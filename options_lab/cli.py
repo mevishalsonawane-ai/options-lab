@@ -19,7 +19,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from options_lab import costs, ic
+from options_lab import costs, ic, monitor
 from options_lab.features import flow
 from options_lab.harvest import manifest, store
 from options_lab.strategy import expiry_put as ep
@@ -242,6 +242,55 @@ def cmd_expiry_put(args) -> int:
     return 0
 
 
+def cmd_regime(args) -> int:
+    """Are the conditions this strategy depends on still true?
+
+    Not a learner. It adapts nothing. It checks the documented kill conditions
+    against the most recent sessions, because the question is whether the
+    strategy is healthy NOW, not on average since 2023.
+    """
+    if args.ledger:
+        trades = pd.read_csv(args.ledger, parse_dates=["session"])
+        trades["session"] = trades["session"].dt.date
+    else:
+        sessions = _load_expiry_sessions(args.cache)
+        if not sessions:
+            print(f"no expiry-session chains in {args.cache}")
+            return 1
+        trades, _ = ep.run_backtest(
+            sessions, lot_size=args.lot, otm_pct=args.otm_pct,
+            regime=args.regime, entry_time=pd.Timestamp(args.entry).time())
+
+    if trades.empty:
+        print("no trades to check")
+        return 1
+
+    trades = trades.sort_values("session")
+    recent = trades.tail(args.last) if args.last > 0 else trades
+
+    print("expiry put health check")
+    print(f"  window: last {len(recent)} of {len(trades)} sessions "
+          f"({recent.session.iloc[0]} .. {recent.session.iloc[-1]})")
+    print()
+
+    checks = monitor.run_checks(recent, otm_pct=args.otm_pct, lot_size=args.lot)
+    for c in checks:
+        print("  " + c.format())
+
+    print()
+    for c in checks:
+        if c.status != "pass":
+            print(f"  {c.name}: {c.why}")
+
+    overall = monitor.verdict(checks)
+    print()
+    print(f"  VERDICT: {overall.upper()}"
+          + ("  - every precondition still holds" if overall == "pass"
+             else "  - see the notes above; the verdict is the WORST check, "
+                  "never an average"))
+    return 0 if overall != "fail" else 2
+
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(description=__doc__)
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -268,6 +317,18 @@ def main(argv: list[str] | None = None) -> int:
                    help="sessions sealed from the tail; 0 disables the split")
     e.add_argument("--out", type=Path, default=None)
     e.set_defaults(func=cmd_expiry_put)
+
+    r = sub.add_parser("regime", help="check the strategy's kill conditions")
+    r.add_argument("--cache", type=Path, default=EXPIRY_CACHE)
+    r.add_argument("--ledger", type=Path, default=None,
+                   help="check a live trade CSV instead of the backtest")
+    r.add_argument("--last", type=int, default=30,
+                   help="sessions to check; 0 checks all")
+    r.add_argument("--otm-pct", type=float, default=ep.DEFAULT_OTM_PCT)
+    r.add_argument("--entry", default="11:00")
+    r.add_argument("--regime", default="quoted", choices=list(costs.REGIMES))
+    r.add_argument("--lot", type=int, default=65)
+    r.set_defaults(func=cmd_regime)
 
     args = p.parse_args(argv)
     return args.func(args)
