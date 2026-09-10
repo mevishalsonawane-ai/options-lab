@@ -90,3 +90,54 @@ def test_a_zero_delta_is_refused_rather_than_dividing_by_zero():
     with pytest.raises(ValueError):
         costs.breakeven_index_points(premium=100.0, lot_size=65, lots=1,
                                      regime="quoted", delta=0.0)
+
+
+# --- buying a leg and holding it to settlement -----------------------------
+def test_buying_to_settle_charges_one_order_not_two():
+    """Same asymmetry as the sell side: settling is not a round trip."""
+    one = costs.buy_to_settle(premium=5.0, lot_size=65, regime="quoted")
+    two = costs.round_trip(premium=5.0, lot_size=65, regime="quoted")
+
+    assert one.brokerage < two.brokerage
+
+
+def test_the_buyer_pays_stamp_duty_and_the_seller_does_not():
+    """Stamp duty is a buy-side charge. sell_to_settle correctly omits it, so
+    a hedged position that only ever called sell_to_settle would understate."""
+    bought = costs.buy_to_settle(premium=5.0, lot_size=65, regime="quoted")
+    sold = costs.sell_to_settle(premium=5.0, lot_size=65, regime="quoted")
+
+    assert bought.stamp > 0
+    assert sold.stamp == 0
+
+
+def test_the_buyer_pays_no_stt_on_the_premium():
+    """STT on option premium falls on the writer."""
+    bought = costs.buy_to_settle(premium=5.0, lot_size=65, regime="quoted")
+
+    assert bought.stt == 0.0
+
+
+def test_an_in_the_money_long_leg_pays_exercise_stt_on_its_intrinsic():
+    """The 0.125%-of-intrinsic exercise charge falls on the option BUYER - the
+    charge sell_to_settle explicitly does not pay. A bought wing that finishes
+    in the money pays it, and it is not small: 0.125% of intrinsic."""
+    worthless = costs.buy_to_settle(premium=5.0, lot_size=65, regime="quoted",
+                                    intrinsic=0.0)
+    exercised = costs.buy_to_settle(premium=5.0, lot_size=65, regime="quoted",
+                                    intrinsic=200.0)
+
+    assert exercised.stt > worthless.stt
+    assert exercised.stt == pytest.approx(0.00125 * 200.0 * 65, rel=1e-9)
+
+
+def test_the_buyer_crosses_half_a_spread_like_the_seller():
+    dear = costs.buy_to_settle(premium=5.0, lot_size=65, regime="stress")
+    cheap = costs.buy_to_settle(premium=5.0, lot_size=65, regime="roll")
+
+    assert dear.spread > cheap.spread
+
+
+def test_an_unknown_regime_is_refused_on_the_buy_side_too():
+    with pytest.raises(ValueError):
+        costs.buy_to_settle(premium=5.0, lot_size=65, regime="free")

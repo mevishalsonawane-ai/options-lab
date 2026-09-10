@@ -111,23 +111,47 @@ def settlement_price(spot: pd.Series, day: date) -> float:
 
 
 def settle_trade(*, strike: float, credit: float, settlement: float,
-                 lot_size: int, lots: int = 1, regime: str = "quoted") -> dict:
-    """P&L of one short put carried to cash settlement.
+                 lot_size: int, lots: int = 1, regime: str = "quoted",
+                 wing_strike: float | None = None,
+                 wing_debit: float = 0.0) -> dict:
+    """P&L of one short put - naked, or spread against a bought wing.
 
-    The short leg pays no exercise STT - that 0.125%-of-intrinsic charge falls
-    on the buyer. The loss is unbounded below and scales one-for-one with the
-    move past the strike.
+    NAKED. The short leg pays no exercise STT; that 0.125%-of-intrinsic charge
+    falls on the buyer. The loss is unbounded below and scales one-for-one with
+    the move past the strike.
+
+    HEDGED. A put bought at `wing_strike` caps the loss at the width of the
+    spread less the net credit. It is not free: a second Rs 20 order, a second
+    half-spread, stamp duty the writer never pays, and - on exactly the
+    sessions the wing does its job - exercise STT on the wing's own intrinsic.
+    That last charge appears only when the hedge pays out, which is the easiest
+    cost in this structure to leave out by accident.
     """
-    intrinsic = max(strike - settlement, 0.0)
     qty = lot_size * lots
-    gross = (credit - intrinsic) * qty
+    short_intrinsic = max(strike - settlement, 0.0)
     charges = costs.sell_to_settle(premium=credit, lot_size=lot_size, lots=lots,
                                    regime=regime)
-    net = gross - charges.total
+    cost = charges.total
+
+    wing_intrinsic = 0.0
+    if wing_strike is not None:
+        wing_intrinsic = max(wing_strike - settlement, 0.0)
+        cost += costs.buy_to_settle(premium=wing_debit, lot_size=lot_size,
+                                    lots=lots, regime=regime,
+                                    intrinsic=wing_intrinsic).total
+
+    net_credit = credit - wing_debit
+    intrinsic = short_intrinsic - wing_intrinsic     # what the position pays out
+    gross = (net_credit - intrinsic) * qty
+    net = gross - cost
     return {
-        "strike": strike, "credit": credit, "settlement": settlement,
+        "strike": strike, "credit": net_credit, "settlement": settlement,
         "intrinsic": intrinsic, "lot_size": lot_size, "lots": lots, "qty": qty,
-        "gross_pnl": gross, "cost": charges.total, "net_pnl": net,
+        "wing_strike": wing_strike, "wing_debit": wing_debit,
+        "wing_intrinsic": wing_intrinsic,
+        "max_loss": (None if wing_strike is None
+                     else (strike - wing_strike - net_credit) * qty + cost),
+        "gross_pnl": gross, "cost": cost, "net_pnl": net,
         "won": net > 0,
     }
 
@@ -173,8 +197,13 @@ def run_session(
     entry_time: time = DEFAULT_ENTRY,
     lots: int = 1,
     regime: str = "quoted",
+    wing_pct: float | None = None,
 ) -> dict:
     """One expiry session -> one trade. Raises SessionSkipped with a reason.
+
+    `wing_pct` buys a put that far below the short strike, bounding the loss at
+    the width of the spread. None is the naked default that every published
+    figure in this repo was measured with.
 
     Settlement is derived from the SAME chain that is traded: at 0 DTE there is
     no carry left, so the put-call-parity forward converges to spot. That keeps
@@ -213,9 +242,31 @@ def run_session(
     if not forwards:
         raise SessionSkipped("settlement window too thin to price")
 
+    wing_strike = wing_debit = None
+    if wing_pct is not None:
+        if wing_pct < 0:
+            raise ValueError(
+                f"wing_pct must be positive; {wing_pct} would buy a put ABOVE "
+                f"the short strike, which is not a hedge"
+            )
+        wing_strike = select_strike(snapshot["strike"].unique(), forward=forward,
+                                    otm_pct=otm_pct + wing_pct)
+        if wing_strike >= strike:
+            raise SessionSkipped(
+                f"wing at {wing_strike:g} is not below the short strike "
+                f"{strike:g}; a zero-width spread is two orders and no hedge"
+            )
+        wing_leg = snapshot[(snapshot["strike"] == wing_strike)
+                            & (snapshot["right"] == "PE")]
+        if wing_leg.empty or float(wing_leg["close"].iloc[0]) <= 0:
+            raise SessionSkipped(f"no PE quote at wing strike {wing_strike:g}")
+        wing_debit = float(wing_leg["close"].iloc[0])
+
     trade = settle_trade(strike=strike, credit=credit,
                          settlement=float(np.mean(forwards)),
-                         lot_size=lot_size, lots=lots, regime=regime)
+                         lot_size=lot_size, lots=lots, regime=regime,
+                         wing_strike=wing_strike,
+                         wing_debit=wing_debit or 0.0)
     trade.update(session=day, forward=forward,
                  otm_realised=(forward - strike) / forward)
     return trade
@@ -230,6 +281,7 @@ def run_backtest(
     lots: int = 1,
     regime: str = "quoted",
     underlying: str = "NIFTY",
+    wing_pct: float | None = None,
 ) -> tuple[pd.DataFrame, list[tuple[date, str]]]:
     """Run every session. Returns (trades, skipped) - skips are never silent.
 
@@ -245,7 +297,8 @@ def run_backtest(
                    if lot_size == DATED_LOT else lot_size)
             trades.append(run_session(day, chain, lot_size=lot,
                                       otm_pct=otm_pct, entry_time=entry_time,
-                                      lots=lots, regime=regime))
+                                      lots=lots, regime=regime,
+                                      wing_pct=wing_pct))
         except (SessionSkipped, ThinChain, NotASnapshot,
                 lot_table.NoLotSize) as exc:
             skipped.append((day, str(exc)[:80]))

@@ -184,3 +184,46 @@ def sell_to_settle(*, premium: float, lot_size: int, lots: int = 1,
     return Charges(brokerage=brokerage, stt=stt, exchange=exchange, sebi=sebi,
                    stamp=stamp, gst=gst, spread=spread,
                    premium_notional=notional)
+
+
+# Exercise STT: 0.125% of INTRINSIC value on an in-the-money option at expiry.
+# It falls on the BUYER, which is why sell_to_settle does not pay it and why a
+# bought protective wing must. Verified against the NSE charge schedule.
+STT_EXERCISE_PCT = 0.00125
+
+
+def buy_to_settle(*, premium: float, lot_size: int, lots: int = 1,
+                  regime: str, intrinsic: float = 0.0) -> Charges:
+    """Cost of BUYING an option and holding it to cash settlement.
+
+    The mirror of `sell_to_settle`, and not symmetric with it. Charged here:
+    ONE brokerage order, stamp duty (a buy-side charge the writer never pays),
+    exchange and SEBI on one side, GST on those, HALF a spread, and - if the
+    leg finishes in the money - exercise STT at 0.125% of intrinsic.
+
+    NOT charged: STT on the premium, which falls on the writer.
+
+    The exercise charge is the one that matters for a hedged position. A wing
+    is bought precisely to be in the money when things go wrong, so it pays
+    that charge exactly on the sessions the hedge is doing its job. Costing a
+    bought leg with `sell_to_settle` would omit both it and the stamp duty.
+    """
+    if regime not in SPREAD_PCT:
+        raise ValueError(
+            f"unknown cost regime {regime!r}; expected one of {REGIMES}. "
+            "There is no zero-cost regime by design."
+        )
+    qty = lot_size * lots
+    notional = premium * qty
+
+    brokerage = BROKERAGE_PER_ORDER              # one order, not two
+    stt = STT_EXERCISE_PCT * max(intrinsic, 0.0) * qty   # buyer's charge
+    exchange = EXCHANGE_PCT * notional           # one side
+    sebi = SEBI_PER_CRORE * notional / 1e7
+    stamp = STAMP_BUY_PCT * notional             # buy side only
+    gst = GST_PCT * (brokerage + exchange + sebi)
+    spread = spread_per_unit(premium=premium, regime=regime) / 2.0 * qty
+
+    return Charges(brokerage=brokerage, stt=stt, exchange=exchange, sebi=sebi,
+                   stamp=stamp, gst=gst, spread=spread,
+                   premium_notional=notional)

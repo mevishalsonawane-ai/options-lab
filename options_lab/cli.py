@@ -207,10 +207,12 @@ def cmd_expiry_put(args) -> int:
 
     by_day = dict(sessions)
     kw = dict(lot_size=args.lot, otm_pct=args.otm_pct, regime=args.regime,
-              entry_time=pd.Timestamp(args.entry).time())
+              entry_time=pd.Timestamp(args.entry).time(), wing_pct=args.wing)
 
+    structure = ("naked put" if args.wing is None
+                 else f"put spread, wing {args.wing:.2%} wider")
     print(f"expiry-day short put  |  {args.otm_pct:.2%} OTM at {args.entry}  |  "
-          f"lot {args.lot}  |  {args.regime} spread")
+          f"lot {args.lot}  |  {args.regime} spread  |  {structure}")
     print(f"sessions: {len(days)}  ({days[0]} .. {days[-1]})")
     if holdout_days:
         print(f"SEALED HOLDOUT: last {len(holdout_days)} sessions, "
@@ -261,6 +263,60 @@ def cmd_expiry_put(args) -> int:
         all_trades.to_csv(args.out, index=False)
         print(f"\nledger -> {args.out}")
     return 0
+
+
+def cmd_backfill(args) -> int:
+    """Pull expiry sessions out of the Kaggle archive into a chain cache.
+
+    This is the only free source that still holds EXPIRED contracts, so it is
+    the only way to extend the cache backwards or to a second underlying. A
+    live broker API can never return a chain that has already settled.
+
+    Nothing here downloads the 4.1 GB archive: the ZIP central directory reads
+    in about three HTTP Range requests and each session is pulled on its own.
+    """
+    from options_lab.backfill import archive, cache as bc, kaggle_map
+
+    zf = archive.open_archive()
+    days = archive.available_days(zf.namelist(), args.underlying)
+    if args.since:
+        days = [d for d in days if d >= pd.Timestamp(args.since).date()]
+    if args.until:
+        days = [d for d in days if d <= pd.Timestamp(args.until).date()]
+
+    if args.list:
+        print(f"{len(days)} sessions in the archive for {args.underlying}")
+        if days:
+            print(f"  {days[0]} .. {days[-1]}")
+        return 0
+
+    if not days:
+        print("no sessions in that range")
+        return 1
+    if args.limit:
+        days = days[:args.limit]
+
+    print(f"{args.underlying}: {len(days)} candidate sessions -> {args.out}")
+    written = skipped = 0
+    for day in days:
+        try:
+            bars = kaggle_map.to_store_frame(
+                archive.read_session(zf, args.underlying, day), args.underlying)
+            chain = bc.chain_frame(bars, day=day)
+        except (bc.NoExpiringSeries, KeyError, ValueError) as exc:
+            # Most archive days are not expiry days; that is expected, not an
+            # error, but it is still counted rather than passed over in silence.
+            skipped += 1
+            if args.verbose:
+                print(f"  skip {day}: {str(exc)[:70]}")
+            continue
+        bc.write_session(args.out, day, chain, source=bc.KAGGLE_SOURCE)
+        written += 1
+        print(f"  {day}  {len(chain):,} rows")
+
+    print()
+    print(f"wrote {written}, skipped {skipped} (not expiry sessions)")
+    return 0 if written else 1
 
 
 def cmd_regime(args) -> int:
@@ -316,7 +372,8 @@ def cmd_regime(args) -> int:
     return 0 if overall != "fail" else 2
 
 
-def main(argv: list[str] | None = None) -> int:
+def build_parser() -> argparse.ArgumentParser:
+    """Built separately from main so tests can enumerate the subcommands."""
     p = argparse.ArgumentParser(description=__doc__)
     sub = p.add_subparsers(dest="cmd", required=True)
 
@@ -338,12 +395,32 @@ def main(argv: list[str] | None = None) -> int:
     e.add_argument("--lot", type=_lot_arg, default=65,
                    help="lot size, or dated to use the verified "
                         "NSE lot for each session")
+    e.add_argument("--wing", type=float, default=None,
+                   help="buy a put this much further OTM, bounding the loss at "
+                        "the width of the spread; omit for the naked trade")
     e.add_argument("--capital", type=float, default=400_000.0)
     e.add_argument("--survive", type=float, default=sizing.DEFAULT_SURVIVE_MOVE_PCT)
     e.add_argument("--holdout", type=int, default=ep.DEFAULT_HOLDOUT_SESSIONS,
                    help="sessions sealed from the tail; 0 disables the split")
     e.add_argument("--out", type=Path, default=None)
     e.set_defaults(func=cmd_expiry_put)
+
+    b = sub.add_parser("backfill",
+                       help="build a chain cache from the Kaggle archive")
+    b.add_argument("--underlying", default="NIFTY",
+                   choices=["NIFTY", "BANKNIFTY"])
+    b.add_argument("--out", type=Path, required=False,
+                   default=Path("options_lab/data/backfill_cache"),
+                   help="a SEPARATE directory: archive OI is in contracts, the "
+                        "live cache is lot-multiplied, and mixing them is the "
+                        "65x/30x units trap")
+    b.add_argument("--since", default=None)
+    b.add_argument("--until", default=None)
+    b.add_argument("--limit", type=int, default=0)
+    b.add_argument("--list", action="store_true",
+                   help="show what the archive holds, write nothing")
+    b.add_argument("--verbose", action="store_true")
+    b.set_defaults(func=cmd_backfill)
 
     r = sub.add_parser("regime", help="check the strategy's kill conditions")
     r.add_argument("--cache", type=Path, default=EXPIRY_CACHE)
@@ -357,7 +434,11 @@ def main(argv: list[str] | None = None) -> int:
     r.add_argument("--lot", type=_lot_arg, default=65)
     r.set_defaults(func=cmd_regime)
 
-    args = p.parse_args(argv)
+    return p
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = build_parser().parse_args(argv)
     return args.func(args)
 
 
