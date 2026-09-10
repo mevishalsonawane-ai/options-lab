@@ -33,6 +33,20 @@ class ScopeMismatch(ValueError):
     """Claimed same-day collection for a session that was reached by backfill."""
 
 
+def scope_for(*, day: date, today: date, failures: int) -> str:
+    """What this partition may honestly claim.
+
+    same_day means the partition holds the whole live chain AS IT TRADED. If
+    any contract failed to fetch it does not, so the claim would be false -
+    and consumers treat same_day as the trustworthy set, so a partial chain
+    hiding inside it would corrupt every chain-aggregate feature built on it.
+    Understating to backfill is the safe direction.
+    """
+    if day == today and failures == 0:
+        return SAME_DAY
+    return BACKFILL
+
+
 def _path(root: Path, underlying: str) -> Path:
     return Path(root) / "manifest" / f"{underlying}.csv"
 

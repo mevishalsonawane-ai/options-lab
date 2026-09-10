@@ -69,3 +69,31 @@ def test_reading_a_manifest_that_does_not_exist_returns_an_empty_frame(tmp_path)
 
     assert got.empty
     assert "scope" in got.columns
+
+
+# --- claiming same_day honestly --------------------------------------------
+def test_a_session_collected_today_with_a_complete_chain_is_same_day():
+    assert manifest.scope_for(day=date(2026, 9, 10), today=date(2026, 9, 10),
+                              failures=0) == manifest.SAME_DAY
+
+
+def test_an_earlier_session_is_backfill_however_it_was_reached():
+    assert manifest.scope_for(day=date(2026, 9, 9), today=date(2026, 9, 10),
+                              failures=0) == manifest.BACKFILL
+
+
+def test_a_today_session_with_failed_contracts_does_not_claim_same_day():
+    """same_day means the partition holds the whole live chain as it traded.
+    If contracts failed to fetch it does not, so the claim would be false.
+    Understating is the safe direction: consumers treat same_day as the
+    trustworthy set, and a partial chain silently inside it would corrupt
+    every chain-aggregate feature computed from it."""
+    assert manifest.scope_for(day=date(2026, 9, 10), today=date(2026, 9, 10),
+                              failures=3) == manifest.BACKFILL
+
+
+def test_the_scope_is_one_of_the_declared_scopes():
+    for failures in (0, 1):
+        for day in (date(2026, 9, 9), date(2026, 9, 10)):
+            assert manifest.scope_for(day=day, today=date(2026, 9, 10),
+                                      failures=failures) in manifest.SCOPES

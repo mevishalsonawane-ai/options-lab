@@ -19,7 +19,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from options_lab import costs, ic, monitor
+from options_lab import costs, ic, live, monitor
 from options_lab.features import flow
 from options_lab.harvest import manifest, store
 from options_lab.strategy import expiry_put as ep
@@ -372,6 +372,125 @@ def cmd_regime(args) -> int:
     return 0 if overall != "fail" else 2
 
 
+def _live_chain(underlying: str, root: Path, near: int = 14):
+    """Today's chain for the nearest expiry, priced off the intraday endpoint.
+
+    Only strikes near the money are fetched. parity_forward needs ten strikes
+    quoting both sides; pulling the whole 180-contract chain would triple the
+    request count for no gain and Upstox rate-limits at 429.
+    """
+    from options_lab.harvest import cli as hcli, collect, instruments
+
+    today = date.today()
+    master = hcli.fetch_master(root)
+    live_contracts = collect.contracts_to_refresh(
+        instruments.parse_options(master, underlying), today=today)
+    if not live_contracts:
+        raise SystemExit(f"no listed {underlying} options in the master")
+
+    expiry = min(c.expiry for c in live_contracts)
+    chain = [c for c in live_contracts if c.expiry == expiry]
+
+    spot = _index_spot(underlying)
+    strikes = sorted({c.strike for c in chain},
+                     key=lambda k: abs(k - spot))[:near * 2 + 1]
+    wanted = [c for c in chain if c.strike in set(strikes)]
+
+    frames = []
+    for c in wanted:
+        f = collect.harvest_contract(c, today, today, fetch=hcli.http_get_json,
+                                     today=today, include_current=True)
+        if not f.empty:
+            frames.append(f)
+    if not frames:
+        raise SystemExit(f"no bars returned for the {expiry} chain")
+    bars = pd.concat(frames, ignore_index=True)
+    return expiry, bars[["ts", "strike", "right", "close", "volume",
+                         "open_interest"]], wanted[0].lot_size
+
+
+def _index_spot(underlying: str) -> float:
+    from options_lab.harvest import cli as hcli, upstox
+    key = {"NIFTY": "NSE_INDEX|Nifty 50",
+           "BANKNIFTY": "NSE_INDEX|Nifty Bank"}[underlying]
+    bars = upstox.parse_candles(hcli.http_get_json(upstox.intraday_url(key)))
+    if not bars:
+        raise SystemExit(f"no intraday bars for {underlying}; market may be shut")
+    return float(bars[-1].close)
+
+
+def cmd_live_ticket(args) -> int:
+    """The order this strategy implies right now. NOTHING IS SENT.
+
+    This computes and records an intention. There is no credential, no order
+    endpoint and no code path here that could place a trade. The ledger row is
+    stamped paper=True so it can never later be read as a fill.
+    """
+    expiry, chain, lot_size = _live_chain(args.underlying, args.root)
+    today = date.today()
+
+    if expiry != today:
+        # The strategy is expiry-day only. Running it on any other day is a
+        # different trade with a different payoff, so it is refused by name
+        # rather than quietly priced.
+        print(f"nearest {args.underlying} expiry is {expiry}, not today "
+              f"({today}).")
+        print("This strategy trades ONLY on expiry day - the edge is the last "
+              "few hours of theta, and holding overnight is a different bet.")
+        return 1
+
+    try:
+        ticket = live.build_ticket(
+            chain, session=today, underlying=args.underlying, expiry=expiry,
+            lot_size=lot_size, otm_pct=args.otm_pct, lots=args.lots,
+            wing_pct=args.wing, entry_time=pd.Timestamp(args.entry).time())
+    except live.TooEarly as exc:
+        print(f"too early: {exc}")
+        return 1
+
+    print(ticket.format())
+    try:
+        path = live.record_ticket(args.ledger, ticket)
+    except live.AlreadyRecorded as exc:
+        print(f"not recorded: {exc}")
+        return 1
+    print(f"[dry-run] ticket recorded at {path}")
+    print("Nothing was sent. Place this order yourself if you want it.")
+    return 0
+
+
+def cmd_live_settle(args) -> int:
+    """Complete an open paper ticket at cash settlement."""
+    session = pd.Timestamp(args.session).date() if args.session else date.today()
+    from options_lab.harvest import cli as hcli, upstox
+
+    key = {"NIFTY": "NSE_INDEX|Nifty 50",
+           "BANKNIFTY": "NSE_INDEX|Nifty Bank"}[args.underlying]
+    bars = upstox.parse_candles(hcli.http_get_json(upstox.intraday_url(key)))
+    spot = pd.Series({b.ts: b.close for b in bars})
+    try:
+        settlement = ep.settlement_price(spot, session)
+    except ValueError as exc:
+        print(f"cannot settle: {exc}")
+        return 1
+
+    try:
+        row = live.settle_ticket(args.ledger, session, settlement=settlement,
+                                 regime=args.regime)
+    except live.NotRecorded as exc:
+        print(f"{exc}")
+        return 1
+
+    print(f"{session}  settled at {settlement:,.1f}")
+    print(f"  strike {row['strike']:g}  credit Rs {row['credit']:.2f}/unit")
+    print(f"  net Rs {row['net_pnl']:+,.0f}  ({'WIN' if row['won'] else 'LOSS'})")
+
+    ledger = live.read_ledger(args.ledger)
+    print()
+    print(f"paper ledger: {len(ledger)} settled session(s)")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     """Built separately from main so tests can enumerate the subcommands."""
     p = argparse.ArgumentParser(description=__doc__)
@@ -421,6 +540,25 @@ def build_parser() -> argparse.ArgumentParser:
                    help="show what the archive holds, write nothing")
     b.add_argument("--verbose", action="store_true")
     b.set_defaults(func=cmd_backfill)
+
+    t = sub.add_parser("live-ticket",
+                       help="the order this strategy implies today (sends nothing)")
+    t.add_argument("--underlying", default="NIFTY", choices=["NIFTY", "BANKNIFTY"])
+    t.add_argument("--root", type=Path, default=DEFAULT_ROOT)
+    t.add_argument("--ledger", type=Path, default=DEFAULT_ROOT / "paper_ledger")
+    t.add_argument("--otm-pct", type=float, default=ep.DEFAULT_OTM_PCT)
+    t.add_argument("--entry", default="11:00")
+    t.add_argument("--lots", type=int, default=1)
+    t.add_argument("--wing", type=float, default=None,
+                   help="buy a put this much further OTM, bounding the loss")
+    t.set_defaults(func=cmd_live_ticket)
+
+    v = sub.add_parser("live-settle", help="close an open paper ticket")
+    v.add_argument("--underlying", default="NIFTY", choices=["NIFTY", "BANKNIFTY"])
+    v.add_argument("--ledger", type=Path, default=DEFAULT_ROOT / "paper_ledger")
+    v.add_argument("--session", default=None, help="defaults to today")
+    v.add_argument("--regime", default="quoted", choices=list(costs.REGIMES))
+    v.set_defaults(func=cmd_live_settle)
 
     r = sub.add_parser("regime", help="check the strategy's kill conditions")
     r.add_argument("--cache", type=Path, default=EXPIRY_CACHE)

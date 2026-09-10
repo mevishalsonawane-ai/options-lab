@@ -1,4 +1,4 @@
-"""Upstox v3 historical-candle client.
+"""Upstox v3 candle client - dated history and the current session.
 
 Works with no Authorization header as of 2026-09-07. That is undocumented
 server behaviour and can be withdrawn without notice, so every caller must
@@ -33,6 +33,24 @@ def candle_url(instrument_key: str, *, to: date, frm: date) -> str:
     """Path order is /{to}/{from}; reversing it returns an empty candle list."""
     key = urllib.parse.quote(instrument_key, safe="")
     return f"{BASE}/{key}/minutes/1/{to:%Y-%m-%d}/{frm:%Y-%m-%d}"
+
+
+def intraday_url(instrument_key: str) -> str:
+    """Bars for the CURRENT session, which the dated endpoint cannot return.
+
+    Probed 2026-09-10 12:54 IST on a liquid ATM contract:
+
+        /minutes/1/2026-09-10/2026-09-10   HTTP 200, 0 candles
+        /intraday/<key>/minutes/1          HTTP 200, 220 candles, latest 12:54
+
+    This is the difference between capturing an expiry chain and losing it.
+    An option is delisted the moment it settles and its token is recycled, so
+    the expiring series must be read on its own day - and the dated endpoint
+    only ever serves sessions that have already closed. A harvester built on
+    it can never record a same_day chain, whatever time it runs.
+    """
+    key = urllib.parse.quote(instrument_key, safe="")
+    return f"{BASE}/intraday/{key}/minutes/1"
 
 
 def parse_candles(payload: dict) -> list[Bar]:

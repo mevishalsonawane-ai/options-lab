@@ -38,7 +38,7 @@ INDEX_KEYS = {
 }
 
 
-def http_get_json(url: str, *, tries: int = 4) -> dict:
+def http_get_json(url: str, *, tries: int = 6) -> dict:
     last: Exception | None = None
     for attempt in range(tries):
         try:
@@ -48,6 +48,15 @@ def http_get_json(url: str, *, tries: int = 4) -> dict:
                     "Upstox now requires authentication for historical-candle. "
                     "The unauthenticated route has been withdrawn - stop and re-plan."
                 )
+            if r.status_code == 429:
+                # Cloudflare rate limit, and it is not a brief one - once
+                # tripped it stayed on for minutes, so the backoff has to be
+                # geometric and start well above a transport blip. Measured
+                # 2026-09-10: a burst of ~200 requests tripped it and a 75s
+                # total backoff was still not enough.
+                time.sleep(10.0 * (2 ** attempt))
+                last = RuntimeError("rate limited (429)")
+                continue
             r.raise_for_status()
             return r.json()
         except upstox.UpstoxError:
@@ -95,7 +104,8 @@ def main(argv: list[str] | None = None) -> int:
                         "past partition holding a single far-dated chain.")
     p.add_argument("--days", type=int, default=30, help="backfill window in days")
     p.add_argument("--root", type=Path, default=DEFAULT_ROOT)
-    p.add_argument("--workers", type=int, default=8)
+    p.add_argument("--workers", type=int, default=4,
+                   help="Upstox rate-limits hard at 429; 8 tripped it")
     p.add_argument("--indices", action="store_true", help="also collect index + VIX")
     args = p.parse_args(argv)
 
@@ -122,12 +132,29 @@ def main(argv: list[str] | None = None) -> int:
         print(f"\n{underlying}: {len(chain)} contracts over expiries "
               f"{[str(e) for e in expiries]}", flush=True)
 
+        failures: list[str] = []
+
         def one(contract):
             try:
+                # Only TODAY's expiring series is at risk of vanishing;
+                # everything else is still listed tomorrow and reads fine from
+                # the dated endpoint. Restricting it here keeps the extra
+                # request count small enough to stay under the 429 limit.
                 return contract, collect.harvest_contract(
-                    contract, start, end, fetch=http_get_json)
+                    contract, start, end, fetch=http_get_json,
+                    today=today, include_current=(contract.expiry == today))
             except upstox.UpstoxError as exc:
                 print(f"  ! {contract.trading_symbol}: {exc}", flush=True)
+                failures.append(contract.trading_symbol)
+                return contract, None
+            except RuntimeError as exc:
+                # A transport failure on one contract used to abort the whole
+                # run AFTER partitions were written but BEFORE the manifest
+                # was, leaving the store and the manifest out of sync. It is
+                # recorded and counted instead - and a non-zero count stops
+                # the day claiming same_day.
+                print(f"  ! {contract.trading_symbol}: {exc}", flush=True)
+                failures.append(contract.trading_symbol)
                 return contract, None
 
         # Accumulate across contracts and rewrite each day-partition once per
@@ -158,6 +185,9 @@ def main(argv: list[str] | None = None) -> int:
                     print(f"  {done}/{len(chain)} contracts, {total:,} bars",
                           flush=True)
         total += flush()
+        if failures:
+            print(f"  {len(failures)} contract(s) failed to fetch; today "
+                  f"cannot claim same_day: {failures[:4]}", flush=True)
 
         # Record what each partition actually contains. A session reached by
         # backfill holds only contracts still listed today; its real front
@@ -170,7 +200,8 @@ def main(argv: list[str] | None = None) -> int:
                 args.root, underlying, day,
                 n_expiries=int(opts["expiry"].nunique()),
                 n_contracts=int(opts["contract_id"].nunique()),
-                scope=manifest.SAME_DAY if day == today else manifest.BACKFILL,
+                scope=manifest.scope_for(day=day, today=today,
+                                         failures=len(failures)),
                 collected_on=today,
             )
 

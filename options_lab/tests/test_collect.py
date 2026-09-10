@@ -97,3 +97,62 @@ def test_contracts_to_refresh_skips_contracts_that_expired_before_collection_sta
     got = collect.contracts_to_refresh([CE, dead], today=date(2026, 9, 7))
 
     assert got == [CE]
+
+
+# --- the current session ---------------------------------------------------
+def test_harvesting_today_asks_the_intraday_endpoint():
+    """The dated endpoint returns nothing for the current session, so a
+    harvest that ends today must also ask /intraday - otherwise the expiring
+    chain is never captured and is delisted before the next run."""
+    asked = []
+
+    def fetch(url):
+        asked.append(url)
+        return {"status": "success", "data": {"candles": []}}
+
+    c = CE
+    collect.harvest_contract(c, date(2026, 9, 9), date(2026, 9, 10),
+                             fetch=fetch, today=date(2026, 9, 10))
+
+    assert any("/intraday/" in u for u in asked), asked
+
+
+def test_a_harvest_that_ends_before_today_never_asks_intraday():
+    asked = []
+
+    def fetch(url):
+        asked.append(url)
+        return {"status": "success", "data": {"candles": []}}
+
+    collect.harvest_contract(CE, date(2026, 9, 1), date(2026, 9, 5),
+                             fetch=fetch, today=date(2026, 9, 10))
+
+    assert not any("/intraday/" in u for u in asked), asked
+
+
+def test_intraday_bars_are_merged_with_dated_ones_in_time_order():
+    def fetch(url):
+        ts = ("2026-09-10T09:16:00+05:30" if "/intraday/" in url
+              else "2026-09-09T09:15:00+05:30")
+        return {"status": "success", "data": {"candles": [
+            [ts, 1.0, 2.0, 0.5, 1.5, 10, 65]]}}
+
+    frame = collect.harvest_contract(
+        CE, date(2026, 9, 9), date(2026, 9, 10),
+        fetch=fetch, today=date(2026, 9, 10))
+
+    assert len(frame) == 2
+    assert frame["ts"].is_monotonic_increasing
+
+
+def test_a_duplicate_bar_from_both_endpoints_is_not_double_counted():
+    """The two endpoints can overlap on the current day."""
+    def fetch(url):
+        return {"status": "success", "data": {"candles": [
+            ["2026-09-10T09:15:00+05:30", 1.0, 2.0, 0.5, 1.5, 10, 65]]}}
+
+    frame = collect.harvest_contract(
+        CE, date(2026, 9, 10), date(2026, 9, 10),
+        fetch=fetch, today=date(2026, 9, 10))
+
+    assert len(frame) == 1, "the same minute must not be stored twice"

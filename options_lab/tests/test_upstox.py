@@ -94,3 +94,60 @@ def test_month_chunks_are_contiguous_and_non_overlapping():
 
     for (_, prev_hi), (next_lo, _) in zip(chunks, chunks[1:]):
         assert (next_lo - prev_hi).days == 1
+
+
+# --- today's bars ----------------------------------------------------------
+"""The dated endpoint cannot see the current session.
+
+Probed 2026-09-10 12:54 IST against a liquid ATM contract:
+
+    /minutes/1/2026-09-10/2026-09-10   HTTP 200, 0 candles
+    /intraday/.../minutes/1            HTTP 200, 220 candles, latest 12:54
+
+That is not a detail. The harvester exists because a contract is delisted the
+moment it settles, so an expiry chain must be captured ON its expiry day - and
+the endpoint it used is precisely the one that cannot do that. Every expiry
+session it has ever run against was already gone.
+"""
+
+
+def test_the_intraday_url_carries_no_date_range():
+    """The dated form returns nothing for today; this one has no dates at all."""
+    url = upstox.intraday_url("NSE_FO|44758")
+
+    assert "/intraday/" in url
+    assert "2026" not in url
+
+
+def test_the_intraday_url_escapes_the_instrument_key():
+    """Instrument keys carry a pipe, which is not URL-safe."""
+    url = upstox.intraday_url("NSE_FO|44758")
+
+    assert "|" not in url
+    assert "%7C" in url
+
+
+def test_intraday_and_dated_urls_are_different_endpoints():
+    assert upstox.intraday_url("NSE_FO|1") != upstox.candle_url(
+        "NSE_FO|1", to=date(2026, 9, 10), frm=date(2026, 9, 10))
+
+
+def test_intraday_candles_parse_exactly_like_dated_ones():
+    """Same payload shape, so parse_candles is reused rather than duplicated."""
+    payload = {"status": "success", "data": {"candles": [
+        ["2026-09-10T12:54:00+05:30", 1.0, 2.0, 0.5, 1.5, 100, 6500],
+        ["2026-09-10T12:53:00+05:30", 1.0, 2.0, 0.5, 1.4, 90, 6435],
+    ]}}
+
+    bars = upstox.parse_candles(payload)
+
+    assert len(bars) == 2
+    assert bars[0].ts < bars[1].ts, "ascending, as everywhere else"
+    assert bars[-1].close == 1.5
+
+
+def test_an_intraday_error_payload_is_still_fatal():
+    """An auth withdrawal must never read as 'the session was quiet'."""
+    with pytest.raises(upstox.UpstoxError):
+        upstox.parse_candles({"status": "error", "errors": [
+            {"errorCode": "UDAPI100050", "message": "Invalid credentials"}]})
