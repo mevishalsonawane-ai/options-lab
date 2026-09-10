@@ -20,3 +20,4 @@ session,n_expiries,n_contracts,scope,collected_on
 2026-09-03,3,341,backfill,2026-09-10
 2026-09-04,3,343,backfill,2026-09-10
 2026-09-09,1,145,backfill,2026-09-10
+2026-09-10,1,142,same_day,2026-09-10

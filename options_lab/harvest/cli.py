@@ -136,13 +136,19 @@ def main(argv: list[str] | None = None) -> int:
 
         def one(contract):
             try:
-                # Only TODAY's expiring series is at risk of vanishing;
-                # everything else is still listed tomorrow and reads fine from
-                # the dated endpoint. Restricting it here keeps the extra
-                # request count small enough to stay under the 429 limit.
+                # The current session is fetched for the WHOLE tracked chain,
+                # not just the series expiring today. Today's expiring series
+                # is the only one at risk of vanishing, so loss-prevention
+                # alone would justify restricting it - but same_day means the
+                # partition holds the chain as it traded, and a partition
+                # carrying one expiry out of three is not that. Restricting it
+                # made same_day unreachable on any non-expiry day, which
+                # empties the scope that chain-aggregate features depend on.
+                # Measured: 472 contracts complete fine at 4 workers with the
+                # 429 backoff.
                 return contract, collect.harvest_contract(
                     contract, start, end, fetch=http_get_json,
-                    today=today, include_current=(contract.expiry == today))
+                    today=today, include_current=True)
             except upstox.UpstoxError as exc:
                 print(f"  ! {contract.trading_symbol}: {exc}", flush=True)
                 failures.append(contract.trading_symbol)
