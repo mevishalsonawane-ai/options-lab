@@ -1,0 +1,92 @@
+"""Session manifest: what was collected, how, and whether the chain is complete.
+
+`scope` is the load-bearing field:
+
+    same_day   collected on the session date itself, so the partition holds the
+               whole live chain as it actually traded
+    backfill   reached by asking today's instrument master for history, so the
+               partition holds ONLY the contracts still listed on the day the
+               harvester ran. Every front chain that had already expired is
+               missing and is unrecoverable from any free source.
+
+Chain-aggregate features - signed order flow, PCR, skew, anything summed across
+strikes - are only meaningful on `same_day` sessions. On a backfilled session
+the denominator is missing most of its contracts, so the aggregate is a
+different quantity wearing the same name.
+"""
+from __future__ import annotations
+
+from datetime import date
+from pathlib import Path
+
+import pandas as pd
+
+SAME_DAY = "same_day"
+BACKFILL = "backfill"
+SCOPES = (SAME_DAY, BACKFILL)
+
+COLUMNS = ["session", "n_expiries", "n_contracts", "scope", "collected_on"]
+KEY = "session"
+
+
+class ScopeMismatch(ValueError):
+    """Claimed same-day collection for a session that was reached by backfill."""
+
+
+def _path(root: Path, underlying: str) -> Path:
+    return Path(root) / "manifest" / f"{underlying}.csv"
+
+
+def read(root: Path, underlying: str) -> pd.DataFrame:
+    path = _path(root, underlying)
+    if not path.exists():
+        return pd.DataFrame({c: pd.Series(dtype="object") for c in COLUMNS})
+    df = pd.read_csv(path, parse_dates=["session", "collected_on"])
+    for col in ("session", "collected_on"):
+        df[col] = df[col].dt.date
+    return df
+
+
+def record(
+    root: Path,
+    underlying: str,
+    session: date,
+    *,
+    n_expiries: int,
+    n_contracts: int,
+    scope: str,
+    collected_on: date,
+) -> None:
+    """Upsert one session row. Refuses a same-day claim that cannot be true."""
+    if scope not in SCOPES:
+        raise ValueError(f"unknown scope {scope!r}; expected one of {SCOPES}")
+    if scope == SAME_DAY and collected_on != session:
+        raise ScopeMismatch(
+            f"session {session} was collected on {collected_on}; that is "
+            f"{BACKFILL!r}, not {SAME_DAY!r} - the chain as traded that day is gone"
+        )
+
+    row = pd.DataFrame([{
+        "session": session, "n_expiries": n_expiries, "n_contracts": n_contracts,
+        "scope": scope, "collected_on": collected_on,
+    }])
+
+    existing = read(root, underlying)
+    merged = (
+        pd.concat([existing, row], ignore_index=True)
+        .drop_duplicates(subset=KEY, keep="last")
+        .sort_values(KEY)
+        .reset_index(drop=True)
+    )
+
+    path = _path(root, underlying)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    merged[COLUMNS].to_csv(path, index=False)
+
+
+def complete_chain_sessions(root: Path, underlying: str) -> list[date]:
+    """Only these are eligible for chain-aggregate features."""
+    df = read(root, underlying)
+    if df.empty:
+        return []
+    return sorted(df.loc[df["scope"] == SAME_DAY, "session"].tolist())

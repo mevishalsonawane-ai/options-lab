@@ -1,0 +1,16 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# Atomic-write temporaries from harvest/store.py. A real partition is renamed
+# into place; a .tmp left behind means a run was interrupted mid-write.
+*.parquet.tmp
+
+# Credentials never belong here. The harvester needs no auth today, but if
+# Upstox starts enforcing it, keep the token outside the tree.
+.kb_key
+.kb_user
+*.token
+.env
