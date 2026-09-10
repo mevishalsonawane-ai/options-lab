@@ -33,16 +33,24 @@ class ScopeMismatch(ValueError):
     """Claimed same-day collection for a session that was reached by backfill."""
 
 
-def scope_for(*, day: date, today: date, failures: int) -> str:
+def scope_for(*, day: date, today: date, failures: int,
+              n_contracts: int = 1) -> str:
     """What this partition may honestly claim.
 
     same_day means the partition holds the whole live chain AS IT TRADED. If
     any contract failed to fetch it does not, so the claim would be false -
     and consumers treat same_day as the trustworthy set, so a partial chain
     hiding inside it would corrupt every chain-aggregate feature built on it.
-    Understating to backfill is the safe direction.
+    An EMPTY chain fails the same test. A partition holding only index rows
+    once claimed same_day with n_contracts=0, because that underlying had no
+    contract expiring today and so never needed the current-session fetch.
+    Nothing was lost - tomorrow's dated fetch returns today's bars - but a
+    same_day session with no chain in it would poison every consumer that
+    filters on that scope precisely because it trusts it.
+
+    Understating to backfill is the safe direction throughout.
     """
-    if day == today and failures == 0:
+    if day == today and failures == 0 and n_contracts > 0:
         return SAME_DAY
     return BACKFILL
 

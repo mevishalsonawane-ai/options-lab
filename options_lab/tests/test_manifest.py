@@ -97,3 +97,18 @@ def test_the_scope_is_one_of_the_declared_scopes():
         for day in (date(2026, 9, 9), date(2026, 9, 10)):
             assert manifest.scope_for(day=day, today=date(2026, 9, 10),
                                       failures=failures) in manifest.SCOPES
+
+
+def test_a_partition_with_no_option_contracts_cannot_claim_same_day():
+    """Found in verification: BANKNIFTY recorded 2026-09-10 as same_day with
+    n_contracts=0. Its nearest expiry was 19 days out, so no contract needed
+    the current-session fetch and the partition held only index rows. An empty
+    chain is not "the whole live chain as it traded", and a same_day session
+    with no chain would poison any consumer that filters on that scope."""
+    assert manifest.scope_for(day=date(2026, 9, 10), today=date(2026, 9, 10),
+                              failures=0, n_contracts=0) == manifest.BACKFILL
+
+
+def test_a_populated_partition_collected_today_still_claims_same_day():
+    assert manifest.scope_for(day=date(2026, 9, 10), today=date(2026, 9, 10),
+                              failures=0, n_contracts=101) == manifest.SAME_DAY

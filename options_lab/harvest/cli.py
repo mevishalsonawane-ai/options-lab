@@ -196,12 +196,14 @@ def main(argv: list[str] | None = None) -> int:
         for day in store.harvested_days(args.root, underlying):
             part = store.read_day(args.root, underlying, day)
             opts = part[part["right"] != "IX"]
+            n_contracts = int(opts["contract_id"].nunique())
             manifest.record(
                 args.root, underlying, day,
                 n_expiries=int(opts["expiry"].nunique()),
-                n_contracts=int(opts["contract_id"].nunique()),
+                n_contracts=n_contracts,
                 scope=manifest.scope_for(day=day, today=today,
-                                         failures=len(failures)),
+                                         failures=len(failures),
+                                         n_contracts=n_contracts),
                 collected_on=today,
             )
 
