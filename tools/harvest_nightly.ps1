@@ -14,6 +14,10 @@
 #>
 param(
     [string]$Repo = "C:\Users\mevis\Downloads\files\options-lab",
+    # Task Scheduler runs with a reduced PATH, so a bare "python" can fail to
+    # resolve even where it works fine in an interactive shell. Pinned here so
+    # the scheduled run does not differ from the tested one.
+    [string]$Python = "C:\Users\mevis\AppData\Local\Programs\Python\Python310\python.exe",
     [int]$Expiries = 3,
     [switch]$Force          # collect even on a weekend, for a manual test run
 )
@@ -36,11 +40,15 @@ if (-not $Force -and ($day -eq "Saturday" -or $day -eq "Sunday")) {
     exit 0
 }
 
+if (-not (Test-Path $Python)) {
+    Write-Log "python not found at $Python - fix the -Python parameter"
+    exit 1
+}
 Write-Log "harvest start (expiries=$Expiries)"
 Push-Location $Repo
 try {
     $env:PYTHONPATH = $Repo
-    $out = & python -m options_lab.harvest.cli --underlying NIFTY BANKNIFTY `
+    $out = & $Python -m options_lab.harvest.cli --underlying NIFTY BANKNIFTY `
         --expiries $Expiries --days 1 --indices 2>&1
     $out | ForEach-Object { Write-Log $_ }
     if ($LASTEXITCODE -ne 0) {
@@ -64,7 +72,7 @@ for u in ("NIFTY", "BANKNIFTY"):
     else:
         print(f"{u}: NO same_day sessions yet")
 '@
-    $probe | & python - 2>&1 | ForEach-Object { Write-Log $_ }
+    $probe | & $Python - 2>&1 | ForEach-Object { Write-Log $_ }
     Write-Log "harvest done"
 }
 finally {
