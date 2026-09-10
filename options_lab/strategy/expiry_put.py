@@ -142,6 +142,24 @@ DEFAULT_HOLDOUT_SESSIONS = 30
 DATED_LOT = "dated"
 
 
+def _dated_lot(chain: pd.DataFrame, underlying: str, day: date) -> int:
+    """This session's real lot: the chain first, the date table as fallback.
+
+    The chain wins because NSE applies a lot change to contracts INTRODUCED
+    after it, so a monthly listed before the change keeps the old lot until it
+    expires. On 2025-01-30 every NIFTY contract expiring that day carried 25
+    while the rest of the book was at 75; the date table says 75 and a position
+    sized on that is three times too large.
+
+    The chain also covers 2023, which the table cannot: NSE published no lot
+    column before 2024-01-01, but the open interest was always there.
+    """
+    observed = lot_table.lot_from_chain(chain)
+    if observed is not None:
+        return observed
+    return lot_table.lot_size_on(underlying, day)
+
+
 class SessionSkipped(Exception):
     """This session could not be priced. Carries why, so it is never silent."""
 
@@ -223,7 +241,7 @@ def run_backtest(
     trades, skipped = [], []
     for day, chain in sessions:
         try:
-            lot = (lot_table.lot_size_on(underlying, day)
+            lot = (_dated_lot(chain, underlying, day)
                    if lot_size == DATED_LOT else lot_size)
             trades.append(run_session(day, chain, lot_size=lot,
                                       otm_pct=otm_pct, entry_time=entry_time,

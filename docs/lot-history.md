@@ -54,6 +54,43 @@ skipped count rather than the rupee totals being quietly wrong. Forward
 extrapolation past the last row *is* allowed â€” the current lot is current until
 NSE changes it, and `monitor.check_lot_size` exists to catch that change.
 
+## The table is the FALLBACK, not the primary source
+
+NSE applies a lot change to contracts **introduced** after it. A monthly listed
+before the change keeps the old lot until it expires. On 2025-01-30 every NIFTY
+contract expiring that day carried lot **25**, while the rest of the book was
+at 75 — so the date table's answer is wrong for that session by a factor of
+three, and a position sized on it would have been three times too large.
+
+The chain settles it. Upstox publishes open interest already multiplied by the
+lot, so the most frequent non-zero OI move *is* one lot.
+`lots.lot_from_chain` takes the gcd of the five most frequent move sizes and
+then requires it to divide at least 95% of all moves.
+
+Ranking by **count**, not by share of volume, is load-bearing: a real session
+has ~4,000 distinct move sizes and the top five are only 11% of the mass — but
+they are 65, 130, 195, 260, 325, every one a whole number of lots. A plain gcd
+over every move is exact and therefore fragile: on 2026-03-30 a handful of
+stray ticks collapse it to 5 against a true lot of 65. The estimator is stable
+for any k from 1 to 12.
+
+Across the 170 cached sessions it agrees with the NSE table on 169 and differs
+on exactly one — 2025-01-30, where bhavcopy confirms the chain, not the table.
+It also covers all 51 sessions of 2023 that the table cannot, so nothing is
+skipped any more.
+
+`run_backtest(..., lot_size=DATED_LOT)` therefore asks the chain first and
+falls back to the table only when the chain carries no evidence.
+
+The eras derived from open interest alone reproduce the NSE table exactly:
+
+| lot | sessions | first | last |
+|---|---|---|---|
+| 50 | 68 | 2023-01-05 | 2024-04-25 |
+| 25 | 36 | 2024-05-02 | 2025-01-30 |
+| 75 | 51 | 2025-01-02 | 2025-12-23 |
+| 65 | 15 | 2026-01-06 | 2026-04-13 |
+
 ## Effect on the headline
 
 |  | pinned lot 65 | dated lots |

@@ -13,6 +13,7 @@ from __future__ import annotations
 
 from datetime import date
 
+import pandas as pd
 import pytest
 
 from options_lab import lots
@@ -89,3 +90,66 @@ def test_coverage_reports_where_the_table_starts():
 
 def test_banknifty_is_covered_too():
     assert lots.lot_size_on("BANKNIFTY", date(2026, 4, 1)) == 30
+
+
+# --- reading the lot off the chain itself ----------------------------------
+"""The date table is not the last word, because NSE applies a lot change to
+contracts INTRODUCED after it. A monthly listed before the change keeps the old
+lot until it expires. On 2025-01-30 every contract expiring that day carried 25
+while the rest of the NIFTY book was at 75 - so the table's answer (75) is
+wrong for the trade that session, by a factor of three.
+
+Open interest settles it. Upstox publishes OI lot-multiplied, so the most
+common OI move IS one lot, and it must divide nearly every other move."""
+
+
+def _oi_chain(lot, *, n=200, noise=0):
+    """A chain whose OI moves in whole lots, plus `noise` stray moves."""
+    import numpy as np
+    rng = np.random.default_rng(0)
+    rows, oi = [], 10_000
+    steps = list(rng.integers(1, 12, n) * lot) + [7] * noise
+    for i, step in enumerate(steps):
+        oi += int(step)
+        rows.append({"ts": pd.Timestamp("2025-01-30 09:15", tz="Asia/Kolkata")
+                     + pd.Timedelta(minutes=i),
+                     "strike": 23_000.0, "right": "PE", "close": 10.0,
+                     "open_interest": oi})
+    return pd.DataFrame(rows)
+
+
+def test_the_lot_is_read_off_the_open_interest_moves():
+    assert lots.lot_from_chain(_oi_chain(75)) == 75
+
+
+def test_a_few_stray_moves_do_not_derail_it():
+    """A raw gcd collapses to 5 on one bad tick. 2026-03-30 has 152 stray moves
+    out of 11,401 and its true lot is 65."""
+    assert lots.lot_from_chain(_oi_chain(65, n=400, noise=4)) == 65
+
+
+def test_too_much_disagreement_returns_no_answer_rather_than_a_wrong_one():
+    assert lots.lot_from_chain(_oi_chain(65, n=20, noise=60)) is None
+
+
+def test_a_chain_with_no_open_interest_column_returns_no_answer():
+    chain = _oi_chain(75).drop(columns=["open_interest"])
+
+    assert lots.lot_from_chain(chain) is None
+
+
+def test_a_chain_whose_open_interest_never_moves_returns_no_answer():
+    """No evidence is not evidence for a lot of one."""
+    flat = _oi_chain(75)
+    flat["open_interest"] = 10_000
+
+    assert lots.lot_from_chain(flat) is None
+
+
+def test_the_observed_lot_beats_the_table_where_they_disagree():
+    """This is the whole point: the chain is the primary source and the table
+    is the fallback, not the other way round."""
+    observed = lots.lot_from_chain(_oi_chain(25))
+
+    assert observed == 25
+    assert lots.lot_size_on("NIFTY", date(2025, 1, 30)) == 75

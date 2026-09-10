@@ -23,7 +23,22 @@ from __future__ import annotations
 
 from datetime import date
 
-__all__ = ["LOT_HISTORY", "NoLotSize", "lot_size_on", "coverage_start"]
+import numpy as np
+import pandas as pd
+
+__all__ = ["LOT_HISTORY", "NoLotSize", "lot_size_on", "lot_from_chain",
+           "coverage_start", "MIN_MOVE_AGREEMENT"]
+
+# The share of non-zero OI moves that must be whole lots before the modal
+# move is believed. Measured over the 170 cached sessions: median 1.0000,
+# minimum 0.9867. A raw gcd would be exact and useless - one stray tick
+# collapses it (2026-03-30 gcd 5 against a true lot of 65).
+MIN_MOVE_AGREEMENT = 0.95
+
+# How many of the most frequent move sizes to reconcile.
+TOP_MOVE_SIZES = 5
+
+
 
 
 class NoLotSize(LookupError):
@@ -96,3 +111,44 @@ def lot_size_on(underlying: str, day: date) -> int:
 def coverage_start(underlying: str) -> date:
     """First date the table can answer for."""
     return _entries(underlying)[0][0]
+
+
+def lot_from_chain(chain: pd.DataFrame, *,
+                   min_agreement: float = MIN_MOVE_AGREEMENT) -> int | None:
+    """The lot the contracts in THIS chain carry, read off open interest.
+
+    The date table is not the last word. NSE applies a lot change to contracts
+    INTRODUCED after it, so a monthly listed before the change keeps the old lot
+    until it expires. On 2025-01-30 every NIFTY contract expiring that day
+    carried 25 while the rest of the book was at 75 - the table says 75, and a
+    trade sized on that is three times too large.
+
+    Upstox publishes OI already multiplied by the lot, so the most common
+    non-zero OI move IS one lot. The modal move is used rather than the gcd
+    because the gcd is exact and therefore fragile: a single non-conforming
+    tick collapses it. The modal move is then required to divide nearly every
+    other move, so a wrong guess cannot pass quietly.
+
+    Returns None when the chain carries no evidence - no OI column, no moves,
+    or too much disagreement. None means "ask something else", never "lot 1".
+    """
+    if "open_interest" not in chain or chain.empty:
+        return None
+    moves = (chain.sort_values("ts")
+                  .groupby(["strike", "right"])["open_interest"].diff().dropna())
+    moves = moves[moves != 0].abs().astype("int64")
+    if moves.empty:
+        return None
+    # The gcd of the most FREQUENT move sizes. Plain gcd over every move is
+    # exact and therefore fragile - one stray tick collapses it (2026-03-30
+    # gcds to 5 against a true lot of 65). Ranking by count, not by share of
+    # volume: a real session has ~4,000 distinct move sizes and the top five
+    # are only 11% of the mass, but they are 65, 130, 195, 260, 325 - every one
+    # a whole number of lots. The result is stable for any k from 1 to 12.
+    common = moves.value_counts().index[:TOP_MOVE_SIZES].to_numpy()
+    lot = int(np.gcd.reduce(common))
+    if lot <= 1:
+        return None
+    if float((moves % lot == 0).mean()) < min_agreement:
+        return None
+    return lot
