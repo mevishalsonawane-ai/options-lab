@@ -134,76 +134,97 @@ def cmd_ic(args) -> int:
     return 0
 
 
+def _load_expiry_sessions(cache: Path):
+    """(day, chain) for every cached expiry session, oldest first."""
+    out = []
+    for f in sorted(Path(cache).glob("*_chain.parquet")):
+        day = pd.Timestamp(f.name[:10]).date()
+        chain = pd.read_parquet(f)
+        chain["ts"] = pd.to_datetime(chain["ts"])
+        out.append((day, chain))
+    return out
+
+
+def _report(label: str, trades: pd.DataFrame, skipped: list, lot: int) -> None:
+    if trades.empty:
+        print(f"{label:<9}: no trades ({len(skipped)} skipped)")
+        return
+    credit = (trades.credit * lot).median()
+    print(f"{label:<9}: n={len(trades):<4} "
+          f"win {100*trades.won.mean():6.2f}%  "
+          f"mean Rs {trades.net_pnl.mean():+8.1f}  "
+          f"median Rs {trades.net_pnl.median():+8.1f}  "
+          f"worst Rs {trades.net_pnl.min():+9.1f}  "
+          f"total Rs {trades.net_pnl.sum():+10,.0f}")
+    print(f"{'':<11}credit Rs {credit:,.0f}/lot  "
+          f"cost Rs {trades.cost.median():,.1f} "
+          f"({100*trades.cost.median()/credit:.1f}% of credit)"
+          + (f"  skipped {len(skipped)}" if skipped else ""))
+
+
 def cmd_expiry_put(args) -> int:
-    """Run the expiry-day short put over every cached expiry session."""
-    files = sorted(Path(args.cache).glob("*_chain.parquet"))
-    if not files:
+    """Expiry-day short put, reported on a sealed train/holdout split.
+
+    The split is honest because the strategy has NO fitted parameter: entry
+    time and strike distance came from a prior sweep, not from this code. So
+    the holdout is genuinely untouched rather than merely unexamined.
+    """
+    sessions = _load_expiry_sessions(args.cache)
+    if not sessions:
         print(f"no expiry-session chains in {args.cache}")
         return 1
 
-    entry = pd.Timestamp(args.entry).time()
-    trades, skipped = [], []
-
-    for f in files:
-        day = pd.Timestamp(f.name[:10]).date()
-        ch = pd.read_parquet(f)
-        ch["ts"] = pd.to_datetime(ch["ts"])
+    days = [d for d, _ in sessions]
+    if args.holdout > 0:
         try:
-            at = ch[ch["ts"].dt.time <= entry]
-            if at.empty:
-                skipped.append((day, "no bars before entry")); continue
-            snap = (at.sort_values("ts")
-                      .groupby(["strike", "right"], as_index=False).last())
-            fwd = ep.parity_forward(snap)
-            k = ep.select_strike(snap["strike"].unique(), forward=fwd,
-                                 otm_pct=args.otm_pct)
-            leg = snap[(snap["strike"] == k) & (snap["right"] == "PE")]
-            if leg.empty or float(leg["close"].iloc[0]) <= 0:
-                skipped.append((day, "no PE quote at strike")); continue
-            credit = float(leg["close"].iloc[0])
+            train_days, holdout_days = ep.split_sessions(days, holdout=args.holdout)
+        except ValueError as exc:
+            print(f"cannot split: {exc}")
+            return 1
+    else:
+        train_days, holdout_days = days, []
 
-            win = ch[(ch["ts"].dt.time >= ep.SETTLE_FROM)
-                     & (ch["ts"].dt.time < ep.SETTLE_TO)]
-            fwds = []
-            for _, g in win.groupby("ts"):
-                try:
-                    fwds.append(ep.parity_forward(g))
-                except ep.ThinChain:
-                    pass
-            if not fwds:
-                skipped.append((day, "settlement window too thin")); continue
-
-            t = ep.settle_trade(strike=k, credit=credit,
-                                settlement=float(np.mean(fwds)),
-                                lot_size=args.lot, lots=1, regime=args.regime)
-            t.update(session=day, forward=fwd, otm_realised=(fwd - k) / fwd)
-            trades.append(t)
-        except (ep.ThinChain, ep.NotASnapshot) as exc:
-            skipped.append((day, str(exc)[:60]))
-
-    T = pd.DataFrame(trades)
-    if T.empty:
-        print("no sessions produced a trade"); return 1
+    by_day = dict(sessions)
+    kw = dict(lot_size=args.lot, otm_pct=args.otm_pct, regime=args.regime,
+              entry_time=pd.Timestamp(args.entry).time())
 
     print(f"expiry-day short put  |  {args.otm_pct:.2%} OTM at {args.entry}  |  "
           f"lot {args.lot}  |  {args.regime} spread")
-    print(f"sessions traded : {len(T)}  (skipped {len(skipped)})")
-    print(f"win rate        : {100*T.won.mean():.2f}%  ({int(T.won.sum())}/{len(T)})")
-    print(f"net per trade   : mean Rs {T.net_pnl.mean():+,.1f}  "
-          f"median Rs {T.net_pnl.median():+,.1f}")
-    print(f"                  worst Rs {T.net_pnl.min():+,.1f}  "
-          f"best Rs {T.net_pnl.max():+,.1f}")
-    print(f"credit          : median Rs {(T.credit*args.lot).median():,.1f}/lot")
-    print(f"cost            : median Rs {T.cost.median():,.1f} "
-          f"({100*T.cost.median()/(T.credit*args.lot).median():.1f}% of credit)")
-    print(f"total           : Rs {T.net_pnl.sum():+,.0f}")
+    print(f"sessions: {len(days)}  ({days[0]} .. {days[-1]})")
+    if holdout_days:
+        print(f"SEALED HOLDOUT: last {len(holdout_days)} sessions, "
+              f"from {holdout_days[0]}  (train ends {train_days[-1]})")
+    print()
 
-    losers = T[~T.won].sort_values("net_pnl")
+    tr_trades, tr_skip = ep.run_backtest(
+        [(d, by_day[d]) for d in train_days], **kw)
+    _report("train", tr_trades, tr_skip, args.lot)
+
+    ho_trades, ho_skip = (ep.run_backtest([(d, by_day[d]) for d in holdout_days], **kw)
+                          if holdout_days else (pd.DataFrame(), []))
+    if holdout_days:
+        _report("holdout", ho_trades, ho_skip, args.lot)
+
+    all_trades = pd.concat([t for t in (tr_trades, ho_trades) if not t.empty],
+                           ignore_index=True)
+    if all_trades.empty:
+        print("no sessions produced a trade")
+        return 1
+    print()
+    _report("combined", all_trades, tr_skip + ho_skip, args.lot)
+
+    if holdout_days and not ho_trades.empty and not tr_trades.empty:
+        drift = ho_trades.net_pnl.mean() - tr_trades.net_pnl.mean()
+        print(f"\nholdout minus train: Rs {drift:+,.1f}/trade "
+              f"({'held up' if drift > -50 else 'DEGRADED out of sample'})")
+
+    losers = all_trades[~all_trades.won].sort_values("net_pnl")
     if len(losers):
-        print(f"\nlosing sessions ({len(losers)}):")
+        print(f"\nlosing sessions ({len(losers)} of {len(all_trades)}):")
         for _, r in losers.iterrows():
-            print(f"   {r.session}  K={r.strike:.0f}  settle={r.settlement:,.1f}  "
-                  f"net Rs {r.net_pnl:+,.0f}")
+            side = "holdout" if r.session in set(holdout_days) else "train"
+            print(f"   {r.session}  {side:<7} K={r.strike:.0f}  "
+                  f"settle={r.settlement:,.1f}  net Rs {r.net_pnl:+,.0f}")
 
     plan = sizing.plan_position(args.capital, survive_move_pct=args.survive)
     print(f"\nsizing on Rs {args.capital:,.0f} surviving a "
@@ -216,7 +237,7 @@ def cmd_expiry_put(args) -> int:
           f"- UNBOUNDED beyond this move")
 
     if args.out:
-        T.to_csv(args.out, index=False)
+        all_trades.to_csv(args.out, index=False)
         print(f"\nledger -> {args.out}")
     return 0
 
@@ -243,6 +264,8 @@ def main(argv: list[str] | None = None) -> int:
     e.add_argument("--lot", type=int, default=65)
     e.add_argument("--capital", type=float, default=400_000.0)
     e.add_argument("--survive", type=float, default=sizing.DEFAULT_SURVIVE_MOVE_PCT)
+    e.add_argument("--holdout", type=int, default=ep.DEFAULT_HOLDOUT_SESSIONS,
+                   help="sessions sealed from the tail; 0 disables the split")
     e.add_argument("--out", type=Path, default=None)
     e.set_defaults(func=cmd_expiry_put)
 

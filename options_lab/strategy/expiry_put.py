@@ -19,6 +19,7 @@ market, not of the payoff. The loss is unbounded; size accordingly.
 from __future__ import annotations
 
 from datetime import date, time
+from typing import Iterable, Sequence
 
 import numpy as np
 import pandas as pd
@@ -128,3 +129,108 @@ def settle_trade(*, strike: float, credit: float, settlement: float,
         "gross_pnl": gross, "cost": charges.total, "net_pnl": net,
         "won": net > 0,
     }
+
+
+DEFAULT_ENTRY = time(11, 0)
+DEFAULT_HOLDOUT_SESSIONS = 30
+
+
+class SessionSkipped(Exception):
+    """This session could not be priced. Carries why, so it is never silent."""
+
+
+def run_session(
+    day: date,
+    chain: pd.DataFrame,
+    *,
+    lot_size: int,
+    otm_pct: float = DEFAULT_OTM_PCT,
+    entry_time: time = DEFAULT_ENTRY,
+    lots: int = 1,
+    regime: str = "quoted",
+) -> dict:
+    """One expiry session -> one trade. Raises SessionSkipped with a reason.
+
+    Settlement is derived from the SAME chain that is traded: at 0 DTE there is
+    no carry left, so the put-call-parity forward converges to spot. That keeps
+    entry, strike and settlement on one source, so a data error cannot shift
+    only one of them.
+    """
+    ts = pd.to_datetime(chain["ts"])
+
+    before = chain[ts.dt.time <= entry_time]
+    if before.empty:
+        raise SessionSkipped(f"no bars at or before {entry_time}")
+
+    snapshot = (before.assign(ts=pd.to_datetime(before["ts"]))
+                      .sort_values("ts")
+                      .groupby(["strike", "right"], as_index=False).last())
+
+    forward = parity_forward(snapshot)
+    strike = select_strike(snapshot["strike"].unique(), forward=forward,
+                           otm_pct=otm_pct)
+
+    leg = snapshot[(snapshot["strike"] == strike) & (snapshot["right"] == "PE")]
+    if leg.empty or float(leg["close"].iloc[0]) <= 0:
+        raise SessionSkipped(f"no PE quote at strike {strike:g}")
+    credit = float(leg["close"].iloc[0])
+
+    window = chain[(ts.dt.time >= SETTLE_FROM) & (ts.dt.time < SETTLE_TO)]
+    if window.empty:
+        raise SessionSkipped("no bars in the settlement window")
+
+    forwards = []
+    for _, minute in window.assign(ts=pd.to_datetime(window["ts"])).groupby("ts"):
+        try:
+            forwards.append(parity_forward(minute))
+        except (ThinChain, NotASnapshot):
+            continue
+    if not forwards:
+        raise SessionSkipped("settlement window too thin to price")
+
+    trade = settle_trade(strike=strike, credit=credit,
+                         settlement=float(np.mean(forwards)),
+                         lot_size=lot_size, lots=lots, regime=regime)
+    trade.update(session=day, forward=forward,
+                 otm_realised=(forward - strike) / forward)
+    return trade
+
+
+def run_backtest(
+    sessions: Iterable[tuple[date, pd.DataFrame]],
+    *,
+    lot_size: int,
+    otm_pct: float = DEFAULT_OTM_PCT,
+    entry_time: time = DEFAULT_ENTRY,
+    lots: int = 1,
+    regime: str = "quoted",
+) -> tuple[pd.DataFrame, list[tuple[date, str]]]:
+    """Run every session. Returns (trades, skipped) - skips are never silent."""
+    trades, skipped = [], []
+    for day, chain in sessions:
+        try:
+            trades.append(run_session(day, chain, lot_size=lot_size,
+                                      otm_pct=otm_pct, entry_time=entry_time,
+                                      lots=lots, regime=regime))
+        except (SessionSkipped, ThinChain, NotASnapshot) as exc:
+            skipped.append((day, str(exc)[:80]))
+    return pd.DataFrame(trades), skipped
+
+
+def split_sessions(
+    days: Sequence[date], *, holdout: int = DEFAULT_HOLDOUT_SESSIONS
+) -> tuple[list[date], list[date]]:
+    """Seal the most recent `holdout` sessions. Chronological, never random.
+
+    Honest here for one specific reason: this strategy has NO fitted parameter.
+    Entry time and strike distance came from a prior sweep, not from this code,
+    so holding sessions back costs nothing in sample and the holdout is
+    genuinely untouched rather than merely unexamined.
+    """
+    ordered = sorted(set(days))
+    if holdout >= len(ordered):
+        raise ValueError(
+            f"holdout of {holdout} leaves no training sessions out of "
+            f"{len(ordered)}; a split needs data on both sides"
+        )
+    return ordered[:-holdout], ordered[-holdout:]
