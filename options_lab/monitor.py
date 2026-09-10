@@ -83,12 +83,41 @@ def check_credit(trades: pd.DataFrame) -> Check:
     )
 
 
-def check_lot_size(current: int, *, assumed: int = ASSUMED_LOT) -> Check:
+def observed_lot(trades: pd.DataFrame) -> int:
+    """The lot the most recent trade actually used.
+
+    Under dated lot sizes there is no single scalar to hand the check, and
+    passing the sentinel string through made it report `measured: dated` and
+    FAIL - a spurious failure that would have masked a real one.
+    """
+    _require(trades)
+    if "lot_size" not in trades:
+        raise KeyError(
+            "trade ledger has no lot_size column; a rupee-denominated check "
+            "cannot be run against it"
+        )
+    return int(trades.sort_values("session")["lot_size"].iloc[-1])
+
+
+def check_lot_size(current: int, *, assumed: int = ASSUMED_LOT,
+                   trades: pd.DataFrame | None = None) -> Check:
+    """Is the live lot the one the economics were measured at?
+
+    Given a ledger, this also refuses a window that SPANS a lot change. Half a
+    window at 25 and half at 75 is not one economics measured over 30 sessions;
+    it is two economics averaged into a number that describes neither.
+    """
+    seen = (sorted({int(v) for v in trades["lot_size"]})
+            if trades is not None and "lot_size" in trades else [current])
+    mixed = len(seen) > 1
+    status = "fail" if (mixed or current != assumed) else "pass"
+    measured = " and ".join(str(v) for v in seen) if mixed else f"{current}"
     return Check(
         name="lot size",
-        status="pass" if current == assumed else "fail",
-        measured=f"{current}",
-        threshold=f"{assumed} (what the economics were measured at)",
+        status=status,
+        measured=measured,
+        threshold=f"{assumed} (what the economics were measured at)"
+                  + (", and one lot across the window" if mixed else ""),
         why="flat brokerage does not scale with lot size, so a lot change moves "
             "the whole cost fraction; at lot 25 this trade won 94.1%, not 100%",
     )
@@ -179,7 +208,7 @@ def run_checks(trades: pd.DataFrame, *, otm_pct: float,
     _require(trades)
     return [
         check_credit(trades),
-        check_lot_size(lot_size),
+        check_lot_size(lot_size, trades=trades),
         check_margin_of_safety(trades),
         check_regime(trades, otm_pct=otm_pct),
         check_variance_premium(trades),

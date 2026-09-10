@@ -25,6 +25,7 @@ import numpy as np
 import pandas as pd
 
 from options_lab import costs
+from options_lab import lots as lot_table
 
 DEFAULT_OTM_PCT = 0.0075        # 0.75%: pays more than the 100% cell at 1.00%
 DEFAULT_N_STRIKES = 10          # pinned, so the forward is deterministic
@@ -125,7 +126,7 @@ def settle_trade(*, strike: float, credit: float, settlement: float,
     net = gross - charges.total
     return {
         "strike": strike, "credit": credit, "settlement": settlement,
-        "intrinsic": intrinsic, "qty": qty,
+        "intrinsic": intrinsic, "lot_size": lot_size, "lots": lots, "qty": qty,
         "gross_pnl": gross, "cost": charges.total, "net_pnl": net,
         "won": net > 0,
     }
@@ -133,6 +134,12 @@ def settle_trade(*, strike: float, credit: float, settlement: float,
 
 DEFAULT_ENTRY = time(11, 0)
 DEFAULT_HOLDOUT_SESSIONS = 30
+
+# Pass as `lot_size` to look the lot up per session instead of pinning one.
+# NIFTY ran 50 / 25 / 75 / 65 inside this sample, and because brokerage is a
+# flat Rs 20/order the lot moves the cost fraction too, so a single pinned
+# number is not even a clean rescale of the others.
+DATED_LOT = "dated"
 
 
 class SessionSkipped(Exception):
@@ -199,20 +206,30 @@ def run_session(
 def run_backtest(
     sessions: Iterable[tuple[date, pd.DataFrame]],
     *,
-    lot_size: int,
+    lot_size: int | str,
     otm_pct: float = DEFAULT_OTM_PCT,
     entry_time: time = DEFAULT_ENTRY,
     lots: int = 1,
     regime: str = "quoted",
+    underlying: str = "NIFTY",
 ) -> tuple[pd.DataFrame, list[tuple[date, str]]]:
-    """Run every session. Returns (trades, skipped) - skips are never silent."""
+    """Run every session. Returns (trades, skipped) - skips are never silent.
+
+    `lot_size` is either an explicit int, or DATED_LOT to take each session's
+    lot from the verified NSE history. A session the history cannot cover is
+    skipped WITH ITS REASON rather than run at a guessed lot, so the sample
+    shrinks visibly instead of the rupee figures being quietly wrong.
+    """
     trades, skipped = [], []
     for day, chain in sessions:
         try:
-            trades.append(run_session(day, chain, lot_size=lot_size,
+            lot = (lot_table.lot_size_on(underlying, day)
+                   if lot_size == DATED_LOT else lot_size)
+            trades.append(run_session(day, chain, lot_size=lot,
                                       otm_pct=otm_pct, entry_time=entry_time,
                                       lots=lots, regime=regime))
-        except (SessionSkipped, ThinChain, NotASnapshot) as exc:
+        except (SessionSkipped, ThinChain, NotASnapshot,
+                lot_table.NoLotSize) as exc:
             skipped.append((day, str(exc)[:80]))
     return pd.DataFrame(trades), skipped
 

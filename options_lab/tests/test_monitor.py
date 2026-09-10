@@ -164,3 +164,42 @@ def test_an_empty_ledger_is_refused_rather_than_reported_as_healthy():
     """No trades is not the same as no problems."""
     with pytest.raises(ValueError):
         monitor.run_checks(pd.DataFrame(), otm_pct=0.0075, lot_size=65)
+
+
+# --- the lot the trades actually used --------------------------------------
+def test_the_observed_lot_is_the_most_recent_one_the_trades_used():
+    """Under dated lots the CLI has no scalar to hand the check, and passing
+    the sentinel through made it report `measured: dated` and FAIL."""
+    led = _ledger(n=5, lot=75)
+
+    assert monitor.observed_lot(led) == 75
+
+
+def test_a_window_that_spans_a_lot_change_is_reported_not_averaged():
+    """Half the window at 25 and half at 75 is not a window with one economics.
+    The most recent lot is the live one, but the mix has to be visible."""
+    led = _ledger(n=6)
+    led.loc[0:2, "lot_size"] = 25
+    led.loc[3:5, "lot_size"] = 75
+
+    c = monitor.check_lot_size(monitor.observed_lot(led), trades=led)
+
+    assert c.status == "fail"
+    assert "25" in c.measured and "75" in c.measured
+
+
+def test_a_single_lot_window_reports_just_that_lot():
+    led = _ledger(n=6, lot=65)
+
+    c = monitor.check_lot_size(monitor.observed_lot(led), trades=led)
+
+    assert c.status == "pass"
+    assert c.measured == "65"
+
+
+def test_observed_lot_refuses_a_ledger_without_the_column():
+    """A ledger with no lot_size cannot support a rupee-denominated check."""
+    led = _ledger(n=3).drop(columns=["lot_size"])
+
+    with pytest.raises(KeyError):
+        monitor.observed_lot(led)

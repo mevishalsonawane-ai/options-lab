@@ -145,11 +145,32 @@ def _load_expiry_sessions(cache: Path):
     return out
 
 
-def _report(label: str, trades: pd.DataFrame, skipped: list, lot: int) -> None:
+def _lot_arg(value: str) -> int | str:
+    """--lot takes a number, or "dated" to use each session own era lot.
+
+    Defaulting to dated would be the honest choice in isolation, but it
+    silently drops every 2023 session (NSE publishes no lot column before
+    2024-01-01), so the default stays pinned and the sample change is
+    something you ask for rather than something that happens to you.
+    """
+    if value == ep.DATED_LOT:
+        return ep.DATED_LOT
+    try:
+        return int(value)
+    except ValueError:
+        raise argparse.ArgumentTypeError(
+            f"--lot takes an integer or {ep.DATED_LOT!r}, not {value!r}"
+        ) from None
+
+
+def _report(label: str, trades: pd.DataFrame, skipped: list, lot) -> None:
     if trades.empty:
         print(f"{label:<9}: no trades ({len(skipped)} skipped)")
         return
-    credit = (trades.credit * lot).median()
+    # Read the lot off the trades, not off the argument: under DATED_LOT it
+    # varies by session, and a per-lot credit quoted at the wrong lot is the
+    # exact error this change exists to remove.
+    credit = (trades.credit * trades.lot_size).median()
     print(f"{label:<9}: n={len(trades):<4} "
           f"win {100*trades.won.mean():6.2f}%  "
           f"mean Rs {trades.net_pnl.mean():+8.1f}  "
@@ -273,7 +294,11 @@ def cmd_regime(args) -> int:
           f"({recent.session.iloc[0]} .. {recent.session.iloc[-1]})")
     print()
 
-    checks = monitor.run_checks(recent, otm_pct=args.otm_pct, lot_size=args.lot)
+    # Never hand the DATED_LOT sentinel to the check - it reported
+    # `measured: dated` and FAILed, which would have masked a real failure.
+    lot = (monitor.observed_lot(recent) if args.lot == ep.DATED_LOT
+           else args.lot)
+    checks = monitor.run_checks(recent, otm_pct=args.otm_pct, lot_size=lot)
     for c in checks:
         print("  " + c.format())
 
@@ -310,7 +335,9 @@ def main(argv: list[str] | None = None) -> int:
     e.add_argument("--otm-pct", type=float, default=ep.DEFAULT_OTM_PCT)
     e.add_argument("--entry", default="11:00")
     e.add_argument("--regime", default="quoted", choices=list(costs.REGIMES))
-    e.add_argument("--lot", type=int, default=65)
+    e.add_argument("--lot", type=_lot_arg, default=65,
+                   help="lot size, or dated to use the verified "
+                        "NSE lot for each session")
     e.add_argument("--capital", type=float, default=400_000.0)
     e.add_argument("--survive", type=float, default=sizing.DEFAULT_SURVIVE_MOVE_PCT)
     e.add_argument("--holdout", type=int, default=ep.DEFAULT_HOLDOUT_SESSIONS,
@@ -327,7 +354,7 @@ def main(argv: list[str] | None = None) -> int:
     r.add_argument("--otm-pct", type=float, default=ep.DEFAULT_OTM_PCT)
     r.add_argument("--entry", default="11:00")
     r.add_argument("--regime", default="quoted", choices=list(costs.REGIMES))
-    r.add_argument("--lot", type=int, default=65)
+    r.add_argument("--lot", type=_lot_arg, default=65)
     r.set_defaults(func=cmd_regime)
 
     args = p.parse_args(argv)

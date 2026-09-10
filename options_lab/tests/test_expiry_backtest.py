@@ -171,3 +171,66 @@ def test_the_boundary_date_is_recoverable_from_the_split():
 
     assert min(holdout) > max(train)
     assert (min(holdout) - max(train)).days > 0
+
+
+# --- dated lot sizes -------------------------------------------------------
+def test_dated_lots_use_each_session_own_era_not_one_pinned_number():
+    """NIFTY ran 50, then 25, then 75, then 65 inside this sample. Pinning 65
+    scales a 2024 session's P&L by 2.6x, and because brokerage is flat it moves
+    the cost fraction too - so it is not even a clean rescale."""
+    old = date(2024, 5, 2)          # lot 25 era
+    new = date(2026, 4, 2)          # lot 65 era
+
+    trades, _ = ep.run_backtest(
+        [(old, _session_chain(old)), (new, _session_chain(new))],
+        lot_size=ep.DATED_LOT)
+
+    by_day = trades.set_index("session")
+    assert by_day.loc[old, "lot_size"] == 25
+    assert by_day.loc[new, "lot_size"] == 65
+
+
+def test_an_explicit_lot_still_overrides_the_history():
+    """The pinned form has to keep working; every existing result used it."""
+    day = date(2024, 5, 2)
+
+    trades, _ = ep.run_backtest([(day, _session_chain(day))], lot_size=65)
+
+    assert trades.iloc[0]["lot_size"] == 65
+
+
+def test_a_session_the_history_cannot_cover_is_skipped_with_its_reason():
+    """Skipped and named, never run at a guessed lot. The sample shrinks
+    visibly instead of the rupee figures being quietly wrong."""
+    ancient = date(2019, 1, 3)
+
+    trades, skipped = ep.run_backtest(
+        [(ancient, _session_chain(ancient))], lot_size=ep.DATED_LOT)
+
+    assert trades.empty
+    assert len(skipped) == 1
+    assert "lot history" in skipped[0][1]
+
+
+def test_dated_lots_follow_the_underlying():
+    day = date(2026, 4, 2)
+
+    nifty, _ = ep.run_backtest([(day, _session_chain(day))],
+                               lot_size=ep.DATED_LOT, underlying="NIFTY")
+    bank, _ = ep.run_backtest([(day, _session_chain(day))],
+                              lot_size=ep.DATED_LOT, underlying="BANKNIFTY")
+
+    assert nifty.iloc[0]["lot_size"] != bank.iloc[0]["lot_size"]
+
+
+def test_the_lot_change_moves_the_cost_fraction_not_just_the_scale():
+    """The reason this is a correctness fix and not a cosmetic one: Rs 20/order
+    is flat, so at a smaller lot it eats a larger share of the same credit."""
+    day = date(2024, 5, 2)
+    small, _ = ep.run_backtest([(day, _session_chain(day))], lot_size=25)
+    large, _ = ep.run_backtest([(day, _session_chain(day))], lot_size=65)
+
+    share_small = small.iloc[0]["cost"] / (small.iloc[0]["credit"] * 25)
+    share_large = large.iloc[0]["cost"] / (large.iloc[0]["credit"] * 65)
+
+    assert share_small > share_large, "flat brokerage bites harder at a small lot"
