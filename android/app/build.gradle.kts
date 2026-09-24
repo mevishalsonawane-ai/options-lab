@@ -1,3 +1,5 @@
+import java.security.MessageDigest
+
 plugins {
     id("com.android.application")
     kotlin("android")
@@ -18,9 +20,9 @@ android {
         // The bundled 170-session record is hashed at build time; the app
         // re-hashes it at runtime, so a swapped or truncated chain file is
         // caught before any backtest reads it.
-        val digest = java.security.MessageDigest.getInstance("SHA-256")
+        val digest = MessageDigest.getInstance("SHA-256")
             .digest(file("src/main/assets/expiry_nifty.olx").readBytes())
-            .joinToString("") { "%02x".format(it) }
+            .joinToString("") { b -> "%02x".format(b) }
         buildConfigField("String", "EXPIRY_SHA256", "\"$digest\"")
     }
 
