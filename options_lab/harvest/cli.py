@@ -169,10 +169,12 @@ def main(argv: list[str] | None = None) -> int:
         # run at 375/502 contracts.
         done = 0
         pending: dict[date, list] = {}
+        touched: set[date] = set()
 
         def flush() -> int:
             written = 0
             for day, frames in pending.items():
+                touched.add(day)
                 part = pd.concat(frames, ignore_index=True)
                 store.write_day(args.root, underlying, day, part,
                                 source="upstox", fetched_at=fetched_at)
@@ -199,7 +201,10 @@ def main(argv: list[str] | None = None) -> int:
         # backfill holds only contracts still listed today; its real front
         # chain expired and is unrecoverable. Chain-aggregate features are
         # valid on same_day sessions only.
-        for day in store.harvested_days(args.root, underlying):
+        # Only the partitions this run wrote. Re-recording every harvested
+        # day stamped them all collected_on=today, which is a claim about
+        # collection this run did not make.
+        for day in sorted(touched):
             part = store.read_day(args.root, underlying, day)
             opts = part[part["right"] != "IX"]
             n_contracts = int(opts["contract_id"].nunique())

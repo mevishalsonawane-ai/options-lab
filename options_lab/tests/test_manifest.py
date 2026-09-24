@@ -112,3 +112,20 @@ def test_a_partition_with_no_option_contracts_cannot_claim_same_day():
 def test_a_populated_partition_collected_today_still_claims_same_day():
     assert manifest.scope_for(day=date(2026, 9, 10), today=date(2026, 9, 10),
                               failures=0, n_contracts=101) == manifest.SAME_DAY
+
+
+def test_a_later_backfill_of_a_same_day_session_does_not_downgrade_it(tmp_path):
+    """The nightly run re-fetches yesterday through the dated endpoint and
+    re-records it. That used to overwrite yesterday's same_day row with
+    backfill, so no session stayed same_day for more than one night."""
+    manifest.record(tmp_path, "NIFTY", date(2026, 9, 4), n_expiries=3, n_contracts=420,
+                    scope="same_day", collected_on=date(2026, 9, 4))
+    manifest.record(tmp_path, "NIFTY", date(2026, 9, 4), n_expiries=3, n_contracts=431,
+                    scope="backfill", collected_on=date(2026, 9, 5))
+
+    got = manifest.read(tmp_path, "NIFTY")
+
+    assert got.loc[0, "scope"] == "same_day"
+    assert got.loc[0, "collected_on"] == date(2026, 9, 4)
+    assert got.loc[0, "n_contracts"] == 431
+    assert manifest.complete_chain_sessions(tmp_path, "NIFTY") == [date(2026, 9, 4)]

@@ -74,7 +74,16 @@ options_lab/
   ic.py         panel IC with its null band and controls attached
   data/         170 expiry-session chains, harvested bars, instrument masters
 docs/design.md  the full spec, including the stopping rule
+android/        the standalone Android app (Kotlin); engine/ is at parity with this harness
 ```
+
+## On a phone
+
+`android/` is the same harness as a standalone Kotlin app: the backtest, the
+variants side by side, the health checks, paper tickets, the IC table, the
+signal lab and the nightly harvest, with a live-watch notification, risk
+alerts, price alarms and a PIN/biometric-locked encrypted ledger. See
+[android/README.md](android/README.md).
 
 ## Invariants worth knowing before you change anything
 

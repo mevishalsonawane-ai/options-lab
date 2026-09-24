@@ -139,17 +139,31 @@ data class BacktestReport(
             sessions: List<Session>, params: ExpiryPut.Params, holdout: Int,
             capital: Double, survive: Double,
         ): BacktestReport {
-            val days = sessions.map { it.day }
+            val (trades, skips) = ExpiryPut.runBacktest(sessions, params)
+            return assemble(sessions.map { it.day }, trades, skips, params, holdout, capital, survive)
+        }
+
+        /**
+         * Split an already-run backtest into train and holdout. Each session's
+         * trade depends only on its own chain, so running everything first and
+         * sealing the tail afterwards is the same computation as the PC's -
+         * and it lets a phone stream sessions instead of holding them all.
+         */
+        fun assemble(
+            days: List<java.time.LocalDate>, trades: List<ExpiryPut.Trade>, skips: List<ExpiryPut.Skip>,
+            params: ExpiryPut.Params, holdout: Int, capital: Double, survive: Double,
+        ): BacktestReport {
             val (trainDays, holdoutDays) =
-                if (holdout > 0) ExpiryPut.splitSessions(days, holdout) else days to emptyList()
-            val byDay = sessions.associateBy { it.day }
-            val (tr, trSkip) = ExpiryPut.runBacktest(trainDays.map { byDay.getValue(it) }, params)
-            val (ho, hoSkip) = if (holdoutDays.isNotEmpty())
-                ExpiryPut.runBacktest(holdoutDays.map { byDay.getValue(it) }, params) else emptyList<ExpiryPut.Trade>() to emptyList()
+                if (holdout > 0) ExpiryPut.splitSessions(days, holdout) else days.sorted() to emptyList()
+            val sealed = holdoutDays.toSet()
+            val sorted = trades.sortedBy { it.session }
             var plan: Sizing.Plan? = null
             var err: String? = null
             try { plan = Sizing.planPosition(capital, survive) } catch (e: IllegalArgumentException) { err = e.message }
-            return BacktestReport(params, days, tr, ho, trainDays, holdoutDays, trSkip + hoSkip, plan, err)
+            return BacktestReport(
+                params, days.sorted(), sorted.filter { it.session !in sealed }, sorted.filter { it.session in sealed },
+                trainDays, holdoutDays, skips.sortedBy { it.day }, plan, err,
+            )
         }
     }
 }

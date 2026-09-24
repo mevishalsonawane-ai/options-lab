@@ -1,0 +1,89 @@
+package com.optionslab.app.security
+
+import java.security.MessageDigest
+import java.security.SecureRandom
+import javax.crypto.SecretKeyFactory
+import javax.crypto.spec.PBEKeySpec
+
+/**
+ * The app PIN. Only a salted PBKDF2-SHA256 verifier is stored, inside the
+ * vault, so the PIN itself exists nowhere on the device. Comparison is
+ * constant-time. Failed attempts escalate a lockout that survives restarts,
+ * and an optional wipe destroys the vault after too many.
+ */
+object PinLock {
+    private const val ITERATIONS = 150_000
+    private const val FREE_ATTEMPTS = 5
+    const val WIPE_AFTER = 10
+    const val MIN_LENGTH = 6
+
+    private const val K_SALT = "pin.salt"
+    private const val K_HASH = "pin.hash"
+    private const val K_ITER = "pin.iter"
+    private const val K_FAILS = "pin.fails"
+    private const val K_UNTIL = "pin.lockedUntilWall"
+
+    sealed interface Result {
+        data object Ok : Result
+        data class Wrong(val attemptsLeftBeforeLockout: Int) : Result
+        data class LockedOut(val secondsLeft: Long) : Result
+        data object Wiped : Result
+    }
+
+    val isSet: Boolean get() = SecurePrefs.getString(K_HASH) != null
+
+    private fun derive(pin: CharArray, salt: ByteArray, iterations: Int): ByteArray {
+        val spec = PBEKeySpec(pin, salt, iterations, 256)
+        try {
+            return SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256").generateSecret(spec).encoded
+        } finally {
+            spec.clearPassword()
+        }
+    }
+
+    private fun hex(b: ByteArray) = b.joinToString("") { "%02x".format(it) }
+    private fun unhex(s: String) = ByteArray(s.length / 2) { s.substring(2 * it, 2 * it + 2).toInt(16).toByte() }
+
+    fun setPin(pin: CharArray) {
+        require(pin.size >= MIN_LENGTH) { "PIN must be at least $MIN_LENGTH digits" }
+        require(pin.distinct().size > 1) { "a PIN of one repeated digit is too easy to guess" }
+        val salt = ByteArray(16).also { SecureRandom().nextBytes(it) }
+        val hash = derive(pin, salt, ITERATIONS)
+        SecurePrefs.putAll(mapOf(K_SALT to hex(salt), K_HASH to hex(hash), K_ITER to ITERATIONS, K_FAILS to 0, K_UNTIL to 0L))
+        pin.fill('\u0000')
+    }
+
+    fun lockoutSecondsLeft(): Long {
+        val until = SecurePrefs.getLong(K_UNTIL, 0L)
+        val left = (until - System.currentTimeMillis()) / 1000
+        return if (left > 0) left else 0
+    }
+
+    fun verify(pin: CharArray, wipeOnExhaustion: Boolean): Result {
+        val wait = lockoutSecondsLeft()
+        if (wait > 0) { pin.fill('\u0000'); return Result.LockedOut(wait) }
+        val salt = SecurePrefs.getString(K_SALT)?.let(::unhex)
+        val want = SecurePrefs.getString(K_HASH)?.let(::unhex)
+        if (salt == null || want == null) { pin.fill('\u0000'); return Result.Wrong(0) }
+        val got = derive(pin, salt, SecurePrefs.getInt(K_ITER, ITERATIONS))
+        pin.fill('\u0000')
+        if (MessageDigest.isEqual(got, want)) {
+            SecurePrefs.putAll(mapOf(K_FAILS to 0, K_UNTIL to 0L))
+            return Result.Ok
+        }
+        val fails = SecurePrefs.getInt(K_FAILS, 0) + 1
+        if (wipeOnExhaustion && fails >= WIPE_AFTER) return Result.Wiped
+        val updates = mutableMapOf<String, Any?>(K_FAILS to fails)
+        if (fails >= FREE_ATTEMPTS) {
+            // 30 s, 60 s, 120 s ... capped at an hour.
+            val seconds = minOf(30L shl (fails - FREE_ATTEMPTS), 3600L)
+            updates[K_UNTIL] = System.currentTimeMillis() + seconds * 1000
+            SecurePrefs.putAll(updates)
+            return Result.LockedOut(seconds)
+        }
+        SecurePrefs.putAll(updates)
+        return Result.Wrong(FREE_ATTEMPTS - fails)
+    }
+
+    fun failures(): Int = SecurePrefs.getInt(K_FAILS, 0)
+}

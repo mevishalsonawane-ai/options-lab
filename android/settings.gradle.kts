@@ -37,6 +37,8 @@ include(":engine")
 val sdkConfigured = System.getenv("ANDROID_HOME") != null ||
     System.getenv("ANDROID_SDK_ROOT") != null ||
     file("local.properties").takeIf { it.exists() }?.readText()?.contains("sdk.dir") == true
+// Read by the root buildscript, which decides whether to load the Android plugin.
+System.setProperty("optionslab.android", sdkConfigured.toString())
 if (sdkConfigured) {
     include(":app")
 } else {

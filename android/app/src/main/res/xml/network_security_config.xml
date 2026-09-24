@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    HTTPS only, and only the system's certificate authorities. A user-installed
+    CA - the usual way to read an app's traffic - is NOT trusted, so the
+    requests this app makes cannot be intercepted by adding one.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

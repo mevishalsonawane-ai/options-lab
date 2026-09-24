@@ -201,26 +201,36 @@ object Ic {
         val cleared: List<IcRow> get() = rows.filter { it.clearsCost && it.beatsNull }
     }
 
-    fun measure(underlying: String, days: List<Session>, regime: String, progress: (Float) -> Unit = {}): IcResult {
-        require(days.isNotEmpty()) { "no sessions to measure. Run the harvester first." }
+    /**
+     * The `ic` command. Days are consumed as a sequence and never held
+     * together: each is reduced to its small per-horizon panels as it streams.
+     */
+    fun measure(underlying: String, days: Sequence<Session>, regime: String, progress: (Int) -> Unit = {}): IcResult {
         val lot = LOTS.getValue(underlying)
-        val prem = days.mapNotNull { atmPremium(it) }
+        val prem = ArrayList<Double>()
+        val seen = ArrayList<java.time.LocalDate>()
+        val panels = HORIZONS.associateWith { ArrayList<Pair<Int, Panel>>() }
+        days.forEachIndexed { i, d ->
+            seen += d.day
+            atmPremium(d)?.let { prem += it }
+            for (h in HORIZONS) sessionPanel(d, h)?.let { panels.getValue(h) += i to it }
+            progress(i + 1)
+        }
+        require(seen.isNotEmpty()) { "no sessions to measure. Run the harvester first." }
         require(prem.isNotEmpty()) { "no traded option premiums found; cannot express cost in index points." }
         val median = Stats.median(prem)
         val breakeven = Costs.breakevenIndexPoints(median, lot, 1, regime, 0.5)
         val rows = ArrayList<IcRow>()
-        HORIZONS.forEachIndexed { hi, h ->
-            val panels = days.mapIndexedNotNull { i, d -> sessionPanel(d, h)?.let { i to it } }
-            if (panels.isNotEmpty()) {
-                val sess = panels.flatMap { (i, p) -> List(p.size) { i } }.toIntArray()
-                fun cat(sel: (Panel) -> DoubleArray) = panels.flatMap { sel(it.second).asList() }.toDoubleArray()
-                val fwd = cat { it.forward }
-                val controls = listOf(cat { it.indexRet }, cat { it.lagRet })
-                rows += panelIc(cat { it.flow }, fwd, sess, controls, "flow", h, breakeven)
-                rows += panelIc(cat { it.flowNorm }, fwd, sess, controls, "flow_norm", h, breakeven)
-            }
-            progress((hi + 1f) / HORIZONS.size)
+        for (h in HORIZONS) {
+            val ps = panels.getValue(h)
+            if (ps.isEmpty()) continue
+            val sess = ps.flatMap { (i, p) -> List(p.size) { i } }.toIntArray()
+            fun cat(sel: (Panel) -> DoubleArray) = ps.flatMap { sel(it.second).asList() }.toDoubleArray()
+            val fwd = cat { it.forward }
+            val controls = listOf(cat { it.indexRet }, cat { it.lagRet })
+            rows += panelIc(cat { it.flow }, fwd, sess, controls, "flow", h, breakeven)
+            rows += panelIc(cat { it.flowNorm }, fwd, sess, controls, "flow_norm", h, breakeven)
         }
-        return IcResult(underlying, days.map { it.day }, median, lot, regime, breakeven, rows)
+        return IcResult(underlying, seen, median, lot, regime, breakeven, rows)
     }
 }

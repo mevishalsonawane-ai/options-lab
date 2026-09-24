@@ -75,15 +75,54 @@ object Olx {
     class BadFile(msg: String) : IllegalArgumentException(msg)
 
     fun read(input: InputStream, float32Prices: Boolean = false): List<Session> {
-        val inp = DataInputStream(BufferedInputStream(GZIPInputStream(input, 1 shl 16), 1 shl 16))
-        val magic = ByteArray(4).also { inp.readFully(it) }
-        if (!magic.contentEquals(MAGIC)) throw BadFile("not an OLX1 file")
-        val flags = inp.readUnsignedByte()
-        val ohl = flags and FLAG_OHL != 0
-        val hasVol = flags and FLAG_VOLUME != 0
-        val nDays = readVarint(inp).toInt()
-        val out = ArrayList<Session>(nDays)
-        repeat(nDays) {
+        val out = ArrayList<Session>()
+        forEach(input, float32Prices) { out += it }
+        return out
+    }
+
+    /**
+     * Decode one session at a time. A phone cannot hold all 170 chains at once
+     * (about 6.5M bars), so backtests stream them and keep only the trades.
+     * Return false from [visit] to stop early.
+     */
+    fun forEach(input: InputStream, float32Prices: Boolean = false, visit: (Session) -> Unit) {
+        forEachUntil(input, float32Prices) { visit(it); true }
+    }
+
+    fun forEachUntil(input: InputStream, float32Prices: Boolean = false, visit: (Session) -> Boolean) {
+        val r = Reader(input, float32Prices)
+        while (r.hasNext()) if (!visit(r.next())) return
+    }
+
+    /** Pull-style decoding, so callers can build lazy sequences over a file. */
+    fun sequence(input: InputStream, float32Prices: Boolean = false): Sequence<Session> =
+        Reader(input, float32Prices).asSequence()
+
+    class Reader(input: InputStream, private val float32Prices: Boolean) : Iterator<Session> {
+        private val inp = DataInputStream(BufferedInputStream(GZIPInputStream(input, 1 shl 16), 1 shl 16))
+        private val ohl: Boolean
+        private val hasVol: Boolean
+        private val nDays: Int
+        private var done = 0
+
+        init {
+            val magic = ByteArray(4).also { inp.readFully(it) }
+            if (!magic.contentEquals(MAGIC)) throw BadFile("not an OLX1 file")
+            val flags = inp.readUnsignedByte()
+            ohl = flags and FLAG_OHL != 0
+            hasVol = flags and FLAG_VOLUME != 0
+            nDays = readVarint(inp).toInt()
+        }
+
+        override fun hasNext(): Boolean {
+            if (done < nDays) return true
+            inp.close()
+            return false
+        }
+
+        override fun next(): Session {
+            if (done >= nDays) throw NoSuchElementException()
+            done++
             val day = LocalDate.ofEpochDay(readVarint(inp))
             val lotRaw = readVarint(inp).toInt()
             val nSeries = readVarint(inp).toInt()
@@ -120,9 +159,8 @@ object Olx {
                     open = open, high = high, low = low, volume = volume, oi = oi,
                 )
             }
-            out += Session(day, if (lotRaw == 0) null else lotRaw - 1, series)
+            return Session(day, if (lotRaw == 0) null else lotRaw - 1, series)
         }
-        return out
     }
 
     /**
@@ -130,7 +168,7 @@ object Olx {
      * 0.699999988. Rebuilding that exact value keeps every forward, strike
      * and P&L bit-comparable with the Python ledger.
      */
-    private fun price(paise: Long, float32: Boolean): Double {
+    internal fun price(paise: Long, float32: Boolean): Double {
         val d = paise / 100.0
         return if (float32) d.toFloat().toDouble() else d
     }
@@ -174,7 +212,7 @@ object Olx {
 
     private fun paise(x: Double): Long = Math.round(x * 100.0)
 
-    private fun readVarint(inp: DataInputStream): Long {
+    internal fun readVarint(inp: DataInputStream): Long {
         var shift = 0
         var result = 0L
         while (true) {
@@ -187,7 +225,7 @@ object Olx {
         }
     }
 
-    private fun readZigzag(inp: DataInputStream): Long {
+    internal fun readZigzag(inp: DataInputStream): Long {
         val v = readVarint(inp)
         return (v ushr 1) xor -(v and 1)
     }

@@ -73,7 +73,7 @@ class ResearchParityTest {
 
     @Test fun `ic table matches the PC on every row the rng does not touch`() {
         val meta = javaClass.getResource("/reference_ic_meta.json")!!.readText()
-        val res = Ic.measure("NIFTY", nifty, "quoted")
+        val res = Ic.measure("NIFTY", nifty.asSequence(), "quoted")
         near(res.medianPremium, Regex("\"median_premium\": ([0-9.]+)").find(meta)!!.groupValues[1].toDouble(), 1e-9, "premium")
         near(res.breakeven, Regex("\"breakeven\": ([0-9.]+)").find(meta)!!.groupValues[1].toDouble(), 1e-9, "breakeven")
         val ref = csv("reference_ic.csv")
