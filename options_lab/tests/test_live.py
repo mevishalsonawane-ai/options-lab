@@ -172,3 +172,23 @@ def test_the_ledger_ignores_rows_still_open(tmp_path):
     live.record_ticket(tmp_path, t)
 
     assert live.read_ledger(tmp_path).empty
+
+
+def test_a_settled_hedged_ticket_nets_the_wing_exactly_once(tmp_path):
+    """The ticket stores its credit net of the wing debit. Settling it used to
+    hand that net figure to settle_trade alongside wing_debit, which nets the
+    wing again - every hedged paper P&L came out one wing debit too low."""
+    from options_lab.strategy import expiry_put as ep
+
+    t = live.build_ticket(_chain(), session=date(2026, 9, 15),
+                          underlying="NIFTY", lot_size=65, wing_pct=0.0075)
+    live.record_ticket(tmp_path, t)
+    row = live.settle_ticket(tmp_path, date(2026, 9, 15), settlement=t.forward)
+
+    direct = ep.settle_trade(strike=t.strike, credit=t.credit + t.wing_debit,
+                             settlement=t.forward, lot_size=65,
+                             wing_strike=t.wing_strike, wing_debit=t.wing_debit)
+    assert row["credit"] == pytest.approx(t.credit)
+    assert row["net_pnl"] == pytest.approx(direct["net_pnl"])
+    # Both legs expire worthless, so gross is exactly the net credit received.
+    assert row["gross_pnl"] == pytest.approx(t.credit * t.qty)

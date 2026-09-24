@@ -192,11 +192,17 @@ def settle_ticket(ledger: Path, session: date, *, settlement: float,
             f"no open ticket for {session}; there is nothing to settle"
         )
     row = json.loads(path.read_text())
+    # The ticket stores its credit NET of the wing debit, and settle_trade
+    # nets the wing itself. Passing the net figure subtracted the wing twice
+    # on every hedged ticket and costed the short leg on the wrong premium,
+    # so the short leg's own credit is rebuilt first.
+    wing_debit = row.get("wing_debit") or 0.0
     trade = ep.settle_trade(
-        strike=row["strike"], credit=row["credit"], settlement=settlement,
+        strike=row["strike"], credit=row["credit"] + wing_debit,
+        settlement=settlement,
         lot_size=row["lot_size"], lots=row["lots"], regime=regime,
         wing_strike=row.get("wing_strike"),
-        wing_debit=row.get("wing_debit") or 0.0,
+        wing_debit=wing_debit,
     )
     forward = row["forward"]
     row.update(trade)
