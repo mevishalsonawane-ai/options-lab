@@ -57,7 +57,14 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
-      - uses: android-actions/setup-android@v3
+      # The hosted runner ships the Android SDK with ANDROID_HOME set; the
+      # Android Gradle plugin installs any missing platform once licences are
+      # accepted. (setup-android@v3 now fails asking for the retired "tools".)
+      - name: Accept Android SDK licences
+        run: |
+          test -n "$ANDROID_HOME"
+          SDKM=$(ls -d "$ANDROID_HOME"/cmdline-tools/*/bin/sdkmanager | sort -V | tail -1)
+          yes | "$SDKM" --licenses > /dev/null || true
       - uses: gradle/actions/setup-gradle@v4
       - name: Release keystore (optional)
         env:
