@@ -447,13 +447,9 @@ fun BrokerPage(model: AppModel) {
                 }
                 ParamTokens("Product", listOf("NRML" to (s.orderProduct == "NRML"), "MIS" to (s.orderProduct == "MIS"))) { i -> model.update { it.copy(orderProduct = if (i == 0) "NRML" else "MIS") } }
                 if (s.orderProduct == "MIS") Note("MIS positions are squared off by Zerodha before the close. The expiry put holds to settlement, so its orders are refused under MIS.")
-                val counts = listOf(2, 4, 8, 20)
-                ParamTokens("Orders per day", counts.map { "$it" to (it == s.maxOrdersPerDay) }) { i -> model.update { it.copy(maxOrdersPerDay = counts[i]) } }
-                val lots = listOf(1, 2, 4)
-                ParamTokens("Lots per order", lots.map { "$it" to (it == s.maxLotsPerOrder) }) { i -> model.update { it.copy(maxLotsPerOrder = lots[i]) } }
-                val values = listOf(50_000.0, 200_000.0, 500_000.0)
-                ParamTokens("Order value cap", values.map { rs(it) to (it == s.maxOrderValue) }) { i -> model.update { it.copy(maxOrderValue = values[i]) } }
-                LedgerLine("Sent today", "${Broker.sentToday()} of ${s.maxOrdersPerDay}")
+                // Order limits live in one place (TODO A6): More -> Bot -> Bot settings.
+                LedgerLine("Sent today", "${Broker.sentToday()}" + if (s.guardMaxTrades > 0) " of ${s.guardMaxTrades}" else "")
+                Note("Order limits (trades per day, lots, order value) are set in More → Bot → Bot settings and apply to paper and live alike.")
             }
         }
         if (b.loggedIn) {
@@ -615,7 +611,7 @@ private fun ManualOrder(model: AppModel) {
         ParamTokens("Expiry", expiries.map { it.toString().substring(5) to (it == expiry) }) { expiry = expiries[it] }
         ParamTokens("Option", listOf("PE" to (right == Right.PE), "CE" to (right == Right.CE))) { right = if (it == 0) Right.PE else Right.CE }
         ParamTokens("Side", listOf("SELL" to (side == Kite.Side.SELL), "BUY" to (side == Kite.Side.BUY))) { side = if (it == 0) Kite.Side.SELL else Kite.Side.BUY }
-        ParamTokens("Lots", (1..s.maxLotsPerOrder).map { "$it" to (it == lots) }) { lots = it + 1 }
+        ParamTokens("Lots", (1..(s.guardMaxLots.takeIf { it > 0 } ?: 5)).map { "$it" to (it == lots) }) { lots = it + 1 }
         loadErr?.let { Text(it, style = Type.bodySmall.copy(color = p.oxblood)) }
         if (strikes.isNotEmpty()) {
             spot?.let { Note("${underlying} ${"%,.1f".format(it)}: nearest listed strikes") }

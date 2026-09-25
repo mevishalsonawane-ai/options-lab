@@ -80,7 +80,14 @@ data class AppSettings(
 
     val live: Boolean get() = mode == "live"
 
-    fun limits() = com.optionslab.engine.Kite.Limits(maxOrdersPerDay, maxLotsPerOrder, maxOrderValue)
+    /**
+     * TODO A6: one set of limits. The Zerodha order checks use the Bot settings values ("off" = no cap),
+     * so the same numbers apply to paper and live and there is one place to change them.
+     */
+    fun limits() = com.optionslab.engine.Kite.Limits(
+        guardMaxTrades.takeIf { it > 0 } ?: Int.MAX_VALUE,
+        guardMaxLots.takeIf { it > 0 } ?: 1_000,
+        guardMaxValue.takeIf { it > 0 } ?: Double.MAX_VALUE)
     fun guardLimits() = com.optionslab.engine.risk.AccountGuard.Limits(guardKill, guardDailyLoss, guardDrawdownPct, guardMaxOpen,
         guardMaxTrades, guardMaxValue, guardMaxLots, guardCutoff.takeIf { it >= 0 }, guardNakedShort)
 

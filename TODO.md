@@ -27,7 +27,7 @@ Source paths prefixed `NTA:` are in D:\New Trading app.
       they currently run as time-scheduled baskets with NO breakout check. DO NOT ARM until A1 lands.
 - [x] A5. (done: `data/ExpirySquareOff.kt` from the market watch, paper + live, keeps the Expiry Put to settlement by default; toggles in Bot settings) Expiry-day square-off at 15:05 for all products (NTA: `services/expiry_squareoff.py`);
       IraAlgo currently settles at expiry / squares MIS at 15:15.
-- [ ] A6. Decide order limits: IraAlgo 4 orders/day + Rs 5L/order vs NTA guard limits.
+- [x] A6. (done: one set of limits in Bot settings; the Zerodha checks use them, the separate Zerodha caps are gone) Decide order limits: IraAlgo 4 orders/day + Rs 5L/order vs NTA guard limits.
 - [ ] A7. Minute market snapshots (BANKNIFTY/NIFTY/SENSEX/VIX + near-ATM options, 09:15-15:30).
       Source: `NTA:services/market_data_collector.py` -> `db/market_snapshots.duckdb`.
 - [ ] A8. Evening ORB replay (15:35-15:40) beside paper results. Source: `NTA:services/ai_signals/orb_shadow.py`
