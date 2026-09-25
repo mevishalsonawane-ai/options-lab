@@ -1,0 +1,15 @@
+# Every permission this app may hold. The build FAILS if the merged manifest
+# carries anything else, and the app flags any extra it finds at runtime.
+# Adding a line here is a security decision: say why beside it.
+android.permission.INTERNET                        # Upstox public candles, nothing else
+android.permission.ACCESS_NETWORK_STATE            # wait for a connection before a job
+android.permission.POST_NOTIFICATIONS              # live watch, risk alerts, alarms
+android.permission.USE_BIOMETRIC                   # fingerprint / face unlock
+android.permission.USE_FINGERPRINT                 # merged by androidx.biometric for Android 8
+android.permission.FOREGROUND_SERVICE              # the market-hours live watch
+android.permission.FOREGROUND_SERVICE_DATA_SYNC    # its declared type
+android.permission.VIBRATE                         # alert vibration
+android.permission.SCHEDULE_EXACT_ALARM            # 09:14 / 10:55 / 11:01 / 15:35 / 15:45
+android.permission.RECEIVE_BOOT_COMPLETED          # re-arm those alarms after a reboot
+android.permission.WAKE_LOCK                       # merged by WorkManager
+${applicationId}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION   # androidx.core, app-private

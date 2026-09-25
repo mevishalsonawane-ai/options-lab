@@ -69,8 +69,46 @@ object Integrity {
         md.digest().joinToString("") { "%02x".format(it) } == BuildConfig.EXPIRY_SHA256
     }.getOrDefault(false)
 
+    /** Every permission this installed app actually requests, as the system sees it. */
+    fun heldPermissions(context: Context): List<String> = runCatching {
+        @Suppress("DEPRECATION")
+        context.packageManager.getPackageInfo(context.packageName, android.content.pm.PackageManager.GET_PERMISSIONS)
+            .requestedPermissions?.toList() ?: emptyList()
+    }.getOrDefault(emptyList()).sorted()
+
+    fun allowedPermissions(context: Context): Set<String> =
+        BuildConfig.ALLOWED_PERMISSIONS.split(",").map { it.replace("\${applicationId}", context.packageName) }.toSet()
+
+    /**
+     * The sandbox, checked from inside. The build already refuses any permission
+     * off the allowlist; finding one here means this APK was altered after it
+     * was built. And with no <queries> declared, Android 11+ hides every other
+     * app from this one - so the list of apps visible here should hold only
+     * this app itself (system components aside).
+     */
+    fun sandbox(context: Context): Finding {
+        val extra = heldPermissions(context) - allowedPermissions(context)
+        if (extra.isNotEmpty()) return Finding("Sandbox", Severity.DANGER, "holds permissions it was never built with: ${extra.joinToString { it.substringAfterLast('.') }}")
+        val visible = runCatching {
+            @Suppress("DEPRECATION")
+            context.packageManager.getInstalledApplications(0).count {
+                it.packageName != context.packageName && it.flags and ApplicationInfo.FLAG_SYSTEM == 0
+            }
+        }.getOrDefault(0)
+        // Android always lets every app see the keyboard, the launcher and any
+        // app that opened it, so a handful is expected; more means the
+        // visibility restriction is not in force (an older Android, or tampering).
+        return when {
+            Build.VERSION.SDK_INT < Build.VERSION_CODES.R ->
+                Finding("Sandbox", Severity.NOTICE, "no sensitive permissions held; Android below 11 does not hide the list of installed apps")
+            visible > 5 -> Finding("Sandbox", Severity.DANGER, "can see $visible other installed apps; it should see almost none")
+            else -> Finding("Sandbox", Severity.OK, "no access to messages, mail, contacts, files or other apps' data")
+        }
+    }
+
     fun report(context: Context): List<Finding> {
         val out = ArrayList<Finding>()
+        out += sandbox(context)
         out += if (rooted()) Finding("Root", Severity.DANGER, "su binaries, Magisk or test-keys present")
         else Finding("Root", Severity.OK, "no root indicators found")
         out += if (hooked()) Finding("Hooking", Severity.DANGER, "an instrumentation framework is loaded or listening")

@@ -80,5 +80,15 @@ release APK is signed with the debug key so it still installs.
 - **Device integrity:** root, Frida/Xposed, debugger and a build-time SHA-256
   of the bundled chains are checked. On a compromised device biometrics are
   withdrawn; you can choose to refuse such devices entirely.
+- **Sandboxed from everything else on the phone.** It cannot read SMS,
+  mail or accounts, contacts, call logs, calendar, files, photos, or any
+  other app's data, and it cannot even list the apps you have installed (no
+  `<queries>`). Every such permission is explicitly removed in the manifest,
+  and the build *fails* if the final merged manifest - after every library -
+  holds anything outside `app/permissions-allowlist.txt`, asks to see other
+  apps, or declares an accessibility or notification-listener service. The
+  app re-checks its own permissions at runtime and shows them in plain words
+  under Cabinet → Security. The only file it ever touches is the one you pick
+  in the system file picker to import or export.
 - No backups, no device transfer, touches through overlays are ignored, and
   notifications show "Unlock to read" on the lock screen.

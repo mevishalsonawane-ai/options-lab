@@ -233,6 +233,29 @@ fun SecurityPage(model: AppModel) {
             }
         }
         item {
+            val held = remember { Integrity.heldPermissions(context) }
+            LedgerCard(title = "The sandbox") {
+                Note("This app lives in its own box. Android enforces it, the build refuses to produce an APK that asks for more, and the app re-checks itself above.")
+                Spacer(Modifier.height(6.dp))
+                Text("IT CAN", style = Type.label.copy(color = p.verdigris))
+                held.forEach { perm -> Text("◆  ${plainPermission(perm)}", style = Type.bodySmall.copy(color = p.ink), modifier = Modifier.padding(vertical = 2.dp)) }
+                Text("◆  Read the one file you pick yourself when importing or exporting a ledger - that file only, that once.",
+                    style = Type.bodySmall.copy(color = p.ink), modifier = Modifier.padding(vertical = 2.dp))
+                Spacer(Modifier.height(8.dp))
+                Text("IT CANNOT", style = Type.label.copy(color = p.oxblood))
+                listOf(
+                    "Read SMS or MMS, or send them",
+                    "Read your mail, or see which accounts are on the phone",
+                    "Read contacts, call history or calendar",
+                    "Browse your files, photos, videos or downloads",
+                    "See which apps you have installed, or read any app's data",
+                    "Read other apps' notifications or screens (no accessibility or notification-listener service)",
+                    "Draw over other apps, or read the clipboard in the background",
+                    "Use the camera, microphone or location",
+                ).forEach { Text("✕  $it", style = Type.bodySmall.copy(color = p.ink), modifier = Modifier.padding(vertical = 2.dp)) }
+            }
+        }
+        item {
             LedgerCard(title = "Unlocking") {
                 ToggleRow("Fingerprint / face", when (kind) {
                     BiometricGate.Kind.STRONG -> "Strong biometrics: unlock a Keystore key that dies if a new finger or face is enrolled"
@@ -380,4 +403,19 @@ fun SchedulePage(model: AppModel) {
             }
         }
     }
+}
+
+/** A permission name in words a person would use. */
+private fun plainPermission(p: String): String = when (p.substringAfterLast('.')) {
+    "INTERNET" -> "Reach the internet - only Upstox's public market data"
+    "ACCESS_NETWORK_STATE" -> "Tell whether the phone is online"
+    "POST_NOTIFICATIONS" -> "Show its own notifications"
+    "USE_BIOMETRIC", "USE_FINGERPRINT" -> "Ask Android to check your fingerprint or face (it never sees them)"
+    "FOREGROUND_SERVICE", "FOREGROUND_SERVICE_DATA_SYNC" -> "Keep the live watch running during market hours"
+    "VIBRATE" -> "Vibrate for an alert"
+    "SCHEDULE_EXACT_ALARM" -> "Wake at the strategy's set times"
+    "RECEIVE_BOOT_COMPLETED" -> "Re-set those times after a restart"
+    "WAKE_LOCK" -> "Stay awake while a scheduled job finishes"
+    "DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" -> "Talk to itself privately (no other app can use this)"
+    else -> p.substringAfterLast('.')
 }
