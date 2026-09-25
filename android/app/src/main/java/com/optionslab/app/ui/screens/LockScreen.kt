@@ -3,7 +3,6 @@ package com.optionslab.app.ui.screens
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -90,7 +89,7 @@ fun LockScreen(
     suspend fun reject(text: String) {
         message = text
         haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-        for (x in listOf(18f, -16f, 12f, -8f, 4f, 0f)) shake.animateTo(x, tween(45))
+        for (x in listOf(10f, -8f, 5f, -2f, 0f)) shake.animateTo(x, tween(50))
         entered = ""
     }
 
@@ -138,7 +137,7 @@ fun LockScreen(
                 val shown = maxOf(PinLock.MIN_LENGTH, entered.length)
                 repeat(shown) { i ->
                     val filled = i < entered.length
-                    val s by animateFloatAsState(if (filled) 1f else 0.55f, spring(dampingRatio = 0.4f), label = "dot")
+                    val s by animateFloatAsState(if (filled) 1f else 0.8f, tween(120), label = "dot")
                     Box(
                         Modifier.size(12.dp).scale(s)
                             .background(if (filled) p.ink else p.chip, CircleShape),
@@ -199,7 +198,7 @@ private fun PadKey(label: String, enabled: Boolean, onClick: () -> Unit) {
     val haptics = LocalHapticFeedback.current
     val src = remember { MutableInteractionSource() }
     val pressed by src.collectIsPressedAsState()
-    val s by animateFloatAsState(if (pressed) 0.88f else 1f, spring(dampingRatio = 0.45f, stiffness = 900f), label = "key")
+    val s by animateFloatAsState(if (pressed) 0.95f else 1f, tween(90), label = "key")
     val action = label == "✓" || label == "⌫"
     Box(
         Modifier.size(72.dp).scale(s)

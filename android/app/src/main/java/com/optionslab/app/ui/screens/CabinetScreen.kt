@@ -1,10 +1,12 @@
 package com.optionslab.app.ui.screens
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -55,7 +57,12 @@ private val GROUPS = listOf(
 fun CabinetScreen(model: AppModel, page: String?, onPage: (String?) -> Unit) {
     AnimatedContent(
         targetState = page,
-        transitionSpec = { (fadeIn(tween(300)) + scaleIn(tween(300), initialScale = 0.97f)) togetherWith fadeOut(tween(200)) },
+        transitionSpec = {
+            // Opening a page pushes it in from the right; going back slides it away, as in any settings list.
+            val dir = if (targetState != null) 1 else -1
+            (slideInHorizontally(tween(240, easing = FastOutSlowInEasing)) { it * dir / 4 } + fadeIn(tween(200))) togetherWith
+                (slideOutHorizontally(tween(200)) { -it * dir / 8 } + fadeOut(tween(140)))
+        },
         label = "drawer",
     ) { pg ->
         if (pg != null) Column {

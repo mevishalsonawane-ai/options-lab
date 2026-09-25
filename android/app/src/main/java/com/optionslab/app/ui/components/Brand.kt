@@ -1,10 +1,6 @@
 package com.optionslab.app.ui.components
 
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -17,8 +13,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
@@ -29,23 +23,18 @@ import com.optionslab.app.R
 import com.optionslab.app.ui.theme.LocalPalette
 
 /**
- * The IraAlgo emblem - the circle and rising arrow from the brand logo. It
- * breathes while the app waits, and on unlock the arrow swings up and the
- * emblem lifts away.
+ * The IraAlgo emblem - the circle and rising arrow from the brand logo.
+ * On unlock it simply fades out.
  */
 @Composable
 fun BrandEmblem(size: Dp, modifier: Modifier = Modifier, unlocked: Boolean = false, calm: Boolean = false) {
-    val t = rememberInfiniteTransition(label = "emblem")
-    val breathe by t.animateFloat(0.96f, 1.04f, infiniteRepeatable(tween(1800), RepeatMode.Reverse), label = "breathe")
-    val lift by animateFloatAsState(if (unlocked) 1f else 0f, tween(650), label = "lift")
+    val lift by animateFloatAsState(if (unlocked && !calm) 1f else 0f, tween(200), label = "lift")
     Image(
         painter = painterResource(R.drawable.iraalgo_emblem),
         contentDescription = "IraAlgo",
         contentScale = ContentScale.Fit,
         modifier = modifier
             .size(size)
-            .scale((if (calm || unlocked) 1f else breathe) * (1f + 0.35f * lift))
-            .rotate(-12f * lift)
             .alpha(1f - lift),
     )
 }

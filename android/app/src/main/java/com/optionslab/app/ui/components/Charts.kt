@@ -34,7 +34,7 @@ fun LinePlot(xs: List<Double>, lines: List<PlotLine>, modifier: Modifier = Modif
              fillSign: Boolean = false) {
     val p = LocalPalette.current
     val draw = remember(xs, lines) { Animatable(0f) }
-    LaunchedEffect(xs, lines) { draw.snapTo(0f); draw.animateTo(1f, tween(900, easing = FastOutSlowInEasing)) }
+    LaunchedEffect(xs, lines) { draw.snapTo(0f); draw.animateTo(1f, tween(450, easing = FastOutSlowInEasing)) }
     Canvas(modifier.fillMaxWidth().height(height)) {
         if (xs.size < 2) return@Canvas
         val all = lines.flatMap { it.ys }.filterNotNull().filter { it.isFinite() }
@@ -82,7 +82,7 @@ fun ButterflyBars(xs: List<Double>, up: List<Double>, down: List<Double>, upColo
                   modifier: Modifier = Modifier, markX: Double? = null, height: Dp = 180.dp) {
     val p = LocalPalette.current
     val grow = remember(xs) { Animatable(0f) }
-    LaunchedEffect(xs) { grow.snapTo(0f); grow.animateTo(1f, tween(800, easing = FastOutSlowInEasing)) }
+    LaunchedEffect(xs) { grow.snapTo(0f); grow.animateTo(1f, tween(400, easing = FastOutSlowInEasing)) }
     Canvas(modifier.fillMaxWidth().height(height)) {
         if (xs.isEmpty()) return@Canvas
         val m = max(up.maxOrNull() ?: 0.0, down.maxOrNull() ?: 0.0).takeIf { it > 0 } ?: 1.0
@@ -109,7 +109,7 @@ fun ButterflyBars(xs: List<Double>, up: List<Double>, down: List<Double>, upColo
 fun SignedBars(xs: List<Double>, values: List<Double>, modifier: Modifier = Modifier, markX: Double? = null, height: Dp = 160.dp) {
     val p = LocalPalette.current
     val grow = remember(xs, values) { Animatable(0f) }
-    LaunchedEffect(xs, values) { grow.snapTo(0f); grow.animateTo(1f, tween(800, easing = FastOutSlowInEasing)) }
+    LaunchedEffect(xs, values) { grow.snapTo(0f); grow.animateTo(1f, tween(400, easing = FastOutSlowInEasing)) }
     Canvas(modifier.fillMaxWidth().height(height)) {
         if (xs.isEmpty()) return@Canvas
         val m = values.maxOfOrNull { abs(it) }?.takeIf { it > 0 } ?: 1.0

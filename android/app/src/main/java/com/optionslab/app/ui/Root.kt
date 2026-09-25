@@ -7,11 +7,10 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
@@ -129,7 +128,7 @@ fun Root(activity: MainActivity) {
         }
         AnimatedContent(
             targetState = locked || !PinLock.isSet,
-            transitionSpec = { (fadeIn(tween(500)) + scaleIn(tween(500), initialScale = 1.04f)) togetherWith (fadeOut(tween(400)) + scaleOut(tween(400), targetScale = 0.96f)) },
+            transitionSpec = { fadeIn(tween(220, delayMillis = 60)) togetherWith fadeOut(tween(160)) },
             label = "seal",
         ) { sealed ->
             // Biometrics are offered only once the device check has run (a report is never empty).
@@ -275,8 +274,8 @@ private fun Main(model: AppModel) {
                     transitionSpec = {
                         val dir = if (targetState.ordinal > initialState.ordinal) 1 else -1
                         if (settings.reduceMotion) fadeIn(tween(150)) togetherWith fadeOut(tween(150))
-                        else (slideInHorizontally(tween(380)) { it * dir / 3 } + fadeIn(tween(380))) togetherWith
-                            (slideOutHorizontally(tween(320)) { -it * dir / 3 } + fadeOut(tween(260)))
+                        else (slideInHorizontally(tween(220, easing = FastOutSlowInEasing)) { it * dir / 12 } + fadeIn(tween(220))) togetherWith
+                            (slideOutHorizontally(tween(180)) { -it * dir / 12 } + fadeOut(tween(140)))
                     },
                     label = "page",
                 ) { t ->
@@ -370,8 +369,8 @@ private fun Toast(text: String?, onGone: () -> Unit) {
     LaunchedEffect(text) { if (text != null) { delay(4200); onGone() } }
     androidx.compose.animation.AnimatedVisibility(
         visible = text != null,
-        enter = androidx.compose.animation.slideInVertically { it } + fadeIn(),
-        exit = androidx.compose.animation.slideOutVertically { it } + fadeOut(),
+        enter = androidx.compose.animation.slideInVertically(tween(200)) { it / 2 } + fadeIn(tween(200)),
+        exit = androidx.compose.animation.slideOutVertically(tween(160)) { it / 2 } + fadeOut(tween(160)),
         modifier = Modifier.fillMaxSize(),
     ) {
         Box(Modifier.fillMaxSize().padding(16.dp), contentAlignment = Alignment.BottomCenter) {

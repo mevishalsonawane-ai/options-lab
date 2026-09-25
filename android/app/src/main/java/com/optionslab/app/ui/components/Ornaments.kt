@@ -242,7 +242,7 @@ fun InkProgress(progress: Float, modifier: Modifier = Modifier) {
 @Composable
 fun RollingFigure(value: Double, format: (Double) -> String, style: TextStyle, modifier: Modifier = Modifier, calm: Boolean = false) {
     val anim = remember { Animatable(value.toFloat()) }
-    LaunchedEffect(value) { if (calm) anim.snapTo(value.toFloat()) else anim.animateTo(value.toFloat(), tween(600, easing = FastOutSlowInEasing)) }
+    LaunchedEffect(value) { if (calm) anim.snapTo(value.toFloat()) else anim.animateTo(value.toFloat(), tween(350, easing = FastOutSlowInEasing)) }
     Text(format(anim.value.toDouble()), style = style, modifier = modifier)
 }
 
@@ -260,7 +260,7 @@ fun InkCurve(
 ) {
     val p = LocalPalette.current
     val draw = remember(values) { Animatable(if (calm) 1f else 0f) }
-    LaunchedEffect(values) { if (!calm) { draw.snapTo(0f); draw.animateTo(1f, tween(700, easing = FastOutSlowInEasing)) } }
+    LaunchedEffect(values) { if (!calm) { draw.snapTo(0f); draw.animateTo(1f, tween(450, easing = FastOutSlowInEasing)) } }
     Canvas(modifier.fillMaxWidth().height(170.dp)) {
         if (values.size < 2) return@Canvas
         val lo = min(0.0, values.min())
@@ -308,7 +308,7 @@ fun VerdictDial(level: Int, modifier: Modifier = Modifier, calm: Boolean = false
     val p = LocalPalette.current
     val target = when (level) { 0 -> 0.17f; 1 -> 0.5f; else -> 0.83f }
     val needle = remember { Animatable(if (calm) target else 0f) }
-    LaunchedEffect(level) { if (calm) needle.snapTo(target) else needle.animateTo(target, tween(600, easing = FastOutSlowInEasing)) }
+    LaunchedEffect(level) { if (calm) needle.snapTo(target) else needle.animateTo(target, tween(350, easing = FastOutSlowInEasing)) }
     Canvas(modifier.fillMaxWidth().height(120.dp)) {
         val r = min(size.width / 2, size.height) * 0.9f
         val c = Offset(size.width / 2, size.height * 0.98f)
@@ -326,7 +326,7 @@ fun VerdictDial(level: Int, modifier: Modifier = Modifier, calm: Boolean = false
 @Composable
 fun StatusDot(color: Color, pulsing: Boolean, modifier: Modifier = Modifier) {
     val t = rememberInfiniteTransition(label = "dot")
-    val a by t.animateFloat(0.35f, 1f, infiniteRepeatable(tween(900), RepeatMode.Reverse), label = "a")
+    val a by t.animateFloat(0.4f, 1f, infiniteRepeatable(tween(1200), RepeatMode.Reverse), label = "a")
     Box(modifier.size(8.dp).background(color.copy(alpha = if (pulsing) a else 1f), CircleShape))
 }
 

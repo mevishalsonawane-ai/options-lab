@@ -192,7 +192,7 @@ fun AlmanacScreen(model: AppModel, onGo: (String) -> Unit) {
                             LedgerLine("Mean per trade", rs(c.mean, true), if (c.mean >= 0) p.verdigris else p.oxblood)
                             LedgerLine("Worst trade", rs(c.worst, true), p.oxblood)
                             LedgerLine("Total", rs(c.total, true))
-                            AnimatedVisibility(shown, enter = fadeIn(tween(900)) + expandVertically()) {
+                            AnimatedVisibility(shown, enter = fadeIn(tween(200)) + expandVertically(tween(200))) {
                                 Note("What this pays, honestly: 5% to 12% a year on properly capitalised money. The loss is UNBOUNDED; the record is a property of a 2023-2026 bull market.")
                             }
                         }
