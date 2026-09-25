@@ -72,6 +72,20 @@ object PositionCards {
         if (open) shown["$venue|$symbol"] = true
     }
 
+    @Volatile private var lastLive: Broker.Positions? = null
+
+    /**
+     * Between position-book readings: rewrite the Zerodha cards from the live price stream
+     * (the book's P&L moved on by each tick). Cheap - no network - so it runs every few seconds.
+     */
+    fun tickLive(context: Context) {
+        val book = lastLive ?: return
+        if (com.optionslab.app.data.KiteStream.status.value != com.optionslab.app.data.KiteStream.Status.LIVE) return
+        com.optionslab.app.data.KiteStream.live(book).net.filter { it.qty != 0 && shown.containsKey("Live|${it.symbol}") }.forEach { p ->
+            card(context, "Live", p.symbol, p.qty, p.avg, p.last.takeIf { it > 0 }, p.pnl)
+        }
+    }
+
     /** Rewrite every card from the accounts' current positions; a position gone since the last pass gets its final card. */
     suspend fun refresh(context: Context) {
         val s = runCatching { AppSettings.load() }.getOrNull() ?: return
@@ -81,7 +95,10 @@ object PositionCards {
             if (p.quantity != 0) { now[key] = Unit; card(context, "Paper", p.symbol, p.quantity, p.averagePrice, p.ltp.takeIf { it > 0 }, p.pnl) }
             else if (shown.remove(key) != null) card(context, "Paper", p.symbol, 0, p.averagePrice, null, p.pnl)
         }
-        if (s.live && Broker.loggedIn) runCatching { Broker.positionBook() }.getOrNull()?.net?.forEach { p ->
+        if (s.live && Broker.loggedIn) runCatching { Broker.positionBook() }.getOrNull()?.also { book ->
+            lastLive = book
+            com.optionslab.app.data.KiteStream.want("positions", book.net.filter { it.qty != 0 }.map { it.token })
+        }?.let { com.optionslab.app.data.KiteStream.live(it) }?.net?.forEach { p ->
             val key = "Live|${p.symbol}"
             if (p.qty != 0) { now[key] = Unit; card(context, "Live", p.symbol, p.qty, p.avg, p.last.takeIf { it > 0 }, p.pnl) }
             else if (shown.remove(key) != null) card(context, "Live", p.symbol, 0, p.avg, null, p.pnl)

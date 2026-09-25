@@ -142,6 +142,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch(Dispatchers.IO) {
             AppSettings.save(next)
             Jobs.scheduleAll(ctx)
+            // Live mode streams Zerodha's prices; Paper does not.
+            com.optionslab.app.data.KiteStream.ensure()
         }
     }
 
@@ -291,19 +293,27 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                         Market.isOpen() -> "No prints yet - the feed may be slow."
                         else -> "Market closed. Showing nothing rather than a stale print."
                     }
-                    if (live) runCatching { com.optionslab.app.data.Broker.positionBook() }.onSuccess { book ->
-                        livePositions.value = book.net
-                        trackPnl(book)
+                    if (live) {
+                        com.optionslab.app.data.KiteStream.ensure()
+                        if (System.currentTimeMillis() - lastBookAt > 20_000) runCatching { com.optionslab.app.data.Broker.positionBook() }.onSuccess { book ->
+                            lastBookAt = System.currentTimeMillis()
+                            livePositions.value = book.net
+                            com.optionslab.app.data.KiteStream.want("positions", book.net.filter { it.qty != 0 }.map { it.token })
+                            trackPnl(book)
+                        }
                     }
                     Ledger.openTicket()?.let { openMark.value = runCatching { Market.markOpenTicket(it) }.getOrNull() }
                     Tasks.checkAlarms(ctx, quotes.value.mapValues { it.value.last }, HashSet())
                 } catch (e: Exception) {
                     quoteNote.value = e.message
                 }
-                delay(if (Market.isOpen()) 30_000 else 300_000)
+                val streaming = _settings.value.live && com.optionslab.app.data.KiteStream.status.value == com.optionslab.app.data.KiteStream.Status.LIVE
+                delay(when { streaming -> 2_000; Market.isOpen() -> 30_000; else -> 300_000 })
             }
         }
     }
+
+    @Volatile private var lastBookAt = 0L
 
     fun stopQuotes() { quoteLoop?.cancel(); quoteLoop = null }
 
@@ -474,6 +484,24 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     }
 
     val account = MutableStateFlow<Load<Account>>(Load.Idle)
+
+    // Declared after [account]: these start collecting at once and read it.
+    init {
+        // Zerodha's live price stream: the account's positions and P&L move with every tick,
+        // and an order update from Zerodha refreshes the account straight away.
+        viewModelScope.launch(Dispatchers.IO) { com.optionslab.app.data.KiteStream.ensure() }
+        viewModelScope.launch {
+            com.optionslab.app.data.KiteStream.version.collect {
+                val st = com.optionslab.app.data.KiteStream
+                (account.value as? Load.Done<Account>)?.value?.let { a -> account.value = Load.Done(a.copy(book = st.live(a.book))) }
+                if (livePositions.value.isNotEmpty()) livePositions.value = livePositions.value.map { st.live(it) }
+            }
+        }
+        viewModelScope.launch {
+            var first = true
+            com.optionslab.app.data.KiteStream.orderEvents.collect { if (first) first = false else if (_settings.value.live) loadAccount(quiet = true) }
+        }
+    }
     val plan = MutableStateFlow<Load<OrderPlan>>(Load.Idle)
     val sending = MutableStateFlow<Load<List<com.optionslab.app.data.Broker.Fill>>>(Load.Idle)
     val showKiteLogin = MutableStateFlow(false)
@@ -579,6 +607,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                 runCatching { orderOwners.value = com.optionslab.app.data.Strategies.owners() }
                 trackPnl(book)
                 livePositions.value = book.net
+                com.optionslab.app.data.KiteStream.want("positions", book.net.filter { it.qty != 0 }.map { it.token })
                 val trades = runCatching { b.trades() }.getOrDefault(emptyList())
                 // Today's Zerodha P&L for the calendar (Zerodha has no past days through its API).
                 if (book.net.isNotEmpty() || trades.isNotEmpty()) runCatching {

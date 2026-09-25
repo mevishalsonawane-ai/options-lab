@@ -85,6 +85,7 @@ object Broker {
     }
 
     fun forget() {
+        KiteStream.stop()
         SecurePrefs.putAll(mapOf(K_KEY to null, K_SECRET to null, K_SEALED to null, K_REDIRECT to null, K_TOKEN to null,
             K_LOGIN_AT to null, K_USER to null, K_UID to null))
         File(app.filesDir, "kite_instruments.json").delete()
@@ -102,7 +103,10 @@ object Broker {
 
     private fun token(): String = if (loggedIn) SecurePrefs.getString(K_TOKEN)!! else throw NotLoggedIn()
 
-    private fun dropSession() = SecurePrefs.putAll(mapOf(K_TOKEN to null, K_LOGIN_AT to null))
+    /** The session token for the live price stream (never logged, never shown). */
+    internal fun streamToken(): String? = if (loggedIn) SecurePrefs.getString(K_TOKEN) else null
+
+    private fun dropSession() { KiteStream.stop(); SecurePrefs.putAll(mapOf(K_TOKEN to null, K_LOGIN_AT to null)) }
 
     // ---- HTTP ---------------------------------------------------------------------
 
@@ -195,6 +199,7 @@ object Broker {
     }
 
     suspend fun logout() {
+        KiteStream.stop()
         val key = apiKey
         val tok = SecurePrefs.getString(K_TOKEN)
         if (key != null && tok != null) runCatching {
@@ -301,8 +306,33 @@ object Broker {
 
     data class Quote(val last: Double, val bid: Double?, val ask: Double?, val open: Double, val oi: Long = 0, val volume: Long = 0)
 
+    /** "NSE:NIFTY BANK" / "NFO:BANKNIFTY26OCT56000CE" -> Kite instrument token, from the day's list. */
+    @Volatile private var tokenMap: Pair<LocalDate, Map<String, Long>>? = null
+    fun tokenOf(key: String): Long? {
+        INDEX.values.firstOrNull { it.first == key }?.let { return it.second }
+        if (!key.startsWith("NFO:")) return null
+        val m = tokenMap?.takeIf { it.first == Market.today() }?.second
+            ?: cachedInstruments()?.associate { "NFO:" + it.tradingSymbol to it.token }?.also { tokenMap = Market.today() to it }
+            ?: return null
+        return m[key]
+    }
+
+    /**
+     * Quotes for "EXCHANGE:SYMBOL" keys. Instruments the live stream has a fresh tick for
+     * are answered from it at once; only the rest go to Kite's quote API (and are
+     * followed by the stream from then on).
+     */
     suspend fun quotes(keys: List<String>): Map<String, Quote> {
         if (keys.isEmpty()) return emptyMap()
+        val tokens = keys.associateWith { tokenOf(it) }
+        KiteStream.touch(tokens.values.filterNotNull())
+        val streamed = keys.mapNotNull { k -> tokens[k]?.let { KiteStream.tick(it) }?.let { t -> k to Quote(t.last, t.bid, t.ask, t.open, t.oi, t.volume) } }.toMap()
+        val rest = keys.filter { it !in streamed }
+        if (rest.isEmpty()) return streamed
+        return streamed + quotesRest(rest)
+    }
+
+    private suspend fun quotesRest(keys: List<String>): Map<String, Quote> {
         val data = call("GET", "/quote?" + keys.joinToString("&") { "i=" + Kite.enc(it) }) as JSONObject
         return keys.mapNotNull { k ->
             val q = data.optJSONObject(k) ?: return@mapNotNull null
@@ -353,10 +383,14 @@ object Broker {
     suspend fun indexMinuteBars(symbol: String, day: LocalDate): List<Upstox.Bar> =
         minuteBars(INDEX[symbol]?.second ?: throw IOException("no Zerodha index for $symbol"), day)
 
+    private val sparks = java.util.concurrent.ConcurrentHashMap<String, Pair<Int, List<Double>>>()
+
     suspend fun indexQuote(symbol: String): Market.Quote? {
         val (key, token) = INDEX[symbol] ?: return null
         val q = quotes(listOf(key))[key] ?: return null
-        val spark = runCatching { minuteBars(token, Market.today()).map { it.close } }.getOrDefault(emptyList())
+        val minute = Market.minuteNow()
+        val spark = sparks[symbol]?.takeIf { it.first == minute && it.second.isNotEmpty() }?.second
+            ?: runCatching { minuteBars(token, Market.today()).map { it.close } }.getOrDefault(emptyList()).also { sparks[symbol] = minute to it }
         val m = Market.now().let { it.hour * 60 + it.minute }
         return Market.Quote(symbol, q.last, q.open.takeIf { it > 0 } ?: q.last, spark.maxOrNull() ?: q.last, spark.minOrNull() ?: q.last, m,
             spark.ifEmpty { listOf(q.last) })

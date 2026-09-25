@@ -348,6 +348,8 @@ object Tasks {
         runCatching { com.optionslab.app.data.Paper.tick() }.getOrNull()?.let { paperEvents(context, it) }
         // The ORB paper arms: manage open positions, then decide on the last completed 5-minute bar.
         runCatching { com.optionslab.app.data.OrbArms.tick() }
+        // Zerodha's live price stream (Live mode, logged in, market hours).
+        runCatching { com.optionslab.app.data.KiteStream.ensure() }
         // Every open position's notification, with its live P&L and a Close button.
         runCatching { PositionCards.refresh(context) }
         // Expiry day, 15:05: close every option position expiring today (paper and live, all products).
@@ -501,7 +503,12 @@ class WatchService : Service() {
             val next = System.currentTimeMillis() + 60_000
             while (System.currentTimeMillis() < next) {
                 val holding = PositionCards.anyOpen || runCatching { com.optionslab.app.data.OrbArms.holding() }.getOrDefault(false)
-                delay(if (holding) 15_000 else next - System.currentTimeMillis())
+                // With the live stream up, Zerodha cards move every 3 s from ticks alone (no network).
+                val streaming = com.optionslab.app.data.KiteStream.status.value == com.optionslab.app.data.KiteStream.Status.LIVE
+                if (holding && streaming) {
+                    val until = System.currentTimeMillis() + 15_000
+                    while (System.currentTimeMillis() < until) { delay(3_000); runCatching { PositionCards.tickLive(this) } }
+                } else delay(if (holding) 15_000 else next - System.currentTimeMillis())
                 if (holding) {
                     runCatching {
                         com.optionslab.app.data.Paper.tick().let { Tasks.paperEventsPublic(this, it) }
