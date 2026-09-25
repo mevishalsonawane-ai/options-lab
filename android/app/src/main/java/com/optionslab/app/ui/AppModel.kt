@@ -1118,6 +1118,25 @@ class AppModel(app: Application) : AndroidViewModel(app) {
 
     val paper = MutableStateFlow<Load<com.optionslab.app.data.Paper.Snapshot>>(Load.Idle)
 
+    /** BANKNIFTY daily closes for the Home chart (a year), read once a day; Zerodha in LIVE mode, else public candles. */
+    val bankNiftyDaily = MutableStateFlow<List<Pair<LocalDate, Double>>>(emptyList())
+    private var bankNiftyDay: LocalDate? = null
+
+    fun loadBankNiftyDaily() {
+        val today = Market.today()
+        if (bankNiftyDay == today && bankNiftyDaily.value.isNotEmpty()) return
+        bankNiftyDay = today
+        viewModelScope.launch(Dispatchers.IO) {
+            val from = today.minusDays(400)
+            val b = com.optionslab.app.data.Broker
+            val bars = (if (_settings.value.live && b.loggedIn)
+                runCatching { b.indexToken("BANKNIFTY")?.let { b.dailyBars(it, from, today) } }.getOrNull() else null)
+                ?: runCatching { com.optionslab.app.data.Net.daily(com.optionslab.engine.Upstox.INDEX_KEYS.getValue("BANKNIFTY"), from, today) }.getOrNull()
+            if (bars.isNullOrEmpty()) { bankNiftyDay = null; return@launch }
+            bankNiftyDaily.value = bars.map { it.istDate to it.close }
+        }
+    }
+
     fun loadPaper(quiet: Boolean = false) {
         if (!quiet || paper.value !is Load.Done) paper.value = Load.Busy("Opening the paper account")
         viewModelScope.launch(Dispatchers.IO) {

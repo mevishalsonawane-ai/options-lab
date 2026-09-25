@@ -306,6 +306,7 @@ private fun Main(model: AppModel) {
                         Tab.ALMANAC -> AlmanacScreen(model, onGo = { dest ->
                             when (dest) {
                                 "trials" -> { tab = Tab.LAB; labPage = "trials" }
+                                "trade" -> { tab = Tab.TRADE; tradePage = "account" }
                                 "ticket" -> if (linked) tab = Tab.TICKET else { tab = Tab.CABINET; cabinetPage = "broker" }
                                 "health" -> { tab = Tab.LAB; labPage = "health" }
                                 else -> { tab = Tab.CABINET; cabinetPage = dest }
