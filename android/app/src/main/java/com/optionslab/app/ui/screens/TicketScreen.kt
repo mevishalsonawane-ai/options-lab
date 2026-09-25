@@ -84,6 +84,7 @@ fun TicketScreen(model: AppModel) {
             is Load.Failed -> item { LedgerCard(accent = p.amber) { Note(d.why) } }
             is Load.Done -> item {
                 Receipt(d.value.ticket)
+                if (d.value.source.isNotBlank()) Note("Priced from ${d.value.source}.", Modifier.padding(top = 6.dp))
                 Spacer(Modifier.height(10.dp))
                 BrassButton("Record as paper", Modifier.fillMaxWidth(), tone = p.verdigris) { model.recordDraft() }
             }

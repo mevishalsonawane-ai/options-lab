@@ -91,6 +91,28 @@ uses it on the PC:
   Fills replace the priced credit in the ledger, so settlement and the health
   checks measure the trade that happened.
 
+## Live mode and sandbox mode
+
+One switch (Cabinet → Zerodha → Mode) decides where every LIVE figure comes from:
+
+| | LIVE · Zerodha | SANDBOX |
+|---|---|---|
+| index levels, sparklines, ticker | Kite quote + 1-min candles | Upstox public candles |
+| option chain for the ticket | Kite 1-min candles; without the historical add-on, Kite live quotes, priced and labelled at the minute taken | Upstox public candles |
+| ticket live mark | Kite quotes on the exact NFO contracts | Upstox candles |
+| settlement (15:00-15:29 average) | Kite index candles, or enter it by hand | Upstox index candles |
+| expiry calendar | Kite instruments | Upstox instrument master |
+| live watch, risk alerts, price alarms | Kite | Upstox |
+| funds, positions, orders | Kite | - |
+| real orders | allowed (still review + hold + PIN) | never |
+
+In LIVE mode there is no fallback: without today's Zerodha login the app says
+so instead of showing another feed's numbers under a live label. Analysis -
+Trials, the arms, Health, the IC table, Signal Lab, sizing, costs - runs on the
+bundled record in both modes. The harvester also stays on Upstox in both: it
+builds the research record, and mixing a second source into it is the
+provenance and units trap the PC harness guards against.
+
 ## Security
 
 - **No screenshots or screen recording.** The window is `FLAG_SECURE` from

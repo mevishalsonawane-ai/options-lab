@@ -42,11 +42,14 @@ object Market {
         val changePct: Double get() = if (open != 0.0) change / open else 0.0
     }
 
-    /** Kite when you are logged in to Zerodha today; Upstox's public candles otherwise. */
-    suspend fun quote(symbol: String): Quote? {
-        if (Broker.loggedIn) runCatching { Broker.indexQuote(symbol) }.getOrNull()?.let { return it }
-        return upstoxQuote(symbol)
-    }
+    /**
+     * LIVE mode: Zerodha only. Not logged in is an error the screen shows, never
+     * a silent switch to another feed. SANDBOX mode: Upstox's public candles.
+     */
+    fun liveMode(): Boolean = AppSettings.load().live
+
+    suspend fun quote(symbol: String): Quote? =
+        if (liveMode()) Broker.indexQuote(symbol) else upstoxQuote(symbol)
 
     private suspend fun upstoxQuote(symbol: String): Quote? {
         val key = Upstox.INDEX_KEYS.getValue(symbol)
@@ -87,6 +90,8 @@ object Market {
      * says so rather than guessing a weekday.
      */
     fun upcomingExpiries(underlying: String = "NIFTY"): List<LocalDate> {
+        if (liveMode()) return Broker.cachedInstruments()?.filter { it.name == underlying && !it.expiry.isBefore(today()) }
+            ?.map { it.expiry }?.distinct()?.sorted() ?: emptyList()
         val c = cachedContracts()?.second ?: return emptyList()
         return c.filter { it.underlying == underlying && !it.expiry.isBefore(today()) }.map { it.expiry }.distinct().sorted()
     }
@@ -95,7 +100,15 @@ object Market {
 
     // ---- the live chain (port of cli._live_chain) --------------------------
 
-    data class LiveChain(val expiry: LocalDate, val series: List<Series>, val lotSize: Int, val contracts: List<Upstox.Contract>, val spot: Double)
+    /**
+     * [pricedAt] is set when the chain is a snapshot of live quotes taken at
+     * that minute rather than 1-minute candles; the ticket is then priced - and
+     * labelled - at that minute, never passed off as the entry-time bar.
+     */
+    data class LiveChain(
+        val expiry: LocalDate, val series: List<Series>, val lotSize: Int, val contracts: List<Upstox.Contract>, val spot: Double,
+        val source: String = "Upstox public candles", val pricedAt: Int? = null,
+    )
 
     /**
      * Today's chain for the nearest expiry, priced off the intraday endpoint.
@@ -103,10 +116,7 @@ object Market {
      * quote both sides, and Upstox rate-limits at 429.
      */
     suspend fun liveChain(underlying: String, near: Int = 14): LiveChain {
-        // Kite first when logged in; a plan without historical data, or any Kite
-        // failure, falls back to the Upstox route rather than to no ticket.
-        if (Broker.loggedIn) runCatching { Broker.liveChain(underlying, near) }.getOrNull()?.let { return it }
-        return upstoxChain(underlying, near)
+        return if (liveMode()) Broker.liveChain(underlying, near) else upstoxChain(underlying, near)
     }
 
     private suspend fun upstoxChain(underlying: String, near: Int): LiveChain {
@@ -126,19 +136,28 @@ object Market {
     }
 
     /** The order the strategy implies now. NOTHING IS SENT. */
-    data class TicketDraft(val ticket: Live.Ticket, val shortKey: String?, val wingKey: String?)
+    data class TicketDraft(val ticket: Live.Ticket, val shortKey: String?, val wingKey: String?, val source: String = "")
 
     suspend fun draftTicket(s: AppSettings): TicketDraft {
         val lc = liveChain(s.ticketUnderlying)
         if (lc.expiry != today()) throw IllegalStateException(
             "nearest ${s.ticketUnderlying} expiry is ${lc.expiry}, not today (${today()}). This strategy trades ONLY on expiry day - the edge is the last few hours of theta, and holding overnight is a different bet.")
-        val t = Live.buildTicket(lc.series, today(), s.ticketUnderlying, lc.lotSize, lc.expiry, s.otmPct, s.entryMinute, s.ticketLots, s.wingPct)
+        // A quote snapshot is priced at the minute it was taken (never earlier
+        // than the entry time); candles are priced at the entry-time bar.
+        val at = lc.pricedAt?.let { maxOf(it, s.entryMinute) } ?: s.entryMinute
+        val t = Live.buildTicket(lc.series, today(), s.ticketUnderlying, lc.lotSize, lc.expiry, s.otmPct, at, s.ticketLots, s.wingPct)
         fun key(k: Double?) = k?.let { strike -> lc.contracts.firstOrNull { it.strike == strike && it.right == Right.PE }?.instrumentKey }
-        return TicketDraft(t, key(t.strike), key(t.wingStrike))
+        val src = lc.source + if (lc.pricedAt != null) " at ${com.optionslab.engine.minuteText(at)} IST" else ", entry bar ${s.entry}"
+        return TicketDraft(t, key(t.strike), key(t.wingStrike), src)
     }
 
     /** Cash settlement: the average of spot over 15:00-15:29, never the 15:29 print. */
     suspend fun settlement(underlying: String, day: LocalDate = today()): Double {
+        if (liveMode()) {
+            val bars = Broker.indexMinuteBars(underlying, day)
+            if (bars.isEmpty()) throw IllegalStateException("Zerodha returned no index bars for $day; enter the exchange's settlement price by hand")
+            return ExpiryPut.settlementPrice(bars.filter { it.istDate == day }.associate { it.istMinute to it.close })
+        }
         val bars = Net.intraday(Upstox.INDEX_KEYS.getValue(underlying)).filter { it.istDate == day }
         return ExpiryPut.settlementPrice(bars.associate { it.istMinute to it.close })
     }
@@ -146,7 +165,7 @@ object Market {
     /** Live mark of an open paper ticket, from its own legs' latest prints. */
     suspend fun markOpenTicket(e: Ledger.Entry): Double? {
         val tk = e.row.ticket
-        if (Broker.loggedIn) runCatching {
+        if (liveMode()) {
             val ins = Broker.instruments()
             val short = Broker.find(ins, tk.underlying, tk.expiry, tk.strike, Right.PE)
             val wing = tk.wingStrike?.let { Broker.find(ins, tk.underlying, tk.expiry, it, Right.PE) }
@@ -157,6 +176,7 @@ object Market {
                 val w = wing?.let { q["NFO:${it.tradingSymbol}"]?.last } ?: 0.0
                 if (s != null) return (tk.credit - (s - w)) * tk.qty
             }
+            return null
         }
         val sk = e.shortKey?.takeIf { !it.startsWith("kite:") } ?: return null
         val short = Net.intraday(sk).lastOrNull { it.istDate == today() } ?: return null

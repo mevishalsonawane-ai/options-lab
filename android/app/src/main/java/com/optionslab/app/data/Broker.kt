@@ -235,6 +235,10 @@ object Broker {
         }
     }
 
+    /** The index's 1-minute bars (needs Kite's historical data), e.g. for settlement. */
+    suspend fun indexMinuteBars(symbol: String, day: LocalDate): List<Upstox.Bar> =
+        minuteBars(INDEX[symbol]?.second ?: throw IOException("no Zerodha index for $symbol"), day)
+
     suspend fun indexQuote(symbol: String): Market.Quote? {
         val (key, token) = INDEX[symbol] ?: return null
         val q = quotes(listOf(key))[key] ?: return null
@@ -245,6 +249,15 @@ object Broker {
     }
 
     // ---- instruments ---------------------------------------------------------------------
+
+    /** The last instruments list fetched (any day), without touching the network. */
+    fun cachedInstruments(): List<Kite.Instrument>? = runCatching {
+        val a = JSONObject(File(app.filesDir, "kite_instruments.json").readText()).getJSONArray("i")
+        (0 until a.length()).map { a.getJSONArray(it) }.map {
+            Kite.Instrument(it.getLong(0), it.getString(1), it.getString(2), LocalDate.parse(it.getString(3)), it.getDouble(4),
+                it.getInt(5), if (it.getString(6) == "CE") Right.CE else Right.PE, it.getDouble(7))
+        }
+    }.getOrNull()
 
     /** NIFTY and BANKNIFTY options from GET /instruments/NFO, cached for the day. */
     suspend fun instruments(): List<Kite.Instrument> {
@@ -283,16 +296,35 @@ object Broker {
         val spot = indexQuote(underlying)?.last ?: throw IOException("no $underlying quote from Kite")
         val strikes = chain.map { it.strike }.distinct().sortedBy { kotlin.math.abs(it - spot) }.take(near * 2 + 1).toSet()
         val wanted = chain.filter { it.strike in strikes }
-        val series = ArrayList<Series>()
-        for (ins in wanted) {
-            val c = Upstox.Contract(underlying, ins.expiry, ins.strike, ins.right, ins.lotSize, "kite:${ins.token}", ins.tradingSymbol)
-            val bars = minuteBars(ins.token, today)
-            if (bars.isNotEmpty()) series += Upstox.toSeries(c, bars, today, contracts = false)
-            delay(340)   // Kite allows three historical calls a second
-        }
-        if (series.isEmpty()) throw IOException("Kite returned no bars for the $expiry chain")
         val contracts = wanted.map { Upstox.Contract(underlying, it.expiry, it.strike, it.right, it.lotSize, "kite:${it.token}", it.tradingSymbol) }
-        return Market.LiveChain(expiry, series, wanted.first().lotSize, contracts, spot)
+        val series = ArrayList<Series>()
+        try {
+            for ((ins, c) in wanted.zip(contracts)) {
+                val bars = minuteBars(ins.token, today)
+                if (bars.isNotEmpty()) series += Upstox.toSeries(c, bars, today, contracts = false)
+                delay(340)   // Kite allows three historical calls a second
+            }
+        } catch (e: KiteError) {
+            if (e.type == "TokenException") throw e
+            // No historical-data entitlement on this Kite plan: price from the
+            // live quote book instead - still Zerodha, labelled with its minute.
+            return quoteSnapshot(underlying, expiry, wanted, contracts, spot)
+        }
+        if (series.isEmpty()) throw IOException("Zerodha returned no bars for the $expiry chain")
+        return Market.LiveChain(expiry, series, wanted.first().lotSize, contracts, spot, "Zerodha 1-minute candles")
+    }
+
+    private suspend fun quoteSnapshot(underlying: String, expiry: LocalDate, wanted: List<Kite.Instrument>,
+                                      contracts: List<Upstox.Contract>, spot: Double): Market.LiveChain {
+        val q = quotes(wanted.map { "NFO:${it.tradingSymbol}" })
+        val minute = Market.minuteNow()
+        val series = wanted.zip(contracts).mapNotNull { (ins, c) ->
+            val last = q["NFO:${ins.tradingSymbol}"]?.last?.takeIf { it > 0 } ?: return@mapNotNull null
+            Series(c.expiry, c.strike, c.right, c.lotSize, intArrayOf(minute), doubleArrayOf(last), doubleArrayOf(last),
+                doubleArrayOf(last), doubleArrayOf(last), longArrayOf(0), longArrayOf(0))
+        }
+        if (series.isEmpty()) throw IOException("Zerodha returned no quotes for the $expiry $underlying chain")
+        return Market.LiveChain(expiry, series, wanted.first().lotSize, contracts, spot, "Zerodha live quotes", minute)
     }
 
     // ---- orders ------------------------------------------------------------------------

@@ -39,6 +39,9 @@ data class AppSettings(
     val refuseCompromised: Boolean = false,
     val wipeOnExhaustion: Boolean = false,
     val hideAmountsOnLockScreen: Boolean = true,
+    // "live": every live figure comes from Zerodha and nothing else.
+    // "sandbox": public Upstox data and paper tickets. Analysis is the same in both.
+    val mode: String = "sandbox",
     // Zerodha: real orders are OFF until the owner turns them on
     val allowRealOrders: Boolean = false,
     val orderProduct: String = "NRML",
@@ -51,6 +54,8 @@ data class AppSettings(
     val reduceMotion: Boolean = false,
 ) {
     val entryMinute: Int get() = runCatching { hhmm(entry) }.getOrDefault(ExpiryPut.DEFAULT_ENTRY)
+
+    val live: Boolean get() = mode == "live"
 
     fun limits() = com.optionslab.engine.Kite.Limits(maxOrdersPerDay, maxLotsPerOrder, maxOrderValue)
 
@@ -90,6 +95,7 @@ data class AppSettings(
                 refuseCompromised = p.getBoolean("sec.refuse", d.refuseCompromised),
                 wipeOnExhaustion = p.getBoolean("sec.wipe", d.wipeOnExhaustion),
                 hideAmountsOnLockScreen = p.getBoolean("sec.hideAmounts", d.hideAmountsOnLockScreen),
+                mode = p.getString("k.mode", d.mode)!!,
                 allowRealOrders = p.getBoolean("k.allow", d.allowRealOrders),
                 orderProduct = p.getString("k.product", d.orderProduct)!!,
                 maxOrdersPerDay = p.getInt("k.maxOrders", d.maxOrdersPerDay),
@@ -113,7 +119,7 @@ data class AppSettings(
                 "lock.graceSeconds" to s.graceSeconds, "sec.refuse" to s.refuseCompromised,
                 "sec.wipe" to s.wipeOnExhaustion, "sec.hideAmounts" to s.hideAmountsOnLockScreen,
                 "ui.theme" to s.theme, "ui.calm" to s.reduceMotion,
-                "k.allow" to s.allowRealOrders, "k.product" to s.orderProduct, "k.maxOrders" to s.maxOrdersPerDay,
+                "k.mode" to s.mode, "k.allow" to s.allowRealOrders, "k.product" to s.orderProduct, "k.maxOrders" to s.maxOrdersPerDay,
                 "k.maxLots" to s.maxLotsPerOrder, "k.maxValue" to s.maxOrderValue, "k.prepare" to s.prepareRealOrder,
             ))
         }

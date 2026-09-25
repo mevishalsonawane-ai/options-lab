@@ -64,6 +64,7 @@ fun AlmanacScreen(model: AppModel, onGo: (String) -> Unit) {
     val bt by model.backtest.collectAsState()
     val job by model.jobState.collectAsState()
     val alarms by model.alarms.collectAsState()
+    val positions by model.livePositions.collectAsState()
 
     DisposableEffect(Unit) {
         model.startQuotes()
@@ -148,6 +149,16 @@ fun AlmanacScreen(model: AppModel, onGo: (String) -> Unit) {
                     LedgerLine("Cushion", "${num(cushion)} pts", if (cushion > 0) p.verdigris else p.oxblood)
                     InkProgress(((spot - tk.breakeven) / (tk.forward - tk.breakeven)).toFloat(), Modifier.fillMaxWidth().padding(top = 6.dp))
                 }
+            }
+        }
+
+        if (s.live) item {
+            LedgerCard(title = "Zerodha Positions · Live", accent = p.oxblood, onClick = { onGo("broker") }) {
+                if (positions.isEmpty()) Note("No open positions, or not logged in today.")
+                positions.filter { it.qty != 0 }.forEach { ps ->
+                    LedgerLine("${ps.symbol} ×${ps.qty}", "${num(ps.last, 2)}  ${rs(ps.pnl, true)}", if (ps.pnl >= 0) p.verdigris else p.oxblood)
+                }
+                if (positions.isNotEmpty()) LedgerLine("Day P&L", rs(positions.sumOf { it.pnl }, true), if (positions.sumOf { it.pnl } >= 0) p.verdigris else p.oxblood)
             }
         }
 

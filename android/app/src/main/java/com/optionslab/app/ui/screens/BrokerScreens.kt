@@ -249,7 +249,7 @@ fun OrderReview(model: AppModel) {
             Note(pl.why)
             BrassButton("Close", tone = p.inkFaint) { model.dismissPlan() }
         }
-        is Load.Done -> PlanCard(pl.value, s.allowRealOrders, sending, onPrice = model::setLegPrice, onSend = { confirming = true }, onClose = model::dismissPlan)
+        is Load.Done -> PlanCard(pl.value, s.allowRealOrders && s.live, sending, onPrice = model::setLegPrice, onSend = { confirming = true }, onClose = model::dismissPlan)
     }
     if (confirming) Reauth(model, onOk = { confirming = false; model.sendPlan() }, onCancel = { confirming = false })
 }
@@ -287,7 +287,7 @@ private fun PlanCard(
             is Load.Failed -> Text(sending.why, style = Type.body.copy(color = p.oxblood))
             is Load.Done -> sending.value.forEach { f -> LedgerLine(f.orderId.takeLast(8), "${f.status} ${f.filled} @ ${"%.2f".format(f.avgPrice)}", if (f.status == "COMPLETE") p.verdigris else p.oxblood) }
             Load.Idle -> {
-                if (!allowed) Note("Real orders are switched off. Turn them on under Cabinet → Zerodha to send.")
+                if (!allowed) Note("To send: LIVE mode and \"Allow real orders\" must both be on (Cabinet → Zerodha).")
                 HoldToSend("Hold to send to Zerodha", allowed && plan.sendable, onSend)
             }
         }
@@ -326,6 +326,16 @@ fun BrokerPage(model: AppModel) {
                 }
                 if (editing) CredentialsForm(model) { editing = false }
                 if (b.configured) BrassButton("Erase Zerodha keys from this phone", Modifier.fillMaxWidth().padding(top = 8.dp), tone = p.oxblood) { forgetting = true }
+            }
+        }
+        item {
+            LedgerCard(title = "Mode") {
+                ParamTokens("Live data from", listOf("LIVE · Zerodha" to s.live, "SANDBOX · public data" to !s.live)) { i ->
+                    if (i == 0 && !b.configured) model.say("Set up Zerodha first.")
+                    else model.update { it.copy(mode = if (i == 0) "live" else "sandbox") }
+                }
+                Note(if (s.live) "Every live figure - index levels, the option chain, the ticket, its live mark, settlement, the expiry calendar, the live watch and alarms - comes from Zerodha only. Without today's login the app says so rather than showing another feed."
+                else "Live figures come from Upstox's public candles and tickets stay paper; nothing touches your broker. Analysis (Trials, Health, the IC table, Signal Lab) is the same in both modes.")
             }
         }
         item {

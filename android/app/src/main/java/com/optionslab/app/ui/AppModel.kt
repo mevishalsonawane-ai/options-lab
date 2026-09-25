@@ -84,6 +84,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     val health = MutableStateFlow<Load<HealthResult>>(Load.Idle)
     val quotes = MutableStateFlow<Map<String, Market.Quote>>(emptyMap())
     val quoteNote = MutableStateFlow<String?>(null)
+    val livePositions = MutableStateFlow<List<com.optionslab.app.data.Broker.Position>>(emptyList())
     val ledger = MutableStateFlow<List<Ledger.Entry>>(emptyList())
     val alarms = MutableStateFlow<List<PriceAlarm>>(emptyList())
     val draft = MutableStateFlow<Load<Market.TicketDraft>>(Load.Idle)
@@ -231,9 +232,27 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         quoteLoop = viewModelScope.launch(Dispatchers.IO) {
             while (isActive) {
                 try {
-                    val q = listOf("NIFTY", "BANKNIFTY", "INDIAVIX").mapNotNull { runCatching { Market.quote(it) }.getOrNull() }
-                    if (q.isNotEmpty()) { quotes.value = q.associateBy { it.symbol }; quoteNote.value = null }
-                    else quoteNote.value = if (Market.isOpen()) "No prints yet - the feed may be slow." else "Market closed. Showing nothing rather than a stale print."
+                    val live = _settings.value.live
+                    if (live && !com.optionslab.app.data.Broker.loggedIn) {
+                        // Live means Zerodha. With no session there is nothing live to show,
+                        // and another feed's numbers would be a different thing wearing the label.
+                        quotes.value = emptyMap(); livePositions.value = emptyList()
+                        quoteNote.value = "LIVE mode: log in to Zerodha (Cabinet → Zerodha) to see live prices."
+                        delay(15_000)
+                        continue
+                    }
+                    var err: String? = null
+                    val q = listOf("NIFTY", "BANKNIFTY", "INDIAVIX").mapNotNull { sym ->
+                        try { Market.quote(sym) } catch (e: Exception) { err = e.message; null }
+                    }
+                    quotes.value = q.associateBy { it.symbol }
+                    quoteNote.value = when {
+                        q.isNotEmpty() -> if (live) null else "SANDBOX: public Upstox candles, not your broker."
+                        err != null -> err
+                        Market.isOpen() -> "No prints yet - the feed may be slow."
+                        else -> "Market closed. Showing nothing rather than a stale print."
+                    }
+                    if (live) livePositions.value = runCatching { com.optionslab.app.data.Broker.positions() }.getOrDefault(livePositions.value)
                     Ledger.openTicket()?.let { openMark.value = runCatching { Market.markOpenTicket(it) }.getOrNull() }
                     Tasks.checkAlarms(ctx, quotes.value.mapValues { it.value.last }, HashSet())
                 } catch (e: Exception) {
@@ -432,6 +451,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                     try {
                         val who = com.optionslab.app.data.Broker.completeLogin(r.requestToken)
                         broker.value = brokerState()
+                        // Warm the instrument list: the live expiry calendar reads it.
+                        runCatching { com.optionslab.app.data.Broker.instruments() }
                         say("Logged in to Zerodha as $who until 06:00 tomorrow.")
                         loadAccount()
                     } catch (e: Exception) { say("Zerodha login failed: ${e.message}") }
@@ -526,6 +547,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     fun sendPlan() {
         val cur = (plan.value as? Load.Done<OrderPlan>)?.value ?: return
         val s = _settings.value
+        if (!s.live) { say("Switch to LIVE mode (Cabinet → Zerodha) to send real orders; sandbox mode never touches the broker."); return }
         if (!s.allowRealOrders) { say("Real orders are switched off. Turn them on under Cabinet → Zerodha."); return }
         if (Integrity.compromised(integrity.value)) { say("Refused: this device shows signs of compromise, so no real order is sent from it."); return }
         val again = gate(cur.legs, cur.holdToSettlement)

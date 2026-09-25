@@ -208,7 +208,7 @@ private fun Main(model: AppModel) {
 
     Parchment(ruled = true) {
         Column(Modifier.fillMaxSize()) {
-            Masthead()
+            Masthead(settings.live)
             Box(Modifier.weight(1f)) {
                 AnimatedContent(
                     targetState = tab,
@@ -244,7 +244,7 @@ private fun Main(model: AppModel) {
 }
 
 @Composable
-private fun Masthead() {
+private fun Masthead(live: Boolean) {
     val p = LocalPalette.current
     var now by remember { mutableStateOf(Market.now()) }
     LaunchedEffect(Unit) { while (true) { delay(15_000); now = Market.now() } }
@@ -258,6 +258,8 @@ private fun Masthead() {
             StatusDot(if (open) p.verdigris else p.inkFaint, pulsing = open)
             Spacer(Modifier.width(4.dp))
             Text(if (open) "MARKET OPEN" else "MARKET SHUT", style = Type.label.copy(color = if (open) p.verdigris else p.inkFaint, fontSize = 9.sp))
+            Spacer(Modifier.width(8.dp))
+            Text(if (live) "· LIVE · ZERODHA" else "· SANDBOX", style = Type.label.copy(color = if (live) p.oxblood else p.inkFaint, fontSize = 9.sp))
         }
         Canvas(Modifier.fillMaxWidth().height(7.dp).padding(top = 3.dp)) {
             drawLine(p.ink, Offset(0f, 0f), Offset(size.width, 0f), 2f)
