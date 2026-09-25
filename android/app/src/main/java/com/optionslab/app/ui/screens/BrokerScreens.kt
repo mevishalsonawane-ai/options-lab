@@ -424,7 +424,7 @@ fun BrokerPage(model: AppModel) {
                     if (i == 0 && !b.configured) model.say("Set up Zerodha first.")
                     else model.update { it.copy(mode = if (i == 0) "live" else "sandbox") }
                 }
-                Note(if (s.live) "Every live figure - index levels, the option chain, the ticket, its live mark, settlement, the expiry calendar, the live watch and alarms - comes from Zerodha only. Without today's login the app says so rather than showing another feed."
+                Note(if (s.live) "Every live figure - index levels, the option chain, the ticket, its live mark, settlement, the expiry calendar, the market watch and alarms - comes from Zerodha only. Without today's login the app says so rather than showing another feed."
                 else "Live figures come from Upstox's public candles and tickets stay paper; nothing touches your broker. Analysis (Backtests, Health, the IC table, Signal Lab) is the same in both modes.")
             }
         }

@@ -126,7 +126,7 @@ object Jobs {
             // Not permitted from here (Android 12+ background start). Hand
             // the one-shot jobs to WorkManager; the watch cannot run that way.
             if (k == Kind.LIVE) {
-                Notifier.post(context, 2010, Notifier.SCHEDULE, "Market is open", "Tap to start the live watch.", "almanac")
+                Notifier.post(context, 2010, Notifier.SCHEDULE, "Market is open", "Tap to start the market watch.", "almanac")
             } else {
                 val req = OneTimeWorkRequestBuilder<FallbackWorker>()
                     .setInputData(workDataOf(EXTRA_KIND to k.name, "manual" to manual))

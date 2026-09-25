@@ -141,7 +141,7 @@ fun AlmanacScreen(model: AppModel, onGo: (String) -> Unit) {
                 }
                 Spacer(Modifier.height(8.dp))
                 if (mark != null) {
-                    Text("LIVE MARK", style = Type.label.copy(color = p.inkSoft))
+                    Text("Current value", style = Type.label.copy(color = p.inkSoft))
                     RollingFigure(mark!!, { rs(it, true) }, Type.figureLarge.copy(color = if (mark!! >= 0) p.verdigris else p.oxblood), calm = s.reduceMotion)
                 }
                 LedgerLine("Breakeven", num(tk.breakeven))
@@ -164,7 +164,7 @@ fun AlmanacScreen(model: AppModel, onGo: (String) -> Unit) {
         }
 
         item {
-            LedgerCard(title = "Live Watch") {
+            LedgerCard(title = "Market watch") {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     StatusDot(if (job.running) p.verdigris else p.inkFaint, pulsing = job.running)
                     Spacer(Modifier.width(8.dp))

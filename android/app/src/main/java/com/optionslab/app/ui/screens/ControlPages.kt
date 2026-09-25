@@ -93,7 +93,7 @@ fun AlarmsPage(model: AppModel) {
     var level by remember { mutableStateOf("") }
     var note by remember { mutableStateOf("") }
     Page {
-        item { PageTitle("Alarms", "Checked every minute by the live watch, and whenever the Home screen is open") }
+        item { PageTitle("Alarms", "Checked every minute by the market watch, and whenever the Home screen is open") }
         item {
             LedgerCard(title = "Set an alarm") {
                 val idx = listOf("NIFTY", "BANKNIFTY", "INDIAVIX")
@@ -137,7 +137,7 @@ fun AlarmsPage(model: AppModel) {
                 ParamTokens("When today's loss reaches", losses.map { (if (it == 0.0) "off" else "-" + rs(it)) to (it == st.pnlLossAlert) }) { i -> model.update { it.copy(pnlLossAlert = losses[i]) } }
                 val gains = listOf(0.0, 5_000.0, 10_000.0, 25_000.0, 50_000.0)
                 ParamTokens("When today's profit reaches", gains.map { (if (it == 0.0) "off" else rs(it)) to (it == st.pnlProfitAlert) }) { i -> model.update { it.copy(pnlProfitAlert = gains[i]) } }
-                Note("Checked every minute by the live watch from your Zerodha positions (LIVE mode, logged in). Each alert rings once a day.")
+                Note("Checked every minute by the market watch from your Zerodha positions (LIVE mode, logged in). Each alert rings once a day.")
             }
         }
         item {
@@ -383,7 +383,7 @@ fun SchedulePage(model: AppModel) {
         item {
             LedgerCard(title = "The Day") {
                 val rows = listOf(
-                    Triple(Jobs.Kind.LIVE, "Live watch from 09:14", "Ongoing notification; risk alerts; price alarms"),
+                    Triple(Jobs.Kind.LIVE, "Market watch from 09:14", "Ongoing notification; risk alerts; price alarms"),
                     Triple(Jobs.Kind.REMIND, "Entry reminder 10:55", "Expiry days only"),
                     Triple(Jobs.Kind.TICKET, "Paper ticket 11:01", "Expiry days: records the ticket for you"),
                     Triple(Jobs.Kind.SETTLE, "Settle 15:35", "Settles today's open ticket at the official window"),
@@ -415,7 +415,7 @@ fun SchedulePage(model: AppModel) {
                 val notif = Notifier.canPost(context)
                 LedgerLine("Notifications", if (notif) "allowed" else "blocked", if (notif) p.verdigris else p.oxblood)
                 LedgerLine("Precise alarms", if (exact) "allowed" else "not allowed", if (exact) p.verdigris else p.amber)
-                if (!exact) Note("Without precise alarms the phone may run jobs late, and cannot start the all-day live watch on its own.")
+                if (!exact) Note("Without precise alarms the phone may run jobs late, and cannot start the all-day market watch on its own.")
                 Spacer(Modifier.height(8.dp))
                 Row {
                     BrassButton("Notification settings", Modifier.weight(1f), tone = p.inkSoft) {
@@ -446,7 +446,7 @@ private fun plainPermission(p: String): String = when (p.substringAfterLast('.')
     "ACCESS_NETWORK_STATE" -> "Tell whether the phone is online"
     "POST_NOTIFICATIONS" -> "Show its own notifications"
     "USE_BIOMETRIC", "USE_FINGERPRINT" -> "Ask Android to check your fingerprint or face (it never sees them)"
-    "FOREGROUND_SERVICE", "FOREGROUND_SERVICE_DATA_SYNC" -> "Keep the live watch running during market hours"
+    "FOREGROUND_SERVICE", "FOREGROUND_SERVICE_DATA_SYNC" -> "Keep the market watch running during market hours"
     "VIBRATE" -> "Vibrate for an alert"
     "SCHEDULE_EXACT_ALARM" -> "Wake at the strategy's set times"
     "RECEIVE_BOOT_COMPLETED" -> "Re-set those times after a restart"

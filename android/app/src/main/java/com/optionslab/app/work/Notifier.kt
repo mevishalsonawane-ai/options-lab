@@ -38,7 +38,7 @@ object Notifier {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         val nm = context.getSystemService(NotificationManager::class.java)
         nm.createNotificationChannels(listOf(
-            NotificationChannel(LIVE, "Live watch", NotificationManager.IMPORTANCE_LOW).apply {
+            NotificationChannel(LIVE, "Market watch", NotificationManager.IMPORTANCE_LOW).apply {
                 description = "Index levels and your open paper ticket during market hours"
                 lockscreenVisibility = android.app.Notification.VISIBILITY_PRIVATE
                 setShowBadge(false)

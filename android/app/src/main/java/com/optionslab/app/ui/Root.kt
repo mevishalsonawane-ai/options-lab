@@ -354,33 +354,32 @@ private fun Masthead(live: Boolean, calm: Boolean, linked: Boolean, onMode: (Boo
             Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f)) {
                 Text("IraAlgo", style = Type.masthead.copy(color = p.ink, fontSize = 20.sp), maxLines = 1)
-                Text(now.format(DateTimeFormatter.ofPattern("EEE d MMM, HH:mm", Locale.ENGLISH)), style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp), maxLines = 1)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(now.format(DateTimeFormatter.ofPattern("EEE d MMM, HH:mm", Locale.ENGLISH)) + "  ·  ",
+                        style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp), maxLines = 1)
+                    StatusDot(if (open) p.verdigris else p.inkFaint, pulsing = open && !calm, modifier = Modifier.size(6.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text(if (open) "Market open" else "Market closed", style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp), maxLines = 1)
+                }
             }
-            Row(verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.background(if (open) p.verdigris.copy(alpha = 0.12f) else p.chip, RoundedCornerShape(50)).padding(horizontal = 10.dp, vertical = 5.dp)) {
-                StatusDot(if (open) p.verdigris else p.inkFaint, pulsing = open && !calm)
-                Spacer(Modifier.width(6.dp))
-                Text(if (open) "NSE open" else "NSE closed", style = Type.label.copy(color = if (open) p.verdigris else p.inkSoft, fontSize = 12.sp))
-            }
-        }
-        // Trading mode, on every screen: a Paper | Live switch once Zerodha is linked.
-        if (linked) {
-            Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 12.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text(if (live) "Live trading · Zerodha, real money" else "Paper trading · simulated, no real orders",
-                    style = Type.bodySmall.copy(color = if (live) p.oxblood else p.inkSoft, fontSize = 12.sp,
-                        fontWeight = if (live) androidx.compose.ui.text.font.FontWeight.SemiBold else null),
-                    modifier = Modifier.weight(1f), maxLines = 1)
-                Row(Modifier.background(p.chip, RoundedCornerShape(50)).padding(2.dp)) {
-                    listOf(false to "Paper", true to "Live").forEach { (isLive, label) ->
-                        val sel = live == isLive
-                        Text(label, style = Type.label.copy(color = if (sel) Color.White else p.inkSoft, fontSize = 12.sp),
-                            modifier = Modifier
-                                .background(if (sel) (if (isLive) p.oxblood else p.verdigris) else Color.Transparent, RoundedCornerShape(50))
-                                .selectable(selected = sel, role = androidx.compose.ui.semantics.Role.RadioButton) {
-                                    if (!sel) { if (isLive) confirmLive = true else onMode(false) }
-                                }
-                                .padding(horizontal = 12.dp, vertical = 5.dp))
-                    }
+            // The trading mode, on every screen. Tap to switch; going live asks first.
+            if (linked) {
+                val tint = if (live) p.oxblood else p.verdigris
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .background(if (live) p.oxblood else tint.copy(alpha = 0.12f), RoundedCornerShape(50))
+                        .selectable(selected = live, role = androidx.compose.ui.semantics.Role.Switch) {
+                            if (live) onMode(false) else confirmLive = true
+                        }
+                        .padding(horizontal = 12.dp, vertical = 7.dp),
+                ) {
+                    Box(Modifier.size(7.dp).background(if (live) Color.White else tint, androidx.compose.foundation.shape.CircleShape))
+                    Spacer(Modifier.width(6.dp))
+                    Text(if (live) "LIVE TRADING" else "PAPER TRADING",
+                        style = Type.label.copy(color = if (live) Color.White else tint, fontSize = 12.sp, letterSpacing = 0.4.sp,
+                            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold), maxLines = 1)
+                    Text("  ▾", style = Type.label.copy(color = if (live) Color.White else tint, fontSize = 11.sp))
                 }
             }
         }
