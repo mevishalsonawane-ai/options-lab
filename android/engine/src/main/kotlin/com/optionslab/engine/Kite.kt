@@ -293,6 +293,63 @@ object Kite {
             onTick(px, spec.tickSize, side), spec.tickSize, spec.exchange)
     }
 
+    // ---- GTT: a stop-loss / target held at Zerodha, not on the phone --------------
+
+    /** One GTT: [triggers] ascending, [orders] in the same order (the order for the lower trigger first). */
+    data class Gtt(
+        val type: String,                 // "single" | "two-leg"
+        val exchange: String, val tradingSymbol: String, val lastPrice: Double,
+        val triggers: List<Double>, val orders: List<Order>,
+    ) {
+        /** POST /gtt/triggers form: type, condition (JSON) and orders (JSON). */
+        fun formBody(): String {
+            val cond = "{\"exchange\":${jsonStr(exchange)},\"tradingsymbol\":${jsonStr(tradingSymbol)}," +
+                "\"trigger_values\":${triggers.joinToString(",", "[", "]") { money(it) }},\"last_price\":${money(lastPrice)}}"
+            val ords = orders.joinToString(",", "[", "]") { o ->
+                "{\"exchange\":${jsonStr(o.exchange)},\"tradingsymbol\":${jsonStr(o.tradingSymbol)},\"transaction_type\":${jsonStr(o.side.name)}," +
+                    "\"quantity\":${o.quantity},\"order_type\":\"LIMIT\",\"product\":${jsonStr(o.product)},\"price\":${money(o.price!!)}}"
+            }
+            return form(listOf("type" to type, "condition" to cond, "orders" to ords))
+        }
+    }
+
+    /** Kite refuses a GTT whose trigger is within 0.25% of the last price. */
+    const val GTT_MIN_GAP = 0.0025
+
+    /**
+     * Protect an open position with a GTT: a [stop], a [target], or both (an
+     * OCO "two-leg" GTT - whichever triggers first closes the position and
+     * cancels the other). Each fires a LIMIT order [slippage] beyond its
+     * trigger, so it fills in a fast market without being an unbounded market
+     * order. Returns the GTT, or the reasons it cannot be placed.
+     */
+    fun protect(spec: Spec, product: String, netQuantity: Int, lastPrice: Double, stop: Double?, target: Double?,
+                slippage: Double = 0.05): Pair<Gtt?, List<String>> {
+        val why = ArrayList<String>()
+        if (netQuantity == 0) return null to listOf("nothing is open")
+        if (stop == null && target == null) return null to listOf("give a stop, a target, or both")
+        if (lastPrice <= 0) return null to listOf("no last price")
+        val long = netQuantity > 0
+        val side = if (long) Side.SELL else Side.BUY
+        val qty = kotlin.math.abs(netQuantity)
+        fun tick(x: Double) = Math.round(x / spec.tickSize) * spec.tickSize
+        val st = stop?.let { tick(it) }
+        val tg = target?.let { tick(it) }
+        // A long is stopped below and taken profit above; a short the other way round.
+        if (st != null && (if (long) st >= lastPrice else st <= lastPrice)) why += "the stop must be ${if (long) "below" else "above"} the last price %.2f".format(lastPrice)
+        if (tg != null && (if (long) tg <= lastPrice else tg >= lastPrice)) why += "the target must be ${if (long) "above" else "below"} the last price %.2f".format(lastPrice)
+        for ((name, t) in listOf("stop" to st, "target" to tg)) if (t != null && kotlin.math.abs(t - lastPrice) / lastPrice < GTT_MIN_GAP)
+            why += "the $name is within 0.25%% of the last price; Zerodha refuses that".format()
+        if (why.isNotEmpty()) return null to why
+        fun leg(trigger: Double) = Order(spec.tradingSymbol, side, qty, spec.lotSize, product, "LIMIT",
+            onTick(if (side == Side.BUY) trigger * (1 + slippage) else trigger * (1 - slippage), spec.tickSize, side).let { maxOf(it, spec.tickSize) },
+            spec.tickSize, spec.exchange)
+        val triggers = listOfNotNull(st, tg).sorted()
+        val gtt = Gtt(if (triggers.size == 2) "two-leg" else "single", spec.exchange, spec.tradingSymbol, lastPrice,
+            triggers.map { Math.round(it * 100) / 100.0 }, triggers.map(::leg))
+        return gtt to emptyList()
+    }
+
     /**
      * The legs to send for a ticket. A hedged ticket BUYS the wing first: the
      * short leg is then margined as a spread, and if the second order fails

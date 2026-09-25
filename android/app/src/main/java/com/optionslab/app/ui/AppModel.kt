@@ -513,6 +513,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             account.value = try {
                 val b = com.optionslab.app.data.Broker
                 val book = b.positionBook()
+                runCatching { b.gtts() }.onSuccess { gtts.value = it }
                 trackPnl(book)
                 livePositions.value = book.net
                 Load.Done(Account(runCatching { b.funds() }.getOrNull(), book, b.orders(),
@@ -604,6 +605,55 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             if (!closes || o.quantity > kotlin.math.abs(open)) return "${o.tradingSymbol} changed since the review (open now ${open}); review the exit again"
         }
         return null
+    }
+
+    // ---- GTT protection ------------------------------------------------------------------------
+
+    val gtts = MutableStateFlow<List<com.optionslab.app.data.Broker.GttRow>>(emptyList())
+
+    /** A GTT prepared for the owner's confirmation, or the reasons it cannot be placed. */
+    data class GttPlan(val title: String, val gtt: com.optionslab.engine.Kite.Gtt?, val why: List<String>)
+    val gttPlan = MutableStateFlow<Load<GttPlan>>(Load.Idle)
+
+    fun loadGtts() { viewModelScope.launch(Dispatchers.IO) { runCatching { com.optionslab.app.data.Broker.gtts() }.onSuccess { gtts.value = it } } }
+
+    fun planGtt(exchange: String, symbol: String, product: String, netQty: Int, stop: Double?, target: Double?) {
+        gttPlan.value = Load.Busy("Pricing the protection")
+        viewModelScope.launch(Dispatchers.IO) {
+            gttPlan.value = try {
+                val b = com.optionslab.app.data.Broker
+                val spec = b.spec(exchange, symbol)
+                val last = b.quotes(listOf("$exchange:$symbol"))["$exchange:$symbol"]?.last ?: error("no last price for $symbol")
+                val (g, why) = com.optionslab.engine.Kite.protect(spec, product, netQty, last, stop, target)
+                Load.Done(GttPlan("Protect $symbol", g, why))
+            } catch (e: Exception) { Load.Failed(e.message ?: "could not prepare the GTT") }
+        }
+    }
+
+    fun dismissGtt() { gttPlan.value = Load.Idle }
+
+    /** Called only after the owner's PIN or fingerprint. */
+    fun placeGtt() {
+        val g = (gttPlan.value as? Load.Done<GttPlan>)?.value?.gtt ?: return
+        val s = _settings.value
+        if (!s.live || !s.allowRealOrders) { say("Real orders are off (Cabinet → Zerodha); a GTT is a real order."); return }
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                if (compromisedFresh()) error("this device shows signs of compromise")
+                val id = com.optionslab.app.data.Broker.placeGtt(g)
+                say("GTT placed (#$id): Zerodha holds it even when the phone is off.")
+                gttPlan.value = Load.Idle
+            } catch (e: Exception) { say("GTT not placed: ${e.message}") }
+            loadGtts()
+        }
+    }
+
+    /** Called only after the owner's PIN or fingerprint: deleting a GTT removes protection. */
+    fun deleteGtt(id: Long) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try { com.optionslab.app.data.Broker.deleteGtt(id); say("GTT #$id deleted.") } catch (e: Exception) { say("Not deleted: ${e.message}") }
+            loadGtts()
+        }
     }
 
     // ---- changing a working order --------------------------------------------------------

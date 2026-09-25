@@ -70,6 +70,10 @@ fun TradeScreen(model: AppModel) {
     var modifying by remember { mutableStateOf<Broker.OrderRow?>(null) }
     var cancelling by remember { mutableStateOf<Broker.OrderRow?>(null) }
     var cancelAuth by remember { mutableStateOf<Broker.OrderRow?>(null) }
+    var protecting by remember { mutableStateOf<GttTarget?>(null) }
+    var gttDelete by remember { mutableStateOf<Broker.GttRow?>(null) }
+    var gttDeleteAuth by remember { mutableStateOf<Broker.GttRow?>(null) }
+    val gtts by model.gtts.collectAsState()
     var selling by remember { mutableStateOf<Broker.Holding?>(null) }
     val paperSnap by model.paper.collectAsState()
     var paperBook by rememberSaveable { mutableStateOf("positions") }
@@ -126,10 +130,13 @@ fun TradeScreen(model: AppModel) {
             is Load.Done -> {
                 val v = a.value
                 when (book) {
-                    "positions" -> item { PositionsCard(model, v) }
-                    "orders" -> item { OrdersCard(v, onModify = { modifying = it }, onCancel = { cancelling = it }) }
+                    "positions" -> item { PositionsCard(model, v) { protecting = it } }
+                    "orders" -> {
+                        item { OrdersCard(v, onModify = { modifying = it }, onCancel = { cancelling = it }) }
+                        item { GttCard(gtts) { gttDelete = it } }
+                    }
                     "trades" -> item { TradesCard(v) }
-                    "holdings" -> item { HoldingsCard(v) { selling = it } }
+                    "holdings" -> item { HoldingsCard(v, onProtect = { h -> protecting = GttTarget(h.exchange, h.symbol, "CNC", h.qty) }) { selling = it } }
                     else -> {
                         item { PnlCard(v, pnl) }
                         item { FundsCard(v) }
@@ -144,6 +151,17 @@ fun TradeScreen(model: AppModel) {
     }
 
     if (resetting) PaperResetDialog(model) { resetting = false }
+    protecting?.let { t -> GttDialog(model, t) { protecting = null } }
+    gttDelete?.let { g ->
+        AlertDialog(
+            onDismissRequest = { gttDelete = null }, properties = secure,
+            title = { Text("Delete GTT #${g.id}?", style = Type.title) },
+            text = { Text("${g.symbol}: triggers ${g.triggers.joinToString(" / ") { px(it) }}. Deleting it removes this protection.", style = Type.bodySmall) },
+            confirmButton = { TextButton({ gttDeleteAuth = g; gttDelete = null }) { Text("Delete") } },
+            dismissButton = { TextButton({ gttDelete = null }) { Text("Keep") } },
+        )
+    }
+    gttDeleteAuth?.let { g -> Reauth(model, onOk = { gttDeleteAuth = null; model.deleteGtt(g.id) }, onCancel = { gttDeleteAuth = null }) }
     cancelAuth?.let { o -> Reauth(model, onOk = { cancelAuth = null; model.cancelOrder(o.id, o.variety) }, onCancel = { cancelAuth = null }) }
     modifying?.let { o -> ModifyDialog(model, o) { modifying = null } }
     cancelling?.let { o ->
@@ -180,7 +198,7 @@ fun TradeScreen(model: AppModel) {
 }
 
 @Composable
-private fun PositionsCard(model: AppModel, a: Account) {
+private fun PositionsCard(model: AppModel, a: Account, onProtect: (GttTarget) -> Unit) {
     val p = LocalPalette.current
     val open = a.positions.filter { it.open }
     val closed = a.positions.filter { !it.open }
@@ -202,6 +220,7 @@ private fun PositionsCard(model: AppModel, a: Account) {
             PositionRow(ps)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 4.dp)) {
                 BrassButton("Square off", tone = p.oxblood) { model.planSquareOff(ps) }
+                BrassButton("Protect (GTT)", tone = p.inkSoft) { onProtect(GttTarget(ps.exchange, ps.symbol, ps.product, ps.qty)) }
             }
         }
         if (open.size > 1) BrassButton("Square off all ${open.size}", Modifier.fillMaxWidth().padding(top = 10.dp), tone = p.oxblood) { model.planSquareOffAll() }
@@ -289,15 +308,15 @@ private fun TradesCard(a: Account) {
 }
 
 @Composable
-private fun HoldingsCard(a: Account, onSell: (Broker.Holding) -> Unit) {
+private fun HoldingsCard(a: Account, onProtect: (Broker.Holding) -> Unit, onSell: (Broker.Holding) -> Unit) {
     val p = LocalPalette.current
     LedgerCard(title = "Holdings") {
-        if (a.holdings.isEmpty()) Note("No delivery holdings.") else HoldingsBody(a, onSell)
+        if (a.holdings.isEmpty()) Note("No delivery holdings.") else HoldingsBody(a, onProtect, onSell)
     }
 }
 
 @Composable
-private fun HoldingsBody(a: Account, onSell: (Broker.Holding) -> Unit) {
+private fun HoldingsBody(a: Account, onProtect: (Broker.Holding) -> Unit, onSell: (Broker.Holding) -> Unit) {
     val p = LocalPalette.current
     run {
         val invested = a.holdings.sumOf { it.invested }
@@ -318,7 +337,10 @@ private fun HoldingsBody(a: Account, onSell: (Broker.Holding) -> Unit) {
                 }
                 Column(horizontalAlignment = Alignment.End) {
                     Text(rs(h.pnl, true), style = Type.figure.copy(color = if (h.pnl >= 0) p.verdigris else p.oxblood))
-                    if (h.qty > 0) TextButton({ onSell(h) }) { Text("Sell", style = Type.label.copy(color = p.oxblood)) }
+                    if (h.qty > 0) Row {
+                        TextButton({ onProtect(h) }) { Text("Protect", style = Type.label.copy(color = p.inkSoft)) }
+                        TextButton({ onSell(h) }) { Text("Sell", style = Type.label.copy(color = p.oxblood)) }
+                    }
                 }
             }
         }
@@ -401,4 +423,74 @@ private fun ModifyDialog(model: AppModel, o: Broker.OrderRow, onClose: () -> Uni
         model.modifyOrder(o, qty.toIntOrNull() ?: 0, type, price.toDoubleOrNull(), trigger.toDoubleOrNull())
         onClose()
     }, onCancel = { confirming = false })
+}
+
+/** What a GTT protects: one position or holding. */
+data class GttTarget(val exchange: String, val symbol: String, val product: String, val netQty: Int)
+
+@Composable
+private fun GttCard(list: List<Broker.GttRow>, onDelete: (Broker.GttRow) -> Unit) {
+    val p = LocalPalette.current
+    LedgerCard(title = "GTT (held at Zerodha)") {
+        if (list.isEmpty()) Note("No GTTs. \"Protect (GTT)\" on a position leaves a stop-loss and/or target at Zerodha that works even when this phone is off.")
+        list.forEach { g ->
+            Rule(Modifier.padding(vertical = 4.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("${g.symbol} · ${g.type} · ${g.status}", style = Type.figure.copy(color = if (g.status == "active") p.ink else p.inkSoft, fontSize = 12.sp))
+                    Text("triggers ${g.triggers.joinToString(" / ") { px(it) }} · ${g.orders}", style = Type.figure.copy(color = p.inkSoft, fontSize = 10.sp))
+                }
+                if (g.status == "active") TextButton({ onDelete(g) }) { Text("Delete", style = Type.label.copy(color = p.oxblood)) }
+            }
+        }
+    }
+}
+
+/** Stop and/or target for one position, checked, then placed after PIN or fingerprint. */
+@Composable
+private fun GttDialog(model: AppModel, t: GttTarget, onClose: () -> Unit) {
+    val p = LocalPalette.current
+    val plan by model.gttPlan.collectAsState()
+    var stop by remember { mutableStateOf("") }
+    var target by remember { mutableStateOf("") }
+    var auth by remember { mutableStateOf(false) }
+    val long = t.netQty > 0
+    AlertDialog(
+        onDismissRequest = { model.dismissGtt(); onClose() }, properties = secure,
+        title = { Text("Protect ${t.symbol}", style = Type.title) },
+        text = {
+            Column {
+                Text("${if (long) "Long" else "Short"} ${kotlin.math.abs(t.netQty)} · ${t.product}. A GTT lives at Zerodha: it fires even if this phone is off. " +
+                    "With both a stop and a target it is one-cancels-other.", style = Type.bodySmall)
+                OutlinedTextField(stop, { stop = it.filter { c -> c.isDigit() || c == '.' } }, singleLine = true,
+                    label = { Text("Stop-loss trigger (${if (long) "below" else "above"} the price)") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
+                OutlinedTextField(target, { target = it.filter { c -> c.isDigit() || c == '.' } }, singleLine = true,
+                    label = { Text("Target trigger (optional)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
+                TextButton({ model.planGtt(t.exchange, t.symbol, t.product, t.netQty, stop.toDoubleOrNull(), target.toDoubleOrNull()) }) {
+                    Text("Check", style = Type.label.copy(color = p.brass))
+                }
+                when (val l = plan) {
+                    is Load.Busy -> Text(l.label, style = Type.italic)
+                    is Load.Failed -> Text(l.why, style = Type.bodySmall.copy(color = p.oxblood))
+                    is Load.Done -> {
+                        l.value.why.forEach { Text("✕ $it", style = Type.bodySmall.copy(color = p.oxblood)) }
+                        l.value.gtt?.let { g ->
+                            Text("Last price ${px(g.lastPrice)} · ${g.type}", style = Type.figure.copy(fontSize = 12.sp))
+                            g.triggers.zip(g.orders).forEach { (tr, o) ->
+                                Text("at ${px(tr)} → ${o.side} ${o.quantity} LIMIT ${px(o.price ?: 0.0)}", style = Type.figure.copy(fontSize = 12.sp))
+                            }
+                        }
+                    }
+                    Load.Idle -> Unit
+                }
+            }
+        },
+        confirmButton = {
+            val ready = (plan as? Load.Done<AppModel.GttPlan>)?.value?.gtt != null
+            TextButton({ auth = true }, enabled = ready) { Text("Place GTT") }
+        },
+        dismissButton = { TextButton({ model.dismissGtt(); onClose() }) { Text("Close") } },
+    )
+    if (auth) Reauth(model, onOk = { auth = false; model.placeGtt(); onClose() }, onCancel = { auth = false })
 }

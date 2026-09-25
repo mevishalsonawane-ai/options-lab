@@ -165,4 +165,28 @@ class KiteTest {
             """{"exchange":"NFO","tradingsymbol":"NIFTY26SEP24500PE","transaction_type":"SELL","variety":"regular","product":"NRML","order_type":"MARKET","quantity":65,"price":0,"trigger_price":0}]""",
             Kite.basketJson(legs))
     }
+
+    @Test fun `a short option is protected with a stop above and a target below, OCO`() {
+        val spec = Kite.Spec("NFO", "NIFTY26SEP24500PE", 1L, 65, 0.05)
+        val (g, why) = Kite.protect(spec, "NRML", -130, lastPrice = 40.0, stop = 60.0, target = 20.0)
+        assertEquals(emptyList(), why)
+        g!!
+        assertEquals("two-leg", g.type)
+        assertEquals(listOf(20.0, 60.0), g.triggers)
+        assertTrue(g.orders.all { it.side == Kite.Side.BUY && it.quantity == 130 && it.orderType == "LIMIT" })
+        assertEquals(listOf(21.0, 63.0), g.orders.map { it.price })
+        val body = java.net.URLDecoder.decode(g.formBody(), "UTF-8")
+        assertTrue("type=two-leg" in body && "\"trigger_values\":[20.00,60.00]" in body && "\"last_price\":40.00" in body, body)
+        assertTrue("\"transaction_type\":\"BUY\",\"quantity\":130,\"order_type\":\"LIMIT\",\"product\":\"NRML\",\"price\":63.00" in body, body)
+    }
+
+    @Test fun `a GTT on the wrong side or too close is refused`() {
+        val spec = Kite.Spec("NSE", "INFY", 1L, 1, 0.1)
+        assertTrue(Kite.protect(spec, "CNC", 10, 1500.0, stop = 1600.0, target = null).second.any { "below" in it })
+        assertTrue(Kite.protect(spec, "CNC", 10, 1500.0, stop = 1499.0, target = null).second.any { "0.25%" in it })
+        val (g, _) = Kite.protect(spec, "CNC", 10, 1500.0, stop = 1400.0, target = null)
+        assertEquals("single", g!!.type)
+        assertEquals(Kite.Side.SELL, g.orders.single().side)
+        assertEquals(1330.0, g.orders.single().price!!, 1e-9)
+    }
 }

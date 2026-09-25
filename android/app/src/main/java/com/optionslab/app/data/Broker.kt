@@ -481,6 +481,24 @@ object Broker {
         }?.optString("order_id")?.also { countSent() }
     }
 
+    // ---- GTT ------------------------------------------------------------------------------
+
+    data class GttRow(val id: Long, val type: String, val status: String, val exchange: String, val symbol: String,
+                      val triggers: List<Double>, val lastPrice: Double, val orders: String, val created: String)
+
+    suspend fun gtts(): List<GttRow> = rows(call("GET", "/gtt/triggers") as? JSONArray).map { g ->
+        val c = g.optJSONObject("condition") ?: JSONObject()
+        val tv = c.optJSONArray("trigger_values") ?: JSONArray()
+        val os = rows(g.optJSONArray("orders")).joinToString(" / ") { "${it.optString("transaction_type")} ${it.optInt("quantity")} @ ${it.optDouble("price")}" }
+        GttRow(g.optLong("id"), g.optString("type"), g.optString("status"), c.optString("exchange"), c.optString("tradingsymbol"),
+            (0 until tv.length()).map { tv.getDouble(it) }, c.optDouble("last_price", 0.0), os, g.optString("created_at"))
+    }.sortedByDescending { it.created }
+
+    /** Places a GTT. Callers must have had the owner confirm it. */
+    suspend fun placeGtt(g: Kite.Gtt): Long = (call("POST", "/gtt/triggers", g.formBody()) as JSONObject).getLong("trigger_id")
+
+    suspend fun deleteGtt(id: Long) { call("DELETE", "/gtt/triggers/$id") }
+
     /** What Zerodha would block for these orders together ([required]), against the account's free margin. */
     data class Margin(val required: Double, val initial: Double, val available: Double, val charges: Double) {
         val short: Boolean get() = required > available
