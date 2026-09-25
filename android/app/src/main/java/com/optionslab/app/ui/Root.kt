@@ -250,7 +250,11 @@ private fun Masthead(live: Boolean) {
     LaunchedEffect(Unit) { while (true) { delay(15_000); now = Market.now() } }
     val open = Market.isOpen()
     Column(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 18.dp, vertical = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        Text("THE IRAALGO ALMANAC", style = Type.masthead.copy(color = p.ink, fontSize = 18.sp, letterSpacing = 3.sp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            com.optionslab.app.ui.components.BrandEmblem(26.dp, calm = true)
+            Spacer(Modifier.width(8.dp))
+            Text("THE IRAALGO ALMANAC", style = Type.masthead.copy(color = p.ink, fontSize = 18.sp, letterSpacing = 3.sp))
+        }
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(now.format(DateTimeFormatter.ofPattern("EEEE, d MMMM yyyy · HH:mm 'IST'", Locale.ENGLISH)),
                 style = Type.italic.copy(color = p.inkSoft, fontSize = 14.sp))

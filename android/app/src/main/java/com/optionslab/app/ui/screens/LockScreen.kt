@@ -50,6 +50,8 @@ import androidx.compose.ui.unit.sp
 import com.optionslab.app.security.PinLock
 import com.optionslab.app.ui.components.BrassButton
 import com.optionslab.app.ui.components.Parchment
+import com.optionslab.app.ui.components.BrandEmblem
+import com.optionslab.app.ui.components.BrandLogo
 import com.optionslab.app.ui.components.WaxSeal
 import com.optionslab.app.ui.theme.LocalPalette
 import com.optionslab.app.ui.theme.Type
@@ -123,9 +125,10 @@ fun LockScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Spacer(Modifier.height(36.dp))
-            WaxSeal(112.dp, broken = broken, pulse = !calm)
-            Spacer(Modifier.height(18.dp))
-            Text("IRAALGO", style = Type.masthead.copy(color = p.ink, fontSize = 26.sp, letterSpacing = 5.sp))
+            BrandEmblem(112.dp, unlocked = broken, calm = calm)
+            Spacer(Modifier.height(14.dp))
+            BrandLogo(Modifier.fillMaxWidth(0.82f))
+            Spacer(Modifier.height(6.dp))
             Text("the expiry-day ledger", style = Type.italic.copy(color = p.inkSoft, fontSize = 17.sp))
             Spacer(Modifier.height(22.dp))
             AnimatedContent(targetState = when {
@@ -224,7 +227,7 @@ fun RefusedScreen(findings: List<String>, onQuit: () -> Unit) {
     val p = LocalPalette.current
     Parchment {
         Column(Modifier.fillMaxSize().systemBarsPadding().padding(28.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-            WaxSeal(96.dp, pulse = false)
+            BrandEmblem(96.dp, calm = true)
             Spacer(Modifier.height(20.dp))
             Text("THE LEDGER STAYS SEALED", style = Type.title.copy(color = p.oxblood), textAlign = TextAlign.Center)
             Spacer(Modifier.height(10.dp))

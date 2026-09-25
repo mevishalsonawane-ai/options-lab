@@ -68,7 +68,7 @@ object Notifier {
 
     private fun publicVersion(context: Context, channel: String) =
         NotificationCompat.Builder(context, channel)
-            .setSmallIcon(R.drawable.ic_notification)
+            .setSmallIcon(R.drawable.ic_notification_art)
             .setContentTitle("IraAlgo")
             .setContentText("Unlock to read")
             .build()
@@ -76,7 +76,7 @@ object Notifier {
     fun builder(context: Context, channel: String, title: String, text: String, tab: String? = null): NotificationCompat.Builder {
         val hide = AppSettings.load().hideAmountsOnLockScreen
         return NotificationCompat.Builder(context, channel)
-            .setSmallIcon(R.drawable.ic_notification)
+            .setSmallIcon(R.drawable.ic_notification_art)
             .setColor(0xFFB08D57.toInt())
             .setContentTitle(title)
             .setContentText(text)
