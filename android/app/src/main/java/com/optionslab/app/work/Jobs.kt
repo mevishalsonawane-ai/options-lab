@@ -23,6 +23,7 @@ import androidx.work.workDataOf
 import com.optionslab.app.data.Alarms
 import com.optionslab.app.data.AppSettings
 import com.optionslab.app.data.Harvester
+import com.optionslab.app.data.Holidays
 import com.optionslab.app.data.Ledger
 import com.optionslab.app.data.Market
 import com.optionslab.app.data.Store
@@ -80,7 +81,7 @@ object Jobs {
     fun nextRun(k: Kind, from: ZonedDateTime = Market.now()): ZonedDateTime {
         var d = from.toLocalDate()
         if (!from.toLocalTime().isBefore(k.at)) d = d.plusDays(1)
-        while (!Market.isWeekday(d)) d = d.plusDays(1)
+        while (!Market.isTradingDay(d)) d = d.plusDays(1)
         return d.atTime(k.at).atZone(IST)
     }
 
@@ -146,6 +147,7 @@ class AlarmReceiver : BroadcastReceiver() {
         val k = runCatching { Jobs.Kind.valueOf(intent.getStringExtra(Jobs.EXTRA_KIND) ?: return) }.getOrNull() ?: return
         Jobs.schedule(context, k)
         val s = AppSettings.load()
+        if (!Market.isTradingDay()) return   // an NSE holiday: nothing trades, nothing to do
         if (k.expiryOnly && !Market.isExpiryDay(s.ticketUnderlying)) return
         if (k == Jobs.Kind.REMIND) {
             Tasks.remind(context, s)
@@ -217,6 +219,7 @@ object Tasks {
     }
 
     suspend fun harvest(context: Context, s: AppSettings, onProgress: (String, Float) -> Unit) {
+        if (Holidays.stale(Market.today())) runCatching { Holidays.refresh() }
         val r = Harvester.run(onProgress = { p -> onProgress(p.stage, if (p.total > 0) p.done.toFloat() / p.total else -1f) })
         SecurePrefs.put("harvest.last", "${Market.today()}: ${r.summary()}")
         Notifier.post(context, Notifier.ID_HARVEST, Notifier.SCHEDULE, "Harvest complete", r.summary(), "cabinet")
@@ -390,12 +393,13 @@ class WatchService : Service() {
 
     private suspend fun watch(s: AppSettings) {
         val fired = HashSet<String>()
+        if (Holidays.stale(Market.today())) runCatching { Holidays.refresh() }
         val b = com.optionslab.app.data.Broker
         if (b.configured && !b.loggedIn) Notifier.post(this, 2005, Notifier.SCHEDULE, "Log in to Zerodha for today",
             "Yesterday's session ended at 06:00. Open Cabinet → Zerodha and log in before the 11:00 entry.", "broker")
         // Market hours, and a quarter-hour past the close while a strategy run is still open,
         // so its exit-time square-off and any retried exits are seen through.
-        while (Market.isWeekday() && (Market.minuteNow() <= Market.CLOSE ||
+        while (Market.isTradingDay() && (Market.minuteNow() <= Market.CLOSE ||
                 (Market.minuteNow() <= Market.CLOSE + 15 && com.optionslab.app.data.Strategies.anyRunning()))) {
             if (Market.minuteNow() < Market.OPEN) {
                 show("Market watch", "Waiting for the 09:15 open")

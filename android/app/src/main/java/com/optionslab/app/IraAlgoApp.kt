@@ -20,6 +20,7 @@ class IraAlgoApp : Application() {
         Alarms.init(this)
         Store.init(this)
         Market.init(this)
+        com.optionslab.app.data.Holidays.init(this)
         Broker.init(this)
         com.optionslab.app.data.Paper.init(this)
         com.optionslab.app.data.History.init(this)

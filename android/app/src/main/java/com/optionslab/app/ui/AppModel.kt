@@ -117,6 +117,21 @@ class AppModel(app: Application) : AndroidViewModel(app) {
 
     fun say(text: String) { message.value = text }
 
+    // ---- NSE holidays ----------------------------------------------------------------------
+
+    val holidays = MutableStateFlow(com.optionslab.app.data.Holidays.book())
+
+    fun refreshHolidays() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val h = com.optionslab.app.data.Holidays
+            try { say("NSE holiday list: ${h.refresh()} dates.") } catch (e: Exception) { say(e.message ?: "could not read NSE's holiday list") }
+            holidays.value = h.book(); Jobs.scheduleAll(ctx)
+        }
+    }
+
+    fun addHoliday(d: LocalDate) { com.optionslab.app.data.Holidays.add(d); holidays.value = com.optionslab.app.data.Holidays.book(); Jobs.scheduleAll(ctx) }
+    fun removeHoliday(d: LocalDate) { com.optionslab.app.data.Holidays.remove(d); holidays.value = com.optionslab.app.data.Holidays.book(); Jobs.scheduleAll(ctx) }
+
     fun update(transform: (AppSettings) -> AppSettings) {
         val next = transform(_settings.value)
         _settings.value = next

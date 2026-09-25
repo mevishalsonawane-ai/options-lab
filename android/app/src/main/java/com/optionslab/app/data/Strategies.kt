@@ -368,7 +368,7 @@ object Strategies {
             val running = cur?.let { Entry(def, it).running } == true
             // The watch polls about once a minute and a tick can itself take a while, so slots are
             // caught up to five minutes late rather than IraAlgo's 60 s.
-            for (due in Scheduler.due(def, last, now, { !Market.isWeekday(it) }, java.time.Duration.ofMinutes(5))) {
+            for (due in Scheduler.due(def, last, now, { !Market.isTradingDay(it) }, java.time.Duration.ofMinutes(5))) {
                 if (due.job.kind == Scheduler.JobKind.START) {
                     when (val d = Scheduler.startDecision(def, running)) {
                         is Scheduler.StartDecision.Start -> if (d.mode == RunMode.LIVE) {

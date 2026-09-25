@@ -346,6 +346,7 @@ fun SchedulePage(model: AppModel) {
     val fmt = DateTimeFormatter.ofPattern("EEE d MMM, HH:mm")
     Page {
         item { PageTitle("Schedules & Notices", "The strategy's day, kept by the phone") }
+        item { HolidaysCard(model) }
         item {
             LedgerCard(title = "The Day") {
                 val rows = listOf(
@@ -419,4 +420,30 @@ private fun plainPermission(p: String): String = when (p.substringAfterLast('.')
     "WAKE_LOCK" -> "Stay awake while a scheduled job finishes"
     "DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" -> "Talk to itself privately (no other app can use this)"
     else -> p.substringAfterLast('.')
+}
+
+/** NSE trading holidays: fetched from NSE, correctable by hand. */
+@Composable
+private fun HolidaysCard(model: AppModel) {
+    val p = LocalPalette.current
+    val h by model.holidays.collectAsState()
+    var text by remember { mutableStateOf("") }
+    LedgerCard(title = "Market holidays") {
+        val up = h.upcoming(com.optionslab.app.data.Market.today())
+        if (up.isEmpty()) Note("No holiday list yet. Without one, a holiday is treated as a trading day: the watch runs and alarms fire.")
+        up.take(12).forEach { (d, name) ->
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("${d.format(DateTimeFormatter.ofPattern("EEE d MMM yyyy"))} · $name", style = Type.bodySmall.copy(color = p.ink), modifier = Modifier.weight(1f))
+                androidx.compose.material3.TextButton({ model.removeHoliday(d) }) { Text("✕", style = Type.label.copy(color = p.oxblood)) }
+            }
+        }
+        LedgerLine("From NSE", h.fetched?.let { "updated $it" } ?: "never")
+        BrassButton("Refresh from NSE", Modifier.fillMaxWidth().padding(top = 6.dp), tone = p.inkSoft) { model.refreshHolidays() }
+        androidx.compose.material3.OutlinedTextField(text, { text = it.filter { c -> c.isDigit() || c == '-' }.take(10) },
+            label = { Text("Add a holiday (yyyy-mm-dd)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+        BrassButton("Add", Modifier.fillMaxWidth().padding(top = 4.dp), tone = p.inkSoft, enabled = runCatching { java.time.LocalDate.parse(text) }.isSuccess) {
+            model.addHoliday(java.time.LocalDate.parse(text)); text = ""
+        }
+        Note("Refreshed weekly by itself. On a holiday the watch, the expiry jobs, the harvest and strategy schedules stand down.")
+    }
 }

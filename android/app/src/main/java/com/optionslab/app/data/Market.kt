@@ -34,7 +34,10 @@ object Market {
     const val CLOSE = 15 * 60 + 30
 
     fun isWeekday(d: LocalDate = today()) = d.dayOfWeek != DayOfWeek.SATURDAY && d.dayOfWeek != DayOfWeek.SUNDAY
-    fun isOpen(): Boolean = isWeekday() && minuteNow() in OPEN until CLOSE
+
+    /** A weekday that is not an NSE trading holiday (see [Holidays]). */
+    fun isTradingDay(d: LocalDate = today()) = isWeekday(d) && !Holidays.isHoliday(d)
+    fun isOpen(): Boolean = isTradingDay() && minuteNow() in OPEN until CLOSE
 
     data class Quote(val symbol: String, val last: Double, val open: Double, val high: Double, val low: Double,
                      val minute: Int, val spark: List<Double>) {
