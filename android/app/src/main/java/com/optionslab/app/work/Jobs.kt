@@ -315,6 +315,8 @@ object Tasks {
         // Sandbox paper account: resting orders fill, MIS squares off at 15:15, expiries settle.
         // Paper account (also used by paper strategy runs in LIVE mode): resting orders fill, MIS squares off, expiries settle.
         runCatching { com.optionslab.app.data.Paper.tick() }.getOrNull()?.let { paperEvents(context, it) }
+        // Expiry day, 15:05: close every option position expiring today (paper and live, all products).
+        runCatching { com.optionslab.app.data.ExpirySquareOff.maybeRun(context, s) }
         // Strategy Module: schedules, prices, per-leg and basket risk, exits.
         runCatching {
             val bad = com.optionslab.app.security.Integrity.compromised(com.optionslab.app.security.Integrity.reportWithin(context, 60_000))

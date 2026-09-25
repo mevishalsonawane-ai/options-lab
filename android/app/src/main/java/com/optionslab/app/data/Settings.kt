@@ -67,6 +67,10 @@ data class AppSettings(
     /** Minute of day; -1 = no cutoff. */
     val guardCutoff: Int = 14 * 60 + 30,
     val guardNakedShort: Boolean = true,
+    /** TODO A5: close positions expiring today at 15:05 on expiry day. */
+    val expirySquareOff: Boolean = true,
+    /** ...except the Expiry Put ticket, which is meant to be held to the 15:30 settlement. */
+    val keepExpiryPut: Boolean = true,
     val prepareRealOrder: Boolean = true,
     // appearance
     val theme: String = "system",          // system | light | dark
@@ -132,6 +136,7 @@ data class AppSettings(
                 guardMaxTrades = p.getInt("g.trades", d.guardMaxTrades), guardMaxValue = p.getDouble("g.value", d.guardMaxValue),
                 guardMaxLots = p.getInt("g.lots", d.guardMaxLots), guardCutoff = p.getInt("g.cutoff", d.guardCutoff),
                 guardNakedShort = p.getBoolean("g.naked", d.guardNakedShort),
+                expirySquareOff = p.getBoolean("g.expSq", d.expirySquareOff), keepExpiryPut = p.getBoolean("g.keepPut", d.keepExpiryPut),
                 prepareRealOrder = p.getBoolean("k.prepare", d.prepareRealOrder),
                 theme = p.getString("ui.theme", d.theme)!!,
                 reduceMotion = p.getBoolean("ui.calm", d.reduceMotion),
@@ -155,7 +160,7 @@ data class AppSettings(
                 "k.maxLots" to s.maxLotsPerOrder, "k.maxValue" to s.maxOrderValue,
                 "g.kill" to s.guardKill, "g.loss" to s.guardDailyLoss, "g.dd" to s.guardDrawdownPct, "g.open" to s.guardMaxOpen,
                 "g.trades" to s.guardMaxTrades, "g.value" to s.guardMaxValue, "g.lots" to s.guardMaxLots, "g.cutoff" to s.guardCutoff,
-                "g.naked" to s.guardNakedShort, "k.prepare" to s.prepareRealOrder,
+                "g.naked" to s.guardNakedShort, "g.expSq" to s.expirySquareOff, "g.keepPut" to s.keepExpiryPut, "k.prepare" to s.prepareRealOrder,
             ))
         }
     }

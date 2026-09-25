@@ -17,15 +17,15 @@ Source paths prefixed `NTA:` are in D:\New Trading app.
       one ATM strike all day, +40/-40 option points, resting stop, 15:10 exit, Rs 40 min premium, 1 lot).
       Source: `NTA:mobile/native/app/app/src/main/java/com/iraalgo/app/rules/OrbRules.kt`,
       `rules/Replay.kt`, `arms/ArmRunner.kt` + their parity tests; Python origin `NTA:services/ai_signals/orb_arm.py`.
-- [ ] A2. Port account-wide guard: kill switch, daily loss, drawdown (vs capital and vs persisted peak),
+- [x] A2. (done: engine `risk/AccountGuard.kt` + tests, app `data/Guard.kt`, More -> Bot -> Bot settings) Port account-wide guard: kill switch, daily loss, drawdown (vs capital and vs persisted peak),
       max concurrent positions, max trades/day, order value, symbol exposure, entry cutoff, naked short.
       Exits bypass all but the kill switch. Source: `NTA:.../rules/AccountGuard.kt` + `AccountGuardParityTest`
       (222 vectors from `NTA:mobile/native/make_vectors.py`); Python origin `NTA:services/risk/account_guard.py`.
-- [ ] A3. Account-level Stop/Start arms for the day + kill-switch clear (confirm dialogs).
+- [x] A3. (done: one bot button on Home's Strategies card - Stop for today / Start / Clear kill switch, each confirmed) Account-level Stop/Start arms for the day + kill-switch clear (confirm dialogs).
       Source: `NTA:blueprints/ai_signals_activity.py`, `NTA:frontend/src/components/trading/ArmsControl.tsx`.
-- [ ] A4. Block or replace the imported ORB / ORB Fresh JSON strategies (`android/.../data/Strategies.kt:187-216`):
+- [ ] A4. (interim block shipped: any strategy named ORB cannot be armed or started and shows 'BLOCKED - needs breakout rules'; replace with the real logic once A1 lands) Block or replace the imported ORB / ORB Fresh JSON strategies (`android/.../data/Strategies.kt:187-216`):
       they currently run as time-scheduled baskets with NO breakout check. DO NOT ARM until A1 lands.
-- [ ] A5. Expiry-day square-off at 15:05 for all products (NTA: `services/expiry_squareoff.py`);
+- [x] A5. (done: `data/ExpirySquareOff.kt` from the market watch, paper + live, keeps the Expiry Put to settlement by default; toggles in Bot settings) Expiry-day square-off at 15:05 for all products (NTA: `services/expiry_squareoff.py`);
       IraAlgo currently settles at expiry / squares MIS at 15:15.
 - [ ] A6. Decide order limits: IraAlgo 4 orders/day + Rs 5L/order vs NTA guard limits.
 - [ ] A7. Minute market snapshots (BANKNIFTY/NIFTY/SENSEX/VIX + near-ATM options, 09:15-15:30).
