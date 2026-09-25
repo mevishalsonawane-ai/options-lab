@@ -273,7 +273,20 @@ object Tasks {
                     "${tk.underlying} %,.1f is below the ${fmtG(tk.strike)} strike. The loss is unbounded below here.".format(spot), "ticket")
             }
         }
-        checkAlarms(context, q.mapValues { it.value.last }, fired)
+        // Alarms on any instrument ("NSE:INFY", "NFO:NIFTY26SEP24500PE") are priced from Zerodha.
+        val prices = HashMap(q.mapValues { it.value.last })
+        val b = com.optionslab.app.data.Broker
+        if (s.live && b.loggedIn) {
+            val keys = Alarms.all().filter { it.enabled && ':' in it.symbol }.map { it.symbol }.distinct()
+            if (keys.isNotEmpty()) runCatching { b.quotes(keys) }.getOrNull()?.forEach { (k, v) -> prices[k] = v.last }
+            // The account's P&L: recorded for the day's curve, and alerted on the owner's levels.
+            runCatching { b.positionBook() }.getOrNull()?.takeIf { it.net.isNotEmpty() }?.let { book ->
+                com.optionslab.app.data.PnlTracker.record(book.pnl)
+                lines.add(0, "Positions %s".format(if (s.hideAmountsOnLockScreen) "open: ${book.net.count { it.open }}" else "Rs %+,.0f".format(book.pnl)))
+                pnlAlerts(context, s, book.pnl)
+            }
+        }
+        checkAlarms(context, prices, fired)
         // Sandbox paper account: resting orders fill, MIS squares off at 15:15, expiries settle.
         // Paper account (also used by paper strategy runs in LIVE mode): resting orders fill, MIS squares off, expiries settle.
         runCatching { com.optionslab.app.data.Paper.tick() }.getOrNull()?.let { paperEvents(context, it) }
@@ -295,6 +308,18 @@ object Tasks {
                 "Paper MIS squared off", e.symbol, "trade")
             else -> Unit
         }
+    }
+
+    /** Once a day per kind: the account's P&L crossed the owner's loss or profit level. */
+    private fun pnlAlerts(context: Context, s: AppSettings, pnl: Double) {
+        val day = Market.today().toString()
+        fun once(kind: String, title: String, text: String) {
+            if (SecurePrefs.getString("pnl.alerted.$kind") == day) return
+            SecurePrefs.put("pnl.alerted.$kind", day)
+            Notifier.post(context, if (kind == "loss") 3101 else 3102, Notifier.RISK, title, text, "trade")
+        }
+        if (s.pnlLossAlert > 0 && pnl <= -s.pnlLossAlert) once("loss", "Account loss beyond your level", "Today's P&L is Rs %,.0f (your alert: -Rs %,.0f).".format(pnl, s.pnlLossAlert))
+        if (s.pnlProfitAlert > 0 && pnl >= s.pnlProfitAlert) once("profit", "Account profit reached your level", "Today's P&L is Rs %+,.0f (your alert: Rs %,.0f).".format(pnl, s.pnlProfitAlert))
     }
 
     fun checkAlarms(context: Context, prices: Map<String, Double>, fired: MutableSet<String>) {

@@ -56,6 +56,7 @@ import com.optionslab.app.ui.components.Stamp
 import com.optionslab.app.ui.eraseEverything
 import com.optionslab.app.ui.num
 import com.optionslab.app.ui.pct
+import com.optionslab.app.ui.rs
 import com.optionslab.app.ui.theme.LocalPalette
 import com.optionslab.app.ui.theme.Type
 import com.optionslab.app.work.Jobs
@@ -95,14 +96,23 @@ fun AlarmsPage(model: AppModel) {
         item { PageTitle("Alarms", "Checked every minute by the live watch, and whenever the Almanac is open") }
         item {
             LedgerCard(title = "Set an alarm") {
-                ParamTokens("Index", listOf("NIFTY", "BANKNIFTY", "INDIAVIX").map { it to (it == symbol) }) { symbol = listOf("NIFTY", "BANKNIFTY", "INDIAVIX")[it] }
+                val idx = listOf("NIFTY", "BANKNIFTY", "INDIAVIX")
+                ParamTokens("On", idx.map { it to (it == symbol) } + ("Any instrument" to (symbol !in idx))) { i ->
+                    symbol = if (i < idx.size) idx[i] else "NSE:"
+                }
+                if (symbol !in idx) {
+                    OutlinedTextField(symbol, { symbol = it.uppercase().filter { c -> c.isLetterOrDigit() || c in ":-&_" }.take(40) },
+                        label = { Text("EXCHANGE:SYMBOL, e.g. NSE:INFY or NFO:NIFTY26SEP24500PE") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                    Note("Priced from Zerodha, so it rings only in LIVE mode while you are logged in.")
+                }
                 ParamTokens("When it", listOf("falls below" to !above, "rises above" to above)) { above = it == 1 }
                 quotes[symbol]?.let { Note("Now ${num(it.last, 2)}") }
                 OutlinedTextField(level, { level = it.filter { c -> c.isDigit() || c == '.' } }, label = { Text("Level") }, singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(note, { note = it.take(80) }, label = { Text("Note (optional)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
                 Spacer(Modifier.height(10.dp))
-                BrassButton("Set alarm", Modifier.fillMaxWidth(), enabled = level.toDoubleOrNull() != null) {
+                val symbolOk = symbol in listOf("NIFTY", "BANKNIFTY", "INDIAVIX") || Regex("^[A-Z]{2,4}:[A-Z0-9&_-]{1,32}$").matches(symbol)
+                BrassButton("Set alarm", Modifier.fillMaxWidth(), enabled = level.toDoubleOrNull() != null && symbolOk) {
                     model.saveAlarm(PriceAlarm(System.currentTimeMillis(), symbol, above, level.toDouble(), note = note.trim()))
                     level = ""; note = ""
                     model.say("Alarm set. It rings once, then rests 30 minutes.")
@@ -118,6 +128,16 @@ fun AlarmsPage(model: AppModel) {
                         a.enabled) { on -> model.saveAlarm(a.copy(enabled = on)) }
                     BrassButton("Remove", tone = p.inkFaint) { model.removeAlarm(a.id) }
                 }
+            }
+        }
+        item {
+            val st by model.settings.collectAsState()
+            LedgerCard(title = "Account P&L alerts") {
+                val losses = listOf(0.0, 2_000.0, 5_000.0, 10_000.0, 25_000.0)
+                ParamTokens("When today's loss reaches", losses.map { (if (it == 0.0) "off" else "-" + rs(it)) to (it == st.pnlLossAlert) }) { i -> model.update { it.copy(pnlLossAlert = losses[i]) } }
+                val gains = listOf(0.0, 5_000.0, 10_000.0, 25_000.0, 50_000.0)
+                ParamTokens("When today's profit reaches", gains.map { (if (it == 0.0) "off" else rs(it)) to (it == st.pnlProfitAlert) }) { i -> model.update { it.copy(pnlProfitAlert = gains[i]) } }
+                Note("Checked every minute by the live watch from your Zerodha positions (LIVE mode, logged in). Each alert rings once a day.")
             }
         }
         item {

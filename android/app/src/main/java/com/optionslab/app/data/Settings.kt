@@ -32,6 +32,11 @@ data class AppSettings(
     val liveWatch: Boolean = true,
     val riskAlertPct: Double = 0.0025,
     val healthAlerts: Boolean = true,
+    // account P&L alerts from the background watch (rupees; 0 = off)
+    val pnlLossAlert: Double = 0.0,
+    val pnlProfitAlert: Double = 0.0,
+    // home-screen widget: index levels always; the account P&L only if the owner opts in
+    val widgetPnl: Boolean = false,
     // security
     val biometric: Boolean = false,
     val allowWeakFace: Boolean = false,
@@ -89,6 +94,9 @@ data class AppSettings(
                 liveWatch = p.getBoolean("n.live", d.liveWatch),
                 riskAlertPct = p.getDouble("n.risk", d.riskAlertPct),
                 healthAlerts = p.getBoolean("n.health", d.healthAlerts),
+                pnlLossAlert = p.getDouble("n.pnlLoss", d.pnlLossAlert),
+                pnlProfitAlert = p.getDouble("n.pnlProfit", d.pnlProfitAlert),
+                widgetPnl = p.getBoolean("ui.widgetPnl", d.widgetPnl),
                 biometric = p.getBoolean("sec.bio", d.biometric),
                 allowWeakFace = p.getBoolean("sec.face", d.allowWeakFace),
                 graceSeconds = p.getInt("lock.graceSeconds", d.graceSeconds),
@@ -118,7 +126,8 @@ data class AppSettings(
                 "n.health" to s.healthAlerts, "sec.bio" to s.biometric, "sec.face" to s.allowWeakFace,
                 "lock.graceSeconds" to s.graceSeconds, "sec.refuse" to s.refuseCompromised,
                 "sec.wipe" to s.wipeOnExhaustion, "sec.hideAmounts" to s.hideAmountsOnLockScreen,
-                "ui.theme" to s.theme, "ui.calm" to s.reduceMotion,
+                "ui.theme" to s.theme, "ui.calm" to s.reduceMotion, "ui.widgetPnl" to s.widgetPnl,
+                "n.pnlLoss" to s.pnlLossAlert, "n.pnlProfit" to s.pnlProfitAlert,
                 "k.mode" to s.mode, "k.allow" to s.allowRealOrders, "k.product" to s.orderProduct, "k.maxOrders" to s.maxOrdersPerDay,
                 "k.maxLots" to s.maxLotsPerOrder, "k.maxValue" to s.maxOrderValue, "k.prepare" to s.prepareRealOrder,
             ))

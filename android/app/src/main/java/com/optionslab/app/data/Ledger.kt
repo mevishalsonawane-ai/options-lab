@@ -158,7 +158,7 @@ object Ledger {
 /** Price alarms: "tell me when NIFTY closes a minute below 24,000". */
 data class PriceAlarm(
     val id: Long,
-    val symbol: String,            // NIFTY | BANKNIFTY | INDIAVIX
+    val symbol: String,            // NIFTY | BANKNIFTY | INDIAVIX, or any instrument as EXCHANGE:SYMBOL (e.g. NSE:INFY)
     val above: Boolean,
     val level: Double,
     val enabled: Boolean = true,
