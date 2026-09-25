@@ -66,12 +66,25 @@ fun StrategyArmCard(model: AppModel, onManage: () -> Unit) {
     var choosing by remember { mutableStateOf<com.optionslab.engine.strategy.StrategyDef?>(null) }
     var reauthArm by remember { mutableStateOf<Pair<Long, Boolean>?>(null) }
     var reauthApprove by remember { mutableStateOf<Long?>(null) }
+    val botStopped by model.botStopped.collectAsState()
+    var confirmBot by remember { mutableStateOf(false) }
 
     LedgerCard {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("Strategies", style = Type.title.copy(color = p.ink, fontSize = 16.sp), modifier = Modifier.weight(1f))
             Text("Import from desktop", style = Type.bodySmall.copy(color = p.ink, fontWeight = FontWeight.SemiBold),
                 modifier = Modifier.clickable { importing = true }.padding(4.dp))
+        }
+        // One control for the whole bot: stop it for today, start it again, or clear the kill switch.
+        val (botState, botAction, botTone) = when {
+            s.guardKill -> Triple("Kill switch ON: all orders blocked", "Clear kill switch", p.oxblood)
+            botStopped -> Triple("Bot stopped for today", "Start bot", p.verdigris)
+            else -> Triple("Bot running: armed strategies start on time", "Stop bot for today", p.oxblood)
+        }
+        Row(Modifier.fillMaxWidth().padding(top = 8.dp).background(botTone.copy(alpha = 0.10f), RoundedCornerShape(12.dp)).padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically) {
+            Text(botState, style = Type.bodySmall.copy(color = p.ink, fontWeight = FontWeight.SemiBold), modifier = Modifier.weight(1f))
+            BrassButton(botAction, tone = botTone) { confirmBot = true }
         }
         if (list.isEmpty()) {
             Note("No strategies on this phone yet. Import ORB and ORB Fresh (or any strategy) from the desktop app, then arm the ones you want.",
@@ -139,6 +152,7 @@ fun StrategyArmCard(model: AppModel, onManage: () -> Unit) {
     reauthArm?.let { (id, automatic) -> Reauth(model, onOk = { reauthArm = null; model.armStrategy(id, true, automatic) }, onCancel = { reauthArm = null }) }
     reauthApprove?.let { id -> Reauth(model, onOk = { reauthApprove = null; model.approveStrategy(id) }, onCancel = { reauthApprove = null }) }
     if (importing) ImportDialog(model) { importing = false }
+    if (confirmBot) BotDialog(model, killOn = s.guardKill, stopped = botStopped, anyRunning = list.any { it.running }) { confirmBot = false }
 }
 
 /** The desktop app's local API lists strategies and returns each one in full; this is the command that collects them. */
@@ -210,4 +224,41 @@ private fun ChoiceRow(title: String, detail: String, onClick: () -> Unit) {
         Text(title, style = Type.body.copy(color = p.ink, fontWeight = FontWeight.SemiBold))
         Text(detail, style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp))
     }
+}
+
+/** The confirmation behind Home's single bot button. */
+@Composable
+private fun BotDialog(model: AppModel, killOn: Boolean, stopped: Boolean, anyRunning: Boolean, onClose: () -> Unit) {
+    val p = LocalPalette.current
+    var alsoStop by remember { mutableStateOf(false) }
+    AlertDialog(
+        onDismissRequest = onClose,
+        properties = DialogProperties(securePolicy = SecureFlagPolicy.SecureOn),
+        title = { Text(when { killOn -> "Clear the kill switch?"; stopped -> "Start the bot?"; else -> "Stop the bot for today?" }, style = Type.title) },
+        text = {
+            Column {
+                Text(when {
+                    killOn -> "Orders are allowed again, within your Bot settings limits. Armed strategies start at their times" +
+                        if (stopped) " once the bot is started too." else "."
+                    stopped -> "Armed strategies start at their scheduled times again today."
+                    else -> "No armed strategy starts for the rest of today and waiting approvals are dropped. Tomorrow the bot runs as usual."
+                }, style = Type.bodySmall)
+                if (!killOn && !stopped && anyRunning) Row(Modifier.padding(top = 10.dp).clickable { alsoStop = !alsoStop }, verticalAlignment = Alignment.CenterVertically) {
+                    androidx.compose.material3.Checkbox(alsoStop, { alsoStop = it })
+                    Text("Also stop the strategies running now (their positions are closed)", style = Type.bodySmall.copy(color = p.ink))
+                }
+            }
+        },
+        confirmButton = {
+            TextButton({
+                when {
+                    killOn -> model.update { it.copy(guardKill = false) }
+                    stopped -> model.startBotAgain()
+                    else -> model.stopBotForToday(alsoStop)
+                }
+                onClose()
+            }) { Text(when { killOn -> "Clear"; stopped -> "Start"; else -> "Stop for today" }, color = if (killOn || stopped) p.verdigris else p.oxblood) }
+        },
+        dismissButton = { TextButton(onClose) { Text("Cancel") } },
+    )
 }

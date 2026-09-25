@@ -86,6 +86,8 @@ object Strategies {
         val autoApprove: LinkedHashMap<Long, Boolean> = LinkedHashMap(),
         /** Scheduled starts waiting for the owner's approval: strategy id -> "<mode>|<date>". */
         val pending: LinkedHashMap<Long, String> = LinkedHashMap(),
+        /** The day the owner stopped the bot: no armed strategy starts for the rest of it. */
+        var stoppedDay: String? = null,
     )
 
     private var cache: Book? = null
@@ -111,7 +113,8 @@ object Strategies {
             o.optJSONObject("autoApprove")?.let { m -> m.keys().forEach { k -> auto[k.toLong()] = m.getBoolean(k) } }
             val pending = LinkedHashMap<Long, String>()
             o.optJSONObject("pending")?.let { m -> m.keys().forEach { k -> pending[k.toLong()] = m.getString(k) } }
-            Book(defs, runs, history, ids, log, o.getLong("nextRunId"), o.getLong("nextStrategyId"), o.optLong("lastCheck", 0).takeIf { it > 0 }, owners, auto, pending)
+            Book(defs, runs, history, ids, log, o.getLong("nextRunId"), o.getLong("nextStrategyId"), o.optLong("lastCheck", 0).takeIf { it > 0 }, owners, auto, pending,
+                o.optString("stoppedDay").takeIf { it.isNotBlank() })
         }.getOrNull()
         if (b == null && file.exists()) {
             Vault.setAside(file)
@@ -134,6 +137,7 @@ object Strategies {
         o.put("owners", JSONObject().apply { b.owners.forEach { (k, v) -> put(k, v) } })
         o.put("autoApprove", JSONObject().apply { b.autoApprove.forEach { (k, v) -> put(k.toString(), v) } })
         o.put("pending", JSONObject().apply { b.pending.forEach { (k, v) -> put(k.toString(), v) } })
+        b.stoppedDay?.let { o.put("stoppedDay", it) }
         Vault.writeFile(file, o.toString().toByteArray(Charsets.UTF_8))
         cache = b
     }
@@ -420,6 +424,33 @@ object Strategies {
         run.startError ?: "${def.name} started (${mode.wire}): ${run.openLegs().size} of ${def.legs.size} legs open."
     }
 
+    /** Whether the owner stopped the bot for today. */
+    suspend fun stoppedToday(): Boolean = lock.withLock { book().stoppedDay == Market.today().toString() }
+
+    /**
+     * Stop the bot for the rest of today: no armed strategy starts, waiting approvals are dropped,
+     * and with [stopRunning] every running strategy is stopped too (its positions closed by its own exits).
+     */
+    suspend fun stopForToday(stopRunning: Boolean, compromised: Boolean): String {
+        val running = lock.withLock {
+            val b = book()
+            b.stoppedDay = Market.today().toString()
+            b.pending.clear()
+            save(b)
+            b.defs.filter { d -> b.runs[d.id]?.let { Entry(d, it).running } == true }.map { it.id to it.name }
+        }
+        if (!stopRunning || running.isEmpty()) return "Bot stopped for today: armed strategies will not start." +
+            if (running.isNotEmpty()) " ${running.size} running strategy(ies) keep managing their exits." else ""
+        val results = running.map { (id, _) -> runCatching { stop(id, "bot stopped for the day", compromised) }.getOrElse { e -> "${e.message}" } }
+        return "Bot stopped for today. " + results.joinToString(" ")
+    }
+
+    /** Undo [stopForToday]: armed strategies start at their times again. */
+    suspend fun startAgain(): String = lock.withLock {
+        val b = book(); b.stoppedDay = null; save(b)
+        "Bot running: armed strategies start at their times."
+    }
+
     suspend fun stop(id: Long, reason: String, compromised: Boolean): String = lock.withLock {
         val b = book()
         val def = b.defs.firstOrNull { it.id == id } ?: return@withLock "No such strategy."
@@ -491,7 +522,9 @@ object Strategies {
             // The watch polls about once a minute and a tick can itself take a while, so slots are
             // caught up to five minutes late rather than IraAlgo's 60 s.
             for (due in Scheduler.due(def, last, now, { !Market.isTradingDay(it) }, java.time.Duration.ofMinutes(5))) {
-                if (due.job.kind == Scheduler.JobKind.START) {
+                if (due.job.kind == Scheduler.JobKind.START && b.stoppedDay == Market.today().toString()) {
+                    record(b, def.name, Event("start_skipped", "Scheduled start skipped: the bot is stopped for today", "info"), false)
+                } else if (due.job.kind == Scheduler.JobKind.START) {
                     when (val d = Scheduler.startDecision(def, running)) {
                         is Scheduler.StartDecision.Start -> if (b.autoApprove[def.id] ?: (d.mode != RunMode.LIVE)) {
                             // Automatic: the owner chose this when arming (live arming needed the PIN or fingerprint).

@@ -964,7 +964,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             val st = com.optionslab.app.data.Strategies
             if (tick) runCatching { st.tickAll(compromisedFresh(60_000)) }
             runCatching { orderOwners.value = st.owners() }
-            runCatching { strategyAuto.value = st.automatic(); strategyPending.value = st.pending() }
+            runCatching { strategyAuto.value = st.automatic(); strategyPending.value = st.pending(); botStopped.value = st.stoppedToday() }
             strategies.value = st.all()
             strategyLog.value = st.log()
         }
@@ -991,6 +991,15 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         if (com.optionslab.app.data.Strategies.anyRunning()) withContext(Dispatchers.Main) { Jobs.start(ctx, Jobs.Kind.LIVE) }
         msg
     }
+
+    /** The bot stopped for today (TODO A3). */
+    val botStopped = MutableStateFlow(false)
+
+    fun stopBotForToday(stopRunning: Boolean) = strategyDo {
+        com.optionslab.app.data.Strategies.stopForToday(stopRunning, compromisedFresh())
+    }
+
+    fun startBotAgain() = strategyDo { com.optionslab.app.data.Strategies.startAgain() }
 
     fun skipStrategy(id: Long) = strategyDo { com.optionslab.app.data.Strategies.skip(id); "Skipped for today." }
 

@@ -532,12 +532,21 @@ fun RiskPage(model: AppModel) {
 private fun GuardCard(model: AppModel) {
     val p = LocalPalette.current
     val s by model.settings.collectAsState()
+    var confirmKill by remember { mutableStateOf<Boolean?>(null) }
+    confirmKill?.let { turnOn ->
+        AlertDialog(
+            onDismissRequest = { confirmKill = null },
+            properties = androidx.compose.ui.window.DialogProperties(securePolicy = androidx.compose.ui.window.SecureFlagPolicy.SecureOn),
+            title = { Text(if (turnOn) "Turn the kill switch on?" else "Clear the kill switch?", style = Type.title) },
+            text = { Text(if (turnOn) "Every order is refused, including closing positions, until you clear it." else "Orders are allowed again, within these limits.", style = Type.bodySmall) },
+            confirmButton = { TextButton({ model.update { it.copy(guardKill = turnOn) }; confirmKill = null }) { Text(if (turnOn) "Turn on" else "Clear", color = if (turnOn) p.oxblood else p.verdigris) } },
+            dismissButton = { TextButton({ confirmKill = null }) { Text("Cancel") } },
+        )
+    }
     fun rupees(x: Double) = if (x >= 100_000) "₹${(x / 100_000).let { if (it % 1.0 == 0.0) it.toInt().toString() else it.toString() }}L" else "₹%,.0f".format(Locale.ENGLISH, x)
     LedgerCard(title = "Account guard", accent = if (s.guardKill) p.oxblood else null) {
         Note("Checked on every order, paper and live, from a strategy or by hand. Closing a position is never blocked, except by the kill switch.")
-        ToggleRow("Kill switch", if (s.guardKill) "ON: every order is refused, exits included, until you turn it off" else "Off. Turn on to stop all trading at once", s.guardKill) { on ->
-            model.update { it.copy(guardKill = on) }
-        }
+        ToggleRow("Kill switch", if (s.guardKill) "ON: every order is refused, exits included, until you turn it off" else "Off. Turn on to stop all trading at once", s.guardKill) { on -> confirmKill = on }
         val loss = listOf(1_000.0, 2_000.0, 5_000.0, 10_000.0, 0.0)
         ParamTokens("Daily loss limit", loss.map { (if (it == 0.0) "off" else rupees(it)) to (it == s.guardDailyLoss) }) { i -> model.update { it.copy(guardDailyLoss = loss[i]) } }
         val dd = listOf(5.0, 10.0, 20.0, 0.0)
