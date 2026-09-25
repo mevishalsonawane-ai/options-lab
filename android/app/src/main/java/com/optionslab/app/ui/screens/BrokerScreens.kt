@@ -12,6 +12,7 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -261,8 +262,32 @@ fun HoldToSend(text: String, enabled: Boolean, onComplete: () -> Unit) {
 
 // ---- reviewing and sending an order ---------------------------------------------------------
 
+/**
+ * The order review, as one secure dialog over whatever page is open: it opens
+ * where the order was asked for, never at the top of a page scrolled away.
+ * Shown once, from the app's root.
+ */
 @Composable
-fun OrderReview(model: AppModel) {
+fun OrderReviewDialog(model: AppModel) {
+    val p = LocalPalette.current
+    val plan by model.plan.collectAsState()
+    val sending by model.sending.collectAsState()
+    if (plan == Load.Idle) return
+    androidx.compose.ui.window.Dialog(
+        onDismissRequest = { if (sending !is Load.Busy) model.dismissPlan() },
+        properties = DialogProperties(securePolicy = SecureFlagPolicy.SecureOn, usePlatformDefaultWidth = false),
+    ) {
+        Box(
+            Modifier.fillMaxWidth(0.94f).background(p.paper, RoundedCornerShape(6.dp))
+                .padding(10.dp),
+        ) {
+            Column(Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState())) { OrderReviewBody(model) }
+        }
+    }
+}
+
+@Composable
+private fun OrderReviewBody(model: AppModel) {
     val p = LocalPalette.current
     val s by model.settings.collectAsState()
     val plan by model.plan.collectAsState()
@@ -370,7 +395,6 @@ fun BrokerPage(model: AppModel) {
     LaunchedEffect(Unit) { model.refreshBroker(); if (Broker.loggedIn) model.loadAccount() }
     Page {
         item { PageTitle("Zerodha", "Your broker, as the PC trading app uses it: Kite Connect") }
-        item { OrderReview(model) }
         item {
             LedgerCard(title = "Connection") {
                 LedgerLine("API key", b.maskedKey)
@@ -482,13 +506,27 @@ private fun ManualOrder(model: AppModel) {
     var side by remember { mutableStateOf(Kite.Side.SELL) }
     var lots by remember { mutableStateOf(1) }
     var price by remember { mutableStateOf("") }
+    var loadErr by remember { mutableStateOf<String?>(null) }
+    var strikes by remember { mutableStateOf<List<Double>>(emptyList()) }
+    var spot by remember { mutableStateOf<Double?>(null) }
     LaunchedEffect(underlying) {
-        expiries = runCatching {
+        loadErr = null
+        expiries = try {
             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                Broker.instruments().filter { it.name == underlying && !it.expiry.isBefore(Market.today()) }.map { it.expiry }.distinct().sorted().take(4)
+                Broker.instruments().filter { it.name == underlying && !it.expiry.isBefore(Market.today()) }.map { it.expiry }.distinct().sorted().take(6)
             }
-        }.getOrDefault(emptyList())
+        } catch (e: Exception) { loadErr = "Could not load Zerodha's contract list: ${e.message}"; emptyList() }
         expiry = expiries.firstOrNull()
+        spot = runCatching { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { Broker.indexQuote(underlying)?.last } }.getOrNull()
+    }
+    // The strikes actually listed for this expiry and option, the eleven nearest the index.
+    LaunchedEffect(underlying, expiry, right, spot) {
+        val e = expiry ?: return@LaunchedEffect
+        val all = runCatching { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            Broker.instruments().filter { it.name == underlying && it.expiry == e && it.right == right }.map { it.strike }.distinct().sorted()
+        } }.getOrDefault(emptyList())
+        val s0 = spot
+        strikes = if (s0 == null) emptyList() else all.sortedBy { kotlin.math.abs(it - s0) }.take(11).sorted()
     }
     LedgerCard(title = "Place an order") {
         ParamTokens("Underlying", listOf("NIFTY", "BANKNIFTY").map { it to (it == underlying) }) { underlying = listOf("NIFTY", "BANKNIFTY")[it] }
@@ -496,7 +534,12 @@ private fun ManualOrder(model: AppModel) {
         ParamTokens("Option", listOf("PE" to (right == Right.PE), "CE" to (right == Right.CE))) { right = if (it == 0) Right.PE else Right.CE }
         ParamTokens("Side", listOf("SELL" to (side == Kite.Side.SELL), "BUY" to (side == Kite.Side.BUY))) { side = if (it == 0) Kite.Side.SELL else Kite.Side.BUY }
         ParamTokens("Lots", (1..s.maxLotsPerOrder).map { "$it" to (it == lots) }) { lots = it + 1 }
-        OutlinedTextField(strike, { strike = it.filter(Char::isDigit) }, label = { Text("Strike") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
+        loadErr?.let { Text(it, style = Type.bodySmall.copy(color = p.oxblood)) }
+        if (strikes.isNotEmpty()) {
+            spot?.let { Note("${underlying} ${"%,.1f".format(it)}: nearest listed strikes") }
+            ParamTokens("Strike", strikes.map { com.optionslab.engine.fmtG(it) to (strike == com.optionslab.engine.fmtG(it)) }) { i -> strike = com.optionslab.engine.fmtG(strikes[i]) }
+        }
+        OutlinedTextField(strike, { strike = it.filter(Char::isDigit) }, label = { Text("Strike (or pick above)") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
         OutlinedTextField(price, { price = it.filter { c -> c.isDigit() || c == '.' } }, label = { Text("Limit price (blank = best bid/offer)") }, singleLine = true,
             modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
@@ -504,6 +547,6 @@ private fun ManualOrder(model: AppModel) {
         BrassButton("Review the order", Modifier.fillMaxWidth(), enabled = expiry != null && strike.toDoubleOrNull() != null) {
             model.planManual(underlying, expiry!!, strike.toDouble(), right, side, lots, s.orderProduct, price.toDoubleOrNull())
         }
-        Note("Nothing is sent from here: the order opens for review at the top of this page.")
+        Note("Nothing is sent from here: the order opens for review over this page.")
     }
 }

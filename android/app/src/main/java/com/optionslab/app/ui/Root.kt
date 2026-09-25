@@ -287,6 +287,8 @@ private fun Main(model: AppModel) {
             }
             TabBar(tab) { if (it == tab && it == Tab.CABINET) cabinetPage = null; tab = it }
         }
+        // Order reviews open over any page, wherever the order was asked for.
+        com.optionslab.app.ui.screens.OrderReviewDialog(model)
         if (kiteLogin) com.optionslab.app.ui.screens.KiteLoginPage(model)
         val askPin by model.askLoginPin.collectAsState()
         if (askPin) com.optionslab.app.ui.screens.LoginPinDialog(model)

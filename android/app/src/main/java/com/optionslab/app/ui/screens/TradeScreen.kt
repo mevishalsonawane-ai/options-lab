@@ -112,7 +112,6 @@ fun TradeScreen(model: AppModel) {
             }
             return@Page
         }
-        item { OrderReview(model) }
         item {
             val a = (acct as? Load.Done<Account>)?.value
             ParamTokens("Book", listOf(

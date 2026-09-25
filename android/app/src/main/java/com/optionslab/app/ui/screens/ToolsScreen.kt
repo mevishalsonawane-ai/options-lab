@@ -311,8 +311,4 @@ private fun BuilderCard(model: AppModel, c: ChainSnapshot, live: Boolean) {
             }
         }
     }
-    if (live) {
-        Spacer(Modifier.height(14.dp))
-        OrderReview(model)
-    }
 }

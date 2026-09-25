@@ -90,7 +90,6 @@ fun TicketScreen(model: AppModel) {
             }
             Load.Idle -> Unit
         }
-        item { OrderReview(model) }
         item {
             LedgerCard(title = "Paper Ledger") {
                 if (ledger.isEmpty()) Note("No tickets yet. Each expiry you record here builds a forward record - the only evidence that is not a backtest of itself.")
