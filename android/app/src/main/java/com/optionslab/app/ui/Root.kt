@@ -269,6 +269,9 @@ private fun Main(model: AppModel) {
         MainActivity.tabRequests.value = null
     }
 
+    // The market watch runs by itself on market days; opening the app restarts it if Android stopped it.
+    LaunchedEffect(Unit) { model.ensureWatch() }
+
     val notify = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
     LaunchedEffect(Unit) {
         if (Build.VERSION.SDK_INT >= 33 && !SecurePrefs.getBoolean("asked.notify", false)) {

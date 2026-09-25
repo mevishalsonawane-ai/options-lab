@@ -48,7 +48,6 @@ import com.optionslab.app.ui.components.Sparkline
 import com.optionslab.app.ui.components.Stamp
 import com.optionslab.app.ui.components.StatusDot
 import com.optionslab.app.ui.components.VerdictDial
-import com.optionslab.app.work.Jobs
 import com.optionslab.engine.fmtG
 import java.time.temporal.ChronoUnit
 
@@ -62,7 +61,6 @@ fun AlmanacScreen(model: AppModel, onGo: (String) -> Unit) {
     val ledger by model.ledger.collectAsState()
     val mark by model.openMark.collectAsState()
     val bt by model.backtest.collectAsState()
-    val job by model.jobState.collectAsState()
     val alarms by model.alarms.collectAsState()
     val positions by model.livePositions.collectAsState()
 
@@ -160,19 +158,6 @@ fun AlmanacScreen(model: AppModel, onGo: (String) -> Unit) {
                     LedgerLine("${ps.symbol} ×${ps.qty}", "${num(ps.last, 2)}  ${rs(ps.pnl, true)}", if (ps.pnl >= 0) p.verdigris else p.oxblood)
                 }
                 if (positions.isNotEmpty()) LedgerLine("Day P&L", rs(positions.sumOf { it.pnl }, true), if (positions.sumOf { it.pnl } >= 0) p.verdigris else p.oxblood)
-            }
-        }
-
-        item {
-            LedgerCard(title = "Market watch") {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    StatusDot(if (job.running) p.verdigris else p.inkFaint, pulsing = job.running)
-                    Spacer(Modifier.width(8.dp))
-                    Text(if (job.running) job.stage.ifEmpty { "Watching" } else "Idle", style = Type.body.copy(color = p.ink), modifier = Modifier.weight(1f))
-                    if (job.running) BrassButton("Stop", tone = p.oxblood) { model.stopLive() }
-                    else BrassButton("Watch now") { model.startJob(Jobs.Kind.LIVE) }
-                }
-                Note("A notification that updates itself every minute: index levels, your ticket's live mark and cushion, risk alerts and ${alarms.count { it.enabled }} price alarm(s). Starts itself at 09:14 on market days.")
             }
         }
 

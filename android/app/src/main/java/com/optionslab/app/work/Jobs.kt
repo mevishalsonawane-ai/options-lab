@@ -71,7 +71,7 @@ object Jobs {
 
     /** Nothing runs in the background until a Zerodha account is linked. */
     fun enabled(k: Kind, s: AppSettings) = com.optionslab.app.data.Broker.linked && when (k) {
-        Kind.LIVE -> s.liveWatch
+        Kind.LIVE -> true   // the market watch always runs on market days; it has no off switch
         Kind.REMIND -> s.entryReminder
         Kind.TICKET -> s.autoTicket || (s.prepareRealOrder && com.optionslab.app.data.Broker.configured)
         Kind.SETTLE -> s.autoSettle
@@ -138,6 +138,12 @@ object Jobs {
         }
     }
 
+    /** Market hours today (from 09:14 to the close): the watch should be running now. */
+    fun watchDue(): Boolean = Market.isTradingDay() && Market.minuteNow() in (Market.OPEN - 1)..Market.CLOSE
+
+    /** Start the watch now if it should be running; it is a no-op when it already is. */
+    fun ensureWatch(context: Context) { if (watchDue()) start(context, Kind.LIVE, manual = false) }
+
     fun stopLive(context: Context) {
         context.startService(Intent(context, WatchService::class.java).setAction(WatchService.STOP))
     }
@@ -166,6 +172,8 @@ class BootReceiver : BroadcastReceiver() {
             Intent.ACTION_BOOT_COMPLETED, Intent.ACTION_MY_PACKAGE_REPLACED,
             "android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED" -> Jobs.scheduleAll(context)
         }
+        // Rebooted or updated during market hours: pick the watch straight back up.
+        if (intent.action == Intent.ACTION_BOOT_COMPLETED || intent.action == Intent.ACTION_MY_PACKAGE_REPLACED) Jobs.ensureWatch(context)
     }
 }
 
@@ -361,9 +369,6 @@ class WatchService : Service() {
     private fun show(title: String, text: String, progress: Int = -1) {
         val n = Notifier.builder(this, Notifier.LIVE, title, text, "almanac")
             .setOngoing(true).setOnlyAlertOnce(true).setAutoCancel(false).setSilent(true)
-            .addAction(0, "Stop", PendingIntent.getBroadcast(this, 7,
-                Intent(this, NotificationActionReceiver::class.java).setAction(NotificationActionReceiver.STOP_LIVE),
-                PendingIntent.FLAG_IMMUTABLE))
             .apply { if (progress >= 0) setProgress(100, progress, false) }
             .build()
         // The watch runs longer than Android 15 allows a dataSync service (6h a day); it is

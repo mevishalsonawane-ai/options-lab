@@ -383,7 +383,6 @@ fun SchedulePage(model: AppModel) {
         item {
             LedgerCard(title = "The Day") {
                 val rows = listOf(
-                    Triple(Jobs.Kind.LIVE, "Market watch from 09:14", "Ongoing notification; risk alerts; price alarms"),
                     Triple(Jobs.Kind.REMIND, "Entry reminder 10:55", "Expiry days only"),
                     Triple(Jobs.Kind.TICKET, "Paper ticket 11:01", "Expiry days: records the ticket for you"),
                     Triple(Jobs.Kind.SETTLE, "Settle 15:35", "Settles today's open ticket at the official window"),

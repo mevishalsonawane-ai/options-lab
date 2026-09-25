@@ -444,6 +444,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
 
     fun startJob(k: Jobs.Kind) = Jobs.start(ctx, k)
     fun stopLive() = Jobs.stopLive(ctx)
+    fun ensureWatch() = Jobs.ensureWatch(ctx)
 
     fun costs(premium: Double, lot: Int, lots: Int, regime: String) = Triple(
         Costs.sellToSettle(premium, lot, lots, regime), Costs.buyToSettle(premium, lot, lots, regime), Costs.roundTrip(premium, lot, lots, regime),
@@ -524,8 +525,9 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                     try {
                         val who = com.optionslab.app.data.Broker.completeLogin(r.requestToken, secret ?: error("the login was not unlocked with your PIN"))
                         broker.value = brokerState()
-                        // Linked now: the background jobs may run.
+                        // Linked now: the background jobs may run, the market watch at once if the market is open.
                         Jobs.scheduleAll(ctx)
+                        withContext(Dispatchers.Main) { Jobs.ensureWatch(ctx) }
                         // Warm the instrument list: the live expiry calendar reads it.
                         runCatching { com.optionslab.app.data.Broker.instruments() }
                         say("Logged in to Zerodha as $who until 06:00 tomorrow.")
