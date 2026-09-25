@@ -43,13 +43,15 @@ object DailyPnl {
     }
 
     /** Every day of [month] that has a figure. */
-    fun month(live: Boolean, month: YearMonth): Map<LocalDate, Day> {
+    fun month(live: Boolean, month: YearMonth): Map<LocalDate, Day> = all(live).filterKeys { YearMonth.from(it) == month }
+
+    /** Every day with a figure, for the account. */
+    fun all(live: Boolean): Map<LocalDate, Day> {
         val out = HashMap<LocalDate, Day>()
-        if (!live) runCatching { rebuildPaper() }.getOrNull()?.forEach { (d, v) -> if (YearMonth.from(d) == month) out[d] = v }
+        if (!live) runCatching { rebuildPaper() }.getOrNull()?.let { out.putAll(it) }
         val o = read(live)
         o.keys().forEach { k ->
             val d = runCatching { LocalDate.parse(k) }.getOrNull() ?: return@forEach
-            if (YearMonth.from(d) != month) return@forEach
             val a = o.getJSONArray(k)
             // A recorded day wins: it includes expiry settlements and open positions the trade book cannot see.
             out[d] = Day(d, a.getDouble(0), maxOf(a.optInt(1, 0), out[d]?.trades ?: 0))

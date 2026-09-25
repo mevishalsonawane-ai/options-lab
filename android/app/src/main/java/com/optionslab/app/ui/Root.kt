@@ -92,6 +92,14 @@ import kotlinx.coroutines.delay
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
+/** A calendar grid for the P&L tab (the core icon set has none). */
+private val CalendarIcon: ImageVector = ImageVector.Builder("pnlcal", 24.dp, 24.dp, 24f, 24f).apply {
+    addPath(androidx.compose.ui.graphics.vector.PathParser().parsePathString(
+        "M7,2h2v2h6V2h2v2h2a2,2 0 0 1 2,2v13a2,2 0 0 1 -2,2H5a2,2 0 0 1 -2,-2V6a2,2 0 0 1 2,-2h2V2z M5,9v10h14V9H5z " +
+            "M7,11h3v3H7v-3z M11,11h3v3h-3v-3z M15,11h2v3h-2v-3z M7,15h3v3H7v-3z M11,15h3v3h-3v-3z").toNodes(),
+        fill = androidx.compose.ui.graphics.SolidColor(Color.Black))
+}.build()
+
 /** A candlestick glyph for the Chart tab (the core icon set has none). */
 private val ChartIcon: ImageVector = ImageVector.Builder("chart", 24.dp, 24.dp, 24f, 24f).apply {
     addPath(androidx.compose.ui.graphics.vector.PathParser().parsePathString(
@@ -103,6 +111,7 @@ enum class Tab(val label: String, val icon: ImageVector) {
     ALMANAC("Home", Icons.Filled.Home),
     CHART("Chart", ChartIcon),
     TRADE("Trade", Icons.Filled.List),
+    PNL("P&L", CalendarIcon),
     TOOLS("Options", Icons.Filled.Search),
     LAB("Research", Icons.Filled.DateRange),
     CABINET("More", Icons.Filled.Menu),
@@ -428,6 +437,7 @@ private fun Main(model: AppModel) {
                         })
                         Tab.CHART -> Box(Modifier.fillMaxSize())   // the chart itself is kept alive below
                         Tab.TRADE -> TradeHub(model, tradePage) { tradePage = it }
+                        Tab.PNL -> com.optionslab.app.ui.screens.PnlCalendarScreen(model)
                         Tab.TOOLS -> ToolsScreen(model, toolsView, { toolsView = it }) { s, e -> chartAsk = s to e; chartNonce++; tab = Tab.CHART }
                         Tab.LAB -> LabScreen(model, labPage) { labPage = it }
                         Tab.CABINET -> CabinetScreen(model, cabinetPage) { cabinetPage = it }
