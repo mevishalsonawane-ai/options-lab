@@ -592,9 +592,9 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     fun modifyOrder(o: com.optionslab.app.data.Broker.OrderRow, quantity: Int, type: String, price: Double?, trigger: Double?) {
         val s = _settings.value
         if (!s.live || !s.allowRealOrders) { say("Real orders are off (Cabinet → Zerodha); a modify is a real order change."); return }
-        if (Integrity.compromised(integrity.value)) { say("Refused: this device shows signs of compromise."); return }
         viewModelScope.launch(Dispatchers.IO) {
             try {
+                if (compromisedFresh()) error("this device shows signs of compromise")
                 val b = com.optionslab.app.data.Broker
                 val now = b.orders().firstOrNull { it.id == o.id } ?: error("the order is gone")
                 if (!now.working) error("it is ${now.status.lowercase()} now, so it cannot be changed")
@@ -672,7 +672,6 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         val s = _settings.value
         if (!s.live) { say("Switch to LIVE mode (Cabinet → Zerodha) to send real orders; sandbox mode never touches the broker."); return }
         if (!s.allowRealOrders) { say("Real orders are switched off. Turn them on under Cabinet → Zerodha."); return }
-        if (Integrity.compromised(integrity.value)) { say("Refused: this device shows signs of compromise, so no real order is sent from it."); return }
         val again = gate(cur.legs, cur.holdToSettlement, cur.exit)
         if (again.any { it.isNotEmpty() }) { plan.value = Load.Done(cur.copy(refusals = again)); return }
         sending.value = Load.Busy("Sending to Zerodha")
@@ -680,11 +679,22 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             val b = com.optionslab.app.data.Broker
             val fills = ArrayList<com.optionslab.app.data.Broker.Fill>()
             try {
+                if (compromisedFresh()) { sending.value = Load.Failed("Refused: this device shows signs of compromise, so no real order is sent from it."); return@launch }
                 if (cur.exit) exitsStillValid(cur.legs)?.let { why -> sending.value = Load.Failed("Not sent: $why"); loadAccount(); return@launch }
                 for ((i, leg) in cur.legs.withIndex()) {
                     sending.value = Load.Busy("Leg ${i + 1} of ${cur.legs.size}: ${leg.side} ${leg.tradingSymbol}")
-                    val id = b.placeOrder(leg)
-                    val f = b.awaitOrder(id)
+                    val id = try {
+                        b.placeOrder(leg)
+                    } catch (e: com.optionslab.app.data.Broker.KiteError) {
+                        throw e
+                    } catch (e: com.optionslab.app.data.Broker.NotLoggedIn) {
+                        throw e
+                    } catch (e: Exception) {
+                        // The reply was lost, not necessarily the order: look for it before saying "not sent".
+                        runCatching { b.findRecent(leg, fills.map { it.orderId }) }.getOrNull()
+                            ?: throw java.io.IOException("${e.message}. No matching order was found at Zerodha; check the order book before trying again.")
+                    }
+                    val f = runCatching { b.awaitOrder(id) }.getOrElse { com.optionslab.app.data.Broker.Fill(id, "UNKNOWN", 0.0, 0, "status not confirmed; check the order book") }
                     fills += f
                     if (f.status != "COMPLETE" || f.filled < leg.quantity) {
                         sending.value = Load.Failed(
@@ -716,12 +726,20 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     val strategies = MutableStateFlow<List<com.optionslab.app.data.Strategies.Entry>>(emptyList())
     val strategyLog = MutableStateFlow<List<com.optionslab.app.data.Strategies.LogLine>>(emptyList())
 
-    private val compromisedNow: Boolean get() = Integrity.compromised(integrity.value)
+    /**
+     * The device check, run fresh right before anything is sent: a debugger or
+     * hooking framework attached after launch must still stop an order.
+     */
+    private fun compromisedFresh(): Boolean {
+        val r = Integrity.report(ctx)
+        integrity.value = r
+        return Integrity.compromised(r)
+    }
 
     fun refreshStrategies(tick: Boolean = false) {
         viewModelScope.launch(Dispatchers.IO) {
             val st = com.optionslab.app.data.Strategies
-            if (tick) runCatching { st.tickAll(compromisedNow) }
+            if (tick) runCatching { st.tickAll(compromisedFresh()) }
             strategies.value = st.all()
             strategyLog.value = st.log()
         }
@@ -750,12 +768,15 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     fun startStrategy(id: Long, live: Boolean) = strategyDo {
         val s = _settings.value
         if (live && (!s.live || !s.allowRealOrders)) return@strategyDo "A live run needs LIVE mode and real orders on (Cabinet → Zerodha)."
-        com.optionslab.app.data.Strategies.start(id, if (live) com.optionslab.engine.strategy.RunMode.LIVE else com.optionslab.engine.strategy.RunMode.SANDBOX,
-            "manual", confirmedByOwner = live, compromised = compromisedNow)
+        val msg = com.optionslab.app.data.Strategies.start(id, if (live) com.optionslab.engine.strategy.RunMode.LIVE else com.optionslab.engine.strategy.RunMode.SANDBOX,
+            "manual", confirmedByOwner = live, compromised = compromisedFresh())
+        // A run's stops are only checked while something polls it: keep the watch running.
+        if (com.optionslab.app.data.Strategies.anyRunning()) withContext(Dispatchers.Main) { Jobs.start(ctx, Jobs.Kind.LIVE) }
+        msg
     }
 
-    fun stopStrategy(id: Long) = strategyDo { com.optionslab.app.data.Strategies.stop(id, "manual", compromisedNow) }
-    fun closeStrategyLeg(id: Long, legId: Int) = strategyDo { com.optionslab.app.data.Strategies.closeLeg(id, legId, compromisedNow) }
+    fun stopStrategy(id: Long) = strategyDo { com.optionslab.app.data.Strategies.stop(id, "manual", compromisedFresh()) }
+    fun closeStrategyLeg(id: Long, legId: Int) = strategyDo { com.optionslab.app.data.Strategies.closeLeg(id, legId, compromisedFresh()) }
 
     // ---- portfolio and SIP backtesters -----------------------------------------------------
 
@@ -875,13 +896,14 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     /** The same legs as paper MARKET orders (sandbox), buys first. */
     fun paperBasket(underlying: String, expiry: LocalDate, legs: List<com.optionslab.engine.options.StrategyLeg>) = paperDo {
         var last = com.optionslab.app.data.Paper.Result(false, "no legs", emptyList())
-        for (l in legs.filter { it.active && it.strike != null }.sortedBy { if (it.side == com.optionslab.engine.options.Side.BUY) 0 else 1 }) {
+        val tradable = legs.filter { it.active && it.strike != null && it.optionType != null }
+        for (l in tradable.sortedBy { if (it.side == com.optionslab.engine.options.Side.BUY) 0 else 1 }) {
             val right = if (l.optionType == com.optionslab.engine.options.OptionType.CE) com.optionslab.engine.Right.CE else com.optionslab.engine.Right.PE
             val c = com.optionslab.app.data.Paper.contractFor(underlying, expiry, l.strike!!, right) ?: error("${com.optionslab.engine.fmtG(l.strike!!)} $right is not listed")
             last = com.optionslab.app.data.Paper.place(c, l.side.name, l.lots, "MARKET", "NRML", null, null)
             if (!last.ok) return@paperDo com.optionslab.app.data.Paper.Result(false, "Stopped at ${c.symbol}: ${last.message}", last.events)
         }
-        last.copy(message = "Paper basket placed: ${legs.size} legs")
+        last.copy(message = "Paper basket placed: ${tradable.size} legs")
     }
 
     // ---- the sandbox paper account ------------------------------------------------------

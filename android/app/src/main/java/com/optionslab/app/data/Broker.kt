@@ -437,7 +437,7 @@ object Broker {
 
     fun sentToday(): Int = if (SecurePrefs.getString(K_SENT_DAY) == Market.today().toString()) SecurePrefs.getInt(K_SENT, 0) else 0
 
-    private fun countSent() = SecurePrefs.putAll(mapOf(K_SENT_DAY to Market.today().toString(), K_SENT to sentToday() + 1))
+    @Synchronized private fun countSent() = SecurePrefs.putAll(mapOf(K_SENT_DAY to Market.today().toString(), K_SENT to sentToday() + 1))
 
     data class Fill(val orderId: String, val status: String, val avgPrice: Double, val filled: Int, val message: String)
 
@@ -461,6 +461,23 @@ object Broker {
         }
         val o = last ?: return Fill(orderId, "UNKNOWN", 0.0, 0, "no order history yet")
         return Fill(orderId, o.optString("status"), o.optDouble("average_price", 0.0), o.optInt("filled_quantity"), o.optString("status_message", ""))
+    }
+
+    /**
+     * After a POST whose answer was lost (timeout, dropped connection), find the
+     * order Kite may have placed anyway: same symbol, side, quantity and tag,
+     * placed in the last three minutes, and not one of [known].
+     */
+    suspend fun findRecent(o: Kite.Order, known: Collection<String>): String? {
+        val since = java.time.LocalDateTime.now(IST).minusMinutes(3)
+        val fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+        val arr = call("GET", "/orders") as JSONArray
+        return rows(arr).lastOrNull {
+            it.optString("tradingsymbol") == o.tradingSymbol && it.optString("transaction_type") == o.side.name &&
+                it.optInt("quantity") == o.quantity && it.optString("tag") == o.tag.filter { c -> c.isLetterOrDigit() }.take(20) &&
+                it.optString("order_id") !in known &&
+                runCatching { !java.time.LocalDateTime.parse(it.optString("order_timestamp"), fmt).isBefore(since) }.getOrDefault(false)
+        }?.optString("order_id")?.also { countSent() }
     }
 
     /** One order's latest state (last entry of its history), or null if Kite has none yet. */

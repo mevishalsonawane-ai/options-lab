@@ -204,7 +204,11 @@ object Kite {
      * an options order needs: whole lots, a price on the tick grid, and the
      * product that survives to settlement.
      */
-    fun refusals(o: Order, limits: Limits, sentToday: Int, holdToSettlement: Boolean, exit: Boolean = false): List<String> {
+    /**
+     * [refPrice] prices a MARKET or SL-M order (the last traded price) so the
+     * value cap applies to it as well; without one a MARKET order's value is unknown.
+     */
+    fun refusals(o: Order, limits: Limits, sentToday: Int, holdToSettlement: Boolean, exit: Boolean = false, refPrice: Double? = null): List<String> {
         val out = ArrayList<String>()
         if (o.tradingSymbol.isBlank()) out += "no trading symbol"
         if (o.quantity <= 0) out += "quantity must be positive, not ${o.quantity}"
@@ -229,6 +233,8 @@ object Kite {
                 if (!exit && p * o.quantity > limits.maxOrderValue) out += "order value Rs %,.0f exceeds the Rs %,.0f cap".format(p * o.quantity, limits.maxOrderValue)
             }
         }
+        if (!o.hasPrice && !exit && refPrice != null && refPrice > 0 && refPrice * o.quantity > limits.maxOrderValue)
+            out += "order value about Rs %,.0f (at the last price) exceeds the Rs %,.0f cap".format(refPrice * o.quantity, limits.maxOrderValue)
         if (o.hasTrigger) {
             val t = o.triggerPrice
             if (t == null || t <= 0) out += "a ${o.orderType} order needs a positive trigger price"

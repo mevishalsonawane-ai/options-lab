@@ -272,7 +272,8 @@ object Tasks {
         }
         checkAlarms(context, q.mapValues { it.value.last }, fired)
         // Sandbox paper account: resting orders fill, MIS squares off at 15:15, expiries settle.
-        if (!s.live) runCatching { com.optionslab.app.data.Paper.tick() }.getOrNull()?.let { paperEvents(context, it) }
+        // Paper account (also used by paper strategy runs in LIVE mode): resting orders fill, MIS squares off, expiries settle.
+        runCatching { com.optionslab.app.data.Paper.tick() }.getOrNull()?.let { paperEvents(context, it) }
         // Strategy Module: schedules, prices, per-leg and basket risk, exits.
         runCatching {
             val bad = com.optionslab.app.security.Integrity.compromised(com.optionslab.app.security.Integrity.report(context))
@@ -283,11 +284,11 @@ object Tasks {
 
     private fun paperEvents(context: Context, events: List<com.optionslab.engine.sandbox.SandboxEvent>) {
         for (e in events) when (e) {
-            is com.optionslab.engine.sandbox.SandboxEvent.Fill -> Notifier.post(context, 4000 + (e.orderId.hashCode() and 0x3ff), Notifier.LIVE,
+            is com.optionslab.engine.sandbox.SandboxEvent.Fill -> Notifier.post(context, 7000 + (e.orderId.hashCode() and 0x3ff), Notifier.LIVE,
                 "Paper ${e.action} filled", "${e.quantity} ${e.symbol} @ %.2f".format(e.price), "trade")
-            is com.optionslab.engine.sandbox.SandboxEvent.ExpirySettled -> Notifier.post(context, 4000 + (e.symbol.hashCode() and 0x3ff), Notifier.LIVE,
+            is com.optionslab.engine.sandbox.SandboxEvent.ExpirySettled -> Notifier.post(context, 7000 + (e.symbol.hashCode() and 0x3ff), Notifier.LIVE,
                 "Paper contract settled", "${e.symbol} at %.2f · P&L Rs %+,.0f".format(e.price.toDouble(), e.pnl.toDouble()), "trade")
-            is com.optionslab.engine.sandbox.SandboxEvent.SquareOff -> Notifier.post(context, 4000 + (e.symbol.hashCode() and 0x3ff), Notifier.LIVE,
+            is com.optionslab.engine.sandbox.SandboxEvent.SquareOff -> Notifier.post(context, 7000 + (e.symbol.hashCode() and 0x3ff), Notifier.LIVE,
                 "Paper MIS squared off", e.symbol, "trade")
             else -> Unit
         }
@@ -316,7 +317,8 @@ class WatchService : Service() {
     companion object { const val STOP = "com.optionslab.app.WATCH_STOP" }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private val running = HashMap<Jobs.Kind, Job>()
+    private val running = java.util.concurrent.ConcurrentHashMap<Jobs.Kind, Job>()
+    @Volatile private var watching = false
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -328,15 +330,34 @@ class WatchService : Service() {
                 PendingIntent.FLAG_IMMUTABLE))
             .apply { if (progress >= 0) setProgress(100, progress, false) }
             .build()
-        val type = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC else 0
-        ServiceCompat.startForeground(this, Notifier.ID_LIVE, n, type)
+        // The watch runs longer than Android 15 allows a dataSync service (6h a day); it is
+        // declared specialUse, which has no daily cap. One-shot jobs stay dataSync.
+        val type = when {
+            Build.VERSION.SDK_INT >= 34 && watching -> ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q -> ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
+            else -> 0
+        }
+        try {
+            ServiceCompat.startForeground(this, Notifier.ID_LIVE, n, type)
+        } catch (_: Exception) {
+            // Not allowed now (e.g. the dataSync budget is spent): say so rather than crash.
+            Notifier.post(this, 2011, Notifier.SCHEDULE, "IraAlgo could not run in the background", "Open the app to continue: $title", "almanac")
+        }
+    }
+
+    /** Android 15: a time-limited foreground service must stop when told, or the app is killed. */
+    override fun onTimeout(startId: Int, fgsType: Int) {
+        Notifier.post(this, 2012, Notifier.RISK, "Background watch stopped by Android",
+            "The system's time limit for background work was reached. Open IraAlgo to keep strategies and alerts checked.", "almanac")
+        stopEverything()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         // Foreground first, always: the system requires it within seconds.
+        val k = runCatching { Jobs.Kind.valueOf(intent?.getStringExtra(Jobs.EXTRA_KIND) ?: "") }.getOrNull()
+        if (k == Jobs.Kind.LIVE) watching = true   // show() then declares the specialUse type
         show("IraAlgo", "Starting…")
         if (intent?.action == STOP) { stopEverything(); return START_NOT_STICKY }
-        val k = runCatching { Jobs.Kind.valueOf(intent?.getStringExtra(Jobs.EXTRA_KIND) ?: "") }.getOrNull()
         if (k == null) { maybeStop(); return START_NOT_STICKY }
         if (running[k]?.isActive == true) return START_NOT_STICKY
         running[k] = scope.launch {
@@ -360,6 +381,7 @@ class WatchService : Service() {
             } finally {
                 Tasks.publish(Tasks.LiveState(false))
                 running.remove(k)
+                if (k == Jobs.Kind.LIVE) watching = false
                 maybeStop()
             }
         }
@@ -371,7 +393,10 @@ class WatchService : Service() {
         val b = com.optionslab.app.data.Broker
         if (b.configured && !b.loggedIn) Notifier.post(this, 2005, Notifier.SCHEDULE, "Log in to Zerodha for today",
             "Yesterday's session ended at 06:00. Open Cabinet → Zerodha and log in before the 11:00 entry.", "broker")
-        while (Market.isWeekday() && Market.minuteNow() <= Market.CLOSE) {
+        // Market hours, and a quarter-hour past the close while a strategy run is still open,
+        // so its exit-time square-off and any retried exits are seen through.
+        while (Market.isWeekday() && (Market.minuteNow() <= Market.CLOSE ||
+                (Market.minuteNow() <= Market.CLOSE + 15 && com.optionslab.app.data.Strategies.anyRunning()))) {
             if (Market.minuteNow() < Market.OPEN) {
                 show("Market watch", "Waiting for the 09:15 open")
                 delay(30_000)
@@ -393,6 +418,9 @@ class WatchService : Service() {
     }
 
     private fun stopEverything() {
+        if (kotlinx.coroutines.runBlocking { runCatching { com.optionslab.app.data.Strategies.anyRunning() }.getOrDefault(false) })
+            Notifier.post(this, 2013, Notifier.RISK, "Strategies are no longer being watched",
+                "A strategy run is open. Its stops and targets are only checked while the watch or the Strategies page is running.", "strategy")
         running.values.forEach { it.cancel() }
         running.clear()
         Tasks.publish(Tasks.LiveState(false))

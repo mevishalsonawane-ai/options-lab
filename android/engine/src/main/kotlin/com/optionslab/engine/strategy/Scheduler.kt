@@ -185,10 +185,12 @@ object Scheduler {
         lastCheck: ZonedDateTime?,
         now: ZonedDateTime,
         isHoliday: (LocalDate) -> Boolean = { false },
+        /** How late a slot may be caught. A poller whose ticks are further apart than [MISFIRE_GRACE] must widen it. */
+        grace: Duration = MISFIRE_GRACE,
     ): List<Due> = plannedJobs(def).mapNotNull { job ->
         val slot = previousFire(job, now) ?: return@mapNotNull null
         if (lastCheck != null && !slot.isAfter(lastCheck)) return@mapNotNull null
-        if (Duration.between(slot, now) > MISFIRE_GRACE) return@mapNotNull null
+        if (Duration.between(slot, now) > grace) return@mapNotNull null
         if (job.kind == JobKind.START && isHoliday(slot.toLocalDate())) return@mapNotNull null
         Due(job, slot)
     }

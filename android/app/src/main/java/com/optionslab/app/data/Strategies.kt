@@ -201,7 +201,7 @@ object Strategies {
 
     private fun record(b: Book, name: String, e: Event, alert: Boolean) {
         b.log += LogLine(System.currentTimeMillis(), name, e.kind, e.message, e.severity)
-        if (alert || e.severity == "warn") Notifier.post(app, 6000 + (name.hashCode() and 0x3ff), if (alert) Notifier.RISK else Notifier.LIVE,
+        if (alert || e.severity == "warn") Notifier.post(app, 6000 + (name.hashCode() and 0x1ff), if (alert) Notifier.RISK else Notifier.LIVE,
             "$name: ${e.kind.replace('_', ' ')}", e.message, "strategy")
     }
 
@@ -225,23 +225,46 @@ object Strategies {
         override fun event(e: Event, alert: Boolean) = record(b, def.name, e, alert)
     }
 
-    private fun kiteExec(b: Book, def: StrategyDef, v: Venue, compromised: Boolean) = object : StrategyHost.Executor {
+    private fun kiteExec(b: Book, def: StrategyDef, v: Venue, compromised: Boolean, known: () -> Collection<String>) = object : StrategyHost.Executor {
         override fun place(order: Action.PlaceOrder): StrategyHost.Placed {
             val s = AppSettings.load()
             if (!s.live || !s.allowRealOrders) return StrategyHost.Placed.Refused("real orders are off (Cabinet → Zerodha)")
             if (compromised) return StrategyHost.Placed.Refused("this device shows signs of compromise")
             if (!Broker.loggedIn) return StrategyHost.Placed.Refused("not logged in to Zerodha today")
             val ref = v.refs[order.symbol] ?: return StrategyHost.Placed.Refused("${order.symbol} is not listed on Zerodha")
+            val kiteSym = ref.kite ?: return StrategyHost.Placed.Refused("${order.symbol} has no Zerodha symbol")
             val side = if (order.side.wire == "BUY") Kite.Side.BUY else Kite.Side.SELL
-            val o = Kite.Order(ref.kite!!, side, order.quantity, ref.lot, order.product, "MARKET", null, ref.tick, "NFO", "iraalgostrat")
-            val why = Kite.refusals(o, s.limits(), Broker.sentToday(), false, exit = order.kind != "entry")
-            if (why.isNotEmpty()) return StrategyHost.Placed.Refused(why.joinToString("; "))
+            val exit = order.kind != "entry"
             return runBlocking {
-                try {
-                    val id = Broker.placeOrder(o)
-                    val f = Broker.awaitOrder(id, 12_000)
-                    StrategyHost.Placed.Accepted("kite:$id", f.status, f.filled, f.avgPrice.takeIf { it > 0 }, f.message)
-                } catch (e: Exception) { StrategyHost.Placed.Refused(e.message ?: "Zerodha refused the order") }
+                // An automatic exit sends no PIN prompt, so it must only ever close what Zerodha
+                // says is held: a leg closed by hand in the Kite app must not be "exited" into a new position.
+                if (exit) {
+                    val net = runCatching { Broker.positionBook().net }.getOrNull()
+                        ?: return@runBlocking StrategyHost.Placed.Refused("could not read Zerodha positions to confirm the exit; will retry")
+                    val held = net.filter { it.symbol == kiteSym && it.exchange == "NFO" && it.product == order.product }.sumOf { it.qty }
+                    val closes = (side == Kite.Side.BUY && held < 0) || (side == Kite.Side.SELL && held > 0)
+                    if (!closes || kotlin.math.abs(held) < order.quantity) return@runBlocking StrategyHost.Placed.Refused(
+                        "Zerodha shows $kiteSym ${order.product} net $held, so a ${side.name} of ${order.quantity} would not simply close it; not sent")
+                }
+                val last = runCatching { Broker.quotes(listOf("NFO:$kiteSym"))["NFO:$kiteSym"]?.last }.getOrNull()
+                val o = Kite.Order(kiteSym, side, order.quantity, ref.lot, order.product, "MARKET", null, ref.tick, "NFO", "iraalgostrat")
+                val why = Kite.refusals(o, s.limits(), Broker.sentToday(), false, exit = exit, refPrice = last)
+                if (why.isNotEmpty()) return@runBlocking StrategyHost.Placed.Refused(why.joinToString("; "))
+                val id = try {
+                    Broker.placeOrder(o)
+                } catch (e: Broker.KiteError) {
+                    return@runBlocking StrategyHost.Placed.Refused(e.message ?: "Zerodha refused the order")
+                } catch (e: Broker.NotLoggedIn) {
+                    return@runBlocking StrategyHost.Placed.Refused(e.message ?: "not logged in")
+                } catch (e: Exception) {
+                    // The answer was lost, not necessarily the order: look before calling it unsent.
+                    runCatching { Broker.findRecent(o, known().map { it.removePrefix("kite:") }) }.getOrNull()
+                        ?: return@runBlocking StrategyHost.Placed.Refused("${e.message}; no matching order found at Zerodha")
+                }
+                // From here the order exists at Zerodha: never report it as refused. An unknown
+                // state is polled on the next tick.
+                val f = runCatching { Broker.awaitOrder(id, 12_000) }.getOrNull()
+                StrategyHost.Placed.Accepted("kite:$id", f?.status ?: "UNKNOWN", f?.filled ?: 0, f?.avgPrice?.takeIf { it > 0 }, f?.message)
             }
         }
         override fun cancel(brokerId: String) = runBlocking { runCatching { Broker.cancel(brokerId.removePrefix("kite:")) }.isSuccess }
@@ -254,7 +277,20 @@ object Strategies {
     }
 
     private fun exec(b: Book, def: StrategyDef, v: Venue, mode: RunMode, compromised: Boolean) =
-        if (mode == RunMode.LIVE) kiteExec(b, def, v, compromised) else paperExec(b, def, v)
+        if (mode == RunMode.LIVE) kiteExec(b, def, v, compromised) { b.brokerIds.values.flatMap { it.values } } else paperExec(b, def, v)
+
+    /** Persist the run after every accepted order, before the next one goes out. */
+    private fun checkpoint(b: Book, strategyId: Long): (RunState) -> Unit = { r -> b.runs[strategyId] = r; runCatching { save(b) } }
+
+    /** Last time each strategy warned that it could not be evaluated (in memory; one warning per 10 minutes). */
+    private val blindWarned = HashMap<Long, Long>()
+
+    private fun warnBlind(b: Book, def: StrategyDef, run: RunState, why: String) {
+        val now = System.currentTimeMillis()
+        if (now - (blindWarned[def.id] ?: 0L) < 600_000) return
+        blindWarned[def.id] = now
+        record(b, def.name, Event("run_unmanaged", "${if (run.mode == RunMode.LIVE) "LIVE" else "Paper"} run not evaluated: $why. Stops and targets are NOT being checked.", "critical"), true)
+    }
 
     // ---- running -------------------------------------------------------------------------
 
@@ -280,8 +316,9 @@ object Strategies {
         val resolved = SymbolResolver.resolve(def, v.master, ltp, now)
         val runId = b.nextRunId++
         val ids = HashMap<Long, String>()
-        val run = host.start(def, resolved, now, runId, mode, trigger, exec(b, def, v, mode, compromised), ids)
-        b.runs[id] = run; b.brokerIds[runId] = ids
+        b.brokerIds[runId] = ids
+        val run = host.start(def, resolved, now, runId, mode, trigger, exec(b, def, v, mode, compromised), ids, checkpoint(b, id))
+        b.runs[id] = run
         finish(b, run)
         save(b)
         run.startError ?: "${def.name} started (${mode.wire}): ${run.openLegs().size} of ${def.legs.size} legs open."
@@ -293,7 +330,7 @@ object Strategies {
         val run = b.runs[id] ?: return@withLock "${def.name} is not running."
         val v = try { venue(run.mode) } catch (e: Exception) { return@withLock "Could not load the contracts: ${e.message}" }
         val ids = b.brokerIds.getOrPut(run.runId) { HashMap() }
-        val next = host.stop(run, def, Market.now(), reason, exec(b, def, v, run.mode, compromised), ids)
+        val next = host.stop(run, def, Market.now(), reason, exec(b, def, v, run.mode, compromised), ids, checkpoint(b, id))
         b.runs[id] = next; finish(b, next); save(b)
         if (next.stoppedAt != null) "${def.name} stopped." else "Exit orders sent for ${def.name}; it closes when they fill."
     }
@@ -303,7 +340,7 @@ object Strategies {
         val def = b.defs.firstOrNull { it.id == id } ?: return@withLock "No such strategy."
         val run = b.runs[id] ?: return@withLock "Not running."
         val v = try { venue(run.mode) } catch (e: Exception) { return@withLock "Could not load the contracts: ${e.message}" }
-        val next = host.closeLeg(run, def, legId, Market.now(), exec(b, def, v, run.mode, compromised), b.brokerIds.getOrPut(run.runId) { HashMap() })
+        val next = host.closeLeg(run, def, legId, Market.now(), exec(b, def, v, run.mode, compromised), b.brokerIds.getOrPut(run.runId) { HashMap() }, checkpoint(b, id))
         b.runs[id] = next; finish(b, next); save(b)
         "Leg $legId exit sent."
     }
@@ -325,21 +362,25 @@ object Strategies {
         for (def in b.defs.toList()) {
             val cur = b.runs[def.id]
             val running = cur?.let { Entry(def, it).running } == true
-            for (due in Scheduler.due(def, last, now) { !Market.isWeekday(it) }) {
+            // The watch polls about once a minute and a tick can itself take a while, so slots are
+            // caught up to five minutes late rather than IraAlgo's 60 s.
+            for (due in Scheduler.due(def, last, now, { !Market.isWeekday(it) }, java.time.Duration.ofMinutes(5))) {
                 if (due.job.kind == Scheduler.JobKind.START) {
                     when (val d = Scheduler.startDecision(def, running)) {
                         is Scheduler.StartDecision.Start -> if (d.mode == RunMode.LIVE) {
-                            Notifier.post(app, 6500 + (def.id.toInt() and 0xff), Notifier.SCHEDULE, "${def.name}: scheduled live start",
+                            Notifier.post(app, 6600 + (def.id.toInt() and 0xff), Notifier.SCHEDULE, "${def.name}: scheduled live start",
                                 "Open IraAlgo to review and confirm it; live entries are never sent without you.", "strategy")
                             notes += "${def.name}: live start waiting for you"
                         } else {
-                            val v = venueFor(RunMode.SANDBOX) ?: continue
+                            val v = venueFor(RunMode.SANDBOX)
+                            if (v == null) { record(b, def.name, Event("start_refused", "Scheduled paper start skipped: the contract list could not be loaded", "warn"), false); continue }
                             val runId = b.nextRunId++
                             val ids = HashMap<Long, String>()
+                            b.brokerIds[runId] = ids
                             val ltp = runCatching { Market.quote(def.underlying)?.last }.getOrNull()
                             val run = host.start(def, SymbolResolver.resolve(def, v.master, ltp, now), now, runId, RunMode.SANDBOX, "scheduler",
-                                exec(b, def, v, RunMode.SANDBOX, compromised), ids)
-                            b.runs[def.id] = run; b.brokerIds[runId] = ids; finish(b, run)
+                                exec(b, def, v, RunMode.SANDBOX, compromised), ids, checkpoint(b, def.id))
+                            b.runs[def.id] = run; finish(b, run)
                             notes += "${def.name}: scheduled paper start"
                         }
                         is Scheduler.StartDecision.Refuse -> record(b, def.name, Event(d.eventKind, d.message, "warn"), false)
@@ -347,17 +388,21 @@ object Strategies {
                     }
                 } else if (running) {
                     val run = b.runs[def.id]!!
-                    val v = venueFor(run.mode) ?: continue
-                    val next = host.stop(run, def, now, "scheduler", exec(b, def, v, run.mode, compromised), b.brokerIds.getOrPut(run.runId) { HashMap() })
+                    val v = venueFor(run.mode)
+                    if (v == null) { warnBlind(b, def, run, "the scheduled square-off could not load the contract list"); continue }
+                    val next = host.stop(run, def, now, "scheduler", exec(b, def, v, run.mode, compromised), b.brokerIds.getOrPut(run.runId) { HashMap() }, checkpoint(b, def.id))
                     b.runs[def.id] = next; finish(b, next)
                 }
             }
             val run = b.runs[def.id] ?: continue
             if (!Entry(def, run).running) continue
-            val v = venueFor(run.mode) ?: continue
+            if (run.mode == RunMode.LIVE && !Broker.loggedIn) warnBlind(b, def, run, "the Zerodha session has ended (log in again)")
+            val v = venueFor(run.mode)
+            if (v == null) { warnBlind(b, def, run, "the contract list could not be loaded"); continue }
             val q = quotes(run, v)
+            if (q.isEmpty() && run.subscribedSymbols().isNotEmpty() && Market.isOpen()) warnBlind(b, def, run, "no prices could be read")
             val banked = StrategyRuntime.sessionBankedPnl(b.history, def.id, run.runId, now)
-            val next = host.tick(run, def, q, now, banked, exec(b, def, v, run.mode, compromised), b.brokerIds.getOrPut(run.runId) { HashMap() })
+            val next = host.tick(run, def, q, now, banked, exec(b, def, v, run.mode, compromised), b.brokerIds.getOrPut(run.runId) { HashMap() }, checkpoint(b, def.id))
             b.runs[def.id] = next; finish(b, next)
         }
         save(b)

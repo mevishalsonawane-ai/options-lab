@@ -144,16 +144,13 @@ object Paper {
         return Contract(symbolOf(c), c.underlying, c.expiry, c.strike, c.right, c.lotSize, c.instrumentKey)
     }
 
-    private fun remember(c: Contract) {
-        val b = book()
-        if (b.contracts[c.symbol] != c) save(b.copy(contracts = b.contracts + (c.symbol to c)))
-    }
 
     suspend fun place(c: Contract, action: String, lots: Int, priceType: String, product: String, price: Double?, trigger: Double?): Result {
-        remember(c)
         val q = runCatching { quote(c) }.getOrNull()
         synchronized(this) {
-            val b = book()
+            // Remember the contract and place in one step, so a concurrent place cannot overwrite either.
+            val b0 = book()
+            val b = if (b0.contracts[c.symbol] == c) b0 else b0.copy(contracts = b0.contracts + (c.symbol to c))
             val out = engine(b.capital, b.contracts).place(b.state,
                 OrderRequest(c.symbol, "NFO", action, lots * c.lotSize, priceType, product, price, trigger, "IraAlgo-Android"), q, Market.now())
             save(b.copy(state = out.state))

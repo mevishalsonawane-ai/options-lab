@@ -1,5 +1,6 @@
 package com.optionslab.engine.strategy
 
+import com.optionslab.engine.risk.Side
 import java.time.ZonedDateTime
 
 /**
@@ -34,22 +35,22 @@ class StrategyHost(private val rt: StrategyRuntime = StrategyRuntime()) {
 
     private val terminal = setOf("complete", "cancelled", "rejected")
 
+    /**
+     * [checkpoint] is called after every order the venue accepted, so the
+     * app can persist the run (and its broker ids) before the next order goes
+     * out - a process killed mid-basket must not forget an order it placed.
+     */
     fun drive(run0: RunState, def: StrategyDef, actions0: List<Action>, exec: Executor, now: ZonedDateTime,
-              brokerIds: MutableMap<Long, String>): RunState {
+              brokerIds: MutableMap<Long, String>, checkpoint: (RunState) -> Unit = {}): RunState {
         var run = run0
-        val queue = ArrayDeque(actions0)
+        // BUY orders go first, entries and exits alike: a wing is bought before the short
+        // it covers is sold, and a short is bought back before the wing that covered it is sold.
+        val queue = ArrayDeque(actions0.sortedBy { if (it is Action.PlaceOrder && it.side == Side.SELL) 1 else 0 })
         var guard = 0
-        // The runtime sends BUY entries before SELL entries so a spread is margined as one.
-        // If a BUY (a hedge) is refused, IraAlgo would still send the SELL and leave a naked
-        // short; here the run's remaining SELL entries are refused instead.
-        var hedgeRefused = run0.legs.values.any { it.position == "B" && it.entryStatus == "rejected" }
         while (queue.isNotEmpty() && guard++ < 500) {
             when (val a = queue.removeFirst()) {
                 is Action.PlaceOrder -> {
-                    val placed = if (a.kind == "entry" && a.side == com.optionslab.engine.risk.Side.SELL && hedgeRefused)
-                        Placed.Refused("not sent: a BUY leg of this basket was refused, and this SELL would be unhedged")
-                    else exec.place(a)
-                    if (placed is Placed.Refused && a.kind == "entry" && a.side == com.optionslab.engine.risk.Side.BUY) hedgeRefused = true
+                    val placed = unhedged(run, a)?.let { Placed.Refused(it) } ?: exec.place(a)
                     val (r1, x1) = when (val p = placed) {
                         is Placed.Refused -> rt.onOrderAck(run, def, a.orderId, false, p.reason, now)
                         is Placed.Accepted -> {
@@ -61,6 +62,7 @@ class StrategyHost(private val rt: StrategyRuntime = StrategyRuntime()) {
                         }
                     }
                     run = r1; queue.addAll(x1)
+                    if (placed is Placed.Accepted) checkpoint(run)
                 }
                 is Action.CancelOrder -> {
                     val id = brokerIds[a.orderId]
@@ -79,40 +81,79 @@ class StrategyHost(private val rt: StrategyRuntime = StrategyRuntime()) {
         return run
     }
 
+    /**
+     * Why this SELL must not go out now, or null. IraAlgo sends each leg on its
+     * own; on a phone holding real money these two orders are refused instead:
+     *
+     *  - a SELL entry while any BUY entry of the run has not completely filled
+     *    (refused, rejected by the exchange, cancelled or still working): the
+     *    short would be unhedged;
+     *  - during a stop, a SELL that closes a long while any short of the run is
+     *    still held: selling the wing first leaves the short naked. The stop
+     *    stays pending and the SELL is retried once the short is closed.
+     */
+    private fun unhedged(run: RunState, a: Action.PlaceOrder): String? {
+        if (a.side != Side.SELL) return null
+        if (a.kind == "entry") {
+            val bad = run.legs.values.firstOrNull { it.position == "B" && it.entryStatus != "complete" }
+            if (bad != null) return "not sent: the BUY leg ${bad.symbol} is ${bad.entryStatus}, and this SELL would be unhedged"
+            return null
+        }
+        if (run.stopRequestedReason != null) {
+            val shortOpen = run.legs.values.firstOrNull { it.position == "S" && it.status == "open" }
+            if (shortOpen != null) return "held back: ${shortOpen.symbol} (short) is still open; the wing is sold once it is closed"
+        }
+        return null
+    }
+
     /** Re-read every order the venue has not finished, and feed what changed back in. */
-    fun poll(run0: RunState, def: StrategyDef, exec: Executor, now: ZonedDateTime, brokerIds: MutableMap<Long, String>): RunState {
+    fun poll(run0: RunState, def: StrategyDef, exec: Executor, now: ZonedDateTime, brokerIds: MutableMap<Long, String>,
+             checkpoint: (RunState) -> Unit = {}): RunState {
         var run = run0
         for ((id, rec) in run0.orders) {
             if (rec.status in terminal) continue
             val bid = brokerIds[id] ?: continue
             val st = exec.status(bid) ?: continue
             val (r1, x1) = rt.onOrderUpdate(run, def, OrderUpdate(id, st.status.lowercase(), st.filledQty, st.avgPrice, st.message), now)
-            run = drive(r1, def, x1, exec, now, brokerIds)
+            run = drive(r1, def, x1, exec, now, brokerIds, checkpoint)
         }
         return run
     }
 
     fun start(def: StrategyDef, resolved: List<ResolvedLeg>, now: ZonedDateTime, runId: Long, mode: RunMode, trigger: String,
-              exec: Executor, brokerIds: MutableMap<Long, String>): RunState {
+              exec: Executor, brokerIds: MutableMap<Long, String>, checkpoint: (RunState) -> Unit = {}): RunState {
         val (run, actions) = rt.start(def, resolved, now, runId, mode, trigger)
-        return drive(run, def, actions, exec, now, brokerIds)
+        checkpoint(run)   // the intent is durable before the first order goes out
+        return drive(run, def, actions, exec, now, brokerIds, checkpoint)
     }
 
+    /**
+     * Poll unfinished orders, evaluate the tick, and - while a stop is pending
+     * (a refused exit, a wing held back behind its short) - retry it, as
+     * upstream's scheduler does every few seconds.
+     */
     fun tick(run: RunState, def: StrategyDef, quotes: List<Quote>, now: ZonedDateTime, banked: Double?, exec: Executor,
-             brokerIds: MutableMap<Long, String>): RunState {
-        val polled = poll(run, def, exec, now, brokerIds)
+             brokerIds: MutableMap<Long, String>, checkpoint: (RunState) -> Unit = {}): RunState {
+        val polled = poll(run, def, exec, now, brokerIds, checkpoint)
         val (r, actions) = rt.onTick(polled, def, quotes, now, banked)
-        return drive(r, def, actions, exec, now, brokerIds)
+        var next = drive(r, def, actions, exec, now, brokerIds, checkpoint)
+        if (next.stopRequestedReason != null && next.stoppedAt == null) {
+            val (rr, ra) = rt.reconcilePendingStop(next, def, now)
+            next = drive(rr, def, ra, exec, now, brokerIds, checkpoint)
+        }
+        return next
     }
 
-    fun stop(run: RunState, def: StrategyDef, now: ZonedDateTime, reason: String, exec: Executor, brokerIds: MutableMap<Long, String>): RunState {
+    fun stop(run: RunState, def: StrategyDef, now: ZonedDateTime, reason: String, exec: Executor, brokerIds: MutableMap<Long, String>,
+             checkpoint: (RunState) -> Unit = {}): RunState {
         val (r, actions) = rt.closeAll(run, def, now, reason)
-        return drive(r, def, actions, exec, now, brokerIds)
+        return drive(r, def, actions, exec, now, brokerIds, checkpoint)
     }
 
-    fun closeLeg(run: RunState, def: StrategyDef, legId: Int, now: ZonedDateTime, exec: Executor, brokerIds: MutableMap<Long, String>): RunState {
+    fun closeLeg(run: RunState, def: StrategyDef, legId: Int, now: ZonedDateTime, exec: Executor, brokerIds: MutableMap<Long, String>,
+                 checkpoint: (RunState) -> Unit = {}): RunState {
         val (r, actions) = rt.closeLeg(run, def, legId, now)
-        return drive(r, def, actions, exec, now, brokerIds)
+        return drive(r, def, actions, exec, now, brokerIds, checkpoint)
     }
 }
 

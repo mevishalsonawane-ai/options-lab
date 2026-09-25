@@ -146,4 +146,12 @@ class KiteTest {
         assertEquals(65, m["NIFTY26SEP24500PE"]!!.lotSize)
         assertEquals(1, m["CRUDEOIL26OCTFUT"]!!.lotSize)
     }
+
+    @Test fun `a MARKET order is held to the value cap at its last price`() {
+        val mkt = Kite.Order("NIFTY26SEP24500PE", Kite.Side.SELL, 130, 65, "NRML", "MARKET", null)
+        val cap = Kite.Limits(maxOrderValue = 10_000.0)
+        assertTrue(Kite.refusals(mkt, cap, 0, false, refPrice = 100.0).any { "cap" in it })
+        assertEquals(emptyList(), Kite.refusals(mkt, cap, 0, false, refPrice = 50.0))
+        assertEquals(emptyList(), Kite.refusals(mkt, cap, 0, false, exit = true, refPrice = 100.0))
+    }
 }

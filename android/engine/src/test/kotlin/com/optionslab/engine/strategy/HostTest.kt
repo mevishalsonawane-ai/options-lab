@@ -33,8 +33,12 @@ class HostTest {
         val alerts = ArrayList<Event>()
         val events = ArrayList<Event>()
         var refuseNext: String? = null
+        /** The venue accepts, then its RMS rejects - Kite's usual margin refusal. */
+        var rejectAfterAccept: String? = null
+        val refused = ArrayList<Action.PlaceOrder>()
         override fun place(order: Action.PlaceOrder): StrategyHost.Placed {
-            refuseNext?.let { refuseNext = null; return StrategyHost.Placed.Refused(it) }
+            refuseNext?.let { refuseNext = null; refused += order; return StrategyHost.Placed.Refused(it) }
+            rejectAfterAccept?.let { rejectAfterAccept = null; refused += order; return StrategyHost.Placed.Accepted("R${refused.size}", "REJECTED", 0, null, it) }
             placed += order
             return StrategyHost.Placed.Accepted("B${placed.size}", "COMPLETE", order.quantity, price)
         }
@@ -104,5 +108,39 @@ class HostTest {
         assertEquals(ok, StrategyCodec.decode(StrategyCodec.encode(ok)))
         val bad = StrategyValidator.check(def.copy(legs = emptyList()))
         assertTrue(bad is StrategyValidator.Result.Invalid)
+    }
+
+    private val spread = def.copy(legs = listOf(
+        LegDef(1, Segment.OPTIONS, Position.B, 1, OptionType.PE, StrikeMode.ATM, "OTM2", expiry = "weekly"),
+        LegDef(2, Segment.OPTIONS, Position.S, 1, OptionType.PE, StrikeMode.ATM, "ATM", expiry = "weekly"),
+    ))
+
+    @Test fun `a wing the exchange rejects after accepting still keeps the short back`() {
+        val venue = FakeVenue(100.0).apply { rejectAfterAccept = "RMS: margin exceeds" }
+        val run = StrategyHost().start(spread, SymbolResolver.resolve(spread, contract, 23590.0, monday), monday, 4, RunMode.SANDBOX, "manual", venue, HashMap())
+        assertTrue(venue.placed.isEmpty(), "the SELL must not be sent: ${venue.placed}")
+        assertTrue(run.openLegs().isEmpty())
+    }
+
+    @Test fun `a stop buys back the short before it sells the wing, and retries a refused exit`() {
+        val host = StrategyHost()
+        val venue = FakeVenue(100.0)
+        val ids = HashMap<Long, String>()
+        var run = host.start(spread, SymbolResolver.resolve(spread, contract, 23590.0, monday), monday, 5, RunMode.SANDBOX, "manual", venue, ids)
+        assertEquals(listOf(Side.BUY, Side.SELL), venue.placed.map { it.side })
+        assertEquals(2, run.openLegs().size)
+
+        // The short's buy-back is refused (e.g. session lost): the wing must stay on.
+        venue.refuseNext = "not logged in"
+        run = host.stop(run, spread, monday.plusMinutes(1), "manual", venue, ids)
+        assertEquals(2, venue.placed.size, "nothing sold while the short is open: ${venue.placed}")
+        assertEquals(2, run.openLegs().size)
+
+        // Next tick: the pending stop is retried - short bought back first, then the wing sold.
+        run = host.tick(run, spread, emptyList(), monday.plusMinutes(2), 0.0, venue, ids)
+        val exits = venue.placed.drop(2)
+        assertEquals(listOf(Side.BUY, Side.SELL), exits.map { it.side })
+        assertTrue(exits[0].symbol.endsWith("PE") && run.openLegs().isEmpty(), "${run.legs.values.map { it.symbol + ":" + it.status }}")
+        assertEquals(RunStatus.CLOSED, run.status)
     }
 }

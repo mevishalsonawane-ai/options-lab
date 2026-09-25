@@ -69,6 +69,7 @@ fun TradeScreen(model: AppModel) {
     var book by rememberSaveable { mutableStateOf("positions") }
     var modifying by remember { mutableStateOf<Broker.OrderRow?>(null) }
     var cancelling by remember { mutableStateOf<Broker.OrderRow?>(null) }
+    var cancelAuth by remember { mutableStateOf<Broker.OrderRow?>(null) }
     var selling by remember { mutableStateOf<Broker.Holding?>(null) }
     val paperSnap by model.paper.collectAsState()
     var paperBook by rememberSaveable { mutableStateOf("positions") }
@@ -143,13 +144,15 @@ fun TradeScreen(model: AppModel) {
     }
 
     if (resetting) PaperResetDialog(model) { resetting = false }
+    cancelAuth?.let { o -> Reauth(model, onOk = { cancelAuth = null; model.cancelOrder(o.id, o.variety) }, onCancel = { cancelAuth = null }) }
     modifying?.let { o -> ModifyDialog(model, o) { modifying = null } }
     cancelling?.let { o ->
         AlertDialog(
             onDismissRequest = { cancelling = null }, properties = secure,
             title = { Text("Cancel this order?", style = Type.title) },
             text = { Text("${o.side} ${o.symbol} ×${o.qty} (${o.type}${if (o.price > 0) " @ ${px(o.price)}" else ""}). Filled so far: ${o.filled}.", style = Type.bodySmall) },
-            confirmButton = { TextButton({ model.cancelOrder(o.id, o.variety); cancelling = null }) { Text("Cancel order") } },
+            // Cancelling a working stop-loss removes protection, so it is proved like a send.
+            confirmButton = { TextButton({ cancelAuth = o; cancelling = null }) { Text("Cancel order") } },
             dismissButton = { TextButton({ cancelling = null }) { Text("Keep") } },
         )
     }

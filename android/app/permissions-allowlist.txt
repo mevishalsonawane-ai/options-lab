@@ -7,7 +7,8 @@ android.permission.POST_NOTIFICATIONS              # live watch, risk alerts, al
 android.permission.USE_BIOMETRIC                   # fingerprint / face unlock
 android.permission.USE_FINGERPRINT                 # merged by androidx.biometric for Android 8
 android.permission.FOREGROUND_SERVICE              # the market-hours live watch
-android.permission.FOREGROUND_SERVICE_DATA_SYNC    # its declared type
+android.permission.FOREGROUND_SERVICE_DATA_SYNC    # the one-shot jobs (ticket, settle, harvest)
+android.permission.FOREGROUND_SERVICE_SPECIAL_USE  # the watch itself: runs past dataSync's 6h/day cap on Android 15
 android.permission.VIBRATE                         # alert vibration
 android.permission.SCHEDULE_EXACT_ALARM            # 09:14 / 10:55 / 11:01 / 15:35 / 15:45
 android.permission.RECEIVE_BOOT_COMPLETED          # re-arm those alarms after a reboot
