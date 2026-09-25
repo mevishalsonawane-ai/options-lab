@@ -53,7 +53,16 @@ data class HealthResult(val source: String, val window: List<Monitor.Row>, val t
 
 data class BrokerState(val configured: Boolean, val loggedIn: Boolean, val user: String?, val expires: java.time.ZonedDateTime?, val maskedKey: String)
 
-data class Account(val funds: com.optionslab.app.data.Broker.Funds?, val positions: List<com.optionslab.app.data.Broker.Position>, val orders: List<com.optionslab.app.data.Broker.OrderRow>)
+data class Account(
+    val funds: com.optionslab.app.data.Broker.Funds?,
+    val book: com.optionslab.app.data.Broker.Positions,
+    val orders: List<com.optionslab.app.data.Broker.OrderRow>,
+    val trades: List<com.optionslab.app.data.Broker.Trade>,
+    val holdings: List<com.optionslab.app.data.Broker.Holding>,
+    val at: java.time.ZonedDateTime = Market.now(),
+) {
+    val positions: List<com.optionslab.app.data.Broker.Position> get() = book.net
+}
 
 /** Orders awaiting the owner's decision, with every gate's verdict attached. */
 data class OrderPlan(
@@ -63,6 +72,8 @@ data class OrderPlan(
     val quotes: Map<String, com.optionslab.app.data.Broker.Quote>,
     val refusals: List<List<String>>,
     val holdToSettlement: Boolean,
+    /** Closing orders: each only reduces a position you already hold. */
+    val exit: Boolean = false,
 ) {
     val sendable: Boolean get() = legs.isNotEmpty() && refusals.all { it.isEmpty() }
 }
@@ -85,6 +96,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     val quotes = MutableStateFlow<Map<String, Market.Quote>>(emptyMap())
     val quoteNote = MutableStateFlow<String?>(null)
     val livePositions = MutableStateFlow<List<com.optionslab.app.data.Broker.Position>>(emptyList())
+    val pnlSeries = MutableStateFlow<List<com.optionslab.app.data.PnlTracker.Point>>(emptyList())
     val ledger = MutableStateFlow<List<Ledger.Entry>>(emptyList())
     val alarms = MutableStateFlow<List<PriceAlarm>>(emptyList())
     val draft = MutableStateFlow<Load<Market.TicketDraft>>(Load.Idle)
@@ -100,6 +112,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         refreshLedger()
         refreshAlarms()
         viewModelScope.launch(Dispatchers.IO) { integrity.value = Integrity.report(ctx) }
+        viewModelScope.launch(Dispatchers.IO) { pnlSeries.value = com.optionslab.app.data.PnlTracker.today() }
     }
 
     fun say(text: String) { message.value = text }
@@ -252,7 +265,10 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                         Market.isOpen() -> "No prints yet - the feed may be slow."
                         else -> "Market closed. Showing nothing rather than a stale print."
                     }
-                    if (live) livePositions.value = runCatching { com.optionslab.app.data.Broker.positions() }.getOrDefault(livePositions.value)
+                    if (live) runCatching { com.optionslab.app.data.Broker.positionBook() }.onSuccess { book ->
+                        livePositions.value = book.net
+                        trackPnl(book)
+                    }
                     Ledger.openTicket()?.let { openMark.value = runCatching { Market.markOpenTicket(it) }.getOrNull() }
                     Tasks.checkAlarms(ctx, quotes.value.mapValues { it.value.last }, HashSet())
                 } catch (e: Exception) {
@@ -470,12 +486,17 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun loadAccount() {
-        account.value = Load.Busy("Reading your Zerodha account")
+    /** [quiet]: a background refresh keeps the last figures on screen instead of a spinner. */
+    fun loadAccount(quiet: Boolean = false) {
+        if (!quiet || account.value !is Load.Done) account.value = Load.Busy("Reading your Zerodha account")
         viewModelScope.launch(Dispatchers.IO) {
             account.value = try {
                 val b = com.optionslab.app.data.Broker
-                Load.Done(Account(runCatching { b.funds() }.getOrNull(), b.positions(), b.orders()))
+                val book = b.positionBook()
+                trackPnl(book)
+                livePositions.value = book.net
+                Load.Done(Account(runCatching { b.funds() }.getOrNull(), book, b.orders(),
+                    runCatching { b.trades() }.getOrDefault(emptyList()), runCatching { b.holdings() }.getOrDefault(emptyList())))
             } catch (e: Exception) {
                 broker.value = brokerState()
                 Load.Failed(e.message ?: "could not read the account")
@@ -483,10 +504,112 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    private fun gate(legs: List<com.optionslab.engine.Kite.Order>, hold: Boolean): List<List<String>> {
+    private fun gate(legs: List<com.optionslab.engine.Kite.Order>, hold: Boolean, exit: Boolean = false): List<List<String>> {
         val s = _settings.value
         val sent = com.optionslab.app.data.Broker.sentToday()
-        return legs.mapIndexed { i, o -> com.optionslab.engine.Kite.refusals(o, s.limits(), sent + i, hold) }
+        return legs.mapIndexed { i, o -> com.optionslab.engine.Kite.refusals(o, s.limits(), sent + i, hold, exit) }
+    }
+
+    /** The day's P&L curve: only sampled while you hold (or held today) something. */
+    private fun trackPnl(book: com.optionslab.app.data.Broker.Positions) {
+        if (book.net.isEmpty() && pnlSeries.value.isEmpty()) return
+        pnlSeries.value = com.optionslab.app.data.PnlTracker.record(book.pnl)
+    }
+
+    // ---- closing what you hold ---------------------------------------------------------
+
+    /** Square off one open position: the opposite side, the whole open quantity, for review. */
+    fun planSquareOff(pos: com.optionslab.app.data.Broker.Position) = planExits("Square off ${pos.symbol}", listOf(pos))
+
+    /**
+     * Close every open position. Shorts are bought back FIRST: selling a
+     * long hedge while its short is still open would leave a naked short.
+     */
+    fun planSquareOffAll() {
+        val open = livePositions.value.filter { it.open }
+        if (open.isEmpty()) { say("No open positions."); return }
+        planExits("Square off all (${open.size})", open.sortedBy { if (it.qty < 0) 0 else 1 })
+    }
+
+    private fun planExits(title: String, positions: List<com.optionslab.app.data.Broker.Position>) {
+        plan.value = Load.Busy("Pricing the exit on Zerodha")
+        viewModelScope.launch(Dispatchers.IO) {
+            plan.value = try {
+                val b = com.optionslab.app.data.Broker
+                val q = b.quotes(positions.map { "${it.exchange}:${it.symbol}" })
+                val legs = positions.mapNotNull { ps ->
+                    val qt = q["${ps.exchange}:${ps.symbol}"]
+                    com.optionslab.engine.Kite.squareOff(b.spec(ps.exchange, ps.symbol), ps.product, ps.qty, qt?.bid, qt?.ask, qt?.last ?: ps.last)
+                }
+                if (legs.isEmpty()) error("nothing is open")
+                Load.Done(OrderPlan(title, null, legs, q, gate(legs, false, exit = true), false, exit = true))
+            } catch (x: Exception) { Load.Failed(x.message ?: "could not prepare the exit") }
+        }
+    }
+
+    /** Sell (part of) a delivery holding. */
+    fun planSellHolding(h: com.optionslab.app.data.Broker.Holding, quantity: Int) {
+        plan.value = Load.Busy("Pricing the sale on Zerodha")
+        viewModelScope.launch(Dispatchers.IO) {
+            plan.value = try {
+                val b = com.optionslab.app.data.Broker
+                val key = "${h.exchange}:${h.symbol}"
+                val q = b.quotes(listOf(key))
+                val qt = q[key]
+                val leg = com.optionslab.engine.Kite.squareOff(b.spec(h.exchange, h.symbol), "CNC", quantity.coerceIn(1, h.qty), qt?.bid, qt?.ask, qt?.last ?: h.last)
+                    ?: error("nothing to sell")
+                Load.Done(OrderPlan("Sell ${h.symbol} from holdings", null, listOf(leg), q, gate(listOf(leg), false, exit = true), false, exit = true))
+            } catch (x: Exception) { Load.Failed(x.message ?: "could not prepare the sale") }
+        }
+    }
+
+    /**
+     * Just before an exit is sent: is every leg still closing something you
+     * hold, and no more than you hold? A position closed elsewhere since the
+     * review would otherwise turn the "exit" into a fresh position.
+     */
+    private suspend fun exitsStillValid(legs: List<com.optionslab.engine.Kite.Order>): String? {
+        val b = com.optionslab.app.data.Broker
+        val net = b.positionBook().net
+        val held = if (legs.any { it.product == "CNC" }) b.holdings() else emptyList()
+        for (o in legs) {
+            if (o.product == "CNC") {
+                val h = held.firstOrNull { it.symbol == o.tradingSymbol && it.exchange == o.exchange }
+                if (o.side != com.optionslab.engine.Kite.Side.SELL || h == null || o.quantity > h.qty) return "${o.tradingSymbol}: you no longer hold ${o.quantity} to sell"
+                continue
+            }
+            val ps = net.firstOrNull { it.symbol == o.tradingSymbol && it.exchange == o.exchange && it.product == o.product }
+            val open = ps?.qty ?: 0
+            val closes = (o.side == com.optionslab.engine.Kite.Side.BUY && open < 0) || (o.side == com.optionslab.engine.Kite.Side.SELL && open > 0)
+            if (!closes || o.quantity > kotlin.math.abs(open)) return "${o.tradingSymbol} changed since the review (open now ${open}); review the exit again"
+        }
+        return null
+    }
+
+    // ---- changing a working order --------------------------------------------------------
+
+    /** Modify a working order after the owner re-proved who they are. */
+    fun modifyOrder(o: com.optionslab.app.data.Broker.OrderRow, quantity: Int, type: String, price: Double?, trigger: Double?) {
+        val s = _settings.value
+        if (!s.live || !s.allowRealOrders) { say("Real orders are off (Cabinet → Zerodha); a modify is a real order change."); return }
+        if (Integrity.compromised(integrity.value)) { say("Refused: this device shows signs of compromise."); return }
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val b = com.optionslab.app.data.Broker
+                val now = b.orders().firstOrNull { it.id == o.id } ?: error("the order is gone")
+                if (!now.working) error("it is ${now.status.lowercase()} now, so it cannot be changed")
+                val spec = b.spec(now.exchange, now.symbol)
+                val probe = com.optionslab.engine.Kite.Order(now.symbol, com.optionslab.engine.Kite.Side.valueOf(now.side), quantity, spec.lotSize,
+                    now.product, type, price, spec.tickSize, now.exchange, triggerPrice = trigger)
+                // A modify is not a new order, so the daily count does not apply; every other gate does.
+                val why = com.optionslab.engine.Kite.refusals(probe, s.limits(), 0, false)
+                if (why.isNotEmpty()) error(why.joinToString("; "))
+                if (quantity < now.filled) error("it has already filled ${now.filled}")
+                b.modify(now, quantity, type, price, trigger)
+                say("Modify sent for ${o.id.takeLast(6)}.")
+            } catch (e: Exception) { say("Not modified: ${e.message}") }
+            loadAccount()
+        }
     }
 
     /** The strategy's ticket for [session], turned into Zerodha orders for review. */
@@ -533,7 +656,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     fun setLegPrice(i: Int, price: Double) {
         val cur = (plan.value as? Load.Done<OrderPlan>)?.value ?: return
         val legs = cur.legs.mapIndexed { j, o -> if (j == i) o.copy(price = price) else o }
-        plan.value = Load.Done(cur.copy(legs = legs, refusals = gate(legs, cur.holdToSettlement)))
+        plan.value = Load.Done(cur.copy(legs = legs, refusals = gate(legs, cur.holdToSettlement, cur.exit)))
     }
 
     fun dismissPlan() { plan.value = Load.Idle; sending.value = Load.Idle }
@@ -550,13 +673,14 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         if (!s.live) { say("Switch to LIVE mode (Cabinet → Zerodha) to send real orders; sandbox mode never touches the broker."); return }
         if (!s.allowRealOrders) { say("Real orders are switched off. Turn them on under Cabinet → Zerodha."); return }
         if (Integrity.compromised(integrity.value)) { say("Refused: this device shows signs of compromise, so no real order is sent from it."); return }
-        val again = gate(cur.legs, cur.holdToSettlement)
+        val again = gate(cur.legs, cur.holdToSettlement, cur.exit)
         if (again.any { it.isNotEmpty() }) { plan.value = Load.Done(cur.copy(refusals = again)); return }
         sending.value = Load.Busy("Sending to Zerodha")
         viewModelScope.launch(Dispatchers.IO) {
             val b = com.optionslab.app.data.Broker
             val fills = ArrayList<com.optionslab.app.data.Broker.Fill>()
             try {
+                if (cur.exit) exitsStillValid(cur.legs)?.let { why -> sending.value = Load.Failed("Not sent: $why"); loadAccount(); return@launch }
                 for ((i, leg) in cur.legs.withIndex()) {
                     sending.value = Load.Busy("Leg ${i + 1} of ${cur.legs.size}: ${leg.side} ${leg.tradingSymbol}")
                     val id = b.placeOrder(leg)
@@ -565,7 +689,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                     if (f.status != "COMPLETE" || f.filled < leg.quantity) {
                         sending.value = Load.Failed(
                             "Leg ${i + 1} ${f.status.lowercase()}${if (f.message.isNotBlank()) ": ${f.message}" else ""}. " +
-                                if (i + 1 < cur.legs.size) "The remaining leg was NOT sent. Check Orders on the Zerodha page." else "Check Orders on the Zerodha page.")
+                                if (i + 1 < cur.legs.size) "The remaining legs were NOT sent. Check Orders on the Zerodha page." else "Check Orders on the Zerodha page.")
                         cur.session?.let { Ledger.attachOrders(it, fills.map { x -> x.orderId }, null, null) }
                         refreshLedger(); loadAccount()
                         return@launch
@@ -587,9 +711,9 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun cancelOrder(id: String) {
+    fun cancelOrder(id: String, variety: String = "regular") {
         viewModelScope.launch(Dispatchers.IO) {
-            try { com.optionslab.app.data.Broker.cancel(id); say("Cancel requested for ${id.takeLast(6)}.") } catch (e: Exception) { say("Cancel failed: ${e.message}") }
+            try { com.optionslab.app.data.Broker.cancel(id, variety); say("Cancel requested for ${id.takeLast(6)}.") } catch (e: Exception) { say("Cancel failed: ${e.message}") }
             loadAccount()
         }
     }

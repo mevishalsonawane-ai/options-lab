@@ -90,6 +90,20 @@ uses it on the PC:
   buys the wing first and sells the put only after the wing has fully filled.
   Fills replace the priced credit in the ledger, so settlement and the health
   checks measure the trade that happened.
+- **Trade tab:** your account live from Kite, refreshed every 15 s in market
+  hours:
+  - **Positions:** net and day books, realised, unrealised and M2M. Square off
+    one position, or all of them; shorts are bought back before any long is
+    sold.
+  - **Order book:** modify (quantity, LIMIT/SL/SL-M/MARKET, price, trigger)
+    and cancel, both behind your PIN or fingerprint.
+  - **Trade book**, **holdings** (sell from delivery) and **funds** (SPAN,
+    exposure, premium, M2M).
+  - **The day's P&L curve:** one encrypted sample a minute.
+
+  Exits skip the caps that limit new risk (lots, daily count, value), so they
+  can never trap you in a position. Before an exit is sent the position is
+  re-read, and nothing is sent if it changed since you reviewed it.
 
 ## Live mode and sandbox mode
 

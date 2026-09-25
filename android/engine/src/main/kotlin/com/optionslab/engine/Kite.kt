@@ -105,6 +105,35 @@ object Kite {
         return out
     }
 
+    /** What an order needs to know about any instrument: its lot and its tick. */
+    data class Spec(val exchange: String, val tradingSymbol: String, val token: Long, val lotSize: Int, val tickSize: Double)
+
+    /**
+     * Lot and tick for [symbols] from any GET /instruments/{exchange} dump.
+     * MCX and currency contracts are ordered in LOTS on Kite (quantity 1 = one
+     * lot), so their order lot is 1; NSE/BSE/NFO/BFO are ordered in units.
+     */
+    fun lookup(lines: Sequence<String>, symbols: Set<String>): Map<String, Spec> {
+        val out = HashMap<String, Spec>()
+        var head: Map<String, Int>? = null
+        for (line in lines) {
+            if (line.isBlank()) continue
+            val c = splitCsv(line)
+            if (head == null) { head = c.withIndex().associate { it.value.trim() to it.index }; continue }
+            fun col(n: String) = c.getOrNull(head[n] ?: -1)?.trim() ?: ""
+            val sym = col("tradingsymbol")
+            if (sym !in symbols) continue
+            val ex = col("exchange")
+            val lot = if (ex in LOT_QUOTED) 1 else col("lot_size").toDoubleOrNull()?.toInt()?.coerceAtLeast(1) ?: 1
+            out[sym] = Spec(ex, sym, col("instrument_token").toLongOrNull() ?: 0L, lot, col("tick_size").toDoubleOrNull()?.takeIf { it > 0 } ?: 0.05)
+            if (out.size == symbols.size) break
+        }
+        return out
+    }
+
+    /** Exchanges whose order quantity is a number of lots, not units. */
+    val LOT_QUOTED = setOf("MCX", "CDS", "BCD")
+
     private fun splitCsv(line: String): List<String> {
         val out = ArrayList<String>()
         val sb = StringBuilder()
@@ -122,30 +151,46 @@ object Kite {
 
     enum class Side { BUY, SELL }
 
+    val DERIVATIVE_EXCHANGES = setOf("NFO", "BFO", "MCX", "CDS", "BCD")
+
     data class Order(
         val tradingSymbol: String,
         val side: Side,
         val quantity: Int,
         val lotSize: Int,
-        val product: String,         // NRML | MIS
-        val orderType: String,       // LIMIT | MARKET
-        val price: Double?,          // required for LIMIT
+        val product: String,         // NRML | MIS | CNC
+        val orderType: String,       // LIMIT | MARKET | SL | SL-M
+        val price: Double?,          // required for LIMIT and SL
         val tickSize: Double = 0.05,
         val exchange: String = "NFO",
         val tag: String = "iraalgo",
+        val triggerPrice: Double? = null,   // required for SL and SL-M
     ) {
         val lots: Int get() = if (lotSize > 0) quantity / lotSize else 0
+        val hasPrice: Boolean get() = orderType == "LIMIT" || orderType == "SL"
+        val hasTrigger: Boolean get() = orderType == "SL" || orderType == "SL-M"
 
         /** The form body of POST /orders/regular. */
         fun formBody(): String = form(listOf(
             "tradingsymbol" to tradingSymbol, "exchange" to exchange, "transaction_type" to side.name,
             "order_type" to orderType, "quantity" to quantity.toString(), "product" to product,
-            "price" to if (orderType == "LIMIT") "%.2f".format(java.util.Locale.ROOT, price!!) else null,
+            "price" to if (hasPrice) money(price!!) else null,
+            "trigger_price" to if (hasTrigger) money(triggerPrice!!) else null,
             // Exchange rules now demand protection on market orders; -1 lets Kite choose it.
-            "market_protection" to if (orderType == "MARKET") "-1" else null,
+            "market_protection" to if (orderType == "MARKET" || orderType == "SL-M") "-1" else null,
             "validity" to "DAY", "tag" to tag.filter { it.isLetterOrDigit() }.take(20),
         ))
     }
+
+    private fun money(x: Double) = "%.2f".format(java.util.Locale.ROOT, x)
+
+    /** The form body of PUT /orders/{variety}/{id}: only what may change. */
+    fun modifyBody(quantity: Int, orderType: String, price: Double?, triggerPrice: Double?): String = form(listOf(
+        "quantity" to quantity.toString(), "order_type" to orderType,
+        "price" to if (orderType == "LIMIT" || orderType == "SL") money(price!!) else null,
+        "trigger_price" to if (orderType == "SL" || orderType == "SL-M") money(triggerPrice!!) else null,
+        "validity" to "DAY",
+    ))
 
     data class Limits(
         val maxOrdersPerDay: Int = 4,
@@ -159,24 +204,48 @@ object Kite {
      * an options order needs: whole lots, a price on the tick grid, and the
      * product that survives to settlement.
      */
-    fun refusals(o: Order, limits: Limits, sentToday: Int, holdToSettlement: Boolean): List<String> {
+    fun refusals(o: Order, limits: Limits, sentToday: Int, holdToSettlement: Boolean, exit: Boolean = false): List<String> {
         val out = ArrayList<String>()
         if (o.tradingSymbol.isBlank()) out += "no trading symbol"
         if (o.quantity <= 0) out += "quantity must be positive, not ${o.quantity}"
         if (o.lotSize <= 0 || o.quantity % o.lotSize != 0) out += "quantity ${o.quantity} is not a whole number of lots of ${o.lotSize}"
-        if (o.lots > limits.maxLotsPerOrder) out += "${o.lots} lots exceeds the ${limits.maxLotsPerOrder}-lot cap (median top-of-book depth is 2 lots)"
-        if (sentToday >= limits.maxOrdersPerDay) out += "daily order limit reached (${limits.maxOrdersPerDay})"
-        if (o.orderType !in setOf("LIMIT", "MARKET")) out += "order type ${o.orderType} is not supported"
-        if (o.orderType == "LIMIT") {
+        // The lot cap is a derivatives rule (book depth is ~2 lots); an equity
+        // "lot" is one share, so it would refuse any ordinary stock order.
+        // An EXIT only ever reduces what is already held, so the caps that
+        // limit new risk (lots, daily count, value) must never trap you in it.
+        if (!exit && o.exchange in DERIVATIVE_EXCHANGES && o.lots > limits.maxLotsPerOrder)
+            out += "${o.lots} lots exceeds the ${limits.maxLotsPerOrder}-lot cap (median top-of-book depth is 2 lots)"
+        if (!exit && sentToday >= limits.maxOrdersPerDay) out += "daily order limit reached (${limits.maxOrdersPerDay})"
+        if (o.orderType !in setOf("LIMIT", "MARKET", "SL", "SL-M")) out += "order type ${o.orderType} is not supported"
+        fun onGrid(x: Double, what: String) {
+            val ticks = x / o.tickSize
+            if (kotlin.math.abs(ticks - Math.round(ticks)) > 1e-6) out += "$what %.2f is not on the %.2f tick".format(x, o.tickSize)
+        }
+        if (o.hasPrice) {
             val p = o.price
-            if (p == null || p <= 0) out += "a LIMIT order needs a positive price"
+            if (p == null || p <= 0) out += "a ${o.orderType} order needs a positive price"
             else {
-                val ticks = p / o.tickSize
-                if (kotlin.math.abs(ticks - Math.round(ticks)) > 1e-6) out += "price %.2f is not on the %.2f tick".format(p, o.tickSize)
-                if (p * o.quantity > limits.maxOrderValue) out += "order value Rs %,.0f exceeds the Rs %,.0f cap".format(p * o.quantity, limits.maxOrderValue)
+                onGrid(p, "price")
+                if (!exit && p * o.quantity > limits.maxOrderValue) out += "order value Rs %,.0f exceeds the Rs %,.0f cap".format(p * o.quantity, limits.maxOrderValue)
             }
         }
-        if (o.product !in setOf("NRML", "MIS")) out += "product ${o.product} is not supported"
+        if (o.hasTrigger) {
+            val t = o.triggerPrice
+            if (t == null || t <= 0) out += "a ${o.orderType} order needs a positive trigger price"
+            else {
+                onGrid(t, "trigger")
+                val p = o.price
+                // A stop BUY fires as the price rises through the trigger and may pay up
+                // to the limit; a stop SELL fires falling and may accept down to it.
+                if (o.orderType == "SL" && p != null && p > 0) {
+                    if (o.side == Side.BUY && p < t) out += "a stop-loss BUY needs its limit (%.2f) at or above the trigger (%.2f)".format(p, t)
+                    if (o.side == Side.SELL && p > t) out += "a stop-loss SELL needs its limit (%.2f) at or below the trigger (%.2f)".format(p, t)
+                }
+            }
+        }
+        if (o.product !in setOf("NRML", "MIS", "CNC")) out += "product ${o.product} is not supported"
+        if (o.product == "CNC" && o.exchange in DERIVATIVE_EXCHANGES) out += "CNC is for delivery equity; use NRML or MIS for ${o.exchange}"
+        if (o.product == "NRML" && o.exchange !in DERIVATIVE_EXCHANGES) out += "NRML is for F&O; use CNC or MIS for ${o.exchange}"
         if (holdToSettlement && o.product == "MIS") out += "MIS is squared off by the broker before the close; this strategy holds to settlement, so it must be NRML"
         return out
     }
@@ -186,6 +255,19 @@ object Kite {
         val t = price / tick
         val n = if (side == Side.SELL) kotlin.math.floor(t + 1e-9) else kotlin.math.ceil(t - 1e-9)
         return Math.round(n * tick * 100) / 100.0
+    }
+
+    /**
+     * The order that closes an open position: the opposite side, the whole
+     * open quantity, the same product, a LIMIT at the price that fills now
+     * (the bid when selling out of a long, the offer when buying back a short).
+     */
+    fun squareOff(spec: Spec, product: String, netQuantity: Int, bid: Double?, ask: Double?, last: Double): Order? {
+        if (netQuantity == 0) return null
+        val side = if (netQuantity > 0) Side.SELL else Side.BUY
+        val px = (if (side == Side.SELL) bid else ask)?.takeIf { it > 0 } ?: last
+        return Order(spec.tradingSymbol, side, kotlin.math.abs(netQuantity), spec.lotSize, product, "LIMIT",
+            onTick(px, spec.tickSize, side), spec.tickSize, spec.exchange)
     }
 
     /**

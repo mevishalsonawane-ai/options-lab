@@ -95,4 +95,55 @@ class KiteTest {
         assertEquals(listOf(Kite.Side.BUY, Kite.Side.SELL), legs.map { it.side })
         assertEquals("NIFTY26SEP24300PE", legs[0].tradingSymbol)
     }
+
+    @Test fun `the lot cap applies to derivatives, not to a 100-share equity order`() {
+        val eq = Kite.Order("INFY", Kite.Side.BUY, 100, 1, "CNC", "LIMIT", 1500.0, exchange = "NSE")
+        assertEquals(emptyList(), Kite.refusals(eq, Kite.Limits(maxOrderValue = 1_000_000.0), 0, holdToSettlement = false))
+        assertTrue(Kite.refusals(eq.copy(product = "NRML"), Kite.Limits(maxOrderValue = 1_000_000.0), 0, false).any { "NRML is for F&O" in it })
+        assertTrue(Kite.refusals(order(product = "CNC"), Kite.Limits(), 0, false).any { "CNC is for delivery" in it })
+    }
+
+    @Test fun `stop-loss orders carry their trigger and are checked`() {
+        val sl = Kite.Order("NIFTY26SEP24500PE", Kite.Side.BUY, 65, 65, "NRML", "SL", 12.0, triggerPrice = 11.5)
+        assertEquals(emptyList(), Kite.refusals(sl, Kite.Limits(), 0, false))
+        assertTrue("trigger_price=11.50" in sl.formBody() && "price=12.00" in sl.formBody())
+        val backwards = sl.copy(price = 11.0)
+        assertTrue(Kite.refusals(backwards, Kite.Limits(), 0, false).any { "at or above the trigger" in it })
+        val slm = sl.copy(orderType = "SL-M", price = null)
+        assertEquals(emptyList(), Kite.refusals(slm, Kite.Limits(), 0, false))
+        assertTrue("market_protection=-1" in slm.formBody() && "&price=" !in slm.formBody())
+        assertTrue(Kite.refusals(slm.copy(triggerPrice = null), Kite.Limits(), 0, false).any { "trigger" in it })
+    }
+
+    @Test fun `a modify sends only what may change`() {
+        assertEquals("quantity=130&order_type=LIMIT&price=5.10&validity=DAY", Kite.modifyBody(130, "LIMIT", 5.1, null))
+        assertEquals("quantity=65&order_type=SL-M&trigger_price=9.00&validity=DAY", Kite.modifyBody(65, "SL-M", null, 9.0))
+    }
+
+    @Test fun `an exit is never trapped by the caps that limit new risk`() {
+        val spec = Kite.Spec("NFO", "NIFTY26SEP24500PE", 1L, 65, 0.05)
+        val out = Kite.squareOff(spec, "NRML", -260, bid = 4.8, ask = 4.93, last = 4.85)!!
+        assertEquals(Kite.Side.BUY, out.side)
+        assertEquals(260, out.quantity)
+        assertEquals(4.95, out.price)
+        val limits = Kite.Limits(maxOrdersPerDay = 4, maxLotsPerOrder = 2)
+        assertTrue(Kite.refusals(out, limits, sentToday = 9, holdToSettlement = false).isNotEmpty())
+        assertEquals(emptyList(), Kite.refusals(out, limits, sentToday = 9, holdToSettlement = false, exit = true))
+        val long = Kite.squareOff(spec, "NRML", 65, bid = 4.8, ask = 4.93, last = 4.85)!!
+        assertEquals(Kite.Side.SELL to 4.8, long.side to long.price)
+        assertEquals(null, Kite.squareOff(spec, "NRML", 0, null, null, 1.0))
+    }
+
+    @Test fun `the lookup finds lot and tick on any exchange, in lots where Kite quotes lots`() {
+        val csv = """
+            instrument_token,exchange_token,tradingsymbol,name,last_price,expiry,strike,tick_size,lot_size,instrument_type,segment,exchange
+            408065,1594,INFY,"INFOSYS",0,,0,0.1,1,EQ,NSE,NSE
+            12345,48,NIFTY26SEP24500PE,"NIFTY",0,2026-09-29,24500,0.05,65,PE,NFO-OPT,NFO
+            5001,77,CRUDEOIL26OCTFUT,"CRUDEOIL",0,2026-10-19,0,1,100,FUT,MCX-FUT,MCX
+        """.trimIndent()
+        val m = Kite.lookup(csv.lineSequence(), setOf("INFY", "CRUDEOIL26OCTFUT", "NIFTY26SEP24500PE"))
+        assertEquals(Kite.Spec("NSE", "INFY", 408065, 1, 0.1), m["INFY"])
+        assertEquals(65, m["NIFTY26SEP24500PE"]!!.lotSize)
+        assertEquals(1, m["CRUDEOIL26OCTFUT"]!!.lotSize)
+    }
 }

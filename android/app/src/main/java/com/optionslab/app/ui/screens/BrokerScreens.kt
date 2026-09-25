@@ -267,9 +267,9 @@ private fun PlanCard(
         }
         plan.legs.forEachIndexed { i, leg ->
             Rule(Modifier.padding(vertical = 6.dp))
-            val q = plan.quotes["NFO:${leg.tradingSymbol}"]
-            Text("${i + 1}. ${leg.side} ${leg.tradingSymbol}", style = Type.figure.copy(color = if (leg.side == Kite.Side.SELL) p.oxblood else p.verdigris))
-            LedgerLine("Quantity", "${leg.quantity} (${leg.lots} lot × ${leg.lotSize})")
+            val q = plan.quotes["${leg.exchange}:${leg.tradingSymbol}"]
+            Text("${i + 1}. ${leg.side} ${leg.exchange}:${leg.tradingSymbol}", style = Type.figure.copy(color = if (leg.side == Kite.Side.SELL) p.oxblood else p.verdigris))
+            LedgerLine("Quantity", if (leg.lotSize > 1) "${leg.quantity} (${leg.lots} lot × ${leg.lotSize})" else "${leg.quantity}")
             LedgerLine("Product / type", "${leg.product} / ${leg.orderType}")
             if (q != null) LedgerLine("Bid / offer / last", "${q.bid?.let { "%.2f".format(it) } ?: "—"} / ${q.ask?.let { "%.2f".format(it) } ?: "—"} / ${"%.2f".format(q.last)}")
             var text by remember(leg.price) { mutableStateOf(leg.price?.let { "%.2f".format(it) } ?: "") }
@@ -279,7 +279,9 @@ private fun PlanCard(
             plan.refusals.getOrNull(i)?.forEach { Text("✕ $it", style = Type.bodySmall.copy(color = p.oxblood)) }
         }
         Spacer(Modifier.height(8.dp))
-        if (plan.legs.size > 1) Note("The wing is bought first. The put is sold only after the wing has filled completely, so the account is never left holding a naked short by accident.")
+        if (plan.exit) Note("Closing orders only: each reduces what you hold, so the lot, value and daily-count caps do not block them. Before sending, the position is re-read; if it changed, nothing is sent." +
+            if (plan.legs.size > 1) " Shorts are bought back first; a long is sold only after the short before it has filled." else "")
+        else if (plan.legs.size > 1) Note("The wing is bought first. The put is sold only after the wing has filled completely, so the account is never left holding a naked short by accident.")
         if (plan.holdToSettlement) Note("NRML, held to cash settlement. Nothing will close it for you: the loss below the strike is unbounded unless a wing is bought.")
         Spacer(Modifier.height(8.dp))
         when (sending) {
@@ -303,7 +305,6 @@ fun BrokerPage(model: AppModel) {
     val p = LocalPalette.current
     val s by model.settings.collectAsState()
     val b by model.broker.collectAsState()
-    val acct by model.account.collectAsState()
     var editing by remember { mutableStateOf(!b.configured) }
     var forgetting by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { model.refreshBroker(); if (Broker.loggedIn) model.loadAccount() }
@@ -359,48 +360,11 @@ fun BrokerPage(model: AppModel) {
         }
         if (b.loggedIn) {
             item { ManualOrder(model) }
-            when (val a = acct) {
-                is Load.Busy -> item { LedgerCard { FullSpinner(a.label) } }
-                is Load.Failed -> item { LedgerCard(accent = p.amber) { Note(a.why) } }
-                is Load.Done -> {
-                    item {
-                        LedgerCard(title = "Funds") {
-                            val f = a.value.funds
-                            if (f == null) Note("Margins unavailable.") else {
-                                LedgerLine("Available", rs(f.available), p.verdigris)
-                                LedgerLine("Used", rs(f.used))
-                                LedgerLine("Net", rs(f.net))
-                            }
-                        }
-                    }
-                    item {
-                        LedgerCard(title = "Positions") {
-                            if (a.value.positions.isEmpty()) Note("No open positions.")
-                            a.value.positions.forEach { ps ->
-                                LedgerLine("${ps.symbol} ${ps.product} ×${ps.qty}", "${"%.2f".format(ps.last)}  ${rs(ps.pnl, true)}", if (ps.pnl >= 0) p.verdigris else p.oxblood)
-                            }
-                        }
-                    }
-                    item {
-                        LedgerCard(title = "Today's orders") {
-                            if (a.value.orders.isEmpty()) Note("No orders today.")
-                            a.value.orders.forEachIndexed { i, o ->
-                                if (i > 0) Rule(Modifier.padding(vertical = 4.dp))
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Column(Modifier.weight(1f)) {
-                                        Text("${o.side} ${o.symbol} ×${o.qty}", style = Type.figure.copy(color = p.ink, fontSize = 13.sp))
-                                        Text("${o.status}${if (o.message.isNotBlank()) " · ${o.message}" else ""} · filled ${o.filled} @ ${"%.2f".format(o.avg)}",
-                                            style = Type.figure.copy(color = p.inkSoft, fontSize = 11.sp))
-                                    }
-                                    if (o.status in setOf("OPEN", "TRIGGER PENDING", "AMO REQ RECEIVED")) BrassButton("Cancel", tone = p.oxblood) { model.cancelOrder(o.id) }
-                                }
-                            }
-                        }
-                    }
+            item {
+                LedgerCard(title = "Your account") {
+                    Note("Positions, the order book, trades, holdings, funds and the day's P&L are on the Trade tab.")
                 }
-                Load.Idle -> Unit
             }
-            item { BrassButton("Refresh account", Modifier.fillMaxWidth(), tone = p.inkSoft) { model.loadAccount() } }
         }
         item {
             LedgerCard {

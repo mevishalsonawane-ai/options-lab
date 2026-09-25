@@ -38,6 +38,7 @@ import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -73,6 +74,7 @@ import com.optionslab.app.ui.screens.HealthScreen
 import com.optionslab.app.ui.screens.LockScreen
 import com.optionslab.app.ui.screens.RefusedScreen
 import com.optionslab.app.ui.screens.TicketScreen
+import com.optionslab.app.ui.screens.TradeScreen
 import com.optionslab.app.ui.screens.TrialsScreen
 import com.optionslab.app.ui.theme.LocalPalette
 import com.optionslab.app.ui.theme.IraAlgoTheme
@@ -85,6 +87,7 @@ enum class Tab(val label: String, val icon: ImageVector) {
     ALMANAC("Almanac", Icons.Filled.Home),
     TRIALS("Trials", Icons.Filled.DateRange),
     TICKET("Ticket", Icons.Filled.Edit),
+    TRADE("Trade", Icons.Filled.ShoppingCart),
     HEALTH("Health", Icons.Filled.Favorite),
     CABINET("Cabinet", Icons.Filled.Build),
 }
@@ -185,6 +188,7 @@ private fun Main(model: AppModel) {
         when (requested) {
             "almanac" -> tab = Tab.ALMANAC
             "ticket" -> tab = Tab.TICKET
+            "trade" -> tab = Tab.TRADE
             "health" -> tab = Tab.HEALTH
             "trials" -> tab = Tab.TRIALS
             "cabinet" -> { tab = Tab.CABINET; cabinetPage = "data" }
@@ -231,6 +235,7 @@ private fun Main(model: AppModel) {
                         })
                         Tab.TRIALS -> TrialsScreen(model)
                         Tab.TICKET -> TicketScreen(model)
+                        Tab.TRADE -> TradeScreen(model)
                         Tab.HEALTH -> HealthScreen(model)
                         Tab.CABINET -> CabinetScreen(model, cabinetPage) { cabinetPage = it }
                     }

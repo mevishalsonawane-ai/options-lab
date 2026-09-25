@@ -80,6 +80,7 @@ object Broker {
         SecurePrefs.putAll(mapOf(K_KEY to null, K_SECRET to null, K_REDIRECT to null, K_TOKEN to null,
             K_LOGIN_AT to null, K_USER to null, K_UID to null))
         File(app.filesDir, "kite_instruments.json").delete()
+        PnlTracker.clear()
     }
 
     fun expiresAt(): ZonedDateTime? = SecurePrefs.getLong(K_LOGIN_AT, 0L).takeIf { it > 0 }
@@ -175,34 +176,94 @@ object Broker {
 
     // ---- account --------------------------------------------------------------------
 
-    data class Funds(val available: Double, val used: Double, val net: Double)
-    data class Position(val symbol: String, val product: String, val qty: Int, val avg: Double, val last: Double, val pnl: Double)
+    data class Funds(val available: Double, val used: Double, val net: Double,
+                     val openingBalance: Double = 0.0, val collateral: Double = 0.0, val span: Double = 0.0,
+                     val exposure: Double = 0.0, val optionPremium: Double = 0.0, val realised: Double = 0.0, val m2m: Double = 0.0)
+
+    /** One row of GET /portfolio/positions (net or day book). */
+    data class Position(
+        val symbol: String, val product: String, val qty: Int, val avg: Double, val last: Double, val pnl: Double,
+        val exchange: String = "NFO", val token: Long = 0L, val overnight: Int = 0, val multiplier: Double = 1.0,
+        val m2m: Double = 0.0, val realised: Double = 0.0, val unrealised: Double = 0.0, val close: Double = 0.0,
+        val buyQty: Int = 0, val buyAvg: Double = 0.0, val sellQty: Int = 0, val sellAvg: Double = 0.0,
+    ) {
+        val open: Boolean get() = qty != 0
+    }
+
+    data class Positions(val net: List<Position>, val day: List<Position>) {
+        val pnl: Double get() = net.sumOf { it.pnl }
+        val m2m: Double get() = net.sumOf { it.m2m }
+        val realised: Double get() = net.sumOf { it.realised }
+        val unrealised: Double get() = net.sumOf { it.unrealised }
+    }
+
     data class OrderRow(val id: String, val symbol: String, val side: String, val qty: Int, val filled: Int, val price: Double,
-                        val avg: Double, val status: String, val message: String, val placedAt: String)
+                        val avg: Double, val status: String, val message: String, val placedAt: String,
+                        val exchange: String = "NFO", val product: String = "", val type: String = "LIMIT", val trigger: Double = 0.0,
+                        val variety: String = "regular", val pending: Int = 0, val tag: String = "") {
+        /** Still working at the exchange: can be modified or cancelled. */
+        val working: Boolean get() = status in WORKING
+    }
+
+    data class Trade(val id: String, val orderId: String, val symbol: String, val exchange: String, val side: String,
+                     val qty: Int, val price: Double, val product: String, val at: String)
+
+    data class Holding(val symbol: String, val exchange: String, val isin: String, val qty: Int, val t1: Int, val avg: Double,
+                       val last: Double, val close: Double, val pnl: Double, val dayChange: Double, val dayChangePct: Double,
+                       val product: String = "CNC") {
+        val invested: Double get() = avg * (qty + t1)
+        val value: Double get() = last * (qty + t1)
+    }
+
+    private val WORKING = setOf("OPEN", "TRIGGER PENDING", "AMO REQ RECEIVED", "OPEN PENDING", "VALIDATION PENDING", "PUT ORDER REQ RECEIVED", "MODIFY PENDING")
 
     suspend fun funds(): Funds {
         val eq = (call("GET", "/user/margins") as JSONObject).getJSONObject("equity")
-        val avail = eq.optJSONObject("available")
-        val used = eq.optJSONObject("utilised")
-        return Funds(avail?.optDouble("live_balance", avail.optDouble("cash", 0.0)) ?: 0.0, used?.optDouble("debits", 0.0) ?: 0.0, eq.optDouble("net", 0.0))
+        val a = eq.optJSONObject("available") ?: JSONObject()
+        val u = eq.optJSONObject("utilised") ?: JSONObject()
+        return Funds(a.optDouble("live_balance", a.optDouble("cash", 0.0)), u.optDouble("debits", 0.0), eq.optDouble("net", 0.0),
+            a.optDouble("opening_balance", 0.0), a.optDouble("collateral", 0.0), u.optDouble("span", 0.0), u.optDouble("exposure", 0.0),
+            u.optDouble("option_premium", 0.0), u.optDouble("m2m_realised", 0.0), u.optDouble("m2m_unrealised", 0.0))
     }
 
-    suspend fun positions(): List<Position> {
-        val net = (call("GET", "/portfolio/positions") as JSONObject).optJSONArray("net") ?: JSONArray()
-        return (0 until net.length()).map { net.getJSONObject(it) }.map {
-            Position(it.optString("tradingsymbol"), it.optString("product"), it.optInt("quantity"), it.optDouble("average_price"),
-                it.optDouble("last_price"), it.optDouble("pnl"))
-        }
+    private fun position(it: JSONObject) = Position(
+        it.optString("tradingsymbol"), it.optString("product"), it.optInt("quantity"), it.optDouble("average_price", 0.0),
+        it.optDouble("last_price", 0.0), it.optDouble("pnl", 0.0), it.optString("exchange", "NFO"), it.optLong("instrument_token"),
+        it.optInt("overnight_quantity"), it.optDouble("multiplier", 1.0), it.optDouble("m2m", 0.0), it.optDouble("realised", 0.0),
+        it.optDouble("unrealised", 0.0), it.optDouble("close_price", 0.0), it.optInt("buy_quantity"), it.optDouble("buy_price", 0.0),
+        it.optInt("sell_quantity"), it.optDouble("sell_price", 0.0))
+
+    private fun rows(a: JSONArray?): List<JSONObject> = if (a == null) emptyList() else (0 until a.length()).map { a.getJSONObject(it) }
+
+    suspend fun positionBook(): Positions {
+        val d = call("GET", "/portfolio/positions") as JSONObject
+        return Positions(rows(d.optJSONArray("net")).map(::position), rows(d.optJSONArray("day")).map(::position))
     }
+
+    suspend fun positions(): List<Position> = positionBook().net
+
+    suspend fun holdings(): List<Holding> = rows(call("GET", "/portfolio/holdings") as? JSONArray).map {
+        Holding(it.optString("tradingsymbol"), it.optString("exchange", "NSE"), it.optString("isin"), it.optInt("quantity"),
+            it.optInt("t1_quantity"), it.optDouble("average_price", 0.0), it.optDouble("last_price", 0.0), it.optDouble("close_price", 0.0),
+            it.optDouble("pnl", 0.0), it.optDouble("day_change", 0.0), it.optDouble("day_change_percentage", 0.0), it.optString("product", "CNC"))
+    }.sortedBy { it.symbol }
+
+    suspend fun trades(): List<Trade> = rows(call("GET", "/trades") as? JSONArray).map {
+        Trade(it.optString("trade_id"), it.optString("order_id"), it.optString("tradingsymbol"), it.optString("exchange"),
+            it.optString("transaction_type"), it.optInt("quantity"), it.optDouble("average_price", 0.0), it.optString("product"),
+            it.optString("fill_timestamp", it.optString("exchange_timestamp", "")))
+    }.sortedByDescending { it.at }
 
     suspend fun orders(): List<OrderRow> {
         val arr = call("GET", "/orders") as JSONArray
-        return (0 until arr.length()).map { arr.getJSONObject(it) }.map(::orderRow).sortedByDescending { it.placedAt }
+        return rows(arr).map(::orderRow).sortedByDescending { it.placedAt }
     }
 
     private fun orderRow(o: JSONObject) = OrderRow(o.optString("order_id"), o.optString("tradingsymbol"), o.optString("transaction_type"),
-        o.optInt("quantity"), o.optInt("filled_quantity"), o.optDouble("price"), o.optDouble("average_price"),
-        o.optString("status"), o.optString("status_message", ""), o.optString("order_timestamp", ""))
+        o.optInt("quantity"), o.optInt("filled_quantity"), o.optDouble("price", 0.0), o.optDouble("average_price", 0.0),
+        o.optString("status"), o.optString("status_message", "").let { if (it == "null") "" else it }, o.optString("order_timestamp", ""),
+        o.optString("exchange", "NFO"), o.optString("product"), o.optString("order_type", "LIMIT"), o.optDouble("trigger_price", 0.0),
+        o.optString("variety", "regular"), o.optInt("pending_quantity"), o.optString("tag", "").let { if (it == "null") "" else it })
 
     // ---- market data ----------------------------------------------------------------
 
@@ -278,6 +339,28 @@ object Broker {
         list.forEach { a.put(JSONArray().put(it.token).put(it.tradingSymbol).put(it.name).put(it.expiry.toString()).put(it.strike).put(it.lotSize).put(it.right.name).put(it.tickSize)) }
         f.writeText(JSONObject().put("day", Market.today().toString()).put("i", a).toString())
         return list
+    }
+
+    private val specs = HashMap<String, Kite.Spec>()
+    private var specDay: LocalDate? = null
+
+    /**
+     * Lot and tick for any instrument, e.g. to square off a position the app
+     * did not open. Options the app already knows come from the cached NFO
+     * list; anything else is looked up once in that exchange's dump and kept
+     * in memory for the day.
+     */
+    suspend fun spec(exchange: String, symbol: String): Kite.Spec {
+        if (specDay != Market.today()) { specs.clear(); specDay = Market.today() }
+        specs["$exchange:$symbol"]?.let { return it }
+        if (exchange == "NFO") (cachedInstruments() ?: emptyList()).firstOrNull { it.tradingSymbol == symbol }?.let {
+            return Kite.Spec("NFO", symbol, it.token, it.lotSize, it.tickSize).also { s -> specs["$exchange:$symbol"] = s }
+        }
+        require(exchange.all { it.isLetter() }) { "unknown exchange $exchange" }
+        val text = call("GET", "/instruments/${Kite.enc(exchange)}", raw = true) as String
+        val got = Kite.lookup(text.lineSequence(), setOf(symbol))[symbol] ?: throw IOException("$exchange:$symbol is not listed on Zerodha today")
+        specs["$exchange:$symbol"] = got
+        return got
     }
 
     fun find(list: List<Kite.Instrument>, underlying: String, expiry: LocalDate, strike: Double, right: Right) =
@@ -357,5 +440,12 @@ object Broker {
         return Fill(orderId, o.optString("status"), o.optDouble("average_price", 0.0), o.optInt("filled_quantity"), o.optString("status_message", ""))
     }
 
-    suspend fun cancel(orderId: String) { call("DELETE", "/orders/regular/${Kite.enc(orderId)}") }
+    suspend fun cancel(orderId: String, variety: String = "regular") {
+        call("DELETE", "/orders/${Kite.enc(variety)}/${Kite.enc(orderId)}")
+    }
+
+    /** PUT /orders/{variety}/{id}. Callers re-check the order is still working and the owner confirmed. */
+    suspend fun modify(order: OrderRow, quantity: Int, orderType: String, price: Double?, trigger: Double?) {
+        call("PUT", "/orders/${Kite.enc(order.variety)}/${Kite.enc(order.id)}", Kite.modifyBody(quantity, orderType, price, trigger))
+    }
 }
