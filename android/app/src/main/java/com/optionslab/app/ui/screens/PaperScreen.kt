@@ -138,7 +138,7 @@ private fun PaperPositions(model: AppModel, v: Paper.Snapshot) {
     val book = v.positions
     LedgerCard(title = "Paper positions") {
         Text("TODAY", style = Type.label.copy(color = p.inkSoft))
-        RollingFigure(book.totalPnlToday, { rs(it, true) }, Type.figureLarge.copy(color = if (book.totalPnlToday >= 0) p.verdigris else p.oxblood))
+        RollingFigure(book.totalPnlToday, { rs(it, true) }, Type.figureLarge.copy(color = if (book.totalPnlToday >= 0) p.verdigris else p.oxblood), calm = true)
         LedgerLine("Unrealised", rs(book.totalUnrealizedPnl, true))
         LedgerLine("Realised today", rs(book.totalTodayRealizedPnl, true))
         if (book.positions.isEmpty()) Note("No paper positions.")

@@ -58,7 +58,8 @@ import com.optionslab.engine.fmtG
 fun ParamTokens(label: String, options: List<Pair<String, Boolean>>, onPick: (Int) -> Unit) {
     val p = LocalPalette.current
     Text(label.uppercase(), style = Type.label.copy(color = p.inkSoft, fontSize = 10.sp), modifier = Modifier.padding(top = 8.dp, bottom = 4.dp))
-    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    // Each token already carries a 48dp touch area, so the rows need no extra gap.
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         options.forEachIndexed { i, (text, sel) -> Token(text, sel) { onPick(i) } }
     }
 }

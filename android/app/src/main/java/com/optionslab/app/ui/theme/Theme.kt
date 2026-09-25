@@ -42,7 +42,7 @@ data class Palette(
 
 val Parchment = Palette(
     paper = Color(0xFFF1E6CC), paperDeep = Color(0xFFE2D1A8), card = Color(0xFFF8F0DC),
-    ink = Color(0xFF2B1D0E), inkSoft = Color(0xFF5E4630), inkFaint = Color(0xFF9A8263),
+    ink = Color(0xFF2B1D0E), inkSoft = Color(0xFF5E4630), inkFaint = Color(0xFF75603F),
     brass = Color(0xFF9C7A3C), gold = Color(0xFFB8912F), oxblood = Color(0xFF7B1E1E),
     verdigris = Color(0xFF2F6B55), amber = Color(0xFFB0671B), rule = Color(0xFFC9B48A),
     seal = Color(0xFF8E2323), dark = false,
@@ -50,7 +50,7 @@ val Parchment = Palette(
 
 val Mahogany = Palette(
     paper = Color(0xFF1A110B), paperDeep = Color(0xFF120B07), card = Color(0xFF26190F),
-    ink = Color(0xFFF0E2C0), inkSoft = Color(0xFFCDB68C), inkFaint = Color(0xFF8C7652),
+    ink = Color(0xFFF0E2C0), inkSoft = Color(0xFFCDB68C), inkFaint = Color(0xFF9C8662),
     brass = Color(0xFFC9A45C), gold = Color(0xFFE0B94F), oxblood = Color(0xFFD0605A),
     verdigris = Color(0xFF7FC0A2), amber = Color(0xFFE09A48), rule = Color(0xFF4A3622),
     seal = Color(0xFFA83232), dark = true,

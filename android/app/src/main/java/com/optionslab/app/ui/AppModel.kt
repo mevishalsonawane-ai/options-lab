@@ -203,7 +203,9 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                     // Never hand the dated sentinel to the lot check: use the lot the window actually traded.
                     val pinned = if (s.datedLot || source != "backtest") null else s.pinnedLot
                     val (window, checks) = Monitor.healthOf(rows, s.healthLast, s.otmPct, pinned)
-                    SecurePrefs.put("health.verdict", Monitor.verdict(checks).name)
+                    // The nightly check compares against the backtest's verdict; a paper or
+                    // imported ledger must not overwrite it (that raised false "health changed" alerts).
+                    if (source == "backtest") SecurePrefs.put("health.verdict", Monitor.verdict(checks).name)
                     Load.Done(HealthResult(source, window, rows.size, checks))
                 }
             } catch (e: Exception) {
@@ -850,9 +852,14 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     val toolsSource = MutableStateFlow("")
 
     /** Price the nearest-expiry chain (Zerodha in LIVE, Upstox in SANDBOX) and run every chain screen on it. */
+    private var toolsJob: Job? = null
+
     fun loadTools(underlying: String, quiet: Boolean = false) {
         if (!quiet || tools.value !is Load.Done) tools.value = Load.Busy("Pricing the $underlying chain")
-        viewModelScope.launch(Dispatchers.IO) {
+        // A newer request (e.g. NIFTY -> BANKNIFTY) replaces the older one, so a slow
+        // NIFTY answer can never land under the BANKNIFTY heading.
+        toolsJob?.cancel()
+        toolsJob = viewModelScope.launch(Dispatchers.IO) {
             tools.value = try {
                 if (_settings.value.live && !com.optionslab.app.data.Broker.loggedIn) error("LIVE mode: log in to Zerodha for today to price the chain.")
                 val lc = Market.liveChain(underlying, near = 12)
@@ -860,7 +867,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                 val rows = com.optionslab.engine.options.ChainSnapshot.rowsFrom(lc.series, symbols, lc.lotSize)
                 toolsSource.value = lc.source + (lc.pricedAt?.let { " · %02d:%02d".format(it / 60, it % 60) } ?: "")
                 Load.Done(com.optionslab.engine.options.ChainSnapshot.of(underlying, lc.expiry, lc.spot, lc.lotSize, rows, Market.now()))
-            } catch (e: Exception) { Load.Failed(e.message ?: "could not price the chain") }
+            } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { Load.Failed(e.message ?: "could not price the chain") }
         }
     }
 

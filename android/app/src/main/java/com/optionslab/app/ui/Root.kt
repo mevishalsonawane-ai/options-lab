@@ -255,7 +255,7 @@ private fun Main(model: AppModel) {
 
     Parchment(ruled = true) {
         Column(Modifier.fillMaxSize()) {
-            Masthead(settings.live)
+            Masthead(settings.live, settings.reduceMotion)
             Box(Modifier.weight(1f)) {
                 AnimatedContent(
                     targetState = tab,
@@ -292,7 +292,7 @@ private fun Main(model: AppModel) {
 }
 
 @Composable
-private fun Masthead(live: Boolean) {
+private fun Masthead(live: Boolean, calm: Boolean = false) {
     val p = LocalPalette.current
     var now by remember { mutableStateOf(Market.now()) }
     LaunchedEffect(Unit) { while (true) { delay(15_000); now = Market.now() } }
@@ -303,15 +303,16 @@ private fun Masthead(live: Boolean) {
             Spacer(Modifier.width(8.dp))
             Text("THE IRAALGO ALMANAC", style = Type.masthead.copy(color = p.ink, fontSize = 18.sp, letterSpacing = 3.sp))
         }
+        // Fits a 360dp phone: the short date, then the status.
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(now.format(DateTimeFormatter.ofPattern("EEEE, d MMMM yyyy · HH:mm 'IST'", Locale.ENGLISH)),
-                style = Type.italic.copy(color = p.inkSoft, fontSize = 14.sp))
+            Text(now.format(DateTimeFormatter.ofPattern("EEE d MMM · HH:mm", Locale.ENGLISH)),
+                style = Type.italic.copy(color = p.inkSoft, fontSize = 14.sp), maxLines = 1)
             Spacer(Modifier.width(8.dp))
-            StatusDot(if (open) p.verdigris else p.inkFaint, pulsing = open)
+            StatusDot(if (open) p.verdigris else p.inkFaint, pulsing = open && !calm)
             Spacer(Modifier.width(4.dp))
             Text(if (open) "MARKET OPEN" else "MARKET SHUT", style = Type.label.copy(color = if (open) p.verdigris else p.inkFaint, fontSize = 9.sp))
             Spacer(Modifier.width(8.dp))
-            Text(if (live) "· LIVE · ZERODHA" else "· SANDBOX", style = Type.label.copy(color = if (live) p.oxblood else p.inkFaint, fontSize = 9.sp))
+            Text(if (live) "· LIVE" else "· SANDBOX", style = Type.label.copy(color = if (live) p.oxblood else p.inkFaint, fontSize = 9.sp))
         }
         Canvas(Modifier.fillMaxWidth().height(7.dp).padding(top = 3.dp)) {
             drawLine(p.ink, Offset(0f, 0f), Offset(size.width, 0f), 2f)

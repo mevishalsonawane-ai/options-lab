@@ -66,9 +66,10 @@ fun AlmanacScreen(model: AppModel, onGo: (String) -> Unit) {
     val alarms by model.alarms.collectAsState()
     val positions by model.livePositions.collectAsState()
 
-    DisposableEffect(Unit) {
+    // Quotes poll only while the Almanac is on screen AND the app is in the foreground.
+    com.optionslab.app.ui.PollWhileStarted {
         model.startQuotes()
-        onDispose { model.stopQuotes() }
+        try { kotlinx.coroutines.awaitCancellation() } finally { model.stopQuotes() }
     }
     LaunchedEffect(Unit) { if (bt is Load.Idle) model.runBacktest() }
     var shown by remember { mutableStateOf(false) }

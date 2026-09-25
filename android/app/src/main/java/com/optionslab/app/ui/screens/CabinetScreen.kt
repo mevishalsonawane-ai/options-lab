@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -74,7 +75,7 @@ private fun Drawers(onPage: (String) -> Unit) {
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     pair.forEach { d ->
-                        LedgerCard(Modifier.weight(1f).height(118.dp), onClick = { onPage(d.key) }) {
+                        LedgerCard(Modifier.weight(1f).heightIn(min = 118.dp), onClick = { onPage(d.key) }) {
                             Text(d.title.uppercase(), style = Type.title.copy(color = p.ink, fontSize = 13.sp))
                             Spacer(Modifier.height(6.dp))
                             Text(d.blurb, style = Type.italic.copy(color = p.inkSoft, fontSize = 14.sp))

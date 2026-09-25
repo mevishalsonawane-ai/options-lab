@@ -76,8 +76,8 @@ fun TradeScreen(model: AppModel) {
     var resetting by remember { mutableStateOf(false) }
 
     // Sandbox: the paper engine runs its jobs against fresh public prices.
-    LaunchedEffect(s.live) {
-        if (s.live) return@LaunchedEffect
+    com.optionslab.app.ui.PollWhileStarted(s.live) {
+        if (s.live) return@PollWhileStarted
         while (true) {
             model.loadPaper(quiet = true)
             delay(if (Market.isOpen()) 30_000 else 300_000)
@@ -85,8 +85,8 @@ fun TradeScreen(model: AppModel) {
     }
 
     // Fresh while the page is open: every 15 s in market hours, 2 min outside.
-    LaunchedEffect(b.loggedIn, s.live) {
-        if (!b.loggedIn || !s.live) return@LaunchedEffect
+    com.optionslab.app.ui.PollWhileStarted(b.loggedIn, s.live) {
+        if (!b.loggedIn || !s.live) return@PollWhileStarted
         while (true) {
             model.loadAccount(quiet = true)
             delay(if (Market.isOpen()) 15_000 else 120_000)
@@ -188,7 +188,7 @@ private fun PositionsCard(model: AppModel, a: Account) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text("TOTAL P&L", style = Type.label.copy(color = p.inkSoft))
-                RollingFigure(a.book.pnl, { rs(it, true) }, Type.figureLarge.copy(color = if (a.book.pnl >= 0) p.verdigris else p.oxblood))
+                RollingFigure(a.book.pnl, { rs(it, true) }, Type.figureLarge.copy(color = if (a.book.pnl >= 0) p.verdigris else p.oxblood), calm = true)
             }
             Column(horizontalAlignment = Alignment.End) {
                 Text("realised ${rs(a.book.realised, true)}", style = Type.figure.copy(color = p.inkSoft, fontSize = 12.sp))
@@ -329,7 +329,7 @@ private fun HoldingsBody(a: Account, onSell: (Broker.Holding) -> Unit) {
 private fun PnlCard(a: Account, series: List<PnlTracker.Point>) {
     val p = LocalPalette.current
     LedgerCard(title = "Today's P&L") {
-        RollingFigure(a.book.pnl, { rs(it, true) }, Type.figureLarge.copy(color = if (a.book.pnl >= 0) p.verdigris else p.oxblood))
+        RollingFigure(a.book.pnl, { rs(it, true) }, Type.figureLarge.copy(color = if (a.book.pnl >= 0) p.verdigris else p.oxblood), calm = true)
         if (series.size >= 2) {
             InkCurve(series.map { it.pnl }, emptyList(), null, calm = true)
             val hi = series.maxBy { it.pnl }; val lo = series.minBy { it.pnl }

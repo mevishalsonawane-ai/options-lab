@@ -15,6 +15,8 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -213,14 +215,22 @@ fun darken(c: Color, f: Float) = Color(c.red * (1 - f), c.green * (1 - f), c.blu
 fun Token(text: String, selected: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
     val p = LocalPalette.current
     val bg by animateFloatAsState(if (selected) 1f else 0f, tween(220), label = "token")
+    // The chip is drawn 30dp tall but its touch area is the 48dp Android asks for,
+    // and TalkBack hears it as a selectable tab.
     Box(
         modifier
-            .background(p.brass.copy(alpha = 0.12f + 0.75f * bg), RoundedCornerShape(14.dp))
-            .border(1.dp, p.brass.copy(alpha = 0.6f), RoundedCornerShape(14.dp))
-            .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 6.dp),
+            .minimumInteractiveComponentSize()
+            .selectable(selected = selected, role = androidx.compose.ui.semantics.Role.Tab, onClick = onClick),
+        contentAlignment = Alignment.Center,
     ) {
-        Text(text, style = Type.figure.copy(fontSize = 13.sp, color = if (selected) Color(0xFFFFF7E3) else p.ink))
+        Box(
+            Modifier
+                .background(p.brass.copy(alpha = 0.12f + 0.75f * bg), RoundedCornerShape(14.dp))
+                .border(1.dp, p.brass.copy(alpha = 0.6f), RoundedCornerShape(14.dp))
+                .padding(horizontal = 12.dp, vertical = 6.dp),
+        ) {
+            Text(text, style = Type.figure.copy(fontSize = 13.sp, color = if (selected) Color(0xFFFFF7E3) else p.ink))
+        }
     }
 }
 

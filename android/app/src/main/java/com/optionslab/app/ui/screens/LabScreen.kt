@@ -1,5 +1,6 @@
 package com.optionslab.app.ui.screens
 
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,7 +17,8 @@ import com.optionslab.app.ui.components.Token
 @Composable
 fun LabScreen(model: AppModel, page: String, onPage: (String) -> Unit) {
     Column(Modifier.fillMaxSize()) {
-        Row(Modifier.padding(horizontal = 14.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(Modifier.horizontalScroll(androidx.compose.foundation.rememberScrollState()).padding(horizontal = 14.dp, vertical = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Token("Trials", page == "trials") { onPage("trials") }
             Token("Health", page == "health") { onPage("health") }
             Token("Portfolio", page == "portfolio") { onPage("portfolio") }

@@ -77,7 +77,7 @@ fun StrategiesScreen(model: AppModel) {
     var confirmLive by remember { mutableStateOf<Long?>(null) }
     var reauthFor by remember { mutableStateOf<Long?>(null) }
 
-    LaunchedEffect(Unit) {
+    com.optionslab.app.ui.PollWhileStarted {
         model.refreshStrategies()
         while (true) {
             delay(if (Market.isOpen()) 15_000 else 60_000)

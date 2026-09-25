@@ -65,7 +65,18 @@ object Market {
 
     fun wipe() { contractsFile().delete() }
 
-    fun cachedContracts(): Pair<LocalDate, List<Upstox.Contract>>? = runCatching {
+    /** Parsed once and kept in memory; the file is only re-read when it changes. */
+    @Volatile private var mem: Pair<Long, Pair<LocalDate, List<Upstox.Contract>>>? = null
+
+    @Synchronized
+    fun cachedContracts(): Pair<LocalDate, List<Upstox.Contract>>? {
+        val f = contractsFile()
+        val stamp = f.lastModified()
+        mem?.let { if (it.first == stamp && f.exists()) return it.second }
+        return parseContracts()?.also { mem = stamp to it }
+    }
+
+    private fun parseContracts(): Pair<LocalDate, List<Upstox.Contract>>? = runCatching {
         val o = JSONObject(contractsFile().readText())
         val day = LocalDate.parse(o.getString("day"))
         val arr = o.getJSONArray("c")
@@ -77,6 +88,8 @@ object Market {
     }.getOrNull()
 
     /** Today's listed options; the master is fetched at most once a day. */
+    /** Synchronized so two callers never download the (tens of MB) master at once. */
+    @Synchronized
     fun contracts(forceRefresh: Boolean = false): List<Upstox.Contract> {
         val cached = cachedContracts()
         if (!forceRefresh && cached != null && cached.first == today()) return cached.second
