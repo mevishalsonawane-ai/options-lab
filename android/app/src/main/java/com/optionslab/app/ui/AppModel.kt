@@ -463,10 +463,10 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     fun refreshBroker() { viewModelScope.launch(Dispatchers.IO) { broker.value = brokerState() } }
 
     /** Returns an error to show, or null when saved. */
-    fun saveBrokerCredentials(key: String, secret: String, redirect: String, pin: String): String? = try {
+    fun saveBrokerCredentials(key: String, secret: String, pin: String): String? = try {
         when (val r = com.optionslab.app.security.PinLock.verify(pin.toCharArray(), _settings.value.wipeOnExhaustion)) {
             com.optionslab.app.security.PinLock.Result.Ok -> {
-                com.optionslab.app.data.Broker.saveCredentials(key, secret, redirect, pin.toCharArray())
+                com.optionslab.app.data.Broker.saveCredentials(key, secret, pin.toCharArray())
                 broker.value = brokerState()
                 null
             }
@@ -507,11 +507,11 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun startKiteLogin() { if (com.optionslab.app.data.Broker.configured) askLoginPin.value = true else say("Add your API key, secret and redirect URL first.") }
+    fun startKiteLogin() { if (com.optionslab.app.data.Broker.configured) askLoginPin.value = true else say("Add your Kite API key and secret first.") }
 
     /** Called by the login page for every navigation; true means "stop, it was ours". */
     fun onKiteNavigation(url: String): Boolean {
-        val registered = com.optionslab.app.data.Broker.redirect ?: return false
+        val registered = com.optionslab.app.data.Broker.redirect
         return when (val r = com.optionslab.engine.Kite.readRedirect(url, registered)) {
             com.optionslab.engine.Kite.Redirect.NotOurs -> false
             is com.optionslab.engine.Kite.Redirect.Refused -> { closeKiteLogin(); say("Zerodha login did not complete: ${r.why}"); true }

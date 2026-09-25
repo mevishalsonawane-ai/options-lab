@@ -23,7 +23,7 @@ import javax.net.ssl.HttpsURLConnection
 /**
  * Zerodha Kite Connect - the broker, as the PC trading app uses it.
  *
- * CREDENTIALS. The API key, API secret, redirect URL and the day's access
+ * CREDENTIALS. The API key, API secret and the day's access
  * token live only in the encrypted vault. The secret and the token are never
  * shown again after entry, never logged, and never put in an error message.
  *
@@ -58,9 +58,15 @@ object Broker {
     // ---- credentials ------------------------------------------------------------
 
     val configured: Boolean get() = SecurePrefs.getString(K_KEY) != null &&
-        (SecurePrefs.getString(K_SEALED) != null || SecurePrefs.getString(K_SECRET) != null) && SecurePrefs.getString(K_REDIRECT) != null
+        (SecurePrefs.getString(K_SEALED) != null || SecurePrefs.getString(K_SECRET) != null)
     val apiKey: String? get() = SecurePrefs.getString(K_KEY)
-    val redirect: String? get() = SecurePrefs.getString(K_REDIRECT)
+    /**
+     * The redirect URL to register in the Kite Connect app. The login page
+     * inside IraAlgo catches it before it loads, so it never reaches the
+     * network and no server is needed. (A URL saved by an older version is kept.)
+     */
+    const val REDIRECT = "http://127.0.0.1/iraalgo"
+    val redirect: String get() = SecurePrefs.getString(K_REDIRECT) ?: REDIRECT
     val userName: String? get() = SecurePrefs.getString(K_USER)
     val userId: String? get() = SecurePrefs.getString(K_UID)
 
@@ -68,15 +74,11 @@ object Broker {
     fun maskedKey(): String = apiKey?.let { "••••" + it.takeLast(4) } ?: "not set"
 
     /** [pin] (already verified by the caller) seals the secret; it is never stored readable. */
-    fun saveCredentials(apiKey: String, apiSecret: String, redirect: String, pin: CharArray) {
+    fun saveCredentials(apiKey: String, apiSecret: String, pin: CharArray) {
         require(apiKey.isNotBlank() && apiKey.all { it.isLetterOrDigit() }) { "The API key should be letters and digits only" }
         require(apiSecret.isNotBlank() && apiSecret.all { it.isLetterOrDigit() }) { "The API secret should be letters and digits only" }
-        val r = runCatching { java.net.URI(redirect.trim()) }.getOrNull()
-        require(r != null && (r.scheme == "https" || r.scheme == "http") && !r.host.isNullOrBlank()) {
-            "The redirect URL must be the full address registered in your Kite app, e.g. https://example.com/"
-        }
         SecurePrefs.putAll(mapOf(K_KEY to apiKey.trim(), K_SEALED to com.optionslab.app.security.SecretBox.seal(apiSecret.trim(), pin),
-            K_SECRET to null, K_REDIRECT to redirect.trim(), K_TOKEN to null, K_LOGIN_AT to null))
+            K_SECRET to null, K_REDIRECT to null, K_TOKEN to null, K_LOGIN_AT to null))
     }
 
     fun forget() {

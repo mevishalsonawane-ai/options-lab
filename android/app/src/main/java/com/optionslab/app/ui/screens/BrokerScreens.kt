@@ -12,6 +12,7 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -415,7 +416,7 @@ fun BrokerPage(model: AppModel) {
         }
         item {
             LedgerCard(title = "Mode") {
-                ParamTokens("Live data from", listOf("LIVE · Zerodha" to s.live, "SANDBOX · public data" to !s.live)) { i ->
+                ParamTokens("Trading mode", listOf("Live · Zerodha" to s.live, "Paper · simulated" to !s.live)) { i ->
                     if (i == 0 && !b.configured) model.say("Set up Zerodha first.")
                     else model.update { it.copy(mode = if (i == 0) "live" else "sandbox") }
                 }
@@ -470,24 +471,37 @@ private fun CredentialsForm(model: AppModel, onDone: () -> Unit) {
     val p = LocalPalette.current
     var key by remember { mutableStateOf("") }
     var secret by remember { mutableStateOf("") }
-    var redirect by remember { mutableStateOf(Broker.redirect ?: "https://") }
+    val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current
     var pin by remember { mutableStateOf("") }
     var err by remember { mutableStateOf<String?>(null) }
     Column(Modifier.padding(top = 10.dp)) {
-        Note("From developers.kite.trade → your app. The redirect URL must be exactly the one registered there.")
+        Text("1. Create a Kite Connect app", style = Type.body.copy(color = p.ink, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold))
+        Note("Sign in at developers.kite.trade and create an app (type: Connect). Paste this as its Redirect URL:")
+        Row(
+            Modifier.fillMaxWidth().padding(vertical = 6.dp).background(p.chip, RoundedCornerShape(10.dp)).padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(Broker.REDIRECT, style = Type.figure.copy(color = p.ink, fontSize = 14.sp), modifier = Modifier.weight(1f))
+            Text("Copy", style = Type.label.copy(color = p.ink, fontSize = 14.sp),
+                modifier = Modifier.clickable {
+                    clipboard.setText(androidx.compose.ui.text.AnnotatedString(Broker.REDIRECT))
+                    model.say("Redirect URL copied")
+                }.padding(start = 12.dp))
+        }
+        Note("IraAlgo catches this address inside the app during login, so it never opens and needs no website. Postback URL can stay empty.")
+        Spacer(Modifier.height(10.dp))
+        Text("2. Paste the app's key and secret", style = Type.body.copy(color = p.ink, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold))
         OutlinedTextField(key, { key = it.trim() }, label = { Text("API key") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password), visualTransformation = PasswordVisualTransformation())
         OutlinedTextField(secret, { secret = it.trim() }, label = { Text("API secret") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password), visualTransformation = PasswordVisualTransformation())
-        OutlinedTextField(redirect, { redirect = it.trim() }, label = { Text("Redirect URL") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri))
         OutlinedTextField(pin, { pin = it.filter(Char::isDigit).take(12) }, label = { Text("Your app PIN (seals the secret)") }, singleLine = true,
             modifier = Modifier.fillMaxWidth(), visualTransformation = PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword))
         err?.let { Text(it, style = Type.italic.copy(color = p.oxblood)) }
         Spacer(Modifier.height(8.dp))
         BrassButton("Save to the vault", Modifier.fillMaxWidth()) {
-            err = model.saveBrokerCredentials(key, secret, redirect, pin)
+            err = model.saveBrokerCredentials(key, secret, pin)
             pin = ""
             if (err == null) { key = ""; secret = ""; onDone(); model.say("Saved, the secret sealed with your PIN. Now log in to Zerodha.") }
         }

@@ -236,13 +236,21 @@ private fun Main(model: AppModel) {
     var tradePage by rememberSaveable { mutableStateOf("account") }
     val message by model.message.collectAsState()
     val kiteLogin by model.showKiteLogin.collectAsState()
+    // Trading (the Ticket and Trade tabs, live or paper) appears only once a Zerodha account is linked.
+    val broker by model.broker.collectAsState()
+    val linked = broker.configured
+    val tabs = if (linked) Tab.entries else Tab.entries.filter { it != Tab.TICKET && it != Tab.TRADE }
+    LaunchedEffect(linked) {
+        if (!linked && tab !in tabs) tab = Tab.ALMANAC
+        if (!linked && settings.live) model.update { it.copy(mode = "sandbox") }
+    }
 
     LaunchedEffect(requested) {
         when (requested) {
             "almanac" -> tab = Tab.ALMANAC
-            "ticket" -> tab = Tab.TICKET
-            "trade" -> { tab = Tab.TRADE; tradePage = "account" }
-            "strategy" -> { tab = Tab.TRADE; tradePage = "strategies" }
+            "ticket" -> if (linked) tab = Tab.TICKET else { tab = Tab.CABINET; cabinetPage = "broker" }
+            "trade" -> if (linked) { tab = Tab.TRADE; tradePage = "account" } else { tab = Tab.CABINET; cabinetPage = "broker" }
+            "strategy" -> if (linked) { tab = Tab.TRADE; tradePage = "strategies" } else { tab = Tab.CABINET; cabinetPage = "broker" }
             "health" -> { tab = Tab.LAB; labPage = "health" }
             "trials" -> { tab = Tab.LAB; labPage = "trials" }
             "tools" -> tab = Tab.TOOLS
@@ -267,7 +275,7 @@ private fun Main(model: AppModel) {
 
     Parchment(ruled = true) {
         Column(Modifier.fillMaxSize()) {
-            Masthead(settings.live, settings.reduceMotion)
+            Masthead(settings.live, settings.reduceMotion, linked, onMode = { live -> model.update { it.copy(mode = if (live) "live" else "sandbox") } })
             Box(Modifier.weight(1f)) {
                 AnimatedContent(
                     targetState = tab,
@@ -283,7 +291,7 @@ private fun Main(model: AppModel) {
                         Tab.ALMANAC -> AlmanacScreen(model, onGo = { dest ->
                             when (dest) {
                                 "trials" -> { tab = Tab.LAB; labPage = "trials" }
-                                "ticket" -> tab = Tab.TICKET
+                                "ticket" -> if (linked) tab = Tab.TICKET else { tab = Tab.CABINET; cabinetPage = "broker" }
                                 "health" -> { tab = Tab.LAB; labPage = "health" }
                                 else -> { tab = Tab.CABINET; cabinetPage = dest }
                             }
@@ -297,7 +305,7 @@ private fun Main(model: AppModel) {
                 }
                 Toast(message) { model.message.value = null }
             }
-            TabBar(tab) { if (it == tab && it == Tab.CABINET) cabinetPage = null; tab = it }
+            TabBar(tab, tabs) { if (it == tab && it == Tab.CABINET) cabinetPage = null; tab = it }
         }
         // Order reviews open over any page, wherever the order was asked for.
         com.optionslab.app.ui.screens.OrderReviewDialog(model)
@@ -308,8 +316,9 @@ private fun Main(model: AppModel) {
 }
 
 @Composable
-private fun Masthead(live: Boolean, calm: Boolean = false) {
+private fun Masthead(live: Boolean, calm: Boolean, linked: Boolean, onMode: (Boolean) -> Unit) {
     val p = LocalPalette.current
+    var confirmLive by remember { mutableStateOf(false) }
     var now by remember { mutableStateOf(Market.now()) }
     LaunchedEffect(Unit) { while (true) { delay(15_000); now = Market.now() } }
     val open = Market.isOpen()
@@ -328,23 +337,50 @@ private fun Masthead(live: Boolean, calm: Boolean = false) {
                 modifier = Modifier.background(if (open) p.verdigris.copy(alpha = 0.12f) else p.chip, RoundedCornerShape(50)).padding(horizontal = 10.dp, vertical = 5.dp)) {
                 StatusDot(if (open) p.verdigris else p.inkFaint, pulsing = open && !calm)
                 Spacer(Modifier.width(6.dp))
-                Text(if (open) "Open" else "Closed", style = Type.label.copy(color = if (open) p.verdigris else p.inkSoft, fontSize = 12.sp))
+                Text(if (open) "NSE open" else "NSE closed", style = Type.label.copy(color = if (open) p.verdigris else p.inkSoft, fontSize = 12.sp))
             }
-            Spacer(Modifier.width(6.dp))
-            Text(if (live) "LIVE" else "PAPER", style = Type.label.copy(color = if (live) p.onPrimary else p.ink, fontSize = 11.sp, letterSpacing = 0.6.sp),
-                modifier = Modifier.background(if (live) p.brass else p.chip, RoundedCornerShape(50)).padding(horizontal = 10.dp, vertical = 5.dp))
         }
-        Box(Modifier.fillMaxWidth().height(1.dp).background(p.rule))
+        // Trading mode, on every screen: a Paper | Live switch once Zerodha is linked.
+        if (linked) {
+            Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 12.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(if (live) "Live trading · Zerodha, real money" else "Paper trading · simulated, no real orders",
+                    style = Type.bodySmall.copy(color = if (live) p.oxblood else p.inkSoft, fontSize = 12.sp,
+                        fontWeight = if (live) androidx.compose.ui.text.font.FontWeight.SemiBold else null),
+                    modifier = Modifier.weight(1f), maxLines = 1)
+                Row(Modifier.background(p.chip, RoundedCornerShape(50)).padding(2.dp)) {
+                    listOf(false to "Paper", true to "Live").forEach { (isLive, label) ->
+                        val sel = live == isLive
+                        Text(label, style = Type.label.copy(color = if (sel) Color.White else p.inkSoft, fontSize = 12.sp),
+                            modifier = Modifier
+                                .background(if (sel) (if (isLive) p.oxblood else p.verdigris) else Color.Transparent, RoundedCornerShape(50))
+                                .selectable(selected = sel, role = androidx.compose.ui.semantics.Role.RadioButton) {
+                                    if (!sel) { if (isLive) confirmLive = true else onMode(false) }
+                                }
+                                .padding(horizontal = 12.dp, vertical = 5.dp))
+                    }
+                }
+            }
+        }
+        // A red line under the bar while live, so real-money mode is never mistaken.
+        Box(Modifier.fillMaxWidth().height(if (linked && live) 2.dp else 1.dp).background(if (linked && live) p.oxblood else p.rule))
     }
+    if (confirmLive) androidx.compose.material3.AlertDialog(
+        onDismissRequest = { confirmLive = false },
+        properties = androidx.compose.ui.window.DialogProperties(securePolicy = androidx.compose.ui.window.SecureFlagPolicy.SecureOn),
+        title = { Text("Switch to live trading?", style = Type.title) },
+        text = { Text("Prices, positions and orders will come from your Zerodha account. Orders you send will use real money. Each order still needs your review, a long press and your PIN or fingerprint.", style = Type.bodySmall) },
+        confirmButton = { androidx.compose.material3.TextButton({ confirmLive = false; onMode(true) }) { Text("Go live", color = p.oxblood) } },
+        dismissButton = { androidx.compose.material3.TextButton({ confirmLive = false }) { Text("Stay on paper") } },
+    )
 }
 
 @Composable
-private fun TabBar(current: Tab, onPick: (Tab) -> Unit) {
+private fun TabBar(current: Tab, tabs: List<Tab>, onPick: (Tab) -> Unit) {
     val p = LocalPalette.current
     Column(Modifier.fillMaxWidth().background(p.paperDeep).navigationBarsPadding()) {
         Box(Modifier.fillMaxWidth().height(1.dp).background(p.rule))
         Row(Modifier.fillMaxWidth().padding(top = 6.dp, bottom = 4.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
-            Tab.entries.forEach { t ->
+            tabs.forEach { t ->
                 val sel = t == current
                 Column(
                     Modifier.weight(1f)

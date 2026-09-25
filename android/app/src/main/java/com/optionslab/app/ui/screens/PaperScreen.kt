@@ -62,6 +62,7 @@ fun LazyListScope.paperTrade(model: AppModel, snap: Load<Paper.Snapshot>, book: 
             Note("IraAlgo's sandbox engine on the phone: margin, fills, MIS square-off at 15:15 and expiry settlement are simulated from Upstox's public prices. Nothing reaches Zerodha.")
         }
     }
+    if (snap is Load.Done) item { PaperBalance(snap.value, onReset) }
     item { PaperOrderForm(model) }
     item {
         ParamTokens("Book", listOf("Positions", "Orders", "Trades", "Funds").map { it to (it.lowercase() == book) }) { i ->
@@ -243,25 +244,50 @@ private fun PaperFunds(v: Paper.Snapshot, onReset: () -> Unit) {
         LedgerLine("Total P&L", rs(f.totalPnl, true), if (f.totalPnl >= 0) p.verdigris else p.oxblood)
         LedgerLine("Resets", "${f.resetCount} · last ${f.lastReset.take(10)}")
         Spacer(Modifier.height(8.dp))
-        BrassButton("Reset the paper account", Modifier.fillMaxWidth(), tone = p.oxblood, onClick = onReset)
+        BrassButton("Set paper amount / reset", Modifier.fillMaxWidth(), tone = p.oxblood, onClick = onReset)
     }
 }
 
-/** Starting capital for a fresh paper account. */
+/** The paper money, always in view: what is free to trade, what is in use, and the P&L. */
+@Composable
+private fun PaperBalance(v: Paper.Snapshot, onChange: () -> Unit) {
+    val p = LocalPalette.current
+    val f = v.funds
+    LedgerCard {
+        Text("Paper balance", style = Type.label.copy(color = p.inkSoft, fontSize = 13.sp))
+        RollingFigure(f.availableCash, { rs(it) }, Type.figureLarge.copy(color = p.ink))
+        Text("available to trade", style = Type.bodySmall.copy(color = p.inkSoft))
+        Spacer(Modifier.height(8.dp))
+        LedgerLine("Used margin", rs(f.utilisedDebits))
+        LedgerLine("Total P&L", rs(f.totalPnl, true), if (f.totalPnl >= 0) p.verdigris else p.oxblood)
+        Spacer(Modifier.height(8.dp))
+        BrassButton("Set paper amount", Modifier.fillMaxWidth(), tone = p.ink, onClick = onChange)
+    }
+}
+
+/** Starting capital for a fresh paper account: a preset, or any amount typed in. */
 @Composable
 fun PaperResetDialog(model: AppModel, onClose: () -> Unit) {
-    val choices = listOf(500_000.0, 1_000_000.0, 5_000_000.0, 10_000_000.0)
-    var pick by remember { mutableStateOf(10_000_000.0) }
+    val p = LocalPalette.current
+    val choices = listOf(100_000.0, 500_000.0, 1_000_000.0, 10_000_000.0)
+    var pick by remember { mutableStateOf(1_000_000.0) }
+    var typed by remember { mutableStateOf("") }
+    val custom = typed.toDoubleOrNull()
+    val amount = if (typed.isNotEmpty()) custom else pick
+    val valid = amount != null && amount >= 10_000.0 && amount <= 1_000_000_000.0
     AlertDialog(
         onDismissRequest = onClose, properties = secure,
-        title = { Text("Reset the paper account?", style = Type.title) },
+        title = { Text("Set paper amount", style = Type.title) },
         text = {
             Column {
-                Text("Every paper order, trade and position is cleared and funds start again at:", style = Type.bodySmall)
-                ParamTokens("Starting capital", choices.map { rs(it) to (it == pick) }) { pick = choices[it] }
+                Text("The paper account starts again with this amount. Every paper order, trade and position is cleared.", style = Type.bodySmall)
+                ParamTokens("Amount", choices.map { rs(it) to (typed.isEmpty() && it == pick) }) { pick = choices[it]; typed = "" }
+                OutlinedTextField(typed, { typed = it.filter(Char::isDigit).take(10) }, label = { Text("Or type an amount (Rs)") }, singleLine = true,
+                    modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
+                if (typed.isNotEmpty() && !valid) Text("Enter between Rs 10,000 and Rs 100,00,00,000.", style = Type.bodySmall.copy(color = p.oxblood))
             }
         },
-        confirmButton = { TextButton({ model.paperReset(pick); onClose() }) { Text("Reset") } },
+        confirmButton = { TextButton({ if (valid) { model.paperReset(amount!!); onClose() } }, enabled = valid) { Text("Start with ${if (valid) rs(amount!!) else "…"}") } },
         dismissButton = { TextButton(onClose) { Text("Keep") } },
     )
 }

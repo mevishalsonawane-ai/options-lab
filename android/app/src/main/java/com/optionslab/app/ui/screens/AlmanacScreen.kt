@@ -65,6 +65,7 @@ fun AlmanacScreen(model: AppModel, onGo: (String) -> Unit) {
     val job by model.jobState.collectAsState()
     val alarms by model.alarms.collectAsState()
     val positions by model.livePositions.collectAsState()
+    val broker by model.broker.collectAsState()
 
     // Quotes poll only while the Almanac is on screen AND the app is in the foreground.
     com.optionslab.app.ui.PollWhileStarted {
@@ -76,6 +77,13 @@ fun AlmanacScreen(model: AppModel, onGo: (String) -> Unit) {
     LaunchedEffect(Unit) { shown = true }
 
     Page {
+        if (!broker.configured) item {
+            LedgerCard(title = "Link your Zerodha account") {
+                Note("Trading, live or paper, opens once your Zerodha account is linked. It takes two minutes: create a Kite Connect app, then paste its API key and secret here.")
+                Spacer(Modifier.height(10.dp))
+                BrassButton("Link Zerodha", Modifier.fillMaxWidth()) { onGo("broker") }
+            }
+        }
         item {
             // The tape: every index, scrolling like a ticker.
             val tape = if (quotes.isEmpty()) "NIFTY ·  BANKNIFTY ·  INDIA VIX ·  awaiting the first print" else
