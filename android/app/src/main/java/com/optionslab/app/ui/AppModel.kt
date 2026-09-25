@@ -570,7 +570,17 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     private fun gate(legs: List<com.optionslab.engine.Kite.Order>, hold: Boolean, exit: Boolean = false): List<List<String>> {
         val s = _settings.value
         val sent = com.optionslab.app.data.Broker.sentToday()
-        return legs.mapIndexed { i, o -> com.optionslab.engine.Kite.refusals(o, s.limits(), sent + i, hold, exit) }
+        // The account-wide guard judges each leg as if the legs before it had filled, so a basket's
+        // wing counts as held when its short leg is checked.
+        val g = com.optionslab.app.data.Guard
+        var acct = (account.value as? Load.Done)?.value?.let { g.liveAccount(it.book, it.funds, it.orders.size) }
+        if (acct == null && !exit) loadAccount(quiet = true)
+        return legs.mapIndexed { i, o ->
+            val order = g.liveOrder(o)
+            val guard = g.check(order, acct, exit)
+            acct = acct?.let { g.after(it, order) }
+            com.optionslab.engine.Kite.refusals(o, s.limits(), sent + i, hold, exit) + guard
+        }
     }
 
     /** The day's P&L curve: only sampled while you hold (or held today) something. */
@@ -1224,6 +1234,11 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                    priceType: String, product: String, price: Double?, trigger: Double?) = paperDo {
         val c = com.optionslab.app.data.Paper.contractFor(underlying, expiry, strike, right)
             ?: error("$underlying ${expiry} ${com.optionslab.engine.fmtG(strike)} $right is not listed")
+        val g = com.optionslab.app.data.Guard
+        val snap = runCatching { com.optionslab.app.data.Paper.snapshot() }.getOrNull()
+        val order = g.paperOrder(c, action, lots, price ?: snap?.positions?.positions?.firstOrNull { it.symbol == c.symbol }?.ltp ?: 0.0)
+        val refused = g.check(order, snap?.let { g.paperAccount(it) })
+        if (refused.isNotEmpty()) return@paperDo com.optionslab.app.data.Paper.Result(false, "Not placed (account guard): " + refused.joinToString(" "), emptyList())
         val r = com.optionslab.app.data.Paper.place(c, action, lots, priceType, product, price, trigger)
         r.events.filterIsInstance<com.optionslab.engine.sandbox.SandboxEvent.Fill>()
             .forEach { com.optionslab.app.work.Notifier.orderFilled(ctx, it.action, it.quantity, it.symbol, it.price, "Paper", null) }
@@ -1232,11 +1247,16 @@ class AppModel(app: Application) : AndroidViewModel(app) {
 
     fun paperCancel(id: String) = paperDo { com.optionslab.app.data.Paper.cancel(id) }
     fun paperModify(id: String, qty: Int?, price: Double?, trigger: Double?) = paperDo { com.optionslab.app.data.Paper.modify(id, qty, price, trigger) }
-    fun paperClose(symbol: String, product: String) = paperDo { com.optionslab.app.data.Paper.close(symbol, product) }
+    fun paperClose(symbol: String, product: String) = paperDo {
+        // Closing is an exit: only the kill switch stops it.
+        if (_settings.value.guardKill) com.optionslab.app.data.Paper.Result(false, "The kill switch is on: no orders at all until it is cleared.", emptyList())
+        else com.optionslab.app.data.Paper.close(symbol, product)
+    }
 
     fun paperReset(capital: Double) {
         viewModelScope.launch(Dispatchers.IO) {
             com.optionslab.app.data.Paper.reset(java.math.BigDecimal.valueOf(capital).setScale(2))
+            com.optionslab.app.data.Guard.resetPeak(live = false)   // the drawdown peak starts again with the new capital
             say("Paper account reset to ${rs(capital)}.")
             loadPaper()
         }

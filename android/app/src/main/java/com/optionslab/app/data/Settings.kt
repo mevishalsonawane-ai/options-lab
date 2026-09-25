@@ -56,6 +56,17 @@ data class AppSettings(
     val maxOrdersPerDay: Int = 4,
     val maxLotsPerOrder: Int = 2,
     val maxOrderValue: Double = 500_000.0,
+    // Account-wide guard (every order, paper and live, strategy and manual; exits only stop at the kill switch)
+    val guardKill: Boolean = false,
+    val guardDailyLoss: Double = 2_000.0,
+    val guardDrawdownPct: Double = 10.0,
+    val guardMaxOpen: Int = 3,
+    val guardMaxTrades: Int = 10,
+    val guardMaxValue: Double = 500_000.0,
+    val guardMaxLots: Int = 2,
+    /** Minute of day; -1 = no cutoff. */
+    val guardCutoff: Int = 14 * 60 + 30,
+    val guardNakedShort: Boolean = true,
     val prepareRealOrder: Boolean = true,
     // appearance
     val theme: String = "system",          // system | light | dark
@@ -66,6 +77,8 @@ data class AppSettings(
     val live: Boolean get() = mode == "live"
 
     fun limits() = com.optionslab.engine.Kite.Limits(maxOrdersPerDay, maxLotsPerOrder, maxOrderValue)
+    fun guardLimits() = com.optionslab.engine.risk.AccountGuard.Limits(guardKill, guardDailyLoss, guardDrawdownPct, guardMaxOpen,
+        guardMaxTrades, guardMaxValue, guardMaxLots, guardCutoff.takeIf { it >= 0 }, guardNakedShort)
 
     fun params(): ExpiryPut.Params = ExpiryPut.Params(
         otmPct = otmPct, entryMinute = entryMinute, regime = regime, wingPct = wingPct,
@@ -114,6 +127,11 @@ data class AppSettings(
                 maxOrdersPerDay = p.getInt("k.maxOrders", d.maxOrdersPerDay),
                 maxLotsPerOrder = p.getInt("k.maxLots", d.maxLotsPerOrder),
                 maxOrderValue = p.getDouble("k.maxValue", d.maxOrderValue),
+                guardKill = p.getBoolean("g.kill", d.guardKill), guardDailyLoss = p.getDouble("g.loss", d.guardDailyLoss),
+                guardDrawdownPct = p.getDouble("g.dd", d.guardDrawdownPct), guardMaxOpen = p.getInt("g.open", d.guardMaxOpen),
+                guardMaxTrades = p.getInt("g.trades", d.guardMaxTrades), guardMaxValue = p.getDouble("g.value", d.guardMaxValue),
+                guardMaxLots = p.getInt("g.lots", d.guardMaxLots), guardCutoff = p.getInt("g.cutoff", d.guardCutoff),
+                guardNakedShort = p.getBoolean("g.naked", d.guardNakedShort),
                 prepareRealOrder = p.getBoolean("k.prepare", d.prepareRealOrder),
                 theme = p.getString("ui.theme", d.theme)!!,
                 reduceMotion = p.getBoolean("ui.calm", d.reduceMotion),
@@ -134,7 +152,10 @@ data class AppSettings(
                 "ui.theme" to s.theme, "ui.calm" to s.reduceMotion, "ui.widgetPnl" to s.widgetPnl,
                 "n.pnlLoss" to s.pnlLossAlert, "n.pnlProfit" to s.pnlProfitAlert,
                 "k.mode" to s.mode, "k.allow" to s.allowRealOrders, "k.product" to s.orderProduct, "k.maxOrders" to s.maxOrdersPerDay,
-                "k.maxLots" to s.maxLotsPerOrder, "k.maxValue" to s.maxOrderValue, "k.prepare" to s.prepareRealOrder,
+                "k.maxLots" to s.maxLotsPerOrder, "k.maxValue" to s.maxOrderValue,
+                "g.kill" to s.guardKill, "g.loss" to s.guardDailyLoss, "g.dd" to s.guardDrawdownPct, "g.open" to s.guardMaxOpen,
+                "g.trades" to s.guardMaxTrades, "g.value" to s.guardMaxValue, "g.lots" to s.guardMaxLots, "g.cutoff" to s.guardCutoff,
+                "g.naked" to s.guardNakedShort, "k.prepare" to s.prepareRealOrder,
             ))
         }
     }

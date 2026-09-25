@@ -237,6 +237,7 @@ fun SecurityPage(model: AppModel) {
     val kind = remember { (context as? androidx.fragment.app.FragmentActivity)?.let { BiometricGate.available(it) } ?: BiometricGate.Kind.NONE }
     Page {
         item { PageTitle("Security", "Nothing personal leaves this phone, and nothing is logged") }
+        item { GuardCard(model) }
         item { KitePinCard(model) }
         item {
             LedgerCard(title = "Home-screen widget") {
@@ -512,4 +513,42 @@ private fun KitePinCard(model: AppModel) {
         reauth = false; com.optionslab.app.security.KitePin.reset(); tick++
         model.say("Pins cleared. The next connection, on a network you trust, records them again.")
     }, onCancel = { reauth = false })
+}
+
+/**
+ * The account-wide guard: limits every paper and live order must pass, from a
+ * strategy or by hand. Exits (closing what is held) are stopped only by the
+ * kill switch.
+ */
+@Composable
+private fun GuardCard(model: AppModel) {
+    val p = LocalPalette.current
+    val s by model.settings.collectAsState()
+    fun rupees(x: Double) = if (x >= 100_000) "₹${(x / 100_000).let { if (it % 1.0 == 0.0) it.toInt().toString() else it.toString() }}L" else "₹%,.0f".format(Locale.ENGLISH, x)
+    LedgerCard(title = "Account guard", accent = if (s.guardKill) p.oxblood else null) {
+        Note("Checked on every order, paper and live, from a strategy or by hand. Closing a position is never blocked, except by the kill switch.")
+        ToggleRow("Kill switch", if (s.guardKill) "ON: every order is refused, exits included, until you turn it off" else "Off. Turn on to stop all trading at once", s.guardKill) { on ->
+            model.update { it.copy(guardKill = on) }
+        }
+        val loss = listOf(1_000.0, 2_000.0, 5_000.0, 10_000.0, 0.0)
+        ParamTokens("Daily loss limit", loss.map { (if (it == 0.0) "off" else rupees(it)) to (it == s.guardDailyLoss) }) { i -> model.update { it.copy(guardDailyLoss = loss[i]) } }
+        val dd = listOf(5.0, 10.0, 20.0, 0.0)
+        ParamTokens("Max drawdown (from capital and from peak)", dd.map { (if (it == 0.0) "off" else "${it.toInt()}%") to (it == s.guardDrawdownPct) }) { i -> model.update { it.copy(guardDrawdownPct = dd[i]) } }
+        val open = listOf(1, 2, 3, 5, 0)
+        ParamTokens("Max open positions", open.map { (if (it == 0) "off" else "$it") to (it == s.guardMaxOpen) }) { i -> model.update { it.copy(guardMaxOpen = open[i]) } }
+        val trades = listOf(5, 10, 20, 0)
+        ParamTokens("Max trades per day", trades.map { (if (it == 0) "off" else "$it") to (it == s.guardMaxTrades) }) { i -> model.update { it.copy(guardMaxTrades = trades[i]) } }
+        val value = listOf(100_000.0, 200_000.0, 500_000.0, 1_000_000.0, 0.0)
+        ParamTokens("Max value per order", value.map { (if (it == 0.0) "off" else rupees(it)) to (it == s.guardMaxValue) }) { i -> model.update { it.copy(guardMaxValue = value[i]) } }
+        val lots = listOf(1, 2, 5, 0)
+        ParamTokens("Max lots per instrument", lots.map { (if (it == 0) "off" else "$it") to (it == s.guardMaxLots) }) { i -> model.update { it.copy(guardMaxLots = lots[i]) } }
+        val cut = listOf(14 * 60, 14 * 60 + 30, 15 * 60, -1)
+        ParamTokens("No new entries after", cut.map { (if (it < 0) "off" else "%02d:%02d".format(it / 60, it % 60)) to (it == s.guardCutoff) }) { i -> model.update { it.copy(guardCutoff = cut[i]) } }
+        ToggleRow("Block naked option shorts", "Selling an option to open needs a bought option of the same index, expiry and type held first", s.guardNakedShort) { on ->
+            model.update { it.copy(guardNakedShort = on) }
+        }
+        TextButton({ com.optionslab.app.data.Guard.resetPeak(s.live); model.say("Drawdown peak restarts from today's equity.") }) {
+            Text("Restart the drawdown peak (${if (s.live) "Zerodha" else "paper"})", style = Type.label.copy(color = p.inkSoft))
+        }
+    }
 }

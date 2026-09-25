@@ -98,6 +98,8 @@ object Paper {
 
     val state: SandboxState get() = book().state
     val capital: BigDecimal get() = book().capital
+    /** The contract a paper symbol stands for (underlying, expiry, type, lot), when it has been traded here. */
+    fun contractOf(symbol: String): Contract? = book().contracts[symbol]
     fun engine(): Sandbox = book().let { engine(it.capital, it.contracts) }
 
     // ---- prices -----------------------------------------------------------------

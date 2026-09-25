@@ -290,6 +290,11 @@ object Strategies {
             val ref = v.refs[order.symbol] ?: return StrategyHost.Placed.Refused("${order.symbol} is not listed")
             val c = ref.upstox ?: return StrategyHost.Placed.Refused("no price feed for ${order.symbol}")
             val pc = Paper.Contract(order.symbol, c.underlying, c.expiry, c.strike, c.right, c.lotSize, c.instrumentKey)
+            // The account-wide guard: entries must pass it; exits stop only at the kill switch.
+            val snap = runCatching { runBlocking { Paper.snapshot() } }.getOrNull()
+            val gOrder = Guard.paperOrder(pc, order.side.wire, order.quantity / ref.lot, snap?.positions?.positions?.firstOrNull { it.symbol == pc.symbol }?.ltp ?: 0.0)
+            Guard.check(gOrder, snap?.let { Guard.paperAccount(it) }, exit = order.kind != "entry").takeIf { it.isNotEmpty() }
+                ?.let { return StrategyHost.Placed.Refused("account guard: " + it.joinToString(" ")) }
             val r = runBlocking { Paper.place(pc, order.side.wire, order.quantity / ref.lot, "MARKET", order.product, null, null) }
             if (!r.ok) return StrategyHost.Placed.Refused(r.message)
             val id = r.orderId ?: return StrategyHost.Placed.Refused("paper order not recorded")
@@ -330,6 +335,12 @@ object Strategies {
                 }
                 val last = runCatching { Broker.quotes(listOf("NFO:$kiteSym"))["NFO:$kiteSym"]?.last }.getOrNull()
                 val o = Kite.Order(kiteSym, side, order.quantity, ref.lot, order.product, "MARKET", null, ref.tick, "NFO", "iraalgostrat")
+                // The account-wide guard, on a fresh read of the account.
+                val acct = runCatching {
+                    Guard.liveAccount(Broker.positionBook(), runCatching { Broker.funds() }.getOrNull(), runCatching { Broker.orders().size }.getOrDefault(0))
+                }.getOrNull()
+                Guard.check(Guard.liveOrder(o).copy(price = last ?: 0.0), acct, exit).takeIf { it.isNotEmpty() }
+                    ?.let { return@runBlocking StrategyHost.Placed.Refused("account guard: " + it.joinToString(" ")) }
                 val why = Kite.refusals(o, s.limits(), Broker.sentToday(), false, exit = exit, refPrice = last)
                 if (why.isNotEmpty()) return@runBlocking StrategyHost.Placed.Refused(why.joinToString("; "))
                 val id = try {
