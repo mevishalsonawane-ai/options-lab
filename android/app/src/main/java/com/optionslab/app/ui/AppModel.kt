@@ -458,11 +458,40 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     fun refreshBroker() { viewModelScope.launch(Dispatchers.IO) { broker.value = brokerState() } }
 
     /** Returns an error to show, or null when saved. */
-    fun saveBrokerCredentials(key: String, secret: String, redirect: String): String? = try {
-        com.optionslab.app.data.Broker.saveCredentials(key, secret, redirect)
-        broker.value = brokerState()
-        null
+    fun saveBrokerCredentials(key: String, secret: String, redirect: String, pin: String): String? = try {
+        when (val r = com.optionslab.app.security.PinLock.verify(pin.toCharArray(), _settings.value.wipeOnExhaustion)) {
+            com.optionslab.app.security.PinLock.Result.Ok -> {
+                com.optionslab.app.data.Broker.saveCredentials(key, secret, redirect, pin.toCharArray())
+                broker.value = brokerState()
+                null
+            }
+            is com.optionslab.app.security.PinLock.Result.LockedOut -> "PIN locked for ${r.secondsLeft} s."
+            com.optionslab.app.security.PinLock.Result.Wiped -> { eraseEverything(); "Too many wrong PINs: everything was erased." }
+            else -> "That is not your app PIN."
+        }
     } catch (e: IllegalArgumentException) { e.message }
+
+    /** The PIN prompt shown before each Zerodha login: the API secret opens only with it. */
+    val askLoginPin = MutableStateFlow(false)
+    /** The unsealed secret, held in memory only while the login page is open. */
+    @Volatile private var loginSecret: String? = null
+
+    fun unlockForLogin(pin: String): String? {
+        return when (val r = com.optionslab.app.security.PinLock.verify(pin.toCharArray(), _settings.value.wipeOnExhaustion)) {
+            com.optionslab.app.security.PinLock.Result.Ok -> {
+                val secret = com.optionslab.app.data.Broker.unsealSecret(pin.toCharArray()) ?: return "The API secret could not be opened; set up the keys again."
+                loginSecret = secret
+                askLoginPin.value = false
+                showKiteLogin.value = true
+                null
+            }
+            is com.optionslab.app.security.PinLock.Result.LockedOut -> "Locked for ${r.secondsLeft} s."
+            com.optionslab.app.security.PinLock.Result.Wiped -> { askLoginPin.value = false; eraseEverything(); null }
+            else -> "Not the right PIN."
+        }
+    }
+
+    fun closeKiteLogin() { showKiteLogin.value = false; loginSecret = null }
 
     fun forgetBroker() {
         viewModelScope.launch(Dispatchers.IO) {
@@ -473,19 +502,20 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun startKiteLogin() { if (com.optionslab.app.data.Broker.configured) showKiteLogin.value = true else say("Add your API key, secret and redirect URL first.") }
+    fun startKiteLogin() { if (com.optionslab.app.data.Broker.configured) askLoginPin.value = true else say("Add your API key, secret and redirect URL first.") }
 
     /** Called by the login page for every navigation; true means "stop, it was ours". */
     fun onKiteNavigation(url: String): Boolean {
         val registered = com.optionslab.app.data.Broker.redirect ?: return false
         return when (val r = com.optionslab.engine.Kite.readRedirect(url, registered)) {
             com.optionslab.engine.Kite.Redirect.NotOurs -> false
-            is com.optionslab.engine.Kite.Redirect.Refused -> { showKiteLogin.value = false; say("Zerodha login did not complete: ${r.why}"); true }
+            is com.optionslab.engine.Kite.Redirect.Refused -> { closeKiteLogin(); say("Zerodha login did not complete: ${r.why}"); true }
             is com.optionslab.engine.Kite.Redirect.Token -> {
-                showKiteLogin.value = false
+                val secret = loginSecret
+                closeKiteLogin()
                 viewModelScope.launch(Dispatchers.IO) {
                     try {
-                        val who = com.optionslab.app.data.Broker.completeLogin(r.requestToken)
+                        val who = com.optionslab.app.data.Broker.completeLogin(r.requestToken, secret ?: error("the login was not unlocked with your PIN"))
                         broker.value = brokerState()
                         // Warm the instrument list: the live expiry calendar reads it.
                         runCatching { com.optionslab.app.data.Broker.instruments() }

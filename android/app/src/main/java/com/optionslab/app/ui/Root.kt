@@ -288,6 +288,8 @@ private fun Main(model: AppModel) {
             TabBar(tab) { if (it == tab && it == Tab.CABINET) cabinetPage = null; tab = it }
         }
         if (kiteLogin) com.optionslab.app.ui.screens.KiteLoginPage(model)
+        val askPin by model.askLoginPin.collectAsState()
+        if (askPin) com.optionslab.app.ui.screens.LoginPinDialog(model)
     }
 }
 

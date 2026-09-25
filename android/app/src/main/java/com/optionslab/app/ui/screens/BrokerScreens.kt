@@ -95,14 +95,14 @@ fun KiteLoginPage(model: AppModel) {
     val p = LocalPalette.current
     var loading by remember { mutableStateOf(true) }
     var blocked by remember { mutableStateOf<String?>(null) }
-    BackHandler { model.showKiteLogin.value = false }
+    BackHandler { model.closeKiteLogin() }
     Column(Modifier.fillMaxSize().background(p.paper).statusBarsPadding()) {
         Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text("ZERODHA LOGIN", style = Type.title.copy(color = p.ink))
                 Text(blocked ?: if (loading) "Loading kite.zerodha.com…" else "Log in with your Zerodha ID, password and TOTP", style = Type.italic.copy(color = if (blocked != null) p.oxblood else p.inkSoft, fontSize = 13.sp))
             }
-            BrassButton("Close", tone = p.inkFaint) { model.showKiteLogin.value = false }
+            BrassButton("Close", tone = p.inkFaint) { model.closeKiteLogin() }
         }
         AndroidView(
             modifier = Modifier.weight(1f).fillMaxWidth(),
@@ -157,6 +157,30 @@ fun KiteLoginPage(model: AppModel) {
             },
         )
     }
+}
+
+/**
+ * Before each Zerodha login: the API secret is sealed with the app PIN, so the
+ * PIN (not a fingerprint) opens it for this one login.
+ */
+@Composable
+fun LoginPinDialog(model: AppModel) {
+    var pin by remember { mutableStateOf("") }
+    var err by remember { mutableStateOf<String?>(null) }
+    AlertDialog(
+        onDismissRequest = { model.askLoginPin.value = false }, properties = secureDialog,
+        title = { Text("Log in to Zerodha", style = Type.title) },
+        text = {
+            Column {
+                Text("Enter your app PIN. It unseals the API secret for this login only.", style = Type.bodySmall)
+                OutlinedTextField(pin, { pin = it.filter(Char::isDigit).take(12) }, singleLine = true, label = { Text("PIN") },
+                    visualTransformation = PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword))
+                err?.let { Text(it, style = Type.italic.copy(color = LocalPalette.current.oxblood)) }
+            }
+        },
+        confirmButton = { TextButton({ err = model.unlockForLogin(pin); pin = "" }) { Text("Continue") } },
+        dismissButton = { TextButton({ model.askLoginPin.value = false }) { Text("Cancel") } },
+    )
 }
 
 // ---- confirming it is you ----------------------------------------------------------------
@@ -423,6 +447,7 @@ private fun CredentialsForm(model: AppModel, onDone: () -> Unit) {
     var key by remember { mutableStateOf("") }
     var secret by remember { mutableStateOf("") }
     var redirect by remember { mutableStateOf(Broker.redirect ?: "https://") }
+    var pin by remember { mutableStateOf("") }
     var err by remember { mutableStateOf<String?>(null) }
     Column(Modifier.padding(top = 10.dp)) {
         Note("From developers.kite.trade → your app. The redirect URL must be exactly the one registered there.")
@@ -432,11 +457,15 @@ private fun CredentialsForm(model: AppModel, onDone: () -> Unit) {
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password), visualTransformation = PasswordVisualTransformation())
         OutlinedTextField(redirect, { redirect = it.trim() }, label = { Text("Redirect URL") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri))
+        OutlinedTextField(pin, { pin = it.filter(Char::isDigit).take(12) }, label = { Text("Your app PIN (seals the secret)") }, singleLine = true,
+            modifier = Modifier.fillMaxWidth(), visualTransformation = PasswordVisualTransformation(),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword))
         err?.let { Text(it, style = Type.italic.copy(color = p.oxblood)) }
         Spacer(Modifier.height(8.dp))
         BrassButton("Save to the vault", Modifier.fillMaxWidth()) {
-            err = model.saveBrokerCredentials(key, secret, redirect)
-            if (err == null) { key = ""; secret = ""; onDone(); model.say("Saved encrypted. Now log in to Zerodha.") }
+            err = model.saveBrokerCredentials(key, secret, redirect, pin)
+            pin = ""
+            if (err == null) { key = ""; secret = ""; onDone(); model.say("Saved, the secret sealed with your PIN. Now log in to Zerodha.") }
         }
     }
 }

@@ -40,7 +40,8 @@ object Broker {
     private lateinit var app: Context
 
     private const val K_KEY = "kite.apiKey"
-    private const val K_SECRET = "kite.apiSecret"
+    private const val K_SECRET = "kite.apiSecret"            // legacy: plain inside the vault; migrated on next login
+    private const val K_SEALED = "kite.apiSecretSealed"      // sealed with the owner's PIN (SecretBox)
     private const val K_REDIRECT = "kite.redirect"
     private const val K_TOKEN = "kite.accessToken"
     private const val K_LOGIN_AT = "kite.loginAt"
@@ -56,7 +57,8 @@ object Broker {
 
     // ---- credentials ------------------------------------------------------------
 
-    val configured: Boolean get() = SecurePrefs.getString(K_KEY) != null && SecurePrefs.getString(K_SECRET) != null && SecurePrefs.getString(K_REDIRECT) != null
+    val configured: Boolean get() = SecurePrefs.getString(K_KEY) != null &&
+        (SecurePrefs.getString(K_SEALED) != null || SecurePrefs.getString(K_SECRET) != null) && SecurePrefs.getString(K_REDIRECT) != null
     val apiKey: String? get() = SecurePrefs.getString(K_KEY)
     val redirect: String? get() = SecurePrefs.getString(K_REDIRECT)
     val userName: String? get() = SecurePrefs.getString(K_USER)
@@ -65,19 +67,20 @@ object Broker {
     /** Only the last four characters of the key, for recognising it. */
     fun maskedKey(): String = apiKey?.let { "••••" + it.takeLast(4) } ?: "not set"
 
-    fun saveCredentials(apiKey: String, apiSecret: String, redirect: String) {
+    /** [pin] (already verified by the caller) seals the secret; it is never stored readable. */
+    fun saveCredentials(apiKey: String, apiSecret: String, redirect: String, pin: CharArray) {
         require(apiKey.isNotBlank() && apiKey.all { it.isLetterOrDigit() }) { "The API key should be letters and digits only" }
         require(apiSecret.isNotBlank() && apiSecret.all { it.isLetterOrDigit() }) { "The API secret should be letters and digits only" }
         val r = runCatching { java.net.URI(redirect.trim()) }.getOrNull()
         require(r != null && (r.scheme == "https" || r.scheme == "http") && !r.host.isNullOrBlank()) {
             "The redirect URL must be the full address registered in your Kite app, e.g. https://example.com/"
         }
-        SecurePrefs.putAll(mapOf(K_KEY to apiKey.trim(), K_SECRET to apiSecret.trim(), K_REDIRECT to redirect.trim(),
-            K_TOKEN to null, K_LOGIN_AT to null))
+        SecurePrefs.putAll(mapOf(K_KEY to apiKey.trim(), K_SEALED to com.optionslab.app.security.SecretBox.seal(apiSecret.trim(), pin),
+            K_SECRET to null, K_REDIRECT to redirect.trim(), K_TOKEN to null, K_LOGIN_AT to null))
     }
 
     fun forget() {
-        SecurePrefs.putAll(mapOf(K_KEY to null, K_SECRET to null, K_REDIRECT to null, K_TOKEN to null,
+        SecurePrefs.putAll(mapOf(K_KEY to null, K_SECRET to null, K_SEALED to null, K_REDIRECT to null, K_TOKEN to null,
             K_LOGIN_AT to null, K_USER to null, K_UID to null))
         File(app.filesDir, "kite_instruments.json").delete()
         PnlTracker.clear()
@@ -152,10 +155,26 @@ object Broker {
 
     fun loginUrl(): String = Kite.loginUrl(apiKey ?: error("API key not set"))
 
+    /**
+     * Open the sealed API secret with the owner's (verified) PIN, for one login.
+     * A secret saved before sealing existed is sealed now and the readable copy removed.
+     */
+    fun unsealSecret(pin: CharArray): String? {
+        SecurePrefs.getString(K_SEALED)?.let { return com.optionslab.app.security.SecretBox.open(it, pin) }
+        val legacy = SecurePrefs.getString(K_SECRET) ?: return null
+        SecurePrefs.putAll(mapOf(K_SEALED to com.optionslab.app.security.SecretBox.seal(legacy, pin), K_SECRET to null))
+        return legacy
+    }
+
+    /** The PIN changed: re-seal the secret under the new one. */
+    fun resealSecret(oldPin: CharArray, newPin: CharArray) {
+        val secret = unsealSecret(oldPin) ?: return
+        SecurePrefs.put(K_SEALED, com.optionslab.app.security.SecretBox.seal(secret, newPin))
+    }
+
     /** Exchange the request token for the day's access token (kite_login.exchange_token). */
-    suspend fun completeLogin(requestToken: String): String {
+    suspend fun completeLogin(requestToken: String, secret: String): String {
         val key = apiKey ?: error("API key not set")
-        val secret = SecurePrefs.getString(K_SECRET) ?: error("API secret not set")
         val data = call("POST", "/session/token",
             Kite.form(listOf("api_key" to key, "request_token" to requestToken, "checksum" to Kite.checksum(key, requestToken, secret))),
             auth = false) as JSONObject

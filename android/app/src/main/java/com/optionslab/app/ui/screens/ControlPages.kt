@@ -337,7 +337,12 @@ fun SecurityPage(model: AppModel) {
             confirmButton = {
                 TextButton({
                     when (val r = PinLock.verify(cur.toCharArray(), s.wipeOnExhaustion)) {
-                        PinLock.Result.Ok -> try { PinLock.setPin(next.toCharArray()); changing = false; model.say("PIN changed.") } catch (e: IllegalArgumentException) { err = e.message }
+                        PinLock.Result.Ok -> try {
+                            PinLock.setPin(next.toCharArray())
+                            // The Zerodha API secret is sealed with the PIN: re-seal it under the new one.
+                            com.optionslab.app.data.Broker.resealSecret(cur.toCharArray(), next.toCharArray())
+                            changing = false; model.say("PIN changed.")
+                        } catch (e: IllegalArgumentException) { err = e.message }
                         is PinLock.Result.LockedOut -> err = "Locked for ${r.secondsLeft} s."
                         PinLock.Result.Wiped -> { changing = false; eraseEverything() }
                         else -> err = "The current PIN is not right."
