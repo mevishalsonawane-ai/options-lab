@@ -220,6 +220,8 @@ fun Reauth(model: AppModel, onOk: () -> Unit, onCancel: () -> Unit) {
     if (usePin) {
         var pin by remember { mutableStateOf("") }
         var err by remember { mutableStateOf<String?>(null) }
+        var checking by remember { mutableStateOf(false) }
+        val pinScope = rememberCoroutineScope()
         AlertDialog(
             onDismissRequest = onCancel, properties = secureDialog,
             title = { Text("Confirm it is you", style = Type.title) },
@@ -232,14 +234,21 @@ fun Reauth(model: AppModel, onOk: () -> Unit, onCancel: () -> Unit) {
                 }
             },
             confirmButton = {
+                // The PIN check is slow on purpose (key stretching): off the screen's thread.
                 TextButton({
-                    when (val r = PinLock.verify(pin.toCharArray(), s.wipeOnExhaustion)) {
-                        PinLock.Result.Ok -> onOk()
-                        is PinLock.Result.LockedOut -> err = "Locked for ${r.secondsLeft} s."
-                        PinLock.Result.Wiped -> { onCancel(); com.optionslab.app.ui.eraseEverything() }
-                        else -> { err = "Not the right PIN."; pin = "" }
+                    checking = true
+                    val typed = pin.toCharArray()
+                    pinScope.launch {
+                        val r = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { PinLock.verify(typed, s.wipeOnExhaustion) }
+                        checking = false
+                        when (r) {
+                            PinLock.Result.Ok -> onOk()
+                            is PinLock.Result.LockedOut -> err = "Locked for ${r.secondsLeft} s."
+                            PinLock.Result.Wiped -> { onCancel(); com.optionslab.app.ui.eraseEverything() }
+                            else -> { err = "Not the right PIN."; pin = "" }
+                        }
                     }
-                }) { Text("Confirm") }
+                }, enabled = !checking) { Text(if (checking) "Checking…" else "Confirm") }
             },
             dismissButton = { TextButton(onCancel) { Text("Cancel") } },
         )
@@ -549,7 +558,11 @@ private fun CredentialsForm(model: AppModel, onDone: () -> Unit) {
             trailingIcon = { TextButton({ pasteInto { key = it; draft(DRAFT_KEY, it) } }) { Text("Paste") } })
         OutlinedTextField(secret, { secret = it.trim(); draft(DRAFT_SECRET, secret) }, label = { Text("API secret") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password), visualTransformation = PasswordVisualTransformation(),
-            trailingIcon = { TextButton({ pasteInto { secret = it; draft(DRAFT_SECRET, it) } }) { Text("Paste") } })
+            trailingIcon = { TextButton({
+                pasteInto { secret = it; draft(DRAFT_SECRET, it) }
+                // The secret must not linger on the clipboard (or in the keyboard's clipboard history).
+                clipboard.setText(androidx.compose.ui.text.AnnotatedString(""))
+            }) { Text("Paste") } })
         if (key.isNotEmpty() || secret.isNotEmpty()) Note("Kept on this phone (encrypted) until you save, so you can switch to the Kite site and back.")
         OutlinedTextField(pin, { pin = it.filter(Char::isDigit).take(12) }, label = { Text("Your app PIN (seals the secret)") }, singleLine = true,
             modifier = Modifier.fillMaxWidth(), visualTransformation = PasswordVisualTransformation(),

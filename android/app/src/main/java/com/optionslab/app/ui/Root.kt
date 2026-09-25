@@ -111,6 +111,9 @@ enum class Tab(val label: String, val icon: ImageVector) {
 @Composable
 fun Root(activity: MainActivity) {
     val model: AppModel = viewModel()
+    // After an erase the view model outlives the data: reload it so the gates and the mode start clean.
+    val wiped by wipes.collectAsState()
+    LaunchedEffect(wiped) { if (wiped > 0) model.resetAfterWipe() }
     val settings by model.settings.collectAsState()
     val locked by SessionLock.locked.collectAsState()
     val findings by model.integrity.collectAsState()
@@ -233,7 +236,8 @@ private fun Gate(activity: MainActivity, model: AppModel, settings: AppSettings,
             val r = PinLock.verify(pin, settings.wipeOnExhaustion)
             when (r) {
                 PinLock.Result.Ok -> SessionLock.unlock()
-                PinLock.Result.Wiped -> eraseEverything()
+                // The check runs off the main thread; the erase (cookies, web storage) belongs on it.
+                PinLock.Result.Wiped -> android.os.Handler(android.os.Looper.getMainLooper()).post { eraseEverything() }
                 else -> Unit
             }
             r
@@ -323,7 +327,11 @@ fun eraseEverything() {
     BiometricGate.forget()
     Vault.destroy()
     SessionLock.lock()
+    wipes.value = wipes.value + 1
 }
+
+/** Bumped by [eraseEverything]: the screen state held in memory is dropped with the data. */
+val wipes = kotlinx.coroutines.flow.MutableStateFlow(0)
 
 @Composable
 private fun Main(model: AppModel) {
@@ -336,6 +344,8 @@ private fun Main(model: AppModel) {
     var tradePage by rememberSaveable { mutableStateOf("account") }
     var toolsView by rememberSaveable { mutableStateOf("chain") }
     var chartAsk by remember { mutableStateOf("BANKNIFTY" to "NSE") }
+    // Bumped on every ask, so asking again for the same symbol after browsing another one still switches back.
+    var chartNonce by remember { mutableStateOf(0) }
     var chartOpened by remember { mutableStateOf(false) }
     LaunchedEffect(tab) { if (tab == Tab.CHART) chartOpened = true }
     val message by model.message.collectAsState()
@@ -369,7 +379,7 @@ private fun Main(model: AppModel) {
     // The market watch runs by itself on market days; opening the app restarts it if Android stopped it.
     LaunchedEffect(Unit) { model.ensureWatch() }
     // Price the NIFTY chain in the background, so the Options tab opens with it ready.
-    LaunchedEffect(Unit) { delay(1500); if (model.tools.value !is Load.Done) model.loadTools("NIFTY", quiet = true) }
+    LaunchedEffect(Unit) { delay(1500); if (model.tools.value is Load.Idle) model.loadTools("NIFTY", quiet = true) }
 
     val notify = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
     LaunchedEffect(Unit) {
@@ -404,21 +414,21 @@ private fun Main(model: AppModel) {
                                 "trade" -> { tab = Tab.TRADE; tradePage = "account" }
                                 "strategy" -> { tab = Tab.TRADE; tradePage = "strategies" }
                                 "ticket" -> { tab = Tab.TOOLS; toolsView = "expiryput" }
-                                "chart" -> { chartAsk = "BANKNIFTY" to "NSE"; tab = Tab.CHART }
+                                "chart" -> { chartAsk = "BANKNIFTY" to "NSE"; chartNonce++; tab = Tab.CHART }
                                 "health" -> { tab = Tab.LAB; labPage = "health" }
                                 else -> { tab = Tab.CABINET; cabinetPage = dest }
                             }
                         })
                         Tab.CHART -> Box(Modifier.fillMaxSize())   // the chart itself is kept alive below
                         Tab.TRADE -> TradeHub(model, tradePage) { tradePage = it }
-                        Tab.TOOLS -> ToolsScreen(model, toolsView, { toolsView = it }) { s, e -> chartAsk = s to e; tab = Tab.CHART }
+                        Tab.TOOLS -> ToolsScreen(model, toolsView, { toolsView = it }) { s, e -> chartAsk = s to e; chartNonce++; tab = Tab.CHART }
                         Tab.LAB -> LabScreen(model, labPage) { labPage = it }
                         Tab.CABINET -> CabinetScreen(model, cabinetPage) { cabinetPage = it }
                     }
                 }
                 // The chart stays loaded once opened, so returning to it is instant.
                 if (chartOpened) Box(if (tab == Tab.CHART) Modifier.fillMaxSize() else Modifier.size(0.dp)) {
-                    com.optionslab.app.ui.screens.ChartScreen(model, chartAsk.first, chartAsk.second, visible = tab == Tab.CHART)
+                    com.optionslab.app.ui.screens.ChartScreen(model, chartAsk.first, chartAsk.second, visible = tab == Tab.CHART, ask = chartNonce)
                 }
                 Toast(message) { model.message.value = null }
             }

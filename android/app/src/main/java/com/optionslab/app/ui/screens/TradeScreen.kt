@@ -459,6 +459,8 @@ private fun GttDialog(model: AppModel, t: GttTarget, onClose: () -> Unit) {
     var target by remember { mutableStateOf("") }
     var auth by remember { mutableStateOf(false) }
     val long = t.netQty > 0
+    // A plan checked for another position (or before a failed placement) never carries over.
+    LaunchedEffect(t) { model.dismissGtt() }
     AlertDialog(
         onDismissRequest = { model.dismissGtt(); onClose() }, properties = secure,
         title = { Text("Protect ${t.symbol}", style = Type.title) },
@@ -466,10 +468,10 @@ private fun GttDialog(model: AppModel, t: GttTarget, onClose: () -> Unit) {
             Column {
                 Text("${if (long) "Long" else "Short"} ${kotlin.math.abs(t.netQty)} · ${t.product}. A GTT lives at Zerodha: it fires even if this phone is off. " +
                     "With both a stop and a target it is one-cancels-other.", style = Type.bodySmall)
-                OutlinedTextField(stop, { stop = it.filter { c -> c.isDigit() || c == '.' } }, singleLine = true,
+                OutlinedTextField(stop, { stop = it.filter { c -> c.isDigit() || c == '.' }; model.dismissGtt() }, singleLine = true,
                     label = { Text("Stop-loss trigger (${if (long) "below" else "above"} the price)") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
-                OutlinedTextField(target, { target = it.filter { c -> c.isDigit() || c == '.' } }, singleLine = true,
+                OutlinedTextField(target, { target = it.filter { c -> c.isDigit() || c == '.' }; model.dismissGtt() }, singleLine = true,
                     label = { Text("Target trigger (optional)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
                 TextButton({ model.planGtt(t.exchange, t.symbol, t.product, t.netQty, stop.toDoubleOrNull(), target.toDoubleOrNull()) }) {
                     Text("Check", style = Type.label.copy(color = p.brass))
@@ -496,5 +498,5 @@ private fun GttDialog(model: AppModel, t: GttTarget, onClose: () -> Unit) {
         },
         dismissButton = { TextButton({ model.dismissGtt(); onClose() }) { Text("Close") } },
     )
-    if (auth) Reauth(model, onOk = { auth = false; model.placeGtt(); onClose() }, onCancel = { auth = false })
+    if (auth) Reauth(model, onOk = { auth = false; model.placeGtt(); model.dismissGtt(); onClose() }, onCancel = { auth = false })
 }

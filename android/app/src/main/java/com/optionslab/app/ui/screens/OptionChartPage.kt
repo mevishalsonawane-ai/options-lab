@@ -102,7 +102,15 @@ fun OptionChartPage(model: AppModel, pick: ChainPick, onFullChart: (String) -> U
                             style = Type.figure.copy(color = if (up) p.verdigris else p.oxblood, fontSize = 15.sp), modifier = Modifier.padding(bottom = 6.dp))
                     }
                     Text("Change since today's open", style = Type.bodySmall.copy(color = p.inkFaint, fontSize = 12.sp))
-                    if (bars.size >= 2) PriceChart(bars.map { it.close }, open, 375,
+                    // Plotted by minute, not by candle: an illiquid option skips minutes, and the line
+                    // (and its 11:00 / 13:00 labels) must still sit at the right time.
+                    val byMinute = remember(bars) {
+                        val m = bars.associate { (it.istMinute - com.optionslab.app.data.Market.OPEN).coerceIn(0, 374) to it.close }
+                        val lastIdx = m.keys.maxOrNull() ?: -1
+                        var carry = bars.firstOrNull()?.close ?: 0.0
+                        (0..lastIdx).map { i -> m[i]?.also { carry = it } ?: carry }
+                    }
+                    if (bars.size >= 2) PriceChart(byMinute, open, 375,
                         listOf(0 to "09:15", 105 to "11:00", 225 to "13:00", 374 to "15:30"), Modifier.padding(top = 10.dp))
                     else Note(when {
                         error != null -> "Could not load the chart: $error"

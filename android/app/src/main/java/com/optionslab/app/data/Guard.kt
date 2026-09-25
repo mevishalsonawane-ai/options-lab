@@ -96,7 +96,9 @@ object Guard {
 
     /** Refusals for [order] against [account] under the owner's limits; empty = it may go. */
     fun check(order: AccountGuard.Order, account: AccountGuard.Account?, exit: Boolean = false, paper: Boolean = false): List<String> =
-        judge(order, account, exit, paper).also { if (!exit) onRefusal(it) }
+        // Only a LIVE drawdown engages the (shared) kill switch: a paper test running into its own
+        // drawdown must not block live exits or the live expiry square-off.
+        judge(order, account, exit, paper).also { if (!exit && !paper) onRefusal(it) }
 
     private fun judge(order: AccountGuard.Order, account: AccountGuard.Account?, exit: Boolean, paper: Boolean): List<String> {
         val limits = AppSettings.load().guardLimits(paper)

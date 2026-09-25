@@ -118,7 +118,7 @@ object Strategies {
         }.getOrNull()
         if (b == null && file.exists()) {
             Vault.setAside(file)
-            Notifier.post(app, 2014, Notifier.RISK, "Strategies could not be read",
+            Notifier.post(app, 2015, Notifier.APPROVAL, "Strategies could not be read",
                 "The saved strategies and runs were set aside. If a live run was open, check your Zerodha positions now.", "strategy")
         }
         val loaded = (b ?: Book(ArrayList(), HashMap(), ArrayList(), HashMap(), ArrayList(), 1, 1, null))

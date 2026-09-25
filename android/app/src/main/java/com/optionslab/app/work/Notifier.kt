@@ -107,10 +107,14 @@ object Notifier {
             .setCategory(if (channel == RISK) NotificationCompat.CATEGORY_ALARM else NotificationCompat.CATEGORY_STATUS)
     }
 
+    private val fillSeq = java.util.concurrent.atomic.AtomicInteger((System.currentTimeMillis() / 1000 % 5_000).toInt())
+
     /** A buy or sell filled: "BUY filled · Paper · ORB" / "SELL filled · Live · Manual". */
     fun orderFilled(context: Context, action: String, qty: Int, symbol: String, price: Double, venue: String, source: String?) {
         val buy = action.equals("BUY", ignoreCase = true)
-        post(context, 7000 + ("$symbol$action$qty$price".hashCode() and 0xfff), if (buy) BUY else SELL,
+        // Every fill gets its own id (20000-24999), clear of every other notification, so two
+        // identical fills (an ORB arm and a strategy leg) both show.
+        post(context, 20_000 + (fillSeq.incrementAndGet() and Int.MAX_VALUE) % 5_000, if (buy) BUY else SELL,
             "${if (buy) "BUY" else "SELL"} filled · $venue · ${source ?: "Manual"}",
             "$qty $symbol @ ${String.format(java.util.Locale.ENGLISH, "%.2f", price)}", "trade")
     }

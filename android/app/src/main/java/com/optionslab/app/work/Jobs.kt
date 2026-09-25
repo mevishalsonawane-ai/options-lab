@@ -136,7 +136,7 @@ object Jobs {
             // Not permitted from here (Android 12+ background start). Hand
             // the one-shot jobs to WorkManager; the watch cannot run that way.
             if (k == Kind.LIVE) {
-                Notifier.post(context, 2010, Notifier.SCHEDULE, "Market is open", "Tap to start the market watch.", "almanac")
+                Notifier.post(context, 2010, Notifier.APPROVAL, "Market is open", "Tap to start the market watch.", "almanac")
             } else {
                 val req = OneTimeWorkRequestBuilder<FallbackWorker>()
                     .setInputData(workDataOf(EXTRA_KIND to k.name, "manual" to manual))
@@ -401,13 +401,13 @@ class WatchService : Service() {
             ServiceCompat.startForeground(this, Notifier.ID_LIVE, n, type)
         } catch (_: Exception) {
             // Not allowed now (e.g. the dataSync budget is spent): say so rather than crash.
-            Notifier.post(this, 2011, Notifier.SCHEDULE, "IraAlgo could not run in the background", "Open the app to continue: $title", "almanac")
+            Notifier.post(this, 2011, Notifier.APPROVAL, "IraAlgo could not run in the background", "Open the app to continue: $title", "almanac")
         }
     }
 
     /** Android 15: a time-limited foreground service must stop when told, or the app is killed. */
     override fun onTimeout(startId: Int, fgsType: Int) {
-        Notifier.post(this, 2012, Notifier.RISK, "Background watch stopped by Android",
+        Notifier.post(this, 2012, Notifier.APPROVAL, "Background watch stopped by Android",
             "The system's time limit for background work was reached. Open IraAlgo to keep strategies and alerts checked.", "almanac")
         stopEverything()
     }
@@ -491,8 +491,8 @@ class WatchService : Service() {
     }
 
     private fun stopEverything() {
-        if (kotlinx.coroutines.runBlocking { runCatching { com.optionslab.app.data.Strategies.anyRunning() }.getOrDefault(false) })
-            Notifier.post(this, 2013, Notifier.RISK, "Strategies are no longer being watched",
+        if (kotlinx.coroutines.runBlocking { runCatching { com.optionslab.app.data.Strategies.anyRunning() || com.optionslab.app.data.OrbArms.holding() }.getOrDefault(false) })
+            Notifier.post(this, 2013, Notifier.APPROVAL, "Strategies are no longer being watched",
                 "A strategy run is open. Its stops and targets are only checked while the watch or the Strategies page is running.", "strategy")
         running.values.forEach { it.cancel() }
         running.clear()

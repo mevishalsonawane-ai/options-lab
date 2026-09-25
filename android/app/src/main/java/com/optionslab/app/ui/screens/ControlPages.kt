@@ -19,6 +19,7 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import java.util.Locale
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -234,6 +235,7 @@ fun SecurityPage(model: AppModel) {
     val s by model.settings.collectAsState()
     val findings by model.integrity.collectAsState()
     var changing by remember { mutableStateOf(false) }
+    val pinScope = androidx.compose.runtime.rememberCoroutineScope()
     var erasing by remember { mutableStateOf(false) }
     val kind = remember { (context as? androidx.fragment.app.FragmentActivity)?.let { BiometricGate.available(it) } ?: BiometricGate.Kind.NONE }
     Page {
@@ -345,7 +347,9 @@ fun SecurityPage(model: AppModel) {
             },
             confirmButton = {
                 TextButton({
-                    when (val r = PinLock.verify(cur.toCharArray(), s.wipeOnExhaustion)) {
+                  pinScope.launch {
+                    val r = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { PinLock.verify(cur.toCharArray(), s.wipeOnExhaustion) }
+                    when (r) {
                         PinLock.Result.Ok -> try {
                             PinLock.setPin(next.toCharArray())
                             // The Zerodha API secret is sealed with the PIN: re-seal it under the new one.
@@ -356,6 +360,7 @@ fun SecurityPage(model: AppModel) {
                         PinLock.Result.Wiped -> { changing = false; eraseEverything() }
                         else -> err = "The current PIN is not right."
                     }
+                  }
                 }) { Text("Change") }
             },
             dismissButton = { TextButton({ changing = false }) { Text("Cancel") } },
@@ -415,7 +420,8 @@ fun SchedulePage(model: AppModel) {
                 ToggleRow("Tell me when health changes", "PASS → WARN → FAIL, after each harvest", s.healthAlerts) { v -> model.update { it.copy(healthAlerts = v) } }
                 val risks = listOf(0.001, 0.0025, 0.005, 0.01)
                 ParamTokens("Warn when the index is within", risks.map { pct(it) to (it == s.riskAlertPct) }) { i -> model.update { it.copy(riskAlertPct = risks[i]) } }
-                Note("The expiry calendar comes from the instrument master; ${Market.upcomingExpiries().size} upcoming NIFTY expiries are known.")
+                val expiries by androidx.compose.runtime.produceState(-1) { value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { Market.upcomingExpiries().size } }
+                Note("The expiry calendar comes from the instrument master; " + (if (expiries < 0) "reading it…" else "$expiries upcoming NIFTY expiries are known."))
             }
         }
         item {

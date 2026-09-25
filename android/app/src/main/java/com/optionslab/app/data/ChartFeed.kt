@@ -51,7 +51,8 @@ object ChartFeed {
     }
 
     fun contract(symbol: String): Upstox.Contract? =
-        known().firstOrNull { it.tradingSymbol.equals(symbol, ignoreCase = true) }
+        // An index is never a contract: answer at once instead of downloading the master to find out.
+        if (symbol.uppercase() in Upstox.INDEX_KEYS) null else known().firstOrNull { it.tradingSymbol.equals(symbol, ignoreCase = true) }
             ?: Market.contracts().firstOrNull { it.tradingSymbol.equals(symbol, ignoreCase = true) }
 
     /**
@@ -97,7 +98,8 @@ object ChartFeed {
                     .flatMap { it.await() }
                 out += got
                 // Keep only finished sessions; today's bars always come fresh.
-                if (to == today) past[cacheKey] = Past(today, from, got.filter { it.istDate.isBefore(today) })
+                // A week or month bar is dated on its first day, so the current one would look finished: not cached.
+                if (to == today && u.unit != "weeks" && u.unit != "months") past[cacheKey] = Past(today, from, got.filter { it.istDate.isBefore(today) })
             }
             todays?.let { out += it.await() }
         }

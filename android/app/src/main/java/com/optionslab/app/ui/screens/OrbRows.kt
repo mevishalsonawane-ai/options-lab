@@ -55,8 +55,7 @@ fun OrbRows(model: AppModel) {
     val v by model.orb.collectAsState()
     var choosing by remember { mutableStateOf<String?>(null) }
     var detail by remember { mutableStateOf(false) }
-    // Keep the arm states fresh while Home is on screen.
-    LaunchedEffect(Unit) { while (true) { model.refreshStrategies(); delay(20_000) } }
+    // Home's own poll (only while the app is on screen) refreshes the arm states every 20 s.
     val view = v ?: return
 
     view.arms.forEachIndexed { i, a ->

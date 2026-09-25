@@ -93,7 +93,7 @@ object OrbArms {
     private fun book(): Book {
         cache?.let { return it }
         val b = Book()
-        runCatching {
+        val ok = runCatching {
             val o = JSONObject(String(Vault.readFileSteady(file) ?: return@runCatching, Charsets.UTF_8))
             o.optJSONObject("armed")?.let { m -> m.keys().forEach { b.armed[it] = m.getBoolean(it) } }
             o.optJSONObject("auto")?.let { m -> m.keys().forEach { b.auto[it] = m.getBoolean(it) } }
@@ -120,6 +120,13 @@ object OrbArms {
             o.optJSONObject("status")?.let { m -> m.keys().forEach { b.status[it] = m.getString(it) } }
             o.optJSONObject("replays")?.let { m -> m.keys().forEach { b.replays[it] = m.getJSONObject(it) } }
             o.optJSONObject("upDays")?.let { m -> m.keys().forEach { b.upDays[it] = m.getBoolean(it) } }
+        }.isSuccess
+        if (!ok) {
+            // Never overwrite what could not be read: set it aside and start clean, and say so.
+            if (file.exists()) Vault.setAside(file)
+            Notifier.post(app, 2016, Notifier.APPROVAL, "ORB arms could not be read",
+                "Their saved state was set aside and both arms are disarmed. If an ORB position was open, check Trade → Paper now.", "almanac")
+            return Book().also { cache = it }
         }
         cache = b
         return b
@@ -266,7 +273,7 @@ object OrbArms {
         if (b.auto[arm.source] == false) {
             // Valid until the next bar completes: after that the signal is stale.
             b.pending[arm.source] = Pending(arm.source, right, last.start, last.start.plusMinutes(10))
-            Notifier.post(app, 6700 + OrbRules.ARMS.indexOf(arm), Notifier.APPROVAL, "${arm.label}: approve BUY ${c.symbol}",
+            Notifier.post(app, 6960 + OrbRules.ARMS.indexOf(arm), Notifier.APPROVAL, "${arm.label}: approve BUY ${c.symbol}",
                 "BANKNIFTY closed ${if (direction > 0) "above" else "below"} the opening range on the ${hhmm(last.start)} bar. " +
                     "Paper account, 1 lot. Approve by ${hhmm(last.start.plusMinutes(10))} or it lapses.", "almanac")
             return "awaiting_approval"
@@ -296,8 +303,7 @@ object OrbArms {
         val refusals = Guard.check(Guard.paperOrder(c, "BUY", 1, expected), snap?.let { Guard.paperAccount(it) }, paper = true)
         if (refusals.isNotEmpty()) return "guard_refused: " + refusals.joinToString(" ")
         val buy = Paper.place(c, "BUY", 1, "MARKET", "MIS", null, null)
-        val fill = buy.events.filterIsInstance<com.optionslab.engine.sandbox.SandboxEvent.Fill>().firstOrNull()
-        if (!buy.ok || fill == null) return "order_refused: ${buy.message}"
+        val fill = filledOrCancelled(buy) ?: return "order_refused: ${if (buy.ok) "no price to fill at; the order was cancelled" else buy.message}"
         buy.orderId?.let { Strategies.tagOwner("paper:$it", "${arm.label} · entry") }
         Notifier.orderFilled(app, "BUY", fill.quantity, fill.symbol, fill.price, "Paper", arm.label)
         val trigger = OrbRules.stopTrigger(fill.price)
@@ -333,8 +339,13 @@ object OrbArms {
             val net = Paper.state.positions.filter { it.symbol == p.symbol && it.product == "MIS" }.sumOf { it.quantity }
             val ltp = Paper.lastPrice(c)
             ltp?.let { marks[p.symbol] = it }
-            if (net <= 0 && !t.toLocalTime().isBefore(LocalTime.of(15, 15))) {
-                b.positions[i] = cur.copy(exit = ltp ?: cur.entry, exitTime = t, why = "backstop_square_off"); continue
+            if (net <= 0 && (cur.day.isBefore(t.toLocalDate()) || !t.toLocalTime().isBefore(LocalTime.of(15, 15)))) {
+                cur.stopOrderId?.let { runCatching { Paper.cancel(it) } }
+                // Book the paper account's own square-off fill (slippage and charges included) when there is one.
+                val sq = Paper.state.trades.lastOrNull { it.symbol == p.symbol && it.action == "SELL" && it.strategy == "AUTO_SQUARE_OFF" && !it.timestamp.isBefore(cur.entryTime) }
+                b.positions[i] = cur.copy(exit = sq?.price?.toDouble() ?: ltp ?: cur.entry, exitTime = sq?.timestamp ?: t, why = "backstop_square_off",
+                    stopOrderId = null, charges = cur.charges + (sq?.charges?.toDouble() ?: 0.0))
+                continue
             }
             if (ltp == null) continue                                               // no price at all: hold
             val why = when {
@@ -355,11 +366,26 @@ object OrbArms {
                 charges = p.charges + chargesOf(id))
         }
         val sell = Paper.place(c, "SELL", p.qty / c.lotSize.coerceAtLeast(1), "MARKET", "MIS", null, null)
-        val fill = sell.events.filterIsInstance<com.optionslab.engine.sandbox.SandboxEvent.Fill>().firstOrNull()
-        if (!sell.ok || fill == null) return p.copy(stopOrderId = null)            // retried on the next pass
+        val fill = filledOrCancelled(sell) ?: return p.copy(stopOrderId = null)    // nothing left working; retried on the next pass
         sell.orderId?.let { Strategies.tagOwner("paper:$it", "${armOf(p.arm).label} · $why") }
         Notifier.orderFilled(app, "SELL", fill.quantity, fill.symbol, fill.price, "Paper", armOf(p.arm).label)
         return p.copy(stopOrderId = null, exit = fill.price, exitTime = now(), why = why, charges = p.charges + chargesOf(sell.orderId))
+    }
+
+    data class Filled(val quantity: Int, val symbol: String, val price: Double)
+
+    /**
+     * The fill of a MARKET order just placed. The paper book can accept one and leave it
+     * OPEN (no fresh price): it is cancelled straight away so it can never fill later as an
+     * untracked entry or a second exit. If it filled before the cancel, that fill counts.
+     */
+    private suspend fun filledOrCancelled(r: Paper.Result): Filled? {
+        r.events.filterIsInstance<com.optionslab.engine.sandbox.SandboxEvent.Fill>().firstOrNull()?.let { return Filled(it.quantity, it.symbol, it.price) }
+        val id = r.orderId ?: return null
+        if (!r.ok) return null
+        Paper.cancel(id)
+        val o = Paper.state.orders.firstOrNull { it.orderId == id } ?: return null
+        return if (o.status == "complete") Filled(o.quantity, o.symbol, o.averagePrice?.toDouble() ?: return null) else null
     }
 
     private fun chargesOf(orderId: String?): Double =
@@ -392,7 +418,13 @@ object OrbArms {
      * paper arms actually did, and note whether the index closed up or down for
      * the pass rule. No orders. Once a day.
      */
+    @Volatile private var lastReplayTry = 0L
+
     suspend fun replayIfDue(): Boolean {
+        // Called on every refresh: when the day's data is not in yet, try again at most every 10 minutes.
+        if (System.currentTimeMillis() - lastReplayTry < 10 * 60_000) return false
+        lastReplayTry = System.currentTimeMillis()
+        runCatching { backfillUpDays() }
         val t = now()
         val day = t.toLocalDate()
         if (!Market.isTradingDay(day) || t.toLocalTime().isBefore(LocalTime.of(15, 35))) return false
@@ -415,6 +447,19 @@ object OrbArms {
         } else out.put("note", "No strike was fixed today (the arms were not running at 09:20), so there is nothing to replay the options on.")
         lock.withLock { val b = book(); b.replays[day.toString()] = out; b.upDays[day.toString()] = out.getBoolean("up"); save(b) }
         return true
+    }
+
+    /** Up or down day (index close vs open) for past trade days the evening replay never recorded, for the pass rule. */
+    private suspend fun backfillUpDays() {
+        val missing = lock.withLock { book().let { b -> b.positions.map { it.day }.distinct().filter { it.isBefore(Market.today()) && !b.upDays.containsKey(it.toString()) } } }
+        if (missing.isEmpty()) return
+        val key = Upstox.INDEX_KEYS.getValue(OrbRules.UNDERLYING)
+        val found = HashMap<String, Boolean>()
+        for (d in missing.takeLast(10)) {
+            val bars = runCatching { fiveMinute(Net.history(key, d, d), d) }.getOrNull().orEmpty()
+            if (bars.isNotEmpty()) found[d.toString()] = bars.last().close > bars.first().open
+        }
+        if (found.isNotEmpty()) lock.withLock { val b = book(); b.upDays.putAll(found); save(b) }
     }
 
     // ---- text ------------------------------------------------------------------

@@ -58,7 +58,7 @@ private const val ORIGIN = "https://$HOST/"
  */
 @SuppressLint("SetJavaScriptEnabled", "JavascriptInterface")
 @Composable
-fun ChartScreen(model: AppModel, symbol: String, exchange: String, visible: Boolean = true) {
+fun ChartScreen(model: AppModel, symbol: String, exchange: String, visible: Boolean = true, ask: Int = 0) {
     val p = LocalPalette.current
     val scope = rememberCoroutineScope()
     var current by remember { mutableStateOf(symbol to exchange) }
@@ -82,7 +82,7 @@ fun ChartScreen(model: AppModel, symbol: String, exchange: String, visible: Bool
     }
 
     // A new symbol asked for from elsewhere (Home, the option chain) while the chart is open.
-    DisposableEffect(symbol, exchange) {
+    DisposableEffect(symbol, exchange, ask) {
         if (current != symbol to exchange) {
             holder[0]?.evaluateJavascript("window.__iraSetSymbol && window.__iraSetSymbol(${JSONObject.quote(symbol)}, ${JSONObject.quote(exchange)})", null)
         }
