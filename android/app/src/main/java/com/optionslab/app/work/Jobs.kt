@@ -325,6 +325,7 @@ object Tasks {
             // The account's P&L: recorded for the day's curve, and alerted on the owner's levels.
             runCatching { b.positionBook() }.getOrNull()?.takeIf { it.net.isNotEmpty() }?.let { book ->
                 com.optionslab.app.data.PnlTracker.record(book.pnl)
+                runCatching { com.optionslab.app.data.DailyPnl.record(true, book.m2m, -1) }
                 accountPnl = book.pnl
                 lines.add(0, "Positions %s".format(if (s.hideAmountsOnLockScreen) "open: ${book.net.count { it.open }}" else "Rs %+,.0f".format(book.pnl)))
                 pnlAlerts(context, s, book.pnl)
@@ -333,6 +334,7 @@ object Tasks {
         runCatching { com.optionslab.app.data.Paper.state.positions.count { it.quantity != 0 } }.getOrDefault(0).takeIf { it > 0 }?.let { n ->
             runCatching { com.optionslab.app.data.Paper.snapshot() }.getOrNull()?.let { snap ->
                 val pnl = snap.funds.todayRealizedPnl + snap.funds.m2mUnrealized
+                runCatching { com.optionslab.app.data.DailyPnl.record(false, pnl, snap.trades.size) }
                 lines.add(0, "Paper %s".format(if (s.hideAmountsOnLockScreen) "open: $n" else "P&L Rs %+,.0f · $n open".format(pnl)))
             }
         }

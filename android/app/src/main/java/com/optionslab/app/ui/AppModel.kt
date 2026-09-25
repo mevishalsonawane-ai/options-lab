@@ -579,8 +579,13 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                 runCatching { orderOwners.value = com.optionslab.app.data.Strategies.owners() }
                 trackPnl(book)
                 livePositions.value = book.net
+                val trades = runCatching { b.trades() }.getOrDefault(emptyList())
+                // Today's Zerodha P&L for the calendar (Zerodha has no past days through its API).
+                if (book.net.isNotEmpty() || trades.isNotEmpty()) runCatching {
+                    com.optionslab.app.data.DailyPnl.record(true, book.m2m, trades.size); pnlDays.value = pnlDays.value + 1
+                }
                 Load.Done(Account(runCatching { b.funds() }.getOrNull(), book, b.orders(),
-                    runCatching { b.trades() }.getOrDefault(emptyList()), runCatching { b.holdings() }.getOrDefault(emptyList())))
+                    trades, runCatching { b.holdings() }.getOrDefault(emptyList())))
             } catch (e: Exception) {
                 broker.value = brokerState()
                 Load.Failed(e.message ?: "could not read the account")
@@ -1280,13 +1285,26 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** Today's paper P&L for the calendar, on days the account did anything. */
+    private fun recordPaperDay(snap: com.optionslab.app.data.Paper.Snapshot) = runCatching {
+        val open = snap.positions.positions.any { it.quantity != 0 }
+        val pnl = snap.funds.todayRealizedPnl + snap.funds.m2mUnrealized
+        if (snap.trades.isNotEmpty() || open || pnl != 0.0) com.optionslab.app.data.DailyPnl.record(false, pnl, snap.trades.size)
+        pnlDays.value = pnlDays.value + 1
+    }
+
+    /** Bumped whenever a day's figure is recorded, so an open P&L calendar redraws. */
+    val pnlDays = MutableStateFlow(0)
+
     fun loadPaper(quiet: Boolean = false) {
         if (!quiet || paper.value !is Load.Done) paper.value = Load.Busy("Opening the paper account")
         viewModelScope.launch(Dispatchers.IO) {
             paper.value = try {
                 runCatching { com.optionslab.app.data.Paper.tick() }
                 runCatching { orderOwners.value = com.optionslab.app.data.Strategies.owners() }
-                Load.Done(com.optionslab.app.data.Paper.snapshot())
+                val snap = com.optionslab.app.data.Paper.snapshot()
+                recordPaperDay(snap)
+                Load.Done(snap)
             } catch (e: Exception) { Load.Failed(e.message ?: "could not read the paper account") }
         }
     }
