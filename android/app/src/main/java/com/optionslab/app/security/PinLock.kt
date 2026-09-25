@@ -84,6 +84,8 @@ object PinLock {
         val salt = SecurePrefs.getString(K_SALT)?.let(::unhex)
         val want = SecurePrefs.getString(K_HASH)?.let(::unhex)
         if (salt == null || want == null) { pin.fill('\u0000'); return Result.Wrong(0) }
+        // PBKDF2 throws on an empty password; an empty PIN is simply wrong and costs no attempt.
+        if (size == 0) return Result.Wrong(FREE_ATTEMPTS - SecurePrefs.getInt(K_FAILS, 0))
         val got = derive(pin, salt, SecurePrefs.getInt(K_ITER, ITERATIONS))
         pin.fill('\u0000')
         if (MessageDigest.isEqual(got, want)) {

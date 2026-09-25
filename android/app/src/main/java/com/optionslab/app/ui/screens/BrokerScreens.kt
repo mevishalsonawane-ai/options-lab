@@ -173,8 +173,10 @@ fun KiteLoginPage(model: AppModel) {
 fun LoginPinDialog(model: AppModel) {
     var pin by remember { mutableStateOf("") }
     var err by remember { mutableStateOf<String?>(null) }
+    var checking by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
     AlertDialog(
-        onDismissRequest = { model.askLoginPin.value = false }, properties = secureDialog,
+        onDismissRequest = { if (!checking) model.askLoginPin.value = false }, properties = secureDialog,
         title = { Text("Log in to Zerodha", style = Type.title) },
         text = {
             Column {
@@ -184,8 +186,17 @@ fun LoginPinDialog(model: AppModel) {
                 err?.let { Text(it, style = Type.italic.copy(color = LocalPalette.current.oxblood)) }
             }
         },
-        confirmButton = { TextButton({ err = model.unlockForLogin(pin); pin = "" }) { Text("Continue") } },
-        dismissButton = { TextButton({ model.askLoginPin.value = false }) { Text("Cancel") } },
+        // The PIN check and unsealing are slow on purpose (key stretching): off the screen's thread, as in CredentialsForm.
+        confirmButton = {
+            TextButton({
+                val pn = pin; pin = ""; checking = true
+                scope.launch {
+                    err = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { model.unlockForLogin(pn) }
+                    checking = false
+                }
+            }, enabled = !checking) { Text(if (checking) "Checking…" else "Continue") }
+        },
+        dismissButton = { TextButton({ model.askLoginPin.value = false }, enabled = !checking) { Text("Cancel") } },
     )
 }
 
