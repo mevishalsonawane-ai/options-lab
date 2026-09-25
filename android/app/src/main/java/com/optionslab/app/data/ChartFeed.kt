@@ -79,7 +79,7 @@ object ChartFeed {
         val live = to == today && u.unit in setOf("minutes", "hours", "days")
         kotlinx.coroutines.coroutineScope {
             // Today's session lives on a separate endpoint; it is fetched alongside the history.
-            val todays = if (live) async(kotlinx.coroutines.Dispatchers.IO) {
+            val todays: kotlinx.coroutines.Deferred<List<Upstox.Bar>>? = if (live) async(kotlinx.coroutines.Dispatchers.IO) {
                 runCatching { Net.parseCandles(Net.getJson("$BASE/intraday/$key/${u.unit}/${u.n}", tries = 2)) }.getOrDefault(emptyList())
             } else null
             val cached = past[cacheKey]?.takeIf { it.day == today && !it.from.isAfter(from) }
