@@ -1,0 +1,2330 @@
+{
+ "name": "futures_reversal",
+ "config": {},
+ "instruments": [
+  {
+   "symbol": "RELIANCE",
+   "exchange": "NSE",
+   "instrumenttype": "EQ",
+   "lotsize": 1
+  },
+  {
+   "symbol": "ZEEL",
+   "exchange": "NSE",
+   "instrumenttype": "EQ",
+   "lotsize": 1
+  },
+  {
+   "symbol": "SBIN",
+   "exchange": "BSE",
+   "instrumenttype": "EQ",
+   "lotsize": 1
+  },
+  {
+   "symbol": "NIFTY29SEP26FUT",
+   "exchange": "NFO",
+   "instrumenttype": "FUTIDX",
+   "lotsize": 75,
+   "expiry": "2026-09-29"
+  },
+  {
+   "symbol": "NIFTY29SEP2625000CE",
+   "exchange": "NFO",
+   "instrumenttype": "OPTIDX",
+   "lotsize": 75,
+   "expiry": "2026-09-29",
+   "strike": 25000
+  },
+  {
+   "symbol": "NIFTY29SEP2625200PE",
+   "exchange": "NFO",
+   "instrumenttype": "OPTIDX",
+   "lotsize": 75,
+   "expiry": "2026-09-29",
+   "strike": 25200
+  },
+  {
+   "symbol": "NIFTY27OCT2625000CE",
+   "exchange": "NFO",
+   "instrumenttype": "OPTIDX",
+   "lotsize": 75,
+   "expiry": "2026-10-27",
+   "strike": 25000
+  },
+  {
+   "symbol": "CRUDEOIL19OCT26FUT",
+   "exchange": "MCX",
+   "instrumenttype": "FUTCOM",
+   "lotsize": 100,
+   "expiry": "2026-10-19"
+  }
+ ],
+ "steps": [
+  {
+   "at": "2026-09-21 09:30:00",
+   "op": "init",
+   "result": {
+    "ok": true
+   },
+   "state": {
+    "funds": {
+     "total_capital": "10000000.00",
+     "available_balance": "10000000.00",
+     "used_margin": "0.00",
+     "realized_pnl": "0.00",
+     "today_realized_pnl": "0.00",
+     "unrealized_pnl": "0.00",
+     "total_pnl": "0.00",
+     "last_reset_date": "2026-09-21 09:30:00",
+     "reset_count": 0,
+     "updated_at": "2026-09-21 09:30:00"
+    },
+    "orders": [],
+    "trades": [],
+    "positions": [],
+    "holdings": []
+   }
+  },
+  {
+   "at": "2026-09-21 09:31:00",
+   "op": "place",
+   "order": {
+    "symbol": "NIFTY29SEP26FUT",
+    "exchange": "NFO",
+    "action": "BUY",
+    "quantity": 50,
+    "price_type": "MARKET",
+    "product": "NRML",
+    "strategy": ""
+   },
+   "quote": {
+    "ltp": 25000.0,
+    "bid": 24999.0,
+    "ask": 25001.0,
+    "high": 25100.0,
+    "low": 24900.0
+   },
+   "result": {
+    "ok": false,
+    "code": 400,
+    "body": {
+     "status": "error",
+     "message": "Quantity must be in multiples of lot size 75",
+     "mode": "analyze"
+    }
+   },
+   "state": {
+    "funds": {
+     "total_capital": "10000000.00",
+     "available_balance": "10000000.00",
+     "used_margin": "0.00",
+     "realized_pnl": "0.00",
+     "today_realized_pnl": "0.00",
+     "unrealized_pnl": "0.00",
+     "total_pnl": "0.00",
+     "last_reset_date": "2026-09-21 09:30:00",
+     "reset_count": 0,
+     "updated_at": "2026-09-21 09:30:00"
+    },
+    "orders": [],
+    "trades": [],
+    "positions": [],
+    "holdings": []
+   }
+  },
+  {
+   "at": "2026-09-21 09:32:00",
+   "op": "place",
+   "order": {
+    "symbol": "NIFTY29SEP26FUT",
+    "exchange": "NFO",
+    "action": "BUY",
+    "quantity": 75,
+    "price_type": "MARKET",
+    "product": "NRML",
+    "strategy": ""
+   },
+   "quote": {
+    "ltp": 25000.0,
+    "bid": 24999.0,
+    "ask": 25001.0,
+    "high": 25100.0,
+    "low": 24900.0
+   },
+   "result": {
+    "ok": true,
+    "code": 200,
+    "body": {
+     "status": "success",
+     "orderid": "26092100000001",
+     "mode": "analyze"
+    }
+   },
+   "state": {
+    "funds": {
+     "total_capital": "10000000.00",
+     "available_balance": "9812500.00",
+     "used_margin": "187500.00",
+     "realized_pnl": "0.00",
+     "today_realized_pnl": "0.00",
+     "unrealized_pnl": "0.00",
+     "total_pnl": "0.00",
+     "last_reset_date": "2026-09-21 09:30:00",
+     "reset_count": 0,
+     "updated_at": "2026-09-21 09:32:00"
+    },
+    "orders": [
+     {
+      "orderid": "26092100000001",
+      "strategy": "",
+      "symbol": "NIFTY29SEP26FUT",
+      "exchange": "NFO",
+      "action": "BUY",
+      "quantity": 75,
+      "price": "25000.00",
+      "trigger_price": null,
+      "price_type": "MARKET",
+      "product": "NRML",
+      "order_status": "complete",
+      "average_price": "25001.00",
+      "filled_quantity": 75,
+      "pending_quantity": 0,
+      "rejection_reason": null,
+      "margin_blocked": "187500.00",
+      "order_timestamp": "2026-09-21 09:32:00"
+     }
+    ],
+    "trades": [
+     {
+      "tradeid": "TRADE-20260921-093200-00000001",
+      "orderid": "26092100000001",
+      "symbol": "NIFTY29SEP26FUT",
+      "exchange": "NFO",
+      "action": "BUY",
+      "quantity": 75,
+      "price": "25001.00",
+      "product": "NRML",
+      "strategy": "",
+      "trade_timestamp": "2026-09-21 09:32:00"
+     }
+    ],
+    "positions": [
+     {
+      "symbol": "NIFTY29SEP26FUT",
+      "exchange": "NFO",
+      "product": "NRML",
+      "quantity": 75,
+      "average_price": "25001.00",
+      "ltp": "25001.00",
+      "pnl": "0.00",
+      "pnl_percent": "0.0000",
+      "accumulated_realized_pnl": "0.00",
+      "today_realized_pnl": "0.00",
+      "margin_blocked": "187500.00",
+      "created_at": "2026-09-21 09:32:00",
+      "updated_at": "2026-09-21 09:32:00"
+     }
+    ],
+    "holdings": []
+   }
+  },
+  {
+   "at": "2026-09-21 09:33:00",
+   "op": "place",
+   "order": {
+    "symbol": "NIFTY29SEP26FUT",
+    "exchange": "NFO",
+    "action": "BUY",
+    "quantity": 75,
+    "price_type": "MARKET",
+    "product": "NRML",
+    "strategy": ""
+   },
+   "quote": {
+    "ltp": 25010.0,
+    "bid": 25009.5,
+    "ask": 25010.5,
+    "high": 25100.0,
+    "low": 24900.0
+   },
+   "result": {
+    "ok": true,
+    "code": 200,
+    "body": {
+     "status": "success",
+     "orderid": "26092100000002",
+     "mode": "analyze"
+    }
+   },
+   "state": {
+    "funds": {
+     "total_capital": "10000000.00",
+     "available_balance": "9624925.00",
+     "used_margin": "375075.00",
+     "realized_pnl": "0.00",
+     "today_realized_pnl": "0.00",
+     "unrealized_pnl": "0.00",
+     "total_pnl": "0.00",
+     "last_reset_date": "2026-09-21 09:30:00",
+     "reset_count": 0,
+     "updated_at": "2026-09-21 09:33:00"
+    },
+    "orders": [
+     {
+      "orderid": "26092100000001",
+      "strategy": "",
+      "symbol": "NIFTY29SEP26FUT",
+      "exchange": "NFO",
+      "action": "BUY",
+      "quantity": 75,
+      "price": "25000.00",
+      "trigger_price": null,
+      "price_type": "MARKET",
+      "product": "NRML",
+      "order_status": "complete",
+      "average_price": "25001.00",
+      "filled_quantity": 75,
+      "pending_quantity": 0,
+      "rejection_reason": null,
+      "margin_blocked": "187500.00",
+      "order_timestamp": "2026-09-21 09:32:00"
+     },
+     {
+      "orderid": "26092100000002",
+      "strategy": "",
+      "symbol": "NIFTY29SEP26FUT",
+      "exchange": "NFO",
+      "action": "BUY",
+      "quantity": 75,
+      "price": "25010.00",
+      "trigger_price": null,
+      "price_type": "MARKET",
+      "product": "NRML",
+      "order_status": "complete",
+      "average_price": "25010.50",
+      "filled_quantity": 75,
+      "pending_quantity": 0,
+      "rejection_reason": null,
+      "margin_blocked": "187575.00",
+      "order_timestamp": "2026-09-21 09:33:00"
+     }
+    ],
+    "trades": [
+     {
+      "tradeid": "TRADE-20260921-093200-00000001",
+      "orderid": "26092100000001",
+      "symbol": "NIFTY29SEP26FUT",
+      "exchange": "NFO",
+      "action": "BUY",
+      "quantity": 75,
+      "price": "25001.00",
+      "product": "NRML",
+      "strategy": "",
+      "trade_timestamp": "2026-09-21 09:32:00"
+     },
+     {
+      "tradeid": "TRADE-20260921-093300-00000002",
+      "orderid": "26092100000002",
+      "symbol": "NIFTY29SEP26FUT",
+      "exchange": "NFO",
+      "action": "BUY",
+      "quantity": 75,
+      "price": "25010.50",
+      "product": "NRML",
+      "strategy": "",
+      "trade_timestamp": "2026-09-21 09:33:00"
+     }
+    ],
+    "positions": [
+     {
+      "symbol": "NIFTY29SEP26FUT",
+      "exchange": "NFO",
+      "product": "NRML",
+      "quantity": 150,
+      "average_price": "25005.75",
+      "ltp": "25010.50",
+      "pnl": "0.00",
+      "pnl_percent": "0.0000",
+      "accumulated_realized_pnl": "0.00",
+      "today_realized_pnl": "0.00",
+      "margin_blocked": "375075.00",
+      "created_at": "2026-09-21 09:32:00",
+      "updated_at": "2026-09-21 09:33:00"
+     }
+    ],
+    "holdings": []
+   }
+  },
+  {
+   "at": "2026-09-21 09:34:00",
+   "op": "place",
+   "order": {
+    "symbol": "NIFTY29SEP26FUT",
+    "exchange": "NFO",
+    "action": "SELL",
+    "quantity": 225,
+    "price_type": "MARKET",
+    "product": "NRML",
+    "strategy": ""
+   },
+   "quote": {
+    "ltp": 25100.0,
+    "bid": 25099.2,
+    "ask": 25100.4,
+    "high": 25150.0,
+    "low": 24900.0
+   },
+   "result": {
+    "ok": true,
+    "code": 200,
+    "body": {
+     "status": "success",
+     "orderid": "26092100000003",
+     "mode": "analyze"
+    }
+   },
+   "state": {
+    "funds": {
+     "total_capital": "10000000.00",
+     "available_balance": "9951267.50",
+     "used_margin": "62750.00",
+     "realized_pnl": "14017.50",
+     "today_realized_pnl": "14017.50",
+     "unrealized_pnl": "0.00",
+     "total_pnl": "14017.50",
+     "last_reset_date": "2026-09-21 09:30:00",
+     "reset_count": 0,
+     "updated_at": "2026-09-21 09:34:00"
+    },
+    "orders": [
+     {
+      "orderid": "26092100000001",
+      "strategy": "",
+      "symbol": "NIFTY29SEP26FUT",
+      "exchange": "NFO",
+      "action": "BUY",
+      "quantity": 75,
+      "price": "25000.00",
+      "trigger_price": null,
+      "price_type": "MARKET",
+      "product": "NRML",
+      "order_status": "complete",
+      "average_price": "25001.00",
+      "filled_quantity": 75,
+      "pending_quantity": 0,
+      "rejection_reason": null,
+      "margin_blocked": "187500.00",
+      "order_timestamp": "2026-09-21 09:32:00"
+     },
+     {
+      "orderid": "26092100000002",
+      "strategy": "",
+      "symbol": "NIFTY29SEP26FUT",
+      "exchange": "NFO",
+      "action": "BUY",
+      "quantity": 75,
+      "price": "25010.00",
+      "trigger_price": null,
+      "price_type": "MARKET",
+      "product": "NRML",
+      "order_status": "complete",
+      "average_price": "25010.50",
+      "filled_quantity": 75,
+      "pending_quantity": 0,
+      "rejection_reason": null,
+      "margin_blocked": "187575.00",
+      "order_timestamp": "2026-09-21 09:33:00"
+     },
+     {
+      "orderid": "26092100000003",
+      "strategy": "",
+      "symbol": "NIFTY29SEP26FUT",
+      "exchange": "NFO",
+      "action": "SELL",
+      "quantity": 225,
+      "price": "25100.00",
+      "trigger_price": null,
+      "price_type": "MARKET",
+      "product": "NRML",
+      "order_status": "complete",
+      "average_price": "25099.20",
+      "filled_quantity": 225,
+      "pending_quantity": 0,
+      "rejection_reason": null,
+      "margin_blocked": "188250.00",
+      "order_timestamp": "2026-09-21 09:34:00"
+     }
+    ],
+    "trades": [
+     {
+      "tradeid": "TRADE-20260921-093200-00000001",
+      "orderid": "26092100000001",
+      "symbol": "NIFTY29SEP26FUT",
+      "exchange": "NFO",
+      "action": "BUY",
+      "quantity": 75,
+      "price": "25001.00",
+      "product": "NRML",
+      "strategy": "",
+      "trade_timestamp": "2026-09-21 09:32:00"
+     },
+     {
+      "tradeid": "TRADE-20260921-093300-00000002",
+      "orderid": "26092100000002",
+      "symbol": "NIFTY29SEP26FUT",
+      "exchange": "NFO",
+      "action": "BUY",
+      "quantity": 75,
+      "price": "25010.50",
+      "product": "NRML",
+      "strategy": "",
+      "trade_timestamp": "2026-09-21 09:33:00"
+     },
+     {
+      "tradeid": "TRADE-20260921-093400-00000003",
+      "orderid": "26092100000003",
+      "symbol": "NIFTY29SEP26FUT",
+      "exchange": "NFO",
+      "action": "SELL",
+      "quantity": 225,
+      "price": "25099.20",
+      "product": "NRML",
+      "strategy": "",
+      "trade_timestamp": "2026-09-21 09:34:00"
+     }
+    ],
+    "positions": [
+     {
+      "symbol": "NIFTY29SEP26FUT",
+      "exchange": "NFO",
+      "product": "NRML",
+      "quantity": -75,
+      "average_price": "25099.20",
+      "ltp": "25099.20",
+      "pnl": "0.00",
+      "pnl_percent": "0.0000",
+      "accumulated_realized_pnl": "14017.50",
+      "today_realized_pnl": "14017.50",
+      "margin_blocked": "62750.00",
+      "created_at": "2026-09-21 09:32:00",
+      "updated_at": "2026-09-21 09:34:00"
+     }
+    ],
+    "holdings": []
+   }
+  },
+  {
+   "at": "2026-09-21 09:35:00",
+   "op": "funds",
+   "quotes": {},
+   "result": {
+    "availablecash": 9951267.5,
+    "collateral": 0.0,
+    "m2munrealized": 0.0,
+    "m2mrealized": 14017.5,
+    "total_realized_pnl": 14017.5,
+    "today_realized_pnl": 14017.5,
+    "utiliseddebits": 62750.0,
+    "grossexposure": 62750.0,
+    "totalpnl": 14017.5,
+    "last_reset": "2026-09-21 09:30:00",
+    "reset_count": 0
+   },
+   "state": {
+    "funds": {
+     "total_capital": "10000000.00",
+     "available_balance": "9951267.50",
+     "used_margin": "62750.00",
+     "realized_pnl": "14017.50",
+     "today_realized_pnl": "14017.50",
+     "unrealized_pnl": "0.00",
+     "total_pnl": "14017.50",
+     "last_reset_date": "2026-09-21 09:30:00",
+     "reset_count": 0,
+     "updated_at": "2026-09-21 09:34:00"
+    },
+    "orders": [
+     {
+      "orderid": "26092100000001",
+      "strategy": "",
+      "symbol": "NIFTY29SEP26FUT",
+      "exchange": "NFO",
+      "action": "BUY",
+      "quantity": 75,
+      "price": "25000.00",
+      "trigger_price": null,
+      "price_type": "MARKET",
+      "product": "NRML",
+      "order_status": "complete",
+      "average_price": "25001.00",
+      "filled_quantity": 75,
+      "pending_quantity": 0,
+      "rejection_reason": null,
+      "margin_blocked": "187500.00",
+      "order_timestamp": "2026-09-21 09:32:00"
+     },
+     {
+      "orderid": "26092100000002",
+      "strategy": "",
+      "symbol": "NIFTY29SEP26FUT",
+      "exchange": "NFO",
+      "action": "BUY",
+      "quantity": 75,
+      "price": "25010.00",
+      "trigger_price": null,
+      "price_type": "MARKET",
+      "product": "NRML",
+      "order_status": "complete",
+      "average_price": "25010.50",
+      "filled_quantity": 75,
+      "pending_quantity": 0,
+      "rejection_reason": null,
+      "margin_blocked": "187575.00",
+      "order_timestamp": "2026-09-21 09:33:00"
+     },
+     {
+      "orderid": "26092100000003",
+      "strategy": "",
+      "symbol": "NIFTY29SEP26FUT",
+      "exchange": "NFO",
+      "action": "SELL",
+      "quantity": 225,
+      "price": "25100.00",
+      "trigger_price": null,
+      "price_type": "MARKET",
+      "product": "NRML",
+      "order_status": "complete",
+      "average_price": "25099.20",
+      "filled_quantity": 225,
+      "pending_quantity": 0,
+      "rejection_reason": null,
+      "margin_blocked": "188250.00",
+      "order_timestamp": "2026-09-21 09:34:00"
+     }
+    ],
+    "trades": [
+     {
+      "tradeid": "TRADE-20260921-093200-00000001",
+      "orderid": "26092100000001",
+      "symbol": "NIFTY29SEP26FUT",
+      "exchange": "NFO",
+      "action": "BUY",
+      "quantity": 75,
+      "price": "25001.00",
+      "product": "NRML",
+      "strategy": "",
+      "trade_timestamp": "2026-09-21 09:32:00"
+     },
+     {
+      "tradeid": "TRADE-20260921-093300-00000002",
+      "orderid": "26092100000002",
+      "symbol": "NIFTY29SEP26FUT",
+      "exchange": "NFO",
+      "action": "BUY",
+      "quantity": 75,
+      "price": "25010.50",
+      "product": "NRML",
+      "strategy": "",
+      "trade_timestamp": "2026-09-21 09:33:00"
+     },
+     {
+      "tradeid": "TRADE-20260921-093400-00000003",
+      "orderid": "26092100000003",
+      "symbol": "NIFTY29SEP26FUT",
+      "exchange": "NFO",
+      "action": "SELL",
+      "quantity": 225,
+      "price": "25099.20",
+      "product": "NRML",
+      "strategy": "",
+      "trade_timestamp": "2026-09-21 09:34:00"
+     }
+    ],
+    "positions": [
+     {
+      "symbol": "NIFTY29SEP26FUT",
+      "exchange": "NFO",
+      "product": "NRML",
+      "quantity": -75,
+      "average_price": "25099.20",
+      "ltp": "25099.20",
+      "pnl": "0.00",
+      "pnl_percent": "0.0000",
+      "accumulated_realized_pnl": "14017.50",
+      "today_realized_pnl": "14017.50",
+      "margin_blocked": "62750.00",
+      "created_at": "2026-09-21 09:32:00",
+      "updated_at": "2026-09-21 09:34:00"
+     }
+    ],
+    "holdings": []
+   }
+  },
+  {
+   "at": "2026-09-21 09:36:00",
+   "op": "place",
+   "order": {
+    "symbol": "NIFTY29SEP26FUT",
+    "exchange": "NFO",
+    "action": "BUY",
+    "quantity": 75,
+    "price_type": "MARKET",
+    "product": "NRML",
+    "strategy": ""
+   },
+   "quote": {
+    "ltp": 25050.0,
+    "bid": 25049.95,
+    "ask": 25050.05,
+    "high": 25150.0,
+    "low": 24900.0
+   },
+   "result": {
+    "ok": true,
+    "code": 200,
+    "body": {
+     "status": "success",
+     "orderid": "26092100000004",
+     "mode": "analyze"
+    }
+   },
+   "state": {
+    "funds": {
+     "total_capital": "10000000.00",
+     "available_balance": "10017703.75",
+     "used_margin": "0.00",
+     "realized_pnl": "17703.75",
+     "today_realized_pnl": "17703.75",
+     "unrealized_pnl": "0.00",
+     "total_pnl": "17703.75",
+     "last_reset_date": "2026-09-21 09:30:00",
+     "reset_count": 0,
+     "updated_at": "2026-09-21 09:36:00"
+    },
+    "orders": [
+     {
+      "orderid": "26092100000001",
+      "strategy": "",
+      "symbol": "NIFTY29SEP26FUT",
+      "exchange": "NFO",
+      "action": "BUY",
+      "quantity": 75,
+      "price": "25000.00",
+      "trigger_price": null,
+      "price_type": "MARKET",
+      "product": "NRML",
+      "order_status": "complete",
+      "average_price": "25001.00",
+      "filled_quantity": 75,
+      "pending_quantity": 0,
+      "rejection_reason": null,
+      "margin_blocked": "187500.00",
+      "order_timestamp": "2026-09-21 09:32:00"
+     },
+     {
+      "orderid": "26092100000002",
+      "strategy": "",
+      "symbol": "NIFTY29SEP26FUT",
+      "exchange": "NFO",
+      "action": "BUY",
+      "quantity": 75,
+      "price": "25010.00",
+      "trigger_price": null,
+      "price_type": "MARKET",
+      "product": "NRML",
+      "order_status": "complete",
+      "average_price": "25010.50",
+      "filled_quantity": 75,
+      "pending_quantity": 0,
+      "rejection_reason": null,
+      "margin_blocked": "187575.00",
+      "order_timestamp": "2026-09-21 09:33:00"
+     },
+     {
+      "orderid": "26092100000003",
+      "strategy": "",
+      "symbol": "NIFTY29SEP26FUT",
+      "exchange": "NFO",
+      "action": "SELL",
+      "quantity": 225,
+      "price": "25100.00",
+      "trigger_price": null,
+      "price_type": "MARKET",
+      "product": "NRML",
+      "order_status": "complete",
+      "average_price": "25099.20",
+      "filled_quantity": 225,
+      "pending_quantity": 0,
+      "rejection_reason": null,
+      "margin_blocked": "188250.00",
+      "order_timestamp": "2026-09-21 09:34:00"
+     },
+     {
+      "orderid": "26092100000004",
+      "strategy": "",
+      "symbol": "NIFTY29SEP26FUT",
+      "exchange": "NFO",
+      "action": "BUY",
+      "quantity": 75,
+      "price": "25050.00",
+      "trigger_price": null,
+      "price_type": "MARKET",
+      "product": "NRML",
+      "order_status": "complete",
+      "average_price": "25050.05",
+      "filled_quantity": 75,
+      "pending_quantity": 0,
+      "rejection_reason": null,
+      "margin_blocked": "0.00",
+      "order_timestamp": "2026-09-21 09:36:00"
+     }
+    ],
+    "trades": [
+     {
+      "tradeid": "TRADE-20260921-093200-00000001",
+      "orderid": "26092100000001",
+      "symbol": "NIFTY29SEP26FUT",
+      "exchange": "NFO",
+      "action": "BUY",
+      "quantity": 75,
+      "price": "25001.00",
+      "product": "NRML",
+      "strategy": "",
+      "trade_timestamp": "2026-09-21 09:32:00"
+     },
+     {
+      "tradeid": "TRADE-20260921-093300-00000002",
+      "orderid": "26092100000002",
+      "symbol": "NIFTY29SEP26FUT",
+      "exchange": "NFO",
+      "action": "BUY",
+      "quantity": 75,
+      "price": "25010.50",
+      "product": "NRML",
+      "strategy": "",
+      "trade_timestamp": "2026-09-21 09:33:00"
+     },
+     {
+      "tradeid": "TRADE-20260921-093400-00000003",
+      "orderid": "26092100000003",
+      "symbol": "NIFTY29SEP26FUT",
+      "exchange": "NFO",
+      "action": "SELL",
+      "quantity": 225,
+      "price": "25099.20",
+      "product": "NRML",
+      "strategy": "",
+      "trade_timestamp": "2026-09-21 09:34:00"
+     },
+     {
+      "tradeid": "TRADE-20260921-093600-00000004",
+      "orderid": "26092100000004",
+      "symbol": "NIFTY29SEP26FUT",
+      "exchange": "NFO",
+      "action": "BUY",
+      "quantity": 75,
+      "price": "25050.05",
+      "product": "NRML",
+      "strategy": "",
+      "trade_timestamp": "2026-09-21 09:36:00"
+     }
+    ],
+    "positions": [
+     {
+      "symbol": "NIFTY29SEP26FUT",
+      "exchange": "NFO",
+      "product": "NRML",
+      "quantity": 0,
+      "average_price": "25099.20",
+      "ltp": "25050.05",
+      "pnl": "17703.75",
+      "pnl_percent": "0.0000",
+      "accumulated_realized_pnl": "17703.75",
+      "today_realized_pnl": "17703.75",
+      "margin_blocked": "0.00",
+      "created_at": "2026-09-21 09:32:00",
+      "updated_at": "2026-09-21 09:36:00"
+     }
+    ],
+    "holdings": []
+   }
+  },
+  {
+   "at": "2026-09-21 09:37:00",
+   "op": "funds",
+   "quotes": {},
+   "result": {
+    "availablecash": 10017703.75,
+    "collateral": 0.0,
+    "m2munrealized": 0.0,
+    "m2mrealized": 17703.75,
+    "total_realized_pnl": 17703.75,
+    "today_realized_pnl": 17703.75,
+    "utiliseddebits": 0.0,
+    "grossexposure": 0.0,
+    "totalpnl": 17703.75,
+    "last_reset": "2026-09-21 09:30:00",
+    "reset_count": 0
+   },
+   "state": {
+    "funds": {
+     "total_capital": "10000000.00",
+     "available_balance": "10017703.75",
+     "used_margin": "0.00",
+     "realized_pnl": "17703.75",
+     "today_realized_pnl": "17703.75",
+     "unrealized_pnl": "0.00",
+     "total_pnl": "17703.75",
+     "last_reset_date": "2026-09-21 09:30:00",
+     "reset_count": 0,
+     "updated_at": "2026-09-21 09:36:00"
+    },
+    "orders": [
+     {
+      "orderid": "26092100000001",
+      "strategy": "",
+      "symbol": "NIFTY29SEP26FUT",
+      "exchange": "NFO",
+      "action": "BUY",
+      "quantity": 75,
+      "price": "25000.00",
+      "trigger_price": null,
+      "price_type": "MARKET",
+      "product": "NRML",
+      "order_status": "complete",
+      "average_price": "25001.00",
+      "filled_quantity": 75,
+      "pending_quantity": 0,
+      "rejection_reason": null,
+      "margin_blocked": "187500.00",
+      "order_timestamp": "2026-09-21 09:32:00"
+     },
+     {
+      "orderid": "26092100000002",
+      "strategy": "",
+      "symbol": "NIFTY29SEP26FUT",
+      "exchange": "NFO",
+      "action": "BUY",
+      "quantity": 75,
+      "price": "25010.00",
+      "trigger_price": null,
+      "price_type": "MARKET",
+      "product": "NRML",
+      "order_status": "complete",
+      "average_price": "25010.50",
+      "filled_quantity": 75,
+      "pending_quantity": 0,
+      "rejection_reason": null,
+      "margin_blocked": "187575.00",
+      "order_timestamp": "2026-09-21 09:33:00"
+     },
+     {
+      "orderid": "26092100000003",
+      "strategy": "",
+      "symbol": "NIFTY29SEP26FUT",
+      "exchange": "NFO",
+      "action": "SELL",
+      "quantity": 225,
+      "price": "25100.00",
+      "trigger_price": null,
+      "price_type": "MARKET",
+      "product": "NRML",
+      "order_status": "complete",
+      "average_price": "25099.20",
+      "filled_quantity": 225,
+      "pending_quantity": 0,
+      "rejection_reason": null,
+      "margin_blocked": "188250.00",
+      "order_timestamp": "2026-09-21 09:34:00"
+     },
+     {
+      "orderid": "26092100000004",
+      "strategy": "",
+      "symbol": "NIFTY29SEP26FUT",
+      "exchange": "NFO",
+      "action": "BUY",
+      "quantity": 75,
+      "price": "25050.00",
+      "trigger_price": null,
+      "price_type": "MARKET",
+      "product": "NRML",
+      "order_status": "complete",
+      "average_price": "25050.05",
+      "filled_quantity": 75,
+      "pending_quantity": 0,
+      "rejection_reason": null,
+      "margin_blocked": "0.00",
+      "order_timestamp": "2026-09-21 09:36:00"
+     }
+    ],
+    "trades": [
+     {
+      "tradeid": "TRADE-20260921-093200-00000001",
+      "orderid": "26092100000001",
+      "symbol": "NIFTY29SEP26FUT",
+      "exchange": "NFO",
+      "action": "BUY",
+      "quantity": 75,
+      "price": "25001.00",
+      "product": "NRML",
+      "strategy": "",
+      "trade_timestamp": "2026-09-21 09:32:00"
+     },
+     {
+      "tradeid": "TRADE-20260921-093300-00000002",
+      "orderid": "26092100000002",
+      "symbol": "NIFTY29SEP26FUT",
+      "exchange": "NFO",
+      "action": "BUY",
+      "quantity": 75,
+      "price": "25010.50",
+      "product": "NRML",
+      "strategy": "",
+      "trade_timestamp": "2026-09-21 09:33:00"
+     },
+     {
+      "tradeid": "TRADE-20260921-093400-00000003",
+      "orderid": "26092100000003",
+      "symbol": "NIFTY29SEP26FUT",
+      "exchange": "NFO",
+      "action": "SELL",
+      "quantity": 225,
+      "price": "25099.20",
+      "product": "NRML",
+      "strategy": "",
+      "trade_timestamp": "2026-09-21 09:34:00"
+     },
+     {
+      "tradeid": "TRADE-20260921-093600-00000004",
+      "orderid": "26092100000004",
+      "symbol": "NIFTY29SEP26FUT",
+      "exchange": "NFO",
+      "action": "BUY",
+      "quantity": 75,
+      "price": "25050.05",
+      "product": "NRML",
+      "strategy": "",
+      "trade_timestamp": "2026-09-21 09:36:00"
+     }
+    ],
+    "positions": [
+     {
+      "symbol": "NIFTY29SEP26FUT",
+      "exchange": "NFO",
+      "product": "NRML",
+      "quantity": 0,
+      "average_price": "25099.20",
+      "ltp": "25050.05",
+      "pnl": "17703.75",
+      "pnl_percent": "0.0000",
+      "accumulated_realized_pnl": "17703.75",
+      "today_realized_pnl": "17703.75",
+      "margin_blocked": "0.00",
+      "created_at": "2026-09-21 09:32:00",
+      "updated_at": "2026-09-21 09:36:00"
+     }
+    ],
+    "holdings": []
+   }
+  },
+  {
+   "at": "2026-09-21 09:38:00",
+   "op": "positions",
+   "quotes": {},
+   "result": {
+    "status": "success",
+    "data": [
+     {
+      "symbol": "NIFTY29SEP26FUT",
+      "exchange": "NFO",
+      "product": "NRML",
+      "quantity": 0,
+      "average_price": 0.0,
+      "ltp": 25050.05,
+      "pnl": 17703.75,
+      "pnlpercent": 0.0,
+      "unrealized_pnl": 17703.75,
+      "today_realized_pnl": 17703.75,
+      "total_pnl_today": 17703.75,
+      "lot_size": 1.0
+     }
+    ],
+    "total_pnl": 17703.75,
+    "total_unrealized_pnl": 0.0,
+    "total_today_realized_pnl": 17703.75,
+    "total_pnl_today": 17703.75,
+    "mode": "analyze"
+   },
+   "state": {
+    "funds": {
+     "total_capital": "10000000.00",
+     "available_balance": "10017703.75",
+     "used_margin": "0.00",
+     "realized_pnl": "17703.75",
+     "today_realized_pnl": "17703.75",
+     "unrealized_pnl": "0.00",
+     "total_pnl": "17703.75",
+     "last_reset_date": "2026-09-21 09:30:00",
+     "reset_count": 0,
+     "updated_at": "2026-09-21 09:36:00"
+    },
+    "orders": [
+     {
+      "orderid": "26092100000001",
+      "strategy": "",
+      "symbol": "NIFTY29SEP26FUT",
+      "exchange": "NFO",
+      "action": "BUY",
+      "quantity": 75,
+      "price": "25000.00",
+      "trigger_price": null,
+      "price_type": "MARKET",
+      "product": "NRML",
+      "order_status": "complete",
+      "average_price": "25001.00",
+      "filled_quantity": 75,
+      "pending_quantity": 0,
+      "rejection_reason": null,
+      "margin_blocked": "187500.00",
+      "order_timestamp": "2026-09-21 09:32:00"
+     },
+     {
+      "orderid": "26092100000002",
+      "strategy": "",
+      "symbol": "NIFTY29SEP26FUT",
+      "exchange": "NFO",
+      "action": "BUY",
+      "quantity": 75,
+      "price": "25010.00",
+      "trigger_price": null,
+      "price_type": "MARKET",
+      "product": "NRML",
+      "order_status": "complete",
+      "average_price": "25010.50",
+      "filled_quantity": 75,
+      "pending_quantity": 0,
+      "rejection_reason": null,
+      "margin_blocked": "187575.00",
+      "order_timestamp": "2026-09-21 09:33:00"
+     },
+     {
+      "orderid": "26092100000003",
+      "strategy": "",
+      "symbol": "NIFTY29SEP26FUT",
+      "exchange": "NFO",
+      "action": "SELL",
+      "quantity": 225,
+      "price": "25100.00",
+      "trigger_price": null,
+      "price_type": "MARKET",
+      "product": "NRML",
+      "order_status": "complete",
+      "average_price": "25099.20",
+      "filled_quantity": 225,
+      "pending_quantity": 0,
+      "rejection_reason": null,
+      "margin_blocked": "188250.00",
+      "order_timestamp": "2026-09-21 09:34:00"
+     },
+     {
+      "orderid": "26092100000004",
+      "strategy": "",
+      "symbol": "NIFTY29SEP26FUT",
+      "exchange": "NFO",
+      "action": "BUY",
+      "quantity": 75,
+      "price": "25050.00",
+      "trigger_price": null,
+      "price_type": "MARKET",
+      "product": "NRML",
+      "order_status": "complete",
+      "average_price": "25050.05",
+      "filled_quantity": 75,
+      "pending_quantity": 0,
+      "rejection_reason": null,
+      "margin_blocked": "0.00",
+      "order_timestamp": "2026-09-21 09:36:00"
+     }
+    ],
+    "trades": [
+     {
+      "tradeid": "TRADE-20260921-093200-00000001",
+      "orderid": "26092100000001",
+      "symbol": "NIFTY29SEP26FUT",
+      "exchange": "NFO",
+      "action": "BUY",
+      "quantity": 75,
+      "price": "25001.00",
+      "product": "NRML",
+      "strategy": "",
+      "trade_timestamp": "2026-09-21 09:32:00"
+     },
+     {
+      "tradeid": "TRADE-20260921-093300-00000002",
+      "orderid": "26092100000002",
+      "symbol": "NIFTY29SEP26FUT",
+      "exchange": "NFO",
+      "action": "BUY",
+      "quantity": 75,
+      "price": "25010.50",
+      "product": "NRML",
+      "strategy": "",
+      "trade_timestamp": "2026-09-21 09:33:00"
+     },
+     {
+      "tradeid": "TRADE-20260921-093400-00000003",
+      "orderid": "26092100000003",
+      "symbol": "NIFTY29SEP26FUT",
+      "exchange": "NFO",
+      "action": "SELL",
+      "quantity": 225,
+      "price": "25099.20",
+      "product": "NRML",
+      "strategy": "",
+      "trade_timestamp": "2026-09-21 09:34:00"
+     },
+     {
+      "tradeid": "TRADE-20260921-093600-00000004",
+      "orderid": "26092100000004",
+      "symbol": "NIFTY29SEP26FUT",
+      "exchange": "NFO",
+      "action": "BUY",
+      "quantity": 75,
+      "price": "25050.05",
+      "product": "NRML",
+      "strategy": "",
+      "trade_timestamp": "2026-09-21 09:36:00"
+     }
+    ],
+    "positions": [
+     {
+      "symbol": "NIFTY29SEP26FUT",
+      "exchange": "NFO",
+      "product": "NRML",
+      "quantity": 0,
+      "average_price": "25099.20",
+      "ltp": "25050.05",
+      "pnl": "17703.75",
+      "pnl_percent": "0.0000",
+      "accumulated_realized_pnl": "17703.75",
+      "today_realized_pnl": "17703.75",
+      "margin_blocked": "0.00",
+      "created_at": "2026-09-21 09:32:00",
+      "updated_at": "2026-09-21 09:36:00"
+     }
+    ],
+    "holdings": []
+   }
+  },
+  {
+   "at": "2026-09-21 09:39:00",
+   "op": "place",
+   "order": {
+    "symbol": "NIFTY27OCT2625000CE",
+    "exchange": "NFO",
+    "action": "SELL",
+    "quantity": 75,
+    "price_type": "MARKET",
+    "product": "NRML",
+    "strategy": ""
+   },
+   "quote": {
+    "ltp": 310.4,
+    "bid": 310.3,
+    "ask": 310.5,
+    "high": 330.0,
+    "low": 300.0
+   },
+   "result": {
+    "ok": true,
+    "code": 200,
+    "body": {
+     "status": "success",
+     "orderid": "26092100000005",
+     "mode": "analyze"
+    }
+   },
+   "state": {
+    "funds": {
+     "total_capital": "10000000.00",
+     "available_balance": "9994423.75",
+     "used_margin": "23280.00",
+     "realized_pnl": "17703.75",
+     "today_realized_pnl": "17703.75",
+     "unrealized_pnl": "0.00",
+     "total_pnl": "17703.75",
+     "last_reset_date": "2026-09-21 09:30:00",
+     "reset_count": 0,
+     "updated_at": "2026-09-21 09:39:00"
+    },
+    "orders": [
+     {
+      "orderid": "26092100000001",
+      "strategy": "",
+      "symbol": "NIFTY29SEP26FUT",
+      "exchange": "NFO",
+      "action": "BUY",
+      "quantity": 75,
+      "price": "25000.00",
+      "trigger_price": null,
+      "price_type": "MARKET",
+      "product": "NRML",
+      "order_status": "complete",
+      "average_price": "25001.00",
+      "filled_quantity": 75,
+      "pending_quantity": 0,
+      "rejection_reason": null,
+      "margin_blocked": "187500.00",
+      "order_timestamp": "2026-09-21 09:32:00"
+     },
+     {
+      "orderid": "26092100000002",
+      "strategy": "",
+      "symbol": "NIFTY29SEP26FUT",
+      "exchange": "NFO",
+      "action": "BUY",
+      "quantity": 75,
+      "price": "25010.00",
+      "trigger_price": null,
+      "price_type": "MARKET",
+      "product": "NRML",
+      "order_status": "complete",
+      "average_price": "25010.50",
+      "filled_quantity": 75,
+      "pending_quantity": 0,
+      "rejection_reason": null,
+      "margin_blocked": "187575.00",
+      "order_timestamp": "2026-09-21 09:33:00"
+     },
+     {
+      "orderid": "26092100000003",
+      "strategy": "",
+      "symbol": "NIFTY29SEP26FUT",
+      "exchange": "NFO",
+      "action": "SELL",
+      "quantity": 225,
+      "price": "25100.00",
+      "trigger_price": null,
+      "price_type": "MARKET",
+      "product": "NRML",
+      "order_status": "complete",
+      "average_price": "25099.20",
+      "filled_quantity": 225,
+      "pending_quantity": 0,
+      "rejection_reason": null,
+      "margin_blocked": "188250.00",
+      "order_timestamp": "2026-09-21 09:34:00"
+     },
+     {
+      "orderid": "26092100000004",
+      "strategy": "",
+      "symbol": "NIFTY29SEP26FUT",
+      "exchange": "NFO",
+      "action": "BUY",
+      "quantity": 75,
+      "price": "25050.00",
+      "trigger_price": null,
+      "price_type": "MARKET",
+      "product": "NRML",
+      "order_status": "complete",
+      "average_price": "25050.05",
+      "filled_quantity": 75,
+      "pending_quantity": 0,
+      "rejection_reason": null,
+      "margin_blocked": "0.00",
+      "order_timestamp": "2026-09-21 09:36:00"
+     },
+     {
+      "orderid": "26092100000005",
+      "strategy": "",
+      "symbol": "NIFTY27OCT2625000CE",
+      "exchange": "NFO",
+      "action": "SELL",
+      "quantity": 75,
+      "price": "310.40",
+      "trigger_price": null,
+      "price_type": "MARKET",
+      "product": "NRML",
+      "order_status": "complete",
+      "average_price": "310.30",
+      "filled_quantity": 75,
+      "pending_quantity": 0,
+      "rejection_reason": null,
+      "margin_blocked": "23280.00",
+      "order_timestamp": "2026-09-21 09:39:00"
+     }
+    ],
+    "trades": [
+     {
+      "tradeid": "TRADE-20260921-093200-00000001",
+      "orderid": "26092100000001",
+      "symbol": "NIFTY29SEP26FUT",
+      "exchange": "NFO",
+      "action": "BUY",
+      "quantity": 75,
+      "price": "25001.00",
+      "product": "NRML",
+      "strategy": "",
+      "trade_timestamp": "2026-09-21 09:32:00"
+     },
+     {
+      "tradeid": "TRADE-20260921-093300-00000002",
+      "orderid": "26092100000002",
+      "symbol": "NIFTY29SEP26FUT",
+      "exchange": "NFO",
+      "action": "BUY",
+      "quantity": 75,
+      "price": "25010.50",
+      "product": "NRML",
+      "strategy": "",
+      "trade_timestamp": "2026-09-21 09:33:00"
+     },
+     {
+      "tradeid": "TRADE-20260921-093400-00000003",
+      "orderid": "26092100000003",
+      "symbol": "NIFTY29SEP26FUT",
+      "exchange": "NFO",
+      "action": "SELL",
+      "quantity": 225,
+      "price": "25099.20",
+      "product": "NRML",
+      "strategy": "",
+      "trade_timestamp": "2026-09-21 09:34:00"
+     },
+     {
+      "tradeid": "TRADE-20260921-093600-00000004",
+      "orderid": "26092100000004",
+      "symbol": "NIFTY29SEP26FUT",
+      "exchange": "NFO",
+      "action": "BUY",
+      "quantity": 75,
+      "price": "25050.05",
+      "product": "NRML",
+      "strategy": "",
+      "trade_timestamp": "2026-09-21 09:36:00"
+     },
+     {
+      "tradeid": "TRADE-20260921-093900-00000005",
+      "orderid": "26092100000005",
+      "symbol": "NIFTY27OCT2625000CE",
+      "exchange": "NFO",
+      "action": "SELL",
+      "quantity": 75,
+      "price": "310.30",
+      "product": "NRML",
+      "strategy": "",
+      "trade_timestamp": "2026-09-21 09:39:00"
+     }
+    ],
+    "positions": [
+     {
+      "symbol": "NIFTY29SEP26FUT",
+      "exchange": "NFO",
+      "product": "NRML",
+      "quantity": 0,
+      "average_price": "25099.20",
+      "ltp": "25050.05",
+      "pnl": "17703.75",
+      "pnl_percent": "0.0000",
+      "accumulated_realized_pnl": "17703.75",
+      "today_realized_pnl": "17703.75",
+      "margin_blocked": "0.00",
+      "created_at": "2026-09-21 09:32:00",
+      "updated_at": "2026-09-21 09:36:00"
+     },
+     {
+      "symbol": "NIFTY27OCT2625000CE",
+      "exchange": "NFO",
+      "product": "NRML",
+      "quantity": -75,
+      "average_price": "310.30",
+      "ltp": "310.30",
+      "pnl": "0.00",
+      "pnl_percent": "0.0000",
+      "accumulated_realized_pnl": "0.00",
+      "today_realized_pnl": "0.00",
+      "margin_blocked": "23280.00",
+      "created_at": "2026-09-21 09:39:00",
+      "updated_at": "2026-09-21 09:39:00"
+     }
+    ],
+    "holdings": []
+   }
+  },
+  {
+   "at": "2026-09-21 09:40:00",
+   "op": "place",
+   "order": {
+    "symbol": "CRUDEOIL19OCT26FUT",
+    "exchange": "MCX",
+    "action": "SELL",
+    "quantity": 100,
+    "price_type": "MARKET",
+    "product": "MIS",
+    "strategy": ""
+   },
+   "quote": {
+    "ltp": 6123.0,
+    "bid": 6122.0,
+    "ask": 6124.0,
+    "high": 6150.0,
+    "low": 6100.0
+   },
+   "result": {
+    "ok": true,
+    "code": 200,
+    "body": {
+     "status": "success",
+     "orderid": "26092100000006",
+     "mode": "analyze"
+    }
+   },
+   "state": {
+    "funds": {
+     "total_capital": "10000000.00",
+     "available_balance": "9933193.75",
+     "used_margin": "84510.00",
+     "realized_pnl": "17703.75",
+     "today_realized_pnl": "17703.75",
+     "unrealized_pnl": "0.00",
+     "total_pnl": "17703.75",
+     "last_reset_date": "2026-09-21 09:30:00",
+     "reset_count": 0,
+     "updated_at": "2026-09-21 09:40:00"
+    },
+    "orders": [
+     {
+      "orderid": "26092100000001",
+      "strategy": "",
+      "symbol": "NIFTY29SEP26FUT",
+      "exchange": "NFO",
+      "action": "BUY",
+      "quantity": 75,
+      "price": "25000.00",
+      "trigger_price": null,
+      "price_type": "MARKET",
+      "product": "NRML",
+      "order_status": "complete",
+      "average_price": "25001.00",
+      "filled_quantity": 75,
+      "pending_quantity": 0,
+      "rejection_reason": null,
+      "margin_blocked": "187500.00",
+      "order_timestamp": "2026-09-21 09:32:00"
+     },
+     {
+      "orderid": "26092100000002",
+      "strategy": "",
+      "symbol": "NIFTY29SEP26FUT",
+      "exchange": "NFO",
+      "action": "BUY",
+      "quantity": 75,
+      "price": "25010.00",
+      "trigger_price": null,
+      "price_type": "MARKET",
+      "product": "NRML",
+      "order_status": "complete",
+      "average_price": "25010.50",
+      "filled_quantity": 75,
+      "pending_quantity": 0,
+      "rejection_reason": null,
+      "margin_blocked": "187575.00",
+      "order_timestamp": "2026-09-21 09:33:00"
+     },
+     {
+      "orderid": "26092100000003",
+      "strategy": "",
+      "symbol": "NIFTY29SEP26FUT",
+      "exchange": "NFO",
+      "action": "SELL",
+      "quantity": 225,
+      "price": "25100.00",
+      "trigger_price": null,
+      "price_type": "MARKET",
+      "product": "NRML",
+      "order_status": "complete",
+      "average_price": "25099.20",
+      "filled_quantity": 225,
+      "pending_quantity": 0,
+      "rejection_reason": null,
+      "margin_blocked": "188250.00",
+      "order_timestamp": "2026-09-21 09:34:00"
+     },
+     {
+      "orderid": "26092100000004",
+      "strategy": "",
+      "symbol": "NIFTY29SEP26FUT",
+      "exchange": "NFO",
+      "action": "BUY",
+      "quantity": 75,
+      "price": "25050.00",
+      "trigger_price": null,
+      "price_type": "MARKET",
+      "product": "NRML",
+      "order_status": "complete",
+      "average_price": "25050.05",
+      "filled_quantity": 75,
+      "pending_quantity": 0,
+      "rejection_reason": null,
+      "margin_blocked": "0.00",
+      "order_timestamp": "2026-09-21 09:36:00"
+     },
+     {
+      "orderid": "26092100000005",
+      "strategy": "",
+      "symbol": "NIFTY27OCT2625000CE",
+      "exchange": "NFO",
+      "action": "SELL",
+      "quantity": 75,
+      "price": "310.40",
+      "trigger_price": null,
+      "price_type": "MARKET",
+      "product": "NRML",
+      "order_status": "complete",
+      "average_price": "310.30",
+      "filled_quantity": 75,
+      "pending_quantity": 0,
+      "rejection_reason": null,
+      "margin_blocked": "23280.00",
+      "order_timestamp": "2026-09-21 09:39:00"
+     },
+     {
+      "orderid": "26092100000006",
+      "strategy": "",
+      "symbol": "CRUDEOIL19OCT26FUT",
+      "exchange": "MCX",
+      "action": "SELL",
+      "quantity": 100,
+      "price": "6123.00",
+      "trigger_price": null,
+      "price_type": "MARKET",
+      "product": "MIS",
+      "order_status": "complete",
+      "average_price": "6122.00",
+      "filled_quantity": 100,
+      "pending_quantity": 0,
+      "rejection_reason": null,
+      "margin_blocked": "61230.00",
+      "order_timestamp": "2026-09-21 09:40:00"
+     }
+    ],
+    "trades": [
+     {
+      "tradeid": "TRADE-20260921-093200-00000001",
+      "orderid": "26092100000001",
+      "symbol": "NIFTY29SEP26FUT",
+      "exchange": "NFO",
+      "action": "BUY",
+      "quantity": 75,
+      "price": "25001.00",
+      "product": "NRML",
+      "strategy": "",
+      "trade_timestamp": "2026-09-21 09:32:00"
+     },
+     {
+      "tradeid": "TRADE-20260921-093300-00000002",
+      "orderid": "26092100000002",
+      "symbol": "NIFTY29SEP26FUT",
+      "exchange": "NFO",
+      "action": "BUY",
+      "quantity": 75,
+      "price": "25010.50",
+      "product": "NRML",
+      "strategy": "",
+      "trade_timestamp": "2026-09-21 09:33:00"
+     },
+     {
+      "tradeid": "TRADE-20260921-093400-00000003",
+      "orderid": "26092100000003",
+      "symbol": "NIFTY29SEP26FUT",
+      "exchange": "NFO",
+      "action": "SELL",
+      "quantity": 225,
+      "price": "25099.20",
+      "product": "NRML",
+      "strategy": "",
+      "trade_timestamp": "2026-09-21 09:34:00"
+     },
+     {
+      "tradeid": "TRADE-20260921-093600-00000004",
+      "orderid": "26092100000004",
+      "symbol": "NIFTY29SEP26FUT",
+      "exchange": "NFO",
+      "action": "BUY",
+      "quantity": 75,
+      "price": "25050.05",
+      "product": "NRML",
+      "strategy": "",
+      "trade_timestamp": "2026-09-21 09:36:00"
+     },
+     {
+      "tradeid": "TRADE-20260921-093900-00000005",
+      "orderid": "26092100000005",
+      "symbol": "NIFTY27OCT2625000CE",
+      "exchange": "NFO",
+      "action": "SELL",
+      "quantity": 75,
+      "price": "310.30",
+      "product": "NRML",
+      "strategy": "",
+      "trade_timestamp": "2026-09-21 09:39:00"
+     },
+     {
+      "tradeid": "TRADE-20260921-094000-00000006",
+      "orderid": "26092100000006",
+      "symbol": "CRUDEOIL19OCT26FUT",
+      "exchange": "MCX",
+      "action": "SELL",
+      "quantity": 100,
+      "price": "6122.00",
+      "product": "MIS",
+      "strategy": "",
+      "trade_timestamp": "2026-09-21 09:40:00"
+     }
+    ],
+    "positions": [
+     {
+      "symbol": "NIFTY29SEP26FUT",
+      "exchange": "NFO",
+      "product": "NRML",
+      "quantity": 0,
+      "average_price": "25099.20",
+      "ltp": "25050.05",
+      "pnl": "17703.75",
+      "pnl_percent": "0.0000",
+      "accumulated_realized_pnl": "17703.75",
+      "today_realized_pnl": "17703.75",
+      "margin_blocked": "0.00",
+      "created_at": "2026-09-21 09:32:00",
+      "updated_at": "2026-09-21 09:36:00"
+     },
+     {
+      "symbol": "NIFTY27OCT2625000CE",
+      "exchange": "NFO",
+      "product": "NRML",
+      "quantity": -75,
+      "average_price": "310.30",
+      "ltp": "310.30",
+      "pnl": "0.00",
+      "pnl_percent": "0.0000",
+      "accumulated_realized_pnl": "0.00",
+      "today_realized_pnl": "0.00",
+      "margin_blocked": "23280.00",
+      "created_at": "2026-09-21 09:39:00",
+      "updated_at": "2026-09-21 09:39:00"
+     },
+     {
+      "symbol": "CRUDEOIL19OCT26FUT",
+      "exchange": "MCX",
+      "product": "MIS",
+      "quantity": -100,
+      "average_price": "6122.00",
+      "ltp": "6122.00",
+      "pnl": "0.00",
+      "pnl_percent": "0.0000",
+      "accumulated_realized_pnl": "0.00",
+      "today_realized_pnl": "0.00",
+      "margin_blocked": "61230.00",
+      "created_at": "2026-09-21 09:40:00",
+      "updated_at": "2026-09-21 09:40:00"
+     }
+    ],
+    "holdings": []
+   }
+  },
+  {
+   "at": "2026-09-21 09:41:00",
+   "op": "positions",
+   "quotes": {
+    "NIFTY27OCT2625000CE|NFO": {
+     "ltp": 300.1,
+     "bid": 0.0,
+     "ask": 0.0,
+     "high": 0.0,
+     "low": 0.0
+    },
+    "CRUDEOIL19OCT26FUT|MCX": {
+     "ltp": 6130.0,
+     "bid": 0.0,
+     "ask": 0.0,
+     "high": 0.0,
+     "low": 0.0
+    }
+   },
+   "result": {
+    "status": "success",
+    "data": [
+     {
+      "symbol": "CRUDEOIL19OCT26FUT",
+      "exchange": "MCX",
+      "product": "MIS",
+      "quantity": -100,
+      "average_price": 6122.0,
+      "ltp": 6130.0,
+      "pnl": -800.0,
+      "pnlpercent": -0.1306762495916367,
+      "unrealized_pnl": -800.0,
+      "today_realized_pnl": 0.0,
+      "total_pnl_today": -800.0,
+      "lot_size": 1.0
+     },
+     {
+      "symbol": "NIFTY29SEP26FUT",
+      "exchange": "NFO",
+      "product": "NRML",
+      "quantity": 0,
+      "average_price": 0.0,
+      "ltp": 25050.05,
+      "pnl": 17703.75,
+      "pnlpercent": 0.0,
+      "unrealized_pnl": 17703.75,
+      "today_realized_pnl": 17703.75,
+      "total_pnl_today": 17703.75,
+      "lot_size": 1.0
+     },
+     {
+      "symbol": "NIFTY27OCT2625000CE",
+      "exchange": "NFO",
+      "product": "NRML",
+      "quantity": -75,
+      "average_price": 310.3,
+      "ltp": 300.1,
+      "pnl": 765.0,
+      "pnlpercent": 3.2871414759909765,
+      "unrealized_pnl": 765.0,
+      "today_realized_pnl": 0.0,
+      "total_pnl_today": 765.0,
+      "lot_size": 1.0
+     }
+    ],
+    "total_pnl": 17668.75,
+    "total_unrealized_pnl": -35.0,
+    "total_today_realized_pnl": 17703.75,
+    "total_pnl_today": 17668.75,
+    "mode": "analyze"
+   },
+   "state": {
+    "funds": {
+     "total_capital": "10000000.00",
+     "available_balance": "9933193.75",
+     "used_margin": "84510.00",
+     "realized_pnl": "17703.75",
+     "today_realized_pnl": "17703.75",
+     "unrealized_pnl": "-35.00",
+     "total_pnl": "17668.75",
+     "last_reset_date": "2026-09-21 09:30:00",
+     "reset_count": 0,
+     "updated_at": "2026-09-21 09:41:00"
+    },
+    "orders": [
+     {
+      "orderid": "26092100000001",
+      "strategy": "",
+      "symbol": "NIFTY29SEP26FUT",
+      "exchange": "NFO",
+      "action": "BUY",
+      "quantity": 75,
+      "price": "25000.00",
+      "trigger_price": null,
+      "price_type": "MARKET",
+      "product": "NRML",
+      "order_status": "complete",
+      "average_price": "25001.00",
+      "filled_quantity": 75,
+      "pending_quantity": 0,
+      "rejection_reason": null,
+      "margin_blocked": "187500.00",
+      "order_timestamp": "2026-09-21 09:32:00"
+     },
+     {
+      "orderid": "26092100000002",
+      "strategy": "",
+      "symbol": "NIFTY29SEP26FUT",
+      "exchange": "NFO",
+      "action": "BUY",
+      "quantity": 75,
+      "price": "25010.00",
+      "trigger_price": null,
+      "price_type": "MARKET",
+      "product": "NRML",
+      "order_status": "complete",
+      "average_price": "25010.50",
+      "filled_quantity": 75,
+      "pending_quantity": 0,
+      "rejection_reason": null,
+      "margin_blocked": "187575.00",
+      "order_timestamp": "2026-09-21 09:33:00"
+     },
+     {
+      "orderid": "26092100000003",
+      "strategy": "",
+      "symbol": "NIFTY29SEP26FUT",
+      "exchange": "NFO",
+      "action": "SELL",
+      "quantity": 225,
+      "price": "25100.00",
+      "trigger_price": null,
+      "price_type": "MARKET",
+      "product": "NRML",
+      "order_status": "complete",
+      "average_price": "25099.20",
+      "filled_quantity": 225,
+      "pending_quantity": 0,
+      "rejection_reason": null,
+      "margin_blocked": "188250.00",
+      "order_timestamp": "2026-09-21 09:34:00"
+     },
+     {
+      "orderid": "26092100000004",
+      "strategy": "",
+      "symbol": "NIFTY29SEP26FUT",
+      "exchange": "NFO",
+      "action": "BUY",
+      "quantity": 75,
+      "price": "25050.00",
+      "trigger_price": null,
+      "price_type": "MARKET",
+      "product": "NRML",
+      "order_status": "complete",
+      "average_price": "25050.05",
+      "filled_quantity": 75,
+      "pending_quantity": 0,
+      "rejection_reason": null,
+      "margin_blocked": "0.00",
+      "order_timestamp": "2026-09-21 09:36:00"
+     },
+     {
+      "orderid": "26092100000005",
+      "strategy": "",
+      "symbol": "NIFTY27OCT2625000CE",
+      "exchange": "NFO",
+      "action": "SELL",
+      "quantity": 75,
+      "price": "310.40",
+      "trigger_price": null,
+      "price_type": "MARKET",
+      "product": "NRML",
+      "order_status": "complete",
+      "average_price": "310.30",
+      "filled_quantity": 75,
+      "pending_quantity": 0,
+      "rejection_reason": null,
+      "margin_blocked": "23280.00",
+      "order_timestamp": "2026-09-21 09:39:00"
+     },
+     {
+      "orderid": "26092100000006",
+      "strategy": "",
+      "symbol": "CRUDEOIL19OCT26FUT",
+      "exchange": "MCX",
+      "action": "SELL",
+      "quantity": 100,
+      "price": "6123.00",
+      "trigger_price": null,
+      "price_type": "MARKET",
+      "product": "MIS",
+      "order_status": "complete",
+      "average_price": "6122.00",
+      "filled_quantity": 100,
+      "pending_quantity": 0,
+      "rejection_reason": null,
+      "margin_blocked": "61230.00",
+      "order_timestamp": "2026-09-21 09:40:00"
+     }
+    ],
+    "trades": [
+     {
+      "tradeid": "TRADE-20260921-093200-00000001",
+      "orderid": "26092100000001",
+      "symbol": "NIFTY29SEP26FUT",
+      "exchange": "NFO",
+      "action": "BUY",
+      "quantity": 75,
+      "price": "25001.00",
+      "product": "NRML",
+      "strategy": "",
+      "trade_timestamp": "2026-09-21 09:32:00"
+     },
+     {
+      "tradeid": "TRADE-20260921-093300-00000002",
+      "orderid": "26092100000002",
+      "symbol": "NIFTY29SEP26FUT",
+      "exchange": "NFO",
+      "action": "BUY",
+      "quantity": 75,
+      "price": "25010.50",
+      "product": "NRML",
+      "strategy": "",
+      "trade_timestamp": "2026-09-21 09:33:00"
+     },
+     {
+      "tradeid": "TRADE-20260921-093400-00000003",
+      "orderid": "26092100000003",
+      "symbol": "NIFTY29SEP26FUT",
+      "exchange": "NFO",
+      "action": "SELL",
+      "quantity": 225,
+      "price": "25099.20",
+      "product": "NRML",
+      "strategy": "",
+      "trade_timestamp": "2026-09-21 09:34:00"
+     },
+     {
+      "tradeid": "TRADE-20260921-093600-00000004",
+      "orderid": "26092100000004",
+      "symbol": "NIFTY29SEP26FUT",
+      "exchange": "NFO",
+      "action": "BUY",
+      "quantity": 75,
+      "price": "25050.05",
+      "product": "NRML",
+      "strategy": "",
+      "trade_timestamp": "2026-09-21 09:36:00"
+     },
+     {
+      "tradeid": "TRADE-20260921-093900-00000005",
+      "orderid": "26092100000005",
+      "symbol": "NIFTY27OCT2625000CE",
+      "exchange": "NFO",
+      "action": "SELL",
+      "quantity": 75,
+      "price": "310.30",
+      "product": "NRML",
+      "strategy": "",
+      "trade_timestamp": "2026-09-21 09:39:00"
+     },
+     {
+      "tradeid": "TRADE-20260921-094000-00000006",
+      "orderid": "26092100000006",
+      "symbol": "CRUDEOIL19OCT26FUT",
+      "exchange": "MCX",
+      "action": "SELL",
+      "quantity": 100,
+      "price": "6122.00",
+      "product": "MIS",
+      "strategy": "",
+      "trade_timestamp": "2026-09-21 09:40:00"
+     }
+    ],
+    "positions": [
+     {
+      "symbol": "NIFTY29SEP26FUT",
+      "exchange": "NFO",
+      "product": "NRML",
+      "quantity": 0,
+      "average_price": "25099.20",
+      "ltp": "25050.05",
+      "pnl": "17703.75",
+      "pnl_percent": "0.0000",
+      "accumulated_realized_pnl": "17703.75",
+      "today_realized_pnl": "17703.75",
+      "margin_blocked": "0.00",
+      "created_at": "2026-09-21 09:32:00",
+      "updated_at": "2026-09-21 09:36:00"
+     },
+     {
+      "symbol": "NIFTY27OCT2625000CE",
+      "exchange": "NFO",
+      "product": "NRML",
+      "quantity": -75,
+      "average_price": "310.30",
+      "ltp": "300.10",
+      "pnl": "765.00",
+      "pnl_percent": "3.2871",
+      "accumulated_realized_pnl": "0.00",
+      "today_realized_pnl": "0.00",
+      "margin_blocked": "23280.00",
+      "created_at": "2026-09-21 09:39:00",
+      "updated_at": "2026-09-21 09:41:00"
+     },
+     {
+      "symbol": "CRUDEOIL19OCT26FUT",
+      "exchange": "MCX",
+      "product": "MIS",
+      "quantity": -100,
+      "average_price": "6122.00",
+      "ltp": "6130.00",
+      "pnl": "-800.00",
+      "pnl_percent": "-0.1307",
+      "accumulated_realized_pnl": "0.00",
+      "today_realized_pnl": "0.00",
+      "margin_blocked": "61230.00",
+      "created_at": "2026-09-21 09:40:00",
+      "updated_at": "2026-09-21 09:41:00"
+     }
+    ],
+    "holdings": []
+   }
+  },
+  {
+   "at": "2026-09-21 09:42:00",
+   "op": "funds",
+   "quotes": {},
+   "result": {
+    "availablecash": 9933193.75,
+    "collateral": 0.0,
+    "m2munrealized": -35.0,
+    "m2mrealized": 17703.75,
+    "total_realized_pnl": 17703.75,
+    "today_realized_pnl": 17703.75,
+    "utiliseddebits": 84510.0,
+    "grossexposure": 84510.0,
+    "totalpnl": 17668.75,
+    "last_reset": "2026-09-21 09:30:00",
+    "reset_count": 0
+   },
+   "state": {
+    "funds": {
+     "total_capital": "10000000.00",
+     "available_balance": "9933193.75",
+     "used_margin": "84510.00",
+     "realized_pnl": "17703.75",
+     "today_realized_pnl": "17703.75",
+     "unrealized_pnl": "-35.00",
+     "total_pnl": "17668.75",
+     "last_reset_date": "2026-09-21 09:30:00",
+     "reset_count": 0,
+     "updated_at": "2026-09-21 09:41:00"
+    },
+    "orders": [
+     {
+      "orderid": "26092100000001",
+      "strategy": "",
+      "symbol": "NIFTY29SEP26FUT",
+      "exchange": "NFO",
+      "action": "BUY",
+      "quantity": 75,
+      "price": "25000.00",
+      "trigger_price": null,
+      "price_type": "MARKET",
+      "product": "NRML",
+      "order_status": "complete",
+      "average_price": "25001.00",
+      "filled_quantity": 75,
+      "pending_quantity": 0,
+      "rejection_reason": null,
+      "margin_blocked": "187500.00",
+      "order_timestamp": "2026-09-21 09:32:00"
+     },
+     {
+      "orderid": "26092100000002",
+      "strategy": "",
+      "symbol": "NIFTY29SEP26FUT",
+      "exchange": "NFO",
+      "action": "BUY",
+      "quantity": 75,
+      "price": "25010.00",
+      "trigger_price": null,
+      "price_type": "MARKET",
+      "product": "NRML",
+      "order_status": "complete",
+      "average_price": "25010.50",
+      "filled_quantity": 75,
+      "pending_quantity": 0,
+      "rejection_reason": null,
+      "margin_blocked": "187575.00",
+      "order_timestamp": "2026-09-21 09:33:00"
+     },
+     {
+      "orderid": "26092100000003",
+      "strategy": "",
+      "symbol": "NIFTY29SEP26FUT",
+      "exchange": "NFO",
+      "action": "SELL",
+      "quantity": 225,
+      "price": "25100.00",
+      "trigger_price": null,
+      "price_type": "MARKET",
+      "product": "NRML",
+      "order_status": "complete",
+      "average_price": "25099.20",
+      "filled_quantity": 225,
+      "pending_quantity": 0,
+      "rejection_reason": null,
+      "margin_blocked": "188250.00",
+      "order_timestamp": "2026-09-21 09:34:00"
+     },
+     {
+      "orderid": "26092100000004",
+      "strategy": "",
+      "symbol": "NIFTY29SEP26FUT",
+      "exchange": "NFO",
+      "action": "BUY",
+      "quantity": 75,
+      "price": "25050.00",
+      "trigger_price": null,
+      "price_type": "MARKET",
+      "product": "NRML",
+      "order_status": "complete",
+      "average_price": "25050.05",
+      "filled_quantity": 75,
+      "pending_quantity": 0,
+      "rejection_reason": null,
+      "margin_blocked": "0.00",
+      "order_timestamp": "2026-09-21 09:36:00"
+     },
+     {
+      "orderid": "26092100000005",
+      "strategy": "",
+      "symbol": "NIFTY27OCT2625000CE",
+      "exchange": "NFO",
+      "action": "SELL",
+      "quantity": 75,
+      "price": "310.40",
+      "trigger_price": null,
+      "price_type": "MARKET",
+      "product": "NRML",
+      "order_status": "complete",
+      "average_price": "310.30",
+      "filled_quantity": 75,
+      "pending_quantity": 0,
+      "rejection_reason": null,
+      "margin_blocked": "23280.00",
+      "order_timestamp": "2026-09-21 09:39:00"
+     },
+     {
+      "orderid": "26092100000006",
+      "strategy": "",
+      "symbol": "CRUDEOIL19OCT26FUT",
+      "exchange": "MCX",
+      "action": "SELL",
+      "quantity": 100,
+      "price": "6123.00",
+      "trigger_price": null,
+      "price_type": "MARKET",
+      "product": "MIS",
+      "order_status": "complete",
+      "average_price": "6122.00",
+      "filled_quantity": 100,
+      "pending_quantity": 0,
+      "rejection_reason": null,
+      "margin_blocked": "61230.00",
+      "order_timestamp": "2026-09-21 09:40:00"
+     }
+    ],
+    "trades": [
+     {
+      "tradeid": "TRADE-20260921-093200-00000001",
+      "orderid": "26092100000001",
+      "symbol": "NIFTY29SEP26FUT",
+      "exchange": "NFO",
+      "action": "BUY",
+      "quantity": 75,
+      "price": "25001.00",
+      "product": "NRML",
+      "strategy": "",
+      "trade_timestamp": "2026-09-21 09:32:00"
+     },
+     {
+      "tradeid": "TRADE-20260921-093300-00000002",
+      "orderid": "26092100000002",
+      "symbol": "NIFTY29SEP26FUT",
+      "exchange": "NFO",
+      "action": "BUY",
+      "quantity": 75,
+      "price": "25010.50",
+      "product": "NRML",
+      "strategy": "",
+      "trade_timestamp": "2026-09-21 09:33:00"
+     },
+     {
+      "tradeid": "TRADE-20260921-093400-00000003",
+      "orderid": "26092100000003",
+      "symbol": "NIFTY29SEP26FUT",
+      "exchange": "NFO",
+      "action": "SELL",
+      "quantity": 225,
+      "price": "25099.20",
+      "product": "NRML",
+      "strategy": "",
+      "trade_timestamp": "2026-09-21 09:34:00"
+     },
+     {
+      "tradeid": "TRADE-20260921-093600-00000004",
+      "orderid": "26092100000004",
+      "symbol": "NIFTY29SEP26FUT",
+      "exchange": "NFO",
+      "action": "BUY",
+      "quantity": 75,
+      "price": "25050.05",
+      "product": "NRML",
+      "strategy": "",
+      "trade_timestamp": "2026-09-21 09:36:00"
+     },
+     {
+      "tradeid": "TRADE-20260921-093900-00000005",
+      "orderid": "26092100000005",
+      "symbol": "NIFTY27OCT2625000CE",
+      "exchange": "NFO",
+      "action": "SELL",
+      "quantity": 75,
+      "price": "310.30",
+      "product": "NRML",
+      "strategy": "",
+      "trade_timestamp": "2026-09-21 09:39:00"
+     },
+     {
+      "tradeid": "TRADE-20260921-094000-00000006",
+      "orderid": "26092100000006",
+      "symbol": "CRUDEOIL19OCT26FUT",
+      "exchange": "MCX",
+      "action": "SELL",
+      "quantity": 100,
+      "price": "6122.00",
+      "product": "MIS",
+      "strategy": "",
+      "trade_timestamp": "2026-09-21 09:40:00"
+     }
+    ],
+    "positions": [
+     {
+      "symbol": "NIFTY29SEP26FUT",
+      "exchange": "NFO",
+      "product": "NRML",
+      "quantity": 0,
+      "average_price": "25099.20",
+      "ltp": "25050.05",
+      "pnl": "17703.75",
+      "pnl_percent": "0.0000",
+      "accumulated_realized_pnl": "17703.75",
+      "today_realized_pnl": "17703.75",
+      "margin_blocked": "0.00",
+      "created_at": "2026-09-21 09:32:00",
+      "updated_at": "2026-09-21 09:36:00"
+     },
+     {
+      "symbol": "NIFTY27OCT2625000CE",
+      "exchange": "NFO",
+      "product": "NRML",
+      "quantity": -75,
+      "average_price": "310.30",
+      "ltp": "300.10",
+      "pnl": "765.00",
+      "pnl_percent": "3.2871",
+      "accumulated_realized_pnl": "0.00",
+      "today_realized_pnl": "0.00",
+      "margin_blocked": "23280.00",
+      "created_at": "2026-09-21 09:39:00",
+      "updated_at": "2026-09-21 09:41:00"
+     },
+     {
+      "symbol": "CRUDEOIL19OCT26FUT",
+      "exchange": "MCX",
+      "product": "MIS",
+      "quantity": -100,
+      "average_price": "6122.00",
+      "ltp": "6130.00",
+      "pnl": "-800.00",
+      "pnl_percent": "-0.1307",
+      "accumulated_realized_pnl": "0.00",
+      "today_realized_pnl": "0.00",
+      "margin_blocked": "61230.00",
+      "created_at": "2026-09-21 09:40:00",
+      "updated_at": "2026-09-21 09:41:00"
+     }
+    ],
+    "holdings": []
+   }
+  }
+ ]
+}

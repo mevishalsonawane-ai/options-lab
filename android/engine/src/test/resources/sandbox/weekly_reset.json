@@ -1,0 +1,523 @@
+{
+ "name": "weekly_reset",
+ "config": {
+  "reset_day": "Sunday",
+  "reset_time": "00:30"
+ },
+ "instruments": [
+  {
+   "symbol": "RELIANCE",
+   "exchange": "NSE",
+   "instrumenttype": "EQ",
+   "lotsize": 1
+  },
+  {
+   "symbol": "ZEEL",
+   "exchange": "NSE",
+   "instrumenttype": "EQ",
+   "lotsize": 1
+  },
+  {
+   "symbol": "SBIN",
+   "exchange": "BSE",
+   "instrumenttype": "EQ",
+   "lotsize": 1
+  }
+ ],
+ "steps": [
+  {
+   "at": "2026-09-26 09:30:00",
+   "op": "init",
+   "result": {
+    "ok": true
+   },
+   "state": {
+    "funds": {
+     "total_capital": "10000000.00",
+     "available_balance": "10000000.00",
+     "used_margin": "0.00",
+     "realized_pnl": "0.00",
+     "today_realized_pnl": "0.00",
+     "unrealized_pnl": "0.00",
+     "total_pnl": "0.00",
+     "last_reset_date": "2026-09-26 09:30:00",
+     "reset_count": 0,
+     "updated_at": "2026-09-26 09:30:00"
+    },
+    "orders": [],
+    "trades": [],
+    "positions": [],
+    "holdings": []
+   }
+  },
+  {
+   "at": "2026-09-26 10:00:00",
+   "op": "place",
+   "order": {
+    "symbol": "RELIANCE",
+    "exchange": "NSE",
+    "action": "BUY",
+    "quantity": 10,
+    "price_type": "MARKET",
+    "product": "CNC",
+    "strategy": ""
+   },
+   "quote": {
+    "ltp": 2500.0,
+    "bid": 0.0,
+    "ask": 0.0,
+    "high": 2520.0,
+    "low": 2480.0
+   },
+   "result": {
+    "ok": true,
+    "code": 200,
+    "body": {
+     "status": "success",
+     "orderid": "26092600000001",
+     "mode": "analyze"
+    }
+   },
+   "state": {
+    "funds": {
+     "total_capital": "10000000.00",
+     "available_balance": "9975000.00",
+     "used_margin": "25000.00",
+     "realized_pnl": "0.00",
+     "today_realized_pnl": "0.00",
+     "unrealized_pnl": "0.00",
+     "total_pnl": "0.00",
+     "last_reset_date": "2026-09-26 09:30:00",
+     "reset_count": 0,
+     "updated_at": "2026-09-26 10:00:00"
+    },
+    "orders": [
+     {
+      "orderid": "26092600000001",
+      "strategy": "",
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "action": "BUY",
+      "quantity": 10,
+      "price": "2500.00",
+      "trigger_price": null,
+      "price_type": "MARKET",
+      "product": "CNC",
+      "order_status": "complete",
+      "average_price": "2500.00",
+      "filled_quantity": 10,
+      "pending_quantity": 0,
+      "rejection_reason": null,
+      "margin_blocked": "25000.00",
+      "order_timestamp": "2026-09-26 10:00:00"
+     }
+    ],
+    "trades": [
+     {
+      "tradeid": "TRADE-20260926-100000-00000001",
+      "orderid": "26092600000001",
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "action": "BUY",
+      "quantity": 10,
+      "price": "2500.00",
+      "product": "CNC",
+      "strategy": "",
+      "trade_timestamp": "2026-09-26 10:00:00"
+     }
+    ],
+    "positions": [
+     {
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "product": "CNC",
+      "quantity": 10,
+      "average_price": "2500.00",
+      "ltp": "2500.00",
+      "pnl": "0.00",
+      "pnl_percent": "0.0000",
+      "accumulated_realized_pnl": "0.00",
+      "today_realized_pnl": "0.00",
+      "margin_blocked": "25000.00",
+      "created_at": "2026-09-26 10:00:00",
+      "updated_at": "2026-09-26 10:00:00"
+     }
+    ],
+    "holdings": []
+   }
+  },
+  {
+   "at": "2026-09-26 23:00:00",
+   "op": "funds",
+   "quotes": {},
+   "result": {
+    "availablecash": 9975000.0,
+    "collateral": 0.0,
+    "m2munrealized": 0.0,
+    "m2mrealized": 0.0,
+    "total_realized_pnl": 0.0,
+    "today_realized_pnl": 0.0,
+    "utiliseddebits": 25000.0,
+    "grossexposure": 25000.0,
+    "totalpnl": 0.0,
+    "last_reset": "2026-09-26 09:30:00",
+    "reset_count": 0
+   },
+   "state": {
+    "funds": {
+     "total_capital": "10000000.00",
+     "available_balance": "9975000.00",
+     "used_margin": "25000.00",
+     "realized_pnl": "0.00",
+     "today_realized_pnl": "0.00",
+     "unrealized_pnl": "0.00",
+     "total_pnl": "0.00",
+     "last_reset_date": "2026-09-26 09:30:00",
+     "reset_count": 0,
+     "updated_at": "2026-09-26 10:00:00"
+    },
+    "orders": [
+     {
+      "orderid": "26092600000001",
+      "strategy": "",
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "action": "BUY",
+      "quantity": 10,
+      "price": "2500.00",
+      "trigger_price": null,
+      "price_type": "MARKET",
+      "product": "CNC",
+      "order_status": "complete",
+      "average_price": "2500.00",
+      "filled_quantity": 10,
+      "pending_quantity": 0,
+      "rejection_reason": null,
+      "margin_blocked": "25000.00",
+      "order_timestamp": "2026-09-26 10:00:00"
+     }
+    ],
+    "trades": [
+     {
+      "tradeid": "TRADE-20260926-100000-00000001",
+      "orderid": "26092600000001",
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "action": "BUY",
+      "quantity": 10,
+      "price": "2500.00",
+      "product": "CNC",
+      "strategy": "",
+      "trade_timestamp": "2026-09-26 10:00:00"
+     }
+    ],
+    "positions": [
+     {
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "product": "CNC",
+      "quantity": 10,
+      "average_price": "2500.00",
+      "ltp": "2500.00",
+      "pnl": "0.00",
+      "pnl_percent": "0.0000",
+      "accumulated_realized_pnl": "0.00",
+      "today_realized_pnl": "0.00",
+      "margin_blocked": "25000.00",
+      "created_at": "2026-09-26 10:00:00",
+      "updated_at": "2026-09-26 10:00:00"
+     }
+    ],
+    "holdings": []
+   }
+  },
+  {
+   "at": "2026-09-27 00:29:00",
+   "op": "funds",
+   "quotes": {},
+   "result": {
+    "availablecash": 9975000.0,
+    "collateral": 0.0,
+    "m2munrealized": 0.0,
+    "m2mrealized": 0.0,
+    "total_realized_pnl": 0.0,
+    "today_realized_pnl": 0.0,
+    "utiliseddebits": 25000.0,
+    "grossexposure": 25000.0,
+    "totalpnl": 0.0,
+    "last_reset": "2026-09-26 09:30:00",
+    "reset_count": 0
+   },
+   "state": {
+    "funds": {
+     "total_capital": "10000000.00",
+     "available_balance": "9975000.00",
+     "used_margin": "25000.00",
+     "realized_pnl": "0.00",
+     "today_realized_pnl": "0.00",
+     "unrealized_pnl": "0.00",
+     "total_pnl": "0.00",
+     "last_reset_date": "2026-09-26 09:30:00",
+     "reset_count": 0,
+     "updated_at": "2026-09-26 10:00:00"
+    },
+    "orders": [
+     {
+      "orderid": "26092600000001",
+      "strategy": "",
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "action": "BUY",
+      "quantity": 10,
+      "price": "2500.00",
+      "trigger_price": null,
+      "price_type": "MARKET",
+      "product": "CNC",
+      "order_status": "complete",
+      "average_price": "2500.00",
+      "filled_quantity": 10,
+      "pending_quantity": 0,
+      "rejection_reason": null,
+      "margin_blocked": "25000.00",
+      "order_timestamp": "2026-09-26 10:00:00"
+     }
+    ],
+    "trades": [
+     {
+      "tradeid": "TRADE-20260926-100000-00000001",
+      "orderid": "26092600000001",
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "action": "BUY",
+      "quantity": 10,
+      "price": "2500.00",
+      "product": "CNC",
+      "strategy": "",
+      "trade_timestamp": "2026-09-26 10:00:00"
+     }
+    ],
+    "positions": [
+     {
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "product": "CNC",
+      "quantity": 10,
+      "average_price": "2500.00",
+      "ltp": "2500.00",
+      "pnl": "0.00",
+      "pnl_percent": "0.0000",
+      "accumulated_realized_pnl": "0.00",
+      "today_realized_pnl": "0.00",
+      "margin_blocked": "25000.00",
+      "created_at": "2026-09-26 10:00:00",
+      "updated_at": "2026-09-26 10:00:00"
+     }
+    ],
+    "holdings": []
+   }
+  },
+  {
+   "at": "2026-09-27 00:31:00",
+   "op": "funds",
+   "quotes": {},
+   "result": {
+    "availablecash": 10000000.0,
+    "collateral": 0.0,
+    "m2munrealized": 0.0,
+    "m2mrealized": 0.0,
+    "total_realized_pnl": 0.0,
+    "today_realized_pnl": 0.0,
+    "utiliseddebits": 0.0,
+    "grossexposure": 0.0,
+    "totalpnl": 0.0,
+    "last_reset": "2026-09-27 00:31:00",
+    "reset_count": 1
+   },
+   "state": {
+    "funds": {
+     "total_capital": "10000000.00",
+     "available_balance": "10000000.00",
+     "used_margin": "0.00",
+     "realized_pnl": "0.00",
+     "today_realized_pnl": "0.00",
+     "unrealized_pnl": "0.00",
+     "total_pnl": "0.00",
+     "last_reset_date": "2026-09-27 00:31:00",
+     "reset_count": 1,
+     "updated_at": "2026-09-27 00:31:00"
+    },
+    "orders": [
+     {
+      "orderid": "26092600000001",
+      "strategy": "",
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "action": "BUY",
+      "quantity": 10,
+      "price": "2500.00",
+      "trigger_price": null,
+      "price_type": "MARKET",
+      "product": "CNC",
+      "order_status": "complete",
+      "average_price": "2500.00",
+      "filled_quantity": 10,
+      "pending_quantity": 0,
+      "rejection_reason": null,
+      "margin_blocked": "25000.00",
+      "order_timestamp": "2026-09-26 10:00:00"
+     }
+    ],
+    "trades": [
+     {
+      "tradeid": "TRADE-20260926-100000-00000001",
+      "orderid": "26092600000001",
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "action": "BUY",
+      "quantity": 10,
+      "price": "2500.00",
+      "product": "CNC",
+      "strategy": "",
+      "trade_timestamp": "2026-09-26 10:00:00"
+     }
+    ],
+    "positions": [],
+    "holdings": []
+   }
+  },
+  {
+   "at": "2026-09-27 12:00:00",
+   "op": "funds",
+   "quotes": {},
+   "result": {
+    "availablecash": 10000000.0,
+    "collateral": 0.0,
+    "m2munrealized": 0.0,
+    "m2mrealized": 0.0,
+    "total_realized_pnl": 0.0,
+    "today_realized_pnl": 0.0,
+    "utiliseddebits": 0.0,
+    "grossexposure": 0.0,
+    "totalpnl": 0.0,
+    "last_reset": "2026-09-27 00:31:00",
+    "reset_count": 1
+   },
+   "state": {
+    "funds": {
+     "total_capital": "10000000.00",
+     "available_balance": "10000000.00",
+     "used_margin": "0.00",
+     "realized_pnl": "0.00",
+     "today_realized_pnl": "0.00",
+     "unrealized_pnl": "0.00",
+     "total_pnl": "0.00",
+     "last_reset_date": "2026-09-27 00:31:00",
+     "reset_count": 1,
+     "updated_at": "2026-09-27 00:31:00"
+    },
+    "orders": [
+     {
+      "orderid": "26092600000001",
+      "strategy": "",
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "action": "BUY",
+      "quantity": 10,
+      "price": "2500.00",
+      "trigger_price": null,
+      "price_type": "MARKET",
+      "product": "CNC",
+      "order_status": "complete",
+      "average_price": "2500.00",
+      "filled_quantity": 10,
+      "pending_quantity": 0,
+      "rejection_reason": null,
+      "margin_blocked": "25000.00",
+      "order_timestamp": "2026-09-26 10:00:00"
+     }
+    ],
+    "trades": [
+     {
+      "tradeid": "TRADE-20260926-100000-00000001",
+      "orderid": "26092600000001",
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "action": "BUY",
+      "quantity": 10,
+      "price": "2500.00",
+      "product": "CNC",
+      "strategy": "",
+      "trade_timestamp": "2026-09-26 10:00:00"
+     }
+    ],
+    "positions": [],
+    "holdings": []
+   }
+  },
+  {
+   "at": "2026-09-27 12:01:00",
+   "op": "positions",
+   "quotes": {},
+   "result": {
+    "status": "success",
+    "data": [],
+    "total_pnl": 0.0,
+    "total_unrealized_pnl": 0.0,
+    "total_today_realized_pnl": 0.0,
+    "total_pnl_today": 0.0,
+    "mode": "analyze"
+   },
+   "state": {
+    "funds": {
+     "total_capital": "10000000.00",
+     "available_balance": "10000000.00",
+     "used_margin": "0.00",
+     "realized_pnl": "0.00",
+     "today_realized_pnl": "0.00",
+     "unrealized_pnl": "0.00",
+     "total_pnl": "0.00",
+     "last_reset_date": "2026-09-27 00:31:00",
+     "reset_count": 1,
+     "updated_at": "2026-09-27 00:31:00"
+    },
+    "orders": [
+     {
+      "orderid": "26092600000001",
+      "strategy": "",
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "action": "BUY",
+      "quantity": 10,
+      "price": "2500.00",
+      "trigger_price": null,
+      "price_type": "MARKET",
+      "product": "CNC",
+      "order_status": "complete",
+      "average_price": "2500.00",
+      "filled_quantity": 10,
+      "pending_quantity": 0,
+      "rejection_reason": null,
+      "margin_blocked": "25000.00",
+      "order_timestamp": "2026-09-26 10:00:00"
+     }
+    ],
+    "trades": [
+     {
+      "tradeid": "TRADE-20260926-100000-00000001",
+      "orderid": "26092600000001",
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "action": "BUY",
+      "quantity": 10,
+      "price": "2500.00",
+      "product": "CNC",
+      "strategy": "",
+      "trade_timestamp": "2026-09-26 10:00:00"
+     }
+    ],
+    "positions": [],
+    "holdings": []
+   }
+  }
+ ]
+}
