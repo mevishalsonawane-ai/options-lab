@@ -153,11 +153,15 @@ private fun Stat(label: String, value: String) {
 @Composable
 private fun ChainCard(c: ChainSnapshot, onPick: (ChainPick) -> Unit) {
     val p = LocalPalette.current
+    // Tablets and a sideways phone have room for the open interest on each side.
+    val wide = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp >= 600
+    fun oi(v: Long?) = v?.let { if (it >= 100_000) f1(it / 100_000.0) + "L" else "%,d".format(it) } ?: "—"
     LedgerCard(title = "Option chain") {
         Row {
-            listOf("CE Δ", "CE IV", "CE LTP", "STRIKE", "PE LTP", "PE IV", "PE Δ").forEachIndexed { i, h ->
+            val heads = listOf("CE Δ", "CE IV", "CE LTP", "STRIKE", "PE LTP", "PE IV", "PE Δ")
+            (if (wide) listOf("CE OI") + heads + "PE OI" else heads).forEach { h ->
                 Text(h, style = Type.label.copy(color = p.inkSoft, fontSize = 9.sp), textAlign = TextAlign.Center,
-                    modifier = Modifier.weight(if (i == 3) 1.25f else 1f))
+                    modifier = Modifier.weight(if (h == "STRIKE") 1.25f else 1f))
             }
         }
         Rule(Modifier.padding(vertical = 4.dp))
@@ -169,6 +173,7 @@ private fun ChainCard(c: ChainSnapshot, onPick: (ChainPick) -> Unit) {
             Row(Modifier.padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
                 val ceTone = if (itmCall) p.ink else p.inkSoft
                 val peTone = if (!itmCall) p.ink else p.inkSoft
+                if (wide) Text(oi(r.ce?.oi), style = cell.copy(color = ceTone), textAlign = TextAlign.Center, modifier = Modifier.weight(1f))
                 Text(ce?.let { f2(it.delta) } ?: "—", style = cell.copy(color = ceTone), textAlign = TextAlign.Center, modifier = Modifier.weight(1f))
                 Text(ce?.let { f1(it.ivPct) } ?: "—", style = cell.copy(color = ceTone), textAlign = TextAlign.Center, modifier = Modifier.weight(1f))
                 val pickCe = { onPick(ChainPick(c.underlying, c.expiry, r.strike, com.optionslab.engine.Right.CE, r.ce?.ltp, ce?.delta, ce?.ivPct, c.lotSize)) }
@@ -181,6 +186,7 @@ private fun ChainCard(c: ChainSnapshot, onPick: (ChainPick) -> Unit) {
                     modifier = Modifier.weight(1f).background(p.oxblood.copy(alpha = 0.08f), androidx.compose.foundation.shape.RoundedCornerShape(6.dp)).clickable(enabled = r.pe != null, onClick = pickPe).padding(vertical = 5.dp))
                 Text(pe?.let { f1(it.ivPct) } ?: "—", style = cell.copy(color = peTone), textAlign = TextAlign.Center, modifier = Modifier.weight(1f))
                 Text(pe?.let { f2(it.delta) } ?: "—", style = cell.copy(color = peTone), textAlign = TextAlign.Center, modifier = Modifier.weight(1f))
+                if (wide) Text(oi(r.pe?.oi), style = cell.copy(color = peTone), textAlign = TextAlign.Center, modifier = Modifier.weight(1f))
             }
         }
         c.synthetic?.let {

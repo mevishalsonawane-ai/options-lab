@@ -93,6 +93,7 @@ fun StrategiesScreen(model: AppModel) {
                 BrassButton("New strategy", Modifier.fillMaxWidth().padding(top = 8.dp)) { editing = blankStrategy() }
             }
         }
+        item { PresetsCard(model) }
         if (list.isEmpty()) item { LedgerCard { Note("No strategies yet.") } }
         list.forEach { e -> item(key = e.def.id) { StrategyCard(model, e, s.live && s.allowRealOrders, onEdit = { editing = e.def }, onLive = { confirmLive = e.def.id }) } }
         if (log.isNotEmpty()) item {

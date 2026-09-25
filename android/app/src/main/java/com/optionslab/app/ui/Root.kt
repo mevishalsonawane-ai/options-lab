@@ -1,6 +1,7 @@
 package com.optionslab.app.ui
 
 import android.Manifest
+import android.content.res.Configuration
 import android.os.Build
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -57,6 +58,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.scale
@@ -416,7 +418,9 @@ private fun Main(model: AppModel) {
 
     Parchment(ruled = true) {
         Column(Modifier.fillMaxSize()) {
-            Masthead(settings.live, settings.reduceMotion, linked, onMode = { live -> model.update { it.copy(mode = if (live) "live" else "sandbox", allowRealOrders = live) } })
+            // Turned sideways, the chart takes the whole screen.
+            val fullChart = tab == Tab.CHART && LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
+            if (!fullChart) Masthead(settings.live, settings.reduceMotion, linked, onMode = { live -> model.update { it.copy(mode = if (live) "live" else "sandbox", allowRealOrders = live) } })
             Box(Modifier.weight(1f)) {
                 AnimatedContent(
                     targetState = tab,
@@ -453,7 +457,7 @@ private fun Main(model: AppModel) {
                     com.optionslab.app.ui.screens.ChartScreen(model, chartAsk.first, chartAsk.second, visible = tab == Tab.CHART, ask = chartNonce)
                 }
             }
-            TabBar(tab, tabs) { if (it == tab && it == Tab.CABINET) cabinetPage = null; tab = it }
+            if (!fullChart) TabBar(tab, tabs) { if (it == tab && it == Tab.CABINET) cabinetPage = null; tab = it }
         }
         // Order reviews open over any page, wherever the order was asked for.
         com.optionslab.app.ui.screens.OrderReviewDialog(model)

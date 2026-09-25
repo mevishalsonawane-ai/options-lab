@@ -114,6 +114,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     val openMark = MutableStateFlow<Double?>(null)
     val ic = MutableStateFlow<Load<Ic.IcResult>>(Load.Idle)
     val signal = MutableStateFlow<Load<SignalResult>>(Load.Idle)
+    val preset = MutableStateFlow<Load<com.optionslab.engine.strategy.Presets.Result>>(Load.Idle)
+    val replay = MutableStateFlow<Load<com.optionslab.engine.Session>>(Load.Idle)
     val integrity = MutableStateFlow<List<Integrity.Finding>>(emptyList())
     val provenance = MutableStateFlow<Load<List<Provenance.Drift>>>(Load.Idle)
     val message = MutableStateFlow<String?>(null)
@@ -408,6 +410,48 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             }
         }
     }
+
+    /** Replay a preset over every harvested session of [underlying]. */
+    fun runPreset(id: String, underlying: String, lots: Int, entry: java.time.LocalTime, exit: java.time.LocalTime, stop: Double?, target: Double?) {
+        val p = com.optionslab.engine.strategy.Presets.byId(id) ?: return
+        preset.value = Load.Busy("Replaying ${p.name}")
+        viewModelScope.launch(Dispatchers.Default) {
+            preset.value = try {
+                val total = Store.barDays(underlying).size.coerceAtLeast(1)
+                val r = com.optionslab.engine.strategy.Presets.backtest(p, Store.barSessions(underlying),
+                    { s -> s.lotHint ?: runCatching { com.optionslab.engine.Lots.lotSizeOn(underlying, s.day) }.getOrNull() },
+                    lots, entry.hour * 60 + entry.minute, exit.hour * 60 + exit.minute, stop, target,
+                ) { n -> preset.value = Load.Busy("Session $n of $total", n.toFloat() / total) }
+                if (r.days.isEmpty()) Load.Failed("No harvested $underlying session could be priced at ${entry}.") else Load.Done(r)
+            } catch (e: Exception) {
+                Load.Failed(e.message ?: "The replay failed")
+            }
+        }
+    }
+
+    /** Save a preset as a strategy (sandbox, not armed). */
+    fun addPreset(id: String, underlying: String, lots: Int, entry: java.time.LocalTime, exit: java.time.LocalTime, stop: Double?, target: Double?) {
+        val p = com.optionslab.engine.strategy.Presets.byId(id) ?: return
+        saveStrategy(com.optionslab.engine.strategy.Presets.def(p, underlying, lots, entry, exit, stop, target)) { err ->
+            if (err != null) com.optionslab.app.work.Alerts.error(err) else com.optionslab.app.work.Alerts.success("${p.name} added to Strategies (paper, not armed)")
+        }
+    }
+
+    /** Load one harvested day for the replay page. */
+    fun loadReplay(underlying: String, day: LocalDate) {
+        replay.value = Load.Busy("Loading $underlying $day")
+        viewModelScope.launch(Dispatchers.IO) {
+            replay.value = try {
+                val s = Store.barSession(underlying, day) ?: error("No harvested bars for $underlying on $day")
+                if (s.index == null) error("$day has no index bars")
+                Load.Done(s)
+            } catch (e: Exception) {
+                Load.Failed(e.message ?: "Could not load $day")
+            }
+        }
+    }
+
+    fun replayDays(underlying: String): List<LocalDate> = runCatching { Store.barDays(underlying) }.getOrDefault(emptyList())
 
     fun runSignal(underlying: String, day: LocalDate, indicator: String, keyValue: Double, atrPeriod: Int, length: Int, lot: Int) {
         signal.value = Load.Busy("Replaying $day")

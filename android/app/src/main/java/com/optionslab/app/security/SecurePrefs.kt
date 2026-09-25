@@ -66,6 +66,9 @@ object SecurePrefs {
         save()
     }
 
+    /** Every key and value (the backup); callers filter out what must never leave the vault. */
+    @Synchronized fun snapshot(): Map<String, Any?> = map().let { m -> m.keys().asSequence().associateWith { m.opt(it) } }
+
     @Synchronized fun wipe() {
         cache = JSONObject()
         unreadable = false

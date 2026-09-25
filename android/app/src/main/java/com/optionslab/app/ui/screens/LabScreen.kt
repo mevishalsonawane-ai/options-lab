@@ -13,7 +13,7 @@ import androidx.compose.ui.unit.dp
 import com.optionslab.app.ui.AppModel
 import com.optionslab.app.ui.components.Token
 
-/** The research bench: the strategy's trials (arms), its health checks, and the portfolio and SIP backtesters. */
+/** The research bench: the strategy's trials (arms), its health checks, and the portfolio and SIP backtesters, and the candle-by-candle replay. */
 @Composable
 fun LabScreen(model: AppModel, page: String, onPage: (String) -> Unit) {
     Column(Modifier.fillMaxSize()) {
@@ -23,12 +23,14 @@ fun LabScreen(model: AppModel, page: String, onPage: (String) -> Unit) {
             Token("Health", page == "health") { onPage("health") }
             Token("Portfolio", page == "portfolio") { onPage("portfolio") }
             Token("SIP", page == "sip") { onPage("sip") }
+            Token("Replay", page == "replay") { onPage("replay") }
         }
         Box(Modifier.weight(1f)) {
             when (page) {
                 "health" -> HealthScreen(model)
                 "portfolio" -> PortfolioLab(model)
                 "sip" -> SipLab(model)
+                "replay" -> ReplayLab(model)
                 else -> TrialsScreen(model)
             }
         }

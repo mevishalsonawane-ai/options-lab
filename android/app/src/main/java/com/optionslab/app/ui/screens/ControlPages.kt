@@ -241,6 +241,7 @@ fun SecurityPage(model: AppModel) {
     Page {
         item { PageTitle("Security", "Nothing personal leaves this phone, and nothing is logged") }
         item { KitePinCard(model) }
+        item { BackupCard(s.wipeOnExhaustion) }
         item {
             LedgerCard(title = "Home-screen widget") {
                 ToggleRow("Show my P&L on the widget", "Off by default: a home screen is seen by anyone holding the unlocked phone. Index levels are always shown.", s.widgetPnl) { on ->
@@ -591,5 +592,108 @@ private fun GuardCard(model: AppModel) {
         TextButton({ com.optionslab.app.data.Guard.resetPeak(s.live); model.say("Drawdown peak restarts from today's equity.") }) {
             Text("Restart the drawdown peak (${if (s.live) "Zerodha" else "paper"})", style = Type.label.copy(color = p.inkSoft))
         }
+    }
+}
+
+
+/**
+ * Encrypted backup and restore (PIN-sealed file). Zerodha credentials, the PIN and
+ * the pinned certificates are never in it.
+ */
+@Composable
+private fun BackupCard(wipeOnExhaustion: Boolean) {
+    val p = LocalPalette.current
+    val ctx = LocalContext.current
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    var busy by remember { mutableStateOf(false) }
+    var ask by remember { mutableStateOf<String?>(null) }          // "backup" | "restore": which PIN prompt is open
+    var pending by remember { mutableStateOf<ByteArray?>(null) }   // a backup made, waiting for its file / a file read, waiting for its PIN
+    var opened by remember { mutableStateOf<com.optionslab.app.data.Backup.Contents?>(null) }
+    val save = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.CreateDocument("application/octet-stream")) { uri ->
+        val bytes = pending; pending = null
+        if (uri == null || bytes == null) return@rememberLauncherForActivityResult
+        val ok = runCatching { ctx.contentResolver.openOutputStream(uri)?.use { it.write(bytes) } }.isSuccess
+        if (ok) com.optionslab.app.work.Alerts.success("Backup saved. Keep it with your PIN in mind: the PIN opens it.")
+        else com.optionslab.app.work.Alerts.error("Could not write the backup file.")
+    }
+    val pick = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        val bytes = runCatching { ctx.contentResolver.openInputStream(uri)?.use { it.readBytes() } }.getOrNull()
+        if (bytes == null) com.optionslab.app.work.Alerts.error("Could not read that file.") else { pending = bytes; ask = "restore" }
+    }
+    LedgerCard(title = "Backup and restore") {
+        Note("One file with your settings, strategies, ORB arms, paper account, ledger, alarms, protections, journal and trade history, sealed with your PIN. " +
+            "Zerodha keys and sessions are never in it: after a restore, link Zerodha again.")
+        Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            BrassButton("Back up now", Modifier.weight(1f), busy = busy && ask == null) { ask = "backup" }
+            BrassButton("Restore…", Modifier.weight(1f), tone = p.inkSoft) { pick.launch(arrayOf("application/octet-stream", "*/*")) }
+        }
+    }
+    ask?.let { mode ->
+        var pin by remember(mode) { mutableStateOf("") }
+        com.optionslab.app.ui.components.AlertDialog(
+            onDismissRequest = { ask = null; if (mode == "restore") pending = null },
+            properties = androidx.compose.ui.window.DialogProperties(securePolicy = androidx.compose.ui.window.SecureFlagPolicy.SecureOn),
+            title = { Text(if (mode == "backup") "Seal the backup" else "Open the backup", style = Type.title) },
+            text = {
+                Column {
+                    Text(if (mode == "backup") "Enter your app PIN. The backup is sealed with it." else "Enter the PIN the backup was made with.", style = Type.bodySmall)
+                    androidx.compose.material3.OutlinedTextField(pin, { pin = it.filter(Char::isDigit).take(12) }, label = { Text("PIN") }, singleLine = true,
+                        visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.NumberPassword))
+                }
+            },
+            confirmButton = {
+                TextButton({
+                    val typed = pin.toCharArray()
+                    busy = true
+                    scope.launch {
+                        try {
+                            if (mode == "backup") {
+                                // The PIN must be the app's own: a typo would seal a file nobody can open.
+                                val r = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { PinLock.verify(typed, wipeOnExhaustion) }
+                                if (r != PinLock.Result.Ok) { com.optionslab.app.work.Alerts.error("Not the right PIN."); return@launch }
+                                pending = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { com.optionslab.app.data.Backup.create(ctx, typed) }
+                                ask = null
+                                save.launch("iraalgo-backup-${com.optionslab.app.data.Market.today()}.irabk")
+                            } else {
+                                val bytes = pending ?: return@launch
+                                opened = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { com.optionslab.app.data.Backup.open(bytes, typed) }
+                                ask = null; pending = null
+                            }
+                        } catch (e: Exception) {
+                            com.optionslab.app.work.Alerts.error(e.message ?: "That did not work.")
+                        } finally { busy = false }
+                    }
+                }, enabled = !busy) { Text(if (busy) "Working…" else "Continue") }
+            },
+            dismissButton = { TextButton({ ask = null; if (mode == "restore") pending = null }) { Text("Cancel") } },
+        )
+    }
+    opened?.let { c ->
+        com.optionslab.app.ui.components.AlertDialog(
+            onDismissRequest = { opened = null },
+            properties = androidx.compose.ui.window.DialogProperties(securePolicy = androidx.compose.ui.window.SecureFlagPolicy.SecureOn),
+            title = { Text("Restore this backup?", style = Type.title) },
+            text = {
+                Text("Made ${java.time.Instant.ofEpochMilli(c.createdAt).atZone(com.optionslab.engine.IST).toLocalDateTime().toString().replace('T', ' ').take(16)} · " +
+                    "${c.files} data files · ${c.prefs} settings.\n\nIt REPLACES this phone's strategies, paper account, ledger, alarms, journal and settings. " +
+                    "Your Zerodha link and PIN here stay as they are. IraAlgo closes when done; open it again.", style = Type.bodySmall)
+            },
+            confirmButton = {
+                TextButton({
+                    scope.launch {
+                        val ok = runCatching { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { com.optionslab.app.data.Backup.restore(ctx, c) } }.isSuccess
+                        opened = null
+                        if (!ok) { com.optionslab.app.work.Alerts.error("The restore did not complete."); return@launch }
+                        com.optionslab.app.work.Alerts.success("Restored. IraAlgo is closing; open it again.")
+                        kotlinx.coroutines.delay(1_200)
+                        // Every store is cached in memory: a fresh start reads the restored files.
+                        android.os.Process.killProcess(android.os.Process.myPid())
+                    }
+                }) { Text("Replace and restart", color = p.oxblood) }
+            },
+            dismissButton = { TextButton({ opened = null }) { Text("Cancel") } },
+        )
     }
 }

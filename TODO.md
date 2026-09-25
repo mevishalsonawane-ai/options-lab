@@ -69,17 +69,17 @@ Source paths prefixed `NTA:` are in D:\New Trading app.
 - [x] D5. (done: `engine/risk/Protection.kt` + tests, `data/Protections.kt`; position popup → Protect; paper at once, Zerodha after one PIN) Trailing stop-loss on any position (paper; Zerodha after one PIN): the stop only ever tightens.
 - [x] D6. (done: order sheet bracket - stop/trail/target set when the entry fills; chart ALERT button, priced from the chart feed) From the chart: bracket order (entry + stop + target) and price alerts drawn at a level.
 - [x] D7. (done: Options → Straddle: any call/put pair, combined premium, pair P&L) Straddle / strangle tracker: combined premium through the day and the pair's live P&L.
-- [ ] D8. Strategy presets ready to arm (short straddle, short strangle, iron fly, iron condor), each backtested on harvested sessions first.
-- [ ] D9. Replay mode: step through a past day candle by candle and paper-trade it.
+- [x] D8. (done: Trade → Strategies → Presets: backtest over harvested sessions, then Add to Strategies, paper and not armed) Strategy presets ready to arm (short straddle, short strangle, iron fly, iron condor), each backtested on harvested sessions first.
+- [x] D9. (done: Lab → Replay: harvested day, index or ATM CE/PE, step/play, buy/sell at the close, live P&L) Replay mode: step through a past day candle by candle and paper-trade it.
 - [x] D10. (done: trade popup → Journal; P&L tab → Journal card with P&L by tag) Trade journal: note and tags per trade; P&L by tag.
 - [x] D11. (done: strategy chips, Month/Year switch with 12 month tiles, Export CSV) P&L calendar: filter by strategy (ORB, manual, Expiry Put, …), year view, CSV export.
 - [x] D12. (done: P&L tab → Strategies compared: trips, win %, profit factor, net, avg, best/worst, drawdown, charges) Strategy comparison: each strategy's forward stats side by side.
 - [x] D13. (done: P&L tab → Charges by month, line by line; Zerodha estimated from recorded trades) Charges report: brokerage, STT, exchange, SEBI, stamp and GST by month.
 - [x] D14. (done: `work/DailyReports.kt`, 09:00 check + 09:10 login reminder, approval channel) Morning check 09:00 (Zerodha login, holidays, contracts, armed strategies) and a login reminder before the open.
 - [x] D15. (done: 15:45 day report, approval channel; opens the P&L tab) End-of-day report at 15:45: the day's P&L, trades, strategies and any problems.
-- [ ] D16. Encrypted backup and restore (PIN-sealed file; Zerodha credentials never included).
+- [x] D16. (done: More → Security → Backup and restore) Encrypted backup and restore (PIN-sealed file; Zerodha credentials never included).
 - [x] D17. (done: widget from ticks every 5 s while streaming) Home-screen widget live from the stream.
-- [ ] D18. Landscape / tablet: full-screen chart and a wider option chain.
+- [x] D18. (done: sideways chart hides the header and tab bar; wide screens add OI columns to the chain) Landscape / tablet: full-screen chart and a wider option chain.
 - [x] D19. (done: haptic on every alert; swipe actions already had one) Haptics on order confirm, fills and swipe actions.
 - [x] D20. (done: harvest script finds its repo and Python itself; READMEs updated) Docs (B6) and the nightly harvest script path (B1: script fixed; re-registering the task stays with the owner).
 
