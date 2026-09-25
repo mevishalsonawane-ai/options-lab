@@ -20,6 +20,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -65,6 +66,12 @@ fun ChartScreen(model: AppModel, symbol: String, exchange: String, visible: Bool
     var order by remember { mutableStateOf<Pair<ChainPick, Pair<Boolean, Double?>>?>(null) }
     var hint by remember { mutableStateOf<String?>(null) }
     val holder = remember { arrayOfNulls<WebView>(1) }
+    // [gen] rebuilds the WebView (after its renderer died, or a load that never finished);
+    // [ready] turns true once the chart has received its first candles.
+    var gen by remember { mutableStateOf(0) }
+    var ready by remember { mutableStateOf(false) }
+    var retried by remember { mutableStateOf(false) }
+    var failed by remember { mutableStateOf(false) }
 
     fun openOrder(buy: Boolean, price: Double?) {
         val (sym, _) = current
@@ -75,10 +82,24 @@ fun ChartScreen(model: AppModel, symbol: String, exchange: String, visible: Bool
         }
     }
 
-    // Kept loaded between tabs; it stops polling while hidden.
+    // Kept loaded between tabs. While hidden it is switched off entirely - not drawn, not
+    // rendering, not polling - so it can never paint over another page.
     DisposableEffect(visible) {
-        holder[0]?.evaluateJavascript("window.__iraPause && window.__iraPause(${!visible})", null)
+        holder[0]?.let { w ->
+            w.evaluateJavascript("window.__iraPause && window.__iraPause(${!visible})", null)
+            w.visibility = if (visible) android.view.View.VISIBLE else android.view.View.GONE
+            if (visible) w.onResume() else w.onPause()
+        }
         onDispose { }
+    }
+
+    // A chart that has not drawn its first candles in 12 s is rebuilt once; after that, say so.
+    LaunchedEffect(gen, visible) {
+        if (!visible || ready) return@LaunchedEffect
+        kotlinx.coroutines.delay(12_000)
+        if (ready) return@LaunchedEffect
+        if (!retried) { retried = true; gen++ }
+        else { failed = true; com.optionslab.app.work.Alerts.error("The chart could not load. Check the connection and tap Retry.") }
     }
 
     // A new symbol asked for from elsewhere (Home, the option chain) while the chart is open.
@@ -103,8 +124,11 @@ fun ChartScreen(model: AppModel, symbol: String, exchange: String, visible: Bool
                         .clickable { openOrder(isBuy, null) }.padding(horizontal = 22.dp, vertical = 8.dp))
             }
         }
+        Box(Modifier.weight(1f).fillMaxWidth()) {
+        androidx.compose.runtime.key(gen) {
         AndroidView(
-            modifier = Modifier.weight(1f).fillMaxWidth(),
+            modifier = Modifier.fillMaxSize(),
+            update = { w -> w.visibility = if (visible) android.view.View.VISIBLE else android.view.View.GONE },
             factory = { ctx ->
                 WebView.setWebContentsDebuggingEnabled(false)
                 WebView(ctx).apply {
@@ -122,7 +146,7 @@ fun ChartScreen(model: AppModel, symbol: String, exchange: String, visible: Bool
                     settings.textZoom = 100
                     setBackgroundColor(if (p.dark) android.graphics.Color.BLACK else android.graphics.Color.WHITE)
                     addJavascriptInterface(Bridge(this, scope, onSymbol = { s, e -> current = s to e; hint = null },
-                        onOrder = { buy, price -> openOrder(buy, price) }), "IraBridge")
+                        onOrder = { buy, price -> openOrder(buy, price) }, onData = { ready = true; failed = false }), "IraBridge")
                     webViewClient = object : WebViewClient() {
                         // Only the bundled chart files are served; every other request is refused.
                         override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse {
@@ -141,13 +165,31 @@ fun ChartScreen(model: AppModel, symbol: String, exchange: String, visible: Bool
                         }
 
                         override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest) = true
+
+                        // Android killed the chart's renderer (memory): rebuild it instead of leaving a white page.
+                        override fun onRenderProcessGone(view: WebView, detail: android.webkit.RenderProcessGoneDetail): Boolean {
+                            if (holder[0] === view) holder[0] = null
+                            view.post { ready = false; gen++ }
+                            return true
+                        }
                     }
                     val theme = if (p.dark) "dark" else "light"
                     loadUrl("${ORIGIN}terminal.html?symbol=${android.net.Uri.encode(symbol)}&exchange=${android.net.Uri.encode(exchange)}&theme=$theme")
                 }
             },
-            onRelease = { w -> holder[0] = null; w.removeJavascriptInterface("IraBridge"); w.stopLoading(); w.destroy() },
+            onRelease = { w -> if (holder[0] === w) holder[0] = null; w.removeJavascriptInterface("IraBridge"); w.stopLoading(); w.destroy() },
         )
+        }
+        // Covers the blank page until the first candles are drawn, so the chart never shows as a white sheet.
+        if (!ready) Box(Modifier.fillMaxSize().background(p.paper), contentAlignment = Alignment.Center) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(if (failed) "The chart could not load" else "Loading chart…", style = Type.bodySmall.copy(color = p.inkSoft))
+                if (failed) Text("Retry", style = Type.label.copy(color = p.ink, fontWeight = FontWeight.SemiBold),
+                    modifier = Modifier.padding(top = 10.dp).background(p.chip, RoundedCornerShape(50))
+                        .clickable { failed = false; retried = false; gen++ }.padding(horizontal = 18.dp, vertical = 8.dp))
+            }
+        }
+        }
     }
     order?.let { (pick, how) ->
         OptionOrderSheet(model, pick, initialBuy = how.first, initialLimit = how.second) { order = null }
@@ -162,6 +204,7 @@ private class Bridge(
     private val scope: CoroutineScope,
     private val onSymbol: (String, String) -> Unit,
     private val onOrder: (Boolean, Double?) -> Unit,
+    private val onData: () -> Unit = {},
 ) {
     private fun reply(id: String, ok: Boolean, payload: String) {
         web.post { web.evaluateJavascript("window.__iraReply(${JSONObject.quote(id)}, $ok, ${JSONObject.quote(payload)})", null) }
@@ -178,6 +221,7 @@ private class Bridge(
                         .put("low", b.low).put("close", b.close).put("volume", b.volume))
                 }
                 reply(id, true, a.toString())
+                web.post { onData() }
             } catch (e: Exception) {
                 reply(id, false, "Could not load $symbol: ${e.message ?: "no data"}")
             }
