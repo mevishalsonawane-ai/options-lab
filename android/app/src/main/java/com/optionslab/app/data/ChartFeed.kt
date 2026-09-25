@@ -49,6 +49,10 @@ object ChartFeed {
         val to = toSec?.let { Instant.ofEpochSecond(it).atZone(IST).toLocalDate() }?.coerceAtMost(today) ?: today
         val defaultBack = when (u.unit) { "minutes" -> if (u.n <= 5) 10L else 60L; "hours" -> 180L; "days" -> 1500L; else -> 5000L }
         var from = fromSec?.let { Instant.ofEpochSecond(it).atZone(IST).toLocalDate() } ?: to.minusDays(defaultBack)
+        // Intraday charts always get the last few sessions, so a Monday-morning or holiday-adjacent
+        // chart still has well over three hours of candles to show.
+        val intraday = u.unit == "minutes" || u.unit == "hours"
+        if (intraday) from = minOf(from, to.minusDays(6))
         // Upstox keeps minute and hour candles from January 2022.
         if (u.unit == "minutes" || u.unit == "hours") from = from.coerceAtLeast(LocalDate.of(2022, 1, 1))
         val out = ArrayList<Upstox.Bar>()
@@ -62,7 +66,7 @@ object ChartFeed {
         if (to == today && u.unit in setOf("minutes", "hours", "days")) {
             runCatching { Net.parseCandles(Net.getJson("$BASE/intraday/$key/${u.unit}/${u.n}", tries = 2)) }.onSuccess { out += it }
         }
-        val lo = fromSec ?: Long.MIN_VALUE
+        val lo = if (intraday) Long.MIN_VALUE else fromSec ?: Long.MIN_VALUE
         val top = toSec ?: Long.MAX_VALUE
         return out.distinctBy { it.epochSecond }.filter { it.epochSecond in lo..top }.sortedBy { it.epochSecond }
     }

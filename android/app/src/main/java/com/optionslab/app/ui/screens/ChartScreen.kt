@@ -84,6 +84,19 @@ fun ChartScreen(model: AppModel, symbol: String, exchange: String) {
     }
 
     Column(Modifier.fillMaxSize().background(p.paper)) {
+        // Buy / Sell sit above the chart so nothing covers its time axis at the bottom.
+        hint?.let {
+            Text(it, style = Type.bodySmall.copy(color = p.inkSoft), modifier = Modifier.fillMaxWidth().background(p.chip).padding(horizontal = 14.dp, vertical = 8.dp))
+        }
+        Row(Modifier.fillMaxWidth().background(p.paperDeep).padding(horizontal = 12.dp, vertical = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(current.first, style = Type.label.copy(color = p.ink, fontSize = 13.sp), maxLines = 1, modifier = Modifier.weight(1f))
+            listOf(true to "BUY", false to "SELL").forEach { (isBuy, label) ->
+                Text(label, textAlign = TextAlign.Center, style = Type.label.copy(color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold),
+                    modifier = Modifier.background(if (isBuy) p.verdigris else p.oxblood, RoundedCornerShape(50))
+                        .clickable { openOrder(isBuy, null) }.padding(horizontal = 22.dp, vertical = 8.dp))
+            }
+        }
         AndroidView(
             modifier = Modifier.weight(1f).fillMaxWidth(),
             factory = { ctx ->
@@ -99,6 +112,8 @@ fun ChartScreen(model: AppModel, symbol: String, exchange: String) {
                     settings.cacheMode = WebSettings.LOAD_NO_CACHE
                     settings.setSupportMultipleWindows(false)
                     settings.javaScriptCanOpenWindowsAutomatically = false
+                    // The phone's font size would otherwise enlarge every label and push the time axis off the bottom.
+                    settings.textZoom = 100
                     setBackgroundColor(if (p.dark) android.graphics.Color.BLACK else android.graphics.Color.WHITE)
                     addJavascriptInterface(Bridge(this, scope, onSymbol = { s, e -> current = s to e; hint = null },
                         onOrder = { buy, price -> openOrder(buy, price) }), "IraBridge")
@@ -127,18 +142,6 @@ fun ChartScreen(model: AppModel, symbol: String, exchange: String) {
             },
             onRelease = { w -> holder[0] = null; w.removeJavascriptInterface("IraBridge"); w.stopLoading(); w.destroy() },
         )
-        hint?.let {
-            Text(it, style = Type.bodySmall.copy(color = p.inkSoft), modifier = Modifier.fillMaxWidth().background(p.chip).padding(horizontal = 14.dp, vertical = 8.dp))
-        }
-        Row(Modifier.fillMaxWidth().background(p.paperDeep).padding(horizontal = 12.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(current.first, style = Type.label.copy(color = p.ink, fontSize = 13.sp), maxLines = 1, modifier = Modifier.weight(1f))
-            listOf(true to "BUY", false to "SELL").forEach { (isBuy, label) ->
-                Text(label, textAlign = TextAlign.Center, style = Type.label.copy(color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold),
-                    modifier = Modifier.background(if (isBuy) p.verdigris else p.oxblood, RoundedCornerShape(50))
-                        .clickable { openOrder(isBuy, null) }.padding(horizontal = 26.dp, vertical = 10.dp))
-            }
-        }
     }
     order?.let { (pick, how) ->
         OptionOrderSheet(model, pick, initialBuy = how.first, initialLimit = how.second) { order = null }
