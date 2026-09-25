@@ -98,7 +98,8 @@ object Broker {
 
     // ---- HTTP ---------------------------------------------------------------------
 
-    private suspend fun call(method: String, path: String, body: String? = null, auth: Boolean = true, raw: Boolean = false): Any {
+    private suspend fun call(method: String, path: String, body: String? = null, auth: Boolean = true, raw: Boolean = false,
+                             json: Boolean = false): Any {
         var attempt = 0
         while (true) {
             val c = URL(Kite.API + path).openConnection() as HttpsURLConnection
@@ -113,7 +114,7 @@ object Broker {
                 if (auth) c.setRequestProperty("Authorization", "token ${apiKey}:${token()}")
                 if (body != null) {
                     c.doOutput = true
-                    c.setRequestProperty("Content-Type", "application/x-www-form-urlencoded")
+                    c.setRequestProperty("Content-Type", if (json) "application/json" else "application/x-www-form-urlencoded")
                     c.outputStream.use { it.write(body.toByteArray()) }
                 }
                 val code = c.responseCode
@@ -478,6 +479,20 @@ object Broker {
                 it.optString("order_id") !in known &&
                 runCatching { !java.time.LocalDateTime.parse(it.optString("order_timestamp"), fmt).isBefore(since) }.getOrDefault(false)
         }?.optString("order_id")?.also { countSent() }
+    }
+
+    /** What Zerodha would block for these orders together ([required]), against the account's free margin. */
+    data class Margin(val required: Double, val initial: Double, val available: Double, val charges: Double) {
+        val short: Boolean get() = required > available
+    }
+
+    /** POST /margins/basket, counting open positions (so a hedge's benefit is included). */
+    suspend fun basketMargin(orders: List<Kite.Order>): Margin {
+        val d = call("POST", "/margins/basket?consider_positions=true", Kite.basketJson(orders), json = true) as JSONObject
+        val fin = d.optJSONObject("final")?.optDouble("total", Double.NaN) ?: Double.NaN
+        val init = d.optJSONObject("initial")?.optDouble("total", Double.NaN) ?: Double.NaN
+        val charges = rows(d.optJSONArray("orders")).sumOf { it.optJSONObject("charges")?.optDouble("total", 0.0) ?: 0.0 }
+        return Margin(if (fin.isNaN()) init else fin, init, funds().net, charges)
     }
 
     /** One order's latest state (last entry of its history), or null if Kite has none yet. */

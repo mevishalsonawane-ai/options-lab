@@ -154,4 +154,15 @@ class KiteTest {
         assertEquals(emptyList(), Kite.refusals(mkt, cap, 0, false, refPrice = 50.0))
         assertEquals(emptyList(), Kite.refusals(mkt, cap, 0, false, exit = true, refPrice = 100.0))
     }
+
+    @Test fun `the basket margin body is Kite's JSON`() {
+        val legs = listOf(
+            Kite.Order("NIFTY26SEP24300PE", Kite.Side.BUY, 65, 65, "NRML", "LIMIT", 2.35),
+            Kite.Order("NIFTY26SEP24500PE", Kite.Side.SELL, 65, 65, "NRML", "MARKET", null),
+        )
+        assertEquals(
+            """[{"exchange":"NFO","tradingsymbol":"NIFTY26SEP24300PE","transaction_type":"BUY","variety":"regular","product":"NRML","order_type":"LIMIT","quantity":65,"price":2.35,"trigger_price":0},""" +
+            """{"exchange":"NFO","tradingsymbol":"NIFTY26SEP24500PE","transaction_type":"SELL","variety":"regular","product":"NRML","order_type":"MARKET","quantity":65,"price":0,"trigger_price":0}]""",
+            Kite.basketJson(legs))
+    }
 }

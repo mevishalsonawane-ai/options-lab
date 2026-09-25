@@ -74,8 +74,11 @@ data class OrderPlan(
     val holdToSettlement: Boolean,
     /** Closing orders: each only reduces a position you already hold. */
     val exit: Boolean = false,
+    /** Zerodha's basket margin for these legs, or why it could not be read. */
+    val margin: com.optionslab.app.data.Broker.Margin? = null,
+    val marginNote: String? = null,
 ) {
-    val sendable: Boolean get() = legs.isNotEmpty() && refusals.all { it.isEmpty() }
+    val sendable: Boolean get() = legs.isNotEmpty() && refusals.all { it.isEmpty() } && margin?.short != true
 }
 
 data class SignalResult(
@@ -629,6 +632,13 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** Ask Zerodha what the plan's legs would block together; a shortfall stops the send. */
+    private suspend fun withMargin(p: OrderPlan): OrderPlan = try {
+        p.copy(margin = com.optionslab.app.data.Broker.basketMargin(p.legs))
+    } catch (e: Exception) {
+        p.copy(marginNote = "Margin could not be checked: ${e.message}")
+    }
+
     /** The strategy's ticket for [session], turned into Zerodha orders for review. */
     fun planTicket(e: Ledger.Entry) {
         plan.value = Load.Busy("Looking up the contracts on Zerodha")
@@ -647,7 +657,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                 // never a market order into an expiry-day book.
                 val legs = com.optionslab.engine.Kite.legsFor(tk, short, wing, _settings.value.orderProduct,
                     sq?.bid ?: sq?.last ?: tk.credit, wq?.ask ?: wq?.last)
-                Load.Done(OrderPlan("Today's ticket: ${tk.underlying} ${com.optionslab.engine.fmtG(tk.strike)} PE", tk.session, legs, q, gate(legs, true), true))
+                Load.Done(withMargin(OrderPlan("Today's ticket: ${tk.underlying} ${com.optionslab.engine.fmtG(tk.strike)} PE", tk.session, legs, q, gate(legs, true), true)))
             } catch (x: Exception) { Load.Failed(x.message ?: "could not prepare the order") }
         }
     }
@@ -665,7 +675,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                 val px = limit ?: (if (side == com.optionslab.engine.Kite.Side.SELL) qt?.bid else qt?.ask) ?: qt?.last ?: 0.0
                 val o = com.optionslab.engine.Kite.Order(ins.tradingSymbol, side, lots * ins.lotSize, ins.lotSize, product, "LIMIT",
                     com.optionslab.engine.Kite.onTick(px, ins.tickSize, side), ins.tickSize)
-                Load.Done(OrderPlan("${side.name} ${ins.tradingSymbol}", null, listOf(o), q, gate(listOf(o), false), false))
+                Load.Done(withMargin(OrderPlan("${side.name} ${ins.tradingSymbol}", null, listOf(o), q, gate(listOf(o), false), false)))
             } catch (x: Exception) { Load.Failed(x.message ?: "could not prepare the order") }
         }
     }
@@ -910,7 +920,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                     com.optionslab.engine.Kite.Order(i.tradingSymbol, side, l.lots * i.lotSize, i.lotSize, product, "LIMIT",
                         com.optionslab.engine.Kite.onTick(px, i.tickSize, side), i.tickSize)
                 }
-                Load.Done(OrderPlan(title, null, orders, q, gate(orders, false), false))
+                Load.Done(withMargin(OrderPlan(title, null, orders, q, gate(orders, false), false)))
             } catch (x: Exception) { Load.Failed(x.message ?: "could not prepare the basket") }
         }
     }

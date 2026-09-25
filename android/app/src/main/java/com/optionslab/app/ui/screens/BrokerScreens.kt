@@ -280,6 +280,14 @@ private fun PlanCard(
                 modifier = Modifier.fillMaxWidth())
             plan.refusals.getOrNull(i)?.forEach { Text("✕ $it", style = Type.bodySmall.copy(color = p.oxblood)) }
         }
+        plan.margin?.let { m ->
+            Rule(Modifier.padding(vertical = 6.dp))
+            LedgerLine("Margin needed (with hedge benefit)", rs(m.required), if (m.short) p.oxblood else p.ink)
+            LedgerLine("Available", rs(m.available), if (m.short) p.oxblood else p.verdigris)
+            if (m.charges > 0) LedgerLine("Charges, estimated", rs(m.charges))
+            if (m.short) Text("✕ Short of margin by ${rs(m.required - m.available)}: not sendable.", style = Type.bodySmall.copy(color = p.oxblood))
+        }
+        plan.marginNote?.let { Note(it) }
         Spacer(Modifier.height(8.dp))
         if (plan.exit) Note("Closing orders only: each reduces what you hold, so the lot, value and daily-count caps do not block them. Before sending, the position is re-read; if it changed, nothing is sent." +
             if (plan.legs.size > 1) " Shorts are bought back first; a long is sold only after the short before it has filled." else "")

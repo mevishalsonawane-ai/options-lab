@@ -184,6 +184,23 @@ object Kite {
 
     private fun money(x: Double) = "%.2f".format(java.util.Locale.ROOT, x)
 
+    private fun jsonStr(t: String) = "\"" + t.replace("\\", "\\\\").replace("\"", "\\\"") + "\""
+
+    /**
+     * The JSON body of POST /margins/basket: what Zerodha would block for
+     * these orders together, spread and hedge benefit included.
+     */
+    fun basketJson(orders: List<Order>): String = orders.joinToString(",", "[", "]") { o ->
+        val f = linkedMapOf<String, String>(
+            "exchange" to jsonStr(o.exchange), "tradingsymbol" to jsonStr(o.tradingSymbol),
+            "transaction_type" to jsonStr(o.side.name), "variety" to jsonStr("regular"), "product" to jsonStr(o.product),
+            "order_type" to jsonStr(o.orderType), "quantity" to o.quantity.toString(),
+            "price" to if (o.hasPrice && o.price != null) money(o.price) else "0",
+            "trigger_price" to if (o.hasTrigger && o.triggerPrice != null) money(o.triggerPrice) else "0",
+        )
+        f.entries.joinToString(",", "{", "}") { (k, v) -> "${jsonStr(k)}:$v" }
+    }
+
     /** The form body of PUT /orders/{variety}/{id}: only what may change. */
     fun modifyBody(quantity: Int, orderType: String, price: Double?, triggerPrice: Double?): String = form(listOf(
         "quantity" to quantity.toString(), "order_type" to orderType,
