@@ -84,9 +84,22 @@ object Guard {
         return a.copy(holdings = h, ordersToday = a.ordersToday + 1)
     }
 
+    /**
+     * As the desktop's account_risk_service does: an entry refused for drawdown also
+     * turns the kill switch on, so nothing else opens until the owner clears it.
+     */
+    fun onRefusal(refusals: List<String>) {
+        if (refusals.none { it.startsWith("Drawdown limit") }) return
+        val s = AppSettings.load()
+        if (!s.guardKill) AppSettings.save(s.copy(guardKill = true))
+    }
+
     /** Refusals for [order] against [account] under the owner's limits; empty = it may go. */
-    fun check(order: AccountGuard.Order, account: AccountGuard.Account?, exit: Boolean = false): List<String> {
-        val limits = AppSettings.load().guardLimits()
+    fun check(order: AccountGuard.Order, account: AccountGuard.Account?, exit: Boolean = false, paper: Boolean = false): List<String> =
+        judge(order, account, exit, paper).also { if (!exit) onRefusal(it) }
+
+    private fun judge(order: AccountGuard.Order, account: AccountGuard.Account?, exit: Boolean, paper: Boolean): List<String> {
+        val limits = AppSettings.load().guardLimits(paper)
         val killed = listOf("The kill switch is on: no orders at all until it is cleared.")
         // An exit is only ever stopped by the kill switch, even when the account cannot be read.
         if (exit) return if (limits.killSwitch) killed else emptyList()

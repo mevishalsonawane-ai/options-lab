@@ -8,34 +8,34 @@ Source paths prefixed `NTA:` are in D:\New Trading app.
 
 ## Decision needed first
 
-- [ ] D1. Which app runs the ORB forward test from now on: laptop (NTA) or phone (IraAlgo)?
+- [x] D1. (decided 2026-09-25: phone) Which app runs the ORB forward test from now on: laptop (NTA) or phone (IraAlgo)?
       If IraAlgo: do A1-A4, then paper-trade both side by side for a few days before turning the laptop arms off.
 
 ## A. Port missing core functionality into IraAlgo (must precede arming anything)
 
-- [ ] A1. Port real ORB / ORB Fresh logic (09:15-10:00 range, breakout entry 10:05-14:25,
+- [x] A1. (done 2026-09-26 from `strategies/orb/`: engine `orb/OrbRules.kt`, `orb/Replay.kt` with PassRule + tests; app `data/OrbArms.kt` on the paper account, Home -> Strategies arm switches, approvals, day detail and forward-test tally; 15 s stop/target checks while in a trade) Port real ORB / ORB Fresh logic (09:15-10:00 range, breakout entry 10:05-14:25,
       one ATM strike all day, +40/-40 option points, resting stop, 15:10 exit, Rs 40 min premium, 1 lot).
       Source: `NTA:mobile/native/app/app/src/main/java/com/iraalgo/app/rules/OrbRules.kt`,
       `rules/Replay.kt`, `arms/ArmRunner.kt` + their parity tests; Python origin `NTA:services/ai_signals/orb_arm.py`.
-- [x] A2. (done: engine `risk/AccountGuard.kt` + tests, app `data/Guard.kt`, More -> Bot -> Bot settings) Port account-wide guard: kill switch, daily loss, drawdown (vs capital and vs persisted peak),
+- [x] A2. (aligned with the desktop 2026-09-26: rupee exposure per instrument Rs 2L, Rs 2L per order, cutoff 14:55, every order counts, a drawdown hit engages the kill switch, paper account limits 60 orders / Rs 6,000 / 30% as the desktop paper test) (done: engine `risk/AccountGuard.kt` + tests, app `data/Guard.kt`, More -> Bot -> Bot settings) Port account-wide guard: kill switch, daily loss, drawdown (vs capital and vs persisted peak),
       max concurrent positions, max trades/day, order value, symbol exposure, entry cutoff, naked short.
       Exits bypass all but the kill switch. Source: `NTA:.../rules/AccountGuard.kt` + `AccountGuardParityTest`
       (222 vectors from `NTA:mobile/native/make_vectors.py`); Python origin `NTA:services/risk/account_guard.py`.
 - [x] A3. (done: one bot button on Home's Strategies card - Stop for today / Start / Clear kill switch, each confirmed) Account-level Stop/Start arms for the day + kill-switch clear (confirm dialogs).
       Source: `NTA:blueprints/ai_signals_activity.py`, `NTA:frontend/src/components/trading/ArmsControl.tsx`.
-- [ ] A4. (interim block shipped: any strategy named ORB cannot be armed or started and shows 'BLOCKED - needs breakout rules'; replace with the real logic once A1 lands) Block or replace the imported ORB / ORB Fresh JSON strategies (`android/.../data/Strategies.kt:187-216`):
+- [x] A4. (done: imported ORB strategies stay blocked and are hidden from Home, replaced by the built-in arms of A1) Block or replace the imported ORB / ORB Fresh JSON strategies (`android/.../data/Strategies.kt:187-216`):
       they currently run as time-scheduled baskets with NO breakout check. DO NOT ARM until A1 lands.
 - [x] A5. (done: `data/ExpirySquareOff.kt` from the market watch, paper + live, keeps the Expiry Put to settlement by default; toggles in Bot settings) Expiry-day square-off at 15:05 for all products (NTA: `services/expiry_squareoff.py`);
       IraAlgo currently settles at expiry / squares MIS at 15:15.
 - [x] A6. (done: one set of limits in Bot settings; the Zerodha checks use them, the separate Zerodha caps are gone) Decide order limits: IraAlgo 4 orders/day + Rs 5L/order vs NTA guard limits.
 - [x] A7. (skipped by the owner's decision, 2026-09-25) Minute market snapshots (BANKNIFTY/NIFTY/SENSEX/VIX + near-ATM options, 09:15-15:30).
       Source: `NTA:services/market_data_collector.py` -> `db/market_snapshots.duckdb`.
-- [ ] A8. Evening ORB replay (15:35-15:40) beside paper results. Source: `NTA:services/ai_signals/orb_shadow.py`
-      (off on NTA; native app Task 8A never started). PARKED 2026-09-25: needs the New Trading app source
-      (the repo is not reachable from here) and the real ORB rules of A1.
-- [ ] A9. Verify sandbox charges/slippage parity with NTA (`NTA:sandbox/charges.py`, `sandbox/slippage.py`,
-      stop slippage 10 bps, spread fallback 5 bps). PARKED 2026-09-25: the NTA files to compare against are
-      not reachable from here.
+- [x] A8. Evening ORB replay (15:35-15:40) beside paper results. Source: `NTA:services/ai_signals/orb_shadow.py`
+      (off on NTA; native app Task 8A never started). Done 2026-09-26: `OrbArms.replayIfDue` after 15:35 (the 15:45
+      job and on opening the app), both arms on the day's 5-minute bars, shown in the ORB day detail; records up/down day for the pass rule.
+- [x] A9. Verify sandbox charges/slippage parity with NTA (`NTA:sandbox/charges.py`, `sandbox/slippage.py`,
+      stop slippage 10 bps, spread fallback 5 bps). Done 2026-09-26: `engine/sandbox/SandboxCosts.kt` (+ tests),
+      on for the phone's paper account; each paper trade keeps its charges.
 - [x] A10. Heartbeat / dead-man alert when the engine stops during market hours
       (incomplete on NTA too: `NTA:services/heartbeat_service.py`). Done on the phone: the market watch stamps
       a heartbeat each pass; an alarm checks it every 5 min from 09:17 to 15:30, restarts a watch silent for

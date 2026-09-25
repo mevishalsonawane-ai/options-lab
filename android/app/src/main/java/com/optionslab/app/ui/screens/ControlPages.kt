@@ -554,13 +554,24 @@ private fun GuardCard(model: AppModel) {
         val open = listOf(1, 2, 3, 5, 0)
         ParamTokens("Max open positions", open.map { (if (it == 0) "off" else "$it") to (it == s.guardMaxOpen) }) { i -> model.update { it.copy(guardMaxOpen = open[i]) } }
         val trades = listOf(5, 10, 20, 0)
-        ParamTokens("Max trades per day", trades.map { (if (it == 0) "off" else "$it") to (it == s.guardMaxTrades) }) { i -> model.update { it.copy(guardMaxTrades = trades[i]) } }
+        ParamTokens("Max orders per day (entries, stops and exits)", trades.map { (if (it == 0) "off" else "$it") to (it == s.guardMaxTrades) }) { i -> model.update { it.copy(guardMaxTrades = trades[i]) } }
         val value = listOf(100_000.0, 200_000.0, 500_000.0, 1_000_000.0, 0.0)
         ParamTokens("Max value per order", value.map { (if (it == 0.0) "off" else rupees(it)) to (it == s.guardMaxValue) }) { i -> model.update { it.copy(guardMaxValue = value[i]) } }
         val lots = listOf(1, 2, 5, 0)
         ParamTokens("Max lots per instrument", lots.map { (if (it == 0) "off" else "$it") to (it == s.guardMaxLots) }) { i -> model.update { it.copy(guardMaxLots = lots[i]) } }
-        val cut = listOf(14 * 60, 14 * 60 + 30, 15 * 60, -1)
+        val expo = listOf(100_000.0, 200_000.0, 500_000.0, 0.0)
+        ParamTokens("Max held in one instrument", expo.map { (if (it == 0.0) "off" else rupees(it)) to (it == s.guardMaxExposure) }) { i -> model.update { it.copy(guardMaxExposure = expo[i]) } }
+        val cut = listOf(14 * 60, 14 * 60 + 30, 14 * 60 + 55, 15 * 60, -1)
         ParamTokens("No new entries after", cut.map { (if (it < 0) "off" else "%02d:%02d".format(it / 60, it % 60)) to (it == s.guardCutoff) }) { i -> model.update { it.copy(guardCutoff = cut[i]) } }
+        Text("Paper account", style = Type.body.copy(color = p.ink, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold), modifier = Modifier.padding(top = 12.dp))
+        Note("The paper account keeps its own loss, drawdown and order-count limits, raised as on the desktop for the ORB forward test (every entry, resting stop and exit counts as an order). The limits above apply to Zerodha.")
+        val pLoss = listOf(2_000.0, 6_000.0, 10_000.0, 0.0)
+        ParamTokens("Paper daily loss limit", pLoss.map { (if (it == 0.0) "off" else rupees(it)) to (it == s.guardPaperDailyLoss) }) { i -> model.update { it.copy(guardPaperDailyLoss = pLoss[i]) } }
+        val pDd = listOf(10.0, 30.0, 0.0)
+        ParamTokens("Paper max drawdown", pDd.map { (if (it == 0.0) "off" else "${it.toInt()}%") to (it == s.guardPaperDrawdownPct) }) { i -> model.update { it.copy(guardPaperDrawdownPct = pDd[i]) } }
+        val pTrades = listOf(10, 30, 60, 0)
+        ParamTokens("Paper orders per day", pTrades.map { (if (it == 0) "off" else "$it") to (it == s.guardPaperTrades) }) { i -> model.update { it.copy(guardPaperTrades = pTrades[i]) } }
+        Note("Hitting the drawdown limit also turns the kill switch on, as the desktop does.")
         ToggleRow("Square off on expiry day at 15:05", "Closes every option position expiring today, paper and live, MIS and NRML", s.expirySquareOff) { on ->
             model.update { it.copy(expirySquareOff = on) }
         }

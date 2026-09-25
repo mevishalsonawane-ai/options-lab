@@ -296,6 +296,9 @@ object Strategies {
     /** Who placed each order this phone knows of: venue id ("paper:…", "kite:…") -> strategy label. */
     suspend fun owners(): Map<String, String> = lock.withLock { HashMap(book().owners) }
 
+    /** Label an order placed outside a strategy definition (the ORB arms), for the Orders and Trades lists. */
+    suspend fun tagOwner(key: String, label: String) = lock.withLock { val b = book(); b.owners[key] = label; save(b) }
+
     private fun paperExec(b: Book, def: StrategyDef, v: Venue) = object : StrategyHost.Executor {
         override fun place(order: Action.PlaceOrder): StrategyHost.Placed {
             val ref = v.refs[order.symbol] ?: return StrategyHost.Placed.Refused("${order.symbol} is not listed")
@@ -304,7 +307,7 @@ object Strategies {
             // The account-wide guard: entries must pass it; exits stop only at the kill switch.
             val snap = runCatching { runBlocking { Paper.snapshot() } }.getOrNull()
             val gOrder = Guard.paperOrder(pc, order.side.wire, order.quantity / ref.lot, snap?.positions?.positions?.firstOrNull { it.symbol == pc.symbol }?.ltp ?: 0.0)
-            Guard.check(gOrder, snap?.let { Guard.paperAccount(it) }, exit = order.kind != "entry").takeIf { it.isNotEmpty() }
+            Guard.check(gOrder, snap?.let { Guard.paperAccount(it) }, exit = order.kind != "entry", paper = true).takeIf { it.isNotEmpty() }
                 ?.let { return StrategyHost.Placed.Refused("account guard: " + it.joinToString(" ")) }
             val r = runBlocking { Paper.place(pc, order.side.wire, order.quantity / ref.lot, "MARKET", order.product, null, null) }
             if (!r.ok) return StrategyHost.Placed.Refused(r.message)
@@ -503,7 +506,7 @@ object Strategies {
      * the real ORB rules are ported (TODO A1) they can be kept and viewed, never armed or started.
      */
     fun needsBreakoutRules(def: StrategyDef): Boolean = Regex("(^|[^a-z])orb([^a-z]|$)").containsMatchIn(def.name.lowercase())
-    const val BREAKOUT_BLOCK = "ORB strategies wait for an opening-range breakout, which this phone does not check yet: as imported they would enter at the start time regardless. They stay blocked until the ORB rules are added."
+    const val BREAKOUT_BLOCK = "Imported ORB strategies are plain timed baskets with no opening-range breakout check: armed, they would enter at the start time whatever the market did. Use the built-in ORB and ORB Fresh arms on Home, which run the real rules."
 
     /** Whether an armed strategy places its entry by itself (true) or asks first (false). */
     suspend fun automatic(): Map<Long, Boolean> = lock.withLock { HashMap(book().autoApprove) }

@@ -69,4 +69,14 @@ class AccountGuardTest {
         assertEquals(110.0, AccountGuard.nextPeak(100.0, 110.0))
         assertEquals(110.0, AccountGuard.nextPeak(110.0, 90.0))
     }
+
+    @Test fun symbolExposureInRupees() {
+        val l = limits.copy(maxSymbolExposure = 200_000.0, maxOrderValue = 0.0, maxLotsPerSymbol = 0)
+        // 75 held + 75 more at 1,400 = Rs 2.1L over a Rs 2L cap; 1,300 = Rs 1.95L passes.
+        val held = calm.copy(holdings = listOf(AccountGuard.Holding("NIFTY24800CE", 75, 75, "NIFTY", exp, "CE")))
+        assertTrue(reasons(buyCe.copy(price = 1_400.0), held, l).any { "Exposure limit" in it })
+        assertTrue(reasons(buyCe.copy(price = 1_300.0), held, l).none { "Exposure limit" in it })
+        // Off by default in the engine.
+        assertTrue(reasons(buyCe.copy(price = 1_400.0), held, limits.copy(maxOrderValue = 0.0, maxLotsPerSymbol = 0)).none { "Exposure limit" in it })
+    }
 }

@@ -58,7 +58,10 @@ import java.util.Locale
 fun StrategyArmCard(model: AppModel, onManage: () -> Unit) {
     val p = LocalPalette.current
     val s by model.settings.collectAsState()
-    val list by model.strategies.collectAsState()
+    val all by model.strategies.collectAsState()
+    // Imported copies of ORB / ORB Fresh are plain timed baskets; the built-in arms above replace them (TODO A4).
+    val list = all.filter { !com.optionslab.app.data.Strategies.needsBreakoutRules(it.def) }
+    val replaced = all.size - list.size
     var importing by remember { mutableStateOf(false) }
     val auto by model.strategyAuto.collectAsState()
     val pending by model.strategyPending.collectAsState()
@@ -86,11 +89,11 @@ fun StrategyArmCard(model: AppModel, onManage: () -> Unit) {
             Text(botState, style = Type.bodySmall.copy(color = p.ink, fontWeight = FontWeight.SemiBold), modifier = Modifier.weight(1f))
             BrassButton(botAction, tone = botTone) { confirmBot = true }
         }
-        if (list.isEmpty()) {
-            Note("No strategies on this phone yet. Import ORB and ORB Fresh (or any strategy) from the desktop app, then arm the ones you want.",
-                Modifier.padding(top = 6.dp))
-        }
+        OrbRows(model)
+        if (replaced > 0) Note("$replaced imported ORB strateg${if (replaced == 1) "y is" else "ies are"} hidden here: the built-in ORB arms above run the real breakout rules. They stay in Trade → Strategies, blocked.",
+            Modifier.padding(bottom = 6.dp))
         list.forEachIndexed { i, e ->
+            if (i == 0) Rule()
             val d = e.def
             val sch = d.scheduler
             val armed = sch?.enabled == true
@@ -247,7 +250,8 @@ private fun BotDialog(model: AppModel, killOn: Boolean, stopped: Boolean, anyRun
                     killOn -> "Orders are allowed again, within your Bot settings limits. Armed strategies start at their times" +
                         if (stopped) " once the bot is started too." else "."
                     stopped -> "Armed strategies start at their scheduled times again today."
-                    else -> "No armed strategy starts for the rest of today and waiting approvals are dropped. Tomorrow the bot runs as usual."
+                    else -> "No armed strategy starts for the rest of today and waiting approvals are dropped. " +
+                        "Open ORB positions are closed now (as on the desktop). Tomorrow the bot runs as usual."
                 }, style = Type.bodySmall)
                 if (!killOn && !stopped && anyRunning) Row(Modifier.padding(top = 10.dp).clickable { alsoStop = !alsoStop }, verticalAlignment = Alignment.CenterVertically) {
                     androidx.compose.material3.Checkbox(alsoStop, { alsoStop = it })

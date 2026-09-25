@@ -31,6 +31,8 @@ object AccountGuard {
         val entryCutoffMinute: Int? = 14 * 60 + 30,
         /** Selling an option to open is refused unless a bought option of the same underlying, expiry and type is held. */
         val blockNakedShort: Boolean = true,
+        /** Rupees; 0 = off. What one instrument may be held at (|held| x price + this order), as the desktop's ACCOUNT_MAX_SYMBOL_EXPOSURE. */
+        val maxSymbolExposure: Double = 0.0,
     )
 
     /** One held instrument; [qty] is signed (short negative), in units. */
@@ -84,6 +86,11 @@ object AccountGuard {
             val after = held + if (o.side.equals("BUY", true)) o.qty else -o.qty
             val lots = abs(after).toDouble() / o.lot
             if (lots > l.maxLotsPerSymbol) out += "Exposure limit: ${o.symbol} would be %.0f lots (limit %d).".format(lots, l.maxLotsPerSymbol)
+        }
+        if (l.maxSymbolExposure > 0 && o.price > 0) {
+            val held = abs(a.holdings.filter { it.symbol == o.symbol }.sumOf { it.qty })
+            val exposure = (held + o.qty) * o.price
+            if (exposure > l.maxSymbolExposure) out += "Exposure limit: ${o.symbol} would be Rs %,.0f held (limit Rs %,.0f).".format(exposure, l.maxSymbolExposure)
         }
         l.entryCutoffMinute?.let { cut ->
             if (a.minuteOfDay >= cut) out += "No new entries after %02d:%02d.".format(cut / 60, cut % 60)

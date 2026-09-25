@@ -309,6 +309,7 @@ fun eraseEverything() {
     com.optionslab.app.data.Ledger.wipe()
     com.optionslab.app.data.Alarms.wipe()
     com.optionslab.app.data.Paper.wipe()
+    com.optionslab.app.data.OrbArms.wipe()
     com.optionslab.app.data.Strategies.wipe()
     com.optionslab.app.data.History.wipe()
     com.optionslab.app.data.Market.wipe()

@@ -245,6 +245,8 @@ object Tasks {
         // No notification: the result is shown in More → Data and harvest.
         SecurePrefs.put("harvest.last", "${Market.today()}: ${r.summary()}")
         if (s.healthAlerts) healthCheck(context, s)
+        // The ORB evening replay (TODO A8): the day's bars, beside what the paper arms did. No orders.
+        runCatching { com.optionslab.app.data.OrbArms.replayIfDue() }
     }
 
     fun healthCheck(context: Context, s: AppSettings) {
@@ -317,6 +319,8 @@ object Tasks {
         // Sandbox paper account: resting orders fill, MIS squares off at 15:15, expiries settle.
         // Paper account (also used by paper strategy runs in LIVE mode): resting orders fill, MIS squares off, expiries settle.
         runCatching { com.optionslab.app.data.Paper.tick() }.getOrNull()?.let { paperEvents(context, it) }
+        // The ORB paper arms: manage open positions, then decide on the last completed 5-minute bar.
+        runCatching { com.optionslab.app.data.OrbArms.tick() }
         // Expiry day, 15:05: close every option position expiring today (paper and live, all products).
         runCatching { com.optionslab.app.data.ExpirySquareOff.maybeRun(context, s) }
         // Strategy Module: schedules, prices, per-leg and basket risk, exits.
@@ -326,6 +330,8 @@ object Tasks {
         }
         return Tick(title, lines, progress)
     }
+
+    fun paperEventsPublic(context: Context, events: List<com.optionslab.engine.sandbox.SandboxEvent>) = paperEvents(context, events)
 
     private fun paperEvents(context: Context, events: List<com.optionslab.engine.sandbox.SandboxEvent>) {
         for (e in events) when (e) {
@@ -462,7 +468,17 @@ class WatchService : Service() {
             val t = Tasks.watchTick(this, s, fired)
             Tasks.publish(Tasks.LiveState(true, t.title, t.progress / 100f, System.currentTimeMillis()))
             show(t.title, t.lines.joinToString("\n").ifEmpty { "Waiting for prints" }, t.progress)
-            delay(60_000)
+            // While an ORB position is open its stop, target and 15:10 exit are checked every 15 s, not once a minute.
+            val next = System.currentTimeMillis() + 60_000
+            while (System.currentTimeMillis() < next) {
+                val holding = runCatching { com.optionslab.app.data.OrbArms.holding() }.getOrDefault(false)
+                delay(if (holding) 15_000 else next - System.currentTimeMillis())
+                if (holding) runCatching {
+                    com.optionslab.app.data.Paper.tick().let { Tasks.paperEventsPublic(this, it) }
+                    com.optionslab.app.data.OrbArms.priceCheckOnly()
+                }
+                Heartbeat.beat(this)
+            }
         }
     }
 

@@ -967,8 +967,23 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             runCatching { strategyAuto.value = st.automatic(); strategyPending.value = st.pending(); botStopped.value = st.stoppedToday() }
             strategies.value = st.all()
             strategyLog.value = st.log()
+            runCatching { com.optionslab.app.data.OrbArms.replayIfDue() }
+            runCatching { orb.value = com.optionslab.app.data.OrbArms.view() }
         }
     }
+
+    /** The ORB and ORB Fresh paper arms (TODO A1): state, arming and approvals. */
+    val orb = MutableStateFlow<com.optionslab.app.data.OrbArms.View?>(null)
+
+    /** Arming an ORB arm starts the market watch if it should be running, so the arm is actually checked. */
+    fun armOrb(source: String, on: Boolean, automatic: Boolean) = strategyDo {
+        val msg = com.optionslab.app.data.OrbArms.setArmed(source, on, automatic)
+        if (on) withContext(Dispatchers.Main) { Jobs.ensureWatch(ctx) }
+        msg
+    }
+
+    fun approveOrb(source: String) = strategyDo { com.optionslab.app.data.OrbArms.approve(source) }
+    fun skipOrb(source: String) = strategyDo { com.optionslab.app.data.OrbArms.skip(source) }
 
     private fun strategyDo(block: suspend () -> String?) {
         viewModelScope.launch(Dispatchers.IO) {
@@ -1246,7 +1261,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         val g = com.optionslab.app.data.Guard
         val snap = runCatching { com.optionslab.app.data.Paper.snapshot() }.getOrNull()
         val order = g.paperOrder(c, action, lots, price ?: snap?.positions?.positions?.firstOrNull { it.symbol == c.symbol }?.ltp ?: 0.0)
-        val refused = g.check(order, snap?.let { g.paperAccount(it) })
+        val refused = g.check(order, snap?.let { g.paperAccount(it) }, paper = true)
         if (refused.isNotEmpty()) return@paperDo com.optionslab.app.data.Paper.Result(false, "Not placed (account guard): " + refused.joinToString(" "), emptyList())
         val r = com.optionslab.app.data.Paper.place(c, action, lots, priceType, product, price, trigger)
         r.events.filterIsInstance<com.optionslab.engine.sandbox.SandboxEvent.Fill>()

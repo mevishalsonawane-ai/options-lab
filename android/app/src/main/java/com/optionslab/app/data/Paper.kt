@@ -114,6 +114,9 @@ object Paper {
             volume = bars.sumOf { it.volume })
     }
 
+    /** The contract's latest price from the paper feed, or null when there is none today. */
+    suspend fun lastPrice(c: Contract): Double? = runCatching { quote(c) }.getOrNull()?.ltp
+
     private suspend fun quotes(symbols: Collection<String>): Map<String, Quote> {
         val b = book()
         return symbols.distinct().mapNotNull { s ->
