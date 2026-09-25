@@ -1,5 +1,6 @@
 package com.optionslab.app.ui.screens
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -146,7 +147,7 @@ private fun PaperPositions(model: AppModel, v: Paper.Snapshot) {
         if (book.positions.isEmpty()) Note("No paper positions.")
         book.positions.forEach { ps ->
             Rule(Modifier.padding(vertical = 6.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.clickable { model.rowAction.value = RowTarget.PaperPosition(ps) }, verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text(ps.symbol, style = Type.figure.copy(color = p.ink, fontSize = 14.sp))
                     Text("${ps.product} · ${if (ps.quantity > 0) "LONG" else if (ps.quantity < 0) "SHORT" else "CLOSED"} ${kotlin.math.abs(ps.quantity)}" +
@@ -174,7 +175,8 @@ private fun PaperOrders(model: AppModel, v: Paper.Snapshot) {
         v.orders.orders.forEach { o ->
             Rule(Modifier.padding(vertical = 5.dp))
             val tone = when (o.status) { "complete" -> p.verdigris; "rejected", "cancelled" -> p.oxblood; else -> p.amber }
-            Text("${o.action} ${o.symbol} ×${o.quantity}", style = Type.figure.copy(color = if (o.action == "SELL") p.oxblood else p.verdigris, fontSize = 13.sp))
+            Text("${o.action} ${o.symbol} ×${o.quantity}", style = Type.figure.copy(color = if (o.action == "SELL") p.oxblood else p.verdigris, fontSize = 13.sp),
+                modifier = Modifier.fillMaxWidth().clickable { model.rowAction.value = RowTarget.PaperOrder(o) })
             Text("${o.product} · ${o.priceType}${if (o.price > 0) " ${px(o.price)}" else ""}${if (o.triggerPrice > 0) " trg ${px(o.triggerPrice)}" else ""} · ${o.timestamp.takeLast(8)}",
                 style = Type.figure.copy(color = p.inkSoft, fontSize = 11.sp))
             Text("${o.status.uppercase()}${if (o.filledQuantity > 0) " · ${o.filledQuantity} @ ${px(o.averagePrice)}" else ""}${if (o.rejectionReason.isNotBlank()) " · ${o.rejectionReason}" else ""}",
@@ -224,7 +226,7 @@ private fun PaperTrades(model: AppModel, v: Paper.Snapshot) {
         if (v.trades.isEmpty()) Note("No paper trades this session.")
         v.trades.forEachIndexed { i, t ->
             if (i > 0) Rule(Modifier.padding(vertical = 4.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.clickable { model.rowAction.value = RowTarget.PaperTrade(t) }, verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text("${t.action} ${t.symbol}", style = Type.figure.copy(color = if (t.action == "SELL") p.oxblood else p.verdigris, fontSize = 13.sp))
                     Text("${t.product} · ${t.timestamp.takeLast(8)}", style = Type.figure.copy(color = p.inkSoft, fontSize = 11.sp))

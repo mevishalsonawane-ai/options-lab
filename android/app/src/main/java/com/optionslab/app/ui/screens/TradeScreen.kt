@@ -1,5 +1,6 @@
 package com.optionslab.app.ui.screens
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -132,10 +133,10 @@ fun TradeScreen(model: AppModel) {
                 when (book) {
                     "positions" -> item { PositionsCard(model, v) { protecting = it } }
                     "orders" -> {
-                        item { OrdersCard(v, owners, onModify = { modifying = it }, onCancel = { cancelling = it }) }
+                        item { OrdersCard(v, owners, onTap = { model.rowAction.value = RowTarget.LiveOrder(it) }, onModify = { modifying = it }, onCancel = { cancelling = it }) }
                         item { GttCard(gtts) { gttDelete = it } }
                     }
-                    "trades" -> item { TradesCard(v, owners) }
+                    "trades" -> item { TradesCard(v, owners) { model.rowAction.value = RowTarget.LiveTrade(it) } }
                     "holdings" -> item { HoldingsCard(v, onProtect = { h -> protecting = GttTarget(h.exchange, h.symbol, "CNC", h.qty) }) { selling = it } }
                     else -> {
                         item { PnlCard(v, pnl) }
@@ -217,7 +218,7 @@ private fun PositionsCard(model: AppModel, a: Account, onProtect: (GttTarget) ->
         if (open.isEmpty()) Note("Nothing open.")
         open.forEach { ps ->
             Rule(Modifier.padding(vertical = 6.dp))
-            PositionRow(ps)
+            PositionRow(ps) { model.rowAction.value = RowTarget.LivePosition(ps) }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 4.dp)) {
                 BrassButton("Square off", tone = p.oxblood) { model.planSquareOff(ps) }
                 BrassButton("Protect (GTT)", tone = p.inkSoft) { onProtect(GttTarget(ps.exchange, ps.symbol, ps.product, ps.qty)) }
@@ -227,16 +228,17 @@ private fun PositionsCard(model: AppModel, a: Account, onProtect: (GttTarget) ->
         if (closed.isNotEmpty()) {
             Spacer(Modifier.height(10.dp))
             Text("CLOSED TODAY", style = Type.label.copy(color = p.inkSoft))
-            closed.forEach { ps -> LedgerLine("${ps.symbol} ${ps.product}", rs(ps.pnl, true), if (ps.pnl >= 0) p.verdigris else p.oxblood) }
+            closed.forEach { ps -> LedgerLine("${ps.symbol} ${ps.product}", rs(ps.pnl, true), if (ps.pnl >= 0) p.verdigris else p.oxblood,
+                Modifier.clickable { model.rowAction.value = RowTarget.LivePosition(ps) }) }
         }
         if (a.book.day.isNotEmpty()) Note("Day book: bought ${a.book.day.sumOf { it.buyQty }}, sold ${a.book.day.sumOf { it.sellQty }} across ${a.book.day.size} instruments today.")
     }
 }
 
 @Composable
-private fun PositionRow(ps: Broker.Position) {
+private fun PositionRow(ps: Broker.Position, onTap: () -> Unit) {
     val p = LocalPalette.current
-    Row(verticalAlignment = Alignment.CenterVertically) {
+    Row(Modifier.clickable(onClick = onTap), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
             Text("${ps.symbol}", style = Type.figure.copy(color = p.ink, fontSize = 14.sp))
             Text("${ps.exchange} · ${ps.product} · ${if (ps.qty > 0) "LONG" else "SHORT"} ${kotlin.math.abs(ps.qty)}" +
@@ -248,7 +250,7 @@ private fun PositionRow(ps: Broker.Position) {
 }
 
 @Composable
-private fun OrdersCard(a: Account, owners: Map<String, String>, onModify: (Broker.OrderRow) -> Unit, onCancel: (Broker.OrderRow) -> Unit) {
+private fun OrdersCard(a: Account, owners: Map<String, String>, onTap: (Broker.OrderRow) -> Unit, onModify: (Broker.OrderRow) -> Unit, onCancel: (Broker.OrderRow) -> Unit) {
     val p = LocalPalette.current
     val working = a.orders.filter { it.working }
     val done = a.orders.filter { !it.working }
@@ -256,7 +258,7 @@ private fun OrdersCard(a: Account, owners: Map<String, String>, onModify: (Broke
         if (a.orders.isEmpty()) Note("No orders today.")
         if (working.isNotEmpty()) Text("WORKING", style = Type.label.copy(color = p.amber))
         working.forEach { o ->
-            OrderLine(o, owners)
+            OrderLine(o, owners) { onTap(o) }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 4.dp, bottom = 6.dp)) {
                 BrassButton("Modify", tone = p.inkSoft) { onModify(o) }
                 BrassButton("Cancel", tone = p.oxblood) { onCancel(o) }
@@ -265,16 +267,16 @@ private fun OrdersCard(a: Account, owners: Map<String, String>, onModify: (Broke
         if (done.isNotEmpty()) {
             if (working.isNotEmpty()) Rule(Modifier.padding(vertical = 6.dp))
             Text("FINISHED", style = Type.label.copy(color = p.inkSoft))
-            done.forEach { OrderLine(it, owners) }
+            done.forEach { o -> OrderLine(o, owners) { onTap(o) } }
         }
     }
 }
 
 @Composable
-private fun OrderLine(o: Broker.OrderRow, owners: Map<String, String>) {
+private fun OrderLine(o: Broker.OrderRow, owners: Map<String, String>, onTap: () -> Unit) {
     val p = LocalPalette.current
     val tone = when (o.status) { "COMPLETE" -> p.verdigris; "REJECTED", "CANCELLED" -> p.oxblood; else -> p.amber }
-    Column(Modifier.padding(vertical = 3.dp)) {
+    Column(Modifier.fillMaxWidth().clickable(onClick = onTap).padding(vertical = 3.dp)) {
         Text("${o.side} ${o.symbol} ×${o.qty}", style = Type.figure.copy(color = if (o.side == "SELL") p.oxblood else p.verdigris, fontSize = 13.sp))
         Text("${o.exchange} · ${o.product} · ${o.type}${if (o.price > 0) " ${px(o.price)}" else ""}${if (o.trigger > 0) " trg ${px(o.trigger)}" else ""}" +
             " · ${o.placedAt.takeLast(8)}", style = Type.figure.copy(color = p.inkSoft, fontSize = 11.sp))
@@ -285,13 +287,13 @@ private fun OrderLine(o: Broker.OrderRow, owners: Map<String, String>) {
 }
 
 @Composable
-private fun TradesCard(a: Account, owners: Map<String, String>) {
+private fun TradesCard(a: Account, owners: Map<String, String>, onTap: (Broker.Trade) -> Unit) {
     val p = LocalPalette.current
     LedgerCard(title = "Trade book") {
         if (a.trades.isEmpty()) Note("No trades today.")
         a.trades.forEachIndexed { i, t ->
             if (i > 0) Rule(Modifier.padding(vertical = 4.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.clickable { onTap(t) }, verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text("${t.side} ${t.symbol}", style = Type.figure.copy(color = if (t.side == "SELL") p.oxblood else p.verdigris, fontSize = 13.sp))
                     Text("${t.exchange} · ${t.product} · ${t.at.takeLast(8)} · order …${t.orderId.takeLast(6)}", style = Type.figure.copy(color = p.inkSoft, fontSize = 11.sp))
@@ -394,7 +396,7 @@ private fun FundsBody(f: Broker.Funds) {
 
 /** Change a working order: quantity, type, price, trigger. Re-proves who you are first. */
 @Composable
-private fun ModifyDialog(model: AppModel, o: Broker.OrderRow, onClose: () -> Unit) {
+internal fun ModifyDialog(model: AppModel, o: Broker.OrderRow, onClose: () -> Unit) {
     val p = LocalPalette.current
     var qty by remember { mutableStateOf(o.qty.toString()) }
     var type by remember { mutableStateOf(o.type) }

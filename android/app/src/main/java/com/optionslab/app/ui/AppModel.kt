@@ -931,6 +931,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     val strategies = MutableStateFlow<List<com.optionslab.app.data.Strategies.Entry>>(emptyList())
     /** Venue order id ("paper:…", "kite:…") -> the strategy that placed it; absent means placed by hand. */
     val orderOwners = MutableStateFlow<Map<String, String>>(emptyMap())
+    /** The order / position / trade row whose action popup is open, on any page. */
+    val rowAction = MutableStateFlow<com.optionslab.app.ui.screens.RowTarget?>(null)
     /** Strategy id -> places its entry by itself (true) or asks (false). */
     val strategyAuto = MutableStateFlow<Map<Long, Boolean>>(emptyMap())
     /** Scheduled starts waiting for approval today: strategy id -> mode. */
