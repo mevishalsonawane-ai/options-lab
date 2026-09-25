@@ -209,11 +209,13 @@ object Protections {
         val c = Paper.contractOf(p.symbol) ?: return p
         val ltp = Paper.lastPrice(c) ?: return p
         val n = Protection.next(p.spec(), ltp)
-        if (n.stop != null && n.stop != p.stop && p.stopOrderId != null) {
-            val r = Paper.modify(p.stopOrderId, null, null, n.stop)
+        val ns = n.stop
+        val orderId = p.stopOrderId
+        if (ns != null && ns != p.stop && orderId != null) {
+            val r = Paper.modify(orderId, null, null, ns)
             if (!r.ok) return p.copy(best = n.best)
         }
-        return p.copy(best = n.best, stop = n.stop)
+        return p.copy(best = n.best, stop = ns)
     }
 
     private suspend fun tickLive(p: Item, kill: Boolean): Item {
@@ -235,10 +237,11 @@ object Protections {
         val key = "${p.exchange}:${p.symbol}"
         val ltp = Broker.quotes(listOf(key))[key]?.last ?: return p
         val n = Protection.next(p.spec(), ltp)
-        if (n.stop != null && n.stop != p.stop && abs(n.stop - (p.stop ?: 0.0)) >= p.tick - 1e-9) {
-            runCatching { Broker.modify(so, so.qty, "SL-M", null, n.stop) }.onFailure { return p.copy(best = n.best) }
+        val ns = n.stop   // a local: the engine's property cannot be smart-cast across modules
+        if (ns != null && ns != p.stop && abs(ns - (p.stop ?: 0.0)) >= p.tick - 1e-9) {
+            runCatching { Broker.modify(so, so.qty, "SL-M", null, ns) }.onFailure { return p.copy(best = n.best) }
         }
-        return p.copy(best = n.best, stop = n.stop)
+        return p.copy(best = n.best, stop = ns)
     }
 
     private fun Int.sign() = if (this > 0) 1 else if (this < 0) -1 else 0

@@ -647,6 +647,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                 livePositions.value = book.net
                 com.optionslab.app.data.KiteStream.want("positions", book.net.filter { it.qty != 0 }.map { it.token })
                 val trades = runCatching { b.trades() }.getOrDefault(emptyList())
+                runCatching { com.optionslab.app.data.TradeBook.recordLive(trades) }
                 // Today's Zerodha P&L for the calendar (Zerodha has no past days through its API).
                 if (book.net.isNotEmpty() || trades.isNotEmpty()) runCatching {
                     com.optionslab.app.data.DailyPnl.record(true, book.m2m, trades.size); pnlDays.value = pnlDays.value + 1

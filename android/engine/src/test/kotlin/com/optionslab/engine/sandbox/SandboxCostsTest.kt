@@ -34,4 +34,11 @@ class SandboxCostsTest {
         assertEquals(d("37.43"), SandboxCosts.charge("SELL", d("240"), 30))
         assertEquals(d("0.00"), SandboxCosts.charge("BUY", d("0"), 30))
     }
+
+    @Test fun breakdownAddsUpToTheCharge() {
+        val b = SandboxCosts.breakdown("SELL", 240.0, 30)
+        assertEquals(37.43, BigDecimal(b.values.sum()).setScale(2, java.math.RoundingMode.HALF_EVEN).toDouble())
+        assertEquals(10.8, b.getValue("STT"), 1e-9)
+        assertEquals(0.0, b.getValue("Stamp duty"), 1e-9)
+    }
 }

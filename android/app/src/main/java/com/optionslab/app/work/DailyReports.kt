@@ -121,7 +121,9 @@ object DailyReports {
         }
         if (Broker.loggedIn) runCatching {
             val book = Broker.positionBook()
-            val trades = runCatching { Broker.trades().size }.getOrDefault(0)
+            val all = runCatching { Broker.trades() }.getOrDefault(emptyList())
+            runCatching { com.optionslab.app.data.TradeBook.recordLive(all) }
+            val trades = all.size
             if (book.net.isNotEmpty() || trades > 0) {
                 total += book.m2m
                 lines += "Zerodha: ${rs(book.m2m)} · $trades trade${if (trades == 1) "" else "s"}"

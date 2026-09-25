@@ -71,10 +71,10 @@ Source paths prefixed `NTA:` are in D:\New Trading app.
 - [x] D7. (done: Options → Straddle: any call/put pair, combined premium, pair P&L) Straddle / strangle tracker: combined premium through the day and the pair's live P&L.
 - [ ] D8. Strategy presets ready to arm (short straddle, short strangle, iron fly, iron condor), each backtested on harvested sessions first.
 - [ ] D9. Replay mode: step through a past day candle by candle and paper-trade it.
-- [ ] D10. Trade journal: note and tags per trade; P&L by tag.
-- [ ] D11. P&L calendar: filter by strategy (ORB, manual, Expiry Put, …), year view, CSV export.
-- [ ] D12. Strategy comparison: each strategy's forward stats side by side.
-- [ ] D13. Charges report: brokerage, STT, exchange, SEBI, stamp and GST by month.
+- [x] D10. (done: trade popup → Journal; P&L tab → Journal card with P&L by tag) Trade journal: note and tags per trade; P&L by tag.
+- [x] D11. (done: strategy chips, Month/Year switch with 12 month tiles, Export CSV) P&L calendar: filter by strategy (ORB, manual, Expiry Put, …), year view, CSV export.
+- [x] D12. (done: P&L tab → Strategies compared: trips, win %, profit factor, net, avg, best/worst, drawdown, charges) Strategy comparison: each strategy's forward stats side by side.
+- [x] D13. (done: P&L tab → Charges by month, line by line; Zerodha estimated from recorded trades) Charges report: brokerage, STT, exchange, SEBI, stamp and GST by month.
 - [x] D14. (done: `work/DailyReports.kt`, 09:00 check + 09:10 login reminder, approval channel) Morning check 09:00 (Zerodha login, holidays, contracts, armed strategies) and a login reminder before the open.
 - [x] D15. (done: 15:45 day report, approval channel; opens the P&L tab) End-of-day report at 15:45: the day's P&L, trades, strategies and any problems.
 - [ ] D16. Encrypted backup and restore (PIN-sealed file; Zerodha credentials never included).

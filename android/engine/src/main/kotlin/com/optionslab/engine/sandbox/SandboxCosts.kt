@@ -41,6 +41,18 @@ object SandboxCosts {
             else -> price
         }
 
+    /** One leg's charges line by line (the charges report): brokerage, STT, exchange, SEBI, stamp, GST. */
+    fun breakdown(action: String, price: Double, quantity: Int): Map<String, Double> {
+        val value = price * kotlin.math.abs(quantity)
+        if (!(value > 0)) return emptyMap()
+        val buy = if (action.uppercase() == "BUY") value else 0.0
+        val sell = if (action.uppercase() == "BUY") 0.0 else value
+        val txn = (buy + sell) * 0.0003553
+        val sebi = (buy + sell) * (10.0 / 1_00_00_000)
+        return linkedMapOf("Brokerage" to 20.0, "STT" to sell * 0.0015, "Exchange" to txn, "SEBI" to sebi,
+            "Stamp duty" to buy * 0.00003, "GST" to (20.0 + txn + sebi) * 0.18)
+    }
+
     /** Total cost of one executed F&O leg in rupees, rounded half-even to paise (Python round). */
     fun charge(action: String, price: BigDecimal, quantity: Int, contractValue: BigDecimal = BigDecimal.ONE): BigDecimal {
         val value = price.toDouble() * kotlin.math.abs(quantity) * contractValue.toDouble()

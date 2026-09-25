@@ -11,6 +11,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import com.optionslab.app.ui.components.AlertDialog
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -67,6 +70,7 @@ fun RowActionPopup(model: AppModel) {
     var modify by remember { mutableStateOf<Broker.OrderRow?>(null) }
     var cancelAuth by remember { mutableStateOf<Broker.OrderRow?>(null) }
     var protectFor by remember { mutableStateOf<ProtectTarget?>(null) }
+    var journalFor by remember { mutableStateOf<Pair<String, String>?>(null) }
     val protections by model.protections.collectAsState()
     LaunchedEffect(t) { model.refreshProtections() }
     fun close() { model.rowAction.value = null }
@@ -138,6 +142,9 @@ fun RowActionPopup(model: AppModel) {
             lines += "Product · exchange" to "${r.product} · ${r.exchange}"
             lines += "Time" to r.timestamp.takeLast(8)
             lines += "Trade · order id" to "${r.tradeId} · ${r.orderId}"
+            val jKey = "paper:${r.tradeId}"
+            com.optionslab.app.data.Journal.of(jKey)?.let { e -> lines += "Journal" to (e.tags.joinToString() + if (e.note.isNotBlank()) " · ${e.note}" else "") }
+            button("Journal: note · tags") { journalFor = jKey to "${r.action} ${r.symbol}" }
             if (pos != null) {
                 pnl = (pos.ltp - r.price) * r.quantity * (if (r.action == "BUY") 1 else -1)
                 lines += "Last price (LTP)" to px(pos.ltp)
@@ -200,6 +207,9 @@ fun RowActionPopup(model: AppModel) {
             lines += "Product · exchange" to "${r.product} · ${r.exchange}"
             lines += "Time" to r.at.takeLast(8)
             lines += "Trade · order id" to "${r.id} · ${r.orderId}"
+            val jKey = "kite:${r.id}"
+            com.optionslab.app.data.Journal.of(jKey)?.let { e -> lines += "Journal" to (e.tags.joinToString() + if (e.note.isNotBlank()) " · ${e.note}" else "") }
+            button("Journal: note · tags") { journalFor = jKey to "${r.side} ${r.symbol}" }
             if (pos != null) {
                 pnl = (pos.last - r.price) * r.qty * (if (r.side == "BUY") 1 else -1)
                 lines += "Last price (LTP)" to px(pos.last)
@@ -209,7 +219,7 @@ fun RowActionPopup(model: AppModel) {
         }
     }
 
-    if (modify == null && cancelAuth == null && protectFor == null) AlertDialog(
+    if (modify == null && cancelAuth == null && protectFor == null && journalFor == null) AlertDialog(
         onDismissRequest = ::close,
         properties = DialogProperties(securePolicy = SecureFlagPolicy.SecureOn),
         title = { Text(title, style = Type.title) },
@@ -237,6 +247,7 @@ fun RowActionPopup(model: AppModel) {
     )
     modify?.let { o -> ModifyDialog(model, o) { modify = null; close() } }
     protectFor?.let { pt -> ProtectDialog(model, pt) { done -> protectFor = null; if (done) close() } }
+    journalFor?.let { (key, label) -> JournalDialog(key, label) { journalFor = null } }
     // Cancelling a working order (it may be a stop-loss) is proved like a send.
     cancelAuth?.let { o -> Reauth(model, onOk = { cancelAuth = null; model.cancelOrder(o.id, o.variety); close() }, onCancel = { cancelAuth = null }) }
 }
@@ -293,4 +304,39 @@ fun PriceField(v: String, set: (String) -> Unit, label: String) {
     androidx.compose.material3.OutlinedTextField(v, { set(it.filter { c -> c.isDigit() || c == '.' }.take(10)) }, label = { Text(label) }, singleLine = true,
         modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
         keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal))
+}
+
+
+/** A note and tags on one trade (setup, mistakes, mood); the P&L tab adds up what each tag makes. */
+@Composable
+fun JournalDialog(key: String, label: String, onClose: () -> Unit) {
+    val p = LocalPalette.current
+    val j = com.optionslab.app.data.Journal
+    val start = remember(key) { j.of(key) }
+    var note by remember(key) { mutableStateOf(start?.note.orEmpty()) }
+    var tags by remember(key) { mutableStateOf(start?.tags.orEmpty()) }
+    AlertDialog(
+        onDismissRequest = onClose,
+        properties = DialogProperties(securePolicy = SecureFlagPolicy.SecureOn),
+        title = { Text("Journal · $label", style = Type.title) },
+        text = {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
+                listOf("Setup" to j.SETUPS, "Mistakes" to j.MISTAKES, "Mood" to j.MOODS).forEach { (head, list) ->
+                    Text(head, style = Type.label.copy(color = p.inkSoft, fontSize = 11.sp), modifier = Modifier.padding(top = 8.dp))
+                    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        list.forEach { t ->
+                            val on = t in tags
+                            Text(t, style = Type.label.copy(color = if (on) p.paper else p.ink, fontSize = 11.sp),
+                                modifier = Modifier.padding(top = 4.dp).background(if (on) p.ink else p.chip, androidx.compose.foundation.shape.RoundedCornerShape(50))
+                                    .clickable { tags = if (on) tags - t else tags + t }.padding(horizontal = 10.dp, vertical = 5.dp))
+                        }
+                    }
+                }
+                androidx.compose.material3.OutlinedTextField(note, { note = it.take(500) }, label = { Text("Note") },
+                    modifier = Modifier.fillMaxWidth().padding(top = 10.dp))
+            }
+        },
+        confirmButton = { TextButton({ j.put(key, note, tags); com.optionslab.app.work.Alerts.success("Journal saved."); onClose() }) { Text("Save") } },
+        dismissButton = { TextButton(onClose) { Text("Cancel") } },
+    )
 }

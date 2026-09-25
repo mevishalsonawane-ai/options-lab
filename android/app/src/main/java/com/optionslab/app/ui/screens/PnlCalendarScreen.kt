@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
@@ -104,11 +105,25 @@ fun PnlCalendarScreen(model: AppModel) {
     val thisMonth = YearMonth.from(Market.today())
     var month by remember { mutableStateOf(thisMonth) }
     var picked by remember { mutableStateOf<LocalDate?>(null) }
+    // Which strategy's trips (All = the whole account), and month or year view.
+    var owner by remember { mutableStateOf("All") }
+    var yearView by remember { mutableStateOf(false) }
+    val owners by model.orderOwners.collectAsState()
+    LaunchedEffect(Unit) { model.refreshStrategies() }
+    val trips by produceState<List<com.optionslab.engine.RoundTrips.Trip>>(emptyList(), live, tick) {
+        value = withContext(Dispatchers.IO) { runCatching { com.optionslab.app.data.TradeBook.trips(live) }.getOrDefault(emptyList()) }
+    }
+    val ownerNames = remember(trips, owners) { trips.map { com.optionslab.app.data.TradeBook.ownerOf(it, owners) }.distinct().sorted() }
 
     // Keep today's figure fresh while the calendar is open.
     LaunchedEffect(live) { if (live) { if (com.optionslab.app.data.Broker.loggedIn) model.loadAccount(quiet = true) } else model.loadPaper(quiet = true) }
-    val all by produceState<Map<LocalDate, DailyPnl.Day>>(emptyMap(), live, tick) {
+    val accountDays by produceState<Map<LocalDate, DailyPnl.Day>>(emptyMap(), live, tick) {
         value = withContext(Dispatchers.IO) { runCatching { DailyPnl.all(live) }.getOrDefault(emptyMap()) }
+    }
+    // One strategy: its realised round trips by the day they closed.
+    val all = if (owner == "All") accountDays else remember(trips, owners, owner) {
+        trips.filter { com.optionslab.app.data.TradeBook.ownerOf(it, owners) == owner }.groupBy { it.day }
+            .mapValues { (d, ts) -> DailyPnl.Day(d, Math.round(ts.sumOf { it.net } * 100) / 100.0, ts.size) }
     }
     val first = all.keys.minOrNull()?.let { YearMonth.from(it) }
     // Today is shown live from the account as it stands now, not from the last recorded reading.
@@ -122,7 +137,7 @@ fun PnlCalendarScreen(model: AppModel) {
             if (sn.trades.isNotEmpty() || pnl != 0.0 || sn.positions.positions.any { it.quantity != 0 }) DailyPnl.Day(today, pnl, sn.trades.size) else null
         }
     val days = all.filterKeys { YearMonth.from(it) == month }.let { m ->
-        if (todayLive != null && YearMonth.from(today) == month) m + (today to todayLive) else m
+        if (owner == "All" && todayLive != null && YearMonth.from(today) == month) m + (today to todayLive) else m
     }
     // While today's figure is open, keep it live.
     LaunchedEffect(picked, live) {
@@ -132,6 +147,19 @@ fun PnlCalendarScreen(model: AppModel) {
         }
     }
     val prev = all.filterKeys { YearMonth.from(it) == month.minusMonths(1) }
+    // CSV export of every day shown (this account, this filter), to a file the owner picks.
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val csv = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.CreateDocument("text/csv")) { uri ->
+        if (uri != null) {
+            val rows = all.values.sortedBy { it.date }
+            val text = buildString {
+                append("date,account,strategy,pnl,trades\n")
+                rows.forEach { d -> append("${d.date},${if (live) "Zerodha" else "Paper"},${owner.replace(',', ' ')},${"%.2f".format(Locale.ENGLISH, d.pnl)},${d.trades}\n") }
+            }
+            val ok = runCatching { ctx.contentResolver.openOutputStream(uri)?.use { it.write(text.toByteArray(Charsets.UTF_8)) } }.isSuccess
+            if (ok) com.optionslab.app.work.Alerts.success("Exported ${rows.size} days.") else com.optionslab.app.work.Alerts.error("Could not write the file.")
+        }
+    }
 
     Page {
         item {
@@ -144,14 +172,24 @@ fun PnlCalendarScreen(model: AppModel) {
                         textAlign = TextAlign.Center, modifier = Modifier.width(78.dp))
                     NavArrow("›", month < thisMonth) { month = month.plusMonths(1); picked = null }
                 }
-                Headline(month, days, prev)
-                Spacer(Modifier.height(12.dp))
-                MonthGrid(month, days, picked, animKey = "$live|$month") { d -> picked = if (picked == d) null else d }
-                Legend()
+                FilterRow(ownerNames, owner, yearView, onOwner = { owner = it; picked = null }, onYear = { yearView = it; picked = null },
+                    onExport = { csv.launch("iraalgo-pnl-${if (live) "zerodha" else "paper"}-${month.year}.csv") })
+                if (yearView) {
+                    YearGrid(month.year, all, thisMonth) { m -> month = m; yearView = false }
+                } else {
+                    Headline(month, days, prev)
+                    Spacer(Modifier.height(12.dp))
+                    MonthGrid(month, days, picked, animKey = "$live|$month|$owner") { d -> picked = if (picked == d) null else d }
+                    Legend()
+                }
+                if (owner != "All") Note("$owner: realised round trips by the day they closed, after charges.", Modifier.padding(top = 6.dp))
             }
         }
         item { Summary(month, days) }
         item { YearStrip(month.year, all, live) }
+        item { StrategyComparison(trips, owners) }
+        item { ChargesCard(live, month, tick) }
+        item { JournalCard(trips) }
     }
 }
 
@@ -441,5 +479,131 @@ private fun YearStrip(year: Int, all: Map<LocalDate, DailyPnl.Day>, live: Boolea
             listOf("Jan", "Mar", "May", "Jul", "Sep", "Nov").forEach { Text(it, style = Type.label.copy(color = p.inkFaint, fontSize = 8.5.sp)) }
         }
         if (live) Note("Zerodha does not share past days' P&L with apps; this fills from the days IraAlgo recorded it.", Modifier.padding(top = 8.dp))
+    }
+}
+
+
+/** Strategy filter, month/year switch and CSV export. */
+@Composable
+private fun FilterRow(owners: List<String>, owner: String, yearView: Boolean, onOwner: (String) -> Unit, onYear: (Boolean) -> Unit, onExport: () -> Unit) {
+    val p = LocalPalette.current
+    Row(Modifier.fillMaxWidth().padding(top = 10.dp).horizontalScroll(androidx.compose.foundation.rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+        (listOf("All") + owners).forEach { o ->
+            val on = o == owner
+            Text(o, style = Type.label.copy(color = if (on) p.paper else p.ink, fontSize = 10.5.sp, fontWeight = FontWeight.SemiBold),
+                modifier = Modifier.clip(RoundedCornerShape(50)).background(if (on) p.ink else p.chip).clickable { onOwner(o) }.padding(horizontal = 10.dp, vertical = 5.dp))
+        }
+    }
+    Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Segmented(listOf("Month", "Year"), if (yearView) 1 else 0) { onYear(it == 1) }
+        Spacer(Modifier.weight(1f))
+        Text("Export CSV", style = Type.label.copy(color = p.ink, fontSize = 11.sp, fontWeight = FontWeight.SemiBold),
+            modifier = Modifier.clip(RoundedCornerShape(50)).clickable(onClick = onExport).padding(horizontal = 8.dp, vertical = 5.dp))
+    }
+}
+
+/** Twelve months as tiles, each shaded by its net; tap one to open it. */
+@Composable
+private fun YearGrid(year: Int, all: Map<LocalDate, DailyPnl.Day>, thisMonth: YearMonth, onPick: (YearMonth) -> Unit) {
+    val p = LocalPalette.current
+    val byMonth = (1..12).associateWith { m -> all.filterKeys { it.year == year && it.monthValue == m }.values }
+    val biggest = byMonth.values.maxOfOrNull { v -> abs(v.sumOf { it.pnl }) }?.takeIf { it > 0 } ?: 1.0
+    val total = byMonth.values.sumOf { v -> v.sumOf { it.pnl } }
+    Column(Modifier.padding(top = 12.dp)) {
+        Eyebrow("Net P&L · $year")
+        Text(rupees(total), style = Type.figure.copy(color = if (total >= 0) p.verdigris else p.oxblood, fontSize = 22.sp, fontWeight = FontWeight.SemiBold))
+        (1..12).chunked(4).forEach { row ->
+            Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                row.forEach { m ->
+                    val ym = YearMonth.of(year, m)
+                    val v = byMonth.getValue(m); val net = v.sumOf { it.pnl }
+                    val depth = if (v.isEmpty()) 0f else (0.22f + 0.78f * sqrt(abs(net) / biggest).toFloat()).coerceIn(0.22f, 1f)
+                    val bg = when { v.isEmpty() -> p.chip; net >= 0 -> lerp(p.chip, p.verdigris, depth); else -> lerp(p.chip, p.oxblood, depth) }
+                    val fg = if (depth > 0.55f) Color.White else p.ink
+                    Column(Modifier.weight(1f).clip(RoundedCornerShape(8.dp)).background(bg).clickable(enabled = ym <= thisMonth) { onPick(ym) }.padding(8.dp)) {
+                        Text(ym.month.getDisplayName(TextStyle.SHORT, Locale.ENGLISH), style = Type.label.copy(color = fg, fontSize = 10.sp, fontWeight = FontWeight.SemiBold))
+                        Text(if (v.isEmpty()) "–" else short(net), style = Type.figure.copy(color = fg, fontSize = 11.sp))
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** Each strategy's round trips side by side (net of charges). */
+@Composable
+private fun StrategyComparison(trips: List<com.optionslab.engine.RoundTrips.Trip>, owners: Map<String, String>) {
+    val p = LocalPalette.current
+    val groups = trips.groupBy { com.optionslab.app.data.TradeBook.ownerOf(it, owners) }.mapValues { com.optionslab.engine.RoundTrips.stats(it.value) }
+        .entries.sortedByDescending { it.value.net }
+    LedgerCard {
+        Eyebrow("Strategies compared · all time")
+        if (groups.isEmpty()) { Note("No completed trades yet.", Modifier.padding(top = 6.dp)); return@LedgerCard }
+        Row(Modifier.fillMaxWidth().padding(top = 8.dp)) {
+            listOf("Strategy" to 1.6f, "Trips" to 0.8f, "Win" to 0.8f, "PF" to 0.8f, "Net" to 1.2f).forEach { (h, w) ->
+                Text(h, style = Type.label.copy(color = p.inkSoft, fontSize = 9.5.sp), modifier = Modifier.weight(w), textAlign = if (h == "Strategy") TextAlign.Start else TextAlign.End)
+            }
+        }
+        groups.forEach { (name, st) ->
+            Row(Modifier.fillMaxWidth().padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(name, style = Type.bodySmall.copy(color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 12.sp), modifier = Modifier.weight(1.6f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text("${st.trips}", style = Type.figure.copy(fontSize = 11.sp), modifier = Modifier.weight(0.8f), textAlign = TextAlign.End)
+                Text("${Math.round(100 * st.winRate)}%", style = Type.figure.copy(fontSize = 11.sp), modifier = Modifier.weight(0.8f), textAlign = TextAlign.End)
+                Text(st.profitFactor?.let { String.format(Locale.ENGLISH, "%.2f", it) } ?: "∞", style = Type.figure.copy(fontSize = 11.sp), modifier = Modifier.weight(0.8f), textAlign = TextAlign.End)
+                Text(short(st.net), style = Type.figure.copy(fontSize = 11.sp, color = if (st.net >= 0) p.verdigris else p.oxblood, fontWeight = FontWeight.SemiBold),
+                    modifier = Modifier.weight(1.2f), textAlign = TextAlign.End)
+            }
+            Text("avg ${short(st.average)} · best ${short(st.best)} · worst ${short(st.worst)} · drawdown ${short(st.maxDrawdown)} · charges ${short(st.charges)}",
+                style = Type.label.copy(color = p.inkSoft, fontSize = 9.5.sp))
+        }
+    }
+}
+
+/** What the month's trades cost, line by line. */
+@Composable
+private fun ChargesCard(live: Boolean, month: YearMonth, tick: Int) {
+    val p = LocalPalette.current
+    val lines by produceState<Map<String, Double>>(emptyMap(), live, month, tick) {
+        value = withContext(Dispatchers.IO) { runCatching { com.optionslab.app.data.TradeBook.charges(live, month) }.getOrDefault(emptyMap()) }
+    }
+    LedgerCard {
+        Eyebrow("Charges · ${month.month.getDisplayName(TextStyle.FULL, Locale.ENGLISH)}")
+        if (lines.isEmpty()) { Note("No trades this month.", Modifier.padding(top = 6.dp)); return@LedgerCard }
+        val total = lines.values.sum()
+        Text(rupees(-total), style = Type.figure.copy(color = p.oxblood, fontSize = 20.sp, fontWeight = FontWeight.SemiBold), modifier = Modifier.padding(top = 4.dp))
+        lines.forEach { (k, v) ->
+            Row(Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
+                Text(k, style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp), modifier = Modifier.weight(1f))
+                Text(String.format(Locale.ENGLISH, "₹%,.2f", v), style = Type.figure.copy(fontSize = 12.sp))
+            }
+        }
+        Note(if (live) "Zerodha: estimated with the F&O schedule from the trades IraAlgo recorded; your contract note is the final word."
+            else "Paper: exactly what the paper account charged.", Modifier.padding(top = 6.dp))
+    }
+}
+
+/** P&L by journal tag, and the latest notes. */
+@Composable
+private fun JournalCard(trips: List<com.optionslab.engine.RoundTrips.Trip>) {
+    val p = LocalPalette.current
+    val stats = remember(trips) { com.optionslab.app.data.Journal.byTag(trips) }
+    val notes = remember(trips) { com.optionslab.app.data.Journal.all().values.filter { it.note.isNotBlank() }.sortedByDescending { it.at }.take(5) }
+    LedgerCard {
+        Eyebrow("Journal")
+        if (stats.isEmpty() && notes.isEmpty()) {
+            Note("Tap any trade (Trade tab or Home) and choose Journal to add a note and tags: setup, mistakes, mood. What each tag makes shows here.", Modifier.padding(top = 6.dp))
+            return@LedgerCard
+        }
+        stats.forEach { t ->
+            Row(Modifier.fillMaxWidth().padding(top = 5.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(t.tag, style = Type.bodySmall.copy(color = p.ink, fontSize = 12.sp, fontWeight = FontWeight.SemiBold), modifier = Modifier.weight(1f))
+                Text("${t.trips} trips · ${Math.round(100.0 * t.wins / t.trips.coerceAtLeast(1))}% won", style = Type.label.copy(color = p.inkSoft, fontSize = 10.sp))
+                Spacer(Modifier.width(10.dp))
+                Text(short(t.net), style = Type.figure.copy(fontSize = 12.sp, color = if (t.net >= 0) p.verdigris else p.oxblood, fontWeight = FontWeight.SemiBold))
+            }
+        }
+        if (notes.isNotEmpty()) Eyebrow("Latest notes", Modifier.padding(top = 10.dp))
+        notes.forEach { e -> Text("• " + e.note + if (e.tags.isNotEmpty()) "  [${e.tags.joinToString()}]" else "", style = Type.bodySmall.copy(color = p.ink, fontSize = 12.sp), modifier = Modifier.padding(top = 3.dp)) }
     }
 }
