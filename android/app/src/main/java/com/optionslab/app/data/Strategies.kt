@@ -124,7 +124,8 @@ object Strategies {
         val loaded = (b ?: Book(ArrayList(), HashMap(), ArrayList(), HashMap(), ArrayList(), 1, 1, null))
         // An ORB armed before the block existed is disarmed (TODO A4).
         loaded.defs.forEachIndexed { i, d ->
-            if (needsBreakoutRules(d) && d.scheduler?.enabled == true) loaded.defs[i] = d.copy(scheduler = d.scheduler.copy(enabled = false))
+            val sc = d.scheduler
+            if (needsBreakoutRules(d) && sc != null && sc.enabled) loaded.defs[i] = d.copy(scheduler = sc.copy(enabled = false))
         }
         return loaded.also { cache = it }
     }
