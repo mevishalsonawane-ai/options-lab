@@ -98,7 +98,7 @@ fun ToolsScreen(model: AppModel) {
             }
         }
     }
-    picked?.let { OptionOrderSheet(model, it) { picked = null } }
+    picked?.let { OptionChartPage(model, it) { picked = null } }
 }
 
 @Composable
@@ -168,7 +168,7 @@ private fun ChainCard(c: ChainSnapshot, onPick: (ChainPick) -> Unit) {
             Spacer(Modifier.height(8.dp))
             LedgerLine("Synthetic future (K + C − P)", "${f2(it.price)} · basis ${f2(it.basis)}")
         }
-        Note("Tap a call (CE) or put (PE) price to buy or sell it. Black-76 Greeks off the parity forward; Δ per 1 of underlying, IV in percent.")
+        Note("Tap a call (CE) or put (PE) price to open its chart. Black-76 Greeks off the parity forward; Δ per 1 of underlying, IV in percent.")
     }
 }
 

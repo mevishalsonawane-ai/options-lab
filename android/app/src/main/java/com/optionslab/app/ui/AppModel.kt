@@ -1118,6 +1118,23 @@ class AppModel(app: Application) : AndroidViewModel(app) {
 
     val paper = MutableStateFlow<Load<com.optionslab.app.data.Paper.Snapshot>>(Load.Idle)
 
+    /**
+     * Today's minute candles for one option contract, for the chain's price
+     * chart: from Zerodha in LIVE mode (logged in), else Upstox's public feed.
+     */
+    suspend fun optionIntraday(underlying: String, expiry: LocalDate, strike: Double, right: com.optionslab.engine.Right): List<com.optionslab.engine.Upstox.Bar> =
+        withContext(Dispatchers.IO) {
+            val b = com.optionslab.app.data.Broker
+            if (_settings.value.live && b.loggedIn) {
+                val ins = b.find(b.instruments(), underlying, expiry, strike, right) ?: error("that contract is not listed")
+                b.minuteBars(ins.token, Market.today())
+            } else {
+                val c = Market.contracts().firstOrNull { it.underlying == underlying && it.expiry == expiry && it.strike == strike && it.right == right }
+                    ?: error("that contract is not in the contract list")
+                com.optionslab.app.data.Net.intraday(c.instrumentKey).filter { it.istDate == Market.today() }
+            }
+        }
+
     /** BANKNIFTY daily closes for the Home chart (a year), read once a day; Zerodha in LIVE mode, else public candles. */
     val bankNiftyDaily = MutableStateFlow<List<Pair<LocalDate, Double>>>(emptyList())
     private var bankNiftyDay: LocalDate? = null
