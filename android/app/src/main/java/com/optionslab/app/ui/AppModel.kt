@@ -51,7 +51,7 @@ data class HealthResult(val source: String, val window: List<Monitor.Row>, val t
     val verdict: Monitor.Status get() = Monitor.verdict(checks)
 }
 
-data class BrokerState(val configured: Boolean, val loggedIn: Boolean, val user: String?, val expires: java.time.ZonedDateTime?, val maskedKey: String)
+data class BrokerState(val configured: Boolean, val linked: Boolean, val loggedIn: Boolean, val user: String?, val expires: java.time.ZonedDateTime?, val maskedKey: String)
 
 data class Account(
     val funds: com.optionslab.app.data.Broker.Funds?,
@@ -457,7 +457,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     val showKiteLogin = MutableStateFlow(false)
 
     private fun brokerState() = com.optionslab.app.data.Broker.let {
-        BrokerState(it.configured, it.loggedIn, it.userName, it.expiresAt(), it.maskedKey())
+        BrokerState(it.configured, it.linked, it.loggedIn, it.userName, it.expiresAt(), it.maskedKey())
     }
 
     fun refreshBroker() { viewModelScope.launch(Dispatchers.IO) { broker.value = brokerState() } }
@@ -503,6 +503,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             runCatching { com.optionslab.app.data.Broker.logout() }
             com.optionslab.app.data.Broker.forget()
             broker.value = brokerState(); account.value = Load.Idle
+            // Unlinked: nothing runs in the background any more.
+            Jobs.stopLive(ctx); Jobs.scheduleAll(ctx)
             say("Zerodha credentials erased from this phone.")
         }
     }
@@ -522,6 +524,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                     try {
                         val who = com.optionslab.app.data.Broker.completeLogin(r.requestToken, secret ?: error("the login was not unlocked with your PIN"))
                         broker.value = brokerState()
+                        // Linked now: the background jobs may run.
+                        Jobs.scheduleAll(ctx)
                         // Warm the instrument list: the live expiry calendar reads it.
                         runCatching { com.optionslab.app.data.Broker.instruments() }
                         say("Logged in to Zerodha as $who until 06:00 tomorrow.")

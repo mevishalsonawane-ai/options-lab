@@ -16,10 +16,13 @@ object PinLock {
     private const val FREE_ATTEMPTS = 5
     const val WIPE_AFTER = 10
     const val MIN_LENGTH = 6
+    /** New PINs are exactly this long, so the pad can unlock on the last digit. */
+    const val LENGTH = 6
 
     private const val K_SALT = "pin.salt"
     private const val K_HASH = "pin.hash"
     private const val K_ITER = "pin.iter"
+    private const val K_LEN = "pin.len"
     private const val K_FAILS = "pin.fails"
     private const val K_UNTIL = "pin.lockedUntilWall"
     private const val K_LOCK_SECS = "pin.lockSeconds"
@@ -48,11 +51,11 @@ object PinLock {
     private fun unhex(s: String) = ByteArray(s.length / 2) { s.substring(2 * it, 2 * it + 2).toInt(16).toByte() }
 
     fun setPin(pin: CharArray) {
-        require(pin.size >= MIN_LENGTH) { "PIN must be at least $MIN_LENGTH digits" }
+        require(pin.size == LENGTH) { "The PIN must be $LENGTH digits" }
         require(pin.distinct().size > 1) { "a PIN of one repeated digit is too easy to guess" }
         val salt = ByteArray(16).also { SecureRandom().nextBytes(it) }
         val hash = derive(pin, salt, ITERATIONS)
-        SecurePrefs.putAll(mapOf(K_SALT to hex(salt), K_HASH to hex(hash), K_ITER to ITERATIONS, K_FAILS to 0, K_UNTIL to null, K_LOCK_SECS to 0L))
+        SecurePrefs.putAll(mapOf(K_SALT to hex(salt), K_HASH to hex(hash), K_ITER to ITERATIONS, K_LEN to pin.size, K_FAILS to 0, K_UNTIL to null, K_LOCK_SECS to 0L))
         pin.fill('\u0000')
     }
 
@@ -71,7 +74,11 @@ object PinLock {
         return if (left > 0) left else 0
     }
 
+    /** The PIN's length, when known (older PINs learn it on their next unlock). */
+    fun length(): Int? = SecurePrefs.getInt(K_LEN, 0).takeIf { it > 0 }
+
     fun verify(pin: CharArray, wipeOnExhaustion: Boolean): Result {
+        val size = pin.size
         val wait = lockoutSecondsLeft()
         if (wait > 0) { pin.fill('\u0000'); return Result.LockedOut(wait) }
         val salt = SecurePrefs.getString(K_SALT)?.let(::unhex)
@@ -80,7 +87,7 @@ object PinLock {
         val got = derive(pin, salt, SecurePrefs.getInt(K_ITER, ITERATIONS))
         pin.fill('\u0000')
         if (MessageDigest.isEqual(got, want)) {
-            SecurePrefs.putAll(mapOf(K_FAILS to 0, K_UNTIL to null, K_LOCK_SECS to 0L))
+            SecurePrefs.putAll(mapOf(K_FAILS to 0, K_UNTIL to null, K_LOCK_SECS to 0L, K_LEN to size))
             return Result.Ok
         }
         val fails = SecurePrefs.getInt(K_FAILS, 0) + 1

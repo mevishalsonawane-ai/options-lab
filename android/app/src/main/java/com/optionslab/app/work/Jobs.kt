@@ -69,7 +69,8 @@ object Jobs {
 
     const val EXTRA_KIND = "kind"
 
-    fun enabled(k: Kind, s: AppSettings) = when (k) {
+    /** Nothing runs in the background until a Zerodha account is linked. */
+    fun enabled(k: Kind, s: AppSettings) = com.optionslab.app.data.Broker.linked && when (k) {
         Kind.LIVE -> s.liveWatch
         Kind.REMIND -> s.entryReminder
         Kind.TICKET -> s.autoTicket || (s.prepareRealOrder && com.optionslab.app.data.Broker.configured)
@@ -117,6 +118,7 @@ object Jobs {
 
     /** Start work in the foreground service; from the UI this is always allowed. */
     fun start(context: Context, k: Kind, manual: Boolean = true) {
+        if (!com.optionslab.app.data.Broker.linked) return
         val i = Intent(context, WatchService::class.java).putExtra(EXTRA_KIND, k.name).putExtra("manual", manual)
         try {
             ContextCompat.startForegroundService(context, i)
@@ -392,6 +394,7 @@ class WatchService : Service() {
         if (k == Jobs.Kind.LIVE) watching = true   // show() then declares the specialUse type
         show("IraAlgo", "Starting…")
         if (intent?.action == STOP) { stopEverything(); return START_NOT_STICKY }
+        if (!com.optionslab.app.data.Broker.linked) { stopEverything(); return START_NOT_STICKY }
         if (k == null) { maybeStop(); return START_NOT_STICKY }
         if (running[k]?.isActive == true) return START_NOT_STICKY
         running[k] = scope.launch {

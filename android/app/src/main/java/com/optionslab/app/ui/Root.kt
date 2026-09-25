@@ -126,19 +126,22 @@ fun Root(activity: MainActivity) {
             RefusedScreen(findings.filter { it.severity == Integrity.Severity.DANGER }.map { "${it.name}: ${it.detail}" }) { activity.finishAndRemoveTask() }
             return@IraAlgoTheme
         }
+        val brokerNow by model.broker.collectAsState()
         AnimatedContent(
             targetState = locked || !PinLock.isSet,
             transitionSpec = { fadeIn(tween(220, delayMillis = 60)) togetherWith fadeOut(tween(160)) },
             label = "seal",
         ) { sealed ->
             // Biometrics are offered only once the device check has run (a report is never empty).
-            if (sealed) Gate(activity, settings, compromised, checked = findings.isNotEmpty()) else Main(model)
+            if (sealed) Gate(activity, model, settings, compromised, checked = findings.isNotEmpty())
+            else if (!brokerNow.linked) ConnectGate(model)
+            else Main(model)
         }
     }
 }
 
 @Composable
-private fun Gate(activity: MainActivity, settings: AppSettings, compromised: Boolean, checked: Boolean) {
+private fun Gate(activity: MainActivity, model: AppModel, settings: AppSettings, compromised: Boolean, checked: Boolean) {
     val setup = !PinLock.isSet
     var notice by remember { mutableStateOf<String?>(if (compromised) "This device shows signs of compromise; biometrics are withdrawn and the PIN is required." else null) }
     val kind = remember { BiometricGate.available(activity) }
@@ -175,6 +178,11 @@ private fun Gate(activity: MainActivity, settings: AppSettings, compromised: Boo
         onCreate = { pin ->
             try {
                 PinLock.setPin(pin)
+                // Fingerprint / face on from the start when the phone has it; it can be turned off in More -> Security.
+                if (kind != BiometricGate.Kind.NONE && !compromised) {
+                    val ok = kind != BiometricGate.Kind.STRONG || runCatching { BiometricGate.enrol() }.isSuccess
+                    if (ok) model.update { it.copy(biometric = true, allowWeakFace = kind == BiometricGate.Kind.WEAK || it.allowWeakFace) }
+                }
                 SessionLock.unlock()
                 null
             } catch (e: IllegalArgumentException) {
@@ -238,7 +246,7 @@ private fun Main(model: AppModel) {
     val kiteLogin by model.showKiteLogin.collectAsState()
     // Trading (the Ticket and Trade tabs, live or paper) appears only once a Zerodha account is linked.
     val broker by model.broker.collectAsState()
-    val linked = broker.configured
+    val linked = broker.linked
     val tabs = if (linked) Tab.entries else Tab.entries.filter { it != Tab.TICKET && it != Tab.TRADE }
     LaunchedEffect(linked) {
         if (!linked && tab !in tabs) tab = Tab.ALMANAC
@@ -311,6 +319,21 @@ private fun Main(model: AppModel) {
         com.optionslab.app.ui.screens.OrderReviewDialog(model)
         if (kiteLogin) com.optionslab.app.ui.screens.KiteLoginPage(model)
         val askPin by model.askLoginPin.collectAsState()
+        if (askPin) com.optionslab.app.ui.screens.LoginPinDialog(model)
+    }
+}
+
+/** Until a Zerodha account is linked the app shows only this: no tabs, no close. */
+@Composable
+private fun ConnectGate(model: AppModel) {
+    val message by model.message.collectAsState()
+    val kiteLogin by model.showKiteLogin.collectAsState()
+    val askPin by model.askLoginPin.collectAsState()
+    LaunchedEffect(Unit) { model.refreshBroker() }
+    Box(Modifier.fillMaxSize()) {
+        com.optionslab.app.ui.screens.ConnectZerodhaScreen(model)
+        Toast(message) { model.message.value = null }
+        if (kiteLogin) com.optionslab.app.ui.screens.KiteLoginPage(model)
         if (askPin) com.optionslab.app.ui.screens.LoginPinDialog(model)
     }
 }

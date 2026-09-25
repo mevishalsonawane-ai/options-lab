@@ -70,6 +70,9 @@ object Broker {
     val userName: String? get() = SecurePrefs.getString(K_USER)
     val userId: String? get() = SecurePrefs.getString(K_UID)
 
+    /** Linked: keys saved and at least one Zerodha login completed. The app opens only once linked. */
+    val linked: Boolean get() = configured && !SecurePrefs.getString(K_UID).isNullOrBlank()
+
     /** Only the last four characters of the key, for recognising it. */
     fun maskedKey(): String = apiKey?.let { "••••" + it.takeLast(4) } ?: "not set"
 

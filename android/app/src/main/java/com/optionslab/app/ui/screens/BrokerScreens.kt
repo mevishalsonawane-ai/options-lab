@@ -14,6 +14,8 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.border
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -25,6 +27,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -65,6 +68,7 @@ import com.optionslab.app.ui.Load
 import com.optionslab.app.ui.OrderPlan
 import com.optionslab.app.ui.Page
 import com.optionslab.app.ui.components.BrassButton
+import com.optionslab.app.ui.components.BrandLogo
 import com.optionslab.app.ui.components.FullSpinner
 import com.optionslab.app.ui.components.LedgerCard
 import com.optionslab.app.ui.components.LedgerLine
@@ -464,6 +468,41 @@ fun BrokerPage(model: AppModel) {
         confirmButton = { TextButton({ forgetting = false; model.forgetBroker() }) { Text("Erase") } },
         dismissButton = { TextButton({ forgetting = false }) { Text("Keep") } },
     )
+}
+
+/**
+ * Shown after unlock until a Zerodha account is linked: the app has no other
+ * way in and no close button. Step 1 saves the Kite app's key and secret;
+ * step 2 logs in once, which links the account and opens the app.
+ */
+@Composable
+fun ConnectZerodhaScreen(model: AppModel) {
+    val p = LocalPalette.current
+    val b by model.broker.collectAsState()
+    Box(Modifier.fillMaxSize().background(p.paper).statusBarsPadding().navigationBarsPadding(), contentAlignment = Alignment.Center) {
+        Column(
+            Modifier.fillMaxWidth().padding(16.dp)
+                .background(p.card, RoundedCornerShape(20.dp)).border(1.dp, p.rule, RoundedCornerShape(20.dp))
+                .verticalScroll(rememberScrollState()).padding(20.dp),
+        ) {
+            BrandLogo()
+            Spacer(Modifier.height(18.dp))
+            Text("Connect to Zerodha", style = Type.masthead.copy(color = p.ink, fontSize = 22.sp))
+            Text("IraAlgo works with your Zerodha account. Link it once to open the app.", style = Type.bodySmall.copy(color = p.inkSoft))
+            Spacer(Modifier.height(12.dp))
+            if (!b.configured) CredentialsForm(model) { }
+            else {
+                Text("Keys saved ✓", style = Type.body.copy(color = p.verdigris, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold))
+                Spacer(Modifier.height(6.dp))
+                Text("3. Log in to Zerodha", style = Type.body.copy(color = p.ink, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold))
+                Note("Sign in with your Zerodha ID, password and TOTP. Your account is linked as soon as the login finishes.")
+                Spacer(Modifier.height(10.dp))
+                BrassButton("Log in to Zerodha", Modifier.fillMaxWidth()) { model.startKiteLogin() }
+                Spacer(Modifier.height(6.dp))
+                BrassButton("Change keys", Modifier.fillMaxWidth(), tone = p.inkSoft) { model.forgetBroker() }
+            }
+        }
+    }
 }
 
 @Composable

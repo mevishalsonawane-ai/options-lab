@@ -337,7 +337,7 @@ fun SecurityPage(model: AppModel) {
                 Column {
                     OutlinedTextField(cur, { cur = it.filter(Char::isDigit).take(12) }, label = { Text("Current PIN") }, singleLine = true,
                         visualTransformation = PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword))
-                    OutlinedTextField(next, { next = it.filter(Char::isDigit).take(12) }, label = { Text("New PIN (${PinLock.MIN_LENGTH}+ digits)") }, singleLine = true,
+                    OutlinedTextField(next, { next = it.filter(Char::isDigit).take(PinLock.LENGTH) }, label = { Text("New PIN (${PinLock.LENGTH} digits)") }, singleLine = true,
                         visualTransformation = PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword))
                     err?.let { Text(it, style = Type.italic.copy(color = p.oxblood)) }
                 }
