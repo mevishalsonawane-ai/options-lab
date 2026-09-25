@@ -1,5 +1,6 @@
 package com.optionslab.app.ui.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -65,6 +66,7 @@ fun ToolsScreen(model: AppModel) {
     val source by model.toolsSource.collectAsState()
     var underlying by rememberSaveable { mutableStateOf("NIFTY") }
     var view by rememberSaveable { mutableStateOf("chain") }
+    var picked by remember { mutableStateOf<ChainPick?>(null) }
     LaunchedEffect(underlying, s.live) { model.loadTools(underlying) }
     Page {
         item { PageTitle("Options", "Option chain analytics and the strategy builder") }
@@ -91,11 +93,12 @@ fun ToolsScreen(model: AppModel) {
                     "gex" -> item { GexCard(c) }
                     "move" -> item { MoveCard(c) }
                     "builder" -> item { Column { BuilderCard(model, c, s.live) } }
-                    else -> item { ChainCard(c) }
+                    else -> item { ChainCard(c) { picked = it } }
                 }
             }
         }
     }
+    picked?.let { OptionOrderSheet(model, it) { picked = null } }
 }
 
 @Composable
@@ -129,7 +132,7 @@ private fun Stat(label: String, value: String) {
 }
 
 @Composable
-private fun ChainCard(c: ChainSnapshot) {
+private fun ChainCard(c: ChainSnapshot, onPick: (ChainPick) -> Unit) {
     val p = LocalPalette.current
     LedgerCard(title = "Option chain") {
         Row {
@@ -149,10 +152,14 @@ private fun ChainCard(c: ChainSnapshot) {
                 val peTone = if (!itmCall) p.ink else p.inkSoft
                 Text(ce?.let { f2(it.delta) } ?: "—", style = cell.copy(color = ceTone), textAlign = TextAlign.Center, modifier = Modifier.weight(1f))
                 Text(ce?.let { f1(it.ivPct) } ?: "—", style = cell.copy(color = ceTone), textAlign = TextAlign.Center, modifier = Modifier.weight(1f))
-                Text(r.ce?.let { f2(it.ltp) } ?: "—", style = cell.copy(color = p.verdigris), textAlign = TextAlign.Center, modifier = Modifier.weight(1f))
+                val pickCe = { onPick(ChainPick(c.underlying, c.expiry, r.strike, com.optionslab.engine.Right.CE, r.ce?.ltp, ce?.delta, ce?.ivPct, c.lotSize)) }
+                val pickPe = { onPick(ChainPick(c.underlying, c.expiry, r.strike, com.optionslab.engine.Right.PE, r.pe?.ltp, pe?.delta, pe?.ivPct, c.lotSize)) }
+                Text(r.ce?.let { f2(it.ltp) } ?: "—", style = cell.copy(color = p.verdigris, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold), textAlign = TextAlign.Center,
+                    modifier = Modifier.weight(1f).background(p.verdigris.copy(alpha = 0.08f), androidx.compose.foundation.shape.RoundedCornerShape(6.dp)).clickable(enabled = r.ce != null, onClick = pickCe).padding(vertical = 5.dp))
                 Text(fmtG(r.strike), style = cell.copy(color = if (atm) p.gold else p.ink, fontSize = if (atm) 13.sp else 12.sp),
                     textAlign = TextAlign.Center, modifier = Modifier.weight(1.25f))
-                Text(r.pe?.let { f2(it.ltp) } ?: "—", style = cell.copy(color = p.oxblood), textAlign = TextAlign.Center, modifier = Modifier.weight(1f))
+                Text(r.pe?.let { f2(it.ltp) } ?: "—", style = cell.copy(color = p.oxblood, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold), textAlign = TextAlign.Center,
+                    modifier = Modifier.weight(1f).background(p.oxblood.copy(alpha = 0.08f), androidx.compose.foundation.shape.RoundedCornerShape(6.dp)).clickable(enabled = r.pe != null, onClick = pickPe).padding(vertical = 5.dp))
                 Text(pe?.let { f1(it.ivPct) } ?: "—", style = cell.copy(color = peTone), textAlign = TextAlign.Center, modifier = Modifier.weight(1f))
                 Text(pe?.let { f2(it.delta) } ?: "—", style = cell.copy(color = peTone), textAlign = TextAlign.Center, modifier = Modifier.weight(1f))
             }
@@ -161,7 +168,7 @@ private fun ChainCard(c: ChainSnapshot) {
             Spacer(Modifier.height(8.dp))
             LedgerLine("Synthetic future (K + C − P)", "${f2(it.price)} · basis ${f2(it.basis)}")
         }
-        Note("Black-76 Greeks off the parity forward, as IraAlgo computes them. Δ per 1 of underlying, IV in percent.")
+        Note("Tap a call (CE) or put (PE) price to buy or sell it. Black-76 Greeks off the parity forward; Δ per 1 of underlying, IV in percent.")
     }
 }
 

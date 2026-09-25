@@ -32,6 +32,12 @@ class MainActivity : FragmentActivity() {
         setContent { Root(this) }
     }
 
+    /** Every touch counts as activity for the idle lock. */
+    override fun dispatchTouchEvent(ev: android.view.MotionEvent): Boolean {
+        com.optionslab.app.security.SessionLock.touch()
+        return super.dispatchTouchEvent(ev)
+    }
+
     override fun onNewIntent(intent: android.content.Intent) {
         super.onNewIntent(intent)
         setIntent(intent)

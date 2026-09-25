@@ -40,7 +40,8 @@ data class AppSettings(
     // security
     val biometric: Boolean = false,
     val allowWeakFace: Boolean = false,
-    val graceSeconds: Int = 0,
+    /** Lock after this long without use (in the app or away from it). */
+    val idleSeconds: Int = 300,
     val refuseCompromised: Boolean = false,
     val wipeOnExhaustion: Boolean = false,
     val hideAmountsOnLockScreen: Boolean = true,
@@ -99,7 +100,7 @@ data class AppSettings(
                 widgetPnl = p.getBoolean("ui.widgetPnl", d.widgetPnl),
                 biometric = p.getBoolean("sec.bio", d.biometric),
                 allowWeakFace = p.getBoolean("sec.face", d.allowWeakFace),
-                graceSeconds = p.getInt("lock.graceSeconds", d.graceSeconds),
+                idleSeconds = p.getInt("lock.idleSeconds", d.idleSeconds),
                 refuseCompromised = p.getBoolean("sec.refuse", d.refuseCompromised),
                 wipeOnExhaustion = p.getBoolean("sec.wipe", d.wipeOnExhaustion),
                 hideAmountsOnLockScreen = p.getBoolean("sec.hideAmounts", d.hideAmountsOnLockScreen),
@@ -124,7 +125,7 @@ data class AppSettings(
                 "n.entry" to s.entryReminder, "n.autoTicket" to s.autoTicket, "n.autoSettle" to s.autoSettle,
                 "n.harvest" to s.nightlyHarvest, "n.live" to s.liveWatch, "n.risk" to s.riskAlertPct,
                 "n.health" to s.healthAlerts, "sec.bio" to s.biometric, "sec.face" to s.allowWeakFace,
-                "lock.graceSeconds" to s.graceSeconds, "sec.refuse" to s.refuseCompromised,
+                "lock.idleSeconds" to s.idleSeconds, "sec.refuse" to s.refuseCompromised,
                 "sec.wipe" to s.wipeOnExhaustion, "sec.hideAmounts" to s.hideAmountsOnLockScreen,
                 "ui.theme" to s.theme, "ui.calm" to s.reduceMotion, "ui.widgetPnl" to s.widgetPnl,
                 "n.pnlLoss" to s.pnlLossAlert, "n.pnlProfit" to s.pnlProfitAlert,

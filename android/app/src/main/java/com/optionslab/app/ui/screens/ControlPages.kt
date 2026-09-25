@@ -296,9 +296,9 @@ fun SecurityPage(model: AppModel) {
                     model.update { it.copy(biometric = on && kind != BiometricGate.Kind.NONE, allowWeakFace = if (kind == BiometricGate.Kind.WEAK) on else it.allowWeakFace) }
                 }
                 if (kind == BiometricGate.Kind.STRONG) ToggleRow("Also accept weak face unlock", "Convenience only - not a cryptographic gate", s.allowWeakFace) { on -> model.update { it.copy(allowWeakFace = on) } }
-                val graces = listOf(0, 30, 60, 300)
-                ParamTokens("Lock after leaving the app", graces.map { (if (it == 0) "at once" else if (it < 60) "${it}s" else "${it / 60} min") to (it == s.graceSeconds) }) { i ->
-                    model.update { it.copy(graceSeconds = graces[i]) }
+                val idles = listOf(60, 120, 300, 600, 900)
+                ParamTokens("Lock after idle for", idles.map { "${it / 60} min" to (it == s.idleSeconds) }) { i ->
+                    model.update { it.copy(idleSeconds = idles[i]) }
                 }
                 ToggleRow("Erase after ${PinLock.WIPE_AFTER} wrong PINs", "Destroys the encryption key; all app data becomes unreadable", s.wipeOnExhaustion) { on -> model.update { it.copy(wipeOnExhaustion = on) } }
                 ToggleRow("Hide figures on the lock screen", "Notifications show only \"Unlock to read\" while the phone is locked", s.hideAmountsOnLockScreen) { on -> model.update { it.copy(hideAmountsOnLockScreen = on) } }

@@ -127,6 +127,8 @@ fun Root(activity: MainActivity) {
             return@IraAlgoTheme
         }
         val brokerNow by model.broker.collectAsState()
+        // The idle lock: checked every few seconds while the session is open.
+        LaunchedEffect(locked) { while (!locked) { delay(5_000); SessionLock.checkIdle() } }
         // Battery: checked on every start; the app stays closed until it is unrestricted.
         val appCtx = androidx.compose.ui.platform.LocalContext.current
         var batteryOk by remember(locked) { mutableStateOf(com.optionslab.app.ui.screens.BatteryCheck.unrestricted(appCtx)) }

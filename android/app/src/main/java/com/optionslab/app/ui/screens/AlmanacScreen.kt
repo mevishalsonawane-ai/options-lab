@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -124,6 +125,29 @@ fun AlmanacScreen(model: AppModel, onGo: (String) -> Unit) {
     }
 
     Page {
+        // ---- the money: capital first and largest --------------------------------------
+        item {
+            val cap = money.capital
+            val usedShare = if (cap != null && cap > 0) ((money.used ?: 0.0) / cap).toFloat().coerceIn(0f, 1f) else 0f
+            LedgerCard {
+                Text("Capital", style = Type.label.copy(color = p.inkSoft, fontSize = 13.sp))
+                Text(cap?.let { inr(it) } ?: "—", style = Type.figureHuge.copy(color = p.ink, fontSize = 38.sp), maxLines = 1)
+                if (cap != null && cap > 0) {
+                    Row(Modifier.fillMaxWidth().padding(top = 10.dp).height(8.dp).background(p.chip, RoundedCornerShape(50))) {
+                        if (usedShare > 0f) Spacer(Modifier.weight(usedShare).fillMaxHeight().background(p.ink, RoundedCornerShape(50)))
+                        if (usedShare < 1f) Spacer(Modifier.weight(1f - usedShare))
+                    }
+                }
+                Row(Modifier.padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    MoneyFigure("Unused", money.unused?.let { inr(it) }, null, Modifier.weight(1f))
+                    MoneyFigure("Used", money.used?.let { inr(it) }, null, Modifier.weight(1f))
+                    MoneyFigure("P&L today", money.pnlToday?.let { inr(it, true) }, money.pnlToday?.let { if (it >= 0) p.verdigris else p.oxblood }, Modifier.weight(1f))
+                }
+                if (moneyNote != null) Note(moneyNote, Modifier.padding(top = 8.dp))
+                else if (cap != null && cap > 0) Text("${Math.round(100 * usedShare)}% of capital in use", style = Type.bodySmall.copy(color = p.inkSoft), modifier = Modifier.padding(top = 8.dp))
+            }
+        }
+
         // ---- BANKNIFTY ------------------------------------------------------------------
         item {
             val q = quotes["BANKNIFTY"]
@@ -169,20 +193,6 @@ fun AlmanacScreen(model: AppModel, onGo: (String) -> Unit) {
             }
         }
 
-        // ---- the money --------------------------------------------------------------------
-        item {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                MoneyTile("P&L today", money.pnlToday?.let { inr(it, true) }, money.pnlToday?.let { if (it >= 0) p.verdigris else p.oxblood }, Modifier.weight(1f))
-                MoneyTile("Unused", money.unused?.let { inr(it) }, null, Modifier.weight(1f))
-                MoneyTile("Used", money.used?.let { inr(it) }, null, Modifier.weight(1f))
-            }
-            val cap = money.capital
-            Text(
-                moneyNote ?: if (cap != null && cap > 0) "Capital ${inr(cap)} · ${Math.round(100 * (money.used ?: 0.0) / cap)}% in use" else " ",
-                style = Type.bodySmall.copy(color = p.inkSoft), modifier = Modifier.padding(start = 2.dp, top = 8.dp),
-            )
-        }
-
         // ---- live orders -----------------------------------------------------------------
         item {
             LedgerCard {
@@ -213,9 +223,9 @@ fun AlmanacScreen(model: AppModel, onGo: (String) -> Unit) {
 private data class ChartSpec(val values: List<Double>, val reference: Double?, val slots: Int, val labels: List<Pair<Int, String>>)
 
 @Composable
-private fun MoneyTile(label: String, value: String?, color: Color?, modifier: Modifier) {
+private fun MoneyFigure(label: String, value: String?, color: Color?, modifier: Modifier) {
     val p = LocalPalette.current
-    LedgerCard(modifier) {
+    Column(modifier) {
         Text(label, style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp), maxLines = 1)
         Spacer(Modifier.height(2.dp))
         Text(value ?: "—", style = Type.figure.copy(color = color ?: p.ink, fontSize = 15.sp, fontWeight = FontWeight.Bold), maxLines = 1)
