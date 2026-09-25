@@ -119,6 +119,15 @@ object Jobs {
     /** Start work in the foreground service; from the UI this is always allowed. */
     fun start(context: Context, k: Kind, manual: Boolean = true) {
         if (!com.optionslab.app.data.Broker.linked) return
+        // The harvest runs quietly in WorkManager: no foreground notification, no "complete" notice.
+        if (k == Kind.HARVEST) {
+            val req = OneTimeWorkRequestBuilder<FallbackWorker>()
+                .setInputData(workDataOf(EXTRA_KIND to k.name, "manual" to manual))
+                .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
+                .build()
+            WorkManager.getInstance(context).enqueueUniqueWork("job.${k.name}", ExistingWorkPolicy.KEEP, req)
+            return
+        }
         val i = Intent(context, WatchService::class.java).putExtra(EXTRA_KIND, k.name).putExtra("manual", manual)
         try {
             ContextCompat.startForegroundService(context, i)
@@ -231,8 +240,8 @@ object Tasks {
     suspend fun harvest(context: Context, s: AppSettings, onProgress: (String, Float) -> Unit) {
         if (Holidays.stale(Market.today())) runCatching { Holidays.refresh() }
         val r = Harvester.run(onProgress = { p -> onProgress(p.stage, if (p.total > 0) p.done.toFloat() / p.total else -1f) })
+        // No notification: the result is shown in More → Data and harvest.
         SecurePrefs.put("harvest.last", "${Market.today()}: ${r.summary()}")
-        Notifier.post(context, Notifier.ID_HARVEST, Notifier.SCHEDULE, "Harvest complete", r.summary(), "cabinet")
         if (s.healthAlerts) healthCheck(context, s)
     }
 
@@ -486,7 +495,12 @@ class FallbackWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(c
             when (k) {
                 Jobs.Kind.TICKET -> Tasks.ticket(applicationContext, s)
                 Jobs.Kind.SETTLE -> Tasks.settle(applicationContext, s)
-                Jobs.Kind.HARVEST -> Tasks.harvest(applicationContext, s) { _, _ -> }
+                Jobs.Kind.HARVEST -> try {
+                    Tasks.harvest(applicationContext, s) { stage, p -> Tasks.publish(Tasks.LiveState(true, stage, p, System.currentTimeMillis())) }
+                } catch (e: Exception) {
+                    SecurePrefs.put("harvest.last", "${Market.today()}: did not complete (${e.message})")
+                    throw e
+                } finally { Tasks.publish(Tasks.LiveState(false)) }
                 Jobs.Kind.REMIND -> Tasks.remind(applicationContext, s)
                 Jobs.Kind.LIVE -> Unit
             }

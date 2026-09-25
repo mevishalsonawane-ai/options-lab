@@ -15,6 +15,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -78,7 +79,7 @@ fun LazyListScope.paperTrade(model: AppModel, snap: Load<Paper.Snapshot>, book: 
             if (!v.priced) item { LedgerCard(accent = LocalPalette.current.amber) { Note("No fresh prices from Upstox just now; resting orders wait and positions show their last mark.") } }
             when (book) {
                 "orders" -> item { PaperOrders(model, v) }
-                "trades" -> item { PaperTrades(v) }
+                "trades" -> item { PaperTrades(model, v) }
                 "funds" -> item { PaperFunds(v, onReset) }
                 else -> item { PaperPositions(model, v) }
             }
@@ -164,6 +165,7 @@ private fun PaperPositions(model: AppModel, v: Paper.Snapshot) {
 private fun PaperOrders(model: AppModel, v: Paper.Snapshot) {
     val p = LocalPalette.current
     var editing by remember { mutableStateOf<com.optionslab.engine.sandbox.OrderRow?>(null) }
+    val owners by model.orderOwners.collectAsState()
     val st = v.orders.statistics
     LedgerCard(title = "Paper order book") {
         LedgerLine("Buy / sell", "${st.totalBuyOrders} / ${st.totalSellOrders}")
@@ -177,6 +179,7 @@ private fun PaperOrders(model: AppModel, v: Paper.Snapshot) {
                 style = Type.figure.copy(color = p.inkSoft, fontSize = 11.sp))
             Text("${o.status.uppercase()}${if (o.filledQuantity > 0) " · ${o.filledQuantity} @ ${px(o.averagePrice)}" else ""}${if (o.rejectionReason.isNotBlank()) " · ${o.rejectionReason}" else ""}",
                 style = Type.figure.copy(color = tone, fontSize = 11.sp))
+            OrderSourcePill(owners, "paper:${o.orderId}")
             if (o.status == "open" || o.status == "trigger pending") Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 TextButton({ editing = o }) { Text("Modify", style = Type.label.copy(color = p.inkSoft)) }
                 TextButton({ model.paperCancel(o.orderId) }) { Text("Cancel", style = Type.label.copy(color = p.oxblood)) }
@@ -214,8 +217,9 @@ private fun PaperOrders(model: AppModel, v: Paper.Snapshot) {
 }
 
 @Composable
-private fun PaperTrades(v: Paper.Snapshot) {
+private fun PaperTrades(model: AppModel, v: Paper.Snapshot) {
     val p = LocalPalette.current
+    val owners by model.orderOwners.collectAsState()
     LedgerCard(title = "Paper trade book") {
         if (v.trades.isEmpty()) Note("No paper trades this session.")
         v.trades.forEachIndexed { i, t ->
@@ -224,6 +228,7 @@ private fun PaperTrades(v: Paper.Snapshot) {
                 Column(Modifier.weight(1f)) {
                     Text("${t.action} ${t.symbol}", style = Type.figure.copy(color = if (t.action == "SELL") p.oxblood else p.verdigris, fontSize = 13.sp))
                     Text("${t.product} · ${t.timestamp.takeLast(8)}", style = Type.figure.copy(color = p.inkSoft, fontSize = 11.sp))
+                    OrderSourcePill(owners, "paper:${t.orderId}")
                 }
                 Text("${t.quantity} @ ${px(t.price)}", style = Type.figure.copy(color = p.ink, fontSize = 13.sp))
             }

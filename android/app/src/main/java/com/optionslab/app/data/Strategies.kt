@@ -80,6 +80,8 @@ object Strategies {
         var nextRunId: Long,
         var nextStrategyId: Long,
         var lastCheck: Long?,
+        /** Venue order id ("paper:…", "kite:…") -> "strategy name · purpose", so books can say who placed it. */
+        val owners: LinkedHashMap<String, String> = LinkedHashMap(),
     )
 
     private var cache: Book? = null
@@ -99,7 +101,9 @@ object Strategies {
             val log = o.getJSONArray("log").let { a ->
                 (0 until a.length()).map { a.getJSONArray(it) }.map { LogLine(it.getLong(0), it.getString(1), it.getString(2), it.getString(3), it.getString(4)) }
             }.toMutableList()
-            Book(defs, runs, history, ids, log, o.getLong("nextRunId"), o.getLong("nextStrategyId"), o.optLong("lastCheck", 0).takeIf { it > 0 })
+            val owners = LinkedHashMap<String, String>()
+            o.optJSONObject("owners")?.let { m -> m.keys().forEach { k -> owners[k] = m.getString(k) } }
+            Book(defs, runs, history, ids, log, o.getLong("nextRunId"), o.getLong("nextStrategyId"), o.optLong("lastCheck", 0).takeIf { it > 0 }, owners)
         }.getOrNull()
         if (b == null && file.exists()) {
             Vault.setAside(file)
@@ -118,6 +122,8 @@ object Strategies {
         o.put("log", JSONArray().apply { b.log.takeLast(300).forEach { put(JSONArray().put(it.at).put(it.strategy).put(it.kind).put(it.message).put(it.severity)) } })
         o.put("nextRunId", b.nextRunId).put("nextStrategyId", b.nextStrategyId)
         b.lastCheck?.let { o.put("lastCheck", it) }
+        while (b.owners.size > 3000) b.owners.remove(b.owners.keys.first())
+        o.put("owners", JSONObject().apply { b.owners.forEach { (k, v) -> put(k, v) } })
         Vault.writeFile(file, o.toString().toByteArray(Charsets.UTF_8))
         cache = b
     }
@@ -261,6 +267,13 @@ object Strategies {
             "$name: ${e.kind.replace('_', ' ')}", e.message, "strategy")
     }
 
+    /** "ORB · entry", "ORB Fresh · exit": the strategy and why the order was sent. */
+    private fun ownerLabel(def: StrategyDef, order: Action.PlaceOrder): String =
+        "${def.name} · leg ${order.legId} ${order.kind.replace('_', ' ')}"
+
+    /** Who placed each order this phone knows of: venue id ("paper:…", "kite:…") -> strategy label. */
+    suspend fun owners(): Map<String, String> = lock.withLock { HashMap(book().owners) }
+
     private fun paperExec(b: Book, def: StrategyDef, v: Venue) = object : StrategyHost.Executor {
         override fun place(order: Action.PlaceOrder): StrategyHost.Placed {
             val ref = v.refs[order.symbol] ?: return StrategyHost.Placed.Refused("${order.symbol} is not listed")
@@ -269,6 +282,7 @@ object Strategies {
             val r = runBlocking { Paper.place(pc, order.side.wire, order.quantity / ref.lot, "MARKET", order.product, null, null) }
             if (!r.ok) return StrategyHost.Placed.Refused(r.message)
             val id = r.orderId ?: return StrategyHost.Placed.Refused("paper order not recorded")
+            b.owners["paper:$id"] = ownerLabel(def, order)
             val fill = r.events.filterIsInstance<com.optionslab.engine.sandbox.SandboxEvent.Fill>().firstOrNull()
             return if (fill != null) StrategyHost.Placed.Accepted("paper:$id", "complete", fill.quantity, fill.price)
             else StrategyHost.Placed.Accepted("paper:$id", "open", 0, null)
@@ -317,6 +331,7 @@ object Strategies {
                     runCatching { Broker.findRecent(o, known().map { it.removePrefix("kite:") }) }.getOrNull()
                         ?: return@runBlocking StrategyHost.Placed.Refused("${e.message}; no matching order found at Zerodha")
                 }
+                b.owners["kite:$id"] = ownerLabel(def, order)
                 // From here the order exists at Zerodha: never report it as refused. An unknown
                 // state is polled on the next tick.
                 val f = runCatching { Broker.awaitOrder(id, 12_000) }.getOrNull()

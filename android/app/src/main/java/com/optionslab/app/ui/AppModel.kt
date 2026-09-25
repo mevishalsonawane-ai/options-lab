@@ -555,6 +555,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                 val b = com.optionslab.app.data.Broker
                 val book = b.positionBook()
                 runCatching { b.gtts() }.onSuccess { gtts.value = it }
+                runCatching { orderOwners.value = com.optionslab.app.data.Strategies.owners() }
                 trackPnl(book)
                 livePositions.value = book.net
                 Load.Done(Account(runCatching { b.funds() }.getOrNull(), book, b.orders(),
@@ -927,6 +928,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     // ---- the strategy module ------------------------------------------------------------------
 
     val strategies = MutableStateFlow<List<com.optionslab.app.data.Strategies.Entry>>(emptyList())
+    /** Venue order id ("paper:…", "kite:…") -> the strategy that placed it; absent means placed by hand. */
+    val orderOwners = MutableStateFlow<Map<String, String>>(emptyMap())
     val strategyLog = MutableStateFlow<List<com.optionslab.app.data.Strategies.LogLine>>(emptyList())
 
     /**
@@ -943,6 +946,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch(Dispatchers.IO) {
             val st = com.optionslab.app.data.Strategies
             if (tick) runCatching { st.tickAll(compromisedFresh(60_000)) }
+            runCatching { orderOwners.value = st.owners() }
             strategies.value = st.all()
             strategyLog.value = st.log()
         }
@@ -1171,6 +1175,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch(Dispatchers.IO) {
             paper.value = try {
                 runCatching { com.optionslab.app.data.Paper.tick() }
+                runCatching { orderOwners.value = com.optionslab.app.data.Strategies.owners() }
                 Load.Done(com.optionslab.app.data.Paper.snapshot())
             } catch (e: Exception) { Load.Failed(e.message ?: "could not read the paper account") }
         }

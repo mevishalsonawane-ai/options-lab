@@ -66,6 +66,7 @@ fun TradeScreen(model: AppModel) {
     val b by model.broker.collectAsState()
     val acct by model.account.collectAsState()
     val pnl by model.pnlSeries.collectAsState()
+    val owners by model.orderOwners.collectAsState()
     var book by rememberSaveable { mutableStateOf("positions") }
     var modifying by remember { mutableStateOf<Broker.OrderRow?>(null) }
     var cancelling by remember { mutableStateOf<Broker.OrderRow?>(null) }
@@ -131,10 +132,10 @@ fun TradeScreen(model: AppModel) {
                 when (book) {
                     "positions" -> item { PositionsCard(model, v) { protecting = it } }
                     "orders" -> {
-                        item { OrdersCard(v, onModify = { modifying = it }, onCancel = { cancelling = it }) }
+                        item { OrdersCard(v, owners, onModify = { modifying = it }, onCancel = { cancelling = it }) }
                         item { GttCard(gtts) { gttDelete = it } }
                     }
-                    "trades" -> item { TradesCard(v) }
+                    "trades" -> item { TradesCard(v, owners) }
                     "holdings" -> item { HoldingsCard(v, onProtect = { h -> protecting = GttTarget(h.exchange, h.symbol, "CNC", h.qty) }) { selling = it } }
                     else -> {
                         item { PnlCard(v, pnl) }
@@ -247,7 +248,7 @@ private fun PositionRow(ps: Broker.Position) {
 }
 
 @Composable
-private fun OrdersCard(a: Account, onModify: (Broker.OrderRow) -> Unit, onCancel: (Broker.OrderRow) -> Unit) {
+private fun OrdersCard(a: Account, owners: Map<String, String>, onModify: (Broker.OrderRow) -> Unit, onCancel: (Broker.OrderRow) -> Unit) {
     val p = LocalPalette.current
     val working = a.orders.filter { it.working }
     val done = a.orders.filter { !it.working }
@@ -255,7 +256,7 @@ private fun OrdersCard(a: Account, onModify: (Broker.OrderRow) -> Unit, onCancel
         if (a.orders.isEmpty()) Note("No orders today.")
         if (working.isNotEmpty()) Text("WORKING", style = Type.label.copy(color = p.amber))
         working.forEach { o ->
-            OrderLine(o)
+            OrderLine(o, owners)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 4.dp, bottom = 6.dp)) {
                 BrassButton("Modify", tone = p.inkSoft) { onModify(o) }
                 BrassButton("Cancel", tone = p.oxblood) { onCancel(o) }
@@ -264,13 +265,13 @@ private fun OrdersCard(a: Account, onModify: (Broker.OrderRow) -> Unit, onCancel
         if (done.isNotEmpty()) {
             if (working.isNotEmpty()) Rule(Modifier.padding(vertical = 6.dp))
             Text("FINISHED", style = Type.label.copy(color = p.inkSoft))
-            done.forEach { OrderLine(it) }
+            done.forEach { OrderLine(it, owners) }
         }
     }
 }
 
 @Composable
-private fun OrderLine(o: Broker.OrderRow) {
+private fun OrderLine(o: Broker.OrderRow, owners: Map<String, String>) {
     val p = LocalPalette.current
     val tone = when (o.status) { "COMPLETE" -> p.verdigris; "REJECTED", "CANCELLED" -> p.oxblood; else -> p.amber }
     Column(Modifier.padding(vertical = 3.dp)) {
@@ -279,11 +280,12 @@ private fun OrderLine(o: Broker.OrderRow) {
             " · ${o.placedAt.takeLast(8)}", style = Type.figure.copy(color = p.inkSoft, fontSize = 11.sp))
         Text("${o.status} · filled ${o.filled}${if (o.filled > 0) " @ ${px(o.avg)}" else ""}${if (o.message.isNotBlank()) " · ${o.message}" else ""}",
             style = Type.figure.copy(color = tone, fontSize = 11.sp))
+        OrderSourcePill(owners, "kite:${o.id}", o.tag)
     }
 }
 
 @Composable
-private fun TradesCard(a: Account) {
+private fun TradesCard(a: Account, owners: Map<String, String>) {
     val p = LocalPalette.current
     LedgerCard(title = "Trade book") {
         if (a.trades.isEmpty()) Note("No trades today.")
@@ -293,6 +295,7 @@ private fun TradesCard(a: Account) {
                 Column(Modifier.weight(1f)) {
                     Text("${t.side} ${t.symbol}", style = Type.figure.copy(color = if (t.side == "SELL") p.oxblood else p.verdigris, fontSize = 13.sp))
                     Text("${t.exchange} · ${t.product} · ${t.at.takeLast(8)} · order …${t.orderId.takeLast(6)}", style = Type.figure.copy(color = p.inkSoft, fontSize = 11.sp))
+                    OrderSourcePill(owners, "kite:${t.orderId}", a.orders.firstOrNull { it.id == t.orderId }?.tag.orEmpty())
                 }
                 Text("${t.qty} @ ${px(t.price)}", style = Type.figure.copy(color = p.ink, fontSize = 13.sp))
             }
