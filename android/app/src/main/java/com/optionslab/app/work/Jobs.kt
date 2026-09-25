@@ -315,7 +315,7 @@ class WatchService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         // Foreground first, always: the system requires it within seconds.
-        show("Options Lab", "Starting…")
+        show("IraAlgo", "Starting…")
         if (intent?.action == STOP) { stopEverything(); return START_NOT_STICKY }
         val k = runCatching { Jobs.Kind.valueOf(intent?.getStringExtra(Jobs.EXTRA_KIND) ?: "") }.getOrNull()
         if (k == null) { maybeStop(); return START_NOT_STICKY }

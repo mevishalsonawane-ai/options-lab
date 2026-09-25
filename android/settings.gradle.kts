@@ -26,7 +26,7 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "OptionsLab"
+rootProject.name = "IraAlgo"
 
 // The engine is plain Kotlin/JVM: it builds and tests anywhere a JDK does, so
 // the strategy can be verified against the PC's numbers without an Android SDK.

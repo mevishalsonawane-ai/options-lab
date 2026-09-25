@@ -107,7 +107,7 @@ object BiometricGate {
         })
 
         val info = BiometricPrompt.PromptInfo.Builder()
-            .setTitle("Unseal the Ledger")
+            .setTitle("Unseal IraAlgo")
             .setSubtitle(if (useStrong) "Fingerprint or face" else "Face unlock")
             .setNegativeButtonText("Use PIN")
             .setAllowedAuthenticators(if (useStrong) BIOMETRIC_STRONG else BIOMETRIC_WEAK)

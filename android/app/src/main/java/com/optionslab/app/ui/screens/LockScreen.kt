@@ -125,7 +125,7 @@ fun LockScreen(
             Spacer(Modifier.height(36.dp))
             WaxSeal(112.dp, broken = broken, pulse = !calm)
             Spacer(Modifier.height(18.dp))
-            Text("OPTIONS LAB", style = Type.masthead.copy(color = p.ink, fontSize = 26.sp, letterSpacing = 5.sp))
+            Text("IRAALGO", style = Type.masthead.copy(color = p.ink, fontSize = 26.sp, letterSpacing = 5.sp))
             Text("the expiry-day ledger", style = Type.italic.copy(color = p.inkSoft, fontSize = 17.sp))
             Spacer(Modifier.height(22.dp))
             AnimatedContent(targetState = when {

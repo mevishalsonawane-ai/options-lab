@@ -87,7 +87,7 @@
     <uses-permission android:name="android.permission.READ_CLIPBOARD_IN_BACKGROUND" tools:node="remove" />
 
     <application
-        android:name=".OptionsLabApp"
+        android:name=".IraAlgoApp"
         android:allowBackup="false"
         android:fullBackupContent="false"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -99,7 +99,7 @@
         android:roundIcon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:supportsRtl="true"
-        android:theme="@style/Theme.OptionsLab"
+        android:theme="@style/Theme.IraAlgo"
         tools:targetApi="35">
 
         <activity
@@ -109,7 +109,7 @@
             android:excludeFromRecents="false"
             android:windowSoftInputMode="adjustResize"
             android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|uiMode"
-            android:theme="@style/Theme.OptionsLab">
+            android:theme="@style/Theme.IraAlgo">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

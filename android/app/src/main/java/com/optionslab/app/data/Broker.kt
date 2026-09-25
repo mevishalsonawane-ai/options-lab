@@ -108,7 +108,7 @@ object Broker {
                 c.instanceFollowRedirects = false
                 c.useCaches = false
                 c.setRequestProperty("X-Kite-Version", "3")
-                c.setRequestProperty("User-Agent", "OptionsLab-Android")
+                c.setRequestProperty("User-Agent", "IraAlgo-Android")
                 if (auth) c.setRequestProperty("Authorization", "token ${apiKey}:${token()}")
                 if (body != null) {
                     c.doOutput = true

@@ -75,7 +75,7 @@ class KiteTest {
     }
 
     @Test fun `the order body is exactly the Kite form`() {
-        assertEquals("tradingsymbol=NIFTY26SEP24500PE&exchange=NFO&transaction_type=SELL&order_type=LIMIT&quantity=65&product=NRML&price=4.85&validity=DAY&tag=optionslab",
+        assertEquals("tradingsymbol=NIFTY26SEP24500PE&exchange=NFO&transaction_type=SELL&order_type=LIMIT&quantity=65&product=NRML&price=4.85&validity=DAY&tag=iraalgo",
             order().formBody())
         assertTrue(order(type = "MARKET", price = null).formBody().contains("market_protection=-1"))
     }

@@ -132,7 +132,7 @@ object Kite {
         val price: Double?,          // required for LIMIT
         val tickSize: Double = 0.05,
         val exchange: String = "NFO",
-        val tag: String = "optionslab",
+        val tag: String = "iraalgo",
     ) {
         val lots: Int get() = if (lotSize > 0) quantity / lotSize else 0
 

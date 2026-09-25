@@ -75,7 +75,7 @@ import com.optionslab.app.ui.screens.RefusedScreen
 import com.optionslab.app.ui.screens.TicketScreen
 import com.optionslab.app.ui.screens.TrialsScreen
 import com.optionslab.app.ui.theme.LocalPalette
-import com.optionslab.app.ui.theme.OptionsLabTheme
+import com.optionslab.app.ui.theme.IraAlgoTheme
 import com.optionslab.app.ui.theme.Type
 import kotlinx.coroutines.delay
 import java.time.format.DateTimeFormatter
@@ -96,11 +96,11 @@ fun Root(activity: MainActivity) {
     val locked by SessionLock.locked.collectAsState()
     val findings by model.integrity.collectAsState()
 
-    OptionsLabTheme(settings.theme) {
+    IraAlgoTheme(settings.theme) {
         val compromised = findings.isNotEmpty() && Integrity.compromised(findings)
         if (compromised && settings.refuseCompromised) {
             RefusedScreen(findings.filter { it.severity == Integrity.Severity.DANGER }.map { "${it.name}: ${it.detail}" }) { activity.finishAndRemoveTask() }
-            return@OptionsLabTheme
+            return@IraAlgoTheme
         }
         AnimatedContent(
             targetState = locked || !PinLock.isSet,
@@ -250,7 +250,7 @@ private fun Masthead(live: Boolean) {
     LaunchedEffect(Unit) { while (true) { delay(15_000); now = Market.now() } }
     val open = Market.isOpen()
     Column(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 18.dp, vertical = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        Text("THE OPTIONS LAB ALMANAC", style = Type.masthead.copy(color = p.ink, fontSize = 18.sp, letterSpacing = 3.sp))
+        Text("THE IRAALGO ALMANAC", style = Type.masthead.copy(color = p.ink, fontSize = 18.sp, letterSpacing = 3.sp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(now.format(DateTimeFormatter.ofPattern("EEEE, d MMMM yyyy · HH:mm 'IST'", Locale.ENGLISH)),
                 style = Type.italic.copy(color = p.inkSoft, fontSize = 14.sp))

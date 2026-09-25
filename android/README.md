@@ -1,4 +1,4 @@
-# Options Lab for Android
+# IraAlgo for Android
 
 The PC harness, standalone on a phone. No server of its own: the 170 expiry
 chains and the harvested partitions ship inside the APK, every backtest and

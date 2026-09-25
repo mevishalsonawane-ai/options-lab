@@ -12,7 +12,7 @@ import com.optionslab.app.security.SessionLock
 import com.optionslab.app.work.Jobs
 import com.optionslab.app.work.Notifier
 
-class OptionsLabApp : Application() {
+class IraAlgoApp : Application() {
     override fun onCreate() {
         super.onCreate()
         SecurePrefs.init(this)

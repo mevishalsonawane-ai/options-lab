@@ -82,7 +82,7 @@ object Type {
 }
 
 @Composable
-fun OptionsLabTheme(mode: String, content: @Composable () -> Unit) {
+fun IraAlgoTheme(mode: String, content: @Composable () -> Unit) {
     val dark = when (mode) { "parchment" -> false; "mahogany" -> true; else -> isSystemInDarkTheme() }
     val p = if (dark) Mahogany else Parchment
     val scheme = if (dark) darkColorScheme(

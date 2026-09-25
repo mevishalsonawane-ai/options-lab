@@ -69,7 +69,7 @@ object Notifier {
     private fun publicVersion(context: Context, channel: String) =
         NotificationCompat.Builder(context, channel)
             .setSmallIcon(R.drawable.ic_notification)
-            .setContentTitle("Options Lab")
+            .setContentTitle("IraAlgo")
             .setContentText("Unlock to read")
             .build()
 
