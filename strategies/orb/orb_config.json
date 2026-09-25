@@ -1,0 +1,49 @@
+{
+  "_source": "D:/New Trading app services/ai_signals/orb_arm.py (constants), as running 2026-09-25",
+  "underlying": "BANKNIFTY",
+  "index_exchange": "NSE_INDEX",
+  "option_exchange": "NFO",
+  "bar_minutes": 5,
+  "timezone": "Asia/Kolkata",
+  "opening_range": { "first_bar": "09:15", "last_bar": "10:00" },
+  "strike": { "bar": "09:20", "step": 100, "rounding": "half_up", "held_all_day": true },
+  "expiry": "nearest listed option expiry strictly after today",
+  "decision_bars": { "after": "10:00", "before": "14:30" },
+  "active_window": { "from": "09:20", "until": "15:12", "weekdays_only": true, "skip_nse_holidays": true },
+  "run_every_seconds": 60,
+  "square_off": "15:10",
+  "backstop_square_off": "15:15",
+  "entry": { "action": "BUY", "order_type": "MARKET", "product": "MIS", "lots": 1, "book_price": "actual_fill" },
+  "exits": {
+    "stop_points": 40.0,
+    "target_points": 40.0,
+    "stop_execution": "resting SL-M SELL at fill - stop_points, rounded to tick",
+    "target_execution": "MARKET SELL when LTP >= fill + target_points",
+    "tick": 0.05
+  },
+  "min_entry_premium_exclusive": 40.0,
+  "one_position_per_arm": true,
+  "reentry": "allowed from the bar after the exit bar",
+  "pipe": "sandbox",
+  "arms": [
+    { "source": "orb", "fresh_only": false, "idx_stop": null, "enabled": true },
+    { "source": "orb_fresh", "fresh_only": true, "idx_stop": null, "enabled": true },
+    { "source": "orb_idx", "fresh_only": false, "idx_stop": 50.0, "enabled": false, "retired": "2026-09-23, shared Rs 1L wallet could not fit three lots" }
+  ],
+  "flags": {
+    "ORB_ARM_ENABLED": "TRUE",
+    "ORB_SHADOW_ENABLED": "FALSE (15:40 evening replay, no orders)",
+    "ORB_ARMS_PAUSE_FILE": "db/orb_arms_pause.json (per-day operator stop)"
+  },
+  "pass_rule": {
+    "ends_at": "60 closed trades or 40 trading days",
+    "all_must_hold": [
+      "net P&L > 0 after charges",
+      "per-trade t-statistic > 2.0",
+      "net P&L > 0 on up days and on down days (index close vs open)",
+      "net P&L > 0 after removing the three best trades"
+    ],
+    "count_started": "2026-09-23T13:36+05:30 (desktop)",
+    "excluded": "operator-closed trades"
+  }
+}
