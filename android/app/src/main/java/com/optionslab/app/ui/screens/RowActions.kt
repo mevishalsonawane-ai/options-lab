@@ -1,6 +1,11 @@
 package com.optionslab.app.ui.screens
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -69,70 +74,117 @@ fun RowActionPopup(model: AppModel) {
     val title: String
     val lines = ArrayList<Pair<String, String>>()
     var source: Pair<String, Boolean>? = null
-    val actions = ArrayList<Triple<String, androidx.compose.ui.graphics.Color, () -> Unit>>()
+    /** label, tone, slide-to-confirm (closing/cancelling) or a plain button (modify), action. */
+    data class Act(val label: String, val tone: androidx.compose.ui.graphics.Color, val swipe: Boolean, val run: () -> Unit)
+    val actions = ArrayList<Act>()
+    fun swipe(label: String, run: () -> Unit) { actions += Act(label, p.oxblood, true, run) }
+    fun button(label: String, run: () -> Unit) { actions += Act(label, p.ink, false, run) }
+    var pnl: Double? = null
     when (t) {
         is RowTarget.PaperPosition -> {
             val r = t.row
             title = r.symbol
-            lines += "Position" to "${if (r.quantity > 0) "LONG" else "SHORT"} ${abs(r.quantity)} · ${r.product}"
-            lines += "Average → LTP" to "${px(r.averagePrice)} → ${px(r.ltp)}"
-            lines += "P&L today" to rs(r.totalPnlToday, true)
-            if (r.quantity != 0) actions += Triple("Close position (market)", p.oxblood) { model.paperClose(r.symbol, r.product); close() }
+            pnl = r.totalPnlToday
+            lines += "Account" to "Paper"
+            lines += "Position" to "${if (r.quantity > 0) "LONG" else if (r.quantity < 0) "SHORT" else "CLOSED"} ${abs(r.quantity)}"
+            lines += "Product · exchange" to "${r.product} · ${r.exchange}"
+            lines += "Average price" to px(r.averagePrice)
+            lines += "Last price (LTP)" to px(r.ltp)
+            lines += "Unrealised P&L" to rs(r.unrealizedPnl, true)
+            lines += "Realised today" to rs(r.todayRealizedPnl, true)
+            lines += "Change" to String.format(Locale.ENGLISH, "%+.2f%%", r.pnlPercent)
+            if (r.quantity != 0) swipe("Slide to close position") { model.paperClose(r.symbol, r.product); close() }
         }
         is RowTarget.PaperOrder -> {
             val r = t.row
             title = "${r.action} ${r.symbol}"
-            lines += "Quantity" to "${r.quantity} (filled ${r.filledQuantity})"
-            lines += "Type" to "${r.priceType}${if (r.price > 0) " @ ${px(r.price)}" else ""}${if (r.triggerPrice > 0) " · trigger ${px(r.triggerPrice)}" else ""} · ${r.product}"
+            val pos = paperOpen.firstOrNull { it.symbol == r.symbol && it.product == r.product }
+            lines += "Account" to "Paper"
             lines += "Status" to r.status.uppercase() + if (r.rejectionReason.isNotBlank()) " · ${r.rejectionReason}" else ""
-            source = orderSource(owners, "paper:${r.orderId}")
-            if (r.status.lowercase() in PAPER_WORKING) actions += Triple("Cancel order", p.oxblood) { model.paperCancel(r.orderId); close() }
-            paperOpen.firstOrNull { it.symbol == r.symbol && it.product == r.product }?.let { ps ->
-                actions += Triple("Close position (${abs(ps.quantity)})", p.oxblood) { model.paperClose(ps.symbol, ps.product); close() }
+            lines += "Quantity · filled · pending" to "${r.quantity} · ${r.filledQuantity} · ${r.pendingQuantity}"
+            lines += "Order type" to "${r.priceType}${if (r.price > 0) " @ ${px(r.price)}" else ""}${if (r.triggerPrice > 0) " · trigger ${px(r.triggerPrice)}" else ""}"
+            lines += "Average fill" to (r.averagePrice.takeIf { it > 0 }?.let(::px) ?: "—")
+            lines += "Product · exchange" to "${r.product} · ${r.exchange}"
+            lines += "Placed at" to r.timestamp.takeLast(8)
+            lines += "Order id" to r.orderId
+            if (pos != null && r.averagePrice > 0 && r.filledQuantity > 0) {
+                pnl = (pos.ltp - r.averagePrice) * r.filledQuantity * (if (r.action == "BUY") 1 else -1)
+                lines += "Last price (LTP)" to px(pos.ltp)
             }
+            source = orderSource(owners, "paper:${r.orderId}")
+            if (r.status.lowercase() in PAPER_WORKING) swipe("Slide to cancel order") { model.paperCancel(r.orderId); close() }
+            pos?.let { ps -> swipe("Slide to close position (${abs(ps.quantity)})") { model.paperClose(ps.symbol, ps.product); close() } }
         }
         is RowTarget.PaperTrade -> {
             val r = t.row
             title = "${r.action} ${r.symbol}"
-            lines += "Filled" to "${r.quantity} @ ${px(r.price)} · ${r.product}"
+            val pos = paperOpen.firstOrNull { it.symbol == r.symbol && it.product == r.product }
+            lines += "Account" to "Paper"
+            lines += "Filled" to "${r.quantity} @ ${px(r.price)}"
+            lines += "Trade value" to rs(r.tradeValue)
+            lines += "Product · exchange" to "${r.product} · ${r.exchange}"
             lines += "Time" to r.timestamp.takeLast(8)
-            source = orderSource(owners, "paper:${r.orderId}")
-            paperOpen.firstOrNull { it.symbol == r.symbol && it.product == r.product }?.let { ps ->
-                actions += Triple("Close position (${abs(ps.quantity)})", p.oxblood) { model.paperClose(ps.symbol, ps.product); close() }
+            lines += "Trade · order id" to "${r.tradeId} · ${r.orderId}"
+            if (pos != null) {
+                pnl = (pos.ltp - r.price) * r.quantity * (if (r.action == "BUY") 1 else -1)
+                lines += "Last price (LTP)" to px(pos.ltp)
             }
+            source = orderSource(owners, "paper:${r.orderId}")
+            pos?.let { ps -> swipe("Slide to close position (${abs(ps.quantity)})") { model.paperClose(ps.symbol, ps.product); close() } }
         }
         is RowTarget.LivePosition -> {
             val r = t.row
             title = r.symbol
-            lines += "Position" to "${if (r.qty > 0) "LONG" else "SHORT"} ${abs(r.qty)} · ${r.product} · ${r.exchange}"
-            lines += "Average → LTP" to "${px(r.avg)} → ${px(r.last)}"
-            lines += "P&L" to rs(r.pnl, true)
-            if (r.qty != 0) actions += Triple("Close position (square off)", p.oxblood) { model.planSquareOff(r); close() }
+            pnl = r.pnl
+            lines += "Account" to "Zerodha (live)"
+            lines += "Position" to "${if (r.qty > 0) "LONG" else if (r.qty < 0) "SHORT" else "CLOSED"} ${abs(r.qty)}" + if (r.overnight != 0) " (overnight ${r.overnight})" else ""
+            lines += "Product · exchange" to "${r.product} · ${r.exchange}"
+            lines += "Average price" to px(r.avg)
+            lines += "Last price (LTP)" to px(r.last)
+            lines += "Unrealised · realised" to "${rs(r.unrealised, true)} · ${rs(r.realised, true)}"
+            lines += "M2M" to rs(r.m2m, true)
+            lines += "Bought · sold today" to "${r.buyQty} @ ${px(r.buyAvg)} · ${r.sellQty} @ ${px(r.sellAvg)}"
+            if (r.qty != 0) swipe("Slide to close position") { model.planSquareOff(r); close() }
         }
         is RowTarget.LiveOrder -> {
             val r = t.row
             title = "${r.side} ${r.symbol}"
-            lines += "Quantity" to "${r.qty} (filled ${r.filled})"
-            lines += "Type" to "${r.type}${if (r.price > 0) " @ ${px(r.price)}" else ""}${if (r.trigger > 0) " · trigger ${px(r.trigger)}" else ""} · ${r.product}"
+            val pos = liveOpen.firstOrNull { it.symbol == r.symbol && it.product == r.product }
+            lines += "Account" to "Zerodha (live)"
             lines += "Status" to r.status + if (r.message.isNotBlank()) " · ${r.message}" else ""
+            lines += "Quantity · filled · pending" to "${r.qty} · ${r.filled} · ${r.pending}"
+            lines += "Order type" to "${r.type}${if (r.price > 0) " @ ${px(r.price)}" else ""}${if (r.trigger > 0) " · trigger ${px(r.trigger)}" else ""}"
+            lines += "Average fill" to (r.avg.takeIf { it > 0 }?.let(::px) ?: "—")
+            lines += "Product · exchange · variety" to "${r.product} · ${r.exchange} · ${r.variety}"
+            lines += "Placed at" to r.placedAt.takeLast(8)
+            lines += "Order id" to r.id
+            if (pos != null && r.avg > 0 && r.filled > 0) {
+                pnl = (pos.last - r.avg) * r.filled * (if (r.side == "BUY") 1 else -1)
+                lines += "Last price (LTP)" to px(pos.last)
+            }
             source = orderSource(owners, "kite:${r.id}", r.tag)
             if (r.working) {
-                actions += Triple("Cancel order", p.oxblood) { cancelAuth = r }
-                actions += Triple("Modify order", p.ink) { modify = r }
+                button("Modify order") { modify = r }
+                swipe("Slide to cancel order") { cancelAuth = r }
             }
-            liveOpen.firstOrNull { it.symbol == r.symbol && it.product == r.product }?.let { ps ->
-                actions += Triple("Close position (${abs(ps.qty)})", p.oxblood) { model.planSquareOff(ps); close() }
-            }
+            pos?.let { ps -> swipe("Slide to close position (${abs(ps.qty)})") { model.planSquareOff(ps); close() } }
         }
         is RowTarget.LiveTrade -> {
             val r = t.row
             title = "${r.side} ${r.symbol}"
-            lines += "Filled" to "${r.qty} @ ${px(r.price)} · ${r.product}"
+            val pos = liveOpen.firstOrNull { it.symbol == r.symbol && it.product == r.product }
+            lines += "Account" to "Zerodha (live)"
+            lines += "Filled" to "${r.qty} @ ${px(r.price)}"
+            lines += "Trade value" to rs(r.qty * r.price)
+            lines += "Product · exchange" to "${r.product} · ${r.exchange}"
             lines += "Time" to r.at.takeLast(8)
-            source = orderSource(owners, "kite:${r.orderId}", (account as? Load.Done)?.value?.orders?.firstOrNull { it.id == r.orderId }?.tag.orEmpty())
-            liveOpen.firstOrNull { it.symbol == r.symbol && it.product == r.product }?.let { ps ->
-                actions += Triple("Close position (${abs(ps.qty)})", p.oxblood) { model.planSquareOff(ps); close() }
+            lines += "Trade · order id" to "${r.id} · ${r.orderId}"
+            if (pos != null) {
+                pnl = (pos.last - r.price) * r.qty * (if (r.side == "BUY") 1 else -1)
+                lines += "Last price (LTP)" to px(pos.last)
             }
+            source = orderSource(owners, "kite:${r.orderId}", (account as? Load.Done)?.value?.orders?.firstOrNull { it.id == r.orderId }?.tag.orEmpty())
+            pos?.let { ps -> swipe("Slide to close position (${abs(ps.qty)})") { model.planSquareOff(ps); close() } }
         }
     }
 
@@ -141,12 +193,21 @@ fun RowActionPopup(model: AppModel) {
         properties = DialogProperties(securePolicy = SecureFlagPolicy.SecureOn),
         title = { Text(title, style = Type.title) },
         text = {
-            Column {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
+                // P&L first and large: what this order or position is making right now.
+                pnl?.let { v ->
+                    Text("P&L", style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp))
+                    Text(rs(v, true), style = Type.figureLarge.copy(color = if (v >= 0) p.verdigris else p.oxblood))
+                    Spacer(Modifier.height(6.dp))
+                }
                 lines.forEach { (k, v) -> LedgerLine(k, v) }
                 source?.let { (label, _) -> LedgerLine("Placed by", label.removePrefix("Strategy: ")) }
                 if (actions.isEmpty()) Note("Nothing to close or cancel: this order is finished and no position is open from it.", Modifier.padding(top = 8.dp))
-                Column(Modifier.padding(top = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    actions.forEach { (label, tone, act) -> BrassButton(label, Modifier.fillMaxWidth(), tone = tone, onClick = act) }
+                Column(Modifier.padding(top = 14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    actions.forEach { a ->
+                        if (a.swipe) com.optionslab.app.ui.components.SwipeToConfirm(a.label, a.tone, onConfirm = a.run)
+                        else BrassButton(a.label, Modifier.fillMaxWidth(), tone = a.tone, onClick = a.run)
+                    }
                 }
             }
         },
