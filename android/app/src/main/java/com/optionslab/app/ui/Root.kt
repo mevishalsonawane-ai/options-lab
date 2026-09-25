@@ -168,6 +168,7 @@ private fun Gate(activity: MainActivity, settings: AppSettings, compromised: Boo
 fun eraseEverything() {
     com.optionslab.app.data.Ledger.wipe()
     com.optionslab.app.data.Alarms.wipe()
+    com.optionslab.app.data.Paper.wipe()
     SecurePrefs.wipe()
     BiometricGate.forget()
     Vault.destroy()

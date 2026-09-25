@@ -711,6 +711,52 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    // ---- the sandbox paper account ------------------------------------------------------
+
+    val paper = MutableStateFlow<Load<com.optionslab.app.data.Paper.Snapshot>>(Load.Idle)
+
+    fun loadPaper(quiet: Boolean = false) {
+        if (!quiet || paper.value !is Load.Done) paper.value = Load.Busy("Opening the paper account")
+        viewModelScope.launch(Dispatchers.IO) {
+            paper.value = try {
+                runCatching { com.optionslab.app.data.Paper.tick() }
+                Load.Done(com.optionslab.app.data.Paper.snapshot())
+            } catch (e: Exception) { Load.Failed(e.message ?: "could not read the paper account") }
+        }
+    }
+
+    private fun paperDo(action: suspend () -> com.optionslab.app.data.Paper.Result) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try { say(action().message) } catch (e: Exception) { say("Paper order failed: ${e.message}") }
+            loadPaper(quiet = true)
+        }
+    }
+
+    fun paperPlace(underlying: String, expiry: LocalDate, strike: Double, right: com.optionslab.engine.Right, action: String, lots: Int,
+                   priceType: String, product: String, price: Double?, trigger: Double?) = paperDo {
+        val c = com.optionslab.app.data.Paper.contractFor(underlying, expiry, strike, right)
+            ?: error("$underlying ${expiry} ${com.optionslab.engine.fmtG(strike)} $right is not listed")
+        com.optionslab.app.data.Paper.place(c, action, lots, priceType, product, price, trigger)
+    }
+
+    fun paperCancel(id: String) = paperDo { com.optionslab.app.data.Paper.cancel(id) }
+    fun paperModify(id: String, qty: Int?, price: Double?, trigger: Double?) = paperDo { com.optionslab.app.data.Paper.modify(id, qty, price, trigger) }
+    fun paperClose(symbol: String, product: String) = paperDo { com.optionslab.app.data.Paper.close(symbol, product) }
+
+    fun paperReset(capital: Double) {
+        viewModelScope.launch(Dispatchers.IO) {
+            com.optionslab.app.data.Paper.reset(java.math.BigDecimal.valueOf(capital).setScale(2))
+            say("Paper account reset to ${rs(capital)}.")
+            loadPaper()
+        }
+    }
+
+    /** Listed expiries (Upstox master) for the paper order form. */
+    suspend fun paperExpiries(underlying: String): List<LocalDate> = withContext(Dispatchers.IO) {
+        runCatching { Market.contracts().filter { it.underlying == underlying && !it.expiry.isBefore(Market.today()) }.map { it.expiry }.distinct().sorted().take(6) }
+            .getOrDefault(emptyList())
+    }
+
     fun cancelOrder(id: String, variety: String = "regular") {
         viewModelScope.launch(Dispatchers.IO) {
             try { com.optionslab.app.data.Broker.cancel(id, variety); say("Cancel requested for ${id.takeLast(6)}.") } catch (e: Exception) { say("Cancel failed: ${e.message}") }

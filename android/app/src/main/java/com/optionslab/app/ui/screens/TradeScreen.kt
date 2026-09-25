@@ -70,6 +70,18 @@ fun TradeScreen(model: AppModel) {
     var modifying by remember { mutableStateOf<Broker.OrderRow?>(null) }
     var cancelling by remember { mutableStateOf<Broker.OrderRow?>(null) }
     var selling by remember { mutableStateOf<Broker.Holding?>(null) }
+    val paperSnap by model.paper.collectAsState()
+    var paperBook by rememberSaveable { mutableStateOf("positions") }
+    var resetting by remember { mutableStateOf(false) }
+
+    // Sandbox: the paper engine runs its jobs against fresh public prices.
+    LaunchedEffect(s.live) {
+        if (s.live) return@LaunchedEffect
+        while (true) {
+            model.loadPaper(quiet = true)
+            delay(if (Market.isOpen()) 30_000 else 300_000)
+        }
+    }
 
     // Fresh while the page is open: every 15 s in market hours, 2 min outside.
     LaunchedEffect(b.loggedIn, s.live) {
@@ -81,9 +93,9 @@ fun TradeScreen(model: AppModel) {
     }
 
     Page {
-        item { PageTitle("Trade", "Your Zerodha account, live") }
+        item { PageTitle("Trade", if (s.live) "Your Zerodha account, live" else "The paper account · sandbox") }
         if (!s.live) {
-            item { LedgerCard(accent = p.amber) { Note("SANDBOX mode: the broker is not touched. Switch to LIVE under Cabinet → Zerodha to see your account.") } }
+            paperTrade(model, paperSnap, paperBook, { paperBook = it }, onReset = { resetting = true })
             return@Page
         }
         if (!b.configured || !b.loggedIn) {
@@ -130,6 +142,7 @@ fun TradeScreen(model: AppModel) {
         }
     }
 
+    if (resetting) PaperResetDialog(model) { resetting = false }
     modifying?.let { o -> ModifyDialog(model, o) { modifying = null } }
     cancelling?.let { o ->
         AlertDialog(

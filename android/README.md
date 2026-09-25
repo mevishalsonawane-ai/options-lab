@@ -127,6 +127,23 @@ bundled record in both modes. The harvester also stays on Upstox in both: it
 builds the research record, and mixing a second source into it is the
 provenance and units trap the PC harness guards against.
 
+## Paper trading (sandbox)
+
+In SANDBOX mode the Trade tab is a paper account running IraAlgo's own
+sandbox engine (`engine/.../sandbox`, checked step by step against the Python
+on 16 scenarios). It covers:
+
+- MARKET, LIMIT, SL and SL-M orders on NIFTY and BANKNIFTY options, as NRML or
+  MIS.
+- Margin with the IraAlgo leverage defaults.
+- Modify, cancel and close.
+- MIS square-off at 15:15, and expiry settlement at the last price.
+- Catch-up after the phone was off, and a reset to a chosen capital.
+
+Prices are Upstox's public 1-minute candles, so nothing reaches Zerodha. The
+live watch keeps filling resting orders and notifies you of fills and
+settlements. The account is stored in one encrypted vault file.
+
 ## Security
 
 - **No screenshots or screen recording.** The window is `FLAG_SECURE` from

@@ -271,7 +271,21 @@ object Tasks {
             }
         }
         checkAlarms(context, q.mapValues { it.value.last }, fired)
+        // Sandbox paper account: resting orders fill, MIS squares off at 15:15, expiries settle.
+        if (!s.live) runCatching { com.optionslab.app.data.Paper.tick() }.getOrNull()?.let { paperEvents(context, it) }
         return Tick(title, lines, progress)
+    }
+
+    private fun paperEvents(context: Context, events: List<com.optionslab.engine.sandbox.SandboxEvent>) {
+        for (e in events) when (e) {
+            is com.optionslab.engine.sandbox.SandboxEvent.Fill -> Notifier.post(context, 4000 + (e.orderId.hashCode() and 0x3ff), Notifier.LIVE,
+                "Paper ${e.action} filled", "${e.quantity} ${e.symbol} @ %.2f".format(e.price), "trade")
+            is com.optionslab.engine.sandbox.SandboxEvent.ExpirySettled -> Notifier.post(context, 4000 + (e.symbol.hashCode() and 0x3ff), Notifier.LIVE,
+                "Paper contract settled", "${e.symbol} at %.2f · P&L Rs %+,.0f".format(e.price.toDouble(), e.pnl.toDouble()), "trade")
+            is com.optionslab.engine.sandbox.SandboxEvent.SquareOff -> Notifier.post(context, 4000 + (e.symbol.hashCode() and 0x3ff), Notifier.LIVE,
+                "Paper MIS squared off", e.symbol, "trade")
+            else -> Unit
+        }
     }
 
     fun checkAlarms(context: Context, prices: Map<String, Double>, fired: MutableSet<String>) {
