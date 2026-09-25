@@ -239,6 +239,13 @@ fun SecurityPage(model: AppModel) {
         item { PageTitle("Security", "Nothing personal leaves this phone, and nothing is logged") }
         item { KitePinCard(model) }
         item {
+            LedgerCard(title = "Home-screen widget") {
+                ToggleRow("Show my P&L on the widget", "Off by default: a home screen is seen by anyone holding the unlocked phone. Index levels are always shown.", s.widgetPnl) { on ->
+                    model.update { it.copy(widgetPnl = on) }
+                }
+            }
+        }
+        item {
             LedgerCard(title = "Device integrity") {
                 findings.forEach { f ->
                     Row(Modifier.fillMaxWidth().padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {

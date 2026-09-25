@@ -135,6 +135,18 @@
             android:name=".work.NotificationActionReceiver"
             android:exported="false" />
 
+        <!-- The home-screen widget. Exported because the launcher binds it; it only draws. -->
+        <receiver
+            android:name=".widget.IraWidget"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_info" />
+        </receiver>
+
         <!-- Exported only because the system delivers these; it acts on nothing else. -->
         <receiver
             android:name=".work.BootReceiver"

@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- IraAlgo home-screen widget: parchment card, index levels, market state. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/w_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="12dp"
+    android:background="@drawable/widget_bg">
+
+    <TextView
+        android:id="@+id/w_title"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="IRAALGO"
+        android:textColor="#FF9C7A3C"
+        android:textSize="11sp"
+        android:letterSpacing="0.15"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/w_nifty"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:textColor="#FF2B1D0E"
+        android:textSize="15sp"
+        android:fontFamily="monospace" />
+
+    <TextView
+        android:id="@+id/w_bank"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="#FF2B1D0E"
+        android:textSize="15sp"
+        android:fontFamily="monospace" />
+
+    <TextView
+        android:id="@+id/w_pnl"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:textColor="#FF2F6B55"
+        android:textSize="13sp"
+        android:fontFamily="monospace"
+        android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/w_status"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:textColor="#FF75603F"
+        android:textSize="11sp" />
+</LinearLayout>

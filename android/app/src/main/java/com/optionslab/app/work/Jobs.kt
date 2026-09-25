@@ -276,17 +276,23 @@ object Tasks {
         // Alarms on any instrument ("NSE:INFY", "NFO:NIFTY26SEP24500PE") are priced from Zerodha.
         val prices = HashMap(q.mapValues { it.value.last })
         val b = com.optionslab.app.data.Broker
+        var accountPnl: Double? = null
         if (s.live && b.loggedIn) {
             val keys = Alarms.all().filter { it.enabled && ':' in it.symbol }.map { it.symbol }.distinct()
             if (keys.isNotEmpty()) runCatching { b.quotes(keys) }.getOrNull()?.forEach { (k, v) -> prices[k] = v.last }
             // The account's P&L: recorded for the day's curve, and alerted on the owner's levels.
             runCatching { b.positionBook() }.getOrNull()?.takeIf { it.net.isNotEmpty() }?.let { book ->
                 com.optionslab.app.data.PnlTracker.record(book.pnl)
+                accountPnl = book.pnl
                 lines.add(0, "Positions %s".format(if (s.hideAmountsOnLockScreen) "open: ${book.net.count { it.open }}" else "Rs %+,.0f".format(book.pnl)))
                 pnlAlerts(context, s, book.pnl)
             }
         }
         checkAlarms(context, prices, fired)
+        runCatching {
+            com.optionslab.app.widget.IraWidget.publish(context, q["NIFTY"]?.let { it.last to it.changePct },
+                q["BANKNIFTY"]?.let { it.last to it.changePct }, accountPnl)
+        }
         // Sandbox paper account: resting orders fill, MIS squares off at 15:15, expiries settle.
         // Paper account (also used by paper strategy runs in LIVE mode): resting orders fill, MIS squares off, expiries settle.
         runCatching { com.optionslab.app.data.Paper.tick() }.getOrNull()?.let { paperEvents(context, it) }

@@ -121,6 +121,38 @@ uses it on the PC:
   can never trap you in a position. Before an exit is sent the position is
   re-read, and nothing is sent if it changed since you reviewed it.
 
+## Protection and everyday tools
+
+- **Margin check:** every reviewed order or basket asks Zerodha's
+  `/margins/basket`, with open positions counted. It shows margin needed,
+  margin available and estimated charges, and a plan that is short of margin
+  cannot be sent.
+- **GTT (Trade → Positions/Holdings → Protect):**
+  - A stop-loss and/or target that Zerodha holds, so it works even when the
+    phone is off.
+  - With both set, it is one-cancels-other. Each trigger fires a LIMIT order
+    placed a little beyond it.
+  - GTTs are listed under Trade → Orders. Placing or deleting one needs your
+    PIN.
+- **A leg still working after the send:** the remaining legs wait. You can
+  move the leg to the best price, send the rest once it has fully filled, or
+  cancel it. Each action needs your PIN.
+- **Background P&L:**
+  - The live watch records the day's P&L curve every minute, even with the app
+    closed.
+  - It alerts once a day when your loss or profit reaches your level (Cabinet
+    → Alarms).
+  - Price alarms work on any `EXCHANGE:SYMBOL`.
+- **NSE holidays:** the list is fetched from NSE weekly and can be edited
+  under Cabinet → Schedules. On a holiday the watch, the jobs and the strategy
+  schedules stand down.
+- **Widget:** shows NIFTY and BANKNIFTY and whether the market is open. Your
+  P&L appears only if you turn it on (Cabinet → Security).
+- **Security:**
+  - The API secret is sealed with your PIN, and each daily login asks for it.
+  - api.kite.trade's certificate authorities are pinned on first use. You can
+    re-trust them under Cabinet → Security.
+
 ## Live mode and sandbox mode
 
 One switch (Cabinet → Zerodha → Mode) decides where every LIVE figure comes from:

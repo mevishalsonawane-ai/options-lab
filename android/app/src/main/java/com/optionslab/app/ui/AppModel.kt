@@ -279,6 +279,11 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                         try { Market.quote(sym) } catch (e: Exception) { err = e.message; null }
                     }
                     quotes.value = q.associateBy { it.symbol }
+                    runCatching {
+                        com.optionslab.app.widget.IraWidget.publish(ctx, quotes.value["NIFTY"]?.let { it.last to it.changePct },
+                            quotes.value["BANKNIFTY"]?.let { it.last to it.changePct },
+                            if (live) livePositions.value.takeIf { it.isNotEmpty() }?.sumOf { it.pnl } else null)
+                    }
                     quoteNote.value = when {
                         q.isNotEmpty() -> if (live) null else "SANDBOX: public Upstox candles, not your broker."
                         err != null -> err
