@@ -196,11 +196,13 @@ object KiteStream {
      * A Zerodha position's P&L moved on from the last position-book reading by the
      * latest tick: the book's figure plus quantity x the price change since.
      */
-    fun live(p: Broker.Position): Broker.Position {
-        val t = tick(p.token) ?: return p
-        if (p.last <= 0 || t.last <= 0) return p
-        val move = p.qty * (t.last - p.last) * p.multiplier
-        return p.copy(last = t.last, pnl = p.pnl + move, m2m = p.m2m + move, unrealised = p.unrealised + move)
+    fun live(p: Broker.Position): Broker.Position = tick(p.token)?.let { moved(p, it.last) } ?: p
+
+    /** [p] re-marked at [last]: P&L, M2M and unrealised move by quantity x the price change. */
+    fun moved(p: Broker.Position, last: Double): Broker.Position {
+        if (p.last <= 0 || last <= 0) return p
+        val move = p.qty * (last - p.last) * p.multiplier
+        return p.copy(last = last, pnl = p.pnl + move, m2m = p.m2m + move, unrealised = p.unrealised + move)
     }
 
     fun live(book: Broker.Positions): Broker.Positions = book.copy(net = book.net.map { live(it) }, day = book.day.map { live(it) })

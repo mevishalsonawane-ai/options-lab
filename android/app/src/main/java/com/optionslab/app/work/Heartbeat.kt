@@ -18,6 +18,10 @@ object Heartbeat {
     const val ACTION = "ol.heartbeat"
     private const val KEY = "hb.last"
     private const val ALERTED = "hb.alerted"
+    private const val STALLED = "hb.stalled.day"
+
+    /** The watch went silent at least once today (for the day report). */
+    fun stalledToday(): Boolean = SecurePrefs.getString(STALLED) == Market.today().toString()
     private const val STALE_MS = 3 * 60_000L
     private const val EVERY_MS = 5 * 60_000L
     private const val NOTE_ID = 2014
@@ -74,7 +78,7 @@ object Heartbeat {
         runCatching { Jobs.ensureWatch(context) }
         val day = Market.today().toString()
         if (SecurePrefs.getString(ALERTED) == day) return
-        SecurePrefs.put(ALERTED, day)
+        SecurePrefs.putAll(mapOf(ALERTED to day, STALLED to day))
         val lastAt = java.time.Instant.ofEpochMilli(last()).atZone(Market.now().zone)
         val since = if (lastAt.toLocalDate() == Market.today()) lastAt.toLocalTime().withSecond(0).withNano(0).toString() else null
         Notifier.post(context, NOTE_ID, Notifier.APPROVAL, "Market watch stopped",

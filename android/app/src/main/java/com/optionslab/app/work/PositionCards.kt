@@ -81,9 +81,26 @@ object PositionCards {
     fun tickLive(context: Context) {
         val book = lastLive ?: return
         if (com.optionslab.app.data.KiteStream.status.value != com.optionslab.app.data.KiteStream.Status.LIVE) return
-        com.optionslab.app.data.KiteStream.live(book).net.filter { it.qty != 0 && shown.containsKey("Live|${it.symbol}") }.forEach { p ->
+        val moved = com.optionslab.app.data.KiteStream.live(book)
+        moved.net.filter { it.qty != 0 && shown.containsKey("Live|${it.symbol}") }.forEach { p ->
             card(context, "Live", p.symbol, p.qty, p.avg, p.last.takeIf { it > 0 }, p.pnl)
         }
+        widgetFromStream(context, moved.pnl)
+    }
+
+    @Volatile private var widgetAt = 0L
+
+    /** The home-screen widget from the live stream: index levels and the Zerodha P&L, at most every 5 s. */
+    fun widgetFromStream(context: Context, pnl: Double?) {
+        val st = com.optionslab.app.data.KiteStream
+        if (st.status.value != com.optionslab.app.data.KiteStream.Status.LIVE) return
+        val now = System.currentTimeMillis()
+        if (now - widgetAt < 5_000) return
+        widgetAt = now
+        val nifty = st.tick(256265L)?.let { it.last to it.changePct }
+        val bank = st.tick(260105L)?.let { it.last to it.changePct }
+        if (nifty == null && bank == null) return
+        runCatching { com.optionslab.app.widget.IraWidget.publish(context, nifty, bank, pnl) }
     }
 
     /** Rewrite every card from the accounts' current positions; a position gone since the last pass gets its final card. */

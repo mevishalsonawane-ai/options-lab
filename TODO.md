@@ -59,6 +59,30 @@ Source paths prefixed `NTA:` are in D:\New Trading app.
 - [ ] B8. Decide fate of the untracked `options_lab/data/banknifty_expiry_cache/` and modified bars in the old
       `D:\files\options-lab` clone (not present in D:\IraAlgo).
 
+## D. Enhancements (owner go-ahead 2026-09-26: all at once; answers: real-order changes need the PIN once;
+##    no Telegram; morning check and end-of-day report always show)
+
+- [x] D1. (ready: CI signs with the owner's key once the 4 secrets from `android/tools/make-release-key.sh` are added; README has the steps) Release signing ready (B2): CI signs with the owner's key once the 4 secrets exist; steps in `android/README.md`.
+- [ ] D2. Live chart from the Zerodha stream: in Live mode the last candle moves with every tick.
+- [ ] D3. Live option chain: refreshes from the stream while open; OI change since the day's first reading; PCR and max pain live.
+- [x] D4. (done: `app/src/test` JVM tests, run by CI before the APK is built) App unit tests (B7): JVM tests for the app's pure logic, run by CI.
+- [ ] D5. Trailing stop-loss on any position (paper; Zerodha after one PIN): the stop only ever tightens.
+- [ ] D6. From the chart: bracket order (entry + stop + target) and price alerts drawn at a level.
+- [ ] D7. Straddle / strangle tracker: combined premium through the day and the pair's live P&L.
+- [ ] D8. Strategy presets ready to arm (short straddle, short strangle, iron fly, iron condor), each backtested on harvested sessions first.
+- [ ] D9. Replay mode: step through a past day candle by candle and paper-trade it.
+- [ ] D10. Trade journal: note and tags per trade; P&L by tag.
+- [ ] D11. P&L calendar: filter by strategy (ORB, manual, Expiry Put, …), year view, CSV export.
+- [ ] D12. Strategy comparison: each strategy's forward stats side by side.
+- [ ] D13. Charges report: brokerage, STT, exchange, SEBI, stamp and GST by month.
+- [x] D14. (done: `work/DailyReports.kt`, 09:00 check + 09:10 login reminder, approval channel) Morning check 09:00 (Zerodha login, holidays, contracts, armed strategies) and a login reminder before the open.
+- [x] D15. (done: 15:45 day report, approval channel; opens the P&L tab) End-of-day report at 15:45: the day's P&L, trades, strategies and any problems.
+- [ ] D16. Encrypted backup and restore (PIN-sealed file; Zerodha credentials never included).
+- [x] D17. (done: widget from ticks every 5 s while streaming) Home-screen widget live from the stream.
+- [ ] D18. Landscape / tablet: full-screen chart and a wider option chain.
+- [x] D19. (done: haptic on every alert; swipe actions already had one) Haptics on order confirm, fills and swipe actions.
+- [x] D20. (done: harvest script finds its repo and Python itself; READMEs updated) Docs (B6) and the nightly harvest script path (B1: script fixed; re-registering the task stays with the owner).
+
 ## C. D:\New Trading app (still running the ORB paper forward test)
 
 - [ ] C1. Revert before live, `.env`: ACCOUNT_MAX_DAILY_LOSS 6000->2000, ACCOUNT_MAX_TRADES_TODAY 60->10,

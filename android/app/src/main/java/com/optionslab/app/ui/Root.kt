@@ -379,6 +379,7 @@ private fun Main(model: AppModel) {
             "health" -> { tab = Tab.LAB; labPage = "health" }
             "trials" -> { tab = Tab.LAB; labPage = "trials" }
             "tools" -> tab = Tab.TOOLS
+            "pnl" -> tab = Tab.PNL
             "cabinet" -> { tab = Tab.CABINET; cabinetPage = "data" }
             "alarms" -> { tab = Tab.CABINET; cabinetPage = "alarms" }
             "broker" -> { tab = Tab.CABINET; cabinetPage = "broker" }

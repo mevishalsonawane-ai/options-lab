@@ -101,6 +101,7 @@ object Jobs {
         val s = AppSettings.load()
         Kind.entries.forEach { schedule(context, it, s) }
         Heartbeat.schedule(context)
+        DailyReports.scheduleAll(context)
     }
 
     fun schedule(context: Context, k: Kind, s: AppSettings = AppSettings.load()) {
@@ -163,6 +164,7 @@ object Jobs {
 class AlarmReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action == Heartbeat.ACTION) { Heartbeat.check(context); return }
+        DailyReports.of(intent.action)?.let { DailyReports.fired(context, it); return }
         val k = runCatching { Jobs.Kind.valueOf(intent.getStringExtra(Jobs.EXTRA_KIND) ?: return) }.getOrNull() ?: return
         Jobs.schedule(context, k)
         val s = AppSettings.load()

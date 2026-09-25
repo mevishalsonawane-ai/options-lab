@@ -67,7 +67,13 @@ private fun Banner(a: Alerts.Alert) {
     val shown = remember { MutableTransitionState(false).apply { targetState = true } }
     var dx by remember { mutableFloatStateOf(0f) }
     var dy by remember { mutableFloatStateOf(0f) }
-    LaunchedEffect(a.id) { delay(2_000); shown.targetState = false }
+    val haptics = androidx.compose.ui.platform.LocalHapticFeedback.current
+    LaunchedEffect(a.id) {
+        // A short tick for good news, a firmer buzz for an error.
+        haptics.performHapticFeedback(if (a.kind == Alerts.Kind.ERROR) androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress
+            else androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
+        delay(2_000); shown.targetState = false
+    }
     // Once the exit animation has finished, the alert leaves the queue.
     LaunchedEffect(shown.currentState, shown.targetState) { if (!shown.targetState && !shown.currentState) Alerts.dismiss(a.id) }
     val bg = when (a.kind) {

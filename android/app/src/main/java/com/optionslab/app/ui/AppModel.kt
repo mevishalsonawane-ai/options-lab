@@ -495,6 +495,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                 val st = com.optionslab.app.data.KiteStream
                 (account.value as? Load.Done<Account>)?.value?.let { a -> account.value = Load.Done(a.copy(book = st.live(a.book))) }
                 if (livePositions.value.isNotEmpty()) livePositions.value = livePositions.value.map { st.live(it) }
+                com.optionslab.app.work.PositionCards.widgetFromStream(ctx, livePositions.value.takeIf { it.isNotEmpty() }?.sumOf { it.pnl })
             }
         }
         viewModelScope.launch {

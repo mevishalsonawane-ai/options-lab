@@ -81,7 +81,7 @@ jobs:
           OL_KEYSTORE_PASSWORD: ${{ secrets.OL_KEYSTORE_PASSWORD }}
           OL_KEY_ALIAS: ${{ secrets.OL_KEY_ALIAS }}
           OL_KEY_PASSWORD: ${{ secrets.OL_KEY_PASSWORD }}
-        run: ./gradlew --no-daemon :app:assembleDebug :app:assembleRelease
+        run: ./gradlew --no-daemon :app:testDebugUnitTest :app:assembleDebug :app:assembleRelease
       - name: Sandbox report (every permission the APK holds)
         run: cat app/build/reports/sandbox/*.txt
       - uses: actions/upload-artifact@v4
