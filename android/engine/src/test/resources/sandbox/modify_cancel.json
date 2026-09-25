@@ -1,0 +1,2634 @@
+{
+ "name": "modify_cancel",
+ "config": {},
+ "instruments": [
+  {
+   "symbol": "RELIANCE",
+   "exchange": "NSE",
+   "instrumenttype": "EQ",
+   "lotsize": 1
+  },
+  {
+   "symbol": "ZEEL",
+   "exchange": "NSE",
+   "instrumenttype": "EQ",
+   "lotsize": 1
+  },
+  {
+   "symbol": "SBIN",
+   "exchange": "BSE",
+   "instrumenttype": "EQ",
+   "lotsize": 1
+  },
+  {
+   "symbol": "NIFTY29SEP26FUT",
+   "exchange": "NFO",
+   "instrumenttype": "FUTIDX",
+   "lotsize": 75,
+   "expiry": "2026-09-29"
+  },
+  {
+   "symbol": "NIFTY29SEP2625000CE",
+   "exchange": "NFO",
+   "instrumenttype": "OPTIDX",
+   "lotsize": 75,
+   "expiry": "2026-09-29",
+   "strike": 25000
+  },
+  {
+   "symbol": "NIFTY29SEP2625200PE",
+   "exchange": "NFO",
+   "instrumenttype": "OPTIDX",
+   "lotsize": 75,
+   "expiry": "2026-09-29",
+   "strike": 25200
+  },
+  {
+   "symbol": "NIFTY27OCT2625000CE",
+   "exchange": "NFO",
+   "instrumenttype": "OPTIDX",
+   "lotsize": 75,
+   "expiry": "2026-10-27",
+   "strike": 25000
+  },
+  {
+   "symbol": "CRUDEOIL19OCT26FUT",
+   "exchange": "MCX",
+   "instrumenttype": "FUTCOM",
+   "lotsize": 100,
+   "expiry": "2026-10-19"
+  }
+ ],
+ "steps": [
+  {
+   "at": "2026-09-21 09:30:00",
+   "op": "init",
+   "result": {
+    "ok": true
+   },
+   "state": {
+    "funds": {
+     "total_capital": "10000000.00",
+     "available_balance": "10000000.00",
+     "used_margin": "0.00",
+     "realized_pnl": "0.00",
+     "today_realized_pnl": "0.00",
+     "unrealized_pnl": "0.00",
+     "total_pnl": "0.00",
+     "last_reset_date": "2026-09-21 09:30:00",
+     "reset_count": 0,
+     "updated_at": "2026-09-21 09:30:00"
+    },
+    "orders": [],
+    "trades": [],
+    "positions": [],
+    "holdings": []
+   }
+  },
+  {
+   "at": "2026-09-21 09:31:00",
+   "op": "place",
+   "order": {
+    "symbol": "RELIANCE",
+    "exchange": "NSE",
+    "action": "BUY",
+    "quantity": 10,
+    "price_type": "LIMIT",
+    "product": "MIS",
+    "strategy": "",
+    "price": 2400.0
+   },
+   "quote": {
+    "ltp": 2500.0,
+    "bid": 0.0,
+    "ask": 0.0,
+    "high": 2520.0,
+    "low": 2480.0
+   },
+   "result": {
+    "ok": true,
+    "code": 200,
+    "body": {
+     "status": "success",
+     "orderid": "26092100000001",
+     "mode": "analyze"
+    }
+   },
+   "state": {
+    "funds": {
+     "total_capital": "10000000.00",
+     "available_balance": "9995200.00",
+     "used_margin": "4800.00",
+     "realized_pnl": "0.00",
+     "today_realized_pnl": "0.00",
+     "unrealized_pnl": "0.00",
+     "total_pnl": "0.00",
+     "last_reset_date": "2026-09-21 09:30:00",
+     "reset_count": 0,
+     "updated_at": "2026-09-21 09:31:00"
+    },
+    "orders": [
+     {
+      "orderid": "26092100000001",
+      "strategy": "",
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "action": "BUY",
+      "quantity": 10,
+      "price": "2400.00",
+      "trigger_price": null,
+      "price_type": "LIMIT",
+      "product": "MIS",
+      "order_status": "open",
+      "average_price": null,
+      "filled_quantity": 0,
+      "pending_quantity": 10,
+      "rejection_reason": null,
+      "margin_blocked": "4800.00",
+      "order_timestamp": "2026-09-21 09:31:00"
+     }
+    ],
+    "trades": [],
+    "positions": [],
+    "holdings": []
+   }
+  },
+  {
+   "at": "2026-09-21 09:32:00",
+   "op": "modify",
+   "ref": 0,
+   "data": {
+    "price": 2410.5,
+    "quantity": 20
+   },
+   "result": {
+    "ok": true,
+    "code": 200,
+    "body": {
+     "status": "success",
+     "orderid": "26092100000001",
+     "message": "Order modified successfully",
+     "mode": "analyze"
+    }
+   },
+   "state": {
+    "funds": {
+     "total_capital": "10000000.00",
+     "available_balance": "9995200.00",
+     "used_margin": "4800.00",
+     "realized_pnl": "0.00",
+     "today_realized_pnl": "0.00",
+     "unrealized_pnl": "0.00",
+     "total_pnl": "0.00",
+     "last_reset_date": "2026-09-21 09:30:00",
+     "reset_count": 0,
+     "updated_at": "2026-09-21 09:31:00"
+    },
+    "orders": [
+     {
+      "orderid": "26092100000001",
+      "strategy": "",
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "action": "BUY",
+      "quantity": 20,
+      "price": "2410.50",
+      "trigger_price": null,
+      "price_type": "LIMIT",
+      "product": "MIS",
+      "order_status": "open",
+      "average_price": null,
+      "filled_quantity": 0,
+      "pending_quantity": 20,
+      "rejection_reason": null,
+      "margin_blocked": "4800.00",
+      "order_timestamp": "2026-09-21 09:31:00"
+     }
+    ],
+    "trades": [],
+    "positions": [],
+    "holdings": []
+   }
+  },
+  {
+   "at": "2026-09-21 09:33:00",
+   "op": "modify",
+   "ref": 0,
+   "data": {
+    "trigger_price": 2300
+   },
+   "result": {
+    "ok": false,
+    "code": 400,
+    "body": {
+     "status": "error",
+     "message": "LIMIT orders do not accept a trigger_price",
+     "mode": "analyze"
+    }
+   },
+   "state": {
+    "funds": {
+     "total_capital": "10000000.00",
+     "available_balance": "9995200.00",
+     "used_margin": "4800.00",
+     "realized_pnl": "0.00",
+     "today_realized_pnl": "0.00",
+     "unrealized_pnl": "0.00",
+     "total_pnl": "0.00",
+     "last_reset_date": "2026-09-21 09:30:00",
+     "reset_count": 0,
+     "updated_at": "2026-09-21 09:31:00"
+    },
+    "orders": [
+     {
+      "orderid": "26092100000001",
+      "strategy": "",
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "action": "BUY",
+      "quantity": 20,
+      "price": "2410.50",
+      "trigger_price": null,
+      "price_type": "LIMIT",
+      "product": "MIS",
+      "order_status": "open",
+      "average_price": null,
+      "filled_quantity": 0,
+      "pending_quantity": 20,
+      "rejection_reason": null,
+      "margin_blocked": "4800.00",
+      "order_timestamp": "2026-09-21 09:31:00"
+     }
+    ],
+    "trades": [],
+    "positions": [],
+    "holdings": []
+   }
+  },
+  {
+   "at": "2026-09-21 09:33:30",
+   "op": "modify",
+   "ref": 0,
+   "data": {
+    "price": 0
+   },
+   "result": {
+    "ok": true,
+    "code": 200,
+    "body": {
+     "status": "success",
+     "orderid": "26092100000001",
+     "message": "Order modified successfully",
+     "mode": "analyze"
+    }
+   },
+   "state": {
+    "funds": {
+     "total_capital": "10000000.00",
+     "available_balance": "9995200.00",
+     "used_margin": "4800.00",
+     "realized_pnl": "0.00",
+     "today_realized_pnl": "0.00",
+     "unrealized_pnl": "0.00",
+     "total_pnl": "0.00",
+     "last_reset_date": "2026-09-21 09:30:00",
+     "reset_count": 0,
+     "updated_at": "2026-09-21 09:31:00"
+    },
+    "orders": [
+     {
+      "orderid": "26092100000001",
+      "strategy": "",
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "action": "BUY",
+      "quantity": 20,
+      "price": "2410.50",
+      "trigger_price": null,
+      "price_type": "LIMIT",
+      "product": "MIS",
+      "order_status": "open",
+      "average_price": null,
+      "filled_quantity": 0,
+      "pending_quantity": 20,
+      "rejection_reason": null,
+      "margin_blocked": "4800.00",
+      "order_timestamp": "2026-09-21 09:31:00"
+     }
+    ],
+    "trades": [],
+    "positions": [],
+    "holdings": []
+   }
+  },
+  {
+   "at": "2026-09-21 09:34:00",
+   "op": "tick",
+   "quotes": {
+    "RELIANCE|NSE": {
+     "ltp": 2410.0,
+     "bid": 0.0,
+     "ask": 0.0,
+     "high": 0.0,
+     "low": 0.0
+    }
+   },
+   "result": null,
+   "state": {
+    "funds": {
+     "total_capital": "10000000.00",
+     "available_balance": "9995200.00",
+     "used_margin": "4800.00",
+     "realized_pnl": "0.00",
+     "today_realized_pnl": "0.00",
+     "unrealized_pnl": "0.00",
+     "total_pnl": "0.00",
+     "last_reset_date": "2026-09-21 09:30:00",
+     "reset_count": 0,
+     "updated_at": "2026-09-21 09:31:00"
+    },
+    "orders": [
+     {
+      "orderid": "26092100000001",
+      "strategy": "",
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "action": "BUY",
+      "quantity": 20,
+      "price": "2410.50",
+      "trigger_price": null,
+      "price_type": "LIMIT",
+      "product": "MIS",
+      "order_status": "complete",
+      "average_price": "2410.50",
+      "filled_quantity": 20,
+      "pending_quantity": 0,
+      "rejection_reason": null,
+      "margin_blocked": "4800.00",
+      "order_timestamp": "2026-09-21 09:31:00"
+     }
+    ],
+    "trades": [
+     {
+      "tradeid": "TRADE-20260921-093400-00000001",
+      "orderid": "26092100000001",
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "action": "BUY",
+      "quantity": 20,
+      "price": "2410.50",
+      "product": "MIS",
+      "strategy": "",
+      "trade_timestamp": "2026-09-21 09:34:00"
+     }
+    ],
+    "positions": [
+     {
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "product": "MIS",
+      "quantity": 20,
+      "average_price": "2410.50",
+      "ltp": "2410.50",
+      "pnl": "0.00",
+      "pnl_percent": "0.0000",
+      "accumulated_realized_pnl": "0.00",
+      "today_realized_pnl": "0.00",
+      "margin_blocked": "4800.00",
+      "created_at": "2026-09-21 09:34:00",
+      "updated_at": "2026-09-21 09:34:00"
+     }
+    ],
+    "holdings": []
+   }
+  },
+  {
+   "at": "2026-09-21 09:35:00",
+   "op": "funds",
+   "quotes": {},
+   "result": {
+    "availablecash": 9995200.0,
+    "collateral": 0.0,
+    "m2munrealized": 0.0,
+    "m2mrealized": 0.0,
+    "total_realized_pnl": 0.0,
+    "today_realized_pnl": 0.0,
+    "utiliseddebits": 4800.0,
+    "grossexposure": 4800.0,
+    "totalpnl": 0.0,
+    "last_reset": "2026-09-21 09:30:00",
+    "reset_count": 0
+   },
+   "state": {
+    "funds": {
+     "total_capital": "10000000.00",
+     "available_balance": "9995200.00",
+     "used_margin": "4800.00",
+     "realized_pnl": "0.00",
+     "today_realized_pnl": "0.00",
+     "unrealized_pnl": "0.00",
+     "total_pnl": "0.00",
+     "last_reset_date": "2026-09-21 09:30:00",
+     "reset_count": 0,
+     "updated_at": "2026-09-21 09:31:00"
+    },
+    "orders": [
+     {
+      "orderid": "26092100000001",
+      "strategy": "",
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "action": "BUY",
+      "quantity": 20,
+      "price": "2410.50",
+      "trigger_price": null,
+      "price_type": "LIMIT",
+      "product": "MIS",
+      "order_status": "complete",
+      "average_price": "2410.50",
+      "filled_quantity": 20,
+      "pending_quantity": 0,
+      "rejection_reason": null,
+      "margin_blocked": "4800.00",
+      "order_timestamp": "2026-09-21 09:31:00"
+     }
+    ],
+    "trades": [
+     {
+      "tradeid": "TRADE-20260921-093400-00000001",
+      "orderid": "26092100000001",
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "action": "BUY",
+      "quantity": 20,
+      "price": "2410.50",
+      "product": "MIS",
+      "strategy": "",
+      "trade_timestamp": "2026-09-21 09:34:00"
+     }
+    ],
+    "positions": [
+     {
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "product": "MIS",
+      "quantity": 20,
+      "average_price": "2410.50",
+      "ltp": "2410.50",
+      "pnl": "0.00",
+      "pnl_percent": "0.0000",
+      "accumulated_realized_pnl": "0.00",
+      "today_realized_pnl": "0.00",
+      "margin_blocked": "4800.00",
+      "created_at": "2026-09-21 09:34:00",
+      "updated_at": "2026-09-21 09:34:00"
+     }
+    ],
+    "holdings": []
+   }
+  },
+  {
+   "at": "2026-09-21 09:36:00",
+   "op": "cancel",
+   "ref": 0,
+   "result": {
+    "ok": false,
+    "code": 400,
+    "body": {
+     "status": "error",
+     "message": "Cannot cancel order in complete status",
+     "mode": "analyze"
+    }
+   },
+   "state": {
+    "funds": {
+     "total_capital": "10000000.00",
+     "available_balance": "9995200.00",
+     "used_margin": "4800.00",
+     "realized_pnl": "0.00",
+     "today_realized_pnl": "0.00",
+     "unrealized_pnl": "0.00",
+     "total_pnl": "0.00",
+     "last_reset_date": "2026-09-21 09:30:00",
+     "reset_count": 0,
+     "updated_at": "2026-09-21 09:31:00"
+    },
+    "orders": [
+     {
+      "orderid": "26092100000001",
+      "strategy": "",
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "action": "BUY",
+      "quantity": 20,
+      "price": "2410.50",
+      "trigger_price": null,
+      "price_type": "LIMIT",
+      "product": "MIS",
+      "order_status": "complete",
+      "average_price": "2410.50",
+      "filled_quantity": 20,
+      "pending_quantity": 0,
+      "rejection_reason": null,
+      "margin_blocked": "4800.00",
+      "order_timestamp": "2026-09-21 09:31:00"
+     }
+    ],
+    "trades": [
+     {
+      "tradeid": "TRADE-20260921-093400-00000001",
+      "orderid": "26092100000001",
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "action": "BUY",
+      "quantity": 20,
+      "price": "2410.50",
+      "product": "MIS",
+      "strategy": "",
+      "trade_timestamp": "2026-09-21 09:34:00"
+     }
+    ],
+    "positions": [
+     {
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "product": "MIS",
+      "quantity": 20,
+      "average_price": "2410.50",
+      "ltp": "2410.50",
+      "pnl": "0.00",
+      "pnl_percent": "0.0000",
+      "accumulated_realized_pnl": "0.00",
+      "today_realized_pnl": "0.00",
+      "margin_blocked": "4800.00",
+      "created_at": "2026-09-21 09:34:00",
+      "updated_at": "2026-09-21 09:34:00"
+     }
+    ],
+    "holdings": []
+   }
+  },
+  {
+   "at": "2026-09-21 09:36:30",
+   "op": "modify",
+   "ref": 0,
+   "data": {
+    "price": 2000
+   },
+   "result": {
+    "ok": false,
+    "code": 400,
+    "body": {
+     "status": "error",
+     "message": "Cannot modify order in complete status",
+     "mode": "analyze"
+    }
+   },
+   "state": {
+    "funds": {
+     "total_capital": "10000000.00",
+     "available_balance": "9995200.00",
+     "used_margin": "4800.00",
+     "realized_pnl": "0.00",
+     "today_realized_pnl": "0.00",
+     "unrealized_pnl": "0.00",
+     "total_pnl": "0.00",
+     "last_reset_date": "2026-09-21 09:30:00",
+     "reset_count": 0,
+     "updated_at": "2026-09-21 09:31:00"
+    },
+    "orders": [
+     {
+      "orderid": "26092100000001",
+      "strategy": "",
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "action": "BUY",
+      "quantity": 20,
+      "price": "2410.50",
+      "trigger_price": null,
+      "price_type": "LIMIT",
+      "product": "MIS",
+      "order_status": "complete",
+      "average_price": "2410.50",
+      "filled_quantity": 20,
+      "pending_quantity": 0,
+      "rejection_reason": null,
+      "margin_blocked": "4800.00",
+      "order_timestamp": "2026-09-21 09:31:00"
+     }
+    ],
+    "trades": [
+     {
+      "tradeid": "TRADE-20260921-093400-00000001",
+      "orderid": "26092100000001",
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "action": "BUY",
+      "quantity": 20,
+      "price": "2410.50",
+      "product": "MIS",
+      "strategy": "",
+      "trade_timestamp": "2026-09-21 09:34:00"
+     }
+    ],
+    "positions": [
+     {
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "product": "MIS",
+      "quantity": 20,
+      "average_price": "2410.50",
+      "ltp": "2410.50",
+      "pnl": "0.00",
+      "pnl_percent": "0.0000",
+      "accumulated_realized_pnl": "0.00",
+      "today_realized_pnl": "0.00",
+      "margin_blocked": "4800.00",
+      "created_at": "2026-09-21 09:34:00",
+      "updated_at": "2026-09-21 09:34:00"
+     }
+    ],
+    "holdings": []
+   }
+  },
+  {
+   "at": "2026-09-21 09:37:00",
+   "op": "place",
+   "order": {
+    "symbol": "ZEEL",
+    "exchange": "NSE",
+    "action": "SELL",
+    "quantity": 30,
+    "price_type": "SL-M",
+    "product": "MIS",
+    "strategy": "",
+    "trigger_price": 105.0
+   },
+   "quote": {
+    "ltp": 112.0,
+    "bid": 0.0,
+    "ask": 0.0,
+    "high": 115.0,
+    "low": 110.0
+   },
+   "result": {
+    "ok": true,
+    "code": 200,
+    "body": {
+     "status": "success",
+     "orderid": "26092100000002",
+     "mode": "analyze"
+    }
+   },
+   "state": {
+    "funds": {
+     "total_capital": "10000000.00",
+     "available_balance": "9994570.00",
+     "used_margin": "5430.00",
+     "realized_pnl": "0.00",
+     "today_realized_pnl": "0.00",
+     "unrealized_pnl": "0.00",
+     "total_pnl": "0.00",
+     "last_reset_date": "2026-09-21 09:30:00",
+     "reset_count": 0,
+     "updated_at": "2026-09-21 09:37:00"
+    },
+    "orders": [
+     {
+      "orderid": "26092100000001",
+      "strategy": "",
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "action": "BUY",
+      "quantity": 20,
+      "price": "2410.50",
+      "trigger_price": null,
+      "price_type": "LIMIT",
+      "product": "MIS",
+      "order_status": "complete",
+      "average_price": "2410.50",
+      "filled_quantity": 20,
+      "pending_quantity": 0,
+      "rejection_reason": null,
+      "margin_blocked": "4800.00",
+      "order_timestamp": "2026-09-21 09:31:00"
+     },
+     {
+      "orderid": "26092100000002",
+      "strategy": "",
+      "symbol": "ZEEL",
+      "exchange": "NSE",
+      "action": "SELL",
+      "quantity": 30,
+      "price": null,
+      "trigger_price": "105.00",
+      "price_type": "SL-M",
+      "product": "MIS",
+      "order_status": "trigger pending",
+      "average_price": null,
+      "filled_quantity": 0,
+      "pending_quantity": 30,
+      "rejection_reason": null,
+      "margin_blocked": "630.00",
+      "order_timestamp": "2026-09-21 09:37:00"
+     }
+    ],
+    "trades": [
+     {
+      "tradeid": "TRADE-20260921-093400-00000001",
+      "orderid": "26092100000001",
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "action": "BUY",
+      "quantity": 20,
+      "price": "2410.50",
+      "product": "MIS",
+      "strategy": "",
+      "trade_timestamp": "2026-09-21 09:34:00"
+     }
+    ],
+    "positions": [
+     {
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "product": "MIS",
+      "quantity": 20,
+      "average_price": "2410.50",
+      "ltp": "2410.50",
+      "pnl": "0.00",
+      "pnl_percent": "0.0000",
+      "accumulated_realized_pnl": "0.00",
+      "today_realized_pnl": "0.00",
+      "margin_blocked": "4800.00",
+      "created_at": "2026-09-21 09:34:00",
+      "updated_at": "2026-09-21 09:34:00"
+     }
+    ],
+    "holdings": []
+   }
+  },
+  {
+   "at": "2026-09-21 09:38:00",
+   "op": "modify",
+   "ref": 1,
+   "data": {
+    "trigger_price": 106.5
+   },
+   "result": {
+    "ok": true,
+    "code": 200,
+    "body": {
+     "status": "success",
+     "orderid": "26092100000002",
+     "message": "Order modified successfully",
+     "mode": "analyze"
+    }
+   },
+   "state": {
+    "funds": {
+     "total_capital": "10000000.00",
+     "available_balance": "9994570.00",
+     "used_margin": "5430.00",
+     "realized_pnl": "0.00",
+     "today_realized_pnl": "0.00",
+     "unrealized_pnl": "0.00",
+     "total_pnl": "0.00",
+     "last_reset_date": "2026-09-21 09:30:00",
+     "reset_count": 0,
+     "updated_at": "2026-09-21 09:37:00"
+    },
+    "orders": [
+     {
+      "orderid": "26092100000001",
+      "strategy": "",
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "action": "BUY",
+      "quantity": 20,
+      "price": "2410.50",
+      "trigger_price": null,
+      "price_type": "LIMIT",
+      "product": "MIS",
+      "order_status": "complete",
+      "average_price": "2410.50",
+      "filled_quantity": 20,
+      "pending_quantity": 0,
+      "rejection_reason": null,
+      "margin_blocked": "4800.00",
+      "order_timestamp": "2026-09-21 09:31:00"
+     },
+     {
+      "orderid": "26092100000002",
+      "strategy": "",
+      "symbol": "ZEEL",
+      "exchange": "NSE",
+      "action": "SELL",
+      "quantity": 30,
+      "price": null,
+      "trigger_price": "106.50",
+      "price_type": "SL-M",
+      "product": "MIS",
+      "order_status": "trigger pending",
+      "average_price": null,
+      "filled_quantity": 0,
+      "pending_quantity": 30,
+      "rejection_reason": null,
+      "margin_blocked": "630.00",
+      "order_timestamp": "2026-09-21 09:37:00"
+     }
+    ],
+    "trades": [
+     {
+      "tradeid": "TRADE-20260921-093400-00000001",
+      "orderid": "26092100000001",
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "action": "BUY",
+      "quantity": 20,
+      "price": "2410.50",
+      "product": "MIS",
+      "strategy": "",
+      "trade_timestamp": "2026-09-21 09:34:00"
+     }
+    ],
+    "positions": [
+     {
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "product": "MIS",
+      "quantity": 20,
+      "average_price": "2410.50",
+      "ltp": "2410.50",
+      "pnl": "0.00",
+      "pnl_percent": "0.0000",
+      "accumulated_realized_pnl": "0.00",
+      "today_realized_pnl": "0.00",
+      "margin_blocked": "4800.00",
+      "created_at": "2026-09-21 09:34:00",
+      "updated_at": "2026-09-21 09:34:00"
+     }
+    ],
+    "holdings": []
+   }
+  },
+  {
+   "at": "2026-09-21 09:38:30",
+   "op": "modify",
+   "ref": 1,
+   "data": {
+    "price": 106
+   },
+   "result": {
+    "ok": false,
+    "code": 400,
+    "body": {
+     "status": "error",
+     "message": "SL-M orders do not accept a price",
+     "mode": "analyze"
+    }
+   },
+   "state": {
+    "funds": {
+     "total_capital": "10000000.00",
+     "available_balance": "9994570.00",
+     "used_margin": "5430.00",
+     "realized_pnl": "0.00",
+     "today_realized_pnl": "0.00",
+     "unrealized_pnl": "0.00",
+     "total_pnl": "0.00",
+     "last_reset_date": "2026-09-21 09:30:00",
+     "reset_count": 0,
+     "updated_at": "2026-09-21 09:37:00"
+    },
+    "orders": [
+     {
+      "orderid": "26092100000001",
+      "strategy": "",
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "action": "BUY",
+      "quantity": 20,
+      "price": "2410.50",
+      "trigger_price": null,
+      "price_type": "LIMIT",
+      "product": "MIS",
+      "order_status": "complete",
+      "average_price": "2410.50",
+      "filled_quantity": 20,
+      "pending_quantity": 0,
+      "rejection_reason": null,
+      "margin_blocked": "4800.00",
+      "order_timestamp": "2026-09-21 09:31:00"
+     },
+     {
+      "orderid": "26092100000002",
+      "strategy": "",
+      "symbol": "ZEEL",
+      "exchange": "NSE",
+      "action": "SELL",
+      "quantity": 30,
+      "price": null,
+      "trigger_price": "106.50",
+      "price_type": "SL-M",
+      "product": "MIS",
+      "order_status": "trigger pending",
+      "average_price": null,
+      "filled_quantity": 0,
+      "pending_quantity": 30,
+      "rejection_reason": null,
+      "margin_blocked": "630.00",
+      "order_timestamp": "2026-09-21 09:37:00"
+     }
+    ],
+    "trades": [
+     {
+      "tradeid": "TRADE-20260921-093400-00000001",
+      "orderid": "26092100000001",
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "action": "BUY",
+      "quantity": 20,
+      "price": "2410.50",
+      "product": "MIS",
+      "strategy": "",
+      "trade_timestamp": "2026-09-21 09:34:00"
+     }
+    ],
+    "positions": [
+     {
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "product": "MIS",
+      "quantity": 20,
+      "average_price": "2410.50",
+      "ltp": "2410.50",
+      "pnl": "0.00",
+      "pnl_percent": "0.0000",
+      "accumulated_realized_pnl": "0.00",
+      "today_realized_pnl": "0.00",
+      "margin_blocked": "4800.00",
+      "created_at": "2026-09-21 09:34:00",
+      "updated_at": "2026-09-21 09:34:00"
+     }
+    ],
+    "holdings": []
+   }
+  },
+  {
+   "at": "2026-09-21 09:39:00",
+   "op": "cancel",
+   "ref": 1,
+   "result": {
+    "ok": true,
+    "code": 200,
+    "body": {
+     "status": "success",
+     "orderid": "26092100000002",
+     "message": "Order cancelled successfully",
+     "mode": "analyze"
+    }
+   },
+   "state": {
+    "funds": {
+     "total_capital": "10000000.00",
+     "available_balance": "9995200.00",
+     "used_margin": "4800.00",
+     "realized_pnl": "0.00",
+     "today_realized_pnl": "0.00",
+     "unrealized_pnl": "0.00",
+     "total_pnl": "0.00",
+     "last_reset_date": "2026-09-21 09:30:00",
+     "reset_count": 0,
+     "updated_at": "2026-09-21 09:39:00"
+    },
+    "orders": [
+     {
+      "orderid": "26092100000001",
+      "strategy": "",
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "action": "BUY",
+      "quantity": 20,
+      "price": "2410.50",
+      "trigger_price": null,
+      "price_type": "LIMIT",
+      "product": "MIS",
+      "order_status": "complete",
+      "average_price": "2410.50",
+      "filled_quantity": 20,
+      "pending_quantity": 0,
+      "rejection_reason": null,
+      "margin_blocked": "4800.00",
+      "order_timestamp": "2026-09-21 09:31:00"
+     },
+     {
+      "orderid": "26092100000002",
+      "strategy": "",
+      "symbol": "ZEEL",
+      "exchange": "NSE",
+      "action": "SELL",
+      "quantity": 30,
+      "price": null,
+      "trigger_price": "106.50",
+      "price_type": "SL-M",
+      "product": "MIS",
+      "order_status": "cancelled",
+      "average_price": null,
+      "filled_quantity": 0,
+      "pending_quantity": 30,
+      "rejection_reason": null,
+      "margin_blocked": "630.00",
+      "order_timestamp": "2026-09-21 09:37:00"
+     }
+    ],
+    "trades": [
+     {
+      "tradeid": "TRADE-20260921-093400-00000001",
+      "orderid": "26092100000001",
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "action": "BUY",
+      "quantity": 20,
+      "price": "2410.50",
+      "product": "MIS",
+      "strategy": "",
+      "trade_timestamp": "2026-09-21 09:34:00"
+     }
+    ],
+    "positions": [
+     {
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "product": "MIS",
+      "quantity": 20,
+      "average_price": "2410.50",
+      "ltp": "2410.50",
+      "pnl": "0.00",
+      "pnl_percent": "0.0000",
+      "accumulated_realized_pnl": "0.00",
+      "today_realized_pnl": "0.00",
+      "margin_blocked": "4800.00",
+      "created_at": "2026-09-21 09:34:00",
+      "updated_at": "2026-09-21 09:34:00"
+     }
+    ],
+    "holdings": []
+   }
+  },
+  {
+   "at": "2026-09-21 09:39:30",
+   "op": "cancel_id",
+   "orderid": "260921999",
+   "result": {
+    "ok": false,
+    "code": 404,
+    "body": {
+     "status": "error",
+     "message": "Order 260921999 not found",
+     "mode": "analyze"
+    }
+   },
+   "state": {
+    "funds": {
+     "total_capital": "10000000.00",
+     "available_balance": "9995200.00",
+     "used_margin": "4800.00",
+     "realized_pnl": "0.00",
+     "today_realized_pnl": "0.00",
+     "unrealized_pnl": "0.00",
+     "total_pnl": "0.00",
+     "last_reset_date": "2026-09-21 09:30:00",
+     "reset_count": 0,
+     "updated_at": "2026-09-21 09:39:00"
+    },
+    "orders": [
+     {
+      "orderid": "26092100000001",
+      "strategy": "",
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "action": "BUY",
+      "quantity": 20,
+      "price": "2410.50",
+      "trigger_price": null,
+      "price_type": "LIMIT",
+      "product": "MIS",
+      "order_status": "complete",
+      "average_price": "2410.50",
+      "filled_quantity": 20,
+      "pending_quantity": 0,
+      "rejection_reason": null,
+      "margin_blocked": "4800.00",
+      "order_timestamp": "2026-09-21 09:31:00"
+     },
+     {
+      "orderid": "26092100000002",
+      "strategy": "",
+      "symbol": "ZEEL",
+      "exchange": "NSE",
+      "action": "SELL",
+      "quantity": 30,
+      "price": null,
+      "trigger_price": "106.50",
+      "price_type": "SL-M",
+      "product": "MIS",
+      "order_status": "cancelled",
+      "average_price": null,
+      "filled_quantity": 0,
+      "pending_quantity": 30,
+      "rejection_reason": null,
+      "margin_blocked": "630.00",
+      "order_timestamp": "2026-09-21 09:37:00"
+     }
+    ],
+    "trades": [
+     {
+      "tradeid": "TRADE-20260921-093400-00000001",
+      "orderid": "26092100000001",
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "action": "BUY",
+      "quantity": 20,
+      "price": "2410.50",
+      "product": "MIS",
+      "strategy": "",
+      "trade_timestamp": "2026-09-21 09:34:00"
+     }
+    ],
+    "positions": [
+     {
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "product": "MIS",
+      "quantity": 20,
+      "average_price": "2410.50",
+      "ltp": "2410.50",
+      "pnl": "0.00",
+      "pnl_percent": "0.0000",
+      "accumulated_realized_pnl": "0.00",
+      "today_realized_pnl": "0.00",
+      "margin_blocked": "4800.00",
+      "created_at": "2026-09-21 09:34:00",
+      "updated_at": "2026-09-21 09:34:00"
+     }
+    ],
+    "holdings": []
+   }
+  },
+  {
+   "at": "2026-09-21 09:39:40",
+   "op": "modify_id",
+   "orderid": "260921999",
+   "data": {
+    "price": 1
+   },
+   "result": {
+    "ok": false,
+    "code": 404,
+    "body": {
+     "status": "error",
+     "message": "Order 260921999 not found",
+     "mode": "analyze"
+    }
+   },
+   "state": {
+    "funds": {
+     "total_capital": "10000000.00",
+     "available_balance": "9995200.00",
+     "used_margin": "4800.00",
+     "realized_pnl": "0.00",
+     "today_realized_pnl": "0.00",
+     "unrealized_pnl": "0.00",
+     "total_pnl": "0.00",
+     "last_reset_date": "2026-09-21 09:30:00",
+     "reset_count": 0,
+     "updated_at": "2026-09-21 09:39:00"
+    },
+    "orders": [
+     {
+      "orderid": "26092100000001",
+      "strategy": "",
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "action": "BUY",
+      "quantity": 20,
+      "price": "2410.50",
+      "trigger_price": null,
+      "price_type": "LIMIT",
+      "product": "MIS",
+      "order_status": "complete",
+      "average_price": "2410.50",
+      "filled_quantity": 20,
+      "pending_quantity": 0,
+      "rejection_reason": null,
+      "margin_blocked": "4800.00",
+      "order_timestamp": "2026-09-21 09:31:00"
+     },
+     {
+      "orderid": "26092100000002",
+      "strategy": "",
+      "symbol": "ZEEL",
+      "exchange": "NSE",
+      "action": "SELL",
+      "quantity": 30,
+      "price": null,
+      "trigger_price": "106.50",
+      "price_type": "SL-M",
+      "product": "MIS",
+      "order_status": "cancelled",
+      "average_price": null,
+      "filled_quantity": 0,
+      "pending_quantity": 30,
+      "rejection_reason": null,
+      "margin_blocked": "630.00",
+      "order_timestamp": "2026-09-21 09:37:00"
+     }
+    ],
+    "trades": [
+     {
+      "tradeid": "TRADE-20260921-093400-00000001",
+      "orderid": "26092100000001",
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "action": "BUY",
+      "quantity": 20,
+      "price": "2410.50",
+      "product": "MIS",
+      "strategy": "",
+      "trade_timestamp": "2026-09-21 09:34:00"
+     }
+    ],
+    "positions": [
+     {
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "product": "MIS",
+      "quantity": 20,
+      "average_price": "2410.50",
+      "ltp": "2410.50",
+      "pnl": "0.00",
+      "pnl_percent": "0.0000",
+      "accumulated_realized_pnl": "0.00",
+      "today_realized_pnl": "0.00",
+      "margin_blocked": "4800.00",
+      "created_at": "2026-09-21 09:34:00",
+      "updated_at": "2026-09-21 09:34:00"
+     }
+    ],
+    "holdings": []
+   }
+  },
+  {
+   "at": "2026-09-21 09:40:00",
+   "op": "place",
+   "order": {
+    "symbol": "NIFTY27OCT2625000CE",
+    "exchange": "NFO",
+    "action": "BUY",
+    "quantity": 75,
+    "price_type": "LIMIT",
+    "product": "NRML",
+    "strategy": "",
+    "price": 250.0
+   },
+   "quote": {
+    "ltp": 300.0,
+    "bid": 0.0,
+    "ask": 0.0,
+    "high": 320.0,
+    "low": 290.0
+   },
+   "result": {
+    "ok": true,
+    "code": 200,
+    "body": {
+     "status": "success",
+     "orderid": "26092100000003",
+     "mode": "analyze"
+    }
+   },
+   "state": {
+    "funds": {
+     "total_capital": "10000000.00",
+     "available_balance": "9976450.00",
+     "used_margin": "23550.00",
+     "realized_pnl": "0.00",
+     "today_realized_pnl": "0.00",
+     "unrealized_pnl": "0.00",
+     "total_pnl": "0.00",
+     "last_reset_date": "2026-09-21 09:30:00",
+     "reset_count": 0,
+     "updated_at": "2026-09-21 09:40:00"
+    },
+    "orders": [
+     {
+      "orderid": "26092100000001",
+      "strategy": "",
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "action": "BUY",
+      "quantity": 20,
+      "price": "2410.50",
+      "trigger_price": null,
+      "price_type": "LIMIT",
+      "product": "MIS",
+      "order_status": "complete",
+      "average_price": "2410.50",
+      "filled_quantity": 20,
+      "pending_quantity": 0,
+      "rejection_reason": null,
+      "margin_blocked": "4800.00",
+      "order_timestamp": "2026-09-21 09:31:00"
+     },
+     {
+      "orderid": "26092100000002",
+      "strategy": "",
+      "symbol": "ZEEL",
+      "exchange": "NSE",
+      "action": "SELL",
+      "quantity": 30,
+      "price": null,
+      "trigger_price": "106.50",
+      "price_type": "SL-M",
+      "product": "MIS",
+      "order_status": "cancelled",
+      "average_price": null,
+      "filled_quantity": 0,
+      "pending_quantity": 30,
+      "rejection_reason": null,
+      "margin_blocked": "630.00",
+      "order_timestamp": "2026-09-21 09:37:00"
+     },
+     {
+      "orderid": "26092100000003",
+      "strategy": "",
+      "symbol": "NIFTY27OCT2625000CE",
+      "exchange": "NFO",
+      "action": "BUY",
+      "quantity": 75,
+      "price": "250.00",
+      "trigger_price": null,
+      "price_type": "LIMIT",
+      "product": "NRML",
+      "order_status": "open",
+      "average_price": null,
+      "filled_quantity": 0,
+      "pending_quantity": 75,
+      "rejection_reason": null,
+      "margin_blocked": "18750.00",
+      "order_timestamp": "2026-09-21 09:40:00"
+     }
+    ],
+    "trades": [
+     {
+      "tradeid": "TRADE-20260921-093400-00000001",
+      "orderid": "26092100000001",
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "action": "BUY",
+      "quantity": 20,
+      "price": "2410.50",
+      "product": "MIS",
+      "strategy": "",
+      "trade_timestamp": "2026-09-21 09:34:00"
+     }
+    ],
+    "positions": [
+     {
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "product": "MIS",
+      "quantity": 20,
+      "average_price": "2410.50",
+      "ltp": "2410.50",
+      "pnl": "0.00",
+      "pnl_percent": "0.0000",
+      "accumulated_realized_pnl": "0.00",
+      "today_realized_pnl": "0.00",
+      "margin_blocked": "4800.00",
+      "created_at": "2026-09-21 09:34:00",
+      "updated_at": "2026-09-21 09:34:00"
+     }
+    ],
+    "holdings": []
+   }
+  },
+  {
+   "at": "2026-09-21 09:41:00",
+   "op": "modify",
+   "ref": 2,
+   "data": {
+    "quantity": 100
+   },
+   "result": {
+    "ok": false,
+    "code": 400,
+    "body": {
+     "status": "error",
+     "message": "Quantity must be in multiples of lot size 75",
+     "mode": "analyze"
+    }
+   },
+   "state": {
+    "funds": {
+     "total_capital": "10000000.00",
+     "available_balance": "9976450.00",
+     "used_margin": "23550.00",
+     "realized_pnl": "0.00",
+     "today_realized_pnl": "0.00",
+     "unrealized_pnl": "0.00",
+     "total_pnl": "0.00",
+     "last_reset_date": "2026-09-21 09:30:00",
+     "reset_count": 0,
+     "updated_at": "2026-09-21 09:40:00"
+    },
+    "orders": [
+     {
+      "orderid": "26092100000001",
+      "strategy": "",
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "action": "BUY",
+      "quantity": 20,
+      "price": "2410.50",
+      "trigger_price": null,
+      "price_type": "LIMIT",
+      "product": "MIS",
+      "order_status": "complete",
+      "average_price": "2410.50",
+      "filled_quantity": 20,
+      "pending_quantity": 0,
+      "rejection_reason": null,
+      "margin_blocked": "4800.00",
+      "order_timestamp": "2026-09-21 09:31:00"
+     },
+     {
+      "orderid": "26092100000002",
+      "strategy": "",
+      "symbol": "ZEEL",
+      "exchange": "NSE",
+      "action": "SELL",
+      "quantity": 30,
+      "price": null,
+      "trigger_price": "106.50",
+      "price_type": "SL-M",
+      "product": "MIS",
+      "order_status": "cancelled",
+      "average_price": null,
+      "filled_quantity": 0,
+      "pending_quantity": 30,
+      "rejection_reason": null,
+      "margin_blocked": "630.00",
+      "order_timestamp": "2026-09-21 09:37:00"
+     },
+     {
+      "orderid": "26092100000003",
+      "strategy": "",
+      "symbol": "NIFTY27OCT2625000CE",
+      "exchange": "NFO",
+      "action": "BUY",
+      "quantity": 75,
+      "price": "250.00",
+      "trigger_price": null,
+      "price_type": "LIMIT",
+      "product": "NRML",
+      "order_status": "open",
+      "average_price": null,
+      "filled_quantity": 0,
+      "pending_quantity": 75,
+      "rejection_reason": null,
+      "margin_blocked": "18750.00",
+      "order_timestamp": "2026-09-21 09:40:00"
+     }
+    ],
+    "trades": [
+     {
+      "tradeid": "TRADE-20260921-093400-00000001",
+      "orderid": "26092100000001",
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "action": "BUY",
+      "quantity": 20,
+      "price": "2410.50",
+      "product": "MIS",
+      "strategy": "",
+      "trade_timestamp": "2026-09-21 09:34:00"
+     }
+    ],
+    "positions": [
+     {
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "product": "MIS",
+      "quantity": 20,
+      "average_price": "2410.50",
+      "ltp": "2410.50",
+      "pnl": "0.00",
+      "pnl_percent": "0.0000",
+      "accumulated_realized_pnl": "0.00",
+      "today_realized_pnl": "0.00",
+      "margin_blocked": "4800.00",
+      "created_at": "2026-09-21 09:34:00",
+      "updated_at": "2026-09-21 09:34:00"
+     }
+    ],
+    "holdings": []
+   }
+  },
+  {
+   "at": "2026-09-21 09:41:30",
+   "op": "modify",
+   "ref": 2,
+   "data": {
+    "quantity": 150
+   },
+   "result": {
+    "ok": true,
+    "code": 200,
+    "body": {
+     "status": "success",
+     "orderid": "26092100000003",
+     "message": "Order modified successfully",
+     "mode": "analyze"
+    }
+   },
+   "state": {
+    "funds": {
+     "total_capital": "10000000.00",
+     "available_balance": "9976450.00",
+     "used_margin": "23550.00",
+     "realized_pnl": "0.00",
+     "today_realized_pnl": "0.00",
+     "unrealized_pnl": "0.00",
+     "total_pnl": "0.00",
+     "last_reset_date": "2026-09-21 09:30:00",
+     "reset_count": 0,
+     "updated_at": "2026-09-21 09:40:00"
+    },
+    "orders": [
+     {
+      "orderid": "26092100000001",
+      "strategy": "",
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "action": "BUY",
+      "quantity": 20,
+      "price": "2410.50",
+      "trigger_price": null,
+      "price_type": "LIMIT",
+      "product": "MIS",
+      "order_status": "complete",
+      "average_price": "2410.50",
+      "filled_quantity": 20,
+      "pending_quantity": 0,
+      "rejection_reason": null,
+      "margin_blocked": "4800.00",
+      "order_timestamp": "2026-09-21 09:31:00"
+     },
+     {
+      "orderid": "26092100000002",
+      "strategy": "",
+      "symbol": "ZEEL",
+      "exchange": "NSE",
+      "action": "SELL",
+      "quantity": 30,
+      "price": null,
+      "trigger_price": "106.50",
+      "price_type": "SL-M",
+      "product": "MIS",
+      "order_status": "cancelled",
+      "average_price": null,
+      "filled_quantity": 0,
+      "pending_quantity": 30,
+      "rejection_reason": null,
+      "margin_blocked": "630.00",
+      "order_timestamp": "2026-09-21 09:37:00"
+     },
+     {
+      "orderid": "26092100000003",
+      "strategy": "",
+      "symbol": "NIFTY27OCT2625000CE",
+      "exchange": "NFO",
+      "action": "BUY",
+      "quantity": 150,
+      "price": "250.00",
+      "trigger_price": null,
+      "price_type": "LIMIT",
+      "product": "NRML",
+      "order_status": "open",
+      "average_price": null,
+      "filled_quantity": 0,
+      "pending_quantity": 150,
+      "rejection_reason": null,
+      "margin_blocked": "18750.00",
+      "order_timestamp": "2026-09-21 09:40:00"
+     }
+    ],
+    "trades": [
+     {
+      "tradeid": "TRADE-20260921-093400-00000001",
+      "orderid": "26092100000001",
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "action": "BUY",
+      "quantity": 20,
+      "price": "2410.50",
+      "product": "MIS",
+      "strategy": "",
+      "trade_timestamp": "2026-09-21 09:34:00"
+     }
+    ],
+    "positions": [
+     {
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "product": "MIS",
+      "quantity": 20,
+      "average_price": "2410.50",
+      "ltp": "2410.50",
+      "pnl": "0.00",
+      "pnl_percent": "0.0000",
+      "accumulated_realized_pnl": "0.00",
+      "today_realized_pnl": "0.00",
+      "margin_blocked": "4800.00",
+      "created_at": "2026-09-21 09:34:00",
+      "updated_at": "2026-09-21 09:34:00"
+     }
+    ],
+    "holdings": []
+   }
+  },
+  {
+   "at": "2026-09-21 09:42:00",
+   "op": "cancel",
+   "ref": 2,
+   "result": {
+    "ok": true,
+    "code": 200,
+    "body": {
+     "status": "success",
+     "orderid": "26092100000003",
+     "message": "Order cancelled successfully",
+     "mode": "analyze"
+    }
+   },
+   "state": {
+    "funds": {
+     "total_capital": "10000000.00",
+     "available_balance": "9995200.00",
+     "used_margin": "4800.00",
+     "realized_pnl": "0.00",
+     "today_realized_pnl": "0.00",
+     "unrealized_pnl": "0.00",
+     "total_pnl": "0.00",
+     "last_reset_date": "2026-09-21 09:30:00",
+     "reset_count": 0,
+     "updated_at": "2026-09-21 09:42:00"
+    },
+    "orders": [
+     {
+      "orderid": "26092100000001",
+      "strategy": "",
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "action": "BUY",
+      "quantity": 20,
+      "price": "2410.50",
+      "trigger_price": null,
+      "price_type": "LIMIT",
+      "product": "MIS",
+      "order_status": "complete",
+      "average_price": "2410.50",
+      "filled_quantity": 20,
+      "pending_quantity": 0,
+      "rejection_reason": null,
+      "margin_blocked": "4800.00",
+      "order_timestamp": "2026-09-21 09:31:00"
+     },
+     {
+      "orderid": "26092100000002",
+      "strategy": "",
+      "symbol": "ZEEL",
+      "exchange": "NSE",
+      "action": "SELL",
+      "quantity": 30,
+      "price": null,
+      "trigger_price": "106.50",
+      "price_type": "SL-M",
+      "product": "MIS",
+      "order_status": "cancelled",
+      "average_price": null,
+      "filled_quantity": 0,
+      "pending_quantity": 30,
+      "rejection_reason": null,
+      "margin_blocked": "630.00",
+      "order_timestamp": "2026-09-21 09:37:00"
+     },
+     {
+      "orderid": "26092100000003",
+      "strategy": "",
+      "symbol": "NIFTY27OCT2625000CE",
+      "exchange": "NFO",
+      "action": "BUY",
+      "quantity": 150,
+      "price": "250.00",
+      "trigger_price": null,
+      "price_type": "LIMIT",
+      "product": "NRML",
+      "order_status": "cancelled",
+      "average_price": null,
+      "filled_quantity": 0,
+      "pending_quantity": 150,
+      "rejection_reason": null,
+      "margin_blocked": "18750.00",
+      "order_timestamp": "2026-09-21 09:40:00"
+     }
+    ],
+    "trades": [
+     {
+      "tradeid": "TRADE-20260921-093400-00000001",
+      "orderid": "26092100000001",
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "action": "BUY",
+      "quantity": 20,
+      "price": "2410.50",
+      "product": "MIS",
+      "strategy": "",
+      "trade_timestamp": "2026-09-21 09:34:00"
+     }
+    ],
+    "positions": [
+     {
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "product": "MIS",
+      "quantity": 20,
+      "average_price": "2410.50",
+      "ltp": "2410.50",
+      "pnl": "0.00",
+      "pnl_percent": "0.0000",
+      "accumulated_realized_pnl": "0.00",
+      "today_realized_pnl": "0.00",
+      "margin_blocked": "4800.00",
+      "created_at": "2026-09-21 09:34:00",
+      "updated_at": "2026-09-21 09:34:00"
+     }
+    ],
+    "holdings": []
+   }
+  },
+  {
+   "at": "2026-09-21 09:43:00",
+   "op": "place",
+   "order": {
+    "symbol": "RELIANCE",
+    "exchange": "NSE",
+    "action": "BUY",
+    "quantity": 1,
+    "price_type": "MARKET",
+    "product": "MIS",
+    "strategy": ""
+   },
+   "quote": {
+    "ltp": 2500.0,
+    "bid": 0.0,
+    "ask": 0.0,
+    "high": 2520.0,
+    "low": 2480.0
+   },
+   "result": {
+    "ok": true,
+    "code": 200,
+    "body": {
+     "status": "success",
+     "orderid": "26092100000004",
+     "mode": "analyze"
+    }
+   },
+   "state": {
+    "funds": {
+     "total_capital": "10000000.00",
+     "available_balance": "9994700.00",
+     "used_margin": "5300.00",
+     "realized_pnl": "0.00",
+     "today_realized_pnl": "0.00",
+     "unrealized_pnl": "0.00",
+     "total_pnl": "0.00",
+     "last_reset_date": "2026-09-21 09:30:00",
+     "reset_count": 0,
+     "updated_at": "2026-09-21 09:43:00"
+    },
+    "orders": [
+     {
+      "orderid": "26092100000001",
+      "strategy": "",
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "action": "BUY",
+      "quantity": 20,
+      "price": "2410.50",
+      "trigger_price": null,
+      "price_type": "LIMIT",
+      "product": "MIS",
+      "order_status": "complete",
+      "average_price": "2410.50",
+      "filled_quantity": 20,
+      "pending_quantity": 0,
+      "rejection_reason": null,
+      "margin_blocked": "4800.00",
+      "order_timestamp": "2026-09-21 09:31:00"
+     },
+     {
+      "orderid": "26092100000002",
+      "strategy": "",
+      "symbol": "ZEEL",
+      "exchange": "NSE",
+      "action": "SELL",
+      "quantity": 30,
+      "price": null,
+      "trigger_price": "106.50",
+      "price_type": "SL-M",
+      "product": "MIS",
+      "order_status": "cancelled",
+      "average_price": null,
+      "filled_quantity": 0,
+      "pending_quantity": 30,
+      "rejection_reason": null,
+      "margin_blocked": "630.00",
+      "order_timestamp": "2026-09-21 09:37:00"
+     },
+     {
+      "orderid": "26092100000003",
+      "strategy": "",
+      "symbol": "NIFTY27OCT2625000CE",
+      "exchange": "NFO",
+      "action": "BUY",
+      "quantity": 150,
+      "price": "250.00",
+      "trigger_price": null,
+      "price_type": "LIMIT",
+      "product": "NRML",
+      "order_status": "cancelled",
+      "average_price": null,
+      "filled_quantity": 0,
+      "pending_quantity": 150,
+      "rejection_reason": null,
+      "margin_blocked": "18750.00",
+      "order_timestamp": "2026-09-21 09:40:00"
+     },
+     {
+      "orderid": "26092100000004",
+      "strategy": "",
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "action": "BUY",
+      "quantity": 1,
+      "price": "2500.00",
+      "trigger_price": null,
+      "price_type": "MARKET",
+      "product": "MIS",
+      "order_status": "complete",
+      "average_price": "2500.00",
+      "filled_quantity": 1,
+      "pending_quantity": 0,
+      "rejection_reason": null,
+      "margin_blocked": "500.00",
+      "order_timestamp": "2026-09-21 09:43:00"
+     }
+    ],
+    "trades": [
+     {
+      "tradeid": "TRADE-20260921-093400-00000001",
+      "orderid": "26092100000001",
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "action": "BUY",
+      "quantity": 20,
+      "price": "2410.50",
+      "product": "MIS",
+      "strategy": "",
+      "trade_timestamp": "2026-09-21 09:34:00"
+     },
+     {
+      "tradeid": "TRADE-20260921-094300-00000002",
+      "orderid": "26092100000004",
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "action": "BUY",
+      "quantity": 1,
+      "price": "2500.00",
+      "product": "MIS",
+      "strategy": "",
+      "trade_timestamp": "2026-09-21 09:43:00"
+     }
+    ],
+    "positions": [
+     {
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "product": "MIS",
+      "quantity": 21,
+      "average_price": "2414.76",
+      "ltp": "2500.00",
+      "pnl": "0.00",
+      "pnl_percent": "0.0000",
+      "accumulated_realized_pnl": "0.00",
+      "today_realized_pnl": "0.00",
+      "margin_blocked": "5300.00",
+      "created_at": "2026-09-21 09:34:00",
+      "updated_at": "2026-09-21 09:43:00"
+     }
+    ],
+    "holdings": []
+   }
+  },
+  {
+   "at": "2026-09-21 09:44:00",
+   "op": "cancel",
+   "ref": 3,
+   "result": {
+    "ok": false,
+    "code": 400,
+    "body": {
+     "status": "error",
+     "message": "Cannot cancel order in complete status",
+     "mode": "analyze"
+    }
+   },
+   "state": {
+    "funds": {
+     "total_capital": "10000000.00",
+     "available_balance": "9994700.00",
+     "used_margin": "5300.00",
+     "realized_pnl": "0.00",
+     "today_realized_pnl": "0.00",
+     "unrealized_pnl": "0.00",
+     "total_pnl": "0.00",
+     "last_reset_date": "2026-09-21 09:30:00",
+     "reset_count": 0,
+     "updated_at": "2026-09-21 09:43:00"
+    },
+    "orders": [
+     {
+      "orderid": "26092100000001",
+      "strategy": "",
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "action": "BUY",
+      "quantity": 20,
+      "price": "2410.50",
+      "trigger_price": null,
+      "price_type": "LIMIT",
+      "product": "MIS",
+      "order_status": "complete",
+      "average_price": "2410.50",
+      "filled_quantity": 20,
+      "pending_quantity": 0,
+      "rejection_reason": null,
+      "margin_blocked": "4800.00",
+      "order_timestamp": "2026-09-21 09:31:00"
+     },
+     {
+      "orderid": "26092100000002",
+      "strategy": "",
+      "symbol": "ZEEL",
+      "exchange": "NSE",
+      "action": "SELL",
+      "quantity": 30,
+      "price": null,
+      "trigger_price": "106.50",
+      "price_type": "SL-M",
+      "product": "MIS",
+      "order_status": "cancelled",
+      "average_price": null,
+      "filled_quantity": 0,
+      "pending_quantity": 30,
+      "rejection_reason": null,
+      "margin_blocked": "630.00",
+      "order_timestamp": "2026-09-21 09:37:00"
+     },
+     {
+      "orderid": "26092100000003",
+      "strategy": "",
+      "symbol": "NIFTY27OCT2625000CE",
+      "exchange": "NFO",
+      "action": "BUY",
+      "quantity": 150,
+      "price": "250.00",
+      "trigger_price": null,
+      "price_type": "LIMIT",
+      "product": "NRML",
+      "order_status": "cancelled",
+      "average_price": null,
+      "filled_quantity": 0,
+      "pending_quantity": 150,
+      "rejection_reason": null,
+      "margin_blocked": "18750.00",
+      "order_timestamp": "2026-09-21 09:40:00"
+     },
+     {
+      "orderid": "26092100000004",
+      "strategy": "",
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "action": "BUY",
+      "quantity": 1,
+      "price": "2500.00",
+      "trigger_price": null,
+      "price_type": "MARKET",
+      "product": "MIS",
+      "order_status": "complete",
+      "average_price": "2500.00",
+      "filled_quantity": 1,
+      "pending_quantity": 0,
+      "rejection_reason": null,
+      "margin_blocked": "500.00",
+      "order_timestamp": "2026-09-21 09:43:00"
+     }
+    ],
+    "trades": [
+     {
+      "tradeid": "TRADE-20260921-093400-00000001",
+      "orderid": "26092100000001",
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "action": "BUY",
+      "quantity": 20,
+      "price": "2410.50",
+      "product": "MIS",
+      "strategy": "",
+      "trade_timestamp": "2026-09-21 09:34:00"
+     },
+     {
+      "tradeid": "TRADE-20260921-094300-00000002",
+      "orderid": "26092100000004",
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "action": "BUY",
+      "quantity": 1,
+      "price": "2500.00",
+      "product": "MIS",
+      "strategy": "",
+      "trade_timestamp": "2026-09-21 09:43:00"
+     }
+    ],
+    "positions": [
+     {
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "product": "MIS",
+      "quantity": 21,
+      "average_price": "2414.76",
+      "ltp": "2500.00",
+      "pnl": "0.00",
+      "pnl_percent": "0.0000",
+      "accumulated_realized_pnl": "0.00",
+      "today_realized_pnl": "0.00",
+      "margin_blocked": "5300.00",
+      "created_at": "2026-09-21 09:34:00",
+      "updated_at": "2026-09-21 09:43:00"
+     }
+    ],
+    "holdings": []
+   }
+  },
+  {
+   "at": "2026-09-21 09:44:30",
+   "op": "modify",
+   "ref": 3,
+   "data": {
+    "quantity": 2
+   },
+   "result": {
+    "ok": false,
+    "code": 400,
+    "body": {
+     "status": "error",
+     "message": "Cannot modify order in complete status",
+     "mode": "analyze"
+    }
+   },
+   "state": {
+    "funds": {
+     "total_capital": "10000000.00",
+     "available_balance": "9994700.00",
+     "used_margin": "5300.00",
+     "realized_pnl": "0.00",
+     "today_realized_pnl": "0.00",
+     "unrealized_pnl": "0.00",
+     "total_pnl": "0.00",
+     "last_reset_date": "2026-09-21 09:30:00",
+     "reset_count": 0,
+     "updated_at": "2026-09-21 09:43:00"
+    },
+    "orders": [
+     {
+      "orderid": "26092100000001",
+      "strategy": "",
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "action": "BUY",
+      "quantity": 20,
+      "price": "2410.50",
+      "trigger_price": null,
+      "price_type": "LIMIT",
+      "product": "MIS",
+      "order_status": "complete",
+      "average_price": "2410.50",
+      "filled_quantity": 20,
+      "pending_quantity": 0,
+      "rejection_reason": null,
+      "margin_blocked": "4800.00",
+      "order_timestamp": "2026-09-21 09:31:00"
+     },
+     {
+      "orderid": "26092100000002",
+      "strategy": "",
+      "symbol": "ZEEL",
+      "exchange": "NSE",
+      "action": "SELL",
+      "quantity": 30,
+      "price": null,
+      "trigger_price": "106.50",
+      "price_type": "SL-M",
+      "product": "MIS",
+      "order_status": "cancelled",
+      "average_price": null,
+      "filled_quantity": 0,
+      "pending_quantity": 30,
+      "rejection_reason": null,
+      "margin_blocked": "630.00",
+      "order_timestamp": "2026-09-21 09:37:00"
+     },
+     {
+      "orderid": "26092100000003",
+      "strategy": "",
+      "symbol": "NIFTY27OCT2625000CE",
+      "exchange": "NFO",
+      "action": "BUY",
+      "quantity": 150,
+      "price": "250.00",
+      "trigger_price": null,
+      "price_type": "LIMIT",
+      "product": "NRML",
+      "order_status": "cancelled",
+      "average_price": null,
+      "filled_quantity": 0,
+      "pending_quantity": 150,
+      "rejection_reason": null,
+      "margin_blocked": "18750.00",
+      "order_timestamp": "2026-09-21 09:40:00"
+     },
+     {
+      "orderid": "26092100000004",
+      "strategy": "",
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "action": "BUY",
+      "quantity": 1,
+      "price": "2500.00",
+      "trigger_price": null,
+      "price_type": "MARKET",
+      "product": "MIS",
+      "order_status": "complete",
+      "average_price": "2500.00",
+      "filled_quantity": 1,
+      "pending_quantity": 0,
+      "rejection_reason": null,
+      "margin_blocked": "500.00",
+      "order_timestamp": "2026-09-21 09:43:00"
+     }
+    ],
+    "trades": [
+     {
+      "tradeid": "TRADE-20260921-093400-00000001",
+      "orderid": "26092100000001",
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "action": "BUY",
+      "quantity": 20,
+      "price": "2410.50",
+      "product": "MIS",
+      "strategy": "",
+      "trade_timestamp": "2026-09-21 09:34:00"
+     },
+     {
+      "tradeid": "TRADE-20260921-094300-00000002",
+      "orderid": "26092100000004",
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "action": "BUY",
+      "quantity": 1,
+      "price": "2500.00",
+      "product": "MIS",
+      "strategy": "",
+      "trade_timestamp": "2026-09-21 09:43:00"
+     }
+    ],
+    "positions": [
+     {
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "product": "MIS",
+      "quantity": 21,
+      "average_price": "2414.76",
+      "ltp": "2500.00",
+      "pnl": "0.00",
+      "pnl_percent": "0.0000",
+      "accumulated_realized_pnl": "0.00",
+      "today_realized_pnl": "0.00",
+      "margin_blocked": "5300.00",
+      "created_at": "2026-09-21 09:34:00",
+      "updated_at": "2026-09-21 09:43:00"
+     }
+    ],
+    "holdings": []
+   }
+  },
+  {
+   "at": "2026-09-21 09:45:00",
+   "op": "funds",
+   "quotes": {},
+   "result": {
+    "availablecash": 9994700.0,
+    "collateral": 0.0,
+    "m2munrealized": 0.0,
+    "m2mrealized": 0.0,
+    "total_realized_pnl": 0.0,
+    "today_realized_pnl": 0.0,
+    "utiliseddebits": 5300.0,
+    "grossexposure": 5300.0,
+    "totalpnl": 0.0,
+    "last_reset": "2026-09-21 09:30:00",
+    "reset_count": 0
+   },
+   "state": {
+    "funds": {
+     "total_capital": "10000000.00",
+     "available_balance": "9994700.00",
+     "used_margin": "5300.00",
+     "realized_pnl": "0.00",
+     "today_realized_pnl": "0.00",
+     "unrealized_pnl": "0.00",
+     "total_pnl": "0.00",
+     "last_reset_date": "2026-09-21 09:30:00",
+     "reset_count": 0,
+     "updated_at": "2026-09-21 09:43:00"
+    },
+    "orders": [
+     {
+      "orderid": "26092100000001",
+      "strategy": "",
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "action": "BUY",
+      "quantity": 20,
+      "price": "2410.50",
+      "trigger_price": null,
+      "price_type": "LIMIT",
+      "product": "MIS",
+      "order_status": "complete",
+      "average_price": "2410.50",
+      "filled_quantity": 20,
+      "pending_quantity": 0,
+      "rejection_reason": null,
+      "margin_blocked": "4800.00",
+      "order_timestamp": "2026-09-21 09:31:00"
+     },
+     {
+      "orderid": "26092100000002",
+      "strategy": "",
+      "symbol": "ZEEL",
+      "exchange": "NSE",
+      "action": "SELL",
+      "quantity": 30,
+      "price": null,
+      "trigger_price": "106.50",
+      "price_type": "SL-M",
+      "product": "MIS",
+      "order_status": "cancelled",
+      "average_price": null,
+      "filled_quantity": 0,
+      "pending_quantity": 30,
+      "rejection_reason": null,
+      "margin_blocked": "630.00",
+      "order_timestamp": "2026-09-21 09:37:00"
+     },
+     {
+      "orderid": "26092100000003",
+      "strategy": "",
+      "symbol": "NIFTY27OCT2625000CE",
+      "exchange": "NFO",
+      "action": "BUY",
+      "quantity": 150,
+      "price": "250.00",
+      "trigger_price": null,
+      "price_type": "LIMIT",
+      "product": "NRML",
+      "order_status": "cancelled",
+      "average_price": null,
+      "filled_quantity": 0,
+      "pending_quantity": 150,
+      "rejection_reason": null,
+      "margin_blocked": "18750.00",
+      "order_timestamp": "2026-09-21 09:40:00"
+     },
+     {
+      "orderid": "26092100000004",
+      "strategy": "",
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "action": "BUY",
+      "quantity": 1,
+      "price": "2500.00",
+      "trigger_price": null,
+      "price_type": "MARKET",
+      "product": "MIS",
+      "order_status": "complete",
+      "average_price": "2500.00",
+      "filled_quantity": 1,
+      "pending_quantity": 0,
+      "rejection_reason": null,
+      "margin_blocked": "500.00",
+      "order_timestamp": "2026-09-21 09:43:00"
+     }
+    ],
+    "trades": [
+     {
+      "tradeid": "TRADE-20260921-093400-00000001",
+      "orderid": "26092100000001",
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "action": "BUY",
+      "quantity": 20,
+      "price": "2410.50",
+      "product": "MIS",
+      "strategy": "",
+      "trade_timestamp": "2026-09-21 09:34:00"
+     },
+     {
+      "tradeid": "TRADE-20260921-094300-00000002",
+      "orderid": "26092100000004",
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "action": "BUY",
+      "quantity": 1,
+      "price": "2500.00",
+      "product": "MIS",
+      "strategy": "",
+      "trade_timestamp": "2026-09-21 09:43:00"
+     }
+    ],
+    "positions": [
+     {
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "product": "MIS",
+      "quantity": 21,
+      "average_price": "2414.76",
+      "ltp": "2500.00",
+      "pnl": "0.00",
+      "pnl_percent": "0.0000",
+      "accumulated_realized_pnl": "0.00",
+      "today_realized_pnl": "0.00",
+      "margin_blocked": "5300.00",
+      "created_at": "2026-09-21 09:34:00",
+      "updated_at": "2026-09-21 09:43:00"
+     }
+    ],
+    "holdings": []
+   }
+  },
+  {
+   "at": "2026-09-21 09:46:00",
+   "op": "orderbook",
+   "quotes": {},
+   "result": {
+    "status": "success",
+    "data": {
+     "orders": [
+      {
+       "orderid": "26092100000004",
+       "symbol": "RELIANCE",
+       "exchange": "NSE",
+       "action": "BUY",
+       "quantity": 1,
+       "price": 2500.0,
+       "trigger_price": 0.0,
+       "pricetype": "MARKET",
+       "product": "MIS",
+       "order_status": "complete",
+       "average_price": 2500.0,
+       "filled_quantity": 1,
+       "pending_quantity": 0,
+       "rejection_reason": "",
+       "timestamp": "2026-09-21 09:43:00",
+       "strategy": ""
+      },
+      {
+       "orderid": "26092100000003",
+       "symbol": "NIFTY27OCT2625000CE",
+       "exchange": "NFO",
+       "action": "BUY",
+       "quantity": 150,
+       "price": 250.0,
+       "trigger_price": 0.0,
+       "pricetype": "LIMIT",
+       "product": "NRML",
+       "order_status": "cancelled",
+       "average_price": 0.0,
+       "filled_quantity": 0,
+       "pending_quantity": 150,
+       "rejection_reason": "",
+       "timestamp": "2026-09-21 09:40:00",
+       "strategy": ""
+      },
+      {
+       "orderid": "26092100000002",
+       "symbol": "ZEEL",
+       "exchange": "NSE",
+       "action": "SELL",
+       "quantity": 30,
+       "price": 0.0,
+       "trigger_price": 106.5,
+       "pricetype": "SL-M",
+       "product": "MIS",
+       "order_status": "cancelled",
+       "average_price": 0.0,
+       "filled_quantity": 0,
+       "pending_quantity": 30,
+       "rejection_reason": "",
+       "timestamp": "2026-09-21 09:37:00",
+       "strategy": ""
+      },
+      {
+       "orderid": "26092100000001",
+       "symbol": "RELIANCE",
+       "exchange": "NSE",
+       "action": "BUY",
+       "quantity": 20,
+       "price": 2410.5,
+       "trigger_price": 0.0,
+       "pricetype": "LIMIT",
+       "product": "MIS",
+       "order_status": "complete",
+       "average_price": 2410.5,
+       "filled_quantity": 20,
+       "pending_quantity": 0,
+       "rejection_reason": "",
+       "timestamp": "2026-09-21 09:31:00",
+       "strategy": ""
+      }
+     ],
+     "statistics": {
+      "total_buy_orders": 3,
+      "total_sell_orders": 1,
+      "total_completed_orders": 2,
+      "total_open_orders": 0,
+      "total_rejected_orders": 0,
+      "total_trigger_pending_orders": 0
+     }
+    },
+    "mode": "analyze"
+   },
+   "state": {
+    "funds": {
+     "total_capital": "10000000.00",
+     "available_balance": "9994700.00",
+     "used_margin": "5300.00",
+     "realized_pnl": "0.00",
+     "today_realized_pnl": "0.00",
+     "unrealized_pnl": "0.00",
+     "total_pnl": "0.00",
+     "last_reset_date": "2026-09-21 09:30:00",
+     "reset_count": 0,
+     "updated_at": "2026-09-21 09:43:00"
+    },
+    "orders": [
+     {
+      "orderid": "26092100000001",
+      "strategy": "",
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "action": "BUY",
+      "quantity": 20,
+      "price": "2410.50",
+      "trigger_price": null,
+      "price_type": "LIMIT",
+      "product": "MIS",
+      "order_status": "complete",
+      "average_price": "2410.50",
+      "filled_quantity": 20,
+      "pending_quantity": 0,
+      "rejection_reason": null,
+      "margin_blocked": "4800.00",
+      "order_timestamp": "2026-09-21 09:31:00"
+     },
+     {
+      "orderid": "26092100000002",
+      "strategy": "",
+      "symbol": "ZEEL",
+      "exchange": "NSE",
+      "action": "SELL",
+      "quantity": 30,
+      "price": null,
+      "trigger_price": "106.50",
+      "price_type": "SL-M",
+      "product": "MIS",
+      "order_status": "cancelled",
+      "average_price": null,
+      "filled_quantity": 0,
+      "pending_quantity": 30,
+      "rejection_reason": null,
+      "margin_blocked": "630.00",
+      "order_timestamp": "2026-09-21 09:37:00"
+     },
+     {
+      "orderid": "26092100000003",
+      "strategy": "",
+      "symbol": "NIFTY27OCT2625000CE",
+      "exchange": "NFO",
+      "action": "BUY",
+      "quantity": 150,
+      "price": "250.00",
+      "trigger_price": null,
+      "price_type": "LIMIT",
+      "product": "NRML",
+      "order_status": "cancelled",
+      "average_price": null,
+      "filled_quantity": 0,
+      "pending_quantity": 150,
+      "rejection_reason": null,
+      "margin_blocked": "18750.00",
+      "order_timestamp": "2026-09-21 09:40:00"
+     },
+     {
+      "orderid": "26092100000004",
+      "strategy": "",
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "action": "BUY",
+      "quantity": 1,
+      "price": "2500.00",
+      "trigger_price": null,
+      "price_type": "MARKET",
+      "product": "MIS",
+      "order_status": "complete",
+      "average_price": "2500.00",
+      "filled_quantity": 1,
+      "pending_quantity": 0,
+      "rejection_reason": null,
+      "margin_blocked": "500.00",
+      "order_timestamp": "2026-09-21 09:43:00"
+     }
+    ],
+    "trades": [
+     {
+      "tradeid": "TRADE-20260921-093400-00000001",
+      "orderid": "26092100000001",
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "action": "BUY",
+      "quantity": 20,
+      "price": "2410.50",
+      "product": "MIS",
+      "strategy": "",
+      "trade_timestamp": "2026-09-21 09:34:00"
+     },
+     {
+      "tradeid": "TRADE-20260921-094300-00000002",
+      "orderid": "26092100000004",
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "action": "BUY",
+      "quantity": 1,
+      "price": "2500.00",
+      "product": "MIS",
+      "strategy": "",
+      "trade_timestamp": "2026-09-21 09:43:00"
+     }
+    ],
+    "positions": [
+     {
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "product": "MIS",
+      "quantity": 21,
+      "average_price": "2414.76",
+      "ltp": "2500.00",
+      "pnl": "0.00",
+      "pnl_percent": "0.0000",
+      "accumulated_realized_pnl": "0.00",
+      "today_realized_pnl": "0.00",
+      "margin_blocked": "5300.00",
+      "created_at": "2026-09-21 09:34:00",
+      "updated_at": "2026-09-21 09:43:00"
+     }
+    ],
+    "holdings": []
+   }
+  }
+ ]
+}

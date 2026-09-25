@@ -1,0 +1,8 @@
+<resources>
+    <color name="widget_bg">#FF111111</color>
+    <color name="widget_rule">#FF262626</color>
+    <color name="widget_ink">#FFFFFFFF</color>
+    <color name="widget_soft">#FF8E8E93</color>
+    <color name="widget_gain">#FF1FCC84</color>
+    <color name="widget_loss">#FFFF5A52</color>
+</resources>

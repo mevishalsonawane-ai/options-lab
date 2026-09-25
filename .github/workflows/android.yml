@@ -1,0 +1,93 @@
+name: Android app
+
+on:
+  push:
+    paths:
+      - "android/**"
+      - "options_lab/**"
+      - "tools/export_android_assets.py"
+      - ".github/workflows/android.yml"
+  pull_request:
+    paths:
+      - "android/**"
+      - "options_lab/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  python:
+    name: PC harness tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pandas numpy pyarrow requests pytest
+      - run: PYTHONPATH=. python -m pytest options_lab/tests -q
+
+  engine:
+    name: Engine parity with the PC
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: android
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v4
+      # No Android SDK on purpose: the engine must build on a bare JDK.
+      - run: env -u ANDROID_HOME -u ANDROID_SDK_ROOT ./gradlew --no-daemon :engine:test
+
+  apk:
+    name: Build APK
+    runs-on: ubuntu-latest
+    needs: engine
+    defaults:
+      run:
+        working-directory: android
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      # The hosted runner ships the Android SDK with ANDROID_HOME set; the
+      # Android Gradle plugin installs any missing platform once licences are
+      # accepted. (setup-android@v3 now fails asking for the retired "tools".)
+      - name: Accept Android SDK licences
+        run: |
+          test -n "$ANDROID_HOME"
+          SDKM=$(ls -d "$ANDROID_HOME"/cmdline-tools/*/bin/sdkmanager | sort -V | tail -1)
+          yes | "$SDKM" --licenses > /dev/null || true
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Release keystore (optional)
+        env:
+          KEYSTORE_B64: ${{ secrets.OL_KEYSTORE_B64 }}
+        run: |
+          if [ -n "$KEYSTORE_B64" ]; then
+            echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/release.jks"
+            echo "OL_KEYSTORE_PATH=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
+          else
+            echo "::warning title=Release APK signed with a throwaway key::No OL_KEYSTORE_B64 secret: this APK will not install over a previous build. Run android/tools/make-release-key.sh once and add the four secrets it prints."
+          fi
+      - name: Assemble
+        env:
+          OL_KEYSTORE_PASSWORD: ${{ secrets.OL_KEYSTORE_PASSWORD }}
+          OL_KEY_ALIAS: ${{ secrets.OL_KEY_ALIAS }}
+          OL_KEY_PASSWORD: ${{ secrets.OL_KEY_PASSWORD }}
+        run: ./gradlew --no-daemon :app:assembleDebug :app:assembleRelease
+      - name: Sandbox report (every permission the APK holds)
+        run: cat app/build/reports/sandbox/*.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: options-lab-apk
+          path: |
+            android/app/build/outputs/apk/release/*.apk
+            android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error

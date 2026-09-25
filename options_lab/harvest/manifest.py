@@ -88,12 +88,25 @@ def record(
             f"{BACKFILL!r}, not {SAME_DAY!r} - the chain as traded that day is gone"
         )
 
+    existing = read(root, underlying)
+
+    # A later run re-fetches recent sessions through the dated endpoint and
+    # upserts them into the same partition. That adds bars; it removes none,
+    # so a chain captured on its own day is still the chain as it traded.
+    # Re-recording it as backfill used to downgrade every same_day session the
+    # night after it was collected, which left complete_chain_sessions holding
+    # at most today - and emptied the scope chain-aggregate features rely on.
+    prior = existing[existing[KEY] == session] if len(existing) else existing
+    if (scope == BACKFILL and len(prior)
+            and prior["scope"].iloc[-1] == SAME_DAY):
+        scope = SAME_DAY
+        collected_on = prior["collected_on"].iloc[-1]
+
     row = pd.DataFrame([{
         "session": session, "n_expiries": n_expiries, "n_contracts": n_contracts,
         "scope": scope, "collected_on": collected_on,
     }])
 
-    existing = read(root, underlying)
     merged = (
         pd.concat([existing, row], ignore_index=True)
         .drop_duplicates(subset=KEY, keep="last")
