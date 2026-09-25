@@ -147,7 +147,20 @@ fun ChartScreen(model: AppModel, symbol: String, exchange: String, visible: Bool
                     setBackgroundColor(if (p.dark) android.graphics.Color.BLACK else android.graphics.Color.WHITE)
                     addJavascriptInterface(Bridge(this, scope, onSymbol = { s, e -> current = s to e; hint = null },
                         onOrder = { buy, price -> openOrder(buy, price) }, onData = { ready = true; failed = false }), "IraBridge")
+                    // A script error in the chart page shows as a red alert (the bundled chart only; no account data).
+                    webChromeClient = object : android.webkit.WebChromeClient() {
+                        override fun onConsoleMessage(m: android.webkit.ConsoleMessage): Boolean {
+                            if (m.messageLevel() == android.webkit.ConsoleMessage.MessageLevel.ERROR)
+                                com.optionslab.app.work.Alerts.post("Chart: ${m.message().take(160)}", com.optionslab.app.work.Alerts.Kind.ERROR, throttle = true)
+                            return true
+                        }
+                    }
                     webViewClient = object : WebViewClient() {
+                        override fun onReceivedError(view: WebView, request: WebResourceRequest, error: android.webkit.WebResourceError) {
+                            if (request.isForMainFrame) com.optionslab.app.work.Alerts.post("Chart page did not load: ${error.description}",
+                                com.optionslab.app.work.Alerts.Kind.ERROR, throttle = true)
+                        }
+
                         // Only the bundled chart files are served; every other request is refused.
                         override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse {
                             val u = request.url
