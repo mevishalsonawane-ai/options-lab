@@ -73,6 +73,8 @@ jobs:
           if [ -n "$KEYSTORE_B64" ]; then
             echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/release.jks"
             echo "OL_KEYSTORE_PATH=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
+          else
+            echo "::warning title=Release APK signed with a throwaway key::No OL_KEYSTORE_B64 secret: this APK will not install over a previous build. Run android/tools/make-release-key.sh once and add the four secrets it prints."
           fi
       - name: Assemble
         env:

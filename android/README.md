@@ -57,6 +57,22 @@ your own key, add repository secrets `OL_KEYSTORE_B64` (base64 of a .jks),
 `OL_KEYSTORE_PASSWORD`, `OL_KEY_ALIAS` and `OL_KEY_PASSWORD`; without them the
 release APK is signed with the debug key so it still installs.
 
+## Signing: install updates without losing data
+
+Android installs an update over an app only if both are signed with the same
+key. Without a key of your own, CI signs each build with a throwaway key, and
+every new APK must be uninstalled first, which erases the vault, PIN and
+strategies. To avoid that, set a signing key up once:
+
+1. On your PC run `bash android/tools/make-release-key.sh`. It needs a JDK.
+2. Add the four values it prints as GitHub repository secrets (Settings →
+   Secrets and variables → Actions): `OL_KEYSTORE_B64`, `OL_KEYSTORE_PASSWORD`,
+   `OL_KEY_ALIAS` and `OL_KEY_PASSWORD`.
+3. Keep `iraalgo-release.jks` and its password offline. Never commit them.
+
+Uninstall the current build once and install the next one. From then on,
+every build updates in place.
+
 ## Zerodha (Kite Connect)
 
 Cabinet → **Zerodha** is the broker, as `Trading_app/nifty_trading_bot/zerodha`
