@@ -523,7 +523,7 @@ private fun KitePinCard(model: AppModel) {
 @Composable
 fun RiskPage(model: AppModel) {
     Page {
-        item { PageTitle("Risk limits", "Account-wide limits on every order, paper and live") }
+        item { PageTitle("Bot settings", "Limits on every order the bot or you place, paper and live") }
         item { GuardCard(model) }
     }
 }

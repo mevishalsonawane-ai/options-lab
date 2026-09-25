@@ -36,10 +36,12 @@ private data class Drawer(val key: String, val title: String, val blurb: String)
 private val GROUPS = listOf(
     "Account" to listOf(
         Drawer("broker", "Zerodha", "Login, mode, order limits, manual order"),
-        Drawer("risk", "Risk limits", "Kill switch, daily loss, drawdown, position and order limits"),
         Drawer("alarms", "Alerts", "Price alarms and P&L alerts"),
         Drawer("security", "Security", "PIN, biometrics, device checks, widget"),
         Drawer("schedule", "Schedules", "Daily jobs, notifications, market holidays"),
+    ),
+    "Bot" to listOf(
+        Drawer("risk", "Bot settings", "Kill switch, daily loss, drawdown, position and order limits"),
     ),
     "Research" to listOf(
         Drawer("signal", "Signal lab", "UT Bot and LinReg on a harvested day"),
