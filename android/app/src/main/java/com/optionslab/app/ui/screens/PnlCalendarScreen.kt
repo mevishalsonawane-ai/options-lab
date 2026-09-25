@@ -42,6 +42,9 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -108,7 +111,26 @@ fun PnlCalendarScreen(model: AppModel) {
         value = withContext(Dispatchers.IO) { runCatching { DailyPnl.all(live) }.getOrDefault(emptyMap()) }
     }
     val first = all.keys.minOrNull()?.let { YearMonth.from(it) }
-    val days = all.filterKeys { YearMonth.from(it) == month }
+    // Today is shown live from the account as it stands now, not from the last recorded reading.
+    val today = Market.today()
+    val paperNow by model.paper.collectAsState()
+    val accountNow by model.account.collectAsState()
+    val todayLive: DailyPnl.Day? = if (live) (accountNow as? com.optionslab.app.ui.Load.Done)?.value
+        ?.takeIf { it.book.net.isNotEmpty() || it.trades.isNotEmpty() }?.let { DailyPnl.Day(today, it.book.m2m, it.trades.size) }
+        else (paperNow as? com.optionslab.app.ui.Load.Done)?.value?.let { sn ->
+            val pnl = sn.funds.todayRealizedPnl + sn.funds.m2mUnrealized
+            if (sn.trades.isNotEmpty() || pnl != 0.0 || sn.positions.positions.any { it.quantity != 0 }) DailyPnl.Day(today, pnl, sn.trades.size) else null
+        }
+    val days = all.filterKeys { YearMonth.from(it) == month }.let { m ->
+        if (todayLive != null && YearMonth.from(today) == month) m + (today to todayLive) else m
+    }
+    // While today's figure is open, keep it live.
+    LaunchedEffect(picked, live) {
+        while (picked == today) {
+            if (live) { if (com.optionslab.app.data.Broker.loggedIn) model.loadAccount(quiet = true) } else model.loadPaper(quiet = true)
+            delay(10_000)
+        }
+    }
     val prev = all.filterKeys { YearMonth.from(it) == month.minusMonths(1) }
 
     Page {
@@ -197,6 +219,18 @@ private fun Headline(month: YearMonth, days: Map<LocalDate, DailyPnl.Day>, prev:
 /** Monday-first weeks of 26 dp tiles, each week's net at the end of its row. */
 @Composable
 private fun MonthGrid(month: YearMonth, days: Map<LocalDate, DailyPnl.Day>, picked: LocalDate?, animKey: String, onPick: (LocalDate) -> Unit) {
+    val tiles = remember { HashMap<LocalDate, androidx.compose.ui.geometry.Rect>() }
+    var origin by remember { mutableStateOf(Offset.Zero) }
+    Box(Modifier.fillMaxWidth().onGloballyPositioned { origin = it.positionInWindow() }) {
+        Column(Modifier.fillMaxWidth()) { MonthRows(month, days, picked, animKey, tiles, onPick) }
+        // Exactly one tooltip, over the picked tile: choosing another day moves it, never leaves the old one behind.
+        if (picked != null) tiles[picked]?.let { r -> DayTip(picked, days[picked], r.translate(-origin.x, -origin.y), picked == Market.today()) { onPick(picked) } }
+    }
+}
+
+@Composable
+private fun MonthRows(month: YearMonth, days: Map<LocalDate, DailyPnl.Day>, picked: LocalDate?, animKey: String,
+                      tiles: MutableMap<LocalDate, androidx.compose.ui.geometry.Rect>, onPick: (LocalDate) -> Unit) {
     val p = LocalPalette.current
     val today = Market.today()
     val biggest = days.values.maxOfOrNull { abs(it.pnl) }?.takeIf { it > 0 } ?: 1.0
@@ -216,8 +250,9 @@ private fun MonthGrid(month: YearMonth, days: Map<LocalDate, DailyPnl.Day>, pick
     cells.chunked(7).forEach { week ->
         Row(Modifier.padding(top = gap), verticalAlignment = Alignment.CenterVertically) {
             (week + List(7 - week.size) { null }).forEach { d ->
-                if (d == null) Spacer(Modifier.size(TILE)) else DayTile(d, days[d], biggest, d == today, d == picked,
-                    !Market.isWeekday(d) || Holidays.isHoliday(d), animKey, index++) { onPick(d) }
+                if (d == null) Spacer(Modifier.size(TILE)) else Box(Modifier.onGloballyPositioned { tiles[d] = it.boundsInWindow() }) {
+                    DayTile(d, days[d], biggest, d == today, d == picked, !Market.isWeekday(d) || Holidays.isHoliday(d), animKey, index++) { onPick(d) }
+                }
                 Spacer(Modifier.width(gap))
             }
             Spacer(Modifier.weight(1f))
@@ -259,24 +294,45 @@ private fun DayTile(d: LocalDate, day: DailyPnl.Day?, biggest: Double, today: Bo
             contentAlignment = Alignment.Center,
         ) { Text("${d.dayOfMonth}", style = Type.label.copy(color = fg, fontSize = 8.5.sp, fontWeight = FontWeight.SemiBold)) }
         if (today) Box(Modifier.align(Alignment.TopEnd).offset(2.dp, (-2).dp).size(6.dp).background(p.ink, CircleShape).border(1.5.dp, p.card, CircleShape))
-        if (picked) DayTip(d, day)
     }
 }
 
 private fun lerp(a: Color, b: Color, t: Float) = Color(
     a.red + (b.red - a.red) * t, a.green + (b.green - a.green) * t, a.blue + (b.blue - a.blue) * t, a.alpha + (b.alpha - a.alpha) * t)
 
-/** The figure for a tapped day, floating above its tile; it leaves on its own after 3 s. */
+/**
+ * The figure for the tapped day, floating just above its tile. Today's is live (the
+ * account as it stands, refreshed every 10 s) and stays until tapped away; another
+ * day's leaves after 3 s.
+ */
 @Composable
-private fun DayTip(d: LocalDate, day: DailyPnl.Day?) {
+private fun DayTip(d: LocalDate, day: DailyPnl.Day?, tile: androidx.compose.ui.geometry.Rect, isToday: Boolean, onGone: () -> Unit) {
     val p = LocalPalette.current
-    var show by remember(d) { mutableStateOf(true) }
-    LaunchedEffect(d) { delay(3_000); show = false }
-    if (!show) return
-    Popup(alignment = Alignment.TopCenter, offset = IntOffset(0, -150)) {
+    LaunchedEffect(d) { if (!isToday) { delay(3_000); onGone() } }
+    val gap = with(androidx.compose.ui.platform.LocalDensity.current) { 6.dp.roundToPx() }
+    val place = remember(tile) {
+        object : androidx.compose.ui.window.PopupPositionProvider {
+            override fun calculatePosition(anchorBounds: androidx.compose.ui.unit.IntRect, windowSize: androidx.compose.ui.unit.IntSize,
+                                           layoutDirection: androidx.compose.ui.unit.LayoutDirection, popupContentSize: androidx.compose.ui.unit.IntSize): IntOffset {
+                val x = anchorBounds.left + tile.center.x.toInt() - popupContentSize.width / 2
+                val above = anchorBounds.top + tile.top.toInt() - popupContentSize.height - gap
+                val y = if (above >= 0) above else anchorBounds.top + tile.bottom.toInt() + gap
+                return IntOffset(x.coerceIn(0, (windowSize.width - popupContentSize.width).coerceAtLeast(0)), y)
+            }
+        }
+    }
+    // Only its own timer or a tap on its day closes it, so tapping another day simply moves it there.
+    Popup(popupPositionProvider = place, properties = androidx.compose.ui.window.PopupProperties(focusable = false, dismissOnClickOutside = false)) {
         Column(Modifier.background(p.ink, RoundedCornerShape(9.dp)).padding(horizontal = 10.dp, vertical = 7.dp)) {
-            Text("${d.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.ENGLISH)}, ${d.dayOfMonth} ${d.month.getDisplayName(TextStyle.SHORT, Locale.ENGLISH)}",
-                style = Type.label.copy(color = p.paper.copy(alpha = 0.7f), fontSize = 9.5.sp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("${d.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.ENGLISH)}, ${d.dayOfMonth} ${d.month.getDisplayName(TextStyle.SHORT, Locale.ENGLISH)}",
+                    style = Type.label.copy(color = p.paper.copy(alpha = 0.7f), fontSize = 9.5.sp))
+                if (isToday) {
+                    Spacer(Modifier.width(6.dp))
+                    Box(Modifier.size(5.dp).background(Color(0xFF3DDC97), CircleShape))
+                    Text(" LIVE", style = Type.label.copy(color = Color(0xFF3DDC97), fontSize = 8.5.sp, fontWeight = FontWeight.Bold))
+                }
+            }
             Text(day?.let { rupees(it.pnl) } ?: "No trades", style = Type.figure.copy(fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
                 color = when { day == null -> p.paper; day.pnl > 0 -> Color(0xFF3DDC97); day.pnl < 0 -> Color(0xFFFF7A73); else -> p.paper }))
             day?.takeIf { it.trades > 0 }?.let { Text("${it.trades} trade${if (it.trades == 1) "" else "s"}", style = Type.label.copy(color = p.paper.copy(alpha = 0.7f), fontSize = 9.5.sp)) }
