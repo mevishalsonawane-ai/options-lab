@@ -19,7 +19,10 @@ import java.time.LocalDate
 object Ledger {
     private lateinit var file: File
 
-    data class Entry(val row: Live.LedgerRow, val shortKey: String?, val wingKey: String?)
+    /** [orders] holds Zerodha order ids once the ticket was actually sent; empty means paper. */
+    data class Entry(val row: Live.LedgerRow, val shortKey: String?, val wingKey: String?, val orders: List<String> = emptyList()) {
+        val live: Boolean get() = orders.isNotEmpty()
+    }
 
     fun init(context: Context) { file = File(context.noBackupFilesDir, "ledger.vault") }
 
@@ -57,6 +60,29 @@ object Ledger {
         return settled
     }
 
+    /**
+     * The ticket was sent to Zerodha. Its credit becomes the ACTUAL net fill,
+     * so settlement - and every health check after it - measures the trade
+     * that happened, not the one that was priced.
+     */
+    @Synchronized
+    fun attachOrders(session: LocalDate, orderIds: List<String>, shortFill: Double?, wingFill: Double?) {
+        saveAll(all().map { e ->
+            if (e.row.ticket.session != session) e else {
+                val t = e.row.ticket
+                // Both legs take their ACTUAL fills: Live.settle rebuilds the
+                // short leg's credit as net credit + wing debit, so replacing
+                // only the net figure would misstate the hedged P&L.
+                val wing = if (t.wingStrike != null) (wingFill ?: t.wingDebit) else null
+                val tk = if (shortFill != null && shortFill > 0) {
+                    val net = shortFill - (wing ?: 0.0)
+                    t.copy(credit = net, breakeven = t.strike - net, wingDebit = wing)
+                } else t
+                e.copy(row = e.row.copy(ticket = tk), orders = e.orders + orderIds)
+            }
+        })
+    }
+
     @Synchronized
     fun delete(session: LocalDate) = saveAll(all().filter { it.row.ticket.session != session })
 
@@ -68,13 +94,13 @@ object Ledger {
     fun wipe() { file.delete() }
 
     fun csv(): String = buildString {
-        append("session,underlying,expiry,side,right,strike,lot_size,lots,qty,credit,forward,breakeven,margin,max_loss,wing_strike,wing_debit,status,settlement,net_pnl,won,paper\n")
+        append("session,underlying,expiry,side,right,strike,lot_size,lots,qty,credit,forward,breakeven,margin,max_loss,wing_strike,wing_debit,status,settlement,net_pnl,won,paper,orders\n")
         for (e in all().sortedBy { it.row.ticket.session }) {
             val t = e.row.ticket
             val tr = e.row.trade
             append(listOf(t.session, t.underlying, t.expiry, t.side, t.right, t.strike, t.lotSize, t.lots, t.qty,
                 t.credit, t.forward, t.breakeven, t.margin, t.maxLoss ?: "", t.wingStrike ?: "", t.wingDebit ?: "",
-                e.row.status, e.row.settlement ?: "", tr?.netPnl ?: "", tr?.won ?: "", "true").joinToString(","))
+                e.row.status, e.row.settlement ?: "", tr?.netPnl ?: "", tr?.won ?: "", (!e.live).toString(), e.orders.joinToString(" ")).joinToString(","))
             append('\n')
         }
     }
@@ -88,7 +114,8 @@ object Ledger {
             .put("breakeven", t.breakeven).put("margin", t.margin)
             .put("max_loss", t.maxLoss ?: JSONObject.NULL).put("wing_strike", t.wingStrike ?: JSONObject.NULL)
             .put("wing_debit", t.wingDebit ?: JSONObject.NULL)
-            .put("status", e.row.status).put("paper", true).put("recorded_at", e.row.recordedAtMillis)
+            .put("status", e.row.status).put("paper", !e.live).put("recorded_at", e.row.recordedAtMillis)
+            .put("orders", JSONArray(e.orders))
             .put("short_key", e.shortKey ?: JSONObject.NULL).put("wing_key", e.wingKey ?: JSONObject.NULL)
         e.row.settlement?.let { o.put("settlement", it) }
         e.row.trade?.let { tr ->
@@ -118,7 +145,8 @@ object Ledger {
             maxLoss = t.maxLoss, grossPnl = o.getDouble("gross_pnl"), cost = o.getDouble("cost"), netPnl = o.getDouble("net_pnl"),
             forward = t.forward, otmRealised = (t.forward - t.strike) / t.forward,
         ) else null
-        return Entry(Live.LedgerRow(t, o.getString("status"), settlement, trade, o.optLong("recorded_at")), o.s("short_key"), o.s("wing_key"))
+        val orders = o.optJSONArray("orders")?.let { a -> (0 until a.length()).map { a.getString(it) } } ?: emptyList()
+        return Entry(Live.LedgerRow(t, o.getString("status"), settlement, trade, o.optLong("recorded_at")), o.s("short_key"), o.s("wing_key"), orders)
     }
 }
 

@@ -71,7 +71,7 @@ object Jobs {
     fun enabled(k: Kind, s: AppSettings) = when (k) {
         Kind.LIVE -> s.liveWatch
         Kind.REMIND -> s.entryReminder
-        Kind.TICKET -> s.autoTicket
+        Kind.TICKET -> s.autoTicket || (s.prepareRealOrder && com.optionslab.app.data.Broker.configured)
         Kind.SETTLE -> s.autoSettle
         Kind.HARVEST -> s.nightlyHarvest
     }
@@ -198,8 +198,11 @@ object Tasks {
         Ledger.record(d.ticket, d.shortKey, d.wingKey)
         val t = d.ticket
         Notifier.post(context, 2002, Notifier.SCHEDULE, "Paper ticket: SELL ${t.underlying} ${fmtG(t.strike)} PE",
-            "Credit Rs %.2f/unit (Rs %,.0f), breakeven %,.1f. Recorded as paper - nothing was sent. Place it yourself if you want it."
+            "Credit Rs %.2f/unit (Rs %,.0f), breakeven %,.1f. Recorded as paper - nothing was sent."
                 .format(t.credit, t.credit * t.qty, t.breakeven), "ticket")
+        // The real order is PREPARED, never sent: it waits for your review.
+        if (s.prepareRealOrder && com.optionslab.app.data.Broker.loggedIn) Notifier.post(context, 2004, Notifier.RISK,
+            "Review today's Zerodha order", "SELL ${t.underlying} ${fmtG(t.strike)} PE x${t.lots} is ready. Open the Ticket page, review it and hold to send - nothing goes until you do.", "ticket")
     }
 
     suspend fun settle(context: Context, s: AppSettings) {
@@ -346,6 +349,9 @@ class WatchService : Service() {
 
     private suspend fun watch(s: AppSettings) {
         val fired = HashSet<String>()
+        val b = com.optionslab.app.data.Broker
+        if (b.configured && !b.loggedIn) Notifier.post(this, 2005, Notifier.SCHEDULE, "Log in to Zerodha for today",
+            "Yesterday's session ended at 06:00. Open Cabinet → Zerodha and log in before the 11:00 entry.", "broker")
         while (Market.isWeekday() && Market.minuteNow() <= Market.CLOSE) {
             if (Market.minuteNow() < Market.OPEN) {
                 show("Market watch", "Waiting for the 09:15 open")

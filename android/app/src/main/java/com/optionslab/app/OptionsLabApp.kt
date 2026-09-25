@@ -3,6 +3,7 @@ package com.optionslab.app
 import android.app.Application
 import androidx.lifecycle.ProcessLifecycleOwner
 import com.optionslab.app.data.Alarms
+import com.optionslab.app.data.Broker
 import com.optionslab.app.data.Ledger
 import com.optionslab.app.data.Market
 import com.optionslab.app.data.Store
@@ -19,6 +20,7 @@ class OptionsLabApp : Application() {
         Alarms.init(this)
         Store.init(this)
         Market.init(this)
+        Broker.init(this)
         Notifier.createChannels(this)
         ProcessLifecycleOwner.get().lifecycle.addObserver(SessionLock)
         // Keystore work stays off the main thread.

@@ -42,7 +42,13 @@ object Market {
         val changePct: Double get() = if (open != 0.0) change / open else 0.0
     }
 
+    /** Kite when you are logged in to Zerodha today; Upstox's public candles otherwise. */
     suspend fun quote(symbol: String): Quote? {
+        if (Broker.loggedIn) runCatching { Broker.indexQuote(symbol) }.getOrNull()?.let { return it }
+        return upstoxQuote(symbol)
+    }
+
+    private suspend fun upstoxQuote(symbol: String): Quote? {
         val key = Upstox.INDEX_KEYS.getValue(symbol)
         val bars = Net.intraday(key).filter { it.istDate == today() }
         if (bars.isEmpty()) return null
@@ -97,6 +103,13 @@ object Market {
      * quote both sides, and Upstox rate-limits at 429.
      */
     suspend fun liveChain(underlying: String, near: Int = 14): LiveChain {
+        // Kite first when logged in; a plan without historical data, or any Kite
+        // failure, falls back to the Upstox route rather than to no ticket.
+        if (Broker.loggedIn) runCatching { Broker.liveChain(underlying, near) }.getOrNull()?.let { return it }
+        return upstoxChain(underlying, near)
+    }
+
+    private suspend fun upstoxChain(underlying: String, near: Int): LiveChain {
         val live = Upstox.contractsToRefresh(contracts().filter { it.underlying == underlying }, today())
         if (live.isEmpty()) throw IllegalStateException("no listed $underlying options in the master")
         val expiry = live.minOf { it.expiry }
@@ -132,7 +145,20 @@ object Market {
 
     /** Live mark of an open paper ticket, from its own legs' latest prints. */
     suspend fun markOpenTicket(e: Ledger.Entry): Double? {
-        val sk = e.shortKey ?: return null
+        val tk = e.row.ticket
+        if (Broker.loggedIn) runCatching {
+            val ins = Broker.instruments()
+            val short = Broker.find(ins, tk.underlying, tk.expiry, tk.strike, Right.PE)
+            val wing = tk.wingStrike?.let { Broker.find(ins, tk.underlying, tk.expiry, it, Right.PE) }
+            if (short != null && (tk.wingStrike == null || wing != null)) {
+                val keys = listOfNotNull(short, wing).map { "NFO:${it.tradingSymbol}" }
+                val q = Broker.quotes(keys)
+                val s = q["NFO:${short.tradingSymbol}"]?.last
+                val w = wing?.let { q["NFO:${it.tradingSymbol}"]?.last } ?: 0.0
+                if (s != null) return (tk.credit - (s - w)) * tk.qty
+            }
+        }
+        val sk = e.shortKey?.takeIf { !it.startsWith("kite:") } ?: return null
         val short = Net.intraday(sk).lastOrNull { it.istDate == today() } ?: return null
         val wing = e.wingKey?.let { Net.intraday(it).lastOrNull { b -> b.istDate == today() } ?: return null }
         return (e.row.ticket.credit - (short.close - (wing?.close ?: 0.0))) * e.row.ticket.qty

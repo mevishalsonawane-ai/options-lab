@@ -27,6 +27,7 @@ import com.optionslab.app.ui.theme.Type
 private data class Drawer(val key: String, val title: String, val blurb: String)
 
 private val DRAWERS = listOf(
+    Drawer("broker", "Zerodha", "Log in, funds, positions, orders - your broker"),
     Drawer("alarms", "Alarms", "Price alarms on NIFTY, BANKNIFTY and VIX"),
     Drawer("signal", "Signal Lab", "UT Bot and LinReg, replayed on a harvested day"),
     Drawer("ic", "The IC Table", "Is this data predictable at all, net of cost?"),
@@ -48,6 +49,7 @@ fun CabinetScreen(model: AppModel, page: String?, onPage: (String?) -> Unit) {
     ) { pg ->
         when (pg) {
             null -> Drawers(onPage)
+            "broker" -> BrokerPage(model)
             "alarms" -> AlarmsPage(model)
             "signal" -> SignalPage(model)
             "ic" -> IcPage(model)

@@ -289,6 +289,7 @@ fun SecurityPage(model: AppModel) {
                     "The ledger, alarms and settings are AES-256-GCM encrypted with a key held in the Android Keystore (StrongBox where present).",
                     "The PIN is never stored: only a salted PBKDF2 verifier, compared in constant time, with escalating lockouts.",
                     "HTTPS only, and only the system's certificate authorities - a user-installed CA cannot read the traffic.",
+                    "Zerodha API key, secret and the day's access token live only in the encrypted vault; a real order needs your review, a long press and a fresh PIN or fingerprint, and is refused on a compromised device.",
                     "Nothing is written to the system log. Errors never carry a URL, an instrument key or a response.",
                     "No backups, no device transfer, no exported components beyond the launcher.",
                     "Touches through another app's overlay are ignored.",
@@ -407,7 +408,7 @@ fun SchedulePage(model: AppModel) {
 
 /** A permission name in words a person would use. */
 private fun plainPermission(p: String): String = when (p.substringAfterLast('.')) {
-    "INTERNET" -> "Reach the internet - only Upstox's public market data"
+    "INTERNET" -> "Reach the internet - Upstox's public market data, and Zerodha (kite.zerodha.com, api.kite.trade) once you connect it"
     "ACCESS_NETWORK_STATE" -> "Tell whether the phone is online"
     "POST_NOTIFICATIONS" -> "Show its own notifications"
     "USE_BIOMETRIC", "USE_FINGERPRINT" -> "Ask Android to check your fingerprint or face (it never sees them)"

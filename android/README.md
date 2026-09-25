@@ -57,6 +57,40 @@ your own key, add repository secrets `OL_KEYSTORE_B64` (base64 of a .jks),
 `OL_KEYSTORE_PASSWORD`, `OL_KEY_ALIAS` and `OL_KEY_PASSWORD`; without them the
 release APK is signed with the debug key so it still installs.
 
+## Zerodha (Kite Connect)
+
+Cabinet → **Zerodha** is the broker, as `Trading_app/nifty_trading_bot/zerodha`
+uses it on the PC:
+
+- **Setup:** API key, API secret and the Redirect URL registered at
+  developers.kite.trade. All three go straight into the encrypted vault; the
+  secret is never displayed again.
+- **Login:** Kite's own login page opens inside the app. The app catches the
+  redirect before it loads, reads the `request_token` (matched on the exact
+  registered scheme, host, port and path, so a lookalike page cannot pass),
+  and exchanges it with `sha256(api_key + request_token + api_secret)` exactly
+  as `kite_login.py` does. The page keeps no cookies, cache or form data.
+- **No refresh token exists** for individual Kite developers: the access token
+  ends at about 06:00 IST, so you log in once per trading day (the PC does the
+  same). A 09:14 notification reminds you.
+- **Data:** with a session, index quotes, the live chain (Kite 1-minute
+  candles, same engine code) and the ticket's live mark come from Kite;
+  without one, or if your plan lacks historical data, Upstox is used.
+- **Orders:** funds, positions, today's orders (with cancel), a manual order
+  form, and "Send to Zerodha" on the day's ticket. Nothing is ever sent by
+  itself: at 11:01 the order is only *prepared* and you are notified. To send
+  you review each leg and its limit price, hold the button for 1.5 s, and
+  prove it is you again with your PIN or fingerprint. Real orders are off
+  until you enable them and are refused on a compromised device.
+- **Gates** (tested in `engine/.../KiteTest.kt`): whole lots, a lot cap
+  (default 2 - the measured book depth), orders per day, order-value cap
+  (kite_adapter.py's Rs 5,00,000 default), prices on the tick, LIMIT orders at
+  the best bid/offer, and **NRML** for the expiry put - MIS would be squared
+  off by Zerodha before the settlement the strategy holds to. A hedged ticket
+  buys the wing first and sells the put only after the wing has fully filled.
+  Fills replace the priced credit in the ledger, so settlement and the health
+  checks measure the trade that happened.
+
 ## Security
 
 - **No screenshots or screen recording.** The window is `FLAG_SECURE` from

@@ -39,11 +39,20 @@ data class AppSettings(
     val refuseCompromised: Boolean = false,
     val wipeOnExhaustion: Boolean = false,
     val hideAmountsOnLockScreen: Boolean = true,
+    // Zerodha: real orders are OFF until the owner turns them on
+    val allowRealOrders: Boolean = false,
+    val orderProduct: String = "NRML",
+    val maxOrdersPerDay: Int = 4,
+    val maxLotsPerOrder: Int = 2,
+    val maxOrderValue: Double = 500_000.0,
+    val prepareRealOrder: Boolean = true,
     // appearance
     val theme: String = "system",          // system | parchment | mahogany
     val reduceMotion: Boolean = false,
 ) {
     val entryMinute: Int get() = runCatching { hhmm(entry) }.getOrDefault(ExpiryPut.DEFAULT_ENTRY)
+
+    fun limits() = com.optionslab.engine.Kite.Limits(maxOrdersPerDay, maxLotsPerOrder, maxOrderValue)
 
     fun params(): ExpiryPut.Params = ExpiryPut.Params(
         otmPct = otmPct, entryMinute = entryMinute, regime = regime, wingPct = wingPct,
@@ -81,6 +90,12 @@ data class AppSettings(
                 refuseCompromised = p.getBoolean("sec.refuse", d.refuseCompromised),
                 wipeOnExhaustion = p.getBoolean("sec.wipe", d.wipeOnExhaustion),
                 hideAmountsOnLockScreen = p.getBoolean("sec.hideAmounts", d.hideAmountsOnLockScreen),
+                allowRealOrders = p.getBoolean("k.allow", d.allowRealOrders),
+                orderProduct = p.getString("k.product", d.orderProduct)!!,
+                maxOrdersPerDay = p.getInt("k.maxOrders", d.maxOrdersPerDay),
+                maxLotsPerOrder = p.getInt("k.maxLots", d.maxLotsPerOrder),
+                maxOrderValue = p.getDouble("k.maxValue", d.maxOrderValue),
+                prepareRealOrder = p.getBoolean("k.prepare", d.prepareRealOrder),
                 theme = p.getString("ui.theme", d.theme)!!,
                 reduceMotion = p.getBoolean("ui.calm", d.reduceMotion),
             )
@@ -98,6 +113,8 @@ data class AppSettings(
                 "lock.graceSeconds" to s.graceSeconds, "sec.refuse" to s.refuseCompromised,
                 "sec.wipe" to s.wipeOnExhaustion, "sec.hideAmounts" to s.hideAmountsOnLockScreen,
                 "ui.theme" to s.theme, "ui.calm" to s.reduceMotion,
+                "k.allow" to s.allowRealOrders, "k.product" to s.orderProduct, "k.maxOrders" to s.maxOrdersPerDay,
+                "k.maxLots" to s.maxLotsPerOrder, "k.maxValue" to s.maxOrderValue, "k.prepare" to s.prepareRealOrder,
             ))
         }
     }

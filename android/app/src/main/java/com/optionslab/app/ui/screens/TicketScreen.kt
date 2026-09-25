@@ -60,6 +60,7 @@ fun TicketScreen(model: AppModel) {
     val mark by model.openMark.collectAsState()
     var settling by remember { mutableStateOf<LocalDate?>(null) }
     var deleting by remember { mutableStateOf<LocalDate?>(null) }
+    val broker by model.broker.collectAsState()
     val export = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri -> uri?.let(model::exportLedger) }
 
     Page {
@@ -88,12 +89,17 @@ fun TicketScreen(model: AppModel) {
             }
             Load.Idle -> Unit
         }
+        item { OrderReview(model) }
         item {
             LedgerCard(title = "Paper Ledger") {
                 if (ledger.isEmpty()) Note("No tickets yet. Each expiry you record here builds a forward record - the only evidence that is not a backtest of itself.")
                 ledger.forEachIndexed { i, e ->
                     if (i > 0) Rule(Modifier.padding(vertical = 8.dp))
                     LedgerRow(e, if (e.row.status == "open") mark else null, onSettle = { settling = e.row.ticket.session }, onDelete = { deleting = e.row.ticket.session })
+                    if (e.row.status == "open" && !e.live && e.row.ticket.session == com.optionslab.app.data.Market.today()) {
+                        if (broker.loggedIn) BrassButton("Send to Zerodha…", Modifier.fillMaxWidth().padding(top = 6.dp), tone = p.oxblood) { model.planTicket(e) }
+                        else if (broker.configured) BrassButton("Log in to Zerodha to send it", Modifier.fillMaxWidth().padding(top = 6.dp), tone = p.inkSoft) { model.startKiteLogin() }
+                    }
                 }
                 if (ledger.isNotEmpty()) {
                     Spacer(Modifier.height(12.dp))
@@ -169,13 +175,14 @@ private fun LedgerRow(e: Ledger.Entry, liveMark: Double?, onSettle: () -> Unit, 
                 Text("LIVE", style = Type.label.copy(color = p.inkSoft, fontSize = 9.sp))
                 RollingFigure(liveMark, { rs(it, true) }, Type.figure.copy(color = if (liveMark >= 0) p.verdigris else p.oxblood))
             }
-            else -> Stamp("Open", p.brass, animate = false)
+            else -> Stamp(if (e.live) "Live" else "Open", if (e.live) p.oxblood else p.brass, animate = false)
         }
     }
     Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         if (e.row.status == "open") BrassButton("Settle", Modifier.weight(1f), tone = p.verdigris, onClick = onSettle)
         BrassButton("Strike out", Modifier.weight(1f), tone = p.inkFaint, onClick = onDelete)
     }
+    if (e.live) LedgerLine("Zerodha orders", e.orders.joinToString { it.takeLast(6) })
     e.row.trade?.let { tr ->
         LedgerLine("Settled at", num(tr.settlement))
         LedgerLine("Cost", rs(tr.cost))

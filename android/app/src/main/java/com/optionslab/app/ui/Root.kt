@@ -179,6 +179,7 @@ private fun Main(model: AppModel) {
     var tab by rememberSaveable { mutableStateOf(Tab.ALMANAC) }
     var cabinetPage by rememberSaveable { mutableStateOf<String?>(null) }
     val message by model.message.collectAsState()
+    val kiteLogin by model.showKiteLogin.collectAsState()
 
     LaunchedEffect(requested) {
         when (requested) {
@@ -188,6 +189,7 @@ private fun Main(model: AppModel) {
             "trials" -> tab = Tab.TRIALS
             "cabinet" -> { tab = Tab.CABINET; cabinetPage = "data" }
             "alarms" -> { tab = Tab.CABINET; cabinetPage = "alarms" }
+            "broker" -> { tab = Tab.CABINET; cabinetPage = "broker" }
         }
         MainActivity.tabRequests.value = null
     }
@@ -237,6 +239,7 @@ private fun Main(model: AppModel) {
             }
             TabBar(tab) { if (it == tab && it == Tab.CABINET) cabinetPage = null; tab = it }
         }
+        if (kiteLogin) com.optionslab.app.ui.screens.KiteLoginPage(model)
     }
 }
 

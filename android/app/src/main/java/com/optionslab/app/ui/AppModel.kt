@@ -51,6 +51,22 @@ data class HealthResult(val source: String, val window: List<Monitor.Row>, val t
     val verdict: Monitor.Status get() = Monitor.verdict(checks)
 }
 
+data class BrokerState(val configured: Boolean, val loggedIn: Boolean, val user: String?, val expires: java.time.ZonedDateTime?, val maskedKey: String)
+
+data class Account(val funds: com.optionslab.app.data.Broker.Funds?, val positions: List<com.optionslab.app.data.Broker.Position>, val orders: List<com.optionslab.app.data.Broker.OrderRow>)
+
+/** Orders awaiting the owner's decision, with every gate's verdict attached. */
+data class OrderPlan(
+    val title: String,
+    val session: LocalDate?,
+    val legs: List<com.optionslab.engine.Kite.Order>,
+    val quotes: Map<String, com.optionslab.app.data.Broker.Quote>,
+    val refusals: List<List<String>>,
+    val holdToSettlement: Boolean,
+) {
+    val sendable: Boolean get() = legs.isNotEmpty() && refusals.all { it.isEmpty() }
+}
+
 data class SignalResult(
     val underlying: String, val day: LocalDate, val indicator: String,
     val bars: SignalBacktest.Bars, val buys: BooleanArray, val sells: BooleanArray,
@@ -372,4 +388,187 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     fun costs(premium: Double, lot: Int, lots: Int, regime: String) = Triple(
         Costs.sellToSettle(premium, lot, lots, regime), Costs.buyToSettle(premium, lot, lots, regime), Costs.roundTrip(premium, lot, lots, regime),
     )
+    // ---- Zerodha --------------------------------------------------------------------
+
+    val broker = MutableStateFlow(brokerState())
+    val account = MutableStateFlow<Load<Account>>(Load.Idle)
+    val plan = MutableStateFlow<Load<OrderPlan>>(Load.Idle)
+    val sending = MutableStateFlow<Load<List<com.optionslab.app.data.Broker.Fill>>>(Load.Idle)
+    val showKiteLogin = MutableStateFlow(false)
+
+    private fun brokerState() = com.optionslab.app.data.Broker.let {
+        BrokerState(it.configured, it.loggedIn, it.userName, it.expiresAt(), it.maskedKey())
+    }
+
+    fun refreshBroker() { viewModelScope.launch(Dispatchers.IO) { broker.value = brokerState() } }
+
+    /** Returns an error to show, or null when saved. */
+    fun saveBrokerCredentials(key: String, secret: String, redirect: String): String? = try {
+        com.optionslab.app.data.Broker.saveCredentials(key, secret, redirect)
+        broker.value = brokerState()
+        null
+    } catch (e: IllegalArgumentException) { e.message }
+
+    fun forgetBroker() {
+        viewModelScope.launch(Dispatchers.IO) {
+            runCatching { com.optionslab.app.data.Broker.logout() }
+            com.optionslab.app.data.Broker.forget()
+            broker.value = brokerState(); account.value = Load.Idle
+            say("Zerodha credentials erased from this phone.")
+        }
+    }
+
+    fun startKiteLogin() { if (com.optionslab.app.data.Broker.configured) showKiteLogin.value = true else say("Add your API key, secret and redirect URL first.") }
+
+    /** Called by the login page for every navigation; true means "stop, it was ours". */
+    fun onKiteNavigation(url: String): Boolean {
+        val registered = com.optionslab.app.data.Broker.redirect ?: return false
+        return when (val r = com.optionslab.engine.Kite.readRedirect(url, registered)) {
+            com.optionslab.engine.Kite.Redirect.NotOurs -> false
+            is com.optionslab.engine.Kite.Redirect.Refused -> { showKiteLogin.value = false; say("Zerodha login did not complete: ${r.why}"); true }
+            is com.optionslab.engine.Kite.Redirect.Token -> {
+                showKiteLogin.value = false
+                viewModelScope.launch(Dispatchers.IO) {
+                    try {
+                        val who = com.optionslab.app.data.Broker.completeLogin(r.requestToken)
+                        broker.value = brokerState()
+                        say("Logged in to Zerodha as $who until 06:00 tomorrow.")
+                        loadAccount()
+                    } catch (e: Exception) { say("Zerodha login failed: ${e.message}") }
+                }
+                true
+            }
+        }
+    }
+
+    fun brokerLogout() {
+        viewModelScope.launch(Dispatchers.IO) {
+            com.optionslab.app.data.Broker.logout()
+            broker.value = brokerState(); account.value = Load.Idle
+            say("Logged out of Zerodha.")
+        }
+    }
+
+    fun loadAccount() {
+        account.value = Load.Busy("Reading your Zerodha account")
+        viewModelScope.launch(Dispatchers.IO) {
+            account.value = try {
+                val b = com.optionslab.app.data.Broker
+                Load.Done(Account(runCatching { b.funds() }.getOrNull(), b.positions(), b.orders()))
+            } catch (e: Exception) {
+                broker.value = brokerState()
+                Load.Failed(e.message ?: "could not read the account")
+            }
+        }
+    }
+
+    private fun gate(legs: List<com.optionslab.engine.Kite.Order>, hold: Boolean): List<List<String>> {
+        val s = _settings.value
+        val sent = com.optionslab.app.data.Broker.sentToday()
+        return legs.mapIndexed { i, o -> com.optionslab.engine.Kite.refusals(o, s.limits(), sent + i, hold) }
+    }
+
+    /** The strategy's ticket for [session], turned into Zerodha orders for review. */
+    fun planTicket(e: Ledger.Entry) {
+        plan.value = Load.Busy("Looking up the contracts on Zerodha")
+        viewModelScope.launch(Dispatchers.IO) {
+            plan.value = try {
+                val b = com.optionslab.app.data.Broker
+                val tk = e.row.ticket
+                val ins = b.instruments()
+                val short = b.find(ins, tk.underlying, tk.expiry, tk.strike, com.optionslab.engine.Right.PE)
+                    ?: error("${tk.underlying} ${tk.expiry} ${com.optionslab.engine.fmtG(tk.strike)} PE is not listed on Zerodha")
+                val wing = tk.wingStrike?.let { w -> b.find(ins, tk.underlying, tk.expiry, w, com.optionslab.engine.Right.PE) ?: error("wing strike ${com.optionslab.engine.fmtG(w)} PE is not listed") }
+                val q = b.quotes(listOfNotNull(short, wing).map { "NFO:${it.tradingSymbol}" })
+                val sq = q["NFO:${short.tradingSymbol}"]
+                val wq = wing?.let { q["NFO:${it.tradingSymbol}"] }
+                // Sell at the best bid, buy at the best offer: a limit that fills,
+                // never a market order into an expiry-day book.
+                val legs = com.optionslab.engine.Kite.legsFor(tk, short, wing, _settings.value.orderProduct,
+                    sq?.bid ?: sq?.last ?: tk.credit, wq?.ask ?: wq?.last)
+                Load.Done(OrderPlan("Today's ticket: ${tk.underlying} ${com.optionslab.engine.fmtG(tk.strike)} PE", tk.session, legs, q, gate(legs, true), true))
+            } catch (x: Exception) { Load.Failed(x.message ?: "could not prepare the order") }
+        }
+    }
+
+    /** A single order typed by hand on the Zerodha page. */
+    fun planManual(underlying: String, expiry: LocalDate, strike: Double, right: com.optionslab.engine.Right,
+                   side: com.optionslab.engine.Kite.Side, lots: Int, product: String, limit: Double?) {
+        plan.value = Load.Busy("Looking up the contract")
+        viewModelScope.launch(Dispatchers.IO) {
+            plan.value = try {
+                val b = com.optionslab.app.data.Broker
+                val ins = b.find(b.instruments(), underlying, expiry, strike, right) ?: error("that contract is not listed")
+                val q = b.quotes(listOf("NFO:${ins.tradingSymbol}"))
+                val qt = q["NFO:${ins.tradingSymbol}"]
+                val px = limit ?: (if (side == com.optionslab.engine.Kite.Side.SELL) qt?.bid else qt?.ask) ?: qt?.last ?: 0.0
+                val o = com.optionslab.engine.Kite.Order(ins.tradingSymbol, side, lots * ins.lotSize, ins.lotSize, product, "LIMIT",
+                    com.optionslab.engine.Kite.onTick(px, ins.tickSize, side), ins.tickSize)
+                Load.Done(OrderPlan("${side.name} ${ins.tradingSymbol}", null, listOf(o), q, gate(listOf(o), false), false))
+            } catch (x: Exception) { Load.Failed(x.message ?: "could not prepare the order") }
+        }
+    }
+
+    fun setLegPrice(i: Int, price: Double) {
+        val cur = (plan.value as? Load.Done<OrderPlan>)?.value ?: return
+        val legs = cur.legs.mapIndexed { j, o -> if (j == i) o.copy(price = price) else o }
+        plan.value = Load.Done(cur.copy(legs = legs, refusals = gate(legs, cur.holdToSettlement)))
+    }
+
+    fun dismissPlan() { plan.value = Load.Idle; sending.value = Load.Idle }
+
+    /**
+     * Send the reviewed plan. The UI calls this only after the hold-to-send
+     * gesture AND a fresh PIN or fingerprint check. Every gate is re-run
+     * here; legs go one at a time and the next is sent only once the previous
+     * one has COMPLETELY filled, so a hedge can never leave a naked short.
+     */
+    fun sendPlan() {
+        val cur = (plan.value as? Load.Done<OrderPlan>)?.value ?: return
+        val s = _settings.value
+        if (!s.allowRealOrders) { say("Real orders are switched off. Turn them on under Cabinet → Zerodha."); return }
+        if (Integrity.compromised(integrity.value)) { say("Refused: this device shows signs of compromise, so no real order is sent from it."); return }
+        val again = gate(cur.legs, cur.holdToSettlement)
+        if (again.any { it.isNotEmpty() }) { plan.value = Load.Done(cur.copy(refusals = again)); return }
+        sending.value = Load.Busy("Sending to Zerodha")
+        viewModelScope.launch(Dispatchers.IO) {
+            val b = com.optionslab.app.data.Broker
+            val fills = ArrayList<com.optionslab.app.data.Broker.Fill>()
+            try {
+                for ((i, leg) in cur.legs.withIndex()) {
+                    sending.value = Load.Busy("Leg ${i + 1} of ${cur.legs.size}: ${leg.side} ${leg.tradingSymbol}")
+                    val id = b.placeOrder(leg)
+                    val f = b.awaitOrder(id)
+                    fills += f
+                    if (f.status != "COMPLETE" || f.filled < leg.quantity) {
+                        sending.value = Load.Failed(
+                            "Leg ${i + 1} ${f.status.lowercase()}${if (f.message.isNotBlank()) ": ${f.message}" else ""}. " +
+                                if (i + 1 < cur.legs.size) "The remaining leg was NOT sent. Check Orders on the Zerodha page." else "Check Orders on the Zerodha page.")
+                        cur.session?.let { Ledger.attachOrders(it, fills.map { x -> x.orderId }, null, null) }
+                        refreshLedger(); loadAccount()
+                        return@launch
+                    }
+                }
+                cur.session?.let { day ->
+                    val short = fills.last().avgPrice
+                    val wing = if (fills.size > 1) fills.first().avgPrice else null
+                    Ledger.attachOrders(day, fills.map { it.orderId }, short, wing)
+                }
+                sending.value = Load.Done(fills)
+                refreshLedger(); loadAccount()
+                say("Filled: " + fills.joinToString(" · ") { "%s @ %.2f".format(it.orderId.takeLast(6), it.avgPrice) })
+            } catch (e: Exception) {
+                sending.value = Load.Failed("Not sent: ${e.message}")
+                if (fills.isNotEmpty()) cur.session?.let { Ledger.attachOrders(it, fills.map { x -> x.orderId }, null, null) }
+                loadAccount()
+            }
+        }
+    }
+
+    fun cancelOrder(id: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try { com.optionslab.app.data.Broker.cancel(id); say("Cancel requested for ${id.takeLast(6)}.") } catch (e: Exception) { say("Cancel failed: ${e.message}") }
+            loadAccount()
+        }
+    }
 }
