@@ -711,6 +711,52 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    // ---- the strategy module ------------------------------------------------------------------
+
+    val strategies = MutableStateFlow<List<com.optionslab.app.data.Strategies.Entry>>(emptyList())
+    val strategyLog = MutableStateFlow<List<com.optionslab.app.data.Strategies.LogLine>>(emptyList())
+
+    private val compromisedNow: Boolean get() = Integrity.compromised(integrity.value)
+
+    fun refreshStrategies(tick: Boolean = false) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val st = com.optionslab.app.data.Strategies
+            if (tick) runCatching { st.tickAll(compromisedNow) }
+            strategies.value = st.all()
+            strategyLog.value = st.log()
+        }
+    }
+
+    private fun strategyDo(block: suspend () -> String?) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try { block()?.let { say(it) } } catch (e: Exception) { say(e.message ?: "failed") }
+            refreshStrategies()
+        }
+    }
+
+    /** Returns through [onResult] the validator's message, or null when saved. */
+    fun saveStrategy(def: com.optionslab.engine.strategy.StrategyDef, onResult: (String?) -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val err = com.optionslab.app.data.Strategies.save(def)
+            withContext(Dispatchers.Main) { onResult(err) }
+            refreshStrategies()
+        }
+    }
+
+    fun deleteStrategy(id: Long) = strategyDo { com.optionslab.app.data.Strategies.delete(id) ?: "Deleted." }
+    fun setStrategyLive(id: Long, on: Boolean) = strategyDo { com.optionslab.app.data.Strategies.setLiveEnabled(id, on); null }
+
+    /** Paper start, or a LIVE start after the UI's PIN/fingerprint check. */
+    fun startStrategy(id: Long, live: Boolean) = strategyDo {
+        val s = _settings.value
+        if (live && (!s.live || !s.allowRealOrders)) return@strategyDo "A live run needs LIVE mode and real orders on (Cabinet → Zerodha)."
+        com.optionslab.app.data.Strategies.start(id, if (live) com.optionslab.engine.strategy.RunMode.LIVE else com.optionslab.engine.strategy.RunMode.SANDBOX,
+            "manual", confirmedByOwner = live, compromised = compromisedNow)
+    }
+
+    fun stopStrategy(id: Long) = strategyDo { com.optionslab.app.data.Strategies.stop(id, "manual", compromisedNow) }
+    fun closeStrategyLeg(id: Long, legId: Int) = strategyDo { com.optionslab.app.data.Strategies.closeLeg(id, legId, compromisedNow) }
+
     // ---- portfolio and SIP backtesters -----------------------------------------------------
 
     data class PortfolioView(val result: com.optionslab.engine.portfolio.PortfolioResult, val sources: Set<String>)

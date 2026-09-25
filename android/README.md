@@ -161,6 +161,34 @@ Daily prices come from Kite when you are logged in and your plan includes
 historical data. Otherwise they come from Upstox's public daily candles, and
 the source is shown under each report.
 
+## Strategies (Trade → Strategies)
+
+IraAlgo's Strategy Module (`engine/.../strategy` and `.../risk`, checked
+against the Python on tens of thousands of cases) runs on the phone.
+
+- **Baskets:** up to ten NIFTY/BANKNIFTY option legs, with strikes set by ATM
+  offset and expiries by rank.
+- **Per-leg risk:** a stop, a target and a stepped or continuous trail.
+- **Basket risk:** an overall stop and target, lock profit, trail-to-entry and
+  a daily loss limit.
+- **Schedule:** intraday entry and exit times, and weekday schedules.
+- **Where it runs:** paper runs trade the sandbox account.
+- **Live runs trade Zerodha:**
+  - You start a live run yourself, after a review and your PIN or
+    fingerprint. A scheduled live start only notifies you.
+  - The exits the strategy makes (stops, targets, lock profit, the loss limit,
+    the exit time) go out on their own and only close what the run holds.
+  - Every order still passes the Kite gates.
+- **One deliberate difference from IraAlgo:** if a basket's BUY (hedge) leg is
+  refused, its SELL legs are not sent, so a refused wing never leaves a naked
+  short.
+- **Not available standalone:** webhook-driven signal strategies need a
+  server to receive the alerts, so they stay on the PC.
+
+The live watch evaluates the strategies every minute. The Strategies page
+evaluates them every 15 s while it is open. Everything is kept in an encrypted
+vault file.
+
 ## Paper trading (sandbox)
 
 In SANDBOX mode the Trade tab is a paper account running IraAlgo's own

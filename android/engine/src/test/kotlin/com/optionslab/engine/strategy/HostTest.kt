@@ -95,4 +95,14 @@ class HostTest {
         assertTrue(venue.placed.isEmpty(), "nothing may reach the venue: ${venue.placed}")
         assertTrue(run.openLegs().isEmpty())
     }
+
+    @Test fun `an editor-built strategy passes IraAlgo's validator and round-trips`() {
+        val r = StrategyValidator.check(def.copy(overallSlMtm = 3000.0, liveEnabled = true))
+        assertTrue(r is StrategyValidator.Result.Ok, r.toString())
+        val ok = (r as StrategyValidator.Result.Ok).def
+        assertEquals(7L, ok.id); assertTrue(ok.liveEnabled)
+        assertEquals(ok, StrategyCodec.decode(StrategyCodec.encode(ok)))
+        val bad = StrategyValidator.check(def.copy(legs = emptyList()))
+        assertTrue(bad is StrategyValidator.Result.Invalid)
+    }
 }

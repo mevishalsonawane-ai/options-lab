@@ -463,6 +463,14 @@ object Broker {
         return Fill(orderId, o.optString("status"), o.optDouble("average_price", 0.0), o.optInt("filled_quantity"), o.optString("status_message", ""))
     }
 
+    /** One order's latest state (last entry of its history), or null if Kite has none yet. */
+    suspend fun orderState(orderId: String): Fill? {
+        val hist = call("GET", "/orders/${Kite.enc(orderId)}") as JSONArray
+        if (hist.length() == 0) return null
+        val o = hist.getJSONObject(hist.length() - 1)
+        return Fill(orderId, o.optString("status"), o.optDouble("average_price", 0.0), o.optInt("filled_quantity"), o.optString("status_message", ""))
+    }
+
     suspend fun cancel(orderId: String, variety: String = "regular") {
         call("DELETE", "/orders/${Kite.enc(variety)}/${Kite.enc(orderId)}")
     }

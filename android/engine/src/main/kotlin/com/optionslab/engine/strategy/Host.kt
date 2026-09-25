@@ -115,3 +115,20 @@ class StrategyHost(private val rt: StrategyRuntime = StrategyRuntime()) {
         return drive(r, def, actions, exec, now, brokerIds)
     }
 }
+
+/** The keys the Strategy Module's create/update endpoint accepts. */
+private val EDITABLE = setOf(
+    "name", "direction", "universe_tab", "underlying", "underlying_exchange", "strategy_type", "entry_time",
+    "exit_time", "product", "pricetype", "legs", "overall_sl_mtm", "overall_target_mtm", "lock_profit",
+    "trail_sl_to_entry", "scheduler", "daily_loss_limit_inr", "webhook_ip_allowlist", "strategy_kind",
+)
+
+/**
+ * Validate a definition built by the app's editor exactly as IraAlgo validates
+ * a submitted form; on success the id and live switch are carried over.
+ */
+fun StrategyValidator.check(def: StrategyDef, lotSizeFor: (String, String) -> Int? = { _, _ -> null }): StrategyValidator.Result =
+    when (val r = validate(StrategyCodec.toMap(def).filterKeys { it in EDITABLE }.filterValues { it != null }, lotSizeFor)) {
+        is StrategyValidator.Result.Ok -> StrategyValidator.Result.Ok(r.def.copy(id = def.id, liveEnabled = def.liveEnabled))
+        is StrategyValidator.Result.Invalid -> r
+    }

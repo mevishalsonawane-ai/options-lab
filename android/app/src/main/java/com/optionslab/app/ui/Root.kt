@@ -76,6 +76,7 @@ import com.optionslab.app.ui.screens.LockScreen
 import com.optionslab.app.ui.screens.RefusedScreen
 import com.optionslab.app.ui.screens.TicketScreen
 import com.optionslab.app.ui.screens.TradeScreen
+import com.optionslab.app.ui.screens.TradeHub
 import com.optionslab.app.ui.screens.ToolsScreen
 import com.optionslab.app.ui.screens.LabScreen
 import com.optionslab.app.ui.screens.TrialsScreen
@@ -172,6 +173,7 @@ fun eraseEverything() {
     com.optionslab.app.data.Ledger.wipe()
     com.optionslab.app.data.Alarms.wipe()
     com.optionslab.app.data.Paper.wipe()
+    com.optionslab.app.data.Strategies.wipe()
     SecurePrefs.wipe()
     BiometricGate.forget()
     Vault.destroy()
@@ -186,6 +188,7 @@ private fun Main(model: AppModel) {
     var tab by rememberSaveable { mutableStateOf(Tab.ALMANAC) }
     var cabinetPage by rememberSaveable { mutableStateOf<String?>(null) }
     var labPage by rememberSaveable { mutableStateOf("trials") }
+    var tradePage by rememberSaveable { mutableStateOf("account") }
     val message by model.message.collectAsState()
     val kiteLogin by model.showKiteLogin.collectAsState()
 
@@ -193,7 +196,8 @@ private fun Main(model: AppModel) {
         when (requested) {
             "almanac" -> tab = Tab.ALMANAC
             "ticket" -> tab = Tab.TICKET
-            "trade" -> tab = Tab.TRADE
+            "trade" -> { tab = Tab.TRADE; tradePage = "account" }
+            "strategy" -> { tab = Tab.TRADE; tradePage = "strategies" }
             "health" -> { tab = Tab.LAB; labPage = "health" }
             "trials" -> { tab = Tab.LAB; labPage = "trials" }
             "tools" -> tab = Tab.TOOLS
@@ -240,7 +244,7 @@ private fun Main(model: AppModel) {
                             }
                         })
                         Tab.TICKET -> TicketScreen(model)
-                        Tab.TRADE -> TradeScreen(model)
+                        Tab.TRADE -> TradeHub(model, tradePage) { tradePage = it }
                         Tab.TOOLS -> ToolsScreen(model)
                         Tab.LAB -> LabScreen(model, labPage) { labPage = it }
                         Tab.CABINET -> CabinetScreen(model, cabinetPage) { cabinetPage = it }

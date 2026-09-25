@@ -273,6 +273,11 @@ object Tasks {
         checkAlarms(context, q.mapValues { it.value.last }, fired)
         // Sandbox paper account: resting orders fill, MIS squares off at 15:15, expiries settle.
         if (!s.live) runCatching { com.optionslab.app.data.Paper.tick() }.getOrNull()?.let { paperEvents(context, it) }
+        // Strategy Module: schedules, prices, per-leg and basket risk, exits.
+        runCatching {
+            val bad = com.optionslab.app.security.Integrity.compromised(com.optionslab.app.security.Integrity.report(context))
+            com.optionslab.app.data.Strategies.tickAll(bad)
+        }
         return Tick(title, lines, progress)
     }
 

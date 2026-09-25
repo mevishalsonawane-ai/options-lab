@@ -125,7 +125,7 @@ object Paper {
 
     // ---- actions -----------------------------------------------------------------
 
-    data class Result(val ok: Boolean, val message: String, val events: List<SandboxEvent>)
+    data class Result(val ok: Boolean, val message: String, val events: List<SandboxEvent>, val orderId: String? = null)
 
     private fun describe(r: OrderResult, events: List<SandboxEvent>): Result {
         val fill = events.filterIsInstance<SandboxEvent.Fill>().firstOrNull()
@@ -134,7 +134,7 @@ object Paper {
             fill != null -> "Paper ${fill.action} ${fill.quantity} ${fill.symbol} filled @ ${"%.2f".format(Locale.ENGLISH, fill.price)}"
             else -> r.message ?: "Paper order placed"
         }
-        return Result(r.ok, msg, events)
+        return Result(r.ok, msg, events, r.orderId)
     }
 
     /** Resolve a listed option into a paper contract (and remember it). */
