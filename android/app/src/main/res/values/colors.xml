@@ -1,5 +1,11 @@
 <resources>
-    <color name="parchment">#FFF1E6CC</color>
-    <color name="mahogany">#FF1A110B</color>
+    <color name="window_light">#FFFFFFFF</color>
+    <color name="window_dark">#FF000000</color>
     <color name="ic_launcher_background">#FFFFFFFF</color>
+    <color name="widget_bg">#FFFFFFFF</color>
+    <color name="widget_rule">#FFECECEC</color>
+    <color name="widget_ink">#FF000000</color>
+    <color name="widget_soft">#FF6E6E73</color>
+    <color name="widget_gain">#FF00A86B</color>
+    <color name="widget_loss">#FFE0322B</color>
 </resources>

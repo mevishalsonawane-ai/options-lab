@@ -107,7 +107,7 @@ fun AlmanacScreen(model: AppModel, onGo: (String) -> Unit) {
             val today = Market.today()
             LedgerCard(title = "The Calendar") {
                 if (expiries.isEmpty()) {
-                    Note("The expiry calendar comes from the instrument master. Run a harvest once (Cabinet → Data) and it fills in.")
+                    Note("The expiry calendar comes from the instrument master. Run a harvest once (More → Data) and it fills in.")
                 } else {
                     val next = expiries.first()
                     val days = ChronoUnit.DAYS.between(today, next)

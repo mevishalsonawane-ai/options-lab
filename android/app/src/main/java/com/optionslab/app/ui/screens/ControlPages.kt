@@ -93,7 +93,7 @@ fun AlarmsPage(model: AppModel) {
     var level by remember { mutableStateOf("") }
     var note by remember { mutableStateOf("") }
     Page {
-        item { PageTitle("Alarms", "Checked every minute by the live watch, and whenever the Almanac is open") }
+        item { PageTitle("Alarms", "Checked every minute by the live watch, and whenever the Home screen is open") }
         item {
             LedgerCard(title = "Set an alarm") {
                 val idx = listOf("NIFTY", "BANKNIFTY", "INDIAVIX")
@@ -257,7 +257,7 @@ fun SecurityPage(model: AppModel) {
                     }
                 }
                 BrassButton("Check again", Modifier.fillMaxWidth().padding(top = 8.dp), tone = p.inkSoft) { model.refreshIntegrity() }
-                ToggleRow("Refuse compromised devices", "Keep the ledger sealed on a rooted, hooked or debugged phone", s.refuseCompromised) { on -> model.update { it.copy(refuseCompromised = on) } }
+                ToggleRow("Refuse compromised devices", "Do not open on a rooted, hooked or debugged phone", s.refuseCompromised) { on -> model.update { it.copy(refuseCompromised = on) } }
             }
         }
         item {
@@ -297,10 +297,10 @@ fun SecurityPage(model: AppModel) {
                 }
                 if (kind == BiometricGate.Kind.STRONG) ToggleRow("Also accept weak face unlock", "Convenience only - not a cryptographic gate", s.allowWeakFace) { on -> model.update { it.copy(allowWeakFace = on) } }
                 val graces = listOf(0, 30, 60, 300)
-                ParamTokens("Re-seal after leaving the app", graces.map { (if (it == 0) "at once" else if (it < 60) "${it}s" else "${it / 60} min") to (it == s.graceSeconds) }) { i ->
+                ParamTokens("Lock after leaving the app", graces.map { (if (it == 0) "at once" else if (it < 60) "${it}s" else "${it / 60} min") to (it == s.graceSeconds) }) { i ->
                     model.update { it.copy(graceSeconds = graces[i]) }
                 }
-                ToggleRow("Erase after ${PinLock.WIPE_AFTER} wrong PINs", "Destroys the vault key; the ledger becomes unreadable", s.wipeOnExhaustion) { on -> model.update { it.copy(wipeOnExhaustion = on) } }
+                ToggleRow("Erase after ${PinLock.WIPE_AFTER} wrong PINs", "Destroys the encryption key; all app data becomes unreadable", s.wipeOnExhaustion) { on -> model.update { it.copy(wipeOnExhaustion = on) } }
                 ToggleRow("Hide figures on the lock screen", "Notifications show only \"Unlock to read\" while the phone is locked", s.hideAmountsOnLockScreen) { on -> model.update { it.copy(hideAmountsOnLockScreen = on) } }
                 Spacer(Modifier.height(8.dp))
                 Row {
@@ -432,7 +432,7 @@ fun SchedulePage(model: AppModel) {
         }
         item {
             LedgerCard(title = "Appearance") {
-                val themes = listOf("system" to "Follow the phone", "parchment" to "Parchment", "mahogany" to "Mahogany")
+                val themes = listOf("system" to "Follow the phone", "light" to "Light", "dark" to "Dark")
                 ParamTokens("Theme", themes.map { it.second to (it.first == s.theme) }) { i -> model.update { it.copy(theme = themes[i].first) } }
                 ToggleRow("Calm motion", "Fewer and shorter animations", s.reduceMotion) { v -> model.update { it.copy(reduceMotion = v) } }
             }

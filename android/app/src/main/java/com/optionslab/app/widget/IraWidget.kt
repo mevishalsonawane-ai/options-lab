@@ -17,7 +17,7 @@ import java.util.Locale
 
 /**
  * The home-screen widget: NIFTY and BANKNIFTY and whether the market is open.
- * The account P&L appears only if the owner turned it on (Cabinet → Security),
+ * The account P&L appears only if the owner turned it on (More → Security),
  * because a home screen is seen by anyone holding the unlocked phone. Tapping
  * it opens the app, which still asks for the PIN or fingerprint.
  */
@@ -57,7 +57,7 @@ class IraWidget : AppWidgetProvider() {
             if (showPnl && pnl != null) {
                 v.setViewVisibility(R.id.w_pnl, View.VISIBLE)
                 v.setTextViewText(R.id.w_pnl, String.format(Locale.ENGLISH, "P&L  Rs %+,.0f", pnl))
-                v.setTextColor(R.id.w_pnl, if (pnl >= 0) 0xFF2F6B55.toInt() else 0xFF7B1E1E.toInt())
+                v.setTextColor(R.id.w_pnl, context.getColor(if (pnl >= 0) R.color.widget_gain else R.color.widget_loss))
             } else v.setViewVisibility(R.id.w_pnl, View.GONE)
             val at = SecurePrefs.getString(K_AT)
             v.setTextViewText(R.id.w_status, (if (Market.isOpen()) "Market open" else "Market shut") + (at?.let { " · $it IST" } ?: ""))

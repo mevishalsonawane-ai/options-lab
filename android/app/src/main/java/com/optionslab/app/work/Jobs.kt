@@ -427,7 +427,7 @@ class WatchService : Service() {
         if (Holidays.stale(Market.today())) runCatching { Holidays.refresh() }
         val b = com.optionslab.app.data.Broker
         if (b.configured && !b.loggedIn) Notifier.post(this, 2005, Notifier.SCHEDULE, "Log in to Zerodha for today",
-            "Yesterday's session ended at 06:00. Open Cabinet → Zerodha and log in before the 11:00 entry.", "broker")
+            "Yesterday's session ended at 06:00. Open More → Zerodha and log in before the 11:00 entry.", "broker")
         // Market hours, and a quarter-hour past the close while a strategy run is still open,
         // so its exit-time square-off and any retried exits are seen through.
         while (Market.isTradingDay() && (Market.minuteNow() <= Market.CLOSE ||

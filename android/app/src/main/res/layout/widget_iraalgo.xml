@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- IraAlgo home-screen widget: parchment card, index levels, market state. -->
+<!-- IraAlgo home-screen widget: monochrome card, index levels, market state. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/w_root"
     android:layout_width="match_parent"
@@ -12,10 +12,9 @@
         android:id="@+id/w_title"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="IRAALGO"
-        android:textColor="#FF9C7A3C"
-        android:textSize="11sp"
-        android:letterSpacing="0.15"
+        android:text="IraAlgo"
+        android:textColor="@color/widget_ink"
+        android:textSize="12sp"
         android:textStyle="bold" />
 
     <TextView
@@ -23,16 +22,18 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="4dp"
-        android:textColor="#FF2B1D0E"
+        android:textColor="@color/widget_ink"
         android:textSize="15sp"
+        android:textStyle="bold"
         android:fontFamily="monospace" />
 
     <TextView
         android:id="@+id/w_bank"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:textColor="#FF2B1D0E"
+        android:textColor="@color/widget_ink"
         android:textSize="15sp"
+        android:textStyle="bold"
         android:fontFamily="monospace" />
 
     <TextView
@@ -40,8 +41,9 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="4dp"
-        android:textColor="#FF2F6B55"
+        android:textColor="@color/widget_gain"
         android:textSize="13sp"
+        android:textStyle="bold"
         android:fontFamily="monospace"
         android:visibility="gone" />
 
@@ -50,6 +52,6 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="4dp"
-        android:textColor="#FF75603F"
+        android:textColor="@color/widget_soft"
         android:textSize="11sp" />
 </LinearLayout>

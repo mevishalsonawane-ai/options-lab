@@ -17,7 +17,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
@@ -25,6 +24,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.optionslab.app.R
 import com.optionslab.app.ui.theme.LocalPalette
 
@@ -51,19 +51,24 @@ fun BrandEmblem(size: Dp, modifier: Modifier = Modifier, unlocked: Boolean = fal
 }
 
 /**
- * The full IraAlgo logo. It is drawn on navy-and-orange for a light ground, so
- * in the dark theme it sits on a parchment plate rather than losing its type.
+ * The IraAlgo wordmark: the emblem and the name set in the app's type. The
+ * emblem's navy would sink into a black ground, so in the dark theme it sits
+ * on a small white tile.
  */
 @Composable
 fun BrandLogo(modifier: Modifier = Modifier) {
     val p = LocalPalette.current
-    Box(
-        modifier
-            .then(if (p.dark) Modifier.background(Color(0xFFF3EAD3), RoundedCornerShape(10.dp)) else Modifier)
-            .drawBehind { if (p.dark) engravedFrame(p.brass) }
-            .padding(horizontal = 14.dp, vertical = 10.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        Image(painterResource(R.drawable.iraalgo_logo), contentDescription = "IraAlgo - Intelligent Algorithmic Trading", contentScale = ContentScale.Fit)
+    androidx.compose.foundation.layout.Row(modifier, verticalAlignment = Alignment.CenterVertically) {
+        Box(
+            Modifier.size(44.dp).then(if (p.dark) Modifier.background(Color.White, RoundedCornerShape(12.dp)) else Modifier).padding(4.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Image(painterResource(R.drawable.iraalgo_emblem), contentDescription = null, contentScale = ContentScale.Fit)
+        }
+        androidx.compose.foundation.layout.Spacer(Modifier.size(10.dp))
+        androidx.compose.foundation.layout.Column {
+            androidx.compose.material3.Text("IraAlgo", style = com.optionslab.app.ui.theme.Type.masthead.copy(color = p.ink, fontSize = 26.sp))
+            androidx.compose.material3.Text("Intelligent algorithmic trading", style = com.optionslab.app.ui.theme.Type.bodySmall.copy(color = p.inkSoft))
+        }
     }
 }

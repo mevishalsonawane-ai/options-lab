@@ -232,7 +232,7 @@ object Strategies {
     private fun kiteExec(b: Book, def: StrategyDef, v: Venue, compromised: Boolean, known: () -> Collection<String>) = object : StrategyHost.Executor {
         override fun place(order: Action.PlaceOrder): StrategyHost.Placed {
             val s = AppSettings.load()
-            if (!s.live || !s.allowRealOrders) return StrategyHost.Placed.Refused("real orders are off (Cabinet → Zerodha)")
+            if (!s.live || !s.allowRealOrders) return StrategyHost.Placed.Refused("real orders are off (More → Zerodha)")
             if (compromised) return StrategyHost.Placed.Refused("this device shows signs of compromise")
             if (!Broker.loggedIn) return StrategyHost.Placed.Refused("not logged in to Zerodha today")
             val ref = v.refs[order.symbol] ?: return StrategyHost.Placed.Refused("${order.symbol} is not listed on Zerodha")

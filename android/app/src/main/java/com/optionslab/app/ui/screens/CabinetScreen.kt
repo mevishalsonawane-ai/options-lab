@@ -6,15 +6,19 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -27,18 +31,24 @@ import com.optionslab.app.ui.theme.Type
 
 private data class Drawer(val key: String, val title: String, val blurb: String)
 
-private val DRAWERS = listOf(
-    Drawer("broker", "Zerodha", "Log in, funds, positions, orders - your broker"),
-    Drawer("alarms", "Alarms", "Price alarms on NIFTY, BANKNIFTY and VIX"),
-    Drawer("signal", "Signal Lab", "UT Bot and LinReg, replayed on a harvested day"),
-    Drawer("ic", "The IC Table", "Is this data predictable at all, net of cost?"),
-    Drawer("sizing", "Sizing & Tail", "What a bad day costs, computed not sampled"),
-    Drawer("costs", "Cost Calculator", "Itemised charges and the tick-floored spread"),
-    Drawer("lots", "Lot History", "NSE lot sizes, verified from bhavcopy"),
-    Drawer("data", "Data & Harvest", "The record, the nightly harvest, provenance"),
-    Drawer("security", "Security", "Lock, biometrics, integrity of this device"),
-    Drawer("schedule", "Schedules & Notices", "The day's clock and what it tells you"),
-    Drawer("notes", "Research Notes", "What was tested, and what was closed"),
+private val GROUPS = listOf(
+    "Account" to listOf(
+        Drawer("broker", "Zerodha", "Login, mode, order limits, manual order"),
+        Drawer("alarms", "Alerts", "Price alarms and P&L alerts"),
+        Drawer("security", "Security", "PIN, biometrics, device checks, widget"),
+        Drawer("schedule", "Schedules", "Daily jobs, notifications, market holidays"),
+    ),
+    "Research" to listOf(
+        Drawer("signal", "Signal lab", "UT Bot and LinReg on a harvested day"),
+        Drawer("ic", "IC table", "Is the data predictable, net of cost?"),
+        Drawer("sizing", "Sizing and tail risk", "What a bad day costs"),
+        Drawer("costs", "Cost calculator", "Itemised charges and spread"),
+        Drawer("lots", "Lot sizes", "NSE lot history, from bhavcopy"),
+        Drawer("notes", "Research notes", "What was tested, and what was closed"),
+    ),
+    "Data" to listOf(
+        Drawer("data", "Data and harvest", "The record, nightly harvest, provenance"),
+    ),
 )
 
 @Composable
@@ -48,8 +58,18 @@ fun CabinetScreen(model: AppModel, page: String?, onPage: (String?) -> Unit) {
         transitionSpec = { (fadeIn(tween(300)) + scaleIn(tween(300), initialScale = 0.97f)) togetherWith fadeOut(tween(200)) },
         label = "drawer",
     ) { pg ->
+        if (pg != null) Column {
+            Text("‹  More", style = Type.label.copy(color = LocalPalette.current.ink, fontSize = 15.sp),
+                modifier = Modifier.clickable { onPage(null) }.padding(horizontal = 16.dp, vertical = 10.dp))
+            Box(Modifier.weight(1f)) { DrawerPage(model, pg, onPage) }
+        } else Drawers(onPage)
+    }
+}
+
+@Composable
+private fun DrawerPage(model: AppModel, pg: String, onPage: (String?) -> Unit) {
+    run {
         when (pg) {
-            null -> Drawers(onPage)
             "broker" -> BrokerPage(model)
             "alarms" -> AlarmsPage(model)
             "signal" -> SignalPage(model)
@@ -70,18 +90,25 @@ fun CabinetScreen(model: AppModel, page: String?, onPage: (String?) -> Unit) {
 private fun Drawers(onPage: (String) -> Unit) {
     val p = LocalPalette.current
     Page {
-        item { Note("A cabinet of instruments. Everything the PC harness can do lives in one of these drawers.") }
-        DRAWERS.chunked(2).forEach { pair ->
+        GROUPS.forEach { (group, items) ->
             item {
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    pair.forEach { d ->
-                        LedgerCard(Modifier.weight(1f).heightIn(min = 118.dp), onClick = { onPage(d.key) }) {
-                            Text(d.title.uppercase(), style = Type.title.copy(color = p.ink, fontSize = 13.sp))
-                            Spacer(Modifier.height(6.dp))
-                            Text(d.blurb, style = Type.italic.copy(color = p.inkSoft, fontSize = 14.sp))
+                Text(group, style = Type.label.copy(color = p.inkSoft, fontSize = 13.sp), modifier = Modifier.padding(start = 4.dp, top = 6.dp))
+            }
+            item {
+                LedgerCard {
+                    items.forEachIndexed { i, d ->
+                        if (i > 0) com.optionslab.app.ui.components.Rule()
+                        Row(
+                            Modifier.fillMaxWidth().clickable { onPage(d.key) }.padding(vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Column(Modifier.weight(1f)) {
+                                Text(d.title, style = Type.body.copy(color = p.ink, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold))
+                                Text(d.blurb, style = Type.bodySmall.copy(color = p.inkSoft))
+                            }
+                            Text("›", style = Type.title.copy(color = p.inkFaint, fontSize = 22.sp))
                         }
                     }
-                    if (pair.size == 1) Column(Modifier.weight(1f)) {}
                 }
             }
         }
@@ -92,7 +119,7 @@ private fun Drawers(onPage: (String) -> Unit) {
 fun PageTitle(text: String, sub: String? = null) {
     val p = LocalPalette.current
     Column(Modifier.fillMaxWidth()) {
-        Text(text.uppercase(), style = Type.masthead.copy(color = p.ink, fontSize = 18.sp))
-        if (sub != null) Text(sub, style = Type.italic.copy(color = p.inkSoft))
+        Text(text, style = Type.masthead.copy(color = p.ink, fontSize = 24.sp))
+        if (sub != null) Text(sub, style = Type.bodySmall.copy(color = p.inkSoft))
     }
 }

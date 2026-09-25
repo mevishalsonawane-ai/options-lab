@@ -102,7 +102,7 @@ private fun CheckCard(c: Monitor.Check) {
     var open by remember { mutableStateOf(c.status != Monitor.Status.PASS) }
     LedgerCard(accent = color(c.status), onClick = { open = !open }) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(c.name.uppercase(), style = Type.title.copy(color = p.ink, fontSize = 14.sp), modifier = Modifier.weight(1f))
+            Text(c.name, style = Type.title.copy(color = p.ink, fontSize = 15.sp), modifier = Modifier.weight(1f))
             Stamp(c.status.mark, color(c.status), animate = false)
         }
         Spacer(Modifier.height(6.dp))

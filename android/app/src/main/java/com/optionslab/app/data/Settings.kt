@@ -55,7 +55,7 @@ data class AppSettings(
     val maxOrderValue: Double = 500_000.0,
     val prepareRealOrder: Boolean = true,
     // appearance
-    val theme: String = "system",          // system | parchment | mahogany
+    val theme: String = "system",          // system | light | dark
     val reduceMotion: Boolean = false,
 ) {
     val entryMinute: Int get() = runCatching { hhmm(entry) }.getOrDefault(ExpiryPut.DEFAULT_ENTRY)

@@ -33,6 +33,9 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Edit
@@ -52,6 +55,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -88,12 +92,12 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 enum class Tab(val label: String, val icon: ImageVector) {
-    ALMANAC("Almanac", Icons.Filled.Home),
+    ALMANAC("Home", Icons.Filled.Home),
     TICKET("Ticket", Icons.Filled.Edit),
-    TRADE("Trade", Icons.Filled.ShoppingCart),
-    TOOLS("Tools", Icons.Filled.Search),
-    LAB("Lab", Icons.Filled.DateRange),
-    CABINET("Cabinet", Icons.Filled.Build),
+    TRADE("Trade", Icons.Filled.List),
+    TOOLS("Options", Icons.Filled.Search),
+    LAB("Research", Icons.Filled.DateRange),
+    CABINET("More", Icons.Filled.Menu),
 }
 
 @Composable
@@ -104,6 +108,15 @@ fun Root(activity: MainActivity) {
     val findings by model.integrity.collectAsState()
 
     IraAlgoTheme(settings.theme) {
+        // Status and navigation bar icons follow the app's theme, not only the phone's.
+        val dark = com.optionslab.app.ui.theme.LocalPalette.current.dark
+        val view = androidx.compose.ui.platform.LocalView.current
+        androidx.compose.runtime.SideEffect {
+            androidx.core.view.WindowCompat.getInsetsController(activity.window, view).apply {
+                isAppearanceLightStatusBars = !dark
+                isAppearanceLightNavigationBars = !dark
+            }
+        }
         val compromised = findings.isNotEmpty() && Integrity.compromised(findings)
         var vaultBad by remember { mutableStateOf(SecurePrefs.unreadable) }
         if (vaultBad) {
@@ -301,55 +314,56 @@ private fun Masthead(live: Boolean, calm: Boolean = false) {
     var now by remember { mutableStateOf(Market.now()) }
     LaunchedEffect(Unit) { while (true) { delay(15_000); now = Market.now() } }
     val open = Market.isOpen()
-    Column(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 18.dp, vertical = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            com.optionslab.app.ui.components.BrandEmblem(26.dp, calm = true)
-            Spacer(Modifier.width(8.dp))
-            Text("THE IRAALGO ALMANAC", style = Type.masthead.copy(color = p.ink, fontSize = 18.sp, letterSpacing = 3.sp))
+    Column(Modifier.fillMaxWidth().background(p.paperDeep).statusBarsPadding()) {
+        Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 12.dp, top = 10.dp, bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                Modifier.size(28.dp).then(if (p.dark) Modifier.background(Color.White, RoundedCornerShape(8.dp)) else Modifier).padding(3.dp),
+                contentAlignment = Alignment.Center,
+            ) { com.optionslab.app.ui.components.BrandEmblem(24.dp, calm = true) }
+            Spacer(Modifier.width(10.dp))
+            Column(Modifier.weight(1f)) {
+                Text("IraAlgo", style = Type.masthead.copy(color = p.ink, fontSize = 20.sp), maxLines = 1)
+                Text(now.format(DateTimeFormatter.ofPattern("EEE d MMM, HH:mm", Locale.ENGLISH)), style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp), maxLines = 1)
+            }
+            Row(verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.background(if (open) p.verdigris.copy(alpha = 0.12f) else p.chip, RoundedCornerShape(50)).padding(horizontal = 10.dp, vertical = 5.dp)) {
+                StatusDot(if (open) p.verdigris else p.inkFaint, pulsing = open && !calm)
+                Spacer(Modifier.width(6.dp))
+                Text(if (open) "Open" else "Closed", style = Type.label.copy(color = if (open) p.verdigris else p.inkSoft, fontSize = 12.sp))
+            }
+            Spacer(Modifier.width(6.dp))
+            Text(if (live) "LIVE" else "PAPER", style = Type.label.copy(color = if (live) p.onPrimary else p.ink, fontSize = 11.sp, letterSpacing = 0.6.sp),
+                modifier = Modifier.background(if (live) p.brass else p.chip, RoundedCornerShape(50)).padding(horizontal = 10.dp, vertical = 5.dp))
         }
-        // Fits a 360dp phone: the short date, then the status.
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(now.format(DateTimeFormatter.ofPattern("EEE d MMM · HH:mm", Locale.ENGLISH)),
-                style = Type.italic.copy(color = p.inkSoft, fontSize = 14.sp), maxLines = 1)
-            Spacer(Modifier.width(8.dp))
-            StatusDot(if (open) p.verdigris else p.inkFaint, pulsing = open && !calm)
-            Spacer(Modifier.width(4.dp))
-            Text(if (open) "MARKET OPEN" else "MARKET SHUT", style = Type.label.copy(color = if (open) p.verdigris else p.inkFaint, fontSize = 9.sp))
-            Spacer(Modifier.width(8.dp))
-            Text(if (live) "· LIVE" else "· SANDBOX", style = Type.label.copy(color = if (live) p.oxblood else p.inkFaint, fontSize = 9.sp))
-        }
-        Canvas(Modifier.fillMaxWidth().height(7.dp).padding(top = 3.dp)) {
-            drawLine(p.ink, Offset(0f, 0f), Offset(size.width, 0f), 2f)
-            drawLine(p.ink, Offset(0f, 4.dp.toPx()), Offset(size.width, 4.dp.toPx()), 0.7f)
-        }
+        Box(Modifier.fillMaxWidth().height(1.dp).background(p.rule))
     }
 }
 
 @Composable
 private fun TabBar(current: Tab, onPick: (Tab) -> Unit) {
     val p = LocalPalette.current
-    Column(Modifier.fillMaxWidth().background(p.paperDeep.copy(alpha = 0.96f)).navigationBarsPadding()) {
-        Canvas(Modifier.fillMaxWidth().height(3.dp)) { drawLine(p.brass, Offset(0f, 1f), Offset(size.width, 1f), 1.5f) }
-        Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
+    Column(Modifier.fillMaxWidth().background(p.paperDeep).navigationBarsPadding()) {
+        Box(Modifier.fillMaxWidth().height(1.dp).background(p.rule))
+        Row(Modifier.fillMaxWidth().padding(top = 6.dp, bottom = 4.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
             Tab.entries.forEach { t ->
                 val sel = t == current
-                val s by animateFloatAsState(if (sel) 1.12f else 1f, tween(260), label = "tab")
                 Column(
-                    Modifier.clickable { onPick(t) }.padding(horizontal = 6.dp, vertical = 2.dp).scale(s),
+                    Modifier.weight(1f)
+                        .selectable(selected = sel, role = androidx.compose.ui.semantics.Role.Tab) { onPick(t) }
+                        .padding(vertical = 6.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    Box(
-                        Modifier.size(34.dp).background(if (sel) p.brass.copy(alpha = 0.22f) else p.paperDeep.copy(alpha = 0f), RoundedCornerShape(17.dp)),
-                        contentAlignment = Alignment.Center,
-                    ) { Icon(t.icon, contentDescription = t.label, tint = if (sel) p.brass else p.inkFaint, modifier = Modifier.size(20.dp)) }
-                    Text(t.label.uppercase(), style = Type.label.copy(fontSize = 9.sp, color = if (sel) p.ink else p.inkFaint))
+                    Icon(t.icon, contentDescription = null, tint = if (sel) p.ink else p.inkFaint, modifier = Modifier.size(22.dp))
+                    Spacer(Modifier.height(3.dp))
+                    Text(t.label, style = Type.label.copy(fontSize = 11.sp, color = if (sel) p.ink else p.inkFaint,
+                        fontWeight = if (sel) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.Medium), maxLines = 1)
                 }
             }
         }
     }
 }
 
-/** A slip of paper that slides up with a message, then withdraws. */
+/** A message that slides up from the bottom, then withdraws. */
 @Composable
 private fun Toast(text: String?, onGone: () -> Unit) {
     val p = LocalPalette.current
@@ -362,7 +376,7 @@ private fun Toast(text: String?, onGone: () -> Unit) {
     ) {
         Box(Modifier.fillMaxSize().padding(16.dp), contentAlignment = Alignment.BottomCenter) {
             Box(
-                Modifier.fillMaxWidth().background(p.ink.copy(alpha = 0.92f), RoundedCornerShape(6.dp)).clickable { onGone() }.padding(14.dp),
+                Modifier.fillMaxWidth().background(p.ink, RoundedCornerShape(12.dp)).clickable { onGone() }.padding(14.dp),
             ) { Text(text ?: "", style = Type.bodySmall.copy(color = p.paper)) }
         }
     }

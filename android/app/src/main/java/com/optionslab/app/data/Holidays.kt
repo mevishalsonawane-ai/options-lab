@@ -17,7 +17,7 @@ import javax.net.ssl.HttpsURLConnection
  * strategy schedule must stand down, and the masthead must not say OPEN.
  *
  * The list comes from NSE's own holiday master (fetched on the phone, cached,
- * refreshed weekly) and can be corrected by hand in Cabinet → Schedule.
+ * refreshed weekly) and can be corrected by hand in More → Schedule.
  * Not sensitive, so it is a plain file.
  */
 object Holidays {

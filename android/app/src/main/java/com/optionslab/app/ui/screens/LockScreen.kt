@@ -52,7 +52,6 @@ import com.optionslab.app.ui.components.BrassButton
 import com.optionslab.app.ui.components.Parchment
 import com.optionslab.app.ui.components.BrandEmblem
 import com.optionslab.app.ui.components.BrandLogo
-import com.optionslab.app.ui.components.WaxSeal
 import com.optionslab.app.ui.theme.LocalPalette
 import com.optionslab.app.ui.theme.Type
 import kotlinx.coroutines.delay
@@ -124,19 +123,15 @@ fun LockScreen(
             Modifier.fillMaxSize().systemBarsPadding().padding(horizontal = 28.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
+            Spacer(Modifier.height(48.dp))
+            BrandLogo()
             Spacer(Modifier.height(36.dp))
-            BrandEmblem(112.dp, unlocked = broken, calm = calm)
-            Spacer(Modifier.height(14.dp))
-            BrandLogo(Modifier.fillMaxWidth(0.82f))
-            Spacer(Modifier.height(6.dp))
-            Text("the expiry-day ledger", style = Type.italic.copy(color = p.inkSoft, fontSize = 17.sp))
-            Spacer(Modifier.height(22.dp))
             AnimatedContent(targetState = when {
                 setup && first == null -> "Choose a PIN of ${PinLock.MIN_LENGTH} or more digits"
                 setup -> "Confirm your PIN"
-                else -> "Enter your PIN to unseal"
+                else -> "Enter your PIN"
             }, transitionSpec = { fadeIn(tween(250)) togetherWith fadeOut(tween(150)) }, label = "prompt") { t ->
-                Text(t, style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp), textAlign = TextAlign.Center)
+                Text(t, style = Type.title.copy(color = p.ink, fontSize = 17.sp), textAlign = TextAlign.Center)
             }
             Spacer(Modifier.height(14.dp))
             Row(Modifier.offset { IntOffset(shake.value.dp.roundToPx(), 0) }, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -145,9 +140,8 @@ fun LockScreen(
                     val filled = i < entered.length
                     val s by animateFloatAsState(if (filled) 1f else 0.55f, spring(dampingRatio = 0.4f), label = "dot")
                     Box(
-                        Modifier.size(14.dp).scale(s)
-                            .background(if (filled) p.ink else p.paper, CircleShape)
-                            .border(1.2.dp, p.brass, CircleShape),
+                        Modifier.size(12.dp).scale(s)
+                            .background(if (filled) p.ink else p.chip, CircleShape),
                     )
                 }
             }
@@ -173,9 +167,9 @@ fun LockScreen(
                     Modifier.clickable(onClick = onBiometric).padding(10.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Icon(Icons.Filled.Face, contentDescription = null, tint = p.brass)
+                    Icon(Icons.Filled.Face, contentDescription = null, tint = p.ink)
                     Spacer(Modifier.width(8.dp))
-                    Text(biometricLabel, style = Type.label.copy(color = p.brass, fontSize = 12.sp))
+                    Text(biometricLabel, style = Type.label.copy(color = p.ink, fontSize = 14.sp))
                 }
             }
             Spacer(Modifier.height(24.dp))
@@ -208,16 +202,16 @@ private fun PadKey(label: String, enabled: Boolean, onClick: () -> Unit) {
     val s by animateFloatAsState(if (pressed) 0.88f else 1f, spring(dampingRatio = 0.45f, stiffness = 900f), label = "key")
     val action = label == "✓" || label == "⌫"
     Box(
-        Modifier.size(68.dp).scale(s)
-            .background(if (pressed) p.brass.copy(alpha = 0.35f) else if (action) p.brass.copy(alpha = 0.18f) else p.card, CircleShape)
-            .border(1.2.dp, p.brass.copy(alpha = if (enabled) 0.9f else 0.35f), CircleShape)
+        Modifier.size(72.dp).scale(s)
+            .background(if (pressed) p.rule else if (label == "✓") p.brass else p.chip, CircleShape)
             .clickable(interactionSource = src, indication = null, enabled = enabled) {
                 haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                 onClick()
             },
         contentAlignment = Alignment.Center,
     ) {
-        Text(label, style = Type.figureLarge.copy(fontSize = if (action) 22.sp else 26.sp, color = if (enabled) p.ink else p.inkFaint))
+        Text(label, style = Type.figureLarge.copy(fontSize = if (action) 22.sp else 26.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Medium,
+            color = if (!enabled) p.inkFaint else if (label == "✓") p.onPrimary else p.ink))
     }
 }
 
@@ -229,7 +223,7 @@ fun RefusedScreen(findings: List<String>, onQuit: () -> Unit) {
         Column(Modifier.fillMaxSize().systemBarsPadding().padding(28.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
             BrandEmblem(96.dp, calm = true)
             Spacer(Modifier.height(20.dp))
-            Text("THE LEDGER STAYS SEALED", style = Type.title.copy(color = p.oxblood), textAlign = TextAlign.Center)
+            Text("IraAlgo will not open on this device", style = Type.title.copy(color = p.oxblood), textAlign = TextAlign.Center)
             Spacer(Modifier.height(10.dp))
             Text("This device shows signs of compromise, and you chose to refuse such devices:", style = Type.body.copy(color = p.ink), textAlign = TextAlign.Center)
             Spacer(Modifier.height(10.dp))

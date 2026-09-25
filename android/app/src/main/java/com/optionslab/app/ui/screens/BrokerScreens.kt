@@ -238,7 +238,7 @@ fun HoldToSend(text: String, enabled: Boolean, onComplete: () -> Unit) {
     val scope = rememberCoroutineScope()
     Box(
         Modifier.fillMaxWidth().height(54.dp)
-            .background(if (enabled) p.oxblood else p.inkFaint, RoundedCornerShape(6.dp))
+            .background(if (enabled) p.oxblood else p.inkFaint, RoundedCornerShape(27.dp))
             .pointerInput(enabled) {
                 detectTapGestures(onPress = {
                     if (!enabled) return@detectTapGestures
@@ -254,9 +254,9 @@ fun HoldToSend(text: String, enabled: Boolean, onComplete: () -> Unit) {
         contentAlignment = Alignment.Center,
     ) {
         Canvas(Modifier.fillMaxSize()) {
-            drawRoundRect(darken(p.oxblood, 0.35f), size = Size(size.width * progress.value, size.height), cornerRadius = CornerRadius(6.dp.toPx()))
+            drawRoundRect(darken(p.oxblood, 0.35f), size = Size(size.width * progress.value, size.height), cornerRadius = CornerRadius(27.dp.toPx()))
         }
-        Text(text.uppercase(), style = Type.label.copy(color = Color(0xFFFFF7E3), fontSize = 13.sp))
+        Text(text, style = Type.label.copy(color = Color.White, fontSize = 15.sp))
     }
 }
 
@@ -278,7 +278,7 @@ fun OrderReviewDialog(model: AppModel) {
         properties = DialogProperties(securePolicy = SecureFlagPolicy.SecureOn, usePlatformDefaultWidth = false),
     ) {
         Box(
-            Modifier.fillMaxWidth(0.94f).background(p.paper, RoundedCornerShape(6.dp))
+            Modifier.fillMaxWidth(0.94f).background(p.paper, RoundedCornerShape(20.dp))
                 .padding(10.dp),
         ) {
             Column(Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState())) { OrderReviewBody(model) }
@@ -374,7 +374,7 @@ private fun PlanCard(
             is Load.Failed -> Text(sending.why, style = Type.body.copy(color = p.oxblood))
             is Load.Done -> sending.value.forEach { f -> LedgerLine(f.orderId.takeLast(8), "${f.status} ${f.filled} @ ${"%.2f".format(f.avgPrice)}", if (f.status == "COMPLETE") p.verdigris else p.oxblood) }
             Load.Idle -> {
-                if (!allowed) Note("To send: LIVE mode and \"Allow real orders\" must both be on (Cabinet → Zerodha).")
+                if (!allowed) Note("To send: LIVE mode and \"Allow real orders\" must both be on (More → Zerodha).")
                 HoldToSend("Hold to send to Zerodha", allowed && plan.sendable, onSend)
             }
         }
@@ -420,7 +420,7 @@ fun BrokerPage(model: AppModel) {
                     else model.update { it.copy(mode = if (i == 0) "live" else "sandbox") }
                 }
                 Note(if (s.live) "Every live figure - index levels, the option chain, the ticket, its live mark, settlement, the expiry calendar, the live watch and alarms - comes from Zerodha only. Without today's login the app says so rather than showing another feed."
-                else "Live figures come from Upstox's public candles and tickets stay paper; nothing touches your broker. Analysis (Trials, Health, the IC table, Signal Lab) is the same in both modes.")
+                else "Live figures come from Upstox's public candles and tickets stay paper; nothing touches your broker. Analysis (Backtests, Health, the IC table, Signal Lab) is the same in both modes.")
             }
         }
         item {

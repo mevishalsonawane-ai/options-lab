@@ -150,7 +150,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.report(r: BacktestRep
                 InkCurve(curve, losses, seal, calm = calm)
                 Row(Modifier.fillMaxWidth()) {
                     Text("cumulative net, Rs", style = Type.italic.copy(color = p.inkFaint, fontSize = 13.sp), modifier = Modifier.weight(1f))
-                    if (seal != null) Text("┆ sealed", style = Type.italic.copy(color = p.brass, fontSize = 13.sp))
+                    if (seal != null) Text("holdout", style = Type.italic.copy(color = p.brass, fontSize = 13.sp))
                 }
             }
         }
@@ -204,14 +204,14 @@ private fun androidx.compose.foundation.lazy.LazyListScope.report(r: BacktestRep
             r.skipped.take(20).forEach { Note("${it.day}: ${it.why}") }
         }
     }
-    item { BrassButton("Export the ledger (CSV)", Modifier.fillMaxWidth(), onClick = onExport) }
+    item { BrassButton("Export trades (CSV)", Modifier.fillMaxWidth(), onClick = onExport) }
 }
 
 @Composable
 private fun SummaryBlock(sm: Summary) {
     val p = LocalPalette.current
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Text(sm.label.uppercase(), style = Type.label.copy(color = p.brass), modifier = Modifier.weight(1f))
+        Text(sm.label, style = Type.label.copy(color = p.ink, fontSize = 13.sp), modifier = Modifier.weight(1f))
         Text("n=${sm.n}  win ${pct(sm.winRate)}", style = Type.figure.copy(color = p.ink, fontSize = 13.sp))
     }
     LedgerLine("Mean / median", "${rs1(sm.mean)} / ${rs1(sm.median)}")

@@ -270,7 +270,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                         // Live means Zerodha. With no session there is nothing live to show,
                         // and another feed's numbers would be a different thing wearing the label.
                         quotes.value = emptyMap(); livePositions.value = emptyList()
-                        quoteNote.value = "LIVE mode: log in to Zerodha (Cabinet → Zerodha) to see live prices."
+                        quoteNote.value = "LIVE mode: log in to Zerodha (More → Zerodha) to see live prices."
                         delay(15_000)
                         continue
                     }
@@ -671,7 +671,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     fun placeGtt() {
         val g = (gttPlan.value as? Load.Done<GttPlan>)?.value?.gtt ?: return
         val s = _settings.value
-        if (!s.live || !s.allowRealOrders) { say("Real orders are off (Cabinet → Zerodha); a GTT is a real order."); return }
+        if (!s.live || !s.allowRealOrders) { say("Real orders are off (More → Zerodha); a GTT is a real order."); return }
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 if (compromisedFresh()) error("this device shows signs of compromise")
@@ -696,7 +696,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     /** Modify a working order after the owner re-proved who they are. */
     fun modifyOrder(o: com.optionslab.app.data.Broker.OrderRow, quantity: Int, type: String, price: Double?, trigger: Double?) {
         val s = _settings.value
-        if (!s.live || !s.allowRealOrders) { say("Real orders are off (Cabinet → Zerodha); a modify is a real order change."); return }
+        if (!s.live || !s.allowRealOrders) { say("Real orders are off (More → Zerodha); a modify is a real order change."); return }
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 if (compromisedFresh()) error("this device shows signs of compromise")
@@ -791,8 +791,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     fun sendPlan() {
         val cur = (plan.value as? Load.Done<OrderPlan>)?.value ?: return
         val s = _settings.value
-        if (!s.live) { say("Switch to LIVE mode (Cabinet → Zerodha) to send real orders; sandbox mode never touches the broker."); return }
-        if (!s.allowRealOrders) { say("Real orders are switched off. Turn them on under Cabinet → Zerodha."); return }
+        if (!s.live) { say("Switch to LIVE mode (More → Zerodha) to send real orders; sandbox mode never touches the broker."); return }
+        if (!s.allowRealOrders) { say("Real orders are switched off. Turn them on under More → Zerodha."); return }
         val again = gate(cur.legs, cur.holdToSettlement, cur.exit)
         if (again.any { it.isNotEmpty() }) { plan.value = Load.Done(cur.copy(refusals = again)); return }
         stuck.value = null
@@ -964,7 +964,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     /** Paper start, or a LIVE start after the UI's PIN/fingerprint check. */
     fun startStrategy(id: Long, live: Boolean) = strategyDo {
         val s = _settings.value
-        if (live && (!s.live || !s.allowRealOrders)) return@strategyDo "A live run needs LIVE mode and real orders on (Cabinet → Zerodha)."
+        if (live && (!s.live || !s.allowRealOrders)) return@strategyDo "A live run needs LIVE mode and real orders on (More → Zerodha)."
         val msg = com.optionslab.app.data.Strategies.start(id, if (live) com.optionslab.engine.strategy.RunMode.LIVE else com.optionslab.engine.strategy.RunMode.SANDBOX,
             "manual", confirmedByOwner = live, compromised = compromisedFresh())
         // A run's stops are only checked while something polls it: keep the watch running.

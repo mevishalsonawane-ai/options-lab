@@ -3,6 +3,7 @@ package com.optionslab.app.ui.screens
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -91,7 +92,7 @@ fun TicketScreen(model: AppModel) {
             Load.Idle -> Unit
         }
         item {
-            LedgerCard(title = "Paper Ledger") {
+            LedgerCard(title = "Paper trades") {
                 if (ledger.isEmpty()) Note("No tickets yet. Each expiry you record here builds a forward record - the only evidence that is not a backtest of itself.")
                 ledger.forEachIndexed { i, e ->
                     if (i > 0) Rule(Modifier.padding(vertical = 8.dp))
@@ -143,7 +144,7 @@ fun TicketScreen(model: AppModel) {
 @Composable
 fun Receipt(t: Live.Ticket) {
     val p = LocalPalette.current
-    Box(Modifier.fillMaxWidth().background(p.card, RoundedCornerShape(2.dp)).padding(16.dp)) {
+    Box(Modifier.fillMaxWidth().background(p.card, RoundedCornerShape(14.dp)).border(1.dp, p.rule, RoundedCornerShape(14.dp)).padding(16.dp)) {
         Column {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("ORDER SLIP", style = Type.label.copy(color = p.inkSoft), modifier = Modifier.weight(1f))

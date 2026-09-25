@@ -67,7 +67,7 @@ fun ToolsScreen(model: AppModel) {
     var view by rememberSaveable { mutableStateOf("chain") }
     LaunchedEffect(underlying, s.live) { model.loadTools(underlying) }
     Page {
-        item { PageTitle("Tools", "Option chain analytics and the strategy builder") }
+        item { PageTitle("Options", "Option chain analytics and the strategy builder") }
         item {
             ParamTokens("Underlying", listOf("NIFTY", "BANKNIFTY").map { it to (it == underlying) }) { underlying = listOf("NIFTY", "BANKNIFTY")[it] }
             val views = listOf("chain" to "Chain", "oi" to "OI · Max pain", "iv" to "IV smile", "gex" to "GEX", "move" to "Expected move", "builder" to "Strategy")

@@ -19,7 +19,7 @@ fun LabScreen(model: AppModel, page: String, onPage: (String) -> Unit) {
     Column(Modifier.fillMaxSize()) {
         Row(Modifier.horizontalScroll(androidx.compose.foundation.rememberScrollState()).padding(horizontal = 14.dp, vertical = 6.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Token("Trials", page == "trials") { onPage("trials") }
+            Token("Backtests", page == "trials") { onPage("trials") }
             Token("Health", page == "health") { onPage("health") }
             Token("Portfolio", page == "portfolio") { onPage("portfolio") }
             Token("SIP", page == "sip") { onPage("sip") }

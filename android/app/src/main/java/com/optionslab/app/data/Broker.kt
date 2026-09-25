@@ -147,7 +147,7 @@ object Broker {
             } catch (e: IOException) {
                 if (com.optionslab.app.security.KitePin.mismatch) throw IOException(
                     "Refused: Zerodha's certificate chain no longer matches the one this phone pinned. On a network you trust, " +
-                        "check api.kite.trade in a browser, then re-trust it under Cabinet → Security.")
+                        "check api.kite.trade in a browser, then re-trust it under More → Security.")
                 throw IOException("Could not reach Zerodha")
             } finally {
                 c.disconnect()

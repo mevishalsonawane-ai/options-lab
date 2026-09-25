@@ -25,7 +25,7 @@ import javax.net.ssl.X509TrustManager
  * token included) is sent.
  *
  * If Zerodha moves to a new CA the app refuses to connect and says so; the
- * owner re-trusts under Cabinet → Security (with the PIN).
+ * owner re-trusts under More → Security (with the PIN).
  */
 object KitePin {
     const val HOST = "api.kite.trade"

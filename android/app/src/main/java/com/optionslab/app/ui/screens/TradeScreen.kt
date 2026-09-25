@@ -106,7 +106,7 @@ fun TradeScreen(model: AppModel) {
         if (!b.configured || !b.loggedIn) {
             item {
                 LedgerCard(accent = p.amber) {
-                    Note(if (!b.configured) "Set up your Kite API key and secret first (Cabinet → Zerodha)." else "Log in to Zerodha for today to see your account.")
+                    Note(if (!b.configured) "Set up your Kite API key and secret first (More → Zerodha)." else "Log in to Zerodha for today to see your account.")
                     if (b.configured) BrassButton("Log in to Zerodha", Modifier.fillMaxWidth().padding(top = 8.dp)) { model.startKiteLogin() }
                 }
             }
