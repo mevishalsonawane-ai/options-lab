@@ -624,7 +624,7 @@ private fun BackupCard(wipeOnExhaustion: Boolean) {
     LedgerCard(title = "Backup and restore") {
         Note("One file with your settings, strategies, ORB arms, paper account, ledger, alarms, protections, journal and trade history, sealed with your PIN. " +
             "Zerodha keys and sessions are never in it: after a restore, link Zerodha again.")
-        Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)) {
             BrassButton("Back up now", Modifier.weight(1f), busy = busy && ask == null) { ask = "backup" }
             BrassButton("Restore…", Modifier.weight(1f), tone = p.inkSoft) { pick.launch(arrayOf("application/octet-stream", "*/*")) }
         }
