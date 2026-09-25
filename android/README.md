@@ -146,7 +146,20 @@ candles. It includes:
     first.
   - In SANDBOX mode it becomes paper orders.
 
-Trials and Health now live together under the **Lab** tab.
+Trials and Health now live together under the **Lab** tab. The Lab also holds
+IraAlgo's **Portfolio Backtester**, **Portfolio Analyzer** and **SIP
+Backtester** (`engine/.../portfolio`, checked against IraAlgo's services to
+about 1e-14).
+
+- **Portfolio Backtester:** a weighted NSE basket with rebalancing,
+  statutory costs, a benchmark, Monte Carlo, health grade and insights.
+- **Portfolio Analyzer:** your Zerodha holdings, run over the last year.
+- **SIP Backtester:** XIRR, step-up, and a comparison with a lump sum and
+  with the benchmark.
+
+Daily prices come from Kite when you are logged in and your plan includes
+historical data. Otherwise they come from Upstox's public daily candles, and
+the source is shown under each report.
 
 ## Paper trading (sandbox)
 

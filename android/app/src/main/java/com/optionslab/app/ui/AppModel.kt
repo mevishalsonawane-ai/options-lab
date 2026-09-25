@@ -711,6 +711,72 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    // ---- portfolio and SIP backtesters -----------------------------------------------------
+
+    data class PortfolioView(val result: com.optionslab.engine.portfolio.PortfolioResult, val sources: Set<String>)
+    data class SipView(val result: com.optionslab.engine.portfolio.SipResult, val sources: Set<String>)
+    data class AnalyzerView(val result: com.optionslab.engine.portfolio.AnalyzerResult, val sources: Set<String>)
+
+    val portfolio = MutableStateFlow<Load<PortfolioView>>(Load.Idle)
+    val sip = MutableStateFlow<Load<SipView>>(Load.Idle)
+    val analyzer = MutableStateFlow<Load<AnalyzerView>>(Load.Idle)
+
+    private fun failure(e: Exception) = when (e) {
+        is com.optionslab.engine.portfolio.PortfolioException -> e.message ?: "refused"
+        is com.optionslab.app.data.Net.Offline -> "No connection for price history."
+        else -> e.message ?: "failed"
+    }
+
+    fun runPortfolio(holdings: List<com.optionslab.engine.portfolio.Holding>, start: LocalDate, end: LocalDate, benchmark: String?,
+                     rebalance: String, capital: Double) {
+        portfolio.value = Load.Busy("Reading price history")
+        viewModelScope.launch(Dispatchers.IO) {
+            portfolio.value = try {
+                val h = com.optionslab.app.data.History.load(holdings.map { it.symbol.trim().uppercase() to it.exchange }, benchmark, start, end) {
+                    portfolio.value = Load.Busy(it)
+                }
+                portfolio.value = Load.Busy("Backtesting ${holdings.size} holdings")
+                val req = com.optionslab.engine.portfolio.PortfolioRequest(holdings, start, end, benchmark = benchmark, rebalance = rebalance,
+                    initialCapital = capital, source = "api")
+                Load.Done(PortfolioView(com.optionslab.engine.portfolio.PortfolioBacktest.run(req, h.bars), h.sources))
+            } catch (e: Exception) { Load.Failed(failure(e)) }
+        }
+    }
+
+    fun runSip(symbol: String, exchange: String, start: LocalDate, end: LocalDate, amount: Double, frequency: String, day: Int,
+               stepUp: Double, benchmark: String?) {
+        sip.value = Load.Busy("Reading price history")
+        viewModelScope.launch(Dispatchers.IO) {
+            sip.value = try {
+                val sym = symbol.trim().uppercase()
+                val h = com.optionslab.app.data.History.load(listOf(sym to exchange), benchmark, start, end) { sip.value = Load.Busy(it) }
+                sip.value = Load.Busy("Running the SIP")
+                val req = com.optionslab.engine.portfolio.SipRequest(sym, exchange, start, end, amount, frequency, day, stepUp, benchmark = benchmark)
+                Load.Done(SipView(com.optionslab.engine.portfolio.SipBacktest.run(req, h.bars), h.sources))
+            } catch (e: Exception) { Load.Failed(failure(e)) }
+        }
+    }
+
+    /** IraAlgo's Portfolio Analyzer on your Zerodha holdings: today's weights, backtested over the last year. */
+    fun analyzeHoldings() {
+        analyzer.value = Load.Busy("Reading your holdings")
+        viewModelScope.launch(Dispatchers.IO) {
+            analyzer.value = try {
+                val b = com.optionslab.app.data.Broker
+                if (!b.loggedIn) error("Log in to Zerodha to analyse your holdings.")
+                val held = b.holdings()
+                if (held.isEmpty()) error("No delivery holdings on Zerodha.")
+                val rows = held.map { mapOf("symbol" to it.symbol, "exchange" to it.exchange, "quantity" to (it.qty + it.t1).toDouble(),
+                    "average_price" to it.avg, "last_price" to it.last, "pnl" to it.pnl, "product" to it.product) }
+                val today = Market.today()
+                val tradable = held.filter { it.exchange == "NSE" || it.exchange == "BSE" }.map { it.symbol to it.exchange }
+                val h = com.optionslab.app.data.History.load(tradable, "NIFTY", today.minusDays(365), today) { analyzer.value = Load.Busy(it) }
+                analyzer.value = Load.Busy("Analysing ${held.size} holdings")
+                Load.Done(AnalyzerView(com.optionslab.engine.portfolio.PortfolioAnalyzer.analyze(rows, h.bars, today), h.sources))
+            } catch (e: Exception) { Load.Failed(failure(e)) }
+        }
+    }
+
     // ---- options tools --------------------------------------------------------------------
 
     val tools = MutableStateFlow<Load<com.optionslab.engine.options.ChainSnapshot>>(Load.Idle)

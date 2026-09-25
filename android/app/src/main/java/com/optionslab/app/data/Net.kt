@@ -135,6 +135,60 @@ object Net {
         }
     }
 
+    /**
+     * Instrument keys for cash-market symbols ("NSE_EQ" to "RELIANCE"), from
+     * one streamed pass over the master. Missing symbols are simply absent.
+     */
+    fun fetchEquityKeys(wanted: Set<Pair<String, String>>): Map<Pair<String, String>, String> {
+        if (wanted.isEmpty()) return emptyMap()
+        val c = open(Upstox.MASTER_URL, 300_000)
+        c.setRequestProperty("Accept", "*/*")
+        try {
+            if (c.responseCode != 200) throw HttpFailure(c.responseCode)
+            val out = HashMap<Pair<String, String>, String>()
+            c.inputStream.use { raw ->
+                JsonReader(InputStreamReader(GZIPInputStream(raw, 1 shl 16), Charsets.UTF_8)).use { r ->
+                    r.beginArray()
+                    while (r.hasNext() && out.size < wanted.size) {
+                        var segment: String? = null; var sym: String? = null; var key: String? = null
+                        r.beginObject()
+                        while (r.hasNext()) {
+                            val name = r.nextName()
+                            if (r.peek() == JsonToken.NULL) { r.nextNull(); continue }
+                            when (name) {
+                                "segment" -> segment = r.nextString()
+                                "trading_symbol" -> sym = r.nextString()
+                                "instrument_key" -> key = r.nextString()
+                                else -> r.skipValue()
+                            }
+                        }
+                        r.endObject()
+                        if (segment != null && sym != null && key != null && (segment to sym) in wanted) out[segment to sym] = key
+                    }
+                }
+            }
+            return out
+        } catch (e: HttpFailure) {
+            throw e
+        } catch (_: IOException) {
+            throw Offline()
+        } finally {
+            c.disconnect()
+        }
+    }
+
+    /** Daily candles, in windows Upstox accepts (a decade each). */
+    suspend fun daily(key: String, frm: LocalDate, to: LocalDate, tries: Int = 4): List<Upstox.Bar> {
+        val out = ArrayList<Upstox.Bar>()
+        var lo = frm
+        while (!lo.isAfter(to)) {
+            val hi = minOf(lo.plusDays(3600), to)
+            out += parseCandles(getJson("${Upstox.BASE}/${Upstox.quote(key)}/days/1/$hi/$lo", tries))
+            lo = hi.plusDays(1)
+        }
+        return out.distinctBy { it.epochSecond }.sortedBy { it.epochSecond }
+    }
+
     fun parseMaster(input: InputStream, underlyings: Set<String>): List<Upstox.Contract> {
         val out = ArrayList<Upstox.Contract>()
         JsonReader(InputStreamReader(input, Charsets.UTF_8)).use { r ->

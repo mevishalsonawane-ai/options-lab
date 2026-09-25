@@ -22,6 +22,7 @@ class IraAlgoApp : Application() {
         Market.init(this)
         Broker.init(this)
         com.optionslab.app.data.Paper.init(this)
+        com.optionslab.app.data.History.init(this)
         Notifier.createChannels(this)
         ProcessLifecycleOwner.get().lifecycle.addObserver(SessionLock)
         // Keystore work stays off the main thread.

@@ -296,6 +296,29 @@ object Broker {
         }
     }
 
+    /** Instrument token of an index Kite knows by its IraAlgo name (NIFTY, BANKNIFTY, INDIAVIX). */
+    fun indexToken(symbol: String): Long? = INDEX[symbol]?.second
+
+    /** Daily candles (needs Kite's historical-data add-on); Kite serves about 2000 days a call. */
+    suspend fun dailyBars(token: Long, from: LocalDate, to: LocalDate): List<Upstox.Bar> {
+        val out = ArrayList<Upstox.Bar>()
+        var lo = from
+        while (!lo.isAfter(to)) {
+            val hi = minOf(lo.plusDays(1900), to)
+            val q = "from=${Kite.enc("$lo 00:00:00")}&to=${Kite.enc("$hi 23:59:59")}"
+            val candles = (call("GET", "/instruments/historical/$token/day?$q") as JSONObject).optJSONArray("candles") ?: JSONArray()
+            for (i in 0 until candles.length()) {
+                val r = candles.getJSONArray(i)
+                val ts = r.getString(0)
+                val epoch = runCatching { OffsetDateTime.parse(ts, KITE_TS) }.getOrElse { OffsetDateTime.parse(ts) }.toEpochSecond()
+                out += Upstox.Bar(epoch, r.getDouble(1), r.getDouble(2), r.getDouble(3), r.getDouble(4), r.optLong(5), 0L)
+            }
+            lo = hi.plusDays(1)
+            delay(340)
+        }
+        return out.distinctBy { it.epochSecond }.sortedBy { it.epochSecond }
+    }
+
     /** The index's 1-minute bars (needs Kite's historical data), e.g. for settlement. */
     suspend fun indexMinuteBars(symbol: String, day: LocalDate): List<Upstox.Bar> =
         minuteBars(INDEX[symbol]?.second ?: throw IOException("no Zerodha index for $symbol"), day)
