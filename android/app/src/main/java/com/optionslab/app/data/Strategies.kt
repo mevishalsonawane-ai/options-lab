@@ -146,6 +146,58 @@ object Strategies {
         }
     }
 
+    /**
+     * Arm or disarm: an armed strategy starts itself at its entry time on its
+     * weekdays (the scheduler), in [mode]. A live arm still only notifies you at
+     * start time to confirm with your PIN or fingerprint; nothing live starts unseen.
+     */
+    suspend fun setArmed(id: Long, on: Boolean, mode: RunMode): String? = lock.withLock {
+        val b = book()
+        val i = b.defs.indexOfFirst { it.id == id }
+        if (i < 0) return@withLock "That strategy no longer exists."
+        val d = b.defs[i]
+        if (on && mode == RunMode.LIVE && !d.liveEnabled) return@withLock "Enable live trading for ${d.name} (Trade → Strategies) before arming it live."
+        val base = d.scheduler ?: com.optionslab.engine.strategy.SchedulerConfig(
+            days = listOf(java.time.DayOfWeek.MONDAY, java.time.DayOfWeek.TUESDAY, java.time.DayOfWeek.WEDNESDAY,
+                java.time.DayOfWeek.THURSDAY, java.time.DayOfWeek.FRIDAY),
+            startTime = d.entryTime, autoStopTime = d.exitTime)
+        if (on && base.startTime == null) return@withLock "${d.name} has no start time. Set its entry time in Trade → Strategies, then arm it."
+        b.defs[i] = d.copy(scheduler = base.copy(enabled = on, defaultMode = if (on) mode else base.defaultMode))
+        save(b); null
+    }
+
+    /**
+     * Import strategies exported from the desktop app: one definition, a list,
+     * or the desktop API's {"data": ...} reply. They arrive new, disarmed and
+     * paper-only; a name already here is skipped rather than duplicated.
+     */
+    suspend fun importJson(text: String): String {
+        val root = runCatching { org.json.JSONTokener(text.trim()).nextValue() }.getOrNull() ?: return "That is not JSON exported from the desktop app."
+        val items = ArrayList<JSONObject>()
+        fun collect(v: Any?) {
+            when (v) {
+                is JSONArray -> for (k in 0 until v.length()) collect(v.opt(k))
+                is JSONObject -> if (v.has("legs")) items += v else if (v.has("data")) collect(v.opt("data"))
+            }
+        }
+        collect(root)
+        if (items.isEmpty()) return "No strategy definitions found in that text."
+        val have = all().map { it.def.name.lowercase() }.toMutableSet()
+        val done = ArrayList<String>(); val skipped = ArrayList<String>(); val failed = ArrayList<String>()
+        for (o in items) {
+            val name = o.optString("name", "strategy")
+            if (name.lowercase() in have) { skipped += name; continue }
+            val def = runCatching { StrategyCodec.decode(o.toString()) }.getOrElse { failed += "$name (${it.message})"; null } ?: continue
+            val err = save(def.copy(id = 0, liveEnabled = false, scheduler = def.scheduler?.copy(enabled = false)))
+            if (err == null) { done += name; have += name.lowercase() } else failed += "$name ($err)"
+        }
+        return buildString {
+            append(if (done.isEmpty()) "Nothing imported." else "Imported ${done.joinToString()} (disarmed, paper only).")
+            if (skipped.isNotEmpty()) append(" Already here: ${skipped.joinToString()}.")
+            if (failed.isNotEmpty()) append(" Could not import: ${failed.joinToString()}.")
+        }
+    }
+
     suspend fun delete(id: Long): String? = lock.withLock {
         val b = book()
         if (b.runs[id]?.let { r -> b.defs.firstOrNull { it.id == id }?.let { Entry(it, r).running } } == true) return@withLock "Stop it first."

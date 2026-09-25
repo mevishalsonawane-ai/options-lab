@@ -955,6 +955,18 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    fun armStrategy(id: Long, on: Boolean) = strategyDo {
+        com.optionslab.app.data.Strategies.setArmed(id, on,
+            if (_settings.value.live) com.optionslab.engine.strategy.RunMode.LIVE else com.optionslab.engine.strategy.RunMode.SANDBOX)
+    }
+
+    fun importStrategies(text: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            say(com.optionslab.app.data.Strategies.importJson(text))
+            refreshStrategies()
+        }
+    }
+
     /** Returns through [onResult] the validator's message, or null when saved. */
     fun saveStrategy(def: com.optionslab.engine.strategy.StrategyDef, onResult: (String?) -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {

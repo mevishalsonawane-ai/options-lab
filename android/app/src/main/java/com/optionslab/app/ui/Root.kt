@@ -372,6 +372,7 @@ private fun Main(model: AppModel) {
                             when (dest) {
                                 "trials" -> { tab = Tab.LAB; labPage = "trials" }
                                 "trade" -> { tab = Tab.TRADE; tradePage = "account" }
+                                "strategy" -> { tab = Tab.TRADE; tradePage = "strategies" }
                                 "ticket" -> { tab = Tab.TOOLS; toolsView = "expiryput" }
                                 "chart" -> { chartAsk = "BANKNIFTY" to "NSE"; tab = Tab.CHART }
                                 "health" -> { tab = Tab.LAB; labPage = "health" }

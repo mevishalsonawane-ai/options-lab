@@ -83,6 +83,7 @@ fun AlmanacScreen(model: AppModel, onGo: (String) -> Unit) {
     com.optionslab.app.ui.PollWhileStarted(s.live) {
         while (true) {
             if (s.live) { if (com.optionslab.app.data.Broker.loggedIn) model.loadAccount(quiet = true) } else model.loadPaper(quiet = true)
+            model.refreshStrategies()
             delay(20_000)
         }
     }
@@ -147,6 +148,9 @@ fun AlmanacScreen(model: AppModel, onGo: (String) -> Unit) {
                 else if (cap != null && cap > 0) Text("${Math.round(100 * usedShare)}% of capital in use", style = Type.bodySmall.copy(color = p.inkSoft), modifier = Modifier.padding(top = 8.dp))
             }
         }
+
+        // ---- strategies: arm the ones you want ------------------------------------------
+        item { StrategyArmCard(model) { onGo("strategy") } }
 
         // ---- BANKNIFTY ------------------------------------------------------------------
         item {
