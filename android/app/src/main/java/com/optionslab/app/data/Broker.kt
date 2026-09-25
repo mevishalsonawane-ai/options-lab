@@ -106,6 +106,7 @@ object Broker {
         var attempt = 0
         while (true) {
             val c = URL(Kite.API + path).openConnection() as HttpsURLConnection
+            c.sslSocketFactory = com.optionslab.app.security.KitePin.socketFactory
             try {
                 c.requestMethod = method
                 c.connectTimeout = 20_000
@@ -143,7 +144,10 @@ object Broker {
                 throw IOException("No connection to Zerodha")
             } catch (_: java.net.SocketTimeoutException) {
                 throw IOException("Zerodha did not answer in time")
-            } catch (_: IOException) {
+            } catch (e: IOException) {
+                if (com.optionslab.app.security.KitePin.mismatch) throw IOException(
+                    "Refused: Zerodha's certificate chain no longer matches the one this phone pinned. On a network you trust, " +
+                        "check api.kite.trade in a browser, then re-trust it under Cabinet → Security.")
                 throw IOException("Could not reach Zerodha")
             } finally {
                 c.disconnect()

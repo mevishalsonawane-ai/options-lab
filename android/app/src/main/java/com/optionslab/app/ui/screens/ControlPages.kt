@@ -237,6 +237,7 @@ fun SecurityPage(model: AppModel) {
     val kind = remember { (context as? androidx.fragment.app.FragmentActivity)?.let { BiometricGate.available(it) } ?: BiometricGate.Kind.NONE }
     Page {
         item { PageTitle("Security", "Nothing personal leaves this phone, and nothing is logged") }
+        item { KitePinCard(model) }
         item {
             LedgerCard(title = "Device integrity") {
                 findings.forEach { f ->
@@ -471,4 +472,28 @@ private fun HolidaysCard(model: AppModel) {
         }
         Note("Refreshed weekly by itself. On a holiday the watch, the expiry jobs, the harvest and strategy schedules stand down.")
     }
+}
+
+/** The pinned certificate authorities for api.kite.trade (trust on first use). */
+@Composable
+private fun KitePinCard(model: AppModel) {
+    val p = LocalPalette.current
+    var reauth by remember { mutableStateOf(false) }
+    var tick by remember { mutableStateOf(0) }
+    val pins = remember(tick) { com.optionslab.app.security.KitePin.pins }
+    val since = remember(tick) { com.optionslab.app.security.KitePin.since }
+    LedgerCard(title = "Zerodha certificate") {
+        if (pins.isEmpty()) Note("Not pinned yet: the first connection to api.kite.trade records its certificate authorities, on a network you trust.")
+        else {
+            LedgerLine("Pinned CAs", "${pins.size}")
+            LedgerLine("Since", java.time.Instant.ofEpochMilli(since).atZone(com.optionslab.engine.IST).format(DateTimeFormatter.ofPattern("d MMM yyyy")))
+            Note("A chain through any other CA is refused before anything is sent, even if Android trusts it.")
+        }
+        if (com.optionslab.app.security.KitePin.mismatch) Text("✕ The last connection was refused: the chain did not match.", style = Type.bodySmall.copy(color = p.oxblood))
+        if (pins.isNotEmpty()) BrassButton("Re-trust (Zerodha changed its CA)", Modifier.fillMaxWidth().padding(top = 6.dp), tone = p.inkSoft) { reauth = true }
+    }
+    if (reauth) Reauth(model, onOk = {
+        reauth = false; com.optionslab.app.security.KitePin.reset(); tick++
+        model.say("Pins cleared. The next connection, on a network you trust, records them again.")
+    }, onCancel = { reauth = false })
 }
