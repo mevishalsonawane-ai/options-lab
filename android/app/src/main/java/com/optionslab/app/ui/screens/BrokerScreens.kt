@@ -244,6 +244,8 @@ fun OrderReview(model: AppModel) {
     val plan by model.plan.collectAsState()
     val sending by model.sending.collectAsState()
     var confirming by remember { mutableStateOf(false) }
+    val st by model.stuck.collectAsState()
+    var stuckAction by remember { mutableStateOf<String?>(null) }
     when (val pl = plan) {
         Load.Idle -> Unit
         is Load.Busy -> LedgerCard { FullSpinner(pl.label) }
@@ -251,9 +253,33 @@ fun OrderReview(model: AppModel) {
             Note(pl.why)
             BrassButton("Close", tone = p.inkFaint) { model.dismissPlan() }
         }
-        is Load.Done -> PlanCard(pl.value, s.allowRealOrders && s.live, sending, onPrice = model::setLegPrice, onSend = { confirming = true }, onClose = model::dismissPlan)
+        is Load.Done -> {
+            PlanCard(pl.value, s.allowRealOrders && s.live, sending, onPrice = model::setLegPrice, onSend = { confirming = true }, onClose = model::dismissPlan)
+            st?.takeIf { it.plan == pl.value }?.let { stk -> StuckCard(stk) { stuckAction = it } }
+        }
     }
     if (confirming) Reauth(model, onOk = { confirming = false; model.sendPlan() }, onCancel = { confirming = false })
+    stuckAction?.let { a ->
+        Reauth(model, onOk = {
+            stuckAction = null
+            when (a) { "cancel" -> model.cancelStuck(); "reprice" -> model.repriceStuck(); else -> model.continueAfterStuck() }
+        }, onCancel = { stuckAction = null })
+    }
+}
+
+/** A leg still working at Zerodha after the send stopped: the owner decides, the rest wait. */
+@Composable
+private fun StuckCard(st: com.optionslab.app.ui.AppModel.StuckLeg, onAction: (String) -> Unit) {
+    val p = LocalPalette.current
+    val leg = st.plan.legs[st.index]
+    LedgerCard(title = "Leg ${st.index + 1} is still working", accent = p.amber, modifier = Modifier.padding(top = 10.dp)) {
+        Text("${leg.side} ${leg.tradingSymbol} ×${leg.quantity} · ${st.status.lowercase()} · order …${st.orderId.takeLast(6)}", style = Type.figure.copy(fontSize = 12.sp))
+        val rest = st.plan.legs.size - st.index - 1
+        Note(if (rest > 0) "$rest more leg${if (rest > 1) "s" else ""} held back: they go only after this one has completely filled." else "This was the last leg.")
+        BrassButton("Move to the best price", Modifier.fillMaxWidth().padding(top = 6.dp), tone = p.inkSoft) { onAction("reprice") }
+        if (rest > 0) BrassButton("It filled: send the remaining legs", Modifier.fillMaxWidth().padding(top = 6.dp)) { onAction("continue") }
+        BrassButton("Cancel this leg (send nothing more)", Modifier.fillMaxWidth().padding(top = 6.dp), tone = p.oxblood) { onAction("cancel") }
+    }
 }
 
 @Composable

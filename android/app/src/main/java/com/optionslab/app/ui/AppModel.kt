@@ -736,7 +736,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         plan.value = Load.Done(cur.copy(legs = legs, refusals = gate(legs, cur.holdToSettlement, cur.exit)))
     }
 
-    fun dismissPlan() { plan.value = Load.Idle; sending.value = Load.Idle }
+    fun dismissPlan() { plan.value = Load.Idle; sending.value = Load.Idle; stuck.value = null }
 
     /**
      * Send the reviewed plan. The UI calls this only after the hold-to-send
@@ -744,6 +744,15 @@ class AppModel(app: Application) : AndroidViewModel(app) {
      * here; legs go one at a time and the next is sent only once the previous
      * one has COMPLETELY filled, so a hedge can never leave a naked short.
      */
+    /**
+     * A leg that was accepted but has not (fully) filled when the send stopped:
+     * the remaining legs are held until the owner decides what to do with it.
+     */
+    data class StuckLeg(val plan: OrderPlan, val index: Int, val orderId: String, val fills: List<com.optionslab.app.data.Broker.Fill>, val status: String)
+    val stuck = MutableStateFlow<StuckLeg?>(null)
+
+    private val WORKING = setOf("OPEN", "TRIGGER PENDING", "UNKNOWN", "OPEN PENDING", "VALIDATION PENDING", "PUT ORDER REQ RECEIVED", "MODIFY PENDING", "AMO REQ RECEIVED")
+
     fun sendPlan() {
         val cur = (plan.value as? Load.Done<OrderPlan>)?.value ?: return
         val s = _settings.value
@@ -751,14 +760,24 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         if (!s.allowRealOrders) { say("Real orders are switched off. Turn them on under Cabinet → Zerodha."); return }
         val again = gate(cur.legs, cur.holdToSettlement, cur.exit)
         if (again.any { it.isNotEmpty() }) { plan.value = Load.Done(cur.copy(refusals = again)); return }
+        stuck.value = null
+        sendFrom(cur, 0, emptyList(), checks = true)
+    }
+
+    /**
+     * Send the plan's legs from [start], one at a time; each must COMPLETELY
+     * fill before the next goes, so a hedge never leaves a naked short.
+     */
+    private fun sendFrom(cur: OrderPlan, start: Int, before: List<com.optionslab.app.data.Broker.Fill>, checks: Boolean) {
         sending.value = Load.Busy("Sending to Zerodha")
         viewModelScope.launch(Dispatchers.IO) {
             val b = com.optionslab.app.data.Broker
-            val fills = ArrayList<com.optionslab.app.data.Broker.Fill>()
+            val fills = ArrayList(before)
             try {
                 if (compromisedFresh()) { sending.value = Load.Failed("Refused: this device shows signs of compromise, so no real order is sent from it."); return@launch }
-                if (cur.exit) exitsStillValid(cur.legs)?.let { why -> sending.value = Load.Failed("Not sent: $why"); loadAccount(); return@launch }
-                for ((i, leg) in cur.legs.withIndex()) {
+                if (checks && cur.exit) exitsStillValid(cur.legs)?.let { why -> sending.value = Load.Failed("Not sent: $why"); loadAccount(); return@launch }
+                for (i in start until cur.legs.size) {
+                    val leg = cur.legs[i]
                     sending.value = Load.Busy("Leg ${i + 1} of ${cur.legs.size}: ${leg.side} ${leg.tradingSymbol}")
                     val id = try {
                         b.placeOrder(leg)
@@ -774,14 +793,23 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                     val f = runCatching { b.awaitOrder(id) }.getOrElse { com.optionslab.app.data.Broker.Fill(id, "UNKNOWN", 0.0, 0, "status not confirmed; check the order book") }
                     fills += f
                     if (f.status != "COMPLETE" || f.filled < leg.quantity) {
+                        val working = f.status in WORKING
+                        if (working) stuck.value = StuckLeg(cur, i, id, fills.toList(), f.status)
                         sending.value = Load.Failed(
-                            "Leg ${i + 1} ${f.status.lowercase()}${if (f.message.isNotBlank()) ": ${f.message}" else ""}. " +
-                                if (i + 1 < cur.legs.size) "The remaining legs were NOT sent. Check Orders on the Zerodha page." else "Check Orders on the Zerodha page.")
+                            "Leg ${i + 1} ${f.status.lowercase()}${if (f.filled > 0) " (${f.filled} of ${leg.quantity} filled)" else ""}" +
+                                "${if (f.message.isNotBlank()) ": ${f.message}" else ""}. " +
+                                when {
+                                    working && i + 1 < cur.legs.size -> "It is still working at Zerodha; the remaining legs are held until you decide below."
+                                    working -> "It is still working at Zerodha; decide below."
+                                    i + 1 < cur.legs.size -> "The remaining legs were NOT sent."
+                                    else -> ""
+                                })
                         cur.session?.let { Ledger.attachOrders(it, fills.map { x -> x.orderId }, null, null) }
                         refreshLedger(); loadAccount()
                         return@launch
                     }
                 }
+                stuck.value = null
                 cur.session?.let { day ->
                     val short = fills.last().avgPrice
                     val wing = if (fills.size > 1) fills.first().avgPrice else null
@@ -795,6 +823,63 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                 if (fills.isNotEmpty()) cur.session?.let { Ledger.attachOrders(it, fills.map { x -> x.orderId }, null, null) }
                 loadAccount()
             }
+        }
+    }
+
+    /** Cancel the stuck leg; the legs after it stay unsent. Called after PIN/biometric. */
+    fun cancelStuck() {
+        val st = stuck.value ?: return
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                com.optionslab.app.data.Broker.cancel(st.orderId)
+                val f = com.optionslab.app.data.Broker.orderState(st.orderId)
+                say("Leg ${st.index + 1} cancelled${f?.filled?.takeIf { it > 0 }?.let { " after $it filled - check Positions" } ?: ""}. The remaining legs were not sent.")
+                stuck.value = null
+            } catch (e: Exception) { say("Cancel failed: ${e.message}") }
+            loadAccount()
+        }
+    }
+
+    /** Re-price the stuck leg at the current best bid (sell) / offer (buy). Called after PIN/biometric. */
+    fun repriceStuck() {
+        val st = stuck.value ?: return
+        val s = _settings.value
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                if (compromisedFresh()) error("this device shows signs of compromise")
+                val b = com.optionslab.app.data.Broker
+                val leg = st.plan.legs[st.index]
+                val key = "${leg.exchange}:${leg.tradingSymbol}"
+                val q = b.quotes(listOf(key))[key] ?: error("no quote for ${leg.tradingSymbol}")
+                val px = (if (leg.side == com.optionslab.engine.Kite.Side.SELL) q.bid else q.ask) ?: q.last
+                val price = com.optionslab.engine.Kite.onTick(px, leg.tickSize, leg.side)
+                val row = b.orders().firstOrNull { it.id == st.orderId } ?: error("the order is gone")
+                if (!row.working) error("it is ${row.status.lowercase()} now")
+                val probe = leg.copy(price = price)
+                val why = com.optionslab.engine.Kite.refusals(probe, s.limits(), 0, st.plan.holdToSettlement, st.plan.exit)
+                if (why.isNotEmpty()) error(why.joinToString("; "))
+                b.modify(row, leg.quantity, "LIMIT", price, null)
+                val f = b.awaitOrder(st.orderId, 15_000)
+                stuck.value = st.copy(status = f.status)
+                say(if (f.status == "COMPLETE") "Leg ${st.index + 1} filled at ${"%.2f".format(f.avgPrice)}. Continue to send the rest." else "Moved to ${"%.2f".format(price)}; still ${f.status.lowercase()}.")
+            } catch (e: Exception) { say("Not moved: ${e.message}") }
+            loadAccount()
+        }
+    }
+
+    /** Send the legs after the stuck one, only once it has completely filled. Called after PIN/biometric. */
+    fun continueAfterStuck() {
+        val st = stuck.value ?: return
+        viewModelScope.launch(Dispatchers.IO) {
+            val f = runCatching { com.optionslab.app.data.Broker.orderState(st.orderId) }.getOrNull()
+            val leg = st.plan.legs[st.index]
+            if (f == null || f.status != "COMPLETE" || f.filled < leg.quantity) {
+                say("Leg ${st.index + 1} is ${f?.status?.lowercase() ?: "unknown"}${f?.let { " (${it.filled} of ${leg.quantity})" } ?: ""}: the rest are sent only after it has completely filled.")
+                return@launch
+            }
+            val done = st.fills.dropLast(1) + f
+            stuck.value = null
+            withContext(Dispatchers.Main) { sendFrom(st.plan, st.index + 1, done, checks = false) }
         }
     }
 
