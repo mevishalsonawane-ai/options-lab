@@ -100,6 +100,7 @@ object Jobs {
     fun scheduleAll(context: Context) {
         val s = AppSettings.load()
         Kind.entries.forEach { schedule(context, it, s) }
+        Heartbeat.schedule(context)
     }
 
     fun schedule(context: Context, k: Kind, s: AppSettings = AppSettings.load()) {
@@ -161,6 +162,7 @@ object Jobs {
 /** Fires at each scheduled instant: re-arm tomorrow's, then run today's. */
 class AlarmReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
+        if (intent.action == Heartbeat.ACTION) { Heartbeat.check(context); return }
         val k = runCatching { Jobs.Kind.valueOf(intent.getStringExtra(Jobs.EXTRA_KIND) ?: return) }.getOrNull() ?: return
         Jobs.schedule(context, k)
         val s = AppSettings.load()
@@ -451,6 +453,7 @@ class WatchService : Service() {
         // so its exit-time square-off and any retried exits are seen through.
         while (Market.isTradingDay() && (Market.minuteNow() <= Market.CLOSE ||
                 (Market.minuteNow() <= Market.CLOSE + 15 && com.optionslab.app.data.Strategies.anyRunning()))) {
+            Heartbeat.beat(this)
             if (Market.minuteNow() < Market.OPEN) {
                 show("Market watch", "Waiting for the 09:15 open")
                 delay(30_000)

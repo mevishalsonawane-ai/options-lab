@@ -31,11 +31,15 @@ Source paths prefixed `NTA:` are in D:\New Trading app.
 - [x] A7. (skipped by the owner's decision, 2026-09-25) Minute market snapshots (BANKNIFTY/NIFTY/SENSEX/VIX + near-ATM options, 09:15-15:30).
       Source: `NTA:services/market_data_collector.py` -> `db/market_snapshots.duckdb`.
 - [ ] A8. Evening ORB replay (15:35-15:40) beside paper results. Source: `NTA:services/ai_signals/orb_shadow.py`
-      (off on NTA; native app Task 8A never started).
+      (off on NTA; native app Task 8A never started). PARKED 2026-09-25: needs the New Trading app source
+      (the repo is not reachable from here) and the real ORB rules of A1.
 - [ ] A9. Verify sandbox charges/slippage parity with NTA (`NTA:sandbox/charges.py`, `sandbox/slippage.py`,
-      stop slippage 10 bps, spread fallback 5 bps).
-- [ ] A10. Heartbeat / dead-man alert when the engine stops during market hours
-      (incomplete on NTA too: `NTA:services/heartbeat_service.py`).
+      stop slippage 10 bps, spread fallback 5 bps). PARKED 2026-09-25: the NTA files to compare against are
+      not reachable from here.
+- [x] A10. Heartbeat / dead-man alert when the engine stops during market hours
+      (incomplete on NTA too: `NTA:services/heartbeat_service.py`). Done on the phone: the market watch stamps
+      a heartbeat each pass; an alarm checks it every 5 min from 09:17 to 15:30, restarts a watch silent for
+      over 3 min and posts one "Market watch stopped" notice per stall (approval channel, so it always shows).
 - [ ] A11. Optional: Telegram alerts (NTA has them; IraAlgo uses phone notifications only).
 - [ ] A12. Optional: pre-market routine (symbol refresh, daily report). AI Signals: skip unless revived (research refused it).
 
