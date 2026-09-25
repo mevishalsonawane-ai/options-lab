@@ -449,6 +449,7 @@ private fun plainPermission(p: String): String = when (p.substringAfterLast('.')
     "VIBRATE" -> "Vibrate for an alert"
     "SCHEDULE_EXACT_ALARM" -> "Wake at the strategy's set times"
     "RECEIVE_BOOT_COMPLETED" -> "Re-set those times after a restart"
+    "REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" -> "Ask to be left out of battery saving, so the market watch is not stopped"
     "WAKE_LOCK" -> "Stay awake while a scheduled job finishes"
     "DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" -> "Talk to itself privately (no other app can use this)"
     else -> p.substringAfterLast('.')

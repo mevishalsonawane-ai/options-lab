@@ -12,5 +12,6 @@ android.permission.FOREGROUND_SERVICE_SPECIAL_USE  # the watch itself: runs past
 android.permission.VIBRATE                         # alert vibration
 android.permission.SCHEDULE_EXACT_ALARM            # 09:14 / 10:55 / 11:01 / 15:35 / 15:45
 android.permission.RECEIVE_BOOT_COMPLETED          # re-arm those alarms after a reboot
+android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS  # ask once to be left out of battery saving, so the market watch keeps running
 android.permission.WAKE_LOCK                       # merged by WorkManager
 ${applicationId}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION   # androidx.core, app-private
