@@ -743,7 +743,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                 val ins = b.instruments()
                 val found = legs.filter { it.active && it.strike != null && it.optionType != null }.map { l ->
                     val right = if (l.optionType == com.optionslab.engine.options.OptionType.CE) com.optionslab.engine.Right.CE else com.optionslab.engine.Right.PE
-                    val i = b.find(ins, underlying, expiry, l.strike!!, right) ?: error("${com.optionslab.engine.fmtG(l.strike)} $right is not listed on Zerodha")
+                    val i = b.find(ins, underlying, expiry, l.strike!!, right) ?: error("${com.optionslab.engine.fmtG(l.strike!!)} $right is not listed on Zerodha")
                     l to i
                 }
                 val q = b.quotes(found.map { "NFO:${it.second.tradingSymbol}" })
@@ -765,7 +765,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         var last = com.optionslab.app.data.Paper.Result(false, "no legs", emptyList())
         for (l in legs.filter { it.active && it.strike != null }.sortedBy { if (it.side == com.optionslab.engine.options.Side.BUY) 0 else 1 }) {
             val right = if (l.optionType == com.optionslab.engine.options.OptionType.CE) com.optionslab.engine.Right.CE else com.optionslab.engine.Right.PE
-            val c = com.optionslab.app.data.Paper.contractFor(underlying, expiry, l.strike!!, right) ?: error("${com.optionslab.engine.fmtG(l.strike)} $right is not listed")
+            val c = com.optionslab.app.data.Paper.contractFor(underlying, expiry, l.strike!!, right) ?: error("${com.optionslab.engine.fmtG(l.strike!!)} $right is not listed")
             last = com.optionslab.app.data.Paper.place(c, l.side.name, l.lots, "MARKET", "NRML", null, null)
             if (!last.ok) return@paperDo com.optionslab.app.data.Paper.Result(false, "Stopped at ${c.symbol}: ${last.message}", last.events)
         }
