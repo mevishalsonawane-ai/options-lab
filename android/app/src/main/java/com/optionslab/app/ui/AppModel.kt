@@ -711,6 +711,67 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    // ---- options tools --------------------------------------------------------------------
+
+    val tools = MutableStateFlow<Load<com.optionslab.engine.options.ChainSnapshot>>(Load.Idle)
+    val toolsSource = MutableStateFlow("")
+
+    /** Price the nearest-expiry chain (Zerodha in LIVE, Upstox in SANDBOX) and run every chain screen on it. */
+    fun loadTools(underlying: String, quiet: Boolean = false) {
+        if (!quiet || tools.value !is Load.Done) tools.value = Load.Busy("Pricing the $underlying chain")
+        viewModelScope.launch(Dispatchers.IO) {
+            tools.value = try {
+                if (_settings.value.live && !com.optionslab.app.data.Broker.loggedIn) error("LIVE mode: log in to Zerodha for today to price the chain.")
+                val lc = Market.liveChain(underlying, near = 12)
+                val symbols = lc.contracts.associate { (it.strike to it.right) to it.tradingSymbol }
+                val rows = com.optionslab.engine.options.ChainSnapshot.rowsFrom(lc.series, symbols, lc.lotSize)
+                toolsSource.value = lc.source + (lc.pricedAt?.let { " · %02d:%02d".format(it / 60, it % 60) } ?: "")
+                Load.Done(com.optionslab.engine.options.ChainSnapshot.of(underlying, lc.expiry, lc.spot, lc.lotSize, rows, Market.now()))
+            } catch (e: Exception) { Load.Failed(e.message ?: "could not price the chain") }
+        }
+    }
+
+    /**
+     * A strategy's legs as Zerodha orders for review. Buys go first so every
+     * short is covered by its wing before it is sold.
+     */
+    fun planBasket(title: String, underlying: String, expiry: LocalDate, legs: List<com.optionslab.engine.options.StrategyLeg>) {
+        plan.value = Load.Busy("Looking up the contracts on Zerodha")
+        viewModelScope.launch(Dispatchers.IO) {
+            plan.value = try {
+                val b = com.optionslab.app.data.Broker
+                val ins = b.instruments()
+                val found = legs.filter { it.active && it.strike != null && it.optionType != null }.map { l ->
+                    val right = if (l.optionType == com.optionslab.engine.options.OptionType.CE) com.optionslab.engine.Right.CE else com.optionslab.engine.Right.PE
+                    val i = b.find(ins, underlying, expiry, l.strike!!, right) ?: error("${com.optionslab.engine.fmtG(l.strike)} $right is not listed on Zerodha")
+                    l to i
+                }
+                val q = b.quotes(found.map { "NFO:${it.second.tradingSymbol}" })
+                val product = _settings.value.orderProduct
+                val orders = found.sortedBy { if (it.first.side == com.optionslab.engine.options.Side.BUY) 0 else 1 }.map { (l, i) ->
+                    val side = if (l.side == com.optionslab.engine.options.Side.BUY) com.optionslab.engine.Kite.Side.BUY else com.optionslab.engine.Kite.Side.SELL
+                    val qt = q["NFO:${i.tradingSymbol}"]
+                    val px = (if (side == com.optionslab.engine.Kite.Side.SELL) qt?.bid else qt?.ask) ?: qt?.last ?: l.price
+                    com.optionslab.engine.Kite.Order(i.tradingSymbol, side, l.lots * i.lotSize, i.lotSize, product, "LIMIT",
+                        com.optionslab.engine.Kite.onTick(px, i.tickSize, side), i.tickSize)
+                }
+                Load.Done(OrderPlan(title, null, orders, q, gate(orders, false), false))
+            } catch (x: Exception) { Load.Failed(x.message ?: "could not prepare the basket") }
+        }
+    }
+
+    /** The same legs as paper MARKET orders (sandbox), buys first. */
+    fun paperBasket(underlying: String, expiry: LocalDate, legs: List<com.optionslab.engine.options.StrategyLeg>) = paperDo {
+        var last = com.optionslab.app.data.Paper.Result(false, "no legs", emptyList())
+        for (l in legs.filter { it.active && it.strike != null }.sortedBy { if (it.side == com.optionslab.engine.options.Side.BUY) 0 else 1 }) {
+            val right = if (l.optionType == com.optionslab.engine.options.OptionType.CE) com.optionslab.engine.Right.CE else com.optionslab.engine.Right.PE
+            val c = com.optionslab.app.data.Paper.contractFor(underlying, expiry, l.strike!!, right) ?: error("${com.optionslab.engine.fmtG(l.strike)} $right is not listed")
+            last = com.optionslab.app.data.Paper.place(c, l.side.name, l.lots, "MARKET", "NRML", null, null)
+            if (!last.ok) return@paperDo com.optionslab.app.data.Paper.Result(false, "Stopped at ${c.symbol}: ${last.message}", last.events)
+        }
+        last.copy(message = "Paper basket placed: ${legs.size} legs")
+    }
+
     // ---- the sandbox paper account ------------------------------------------------------
 
     val paper = MutableStateFlow<Load<com.optionslab.app.data.Paper.Snapshot>>(Load.Idle)

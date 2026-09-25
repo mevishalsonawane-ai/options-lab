@@ -38,6 +38,7 @@ import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -75,6 +76,8 @@ import com.optionslab.app.ui.screens.LockScreen
 import com.optionslab.app.ui.screens.RefusedScreen
 import com.optionslab.app.ui.screens.TicketScreen
 import com.optionslab.app.ui.screens.TradeScreen
+import com.optionslab.app.ui.screens.ToolsScreen
+import com.optionslab.app.ui.screens.LabScreen
 import com.optionslab.app.ui.screens.TrialsScreen
 import com.optionslab.app.ui.theme.LocalPalette
 import com.optionslab.app.ui.theme.IraAlgoTheme
@@ -85,10 +88,10 @@ import java.util.Locale
 
 enum class Tab(val label: String, val icon: ImageVector) {
     ALMANAC("Almanac", Icons.Filled.Home),
-    TRIALS("Trials", Icons.Filled.DateRange),
     TICKET("Ticket", Icons.Filled.Edit),
     TRADE("Trade", Icons.Filled.ShoppingCart),
-    HEALTH("Health", Icons.Filled.Favorite),
+    TOOLS("Tools", Icons.Filled.Search),
+    LAB("Lab", Icons.Filled.DateRange),
     CABINET("Cabinet", Icons.Filled.Build),
 }
 
@@ -182,6 +185,7 @@ private fun Main(model: AppModel) {
     val requested by MainActivity.tabRequests.collectAsState()
     var tab by rememberSaveable { mutableStateOf(Tab.ALMANAC) }
     var cabinetPage by rememberSaveable { mutableStateOf<String?>(null) }
+    var labPage by rememberSaveable { mutableStateOf("trials") }
     val message by model.message.collectAsState()
     val kiteLogin by model.showKiteLogin.collectAsState()
 
@@ -190,8 +194,9 @@ private fun Main(model: AppModel) {
             "almanac" -> tab = Tab.ALMANAC
             "ticket" -> tab = Tab.TICKET
             "trade" -> tab = Tab.TRADE
-            "health" -> tab = Tab.HEALTH
-            "trials" -> tab = Tab.TRIALS
+            "health" -> { tab = Tab.LAB; labPage = "health" }
+            "trials" -> { tab = Tab.LAB; labPage = "trials" }
+            "tools" -> tab = Tab.TOOLS
             "cabinet" -> { tab = Tab.CABINET; cabinetPage = "data" }
             "alarms" -> { tab = Tab.CABINET; cabinetPage = "alarms" }
             "broker" -> { tab = Tab.CABINET; cabinetPage = "broker" }
@@ -228,16 +233,16 @@ private fun Main(model: AppModel) {
                     when (t) {
                         Tab.ALMANAC -> AlmanacScreen(model, onGo = { dest ->
                             when (dest) {
-                                "trials" -> tab = Tab.TRIALS
+                                "trials" -> { tab = Tab.LAB; labPage = "trials" }
                                 "ticket" -> tab = Tab.TICKET
-                                "health" -> tab = Tab.HEALTH
+                                "health" -> { tab = Tab.LAB; labPage = "health" }
                                 else -> { tab = Tab.CABINET; cabinetPage = dest }
                             }
                         })
-                        Tab.TRIALS -> TrialsScreen(model)
                         Tab.TICKET -> TicketScreen(model)
                         Tab.TRADE -> TradeScreen(model)
-                        Tab.HEALTH -> HealthScreen(model)
+                        Tab.TOOLS -> ToolsScreen(model)
+                        Tab.LAB -> LabScreen(model, labPage) { labPage = it }
                         Tab.CABINET -> CabinetScreen(model, cabinetPage) { cabinetPage = it }
                     }
                 }

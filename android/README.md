@@ -127,6 +127,27 @@ bundled record in both modes. The harvester also stays on Upstox in both: it
 builds the research record, and mixing a second source into it is the
 provenance and units trap the PC harness guards against.
 
+## Tools
+
+The Tools tab runs IraAlgo's option analytics (`engine/.../options`, checked
+against IraAlgo's own Python and TypeScript) on one priced chain. In LIVE mode
+the chain comes from Zerodha; in SANDBOX mode it comes from Upstox's public
+candles. It includes:
+
+- The chain, with Black-76 IV and delta off the parity forward.
+- OI walls, PCR and max pain.
+- The IV smile and skew.
+- Gamma exposure, with the sign flip.
+- The expected move (1σ and 2σ, today and to expiry), and the synthetic future.
+- The strategy builder. Pick one of IraAlgo's single-expiry templates to see
+  the legs placed on the chain, the payoff at expiry and today, max
+  profit/loss, breakevens, net credit and the probability of profit.
+  - In LIVE mode the basket opens the usual Zerodha review, with wings bought
+    first.
+  - In SANDBOX mode it becomes paper orders.
+
+Trials and Health now live together under the **Lab** tab.
+
 ## Paper trading (sandbox)
 
 In SANDBOX mode the Trade tab is a paper account running IraAlgo's own
