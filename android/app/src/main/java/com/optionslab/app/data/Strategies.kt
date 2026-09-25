@@ -121,7 +121,12 @@ object Strategies {
             Notifier.post(app, 2014, Notifier.RISK, "Strategies could not be read",
                 "The saved strategies and runs were set aside. If a live run was open, check your Zerodha positions now.", "strategy")
         }
-        return (b ?: Book(ArrayList(), HashMap(), ArrayList(), HashMap(), ArrayList(), 1, 1, null)).also { cache = it }
+        val loaded = (b ?: Book(ArrayList(), HashMap(), ArrayList(), HashMap(), ArrayList(), 1, 1, null))
+        // An ORB armed before the block existed is disarmed (TODO A4).
+        loaded.defs.forEachIndexed { i, d ->
+            if (needsBreakoutRules(d) && d.scheduler?.enabled == true) loaded.defs[i] = d.copy(scheduler = d.scheduler.copy(enabled = false))
+        }
+        return loaded.also { cache = it }
     }
 
     private fun save(b: Book) {
@@ -176,6 +181,7 @@ object Strategies {
         val i = b.defs.indexOfFirst { it.id == id }
         if (i < 0) return@withLock "That strategy no longer exists."
         val d = b.defs[i]
+        if (on && needsBreakoutRules(d)) return@withLock BREAKOUT_BLOCK
         if (on && mode == RunMode.LIVE && !d.liveEnabled) return@withLock "Enable live trading for ${d.name} (Trade → Strategies) before arming it live."
         val base = d.scheduler ?: com.optionslab.engine.strategy.SchedulerConfig(
             days = listOf(java.time.DayOfWeek.MONDAY, java.time.DayOfWeek.TUESDAY, java.time.DayOfWeek.WEDNESDAY,
@@ -405,6 +411,7 @@ object Strategies {
         val b = book()
         val def = b.defs.firstOrNull { it.id == id } ?: return@withLock "No such strategy."
         if (b.runs[id]?.let { Entry(def, it).running } == true) return@withLock "${def.name} is already running."
+        if (needsBreakoutRules(def)) return@withLock BREAKOUT_BLOCK
         if (mode == RunMode.LIVE) {
             if (!confirmedByOwner) return@withLock "A live start needs your confirmation in the app."
             if (!def.liveEnabled) return@withLock "Enable live trading for ${def.name} first."
@@ -489,6 +496,14 @@ object Strategies {
         return run
     }
 
+    /**
+     * TODO A4: the desktop app's ORB and ORB Fresh wait for an opening-range breakout, but as imported
+     * here they are plain timed baskets that would enter at the start time with no breakout check. Until
+     * the real ORB rules are ported (TODO A1) they can be kept and viewed, never armed or started.
+     */
+    fun needsBreakoutRules(def: StrategyDef): Boolean = Regex("(^|[^a-z])orb([^a-z]|$)").containsMatchIn(def.name.lowercase())
+    const val BREAKOUT_BLOCK = "ORB strategies wait for an opening-range breakout, which this phone does not check yet: as imported they would enter at the start time regardless. They stay blocked until the ORB rules are added."
+
     /** Whether an armed strategy places its entry by itself (true) or asks first (false). */
     suspend fun automatic(): Map<Long, Boolean> = lock.withLock { HashMap(book().autoApprove) }
 
@@ -522,7 +537,9 @@ object Strategies {
             // The watch polls about once a minute and a tick can itself take a while, so slots are
             // caught up to five minutes late rather than IraAlgo's 60 s.
             for (due in Scheduler.due(def, last, now, { !Market.isTradingDay(it) }, java.time.Duration.ofMinutes(5))) {
-                if (due.job.kind == Scheduler.JobKind.START && b.stoppedDay == Market.today().toString()) {
+                if (due.job.kind == Scheduler.JobKind.START && needsBreakoutRules(def)) {
+                    record(b, def.name, Event("start_refused", "Scheduled start refused: ORB needs its breakout rules (not added yet)", "warn"), false)
+                } else if (due.job.kind == Scheduler.JobKind.START && b.stoppedDay == Market.today().toString()) {
                     record(b, def.name, Event("start_skipped", "Scheduled start skipped: the bot is stopped for today", "info"), false)
                 } else if (due.job.kind == Scheduler.JobKind.START) {
                     when (val d = Scheduler.startDecision(def, running)) {

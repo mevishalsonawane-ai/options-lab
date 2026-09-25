@@ -101,7 +101,9 @@ fun StrategyArmCard(model: AppModel, onManage: () -> Unit) {
                         Text(d.name, style = Type.body.copy(color = p.ink, fontSize = 15.sp, fontWeight = FontWeight.SemiBold), maxLines = 1)
                         Spacer(Modifier.width(8.dp))
                         val how = if (auto[d.id] ?: (sch?.defaultMode != RunMode.LIVE)) "AUTO" else "APPROVE"
+                        val blocked = com.optionslab.app.data.Strategies.needsBreakoutRules(d)
                         val (label, color) = when {
+                            blocked -> "BLOCKED · needs breakout rules" to p.amber
                             e.running -> "RUNNING" to p.verdigris
                             armed && sch?.defaultMode == RunMode.LIVE -> "ARMED · LIVE · $how" to p.oxblood
                             armed -> "ARMED · PAPER · $how" to p.verdigris
@@ -118,8 +120,12 @@ fun StrategyArmCard(model: AppModel, onManage: () -> Unit) {
                     }
                     Text(listOfNotNull(d.underlying, start?.let { st -> "$st–${stop ?: "close"}" }, days, "${d.legs.size} leg${if (d.legs.size == 1) "" else "s"}").joinToString(" · "),
                         style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp), maxLines = 1)
+                    if (com.optionslab.app.data.Strategies.needsBreakoutRules(d))
+                        Text("Would enter at the start time without a breakout check, so it cannot be armed until the ORB rules are added.",
+                            style = Type.bodySmall.copy(color = p.amber, fontSize = 12.sp))
                 }
                 Switch(
+                    enabled = !com.optionslab.app.data.Strategies.needsBreakoutRules(d),
                     checked = armed,
                     onCheckedChange = { on -> if (on) choosing = d else model.armStrategy(d.id, false) },
                     colors = SwitchDefaults.colors(checkedTrackColor = if (s.live) p.oxblood else p.verdigris, checkedThumbColor = p.card),
