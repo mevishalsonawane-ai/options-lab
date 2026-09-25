@@ -834,6 +834,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                     }
                     val f = runCatching { b.awaitOrder(id) }.getOrElse { com.optionslab.app.data.Broker.Fill(id, "UNKNOWN", 0.0, 0, "status not confirmed; check the order book") }
                     fills += f
+                    if (f.filled > 0) com.optionslab.app.work.Notifier.orderFilled(ctx, leg.side.name, f.filled, leg.tradingSymbol, f.avgPrice, "Live", null)
                     if (f.status != "COMPLETE" || f.filled < leg.quantity) {
                         val working = f.status in WORKING
                         if (working) stuck.value = StuckLeg(cur, i, id, fills.toList(), f.status)
@@ -1209,7 +1210,10 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                    priceType: String, product: String, price: Double?, trigger: Double?) = paperDo {
         val c = com.optionslab.app.data.Paper.contractFor(underlying, expiry, strike, right)
             ?: error("$underlying ${expiry} ${com.optionslab.engine.fmtG(strike)} $right is not listed")
-        com.optionslab.app.data.Paper.place(c, action, lots, priceType, product, price, trigger)
+        val r = com.optionslab.app.data.Paper.place(c, action, lots, priceType, product, price, trigger)
+        r.events.filterIsInstance<com.optionslab.engine.sandbox.SandboxEvent.Fill>()
+            .forEach { com.optionslab.app.work.Notifier.orderFilled(ctx, it.action, it.quantity, it.symbol, it.price, "Paper", null) }
+        r
     }
 
     fun paperCancel(id: String) = paperDo { com.optionslab.app.data.Paper.cancel(id) }

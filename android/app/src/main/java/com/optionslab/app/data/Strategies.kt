@@ -295,6 +295,7 @@ object Strategies {
             val id = r.orderId ?: return StrategyHost.Placed.Refused("paper order not recorded")
             b.owners["paper:$id"] = ownerLabel(def, order)
             val fill = r.events.filterIsInstance<com.optionslab.engine.sandbox.SandboxEvent.Fill>().firstOrNull()
+            fill?.let { Notifier.orderFilled(app, it.action, it.quantity, it.symbol, it.price, "Paper", ownerLabel(def, order)) }
             return if (fill != null) StrategyHost.Placed.Accepted("paper:$id", "complete", fill.quantity, fill.price)
             else StrategyHost.Placed.Accepted("paper:$id", "open", 0, null)
         }
@@ -346,6 +347,7 @@ object Strategies {
                 // From here the order exists at Zerodha: never report it as refused. An unknown
                 // state is polled on the next tick.
                 val f = runCatching { Broker.awaitOrder(id, 12_000) }.getOrNull()
+                if (f != null && f.filled > 0) Notifier.orderFilled(app, side.name, f.filled, kiteSym, f.avgPrice, "Live", ownerLabel(def, order))
                 StrategyHost.Placed.Accepted("kite:$id", f?.status ?: "UNKNOWN", f?.filled ?: 0, f?.avgPrice?.takeIf { it > 0 }, f?.message)
             }
         }
@@ -491,7 +493,7 @@ object Strategies {
                         } else {
                             // Manual approval: the entry waits for the owner.
                             b.pending[def.id] = "${d.mode.wire}|${now.toLocalDate()}"
-                            Notifier.post(app, 6600 + (def.id.toInt() and 0xff), Notifier.RISK, "${def.name}: approve the start",
+                            Notifier.post(app, 6600 + (def.id.toInt() and 0xff), Notifier.APPROVAL, "${def.name}: approve the start",
                                 "It is ${def.name}'s start time (${if (d.mode == RunMode.LIVE) "live" else "paper"}). Open IraAlgo to approve or skip; nothing is sent until you do.", "almanac")
                             notes += "${def.name}: waiting for approval"
                         }

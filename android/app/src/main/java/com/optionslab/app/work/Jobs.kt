@@ -222,7 +222,7 @@ object Tasks {
             "Credit Rs %.2f/unit (Rs %,.0f), breakeven %,.1f. Recorded as paper - nothing was sent."
                 .format(t.credit, t.credit * t.qty, t.breakeven), "ticket")
         // The real order is PREPARED, never sent: it waits for your review.
-        if (s.prepareRealOrder && com.optionslab.app.data.Broker.loggedIn) Notifier.post(context, 2004, Notifier.RISK,
+        if (s.prepareRealOrder && com.optionslab.app.data.Broker.loggedIn) Notifier.post(context, 2004, Notifier.APPROVAL,
             "Review today's Zerodha order", "SELL ${t.underlying} ${fmtG(t.strike)} PE x${t.lots} is ready. Open Options → Expiry Put, review it and hold to send - nothing goes until you do.", "ticket")
     }
 
@@ -325,8 +325,8 @@ object Tasks {
 
     private fun paperEvents(context: Context, events: List<com.optionslab.engine.sandbox.SandboxEvent>) {
         for (e in events) when (e) {
-            is com.optionslab.engine.sandbox.SandboxEvent.Fill -> Notifier.post(context, 7000 + (e.orderId.hashCode() and 0x3ff), Notifier.LIVE,
-                "Paper ${e.action} filled", "${e.quantity} ${e.symbol} @ %.2f".format(e.price), "trade")
+            is com.optionslab.engine.sandbox.SandboxEvent.Fill -> Notifier.orderFilled(context, e.action, e.quantity, e.symbol, e.price, "Paper",
+                kotlinx.coroutines.runBlocking { runCatching { com.optionslab.app.data.Strategies.owners()["paper:${e.orderId}"] }.getOrNull() })
             is com.optionslab.engine.sandbox.SandboxEvent.ExpirySettled -> Notifier.post(context, 7000 + (e.symbol.hashCode() and 0x3ff), Notifier.LIVE,
                 "Paper contract settled", "${e.symbol} at %.2f · P&L Rs %+,.0f".format(e.price.toDouble(), e.pnl.toDouble()), "trade")
             is com.optionslab.engine.sandbox.SandboxEvent.SquareOff -> Notifier.post(context, 7000 + (e.symbol.hashCode() and 0x3ff), Notifier.LIVE,

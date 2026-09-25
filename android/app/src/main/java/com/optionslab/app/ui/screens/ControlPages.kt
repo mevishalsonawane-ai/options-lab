@@ -381,6 +381,15 @@ fun SchedulePage(model: AppModel) {
         item { PageTitle("Schedules & Notices", "The strategy's day, kept by the phone") }
         item { HolidaysCard(model) }
         item {
+            LedgerCard(title = "Notifications") {
+                Note("You always get three: a buy filled, a sell filled, and an order or strategy start waiting for your approval. " +
+                    "The market watch also keeps one quiet ongoing notification while it runs, which Android requires; long-press it to hide it.")
+                ToggleRow("Other notifications", "Risk and P&L alerts, price alarms, reminders, health changes and warnings", s.otherAlerts) { on ->
+                    model.update { it.copy(otherAlerts = on) }
+                }
+            }
+        }
+        item {
             LedgerCard(title = "The Day") {
                 val rows = listOf(
                     Triple(Jobs.Kind.REMIND, "Entry reminder 10:55", "Expiry days only"),

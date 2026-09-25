@@ -30,6 +30,11 @@ object Notifier {
     const val RISK = "risk"
     const val SCHEDULE = "schedule"
     const val HEALTH = "health"
+    /** The three notifications the owner gets by default: a buy filled, a sell filled, an order waiting for approval. */
+    const val BUY = "orders.buy"
+    const val SELL = "orders.sell"
+    const val APPROVAL = "orders.approval"
+    private val ALWAYS = setOf(BUY, SELL, APPROVAL)
 
     const val ID_LIVE = 1001
     const val ID_HARVEST = 1002
@@ -38,6 +43,19 @@ object Notifier {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         val nm = context.getSystemService(NotificationManager::class.java)
         nm.createNotificationChannels(listOf(
+            NotificationChannel(BUY, "Buy orders", NotificationManager.IMPORTANCE_HIGH).apply {
+                description = "A buy order was filled (paper or Zerodha), and by which strategy or by hand"
+                lockscreenVisibility = android.app.Notification.VISIBILITY_PRIVATE
+            },
+            NotificationChannel(SELL, "Sell orders", NotificationManager.IMPORTANCE_HIGH).apply {
+                description = "A sell order was filled (paper or Zerodha), and by which strategy or by hand"
+                lockscreenVisibility = android.app.Notification.VISIBILITY_PRIVATE
+            },
+            NotificationChannel(APPROVAL, "Order approvals", NotificationManager.IMPORTANCE_HIGH).apply {
+                description = "An order or a strategy start waiting for you to approve it"
+                lockscreenVisibility = android.app.Notification.VISIBILITY_PRIVATE
+                enableVibration(true)
+            },
             NotificationChannel(LIVE, "Market watch", NotificationManager.IMPORTANCE_LOW).apply {
                 description = "Index levels and your open paper ticket during market hours"
                 lockscreenVisibility = android.app.Notification.VISIBILITY_PRIVATE
@@ -85,8 +103,16 @@ object Notifier {
             .setAutoCancel(true)
             .setVisibility(if (hide) NotificationCompat.VISIBILITY_PRIVATE else NotificationCompat.VISIBILITY_PUBLIC)
             .setPublicVersion(publicVersion(context, channel))
-            .setPriority(if (channel == RISK) NotificationCompat.PRIORITY_HIGH else NotificationCompat.PRIORITY_DEFAULT)
+            .setPriority(if (channel == RISK || channel in ALWAYS) NotificationCompat.PRIORITY_HIGH else NotificationCompat.PRIORITY_DEFAULT)
             .setCategory(if (channel == RISK) NotificationCompat.CATEGORY_ALARM else NotificationCompat.CATEGORY_STATUS)
+    }
+
+    /** A buy or sell filled: "BUY filled · Paper · ORB" / "SELL filled · Live · Manual". */
+    fun orderFilled(context: Context, action: String, qty: Int, symbol: String, price: Double, venue: String, source: String?) {
+        val buy = action.equals("BUY", ignoreCase = true)
+        post(context, 7000 + ("$symbol$action$qty$price".hashCode() and 0xfff), if (buy) BUY else SELL,
+            "${if (buy) "BUY" else "SELL"} filled · $venue · ${source ?: "Manual"}",
+            "$qty $symbol @ ${String.format(java.util.Locale.ENGLISH, "%.2f", price)}", "trade")
     }
 
     fun canPost(context: Context): Boolean =
@@ -95,6 +121,8 @@ object Notifier {
 
     fun post(context: Context, id: Int, channel: String, title: String, text: String, tab: String? = null) {
         if (!canPost(context)) return
+        // Only buy / sell / approval notifications unless the owner turned the others on (More → Schedules).
+        if (channel !in ALWAYS && !runCatching { AppSettings.load().otherAlerts }.getOrDefault(false)) return
         try {
             NotificationManagerCompat.from(context).notify(id, builder(context, channel, title, text, tab).build())
         } catch (_: SecurityException) {
