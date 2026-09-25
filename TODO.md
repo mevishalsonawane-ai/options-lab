@@ -63,12 +63,12 @@ Source paths prefixed `NTA:` are in D:\New Trading app.
 ##    no Telegram; morning check and end-of-day report always show)
 
 - [x] D1. (ready: CI signs with the owner's key once the 4 secrets from `android/tools/make-release-key.sh` are added; README has the steps) Release signing ready (B2): CI signs with the owner's key once the 4 secrets exist; steps in `android/README.md`.
-- [ ] D2. Live chart from the Zerodha stream: in Live mode the last candle moves with every tick.
-- [ ] D3. Live option chain: refreshes from the stream while open; OI change since the day's first reading; PCR and max pain live.
+- [x] D2. (done: stream ticks pushed into the chart page, `window.__iraTick`; tested in a browser harness) Live chart from the Zerodha stream: in Live mode the last candle moves with every tick.
+- [x] D3. (done: 5 s re-pricing from the stream in Live mode; OI change card from the day's first reading) Live option chain: refreshes from the stream while open; OI change since the day's first reading; PCR and max pain live.
 - [x] D4. (done: `app/src/test` JVM tests, run by CI before the APK is built) App unit tests (B7): JVM tests for the app's pure logic, run by CI.
 - [ ] D5. Trailing stop-loss on any position (paper; Zerodha after one PIN): the stop only ever tightens.
 - [ ] D6. From the chart: bracket order (entry + stop + target) and price alerts drawn at a level.
-- [ ] D7. Straddle / strangle tracker: combined premium through the day and the pair's live P&L.
+- [x] D7. (done: Options → Straddle: any call/put pair, combined premium, pair P&L) Straddle / strangle tracker: combined premium through the day and the pair's live P&L.
 - [ ] D8. Strategy presets ready to arm (short straddle, short strangle, iron fly, iron condor), each backtested on harvested sessions first.
 - [ ] D9. Replay mode: step through a past day candle by candle and paper-trade it.
 - [ ] D10. Trade journal: note and tags per trade; P&L by tag.

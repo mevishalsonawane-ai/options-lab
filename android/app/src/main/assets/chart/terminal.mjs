@@ -44,17 +44,45 @@ const feed = {
     }
   },
   // Live updates: the newest bars are asked for again every 15 seconds while the chart is open.
+  // In Live mode the app also pushes every trade (window.__iraTick), and then the poll stands back.
   subscribeBars(req, onBar) {
+    live = { req, onBar };
     const timer = setInterval(async () => {
       if (paused) return;   // the Chart tab is not on screen
+      if (Date.now() - lastTickAt < 20000) return;   // the stream is moving the candle
       try {
         const now = Math.floor(Date.now() / 1000);
         const bars = await call('bars', req.symbol, req.exchange, req.interval, now - 3 * 86400, now);
         bars.slice(-2).forEach(onBar);
       } catch (e) { /* the next tick tries again */ }
     }, 15000);
-    return () => clearInterval(timer);
+    return () => { clearInterval(timer); if (live && live.onBar === onBar) live = null; };
   },
+};
+
+// ---- the live candle (Zerodha stream, Live mode) --------------------------------------
+let live = null;
+let lastTickAt = 0;
+
+/**
+ * One trade from the app: the last candle takes it (close, and high/low if it breaks
+ * them), or, when the trade falls in the next candle's time, a new candle starts.
+ * Only intraday candles up to 30 minutes start new bars; hourly and daily just move.
+ */
+window.__iraTick = (price, t) => {
+  if (!live || !(price > 0)) return;
+  const data = widget.series.getData();
+  const last = data[data.length - 1];
+  if (!last) return;
+  lastTickAt = Date.now();
+  const close = last.close ?? last.value ?? price;
+  const open = last.open ?? close, high = last.high ?? close, low = last.low ?? close;
+  const step = barSeconds(widget.interval());
+  const bucket = step <= 1800 ? Math.floor(t / step) * step : last.time;
+  const bar = bucket > last.time
+    ? { time: bucket, open: price, high: price, low: price, close: price, volume: 0 }
+    : { time: last.time, open, high: Math.max(high, price), low: Math.min(low, price), close: price, volume: last.volume ?? 0 };
+  live.onBar(bar);
 };
 
 // While another tab is showing, the chart stays loaded but stops asking for prices.

@@ -44,7 +44,10 @@ data class ChainSnapshot(
             fun leg(s: Series?): OptLeg? {
                 if (s == null || s.size == 0) return null
                 val i = s.size - 1
-                return OptLeg(symbols[s.strike to s.right] ?: "", s.close[i], oi = s.oi[i], volume = s.volume?.sum() ?: 0L, lotSize = lotSize)
+                // The session's first OI reading is the baseline for "OI change today"; a single reading has none.
+                val first = (0 until s.size).firstOrNull { s.oi[it] > 0 }
+                val prev = if (s.size > 1 && first != null && first < i) s.oi[first] else null
+                return OptLeg(symbols[s.strike to s.right] ?: "", s.close[i], oi = s.oi[i], volume = s.volume?.sum() ?: 0L, prevOi = prev, lotSize = lotSize)
             }
             val by = series.filter { it.right != Right.IX }.groupBy { it.strike }
             return by.keys.sorted().map { k ->

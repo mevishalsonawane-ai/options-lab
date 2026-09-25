@@ -27,6 +27,7 @@ import com.optionslab.engine.Summary
 import com.optionslab.engine.UtBot
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -1212,7 +1213,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                 if (_settings.value.live && !com.optionslab.app.data.Broker.loggedIn) error("LIVE mode: log in to Zerodha for today to price the chain.")
                 val lc = Market.liveChain(underlying, near = 12)
                 val symbols = lc.contracts.associate { (it.strike to it.right) to it.tradingSymbol }
-                val rows = com.optionslab.engine.options.ChainSnapshot.rowsFrom(lc.series, symbols, lc.lotSize)
+                val rows = com.optionslab.app.data.OiBaseline.apply(com.optionslab.engine.options.ChainSnapshot.rowsFrom(lc.series, symbols, lc.lotSize))
                 val source = lc.source + (lc.pricedAt?.let { " · %02d:%02d".format(it / 60, it % 60) } ?: "")
                 toolsSource.value = source
                 val snap = com.optionslab.engine.options.ChainSnapshot.of(underlying, lc.expiry, lc.spot, lc.lotSize, rows, Market.now())
@@ -1224,6 +1225,54 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                 else Load.Failed(e.message ?: "could not price the chain")
             }
         }
+    }
+
+    /** The straddle / strangle tracker: a call and a put of one expiry, as one combined premium. */
+    data class StraddleView(
+        val minutes: List<Int>, val combined: List<Double>, val ceNow: Double, val peNow: Double,
+        val open: Double, val high: Double, val low: Double, val heldPnl: Double?, val heldWhere: String?, val streamed: Boolean,
+    ) { val now: Double get() = ceNow + peNow }
+
+    suspend fun straddle(underlying: String, expiry: LocalDate, ceStrike: Double, peStrike: Double): StraddleView = withContext(Dispatchers.IO) {
+        val list = Market.contracts().filter { it.underlying == underlying && it.expiry == expiry }
+        val ce = list.firstOrNull { it.strike == ceStrike && it.right == com.optionslab.engine.Right.CE } ?: error("${com.optionslab.engine.fmtG(ceStrike)} CE is not listed")
+        val pe = list.firstOrNull { it.strike == peStrike && it.right == com.optionslab.engine.Right.PE } ?: error("${com.optionslab.engine.fmtG(peStrike)} PE is not listed")
+        val today = Market.today()
+        val ceBars = async { com.optionslab.app.data.Net.intraday(ce.instrumentKey).filter { it.istDate == today }.associate { it.istMinute to it.close } }
+        val peBars = async { com.optionslab.app.data.Net.intraday(pe.instrumentKey).filter { it.istDate == today }.associate { it.istMinute to it.close } }
+        val cm = ceBars.await(); val pm = peBars.await()
+        // Minute by minute, each side carried forward over a minute it did not trade.
+        val minutes = (cm.keys + pm.keys).toSortedSet().toList()
+        var lc: Double? = null; var lp: Double? = null
+        val combined = ArrayList<Double>(); val mins = ArrayList<Int>()
+        for (m in minutes) {
+            cm[m]?.let { lc = it }; pm[m]?.let { lp = it }
+            val c = lc; val q = lp
+            if (c != null && q != null) { mins += m; combined += c + q }
+        }
+        var ceNow = lc ?: 0.0; var peNow = lp ?: 0.0
+        // Live mode with the stream up: the latest trades, not the last minute's close.
+        var streamed = false
+        val b = com.optionslab.app.data.Broker
+        if (_settings.value.live && b.loggedIn) b.cachedInstruments()?.let { ins ->
+            val tc = b.find(ins, underlying, expiry, ceStrike, com.optionslab.engine.Right.CE)
+            val tp = b.find(ins, underlying, expiry, peStrike, com.optionslab.engine.Right.PE)
+            com.optionslab.app.data.KiteStream.touch(listOfNotNull(tc?.token, tp?.token))
+            val xc = tc?.let { com.optionslab.app.data.KiteStream.tick(it.token) }; val xp = tp?.let { com.optionslab.app.data.KiteStream.tick(it.token) }
+            if (xc != null && xp != null) {
+                ceNow = xc.last; peNow = xp.last; streamed = true
+                if (combined.isNotEmpty()) combined[combined.size - 1] = ceNow + peNow
+            }
+            // The pair's P&L when both legs are held at Zerodha.
+            val held = livePositions.value.filter { it.qty != 0 && (it.symbol == tc?.tradingSymbol || it.symbol == tp?.tradingSymbol) }
+            if (held.size == 2) return@withContext StraddleView(mins, combined, ceNow, peNow, combined.firstOrNull() ?: 0.0, combined.maxOrNull() ?: 0.0,
+                combined.minOrNull() ?: 0.0, held.sumOf { com.optionslab.app.data.KiteStream.live(it).pnl }, "Zerodha", streamed)
+        }
+        // ...or on the paper account.
+        val ps = runCatching { com.optionslab.app.data.Paper.snapshot() }.getOrNull()?.positions?.positions.orEmpty()
+            .filter { it.quantity != 0 && (it.symbol == com.optionslab.app.data.Paper.symbolOf(ce) || it.symbol == com.optionslab.app.data.Paper.symbolOf(pe)) }
+        StraddleView(mins, combined, ceNow, peNow, combined.firstOrNull() ?: 0.0, combined.maxOrNull() ?: 0.0, combined.minOrNull() ?: 0.0,
+            if (ps.size == 2) ps.sumOf { it.pnl } else null, if (ps.size == 2) "Paper" else null, streamed)
     }
 
     /**

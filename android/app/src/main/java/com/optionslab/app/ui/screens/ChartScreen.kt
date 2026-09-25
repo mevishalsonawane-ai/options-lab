@@ -20,6 +20,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -91,6 +92,25 @@ fun ChartScreen(model: AppModel, symbol: String, exchange: String, visible: Bool
             if (visible) w.onResume() else w.onPause()
         }
         onDispose { }
+    }
+
+    // Live mode: every trade of the charted instrument comes from the Zerodha stream and moves the
+    // last candle at once (the chart page's own 15 s poll stands back while ticks arrive).
+    val settings by model.settings.collectAsState()
+    val streamStatus by com.optionslab.app.data.KiteStream.status.collectAsState()
+    val streaming = settings.live && streamStatus == com.optionslab.app.data.KiteStream.Status.LIVE
+    var liveToken by remember { mutableStateOf<Long?>(null) }
+    LaunchedEffect(current, streaming) {
+        liveToken = if (!streaming) null else withContext(Dispatchers.IO) { runCatching { streamToken(current.first) }.getOrNull() }
+        com.optionslab.app.data.KiteStream.want("chart", listOfNotNull(liveToken))
+    }
+    DisposableEffect(Unit) { onDispose { com.optionslab.app.data.KiteStream.want("chart", emptyList()) } }
+    val tickVersion by com.optionslab.app.data.KiteStream.version.collectAsState()
+    LaunchedEffect(tickVersion, liveToken, visible, ready) {
+        val t = liveToken?.let { com.optionslab.app.data.KiteStream.tick(it) } ?: return@LaunchedEffect
+        if (!visible || !ready) return@LaunchedEffect
+        val at = t.exchangeTime ?: (System.currentTimeMillis() / 1000)
+        holder[0]?.evaluateJavascript("window.__iraTick && window.__iraTick(${t.last}, $at)", null)
     }
 
     // A chart that has not drawn its first candles in 12 s is rebuilt once; after that, say so.
@@ -207,6 +227,14 @@ fun ChartScreen(model: AppModel, symbol: String, exchange: String, visible: Bool
     order?.let { (pick, how) ->
         OptionOrderSheet(model, pick, initialBuy = how.first, initialLimit = how.second) { order = null }
     }
+}
+
+/** The Zerodha instrument token for a chart symbol: an index by name, an option through the day's instrument list. */
+private suspend fun streamToken(symbol: String): Long? {
+    com.optionslab.app.data.Broker.indexToken(symbol.uppercase())?.let { return it }
+    val c = ChartFeed.contract(symbol) ?: return null
+    val list = com.optionslab.app.data.Broker.cachedInstruments() ?: return null
+    return com.optionslab.app.data.Broker.find(list, c.underlying, c.expiry, c.strike, c.right)?.token
 }
 
 private fun refused() = WebResourceResponse("text/plain", "utf-8", 403, "Refused", emptyMap(), ByteArrayInputStream(ByteArray(0)))
