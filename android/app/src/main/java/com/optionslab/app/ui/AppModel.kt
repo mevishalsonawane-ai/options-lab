@@ -118,7 +118,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch(Dispatchers.IO) { pnlSeries.value = com.optionslab.app.data.PnlTracker.today() }
     }
 
-    fun say(text: String) { message.value = text }
+    /** Every message the app gives shows as a banner at the top: green for success, red for an error. */
+    fun say(text: String) { message.value = text; com.optionslab.app.work.Alerts.post(text) }
 
     // ---- NSE holidays ----------------------------------------------------------------------
 
@@ -453,6 +454,17 @@ class AppModel(app: Application) : AndroidViewModel(app) {
 
     val broker = MutableStateFlow(brokerState())
     /** Everything erased: settings, the broker link and every loaded account view start again from the (empty) vault. */
+    /** From a Zerodha position's notification: open that position's close popup (the square-off review and PIN follow). */
+    fun openLiveClose(symbol: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val b = com.optionslab.app.data.Broker
+            if (!b.loggedIn) { say("Log in to Zerodha for today first, then close $symbol."); return@launch }
+            val p = runCatching { b.positionBook() }.getOrNull()?.net?.firstOrNull { it.symbol == symbol && it.qty != 0 }
+            if (p == null) { say("No open Zerodha position in $symbol."); return@launch }
+            rowAction.value = com.optionslab.app.ui.screens.RowTarget.LivePosition(p)
+        }
+    }
+
     fun resetAfterWipe() {
         _settings.value = AppSettings.load()
         broker.value = brokerState()

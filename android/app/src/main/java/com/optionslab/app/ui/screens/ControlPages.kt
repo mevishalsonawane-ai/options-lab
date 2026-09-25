@@ -12,7 +12,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.AlertDialog
+import com.optionslab.app.ui.components.AlertDialog
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -207,7 +207,7 @@ fun DataPage(model: AppModel) {
                 BrassButton("Verify the record", Modifier.fillMaxWidth(), busy = prov is Load.Busy) { model.verifyProvenance() }
                 when (val v = prov) {
                     is Load.Busy -> FullSpinner(v.label, v.progress)
-                    is Load.Failed -> Note(v.why)
+                    is Load.Failed -> com.optionslab.app.ui.components.AlertOn(v.why)
                     is Load.Done -> if (v.value.isEmpty()) Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                         Stamp("Intact", p.verdigris); Spacer(Modifier.width(10.dp)); Note("All 170 sessions match their provenance.")
                     } else v.value.forEach { d -> LedgerLine(d.kind, d.why, p.oxblood) }
@@ -342,11 +342,12 @@ fun SecurityPage(model: AppModel) {
                         visualTransformation = PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword))
                     OutlinedTextField(next, { next = it.filter(Char::isDigit).take(PinLock.LENGTH) }, label = { Text("New PIN (${PinLock.LENGTH} digits)") }, singleLine = true,
                         visualTransformation = PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword))
-                    err?.let { Text(it, style = Type.italic.copy(color = p.oxblood)) }
+                    com.optionslab.app.ui.components.AlertOn(err, throttle = false)
                 }
             },
             confirmButton = {
                 TextButton({
+                  err = null
                   pinScope.launch {
                     val r = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { PinLock.verify(cur.toCharArray(), s.wipeOnExhaustion) }
                     when (r) {
@@ -512,7 +513,7 @@ private fun KitePinCard(model: AppModel) {
             LedgerLine("Since", java.time.Instant.ofEpochMilli(since).atZone(com.optionslab.engine.IST).format(DateTimeFormatter.ofPattern("d MMM yyyy")))
             Note("A chain through any other CA is refused before anything is sent, even if Android trusts it.")
         }
-        if (com.optionslab.app.security.KitePin.mismatch) Text("✕ The last connection was refused: the chain did not match.", style = Type.bodySmall.copy(color = p.oxblood))
+        com.optionslab.app.ui.components.AlertOn(if (com.optionslab.app.security.KitePin.mismatch) "The last Zerodha connection was refused: the certificate chain did not match." else null)
         if (pins.isNotEmpty()) BrassButton("Re-trust (Zerodha changed its CA)", Modifier.fillMaxWidth().padding(top = 6.dp), tone = p.inkSoft) { reauth = true }
     }
     if (reauth) Reauth(model, onOk = {

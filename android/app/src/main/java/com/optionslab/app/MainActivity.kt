@@ -20,6 +20,9 @@ class MainActivity : FragmentActivity() {
     companion object {
         const val EXTRA_TAB = "tab"
         val tabRequests = MutableStateFlow<String?>(null)
+        /** A Zerodha position's "Close…" notification button: open its close popup (review + PIN). */
+        const val EXTRA_CLOSE = "close"
+        val closeRequests = MutableStateFlow<String?>(null)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -29,6 +32,7 @@ class MainActivity : FragmentActivity() {
         enableEdgeToEdge()
         window.decorView.filterTouchesWhenObscured = true
         tabRequests.value = intent?.getStringExtra(EXTRA_TAB)
+        closeRequests.value = intent?.getStringExtra(EXTRA_CLOSE)
         setContent { Root(this) }
     }
 
@@ -42,5 +46,6 @@ class MainActivity : FragmentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         tabRequests.value = intent.getStringExtra(EXTRA_TAB)
+        intent.getStringExtra(EXTRA_CLOSE)?.let { closeRequests.value = it }
     }
 }

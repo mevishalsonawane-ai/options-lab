@@ -9,7 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.AlertDialog
+import com.optionslab.app.ui.components.AlertDialog
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -127,7 +127,7 @@ fun TradeScreen(model: AppModel) {
         when (val a = acct) {
             Load.Idle -> item { LedgerCard { FullSpinner("Reading your Zerodha account") } }
             is Load.Busy -> item { LedgerCard { FullSpinner(a.label) } }
-            is Load.Failed -> item { LedgerCard(accent = p.amber) { Note(a.why); BrassButton("Try again", Modifier.fillMaxWidth()) { model.loadAccount() } } }
+            is Load.Failed -> item { com.optionslab.app.ui.components.AlertOn(a.why); LedgerCard(accent = p.amber) { BrassButton("Try again", Modifier.fillMaxWidth()) { model.loadAccount() } } }
             is Load.Done -> {
                 val v = a.value
                 when (book) {
@@ -478,9 +478,9 @@ private fun GttDialog(model: AppModel, t: GttTarget, onClose: () -> Unit) {
                 }
                 when (val l = plan) {
                     is Load.Busy -> Text(l.label, style = Type.italic)
-                    is Load.Failed -> Text(l.why, style = Type.bodySmall.copy(color = p.oxblood))
+                    is Load.Failed -> com.optionslab.app.ui.components.AlertOn(l.why)
                     is Load.Done -> {
-                        l.value.why.forEach { Text("✕ $it", style = Type.bodySmall.copy(color = p.oxblood)) }
+                        com.optionslab.app.ui.components.AlertOn(l.value.why.takeIf { it.isNotEmpty() }?.joinToString(" "))
                         l.value.gtt?.let { g ->
                             Text("Last price ${px(g.lastPrice)} · ${g.type}", style = Type.figure.copy(fontSize = 12.sp))
                             g.triggers.zip(g.orders).forEach { (tr, o) ->

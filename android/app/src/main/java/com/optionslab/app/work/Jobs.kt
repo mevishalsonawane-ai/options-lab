@@ -193,6 +193,25 @@ class NotificationActionReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action == STOP_LIVE) Jobs.stopLive(context)
+        // "Close position" on a paper position's card: close it now (paper only; a Zerodha card opens the app instead).
+        if (intent.action == PositionCards.ACTION_CLOSE_PAPER) {
+            val symbol = intent.getStringExtra(PositionCards.EXTRA_SYMBOL) ?: return
+            val done = goAsync()
+            CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
+                try {
+                    val open = com.optionslab.app.data.Paper.state.positions.filter { it.symbol == symbol && it.quantity != 0 }
+                    if (open.isEmpty()) Alerts.post("No open paper position in $symbol.", Alerts.Kind.ERROR)
+                    for (p in open) {
+                        val r = com.optionslab.app.data.Paper.close(p.symbol, p.product)
+                        Alerts.post(r.message, if (r.ok) Alerts.Kind.SUCCESS else Alerts.Kind.ERROR, if (r.ok) "Paper position closed" else "Could not close")
+                    }
+                    // An ORB position closed this way is booked and its resting stop taken out now, not on the next pass.
+                    runCatching { com.optionslab.app.data.OrbArms.priceCheckOnly() }
+                    runCatching { com.optionslab.app.data.Paper.tick() }
+                    runCatching { PositionCards.refresh(context) }
+                } finally { done.finish() }
+            }
+        }
     }
 }
 
@@ -311,6 +330,12 @@ object Tasks {
                 pnlAlerts(context, s, book.pnl)
             }
         }
+        runCatching { com.optionslab.app.data.Paper.state.positions.count { it.quantity != 0 } }.getOrDefault(0).takeIf { it > 0 }?.let { n ->
+            runCatching { com.optionslab.app.data.Paper.snapshot() }.getOrNull()?.let { snap ->
+                val pnl = snap.funds.todayRealizedPnl + snap.funds.m2mUnrealized
+                lines.add(0, "Paper %s".format(if (s.hideAmountsOnLockScreen) "open: $n" else "P&L Rs %+,.0f · $n open".format(pnl)))
+            }
+        }
         checkAlarms(context, prices, fired)
         runCatching {
             com.optionslab.app.widget.IraWidget.publish(context, q["NIFTY"]?.let { it.last to it.changePct },
@@ -321,6 +346,8 @@ object Tasks {
         runCatching { com.optionslab.app.data.Paper.tick() }.getOrNull()?.let { paperEvents(context, it) }
         // The ORB paper arms: manage open positions, then decide on the last completed 5-minute bar.
         runCatching { com.optionslab.app.data.OrbArms.tick() }
+        // Every open position's notification, with its live P&L and a Close button.
+        runCatching { PositionCards.refresh(context) }
         // Expiry day, 15:05: close every option position expiring today (paper and live, all products).
         runCatching { com.optionslab.app.data.ExpirySquareOff.maybeRun(context, s) }
         // Strategy Module: schedules, prices, per-leg and basket risk, exits.
@@ -471,11 +498,14 @@ class WatchService : Service() {
             // While an ORB position is open its stop, target and 15:10 exit are checked every 15 s, not once a minute.
             val next = System.currentTimeMillis() + 60_000
             while (System.currentTimeMillis() < next) {
-                val holding = runCatching { com.optionslab.app.data.OrbArms.holding() }.getOrDefault(false)
+                val holding = PositionCards.anyOpen || runCatching { com.optionslab.app.data.OrbArms.holding() }.getOrDefault(false)
                 delay(if (holding) 15_000 else next - System.currentTimeMillis())
-                if (holding) runCatching {
-                    com.optionslab.app.data.Paper.tick().let { Tasks.paperEventsPublic(this, it) }
-                    com.optionslab.app.data.OrbArms.priceCheckOnly()
+                if (holding) {
+                    runCatching {
+                        com.optionslab.app.data.Paper.tick().let { Tasks.paperEventsPublic(this, it) }
+                        com.optionslab.app.data.OrbArms.priceCheckOnly()
+                    }
+                    runCatching { PositionCards.refresh(this) }
                 }
                 Heartbeat.beat(this)
             }

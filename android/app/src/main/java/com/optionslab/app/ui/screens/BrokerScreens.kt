@@ -31,7 +31,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.AlertDialog
+import com.optionslab.app.ui.components.AlertDialog
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -183,13 +183,13 @@ fun LoginPinDialog(model: AppModel) {
                 Text("Enter your app PIN. It unseals the API secret for this login only.", style = Type.bodySmall)
                 OutlinedTextField(pin, { pin = it.filter(Char::isDigit).take(12) }, singleLine = true, label = { Text("PIN") },
                     visualTransformation = PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword))
-                err?.let { Text(it, style = Type.italic.copy(color = LocalPalette.current.oxblood)) }
+                com.optionslab.app.ui.components.AlertOn(err, throttle = false)
             }
         },
         // The PIN check and unsealing are slow on purpose (key stretching): off the screen's thread, as in CredentialsForm.
         confirmButton = {
             TextButton({
-                val pn = pin; pin = ""; checking = true
+                val pn = pin; pin = ""; checking = true; err = null
                 scope.launch {
                     err = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { model.unlockForLogin(pn) }
                     checking = false
@@ -230,13 +230,13 @@ fun Reauth(model: AppModel, onOk: () -> Unit, onCancel: () -> Unit) {
                     Text("Enter your app PIN to send this order to Zerodha.", style = Type.bodySmall)
                     OutlinedTextField(pin, { pin = it.filter(Char::isDigit).take(12) }, singleLine = true, label = { Text("PIN") },
                         visualTransformation = PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword))
-                    err?.let { Text(it, style = Type.italic.copy(color = LocalPalette.current.oxblood)) }
+                    com.optionslab.app.ui.components.AlertOn(err, throttle = false)
                 }
             },
             confirmButton = {
                 // The PIN check is slow on purpose (key stretching): off the screen's thread.
                 TextButton({
-                    checking = true
+                    checking = true; err = null
                     val typed = pin.toCharArray()
                     pinScope.launch {
                         val r = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { PinLock.verify(typed, s.wipeOnExhaustion) }
@@ -306,7 +306,10 @@ fun OrderReviewDialog(model: AppModel) {
             Modifier.fillMaxWidth(0.94f).background(p.paper, RoundedCornerShape(20.dp))
                 .padding(10.dp),
         ) {
-            Column(Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState())) { OrderReviewBody(model) }
+            Column(Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState())) {
+                com.optionslab.app.ui.components.InlineAlerts()
+                OrderReviewBody(model)
+            }
         }
     }
 }
@@ -323,10 +326,8 @@ private fun OrderReviewBody(model: AppModel) {
     when (val pl = plan) {
         Load.Idle -> Unit
         is Load.Busy -> LedgerCard { FullSpinner(pl.label) }
-        is Load.Failed -> LedgerCard(accent = p.oxblood) {
-            Note(pl.why)
-            BrassButton("Close", tone = p.inkFaint) { model.dismissPlan() }
-        }
+        // The reason shows in the red banner; the review closes.
+        is Load.Failed -> { com.optionslab.app.ui.components.AlertOn(pl.why); LaunchedEffect(pl) { model.dismissPlan() } }
         is Load.Done -> {
             PlanCard(pl.value, s.allowRealOrders && s.live, sending, onPrice = model::setLegPrice, onSend = { confirming = true }, onClose = model::dismissPlan)
             st?.takeIf { it.plan == pl.value }?.let { stk -> StuckCard(stk) { stuckAction = it } }
@@ -378,14 +379,14 @@ private fun PlanCard(
             OutlinedTextField(text, { t -> text = t.filter { it.isDigit() || it == '.' }; text.toDoubleOrNull()?.let { onPrice(i, it) } },
                 label = { Text("Limit price") }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 modifier = Modifier.fillMaxWidth())
-            plan.refusals.getOrNull(i)?.forEach { Text("✕ $it", style = Type.bodySmall.copy(color = p.oxblood)) }
+            com.optionslab.app.ui.components.AlertOn(plan.refusals.getOrNull(i)?.takeIf { it.isNotEmpty() }?.joinToString(" "))
         }
         plan.margin?.let { m ->
             Rule(Modifier.padding(vertical = 6.dp))
             LedgerLine("Margin needed (with hedge benefit)", rs(m.required), if (m.short) p.oxblood else p.ink)
             LedgerLine("Available", rs(m.available), if (m.short) p.oxblood else p.verdigris)
             if (m.charges > 0) LedgerLine("Charges, estimated", rs(m.charges))
-            if (m.short) Text("✕ Short of margin by ${rs(m.required - m.available)}: not sendable.", style = Type.bodySmall.copy(color = p.oxblood))
+            com.optionslab.app.ui.components.AlertOn(if (m.short) "Short of margin by ${rs(m.required - m.available)}: not sendable." else null)
         }
         plan.marginNote?.let { Note(it) }
         Spacer(Modifier.height(8.dp))
@@ -396,7 +397,7 @@ private fun PlanCard(
         Spacer(Modifier.height(8.dp))
         when (sending) {
             is Load.Busy -> FullSpinner(sending.label)
-            is Load.Failed -> Text(sending.why, style = Type.body.copy(color = p.oxblood))
+            is Load.Failed -> com.optionslab.app.ui.components.AlertOn(sending.why)
             is Load.Done -> sending.value.forEach { f -> LedgerLine(f.orderId.takeLast(8), "${f.status} ${f.filled} @ ${"%.2f".format(f.avgPrice)}", if (f.status == "COMPLETE") p.verdigris else p.oxblood) }
             Load.Idle -> {
                 if (!allowed) Note("This is Paper mode. To send real orders, tap the PAPER TRADING badge at the top and switch to Live.")
@@ -567,12 +568,12 @@ private fun CredentialsForm(model: AppModel, onDone: () -> Unit) {
         OutlinedTextField(pin, { pin = it.filter(Char::isDigit).take(12) }, label = { Text("Your app PIN (seals the secret)") }, singleLine = true,
             modifier = Modifier.fillMaxWidth(), visualTransformation = PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword))
-        err?.let { Text(it, style = Type.italic.copy(color = p.oxblood)) }
+        com.optionslab.app.ui.components.AlertOn(err, throttle = false)
         Spacer(Modifier.height(8.dp))
         BrassButton("Save to the vault", Modifier.fillMaxWidth(), busy = saving, enabled = !saving) {
             // The PIN check and the sealing are slow on purpose (key stretching): off the screen's thread.
             val k = key; val s = secret; val pn = pin
-            saving = true
+            saving = true; err = null
             scope.launch {
                 val e = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { model.saveBrokerCredentials(k, s, pn) }
                 saving = false; err = e; pin = ""

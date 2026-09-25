@@ -290,7 +290,8 @@ private fun BuilderCard(model: AppModel, c: ChainSnapshot, live: Boolean) {
     val r = StrategyTemplates.resolve(t, c.rows, atm, c.expiryCode, listOf(c.expiryCode), mult)
     LedgerCard(title = t.name) {
         Note(t.description)
-        if (!r.ok) { r.errors.forEach { Text("✕ $it", style = Type.bodySmall.copy(color = p.oxblood)) } }
+        com.optionslab.app.ui.components.AlertOn(r.errors.takeIf { !r.ok && it.isNotEmpty() }?.joinToString(" "))
+
         r.legs.forEach { l ->
             LedgerLine("${l.leg.side} ${l.lots}× ${fmtG(l.strike)} ${l.leg.optionType}", f2(l.price), if (l.leg.side == Side.SELL) p.oxblood else p.verdigris)
         }

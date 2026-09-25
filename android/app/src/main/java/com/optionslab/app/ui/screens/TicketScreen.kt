@@ -15,7 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.AlertDialog
+import com.optionslab.app.ui.components.AlertDialog
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -82,7 +82,7 @@ fun TicketScreen(model: AppModel) {
         }
         when (val d = draft) {
             is Load.Busy -> item { LedgerCard { FullSpinner(d.label) } }
-            is Load.Failed -> item { LedgerCard(accent = p.amber) { Note(d.why) } }
+            is Load.Failed -> item { com.optionslab.app.ui.components.AlertOn(d.why) }
             is Load.Done -> item {
                 Receipt(d.value.ticket)
                 if (d.value.source.isNotBlank()) Note("Priced from ${d.value.source}.", Modifier.padding(top = 6.dp))

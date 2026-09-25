@@ -10,7 +10,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.AlertDialog
+import com.optionslab.app.ui.components.AlertDialog
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -74,7 +74,7 @@ fun LazyListScope.paperTrade(model: AppModel, snap: Load<Paper.Snapshot>, book: 
     when (snap) {
         Load.Idle -> item { LedgerCard { FullSpinner("Opening the paper account") } }
         is Load.Busy -> item { LedgerCard { FullSpinner(snap.label) } }
-        is Load.Failed -> item { LedgerCard(accent = LocalPalette.current.amber) { Note(snap.why) } }
+        is Load.Failed -> item { com.optionslab.app.ui.components.AlertOn(snap.why) }
         is Load.Done -> {
             val v = snap.value
             if (!v.priced) item { LedgerCard(accent = LocalPalette.current.amber) { Note("No fresh prices from Upstox just now; resting orders wait and positions show their last mark.") } }

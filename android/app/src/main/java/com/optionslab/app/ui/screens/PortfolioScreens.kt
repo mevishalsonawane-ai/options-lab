@@ -162,7 +162,7 @@ fun PortfolioLab(model: AppModel) {
                 BrassButton("Analyse my holdings", Modifier.fillMaxWidth()) { model.analyzeHoldings() }
                 when (val a = an) {
                     is Load.Busy -> FullSpinner(a.label)
-                    is Load.Failed -> Text(a.why, style = Type.bodySmall.copy(color = p.oxblood))
+                    is Load.Failed -> com.optionslab.app.ui.components.AlertOn(a.why)
                     is Load.Done -> {
                         val sm = a.value.result.summary
                         LedgerLine("Holdings", "${sm.count}")

@@ -133,7 +133,7 @@ fun Root(activity: MainActivity) {
         var crash by remember { mutableStateOf(runCatching { java.io.File(activity.filesDir, com.optionslab.app.IraAlgoApp.CRASH_FILE).takeIf { it.exists() }?.readText() }.getOrNull()) }
         crash?.let { text ->
             val clip = androidx.compose.ui.platform.LocalClipboardManager.current
-            androidx.compose.material3.AlertDialog(
+            com.optionslab.app.ui.components.AlertDialog(
                 onDismissRequest = {},
                 properties = androidx.compose.ui.window.DialogProperties(securePolicy = androidx.compose.ui.window.SecureFlagPolicy.SecureOn),
                 title = { Text("IraAlgo closed unexpectedly last time", style = Type.title) },
@@ -375,6 +375,13 @@ private fun Main(model: AppModel) {
         }
         MainActivity.tabRequests.value = null
     }
+    // "Close…" on a Zerodha position's notification: that position's close popup, over the Trade tab.
+    val closeAsk by MainActivity.closeRequests.collectAsState()
+    LaunchedEffect(closeAsk) {
+        val sym = closeAsk ?: return@LaunchedEffect
+        if (linked) { tab = Tab.TRADE; tradePage = "account"; model.openLiveClose(sym) }
+        MainActivity.closeRequests.value = null
+    }
 
     // The market watch runs by itself on market days; opening the app restarts it if Android stopped it.
     LaunchedEffect(Unit) { model.ensureWatch() }
@@ -430,7 +437,6 @@ private fun Main(model: AppModel) {
                 if (chartOpened) Box(if (tab == Tab.CHART) Modifier.fillMaxSize() else Modifier.size(0.dp)) {
                     com.optionslab.app.ui.screens.ChartScreen(model, chartAsk.first, chartAsk.second, visible = tab == Tab.CHART, ask = chartNonce)
                 }
-                Toast(message) { model.message.value = null }
             }
             TabBar(tab, tabs) { if (it == tab && it == Tab.CABINET) cabinetPage = null; tab = it }
         }
@@ -441,6 +447,8 @@ private fun Main(model: AppModel) {
         if (kiteLogin) com.optionslab.app.ui.screens.KiteLoginPage(model)
         val askPin by model.askLoginPin.collectAsState()
         if (askPin) com.optionslab.app.ui.screens.LoginPinDialog(model)
+        // Every event, success or error, drops in at the top of the screen.
+        com.optionslab.app.ui.components.AlertBanner()
     }
 }
 
@@ -453,9 +461,9 @@ private fun ConnectGate(model: AppModel) {
     LaunchedEffect(Unit) { model.refreshBroker() }
     Box(Modifier.fillMaxSize()) {
         com.optionslab.app.ui.screens.ConnectZerodhaScreen(model)
-        Toast(message) { model.message.value = null }
         if (kiteLogin) com.optionslab.app.ui.screens.KiteLoginPage(model)
         if (askPin) com.optionslab.app.ui.screens.LoginPinDialog(model)
+        com.optionslab.app.ui.components.AlertBanner()
     }
 }
 
@@ -507,7 +515,7 @@ private fun Masthead(live: Boolean, calm: Boolean, linked: Boolean, onMode: (Boo
         // A red line under the bar while live, so real-money mode is never mistaken.
         Box(Modifier.fillMaxWidth().height(if (linked && live) 2.dp else 1.dp).background(if (linked && live) p.oxblood else p.rule))
     }
-    if (confirmLive) androidx.compose.material3.AlertDialog(
+    if (confirmLive) com.optionslab.app.ui.components.AlertDialog(
         onDismissRequest = { confirmLive = false },
         properties = androidx.compose.ui.window.DialogProperties(securePolicy = androidx.compose.ui.window.SecureFlagPolicy.SecureOn),
         title = { Text("Switch to live trading?", style = Type.title) },

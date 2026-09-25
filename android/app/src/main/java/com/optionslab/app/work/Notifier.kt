@@ -107,16 +107,18 @@ object Notifier {
             .setCategory(if (channel == RISK) NotificationCompat.CATEGORY_ALARM else NotificationCompat.CATEGORY_STATUS)
     }
 
-    private val fillSeq = java.util.concurrent.atomic.AtomicInteger((System.currentTimeMillis() / 1000 % 5_000).toInt())
-
-    /** A buy or sell filled: "BUY filled · Paper · ORB" / "SELL filled · Live · Manual". */
+    /**
+     * A buy or sell filled: "BUY filled · Paper · ORB" / "SELL filled · Live · Manual". It lands on the
+     * position's own card (PositionCards), which the market watch then keeps live with its P&L and a Close button.
+     */
     fun orderFilled(context: Context, action: String, qty: Int, symbol: String, price: Double, venue: String, source: String?) {
         val buy = action.equals("BUY", ignoreCase = true)
-        // Every fill gets its own id (20000-24999), clear of every other notification, so two
-        // identical fills (an ORB arm and a strategy leg) both show.
-        post(context, 20_000 + (fillSeq.incrementAndGet() and Int.MAX_VALUE) % 5_000, if (buy) BUY else SELL,
-            "${if (buy) "BUY" else "SELL"} filled · $venue · ${source ?: "Manual"}",
-            "$qty $symbol @ ${String.format(java.util.Locale.ENGLISH, "%.2f", price)}", "trade")
+        val headline = "${if (buy) "BUY" else "SELL"} filled · $venue · ${source ?: "Manual"}"
+        val line = "$qty $symbol @ ${String.format(java.util.Locale.ENGLISH, "%.2f", price)}"
+        Alerts.post(line, Alerts.Kind.SUCCESS, headline)
+        if (!canPost(context)) return
+        PositionCards.card(context, if (venue == "Paper") "Paper" else "Live", symbol, if (buy) qty else -qty, price, price, 0.0,
+            alert = true, headline = headline)
     }
 
     fun canPost(context: Context): Boolean =
@@ -124,6 +126,13 @@ object Notifier {
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
 
     fun post(context: Context, id: Int, channel: String, title: String, text: String, tab: String? = null) {
+        // Everything notified also drops in at the top of the app when it is open (green / red).
+        Alerts.post(text, when (channel) {
+            BUY, SELL -> Alerts.Kind.SUCCESS
+            RISK -> Alerts.Kind.ERROR
+            APPROVAL -> if (Alerts.classify("$title $text") == Alerts.Kind.ERROR) Alerts.Kind.ERROR else Alerts.Kind.INFO
+            else -> Alerts.classify("$title $text")
+        }, title, throttle = true)
         if (!canPost(context)) return
         // Only buy / sell / approval notifications unless the owner turned the others on (More → Schedules).
         if (channel !in ALWAYS && !runCatching { AppSettings.load().otherAlerts }.getOrDefault(false)) return

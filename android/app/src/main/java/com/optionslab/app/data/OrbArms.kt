@@ -190,7 +190,7 @@ object OrbArms {
 
     /** The pre-registered forward test on the closed arm trades, operator-closed trades excluded. */
     private fun forward(b: Book): PassRule.Verdict = PassRule.judge(
-        b.positions.filter { !it.open && it.why != "operator_stop" }.map { p ->
+        b.positions.filter { !it.open && it.why != "operator_stop" && it.why != "closed_by_you" }.map { p ->
             PassRule.Closed(p.day, (p.grossPnl ?: 0.0) - p.charges, b.upDays[p.day.toString()])
         })
 
@@ -339,11 +339,16 @@ object OrbArms {
             val net = Paper.state.positions.filter { it.symbol == p.symbol && it.product == "MIS" }.sumOf { it.quantity }
             val ltp = Paper.lastPrice(c)
             ltp?.let { marks[p.symbol] = it }
-            if (net <= 0 && (cur.day.isBefore(t.toLocalDate()) || !t.toLocalTime().isBefore(LocalTime.of(15, 15)))) {
+            // The position is gone from the paper book without the arm selling it: the 15:15 square-off
+            // (or a restart after it), or the owner closed it (a notification's Close button, the Trade tab).
+            // Its resting stop comes out of the book at once, so it can never fill as a short.
+            if (net <= 0) {
                 cur.stopOrderId?.let { runCatching { Paper.cancel(it) } }
-                // Book the paper account's own square-off fill (slippage and charges included) when there is one.
+                val backstop = cur.day.isBefore(t.toLocalDate()) || !t.toLocalTime().isBefore(LocalTime.of(15, 15))
+                // Book the actual closing fill (slippage and charges included) when there is one.
                 val sq = Paper.state.trades.lastOrNull { it.symbol == p.symbol && it.action == "SELL" && it.strategy == "AUTO_SQUARE_OFF" && !it.timestamp.isBefore(cur.entryTime) }
-                b.positions[i] = cur.copy(exit = sq?.price?.toDouble() ?: ltp ?: cur.entry, exitTime = sq?.timestamp ?: t, why = "backstop_square_off",
+                b.positions[i] = cur.copy(exit = sq?.price?.toDouble() ?: ltp ?: cur.entry, exitTime = sq?.timestamp ?: t,
+                    why = if (backstop) "backstop_square_off" else "closed_by_you",
                     stopOrderId = null, charges = cur.charges + (sq?.charges?.toDouble() ?: 0.0))
                 continue
             }
