@@ -108,7 +108,8 @@ data class AppSettings(
                 wipeOnExhaustion = p.getBoolean("sec.wipe", d.wipeOnExhaustion),
                 hideAmountsOnLockScreen = p.getBoolean("sec.hideAmounts", d.hideAmountsOnLockScreen),
                 mode = p.getString("k.mode", d.mode)!!,
-                allowRealOrders = p.getBoolean("k.allow", d.allowRealOrders),
+                // Live trading means real orders; the separate switch is gone, so Live always allows them.
+                allowRealOrders = p.getBoolean("k.allow", d.allowRealOrders) || p.getString("k.mode", d.mode) == "live",
                 orderProduct = p.getString("k.product", d.orderProduct)!!,
                 maxOrdersPerDay = p.getInt("k.maxOrders", d.maxOrdersPerDay),
                 maxLotsPerOrder = p.getInt("k.maxLots", d.maxLotsPerOrder),

@@ -379,7 +379,7 @@ private fun PlanCard(
             is Load.Failed -> Text(sending.why, style = Type.body.copy(color = p.oxblood))
             is Load.Done -> sending.value.forEach { f -> LedgerLine(f.orderId.takeLast(8), "${f.status} ${f.filled} @ ${"%.2f".format(f.avgPrice)}", if (f.status == "COMPLETE") p.verdigris else p.oxblood) }
             Load.Idle -> {
-                if (!allowed) Note("To send: LIVE mode and \"Allow real orders\" must both be on (More → Zerodha).")
+                if (!allowed) Note("This is Paper mode. To send real orders, tap the PAPER TRADING badge at the top and switch to Live.")
                 HoldToSend("Hold to send to Zerodha", allowed && plan.sendable, onSend)
             }
         }
@@ -422,7 +422,7 @@ fun BrokerPage(model: AppModel) {
             LedgerCard(title = "Mode") {
                 ParamTokens("Trading mode", listOf("Live · Zerodha" to s.live, "Paper · simulated" to !s.live)) { i ->
                     if (i == 0 && !b.configured) model.say("Set up Zerodha first.")
-                    else model.update { it.copy(mode = if (i == 0) "live" else "sandbox") }
+                    else model.update { it.copy(mode = if (i == 0) "live" else "sandbox", allowRealOrders = i == 0) }
                 }
                 Note(if (s.live) "Every live figure - index levels, the option chain, the ticket, its live mark, settlement, the expiry calendar, the market watch and alarms - comes from Zerodha only. Without today's login the app says so rather than showing another feed."
                 else "Live figures come from Upstox's public candles and tickets stay paper; nothing touches your broker. Analysis (Backtests, Health, the IC table, Signal Lab) is the same in both modes.")
@@ -430,9 +430,7 @@ fun BrokerPage(model: AppModel) {
         }
         item {
             LedgerCard(title = "Real orders") {
-                ToggleRow("Allow real orders", "Off by default. Even when on, every order needs your review, a long press and your PIN or fingerprint.", s.allowRealOrders) { on ->
-                    model.update { it.copy(allowRealOrders = on) }
-                }
+                Note("Live trading sends real orders to Zerodha; Paper never does. Switch with the PAPER / LIVE badge at the top. Every order still needs your review, a long press and your PIN or fingerprint.")
                 ToggleRow("Prepare the expiry order at 11:01", "Builds today's ticket and notifies you to review it. It is never sent by itself.", s.prepareRealOrder) { on ->
                     model.update { it.copy(prepareRealOrder = on) }
                 }

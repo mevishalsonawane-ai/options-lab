@@ -178,7 +178,7 @@ private fun StrategyCard(model: AppModel, e: Strategies.Entry, liveAllowed: Bool
                 }
                 TextButton({ deleting = true }) { Text("Delete", style = Type.label.copy(color = p.oxblood)) }
             }
-            if (!liveAllowed) Note("Live runs need LIVE mode and real orders on (More → Zerodha), and \"Enable live\" on this strategy.")
+            if (!liveAllowed) Note("Live runs need Live mode (the badge at the top) and \"Enable live\" on this strategy.")
         }
     }
     if (deleting) AlertDialog(

@@ -319,7 +319,7 @@ private fun Main(model: AppModel) {
     val tabs = if (linked) Tab.entries else Tab.entries.filter { it != Tab.TRADE }
     LaunchedEffect(linked) {
         if (!linked && tab !in tabs) tab = Tab.ALMANAC
-        if (!linked && settings.live) model.update { it.copy(mode = "sandbox") }
+        if (!linked && settings.live) model.update { it.copy(mode = "sandbox", allowRealOrders = false) }
     }
 
     LaunchedEffect(requested) {
@@ -356,7 +356,7 @@ private fun Main(model: AppModel) {
 
     Parchment(ruled = true) {
         Column(Modifier.fillMaxSize()) {
-            Masthead(settings.live, settings.reduceMotion, linked, onMode = { live -> model.update { it.copy(mode = if (live) "live" else "sandbox") } })
+            Masthead(settings.live, settings.reduceMotion, linked, onMode = { live -> model.update { it.copy(mode = if (live) "live" else "sandbox", allowRealOrders = live) } })
             Box(Modifier.weight(1f)) {
                 AnimatedContent(
                     targetState = tab,
