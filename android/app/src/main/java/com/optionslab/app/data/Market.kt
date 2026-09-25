@@ -138,14 +138,19 @@ object Market {
     }
 
     private suspend fun upstoxChain(underlying: String, near: Int): LiveChain {
-        val live = Upstox.contractsToRefresh(contracts().filter { it.underlying == underlying }, today())
+        // The saved contract list is good while its nearest expiry is still ahead; the day's fresh
+        // list (tens of MB) then downloads in the background instead of holding the chain up.
+        val saved = cachedContracts()?.second?.filter { it.underlying == underlying }
+        val usable = saved?.let { Upstox.contractsToRefresh(it, today()) }?.takeIf { it.isNotEmpty() }
+        if (usable != null && cachedContracts()?.first != today()) Thread { runCatching { contracts() } }.start()
+        val live = usable ?: Upstox.contractsToRefresh(contracts().filter { it.underlying == underlying }, today())
         if (live.isEmpty()) throw IllegalStateException("no listed $underlying options in the master")
         val expiry = live.minOf { it.expiry }
         val chain = live.filter { it.expiry == expiry }
         val spot = quote(underlying)?.last ?: throw IllegalStateException("no intraday bars for $underlying; the market may be shut")
         val strikes = chain.map { it.strike }.distinct().sortedBy { abs(it - spot) }.take(near * 2 + 1).toSet()
         val wanted = chain.filter { it.strike in strikes }
-        val gate = Semaphore(4)
+        val gate = Semaphore(10)
         val series = coroutineScope {
             wanted.map { c -> async { gate.withPermit { runCatching { Upstox.toSeries(c, Net.intraday(c.instrumentKey), today(), contracts = false) }.getOrNull() } } }.awaitAll()
         }.filterNotNull().filter { it.size > 0 }

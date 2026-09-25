@@ -58,7 +58,7 @@ private const val ORIGIN = "https://$HOST/"
  */
 @SuppressLint("SetJavaScriptEnabled", "JavascriptInterface")
 @Composable
-fun ChartScreen(model: AppModel, symbol: String, exchange: String) {
+fun ChartScreen(model: AppModel, symbol: String, exchange: String, visible: Boolean = true) {
     val p = LocalPalette.current
     val scope = rememberCoroutineScope()
     var current by remember { mutableStateOf(symbol to exchange) }
@@ -73,6 +73,12 @@ fun ChartScreen(model: AppModel, symbol: String, exchange: String) {
             if (c == null) { hint = "Indices cannot be traded. Search an option in the chart (e.g. NIFTY 24800 CE) to buy or sell it."; return@launch }
             order = ChainPick(c.underlying, c.expiry, c.strike, c.right, price, null, null, c.lotSize) to (buy to price)
         }
+    }
+
+    // Kept loaded between tabs; it stops polling while hidden.
+    DisposableEffect(visible) {
+        holder[0]?.evaluateJavascript("window.__iraPause && window.__iraPause(${!visible})", null)
+        onDispose { }
     }
 
     // A new symbol asked for from elsewhere (Home, the option chain) while the chart is open.

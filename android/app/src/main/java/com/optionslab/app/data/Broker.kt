@@ -299,7 +299,7 @@ object Broker {
     private val INDEX = mapOf("NIFTY" to ("NSE:NIFTY 50" to 256265L), "BANKNIFTY" to ("NSE:NIFTY BANK" to 260105L),
         "INDIAVIX" to ("NSE:INDIA VIX" to 264969L))
 
-    data class Quote(val last: Double, val bid: Double?, val ask: Double?, val open: Double)
+    data class Quote(val last: Double, val bid: Double?, val ask: Double?, val open: Double, val oi: Long = 0, val volume: Long = 0)
 
     suspend fun quotes(keys: List<String>): Map<String, Quote> {
         if (keys.isEmpty()) return emptyMap()
@@ -308,7 +308,8 @@ object Broker {
             val q = data.optJSONObject(k) ?: return@mapNotNull null
             val depth = q.optJSONObject("depth")
             fun best(side: String) = depth?.optJSONArray(side)?.optJSONObject(0)?.optDouble("price")?.takeIf { it > 0 }
-            k to Quote(q.optDouble("last_price"), best("buy"), best("sell"), q.optJSONObject("ohlc")?.optDouble("open") ?: 0.0)
+            k to Quote(q.optDouble("last_price"), best("buy"), best("sell"), q.optJSONObject("ohlc")?.optDouble("open") ?: 0.0,
+                q.optLong("oi", 0), q.optLong("volume", 0))
         }.toMap()
     }
 
@@ -432,21 +433,9 @@ object Broker {
         val strikes = chain.map { it.strike }.distinct().sortedBy { kotlin.math.abs(it - spot) }.take(near * 2 + 1).toSet()
         val wanted = chain.filter { it.strike in strikes }
         val contracts = wanted.map { Upstox.Contract(underlying, it.expiry, it.strike, it.right, it.lotSize, "kite:${it.token}", it.tradingSymbol) }
-        val series = ArrayList<Series>()
-        try {
-            for ((ins, c) in wanted.zip(contracts)) {
-                val bars = minuteBars(ins.token, today)
-                if (bars.isNotEmpty()) series += Upstox.toSeries(c, bars, today, contracts = false)
-                delay(340)   // Kite allows three historical calls a second
-            }
-        } catch (e: KiteError) {
-            if (e.type == "TokenException") throw e
-            // No historical-data entitlement on this Kite plan: price from the
-            // live quote book instead - still Zerodha, labelled with its minute.
-            return quoteSnapshot(underlying, expiry, wanted, contracts, spot)
-        }
-        if (series.isEmpty()) throw IOException("Zerodha returned no bars for the $expiry chain")
-        return Market.LiveChain(expiry, series, wanted.first().lotSize, contracts, spot, "Zerodha 1-minute candles")
+        // One quote call prices every strike with its open interest: about a second, where fetching
+        // each contract's minute candles at Kite's three-a-second limit took 15-20 seconds.
+        return quoteSnapshot(underlying, expiry, wanted, contracts, spot)
     }
 
     private suspend fun quoteSnapshot(underlying: String, expiry: LocalDate, wanted: List<Kite.Instrument>,
@@ -455,8 +444,9 @@ object Broker {
         val minute = Market.minuteNow()
         val series = wanted.zip(contracts).mapNotNull { (ins, c) ->
             val last = q["NFO:${ins.tradingSymbol}"]?.last?.takeIf { it > 0 } ?: return@mapNotNull null
+            val qt = q["NFO:${ins.tradingSymbol}"]!!
             Series(c.expiry, c.strike, c.right, c.lotSize, intArrayOf(minute), doubleArrayOf(last), doubleArrayOf(last),
-                doubleArrayOf(last), doubleArrayOf(last), longArrayOf(0), longArrayOf(0))
+                doubleArrayOf(last), doubleArrayOf(last), longArrayOf(qt.volume), longArrayOf(qt.oi))
         }
         if (series.isEmpty()) throw IOException("Zerodha returned no quotes for the $expiry $underlying chain")
         return Market.LiveChain(expiry, series, wanted.first().lotSize, contracts, spot, "Zerodha live quotes", minute)

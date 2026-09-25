@@ -46,6 +46,7 @@ const feed = {
   // Live updates: the newest bars are asked for again every 15 seconds while the chart is open.
   subscribeBars(req, onBar) {
     const timer = setInterval(async () => {
+      if (paused) return;   // the Chart tab is not on screen
       try {
         const now = Math.floor(Date.now() / 1000);
         const bars = await call('bars', req.symbol, req.exchange, req.interval, now - 3 * 86400, now);
@@ -55,6 +56,10 @@ const feed = {
     return () => clearInterval(timer);
   },
 };
+
+// While another tab is showing, the chart stays loaded but stops asking for prices.
+let paused = false;
+window.__iraPause = (p) => { paused = !!p; };
 
 const q = new URLSearchParams(location.search);
 const symbol = q.get('symbol') || 'BANKNIFTY';

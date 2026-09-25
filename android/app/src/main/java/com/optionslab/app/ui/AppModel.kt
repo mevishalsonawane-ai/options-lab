@@ -1089,8 +1089,13 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     /** Price the nearest-expiry chain (Zerodha in LIVE, Upstox in SANDBOX) and run every chain screen on it. */
     private var toolsJob: Job? = null
 
+    /** The last chain per underlying, shown at once while a fresh one is priced behind it. */
+    private val toolsCache = java.util.concurrent.ConcurrentHashMap<String, Pair<com.optionslab.engine.options.ChainSnapshot, String>>()
+
     fun loadTools(underlying: String, quiet: Boolean = false) {
-        if (!quiet || tools.value !is Load.Done) tools.value = Load.Busy("Pricing the $underlying chain")
+        val cached = toolsCache[underlying]
+        if (cached != null) { tools.value = Load.Done(cached.first); toolsSource.value = cached.second + " · refreshing" }
+        else if (!quiet || tools.value !is Load.Done) tools.value = Load.Busy("Pricing the $underlying chain")
         // A newer request (e.g. NIFTY -> BANKNIFTY) replaces the older one, so a slow
         // NIFTY answer can never land under the BANKNIFTY heading.
         toolsJob?.cancel()
@@ -1100,9 +1105,16 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                 val lc = Market.liveChain(underlying, near = 12)
                 val symbols = lc.contracts.associate { (it.strike to it.right) to it.tradingSymbol }
                 val rows = com.optionslab.engine.options.ChainSnapshot.rowsFrom(lc.series, symbols, lc.lotSize)
-                toolsSource.value = lc.source + (lc.pricedAt?.let { " · %02d:%02d".format(it / 60, it % 60) } ?: "")
-                Load.Done(com.optionslab.engine.options.ChainSnapshot.of(underlying, lc.expiry, lc.spot, lc.lotSize, rows, Market.now()))
-            } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { Load.Failed(e.message ?: "could not price the chain") }
+                val source = lc.source + (lc.pricedAt?.let { " · %02d:%02d".format(it / 60, it % 60) } ?: "")
+                toolsSource.value = source
+                val snap = com.optionslab.engine.options.ChainSnapshot.of(underlying, lc.expiry, lc.spot, lc.lotSize, rows, Market.now())
+                toolsCache[underlying] = snap to source
+                Load.Done(snap)
+            } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) {
+                // A failed refresh keeps the last good chain on screen, saying why it is not fresh.
+                if (cached != null) { toolsSource.value = cached.second + " · not refreshed: ${e.message}"; Load.Done(cached.first) }
+                else Load.Failed(e.message ?: "could not price the chain")
+            }
         }
     }
 

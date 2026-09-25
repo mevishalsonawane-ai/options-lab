@@ -311,6 +311,8 @@ private fun Main(model: AppModel) {
     var tradePage by rememberSaveable { mutableStateOf("account") }
     var toolsView by rememberSaveable { mutableStateOf("chain") }
     var chartAsk by remember { mutableStateOf("BANKNIFTY" to "NSE") }
+    var chartOpened by remember { mutableStateOf(false) }
+    LaunchedEffect(tab) { if (tab == Tab.CHART) chartOpened = true }
     val message by model.message.collectAsState()
     val kiteLogin by model.showKiteLogin.collectAsState()
     // Trading (the Ticket and Trade tabs, live or paper) appears only once a Zerodha account is linked.
@@ -341,6 +343,8 @@ private fun Main(model: AppModel) {
 
     // The market watch runs by itself on market days; opening the app restarts it if Android stopped it.
     LaunchedEffect(Unit) { model.ensureWatch() }
+    // Price the NIFTY chain in the background, so the Options tab opens with it ready.
+    LaunchedEffect(Unit) { delay(1500); if (model.tools.value !is Load.Done) model.loadTools("NIFTY", quiet = true) }
 
     val notify = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
     LaunchedEffect(Unit) {
@@ -380,12 +384,16 @@ private fun Main(model: AppModel) {
                                 else -> { tab = Tab.CABINET; cabinetPage = dest }
                             }
                         })
-                        Tab.CHART -> com.optionslab.app.ui.screens.ChartScreen(model, chartAsk.first, chartAsk.second)
+                        Tab.CHART -> Box(Modifier.fillMaxSize())   // the chart itself is kept alive below
                         Tab.TRADE -> TradeHub(model, tradePage) { tradePage = it }
                         Tab.TOOLS -> ToolsScreen(model, toolsView, { toolsView = it }) { s, e -> chartAsk = s to e; tab = Tab.CHART }
                         Tab.LAB -> LabScreen(model, labPage) { labPage = it }
                         Tab.CABINET -> CabinetScreen(model, cabinetPage) { cabinetPage = it }
                     }
+                }
+                // The chart stays loaded once opened, so returning to it is instant.
+                if (chartOpened) Box(if (tab == Tab.CHART) Modifier.fillMaxSize() else Modifier.size(0.dp)) {
+                    com.optionslab.app.ui.screens.ChartScreen(model, chartAsk.first, chartAsk.second, visible = tab == Tab.CHART)
                 }
                 Toast(message) { model.message.value = null }
             }
