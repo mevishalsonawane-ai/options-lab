@@ -57,6 +57,12 @@ data class SandboxConfig(
     val optionExpirySettlement: String = "ltp",
     /** Daily session boundary, the SESSION_EXPIRY_TIME the Python reads from the environment. */
     val sessionExpiryTime: String = "03:00",
+    /** Adverse slip on SL / SL-M fills, basis points (desktop SANDBOX_STOP_SLIPPAGE_BPS; 0 = off). */
+    val stopSlippageBps: BigDecimal = BigDecimal.ZERO,
+    /** Adverse slip on a MARKET fill with no bid/ask (SANDBOX_SPREAD_FALLBACK_BPS; 0 = off). */
+    val spreadFallbackBps: BigDecimal = BigDecimal.ZERO,
+    /** Debit brokerage, STT, exchange, SEBI, stamp and GST on each fill (sandbox/charges.py). */
+    val chargesEnabled: Boolean = false,
 ) {
     companion object {
         /** Build from `sandbox_config` keys, as the Python's get_config would read them. */
@@ -222,6 +228,8 @@ data class Trade(
     val product: String,
     val strategy: String?,
     val timestamp: LocalDateTime,
+    /** Brokerage and statutory charges debited for this leg (0 when charges are off). */
+    val charges: BigDecimal = BigDecimal.ZERO,
 )
 
 /**
@@ -388,6 +396,8 @@ data class TradeRow(
     val product: String,
     val strategy: String,
     val timestamp: String,
+    /** Charges debited for this leg (0 with charges off). */
+    val charges: Double = 0.0,
 )
 
 data class HoldingRow(

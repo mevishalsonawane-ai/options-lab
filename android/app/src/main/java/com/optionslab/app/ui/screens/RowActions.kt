@@ -122,6 +122,7 @@ fun RowActionPopup(model: AppModel) {
             lines += "Account" to "Paper"
             lines += "Filled" to "${r.quantity} @ ${px(r.price)}"
             lines += "Trade value" to rs(r.tradeValue)
+            if (r.charges > 0) lines += "Charges (brokerage, STT, fees)" to rs(r.charges)
             lines += "Product · exchange" to "${r.product} · ${r.exchange}"
             lines += "Time" to r.timestamp.takeLast(8)
             lines += "Trade · order id" to "${r.tradeId} · ${r.orderId}"

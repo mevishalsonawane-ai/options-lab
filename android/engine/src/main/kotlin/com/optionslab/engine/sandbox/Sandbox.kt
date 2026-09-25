@@ -215,6 +215,7 @@ class Sandbox(
                 action = t.action, quantity = t.quantity, averagePrice = SandboxRules.round2(price),
                 price = SandboxRules.round2(price), tradeValue = SandboxRules.round2(price * kotlin.math.abs(t.quantity)),
                 product = t.product, strategy = t.strategy ?: "", timestamp = ts(t.timestamp),
+                charges = t.charges.toDouble(),
             )
         }
     }
@@ -768,7 +769,8 @@ class Sandbox(
                 "SL-M" -> if ((buy && ltp >= o.triggerPrice!!) || (!buy && ltp <= o.triggerPrice!!)) ltp else null
                 else -> null
             }
-            if (fill != null) executeOrder(orderId, fill)
+            val usedBook = o.priceType == "MARKET" && (if (buy) ask.signum() > 0 else bid.signum() > 0)
+            if (fill != null) executeOrder(orderId, fill, usedBook)
         }
 
         /**
@@ -785,11 +787,19 @@ class Sandbox(
             events += SandboxEvent.OrderUpdate(o.orderId, OrderStatus.OPEN)
         }
 
-        /** _execute_order: one full fill (the sandbox never partially fills). */
-        fun executeOrder(orderId: String, px: BigDecimal) {
+        /**
+         * _execute_order: one full fill (the sandbox never partially fills).
+         * With slippage configured (the desktop's sandbox/slippage.py), a stop
+         * fill and a MARKET fill that found no bid/ask move against the order;
+         * with charges on (sandbox/charges.py), the leg's cost is debited now.
+         */
+        fun executeOrder(orderId: String, rawPx: BigDecimal, usedBook: Boolean = false) {
             val o = order(orderId) ?: return
+            val px = SandboxCosts.fillPrice(rawPx, o.action, o.priceType, usedBook, o.price, config)
             val tradeId = nextTradeId()
-            trades += Trade(tradeId, o.orderId, o.symbol, o.exchange, o.action, o.quantity, store(px), o.product, o.strategy, now)
+            val charge = if (config.chargesEnabled) SandboxCosts.charge(o.action, px, o.quantity, contractValue(o.symbol, o.exchange)) else BigDecimal.ZERO
+            if (charge.signum() > 0) editFunds { available -= charge; realized -= charge; today -= charge; total = realized + unrealized }
+            trades += Trade(tradeId, o.orderId, o.symbol, o.exchange, o.action, o.quantity, store(px), o.product, o.strategy, now, if (charge.signum() > 0) store(charge) else BigDecimal.ZERO)
             val done = o.copy(status = OrderStatus.COMPLETE, averagePrice = store(px), filledQuantity = o.quantity, pendingQuantity = 0, updateTimestamp = now)
             putOrder(done)
             updatePosition(done, px)
