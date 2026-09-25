@@ -238,7 +238,6 @@ fun SecurityPage(model: AppModel) {
     val kind = remember { (context as? androidx.fragment.app.FragmentActivity)?.let { BiometricGate.available(it) } ?: BiometricGate.Kind.NONE }
     Page {
         item { PageTitle("Security", "Nothing personal leaves this phone, and nothing is logged") }
-        item { GuardCard(model) }
         item { KitePinCard(model) }
         item {
             LedgerCard(title = "Home-screen widget") {
@@ -521,6 +520,14 @@ private fun KitePinCard(model: AppModel) {
  * strategy or by hand. Exits (closing what is held) are stopped only by the
  * kill switch.
  */
+@Composable
+fun RiskPage(model: AppModel) {
+    Page {
+        item { PageTitle("Risk limits", "Account-wide limits on every order, paper and live") }
+        item { GuardCard(model) }
+    }
+}
+
 @Composable
 private fun GuardCard(model: AppModel) {
     val p = LocalPalette.current

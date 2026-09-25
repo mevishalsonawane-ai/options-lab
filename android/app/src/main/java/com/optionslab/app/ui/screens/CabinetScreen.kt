@@ -36,6 +36,7 @@ private data class Drawer(val key: String, val title: String, val blurb: String)
 private val GROUPS = listOf(
     "Account" to listOf(
         Drawer("broker", "Zerodha", "Login, mode, order limits, manual order"),
+        Drawer("risk", "Risk limits", "Kill switch, daily loss, drawdown, position and order limits"),
         Drawer("alarms", "Alerts", "Price alarms and P&L alerts"),
         Drawer("security", "Security", "PIN, biometrics, device checks, widget"),
         Drawer("schedule", "Schedules", "Daily jobs, notifications, market holidays"),
@@ -79,6 +80,7 @@ private fun DrawerPage(model: AppModel, pg: String, onPage: (String?) -> Unit) {
         when (pg) {
             "broker" -> BrokerPage(model)
             "alarms" -> AlarmsPage(model)
+            "risk" -> RiskPage(model)
             "signal" -> SignalPage(model)
             "ic" -> IcPage(model)
             "sizing" -> SizingPage(model)
