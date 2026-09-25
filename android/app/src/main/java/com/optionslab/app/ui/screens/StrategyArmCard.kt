@@ -60,7 +60,12 @@ fun StrategyArmCard(model: AppModel, onManage: () -> Unit) {
     val s by model.settings.collectAsState()
     val list by model.strategies.collectAsState()
     var importing by remember { mutableStateOf(false) }
-    var reauthFor by remember { mutableStateOf<Long?>(null) }
+    val auto by model.strategyAuto.collectAsState()
+    val pending by model.strategyPending.collectAsState()
+    // Arming asks how orders should go out; a live choice is then confirmed with the PIN or fingerprint.
+    var choosing by remember { mutableStateOf<com.optionslab.engine.strategy.StrategyDef?>(null) }
+    var reauthArm by remember { mutableStateOf<Pair<Long, Boolean>?>(null) }
+    var reauthApprove by remember { mutableStateOf<Long?>(null) }
 
     LedgerCard {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -82,10 +87,11 @@ fun StrategyArmCard(model: AppModel, onManage: () -> Unit) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(d.name, style = Type.body.copy(color = p.ink, fontSize = 15.sp, fontWeight = FontWeight.SemiBold), maxLines = 1)
                         Spacer(Modifier.width(8.dp))
+                        val how = if (auto[d.id] ?: (sch?.defaultMode != RunMode.LIVE)) "AUTO" else "APPROVE"
                         val (label, color) = when {
                             e.running -> "RUNNING" to p.verdigris
-                            armed && sch?.defaultMode == RunMode.LIVE -> "ARMED · LIVE" to p.oxblood
-                            armed -> "ARMED · PAPER" to p.verdigris
+                            armed && sch?.defaultMode == RunMode.LIVE -> "ARMED · LIVE · $how" to p.oxblood
+                            armed -> "ARMED · PAPER · $how" to p.verdigris
                             else -> "OFF" to p.inkFaint
                         }
                         Text(label, style = Type.label.copy(color = color, fontSize = 10.sp, fontWeight = FontWeight.Bold),
@@ -102,18 +108,36 @@ fun StrategyArmCard(model: AppModel, onManage: () -> Unit) {
                 }
                 Switch(
                     checked = armed,
-                    onCheckedChange = { on ->
-                        if (on && s.live) reauthFor = d.id else model.armStrategy(d.id, on)
-                    },
+                    onCheckedChange = { on -> if (on) choosing = d else model.armStrategy(d.id, false) },
                     colors = SwitchDefaults.colors(checkedTrackColor = if (s.live) p.oxblood else p.verdigris, checkedThumbColor = p.card),
                 )
             }
+            pending[d.id]?.let { mode ->
+                Column(Modifier.fillMaxWidth().padding(bottom = 10.dp).background(p.amber.copy(alpha = 0.12f), RoundedCornerShape(12.dp)).padding(12.dp)) {
+                    Text("Start time reached: waiting for your approval (${if (mode == RunMode.LIVE) "live" else "paper"})",
+                        style = Type.bodySmall.copy(color = p.ink, fontWeight = FontWeight.SemiBold))
+                    Row(Modifier.padding(top = 8.dp)) {
+                        BrassButton("Approve & start", Modifier.weight(1f), tone = if (mode == RunMode.LIVE) p.oxblood else p.verdigris) {
+                            if (mode == RunMode.LIVE) reauthApprove = d.id else model.approveStrategy(d.id)
+                        }
+                        Spacer(Modifier.width(8.dp))
+                        BrassButton("Skip today", tone = p.inkSoft) { model.skipStrategy(d.id) }
+                    }
+                }
+            }
         }
-        if (list.isNotEmpty()) Note(if (s.live) "Arming in Live mode: at the start time you get a notification to confirm with your PIN or fingerprint; exits then run on their own."
-            else "Armed strategies start themselves on the paper account at their start time on market days.", Modifier.padding(top = 4.dp))
+        if (list.isNotEmpty()) Note("AUTO places the entry by itself at the start time; APPROVE waits for your tap. Stops, targets and square-off always run by themselves.",
+            Modifier.padding(top = 4.dp))
     }
 
-    reauthFor?.let { id -> Reauth(model, onOk = { reauthFor = null; model.armStrategy(id, true) }, onCancel = { reauthFor = null }) }
+    choosing?.let { d ->
+        ApprovalChoice(d.name, live = s.live, onPick = { automatic ->
+            choosing = null
+            if (s.live) reauthArm = d.id to automatic else model.armStrategy(d.id, true, automatic)
+        }, onCancel = { choosing = null })
+    }
+    reauthArm?.let { (id, automatic) -> Reauth(model, onOk = { reauthArm = null; model.armStrategy(id, true, automatic) }, onCancel = { reauthArm = null }) }
+    reauthApprove?.let { id -> Reauth(model, onOk = { reauthApprove = null; model.approveStrategy(id) }, onCancel = { reauthApprove = null }) }
     if (importing) ImportDialog(model) { importing = false }
 }
 
@@ -155,4 +179,35 @@ private fun ImportDialog(model: AppModel, onClose: () -> Unit) {
         confirmButton = { TextButton({ if (text.isNotBlank()) { model.importStrategies(text); onClose() } }, enabled = text.isNotBlank()) { Text("Import") } },
         dismissButton = { TextButton(onClose) { Text("Cancel") } },
     )
+}
+
+/** Asked when a strategy is armed: place orders by itself, or wait for approval. */
+@Composable
+private fun ApprovalChoice(name: String, live: Boolean, onPick: (Boolean) -> Unit, onCancel: () -> Unit) {
+    val p = LocalPalette.current
+    AlertDialog(
+        onDismissRequest = onCancel,
+        properties = DialogProperties(securePolicy = SecureFlagPolicy.SecureOn),
+        title = { Text("Arm $name${if (live) " (live)" else " (paper)"}", style = Type.title) },
+        text = {
+            Column {
+                Text("How should its entry orders go out at the start time?", style = Type.bodySmall.copy(color = p.inkSoft))
+                ChoiceRow("Automatic", if (live) "Real orders go to Zerodha at the start time without asking. You confirm once now with your PIN or fingerprint."
+                    else "The paper entry is placed at the start time without asking.") { onPick(true) }
+                ChoiceRow("Ask me to approve", "At the start time you get a notification; the entry is sent only when you tap Approve.") { onPick(false) }
+                Note("Either way, stops, targets and the square-off run by themselves.", Modifier.padding(top = 8.dp))
+            }
+        },
+        confirmButton = {},
+        dismissButton = { TextButton(onCancel) { Text("Cancel") } },
+    )
+}
+
+@Composable
+private fun ChoiceRow(title: String, detail: String, onClick: () -> Unit) {
+    val p = LocalPalette.current
+    Column(Modifier.fillMaxWidth().padding(top = 10.dp).background(p.chip, RoundedCornerShape(12.dp)).clickable(onClick = onClick).padding(12.dp)) {
+        Text(title, style = Type.body.copy(color = p.ink, fontWeight = FontWeight.SemiBold))
+        Text(detail, style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp))
+    }
 }

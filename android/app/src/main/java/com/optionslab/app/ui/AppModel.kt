@@ -930,6 +930,10 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     val strategies = MutableStateFlow<List<com.optionslab.app.data.Strategies.Entry>>(emptyList())
     /** Venue order id ("paper:…", "kite:…") -> the strategy that placed it; absent means placed by hand. */
     val orderOwners = MutableStateFlow<Map<String, String>>(emptyMap())
+    /** Strategy id -> places its entry by itself (true) or asks (false). */
+    val strategyAuto = MutableStateFlow<Map<Long, Boolean>>(emptyMap())
+    /** Scheduled starts waiting for approval today: strategy id -> mode. */
+    val strategyPending = MutableStateFlow<Map<Long, com.optionslab.engine.strategy.RunMode>>(emptyMap())
     val strategyLog = MutableStateFlow<List<com.optionslab.app.data.Strategies.LogLine>>(emptyList())
 
     /**
@@ -947,6 +951,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             val st = com.optionslab.app.data.Strategies
             if (tick) runCatching { st.tickAll(compromisedFresh(60_000)) }
             runCatching { orderOwners.value = st.owners() }
+            runCatching { strategyAuto.value = st.automatic(); strategyPending.value = st.pending() }
             strategies.value = st.all()
             strategyLog.value = st.log()
         }
@@ -959,10 +964,22 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun armStrategy(id: Long, on: Boolean) = strategyDo {
+    /** [automatic]: entries go out by themselves at the start time; false waits for approval. */
+    fun armStrategy(id: Long, on: Boolean, automatic: Boolean = true) = strategyDo {
+        val s = _settings.value
+        if (on && s.live && automatic && !s.allowRealOrders) return@strategyDo "Turn on real orders (More → Zerodha) before arming a live strategy to trade automatically."
         com.optionslab.app.data.Strategies.setArmed(id, on,
-            if (_settings.value.live) com.optionslab.engine.strategy.RunMode.LIVE else com.optionslab.engine.strategy.RunMode.SANDBOX)
+            if (s.live) com.optionslab.engine.strategy.RunMode.LIVE else com.optionslab.engine.strategy.RunMode.SANDBOX, automatic)
     }
+
+    /** Approve a scheduled start that is waiting (a live one is PIN- or fingerprint-confirmed by the screen). */
+    fun approveStrategy(id: Long) = strategyDo {
+        val msg = com.optionslab.app.data.Strategies.approve(id, compromisedFresh())
+        if (com.optionslab.app.data.Strategies.anyRunning()) withContext(Dispatchers.Main) { Jobs.start(ctx, Jobs.Kind.LIVE) }
+        msg
+    }
+
+    fun skipStrategy(id: Long) = strategyDo { com.optionslab.app.data.Strategies.skip(id); "Skipped for today." }
 
     fun importStrategies(text: String) {
         viewModelScope.launch(Dispatchers.IO) {

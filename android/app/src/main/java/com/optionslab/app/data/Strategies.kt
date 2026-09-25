@@ -82,6 +82,10 @@ object Strategies {
         var lastCheck: Long?,
         /** Venue order id ("paper:…", "kite:…") -> "strategy name · purpose", so books can say who placed it. */
         val owners: LinkedHashMap<String, String> = LinkedHashMap(),
+        /** Strategy id -> true when an armed start places its entry by itself, false when it waits for approval. */
+        val autoApprove: LinkedHashMap<Long, Boolean> = LinkedHashMap(),
+        /** Scheduled starts waiting for the owner's approval: strategy id -> "<mode>|<date>". */
+        val pending: LinkedHashMap<Long, String> = LinkedHashMap(),
     )
 
     private var cache: Book? = null
@@ -103,7 +107,11 @@ object Strategies {
             }.toMutableList()
             val owners = LinkedHashMap<String, String>()
             o.optJSONObject("owners")?.let { m -> m.keys().forEach { k -> owners[k] = m.getString(k) } }
-            Book(defs, runs, history, ids, log, o.getLong("nextRunId"), o.getLong("nextStrategyId"), o.optLong("lastCheck", 0).takeIf { it > 0 }, owners)
+            val auto = LinkedHashMap<Long, Boolean>()
+            o.optJSONObject("autoApprove")?.let { m -> m.keys().forEach { k -> auto[k.toLong()] = m.getBoolean(k) } }
+            val pending = LinkedHashMap<Long, String>()
+            o.optJSONObject("pending")?.let { m -> m.keys().forEach { k -> pending[k.toLong()] = m.getString(k) } }
+            Book(defs, runs, history, ids, log, o.getLong("nextRunId"), o.getLong("nextStrategyId"), o.optLong("lastCheck", 0).takeIf { it > 0 }, owners, auto, pending)
         }.getOrNull()
         if (b == null && file.exists()) {
             Vault.setAside(file)
@@ -124,6 +132,8 @@ object Strategies {
         b.lastCheck?.let { o.put("lastCheck", it) }
         while (b.owners.size > 3000) b.owners.remove(b.owners.keys.first())
         o.put("owners", JSONObject().apply { b.owners.forEach { (k, v) -> put(k, v) } })
+        o.put("autoApprove", JSONObject().apply { b.autoApprove.forEach { (k, v) -> put(k.toString(), v) } })
+        o.put("pending", JSONObject().apply { b.pending.forEach { (k, v) -> put(k.toString(), v) } })
         Vault.writeFile(file, o.toString().toByteArray(Charsets.UTF_8))
         cache = b
     }
@@ -157,7 +167,7 @@ object Strategies {
      * weekdays (the scheduler), in [mode]. A live arm still only notifies you at
      * start time to confirm with your PIN or fingerprint; nothing live starts unseen.
      */
-    suspend fun setArmed(id: Long, on: Boolean, mode: RunMode): String? = lock.withLock {
+    suspend fun setArmed(id: Long, on: Boolean, mode: RunMode, automatic: Boolean = mode != RunMode.LIVE): String? = lock.withLock {
         val b = book()
         val i = b.defs.indexOfFirst { it.id == id }
         if (i < 0) return@withLock "That strategy no longer exists."
@@ -169,6 +179,7 @@ object Strategies {
             startTime = d.entryTime, autoStopTime = d.exitTime)
         if (on && base.startTime == null) return@withLock "${d.name} has no start time. Set its entry time in Trade → Strategies, then arm it."
         b.defs[i] = d.copy(scheduler = base.copy(enabled = on, defaultMode = if (on) mode else base.defaultMode))
+        if (on) b.autoApprove[id] = automatic else b.pending.remove(id)
         save(b); null
     }
 
@@ -390,6 +401,7 @@ object Strategies {
         b.brokerIds[runId] = ids
         val run = host.start(def, resolved, now, runId, mode, trigger, exec(b, def, v, mode, compromised), ids, checkpoint(b, id))
         b.runs[id] = run
+        b.pending.remove(id)
         finish(b, run)
         save(b)
         run.startError ?: "${def.name} started (${mode.wire}): ${run.openLegs().size} of ${def.legs.size} legs open."
@@ -421,6 +433,36 @@ object Strategies {
      * then prices, risk and exits for every running run. Called by the live
      * watch each minute and by the Strategy page while it is open.
      */
+    private suspend fun startRun(b: Book, def: StrategyDef, v: Venue, mode: RunMode, trigger: String, compromised: Boolean, now: ZonedDateTime): RunState {
+        val runId = b.nextRunId++
+        val ids = HashMap<Long, String>()
+        b.brokerIds[runId] = ids
+        val ltp = runCatching { Market.quote(def.underlying)?.last }.getOrNull()
+        val run = host.start(def, SymbolResolver.resolve(def, v.master, ltp, now), now, runId, mode, trigger, exec(b, def, v, mode, compromised), ids, checkpoint(b, def.id))
+        b.runs[def.id] = run
+        finish(b, run)
+        b.pending.remove(def.id)
+        return run
+    }
+
+    /** Whether an armed strategy places its entry by itself (true) or asks first (false). */
+    suspend fun automatic(): Map<Long, Boolean> = lock.withLock { HashMap(book().autoApprove) }
+
+    /** Today's scheduled starts waiting for approval: strategy id -> mode. */
+    suspend fun pending(): Map<Long, RunMode> = lock.withLock {
+        val today = Market.today().toString()
+        book().pending.filterValues { it.substringAfter('|') == today }
+            .mapValues { (_, v) -> if (v.substringBefore('|') == RunMode.LIVE.wire) RunMode.LIVE else RunMode.SANDBOX }
+    }
+
+    /** The owner approved a waiting start (live approval is PIN- or fingerprint-confirmed by the caller). */
+    suspend fun approve(id: Long, compromised: Boolean): String {
+        val mode = pending()[id] ?: return "Nothing is waiting for approval."
+        return start(id, mode, "approved", confirmedByOwner = true, compromised = compromised)
+    }
+
+    suspend fun skip(id: Long) = lock.withLock { val b = book(); b.pending.remove(id); save(b) }
+
     suspend fun tickAll(compromised: Boolean): List<String> = lock.withLock {
         val b = book()
         val now = Market.now()
@@ -438,25 +480,26 @@ object Strategies {
             for (due in Scheduler.due(def, last, now, { !Market.isTradingDay(it) }, java.time.Duration.ofMinutes(5))) {
                 if (due.job.kind == Scheduler.JobKind.START) {
                     when (val d = Scheduler.startDecision(def, running)) {
-                        is Scheduler.StartDecision.Start -> if (d.mode == RunMode.LIVE) {
-                            Notifier.post(app, 6600 + (def.id.toInt() and 0xff), Notifier.SCHEDULE, "${def.name}: scheduled live start",
-                                "Open IraAlgo to review and confirm it; live entries are never sent without you.", "strategy")
-                            notes += "${def.name}: live start waiting for you"
+                        is Scheduler.StartDecision.Start -> if (b.autoApprove[def.id] ?: (d.mode != RunMode.LIVE)) {
+                            // Automatic: the owner chose this when arming (live arming needed the PIN or fingerprint).
+                            val v = venueFor(d.mode)
+                            if (v == null) { record(b, def.name, Event("start_refused", "Scheduled start skipped: the contract list could not be loaded", "warn"), true); continue }
+                            val run = startRun(b, def, v, d.mode, "scheduler", compromised, now)
+                            notes += "${def.name}: scheduled ${if (d.mode == RunMode.LIVE) "live" else "paper"} start"
+                            if (d.mode == RunMode.LIVE) Notifier.post(app, 6600 + (def.id.toInt() and 0xff), Notifier.SCHEDULE, "${def.name} started (live)",
+                                run.startError ?: "${run.openLegs().size} of ${def.legs.size} legs open. Stops, targets and square-off run by themselves.", "almanac")
                         } else {
-                            val v = venueFor(RunMode.SANDBOX)
-                            if (v == null) { record(b, def.name, Event("start_refused", "Scheduled paper start skipped: the contract list could not be loaded", "warn"), false); continue }
-                            val runId = b.nextRunId++
-                            val ids = HashMap<Long, String>()
-                            b.brokerIds[runId] = ids
-                            val ltp = runCatching { Market.quote(def.underlying)?.last }.getOrNull()
-                            val run = host.start(def, SymbolResolver.resolve(def, v.master, ltp, now), now, runId, RunMode.SANDBOX, "scheduler",
-                                exec(b, def, v, RunMode.SANDBOX, compromised), ids, checkpoint(b, def.id))
-                            b.runs[def.id] = run; finish(b, run)
-                            notes += "${def.name}: scheduled paper start"
+                            // Manual approval: the entry waits for the owner.
+                            b.pending[def.id] = "${d.mode.wire}|${now.toLocalDate()}"
+                            Notifier.post(app, 6600 + (def.id.toInt() and 0xff), Notifier.RISK, "${def.name}: approve the start",
+                                "It is ${def.name}'s start time (${if (d.mode == RunMode.LIVE) "live" else "paper"}). Open IraAlgo to approve or skip; nothing is sent until you do.", "almanac")
+                            notes += "${def.name}: waiting for approval"
                         }
                         is Scheduler.StartDecision.Refuse -> record(b, def.name, Event(d.eventKind, d.message, "warn"), false)
                         is Scheduler.StartDecision.Skip -> Unit
                     }
+                } else if (!running) {
+                    b.pending.remove(def.id)     // the day's window closed unapproved
                 } else if (running) {
                     val run = b.runs[def.id]!!
                     val v = venueFor(run.mode)
