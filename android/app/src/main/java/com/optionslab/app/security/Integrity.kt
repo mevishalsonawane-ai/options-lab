@@ -101,7 +101,9 @@ object Integrity {
         return when {
             Build.VERSION.SDK_INT < Build.VERSION_CODES.R ->
                 Finding("Sandbox", Severity.NOTICE, "no sensitive permissions held; Android below 11 does not hide the list of installed apps")
-            visible > 5 -> Finding("Sandbox", Severity.DANGER, "can see $visible other installed apps; it should see almost none")
+            // Some makers show their pre-installed apps to every app. That is the phone's privacy, not tampering
+            // with IraAlgo, so it is reported but does not withdraw biometrics.
+            visible > 5 -> Finding("Sandbox", Severity.NOTICE, "can see $visible other installed apps (common on some phone makers)")
             else -> Finding("Sandbox", Severity.OK, "no access to messages, mail, contacts, files or other apps' data")
         }
     }

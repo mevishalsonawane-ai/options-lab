@@ -293,9 +293,9 @@ fun SecurityPage(model: AppModel) {
                     if (on) runCatching { if (kind == BiometricGate.Kind.STRONG) BiometricGate.enrol() }
                         .onFailure { model.say("Could not enable biometrics: ${it.message}"); return@ToggleRow }
                     else BiometricGate.forget()
-                    model.update { it.copy(biometric = on && kind != BiometricGate.Kind.NONE, allowWeakFace = if (kind == BiometricGate.Kind.WEAK) on else it.allowWeakFace) }
+                    model.update { it.copy(biometric = on && kind != BiometricGate.Kind.NONE, allowWeakFace = on) }
                 }
-                if (kind == BiometricGate.Kind.STRONG) ToggleRow("Also accept weak face unlock", "Convenience only - not a cryptographic gate", s.allowWeakFace) { on -> model.update { it.copy(allowWeakFace = on) } }
+                if (kind == BiometricGate.Kind.STRONG) ToggleRow("Accept face unlock", "Off: fingerprint only, tied to a hardware key. On: any fingerprint or face the phone accepts", s.allowWeakFace) { on -> model.update { it.copy(allowWeakFace = on) } }
                 val idles = listOf(60, 120, 300, 600, 900)
                 ParamTokens("Lock after idle for", idles.map { "${it / 60} min" to (it == s.idleSeconds) }) { i ->
                     model.update { it.copy(idleSeconds = idles[i]) }

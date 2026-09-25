@@ -61,6 +61,10 @@ object BiometricGate {
 
     fun forget() { runCatching { keyStore().deleteEntry(BIO_KEY) } }
 
+    /** The phone has a sensor but no fingerprint or face added yet. */
+    fun notEnrolled(activity: FragmentActivity): Boolean =
+        BiometricManager.from(activity).canAuthenticate(BIOMETRIC_WEAK) == BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED
+
     /** A cipher bound to the gated key, or null if enrolment changed since. */
     private fun gatedCipher(): Cipher? = try {
         val key = keyStore().getKey(BIO_KEY, null) as? SecretKey ?: return null
@@ -80,7 +84,9 @@ object BiometricGate {
 
     fun authenticate(activity: FragmentActivity, allowWeakFace: Boolean, onDone: (Outcome) -> Unit) {
         val kind = available(activity)
-        val useStrong = kind == Kind.STRONG
+        // With face unlock accepted, any enrolled fingerprint or face works (no key gate, as weak
+        // biometrics cannot guard a key). Otherwise only strong biometrics, bound to the Keystore key.
+        val useStrong = kind == Kind.STRONG && !allowWeakFace
         if (kind == Kind.NONE || (!useStrong && !allowWeakFace)) { onDone(Outcome.UsePin); return }
 
         val cipher = if (useStrong) gatedCipher() else null
@@ -107,8 +113,8 @@ object BiometricGate {
         })
 
         val info = BiometricPrompt.PromptInfo.Builder()
-            .setTitle("Unseal IraAlgo")
-            .setSubtitle(if (useStrong) "Fingerprint or face" else "Face unlock")
+            .setTitle("Unlock IraAlgo")
+            .setSubtitle("Fingerprint or face")
             .setNegativeButtonText("Use PIN")
             .setAllowedAuthenticators(if (useStrong) BIOMETRIC_STRONG else BIOMETRIC_WEAK)
             .setConfirmationRequired(false)
