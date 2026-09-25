@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import com.optionslab.app.ui.components.AlertDialog
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -65,6 +66,9 @@ fun RowActionPopup(model: AppModel) {
     val account by model.account.collectAsState()
     var modify by remember { mutableStateOf<Broker.OrderRow?>(null) }
     var cancelAuth by remember { mutableStateOf<Broker.OrderRow?>(null) }
+    var protectFor by remember { mutableStateOf<ProtectTarget?>(null) }
+    val protections by model.protections.collectAsState()
+    LaunchedEffect(t) { model.refreshProtections() }
     fun close() { model.rowAction.value = null }
 
     // The open position a finished order or trade belongs to, so it can be closed from here too.
@@ -93,7 +97,15 @@ fun RowActionPopup(model: AppModel) {
             lines += "Unrealised P&L" to rs(r.unrealizedPnl, true)
             lines += "Realised today" to rs(r.todayRealizedPnl, true)
             lines += "Change" to String.format(Locale.ENGLISH, "%+.2f%%", r.pnlPercent)
-            if (r.quantity != 0) swipe("Slide to close position") { model.paperClose(r.symbol, r.product); close() }
+            if (r.quantity != 0) {
+                val pr = protections.lastOrNull { !it.live && it.symbol == r.symbol }
+                pr?.let { lines += "Protection" to it.describe() }
+                button(if (pr == null) "Protect: stop · trail · target" else "Change protection") {
+                    protectFor = ProtectTarget(false, r.symbol, r.exchange, r.product, r.quantity, r.ltp)
+                }
+                pr?.let { button("Remove protection") { model.removeProtection(it.id) } }
+                swipe("Slide to close position") { model.paperClose(r.symbol, r.product); close() }
+            }
         }
         is RowTarget.PaperOrder -> {
             val r = t.row
@@ -145,7 +157,15 @@ fun RowActionPopup(model: AppModel) {
             lines += "Unrealised · realised" to "${rs(r.unrealised, true)} · ${rs(r.realised, true)}"
             lines += "M2M" to rs(r.m2m, true)
             lines += "Bought · sold today" to "${r.buyQty} @ ${px(r.buyAvg)} · ${r.sellQty} @ ${px(r.sellAvg)}"
-            if (r.qty != 0) swipe("Slide to close position") { model.planSquareOff(r); close() }
+            if (r.qty != 0) {
+                val pr = protections.lastOrNull { it.live && it.symbol == r.symbol }
+                pr?.let { lines += "Protection" to it.describe() }
+                button(if (pr == null) "Protect: stop · trail · target" else "Change protection") {
+                    protectFor = ProtectTarget(true, r.symbol, r.exchange, r.product, r.qty, r.last)
+                }
+                pr?.let { button("Remove protection") { model.removeProtection(it.id) } }
+                swipe("Slide to close position") { model.planSquareOff(r); close() }
+            }
         }
         is RowTarget.LiveOrder -> {
             val r = t.row
@@ -189,7 +209,7 @@ fun RowActionPopup(model: AppModel) {
         }
     }
 
-    if (modify == null && cancelAuth == null) AlertDialog(
+    if (modify == null && cancelAuth == null && protectFor == null) AlertDialog(
         onDismissRequest = ::close,
         properties = DialogProperties(securePolicy = SecureFlagPolicy.SecureOn),
         title = { Text(title, style = Type.title) },
@@ -216,6 +236,61 @@ fun RowActionPopup(model: AppModel) {
         dismissButton = { TextButton(::close) { Text("Close") } },
     )
     modify?.let { o -> ModifyDialog(model, o) { modify = null; close() } }
+    protectFor?.let { pt -> ProtectDialog(model, pt) { done -> protectFor = null; if (done) close() } }
     // Cancelling a working order (it may be a stop-loss) is proved like a send.
     cancelAuth?.let { o -> Reauth(model, onOk = { cancelAuth = null; model.cancelOrder(o.id, o.variety); close() }, onCancel = { cancelAuth = null }) }
+}
+
+
+/** An open position to protect. [qty] is signed: + long, - short. */
+data class ProtectTarget(val live: Boolean, val symbol: String, val exchange: String, val product: String, val qty: Int, val price: Double)
+
+/**
+ * Stop, trailing stop and target for one position. Paper: set at once. Zerodha: the
+ * PIN or fingerprint first (once); after that the trailing stop moves by itself,
+ * and only ever tighter.
+ */
+@Composable
+fun ProtectDialog(model: AppModel, t: ProtectTarget, onDone: (Boolean) -> Unit) {
+    val p = LocalPalette.current
+    var stop by remember { mutableStateOf("") }
+    var trail by remember { mutableStateOf("") }
+    var target by remember { mutableStateOf("") }
+    var auth by remember { mutableStateOf(false) }
+    val long = t.qty > 0
+    val spec = com.optionslab.app.ui.ProtectSpec(stop.toDoubleOrNull(), trail.toDoubleOrNull(), target.toDoubleOrNull())
+    val problem = com.optionslab.engine.risk.Protection.validate(if (long) 1 else -1, t.price, spec.stop, spec.trail, spec.target)
+    fun go() = model.protect(t.live, t.symbol, t.exchange, t.product, t.qty, t.price, spec).also { onDone(true) }
+    if (auth) { Reauth(model, onOk = { auth = false; go() }, onCancel = { auth = false }); return }
+    AlertDialog(
+        onDismissRequest = { onDone(false) },
+        properties = DialogProperties(securePolicy = SecureFlagPolicy.SecureOn),
+        title = { Text("Protect ${t.symbol}", style = Type.title) },
+        text = {
+            Column {
+                Text("${if (long) "Long" else "Short"} ${abs(t.qty)} · last ${px(t.price)} · ${if (t.live) "Zerodha" else "paper"}", style = Type.bodySmall.copy(color = p.inkSoft))
+                PriceField(stop, { stop = it }, "Stop price (${if (long) "below" else "above"} ${px(t.price)})")
+                PriceField(trail, { trail = it }, "…or trail by (points)")
+                PriceField(target, { target = it }, "Target price (optional)")
+                Note(if (spec.trail != null) "Trailing: the stop follows the best price at ${spec.trail} points behind and never loosens." +
+                    (if (spec.stop != null) " It starts at your stop price." else "")
+                    else "The stop rests as an SL-M exit and the target as a LIMIT exit; when one fills the other is cancelled.", Modifier.padding(top = 8.dp))
+                if (t.live) Note("Zerodha: real exit orders are placed now. You confirm once with your PIN or fingerprint.", Modifier.padding(top = 4.dp))
+            }
+        },
+        confirmButton = {
+            TextButton({
+                if (problem != null) com.optionslab.app.work.Alerts.error(problem)
+                else if (t.live) auth = true else go()
+            }) { Text(if (t.live) "Confirm & protect" else "Protect") }
+        },
+        dismissButton = { TextButton({ onDone(false) }) { Text("Cancel") } },
+    )
+}
+
+@Composable
+fun PriceField(v: String, set: (String) -> Unit, label: String) {
+    androidx.compose.material3.OutlinedTextField(v, { set(it.filter { c -> c.isDigit() || c == '.' }.take(10)) }, label = { Text(label) }, singleLine = true,
+        modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
+        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal))
 }

@@ -340,6 +340,12 @@ object Tasks {
                 lines.add(0, "Paper %s".format(if (s.hideAmountsOnLockScreen) "open: $n" else "P&L Rs %+,.0f · $n open".format(pnl)))
             }
         }
+        // Alarms set from the chart, priced from the chart's own feed (the last 1-minute close).
+        Alarms.all().filter { it.enabled && it.symbol.startsWith(com.optionslab.app.data.PriceAlarm.CHART) }.map { it.symbol }.distinct().forEach { key ->
+            val sym = key.removePrefix(com.optionslab.app.data.PriceAlarm.CHART)
+            val now = System.currentTimeMillis() / 1000
+            runCatching { com.optionslab.app.data.ChartFeed.bars(sym, "1m", now - 3 * 3600, now).lastOrNull()?.close }.getOrNull()?.let { prices[key] = it }
+        }
         checkAlarms(context, prices, fired)
         runCatching {
             com.optionslab.app.widget.IraWidget.publish(context, q["NIFTY"]?.let { it.last to it.changePct },
@@ -352,6 +358,8 @@ object Tasks {
         runCatching { com.optionslab.app.data.OrbArms.tick() }
         // Zerodha's live price stream (Live mode, logged in, market hours).
         runCatching { com.optionslab.app.data.KiteStream.ensure() }
+        // Stops, trailing stops and targets: one exit filled cancels the other; trails move up.
+        runCatching { com.optionslab.app.data.Protections.tick() }
         // Every open position's notification, with its live P&L and a Close button.
         runCatching { PositionCards.refresh(context) }
         // Expiry day, 15:05: close every option position expiring today (paper and live, all products).
@@ -515,6 +523,7 @@ class WatchService : Service() {
                     runCatching {
                         com.optionslab.app.data.Paper.tick().let { Tasks.paperEventsPublic(this, it) }
                         com.optionslab.app.data.OrbArms.priceCheckOnly()
+                        com.optionslab.app.data.Protections.tick()
                     }
                     runCatching { PositionCards.refresh(this) }
                 }

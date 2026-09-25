@@ -66,8 +66,8 @@ Source paths prefixed `NTA:` are in D:\New Trading app.
 - [x] D2. (done: stream ticks pushed into the chart page, `window.__iraTick`; tested in a browser harness) Live chart from the Zerodha stream: in Live mode the last candle moves with every tick.
 - [x] D3. (done: 5 s re-pricing from the stream in Live mode; OI change card from the day's first reading) Live option chain: refreshes from the stream while open; OI change since the day's first reading; PCR and max pain live.
 - [x] D4. (done: `app/src/test` JVM tests, run by CI before the APK is built) App unit tests (B7): JVM tests for the app's pure logic, run by CI.
-- [ ] D5. Trailing stop-loss on any position (paper; Zerodha after one PIN): the stop only ever tightens.
-- [ ] D6. From the chart: bracket order (entry + stop + target) and price alerts drawn at a level.
+- [x] D5. (done: `engine/risk/Protection.kt` + tests, `data/Protections.kt`; position popup → Protect; paper at once, Zerodha after one PIN) Trailing stop-loss on any position (paper; Zerodha after one PIN): the stop only ever tightens.
+- [x] D6. (done: order sheet bracket - stop/trail/target set when the entry fills; chart ALERT button, priced from the chart feed) From the chart: bracket order (entry + stop + target) and price alerts drawn at a level.
 - [x] D7. (done: Options → Straddle: any call/put pair, combined premium, pair P&L) Straddle / strangle tracker: combined premium through the day and the pair's live P&L.
 - [ ] D8. Strategy presets ready to arm (short straddle, short strangle, iron fly, iron condor), each backtested on harvested sessions first.
 - [ ] D9. Replay mode: step through a past day candle by candle and paper-trade it.

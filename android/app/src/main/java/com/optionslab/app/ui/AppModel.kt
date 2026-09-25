@@ -66,6 +66,11 @@ data class Account(
 }
 
 /** Orders awaiting the owner's decision, with every gate's verdict attached. */
+/** A bracket's exits: any of a fixed stop, a trailing distance (points) and a target. */
+data class ProtectSpec(val stop: Double?, val trail: Double?, val target: Double?) {
+    val any: Boolean get() = stop != null || trail != null || target != null
+}
+
 data class OrderPlan(
     val title: String,
     val session: LocalDate?,
@@ -77,6 +82,8 @@ data class OrderPlan(
     val exit: Boolean = false,
     /** Zerodha's basket margin for these legs, or why it could not be read. */
     val margin: com.optionslab.app.data.Broker.Margin? = null,
+    /** A bracket: stop / trailing distance / target, set on the position once this order has filled. */
+    val protect: ProtectSpec? = null,
     val marginNote: String? = null,
 ) {
     val sendable: Boolean get() = legs.isNotEmpty() && refusals.all { it.isEmpty() } && margin?.short != true
@@ -484,6 +491,35 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         orderOwners.value = emptyMap(); strategyPending.value = emptyMap(); botStopped.value = false
     }
 
+    // ---- protections: stops, trailing stops, targets ------------------------------------------
+
+    val protections = MutableStateFlow<List<com.optionslab.app.data.Protections.Item>>(emptyList())
+
+    fun refreshProtections() {
+        viewModelScope.launch(Dispatchers.IO) {
+            runCatching { com.optionslab.app.data.Protections.tick() }
+            protections.value = runCatching { com.optionslab.app.data.Protections.active() }.getOrDefault(emptyList())
+        }
+    }
+
+    /** Protect an open position. Zerodha: call only after the PIN or fingerprint (the screen asks first). */
+    fun protect(live: Boolean, symbol: String, exchange: String, product: String, qty: Int, price: Double, spec: ProtectSpec) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val d = com.optionslab.app.data.Protections
+            say(if (live) { if (compromisedFresh()) "Refused: this device shows signs of compromise." else d.protectLive(symbol, exchange, product, qty, price, spec.stop, spec.trail, spec.target) }
+                else d.protectPaper(symbol, product, qty, price, spec.stop, spec.trail, spec.target))
+            protections.value = d.active()
+            if (live) loadAccount(quiet = true) else loadPaper(quiet = true)
+        }
+    }
+
+    fun removeProtection(id: Long) {
+        viewModelScope.launch(Dispatchers.IO) {
+            say(com.optionslab.app.data.Protections.remove(id))
+            protections.value = com.optionslab.app.data.Protections.active()
+        }
+    }
+
     val account = MutableStateFlow<Load<Account>>(Load.Idle)
 
     // Declared after [account]: these start collecting at once and read it.
@@ -829,7 +865,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
 
     /** A single order typed by hand on the Zerodha page. */
     fun planManual(underlying: String, expiry: LocalDate, strike: Double, right: com.optionslab.engine.Right,
-                   side: com.optionslab.engine.Kite.Side, lots: Int, product: String, limit: Double?) {
+                   side: com.optionslab.engine.Kite.Side, lots: Int, product: String, limit: Double?, protect: ProtectSpec? = null) {
         plan.value = Load.Busy("Looking up the contract")
         viewModelScope.launch(Dispatchers.IO) {
             plan.value = try {
@@ -840,7 +876,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                 val px = limit ?: (if (side == com.optionslab.engine.Kite.Side.SELL) qt?.bid else qt?.ask) ?: qt?.last ?: 0.0
                 val o = com.optionslab.engine.Kite.Order(ins.tradingSymbol, side, lots * ins.lotSize, ins.lotSize, product, "LIMIT",
                     com.optionslab.engine.Kite.onTick(px, ins.tickSize, side), ins.tickSize)
-                Load.Done(withMargin(OrderPlan("${side.name} ${ins.tradingSymbol}", null, listOf(o), q, gate(listOf(o), false), false)))
+                Load.Done(withMargin(OrderPlan("${side.name} ${ins.tradingSymbol}", null, listOf(o), q, gate(listOf(o), false), false,
+                    protect = protect?.takeIf { it.any })))
             } catch (x: Exception) { Load.Failed(x.message ?: "could not prepare the order") }
         }
     }
@@ -935,6 +972,13 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                     Ledger.attachOrders(day, fills.map { it.orderId }, short, wing)
                 }
                 sending.value = Load.Done(fills)
+                // A bracket rides on the same confirmation: its exits go to Zerodha now that the entry filled.
+                cur.protect?.let { pr ->
+                    val leg = cur.legs.single(); val f = fills.last()
+                    val signed = if (leg.side == com.optionslab.engine.Kite.Side.BUY) f.filled else -f.filled
+                    say(com.optionslab.app.data.Protections.protectLive(leg.tradingSymbol, leg.exchange, leg.product, signed, f.avgPrice, pr.stop, pr.trail, pr.target))
+                    refreshProtections()
+                }
                 refreshLedger(); loadAccount()
                 say("Filled: " + fills.joinToString(" · ") { "%s @ %.2f".format(it.orderId.takeLast(6), it.avgPrice) })
             } catch (e: Exception) {
@@ -1380,6 +1424,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch(Dispatchers.IO) {
             paper.value = try {
                 runCatching { com.optionslab.app.data.Paper.tick() }
+                runCatching { com.optionslab.app.data.Protections.tick(); protections.value = com.optionslab.app.data.Protections.active() }
                 runCatching { orderOwners.value = com.optionslab.app.data.Strategies.owners() }
                 val snap = com.optionslab.app.data.Paper.snapshot()
                 recordPaperDay(snap)
@@ -1396,7 +1441,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun paperPlace(underlying: String, expiry: LocalDate, strike: Double, right: com.optionslab.engine.Right, action: String, lots: Int,
-                   priceType: String, product: String, price: Double?, trigger: Double?) = paperDo {
+                   priceType: String, product: String, price: Double?, trigger: Double?, protect: ProtectSpec? = null) = paperDo {
         val c = com.optionslab.app.data.Paper.contractFor(underlying, expiry, strike, right)
             ?: error("$underlying ${expiry} ${com.optionslab.engine.fmtG(strike)} $right is not listed")
         val g = com.optionslab.app.data.Guard
@@ -1407,8 +1452,15 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         val refused = g.check(order, snap?.let { g.paperAccount(it) }, paper = true)
         if (refused.isNotEmpty()) return@paperDo com.optionslab.app.data.Paper.Result(false, "Not placed (account guard): " + refused.joinToString(" "), emptyList())
         val r = com.optionslab.app.data.Paper.place(c, action, lots, priceType, product, price, trigger)
-        r.events.filterIsInstance<com.optionslab.engine.sandbox.SandboxEvent.Fill>()
-            .forEach { com.optionslab.app.work.Notifier.orderFilled(ctx, it.action, it.quantity, it.symbol, it.price, "Paper", null) }
+        val fills = r.events.filterIsInstance<com.optionslab.engine.sandbox.SandboxEvent.Fill>()
+        fills.forEach { com.optionslab.app.work.Notifier.orderFilled(ctx, it.action, it.quantity, it.symbol, it.price, "Paper", null) }
+        // The bracket: the whole position gets the stop / trail / target once the entry has filled.
+        val f = fills.firstOrNull()
+        if (protect?.any == true && f != null) {
+            val net = com.optionslab.app.data.Paper.state.positions.filter { it.symbol == c.symbol && it.product == product }.sumOf { it.quantity }
+            if (net != 0) say(com.optionslab.app.data.Protections.protectPaper(c.symbol, product, net, f.price, protect.stop, protect.trail, protect.target))
+            refreshProtections()
+        } else if (protect?.any == true) say("The bracket is set once the order fills; set it from the position when it does.")
         r
     }
 

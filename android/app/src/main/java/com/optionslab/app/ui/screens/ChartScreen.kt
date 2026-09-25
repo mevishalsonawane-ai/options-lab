@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
@@ -66,6 +67,7 @@ fun ChartScreen(model: AppModel, symbol: String, exchange: String, visible: Bool
     var current by remember { mutableStateOf(symbol to exchange) }
     var order by remember { mutableStateOf<Pair<ChainPick, Pair<Boolean, Double?>>?>(null) }
     var hint by remember { mutableStateOf<String?>(null) }
+    var alerting by remember { mutableStateOf(false) }
     val holder = remember { arrayOfNulls<WebView>(1) }
     // [gen] rebuilds the WebView (after its renderer died, or a load that never finished);
     // [ready] turns true once the chart has received its first candles.
@@ -96,9 +98,10 @@ fun ChartScreen(model: AppModel, symbol: String, exchange: String, visible: Bool
 
     // Live mode: every trade of the charted instrument comes from the Zerodha stream and moves the
     // last candle at once (the chart page's own 15 s poll stands back while ticks arrive).
-    val settings by model.settings.collectAsState()
+    // Named apart from the WebView's own `settings`, which the factory below configures.
+    val appSettings by model.settings.collectAsState()
     val streamStatus by com.optionslab.app.data.KiteStream.status.collectAsState()
-    val streaming = settings.live && streamStatus == com.optionslab.app.data.KiteStream.Status.LIVE
+    val streaming = appSettings.live && streamStatus == com.optionslab.app.data.KiteStream.Status.LIVE
     var liveToken by remember { mutableStateOf<Long?>(null) }
     LaunchedEffect(current, streaming) {
         liveToken = if (!streaming) null else withContext(Dispatchers.IO) { runCatching { streamToken(current.first) }.getOrNull() }
@@ -138,6 +141,9 @@ fun ChartScreen(model: AppModel, symbol: String, exchange: String, visible: Bool
         Row(Modifier.fillMaxWidth().background(p.paperDeep).padding(horizontal = 12.dp, vertical = 6.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(current.first, style = Type.label.copy(color = p.ink, fontSize = 13.sp), maxLines = 1, modifier = Modifier.weight(1f))
+            // A price alert on whatever is charted, at a level you choose.
+            Text("ALERT", textAlign = TextAlign.Center, style = Type.label.copy(color = p.ink, fontSize = 13.sp, fontWeight = FontWeight.Bold),
+                modifier = Modifier.background(p.chip, RoundedCornerShape(50)).clickable { alerting = true }.padding(horizontal = 14.dp, vertical = 8.dp))
             listOf(true to "BUY", false to "SELL").forEach { (isBuy, label) ->
                 Text(label, textAlign = TextAlign.Center, style = Type.label.copy(color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold),
                     modifier = Modifier.background(if (isBuy) p.verdigris else p.oxblood, RoundedCornerShape(50))
@@ -224,9 +230,49 @@ fun ChartScreen(model: AppModel, symbol: String, exchange: String, visible: Bool
         }
         }
     }
+    if (alerting) ChartAlertDialog(model, current.first) { alerting = false }
     order?.let { (pick, how) ->
         OptionOrderSheet(model, pick, initialBuy = how.first, initialLimit = how.second) { order = null }
     }
+}
+
+/** Set a price alert on the charted symbol: above or below is decided from where the price is now. */
+@Composable
+private fun ChartAlertDialog(model: AppModel, symbol: String, onClose: () -> Unit) {
+    val p = LocalPalette.current
+    var now by remember { mutableStateOf<Double?>(null) }
+    var level by remember { mutableStateOf("") }
+    LaunchedEffect(symbol) {
+        val t = System.currentTimeMillis() / 1000
+        now = withContext(Dispatchers.IO) { runCatching { ChartFeed.bars(symbol, "1m", t - 3 * 86400, t).lastOrNull()?.close }.getOrNull() }
+        if (level.isEmpty()) now?.let { level = String.format(java.util.Locale.ENGLISH, "%.2f", it) }
+    }
+    val lv = level.toDoubleOrNull()
+    val cur = now
+    com.optionslab.app.ui.components.AlertDialog(
+        onDismissRequest = onClose,
+        properties = androidx.compose.ui.window.DialogProperties(securePolicy = androidx.compose.ui.window.SecureFlagPolicy.SecureOn),
+        title = { Text("Alert on $symbol", style = Type.title) },
+        text = {
+            Column {
+                Text(cur?.let { "Now ${String.format(java.util.Locale.ENGLISH, "%,.2f", it)}" } ?: "Reading the price…", style = Type.bodySmall.copy(color = p.inkSoft))
+                PriceField(level, { level = it }, "Alert when the price reaches")
+                if (lv != null && cur != null) Text(if (lv >= cur) "Fires when it rises to ${level}" else "Fires when it falls to ${level}",
+                    style = Type.bodySmall.copy(color = p.ink), modifier = Modifier.padding(top = 6.dp))
+                Text("Checked by the market watch every minute, on market days.", style = Type.italic.copy(color = p.inkFaint, fontSize = 12.sp), modifier = Modifier.padding(top = 6.dp))
+            }
+        },
+        confirmButton = {
+            TextButton({
+                if (lv != null && lv > 0 && cur != null) {
+                    model.saveAlarm(com.optionslab.app.data.PriceAlarm(System.currentTimeMillis(), com.optionslab.app.data.PriceAlarm.CHART + symbol, lv >= cur, lv))
+                    model.say("Alert set: $symbol at ${level}")
+                    onClose()
+                } else com.optionslab.app.work.Alerts.error("Enter a price above zero.")
+            }) { Text("Set alert") }
+        },
+        dismissButton = { TextButton(onClose) { Text("Cancel") } },
+    )
 }
 
 /** The Zerodha instrument token for a chart symbol: an index by name, an option through the day's instrument list. */

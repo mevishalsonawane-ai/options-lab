@@ -39,6 +39,7 @@ class IraAlgoApp : Application() {
         com.optionslab.app.data.History.init(this)
         com.optionslab.app.data.Strategies.init(this)
         com.optionslab.app.data.OrbArms.init(this)
+        com.optionslab.app.data.Protections.init(this)
         Notifier.createChannels(this)
         ProcessLifecycleOwner.get().lifecycle.addObserver(SessionLock)
         // Keystore work stays off the main thread.
