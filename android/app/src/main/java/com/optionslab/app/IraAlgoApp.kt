@@ -13,8 +13,21 @@ import com.optionslab.app.work.Jobs
 import com.optionslab.app.work.Notifier
 
 class IraAlgoApp : Application() {
+    companion object { const val CRASH_FILE = "last_crash.txt" }
+
     override fun onCreate() {
         super.onCreate()
+        // If the app ever crashes, keep what went wrong (on this phone only, never logged or sent)
+        // so the next start can show it and the owner can pass it on.
+        val previous = Thread.getDefaultUncaughtExceptionHandler()
+        Thread.setDefaultUncaughtExceptionHandler { t, e ->
+            runCatching {
+                java.io.File(filesDir, CRASH_FILE).writeText(
+                    "${java.time.ZonedDateTime.now()} · thread ${t.name} · Android ${android.os.Build.VERSION.RELEASE} · ${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}\n" +
+                        e.stackTraceToString().take(12_000))
+            }
+            previous?.uncaughtException(t, e)
+        }
         SecurePrefs.init(this)
         Ledger.init(this)
         Alarms.init(this)

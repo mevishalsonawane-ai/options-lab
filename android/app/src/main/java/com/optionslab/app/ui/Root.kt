@@ -27,6 +27,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
@@ -124,6 +126,28 @@ fun Root(activity: MainActivity) {
             }
         }
         val compromised = findings.isNotEmpty() && Integrity.compromised(findings)
+        // The app stopped unexpectedly last time: show why, once, so it can be reported.
+        var crash by remember { mutableStateOf(runCatching { java.io.File(activity.filesDir, com.optionslab.app.IraAlgoApp.CRASH_FILE).takeIf { it.exists() }?.readText() }.getOrNull()) }
+        crash?.let { text ->
+            val clip = androidx.compose.ui.platform.LocalClipboardManager.current
+            androidx.compose.material3.AlertDialog(
+                onDismissRequest = {},
+                properties = androidx.compose.ui.window.DialogProperties(securePolicy = androidx.compose.ui.window.SecureFlagPolicy.SecureOn),
+                title = { Text("IraAlgo closed unexpectedly last time", style = Type.title) },
+                text = {
+                    Column(Modifier.heightIn(max = 360.dp).verticalScroll(androidx.compose.foundation.rememberScrollState())) {
+                        Text("This is what went wrong. Copy it and send it to get it fixed; it contains no keys, PIN or balances.", style = Type.bodySmall)
+                        androidx.compose.foundation.text.selection.SelectionContainer {
+                            Text(text, style = Type.bodySmall.copy(fontSize = 10.sp, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace), modifier = Modifier.padding(top = 8.dp))
+                        }
+                    }
+                },
+                confirmButton = { androidx.compose.material3.TextButton({ clip.setText(androidx.compose.ui.text.AnnotatedString(text)) }) { Text("Copy") } },
+                dismissButton = { androidx.compose.material3.TextButton({
+                    runCatching { java.io.File(activity.filesDir, com.optionslab.app.IraAlgoApp.CRASH_FILE).delete() }; crash = null
+                }) { Text("Dismiss") } },
+            )
+        }
         var vaultBad by remember { mutableStateOf(SecurePrefs.unreadable) }
         if (vaultBad) {
             VaultUnreadable(onRetry = { vaultBad = !SecurePrefs.reload() }, onErase = { eraseEverything(); vaultBad = false })

@@ -503,14 +503,23 @@ fun ConnectZerodhaScreen(model: AppModel) {
     }
 }
 
+private const val DRAFT_KEY = "draft.kite.key"
+private const val DRAFT_SECRET = "draft.kite.secret"
+
 @Composable
 private fun CredentialsForm(model: AppModel, onDone: () -> Unit) {
     val p = LocalPalette.current
-    var key by remember { mutableStateOf("") }
-    var secret by remember { mutableStateOf("") }
+    // What was typed is kept (encrypted, in the vault) until it is saved, so stepping out to the
+    // Kite site, an idle lock or Android closing the app in the background never loses it.
+    var key by remember { mutableStateOf(com.optionslab.app.security.SecurePrefs.getString(DRAFT_KEY).orEmpty()) }
+    var secret by remember { mutableStateOf(com.optionslab.app.security.SecurePrefs.getString(DRAFT_SECRET).orEmpty()) }
     val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current
     var pin by remember { mutableStateOf("") }
     var err by remember { mutableStateOf<String?>(null) }
+    var saving by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    fun draft(k: String, v: String) = com.optionslab.app.security.SecurePrefs.put(k, v.ifEmpty { null })
+    fun pasteInto(set: (String) -> Unit) = clipboard.getText()?.text?.trim()?.takeIf { it.isNotEmpty() }?.let(set)
     Column(Modifier.padding(top = 10.dp)) {
         Text("1. Create a Kite Connect app", style = Type.body.copy(color = p.ink, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold))
         Note("Sign in at developers.kite.trade and create an app (type: Connect). Paste this as its Redirect URL:")
@@ -528,19 +537,30 @@ private fun CredentialsForm(model: AppModel, onDone: () -> Unit) {
         Note("IraAlgo catches this address inside the app during login, so it never opens and needs no website. Postback URL can stay empty.")
         Spacer(Modifier.height(10.dp))
         Text("2. Paste the app's key and secret", style = Type.body.copy(color = p.ink, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold))
-        OutlinedTextField(key, { key = it.trim() }, label = { Text("API key") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password), visualTransformation = PasswordVisualTransformation())
-        OutlinedTextField(secret, { secret = it.trim() }, label = { Text("API secret") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password), visualTransformation = PasswordVisualTransformation())
+        OutlinedTextField(key, { key = it.trim(); draft(DRAFT_KEY, key) }, label = { Text("API key") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password), visualTransformation = PasswordVisualTransformation(),
+            trailingIcon = { TextButton({ pasteInto { key = it; draft(DRAFT_KEY, it) } }) { Text("Paste") } })
+        OutlinedTextField(secret, { secret = it.trim(); draft(DRAFT_SECRET, secret) }, label = { Text("API secret") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password), visualTransformation = PasswordVisualTransformation(),
+            trailingIcon = { TextButton({ pasteInto { secret = it; draft(DRAFT_SECRET, it) } }) { Text("Paste") } })
+        if (key.isNotEmpty() || secret.isNotEmpty()) Note("Kept on this phone (encrypted) until you save, so you can switch to the Kite site and back.")
         OutlinedTextField(pin, { pin = it.filter(Char::isDigit).take(12) }, label = { Text("Your app PIN (seals the secret)") }, singleLine = true,
             modifier = Modifier.fillMaxWidth(), visualTransformation = PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword))
         err?.let { Text(it, style = Type.italic.copy(color = p.oxblood)) }
         Spacer(Modifier.height(8.dp))
-        BrassButton("Save to the vault", Modifier.fillMaxWidth()) {
-            err = model.saveBrokerCredentials(key, secret, pin)
-            pin = ""
-            if (err == null) { key = ""; secret = ""; onDone(); model.say("Saved, the secret sealed with your PIN. Now log in to Zerodha.") }
+        BrassButton("Save to the vault", Modifier.fillMaxWidth(), busy = saving, enabled = !saving) {
+            // The PIN check and the sealing are slow on purpose (key stretching): off the screen's thread.
+            val k = key; val s = secret; val pn = pin
+            saving = true
+            scope.launch {
+                val e = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { model.saveBrokerCredentials(k, s, pn) }
+                saving = false; err = e; pin = ""
+                if (e == null) {
+                    draft(DRAFT_KEY, ""); draft(DRAFT_SECRET, "")
+                    key = ""; secret = ""; onDone(); model.say("Saved, the secret sealed with your PIN. Now log in to Zerodha.")
+                }
+            }
         }
     }
 }
