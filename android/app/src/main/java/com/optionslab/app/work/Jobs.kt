@@ -214,7 +214,7 @@ object Tasks {
                 .format(t.credit, t.credit * t.qty, t.breakeven), "ticket")
         // The real order is PREPARED, never sent: it waits for your review.
         if (s.prepareRealOrder && com.optionslab.app.data.Broker.loggedIn) Notifier.post(context, 2004, Notifier.RISK,
-            "Review today's Zerodha order", "SELL ${t.underlying} ${fmtG(t.strike)} PE x${t.lots} is ready. Open the Ticket page, review it and hold to send - nothing goes until you do.", "ticket")
+            "Review today's Zerodha order", "SELL ${t.underlying} ${fmtG(t.strike)} PE x${t.lots} is ready. Open Options → Expiry Put, review it and hold to send - nothing goes until you do.", "ticket")
     }
 
     suspend fun settle(context: Context, s: AppSettings) {

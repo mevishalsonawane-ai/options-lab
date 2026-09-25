@@ -63,13 +63,13 @@ data class ChainPick(
  * check, hold to send, PIN or fingerprint) - nothing is sent from here.
  */
 @Composable
-fun OptionOrderSheet(model: AppModel, pick: ChainPick, initialBuy: Boolean = true, onClose: () -> Unit) {
+fun OptionOrderSheet(model: AppModel, pick: ChainPick, initialBuy: Boolean = true, initialLimit: Double? = null, onClose: () -> Unit) {
     val p = LocalPalette.current
     val s by model.settings.collectAsState()
     var buy by remember { mutableStateOf(initialBuy) }
     var lots by remember { mutableStateOf(1) }
-    var limit by remember { mutableStateOf(false) }
-    var price by remember { mutableStateOf(pick.ltp?.let { String.format(Locale.ENGLISH, "%.2f", it) } ?: "") }
+    var limit by remember { mutableStateOf(initialLimit != null) }
+    var price by remember { mutableStateOf((initialLimit ?: pick.ltp)?.let { String.format(Locale.ENGLISH, "%.2f", it) } ?: "") }
     var product by remember { mutableStateOf(s.orderProduct.takeIf { it == "MIS" } ?: "NRML") }
     val side = if (buy) p.verdigris else p.oxblood
     val qty = lots * pick.lotSize

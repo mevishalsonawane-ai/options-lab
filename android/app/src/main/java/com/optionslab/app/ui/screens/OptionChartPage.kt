@@ -41,6 +41,7 @@ import com.optionslab.app.ui.theme.Type
 import com.optionslab.engine.Upstox
 import com.optionslab.engine.fmtG
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
@@ -50,7 +51,8 @@ import java.util.Locale
  * open interest, and Buy / Sell at the bottom. Refreshes every 30 s.
  */
 @Composable
-fun OptionChartPage(model: AppModel, pick: ChainPick, onClose: () -> Unit) {
+fun OptionChartPage(model: AppModel, pick: ChainPick, onFullChart: (String) -> Unit, onClose: () -> Unit) {
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
     val p = LocalPalette.current
     var bars by remember(pick) { mutableStateOf<List<Upstox.Bar>>(emptyList()) }
     var error by remember(pick) { mutableStateOf<String?>(null) }
@@ -79,6 +81,16 @@ fun OptionChartPage(model: AppModel, pick: ChainPick, onClose: () -> Unit) {
                     Text("Lot ${pick.lotSize}" + (pick.ivPct?.let { " · IV %.1f%%".format(Locale.ENGLISH, it) } ?: "") +
                         (pick.delta?.let { " · Δ %.2f".format(Locale.ENGLISH, it) } ?: ""), style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp))
                 }
+                // The full chart: indicators, drawing tools, chart types.
+                Text("Full chart ›", style = Type.label.copy(color = p.ink, fontSize = 13.sp), modifier = Modifier.clickable {
+                    scope.launch {
+                        val sym = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                            runCatching { com.optionslab.app.data.Market.contracts().firstOrNull { c ->
+                                c.underlying == pick.underlying && c.expiry == pick.expiry && c.strike == pick.strike && c.right == pick.right }?.tradingSymbol }.getOrNull()
+                        }
+                        if (sym != null) onFullChart(sym)
+                    }
+                }.padding(horizontal = 10.dp, vertical = 6.dp))
             }
             Box(Modifier.fillMaxWidth().height(1.dp).background(p.rule))
             Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {

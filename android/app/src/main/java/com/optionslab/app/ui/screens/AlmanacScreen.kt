@@ -173,7 +173,10 @@ fun AlmanacScreen(model: AppModel, onGo: (String) -> Unit) {
             LedgerCard {
                 Row(verticalAlignment = Alignment.Top) {
                     Column(Modifier.weight(1f)) {
-                        Text("BANKNIFTY", style = Type.label.copy(color = p.inkSoft, fontSize = 13.sp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("BANKNIFTY", style = Type.label.copy(color = p.inkSoft, fontSize = 13.sp))
+                            Text("  Full chart ›", style = Type.label.copy(color = p.ink, fontSize = 12.sp), modifier = Modifier.clickable { onGo("chart") })
+                        }
                         Text(last?.let { PX.format(it) } ?: "—", style = Type.figureLarge.copy(color = p.ink))
                     }
                     if (change != null && base != null && base != 0.0) Text(

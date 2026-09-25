@@ -66,9 +66,9 @@ fun TicketScreen(model: AppModel) {
 
     Page {
         item {
-            LedgerCard(title = "Today's Ticket") {
+            LedgerCard(title = "Expiry Put · today's trade") {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Note("The order this strategy implies right now. There is no credential, no order endpoint and no code path here that could place a trade.", Modifier.weight(1f))
+                    Note("The strategy sells an out-of-the-money put on expiry day at 11:01 and holds it to the 15:30 settlement. This is the trade it would make right now; nothing is sent from here.", Modifier.weight(1f))
                     Spacer(Modifier.width(8.dp))
                     Stamp("Nothing is sent", p.oxblood, angle = 6f, animate = false)
                 }

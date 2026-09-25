@@ -3,6 +3,8 @@ package com.optionslab.app.ui.screens
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -59,21 +61,31 @@ private fun f1(x: Double) = String.format(Locale.ENGLISH, "%,.1f", x)
  * LIVE mode, Upstox's public candles in SANDBOX.
  */
 @Composable
-fun ToolsScreen(model: AppModel) {
+fun ToolsScreen(model: AppModel, view: String, onView: (String) -> Unit, onChart: (String, String) -> Unit) {
     val p = LocalPalette.current
     val s by model.settings.collectAsState()
     val snap by model.tools.collectAsState()
     val source by model.toolsSource.collectAsState()
     var underlying by rememberSaveable { mutableStateOf("NIFTY") }
-    var view by rememberSaveable { mutableStateOf("chain") }
     var picked by remember { mutableStateOf<ChainPick?>(null) }
+    val views = listOf("chain" to "Chain", "oi" to "OI · Max pain", "iv" to "IV smile", "gex" to "GEX", "move" to "Expected move",
+        "builder" to "Strategy builder", "expiryput" to "Expiry Put")
+    // The Expiry Put strategy (formerly the Ticket tab) has its own scrolling page.
+    if (view == "expiryput") {
+        Column(Modifier.fillMaxSize()) {
+            Column(Modifier.padding(start = 14.dp, end = 14.dp, top = 6.dp)) {
+                ParamTokens("Tool", views.map { it.second to (it.first == view) }) { onView(views[it].first) }
+            }
+            Box(Modifier.weight(1f)) { TicketScreen(model) }
+        }
+        return
+    }
     LaunchedEffect(underlying, s.live) { model.loadTools(underlying) }
     Page {
-        item { PageTitle("Options", "Option chain analytics and the strategy builder") }
+        item { PageTitle("Options", "Option chain, analytics, the strategy builder and the Expiry Put strategy") }
         item {
+            ParamTokens("Tool", views.map { it.second to (it.first == view) }) { onView(views[it].first) }
             ParamTokens("Underlying", listOf("NIFTY", "BANKNIFTY").map { it to (it == underlying) }) { underlying = listOf("NIFTY", "BANKNIFTY")[it] }
-            val views = listOf("chain" to "Chain", "oi" to "OI · Max pain", "iv" to "IV smile", "gex" to "GEX", "move" to "Expected move", "builder" to "Strategy")
-            ParamTokens("Tool", views.map { it.second to (it.first == view) }) { view = views[it].first }
         }
         when (val l = snap) {
             Load.Idle -> item { LedgerCard { FullSpinner("Pricing the chain") } }
@@ -98,7 +110,7 @@ fun ToolsScreen(model: AppModel) {
             }
         }
     }
-    picked?.let { OptionChartPage(model, it) { picked = null } }
+    picked?.let { pk -> OptionChartPage(model, pk, onFullChart = { sym -> picked = null; onChart(sym, "NFO") }) { picked = null } }
 }
 
 @Composable

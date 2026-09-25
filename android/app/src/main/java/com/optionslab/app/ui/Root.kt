@@ -77,7 +77,6 @@ import com.optionslab.app.ui.screens.CabinetScreen
 import com.optionslab.app.ui.screens.HealthScreen
 import com.optionslab.app.ui.screens.LockScreen
 import com.optionslab.app.ui.screens.RefusedScreen
-import com.optionslab.app.ui.screens.TicketScreen
 import com.optionslab.app.ui.screens.TradeScreen
 import com.optionslab.app.ui.screens.TradeHub
 import com.optionslab.app.ui.screens.ToolsScreen
@@ -90,9 +89,16 @@ import kotlinx.coroutines.delay
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
+/** A candlestick glyph for the Chart tab (the core icon set has none). */
+private val ChartIcon: ImageVector = ImageVector.Builder("chart", 24.dp, 24.dp, 24f, 24f).apply {
+    addPath(androidx.compose.ui.graphics.vector.PathParser().parsePathString(
+        "M5,4h2v3h1v9H7v4H5v-4H4V7h1V4z M11,8h2v2h1v6h-1v4h-2v-4h-1v-6h1V8z M17,3h2v4h1v6h-1v5h-2v-5h-1V7h1V3z").toNodes(),
+        fill = androidx.compose.ui.graphics.SolidColor(Color.Black))
+}.build()
+
 enum class Tab(val label: String, val icon: ImageVector) {
     ALMANAC("Home", Icons.Filled.Home),
-    TICKET("Ticket", Icons.Filled.Edit),
+    CHART("Chart", ChartIcon),
     TRADE("Trade", Icons.Filled.List),
     TOOLS("Options", Icons.Filled.Search),
     LAB("Research", Icons.Filled.DateRange),
@@ -302,12 +308,14 @@ private fun Main(model: AppModel) {
     var cabinetPage by rememberSaveable { mutableStateOf<String?>(null) }
     var labPage by rememberSaveable { mutableStateOf("trials") }
     var tradePage by rememberSaveable { mutableStateOf("account") }
+    var toolsView by rememberSaveable { mutableStateOf("chain") }
+    var chartAsk by remember { mutableStateOf("BANKNIFTY" to "NSE") }
     val message by model.message.collectAsState()
     val kiteLogin by model.showKiteLogin.collectAsState()
     // Trading (the Ticket and Trade tabs, live or paper) appears only once a Zerodha account is linked.
     val broker by model.broker.collectAsState()
     val linked = broker.linked
-    val tabs = if (linked) Tab.entries else Tab.entries.filter { it != Tab.TICKET && it != Tab.TRADE }
+    val tabs = if (linked) Tab.entries else Tab.entries.filter { it != Tab.TRADE }
     LaunchedEffect(linked) {
         if (!linked && tab !in tabs) tab = Tab.ALMANAC
         if (!linked && settings.live) model.update { it.copy(mode = "sandbox") }
@@ -316,7 +324,8 @@ private fun Main(model: AppModel) {
     LaunchedEffect(requested) {
         when (requested) {
             "almanac" -> tab = Tab.ALMANAC
-            "ticket" -> if (linked) tab = Tab.TICKET else { tab = Tab.CABINET; cabinetPage = "broker" }
+            "ticket" -> { tab = Tab.TOOLS; toolsView = "expiryput" }
+            "chart" -> tab = Tab.CHART
             "trade" -> if (linked) { tab = Tab.TRADE; tradePage = "account" } else { tab = Tab.CABINET; cabinetPage = "broker" }
             "strategy" -> if (linked) { tab = Tab.TRADE; tradePage = "strategies" } else { tab = Tab.CABINET; cabinetPage = "broker" }
             "health" -> { tab = Tab.LAB; labPage = "health" }
@@ -363,14 +372,15 @@ private fun Main(model: AppModel) {
                             when (dest) {
                                 "trials" -> { tab = Tab.LAB; labPage = "trials" }
                                 "trade" -> { tab = Tab.TRADE; tradePage = "account" }
-                                "ticket" -> if (linked) tab = Tab.TICKET else { tab = Tab.CABINET; cabinetPage = "broker" }
+                                "ticket" -> { tab = Tab.TOOLS; toolsView = "expiryput" }
+                                "chart" -> { chartAsk = "BANKNIFTY" to "NSE"; tab = Tab.CHART }
                                 "health" -> { tab = Tab.LAB; labPage = "health" }
                                 else -> { tab = Tab.CABINET; cabinetPage = dest }
                             }
                         })
-                        Tab.TICKET -> TicketScreen(model)
+                        Tab.CHART -> com.optionslab.app.ui.screens.ChartScreen(model, chartAsk.first, chartAsk.second)
                         Tab.TRADE -> TradeHub(model, tradePage) { tradePage = it }
-                        Tab.TOOLS -> ToolsScreen(model)
+                        Tab.TOOLS -> ToolsScreen(model, toolsView, { toolsView = it }) { s, e -> chartAsk = s to e; tab = Tab.CHART }
                         Tab.LAB -> LabScreen(model, labPage) { labPage = it }
                         Tab.CABINET -> CabinetScreen(model, cabinetPage) { cabinetPage = it }
                     }
