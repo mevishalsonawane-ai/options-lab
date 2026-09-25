@@ -105,6 +105,11 @@ fun Root(activity: MainActivity) {
 
     IraAlgoTheme(settings.theme) {
         val compromised = findings.isNotEmpty() && Integrity.compromised(findings)
+        var vaultBad by remember { mutableStateOf(SecurePrefs.unreadable) }
+        if (vaultBad) {
+            VaultUnreadable(onRetry = { vaultBad = !SecurePrefs.reload() }, onErase = { eraseEverything(); vaultBad = false })
+            return@IraAlgoTheme
+        }
         if (compromised && settings.refuseCompromised) {
             RefusedScreen(findings.filter { it.severity == Integrity.Severity.DANGER }.map { "${it.name}: ${it.detail}" }) { activity.finishAndRemoveTask() }
             return@IraAlgoTheme
@@ -114,18 +119,19 @@ fun Root(activity: MainActivity) {
             transitionSpec = { (fadeIn(tween(500)) + scaleIn(tween(500), initialScale = 1.04f)) togetherWith (fadeOut(tween(400)) + scaleOut(tween(400), targetScale = 0.96f)) },
             label = "seal",
         ) { sealed ->
-            if (sealed) Gate(activity, settings, compromised) else Main(model)
+            // Biometrics are offered only once the device check has run (a report is never empty).
+            if (sealed) Gate(activity, settings, compromised, checked = findings.isNotEmpty()) else Main(model)
         }
     }
 }
 
 @Composable
-private fun Gate(activity: MainActivity, settings: AppSettings, compromised: Boolean) {
+private fun Gate(activity: MainActivity, settings: AppSettings, compromised: Boolean, checked: Boolean) {
     val setup = !PinLock.isSet
     var notice by remember { mutableStateOf<String?>(if (compromised) "This device shows signs of compromise; biometrics are withdrawn and the PIN is required." else null) }
     val kind = remember { BiometricGate.available(activity) }
     // A compromised device can fake a biometric callback; it cannot fake PBKDF2.
-    val bioAllowed = settings.biometric && !compromised &&
+    val bioAllowed = settings.biometric && checked && !compromised &&
         (kind == BiometricGate.Kind.STRONG || (kind == BiometricGate.Kind.WEAK && settings.allowWeakFace))
     val label = if (!bioAllowed) null else if (kind == BiometricGate.Kind.STRONG) "Use fingerprint or face" else "Use face unlock"
 
@@ -169,11 +175,38 @@ private fun Gate(activity: MainActivity, settings: AppSettings, compromised: Boo
 }
 
 /** Destroy the vault key and every personal file. Market data is public and stays. */
+/** The settings vault exists but cannot be decrypted: fail closed, never "choose a new PIN". */
+@Composable
+private fun VaultUnreadable(onRetry: () -> Unit, onErase: () -> Unit) {
+    val p = com.optionslab.app.ui.theme.LocalPalette.current
+    var confirm by remember { mutableStateOf(false) }
+    Column(Modifier.fillMaxSize().background(p.paper).padding(28.dp), verticalArrangement = Arrangement.Center) {
+        Text("THE VAULT IS SEALED SHUT", style = com.optionslab.app.ui.theme.Type.title.copy(color = p.oxblood))
+        Spacer(Modifier.height(12.dp))
+        Text("IraAlgo's encrypted settings could not be read on this start. That is usually a passing Android Keystore fault; " +
+            "it can also mean the file was altered. Nothing has been changed and no new PIN can be set over it.",
+            style = com.optionslab.app.ui.theme.Type.body.copy(color = p.ink))
+        Spacer(Modifier.height(20.dp))
+        com.optionslab.app.ui.components.BrassButton("Try again", Modifier.fillMaxWidth(), onClick = onRetry)
+        Spacer(Modifier.height(10.dp))
+        com.optionslab.app.ui.components.BrassButton(if (confirm) "Tap again: erase ALL IraAlgo data" else "Erase everything and start again",
+            Modifier.fillMaxWidth(), tone = p.oxblood) { if (confirm) onErase() else confirm = true }
+    }
+}
+
 fun eraseEverything() {
     com.optionslab.app.data.Ledger.wipe()
     com.optionslab.app.data.Alarms.wipe()
     com.optionslab.app.data.Paper.wipe()
     com.optionslab.app.data.Strategies.wipe()
+    com.optionslab.app.data.History.wipe()
+    com.optionslab.app.data.Market.wipe()
+    runCatching { com.optionslab.app.data.Broker.forget() }
+    runCatching { com.optionslab.app.data.Store.wipeDeviceData() }
+    runCatching {
+        android.webkit.CookieManager.getInstance().removeAllCookies(null)
+        android.webkit.WebStorage.getInstance().deleteAllData()
+    }
     SecurePrefs.wipe()
     BiometricGate.forget()
     Vault.destroy()

@@ -78,6 +78,25 @@ object Vault {
 
     fun readFile(file: File): ByteArray? = if (file.exists()) decrypt(file.readBytes()) else null
 
+    /**
+     * [readFile], retried a few times: a Keystore hiccup must not be mistaken
+     * for a destroyed or tampered vault. Still throws if it stays unreadable.
+     */
+    fun readFileSteady(file: File, attempts: Int = 3): ByteArray? {
+        var last: Exception? = null
+        repeat(attempts) { i ->
+            try { return readFile(file) } catch (e: Exception) { last = e; if (i < attempts - 1) Thread.sleep(150L * (i + 1)) }
+        }
+        throw last!!
+    }
+
+    /** Move an unreadable vault file aside (never overwrite it) and say where it went. */
+    fun setAside(file: File): File {
+        val aside = File(file.parentFile, "${file.name}.unreadable.${System.currentTimeMillis()}")
+        file.renameTo(aside)
+        return aside
+    }
+
     /** Destroys the key: every vault file becomes unreadable at once. */
     fun destroy() {
         runCatching { keyStore().deleteEntry(DATA_KEY) }

@@ -276,7 +276,7 @@ object Tasks {
         runCatching { com.optionslab.app.data.Paper.tick() }.getOrNull()?.let { paperEvents(context, it) }
         // Strategy Module: schedules, prices, per-leg and basket risk, exits.
         runCatching {
-            val bad = com.optionslab.app.security.Integrity.compromised(com.optionslab.app.security.Integrity.report(context))
+            val bad = com.optionslab.app.security.Integrity.compromised(com.optionslab.app.security.Integrity.reportWithin(context, 60_000))
             com.optionslab.app.data.Strategies.tickAll(bad)
         }
         return Tick(title, lines, progress)

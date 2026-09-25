@@ -60,7 +60,7 @@ object Paper {
     private fun book(): Book {
         cache?.let { return it }
         val loaded = runCatching {
-            val o = JSONObject(String(Vault.readFile(file) ?: return@runCatching null, Charsets.UTF_8))
+            val o = JSONObject(String(Vault.readFileSteady(file) ?: return@runCatching null, Charsets.UTF_8))
             val cs = o.optJSONArray("contracts") ?: JSONArray()
             val contracts = (0 until cs.length()).map { cs.getJSONArray(it) }.associate {
                 it.getString(0) to Contract(it.getString(0), it.getString(1), LocalDate.parse(it.getString(2)), it.getDouble(3),

@@ -19,7 +19,12 @@ import java.time.LocalDate
 object History {
     private lateinit var keysFile: File
 
-    fun init(context: Context) { keysFile = File(context.applicationContext.filesDir, "equity_keys.json") }
+    fun init(context: Context) {
+        File(context.applicationContext.filesDir, "equity_keys.json").delete()   // the old plaintext cache
+        keysFile = File(context.applicationContext.filesDir, "equity_keys.vault")
+    }
+
+    fun wipe() { keysFile.delete() }
 
     /** Indices the backtesters accept as benchmarks, by IraAlgo name. */
     val BENCHMARKS = listOf("NIFTY", "BANKNIFTY")
@@ -29,8 +34,9 @@ object History {
     private fun toDaily(b: Upstox.Bar) = DailyBar(Instant.ofEpochSecond(b.epochSecond).atZone(IST).toLocalDate(),
         b.open, b.high, b.low, b.close, b.volume.toDouble())
 
+    // Encrypted: the symbols looked up include the ones you hold.
     private fun cachedKeys(): MutableMap<String, String> = runCatching {
-        val o = JSONObject(keysFile.readText())
+        val o = JSONObject(String(com.optionslab.app.security.Vault.readFile(keysFile)!!, Charsets.UTF_8))
         o.keys().asSequence().associateWith { o.getString(it) }.toMutableMap()
     }.getOrDefault(HashMap())
 
@@ -41,7 +47,7 @@ object History {
         if (missing.isNotEmpty()) {
             val found = Net.fetchEquityKeys(missing.map { (ex, sym) -> "${ex}_EQ" to sym }.toSet())
             found.forEach { (k, v) -> cache["${k.first.removeSuffix("_EQ")}:${k.second}"] = v }
-            runCatching { keysFile.writeText(JSONObject(cache as Map<*, *>).toString()) }
+            runCatching { com.optionslab.app.security.Vault.writeFile(keysFile, JSONObject(cache as Map<*, *>).toString().toByteArray(Charsets.UTF_8)) }
         }
         return cache
     }

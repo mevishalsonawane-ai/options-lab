@@ -730,8 +730,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
      * The device check, run fresh right before anything is sent: a debugger or
      * hooking framework attached after launch must still stop an order.
      */
-    private fun compromisedFresh(): Boolean {
-        val r = Integrity.report(ctx)
+    private fun compromisedFresh(maxAgeMs: Long = 0): Boolean {
+        val r = Integrity.reportWithin(ctx, maxAgeMs)
         integrity.value = r
         return Integrity.compromised(r)
     }
@@ -739,7 +739,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     fun refreshStrategies(tick: Boolean = false) {
         viewModelScope.launch(Dispatchers.IO) {
             val st = com.optionslab.app.data.Strategies
-            if (tick) runCatching { st.tickAll(compromisedFresh()) }
+            if (tick) runCatching { st.tickAll(compromisedFresh(60_000)) }
             strategies.value = st.all()
             strategyLog.value = st.log()
         }

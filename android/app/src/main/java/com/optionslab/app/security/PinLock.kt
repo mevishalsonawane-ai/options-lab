@@ -22,6 +22,8 @@ object PinLock {
     private const val K_ITER = "pin.iter"
     private const val K_FAILS = "pin.fails"
     private const val K_UNTIL = "pin.lockedUntilWall"
+    private const val K_LOCK_SECS = "pin.lockSeconds"
+    private const val K_LOCK_AT = "pin.lockAtElapsed"
 
     sealed interface Result {
         data object Ok : Result
@@ -30,7 +32,8 @@ object PinLock {
         data object Wiped : Result
     }
 
-    val isSet: Boolean get() = SecurePrefs.getString(K_HASH) != null
+    /** An unreadable settings vault counts as set: the fallback must never be "choose a new PIN". */
+    val isSet: Boolean get() = SecurePrefs.getString(K_HASH) != null || SecurePrefs.unreadable
 
     private fun derive(pin: CharArray, salt: ByteArray, iterations: Int): ByteArray {
         val spec = PBEKeySpec(pin, salt, iterations, 256)
@@ -49,13 +52,22 @@ object PinLock {
         require(pin.distinct().size > 1) { "a PIN of one repeated digit is too easy to guess" }
         val salt = ByteArray(16).also { SecureRandom().nextBytes(it) }
         val hash = derive(pin, salt, ITERATIONS)
-        SecurePrefs.putAll(mapOf(K_SALT to hex(salt), K_HASH to hex(hash), K_ITER to ITERATIONS, K_FAILS to 0, K_UNTIL to 0L))
+        SecurePrefs.putAll(mapOf(K_SALT to hex(salt), K_HASH to hex(hash), K_ITER to ITERATIONS, K_FAILS to 0, K_UNTIL to null, K_LOCK_SECS to 0L))
         pin.fill('\u0000')
     }
 
+    /**
+     * Measured on the monotonic clock, so moving the phone's date forward does
+     * not end a lockout. A reboot resets that clock; the lockout then starts
+     * again in full rather than being forgotten.
+     */
     fun lockoutSecondsLeft(): Long {
-        val until = SecurePrefs.getLong(K_UNTIL, 0L)
-        val left = (until - System.currentTimeMillis()) / 1000
+        val secs = SecurePrefs.getLong(K_LOCK_SECS, 0L)
+        if (secs <= 0) return 0
+        val now = android.os.SystemClock.elapsedRealtime()
+        val at = SecurePrefs.getLong(K_LOCK_AT, 0L)
+        if (now < at) { SecurePrefs.put(K_LOCK_AT, now); return secs }   // rebooted since
+        val left = secs - (now - at) / 1000
         return if (left > 0) left else 0
     }
 
@@ -68,7 +80,7 @@ object PinLock {
         val got = derive(pin, salt, SecurePrefs.getInt(K_ITER, ITERATIONS))
         pin.fill('\u0000')
         if (MessageDigest.isEqual(got, want)) {
-            SecurePrefs.putAll(mapOf(K_FAILS to 0, K_UNTIL to 0L))
+            SecurePrefs.putAll(mapOf(K_FAILS to 0, K_UNTIL to null, K_LOCK_SECS to 0L))
             return Result.Ok
         }
         val fails = SecurePrefs.getInt(K_FAILS, 0) + 1
@@ -76,8 +88,9 @@ object PinLock {
         val updates = mutableMapOf<String, Any?>(K_FAILS to fails)
         if (fails >= FREE_ATTEMPTS) {
             // 30 s, 60 s, 120 s ... capped at an hour.
-            val seconds = minOf(30L shl (fails - FREE_ATTEMPTS), 3600L)
-            updates[K_UNTIL] = System.currentTimeMillis() + seconds * 1000
+            val seconds = minOf(30L shl minOf(fails - FREE_ATTEMPTS, 7), 3600L)
+            updates[K_LOCK_SECS] = seconds
+            updates[K_LOCK_AT] = android.os.SystemClock.elapsedRealtime()
             SecurePrefs.putAll(updates)
             return Result.LockedOut(seconds)
         }

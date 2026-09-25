@@ -125,4 +125,15 @@ object Integrity {
     }
 
     fun compromised(findings: List<Finding>): Boolean = findings.any { it.severity == Severity.DANGER }
+
+    private var cached: List<Finding>? = null
+    private var cachedAt = 0L
+
+    /** [report], reused for up to [maxAgeMs] (the asset hash is not free); 0 = always fresh. */
+    @Synchronized
+    fun reportWithin(context: Context, maxAgeMs: Long): List<Finding> {
+        val now = android.os.SystemClock.elapsedRealtime()
+        cached?.let { if (now - cachedAt <= maxAgeMs) return it }
+        return report(context).also { cached = it; cachedAt = now }
+    }
 }

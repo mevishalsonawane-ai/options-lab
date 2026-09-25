@@ -87,7 +87,7 @@ object Strategies {
     private fun book(): Book {
         cache?.let { return it }
         val b = runCatching {
-            val o = JSONObject(String(Vault.readFile(file) ?: return@runCatching null, Charsets.UTF_8))
+            val o = JSONObject(String(Vault.readFileSteady(file) ?: return@runCatching null, Charsets.UTF_8))
             val defs = o.getJSONArray("defs").let { a -> (0 until a.length()).map { StrategyCodec.decode(a.getString(it)) } }.toMutableList()
             val runs = HashMap<Long, RunState>()
             o.getJSONObject("runs").let { r -> r.keys().forEach { k -> runs[k.toLong()] = RunStateCodec.decode(r.getString(k)) } }
@@ -101,7 +101,11 @@ object Strategies {
             }.toMutableList()
             Book(defs, runs, history, ids, log, o.getLong("nextRunId"), o.getLong("nextStrategyId"), o.optLong("lastCheck", 0).takeIf { it > 0 })
         }.getOrNull()
-        if (b == null && file.exists()) file.renameTo(File(file.parentFile, "strategies.unreadable.${System.currentTimeMillis()}"))
+        if (b == null && file.exists()) {
+            Vault.setAside(file)
+            Notifier.post(app, 2014, Notifier.RISK, "Strategies could not be read",
+                "The saved strategies and runs were set aside. If a live run was open, check your Zerodha positions now.", "strategy")
+        }
         return (b ?: Book(ArrayList(), HashMap(), ArrayList(), HashMap(), ArrayList(), 1, 1, null)).also { cache = it }
     }
 

@@ -120,6 +120,8 @@ fun KiteLoginPage(model: AppModel) {
                     settings.setSupportMultipleWindows(false)
                     settings.javaScriptCanOpenWindowsAutomatically = false
                     isSaveEnabled = false
+                    // No autofill service gets to save the Zerodha password.
+                    importantForAutofill = android.view.View.IMPORTANT_FOR_AUTOFILL_NO_EXCLUDE_DESCENDANTS
                     webViewClient = object : WebViewClient() {
                         private fun guard(view: WebView, url: String): Boolean {
                             if (model.onKiteNavigation(url)) { view.stopLoading(); return true }
@@ -140,7 +142,8 @@ fun KiteLoginPage(model: AppModel) {
 
                         override fun onPageFinished(view: WebView, url: String) { loading = false }
                     }
-                    loadUrl(Broker.loginUrl())
+                    // Start from nothing: a session left behind by a killed process must not be reused.
+                    CookieManager.getInstance().removeAllCookies { CookieManager.getInstance().flush(); loadUrl(Broker.loginUrl()) }
                 }
             },
             onRelease = { w ->
@@ -148,8 +151,7 @@ fun KiteLoginPage(model: AppModel) {
                 w.clearHistory()
                 w.clearCache(true)
                 w.clearFormData()
-                CookieManager.getInstance().removeAllCookies(null)
-                CookieManager.getInstance().flush()
+                CookieManager.getInstance().removeAllCookies { CookieManager.getInstance().flush() }
                 android.webkit.WebStorage.getInstance().deleteAllData()
                 w.destroy()
             },

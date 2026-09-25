@@ -63,6 +63,8 @@ object Market {
 
     private fun contractsFile() = File(app.filesDir, "contracts.json")
 
+    fun wipe() { contractsFile().delete() }
+
     fun cachedContracts(): Pair<LocalDate, List<Upstox.Contract>>? = runCatching {
         val o = JSONObject(contractsFile().readText())
         val day = LocalDate.parse(o.getString("day"))

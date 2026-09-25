@@ -28,9 +28,14 @@ object Ledger {
 
     @Synchronized
     fun all(): List<Entry> {
-        val bytes = runCatching { Vault.readFile(file) }.getOrNull() ?: return emptyList()
-        val arr = JSONArray(String(bytes, Charsets.UTF_8))
-        return (0 until arr.length()).map { fromJson(arr.getJSONObject(it)) }.sortedByDescending { it.row.ticket.session }
+        // An unreadable ledger is moved aside, never overwritten by the next record().
+        return try {
+            val bytes = Vault.readFileSteady(file) ?: return emptyList()
+            val arr = JSONArray(String(bytes, Charsets.UTF_8))
+            (0 until arr.length()).map { fromJson(arr.getJSONObject(it)) }.sortedByDescending { it.row.ticket.session }
+        } catch (_: Exception) {
+            Vault.setAside(file); emptyList()
+        }
     }
 
     @Synchronized
@@ -171,12 +176,16 @@ object Alarms {
 
     @Synchronized
     fun all(): List<PriceAlarm> {
-        val bytes = runCatching { Vault.readFile(file) }.getOrNull() ?: return emptyList()
-        val arr = JSONArray(String(bytes, Charsets.UTF_8))
-        return (0 until arr.length()).map {
-            val o = arr.getJSONObject(it)
-            PriceAlarm(o.getLong("id"), o.getString("symbol"), o.getBoolean("above"), o.getDouble("level"),
-                o.optBoolean("enabled", true), o.optLong("fired", 0L), o.optString("note", ""))
+        return try {
+            val bytes = Vault.readFileSteady(file) ?: return emptyList()
+            val arr = JSONArray(String(bytes, Charsets.UTF_8))
+            (0 until arr.length()).map {
+                val o = arr.getJSONObject(it)
+                PriceAlarm(o.getLong("id"), o.getString("symbol"), o.getBoolean("above"), o.getDouble("level"),
+                    o.optBoolean("enabled", true), o.optLong("fired", 0L), o.optString("note", ""))
+            }
+        } catch (_: Exception) {
+            Vault.setAside(file); emptyList()
         }
     }
 
