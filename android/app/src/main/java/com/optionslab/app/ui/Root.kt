@@ -42,6 +42,7 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material.icons.filled.Face
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -238,7 +239,7 @@ private fun BiometricOffer(activity: MainActivity, error: String?, onUse: () -> 
     Column(Modifier.fillMaxSize().background(p.paper).statusBarsPadding().navigationBarsPadding().padding(24.dp),
         verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
         Box(Modifier.size(72.dp).background(p.chip, androidx.compose.foundation.shape.CircleShape), contentAlignment = Alignment.Center) {
-            Icon(androidx.compose.material.icons.Icons.Filled.Face, contentDescription = null, tint = p.ink, modifier = Modifier.size(36.dp))
+            Icon(Icons.Filled.Face, contentDescription = null, tint = p.ink, modifier = Modifier.size(36.dp))
         }
         Spacer(Modifier.height(20.dp))
         Text("Unlock with fingerprint or face?", style = Type.masthead.copy(color = p.ink, fontSize = 22.sp), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
