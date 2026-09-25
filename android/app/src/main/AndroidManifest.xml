@@ -15,6 +15,8 @@
     <!-- Only an exact alarm may start the market-hours watch from the background. -->
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <!-- Asks once to be left out of battery optimisation, so the market watch is not stopped. -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
     <!--
         WHAT THIS APP MAY NEVER HOLD. Declared "remove" so that no library can

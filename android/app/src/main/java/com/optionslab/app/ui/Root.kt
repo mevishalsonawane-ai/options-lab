@@ -127,6 +127,9 @@ fun Root(activity: MainActivity) {
             return@IraAlgoTheme
         }
         val brokerNow by model.broker.collectAsState()
+        // Battery: checked on every start; the app stays closed until it is unrestricted.
+        val appCtx = androidx.compose.ui.platform.LocalContext.current
+        var batteryOk by remember(locked) { mutableStateOf(com.optionslab.app.ui.screens.BatteryCheck.unrestricted(appCtx)) }
         AnimatedContent(
             targetState = locked || !PinLock.isSet,
             transitionSpec = { fadeIn(tween(220, delayMillis = 60)) togetherWith fadeOut(tween(160)) },
@@ -134,6 +137,7 @@ fun Root(activity: MainActivity) {
         ) { sealed ->
             // Biometrics are offered only once the device check has run (a report is never empty).
             if (sealed) Gate(activity, model, settings, compromised, checked = findings.isNotEmpty())
+            else if (!batteryOk) com.optionslab.app.ui.screens.BatteryScreen { batteryOk = true }
             else if (!brokerNow.linked) ConnectGate(model)
             else Main(model)
         }
