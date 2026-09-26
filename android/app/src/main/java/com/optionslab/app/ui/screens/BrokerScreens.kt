@@ -394,8 +394,13 @@ private fun StuckCard(st: com.optionslab.app.ui.AppModel.StuckLeg, onAction: (St
     }
 }
 
+/**
+ * The order card inside [OrderReviewDialog]. `internal` (not private) only so the JVM tests in
+ * src/test can render it with a hand-made [OrderPlan] - no AppModel, no network. Visibility only:
+ * nothing about what it shows or when sending is allowed changed.
+ */
 @Composable
-private fun PlanCard(
+internal fun PlanCard(
     plan: OrderPlan, allowed: Boolean, sending: Load<List<Broker.Fill>>,
     onPrice: (Int, Double) -> Unit, onSend: () -> Unit, onClose: () -> Unit,
 ) {

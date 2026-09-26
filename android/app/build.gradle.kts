@@ -1,3 +1,4 @@
+import org.gradle.testing.jacoco.plugins.JacocoTaskExtension
 import com.android.build.api.artifact.SingleArtifact
 import java.security.MessageDigest
 
@@ -5,6 +6,7 @@ plugins {
     id("com.android.application")
     kotlin("android")
     id("org.jetbrains.kotlin.plugin.compose")
+    jacoco
 }
 
 android {
@@ -55,6 +57,8 @@ android {
         }
         debug {
             applicationIdSuffix = ".debug"
+            // JaCoCo for the JVM/Robolectric tests: :app:createDebugUnitTestCoverageReport.
+            enableUnitTestCoverage = true
         }
     }
 
@@ -81,9 +85,19 @@ android {
         checkReleaseBuilds = false
     }
     testOptions {
-        // JVM unit tests of the app's own logic (no device); Android calls answer defaults.
-        unitTests.isReturnDefaultValues = true
-        unitTests.all { it.useJUnitPlatform() }
+        // JVM unit tests (no device): plain JUnit 4 for pure logic, Robolectric for anything that
+        // needs Android (the vault, settings, backups) and for Compose screens. See src/test/README.md.
+        unitTests {
+            // Robolectric reads the merged debug manifest and resources (Compose screens need them).
+            isIncludeAndroidResources = true
+            // Pure JVM tests: an Android call that is not under Robolectric answers a default.
+            isReturnDefaultValues = true
+            all {
+                it.maxHeapSize = "3g"
+                it.systemProperty("robolectric.logging.enabled", "false")
+                it.testLogging { events("failed"); exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL }
+            }
+        }
     }
 }
 
@@ -114,7 +128,28 @@ dependencies {
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     // SSH for the built-in static-IP relay (pure Java, no native code, no permissions).
     implementation("com.github.mwiede:jsch:0.2.18")
-    testImplementation(kotlin("test"))
+    // ---- tests (src/test: JVM + Robolectric + Compose UI; nothing here reaches the APK) ----
+    testImplementation(kotlin("test-junit"))
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("org.robolectric:robolectric:4.14.1")
+    testImplementation("androidx.test:core-ktx:1.6.1")
+    testImplementation("androidx.test.ext:junit-ktx:1.2.1")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
+    testImplementation(composeBom)
+    testImplementation("androidx.compose.ui:ui-test-junit4")
+    // Registers the empty ComponentActivity createComposeRule() launches. Debug variant only:
+    // the release manifest (and its sandbox report) is unchanged.
+    debugImplementation("androidx.compose.ui:ui-test-manifest")
+}
+
+
+// Robolectric loads the app's classes through its own class loader, which gives them no code
+// location: JaCoCo must be told to count those too, or the coverage report reads ~0%.
+tasks.withType<Test>().configureEach {
+    extensions.configure<JacocoTaskExtension> {
+        isIncludeNoLocationClasses = true
+        excludes = listOf("jdk.internal.*")
+    }
 }
 
 
