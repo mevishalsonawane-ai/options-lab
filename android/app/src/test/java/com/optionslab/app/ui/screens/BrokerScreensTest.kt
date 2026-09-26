@@ -1027,14 +1027,14 @@ abstract class BrokerLayoutBase(device: DeviceConfig) : BrokerScreenBase(device)
         until(60_000) { compose.onAllNodesWithText("All 9 checks passed.").fetchSemanticsNodes().isNotEmpty() }
         until { runCatching { compose.onNodeWithText("Review the order").assertIsEnabled(); true }.getOrDefault(false) }
         snap("zerodha-cards", KNOWN)
-        smokeEveryAction(NO_SMOKE)
+        smokeOnce(NO_SMOKE)
     }
 
     protected fun connectStepOne() {
         val m = model()
         show { ConnectZerodhaScreen(m) }
         snap("connect-zerodha-guide", KNOWN)
-        smokeEveryAction(NO_SMOKE + "Save to the vault")
+        smokeOnce(NO_SMOKE + "Save to the vault")
     }
 
     protected fun connectForm() {

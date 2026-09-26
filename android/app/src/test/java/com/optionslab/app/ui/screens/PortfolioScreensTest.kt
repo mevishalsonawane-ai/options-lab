@@ -287,12 +287,12 @@ class PortfolioScreensLayoutTest(device: DeviceConfig) : BrokerScreenBase(device
             PortfolioLabContent(true, Load.Done(PortfolioFixtures.portfolio), Load.Done(PortfolioFixtures.analyzer), onAnalyze = {}, onRun = { _, _, _, _, _, _ -> })
         }
         snap("portfolio-report", KNOWN)
-        smokeEveryAction()
+        smokeOnce()
     }
 
     @Test fun sipReport() {
         show { SipLabContent(Load.Done(PortfolioFixtures.sip)) { _, _, _, _, _, _, _, _, _ -> } }
         snap("sip-report", KNOWN)
-        smokeEveryAction()
+        smokeOnce()
     }
 }

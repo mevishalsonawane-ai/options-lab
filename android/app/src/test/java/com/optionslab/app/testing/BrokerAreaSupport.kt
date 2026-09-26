@@ -122,6 +122,9 @@ abstract class BrokerScreenBase(device: DeviceConfig) : ScreenTest(device) {
 
     protected fun frames(n: Int = 12) = repeat(n) { compose.mainClock.advanceTimeByFrame() }
 
+    /** The click-everything smoke runs on one set-up only (it is about behaviour, not layout), to keep CI time in bounds. */
+    protected fun smokeOnce(skip: Set<String> = emptySet()) { if (device.name == "phone-font1.0-light") smokeEveryAction(skip) }
+
     /** Render [content] with the clock stopped (for screens that open a dialog with a text field), a few frames on. */
     protected fun showPaused(content: @androidx.compose.runtime.Composable () -> Unit) {
         compose.mainClock.autoAdvance = false
