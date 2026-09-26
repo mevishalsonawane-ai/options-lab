@@ -56,7 +56,13 @@ object Market {
 
     private suspend fun upstoxQuote(symbol: String): Quote? {
         val key = Upstox.INDEX_KEYS.getValue(symbol)
-        val bars = Net.intraday(key).filter { it.istDate == today() }
+        var bars = runCatching { Net.intraday(key) }.getOrDefault(emptyList()).filter { it.istDate == today() }
+        // Weekend, holiday, before the open: the last session the market traded, not nothing.
+        if (bars.isEmpty()) {
+            val past = runCatching { ChartFeed.bars(symbol, "1m", null, null) }.getOrDefault(emptyList())
+            val day = past.lastOrNull()?.istDate
+            bars = past.filter { it.istDate == day }
+        }
         if (bars.isEmpty()) return null
         return Quote(symbol, bars.last().close, bars.first().open, bars.maxOf { it.high }, bars.minOf { it.low },
             bars.last().istMinute, bars.map { it.close })

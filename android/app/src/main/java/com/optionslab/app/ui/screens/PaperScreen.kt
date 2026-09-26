@@ -1,6 +1,7 @@
 package com.optionslab.app.ui.screens
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -104,6 +105,16 @@ private fun PaperOrderForm(model: AppModel) {
     var trigger by remember { mutableStateOf("") }
     var open by remember { mutableStateOf(false) }
     LaunchedEffect(underlying) { expiries = model.paperExpiries(underlying); expiry = expiries.firstOrNull() }
+    // Only listed strikes can be chosen: the ones around the index, nearest first in the middle.
+    var listed by remember { mutableStateOf<List<Double>>(emptyList()) }
+    var spot by remember { mutableStateOf<Double?>(null) }
+    LaunchedEffect(underlying, expiry) {
+        val e = expiry ?: return@LaunchedEffect
+        val (ks, sp) = model.paperStrikes(underlying, e)
+        listed = ks; spot = sp
+        val atm = sp?.let { x -> ks.minByOrNull { kotlin.math.abs(it - x) } }
+        if (strike.toDoubleOrNull() !in ks) strike = atm?.let { com.optionslab.engine.fmtG(it) } ?: ""
+    }
     LedgerCard(title = "Paper order") {
         if (!open) {
             BrassButton("New paper order", Modifier.fillMaxWidth(), tone = p.verdigris) { open = true }
@@ -118,15 +129,26 @@ private fun PaperOrderForm(model: AppModel) {
             val types = listOf("MARKET", "LIMIT", "SL", "SL-M")
             ParamTokens("Type", types.map { it to (it == type) }) { type = types[it] }
             ParamTokens("Product", listOf("NRML" to (product == "NRML"), "MIS" to (product == "MIS"))) { product = if (it == 0) "NRML" else "MIS" }
-            OutlinedTextField(strike, { strike = it.filter(Char::isDigit) }, label = { Text("Strike") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
+            if (listed.isEmpty()) Note("Loading the listed strikes…") else {
+                val sp = spot
+                val centre = sp?.let { x -> listed.indices.minByOrNull { kotlin.math.abs(listed[it] - x) } } ?: (listed.size / 2)
+                val near = listed.subList((centre - 8).coerceAtLeast(0), (centre + 9).coerceAtMost(listed.size))
+                Text("STRIKE" + (sp?.let { " · $underlying at ${String.format(java.util.Locale.ENGLISH, "%,.0f", it)}" } ?: ""),
+                    style = Type.label.copy(color = p.inkSoft), modifier = Modifier.padding(top = 8.dp))
+                Row(Modifier.horizontalScroll(androidx.compose.foundation.rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    near.forEach { k ->
+                        val label = com.optionslab.engine.fmtG(k)
+                        com.optionslab.app.ui.components.Token(label + if (k == listed.getOrNull(centre)) " ATM" else "", strike == label) { strike = label }
+                    }
+                }
+            }
             if (type == "LIMIT" || type == "SL") OutlinedTextField(price, { price = it.filter { c -> c.isDigit() || c == '.' } }, label = { Text("Price") },
                 singleLine = true, modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
             if (type == "SL" || type == "SL-M") OutlinedTextField(trigger, { trigger = it.filter { c -> c.isDigit() || c == '.' } }, label = { Text("Trigger") },
                 singleLine = true, modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
             Spacer(Modifier.height(8.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                BrassButton("Place paper order", Modifier.weight(1f), tone = p.verdigris, enabled = expiry != null && strike.toDoubleOrNull() != null) {
+                BrassButton("Place paper order", Modifier.weight(1f), tone = p.verdigris, enabled = expiry != null && strike.toDoubleOrNull()?.let { it in listed } == true) {
                     model.paperPlace(underlying, expiry!!, strike.toDouble(), right, action, lots, type, product, price.toDoubleOrNull(), trigger.toDoubleOrNull())
                 }
                 BrassButton("Close", tone = p.inkFaint) { open = false }

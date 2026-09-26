@@ -1528,6 +1528,13 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** Listed expiries (Upstox master) for the paper order form. */
+    /** The listed strikes for one expiry, and the index level (the last session's when closed) to centre them on. */
+    suspend fun paperStrikes(underlying: String, expiry: LocalDate): Pair<List<Double>, Double?> = withContext(Dispatchers.IO) {
+        val strikes = runCatching { Market.contracts().filter { it.underlying == underlying && it.expiry == expiry }.map { it.strike }.distinct().sorted() }
+            .getOrDefault(emptyList())
+        strikes to runCatching { Market.quote(underlying)?.last }.getOrNull()
+    }
+
     suspend fun paperExpiries(underlying: String): List<LocalDate> = withContext(Dispatchers.IO) {
         runCatching { Market.contracts().filter { it.underlying == underlying && !it.expiry.isBefore(Market.today()) }.map { it.expiry }.distinct().sorted().take(6) }
             .getOrDefault(emptyList())

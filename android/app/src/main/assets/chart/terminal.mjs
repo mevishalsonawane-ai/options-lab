@@ -113,6 +113,7 @@ if (widget.interval() !== '5m') widget.setInterval('5m');
 if (widget.symbol() !== symbol || widget.exchange() !== exchange) widget.setSymbol(symbol, exchange);
 if (widget.theme() !== theme) widget.setTheme(theme);
 
+window.__iraBooted = true;   // boot.js stops waiting
 bridge.symbol(widget.symbol(), widget.exchange());
 widget.on('symbol', () => bridge.symbol(widget.symbol(), widget.exchange()));
 

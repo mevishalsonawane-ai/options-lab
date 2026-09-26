@@ -123,7 +123,7 @@ fun ChartScreen(model: AppModel, symbol: String, exchange: String, visible: Bool
         if (!visible || ready) return@LaunchedEffect
         kotlinx.coroutines.delay(12_000)
         if (ready) return@LaunchedEffect
-        if (!retried) { retried = true; gen++ }
+        if (!retried) { retried = true; ready = false; gen++ }
         else { failed = true; com.optionslab.app.work.Alerts.error("The chart could not load. Check the connection and tap Retry.") }
     }
 
@@ -174,8 +174,9 @@ fun ChartScreen(model: AppModel, symbol: String, exchange: String, visible: Bool
                     settings.textZoom = 100
                     setBackgroundColor(if (p.dark) android.graphics.Color.BLACK else android.graphics.Color.WHITE)
                     addJavascriptInterface(Bridge(this, scope, onSymbol = { s, e -> current = s to e; hint = null },
-                        onOrder = { buy, price -> openOrder(buy, price) }, onData = { ready = true; failed = false; why = null },
-                        onFail = { m -> if (!ready) { failed = true; why = m } }), "IraBridge")
+                        onOrder = { buy, price -> openOrder(buy, price) }, onData = { if (holder[0] === this) { ready = true; failed = false; why = null } },
+                        onFail = { m -> if (holder[0] === this && !ready) { failed = true; why = m } },
+                        onPageError = { m -> if (holder[0] === this) { ready = false; failed = true; why = m } }), "IraBridge")
                     // A script error in the chart page shows as a red alert (the bundled chart only; no account data).
                     webChromeClient = object : android.webkit.WebChromeClient() {
                         override fun onConsoleMessage(m: android.webkit.ConsoleMessage): Boolean {
@@ -228,7 +229,7 @@ fun ChartScreen(model: AppModel, symbol: String, exchange: String, visible: Bool
                 Text(if (failed) (why ?: "The chart could not load") else "Loading chart…", style = Type.bodySmall.copy(color = p.inkSoft))
                 if (failed) Text("Retry", style = Type.label.copy(color = p.ink, fontWeight = FontWeight.SemiBold),
                     modifier = Modifier.padding(top = 10.dp).background(p.chip, RoundedCornerShape(50))
-                        .clickable { failed = false; retried = false; gen++ }.padding(horizontal = 18.dp, vertical = 8.dp))
+                        .clickable { failed = false; retried = false; ready = false; gen++ }.padding(horizontal = 18.dp, vertical = 8.dp))
             }
         }
         }
@@ -296,7 +297,14 @@ private class Bridge(
     private val onOrder: (Boolean, Double?) -> Unit,
     private val onData: () -> Unit = {},
     private val onFail: (String) -> Unit = {},
+    private val onPageError: (String) -> Unit = {},
 ) {
+    /** boot.js: the chart page itself failed (a script error, or it never started). */
+    @JavascriptInterface
+    fun fail(message: String) {
+        web.post { onPageError(message.take(300)) }
+    }
+
     private fun reply(id: String, ok: Boolean, payload: String) {
         web.post { web.evaluateJavascript("window.__iraReply(${JSONObject.quote(id)}, $ok, ${JSONObject.quote(payload)})", null) }
     }
