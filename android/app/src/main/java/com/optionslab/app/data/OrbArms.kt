@@ -546,6 +546,15 @@ object OrbArms {
                 val px = st.avgPrice.takeIf { it > 0 } ?: p.stopTrigger ?: p.entry
                 return p.copy(exit = px, exitTime = now(), why = "stop", stopOrderId = null, charges = p.charges + kiteCharge("SELL", px, p.qty))
             }
+            // Only sell once the stop is known to be out: a stop still working plus a market sell could both fill.
+            if (st == null || st.status !in setOf("CANCELLED", "REJECTED")) return p
+        }
+        // An exit already working (an earlier pass's, or a lost reply) fills or is cancelled before another goes out.
+        val working = runCatching { Broker.orders().filter { it.working && it.symbol == sym && it.side == "SELL" && it.tag == "iraorb" } }.getOrNull()
+            ?: return p.copy(stopOrderId = null)
+        if (working.isNotEmpty()) {
+            working.forEach { runCatching { Broker.cancel(it.id, it.variety) } }
+            return p.copy(stopOrderId = null)
         }
         // Read what is held again after the stop came out: a stop that part-filled meanwhile must not turn the sell into a short.
         val still = runCatching { Broker.positionBook().net.filter { it.symbol == sym && it.exchange == "NFO" && it.product == "MIS" }.sumOf { it.qty } }
@@ -567,7 +576,10 @@ object OrbArms {
         }
         Strategies.tagOwner("kite:$id", "$label · $why")
         val f = runCatching { Broker.awaitOrder(id, 15_000) }.getOrNull()
-        if (f == null || f.filled <= 0) return p.copy(stopOrderId = null)          // checked again next pass against the position book
+        if (f == null || f.filled <= 0) {
+            runCatching { Broker.cancel(id) }                                       // not filled: out, and tried afresh next pass
+            return p.copy(stopOrderId = null)
+        }
         Notifier.orderFilled(app, "SELL", f.filled, sym, f.avgPrice, "Live", label)
         return p.copy(stopOrderId = null, exit = f.avgPrice, exitTime = now(), why = why, charges = p.charges + kiteCharge("SELL", f.avgPrice, f.filled))
     }

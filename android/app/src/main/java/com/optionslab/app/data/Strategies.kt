@@ -337,8 +337,10 @@ object Strategies {
     private fun kiteExec(b: Book, def: StrategyDef, v: Venue, compromised: Boolean, known: () -> Collection<String>) = object : StrategyHost.Executor {
         override fun place(order: Action.PlaceOrder): StrategyHost.Placed {
             val s = AppSettings.load()
-            if (!s.live || !s.allowRealOrders) return StrategyHost.Placed.Refused("the app is in Paper mode (switch to Live with the badge at the top)")
-            if (compromised) return StrategyHost.Placed.Refused("this device shows signs of compromise")
+            // Paper mode blocks new live entries only: a live run's stops, targets and square-off must still
+            // close what it holds at Zerodha (a stop that waits for the badge to say Live is not a stop).
+            if (order.kind == "entry" && (!s.live || !s.allowRealOrders)) return StrategyHost.Placed.Refused("the app is in Paper mode (switch to Live with the badge at the top)")
+            if (compromised && order.kind == "entry") return StrategyHost.Placed.Refused("this device shows signs of compromise")
             if (!Broker.loggedIn) return StrategyHost.Placed.Refused("not logged in to Zerodha today")
             val ref = v.refs[order.symbol] ?: return StrategyHost.Placed.Refused("${order.symbol} is not listed on Zerodha")
             val kiteSym = ref.kite ?: return StrategyHost.Placed.Refused("${order.symbol} has no Zerodha symbol")

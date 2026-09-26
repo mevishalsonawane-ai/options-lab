@@ -69,8 +69,11 @@ object Jobs {
 
     const val EXTRA_KIND = "kind"
 
-    /** Nothing runs in the background until a Zerodha account is linked. */
-    fun enabled(k: Kind, s: AppSettings) = com.optionslab.app.data.Broker.linked && when (k) {
+    /**
+     * The market watch runs on every market day (paper bots need no Zerodha account); the other
+     * jobs need a linked Zerodha account.
+     */
+    fun enabled(k: Kind, s: AppSettings) = (k == Kind.LIVE || com.optionslab.app.data.Broker.linked) && when (k) {
         Kind.LIVE -> true   // the market watch always runs on market days; it has no off switch
         Kind.REMIND -> s.entryReminder
         Kind.TICKET -> s.autoTicket || (s.prepareRealOrder && com.optionslab.app.data.Broker.configured)
@@ -120,7 +123,7 @@ object Jobs {
 
     /** Start work in the foreground service; from the UI this is always allowed. */
     fun start(context: Context, k: Kind, manual: Boolean = true) {
-        if (!com.optionslab.app.data.Broker.linked) return
+        if (k != Kind.LIVE && !com.optionslab.app.data.Broker.linked) return
         // The harvest runs quietly in WorkManager: no foreground notification, no "complete" notice.
         if (k == Kind.HARVEST) {
             val req = OneTimeWorkRequestBuilder<FallbackWorker>()
@@ -465,7 +468,8 @@ class WatchService : Service() {
         if (k == Jobs.Kind.LIVE) watching = true   // show() then declares the specialUse type
         show("IraAlgo", "Starting…")
         if (intent?.action == STOP) { stopEverything(); return START_NOT_STICKY }
-        if (!com.optionslab.app.data.Broker.linked) { stopEverything(); return START_NOT_STICKY }
+        // Paper trading needs no Zerodha account: only the Zerodha-only jobs stop when none is linked.
+        if (!com.optionslab.app.data.Broker.linked && k != null && k != Jobs.Kind.LIVE) { stopEverything(); return START_NOT_STICKY }
         if (k == null) { maybeStop(); return START_NOT_STICKY }
         if (running[k]?.isActive == true) return START_NOT_STICKY
         running[k] = scope.launch {
@@ -512,7 +516,8 @@ class WatchService : Service() {
                 delay(30_000)
                 continue
             }
-            val t = Tasks.watchTick(this, s, fired)
+            // Settings read fresh every pass: the kill switch, Paper / Live and limits changed mid-session take effect at once.
+            val t = Tasks.watchTick(this, AppSettings.load(), fired)
             Tasks.publish(Tasks.LiveState(true, t.title, t.progress / 100f, System.currentTimeMillis()))
             show(t.title, t.lines.joinToString("\n").ifEmpty { "Waiting for prints" }, t.progress)
             // While an ORB position is open its stop, target and 15:10 exit are checked every 15 s, not once a minute.

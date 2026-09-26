@@ -19,23 +19,26 @@ object LossBreaker {
     fun trippedToday(): Boolean = SecurePrefs.getString(K_DAY) == Market.today().toString()
 
     suspend fun check(context: Context) {
-        if (trippedToday()) return
-        val s = AppSettings.load()
-        val live = s.live && s.allowRealOrders
-        val limit = if (live) s.guardDailyLoss else s.guardPaperDailyLoss
-        if (!(limit > 0)) return
-        val dayPnl = if (live) {
-            if (!Broker.loggedIn) return
-            runCatching { Broker.positionBook().m2m }.getOrNull() ?: return
-        } else {
-            val f = runCatching { Paper.snapshot().funds }.getOrNull() ?: return
-            f.todayRealizedPnl + f.m2mUnrealized
+        val today = Market.today().toString()
+        if (trippedToday()) {
+            // Tripped: keep asking until every running strategy has actually stopped (a stop that
+            // could not be requested, e.g. contracts not loaded, is retried on the next pass).
+            if (Strategies.anyRunning()) runCatching { Strategies.stopForToday(stopRunning = true, compromised = false) }
+            return
         }
-        if (dayPnl > -limit) return
-        SecurePrefs.put(K_DAY, Market.today().toString())
+        val s = AppSettings.load()
+        // Both accounts are watched whatever the badge shows: a live position is real money in Paper mode too.
+        val paper = runCatching { Paper.snapshot().funds }.getOrNull()?.let { it.todayRealizedPnl + it.m2mUnrealized }
+        val live = if (Broker.loggedIn) runCatching { Broker.positionBook().m2m }.getOrNull() else null
+        val hit = when {
+            live != null && s.guardDailyLoss > 0 && live <= -s.guardDailyLoss -> Triple("Live", live, s.guardDailyLoss)
+            paper != null && s.guardPaperDailyLoss > 0 && paper <= -s.guardPaperDailyLoss -> Triple("Paper", paper, s.guardPaperDailyLoss)
+            else -> null
+        } ?: return
         val msg = runCatching { Strategies.stopForToday(stopRunning = true, compromised = false) }.getOrElse { it.message ?: "" }
-        val text = "Today's P&L Rs %,.0f reached the Rs %,.0f daily loss limit (%s). The bot sold what it held and stopped for today. %s"
-            .format(dayPnl, limit, if (live) "Live" else "Paper", msg)
+        SecurePrefs.put(K_DAY, today)
+        val text = "Today's %s P&L Rs %,.0f reached the Rs %,.0f daily loss limit. The bot sold what it held and stopped for today. %s"
+            .format(hit.first, hit.second, hit.third, msg)
         Notifier.post(context, 2040, Notifier.RISK, "Daily loss limit reached", text, "strategy")
         com.optionslab.app.work.Alerts.error(text, "Daily loss limit")
     }

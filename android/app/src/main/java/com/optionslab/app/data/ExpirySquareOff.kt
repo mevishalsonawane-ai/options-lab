@@ -21,7 +21,8 @@ object ExpirySquareOff {
     private const val K_DONE = "sq.expiry.done"
 
     suspend fun maybeRun(context: Context, s: AppSettings) {
-        if (!s.expirySquareOff || s.guardKill) return
+        // The kill switch stops new orders, not this: closing what expires today only lowers risk.
+        if (!s.expirySquareOff) return
         val today = Market.today()
         if (Market.minuteNow() < AT_MINUTE || Market.minuteNow() >= Market.CLOSE) return
         if (SecurePrefs.getString(K_DONE) == today.toString()) return
@@ -43,8 +44,9 @@ object ExpirySquareOff {
             }
         }.onFailure { failed = true }
 
-        // Live: only in Live mode with a session; shorts are bought back before longs are sold.
-        if (s.live && s.allowRealOrders && Broker.loggedIn) runCatching {
+        // Live: whenever there is a Zerodha session (the positions are real even while the app shows Paper);
+        // shorts are bought back before longs are sold.
+        if (Broker.loggedIn) runCatching {
             val ins = Broker.cachedInstruments().orEmpty().associateBy { it.tradingSymbol }
             val open = Broker.positionBook().net.filter { it.qty != 0 && it.exchange == "NFO" }
                 .filter { p -> ins[p.symbol]?.let { it.expiry == today && !isTicketLeg(it.name, it.strike, it.right.name) } == true }
@@ -55,8 +57,15 @@ object ExpirySquareOff {
             for (p in open) {
                 val i = ins.getValue(p.symbol)
                 val side = if (p.qty < 0) Kite.Side.BUY else Kite.Side.SELL
-                val pending = working.filter { it.symbol == p.symbol && it.side == side.name && it.product == p.product }
-                    .sumOf { (it.pending.takeIf { q -> q > 0 } ?: (it.qty - it.filled)).coerceAtLeast(0) }
+                val same = working.filter { it.symbol == p.symbol && it.side == side.name && it.product == p.product }
+                // Any other resting exit on it (a protection's stop or target, a strategy's stop) would keep the
+                // market exit from ever going out: cancel them first; the exit goes on the next pass.
+                val others = same.filter { it.tag != "iraalgoexpiry" }
+                if (others.isNotEmpty()) {
+                    others.forEach { runCatching { Broker.cancel(it.id, it.variety) } }
+                    failed = true; continue
+                }
+                val pending = same.sumOf { (it.pending.takeIf { q -> q > 0 } ?: (it.qty - it.filled)).coerceAtLeast(0) }
                 val qty = abs(p.qty) - pending
                 if (qty <= 0) { failed = true; continue }                  // still closing; checked again next pass
                 val o = Kite.Order(p.symbol, side, qty, i.lotSize, p.product, "MARKET", null, i.tickSize, "NFO", "iraalgoexpiry")

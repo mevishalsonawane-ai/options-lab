@@ -341,6 +341,14 @@ object PineAuto {
             .getOrNull() ?: return
         val qty = minOf(still, h.qty)
         if (qty <= 0) { b.held.remove(id); note(b, id, "$sym already closed"); return }
+        // An exit already working at Zerodha (an earlier pass's, or one whose reply was lost) must fill or be
+        // cancelled before another goes out: two sells of what is held would leave the account short.
+        val working = runCatching { Broker.orders().filter { it.working && it.symbol == sym && it.side == "SELL" } }.getOrNull() ?: return
+        if (working.isNotEmpty()) {
+            working.filter { it.tag == "irapine" }.forEach { runCatching { Broker.cancel(it.id, it.variety) } }
+            note(b, id, "An exit for $sym is still working at Zerodha; checked again next pass")
+            return
+        }
         val spec = runCatching { Broker.spec("NFO", sym) }.getOrNull() ?: return
         val o = com.optionslab.engine.Kite.Order(sym, com.optionslab.engine.Kite.Side.SELL, qty, spec.lotSize, "MIS", "MARKET", null, spec.tickSize, "NFO", "irapine")
         val bad = com.optionslab.engine.Kite.refusals(o, AppSettings.load().limits(), Broker.sentToday(), false, exit = true)
@@ -356,7 +364,11 @@ object PineAuto {
         }
         Strategies.tagOwner("kite:$orderId", "${label(item)} · $why")
         val f = runCatching { Broker.awaitOrder(orderId, 15_000) }.getOrNull()
-        if (f == null || f.filled <= 0) return                          // checked again next pass against the position book
+        if (f == null || f.filled <= 0) {
+            // Not filled in 15 s: take it out, so the next pass starts from what Zerodha says is held.
+            runCatching { Broker.cancel(orderId) }
+            return
+        }
         Notifier.orderFilled(app, "SELL", f.filled, sym, f.avgPrice, "Live", label(item))
         addPnl(b, id, (f.avgPrice - h.entry) * f.filled)
         if (f.filled >= qty) b.held.remove(id) else b.held[id] = h.copy(qty = h.qty - f.filled)
