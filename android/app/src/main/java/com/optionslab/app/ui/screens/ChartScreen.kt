@@ -85,9 +85,8 @@ fun ChartScreen(model: AppModel, symbol: String, exchange: String, visible: Bool
     var why by remember { mutableStateOf<String?>(null) }   // the load's own error, shown on the cover
     // The basic chart (drawn by the app, no WebView): chosen by the owner, or used automatically
     // when the advanced chart reports it could not draw on this phone.
-    var basicChosen by remember { mutableStateOf(com.optionslab.app.security.SecurePrefs.getBoolean("chart.basic", true)) }
-    // Advanced chart diagnostics (shown in ADV mode) and the WebView drawing mode (hardware / software).
-    var pageState by remember { mutableStateOf("loading") }
+    var basicChosen by remember { mutableStateOf(com.optionslab.app.security.SecurePrefs.getBoolean("chart.basic", false)) }
+    // The WebView drawing mode (hardware / software).
     var softwareLayer by remember { mutableStateOf(com.optionslab.app.security.SecurePrefs.getBoolean("chart.sw", false)) }
     var painted by remember { mutableStateOf<String?>(null) }        // "w×h, n bars" once the web chart drew
     var paintedOk by remember { mutableStateOf(false) }
@@ -139,8 +138,7 @@ fun ChartScreen(model: AppModel, symbol: String, exchange: String, visible: Bool
     LaunchedEffect(ready, visible, gen) {
         if (!ready || !visible || paintedOk) return@LaunchedEffect
         kotlinx.coroutines.delay(8_000)
-        if (!paintedOk) autoBasic = "The advanced chart did not draw on this phone" + (painted?.let { " (it reported $it)" } ?: "") +
-            (android.webkit.WebView.getCurrentWebViewPackage()?.let { " (WebView ${it.versionName})" } ?: "") + "."
+        if (!paintedOk) autoBasic = "The advanced chart could not draw on this phone."
     }
     // The page failed outright after the retry: the basic chart instead of an error.
     LaunchedEffect(failed) { if (failed && autoBasic == null) autoBasic = why ?: "The advanced chart could not load." }
@@ -262,7 +260,6 @@ fun ChartScreen(model: AppModel, symbol: String, exchange: String, visible: Bool
                         }
                     }
                     webViewClient = object : WebViewClient() {
-                        override fun onPageFinished(view: WebView, url: String?) { pageState = "loaded" }
                         override fun onReceivedError(view: WebView, request: WebResourceRequest, error: android.webkit.WebResourceError) {
                             if (request.isForMainFrame) com.optionslab.app.work.Alerts.post("Chart page did not load: ${error.description}",
                                 com.optionslab.app.work.Alerts.Kind.ERROR, throttle = true)
@@ -307,18 +304,6 @@ fun ChartScreen(model: AppModel, symbol: String, exchange: String, visible: Bool
                     style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 11.sp), modifier = Modifier.fillMaxWidth().background(p.chip).padding(horizontal = 12.dp, vertical = 6.dp))
             }
             NativeChart(current.first, Modifier.weight(1f))
-        }
-        // ADV mode: what the chart page reports, and a switch between the WebView's two drawing modes.
-        else if (ready) Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().background(p.chip).padding(horizontal = 10.dp, vertical = 4.dp)) {
-            val wv = android.webkit.WebView.getCurrentWebViewPackage()?.versionName ?: "?"
-            Text("page $pageState · data ✓ · drawn ${painted ?: "not reported"} · WebView $wv · ${if (softwareLayer) "software" else "hardware"} drawing",
-                style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 10.sp))
-            Text("Blank? Tap here to try the other display mode", style = Type.label.copy(color = p.ink, fontSize = 11.sp),
-                modifier = Modifier.clickable {
-                    softwareLayer = !softwareLayer
-                    com.optionslab.app.security.SecurePrefs.put("chart.sw", softwareLayer)
-                    ready = false; painted = null; paintedOk = false; pageState = "loading"; gen++
-                }.padding(vertical = 3.dp))
         }
         // Covers the blank page until the first candles are drawn, so the chart never shows as a white sheet.
         if (!basic && !ready) Box(Modifier.fillMaxSize().background(p.paper), contentAlignment = Alignment.Center) {

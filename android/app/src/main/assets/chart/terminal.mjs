@@ -1,7 +1,7 @@
 // IraAlgo's chart terminal inside the Android app: the PC app's IraAlgo Charts
 // widget (toolbar, drawing rail, 102 indicators, 51 drawing tools), fed by the
 // app through window.IraBridge. Nothing here talks to the network.
-import { createWidget } from './iraalgo-charts.widget.mjs';
+import { createWidget, WIDGET_DIALOGS } from './iraalgo-charts.widget.mjs';
 import { registerIndicator } from './iraalgo-charts.mjs';
 import './iraalgo-charts.indicators.mjs';
 import './iraalgo-charts.transform.mjs';
@@ -217,6 +217,11 @@ window.__iraPine = () => {
     for (const p of pineList) if (p.onChart) { try { widget.chart.addIndicator(p.id); } catch (e) { window.__iraPineErr = String(e && e.message || e); } }
   } catch (e) { window.__iraPineErr = String(e && e.message || e); }
 };
+
+// The gear after an indicator's name in the legend opens its settings (inputs and style).
+widget.chart.on('indicatorSettings', (e) => {
+  try { WIDGET_DIALOGS.indicatorSettings(widget.context, undefined, { instanceId: e && e.instanceId }); } catch (err) { /* older chart build */ }
+});
 
 // The app switches symbol (e.g. from the option chain) through this.
 window.__iraSetSymbol = (s, ex) => widget.setSymbol(s, ex);

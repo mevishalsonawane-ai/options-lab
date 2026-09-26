@@ -329,17 +329,6 @@ fun SecurityPage(model: AppModel) {
                     kind == BiometricGate.Kind.NONE -> Text("Add a fingerprint in the phone's Settings → Security, then switch this on.",
                         style = Type.bodySmall.copy(color = p.inkSoft), modifier = Modifier.padding(vertical = 4.dp))
                 }
-                if (s.biometric && kind != BiometricGate.Kind.NONE) BrassButton("Test fingerprint", Modifier.fillMaxWidth().padding(vertical = 6.dp), tone = p.inkSoft) {
-                    val act = context as? androidx.fragment.app.FragmentActivity ?: return@BrassButton
-                    BiometricGate.authenticate(act, false) { out ->
-                        when (out) {
-                            BiometricGate.Outcome.Success -> com.optionslab.app.work.Alerts.success("Fingerprint works" + if (danger.isNotEmpty()) ", but it stays paused until the security check passes." else ".")
-                            is BiometricGate.Outcome.Failed -> com.optionslab.app.work.Alerts.error("Did not work: ${out.why}")
-                            is BiometricGate.Outcome.Invalidated -> { com.optionslab.app.work.Alerts.error(out.why); model.update { it.copy(biometric = false) } }
-                            BiometricGate.Outcome.UsePin -> com.optionslab.app.work.Alerts.error("Cancelled, or no fingerprint is set up on this phone.")
-                        }
-                    }
-                }
                 var capture by remember { mutableStateOf(com.optionslab.app.security.Capture.allowed) }
                 ToggleRow("Allow screenshots and screen recording",
                     if (capture) "On while testing: anyone with the phone can capture any screen, keys and P&L included. Turn off before going live."
