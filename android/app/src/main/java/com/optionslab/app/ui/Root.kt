@@ -473,6 +473,18 @@ private fun Main(model: AppModel) {
             if (!fullChart && !typing) TabBar(tab, tabs) { if (it == tab && it == Tab.CABINET) cabinetPage = null; tab = it }
         }
         // Order reviews open over any page, wherever the order was asked for.
+        // First use only: a short guide the first time the app opens after Zerodha is linked, never again.
+        var tour by remember { mutableStateOf(!SecurePrefs.getBoolean(com.optionslab.app.ui.screens.GETTING_STARTED, false)) }
+        val again by com.optionslab.app.ui.screens.showGettingStarted.collectAsState()
+        if (tour || again) com.optionslab.app.ui.screens.GettingStarted(onGo = { dest ->
+            SecurePrefs.put(com.optionslab.app.ui.screens.GETTING_STARTED, true); tour = false
+            com.optionslab.app.ui.screens.showGettingStarted.value = false
+            when (dest) {
+                "orb" -> tab = Tab.ALMANAC
+                "chart" -> { chartAsk = "BANKNIFTY" to "NSE"; chartNonce++; tab = Tab.CHART }
+                "trade" -> { tab = Tab.TRADE; tradePage = "account" }
+            }
+        })
         com.optionslab.app.ui.screens.OrderReviewDialog(model)
         // Tapping any order, position or trade opens its close / cancel popup.
         com.optionslab.app.ui.screens.RowActionPopup(model)
