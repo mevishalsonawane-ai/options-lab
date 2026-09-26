@@ -383,7 +383,8 @@ private fun Main(model: AppModel) {
     // Trading (the Ticket and Trade tabs, live or paper) appears only once a Zerodha account is linked.
     val broker by model.broker.collectAsState()
     val linked = broker.linked
-    val tabs = if (linked) Tab.entries else Tab.entries.filter { it != Tab.TRADE }
+    // Paper trading needs no Zerodha account, so Trade is always there; live needs one linked.
+    val tabs = Tab.entries
     LaunchedEffect(linked) {
         if (!linked && tab !in tabs) tab = Tab.ALMANAC
         if (!linked && settings.live) model.update { it.copy(mode = "sandbox", allowRealOrders = false) }
@@ -394,8 +395,8 @@ private fun Main(model: AppModel) {
             "almanac" -> tab = Tab.ALMANAC
             "ticket" -> { tab = Tab.TOOLS; toolsView = "expiryput" }
             "chart" -> tab = Tab.CHART
-            "trade" -> if (linked) { tab = Tab.TRADE; tradePage = "account" } else { tab = Tab.CABINET; cabinetPage = "broker" }
-            "strategy" -> if (linked) { tab = Tab.TRADE; tradePage = "strategies" } else { tab = Tab.CABINET; cabinetPage = "broker" }
+            "trade" -> { tab = Tab.TRADE; tradePage = "account" }
+            "strategy" -> { tab = Tab.TRADE; tradePage = "strategies" }
             "health" -> { tab = Tab.LAB; labPage = "health" }
             "trials" -> { tab = Tab.LAB; labPage = "trials" }
             "pine" -> { tab = Tab.LAB; labPage = "pine" }
@@ -436,7 +437,8 @@ private fun Main(model: AppModel) {
         Column(Modifier.fillMaxSize()) {
             // Turned sideways, the chart takes the whole screen.
             val fullChart = tab == Tab.CHART && LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
-            if (!fullChart) Masthead(settings.live, settings.reduceMotion, linked, onMode = { live -> model.update { it.copy(mode = if (live) "live" else "sandbox", allowRealOrders = live) } })
+            if (!fullChart) Masthead(settings.live, settings.reduceMotion, linked, onMode = { live -> model.update { it.copy(mode = if (live) "live" else "sandbox", allowRealOrders = live) } },
+                onLink = { tab = Tab.CABINET; cabinetPage = "broker" })
             Box(Modifier.weight(1f)) {
                 AnimatedContent(
                     targetState = tab,
@@ -520,9 +522,10 @@ private fun ConnectGate(model: AppModel) {
 }
 
 @Composable
-private fun Masthead(live: Boolean, calm: Boolean, linked: Boolean, onMode: (Boolean) -> Unit) {
+private fun Masthead(live: Boolean, calm: Boolean, linked: Boolean, onMode: (Boolean) -> Unit, onLink: () -> Unit = {}) {
     val p = LocalPalette.current
     var confirmLive by remember { mutableStateOf(false) }
+    var needLink by remember { mutableStateOf(false) }
     var now by remember { mutableStateOf(Market.now()) }
     LaunchedEffect(Unit) { while (true) { delay(15_000); now = Market.now() } }
     val open = Market.isOpen()
@@ -543,15 +546,15 @@ private fun Masthead(live: Boolean, calm: Boolean, linked: Boolean, onMode: (Boo
                     Text(if (open) "Market open" else "Market closed", style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp), maxLines = 1)
                 }
             }
-            // The trading mode, on every screen. Tap to switch; going live asks first.
-            if (linked) {
+            // The trading mode, on every screen. Tap to switch; going live asks first (and needs Zerodha linked).
+            run {
                 val tint = if (live) p.oxblood else p.verdigris
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
                         .background(if (live) p.oxblood else tint.copy(alpha = 0.12f), RoundedCornerShape(50))
                         .selectable(selected = live, role = androidx.compose.ui.semantics.Role.Switch) {
-                            if (live) onMode(false) else confirmLive = true
+                            if (live) onMode(false) else if (linked) confirmLive = true else needLink = true
                         }
                         .padding(horizontal = 12.dp, vertical = 7.dp),
                 ) {
@@ -574,6 +577,14 @@ private fun Masthead(live: Boolean, calm: Boolean, linked: Boolean, onMode: (Boo
         text = { Text("Prices, positions and orders will come from your Zerodha account. Orders you send will use real money. Each order still needs your review, a long press and your PIN or fingerprint.", style = Type.bodySmall) },
         confirmButton = { androidx.compose.material3.TextButton({ confirmLive = false; onMode(true) }) { Text("Go live", color = p.oxblood) } },
         dismissButton = { androidx.compose.material3.TextButton({ confirmLive = false }) { Text("Stay on paper") } },
+    )
+    if (needLink) com.optionslab.app.ui.components.AlertDialog(
+        onDismissRequest = { needLink = false },
+        properties = androidx.compose.ui.window.DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy),
+        title = { Text("Link Zerodha for live trading", style = Type.title) },
+        text = { Text("Paper trading works now with virtual money. Live trading needs your Zerodha account: add your Kite API key and log in once (More → Zerodha).", style = Type.bodySmall) },
+        confirmButton = { androidx.compose.material3.TextButton({ needLink = false; onLink() }) { Text("Link Zerodha") } },
+        dismissButton = { androidx.compose.material3.TextButton({ needLink = false }) { Text("Stay on paper") } },
     )
 }
 
