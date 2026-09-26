@@ -109,6 +109,22 @@ class PaperScreenTest {
         return m.message.value!!
     }
 
+    /** Dialogs with a text field never report idle while the clock runs by itself (Robolectric): [paused] moves it by hand. */
+    private fun <T> paused(block: () -> T): T {
+        compose.mainClock.autoAdvance = false
+        try { return block() } finally { frames(); compose.mainClock.autoAdvance = true }
+    }
+
+    private fun frames(n: Int = 12) = repeat(n) { compose.mainClock.advanceTimeByFrame() }
+
+    private fun pump(timeoutMs: Long = 20_000, cond: () -> Boolean) {
+        val end = System.currentTimeMillis() + timeoutMs
+        while (!runCatching(cond).getOrDefault(false)) {
+            if (System.currentTimeMillis() > end) throw AssertionError("condition not met in $timeoutMs ms")
+            frames(2); Thread.sleep(20)
+        }
+    }
+
     private fun exists(text: String, substring: Boolean = false) =
         compose.onAllNodesWithText(text, substring = substring).fetchSemanticsNodes().isNotEmpty()
 
@@ -291,27 +307,33 @@ class PaperScreenTest {
         assertTrue(exists("0 · 1 · 0 · 0"))
 
         // Modify: the dialog starts from the order; a new price goes through.
-        tap("Modify")
-        inDialog("Modify paper order").assertExists()
-        compose.onNode(hasSetTextAction() and hasText("75") and hasAnyAncestor(isDialog())).assertExists()
-        val price = compose.onNode(hasSetTextAction() and hasText("90.00") and hasAnyAncestor(isDialog()))
-        price.performTextClearance(); price.performTextInput("95")
-        inDialog("Modify").performClick()
+        paused {
+            tap("Modify"); frames()
+            inDialog("Modify paper order").assertExists()
+            compose.onNode(hasSetTextAction() and hasText("75") and hasAnyAncestor(isDialog())).assertExists()
+            val price = compose.onNode(hasSetTextAction() and hasText("90.00") and hasAnyAncestor(isDialog()))
+            price.performTextClearance(); frames(); price.performTextInput("95"); frames()
+            inDialog("Modify").performClick(); frames()
+        }
         s = waitSnap(m, "the modified price") { x -> x.orders.orders.single().price == 95.0 }
         assertEquals("open", s.orders.orders.single().status)
         waitMessage(m, "Order modified")
 
         // A quantity that is not whole lots is refused and changes nothing.
-        tap("Modify")
-        val qty = compose.onNode(hasSetTextAction() and hasText("75") and hasAnyAncestor(isDialog()))
-        qty.performTextClearance(); qty.performTextInput("100")
-        inDialog("Modify").performClick()
+        paused {
+            tap("Modify"); frames()
+            val qty = compose.onNode(hasSetTextAction() and hasText("75") and hasAnyAncestor(isDialog()))
+            qty.performTextClearance(); frames(); qty.performTextInput("100"); frames()
+            inDialog("Modify").performClick(); frames()
+        }
         waitMessage(m, "multiples of lot size 75")
         assertEquals(75, m.snap()!!.orders.orders.single().quantity)
 
         // Keep / Close in the dialog changes nothing.
-        tap("Modify"); inDialog("Close").performClick()
-        compose.waitUntil(2_000) { !exists("Modify paper order") }
+        paused {
+            tap("Modify"); frames(); inDialog("Close").performClick(); frames()
+            pump(2_000) { !exists("Modify paper order") }
+        }
 
         // Cancel: the order goes and its margin comes back.
         tap("Cancel")
@@ -550,27 +572,29 @@ class PaperScreenTest {
     @Test fun thePaperAmountDialogValidatesItsBoundsAndResets() {
         val m = show()
         buyMarket(m)
-        tap("Set paper amount")
-        inDialog("Set paper amount").assertExists()
-        inDialog("Start with ${rs(1_000_000.0)}").assertIsEnabled()     // the 10 lakh preset is picked
-        inDialog(rs(500_000.0)).performClick()
-        inDialog(rs(500_000.0)).assertIsSelected()
-        inDialog("Start with ${rs(500_000.0)}").assertIsEnabled()
-        val box = compose.onNode(hasSetTextAction() and hasAnyAncestor(isDialog()))
-        box.performTextInput("9999")
-        inDialog("Enter between Rs 10,000 and Rs 100,00,00,000.").assertExists()
-        inDialog("Start with …").assertIsNotEnabled()
-        box.performTextClearance(); box.performTextInput("1000000001")
-        inDialog("Start with …").assertIsNotEnabled()
-        box.performTextClearance(); box.performTextInput("1000000000")
-        inDialog("Start with ${rs(1_000_000_000.0)}").assertIsEnabled()
-        box.performTextClearance(); box.performTextInput("12x3y45")        // digits only
-        compose.waitUntil(2_000) { exists("12345") }
-        inDialog("Start with ${rs(12_345.0)}").assertIsEnabled()
-        inDialog(rs(500_000.0)).assertIsNotSelected()     // a typed amount replaces the preset
-        box.performTextClearance(); box.performTextInput("10000")
-        inDialog("Start with ${rs(10_000.0)}").performClick()
-        compose.waitUntil(5_000) { compose.onAllNodes(isDialog()).fetchSemanticsNodes().isEmpty() }
+        paused {
+            tap("Set paper amount"); frames()
+            inDialog("Set paper amount").assertExists()
+            inDialog("Start with ${rs(1_000_000.0)}").assertIsEnabled()     // the 10 lakh preset is picked
+            inDialog(rs(500_000.0)).performClick().also { frames() }
+            inDialog(rs(500_000.0)).assertIsSelected()
+            inDialog("Start with ${rs(500_000.0)}").assertIsEnabled()
+            val box = compose.onNode(hasSetTextAction() and hasAnyAncestor(isDialog()))
+            box.performTextInput("9999").also { frames() }
+            inDialog("Enter between Rs 10,000 and Rs 100,00,00,000.").assertExists()
+            inDialog("Start with …").assertIsNotEnabled()
+            box.performTextClearance().also { frames() }; box.performTextInput("1000000001").also { frames() }
+            inDialog("Start with …").assertIsNotEnabled()
+            box.performTextClearance().also { frames() }; box.performTextInput("1000000000").also { frames() }
+            inDialog("Start with ${rs(1_000_000_000.0)}").assertIsEnabled()
+            box.performTextClearance().also { frames() }; box.performTextInput("12x3y45").also { frames() }        // digits only
+            pump(2_000) { exists("12345") }
+            inDialog("Start with ${rs(12_345.0)}").assertIsEnabled()
+            inDialog(rs(500_000.0)).assertIsNotSelected()     // a typed amount replaces the preset
+            box.performTextClearance().also { frames() }; box.performTextInput("10000").also { frames() }
+            inDialog("Start with ${rs(10_000.0)}").performClick().also { frames() }
+            pump(5_000) { compose.onAllNodes(isDialog()).fetchSemanticsNodes().isEmpty() }
+        }
         val s = waitSnap(m, "the reset account") { x -> x.funds.availableCash == 10_000.0 }
         assertTrue("every paper position is cleared", s.positions.positions.none { it.quantity != 0 })
         assertEquals(0, s.orders.orders.size)
@@ -581,10 +605,12 @@ class PaperScreenTest {
     @Test fun keepLeavesThePaperAccountAlone() {
         val m = show()
         buyMarket(m)
-        tap("Set paper amount")
-        compose.onNode(hasSetTextAction() and hasAnyAncestor(isDialog())).performTextInput("50000")
-        inDialog("Keep").performClick()
-        compose.waitUntil(5_000) { compose.onAllNodes(isDialog()).fetchSemanticsNodes().isEmpty() }
+        paused {
+            tap("Set paper amount"); frames()
+            compose.onNode(hasSetTextAction() and hasAnyAncestor(isDialog())).performTextInput("50000"); frames()
+            inDialog("Keep").performClick(); frames()
+            pump(5_000) { compose.onAllNodes(isDialog()).fetchSemanticsNodes().isEmpty() }
+        }
         assertEquals(0, BigDecimal("10000000").compareTo(Paper.capital))
         assertEquals(75, m.snap()!!.positions.positions.single().quantity)
     }

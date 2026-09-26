@@ -4,6 +4,7 @@ import android.app.Application
 import android.os.Looper
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelStore
+import com.github.takahirom.roborazzi.captureRoboImage
 import com.optionslab.app.data.Market
 import com.optionslab.app.data.Paper
 import com.optionslab.app.security.SecurePrefs
@@ -289,10 +290,32 @@ abstract class TradeScreenBase(device: DeviceConfig) : ScreenTest(device) {
             errors.joinToString("\n"), false)
     }
 
-    /** Screenshot and [lintKnown] of what is on screen now. */
+    /**
+     * Screenshot and [lintKnown] of what is on screen now. With a dialog or popup open there are several
+     * roots: each non-empty one is saved (the window as <name>_<device>.png, the others with a -layerN suffix).
+     */
     protected fun snap(name: String, known: List<Known> = emptyList(), options: LayoutLint.Options = LayoutLint.Options()) {
         compose.waitForIdle()
-        capture(name)
+        val roots = compose.onAllNodes(androidx.compose.ui.test.isRoot())
+        val nodes = roots.fetchSemanticsNodes()
+        if (nodes.size <= 1) capture(name)
+        else nodes.forEachIndexed { i, n ->
+            if (n.size.width > 0 && n.size.height > 0) {
+                val file = "build/outputs/roborazzi/${name}${if (i == 0) "" else "-layer$i"}_${device.name}.png"
+                roots[i].captureRoboImage(file)
+            }
+        }
         lintKnown(name, known, options)
     }
+
+    /**
+     * Dialogs holding a text field never report idle under Robolectric while the clock runs by itself;
+     * [paused] stops the automatic clock for [block] and [frames] moves it by hand.
+     */
+    protected fun <T> paused(block: () -> T): T {
+        compose.mainClock.autoAdvance = false
+        try { return block() } finally { compose.mainClock.autoAdvance = true }
+    }
+
+    protected fun frames(n: Int = 12) = repeat(n) { compose.mainClock.advanceTimeByFrame() }
 }

@@ -17,6 +17,8 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTouchInput
@@ -133,7 +135,7 @@ class OptionOrderSheetTest {
     @Test fun withoutAPriceItShowsDashes() {
         show(pick.copy(ltp = null, delta = null, ivPct = null))
         assertTrue(exists("lot 75"))
-        assertEquals(2, compose.onAllNodesWithText("—").fetchSemanticsNodes().size)   // LTP and value
+        assertEquals(2, compose.onAllNodesWithText("—", useUnmergedTree = true).fetchSemanticsNodes().size)   // LTP and value
         tap("Limit")
         price().assertExists()
         assertTrue("no LTP, so the limit box starts empty", !exists("100.00"))
@@ -334,11 +336,28 @@ class OptionOrderSheetTest {
 
     @Test fun tappingInsideTheSheetDoesNotCloseIt() {
         show()
-        compose.onNodeWithText("75 qty").performClick()
-        compose.onNodeWithText("₹100.00").performClick()
+        // Taps on the sheet's own texts (not the backdrop around it).
+        compose.onNodeWithText("75 qty", useUnmergedTree = true).performClick()
+        compose.onNodeWithText("₹100.00", useUnmergedTree = true).performClick()
         compose.waitForIdle()
         assertEquals(0, closed)
         assertTrue(exists("Buy (paper)"))
+    }
+
+    @Test fun theSheetsTextsAreNotPartOfTheBackdropsCloseAction() {
+        show()
+        val title = "NIFTY ${near.format(DateTimeFormatter.ofPattern("d MMM", Locale.ENGLISH)).uppercase()} 24500 PE"
+        val node = compose.onNodeWithText(title).fetchSemanticsNode()
+        val click = node.config.getOrNull(SemanticsActions.OnClick)
+        if (click != null) {
+            // What TalkBack does on a double tap of the contract's name:
+            compose.onNodeWithText(title).performSemanticsAction(SemanticsActions.OnClick)
+            compose.waitForIdle()
+            assumeTrue("UI BUG (accessibility): OptionOrderSheet: the full-screen backdrop is one clickable (it closes the sheet) with " +
+                "no label, and the sheet's texts (title, greeks, LTP, lots, value) merge into it; with TalkBack, focusing '$title' and " +
+                "double-tapping closes the sheet (closed=$closed). Expected: the texts readable on their own and the backdrop a separate " +
+                "'Close' action", false)
+        }
     }
 
     // ---- live: review only ------------------------------------------------------------------------

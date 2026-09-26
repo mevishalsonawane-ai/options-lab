@@ -96,42 +96,59 @@ class TradeScreenTest {
         var p by mutableStateOf(page)
         compose.setContent { IraAlgoTheme("light") { Box(Modifier.fillMaxSize()) { TradeHub(m, p) { p = it }; RowActionPopup(m) } } }
         compose.waitForIdle()
+        // Dialogs with a text field never report idle while the clock runs by itself (Robolectric):
+        // the clock is moved by hand from here on, a few frames after each action.
+        compose.mainClock.autoAdvance = false
+        frames()
         return m
     }
 
     private fun showAccount(): AppModel {
         val m = show()
-        compose.waitUntil(20_000) { m.account.value is Load.Done<*> }
+        pump(20_000) { m.account.value is Load.Done<*> }
         return m
+    }
+
+    private fun frames(n: Int = 12) = repeat(n) { compose.mainClock.advanceTimeByFrame() }
+
+    /** Waits (real time) for [cond], moving the paused clock a couple of frames per look. */
+    private fun pump(timeoutMs: Long, cond: () -> Boolean) {
+        val end = System.currentTimeMillis() + timeoutMs
+        while (true) {
+            frames(2)
+            if (runCatching(cond).getOrDefault(false)) return
+            if (System.currentTimeMillis() > end) throw AssertionError("condition not met in $timeoutMs ms")
+            Thread.sleep(20)
+        }
     }
 
     private fun exists(text: String, substring: Boolean = false) =
         compose.onAllNodesWithText(text, substring = substring).fetchSemanticsNodes().isNotEmpty()
 
     private fun waitText(text: String, substring: Boolean = false, timeoutMs: Long = 20_000) = try {
-        compose.waitUntil(timeoutMs) { exists(text, substring) }
+        pump(timeoutMs) { exists(text, substring) }
     } catch (e: Throwable) { throw AssertionError("'$text' never appeared", e) }
 
-    private fun tap(text: String) = compose.onNodeWithText(text).performClick()
-    private fun tab(name: String) = compose.onNode(isSelectable() and hasText(name, substring = true)).performClick()
+    private fun tap(text: String) = compose.onNodeWithText(text).performClick().also { frames() }
+    private fun tab(name: String) = compose.onNode(isSelectable() and hasText(name, substring = true)).performClick().also { frames() }
     private fun inDialog(text: String) = compose.onNode(hasText(text) and hasAnyAncestor(isDialog()))
 
     private fun waitMessage(m: AppModel, part: String): String {
-        try { compose.waitUntil(20_000) { m.message.value?.contains(part) == true } }
+        try { pump(20_000) { m.message.value?.contains(part) == true } }
         catch (e: Throwable) { throw AssertionError("expected a message with '$part'; last: ${m.message.value}", e) }
         return m.message.value!!
     }
 
     private fun waitPlan(m: AppModel): OrderPlan {
-        compose.waitUntil(20_000) { m.plan.value is Load.Done<*> || m.plan.value is Load.Failed }
+        pump(20_000) { m.plan.value is Load.Done<*> || m.plan.value is Load.Failed }
         return (m.plan.value as? Load.Done<OrderPlan>)?.value ?: throw AssertionError("no plan: ${m.plan.value}")
     }
 
     /** The PIN dialog every change at Zerodha goes through. */
     private fun enterPin(value: String = pin) {
         waitText("Confirm it is you")
-        compose.onNode(hasSetTextAction() and hasText("PIN") and hasAnyAncestor(isDialog())).performTextInput(value)
-        inDialog("Confirm").performClick()
+        compose.onNode(hasSetTextAction() and hasText("PIN") and hasAnyAncestor(isDialog())).performTextInput(value).also { frames() }
+        inDialog("Confirm").performClick().also { frames() }
     }
 
     private fun workingOrder(id: String = "250926000000901", type: String = "LIMIT", price: Double = 90.0, trigger: Double = 0.0) {
@@ -154,7 +171,7 @@ class TradeScreenTest {
         val m = show()
         waitText("Log in to Zerodha for today to see your account.")
         tap("Log in to Zerodha")
-        compose.waitUntil(5_000) { m.askLoginPin.value }
+        pump(5_000) { m.askLoginPin.value }
         assertTrue(kite.requests.isEmpty())
     }
 
@@ -174,11 +191,11 @@ class TradeScreenTest {
         loginConfigured()
         kite.down += "/portfolio/positions"
         val m = show()
-        compose.waitUntil(20_000) { m.account.value is Load.Failed }
+        pump(20_000) { m.account.value is Load.Failed }
         waitText("Try again")
         kite.down.clear()
         tap("Try again")
-        compose.waitUntil(20_000) { m.account.value is Load.Done<*> }
+        pump(20_000) { m.account.value is Load.Done<*> }
         assertTrue(exists("Nothing open."))
     }
 
@@ -186,7 +203,7 @@ class TradeScreenTest {
         loginConfigured()
         kite.sessionExpired = true
         val m = show()
-        compose.waitUntil(20_000) { m.account.value is Load.Failed }
+        pump(20_000) { m.account.value is Load.Failed }
         assertTrue((m.account.value as Load.Failed).why.contains("session ended"))
         waitText("Log in to Zerodha for today to see your account.")
     }
@@ -229,15 +246,15 @@ class TradeScreenTest {
         kite.position(sym, 75, 100.0)
         val m = showAccount()
         waitText(sym)
-        compose.onAllNodesWithText(sym)[0].performClick()
-        compose.waitUntil(5_000) { m.rowAction.value is RowTarget.LivePosition }
+        compose.onAllNodesWithText(sym)[0].performClick().also { frames() }
+        pump(5_000) { m.rowAction.value is RowTarget.LivePosition }
         inDialog("Zerodha (live)").assertExists()
         inDialog("LONG 75").assertExists()
         compose.onNode(hasText("Slide to close position", substring = true) and hasAnyAncestor(isDialog()))
-            .performSemanticsAction(SemanticsActions.OnClick)
+            .performSemanticsAction(SemanticsActions.OnClick).also { frames() }
         val plan = waitPlan(m)
         assertEquals(Kite.Side.SELL, plan.legs.single().side)
-        compose.waitUntil(5_000) { m.rowAction.value == null }
+        pump(5_000) { m.rowAction.value == null }
         assertTrue(kite.writes.isEmpty())
     }
 
@@ -264,23 +281,23 @@ class TradeScreenTest {
         tap("Cancel")
         inDialog("Cancel this order?").assertExists()
         inDialog("BUY $sym ×75 (LIMIT @ 90.00). Filled so far: 0.").assertExists()
-        inDialog("Keep").performClick()
-        compose.waitUntil(5_000) { !exists("Cancel this order?") }
+        inDialog("Keep").performClick().also { frames() }
+        pump(5_000) { !exists("Cancel this order?") }
         // Cancel order -> PIN; cancelling the PIN sends nothing.
         tap("Cancel")
-        inDialog("Cancel order").performClick()
+        inDialog("Cancel order").performClick().also { frames() }
         waitText("Confirm it is you")
-        inDialog("Cancel").performClick()
-        compose.waitUntil(5_000) { !exists("Confirm it is you") }
+        inDialog("Cancel").performClick().also { frames() }
+        pump(5_000) { !exists("Confirm it is you") }
         assertTrue(kite.writes.isEmpty())
         // A wrong PIN sends nothing either.
-        tap("Cancel"); inDialog("Cancel order").performClick()
+        tap("Cancel"); inDialog("Cancel order").performClick().also { frames() }
         enterPin("111111")
         waitText("Not the right PIN.")
         assertTrue(kite.writes.isEmpty())
-        inDialog("Cancel").performClick()
+        inDialog("Cancel").performClick().also { frames() }
         // The right PIN: one DELETE for that order.
-        tap("Cancel"); inDialog("Cancel order").performClick()
+        tap("Cancel"); inDialog("Cancel order").performClick().also { frames() }
         enterPin()
         assertTrue(waitMessage(m, "Cancel requested").contains("000901"))
         assertEquals(listOf("DELETE /orders/regular/250926000000901"), kite.writes.map { "${it.method} ${it.path}" })
@@ -300,22 +317,22 @@ class TradeScreenTest {
         val price = compose.onNode(hasSetTextAction() and hasText("Price") and hasAnyAncestor(isDialog()))
         price.assertExists()
         assertTrue(!exists("Trigger"))
-        compose.onNode(isSelectable() and hasText("SL-M") and hasAnyAncestor(isDialog())).performClick()
+        compose.onNode(isSelectable() and hasText("SL-M") and hasAnyAncestor(isDialog())).performClick().also { frames() }
         assertTrue(!exists("Price")); compose.onNode(hasSetTextAction() and hasText("Trigger")).assertExists()
-        compose.onNode(isSelectable() and hasText("MARKET") and hasAnyAncestor(isDialog())).performClick()
+        compose.onNode(isSelectable() and hasText("MARKET") and hasAnyAncestor(isDialog())).performClick().also { frames() }
         assertTrue(!exists("Price") && !exists("Trigger"))
-        compose.onNode(isSelectable() and hasText("SL") and hasAnyAncestor(isDialog())).performClick()
+        compose.onNode(isSelectable() and hasText("SL") and hasAnyAncestor(isDialog())).performClick().also { frames() }
         compose.onNode(hasSetTextAction() and hasText("Price")).assertExists(); compose.onNode(hasSetTextAction() and hasText("Trigger")).assertExists()
         // Close: nothing sent.
-        inDialog("Close").performClick()
-        compose.waitUntil(5_000) { !exists("Modify $sym") }
+        inDialog("Close").performClick().also { frames() }
+        pump(5_000) { !exists("Modify $sym") }
         assertTrue(kite.writes.isEmpty())
 
         // LIMIT 90 -> 95, after the PIN.
         tap("Modify")
         val box = compose.onNode(hasSetTextAction() and hasText("90.00") and hasAnyAncestor(isDialog()))
-        box.performTextClearance(); box.performTextInput("95")
-        inDialog("Confirm change").performClick()
+        box.performTextClearance().also { frames() }; box.performTextInput("95").also { frames() }
+        inDialog("Confirm change").performClick().also { frames() }
         enterPin()
         waitMessage(m, "Modify sent")
         val put = kite.writes.single()
@@ -332,10 +349,10 @@ class TradeScreenTest {
         showAccount()
         tab("Orders"); waitText("WORKING")
         tap("Modify")
-        inDialog("Confirm change").performClick()
+        inDialog("Confirm change").performClick().also { frames() }
         waitText("Confirm it is you")
-        inDialog("Cancel").performClick()
-        compose.waitUntil(5_000) { !exists("Confirm it is you") }
+        inDialog("Cancel").performClick().also { frames() }
+        pump(5_000) { !exists("Confirm it is you") }
         assertTrue("the modify dialog stays for another go", exists("Modify $sym"))
         assertTrue(kite.writes.isEmpty())
     }
@@ -347,11 +364,11 @@ class TradeScreenTest {
         val m = showAccount()
         tab("Orders"); waitText("WORKING")
         tap("Modify")
-        compose.onNode(hasSetTextAction() and hasText("90.00") and hasAnyAncestor(isDialog())).performTextClearance()
+        compose.onNode(hasSetTextAction() and hasText("90.00") and hasAnyAncestor(isDialog())).performTextClearance().also { frames() }
         val offered = runCatching { inDialog("Confirm change").assertIsNotEnabled() }.isFailure
         if (offered) {
             // Nothing wrong reaches Zerodha: the change is refused after the PIN.
-            inDialog("Confirm change").performClick()
+            inDialog("Confirm change").performClick().also { frames() }
             enterPin()
             val msg = waitMessage(m, "Not modified")
             assertTrue("nothing sent: ${kite.writes}", kite.writes.isEmpty())
@@ -370,11 +387,11 @@ class TradeScreenTest {
         assertTrue(!exists("Modify") && !exists("WORKING"))
         assertTrue(exists("REJECTED · filled 0 · RMS:Margin Exceeds"))
         assertTrue("an old strategy order is marked by its tag", exists("Strategy order"))
-        compose.onAllNodesWithText("SELL $sym ×75")[0].performClick()
-        compose.waitUntil(5_000) { m.rowAction.value is RowTarget.LiveOrder }
+        compose.onAllNodesWithText("SELL $sym ×75")[0].performClick().also { frames() }
+        pump(5_000) { m.rowAction.value is RowTarget.LiveOrder }
         inDialog("Nothing to close or cancel: this order is finished and no position is open from it.").assertExists()
-        inDialog("Close").performClick()
-        compose.waitUntil(5_000) { m.rowAction.value == null }
+        inDialog("Close").performClick().also { frames() }
+        pump(5_000) { m.rowAction.value == null }
     }
 
     @Test fun emptyBooksSayTheyAreEmpty() {
@@ -403,31 +420,31 @@ class TradeScreenTest {
         inDialog("Place GTT").assertIsNotEnabled()
         // A stop above the price is refused with the reason.
         val stop = compose.onNode(hasSetTextAction() and hasText("Stop-loss trigger (below the price)"))
-        stop.performTextInput("115")
-        inDialog("Check").performClick()
-        compose.waitUntil(20_000) { m.gttPlan.value is Load.Done<*> }
+        stop.performTextInput("115").also { frames() }
+        inDialog("Check").performClick().also { frames() }
+        pump(20_000) { m.gttPlan.value is Load.Done<*> }
         inDialog("Place GTT").assertIsNotEnabled()
         // A stop below: priced and placeable.
-        stop.performTextClearance(); stop.performTextInput("95")
+        stop.performTextClearance().also { frames() }; stop.performTextInput("95").also { frames() }
         assertEquals("typing again drops the old check", Load.Idle, m.gttPlan.value)
-        inDialog("Check").performClick()
-        compose.waitUntil(20_000) { (m.gttPlan.value as? Load.Done<AppModel.GttPlan>)?.value?.gtt != null }
+        inDialog("Check").performClick().also { frames() }
+        pump(20_000) { (m.gttPlan.value as? Load.Done<AppModel.GttPlan>)?.value?.gtt != null }
         waitText("at 95.00 → SELL 75 LIMIT 90.25")
         assertTrue(kite.writes.isEmpty())
-        inDialog("Place GTT").assertIsEnabled().performClick()
+        inDialog("Place GTT").assertIsEnabled().performClick().also { frames() }
         enterPin()
         waitMessage(m, "GTT placed")
         assertEquals(1, kite.writes.count { it.method == "POST" && it.path == "/gtt/triggers" })
-        compose.waitUntil(10_000) { m.gtts.value.isNotEmpty() }
+        pump(10_000) { m.gtts.value.isNotEmpty() }
         val id = m.gtts.value.single().id
 
         tab("Orders")
         waitText("$sym · single · active")
         tap("Delete")
         inDialog("Delete GTT #$id?").assertExists()
-        inDialog("Keep").performClick()
-        compose.waitUntil(5_000) { !exists("Delete GTT #$id?") }
-        tap("Delete"); inDialog("Delete").performClick()
+        inDialog("Keep").performClick().also { frames() }
+        pump(5_000) { !exists("Delete GTT #$id?") }
+        tap("Delete"); inDialog("Delete").performClick().also { frames() }
         enterPin()
         waitMessage(m, "GTT #$id deleted.")
         assertEquals(1, kite.writes.count { it.method == "DELETE" && it.path == "/gtt/triggers/$id" })
@@ -438,11 +455,11 @@ class TradeScreenTest {
         kite.position(sym, 75, 100.0)
         val m = showAccount()
         waitText("Protect (GTT)"); tap("Protect (GTT)")
-        compose.onNode(hasSetTextAction() and hasText("Stop-loss trigger (below the price)")).performTextInput("95")
-        inDialog("Check").performClick()
-        compose.waitUntil(20_000) { m.gttPlan.value is Load.Done<*> }
-        inDialog("Close").performClick()
-        compose.waitUntil(5_000) { !exists("Protect $sym") }
+        compose.onNode(hasSetTextAction() and hasText("Stop-loss trigger (below the price)")).performTextInput("95").also { frames() }
+        inDialog("Check").performClick().also { frames() }
+        pump(20_000) { m.gttPlan.value is Load.Done<*> }
+        inDialog("Close").performClick().also { frames() }
+        pump(5_000) { !exists("Protect $sym") }
         assertEquals(Load.Idle, m.gttPlan.value)
         assertTrue(kite.writes.isEmpty())
     }

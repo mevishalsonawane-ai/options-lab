@@ -43,27 +43,20 @@ import java.time.LocalDate
  * TradeScreenTest), on every device set-up: a screenshot each and [com.optionslab.app.testing.LayoutLint],
  * with the real screens on a real [AppModel] (paper: the sandbox priced by [FakeUpstox]; live: [FakeKite]).
  */
-@RunWith(ParameterizedRobolectricTestRunner::class)
-@GraphicsMode(GraphicsMode.Mode.NATIVE)
-@ConscryptMode(ConscryptMode.Mode.OFF)
-class TradeLayoutTest(device: DeviceConfig) : TradeScreenBase(device) {
+abstract class TradeLayoutBase(device: DeviceConfig) : TradeScreenBase(device) {
     companion object {
-        @JvmStatic
-        @ParameterizedRobolectricTestRunner.Parameters(name = "{0}")
-        fun configs(): List<Array<Any>> = DeviceConfig.matrix()
-
-        /** First run on CI: every error is listed (as a skipped LAYOUT BUG) instead of failing, to be triaged. */
+        /** First runs on CI: every error is listed (as a skipped LAYOUT BUG) instead of failing, to be triaged. */
         const val DISCOVERY = true
         private val ALL = listOf(TradeScreenBase.Known(Regex("."), "DISCOVERY: findings to triage"))
         fun known(vararg k: TradeScreenBase.Known): List<TradeScreenBase.Known> = if (DISCOVERY) ALL else k.toList()
     }
 
-    private lateinit var upstox: FakeUpstox
+    protected lateinit var upstox: FakeUpstox
     private lateinit var holder: ModelHolder
     private var kite: FakeKite? = null
     private val app: Application get() = ApplicationProvider.getApplicationContext()
     private val near: LocalDate get() = TradeFixtures.nearExpiry
-    private val m: AppModel get() = holder.model
+    protected val m: AppModel get() = holder.model
 
     @Before fun up() {
         TradeFixtures.paperSettings()
@@ -80,7 +73,7 @@ class TradeLayoutTest(device: DeviceConfig) : TradeScreenBase(device) {
 
     // ---- helpers ------------------------------------------------------------------------------
 
-    private fun exists(text: String) = compose.onAllNodesWithText(text).fetchSemanticsNodes().isNotEmpty()
+    protected fun exists(text: String) = compose.onAllNodesWithText(text).fetchSemanticsNodes().isNotEmpty()
 
     private fun paperPosition() = runBlocking {
         Paper.place(Paper.contractFor("NIFTY", near, 24_500.0, Right.PE)!!, "BUY", 1, "MARKET", "NRML", null, null)
@@ -98,7 +91,7 @@ class TradeLayoutTest(device: DeviceConfig) : TradeScreenBase(device) {
         compose.waitForIdle()
     }
 
-    private fun scrollTo(text: String) = compose.onNode(hasScrollToNodeAction()).performScrollToNode(hasText(text))
+    protected fun scrollTo(text: String) = compose.onNode(hasScrollToNodeAction()).performScrollToNode(hasText(text))
 
     private val pick get() = ChainPick("NIFTY", near, 24_500.0, Right.PE, ltp = 100.0, delta = -0.45, ivPct = 14.2, lotSize = 75)
 
@@ -124,26 +117,26 @@ class TradeLayoutTest(device: DeviceConfig) : TradeScreenBase(device) {
     // ---- paper -----------------------------------------------------------------------------------
 
     /** The StrikeDropdown's whole-field tap target: a bare clickable Box over the text field. */
-    private val strikeOverlay = arrayOf(
+    protected val strikeOverlay = arrayOf(
         TradeScreenBase.Known(Regex("A11Y.*clickable node \\d+ has no text"), "StrikeDropdown: the full-field click overlay has no label or role for TalkBack"),
         TradeScreenBase.Known(Regex("OVERLAP.*Strike"), "StrikeDropdown: the click overlay is a separate node drawn over the strike text field"),
     )
 
-    @Test fun paperAccount() {
+    protected fun paperAccount() {
         paperPosition(); paperRestingLimit()
         showPaper()
         snap("trade-paper-account", known())
         if (device.fontScale == 1.0f) smokeEveryAction(skip = setOf("Close"))
     }
 
-    @Test fun paperPositions() {
+    protected fun paperPositions() {
         paperPosition()
         showPaper()
         scrollTo("Paper positions")
         snap("trade-paper-positions", known())
     }
 
-    @Test fun paperOrderForm() {
+    protected fun paperOrderForm() {
         showPaper()
         compose.onNodeWithText("New paper order").performClick()
         compose.waitUntil(20_000) { exists("24500") }
@@ -152,7 +145,7 @@ class TradeLayoutTest(device: DeviceConfig) : TradeScreenBase(device) {
         snap("trade-paper-form", known(*strikeOverlay))
     }
 
-    @Test fun paperStrikeList() {
+    protected fun paperStrikeList() {
         showPaper()
         compose.onNodeWithText("New paper order").performClick()
         compose.waitUntil(20_000) { exists("24500") }
@@ -162,7 +155,7 @@ class TradeLayoutTest(device: DeviceConfig) : TradeScreenBase(device) {
         snap("trade-paper-strikes", known(*strikeOverlay))
     }
 
-    @Test fun paperOrders() {
+    protected fun paperOrders() {
         paperRestingLimit(); paperPosition()
         showPaper()
         scrollTo("Orders")
@@ -172,18 +165,20 @@ class TradeLayoutTest(device: DeviceConfig) : TradeScreenBase(device) {
         snap("trade-paper-orders", known())
     }
 
-    @Test fun paperModifyDialog() {
+    protected fun paperModifyDialog() {
         paperRestingLimit()
         showPaper()
         scrollTo("Orders")
         compose.onNodeWithText("Orders").performClick()
         compose.waitUntil(5_000) { exists("Modify") }
         scrollTo("Modify")
-        compose.onNodeWithText("Modify").performClick()
-        snap("trade-paper-modify", known())
+        paused {
+            compose.onNodeWithText("Modify").performClick(); frames()
+            snap("trade-paper-modify", known())
+        }
     }
 
-    @Test fun paperFunds() {
+    protected fun paperFunds() {
         paperPosition()
         showPaper()
         scrollTo("Funds")
@@ -193,15 +188,17 @@ class TradeLayoutTest(device: DeviceConfig) : TradeScreenBase(device) {
         snap("trade-paper-funds", known())
     }
 
-    @Test fun paperAmountDialog() {
+    protected fun paperAmountDialog() {
         showPaper()
-        scrollTo("Set paper amount")
-        compose.onNodeWithText("Set paper amount").performClick()
-        compose.onNode(hasSetTextAction() and hasAnyAncestor(isDialog())).performTextInput("9999")
-        snap("trade-paper-amount", known())
+        compose.waitUntil(10_000) { runCatching { scrollTo("Set paper amount"); true }.getOrDefault(false) }
+        paused {
+            compose.onNodeWithText("Set paper amount").performClick(); frames()
+            compose.onNode(hasSetTextAction() and hasAnyAncestor(isDialog())).performTextInput("9999"); frames()
+            snap("trade-paper-amount", known())
+        }
     }
 
-    @Test fun paperPositionPopup() {
+    protected fun paperPositionPopup() {
         paperPosition()
         showPaper()
         val s = Paper.state.positions.first().symbol
@@ -214,18 +211,18 @@ class TradeLayoutTest(device: DeviceConfig) : TradeScreenBase(device) {
     // ---- the order sheet ------------------------------------------------------------------------
 
     /** The BUY / SELL halves of the sheet's side switch are text with 10 dp padding. */
-    private val sideSwitch = arrayOf(
+    protected val sideSwitch = arrayOf(
         TradeScreenBase.Known(Regex("TOUCH.*clickable '(BUY|SELL)'"), "OptionOrderSheet: the BUY / SELL switch is under 48 dp tall"),
     )
 
-    @Test fun orderSheetPaper() {
+    protected fun orderSheetPaper() {
         show { OptionOrderSheet(m, pick, initialBuy = true, initialLimit = 98.5) {} }
         compose.onNodeWithText("▸ Bracket: stop · trail · target").performScrollTo().performClick()
         compose.waitForIdle()
         snap("trade-sheet-paper", known(*sideSwitch))
     }
 
-    @Test fun orderSheetLive() {
+    protected fun orderSheetLive() {
         live()
         show { OptionOrderSheet(m, pick, initialBuy = false) {} }
         snap("trade-sheet-live", known(*sideSwitch))
@@ -233,13 +230,13 @@ class TradeLayoutTest(device: DeviceConfig) : TradeScreenBase(device) {
 
     // ---- live ------------------------------------------------------------------------------------
 
-    @Test fun livePositions() {
+    protected fun livePositions() {
         live(sym to 75, "NIFTY26OCT24400CE" to -75)
         showLive()
         snap("trade-live-positions", known())
     }
 
-    @Test fun liveOrders() {
+    protected fun liveOrders() {
         live(working = true)
         showLive()
         compose.onNodeWithText("Orders 1").performClick()
@@ -247,27 +244,79 @@ class TradeLayoutTest(device: DeviceConfig) : TradeScreenBase(device) {
         snap("trade-live-orders", known())
     }
 
-    @Test fun liveModifyDialog() {
+    protected fun liveModifyDialog() {
         live(working = true)
         showLive()
         compose.onNodeWithText("Orders 1").performClick()
         compose.waitUntil(5_000) { exists("Modify") }
-        compose.onNodeWithText("Modify").performClick()
-        compose.onNodeWithText("SL").performClick()
-        snap("trade-live-modify", known())
+        paused {
+            compose.onNodeWithText("Modify").performClick(); frames()
+            compose.onNodeWithText("SL").performClick(); frames()
+            snap("trade-live-modify", known())
+        }
     }
 
-    @Test fun liveGttDialog() {
+    protected fun liveGttDialog() {
         live(sym to 75)
         showLive()
-        compose.onNodeWithText("Protect (GTT)").performClick()
-        snap("trade-live-gtt", known())
+        paused {
+            compose.onNodeWithText("Protect (GTT)").performClick(); frames()
+            snap("trade-live-gtt", known())
+        }
     }
 
-    @Test fun liveLoggedOut() {
+    protected fun liveLoggedOut() {
         SecurePrefs.putAll(mapOf("k.mode" to "live", "k.allow" to true, "kite.apiKey" to "testkey", "kite.apiSecret" to "testsecretnotreal"))
         show(tradeTab)
         compose.waitUntil(5_000) { exists("Log in to Zerodha") }
         snap("trade-live-logged-out", known())
     }
+}
+
+/** The main Trade-tab states on all 24 device set-ups. */
+@RunWith(ParameterizedRobolectricTestRunner::class)
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
+@ConscryptMode(ConscryptMode.Mode.OFF)
+class TradeLayoutTest(device: DeviceConfig) : TradeLayoutBase(device) {
+    companion object {
+        @JvmStatic
+        @ParameterizedRobolectricTestRunner.Parameters(name = "{0}")
+        fun configs(): List<Array<Any>> = DeviceConfig.matrix()
+    }
+
+    @Test fun paperAccountState() = paperAccount()
+    @Test fun paperOrderFormState() = paperOrderForm()
+    @Test fun paperOrdersState() = paperOrders()
+    @Test fun orderSheetPaperState() = orderSheetPaper()
+    @Test fun livePositionsState() = livePositions()
+    @Test fun liveLoggedOutState() = liveLoggedOut()
+}
+
+/**
+ * The Trade tab's secondary states (lists, dialogs, popups) on six set-ups that span the matrix
+ * (every size, every font scale, both themes), to keep the CI time in bounds.
+ */
+@RunWith(ParameterizedRobolectricTestRunner::class)
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
+@ConscryptMode(ConscryptMode.Mode.OFF)
+class TradeDialogsLayoutTest(device: DeviceConfig) : TradeLayoutBase(device) {
+    companion object {
+        private val PICK = setOf("small-font2.0-light", "small-font1.0-dark", "phone-font1.3-light", "landscape-font1.0-light",
+            "landscape-font2.0-dark", "tablet-font1.3-dark")
+
+        @JvmStatic
+        @ParameterizedRobolectricTestRunner.Parameters(name = "{0}")
+        fun configs(): List<Array<Any>> = DeviceConfig.matrix().filter { (it[0] as DeviceConfig).name in PICK }
+    }
+
+    @Test fun paperPositionsState() = paperPositions()
+    @Test fun paperStrikeListState() = paperStrikeList()
+    @Test fun paperModifyDialogState() = paperModifyDialog()
+    @Test fun paperFundsState() = paperFunds()
+    @Test fun paperAmountDialogState() = paperAmountDialog()
+    @Test fun paperPositionPopupState() = paperPositionPopup()
+    @Test fun orderSheetLiveState() = orderSheetLive()
+    @Test fun liveOrdersState() = liveOrders()
+    @Test fun liveModifyDialogState() = liveModifyDialog()
+    @Test fun liveGttDialogState() = liveGttDialog()
 }
