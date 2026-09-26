@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Print a JaCoCo XML report as a Markdown summary: totals, then line coverage per package.
 
-Usage: coverage_summary.py report.xml   (a missing report prints a note and exits 0, so a
+Usage: coverage_summary.py report.xml [junit-results-dir]   (a missing report prints a note and exits 0, so a
 failed test run still shows its real error rather than this one's).
 """
 import sys
@@ -17,7 +17,25 @@ def pct(cov_miss):
     return f"{100.0 * cov / (cov + miss):.1f}%" if cov + miss else "n/a"
 
 
-def main(path):
+def test_counts(results_dir):
+    """Totals from the JUnit XML files Gradle writes (one per test class)."""
+    import glob
+    import os
+    n = fail = skip = 0
+    for f in glob.glob(os.path.join(results_dir, "*.xml")):
+        try:
+            r = ET.parse(f).getroot()
+        except ET.ParseError:
+            continue
+        n += int(r.get("tests", 0))
+        fail += int(r.get("failures", 0)) + int(r.get("errors", 0))
+        skip += int(r.get("skipped", 0))
+    print(f"**Tests:** {n} run, {fail} failed, {skip} skipped\n")
+
+
+def main(path, results_dir=None):
+    if results_dir:
+        test_counts(results_dir)
     try:
         root = ET.parse(path).getroot()
     except (OSError, ET.ParseError) as e:
@@ -41,4 +59,5 @@ def main(path):
 
 
 if __name__ == "__main__":
-    main(sys.argv[1] if len(sys.argv) > 1 else "app/build/reports/coverage/test/debug/report.xml")
+    main(sys.argv[1] if len(sys.argv) > 1 else "app/build/reports/coverage/test/debug/report.xml",
+         sys.argv[2] if len(sys.argv) > 2 else None)

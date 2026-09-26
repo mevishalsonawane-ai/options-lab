@@ -118,7 +118,7 @@ jobs:
         run: ./gradlew --no-daemon :app:testDebugUnitTest :app:createDebugUnitTestCoverageReport
       - name: Coverage summary
         if: always()
-        run: python3 tools/coverage_summary.py $(find app/build/reports/coverage -name report.xml 2>/dev/null | head -1) | tee -a "$GITHUB_STEP_SUMMARY"
+        run: python3 tools/coverage_summary.py "$(find app/build/reports/coverage -name report.xml 2>/dev/null | head -1)" app/build/test-results/testDebugUnitTest | tee -a "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
