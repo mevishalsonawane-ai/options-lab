@@ -90,13 +90,29 @@ fun StrategyParams(s: AppSettings, update: ((AppSettings) -> AppSettings) -> Uni
 
 @Composable
 fun TrialsScreen(model: AppModel) {
-    val p = LocalPalette.current
     val s by model.settings.collectAsState()
     val bt by model.backtest.collectAsState()
     val arms by model.arms.collectAsState()
-    var showParams by remember { mutableStateOf(false) }
     val export = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri -> uri?.let(model::exportBacktest) }
+    TrialsContent(s, bt, arms, onRun = { model.runBacktest(force = true) }, onUpdate = model::update,
+        onExport = { export.launch("expiry_put_ledger.csv") }, onCompare = { model.runArms(it) },
+        onAdopt = { a -> model.update { st -> adopt(st, a.arm.params) }; model.say("Adopted \"${a.arm.name}\". Run the trial to see it in full.") })
+}
 
+/** The Backtests page from plain state and callbacks (what [TrialsScreen] shows; tests drive it without an [AppModel]). */
+@Composable
+internal fun TrialsContent(
+    s: AppSettings,
+    bt: Load<BacktestReport>,
+    arms: Load<List<com.optionslab.app.ui.ArmResult>>,
+    onRun: () -> Unit,
+    onUpdate: ((AppSettings) -> AppSettings) -> Unit,
+    onExport: () -> Unit,
+    onCompare: (Arm) -> Unit,
+    onAdopt: (com.optionslab.app.ui.ArmResult) -> Unit,
+) {
+    val p = LocalPalette.current
+    var showParams by remember { mutableStateOf(false) }
     Page {
         item {
             LedgerCard(title = "The Trial") {
@@ -105,21 +121,21 @@ fun TrialsScreen(model: AppModel) {
                     style = Type.figure.copy(color = p.ink, fontSize = 13.sp))
                 Spacer(Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    BrassButton("Run the trial", Modifier.weight(1f), busy = bt is Load.Busy) { model.runBacktest(force = true) }
+                    BrassButton("Run the trial", Modifier.weight(1f), busy = bt is Load.Busy, onClick = onRun)
                     BrassButton(if (showParams) "Close" else "Adjust", tone = p.inkSoft) { showParams = !showParams }
                 }
                 AnimatedVisibility(showParams) {
-                    Column(Modifier.animateContentSize()) { StrategyParams(s, model::update) }
+                    Column(Modifier.animateContentSize()) { StrategyParams(s, onUpdate) }
                 }
             }
         }
         when (val b = bt) {
             is Load.Busy -> item { LedgerCard { FullSpinner(b.label, b.progress) } }
             is Load.Failed -> item { LedgerCard { Note(b.why) } }
-            is Load.Done -> report(b.value, s.reduceMotion) { export.launch("expiry_put_ledger.csv") }
+            is Load.Done -> report(b.value, s.reduceMotion, onExport)
             Load.Idle -> item { LedgerCard { Note("Run the trial to replay every cached expiry session through the strategy.") } }
         }
-        item { ArmsCard(model, arms, s) }
+        item { ArmsCard(arms, s, onCompare, onAdopt) }
     }
 }
 
@@ -221,20 +237,20 @@ private fun SummaryBlock(sm: Summary) {
 }
 
 @Composable
-private fun ArmsCard(model: AppModel, arms: Load<List<com.optionslab.app.ui.ArmResult>>, s: AppSettings) {
+private fun ArmsCard(arms: Load<List<com.optionslab.app.ui.ArmResult>>, s: AppSettings, onCompare: (Arm) -> Unit, onAdopt: (com.optionslab.app.ui.ArmResult) -> Unit) {
     val p = LocalPalette.current
     LedgerCard(title = "The Arms") {
         Note("Every variant this project measured, replayed side by side over one pass of the record. Tap an arm to adopt its settings.")
         Spacer(Modifier.height(8.dp))
         BrassButton("Compare all arms", Modifier.fillMaxWidth(), busy = arms is Load.Busy) {
-            model.runArms(Arm("Your settings", "the trial above", s.params()))
+            onCompare(Arm("Your settings", "the trial above", s.params()))
         }
         when (arms) {
             is Load.Busy -> FullSpinner(arms.label, arms.progress)
             is Load.Failed -> Note(arms.why)
             is Load.Done -> arms.value.forEach { a ->
                 Rule(Modifier.padding(vertical = 8.dp))
-                Column(Modifier.fillMaxWidth().clickable { model.update { st -> adopt(st, a.arm.params) }; model.say("Adopted \"${a.arm.name}\". Run the trial to see it in full.") }) {
+                Column(Modifier.fillMaxWidth().clickable { onAdopt(a) }) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
                             Text(a.arm.name, style = Type.title.copy(color = p.ink, fontSize = 14.sp))

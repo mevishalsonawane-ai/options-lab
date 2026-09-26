@@ -37,27 +37,40 @@ import com.optionslab.engine.Monitor
 
 @Composable
 fun HealthScreen(model: AppModel) {
-    val p = LocalPalette.current
     val s by model.settings.collectAsState()
     val h by model.health.collectAsState()
     var source by remember { mutableStateOf((h as? Load.Done<com.optionslab.app.ui.HealthResult>)?.value?.source ?: "backtest") }
     val pick = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> uri?.let { source = "imported"; model.importLedger(it) } }
 
     LaunchedEffect(Unit) { if (h is Load.Idle) model.runHealth(source) }
+    HealthContent(s, h, source, onSource = { source = it; model.runHealth(it) },
+        onImport = { pick.launch(arrayOf("text/*", "text/csv", "application/octet-stream")) },
+        onWindow = { w -> model.update { it.copy(healthLast = w) }; model.runHealth(source) },
+        onCheck = { model.runHealth(source) })
+}
 
+/** The Health page from plain state and callbacks (what [HealthScreen] shows; tests drive it without an [AppModel]). */
+@Composable
+internal fun HealthContent(
+    s: com.optionslab.app.data.AppSettings,
+    h: Load<com.optionslab.app.ui.HealthResult>,
+    source: String,
+    onSource: (String) -> Unit,
+    onImport: () -> Unit,
+    onWindow: (Int) -> Unit,
+    onCheck: () -> Unit,
+) {
+    val p = LocalPalette.current
     Page {
         item {
             LedgerCard(title = "Kill Conditions") {
                 Note("Not a learner. It adapts nothing. It asks whether the conditions this strategy depends on are still true - now, not on average since 2023.")
                 val sources = listOf("backtest" to "Backtest", "paper" to "Paper ledger", "imported" to "Imported CSV")
                 ParamTokens("Check", sources.map { it.second to (it.first == source) }) { i ->
-                    if (sources[i].first == "imported") pick.launch(arrayOf("text/*", "text/csv", "application/octet-stream"))
-                    else { source = sources[i].first; model.runHealth(source) }
+                    if (sources[i].first == "imported") onImport() else onSource(sources[i].first)
                 }
                 val windows = listOf(10, 30, 60, 0)
-                ParamTokens("Window", windows.map { (if (it == 0) "all" else "last $it") to (it == s.healthLast) }) { i ->
-                    model.update { it.copy(healthLast = windows[i]) }; model.runHealth(source)
-                }
+                ParamTokens("Window", windows.map { (if (it == 0) "all" else "last $it") to (it == s.healthLast) }) { i -> onWindow(windows[i]) }
             }
         }
         when (val r = h) {
@@ -86,7 +99,7 @@ fun HealthScreen(model: AppModel) {
             Load.Idle -> Unit
         }
         item {
-            BrassButton("Check again", Modifier.fillMaxWidth()) { model.runHealth(source) }
+            BrassButton("Check again", Modifier.fillMaxWidth(), onClick = onCheck)
         }
     }
 }

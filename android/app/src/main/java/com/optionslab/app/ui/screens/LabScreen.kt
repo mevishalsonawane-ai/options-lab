@@ -16,6 +16,21 @@ import com.optionslab.app.ui.components.Token
 /** The research bench: Pine scripts (write, check, backtest, chart, auto-trade), the strategy's trials (arms), its health checks, and the portfolio and SIP backtesters, and the candle-by-candle replay. */
 @Composable
 fun LabScreen(model: AppModel, page: String, onPage: (String) -> Unit, onChart: () -> Unit = {}) {
+    LabTabs(page, onPage) { current ->
+        when (current) {
+            "pine" -> PineScreen(model, onChart)
+            "health" -> HealthScreen(model)
+            "portfolio" -> PortfolioLab(model)
+            "sip" -> SipLab(model)
+            "replay" -> ReplayLab(model)
+            else -> TrialsScreen(model)
+        }
+    }
+}
+
+/** The Lab's page tokens over [content] for the page picked (split out so tests can drive the tabs without an [AppModel]). */
+@Composable
+internal fun LabTabs(page: String, onPage: (String) -> Unit, content: @Composable (String) -> Unit) {
     Column(Modifier.fillMaxSize()) {
         Row(Modifier.horizontalScroll(androidx.compose.foundation.rememberScrollState()).padding(horizontal = 14.dp, vertical = 6.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -26,15 +41,6 @@ fun LabScreen(model: AppModel, page: String, onPage: (String) -> Unit, onChart: 
             Token("SIP", page == "sip") { onPage("sip") }
             Token("Replay", page == "replay") { onPage("replay") }
         }
-        Box(Modifier.weight(1f)) {
-            when (page) {
-                "pine" -> PineScreen(model, onChart)
-                "health" -> HealthScreen(model)
-                "portfolio" -> PortfolioLab(model)
-                "sip" -> SipLab(model)
-                "replay" -> ReplayLab(model)
-                else -> TrialsScreen(model)
-            }
-        }
+        Box(Modifier.weight(1f)) { content(page) }
     }
 }

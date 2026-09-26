@@ -52,6 +52,32 @@ import java.util.Locale
  */
 @Composable
 fun OptionChartPage(model: AppModel, pick: ChainPick, onFullChart: (String) -> Unit, onClose: () -> Unit) {
+    OptionChartContent(pick,
+        intraday = { model.optionIntraday(pick.underlying, pick.expiry, pick.strike, pick.right) },
+        symbolOf = {
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                runCatching { com.optionslab.app.data.Market.contracts().firstOrNull { c ->
+                    c.underlying == pick.underlying && c.expiry == pick.expiry && c.strike == pick.strike && c.right == pick.right }?.tradingSymbol }.getOrNull()
+            }
+        },
+        onFullChart = onFullChart, onClose = onClose,
+        orderSheet = { pk, buy, close -> OptionOrderSheet(model, pk, initialBuy = buy, onClose = close) })
+}
+
+/**
+ * The option page from data sources and callbacks (what [OptionChartPage] shows; tests drive it without an
+ * [AppModel]): [intraday] is the session's minute bars, [symbolOf] the option's trading symbol (null when not
+ * listed), [orderSheet] the order sheet for (pick with the last price, buy, close).
+ */
+@Composable
+internal fun OptionChartContent(
+    pick: ChainPick,
+    intraday: suspend () -> List<Upstox.Bar>,
+    symbolOf: suspend () -> String?,
+    onFullChart: (String) -> Unit,
+    onClose: () -> Unit,
+    orderSheet: @Composable (ChainPick, Boolean, () -> Unit) -> Unit,
+) {
     val scope = androidx.compose.runtime.rememberCoroutineScope()
     val p = LocalPalette.current
     var bars by remember(pick) { mutableStateOf<List<Upstox.Bar>>(emptyList()) }
@@ -60,7 +86,7 @@ fun OptionChartPage(model: AppModel, pick: ChainPick, onFullChart: (String) -> U
     var order by remember { mutableStateOf<Boolean?>(null) }   // true = buy, false = sell
     com.optionslab.app.ui.PollWhileStarted(pick) {
         while (true) {
-            runCatching { model.optionIntraday(pick.underlying, pick.expiry, pick.strike, pick.right) }
+            runCatching { intraday() }
                 .onSuccess { bars = it; error = null }.onFailure { error = it.message }
             loaded = true
             delay(30_000)
@@ -84,10 +110,7 @@ fun OptionChartPage(model: AppModel, pick: ChainPick, onFullChart: (String) -> U
                 // The full chart: indicators, drawing tools, chart types.
                 Text("Full chart ›", style = Type.label.copy(color = p.ink, fontSize = 13.sp), modifier = Modifier.clickable {
                     scope.launch {
-                        val sym = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                            runCatching { com.optionslab.app.data.Market.contracts().firstOrNull { c ->
-                                c.underlying == pick.underlying && c.expiry == pick.expiry && c.strike == pick.strike && c.right == pick.right }?.tradingSymbol }.getOrNull()
-                        }
+                        val sym = symbolOf()
                         if (sym != null) onFullChart(sym)
                     }
                 }.padding(horizontal = 10.dp, vertical = 6.dp))
@@ -140,7 +163,7 @@ fun OptionChartPage(model: AppModel, pick: ChainPick, onFullChart: (String) -> U
                 }
             }
         }
-        order?.let { OptionOrderSheet(model, pick.copy(ltp = last ?: pick.ltp), initialBuy = it) { order = null } }
+        order?.let { orderSheet(pick.copy(ltp = last ?: pick.ltp), it) { order = null } }
     }
 }
 

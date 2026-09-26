@@ -58,6 +58,18 @@ private fun hm(t: String): LocalTime? = runCatching { LocalTime.parse(t.trim().p
  */
 @Composable
 fun PresetsCard(model: AppModel) {
+    val result by model.preset.collectAsState()
+    PresetsContent(result, onReset = { model.preset.value = Load.Idle },
+        onRun = { id, u, n, e, x, sl, tg -> model.runPreset(id, u, n, e, x, sl, tg) },
+        onAdd = { id, u, n, e, x, sl, tg -> model.addPreset(id, u, n, e, x, sl, tg) })
+}
+
+/** What [PresetsCard] asks the model to do with a checked preset: id, underlying, lots, entry, exit, basket stop, basket target. */
+internal typealias PresetAction = (String, String, Int, LocalTime, LocalTime, Double?, Double?) -> Unit
+
+/** The Presets card from its result and callbacks (tests drive it without an [AppModel]). [onReset]: a new preset or underlying clears the result. */
+@Composable
+internal fun PresetsContent(result: Load<Presets.Result>, onReset: () -> Unit, onRun: PresetAction, onAdd: PresetAction) {
     val p = LocalPalette.current
     var id by remember { mutableStateOf(Presets.ALL.first().id) }
     var u by remember { mutableStateOf("NIFTY") }
@@ -66,7 +78,6 @@ fun PresetsCard(model: AppModel) {
     var exit by remember { mutableStateOf("15:15") }
     var stop by remember { mutableStateOf("") }
     var target by remember { mutableStateOf("") }
-    val result by model.preset.collectAsState()
     val preset = Presets.byId(id)!!
 
     val e = hm(entry); val x = hm(exit)
@@ -84,11 +95,11 @@ fun PresetsCard(model: AppModel) {
 
     LedgerCard(title = "Presets") {
         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            Presets.ALL.forEach { pr -> Token(pr.name, pr.id == id) { id = pr.id; model.preset.value = Load.Idle } }
+            Presets.ALL.forEach { pr -> Token(pr.name, pr.id == id) { id = pr.id; onReset() } }
         }
         Text(preset.blurb, style = Type.bodySmall.copy(color = p.inkSoft), modifier = Modifier.padding(top = 6.dp))
         Row(Modifier.padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            UNDERLYINGS.forEach { k -> Token(k, k == u) { u = k; model.preset.value = Load.Idle } }
+            UNDERLYINGS.forEach { k -> Token(k, k == u) { u = k; onReset() } }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Column(Modifier.weight(1f)) { PriceField(lots, { lots = it.filter(Char::isDigit) }, "Lots") }
@@ -102,10 +113,10 @@ fun PresetsCard(model: AppModel) {
         val busy = result is Load.Busy
         Row(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             BrassButton("Backtest", Modifier.weight(1f), busy = busy, enabled = !busy) {
-                if (problem != null) Alerts.error(problem) else model.runPreset(id, u, n!!, e!!, x!!, sl, tg)
+                if (problem != null) Alerts.error(problem) else onRun(id, u, n!!, e!!, x!!, sl, tg)
             }
             BrassButton("Add to Strategies", Modifier.weight(1f), tone = p.inkSoft) {
-                if (problem != null) Alerts.error(problem) else model.addPreset(id, u, n!!, e!!, x!!, sl, tg)
+                if (problem != null) Alerts.error(problem) else onAdd(id, u, n!!, e!!, x!!, sl, tg)
             }
         }
         when (val r = result) {
@@ -157,11 +168,17 @@ private fun PresetResult(r: Presets.Result) {
  */
 @Composable
 fun ReplayLab(model: AppModel) {
+    val loaded by model.replay.collectAsState()
+    ReplayContent(loaded, daysFor = model::replayDays, onLoad = model::loadReplay)
+}
+
+/** The Replay page from the loaded session and callbacks (what [ReplayLab] shows; tests drive it without an [AppModel]). */
+@Composable
+internal fun ReplayContent(loaded: Load<com.optionslab.engine.Session>, daysFor: (String) -> List<java.time.LocalDate>, onLoad: (String, java.time.LocalDate) -> Unit) {
     val p = LocalPalette.current
     var u by remember { mutableStateOf("NIFTY") }
-    val days = remember(u) { model.replayDays(u).sortedDescending() }
+    val days = remember(u) { daysFor(u).sortedDescending() }
     var di by remember(u) { mutableIntStateOf(0) }
-    val loaded by model.replay.collectAsState()
     var what by remember { mutableStateOf("Index") }
     var cursor by remember { mutableIntStateOf(5) }
     var playing by remember { mutableStateOf(false) }
@@ -205,7 +222,7 @@ fun ReplayLab(model: AppModel) {
                             style = Type.title.copy(fontSize = 15.sp), modifier = Modifier.weight(1f))
                         BrassButton("›", tone = p.inkSoft, enabled = di > 0) { di-- }
                     }
-                    BrassButton("Load this session", Modifier.fillMaxWidth().padding(top = 8.dp), busy = loaded is Load.Busy) { model.loadReplay(u, days[di]) }
+                    BrassButton("Load this session", Modifier.fillMaxWidth().padding(top = 8.dp), busy = loaded is Load.Busy) { onLoad(u, days[di]) }
                 }
                 (loaded as? Load.Failed)?.let { AlertOn(it.why, throttle = false) }
             }

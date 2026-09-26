@@ -50,10 +50,14 @@ import kotlin.math.min
  * A candlestick chart drawn by the app itself (no WebView): intervals, the last
  * sessions (the last one the market was open when it is closed), drag to scroll,
  * tap for a candle's OHLC, the last price marked, refreshed every 15 s while open.
- * Used when the advanced (web) chart cannot draw on this phone.
+ * Used when the advanced (web) chart cannot draw on this phone. [feed] gives the candles for (symbol,
+ * interval): [ChartFeed] in the app, a fake in tests.
  */
 @Composable
-fun NativeChart(symbol: String, modifier: Modifier = Modifier, visible: Boolean = true) {
+fun NativeChart(
+    symbol: String, modifier: Modifier = Modifier, visible: Boolean = true,
+    feed: suspend (symbol: String, interval: String) -> List<Upstox.Bar> = { s, iv -> ChartFeed.bars(s, iv, null, null) },
+) {
     val p = LocalPalette.current
     var interval by remember { mutableStateOf("5m") }
     var bars by remember(symbol) { mutableStateOf<List<Upstox.Bar>>(emptyList()) }
@@ -69,7 +73,7 @@ fun NativeChart(symbol: String, modifier: Modifier = Modifier, visible: Boolean 
         if (bars.isEmpty()) loading = true
         error = null
         while (true) {
-            val r = withContext(Dispatchers.IO) { runCatching { ChartFeed.bars(symbol, interval, null, null) } }
+            val r = withContext(Dispatchers.IO) { runCatching { feed(symbol, interval) } }
             r.onSuccess { bars = it; error = if (it.isEmpty()) "No candles for $symbol $interval yet." else null }
                 .onFailure { error = "Could not load $symbol: ${it.message ?: "no data"}" }
             loading = false

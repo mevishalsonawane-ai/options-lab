@@ -65,14 +65,12 @@ private data class Money(val pnlToday: Double?, val unused: Double?, val used: D
  */
 @Composable
 fun AlmanacScreen(model: AppModel, onGo: (String) -> Unit) {
-    val p = LocalPalette.current
     val s by model.settings.collectAsState()
     val quotes by model.quotes.collectAsState()
     val note by model.quoteNote.collectAsState()
     val daily by model.bankNiftyDaily.collectAsState()
     val account by model.account.collectAsState()
     val paper by model.paper.collectAsState()
-    var range by rememberSaveable { mutableStateOf("1D") }
 
     // Prices poll only while Home is on screen and the app is in front.
     com.optionslab.app.ui.PollWhileStarted {
@@ -88,11 +86,34 @@ fun AlmanacScreen(model: AppModel, onGo: (String) -> Unit) {
         }
     }
     LaunchedEffect(s.live) { model.loadBankNiftyDaily() }
+    AlmanacContent(s.live, com.optionslab.app.data.Broker.loggedIn, quotes, note, daily, account, paper, onGo,
+        onRow = { model.rowAction.value = it }, strategies = { StrategyArmCard(model) { onGo("strategy") } })
+}
+
+/**
+ * Home from plain state and callbacks (what [AlmanacScreen] shows; tests drive it without an [AppModel]).
+ * [loggedIn]: a Zerodha session for today; [strategies]: the strategy card between the money and the chart.
+ */
+@Composable
+internal fun AlmanacContent(
+    live: Boolean,
+    loggedIn: Boolean,
+    quotes: Map<String, Market.Quote>,
+    note: String?,
+    daily: List<Pair<java.time.LocalDate, Double>>,
+    account: Load<com.optionslab.app.ui.Account>,
+    paper: Load<com.optionslab.app.data.Paper.Snapshot>,
+    onGo: (String) -> Unit,
+    onRow: (RowTarget) -> Unit,
+    strategies: @Composable () -> Unit,
+) {
+    val p = LocalPalette.current
+    var range by rememberSaveable { mutableStateOf("1D") }
 
     val money: Money
     val orders: List<HomeOrder>
     val moneyNote: String?
-    if (s.live) {
+    if (live) {
         val a = (account as? Load.Done)?.value
         money = Money(a?.book?.m2m, a?.funds?.available, a?.funds?.used)
         orders = a?.let { acc ->
@@ -106,7 +127,7 @@ fun AlmanacScreen(model: AppModel, onGo: (String) -> Unit) {
             }
         } ?: emptyList()
         moneyNote = when {
-            !com.optionslab.app.data.Broker.loggedIn -> "Log in to Zerodha for today to see your money and orders."
+            !loggedIn -> "Log in to Zerodha for today to see your money and orders."
             account is Load.Failed -> (account as Load.Failed).why
             else -> null
         }
@@ -151,7 +172,7 @@ fun AlmanacScreen(model: AppModel, onGo: (String) -> Unit) {
         }
 
         // ---- strategies: arm the ones you want ------------------------------------------
-        item { StrategyArmCard(model) { onGo("strategy") } }
+        item { strategies() }
 
         // ---- BANKNIFTY ------------------------------------------------------------------
         item {
@@ -211,7 +232,7 @@ fun AlmanacScreen(model: AppModel, onGo: (String) -> Unit) {
                 if (orders.isEmpty()) Note("No open positions or pending orders.", Modifier.padding(top = 6.dp))
                 orders.forEachIndexed { i, o ->
                     if (i > 0) Rule()
-                    Row(Modifier.fillMaxWidth().clickable { model.rowAction.value = o.target }.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Row(Modifier.fillMaxWidth().clickable { onRow(o.target) }.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
                             Text(o.name, style = Type.body.copy(color = p.ink, fontSize = 14.sp, fontWeight = FontWeight.SemiBold), maxLines = 1)
                             Text(o.detail, style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp), maxLines = 1)

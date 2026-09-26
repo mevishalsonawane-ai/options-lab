@@ -55,8 +55,14 @@ import java.time.LocalDate
 
 @Composable
 fun IcPage(model: AppModel) {
-    val p = LocalPalette.current
     val st by model.ic.collectAsState()
+    IcContent(st) { u, regime, complete -> model.runIc(u, regime, complete) }
+}
+
+/** The IC table from its state (what [IcPage] shows; tests drive it without an [AppModel]). */
+@Composable
+internal fun IcContent(st: Load<Ic.IcResult>, onMeasure: (underlying: String, regime: String, completeOnly: Boolean) -> Unit) {
+    val p = LocalPalette.current
     var underlying by remember { mutableStateOf("NIFTY") }
     var regime by remember { mutableStateOf("quoted") }
     var complete by remember { mutableStateOf(false) }
@@ -69,7 +75,7 @@ fun IcPage(model: AppModel) {
                 ParamTokens("Regime", Costs.REGIMES.map { it to (it == regime) }) { regime = Costs.REGIMES[it] }
                 ParamTokens("Sessions", listOf("all" to !complete, "same-day chains only" to complete)) { complete = it == 1 }
                 Spacer(Modifier.height(10.dp))
-                BrassButton("Measure", Modifier.fillMaxWidth(), busy = st is Load.Busy) { model.runIc(underlying, regime, complete) }
+                BrassButton("Measure", Modifier.fillMaxWidth(), busy = st is Load.Busy) { onMeasure(underlying, regime, complete) }
             }
         }
         when (val s = st) {
@@ -124,8 +130,18 @@ private fun IcRowCard(r: Ic.IcRow) {
 
 @Composable
 fun SignalPage(model: AppModel) {
-    val p = LocalPalette.current
     val st by model.signal.collectAsState()
+    SignalContent(st, daysFor = { Store.barDays(it) }) { u, day, indicator, key, atr, length, lot -> model.runSignal(u, day, indicator, key, atr, length, lot) }
+}
+
+/** Signal Lab from its state (what [SignalPage] shows; tests drive it without an [AppModel]). [daysFor] runs on the IO dispatcher. */
+@Composable
+internal fun SignalContent(
+    st: Load<SignalResult>,
+    daysFor: (String) -> List<LocalDate>,
+    onReplay: (underlying: String, day: LocalDate, indicator: String, keyValue: Double, atrPeriod: Int, length: Int, lot: Int) -> Unit,
+) {
+    val p = LocalPalette.current
     var underlying by remember { mutableStateOf("NIFTY") }
     var indicator by remember { mutableStateOf("utbot") }
     var key by remember { mutableFloatStateOf(2f) }
@@ -134,7 +150,7 @@ fun SignalPage(model: AppModel) {
     var days by remember { mutableStateOf<List<LocalDate>>(emptyList()) }
     var day by remember { mutableStateOf<LocalDate?>(null) }
     LaunchedEffect(underlying) {
-        days = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { Store.barDays(underlying) }
+        days = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { daysFor(underlying) }
         day = days.lastOrNull()
     }
     Page {
@@ -153,7 +169,7 @@ fun SignalPage(model: AppModel) {
                     Slider(length.toFloat(), { length = it.toInt() }, valueRange = 20f..200f)
                 }
                 BrassButton("Replay the session", Modifier.fillMaxWidth(), enabled = day != null, busy = st is Load.Busy) {
-                    day?.let { model.runSignal(underlying, it, indicator, key.toDouble(), atr, length, if (underlying == "NIFTY") 65 else 30) }
+                    day?.let { onReplay(underlying, it, indicator, key.toDouble(), atr, length, if (underlying == "NIFTY") 65 else 30) }
                 }
                 Note("Run settings from the PC port: a = 2, ATR period 1, Heikin Ashi off. ATR(1) is the bar's own true range, so this is far twitchier than the script's default ATR(10).")
             }
@@ -220,8 +236,17 @@ private fun SignalChart(r: SignalResult) {
 
 @Composable
 fun SizingPage(model: AppModel) {
-    val p = LocalPalette.current
     val s by model.settings.collectAsState()
+    SizingContent(s) { capital, survive ->
+        model.update { it.copy(capital = capital, survive = survive) }
+        model.say("Sizing saved for the trial.")
+    }
+}
+
+/** Sizing & Tail from the settings (what [SizingPage] shows; tests drive it without an [AppModel]). [onUse]: capital, survive fraction. */
+@Composable
+internal fun SizingContent(s: com.optionslab.app.data.AppSettings, onUse: (capital: Double, survive: Double) -> Unit) {
+    val p = LocalPalette.current
     var capital by remember { mutableFloatStateOf(s.capital.toFloat()) }
     var survive by remember { mutableFloatStateOf((s.survive * 100).toFloat()) }
     val plan = runCatching { Sizing.planPosition(capital.toDouble(), survive / 100.0) }
@@ -243,8 +268,7 @@ fun SizingPage(model: AppModel) {
                 }.onFailure { Note(it.message ?: "") }
                 Spacer(Modifier.height(8.dp))
                 BrassButton("Use for the trial", Modifier.fillMaxWidth(), tone = p.inkSoft) {
-                    model.update { it.copy(capital = capital.toDouble(), survive = survive / 100.0) }
-                    model.say("Sizing saved for the trial.")
+                    onUse(capital.toDouble(), survive / 100.0)
                 }
             }
         }
@@ -265,12 +289,16 @@ fun SizingPage(model: AppModel) {
 // ---- Cost calculator ---------------------------------------------------------------
 
 @Composable
-fun CostsPage(model: AppModel) {
+fun CostsPage(model: AppModel) = CostsContent(model::costs)
+
+/** The cost calculator over [costs] (sell, buy, round trip; [AppModel.costs] in the app). */
+@Composable
+internal fun CostsContent(costs: (premium: Double, lot: Int, lots: Int, regime: String) -> Triple<Costs.Charges, Costs.Charges, Costs.Charges>) {
     val p = LocalPalette.current
     var premium by remember { mutableFloatStateOf(4.85f) }
     var lot by remember { mutableIntStateOf(65) }
     var regime by remember { mutableStateOf("quoted") }
-    val (sell, buy, rt) = model.costs(premium.toDouble(), lot, 1, regime)
+    val (sell, buy, rt) = costs(premium.toDouble(), lot, 1, regime)
     Page {
         item { PageTitle("Cost Calculator", "There is deliberately no zero-cost regime") }
         item {
