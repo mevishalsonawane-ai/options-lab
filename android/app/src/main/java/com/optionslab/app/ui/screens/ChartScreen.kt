@@ -76,6 +76,13 @@ fun ChartScreen(model: AppModel, symbol: String, exchange: String, visible: Bool
     var retried by remember { mutableStateOf(false) }
     var failed by remember { mutableStateOf(false) }
     var why by remember { mutableStateOf<String?>(null) }   // the load's own error, shown on the cover
+    // The basic chart (drawn by the app, no WebView): chosen by the owner, or used automatically
+    // when the advanced chart reports it could not draw on this phone.
+    var basicChosen by remember { mutableStateOf(com.optionslab.app.security.SecurePrefs.getBoolean("chart.basic", false)) }
+    var painted by remember { mutableStateOf<String?>(null) }        // "w×h, n bars" once the web chart drew
+    var paintedOk by remember { mutableStateOf(false) }
+    var autoBasic by remember { mutableStateOf<String?>(null) }      // why the basic chart was switched in
+    val basic = basicChosen || autoBasic != null
 
     fun openOrder(buy: Boolean, price: Double?) {
         val (sym, _) = current
@@ -118,6 +125,16 @@ fun ChartScreen(model: AppModel, symbol: String, exchange: String, visible: Bool
         holder[0]?.evaluateJavascript("window.__iraTick && window.__iraTick(${t.last}, $at)", null)
     }
 
+    // Data arrived but the page never said it drew: this phone's WebView is not drawing it.
+    LaunchedEffect(ready, visible, gen) {
+        if (!ready || !visible || paintedOk) return@LaunchedEffect
+        kotlinx.coroutines.delay(8_000)
+        if (!paintedOk) autoBasic = "The advanced chart did not draw on this phone" + (painted?.let { " (it reported $it)" } ?: "") +
+            (android.webkit.WebView.getCurrentWebViewPackage()?.let { " (WebView ${it.versionName})" } ?: "") + "."
+    }
+    // The page failed outright after the retry: the basic chart instead of an error.
+    LaunchedEffect(failed) { if (failed && autoBasic == null) autoBasic = why ?: "The advanced chart could not load." }
+
     // A chart that has not drawn its first candles in 12 s is rebuilt once; after that, say so.
     LaunchedEffect(gen, visible) {
         if (!visible || ready) return@LaunchedEffect
@@ -143,6 +160,12 @@ fun ChartScreen(model: AppModel, symbol: String, exchange: String, visible: Bool
         Row(Modifier.fillMaxWidth().background(p.paperDeep).padding(horizontal = 12.dp, vertical = 6.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(current.first, style = Type.label.copy(color = p.ink, fontSize = 13.sp), maxLines = 1, modifier = Modifier.weight(1f))
+            // Basic (drawn by the app) or Advanced (indicators, drawings; needs the phone's WebView).
+            Text(if (basic) "BASIC" else "ADV", textAlign = TextAlign.Center, style = Type.label.copy(color = p.ink, fontSize = 12.sp, fontWeight = FontWeight.Bold),
+                modifier = Modifier.background(p.chip, RoundedCornerShape(50)).clickable {
+                    if (basic) { basicChosen = false; autoBasic = null; com.optionslab.app.security.SecurePrefs.put("chart.basic", false); if (failed) { failed = false; retried = false; ready = false; gen++ } }
+                    else { basicChosen = true; com.optionslab.app.security.SecurePrefs.put("chart.basic", true) }
+                }.padding(horizontal = 10.dp, vertical = 8.dp))
             // A price alert on whatever is charted, at a level you choose.
             Text("ALERT", textAlign = TextAlign.Center, style = Type.label.copy(color = p.ink, fontSize = 13.sp, fontWeight = FontWeight.Bold),
                 modifier = Modifier.background(p.chip, RoundedCornerShape(50)).clickable { alerting = true }.padding(horizontal = 14.dp, vertical = 8.dp))
@@ -175,6 +198,10 @@ fun ChartScreen(model: AppModel, symbol: String, exchange: String, visible: Bool
                     setBackgroundColor(if (p.dark) android.graphics.Color.BLACK else android.graphics.Color.WHITE)
                     addJavascriptInterface(Bridge(this, scope, onSymbol = { s, e -> current = s to e; hint = null },
                         onOrder = { buy, price -> openOrder(buy, price) }, onData = { if (holder[0] === this) { ready = true; failed = false; why = null } },
+                        onPainted = { w, h, n -> if (holder[0] === this) {
+                            painted = "${w}×${h}, $n bars"
+                            paintedOk = w >= 50 && h >= 50
+                        } },
                         onFail = { m -> if (holder[0] === this && !ready) { failed = true; why = m } },
                         onPageError = { m -> if (holder[0] === this) { ready = false; failed = true; why = m } }), "IraBridge")
                     // A script error in the chart page shows as a red alert (the bundled chart only; no account data).
@@ -223,8 +250,16 @@ fun ChartScreen(model: AppModel, symbol: String, exchange: String, visible: Bool
             onRelease = { w -> if (holder[0] === w) holder[0] = null; w.removeJavascriptInterface("IraBridge"); w.stopLoading(); w.destroy() },
         )
         }
+        // The basic chart, drawn by the app: over the web chart when chosen or when that cannot draw.
+        if (basic) Column(Modifier.fillMaxSize().background(p.paper)) {
+            autoBasic?.let {
+                Text("$it Showing the basic chart. Tap ADV / BASIC above to try the advanced one again.",
+                    style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 11.sp), modifier = Modifier.fillMaxWidth().background(p.chip).padding(horizontal = 12.dp, vertical = 6.dp))
+            }
+            NativeChart(current.first, Modifier.weight(1f))
+        }
         // Covers the blank page until the first candles are drawn, so the chart never shows as a white sheet.
-        if (!ready) Box(Modifier.fillMaxSize().background(p.paper), contentAlignment = Alignment.Center) {
+        else if (!ready) Box(Modifier.fillMaxSize().background(p.paper), contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(if (failed) (why ?: "The chart could not load") else "Loading chart…", style = Type.bodySmall.copy(color = p.inkSoft))
                 if (failed) Text("Retry", style = Type.label.copy(color = p.ink, fontWeight = FontWeight.SemiBold),
@@ -298,7 +333,12 @@ private class Bridge(
     private val onData: () -> Unit = {},
     private val onFail: (String) -> Unit = {},
     private val onPageError: (String) -> Unit = {},
+    private val onPainted: (Int, Int, Int) -> Unit = { _, _, _ -> },
 ) {
+    /** terminal.mjs: the chart drew its first candles at this size. */
+    @JavascriptInterface
+    fun painted(w: Int, h: Int, bars: Int) { web.post { onPainted(w, h, bars) } }
+
     /** boot.js: the chart page itself failed (a script error, or it never started). */
     @JavascriptInterface
     fun fail(message: String) {

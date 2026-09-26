@@ -138,7 +138,16 @@ widget.on('data', (e) => {
   const key = `${e.symbol}|${e.interval}`;
   if (placed.has(key)) return;
   placed.add(key);
-  requestAnimationFrame(placeAtNow);
+  requestAnimationFrame(() => {
+    placeAtNow();
+    // Tell the app the chart actually drew, and at what size: a 0 x 0 or missing report
+    // means this phone's WebView cannot draw it, and the app shows its basic chart instead.
+    const el = document.getElementById('t');
+    const report = () => { try { bridge.painted && bridge.painted(el.clientWidth | 0, el.clientHeight | 0, e.bars | 0); } catch (err) { /* older app */ } };
+    report();
+    // Report again when the chart's size changes (it may start small and grow).
+    if (typeof ResizeObserver !== 'undefined' && !window.__iraSized) { window.__iraSized = true; new ResizeObserver(report).observe(el); }
+  });
 });
 
 // The app switches symbol (e.g. from the option chain) through this.
