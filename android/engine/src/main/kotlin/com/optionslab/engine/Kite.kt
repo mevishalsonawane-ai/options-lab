@@ -182,7 +182,15 @@ object Kite {
         ))
     }
 
-    private fun money(x: Double) = "%.2f".format(java.util.Locale.ROOT, x)
+    /**
+     * A price for the API: at least two decimals, up to four so sub-paisa ticks
+     * (CDS trades on 0.0025) are not rounded off the tick.
+     */
+    internal fun money(x: Double): String {
+        if (!x.isFinite()) return "%.2f".format(java.util.Locale.ROOT, x)
+        val s = java.math.BigDecimal(x).setScale(4, java.math.RoundingMode.HALF_UP).stripTrailingZeros()
+        return s.setScale(maxOf(2, s.scale())).toPlainString()
+    }
 
     private fun jsonStr(t: String) = "\"" + t.replace("\\", "\\\\").replace("\"", "\\\"") + "\""
 
@@ -281,7 +289,8 @@ object Kite {
     fun onTick(price: Double, tick: Double, side: Side): Double {
         val t = price / tick
         val n = if (side == Side.SELL) kotlin.math.floor(t + 1e-9) else kotlin.math.ceil(t - 1e-9)
-        return Math.round(n * tick * 100) / 100.0
+        // n ticks exactly, in decimal: 0.0025 ticks keep their four places.
+        return java.math.BigDecimal.valueOf(tick).multiply(java.math.BigDecimal.valueOf(n.toLong())).toDouble()
     }
 
     /**
@@ -330,6 +339,8 @@ object Kite {
     val FREEZE_QUANTITY = mapOf(
         "NIFTY" to 1800, "BANKNIFTY" to 900, "FINNIFTY" to 1800, "MIDCPNIFTY" to 2800,
         "SENSEX" to 1000, "BANKEX" to 900,
+        // NIFTY NEXT 50: 600 units per NSE's freeze-limit circular; verify against the latest revision.
+        "NIFTYNXT50" to 600,
     )
 
     /** Longest name first, so BANKNIFTY is never read as NIFTY. */
@@ -338,7 +349,7 @@ object Kite {
     /**
      * The underlying of a derivative trading symbol (NIFTY26SEP24500PE -> NIFTY),
      * or null when it is not one in [FREEZE_QUANTITY]. The expiry digits must
-     * follow the name, so NIFTYNXT50 is not taken for NIFTY.
+     * follow the name, so NIFTYNXT50 is never taken for NIFTY.
      */
     fun underlyingOf(tradingSymbol: String): String? =
         FREEZE_NAMES.firstOrNull { tradingSymbol.startsWith(it) && tradingSymbol.getOrNull(it.length)?.isDigit() == true }

@@ -109,7 +109,7 @@ object Costs {
 
     /**
      * BUY an option and hold it to settlement: one order, stamp duty, exercise
-     * STT at 0.125% of intrinsic when it finishes in the money, half a spread.
+     * STT at 0.15% ([STT_EXERCISE_PCT]) of intrinsic when it finishes in the money, half a spread.
      */
     fun buyToSettle(premium: Double, lotSize: Int, lots: Int = 1, regime: String, intrinsic: Double = 0.0): Charges {
         check(regime)

@@ -38,16 +38,27 @@ object Harvester {
     /** Contracts fetched, then written, a batch at a time: a harvest stopped part-way keeps what it had. */
     private const val BATCH = 100
 
+    /** In a done-list: the expiring chain on disk was captured with no contract missing. */
+    private const val EXPIRY_COMPLETE = "expiry-chain-complete"
+
+    /**
+     * [session] is the day being harvested, fixed when the job was requested: a retry that runs
+     * after midnight still harvests (and marks) that day, not the new one.
+     */
     suspend fun run(
         underlyings: List<String> = listOf("NIFTY", "BANKNIFTY"),
         expiries: Int = 3, days: Long = 1, indices: Boolean = true,
         onProgress: (Progress) -> Unit = {},
+        session: LocalDate = Market.today(),
     ): Result {
-        val today = Market.today()
+        val today = session
+        val collected = Market.today()
         val start = today.minusDays(days)
-        // Today's session is final once the market has closed (or never opened). Only then may a
-        // retried run skip the contracts an earlier attempt already stored.
-        val sessionFinal = !Market.isTradingDay(today) || Market.minuteNow() >= Market.CLOSE
+        // The session is final once the exchange has served its last minute and closing OI - a few
+        // minutes after the 15:30 close - or it never opened. Only then may a retried run skip the
+        // contracts an earlier attempt already stored.
+        val closed = today.isBefore(collected) || Market.minuteNow() >= Market.CLOSE + 10
+        val sessionFinal = !Market.isTradingDay(today) || closed
         kotlinx.coroutines.yield()   // a stopped run ends here, not after the (blocking) master read
         onProgress(Progress("Reading the instrument master", 0, 1))
         // Today's master if the phone already has it: a retry does not download tens of MB again.
@@ -74,8 +85,9 @@ object Harvester {
             val chain = live.filter { it.expiry in chosen }
             // The expiring NIFTY chain is also kept in Upstox units, from this run's own fetch, so it
             // is never skipped until that capture is on disk.
-            val expiryHeld = u == "NIFTY" && today in Store.deviceExpiryDays()
             val already = if (sessionFinal) Store.harvested(u, today) else emptySet()
+            // Held only when that capture was complete; a partial one is fetched again and replaced.
+            val expiryHeld = u == "NIFTY" && today in Store.deviceExpiryDays() && EXPIRY_COMPLETE in already
             val todo = chain.filter { c -> c.instrumentKey !in already || (u == "NIFTY" && c.expiry == today && !expiryHeld) }
             val failures = ArrayList<String>()
             val gate = Semaphore(4)   // Upstox rate-limits hard at 429; 8 workers tripped it
@@ -140,18 +152,24 @@ object Harvester {
                 val opts = part?.options ?: emptyList()
                 Store.recordManifest(u, Manifest.Entry(
                     session = day, nExpiries = opts.mapNotNull { it.expiry }.distinct().size, nContracts = opts.size,
-                    scope = Manifest.scopeFor(day, today, failures.size, opts.size), collectedOn = today,
+                    scope = Manifest.scopeFor(day, collected, failures.size, opts.size), collectedOn = collected,
                 ))
-                if (day == today && failures.isEmpty()) sameDay[u] = opts.size
+                if (day == collected && failures.isEmpty()) sameDay[u] = opts.size
             }
             allFailures += failures
 
             // Expiry day: keep the expiring chain in Upstox units, exactly like
             // the PC's cache, so the forward record grows by one session.
-            if (!expiryHeld && expiringToday.isNotEmpty() && Market.minuteNow() >= 15 * 60 + 30) {
+            // Written whole, and then held, only when no expiring contract failed; a capture with gaps is
+            // written only over a smaller one, and a later run may still replace it.
+            val expiringSymbols = chain.filter { it.expiry == today }.map { it.tradingSymbol }.toSet()
+            val expiryGaps = failures.any { it in expiringSymbols }
+            if (!expiryHeld && expiringToday.isNotEmpty() && closed &&
+                (!expiryGaps || expiringToday.size > Store.deviceExpirySize(today))) {
                 val lot = Lots.lotFromChain(expiringToday)
                 Store.writeExpiry(Session(today, lot, expiringToday))
                 Store.invalidate()
+                if (!expiryGaps) Store.markHarvested(u, today, listOf(EXPIRY_COMPLETE))
                 captured = today
             }
         }

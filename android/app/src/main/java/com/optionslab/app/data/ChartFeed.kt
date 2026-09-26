@@ -89,8 +89,17 @@ object ChartFeed {
 
     /** History chunks in flight at once, across every chart: Upstox answers a burst with 429s. */
     private val chunkGate = Semaphore(4)
+    /** The market watch's own gate: its alarm pricing never queues behind a backtest's history load. */
+    private val quickGate = Semaphore(2)
 
-    suspend fun bars(symbol: String, interval: String, fromSec: Long?, toSec: Long?): List<Upstox.Bar> {
+    /**
+     * [quick]: for a caller on a deadline (the market watch) - one attempt per request with short
+     * timeouts, and its own gate instead of the one the chart and backtests share.
+     */
+    suspend fun bars(symbol: String, interval: String, fromSec: Long?, toSec: Long?, quick: Boolean = false): List<Upstox.Bar> {
+        val gate = if (quick) quickGate else chunkGate
+        suspend fun get(url: String, tries: Int) =
+            if (quick) Net.getJson(url, tries = 1, timeoutMs = Net.QUICK_READ_MS, connectMs = Net.QUICK_CONNECT_MS) else Net.getJson(url, tries = tries)
         val key = Upstox.quote(instrumentKey(symbol))
         val u = unitOf(interval)
         val today = Market.today()
@@ -118,7 +127,7 @@ object ChartFeed {
         kotlinx.coroutines.coroutineScope {
             // Today's session lives on a separate endpoint; it is fetched alongside the history.
             val todays: kotlinx.coroutines.Deferred<List<Upstox.Bar>>? = if (live) async(kotlinx.coroutines.Dispatchers.IO) {
-                val r = runCatching { Net.parseCandles(Net.getJson("$BASE/intraday/$key/${u.unit}/${u.n}", tries = 2)) }
+                val r = runCatching { Net.parseCandles(get("$BASE/intraday/$key/${u.unit}/${u.n}", tries = 2)) }
                 // While the market is open a failed read is an error, never history passed off as the whole chart.
                 r.exceptionOrNull()?.let { if (it is kotlinx.coroutines.CancellationException || Market.isOpen()) throw it }
                 r.getOrDefault(emptyList())
@@ -139,7 +148,7 @@ object ChartFeed {
                     hi = lo.minusDays(1)
                 }
                 // One failed chunk costs only its own days; the load fails only if every chunk did.
-                val res = chunks.map { (lo, h) -> async(kotlinx.coroutines.Dispatchers.IO) { chunkGate.withPermit { runCatching { Net.parseCandles(Net.getJson("$BASE/$key/${u.unit}/${u.n}/$h/$lo", tries = 3)) } } } }
+                val res = chunks.map { (lo, h) -> async(kotlinx.coroutines.Dispatchers.IO) { gate.withPermit { runCatching { Net.parseCandles(get("$BASE/$key/${u.unit}/${u.n}/$h/$lo", tries = 3)) } } } }
                     .map { it.await() }
                 if (res.isNotEmpty() && res.all { it.isFailure }) throw res.first().exceptionOrNull()!!
                 val got = res.flatMap { it.getOrDefault(emptyList()) }

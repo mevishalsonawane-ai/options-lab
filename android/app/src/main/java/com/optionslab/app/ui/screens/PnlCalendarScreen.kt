@@ -289,7 +289,7 @@ private fun MonthRows(month: YearMonth, days: Map<LocalDate, DailyPnl.Day>, pick
         Row(Modifier.padding(top = gap), verticalAlignment = Alignment.CenterVertically) {
             (week + List(7 - week.size) { null }).forEach { d ->
                 if (d == null) Spacer(Modifier.size(TILE)) else Box(Modifier.onGloballyPositioned { tiles[d] = it.boundsInWindow() }) {
-                    DayTile(d, days[d], biggest, d == today, d == picked, !Market.isWeekday(d) || Holidays.isHoliday(d), animKey, index++) { onPick(d) }
+                    DayTile(d, days[d], biggest, d == today, d == picked, !Market.isTradingDay(d), animKey, index++) { onPick(d) }
                 }
                 Spacer(Modifier.width(gap))
             }

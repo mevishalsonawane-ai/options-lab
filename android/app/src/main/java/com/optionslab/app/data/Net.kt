@@ -5,6 +5,8 @@ import android.util.JsonToken
 import com.optionslab.engine.Right
 import com.optionslab.engine.Upstox
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.launch
 import org.json.JSONObject
 import java.io.IOException
 import java.io.InputStream
@@ -37,9 +39,9 @@ object Net {
 
     class Offline : IOException("No connection to the market data service")
 
-    private fun open(url: String, timeoutMs: Int): HttpsURLConnection {
+    private fun open(url: String, timeoutMs: Int, connectMs: Int = timeoutMs): HttpsURLConnection {
         val c = URL(url).openConnection() as? HttpsURLConnection ?: throw IOException("refusing a non-HTTPS request")
-        c.connectTimeout = timeoutMs
+        c.connectTimeout = connectMs
         c.readTimeout = timeoutMs
         c.instanceFollowRedirects = false
         c.useCaches = false
@@ -48,35 +50,61 @@ object Net {
         return c
     }
 
-    /** The longest a server-sent Retry-After is honoured for; a longer ask is treated as this. */
-    private const val MAX_RETRY_AFTER_MS = 60_000L
+    /** The longest any one wait between attempts lasts, a server-sent Retry-After included. */
+    private const val MAX_WAIT_MS = 160_000L
 
-    /** Retry-After in delta-seconds, in ms; an HTTP-date or anything malformed is ignored. */
+    /** Short timeouts for a caller on a deadline (the market watch): a dead feed fails in seconds, not minutes. */
+    const val QUICK_CONNECT_MS = 5_000
+    const val QUICK_READ_MS = 10_000
+
+    /** Retry-After in delta-seconds, in ms (at least a second); an HTTP-date or anything malformed is ignored. */
     private fun retryAfterMs(header: String?): Long? =
-        header?.trim()?.toLongOrNull()?.takeIf { it >= 0 }?.let { (it * 1_000L).coerceAtMost(MAX_RETRY_AFTER_MS) }
+        header?.trim()?.toLongOrNull()?.takeIf { it >= 0 }?.let { (it * 1_000L).coerceIn(1_000L, MAX_WAIT_MS) }
+
+    private class Reply(val code: Int, val retryAfter: String?, val body: ByteArray?)
+
+    /**
+     * The blocking exchange, made cancellable: cancelling the caller (a withTimeoutOrNull deadline)
+     * interrupts the thread and closes the connection, so a hung read ends at once instead of
+     * running out its read timeout.
+     */
+    private suspend fun exchange(c: HttpsURLConnection): Reply = kotlinx.coroutines.coroutineScope {
+        val closer = launch(kotlinx.coroutines.Dispatchers.Unconfined) {
+            try { kotlinx.coroutines.awaitCancellation() } finally { c.disconnect() }
+        }
+        try {
+            kotlinx.coroutines.runInterruptible(kotlinx.coroutines.Dispatchers.IO) {
+                val code = c.responseCode
+                Reply(code, c.getHeaderField("Retry-After"), if (code == HttpURLConnection.HTTP_OK) c.inputStream.use { it.readBytes() } else null)
+            }
+        } finally {
+            closer.cancel()
+        }
+    }
 
     /**
      * GET JSON with the PC harvester's retry policy: 401 is FATAL (the
      * unauthenticated route has been withdrawn - stop and re-plan), a 429 waits
-     * as long as Retry-After asks (capped) or backs off geometrically from 10 s,
-     * and transport errors retry briefly. Nothing waits after the last attempt.
+     * the longer of Retry-After and a geometric backoff from 10 s (capped), and
+     * transport errors retry briefly. Nothing waits after the last attempt.
+     * [connectMs] defaults to [timeoutMs]; a caller on a deadline passes the QUICK_ pair.
      */
-    suspend fun getJson(url: String, tries: Int = 6, timeoutMs: Int = 45_000): JSONObject {
+    suspend fun getJson(url: String, tries: Int = 6, timeoutMs: Int = 45_000, connectMs: Int = timeoutMs): JSONObject {
         var last: IOException = Offline()
         for (attempt in 0 until tries) {
             var wait = 1_500L * (attempt + 1)
             try {
-                val c = open(url, timeoutMs)
+                val c = open(url, timeoutMs, connectMs)
                 try {
-                    val code = c.responseCode
-                    if (code == 401) throw Upstox.UpstoxError(
+                    val r = exchange(c)
+                    if (r.code == 401) throw Upstox.UpstoxError(
                         "Upstox now requires authentication for historical candles. The unauthenticated route has been withdrawn - stop and re-plan.")
-                    if (code == 429) {
+                    if (r.code == 429) {
                         last = HttpFailure(429)
-                        wait = retryAfterMs(c.getHeaderField("Retry-After")) ?: (10_000L * (1L shl attempt))
+                        wait = maxOf(retryAfterMs(r.retryAfter) ?: 0L, 10_000L * (1L shl attempt.coerceAtMost(8))).coerceAtMost(MAX_WAIT_MS)
                     } else {
-                        if (code != HttpURLConnection.HTTP_OK) throw HttpFailure(code)
-                        return JSONObject(c.inputStream.use { it.readBytes() }.toString(Charsets.UTF_8))
+                        if (r.code != HttpURLConnection.HTTP_OK) throw HttpFailure(r.code)
+                        return JSONObject(r.body!!.toString(Charsets.UTF_8))
                     }
                 } finally {
                     c.disconnect()
@@ -91,6 +119,8 @@ object Net {
             } catch (_: org.json.JSONException) {
                 last = IOException("Market data returned something that is not JSON")
             }
+            // A read ended by cancellation (the socket closed under it) is not a failure to retry.
+            kotlinx.coroutines.currentCoroutineContext().ensureActive()
             if (attempt < tries - 1) delay(wait)
         }
         throw last
@@ -121,6 +151,10 @@ object Net {
     }
 
     suspend fun intraday(key: String, tries: Int = 3): List<Upstox.Bar> = parseCandles(getJson(Upstox.intradayUrl(key), tries))
+
+    /** Today's candles for a caller on a deadline: one retry at most, short timeouts. */
+    suspend fun intradayQuick(key: String): List<Upstox.Bar> =
+        parseCandles(getJson(Upstox.intradayUrl(key), tries = 2, timeoutMs = QUICK_READ_MS, connectMs = QUICK_CONNECT_MS))
 
     suspend fun history(key: String, frm: LocalDate, to: LocalDate, tries: Int = 6): List<Upstox.Bar> =
         Upstox.monthChunks(frm, to).flatMap { (lo, hi) -> parseCandles(getJson(Upstox.candleUrl(key, hi, lo), tries)) }

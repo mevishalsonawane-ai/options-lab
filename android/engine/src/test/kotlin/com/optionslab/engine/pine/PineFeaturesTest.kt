@@ -106,6 +106,17 @@ class PineFeaturesTest {
         ok("indicator(\"x\")\nlen = input.int(3, \"Len\")\nplot(request.security(syminfo.tickerid, \"60\", ta.sma(close, len)))\n")
     }
 
+    @Test fun securityRefusesMethodCallsOnChartVariables() {
+        // a.size() reads the chart's array 'a' as surely as a bare 'a' would.
+        val c = Pine.compile("indicator(\"x\")\nvar a = array.new_float(0)\narray.push(a, close)\nplot(request.security(syminfo.tickerid, \"D\", a.size()))\n")
+        assertTrue(c is Pine.Compiled.Failed && c.errors.any { it.message.contains("only use built-in") && it.message.contains("'a'") },
+            (c as? Pine.Compiled.Failed)?.errors.toString())
+        val d = Pine.compile("indicator(\"x\")\nvar a = array.new_float(0)\narray.push(a, close)\nf() => a.size()\nplot(request.security(syminfo.tickerid, \"D\", f()))\n")
+        assertTrue(d is Pine.Compiled.Failed && d.errors.any { it.message.contains("'a'") && it.message.contains("f()") })
+        // A local array inside the function is fine.
+        ok("indicator(\"x\")\nf() =>\n    b = array.new_float(0)\n    b.push(close)\n    b.size()\nplot(request.security(syminfo.tickerid, \"D\", f()))\n")
+    }
+
     @Test fun securityRefusesChartVariablesReadThroughAFunction() {
         // f() reads the chart's 'src': on the daily candles it would see the chart's first bar, not each day's.
         val c = Pine.compile("indicator(\"x\")\nsrc = close * 2\nf() => src\nplot(request.security(syminfo.tickerid, \"D\", f(), lookahead = barmerge.lookahead_on))\n")
@@ -214,5 +225,47 @@ class PinePremiumTest {
         val later = trade.copy(entryTime = t0 + 86400 * 3, exitTime = t0 + 86400 * 3 + 600)
         val r2 = PinePremium.run(listOf(later), bars, { if (it == day) session else null }, 50, 1, 100_000.0)
         assertEquals(0, r2.priced); assertEquals(1, r2.reasons["no option data for the entry day"])
+    }
+
+    private val pDay = java.time.LocalDate.of(2026, 9, 22)
+    private val pT0 = 1790048700L                                  // 09:15 IST
+    /** CE 25000 opens each minute m at 100 + m and closes it at 100.5 + m; the index reaches 25040 from minute 27. */
+    private fun pSession(withIndex: Boolean): com.optionslab.engine.Session {
+        val mins = IntArray(60) { 555 + it }
+        val ce = com.optionslab.engine.Series(java.time.LocalDate.of(2026, 9, 23), 25000.0, com.optionslab.engine.Right.CE, 75, mins,
+            DoubleArray(60) { 100.5 + it }, DoubleArray(60) { 100.0 + it }, null, null, null, LongArray(60))
+        val ix = com.optionslab.engine.Series(null, 0.0, com.optionslab.engine.Right.IX, 0, mins, DoubleArray(60) { 25000.0 },
+            DoubleArray(60) { 25000.0 }, DoubleArray(60) { if (it >= 27) 25040.0 else 25020.0 }, DoubleArray(60) { 24990.0 }, null, LongArray(60))
+        return com.optionslab.engine.Session(pDay, 75, if (withIndex) listOf(ce, ix) else listOf(ce))
+    }
+    private val pBars = List(12) { Pine.Bar(pT0 + it * 300L, 25000.0, 25001.0, 24999.0, 25000.0, 0.0) }
+
+    @Test fun fillsArePricedAtTheirOwnMomentNotTheBarsOpen() {
+        // Entry filled at the close of the 5-minute bar starting minute 5 (by the close of minute 9);
+        // exit a stop inside the bar starting minute 25.
+        val t = Pine.Trade("L", "x", true, 1.0, 1, pT0 + 300, 25010.0, 5, pT0 + 1500, 25030.0, 20.0, 0.08, 0.0, false,
+            entryFillTime = pT0 + 300 + 299, exitFillTime = pT0 + 1500 + 299, exitIntrabar = true)
+        val bare = PinePremium.run(listOf(t), pBars, { if (it == pDay) pSession(false) else null }, 50, 1, 100_000.0).report!!.trades.single()
+        assertEquals(109.5, bare.entryPrice, 1e-9)                 // minute 9's close, not minute 5's open (105)
+        assertEquals(129.5, bare.exitPrice, 1e-9)                  // no index data: the bar's last minute, conservatively
+        val refined = PinePremium.run(listOf(t), pBars, { if (it == pDay) pSession(true) else null }, 50, 1, 100_000.0).report!!.trades.single()
+        assertEquals(127.5, refined.exitPrice, 1e-9)               // the index first reached 25030 in minute 27
+        // A fill at a bar's open is that minute's open, as before.
+        val atOpen = t.copy(entryFillTime = null)
+        assertEquals(105.0, PinePremium.run(listOf(atOpen), pBars, { if (it == pDay) pSession(false) else null }, 50, 1, 100_000.0)
+            .report!!.trades.single().entryPrice, 1e-9)
+    }
+
+    @Test fun partialExitsShareTheEntrysLots() {
+        // One entry of 2 units closed in two halves: 2 lots become 1 + 1, not 2 + 2.
+        val a = Pine.Trade("L", "tp1", true, 1.0, 1, pT0 + 300, 25010.0, 3, pT0 + 900, 25030.0, 20.0, 0.08, 0.0, false)
+        val b = a.copy(exitId = "tp2", exitBar = 5, exitTime = pT0 + 1500)
+        val r = PinePremium.run(listOf(a, b), pBars, { if (it == pDay) pSession(false) else null }, 50, 2, 100_000.0)
+        assertEquals(listOf(75.0, 75.0), r.report!!.trades.map { it.qty })
+        // With one lot the first half takes it; the second is skipped as under a lot.
+        val r1 = PinePremium.run(listOf(a, b), pBars, { if (it == pDay) pSession(false) else null }, 50, 1, 100_000.0)
+        assertEquals(1, r1.priced); assertEquals(1, r1.reasons["partial exit under one lot"])
+        assertEquals(listOf(1, 1), PinePremium.lotShares(listOf(a, b), 2).toList())
+        assertEquals(listOf(2, 1), PinePremium.lotShares(listOf(a.copy(qty = 2.0), b), 3).toList())
     }
 }

@@ -25,7 +25,9 @@ object Holidays {
 
     fun init(context: Context) { file = File(context.applicationContext.filesDir, "holidays.json") }
 
-    data class Book(val fetched: LocalDate?, val nse: Map<LocalDate, String>, val added: Set<LocalDate>, val removed: Set<LocalDate>) {
+    /** [extra]: special sessions NSE calls on a weekend (budget day, a live-site drill), added by hand. */
+    data class Book(val fetched: LocalDate?, val nse: Map<LocalDate, String>, val added: Set<LocalDate>, val removed: Set<LocalDate>,
+                    val extra: Set<LocalDate> = emptySet()) {
         fun holiday(d: LocalDate) = (d in nse || d in added) && d !in removed
         fun upcoming(from: LocalDate): List<Pair<LocalDate, String>> =
             ((nse.keys + added) - removed).filter { !it.isBefore(from) }.sorted().map { it to (nse[it] ?: "added by you") }
@@ -40,7 +42,7 @@ object Holidays {
             val o = JSONObject(file.readText())
             fun set(k: String) = o.optJSONArray(k)?.let { a -> (0 until a.length()).map { LocalDate.parse(a.getString(it)) }.toSet() } ?: emptySet()
             val nse = o.optJSONObject("nse")?.let { m -> m.keys().asSequence().associate { LocalDate.parse(it) to m.getString(it) } } ?: emptyMap()
-            Book(o.optString("fetched").takeIf { it.isNotBlank() }?.let(LocalDate::parse), nse, set("added"), set("removed"))
+            Book(o.optString("fetched").takeIf { it.isNotBlank() }?.let(LocalDate::parse), nse, set("added"), set("removed"), set("extra"))
         }.getOrElse { Book(null, emptyMap(), emptySet(), emptySet()) }
         cache = b
         return b
@@ -53,9 +55,11 @@ object Holidays {
         o.put("nse", JSONObject().apply { b.nse.forEach { (d, n) -> put(d.toString(), n) } })
         o.put("added", JSONArray().apply { b.added.sorted().forEach { put(it.toString()) } })
         o.put("removed", JSONArray().apply { b.removed.sorted().forEach { put(it.toString()) } })
+        o.put("extra", JSONArray().apply { b.extra.sorted().forEach { put(it.toString()) } })
         val tmp = File(file.parentFile, file.name + ".tmp")
-        tmp.writeText(o.toString())
+        java.io.FileOutputStream(tmp).use { it.write(o.toString().toByteArray(Charsets.UTF_8)); it.fd.sync() }
         if (!tmp.renameTo(file)) { file.delete(); tmp.renameTo(file) }
+        com.optionslab.app.security.Vault.syncDir(file.parentFile)
         cache = b
     }
 
@@ -65,6 +69,14 @@ object Holidays {
     fun add(d: LocalDate) = book().let { save(it.copy(added = it.added + d, removed = it.removed - d)) }
     @Synchronized
     fun remove(d: LocalDate) = book().let { save(it.copy(added = it.added - d, removed = it.removed + d)) }
+
+    /** A special session on a day that is otherwise shut (a weekend): the market trades it. */
+    fun isExtraSession(d: LocalDate): Boolean = d in book().extra
+
+    @Synchronized
+    fun addSession(d: LocalDate) = book().let { save(it.copy(extra = it.extra + d)) }
+    @Synchronized
+    fun removeSession(d: LocalDate) = book().let { save(it.copy(extra = it.extra - d)) }
 
     /** Whether the cached list is older than a week, or does not cover this year. */
     fun stale(today: LocalDate): Boolean {

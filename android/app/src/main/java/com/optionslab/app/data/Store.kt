@@ -45,6 +45,11 @@ object Store {
         return bundled + device.asSequence().flatMap { d -> Olx.sequence(File(expiryDir(), "$d.olx").inputStream()) }
     }
 
+    /** How many series this phone's capture of [day]'s expiring chain holds (0 when none, or unreadable). */
+    fun deviceExpirySize(day: LocalDate): Int = runCatching {
+        File(expiryDir(), "$day.olx").takeIf { it.exists() }?.inputStream()?.use { Olx.read(it).firstOrNull()?.series?.size }
+    }.getOrNull() ?: 0
+
     fun writeExpiry(session: Session) {
         val dir = expiryDir().apply { mkdirs() }
         atomicWrite(File(dir, "${session.day}.olx")) { Olx.write(it, listOf(session)) }
@@ -82,11 +87,11 @@ object Store {
 
     fun barSession(u: String, day: LocalDate): Session? {
         val f = File(barsDir(u), "$day.olx")
-        if (f.exists()) return Olx.read(f.inputStream()).firstOrNull()
+        if (f.exists()) return f.inputStream().use { Olx.read(it).firstOrNull() }
         val asset = "bars_${u.lowercase()}.olx"
         if (app.assets.list("")?.contains(asset) != true) return null
         var hit: Session? = null
-        Olx.forEachUntil(app.assets.open(asset)) { s -> if (s.day == day) { hit = s; false } else true }
+        app.assets.open(asset).use { Olx.forEachUntil(it) { s -> if (s.day == day) { hit = s; false } else true } }
         return hit
     }
 
@@ -97,15 +102,25 @@ object Store {
     @Synchronized
     fun upsertDay(u: String, day: LocalDate, incoming: List<Series>) {
         if (incoming.isEmpty()) return
-        val existing = barSession(u, day)?.series ?: emptyList()
+        val f = File(barsDir(u), "$day.olx")
+        val existing = try {
+            barSession(u, day)?.series ?: emptyList()
+        } catch (e: Exception) {
+            if (!f.exists()) throw e
+            // A truncated or corrupt partition (a power cut mid-write): set it aside, never overwrite it,
+            // and start the day afresh. The done-lists vouched for bars that were in it, so they go too.
+            f.renameTo(File(f.parentFile, "${f.name}.corrupt.${System.currentTimeMillis()}"))
+            synchronized(harvestLock) { File(root, "harvest/$u").listFiles()?.forEach { it.delete() } }
+            emptyList()
+        }
         val byKey = LinkedHashMap<Triple<LocalDate?, Double, com.optionslab.engine.Right>, Series>()
         for (s in existing) byKey[Triple(s.expiry, s.strike, s.right)] = s
         for (s in incoming) {
             val k = Triple(s.expiry, s.strike, s.right)
             byKey[k] = byKey[k]?.let { merge(it, s) } ?: s
         }
-        val dir = barsDir(u).apply { mkdirs() }
-        atomicWrite(File(dir, "$day.olx")) { Olx.write(it, listOf(Session(day, null, byKey.values.toList()))) }
+        barsDir(u).mkdirs()
+        atomicWrite(f) { Olx.write(it, listOf(Session(day, null, byKey.values.toList()))) }
     }
 
     private fun merge(old: Series, new: Series): Series {
@@ -207,7 +222,11 @@ object Store {
 
     fun deviceBytes(): Long = listOf(File(root, "expiry"), File(root, "bars")).sumOf { d -> d.walkTopDown().filter { it.isFile }.sumOf { it.length() } }
 
-    /** Temp file, flushed to disk, then renamed over the target: a crash leaves the old file or the new one. */
+    /**
+     * Temp file, flushed to disk, then renamed over the target, and the rename synced: a crash or a
+     * power cut leaves the old file or the new one, and a file written after this one (a .done
+     * marker after the bars it vouches for) can never survive without it.
+     */
     private fun atomicWrite(target: File, write: (java.io.OutputStream) -> Unit) {
         val tmp = File(target.parentFile, target.name + ".tmp")
         java.io.FileOutputStream(tmp).use { fos ->
@@ -222,5 +241,6 @@ object Store {
             fos.fd.sync()
         }
         if (!tmp.renameTo(target)) { target.delete(); tmp.renameTo(target) }
+        com.optionslab.app.security.Vault.syncDir(target.parentFile)
     }
 }

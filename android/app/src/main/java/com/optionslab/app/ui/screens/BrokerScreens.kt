@@ -52,6 +52,11 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.disabled
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
@@ -291,6 +296,11 @@ fun HoldToSend(text: String, enabled: Boolean, onComplete: () -> Unit) {
     Box(
         Modifier.fillMaxWidth().height(54.dp)
             .background(if (enabled) p.oxblood else p.inkFaint, RoundedCornerShape(27.dp))
+            // Screen readers cannot hold: the same action as a button (the PIN or fingerprint still follows).
+            .semantics(mergeDescendants = true) {
+                role = Role.Button
+                if (enabled) onClick(label = text) { onComplete(); true } else disabled()
+            }
             .pointerInput(enabled) {
                 detectTapGestures(onPress = {
                     if (!enabled) return@detectTapGestures
@@ -405,11 +415,13 @@ private fun PlanCard(
             if (q != null) LedgerLine("Bid / offer / last", "${q.bid?.let { "%.2f".format(it) } ?: "—"} / ${q.ask?.let { "%.2f".format(it) } ?: "—"} / ${"%.2f".format(q.last)}")
             // Keyed on the leg, not its price: the box itself changes the price, and re-keying would rewrite what is being typed.
             var text by remember(i, leg.tradingSymbol) { mutableStateOf(leg.price?.let { java.lang.String.format(java.util.Locale.ENGLISH, "%.2f", it) } ?: "") }
+            // An empty or half-typed box is a mismatch too: the order must never go at a stale price the box no longer shows.
+            val mismatch = leg.orderType != "MARKET" && text.toDoubleOrNull() != leg.price
             OutlinedTextField(text, { t -> text = t.filter { it.isDigit() || it == '.' }; text.toDoubleOrNull()?.takeIf { it > 0 }?.let { onPrice(i, it) } },
                 label = { Text("Limit price") }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                isError = text.isNotEmpty() && text.toDoubleOrNull() != leg.price,
+                isError = mismatch,
                 modifier = Modifier.fillMaxWidth())
-            if (text.isNotEmpty() && text.toDoubleOrNull() != leg.price) priceMismatch = true
+            if (mismatch) priceMismatch = true
             com.optionslab.app.ui.components.AlertOn(plan.refusals.getOrNull(i)?.takeIf { it.isNotEmpty() }?.joinToString(" "))
         }
         plan.margin?.let { m ->
@@ -822,9 +834,9 @@ private fun CredentialsForm(model: AppModel, onDone: () -> Unit) {
     val p = LocalPalette.current
     // What was typed is kept (encrypted, in the vault) until it is saved, so stepping out to the
     // Kite site, an idle lock or Android closing the app in the background never loses it.
-    var key by remember { mutableStateOf(com.optionslab.app.security.SecurePrefs.getString(DRAFT_KEY).orEmpty()) }
-    // The secret is held in memory only until it is sealed with the PIN; a draft left by an older version is erased.
-    var secret by remember { com.optionslab.app.security.SecurePrefs.run { if (getString(DRAFT_SECRET) != null) put(DRAFT_SECRET, null) }; mutableStateOf("") }
+    var key by remember { mutableStateOf("") }
+    // The secret is held in memory only until it is sealed with the PIN.
+    var secret by remember { mutableStateOf("") }
     val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current
     var pin by remember { mutableStateOf("") }
     var err by remember { mutableStateOf<String?>(null) }
@@ -839,16 +851,28 @@ private fun CredentialsForm(model: AppModel, onDone: () -> Unit) {
     fun draft(k: String, v: String) = com.optionslab.app.security.SecurePrefs.put(k, v.ifEmpty { null })
     // Each draft write re-encrypts the vault file: the key is written 0.6 s after the last keystroke,
     // off the main thread, and whatever is still pending when the form closes is written then.
-    var keyWritten by remember { mutableStateOf(key) }
-    LaunchedEffect(key) {
-        if (key == keyWritten) return@LaunchedEffect
+    // Null until the draft has been read back (the vault is decrypted off the main thread, not while composing).
+    var keyWritten by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(Unit) {
+        val k = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            com.optionslab.app.security.SecurePrefs.run {
+                // A secret draft left by an older version is erased.
+                if (getString(DRAFT_SECRET) != null) put(DRAFT_SECRET, null)
+                getString(DRAFT_KEY).orEmpty()
+            }
+        }
+        if (key.isEmpty()) key = k       // anything typed meanwhile wins
+        keyWritten = k
+    }
+    LaunchedEffect(key, keyWritten) {
+        if (keyWritten == null || key == keyWritten) return@LaunchedEffect
         kotlinx.coroutines.delay(600)
         val v = key
         kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { draft(DRAFT_KEY, v) }
         keyWritten = v
     }
     DisposableEffect(Unit) {
-        onDispose { val v = key; if (v != keyWritten) Thread { draft(DRAFT_KEY, v) }.start() }
+        onDispose { val v = key; if (keyWritten != null && v != keyWritten) Thread { draft(DRAFT_KEY, v) }.start() }
     }
     fun pasteInto(set: (String) -> Unit) = clipboard.getText()?.text?.trim()?.takeIf { it.isNotEmpty() }?.let(set)
     Column(Modifier.padding(top = 10.dp)) {
@@ -921,29 +945,45 @@ private fun ManualOrder(model: AppModel) {
     var loadErr by remember { mutableStateOf<String?>(null) }
     var strikes by remember { mutableStateOf<List<Double>>(emptyList()) }
     var spot by remember { mutableStateOf<Double?>(null) }
+    // True while the contracts or strikes are being read: nothing can be reviewed from a half-loaded form.
+    var loading by remember { mutableStateOf(true) }
+    var listing by remember { mutableStateOf(false) }
+    // Nothing of the old index may stay selected (or selectable) while the new one loads.
+    fun clearContract() { spot = null; strikes = emptyList(); expiries = emptyList(); expiry = null; strike = "" }
     LaunchedEffect(underlying) {
-        loadErr = null
-        expiries = try {
-            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        loading = true; loadErr = null
+        clearContract()
+        try {
+            // The index price first, so the strike chosen below is the one nearest THIS index.
+            spot = try { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { Broker.indexQuote(underlying)?.last } }
+                catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { null }
+            val list = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                 Broker.instruments().filter { it.name == underlying && !it.expiry.isBefore(Market.today()) }.map { it.expiry }.distinct().sorted().take(6)
             }
-        } catch (e: Exception) { loadErr = "Could not load Zerodha's contract list: ${e.message}"; emptyList() }
-        expiry = expiries.firstOrNull()
-        spot = runCatching { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { Broker.indexQuote(underlying)?.last } }.getOrNull()
+            expiries = list
+            expiry = list.firstOrNull()
+        } catch (e: kotlinx.coroutines.CancellationException) { throw e
+        } catch (e: Exception) { loadErr = "Could not load Zerodha's contract list: ${e.message}" }
+        loading = false
     }
     // The strikes actually listed for this expiry and option, the eleven nearest the index.
     LaunchedEffect(underlying, expiry, right, spot) {
-        val e = expiry ?: return@LaunchedEffect
-        val all = runCatching { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        val e = expiry ?: run { listing = false; return@LaunchedEffect }
+        listing = true
+        val all = try { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
             Broker.instruments().filter { it.name == underlying && it.expiry == e && it.right == right }.map { it.strike }.distinct().sorted()
-        } }.getOrDefault(emptyList())
+        } } catch (x: kotlinx.coroutines.CancellationException) { throw x } catch (x: Exception) { emptyList() }
         val s0 = spot
         // Every listed strike (the dropdown opens on the one nearest the index).
         strikes = all
         if (strike.toDoubleOrNull() !in all) strike = s0?.let { x -> all.minByOrNull { kotlin.math.abs(it - x) } }?.let { com.optionslab.engine.fmtG(it) } ?: ""
+        listing = false
     }
     LedgerCard(title = "Place an order") {
-        ParamTokens("Underlying", listOf("NIFTY", "BANKNIFTY").map { it to (it == underlying) }) { underlying = listOf("NIFTY", "BANKNIFTY")[it] }
+        ParamTokens("Underlying", listOf("NIFTY", "BANKNIFTY").map { it to (it == underlying) }) {
+            val u = listOf("NIFTY", "BANKNIFTY")[it]
+            if (u != underlying) { clearContract(); loading = true; underlying = u }
+        }
         ParamTokens("Expiry", expiries.map { it.toString().substring(5) to (it == expiry) }) { expiry = expiries[it] }
         ParamTokens("Option", listOf("PE" to (right == Right.PE), "CE" to (right == Right.CE))) { right = if (it == 0) Right.PE else Right.CE }
         ParamTokens("Side", listOf("SELL" to (side == Kite.Side.SELL), "BUY" to (side == Kite.Side.BUY))) { side = if (it == 0) Kite.Side.SELL else Kite.Side.BUY }
@@ -953,7 +993,7 @@ private fun ManualOrder(model: AppModel) {
         OutlinedTextField(price, { price = it.filter { c -> c.isDigit() || c == '.' } }, label = { Text("Limit price (blank = best bid/offer)") }, singleLine = true,
             modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
         Spacer(Modifier.height(8.dp))
-        BrassButton("Review the order", Modifier.fillMaxWidth(), enabled = expiry != null && strike.toDoubleOrNull()?.let { it in strikes } == true) {
+        BrassButton("Review the order", Modifier.fillMaxWidth(), enabled = !loading && !listing && expiry != null && strike.toDoubleOrNull()?.let { it in strikes } == true) {
             model.planManual(underlying, expiry!!, strike.toDouble(), right, side, lots, s.orderProduct, price.toDoubleOrNull())
         }
         Note("Nothing is sent from here: the order opens for review over this page.")

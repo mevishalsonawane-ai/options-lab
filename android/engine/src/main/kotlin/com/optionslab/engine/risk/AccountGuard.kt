@@ -96,8 +96,15 @@ object AccountGuard {
             if (a.minuteOfDay >= cut) out += "No new entries after %02d:%02d.".format(cut / 60, cut % 60)
         }
         if (l.blockNakedShort && o.right != null && o.side.equals("SELL", true)) {
-            val hedged = a.holdings.any { h -> h.qty > 0 && h.right == o.right && h.underlying == o.underlying && h.expiry == o.expiry }
-            if (!hedged) out += "Naked short: selling ${o.symbol} needs a bought ${o.right} of the same underlying and expiry held first."
+            // Net each instrument of this underlying/expiry/type after the order: the longs of OTHER
+            // strikes must cover every unit left short (selling what is held first uses it up, so the
+            // very symbol being sold never hedges itself).
+            val series = a.holdings.filter { h -> h.right == o.right && h.underlying == o.underlying && h.expiry == o.expiry }
+            val after = series.groupBy { it.symbol }.mapValues { (_, l) -> l.sumOf { it.qty } }.toMutableMap()
+            after[o.symbol] = (after[o.symbol] ?: 0) - o.qty
+            val longs = after.values.filter { it > 0 }.sum()
+            val shorts = -after.values.filter { it < 0 }.sum()
+            if (shorts > longs) out += "Naked short: selling ${o.symbol} needs a bought ${o.right} of the same underlying and expiry held first."
         }
         return out
     }

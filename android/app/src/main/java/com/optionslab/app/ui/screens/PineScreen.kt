@@ -195,6 +195,13 @@ private fun PineEditor(model: AppModel, d: PineDraft, onOpenChart: () -> Unit, o
         result = withContext(Dispatchers.Default) { PineScripts.compile(text) }
     }
     val ok = (result as? Pine.Compiled.Ok)?.script
+    // Auto-trade runs the SAVED code, so its panel is built from that, never from the draft.
+    val savedCode = d.item.code
+    val savedResult = androidx.compose.runtime.produceState<Pine.Compiled?>(null, savedCode) {
+        value = null                                        // never the previous code's signals while this one compiles
+        value = withContext(Dispatchers.Default) { PineScripts.compile(savedCode) }
+    }.value
+    val savedOk = (savedResult as? Pine.Compiled.Ok)?.script
     val errors = (result as? Pine.Compiled.Failed)?.errors.orEmpty()
     val warnings = when (val r = result) { is Pine.Compiled.Ok -> r.script.warnings; is Pine.Compiled.Failed -> r.warnings; else -> emptyList() }
     val dirty = d.code.text != d.item.code || d.name != d.item.name
@@ -259,7 +266,7 @@ private fun PineEditor(model: AppModel, d: PineDraft, onOpenChart: () -> Unit, o
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         BrassButton(if (d.saved && !dirty) "Saved" else "Save", Modifier.weight(1f), busy = writing,
                             enabled = (dirty || !d.saved) && !armed && !writing) { later { saveNow() } }
-                        BrassButton("Delete", Modifier.weight(1f), tone = p.inkSoft, enabled = d.saved) { deleting = true }
+                        BrassButton("Delete", Modifier.weight(1f), tone = p.inkSoft, enabled = d.saved && !writing) { deleting = true }
                     }
                     if (armed && dirty) Note("Auto-trade is on: switch it off (Auto-trade tab) to save changes. Until then it trades with the code it was switched on with.")
                     if (ok != null) {
@@ -281,8 +288,10 @@ private fun PineEditor(model: AppModel, d: PineDraft, onOpenChart: () -> Unit, o
             }
             "test" -> if (ok == null) Box(Modifier.fillMaxSize().padding(20.dp)) { Note(notYet) }
                 else PineBacktest(model, d, ok, onOpenChart) { inputs -> if (!armed) later { saveNow(inputs) } }
-            else -> if (ok == null) Box(Modifier.fillMaxSize().padding(20.dp)) { Note(notYet) }
-                else PineAutoPanel(model, d.item, ok, save = { saveNow() }) { d.item = it }
+            else -> if (savedOk == null) Box(Modifier.fillMaxSize().padding(20.dp)) {
+                    Note(if (savedResult == null) "Checking the script…" else "The saved script has errors: fix them in Code and Save first.")
+                }
+                else PineAutoPanel(model, d.item, savedOk, dirty = dirty, save = { saveNow() }) { d.item = it }
         }
     }
     if (leaving) AlertDialog(onDismissRequest = { leaving = false }, properties = secureDialog,
@@ -292,7 +301,21 @@ private fun PineEditor(model: AppModel, d: PineDraft, onOpenChart: () -> Unit, o
         text = { Text("The changes to ${d.name.ifBlank { "this script" }} are not saved." +
             (if (armed) " Auto-trade is on, so they cannot be saved until it is switched off." else " Keep editing and tap Save to keep them.")) })
     if (deleting) AlertDialog(onDismissRequest = { deleting = false }, properties = secureDialog,
-        confirmButton = { TextButton({ deleting = false; PineScripts.delete(d.item.id); onClose() }) { Text("Delete", color = p.oxblood) } },
+        confirmButton = { TextButton({
+            deleting = false
+            if (!writing) {
+                writing = true
+                // Under the save lock and off the main thread, so a save already started cannot re-add it afterwards.
+                model.viewModelScope.launch {
+                    try {
+                        d.saving.withLock { withContext(Dispatchers.IO) { PineScripts.delete(d.item.id) } }
+                        if (PineSession.open === d) onClose()
+                    } catch (e: kotlinx.coroutines.CancellationException) { throw e
+                    } catch (e: Throwable) { com.optionslab.app.work.Alerts.error("Could not delete the script: ${e.message ?: e.javaClass.simpleName}")
+                    } finally { writing = false }
+                }
+            }
+        }) { Text("Delete", color = p.oxblood) } },
         dismissButton = { TextButton({ deleting = false }) { Text("Keep") } },
         title = { Text("Delete ${d.item.name}?") }, text = { Text("The script is removed from this phone and from the chart." +
             (if (armed) " It stops auto-trading and sells what it holds." else "") + " This cannot be undone.") })
@@ -346,7 +369,7 @@ private fun KeyStrip(onKey: (String) -> Unit) {
 // ---- backtest ------------------------------------------------------------------------------
 
 private data class TestRun(val run: Pine.Run, val report: Pine.Report?, val bars: List<Pine.Bar>, val symbol: String, val interval: String,
-                            val how: String, val note: String? = null)
+                            val how: String, val note: String? = null, val signals: List<String> = emptyList())
 
 @Composable
 private fun PineBacktest(model: AppModel, d: PineDraft, s: Pine.Script, onChart: () -> Unit, onInputs: (Map<String, String>) -> Unit) {
@@ -379,9 +402,10 @@ private fun PineBacktest(model: AppModel, d: PineDraft, s: Pine.Script, onChart:
 
     Column(Modifier.fillMaxSize().verticalScroll(scroll).padding(horizontal = 14.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        ParamTokens("Symbol", PINE_SYMBOLS.map { it to (it == symbol) }) { symbol = PINE_SYMBOLS[it] }
-        ParamTokens("Candles", listOf("1m", "5m", "15m", "1h", "1D").map { it to (it == interval) }) { interval = listOf("1m", "5m", "15m", "1h", "1D")[it] }
-        ParamTokens("Period", periods.map { (if (it >= 365) "${it / 365} yr" else "$it days") to (it == days) }) { days = periods[it] }
+        // Fixed while a backtest runs: it reads the instrument it started with.
+        ParamTokens("Symbol", PINE_SYMBOLS.map { it to (it == symbol) }) { if (!busy) symbol = PINE_SYMBOLS[it] }
+        ParamTokens("Candles", listOf("1m", "5m", "15m", "1h", "1D").map { it to (it == interval) }) { if (!busy) interval = listOf("1m", "5m", "15m", "1h", "1D")[it] }
+        ParamTokens("Period", periods.map { (if (it >= 365) "${it / 365} yr" else "$it days") to (it == days) }) { if (!busy) days = periods[it] }
         if (!strategy) {
             if (s.signals.isEmpty()) Note("This indicator has no buy/sell signals to trade. Add plotshape(buy, \"Buy\") and plotshape(sell, \"Sell\") (or alertcondition) and it can be backtested for P&L.")
             else {
@@ -429,6 +453,7 @@ private fun PineBacktest(model: AppModel, d: PineDraft, s: Pine.Script, onChart:
             if (d.testing) return@BrassButton
             d.testing = true; d.testError = null; d.test = null; d.stage = "Loading $symbol $interval candles…"
             val ins = inputs.toMap()
+            val sym = symbol; val iv = interval; val nDays = days      // the run never reads the tokens again
             val bs = buySig; val ss = sellSig; val rev = reverse
             val q = qty.toDoubleOrNull()?.takeIf { it > 0 }
             val cap = capital.toDoubleOrNull()?.takeIf { it > 0 } ?: 100_000.0
@@ -441,12 +466,12 @@ private fun PineBacktest(model: AppModel, d: PineDraft, s: Pine.Script, onChart:
                 val r = withContext(Dispatchers.IO) {
                     try {
                         val to = System.currentTimeMillis() / 1000
-                        val raw = ChartFeed.bars(symbol, interval, to - days * 86400L, null)
-                        if (raw.isEmpty()) throw IllegalStateException("No $symbol $interval candles came back for that period. Check the connection, or pick a shorter period.")
+                        val raw = ChartFeed.bars(sym, iv, to - nDays * 86400L, null)
+                        if (raw.isEmpty()) throw IllegalStateException("No $sym $iv candles came back for that period. Check the connection, or pick a shorter period.")
                         val bars = raw.map { PineScripts.toPine(it) }
                         withContext(Dispatchers.Main) { d.stage = "Running the script on ${"%,d".format(bars.size)} candles…" }
                         val values = PineScripts.inputValues(PineScripts.Item(0, "", "", inputs = ins), s)
-                        val run = withContext(Dispatchers.Default) { Pine.run(s, bars, values, symbol, interval, if (strategy) q else null, budgetMs = 60_000, costs = costs) }
+                        val run = withContext(Dispatchers.Default) { Pine.run(s, bars, values, sym, iv, if (strategy) q else null, budgetMs = 60_000, costs = costs) }
                         var report = when {
                             strategy -> run.report
                             canTrade && run.error == null -> withContext(Dispatchers.Default) {
@@ -458,8 +483,8 @@ private fun PineBacktest(model: AppModel, d: PineDraft, s: Pine.Script, onChart:
                         if (prem && report != null) {
                             withContext(Dispatchers.Main) { d.stage = "Pricing the trades on option data…" }
                             val pr = withContext(Dispatchers.Default) {
-                                com.optionslab.engine.pine.PinePremium.run(report!!.trades, bars, { day -> com.optionslab.app.data.Store.barSession(symbol, day) },
-                                    com.optionslab.app.data.PineAuto.strikeStep(symbol), nLots, if (strategy) s.settings.initialCapital else cap,
+                                com.optionslab.engine.pine.PinePremium.run(report!!.trades, bars, { day -> com.optionslab.app.data.Store.barSession(sym, day) },
+                                    com.optionslab.app.data.PineAuto.strikeStep(sym), nLots, if (strategy) s.settings.initialCapital else cap,
                                     shortsBuyPuts = strategy || rev, slippage = slipPrem)
                             }
                             note = "Option premium: priced ${pr.priced} of ${pr.priced + pr.skipped} trades" +
@@ -468,7 +493,7 @@ private fun PineBacktest(model: AppModel, d: PineDraft, s: Pine.Script, onChart:
                         }
                         val how = (if (strategy) "the strategy's own orders" else "buy on \"$bs\", ${if (rev) "reverse to short" else "exit"} on \"$ss\"") +
                             if (prem) " · ATM options × $nLots lot${if (nLots == 1) "" else "s"}" else ""
-                        Result.success(TestRun(run, report, bars, symbol, interval, how, note))
+                        Result.success(TestRun(run, report, bars, sym, iv, how, note, s.signals))
                     } catch (e: kotlinx.coroutines.CancellationException) { throw e
                     } catch (e: Throwable) { Result.failure(e) }
                 }
@@ -485,16 +510,19 @@ private fun PineBacktest(model: AppModel, d: PineDraft, s: Pine.Script, onChart:
         Box(Modifier.fillMaxWidth().height(1.dp).onGloballyPositioned { resultTop = it.positionInParent().y.toInt() })
         d.testError?.let { LedgerCard(accent = p.oxblood) { Text(it, style = Type.bodySmall.copy(color = p.oxblood)) } }
         d.test?.let { t ->
-            BacktestResult(t, s)
+            BacktestResult(t)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 6.dp)) {
                 ExportCsv(t, Modifier.weight(1f))
                 BrassButton("Show on chart", Modifier.weight(1f), tone = p.inkSoft) {
                     val id = d.item.id
-                    scope.launch {
-                        if (id != 0L) withContext(Dispatchers.IO) { PineScripts.setOnChart(id, true) }
-                        // The chart opens on the index the backtest ran on.
-                        pineChartAsk = t.symbol to (if (t.symbol == "SENSEX") "BSE" else "NSE")
-                        onChart()
+                    model.viewModelScope.launch {
+                        try {
+                            if (id != 0L) withContext(Dispatchers.IO) { PineScripts.setOnChart(id, true) }
+                            // The chart opens on the index the backtest ran on.
+                            pineChartAsk = t.symbol to (if (t.symbol == "SENSEX") "BSE" else "NSE")
+                            onChart()
+                        } catch (e: kotlinx.coroutines.CancellationException) { throw e
+                        } catch (e: Throwable) { com.optionslab.app.work.Alerts.error("Could not put the script on the chart: ${e.message ?: e.javaClass.simpleName}") }
                     }
                 }
             }
@@ -532,7 +560,7 @@ private fun Tile(label: String, value: String, tone: androidx.compose.ui.graphic
 }
 
 @Composable
-private fun BacktestResult(t: TestRun, s: Pine.Script) {
+private fun BacktestResult(t: TestRun) {
     val p = LocalPalette.current
     val r = t.run
     val daily = t.interval == "1D"
@@ -541,10 +569,11 @@ private fun BacktestResult(t: TestRun, s: Pine.Script) {
         style = Type.bodySmall.copy(color = p.inkSoft), modifier = Modifier.padding(top = 8.dp))
     r.error?.let { Text("Stopped: $it", style = Type.bodySmall.copy(color = p.oxblood)) }
     t.note?.let { Text(it, style = Type.bodySmall.copy(color = p.amber)) }
-    // Every signal the script gave, and how often.
-    if (s.signals.isNotEmpty()) LedgerCard(title = "Signals") {
-        s.signals.forEachIndexed { i, name ->
-            val hits = r.signals[i].indices.filter { r.signals[i][it] }
+    // Every signal the script gave, and how often: the names it was run with (the code may have changed since).
+    if (t.signals.isNotEmpty()) LedgerCard(title = "Signals") {
+        t.signals.forEachIndexed { i, name ->
+            val sig = r.signals.getOrNull(i) ?: return@forEachIndexed
+            val hits = sig.indices.filter { sig[it] && it < t.bars.size }
             LedgerLine(name, "${hits.size} times" + (hits.lastOrNull()?.let { " · last ${fmtTime(t.bars[it].time, daily)}" } ?: ""))
         }
     }
@@ -816,9 +845,8 @@ private fun num(x: Double) = if (x == Math.floor(x) && kotlin.math.abs(x) < 1e12
 // ---- auto-trade ----------------------------------------------------------------------------
 
 @Composable
-private fun PineAutoPanel(model: AppModel, start: PineScripts.Item, s: Pine.Script, save: suspend () -> PineScripts.Item, onItem: (PineScripts.Item) -> Unit) {
+private fun PineAutoPanel(model: AppModel, start: PineScripts.Item, s: Pine.Script, dirty: Boolean, save: suspend () -> PineScripts.Item, onItem: (PineScripts.Item) -> Unit) {
     val p = LocalPalette.current
-    val scope = rememberCoroutineScope()
     val items by PineScripts.items.collectAsState()
     val item = items.firstOrNull { it.id == start.id } ?: start
     val settings by model.settings.collectAsState()
@@ -871,14 +899,20 @@ private fun PineAutoPanel(model: AppModel, start: PineScripts.Item, s: Pine.Scri
     androidx.compose.runtime.DisposableEffect(Unit) {
         onDispose { if (typed.isNotEmpty()) model.viewModelScope.launch { runCatching { flushTyped() } } }
     }
+    // It trades the saved code: unsaved edits must be saved (and seen) before it is switched on.
+    val unsaved = "Save the script first (Code tab): auto-trade runs the saved code, not unsaved edits."
     fun arm(on: Boolean, pin: Boolean) {
+        if (on && dirty) { com.optionslab.app.work.Alerts.error(unsaved); return }
         busy = true
-        scope.launch {
-            val id = (if (item.id == 0L) save() else item).id
-            if (on) runCatching { flushTyped() }               // what was just typed counts
-            withContext(Dispatchers.IO) { com.optionslab.app.data.PineAuto.arm(id, on, pin) }
-            PineScripts.get(id)?.let(onItem)
-            busy = false
+        model.viewModelScope.launch {
+            try {
+                val id = (if (item.id == 0L) save() else item).id
+                if (on) runCatching { flushTyped() }               // what was just typed counts
+                withContext(Dispatchers.IO) { com.optionslab.app.data.PineAuto.arm(id, on, pin) }
+                PineScripts.get(id)?.let(onItem)
+            } catch (e: kotlinx.coroutines.CancellationException) { throw e
+            } catch (e: Throwable) { com.optionslab.app.work.Alerts.error("Could not switch auto-trade ${if (on) "on" else "off"}: ${e.message ?: e.javaClass.simpleName}")
+            } finally { busy = false }
         }
     }
 
@@ -900,6 +934,7 @@ private fun PineAutoPanel(model: AppModel, start: PineScripts.Item, s: Pine.Scri
                 }
                 androidx.compose.material3.Switch(a.on, { on ->
                     if (busy) return@Switch
+                    if (on && dirty) { com.optionslab.app.work.Alerts.error(unsaved); return@Switch }
                     // Alerts only places nothing: no PIN needed.
                     if (on && live && a.mode != "alert") auth = true else arm(on, false)
                 })
@@ -913,6 +948,7 @@ private fun PineAutoPanel(model: AppModel, start: PineScripts.Item, s: Pine.Scri
         com.optionslab.app.data.PineAuto.todayOf(item.id)?.takeIf { it != 0.0 }?.let {
             LedgerLine("Closed trades today", rs(it, sign = true), if (it >= 0) p.verdigris else p.oxblood)
         }
+        if (dirty && !a.on) Note(unsaved)
         val locked = a.on
         if (locked) Text("Switch it off to change these.", style = Type.bodySmall.copy(color = p.inkFaint))
         ParamTokens("What it does", listOf("Place orders" to (a.mode != "alert"), "Alerts only" to (a.mode == "alert"))) { i ->
@@ -931,7 +967,8 @@ private fun PineAutoPanel(model: AppModel, start: PineScripts.Item, s: Pine.Scri
         } else {
             val buy = a.buy.takeIf { it in s.signals } ?: s.signals.first()
             val sell = a.sell.takeIf { it in s.signals } ?: s.signals.getOrElse(1) { s.signals.first() }
-            if (buy != a.buy || sell != a.sell) LaunchedEffect(Unit) { set { au -> au.copy(buy = buy, sell = sell) } }
+            // Only while off: an armed script's settings never change without the PIN.
+            if (!a.on && (buy != a.buy || sell != a.sell)) LaunchedEffect(buy, sell) { set { au -> if (au.on) au else au.copy(buy = buy, sell = sell) } }
             ParamTokens("Buy signal", s.signals.map { it to (it == buy) }) { i -> if (!locked) set { au -> au.copy(buy = s.signals[i]) } }
             ParamTokens("Sell signal", s.signals.map { it to (it == sell) }) { i -> if (!locked) set { au -> au.copy(sell = s.signals[i]) } }
         }

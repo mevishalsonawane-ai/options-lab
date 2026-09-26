@@ -74,7 +74,8 @@ object PineOptimise {
             while (d >= 0) { idx[d]++; if (idx[d] < grids[d].second.size) break; idx[d] = 0; d-- }
             if (d < 0) break
         }
-        return Result(rows.sortedByDescending { it.inSample.net }, tried, total, stopped || tried < total, splitTime)
+        // A run that stopped on an error only traded part of the period: listed, but last and unranked.
+        return Result(rows.sortedWith(compareBy<Row> { it.error != null }.thenByDescending { it.inSample.net }), tried, total, stopped || tried < total, splitTime)
     }
 
     /** Net, count, win rate, profit factor and the deepest fall of the closed-trade P&L curve. */

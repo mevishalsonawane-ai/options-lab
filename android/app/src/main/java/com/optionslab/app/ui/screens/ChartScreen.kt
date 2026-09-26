@@ -93,12 +93,20 @@ fun ChartScreen(model: AppModel, symbol: String, exchange: String, visible: Bool
     var autoBasic by remember { mutableStateOf<String?>(null) }      // why the basic chart was switched in
     val basic = basicChosen || autoBasic != null
 
-    fun openOrder(buy: Boolean, price: Double?) {
+    fun openOrder(buy: Boolean, price: Double?, type: String = if (price == null) "MARKET" else "LIMIT") {
+        // A stop entry would become a LIMIT at the stop level here and fill at once: refused, not converted.
+        if (type != "MARKET" && type != "LIMIT") {
+            hint = "Stop entries cannot be placed from the chart. Use BUY / SELL for a market or limit order."
+            return
+        }
         val (sym, _) = current
         scope.launch {
             val c = withContext(Dispatchers.IO) { runCatching { ChartFeed.contract(sym) }.getOrNull() }
             if (c == null) { hint = "Indices cannot be traded. Search an option in the chart (e.g. NIFTY 24800 CE) to buy or sell it."; return@launch }
-            order = ChainPick(c.underlying, c.expiry, c.strike, c.right, price, null, null, c.lotSize) to (buy to price)
+            // The sheet's LTP is the last traded price, not the level under the finger.
+            val t = System.currentTimeMillis() / 1000
+            val last = withContext(Dispatchers.IO) { runCatching { ChartFeed.bars(sym, "1m", t - 3 * 86400, t).lastOrNull()?.close }.getOrNull() }
+            order = ChainPick(c.underlying, c.expiry, c.strike, c.right, last, null, null, c.lotSize) to (buy to price)
         }
     }
 
@@ -246,13 +254,14 @@ fun ChartScreen(model: AppModel, symbol: String, exchange: String, visible: Bool
                     // Some phones show a blank WebView inside Compose with hardware drawing; software drawing is the fallback.
                     setLayerType(if (softwareLayer) android.view.View.LAYER_TYPE_SOFTWARE else android.view.View.LAYER_TYPE_HARDWARE, null)
                     addJavascriptInterface(Bridge(this, scope, onSymbol = { s, e -> current = s to e; hint = null },
-                        onOrder = { buy, price -> openOrder(buy, price) }, onData = { if (holder[0] === this) { ready = true; failed = false; why = null } },
+                        onOrder = { buy, price, type -> openOrder(buy, price, type) }, onData = { if (holder[0] === this) { ready = true; failed = false; why = null } },
                         onPainted = { w, h, n -> if (holder[0] === this) {
                             painted = "${w}×${h}, $n bars"
                             paintedOk = w >= 50 && h >= 50
                         } },
                         onFail = { m -> if (holder[0] === this && !ready) { failed = true; why = m } },
-                        onPageError = { m -> if (holder[0] === this) { ready = false; failed = true; why = m } }), "IraBridge")
+                        // Only fatal before the first candles: one runtime error later must not drop the chart for the session.
+                        onPageError = { m -> if (holder[0] === this && !ready) { failed = true; why = m } }), "IraBridge")
                     // A script error in the chart page shows as a red alert (the bundled chart only; no account data).
                     webChromeClient = object : android.webkit.WebChromeClient() {
                         override fun onConsoleMessage(m: android.webkit.ConsoleMessage): Boolean {
@@ -393,7 +402,7 @@ private class Bridge(
     private val web: WebView,
     private val scope: CoroutineScope,
     private val onSymbol: (String, String) -> Unit,
-    private val onOrder: (Boolean, Double?) -> Unit,
+    private val onOrder: (Boolean, Double?, String) -> Unit,
     private val onData: () -> Unit = {},
     private val onFail: (String) -> Unit = {},
     private val onPageError: (String) -> Unit = {},
@@ -462,8 +471,11 @@ private class Bridge(
     fun order(json: String) {
         val o = runCatching { JSONObject(json) }.getOrNull() ?: return
         val buy = o.optString("side") == "BUY"
-        val price = if (o.isNull("price") || o.optString("type") == "MARKET") null else o.optDouble("price").takeIf { !it.isNaN() }
-        web.post { onOrder(buy, price) }
+        val type = o.optString("type").uppercase().ifEmpty { "MARKET" }
+        val price = if (o.isNull("price") || type == "MARKET") null else o.optDouble("price").takeIf { !it.isNaN() }
+        // A LIMIT without a price would open as a market order: dropped instead.
+        if (type == "LIMIT" && price == null) return
+        web.post { onOrder(buy, price, type) }
     }
 }
 

@@ -6,6 +6,7 @@ import com.optionslab.app.work.Notifier
 import com.optionslab.engine.Right
 import com.optionslab.engine.orb.OrbRules
 import com.optionslab.engine.pine.Pine
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.sync.Mutex
@@ -32,8 +33,14 @@ object PineAuto {
     private lateinit var file: File
     private val lock = Mutex()
 
+    /**
+     * [since] > 0: a live buy Zerodha has not confirmed (since then, epoch ms), its order [order] (null when even the
+     * id was lost). [qty] is then at most what may have filled; it is settled from the order book on the next passes.
+     */
     data class Held(val symbol: String, val right: String, val qty: Int, val lotSize: Int, val entry: Double, val day: String,
-                    val live: Boolean, val kite: String?)
+                    val live: Boolean, val kite: String?, val order: String? = null, val since: Long = 0L) {
+        val unconfirmed: Boolean get() = since > 0
+    }
     data class Line(val at: Long, val script: Long, val text: String)
 
     private class Book(
@@ -66,13 +73,16 @@ object PineAuto {
             val bk = Book()
             o.optJSONObject("held")?.let { m -> m.keys().forEach { k -> val h = m.getJSONObject(k)
                 bk.held[k.toLong()] = Held(h.getString("symbol"), h.getString("right"), h.getInt("qty"), h.optInt("lot", 1), h.getDouble("entry"),
-                    h.getString("day"), h.optBoolean("live"), h.optString("kite").ifBlank { null }) } }
+                    h.getString("day"), h.optBoolean("live"), h.optString("kite").ifBlank { null }, h.optString("order").ifBlank { null },
+                    h.optLong("since", 0L)) } }
             o.optJSONObject("lastBar")?.let { m -> m.keys().forEach { k -> bk.lastBar[k.toLong()] = m.getLong(k) } }
             o.optJSONObject("lastTarget")?.let { m -> m.keys().forEach { k -> bk.lastTarget[k.toLong()] = m.getInt(k) } }
             o.optJSONObject("liveOk")?.let { m -> m.keys().forEach { k -> bk.liveOk[k.toLong()] = m.getBoolean(k) } }
             o.optJSONArray("log")?.let { a -> for (i in 0 until a.length()) { val l = a.getJSONArray(i); bk.log += Line(l.getLong(0), l.getLong(1), l.getString(2)) } }
             o.optJSONObject("dayPnl")?.let { m -> m.keys().forEach { k -> bk.dayPnl[k.toLong()] = m.getString(k) } }
             o.optJSONObject("paused")?.let { m -> m.keys().forEach { k -> bk.paused[k.toLong()] = m.getString(k) } }
+            // A restore not yet disarmed (the app clears the flag once it has): no script may trade live on restored approvals.
+            if (com.optionslab.app.security.SecurePrefs.getBoolean(Backup.DISARM, false)) bk.liveOk.clear()
             bk
         }.getOrNull()
         if (b == null && file.exists()) Vault.setAside(file)
@@ -83,7 +93,8 @@ object PineAuto {
         while (b.log.size > 300) b.log.removeAt(0)
         val o = JSONObject()
         o.put("held", JSONObject().apply { b.held.forEach { (k, h) -> put(k.toString(), JSONObject().put("symbol", h.symbol).put("right", h.right)
-            .put("qty", h.qty).put("lot", h.lotSize).put("entry", h.entry).put("day", h.day).put("live", h.live).put("kite", h.kite ?: "")) } })
+            .put("qty", h.qty).put("lot", h.lotSize).put("entry", h.entry).put("day", h.day).put("live", h.live).put("kite", h.kite ?: "")
+            .put("order", h.order ?: "").put("since", h.since)) } })
         o.put("lastBar", JSONObject().apply { b.lastBar.forEach { (k, v) -> put(k.toString(), v) } })
         o.put("lastTarget", JSONObject().apply { b.lastTarget.forEach { (k, v) -> put(k.toString(), v) } })
         o.put("liveOk", JSONObject().apply { b.liveOk.forEach { (k, v) -> put(k.toString(), v) } })
@@ -130,7 +141,9 @@ object PineAuto {
     /** Called by the market watch every pass. */
     suspend fun tick() = lock.withLock {
         val all = PineScripts.items.value
-        val on = all.filter { it.auto.on }
+        // A restore not yet disarmed: every script counts as switched off (what it holds is still sold).
+        val disarm = com.optionslab.app.security.SecurePrefs.getBoolean(Backup.DISARM, false)
+        val on = if (disarm) emptyList() else all.filter { it.auto.on }
         val b = book()
         if (on.isEmpty() && b.held.isEmpty()) return@withLock
         // Held by a script that is no longer on (turned off elsewhere, a restore, deleted): sell it.
@@ -152,8 +165,13 @@ object PineAuto {
         val t = Market.now()
         val mins = t.hour * 60 + t.minute
         var h = b.held[id]
+        // A buy Zerodha did not confirm: settled from the order book first (its unfilled rest cancelled).
+        if (h != null && h.unconfirmed) {
+            h = settle(b, id, h)
+            if (h == null) b.held.remove(id) else b.held[id] = h
+        }
         // Sold outside the app (a notification's Close, the Trade tab, the broker's square-off).
-        if (h != null && gone(h)) { note(b, id, "${h.symbol} is no longer held (closed outside the auto-trader)"); b.held.remove(id); h = null }
+        if (h != null && !h.unconfirmed && gone(h)) { note(b, id, "${h.symbol} is no longer held (closed outside the auto-trader)"); b.held.remove(id); h = null }
         if (h != null && (stopped || (item.auto.squareOff && mins >= 15 * 60 + 15) || h.day != Market.today().toString())) {
             exit(b, id, item, h, if (stopped) "the day's stop" else "15:15 square-off"); return
         }
@@ -185,8 +203,14 @@ object PineAuto {
         val script = PineScripts.script(item) ?: run { note(b, id, "The script has errors: nothing traded"); return }
         val step = stepSeconds(item.auto.interval)
         val now = System.currentTimeMillis() / 1000
-        val bars = ChartFeed.bars(item.auto.symbol, item.auto.interval, now - lookbackDays(item.auto.interval) * 86400, null)
-            .filter { it.epochSecond + step <= now }                    // completed candles only
+        // At most 15 s: this runs in the watch's risk steps, before the stops, the expiry square-off and the strategies.
+        // The fetch runs apart and is only waited for, so even a read stuck in the network cannot hold the pass.
+        val fetch = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO).async {
+            ChartFeed.bars(item.auto.symbol, item.auto.interval, now - lookbackDays(item.auto.interval) * 86400, null, quick = true)
+        }
+        val fetched = kotlinx.coroutines.withTimeoutOrNull(15_000) { fetch.await() }
+            ?: run { fetch.cancel(); note(b, id, "No candles for ${item.auto.symbol} within 15 s: this pass skipped"); return }
+        val bars = fetched.filter { it.epochSecond + step <= now }                    // completed candles only
         val last = bars.lastOrNull() ?: return
         // A feed that failed today can hand back yesterday's candles: never trade on those, or on a stalled feed.
         if (step < 86_400 && (java.time.Instant.ofEpochSecond(last.epochSecond).atZone(com.optionslab.engine.IST).toLocalDate() != Market.today() ||
@@ -305,26 +329,31 @@ object PineAuto {
         if (refusals.isNotEmpty()) { note(b, id, "Guard refused: ${refusals.joinToString(" ")}"); return }
         val why = com.optionslab.engine.Kite.refusals(o, s.limits(), Broker.sentToday(), false, refPrice = quote)
         if (why.isNotEmpty()) { note(b, id, "Refused: ${why.joinToString("; ")}"); return }
-        val orderId = try { Broker.placeOrder(o) } catch (e: Exception) {
-            runCatching { Broker.findRecent(o, emptyList()) }.getOrNull() ?: run { note(b, id, "Zerodha refused the buy: ${e.message}"); return }
+        val known = knownKite()
+        val orderId: String? = try { Broker.placeOrder(o) } catch (e: Exception) {
+            if (Broker.definite(e)) { note(b, id, "Zerodha refused the buy: ${e.message}"); return }
+            // The answer was lost, not necessarily the order: look (the book can trail the POST) before calling it unsent.
+            try { Broker.findRecentRetrying(o, known) ?: run { note(b, id, "Zerodha did not answer the buy (${e.message}) and no such order is in its book: nothing bought"); return } }
+            catch (_: Exception) { null }                                          // the order book could not be read either
         }
-        Strategies.tagOwner("kite:$orderId", "${label(item)} · entry")
-        var f = runCatching { Broker.awaitOrder(orderId, 15_000) }.getOrNull()
-        if (f == null || f.filled <= 0) {
-            // Not filled in 15 s: take it out so it can never fill later as an untracked entry.
-            if (f?.status !in setOf("REJECTED", "CANCELLED")) runCatching { Broker.cancel(orderId) }
+        orderId?.let { Strategies.tagOwner("kite:$it", "${label(item)} · entry") }
+        var f = orderId?.let { runCatching { Broker.awaitOrder(it, 15_000) }.getOrNull() }
+        if (orderId != null && f?.status !in DONE) {
+            // Not finished in 15 s: the unfilled rest is cancelled so it can never fill later as an untracked entry;
+            // only what filled is booked.
+            runCatching { Broker.cancel(orderId) }
             f = runCatching { Broker.orderState(orderId) }.getOrNull()
-            if (f == null) {
-                // No answer: it may have filled. Tracked as held, so the exit (which re-reads the position
-                // book and removes it when nothing is there) owns it rather than leaving it unwatched.
-                b.held[id] = Held(c.symbol, right.name, o.quantity, ins.lotSize, quote, today.toString(), true, sym)
-                runCatching { save(b) }
-                com.optionslab.app.work.Alerts.error("${label(item)}: Zerodha did not confirm the buy of $sym. It is treated as held until the position book shows otherwise.", "Pine auto-trade")
-                note(b, id, "Zerodha did not confirm the buy of $sym: tracked as held until checked")
-                return
-            }
-            if (f.filled <= 0) { note(b, id, "Zerodha ${f.status.lowercase()}: no position"); return }
         }
+        if (f == null || f.status !in DONE) {
+            // No answer: it may have filled, or still be working. Tracked as held (at most the full quantity) and
+            // settled from the order book on the next passes, rather than left unwatched.
+            b.held[id] = Held(c.symbol, right.name, o.quantity, ins.lotSize, quote, today.toString(), true, sym, orderId, System.currentTimeMillis())
+            runCatching { save(b) }
+            com.optionslab.app.work.Alerts.error("${label(item)}: Zerodha did not confirm the buy of $sym. It is treated as held until the order book shows what filled.", "Pine auto-trade")
+            note(b, id, "Zerodha did not confirm the buy of $sym: tracked as held until checked")
+            return
+        }
+        if (f.filled <= 0) { note(b, id, "Zerodha ${f.status.lowercase()}: no position"); return }
         val px = f.avgPrice.takeIf { it > 0 } ?: quote
         Notifier.orderFilled(app, "BUY", f.filled, sym, px, "Live", label(item))
         b.held[id] = Held(c.symbol, right.name, f.filled, ins.lotSize, px, today.toString(), true, sym)
@@ -332,8 +361,48 @@ object PineAuto {
         note(b, id, "Bought ${f.filled} $sym at ${"%.2f".format(java.util.Locale.ENGLISH, px)} (LIVE)")
     }
 
+    /** Terminal order states at Zerodha. */
+    private val DONE = setOf("COMPLETE", "REJECTED", "CANCELLED")
+
+    /** Kite order ids this phone already tracks (every bot's): never adopted for a lost reply. */
+    private suspend fun knownKite(): List<String> =
+        runCatching { Strategies.owners().keys.filter { it.startsWith("kite:") }.map { it.removePrefix("kite:") } }.getOrDefault(emptyList())
+
+    /**
+     * A live buy Zerodha had not confirmed: whatever of it still works is cancelled, then only what filled is
+     * kept. Null when nothing was bought; [h] (its order id filled in) while Zerodha cannot tell yet.
+     */
+    private suspend fun settle(b: Book, id: Long, h: Held): Held? {
+        val sym = h.kite ?: return null
+        if (!Broker.loggedIn) return h
+        if (h.day != Market.today().toString()) {
+            // A day old: the MIS order and position are long settled; what is held now is read from the position book.
+            note(b, id, "The buy of $sym on ${h.day} was never confirmed by Zerodha; check that day's contract note")
+            return null
+        }
+        val oid = h.order ?: run {
+            // The order id itself was lost: the entry is found in today's book by its symbol, side, tag and time.
+            val since = java.time.Instant.ofEpochMilli(h.since).atZone(com.optionslab.engine.IST).toLocalDateTime().minusSeconds(30)
+            val row = runCatching { Broker.latestTagged(sym, "BUY", "irapine", since, knownKite()) }.getOrElse { return h }
+                ?: run { note(b, id, "No buy of $sym reached Zerodha: nothing held"); return null }
+            Strategies.tagOwner("kite:${row.id}", "Pine · entry")
+            row.id
+        }
+        var st = runCatching { Broker.orderState(oid) }.getOrNull() ?: return h.copy(order = oid)
+        if (st.status !in DONE) {
+            runCatching { Broker.cancel(oid) }
+            st = runCatching { Broker.orderState(oid) }.getOrNull() ?: return h.copy(order = oid)
+            if (st.status !in DONE) return h.copy(order = oid)
+        }
+        if (st.filled <= 0) { note(b, id, "The unconfirmed buy of $sym did not fill (${st.status.lowercase()}): nothing held"); return null }
+        val px = st.avgPrice.takeIf { it > 0 } ?: h.entry
+        note(b, id, "Zerodha confirmed the buy: ${st.filled} $sym at ${"%.2f".format(java.util.Locale.ENGLISH, px)} (LIVE)")
+        return h.copy(qty = st.filled, entry = px, order = null, since = 0L)
+    }
+
     /** Sell what the script holds. Removes it from [b] once sold (or found gone). */
-    private suspend fun exit(b: Book, id: Long, item: PineScripts.Item, h: Held, why: String) {
+    private suspend fun exit(b: Book, id: Long, item: PineScripts.Item, h0: Held, why: String) {
+        var h = h0
         if (!h.live) {
             val c = Paper.contractOf(h.symbol) ?: run { b.held.remove(id); return }
             val net = Paper.state.positions.filter { it.symbol == h.symbol && it.product == "MIS" }.sumOf { it.quantity }
@@ -350,19 +419,28 @@ object PineAuto {
         }
         val sym = h.kite ?: run { b.held.remove(id); return }
         if (!Broker.loggedIn) { note(b, id, "Not logged in to Zerodha: cannot sell $sym. Close it in Trade."); return }
+        // A buy not yet confirmed: its unfilled rest is cancelled first, and only what filled is sold.
+        if (h.unconfirmed) {
+            h = settle(b, id, h) ?: run { b.held.remove(id); return }
+            b.held[id] = h
+        }
         val still = runCatching { Broker.positionBook().net.filter { it.symbol == sym && it.exchange == "NFO" && it.product == "MIS" }.sumOf { it.qty } }
             .getOrNull() ?: return
-        val qty = minOf(still, h.qty)
-        if (qty <= 0) { b.held.remove(id); note(b, id, "$sym already closed"); return }
-        // An exit already working at Zerodha (an earlier pass's, or one whose reply was lost) must fill or be
-        // cancelled before another goes out: two sells of what is held would leave the account short.
-        val working = runCatching { Broker.orders().filter { it.working && it.symbol == sym && it.side == "SELL" } }.getOrNull() ?: return
-        if (working.isNotEmpty()) {
-            working.filter { it.tag == "irapine" }.forEach { runCatching { Broker.cancel(it.id, it.variety) } }
-            note(b, id, "An exit for $sym is still working at Zerodha; checked again next pass")
+        if (minOf(still, h.qty) <= 0 && !h.unconfirmed) { b.held.remove(id); note(b, id, "$sym already closed"); return }
+        // Its own exits still working (an earlier pass's, or one whose reply was lost) come out first; every other sell
+        // resting on the symbol (a protection's stop, an ORB stop, the owner's own limit) is left alone and subtracted:
+        // together they never sell more than is held, and none of them can block this exit.
+        val orders = runCatching { Broker.orders() }.getOrNull() ?: return
+        orders.filter { it.working && it.symbol == sym && it.side == "SELL" && it.tag == "irapine" }.forEach { runCatching { Broker.cancel(it.id, it.variety) } }
+        val working = runCatching { Broker.orders().filter { it.working && it.symbol == sym && it.side == "SELL" && it.product == "MIS" } }.getOrNull() ?: return
+        val spec = runCatching { Broker.spec("NFO", sym) }.getOrNull() ?: return
+        val qty = com.optionslab.engine.risk.ExitQty.sendable(still, working.sumOf { com.optionslab.engine.risk.ExitQty.remaining(it.qty, it.filled, it.pending) },
+            h.qty, spec.lotSize)
+        if (qty <= 0) {
+            note(b, id, if (h.unconfirmed) "$sym: the buy is not confirmed yet and nothing of it is held to sell; checked again next pass"
+                else "$sym: other exits already working at Zerodha cover what is held; checked again next pass")
             return
         }
-        val spec = runCatching { Broker.spec("NFO", sym) }.getOrNull() ?: return
         val o = com.optionslab.engine.Kite.Order(sym, com.optionslab.engine.Kite.Side.SELL, qty, spec.lotSize, "MIS", "MARKET", null, spec.tickSize, "NFO", "irapine")
         val bad = com.optionslab.engine.Kite.refusals(o, AppSettings.load().limits(), Broker.sentToday(), false, exit = true)
         if (bad.isNotEmpty()) {
@@ -370,22 +448,25 @@ object PineAuto {
             return
         }
         val orderId = try { Broker.placeOrder(o, exit = true) } catch (e: Exception) {
-            runCatching { Broker.findRecent(o, emptyList()) }.getOrNull() ?: run {
+            val found = if (Broker.definite(e)) null else runCatching { Broker.findRecentRetrying(o, knownKite() + orders.map { it.id }) }.getOrNull()
+            found ?: run {
                 com.optionslab.app.work.Alerts.error("${label(item)}: the Zerodha exit failed (${e.message}); retrying on the next pass.", "Pine live")
                 return
             }
         }
         Strategies.tagOwner("kite:$orderId", "${label(item)} · $why")
-        val f = runCatching { Broker.awaitOrder(orderId, 15_000) }.getOrNull()
-        if (f == null || f.filled <= 0) {
-            // Not filled in 15 s: take it out, so the next pass starts from what Zerodha says is held.
+        var f = runCatching { Broker.awaitOrder(orderId, 15_000) }.getOrNull()
+        if (f?.status !in DONE) {
+            // Not finished in 15 s: the rest is cancelled, so the next pass starts from what Zerodha says is held.
             runCatching { Broker.cancel(orderId) }
-            return
+            f = runCatching { Broker.orderState(orderId) }.getOrNull() ?: f
         }
-        Notifier.orderFilled(app, "SELL", f.filled, sym, f.avgPrice, "Live", label(item))
-        addPnl(b, id, (f.avgPrice - h.entry) * f.filled)
-        if (f.filled >= qty) b.held.remove(id) else b.held[id] = h.copy(qty = h.qty - f.filled)
-        note(b, id, "Sold ${f.filled} $sym at ${"%.2f".format(java.util.Locale.ENGLISH, f.avgPrice)} ($why, LIVE)")
+        if (f == null || f.filled <= 0) return
+        val px = f.avgPrice.takeIf { it > 0 } ?: h.entry
+        Notifier.orderFilled(app, "SELL", f.filled, sym, px, "Live", label(item))
+        addPnl(b, id, (px - h.entry) * f.filled)
+        if (f.filled >= h.qty && !h.unconfirmed) b.held.remove(id) else b.held[id] = h.copy(qty = (h.qty - f.filled).coerceAtLeast(0))
+        note(b, id, "Sold ${f.filled} $sym at ${"%.2f".format(java.util.Locale.ENGLISH, px)} ($why, LIVE)")
     }
 
     private suspend fun gone(h: Held): Boolean = if (!h.live) {

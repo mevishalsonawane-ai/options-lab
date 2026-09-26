@@ -20,6 +20,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import java.util.Locale
 import kotlinx.coroutines.launch
+import androidx.lifecycle.viewModelScope
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -676,21 +677,40 @@ private fun BackupCard(model: AppModel, wipeOnExhaustion: Boolean) {
     var fileVersion by remember { mutableStateOf(0) }              // the picked file: 1 = old, PIN-sealed; 2 = passphrase-sealed
     var opened by remember { mutableStateOf<com.optionslab.app.data.Backup.Contents?>(null) }
     var restoreAuth by remember { mutableStateOf(false) }
+    var restoring by remember { mutableStateOf(false) }            // a restore has started: it runs once, to the restart
     val save = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.CreateDocument("application/octet-stream")) { uri ->
         val bytes = pending; pending = null
-        if (uri == null || bytes == null) return@rememberLauncherForActivityResult
-        val ok = runCatching { ctx.contentResolver.openOutputStream(uri)?.use { it.write(bytes) } }.isSuccess
-        if (ok) com.optionslab.app.work.Alerts.success("Backup saved. Only its passphrase opens it: keep the passphrase safe, it cannot be recovered.")
-        else com.optionslab.app.work.Alerts.error("Could not write the backup file.")
+        if (uri == null) return@rememberLauncherForActivityResult          // the owner cancelled the file picker
+        if (bytes == null) {
+            com.optionslab.app.work.Alerts.error("The backup was lost before it could be saved (the app was closed meanwhile). Tap Back up now again.")
+            return@rememberLauncherForActivityResult
+        }
+        val resolver = ctx.applicationContext.contentResolver
+        // Written off the main thread, in the app's scope so leaving the page does not cut the file short.
+        model.viewModelScope.launch {
+            val ok = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                try { resolver.openOutputStream(uri)?.use { it.write(bytes) } ?: error("no stream"); true }
+                catch (e: Exception) { false }
+            }
+            if (ok) com.optionslab.app.work.Alerts.success("Backup saved. Only its passphrase opens it: keep the passphrase safe, it cannot be recovered.")
+            else com.optionslab.app.work.Alerts.error("Could not write the backup file.")
+        }
     }
     val pick = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.OpenDocument()) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
-        val bytes = runCatching { ctx.contentResolver.openInputStream(uri)?.use { it.readBytes() } }.getOrNull()
-        val ver = bytes?.let { b -> runCatching { com.optionslab.app.data.Backup.version(b) }.getOrNull() }
-        when {
-            bytes == null -> com.optionslab.app.work.Alerts.error("Could not read that file.")
-            ver == null -> com.optionslab.app.work.Alerts.error("This is not an IraAlgo backup.")
-            else -> { pending = bytes; fileVersion = ver; ask = "restore" }
+        val resolver = ctx.applicationContext.contentResolver
+        scope.launch {
+            // Read and checked off the main thread.
+            val read = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                val bytes = try { resolver.openInputStream(uri)?.use { it.readBytes() } } catch (e: Exception) { null }
+                bytes to bytes?.let { b -> try { com.optionslab.app.data.Backup.version(b) } catch (e: Exception) { null } }
+            }
+            val (bytes, ver) = read
+            when {
+                bytes == null -> com.optionslab.app.work.Alerts.error("Could not read that file.")
+                ver == null -> com.optionslab.app.work.Alerts.error("This is not an IraAlgo backup.")
+                else -> { pending = bytes; fileVersion = ver; ask = "restore" }
+            }
         }
     }
     LedgerCard(title = "Backup and restore") {
@@ -750,6 +770,8 @@ private fun BackupCard(model: AppModel, wipeOnExhaustion: Boolean) {
                 TextButton({
                     if (mode == "backup" && pass.length < minPass) com.optionslab.app.work.Alerts.error("The backup passphrase needs at least $minPass characters.")
                     else if (mode == "backup" && pass != again) com.optionslab.app.work.Alerts.error("The two passphrases differ.")
+                    else if (mode == "backup" && pass.toCharArray().let { a -> com.optionslab.app.data.Backup.strength(a).also { a.fill('\u0000') } } <= 1)
+                        com.optionslab.app.work.Alerts.error("That passphrase is too easy to guess: make it longer, or mix words, digits and symbols.")
                     else {
                         val typed = pin.toCharArray()
                         val phrase = pass.toCharArray()
@@ -786,7 +808,7 @@ private fun BackupCard(model: AppModel, wipeOnExhaustion: Boolean) {
             dismissButton = { TextButton({ ask = null; if (mode == "restore") pending = null }) { Text("Cancel") } },
         )
     }
-    if (!restoreAuth) opened?.let { c ->
+    if (!restoreAuth && !restoring) opened?.let { c ->
         com.optionslab.app.ui.components.AlertDialog(
             onDismissRequest = { opened = null },
             properties = androidx.compose.ui.window.DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy),
@@ -803,17 +825,31 @@ private fun BackupCard(model: AppModel, wipeOnExhaustion: Boolean) {
         )
     }
     // The backup's passphrase (or old PIN) is whoever made the file's choice: replacing this phone's data needs THIS app's PIN.
-    if (restoreAuth) opened?.let { c ->
+    if (restoreAuth && !restoring) opened?.let { c ->
         Reauth(model, onCancel = { restoreAuth = false }, why = "Enter this phone's app PIN to replace its data with the backup.", onOk = {
                     restoreAuth = false
-                    scope.launch {
-                        val ok = runCatching { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { com.optionslab.app.data.Backup.restore(ctx, c) } }.isSuccess
-                        opened = null
-                        if (!ok) { com.optionslab.app.work.Alerts.error("The restore did not complete."); return@launch }
-                        com.optionslab.app.work.Alerts.success("Restored. IraAlgo is closing; open it again.")
-                        kotlinx.coroutines.delay(1_200)
-                        // Every store is cached in memory: a fresh start reads the restored files.
-                        android.os.Process.killProcess(android.os.Process.myPid())
+                    if (!restoring) {
+                        // Once: the dialog cannot come back and a second restore cannot start.
+                        restoring = true; opened = null
+                        val app = ctx.applicationContext
+                        // In the app's scope and not cancellable: leaving the page must not stop it halfway through the files.
+                        model.viewModelScope.launch {
+                            kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) {
+                                val done = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                                    try { com.optionslab.app.data.Backup.restore(app, c) } catch (e: Exception) { null }
+                                }
+                                // Files may have been replaced either way: the app always restarts, never runs on half-restored data.
+                                when {
+                                    done == null -> com.optionslab.app.work.Alerts.error("The restore did not complete. IraAlgo is closing; open it again and restore once more.")
+                                    done.changePin -> com.optionslab.app.work.Alerts.error("Restored. This backup was sealed with a PIN, which anyone holding the file can guess: " +
+                                        "if it is this phone's PIN, change it now (More → Security → Change PIN). IraAlgo is closing; open it again.")
+                                    else -> com.optionslab.app.work.Alerts.success("Restored. IraAlgo is closing; open it again.")
+                                }
+                                kotlinx.coroutines.delay(if (done?.changePin == true) 6_000 else 1_200)
+                                // Every store is cached in memory: a fresh start reads the restored files.
+                                android.os.Process.killProcess(android.os.Process.myPid())
+                            }
+                        }
                     }
         })
     }

@@ -86,6 +86,15 @@ class KiteTest {
         assertEquals(4.85, Kite.onTick(4.85, 0.05, Kite.Side.SELL))
     }
 
+    @Test fun `sub-paisa ticks keep their precision on the tick and in the order body`() {
+        // CDS (USDINR) trades on a 0.0025 tick: two-decimal rounding would put it off the grid.
+        assertEquals(83.2525, Kite.onTick(83.2526, 0.0025, Kite.Side.SELL))
+        assertEquals(83.255, Kite.onTick(83.2526, 0.0025, Kite.Side.BUY))
+        val cds = Kite.Order("USDINR26SEPFUT", Kite.Side.BUY, 1, 1, "NRML", "LIMIT", 83.2525, exchange = "CDS")
+        assertTrue("price=83.2525&" in cds.formBody(), cds.formBody())
+        assertTrue("price=5.00&" in order(price = 5.0).formBody())
+    }
+
     @Test fun `a hedged ticket buys its wing before it sells the put`() {
         val tk = Live.Ticket(LocalDate.of(2026, 9, 29), "NIFTY", LocalDate.of(2026, 9, 29), "SELL", "PE", 24500.0, 65, 1, 65,
             credit = 3.0, forward = 24700.0, breakeven = 24497.0, margin = 0.0, maxLoss = 0.0, wingStrike = 24300.0, wingDebit = 1.5)
@@ -140,7 +149,9 @@ class KiteTest {
         assertEquals("FINNIFTY", Kite.underlyingOf("FINNIFTY26SEP23000CE"))
         assertEquals("MIDCPNIFTY", Kite.underlyingOf("MIDCPNIFTY26SEP12000PE"))
         assertEquals("BANKEX", Kite.underlyingOf("BANKEX26SEP60000CE"))
-        assertEquals(null, Kite.underlyingOf("NIFTYNXT5026SEP70000CE"))
+        // NIFTYNXT50 has its own freeze quantity and is never read as NIFTY.
+        assertEquals("NIFTYNXT50", Kite.underlyingOf("NIFTYNXT5026SEP70000CE"))
+        assertEquals(600, Kite.freezeQuantity("NFO", "NIFTYNXT5026SEP70000CE"))
         assertEquals(1800, Kite.freezeQuantity("NFO", "NIFTY26SEP24500PE"))
         assertEquals(900, Kite.freezeQuantity("NFO", "BANKNIFTY26SEP52000CE"))
         assertEquals(2800, Kite.freezeQuantity("NFO", "MIDCPNIFTY26SEP12000PE"))

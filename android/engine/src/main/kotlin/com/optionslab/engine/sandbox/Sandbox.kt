@@ -863,7 +863,9 @@ class Sandbox(
          * so it is refused along with the margin if used margin has already
          * been reconciled below the position's margin (Python parity). The
          * row's updated_at is then set to 00:00 UTC of expiry day, which the
-         * Python does to hide the row from later sessions.
+         * Python does to hide the row from later sessions. Also Python parity: the close P&L is
+         * (settle - average) x qty with no contract value and no exercise STT on a long ITM option,
+         * as position_manager._settle_expired_position computes it.
          */
         fun settleExpired(i: Int) {
             val p = positions[i]

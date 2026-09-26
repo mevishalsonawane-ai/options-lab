@@ -187,7 +187,12 @@ object Broker {
      * A secret saved before sealing existed is sealed now and the readable copy removed.
      */
     fun unsealSecret(pin: CharArray): String? {
-        SecurePrefs.getString(K_SEALED)?.let { return com.optionslab.app.security.SecretBox.open(it, pin) }
+        SecurePrefs.getString(K_SEALED)?.let { blob ->
+            val secret = com.optionslab.app.security.SecretBox.open(blob, pin) ?: return null
+            // An older (v1) seal is re-sealed in the device-bound format now that the PIN has opened it.
+            runCatching { com.optionslab.app.security.SecretBox.upgrade(blob, pin, secret)?.let { SecurePrefs.put(K_SEALED, it) } }
+            return secret
+        }
         val legacy = SecurePrefs.getString(K_SECRET) ?: return null
         SecurePrefs.putAll(mapOf(K_SEALED to com.optionslab.app.security.SecretBox.seal(legacy, pin), K_SECRET to null))
         return legacy
@@ -413,14 +418,22 @@ object Broker {
 
     // ---- instruments ---------------------------------------------------------------------
 
-    /** The last instruments list fetched (any day), without touching the network. */
-    fun cachedInstruments(): List<Kite.Instrument>? = runCatching {
-        val a = JSONObject(File(app.filesDir, "kite_instruments.json").readText()).getJSONArray("i")
-        (0 until a.length()).map { a.getJSONArray(it) }.map {
-            Kite.Instrument(it.getLong(0), it.getString(1), it.getString(2), LocalDate.parse(it.getString(3)), it.getDouble(4),
-                it.getInt(5), if (it.getString(6) == "CE") Right.CE else Right.PE, it.getDouble(7))
-        }
-    }.getOrNull()
+    /** The parsed list and the file stamp (modified time, length) it was parsed from. */
+    @Volatile private var instrumentsMemo: Pair<Pair<Long, Long>, List<Kite.Instrument>>? = null
+
+    /** The last instruments list fetched (any day), without touching the network; parsed again only when the file changes. */
+    fun cachedInstruments(): List<Kite.Instrument>? {
+        val f = File(app.filesDir, "kite_instruments.json")
+        val stamp = f.lastModified() to f.length()
+        instrumentsMemo?.let { if (it.first == stamp && stamp.first != 0L) return it.second }
+        return runCatching {
+            val a = JSONObject(f.readText()).getJSONArray("i")
+            (0 until a.length()).map { a.getJSONArray(it) }.map {
+                Kite.Instrument(it.getLong(0), it.getString(1), it.getString(2), LocalDate.parse(it.getString(3)), it.getDouble(4),
+                    it.getInt(5), if (it.getString(6) == "CE") Right.CE else Right.PE, it.getDouble(7))
+            }.also { instrumentsMemo = stamp to it }
+        }.getOrNull()
+    }
 
     /** NIFTY and BANKNIFTY options from GET /instruments/NFO, cached for the day. */
     suspend fun instruments(): List<Kite.Instrument> {
@@ -539,15 +552,62 @@ object Broker {
      * placed in the last three minutes, and not one of [known].
      */
     suspend fun findRecent(o: Kite.Order, known: Collection<String>): String? {
-        val since = java.time.LocalDateTime.now(IST).minusMinutes(3)
         val fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
-        val arr = call("GET", "/orders") as JSONArray
-        return rows(arr).lastOrNull {
+        val rs = rows(call("GET", "/orders") as JSONArray)
+        fun at(r: JSONObject) = runCatching { java.time.LocalDateTime.parse(r.optString("order_timestamp"), fmt) }.getOrNull()
+        // "Now" by Kite's own clock when the book has a later order than the phone's clock says (a phone running
+        // slow would otherwise widen the window); never earlier than the phone's.
+        val now = rs.mapNotNull(::at).fold(java.time.LocalDateTime.now(IST)) { a, t -> if (t.isAfter(a)) t else a }
+        val since = now.minusMinutes(3)
+        return rs.lastOrNull {
             it.optString("tradingsymbol") == o.tradingSymbol && it.optString("transaction_type") == o.side.name &&
                 it.optInt("quantity") == o.quantity && it.optString("tag") == o.tag.filter { c -> c.isLetterOrDigit() }.take(20) &&
-                it.optString("order_id") !in known &&
-                runCatching { !java.time.LocalDateTime.parse(it.optString("order_timestamp"), fmt).isBefore(since) }.getOrDefault(false)
+                it.optString("order_id") !in known && at(it)?.isBefore(since) == false
         }?.optString("order_id")?.also { countSent() }
+    }
+
+    /**
+     * True when [e] from [placeOrder] means the order was certainly NOT placed: Zerodha answered with a
+     * refusal, or nothing was sent (not logged in). A lost reply (timeout, dropped connection, an
+     * unreadable answer, Kite's own NetworkException) is not definite: the order may exist.
+     */
+    fun definite(e: Throwable): Boolean = e is NotLoggedIn || (e is KiteError && e.type != "NetworkException")
+
+    /**
+     * [findRecent] for a POST whose reply was lost, tried [tries] times [waitMs] apart (the order book can
+     * trail the POST by a moment). The order id; null when the book was read and holds no such order;
+     * throws when the book could not be read at all, so the caller knows the order's fate is unknown.
+     */
+    suspend fun findRecentRetrying(o: Kite.Order, known: Collection<String>, tries: Int = 3, waitMs: Long = 2_000): String? {
+        var read = false
+        var err: Exception? = null
+        for (i in 0 until tries) {
+            if (i > 0) delay(waitMs)
+            try {
+                findRecent(o, known)?.let { return it }
+                read = true
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                err = e
+            }
+        }
+        if (!read) throw err ?: IOException("Zerodha's order book could not be read")
+        return null
+    }
+
+    /**
+     * The newest of today's orders on [symbol] with [side] and [tag], placed at or after [since] (IST, Kite's
+     * timestamp, with two minutes' allowance for the phone's clock) and not in [exclude]: an entry whose order
+     * id was lost, found again.
+     */
+    suspend fun latestTagged(symbol: String, side: String, tag: String, since: java.time.LocalDateTime, exclude: Collection<String>): OrderRow? {
+        val fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+        val from = since.minusMinutes(2)
+        return orders().firstOrNull {
+            it.symbol == symbol && it.side == side && it.tag == tag && it.id !in exclude &&
+                runCatching { !java.time.LocalDateTime.parse(it.placedAt, fmt).isBefore(from) }.getOrDefault(false)
+        }
     }
 
     // ---- GTT ------------------------------------------------------------------------------

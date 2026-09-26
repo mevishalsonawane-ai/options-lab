@@ -123,9 +123,10 @@ internal class Interp(
 
     fun go(): Pine.Run {
         var error: Pine.Problem? = null
+        var cur = 0
         try {
             for (i in chartBars.indices) {
-                bar = i; loopOps = 0
+                bar = i; loopOps = 0; cur = i
                 broker?.beforeBar(i)
                 for (s in top) exec(s, global)
                 broker?.afterScript(i)
@@ -145,6 +146,7 @@ internal class Interp(
         } catch (e: RuntimeException) {
             error = Pine.Problem(0, 0, "Stopped at bar ${bar + 1}: ${e.message ?: e.javaClass.simpleName}")
         }
+        if (error != null) broker?.halt(cur)
         val report = broker?.report()
         return Pine.Run(plots, markers, signals, position, broker?.nextPosition() ?: 0.0, report, error)
     }
@@ -1053,7 +1055,8 @@ internal class Broker(
     private val costs: Pine.Costs = Pine.Costs(),
 ) {
     /** An open entry; [qty] and [comm] shrink as partial exits take pieces of it. */
-    class Open(val id: String, val long: Boolean, var qty: Double, val price: Double, val bar: Int, var comm: Double, var best: Double) {
+    class Open(val id: String, val long: Boolean, var qty: Double, val price: Double, val bar: Int, var comm: Double, var best: Double,
+               val fillTime: Long = 0, val intrabar: Boolean = false) {
         val origQty = qty
         /** Exit orders that already took their piece of this entry. */
         val done = HashSet<String>()
@@ -1081,6 +1084,9 @@ internal class Broker(
     private var ddMax = 0.0
     private val equity = DoubleArray(bars.size) { s.initialCapital }
     private var bar = 0
+    /** When the fills being made now happen (epoch seconds), and whether inside the bar: see [Pine.Trade.entryFillTime]. */
+    private var fillAt = 0L
+    private var fillIntrabar = false
 
     fun size(): Double = open.sumOf { if (it.long) it.qty else -it.qty }
     private fun openPnl(px: Double) = open.sumOf { (px - it.price) * it.qty * (if (it.long) 1 else -1) }
@@ -1143,7 +1149,15 @@ internal class Broker(
         }
     }
     fun exit(x: Exit) { exits[x.id] = x }
-    fun cancel(id: String?) { if (id == null) orders.clear() else orders.remove(id) }
+    /**
+     * strategy.cancel / cancel_all: every pending order by that name - entries, strategy.exit
+     * orders and waiting strategy.close orders (all of them when [id] is null), as TradingView.
+     */
+    fun cancel(id: String?) {
+        if (id == null) { orders.clear(); exits.clear(); closes.clear(); partCloses.clear(); return }
+        orders.remove(id); exits.remove(id)
+        closes.removeAll { it == id }; partCloses.removeAll { it.id == id }
+    }
 
     private fun enter(o: Order, i: Int, px: Double) {
         var q = qtyFor(o, px)
@@ -1164,7 +1178,7 @@ internal class Broker(
         val fill = if (o.long) buyPx(px) else sellPx(px)
         val c = comm(fill, q)
         realized -= c; commission += c
-        open += Open(o.id, o.long, q, fill, i, c, fill)
+        open += Open(o.id, o.long, q, fill, i, c, fill, fillAt, fillIntrabar)
         markers += Pine.Marker(i, !o.long, if (o.long) "labelUp" else "labelDown", if (o.long) "#089981" else "#F23645", o.id)
     }
 
@@ -1184,7 +1198,8 @@ internal class Broker(
         val pnl = gross - entryComm - c
         closedPnl += pnl
         trades += Pine.Trade(e.id, exitId, e.long, q, e.bar, bars[e.bar].time, e.price, i, bars[i].time, fill,
-            pnl, pnl / (e.price * q) * 100, entryComm + c, false)
+            pnl, pnl / (e.price * q) * 100, entryComm + c, false,
+            entryFillTime = e.fillTime, exitFillTime = fillAt, entryIntrabar = e.intrabar, exitIntrabar = fillIntrabar)
         e.comm -= entryComm; e.qty -= q
         markers += Pine.Marker(i, e.long, if (e.long) "triangleDown" else "triangleUp", "#787B86", exitId)
         if (e.qty <= 1e-9) {
@@ -1206,152 +1221,176 @@ internal class Broker(
     private fun path(b: Pine.Bar): List<Double> =
         if ((b.high - b.open) < (b.open - b.low)) listOf(b.open, b.high, b.low, b.close) else listOf(b.open, b.low, b.high, b.close)
 
-    /** The rest of [pts] from the first moment the price is at [px]: [px] first, then the points after it. */
-    private fun pathFrom(pts: List<Double>, px: Double): List<Double> {
-        for (k in 0 until pts.size - 1) {
-            val a = pts[k]; val c = pts[k + 1]
-            if (px >= minOf(a, c) - 1e-9 && px <= maxOf(a, c) + 1e-9) return listOf(px) + pts.subList(k + 1, pts.size)
-        }
-        return listOf(px)
+    /** A moment on a bar's path: on segment [k] (pts[k] -> pts[k+1]) at price [px], [d] along it from pts[k]. */
+    private class At(val k: Int, val px: Double, val d: Double) {
+        fun before(o: At) = k < o.k || k == o.k && d < o.d - 1e-12
     }
+    private fun at(pts: List<Double>, k: Int, px: Double) = At(k, px, abs(px - pts[k]))
 
     /**
-     * A stop-limit entry: the stop arms it, then it is a limit order. Returns the fill price on
-     * this bar, or null; [armed] is set when the stop was reached but the limit did not fill.
+     * The first moment, from the cursor at price [p] on segment [k], that the price is at or
+     * beyond [level]: rising to it when [up], else falling. Already beyond it: the cursor itself
+     * (a gap at the open, or a level that was passed before its order existed).
      */
-    private fun stopLimitFill(o: Order, b: Pine.Bar, armed: BooleanArray): Double? {
-        val stop = o.stop!!; val limit = o.limit!!
-        val pts = path(b)
-        val trig = if (o.long) { if (b.open >= stop) b.open else if (b.high >= stop) stop else return null }
-                   else { if (b.open <= stop) b.open else if (b.low <= stop) stop else return null }
-        armed[0] = true
-        val rest = pathFrom(pts, trig)
-        return if (o.long) { if (trig <= limit) trig else if (rest.any { it <= limit }) limit else null }
-               else { if (trig >= limit) trig else if (rest.any { it >= limit }) limit else null }
-    }
-
-    private fun entryFill(o: Order, b: Pine.Bar): Double? {
-        val stop = o.stop; val limit = o.limit
-        return if (o.long) when {
-            stop != null -> if (b.open >= stop) b.open else if (b.high >= stop) stop else null
-            limit != null -> if (b.open <= limit) b.open else if (b.low <= limit) limit else null
-            else -> null
-        } else when {
-            stop != null -> if (b.open <= stop) b.open else if (b.low <= stop) stop else null
-            limit != null -> if (b.open >= limit) b.open else if (b.high >= limit) limit else null
-            else -> null
-        }
-    }
-
-    fun beforeBar(i: Int) {
-        bar = i
-        val b = bars[i]
-        if (!s.processOnClose) fillMarket(i, b.open)
-        // Entries filled part-way through this bar: their exits see only the path after the fill.
-        val midBar = HashMap<Open, List<Double>>()
-        for (o in orders.values.toList()) {
-            if ((o.limit == null && o.stop == null) || o.bar >= i) continue
-            val px = if (o.stop != null && o.limit != null) {
-                val armed = BooleanArray(1)
-                val f = stopLimitFill(o, b, armed)
-                // Armed but unfilled: from now on it is a plain limit order.
-                if (f == null) { if (armed[0]) orders[o.id] = Order(o.id, o.long, o.qty, o.limit, null, o.bar, o.plain); continue }
-                f
-            } else entryFill(o, b) ?: continue
-            orders.remove(o.id)
-            val before = open.toSet()
-            enter(o, i, px)
-            open.filter { it !in before }.forEach { midBar[it] = pathFrom(path(b), it.price) }
-        }
-        for (e in open.toList()) {
-            for (x in exits.values.filter { (it.from == e.id || it.from == null) && it.id !in e.done }) {
-                if (e.qty <= 1e-9 || e !in open) break
-                val px = midBar[e]?.let { exitOnPath(e, x, it) } ?: if (e in midBar) continue else exitFill(e, x, b) ?: continue
-                val amount = x.qty ?: x.qtyPct?.let { e.origQty * it / 100 } ?: e.qty
-                e.done += x.id
-                closePart(i, px, e, amount, x.id)
-            }
-        }
-    }
-
-    /**
-     * Where exit [x] fills entry [e] along [pts], a path that starts at the entry's own fill
-     * (no gap at the open: the position did not exist before it).
-     */
-    private fun exitOnPath(e: Open, x: Exit, pts: List<Double>): Double? {
-        val (stop, limit) = levels(e, x)
-        if (stop == null && limit == null) return null
-        val p0 = pts[0]
-        if (e.long && stop != null && p0 <= stop || !e.long && stop != null && p0 >= stop) return p0
-        if (e.long && limit != null && p0 >= limit || !e.long && limit != null && p0 <= limit) return p0
-        for (k in 0 until pts.size - 1) {
-            val a = pts[k]; val c = pts[k + 1]
-            if (e.long) {
-                if (c < a && stop != null && c <= stop && a >= stop) return stop
-                if (c > a && limit != null && c >= limit && a <= limit) return limit
-            } else {
-                if (c > a && stop != null && c >= stop && a <= stop) return stop
-                if (c < a && limit != null && c <= limit && a >= limit) return limit
-            }
+    private fun touch(pts: List<Double>, k: Int, p: Double, level: Double, up: Boolean): At? {
+        if (if (up) p >= level else p <= level) return at(pts, k, p)
+        for (j in k until pts.size - 1) {
+            val a = if (j == k) p else pts[j]; val c = pts[j + 1]
+            if (if (up) a <= level && c >= level else a >= level && c <= level) return at(pts, j, level)
         }
         return null
     }
 
-    /** The stop and limit prices of exit [x] for entry [e], trailing included. */
-    private fun levels(e: Open, x: Exit): Pair<Double?, Double?> {
+    /** Where a waiting stop / limit entry is first triggered from the cursor (a stop-limit: where its stop arms it). */
+    private fun entryTouch(o: Order, pts: List<Double>, k: Int, p: Double): At? = when {
+        o.stop != null -> touch(pts, k, p, o.stop, o.long)
+        o.limit != null -> touch(pts, k, p, o.limit, !o.long)
+        else -> null
+    }
+
+    private fun trails(x: Exit) = x.trailOff != null && (x.trailPts != null || x.trailPrice != null)
+
+    /** The stop and limit prices of exit [x] for entry [e] with the best price so far at [best], trailing included. */
+    private fun levels(e: Open, x: Exit, best: Double): Pair<Double?, Double?> {
         val sign = if (e.long) 1 else -1
         var stop = x.stop ?: x.loss?.let { e.price - sign * it * tick }
         val limit = x.limit ?: x.profit?.let { e.price + sign * it * tick }
-        if (x.trailOff != null && (x.trailPts != null || x.trailPrice != null)) {
+        if (trails(x)) {
             val act = x.trailPrice ?: (e.price + sign * x.trailPts!! * tick)
-            val reached = if (e.long) e.best >= act else e.best <= act
+            val reached = if (e.long) best >= act else best <= act
             if (reached) {
-                val t = e.best - sign * x.trailOff * tick
+                val t = best - sign * x.trailOff!! * tick
                 stop = if (stop == null) t else if (e.long) max(stop, t) else min(stop, t)
             }
         }
         return stop to limit
     }
 
-    /** Where exit [x] fills entry [e] inside candle [b], if it does. */
-    private fun exitFill(e: Open, x: Exit, b: Pine.Bar): Double? {
-        val sign = if (e.long) 1 else -1
-        var stop = x.stop ?: x.loss?.let { e.price - sign * it * tick }
-        val limit = x.limit ?: x.profit?.let { e.price + sign * it * tick }
-        if (x.trailOff != null && (x.trailPts != null || x.trailPrice != null)) {
-            val act = x.trailPrice ?: (e.price + sign * x.trailPts!! * tick)
-            val reached = if (e.long) e.best >= act else e.best <= act
-            if (reached) {
-                val t = e.best - sign * x.trailOff * tick
-                stop = if (stop == null) t else if (e.long) max(stop, t) else min(stop, t)
-            }
+    /**
+     * Where exit [x] first fills entry [e] from the cursor. The best price is carried along the
+     * path, so a trailing stop activates and moves within the bar: a favourable leg can only
+     * reach the target, an adverse leg only the stop (at the stop it had when the leg began).
+     */
+    private fun exitTouch(e: Open, x: Exit, pts: List<Double>, k: Int, p: Double): At? {
+        if (x.stop == null && x.loss == null && x.limit == null && x.profit == null && !trails(x)) return null
+        val long = e.long
+        var best = if (long) max(e.best, p) else min(e.best, p)
+        run {
+            val (stop, limit) = levels(e, x, best)
+            if (stop != null && (if (long) p <= stop else p >= stop)) return at(pts, k, p)
+            if (limit != null && (if (long) p >= limit else p <= limit)) return at(pts, k, p)
         }
-        if (stop == null && limit == null) return null
-        return if (e.long) {
-            when {
-                stop != null && b.open <= stop -> b.open
-                limit != null && b.open >= limit -> b.open
-                (b.high - b.open) < (b.open - b.low) ->
-                    if (limit != null && b.high >= limit) limit else if (stop != null && b.low <= stop) stop else null
-                else -> if (stop != null && b.low <= stop) stop else if (limit != null && b.high >= limit) limit else null
-            }
-        } else {
-            when {
-                stop != null && b.open >= stop -> b.open
-                limit != null && b.open <= limit -> b.open
-                (b.high - b.open) < (b.open - b.low) ->
-                    if (stop != null && b.high >= stop) stop else if (limit != null && b.low <= limit) limit else null
-                else -> if (limit != null && b.low <= limit) limit else if (stop != null && b.high >= stop) stop else null
-            }
+        for (j in k until pts.size - 1) {
+            val a = if (j == k) p else pts[j]; val c = pts[j + 1]
+            best = if (long) max(best, a) else min(best, a)
+            val (stop, limit) = levels(e, x, best)
+            if (stop != null && (if (long) a <= stop else a >= stop)) return at(pts, j, a)
+            val favourable = if (long) c > a else c < a
+            if (favourable) {
+                if (limit != null && (if (long) c >= limit else c <= limit)) return at(pts, j, limit)
+            } else if (stop != null && (if (long) c <= stop else c >= stop)) return at(pts, j, stop)
         }
+        return null
+    }
+
+    /** Moving the cursor from [p0] on segment [k0] to [p1] on [k1]: every open entry's best price follows. */
+    private fun advance(pts: List<Double>, k0: Int, p0: Double, k1: Int, p1: Double) {
+        if (open.isEmpty()) return
+        var hi = max(p0, p1); var lo = min(p0, p1)
+        for (j in k0 + 1..k1) { hi = max(hi, pts[j]); lo = min(lo, pts[j]) }
+        for (e in open) e.best = if (e.long) max(e.best, hi) else min(e.best, lo)
+    }
+
+    /**
+     * The bar's stop / limit orders, entries and exits alike, fill in the order the price
+     * reaches them along the bar's path (open -> nearer extreme -> far extreme -> close).
+     * After each fill the rest are looked at again from that moment: a fill can open an
+     * entry whose exits then see only the path after it, or close one whose exits go with it.
+     * A level already passed at the open fills at the open. At the same moment, exits go first.
+     */
+    fun beforeBar(i: Int) {
+        bar = i
+        val b = bars[i]
+        fillAt = b.time; fillIntrabar = false
+        if (!s.processOnClose) fillMarket(i, b.open)
+        val pts = path(b)
+        var k = 0; var p = pts[0]
+        var guard = 0
+        while (guard++ < 10_000) {
+            var first: At? = null
+            var act: (() -> Unit)? = null
+            for (e in open.toList()) for (x in exits.values.toList()) {
+                if ((x.from != null && x.from != e.id) || x.id in e.done) continue
+                val t = exitTouch(e, x, pts, k, p) ?: continue
+                if (first == null || t.before(first)) { first = t; act = { fireExit(i, e, x, t.px) } }
+            }
+            for (o in orders.values.toList()) {
+                if ((o.limit == null && o.stop == null) || o.bar >= i) continue
+                val t = entryTouch(o, pts, k, p) ?: continue
+                if (first == null || t.before(first)) { first = t; act = { fireEntry(i, o, t.px) } }
+            }
+            if (first == null || act == null) break
+            advance(pts, k, p, first.k, first.px)
+            k = first.k; p = first.px
+            val atOpen = first.k == 0 && first.d == 0.0
+            fillAt = if (atOpen) b.time else closeInstant(i); fillIntrabar = !atOpen
+            act()
+        }
+        advance(pts, k, p, pts.size - 2, pts.last())
+        // strategy.close(immediately = true) during the script fills at this bar's close.
+        fillAt = closeInstant(i); fillIntrabar = false
+    }
+
+    private fun fireExit(i: Int, e: Open, x: Exit, px: Double) {
+        if (e !in open || e.qty <= 1e-9) return
+        val amount = x.qty ?: x.qtyPct?.let { e.origQty * it / 100 } ?: e.qty
+        e.done += x.id
+        closePart(i, px, e, amount, x.id)
+    }
+
+    private fun fireEntry(i: Int, o: Order, px: Double) {
+        if (o.stop != null && o.limit != null && !(if (o.long) px <= o.limit else px >= o.limit)) {
+            // A stop-limit armed where its limit is not on offer: from here on it is a plain limit order.
+            orders[o.id] = Order(o.id, o.long, o.qty, o.limit, null, o.bar, o.plain)
+            return
+        }
+        orders.remove(o.id)
+        enter(o, i, px)
+    }
+
+    /** Seconds between candles: the smallest gap between neighbours (60 with a single candle). */
+    private val step: Long = run {
+        var m = Long.MAX_VALUE
+        for (k in 1 until minOf(bars.size, 1000)) { val d = bars[k].time - bars[k - 1].time; if (d in 1 until m) m = d }
+        if (m == Long.MAX_VALUE) 60L else m
+    }
+
+    /**
+     * The moment bar [i] closes: the last second of its last minute. Its end is its start plus
+     * the chart's interval, or the next bar's start when that is sooner, never past its IST day.
+     */
+    private fun closeInstant(i: Int): Long {
+        val b = bars[i]
+        var end = b.time + step
+        bars.getOrNull(i + 1)?.let { if (it.time > b.time) end = minOf(end, it.time) }
+        val dayEnd = java.time.Instant.ofEpochSecond(b.time).atZone(Pine.IST).toLocalDate().plusDays(1).atStartOfDay(Pine.IST).toEpochSecond()
+        return maxOf(b.time, minOf(end, dayEnd) - 1)
     }
 
     fun afterScript(i: Int) {
         val b = bars[i]
+        fillAt = closeInstant(i); fillIntrabar = false
         if (s.processOnClose) fillMarket(i, b.close)
-        for (e in open) e.best = if (e.long) max(e.best, b.high) else min(e.best, b.low)
         equity[i] = equityAt(b.close)
         ddPeak = max(ddPeak, equity[i]); ddMax = max(ddMax, ddPeak - equity[i])
+    }
+
+    /** A runtime error stopped the script at bar [i]: equity stays where it was from there on, not back at the capital. */
+    fun halt(i: Int) {
+        if (bars.isEmpty()) return
+        val from = i.coerceIn(0, bars.size - 1)
+        val v = equityAt(bars[from].close)
+        for (j in from until equity.size) equity[j] = v
     }
 
     /** Where the position goes when the orders waiting after the last bar fill. */
@@ -1388,7 +1427,8 @@ internal class Broker(
         val openTrades = open.map { e ->
             val gross = (lastPx - e.price) * e.qty * (if (e.long) 1 else -1)
             Pine.Trade(e.id, "Open", e.long, e.qty, e.bar, bars[e.bar].time, e.price, last, bars.getOrNull(last)?.time ?: 0, lastPx,
-                gross - e.comm, (gross - e.comm) / (e.price * e.qty) * 100, e.comm, true)
+                gross - e.comm, (gross - e.comm) / (e.price * e.qty) * 100, e.comm, true,
+                entryFillTime = e.fillTime, entryIntrabar = e.intrabar)
         }
         val closed = trades
         val wins = closed.filter { it.pnl > 0 }; val losses = closed.filter { it.pnl < 0 }

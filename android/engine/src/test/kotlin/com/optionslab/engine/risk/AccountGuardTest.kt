@@ -58,6 +58,20 @@ class AccountGuardTest {
         assertTrue(reasons(sellPe, calm, limits.copy(blockNakedShort = false)).isEmpty())
     }
 
+    @Test fun nakedShortIsNotHedgedByTheSymbolBeingSold() {
+        // +65 of the CE held; selling 195 of the SAME CE leaves -130 naked.
+        val ce = AccountGuard.Holding("NIFTY24800CE", 65, 75, "NIFTY", exp, "CE")
+        val sell = AccountGuard.Order("NIFTY24800CE", "SELL", 195, 75, 100.0, "NIFTY", exp, "CE")
+        assertTrue(reasons(sell, calm.copy(holdings = listOf(ce)), limits.copy(maxLotsPerSymbol = 0)).any { "Naked short" in it })
+        // A smaller long of another strike does not cover a bigger short either.
+        val wing = AccountGuard.Holding("NIFTY25000CE", 75, 75, "NIFTY", exp, "CE")
+        val sell150 = AccountGuard.Order("NIFTY24800CE", "SELL", 150, 75, 100.0, "NIFTY", exp, "CE")
+        assertTrue(reasons(sell150, calm.copy(holdings = listOf(wing)), limits.copy(maxLotsPerSymbol = 0)).any { "Naked short" in it })
+        // Enough of another strike hedges it.
+        val wing2 = wing.copy(qty = 150)
+        assertTrue(reasons(sell150, calm.copy(holdings = listOf(wing2)), limits.copy(maxLotsPerSymbol = 0)).none { "Naked short" in it })
+    }
+
     @Test fun zeroMeansOff() {
         val off = AccountGuard.Limits(maxDailyLoss = 0.0, maxDrawdownPct = 0.0, maxOpenPositions = 0, maxTradesPerDay = 0,
             maxOrderValue = 0.0, maxLotsPerSymbol = 0, entryCutoffMinute = null, blockNakedShort = false)

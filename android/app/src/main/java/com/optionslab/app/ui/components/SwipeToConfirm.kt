@@ -24,6 +24,10 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -47,7 +51,9 @@ fun SwipeToConfirm(label: String, tone: Color, modifier: Modifier = Modifier, on
     val knob = 52.dp
     val x = androidx.compose.runtime.remember { Animatable(0f) }
     BoxWithConstraints(
-        modifier.fillMaxWidth().height(60.dp).background(tone.copy(alpha = 0.14f), RoundedCornerShape(50)),
+        modifier.fillMaxWidth().height(60.dp).background(tone.copy(alpha = 0.14f), RoundedCornerShape(50))
+            // Screen readers cannot drag: the same confirmation as a button action (any PIN step still follows).
+            .semantics(mergeDescendants = true) { role = Role.Button; onClick(label = label) { onConfirm(); true } },
         contentAlignment = Alignment.CenterStart,
     ) {
         val maxPx = with(density) { (maxWidth - knob - 8.dp).toPx() }.coerceAtLeast(1f)

@@ -37,8 +37,8 @@ object Market {
 
     fun isWeekday(d: LocalDate = today()) = d.dayOfWeek != DayOfWeek.SATURDAY && d.dayOfWeek != DayOfWeek.SUNDAY
 
-    /** A weekday that is not an NSE trading holiday (see [Holidays]). */
-    fun isTradingDay(d: LocalDate = today()) = isWeekday(d) && !Holidays.isHoliday(d)
+    /** A weekday that is not an NSE trading holiday, or a special session NSE called (see [Holidays]). */
+    fun isTradingDay(d: LocalDate = today()) = Holidays.isExtraSession(d) || (isWeekday(d) && !Holidays.isHoliday(d))
     fun isOpen(): Boolean = isTradingDay() && minuteNow() in OPEN until CLOSE
 
     data class Quote(val symbol: String, val last: Double, val open: Double, val high: Double, val low: Double,
@@ -55,12 +55,13 @@ object Market {
      */
     fun liveMode(): Boolean = AppSettings.load().live
 
-    suspend fun quote(symbol: String): Quote? =
-        if (liveMode()) Broker.indexQuote(symbol) else upstoxQuote(symbol)
+    /** [quick]: short timeouts and no queueing behind chart loads, for the market watch (Upstox feed only). */
+    suspend fun quote(symbol: String, quick: Boolean = false): Quote? =
+        if (liveMode()) Broker.indexQuote(symbol) else upstoxQuote(symbol, quick)
 
-    private suspend fun upstoxQuote(symbol: String): Quote? {
+    private suspend fun upstoxQuote(symbol: String, quick: Boolean): Quote? {
         val key = Upstox.INDEX_KEYS.getValue(symbol)
-        val read = runCatching { Net.intraday(key) }
+        val read = runCatching { if (quick) Net.intradayQuick(key) else Net.intraday(key) }
         read.exceptionOrNull()?.let { if (it is kotlinx.coroutines.CancellationException) throw it }
         var bars = read.getOrDefault(emptyList()).filter { it.istDate == today() }
         if (bars.isEmpty() && isOpen()) {
@@ -73,7 +74,7 @@ object Market {
         // market traded (its close as the last price), not nothing.
         val fallback = bars.isEmpty()
         if (fallback) {
-            val past = runCatching { ChartFeed.bars(symbol, "1m", null, null) }.getOrDefault(emptyList())
+            val past = runCatching { ChartFeed.bars(symbol, "1m", null, null, quick = quick) }.getOrDefault(emptyList())
             val day = past.lastOrNull()?.istDate
             bars = past.filter { it.istDate == day }
         }

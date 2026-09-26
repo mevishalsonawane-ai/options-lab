@@ -145,7 +145,10 @@ fun Root(activity: MainActivity) {
         }
         val compromised = findings.isNotEmpty() && Integrity.compromised(findings)
         // The app stopped unexpectedly last time: show why, once, so it can be reported.
-        var crash by remember { mutableStateOf(runCatching { java.io.File(activity.filesDir, com.optionslab.app.IraAlgoApp.CRASH_FILE).takeIf { it.exists() }?.readText() }.getOrNull()) }
+        // Sealed in the vault by IraAlgoApp's crash handler: class names and stack frames, no messages.
+        var crash by remember { mutableStateOf(runCatching {
+            Vault.readFile(java.io.File(activity.filesDir, com.optionslab.app.IraAlgoApp.CRASH_FILE))?.toString(Charsets.UTF_8)
+        }.getOrNull()) }
         crash?.let { text ->
             val clip = androidx.compose.ui.platform.LocalClipboardManager.current
             com.optionslab.app.ui.components.AlertDialog(
@@ -154,7 +157,8 @@ fun Root(activity: MainActivity) {
                 title = { Text("IraAlgo closed unexpectedly last time", style = Type.title) },
                 text = {
                     Column(Modifier.heightIn(max = 360.dp).verticalScroll(androidx.compose.foundation.rememberScrollState())) {
-                        Text("This is what went wrong. Copy it and send it to get it fixed; it contains no keys, PIN or balances.", style = Type.bodySmall)
+                        Text("This is where it went wrong: only the kinds of error and the lines of code, no error messages. " +
+                            "Copy it and send it to get it fixed; it contains no keys, PIN or balances.", style = Type.bodySmall)
                         androidx.compose.foundation.text.selection.SelectionContainer {
                             Text(text, style = Type.bodySmall.copy(fontSize = 10.sp, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace), modifier = Modifier.padding(top = 8.dp))
                         }
@@ -349,12 +353,17 @@ fun eraseEverything() {
     com.optionslab.app.data.Market.wipe()
     runCatching { com.optionslab.app.data.Broker.forget() }
     runCatching { com.optionslab.app.data.Store.wipeDeviceData() }
-    runCatching {
-        android.webkit.CookieManager.getInstance().removeAllCookies(null)
-        android.webkit.WebStorage.getInstance().deleteAllData()
+    // WebView state (the Zerodha login's cookies and storage) must be cleared on the main thread;
+    // eraseEverything can be called from a background dispatcher, where these calls fail silently.
+    val web = Runnable {
+        runCatching { android.webkit.CookieManager.getInstance().removeAllCookies(null) }
+        runCatching { android.webkit.WebStorage.getInstance().deleteAllData() }
     }
+    val main = android.os.Looper.getMainLooper()
+    if (android.os.Looper.myLooper() == main) web.run() else android.os.Handler(main).post(web)
     SecurePrefs.wipe()
     BiometricGate.forget()
+    com.optionslab.app.security.PinPepper.destroy()
     Vault.destroy()
     SessionLock.lock()
     wipes.value = wipes.value + 1

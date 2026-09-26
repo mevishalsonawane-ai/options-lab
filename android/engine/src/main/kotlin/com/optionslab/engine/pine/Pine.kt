@@ -18,7 +18,9 @@ import java.time.temporal.IsoFields
  * Broker rules (TradingView's defaults): an order placed on a bar fills at the next bar's
  * open (or on this bar's close with process_orders_on_close); strategy.exit stops and
  * targets fill inside later bars, the bar's path taken as open -> nearer extreme -> far
- * extreme -> close, and a gap past a level fills at the open. Opposite entries reverse.
+ * extreme -> close, and a gap past a level fills at the open. Stop / limit entries and exits
+ * fill in the order that path reaches them (a trailing stop follows the path too), and
+ * strategy.cancel removes exits and waiting closes as well as entries. Opposite entries reverse.
  */
 object Pine {
     data class Problem(val line: Int, val col: Int, val message: String) {
@@ -66,6 +68,15 @@ object Pine {
         val entryBar: Int, val entryTime: Long, val entryPrice: Double,
         val exitBar: Int, val exitTime: Long, val exitPrice: Double,
         val pnl: Double, val pnlPct: Double, val commission: Double, val open: Boolean,
+        /**
+         * When the fills actually happened, in epoch seconds ([entryTime] / [exitTime] are the
+         * bars' start times). At a minute's first second (a fill at a bar's open) the price was
+         * that minute's open; any later second in the minute means by that minute's close (a fill
+         * at a bar's close, or inside it). Null: the bar's time, at its open.
+         */
+        val entryFillTime: Long? = null, val exitFillTime: Long? = null,
+        /** The fill was a stop or limit met inside the bar, somewhere up to [entryFillTime] / [exitFillTime]. */
+        val entryIntrabar: Boolean = false, val exitIntrabar: Boolean = false,
     )
 
     data class Report(

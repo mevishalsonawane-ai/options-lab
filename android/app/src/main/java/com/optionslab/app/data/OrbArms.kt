@@ -65,6 +65,11 @@ object OrbArms {
         val exit: Double? = null, val exitTime: LocalDateTime? = null, val why: String? = null, val charges: Double = 0.0,
         /** True: entered at Zerodha under [kite] (its orders are Kite order ids); false: the paper account. */
         val live: Boolean = false, val kite: String? = null,
+        /**
+         * A live buy Zerodha has not confirmed (the reply or its status was lost): [qty] is at most what may have
+         * filled, and no stop rests yet. Kept as open (so the arm buys nothing more) until the books settle it.
+         */
+        val unconfirmed: Boolean = false,
     ) {
         val open: Boolean get() = exit == null
         val day: LocalDate get() = entryTime.toLocalDate()
@@ -123,7 +128,8 @@ object OrbArms {
                         if (p.has("stopTrigger")) p.getDouble("stopTrigger") else null,
                         if (p.has("exit")) p.getDouble("exit") else null,
                         p.optString("exitTime").ifEmpty { null }?.let { LocalDateTime.parse(it) }, p.optString("why").ifEmpty { null },
-                        p.optDouble("charges", 0.0), p.optBoolean("live", false), p.optString("kite").ifEmpty { null })
+                        p.optDouble("charges", 0.0), p.optBoolean("live", false), p.optString("kite").ifEmpty { null },
+                        p.optBoolean("unconfirmed", false))
                 }
             }
             o.optJSONObject("pending")?.let { m -> m.keys().forEach { k -> val p = m.getJSONObject(k)
@@ -137,11 +143,23 @@ object OrbArms {
             if (file.exists()) Vault.setAside(file)
             Notifier.post(app, 2016, Notifier.APPROVAL, "ORB arms could not be read",
                 "Their saved state was set aside and both arms are disarmed. If an ORB position was open, check Trade → Paper now.", "almanac")
-            return Book().also { cache = it }
+            return Book().also { cache = it; holdingHint = false }
+        }
+        // A restore not yet disarmed (the app clears the flag once it has): the restored arms act as disarmed.
+        if (com.optionslab.app.security.SecurePrefs.getBoolean(Backup.DISARM, false)) {
+            b.armed.clear(); b.auto.clear(); b.liveOk.clear(); b.pending.clear()
         }
         cache = b
+        holdingHint = b.positions.any { it.open }
         return b
     }
+
+    /**
+     * Whether an arm holds an open position, as of the last load or save: read without the lock, so the main
+     * thread never waits for a pass that is placing orders.
+     */
+    @Volatile var holdingHint: Boolean = false
+        private set
 
     private fun save(b: Book) {
         val o = JSONObject()
@@ -161,7 +179,7 @@ object OrbArms {
                     .put("entryOrderId", p.entryOrderId ?: "").put("stopOrderId", p.stopOrderId ?: "")
                     .apply { p.stopTrigger?.let { put("stopTrigger", it) }; p.exit?.let { put("exit", it) } }
                     .put("exitTime", p.exitTime?.toString() ?: "").put("why", p.why ?: "").put("charges", p.charges)
-                    .put("live", p.live).put("kite", p.kite ?: ""))
+                    .put("live", p.live).put("kite", p.kite ?: "").put("unconfirmed", p.unconfirmed))
             }
         })
         o.put("pending", JSONObject().apply { b.pending.forEach { (k, p) -> put(k, JSONObject().put("right", p.right).put("bar", p.signalBar.toString()).put("expires", p.expires.toString())) } })
@@ -170,6 +188,7 @@ object OrbArms {
         o.put("upDays", JSONObject(b.upDays as Map<*, *>))
         Vault.writeFile(file, o.toString().toByteArray(Charsets.UTF_8))
         cache = b
+        holdingHint = b.positions.any { it.open }
     }
 
     private fun armOf(source: String): Arm = OrbRules.ARMS.first { it.source == source }
@@ -430,6 +449,35 @@ object OrbArms {
     private fun kiteCharge(side: String, price: Double, qty: Int): Double =
         com.optionslab.engine.sandbox.SandboxCosts.charge(side, java.math.BigDecimal(price), qty).toDouble()
 
+    /** Terminal order states at Zerodha. */
+    private val DONE = setOf("COMPLETE", "REJECTED", "CANCELLED")
+
+    /** Kite order ids this phone already tracks (every bot's, and the arms' own): never adopted for a lost reply. */
+    private suspend fun knownKite(b: Book): List<String> =
+        runCatching { Strategies.owners().keys.filter { it.startsWith("kite:") }.map { it.removePrefix("kite:") } }.getOrDefault(emptyList()) +
+            b.positions.flatMap { listOfNotNull(it.entryOrderId, it.stopOrderId) }
+
+    private suspend fun heldAtZerodha(sym: String): Int? = runCatching {
+        Broker.positionBook().net.filter { it.symbol == sym && it.exchange == "NFO" && it.product == "MIS" }.sumOf { it.qty }
+    }.getOrNull()
+
+    /**
+     * The resting SL SELL 40 below a live fill. Its trigger, and its order id or null when it could not be
+     * placed (the app then watches the stop itself). A lost reply is looked for before it counts as unplaced.
+     */
+    private suspend fun placeStop(label: String, sym: String, qty: Int, lot: Int, tick: Double, fill: Double, known: Collection<String>): Pair<String?, Double?> {
+        val trigger = OrbRules.stopTrigger(fill)?.let { com.optionslab.engine.Kite.onTick(it, tick, com.optionslab.engine.Kite.Side.SELL) }
+            ?: return null to null
+        val o = com.optionslab.engine.Kite.Order(sym, com.optionslab.engine.Kite.Side.SELL, qty, lot, "MIS", "SL",
+            stopLimit(trigger, tick), tick, "NFO", "iraorb", triggerPrice = trigger)
+        val id = try { Broker.placeOrder(o, exit = true) } catch (e: Exception) {
+            if (Broker.definite(e)) null else runCatching { Broker.findRecentRetrying(o, known) }.getOrNull()
+        }
+        if (id != null) Strategies.tagOwner("kite:$id", "$label · stop")
+        else com.optionslab.app.work.Alerts.error("$label: the −40 stop could not be placed at Zerodha; the app watches it instead.", "ORB live")
+        return id to trigger
+    }
+
     /**
      * A live entry: MARKET BUY 1 lot MIS at Zerodha, then a resting SL SELL 40 below the
      * fill. Only reached after the owner approved with the PIN (see [approve]).
@@ -437,6 +485,9 @@ object OrbArms {
     private suspend fun enterLive(b: Book, arm: Arm, c: Paper.Contract, signalBar: LocalDateTime): String {
         val s = AppSettings.load()
         if (s.guardKill) return "refused: the kill switch is on"
+        // A phone that failed the security check never sends a real order on its own.
+        val findings = runCatching { com.optionslab.app.security.Integrity.reportWithin(app, 60_000) }.getOrDefault(emptyList())
+        if (com.optionslab.app.security.Integrity.compromised(findings)) return "refused: this phone failed the security check; no live order sent"
         if (!Broker.loggedIn) return "refused: not logged in to Zerodha today"
         val ins = (Broker.cachedInstruments() ?: runCatching { Broker.instruments() }.getOrNull())?.firstOrNull {
             it.name == c.underlying && it.expiry == c.expiry && it.right == c.right && kotlin.math.abs(it.strike - c.strike) < 1e-6
@@ -455,41 +506,83 @@ object OrbArms {
         if (refusals.isNotEmpty()) return "guard_refused: " + refusals.joinToString(" ")
         val why = com.optionslab.engine.Kite.refusals(o, s.limits(), Broker.sentToday(), false, refPrice = last)
         if (why.isNotEmpty()) return "refused: " + why.joinToString("; ")
-        val id = try {
+        val known = knownKite(b)
+        val id: String? = try {
             Broker.placeOrder(o)
-        } catch (e: Broker.KiteError) {
-            return "order_refused: " + (e.message ?: "Zerodha refused the order")
         } catch (e: Broker.NotLoggedIn) {
             return "refused: not logged in to Zerodha today"
         } catch (e: Exception) {
-            // The answer was lost, not necessarily the order: look before calling it unsent.
-            runCatching { Broker.findRecent(o, emptyList()) }.getOrNull() ?: return "order_refused: ${e.message}; no matching order found at Zerodha"
+            if (Broker.definite(e)) return "order_refused: " + (e.message ?: "Zerodha refused the order")
+            // The answer was lost, not necessarily the order: look (the book can trail the POST) before calling it unsent.
+            try { Broker.findRecentRetrying(o, known) ?: return "order_refused: ${e.message}; no matching order found at Zerodha" }
+            catch (_: Exception) { null }                                          // the order book could not be read either
         }
-        Strategies.tagOwner("kite:$id", "${arm.label} · entry")
-        var f = runCatching { Broker.awaitOrder(id, 15_000) }.getOrNull()
-        if (f == null || f.filled <= 0) {
-            // Not filled in 15 s: take it out so it can never fill later as an untracked entry.
-            if (f?.status !in setOf("REJECTED", "CANCELLED")) runCatching { Broker.cancel(id) }
+        id?.let { Strategies.tagOwner("kite:$it", "${arm.label} · entry") }
+        var f = id?.let { runCatching { Broker.awaitOrder(it, 15_000) }.getOrNull() }
+        if (id != null && f?.status !in DONE) {
+            // Not finished in 15 s: the unfilled rest is cancelled so it can never fill later untracked; only what filled is booked.
+            runCatching { Broker.cancel(id) }
             f = runCatching { Broker.orderState(id) }.getOrNull()
-            if (f == null || f.filled <= 0) return "order_refused: Zerodha ${f?.status?.lowercase() ?: "did not answer"}" +
-                (f?.message?.takeIf { it.isNotBlank() }?.let { ": $it" } ?: "")
         }
+        if (f == null || f.status !in DONE) {
+            // Zerodha has not said how it ended: held as unconfirmed (so the arm buys nothing more) until the books settle it.
+            b.positions += Position(arm.source, c.symbol, c.right.name, o.quantity, last, now(), signalBar, id, null, null,
+                live = true, kite = sym, unconfirmed = true)
+            runCatching { save(b) }
+            com.optionslab.app.work.Alerts.error("${arm.label}: Zerodha did not confirm the buy of $sym. It is treated as held (no stop yet) " +
+                "until the order book shows what filled.", "ORB live")
+            return "entered_unconfirmed"
+        }
+        if (f.filled <= 0) return "order_refused: Zerodha ${f.status.lowercase()}" + (f.message.takeIf { it.isNotBlank() }?.let { ": $it" } ?: "")
         val fill = f.avgPrice.takeIf { it > 0 } ?: last
         Notifier.orderFilled(app, "BUY", f.filled, sym, fill, "Live", arm.label)
-        val trigger = OrbRules.stopTrigger(fill)?.let { com.optionslab.engine.Kite.onTick(it, ins.tickSize, com.optionslab.engine.Kite.Side.SELL) }
-        var stopId: String? = null
-        if (trigger != null) {
-            stopId = runCatching {
-                Broker.placeOrder(com.optionslab.engine.Kite.Order(sym, com.optionslab.engine.Kite.Side.SELL, f.filled, ins.lotSize, "MIS", "SL",
-                    stopLimit(trigger, ins.tickSize), ins.tickSize, "NFO", "iraorb", triggerPrice = trigger), exit = true)
-            }.getOrNull()
-            if (stopId != null) Strategies.tagOwner("kite:$stopId", "${arm.label} · stop")
-            else com.optionslab.app.work.Alerts.error("${arm.label}: the −40 stop could not be placed at Zerodha; the app watches it instead.", "ORB live")
-        }
+        val (stopId, trigger) = placeStop(arm.label, sym, f.filled, ins.lotSize, ins.tickSize, fill, known + listOfNotNull(id))
         b.positions += Position(arm.source, c.symbol, c.right.name, f.filled, fill, now(), signalBar, id, stopId, trigger,
             charges = kiteCharge("BUY", fill, f.filled), live = true, kite = sym)
+        runCatching { save(b) }   // a live position is written down at once, not at the end of the pass
         marks[c.symbol] = fill
         return "entered_live"
+    }
+
+    /**
+     * A live buy Zerodha had not confirmed: whatever of it still works is cancelled, then only what filled is
+     * kept, with its stop. Null when nothing was bought; [p] (its order id filled in) while Zerodha cannot tell yet.
+     */
+    private suspend fun settleEntry(b: Book, p: Position, sym: String): Position? {
+        val label = armOf(p.arm).label
+        if (p.day.isBefore(Market.today())) {
+            com.optionslab.app.work.Alerts.error("$label: the buy of $sym on ${p.day} was never confirmed by Zerodha; check that day's contract note.", "ORB live")
+            return null
+        }
+        val known = knownKite(b)
+        val oid = p.entryOrderId ?: run {
+            // The order id itself was lost: the entry is found in today's book by its symbol, side, tag and time.
+            val row = runCatching { Broker.latestTagged(sym, "BUY", "iraorb", p.entryTime, known) }.getOrElse { return p }
+                ?: run {
+                    com.optionslab.app.work.Alerts.post("$label: no buy of $sym reached Zerodha; nothing is held.", com.optionslab.app.work.Alerts.Kind.INFO, "ORB live")
+                    return null
+                }
+            Strategies.tagOwner("kite:${row.id}", "$label · entry")
+            row.id
+        }
+        var st = runCatching { Broker.orderState(oid) }.getOrNull() ?: return p.copy(entryOrderId = oid)
+        if (st.status !in DONE) {
+            runCatching { Broker.cancel(oid) }
+            st = runCatching { Broker.orderState(oid) }.getOrNull() ?: return p.copy(entryOrderId = oid)
+            if (st.status !in DONE) return p.copy(entryOrderId = oid)
+        }
+        if (st.filled <= 0) {
+            com.optionslab.app.work.Alerts.post("$label: the unconfirmed buy of $sym did not fill (${st.status.lowercase()}); nothing is held.",
+                com.optionslab.app.work.Alerts.Kind.INFO, "ORB live")
+            return null
+        }
+        val fill = st.avgPrice.takeIf { it > 0 } ?: p.entry
+        Notifier.orderFilled(app, "BUY", st.filled, sym, fill, "Live", label)
+        val spec = runCatching { Broker.spec("NFO", sym) }.getOrNull()
+        val (stopId, trigger) = if (spec != null) placeStop(label, sym, st.filled, spec.lotSize, spec.tickSize, fill, known + oid)
+            else null to OrbRules.stopTrigger(fill)
+        return p.copy(qty = st.filled, entry = fill, entryOrderId = oid, stopOrderId = stopId, stopTrigger = trigger,
+            charges = kiteCharge("BUY", fill, st.filled), unconfirmed = false)
     }
 
     /** Stop, target, 15:10 and the operator stop for positions held at Zerodha. */
@@ -499,8 +592,14 @@ object OrbArms {
         val net = Broker.positionBook().net
         val keys = open.mapNotNull { it.value.kite }.map { "NFO:$it" }.distinct()
         val q = runCatching { Broker.quotes(keys) }.getOrDefault(emptyMap())
+        val drop = ArrayList<Int>()
         for ((i, p) in open) {
             val sym = p.kite ?: continue
+            if (p.unconfirmed) {
+                val settled = runCatching { settleEntry(b, p, sym) }.getOrDefault(p)
+                if (settled == null) drop += i else b.positions[i] = settled
+                continue
+            }
             val so = p.stopOrderId?.let { orders[it] }
             if (so != null && so.status == "COMPLETE") {
                 val px = so.avg.takeIf { it > 0 } ?: p.stopTrigger ?: p.entry
@@ -508,15 +607,22 @@ object OrbArms {
                 b.positions[i] = p.copy(exit = px, exitTime = t, why = "stop", stopOrderId = null, charges = p.charges + kiteCharge("SELL", px, p.qty))
                 continue
             }
-            if (so?.status == "REJECTED") com.optionslab.app.work.Alerts.error(
-                "${armOf(p.arm).label}: Zerodha rejected the stop (${so.message.ifBlank { "no reason given" }}). The app now watches the −40 stop itself.", "ORB live")
+            // A stop taken out at Zerodha (refused, or cancelled by hand or by Zerodha) leaves the position without one: say so.
+            if (so != null && so.status in setOf("REJECTED", "CANCELLED")) com.optionslab.app.work.Alerts.error(
+                "${armOf(p.arm).label}: the stop at Zerodha was ${so.status.lowercase()} (${so.message.ifBlank { "no reason given" }}). " +
+                    "The app now watches the −40 stop itself.", "ORB live")
             val cur = if (so != null && (so.status == "CANCELLED" || so.status == "REJECTED")) p.copy(stopOrderId = null).also { b.positions[i] = it } else p
             val held = net.filter { it.symbol == sym && it.exchange == "NFO" && it.product == "MIS" }.sumOf { it.qty }
             val ltp = q["NFO:$sym"]?.last?.takeIf { it > 0 }
             ltp?.let { marks[p.symbol] = it }
             // Gone at Zerodha without the arm selling it: Zerodha's MIS square-off, or closed by hand.
             if (held <= 0) {
-                cur.stopOrderId?.let { runCatching { Broker.cancel(it) } }
+                // Its stop must be confirmed out first: left resting, it would sell into a short.
+                val sid = cur.stopOrderId
+                if (sid != null) {
+                    runCatching { Broker.cancel(sid) }
+                    if (runCatching { Broker.orderState(sid)?.status }.getOrNull() !in DONE) continue
+                }
                 val backstop = cur.day.isBefore(t.toLocalDate()) || !t.toLocalTime().isBefore(LocalTime.of(15, 15))
                 val px = ltp ?: cur.entry
                 b.positions[i] = cur.copy(exit = px, exitTime = t, why = if (backstop) "backstop_square_off" else "closed_by_you",
@@ -532,56 +638,69 @@ object OrbArms {
                 !t.toLocalTime().isBefore(OrbRules.SQUARE_OFF) -> "session_end"
                 else -> OrbRules.exitReason(cur.entry, ltp, t).takeIf { it == "target" || (it == "stop" && (cur.stopOrderId == null || runThrough)) }
             } ?: continue
-            b.positions[i] = exitLive(cur, sym, minOf(held, cur.qty), why)
+            val (done, rest) = exitLive(b, cur, sym, why)
+            b.positions[i] = done
+            rest?.let { b.positions += it }
         }
+        drop.sortedDescending().forEach { b.positions.removeAt(it) }
     }
 
-    /** Take the resting stop out first, then MARKET SELL what is held; if the stop filled meanwhile, that is the exit. */
-    private suspend fun exitLive(p: Position, sym: String, held: Int, why: String): Position {
+    /**
+     * Take the resting stop out first, then MARKET SELL what is held; if the stop filled meanwhile, that is the exit.
+     * Returns the position, and (when only part sold) the rest, still open, to be sold on the next pass.
+     */
+    private suspend fun exitLive(b: Book, p: Position, sym: String, why: String): Pair<Position, Position?> {
         val label = armOf(p.arm).label
         p.stopOrderId?.let { id ->
             runCatching { Broker.cancel(id) }
             val st = runCatching { Broker.orderState(id) }.getOrNull()
             if (st?.status == "COMPLETE") {
                 val px = st.avgPrice.takeIf { it > 0 } ?: p.stopTrigger ?: p.entry
-                return p.copy(exit = px, exitTime = now(), why = "stop", stopOrderId = null, charges = p.charges + kiteCharge("SELL", px, p.qty))
+                return p.copy(exit = px, exitTime = now(), why = "stop", stopOrderId = null, charges = p.charges + kiteCharge("SELL", px, p.qty)) to null
             }
             // Only sell once the stop is known to be out: a stop still working plus a market sell could both fill.
-            if (st == null || st.status !in setOf("CANCELLED", "REJECTED")) return p
+            if (st == null || st.status !in setOf("CANCELLED", "REJECTED")) return p to null
         }
-        // An exit already working (an earlier pass's, or a lost reply) fills or is cancelled before another goes out.
-        val working = runCatching { Broker.orders().filter { it.working && it.symbol == sym && it.side == "SELL" && it.tag == "iraorb" } }.getOrNull()
-            ?: return p.copy(stopOrderId = null)
-        if (working.isNotEmpty()) {
-            working.forEach { runCatching { Broker.cancel(it.id, it.variety) } }
-            return p.copy(stopOrderId = null)
-        }
-        // Read what is held again after the stop came out: a stop that part-filled meanwhile must not turn the sell into a short.
-        val still = runCatching { Broker.positionBook().net.filter { it.symbol == sym && it.exchange == "NFO" && it.product == "MIS" }.sumOf { it.qty } }
-            .getOrNull() ?: return p.copy(stopOrderId = null)
-        val qty = minOf(held, still)
-        if (qty <= 0) return p.copy(stopOrderId = null)                          // gone already: booked on the next pass
-        val spec = runCatching { Broker.spec("NFO", sym) }.getOrNull() ?: return p.copy(stopOrderId = null)
+        // What is held and what is already on its way out, read again after the stop came out. Only this position's own
+        // orders are ever cancelled here: another sell resting on the symbol (the other arm's stop, a protection, the
+        // owner's own order, an earlier pass's sell whose reply was lost) is subtracted instead, so both filling never
+        // turns the long into a short.
+        val working = runCatching { Broker.orders().filter { it.working && it.symbol == sym && it.side == "SELL" && it.product == "MIS" } }.getOrNull()
+            ?: return p.copy(stopOrderId = null) to null
+        val still = heldAtZerodha(sym) ?: return p.copy(stopOrderId = null) to null
+        val spec = runCatching { Broker.spec("NFO", sym) }.getOrNull() ?: return p.copy(stopOrderId = null) to null
+        val qty = com.optionslab.engine.risk.ExitQty.sendable(still, working.sumOf { com.optionslab.engine.risk.ExitQty.remaining(it.qty, it.filled, it.pending) },
+            p.qty, spec.lotSize)
+        if (qty <= 0) return p.copy(stopOrderId = null) to null                   // gone, or covered by what is working: next pass
         val o = com.optionslab.engine.Kite.Order(sym, com.optionslab.engine.Kite.Side.SELL, qty, spec.lotSize, "MIS", "MARKET", null, spec.tickSize, "NFO", "iraorb")
         val bad = com.optionslab.engine.Kite.refusals(o, AppSettings.load().limits(), Broker.sentToday(), false, exit = true)
         if (bad.isNotEmpty()) {
             com.optionslab.app.work.Alerts.error("$label: the Zerodha exit was not sent (${bad.joinToString("; ")}). Close $sym in Trade.", "ORB live")
-            return p.copy(stopOrderId = null)
+            return p.copy(stopOrderId = null) to null
         }
         val id = try { Broker.placeOrder(o, exit = true) } catch (e: Exception) {
-            runCatching { Broker.findRecent(o, emptyList()) }.getOrNull() ?: run {
+            val found = if (Broker.definite(e)) null else runCatching { Broker.findRecentRetrying(o, knownKite(b) + working.map { it.id }) }.getOrNull()
+            found ?: run {
                 com.optionslab.app.work.Alerts.error("$label: the Zerodha exit failed (${e.message}); retrying on the next pass.", "ORB live")
-                return p.copy(stopOrderId = null)
+                return p.copy(stopOrderId = null) to null
             }
         }
         Strategies.tagOwner("kite:$id", "$label · $why")
-        val f = runCatching { Broker.awaitOrder(id, 15_000) }.getOrNull()
-        if (f == null || f.filled <= 0) {
-            runCatching { Broker.cancel(id) }                                       // not filled: out, and tried afresh next pass
-            return p.copy(stopOrderId = null)
+        var f = runCatching { Broker.awaitOrder(id, 15_000) }.getOrNull()
+        if (f?.status !in DONE) {
+            // Not finished in 15 s: the rest is cancelled (and tried afresh next pass); only what filled is booked.
+            runCatching { Broker.cancel(id) }
+            f = runCatching { Broker.orderState(id) }.getOrNull() ?: f
         }
-        Notifier.orderFilled(app, "SELL", f.filled, sym, f.avgPrice, "Live", label)
-        return p.copy(stopOrderId = null, exit = f.avgPrice, exitTime = now(), why = why, charges = p.charges + kiteCharge("SELL", f.avgPrice, f.filled))
+        if (f == null || f.filled <= 0) return p.copy(stopOrderId = null) to null
+        val px = f.avgPrice.takeIf { it > 0 } ?: p.entry
+        Notifier.orderFilled(app, "SELL", f.filled, sym, px, "Live", label)
+        if (f.filled >= p.qty) return p.copy(stopOrderId = null, exit = px, exitTime = now(), why = why, charges = p.charges + kiteCharge("SELL", px, f.filled)) to null
+        // Only part sold: that part is booked as closed, the rest stays open (no stop: the app watches it) and is sold next pass.
+        val share = f.filled.toDouble() / p.qty
+        return p.copy(qty = f.filled, stopOrderId = null, exit = px, exitTime = now(), why = why,
+            charges = p.charges * share + kiteCharge("SELL", px, f.filled)) to
+            p.copy(qty = p.qty - f.filled, stopOrderId = null, charges = p.charges * (1 - share))
     }
 
     data class Filled(val quantity: Int, val symbol: String, val price: Double)
@@ -683,6 +802,7 @@ object OrbArms {
         s.isEmpty() -> "Waits for the market watch."
         s == "entered" -> "Entered (paper)."
         s == "entered_live" -> "Entered at Zerodha (live)."
+        s == "entered_unconfirmed" -> "Bought at Zerodha, not yet confirmed: held until the order book shows what filled."
         s == "holding" -> "Holding a position."
         s == "waiting_for_opening_range" -> "Waiting for the opening range (09:15-10:00)."
         s == "inside_range" -> "Waiting for a breakout: the last bar closed inside the range."
@@ -702,5 +822,5 @@ object OrbArms {
         else -> s
     }
 
-    @Synchronized fun wipe() { cache = null; if (::file.isInitialized) file.delete() }
+    @Synchronized fun wipe() { cache = null; holdingHint = false; if (::file.isInitialized) file.delete() }
 }

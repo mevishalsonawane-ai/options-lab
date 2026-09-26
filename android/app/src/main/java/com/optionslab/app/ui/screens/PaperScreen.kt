@@ -119,18 +119,33 @@ private fun PaperOrderForm(model: AppModel) {
     // Only listed strikes can be chosen: the ones around the index, nearest first in the middle.
     var listed by remember { mutableStateOf<List<Double>>(emptyList()) }
     var spot by remember { mutableStateOf<Double?>(null) }
+    // Which underlying and expiry [listed] belongs to: nothing can be placed until it matches the form.
+    var listedFor by remember { mutableStateOf<Pair<String, LocalDate>?>(null) }
     LaunchedEffect(underlying, expiry) {
         val e = expiry ?: return@LaunchedEffect
         val (ks, sp) = model.paperStrikes(underlying, e)
-        listed = ks; spot = sp
+        listed = ks; spot = sp; listedFor = underlying to e
         val atm = sp?.let { x -> ks.minByOrNull { kotlin.math.abs(it - x) } }
         if (strike.toDoubleOrNull() !in ks) strike = atm?.let { com.optionslab.engine.fmtG(it) } ?: ""
+    }
+    // One tap, one order: the button stays off until the paper book reloads after it (or 8 s pass).
+    val paperNow by model.paper.collectAsState()
+    var placing by remember { mutableStateOf<Any?>(null) }
+    LaunchedEffect(placing, paperNow) {
+        val sent = placing ?: return@LaunchedEffect
+        if (paperNow !== sent) { placing = null; return@LaunchedEffect }
+        kotlinx.coroutines.delay(8_000)
+        placing = null
     }
     LedgerCard(title = "Paper order") {
         if (!open) {
             BrassButton("New paper order", Modifier.fillMaxWidth(), tone = p.verdigris) { open = true }
         } else {
-            ParamTokens("Underlying", listOf("NIFTY", "BANKNIFTY").map { it to (it == underlying) }) { underlying = listOf("NIFTY", "BANKNIFTY")[it] }
+            ParamTokens("Underlying", listOf("NIFTY", "BANKNIFTY").map { it to (it == underlying) }) {
+                val u = listOf("NIFTY", "BANKNIFTY")[it]
+                // Nothing of the old index stays selected while the new one loads.
+                if (u != underlying) { expiries = emptyList(); expiryIso = null; strike = ""; listed = emptyList(); spot = null; listedFor = null; underlying = u }
+            }
             if (expiries.isEmpty()) Note("Loading the listed expiries from Upstox…")
             ParamTokens("Expiry", expiries.map { it.toString().substring(5) to (it == expiry) }) { expiryIso = expiries[it].toString() }
             ParamTokens("Option", listOf("PE" to (right == Right.PE), "CE" to (right == Right.CE))) { rightName = if (it == 0) Right.PE.name else Right.CE.name }
@@ -147,7 +162,10 @@ private fun PaperOrderForm(model: AppModel) {
                 singleLine = true, modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
             Spacer(Modifier.height(8.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                BrassButton("Place paper order", Modifier.weight(1f), tone = p.verdigris, enabled = expiry != null && strike.toDoubleOrNull()?.let { it in listed } == true) {
+                val ready = expiry != null && listedFor == (underlying to expiry) && strike.toDoubleOrNull()?.let { it in listed } == true
+                BrassButton("Place paper order", Modifier.weight(1f), tone = p.verdigris, busy = placing != null, enabled = ready && placing == null) {
+                    if (placing != null || !ready) return@BrassButton
+                    placing = paperNow
                     model.paperPlace(underlying, expiry!!, strike.toDouble(), right, action, lots, type, product, price.toDoubleOrNull(), trigger.toDoubleOrNull())
                 }
                 BrassButton("Close", tone = p.inkFaint) { open = false }

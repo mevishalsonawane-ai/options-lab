@@ -135,4 +135,152 @@ class PineBrokerTest {
         assertNotNull(res)
         assertEquals(2, res.tried)
     }
+
+    // ---- orders fill in the order the bar's path reaches them ------------------------------
+
+    @Test fun exitStopBeforeAPendingReversalOnTheWayDown() {
+        // L at 100, stop 95, a short limit waiting at 108. Low first: 100 -> 94 -> 109.
+        // L is stopped at 95 first, then S opens at 108 - not a reversal of L at 108.
+        val r = run("""
+            strategy("t")
+            if bar_index == 0
+                strategy.entry("L", strategy.long)
+                strategy.exit("x", "L", stop=95)
+                strategy.entry("S", strategy.short, limit=108)
+        """, listOf(flat(0), flat(1), bar(2, 100.0, 109.0, 94.0, 100.0), flat(3)))
+        val t = closed(r).single()
+        assertEquals("x", t.exitId); assertEquals(95.0, t.exitPrice, 1e-9)
+        val s = r.report!!.trades.single { it.open }
+        assertEquals("S", s.entryId); assertEquals(108.0, s.entryPrice, 1e-9); assertEquals(2, s.entryBar)
+    }
+
+    @Test fun twoStopEntriesFillInPathOrder() {
+        // Long stop 105 and short stop 95; low first (100 -> 94 -> 107): short at 95, then reversed long at 105.
+        val r = run("""
+            strategy("t")
+            if bar_index == 0
+                strategy.entry("L", strategy.long, stop=105)
+                strategy.entry("S", strategy.short, stop=95)
+        """, listOf(flat(0), bar(1, 100.0, 107.0, 94.0, 100.0), flat(2)))
+        val t = closed(r).single()
+        assertEquals("S", t.entryId); assertEquals(95.0, t.entryPrice, 1e-9)
+        assertEquals("L", t.exitId); assertEquals(105.0, t.exitPrice, 1e-9)
+        val l = r.report!!.trades.single { it.open }
+        assertEquals("L", l.entryId); assertEquals(105.0, l.entryPrice, 1e-9)
+    }
+
+    @Test fun severalExitsOfOneEntryFillInPathOrder() {
+        // Target 110 placed before stop 95; low first (100 -> 94 -> 111): the stop is reached first.
+        val r = run("""
+            strategy("t")
+            if bar_index == 0
+                strategy.entry("L", strategy.long)
+                strategy.exit("tp", "L", limit=110)
+                strategy.exit("sl", "L", stop=95)
+        """, listOf(flat(0), flat(1), bar(2, 100.0, 111.0, 94.0, 100.0), flat(3)))
+        val t = closed(r).single()
+        assertEquals("sl", t.exitId); assertEquals(95.0, t.exitPrice, 1e-9)
+    }
+
+    @Test fun trailingStopActivatesAndFillsInsideTheSameBar() {
+        // Long at 100; trail activates 10 above (200 ticks of 0.05), trails 5 behind (100 ticks).
+        // High first (105 -> 115 -> 94): best 115, stop 110, filled on the way down on this bar.
+        val r = run("""
+            strategy("t")
+            if bar_index == 0
+                strategy.entry("L", strategy.long)
+                strategy.exit("tr", "L", trail_points=200, trail_offset=100)
+        """, listOf(flat(0), flat(1), bar(2, 105.0, 115.0, 94.0, 100.0), flat(3, 100.0)))
+        val t = closed(r).single()
+        assertEquals("tr", t.exitId); assertEquals(2, t.exitBar); assertEquals(110.0, t.exitPrice, 1e-9)
+    }
+
+    @Test fun trailingBestIgnoresPricesBeforeAMidBarFill() {
+        // High first (100 -> 108 -> 90): the limit entry at 95 fills after the 108 high, so the
+        // trail (active at 105) was never reached by this position and nothing trails next bar.
+        val r = run("""
+            strategy("t")
+            if bar_index == 0
+                strategy.entry("L", strategy.long, limit=95)
+                strategy.exit("tr", "L", trail_price=105, trail_offset=20)
+        """, listOf(flat(0), bar(1, 100.0, 108.0, 90.0, 92.0), flat(2, 93.0)))
+        assertTrue(closed(r).isEmpty(), "trades: ${closed(r)}")
+        assertEquals(95.0, r.report!!.trades.single().entryPrice, 1e-9)
+    }
+
+    @Test fun cancelRemovesExitOrdersAndWaitingCloses() {
+        val src = """
+            strategy("t")
+            if bar_index == 0
+                strategy.entry("L", strategy.long)
+                strategy.exit("x", "L", stop=95)
+            if bar_index == 1
+                CANCEL
+        """
+        val bars = listOf(flat(0), flat(1), bar(2, 100.0, 101.0, 90.0, 92.0), flat(3, 92.0))
+        // Without the cancel the stop fills; strategy.cancel("x") and cancel_all() both remove it.
+        assertEquals("x", closed(run(src.replace("CANCEL", "strategy.cancel(\"none\")"), bars)).single().exitId)
+        assertTrue(closed(run(src.replace("CANCEL", "strategy.cancel(\"x\")"), bars)).isEmpty())
+        assertTrue(closed(run(src.replace("CANCEL", "strategy.cancel_all()"), bars)).isEmpty())
+        // A waiting strategy.close is cancelled by its id too.
+        val c = run("""
+            strategy("t")
+            if bar_index == 0
+                strategy.entry("L", strategy.long)
+            if bar_index == 1
+                strategy.close("L")
+                strategy.cancel("L")
+        """, (0..3).map { flat(it) })
+        assertTrue(closed(c).isEmpty(), "trades: ${closed(c)}")
+    }
+
+    @Test fun tradesCarryWhenTheirFillsHappened() {
+        // 5-minute bars. Market entry at bar 1's open; stop exit inside bar 2 (by its last minute's close).
+        val r = run("""
+            strategy("t")
+            if bar_index == 0
+                strategy.entry("L", strategy.long)
+                strategy.exit("x", "L", stop=95)
+        """, listOf(flat(0), flat(1), bar(2, 100.0, 101.0, 90.0, 92.0), flat(3, 92.0)))
+        val t = closed(r).single()
+        assertEquals(t0 + 300, t.entryFillTime); assertTrue(!t.entryIntrabar)
+        assertEquals(t0 + 600 + 299, t.exitFillTime); assertTrue(t.exitIntrabar)
+        // process_orders_on_close: filled at the close of the bar that placed it.
+        val c = run("""
+            strategy("t", process_orders_on_close=true)
+            if bar_index == 1
+                strategy.entry("L", strategy.long)
+            if bar_index == 2
+                strategy.close("L")
+        """, (0..3).map { flat(it) })
+        val tc = closed(c).single()
+        assertEquals(1, tc.entryBar); assertEquals(t0 + 300 + 299, tc.entryFillTime); assertTrue(!tc.entryIntrabar)
+        assertEquals(t0 + 600 + 299, tc.exitFillTime)
+    }
+
+    @Test fun equityHoldsAfterARuntimeErrorAndTheOptimiserRanksSuchRunsLast() {
+        val src = """
+            strategy("t")
+            v = input.int(1, "V")
+            if bar_index == 0
+                strategy.entry("L", strategy.long, qty=v)
+            if bar_index == 3
+                strategy.close("L")
+            if v == 2 and bar_index == 5
+                runtime.error("boom")
+        """.trimIndent()
+        val closes = (0..7).map { 100.0 + it * 2 }
+        val bars = closes.mapIndexed { i, c -> bar(i, if (i == 0) c else closes[i - 1], c + 0.5, (if (i == 0) c else closes[i - 1]) - 0.5, c) }
+        val sc = (Pine.compile(src) as Pine.Compiled.Ok).script
+        val r = Pine.run(sc, bars, mapOf("V" to 2.0))
+        assertNotNull(r.error)
+        val eq = r.report!!.equity
+        // Flat after bar 4's open: equity stays at capital + profit, not back at the capital.
+        val final = r.report!!.initialCapital + r.report!!.netProfit
+        for (k in 4 until eq.size) assertEquals(final, eq[k], 1e-9, "equity[$k]")
+        val res = PineOptimise.run(sc, bars, emptyMap(), PineOptimise.Plan(listOf(PineOptimise.Range("V", 1.0, 2.0, 1.0)), inSamplePct = 99))
+        assertEquals(listOf(1.0, 2.0), res.rows.map { it.values["V"] })
+        assertNull(res.rows[0].error); assertNotNull(res.rows[1].error)
+        assertTrue(res.rows[1].inSample.net > res.rows[0].inSample.net)
+    }
 }

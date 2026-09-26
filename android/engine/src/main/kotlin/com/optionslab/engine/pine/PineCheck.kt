@@ -264,6 +264,12 @@ internal class Checker(private val prog: List<Stmt>) {
             is IfExpr -> secStmts(listOf(x.stmt), at, fn, locals, seen)
             is Call -> {
                 if (x.name.startsWith("strategy.") || x.name == "plot") err(x.line, x.col, "${x.name}() cannot run inside request.security")
+                // a.size(): a method on a chart variable reads that variable just as a bare name would.
+                val recv = x.name.substringBefore('.', "")
+                if (recv.isNotEmpty() && x.name !in funcs && Builtins.SIGS[x.name] == null && recv !in locals && !Builtins.isKnownName(recv) &&
+                    recv !in inputGlobals && scopes.first().contains(recv))
+                    err(x.line, x.col, if (fn == null) "request.security can only use built-in values, inputs and functions, not '$recv': compute it inside the expression"
+                        else "request.security can only use built-in values, inputs and functions, not '$recv' (read by ${fn}()): pass it to ${fn}() as an argument computed inside the expression")
                 x.args.forEach { go(it.value) }
                 val user = funcs[x.name]
                 if (user != null && seen.add(user.name)) {
