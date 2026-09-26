@@ -244,19 +244,65 @@ internal class Checker(private val prog: List<Stmt>) {
         }
     }
 
-    private fun secNames(x: Expr, at: Call) {
+    /**
+     * [fn] is the user function whose body [x] is in (null at the top of the
+     * expression), [locals] its parameters and variables, [seen] the functions
+     * already walked for this call - a function's body runs on the higher
+     * timeframe too, so the globals it reads are held to the same rule.
+     */
+    private fun secNames(x: Expr, at: Call, fn: String? = null, locals: Set<String> = emptySet(), seen: MutableSet<String> = HashSet()) {
+        fun go(y: Expr) = secNames(y, at, fn, locals, seen)
         when (x) {
-            is Name -> if (!Builtins.isKnownName(x.name) && x.name !in inputGlobals && scopes.first().contains(x.name))
-                err(x.line, x.col, "request.security can only use built-in values, inputs and functions, not '${x.name}': compute it inside the expression")
-            is Index -> { secNames(x.target, at); secNames(x.offset, at) }
-            is Unary -> secNames(x.e, at)
-            is Binary -> { secNames(x.a, at); secNames(x.b, at) }
-            is Ternary -> { secNames(x.c, at); secNames(x.a, at); secNames(x.b, at) }
-            is TupleLit -> x.items.forEach { secNames(it, at) }
+            is Name -> if (x.name !in locals && !Builtins.isKnownName(x.name) && x.name !in inputGlobals && scopes.first().contains(x.name))
+                err(x.line, x.col, if (fn == null) "request.security can only use built-in values, inputs and functions, not '${x.name}': compute it inside the expression"
+                    else "request.security can only use built-in values, inputs and functions, not '${x.name}' (read by ${fn}()): pass it to ${fn}() as an argument computed inside the expression")
+            is Index -> { go(x.target); go(x.offset) }
+            is Unary -> go(x.e)
+            is Binary -> { go(x.a); go(x.b) }
+            is Ternary -> { go(x.c); go(x.a); go(x.b) }
+            is TupleLit -> x.items.forEach { go(it) }
+            is IfExpr -> secStmts(listOf(x.stmt), at, fn, locals, seen)
             is Call -> {
                 if (x.name.startsWith("strategy.") || x.name == "plot") err(x.line, x.col, "${x.name}() cannot run inside request.security")
-                x.args.forEach { secNames(it.value, at) }
+                x.args.forEach { go(it.value) }
+                val user = funcs[x.name]
+                if (user != null && seen.add(user.name)) {
+                    val own = HashSet<String>().apply { user.params.forEach { add(it.first) }; declaredIn(user.body, this) }
+                    user.params.forEach { (_, d) -> d?.let { secNames(it, at, user.name, own, seen) } }
+                    secStmts(user.body, at, user.name, own, seen)
+                }
             }
+            else -> {}
+        }
+    }
+
+    private fun secStmts(list: List<Stmt>, at: Call, fn: String?, locals: Set<String>, seen: MutableSet<String>) {
+        fun go(y: Expr) = secNames(y, at, fn, locals, seen)
+        fun all(b: List<Stmt>) = secStmts(b, at, fn, locals, seen)
+        for (s in list) when (s) {
+            is Decl -> go(s.value)
+            is TupleDecl -> go(s.value)
+            is Assign -> go(s.value)
+            is If -> { go(s.cond); all(s.then); s.orElse?.let { all(it) } }
+            is For -> { go(s.from); go(s.to); s.by?.let { go(it) }; all(s.body) }
+            is ForIn -> { go(s.over); all(s.body) }
+            is While -> { go(s.cond); all(s.body) }
+            is Switch -> { s.subject?.let { go(it) }; s.cases.forEach { (c, b) -> c?.let { go(it) }; all(b) } }
+            is ExprStmt -> go(s.e)
+            is Jump, is FuncDef -> {}
+        }
+    }
+
+    /** Every name a function body declares, at any depth: its locals, never globals. */
+    private fun declaredIn(list: List<Stmt>, out: MutableSet<String>) {
+        for (s in list) when (s) {
+            is Decl -> out += s.name
+            is TupleDecl -> out += s.names
+            is If -> { declaredIn(s.then, out); s.orElse?.let { declaredIn(it, out) } }
+            is For -> { out += s.v; declaredIn(s.body, out) }
+            is ForIn -> { out += s.item; s.index?.let { out += it }; declaredIn(s.body, out) }
+            is While -> declaredIn(s.body, out)
+            is Switch -> s.cases.forEach { declaredIn(it.second, out) }
             else -> {}
         }
     }

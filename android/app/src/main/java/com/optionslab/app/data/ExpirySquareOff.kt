@@ -68,18 +68,23 @@ object ExpirySquareOff {
                 val pending = same.sumOf { (it.pending.takeIf { q -> q > 0 } ?: (it.qty - it.filled)).coerceAtLeast(0) }
                 val qty = abs(p.qty) - pending
                 if (qty <= 0) { failed = true; continue }                  // still closing; checked again next pass
-                val o = Kite.Order(p.symbol, side, qty, i.lotSize, p.product, "MARKET", null, i.tickSize, "NFO", "iraalgoexpiry")
-                val why = Kite.refusals(o, s.limits(), Broker.sentToday(), false, exit = true)
-                if (why.isNotEmpty()) { failed = true; continue }
-                try {
-                    Broker.placeOrder(o, exit = true); closed += "live ${p.symbol}"
-                } catch (e: Broker.KiteError) {
-                    failed = true
-                } catch (e: Exception) {
-                    // The reply was lost, not necessarily the order: look for it before trying again.
-                    if (runCatching { Broker.findRecent(o, emptyList()) }.getOrNull() != null) closed += "live ${p.symbol}"
-                    failed = true
+                // Above the exchange freeze quantity the exit goes as several orders, each one the exchange accepts.
+                val orders = Kite.slices(qty, i.lotSize, Kite.freezeQuantity("NFO", p.symbol))
+                    .map { Kite.Order(p.symbol, side, it, i.lotSize, p.product, "MARKET", null, i.tickSize, "NFO", "iraalgoexpiry") }
+                if (orders.any { Kite.refusals(it, s.limits(), Broker.sentToday(), false, exit = true).isNotEmpty() }) { failed = true; continue }
+                val placed = ArrayList<String>()
+                for (o in orders) {
+                    try {
+                        placed += Broker.placeOrder(o, exit = true)
+                    } catch (e: Broker.KiteError) {
+                        failed = true; break
+                    } catch (e: Exception) {
+                        // The reply was lost, not necessarily the order: look for it before trying again.
+                        runCatching { Broker.findRecent(o, placed) }.getOrNull()?.let { placed += it }
+                        failed = true; break
+                    }
                 }
+                if (placed.isNotEmpty()) closed += "live ${p.symbol}"
             }
         }.onFailure { failed = true }
 

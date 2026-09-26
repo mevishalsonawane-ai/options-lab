@@ -106,6 +106,24 @@ class PineFeaturesTest {
         ok("indicator(\"x\")\nlen = input.int(3, \"Len\")\nplot(request.security(syminfo.tickerid, \"60\", ta.sma(close, len)))\n")
     }
 
+    @Test fun securityRefusesChartVariablesReadThroughAFunction() {
+        // f() reads the chart's 'src': on the daily candles it would see the chart's first bar, not each day's.
+        val c = Pine.compile("indicator(\"x\")\nsrc = close * 2\nf() => src\nplot(request.security(syminfo.tickerid, \"D\", f(), lookahead = barmerge.lookahead_on))\n")
+        assertTrue(c is Pine.Compiled.Failed && c.errors.any { it.message.contains("only use built-in") && it.message.contains("f()") })
+        // Also when reached through another function.
+        val d = Pine.compile("indicator(\"x\")\nsrc = close * 2\ng() => src + 1\nf() => g()\nplot(request.security(syminfo.tickerid, \"D\", f()))\n")
+        assertTrue(d is Pine.Compiled.Failed && d.errors.any { it.message.contains("'src'") })
+        // Parameters, locals, builtins and inputs are fine inside the function.
+        ok("indicator(\"x\")\nlen = input.int(3, \"Len\")\nf(x) =>\n    m = ta.sma(x, len)\n    m * 1\nplot(request.security(syminfo.tickerid, \"D\", f(close)))\n")
+        // And it computes per higher-timeframe candle: a 3-day SMA of the daily close.
+        val b = (0 until 4).flatMap { d -> (0 until 3).map { i -> val c0 = 100.0 * (d + 1) + i; Pine.Bar(t0 + d * 86400L + i * 300L, c0, c0 + 1, c0 - 1, c0, 1.0) } }
+        val r = Pine.run(ok("indicator(\"x\")\nf(x) => ta.sma(x, 3)\nplot(request.security(syminfo.tickerid, \"D\", f(close), lookahead = barmerge.lookahead_on))\n"), b, symbol = "NIFTY")
+        assertNull(r.error, r.error?.toString())
+        assertTrue(r.plots[0][0].isNaN())
+        assertEquals((102.0 + 202.0 + 302.0) / 3, r.plots[0][6], 1e-9)
+        assertEquals((202.0 + 302.0 + 402.0) / 3, r.plots[0][11], 1e-9)
+    }
+
     @Test fun partialExitsTakeTheirPieces() {
         val src = """
             strategy("p")

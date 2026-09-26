@@ -237,6 +237,10 @@ object Kite {
         if (!exit && o.exchange in DERIVATIVE_EXCHANGES && o.lots > limits.maxLotsPerOrder)
             out += "${o.lots} lots exceeds the ${limits.maxLotsPerOrder}-lot cap (median top-of-book depth is 2 lots)"
         if (!exit && sentToday >= limits.maxOrdersPerDay) out += "daily order limit reached (${limits.maxOrdersPerDay})"
+        // The exchange rejects any single order above the freeze quantity, exits included: split it instead.
+        val freeze = freezeQuantity(o.exchange, o.tradingSymbol)
+        if (freeze != null && o.quantity > freeze)
+            out += "quantity ${o.quantity} exceeds the exchange freeze quantity of $freeze for ${underlyingOf(o.tradingSymbol)}; split it into orders of at most $freeze"
         if (o.orderType !in setOf("LIMIT", "MARKET", "SL", "SL-M")) out += "order type ${o.orderType} is not supported"
         fun onGrid(x: Double, what: String) {
             val ticks = x / o.tickSize
@@ -292,6 +296,56 @@ object Kite {
         return Order(spec.tradingSymbol, side, kotlin.math.abs(netQuantity), spec.lotSize, product, "LIMIT",
             onTick(px, spec.tickSize, side), spec.tickSize, spec.exchange)
     }
+
+    /**
+     * The same exit as [squareOff], split into orders the exchange accepts:
+     * each at most the freeze quantity, rounded down to whole lots. A position
+     * under the freeze quantity is one order, exactly as [squareOff].
+     */
+    fun squareOffSlices(spec: Spec, product: String, netQuantity: Int, bid: Double?, ask: Double?, last: Double): List<Order> {
+        val whole = squareOff(spec, product, netQuantity, bid, ask, last) ?: return emptyList()
+        return slices(whole.quantity, spec.lotSize, freezeQuantity(spec.exchange, spec.tradingSymbol)).map { whole.copy(quantity = it) }
+    }
+
+    /** [quantity] cut into pieces of at most [freeze] units, each a whole number of [lotSize] (the last takes the rest). */
+    fun slices(quantity: Int, lotSize: Int, freeze: Int?): List<Int> {
+        if (quantity <= 0) return emptyList()
+        if (freeze == null || quantity <= freeze) return listOf(quantity)
+        val lot = lotSize.coerceAtLeast(1)
+        val step = (freeze / lot * lot).coerceAtLeast(lot)
+        val out = ArrayList<Int>()
+        var left = quantity
+        while (left > 0) { val q = minOf(step, left); out += q; left -= q }
+        return out
+    }
+
+    // ---- freeze quantity: the largest single order the exchange accepts ----------
+
+    /**
+     * Units per order above which NSE/BSE reject an index-option order outright
+     * ("freeze quantity"). The exchanges revise these from time to time by
+     * circular (NSE: F&O "Revision in quantity freeze limits"; BSE: equity
+     * derivatives notices) - update this table when they do.
+     */
+    val FREEZE_QUANTITY = mapOf(
+        "NIFTY" to 1800, "BANKNIFTY" to 900, "FINNIFTY" to 1800, "MIDCPNIFTY" to 2800,
+        "SENSEX" to 1000, "BANKEX" to 900,
+    )
+
+    /** Longest name first, so BANKNIFTY is never read as NIFTY. */
+    private val FREEZE_NAMES = FREEZE_QUANTITY.keys.sortedByDescending { it.length }
+
+    /**
+     * The underlying of a derivative trading symbol (NIFTY26SEP24500PE -> NIFTY),
+     * or null when it is not one in [FREEZE_QUANTITY]. The expiry digits must
+     * follow the name, so NIFTYNXT50 is not taken for NIFTY.
+     */
+    fun underlyingOf(tradingSymbol: String): String? =
+        FREEZE_NAMES.firstOrNull { tradingSymbol.startsWith(it) && tradingSymbol.getOrNull(it.length)?.isDigit() == true }
+
+    /** The freeze quantity for this order's instrument, or null when there is none we know of. */
+    fun freezeQuantity(exchange: String, tradingSymbol: String): Int? =
+        if (exchange != "NFO" && exchange != "BFO") null else underlyingOf(tradingSymbol)?.let { FREEZE_QUANTITY[it] }
 
     // ---- GTT: a stop-loss / target held at Zerodha, not on the phone --------------
 
