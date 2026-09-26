@@ -121,9 +121,9 @@ class NetTest : RobolectricTest() {
     }
 
     @Test fun aDroppedConnectionIsOfflineAndRetried() = runTest {
-        script(MockResponse().setSocketPolicy(SocketPolicy.DISCONNECT_AT_START), json("""{"n":1}"""))
+        script(MockResponse().setSocketPolicy(SocketPolicy.DISCONNECT_AFTER_REQUEST), json("""{"n":1}"""))
         assertEquals(1, Net.getJson(url, tries = 3).getInt("n"))
-        script(MockResponse().setSocketPolicy(SocketPolicy.DISCONNECT_AT_START))
+        script(MockResponse().setSocketPolicy(SocketPolicy.DISCONNECT_AFTER_REQUEST))
         try { Net.getJson(url, tries = 2); fail() } catch (e: Net.Offline) { assertEquals("No connection to the market data service", e.message) }
     }
 
