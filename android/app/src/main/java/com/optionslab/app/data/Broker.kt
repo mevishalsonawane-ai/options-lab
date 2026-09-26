@@ -160,7 +160,11 @@ object Broker {
                 if (body != null) {
                     c.doOutput = true
                     c.setRequestProperty("Content-Type", if (json) "application/json" else "application/x-www-form-urlencoded")
-                    c.outputStream.use { it.write(body.toByteArray()) }
+                    // Streamed at a fixed length, the body cannot be replayed: neither the JVM's nor Android's
+                    // connection code may then silently re-send an order when a reply is lost (a second order).
+                    val bytes = body.toByteArray()
+                    c.setFixedLengthStreamingMode(bytes.size)
+                    c.outputStream.use { it.write(bytes) }
                 }
                 val code = c.responseCode
                 if (code == 429 && attempt < 3) { attempt++; delay(1_000L * attempt); continue }

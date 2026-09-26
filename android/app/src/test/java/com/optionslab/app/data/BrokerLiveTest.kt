@@ -14,7 +14,6 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Before
-import org.junit.Ignore
 import org.junit.Test
 import org.robolectric.annotation.ConscryptMode
 
@@ -76,10 +75,6 @@ class BrokerLiveTest : RobolectricTest() {
         try { Broker.placeOrder(order()); fail() } catch (e: Exception) { assertFalse(Broker.definite(e)) }
     }
 
-    @Ignore("MONEY BUG: Broker.call - a POST whose connection drops after the request was sent is silently re-sent by " +
-        "HttpURLConnection (JDK: sun.net.http.retryPost; Android's OkHttp-based stack retries buffered bodies too), so the " +
-        "order is placed TWICE and placeOrder returns the second id. Fix: c.setFixedLengthStreamingMode(bytes.size) before " +
-        "writing the body (a streamed body is never retried), then un-ignore this test.")
     @Test fun aLostReplyIsFoundInTheOrderBook() = runBlocking {
         kite.nextPlace(reply = Reply.DROP_AFTER_ACCEPT)
         val o = order()

@@ -15,6 +15,8 @@ import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -132,10 +134,17 @@ fun LockScreen(
 
     Parchment {
       Box(Modifier.fillMaxSize()) {
+       // At least a screen tall (the pad sits at the bottom, as before) and scrollable when the screen is
+       // shorter than the content - landscape, large fonts - so every key stays full size and reachable.
+       androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize().systemBarsPadding()) {
+        val screen = maxHeight
         Column(
-            Modifier.fillMaxSize().systemBarsPadding().padding(horizontal = 28.dp),
+            Modifier.fillMaxWidth().verticalScroll(androidx.compose.foundation.rememberScrollState())
+                .heightIn(min = screen).padding(horizontal = 28.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.SpaceBetween,
         ) {
+          Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Spacer(Modifier.height(48.dp))
             BrandLogo()
             Spacer(Modifier.height(36.dp))
@@ -158,7 +167,9 @@ fun LockScreen(
                     )
                 }
             }
-            Spacer(Modifier.weight(1f))
+          }
+          Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Spacer(Modifier.height(24.dp))
             PinPad(
                 enabled = lockout <= 0 && !broken,
                 showEnter = target == null,
@@ -183,7 +194,9 @@ fun LockScreen(
                 }
             }
             Spacer(Modifier.height(24.dp))
+          }
         }
+       }
         // The small alert: wrong PIN, lockout, biometric problems.
         val alert = if (lockout > 0) "Too many attempts. Try again in $lockout s." else message
         androidx.compose.animation.AnimatedVisibility(
@@ -248,7 +261,11 @@ private fun PadKey(label: String, enabled: Boolean, onClick: () -> Unit) {
 fun RefusedScreen(findings: List<String>, onQuit: () -> Unit) {
     val p = LocalPalette.current
     Parchment {
-        Column(Modifier.fillMaxSize().systemBarsPadding().padding(28.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+        // Scrolls when the findings or a large font do not fit (landscape): nothing is cut, Close stays full size.
+        androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize().systemBarsPadding()) {
+        val screen = maxHeight
+        Column(Modifier.fillMaxWidth().verticalScroll(androidx.compose.foundation.rememberScrollState()).heightIn(min = screen).padding(28.dp),
+            horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
             BrandEmblem(96.dp, calm = true)
             Spacer(Modifier.height(20.dp))
             Text("IraAlgo will not open on this device", style = Type.title.copy(color = p.oxblood), textAlign = TextAlign.Center)
@@ -258,6 +275,7 @@ fun RefusedScreen(findings: List<String>, onQuit: () -> Unit) {
             findings.forEach { Text("• $it", style = Type.bodySmall.copy(color = p.inkSoft)) }
             Spacer(Modifier.height(24.dp))
             BrassButton("Close", Modifier.fillMaxWidth(0.6f), onClick = onQuit)
+        }
         }
     }
 }

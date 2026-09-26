@@ -6,6 +6,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import com.optionslab.app.data.Broker
 import com.optionslab.app.security.PinLock
 import com.optionslab.app.testing.DeviceConfig
@@ -32,13 +33,10 @@ class ScreensLayoutTest(device: DeviceConfig) : ScreenTest(device) {
         @ParameterizedRobolectricTestRunner.Parameters(name = "{0}")
         fun configs(): List<Array<Any>> = DeviceConfig.matrix()
 
-        /** Real layout bugs found by these tests (skipped with this text until fixed). */
-        val LOCK_BUGS = mapOf("landscape" to "LockScreen in landscape (w891dp-h411dp): the Column does not scroll and the PIN pad " +
-            "is squeezed - digit keys are cut in height and the bottom row ('⌫', '0', '✓') collapses to zero height, so 0 cannot be typed. " +
-            "Fix: make the lock column scroll, or lay the pad out beside the logo in landscape.")
-        val REFUSED_BUGS = mapOf("landscape-font2.0-light" to REFUSED_LANDSCAPE, "landscape-font2.0-dark" to REFUSED_LANDSCAPE)
-        private const val REFUSED_LANDSCAPE = "RefusedScreen in landscape at font 2.0: the centred Column does not scroll, so the " +
-            "findings and the Close button are squeezed (Close 34 dp tall, under the 48 dp touch minimum; text cut). Fix: verticalScroll."
+        /** Real layout bugs found by these tests, skipped with this text until fixed (none open now:
+         *  the lock and refused screens scroll since the landscape / large-font findings). */
+        val LOCK_BUGS = emptyMap<String, String>()
+        val REFUSED_BUGS = emptyMap<String, String>()
 
         /** The alert banner is drawn over the top of the lock screen on purpose. */
         val LOCK_OVERLAYS = LayoutLint.Options(overlays = setOf("Not the right PIN. 3 before a pause."))
@@ -60,13 +58,10 @@ class ScreensLayoutTest(device: DeviceConfig) : ScreenTest(device) {
     }
 
     @Test fun lockWrongPin() {
-        // UI BUG (follows from the layout bug): in landscape the pad's bottom row has zero height, so the
-        // ✓ key cannot be tapped and a PIN of unknown length can never be submitted.
-        org.junit.Assume.assumeFalse("UI BUG (lock-wrong-pin, ${device.name}): ${LOCK_BUGS.getValue("landscape")} " +
-            "Consequence: the ✓ key cannot be tapped, so the PIN cannot be submitted.", device.size == "landscape")
+        // Every key must be reachable on every device (in landscape the lock screen scrolls to it).
         show(lock(setup = false) { PinLock.Result.Wrong(3) })
-        "2468".forEach { compose.onNodeWithText(it.toString()).performClick() }
-        compose.onNodeWithText("✓").performClick()
+        "2468".forEach { compose.onNodeWithText(it.toString()).performScrollTo().performClick() }
+        compose.onNodeWithText("✓").performScrollTo().performClick()
         compose.waitUntil(5_000) { compose.onAllNodes(androidx.compose.ui.test.hasText("Not the right PIN. 3 before a pause.")).fetchSemanticsNodes().isNotEmpty() }
         capture("lock-wrong-pin")
         lint("lock-wrong-pin", knownBugs = LOCK_BUGS, options = LOCK_OVERLAYS)
