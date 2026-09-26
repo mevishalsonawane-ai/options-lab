@@ -141,3 +141,33 @@ jobs:
             android/app/build/test-results/testDebugUnitTest/
             android/app/build/reports/coverage/
           if-no-files-found: warn
+
+  # The latest screenshots on branch ui-screenshots (force-replaced, one commit, images only),
+  # so they can be fetched with git. Only this job may write, and it runs no build or test code.
+  screenshots:
+    name: Publish screenshots
+    runs-on: ubuntu-latest
+    needs: app-tests
+    if: always() && github.event_name == 'push' && github.ref == 'refs/heads/claude/android-options-lab-kotlin-xgt1ym'
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: app-screenshots
+          path: shots
+      - name: Push to ui-screenshots
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+        run: |
+          cd shots
+          n=$(find . -name '*.png' | wc -l)
+          if [ "$n" -eq 0 ]; then echo "no screenshots"; exit 0; fi
+          find . -name '*.png' -printf '%P\n' | sort > index.txt
+          git init -q -b ui-screenshots
+          git config user.name "ci-screenshots"; git config user.email "ci-screenshots@users.noreply.github.com"
+          git add -A && git commit -qm "Screenshots for $SHA ($n images)"
+          git push -qf "https://x-access-token:${TOKEN}@github.com/${REPO}" HEAD:ui-screenshots
+          echo "published $n screenshots to ui-screenshots"
