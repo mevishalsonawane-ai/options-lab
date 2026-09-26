@@ -9,7 +9,7 @@ import org.json.JSONObject
  * each script run over the chart's own candles. Called by the chart page synchronously.
  */
 object PineChart {
-    fun id(item: PineScripts.Item) = "pine-${item.id}"
+    fun chartId(item: PineScripts.Item) = "pine-${item.id}"
 
     /** Every script that compiles: its plots, inputs, and whether it is shown on the chart. */
     fun list(): String {
@@ -30,7 +30,7 @@ object PineChart {
                 inputs.put(JSONObject().put("key", "in$i").put("kind", d.kind).put("label", d.key).put("default", def ?: JSONObject.NULL)
                     .put("min", d.min ?: JSONObject.NULL).put("max", d.max ?: JSONObject.NULL))
             }
-            a.put(JSONObject().put("id", id(item)).put("name", s.title.ifBlank { item.name }).put("overlay", s.overlay)
+            a.put(JSONObject().put("id", chartId(item)).put("name", s.title.ifBlank { item.name }).put("overlay", s.overlay)
                 .put("onChart", item.onChart).put("plots", plots).put("inputs", inputs))
         }
         return a.toString()
@@ -40,7 +40,7 @@ object PineChart {
     fun calc(id: String, symbol: String, interval: String, barsJson: String, inputsJson: String): String {
         val out = JSONObject()
         try {
-            val item = PineScripts.items.value.firstOrNull { id(it) == id } ?: return out.put("error", "Script not found").toString()
+            val item = PineScripts.items.value.firstOrNull { chartId(it) == id } ?: return out.put("error", "Script not found").toString()
             val s = PineScripts.script(item) ?: return out.put("error", "The script has errors").toString()
             val a = JSONArray(barsJson)
             val bars = (0 until a.length()).map { i ->
