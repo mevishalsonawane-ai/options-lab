@@ -1073,7 +1073,12 @@ internal class Broker(
     private val exits = LinkedHashMap<String, Exit>()
     private val trades = ArrayList<Pine.Trade>()
     private var realized = 0.0
+    /** Net P&L of closed trades (what strategy.netprofit reports). */
+    private var closedPnl = 0.0
     private var commission = 0.0
+    /** Running peak and deepest fall of bar-close equity, for strategy.max_drawdown. */
+    private var ddPeak = s.initialCapital
+    private var ddMax = 0.0
     private val equity = DoubleArray(bars.size) { s.initialCapital }
     private var bar = 0
 
@@ -1095,8 +1100,8 @@ internal class Broker(
             "strategy.position_size" -> size()
             "strategy.position_avg_price" -> if (open.isEmpty()) null else open.sumOf { it.price * it.qty } / open.sumOf { it.qty }
             "strategy.equity" -> equityAt(px)
-            "strategy.netprofit" -> realized
-            "strategy.openprofit" -> openPnl(px)
+            "strategy.netprofit" -> closedPnl
+            "strategy.openprofit" -> openPnl(px) - open.sumOf { it.comm }
             "strategy.opentrades" -> open.size.toDouble()
             "strategy.closedtrades" -> trades.size.toDouble()
             "strategy.wintrades" -> trades.count { it.pnl > 0 }.toDouble()
@@ -1104,7 +1109,7 @@ internal class Broker(
             "strategy.initial_capital" -> s.initialCapital
             "strategy.grossprofit" -> trades.filter { it.pnl > 0 }.sumOf { it.pnl }
             "strategy.grossloss" -> -trades.filter { it.pnl < 0 }.sumOf { it.pnl }
-            "strategy.max_drawdown" -> maxDd(bar).first
+            "strategy.max_drawdown" -> equityAt(px).let { eq -> max(ddMax, max(ddPeak, eq) - eq) }
             "strategy.position_entry_name" -> open.firstOrNull()?.id ?: ""
             else -> null
         }
@@ -1141,16 +1146,21 @@ internal class Broker(
     fun cancel(id: String?) { if (id == null) orders.clear() else orders.remove(id) }
 
     private fun enter(o: Order, i: Int, px: Double) {
+        var q = qtyFor(o, px)
+        if (!(q > 0)) return
         if (open.isNotEmpty() && open[0].long != o.long) {
             if (o.plain) {
-                // strategy.order: an opposite order reduces the position rather than reversing it.
-                closeWhere(i, px, o.id) { true }
-                return
-            }
-            closeWhere(i, px, o.id) { true }
-        } else if (open.size >= s.pyramiding) return
-        val q = qtyFor(o, px)
-        if (!(q > 0)) return
+                // strategy.order: an opposite order trades its own quantity - it reduces the
+                // position (oldest entries first) and only what is left over opens the other way.
+                for (e in open.toList()) {
+                    if (q <= 1e-12) break
+                    val take = minOf(q, e.qty)
+                    closePart(i, px, e, take, o.id)
+                    q -= take
+                }
+                if (q <= 1e-12) return
+            } else closeWhere(i, px, o.id) { true }
+        } else if (!o.plain && open.size >= s.pyramiding) return   // strategy.order ignores pyramiding
         val fill = if (o.long) buyPx(px) else sellPx(px)
         val c = comm(fill, q)
         realized -= c; commission += c
@@ -1172,6 +1182,7 @@ internal class Broker(
         val gross = (fill - e.price) * q * (if (e.long) 1 else -1)
         realized += gross - c; commission += c
         val pnl = gross - entryComm - c
+        closedPnl += pnl
         trades += Pine.Trade(e.id, exitId, e.long, q, e.bar, bars[e.bar].time, e.price, i, bars[i].time, fill,
             pnl, pnl / (e.price * q) * 100, entryComm + c, false)
         e.comm -= entryComm; e.qty -= q
@@ -1191,6 +1202,34 @@ internal class Broker(
         for (o in orders.values.filter { it.limit == null && it.stop == null }) { orders.remove(o.id); enter(o, i, px) }
     }
 
+    /** The bar's price path as TradingView walks it: open, the nearer extreme, the other, close. */
+    private fun path(b: Pine.Bar): List<Double> =
+        if ((b.high - b.open) < (b.open - b.low)) listOf(b.open, b.high, b.low, b.close) else listOf(b.open, b.low, b.high, b.close)
+
+    /** The rest of [pts] from the first moment the price is at [px]: [px] first, then the points after it. */
+    private fun pathFrom(pts: List<Double>, px: Double): List<Double> {
+        for (k in 0 until pts.size - 1) {
+            val a = pts[k]; val c = pts[k + 1]
+            if (px >= minOf(a, c) - 1e-9 && px <= maxOf(a, c) + 1e-9) return listOf(px) + pts.subList(k + 1, pts.size)
+        }
+        return listOf(px)
+    }
+
+    /**
+     * A stop-limit entry: the stop arms it, then it is a limit order. Returns the fill price on
+     * this bar, or null; [armed] is set when the stop was reached but the limit did not fill.
+     */
+    private fun stopLimitFill(o: Order, b: Pine.Bar, armed: BooleanArray): Double? {
+        val stop = o.stop!!; val limit = o.limit!!
+        val pts = path(b)
+        val trig = if (o.long) { if (b.open >= stop) b.open else if (b.high >= stop) stop else return null }
+                   else { if (b.open <= stop) b.open else if (b.low <= stop) stop else return null }
+        armed[0] = true
+        val rest = pathFrom(pts, trig)
+        return if (o.long) { if (trig <= limit) trig else if (rest.any { it <= limit }) limit else null }
+               else { if (trig >= limit) trig else if (rest.any { it >= limit }) limit else null }
+    }
+
     private fun entryFill(o: Order, b: Pine.Bar): Double? {
         val stop = o.stop; val limit = o.limit
         return if (o.long) when {
@@ -1208,20 +1247,70 @@ internal class Broker(
         bar = i
         val b = bars[i]
         if (!s.processOnClose) fillMarket(i, b.open)
+        // Entries filled part-way through this bar: their exits see only the path after the fill.
+        val midBar = HashMap<Open, List<Double>>()
         for (o in orders.values.toList()) {
             if ((o.limit == null && o.stop == null) || o.bar >= i) continue
-            val px = entryFill(o, b) ?: continue
-            orders.remove(o.id); enter(o, i, px)
+            val px = if (o.stop != null && o.limit != null) {
+                val armed = BooleanArray(1)
+                val f = stopLimitFill(o, b, armed)
+                // Armed but unfilled: from now on it is a plain limit order.
+                if (f == null) { if (armed[0]) orders[o.id] = Order(o.id, o.long, o.qty, o.limit, null, o.bar, o.plain); continue }
+                f
+            } else entryFill(o, b) ?: continue
+            orders.remove(o.id)
+            val before = open.toSet()
+            enter(o, i, px)
+            open.filter { it !in before }.forEach { midBar[it] = pathFrom(path(b), it.price) }
         }
         for (e in open.toList()) {
             for (x in exits.values.filter { (it.from == e.id || it.from == null) && it.id !in e.done }) {
                 if (e.qty <= 1e-9 || e !in open) break
-                val px = exitFill(e, x, b) ?: continue
+                val px = midBar[e]?.let { exitOnPath(e, x, it) } ?: if (e in midBar) continue else exitFill(e, x, b) ?: continue
                 val amount = x.qty ?: x.qtyPct?.let { e.origQty * it / 100 } ?: e.qty
                 e.done += x.id
                 closePart(i, px, e, amount, x.id)
             }
         }
+    }
+
+    /**
+     * Where exit [x] fills entry [e] along [pts], a path that starts at the entry's own fill
+     * (no gap at the open: the position did not exist before it).
+     */
+    private fun exitOnPath(e: Open, x: Exit, pts: List<Double>): Double? {
+        val (stop, limit) = levels(e, x)
+        if (stop == null && limit == null) return null
+        val p0 = pts[0]
+        if (e.long && stop != null && p0 <= stop || !e.long && stop != null && p0 >= stop) return p0
+        if (e.long && limit != null && p0 >= limit || !e.long && limit != null && p0 <= limit) return p0
+        for (k in 0 until pts.size - 1) {
+            val a = pts[k]; val c = pts[k + 1]
+            if (e.long) {
+                if (c < a && stop != null && c <= stop && a >= stop) return stop
+                if (c > a && limit != null && c >= limit && a <= limit) return limit
+            } else {
+                if (c > a && stop != null && c >= stop && a <= stop) return stop
+                if (c < a && limit != null && c <= limit && a >= limit) return limit
+            }
+        }
+        return null
+    }
+
+    /** The stop and limit prices of exit [x] for entry [e], trailing included. */
+    private fun levels(e: Open, x: Exit): Pair<Double?, Double?> {
+        val sign = if (e.long) 1 else -1
+        var stop = x.stop ?: x.loss?.let { e.price - sign * it * tick }
+        val limit = x.limit ?: x.profit?.let { e.price + sign * it * tick }
+        if (x.trailOff != null && (x.trailPts != null || x.trailPrice != null)) {
+            val act = x.trailPrice ?: (e.price + sign * x.trailPts!! * tick)
+            val reached = if (e.long) e.best >= act else e.best <= act
+            if (reached) {
+                val t = e.best - sign * x.trailOff * tick
+                stop = if (stop == null) t else if (e.long) max(stop, t) else min(stop, t)
+            }
+        }
+        return stop to limit
     }
 
     /** Where exit [x] fills entry [e] inside candle [b], if it does. */
@@ -1262,6 +1351,7 @@ internal class Broker(
         if (s.processOnClose) fillMarket(i, b.close)
         for (e in open) e.best = if (e.long) max(e.best, b.high) else min(e.best, b.low)
         equity[i] = equityAt(b.close)
+        ddPeak = max(ddPeak, equity[i]); ddMax = max(ddMax, ddPeak - equity[i])
     }
 
     /** Where the position goes when the orders waiting after the last bar fill. */
@@ -1275,7 +1365,8 @@ internal class Broker(
             val q = qtyFor(o, px)
             if (!(q > 0)) continue
             val signed = if (o.long) q else -q
-            if (pos == 0.0 || Math.signum(pos) != Math.signum(signed)) { pos = if (o.plain && pos != 0.0) 0.0 else signed; entries = 1 }
+            if (o.plain) { pos += signed; if (abs(pos) < 1e-12) pos = 0.0; entries++ }
+            else if (pos == 0.0 || Math.signum(pos) != Math.signum(signed)) { pos = signed; entries = 1 }
             else if (entries < s.pyramiding) { pos += signed; entries++ }
         }
         return pos

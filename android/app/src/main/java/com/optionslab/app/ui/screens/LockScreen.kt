@@ -114,7 +114,8 @@ fun LockScreen(
                 } else if (first != pin) {
                     first = null; reject("Those did not match. Start again.")
                 } else {
-                    val err = onCreate(pin.toCharArray())
+                    // Key stretching is slow on purpose: off the screen's thread.
+                    val err = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { onCreate(pin.toCharArray()) }
                     if (err != null) { first = null; reject(err) } else broken = true
                 }
                 return@launch

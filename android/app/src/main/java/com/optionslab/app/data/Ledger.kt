@@ -204,7 +204,12 @@ object Alarms {
         Vault.writeFile(file, arr.toString().toByteArray(Charsets.UTF_8))
     }
 
+    @Synchronized
     fun upsert(a: PriceAlarm) = save(all().filter { it.id != a.id } + a)
+    @Synchronized
     fun remove(id: Long) = save(all().filter { it.id != id })
+    /** Stamp an alarm fired, on the current list: an edit made meanwhile is kept. */
+    @Synchronized
+    fun markFired(id: Long, at: Long) = save(all().map { if (it.id == id) it.copy(firedAtMillis = at) else it })
     fun wipe() { file.delete() }
 }

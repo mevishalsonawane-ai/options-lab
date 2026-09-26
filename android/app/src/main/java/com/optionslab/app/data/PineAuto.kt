@@ -188,6 +188,9 @@ object PineAuto {
         val bars = ChartFeed.bars(item.auto.symbol, item.auto.interval, now - lookbackDays(item.auto.interval) * 86400, null)
             .filter { it.epochSecond + step <= now }                    // completed candles only
         val last = bars.lastOrNull() ?: return
+        // A feed that failed today can hand back yesterday's candles: never trade on those, or on a stalled feed.
+        if (step < 86_400 && (java.time.Instant.ofEpochSecond(last.epochSecond).atZone(com.optionslab.engine.IST).toLocalDate() != Market.today() ||
+                now - last.epochSecond > step * 3 + 120)) return
         if (b.lastBar[id] == last.epochSecond) return
         b.lastBar[id] = last.epochSecond
         val r = Pine.run(script, bars.map { PineScripts.toPine(it) }, PineScripts.inputValues(item, script), item.auto.symbol, item.auto.interval,

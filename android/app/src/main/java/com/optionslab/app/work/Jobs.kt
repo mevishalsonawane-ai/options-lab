@@ -35,6 +35,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -290,11 +291,49 @@ object Tasks {
     data class Tick(val title: String, val lines: List<String>, val progress: Int)
 
     /**
+     * The steps that protect money: fills, the daily loss limit, bot exits, stops and targets,
+     * the expiry square-off and strategy risk. Run first in every pass, so a slow quote or
+     * chart fetch never holds them up.
+     */
+    private suspend fun riskSteps(context: Context, s: AppSettings) {
+        // Zerodha's live price stream (Live mode, logged in, market hours).
+        runCatching { com.optionslab.app.data.KiteStream.ensure() }
+        // The static-IP relay: connected ahead of the first order, kept alive during market hours.
+        if (com.optionslab.app.data.Market.isOpen()) runCatching { com.optionslab.app.data.Relay.warm() }
+        // Paper account (also used by paper strategy runs in LIVE mode): resting orders fill, MIS squares off, expiries settle.
+        runCatching { com.optionslab.app.data.Paper.tick() }.getOrNull()?.let { paperEvents(context, it) }
+        // One daily loss limit over every bot: past it, all of them sell and stop for the day.
+        runCatching { com.optionslab.app.data.LossBreaker.check(context) }
+        // The ORB paper arms: manage open positions, then decide on the last completed 5-minute bar.
+        runCatching { com.optionslab.app.data.OrbArms.tick() }
+        // Pine scripts set to auto-trade: decide on each completed candle, sell at 15:15.
+        runCatching { com.optionslab.app.data.PineAuto.tick() }
+        // Stops, trailing stops and targets: one exit filled cancels the other; trails move up.
+        runCatching { com.optionslab.app.data.Protections.tick() }
+        // Expiry day, 15:05: close every option position expiring today (paper and live, all products).
+        runCatching { com.optionslab.app.data.ExpirySquareOff.maybeRun(context, s) }
+        // Strategy Module: schedules, prices, per-leg and basket risk, exits.
+        runCatching {
+            val bad = com.optionslab.app.security.Integrity.compromised(com.optionslab.app.security.Integrity.reportWithin(context, 60_000))
+            com.optionslab.app.data.Strategies.tickAll(bad)
+        }
+        // Every open position's notification, with its live P&L and a Close button.
+        runCatching { PositionCards.refresh(context) }
+    }
+
+
+    /**
      * One pass of the live watch: index levels, the open ticket's live mark and
      * cushion to breakeven, and every price alarm. Risk alerts fire once each.
      */
     suspend fun watchTick(context: Context, s: AppSettings, fired: MutableSet<String>): Tick {
-        val q = listOf("NIFTY", "BANKNIFTY", "INDIAVIX").mapNotNull { runCatching { Market.quote(it) }.getOrNull() }.associateBy { it.symbol }
+        riskSteps(context, s)
+        // The three index quotes at once, each given at most 20 s: a hung feed cannot stall the watch.
+        val q = kotlinx.coroutines.coroutineScope {
+            listOf("NIFTY", "BANKNIFTY", "INDIAVIX").map { sym ->
+                async(kotlinx.coroutines.Dispatchers.IO) { runCatching { kotlinx.coroutines.withTimeoutOrNull(20_000) { Market.quote(sym) } }.getOrNull() }
+            }.mapNotNull { it.await() }.associateBy { it.symbol }
+        }
         val lines = ArrayList<String>()
         q["NIFTY"]?.let { lines += "NIFTY %,.1f (%+.2f%%)".format(it.last, 100 * it.changePct) }
         q["BANKNIFTY"]?.let { lines += "BANKNIFTY %,.1f (%+.2f%%)".format(it.last, 100 * it.changePct) }
@@ -354,30 +393,6 @@ object Tasks {
             com.optionslab.app.widget.IraWidget.publish(context, q["NIFTY"]?.let { it.last to it.changePct },
                 q["BANKNIFTY"]?.let { it.last to it.changePct }, accountPnl)
         }
-        // Sandbox paper account: resting orders fill, MIS squares off at 15:15, expiries settle.
-        // Paper account (also used by paper strategy runs in LIVE mode): resting orders fill, MIS squares off, expiries settle.
-        runCatching { com.optionslab.app.data.Paper.tick() }.getOrNull()?.let { paperEvents(context, it) }
-        // One daily loss limit over every bot: past it, all of them sell and stop for the day.
-        runCatching { com.optionslab.app.data.LossBreaker.check(context) }
-        // The ORB paper arms: manage open positions, then decide on the last completed 5-minute bar.
-        runCatching { com.optionslab.app.data.OrbArms.tick() }
-        // Pine scripts set to auto-trade: decide on each completed candle, sell at 15:15.
-        runCatching { com.optionslab.app.data.PineAuto.tick() }
-        // Zerodha's live price stream (Live mode, logged in, market hours).
-        runCatching { com.optionslab.app.data.KiteStream.ensure() }
-        // The static-IP relay: connected ahead of the first order, kept alive during market hours.
-        if (com.optionslab.app.data.Market.isOpen()) runCatching { com.optionslab.app.data.Relay.warm() }
-        // Stops, trailing stops and targets: one exit filled cancels the other; trails move up.
-        runCatching { com.optionslab.app.data.Protections.tick() }
-        // Every open position's notification, with its live P&L and a Close button.
-        runCatching { PositionCards.refresh(context) }
-        // Expiry day, 15:05: close every option position expiring today (paper and live, all products).
-        runCatching { com.optionslab.app.data.ExpirySquareOff.maybeRun(context, s) }
-        // Strategy Module: schedules, prices, per-leg and basket risk, exits.
-        runCatching {
-            val bad = com.optionslab.app.security.Integrity.compromised(com.optionslab.app.security.Integrity.reportWithin(context, 60_000))
-            com.optionslab.app.data.Strategies.tickAll(bad)
-        }
         return Tick(title, lines, progress)
     }
 
@@ -413,7 +428,7 @@ object Tasks {
             val tag = "alarm.${a.id}"
             if (a.hit(price) && tag !in fired && System.currentTimeMillis() - a.firedAtMillis > 30 * 60_000) {
                 fired += tag
-                Alarms.upsert(a.copy(firedAtMillis = System.currentTimeMillis()))
+                Alarms.markFired(a.id, System.currentTimeMillis())
                 Notifier.post(context, 4000 + (a.id % 1000).toInt(), Notifier.RISK, "Alarm: ${a.describe()}",
                     "${a.symbol} is at %,.2f.${if (a.note.isNotBlank()) " ${a.note}" else ""}".format(price), "alarms")
             }
@@ -450,8 +465,13 @@ class WatchService : Service() {
         try {
             ServiceCompat.startForeground(this, Notifier.ID_LIVE, n, type)
         } catch (_: Exception) {
-            // Not allowed now (e.g. the dataSync budget is spent): say so rather than crash.
+            // Not allowed now (e.g. the dataSync budget is spent): say so and stop cleanly - a service
+            // started in the foreground that never calls startForeground is killed by the system.
             Notifier.post(this, 2011, Notifier.APPROVAL, "IraAlgo could not run in the background", "Open the app to continue: $title", "almanac")
+            running.values.forEach { it.cancel() }
+            running.clear()
+            watching = false
+            stopSelf()
         }
     }
 
@@ -510,11 +530,28 @@ class WatchService : Service() {
         // so its exit-time square-off and any retried exits are seen through.
         while (Market.isTradingDay() && (Market.minuteNow() <= Market.CLOSE ||
                 (Market.minuteNow() <= Market.CLOSE + 15 && com.optionslab.app.data.Strategies.anyRunning()))) {
+            try {
+                watchPass(fired)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // One bad pass (a Keystore or disk hiccup) must not end the watch: note it and go on.
+                Notifier.post(this, 2014, Notifier.SCHEDULE, "Market watch hiccup", e.message ?: e.javaClass.simpleName)
+                delay(15_000)
+            }
+        }
+        // The watch is over for the day: the live price stream closes with it.
+        runCatching { com.optionslab.app.data.KiteStream.stop() }
+    }
+
+    /** One pass of the watch loop and the wait until the next one. */
+    private suspend fun watchPass(fired: HashSet<String>) {
+        run {
             Heartbeat.beat(this)
             if (Market.minuteNow() < Market.OPEN) {
                 show("Market watch", "Waiting for the 09:15 open")
                 delay(30_000)
-                continue
+                return
             }
             // Settings read fresh every pass: the kill switch, Paper / Live and limits changed mid-session take effect at once.
             val t = Tasks.watchTick(this, AppSettings.load(), fired)

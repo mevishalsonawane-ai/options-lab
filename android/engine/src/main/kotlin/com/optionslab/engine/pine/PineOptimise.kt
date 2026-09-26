@@ -41,7 +41,7 @@ object PineOptimise {
     ): Result {
         val grids = plan.ranges.map { it.key to it.values() }
         val total = grids.fold(1L) { acc, g -> acc * g.second.size }.coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
-        val splitIdx = if (plan.inSamplePct in 1..99) (bars.size * plan.inSamplePct / 100).coerceIn(1, bars.size - 1) else bars.size
+        val splitIdx = if (plan.inSamplePct in 1..99 && bars.size >= 2) (bars.size * plan.inSamplePct / 100).coerceIn(1, bars.size - 1) else bars.size
         val splitTime = if (splitIdx < bars.size) bars[splitIdx].time else null
         val deadline = System.nanoTime() + plan.budgetMs * 1_000_000
         val rows = ArrayList<Row>()

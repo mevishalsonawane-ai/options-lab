@@ -17,9 +17,10 @@ import kotlin.math.abs
  * and the bracket an order can carry (entry + stop + target).
  *
  * A protection rests as real orders in the account it protects: the stop as an
- * SL-M exit, the target as a LIMIT exit. The two are one-cancels-other: when one
+ * SL-M exit on paper (an SL with a limit at Zerodha, which refuses SL-M on options),
+ * the target as a LIMIT exit. The two are one-cancels-other: when one
  * fills, the other is cancelled here. A trailing stop is moved up (for a long;
- * down for a short) by modifying the SL-M order - it only ever tightens.
+ * down for a short) by modifying the stop order - it only ever tightens.
  *
  * Zerodha: a protection is set up only after the owner's PIN or fingerprint
  * (once, when it is created, as the owner chose); its later moves need nothing
@@ -53,7 +54,7 @@ object Protections {
     private fun load(): MutableList<Item> {
         cache?.let { return it }
         val out = ArrayList<Item>()
-        runCatching {
+        val read = runCatching {
             val a = JSONArray(String(Vault.readFileSteady(file) ?: return@runCatching, Charsets.UTF_8))
             for (i in 0 until a.length()) {
                 val o = a.getJSONObject(i)
@@ -63,6 +64,11 @@ object Protections {
                     o.getInt("qty"), o.getInt("lot"), o.getDouble("tick"), d("stop"), d("trail"), d("target"), o.getDouble("best"),
                     s("stopId"), s("targetId"), o.optBoolean("active", true), o.optString("note"))
             }
+        }
+        if (read.isFailure && file.exists()) {
+            // Never overwrite it: kept aside, and the owner told that exits may still rest at the broker.
+            Vault.setAside(file)
+            Alerts.error("The saved stops and targets could not be read and were set aside. Their orders may still be resting: check the order book.", "Protection")
         }
         cache = out
         return out
@@ -120,7 +126,7 @@ object Protections {
 
     /**
      * Protect a Zerodha position. Call only after the owner's PIN or fingerprint.
-     * The stop goes to Zerodha as an SL-M order, the target as a LIMIT order.
+     * The stop goes to Zerodha as an SL order with a limit, the target as a LIMIT order.
      */
     suspend fun protectLive(symbol: String, exchange: String, product: String, qty: Int, price: Double,
                             stop: Double?, trail: Double?, target: Double?): String {
@@ -138,8 +144,9 @@ object Protections {
             val side = if (qty > 0) Kite.Side.SELL else Kite.Side.BUY
             var stopId: String? = null; var targetId: String? = null
             try {
-                if (s0 != null) stopId = Broker.placeOrder(Kite.Order(symbol, side, abs(qty), spec.lotSize, product, "SL-M", null, spec.tickSize, exchange,
-                    "iraprotect", triggerPrice = s0), exit = true)
+                // SL (with a limit), not SL-M: Zerodha refuses SL-M on options.
+                if (s0 != null) stopId = Broker.placeOrder(Kite.Order(symbol, side, abs(qty), spec.lotSize, product, "SL", stopLimit(s0, side, spec.tickSize),
+                    spec.tickSize, exchange, "iraprotect", triggerPrice = s0), exit = true)
                 if (target != null) targetId = Broker.placeOrder(Kite.Order(symbol, side, abs(qty), spec.lotSize, product, "LIMIT",
                     Kite.onTick(target, spec.tickSize, side), spec.tickSize, exchange, "iraprotect"), exit = true)
             } catch (e: Exception) {
@@ -169,6 +176,16 @@ object Protections {
             runCatching { if (p.live) Broker.cancel(id) else Paper.cancel(id) }
         }
     }
+
+    /**
+     * The limit of a stop exit: [STOP_SLIP] past the trigger (at least 5 ticks), so a fast
+     * market still fills it; a SELL may accept down to it, a BUY may pay up to it.
+     */
+    fun stopLimit(trigger: Double, side: Kite.Side, tick: Double): Double {
+        val room = maxOf(trigger * STOP_SLIP, tick * 5)
+        return if (side == Kite.Side.SELL) Kite.onTick(maxOf(tick, trigger - room), tick, side) else Kite.onTick(trigger + room, tick, side)
+    }
+    private const val STOP_SLIP = 0.10
 
     // ---- watching ---------------------------------------------------------------------------
 
@@ -224,12 +241,34 @@ object Protections {
         val so = p.stopOrderId?.let { rows[it] }; val to = p.targetOrderId?.let { rows[it] }
         val stopDone = so?.status == "COMPLETE"; val targetDone = to?.status == "COMPLETE"
         if (stopDone || targetDone) {
-            (if (stopDone) p.targetOrderId else p.stopOrderId)?.let { runCatching { Broker.cancel(it) } }
+            // One-cancels-other: finished only once the other exit is confirmed gone, or it
+            // would still rest at Zerodha and could open a naked position when it fills.
+            val other = if (stopDone) to else so
+            if (other != null && other.working) {
+                runCatching { Broker.cancel(other.id, other.variety) }
+                val st = runCatching { Broker.orderState(other.id)?.status }.getOrNull()
+                if (st == null || st !in setOf("CANCELLED", "REJECTED", "COMPLETE")) return p
+            }
             Alerts.post("${p.symbol}: ${if (stopDone) "stop" else "target"} filled at Zerodha; the other exit was cancelled.",
                 if (stopDone) Alerts.Kind.ERROR else Alerts.Kind.SUCCESS, "Protection")
             return p.copy(active = false, note = if (stopDone) "stop filled" else "target filled")
         }
-        // Both exits gone some other way (cancelled at Zerodha, rejected): nothing left to watch.
+        // The position closed by hand (or flipped): the resting exits would now open a new position.
+        // (Not in its first minute: the position book can trail a fresh fill.)
+        val net = if (System.currentTimeMillis() - p.id < 60_000) null else runCatching { Broker.positionBook().net.filter { it.symbol == p.symbol && it.exchange == p.exchange && it.product == p.product }.sumOf { it.qty } }.getOrNull()
+        if (net != null && (net == 0 || net.sign() != p.qty.sign())) {
+            listOfNotNull(so, to).filter { it.working }.forEach { runCatching { Broker.cancel(it.id, it.variety) } }
+            val still = runCatching { Broker.orders().filter { it.id == p.stopOrderId || it.id == p.targetOrderId }.any { it.working } }.getOrElse { true }
+            if (still) return p
+            return p.copy(active = false, note = "position closed")
+        }
+        // A stop refused or cancelled at Zerodha leaves the position unprotected: say so.
+        if (so != null && so.status in setOf("REJECTED", "CANCELLED") && p.stopOrderId != null) {
+            Alerts.error("${p.symbol}: the stop at Zerodha was ${so.status.lowercase()}${so.message.takeIf { it.isNotBlank() }?.let { " ($it)" } ?: ""}. The position is not protected by a stop.", "Protection")
+            if (to == null || !to.working) return p.copy(active = false, stopOrderId = null, note = "stop ${so.status.lowercase()}")
+            return p.copy(stopOrderId = null, note = "stop ${so.status.lowercase()}")
+        }
+        // Both exits gone some other way: nothing left to watch.
         if ((so == null || !so.working) && (to == null || !to.working) && (p.stopOrderId != null || p.targetOrderId != null)) {
             return p.copy(active = false, note = "exit orders no longer working")
         }
@@ -239,7 +278,12 @@ object Protections {
         val n = Protection.next(p.spec(), ltp)
         val ns = n.stop   // a local: the engine's property cannot be smart-cast across modules
         if (ns != null && ns != p.stop && abs(ns - (p.stop ?: 0.0)) >= p.tick - 1e-9) {
-            runCatching { Broker.modify(so, so.qty, "SL-M", null, ns) }.onFailure { return p.copy(best = n.best) }
+            val side = if (p.qty > 0) Kite.Side.SELL else Kite.Side.BUY
+            val r = runCatching {
+                if (so.type == "SL-M") Broker.modify(so, so.qty, "SL-M", null, ns)
+                else Broker.modify(so, so.qty, "SL", stopLimit(ns, side, p.tick), ns)
+            }
+            if (r.isFailure) return p.copy(best = n.best)
         }
         return p.copy(best = n.best, stop = ns)
     }

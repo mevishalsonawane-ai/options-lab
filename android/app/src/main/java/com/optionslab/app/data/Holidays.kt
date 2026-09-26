@@ -61,7 +61,9 @@ object Holidays {
 
     fun isHoliday(d: LocalDate): Boolean = book().holiday(d)
 
+    @Synchronized
     fun add(d: LocalDate) = book().let { save(it.copy(added = it.added + d, removed = it.removed - d)) }
+    @Synchronized
     fun remove(d: LocalDate) = book().let { save(it.copy(added = it.added - d, removed = it.removed + d)) }
 
     /** Whether the cached list is older than a week, or does not cover this year. */

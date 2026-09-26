@@ -429,8 +429,9 @@ private fun Main(model: AppModel) {
         }
     }
 
-    BackHandler(enabled = cabinetPage != null || tab != Tab.ALMANAC) {
-        if (cabinetPage != null) cabinetPage = null else tab = Tab.ALMANAC
+    BackHandler(enabled = (cabinetPage != null && tab == Tab.CABINET) || tab != Tab.ALMANAC) {
+        // A More sub-page left open behind another tab is not what Back should close.
+        if (cabinetPage != null && tab == Tab.CABINET) cabinetPage = null else { if (tab != Tab.CABINET) cabinetPage = null; tab = Tab.ALMANAC }
     }
 
     Parchment(ruled = true) {

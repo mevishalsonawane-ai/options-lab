@@ -574,7 +574,7 @@ private fun BacktestResult(t: TestRun, s: Pine.Script) {
         if (!all && trades.size > 30) TextButton({ all = true }) { Text("Show all ${trades.size}") }
     }
     Text("Fills follow TradingView: orders fill at the next candle's open; stops and targets inside a candle, open → nearer extreme → far extreme → close. " +
-        "P&L is index points × quantity (not option premium), after the script's commission; no slippage.",
+        "P&L is as chosen above - index points × quantity, or the ATM option's own premium - after the commission, charges and slippage set there.",
         style = Type.bodySmall.copy(color = p.inkFaint, fontSize = 11.sp), modifier = Modifier.padding(top = 6.dp))
 }
 

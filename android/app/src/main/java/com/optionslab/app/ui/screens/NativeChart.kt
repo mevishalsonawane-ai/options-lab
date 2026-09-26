@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -54,7 +53,7 @@ import kotlin.math.min
  * Used when the advanced (web) chart cannot draw on this phone.
  */
 @Composable
-fun NativeChart(symbol: String, modifier: Modifier = Modifier) {
+fun NativeChart(symbol: String, modifier: Modifier = Modifier, visible: Boolean = true) {
     val p = LocalPalette.current
     var interval by remember { mutableStateOf("5m") }
     var bars by remember(symbol) { mutableStateOf<List<Upstox.Bar>>(emptyList()) }
@@ -64,8 +63,11 @@ fun NativeChart(symbol: String, modifier: Modifier = Modifier) {
     var picked by remember(symbol, interval) { mutableStateOf<Int?>(null) }
     val measurer = rememberTextMeasurer()
 
-    LaunchedEffect(symbol, interval) {
-        loading = true; error = null
+    // Polls only while shown and the app is in front: a hidden or pocketed chart fetches nothing.
+    com.optionslab.app.ui.PollWhileStarted(symbol, interval, visible) {
+        if (!visible) return@PollWhileStarted
+        if (bars.isEmpty()) loading = true
+        error = null
         while (true) {
             val r = withContext(Dispatchers.IO) { runCatching { ChartFeed.bars(symbol, interval, null, null) } }
             r.onSuccess { bars = it; error = if (it.isEmpty()) "No candles for $symbol $interval yet." else null }

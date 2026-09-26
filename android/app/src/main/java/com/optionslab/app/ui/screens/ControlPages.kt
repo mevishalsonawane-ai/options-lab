@@ -395,9 +395,11 @@ fun SecurityPage(model: AppModel) {
                     val r = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { PinLock.verify(cur.toCharArray(), s.wipeOnExhaustion) }
                     when (r) {
                         PinLock.Result.Ok -> try {
-                            PinLock.setPin(next.toCharArray())
-                            // The Zerodha API secret is sealed with the PIN: re-seal it under the new one.
-                            com.optionslab.app.data.Broker.resealSecret(cur.toCharArray(), next.toCharArray())
+                            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+                                PinLock.setPin(next.toCharArray())
+                                // The Zerodha API secret is sealed with the PIN: re-seal it under the new one.
+                                com.optionslab.app.data.Broker.resealSecret(cur.toCharArray(), next.toCharArray())
+                            }
                             changing = false; model.say("PIN changed.")
                         } catch (e: IllegalArgumentException) { err = e.message }
                         is PinLock.Result.LockedOut -> err = "Locked for ${r.secondsLeft} s."
@@ -695,8 +697,14 @@ private fun BackupCard(model: AppModel, wipeOnExhaustion: Boolean) {
                         try {
                             if (mode == "backup") {
                                 // The PIN must be the app's own: a typo would seal a file nobody can open.
-                                val r = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { PinLock.verify(typed, wipeOnExhaustion) }
-                                if (r != PinLock.Result.Ok) { com.optionslab.app.work.Alerts.error("Not the right PIN."); return@launch }
+                                // verify() wipes the array it is given, so it gets its own copy: the backup is sealed with [typed].
+                                val r = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { PinLock.verify(typed.copyOf(), wipeOnExhaustion) }
+                                when (r) {
+                                    PinLock.Result.Ok -> Unit
+                                    PinLock.Result.Wiped -> { typed.fill('\u0000'); ask = null; eraseEverything(); return@launch }
+                                    is PinLock.Result.LockedOut -> { typed.fill('\u0000'); com.optionslab.app.work.Alerts.error("Too many wrong PINs. Try again in ${r.secondsLeft} s."); return@launch }
+                                    else -> { typed.fill('\u0000'); com.optionslab.app.work.Alerts.error("Not the right PIN."); return@launch }
+                                }
                                 pending = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { com.optionslab.app.data.Backup.create(ctx, typed) }
                                 ask = null
                                 save.launch("iraalgo-backup-${com.optionslab.app.data.Market.today()}.irabk")
@@ -707,7 +715,7 @@ private fun BackupCard(model: AppModel, wipeOnExhaustion: Boolean) {
                             }
                         } catch (e: Exception) {
                             com.optionslab.app.work.Alerts.error(e.message ?: "That did not work.")
-                        } finally { busy = false }
+                        } finally { typed.fill('\u0000'); busy = false }
                     }
                 }, enabled = !busy) { Text(if (busy) "Working…" else "Continue") }
             },

@@ -914,7 +914,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                 // Sell at the best bid, buy at the best offer: a limit that fills,
                 // never a market order into an expiry-day book.
                 val legs = com.optionslab.engine.Kite.legsFor(tk, short, wing, _settings.value.orderProduct,
-                    sq?.bid ?: sq?.last ?: tk.credit, wq?.ask ?: wq?.last)
+                    sq?.bid ?: sq?.last ?: (tk.credit + (tk.wingDebit ?: 0.0)), wq?.ask ?: wq?.last ?: tk.wingDebit)
                 Load.Done(withMargin(OrderPlan("Today's ticket: ${tk.underlying} ${com.optionslab.engine.fmtG(tk.strike)} PE", tk.session, legs, q, gate(legs, true), true)))
             } catch (x: Exception) { Load.Failed(x.message ?: "could not prepare the order") }
         }

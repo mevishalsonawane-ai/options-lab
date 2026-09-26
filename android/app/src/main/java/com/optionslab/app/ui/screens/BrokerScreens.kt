@@ -395,6 +395,7 @@ private fun PlanCard(
             Text(plan.title, style = Type.title.copy(color = p.ink, fontSize = 14.sp), modifier = Modifier.weight(1f))
             Stamp("Live money", p.oxblood, animate = false)
         }
+        var priceMismatch = false
         plan.legs.forEachIndexed { i, leg ->
             Rule(Modifier.padding(vertical = 6.dp))
             val q = plan.quotes["${leg.exchange}:${leg.tradingSymbol}"]
@@ -402,10 +403,13 @@ private fun PlanCard(
             LedgerLine("Quantity", if (leg.lotSize > 1) "${leg.quantity} (${leg.lots} lot × ${leg.lotSize})" else "${leg.quantity}")
             LedgerLine("Product / type", "${leg.product} / ${leg.orderType}")
             if (q != null) LedgerLine("Bid / offer / last", "${q.bid?.let { "%.2f".format(it) } ?: "—"} / ${q.ask?.let { "%.2f".format(it) } ?: "—"} / ${"%.2f".format(q.last)}")
-            var text by remember(leg.price) { mutableStateOf(leg.price?.let { "%.2f".format(it) } ?: "") }
-            OutlinedTextField(text, { t -> text = t.filter { it.isDigit() || it == '.' }; text.toDoubleOrNull()?.let { onPrice(i, it) } },
+            // Keyed on the leg, not its price: the box itself changes the price, and re-keying would rewrite what is being typed.
+            var text by remember(i, leg.tradingSymbol) { mutableStateOf(leg.price?.let { java.lang.String.format(java.util.Locale.ENGLISH, "%.2f", it) } ?: "") }
+            OutlinedTextField(text, { t -> text = t.filter { it.isDigit() || it == '.' }; text.toDoubleOrNull()?.takeIf { it > 0 }?.let { onPrice(i, it) } },
                 label = { Text("Limit price") }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                isError = text.isNotEmpty() && text.toDoubleOrNull() != leg.price,
                 modifier = Modifier.fillMaxWidth())
+            if (text.isNotEmpty() && text.toDoubleOrNull() != leg.price) priceMismatch = true
             com.optionslab.app.ui.components.AlertOn(plan.refusals.getOrNull(i)?.takeIf { it.isNotEmpty() }?.joinToString(" "))
         }
         plan.margin?.let { m ->
@@ -428,7 +432,8 @@ private fun PlanCard(
             is Load.Done -> sending.value.forEach { f -> LedgerLine(f.orderId.takeLast(8), "${f.status} ${f.filled} @ ${"%.2f".format(f.avgPrice)}", if (f.status == "COMPLETE") p.verdigris else p.oxblood) }
             Load.Idle -> {
                 if (!allowed) Note("This is Paper mode. To send real orders, tap the PAPER TRADING badge at the top and switch to Live.")
-                HoldToSend("Hold to send to Zerodha", allowed && plan.sendable, onSend)
+                if (priceMismatch) Note("A limit price box does not hold a valid price; fix it before sending.")
+                HoldToSend("Hold to send to Zerodha", allowed && plan.sendable && !priceMismatch, onSend)
             }
         }
         Spacer(Modifier.height(8.dp))

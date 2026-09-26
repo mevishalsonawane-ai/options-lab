@@ -180,6 +180,8 @@ fun ChartScreen(model: AppModel, symbol: String, exchange: String, visible: Bool
     DisposableEffect(symbol, exchange, ask) {
         if (current != symbol to exchange) {
             returnTo = null
+            // Set here too: when the web chart has failed, the page never reports the change back.
+            current = symbol to exchange; hint = null
             holder[0]?.evaluateJavascript("window.__iraSetSymbol && window.__iraSetSymbol(${JSONObject.quote(symbol)}, ${JSONObject.quote(exchange)})", null)
         }
         onDispose { }
@@ -303,7 +305,7 @@ fun ChartScreen(model: AppModel, symbol: String, exchange: String, visible: Bool
                 Text("$it Showing the basic chart. Tap ADV / BASIC above to try the advanced one again.",
                     style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 11.sp), modifier = Modifier.fillMaxWidth().background(p.chip).padding(horizontal = 12.dp, vertical = 6.dp))
             }
-            NativeChart(current.first, Modifier.weight(1f))
+            NativeChart(current.first, Modifier.weight(1f), visible)
         }
         // Covers the blank page until the first candles are drawn, so the chart never shows as a white sheet.
         if (!basic && !ready) Box(Modifier.fillMaxSize().background(p.paper), contentAlignment = Alignment.Center) {
