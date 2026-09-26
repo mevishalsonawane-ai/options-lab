@@ -87,7 +87,7 @@ internal object Builtins {
     }
 
     /** Functions accepted but not drawn on the phone chart. */
-    val IGNORED = setOf("plotcandle", "plotbar", "bgcolor", "barcolor", "fill", "alertcondition", "alert",
+    val IGNORED = setOf("plotcandle", "plotbar", "bgcolor", "barcolor", "fill", "alert",
         "max_bars_back", "log.info", "log.warning", "log.error")
     val DRAWING_NS = setOf("label", "line", "box", "table", "linefill", "polyline", "chart.point")
     val UNSUPPORTED_NS = setOf("array", "matrix", "map", "request", "ticker", "strategy.risk", "str")

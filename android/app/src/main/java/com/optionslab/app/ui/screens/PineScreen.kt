@@ -37,6 +37,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
@@ -298,8 +300,11 @@ private fun PineBacktest(item: PineScripts.Item, s: Pine.Script, onInputs: (Map<
     var busy by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     var res by remember { mutableStateOf<TestRun?>(null) }
+    var stage by remember { mutableStateOf<String?>(null) }
+    val scroll = rememberScrollState()
+    var resultTop by remember { mutableStateOf(0) }
 
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 14.dp, vertical = 8.dp),
+    Column(Modifier.fillMaxSize().verticalScroll(scroll).padding(horizontal = 14.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp)) {
         ParamTokens("Symbol", listOf("NIFTY", "BANKNIFTY").map { it to (it == symbol) }) { symbol = listOf("NIFTY", "BANKNIFTY")[it] }
         ParamTokens("Candles", listOf("1m", "5m", "15m", "1h", "1D").map { it to (it == interval) }) { interval = listOf("1m", "5m", "15m", "1h", "1D")[it] }
@@ -322,25 +327,34 @@ private fun PineBacktest(item: PineScripts.Item, s: Pine.Script, onInputs: (Map<
         if (s.kind == Pine.Kind.STRATEGY) OutlinedTextField(qty, { v -> qty = v.filter { it.isDigit() || it == '.' }.take(8) },
             label = { Text("Quantity per order (blank: the script's own, ${s.settings.qtyValue.let { if (it == Math.floor(it)) it.toLong().toString() else it.toString() }} ${s.settings.qtyType.replace('_', ' ')})") },
             singleLine = true, modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
-        BrassButton("Run backtest", Modifier.fillMaxWidth().padding(top = 6.dp), busy = busy) {
-            busy = true; error = null
+        BrassButton(if (busy) "Running…" else "Run backtest", Modifier.fillMaxWidth().padding(top = 6.dp), busy = busy) {
+            busy = true; error = null; res = null; stage = "Loading $symbol $interval candles…"
             val ins = inputs.toMap()
-            onInputs(ins)
+            runCatching { onInputs(ins) }                          // remembering the inputs must never stop the run
             scope.launch {
                 val r = withContext(Dispatchers.IO) {
-                    runCatching {
+                    try {
                         val to = System.currentTimeMillis() / 1000
-                        val bars = ChartFeed.bars(symbol, interval, to - days * 86400L, null).map { PineScripts.toPine(it) }
-                        if (bars.isEmpty()) throw IllegalStateException("No $symbol candles for that period")
+                        val raw = ChartFeed.bars(symbol, interval, to - days * 86400L, null)
+                        if (raw.isEmpty()) throw IllegalStateException("No $symbol $interval candles came back for that period. Check the connection, or pick a shorter period.")
+                        val bars = raw.map { PineScripts.toPine(it) }
+                        withContext(Dispatchers.Main) { stage = "Running the script on ${"%,d".format(bars.size)} candles…" }
                         val values = PineScripts.inputValues(PineScripts.Item(0, "", "", inputs = ins), s)
-                        TestRun(withContext(Dispatchers.Default) { Pine.run(s, bars, values, symbol, interval, qty.toDoubleOrNull()?.takeIf { it > 0 }, budgetMs = 60_000) }, bars, symbol, interval)
-                    }
+                        Result.success(TestRun(withContext(Dispatchers.Default) {
+                            Pine.run(s, bars, values, symbol, interval, qty.toDoubleOrNull()?.takeIf { it > 0 }, budgetMs = 60_000)
+                        }, bars, symbol, interval))
+                    } catch (e: kotlinx.coroutines.CancellationException) { throw e
+                    } catch (e: Throwable) { Result.failure(e) }
                 }
-                busy = false
-                r.onSuccess { res = it }.onFailure { error = it.message ?: "The backtest failed" }
+                busy = false; stage = null
+                r.onSuccess { res = it }.onFailure { error = "Backtest failed: " + (it.message ?: it.javaClass.simpleName) }
+                // The result sits below the inputs: bring it into view.
+                scroll.animateScrollTo(resultTop)
             }
         }
-        error?.let { Text(it, style = Type.bodySmall.copy(color = p.oxblood)) }
+        stage?.let { Text(it, style = Type.bodySmall.copy(color = p.inkSoft)) }
+        Box(Modifier.fillMaxWidth().height(1.dp).onGloballyPositioned { resultTop = it.positionInParent().y.toInt() })
+        error?.let { LedgerCard(accent = p.oxblood) { Text(it, style = Type.bodySmall.copy(color = p.oxblood)) } }
         res?.let { BacktestResult(it, s) }
         Spacer(Modifier.height(24.dp))
     }
@@ -367,6 +381,13 @@ private fun BacktestResult(t: TestRun, s: Pine.Script) {
                 val hits = r.signals[i].indices.filter { r.signals[i][it] }
                 LedgerLine(name, "${hits.size} times" + (hits.lastOrNull()?.let { " · last ${fmtTime(t.bars[it].time, daily)}" } ?: ""))
             }
+        }
+        return
+    }
+    if (rep.trades.isEmpty()) {
+        LedgerCard(title = "No trades") {
+            Text("The script ran on every candle but never entered: its conditions were not met in this period. Try a longer period, other candles or other inputs.",
+                style = Type.bodySmall.copy(color = p.inkSoft))
         }
         return
     }
