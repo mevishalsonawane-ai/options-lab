@@ -129,19 +129,7 @@ private fun PaperOrderForm(model: AppModel) {
             val types = listOf("MARKET", "LIMIT", "SL", "SL-M")
             ParamTokens("Type", types.map { it to (it == type) }) { type = types[it] }
             ParamTokens("Product", listOf("NRML" to (product == "NRML"), "MIS" to (product == "MIS"))) { product = if (it == 0) "NRML" else "MIS" }
-            if (listed.isEmpty()) Note("Loading the listed strikes…") else {
-                val sp = spot
-                val centre = sp?.let { x -> listed.indices.minByOrNull { kotlin.math.abs(listed[it] - x) } } ?: (listed.size / 2)
-                val near = listed.subList((centre - 8).coerceAtLeast(0), (centre + 9).coerceAtMost(listed.size))
-                Text("STRIKE" + (sp?.let { " · $underlying at ${String.format(java.util.Locale.ENGLISH, "%,.0f", it)}" } ?: ""),
-                    style = Type.label.copy(color = p.inkSoft), modifier = Modifier.padding(top = 8.dp))
-                Row(Modifier.horizontalScroll(androidx.compose.foundation.rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    near.forEach { k ->
-                        val label = com.optionslab.engine.fmtG(k)
-                        com.optionslab.app.ui.components.Token(label + if (k == listed.getOrNull(centre)) " ATM" else "", strike == label) { strike = label }
-                    }
-                }
-            }
+            com.optionslab.app.ui.components.StrikeDropdown(listed, spot, strike, underlying) { strike = it }
             if (type == "LIMIT" || type == "SL") OutlinedTextField(price, { price = it.filter { c -> c.isDigit() || c == '.' } }, label = { Text("Price") },
                 singleLine = true, modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
             if (type == "SL" || type == "SL-M") OutlinedTextField(trigger, { trigger = it.filter { c -> c.isDigit() || c == '.' } }, label = { Text("Trigger") },

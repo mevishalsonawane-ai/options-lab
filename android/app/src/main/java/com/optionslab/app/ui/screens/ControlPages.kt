@@ -296,36 +296,35 @@ fun SecurityPage(model: AppModel) {
         }
         item {
             LedgerCard(title = "Unlocking") {
-                ToggleRow("Fingerprint / face", when (kind) {
-                    BiometricGate.Kind.STRONG -> "Strong biometrics: unlock a Keystore key that dies if a new finger or face is enrolled"
-                    BiometricGate.Kind.WEAK -> "This phone offers face unlock only at the weaker class"
-                    BiometricGate.Kind.NONE -> "No biometrics enrolled on this phone"
+                ToggleRow("Fingerprint", when (kind) {
+                    BiometricGate.Kind.STRONG -> "Unlocks the app, confirms orders and opens the Zerodha secret; tied to a hardware key that dies if a finger is added or removed"
+                    BiometricGate.Kind.WEAK -> "Face unlock is not used; add a fingerprint"
+                    BiometricGate.Kind.NONE -> "No fingerprint added on this phone"
                 }, s.biometric && kind != BiometricGate.Kind.NONE) { on ->
                     if (on) runCatching { if (kind == BiometricGate.Kind.STRONG) BiometricGate.enrol() }
                         .onFailure { model.say("Could not enable biometrics: ${it.message}"); return@ToggleRow }
                     else BiometricGate.forget()
-                    model.update { it.copy(biometric = on && kind != BiometricGate.Kind.NONE, allowWeakFace = on) }
+                    model.update { it.copy(biometric = on && kind != BiometricGate.Kind.NONE, allowWeakFace = false) }
                 }
                 // Say plainly why it would not be offered, and let the owner try it here.
                 val danger = findings.filter { it.severity == com.optionslab.app.security.Integrity.Severity.DANGER }
                 when {
                     s.biometric && danger.isNotEmpty() -> Text("Paused: this phone failed the security check (" + danger.joinToString { it.name + ": " + it.detail } +
                         "). The PIN is asked instead until the check passes.", style = Type.bodySmall.copy(color = p.oxblood), modifier = Modifier.padding(vertical = 4.dp))
-                    kind == BiometricGate.Kind.NONE -> Text("Add a fingerprint or face in the phone's Settings → Security, then switch this on.",
+                    kind == BiometricGate.Kind.NONE -> Text("Add a fingerprint in the phone's Settings → Security, then switch this on.",
                         style = Type.bodySmall.copy(color = p.inkSoft), modifier = Modifier.padding(vertical = 4.dp))
                 }
-                if (s.biometric && kind != BiometricGate.Kind.NONE) BrassButton("Test fingerprint / face", Modifier.fillMaxWidth().padding(vertical = 6.dp), tone = p.inkSoft) {
+                if (s.biometric && kind != BiometricGate.Kind.NONE) BrassButton("Test fingerprint", Modifier.fillMaxWidth().padding(vertical = 6.dp), tone = p.inkSoft) {
                     val act = context as? androidx.fragment.app.FragmentActivity ?: return@BrassButton
-                    BiometricGate.authenticate(act, s.allowWeakFace) { out ->
+                    BiometricGate.authenticate(act, false) { out ->
                         when (out) {
-                            BiometricGate.Outcome.Success -> com.optionslab.app.work.Alerts.success("Fingerprint / face works" + if (danger.isNotEmpty()) ", but it stays paused until the security check passes." else ".")
+                            BiometricGate.Outcome.Success -> com.optionslab.app.work.Alerts.success("Fingerprint works" + if (danger.isNotEmpty()) ", but it stays paused until the security check passes." else ".")
                             is BiometricGate.Outcome.Failed -> com.optionslab.app.work.Alerts.error("Did not work: ${out.why}")
                             is BiometricGate.Outcome.Invalidated -> { com.optionslab.app.work.Alerts.error(out.why); model.update { it.copy(biometric = false) } }
-                            BiometricGate.Outcome.UsePin -> com.optionslab.app.work.Alerts.error("Cancelled, or this phone offers nothing the setting accepts (turn on Accept face unlock for face).")
+                            BiometricGate.Outcome.UsePin -> com.optionslab.app.work.Alerts.error("Cancelled, or no fingerprint is set up on this phone.")
                         }
                     }
                 }
-                if (kind == BiometricGate.Kind.STRONG) ToggleRow("Accept face unlock", "Off: fingerprint only, tied to a hardware key. On: any fingerprint or face the phone accepts", s.allowWeakFace) { on -> model.update { it.copy(allowWeakFace = on) } }
                 var capture by remember { mutableStateOf(com.optionslab.app.security.Capture.allowed) }
                 ToggleRow("Allow screenshots and screen recording",
                     if (capture) "On while testing: anyone with the phone can capture any screen, keys and P&L included. Turn off before going live."
@@ -496,7 +495,7 @@ private fun plainPermission(p: String): String = when (p.substringAfterLast('.')
     "ACCESS_NETWORK_STATE" -> "Tell whether the phone is online"
     "ACCESS_LOCAL_NETWORK" -> "Local network (added by Android itself to every internet app; IraAlgo never uses it)"
     "POST_NOTIFICATIONS" -> "Show its own notifications"
-    "USE_BIOMETRIC", "USE_FINGERPRINT" -> "Ask Android to check your fingerprint or face (it never sees them)"
+    "USE_BIOMETRIC", "USE_FINGERPRINT" -> "Ask Android to check your fingerprint (the app never sees it)"
     "FOREGROUND_SERVICE", "FOREGROUND_SERVICE_DATA_SYNC" -> "Keep the market watch running during market hours"
     "VIBRATE" -> "Vibrate for an alert"
     "SCHEDULE_EXACT_ALARM" -> "Wake at the strategy's set times"

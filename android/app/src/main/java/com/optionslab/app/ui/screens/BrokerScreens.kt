@@ -166,8 +166,8 @@ fun KiteLoginPage(model: AppModel) {
 }
 
 /**
- * Before each Zerodha login: the API secret is sealed with the app PIN, so the
- * PIN (not a fingerprint) opens it for this one login.
+ * Before each Zerodha login: the API secret is opened by the fingerprint (its own
+ * hardware-bound copy) when that is set up, otherwise by the app PIN, for this one login.
  */
 @Composable
 fun LoginPinDialog(model: AppModel) {
@@ -175,6 +175,23 @@ fun LoginPinDialog(model: AppModel) {
     var err by remember { mutableStateOf<String?>(null) }
     var checking by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+    val s by model.settings.collectAsState()
+    val findings by model.integrity.collectAsState()
+    val activity = LocalContext.current as? FragmentActivity
+    val blob = remember { Broker.bioSealedSecret }
+    val bio = s.biometric && activity != null && blob != null && !(findings.isNotEmpty() && com.optionslab.app.security.Integrity.compromised(findings))
+    var usePin by remember { mutableStateOf(!bio) }
+    LaunchedEffect(usePin) {
+        if (!usePin && activity != null && blob != null) BiometricGate.openWithFingerprint(activity, blob) { secret, why ->
+            when {
+                secret != null -> model.loginWithSecret(secret)
+                why == "invalid" -> { Broker.dropBioSealed(); err = "A fingerprint was added or removed on this phone, so the fingerprint copy of the secret was cleared. Use your PIN (or set up the keys again)."; usePin = true }
+                why != null -> { err = "Fingerprint: $why"; usePin = true }
+                else -> usePin = true
+            }
+        }
+    }
+    if (!usePin) return
     AlertDialog(
         onDismissRequest = { if (!checking) model.askLoginPin.value = false }, properties = secureDialog,
         title = { Text("Log in to Zerodha", style = Type.title) },
@@ -203,7 +220,7 @@ fun LoginPinDialog(model: AppModel) {
 // ---- confirming it is you ----------------------------------------------------------------
 
 /**
- * A fresh proof of identity before a real order: fingerprint/face when it is
+ * A fresh proof of identity before a real order: the fingerprint when it is
  * enabled and strong, the PIN otherwise. Being unlocked is not enough - the
  * phone may have been handed over unlocked.
  */
@@ -220,7 +237,7 @@ fun Reauth(model: AppModel, onOk: () -> Unit, onCancel: () -> Unit) {
         if (!usePin && activity != null) BiometricGate.authenticate(activity, allowWeakFace = s.allowWeakFace) { out ->
             when (out) {
                 BiometricGate.Outcome.Success -> onOk()
-                is BiometricGate.Outcome.Failed -> { com.optionslab.app.work.Alerts.error("Fingerprint / face: ${out.why}. Use your PIN."); usePin = true }
+                is BiometricGate.Outcome.Failed -> { com.optionslab.app.work.Alerts.error("Fingerprint: ${out.why}. Use your PIN."); usePin = true }
                 is BiometricGate.Outcome.Invalidated -> { com.optionslab.app.work.Alerts.error(out.why); model.update { it.copy(biometric = false) }; usePin = true }
                 BiometricGate.Outcome.UsePin -> usePin = true
             }
@@ -544,6 +561,12 @@ private fun CredentialsForm(model: AppModel, onDone: () -> Unit) {
     var err by remember { mutableStateOf<String?>(null) }
     var saving by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+    // With the fingerprint on, it seals the secret too (the PIN then becomes optional).
+    val st by model.settings.collectAsState()
+    val findings by model.integrity.collectAsState()
+    val activity = LocalContext.current as? FragmentActivity
+    val fingerprint = st.biometric && activity != null && BiometricGate.available(activity) == BiometricGate.Kind.STRONG &&
+        !(findings.isNotEmpty() && com.optionslab.app.security.Integrity.compromised(findings))
     fun draft(k: String, v: String) = com.optionslab.app.security.SecurePrefs.put(k, v.ifEmpty { null })
     fun pasteInto(set: (String) -> Unit) = clipboard.getText()?.text?.trim()?.takeIf { it.isNotEmpty() }?.let(set)
     Column(Modifier.padding(top = 10.dp)) {
@@ -574,23 +597,29 @@ private fun CredentialsForm(model: AppModel, onDone: () -> Unit) {
                 clipboard.setText(androidx.compose.ui.text.AnnotatedString(""))
             }) { Text("Paste") } })
         if (key.isNotEmpty() || secret.isNotEmpty()) Note("Kept on this phone (encrypted) until you save, so you can switch to the Kite site and back.")
-        OutlinedTextField(pin, { pin = it.filter(Char::isDigit).take(12) }, label = { Text("Your app PIN (seals the secret)") }, singleLine = true,
+        OutlinedTextField(pin, { pin = it.filter(Char::isDigit).take(12) }, label = { Text(if (fingerprint) "App PIN (optional: a backup if the fingerprint changes)" else "Your app PIN (seals the secret)") }, singleLine = true,
             modifier = Modifier.fillMaxWidth(), visualTransformation = PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword))
         com.optionslab.app.ui.components.AlertOn(err, throttle = false)
         Spacer(Modifier.height(8.dp))
-        BrassButton("Save to the vault", Modifier.fillMaxWidth(), busy = saving, enabled = !saving) {
+        if (fingerprint) Note("Your fingerprint seals the secret and opens it at each Zerodha login. Adding the PIN too keeps a way in if a fingerprint is ever added or removed on this phone.")
+        BrassButton(if (fingerprint) "Save with fingerprint" else "Save to the vault", Modifier.fillMaxWidth(), busy = saving, enabled = !saving) {
             // The PIN check and the sealing are slow on purpose (key stretching): off the screen's thread.
             val k = key; val s = secret; val pn = pin
             saving = true; err = null
-            scope.launch {
-                val e = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { model.saveBrokerCredentials(k, s, pn) }
+            fun finish(bioBlob: String?) = scope.launch {
+                val e = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { model.saveBrokerCredentials(k, s, pn, bioBlob) }
                 saving = false; err = e; pin = ""
                 if (e == null) {
                     draft(DRAFT_KEY, ""); draft(DRAFT_SECRET, "")
-                    key = ""; secret = ""; onDone(); model.say("Saved, the secret sealed with your PIN. Now log in to Zerodha.")
+                    key = ""; secret = ""; onDone()
+                    model.say("Saved, the secret sealed with your " + when { bioBlob != null && pn.isNotBlank() -> "fingerprint and PIN"; bioBlob != null -> "fingerprint"; else -> "PIN" } + ". Now log in to Zerodha.")
                 }
             }
+            if (fingerprint && activity != null && s.isNotBlank()) BiometricGate.sealWithFingerprint(activity, s.trim()) { blob, why ->
+                if (blob == null && pn.isBlank()) { saving = false; err = why?.let { "Fingerprint: $it" } ?: "Cancelled. Use the fingerprint, or enter your PIN." }
+                else finish(blob)
+            } else finish(null)
         }
     }
 }
@@ -627,7 +656,9 @@ private fun ManualOrder(model: AppModel) {
             Broker.instruments().filter { it.name == underlying && it.expiry == e && it.right == right }.map { it.strike }.distinct().sorted()
         } }.getOrDefault(emptyList())
         val s0 = spot
-        strikes = if (s0 == null) emptyList() else all.sortedBy { kotlin.math.abs(it - s0) }.take(11).sorted()
+        // Every listed strike (the dropdown opens on the one nearest the index).
+        strikes = all
+        if (strike.toDoubleOrNull() !in all) strike = s0?.let { x -> all.minByOrNull { kotlin.math.abs(it - x) } }?.let { com.optionslab.engine.fmtG(it) } ?: ""
     }
     LedgerCard(title = "Place an order") {
         ParamTokens("Underlying", listOf("NIFTY", "BANKNIFTY").map { it to (it == underlying) }) { underlying = listOf("NIFTY", "BANKNIFTY")[it] }
@@ -636,16 +667,11 @@ private fun ManualOrder(model: AppModel) {
         ParamTokens("Side", listOf("SELL" to (side == Kite.Side.SELL), "BUY" to (side == Kite.Side.BUY))) { side = if (it == 0) Kite.Side.SELL else Kite.Side.BUY }
         ParamTokens("Lots", (1..(s.guardMaxLots.takeIf { it > 0 } ?: 5)).map { "$it" to (it == lots) }) { lots = it + 1 }
         loadErr?.let { Text(it, style = Type.bodySmall.copy(color = p.oxblood)) }
-        if (strikes.isNotEmpty()) {
-            spot?.let { Note("${underlying} ${"%,.1f".format(it)}: nearest listed strikes") }
-            ParamTokens("Strike", strikes.map { com.optionslab.engine.fmtG(it) to (strike == com.optionslab.engine.fmtG(it)) }) { i -> strike = com.optionslab.engine.fmtG(strikes[i]) }
-        }
-        OutlinedTextField(strike, { strike = it.filter(Char::isDigit) }, label = { Text("Strike (or pick above)") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
+        com.optionslab.app.ui.components.StrikeDropdown(strikes, spot, strike, underlying) { strike = it }
         OutlinedTextField(price, { price = it.filter { c -> c.isDigit() || c == '.' } }, label = { Text("Limit price (blank = best bid/offer)") }, singleLine = true,
             modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
         Spacer(Modifier.height(8.dp))
-        BrassButton("Review the order", Modifier.fillMaxWidth(), enabled = expiry != null && strike.toDoubleOrNull() != null) {
+        BrassButton("Review the order", Modifier.fillMaxWidth(), enabled = expiry != null && strike.toDoubleOrNull()?.let { it in strikes } == true) {
             model.planManual(underlying, expiry!!, strike.toDouble(), right, side, lots, s.orderProduct, price.toDoubleOrNull())
         }
         Note("Nothing is sent from here: the order opens for review over this page.")

@@ -82,7 +82,7 @@ fun LockScreen(
     var broken by remember { mutableStateOf(false) }
     val shake = remember { Animatable(0f) }
 
-    // Ask for fingerprint / face as soon as it is allowed (the device check may finish a moment after this screen appears).
+    // Ask for the fingerprint as soon as it is allowed (the device check may finish a moment after this screen appears).
     var asked by remember { mutableStateOf(false) }
     LaunchedEffect(biometricLabel) { if (!setup && biometricLabel != null && !asked) { asked = true; delay(300); onBiometric() } }
 

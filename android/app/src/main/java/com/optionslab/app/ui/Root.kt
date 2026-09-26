@@ -197,19 +197,17 @@ private fun Gate(activity: MainActivity, model: AppModel, settings: AppSettings,
     val setup = !PinLock.isSet
     var notice by remember { mutableStateOf<String?>(if (compromised) "This phone failed the security check (More → Security shows why); unlock with your PIN." else null) }
     val kind = remember { BiometricGate.available(activity) }
-    // Just created a PIN: ask once whether to unlock with fingerprint or face.
+    // Just created a PIN: ask once whether to unlock with the fingerprint.
     var offerBio by remember { mutableStateOf(false) }
     var offerError by remember { mutableStateOf<String?>(null) }
     // A compromised device can fake a biometric callback; it cannot fake PBKDF2.
     val bioAllowed = settings.biometric && checked && !compromised && kind != BiometricGate.Kind.NONE &&
         (kind == BiometricGate.Kind.STRONG || settings.allowWeakFace)
-    val label = if (!bioAllowed) null else "Use fingerprint or face"
+    val label = if (!bioAllowed) null else "Use fingerprint"
     // Switched on but not offered: say why rather than silently asking for the PIN.
     LaunchedEffect(settings.biometric, checked, kind) {
         if (notice == null && settings.biometric && checked && !compromised && kind == BiometricGate.Kind.NONE)
-            notice = "No fingerprint or face is set up on this phone any more; unlock with your PIN."
-        else if (notice == null && settings.biometric && checked && !compromised && kind == BiometricGate.Kind.WEAK && !settings.allowWeakFace)
-            notice = "This phone's face unlock is the weaker class: turn on Accept face unlock in More → Security to use it."
+            notice = "No fingerprint is set up on this phone any more; unlock with your PIN."
     }
 
     if (offerBio) {
@@ -219,13 +217,13 @@ private fun Gate(activity: MainActivity, model: AppModel, settings: AppSettings,
             onUse = {
                 // Prove it works on this phone before switching it on.
                 runCatching { if (kind == BiometricGate.Kind.STRONG) BiometricGate.enrol() }
-                BiometricGate.authenticate(activity, allowWeakFace = true) { out ->
+                BiometricGate.authenticate(activity, allowWeakFace = false) { out ->
                     when (out) {
                         BiometricGate.Outcome.Success -> {
-                            model.update { it.copy(biometric = true, allowWeakFace = true) }
+                            model.update { it.copy(biometric = true, allowWeakFace = false) }
                             offerBio = false; SessionLock.unlock()
                         }
-                        is BiometricGate.Outcome.Failed -> offerError = "Fingerprint / face did not work: ${out.why}"
+                        is BiometricGate.Outcome.Failed -> offerError = "Fingerprint did not work: ${out.why}"
                         else -> Unit
                     }
                 }
@@ -276,7 +274,7 @@ private fun Gate(activity: MainActivity, model: AppModel, settings: AppSettings,
     )
 }
 
-/** After the PIN is set: unlock with fingerprint or face as well? */
+/** After the PIN is set: unlock with the fingerprint as well? */
 @Composable
 private fun BiometricOffer(activity: MainActivity, error: String?, onUse: () -> Unit, onSkip: () -> Unit) {
     val p = LocalPalette.current
@@ -289,14 +287,14 @@ private fun BiometricOffer(activity: MainActivity, error: String?, onUse: () -> 
             Icon(Icons.Filled.Face, contentDescription = null, tint = p.ink, modifier = Modifier.size(36.dp))
         }
         Spacer(Modifier.height(20.dp))
-        Text("Unlock with fingerprint or face?", style = Type.masthead.copy(color = p.ink, fontSize = 22.sp), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+        Text("Unlock with your fingerprint?", style = Type.masthead.copy(color = p.ink, fontSize = 22.sp), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
         Spacer(Modifier.height(8.dp))
-        Text(if (enrolled) "Use the fingerprint or face already set up on this phone instead of typing your PIN. Your PIN still works, and you can change this in More → Security."
-            else "This phone has no fingerprint or face added yet. Add one in the phone's Settings, then come back and tap Use.",
+        Text(if (enrolled) "Use the fingerprint already set up on this phone instead of typing your PIN. Your PIN still works, and you can change this in More → Security."
+            else "This phone has no fingerprint added yet. Add one in the phone's Settings, then come back and tap Use.",
             style = Type.bodySmall.copy(color = p.inkSoft), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
         if (error != null) Text(error, style = Type.bodySmall.copy(color = p.oxblood), textAlign = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.padding(top = 10.dp))
         Spacer(Modifier.height(24.dp))
-        if (enrolled) com.optionslab.app.ui.components.BrassButton("Use fingerprint or face", Modifier.fillMaxWidth(), onClick = onUse)
+        if (enrolled) com.optionslab.app.ui.components.BrassButton("Use fingerprint", Modifier.fillMaxWidth(), onClick = onUse)
         else com.optionslab.app.ui.components.BrassButton("Open phone settings", Modifier.fillMaxWidth()) {
             runCatching {
                 activity.startActivity(if (Build.VERSION.SDK_INT >= 30) android.content.Intent(android.provider.Settings.ACTION_BIOMETRIC_ENROLL)

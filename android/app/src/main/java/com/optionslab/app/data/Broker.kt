@@ -42,6 +42,7 @@ object Broker {
     private const val K_KEY = "kite.apiKey"
     private const val K_SECRET = "kite.apiSecret"            // legacy: plain inside the vault; migrated on next login
     private const val K_SEALED = "kite.apiSecretSealed"      // sealed with the owner's PIN (SecretBox)
+    private const val K_BIO_SEALED = "kite.apiSecretBio"      // a second copy only the fingerprint opens (BiometricGate)
     private const val K_REDIRECT = "kite.redirect"
     private const val K_TOKEN = "kite.accessToken"
     private const val K_LOGIN_AT = "kite.loginAt"
@@ -58,7 +59,7 @@ object Broker {
     // ---- credentials ------------------------------------------------------------
 
     val configured: Boolean get() = SecurePrefs.getString(K_KEY) != null &&
-        (SecurePrefs.getString(K_SEALED) != null || SecurePrefs.getString(K_SECRET) != null)
+        (SecurePrefs.getString(K_SEALED) != null || SecurePrefs.getString(K_SECRET) != null || SecurePrefs.getString(K_BIO_SEALED) != null)
     val apiKey: String? get() = SecurePrefs.getString(K_KEY)
     /**
      * The redirect URL to register in the Kite Connect app. The login page
@@ -76,17 +77,27 @@ object Broker {
     /** Only the last four characters of the key, for recognising it. */
     fun maskedKey(): String = apiKey?.let { "••••" + it.takeLast(4) } ?: "not set"
 
-    /** [pin] (already verified by the caller) seals the secret; it is never stored readable. */
-    fun saveCredentials(apiKey: String, apiSecret: String, pin: CharArray) {
+    /**
+     * Save the key with the secret sealed by [pin] (already verified by the caller), and/or by the
+     * fingerprint ([bioSealed], from BiometricGate). At least one; the secret is never stored readable.
+     */
+    fun saveCredentials(apiKey: String, apiSecret: String, pin: CharArray?, bioSealed: String? = null) {
         require(apiKey.isNotBlank() && apiKey.all { it.isLetterOrDigit() }) { "The API key should be letters and digits only" }
         require(apiSecret.isNotBlank() && apiSecret.all { it.isLetterOrDigit() }) { "The API secret should be letters and digits only" }
-        SecurePrefs.putAll(mapOf(K_KEY to apiKey.trim(), K_SEALED to com.optionslab.app.security.SecretBox.seal(apiSecret.trim(), pin),
-            K_SECRET to null, K_REDIRECT to null, K_TOKEN to null, K_LOGIN_AT to null))
+        require(pin != null || bioSealed != null) { "Enter your PIN, or use your fingerprint, to seal the secret" }
+        SecurePrefs.putAll(mapOf(K_KEY to apiKey.trim(), K_SEALED to pin?.let { com.optionslab.app.security.SecretBox.seal(apiSecret.trim(), it) },
+            K_BIO_SEALED to bioSealed, K_SECRET to null, K_REDIRECT to null, K_TOKEN to null, K_LOGIN_AT to null))
     }
+
+    /** The fingerprint-sealed copy of the secret, if there is one. */
+    val bioSealedSecret: String? get() = SecurePrefs.getString(K_BIO_SEALED)
+    val pinSealed: Boolean get() = SecurePrefs.getString(K_SEALED) != null || SecurePrefs.getString(K_SECRET) != null
+    fun dropBioSealed() { SecurePrefs.put(K_BIO_SEALED, null) }
 
     fun forget() {
         KiteStream.stop()
-        SecurePrefs.putAll(mapOf(K_KEY to null, K_SECRET to null, K_SEALED to null, K_REDIRECT to null, K_TOKEN to null,
+        com.optionslab.app.security.BiometricGate.forgetSecretKey()
+        SecurePrefs.putAll(mapOf(K_KEY to null, K_SECRET to null, K_SEALED to null, K_BIO_SEALED to null, K_REDIRECT to null, K_TOKEN to null,
             K_LOGIN_AT to null, K_USER to null, K_UID to null))
         File(app.filesDir, "kite_instruments.json").delete()
         PnlTracker.clear()

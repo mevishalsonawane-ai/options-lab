@@ -595,10 +595,15 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     fun refreshBroker() { viewModelScope.launch(Dispatchers.IO) { broker.value = brokerState() } }
 
     /** Returns an error to show, or null when saved. */
-    fun saveBrokerCredentials(key: String, secret: String, pin: String): String? = try {
-        when (val r = com.optionslab.app.security.PinLock.verify(pin.toCharArray(), _settings.value.wipeOnExhaustion)) {
+    fun saveBrokerCredentials(key: String, secret: String, pin: String, bioSealed: String? = null): String? = try {
+        // Sealed by the fingerprint alone: no PIN to check.
+        if (pin.isBlank() && bioSealed != null) {
+            com.optionslab.app.data.Broker.saveCredentials(key, secret, null, bioSealed)
+            broker.value = brokerState()
+            null
+        } else when (val r = com.optionslab.app.security.PinLock.verify(pin.toCharArray(), _settings.value.wipeOnExhaustion)) {
             com.optionslab.app.security.PinLock.Result.Ok -> {
-                com.optionslab.app.data.Broker.saveCredentials(key, secret, pin.toCharArray())
+                com.optionslab.app.data.Broker.saveCredentials(key, secret, pin.toCharArray(), bioSealed)
                 broker.value = brokerState()
                 null
             }
@@ -616,7 +621,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     fun unlockForLogin(pin: String): String? {
         return when (val r = com.optionslab.app.security.PinLock.verify(pin.toCharArray(), _settings.value.wipeOnExhaustion)) {
             com.optionslab.app.security.PinLock.Result.Ok -> {
-                val secret = com.optionslab.app.data.Broker.unsealSecret(pin.toCharArray()) ?: return "The API secret could not be opened; set up the keys again."
+                val secret = com.optionslab.app.data.Broker.unsealSecret(pin.toCharArray()) ?: return if (!com.optionslab.app.data.Broker.pinSealed) "Your API secret was sealed with your fingerprint only: use the fingerprint, or set up the keys again." else "The API secret could not be opened; set up the keys again."
                 loginSecret = secret
                 askLoginPin.value = false
                 showKiteLogin.value = true
@@ -626,6 +631,13 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             com.optionslab.app.security.PinLock.Result.Wiped -> { askLoginPin.value = false; eraseEverything(); null }
             else -> "Not the right PIN."
         }
+    }
+
+    /** The fingerprint opened the API secret: straight to the Zerodha login page. */
+    fun loginWithSecret(secret: String) {
+        loginSecret = secret
+        askLoginPin.value = false
+        showKiteLogin.value = true
     }
 
     fun closeKiteLogin() { showKiteLogin.value = false; loginSecret = null }
