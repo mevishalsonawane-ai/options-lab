@@ -149,6 +149,8 @@ dependencies {
     // A fake Zerodha (Kite Connect) server on localhost for the live-order paths; same version as okhttp.
     testImplementation("com.squareup.okhttp3:mockwebserver:4.12.0")
     testImplementation("com.squareup.okhttp3:okhttp-tls:4.12.0")
+    // WorkManager in tests (synchronous executor, TestListenableWorkerBuilder); same version as work-runtime.
+    testImplementation("androidx.work:work-testing:2.10.0")
 }
 
 

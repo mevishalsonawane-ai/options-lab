@@ -39,8 +39,24 @@ object Net {
 
     class Offline : IOException("No connection to the market data service")
 
+    /**
+     * TEST SEAM (JVM tests only): send every request to a local fake Upstox server (its base URL
+     * replaces the scheme and host) trusted through [TestEndpoint.ssl]. Its setter throws unless
+     * BuildConfig.DEBUG and no app code sets it; when null (always, in the app) requests go to
+     * Upstox exactly as before. Timeouts, retries and error mapping run unchanged against the fake.
+     */
+    internal class TestEndpoint(val base: String, val ssl: javax.net.ssl.SSLSocketFactory)
+    @Volatile internal var testEndpoint: TestEndpoint? = null
+        set(v) {
+            check(com.optionslab.app.BuildConfig.DEBUG) { "the test endpoint exists only in debug builds" }
+            field = v
+        }
+
     private fun open(url: String, timeoutMs: Int, connectMs: Int = timeoutMs): HttpsURLConnection {
-        val c = URL(url).openConnection() as? HttpsURLConnection ?: throw IOException("refusing a non-HTTPS request")
+        val test = testEndpoint
+        val target = if (test != null) test.base + url.replaceFirst(Regex("^https://[^/]+"), "") else url
+        val c = URL(target).openConnection() as? HttpsURLConnection ?: throw IOException("refusing a non-HTTPS request")
+        if (test != null) c.sslSocketFactory = test.ssl
         c.connectTimeout = connectMs
         c.readTimeout = timeoutMs
         c.instanceFollowRedirects = false

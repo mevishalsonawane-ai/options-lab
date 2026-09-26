@@ -26,7 +26,18 @@ object Market {
 
     fun init(context: Context) { app = context.applicationContext }
 
-    fun now(): ZonedDateTime = ZonedDateTime.now(IST)
+    /**
+     * TEST SEAM (JVM tests only): a fixed or stepped wall clock for the market calendar. Its setter
+     * throws unless BuildConfig.DEBUG and no app code sets it; when null (always, in the app) [now]
+     * reads the system clock exactly as before.
+     */
+    @Volatile internal var testClock: java.time.Clock? = null
+        set(v) {
+            check(com.optionslab.app.BuildConfig.DEBUG) { "the test clock exists only in debug builds" }
+            field = v
+        }
+
+    fun now(): ZonedDateTime = testClock?.let { ZonedDateTime.now(it).withZoneSameInstant(IST) } ?: ZonedDateTime.now(IST)
     fun today(): LocalDate = now().toLocalDate()
     fun minuteNow(): Int = now().let { it.hour * 60 + it.minute }
 
