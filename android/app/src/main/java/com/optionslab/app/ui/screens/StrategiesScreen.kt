@@ -69,13 +69,9 @@ private fun p2(x: Double?) = x?.let { String.format(Locale.ENGLISH, "%,.2f", it)
  */
 @Composable
 fun StrategiesScreen(model: AppModel) {
-    val p = LocalPalette.current
     val s by model.settings.collectAsState()
     val list by model.strategies.collectAsState()
     val log by model.strategyLog.collectAsState()
-    var editing by remember { mutableStateOf<StrategyDef?>(null) }
-    var confirmLive by remember { mutableStateOf<Long?>(null) }
-    var reauthFor by remember { mutableStateOf<Long?>(null) }
 
     com.optionslab.app.ui.PollWhileStarted {
         model.refreshStrategies()
@@ -85,6 +81,45 @@ fun StrategiesScreen(model: AppModel) {
         }
     }
 
+    StrategiesContent(
+        liveAllowed = s.live && s.allowRealOrders, list = list, log = log,
+        actions = object : StrategyActions {
+            override fun save(def: StrategyDef, onResult: (String?) -> Unit) = model.saveStrategy(def, onResult)
+            override fun start(id: Long, live: Boolean) { model.startStrategy(id, live) }
+            override fun stop(id: Long) { model.stopStrategy(id) }
+            override fun closeLeg(id: Long, legId: Int) { model.closeStrategyLeg(id, legId) }
+            override fun setLive(id: Long, on: Boolean) { model.setStrategyLive(id, on) }
+            override fun delete(id: Long) { model.deleteStrategy(id) }
+        },
+        presets = { PresetsCard(model) },
+        reauth = { onOk, onCancel -> Reauth(model, onOk = onOk, onCancel = onCancel) },
+    )
+}
+
+/** What the Strategies page asks the model to do (an interface so tests can record it without an [AppModel]). */
+internal interface StrategyActions {
+    fun save(def: StrategyDef, onResult: (String?) -> Unit)
+    fun start(id: Long, live: Boolean)
+    fun stop(id: Long)
+    fun closeLeg(id: Long, legId: Int)
+    fun setLive(id: Long, on: Boolean)
+    fun delete(id: Long)
+}
+
+/**
+ * The Strategies page from plain state and callbacks: [presets] is the Presets card, [reauth] the PIN or
+ * fingerprint prompt (the app passes [PresetsCard] and [Reauth]; tests pass stand-ins).
+ */
+@Composable
+internal fun StrategiesContent(
+    liveAllowed: Boolean, list: List<Strategies.Entry>, log: List<Strategies.LogLine>, actions: StrategyActions,
+    presets: @Composable () -> Unit, reauth: @Composable (onOk: () -> Unit, onCancel: () -> Unit) -> Unit,
+) {
+    val p = LocalPalette.current
+    var editing by remember { mutableStateOf<StrategyDef?>(null) }
+    var confirmLive by remember { mutableStateOf<Long?>(null) }
+    var reauthFor by remember { mutableStateOf<Long?>(null) }
+
     Page {
         item { PageTitle("Strategies", "Baskets with stops, targets and trails, managed by the phone") }
         item {
@@ -93,9 +128,9 @@ fun StrategiesScreen(model: AppModel) {
                 BrassButton("New strategy", Modifier.fillMaxWidth().padding(top = 8.dp)) { editing = blankStrategy() }
             }
         }
-        item { PresetsCard(model) }
+        item { presets() }
         if (list.isEmpty()) item { LedgerCard { Note("No strategies yet.") } }
-        list.forEach { e -> item(key = e.def.id) { StrategyCard(model, e, s.live && s.allowRealOrders, onEdit = { editing = e.def }, onLive = { confirmLive = e.def.id }) } }
+        list.forEach { e -> item(key = e.def.id) { StrategyCard(actions, e, liveAllowed, onEdit = { editing = e.def }, onLive = { confirmLive = e.def.id }) } }
         if (log.isNotEmpty()) item {
             LedgerCard(title = "Audit log") {
                 val fmt = DateTimeFormatter.ofPattern("d MMM HH:mm:ss")
@@ -109,7 +144,7 @@ fun StrategiesScreen(model: AppModel) {
         }
     }
 
-    editing?.let { d -> StrategyEditor(model, d) { editing = null } }
+    editing?.let { d -> StrategyEditor(actions, d) { editing = null } }
     confirmLive?.let { id ->
         val d = list.firstOrNull { it.def.id == id }?.def
         AlertDialog(
@@ -125,11 +160,11 @@ fun StrategiesScreen(model: AppModel) {
             dismissButton = { TextButton({ confirmLive = null }) { Text("Cancel") } },
         )
     }
-    reauthFor?.let { id -> Reauth(model, onOk = { reauthFor = null; model.startStrategy(id, live = true) }, onCancel = { reauthFor = null }) }
+    reauthFor?.let { id -> reauth({ reauthFor = null; actions.start(id, true) }, { reauthFor = null }) }
 }
 
 @Composable
-private fun StrategyCard(model: AppModel, e: Strategies.Entry, liveAllowed: Boolean, onEdit: () -> Unit, onLive: () -> Unit) {
+private fun StrategyCard(actions: StrategyActions, e: Strategies.Entry, liveAllowed: Boolean, onEdit: () -> Unit, onLive: () -> Unit) {
     val p = LocalPalette.current
     val d = e.def
     val r = e.run
@@ -157,7 +192,7 @@ private fun StrategyCard(model: AppModel, e: Strategies.Entry, liveAllowed: Bool
                     }
                     Column(horizontalAlignment = Alignment.End) {
                         Text(rs(l.mtm + l.realizedPnl, true), style = Type.figure.copy(color = if (l.mtm + l.realizedPnl >= 0) p.verdigris else p.oxblood, fontSize = 12.sp))
-                        if (e.running && l.status == "open") TextButton({ model.closeStrategyLeg(d.id, l.legId) }) { Text("Exit", style = Type.label.copy(color = p.oxblood)) }
+                        if (e.running && l.status == "open") TextButton({ actions.closeLeg(d.id, l.legId) }) { Text("Exit", style = Type.label.copy(color = p.oxblood)) }
                     }
                 }
             }
@@ -166,15 +201,15 @@ private fun StrategyCard(model: AppModel, e: Strategies.Entry, liveAllowed: Bool
             LedgerLine("Schedule", "${sc.days.joinToString(",") { it.name.take(3).lowercase() }} ${sc.startTime ?: ""}→${sc.autoStopTime ?: ""} · ${sc.defaultMode.wire}")
         }
         Spacer(Modifier.height(8.dp))
-        if (e.running) BrassButton("Stop and close all", Modifier.fillMaxWidth(), tone = p.oxblood) { model.stopStrategy(d.id) }
+        if (e.running) BrassButton("Stop and close all", Modifier.fillMaxWidth(), tone = p.oxblood) { actions.stop(d.id) }
         else {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                BrassButton("Start paper", Modifier.weight(1f), tone = p.verdigris) { model.startStrategy(d.id, live = false) }
+                BrassButton("Start paper", Modifier.weight(1f), tone = p.verdigris) { actions.start(d.id, false) }
                 BrassButton("Start live", Modifier.weight(1f), tone = p.oxblood, enabled = liveAllowed && d.liveEnabled, onClick = onLive)
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 6.dp)) {
                 TextButton(onEdit) { Text("Edit", style = Type.label.copy(color = p.inkSoft)) }
-                TextButton({ model.setStrategyLive(d.id, !d.liveEnabled) }) {
+                TextButton({ actions.setLive(d.id, !d.liveEnabled) }) {
                     Text(if (d.liveEnabled) "Disable live" else "Enable live", style = Type.label.copy(color = if (d.liveEnabled) p.oxblood else p.inkSoft))
                 }
                 TextButton({ deleting = true }) { Text("Delete", style = Type.label.copy(color = p.oxblood)) }
@@ -185,7 +220,7 @@ private fun StrategyCard(model: AppModel, e: Strategies.Entry, liveAllowed: Bool
     if (deleting) AlertDialog(
         onDismissRequest = { deleting = false }, properties = secure,
         title = { Text("Delete ${d.name}?", style = Type.title) },
-        confirmButton = { TextButton({ deleting = false; model.deleteStrategy(d.id) }) { Text("Delete") } },
+        confirmButton = { TextButton({ deleting = false; actions.delete(d.id) }) { Text("Delete") } },
         dismissButton = { TextButton({ deleting = false }) { Text("Keep") } },
     )
 }
@@ -219,7 +254,7 @@ private class LegForm(l: LegDef) {
 }
 
 @Composable
-private fun StrategyEditor(model: AppModel, d: StrategyDef, onClose: () -> Unit) {
+private fun StrategyEditor(actions: StrategyActions, d: StrategyDef, onClose: () -> Unit) {
     val p = LocalPalette.current
     var name by remember { mutableStateOf(d.name) }
     var underlying by remember { mutableStateOf(d.underlying) }
@@ -314,7 +349,7 @@ private fun StrategyEditor(model: AppModel, d: StrategyDef, onClose: () -> Unit)
                         if (schedLive) RunMode.LIVE else RunMode.SANDBOX) else null,
                 )
                 err = null
-                model.saveStrategy(def) { e -> if (e == null) onClose() else err = e }
+                actions.save(def) { e -> if (e == null) onClose() else err = e }
             }) { Text("Save") }
         },
         dismissButton = { TextButton(onClose) { Text("Cancel") } },

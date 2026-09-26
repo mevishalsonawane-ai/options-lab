@@ -89,11 +89,30 @@ private val Mono = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 13.sp
  */
 @Composable
 fun PineScreen(model: AppModel, onOpenChart: () -> Unit = {}) {
+    PineContent(PineEnv(model.viewModelScope, model.settings, reauth = { why, onOk, onCancel -> Reauth(model, onOk = onOk, onCancel = onCancel, why = why) }),
+        onOpenChart)
+}
+
+/**
+ * What the Pine page needs from the app: a scope that outlives the page (saves and backtests land even if it is
+ * left), the Paper/Live switch, the PIN or fingerprint prompt, and the candles a backtest runs on. The app passes
+ * the model's scope and settings, [Reauth] and [ChartFeed.bars]; tests pass their own, so no [AppModel] is built.
+ */
+internal class PineEnv(
+    val scope: kotlinx.coroutines.CoroutineScope,
+    val settings: kotlinx.coroutines.flow.StateFlow<com.optionslab.app.data.AppSettings>,
+    val reauth: @Composable (why: String, onOk: () -> Unit, onCancel: () -> Unit) -> Unit,
+    val bars: suspend (symbol: String, interval: String, fromSec: Long) -> List<com.optionslab.engine.Upstox.Bar> =
+        { sym, iv, from -> ChartFeed.bars(sym, iv, from, null) },
+)
+
+@Composable
+internal fun PineContent(env: PineEnv, onOpenChart: () -> Unit = {}) {
     // A draft from before "erase everything" is dropped with the data.
     val wiped by com.optionslab.app.ui.wipes.collectAsState()
     val d = PineSession.open?.takeIf { it.wipe == wiped }
     if (d == null) PineList(onOpen = { PineSession.open = PineDraft(it, wiped) }, onNew = { PineSession.open = PineDraft(it, wiped) })
-    else androidx.compose.runtime.key(d) { PineEditor(model, d, onOpenChart, onClose = { PineSession.open = null }) }
+    else androidx.compose.runtime.key(d) { PineEditor(env, d, onOpenChart, onClose = { PineSession.open = null }) }
 }
 
 /**
@@ -181,7 +200,7 @@ private fun PineList(onOpen: (PineScripts.Item) -> Unit, onNew: (PineScripts.Ite
 }
 
 @Composable
-private fun PineEditor(model: AppModel, d: PineDraft, onOpenChart: () -> Unit, onClose: () -> Unit) {
+private fun PineEditor(env: PineEnv, d: PineDraft, onOpenChart: () -> Unit, onClose: () -> Unit) {
     val p = LocalPalette.current
     var result by remember { mutableStateOf<Pine.Compiled?>(null) }
     var deleting by remember { mutableStateOf(false) }
@@ -220,7 +239,7 @@ private fun PineEditor(model: AppModel, d: PineDraft, onOpenChart: () -> Unit, o
     }
     fun later(what: suspend () -> Unit) {
         writing = true
-        model.viewModelScope.launch {
+        env.scope.launch {
             try { what() }
             catch (e: kotlinx.coroutines.CancellationException) { throw e }
             catch (e: Throwable) { com.optionslab.app.work.Alerts.error("Could not save the script: ${e.message ?: e.javaClass.simpleName}") }
@@ -287,11 +306,11 @@ private fun PineEditor(model: AppModel, d: PineDraft, onOpenChart: () -> Unit, o
                 KeyStrip { ins -> d.code = insert(d.code, ins) }
             }
             "test" -> if (ok == null) Box(Modifier.fillMaxSize().padding(20.dp)) { Note(notYet) }
-                else PineBacktest(model, d, ok, onOpenChart) { inputs -> if (!armed) later { saveNow(inputs) } }
+                else PineBacktest(env, d, ok, onOpenChart) { inputs -> if (!armed) later { saveNow(inputs) } }
             else -> if (savedOk == null) Box(Modifier.fillMaxSize().padding(20.dp)) {
                     Note(if (savedResult == null) "Checking the script…" else "The saved script has errors: fix them in Code and Save first.")
                 }
-                else PineAutoPanel(model, d.item, savedOk, dirty = dirty, save = { saveNow() }) { d.item = it }
+                else PineAutoPanel(env, d.item, savedOk, dirty = dirty, save = { saveNow() }) { d.item = it }
         }
     }
     if (leaving) AlertDialog(onDismissRequest = { leaving = false }, properties = secureDialog,
@@ -306,7 +325,7 @@ private fun PineEditor(model: AppModel, d: PineDraft, onOpenChart: () -> Unit, o
             if (!writing) {
                 writing = true
                 // Under the save lock and off the main thread, so a save already started cannot re-add it afterwards.
-                model.viewModelScope.launch {
+                env.scope.launch {
                     try {
                         d.saving.withLock { withContext(Dispatchers.IO) { PineScripts.delete(d.item.id) } }
                         if (PineSession.open === d) onClose()
@@ -372,7 +391,7 @@ private data class TestRun(val run: Pine.Run, val report: Pine.Report?, val bars
                             val how: String, val note: String? = null, val signals: List<String> = emptyList())
 
 @Composable
-private fun PineBacktest(model: AppModel, d: PineDraft, s: Pine.Script, onChart: () -> Unit, onInputs: (Map<String, String>) -> Unit) {
+private fun PineBacktest(env: PineEnv, d: PineDraft, s: Pine.Script, onChart: () -> Unit, onInputs: (Map<String, String>) -> Unit) {
     val p = LocalPalette.current
     val scope = rememberCoroutineScope()
     val item = d.item
@@ -462,11 +481,11 @@ private fun PineBacktest(model: AppModel, d: PineDraft, s: Pine.Script, onChart:
             runCatching { onInputs(ins) }                          // remembering the inputs must never stop the run
             // The run lives in the app's scope and reports into the draft, so leaving the page
             // does not throw away a run of up to a minute; this page only scrolls to the result.
-            val job = model.viewModelScope.launch {
+            val job = env.scope.launch {
                 val r = withContext(Dispatchers.IO) {
                     try {
                         val to = System.currentTimeMillis() / 1000
-                        val raw = ChartFeed.bars(sym, iv, to - nDays * 86400L, null)
+                        val raw = env.bars(sym, iv, to - nDays * 86400L)
                         if (raw.isEmpty()) throw IllegalStateException("No $sym $iv candles came back for that period. Check the connection, or pick a shorter period.")
                         val bars = raw.map { PineScripts.toPine(it) }
                         withContext(Dispatchers.Main) { d.stage = "Running the script on ${"%,d".format(bars.size)} candles…" }
@@ -515,7 +534,7 @@ private fun PineBacktest(model: AppModel, d: PineDraft, s: Pine.Script, onChart:
                 ExportCsv(t, Modifier.weight(1f))
                 BrassButton("Show on chart", Modifier.weight(1f), tone = p.inkSoft) {
                     val id = d.item.id
-                    model.viewModelScope.launch {
+                    env.scope.launch {
                         try {
                             if (id != 0L) withContext(Dispatchers.IO) { PineScripts.setOnChart(id, true) }
                             // The chart opens on the index the backtest ran on.
@@ -527,7 +546,7 @@ private fun PineBacktest(model: AppModel, d: PineDraft, s: Pine.Script, onChart:
                 }
             }
         }
-        if (s.inputs.any { it.kind == "int" || it.kind == "float" }) Optimiser(s, strategy, symbol, interval, days, inputs, buySig, sellSig, reverse,
+        if (s.inputs.any { it.kind == "int" || it.kind == "float" }) Optimiser(env, s, strategy, symbol, interval, days, inputs, buySig, sellSig, reverse,
             qty.toDoubleOrNull()?.takeIf { it > 0 }, capital.toDoubleOrNull()?.takeIf { it > 0 } ?: 100_000.0,
             Pine.Costs(slippagePoints = slippage.toDoubleOrNull() ?: 0.0, perOrder = perOrder.toDoubleOrNull() ?: 0.0)) { picked ->
             picked.forEach { (k, v) -> inputs[k] = if (v == Math.floor(v)) v.toLong().toString() else v.toString() }
@@ -693,7 +712,7 @@ private fun ExportCsv(t: TestRun, modifier: Modifier) {
 }
 
 /** One row per trade. Text from the script is quoted, and a leading = + - @ is defused so a spreadsheet never runs it. */
-private fun tradesCsv(rep: Pine.Report): String {
+internal fun tradesCsv(rep: Pine.Report): String {
     val f = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm", Locale.ENGLISH)
     fun t(x: Long) = Instant.ofEpochSecond(x).atZone(IST).format(f)
     fun q(x: String): String { val v = if (x.isNotEmpty() && x[0] in "=+-@\t\r") "'$x" else x; return "\"" + v.replace("\"", "\"\"") + "\"" }
@@ -710,7 +729,7 @@ private fun tradesCsv(rep: Pine.Report): String {
  */
 @Composable
 private fun Optimiser(
-    s: Pine.Script, strategy: Boolean, symbol: String, interval: String, days: Int, inputs: Map<String, String>,
+    env: PineEnv, s: Pine.Script, strategy: Boolean, symbol: String, interval: String, days: Int, inputs: Map<String, String>,
     buySig: String?, sellSig: String?, reverse: Boolean, qty: Double?, capital: Double, costs: Pine.Costs,
     onApply: (Map<String, Double>) -> Unit,
 ) {
@@ -779,7 +798,7 @@ private fun Optimiser(
                 val r = withContext(Dispatchers.IO) {
                     try {
                         val to = System.currentTimeMillis() / 1000
-                        val bars = ChartFeed.bars(symbol, interval, to - days * 86400L, null).map { PineScripts.toPine(it) }
+                        val bars = env.bars(symbol, interval, to - days * 86400L).map { PineScripts.toPine(it) }
                         if (bars.size < 50) throw IllegalStateException("Too few candles to optimise on")
                         Result.success(withContext(Dispatchers.Default) {
                             com.optionslab.engine.pine.PineOptimise.run(s, bars, base, plan, symbol, interval) { done, all -> progress = "Tried $done of $all…" }
@@ -845,11 +864,11 @@ private fun num(x: Double) = if (x == Math.floor(x) && kotlin.math.abs(x) < 1e12
 // ---- auto-trade ----------------------------------------------------------------------------
 
 @Composable
-private fun PineAutoPanel(model: AppModel, start: PineScripts.Item, s: Pine.Script, dirty: Boolean, save: suspend () -> PineScripts.Item, onItem: (PineScripts.Item) -> Unit) {
+private fun PineAutoPanel(env: PineEnv, start: PineScripts.Item, s: Pine.Script, dirty: Boolean, save: suspend () -> PineScripts.Item, onItem: (PineScripts.Item) -> Unit) {
     val p = LocalPalette.current
     val items by PineScripts.items.collectAsState()
     val item = items.firstOrNull { it.id == start.id } ?: start
-    val settings by model.settings.collectAsState()
+    val settings by env.settings.collectAsState()
     val live = settings.live && settings.allowRealOrders
     val held by com.optionslab.app.data.PineAuto.held.collectAsState()
     val log by com.optionslab.app.data.PineAuto.log.collectAsState()
@@ -872,7 +891,7 @@ private fun PineAutoPanel(model: AppModel, start: PineScripts.Item, s: Pine.Scri
         now?.let(onItem)
     }
     fun set(change: (PineScripts.Auto) -> PineScripts.Auto) {
-        model.viewModelScope.launch {
+        env.scope.launch {
             try { write(change) }
             catch (e: kotlinx.coroutines.CancellationException) { throw e }
             catch (e: Throwable) { com.optionslab.app.work.Alerts.error("Could not save the auto-trade setting: ${e.message ?: e.javaClass.simpleName}") }
@@ -894,17 +913,17 @@ private fun PineAutoPanel(model: AppModel, start: PineScripts.Item, s: Pine.Scri
     LaunchedEffect(pending) {
         if (pending.isEmpty()) return@LaunchedEffect
         delay(600)
-        model.viewModelScope.launch { runCatching { flushTyped() } }
+        env.scope.launch { runCatching { flushTyped() } }
     }
     androidx.compose.runtime.DisposableEffect(Unit) {
-        onDispose { if (typed.isNotEmpty()) model.viewModelScope.launch { runCatching { flushTyped() } } }
+        onDispose { if (typed.isNotEmpty()) env.scope.launch { runCatching { flushTyped() } } }
     }
     // It trades the saved code: unsaved edits must be saved (and seen) before it is switched on.
     val unsaved = "Save the script first (Code tab): auto-trade runs the saved code, not unsaved edits."
     fun arm(on: Boolean, pin: Boolean) {
         if (on && dirty) { com.optionslab.app.work.Alerts.error(unsaved); return }
         busy = true
-        model.viewModelScope.launch {
+        env.scope.launch {
             try {
                 val id = (if (item.id == 0L) save() else item).id
                 if (on) runCatching { flushTyped() }               // what was just typed counts
@@ -996,8 +1015,8 @@ private fun PineAutoPanel(model: AppModel, start: PineScripts.Item, s: Pine.Scri
             style = Type.bodySmall.copy(color = p.inkFaint, fontSize = 11.sp))
         Spacer(Modifier.height(20.dp))
     }
-    if (auth) Reauth(model, onOk = { auth = false; arm(true, true) }, onCancel = { auth = false },
-        why = "Enter your app PIN to let this Pine script trade on Zerodha. It then places real orders by itself until you switch it off.")
+    if (auth) env.reauth("Enter your app PIN to let this Pine script trade on Zerodha. It then places real orders by itself until you switch it off.",
+        { auth = false; arm(true, true) }, { auth = false })
 }
 
 /** A number box for an auto-trade setting: reported when it parses, 0 when cleared (the panel saves it). */

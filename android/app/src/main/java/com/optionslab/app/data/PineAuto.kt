@@ -112,6 +112,22 @@ object PineAuto {
 
     private fun label(item: PineScripts.Item) = "Pine · ${item.name}"
 
+    /**
+     * TEST ONLY: a fixed clock and a candle source for the auto-trader's own checks (market hours, 15:15, the day,
+     * the stale-candle guard). Both are null in the app, always: the time is then [Market.now] (market hours as
+     * [Market.isOpen]) and candles come from [ChartFeed.bars], exactly as before. Their setters throw unless
+     * BuildConfig.DEBUG (as Broker.testEndpoint), and no app code sets them; only the unit tests do.
+     */
+    @Volatile internal var testNow: java.time.ZonedDateTime? = null
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test clock exists only in debug builds" }; field = v }
+    @Volatile internal var testBars: ((symbol: String, interval: String) -> List<com.optionslab.engine.Upstox.Bar>)? = null
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test candles exist only in debug builds" }; field = v }
+    private fun clock(): java.time.ZonedDateTime = testNow ?: Market.now()
+    private fun todayIst(): java.time.LocalDate = testNow?.toLocalDate() ?: Market.today()
+    private fun isOpen(): Boolean = testNow?.let { Market.isTradingDay(it.toLocalDate()) && (it.hour * 60 + it.minute) in Market.OPEN until Market.CLOSE }
+        ?: Market.isOpen()
+    private fun epochSecondNow(): Long = testNow?.toEpochSecond() ?: (System.currentTimeMillis() / 1000)
+
     @Synchronized fun wipe() { cache = null; if (::file.isInitialized) file.delete(); _held.value = emptyMap(); _log.value = emptyList() }
 
     suspend fun load() = lock.withLock { book(); Unit }
@@ -162,7 +178,7 @@ object PineAuto {
 
     private suspend fun one(b: Book, item: PineScripts.Item, stopped: Boolean) {
         val id = item.id
-        val t = Market.now()
+        val t = clock()
         val mins = t.hour * 60 + t.minute
         var h = b.held[id]
         // A buy Zerodha did not confirm: settled from the order book first (its unfilled rest cancelled).
@@ -172,13 +188,13 @@ object PineAuto {
         }
         // Sold outside the app (a notification's Close, the Trade tab, the broker's square-off).
         if (h != null && !h.unconfirmed && gone(h)) { note(b, id, "${h.symbol} is no longer held (closed outside the auto-trader)"); b.held.remove(id); h = null }
-        if (h != null && (stopped || (item.auto.squareOff && mins >= 15 * 60 + 15) || h.day != Market.today().toString())) {
+        if (h != null && (stopped || (item.auto.squareOff && mins >= 15 * 60 + 15) || h.day != todayIst().toString())) {
             exit(b, id, item, h, if (stopped) "the day's stop" else "15:15 square-off"); return
         }
         val a = item.auto
-        val today = Market.today().toString()
+        val today = todayIst().toString()
         // The held option's own stop-loss, target and the script's daily loss limit: checked every pass.
-        if (h != null && Market.isOpen() && (a.stopPts > 0 || a.targetPts > 0 || a.maxDayLoss > 0)) {
+        if (h != null && isOpen() && (a.stopPts > 0 || a.targetPts > 0 || a.maxDayLoss > 0)) {
             val ltp = runCatching { optionLtp(h) }.getOrNull()
             if (ltp != null) {
                 val why = when {
@@ -199,21 +215,22 @@ object PineAuto {
             b.paused[id] = today; note(b, id, "Daily loss limit reached: no more trades today")
         }
         if (b.paused[id] == today) return
-        if (!Market.isOpen() || stopped || mins >= 15 * 60 + 15) return
+        if (!isOpen() || stopped || mins >= 15 * 60 + 15) return
         val script = PineScripts.script(item) ?: run { note(b, id, "The script has errors: nothing traded"); return }
         val step = stepSeconds(item.auto.interval)
-        val now = System.currentTimeMillis() / 1000
+        val now = epochSecondNow()
         // At most 15 s: this runs in the watch's risk steps, before the stops, the expiry square-off and the strategies.
         // The fetch runs apart and is only waited for, so even a read stuck in the network cannot hold the pass.
         val fetch = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO).async {
-            ChartFeed.bars(item.auto.symbol, item.auto.interval, now - lookbackDays(item.auto.interval) * 86400, null, quick = true)
+            testBars?.invoke(item.auto.symbol, item.auto.interval)
+                ?: ChartFeed.bars(item.auto.symbol, item.auto.interval, now - lookbackDays(item.auto.interval) * 86400, null, quick = true)
         }
         val fetched = kotlinx.coroutines.withTimeoutOrNull(15_000) { fetch.await() }
             ?: run { fetch.cancel(); note(b, id, "No candles for ${item.auto.symbol} within 15 s: this pass skipped"); return }
         val bars = fetched.filter { it.epochSecond + step <= now }                    // completed candles only
         val last = bars.lastOrNull() ?: return
         // A feed that failed today can hand back yesterday's candles: never trade on those, or on a stalled feed.
-        if (step < 86_400 && (java.time.Instant.ofEpochSecond(last.epochSecond).atZone(com.optionslab.engine.IST).toLocalDate() != Market.today() ||
+        if (step < 86_400 && (java.time.Instant.ofEpochSecond(last.epochSecond).atZone(com.optionslab.engine.IST).toLocalDate() != todayIst() ||
                 now - last.epochSecond > step * 3 + 120)) return
         if (b.lastBar[id] == last.epochSecond) return
         b.lastBar[id] = last.epochSecond
@@ -257,10 +274,10 @@ object PineAuto {
     private fun realizedToday(b: Book, id: Long): Double {
         val v = b.dayPnl[id] ?: return 0.0
         val (day, amt) = v.split('|', limit = 2).let { it[0] to it.getOrNull(1) }
-        return if (day == Market.today().toString()) amt?.toDoubleOrNull() ?: 0.0 else 0.0
+        return if (day == todayIst().toString()) amt?.toDoubleOrNull() ?: 0.0 else 0.0
     }
 
-    private fun addPnl(b: Book, id: Long, pnl: Double) { b.dayPnl[id] = "${Market.today()}|${realizedToday(b, id) + pnl}" }
+    private fun addPnl(b: Book, id: Long, pnl: Double) { b.dayPnl[id] = "${todayIst()}|${realizedToday(b, id) + pnl}" }
 
     /** Today's P&L of script [id]: closed trades and, when it holds one, the open option. */
     fun todayOf(id: Long): Double? = cache?.let { realizedToday(it, id) }
@@ -289,7 +306,7 @@ object PineAuto {
         val u = item.auto.symbol
         if (u == "SENSEX") { note(b, id, "SENSEX options trade on BSE, which the app does not place orders on: use Alerts only"); return }
         val strike = OrbRules.atmStrike(spot, strikeStep(u))
-        val today = Market.today()
+        val today = todayIst()
         val listed = Market.contracts().filter { it.underlying == u }.map { it.expiry }.distinct()
         val expiry = OrbRules.expiryAfter(today, listed) ?: run { note(b, id, "No $u expiry after today is listed: nothing bought"); return }
         val c = Paper.contractFor(u, expiry, strike.toDouble(), right) ?: run { note(b, id, "$u $strike $right is not listed: nothing bought"); return }
@@ -375,7 +392,7 @@ object PineAuto {
     private suspend fun settle(b: Book, id: Long, h: Held): Held? {
         val sym = h.kite ?: return null
         if (!Broker.loggedIn) return h
-        if (h.day != Market.today().toString()) {
+        if (h.day != todayIst().toString()) {
             // A day old: the MIS order and position are long settled; what is held now is read from the position book.
             note(b, id, "The buy of $sym on ${h.day} was never confirmed by Zerodha; check that day's contract note")
             return null

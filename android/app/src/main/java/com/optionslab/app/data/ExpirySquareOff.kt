@@ -21,11 +21,21 @@ object ExpirySquareOff {
     const val AT_MINUTE = 15 * 60 + 5
     private const val K_DONE = "sq.expiry.done"
 
+    /**
+     * TEST ONLY: a fixed clock for this pass's day and minute. Null in the app, always: the day and minute are then
+     * [Market.today] and [Market.minuteNow], exactly as before. Its setter throws unless BuildConfig.DEBUG (as
+     * Broker.testEndpoint), and no app code sets it; only the unit tests do.
+     */
+    @Volatile internal var testNow: java.time.ZonedDateTime? = null
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test clock exists only in debug builds" }; field = v }
+    private fun todayIst(): java.time.LocalDate = testNow?.toLocalDate() ?: Market.today()
+    private fun minuteNow(): Int = testNow?.let { it.hour * 60 + it.minute } ?: Market.minuteNow()
+
     /** What the owner was already told today ("day|what"), so a retry every pass does not repeat it. */
     private val told = HashSet<String>()
 
     private fun tellOnce(context: Context, key: String, text: String) {
-        val k = "${Market.today()}|$key"
+        val k = "${todayIst()}|$key"
         synchronized(told) { if (!told.add(k)) return }
         com.optionslab.app.work.Alerts.error(text, "Expiry square-off")
         runCatching { Notifier.post(context, 2032, Notifier.RISK, "Expiry square-off", text, "trade") }
@@ -34,8 +44,8 @@ object ExpirySquareOff {
     suspend fun maybeRun(context: Context, s: AppSettings) {
         // The kill switch stops new orders, not this: closing what expires today only lowers risk.
         if (!s.expirySquareOff) return
-        val today = Market.today()
-        if (Market.minuteNow() < AT_MINUTE || Market.minuteNow() >= Market.CLOSE) return
+        val today = todayIst()
+        if (minuteNow() < AT_MINUTE || minuteNow() >= Market.CLOSE) return
         if (SecurePrefs.getString(K_DONE) == today.toString()) return
         val ticket = Ledger.openTicket()?.row?.ticket?.takeIf { s.keepExpiryPut && it.session == today }
         fun isTicketLeg(underlying: String?, strike: Double?, right: String?): Boolean =

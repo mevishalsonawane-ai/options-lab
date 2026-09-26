@@ -195,7 +195,14 @@ object OrbArms {
 
     /** New entries follow the app's Paper/Live switch. */
     fun liveNow(): Boolean = AppSettings.load().let { it.live && it.allowRealOrders }
-    private fun now(): LocalDateTime = Market.now().toLocalDateTime()
+    /**
+     * TEST ONLY: a fixed clock for the arms' own time checks (session end, the backstop, a signal's expiry, entry
+     * times). Null in the app, always: [now] is then [Market.now], exactly as before. Its setter throws unless
+     * BuildConfig.DEBUG (as Broker.testEndpoint), and no app code sets it; only the unit tests do.
+     */
+    @Volatile internal var testNow: java.time.ZonedDateTime? = null
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test clock exists only in debug builds" }; field = v }
+    private fun now(): LocalDateTime = (testNow ?: Market.now()).toLocalDateTime()
 
     // ---- views for the UI ---------------------------------------------------------
 
