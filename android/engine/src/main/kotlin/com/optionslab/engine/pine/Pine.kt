@@ -76,7 +76,23 @@ object Pine {
         val report: Report?, val error: Problem?,
     )
 
-    fun compile(src: String): Compiled {
+    /** Largest script accepted, in characters and lines. */
+    const val MAX_CHARS = 100_000
+    const val MAX_LINES = 5_000
+
+    fun compile(src: String): Compiled = try {
+        compileChecked(src)
+    } catch (e: StackOverflowError) {
+        Compiled.Failed(listOf(Problem(1, 1, "The script is nested too deeply to check")), emptyList())
+    } catch (e: OutOfMemoryError) {
+        Compiled.Failed(listOf(Problem(1, 1, "The script is too large to check")), emptyList())
+    } catch (e: RuntimeException) {
+        Compiled.Failed(listOf(Problem(1, 1, "Could not check the script: ${e.message ?: e.javaClass.simpleName}")), emptyList())
+    }
+
+    private fun compileChecked(src: String): Compiled {
+        if (src.length > MAX_CHARS) return Compiled.Failed(listOf(Problem(1, 1, "The script is too long (over ${MAX_CHARS / 1000} thousand characters)")), emptyList())
+        if (src.count { it == '\n' } >= MAX_LINES) return Compiled.Failed(listOf(Problem(MAX_LINES, 1, "The script is too long (over $MAX_LINES lines)")), emptyList())
         val prog = try { Parser(Lexer.lex(src)).program() }
         catch (e: PineError) { return Compiled.Failed(listOf(Problem(e.line, e.col, e.message ?: "Syntax error")), emptyList()) }
         val ch = Checker(prog)
@@ -89,13 +105,15 @@ object Pine {
         fun arg(name: String): Expr? = argOf(decl, sig, name)
         val title = (arg("title")?.let { constOf(it) } as? String) ?: if (kind == Kind.STRATEGY) "Strategy" else "Indicator"
         val overlay = (arg("overlay")?.let { constOf(it) } as? Boolean) ?: false
+        fun num(name: String): Double? = (arg(name)?.let { constOf(it) } as? Double)?.takeIf { it.isFinite() }
+        // Out-of-range settings fall back to TradingView's defaults rather than breaking the maths.
         val settings = if (kind == Kind.STRATEGY) Settings(
-            initialCapital = (arg("initial_capital")?.let { constOf(it) } as? Double) ?: 1_000_000.0,
-            qtyType = (arg("default_qty_type")?.let { constOf(it) } as? String) ?: "fixed",
-            qtyValue = (arg("default_qty_value")?.let { constOf(it) } as? Double) ?: 1.0,
-            pyramiding = ((arg("pyramiding")?.let { constOf(it) } as? Double) ?: 0.0).toInt().coerceAtLeast(1),
-            commissionType = (arg("commission_type")?.let { constOf(it) } as? String) ?: "percent",
-            commissionValue = (arg("commission_value")?.let { constOf(it) } as? Double) ?: 0.0,
+            initialCapital = num("initial_capital")?.takeIf { it > 0 && it <= 1e13 } ?: 1_000_000.0,
+            qtyType = (arg("default_qty_type")?.let { constOf(it) } as? String)?.takeIf { it in setOf("fixed", "cash", "percent_of_equity") } ?: "fixed",
+            qtyValue = num("default_qty_value")?.takeIf { it > 0 && it <= 1e9 } ?: 1.0,
+            pyramiding = (num("pyramiding") ?: 0.0).coerceIn(0.0, 100.0).toInt().coerceAtLeast(1),
+            commissionType = (arg("commission_type")?.let { constOf(it) } as? String)?.takeIf { it in setOf("percent", "cash_per_order", "cash_per_contract") } ?: "percent",
+            commissionValue = num("commission_value")?.takeIf { it >= 0 && it <= 1e6 } ?: 0.0,
             processOnClose = (arg("process_orders_on_close")?.let { constOf(it) } as? Boolean) ?: false,
         ) else Settings()
 
@@ -156,11 +174,13 @@ object Pine {
                             val loc = (argOf(c, s, "location") as? Name)?.name?.removePrefix("location.") ?: "abovebar"
                             val text = argOf(c, s, "text")?.let { constOf(it) } as? String ?: (if (c.name == "plotchar") argOf(c, s, "char")?.let { constOf(it) } as? String else null) ?: ""
                             val color = colorOf(argOf(c, s, "color")) ?: PALETTE[(shapes.size + 3) % PALETTE.size]
+                            if (shapes.size >= 64) continue
                             shapeIndex[c.id] = shapes.size
                             shapes += ShapeDef(t, color, style, loc, text)
                             signalIndex[c.id] = signals.size; signals += t
                         }
                         "alertcondition" -> {
+                            if (signals.size >= 128) continue
                             val t = argOf(c, s, "title")?.let { constOf(it) } as? String ?: "Alert ${signals.size + 1}"
                             signalIndex[c.id] = signals.size; signals += t
                         }
@@ -178,8 +198,12 @@ object Pine {
      * chart code (1m, 5m, 1h, 1D ...). [qty] overrides the strategy's order size.
      */
     fun run(script: Script, bars: List<Bar>, inputs: Map<String, Any?> = emptyMap(), symbol: String = "NIFTY",
-            interval: String = "5m", qty: Double? = null, mintick: Double = 0.05): Run =
-        Interp(script, bars, inputs, symbol, interval, qty, mintick).go()
+            interval: String = "5m", qty: Double? = null, mintick: Double = 0.05, budgetMs: Long = 10_000): Run =
+        Interp(script, bars, inputs, symbol, interval, qty?.takeIf { it.isFinite() && it > 0 }?.coerceAtMost(1e9), mintick, budgetMs).go()
+
+    /** A colour the chart can use: #RRGGBB or #RRGGBBAA, else null. */
+    fun safeColor(c: String?): String? = c?.takeIf { COLOR.matches(it) }
+    private val COLOR = Regex("^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$")
 
     internal val PALETTE = listOf("#2962FF", "#FF6D00", "#00897B", "#AB47BC", "#F23645", "#FBC02D", "#26C6DA", "#8D6E63")
     internal val IST: ZoneId = ZoneId.of("Asia/Kolkata")

@@ -86,13 +86,21 @@ object PineScripts {
 
     fun get(id: Long): Item? = _items.value.firstOrNull { it.id == id }
 
-    /** Save (a new script when [item] has id 0); returns the saved script. */
-    @Synchronized fun put(item: Item): Item {
+    /**
+     * Save (a new script when [item] has id 0); returns the saved script. The auto-trade
+     * settings are never taken from [item]: a screen holding an older copy must not switch
+     * auto-trading back on after the kill switch or a restore turned it off. Only
+     * [setAuto] changes them, and a new script starts with auto-trade off.
+     */
+    @Synchronized fun put(item: Item): Item = write(item, keepAuto = true)
+
+    @Synchronized private fun write(item: Item, keepAuto: Boolean): Item {
         ensure()
         val list = _items.value.toMutableList()
         val drawn = get(item.id)
-        val saved = if (item.id == 0L) item.copy(id = (list.maxOfOrNull { it.id } ?: 0) + 1, updated = System.currentTimeMillis())
-            else item.copy(updated = System.currentTimeMillis())
+        val saved = if (item.id == 0L || drawn == null) item.copy(id = if (item.id == 0L) (list.maxOfOrNull { it.id } ?: 0) + 1 else item.id,
+                auto = if (keepAuto) item.auto.copy(on = false) else item.auto, updated = System.currentTimeMillis())
+            else item.copy(auto = if (keepAuto) drawn.auto else item.auto, updated = System.currentTimeMillis())
         val i = list.indexOfFirst { it.id == saved.id }
         if (i >= 0) list[i] = saved else list += saved
         save(list)
@@ -109,7 +117,7 @@ object PineScripts {
 
     fun setOnChart(id: Long, on: Boolean) { get(id)?.let { put(it.copy(onChart = on)); _chartRev.value++ } }
 
-    fun setAuto(id: Long, auto: Auto) { get(id)?.let { put(it.copy(auto = auto)) } }
+    @Synchronized fun setAuto(id: Long, auto: Auto) { get(id)?.let { write(it.copy(auto = auto), keepAuto = false) } }
 
     /** Turn every auto-trading script off (the kill switch, a restore). */
     @Synchronized fun disarmAll() {

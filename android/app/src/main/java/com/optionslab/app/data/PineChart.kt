@@ -9,6 +9,17 @@ import org.json.JSONObject
  * each script run over the chart's own candles. Called by the chart page synchronously.
  */
 object PineChart {
+    /** A script's run on the chart may take this long (it runs on every new candle). */
+    private const val BUDGET_MS = 1_500L
+
+    /**
+     * Text from a script (titles, labels, marker text) as plain text for the chart page:
+     * no markup characters, no control characters, bounded length. The chart already
+     * writes these as text; this keeps it so even if that ever changed.
+     */
+    fun plain(s: String?, max: Int = 40): String =
+        (s ?: "").filter { it >= ' ' && it !in "<>&\"'`\\" }.take(max)
+
     fun chartId(item: PineScripts.Item) = "pine-${item.id}"
 
     /** Every script that compiles: its plots, inputs, and whether it is shown on the chart. */
@@ -17,7 +28,8 @@ object PineChart {
         for (item in PineScripts.items.value) {
             val s = PineScripts.script(item) ?: continue
             val plots = JSONArray()
-            s.plots.forEachIndexed { i, p -> plots.put(JSONObject().put("key", "p$i").put("title", p.title).put("color", p.color).put("style", p.style)) }
+            s.plots.forEachIndexed { i, p -> plots.put(JSONObject().put("key", "p$i").put("title", plain(p.title).ifBlank { "Plot ${i + 1}" })
+                .put("color", Pine.safeColor(p.color) ?: "#2962FF").put("style", p.style)) }
             val inputs = JSONArray()
             s.inputs.forEachIndexed { i, d ->
                 if (d.kind !in setOf("int", "float", "price", "bool", "source")) return@forEachIndexed
@@ -27,10 +39,10 @@ object PineChart {
                     "source" -> saved ?: d.default
                     else -> saved?.toDoubleOrNull() ?: d.default
                 }
-                inputs.put(JSONObject().put("key", "in$i").put("kind", d.kind).put("label", d.key).put("default", def ?: JSONObject.NULL)
+                inputs.put(JSONObject().put("key", "in$i").put("kind", d.kind).put("label", plain(d.key).ifBlank { "Input ${i + 1}" }).put("default", (if (def is String) plain(def, 12) else def) ?: JSONObject.NULL)
                     .put("min", d.min ?: JSONObject.NULL).put("max", d.max ?: JSONObject.NULL))
             }
-            a.put(JSONObject().put("id", chartId(item)).put("name", s.title.ifBlank { item.name }).put("overlay", s.overlay)
+            a.put(JSONObject().put("id", chartId(item)).put("name", plain(s.title).ifBlank { plain(item.name) }.ifBlank { "Pine" }).put("overlay", s.overlay)
                 .put("onChart", item.onChart).put("plots", plots).put("inputs", inputs))
         }
         return a.toString()
@@ -53,16 +65,18 @@ object PineChart {
                 val v = chartInputs?.opt("in$i") ?: return@forEachIndexed
                 if (v != JSONObject.NULL) values[d.key] = when (v) { is Number -> v.toDouble(); is Boolean -> v; else -> v.toString() }
             }
-            val r = Pine.run(s, bars, values, symbol.uppercase(), interval)
+            if (bars.size > 20_000) return out.put("error", "Too many candles").toString()
+            val r = Pine.run(s, bars, values, plain(symbol, 30).uppercase(), plain(interval, 6), budgetMs = BUDGET_MS)
             val vs = JSONObject()
             r.plots.forEachIndexed { i, arr -> vs.put("p$i", JSONArray().apply { arr.forEach { put(if (it.isNaN() || it.isInfinite()) JSONObject.NULL else it) } }) }
             out.put("values", vs)
             out.put("markers", JSONArray().apply {
-                r.markers.takeLast(2000).forEach { m -> put(JSONArray().put(m.bar).put(if (m.above) 1 else 0).put(m.shape).put(m.color).put(m.text)) }
+                r.markers.takeLast(2000).forEach { m -> put(JSONArray().put(m.bar).put(if (m.above) 1 else 0).put(m.shape).put(Pine.safeColor(m.color) ?: "#787B86").put(plain(m.text, 16))) }
             })
-            r.error?.let { out.put("error", it.toString()) }
-        } catch (e: Exception) {
-            out.put("error", e.message ?: "Could not run the script")
+            r.error?.let { out.put("error", plain(it.toString(), 200)) }
+        } catch (e: Throwable) {
+            // Called from the chart page's thread: nothing may escape and take the app down.
+            out.put("error", plain(e.message ?: "Could not run the script", 200))
         }
         return out.toString()
     }

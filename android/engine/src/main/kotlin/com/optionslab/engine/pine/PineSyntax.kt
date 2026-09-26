@@ -21,7 +21,18 @@ internal object Lexer {
     private val OPS2 = listOf(":=", "==", "!=", "<=", ">=", "=>", "+=", "-=", "*=", "/=", "%=")
     private const val OPS1 = "+-*/%<>=?:()[],"
 
+    /**
+     * Characters that make code look different from what runs ("Trojan Source"): text-direction
+     * overrides and invisible characters. Refused anywhere, strings and comments included.
+     */
+    private fun hidden(c: Char) = c in '\u202A'..'\u202E' || c in '\u2066'..'\u2069' || c == '\u200E' || c == '\u200F' ||
+        c == '\u061C' || c in '\u200B'..'\u200D' || c == '\u2060' || c == '\uFEFF' || c == '\u00AD'
+
     fun lex(src: String): List<Tok> {
+        src.lineSequence().forEachIndexed { i, l ->
+            val at = l.indexOfFirst { hidden(it) }
+            if (at >= 0) throw PineError(i + 1, at + 1, "Hidden character U+%04X here: it can make code look different from what runs. Retype this line.".format(l[at].code))
+        }
         val out = ArrayList<Tok>()
         val indents = ArrayDeque<Int>().apply { addLast(0) }
         var depth = 0                        // open ( and [
@@ -119,7 +130,7 @@ internal object Lexer {
 
 // ---- syntax tree -------------------------------------------------------------------------
 
-internal sealed class Expr { abstract val line: Int; abstract val col: Int; var id = 0 }
+internal sealed class Expr { abstract val line: Int; abstract val col: Int; var id = 0; var depth = 1 }
 internal data class Num(val v: Double, override val line: Int, override val col: Int) : Expr()
 internal data class Str(val v: String, override val line: Int, override val col: Int) : Expr()
 internal data class Bool(val v: Boolean, override val line: Int, override val col: Int) : Expr()
@@ -167,7 +178,32 @@ internal class Parser(private val toks: List<Tok>) {
         if (peek().t != T.ID) err(peek(), "Expected $what but found ${describe(peek())}")
         return next()
     }
-    private fun <E : Expr> E.tag(): E { id = ++ids; return this }
+    private var nest = 0
+    private var blocks = 0
+
+    /** How deep an expression may nest: deeper trees would exhaust the stack when checked or run. */
+    private val maxDepth = 120
+
+    private fun <E : Expr> E.tag(): E {
+        id = ++ids
+        depth = 1 + when (this) {
+            is Binary -> maxOf(a.depth, b.depth)
+            is Unary -> e.depth
+            is Ternary -> maxOf(c.depth, a.depth, b.depth)
+            is Index -> maxOf(target.depth, offset.depth)
+            is Call -> args.maxOfOrNull { it.value.depth } ?: 0
+            is TupleLit -> items.maxOfOrNull { it.depth } ?: 0
+            else -> 0
+        }
+        if (depth > maxDepth) throw PineError(line, col, "This expression is too long or nested too deeply: split it into a few variables")
+        return this
+    }
+
+    /** Guards the parser's own recursion (brackets, unary operators, nested calls). */
+    private inline fun <T> nested(f: () -> T): T {
+        if (++nest > maxDepth) err(peek(), "Nested too deeply: split it into a few variables")
+        try { return f() } finally { nest-- }
+    }
 
     fun program(): List<Stmt> {
         val out = ArrayList<Stmt>()
@@ -180,6 +216,11 @@ internal class Parser(private val toks: List<Tok>) {
     }
 
     private fun block(): List<Stmt> {
+        if (++blocks > 40) err(peek(), "Blocks are nested too deeply (over 40 levels)")
+        try { return blockBody() } finally { blocks-- }
+    }
+
+    private fun blockBody(): List<Stmt> {
         if (peek().t != T.NL) err(peek(), "Expected a new line before the block, found ${describe(peek())}")
         next()
         if (peek().t != T.INDENT) err(peek(), "Expected an indented block (4 spaces) here")
@@ -323,20 +364,20 @@ internal class Parser(private val toks: List<Tok>) {
         return If(cond, then, orElse, t.line, t.col)
     }
 
-    fun expr(): Expr = ternary()
+    fun expr(): Expr = nested { ternary() }
 
     private fun ternary(): Expr {
         val c = or()
         if (at("?")) {
             val q = next()
-            val a = ternary(); expect(":"); val b = ternary()
+            val a = nested { ternary() }; expect(":"); val b = nested { ternary() }
             return Ternary(c, a, b, q.line, q.col).tag()
         }
         return c
     }
     private fun or(): Expr { var a = and(); while (at("or")) { val o = next(); a = Binary("or", a, and(), o.line, o.col).tag() }; return a }
     private fun and(): Expr { var a = not(); while (at("and")) { val o = next(); a = Binary("and", a, not(), o.line, o.col).tag() }; return a }
-    private fun not(): Expr { if (at("not")) { val o = next(); return Unary("not", not(), o.line, o.col).tag() }; return eq() }
+    private fun not(): Expr { if (at("not")) { val o = next(); return Unary("not", nested { not() }, o.line, o.col).tag() }; return eq() }
     private fun eq(): Expr {
         var a = cmp()
         while (at("==") || at("!=")) { val o = next(); a = Binary(o.text, a, cmp(), o.line, o.col).tag() }
@@ -358,7 +399,7 @@ internal class Parser(private val toks: List<Tok>) {
         return a
     }
     private fun unary(): Expr {
-        if (at("-") || at("+")) { val o = next(); return Unary(o.text, unary(), o.line, o.col).tag() }
+        if (at("-") || at("+")) { val o = next(); return Unary(o.text, nested { unary() }, o.line, o.col).tag() }
         return postfix()
     }
     private fun postfix(): Expr {

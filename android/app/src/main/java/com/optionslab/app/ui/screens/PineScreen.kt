@@ -162,6 +162,10 @@ private fun PineEditor(model: AppModel, start: PineScripts.Item, onOpenChart: ()
     val errors = (result as? Pine.Compiled.Failed)?.errors.orEmpty()
     val warnings = when (val r = result) { is Pine.Compiled.Ok -> r.script.warnings; is Pine.Compiled.Failed -> r.warnings; else -> emptyList() }
     val dirty = code.text != item.code || name != item.name
+    // While it trades by itself its code and inputs stay as they were armed: a change would alter
+    // real orders without the PIN. Switch auto-trade off to edit.
+    val allItems by PineScripts.items.collectAsState()
+    val armed = allItems.firstOrNull { it.id == item.id }?.auto?.on == true
 
     fun save(): PineScripts.Item {
         val s = PineScripts.put(item.copy(name = name.ifBlank { ok?.title ?: "Script" }, code = code.text))
@@ -193,7 +197,7 @@ private fun PineEditor(model: AppModel, start: PineScripts.Item, onOpenChart: ()
                 Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(name, { name = it.take(60) }, label = { Text("Name") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                    CodeField(code, { code = it }, errors.map { it.line }.toSet())
+                    CodeField(code, { if (it.text.length <= Pine.MAX_CHARS) code = it }, errors.map { it.line }.toSet())
                     errors.forEach { er ->
                         Text("Line ${er.line}:${er.col}  ${er.message}", style = Type.bodySmall.copy(color = p.oxblood),
                             modifier = Modifier.fillMaxWidth().clickable { code = code.copy(selection = TextRange(offsetOf(code.text, er.line, er.col))) }
@@ -201,13 +205,14 @@ private fun PineEditor(model: AppModel, start: PineScripts.Item, onOpenChart: ()
                     }
                     warnings.forEach { w -> Text("Line ${w.line}: ${w.message}", style = Type.bodySmall.copy(color = p.amber)) }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        BrassButton(if (saved && !dirty) "Saved" else "Save", Modifier.weight(1f), enabled = dirty || !saved) { save() }
+                        BrassButton(if (saved && !dirty) "Saved" else "Save", Modifier.weight(1f), enabled = (dirty || !saved) && !armed) { save() }
                         BrassButton("Delete", Modifier.weight(1f), tone = p.inkSoft, enabled = saved) { deleting = true }
                     }
+                    if (armed && dirty) Note("Auto-trade is on: switch it off (Auto-trade tab) to save changes. Until then it trades with the code it was switched on with.")
                     if (ok != null) {
                         ToggleRow("Show on the chart", if (ok.overlay) "Drawn over the candles, with its buy/sell marks" else "Drawn in its own pane under the candles",
                             item.onChart) { on ->
-                            val s = save()
+                            val s = if (armed) item else save()
                             PineScripts.setOnChart(s.id, on); item = PineScripts.get(s.id) ?: s
                         }
                         if (item.onChart) TextButton(onOpenChart) { Text("Open the chart ›") }
@@ -219,7 +224,7 @@ private fun PineEditor(model: AppModel, start: PineScripts.Item, onOpenChart: ()
                 KeyStrip { ins -> code = insert(code, ins) }
             }
             "test" -> if (ok == null) Box(Modifier.fillMaxSize().padding(20.dp)) { Note("The script has errors: fix them in Code first.") }
-                else PineBacktest(item, ok) { inputs -> item = PineScripts.put(save().copy(inputs = inputs)) }
+                else PineBacktest(item, ok) { inputs -> if (!armed) item = PineScripts.put(save().copy(inputs = inputs)) }
             else -> if (ok == null) Box(Modifier.fillMaxSize().padding(20.dp)) { Note("The script has errors: fix them in Code first.") }
                 else PineAutoPanel(model, item, ok, save = { save() }) { item = it }
         }
@@ -227,7 +232,8 @@ private fun PineEditor(model: AppModel, start: PineScripts.Item, onOpenChart: ()
     if (deleting) AlertDialog(onDismissRequest = { deleting = false }, properties = secureDialog,
         confirmButton = { TextButton({ deleting = false; PineScripts.delete(item.id); onClose() }) { Text("Delete", color = p.oxblood) } },
         dismissButton = { TextButton({ deleting = false }) { Text("Keep") } },
-        title = { Text("Delete ${item.name}?") }, text = { Text("The script is removed from this phone and from the chart. This cannot be undone.") })
+        title = { Text("Delete ${item.name}?") }, text = { Text("The script is removed from this phone and from the chart." +
+            (if (armed) " It stops auto-trading and sells what it holds." else "") + " This cannot be undone.") })
 }
 
 private fun offsetOf(text: String, line: Int, col: Int): Int {
@@ -327,7 +333,7 @@ private fun PineBacktest(item: PineScripts.Item, s: Pine.Script, onInputs: (Map<
                         val bars = ChartFeed.bars(symbol, interval, to - days * 86400L, null).map { PineScripts.toPine(it) }
                         if (bars.isEmpty()) throw IllegalStateException("No $symbol candles for that period")
                         val values = PineScripts.inputValues(PineScripts.Item(0, "", "", inputs = ins), s)
-                        TestRun(withContext(Dispatchers.Default) { Pine.run(s, bars, values, symbol, interval, qty.toDoubleOrNull()?.takeIf { it > 0 }) }, bars, symbol, interval)
+                        TestRun(withContext(Dispatchers.Default) { Pine.run(s, bars, values, symbol, interval, qty.toDoubleOrNull()?.takeIf { it > 0 }, budgetMs = 60_000) }, bars, symbol, interval)
                     }
                 }
                 busy = false

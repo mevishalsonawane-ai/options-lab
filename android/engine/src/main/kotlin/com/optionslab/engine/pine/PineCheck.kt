@@ -149,6 +149,7 @@ internal class Checker(private val prog: List<Stmt>) {
     private val scopes = ArrayList<HashSet<String>>()
     private var loopDepth = 0
     private var inFunc = false
+    private var current: String? = null
     val plotCalls = ArrayList<Call>()
     val inputCalls = ArrayList<Call>()
     var declaration: Call? = null
@@ -204,13 +205,15 @@ internal class Checker(private val prog: List<Stmt>) {
                 if (!top) err(s.line, s.col, "Functions must be declared at the top level, not inside a block")
                 if (s.name in funcs) err(s.line, s.col, "Function '${s.name}' is already defined")
                 if (Builtins.SIGS.containsKey(s.name)) warn(s.line, s.col, "'${s.name}' replaces the built-in function of that name")
-                funcs[s.name] = s
                 val was = inFunc; inFunc = true
+                current = s.name
                 scopes.add(s.params.map { it.first }.toHashSet())
                 s.params.forEach { (_, d) -> d?.let { expr(it) } }
                 stmts(s.body)
                 scopes.removeAt(scopes.size - 1)
-                inFunc = was
+                inFunc = was; current = null
+                // Registered after its body: a function cannot call itself (Pine has no recursion).
+                funcs[s.name] = s
             }
         }
     }
@@ -239,6 +242,7 @@ internal class Checker(private val prog: List<Stmt>) {
 
     private fun call(e: Call, statementLevel: Boolean, top: Boolean) {
         e.args.forEach { expr(it.value) }
+        if (e.name == current) { err(e.line, e.col, "${e.name}() cannot call itself: Pine functions are not recursive"); return }
         val user = funcs[e.name]
         if (user != null) {
             val names = user.params.map { it.first }
@@ -282,6 +286,10 @@ internal class Checker(private val prog: List<Stmt>) {
             if (!one) sig.params.take(sig.required).filter { it !in given }.forEach { err(e.line, e.col, "${e.name}() is missing the argument '$it'") }
         } else if (e.args.size < sig.required) err(e.line, e.col, "${e.name}() needs at least ${sig.required} argument(s)")
         if (e.name in Builtins.IGNORED) warn(e.line, e.col, "${e.name}() is accepted but not drawn on the phone chart")
+        if ((e.name == "strategy.exit" || e.name == "strategy.close") && e.args.any { it.name == "qty" || it.name == "qty_percent" })
+            warn(e.line, e.col, "Partial exits (qty / qty_percent in ${e.name}) close the whole entry in the phone backtest")
+        if (e.name == "strategy.exit" && e.args.any { it.name?.startsWith("oca") == true })
+            warn(e.line, e.col, "OCA groups are ignored in the phone backtest")
         when (e.name) {
             "indicator", "study", "strategy" -> {
                 if (!top || !statementLevel) err(e.line, e.col, "${e.name}() must be a statement of its own at the top level")
@@ -289,11 +297,13 @@ internal class Checker(private val prog: List<Stmt>) {
                 else declaration = e
             }
             "plot", "hline" -> {
+                if (plotCalls.size >= 64) err(e.line, e.col, "At most 64 plots per script")
                 if (!top || inFunc) err(e.line, e.col, "Cannot use '${e.name}' in a local scope: plot at the top level (use a ternary for conditions)")
                 else plotCalls += e
             }
         }
         if (e.name == "input" || e.name.startsWith("input.")) {
+            if (inputCalls.size >= 100) err(e.line, e.col, "At most 100 inputs per script")
             if (inFunc) err(e.line, e.col, "Inputs must be declared at the top level")
             else inputCalls += e
         }

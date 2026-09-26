@@ -76,10 +76,23 @@ private class G {
 
 private object Missing
 
+/** Longest text a script may build. */
+private const val MAX_TEXT = 4_000
+/** Longest lookback a ta.* function may use (TradingView's own limit is 5000 bars). */
+private const val MAX_LEN = 5_000
+
 internal class Interp(
     private val sc: Pine.Script, private val bars: List<Pine.Bar>, private val overrides: Map<String, Any?>,
     private val symbol: String, private val interval: String, qty: Double?, private val mintick: Double,
+    private val budgetMs: Long = 10_000,
 ) {
+    /** A script that runs past its time budget stops with an error (an endless loop must not hang the app). */
+    private val deadline = System.nanoTime() + budgetMs * 1_000_000
+    private var steps = 0L
+    private fun tick(line: Int, col: Int) {
+        if ((++steps and 1023L) == 0L && System.nanoTime() > deadline)
+            fail(line, col, "The script takes too long (over ${budgetMs / 1000.0} s): simplify its loops")
+    }
     private val n = bars.size
     private var bar = 0
     private val plots = List(sc.plots.size) { DoubleArray(n) { NA } }
@@ -116,6 +129,8 @@ internal class Interp(
             error = Pine.Problem(e.line, e.col, "Bar ${bar + 1}: ${e.message}")
         } catch (e: StackOverflowError) {
             error = Pine.Problem(0, 0, "The script recursed too deeply")
+        } catch (e: OutOfMemoryError) {
+            error = Pine.Problem(0, 0, "The script used too much memory at bar ${bar + 1}")
         } catch (e: RuntimeException) {
             error = Pine.Problem(0, 0, "Stopped at bar ${bar + 1}: ${e.message ?: e.javaClass.simpleName}")
         }
@@ -138,6 +153,7 @@ internal class Interp(
     }
 
     private fun exec(s: Stmt, scope: Scope): Any? {
+        tick(s.line, s.col)
         return when (s) {
             is Decl -> {
                 if (s.persistent) {
@@ -256,7 +272,9 @@ internal class Interp(
     private fun arith(op: String, a: Any?, b: Any?, line: Int, col: Int): Any? {
         if (op == "+" && (a is String || b is String)) {
             if (a == null || b == null) return null
-            return str(a) + str(b)
+            val sa = str(a); val sb = str(b)
+            if (sa.length + sb.length > MAX_TEXT) fail(line, col, "Text longer than $MAX_TEXT characters")
+            return sa + sb
         }
         if (a is String || b is String) fail(line, col, "Cannot use '$op' on text")
         val x = num(a); val y = num(b)
@@ -397,6 +415,7 @@ internal class Interp(
     }
 
     private fun callUser(f: FuncDef, c: Call, scope: Scope): Any? {
+        tick(c.line, c.col)
         val fs = Scope(global)
         val given = arrayOfNulls<Any?>(f.params.size); val set = BooleanArray(f.params.size)
         var pos = 0
@@ -418,6 +437,7 @@ internal class Interp(
     private fun len(c: Call, a: Array<Any?>, i: Int, def: Int? = null): Int {
         val v = if (given(a, i)) num(a[i]) else def?.toDouble() ?: NA
         if (v.isNaN() || v < 1) fail(c.line, c.col, "${c.name}(): the length must be 1 or more (got ${if (v.isNaN()) "na" else str(v)})")
+        if (v > MAX_LEN) fail(c.line, c.col, "${c.name}(): the length must be at most $MAX_LEN (got ${str(v)})")
         return v.toInt()
     }
 
@@ -477,8 +497,11 @@ internal class Interp(
         "math.min" -> box(v.map { num(it) }.let { l -> if (l.any { it.isNaN() }) NA else l.min() })
         "math.avg" -> box(v.map { num(it) }.average())
         "str.format" -> {
-            var s = v.firstOrNull()?.toString() ?: ""
-            v.drop(1).forEachIndexed { i, x -> s = s.replace(Regex("\\{$i(,[^}]*)?\\}"), str(x)) }
+            var s = (v.firstOrNull()?.toString() ?: "").take(MAX_TEXT)
+            v.drop(1).take(20).forEachIndexed { i, x ->
+                s = s.replace(Regex("\\{$i(,[^}]*)?\\}"), Regex.escapeReplacement(str(x)))
+                if (s.length > MAX_TEXT) fail(c.line, c.col, "Text longer than $MAX_TEXT characters")
+            }
             s
         }
         "timestamp" -> {
@@ -512,7 +535,7 @@ internal class Interp(
                 val si = sc.shapeIndex[c.id] ?: return null
                 if (hit) {
                     val def = sc.shapes[si]
-                    val color = (if (c.name == "plotarrow") null else arg(a, 4) as? String)?.take(7) ?: def.color
+                    val color = Pine.safeColor((if (c.name == "plotarrow") null else arg(a, 4) as? String)?.take(7)) ?: def.color
                     val style = if (c.name == "plotarrow") (if (num(v) > 0) "arrowup" else "arrowdown") else def.style
                     val above = when (def.location) { "belowbar" -> false; "abovebar" -> true; "bottom" -> false; "top" -> true
                         else -> !(style.endsWith("up")) }
@@ -538,7 +561,9 @@ internal class Interp(
                     val dir = arg(a, 1)
                     val long = when (dir) { "long" -> true; "short" -> false; is Boolean -> dir
                         else -> fail(c.line, c.col, "${c.name}(): direction must be strategy.long or strategy.short") }
-                    br.entry(id, long, d(a, 2).takeIf { !it.isNaN() }, d(a, 3).takeIf { !it.isNaN() }, d(a, 4).takeIf { !it.isNaN() }, bar, c.name == "strategy.order")
+                    val q = d(a, 2).takeIf { !it.isNaN() }
+                    if (q != null && (q <= 0 || q > 1e9)) fail(c.line, c.col, "${c.name}(): qty must be above 0 and at most 1e9")
+                    br.entry(id.take(64), long, q, d(a, 3).takeIf { !it.isNaN() }, d(a, 4).takeIf { !it.isNaN() }, bar, c.name == "strategy.order")
                 }
                 "strategy.close" -> {
                     if (given(a, 7) && !truthy(a[7])) return null
@@ -753,7 +778,7 @@ internal class Interp(
             "math.sign" -> box(Math.signum(d(a, 0)))
             "math.pow" -> box(Math.pow(d(a, 0), d(a, 1)))
             "math.round" -> {
-                val x = d(a, 0); val p = d(a, 1, 0.0).toInt()
+                val x = d(a, 0); val p = d(a, 1, 0.0).let { if (it.isNaN()) 0 else it.coerceIn(0.0, 12.0).toInt() }
                 if (x.isNaN()) null else { val f = Math.pow(10.0, p.toDouble()); Math.round(x * f) / f }
             }
             "nz" -> arg(a, 0).let { v -> if (v == null || (v is Double && v.isNaN())) (if (given(a, 1)) arg(a, 1) else 0.0) else v }
@@ -776,7 +801,7 @@ internal class Interp(
                 val v = arg(a, 0)
                 val f = arg(a, 1) as? String
                 if (v is Double && f != null) {
-                    val dec = if (f.startsWith("format.")) 2 else f.substringAfter('.', "").length
+                    val dec = (if (f.startsWith("format.")) 2 else f.substringAfter('.', "").length).coerceAtMost(12)
                     String.format(java.util.Locale.ENGLISH, "%.${dec}f", v)
                 } else str(v)
             }

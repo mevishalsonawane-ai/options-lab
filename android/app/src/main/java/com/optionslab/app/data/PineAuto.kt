@@ -158,7 +158,8 @@ object PineAuto {
         val last = bars.lastOrNull() ?: return
         if (b.lastBar[id] == last.epochSecond) return
         b.lastBar[id] = last.epochSecond
-        val r = Pine.run(script, bars.map { PineScripts.toPine(it) }, PineScripts.inputValues(item, script), item.auto.symbol, item.auto.interval)
+        val r = Pine.run(script, bars.map { PineScripts.toPine(it) }, PineScripts.inputValues(item, script), item.auto.symbol, item.auto.interval,
+            budgetMs = 5_000)
         r.error?.let { note(b, id, "Script stopped: ${it.message}"); return }
         val prev = b.lastTarget[id]
         val target = targetOf(item, script, r, prev ?: 0)
@@ -223,6 +224,9 @@ object PineAuto {
         }
         val s = AppSettings.load()
         if (s.guardKill) { note(b, id, "Kill switch is on: nothing sent"); return }
+        // A phone that failed the security check never sends a real order on its own.
+        val findings = runCatching { com.optionslab.app.security.Integrity.reportWithin(app, 60_000) }.getOrDefault(emptyList())
+        if (com.optionslab.app.security.Integrity.compromised(findings)) { note(b, id, "This phone failed the security check: no live order sent"); return }
         if (!Broker.loggedIn) { note(b, id, "Not logged in to Zerodha today: nothing sent"); return }
         val ins = (Broker.cachedInstruments() ?: runCatching { Broker.instruments() }.getOrNull())?.firstOrNull {
             it.name == c.underlying && it.expiry == c.expiry && it.right == c.right && kotlin.math.abs(it.strike - c.strike) < 1e-6

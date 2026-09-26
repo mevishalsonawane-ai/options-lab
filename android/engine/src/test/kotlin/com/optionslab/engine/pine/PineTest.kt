@@ -288,4 +288,52 @@ class PineTest {
         assertTrue(rep.commission > 0)
         assertTrue(r.markers.isNotEmpty())
     }
+
+    @Test fun rsiAtrAndHistoryMatchIndependentMaths() {
+        val c = DoubleArray(80) { 100 + 8 * kotlin.math.sin(it / 5.0) + (it % 3) }
+        val b = bars(*c)
+        val s = ok("indicator(\"m\")\nplot(ta.rsi(close, 14))\nplot(ta.atr(14))\nx = close\nx := x * 2\nplot(x[1])\nplot(ta.wma(close, 4))\nplot(ta.stdev(close, 5))\n")
+        val r = Pine.run(s, b)
+        // Wilder's RSI: seeded with the average of the first 14 changes.
+        val ch = (1 until c.size).map { c[it] - c[it - 1] }
+        var up = ch.take(14).map { maxOf(it, 0.0) }.average(); var dn = ch.take(14).map { maxOf(-it, 0.0) }.average()
+        val rsi = DoubleArray(c.size) { Double.NaN }
+        rsi[14] = 100 - 100 / (1 + up / dn)
+        for (i in 15 until c.size) { up = (up * 13 + maxOf(ch[i - 1], 0.0)) / 14; dn = (dn * 13 + maxOf(-ch[i - 1], 0.0)) / 14; rsi[i] = 100 - 100 / (1 + up / dn) }
+        for (i in 15 until c.size) assertEquals(rsi[i], r.plots[0][i], 1e-9, "rsi at $i")
+        // ATR: Wilder's average of the true range, seeded with the first 14.
+        val tr = b.indices.map { i -> if (i == 0) b[i].high - b[i].low else maxOf(b[i].high - b[i].low, abs(b[i].high - b[i - 1].close), abs(b[i].low - b[i - 1].close)) }
+        var atr = tr.take(14).average()
+        assertEquals(atr, r.plots[1][13], 1e-9)
+        for (i in 14 until b.size) { atr = (atr * 13 + tr[i]) / 14; assertEquals(atr, r.plots[1][i], 1e-9, "atr at $i") }
+        // A variable's history is its value at the end of each bar.
+        for (i in 1 until b.size) assertEquals(2 * c[i - 1], r.plots[2][i], 1e-9)
+        assertEquals((c[0] * 1 + c[1] * 2 + c[2] * 3 + c[3] * 4) / 10, r.plots[3][3], 1e-9)
+        val w = c.slice(0..4); val m = w.average()
+        assertEquals(kotlin.math.sqrt(w.sumOf { (it - m) * (it - m) } / 5), r.plots[4][4], 1e-9)
+    }
+
+    @Test fun profitAndLossInTicksAndTrailing() {
+        val t0 = 1790048700L
+        fun bar(i: Int, o: Double, h: Double, l: Double, c: Double) = Pine.Bar(t0 + i * 300L, o, h, l, c, 0.0)
+        val s = ok("strategy(\"t\")\nif bar_index == 0\n    strategy.entry(\"L\", strategy.long)\nstrategy.exit(\"X\", \"L\", profit = 200, loss = 100)\n")
+        // mintick 0.05: profit 200 ticks = 10 points, loss 100 ticks = 5 points.
+        val r = Pine.run(s, listOf(bar(0, 100.0, 100.0, 100.0, 100.0), bar(1, 100.0, 104.0, 99.0, 103.0), bar(2, 103.0, 111.0, 102.0, 110.0)))
+        val t = r.report!!.trades.single()
+        assertEquals(110.0, t.exitPrice, 1e-9); assertEquals(10.0, t.pnl, 1e-9)
+        val tr = ok("strategy(\"t\")\nif bar_index == 0\n    strategy.entry(\"L\", strategy.long)\nstrategy.exit(\"T\", \"L\", trail_points = 20, trail_offset = 40)\n")
+        // Trail starts once the high reaches entry + 1 point, then follows the best high 2 points back.
+        val r2 = Pine.run(tr, listOf(bar(0, 100.0, 100.0, 100.0, 100.0), bar(1, 100.0, 106.0, 99.5, 105.0), bar(2, 105.0, 105.5, 103.0, 103.5)))
+        val t2 = r2.report!!.trades.single()
+        assertEquals(104.0, t2.exitPrice, 1e-9)
+    }
+
+    @Test fun gapThroughAStopFillsAtTheOpen() {
+        val t0 = 1790048700L
+        val s = ok("strategy(\"g\")\nif bar_index == 0\n    strategy.entry(\"S\", strategy.short)\nstrategy.exit(\"X\", \"S\", stop = 105)\n")
+        val r = Pine.run(s, listOf(Pine.Bar(t0, 100.0, 100.0, 100.0, 100.0, 0.0), Pine.Bar(t0 + 300, 100.0, 101.0, 99.0, 100.0, 0.0),
+            Pine.Bar(t0 + 600, 108.0, 109.0, 107.0, 108.0, 0.0)))
+        val t = r.report!!.trades.single()
+        assertEquals(108.0, t.exitPrice, 1e-9); assertEquals(-8.0, t.pnl, 1e-9)
+    }
 }
