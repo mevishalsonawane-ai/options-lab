@@ -29,6 +29,9 @@ import java.net.Socket
  * "direct-tcpip" channel, so TLS runs end to end between the app and api.kite.trade
  * (certificate pinning included); the server only forwards bytes it cannot read.
  * Only api.kite.trade and api.ipify.org (the IP check) may be reached through it.
+ * The endpoint asks for a SOCKS5 user name and password (RFC 1929) made fresh at random
+ * in each app process and handed only to this app's own connections (through
+ * java.net.Authenticator), so another app on the phone cannot borrow the relay.
  *
  * The key pair is made on the phone; only the public half is ever shown. The server's
  * host key is remembered on first connect and any change is refused.
@@ -41,6 +44,26 @@ object Relay {
     private const val K_PUB = "relay.pub"
     private const val K_HOSTKEY = "relay.hostkey"
     private val ALLOWED = setOf("api.kite.trade", "api.ipify.org")
+
+    // The SOCKS credential: random per process, never stored, never shown or logged.
+    private const val SOCKS_USER = "iraalgo"
+    private val socksPass: String by lazy {
+        val b = ByteArray(24).also { java.security.SecureRandom().nextBytes(it) }
+        b.joinToString("") { "%02x".format(it.toInt() and 0xff) }.also { java.util.Arrays.fill(b, 0.toByte()) }
+    }
+
+    /**
+     * Hands the credential to this app's own SOCKS connections (Android's SocksSocketImpl asks
+     * the default Authenticator for "SOCKS5"), only for the relay's port, never to anyone else.
+     */
+    private object SocksAuth : java.net.Authenticator() {
+        override fun getPasswordAuthentication(): java.net.PasswordAuthentication? {
+            val port = socks?.takeIf { !it.isClosed }?.localPort ?: return null
+            if (!requestingProtocol.orEmpty().equals("SOCKS5", true) || requestingPort != port) return null
+            if (requestingSite?.isLoopbackAddress == false) return null
+            return java.net.PasswordAuthentication(SOCKS_USER, socksPass.toCharArray())
+        }
+    }
 
     var enabled: Boolean
         get() = SecurePrefs.getBoolean(K_ON, false)
@@ -135,12 +158,13 @@ object Relay {
 
     @Synchronized private fun socksServer(): ServerSocket {
         socks?.takeIf { !it.isClosed }?.let { return it }
-        val ss = ServerSocket(0, 50, InetAddress.getLoopbackAddress())
+        java.net.Authenticator.setDefault(SocksAuth)
+        val ss = ServerSocket(0, 50, InetAddress.getLoopbackAddress())      // loopback only, never the network
         socks = ss
         Thread({
             while (!ss.isClosed) {
                 val client = runCatching { ss.accept() }.getOrNull() ?: break
-                Thread({ serve(client) }, "relay-conn").apply { isDaemon = true }.start()
+                Thread({ runCatching { serve(client) } }, "relay-conn").apply { isDaemon = true }.start()
             }
         }, "relay-socks").apply { isDaemon = true }.start()
         return ss
@@ -172,9 +196,15 @@ object Relay {
         client.use { c ->
             val inp = DataInputStream(c.getInputStream())
             val out = c.getOutputStream()
+            if (c.inetAddress?.isLoopbackAddress != true) return
+            c.soTimeout = 15_000                                               // a stalled handshake does not hold a thread
             if (inp.readUnsignedByte() != 5) return
-            repeat(inp.readUnsignedByte()) { inp.readUnsignedByte() }
-            out.write(byteArrayOf(5, 0)); out.flush()                         // no authentication (loopback)
+            var userPass = false
+            repeat(inp.readUnsignedByte()) { if (inp.readUnsignedByte() == 2) userPass = true }
+            if (!userPass) { out.write(byteArrayOf(5, 0xFF.toByte())); out.flush(); return }   // no acceptable method
+            out.write(byteArrayOf(5, 2)); out.flush()                         // user name / password (RFC 1929)
+            if (!authOk(inp)) { out.write(byteArrayOf(1, 1)); out.flush(); return }
+            out.write(byteArrayOf(1, 0)); out.flush()
             if (inp.readUnsignedByte() != 5 || inp.readUnsignedByte() != 1) return
             inp.readUnsignedByte()
             val dest = when (inp.readUnsignedByte()) {
@@ -192,11 +222,24 @@ object Relay {
             val toServer = ch.outputStream
             try { ch.connect(15_000) } catch (e: Exception) { reply(out, 5); return }
             reply(out, 0)
+            c.soTimeout = 0                                                    // a quiet tunnel is not an error
             val up = Thread({ pump(inp, toServer); runCatching { ch.disconnect() } }, "relay-up").apply { isDaemon = true; start() }
             pump(fromServer, out)
             runCatching { ch.disconnect() }
             up.join(1_000)
         }
+    }
+
+    /** Reads the RFC 1929 request and checks it in constant time; the bytes read are wiped. */
+    private fun authOk(inp: DataInputStream): Boolean {
+        if (inp.readUnsignedByte() != 1) return false
+        val u = ByteArray(inp.readUnsignedByte()).also { inp.readFully(it) }
+        val p = ByteArray(inp.readUnsignedByte()).also { inp.readFully(it) }
+        val want = socksPass.toByteArray(Charsets.US_ASCII)
+        val ok = java.security.MessageDigest.isEqual(u, SOCKS_USER.toByteArray(Charsets.US_ASCII)) and
+            java.security.MessageDigest.isEqual(p, want)
+        java.util.Arrays.fill(u, 0.toByte()); java.util.Arrays.fill(p, 0.toByte()); java.util.Arrays.fill(want, 0.toByte())
+        return ok
     }
 
     private fun reply(out: OutputStream, code: Int) {
