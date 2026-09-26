@@ -76,6 +76,24 @@ object Integrity {
             .requestedPermissions?.toList() ?: emptyList()
     }.getOrDefault(emptyList()).sorted()
 
+    /**
+     * Permissions Android adds by itself, which the app never asked for: those flagged
+     * implicit by the system (Android 12+), and the local-network permission newer Android
+     * versions give every app that has INTERNET. They say nothing about the APK being altered.
+     */
+    private val OS_ADDED = setOf("android.permission.ACCESS_LOCAL_NETWORK")
+
+    fun platformAdded(context: Context): Set<String> = runCatching {
+        @Suppress("DEPRECATION")
+        val info = context.packageManager.getPackageInfo(context.packageName, android.content.pm.PackageManager.GET_PERMISSIONS)
+        val names = info.requestedPermissions ?: return@runCatching emptySet<String>()
+        val flags = info.requestedPermissionsFlags
+        val implicit = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && flags != null)
+            names.indices.filter { flags[it] and android.content.pm.PackageInfo.REQUESTED_PERMISSION_IMPLICIT != 0 }.map { names[it] }.toSet()
+        else emptySet()
+        implicit + names.filter { it in OS_ADDED }
+    }.getOrDefault(emptySet())
+
     fun allowedPermissions(context: Context): Set<String> =
         BuildConfig.ALLOWED_PERMISSIONS.split(",").map { it.replace("\${applicationId}", context.packageName) }.toSet()
 
@@ -87,7 +105,7 @@ object Integrity {
      * this app itself (system components aside).
      */
     fun sandbox(context: Context): Finding {
-        val extra = heldPermissions(context) - allowedPermissions(context)
+        val extra = heldPermissions(context) - allowedPermissions(context) - platformAdded(context)
         if (extra.isNotEmpty()) return Finding("Sandbox", Severity.DANGER, "holds permissions it was never built with: ${extra.joinToString { it.substringAfterLast('.') }}")
         val visible = runCatching {
             @Suppress("DEPRECATION")

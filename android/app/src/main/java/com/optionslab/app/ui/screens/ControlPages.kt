@@ -487,6 +487,7 @@ fun SchedulePage(model: AppModel) {
 private fun plainPermission(p: String): String = when (p.substringAfterLast('.')) {
     "INTERNET" -> "Reach the internet - Upstox's public market data, and Zerodha (kite.zerodha.com, api.kite.trade) once you connect it"
     "ACCESS_NETWORK_STATE" -> "Tell whether the phone is online"
+    "ACCESS_LOCAL_NETWORK" -> "Local network (added by Android itself to every internet app; IraAlgo never uses it)"
     "POST_NOTIFICATIONS" -> "Show its own notifications"
     "USE_BIOMETRIC", "USE_FINGERPRINT" -> "Ask Android to check your fingerprint or face (it never sees them)"
     "FOREGROUND_SERVICE", "FOREGROUND_SERVICE_DATA_SYNC" -> "Keep the market watch running during market hours"
