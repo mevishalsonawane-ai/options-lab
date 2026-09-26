@@ -7,6 +7,16 @@ internal object Builtins {
     private fun s(required: Int, vararg p: String) = Sig(p.toList(), required)
     private fun v(required: Int) = Sig(emptyList(), required, variadic = true)
 
+    /** Array functions: argument count range (the array itself counts). */
+    val ARRAY_FNS: Map<String, IntRange> = mapOf(
+        "new" to 0..2, "new_float" to 0..2, "new_int" to 0..2, "new_bool" to 0..2, "new_string" to 0..2, "new_color" to 0..2,
+        "from" to 0..1000, "size" to 1..1, "get" to 2..2, "set" to 3..3, "push" to 2..2, "pop" to 1..1, "shift" to 1..1,
+        "unshift" to 2..2, "insert" to 3..3, "remove" to 2..2, "clear" to 1..1, "sum" to 1..1, "avg" to 1..1, "min" to 1..2,
+        "max" to 1..2, "stdev" to 1..2, "median" to 1..1, "includes" to 2..2, "indexof" to 2..2, "lastindexof" to 2..2,
+        "first" to 1..1, "last" to 1..1, "slice" to 3..3, "copy" to 1..1, "sort" to 1..2, "reverse" to 1..1, "fill" to 2..4,
+        "concat" to 2..2, "join" to 1..2, "range" to 1..1, "variance" to 1..2, "mode" to 1..1,
+    )
+
     private val DECL_COMMON = arrayOf("title", "shorttitle", "overlay", "format", "precision", "scale", "max_bars_back",
         "timeframe", "timeframe_gaps", "explicit_plot_zorder", "max_lines_count", "max_labels_count", "max_boxes_count",
         "calc_bars_count", "max_polylines_count", "dynamic_requests", "behind_chart")
@@ -84,13 +94,18 @@ internal object Builtins {
         put("runtime.error", s(1, "message"))
         put("max_bars_back", s(2, "var", "num"))
         put("log.info", v(1)); put("log.warning", v(1)); put("log.error", v(1))
+        val sec = arrayOf("symbol", "timeframe", "expression", "gaps", "lookahead", "ignore_invalid_symbol", "currency", "calc_bars_count")
+        put("request.security", s(3, *sec)); put("security", s(3, *sec))
+        put("timeframe.change", s(1, "timeframe")); put("timeframe.in_seconds", s(0, "timeframe"))
+        for ((f, range) in ARRAY_FNS) put("array.$f", v(range.first))
     }
 
     /** Functions accepted but not drawn on the phone chart. */
     val IGNORED = setOf("plotcandle", "plotbar", "bgcolor", "barcolor", "fill", "alert",
         "max_bars_back", "log.info", "log.warning", "log.error")
     val DRAWING_NS = setOf("label", "line", "box", "table", "linefill", "polyline", "chart.point")
-    val UNSUPPORTED_NS = setOf("array", "matrix", "map", "request", "ticker", "strategy.risk", "str")
+    val UNSUPPORTED_NS = setOf("matrix", "map", "ticker", "strategy.risk", "str")
+
 
     val SERIES = setOf("open", "high", "low", "close", "volume", "hl2", "hlc3", "ohlc4", "hlcc4", "time", "time_close", "time_tradingday",
         "bar_index", "last_bar_index", "last_bar_time", "year", "month", "weekofyear", "dayofmonth", "dayofweek", "hour", "minute", "second",
@@ -175,6 +190,7 @@ internal class Checker(private val prog: List<Stmt>) {
         when (s) {
             is Decl -> {
                 expr(s.value)
+                if (scopes.size == 1 && (s.value as? Call)?.name?.let { it == "input" || it.startsWith("input.") } == true) inputGlobals += s.name
                 if (s.name in scopes.last()) err(s.line, s.col, "'${s.name}' is already defined: use ':=' to give it a new value")
                 if (s.name in funcs) err(s.line, s.col, "'${s.name}' is already a function name")
                 scopes.last() += s.name
@@ -199,6 +215,16 @@ internal class Checker(private val prog: List<Stmt>) {
                 loopDepth--; scopes.removeAt(scopes.size - 1)
             }
             is While -> { expr(s.cond); loopDepth++; block(s.body); loopDepth-- }
+            is Switch -> {
+                s.subject?.let { expr(it) }
+                for ((c, body) in s.cases) { c?.let { expr(it) }; block(body) }
+            }
+            is ForIn -> {
+                expr(s.over)
+                scopes.add(hashSetOf(s.item).apply { s.index?.let { add(it) } }); loopDepth++
+                stmts(s.body)
+                loopDepth--; scopes.removeAt(scopes.size - 1)
+            }
             is Jump -> if (loopDepth == 0) err(s.line, s.col, "'${if (s.brk) "break" else "continue"}' can only be used inside a loop")
             is ExprStmt -> expr(s.e, statementLevel = true, top = top)
             is FuncDef -> {
@@ -217,6 +243,26 @@ internal class Checker(private val prog: List<Stmt>) {
             }
         }
     }
+
+    private fun secNames(x: Expr, at: Call) {
+        when (x) {
+            is Name -> if (!Builtins.isKnownName(x.name) && x.name !in inputGlobals && scopes.first().contains(x.name))
+                err(x.line, x.col, "request.security can only use built-in values, inputs and functions, not '${x.name}': compute it inside the expression")
+            is Index -> { secNames(x.target, at); secNames(x.offset, at) }
+            is Unary -> secNames(x.e, at)
+            is Binary -> { secNames(x.a, at); secNames(x.b, at) }
+            is Ternary -> { secNames(x.c, at); secNames(x.a, at); secNames(x.b, at) }
+            is TupleLit -> x.items.forEach { secNames(it, at) }
+            is Call -> {
+                if (x.name.startsWith("strategy.") || x.name == "plot") err(x.line, x.col, "${x.name}() cannot run inside request.security")
+                x.args.forEach { secNames(it.value, at) }
+            }
+            else -> {}
+        }
+    }
+
+    /** Globals holding an input (constant over the run): request.security may use them. */
+    private val inputGlobals = HashSet<String>()
 
     private fun expr(e: Expr, statementLevel: Boolean = false, top: Boolean = false) {
         when (e) {
@@ -265,9 +311,13 @@ internal class Checker(private val prog: List<Stmt>) {
                     warn(e.line, e.col, "$ns.* drawings are accepted but not drawn on the phone chart"); return
                 }
                 e.name.startsWith("strategy.risk.") -> { warn(e.line, e.col, "strategy.risk.* rules are ignored in the phone backtest"); return }
-                ns in Builtins.UNSUPPORTED_NS || e.name == "request.security" ->
-                    err(e.line, e.col, if (ns == "request") "${e.name}() is not supported yet: the script runs on the chart's own symbol and timeframe"
-                        else "${e.name}() is not supported yet")
+                // arr.push(x): a method on an array variable.
+                ns.isNotEmpty() && !ns.contains('.') && declared(ns) && Builtins.SIGS.containsKey("array.${e.name.substringAfter('.')}") -> {
+                    val r = Builtins.ARRAY_FNS[e.name.substringAfter('.')]!!
+                    if (e.args.size + 1 !in r) err(e.line, e.col, "${e.name}(): wrong number of arguments")
+                }
+                ns == "request" -> err(e.line, e.col, "${e.name}() is not supported: only request.security on the chart's own symbol")
+                ns in Builtins.UNSUPPORTED_NS -> err(e.line, e.col, "${e.name}() is not supported yet")
                 e.name in funcs -> {}
                 else -> err(e.line, e.col, "Unknown function '${e.name}'")
             }
@@ -285,9 +335,16 @@ internal class Checker(private val prog: List<Stmt>) {
             val one = e.name in setOf("ta.highest", "ta.lowest", "ta.highestbars", "ta.lowestbars")
             if (!one) sig.params.take(sig.required).filter { it !in given }.forEach { err(e.line, e.col, "${e.name}() is missing the argument '$it'") }
         } else if (e.args.size < sig.required) err(e.line, e.col, "${e.name}() needs at least ${sig.required} argument(s)")
+        else if (e.name.startsWith("array.")) Builtins.ARRAY_FNS[e.name.removePrefix("array.")]?.let { r ->
+            if (e.args.size > r.last) err(e.line, e.col, "${e.name}() takes at most ${r.last} argument(s)")
+        }
+        if (e.name == "request.security" || e.name == "security") {
+            // The expression runs on the higher timeframe's own candles: it may use built-in values,
+            // inputs and functions, not the script's other variables (those live on the chart's candles).
+            val x = e.args.firstOrNull { it.name == "expression" }?.value ?: e.args.filter { it.name == null }.getOrNull(2)?.value
+            x?.let { secNames(it, e) }
+        }
         if (e.name in Builtins.IGNORED) warn(e.line, e.col, "${e.name}() is accepted but not drawn on the phone chart")
-        if ((e.name == "strategy.exit" || e.name == "strategy.close") && e.args.any { it.name == "qty" || it.name == "qty_percent" })
-            warn(e.line, e.col, "Partial exits (qty / qty_percent in ${e.name}) close the whole entry in the phone backtest")
         if (e.name == "strategy.exit" && e.args.any { it.name?.startsWith("oca") == true })
             warn(e.line, e.col, "OCA groups are ignored in the phone backtest")
         when (e.name) {

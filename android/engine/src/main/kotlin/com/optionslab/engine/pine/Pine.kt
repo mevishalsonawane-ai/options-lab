@@ -32,7 +32,16 @@ object Pine {
         val initialCapital: Double = 1_000_000.0, val qtyType: String = "fixed", val qtyValue: Double = 1.0,
         val pyramiding: Int = 1, val commissionType: String = "percent", val commissionValue: Double = 0.0,
         val processOnClose: Boolean = false,
+        /** strategy(slippage = N): N ticks against every fill. */
+        val slippageTicks: Double = 0.0,
     )
+
+    /**
+     * Costs added on top of the script's own, for a truer backtest: [slippagePoints] against
+     * every fill (buys higher, sells lower), [perOrder] rupees per fill (brokerage and fees),
+     * and [percent] of each fill's value (taxes on turnover).
+     */
+    data class Costs(val slippagePoints: Double = 0.0, val perOrder: Double = 0.0, val percent: Double = 0.0)
 
     class Script internal constructor(
         val kind: Kind, val title: String, val overlay: Boolean,
@@ -140,6 +149,7 @@ object Pine {
             commissionType = (arg("commission_type")?.let { constOf(it) } as? String)?.takeIf { it in setOf("percent", "cash_per_order", "cash_per_contract") } ?: "percent",
             commissionValue = num("commission_value")?.takeIf { it >= 0 && it <= 1e6 } ?: 0.0,
             processOnClose = (arg("process_orders_on_close")?.let { constOf(it) } as? Boolean) ?: false,
+            slippageTicks = num("slippage")?.coerceIn(0.0, 10_000.0) ?: 0.0,
         ) else Settings()
 
         val inputIndex = LinkedHashMap<Int, InputDef>()
@@ -188,7 +198,9 @@ object Pine {
                 when (st) {
                     is ExprStmt -> ex(st.e); is Decl -> ex(st.value); is Assign -> ex(st.value); is TupleDecl -> ex(st.value)
                     is If -> { ex(st.cond); walk(st.then); st.orElse?.let { walk(it) } }
-                    is For -> walk(st.body); is While -> walk(st.body); else -> {}
+                    is For -> walk(st.body); is While -> walk(st.body); is ForIn -> { ex(st.over); walk(st.body) }
+                    is Switch -> { st.subject?.let { ex(it) }; st.cases.forEach { (c, b) -> c?.let { ex(it) }; walk(b) } }
+                    else -> {}
                 }
                 for (c in calls) {
                     val s = Builtins.SIGS[c.name] ?: continue
@@ -223,17 +235,20 @@ object Pine {
      * chart code (1m, 5m, 1h, 1D ...). [qty] overrides the strategy's order size.
      */
     fun run(script: Script, bars: List<Bar>, inputs: Map<String, Any?> = emptyMap(), symbol: String = "NIFTY",
-            interval: String = "5m", qty: Double? = null, mintick: Double = 0.05, budgetMs: Long = 10_000): Run =
-        Interp(script, bars, inputs, symbol, interval, qty?.takeIf { it.isFinite() && it > 0 }?.coerceAtMost(1e9), mintick, budgetMs).go()
+            interval: String = "5m", qty: Double? = null, mintick: Double = 0.05, budgetMs: Long = 10_000, costs: Costs = Costs()): Run =
+        Interp(script, bars, inputs, symbol, interval, qty?.takeIf { it.isFinite() && it > 0 }?.coerceAtMost(1e9), mintick, budgetMs, safe(costs)).go()
+
+    private fun safe(c: Costs) = Costs(c.slippagePoints.takeIf { it.isFinite() }?.coerceIn(0.0, 1e6) ?: 0.0,
+        c.perOrder.takeIf { it.isFinite() }?.coerceIn(0.0, 1e7) ?: 0.0, c.percent.takeIf { it.isFinite() }?.coerceIn(0.0, 10.0) ?: 0.0)
 
     /**
      * Trade an indicator's signals: [buy] goes long, [sell] goes short ([reverse]) or just
      * exits. Orders fill at the next candle's open, as a strategy's would. [qty] units per trade.
      */
     fun signalBacktest(bars: List<Bar>, buy: BooleanArray, sell: BooleanArray, reverse: Boolean, qty: Double = 1.0,
-                       capital: Double = 100_000.0): Report {
+                       capital: Double = 100_000.0, costs: Costs = Costs()): Report {
         val markers = ArrayList<Marker>()
-        val br = Broker(Settings(initialCapital = capital.takeIf { it > 0 && it.isFinite() } ?: 100_000.0), qty.coerceIn(1e-9, 1e9), 0.05, bars, markers)
+        val br = Broker(Settings(initialCapital = capital.takeIf { it > 0 && it.isFinite() } ?: 100_000.0), qty.coerceIn(1e-9, 1e9), 0.05, bars, markers, safe(costs))
         for (i in bars.indices) {
             br.beforeBar(i)
             when {

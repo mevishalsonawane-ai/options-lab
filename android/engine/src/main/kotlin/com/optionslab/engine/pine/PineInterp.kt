@@ -76,15 +76,22 @@ private class G {
 
 private object Missing
 
+/** A Pine array: a list of values, shared by reference like TradingView's. */
+internal class PArr(val v: ArrayList<Any?>) { override fun toString() = v.joinToString(", ", "[", "]") }
+
+/** Most items one array may hold. */
+private const val MAX_ITEMS = 100_000
+
 /** Longest text a script may build. */
 private const val MAX_TEXT = 4_000
 /** Longest lookback a ta.* function may use (TradingView's own limit is 5000 bars). */
 private const val MAX_LEN = 5_000
 
 internal class Interp(
-    private val sc: Pine.Script, private val bars: List<Pine.Bar>, private val overrides: Map<String, Any?>,
-    private val symbol: String, private val interval: String, qty: Double?, private val mintick: Double,
+    private val sc: Pine.Script, private val chartBars: List<Pine.Bar>, private val overrides: Map<String, Any?>,
+    private val symbol: String, private val chartInterval: String, qty: Double?, private val mintick: Double,
     private val budgetMs: Long = 10_000,
+    costs: Pine.Costs = Pine.Costs(),
 ) {
     /** A script that runs past its time budget stops with an error (an endless loop must not hang the app). */
     private val deadline = System.nanoTime() + budgetMs * 1_000_000
@@ -93,19 +100,23 @@ internal class Interp(
         if ((++steps and 1023L) == 0L && System.nanoTime() > deadline)
             fail(line, col, "The script takes too long (over ${budgetMs / 1000.0} s): simplify its loops")
     }
-    private val n = bars.size
+    // The candles the script is running on: the chart's, or a higher timeframe's inside request.security.
+    private var bars = chartBars
+    private var n = chartBars.size
+    private var interval = chartInterval
+    private var htf = false
     private var bar = 0
-    private val plots = List(sc.plots.size) { DoubleArray(n) { NA } }
+    private val plots = List(sc.plots.size) { DoubleArray(chartBars.size) { NA } }
     private val markers = ArrayList<Pine.Marker>()
-    private val signals = List(sc.signals.size) { BooleanArray(n) }
-    private val position = DoubleArray(n)
+    private val signals = List(sc.signals.size) { BooleanArray(chartBars.size) }
+    private val position = DoubleArray(chartBars.size)
     private val global = Scope(null)
     private val funcs = sc.prog.filterIsInstance<FuncDef>().associateBy { it.name }
     private val state = HashMap<String, Any>()
     private var path = ""
     private var depth = 0
     private var loopOps = 0L
-    private val broker = if (sc.kind == Pine.Kind.STRATEGY) Broker(sc.settings, qty, mintick, bars, markers) else null
+    private val broker = if (sc.kind == Pine.Kind.STRATEGY) Broker(sc.settings, qty, mintick, chartBars, markers, costs) else null
     private val top = sc.prog.filter { it !is FuncDef }
 
     private fun fail(line: Int, col: Int, msg: String): Nothing = throw PineError(line, col, msg)
@@ -113,7 +124,7 @@ internal class Interp(
     fun go(): Pine.Run {
         var error: Pine.Problem? = null
         try {
-            for (i in 0 until n) {
+            for (i in chartBars.indices) {
                 bar = i; loopOps = 0
                 broker?.beforeBar(i)
                 for (s in top) exec(s, global)
@@ -206,6 +217,33 @@ internal class Interp(
                     iv.v = i
                     try { last = block(s.body, Scope(loop)) } catch (_: BreakSignal) { break } catch (_: ContinueSignal) {}
                     i += step
+                }
+                return last
+            }
+            is Switch -> {
+                val subj = s.subject?.let { eval(it, scope) }
+                for ((c, body) in s.cases) {
+                    val hit = when {
+                        c == null -> true
+                        s.subject != null -> { val v = eval(c, scope); v != null && subj != null && (if (v is Double || subj is Double) num(v) == num(subj) else v == subj) }
+                        else -> truthy(eval(c, scope))
+                    }
+                    if (hit) return block(body, Scope(scope))
+                }
+                return null
+            }
+            is ForIn -> {
+                val arr = eval(s.over, scope) as? PArr ?: fail(s.line, s.col, "for...in needs an array")
+                val loop = Scope(scope)
+                val item = Slot(null); loop.vars[s.item] = item
+                val idx = s.index?.let { Slot(null).also { sl -> loop.vars[it] = sl } }
+                var last: Any? = null
+                // A copy: the body may change the array.
+                val items = ArrayList(arr.v)
+                for ((i, x) in items.withIndex()) {
+                    if (++loopOps > 500_000) fail(s.line, s.col, "This loop takes too long (over 500,000 steps on one bar)")
+                    item.v = x; idx?.v = i.toDouble()
+                    try { last = block(s.body, Scope(loop)) } catch (_: BreakSignal) { break } catch (_: ContinueSignal) {}
                 }
                 return last
             }
@@ -377,11 +415,180 @@ internal class Interp(
         }
     }
 
-    private fun stepSeconds(): Long {
-        val m = Regex("^(\\d*)([a-zA-Z])").find(interval) ?: return 300
-        val k = m.groupValues[1].ifEmpty { "1" }.toLong()
-        return k * when (m.groupValues[2]) { "m" -> 60L; "h", "H" -> 3600L; "d", "D" -> 86400L; "w", "W" -> 604800L; "M" -> 2592000L; else -> 60L }
+    private fun stepSeconds(): Long = tfSeconds(interval)
+
+    /** Seconds in a timeframe: Pine's ("5", "60", "D", "W", "M") or the chart's ("5m", "1h", "1D"). */
+    private fun tfSeconds(tf: String): Long {
+        val m = Regex("^(\\d*)([a-zA-Z]?)$").find(tf.trim()) ?: return 300
+        val k = m.groupValues[1].ifEmpty { "1" }.toLongOrNull()?.coerceIn(1, 100_000) ?: 1
+        return k * when (m.groupValues[2]) {
+            "", "m" -> 60L; "h", "H" -> 3600L; "d", "D" -> 86400L; "w", "W" -> 604800L; "M" -> 2592000L; "s", "S" -> 1L; else -> 60L
+        }
     }
+
+    /**
+     * The start (epoch seconds) of the [tf] candle holding time [t]: days, weeks (Monday) and
+     * months in IST; minute and hour candles counted from the 09:15 open.
+     */
+    private fun bucketStart(t: Long, tf: String): Long {
+        val z = Instant.ofEpochSecond(t).atZone(Pine.IST)
+        val secs = tfSeconds(tf)
+        val day = z.toLocalDate()
+        return when {
+            secs >= 2592000 -> day.withDayOfMonth(1).atStartOfDay(Pine.IST).toEpochSecond()
+            secs >= 604800 -> day.minusDays((day.dayOfWeek.value - 1).toLong()).atStartOfDay(Pine.IST).toEpochSecond()
+            secs >= 86400 -> day.atStartOfDay(Pine.IST).toEpochSecond()
+            else -> {
+                val open = day.atStartOfDay(Pine.IST).toEpochSecond() + 555 * 60
+                open + Math.floorDiv(t - open, secs) * secs
+            }
+        }
+    }
+
+    // ---- request.security: the same symbol on a higher timeframe --------------------------
+
+    private class Sec(val vals: Array<Any?>, val groupOf: IntArray, val last: IntArray, val lookahead: Boolean)
+    private object SameTf
+
+    private fun security(c: Call, scope: Scope): Any? {
+        if (htf) fail(c.line, c.col, "request.security cannot be nested")
+        val sig = Builtins.SIGS[c.name]!!
+        val key = path + "sec" + c.id
+        val done = state[key]
+        val expr = Pine.argOf(c, sig, "expression") ?: fail(c.line, c.col, "request.security needs an expression")
+        if (done === SameTf) return eval(expr, scope)
+        if (done is Sec) return pick(done)
+        val sym = Pine.argOf(c, sig, "symbol")?.let { eval(it, scope) }?.toString()?.trim().orEmpty()
+        val bare = sym.substringAfter(':').uppercase()
+        if (sym.isNotEmpty() && bare != symbol.uppercase())
+            fail(c.line, c.col, "request.security on another symbol ($sym) is not supported: only $symbol")
+        val tf = Pine.argOf(c, sig, "timeframe")?.let { eval(it, scope) }?.toString()?.trim().orEmpty()
+        val look = Pine.argOf(c, sig, "lookahead")?.let { eval(it, scope) }.let { it == true || it.toString().endsWith("lookahead_on") }
+        val step = stepSeconds()
+        val tfs = if (tf.isEmpty()) step else tfSeconds(tf)
+        if (tfs < step) fail(c.line, c.col, "request.security to a lower timeframe ($tf) than the chart's is not supported")
+        if (tfs == step) { state[key] = SameTf; return eval(expr, scope) }
+        // Group the chart's candles into the higher timeframe's.
+        val groupOf = IntArray(chartBars.size)
+        val lastIdx = ArrayList<Int>()
+        val hb = ArrayList<Pine.Bar>()
+        var cur = Long.MIN_VALUE
+        for ((i, b) in chartBars.withIndex()) {
+            val k = bucketStart(b.time, tf)
+            if (k != cur) {
+                cur = k
+                hb += Pine.Bar(b.time, b.open, b.high, b.low, b.close, b.volume); lastIdx += i
+            } else {
+                val h = hb.last()
+                hb[hb.size - 1] = Pine.Bar(h.time, h.open, max(h.high, b.high), min(h.low, b.low), b.close, h.volume + b.volume)
+                lastIdx[lastIdx.size - 1] = i
+            }
+            groupOf[i] = hb.size - 1
+        }
+        val vals = arrayOfNulls<Any?>(hb.size)
+        val saved = arrayOf<Any?>(bars, n, bar, path, interval)
+        bars = hb; n = hb.size; interval = tf; htf = true; path = path + "S" + c.id + "/"
+        try {
+            for (i in 0 until n) { bar = i; vals[i] = eval(expr, scope) }
+        } finally {
+            @Suppress("UNCHECKED_CAST")
+            bars = saved[0] as List<Pine.Bar>; n = saved[1] as Int; bar = saved[2] as Int; path = saved[3] as String; interval = saved[4] as String
+            htf = false
+        }
+        val sec = Sec(vals, groupOf, lastIdx.toIntArray(), look)
+        state[key] = sec
+        return pick(sec)
+    }
+
+    /** No look-ahead: a higher-timeframe value counts from the chart candle that completes it. */
+    private fun pick(s: Sec): Any? {
+        val g = s.groupOf[bar]
+        return if (s.lookahead || s.last[g] == bar) s.vals[g] else if (g > 0) s.vals[g - 1] else null
+    }
+
+    // ---- arrays -------------------------------------------------------------------------------
+
+    private fun same(x: Any?, y: Any?) = if (x is Double || y is Double) num(x) == num(y) else x == y
+
+    private fun array(c: Call, a: List<Any?>): Any? {
+        val f = c.name.removePrefix("array.")
+        fun arr(i: Int = 0): PArr = a.getOrNull(i) as? PArr ?: fail(c.line, c.col, "${c.name}(): expected an array")
+        fun cap(p: PArr): PArr { if (p.v.size > MAX_ITEMS) fail(c.line, c.col, "An array may hold at most $MAX_ITEMS items"); return p }
+        fun idx(p: PArr, x: Any?): Int {
+            val d = num(x); if (d.isNaN()) fail(c.line, c.col, "${c.name}(): the index is na")
+            var i = d.toInt(); if (i < 0) i += p.v.size
+            if (i !in p.v.indices) fail(c.line, c.col, "${c.name}(): index ${d.toInt()} is out of range (the array has ${p.v.size})")
+            return i
+        }
+        fun nums(p: PArr) = p.v.map { num(it) }.filter { !it.isNaN() }
+        return when (f) {
+            "new", "new_float", "new_int", "new_bool", "new_string", "new_color" -> {
+                val size = a.getOrNull(0)?.let { num(it) }?.takeIf { !it.isNaN() }?.toInt() ?: 0
+                if (size < 0 || size > MAX_ITEMS) fail(c.line, c.col, "An array may hold 0 to $MAX_ITEMS items")
+                PArr(ArrayList<Any?>(size).apply { repeat(size) { add(a.getOrNull(1)) } })
+            }
+            "from" -> cap(PArr(ArrayList(a)))
+            "size" -> arr().v.size.toDouble()
+            "get" -> arr().let { it.v[idx(it, a.getOrNull(1))] }
+            "set" -> { arr().let { it.v[idx(it, a.getOrNull(1))] = a.getOrNull(2) }; null }
+            "push" -> { cap(arr()).v.add(a.getOrNull(1)); cap(arr()); null }
+            "unshift" -> { arr().v.add(0, a.getOrNull(1)); cap(arr()); null }
+            "insert" -> { val p = arr(); val i = num(a.getOrNull(1)).let { if (it.isNaN()) 0 else it.toInt() }.coerceIn(0, p.v.size); p.v.add(i, a.getOrNull(2)); cap(p); null }
+            "pop" -> arr().let { if (it.v.isEmpty()) fail(c.line, c.col, "${c.name}(): the array is empty") else it.v.removeAt(it.v.size - 1) }
+            "shift" -> arr().let { if (it.v.isEmpty()) fail(c.line, c.col, "${c.name}(): the array is empty") else it.v.removeAt(0) }
+            "remove" -> arr().let { it.v.removeAt(idx(it, a.getOrNull(1))) }
+            "clear" -> { arr().v.clear(); null }
+            "sum" -> box(nums(arr()).sum())
+            "avg" -> nums(arr()).let { if (it.isEmpty()) null else box(it.average()) }
+            "min", "max" -> {
+                val l = nums(arr()).sorted().let { if (f == "max") it.reversed() else it }
+                val k = a.getOrNull(1)?.let { num(it).toInt() } ?: 0
+                l.getOrNull(k)?.let { box(it) }
+            }
+            "range" -> nums(arr()).let { if (it.isEmpty()) null else box(it.max() - it.min()) }
+            "stdev", "variance" -> {
+                val l = nums(arr()); if (l.isEmpty()) return null
+                val m = l.average(); val biased = a.getOrNull(1)?.let { truthy(it) } ?: true
+                val v = l.sumOf { (it - m) * (it - m) } / (if (biased || l.size < 2) l.size else l.size - 1)
+                box(if (f == "stdev") sqrt(v) else v)
+            }
+            "median" -> nums(arr()).sorted().let { if (it.isEmpty()) null else box(if (it.size % 2 == 1) it[it.size / 2] else (it[it.size / 2 - 1] + it[it.size / 2]) / 2) }
+            "mode" -> nums(arr()).groupingBy { it }.eachCount().entries.sortedWith(compareBy({ -it.value }, { it.key })).firstOrNull()?.key?.let { box(it) }
+            "includes" -> arr().v.any { same(it, a.getOrNull(1)) }
+            "indexof" -> arr().v.indexOfFirst { same(it, a.getOrNull(1)) }.toDouble()
+            "lastindexof" -> arr().v.indexOfLast { same(it, a.getOrNull(1)) }.toDouble()
+            "first" -> arr().v.firstOrNull() ?: if (arr().v.isEmpty()) fail(c.line, c.col, "${c.name}(): the array is empty") else null
+            "last" -> arr().v.lastOrNull() ?: if (arr().v.isEmpty()) fail(c.line, c.col, "${c.name}(): the array is empty") else null
+            "slice" -> {
+                val p = arr()
+                val from = num(a.getOrNull(1)).toInt().coerceIn(0, p.v.size); val to = num(a.getOrNull(2)).toInt().coerceIn(from, p.v.size)
+                PArr(ArrayList(p.v.subList(from, to)))
+            }
+            "copy" -> PArr(ArrayList(arr().v))
+            "sort" -> {
+                val p = arr(); val desc = a.getOrNull(1)?.toString()?.endsWith("descending") == true
+                if (p.v.all { it is String }) p.v.sortBy { it as String } else p.v.sortBy { num(it).let { d -> if (d.isNaN()) Double.MAX_VALUE else d } }
+                if (desc) p.v.reverse()
+                null
+            }
+            "reverse" -> { arr().v.reverse(); null }
+            "fill" -> {
+                val p = arr()
+                val from = a.getOrNull(2)?.let { num(it).toInt() }?.coerceIn(0, p.v.size) ?: 0
+                val to = a.getOrNull(3)?.let { num(it).toInt() }?.coerceIn(from, p.v.size) ?: p.v.size
+                for (i in from until to) p.v[i] = a.getOrNull(1)
+                null
+            }
+            "concat" -> { val p = arr(); p.v.addAll(arr(1).v); cap(p) }
+            "join" -> {
+                val sb = StringBuilder(); val sep = a.getOrNull(1)?.toString() ?: ","
+                for ((i, x) in arr().v.withIndex()) { if (i > 0) sb.append(sep); sb.append(str(x)); if (sb.length > MAX_TEXT) fail(c.line, c.col, "Text longer than $MAX_TEXT characters") }
+                sb.toString()
+            }
+            else -> fail(c.line, c.col, "${c.name}() is not supported yet")
+        }
+    }
+
     private fun tfPeriod(): String {
         val s = stepSeconds()
         return when { s >= 2592000 -> "M"; s >= 604800 -> "W"; s >= 86400 -> "D"; else -> (s / 60).toString() }
@@ -395,14 +602,26 @@ internal class Interp(
 
     private fun call(c: Call, scope: Scope): Any? {
         funcs[c.name]?.let { return callUser(it, c, scope) }
+        if (c.name == "request.security" || c.name == "security") return security(c, scope)
         val sig = Builtins.SIGS[c.name]
         if (sig == null) {
+            // arr.push(x) and friends: a method call on an array variable.
+            val dot = c.name.indexOf('.')
+            if (dot > 0) {
+                val holder = lookup(c.name.substring(0, dot), scope)
+                if (holder != null) {
+                    val fn = "array." + c.name.substring(dot + 1)
+                    if (Builtins.SIGS.containsKey(fn)) return array(Call(fn, listOf(Arg(null, Name(c.name.substring(0, dot), c.line, c.col))) + c.args, c.line, c.col),
+                        listOf(holder.v) + c.args.map { eval(it.value, scope) })
+                }
+            }
             val ns = c.name.substringBeforeLast('.', "")
             if (ns in Builtins.DRAWING_NS || c.name.startsWith("strategy.risk.") || c.name.startsWith("chart.point")) {
                 c.args.forEach { eval(it.value, scope) }; return null
             }
             fail(c.line, c.col, "Unknown function '${c.name}'")
         }
+        if (c.name.startsWith("array.")) return array(c, c.args.map { eval(it.value, scope) })
         if (sig.variadic) return builtinVar(c, c.args.map { eval(it.value, scope) }, scope)
         val a = arrayOfNulls<Any?>(sig.params.size)
         java.util.Arrays.fill(a, Missing)
@@ -521,6 +740,9 @@ internal class Interp(
     private fun builtin(c: Call, a: Array<Any?>, scope: Scope): Any? {
         val key = path + c.id
         val b = bars[bar]
+        // Inside request.security nothing is drawn, signalled or traded: only the value comes back.
+        if (htf && (c.name.startsWith("plot") || c.name == "hline" || c.name == "alertcondition" || c.name.startsWith("strategy.")))
+            fail(c.line, c.col, "${c.name}() cannot run inside request.security")
         when (c.name) {
             "indicator", "study", "strategy" -> return null
             "plot", "hline" -> {
@@ -567,7 +789,8 @@ internal class Interp(
                 }
                 "strategy.close" -> {
                     if (given(a, 7) && !truthy(a[7])) return null
-                    br.close(arg(a, 0)?.toString(), bar, truthy(arg(a, 5)))
+                    br.close(arg(a, 0)?.toString(), bar, truthy(arg(a, 5)),
+                        d(a, 2).takeIf { !it.isNaN() && it > 0 }, d(a, 3).takeIf { !it.isNaN() && it > 0 }?.coerceAtMost(100.0))
                 }
                 "strategy.close_all" -> {
                     if (given(a, 4) && !truthy(a[4])) return null
@@ -577,7 +800,8 @@ internal class Interp(
                     if (given(a, 21) && !truthy(a[21])) return null
                     val id = arg(a, 0)?.toString() ?: fail(c.line, c.col, "strategy.exit() needs an id")
                     fun opt(i: Int) = d(a, i).takeIf { !it.isNaN() }
-                    br.exit(Broker.Exit(id, arg(a, 1)?.toString(), opt(4), opt(6), opt(5), opt(7), opt(9), opt(10), opt(8)))
+                    val eq = opt(2)?.takeIf { it > 0 }; val ep = opt(3)?.takeIf { it > 0 }?.coerceAtMost(100.0)
+                    br.exit(Broker.Exit(id, arg(a, 1)?.toString(), opt(4), opt(6), opt(5), opt(7), opt(9), opt(10), opt(8), eq, ep))
                 }
                 "strategy.cancel" -> { if (!given(a, 1) || truthy(a[1])) br.cancel(arg(a, 0)?.toString()) }
                 "strategy.cancel_all" -> { if (!given(a, 0) || truthy(a[0])) br.cancel(null) }
@@ -807,8 +1031,16 @@ internal class Interp(
             }
             "time" -> {
                 val sess = arg(a, 1) as? String
-                if (sess != null && sess.isNotBlank() && !sessionOk(sess, bar)) null else b.time * 1000.0
+                val tf = (arg(a, 0) as? String)?.takeIf { it.isNotBlank() }
+                if (sess != null && sess.isNotBlank() && !sessionOk(sess, bar)) null
+                else if (tf == null || tfSeconds(tf) <= stepSeconds()) b.time * 1000.0
+                else bucketStart(b.time, tf) * 1000.0
             }
+            "timeframe.change" -> {
+                val tf = arg(a, 0) as? String ?: return false
+                bar > 0 && bucketStart(b.time, tf) != bucketStart(bars[bar - 1].time, tf)
+            }
+            "timeframe.in_seconds" -> tfSeconds((arg(a, 0) as? String)?.takeIf { it.isNotBlank() } ?: tfPeriod()).toDouble()
             else -> fail(c.line, c.col, "${c.name}() is not supported yet")
         }
     }
@@ -818,11 +1050,22 @@ internal class Interp(
 internal class Broker(
     private val s: Pine.Settings, private val qtyOverride: Double?, private val tick: Double,
     private val bars: List<Pine.Bar>, private val markers: MutableList<Pine.Marker>,
+    private val costs: Pine.Costs = Pine.Costs(),
 ) {
-    class Open(val id: String, val long: Boolean, val qty: Double, val price: Double, val bar: Int, val comm: Double, var best: Double)
+    /** An open entry; [qty] and [comm] shrink as partial exits take pieces of it. */
+    class Open(val id: String, val long: Boolean, var qty: Double, val price: Double, val bar: Int, var comm: Double, var best: Double) {
+        val origQty = qty
+        /** Exit orders that already took their piece of this entry. */
+        val done = HashSet<String>()
+    }
     class Order(val id: String, val long: Boolean, val qty: Double?, val limit: Double?, val stop: Double?, val bar: Int, val plain: Boolean)
     class Exit(val id: String, val from: String?, val profit: Double?, val loss: Double?, val limit: Double?, val stop: Double?,
-               val trailPts: Double?, val trailOff: Double?, val trailPrice: Double?)
+               val trailPts: Double?, val trailOff: Double?, val trailPrice: Double?, val qty: Double? = null, val qtyPct: Double? = null)
+
+    /** Price after slippage: buys fill higher, sells lower. */
+    private val slip = s.slippageTicks * tick + costs.slippagePoints
+    private fun buyPx(px: Double) = px + slip
+    private fun sellPx(px: Double) = px - slip
 
     private val open = ArrayList<Open>()
     private val orders = LinkedHashMap<String, Order>()
@@ -839,7 +1082,7 @@ internal class Broker(
     private fun equityAt(px: Double) = s.initialCapital + realized + openPnl(px)
     private fun comm(px: Double, q: Double) = when (s.commissionType) {
         "percent" -> px * q * s.commissionValue / 100; "cash_per_order" -> s.commissionValue; "cash_per_contract" -> s.commissionValue * q; else -> 0.0
-    }
+    } + costs.perOrder + px * q * costs.percent / 100
     private fun qtyFor(o: Order, px: Double): Double = qtyOverride ?: o.qty ?: when (s.qtyType) {
         "cash" -> floor(s.qtyValue / px)
         "percent_of_equity" -> floor(equityAt(px) * s.qtyValue / 100 / px)
@@ -870,9 +1113,29 @@ internal class Broker(
     fun entry(id: String, long: Boolean, qty: Double?, limit: Double?, stop: Double?, bar: Int, plain: Boolean) {
         orders[id] = Order(id, long, qty, limit, stop, bar, plain)
     }
-    fun close(id: String?, bar: Int, immediately: Boolean) {
-        if (immediately) closeWhere(bar, bars[bar].close, if (id == null) "Close all" else "Close") { id == null || it.id == id }
-        else closes += id
+    private class CloseReq(val id: String?, val qty: Double?, val pct: Double?)
+    private val partCloses = ArrayList<CloseReq>()
+
+    fun close(id: String?, bar: Int, immediately: Boolean, qty: Double? = null, pct: Double? = null) {
+        if (qty == null && pct == null) {
+            if (immediately) closeWhere(bar, bars[bar].close, if (id == null) "Close all" else "Close") { id == null || it.id == id }
+            else closes += id
+            return
+        }
+        if (immediately) closeAmount(bar, bars[bar].close, CloseReq(id, qty, pct)) else partCloses += CloseReq(id, qty, pct)
+    }
+
+    /** strategy.close with qty / qty_percent: that much of the matching entries, oldest first. */
+    private fun closeAmount(i: Int, px: Double, r: CloseReq) {
+        val match = open.filter { r.id == null || it.id == r.id }
+        val total = match.sumOf { it.qty }
+        var left = (r.qty ?: r.pct?.let { total * it / 100 } ?: total).coerceIn(0.0, total)
+        for (e in match) {
+            if (left <= 1e-12) break
+            val q = minOf(left, e.qty)
+            closePart(i, px, e, q, if (r.id == null) "Close all" else "Close ${r.id}")
+            left -= q
+        }
     }
     fun exit(x: Exit) { exits[x.id] = x }
     fun cancel(id: String?) { if (id == null) orders.clear() else orders.remove(id) }
@@ -888,34 +1151,43 @@ internal class Broker(
         } else if (open.size >= s.pyramiding) return
         val q = qtyFor(o, px)
         if (!(q > 0)) return
-        val c = comm(px, q)
+        val fill = if (o.long) buyPx(px) else sellPx(px)
+        val c = comm(fill, q)
         realized -= c; commission += c
-        open += Open(o.id, o.long, q, px, i, c, px)
+        open += Open(o.id, o.long, q, fill, i, c, fill)
         markers += Pine.Marker(i, !o.long, if (o.long) "labelUp" else "labelDown", if (o.long) "#089981" else "#F23645", o.id)
     }
 
     private fun closeWhere(i: Int, px: Double, exitId: String, pred: (Open) -> Boolean) {
-        val it = open.iterator()
-        var any = false
-        while (it.hasNext()) {
-            val e = it.next()
-            if (!pred(e)) continue
-            it.remove(); any = true
-            val c = comm(px, e.qty)
-            val gross = (px - e.price) * e.qty * (if (e.long) 1 else -1)
-            realized += gross - c; commission += c
-            val pnl = gross - e.comm - c
-            trades += Pine.Trade(e.id, exitId, e.long, e.qty, e.bar, bars[e.bar].time, e.price, i, bars[i].time, px,
-                pnl, pnl / (e.price * e.qty) * 100, e.comm + c, false)
-            exits.values.removeIf { x -> x.from == e.id }
-            markers += Pine.Marker(i, e.long, if (e.long) "triangleDown" else "triangleUp", "#787B86", exitId)
+        for (e in open.filter(pred)) closePart(i, px, e, e.qty, exitId)
+    }
+
+    /** Close [q] of entry [e] at [px] (slippage applied here). The whole entry once [q] reaches its size. */
+    private fun closePart(i: Int, px: Double, e: Open, q0: Double, exitId: String) {
+        val q = minOf(q0, e.qty)
+        if (q <= 1e-12) return
+        val fill = if (e.long) sellPx(px) else buyPx(px)
+        val c = comm(fill, q)
+        val entryComm = e.comm * (q / e.qty)
+        val gross = (fill - e.price) * q * (if (e.long) 1 else -1)
+        realized += gross - c; commission += c
+        val pnl = gross - entryComm - c
+        trades += Pine.Trade(e.id, exitId, e.long, q, e.bar, bars[e.bar].time, e.price, i, bars[i].time, fill,
+            pnl, pnl / (e.price * q) * 100, entryComm + c, false)
+        e.comm -= entryComm; e.qty -= q
+        markers += Pine.Marker(i, e.long, if (e.long) "triangleDown" else "triangleUp", "#787B86", exitId)
+        if (e.qty <= 1e-9) {
+            open.remove(e)
+            exits.values.removeIf { x -> x.from == e.id && open.none { it.id == e.id } }
+            if (open.isEmpty()) exits.values.removeIf { it.from == null }
         }
-        if (any && open.isEmpty()) exits.values.removeIf { it.from == null }
     }
 
     private fun fillMarket(i: Int, px: Double) {
         for (id in closes.toList()) closeWhere(i, px, if (id == null) "Close all" else "Close $id") { id == null || it.id == id }
         closes.clear()
+        for (r in partCloses.toList()) closeAmount(i, px, r)
+        partCloses.clear()
         for (o in orders.values.filter { it.limit == null && it.stop == null }) { orders.remove(o.id); enter(o, i, px) }
     }
 
@@ -942,37 +1214,46 @@ internal class Broker(
             orders.remove(o.id); enter(o, i, px)
         }
         for (e in open.toList()) {
-            val x = exits.values.firstOrNull { it.from == e.id } ?: exits.values.firstOrNull { it.from == null } ?: continue
-            val sign = if (e.long) 1 else -1
-            var stop = x.stop ?: x.loss?.let { e.price - sign * it * tick }
-            val limit = x.limit ?: x.profit?.let { e.price + sign * it * tick }
-            if (x.trailOff != null && (x.trailPts != null || x.trailPrice != null)) {
-                val act = x.trailPrice ?: (e.price + sign * x.trailPts!! * tick)
-                val reached = if (e.long) e.best >= act else e.best <= act
-                if (reached) {
-                    val t = e.best - sign * x.trailOff * tick
-                    stop = if (stop == null) t else if (e.long) max(stop, t) else min(stop, t)
-                }
+            for (x in exits.values.filter { (it.from == e.id || it.from == null) && it.id !in e.done }) {
+                if (e.qty <= 1e-9 || e !in open) break
+                val px = exitFill(e, x, b) ?: continue
+                val amount = x.qty ?: x.qtyPct?.let { e.origQty * it / 100 } ?: e.qty
+                e.done += x.id
+                closePart(i, px, e, amount, x.id)
             }
-            if (stop == null && limit == null) continue
-            val px: Double? = if (e.long) {
-                when {
-                    stop != null && b.open <= stop -> b.open
-                    limit != null && b.open >= limit -> b.open
-                    (b.high - b.open) < (b.open - b.low) ->
-                        if (limit != null && b.high >= limit) limit else if (stop != null && b.low <= stop) stop else null
-                    else -> if (stop != null && b.low <= stop) stop else if (limit != null && b.high >= limit) limit else null
-                }
-            } else {
-                when {
-                    stop != null && b.open >= stop -> b.open
-                    limit != null && b.open <= limit -> b.open
-                    (b.high - b.open) < (b.open - b.low) ->
-                        if (stop != null && b.high >= stop) stop else if (limit != null && b.low <= limit) limit else null
-                    else -> if (limit != null && b.low <= limit) limit else if (stop != null && b.high >= stop) stop else null
-                }
+        }
+    }
+
+    /** Where exit [x] fills entry [e] inside candle [b], if it does. */
+    private fun exitFill(e: Open, x: Exit, b: Pine.Bar): Double? {
+        val sign = if (e.long) 1 else -1
+        var stop = x.stop ?: x.loss?.let { e.price - sign * it * tick }
+        val limit = x.limit ?: x.profit?.let { e.price + sign * it * tick }
+        if (x.trailOff != null && (x.trailPts != null || x.trailPrice != null)) {
+            val act = x.trailPrice ?: (e.price + sign * x.trailPts!! * tick)
+            val reached = if (e.long) e.best >= act else e.best <= act
+            if (reached) {
+                val t = e.best - sign * x.trailOff * tick
+                stop = if (stop == null) t else if (e.long) max(stop, t) else min(stop, t)
             }
-            if (px != null) closeWhere(i, px, x.id) { it === e }
+        }
+        if (stop == null && limit == null) return null
+        return if (e.long) {
+            when {
+                stop != null && b.open <= stop -> b.open
+                limit != null && b.open >= limit -> b.open
+                (b.high - b.open) < (b.open - b.low) ->
+                    if (limit != null && b.high >= limit) limit else if (stop != null && b.low <= stop) stop else null
+                else -> if (stop != null && b.low <= stop) stop else if (limit != null && b.high >= limit) limit else null
+            }
+        } else {
+            when {
+                stop != null && b.open >= stop -> b.open
+                limit != null && b.open <= limit -> b.open
+                (b.high - b.open) < (b.open - b.low) ->
+                    if (stop != null && b.high >= stop) stop else if (limit != null && b.low <= limit) limit else null
+                else -> if (limit != null && b.low <= limit) limit else if (stop != null && b.high >= stop) stop else null
+            }
         }
     }
 

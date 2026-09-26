@@ -219,7 +219,7 @@ private fun PineEditor(model: AppModel, start: PineScripts.Item, onOpenChart: ()
                         }
                         if (item.onChart) TextButton(onOpenChart) { Text("Open the chart ›") }
                     } else if (errors.isNotEmpty()) Note("Fix the errors to backtest it or put it on the chart. Tap an error to jump to it.")
-                    Text("Supported: variables, var, :=, if/for/while, functions and tuples, x[n] history, inputs, ta.* (sma ema rma wma vwma hma rsi atr stdev highest lowest crossover crossunder change macd bb supertrend stoch cci vwap dmi pivots linreg …), math.*, plot, hline, plotshape, alertcondition and strategy.entry / exit / close. Not yet: request.security, arrays, switch.",
+                    Text("Supported: variables, var, :=, if / switch / for / for…in / while, functions and tuples, x[n] history, arrays (array.* and a.push()), inputs, request.security on higher timeframes of the same symbol, ta.* and math.*, plot, hline, plotshape, alertcondition, strategy.entry / exit (partial too) / close / cancel. Not yet: other symbols, matrices, maps, user types.",
                         style = Type.bodySmall.copy(color = p.inkFaint, fontSize = 11.sp))
                     Spacer(Modifier.height(12.dp))
                 }

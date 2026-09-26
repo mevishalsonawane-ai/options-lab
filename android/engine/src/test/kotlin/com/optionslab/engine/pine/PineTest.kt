@@ -46,7 +46,7 @@ class PineTest {
         assertTrue(errors("x = 1\nplot(x)\n").single().message.contains("declaration"))
         assertTrue(errors("indicator(\"x\")\nx = 1\nx = 2\n").single().message.contains("already defined"))
         assertTrue(errors("indicator(\"x\")\nif close > open\n    plot(close)\n").single().message.contains("local scope"))
-        assertTrue(errors("indicator(\"x\")\ns = request.security(\"NSE:NIFTY\", \"D\", close)\n").single().message.contains("not supported"))
+        assertTrue(errors("indicator(\"x\")\ns = request.financial(\"NSE:NIFTY\", \"EPS\", \"FQ\")\n").single().message.contains("not supported"))
     }
 
     @Test fun smaAndPlotsMatchByHand() {

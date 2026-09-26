@@ -143,7 +143,7 @@ internal data class Unary(val op: String, val e: Expr, override val line: Int, o
 internal data class Binary(val op: String, val a: Expr, val b: Expr, override val line: Int, override val col: Int) : Expr()
 internal data class Ternary(val c: Expr, val a: Expr, val b: Expr, override val line: Int, override val col: Int) : Expr()
 internal data class TupleLit(val items: List<Expr>, override val line: Int, override val col: Int) : Expr()
-internal data class IfExpr(val stmt: If, override val line: Int, override val col: Int) : Expr()
+internal data class IfExpr(val stmt: Stmt, override val line: Int, override val col: Int) : Expr()
 
 internal sealed class Stmt { abstract val line: Int; abstract val col: Int }
 internal data class Decl(val name: String, val value: Expr, val persistent: Boolean, override val line: Int, override val col: Int) : Stmt()
@@ -151,6 +151,10 @@ internal data class TupleDecl(val names: List<String>, val value: Expr, override
 internal data class Assign(val name: String, val op: String, val value: Expr, override val line: Int, override val col: Int) : Stmt()
 internal data class If(val cond: Expr, val then: List<Stmt>, val orElse: List<Stmt>?, override val line: Int, override val col: Int) : Stmt()
 internal data class For(val v: String, val from: Expr, val to: Expr, val by: Expr?, val body: List<Stmt>, override val line: Int, override val col: Int) : Stmt()
+/** switch: with a [subject] each case value is compared to it; without one each case is a condition. A null case is the default. */
+internal data class Switch(val subject: Expr?, val cases: List<Pair<Expr?, List<Stmt>>>, override val line: Int, override val col: Int) : Stmt()
+/** for x in array, or for [i, x] in array. */
+internal data class ForIn(val index: String?, val item: String, val over: Expr, val body: List<Stmt>, override val line: Int, override val col: Int) : Stmt()
 internal data class While(val cond: Expr, val body: List<Stmt>, override val line: Int, override val col: Int) : Stmt()
 internal data class Jump(val brk: Boolean, override val line: Int, override val col: Int) : Stmt()
 internal data class ExprStmt(val e: Expr, override val line: Int, override val col: Int) : Stmt()
@@ -164,6 +168,7 @@ internal class Parser(private val toks: List<Tok>) {
     private fun peek(k: Int = 0) = toks[minOf(p + k, toks.size - 1)]
     private fun at(text: String) = peek().t == T.OP && peek().text == text
     private fun atK(k: Int, text: String) = peek(k).t == T.OP && peek(k).text == text
+    private fun at3(text: String) = atK(3, text)
     private fun next() = toks[p++]
     private fun err(t: Tok, msg: String): Nothing = throw PineError(t.line, t.col, msg)
     private fun describe(t: Tok) = when (t.t) {
@@ -261,8 +266,16 @@ internal class Parser(private val toks: List<Tok>) {
             "if" -> return ifStmt()
             "for" -> {
                 next()
+                if (at("[")) {
+                    next()
+                    val i = ident("the index variable"); expect(","); val x = ident("the item variable"); expect("]")
+                    if (peek().text != "in") err(peek(), "Expected 'in'")
+                    next()
+                    val over = expr()
+                    return ForIn(i.text, x.text, over, block(), t.line, t.col)
+                }
                 val v = ident("the loop variable")
-                if (peek().text == "in") err(peek(), "for...in loops are not supported yet")
+                if (peek().text == "in") { next(); val over = expr(); return ForIn(null, v.text, over, block(), t.line, t.col) }
                 expect("=")
                 val from = expr(); expect("to"); val to = expr()
                 val by = if (at("by")) { next(); expr() } else null
@@ -278,7 +291,7 @@ internal class Parser(private val toks: List<Tok>) {
                 val v = rhs()
                 return Decl(n.text, v, true, t.line, t.col).also { endOfStatement() }
             }
-            "switch" -> err(t, "'switch' is not supported yet: use if / else if")
+            "switch" -> return switchStmt()
             "import", "export", "method", "type" -> err(t, "'${t.text}' is not supported on the phone")
             "[" -> {
                 // [a, b, c] = f(...)
@@ -316,10 +329,9 @@ internal class Parser(private val toks: List<Tok>) {
             val body = if (peek().t == T.NL) block() else listOf(ExprStmt(expr(), n.line, n.col).also { endOfStatement() })
             return FuncDef(n.text, params, body, n.line, n.col)
         }
-        // Typed declaration: float x = ..., series int n = ...
-        if (peek().t == T.ID && peek().text in typeWords) {
-            var k = 0
-            while (peek(k).t == T.ID && peek(k).text in typeWords) k++
+        // Typed declaration: float x = ..., series int n = ..., float[] a = ..., array<int> a = ...
+        run {
+            val k = typeLen(0)
             if (k > 0 && peek(k).t == T.ID && atK(k + 1, "=")) {
                 p += k
                 val n = next(); next()
@@ -342,14 +354,57 @@ internal class Parser(private val toks: List<Tok>) {
         return ExprStmt(e, t.line, t.col).also { endOfStatement() }
     }
 
-    private fun skipType() {
-        while (peek().t == T.ID && peek().text in typeWords && peek(1).t == T.ID) next()
+    /**
+     * How many tokens from peek(k) form a type: (series|simple|const)* then int / float / ...,
+     * optionally followed by [], or array<T>. 0 when there is no type there.
+     */
+    private fun typeLen(k0: Int): Int {
+        var k = k0
+        while (peek(k).t == T.ID && peek(k).text in setOf("series", "simple", "const")) k++
+        val t = peek(k)
+        if (t.t != T.ID) return 0
+        if (t.text == "array" && atK(k + 1, "<") && peek(k + 2).t == T.ID && atK(k + 3, ">")) return k + 4 - k0
+        if (t.text !in typeWords) return 0
+        k++
+        if (atK(k, "[") && atK(k + 1, "]")) k += 2
+        return k - k0
     }
 
-    /** The right-hand side of = or :=, which may be an if block. */
+    private fun skipType() {
+        val n = typeLen(0)
+        if (n > 0 && peek(n).t == T.ID) p += n
+    }
+
+    /** The right-hand side of = or :=, which may be an if or a switch block. */
     private fun rhs(): Expr {
         if (at("if")) { val t = peek(); return IfExpr(ifStmt(inExpr = true), t.line, t.col).tag() }
+        if (at("switch")) { val t = peek(); return IfExpr(switchStmt(), t.line, t.col).tag() }
         return expr()
+    }
+
+    private fun switchStmt(): Switch {
+        val t = expect("switch")
+        val subject = if (peek().t == T.NL) null else expr()
+        if (peek().t != T.NL) err(peek(), "Expected a new line after the switch")
+        next()
+        if (peek().t != T.INDENT) err(peek(), "Expected the switch cases, indented by 4 spaces")
+        next()
+        if (++blocks > 40) err(peek(), "Blocks are nested too deeply (over 40 levels)")
+        val cases = ArrayList<Pair<Expr?, List<Stmt>>>()
+        try {
+            while (peek().t != T.DEDENT && peek().t != T.EOF) {
+                if (peek().t == T.NL) { next(); continue }
+                val c = if (at("=>")) null else expr()
+                if (c == null && cases.any { it.first == null }) err(peek(), "A switch can have only one default (=>)")
+                expect("=>")
+                val body = if (peek().t == T.NL) block()
+                    else { val at0 = peek(); listOf(ExprStmt(rhs(), at0.line, at0.col)).also { endOfStatement() } }
+                cases += c to body
+            }
+            if (peek().t == T.DEDENT) next()
+        } finally { blocks-- }
+        if (cases.isEmpty()) err(t, "The switch has no cases")
+        return Switch(subject, cases, t.line, t.col)
     }
 
     private fun ifStmt(inExpr: Boolean = false): If {
@@ -420,9 +475,10 @@ internal class Parser(private val toks: List<Tok>) {
             T.ID -> {
                 next()
                 if (t.text == "na" && !at("(")) return Name("na", t.line, t.col).tag()
-                if (at("<")) {
-                    // array.new<float>(...) and friends
-                    if (peek(1).t == T.ID && atK(2, ">")) err(t, "Arrays and generic types are not supported yet")
+                if (at("<") && peek(1).t == T.ID && atK(2, ">") && at3("(")) {
+                    // array.new<float>(...): the element type is not needed to run it
+                    if (!t.text.startsWith("array.")) err(t, "Generic types are only supported for arrays")
+                    p += 3
                 }
                 if (at("(")) {
                     next()
