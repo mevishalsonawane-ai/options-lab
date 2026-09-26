@@ -16,7 +16,7 @@ import java.time.Duration
 class PinLockTest : RobolectricTest() {
     private val pin = "246813"
     private fun verify(p: String, wipe: Boolean = false) = PinLock.verify(p.toCharArray(), wipe)
-    private fun wait(seconds: Long) = ShadowSystemClock.advanceBy(Duration.ofSeconds(seconds))
+    private fun passTime(seconds: Long) = ShadowSystemClock.advanceBy(Duration.ofSeconds(seconds))
 
     @Test fun setAndVerify() {
         assertFalse(PinLock.isSet)
@@ -43,10 +43,10 @@ class PinLockTest : RobolectricTest() {
         // While locked out even the right PIN is refused, and the attempt is not counted.
         assertTrue(verify(pin) is PinLock.Result.LockedOut)
         assertEquals(5, PinLock.failures())
-        wait(31)
+        passTime(31)
         assertEquals(0, PinLock.lockoutSecondsLeft())
         assertEquals(PinLock.Result.LockedOut(60), verify("000000"))
-        wait(61)
+        passTime(61)
         assertEquals(PinLock.Result.Ok, verify(pin))
         assertEquals(0, PinLock.failures())
         assertEquals(0, PinLock.lockoutSecondsLeft())
@@ -62,7 +62,7 @@ class PinLockTest : RobolectricTest() {
         PinLock.setPin(pin.toCharArray())
         var last: PinLock.Result? = null
         repeat(PinLock.WIPE_AFTER) {
-            PinLock.lockoutSecondsLeft().takeIf { it > 0 }?.let { s -> wait(s + 1) }
+            PinLock.lockoutSecondsLeft().takeIf { it > 0 }?.let { s -> passTime(s + 1) }
             last = verify("000000", wipe = true)
         }
         assertEquals(PinLock.Result.Wiped, last)
@@ -72,7 +72,7 @@ class PinLockTest : RobolectricTest() {
         PinLock.setPin(pin.toCharArray())
         var last: PinLock.Result? = null
         repeat(14) {
-            PinLock.lockoutSecondsLeft().takeIf { it > 0 }?.let { s -> wait(s + 1) }
+            PinLock.lockoutSecondsLeft().takeIf { it > 0 }?.let { s -> passTime(s + 1) }
             last = verify("000000", wipe = false)
         }
         assertEquals(PinLock.Result.LockedOut(3600), last)
