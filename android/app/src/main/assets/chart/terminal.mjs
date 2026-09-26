@@ -132,7 +132,13 @@ function placeAtNow() {
   // Intraday: at least 3 hours of candles (and never fewer than 40); daily and up: about 60 bars.
   const inView = step < 86400 ? Math.max(40, Math.ceil((3 * 3600) / step) + 4) : 60;
   widget.chart.setVisibleLogicalRange({ from: Math.max(0, n - inView), to: n + 3 });
+  // Fit the price axis to this symbol: a range kept from the previous symbol (or a saved
+  // layout) would leave e.g. NIFTY's candles far outside BANKNIFTY's 55,000s.
+  try { for (const pane of widget.chart.panes()) pane.priceScale.setAutoScale(true); } catch (err) { /* older build */ }
 }
+// Every new symbol or interval opens at the latest candle again.
+widget.on('symbol', () => placed.clear());
+widget.on('interval', () => placed.clear());
 widget.on('data', (e) => {
   if (!e || !e.bars) return;
   const key = `${e.symbol}|${e.interval}`;
