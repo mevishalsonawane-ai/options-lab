@@ -59,7 +59,7 @@ import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
-private val secure = DialogProperties(securePolicy = SecureFlagPolicy.SecureOn)
+private val secure get() = DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy)
 private fun p2(x: Double?) = x?.let { String.format(Locale.ENGLISH, "%,.2f", it) } ?: "—"
 
 /**

@@ -120,7 +120,7 @@ fun OrbRows(model: AppModel) {
         val label = view.arms.first { it.arm.source == src }.arm.label
         AlertDialog(
             onDismissRequest = { choosing = null },
-            properties = DialogProperties(securePolicy = SecureFlagPolicy.SecureOn),
+            properties = DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy),
             title = { Text("Arm $label" + if (live) " (LIVE)" else " (paper)", style = Type.title) },
             text = {
                 Column {
@@ -158,7 +158,7 @@ private fun OrbDetail(v: OrbArms.View, onClose: () -> Unit) {
     val p = LocalPalette.current
     AlertDialog(
         onDismissRequest = onClose,
-        properties = DialogProperties(securePolicy = SecureFlagPolicy.SecureOn),
+        properties = DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy),
         title = { Text("ORB arms · today", style = Type.title) },
         text = {
             Column(Modifier.heightIn(max = 520.dp).verticalScroll(rememberScrollState())) {

@@ -83,6 +83,15 @@ Source paths prefixed `NTA:` are in D:\New Trading app.
 - [x] D19. (done: haptic on every alert; swipe actions already had one) Haptics on order confirm, fills and swipe actions.
 - [x] D20. (done: harvest script finds its repo and Python itself; READMEs updated) Docs (B6) and the nightly harvest script path (B1: script fixed; re-registering the task stays with the owner).
 
+## L. Before going live (real money)
+
+- [ ] L1. Turn OFF "Allow screenshots and screen recording" (More -> Security), and set its default
+  back to off (`security/Capture.kt`, `DEFAULT_ALLOWED = false`). It is on only while testing.
+- [ ] L2. First live ORB trade with the app open: confirm the entry and the SL stop order appear in Kite,
+  and that the +40 / 15:10 exit goes out.
+- [ ] L3. Protections (Zerodha stop / trailing stop) still send SL-M: confirm Zerodha accepts SL-M on
+  index options, or switch them to SL with a limit like the ORB stop.
+
 ## C. D:\New Trading app (still running the ORB paper forward test)
 
 - [ ] C1. Revert before live, `.env`: ACCOUNT_MAX_DAILY_LOSS 6000->2000, ACCOUNT_MAX_TRADES_TODAY 60->10,

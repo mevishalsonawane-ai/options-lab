@@ -72,7 +72,7 @@ fun OptionChartPage(model: AppModel, pick: ChainPick, onFullChart: (String) -> U
     val change = if (last != null && open != null) last - open else null
     val up = (change ?: 0.0) >= 0
 
-    Dialog(onDismissRequest = onClose, properties = DialogProperties(securePolicy = SecureFlagPolicy.SecureOn, usePlatformDefaultWidth = false)) {
+    Dialog(onDismissRequest = onClose, properties = DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy, usePlatformDefaultWidth = false)) {
         Column(Modifier.fillMaxSize().background(p.paper).statusBarsPadding().navigationBarsPadding()) {
             Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text("‹", style = Type.masthead.copy(color = p.ink, fontSize = 28.sp), modifier = Modifier.clickable(onClick = onClose).padding(horizontal = 12.dp, vertical = 4.dp))

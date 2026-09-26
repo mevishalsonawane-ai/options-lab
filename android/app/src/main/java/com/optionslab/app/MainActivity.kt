@@ -26,9 +26,9 @@ class MainActivity : FragmentActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        if (!BuildConfig.DEBUG) window.setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE)
+        // Screenshots / recording follow the owner's switch in More -> Security (see security/Capture).
+        com.optionslab.app.security.Capture.apply(this)
         super.onCreate(savedInstanceState)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) setRecentsScreenshotEnabled(false)
         enableEdgeToEdge()
         window.decorView.filterTouchesWhenObscured = true
         tabRequests.value = intent?.getStringExtra(EXTRA_TAB)

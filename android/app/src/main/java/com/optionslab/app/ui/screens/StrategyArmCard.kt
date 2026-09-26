@@ -182,7 +182,7 @@ private fun ImportDialog(model: AppModel, onClose: () -> Unit) {
     }
     AlertDialog(
         onDismissRequest = onClose,
-        properties = DialogProperties(securePolicy = SecureFlagPolicy.SecureOn),
+        properties = DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy),
         title = { Text("Import from desktop", style = Type.title) },
         text = {
             Column(Modifier.heightIn(max = 460.dp).verticalScroll(rememberScrollState())) {
@@ -210,7 +210,7 @@ private fun ApprovalChoice(name: String, live: Boolean, onPick: (Boolean) -> Uni
     val p = LocalPalette.current
     AlertDialog(
         onDismissRequest = onCancel,
-        properties = DialogProperties(securePolicy = SecureFlagPolicy.SecureOn),
+        properties = DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy),
         title = { Text("Arm $name${if (live) " (live)" else " (paper)"}", style = Type.title) },
         text = {
             Column {
@@ -242,7 +242,7 @@ private fun BotDialog(model: AppModel, killOn: Boolean, stopped: Boolean, anyRun
     var alsoStop by remember { mutableStateOf(false) }
     AlertDialog(
         onDismissRequest = onClose,
-        properties = DialogProperties(securePolicy = SecureFlagPolicy.SecureOn),
+        properties = DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy),
         title = { Text(when { killOn -> "Clear the kill switch?"; stopped -> "Start the bot?"; else -> "Stop the bot for today?" }, style = Type.title) },
         text = {
             Column {

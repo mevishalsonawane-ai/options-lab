@@ -221,7 +221,7 @@ fun RowActionPopup(model: AppModel) {
 
     if (modify == null && cancelAuth == null && protectFor == null && journalFor == null) AlertDialog(
         onDismissRequest = ::close,
-        properties = DialogProperties(securePolicy = SecureFlagPolicy.SecureOn),
+        properties = DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy),
         title = { Text(title, style = Type.title) },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
@@ -275,7 +275,7 @@ fun ProtectDialog(model: AppModel, t: ProtectTarget, onDone: (Boolean) -> Unit) 
     if (auth) { Reauth(model, onOk = { auth = false; go() }, onCancel = { auth = false }); return }
     AlertDialog(
         onDismissRequest = { onDone(false) },
-        properties = DialogProperties(securePolicy = SecureFlagPolicy.SecureOn),
+        properties = DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy),
         title = { Text("Protect ${t.symbol}", style = Type.title) },
         text = {
             Column {
@@ -317,7 +317,7 @@ fun JournalDialog(key: String, label: String, onClose: () -> Unit) {
     var tags by remember(key) { mutableStateOf(start?.tags.orEmpty()) }
     AlertDialog(
         onDismissRequest = onClose,
-        properties = DialogProperties(securePolicy = SecureFlagPolicy.SecureOn),
+        properties = DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy),
         title = { Text("Journal · $label", style = Type.title) },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {

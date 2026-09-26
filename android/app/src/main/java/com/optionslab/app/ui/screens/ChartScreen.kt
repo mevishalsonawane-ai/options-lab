@@ -254,7 +254,7 @@ private fun ChartAlertDialog(model: AppModel, symbol: String, onClose: () -> Uni
     val cur = now
     com.optionslab.app.ui.components.AlertDialog(
         onDismissRequest = onClose,
-        properties = androidx.compose.ui.window.DialogProperties(securePolicy = androidx.compose.ui.window.SecureFlagPolicy.SecureOn),
+        properties = androidx.compose.ui.window.DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy),
         title = { Text("Alert on $symbol", style = Type.title) },
         text = {
             Column {

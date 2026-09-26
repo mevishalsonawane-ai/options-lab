@@ -86,7 +86,7 @@ fun OptionOrderSheet(model: AppModel, pick: ChainPick, initialBuy: Boolean = tru
     val px = if (limit) price.toDoubleOrNull() else pick.ltp
     val title = "${pick.underlying} ${pick.expiry.format(DateTimeFormatter.ofPattern("d MMM", Locale.ENGLISH)).uppercase()} ${fmtG(pick.strike)} ${pick.right.name}"
 
-    Dialog(onDismissRequest = onClose, properties = DialogProperties(securePolicy = SecureFlagPolicy.SecureOn, usePlatformDefaultWidth = false)) {
+    Dialog(onDismissRequest = onClose, properties = DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy, usePlatformDefaultWidth = false)) {
         Box(Modifier.fillMaxSize().clickable(onClick = onClose), contentAlignment = Alignment.BottomCenter) {
             Column(
                 Modifier.fillMaxWidth()

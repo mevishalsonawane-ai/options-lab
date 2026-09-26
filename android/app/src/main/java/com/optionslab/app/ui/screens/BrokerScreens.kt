@@ -84,7 +84,7 @@ import com.optionslab.engine.Right
 import kotlinx.coroutines.launch
 import java.time.format.DateTimeFormatter
 
-private val secureDialog = DialogProperties(securePolicy = SecureFlagPolicy.SecureOn)
+private val secureDialog get() = DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy)
 
 // ---- the Zerodha login page ------------------------------------------------------------
 
@@ -309,7 +309,7 @@ fun OrderReviewDialog(model: AppModel) {
     if (plan == Load.Idle) return
     androidx.compose.ui.window.Dialog(
         onDismissRequest = { if (sending !is Load.Busy) model.dismissPlan() },
-        properties = DialogProperties(securePolicy = SecureFlagPolicy.SecureOn, usePlatformDefaultWidth = false),
+        properties = DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy, usePlatformDefaultWidth = false),
     ) {
         Box(
             Modifier.fillMaxWidth(0.94f).background(p.paper, RoundedCornerShape(20.dp))

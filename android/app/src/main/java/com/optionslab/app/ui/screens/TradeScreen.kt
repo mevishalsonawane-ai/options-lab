@@ -49,7 +49,7 @@ import com.optionslab.app.ui.theme.Type
 import kotlinx.coroutines.delay
 import java.util.Locale
 
-private val secure = DialogProperties(securePolicy = SecureFlagPolicy.SecureOn)
+private val secure get() = DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy)
 
 private fun px(x: Double) = String.format(Locale.ENGLISH, "%,.2f", x)
 

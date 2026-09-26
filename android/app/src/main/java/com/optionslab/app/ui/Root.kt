@@ -147,7 +147,7 @@ fun Root(activity: MainActivity) {
             val clip = androidx.compose.ui.platform.LocalClipboardManager.current
             com.optionslab.app.ui.components.AlertDialog(
                 onDismissRequest = {},
-                properties = androidx.compose.ui.window.DialogProperties(securePolicy = androidx.compose.ui.window.SecureFlagPolicy.SecureOn),
+                properties = androidx.compose.ui.window.DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy),
                 title = { Text("IraAlgo closed unexpectedly last time", style = Type.title) },
                 text = {
                     Column(Modifier.heightIn(max = 360.dp).verticalScroll(androidx.compose.foundation.rememberScrollState())) {
@@ -543,7 +543,7 @@ private fun Masthead(live: Boolean, calm: Boolean, linked: Boolean, onMode: (Boo
     }
     if (confirmLive) com.optionslab.app.ui.components.AlertDialog(
         onDismissRequest = { confirmLive = false },
-        properties = androidx.compose.ui.window.DialogProperties(securePolicy = androidx.compose.ui.window.SecureFlagPolicy.SecureOn),
+        properties = androidx.compose.ui.window.DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy),
         title = { Text("Switch to live trading?", style = Type.title) },
         text = { Text("Prices, positions and orders will come from your Zerodha account. Orders you send will use real money. Each order still needs your review, a long press and your PIN or fingerprint.", style = Type.bodySmall) },
         confirmButton = { androidx.compose.material3.TextButton({ confirmLive = false; onMode(true) }) { Text("Go live", color = p.oxblood) } },

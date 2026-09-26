@@ -81,7 +81,7 @@ fun ToggleRow(title: String, sub: String?, checked: Boolean, onChange: (Boolean)
     }
 }
 
-private val secure = DialogProperties(securePolicy = SecureFlagPolicy.SecureOn)
+private val secure get() = DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy)
 
 // ---- Alarms ----------------------------------------------------------------------
 
@@ -326,6 +326,13 @@ fun SecurityPage(model: AppModel) {
                     }
                 }
                 if (kind == BiometricGate.Kind.STRONG) ToggleRow("Accept face unlock", "Off: fingerprint only, tied to a hardware key. On: any fingerprint or face the phone accepts", s.allowWeakFace) { on -> model.update { it.copy(allowWeakFace = on) } }
+                var capture by remember { mutableStateOf(com.optionslab.app.security.Capture.allowed) }
+                ToggleRow("Allow screenshots and screen recording",
+                    if (capture) "On while testing: anyone with the phone can capture any screen, keys and P&L included. Turn off before going live."
+                    else "Off: every screen and popup is blocked from screenshots, recordings and the recent-apps preview.", capture) { on ->
+                    capture = on
+                    com.optionslab.app.security.Capture.set(context as? android.app.Activity, on)
+                }
                 val idles = listOf(60, 120, 300, 600, 900)
                 ParamTokens("Lock after idle for", idles.map { "${it / 60} min" to (it == s.idleSeconds) }) { i ->
                     model.update { it.copy(idleSeconds = idles[i]) }
@@ -571,7 +578,7 @@ private fun GuardCard(model: AppModel) {
     confirmKill?.let { turnOn ->
         AlertDialog(
             onDismissRequest = { confirmKill = null },
-            properties = androidx.compose.ui.window.DialogProperties(securePolicy = androidx.compose.ui.window.SecureFlagPolicy.SecureOn),
+            properties = androidx.compose.ui.window.DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy),
             title = { Text(if (turnOn) "Turn the kill switch on?" else "Clear the kill switch?", style = Type.title) },
             text = { Text(if (turnOn) "Every order is refused, including closing positions, until you clear it." else "Orders are allowed again, within these limits.", style = Type.bodySmall) },
             confirmButton = { TextButton({ model.update { it.copy(guardKill = turnOn) }; confirmKill = null }) { Text(if (turnOn) "Turn on" else "Clear", color = if (turnOn) p.oxblood else p.verdigris) } },
@@ -660,7 +667,7 @@ private fun BackupCard(wipeOnExhaustion: Boolean) {
         var pin by remember(mode) { mutableStateOf("") }
         com.optionslab.app.ui.components.AlertDialog(
             onDismissRequest = { ask = null; if (mode == "restore") pending = null },
-            properties = androidx.compose.ui.window.DialogProperties(securePolicy = androidx.compose.ui.window.SecureFlagPolicy.SecureOn),
+            properties = androidx.compose.ui.window.DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy),
             title = { Text(if (mode == "backup") "Seal the backup" else "Open the backup", style = Type.title) },
             text = {
                 Column {
@@ -700,7 +707,7 @@ private fun BackupCard(wipeOnExhaustion: Boolean) {
     opened?.let { c ->
         com.optionslab.app.ui.components.AlertDialog(
             onDismissRequest = { opened = null },
-            properties = androidx.compose.ui.window.DialogProperties(securePolicy = androidx.compose.ui.window.SecureFlagPolicy.SecureOn),
+            properties = androidx.compose.ui.window.DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy),
             title = { Text("Restore this backup?", style = Type.title) },
             text = {
                 Text("Made ${java.time.Instant.ofEpochMilli(c.createdAt).atZone(com.optionslab.engine.IST).toLocalDateTime().toString().replace('T', ' ').take(16)} · " +

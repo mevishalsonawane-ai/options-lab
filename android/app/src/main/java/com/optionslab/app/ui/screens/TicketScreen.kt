@@ -114,7 +114,7 @@ fun TicketScreen(model: AppModel) {
         var manual by remember { mutableStateOf("") }
         AlertDialog(
             onDismissRequest = { settling = null },
-            properties = DialogProperties(securePolicy = SecureFlagPolicy.SecureOn),
+            properties = DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy),
             title = { Text("Settle $day", style = Type.title) },
             text = {
                 Column {
@@ -131,7 +131,7 @@ fun TicketScreen(model: AppModel) {
     deleting?.let { day ->
         AlertDialog(
             onDismissRequest = { deleting = null },
-            properties = DialogProperties(securePolicy = SecureFlagPolicy.SecureOn),
+            properties = DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy),
             title = { Text("Strike out $day?", style = Type.title) },
             text = { Text("The ticket is removed from the paper ledger. A deleted loss is still a loss you would have taken; this is for mistakes only.", style = Type.bodySmall) },
             confirmButton = { TextButton({ model.deleteTicket(day); deleting = null }) { Text("Strike out") } },
