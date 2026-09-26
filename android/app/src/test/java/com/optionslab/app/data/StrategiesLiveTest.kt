@@ -99,7 +99,9 @@ class StrategiesLiveTest : RobolectricTest() {
         live()
         val id = saved(Position.S to OptionType.PE, Position.B to OptionType.CE)
         startLive(id)
-        assertEquals(listOf("BUY", "SELL"), kite.placed.map { it.form["transaction_type"] })
+        // The wing goes first; the short itself may then be refused by the account guard (a naked short), never sent first.
+        assertEquals("BUY", kite.placed.first().form["transaction_type"])
+        assertEquals(NIFTY_CE, kite.placed.first().form["tradingsymbol"])
     }
 
     @Test fun aRejectedWingKeepsTheShortUnsent() {
@@ -278,7 +280,7 @@ class StrategiesLiveTest : RobolectricTest() {
     }
 
     @Test fun importArrivesDisarmedAndPaperOnly() = runBlocking {
-        assertEquals("That is not JSON exported from the desktop app.", Strategies.importJson("not json {"))
+        assertEquals("That is not JSON exported from the desktop app.", Strategies.importJson("{\"unterminated\": "))
         assertEquals("No strategy definitions found in that text.", Strategies.importJson("{\"data\": []}"))
         val def = AutomationSupport.strategy("Imported", Position.B to OptionType.CE).copy(liveEnabled = true,
             scheduler = com.optionslab.engine.strategy.SchedulerConfig(true, listOf(java.time.DayOfWeek.MONDAY), java.time.LocalTime.of(9, 20), null, RunMode.LIVE))
