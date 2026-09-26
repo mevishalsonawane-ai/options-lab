@@ -106,7 +106,8 @@ object LayoutLint {
                 val last = t.lineCount - 1
                 val ellipsized = (0..last).any { t.isLineEllipsized(it) }
                 // Measured on the lines themselves: a line wider than the node, or lines lower than it, are cut off.
-                val widest = (0..last).maxOf { t.getLineRight(it) }
+                // (Width, not right edge: a centred or end-aligned paragraph can be wider than the node it sits in.)
+                val widest = (0..last).maxOf { t.getLineRight(it) - t.getLineLeft(it) }
                 val bottom = t.getLineBottom(last)
                 if (bottom > t.size.height + slack)
                     out += Finding("TEXT", Level.ERROR, "'${text.take(60)}' is cut off: its lines need ${dp(bottom)} dp height, it has ${dp(t.size.height.toFloat())} dp")

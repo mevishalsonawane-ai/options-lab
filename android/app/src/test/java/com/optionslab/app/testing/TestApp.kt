@@ -34,6 +34,7 @@ class TestApp : Application() {
     override fun onCreate() {
         super.onCreate()
         NetworkGuard.install()
+        NetworkGuard.blocked.clear()
         FakeAndroidKeyStore.install()
         FakeAndroidKeyStore.reset()
         SecurePrefs.init(this)

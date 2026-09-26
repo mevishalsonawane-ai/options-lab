@@ -38,7 +38,20 @@ class OrderFlowLiveTest : RobolectricTest() {
         kite.quote("NFO:$sym", 100.0, 99.95, 100.05)
     }
 
+    private val store = androidx.lifecycle.ViewModelStore()
+
+    /** A real AppModel, owned by a store the test clears (its coroutines end with the test). */
+    private fun model(): AppModel {
+        val m = androidx.lifecycle.ViewModelProvider(store, androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory(context as Application))[AppModel::class.java]
+        // The review checks the order against the account (limits, exposure): read it first, as the Zerodha page does.
+        m.loadAccount(quiet = true)
+        await("the account") { m.account.value as? Load.Done }
+        return m
+    }
+
     @After fun down() {
+        store.clear()
+        Thread.sleep(200)
         kite.close()
         assertFalse("Kite REST calls must all go to the fake", "api.kite.trade" in NetworkGuard.blocked)
     }
@@ -54,7 +67,7 @@ class OrderFlowLiveTest : RobolectricTest() {
     }
 
     @Test fun reviewSendsNothingThenSendPlacesExactlyTheReviewedOrder() {
-        val model = AppModel(context as Application)
+        val model = model()
         model.planManual("NIFTY", expiry, 24_500.0, Right.CE, Kite.Side.BUY, 1, "NRML", null)
         val plan = await("the plan") { (model.plan.value as? Load.Done)?.value ?: (model.plan.value as? Load.Failed)?.let { throw AssertionError(it.why) } }
         assertEquals(sym, plan.legs.single().tradingSymbol)
@@ -75,7 +88,7 @@ class OrderFlowLiveTest : RobolectricTest() {
 
     @Test fun paperModeNeverSends() {
         SecurePrefs.put("k.mode", "sandbox"); SecurePrefs.put("k.allow", false)
-        val model = AppModel(context as Application)
+        val model = model()
         model.planManual("NIFTY", expiry, 24_500.0, Right.CE, Kite.Side.BUY, 1, "NRML", 100.0)
         await("the plan") { model.plan.value as? Load.Done }
         model.sendPlan()
@@ -87,7 +100,7 @@ class OrderFlowLiveTest : RobolectricTest() {
 
     @Test fun aRejectedOrderIsShownAndNotRetried() {
         kite.nextPlace(outcome = FakeKite.Outcome.REJECT, message = "RMS:Margin Exceeds, Required:1,20,000.00, Available:40,000.00")
-        val model = AppModel(context as Application)
+        val model = model()
         model.planManual("NIFTY", expiry, 24_500.0, Right.CE, Kite.Side.BUY, 1, "NRML", 100.05)
         await("the plan") { model.plan.value as? Load.Done }
         model.sendPlan()
