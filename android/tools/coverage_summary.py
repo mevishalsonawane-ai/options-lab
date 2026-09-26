@@ -22,7 +22,8 @@ def test_counts(results_dir):
     import glob
     import os
     n = fail = skip = 0
-    for f in glob.glob(os.path.join(results_dir, "*.xml")):
+    failed, skipped = [], []
+    for f in sorted(glob.glob(os.path.join(results_dir, "*.xml"))):
         try:
             r = ET.parse(f).getroot()
         except ET.ParseError:
@@ -30,7 +31,21 @@ def test_counts(results_dir):
         n += int(r.get("tests", 0))
         fail += int(r.get("failures", 0)) + int(r.get("errors", 0))
         skip += int(r.get("skipped", 0))
+        for case in r.findall("testcase"):
+            name = case.get("classname", "").split(".")[-1] + "." + case.get("name", "")
+            for bad in case.findall("failure") + case.findall("error"):
+                msg = (bad.get("message") or bad.text or "").strip().replace("\n", " | ")
+                failed.append(f"{name}: {msg[:400]}")
+            for sk in case.findall("skipped"):
+                msg = (sk.get("message") or sk.text or "").strip().split("\n")[0]
+                skipped.append(f"{name}: {msg[:200]}")
     print(f"**Tests:** {n} run, {fail} failed, {skip} skipped\n")
+    for line in failed[:150]:
+        print(f"- FAILED {line}")
+    for line in skipped[:150]:
+        print(f"- SKIPPED {line}")
+    if failed or skipped:
+        print()
 
 
 def main(path, results_dir=None):

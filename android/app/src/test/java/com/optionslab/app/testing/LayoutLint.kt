@@ -102,11 +102,19 @@ object LayoutLint {
             n.config.getOrNull(SemanticsActions.GetTextLayoutResult)?.action?.invoke(layouts)
             for (t in layouts) {
                 val text = t.layoutInput.text.text
-                if (t.hasVisualOverflow && t.didOverflowHeight)
-                    out += Finding("TEXT", Level.ERROR, "'${text.take(60)}' is cut off: needs ${dp(t.multiParagraph.height)} dp height, has ${dp(t.size.height.toFloat())} dp")
-                else if (t.hasVisualOverflow && t.didOverflowWidth && !(t.lineCount > 0 && t.isLineEllipsized(t.lineCount - 1)))
-                    out += Finding("TEXT", Level.ERROR, "'${text.take(60)}' is cut off at the side (${dp(t.multiParagraph.width)} dp wide, ${dp(t.size.width.toFloat())} dp room)")
-                if (t.lineCount > 0 && (0 until t.lineCount).any { t.isLineEllipsized(it) } && text !in options.ellipsisOk)
+                if (t.lineCount == 0) continue
+                val last = t.lineCount - 1
+                val ellipsized = (0..last).any { t.isLineEllipsized(it) }
+                // Measured on the lines themselves: a line wider than the node, or lines lower than it, are cut off.
+                val widest = (0..last).maxOf { t.getLineRight(it) }
+                val bottom = t.getLineBottom(last)
+                if (bottom > t.size.height + slack)
+                    out += Finding("TEXT", Level.ERROR, "'${text.take(60)}' is cut off: its lines need ${dp(bottom)} dp height, it has ${dp(t.size.height.toFloat())} dp")
+                else if (!ellipsized && widest > t.size.width + slack)
+                    out += Finding("TEXT", Level.ERROR, "'${text.take(60)}' is cut off at the side: ${dp(widest)} dp of text in ${dp(t.size.width.toFloat())} dp")
+                else if (t.multiParagraph.didExceedMaxLines && !ellipsized)
+                    out += Finding("TEXT", Level.ERROR, "'${text.take(60)}' has more lines than it may show; the rest is cut")
+                if (ellipsized && text !in options.ellipsisOk)
                     out += Finding("TEXT", Level.ERROR, "'${text.take(60)}' is ellipsized")
             }
             if (clickable(n)) {

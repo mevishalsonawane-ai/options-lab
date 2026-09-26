@@ -47,7 +47,13 @@ class FakeAndroidKeyStore : Provider(NAME, 1.0, "In-memory stand-in for the Andr
 
         /** Idempotent. Registered last, so it is only ever used when asked for by name. */
         @Synchronized fun install() {
-            if (Security.getProvider(NAME) == null) Security.addProvider(FakeAndroidKeyStore())
+            // One provider per JVM, but Robolectric loads this class once per sandbox (SDK, graphics mode,
+            // Conscrypt mode...): a provider from another sandbox would not recognise this sandbox's
+            // KeyGenParameterSpec, so it is replaced by this sandbox's own.
+            val cur = Security.getProvider(NAME)
+            if (cur != null && cur.javaClass === FakeAndroidKeyStore::class.java) return
+            if (cur != null) Security.removeProvider(NAME)
+            Security.addProvider(FakeAndroidKeyStore())
         }
 
         /** Forget every key (a fresh phone). */
