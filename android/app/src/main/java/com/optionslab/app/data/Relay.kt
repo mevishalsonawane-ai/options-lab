@@ -98,21 +98,34 @@ object Relay {
         val jsch = JSch()
         jsch.addIdentity("iraalgo", prv.toByteArray(Charsets.UTF_8), SecurePrefs.getString(K_PUB)?.toByteArray(Charsets.UTF_8), null)
         jsch.hostKeyRepository = Tofu
-        val s = jsch.getSession(user, h, 22)
-        s.setConfig("StrictHostKeyChecking", "yes")
-        s.setConfig("PreferredAuthentications", "publickey")
-        s.timeout = 15_000
-        s.setServerAliveInterval(15_000)
-        s.setServerAliveCountMax(3)
-        try {
-            s.connect(15_000)
-        } catch (e: Exception) {
-            val m = e.message.orEmpty()
+        // The login name depends on the server image: ubuntu (Ubuntu), opc (Oracle Linux), ec2-user (Amazon Linux).
+        // The one that worked last is tried first and remembered.
+        val names = (listOf(user) + listOf("ubuntu", "opc", "ec2-user")).distinct()
+        var last: Exception? = null
+        var s: Session? = null
+        for (name in names) {
+            val t = jsch.getSession(name, h, 22)
+            t.setConfig("StrictHostKeyChecking", "yes")
+            t.setConfig("PreferredAuthentications", "publickey")
+            t.timeout = 15_000
+            t.setServerAliveInterval(15_000)
+            t.setServerAliveCountMax(3)
+            try {
+                t.connect(15_000)
+                if (name != user) SecurePrefs.put(K_USER, name)
+                s = t; break
+            } catch (e: Exception) {
+                last = e
+                if (!e.message.orEmpty().contains("Auth fail", true)) break      // only a refused login is worth another name
+            }
+        }
+        if (s == null) {
+            val m = last?.message.orEmpty()
             throw IOException(when {
                 m.contains("HostKey has been changed", true) || m.contains("reject HostKey", true) ->
                     "Relay: the server's identity changed. If you rebuilt the server, tap Forget server and connect again."
-                m.contains("Auth fail", true) -> "Relay: the server refused the key. Paste the app's public key into the server's SSH keys."
-                m.contains("timeout", true) || m.contains("connect", true) -> "Relay: cannot reach $h on port 22 (is the server running?)"
+                m.contains("Auth fail", true) -> "Relay: the server refused the app's key. Log in to the server once and add the key to ~/.ssh/authorized_keys (user ubuntu on Ubuntu, opc on Oracle Linux)."
+                m.contains("timeout", true) || m.contains("connect", true) -> "Relay: cannot reach $h on port 22 (is the server running, with the IP attached?)"
                 else -> "Relay: $m"
             })
         }

@@ -514,7 +514,7 @@ private fun StaticIpCard(model: AppModel) {
             }
         }
         step("2", "Create the server in Oracle and paste the key",
-            "Oracle console → Compute → Instances → Create instance. Image: Ubuntu. Under \"Add SSH keys\" choose \"Paste public keys\" and paste. " +
+            "Oracle console → Compute → Instances → Create instance. Image: Ubuntu or Oracle Linux (the app finds the right login). Under \"Add SSH keys\" choose \"Paste public keys\" and paste. " +
                 "Under networking choose \"Do not assign a public IPv4 address\", then Create. When it is running: the instance → Attached VNICs → the VNIC → " +
                 "IPv4 Addresses → ⋮ → Edit → Public IP: Reserved → pick your reserved IP (e.g. 144.24.125.164) → Update.")
         link("Open the Oracle console", "https://cloud.oracle.com/compute/instances")
