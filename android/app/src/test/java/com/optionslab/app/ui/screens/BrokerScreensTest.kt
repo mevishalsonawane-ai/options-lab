@@ -166,6 +166,9 @@ class BrokerScreensTest {
 
     private fun editable(label: String) = field(label).fetchSemanticsNode().config[SemanticsProperties.EditableText].text
 
+    /** The strike field is read-only (chosen from a list), so it has no SetText action: found by its label alone. */
+    private fun strike(label: String) = compose.onNode(hasText(label)).fetchSemanticsNode().config[SemanticsProperties.EditableText].text
+
     /** No visible text anywhere (dialogs included) carries the secret or the day's token. */
     private fun assertNoSecretShown() {
         val texts = compose.onAllNodes(isRoot(), useUnmergedTree = true).fetchSemanticsNodes().flatMap { r ->
@@ -629,7 +632,8 @@ class BrokerScreensTest {
         kite.quote("NSE:NIFTY 50", 24_480.0)
         val m = model()
         page(m)
-        until("the session") { shown("Test User · until", substring = true) }
+        until("the session") { m.broker.value.loggedIn }
+        node("Test User · until", substring = true)
         node("Live self-test"); node("Place an order"); node("Your account")
         assertNoSecretShown()
         click("Log out")
@@ -817,7 +821,7 @@ class BrokerScreensTest {
         for (i in kite.instruments) kite.quote("NFO:${i.symbol}", 100.0, 99.95, 100.05)
         val m = model()
         show { ManualOrder(m) }
-        until("the contracts") { runCatching { editable("Strike · NIFTY 24,480") == "24500" }.getOrDefault(false) }
+        until("the contracts") { runCatching { strike("Strike · NIFTY 24,480") == "24500" }.getOrDefault(false) }
         return m
     }
 
@@ -846,7 +850,7 @@ class BrokerScreensTest {
         val m = orderCard()
         click(e2.toString().substring(5))
         node(e2.toString().substring(5)).assertIsSelected()
-        until("the strikes of that expiry") { runCatching { editable("Strike · NIFTY 24,480") == "24500" }.getOrDefault(false) }
+        until("the strikes of that expiry") { runCatching { strike("Strike · NIFTY 24,480") == "24500" }.getOrDefault(false) }
         val leg = reviewed(m).legs.single()
         assertEquals("the default is SELL PE", BrokerArea.symbol("NIFTY", e2, 24_500.0, "PE"), leg.tradingSymbol)
         assertEquals(Kite.Side.SELL, leg.side); assertEquals(75, leg.quantity)
@@ -855,18 +859,18 @@ class BrokerScreensTest {
 
     @Test fun aStrikeIsPickedFromTheListedOnes() {
         val m = orderCard()
-        field("Strike · NIFTY 24,480").performClick()
+        compose.onNode(hasText("Strike · NIFTY 24,480")).performScrollTo().performClick()
         until("the list") { shown("24600") }
         assertTrue("the ATM strike is marked", shown("24500   ATM"))
         compose.onNodeWithText("24600").performClick()
-        until("picked") { runCatching { editable("Strike · NIFTY 24,480") == "24600" }.getOrDefault(false) }
+        until("picked") { runCatching { strike("Strike · NIFTY 24,480") == "24600" }.getOrDefault(false) }
         assertEquals(24_600.0, reviewed(m).legs.single().tradingSymbol.let { s -> kite.instruments.first { it.symbol == s }.strike }, 0.0)
     }
 
     @Test fun switchingTheIndexLoadsItsOwnContracts() {
         val m = orderCard()
         click("BANKNIFTY")
-        until("BANKNIFTY's strikes") { runCatching { editable("Strike · BANKNIFTY 52,120") == "52100" }.getOrDefault(false) }
+        until("BANKNIFTY's strikes") { runCatching { strike("Strike · BANKNIFTY 52,120") == "52100" }.getOrDefault(false) }
         val leg = reviewed(m).legs.single()
         assertEquals(BrokerArea.symbol("BANKNIFTY", e1, 52_100.0, "PE"), leg.tradingSymbol)
         assertEquals("one BANKNIFTY lot", 35, leg.quantity)
