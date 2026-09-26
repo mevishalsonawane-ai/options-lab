@@ -1,6 +1,6 @@
 # App tests (`android/app/src/test`)
 
-JVM tests for the app module: no device or emulator needed. Three kinds, all run by
+JVM tests for the app module: no device or emulator needed. All of them run with
 `./gradlew :app:testDebugUnitTest`:
 
 | Kind | Runner | Use for | Examples |
