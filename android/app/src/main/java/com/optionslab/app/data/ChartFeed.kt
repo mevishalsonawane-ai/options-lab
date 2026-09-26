@@ -80,7 +80,16 @@ object ChartFeed {
         // Intraday charts always get the last few sessions, so a Monday-morning or holiday-adjacent
         // chart still has well over three hours of candles to show.
         val intraday = u.unit == "minutes" || u.unit == "hours"
-        if (intraday) from = minOf(from, to.minusDays(6))
+        // On a holiday, a weekend or after hours this is what shows the last session(s) the market was open:
+        // reach back to the third-last trading day on the NSE calendar, however long the closure.
+        if (intraday) {
+            var d = to; var found = 0; var back = to
+            while (found < 3 && to.toEpochDay() - d.toEpochDay() < 30) {
+                if (Market.isTradingDay(d)) { found++; back = d }
+                d = d.minusDays(1)
+            }
+            from = minOf(from, back, to.minusDays(6))
+        }
         // Upstox keeps minute and hour candles from January 2022.
         if (u.unit == "minutes" || u.unit == "hours") from = from.coerceAtLeast(LocalDate.of(2022, 1, 1))
         val out = ArrayList<Upstox.Bar>()
