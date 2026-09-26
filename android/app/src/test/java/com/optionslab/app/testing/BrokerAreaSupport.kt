@@ -9,6 +9,7 @@ import com.optionslab.app.data.StaticIp
 import com.optionslab.app.security.PinLock
 import com.optionslab.app.ui.AppModel
 import com.optionslab.app.work.Alerts
+import com.github.takahirom.roborazzi.captureRoboImage
 import org.robolectric.Shadows.shadowOf
 import java.time.LocalDate
 
@@ -77,4 +78,54 @@ object BrokerArea {
     /** A Kite-style monthly-looking symbol (the fake only needs it unique and starting with the underlying and digits). */
     fun symbol(name: String, e: LocalDate, strike: Double, right: String) =
         "$name${e.year % 100}${"%02d".format(e.monthValue)}${"%02d".format(e.dayOfMonth)}${strike.toInt()}$right"
+}
+
+/**
+ * Screen-matrix base for area B. [lintKnown] is [ScreenTest.lint] with known layout bugs matched per
+ * finding (a regex over the finding's text), so a screen with one known bug still fails on any other
+ * error; when every error is a known one the test is skipped with "LAYOUT BUG (...)". [snap] saves every
+ * window (a dialog is a window of its own). Dialogs holding a text field never report idle under
+ * Robolectric while the clock runs by itself: [paused] and [frames] drive the clock by hand.
+ */
+abstract class BrokerScreenBase(device: DeviceConfig) : ScreenTest(device) {
+    data class Known(val pattern: Regex, val bug: String)
+
+    /** Set to true to list every finding as a skip (a first look at a new screen), never committed as true. */
+    protected open val discovery: Boolean = false
+
+    protected fun lintKnown(name: String, known: List<Known> = emptyList(), options: LayoutLint.Options = LayoutLint.Options()) {
+        compose.waitForIdle()
+        val findings = compose.onAllNodes(androidx.compose.ui.test.isRoot(), useUnmergedTree = true).fetchSemanticsNodes()
+            .flatMap { LayoutLint.check(it, compose.density, options) }
+        findings.forEach { println("LAYOUT $name ${device.name}: $it") }
+        val errors = findings.filter { it.level == LayoutLint.Level.ERROR }
+        if (errors.isEmpty()) return
+        if (discovery) org.junit.Assume.assumeTrue("LAYOUT BUG ($name, ${device.name}): TRIAGE\n" + errors.joinToString("\n"), false)
+        val matched = errors.associateWith { e -> known.firstOrNull { it.pattern.containsMatchIn(e.toString()) } }
+        val other = matched.filterValues { it == null }.keys
+        if (other.isNotEmpty()) org.junit.Assert.fail("Layout problems on $name (${device.name}):\n" + other.joinToString("\n"))
+        val bugs = matched.values.filterNotNull().map { it.bug }.distinct()
+        org.junit.Assume.assumeTrue("LAYOUT BUG ($name, ${device.name}): ${bugs.joinToString(" | ")}\n" + errors.joinToString("\n"), false)
+    }
+
+    protected fun snap(name: String, known: List<Known> = emptyList(), options: LayoutLint.Options = LayoutLint.Options()) {
+        compose.waitForIdle()
+        val roots = compose.onAllNodes(androidx.compose.ui.test.isRoot())
+        val nodes = roots.fetchSemanticsNodes()
+        if (nodes.size <= 1) capture(name)
+        else nodes.forEachIndexed { i, n ->
+            if (n.size.width > 0 && n.size.height > 0)
+                roots[i].captureRoboImage("build/outputs/roborazzi/${name}${if (i == 0) "" else "-layer$i"}_${device.name}.png")
+        }
+        lintKnown(name, known, options)
+    }
+
+    protected fun frames(n: Int = 12) = repeat(n) { compose.mainClock.advanceTimeByFrame() }
+
+    /** Render [content] with the clock stopped (for screens that open a dialog with a text field), a few frames on. */
+    protected fun showPaused(content: @androidx.compose.runtime.Composable () -> Unit) {
+        compose.mainClock.autoAdvance = false
+        show(content)
+        frames()
+    }
 }

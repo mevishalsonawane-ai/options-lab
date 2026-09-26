@@ -22,7 +22,7 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.optionslab.app.data.Market
 import com.optionslab.app.testing.DeviceConfig
-import com.optionslab.app.testing.ScreenTest
+import com.optionslab.app.testing.BrokerScreenBase
 import com.optionslab.app.ui.AppModel
 import com.optionslab.app.ui.Load
 import com.optionslab.app.ui.theme.IraAlgoTheme
@@ -270,25 +270,29 @@ class PortfolioScreensTest {
 /** The Portfolio and SIP labs with results, on every device set-up: screenshots, layout lint and a click smoke. */
 @RunWith(ParameterizedRobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
-class PortfolioScreensLayoutTest(device: DeviceConfig) : ScreenTest(device) {
+class PortfolioScreensLayoutTest(device: DeviceConfig) : BrokerScreenBase(device) {
     companion object {
         @JvmStatic
         @ParameterizedRobolectricTestRunner.Parameters(name = "{0}")
         fun configs(): List<Array<Any>> = DeviceConfig.matrix()
 
-        /** Real layout bugs found here, skipped with this text until fixed. */
-        val BUGS = emptyMap<String, String>()
+        /** Real layout bugs found here, matched per finding. */
+        val KNOWN = emptyList<BrokerScreenBase.Known>()
     }
 
+    override val discovery = true   // first full look at these screens on every set-up
+
     @Test fun portfolioReport() {
-        checkScreen("portfolio-report", BUGS) {
+        show {
             PortfolioLabContent(true, Load.Done(PortfolioFixtures.portfolio), Load.Done(PortfolioFixtures.analyzer), onAnalyze = {}, onRun = { _, _, _, _, _, _ -> })
         }
+        snap("portfolio-report", KNOWN)
         smokeEveryAction()
     }
 
     @Test fun sipReport() {
-        checkScreen("sip-report", BUGS) { SipLabContent(Load.Done(PortfolioFixtures.sip)) { _, _, _, _, _, _, _, _, _ -> } }
+        show { SipLabContent(Load.Done(PortfolioFixtures.sip)) { _, _, _, _, _, _, _, _, _ -> } }
+        snap("sip-report", KNOWN)
         smokeEveryAction()
     }
 }

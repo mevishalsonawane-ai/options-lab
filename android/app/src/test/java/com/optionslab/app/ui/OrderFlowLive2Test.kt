@@ -371,8 +371,14 @@ class OrderReviewLiveGateTest {
     }
 
     private fun until(what: String, timeoutMs: Long = 20_000, cond: () -> Boolean) = try {
-        compose.waitUntil(timeoutMs) { shadowOf(Looper.getMainLooper()).idle(); cond() }
+        compose.waitUntil(timeoutMs) {
+            shadowOf(Looper.getMainLooper()).idle()
+            if (!compose.mainClock.autoAdvance) compose.mainClock.advanceTimeByFrame()
+            cond()
+        }
     } catch (e: Throwable) { throw AssertionError("timed out waiting for $what", e) }
+
+    private fun frames(n: Int = 12) = repeat(n) { compose.mainClock.advanceTimeByFrame() }
 
     private fun shown(text: String) = compose.onAllNodesWithText(text).fetchSemanticsNodes().isNotEmpty()
 
@@ -386,11 +392,14 @@ class OrderReviewLiveGateTest {
         compose.setContent { IraAlgoTheme("light") { OrderReviewDialog(m) } }
         until("the review") { shown(send) }
         assertTrue("the review sends nothing: ${kite.writes}", kite.writes.isEmpty())
+        // The PIN prompt is a dialog with a text field, which never reports idle under Robolectric while the
+        // clock runs by itself: from here the clock is moved by frames() and until().
+        compose.mainClock.autoAdvance = false
         return m
     }
 
     private fun hold(): SemanticsNodeInteraction =
-        compose.onNodeWithText(send).performScrollTo().assertIsEnabled().performSemanticsAction(SemanticsActions.OnClick)
+        compose.onNodeWithText(send).performScrollTo().assertIsEnabled().performSemanticsAction(SemanticsActions.OnClick).also { frames() }
 
     private fun pin(): SemanticsNodeInteraction = compose.onNode(hasSetTextAction() and hasText("PIN"))
 
@@ -402,7 +411,7 @@ class OrderReviewLiveGateTest {
     @Test fun aTapIsNotAHoldAndSendsNothing() {
         reviewed()
         compose.onNodeWithText(send).performScrollTo().performClick()
-        compose.waitForIdle()
+        frames(120)
         assertFalse("a tap must not open the PIN", shown("Confirm it is you"))
         assertTrue(kite.writes.isEmpty())
     }
@@ -444,7 +453,7 @@ class OrderReviewLiveGateTest {
         hold()
         until("the PIN prompt") { shown("Confirm it is you") }
         pin().performTextInput("12ab34-5678901234")
-        compose.waitForIdle()
+        frames()
         assertEquals(12, pinLength())
         assertTrue(kite.writes.isEmpty())
     }
@@ -477,6 +486,7 @@ class OrderReviewLiveGateTest {
         val m = reviewed()
         hold()
         compose.onNodeWithText(send).performSemanticsAction(SemanticsActions.OnClick)
+        frames()
         until("the PIN prompt") { shown("Confirm it is you") }
         assertEquals("one prompt", 1, compose.onAllNodesWithText("Confirm it is you").fetchSemanticsNodes().size)
         pin().performTextInput(BrokerArea.PIN)

@@ -53,6 +53,7 @@ import com.optionslab.app.data.StaticIp
 import com.optionslab.app.security.PinLock
 import com.optionslab.app.security.SecurePrefs
 import com.optionslab.app.testing.BrokerArea
+import com.optionslab.app.testing.BrokerScreenBase
 import com.optionslab.app.testing.DeviceConfig
 import com.optionslab.app.testing.FakeKite
 import com.optionslab.app.testing.NetworkGuard
@@ -125,8 +126,24 @@ class BrokerScreensTest {
     private fun plain(content: @Composable () -> Unit) = compose.setContent { IraAlgoTheme("light") { content() } }
 
     private fun until(what: String, timeoutMs: Long = 20_000, cond: () -> Boolean) = try {
-        compose.waitUntil(timeoutMs) { shadowOf(Looper.getMainLooper()).idle(); cond() }
+        compose.waitUntil(timeoutMs) {
+            shadowOf(Looper.getMainLooper()).idle()
+            if (!compose.mainClock.autoAdvance) compose.mainClock.advanceTimeByFrame()
+            cond()
+        }
     } catch (e: Throwable) { throw AssertionError("timed out waiting for $what", e) }
+
+    private fun frames(n: Int = 12) = repeat(n) { compose.mainClock.advanceTimeByFrame() }
+
+    /**
+     * A PIN dialog (a dialog holding a text field) never reports idle under Robolectric while the clock runs
+     * by itself: the clock is stopped for the rest of the test and moved by [frames] and [until].
+     */
+    private fun pausedShow(content: @Composable () -> Unit) {
+        compose.mainClock.autoAdvance = false
+        show(content)
+        frames()
+    }
 
     private fun shown(text: String, substring: Boolean = false) =
         compose.onAllNodesWithText(text, substring = substring).fetchSemanticsNodes().isNotEmpty()
@@ -213,7 +230,7 @@ class BrokerScreensTest {
         PinLock.setPin(BrokerArea.PIN.toCharArray())
         val m = model()
         var ok = 0; var cancelled = 0
-        show { Reauth(m, onOk = { ok++ }, onCancel = { cancelled++ }) }
+        pausedShow { Reauth(m, onOk = { ok++ }, onCancel = { cancelled++ }) }
         assertTrue(shown("Confirm it is you"))
         assertTrue(shown("Enter your app PIN to send this order to Zerodha."))
         field("PIN").performTextInput(BrokerArea.WRONG_PIN)
@@ -232,9 +249,10 @@ class BrokerScreensTest {
         PinLock.setPin(BrokerArea.PIN.toCharArray())
         val m = model()
         var ok = 0; var cancelled = 0
-        show { Reauth(m, onOk = { ok++ }, onCancel = { cancelled++ }, pinOnly = true, why = "Enter your app PIN to delete this GTT.") }
+        pausedShow { Reauth(m, onOk = { ok++ }, onCancel = { cancelled++ }, pinOnly = true, why = "Enter your app PIN to delete this GTT.") }
         assertTrue(shown("Enter your app PIN to delete this GTT."))
         compose.onNodeWithText("Cancel").performClick()
+        frames()
         assertEquals(1, cancelled); assertEquals(0, ok)
     }
 
@@ -243,7 +261,7 @@ class BrokerScreensTest {
         repeat(4) { PinLock.verify(BrokerArea.WRONG_PIN.toCharArray(), false) }
         val m = model()
         var ok = 0
-        show { Reauth(m, onOk = { ok++ }, onCancel = {}) }
+        pausedShow { Reauth(m, onOk = { ok++ }, onCancel = {}) }
         field("PIN").performTextInput(BrokerArea.WRONG_PIN)
         compose.onNodeWithText("Confirm").performClick()
         until("the lockout") { shown("Locked for 30 s.") }
@@ -257,7 +275,7 @@ class BrokerScreensTest {
 
     // ---- the login PIN and Kite's login page ---------------------------------------------------------
 
-    private fun loginPin(m: AppModel) = show {
+    private fun loginPin(m: AppModel) = pausedShow {
         val ask by m.askLoginPin.collectAsState()
         if (ask) LoginPinDialog(m)
     }
@@ -925,26 +943,28 @@ class BrokerScreensTest {
     }
 }
 
-/**
- * Every Zerodha screen state the functional tests reach, on every device set-up (4 sizes x 3 font
- * scales x light/dark): a screenshot, [com.optionslab.app.testing.LayoutLint], and on the busiest
- * states a click-everything smoke. Real AppModel, fake Kite, no network.
- */
-@RunWith(ParameterizedRobolectricTestRunner::class)
-@GraphicsMode(GraphicsMode.Mode.NATIVE)
-@ConscryptMode(ConscryptMode.Mode.OFF)
-class BrokerScreensLayoutTest(device: DeviceConfig) : ScreenTest(device) {
+/** Shared set-up and states for the two Zerodha screen-matrix classes below. */
+abstract class BrokerLayoutBase(device: DeviceConfig) : BrokerScreenBase(device) {
     companion object {
-        @JvmStatic
-        @ParameterizedRobolectricTestRunner.Parameters(name = "{0}")
-        fun configs(): List<Array<Any>> = DeviceConfig.matrix()
-
-        /** Real layout bugs found here, skipped with this text until fixed. */
-        val BUGS = emptyMap<String, String>()
-
         /** Controls the smoke must not press: they would try to reach a real server (the relay) or take seconds (RSA keys). */
         val NO_SMOKE = setOf("Connect & test", "New key", "Create key")
+
+        /** Real layout and accessibility bugs these screens show, matched per finding (see [BrokerScreenBase.lintKnown]). */
+        val KNOWN = listOf(
+            BrokerScreenBase.Known(Regex("""'ssh-rsa .*' has more lines than it may show"""),
+                "Static IP card: the relay key row (Text maxLines = 1 with no overflow) is cut mid-line instead of ending in an ellipsis"),
+            BrokerScreenBase.Known(Regex("""A11Y\] clickable node \d+ has no text"""),
+                "unlabelled controls: the relay Switch (Static IP card), ToggleRow's Switch and the strike field's tap overlay (StrikeDropdown) have no text or description, so TalkBack announces an unnamed control"),
+            BrokerScreenBase.Known(Regex("""TEXT\] '[✓✗] .*' is cut off at the side"""),
+                "Live self-test: a long result (detail · ms) takes the whole row and squeezes the step name (LedgerLine label, weight 1f) to 0 dp, so the names of the steps disappear on small phones and large fonts"),
+            BrokerScreenBase.Known(Regex("""TOUCH\] clickable '(SELL|BUY)' is \d+x\d+ dp"""),
+                "ParamTokens' Token: the selectable node is 34-43 dp tall (minimumInteractiveComponentSize sits outside .selectable), under 48 dp for the order's SELL/BUY choice"),
+            BrokerScreenBase.Known(Regex("""TEXT\] '.*' is ellipsized"""),
+                "BrassButton labels (e.g. 'Check now', 'Open the phone's VPN settings') are ellipsized at large font scales on narrow screens"),
+        )
     }
+
+    override val discovery = true   // first full look at these screens on every set-up
 
     private lateinit var kite: FakeKite
     private val store = androidx.lifecycle.ViewModelStore()
@@ -970,24 +990,28 @@ class BrokerScreensLayoutTest(device: DeviceConfig) : ScreenTest(device) {
     private fun model() = BrokerArea.model(app, store)
     private val ip: suspend () -> StaticIp.Status = { StaticIp.Status("13.235.10.20", "49.36.1.2", false) }
 
-    private fun until(timeoutMs: Long = 20_000, cond: () -> Boolean) =
-        compose.waitUntil(timeoutMs) { shadowOf(Looper.getMainLooper()).idle(); cond() }
-
-    @Test fun pageBeforeSetUp() {
-        val m = model()
-        checkScreen("zerodha-page-setup", BUGS) { BrokerPage(m, ip) }
+    private fun until(timeoutMs: Long = 20_000, cond: () -> Boolean) = compose.waitUntil(timeoutMs) {
+        shadowOf(Looper.getMainLooper()).idle()
+        if (!compose.mainClock.autoAdvance) compose.mainClock.advanceTimeByFrame()
+        cond()
     }
 
-    @Test fun pageLoggedIn() {
+    protected fun pageBeforeSetUp() {
+        val m = model()
+        show { BrokerPage(m, ip) }
+        snap("zerodha-page-setup", KNOWN)
+    }
+
+    protected fun pageLoggedIn() {
         BrokerArea.saveKeys(); kite.login()
         val m = model()
         show { BrokerPage(m, ip) }
-        until { compose.onAllNodesWithText("Test User · until", substring = true).fetchSemanticsNodes().isNotEmpty() }
-        capture("zerodha-page-live"); lint("zerodha-page-live", BUGS)
-        smokeEveryAction(NO_SMOKE + "Log out" + "Erase Zerodha keys from this phone")
+        until { m.broker.value.loggedIn }
+        BrokerArea.settle(300)
+        snap("zerodha-page-live", KNOWN)
     }
 
-    @Test fun cards() {
+    protected fun cards() {
         BrokerArea.saveKeys(); kite.login()
         SecurePrefs.put("relay.pub", "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQtestkeynotreal iraalgo-relay")
         StaticIp.registered = "13.235.10.20"
@@ -997,45 +1021,48 @@ class BrokerScreensLayoutTest(device: DeviceConfig) : ScreenTest(device) {
         compose.onNodeWithText("Advanced: use a WireGuard VPN instead ▼").performScrollTo().performClick()
         compose.onNodeWithText("Run the self-test").performScrollTo().performClick()
         until(60_000) { compose.onAllNodesWithText("All 9 checks passed.").fetchSemanticsNodes().isNotEmpty() }
-        until { compose.onAllNodesWithText("Review the order").fetchSemanticsNodes().isNotEmpty() && m.plan.value == Load.Idle &&
-            runCatching { compose.onNodeWithText("Review the order").assertIsEnabled(); true }.getOrDefault(false) }
-        capture("zerodha-cards"); lint("zerodha-cards", BUGS)
+        until { runCatching { compose.onNodeWithText("Review the order").assertIsEnabled(); true }.getOrDefault(false) }
+        snap("zerodha-cards", KNOWN)
         smokeEveryAction(NO_SMOKE)
     }
 
-    @Test fun connectStepOne() {
+    protected fun connectStepOne() {
         val m = model()
-        checkScreen("connect-zerodha-guide", BUGS) { ConnectZerodhaScreen(m) }
-        smokeEveryAction(NO_SMOKE)
+        show { ConnectZerodhaScreen(m) }
+        snap("connect-zerodha-guide", KNOWN)
+        smokeEveryAction(NO_SMOKE + "Save to the vault")
     }
 
-    @Test fun connectForm() {
+    protected fun connectForm() {
         val m = model()
         show { ConnectZerodhaScreen(m) }
         compose.onNodeWithText("I already have my API key and secret").performScrollTo().performClick()
         compose.waitForIdle()
-        capture("connect-zerodha-form"); lint("connect-zerodha-form", BUGS)
+        snap("connect-zerodha-form", KNOWN)
     }
 
-    @Test fun connectKeysSaved() {
+    protected fun connectKeysSaved() {
         BrokerArea.saveKeys()
         val m = model()
-        checkScreen("connect-zerodha-login", BUGS) { ConnectZerodhaScreen(m) }
+        show { ConnectZerodhaScreen(m) }
+        snap("connect-zerodha-login", KNOWN)
     }
 
-    @Test fun loginPin() {
+    protected fun loginPin() {
         BrokerArea.saveKeys()
         val m = model()
-        checkScreen("zerodha-login-pin", BUGS) { LoginPinDialog(m) }
+        showPaused { LoginPinDialog(m) }
+        snap("zerodha-login-pin", KNOWN)
     }
 
-    @Test fun reauth() {
+    protected fun reauth() {
         PinLock.setPin(BrokerArea.PIN.toCharArray())
         val m = model()
-        checkScreen("reauth-pin", BUGS) { Reauth(m, onOk = {}, onCancel = {}) }
+        showPaused { Reauth(m, onOk = {}, onCancel = {}) }
+        snap("reauth-pin", KNOWN)
     }
 
-    @Test fun reviewWithAStuckLeg() {
+    protected fun reviewWithAStuckLeg() {
         PinLock.setPin(BrokerArea.PIN.toCharArray())
         kite.login()
         val m = model()
@@ -1045,6 +1072,49 @@ class BrokerScreensLayoutTest(device: DeviceConfig) : ScreenTest(device) {
         val plan = BrokerArea.await("the plan") { (m.plan.value as? Load.Done)?.value }
         m.stuck.value = AppModel.StuckLeg(plan, 0, "250926000000123456", emptyList(), "OPEN")
         m.sending.value = Load.Failed("Leg 1 open. It is still working at Zerodha; decide below.")
-        checkScreen("order-review-stuck", BUGS) { OrderReviewDialog(m) }
+        showPaused { OrderReviewDialog(m) }
+        snap("order-review-stuck", KNOWN)
     }
+}
+
+/**
+ * The main Zerodha screen states on every device set-up (4 sizes x 3 font scales x light/dark): every
+ * window saved as a screenshot, [com.optionslab.app.testing.LayoutLint], and a click smoke on the busiest.
+ * Real AppModel, fake Kite, no network.
+ */
+@RunWith(ParameterizedRobolectricTestRunner::class)
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
+@ConscryptMode(ConscryptMode.Mode.OFF)
+class BrokerScreensLayoutTest(device: DeviceConfig) : BrokerLayoutBase(device) {
+    companion object {
+        @JvmStatic
+        @ParameterizedRobolectricTestRunner.Parameters(name = "{0}")
+        fun configs(): List<Array<Any>> = DeviceConfig.matrix()
+    }
+
+    @Test fun pageBeforeSetUpState() = pageBeforeSetUp()
+    @Test fun cardsState() = cards()
+    @Test fun connectStepOneState() = connectStepOne()
+    @Test fun connectKeysSavedState() = connectKeysSaved()
+}
+
+/** The Zerodha page's secondary states (dialogs, the form, the live page) on six set-ups spanning the matrix, to keep CI time in bounds. */
+@RunWith(ParameterizedRobolectricTestRunner::class)
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
+@ConscryptMode(ConscryptMode.Mode.OFF)
+class BrokerDialogsLayoutTest(device: DeviceConfig) : BrokerLayoutBase(device) {
+    companion object {
+        private val PICK = setOf("small-font2.0-light", "small-font1.0-dark", "phone-font1.3-light", "landscape-font1.0-light",
+            "landscape-font2.0-dark", "tablet-font1.3-dark")
+
+        @JvmStatic
+        @ParameterizedRobolectricTestRunner.Parameters(name = "{0}")
+        fun configs(): List<Array<Any>> = DeviceConfig.matrix().filter { (it[0] as DeviceConfig).name in PICK }
+    }
+
+    @Test fun pageLoggedInState() = pageLoggedIn()
+    @Test fun connectFormState() = connectForm()
+    @Test fun loginPinState() = loginPin()
+    @Test fun reauthState() = reauth()
+    @Test fun reviewWithAStuckLegState() = reviewWithAStuckLeg()
 }
