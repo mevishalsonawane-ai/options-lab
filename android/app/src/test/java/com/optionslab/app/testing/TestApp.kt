@@ -24,7 +24,7 @@ import com.optionslab.app.security.SecurePrefs
  * Does what [com.optionslab.app.IraAlgoApp.onCreate] does to make the stores usable - every
  * `init(context)` - and nothing else: no crash handler, no notification channels, no
  * [com.optionslab.app.work.Jobs] (alarms / WorkManager), no process-lifecycle observer and
- * no PineScripts background thread. Nothing here touches the network.
+ * no PineScripts background thread. [NetworkGuard] makes any attempt to reach the internet fail.
  *
  * Robolectric builds a new Application (with new, empty app directories) for every test, but
  * the app's `object` singletons live on for the whole run; so each store's in-memory cache is
@@ -33,6 +33,7 @@ import com.optionslab.app.security.SecurePrefs
 class TestApp : Application() {
     override fun onCreate() {
         super.onCreate()
+        NetworkGuard.install()
         FakeAndroidKeyStore.install()
         FakeAndroidKeyStore.reset()
         SecurePrefs.init(this)

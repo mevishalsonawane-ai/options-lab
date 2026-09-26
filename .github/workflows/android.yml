@@ -119,6 +119,19 @@ jobs:
       - name: Coverage summary
         if: always()
         run: python3 tools/coverage_summary.py "$(find app/build/reports/coverage -name report.xml 2>/dev/null | head -1)" app/build/test-results/testDebugUnitTest | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Screenshots captured
+        if: always()
+        run: |
+          n=$(find app/build/outputs/roborazzi -name '*.png' 2>/dev/null | wc -l)
+          echo "$n screenshots in app/build/outputs/roborazzi (artifact app-screenshots)"
+          find app/build/outputs/roborazzi -name '*.png' -printf '%f\n' 2>/dev/null | sort | head -400
+          grep -rhoE 'LAYOUT BUG \([^)]*\): [^<]*' app/build/test-results/testDebugUnitTest/*.xml 2>/dev/null | sort -u | head -100 || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: app-screenshots
+          path: android/app/build/outputs/roborazzi/
+          if-no-files-found: warn
       - uses: actions/upload-artifact@v4
         if: always()
         with:

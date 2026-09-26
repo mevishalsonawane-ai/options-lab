@@ -95,6 +95,8 @@ android {
             all {
                 it.maxHeapSize = "3g"
                 it.systemProperty("robolectric.logging.enabled", "false")
+                // Screen tests write their screenshots (build/outputs/roborazzi); nothing is compared or committed.
+                it.systemProperty("roborazzi.test.record", "true")
                 it.testLogging { events("failed"); exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL }
             }
         }
@@ -140,6 +142,13 @@ dependencies {
     // Registers the empty ComponentActivity createComposeRule() launches. Debug variant only:
     // the release manifest (and its sandbox report) is unchanged.
     debugImplementation("androidx.compose.ui:ui-test-manifest")
+    // Screenshots of every tested screen on the JVM (Robolectric native graphics).
+    testImplementation("io.github.takahirom.roborazzi:roborazzi:1.36.0")
+    testImplementation("io.github.takahirom.roborazzi:roborazzi-compose:1.36.0")
+    testImplementation("io.github.takahirom.roborazzi:roborazzi-junit-rule:1.36.0")
+    // A fake Zerodha (Kite Connect) server on localhost for the live-order paths; same version as okhttp.
+    testImplementation("com.squareup.okhttp3:mockwebserver:4.12.0")
+    testImplementation("com.squareup.okhttp3:okhttp-tls:4.12.0")
 }
 
 

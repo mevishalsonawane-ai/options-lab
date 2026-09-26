@@ -121,15 +121,33 @@ object Broker {
 
     // ---- HTTP ---------------------------------------------------------------------
 
+    /**
+     * TEST SEAM (JVM tests only): send [call]'s requests to a local fake Kite server instead of
+     * api.kite.trade, trusting that server's test certificate instead of the pinned Zerodha chain,
+     * and without the static-IP relay. Null - always, in the app - means Zerodha itself.
+     *
+     * It cannot be switched on in a release build: the setter throws unless BuildConfig.DEBUG, and
+     * nothing in the app calls it (only src/test does). Every other line of [call] - headers, auth,
+     * retries, error mapping - runs unchanged against the fake.
+     */
+    internal class TestEndpoint(val base: String, val ssl: javax.net.ssl.SSLSocketFactory)
+    @Volatile internal var testEndpoint: TestEndpoint? = null
+        set(v) {
+            check(com.optionslab.app.BuildConfig.DEBUG) { "the test endpoint exists only in debug builds" }
+            field = v
+        }
+
     private suspend fun call(method: String, path: String, body: String? = null, auth: Boolean = true, raw: Boolean = false,
                              json: Boolean = false): Any {
         var attempt = 0
         while (true) {
             // Orders and every other write go through the static-IP relay when it is on (it throws if it
             // cannot connect, so nothing leaves from another IP); reads go direct.
-            val relay = if (method != "GET") Relay.proxy() else null
-            val c = (if (relay != null) URL(Kite.API + path).openConnection(relay) else URL(Kite.API + path).openConnection()) as HttpsURLConnection
-            c.sslSocketFactory = com.optionslab.app.security.KitePin.socketFactory
+            val test = testEndpoint
+            val relay = if (method != "GET" && test == null) Relay.proxy() else null
+            val url = URL((test?.base ?: Kite.API) + path)
+            val c = (if (relay != null) url.openConnection(relay) else url.openConnection()) as HttpsURLConnection
+            c.sslSocketFactory = test?.ssl ?: com.optionslab.app.security.KitePin.socketFactory
             try {
                 c.requestMethod = method
                 c.connectTimeout = 20_000
