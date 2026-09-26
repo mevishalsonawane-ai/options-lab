@@ -481,7 +481,7 @@ object OrbArms {
         if (trigger != null) {
             stopId = runCatching {
                 Broker.placeOrder(com.optionslab.engine.Kite.Order(sym, com.optionslab.engine.Kite.Side.SELL, f.filled, ins.lotSize, "MIS", "SL",
-                    stopLimit(trigger, ins.tickSize), ins.tickSize, "NFO", "iraorb", triggerPrice = trigger))
+                    stopLimit(trigger, ins.tickSize), ins.tickSize, "NFO", "iraorb", triggerPrice = trigger), exit = true)
             }.getOrNull()
             if (stopId != null) Strategies.tagOwner("kite:$stopId", "${arm.label} · stop")
             else com.optionslab.app.work.Alerts.error("${arm.label}: the −40 stop could not be placed at Zerodha; the app watches it instead.", "ORB live")
@@ -559,7 +559,7 @@ object OrbArms {
             com.optionslab.app.work.Alerts.error("$label: the Zerodha exit was not sent (${bad.joinToString("; ")}). Close $sym in Trade.", "ORB live")
             return p.copy(stopOrderId = null)
         }
-        val id = try { Broker.placeOrder(o) } catch (e: Exception) {
+        val id = try { Broker.placeOrder(o, exit = true) } catch (e: Exception) {
             runCatching { Broker.findRecent(o, emptyList()) }.getOrNull() ?: run {
                 com.optionslab.app.work.Alerts.error("$label: the Zerodha exit failed (${e.message}); retrying on the next pass.", "ORB live")
                 return p.copy(stopOrderId = null)

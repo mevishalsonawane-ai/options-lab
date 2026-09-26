@@ -366,7 +366,7 @@ object Strategies {
                 val why = Kite.refusals(o, s.limits(), Broker.sentToday(), false, exit = exit, refPrice = last)
                 if (why.isNotEmpty()) return@runBlocking StrategyHost.Placed.Refused(why.joinToString("; "))
                 val id = try {
-                    Broker.placeOrder(o)
+                    Broker.placeOrder(o, exit)
                 } catch (e: Broker.KiteError) {
                     return@runBlocking StrategyHost.Placed.Refused(e.message ?: "Zerodha refused the order")
                 } catch (e: Broker.NotLoggedIn) {

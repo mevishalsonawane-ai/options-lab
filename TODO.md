@@ -49,7 +49,7 @@ Source paths prefixed `NTA:` are in D:\New Trading app.
       and re-register in Task Scheduler; harvested bars stop at 2026-09-10 (missed sessions are lost for good).
 - [ ] B2. Release signing: run `android/tools/make-release-key.sh`, add the 4 GitHub secrets
       (otherwise every update needs uninstall, which wipes the vault).
-- [ ] B3. Static IP for live orders (SEBI): VPS + `android/tools/wg-relay-setup.sh`.
+- [ ] B3. Static IP for live orders (SEBI): VPS (Oracle Always Free works) or a home static IP + `android/tools/wg-relay-setup.sh`; then enter the IP in the app (More → Zerodha → Static IP) and check it shows ✓. The app now refuses new live positions from any other IP.
 - [ ] B4. Research milestones in `docs/design.md`: M1 in progress, M4-M9 open, M9 forward holdout ~Dec 2026;
       missing tests `test_theta_units`, `test_long_short_mirror`, `test_exits_fire`, `test_no_engine_import`; pricer/IV module;
       confirm M3 Kaggle splice reconciliation.

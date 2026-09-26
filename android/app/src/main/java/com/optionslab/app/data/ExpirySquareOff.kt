@@ -63,7 +63,7 @@ object ExpirySquareOff {
                 val why = Kite.refusals(o, s.limits(), Broker.sentToday(), false, exit = true)
                 if (why.isNotEmpty()) { failed = true; continue }
                 try {
-                    Broker.placeOrder(o); closed += "live ${p.symbol}"
+                    Broker.placeOrder(o, exit = true); closed += "live ${p.symbol}"
                 } catch (e: Broker.KiteError) {
                     failed = true
                 } catch (e: Exception) {

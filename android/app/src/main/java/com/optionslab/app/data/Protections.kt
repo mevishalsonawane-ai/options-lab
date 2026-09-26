@@ -139,9 +139,9 @@ object Protections {
             var stopId: String? = null; var targetId: String? = null
             try {
                 if (s0 != null) stopId = Broker.placeOrder(Kite.Order(symbol, side, abs(qty), spec.lotSize, product, "SL-M", null, spec.tickSize, exchange,
-                    "iraprotect", triggerPrice = s0))
+                    "iraprotect", triggerPrice = s0), exit = true)
                 if (target != null) targetId = Broker.placeOrder(Kite.Order(symbol, side, abs(qty), spec.lotSize, product, "LIMIT",
-                    Kite.onTick(target, spec.tickSize, side), spec.tickSize, exchange, "iraprotect"))
+                    Kite.onTick(target, spec.tickSize, side), spec.tickSize, exchange, "iraprotect"), exit = true)
             } catch (e: Exception) {
                 stopId?.let { runCatching { Broker.cancel(it) } }
                 return@withLock "Not protected: ${e.message}"

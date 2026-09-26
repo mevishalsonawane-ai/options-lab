@@ -506,7 +506,9 @@ object Broker {
     data class Fill(val orderId: String, val status: String, val avgPrice: Double, val filled: Int, val message: String)
 
     /** Sends ONE order. Callers must have passed Kite.refusals and the owner's confirmation. */
-    suspend fun placeOrder(o: Kite.Order): String {
+    suspend fun placeOrder(o: Kite.Order, exit: Boolean = false): String {
+        // SEBI static IP: a new position is not opened from an IP Zerodha would refuse (exits always go).
+        if (!exit) StaticIp.entryBlock()?.let { throw KiteError("static_ip", it) }
         val data = call("POST", "/orders/regular", o.formBody()) as JSONObject
         countSent()
         return data.getString("order_id")

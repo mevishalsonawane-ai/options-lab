@@ -35,6 +35,7 @@ class IraAlgoApp : Application() {
         Market.init(this)
         com.optionslab.app.data.Holidays.init(this)
         Broker.init(this)
+        com.optionslab.app.data.StaticIp.init(this)
         com.optionslab.app.data.Paper.init(this)
         com.optionslab.app.data.History.init(this)
         com.optionslab.app.data.Strategies.init(this)

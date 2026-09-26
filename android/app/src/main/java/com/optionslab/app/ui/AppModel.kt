@@ -992,7 +992,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                     val leg = cur.legs[i]
                     sending.value = Load.Busy("Leg ${i + 1} of ${cur.legs.size}: ${leg.side} ${leg.tradingSymbol}")
                     val id = try {
-                        b.placeOrder(leg)
+                        b.placeOrder(leg, exit = cur.exit)
                     } catch (e: com.optionslab.app.data.Broker.KiteError) {
                         throw e
                     } catch (e: com.optionslab.app.data.Broker.NotLoggedIn) {

@@ -436,6 +436,103 @@ private fun PlanCard(
     }
 }
 
+// ---- static IP (SEBI) --------------------------------------------------------------------------
+
+/**
+ * SEBI requires API orders to come from an IP registered with Zerodha. This card shows
+ * whether the phone is on that IP right now, keeps the registered IP (new live positions
+ * are refused from any other), and walks through setting up the relay and the VPN.
+ */
+@Composable
+private fun StaticIpCard(model: AppModel) {
+    val p = LocalPalette.current
+    val ctx = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current
+    var status by remember { mutableStateOf<com.optionslab.app.data.StaticIp.Status?>(null) }
+    var checking by remember { mutableStateOf(false) }
+    var ipText by remember { mutableStateOf(com.optionslab.app.data.StaticIp.registered.orEmpty()) }
+    var guide by rememberSaveable { mutableStateOf(com.optionslab.app.data.StaticIp.registered == null) }
+    fun check() { checking = true; scope.launch { status = com.optionslab.app.data.StaticIp.status(force = true); checking = false } }
+    LaunchedEffect(Unit) { check() }
+    fun open(url: String) = runCatching {
+        ctx.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url)).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+    }
+    @Composable fun link(label: String, url: String) = Text("↗  $label", style = Type.body.copy(color = p.verdigris,
+        textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold),
+        modifier = Modifier.fillMaxWidth().clickable { open(url) }.padding(vertical = 6.dp))
+    @Composable fun step(n: String, title: String, body: String) = Column(Modifier.padding(top = 10.dp)) {
+        Text("$n. $title", style = Type.body.copy(color = p.ink, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold))
+        Text(body, style = Type.bodySmall.copy(color = p.inkSoft))
+    }
+    val st = status
+    val tone = when { st == null -> p.inkSoft; st.registered == null -> p.amber; st.matches -> p.verdigris; else -> p.oxblood }
+    LedgerCard(title = "Static IP (needed for live orders)", accent = if (st != null && st.registered != null && !st.matches) p.oxblood else null) {
+        Text(when {
+            st == null -> "Checking…"
+            st.registered == null -> "Not set up yet. SEBI requires API orders to come from an IP you have registered with Zerodha."
+            st.current == null -> "Could not read this phone's IP just now."
+            st.matches -> "✓ This phone is on your registered IP ${st.registered}. Live orders can go."
+            else -> "✗ This phone is on ${st.current}, not your registered ${st.registered}. New live positions are refused until the VPN is on (exits still go)."
+        }, style = Type.body.copy(color = tone))
+        st?.let { LedgerLine("VPN", if (it.vpn) "on" else "off", if (it.vpn) p.verdigris else p.inkSoft) }
+        st?.current?.let { LedgerLine("This phone's IP now", it) }
+        androidx.compose.material3.OutlinedTextField(ipText, { ipText = it.filter { c -> c.isDigit() || c == '.' }.take(15) },
+            label = { Text("Your registered static IP (from your VPN server)") }, singleLine = true, modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
+        Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            BrassButton("Save IP", Modifier.weight(1f)) {
+                when {
+                    ipText.isBlank() -> { com.optionslab.app.data.StaticIp.registered = null; model.say("Static IP cleared: orders are no longer checked against it."); check() }
+                    !com.optionslab.app.data.StaticIp.valid(ipText) -> com.optionslab.app.work.Alerts.error("That is not an IP address like 13.235.10.20.")
+                    else -> { com.optionslab.app.data.StaticIp.registered = ipText.trim(); com.optionslab.app.work.Alerts.success("Static IP saved."); check() }
+                }
+            }
+            BrassButton(if (checking) "Checking…" else "Check now", Modifier.weight(1f), tone = p.inkSoft, enabled = !checking) { check() }
+        }
+        Text(if (guide) "Hide the setup steps ▲" else "How to set up a static IP and the VPN ▼", style = Type.label.copy(color = p.ink, fontSize = 14.sp),
+            modifier = Modifier.padding(top = 12.dp).clickable { guide = !guide }.padding(vertical = 4.dp))
+        if (guide) {
+            Note("Why: a phone on mobile data or home Wi-Fi has an IP that keeps changing, so Zerodha would reject its orders. " +
+                "You rent a tiny server with a fixed IP and send the phone's traffic through it with a VPN (WireGuard). " +
+                "The server only forwards encrypted traffic: it never sees your keys, orders or passwords. Setup takes about 20 minutes, once.")
+            step("1", "Rent a small server with a static IP",
+                "Any provider with a fixed public IPv4 in India (Mumbai or Bangalore region), the smallest plan, Ubuntu 22.04 or 24.04. " +
+                    "In its firewall allow UDP port 51820. Note the server's public IP.")
+            link("Oracle Cloud Always Free (₹0: free VM with a reserved IP, Mumbai / Hyderabad)", "https://www.oracle.com/cloud/free/")
+            Note("Already have home broadband with a static IP (many Jio Fiber / Airtel Xstream plans sell one as an add-on)? Run the same relay on an always-on home PC or router instead and register that IP.")
+            link("AWS Lightsail (Mumbai)", "https://lightsail.aws.amazon.com/")
+            link("DigitalOcean (Bangalore)", "https://www.digitalocean.com/products/droplets")
+            link("Vultr (Mumbai / Bangalore)", "https://www.vultr.com/products/cloud-compute/")
+            step("2", "Install the VPN relay on it (one command)",
+                "From a computer, copy android/tools/wg-relay-setup.sh from the IraAlgo code to the server and run it. It installs WireGuard and prints the IP to register and a QR code for the phone.")
+            val cmd = "sudo bash wg-relay-setup.sh"
+            Row(
+                Modifier.fillMaxWidth().padding(vertical = 6.dp).background(p.chip, RoundedCornerShape(10.dp)).padding(horizontal = 12.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(cmd, style = Type.figure.copy(color = p.ink, fontSize = 13.sp), modifier = Modifier.weight(1f))
+                Text("Copy", style = Type.label.copy(color = p.ink, fontSize = 14.sp),
+                    modifier = Modifier.clickable { clipboard.setText(androidx.compose.ui.text.AnnotatedString(cmd)); model.say("Command copied") }.padding(start = 12.dp))
+            }
+            link("Full guide (static-ip-relay.md)", "https://github.com/mevishalsonawane-ai/options-lab/blob/main/android/docs/static-ip-relay.md")
+            step("3", "Register that IP with Zerodha",
+                "On the Kite developer site open your app and enter the server's IP in its static IP / IP whitelist setting, exactly as the script printed it.")
+            link("Open My apps on developers.kite.trade", "https://developers.kite.trade/apps")
+            step("4", "Install WireGuard on this phone and scan the QR code",
+                "Install the official WireGuard app, tap +, choose Scan from QR code, scan the code the script printed, and switch the tunnel on.")
+            link("WireGuard on the Play Store", "https://play.google.com/store/apps/details?id=com.wireguard.android")
+            step("5", "Keep the VPN always on",
+                "In Android Settings → Network → VPN → WireGuard (gear icon), turn on Always-on VPN and Block connections without VPN, so no order ever leaves outside the tunnel.")
+            BrassButton("Open the phone's VPN settings", Modifier.fillMaxWidth().padding(top = 6.dp), tone = p.inkSoft) {
+                runCatching { ctx.startActivity(android.content.Intent("android.settings.VPN_SETTINGS").addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
+            }
+            step("6", "Enter the IP here and check",
+                "Type the server's IP in the box above, tap Save IP, then Check now: it must say ✓. If it says ✗, the VPN is off or connected to a different server.")
+        }
+    }
+}
+
 // ---- the Zerodha page (Cabinet) ------------------------------------------------------------
 
 @Composable
@@ -448,6 +545,7 @@ fun BrokerPage(model: AppModel) {
     LaunchedEffect(Unit) { model.refreshBroker(); if (Broker.loggedIn) model.loadAccount() }
     Page {
         item { PageTitle("Zerodha", "Your broker, as the PC trading app uses it: Kite Connect") }
+        item { StaticIpCard(model) }
         item {
             LedgerCard(title = "Connection") {
                 LedgerLine("API key", b.maskedKey)
