@@ -32,11 +32,16 @@ object Backup {
     private const val ROUNDS = 200_000
 
     /** (directory, name): f = files, n = no-backup files. */
-    private val FILES = listOf("f" to "strategies.vault", "f" to "orb.vault", "f" to "paper.vault", "f" to "holidays.json",
-        "n" to "ledger.vault", "n" to "alarms.vault", "n" to "protections.vault", "n" to "live_trades.vault", "n" to "journal.vault")
+    // Not carried: protections (they name this phone's live Zerodha orders) and the holiday list
+    // (fetched from NSE; a crafted one could mark every day closed and stop the market watch).
+    private val FILES = listOf("f" to "strategies.vault", "f" to "orb.vault", "f" to "paper.vault",
+        "n" to "ledger.vault", "n" to "alarms.vault", "n" to "live_trades.vault", "n" to "journal.vault")
 
     /** Preferences that stay on this phone only. */
-    private val PRIVATE = listOf("kite.", "draft.kite", "pin.", "tls.", "ol.vault", "hb.", "sq.", "report.")
+    // Also never restored: trading mode and risk limits (k.), security switches (sec.) and the idle lock (lock.):
+    // a file must not be able to switch on live trading, raise limits or weaken the locks.
+    private val PRIVATE = listOf("kite.", "draft.kite", "pin.", "tls.", "ol.vault", "hb.", "sq.", "report.", "k.", "sec.", "lock.", "intent.")
+    const val DISARM = "restore.disarm"
 
     private fun file(ctx: Context, dir: String, name: String) = File(if (dir == "f") ctx.filesDir else ctx.noBackupFilesDir, name)
 
@@ -98,6 +103,8 @@ object Backup {
         val prefs = c.json.getJSONObject("prefs")
         val values = HashMap<String, Any?>()
         prefs.keys().forEach { k -> if (PRIVATE.none { k.startsWith(it) }) values[k] = prefs.get(k) }
+        // Every restored strategy and ORB arm starts disarmed, paper only, on the next start.
+        values[DISARM] = true
         SecurePrefs.putAll(values)
     }
 }

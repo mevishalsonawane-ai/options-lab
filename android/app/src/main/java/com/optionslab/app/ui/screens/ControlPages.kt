@@ -237,6 +237,12 @@ fun SecurityPage(model: AppModel) {
     var changing by remember { mutableStateOf(false) }
     val pinScope = androidx.compose.runtime.rememberCoroutineScope()
     var erasing by remember { mutableStateOf(false) }
+    // Switches that lower the protection ask for the PIN (or fingerprint) first.
+    var guarded by remember { mutableStateOf<Triple<String, Boolean, () -> Unit>?>(null) }
+    fun guard(why: String, pinOnly: Boolean = false, action: () -> Unit) { guarded = Triple(why, pinOnly, action) }
+    guarded?.let { (why, pinOnly, action) ->
+        Reauth(model, onOk = { guarded = null; action() }, onCancel = { guarded = null }, pinOnly = pinOnly, why = why)
+    }
     // Re-read while the page is open, so adding a fingerprint in the phone's Settings shows up on return.
     var kind by remember { mutableStateOf((context as? androidx.fragment.app.FragmentActivity)?.let { BiometricGate.available(it) } ?: BiometricGate.Kind.NONE) }
     com.optionslab.app.ui.PollWhileStarted {
@@ -248,7 +254,7 @@ fun SecurityPage(model: AppModel) {
     Page {
         item { PageTitle("Security", "Nothing personal leaves this phone, and nothing is logged") }
         item { KitePinCard(model) }
-        item { BackupCard(s.wipeOnExhaustion) }
+        item { BackupCard(model, s.wipeOnExhaustion) }
         item {
             LedgerCard(title = "Home-screen widget") {
                 ToggleRow("Show my P&L on the widget", "Off by default: a home screen is seen by anyone holding the unlocked phone. Index levels are always shown.", s.widgetPnl) { on ->
@@ -268,7 +274,9 @@ fun SecurityPage(model: AppModel) {
                     }
                 }
                 BrassButton("Check again", Modifier.fillMaxWidth().padding(top = 8.dp), tone = p.inkSoft) { model.refreshIntegrity() }
-                ToggleRow("Refuse compromised devices", "Do not open on a rooted, hooked or debugged phone", s.refuseCompromised) { on -> model.update { it.copy(refuseCompromised = on) } }
+                ToggleRow("Refuse compromised devices", "Do not open on a rooted, hooked or debugged phone", s.refuseCompromised) { on ->
+                    if (on) model.update { it.copy(refuseCompromised = true) } else guard("Enter your app PIN to let IraAlgo open on a compromised phone.") { model.update { it.copy(refuseCompromised = false) } }
+                }
             }
         }
         item {
@@ -301,10 +309,17 @@ fun SecurityPage(model: AppModel) {
                     BiometricGate.Kind.WEAK -> "Face unlock is not used; add a fingerprint"
                     BiometricGate.Kind.NONE -> "No fingerprint added on this phone"
                 }, s.biometric && kind != BiometricGate.Kind.NONE) { on ->
-                    if (on) runCatching { if (kind == BiometricGate.Kind.STRONG) BiometricGate.enrol() }
-                        .onFailure { model.say("Could not enable biometrics: ${it.message}"); return@ToggleRow }
-                    else BiometricGate.forget()
-                    model.update { it.copy(biometric = on && kind != BiometricGate.Kind.NONE, allowWeakFace = false) }
+                    if (on) {
+                        // The PIN, never a finger: a finger added by someone else must not be able to trust itself.
+                        guard("Enter your app PIN to switch the fingerprint on. Every finger on this phone can then approve orders.", pinOnly = true) {
+                            runCatching { if (kind == BiometricGate.Kind.STRONG) BiometricGate.enrol() }
+                                .onFailure { model.say("Could not enable the fingerprint: ${it.message}") }
+                                .onSuccess { model.update { it.copy(biometric = kind != BiometricGate.Kind.NONE, allowWeakFace = false) } }
+                        }
+                    } else {
+                        BiometricGate.forget()
+                        model.update { it.copy(biometric = false, allowWeakFace = false) }
+                    }
                 }
                 // Say plainly why it would not be offered, and let the owner try it here.
                 val danger = findings.filter { it.severity == com.optionslab.app.security.Integrity.Severity.DANGER }
@@ -329,14 +344,20 @@ fun SecurityPage(model: AppModel) {
                 ToggleRow("Allow screenshots and screen recording",
                     if (capture) "On while testing: anyone with the phone can capture any screen, keys and P&L included. Turn off before going live."
                     else "Off: every screen and popup is blocked from screenshots, recordings and the recent-apps preview.", capture) { on ->
-                    capture = on
-                    com.optionslab.app.security.Capture.set(context as? android.app.Activity, on)
+                    if (!on) { capture = false; com.optionslab.app.security.Capture.set(context as? android.app.Activity, false) }
+                    else guard("Enter your app PIN to allow screenshots and screen recording.") {
+                        capture = true; com.optionslab.app.security.Capture.set(context as? android.app.Activity, true)
+                    }
                 }
                 val idles = listOf(60, 120, 300, 600, 900)
                 ParamTokens("Lock after idle for", idles.map { "${it / 60} min" to (it == s.idleSeconds) }) { i ->
-                    model.update { it.copy(idleSeconds = idles[i]) }
+                    // A shorter lock is always allowed; a longer one needs the PIN.
+                    if (idles[i] <= s.idleSeconds) model.update { it.copy(idleSeconds = idles[i]) }
+                    else guard("Enter your app PIN to keep the app open longer when idle.") { model.update { it.copy(idleSeconds = idles[i]) } }
                 }
-                ToggleRow("Erase after ${PinLock.WIPE_AFTER} wrong PINs", "Destroys the encryption key; all app data becomes unreadable", s.wipeOnExhaustion) { on -> model.update { it.copy(wipeOnExhaustion = on) } }
+                ToggleRow("Erase after ${PinLock.WIPE_AFTER} wrong PINs", "Destroys the encryption key; all app data becomes unreadable", s.wipeOnExhaustion) { on ->
+                    if (on) model.update { it.copy(wipeOnExhaustion = true) } else guard("Enter your app PIN to switch off erasing after wrong PINs.") { model.update { it.copy(wipeOnExhaustion = false) } }
+                }
                 ToggleRow("Hide figures on the lock screen", "Notifications show only \"Unlock to read\" while the phone is locked", s.hideAmountsOnLockScreen) { on -> model.update { it.copy(hideAmountsOnLockScreen = on) } }
                 Spacer(Modifier.height(8.dp))
                 Row {
@@ -634,7 +655,7 @@ private fun GuardCard(model: AppModel) {
  * the pinned certificates are never in it.
  */
 @Composable
-private fun BackupCard(wipeOnExhaustion: Boolean) {
+private fun BackupCard(model: AppModel, wipeOnExhaustion: Boolean) {
     val p = LocalPalette.current
     val ctx = LocalContext.current
     val scope = androidx.compose.runtime.rememberCoroutineScope()
@@ -642,6 +663,7 @@ private fun BackupCard(wipeOnExhaustion: Boolean) {
     var ask by remember { mutableStateOf<String?>(null) }          // "backup" | "restore": which PIN prompt is open
     var pending by remember { mutableStateOf<ByteArray?>(null) }   // a backup made, waiting for its file / a file read, waiting for its PIN
     var opened by remember { mutableStateOf<com.optionslab.app.data.Backup.Contents?>(null) }
+    var restoreAuth by remember { mutableStateOf(false) }
     val save = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.CreateDocument("application/octet-stream")) { uri ->
         val bytes = pending; pending = null
         if (uri == null || bytes == null) return@rememberLauncherForActivityResult
@@ -703,7 +725,7 @@ private fun BackupCard(wipeOnExhaustion: Boolean) {
             dismissButton = { TextButton({ ask = null; if (mode == "restore") pending = null }) { Text("Cancel") } },
         )
     }
-    opened?.let { c ->
+    if (!restoreAuth) opened?.let { c ->
         com.optionslab.app.ui.components.AlertDialog(
             onDismissRequest = { opened = null },
             properties = androidx.compose.ui.window.DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy),
@@ -714,7 +736,15 @@ private fun BackupCard(wipeOnExhaustion: Boolean) {
                     "Your Zerodha link and PIN here stay as they are. IraAlgo closes when done; open it again.", style = Type.bodySmall)
             },
             confirmButton = {
-                TextButton({
+                TextButton({ restoreAuth = true }) { Text("Replace and restart", color = p.oxblood) }
+            },
+            dismissButton = { TextButton({ opened = null }) { Text("Cancel") } },
+        )
+    }
+    // The backup's own PIN is whoever made the file's choice: replacing this phone's data needs THIS app's PIN.
+    if (restoreAuth) opened?.let { c ->
+        Reauth(model, onCancel = { restoreAuth = false }, why = "Enter this phone's app PIN to replace its data with the backup.", onOk = {
+                    restoreAuth = false
                     scope.launch {
                         val ok = runCatching { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { com.optionslab.app.data.Backup.restore(ctx, c) } }.isSuccess
                         opened = null
@@ -724,9 +754,6 @@ private fun BackupCard(wipeOnExhaustion: Boolean) {
                         // Every store is cached in memory: a fresh start reads the restored files.
                         android.os.Process.killProcess(android.os.Process.myPid())
                     }
-                }) { Text("Replace and restart", color = p.oxblood) }
-            },
-            dismissButton = { TextButton({ opened = null }) { Text("Cancel") } },
-        )
+        })
     }
 }

@@ -226,6 +226,14 @@ object Strategies {
         }
     }
 
+    /** After a restore: every strategy disarmed and paper only, no automatic approvals, no carried-over runs. */
+    suspend fun disarmAll() = lock.withLock {
+        val b = book()
+        for (i in b.defs.indices) b.defs[i] = b.defs[i].copy(liveEnabled = false, scheduler = b.defs[i].scheduler?.copy(enabled = false))
+        b.autoApprove.clear(); b.pending.clear(); b.runs.clear()
+        save(b)
+    }
+
     suspend fun delete(id: Long): String? = lock.withLock {
         val b = book()
         if (b.runs[id]?.let { r -> b.defs.firstOrNull { it.id == id }?.let { Entry(it, r).running } } == true) return@withLock "Stop it first."

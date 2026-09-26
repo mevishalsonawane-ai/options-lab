@@ -69,6 +69,8 @@ fun RowActionPopup(model: AppModel) {
     val account by model.account.collectAsState()
     var modify by remember { mutableStateOf<Broker.OrderRow?>(null) }
     var cancelAuth by remember { mutableStateOf<Broker.OrderRow?>(null) }
+    // Removing a Zerodha protection cancels its real stop / target orders: proved like a send.
+    var removeAuth by remember { mutableStateOf<Long?>(null) }
     var protectFor by remember { mutableStateOf<ProtectTarget?>(null) }
     var journalFor by remember { mutableStateOf<Pair<String, String>?>(null) }
     val protections by model.protections.collectAsState()
@@ -107,7 +109,7 @@ fun RowActionPopup(model: AppModel) {
                 button(if (pr == null) "Protect: stop · trail · target" else "Change protection") {
                     protectFor = ProtectTarget(false, r.symbol, r.exchange, r.product, r.quantity, r.ltp)
                 }
-                pr?.let { button("Remove protection") { model.removeProtection(it.id) } }
+                pr?.let { button("Remove protection") { if (it.live) removeAuth = it.id else model.removeProtection(it.id) } }
                 swipe("Slide to close position") { model.paperClose(r.symbol, r.product); close() }
             }
         }
@@ -170,7 +172,7 @@ fun RowActionPopup(model: AppModel) {
                 button(if (pr == null) "Protect: stop · trail · target" else "Change protection") {
                     protectFor = ProtectTarget(true, r.symbol, r.exchange, r.product, r.qty, r.last)
                 }
-                pr?.let { button("Remove protection") { model.removeProtection(it.id) } }
+                pr?.let { button("Remove protection") { if (it.live) removeAuth = it.id else model.removeProtection(it.id) } }
                 swipe("Slide to close position") { model.planSquareOff(r); close() }
             }
         }
@@ -219,7 +221,7 @@ fun RowActionPopup(model: AppModel) {
         }
     }
 
-    if (modify == null && cancelAuth == null && protectFor == null && journalFor == null) AlertDialog(
+    if (modify == null && cancelAuth == null && removeAuth == null && protectFor == null && journalFor == null) AlertDialog(
         onDismissRequest = ::close,
         properties = DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy),
         title = { Text(title, style = Type.title) },
@@ -249,6 +251,8 @@ fun RowActionPopup(model: AppModel) {
     protectFor?.let { pt -> ProtectDialog(model, pt) { done -> protectFor = null; if (done) close() } }
     journalFor?.let { (key, label) -> JournalDialog(key, label) { journalFor = null } }
     // Cancelling a working order (it may be a stop-loss) is proved like a send.
+    removeAuth?.let { id -> Reauth(model, onOk = { removeAuth = null; model.removeProtection(id); close() }, onCancel = { removeAuth = null },
+        why = "Enter your app PIN to cancel this position's stop and target at Zerodha.") }
     cancelAuth?.let { o -> Reauth(model, onOk = { cancelAuth = null; model.cancelOrder(o.id, o.variety); close() }, onCancel = { cancelAuth = null }) }
 }
 

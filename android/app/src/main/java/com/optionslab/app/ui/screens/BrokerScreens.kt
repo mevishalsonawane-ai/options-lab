@@ -225,13 +225,13 @@ fun LoginPinDialog(model: AppModel) {
  * phone may have been handed over unlocked.
  */
 @Composable
-fun Reauth(model: AppModel, onOk: () -> Unit, onCancel: () -> Unit) {
+fun Reauth(model: AppModel, onOk: () -> Unit, onCancel: () -> Unit, pinOnly: Boolean = false, why: String = "Enter your app PIN to send this order to Zerodha.") {
     val s by model.settings.collectAsState()
     val activity = LocalContext.current as? FragmentActivity
     // A phone that failed the security check can fake a biometric callback: the PIN only, there.
     val findings by model.integrity.collectAsState()
     val compromised = findings.isNotEmpty() && com.optionslab.app.security.Integrity.compromised(findings)
-    var usePin by remember { mutableStateOf(!(s.biometric && activity != null && !compromised)) }
+    var usePin by remember { mutableStateOf(pinOnly || !(s.biometric && activity != null && !compromised)) }
     LaunchedEffect(usePin) {
         // Face unlock counts here too when the owner accepted it (More → Security); otherwise the fingerprint key.
         if (!usePin && activity != null) BiometricGate.authenticate(activity, allowWeakFace = s.allowWeakFace) { out ->
@@ -253,7 +253,7 @@ fun Reauth(model: AppModel, onOk: () -> Unit, onCancel: () -> Unit) {
             title = { Text("Confirm it is you", style = Type.title) },
             text = {
                 Column {
-                    Text("Enter your app PIN to send this order to Zerodha.", style = Type.bodySmall)
+                    Text(why, style = Type.bodySmall)
                     OutlinedTextField(pin, { pin = it.filter(Char::isDigit).take(12) }, singleLine = true, label = { Text("PIN") },
                         visualTransformation = PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword))
                     com.optionslab.app.ui.components.AlertOn(err, throttle = false)

@@ -221,6 +221,11 @@ object OrbArms {
         else "$label disarmed." + if (b.positions.any { it.arm == source && it.open }) " Its open position is still managed to its exit." else ""
     }
 
+    /** After a restore: both arms off, nothing waiting for approval. */
+    suspend fun disarmAll() = lock.withLock {
+        val b = book(); b.armed.clear(); b.auto.clear(); b.pending.clear(); save(b)
+    }
+
     suspend fun approve(source: String, pinConfirmed: Boolean = false): String {
         // A live entry is sent only after the owner's PIN or fingerprint (the UI asks first).
         if (liveNow() && !pinConfirmed) return "The app is in Live: approve with your PIN on Home → Strategies."
@@ -229,7 +234,10 @@ object OrbArms {
         return lock.withLock {
             val b = book()
             val legs = b.legs ?: return@withLock "The day's contracts are not loaded yet."
-            val msg = enter(b, armOf(source), if (p.right == "CE") legs.ce else legs.pe, p.signalBar)
+            // A paper approval never turns into a live order because the switch flipped meanwhile.
+            val live = liveNow()
+            if (live && !pinConfirmed) return@withLock "The app switched to Live: approve with your PIN on Home → Strategies."
+            val msg = enter(b, armOf(source), if (p.right == "CE") legs.ce else legs.pe, p.signalBar, live)
             b.status[source] = msg; save(b); describe(msg)
         }
     }
@@ -294,7 +302,7 @@ object OrbArms {
                     ". Approve by ${hhmm(last.start.plusMinutes(10))} or it lapses.", "almanac")
             return "awaiting_approval"
         }
-        return enter(b, arm, c, last.start)
+        return enter(b, arm, c, last.start, live)
     }
 
     /** The day's strike from the first completed bar at or after 09:20, and the nearest expiry after today; held all day. */
@@ -309,8 +317,9 @@ object OrbArms {
         return Legs(day, strike, expiry, ce, pe).also { b.legs = it }
     }
 
-    private suspend fun enter(b: Book, arm: Arm, c: Paper.Contract, signalBar: LocalDateTime): String {
-        if (liveNow()) return enterLive(b, arm, c, signalBar)
+    /** [live] is decided once by the caller, so the account cannot change between the check and the order. */
+    private suspend fun enter(b: Book, arm: Arm, c: Paper.Contract, signalBar: LocalDateTime, live: Boolean): String {
+        if (live) return enterLive(b, arm, c, signalBar)
         val ltp = Paper.lastPrice(c) ?: return "refused: no quote"             // never enter blind
         // The Upstox feed has no bid/ask, so the paper fill is the LTP slipped 5 bps: price the checks the same way.
         val expected = ltp * 1.0005

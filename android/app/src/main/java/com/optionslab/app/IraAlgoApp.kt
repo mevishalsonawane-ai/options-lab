@@ -45,6 +45,16 @@ class IraAlgoApp : Application() {
         Notifier.createChannels(this)
         ProcessLifecycleOwner.get().lifecycle.addObserver(SessionLock)
         // Keystore work stays off the main thread.
-        Thread { runCatching { Jobs.scheduleAll(this) } }.start()
+        Thread {
+            // First start after a restore: everything restored comes back disarmed and paper only.
+            if (SecurePrefs.getBoolean(com.optionslab.app.data.Backup.DISARM, false)) runCatching {
+                kotlinx.coroutines.runBlocking {
+                    com.optionslab.app.data.Strategies.disarmAll()
+                    com.optionslab.app.data.OrbArms.disarmAll()
+                }
+                SecurePrefs.put(com.optionslab.app.data.Backup.DISARM, null)
+            }
+            runCatching { Jobs.scheduleAll(this) }
+        }.start()
     }
 }

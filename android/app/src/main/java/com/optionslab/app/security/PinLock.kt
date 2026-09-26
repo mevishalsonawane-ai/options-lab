@@ -77,6 +77,8 @@ object PinLock {
     /** The PIN's length, when known (older PINs learn it on their next unlock). */
     fun length(): Int? = SecurePrefs.getInt(K_LEN, 0).takeIf { it > 0 }
 
+    /** One attempt at a time; the attempt is counted before the slow check, so parallel guesses each cost one. */
+    @Synchronized
     fun verify(pin: CharArray, wipeOnExhaustion: Boolean): Result {
         val size = pin.size
         val wait = lockoutSecondsLeft()
@@ -86,13 +88,15 @@ object PinLock {
         if (salt == null || want == null) { pin.fill('\u0000'); return Result.Wrong(0) }
         // PBKDF2 throws on an empty password; an empty PIN is simply wrong and costs no attempt.
         if (size == 0) return Result.Wrong(FREE_ATTEMPTS - SecurePrefs.getInt(K_FAILS, 0))
+        val prior = SecurePrefs.getInt(K_FAILS, 0)
+        SecurePrefs.put(K_FAILS, prior + 1)
         val got = derive(pin, salt, SecurePrefs.getInt(K_ITER, ITERATIONS))
         pin.fill('\u0000')
         if (MessageDigest.isEqual(got, want)) {
             SecurePrefs.putAll(mapOf(K_FAILS to 0, K_UNTIL to null, K_LOCK_SECS to 0L, K_LEN to size))
             return Result.Ok
         }
-        val fails = SecurePrefs.getInt(K_FAILS, 0) + 1
+        val fails = prior + 1
         if (wipeOnExhaustion && fails >= WIPE_AFTER) return Result.Wiped
         val updates = mutableMapOf<String, Any?>(K_FAILS to fails)
         if (fails >= FREE_ATTEMPTS) {

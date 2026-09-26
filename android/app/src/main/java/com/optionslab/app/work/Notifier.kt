@@ -80,7 +80,7 @@ object Notifier {
     fun openApp(context: Context, tab: String? = null): PendingIntent = PendingIntent.getActivity(
         context, tab?.hashCode() ?: 0,
         Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-            .apply { tab?.let { putExtra(MainActivity.EXTRA_TAB, it) } },
+            .apply { tab?.let { putExtra(MainActivity.EXTRA_TAB, it) }; putExtra(MainActivity.EXTRA_NONCE, MainActivity.nonce()) },
         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
     )
 

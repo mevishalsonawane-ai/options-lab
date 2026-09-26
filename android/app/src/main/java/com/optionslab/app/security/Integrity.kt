@@ -88,7 +88,8 @@ object Integrity {
         val info = context.packageManager.getPackageInfo(context.packageName, android.content.pm.PackageManager.GET_PERMISSIONS)
         val names = info.requestedPermissions ?: return@runCatching emptySet<String>()
         val flags = info.requestedPermissionsFlags
-        val implicit = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && flags != null)
+        // An APK repackaged with a lower target SDK gets old permissions marked implicit: never trust that.
+        val implicit = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && flags != null && context.applicationInfo.targetSdkVersion >= 35)
             names.indices.filter { flags[it] and android.content.pm.PackageInfo.REQUESTED_PERMISSION_IMPLICIT != 0 }.map { names[it] }.toSet()
         else emptySet()
         implicit + names.filter { it in OS_ADDED }
