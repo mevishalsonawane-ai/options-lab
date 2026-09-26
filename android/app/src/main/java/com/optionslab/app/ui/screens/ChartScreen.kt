@@ -187,6 +187,9 @@ fun ChartScreen(model: AppModel, symbol: String, exchange: String, visible: Bool
                 WebView.setWebContentsDebuggingEnabled(false)
                 WebView(ctx).apply {
                     holder[0] = this
+                    // Fill the space Compose gives it. Without MATCH_PARENT the WebView sizes its viewport to its
+                    // content, and the chart sizes itself to the viewport: both settle at 0 px high (seen as "drawn 411×0").
+                    layoutParams = android.view.ViewGroup.LayoutParams(android.view.ViewGroup.LayoutParams.MATCH_PARENT, android.view.ViewGroup.LayoutParams.MATCH_PARENT)
                     settings.javaScriptEnabled = true
                     settings.domStorageEnabled = true            // the chart keeps its layout and drawings
                     settings.allowFileAccess = false
