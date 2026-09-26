@@ -10,11 +10,11 @@ unauthenticated Upstox candle endpoint the PC harvester uses.
 | Tab | What is there |
 |---|---|
 | **Home** | Capital, P&L, the BANKNIFTY chart, live orders, the Strategies card (ORB / ORB Fresh arms, imported strategies, the one bot button) |
-| **Chart** | IraAlgo Charts (the PC terminal): every drawing tool, indicators, buy/sell, brackets and price alerts from the chart; live candle from the Zerodha stream in Live mode |
+| **Chart** | IraAlgo Charts (the PC terminal): every drawing tool, indicators (and your Pine scripts), buy/sell, brackets and price alerts from the chart; OPT opens the option chain and charts the option you tap (‹ back to the index); live candle from the Zerodha stream in Live mode |
 | **Trade** | The account (paper or Zerodha): positions, orders, trades, GTT, strategies, replay |
 | **P&L** | The P&L calendar, month summary, year view, strategy filter and comparison, charges, journal, CSV export |
 | **Options** | Option chain with OI and PCR, strategy builder and templates, Expiry Put ticket, straddle tracker |
-| **Research** | Trials, health, the IC table, signal lab |
+| **Research** | Pine scripts (write, check, backtest, chart, auto-trade), trials, health, the IC table, signal lab |
 | **More** | Zerodha, Bot settings, security, alerts, schedules, backup and restore, data and harvest |
 
 ## What it does, mapped to the PC
@@ -248,6 +248,31 @@ against the Python on tens of thousands of cases) runs on the phone.
 The live watch evaluates the strategies every minute. The Strategies page
 evaluates them every 15 s while it is open. Everything is kept in an encrypted
 vault file.
+
+## Pine scripts (Research → Pine scripts)
+
+TradingView Pine (v5) runs on the phone (`engine/.../pine`).
+
+- **Write or paste** a script, or start from an example. It is checked as you
+  type: errors show with their line and column, and the line number turns red.
+- **Backtest** on NIFTY or BANKNIFTY candles (1m to 1D, days to years), with
+  the script's inputs editable. The report shows net profit, win rate, profit
+  factor, drawdown, the equity curve and every trade. Fills follow
+  TradingView: orders fill at the next open; stops and targets fill inside the
+  candle.
+- **On the chart:** "Show on the chart" adds the script as an indicator
+  (category Pine). Its plots are drawn and its `plotshape` buy/sell marks
+  appear on the candles.
+- **Auto-trade:** on each completed candle the script runs. When its signal
+  changes, the app buys the ATM CALL (buy) or PUT (sell, or just exits) of the
+  nearest expiry after today, and sells what it held. The signal is the
+  strategy's own position, or chosen `plotshape` / `alertcondition` signals.
+  - It follows the Paper / Live switch, and Live needs the PIN once.
+  - Every order passes the account guard, the limits, the kill switch and the
+    static-IP check.
+  - Everything is sold at 15:15.
+- **Not yet supported:** `request.security`, arrays, `switch`. Labels, lines
+  and boxes are accepted but not drawn.
 
 ## Paper trading (sandbox)
 
