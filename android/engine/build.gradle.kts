@@ -1,5 +1,6 @@
 plugins {
     kotlin("jvm")
+    jacoco
 }
 
 kotlin {
@@ -17,6 +18,15 @@ tasks.test {
     systemProperty("olx.assets", rootProject.file("app/src/main/assets").absolutePath)
     maxHeapSize = "2g"
     testLogging { events("failed"); exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL }
+    finalizedBy(tasks.jacocoTestReport)
+}
+
+jacoco { toolVersion = "0.8.12" }
+
+// Line and branch coverage of the engine: build/reports/jacoco/test/html/index.html (and XML for CI).
+tasks.jacocoTestReport {
+    dependsOn(tasks.test)
+    reports { xml.required.set(true); html.required.set(true) }
 }
 
 java {
