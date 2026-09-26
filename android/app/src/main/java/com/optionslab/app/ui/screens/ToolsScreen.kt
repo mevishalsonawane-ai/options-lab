@@ -121,7 +121,7 @@ fun ToolsScreen(model: AppModel, view: String, onView: (String) -> Unit, onChart
 }
 
 @Composable
-private fun Header(c: ChainSnapshot, source: String, onRefresh: () -> Unit) {
+internal fun Header(c: ChainSnapshot, source: String, onRefresh: () -> Unit) {
     val p = LocalPalette.current
     LedgerCard {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -198,7 +198,7 @@ fun ChainCard(c: ChainSnapshot, onPick: (ChainPick) -> Unit) {
 }
 
 @Composable
-private fun OiCard(c: ChainSnapshot) {
+internal fun OiCard(c: ChainSnapshot) {
     val p = LocalPalette.current
     val xs = c.rows.map { it.strike }
     LedgerCard(title = "Open interest") {
@@ -227,7 +227,7 @@ private fun OiCard(c: ChainSnapshot) {
 }
 
 @Composable
-private fun IvCard(c: ChainSnapshot) {
+internal fun IvCard(c: ChainSnapshot) {
     val p = LocalPalette.current
     val sm = c.ivSmile
     LedgerCard(title = "IV smile") {
@@ -242,7 +242,7 @@ private fun IvCard(c: ChainSnapshot) {
 }
 
 @Composable
-private fun GexCard(c: ChainSnapshot) {
+internal fun GexCard(c: ChainSnapshot) {
     val p = LocalPalette.current
     val g = c.gex
     LedgerCard(title = "Gamma exposure") {
@@ -258,7 +258,7 @@ private fun GexCard(c: ChainSnapshot) {
 }
 
 @Composable
-private fun MoveCard(c: ChainSnapshot) {
+internal fun MoveCard(c: ChainSnapshot) {
     val p = LocalPalette.current
     val gd = c.gammaDensity
     LedgerCard(title = "Expected move") {
@@ -351,7 +351,7 @@ private fun BuilderCard(model: AppModel, c: ChainSnapshot, live: Boolean) {
 
 /** OI added or shed today, per strike: from the day's first reading of each contract. */
 @Composable
-private fun OiChangeCard(c: ChainSnapshot) {
+internal fun OiChangeCard(c: ChainSnapshot) {
     val p = LocalPalette.current
     val ch = com.optionslab.engine.options.ChainAnalytics.oiChange(c.rows)
     LedgerCard(title = "OI change today") {

@@ -146,30 +146,7 @@ fun Root(activity: MainActivity) {
         val compromised = findings.isNotEmpty() && Integrity.compromised(findings)
         // The app stopped unexpectedly last time: show why, once, so it can be reported.
         // Sealed in the vault by IraAlgoApp's crash handler: class names and stack frames, no messages.
-        var crash by remember { mutableStateOf(runCatching {
-            Vault.readFile(java.io.File(activity.filesDir, com.optionslab.app.IraAlgoApp.CRASH_FILE))?.toString(Charsets.UTF_8)
-        }.getOrNull()) }
-        crash?.let { text ->
-            val clip = androidx.compose.ui.platform.LocalClipboardManager.current
-            com.optionslab.app.ui.components.AlertDialog(
-                onDismissRequest = {},
-                properties = androidx.compose.ui.window.DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy),
-                title = { Text("IraAlgo closed unexpectedly last time", style = Type.title) },
-                text = {
-                    Column(Modifier.heightIn(max = 360.dp).verticalScroll(androidx.compose.foundation.rememberScrollState())) {
-                        Text("This is where it went wrong: only the kinds of error and the lines of code, no error messages. " +
-                            "Copy it and send it to get it fixed; it contains no keys, PIN or balances.", style = Type.bodySmall)
-                        androidx.compose.foundation.text.selection.SelectionContainer {
-                            Text(text, style = Type.bodySmall.copy(fontSize = 10.sp, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace), modifier = Modifier.padding(top = 8.dp))
-                        }
-                    }
-                },
-                confirmButton = { androidx.compose.material3.TextButton({ clip.setText(androidx.compose.ui.text.AnnotatedString(text)) }) { Text("Copy") } },
-                dismissButton = { androidx.compose.material3.TextButton({
-                    runCatching { java.io.File(activity.filesDir, com.optionslab.app.IraAlgoApp.CRASH_FILE).delete() }; crash = null
-                }) { Text("Dismiss") } },
-            )
-        }
+        CrashReport(activity.filesDir)
         var vaultBad by remember { mutableStateOf(SecurePrefs.unreadable) }
         if (vaultBad) {
             VaultUnreadable(onRetry = { vaultBad = !SecurePrefs.reload() }, onErase = { eraseEverything(); vaultBad = false })
@@ -321,7 +298,7 @@ private fun BiometricOffer(activity: MainActivity, error: String?, onUse: () -> 
 /** Destroy the vault key and every personal file. Market data is public and stays. */
 /** The settings vault exists but cannot be decrypted: fail closed, never "choose a new PIN". */
 @Composable
-private fun VaultUnreadable(onRetry: () -> Unit, onErase: () -> Unit) {
+internal fun VaultUnreadable(onRetry: () -> Unit, onErase: () -> Unit) {
     val p = com.optionslab.app.ui.theme.LocalPalette.current
     var confirm by remember { mutableStateOf(false) }
     Column(Modifier.fillMaxSize().background(p.paper).padding(28.dp), verticalArrangement = Arrangement.Center) {
@@ -399,22 +376,11 @@ private fun Main(model: AppModel) {
         if (!linked && settings.live) model.update { it.copy(mode = "sandbox", allowRealOrders = false) }
     }
 
+    // Every move goes through [NavState], which holds the rules (and is what the tests drive).
+    fun navNow() = NavState(tab, cabinetPage, labPage, tradePage, toolsView)
+    fun go(n: NavState) { tab = n.tab; cabinetPage = n.cabinetPage; labPage = n.labPage; tradePage = n.tradePage; toolsView = n.toolsView }
     LaunchedEffect(requested) {
-        when (requested) {
-            "almanac" -> tab = Tab.ALMANAC
-            "ticket" -> { tab = Tab.TOOLS; toolsView = "expiryput" }
-            "chart" -> tab = Tab.CHART
-            "trade" -> { tab = Tab.TRADE; tradePage = "account" }
-            "strategy" -> { tab = Tab.TRADE; tradePage = "strategies" }
-            "health" -> { tab = Tab.LAB; labPage = "health" }
-            "trials" -> { tab = Tab.LAB; labPage = "trials" }
-            "pine" -> { tab = Tab.LAB; labPage = "pine" }
-            "tools" -> tab = Tab.TOOLS
-            "pnl" -> tab = Tab.PNL
-            "cabinet" -> { tab = Tab.CABINET; cabinetPage = "data" }
-            "alarms" -> { tab = Tab.CABINET; cabinetPage = "alarms" }
-            "broker" -> { tab = Tab.CABINET; cabinetPage = "broker" }
-        }
+        go(navNow().request(requested))
         MainActivity.tabRequests.value = null
     }
     // "Close…" on a Zerodha position's notification: that position's close popup, over the Trade tab.
@@ -438,10 +404,7 @@ private fun Main(model: AppModel) {
         }
     }
 
-    BackHandler(enabled = (cabinetPage != null && tab == Tab.CABINET) || tab != Tab.ALMANAC) {
-        // A More sub-page left open behind another tab is not what Back should close.
-        if (cabinetPage != null && tab == Tab.CABINET) cabinetPage = null else { if (tab != Tab.CABINET) cabinetPage = null; tab = Tab.ALMANAC }
-    }
+    NavBack(navNow()) { go(it) }
 
     Parchment(ruled = true) {
         Column(Modifier.fillMaxSize()) {
@@ -462,15 +425,8 @@ private fun Main(model: AppModel) {
                 ) { t ->
                     when (t) {
                         Tab.ALMANAC -> AlmanacScreen(model, onGo = { dest ->
-                            when (dest) {
-                                "trials" -> { tab = Tab.LAB; labPage = "trials" }
-                                "trade" -> { tab = Tab.TRADE; tradePage = "account" }
-                                "strategy" -> { tab = Tab.TRADE; tradePage = "strategies" }
-                                "ticket" -> { tab = Tab.TOOLS; toolsView = "expiryput" }
-                                "chart" -> { chartAsk = "BANKNIFTY" to "NSE"; chartNonce++; tab = Tab.CHART }
-                                "health" -> { tab = Tab.LAB; labPage = "health" }
-                                else -> { tab = Tab.CABINET; cabinetPage = dest }
-                            }
+                            if (dest == "chart") { chartAsk = "BANKNIFTY" to "NSE"; chartNonce++ }
+                            go(navNow().home(dest))
                         })
                         Tab.CHART -> Box(Modifier.fillMaxSize())   // the chart itself is kept alive below
                         Tab.TRADE -> TradeHub(model, tradePage) { tradePage = it }
@@ -491,7 +447,7 @@ private fun Main(model: AppModel) {
             }
             // While typing, the tab bar steps aside so the field keeps the room.
             val typing = WindowInsets.ime.getBottom(androidx.compose.ui.platform.LocalDensity.current) > 0
-            if (!fullChart && !typing) TabBar(tab, tabs) { if (it == tab && it == Tab.CABINET) cabinetPage = null; tab = it }
+            if (!fullChart && !typing) TabBar(tab, tabs) { go(navNow().pick(it)) }
         }
         // Order reviews open over any page, wherever the order was asked for.
         // First use only: a short guide the first time the app opens after Zerodha is linked, never again.
@@ -500,11 +456,8 @@ private fun Main(model: AppModel) {
         if (tour || again) com.optionslab.app.ui.screens.GettingStarted(onGo = { dest ->
             SecurePrefs.put(com.optionslab.app.ui.screens.GETTING_STARTED, true); tour = false
             com.optionslab.app.ui.screens.showGettingStarted.value = false
-            when (dest) {
-                "orb" -> tab = Tab.ALMANAC
-                "chart" -> { chartAsk = "BANKNIFTY" to "NSE"; chartNonce++; tab = Tab.CHART }
-                "trade" -> { tab = Tab.TRADE; tradePage = "account" }
-            }
+            if (dest == "chart") { chartAsk = "BANKNIFTY" to "NSE"; chartNonce++ }
+            go(navNow().tour(dest))
         })
         com.optionslab.app.ui.screens.OrderReviewDialog(model)
         // Tapping any order, position or trade opens its close / cancel popup.
@@ -514,6 +467,104 @@ private fun Main(model: AppModel) {
         if (askPin) com.optionslab.app.ui.screens.LoginPinDialog(model)
         // Every event, success or error, drops in at the top of the screen.
         com.optionslab.app.ui.components.AlertBanner()
+    }
+}
+
+/**
+ * Where the main screen is: the tab, and the page open inside each tab. Every move (a tab tap,
+ * Back, a Home shortcut, the first-use guide, a deep link from the app's own notification) is a
+ * pure function of it, so the rules can be tested without the screens behind them.
+ */
+internal data class NavState(
+    val tab: Tab = Tab.ALMANAC,
+    val cabinetPage: String? = null,
+    val labPage: String = "trials",
+    val tradePage: String = "account",
+    val toolsView: String = "chain",
+) {
+    /** A trusted deep link ([MainActivity.EXTRA_TAB]); an unknown or absent one changes nothing. */
+    fun request(dest: String?): NavState = when (dest) {
+        "almanac" -> copy(tab = Tab.ALMANAC)
+        "ticket" -> copy(tab = Tab.TOOLS, toolsView = "expiryput")
+        "chart" -> copy(tab = Tab.CHART)
+        "trade" -> copy(tab = Tab.TRADE, tradePage = "account")
+        "strategy" -> copy(tab = Tab.TRADE, tradePage = "strategies")
+        "health" -> copy(tab = Tab.LAB, labPage = "health")
+        "trials" -> copy(tab = Tab.LAB, labPage = "trials")
+        "pine" -> copy(tab = Tab.LAB, labPage = "pine")
+        "tools" -> copy(tab = Tab.TOOLS)
+        "pnl" -> copy(tab = Tab.PNL)
+        "cabinet" -> copy(tab = Tab.CABINET, cabinetPage = "data")
+        "alarms" -> copy(tab = Tab.CABINET, cabinetPage = "alarms")
+        "broker" -> copy(tab = Tab.CABINET, cabinetPage = "broker")
+        else -> this
+    }
+
+    /** A shortcut on Home; anything else it names is a More page. */
+    fun home(dest: String): NavState = when (dest) {
+        "trials" -> copy(tab = Tab.LAB, labPage = "trials")
+        "trade" -> copy(tab = Tab.TRADE, tradePage = "account")
+        "strategy" -> copy(tab = Tab.TRADE, tradePage = "strategies")
+        "ticket" -> copy(tab = Tab.TOOLS, toolsView = "expiryput")
+        "chart" -> copy(tab = Tab.CHART)
+        "health" -> copy(tab = Tab.LAB, labPage = "health")
+        else -> copy(tab = Tab.CABINET, cabinetPage = dest)
+    }
+
+    /** The first-use guide's buttons ("" just closes it). */
+    fun tour(dest: String): NavState = when (dest) {
+        "orb" -> copy(tab = Tab.ALMANAC)
+        "chart" -> copy(tab = Tab.CHART)
+        "trade" -> copy(tab = Tab.TRADE, tradePage = "account")
+        else -> this
+    }
+
+    /** A tab tapped; tapping More while on More goes back to its list. */
+    fun pick(t: Tab): NavState = if (t == tab && t == Tab.CABINET) copy(tab = t, cabinetPage = null) else copy(tab = t)
+
+    val backEnabled: Boolean get() = (cabinetPage != null && tab == Tab.CABINET) || tab != Tab.ALMANAC
+
+    /** Back: a More page closes to the More list; any other tab goes Home. A More page left open behind another tab is not what Back closes. */
+    fun back(): NavState = if (cabinetPage != null && tab == Tab.CABINET) copy(cabinetPage = null)
+        else copy(tab = Tab.ALMANAC, cabinetPage = if (tab != Tab.CABINET) null else cabinetPage)
+}
+
+/** The system Back button over the main screen, following [NavState.back]. */
+@Composable
+internal fun NavBack(nav: NavState, onNav: (NavState) -> Unit) {
+    BackHandler(enabled = nav.backEnabled) { onNav(nav.back()) }
+}
+
+/**
+ * The app stopped unexpectedly last time: show why, once, so it can be reported. The report in [dir]
+ * is sealed in the vault by IraAlgoApp's crash handler (class names and stack frames, no messages).
+ * Its own composable (internal) so the dialog can be tested with a hand-made report.
+ */
+@Composable
+internal fun CrashReport(dir: java.io.File) {
+    var crash by remember { mutableStateOf(runCatching {
+        Vault.readFile(java.io.File(dir, com.optionslab.app.IraAlgoApp.CRASH_FILE))?.toString(Charsets.UTF_8)
+    }.getOrNull()) }
+    crash?.let { text ->
+        val clip = androidx.compose.ui.platform.LocalClipboardManager.current
+        com.optionslab.app.ui.components.AlertDialog(
+            onDismissRequest = {},
+            properties = androidx.compose.ui.window.DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy),
+            title = { Text("IraAlgo closed unexpectedly last time", style = Type.title) },
+            text = {
+                Column(Modifier.heightIn(max = 360.dp).verticalScroll(androidx.compose.foundation.rememberScrollState())) {
+                    Text("This is where it went wrong: only the kinds of error and the lines of code, no error messages. " +
+                        "Copy it and send it to get it fixed; it contains no keys, PIN or balances.", style = Type.bodySmall)
+                    androidx.compose.foundation.text.selection.SelectionContainer {
+                        Text(text, style = Type.bodySmall.copy(fontSize = 10.sp, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace), modifier = Modifier.padding(top = 8.dp))
+                    }
+                }
+            },
+            confirmButton = { androidx.compose.material3.TextButton({ clip.setText(androidx.compose.ui.text.AnnotatedString(text)) }) { Text("Copy") } },
+            dismissButton = { androidx.compose.material3.TextButton({
+                runCatching { java.io.File(dir, com.optionslab.app.IraAlgoApp.CRASH_FILE).delete() }; crash = null
+            }) { Text("Dismiss") } },
+        )
     }
 }
 
@@ -536,7 +587,7 @@ private fun ConnectGate(model: AppModel) {
 }
 
 @Composable
-private fun Masthead(live: Boolean, calm: Boolean, linked: Boolean, onMode: (Boolean) -> Unit, onLink: () -> Unit = {}) {
+internal fun Masthead(live: Boolean, calm: Boolean, linked: Boolean, onMode: (Boolean) -> Unit, onLink: () -> Unit = {}) {
     val p = LocalPalette.current
     var confirmLive by remember { mutableStateOf(false) }
     var needLink by remember { mutableStateOf(false) }
@@ -603,7 +654,7 @@ private fun Masthead(live: Boolean, calm: Boolean, linked: Boolean, onMode: (Boo
 }
 
 @Composable
-private fun TabBar(current: Tab, tabs: List<Tab>, onPick: (Tab) -> Unit) {
+internal fun TabBar(current: Tab, tabs: List<Tab>, onPick: (Tab) -> Unit) {
     val p = LocalPalette.current
     Column(Modifier.fillMaxWidth().background(p.paperDeep).navigationBarsPadding()) {
         Box(Modifier.fillMaxWidth().height(1.dp).background(p.rule))
