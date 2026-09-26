@@ -1,0 +1,41 @@
+{
+  "_source": "D:/New Trading app sandbox/charges.py, sandbox/slippage.py (ported as reference/Costs.kt), .env",
+  "charges_per_fill_inr": {
+    "_formula": "value = price * qty; buy = value if BUY else 0; sell = value if SELL else 0",
+    "brokerage_flat": 20.0,
+    "stt_on_sell": 0.0015,
+    "exchange_txn_on_turnover": 0.0003553,
+    "sebi_on_turnover": 1e-06,
+    "stamp_on_buy": 3e-05,
+    "gst_on": "brokerage + exchange_txn + sebi",
+    "gst_rate": 0.18,
+    "rounding": "2 decimals, half-even (Python round)"
+  },
+  "slippage": {
+    "SANDBOX_STOP_SLIPPAGE_BPS": 10,
+    "SANDBOX_SPREAD_FALLBACK_BPS": 5,
+    "rules": [
+      "SL and SL-M fills: trigger moved 10 bps against the order (BUY up, SELL down); SL is then clamped to its limit",
+      "MARKET fill with no quote book: last price moved 5 bps against the order",
+      "MARKET fill with a quote book: fill at the book (ask for BUY, bid for SELL)",
+      "a slipped price never goes below 0.01"
+    ]
+  },
+  "fills": {
+    "live_arm": "entry and exits booked at the actual sandbox fill",
+    "replay": "decide on a completed bar, fill on the NEXT bar's open; stop fills at fill - 40 or the gap if the bar opens through it"
+  },
+  "data": {
+    "index_bars": "BANKNIFTY 5m history for today, from the broker (Zerodha)",
+    "option_quotes": "NFO LTP / depth for the day's CE and PE",
+    "instrument_master": "NFO list for lot size and expiries",
+    "minute_snapshots": "desktop only: MARKET_DATA_COLLECTOR_ENABLED=TRUE writes one multi-quote call per minute 09:15-15:30 (BANKNIFTY, NIFTY, SENSEX, INDIA VIX, near-ATM options) to db/market_snapshots.duckdb; nothing in it feeds the arms"
+  },
+  "phone_port_settings": {
+    "_source": "D:/New Trading app mobile/native/make_config.py",
+    "price_check_seconds_with_position": 5,
+    "price_check_seconds_flat": 30,
+    "minute_job_at_second": 5,
+    "session_valid_until": "06:00 next day (Zerodha token)"
+  }
+}

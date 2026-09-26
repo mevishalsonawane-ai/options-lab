@@ -86,6 +86,8 @@ object Strategies {
         val autoApprove: LinkedHashMap<Long, Boolean> = LinkedHashMap(),
         /** Scheduled starts waiting for the owner's approval: strategy id -> "<mode>|<date>". */
         val pending: LinkedHashMap<Long, String> = LinkedHashMap(),
+        /** The day the owner stopped the bot: no armed strategy starts for the rest of it. */
+        var stoppedDay: String? = null,
     )
 
     private var cache: Book? = null
@@ -111,14 +113,21 @@ object Strategies {
             o.optJSONObject("autoApprove")?.let { m -> m.keys().forEach { k -> auto[k.toLong()] = m.getBoolean(k) } }
             val pending = LinkedHashMap<Long, String>()
             o.optJSONObject("pending")?.let { m -> m.keys().forEach { k -> pending[k.toLong()] = m.getString(k) } }
-            Book(defs, runs, history, ids, log, o.getLong("nextRunId"), o.getLong("nextStrategyId"), o.optLong("lastCheck", 0).takeIf { it > 0 }, owners, auto, pending)
+            Book(defs, runs, history, ids, log, o.getLong("nextRunId"), o.getLong("nextStrategyId"), o.optLong("lastCheck", 0).takeIf { it > 0 }, owners, auto, pending,
+                o.optString("stoppedDay").takeIf { it.isNotBlank() })
         }.getOrNull()
         if (b == null && file.exists()) {
             Vault.setAside(file)
-            Notifier.post(app, 2014, Notifier.RISK, "Strategies could not be read",
+            Notifier.post(app, 2015, Notifier.APPROVAL, "Strategies could not be read",
                 "The saved strategies and runs were set aside. If a live run was open, check your Zerodha positions now.", "strategy")
         }
-        return (b ?: Book(ArrayList(), HashMap(), ArrayList(), HashMap(), ArrayList(), 1, 1, null)).also { cache = it }
+        val loaded = (b ?: Book(ArrayList(), HashMap(), ArrayList(), HashMap(), ArrayList(), 1, 1, null))
+        // An ORB armed before the block existed is disarmed (TODO A4).
+        loaded.defs.forEachIndexed { i, d ->
+            val sc = d.scheduler
+            if (needsBreakoutRules(d) && sc != null && sc.enabled) loaded.defs[i] = d.copy(scheduler = sc.copy(enabled = false))
+        }
+        return loaded.also { cache = it }
     }
 
     private fun save(b: Book) {
@@ -134,6 +143,7 @@ object Strategies {
         o.put("owners", JSONObject().apply { b.owners.forEach { (k, v) -> put(k, v) } })
         o.put("autoApprove", JSONObject().apply { b.autoApprove.forEach { (k, v) -> put(k.toString(), v) } })
         o.put("pending", JSONObject().apply { b.pending.forEach { (k, v) -> put(k.toString(), v) } })
+        b.stoppedDay?.let { o.put("stoppedDay", it) }
         Vault.writeFile(file, o.toString().toByteArray(Charsets.UTF_8))
         cache = b
     }
@@ -172,6 +182,7 @@ object Strategies {
         val i = b.defs.indexOfFirst { it.id == id }
         if (i < 0) return@withLock "That strategy no longer exists."
         val d = b.defs[i]
+        if (on && needsBreakoutRules(d)) return@withLock BREAKOUT_BLOCK
         if (on && mode == RunMode.LIVE && !d.liveEnabled) return@withLock "Enable live trading for ${d.name} (Trade → Strategies) before arming it live."
         val base = d.scheduler ?: com.optionslab.engine.strategy.SchedulerConfig(
             days = listOf(java.time.DayOfWeek.MONDAY, java.time.DayOfWeek.TUESDAY, java.time.DayOfWeek.WEDNESDAY,
@@ -213,6 +224,14 @@ object Strategies {
             if (skipped.isNotEmpty()) append(" Already here: ${skipped.joinToString()}.")
             if (failed.isNotEmpty()) append(" Could not import: ${failed.joinToString()}.")
         }
+    }
+
+    /** After a restore: every strategy disarmed and paper only, no automatic approvals, no carried-over runs. */
+    suspend fun disarmAll() = lock.withLock {
+        val b = book()
+        for (i in b.defs.indices) b.defs[i] = b.defs[i].copy(liveEnabled = false, scheduler = b.defs[i].scheduler?.copy(enabled = false))
+        b.autoApprove.clear(); b.pending.clear(); b.runs.clear()
+        save(b)
     }
 
     suspend fun delete(id: Long): String? = lock.withLock {
@@ -285,11 +304,19 @@ object Strategies {
     /** Who placed each order this phone knows of: venue id ("paper:…", "kite:…") -> strategy label. */
     suspend fun owners(): Map<String, String> = lock.withLock { HashMap(book().owners) }
 
+    /** Label an order placed outside a strategy definition (the ORB arms), for the Orders and Trades lists. */
+    suspend fun tagOwner(key: String, label: String) = lock.withLock { val b = book(); b.owners[key] = label; save(b) }
+
     private fun paperExec(b: Book, def: StrategyDef, v: Venue) = object : StrategyHost.Executor {
         override fun place(order: Action.PlaceOrder): StrategyHost.Placed {
             val ref = v.refs[order.symbol] ?: return StrategyHost.Placed.Refused("${order.symbol} is not listed")
             val c = ref.upstox ?: return StrategyHost.Placed.Refused("no price feed for ${order.symbol}")
             val pc = Paper.Contract(order.symbol, c.underlying, c.expiry, c.strike, c.right, c.lotSize, c.instrumentKey)
+            // The account-wide guard: entries must pass it; exits stop only at the kill switch.
+            val snap = runCatching { runBlocking { Paper.snapshot() } }.getOrNull()
+            val gOrder = Guard.paperOrder(pc, order.side.wire, order.quantity / ref.lot, snap?.positions?.positions?.firstOrNull { it.symbol == pc.symbol }?.ltp ?: 0.0)
+            Guard.check(gOrder, snap?.let { Guard.paperAccount(it) }, exit = order.kind != "entry", paper = true).takeIf { it.isNotEmpty() }
+                ?.let { return StrategyHost.Placed.Refused("account guard: " + it.joinToString(" ")) }
             val r = runBlocking { Paper.place(pc, order.side.wire, order.quantity / ref.lot, "MARKET", order.product, null, null) }
             if (!r.ok) return StrategyHost.Placed.Refused(r.message)
             val id = r.orderId ?: return StrategyHost.Placed.Refused("paper order not recorded")
@@ -330,10 +357,16 @@ object Strategies {
                 }
                 val last = runCatching { Broker.quotes(listOf("NFO:$kiteSym"))["NFO:$kiteSym"]?.last }.getOrNull()
                 val o = Kite.Order(kiteSym, side, order.quantity, ref.lot, order.product, "MARKET", null, ref.tick, "NFO", "iraalgostrat")
+                // The account-wide guard, on a fresh read of the account.
+                val acct = runCatching {
+                    Guard.liveAccount(Broker.positionBook(), runCatching { Broker.funds() }.getOrNull(), runCatching { Broker.orders().size }.getOrDefault(0))
+                }.getOrNull()
+                Guard.check(Guard.liveOrder(o).copy(price = last ?: 0.0), acct, exit).takeIf { it.isNotEmpty() }
+                    ?.let { return@runBlocking StrategyHost.Placed.Refused("account guard: " + it.joinToString(" ")) }
                 val why = Kite.refusals(o, s.limits(), Broker.sentToday(), false, exit = exit, refPrice = last)
                 if (why.isNotEmpty()) return@runBlocking StrategyHost.Placed.Refused(why.joinToString("; "))
                 val id = try {
-                    Broker.placeOrder(o)
+                    Broker.placeOrder(o, exit)
                 } catch (e: Broker.KiteError) {
                     return@runBlocking StrategyHost.Placed.Refused(e.message ?: "Zerodha refused the order")
                 } catch (e: Broker.NotLoggedIn) {
@@ -390,6 +423,7 @@ object Strategies {
         val b = book()
         val def = b.defs.firstOrNull { it.id == id } ?: return@withLock "No such strategy."
         if (b.runs[id]?.let { Entry(def, it).running } == true) return@withLock "${def.name} is already running."
+        if (needsBreakoutRules(def)) return@withLock BREAKOUT_BLOCK
         if (mode == RunMode.LIVE) {
             if (!confirmedByOwner) return@withLock "A live start needs your confirmation in the app."
             if (!def.liveEnabled) return@withLock "Enable live trading for ${def.name} first."
@@ -407,6 +441,33 @@ object Strategies {
         finish(b, run)
         save(b)
         run.startError ?: "${def.name} started (${mode.wire}): ${run.openLegs().size} of ${def.legs.size} legs open."
+    }
+
+    /** Whether the owner stopped the bot for today. */
+    suspend fun stoppedToday(): Boolean = lock.withLock { book().stoppedDay == Market.today().toString() }
+
+    /**
+     * Stop the bot for the rest of today: no armed strategy starts, waiting approvals are dropped,
+     * and with [stopRunning] every running strategy is stopped too (its positions closed by its own exits).
+     */
+    suspend fun stopForToday(stopRunning: Boolean, compromised: Boolean): String {
+        val running = lock.withLock {
+            val b = book()
+            b.stoppedDay = Market.today().toString()
+            b.pending.clear()
+            save(b)
+            b.defs.filter { d -> b.runs[d.id]?.let { Entry(d, it).running } == true }.map { it.id to it.name }
+        }
+        if (!stopRunning || running.isEmpty()) return "Bot stopped for today: armed strategies will not start." +
+            if (running.isNotEmpty()) " ${running.size} running strategy(ies) keep managing their exits." else ""
+        val results = running.map { (id, _) -> runCatching { stop(id, "bot stopped for the day", compromised) }.getOrElse { e -> "${e.message}" } }
+        return "Bot stopped for today. " + results.joinToString(" ")
+    }
+
+    /** Undo [stopForToday]: armed strategies start at their times again. */
+    suspend fun startAgain(): String = lock.withLock {
+        val b = book(); b.stoppedDay = null; save(b)
+        "Bot running: armed strategies start at their times."
     }
 
     suspend fun stop(id: Long, reason: String, compromised: Boolean): String = lock.withLock {
@@ -447,6 +508,14 @@ object Strategies {
         return run
     }
 
+    /**
+     * TODO A4: the desktop app's ORB and ORB Fresh wait for an opening-range breakout, but as imported
+     * here they are plain timed baskets that would enter at the start time with no breakout check. Until
+     * the real ORB rules are ported (TODO A1) they can be kept and viewed, never armed or started.
+     */
+    fun needsBreakoutRules(def: StrategyDef): Boolean = Regex("(^|[^a-z])orb([^a-z]|$)").containsMatchIn(def.name.lowercase())
+    const val BREAKOUT_BLOCK = "Imported ORB strategies are plain timed baskets with no opening-range breakout check: armed, they would enter at the start time whatever the market did. Use the built-in ORB and ORB Fresh arms on Home, which run the real rules."
+
     /** Whether an armed strategy places its entry by itself (true) or asks first (false). */
     suspend fun automatic(): Map<Long, Boolean> = lock.withLock { HashMap(book().autoApprove) }
 
@@ -480,7 +549,11 @@ object Strategies {
             // The watch polls about once a minute and a tick can itself take a while, so slots are
             // caught up to five minutes late rather than IraAlgo's 60 s.
             for (due in Scheduler.due(def, last, now, { !Market.isTradingDay(it) }, java.time.Duration.ofMinutes(5))) {
-                if (due.job.kind == Scheduler.JobKind.START) {
+                if (due.job.kind == Scheduler.JobKind.START && needsBreakoutRules(def)) {
+                    record(b, def.name, Event("start_refused", "Scheduled start refused: ORB needs its breakout rules (not added yet)", "warn"), false)
+                } else if (due.job.kind == Scheduler.JobKind.START && b.stoppedDay == Market.today().toString()) {
+                    record(b, def.name, Event("start_skipped", "Scheduled start skipped: the bot is stopped for today", "info"), false)
+                } else if (due.job.kind == Scheduler.JobKind.START) {
                     when (val d = Scheduler.startDecision(def, running)) {
                         is Scheduler.StartDecision.Start -> if (b.autoApprove[def.id] ?: (d.mode != RunMode.LIVE)) {
                             // Automatic: the owner chose this when arming (live arming needed the PIN or fingerprint).

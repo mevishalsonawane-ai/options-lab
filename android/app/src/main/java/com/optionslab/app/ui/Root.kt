@@ -1,6 +1,7 @@
 package com.optionslab.app.ui
 
 import android.Manifest
+import android.content.res.Configuration
 import android.os.Build
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -28,6 +29,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -57,6 +61,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
@@ -92,6 +98,14 @@ import kotlinx.coroutines.delay
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
+/** A calendar grid for the P&L tab (the core icon set has none). */
+private val CalendarIcon: ImageVector = ImageVector.Builder("pnlcal", 24.dp, 24.dp, 24f, 24f).apply {
+    addPath(androidx.compose.ui.graphics.vector.PathParser().parsePathString(
+        "M7,2h2v2h6V2h2v2h2a2,2 0 0 1 2,2v13a2,2 0 0 1 -2,2H5a2,2 0 0 1 -2,-2V6a2,2 0 0 1 2,-2h2V2z M5,9v10h14V9H5z " +
+            "M7,11h3v3H7v-3z M11,11h3v3h-3v-3z M15,11h2v3h-2v-3z M7,15h3v3H7v-3z M11,15h3v3h-3v-3z").toNodes(),
+        fill = androidx.compose.ui.graphics.SolidColor(Color.Black))
+}.build()
+
 /** A candlestick glyph for the Chart tab (the core icon set has none). */
 private val ChartIcon: ImageVector = ImageVector.Builder("chart", 24.dp, 24.dp, 24f, 24f).apply {
     addPath(androidx.compose.ui.graphics.vector.PathParser().parsePathString(
@@ -103,6 +117,7 @@ enum class Tab(val label: String, val icon: ImageVector) {
     ALMANAC("Home", Icons.Filled.Home),
     CHART("Chart", ChartIcon),
     TRADE("Trade", Icons.Filled.List),
+    PNL("P&L", CalendarIcon),
     TOOLS("Options", Icons.Filled.Search),
     LAB("Research", Icons.Filled.DateRange),
     CABINET("More", Icons.Filled.Menu),
@@ -111,6 +126,9 @@ enum class Tab(val label: String, val icon: ImageVector) {
 @Composable
 fun Root(activity: MainActivity) {
     val model: AppModel = viewModel()
+    // After an erase the view model outlives the data: reload it so the gates and the mode start clean.
+    val wiped by wipes.collectAsState()
+    LaunchedEffect(wiped) { if (wiped > 0) model.resetAfterWipe() }
     val settings by model.settings.collectAsState()
     val locked by SessionLock.locked.collectAsState()
     val findings by model.integrity.collectAsState()
@@ -130,9 +148,9 @@ fun Root(activity: MainActivity) {
         var crash by remember { mutableStateOf(runCatching { java.io.File(activity.filesDir, com.optionslab.app.IraAlgoApp.CRASH_FILE).takeIf { it.exists() }?.readText() }.getOrNull()) }
         crash?.let { text ->
             val clip = androidx.compose.ui.platform.LocalClipboardManager.current
-            androidx.compose.material3.AlertDialog(
+            com.optionslab.app.ui.components.AlertDialog(
                 onDismissRequest = {},
-                properties = androidx.compose.ui.window.DialogProperties(securePolicy = androidx.compose.ui.window.SecureFlagPolicy.SecureOn),
+                properties = androidx.compose.ui.window.DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy),
                 title = { Text("IraAlgo closed unexpectedly last time", style = Type.title) },
                 text = {
                     Column(Modifier.heightIn(max = 360.dp).verticalScroll(androidx.compose.foundation.rememberScrollState())) {
@@ -165,6 +183,9 @@ fun Root(activity: MainActivity) {
         var batteryOk by remember(locked) { mutableStateOf(com.optionslab.app.ui.screens.BatteryCheck.unrestricted(appCtx)) }
         AnimatedContent(
             targetState = locked || !PinLock.isSet,
+            // The keyboard takes its room from every screen (edge-to-edge draws under it otherwise),
+            // so the field being typed in scrolls into view above it.
+            modifier = Modifier.fillMaxSize().imePadding(),
             transitionSpec = { fadeIn(tween(220, delayMillis = 60)) togetherWith fadeOut(tween(160)) },
             label = "seal",
         ) { sealed ->
@@ -182,13 +203,18 @@ private fun Gate(activity: MainActivity, model: AppModel, settings: AppSettings,
     val setup = !PinLock.isSet
     var notice by remember { mutableStateOf<String?>(if (compromised) "This phone failed the security check (More → Security shows why); unlock with your PIN." else null) }
     val kind = remember { BiometricGate.available(activity) }
-    // Just created a PIN: ask once whether to unlock with fingerprint or face.
+    // Just created a PIN: ask once whether to unlock with the fingerprint.
     var offerBio by remember { mutableStateOf(false) }
     var offerError by remember { mutableStateOf<String?>(null) }
     // A compromised device can fake a biometric callback; it cannot fake PBKDF2.
     val bioAllowed = settings.biometric && checked && !compromised && kind != BiometricGate.Kind.NONE &&
         (kind == BiometricGate.Kind.STRONG || settings.allowWeakFace)
-    val label = if (!bioAllowed) null else "Use fingerprint or face"
+    val label = if (!bioAllowed) null else "Use fingerprint"
+    // Switched on but not offered: say why rather than silently asking for the PIN.
+    LaunchedEffect(settings.biometric, checked, kind) {
+        if (notice == null && settings.biometric && checked && !compromised && kind == BiometricGate.Kind.NONE)
+            notice = "No fingerprint is set up on this phone any more; unlock with your PIN."
+    }
 
     if (offerBio) {
         BiometricOffer(
@@ -197,13 +223,13 @@ private fun Gate(activity: MainActivity, model: AppModel, settings: AppSettings,
             onUse = {
                 // Prove it works on this phone before switching it on.
                 runCatching { if (kind == BiometricGate.Kind.STRONG) BiometricGate.enrol() }
-                BiometricGate.authenticate(activity, allowWeakFace = true) { out ->
+                BiometricGate.authenticate(activity, allowWeakFace = false) { out ->
                     when (out) {
                         BiometricGate.Outcome.Success -> {
-                            model.update { it.copy(biometric = true, allowWeakFace = true) }
+                            model.update { it.copy(biometric = true, allowWeakFace = false) }
                             offerBio = false; SessionLock.unlock()
                         }
-                        is BiometricGate.Outcome.Failed -> offerError = "Fingerprint / face did not work: ${out.why}"
+                        is BiometricGate.Outcome.Failed -> offerError = "Fingerprint did not work: ${out.why}"
                         else -> Unit
                     }
                 }
@@ -233,7 +259,8 @@ private fun Gate(activity: MainActivity, model: AppModel, settings: AppSettings,
             val r = PinLock.verify(pin, settings.wipeOnExhaustion)
             when (r) {
                 PinLock.Result.Ok -> SessionLock.unlock()
-                PinLock.Result.Wiped -> eraseEverything()
+                // The check runs off the main thread; the erase (cookies, web storage) belongs on it.
+                PinLock.Result.Wiped -> android.os.Handler(android.os.Looper.getMainLooper()).post { eraseEverything() }
                 else -> Unit
             }
             r
@@ -253,7 +280,7 @@ private fun Gate(activity: MainActivity, model: AppModel, settings: AppSettings,
     )
 }
 
-/** After the PIN is set: unlock with fingerprint or face as well? */
+/** After the PIN is set: unlock with the fingerprint as well? */
 @Composable
 private fun BiometricOffer(activity: MainActivity, error: String?, onUse: () -> Unit, onSkip: () -> Unit) {
     val p = LocalPalette.current
@@ -266,14 +293,14 @@ private fun BiometricOffer(activity: MainActivity, error: String?, onUse: () -> 
             Icon(Icons.Filled.Face, contentDescription = null, tint = p.ink, modifier = Modifier.size(36.dp))
         }
         Spacer(Modifier.height(20.dp))
-        Text("Unlock with fingerprint or face?", style = Type.masthead.copy(color = p.ink, fontSize = 22.sp), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+        Text("Unlock with your fingerprint?", style = Type.masthead.copy(color = p.ink, fontSize = 22.sp), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
         Spacer(Modifier.height(8.dp))
-        Text(if (enrolled) "Use the fingerprint or face already set up on this phone instead of typing your PIN. Your PIN still works, and you can change this in More → Security."
-            else "This phone has no fingerprint or face added yet. Add one in the phone's Settings, then come back and tap Use.",
+        Text(if (enrolled) "Use the fingerprint already set up on this phone instead of typing your PIN. Your PIN still works, and you can change this in More → Security."
+            else "This phone has no fingerprint added yet. Add one in the phone's Settings, then come back and tap Use.",
             style = Type.bodySmall.copy(color = p.inkSoft), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
         if (error != null) Text(error, style = Type.bodySmall.copy(color = p.oxblood), textAlign = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.padding(top = 10.dp))
         Spacer(Modifier.height(24.dp))
-        if (enrolled) com.optionslab.app.ui.components.BrassButton("Use fingerprint or face", Modifier.fillMaxWidth(), onClick = onUse)
+        if (enrolled) com.optionslab.app.ui.components.BrassButton("Use fingerprint", Modifier.fillMaxWidth(), onClick = onUse)
         else com.optionslab.app.ui.components.BrassButton("Open phone settings", Modifier.fillMaxWidth()) {
             runCatching {
                 activity.startActivity(if (Build.VERSION.SDK_INT >= 30) android.content.Intent(android.provider.Settings.ACTION_BIOMETRIC_ENROLL)
@@ -309,6 +336,10 @@ fun eraseEverything() {
     com.optionslab.app.data.Ledger.wipe()
     com.optionslab.app.data.Alarms.wipe()
     com.optionslab.app.data.Paper.wipe()
+    com.optionslab.app.data.OrbArms.wipe()
+    com.optionslab.app.data.Protections.wipe()
+    com.optionslab.app.data.TradeBook.wipe()
+    com.optionslab.app.data.Journal.wipe()
     com.optionslab.app.data.Strategies.wipe()
     com.optionslab.app.data.History.wipe()
     com.optionslab.app.data.Market.wipe()
@@ -322,7 +353,11 @@ fun eraseEverything() {
     BiometricGate.forget()
     Vault.destroy()
     SessionLock.lock()
+    wipes.value = wipes.value + 1
 }
+
+/** Bumped by [eraseEverything]: the screen state held in memory is dropped with the data. */
+val wipes = kotlinx.coroutines.flow.MutableStateFlow(0)
 
 @Composable
 private fun Main(model: AppModel) {
@@ -335,6 +370,8 @@ private fun Main(model: AppModel) {
     var tradePage by rememberSaveable { mutableStateOf("account") }
     var toolsView by rememberSaveable { mutableStateOf("chain") }
     var chartAsk by remember { mutableStateOf("BANKNIFTY" to "NSE") }
+    // Bumped on every ask, so asking again for the same symbol after browsing another one still switches back.
+    var chartNonce by remember { mutableStateOf(0) }
     var chartOpened by remember { mutableStateOf(false) }
     LaunchedEffect(tab) { if (tab == Tab.CHART) chartOpened = true }
     val message by model.message.collectAsState()
@@ -358,17 +395,25 @@ private fun Main(model: AppModel) {
             "health" -> { tab = Tab.LAB; labPage = "health" }
             "trials" -> { tab = Tab.LAB; labPage = "trials" }
             "tools" -> tab = Tab.TOOLS
+            "pnl" -> tab = Tab.PNL
             "cabinet" -> { tab = Tab.CABINET; cabinetPage = "data" }
             "alarms" -> { tab = Tab.CABINET; cabinetPage = "alarms" }
             "broker" -> { tab = Tab.CABINET; cabinetPage = "broker" }
         }
         MainActivity.tabRequests.value = null
     }
+    // "Close…" on a Zerodha position's notification: that position's close popup, over the Trade tab.
+    val closeAsk by MainActivity.closeRequests.collectAsState()
+    LaunchedEffect(closeAsk) {
+        val sym = closeAsk ?: return@LaunchedEffect
+        if (linked) { tab = Tab.TRADE; tradePage = "account"; model.openLiveClose(sym) }
+        MainActivity.closeRequests.value = null
+    }
 
     // The market watch runs by itself on market days; opening the app restarts it if Android stopped it.
     LaunchedEffect(Unit) { model.ensureWatch() }
     // Price the NIFTY chain in the background, so the Options tab opens with it ready.
-    LaunchedEffect(Unit) { delay(1500); if (model.tools.value !is Load.Done) model.loadTools("NIFTY", quiet = true) }
+    LaunchedEffect(Unit) { delay(1500); if (model.tools.value is Load.Idle) model.loadTools("NIFTY", quiet = true) }
 
     val notify = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
     LaunchedEffect(Unit) {
@@ -384,7 +429,9 @@ private fun Main(model: AppModel) {
 
     Parchment(ruled = true) {
         Column(Modifier.fillMaxSize()) {
-            Masthead(settings.live, settings.reduceMotion, linked, onMode = { live -> model.update { it.copy(mode = if (live) "live" else "sandbox", allowRealOrders = live) } })
+            // Turned sideways, the chart takes the whole screen.
+            val fullChart = tab == Tab.CHART && LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
+            if (!fullChart) Masthead(settings.live, settings.reduceMotion, linked, onMode = { live -> model.update { it.copy(mode = if (live) "live" else "sandbox", allowRealOrders = live) } })
             Box(Modifier.weight(1f)) {
                 AnimatedContent(
                     targetState = tab,
@@ -403,33 +450,49 @@ private fun Main(model: AppModel) {
                                 "trade" -> { tab = Tab.TRADE; tradePage = "account" }
                                 "strategy" -> { tab = Tab.TRADE; tradePage = "strategies" }
                                 "ticket" -> { tab = Tab.TOOLS; toolsView = "expiryput" }
-                                "chart" -> { chartAsk = "BANKNIFTY" to "NSE"; tab = Tab.CHART }
+                                "chart" -> { chartAsk = "BANKNIFTY" to "NSE"; chartNonce++; tab = Tab.CHART }
                                 "health" -> { tab = Tab.LAB; labPage = "health" }
                                 else -> { tab = Tab.CABINET; cabinetPage = dest }
                             }
                         })
                         Tab.CHART -> Box(Modifier.fillMaxSize())   // the chart itself is kept alive below
                         Tab.TRADE -> TradeHub(model, tradePage) { tradePage = it }
-                        Tab.TOOLS -> ToolsScreen(model, toolsView, { toolsView = it }) { s, e -> chartAsk = s to e; tab = Tab.CHART }
+                        Tab.PNL -> com.optionslab.app.ui.screens.PnlCalendarScreen(model)
+                        Tab.TOOLS -> ToolsScreen(model, toolsView, { toolsView = it }) { s, e -> chartAsk = s to e; chartNonce++; tab = Tab.CHART }
                         Tab.LAB -> LabScreen(model, labPage) { labPage = it }
                         Tab.CABINET -> CabinetScreen(model, cabinetPage) { cabinetPage = it }
                     }
                 }
                 // The chart stays loaded once opened, so returning to it is instant.
-                if (chartOpened) Box(if (tab == Tab.CHART) Modifier.fillMaxSize() else Modifier.size(0.dp)) {
-                    com.optionslab.app.ui.screens.ChartScreen(model, chartAsk.first, chartAsk.second, visible = tab == Tab.CHART)
+                if (chartOpened) Box(if (tab == Tab.CHART) Modifier.fillMaxSize() else Modifier.size(0.dp).clipToBounds()) {
+                    com.optionslab.app.ui.screens.ChartScreen(model, chartAsk.first, chartAsk.second, visible = tab == Tab.CHART, ask = chartNonce)
                 }
-                Toast(message) { model.message.value = null }
             }
-            TabBar(tab, tabs) { if (it == tab && it == Tab.CABINET) cabinetPage = null; tab = it }
+            // While typing, the tab bar steps aside so the field keeps the room.
+            val typing = WindowInsets.ime.getBottom(androidx.compose.ui.platform.LocalDensity.current) > 0
+            if (!fullChart && !typing) TabBar(tab, tabs) { if (it == tab && it == Tab.CABINET) cabinetPage = null; tab = it }
         }
         // Order reviews open over any page, wherever the order was asked for.
+        // First use only: a short guide the first time the app opens after Zerodha is linked, never again.
+        var tour by remember { mutableStateOf(!SecurePrefs.getBoolean(com.optionslab.app.ui.screens.GETTING_STARTED, false)) }
+        val again by com.optionslab.app.ui.screens.showGettingStarted.collectAsState()
+        if (tour || again) com.optionslab.app.ui.screens.GettingStarted(onGo = { dest ->
+            SecurePrefs.put(com.optionslab.app.ui.screens.GETTING_STARTED, true); tour = false
+            com.optionslab.app.ui.screens.showGettingStarted.value = false
+            when (dest) {
+                "orb" -> tab = Tab.ALMANAC
+                "chart" -> { chartAsk = "BANKNIFTY" to "NSE"; chartNonce++; tab = Tab.CHART }
+                "trade" -> { tab = Tab.TRADE; tradePage = "account" }
+            }
+        })
         com.optionslab.app.ui.screens.OrderReviewDialog(model)
         // Tapping any order, position or trade opens its close / cancel popup.
         com.optionslab.app.ui.screens.RowActionPopup(model)
         if (kiteLogin) com.optionslab.app.ui.screens.KiteLoginPage(model)
         val askPin by model.askLoginPin.collectAsState()
         if (askPin) com.optionslab.app.ui.screens.LoginPinDialog(model)
+        // Every event, success or error, drops in at the top of the screen.
+        com.optionslab.app.ui.components.AlertBanner()
     }
 }
 
@@ -442,9 +505,9 @@ private fun ConnectGate(model: AppModel) {
     LaunchedEffect(Unit) { model.refreshBroker() }
     Box(Modifier.fillMaxSize()) {
         com.optionslab.app.ui.screens.ConnectZerodhaScreen(model)
-        Toast(message) { model.message.value = null }
         if (kiteLogin) com.optionslab.app.ui.screens.KiteLoginPage(model)
         if (askPin) com.optionslab.app.ui.screens.LoginPinDialog(model)
+        com.optionslab.app.ui.components.AlertBanner()
     }
 }
 
@@ -496,9 +559,9 @@ private fun Masthead(live: Boolean, calm: Boolean, linked: Boolean, onMode: (Boo
         // A red line under the bar while live, so real-money mode is never mistaken.
         Box(Modifier.fillMaxWidth().height(if (linked && live) 2.dp else 1.dp).background(if (linked && live) p.oxblood else p.rule))
     }
-    if (confirmLive) androidx.compose.material3.AlertDialog(
+    if (confirmLive) com.optionslab.app.ui.components.AlertDialog(
         onDismissRequest = { confirmLive = false },
-        properties = androidx.compose.ui.window.DialogProperties(securePolicy = androidx.compose.ui.window.SecureFlagPolicy.SecureOn),
+        properties = androidx.compose.ui.window.DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy),
         title = { Text("Switch to live trading?", style = Type.title) },
         text = { Text("Prices, positions and orders will come from your Zerodha account. Orders you send will use real money. Each order still needs your review, a long press and your PIN or fingerprint.", style = Type.bodySmall) },
         confirmButton = { androidx.compose.material3.TextButton({ confirmLive = false; onMode(true) }) { Text("Go live", color = p.oxblood) } },

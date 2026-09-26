@@ -12,12 +12,14 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.AlertDialog
+import com.optionslab.app.ui.components.AlertDialog
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import java.util.Locale
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -79,7 +81,7 @@ fun ToggleRow(title: String, sub: String?, checked: Boolean, onChange: (Boolean)
     }
 }
 
-private val secure = DialogProperties(securePolicy = SecureFlagPolicy.SecureOn)
+private val secure get() = DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy)
 
 // ---- Alarms ----------------------------------------------------------------------
 
@@ -205,7 +207,7 @@ fun DataPage(model: AppModel) {
                 BrassButton("Verify the record", Modifier.fillMaxWidth(), busy = prov is Load.Busy) { model.verifyProvenance() }
                 when (val v = prov) {
                     is Load.Busy -> FullSpinner(v.label, v.progress)
-                    is Load.Failed -> Note(v.why)
+                    is Load.Failed -> com.optionslab.app.ui.components.AlertOn(v.why)
                     is Load.Done -> if (v.value.isEmpty()) Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                         Stamp("Intact", p.verdigris); Spacer(Modifier.width(10.dp)); Note("All 170 sessions match their provenance.")
                     } else v.value.forEach { d -> LedgerLine(d.kind, d.why, p.oxblood) }
@@ -233,11 +235,26 @@ fun SecurityPage(model: AppModel) {
     val s by model.settings.collectAsState()
     val findings by model.integrity.collectAsState()
     var changing by remember { mutableStateOf(false) }
+    val pinScope = androidx.compose.runtime.rememberCoroutineScope()
     var erasing by remember { mutableStateOf(false) }
-    val kind = remember { (context as? androidx.fragment.app.FragmentActivity)?.let { BiometricGate.available(it) } ?: BiometricGate.Kind.NONE }
+    // Switches that lower the protection ask for the PIN (or fingerprint) first.
+    var guarded by remember { mutableStateOf<Triple<String, Boolean, () -> Unit>?>(null) }
+    fun guard(why: String, pinOnly: Boolean = false, action: () -> Unit) { guarded = Triple(why, pinOnly, action) }
+    guarded?.let { (why, pinOnly, action) ->
+        Reauth(model, onOk = { guarded = null; action() }, onCancel = { guarded = null }, pinOnly = pinOnly, why = why)
+    }
+    // Re-read while the page is open, so adding a fingerprint in the phone's Settings shows up on return.
+    var kind by remember { mutableStateOf((context as? androidx.fragment.app.FragmentActivity)?.let { BiometricGate.available(it) } ?: BiometricGate.Kind.NONE) }
+    com.optionslab.app.ui.PollWhileStarted {
+        while (true) {
+            kind = (context as? androidx.fragment.app.FragmentActivity)?.let { BiometricGate.available(it) } ?: BiometricGate.Kind.NONE
+            kotlinx.coroutines.delay(2_000)
+        }
+    }
     Page {
         item { PageTitle("Security", "Nothing personal leaves this phone, and nothing is logged") }
         item { KitePinCard(model) }
+        item { BackupCard(model, s.wipeOnExhaustion) }
         item {
             LedgerCard(title = "Home-screen widget") {
                 ToggleRow("Show my P&L on the widget", "Off by default: a home screen is seen by anyone holding the unlocked phone. Index levels are always shown.", s.widgetPnl) { on ->
@@ -257,7 +274,9 @@ fun SecurityPage(model: AppModel) {
                     }
                 }
                 BrassButton("Check again", Modifier.fillMaxWidth().padding(top = 8.dp), tone = p.inkSoft) { model.refreshIntegrity() }
-                ToggleRow("Refuse compromised devices", "Do not open on a rooted, hooked or debugged phone", s.refuseCompromised) { on -> model.update { it.copy(refuseCompromised = on) } }
+                ToggleRow("Refuse compromised devices", "Do not open on a rooted, hooked or debugged phone", s.refuseCompromised) { on ->
+                    if (on) model.update { it.copy(refuseCompromised = true) } else guard("Enter your app PIN to let IraAlgo open on a compromised phone.") { model.update { it.copy(refuseCompromised = false) } }
+                }
             }
         }
         item {
@@ -285,22 +304,60 @@ fun SecurityPage(model: AppModel) {
         }
         item {
             LedgerCard(title = "Unlocking") {
-                ToggleRow("Fingerprint / face", when (kind) {
-                    BiometricGate.Kind.STRONG -> "Strong biometrics: unlock a Keystore key that dies if a new finger or face is enrolled"
-                    BiometricGate.Kind.WEAK -> "This phone offers face unlock only at the weaker class"
-                    BiometricGate.Kind.NONE -> "No biometrics enrolled on this phone"
+                ToggleRow("Fingerprint", when (kind) {
+                    BiometricGate.Kind.STRONG -> "Unlocks the app, confirms orders and opens the Zerodha secret; tied to a hardware key that dies if a finger is added or removed"
+                    BiometricGate.Kind.WEAK -> "Face unlock is not used; add a fingerprint"
+                    BiometricGate.Kind.NONE -> "No fingerprint added on this phone"
                 }, s.biometric && kind != BiometricGate.Kind.NONE) { on ->
-                    if (on) runCatching { if (kind == BiometricGate.Kind.STRONG) BiometricGate.enrol() }
-                        .onFailure { model.say("Could not enable biometrics: ${it.message}"); return@ToggleRow }
-                    else BiometricGate.forget()
-                    model.update { it.copy(biometric = on && kind != BiometricGate.Kind.NONE, allowWeakFace = on) }
+                    if (on) {
+                        // The PIN, never a finger: a finger added by someone else must not be able to trust itself.
+                        guard("Enter your app PIN to switch the fingerprint on. Every finger on this phone can then approve orders.", pinOnly = true) {
+                            runCatching { if (kind == BiometricGate.Kind.STRONG) BiometricGate.enrol() }
+                                .onFailure { model.say("Could not enable the fingerprint: ${it.message}") }
+                                .onSuccess { model.update { it.copy(biometric = kind != BiometricGate.Kind.NONE, allowWeakFace = false) } }
+                        }
+                    } else {
+                        BiometricGate.forget()
+                        model.update { it.copy(biometric = false, allowWeakFace = false) }
+                    }
                 }
-                if (kind == BiometricGate.Kind.STRONG) ToggleRow("Accept face unlock", "Off: fingerprint only, tied to a hardware key. On: any fingerprint or face the phone accepts", s.allowWeakFace) { on -> model.update { it.copy(allowWeakFace = on) } }
+                // Say plainly why it would not be offered, and let the owner try it here.
+                val danger = findings.filter { it.severity == com.optionslab.app.security.Integrity.Severity.DANGER }
+                when {
+                    s.biometric && danger.isNotEmpty() -> Text("Paused: this phone failed the security check (" + danger.joinToString { it.name + ": " + it.detail } +
+                        "). The PIN is asked instead until the check passes.", style = Type.bodySmall.copy(color = p.oxblood), modifier = Modifier.padding(vertical = 4.dp))
+                    kind == BiometricGate.Kind.NONE -> Text("Add a fingerprint in the phone's Settings → Security, then switch this on.",
+                        style = Type.bodySmall.copy(color = p.inkSoft), modifier = Modifier.padding(vertical = 4.dp))
+                }
+                if (s.biometric && kind != BiometricGate.Kind.NONE) BrassButton("Test fingerprint", Modifier.fillMaxWidth().padding(vertical = 6.dp), tone = p.inkSoft) {
+                    val act = context as? androidx.fragment.app.FragmentActivity ?: return@BrassButton
+                    BiometricGate.authenticate(act, false) { out ->
+                        when (out) {
+                            BiometricGate.Outcome.Success -> com.optionslab.app.work.Alerts.success("Fingerprint works" + if (danger.isNotEmpty()) ", but it stays paused until the security check passes." else ".")
+                            is BiometricGate.Outcome.Failed -> com.optionslab.app.work.Alerts.error("Did not work: ${out.why}")
+                            is BiometricGate.Outcome.Invalidated -> { com.optionslab.app.work.Alerts.error(out.why); model.update { it.copy(biometric = false) } }
+                            BiometricGate.Outcome.UsePin -> com.optionslab.app.work.Alerts.error("Cancelled, or no fingerprint is set up on this phone.")
+                        }
+                    }
+                }
+                var capture by remember { mutableStateOf(com.optionslab.app.security.Capture.allowed) }
+                ToggleRow("Allow screenshots and screen recording",
+                    if (capture) "On while testing: anyone with the phone can capture any screen, keys and P&L included. Turn off before going live."
+                    else "Off: every screen and popup is blocked from screenshots, recordings and the recent-apps preview.", capture) { on ->
+                    if (!on) { capture = false; com.optionslab.app.security.Capture.set(context as? android.app.Activity, false) }
+                    else guard("Enter your app PIN to allow screenshots and screen recording.") {
+                        capture = true; com.optionslab.app.security.Capture.set(context as? android.app.Activity, true)
+                    }
+                }
                 val idles = listOf(60, 120, 300, 600, 900)
                 ParamTokens("Lock after idle for", idles.map { "${it / 60} min" to (it == s.idleSeconds) }) { i ->
-                    model.update { it.copy(idleSeconds = idles[i]) }
+                    // A shorter lock is always allowed; a longer one needs the PIN.
+                    if (idles[i] <= s.idleSeconds) model.update { it.copy(idleSeconds = idles[i]) }
+                    else guard("Enter your app PIN to keep the app open longer when idle.") { model.update { it.copy(idleSeconds = idles[i]) } }
                 }
-                ToggleRow("Erase after ${PinLock.WIPE_AFTER} wrong PINs", "Destroys the encryption key; all app data becomes unreadable", s.wipeOnExhaustion) { on -> model.update { it.copy(wipeOnExhaustion = on) } }
+                ToggleRow("Erase after ${PinLock.WIPE_AFTER} wrong PINs", "Destroys the encryption key; all app data becomes unreadable", s.wipeOnExhaustion) { on ->
+                    if (on) model.update { it.copy(wipeOnExhaustion = true) } else guard("Enter your app PIN to switch off erasing after wrong PINs.") { model.update { it.copy(wipeOnExhaustion = false) } }
+                }
                 ToggleRow("Hide figures on the lock screen", "Notifications show only \"Unlock to read\" while the phone is locked", s.hideAmountsOnLockScreen) { on -> model.update { it.copy(hideAmountsOnLockScreen = on) } }
                 Spacer(Modifier.height(8.dp))
                 Row {
@@ -339,12 +396,15 @@ fun SecurityPage(model: AppModel) {
                         visualTransformation = PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword))
                     OutlinedTextField(next, { next = it.filter(Char::isDigit).take(PinLock.LENGTH) }, label = { Text("New PIN (${PinLock.LENGTH} digits)") }, singleLine = true,
                         visualTransformation = PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword))
-                    err?.let { Text(it, style = Type.italic.copy(color = p.oxblood)) }
+                    com.optionslab.app.ui.components.AlertOn(err, throttle = false)
                 }
             },
             confirmButton = {
                 TextButton({
-                    when (val r = PinLock.verify(cur.toCharArray(), s.wipeOnExhaustion)) {
+                  err = null
+                  pinScope.launch {
+                    val r = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { PinLock.verify(cur.toCharArray(), s.wipeOnExhaustion) }
+                    when (r) {
                         PinLock.Result.Ok -> try {
                             PinLock.setPin(next.toCharArray())
                             // The Zerodha API secret is sealed with the PIN: re-seal it under the new one.
@@ -355,6 +415,7 @@ fun SecurityPage(model: AppModel) {
                         PinLock.Result.Wiped -> { changing = false; eraseEverything() }
                         else -> err = "The current PIN is not right."
                     }
+                  }
                 }) { Text("Change") }
             },
             dismissButton = { TextButton({ changing = false }) { Text("Cancel") } },
@@ -414,7 +475,8 @@ fun SchedulePage(model: AppModel) {
                 ToggleRow("Tell me when health changes", "PASS → WARN → FAIL, after each harvest", s.healthAlerts) { v -> model.update { it.copy(healthAlerts = v) } }
                 val risks = listOf(0.001, 0.0025, 0.005, 0.01)
                 ParamTokens("Warn when the index is within", risks.map { pct(it) to (it == s.riskAlertPct) }) { i -> model.update { it.copy(riskAlertPct = risks[i]) } }
-                Note("The expiry calendar comes from the instrument master; ${Market.upcomingExpiries().size} upcoming NIFTY expiries are known.")
+                val expiries by androidx.compose.runtime.produceState(-1) { value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { Market.upcomingExpiries().size } }
+                Note("The expiry calendar comes from the instrument master; " + (if (expiries < 0) "reading it…" else "$expiries upcoming NIFTY expiries are known."))
             }
         }
         item {
@@ -452,8 +514,9 @@ fun SchedulePage(model: AppModel) {
 private fun plainPermission(p: String): String = when (p.substringAfterLast('.')) {
     "INTERNET" -> "Reach the internet - Upstox's public market data, and Zerodha (kite.zerodha.com, api.kite.trade) once you connect it"
     "ACCESS_NETWORK_STATE" -> "Tell whether the phone is online"
+    "ACCESS_LOCAL_NETWORK" -> "Local network (added by Android itself to every internet app; IraAlgo never uses it)"
     "POST_NOTIFICATIONS" -> "Show its own notifications"
-    "USE_BIOMETRIC", "USE_FINGERPRINT" -> "Ask Android to check your fingerprint or face (it never sees them)"
+    "USE_BIOMETRIC", "USE_FINGERPRINT" -> "Ask Android to check your fingerprint (the app never sees it)"
     "FOREGROUND_SERVICE", "FOREGROUND_SERVICE_DATA_SYNC" -> "Keep the market watch running during market hours"
     "VIBRATE" -> "Vibrate for an alert"
     "SCHEDULE_EXACT_ALARM" -> "Wake at the strategy's set times"
@@ -505,11 +568,192 @@ private fun KitePinCard(model: AppModel) {
             LedgerLine("Since", java.time.Instant.ofEpochMilli(since).atZone(com.optionslab.engine.IST).format(DateTimeFormatter.ofPattern("d MMM yyyy")))
             Note("A chain through any other CA is refused before anything is sent, even if Android trusts it.")
         }
-        if (com.optionslab.app.security.KitePin.mismatch) Text("✕ The last connection was refused: the chain did not match.", style = Type.bodySmall.copy(color = p.oxblood))
+        com.optionslab.app.ui.components.AlertOn(if (com.optionslab.app.security.KitePin.mismatch) "The last Zerodha connection was refused: the certificate chain did not match." else null)
         if (pins.isNotEmpty()) BrassButton("Re-trust (Zerodha changed its CA)", Modifier.fillMaxWidth().padding(top = 6.dp), tone = p.inkSoft) { reauth = true }
     }
     if (reauth) Reauth(model, onOk = {
         reauth = false; com.optionslab.app.security.KitePin.reset(); tick++
         model.say("Pins cleared. The next connection, on a network you trust, records them again.")
     }, onCancel = { reauth = false })
+}
+
+/**
+ * The account-wide guard: limits every paper and live order must pass, from a
+ * strategy or by hand. Exits (closing what is held) are stopped only by the
+ * kill switch.
+ */
+@Composable
+fun RiskPage(model: AppModel) {
+    Page {
+        item { PageTitle("Bot settings", "Limits on every order the bot or you place, paper and live") }
+        item { GuardCard(model) }
+    }
+}
+
+@Composable
+private fun GuardCard(model: AppModel) {
+    val p = LocalPalette.current
+    val s by model.settings.collectAsState()
+    var confirmKill by remember { mutableStateOf<Boolean?>(null) }
+    confirmKill?.let { turnOn ->
+        AlertDialog(
+            onDismissRequest = { confirmKill = null },
+            properties = androidx.compose.ui.window.DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy),
+            title = { Text(if (turnOn) "Turn the kill switch on?" else "Clear the kill switch?", style = Type.title) },
+            text = { Text(if (turnOn) "Every order is refused, including closing positions, until you clear it." else "Orders are allowed again, within these limits.", style = Type.bodySmall) },
+            confirmButton = { TextButton({ model.update { it.copy(guardKill = turnOn) }; confirmKill = null }) { Text(if (turnOn) "Turn on" else "Clear", color = if (turnOn) p.oxblood else p.verdigris) } },
+            dismissButton = { TextButton({ confirmKill = null }) { Text("Cancel") } },
+        )
+    }
+    fun rupees(x: Double) = if (x >= 100_000) "₹${(x / 100_000).let { if (it % 1.0 == 0.0) it.toInt().toString() else it.toString() }}L" else "₹%,.0f".format(Locale.ENGLISH, x)
+    LedgerCard(title = "Account guard", accent = if (s.guardKill) p.oxblood else null) {
+        Note("Checked on every order, paper and live, from a strategy or by hand. Closing a position is never blocked, except by the kill switch.")
+        ToggleRow("Kill switch", if (s.guardKill) "ON: every order is refused, exits included, until you turn it off" else "Off. Turn on to stop all trading at once", s.guardKill) { on -> confirmKill = on }
+        val loss = listOf(1_000.0, 2_000.0, 5_000.0, 10_000.0, 0.0)
+        ParamTokens("Daily loss limit", loss.map { (if (it == 0.0) "off" else rupees(it)) to (it == s.guardDailyLoss) }) { i -> model.update { it.copy(guardDailyLoss = loss[i]) } }
+        val dd = listOf(5.0, 10.0, 20.0, 0.0)
+        ParamTokens("Max drawdown (from capital and from peak)", dd.map { (if (it == 0.0) "off" else "${it.toInt()}%") to (it == s.guardDrawdownPct) }) { i -> model.update { it.copy(guardDrawdownPct = dd[i]) } }
+        val open = listOf(1, 2, 3, 5, 0)
+        ParamTokens("Max open positions", open.map { (if (it == 0) "off" else "$it") to (it == s.guardMaxOpen) }) { i -> model.update { it.copy(guardMaxOpen = open[i]) } }
+        val trades = listOf(5, 10, 20, 0)
+        ParamTokens("Max orders per day (entries, stops and exits)", trades.map { (if (it == 0) "off" else "$it") to (it == s.guardMaxTrades) }) { i -> model.update { it.copy(guardMaxTrades = trades[i]) } }
+        val value = listOf(100_000.0, 200_000.0, 500_000.0, 1_000_000.0, 0.0)
+        ParamTokens("Max value per order", value.map { (if (it == 0.0) "off" else rupees(it)) to (it == s.guardMaxValue) }) { i -> model.update { it.copy(guardMaxValue = value[i]) } }
+        val lots = listOf(1, 2, 5, 0)
+        ParamTokens("Max lots per instrument", lots.map { (if (it == 0) "off" else "$it") to (it == s.guardMaxLots) }) { i -> model.update { it.copy(guardMaxLots = lots[i]) } }
+        val expo = listOf(100_000.0, 200_000.0, 500_000.0, 0.0)
+        ParamTokens("Max held in one instrument", expo.map { (if (it == 0.0) "off" else rupees(it)) to (it == s.guardMaxExposure) }) { i -> model.update { it.copy(guardMaxExposure = expo[i]) } }
+        val cut = listOf(14 * 60, 14 * 60 + 30, 14 * 60 + 55, 15 * 60, -1)
+        ParamTokens("No new entries after", cut.map { (if (it < 0) "off" else "%02d:%02d".format(it / 60, it % 60)) to (it == s.guardCutoff) }) { i -> model.update { it.copy(guardCutoff = cut[i]) } }
+        Text("Paper account", style = Type.body.copy(color = p.ink, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold), modifier = Modifier.padding(top = 12.dp))
+        Note("The paper account keeps its own loss, drawdown and order-count limits, raised as on the desktop for the ORB forward test (every entry, resting stop and exit counts as an order). The limits above apply to Zerodha.")
+        val pLoss = listOf(2_000.0, 6_000.0, 10_000.0, 0.0)
+        ParamTokens("Paper daily loss limit", pLoss.map { (if (it == 0.0) "off" else rupees(it)) to (it == s.guardPaperDailyLoss) }) { i -> model.update { it.copy(guardPaperDailyLoss = pLoss[i]) } }
+        val pDd = listOf(10.0, 30.0, 0.0)
+        ParamTokens("Paper max drawdown", pDd.map { (if (it == 0.0) "off" else "${it.toInt()}%") to (it == s.guardPaperDrawdownPct) }) { i -> model.update { it.copy(guardPaperDrawdownPct = pDd[i]) } }
+        val pTrades = listOf(10, 30, 60, 0)
+        ParamTokens("Paper orders per day", pTrades.map { (if (it == 0) "off" else "$it") to (it == s.guardPaperTrades) }) { i -> model.update { it.copy(guardPaperTrades = pTrades[i]) } }
+        Note("Hitting the drawdown limit also turns the kill switch on, as the desktop does.")
+        ToggleRow("Square off on expiry day at 15:05", "Closes every option position expiring today, paper and live, MIS and NRML", s.expirySquareOff) { on ->
+            model.update { it.copy(expirySquareOff = on) }
+        }
+        if (s.expirySquareOff) ToggleRow("Keep the Expiry Put to settlement", "Its legs are left for the 15:30 settlement, as the strategy intends", s.keepExpiryPut) { on ->
+            model.update { it.copy(keepExpiryPut = on) }
+        }
+        ToggleRow("Block naked option shorts", "Selling an option to open needs a bought option of the same index, expiry and type held first", s.guardNakedShort) { on ->
+            model.update { it.copy(guardNakedShort = on) }
+        }
+        TextButton({ com.optionslab.app.data.Guard.resetPeak(s.live); model.say("Drawdown peak restarts from today's equity.") }) {
+            Text("Restart the drawdown peak (${if (s.live) "Zerodha" else "paper"})", style = Type.label.copy(color = p.inkSoft))
+        }
+    }
+}
+
+
+/**
+ * Encrypted backup and restore (PIN-sealed file). Zerodha credentials, the PIN and
+ * the pinned certificates are never in it.
+ */
+@Composable
+private fun BackupCard(model: AppModel, wipeOnExhaustion: Boolean) {
+    val p = LocalPalette.current
+    val ctx = LocalContext.current
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    var busy by remember { mutableStateOf(false) }
+    var ask by remember { mutableStateOf<String?>(null) }          // "backup" | "restore": which PIN prompt is open
+    var pending by remember { mutableStateOf<ByteArray?>(null) }   // a backup made, waiting for its file / a file read, waiting for its PIN
+    var opened by remember { mutableStateOf<com.optionslab.app.data.Backup.Contents?>(null) }
+    var restoreAuth by remember { mutableStateOf(false) }
+    val save = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.CreateDocument("application/octet-stream")) { uri ->
+        val bytes = pending; pending = null
+        if (uri == null || bytes == null) return@rememberLauncherForActivityResult
+        val ok = runCatching { ctx.contentResolver.openOutputStream(uri)?.use { it.write(bytes) } }.isSuccess
+        if (ok) com.optionslab.app.work.Alerts.success("Backup saved. Keep it with your PIN in mind: the PIN opens it.")
+        else com.optionslab.app.work.Alerts.error("Could not write the backup file.")
+    }
+    val pick = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        val bytes = runCatching { ctx.contentResolver.openInputStream(uri)?.use { it.readBytes() } }.getOrNull()
+        if (bytes == null) com.optionslab.app.work.Alerts.error("Could not read that file.") else { pending = bytes; ask = "restore" }
+    }
+    LedgerCard(title = "Backup and restore") {
+        Note("One file with your settings, strategies, ORB arms, paper account, ledger, alarms, protections, journal and trade history, sealed with your PIN. " +
+            "Zerodha keys and sessions are never in it: after a restore, link Zerodha again.")
+        Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)) {
+            BrassButton("Back up now", Modifier.weight(1f), busy = busy && ask == null) { ask = "backup" }
+            BrassButton("Restore…", Modifier.weight(1f), tone = p.inkSoft) { pick.launch(arrayOf("application/octet-stream", "*/*")) }
+        }
+    }
+    ask?.let { mode ->
+        var pin by remember(mode) { mutableStateOf("") }
+        com.optionslab.app.ui.components.AlertDialog(
+            onDismissRequest = { ask = null; if (mode == "restore") pending = null },
+            properties = androidx.compose.ui.window.DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy),
+            title = { Text(if (mode == "backup") "Seal the backup" else "Open the backup", style = Type.title) },
+            text = {
+                Column {
+                    Text(if (mode == "backup") "Enter your app PIN. The backup is sealed with it." else "Enter the PIN the backup was made with.", style = Type.bodySmall)
+                    androidx.compose.material3.OutlinedTextField(pin, { pin = it.filter(Char::isDigit).take(12) }, label = { Text("PIN") }, singleLine = true,
+                        visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.NumberPassword))
+                }
+            },
+            confirmButton = {
+                TextButton({
+                    val typed = pin.toCharArray()
+                    busy = true
+                    scope.launch {
+                        try {
+                            if (mode == "backup") {
+                                // The PIN must be the app's own: a typo would seal a file nobody can open.
+                                val r = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { PinLock.verify(typed, wipeOnExhaustion) }
+                                if (r != PinLock.Result.Ok) { com.optionslab.app.work.Alerts.error("Not the right PIN."); return@launch }
+                                pending = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { com.optionslab.app.data.Backup.create(ctx, typed) }
+                                ask = null
+                                save.launch("iraalgo-backup-${com.optionslab.app.data.Market.today()}.irabk")
+                            } else {
+                                val bytes = pending ?: return@launch
+                                opened = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { com.optionslab.app.data.Backup.open(bytes, typed) }
+                                ask = null; pending = null
+                            }
+                        } catch (e: Exception) {
+                            com.optionslab.app.work.Alerts.error(e.message ?: "That did not work.")
+                        } finally { busy = false }
+                    }
+                }, enabled = !busy) { Text(if (busy) "Working…" else "Continue") }
+            },
+            dismissButton = { TextButton({ ask = null; if (mode == "restore") pending = null }) { Text("Cancel") } },
+        )
+    }
+    if (!restoreAuth) opened?.let { c ->
+        com.optionslab.app.ui.components.AlertDialog(
+            onDismissRequest = { opened = null },
+            properties = androidx.compose.ui.window.DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy),
+            title = { Text("Restore this backup?", style = Type.title) },
+            text = {
+                Text("Made ${java.time.Instant.ofEpochMilli(c.createdAt).atZone(com.optionslab.engine.IST).toLocalDateTime().toString().replace('T', ' ').take(16)} · " +
+                    "${c.files} data files · ${c.prefs} settings.\n\nIt REPLACES this phone's strategies, paper account, ledger, alarms, journal and settings. " +
+                    "Your Zerodha link and PIN here stay as they are. IraAlgo closes when done; open it again.", style = Type.bodySmall)
+            },
+            confirmButton = {
+                TextButton({ restoreAuth = true }) { Text("Replace and restart", color = p.oxblood) }
+            },
+            dismissButton = { TextButton({ opened = null }) { Text("Cancel") } },
+        )
+    }
+    // The backup's own PIN is whoever made the file's choice: replacing this phone's data needs THIS app's PIN.
+    if (restoreAuth) opened?.let { c ->
+        Reauth(model, onCancel = { restoreAuth = false }, why = "Enter this phone's app PIN to replace its data with the backup.", onOk = {
+                    restoreAuth = false
+                    scope.launch {
+                        val ok = runCatching { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { com.optionslab.app.data.Backup.restore(ctx, c) } }.isSuccess
+                        opened = null
+                        if (!ok) { com.optionslab.app.work.Alerts.error("The restore did not complete."); return@launch }
+                        com.optionslab.app.work.Alerts.success("Restored. IraAlgo is closing; open it again.")
+                        kotlinx.coroutines.delay(1_200)
+                        // Every store is cached in memory: a fresh start reads the restored files.
+                        android.os.Process.killProcess(android.os.Process.myPid())
+                    }
+        })
+    }
 }

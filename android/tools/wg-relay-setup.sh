@@ -41,8 +41,8 @@ cat > "$WG_DIR/wg0.conf" <<EOF
 Address = $NET.1/24
 ListenPort = $PORT
 PrivateKey = $(cat "$WG_DIR/server.key")
-PostUp = iptables -t nat -A POSTROUTING -s $NET.0/24 -o $IFACE -j MASQUERADE; iptables -A FORWARD -i wg0 -j ACCEPT; iptables -A FORWARD -o wg0 -j ACCEPT
-PostDown = iptables -t nat -D POSTROUTING -s $NET.0/24 -o $IFACE -j MASQUERADE; iptables -D FORWARD -i wg0 -j ACCEPT; iptables -D FORWARD -o wg0 -j ACCEPT
+PostUp = iptables -t nat -A POSTROUTING -s $NET.0/24 -o $IFACE -j MASQUERADE; iptables -I INPUT 1 -p udp --dport $PORT -j ACCEPT; iptables -I FORWARD 1 -i wg0 -j ACCEPT; iptables -I FORWARD 1 -o wg0 -j ACCEPT
+PostDown = iptables -t nat -D POSTROUTING -s $NET.0/24 -o $IFACE -j MASQUERADE; iptables -D INPUT -p udp --dport $PORT -j ACCEPT; iptables -D FORWARD -i wg0 -j ACCEPT; iptables -D FORWARD -o wg0 -j ACCEPT
 EOF
 fi
 

@@ -88,7 +88,9 @@ object Paper {
     }
 
     private fun engine(capital: BigDecimal, contracts: Map<String, Contract>) = Sandbox(
-        SandboxConfig(startingCapital = capital),
+        // The desktop sandbox's execution costs (TODO A9): stops slip 10 bps, a MARKET fill with no
+        // bid/ask (the Upstox candle feed has none) slips 5 bps, and every leg pays its charges.
+        SandboxConfig(startingCapital = capital, stopSlippageBps = BigDecimal("10"), spreadFallbackBps = BigDecimal("5"), chargesEnabled = true),
         InstrumentMaster { sym, ex ->
             if (ex != "NFO") null else contracts[sym]?.let {
                 Instrument(sym, "NFO", "OPTIDX", it.lotSize, 0.05, it.expiry, it.strike)
@@ -98,6 +100,8 @@ object Paper {
 
     val state: SandboxState get() = book().state
     val capital: BigDecimal get() = book().capital
+    /** The contract a paper symbol stands for (underlying, expiry, type, lot), when it has been traded here. */
+    fun contractOf(symbol: String): Contract? = book().contracts[symbol]
     fun engine(): Sandbox = book().let { engine(it.capital, it.contracts) }
 
     // ---- prices -----------------------------------------------------------------
@@ -109,6 +113,9 @@ object Paper {
         return Quote(bars.last().close, high = bars.maxOf { it.high }, low = bars.minOf { it.low }, open = bars.first().open,
             volume = bars.sumOf { it.volume })
     }
+
+    /** The contract's latest price from the paper feed, or null when there is none today. */
+    suspend fun lastPrice(c: Contract): Double? = runCatching { quote(c) }.getOrNull()?.ltp
 
     private suspend fun quotes(symbols: Collection<String>): Map<String, Quote> {
         val b = book()

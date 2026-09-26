@@ -165,7 +165,12 @@ data class PriceAlarm(
     val firedAtMillis: Long = 0L,
     val note: String = "",
 ) {
-    fun describe() = "$symbol ${if (above) "rises above" else "falls below"} ${"%,.2f".format(level)}"
+    fun describe() = "${symbol.removePrefix(CHART)} ${if (above) "rises above" else "falls below"} ${"%,.2f".format(level)}"
+
+    companion object {
+        /** An alarm set from the chart: priced from the chart's own feed, in Paper and Live alike. */
+        const val CHART = "CHART:"
+    }
     fun hit(price: Double) = if (above) price >= level else price <= level
 }
 

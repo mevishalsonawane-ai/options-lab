@@ -8,34 +8,38 @@ Source paths prefixed `NTA:` are in D:\New Trading app.
 
 ## Decision needed first
 
-- [ ] D1. Which app runs the ORB forward test from now on: laptop (NTA) or phone (IraAlgo)?
+- [x] D1. (decided 2026-09-25: phone) Which app runs the ORB forward test from now on: laptop (NTA) or phone (IraAlgo)?
       If IraAlgo: do A1-A4, then paper-trade both side by side for a few days before turning the laptop arms off.
 
 ## A. Port missing core functionality into IraAlgo (must precede arming anything)
 
-- [ ] A1. Port real ORB / ORB Fresh logic (09:15-10:00 range, breakout entry 10:05-14:25,
+- [x] A1. (done 2026-09-26 from `strategies/orb/`: engine `orb/OrbRules.kt`, `orb/Replay.kt` with PassRule + tests; app `data/OrbArms.kt` on the paper account, Home -> Strategies arm switches, approvals, day detail and forward-test tally; 15 s stop/target checks while in a trade) Port real ORB / ORB Fresh logic (09:15-10:00 range, breakout entry 10:05-14:25,
       one ATM strike all day, +40/-40 option points, resting stop, 15:10 exit, Rs 40 min premium, 1 lot).
       Source: `NTA:mobile/native/app/app/src/main/java/com/iraalgo/app/rules/OrbRules.kt`,
       `rules/Replay.kt`, `arms/ArmRunner.kt` + their parity tests; Python origin `NTA:services/ai_signals/orb_arm.py`.
-- [ ] A2. Port account-wide guard: kill switch, daily loss, drawdown (vs capital and vs persisted peak),
+- [x] A2. (aligned with the desktop 2026-09-26: rupee exposure per instrument Rs 2L, Rs 2L per order, cutoff 14:55, every order counts, a drawdown hit engages the kill switch, paper account limits 60 orders / Rs 6,000 / 30% as the desktop paper test) (done: engine `risk/AccountGuard.kt` + tests, app `data/Guard.kt`, More -> Bot -> Bot settings) Port account-wide guard: kill switch, daily loss, drawdown (vs capital and vs persisted peak),
       max concurrent positions, max trades/day, order value, symbol exposure, entry cutoff, naked short.
       Exits bypass all but the kill switch. Source: `NTA:.../rules/AccountGuard.kt` + `AccountGuardParityTest`
       (222 vectors from `NTA:mobile/native/make_vectors.py`); Python origin `NTA:services/risk/account_guard.py`.
-- [ ] A3. Account-level Stop/Start arms for the day + kill-switch clear (confirm dialogs).
+- [x] A3. (done: one bot button on Home's Strategies card - Stop for today / Start / Clear kill switch, each confirmed) Account-level Stop/Start arms for the day + kill-switch clear (confirm dialogs).
       Source: `NTA:blueprints/ai_signals_activity.py`, `NTA:frontend/src/components/trading/ArmsControl.tsx`.
-- [ ] A4. Block or replace the imported ORB / ORB Fresh JSON strategies (`android/.../data/Strategies.kt:187-216`):
+- [x] A4. (done: imported ORB strategies stay blocked and are hidden from Home, replaced by the built-in arms of A1) Block or replace the imported ORB / ORB Fresh JSON strategies (`android/.../data/Strategies.kt:187-216`):
       they currently run as time-scheduled baskets with NO breakout check. DO NOT ARM until A1 lands.
-- [ ] A5. Expiry-day square-off at 15:05 for all products (NTA: `services/expiry_squareoff.py`);
+- [x] A5. (done: `data/ExpirySquareOff.kt` from the market watch, paper + live, keeps the Expiry Put to settlement by default; toggles in Bot settings) Expiry-day square-off at 15:05 for all products (NTA: `services/expiry_squareoff.py`);
       IraAlgo currently settles at expiry / squares MIS at 15:15.
-- [ ] A6. Decide order limits: IraAlgo 4 orders/day + Rs 5L/order vs NTA guard limits.
-- [ ] A7. Minute market snapshots (BANKNIFTY/NIFTY/SENSEX/VIX + near-ATM options, 09:15-15:30).
+- [x] A6. (done: one set of limits in Bot settings; the Zerodha checks use them, the separate Zerodha caps are gone) Decide order limits: IraAlgo 4 orders/day + Rs 5L/order vs NTA guard limits.
+- [x] A7. (skipped by the owner's decision, 2026-09-25) Minute market snapshots (BANKNIFTY/NIFTY/SENSEX/VIX + near-ATM options, 09:15-15:30).
       Source: `NTA:services/market_data_collector.py` -> `db/market_snapshots.duckdb`.
-- [ ] A8. Evening ORB replay (15:35-15:40) beside paper results. Source: `NTA:services/ai_signals/orb_shadow.py`
-      (off on NTA; native app Task 8A never started).
-- [ ] A9. Verify sandbox charges/slippage parity with NTA (`NTA:sandbox/charges.py`, `sandbox/slippage.py`,
-      stop slippage 10 bps, spread fallback 5 bps).
-- [ ] A10. Heartbeat / dead-man alert when the engine stops during market hours
-      (incomplete on NTA too: `NTA:services/heartbeat_service.py`).
+- [x] A8. Evening ORB replay (15:35-15:40) beside paper results. Source: `NTA:services/ai_signals/orb_shadow.py`
+      (off on NTA; native app Task 8A never started). Done 2026-09-26: `OrbArms.replayIfDue` after 15:35 (the 15:45
+      job and on opening the app), both arms on the day's 5-minute bars, shown in the ORB day detail; records up/down day for the pass rule.
+- [x] A9. Verify sandbox charges/slippage parity with NTA (`NTA:sandbox/charges.py`, `sandbox/slippage.py`,
+      stop slippage 10 bps, spread fallback 5 bps). Done 2026-09-26: `engine/sandbox/SandboxCosts.kt` (+ tests),
+      on for the phone's paper account; each paper trade keeps its charges.
+- [x] A10. Heartbeat / dead-man alert when the engine stops during market hours
+      (incomplete on NTA too: `NTA:services/heartbeat_service.py`). Done on the phone: the market watch stamps
+      a heartbeat each pass; an alarm checks it every 5 min from 09:17 to 15:30, restarts a watch silent for
+      over 3 min and posts one "Market watch stopped" notice per stall (approval channel, so it always shows).
 - [ ] A11. Optional: Telegram alerts (NTA has them; IraAlgo uses phone notifications only).
 - [ ] A12. Optional: pre-market routine (symbol refresh, daily report). AI Signals: skip unless revived (research refused it).
 
@@ -45,7 +49,7 @@ Source paths prefixed `NTA:` are in D:\New Trading app.
       and re-register in Task Scheduler; harvested bars stop at 2026-09-10 (missed sessions are lost for good).
 - [ ] B2. Release signing: run `android/tools/make-release-key.sh`, add the 4 GitHub secrets
       (otherwise every update needs uninstall, which wipes the vault).
-- [ ] B3. Static IP for live orders (SEBI): VPS + `android/tools/wg-relay-setup.sh`.
+- [ ] B3. Static IP for live orders (SEBI): VPS (Oracle Always Free works) or a home static IP + `android/tools/wg-relay-setup.sh`; then enter the IP in the app (More → Zerodha → Static IP) and check it shows ✓. The app now refuses new live positions from any other IP.
 - [ ] B4. Research milestones in `docs/design.md`: M1 in progress, M4-M9 open, M9 forward holdout ~Dec 2026;
       missing tests `test_theta_units`, `test_long_short_mirror`, `test_exits_fire`, `test_no_engine_import`; pricer/IV module;
       confirm M3 Kaggle splice reconciliation.
@@ -54,6 +58,39 @@ Source paths prefixed `NTA:` are in D:\New Trading app.
 - [ ] B7. App module has no unit/UI tests (engine only).
 - [ ] B8. Decide fate of the untracked `options_lab/data/banknifty_expiry_cache/` and modified bars in the old
       `D:\files\options-lab` clone (not present in D:\IraAlgo).
+
+## D. Enhancements (owner go-ahead 2026-09-26: all at once; answers: real-order changes need the PIN once;
+##    no Telegram; morning check and end-of-day report always show)
+
+- [x] D1. (ready: CI signs with the owner's key once the 4 secrets from `android/tools/make-release-key.sh` are added; README has the steps) Release signing ready (B2): CI signs with the owner's key once the 4 secrets exist; steps in `android/README.md`.
+- [x] D2. (done: stream ticks pushed into the chart page, `window.__iraTick`; tested in a browser harness) Live chart from the Zerodha stream: in Live mode the last candle moves with every tick.
+- [x] D3. (done: 5 s re-pricing from the stream in Live mode; OI change card from the day's first reading) Live option chain: refreshes from the stream while open; OI change since the day's first reading; PCR and max pain live.
+- [x] D4. (done: `app/src/test` JVM tests, run by CI before the APK is built) App unit tests (B7): JVM tests for the app's pure logic, run by CI.
+- [x] D5. (done: `engine/risk/Protection.kt` + tests, `data/Protections.kt`; position popup → Protect; paper at once, Zerodha after one PIN) Trailing stop-loss on any position (paper; Zerodha after one PIN): the stop only ever tightens.
+- [x] D6. (done: order sheet bracket - stop/trail/target set when the entry fills; chart ALERT button, priced from the chart feed) From the chart: bracket order (entry + stop + target) and price alerts drawn at a level.
+- [x] D7. (done: Options → Straddle: any call/put pair, combined premium, pair P&L) Straddle / strangle tracker: combined premium through the day and the pair's live P&L.
+- [x] D8. (done: Trade → Strategies → Presets: backtest over harvested sessions, then Add to Strategies, paper and not armed) Strategy presets ready to arm (short straddle, short strangle, iron fly, iron condor), each backtested on harvested sessions first.
+- [x] D9. (done: Lab → Replay: harvested day, index or ATM CE/PE, step/play, buy/sell at the close, live P&L) Replay mode: step through a past day candle by candle and paper-trade it.
+- [x] D10. (done: trade popup → Journal; P&L tab → Journal card with P&L by tag) Trade journal: note and tags per trade; P&L by tag.
+- [x] D11. (done: strategy chips, Month/Year switch with 12 month tiles, Export CSV) P&L calendar: filter by strategy (ORB, manual, Expiry Put, …), year view, CSV export.
+- [x] D12. (done: P&L tab → Strategies compared: trips, win %, profit factor, net, avg, best/worst, drawdown, charges) Strategy comparison: each strategy's forward stats side by side.
+- [x] D13. (done: P&L tab → Charges by month, line by line; Zerodha estimated from recorded trades) Charges report: brokerage, STT, exchange, SEBI, stamp and GST by month.
+- [x] D14. (done: `work/DailyReports.kt`, 09:00 check + 09:10 login reminder, approval channel) Morning check 09:00 (Zerodha login, holidays, contracts, armed strategies) and a login reminder before the open.
+- [x] D15. (done: 15:45 day report, approval channel; opens the P&L tab) End-of-day report at 15:45: the day's P&L, trades, strategies and any problems.
+- [x] D16. (done: More → Security → Backup and restore) Encrypted backup and restore (PIN-sealed file; Zerodha credentials never included).
+- [x] D17. (done: widget from ticks every 5 s while streaming) Home-screen widget live from the stream.
+- [x] D18. (done: sideways chart hides the header and tab bar; wide screens add OI columns to the chain) Landscape / tablet: full-screen chart and a wider option chain.
+- [x] D19. (done: haptic on every alert; swipe actions already had one) Haptics on order confirm, fills and swipe actions.
+- [x] D20. (done: harvest script finds its repo and Python itself; READMEs updated) Docs (B6) and the nightly harvest script path (B1: script fixed; re-registering the task stays with the owner).
+
+## L. Before going live (real money)
+
+- [ ] L1. Turn OFF "Allow screenshots and screen recording" (More -> Security), and set its default
+  back to off (`security/Capture.kt`, `DEFAULT_ALLOWED = false`). It is on only while testing.
+- [ ] L2. First live ORB trade with the app open: confirm the entry and the SL stop order appear in Kite,
+  and that the +40 / 15:10 exit goes out.
+- [ ] L3. Protections (Zerodha stop / trailing stop) still send SL-M: confirm Zerodha accepts SL-M on
+  index options, or switch them to SL with a limit like the ORB stop.
 
 ## C. D:\New Trading app (still running the ORB paper forward test)
 

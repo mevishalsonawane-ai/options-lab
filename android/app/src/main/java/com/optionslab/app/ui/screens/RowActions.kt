@@ -10,7 +10,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.AlertDialog
+import com.optionslab.app.ui.components.AlertDialog
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -65,6 +69,12 @@ fun RowActionPopup(model: AppModel) {
     val account by model.account.collectAsState()
     var modify by remember { mutableStateOf<Broker.OrderRow?>(null) }
     var cancelAuth by remember { mutableStateOf<Broker.OrderRow?>(null) }
+    // Removing a Zerodha protection cancels its real stop / target orders: proved like a send.
+    var removeAuth by remember { mutableStateOf<Long?>(null) }
+    var protectFor by remember { mutableStateOf<ProtectTarget?>(null) }
+    var journalFor by remember { mutableStateOf<Pair<String, String>?>(null) }
+    val protections by model.protections.collectAsState()
+    LaunchedEffect(t) { model.refreshProtections() }
     fun close() { model.rowAction.value = null }
 
     // The open position a finished order or trade belongs to, so it can be closed from here too.
@@ -93,7 +103,15 @@ fun RowActionPopup(model: AppModel) {
             lines += "Unrealised P&L" to rs(r.unrealizedPnl, true)
             lines += "Realised today" to rs(r.todayRealizedPnl, true)
             lines += "Change" to String.format(Locale.ENGLISH, "%+.2f%%", r.pnlPercent)
-            if (r.quantity != 0) swipe("Slide to close position") { model.paperClose(r.symbol, r.product); close() }
+            if (r.quantity != 0) {
+                val pr = protections.lastOrNull { !it.live && it.symbol == r.symbol }
+                pr?.let { lines += "Protection" to it.describe() }
+                button(if (pr == null) "Protect: stop · trail · target" else "Change protection") {
+                    protectFor = ProtectTarget(false, r.symbol, r.exchange, r.product, r.quantity, r.ltp)
+                }
+                pr?.let { button("Remove protection") { if (it.live) removeAuth = it.id else model.removeProtection(it.id) } }
+                swipe("Slide to close position") { model.paperClose(r.symbol, r.product); close() }
+            }
         }
         is RowTarget.PaperOrder -> {
             val r = t.row
@@ -122,9 +140,13 @@ fun RowActionPopup(model: AppModel) {
             lines += "Account" to "Paper"
             lines += "Filled" to "${r.quantity} @ ${px(r.price)}"
             lines += "Trade value" to rs(r.tradeValue)
+            if (r.charges > 0) lines += "Charges (brokerage, STT, fees)" to rs(r.charges)
             lines += "Product · exchange" to "${r.product} · ${r.exchange}"
             lines += "Time" to r.timestamp.takeLast(8)
             lines += "Trade · order id" to "${r.tradeId} · ${r.orderId}"
+            val jKey = "paper:${r.tradeId}"
+            com.optionslab.app.data.Journal.of(jKey)?.let { e -> lines += "Journal" to (e.tags.joinToString() + if (e.note.isNotBlank()) " · ${e.note}" else "") }
+            button("Journal: note · tags") { journalFor = jKey to "${r.action} ${r.symbol}" }
             if (pos != null) {
                 pnl = (pos.ltp - r.price) * r.quantity * (if (r.action == "BUY") 1 else -1)
                 lines += "Last price (LTP)" to px(pos.ltp)
@@ -144,7 +166,15 @@ fun RowActionPopup(model: AppModel) {
             lines += "Unrealised · realised" to "${rs(r.unrealised, true)} · ${rs(r.realised, true)}"
             lines += "M2M" to rs(r.m2m, true)
             lines += "Bought · sold today" to "${r.buyQty} @ ${px(r.buyAvg)} · ${r.sellQty} @ ${px(r.sellAvg)}"
-            if (r.qty != 0) swipe("Slide to close position") { model.planSquareOff(r); close() }
+            if (r.qty != 0) {
+                val pr = protections.lastOrNull { it.live && it.symbol == r.symbol }
+                pr?.let { lines += "Protection" to it.describe() }
+                button(if (pr == null) "Protect: stop · trail · target" else "Change protection") {
+                    protectFor = ProtectTarget(true, r.symbol, r.exchange, r.product, r.qty, r.last)
+                }
+                pr?.let { button("Remove protection") { if (it.live) removeAuth = it.id else model.removeProtection(it.id) } }
+                swipe("Slide to close position") { model.planSquareOff(r); close() }
+            }
         }
         is RowTarget.LiveOrder -> {
             val r = t.row
@@ -179,6 +209,9 @@ fun RowActionPopup(model: AppModel) {
             lines += "Product · exchange" to "${r.product} · ${r.exchange}"
             lines += "Time" to r.at.takeLast(8)
             lines += "Trade · order id" to "${r.id} · ${r.orderId}"
+            val jKey = "kite:${r.id}"
+            com.optionslab.app.data.Journal.of(jKey)?.let { e -> lines += "Journal" to (e.tags.joinToString() + if (e.note.isNotBlank()) " · ${e.note}" else "") }
+            button("Journal: note · tags") { journalFor = jKey to "${r.side} ${r.symbol}" }
             if (pos != null) {
                 pnl = (pos.last - r.price) * r.qty * (if (r.side == "BUY") 1 else -1)
                 lines += "Last price (LTP)" to px(pos.last)
@@ -188,9 +221,9 @@ fun RowActionPopup(model: AppModel) {
         }
     }
 
-    if (modify == null && cancelAuth == null) AlertDialog(
+    if (modify == null && cancelAuth == null && removeAuth == null && protectFor == null && journalFor == null) AlertDialog(
         onDismissRequest = ::close,
-        properties = DialogProperties(securePolicy = SecureFlagPolicy.SecureOn),
+        properties = DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy),
         title = { Text(title, style = Type.title) },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
@@ -215,6 +248,99 @@ fun RowActionPopup(model: AppModel) {
         dismissButton = { TextButton(::close) { Text("Close") } },
     )
     modify?.let { o -> ModifyDialog(model, o) { modify = null; close() } }
+    protectFor?.let { pt -> ProtectDialog(model, pt) { done -> protectFor = null; if (done) close() } }
+    journalFor?.let { (key, label) -> JournalDialog(key, label) { journalFor = null } }
     // Cancelling a working order (it may be a stop-loss) is proved like a send.
+    removeAuth?.let { id -> Reauth(model, onOk = { removeAuth = null; model.removeProtection(id); close() }, onCancel = { removeAuth = null },
+        why = "Enter your app PIN to cancel this position's stop and target at Zerodha.") }
     cancelAuth?.let { o -> Reauth(model, onOk = { cancelAuth = null; model.cancelOrder(o.id, o.variety); close() }, onCancel = { cancelAuth = null }) }
+}
+
+
+/** An open position to protect. [qty] is signed: + long, - short. */
+data class ProtectTarget(val live: Boolean, val symbol: String, val exchange: String, val product: String, val qty: Int, val price: Double)
+
+/**
+ * Stop, trailing stop and target for one position. Paper: set at once. Zerodha: the
+ * PIN or fingerprint first (once); after that the trailing stop moves by itself,
+ * and only ever tighter.
+ */
+@Composable
+fun ProtectDialog(model: AppModel, t: ProtectTarget, onDone: (Boolean) -> Unit) {
+    val p = LocalPalette.current
+    var stop by remember { mutableStateOf("") }
+    var trail by remember { mutableStateOf("") }
+    var target by remember { mutableStateOf("") }
+    var auth by remember { mutableStateOf(false) }
+    val long = t.qty > 0
+    val spec = com.optionslab.app.ui.ProtectSpec(stop.toDoubleOrNull(), trail.toDoubleOrNull(), target.toDoubleOrNull())
+    val problem = com.optionslab.engine.risk.Protection.validate(if (long) 1 else -1, t.price, spec.stop, spec.trail, spec.target)
+    fun go() = model.protect(t.live, t.symbol, t.exchange, t.product, t.qty, t.price, spec).also { onDone(true) }
+    if (auth) { Reauth(model, onOk = { auth = false; go() }, onCancel = { auth = false }); return }
+    AlertDialog(
+        onDismissRequest = { onDone(false) },
+        properties = DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy),
+        title = { Text("Protect ${t.symbol}", style = Type.title) },
+        text = {
+            Column {
+                Text("${if (long) "Long" else "Short"} ${abs(t.qty)} · last ${px(t.price)} · ${if (t.live) "Zerodha" else "paper"}", style = Type.bodySmall.copy(color = p.inkSoft))
+                PriceField(stop, { stop = it }, "Stop price (${if (long) "below" else "above"} ${px(t.price)})")
+                PriceField(trail, { trail = it }, "…or trail by (points)")
+                PriceField(target, { target = it }, "Target price (optional)")
+                Note(if (spec.trail != null) "Trailing: the stop follows the best price at ${spec.trail} points behind and never loosens." +
+                    (if (spec.stop != null) " It starts at your stop price." else "")
+                    else "The stop rests as an SL-M exit and the target as a LIMIT exit; when one fills the other is cancelled.", Modifier.padding(top = 8.dp))
+                if (t.live) Note("Zerodha: real exit orders are placed now. You confirm once with your PIN or fingerprint.", Modifier.padding(top = 4.dp))
+            }
+        },
+        confirmButton = {
+            TextButton({
+                if (problem != null) com.optionslab.app.work.Alerts.error(problem)
+                else if (t.live) auth = true else go()
+            }) { Text(if (t.live) "Confirm & protect" else "Protect") }
+        },
+        dismissButton = { TextButton({ onDone(false) }) { Text("Cancel") } },
+    )
+}
+
+@Composable
+fun PriceField(v: String, set: (String) -> Unit, label: String) {
+    androidx.compose.material3.OutlinedTextField(v, { set(it.filter { c -> c.isDigit() || c == '.' }.take(10)) }, label = { Text(label) }, singleLine = true,
+        modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
+        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal))
+}
+
+
+/** A note and tags on one trade (setup, mistakes, mood); the P&L tab adds up what each tag makes. */
+@Composable
+fun JournalDialog(key: String, label: String, onClose: () -> Unit) {
+    val p = LocalPalette.current
+    val j = com.optionslab.app.data.Journal
+    val start = remember(key) { j.of(key) }
+    var note by remember(key) { mutableStateOf(start?.note.orEmpty()) }
+    var tags by remember(key) { mutableStateOf(start?.tags.orEmpty()) }
+    AlertDialog(
+        onDismissRequest = onClose,
+        properties = DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy),
+        title = { Text("Journal · $label", style = Type.title) },
+        text = {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
+                listOf("Setup" to j.SETUPS, "Mistakes" to j.MISTAKES, "Mood" to j.MOODS).forEach { (head, list) ->
+                    Text(head, style = Type.label.copy(color = p.inkSoft, fontSize = 11.sp), modifier = Modifier.padding(top = 8.dp))
+                    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        list.forEach { t ->
+                            val on = t in tags
+                            Text(t, style = Type.label.copy(color = if (on) p.paper else p.ink, fontSize = 11.sp),
+                                modifier = Modifier.padding(top = 4.dp).background(if (on) p.ink else p.chip, androidx.compose.foundation.shape.RoundedCornerShape(50))
+                                    .clickable { tags = if (on) tags - t else tags + t }.padding(horizontal = 10.dp, vertical = 5.dp))
+                        }
+                    }
+                }
+                androidx.compose.material3.OutlinedTextField(note, { note = it.take(500) }, label = { Text("Note") },
+                    modifier = Modifier.fillMaxWidth().padding(top = 10.dp))
+            }
+        },
+        confirmButton = { TextButton({ j.put(key, note, tags); com.optionslab.app.work.Alerts.success("Journal saved."); onClose() }) { Text("Save") } },
+        dismissButton = { TextButton(onClose) { Text("Cancel") } },
+    )
 }

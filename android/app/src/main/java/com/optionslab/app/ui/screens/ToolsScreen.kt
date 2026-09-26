@@ -68,8 +68,8 @@ fun ToolsScreen(model: AppModel, view: String, onView: (String) -> Unit, onChart
     val source by model.toolsSource.collectAsState()
     var underlying by rememberSaveable { mutableStateOf("NIFTY") }
     var picked by remember { mutableStateOf<ChainPick?>(null) }
-    val views = listOf("chain" to "Chain", "oi" to "OI · Max pain", "iv" to "IV smile", "gex" to "GEX", "move" to "Expected move",
-        "builder" to "Strategy builder", "expiryput" to "Expiry Put")
+    val views = listOf("chain" to "Chain", "oi" to "OI · Max pain", "straddle" to "Straddle", "iv" to "IV smile", "gex" to "GEX",
+        "move" to "Expected move", "builder" to "Strategy builder", "expiryput" to "Expiry Put")
     // The Expiry Put strategy (formerly the Ticket tab) has its own scrolling page.
     if (view == "expiryput") {
         Column(Modifier.fillMaxSize()) {
@@ -81,6 +81,12 @@ fun ToolsScreen(model: AppModel, view: String, onView: (String) -> Unit, onChart
         return
     }
     LaunchedEffect(underlying, s.live) { model.loadTools(underlying) }
+    // Live mode with the Zerodha stream up: the chain re-prices every 5 s from the ticks (no quote calls).
+    val streamStatus by com.optionslab.app.data.KiteStream.status.collectAsState()
+    val streaming = s.live && streamStatus == com.optionslab.app.data.KiteStream.Status.LIVE
+    LaunchedEffect(underlying, streaming) {
+        while (streaming) { kotlinx.coroutines.delay(5_000); model.loadTools(underlying, quiet = true) }
+    }
     Page {
         item { PageTitle("Options", "Option chain, analytics, the strategy builder and the Expiry Put strategy") }
         item {
@@ -101,6 +107,7 @@ fun ToolsScreen(model: AppModel, view: String, onView: (String) -> Unit, onChart
                 item { Header(c, source) { model.loadTools(underlying) } }
                 when (view) {
                     "oi" -> item { Column { OiCard(c) } }
+                    "straddle" -> item { StraddleCard(model, c, streaming) }
                     "iv" -> item { IvCard(c) }
                     "gex" -> item { GexCard(c) }
                     "move" -> item { MoveCard(c) }
@@ -146,11 +153,15 @@ private fun Stat(label: String, value: String) {
 @Composable
 private fun ChainCard(c: ChainSnapshot, onPick: (ChainPick) -> Unit) {
     val p = LocalPalette.current
+    // Tablets and a sideways phone have room for the open interest on each side.
+    val wide = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp >= 600
+    fun oi(v: Long?) = v?.let { if (it >= 100_000) f1(it / 100_000.0) + "L" else "%,d".format(it) } ?: "—"
     LedgerCard(title = "Option chain") {
         Row {
-            listOf("CE Δ", "CE IV", "CE LTP", "STRIKE", "PE LTP", "PE IV", "PE Δ").forEachIndexed { i, h ->
+            val heads = listOf("CE Δ", "CE IV", "CE LTP", "STRIKE", "PE LTP", "PE IV", "PE Δ")
+            (if (wide) listOf("CE OI") + heads + "PE OI" else heads).forEach { h ->
                 Text(h, style = Type.label.copy(color = p.inkSoft, fontSize = 9.sp), textAlign = TextAlign.Center,
-                    modifier = Modifier.weight(if (i == 3) 1.25f else 1f))
+                    modifier = Modifier.weight(if (h == "STRIKE") 1.25f else 1f))
             }
         }
         Rule(Modifier.padding(vertical = 4.dp))
@@ -162,6 +173,7 @@ private fun ChainCard(c: ChainSnapshot, onPick: (ChainPick) -> Unit) {
             Row(Modifier.padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
                 val ceTone = if (itmCall) p.ink else p.inkSoft
                 val peTone = if (!itmCall) p.ink else p.inkSoft
+                if (wide) Text(oi(r.ce?.oi), style = cell.copy(color = ceTone), textAlign = TextAlign.Center, modifier = Modifier.weight(1f))
                 Text(ce?.let { f2(it.delta) } ?: "—", style = cell.copy(color = ceTone), textAlign = TextAlign.Center, modifier = Modifier.weight(1f))
                 Text(ce?.let { f1(it.ivPct) } ?: "—", style = cell.copy(color = ceTone), textAlign = TextAlign.Center, modifier = Modifier.weight(1f))
                 val pickCe = { onPick(ChainPick(c.underlying, c.expiry, r.strike, com.optionslab.engine.Right.CE, r.ce?.ltp, ce?.delta, ce?.ivPct, c.lotSize)) }
@@ -174,6 +186,7 @@ private fun ChainCard(c: ChainSnapshot, onPick: (ChainPick) -> Unit) {
                     modifier = Modifier.weight(1f).background(p.oxblood.copy(alpha = 0.08f), androidx.compose.foundation.shape.RoundedCornerShape(6.dp)).clickable(enabled = r.pe != null, onClick = pickPe).padding(vertical = 5.dp))
                 Text(pe?.let { f1(it.ivPct) } ?: "—", style = cell.copy(color = peTone), textAlign = TextAlign.Center, modifier = Modifier.weight(1f))
                 Text(pe?.let { f2(it.delta) } ?: "—", style = cell.copy(color = peTone), textAlign = TextAlign.Center, modifier = Modifier.weight(1f))
+                if (wide) Text(oi(r.pe?.oi), style = cell.copy(color = peTone), textAlign = TextAlign.Center, modifier = Modifier.weight(1f))
             }
         }
         c.synthetic?.let {
@@ -200,6 +213,8 @@ private fun OiCard(c: ChainSnapshot) {
         ceWall?.let { LedgerLine("Call wall (resistance)", fmtG(it.strike), p.verdigris) }
         peWall?.let { LedgerLine("Put wall (support)", fmtG(it.strike), p.oxblood) }
     }
+    Spacer(Modifier.height(14.dp))
+    OiChangeCard(c)
     Spacer(Modifier.height(14.dp))
     c.maxPain?.let { mp ->
         LedgerCard(title = "Max pain") {
@@ -290,7 +305,8 @@ private fun BuilderCard(model: AppModel, c: ChainSnapshot, live: Boolean) {
     val r = StrategyTemplates.resolve(t, c.rows, atm, c.expiryCode, listOf(c.expiryCode), mult)
     LedgerCard(title = t.name) {
         Note(t.description)
-        if (!r.ok) { r.errors.forEach { Text("✕ $it", style = Type.bodySmall.copy(color = p.oxblood)) } }
+        com.optionslab.app.ui.components.AlertOn(r.errors.takeIf { !r.ok && it.isNotEmpty() }?.joinToString(" "))
+
         r.legs.forEach { l ->
             LedgerLine("${l.leg.side} ${l.lots}× ${fmtG(l.strike)} ${l.leg.optionType}", f2(l.price), if (l.leg.side == Side.SELL) p.oxblood else p.verdigris)
         }
@@ -329,5 +345,71 @@ private fun BuilderCard(model: AppModel, c: ChainSnapshot, live: Boolean) {
                 if (live) Note("Opens the usual review on the Trade tab: wings are bought before any leg is sold, each at the best bid/offer, then hold-to-send and your PIN.")
             }
         }
+    }
+}
+
+
+/** OI added or shed today, per strike: from the day's first reading of each contract. */
+@Composable
+private fun OiChangeCard(c: ChainSnapshot) {
+    val p = LocalPalette.current
+    val ch = com.optionslab.engine.options.ChainAnalytics.oiChange(c.rows)
+    LedgerCard(title = "OI change today") {
+        if (ch.none { it.ceOiChange != 0.0 || it.peOiChange != 0.0 }) {
+            Note("No change yet: the baseline is the first reading of the day, so this fills in as the session goes on.")
+            return@LedgerCard
+        }
+        LinePlot(ch.map { it.strike }, listOf(PlotLine(ch.map { it.ceOiChange }, p.verdigris), PlotLine(ch.map { it.peOiChange }, p.oxblood)), markX = c.spot)
+        Text("Calls green, puts red; above zero is OI added. The rule is spot.", style = Type.italic.copy(color = p.inkFaint, fontSize = 12.sp))
+        Spacer(Modifier.height(6.dp))
+        LedgerLine("Call OI added", "%,+.0f".format(ch.sumOf { it.ceOiChange }), p.verdigris)
+        LedgerLine("Put OI added", "%,+.0f".format(ch.sumOf { it.peOiChange }), p.oxblood)
+        ch.maxByOrNull { it.ceOiChange }?.takeIf { it.ceOiChange > 0 }?.let { LedgerLine("Most calls written", fmtG(it.strike), p.verdigris) }
+        ch.maxByOrNull { it.peOiChange }?.takeIf { it.peOiChange > 0 }?.let { LedgerLine("Most puts written", fmtG(it.strike), p.oxblood) }
+    }
+}
+
+/**
+ * The straddle / strangle tracker: a call and a put of the chain's expiry as one
+ * combined premium through the day, and the pair's P&L when both legs are held.
+ */
+@Composable
+private fun StraddleCard(model: AppModel, c: ChainSnapshot, streaming: Boolean) {
+    val p = LocalPalette.current
+    val strikes = c.rows.map { it.strike }
+    val atmIndex = strikes.indexOf(c.atm).takeIf { it >= 0 } ?: (strikes.size / 2)
+    val near = (-3..3).mapNotNull { strikes.getOrNull(atmIndex + it) }
+    var ceK by remember(c.underlying, c.expiry) { mutableStateOf(c.atm ?: strikes.getOrNull(atmIndex) ?: 0.0) }
+    var peK by remember(c.underlying, c.expiry) { mutableStateOf(c.atm ?: strikes.getOrNull(atmIndex) ?: 0.0) }
+    var view by remember { mutableStateOf<AppModel.StraddleView?>(null) }
+    var err by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(c.underlying, c.expiry, ceK, peK, streaming) {
+        view = null
+        while (true) {
+            runCatching { model.straddle(c.underlying, c.expiry, ceK, peK) }
+                .onSuccess { view = it; err = null }.onFailure { err = it.message ?: "could not load the pair" }
+            kotlinx.coroutines.delay(if (streaming) 3_000 else 30_000)
+        }
+    }
+    com.optionslab.app.ui.components.AlertOn(err)
+    LedgerCard(title = if (ceK == peK) "Straddle ${fmtG(ceK)}" else "Strangle ${fmtG(peK)} PE · ${fmtG(ceK)} CE") {
+        ParamTokens("Call strike", near.map { fmtG(it) to (it == ceK) }) { ceK = near[it] }
+        ParamTokens("Put strike", near.map { fmtG(it) to (it == peK) }) { peK = near[it] }
+        val v = view
+        if (v == null) { FullSpinner("Loading the pair"); return@LedgerCard }
+        Row(horizontalArrangement = Arrangement.spacedBy(14.dp), modifier = Modifier.padding(top = 8.dp)) {
+            Stat("Combined", f2(v.now))
+            Stat("CE", f2(v.ceNow))
+            Stat("PE", f2(v.peNow))
+            Stat("From open", (if (v.now - v.open >= 0) "+" else "") + f2(v.now - v.open))
+        }
+        if (v.minutes.size >= 2) {
+            LinePlot(v.minutes.map { it.toDouble() }, listOf(PlotLine(v.combined, p.ink)), Modifier.padding(top = 8.dp))
+            Text("Combined premium through the day" + if (v.streamed) " · live from Zerodha" else " · 1-minute closes", style = Type.italic.copy(color = p.inkFaint, fontSize = 12.sp))
+        }
+        LedgerLine("Day's high · low", "${f2(v.high)} · ${f2(v.low)}")
+        LedgerLine("Opened at", f2(v.open))
+        v.heldPnl?.let { LedgerLine("Your pair's P&L (${v.heldWhere})", "%+,.0f".format(it), if (it >= 0) p.verdigris else p.oxblood) }
+        Note("A seller wants the combined premium to fall; a buyer wants it to rise. Both legs of the same expiry (${c.expiry}).")
     }
 }

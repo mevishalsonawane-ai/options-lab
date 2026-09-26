@@ -35,12 +35,27 @@ class IraAlgoApp : Application() {
         Market.init(this)
         com.optionslab.app.data.Holidays.init(this)
         Broker.init(this)
+        com.optionslab.app.data.StaticIp.init(this)
         com.optionslab.app.data.Paper.init(this)
         com.optionslab.app.data.History.init(this)
         com.optionslab.app.data.Strategies.init(this)
+        com.optionslab.app.data.OrbArms.init(this)
+        com.optionslab.app.data.Protections.init(this)
+        com.optionslab.app.data.TradeBook.init(this)
+        com.optionslab.app.data.Journal.init(this)
         Notifier.createChannels(this)
         ProcessLifecycleOwner.get().lifecycle.addObserver(SessionLock)
         // Keystore work stays off the main thread.
-        Thread { runCatching { Jobs.scheduleAll(this) } }.start()
+        Thread {
+            // First start after a restore: everything restored comes back disarmed and paper only.
+            if (SecurePrefs.getBoolean(com.optionslab.app.data.Backup.DISARM, false)) runCatching {
+                kotlinx.coroutines.runBlocking {
+                    com.optionslab.app.data.Strategies.disarmAll()
+                    com.optionslab.app.data.OrbArms.disarmAll()
+                }
+                SecurePrefs.put(com.optionslab.app.data.Backup.DISARM, null)
+            }
+            runCatching { Jobs.scheduleAll(this) }
+        }.start()
     }
 }

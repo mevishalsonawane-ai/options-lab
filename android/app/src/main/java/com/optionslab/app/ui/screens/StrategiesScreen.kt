@@ -8,7 +8,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.AlertDialog
+import com.optionslab.app.ui.components.AlertDialog
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -59,7 +59,7 @@ import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
-private val secure = DialogProperties(securePolicy = SecureFlagPolicy.SecureOn)
+private val secure get() = DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy)
 private fun p2(x: Double?) = x?.let { String.format(Locale.ENGLISH, "%,.2f", it) } ?: "—"
 
 /**
@@ -93,6 +93,7 @@ fun StrategiesScreen(model: AppModel) {
                 BrassButton("New strategy", Modifier.fillMaxWidth().padding(top = 8.dp)) { editing = blankStrategy() }
             }
         }
+        item { PresetsCard(model) }
         if (list.isEmpty()) item { LedgerCard { Note("No strategies yet.") } }
         list.forEach { e -> item(key = e.def.id) { StrategyCard(model, e, s.live && s.allowRealOrders, onEdit = { editing = e.def }, onLive = { confirmLive = e.def.id }) } }
         if (log.isNotEmpty()) item {
@@ -145,7 +146,7 @@ private fun StrategyCard(model: AppModel, e: Strategies.Entry, liveAllowed: Bool
             LedgerLine("Run", "${r.status.name.lowercase()}${r.stopReason?.let { " · $it" } ?: ""}")
             LedgerLine("P&L", "${rs(r.pnlTotal, true)}  (realised ${rs(r.pnlRealized, true)})", if (r.pnlTotal >= 0) p.verdigris else p.oxblood)
             if (r.lockArmed) LedgerLine("Lock floor", r.lockFloor?.let { rs(it, true) } ?: "armed")
-            r.startError?.let { Text("✕ $it", style = Type.bodySmall.copy(color = p.oxblood)) }
+            com.optionslab.app.ui.components.AlertOn(r.startError)
             r.legs.values.forEach { l ->
                 Rule(Modifier.padding(vertical = 4.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -296,7 +297,7 @@ private fun StrategyEditor(model: AppModel, d: StrategyDef, onClose: () -> Unit)
                         ParamTokens("Days", all.map { it.name.take(3) to (it in days) }) { i -> if (all[i] in days) days.remove(all[i]) else days.add(all[i]) }
                         ParamTokens("Scheduled start", listOf("Paper" to !schedLive, "Live (asks you)" to schedLive)) { schedLive = it == 1 }
                     }
-                    err?.let { Text(it, style = Type.bodySmall.copy(color = p.oxblood), modifier = Modifier.padding(top = 6.dp)) }
+                    com.optionslab.app.ui.components.AlertOn(err, throttle = false)
                 }
             }
         },
@@ -312,6 +313,7 @@ private fun StrategyEditor(model: AppModel, d: StrategyDef, onClose: () -> Unit)
                     scheduler = if (sched) SchedulerConfig(true, days.sortedBy { it.value }, time(entry), time(exit),
                         if (schedLive) RunMode.LIVE else RunMode.SANDBOX) else null,
                 )
+                err = null
                 model.saveStrategy(def) { e -> if (e == null) onClose() else err = e }
             }) { Text("Save") }
         },

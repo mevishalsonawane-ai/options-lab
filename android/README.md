@@ -5,6 +5,18 @@ chains and the harvested partitions ship inside the APK, every backtest and
 health check runs on the device, and the only network it touches is the same
 unauthenticated Upstox candle endpoint the PC harvester uses.
 
+## The app's tabs
+
+| Tab | What is there |
+|---|---|
+| **Home** | Capital, P&L, the BANKNIFTY chart, live orders, the Strategies card (ORB / ORB Fresh arms, imported strategies, the one bot button) |
+| **Chart** | IraAlgo Charts (the PC terminal): every drawing tool, indicators, buy/sell, brackets and price alerts from the chart; live candle from the Zerodha stream in Live mode |
+| **Trade** | The account (paper or Zerodha): positions, orders, trades, GTT, strategies, replay |
+| **P&L** | The P&L calendar, month summary, year view, strategy filter and comparison, charges, journal, CSV export |
+| **Options** | Option chain with OI and PCR, strategy builder and templates, Expiry Put ticket, straddle tracker |
+| **Research** | Trials, health, the IC table, signal lab |
+| **More** | Zerodha, Bot settings, security, alerts, schedules, backup and restore, data and harvest |
+
 ## What it does, mapped to the PC
 
 | PC command | On the phone |

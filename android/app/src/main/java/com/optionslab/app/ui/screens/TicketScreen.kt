@@ -15,7 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.AlertDialog
+import com.optionslab.app.ui.components.AlertDialog
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -82,7 +82,7 @@ fun TicketScreen(model: AppModel) {
         }
         when (val d = draft) {
             is Load.Busy -> item { LedgerCard { FullSpinner(d.label) } }
-            is Load.Failed -> item { LedgerCard(accent = p.amber) { Note(d.why) } }
+            is Load.Failed -> item { com.optionslab.app.ui.components.AlertOn(d.why) }
             is Load.Done -> item {
                 Receipt(d.value.ticket)
                 if (d.value.source.isNotBlank()) Note("Priced from ${d.value.source}.", Modifier.padding(top = 6.dp))
@@ -114,7 +114,7 @@ fun TicketScreen(model: AppModel) {
         var manual by remember { mutableStateOf("") }
         AlertDialog(
             onDismissRequest = { settling = null },
-            properties = DialogProperties(securePolicy = SecureFlagPolicy.SecureOn),
+            properties = DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy),
             title = { Text("Settle $day", style = Type.title) },
             text = {
                 Column {
@@ -131,7 +131,7 @@ fun TicketScreen(model: AppModel) {
     deleting?.let { day ->
         AlertDialog(
             onDismissRequest = { deleting = null },
-            properties = DialogProperties(securePolicy = SecureFlagPolicy.SecureOn),
+            properties = DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy),
             title = { Text("Strike out $day?", style = Type.title) },
             text = { Text("The ticket is removed from the paper ledger. A deleted loss is still a loss you would have taken; this is for mistakes only.", style = Type.bodySmall) },
             confirmButton = { TextButton({ model.deleteTicket(day); deleting = null }) { Text("Strike out") } },

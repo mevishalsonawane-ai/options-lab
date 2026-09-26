@@ -56,7 +56,13 @@ object Market {
 
     private suspend fun upstoxQuote(symbol: String): Quote? {
         val key = Upstox.INDEX_KEYS.getValue(symbol)
-        val bars = Net.intraday(key).filter { it.istDate == today() }
+        var bars = runCatching { Net.intraday(key) }.getOrDefault(emptyList()).filter { it.istDate == today() }
+        // Weekend, holiday, before the open: the last session the market traded, not nothing.
+        if (bars.isEmpty()) {
+            val past = runCatching { ChartFeed.bars(symbol, "1m", null, null) }.getOrDefault(emptyList())
+            val day = past.lastOrNull()?.istDate
+            bars = past.filter { it.istDate == day }
+        }
         if (bars.isEmpty()) return null
         return Quote(symbol, bars.last().close, bars.first().open, bars.maxOf { it.high }, bars.minOf { it.low },
             bars.last().istMinute, bars.map { it.close })
@@ -71,8 +77,12 @@ object Market {
     /** Parsed once and kept in memory; the file is only re-read when it changes. */
     @Volatile private var mem: Pair<Long, Pair<LocalDate, List<Upstox.Contract>>>? = null
 
-    @Synchronized
-    fun cachedContracts(): Pair<LocalDate, List<Upstox.Contract>>? {
+    // Two locks: reading the saved list never waits behind the (minutes-long) master download.
+    private val readLock = Any()
+    private val downloadLock = Any()
+    private val refreshing = java.util.concurrent.atomic.AtomicBoolean(false)
+
+    fun cachedContracts(): Pair<LocalDate, List<Upstox.Contract>>? = synchronized(readLock) {
         val f = contractsFile()
         val stamp = f.lastModified()
         mem?.let { if (it.first == stamp && f.exists()) return it.second }
@@ -92,15 +102,23 @@ object Market {
 
     /** Today's listed options; the master is fetched at most once a day. */
     /** Synchronized so two callers never download the (tens of MB) master at once. */
-    @Synchronized
-    fun contracts(forceRefresh: Boolean = false): List<Upstox.Contract> {
+    fun contracts(forceRefresh: Boolean = false): List<Upstox.Contract> = synchronized(downloadLock) {
         val cached = cachedContracts()
         if (!forceRefresh && cached != null && cached.first == today()) return cached.second
         val fresh = Net.fetchMaster()
         val arr = JSONArray()
         fresh.forEach { arr.put(JSONArray().put(it.underlying).put(it.expiry.toString()).put(it.strike).put(it.right.name).put(it.lotSize).put(it.instrumentKey).put(it.tradingSymbol)) }
-        contractsFile().writeText(JSONObject().put("day", today().toString()).put("c", arr).toString())
+        // Written to a temporary file and moved into place, so a reader never sees half a list.
+        val tmp = File(app.filesDir, "contracts.json.tmp")
+        tmp.writeText(JSONObject().put("day", today().toString()).put("c", arr).toString())
+        synchronized(readLock) { if (!tmp.renameTo(contractsFile())) { contractsFile().writeText(tmp.readText()); tmp.delete() } }
         return fresh
+    }
+
+    /** Refresh the day's list in the background, once at a time. */
+    fun refreshContractsInBackground() {
+        if (!refreshing.compareAndSet(false, true)) return
+        Thread { try { runCatching { contracts() } } finally { refreshing.set(false) } }.start()
     }
 
     /**
@@ -142,7 +160,7 @@ object Market {
         // list (tens of MB) then downloads in the background instead of holding the chain up.
         val saved = cachedContracts()?.second?.filter { it.underlying == underlying }
         val usable = saved?.let { Upstox.contractsToRefresh(it, today()) }?.takeIf { it.isNotEmpty() }
-        if (usable != null && cachedContracts()?.first != today()) Thread { runCatching { contracts() } }.start()
+        if (usable != null && cachedContracts()?.first != today()) refreshContractsInBackground()
         val live = usable ?: Upstox.contractsToRefresh(contracts().filter { it.underlying == underlying }, today())
         if (live.isEmpty()) throw IllegalStateException("no listed $underlying options in the master")
         val expiry = live.minOf { it.expiry }
@@ -181,7 +199,9 @@ object Market {
             if (bars.isEmpty()) throw IllegalStateException("Zerodha returned no index bars for $day; enter the exchange's settlement price by hand")
             return ExpiryPut.settlementPrice(bars.filter { it.istDate == day }.associate { it.istMinute to it.close })
         }
-        val bars = Net.intraday(Upstox.INDEX_KEYS.getValue(underlying)).filter { it.istDate == day }
+        val key = Upstox.INDEX_KEYS.getValue(underlying)
+        // The intraday endpoint only has today's session; an earlier day comes from history.
+        val bars = (if (day == today()) Net.intraday(key) else Net.history(key, day, day)).filter { it.istDate == day }
         return ExpiryPut.settlementPrice(bars.associate { it.istMinute to it.close })
     }
 

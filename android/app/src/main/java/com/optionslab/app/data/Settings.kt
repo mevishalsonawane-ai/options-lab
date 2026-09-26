@@ -56,6 +56,28 @@ data class AppSettings(
     val maxOrdersPerDay: Int = 4,
     val maxLotsPerOrder: Int = 2,
     val maxOrderValue: Double = 500_000.0,
+    // Account-wide guard (every order, paper and live, strategy and manual; exits only stop at the kill switch)
+    val guardKill: Boolean = false,
+    val guardDailyLoss: Double = 2_000.0,
+    val guardDrawdownPct: Double = 10.0,
+    val guardMaxOpen: Int = 3,
+    val guardMaxTrades: Int = 10,
+    val guardMaxValue: Double = 200_000.0,
+    val guardMaxLots: Int = 2,
+    /** Rupees held in one instrument after an order; 0 = off (desktop ACCOUNT_MAX_SYMBOL_EXPOSURE). */
+    val guardMaxExposure: Double = 200_000.0,
+    /** Minute of day; -1 = no cutoff. 14:55 = 20 minutes before the 15:15 square-off, as the desktop. */
+    val guardCutoff: Int = 14 * 60 + 55,
+    // The paper account's own loss, drawdown and order limits: the desktop raised these for its paper
+    // forward test only (two ORB arms count entry, resting stop and exit orders). Live keeps the ones above.
+    val guardPaperTrades: Int = 60,
+    val guardPaperDailyLoss: Double = 6_000.0,
+    val guardPaperDrawdownPct: Double = 30.0,
+    val guardNakedShort: Boolean = true,
+    /** TODO A5: close positions expiring today at 15:05 on expiry day. */
+    val expirySquareOff: Boolean = true,
+    /** ...except the Expiry Put ticket, which is meant to be held to the 15:30 settlement. */
+    val keepExpiryPut: Boolean = true,
     val prepareRealOrder: Boolean = true,
     // appearance
     val theme: String = "system",          // system | light | dark
@@ -65,7 +87,18 @@ data class AppSettings(
 
     val live: Boolean get() = mode == "live"
 
-    fun limits() = com.optionslab.engine.Kite.Limits(maxOrdersPerDay, maxLotsPerOrder, maxOrderValue)
+    /**
+     * TODO A6: one set of limits. The Zerodha order checks use the Bot settings values ("off" = no cap),
+     * so the same numbers apply to paper and live and there is one place to change them.
+     */
+    fun limits() = com.optionslab.engine.Kite.Limits(
+        guardMaxTrades.takeIf { it > 0 } ?: Int.MAX_VALUE,
+        guardMaxLots.takeIf { it > 0 } ?: 1_000,
+        guardMaxValue.takeIf { it > 0 } ?: Double.MAX_VALUE)
+    fun guardLimits(paper: Boolean = false) = com.optionslab.engine.risk.AccountGuard.Limits(guardKill,
+        if (paper) guardPaperDailyLoss else guardDailyLoss, if (paper) guardPaperDrawdownPct else guardDrawdownPct, guardMaxOpen,
+        if (paper) guardPaperTrades else guardMaxTrades, guardMaxValue, guardMaxLots, guardCutoff.takeIf { it >= 0 }, guardNakedShort,
+        maxSymbolExposure = guardMaxExposure)
 
     fun params(): ExpiryPut.Params = ExpiryPut.Params(
         otmPct = otmPct, entryMinute = entryMinute, regime = regime, wingPct = wingPct,
@@ -76,6 +109,8 @@ data class AppSettings(
         fun load(): AppSettings {
             val d = AppSettings()
             val p = SecurePrefs
+            // Saved before the guard matched the desktop (v2): the old untouched defaults move to the desktop's.
+            val old = p.getInt("g.v", 1) < 2
             return AppSettings(
                 otmPct = p.getDouble("s.otm", d.otmPct),
                 entry = p.getString("s.entry", d.entry)!!,
@@ -114,6 +149,14 @@ data class AppSettings(
                 maxOrdersPerDay = p.getInt("k.maxOrders", d.maxOrdersPerDay),
                 maxLotsPerOrder = p.getInt("k.maxLots", d.maxLotsPerOrder),
                 maxOrderValue = p.getDouble("k.maxValue", d.maxOrderValue),
+                guardKill = p.getBoolean("g.kill", d.guardKill), guardDailyLoss = p.getDouble("g.loss", d.guardDailyLoss),
+                guardDrawdownPct = p.getDouble("g.dd", d.guardDrawdownPct), guardMaxOpen = p.getInt("g.open", d.guardMaxOpen),
+                guardMaxTrades = p.getInt("g.trades", d.guardMaxTrades), guardMaxValue = p.getDouble("g.value", d.guardMaxValue).let { if (old && it == 500_000.0) d.guardMaxValue else it },
+                guardMaxLots = p.getInt("g.lots", d.guardMaxLots), guardCutoff = p.getInt("g.cutoff", d.guardCutoff).let { if (old && it == 14 * 60 + 30) d.guardCutoff else it },
+                guardNakedShort = p.getBoolean("g.naked", d.guardNakedShort),
+                guardMaxExposure = p.getDouble("g.expo", d.guardMaxExposure), guardPaperTrades = p.getInt("g.pTrades", d.guardPaperTrades),
+                guardPaperDailyLoss = p.getDouble("g.pLoss", d.guardPaperDailyLoss), guardPaperDrawdownPct = p.getDouble("g.pDd", d.guardPaperDrawdownPct),
+                expirySquareOff = p.getBoolean("g.expSq", d.expirySquareOff), keepExpiryPut = p.getBoolean("g.keepPut", d.keepExpiryPut),
                 prepareRealOrder = p.getBoolean("k.prepare", d.prepareRealOrder),
                 theme = p.getString("ui.theme", d.theme)!!,
                 reduceMotion = p.getBoolean("ui.calm", d.reduceMotion),
@@ -134,7 +177,11 @@ data class AppSettings(
                 "ui.theme" to s.theme, "ui.calm" to s.reduceMotion, "ui.widgetPnl" to s.widgetPnl,
                 "n.pnlLoss" to s.pnlLossAlert, "n.pnlProfit" to s.pnlProfitAlert,
                 "k.mode" to s.mode, "k.allow" to s.allowRealOrders, "k.product" to s.orderProduct, "k.maxOrders" to s.maxOrdersPerDay,
-                "k.maxLots" to s.maxLotsPerOrder, "k.maxValue" to s.maxOrderValue, "k.prepare" to s.prepareRealOrder,
+                "k.maxLots" to s.maxLotsPerOrder, "k.maxValue" to s.maxOrderValue,
+                "g.kill" to s.guardKill, "g.loss" to s.guardDailyLoss, "g.dd" to s.guardDrawdownPct, "g.open" to s.guardMaxOpen,
+                "g.trades" to s.guardMaxTrades, "g.value" to s.guardMaxValue, "g.lots" to s.guardMaxLots, "g.cutoff" to s.guardCutoff,
+                "g.naked" to s.guardNakedShort, "g.expo" to s.guardMaxExposure, "g.pTrades" to s.guardPaperTrades,
+                "g.pLoss" to s.guardPaperDailyLoss, "g.pDd" to s.guardPaperDrawdownPct, "g.v" to 2, "g.expSq" to s.expirySquareOff, "g.keepPut" to s.keepExpiryPut, "k.prepare" to s.prepareRealOrder,
             ))
         }
     }

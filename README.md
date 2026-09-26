@@ -113,7 +113,7 @@ alerts, price alarms and a PIN/biometric-locked encrypted ledger. See
 ```bash
 pip install pandas numpy pyarrow requests pytest
 
-PYTHONPATH=. python -m pytest options_lab/tests/ -q        # 206 tests
+PYTHONPATH=. python -m pytest options_lab/tests/ -q        # 357 tests
 PYTHONPATH=. python -m options_lab.cli expiry-put          # the strategy
 PYTHONPATH=. python -m options_lab.cli ic --underlying NIFTY
 PYTHONPATH=. python -m options_lab.harvest.cli --indices   # nightly collector

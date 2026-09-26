@@ -80,6 +80,11 @@ android {
         abortOnError = false
         checkReleaseBuilds = false
     }
+    testOptions {
+        // JVM unit tests of the app's own logic (no device); Android calls answer defaults.
+        unitTests.isReturnDefaultValues = true
+        unitTests.all { it.useJUnitPlatform() }
+    }
 }
 
 dependencies {
@@ -105,6 +110,9 @@ dependencies {
     implementation("androidx.biometric:biometric:1.1.0")
     implementation("androidx.work:work-runtime-ktx:2.10.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
+    // The Kite live price stream (WebSocket). No logging interceptor: nothing about the connection is ever logged.
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    testImplementation(kotlin("test"))
 }
 
 

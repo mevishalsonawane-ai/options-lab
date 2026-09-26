@@ -82,7 +82,7 @@ fun LockScreen(
     var broken by remember { mutableStateOf(false) }
     val shake = remember { Animatable(0f) }
 
-    // Ask for fingerprint / face as soon as it is allowed (the device check may finish a moment after this screen appears).
+    // Ask for the fingerprint as soon as it is allowed (the device check may finish a moment after this screen appears).
     var asked by remember { mutableStateOf(false) }
     LaunchedEffect(biometricLabel) { if (!setup && biometricLabel != null && !asked) { asked = true; delay(300); onBiometric() } }
 
@@ -119,7 +119,8 @@ fun LockScreen(
                 }
                 return@launch
             }
-            when (val r = onPin(pin.toCharArray())) {
+            // The PIN check is slow on purpose (key stretching): off the screen's thread.
+            when (val r = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { onPin(pin.toCharArray()) }) {
                 PinLock.Result.Ok -> { broken = true; entered = "" }
                 is PinLock.Result.Wrong -> reject(if (r.attemptsLeftBeforeLockout > 0) "Not the right PIN. ${r.attemptsLeftBeforeLockout} before a pause." else "Not the right PIN.")
                 is PinLock.Result.LockedOut -> { lockout = r.secondsLeft; reject("Too many attempts. Wait ${r.secondsLeft} s.") }

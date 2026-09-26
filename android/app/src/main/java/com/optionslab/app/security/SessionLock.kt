@@ -21,7 +21,7 @@ object SessionLock : DefaultLifecycleObserver {
     val locked: StateFlow<Boolean> = _locked
     @Volatile private var lastActive = SystemClock.elapsedRealtime()
 
-    private fun idleLimit(): Int = SecurePrefs.getInt(K_IDLE, DEFAULT_IDLE).coerceAtLeast(30)
+    private fun idleLimit(): Int = SecurePrefs.getInt(K_IDLE, DEFAULT_IDLE).coerceIn(30, 900)
 
     /** Any touch in the app keeps the session alive. */
     fun touch() { lastActive = SystemClock.elapsedRealtime() }

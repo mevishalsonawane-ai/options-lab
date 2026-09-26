@@ -20,15 +20,26 @@ class MainActivity : FragmentActivity() {
     companion object {
         const val EXTRA_TAB = "tab"
         val tabRequests = MutableStateFlow<String?>(null)
+        /** A Zerodha position's "Close…" notification button: open its close popup (review + PIN). */
+        const val EXTRA_CLOSE = "close"
+        val closeRequests = MutableStateFlow<String?>(null)
+        /** A per-install secret the app's own notifications carry; another app's launch intent lacks it. */
+        const val EXTRA_NONCE = "n"
+        fun nonce(): String = com.optionslab.app.security.SecurePrefs.getString("intent.nonce") ?: java.util.UUID.randomUUID().toString()
+            .also { com.optionslab.app.security.SecurePrefs.put("intent.nonce", it) }
+        private fun trusted(i: android.content.Intent?) = i?.getStringExtra(EXTRA_NONCE)?.let { it == nonce() } == true
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        if (!BuildConfig.DEBUG) window.setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE)
+        // Screenshots / recording follow the owner's switch in More -> Security (see security/Capture).
+        com.optionslab.app.security.Capture.apply(this)
         super.onCreate(savedInstanceState)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) setRecentsScreenshotEnabled(false)
         enableEdgeToEdge()
         window.decorView.filterTouchesWhenObscured = true
-        tabRequests.value = intent?.getStringExtra(EXTRA_TAB)
+        if (trusted(intent)) {
+            tabRequests.value = intent?.getStringExtra(EXTRA_TAB)
+            closeRequests.value = intent?.getStringExtra(EXTRA_CLOSE)
+        }
         setContent { Root(this) }
     }
 
@@ -41,6 +52,8 @@ class MainActivity : FragmentActivity() {
     override fun onNewIntent(intent: android.content.Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        if (!trusted(intent)) return
         tabRequests.value = intent.getStringExtra(EXTRA_TAB)
+        intent.getStringExtra(EXTRA_CLOSE)?.let { closeRequests.value = it }
     }
 }

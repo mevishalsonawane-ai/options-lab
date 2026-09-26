@@ -15,7 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
-import androidx.compose.material3.AlertDialog
+import com.optionslab.app.ui.components.AlertDialog
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -58,7 +58,10 @@ import java.util.Locale
 fun StrategyArmCard(model: AppModel, onManage: () -> Unit) {
     val p = LocalPalette.current
     val s by model.settings.collectAsState()
-    val list by model.strategies.collectAsState()
+    val all by model.strategies.collectAsState()
+    // Imported copies of ORB / ORB Fresh are plain timed baskets; the built-in arms above replace them (TODO A4).
+    val list = all.filter { !com.optionslab.app.data.Strategies.needsBreakoutRules(it.def) }
+    val replaced = all.size - list.size
     var importing by remember { mutableStateOf(false) }
     val auto by model.strategyAuto.collectAsState()
     val pending by model.strategyPending.collectAsState()
@@ -66,6 +69,8 @@ fun StrategyArmCard(model: AppModel, onManage: () -> Unit) {
     var choosing by remember { mutableStateOf<com.optionslab.engine.strategy.StrategyDef?>(null) }
     var reauthArm by remember { mutableStateOf<Pair<Long, Boolean>?>(null) }
     var reauthApprove by remember { mutableStateOf<Long?>(null) }
+    val botStopped by model.botStopped.collectAsState()
+    var confirmBot by remember { mutableStateOf(false) }
 
     LedgerCard {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -73,11 +78,22 @@ fun StrategyArmCard(model: AppModel, onManage: () -> Unit) {
             Text("Import from desktop", style = Type.bodySmall.copy(color = p.ink, fontWeight = FontWeight.SemiBold),
                 modifier = Modifier.clickable { importing = true }.padding(4.dp))
         }
-        if (list.isEmpty()) {
-            Note("No strategies on this phone yet. Import ORB and ORB Fresh (or any strategy) from the desktop app, then arm the ones you want.",
-                Modifier.padding(top = 6.dp))
+        // One control for the whole bot: stop it for today, start it again, or clear the kill switch.
+        val (botState, botAction, botTone) = when {
+            s.guardKill -> Triple("Kill switch ON: all orders blocked", "Clear kill switch", p.oxblood)
+            botStopped -> Triple("Bot stopped for today", "Start bot", p.verdigris)
+            else -> Triple("Bot running: armed strategies start on time", "Stop bot for today", p.oxblood)
         }
+        Row(Modifier.fillMaxWidth().padding(top = 8.dp).background(botTone.copy(alpha = 0.10f), RoundedCornerShape(12.dp)).padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically) {
+            Text(botState, style = Type.bodySmall.copy(color = p.ink, fontWeight = FontWeight.SemiBold), modifier = Modifier.weight(1f))
+            BrassButton(botAction, tone = botTone) { confirmBot = true }
+        }
+        OrbRows(model)
+        if (replaced > 0) Note("$replaced imported ORB strateg${if (replaced == 1) "y is" else "ies are"} hidden here: the built-in ORB arms above run the real breakout rules. They stay in Trade → Strategies, blocked.",
+            Modifier.padding(bottom = 6.dp))
         list.forEachIndexed { i, e ->
+            if (i == 0) Rule()
             val d = e.def
             val sch = d.scheduler
             val armed = sch?.enabled == true
@@ -88,7 +104,9 @@ fun StrategyArmCard(model: AppModel, onManage: () -> Unit) {
                         Text(d.name, style = Type.body.copy(color = p.ink, fontSize = 15.sp, fontWeight = FontWeight.SemiBold), maxLines = 1)
                         Spacer(Modifier.width(8.dp))
                         val how = if (auto[d.id] ?: (sch?.defaultMode != RunMode.LIVE)) "AUTO" else "APPROVE"
+                        val blocked = com.optionslab.app.data.Strategies.needsBreakoutRules(d)
                         val (label, color) = when {
+                            blocked -> "BLOCKED · needs breakout rules" to p.amber
                             e.running -> "RUNNING" to p.verdigris
                             armed && sch?.defaultMode == RunMode.LIVE -> "ARMED · LIVE · $how" to p.oxblood
                             armed -> "ARMED · PAPER · $how" to p.verdigris
@@ -105,8 +123,12 @@ fun StrategyArmCard(model: AppModel, onManage: () -> Unit) {
                     }
                     Text(listOfNotNull(d.underlying, start?.let { st -> "$st–${stop ?: "close"}" }, days, "${d.legs.size} leg${if (d.legs.size == 1) "" else "s"}").joinToString(" · "),
                         style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp), maxLines = 1)
+                    if (com.optionslab.app.data.Strategies.needsBreakoutRules(d))
+                        Text("Would enter at the start time without a breakout check, so it cannot be armed until the ORB rules are added.",
+                            style = Type.bodySmall.copy(color = p.amber, fontSize = 12.sp))
                 }
                 Switch(
+                    enabled = !com.optionslab.app.data.Strategies.needsBreakoutRules(d),
                     checked = armed,
                     onCheckedChange = { on -> if (on) choosing = d else model.armStrategy(d.id, false) },
                     colors = SwitchDefaults.colors(checkedTrackColor = if (s.live) p.oxblood else p.verdigris, checkedThumbColor = p.card),
@@ -139,6 +161,7 @@ fun StrategyArmCard(model: AppModel, onManage: () -> Unit) {
     reauthArm?.let { (id, automatic) -> Reauth(model, onOk = { reauthArm = null; model.armStrategy(id, true, automatic) }, onCancel = { reauthArm = null }) }
     reauthApprove?.let { id -> Reauth(model, onOk = { reauthApprove = null; model.approveStrategy(id) }, onCancel = { reauthApprove = null }) }
     if (importing) ImportDialog(model) { importing = false }
+    if (confirmBot) BotDialog(model, killOn = s.guardKill, stopped = botStopped, anyRunning = list.any { it.running }) { confirmBot = false }
 }
 
 /** The desktop app's local API lists strategies and returns each one in full; this is the command that collects them. */
@@ -159,7 +182,7 @@ private fun ImportDialog(model: AppModel, onClose: () -> Unit) {
     }
     AlertDialog(
         onDismissRequest = onClose,
-        properties = DialogProperties(securePolicy = SecureFlagPolicy.SecureOn),
+        properties = DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy),
         title = { Text("Import from desktop", style = Type.title) },
         text = {
             Column(Modifier.heightIn(max = 460.dp).verticalScroll(rememberScrollState())) {
@@ -187,7 +210,7 @@ private fun ApprovalChoice(name: String, live: Boolean, onPick: (Boolean) -> Uni
     val p = LocalPalette.current
     AlertDialog(
         onDismissRequest = onCancel,
-        properties = DialogProperties(securePolicy = SecureFlagPolicy.SecureOn),
+        properties = DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy),
         title = { Text("Arm $name${if (live) " (live)" else " (paper)"}", style = Type.title) },
         text = {
             Column {
@@ -210,4 +233,42 @@ private fun ChoiceRow(title: String, detail: String, onClick: () -> Unit) {
         Text(title, style = Type.body.copy(color = p.ink, fontWeight = FontWeight.SemiBold))
         Text(detail, style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp))
     }
+}
+
+/** The confirmation behind Home's single bot button. */
+@Composable
+private fun BotDialog(model: AppModel, killOn: Boolean, stopped: Boolean, anyRunning: Boolean, onClose: () -> Unit) {
+    val p = LocalPalette.current
+    var alsoStop by remember { mutableStateOf(false) }
+    AlertDialog(
+        onDismissRequest = onClose,
+        properties = DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy),
+        title = { Text(when { killOn -> "Clear the kill switch?"; stopped -> "Start the bot?"; else -> "Stop the bot for today?" }, style = Type.title) },
+        text = {
+            Column {
+                Text(when {
+                    killOn -> "Orders are allowed again, within your Bot settings limits. Armed strategies start at their times" +
+                        if (stopped) " once the bot is started too." else "."
+                    stopped -> "Armed strategies start at their scheduled times again today."
+                    else -> "No armed strategy starts for the rest of today and waiting approvals are dropped. " +
+                        "Open ORB positions are closed now (as on the desktop). Tomorrow the bot runs as usual."
+                }, style = Type.bodySmall)
+                if (!killOn && !stopped && anyRunning) Row(Modifier.padding(top = 10.dp).clickable { alsoStop = !alsoStop }, verticalAlignment = Alignment.CenterVertically) {
+                    androidx.compose.material3.Checkbox(alsoStop, { alsoStop = it })
+                    Text("Also stop the strategies running now (their positions are closed)", style = Type.bodySmall.copy(color = p.ink))
+                }
+            }
+        },
+        confirmButton = {
+            TextButton({
+                when {
+                    killOn -> model.update { it.copy(guardKill = false) }
+                    stopped -> model.startBotAgain()
+                    else -> model.stopBotForToday(alsoStop)
+                }
+                onClose()
+            }) { Text(when { killOn -> "Clear"; stopped -> "Start"; else -> "Stop for today" }, color = if (killOn || stopped) p.verdigris else p.oxblood) }
+        },
+        dismissButton = { TextButton(onClose) { Text("Cancel") } },
+    )
 }

@@ -76,12 +76,17 @@ fun OptionOrderSheet(model: AppModel, pick: ChainPick, initialBuy: Boolean = tru
     var limit by remember { mutableStateOf(initialLimit != null) }
     var price by remember { mutableStateOf((initialLimit ?: pick.ltp)?.let { String.format(Locale.ENGLISH, "%.2f", it) } ?: "") }
     var product by remember { mutableStateOf(s.orderProduct.takeIf { it == "MIS" } ?: "NRML") }
+    // The bracket: stop / trailing distance / target, set on the position as soon as the order fills.
+    var bracket by remember { mutableStateOf(false) }
+    var bStop by remember { mutableStateOf("") }
+    var bTrail by remember { mutableStateOf("") }
+    var bTarget by remember { mutableStateOf("") }
     val side = if (buy) p.verdigris else p.oxblood
     val qty = lots * pick.lotSize
     val px = if (limit) price.toDoubleOrNull() else pick.ltp
     val title = "${pick.underlying} ${pick.expiry.format(DateTimeFormatter.ofPattern("d MMM", Locale.ENGLISH)).uppercase()} ${fmtG(pick.strike)} ${pick.right.name}"
 
-    Dialog(onDismissRequest = onClose, properties = DialogProperties(securePolicy = SecureFlagPolicy.SecureOn, usePlatformDefaultWidth = false)) {
+    Dialog(onDismissRequest = onClose, properties = DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy, usePlatformDefaultWidth = false)) {
         Box(Modifier.fillMaxSize().clickable(onClick = onClose), contentAlignment = Alignment.BottomCenter) {
             Column(
                 Modifier.fillMaxWidth()
@@ -141,6 +146,16 @@ fun OptionOrderSheet(model: AppModel, pick: ChainPick, initialBuy: Boolean = tru
                 }
                 if (limit) OutlinedTextField(price, { price = it.filter { c -> c.isDigit() || c == '.' }.take(10) }, label = { Text("Limit price") },
                     singleLine = true, modifier = Modifier.fillMaxWidth().padding(top = 8.dp), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
+                Spacer(Modifier.height(8.dp))
+                Row(Modifier.fillMaxWidth().clickable { bracket = !bracket }.padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text((if (bracket) "▾ " else "▸ ") + "Bracket: stop · trail · target", style = Type.bodySmall.copy(color = p.ink, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold))
+                }
+                if (bracket) {
+                    PriceField(bStop, { bStop = it }, "Stop price")
+                    PriceField(bTrail, { bTrail = it }, "…or trail by (points)")
+                    PriceField(bTarget, { bTarget = it }, "Target price")
+                    Note("Set on the position once this order fills: the stop as an SL-M exit, the target as a LIMIT exit; one cancels the other. A trailing stop only tightens.")
+                }
                 Spacer(Modifier.height(12.dp))
                 Row {
                     Text("Approx. value", style = Type.bodySmall.copy(color = p.inkSoft), modifier = Modifier.weight(1f))
@@ -148,18 +163,22 @@ fun OptionOrderSheet(model: AppModel, pick: ChainPick, initialBuy: Boolean = tru
                 }
               }
                 Spacer(Modifier.height(12.dp))
-                val ok = !limit || price.toDoubleOrNull()?.let { it > 0 } == true
+                val protect = com.optionslab.app.ui.ProtectSpec(bStop.toDoubleOrNull(), bTrail.toDoubleOrNull(), bTarget.toDoubleOrNull()).takeIf { bracket && it.any }
+                // A bracket's levels must sit on the right sides of the entry.
+                val bracketProblem = protect?.let { pr -> px?.let { e -> com.optionslab.engine.risk.Protection.validate(if (buy) 1 else -1, e, pr.stop, pr.trail, pr.target) } }
+                com.optionslab.app.ui.components.AlertOn(bracketProblem)
+                val ok = (!limit || price.toDoubleOrNull()?.let { it > 0 } == true) && bracketProblem == null
                 if (s.live) {
                     BrassButton("Review ${if (buy) "buy" else "sell"} order", Modifier.fillMaxWidth(), enabled = ok, tone = side) {
                         model.planManual(pick.underlying, pick.expiry, pick.strike, pick.right,
-                            if (buy) com.optionslab.engine.Kite.Side.BUY else com.optionslab.engine.Kite.Side.SELL, lots, product, if (limit) price.toDoubleOrNull() else null)
+                            if (buy) com.optionslab.engine.Kite.Side.BUY else com.optionslab.engine.Kite.Side.SELL, lots, product, if (limit) price.toDoubleOrNull() else null, protect)
                         onClose()
                     }
                     Note("Live: Zerodha. The order opens for review; it is sent only after you hold the button and confirm with your PIN or fingerprint.")
                 } else {
                     BrassButton("${if (buy) "Buy" else "Sell"} (paper)", Modifier.fillMaxWidth(), enabled = ok, tone = side) {
                         model.paperPlace(pick.underlying, pick.expiry, pick.strike, pick.right, if (buy) "BUY" else "SELL", lots,
-                            if (limit) "LIMIT" else "MARKET", product, if (limit) price.toDoubleOrNull() else null, null)
+                            if (limit) "LIMIT" else "MARKET", product, if (limit) price.toDoubleOrNull() else null, null, protect)
                         onClose()
                     }
                     Note("Paper: simulated in your paper account. Nothing reaches Zerodha.")

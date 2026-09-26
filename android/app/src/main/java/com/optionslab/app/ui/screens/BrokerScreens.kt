@@ -31,7 +31,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.AlertDialog
+import com.optionslab.app.ui.components.AlertDialog
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -43,6 +43,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -84,7 +85,7 @@ import com.optionslab.engine.Right
 import kotlinx.coroutines.launch
 import java.time.format.DateTimeFormatter
 
-private val secureDialog = DialogProperties(securePolicy = SecureFlagPolicy.SecureOn)
+private val secureDialog get() = DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy)
 
 // ---- the Zerodha login page ------------------------------------------------------------
 
@@ -166,8 +167,8 @@ fun KiteLoginPage(model: AppModel) {
 }
 
 /**
- * Before each Zerodha login: the API secret is sealed with the app PIN, so the
- * PIN (not a fingerprint) opens it for this one login.
+ * Before each Zerodha login: the API secret is opened by the fingerprint (its own
+ * hardware-bound copy) when that is set up, otherwise by the app PIN, for this one login.
  */
 @Composable
 fun LoginPinDialog(model: AppModel) {
@@ -175,6 +176,23 @@ fun LoginPinDialog(model: AppModel) {
     var err by remember { mutableStateOf<String?>(null) }
     var checking by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+    val s by model.settings.collectAsState()
+    val findings by model.integrity.collectAsState()
+    val activity = LocalContext.current as? FragmentActivity
+    val blob = remember { Broker.bioSealedSecret }
+    val bio = s.biometric && activity != null && blob != null && !(findings.isNotEmpty() && com.optionslab.app.security.Integrity.compromised(findings))
+    var usePin by remember { mutableStateOf(!bio) }
+    LaunchedEffect(usePin) {
+        if (!usePin && activity != null && blob != null) BiometricGate.openWithFingerprint(activity, blob) { secret, why ->
+            when {
+                secret != null -> model.loginWithSecret(secret)
+                why == "invalid" -> { Broker.dropBioSealed(); err = "A fingerprint was added or removed on this phone, so the fingerprint copy of the secret was cleared. Use your PIN (or set up the keys again)."; usePin = true }
+                why != null -> { err = "Fingerprint: $why"; usePin = true }
+                else -> usePin = true
+            }
+        }
+    }
+    if (!usePin) return
     AlertDialog(
         onDismissRequest = { if (!checking) model.askLoginPin.value = false }, properties = secureDialog,
         title = { Text("Log in to Zerodha", style = Type.title) },
@@ -183,13 +201,13 @@ fun LoginPinDialog(model: AppModel) {
                 Text("Enter your app PIN. It unseals the API secret for this login only.", style = Type.bodySmall)
                 OutlinedTextField(pin, { pin = it.filter(Char::isDigit).take(12) }, singleLine = true, label = { Text("PIN") },
                     visualTransformation = PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword))
-                err?.let { Text(it, style = Type.italic.copy(color = LocalPalette.current.oxblood)) }
+                com.optionslab.app.ui.components.AlertOn(err, throttle = false)
             }
         },
         // The PIN check and unsealing are slow on purpose (key stretching): off the screen's thread, as in CredentialsForm.
         confirmButton = {
             TextButton({
-                val pn = pin; pin = ""; checking = true
+                val pn = pin; pin = ""; checking = true; err = null
                 scope.launch {
                     err = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { model.unlockForLogin(pn) }
                     checking = false
@@ -203,43 +221,61 @@ fun LoginPinDialog(model: AppModel) {
 // ---- confirming it is you ----------------------------------------------------------------
 
 /**
- * A fresh proof of identity before a real order: fingerprint/face when it is
+ * A fresh proof of identity before a real order: the fingerprint when it is
  * enabled and strong, the PIN otherwise. Being unlocked is not enough - the
  * phone may have been handed over unlocked.
  */
 @Composable
-fun Reauth(model: AppModel, onOk: () -> Unit, onCancel: () -> Unit) {
+fun Reauth(model: AppModel, onOk: () -> Unit, onCancel: () -> Unit, pinOnly: Boolean = false, why: String = "Enter your app PIN to send this order to Zerodha.") {
     val s by model.settings.collectAsState()
     val activity = LocalContext.current as? FragmentActivity
-    var usePin by remember { mutableStateOf(!(s.biometric && activity != null)) }
+    // A phone that failed the security check can fake a biometric callback: the PIN only, there.
+    val findings by model.integrity.collectAsState()
+    val compromised = findings.isNotEmpty() && com.optionslab.app.security.Integrity.compromised(findings)
+    var usePin by remember { mutableStateOf(pinOnly || !(s.biometric && activity != null && !compromised)) }
     LaunchedEffect(usePin) {
-        if (!usePin && activity != null) BiometricGate.authenticate(activity, allowWeakFace = false) { out ->
-            if (out == BiometricGate.Outcome.Success) onOk() else usePin = true
+        // Face unlock counts here too when the owner accepted it (More → Security); otherwise the fingerprint key.
+        if (!usePin && activity != null) BiometricGate.authenticate(activity, allowWeakFace = s.allowWeakFace) { out ->
+            when (out) {
+                BiometricGate.Outcome.Success -> onOk()
+                is BiometricGate.Outcome.Failed -> { com.optionslab.app.work.Alerts.error("Fingerprint: ${out.why}. Use your PIN."); usePin = true }
+                is BiometricGate.Outcome.Invalidated -> { com.optionslab.app.work.Alerts.error(out.why); model.update { it.copy(biometric = false) }; usePin = true }
+                BiometricGate.Outcome.UsePin -> usePin = true
+            }
         }
     }
     if (usePin) {
         var pin by remember { mutableStateOf("") }
         var err by remember { mutableStateOf<String?>(null) }
+        var checking by remember { mutableStateOf(false) }
+        val pinScope = rememberCoroutineScope()
         AlertDialog(
             onDismissRequest = onCancel, properties = secureDialog,
             title = { Text("Confirm it is you", style = Type.title) },
             text = {
                 Column {
-                    Text("Enter your app PIN to send this order to Zerodha.", style = Type.bodySmall)
+                    Text(why, style = Type.bodySmall)
                     OutlinedTextField(pin, { pin = it.filter(Char::isDigit).take(12) }, singleLine = true, label = { Text("PIN") },
                         visualTransformation = PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword))
-                    err?.let { Text(it, style = Type.italic.copy(color = LocalPalette.current.oxblood)) }
+                    com.optionslab.app.ui.components.AlertOn(err, throttle = false)
                 }
             },
             confirmButton = {
+                // The PIN check is slow on purpose (key stretching): off the screen's thread.
                 TextButton({
-                    when (val r = PinLock.verify(pin.toCharArray(), s.wipeOnExhaustion)) {
-                        PinLock.Result.Ok -> onOk()
-                        is PinLock.Result.LockedOut -> err = "Locked for ${r.secondsLeft} s."
-                        PinLock.Result.Wiped -> { onCancel(); com.optionslab.app.ui.eraseEverything() }
-                        else -> { err = "Not the right PIN."; pin = "" }
+                    checking = true; err = null
+                    val typed = pin.toCharArray()
+                    pinScope.launch {
+                        val r = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { PinLock.verify(typed, s.wipeOnExhaustion) }
+                        checking = false
+                        when (r) {
+                            PinLock.Result.Ok -> onOk()
+                            is PinLock.Result.LockedOut -> err = "Locked for ${r.secondsLeft} s."
+                            PinLock.Result.Wiped -> { onCancel(); com.optionslab.app.ui.eraseEverything() }
+                            else -> { err = "Not the right PIN."; pin = "" }
+                        }
                     }
-                }) { Text("Confirm") }
+                }, enabled = !checking) { Text(if (checking) "Checking…" else "Confirm") }
             },
             dismissButton = { TextButton(onCancel) { Text("Cancel") } },
         )
@@ -291,13 +327,16 @@ fun OrderReviewDialog(model: AppModel) {
     if (plan == Load.Idle) return
     androidx.compose.ui.window.Dialog(
         onDismissRequest = { if (sending !is Load.Busy) model.dismissPlan() },
-        properties = DialogProperties(securePolicy = SecureFlagPolicy.SecureOn, usePlatformDefaultWidth = false),
+        properties = DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy, usePlatformDefaultWidth = false),
     ) {
         Box(
             Modifier.fillMaxWidth(0.94f).background(p.paper, RoundedCornerShape(20.dp))
                 .padding(10.dp),
         ) {
-            Column(Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState())) { OrderReviewBody(model) }
+            Column(Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState())) {
+                com.optionslab.app.ui.components.InlineAlerts()
+                OrderReviewBody(model)
+            }
         }
     }
 }
@@ -314,10 +353,8 @@ private fun OrderReviewBody(model: AppModel) {
     when (val pl = plan) {
         Load.Idle -> Unit
         is Load.Busy -> LedgerCard { FullSpinner(pl.label) }
-        is Load.Failed -> LedgerCard(accent = p.oxblood) {
-            Note(pl.why)
-            BrassButton("Close", tone = p.inkFaint) { model.dismissPlan() }
-        }
+        // The reason shows in the red banner; the review closes.
+        is Load.Failed -> { com.optionslab.app.ui.components.AlertOn(pl.why); LaunchedEffect(pl) { model.dismissPlan() } }
         is Load.Done -> {
             PlanCard(pl.value, s.allowRealOrders && s.live, sending, onPrice = model::setLegPrice, onSend = { confirming = true }, onClose = model::dismissPlan)
             st?.takeIf { it.plan == pl.value }?.let { stk -> StuckCard(stk) { stuckAction = it } }
@@ -369,14 +406,14 @@ private fun PlanCard(
             OutlinedTextField(text, { t -> text = t.filter { it.isDigit() || it == '.' }; text.toDoubleOrNull()?.let { onPrice(i, it) } },
                 label = { Text("Limit price") }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 modifier = Modifier.fillMaxWidth())
-            plan.refusals.getOrNull(i)?.forEach { Text("✕ $it", style = Type.bodySmall.copy(color = p.oxblood)) }
+            com.optionslab.app.ui.components.AlertOn(plan.refusals.getOrNull(i)?.takeIf { it.isNotEmpty() }?.joinToString(" "))
         }
         plan.margin?.let { m ->
             Rule(Modifier.padding(vertical = 6.dp))
             LedgerLine("Margin needed (with hedge benefit)", rs(m.required), if (m.short) p.oxblood else p.ink)
             LedgerLine("Available", rs(m.available), if (m.short) p.oxblood else p.verdigris)
             if (m.charges > 0) LedgerLine("Charges, estimated", rs(m.charges))
-            if (m.short) Text("✕ Short of margin by ${rs(m.required - m.available)}: not sendable.", style = Type.bodySmall.copy(color = p.oxblood))
+            com.optionslab.app.ui.components.AlertOn(if (m.short) "Short of margin by ${rs(m.required - m.available)}: not sendable." else null)
         }
         plan.marginNote?.let { Note(it) }
         Spacer(Modifier.height(8.dp))
@@ -387,7 +424,7 @@ private fun PlanCard(
         Spacer(Modifier.height(8.dp))
         when (sending) {
             is Load.Busy -> FullSpinner(sending.label)
-            is Load.Failed -> Text(sending.why, style = Type.body.copy(color = p.oxblood))
+            is Load.Failed -> com.optionslab.app.ui.components.AlertOn(sending.why)
             is Load.Done -> sending.value.forEach { f -> LedgerLine(f.orderId.takeLast(8), "${f.status} ${f.filled} @ ${"%.2f".format(f.avgPrice)}", if (f.status == "COMPLETE") p.verdigris else p.oxblood) }
             Load.Idle -> {
                 if (!allowed) Note("This is Paper mode. To send real orders, tap the PAPER TRADING badge at the top and switch to Live.")
@@ -396,6 +433,103 @@ private fun PlanCard(
         }
         Spacer(Modifier.height(8.dp))
         BrassButton("Close", Modifier.fillMaxWidth(), tone = p.inkFaint, onClick = onClose)
+    }
+}
+
+// ---- static IP (SEBI) --------------------------------------------------------------------------
+
+/**
+ * SEBI requires API orders to come from an IP registered with Zerodha. This card shows
+ * whether the phone is on that IP right now, keeps the registered IP (new live positions
+ * are refused from any other), and walks through setting up the relay and the VPN.
+ */
+@Composable
+private fun StaticIpCard(model: AppModel) {
+    val p = LocalPalette.current
+    val ctx = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current
+    var status by remember { mutableStateOf<com.optionslab.app.data.StaticIp.Status?>(null) }
+    var checking by remember { mutableStateOf(false) }
+    var ipText by remember { mutableStateOf(com.optionslab.app.data.StaticIp.registered.orEmpty()) }
+    var guide by rememberSaveable { mutableStateOf(com.optionslab.app.data.StaticIp.registered == null) }
+    fun check() { checking = true; scope.launch { status = com.optionslab.app.data.StaticIp.status(force = true); checking = false } }
+    LaunchedEffect(Unit) { check() }
+    fun open(url: String) = runCatching {
+        ctx.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url)).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+    }
+    @Composable fun link(label: String, url: String) = Text("↗  $label", style = Type.body.copy(color = p.verdigris,
+        textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold),
+        modifier = Modifier.fillMaxWidth().clickable { open(url) }.padding(vertical = 6.dp))
+    @Composable fun step(n: String, title: String, body: String) = Column(Modifier.padding(top = 10.dp)) {
+        Text("$n. $title", style = Type.body.copy(color = p.ink, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold))
+        Text(body, style = Type.bodySmall.copy(color = p.inkSoft))
+    }
+    val st = status
+    val tone = when { st == null -> p.inkSoft; st.registered == null -> p.amber; st.matches -> p.verdigris; else -> p.oxblood }
+    LedgerCard(title = "Static IP (needed for live orders)", accent = if (st != null && st.registered != null && !st.matches) p.oxblood else null) {
+        Text(when {
+            st == null -> "Checking…"
+            st.registered == null -> "Not set up yet. SEBI requires API orders to come from an IP you have registered with Zerodha."
+            st.current == null -> "Could not read this phone's IP just now."
+            st.matches -> "✓ This phone is on your registered IP ${st.registered}. Live orders can go."
+            else -> "✗ This phone is on ${st.current}, not your registered ${st.registered}. New live positions are refused until the VPN is on (exits still go)."
+        }, style = Type.body.copy(color = tone))
+        st?.let { LedgerLine("VPN", if (it.vpn) "on" else "off", if (it.vpn) p.verdigris else p.inkSoft) }
+        st?.current?.let { LedgerLine("This phone's IP now", it) }
+        androidx.compose.material3.OutlinedTextField(ipText, { ipText = it.filter { c -> c.isDigit() || c == '.' }.take(15) },
+            label = { Text("Your registered static IP (from your VPN server)") }, singleLine = true, modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
+        Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            BrassButton("Save IP", Modifier.weight(1f)) {
+                when {
+                    ipText.isBlank() -> { com.optionslab.app.data.StaticIp.registered = null; model.say("Static IP cleared: orders are no longer checked against it."); check() }
+                    !com.optionslab.app.data.StaticIp.valid(ipText) -> com.optionslab.app.work.Alerts.error("That is not an IP address like 13.235.10.20.")
+                    else -> { com.optionslab.app.data.StaticIp.registered = ipText.trim(); com.optionslab.app.work.Alerts.success("Static IP saved."); check() }
+                }
+            }
+            BrassButton(if (checking) "Checking…" else "Check now", Modifier.weight(1f), tone = p.inkSoft, enabled = !checking) { check() }
+        }
+        Text(if (guide) "Hide the setup steps ▲" else "How to set up a static IP and the VPN ▼", style = Type.label.copy(color = p.ink, fontSize = 14.sp),
+            modifier = Modifier.padding(top = 12.dp).clickable { guide = !guide }.padding(vertical = 4.dp))
+        if (guide) {
+            Note("Why: a phone on mobile data or home Wi-Fi has an IP that keeps changing, so Zerodha would reject its orders. " +
+                "You rent a tiny server with a fixed IP and send the phone's traffic through it with a VPN (WireGuard). " +
+                "The server only forwards encrypted traffic: it never sees your keys, orders or passwords. Setup takes about 20 minutes, once.")
+            step("1", "Rent a small server with a static IP",
+                "Any provider with a fixed public IPv4 in India (Mumbai or Bangalore region), the smallest plan, Ubuntu 22.04 or 24.04. " +
+                    "In its firewall allow UDP port 51820. Note the server's public IP.")
+            link("Oracle Cloud Always Free (₹0: free VM with a reserved IP, Mumbai / Hyderabad)", "https://www.oracle.com/cloud/free/")
+            Note("Already have home broadband with a static IP (many Jio Fiber / Airtel Xstream plans sell one as an add-on)? Run the same relay on an always-on home PC or router instead and register that IP.")
+            link("AWS Lightsail (Mumbai)", "https://lightsail.aws.amazon.com/")
+            link("DigitalOcean (Bangalore)", "https://www.digitalocean.com/products/droplets")
+            link("Vultr (Mumbai / Bangalore)", "https://www.vultr.com/products/cloud-compute/")
+            step("2", "Install the VPN relay on it (one command)",
+                "From a computer, copy android/tools/wg-relay-setup.sh from the IraAlgo code to the server and run it. It installs WireGuard and prints the IP to register and a QR code for the phone.")
+            val cmd = "sudo bash wg-relay-setup.sh"
+            Row(
+                Modifier.fillMaxWidth().padding(vertical = 6.dp).background(p.chip, RoundedCornerShape(10.dp)).padding(horizontal = 12.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(cmd, style = Type.figure.copy(color = p.ink, fontSize = 13.sp), modifier = Modifier.weight(1f))
+                Text("Copy", style = Type.label.copy(color = p.ink, fontSize = 14.sp),
+                    modifier = Modifier.clickable { clipboard.setText(androidx.compose.ui.text.AnnotatedString(cmd)); model.say("Command copied") }.padding(start = 12.dp))
+            }
+            link("Full guide (static-ip-relay.md)", "https://github.com/mevishalsonawane-ai/options-lab/blob/main/android/docs/static-ip-relay.md")
+            step("3", "Register that IP with Zerodha",
+                "On the Kite developer site open your app and enter the server's IP in its static IP / IP whitelist setting, exactly as the script printed it.")
+            link("Open My apps on developers.kite.trade", "https://developers.kite.trade/apps")
+            step("4", "Install WireGuard on this phone and scan the QR code",
+                "Install the official WireGuard app, tap +, choose Scan from QR code, scan the code the script printed, and switch the tunnel on.")
+            link("WireGuard on the Play Store", "https://play.google.com/store/apps/details?id=com.wireguard.android")
+            step("5", "Keep the VPN always on",
+                "In Android Settings → Network → VPN → WireGuard (gear icon), turn on Always-on VPN and Block connections without VPN, so no order ever leaves outside the tunnel.")
+            BrassButton("Open the phone's VPN settings", Modifier.fillMaxWidth().padding(top = 6.dp), tone = p.inkSoft) {
+                runCatching { ctx.startActivity(android.content.Intent("android.settings.VPN_SETTINGS").addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
+            }
+            step("6", "Enter the IP here and check",
+                "Type the server's IP in the box above, tap Save IP, then Check now: it must say ✓. If it says ✗, the VPN is off or connected to a different server.")
+        }
     }
 }
 
@@ -411,6 +545,7 @@ fun BrokerPage(model: AppModel) {
     LaunchedEffect(Unit) { model.refreshBroker(); if (Broker.loggedIn) model.loadAccount() }
     Page {
         item { PageTitle("Zerodha", "Your broker, as the PC trading app uses it: Kite Connect") }
+        item { StaticIpCard(model) }
         item {
             LedgerCard(title = "Connection") {
                 LedgerLine("API key", b.maskedKey)
@@ -447,13 +582,9 @@ fun BrokerPage(model: AppModel) {
                 }
                 ParamTokens("Product", listOf("NRML" to (s.orderProduct == "NRML"), "MIS" to (s.orderProduct == "MIS"))) { i -> model.update { it.copy(orderProduct = if (i == 0) "NRML" else "MIS") } }
                 if (s.orderProduct == "MIS") Note("MIS positions are squared off by Zerodha before the close. The expiry put holds to settlement, so its orders are refused under MIS.")
-                val counts = listOf(2, 4, 8, 20)
-                ParamTokens("Orders per day", counts.map { "$it" to (it == s.maxOrdersPerDay) }) { i -> model.update { it.copy(maxOrdersPerDay = counts[i]) } }
-                val lots = listOf(1, 2, 4)
-                ParamTokens("Lots per order", lots.map { "$it" to (it == s.maxLotsPerOrder) }) { i -> model.update { it.copy(maxLotsPerOrder = lots[i]) } }
-                val values = listOf(50_000.0, 200_000.0, 500_000.0)
-                ParamTokens("Order value cap", values.map { rs(it) to (it == s.maxOrderValue) }) { i -> model.update { it.copy(maxOrderValue = values[i]) } }
-                LedgerLine("Sent today", "${Broker.sentToday()} of ${s.maxOrdersPerDay}")
+                // Order limits live in one place (TODO A6): More -> Bot -> Bot settings.
+                LedgerLine("Sent today", "${Broker.sentToday()}" + if (s.guardMaxTrades > 0) " of ${s.guardMaxTrades}" else "")
+                Note("Order limits (trades per day, lots, order value) are set in More → Bot → Bot settings and apply to paper and live alike.")
             }
         }
         if (b.loggedIn) {
@@ -499,7 +630,7 @@ fun ConnectZerodhaScreen(model: AppModel) {
             Text("Connect to Zerodha", style = Type.masthead.copy(color = p.ink, fontSize = 22.sp))
             Text("IraAlgo works with your Zerodha account. Link it once to open the app.", style = Type.bodySmall.copy(color = p.inkSoft))
             Spacer(Modifier.height(12.dp))
-            if (!b.configured) CredentialsForm(model) { }
+            if (!b.configured) SetupGuide(model)
             else {
                 Text("Keys saved ✓", style = Type.body.copy(color = p.verdigris, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold))
                 Spacer(Modifier.height(6.dp))
@@ -512,6 +643,99 @@ fun ConnectZerodhaScreen(model: AppModel) {
             }
         }
     }
+}
+
+/**
+ * First-time setup, step by step, for someone who has never used the Kite Connect API:
+ * what is needed, where the developer site is, how to create the app, where the key and
+ * secret are, then the form to save them. Can be skipped by someone who has them.
+ */
+@Composable
+private fun SetupGuide(model: AppModel) {
+    val p = LocalPalette.current
+    val ctx = LocalContext.current
+    val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current
+    var step by rememberSaveable { mutableStateOf(0) }
+    fun open(url: String) = runCatching {
+        ctx.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url)).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+    }.onFailure { model.say("No browser found to open $url") }
+    val bold = Type.body.copy(color = p.ink, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
+    @Composable fun point(n: String, text: String) = Row(Modifier.padding(vertical = 3.dp)) {
+        Text(n, style = Type.bodySmall.copy(color = p.gold, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold), modifier = Modifier.width(22.dp))
+        Text(text, style = Type.bodySmall.copy(color = p.ink))
+    }
+    // A tappable link that opens in the browser.
+    @Composable fun link(label: String, url: String) = Text("↗  $label", style = Type.body.copy(color = p.verdigris,
+        textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold),
+        modifier = Modifier.fillMaxWidth().clickable { open(url) }.padding(vertical = 7.dp))
+    val titles = listOf("What you need", "Open the Kite developer site", "Create your app", "Copy the API key and secret", "Save them in IraAlgo")
+    // Progress: a bar per step.
+    Row(Modifier.fillMaxWidth().padding(bottom = 10.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        titles.indices.forEach { i ->
+            Box(Modifier.weight(1f).height(4.dp).background(if (i <= step) p.verdigris else p.rule, RoundedCornerShape(2.dp)))
+        }
+    }
+    Text("Step ${step + 1} of ${titles.size}", style = Type.label.copy(color = p.inkSoft))
+    Text(titles[step], style = Type.title.copy(color = p.ink, fontSize = 18.sp), modifier = Modifier.padding(bottom = 8.dp))
+    when (step) {
+        0 -> {
+            point("1", "A Zerodha trading account with F&O (derivatives) enabled.")
+            point("2", "Two-factor login (TOTP) set up on it: in the Kite app, open Account → Settings → Password & Security → External 2FA TOTP. You will type this code every time you log in.")
+            point("3", "A Kite Connect developer account at developers.kite.trade. This is Zerodha's official API; it is what lets IraAlgo read your account and place your orders. Check the current API pricing on that site.")
+            point("4", "About 10 minutes, and this phone's fingerprint set up (Settings → Security) so IraAlgo can protect your keys with it.")
+            link("No Zerodha account yet? Open one", "https://zerodha.com/open-account")
+            link("Set up TOTP on Kite web (Profile → Password & Security)", "https://kite.zerodha.com/")
+            link("Zerodha help centre", "https://support.zerodha.com/")
+            Note("IraAlgo never sees your Zerodha password or TOTP: you type them on Zerodha's own login page.")
+        }
+        1 -> {
+            point("1", "Tap the button below; the Kite developer site opens in your browser.")
+            point("2", "Sign up (or log in) with your email and mobile number and verify them.")
+            point("3", "If the site asks you to add credits or pick a plan for API access, do that there.")
+            point("4", "Keep that page open and come back here for the next step.")
+            BrassButton("Open developers.kite.trade", Modifier.fillMaxWidth().padding(top = 8.dp)) { open("https://developers.kite.trade/") }
+            link("Sign up on the developer site", "https://developers.kite.trade/signup")
+            link("Already signed up? Log in", "https://developers.kite.trade/login")
+            link("What Kite Connect is (official docs)", "https://kite.trade/docs/connect/v3/")
+        }
+        2 -> {
+            point("1", "On the developer site open \"My apps\" and tap \"Create new app\".")
+            point("2", "Type: Connect.")
+            point("3", "App name: IraAlgo (any name works).")
+            point("4", "Zerodha Client ID: your Zerodha user ID, for example AB1234.")
+            point("5", "Redirect URL: copy it from the box below and paste it exactly.")
+            Row(
+                Modifier.fillMaxWidth().padding(vertical = 6.dp).background(p.chip, RoundedCornerShape(10.dp)).padding(horizontal = 12.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(Broker.REDIRECT, style = Type.figure.copy(color = p.ink, fontSize = 14.sp), modifier = Modifier.weight(1f))
+                Text("Copy", style = Type.label.copy(color = p.ink, fontSize = 14.sp),
+                    modifier = Modifier.clickable { clipboard.setText(androidx.compose.ui.text.AnnotatedString(Broker.REDIRECT)); model.say("Redirect URL copied") }.padding(start = 12.dp))
+            }
+            point("6", "Postback URL: leave it empty. Description: anything, e.g. \"personal trading\".")
+            point("7", "Tap Create.")
+            link("Open My apps on the developer site", "https://developers.kite.trade/apps")
+            Note("The redirect address never opens a website: IraAlgo catches it inside the app when you log in.")
+        }
+        3 -> {
+            point("1", "In \"My apps\", open the app you just created.")
+            point("2", "The API key is shown on that page: copy it.")
+            point("3", "Tap \"Show API secret\" and copy the secret too. Treat it like a password: never share it or send a screenshot of it.")
+            point("4", "Come back here: the next step has Paste buttons for both.")
+            link("Open My apps to copy them", "https://developers.kite.trade/apps")
+            Note("Only one thing is copied at a time, so copy the key, paste it in the next step, then go back to the site for the secret.")
+        }
+        else -> {
+            CredentialsForm(model) { }
+            Note("After saving: tap \"Log in to Zerodha\", sign in with your Zerodha ID, password and TOTP. Zerodha ends the session early each morning, so you log in once every trading day; IraAlgo reminds you at 09:10.")
+        }
+    }
+    Row(Modifier.fillMaxWidth().padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        if (step > 0) BrassButton("Back", Modifier.weight(1f), tone = p.inkSoft) { step-- }
+        if (step < titles.size - 1) BrassButton(if (step == 0) "Start" else "Next", Modifier.weight(1f)) { step++ }
+    }
+    if (step < titles.size - 1) Text("I already have my API key and secret", style = Type.label.copy(color = p.inkSoft),
+        modifier = Modifier.padding(top = 10.dp).clickable { step = titles.size - 1 }.padding(4.dp))
 }
 
 private const val DRAFT_KEY = "draft.kite.key"
@@ -529,6 +753,12 @@ private fun CredentialsForm(model: AppModel, onDone: () -> Unit) {
     var err by remember { mutableStateOf<String?>(null) }
     var saving by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+    // With the fingerprint on, it seals the secret too (the PIN then becomes optional).
+    val st by model.settings.collectAsState()
+    val findings by model.integrity.collectAsState()
+    val activity = LocalContext.current as? FragmentActivity
+    val fingerprint = st.biometric && activity != null && BiometricGate.available(activity) == BiometricGate.Kind.STRONG &&
+        !(findings.isNotEmpty() && com.optionslab.app.security.Integrity.compromised(findings))
     fun draft(k: String, v: String) = com.optionslab.app.security.SecurePrefs.put(k, v.ifEmpty { null })
     fun pasteInto(set: (String) -> Unit) = clipboard.getText()?.text?.trim()?.takeIf { it.isNotEmpty() }?.let(set)
     Column(Modifier.padding(top = 10.dp)) {
@@ -553,25 +783,35 @@ private fun CredentialsForm(model: AppModel, onDone: () -> Unit) {
             trailingIcon = { TextButton({ pasteInto { key = it; draft(DRAFT_KEY, it) } }) { Text("Paste") } })
         OutlinedTextField(secret, { secret = it.trim(); draft(DRAFT_SECRET, secret) }, label = { Text("API secret") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password), visualTransformation = PasswordVisualTransformation(),
-            trailingIcon = { TextButton({ pasteInto { secret = it; draft(DRAFT_SECRET, it) } }) { Text("Paste") } })
+            trailingIcon = { TextButton({
+                pasteInto { secret = it; draft(DRAFT_SECRET, it) }
+                // The secret must not linger on the clipboard (or in the keyboard's clipboard history).
+                clipboard.setText(androidx.compose.ui.text.AnnotatedString(""))
+            }) { Text("Paste") } })
         if (key.isNotEmpty() || secret.isNotEmpty()) Note("Kept on this phone (encrypted) until you save, so you can switch to the Kite site and back.")
-        OutlinedTextField(pin, { pin = it.filter(Char::isDigit).take(12) }, label = { Text("Your app PIN (seals the secret)") }, singleLine = true,
+        OutlinedTextField(pin, { pin = it.filter(Char::isDigit).take(12) }, label = { Text(if (fingerprint) "App PIN (optional: a backup if the fingerprint changes)" else "Your app PIN (seals the secret)") }, singleLine = true,
             modifier = Modifier.fillMaxWidth(), visualTransformation = PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword))
-        err?.let { Text(it, style = Type.italic.copy(color = p.oxblood)) }
+        com.optionslab.app.ui.components.AlertOn(err, throttle = false)
         Spacer(Modifier.height(8.dp))
-        BrassButton("Save to the vault", Modifier.fillMaxWidth(), busy = saving, enabled = !saving) {
+        if (fingerprint) Note("Your fingerprint seals the secret and opens it at each Zerodha login. Adding the PIN too keeps a way in if a fingerprint is ever added or removed on this phone.")
+        BrassButton(if (fingerprint) "Save with fingerprint" else "Save to the vault", Modifier.fillMaxWidth(), busy = saving, enabled = !saving) {
             // The PIN check and the sealing are slow on purpose (key stretching): off the screen's thread.
             val k = key; val s = secret; val pn = pin
-            saving = true
-            scope.launch {
-                val e = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { model.saveBrokerCredentials(k, s, pn) }
+            saving = true; err = null
+            fun finish(bioBlob: String?) = scope.launch {
+                val e = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { model.saveBrokerCredentials(k, s, pn, bioBlob) }
                 saving = false; err = e; pin = ""
                 if (e == null) {
                     draft(DRAFT_KEY, ""); draft(DRAFT_SECRET, "")
-                    key = ""; secret = ""; onDone(); model.say("Saved, the secret sealed with your PIN. Now log in to Zerodha.")
+                    key = ""; secret = ""; onDone()
+                    model.say("Saved, the secret sealed with your " + when { bioBlob != null && pn.isNotBlank() -> "fingerprint and PIN"; bioBlob != null -> "fingerprint"; else -> "PIN" } + ". Now log in to Zerodha.")
                 }
             }
+            if (fingerprint && activity != null && s.isNotBlank()) BiometricGate.sealWithFingerprint(activity, s.trim()) { blob, why ->
+                if (blob == null && pn.isBlank()) { saving = false; err = why?.let { "Fingerprint: $it" } ?: "Cancelled. Use the fingerprint, or enter your PIN." }
+                else finish(blob)
+            } else finish(null)
         }
     }
 }
@@ -608,25 +848,22 @@ private fun ManualOrder(model: AppModel) {
             Broker.instruments().filter { it.name == underlying && it.expiry == e && it.right == right }.map { it.strike }.distinct().sorted()
         } }.getOrDefault(emptyList())
         val s0 = spot
-        strikes = if (s0 == null) emptyList() else all.sortedBy { kotlin.math.abs(it - s0) }.take(11).sorted()
+        // Every listed strike (the dropdown opens on the one nearest the index).
+        strikes = all
+        if (strike.toDoubleOrNull() !in all) strike = s0?.let { x -> all.minByOrNull { kotlin.math.abs(it - x) } }?.let { com.optionslab.engine.fmtG(it) } ?: ""
     }
     LedgerCard(title = "Place an order") {
         ParamTokens("Underlying", listOf("NIFTY", "BANKNIFTY").map { it to (it == underlying) }) { underlying = listOf("NIFTY", "BANKNIFTY")[it] }
         ParamTokens("Expiry", expiries.map { it.toString().substring(5) to (it == expiry) }) { expiry = expiries[it] }
         ParamTokens("Option", listOf("PE" to (right == Right.PE), "CE" to (right == Right.CE))) { right = if (it == 0) Right.PE else Right.CE }
         ParamTokens("Side", listOf("SELL" to (side == Kite.Side.SELL), "BUY" to (side == Kite.Side.BUY))) { side = if (it == 0) Kite.Side.SELL else Kite.Side.BUY }
-        ParamTokens("Lots", (1..s.maxLotsPerOrder).map { "$it" to (it == lots) }) { lots = it + 1 }
+        ParamTokens("Lots", (1..(s.guardMaxLots.takeIf { it > 0 } ?: 5)).map { "$it" to (it == lots) }) { lots = it + 1 }
         loadErr?.let { Text(it, style = Type.bodySmall.copy(color = p.oxblood)) }
-        if (strikes.isNotEmpty()) {
-            spot?.let { Note("${underlying} ${"%,.1f".format(it)}: nearest listed strikes") }
-            ParamTokens("Strike", strikes.map { com.optionslab.engine.fmtG(it) to (strike == com.optionslab.engine.fmtG(it)) }) { i -> strike = com.optionslab.engine.fmtG(strikes[i]) }
-        }
-        OutlinedTextField(strike, { strike = it.filter(Char::isDigit) }, label = { Text("Strike (or pick above)") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
+        com.optionslab.app.ui.components.StrikeDropdown(strikes, spot, strike, underlying) { strike = it }
         OutlinedTextField(price, { price = it.filter { c -> c.isDigit() || c == '.' } }, label = { Text("Limit price (blank = best bid/offer)") }, singleLine = true,
             modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
         Spacer(Modifier.height(8.dp))
-        BrassButton("Review the order", Modifier.fillMaxWidth(), enabled = expiry != null && strike.toDoubleOrNull() != null) {
+        BrassButton("Review the order", Modifier.fillMaxWidth(), enabled = expiry != null && strike.toDoubleOrNull()?.let { it in strikes } == true) {
             model.planManual(underlying, expiry!!, strike.toDouble(), right, side, lots, s.orderProduct, price.toDoubleOrNull())
         }
         Note("Nothing is sent from here: the order opens for review over this page.")

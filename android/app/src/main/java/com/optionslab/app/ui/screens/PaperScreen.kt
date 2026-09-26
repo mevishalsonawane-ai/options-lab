@@ -1,6 +1,7 @@
 package com.optionslab.app.ui.screens
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -10,7 +11,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.AlertDialog
+import com.optionslab.app.ui.components.AlertDialog
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -46,7 +47,7 @@ import com.optionslab.engine.Right
 import java.time.LocalDate
 import java.util.Locale
 
-private val secure = DialogProperties(securePolicy = SecureFlagPolicy.SecureOn)
+private val secure get() = DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy)
 private fun px(x: Double) = String.format(Locale.ENGLISH, "%,.2f", x)
 
 /**
@@ -74,7 +75,7 @@ fun LazyListScope.paperTrade(model: AppModel, snap: Load<Paper.Snapshot>, book: 
     when (snap) {
         Load.Idle -> item { LedgerCard { FullSpinner("Opening the paper account") } }
         is Load.Busy -> item { LedgerCard { FullSpinner(snap.label) } }
-        is Load.Failed -> item { LedgerCard(accent = LocalPalette.current.amber) { Note(snap.why) } }
+        is Load.Failed -> item { com.optionslab.app.ui.components.AlertOn(snap.why) }
         is Load.Done -> {
             val v = snap.value
             if (!v.priced) item { LedgerCard(accent = LocalPalette.current.amber) { Note("No fresh prices from Upstox just now; resting orders wait and positions show their last mark.") } }
@@ -104,6 +105,16 @@ private fun PaperOrderForm(model: AppModel) {
     var trigger by remember { mutableStateOf("") }
     var open by remember { mutableStateOf(false) }
     LaunchedEffect(underlying) { expiries = model.paperExpiries(underlying); expiry = expiries.firstOrNull() }
+    // Only listed strikes can be chosen: the ones around the index, nearest first in the middle.
+    var listed by remember { mutableStateOf<List<Double>>(emptyList()) }
+    var spot by remember { mutableStateOf<Double?>(null) }
+    LaunchedEffect(underlying, expiry) {
+        val e = expiry ?: return@LaunchedEffect
+        val (ks, sp) = model.paperStrikes(underlying, e)
+        listed = ks; spot = sp
+        val atm = sp?.let { x -> ks.minByOrNull { kotlin.math.abs(it - x) } }
+        if (strike.toDoubleOrNull() !in ks) strike = atm?.let { com.optionslab.engine.fmtG(it) } ?: ""
+    }
     LedgerCard(title = "Paper order") {
         if (!open) {
             BrassButton("New paper order", Modifier.fillMaxWidth(), tone = p.verdigris) { open = true }
@@ -118,15 +129,14 @@ private fun PaperOrderForm(model: AppModel) {
             val types = listOf("MARKET", "LIMIT", "SL", "SL-M")
             ParamTokens("Type", types.map { it to (it == type) }) { type = types[it] }
             ParamTokens("Product", listOf("NRML" to (product == "NRML"), "MIS" to (product == "MIS"))) { product = if (it == 0) "NRML" else "MIS" }
-            OutlinedTextField(strike, { strike = it.filter(Char::isDigit) }, label = { Text("Strike") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
+            com.optionslab.app.ui.components.StrikeDropdown(listed, spot, strike, underlying) { strike = it }
             if (type == "LIMIT" || type == "SL") OutlinedTextField(price, { price = it.filter { c -> c.isDigit() || c == '.' } }, label = { Text("Price") },
                 singleLine = true, modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
             if (type == "SL" || type == "SL-M") OutlinedTextField(trigger, { trigger = it.filter { c -> c.isDigit() || c == '.' } }, label = { Text("Trigger") },
                 singleLine = true, modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
             Spacer(Modifier.height(8.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                BrassButton("Place paper order", Modifier.weight(1f), tone = p.verdigris, enabled = expiry != null && strike.toDoubleOrNull() != null) {
+                BrassButton("Place paper order", Modifier.weight(1f), tone = p.verdigris, enabled = expiry != null && strike.toDoubleOrNull()?.let { it in listed } == true) {
                     model.paperPlace(underlying, expiry!!, strike.toDouble(), right, action, lots, type, product, price.toDoubleOrNull(), trigger.toDoubleOrNull())
                 }
                 BrassButton("Close", tone = p.inkFaint) { open = false }

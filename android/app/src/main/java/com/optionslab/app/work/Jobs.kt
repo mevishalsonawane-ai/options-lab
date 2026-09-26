@@ -100,6 +100,8 @@ object Jobs {
     fun scheduleAll(context: Context) {
         val s = AppSettings.load()
         Kind.entries.forEach { schedule(context, it, s) }
+        Heartbeat.schedule(context)
+        DailyReports.scheduleAll(context)
     }
 
     fun schedule(context: Context, k: Kind, s: AppSettings = AppSettings.load()) {
@@ -135,7 +137,7 @@ object Jobs {
             // Not permitted from here (Android 12+ background start). Hand
             // the one-shot jobs to WorkManager; the watch cannot run that way.
             if (k == Kind.LIVE) {
-                Notifier.post(context, 2010, Notifier.SCHEDULE, "Market is open", "Tap to start the market watch.", "almanac")
+                Notifier.post(context, 2010, Notifier.APPROVAL, "Market is open", "Tap to start the market watch.", "almanac")
             } else {
                 val req = OneTimeWorkRequestBuilder<FallbackWorker>()
                     .setInputData(workDataOf(EXTRA_KIND to k.name, "manual" to manual))
@@ -161,6 +163,8 @@ object Jobs {
 /** Fires at each scheduled instant: re-arm tomorrow's, then run today's. */
 class AlarmReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
+        if (intent.action == Heartbeat.ACTION) { Heartbeat.check(context); return }
+        DailyReports.of(intent.action)?.let { DailyReports.fired(context, it); return }
         val k = runCatching { Jobs.Kind.valueOf(intent.getStringExtra(Jobs.EXTRA_KIND) ?: return) }.getOrNull() ?: return
         Jobs.schedule(context, k)
         val s = AppSettings.load()
@@ -191,6 +195,25 @@ class NotificationActionReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action == STOP_LIVE) Jobs.stopLive(context)
+        // "Close position" on a paper position's card: close it now (paper only; a Zerodha card opens the app instead).
+        if (intent.action == PositionCards.ACTION_CLOSE_PAPER) {
+            val symbol = intent.getStringExtra(PositionCards.EXTRA_SYMBOL) ?: return
+            val done = goAsync()
+            CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
+                try {
+                    val open = com.optionslab.app.data.Paper.state.positions.filter { it.symbol == symbol && it.quantity != 0 }
+                    if (open.isEmpty()) Alerts.post("No open paper position in $symbol.", Alerts.Kind.ERROR)
+                    for (p in open) {
+                        val r = com.optionslab.app.data.Paper.close(p.symbol, p.product)
+                        Alerts.post(r.message, if (r.ok) Alerts.Kind.SUCCESS else Alerts.Kind.ERROR, if (r.ok) "Paper position closed" else "Could not close")
+                    }
+                    // An ORB position closed this way is booked and its resting stop taken out now, not on the next pass.
+                    runCatching { com.optionslab.app.data.OrbArms.priceCheckOnly() }
+                    runCatching { com.optionslab.app.data.Paper.tick() }
+                    runCatching { PositionCards.refresh(context) }
+                } finally { done.finish() }
+            }
+        }
     }
 }
 
@@ -243,6 +266,8 @@ object Tasks {
         // No notification: the result is shown in More → Data and harvest.
         SecurePrefs.put("harvest.last", "${Market.today()}: ${r.summary()}")
         if (s.healthAlerts) healthCheck(context, s)
+        // The ORB evening replay (TODO A8): the day's bars, beside what the paper arms did. No orders.
+        runCatching { com.optionslab.app.data.OrbArms.replayIfDue() }
     }
 
     fun healthCheck(context: Context, s: AppSettings) {
@@ -302,10 +327,24 @@ object Tasks {
             // The account's P&L: recorded for the day's curve, and alerted on the owner's levels.
             runCatching { b.positionBook() }.getOrNull()?.takeIf { it.net.isNotEmpty() }?.let { book ->
                 com.optionslab.app.data.PnlTracker.record(book.pnl)
+                runCatching { com.optionslab.app.data.DailyPnl.record(true, book.m2m, -1) }
                 accountPnl = book.pnl
                 lines.add(0, "Positions %s".format(if (s.hideAmountsOnLockScreen) "open: ${book.net.count { it.open }}" else "Rs %+,.0f".format(book.pnl)))
                 pnlAlerts(context, s, book.pnl)
             }
+        }
+        runCatching { com.optionslab.app.data.Paper.state.positions.count { it.quantity != 0 } }.getOrDefault(0).takeIf { it > 0 }?.let { n ->
+            runCatching { com.optionslab.app.data.Paper.snapshot() }.getOrNull()?.let { snap ->
+                val pnl = snap.funds.todayRealizedPnl + snap.funds.m2mUnrealized
+                runCatching { com.optionslab.app.data.DailyPnl.record(false, pnl, snap.trades.size) }
+                lines.add(0, "Paper %s".format(if (s.hideAmountsOnLockScreen) "open: $n" else "P&L Rs %+,.0f · $n open".format(pnl)))
+            }
+        }
+        // Alarms set from the chart, priced from the chart's own feed (the last 1-minute close).
+        Alarms.all().filter { it.enabled && it.symbol.startsWith(com.optionslab.app.data.PriceAlarm.CHART) }.map { it.symbol }.distinct().forEach { key ->
+            val sym = key.removePrefix(com.optionslab.app.data.PriceAlarm.CHART)
+            val now = System.currentTimeMillis() / 1000
+            runCatching { com.optionslab.app.data.ChartFeed.bars(sym, "1m", now - 3 * 3600, now).lastOrNull()?.close }.getOrNull()?.let { prices[key] = it }
         }
         checkAlarms(context, prices, fired)
         runCatching {
@@ -315,6 +354,16 @@ object Tasks {
         // Sandbox paper account: resting orders fill, MIS squares off at 15:15, expiries settle.
         // Paper account (also used by paper strategy runs in LIVE mode): resting orders fill, MIS squares off, expiries settle.
         runCatching { com.optionslab.app.data.Paper.tick() }.getOrNull()?.let { paperEvents(context, it) }
+        // The ORB paper arms: manage open positions, then decide on the last completed 5-minute bar.
+        runCatching { com.optionslab.app.data.OrbArms.tick() }
+        // Zerodha's live price stream (Live mode, logged in, market hours).
+        runCatching { com.optionslab.app.data.KiteStream.ensure() }
+        // Stops, trailing stops and targets: one exit filled cancels the other; trails move up.
+        runCatching { com.optionslab.app.data.Protections.tick() }
+        // Every open position's notification, with its live P&L and a Close button.
+        runCatching { PositionCards.refresh(context) }
+        // Expiry day, 15:05: close every option position expiring today (paper and live, all products).
+        runCatching { com.optionslab.app.data.ExpirySquareOff.maybeRun(context, s) }
         // Strategy Module: schedules, prices, per-leg and basket risk, exits.
         runCatching {
             val bad = com.optionslab.app.security.Integrity.compromised(com.optionslab.app.security.Integrity.reportWithin(context, 60_000))
@@ -322,6 +371,8 @@ object Tasks {
         }
         return Tick(title, lines, progress)
     }
+
+    fun paperEventsPublic(context: Context, events: List<com.optionslab.engine.sandbox.SandboxEvent>) = paperEvents(context, events)
 
     private fun paperEvents(context: Context, events: List<com.optionslab.engine.sandbox.SandboxEvent>) {
         for (e in events) when (e) {
@@ -391,13 +442,13 @@ class WatchService : Service() {
             ServiceCompat.startForeground(this, Notifier.ID_LIVE, n, type)
         } catch (_: Exception) {
             // Not allowed now (e.g. the dataSync budget is spent): say so rather than crash.
-            Notifier.post(this, 2011, Notifier.SCHEDULE, "IraAlgo could not run in the background", "Open the app to continue: $title", "almanac")
+            Notifier.post(this, 2011, Notifier.APPROVAL, "IraAlgo could not run in the background", "Open the app to continue: $title", "almanac")
         }
     }
 
     /** Android 15: a time-limited foreground service must stop when told, or the app is killed. */
     override fun onTimeout(startId: Int, fgsType: Int) {
-        Notifier.post(this, 2012, Notifier.RISK, "Background watch stopped by Android",
+        Notifier.post(this, 2012, Notifier.APPROVAL, "Background watch stopped by Android",
             "The system's time limit for background work was reached. Open IraAlgo to keep strategies and alerts checked.", "almanac")
         stopEverything()
     }
@@ -449,6 +500,7 @@ class WatchService : Service() {
         // so its exit-time square-off and any retried exits are seen through.
         while (Market.isTradingDay() && (Market.minuteNow() <= Market.CLOSE ||
                 (Market.minuteNow() <= Market.CLOSE + 15 && com.optionslab.app.data.Strategies.anyRunning()))) {
+            Heartbeat.beat(this)
             if (Market.minuteNow() < Market.OPEN) {
                 show("Market watch", "Waiting for the 09:15 open")
                 delay(30_000)
@@ -457,7 +509,26 @@ class WatchService : Service() {
             val t = Tasks.watchTick(this, s, fired)
             Tasks.publish(Tasks.LiveState(true, t.title, t.progress / 100f, System.currentTimeMillis()))
             show(t.title, t.lines.joinToString("\n").ifEmpty { "Waiting for prints" }, t.progress)
-            delay(60_000)
+            // While an ORB position is open its stop, target and 15:10 exit are checked every 15 s, not once a minute.
+            val next = System.currentTimeMillis() + 60_000
+            while (System.currentTimeMillis() < next) {
+                val holding = PositionCards.anyOpen || runCatching { com.optionslab.app.data.OrbArms.holding() }.getOrDefault(false)
+                // With the live stream up, Zerodha cards move every 3 s from ticks alone (no network).
+                val streaming = com.optionslab.app.data.KiteStream.status.value == com.optionslab.app.data.KiteStream.Status.LIVE
+                if (holding && streaming) {
+                    val until = System.currentTimeMillis() + 15_000
+                    while (System.currentTimeMillis() < until) { delay(3_000); runCatching { PositionCards.tickLive(this) } }
+                } else delay(if (holding) 15_000 else next - System.currentTimeMillis())
+                if (holding) {
+                    runCatching {
+                        com.optionslab.app.data.Paper.tick().let { Tasks.paperEventsPublic(this, it) }
+                        com.optionslab.app.data.OrbArms.priceCheckOnly()
+                        com.optionslab.app.data.Protections.tick()
+                    }
+                    runCatching { PositionCards.refresh(this) }
+                }
+                Heartbeat.beat(this)
+            }
         }
     }
 
@@ -470,8 +541,8 @@ class WatchService : Service() {
     }
 
     private fun stopEverything() {
-        if (kotlinx.coroutines.runBlocking { runCatching { com.optionslab.app.data.Strategies.anyRunning() }.getOrDefault(false) })
-            Notifier.post(this, 2013, Notifier.RISK, "Strategies are no longer being watched",
+        if (kotlinx.coroutines.runBlocking { runCatching { com.optionslab.app.data.Strategies.anyRunning() || com.optionslab.app.data.OrbArms.holding() }.getOrDefault(false) })
+            Notifier.post(this, 2013, Notifier.APPROVAL, "Strategies are no longer being watched",
                 "A strategy run is open. Its stops and targets are only checked while the watch or the Strategies page is running.", "strategy")
         running.values.forEach { it.cancel() }
         running.clear()

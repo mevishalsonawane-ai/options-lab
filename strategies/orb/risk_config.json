@@ -1,0 +1,32 @@
+{
+  "_source": "D:/New Trading app services/account_risk_service.py (env names and defaults) + services/risk/account_guard.py (rules)",
+  "_note": "live_default = the value to use with real money. paper_now = what the desktop sandbox runs with; three limits were raised for paper only and MUST go back to live_default before any live trading.",
+  "applies_to": "every new entry, across all strategies on the account; exits bypass everything except the kill switch",
+  "limits": {
+    "ACCOUNT_RISK_ENABLED":            { "live_default": true,     "paper_now": true },
+    "ACCOUNT_RISK_TRADING_ENABLED":    { "live_default": true,     "paper_now": true },
+    "ACCOUNT_RISK_KILL_SWITCH_CLEAR":  { "live_default": true,     "paper_now": true, "meaning": "false engages the kill switch" },
+    "ACCOUNT_RISK_KILL_SWITCH_FILE":   { "live_default": "kill_switch", "paper_now": "kill_switch", "meaning": "file present = kill switch engaged" },
+    "ACCOUNT_MAX_CONCURRENT_POSITIONS":{ "live_default": 3,        "paper_now": 3 },
+    "ACCOUNT_MAX_TRADES_TODAY":        { "live_default": 10,       "paper_now": 60, "counts": "every order sent: entry, resting stop and exit" },
+    "ACCOUNT_MAX_DAILY_LOSS":          { "live_default": 2000,     "paper_now": 6000, "unit": "INR, realised + open" },
+    "ACCOUNT_MAX_DRAWDOWN_PCT":        { "live_default": 10,       "paper_now": 30, "meaning": "equity this % below the persisted peak refuses entries and engages the kill switch" },
+    "ACCOUNT_STARTING_CAPITAL":        { "live_default": 0,        "paper_now": 0, "meaning": "0 disables the drawdown-vs-capital leg; the vs-peak leg still works" },
+    "ACCOUNT_PEAK_FILE":               { "live_default": "db/account_peak.json", "paper_now": "db/account_peak.json", "meaning": "peak equity persisted across days; re-base it when going live" },
+    "ACCOUNT_MAX_ORDER_VALUE":         { "live_default": 200000,   "paper_now": 200000, "unit": "INR" },
+    "ACCOUNT_MAX_SYMBOL_EXPOSURE":     { "live_default": 200000,   "paper_now": 200000, "unit": "INR" },
+    "ACCOUNT_ENTRY_CUTOFF_MINUTES":    { "live_default": 20,       "paper_now": 20, "meaning": "no new entries this many minutes before the 15:15 square-off" }
+  },
+  "capital": {
+    "sandbox_wallet_inr": 100000,
+    "shared_by": ["orb", "orb_fresh"],
+    "AI_SIGNALS_CAPITAL": 90000,
+    "AI_SIGNALS_AUTO_TRADER_ENABLED": false
+  },
+  "revert_before_live": [
+    "ACCOUNT_MAX_TRADES_TODAY 60 -> 10",
+    "ACCOUNT_MAX_DAILY_LOSS 6000 -> 2000",
+    "ACCOUNT_MAX_DRAWDOWN_PCT 30 -> 10",
+    "re-base the stored peak equity to the live balance"
+  ]
+}

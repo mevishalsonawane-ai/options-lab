@@ -13,11 +13,13 @@
     No credentials: the Upstox historical-candle endpoint is unauthenticated.
 #>
 param(
-    [string]$Repo = "C:\Users\mevis\Downloads\files\options-lab",
+    # The repository this script lives in (tools\..), wherever it was cloned.
+    [string]$Repo = (Split-Path -Parent $PSScriptRoot),
     # Task Scheduler runs with a reduced PATH, so a bare "python" can fail to
     # resolve even where it works fine in an interactive shell. Pinned here so
     # the scheduled run does not differ from the tested one.
-    [string]$Python = "C:\Users\mevis\AppData\Local\Programs\Python\Python310\python.exe",
+    # Empty = find it: "py -3" launcher, then python on PATH. Pass -Python to pin one.
+    [string]$Python = "",
     [int]$Expiries = 3,
     [switch]$Force          # collect even on a weekend, for a manual test run
 )
@@ -40,7 +42,12 @@ if (-not $Force -and ($day -eq "Saturday" -or $day -eq "Sunday")) {
     exit 0
 }
 
-if (-not (Test-Path $Python)) {
+if (-not $Python) {
+    $cmd = Get-Command python -ErrorAction SilentlyContinue
+    if ($cmd) { $Python = $cmd.Source }
+    elseif (Get-Command py -ErrorAction SilentlyContinue) { $Python = (& py -3 -c "import sys; print(sys.executable)").Trim() }
+}
+if (-not $Python -or -not (Test-Path $Python)) {
     Write-Log "python not found at $Python - fix the -Python parameter"
     exit 1
 }

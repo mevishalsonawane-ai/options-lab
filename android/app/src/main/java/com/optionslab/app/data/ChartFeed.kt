@@ -36,9 +36,12 @@ object ChartFeed {
     }
 
     /** The Upstox instrument key for a chart symbol: an index name, or an option's trading symbol. */
-    fun instrumentKey(symbol: String): String =
-        Upstox.INDEX_KEYS[symbol.uppercase()] ?: contract(symbol)?.instrumentKey
-            ?: throw IOException("$symbol is not an index or a listed NIFTY/BANKNIFTY option")
+    fun instrumentKey(symbol: String): String {
+        Upstox.INDEX_KEYS[symbol.uppercase()]?.let { return it }
+        val c = contract(symbol) ?: throw IOException("$symbol is not an index or a listed NIFTY/BANKNIFTY option")
+        if (c.isExpired(Market.today())) throw IOException("$symbol expired on ${c.expiry}; the free candle feed does not keep expired contracts")
+        return c.instrumentKey
+    }
 
     /** The contract list already on the phone (any day): never waits on the network. */
     private fun known(): List<Upstox.Contract> = Market.cachedContracts()?.second.orEmpty()
@@ -50,9 +53,15 @@ object ChartFeed {
         Thread { try { runCatching { Market.contracts() } } finally { refreshing.set(false) } }.start()
     }
 
-    fun contract(symbol: String): Upstox.Contract? =
-        known().firstOrNull { it.tradingSymbol.equals(symbol, ignoreCase = true) }
-            ?: Market.contracts().firstOrNull { it.tradingSymbol.equals(symbol, ignoreCase = true) }
+    fun contract(symbol: String): Upstox.Contract? {
+        // An index is never a contract: answer at once instead of downloading the master to find out.
+        if (symbol.uppercase() in Upstox.INDEX_KEYS) return null
+        known().firstOrNull { it.tradingSymbol.equals(symbol, ignoreCase = true) }?.let { return it }
+        // Block on the (large) master download only when the phone has no list at all; on a weekend or
+        // holiday the saved list is from an earlier day, so refresh it behind the chart instead.
+        if (Market.cachedContracts() != null) { refreshInBackground(); return null }
+        return Market.contracts().firstOrNull { it.tradingSymbol.equals(symbol, ignoreCase = true) }
+    }
 
     /**
      * Past sessions do not change, so their candles are kept in memory for the day: after the
@@ -71,7 +80,16 @@ object ChartFeed {
         // Intraday charts always get the last few sessions, so a Monday-morning or holiday-adjacent
         // chart still has well over three hours of candles to show.
         val intraday = u.unit == "minutes" || u.unit == "hours"
-        if (intraday) from = minOf(from, to.minusDays(6))
+        // On a holiday, a weekend or after hours this is what shows the last session(s) the market was open:
+        // reach back to the third-last trading day on the NSE calendar, however long the closure.
+        if (intraday) {
+            var d = to; var found = 0; var back = to
+            while (found < 3 && to.toEpochDay() - d.toEpochDay() < 30) {
+                if (Market.isTradingDay(d)) { found++; back = d }
+                d = d.minusDays(1)
+            }
+            from = minOf(from, back, to.minusDays(6))
+        }
         // Upstox keeps minute and hour candles from January 2022.
         if (u.unit == "minutes" || u.unit == "hours") from = from.coerceAtLeast(LocalDate.of(2022, 1, 1))
         val out = ArrayList<Upstox.Bar>()
@@ -93,11 +111,15 @@ object ChartFeed {
                     chunks += lo to hi
                     hi = lo.minusDays(1)
                 }
-                val got = chunks.map { (lo, h) -> async(kotlinx.coroutines.Dispatchers.IO) { Net.parseCandles(Net.getJson("$BASE/$key/${u.unit}/${u.n}/$h/$lo", tries = 3)) } }
-                    .flatMap { it.await() }
+                // One failed chunk costs only its own days; the load fails only if every chunk did.
+                val res = chunks.map { (lo, h) -> async(kotlinx.coroutines.Dispatchers.IO) { runCatching { Net.parseCandles(Net.getJson("$BASE/$key/${u.unit}/${u.n}/$h/$lo", tries = 3)) } } }
+                    .map { it.await() }
+                if (res.isNotEmpty() && res.all { it.isFailure }) throw res.first().exceptionOrNull()!!
+                val got = res.flatMap { it.getOrDefault(emptyList()) }
                 out += got
                 // Keep only finished sessions; today's bars always come fresh.
-                if (to == today) past[cacheKey] = Past(today, from, got.filter { it.istDate.isBefore(today) })
+                // A week or month bar is dated on its first day, so the current one would look finished: not cached.
+                if (res.all { it.isSuccess } && to == today && u.unit != "weeks" && u.unit != "months") past[cacheKey] = Past(today, from, got.filter { it.istDate.isBefore(today) })
             }
             todays?.let { out += it.await() }
         }

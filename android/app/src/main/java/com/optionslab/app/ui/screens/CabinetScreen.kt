@@ -40,6 +40,9 @@ private val GROUPS = listOf(
         Drawer("security", "Security", "PIN, biometrics, device checks, widget"),
         Drawer("schedule", "Schedules", "Daily jobs, notifications, market holidays"),
     ),
+    "Bot" to listOf(
+        Drawer("risk", "Bot settings", "Kill switch, daily loss, drawdown, position and order limits"),
+    ),
     "Research" to listOf(
         Drawer("signal", "Signal lab", "UT Bot and LinReg on a harvested day"),
         Drawer("ic", "IC table", "Is the data predictable, net of cost?"),
@@ -79,6 +82,7 @@ private fun DrawerPage(model: AppModel, pg: String, onPage: (String?) -> Unit) {
         when (pg) {
             "broker" -> BrokerPage(model)
             "alarms" -> AlarmsPage(model)
+            "risk" -> RiskPage(model)
             "signal" -> SignalPage(model)
             "ic" -> IcPage(model)
             "sizing" -> SizingPage(model)

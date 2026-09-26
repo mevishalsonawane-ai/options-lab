@@ -9,7 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.AlertDialog
+import com.optionslab.app.ui.components.AlertDialog
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -49,7 +49,7 @@ import com.optionslab.app.ui.theme.Type
 import kotlinx.coroutines.delay
 import java.util.Locale
 
-private val secure = DialogProperties(securePolicy = SecureFlagPolicy.SecureOn)
+private val secure get() = DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy)
 
 private fun px(x: Double) = String.format(Locale.ENGLISH, "%,.2f", x)
 
@@ -127,7 +127,7 @@ fun TradeScreen(model: AppModel) {
         when (val a = acct) {
             Load.Idle -> item { LedgerCard { FullSpinner("Reading your Zerodha account") } }
             is Load.Busy -> item { LedgerCard { FullSpinner(a.label) } }
-            is Load.Failed -> item { LedgerCard(accent = p.amber) { Note(a.why); BrassButton("Try again", Modifier.fillMaxWidth()) { model.loadAccount() } } }
+            is Load.Failed -> item { com.optionslab.app.ui.components.AlertOn(a.why); LedgerCard(accent = p.amber) { BrassButton("Try again", Modifier.fillMaxWidth()) { model.loadAccount() } } }
             is Load.Done -> {
                 val v = a.value
                 when (book) {
@@ -459,6 +459,8 @@ private fun GttDialog(model: AppModel, t: GttTarget, onClose: () -> Unit) {
     var target by remember { mutableStateOf("") }
     var auth by remember { mutableStateOf(false) }
     val long = t.netQty > 0
+    // A plan checked for another position (or before a failed placement) never carries over.
+    LaunchedEffect(t) { model.dismissGtt() }
     AlertDialog(
         onDismissRequest = { model.dismissGtt(); onClose() }, properties = secure,
         title = { Text("Protect ${t.symbol}", style = Type.title) },
@@ -466,19 +468,19 @@ private fun GttDialog(model: AppModel, t: GttTarget, onClose: () -> Unit) {
             Column {
                 Text("${if (long) "Long" else "Short"} ${kotlin.math.abs(t.netQty)} · ${t.product}. A GTT lives at Zerodha: it fires even if this phone is off. " +
                     "With both a stop and a target it is one-cancels-other.", style = Type.bodySmall)
-                OutlinedTextField(stop, { stop = it.filter { c -> c.isDigit() || c == '.' } }, singleLine = true,
+                OutlinedTextField(stop, { stop = it.filter { c -> c.isDigit() || c == '.' }; model.dismissGtt() }, singleLine = true,
                     label = { Text("Stop-loss trigger (${if (long) "below" else "above"} the price)") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
-                OutlinedTextField(target, { target = it.filter { c -> c.isDigit() || c == '.' } }, singleLine = true,
+                OutlinedTextField(target, { target = it.filter { c -> c.isDigit() || c == '.' }; model.dismissGtt() }, singleLine = true,
                     label = { Text("Target trigger (optional)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
                 TextButton({ model.planGtt(t.exchange, t.symbol, t.product, t.netQty, stop.toDoubleOrNull(), target.toDoubleOrNull()) }) {
                     Text("Check", style = Type.label.copy(color = p.brass))
                 }
                 when (val l = plan) {
                     is Load.Busy -> Text(l.label, style = Type.italic)
-                    is Load.Failed -> Text(l.why, style = Type.bodySmall.copy(color = p.oxblood))
+                    is Load.Failed -> com.optionslab.app.ui.components.AlertOn(l.why)
                     is Load.Done -> {
-                        l.value.why.forEach { Text("✕ $it", style = Type.bodySmall.copy(color = p.oxblood)) }
+                        com.optionslab.app.ui.components.AlertOn(l.value.why.takeIf { it.isNotEmpty() }?.joinToString(" "))
                         l.value.gtt?.let { g ->
                             Text("Last price ${px(g.lastPrice)} · ${g.type}", style = Type.figure.copy(fontSize = 12.sp))
                             g.triggers.zip(g.orders).forEach { (tr, o) ->
@@ -496,5 +498,5 @@ private fun GttDialog(model: AppModel, t: GttTarget, onClose: () -> Unit) {
         },
         dismissButton = { TextButton({ model.dismissGtt(); onClose() }) { Text("Close") } },
     )
-    if (auth) Reauth(model, onOk = { auth = false; model.placeGtt(); onClose() }, onCancel = { auth = false })
+    if (auth) Reauth(model, onOk = { auth = false; model.placeGtt(); model.dismissGtt(); onClose() }, onCancel = { auth = false })
 }

@@ -72,7 +72,7 @@ fun OptionChartPage(model: AppModel, pick: ChainPick, onFullChart: (String) -> U
     val change = if (last != null && open != null) last - open else null
     val up = (change ?: 0.0) >= 0
 
-    Dialog(onDismissRequest = onClose, properties = DialogProperties(securePolicy = SecureFlagPolicy.SecureOn, usePlatformDefaultWidth = false)) {
+    Dialog(onDismissRequest = onClose, properties = DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy, usePlatformDefaultWidth = false)) {
         Column(Modifier.fillMaxSize().background(p.paper).statusBarsPadding().navigationBarsPadding()) {
             Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text("‹", style = Type.masthead.copy(color = p.ink, fontSize = 28.sp), modifier = Modifier.clickable(onClick = onClose).padding(horizontal = 12.dp, vertical = 4.dp))
@@ -102,7 +102,15 @@ fun OptionChartPage(model: AppModel, pick: ChainPick, onFullChart: (String) -> U
                             style = Type.figure.copy(color = if (up) p.verdigris else p.oxblood, fontSize = 15.sp), modifier = Modifier.padding(bottom = 6.dp))
                     }
                     Text("Change since today's open", style = Type.bodySmall.copy(color = p.inkFaint, fontSize = 12.sp))
-                    if (bars.size >= 2) PriceChart(bars.map { it.close }, open, 375,
+                    // Plotted by minute, not by candle: an illiquid option skips minutes, and the line
+                    // (and its 11:00 / 13:00 labels) must still sit at the right time.
+                    val byMinute = remember(bars) {
+                        val m = bars.associate { (it.istMinute - com.optionslab.app.data.Market.OPEN).coerceIn(0, 374) to it.close }
+                        val lastIdx = m.keys.maxOrNull() ?: -1
+                        var carry = bars.firstOrNull()?.close ?: 0.0
+                        (0..lastIdx).map { i -> m[i]?.also { carry = it } ?: carry }
+                    }
+                    if (bars.size >= 2) PriceChart(byMinute, open, 375,
                         listOf(0 to "09:15", 105 to "11:00", 225 to "13:00", 374 to "15:30"), Modifier.padding(top = 10.dp))
                     else Note(when {
                         error != null -> "Could not load the chart: $error"

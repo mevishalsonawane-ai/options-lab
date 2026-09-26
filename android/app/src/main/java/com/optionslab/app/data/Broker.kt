@@ -42,6 +42,7 @@ object Broker {
     private const val K_KEY = "kite.apiKey"
     private const val K_SECRET = "kite.apiSecret"            // legacy: plain inside the vault; migrated on next login
     private const val K_SEALED = "kite.apiSecretSealed"      // sealed with the owner's PIN (SecretBox)
+    private const val K_BIO_SEALED = "kite.apiSecretBio"      // a second copy only the fingerprint opens (BiometricGate)
     private const val K_REDIRECT = "kite.redirect"
     private const val K_TOKEN = "kite.accessToken"
     private const val K_LOGIN_AT = "kite.loginAt"
@@ -58,7 +59,7 @@ object Broker {
     // ---- credentials ------------------------------------------------------------
 
     val configured: Boolean get() = SecurePrefs.getString(K_KEY) != null &&
-        (SecurePrefs.getString(K_SEALED) != null || SecurePrefs.getString(K_SECRET) != null)
+        (SecurePrefs.getString(K_SEALED) != null || SecurePrefs.getString(K_SECRET) != null || SecurePrefs.getString(K_BIO_SEALED) != null)
     val apiKey: String? get() = SecurePrefs.getString(K_KEY)
     /**
      * The redirect URL to register in the Kite Connect app. The login page
@@ -76,16 +77,27 @@ object Broker {
     /** Only the last four characters of the key, for recognising it. */
     fun maskedKey(): String = apiKey?.let { "••••" + it.takeLast(4) } ?: "not set"
 
-    /** [pin] (already verified by the caller) seals the secret; it is never stored readable. */
-    fun saveCredentials(apiKey: String, apiSecret: String, pin: CharArray) {
+    /**
+     * Save the key with the secret sealed by [pin] (already verified by the caller), and/or by the
+     * fingerprint ([bioSealed], from BiometricGate). At least one; the secret is never stored readable.
+     */
+    fun saveCredentials(apiKey: String, apiSecret: String, pin: CharArray?, bioSealed: String? = null) {
         require(apiKey.isNotBlank() && apiKey.all { it.isLetterOrDigit() }) { "The API key should be letters and digits only" }
         require(apiSecret.isNotBlank() && apiSecret.all { it.isLetterOrDigit() }) { "The API secret should be letters and digits only" }
-        SecurePrefs.putAll(mapOf(K_KEY to apiKey.trim(), K_SEALED to com.optionslab.app.security.SecretBox.seal(apiSecret.trim(), pin),
-            K_SECRET to null, K_REDIRECT to null, K_TOKEN to null, K_LOGIN_AT to null))
+        require(pin != null || bioSealed != null) { "Enter your PIN, or use your fingerprint, to seal the secret" }
+        SecurePrefs.putAll(mapOf(K_KEY to apiKey.trim(), K_SEALED to pin?.let { com.optionslab.app.security.SecretBox.seal(apiSecret.trim(), it) },
+            K_BIO_SEALED to bioSealed, K_SECRET to null, K_REDIRECT to null, K_TOKEN to null, K_LOGIN_AT to null))
     }
 
+    /** The fingerprint-sealed copy of the secret, if there is one. */
+    val bioSealedSecret: String? get() = SecurePrefs.getString(K_BIO_SEALED)
+    val pinSealed: Boolean get() = SecurePrefs.getString(K_SEALED) != null || SecurePrefs.getString(K_SECRET) != null
+    fun dropBioSealed() { SecurePrefs.put(K_BIO_SEALED, null) }
+
     fun forget() {
-        SecurePrefs.putAll(mapOf(K_KEY to null, K_SECRET to null, K_SEALED to null, K_REDIRECT to null, K_TOKEN to null,
+        KiteStream.stop()
+        com.optionslab.app.security.BiometricGate.forgetSecretKey()
+        SecurePrefs.putAll(mapOf(K_KEY to null, K_SECRET to null, K_SEALED to null, K_BIO_SEALED to null, K_REDIRECT to null, K_TOKEN to null,
             K_LOGIN_AT to null, K_USER to null, K_UID to null))
         File(app.filesDir, "kite_instruments.json").delete()
         PnlTracker.clear()
@@ -102,7 +114,10 @@ object Broker {
 
     private fun token(): String = if (loggedIn) SecurePrefs.getString(K_TOKEN)!! else throw NotLoggedIn()
 
-    private fun dropSession() = SecurePrefs.putAll(mapOf(K_TOKEN to null, K_LOGIN_AT to null))
+    /** The session token for the live price stream (never logged, never shown). */
+    internal fun streamToken(): String? = if (loggedIn) SecurePrefs.getString(K_TOKEN) else null
+
+    private fun dropSession() { KiteStream.stop(); SecurePrefs.putAll(mapOf(K_TOKEN to null, K_LOGIN_AT to null)) }
 
     // ---- HTTP ---------------------------------------------------------------------
 
@@ -195,6 +210,7 @@ object Broker {
     }
 
     suspend fun logout() {
+        KiteStream.stop()
         val key = apiKey
         val tok = SecurePrefs.getString(K_TOKEN)
         if (key != null && tok != null) runCatching {
@@ -301,8 +317,33 @@ object Broker {
 
     data class Quote(val last: Double, val bid: Double?, val ask: Double?, val open: Double, val oi: Long = 0, val volume: Long = 0)
 
+    /** "NSE:NIFTY BANK" / "NFO:BANKNIFTY26OCT56000CE" -> Kite instrument token, from the day's list. */
+    @Volatile private var tokenMap: Pair<LocalDate, Map<String, Long>>? = null
+    fun tokenOf(key: String): Long? {
+        INDEX.values.firstOrNull { it.first == key }?.let { return it.second }
+        if (!key.startsWith("NFO:")) return null
+        val m = tokenMap?.takeIf { it.first == Market.today() }?.second
+            ?: cachedInstruments()?.associate { "NFO:" + it.tradingSymbol to it.token }?.also { tokenMap = Market.today() to it }
+            ?: return null
+        return m[key]
+    }
+
+    /**
+     * Quotes for "EXCHANGE:SYMBOL" keys. Instruments the live stream has a fresh tick for
+     * are answered from it at once; only the rest go to Kite's quote API (and are
+     * followed by the stream from then on).
+     */
     suspend fun quotes(keys: List<String>): Map<String, Quote> {
         if (keys.isEmpty()) return emptyMap()
+        val tokens = keys.associateWith { tokenOf(it) }
+        KiteStream.touch(tokens.values.filterNotNull())
+        val streamed = keys.mapNotNull { k -> tokens[k]?.let { KiteStream.tick(it) }?.let { t -> k to Quote(t.last, t.bid, t.ask, t.open, t.oi, t.volume) } }.toMap()
+        val rest = keys.filter { it !in streamed }
+        if (rest.isEmpty()) return streamed
+        return streamed + quotesRest(rest)
+    }
+
+    private suspend fun quotesRest(keys: List<String>): Map<String, Quote> {
         val data = call("GET", "/quote?" + keys.joinToString("&") { "i=" + Kite.enc(it) }) as JSONObject
         return keys.mapNotNull { k ->
             val q = data.optJSONObject(k) ?: return@mapNotNull null
@@ -353,10 +394,14 @@ object Broker {
     suspend fun indexMinuteBars(symbol: String, day: LocalDate): List<Upstox.Bar> =
         minuteBars(INDEX[symbol]?.second ?: throw IOException("no Zerodha index for $symbol"), day)
 
+    private val sparks = java.util.concurrent.ConcurrentHashMap<String, Pair<Int, List<Double>>>()
+
     suspend fun indexQuote(symbol: String): Market.Quote? {
         val (key, token) = INDEX[symbol] ?: return null
         val q = quotes(listOf(key))[key] ?: return null
-        val spark = runCatching { minuteBars(token, Market.today()).map { it.close } }.getOrDefault(emptyList())
+        val minute = Market.minuteNow()
+        val spark = sparks[symbol]?.takeIf { it.first == minute && it.second.isNotEmpty() }?.second
+            ?: runCatching { minuteBars(token, Market.today()).map { it.close } }.getOrDefault(emptyList()).also { sparks[symbol] = minute to it }
         val m = Market.now().let { it.hour * 60 + it.minute }
         return Market.Quote(symbol, q.last, q.open.takeIf { it > 0 } ?: q.last, spark.maxOrNull() ?: q.last, spark.minOrNull() ?: q.last, m,
             spark.ifEmpty { listOf(q.last) })
@@ -461,7 +506,9 @@ object Broker {
     data class Fill(val orderId: String, val status: String, val avgPrice: Double, val filled: Int, val message: String)
 
     /** Sends ONE order. Callers must have passed Kite.refusals and the owner's confirmation. */
-    suspend fun placeOrder(o: Kite.Order): String {
+    suspend fun placeOrder(o: Kite.Order, exit: Boolean = false): String {
+        // SEBI static IP: a new position is not opened from an IP Zerodha would refuse (exits always go).
+        if (!exit) StaticIp.entryBlock()?.let { throw KiteError("static_ip", it) }
         val data = call("POST", "/orders/regular", o.formBody()) as JSONObject
         countSent()
         return data.getString("order_id")
