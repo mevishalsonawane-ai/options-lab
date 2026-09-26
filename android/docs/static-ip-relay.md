@@ -24,6 +24,14 @@ Choose **Ubuntu 22.04 or 24.04**. Note the public IP it shows.
 
 Open **UDP 51820** in the provider's firewall / security group.
 
+**Free option: Oracle Cloud "Always Free".** Sign up at https://signup.cloud.oracle.com/
+with India West (Mumbai) or India South (Hyderabad) as the home region (Always Free
+resources exist only there, and it cannot be changed later). Create an Always Free VM
+(VM.Standard.E2.1.Micro or Ampere A1) with Ubuntu, make its public IP **Reserved**
+(Networking -> Reserved public IPs), and add an ingress rule for UDP 51820 from 0.0.0.0/0
+in the subnet's security list. Oracle's Ubuntu images also reject new ports in the VM's
+own firewall; the setup script inserts its rules ahead of that, so nothing else is needed.
+
 ## 2. Install the relay (one command)
 
 ```bash
