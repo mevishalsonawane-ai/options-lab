@@ -46,6 +46,7 @@ class StrategiesLiveTest : RobolectricTest() {
     }
 
     @After fun down() {
+        Market.testClock = null
         kite.close()
         if (checkNetwork) assertEquals("no test may reach the internet", emptyList<String>(), NetworkGuard.blocked.toList())
     }
@@ -225,6 +226,79 @@ class StrategiesLiveTest : RobolectricTest() {
         assertTrue("the exit order is on file: ${run.status}", run.legs.values.single().exitOrderId != null || run.stoppedAt != null)
         runBlocking { Strategies.tickAll(compromised = false) }
         assertEquals("the exit is not sent twice after a restart", 1, sells().size)
+    }
+
+    // ---- the weekday scheduler (on a fixed clock: Market.testClock) --------------------------------
+
+    private val day by lazy { var d = Market.today(); while (!Market.isTradingDay(d)) d = d.plusDays(1); d }
+    private fun at(h: Int, m: Int) {
+        Market.testClock = java.time.Clock.fixed(day.atTime(h, m).atZone(com.optionslab.engine.IST).toInstant(), com.optionslab.engine.IST)
+    }
+    private fun tick() = runBlocking { Strategies.tickAll(compromised = false) }
+
+    /** Saved, live-enabled and armed live ([automatic] or asking for approval) for 09:20-15:15 on weekdays. */
+    private fun armedLive(automatic: Boolean): Long {
+        val id = saved(Position.B to OptionType.CE)
+        assertNull(runBlocking { Strategies.setArmed(id, true, RunMode.LIVE, automatic = automatic) })
+        return id
+    }
+
+    @Test fun anAutomaticLiveArmStartsAtItsTimeAndSquaresOffAtItsExit() {
+        live()
+        val id = armedLive(automatic = true)
+        at(9, 19); tick()
+        assertTrue("nothing before the start time", kite.placed.isEmpty())
+        at(9, 21)
+        val notes = tick()
+        assertTrue(notes.toString(), notes.any { it.contains("scheduled live start") })
+        assertEquals("BUY", kite.placed.single().form["transaction_type"])
+        assertTrue(entry(id).running)
+        at(9, 30); tick()
+        assertEquals("started once", 1, kite.placed.size)
+        at(15, 16); tick()
+        assertEquals("squared off at the exit time", 1, sells().size)
+    }
+
+    @Test fun aLiveArmThatAsksWaitsForApprovalAndSendsNothingUntilThen() {
+        live()
+        val id = armedLive(automatic = false)
+        at(9, 19); tick(); at(9, 21); tick()
+        assertEquals(mapOf(id to RunMode.LIVE), runBlocking { Strategies.pending() })
+        assertTrue("nothing is sent until approved", kite.placed.isEmpty())
+        val msg = runBlocking { Strategies.approve(id, compromised = false) }
+        assertEquals("Test basket started (live): 1 of 1 legs open.", msg)
+        assertEquals(1, kite.placed.size)
+        assertTrue(runBlocking { Strategies.pending() }.isEmpty())
+    }
+
+    @Test fun aSkippedApprovalIsDropped() {
+        live()
+        val id = armedLive(automatic = false)
+        at(9, 19); tick(); at(9, 21); tick()
+        runBlocking { Strategies.skip(id) }
+        assertTrue(runBlocking { Strategies.pending() }.isEmpty())
+        assertEquals("Nothing is waiting for approval.", runBlocking { Strategies.approve(id, compromised = false) })
+        assertTrue(kite.placed.isEmpty())
+    }
+
+    @Test fun noArmedStartWhileTheBotIsStoppedForToday() {
+        live()
+        armedLive(automatic = true)
+        at(9, 10)
+        runBlocking { Strategies.stopForToday(stopRunning = false, compromised = false) }
+        tick(); at(9, 21); tick()
+        assertTrue(kite.placed.isEmpty())
+        val log = runBlocking { Strategies.log() }.joinToString("\n") { it.message }
+        assertTrue(log, log.contains("Scheduled start skipped: the bot is stopped for today"))
+    }
+
+    @Test fun aScheduledStartOnAHolidayDoesNothing() {
+        live()
+        armedLive(automatic = true)
+        var sat = day; while (sat.dayOfWeek != java.time.DayOfWeek.SATURDAY) sat = sat.plusDays(1)
+        val t = { h: Int, m: Int -> Market.testClock = java.time.Clock.fixed(sat.atTime(h, m).atZone(com.optionslab.engine.IST).toInstant(), com.optionslab.engine.IST) }
+        t(9, 19); tick(); t(9, 21); tick()
+        assertTrue(kite.placed.isEmpty())
     }
 
     // ---- book-keeping ----------------------------------------------------------------------------
