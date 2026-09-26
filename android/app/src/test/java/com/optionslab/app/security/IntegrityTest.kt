@@ -18,6 +18,16 @@ import java.time.Duration
  * if the owner chose, refuses to open), and each probe on its own.
  */
 class IntegrityTest : RobolectricTest() {
+    /**
+     * [Integrity.reportWithin] keeps its report in a static cache that outlives the test, and the Robolectric clock
+     * restarts with every test (so a cached time can lie in the "future"): drop it, or a compromised report made
+     * here would be reused by every later test that asks for a recent one.
+     */
+    @org.junit.Before @org.junit.After fun dropCachedReport() {
+        Integrity::class.java.getDeclaredField("cached").apply { isAccessible = true }.set(null, null)
+        Integrity::class.java.getDeclaredField("cachedAt").apply { isAccessible = true }.setLong(null, 0L)
+    }
+
     private fun f(sev: Integrity.Severity) = Integrity.Finding("x", sev, "test")
 
     @Test fun onlyADangerFindingIsACompromise() {
