@@ -45,9 +45,10 @@ private fun rs(x: Double) = (if (x < 0) "−₹" else "₹") + String.format(Loc
 private fun px(x: Double) = String.format(Locale.ENGLISH, "%.2f", x)
 
 /**
- * The two built-in ORB arms on Home's Strategies card: an arm switch each (always
- * the paper account), what the arm is doing now, a waiting approval, and a tap
- * for the day's detail and the forward test.
+ * The two built-in ORB arms on Home's Strategies card: an arm switch each, what
+ * the arm is doing now, a waiting approval, and a tap for the day's detail and the
+ * forward test. New entries follow the Paper/Live switch; in Live each one is
+ * approved with the PIN. An open position shows the account it is in.
  */
 @Composable
 fun OrbRows(model: AppModel) {
@@ -55,6 +56,9 @@ fun OrbRows(model: AppModel) {
     val v by model.orb.collectAsState()
     var choosing by remember { mutableStateOf<String?>(null) }
     var detail by remember { mutableStateOf(false) }
+    var reauthFor by remember { mutableStateOf<String?>(null) }
+    val settings by model.settings.collectAsState()
+    val live = settings.live && settings.allowRealOrders
     // Home's own poll (only while the app is on screen) refreshes the arm states every 20 s.
     val view = v ?: return
 
@@ -66,7 +70,8 @@ fun OrbRows(model: AppModel) {
                     Text(a.arm.label, style = Type.body.copy(color = p.ink, fontSize = 15.sp, fontWeight = FontWeight.SemiBold))
                     Spacer(Modifier.width(8.dp))
                     val (label, color) = when {
-                        a.open != null -> "IN TRADE · PAPER" to p.verdigris
+                        a.open != null -> if (a.open.live) "IN TRADE · LIVE" to p.oxblood else "IN TRADE · PAPER" to p.verdigris
+                        a.armed && live -> "ARMED · LIVE · APPROVE WITH PIN" to p.oxblood
                         a.armed -> "ARMED · PAPER · ${if (a.automatic) "AUTO" else "APPROVE"}" to p.verdigris
                         else -> "OFF" to p.inkFaint
                     }
@@ -94,11 +99,13 @@ fun OrbRows(model: AppModel) {
         }
         a.pending?.let { pd ->
             Column(Modifier.fillMaxWidth().padding(bottom = 10.dp).background(p.amber.copy(alpha = 0.12f), RoundedCornerShape(12.dp)).padding(12.dp)) {
-                Text("Breakout on the %02d:%02d bar: BUY ${pd.right}, 1 lot, paper. Lapses at %02d:%02d."
+                Text("Breakout on the %02d:%02d bar: BUY ${pd.right}, 1 lot, ${if (live) "LIVE on Zerodha" else "paper"}. Lapses at %02d:%02d."
                     .format(pd.signalBar.hour, pd.signalBar.minute, pd.expires.hour, pd.expires.minute),
                     style = Type.bodySmall.copy(color = p.ink, fontWeight = FontWeight.SemiBold))
                 Row(Modifier.padding(top = 8.dp)) {
-                    BrassButton("Approve entry", Modifier.weight(1f), tone = p.verdigris) { model.approveOrb(a.arm.source) }
+                    BrassButton(if (live) "Approve with PIN" else "Approve entry", Modifier.weight(1f), tone = if (live) p.oxblood else p.verdigris) {
+                        if (live) reauthFor = a.arm.source else model.approveOrb(a.arm.source)
+                    }
                     Spacer(Modifier.width(8.dp))
                     BrassButton("Skip", tone = p.inkSoft) { model.skipOrb(a.arm.source) }
                 }
@@ -114,22 +121,25 @@ fun OrbRows(model: AppModel) {
         AlertDialog(
             onDismissRequest = { choosing = null },
             properties = DialogProperties(securePolicy = SecureFlagPolicy.SecureOn),
-            title = { Text("Arm $label (paper)", style = Type.title) },
+            title = { Text("Arm $label" + if (live) " (LIVE)" else " (paper)", style = Type.title) },
             text = {
                 Column {
-                    Text("It always trades the paper account, whatever the Paper/Live switch says. How should its entries go out?",
+                    Text(if (live) "The app is in LIVE: each entry goes to Zerodha (1 lot MIS) only after you approve it with your PIN. " +
+                        "Switch to Paper and new entries go to the paper account. An open position always exits in the account it entered."
+                        else "The app is in Paper: entries go to the paper account. If you switch to Live, new entries go to Zerodha and each needs your PIN. How should paper entries go out?",
                         style = Type.bodySmall.copy(color = p.inkSoft))
                     OrbChoice("Automatic", "The paper entry is placed on the breakout bar without asking.") { model.armOrb(src, true, true); choosing = null }
                     OrbChoice("Ask me to approve", "You get a notification on a breakout; the entry goes only if you approve before the next bar closes.") {
                         model.armOrb(src, true, false); choosing = null
                     }
-                    Note("Either way the −40 stop rests in the paper book, and the +40 target and the 15:10 square-off run by themselves.", Modifier.padding(top = 8.dp))
+                    Note("Either way the −40 stop rests as an order (paper book, or an SL order at Zerodha), and the +40 target and the 15:10 square-off run by themselves.", Modifier.padding(top = 8.dp))
                 }
             },
             confirmButton = {},
             dismissButton = { TextButton({ choosing = null }) { Text("Cancel") } },
         )
     }
+    reauthFor?.let { src -> Reauth(model, onOk = { reauthFor = null; model.approveOrb(src, pinConfirmed = true) }, onCancel = { reauthFor = null }) }
     if (detail) OrbDetail(view) { detail = false }
 }
 
@@ -164,7 +174,7 @@ private fun OrbDetail(v: OrbArms.View, onClose: () -> Unit) {
                     if (a.today.isEmpty()) Text("No trades today.", style = soft)
                     a.today.forEach { t ->
                         val tail = if (t.open) "open" else "${px(t.exit ?: 0.0)} ${t.why?.replace('_', ' ')} · ${rs((t.grossPnl ?: 0.0) - t.charges)}"
-                        Text("%02d:%02d BUY ${t.right} @ ${px(t.entry)} → $tail".format(t.entryTime.hour, t.entryTime.minute), style = small)
+                        Text("%02d:%02d ${if (t.live) "LIVE" else "paper"} BUY ${t.right} @ ${px(t.entry)} → $tail".format(t.entryTime.hour, t.entryTime.minute), style = small)
                     }
                 }
                 v.replay?.let { r ->

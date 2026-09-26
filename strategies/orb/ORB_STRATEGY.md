@@ -102,6 +102,14 @@ Always the **sandbox/paper** pipe, decided in the arm itself, never from a globa
 live/paper switch: an operator flipping the platform to live while a paper position is
 open must not send its exit to the broker.
 
+**Phone app (IraAlgo), owner's decision 2026-09-26:** new ORB entries follow the app's
+Paper/Live switch at the moment they are placed. In Live each entry needs the owner's
+approval with the PIN or fingerprint (never automatic), goes to Zerodha as 1 lot MIS,
+and rests an SL stop (limit 5% under the trigger; the app sells at market if the price
+runs through it or Zerodha rejects it). Each position keeps its own account: its stop
+and exit never follow a later flip of the switch. This departs from the desktop pipe
+above; the forward-test count includes both accounts.
+
 ## Pass rule (pre-registered, `reference/92_orb_forward_test_preregistration.md`)
 
 The forward test ends at 60 closed trades or 40 trading days, whichever first. It

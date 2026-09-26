@@ -33,9 +33,13 @@ import java.util.Locale
  *    a MARKET SELL after the resting stop has been taken out of the book;
  *  - re-entry from the bar after the exit bar, one position per arm.
  *
- * ALWAYS THE PAPER ACCOUNT, decided here and never from the app's Paper/Live
- * switch: flipping the app to live while an ORB position is open must not send
- * its exit to Zerodha. Every entry goes through the account guard.
+ * WHERE: a new entry follows the app's Paper/Live switch at the moment it is
+ * placed (the owner's choice, 2026-09-26). In Live every entry waits for the
+ * owner's approval with the PIN or fingerprint, never automatic. Each position
+ * remembers its own account, and its stop and exit only ever go there:
+ * flipping the switch while a position is open never moves its exit. Every
+ * entry goes through the account guard (and in Live the kill switch and the
+ * Bot settings caps as well).
  *
  * Prices are the Upstox public candles the paper account already uses; the
  * index is aggregated from 1-minute to 5-minute bars labelled by their start.
@@ -57,6 +61,8 @@ object OrbArms {
         val arm: String, val symbol: String, val right: String, val qty: Int, val entry: Double, val entryTime: LocalDateTime,
         val signalBar: LocalDateTime, val entryOrderId: String?, val stopOrderId: String?, val stopTrigger: Double?,
         val exit: Double? = null, val exitTime: LocalDateTime? = null, val why: String? = null, val charges: Double = 0.0,
+        /** True: entered at Zerodha under [kite] (its orders are Kite order ids); false: the paper account. */
+        val live: Boolean = false, val kite: String? = null,
     ) {
         val open: Boolean get() = exit == null
         val day: LocalDate get() = entryTime.toLocalDate()
@@ -112,7 +118,7 @@ object OrbArms {
                         if (p.has("stopTrigger")) p.getDouble("stopTrigger") else null,
                         if (p.has("exit")) p.getDouble("exit") else null,
                         p.optString("exitTime").ifEmpty { null }?.let { LocalDateTime.parse(it) }, p.optString("why").ifEmpty { null },
-                        p.optDouble("charges", 0.0))
+                        p.optDouble("charges", 0.0), p.optBoolean("live", false), p.optString("kite").ifEmpty { null })
                 }
             }
             o.optJSONObject("pending")?.let { m -> m.keys().forEach { k -> val p = m.getJSONObject(k)
@@ -148,7 +154,8 @@ object OrbArms {
                     .put("entryTime", p.entryTime.toString()).put("signalBar", p.signalBar.toString())
                     .put("entryOrderId", p.entryOrderId ?: "").put("stopOrderId", p.stopOrderId ?: "")
                     .apply { p.stopTrigger?.let { put("stopTrigger", it) }; p.exit?.let { put("exit", it) } }
-                    .put("exitTime", p.exitTime?.toString() ?: "").put("why", p.why ?: "").put("charges", p.charges))
+                    .put("exitTime", p.exitTime?.toString() ?: "").put("why", p.why ?: "").put("charges", p.charges)
+                    .put("live", p.live).put("kite", p.kite ?: ""))
             }
         })
         o.put("pending", JSONObject().apply { b.pending.forEach { (k, p) -> put(k, JSONObject().put("right", p.right).put("bar", p.signalBar.toString()).put("expires", p.expires.toString())) } })
@@ -160,6 +167,9 @@ object OrbArms {
     }
 
     private fun armOf(source: String): Arm = OrbRules.ARMS.first { it.source == source }
+
+    /** New entries follow the app's Paper/Live switch. */
+    fun liveNow(): Boolean = AppSettings.load().let { it.live && it.allowRealOrders }
     private fun now(): LocalDateTime = Market.now().toLocalDateTime()
 
     // ---- views for the UI ---------------------------------------------------------
@@ -205,11 +215,15 @@ object OrbArms {
         if (!on) b.pending.remove(source)
         save(b)
         val label = armOf(source).label
-        if (on) "$label armed on the paper account (${if (automatic) "automatic" else "you approve each entry"}). It decides on 5-minute BANKNIFTY bars from 10:05."
+        if (on) "$label armed. " + (if (liveNow()) "The app is in LIVE: entries go to Zerodha, 1 lot, each one after your approval with the PIN."
+            else "Paper account, ${if (automatic) "automatic" else "you approve each entry"}; entries follow the Paper/Live switch.") +
+            " It decides on 5-minute BANKNIFTY bars from 10:05."
         else "$label disarmed." + if (b.positions.any { it.arm == source && it.open }) " Its open position is still managed to its exit." else ""
     }
 
-    suspend fun approve(source: String): String {
+    suspend fun approve(source: String, pinConfirmed: Boolean = false): String {
+        // A live entry is sent only after the owner's PIN or fingerprint (the UI asks first).
+        if (liveNow() && !pinConfirmed) return "The app is in Live: approve with your PIN on Home → Strategies."
         val p = lock.withLock { book().pending.remove(source)?.also { save(book()) } } ?: return "Nothing is waiting for approval."
         if (now().isAfter(p.expires)) return "The ${armOf(source).label} signal expired at ${hhmm(p.expires)}; a new break will ask again."
         return lock.withLock {
@@ -270,12 +284,14 @@ object OrbArms {
         if (direction == 0) return why
         val right = if (direction > 0) "CE" else "PE"
         val c = if (direction > 0) legs.ce else legs.pe
-        if (b.auto[arm.source] == false) {
+        val live = liveNow()
+        if (live || b.auto[arm.source] == false) {
             // Valid until the next bar completes: after that the signal is stale.
             b.pending[arm.source] = Pending(arm.source, right, last.start, last.start.plusMinutes(10))
             Notifier.post(app, 6960 + OrbRules.ARMS.indexOf(arm), Notifier.APPROVAL, "${arm.label}: approve BUY ${c.symbol}",
                 "BANKNIFTY closed ${if (direction > 0) "above" else "below"} the opening range on the ${hhmm(last.start)} bar. " +
-                    "Paper account, 1 lot. Approve by ${hhmm(last.start.plusMinutes(10))} or it lapses.", "almanac")
+                    (if (live) "LIVE on Zerodha, 1 lot: approve with your PIN in the app" else "Paper account, 1 lot") +
+                    ". Approve by ${hhmm(last.start.plusMinutes(10))} or it lapses.", "almanac")
             return "awaiting_approval"
         }
         return enter(b, arm, c, last.start)
@@ -294,6 +310,7 @@ object OrbArms {
     }
 
     private suspend fun enter(b: Book, arm: Arm, c: Paper.Contract, signalBar: LocalDateTime): String {
+        if (liveNow()) return enterLive(b, arm, c, signalBar)
         val ltp = Paper.lastPrice(c) ?: return "refused: no quote"             // never enter blind
         // The Upstox feed has no bid/ask, so the paper fill is the LTP slipped 5 bps: price the checks the same way.
         val expected = ltp * 1.0005
@@ -320,9 +337,11 @@ object OrbArms {
 
     /** Resting stop, +40 target, 15:10 exit, the 15:15 backstop and the operator stop, for every open position. */
     private suspend fun priceCheck(b: Book, t: LocalDateTime) {
-        val open = b.positions.withIndex().filter { it.value.open }
-        if (open.isEmpty()) return
         val stopped = Strategies.stoppedToday()
+        val liveOpen = b.positions.withIndex().filter { it.value.open && it.value.live }
+        if (liveOpen.isNotEmpty()) runCatching { priceCheckLive(b, t, liveOpen, stopped) }
+        val open = b.positions.withIndex().filter { it.value.open && !it.value.live }
+        if (open.isEmpty()) return
         val orders = Paper.state.orders.associateBy { it.orderId }
         for ((i, p) in open) {
             val c = Paper.contractOf(p.symbol) ?: continue
@@ -375,6 +394,161 @@ object OrbArms {
         sell.orderId?.let { Strategies.tagOwner("paper:$it", "${armOf(p.arm).label} · $why") }
         Notifier.orderFilled(app, "SELL", fill.quantity, fill.symbol, fill.price, "Paper", armOf(p.arm).label)
         return p.copy(stopOrderId = null, exit = fill.price, exitTime = now(), why = why, charges = p.charges + chargesOf(sell.orderId))
+    }
+
+    // ---- Zerodha (the app in Live) --------------------------------------------------
+
+    /**
+     * The limit under a live stop: SL, not SL-M (Zerodha can refuse SL-M on index options),
+     * 5% (at least 2 points) below the trigger so it fills in a fast fall. If the price runs
+     * through even that, the app's own check sells at market.
+     */
+    private fun stopLimit(trigger: Double, tick: Double): Double =
+        com.optionslab.engine.Kite.onTick(trigger - maxOf(2.0, trigger * 0.05), tick, com.optionslab.engine.Kite.Side.SELL).coerceAtLeast(tick)
+
+    private fun kiteCharge(side: String, price: Double, qty: Int): Double =
+        com.optionslab.engine.sandbox.SandboxCosts.charge(side, java.math.BigDecimal(price), qty).toDouble()
+
+    /**
+     * A live entry: MARKET BUY 1 lot MIS at Zerodha, then a resting SL SELL 40 below the
+     * fill. Only reached after the owner approved with the PIN (see [approve]).
+     */
+    private suspend fun enterLive(b: Book, arm: Arm, c: Paper.Contract, signalBar: LocalDateTime): String {
+        val s = AppSettings.load()
+        if (s.guardKill) return "refused: the kill switch is on"
+        if (!Broker.loggedIn) return "refused: not logged in to Zerodha today"
+        val ins = (Broker.cachedInstruments() ?: runCatching { Broker.instruments() }.getOrNull())?.firstOrNull {
+            it.name == c.underlying && it.expiry == c.expiry && it.right == c.right && kotlin.math.abs(it.strike - c.strike) < 1e-6
+        } ?: return "refused: ${c.symbol} is not listed on Zerodha"
+        val sym = ins.tradingSymbol
+        val key = "NFO:$sym"
+        val last = runCatching { Broker.quotes(listOf(key))[key]?.last }.getOrNull()?.takeIf { it > 0 } ?: return "refused: no quote"
+        if (OrbRules.stopTrigger(last) == null) return "refused: premium %.2f is at or below 40, a 40-point stop has no level".format(Locale.ENGLISH, last)
+        if (Strategies.stoppedToday()) return "stopped_for_today"
+        val o = com.optionslab.engine.Kite.Order(sym, com.optionslab.engine.Kite.Side.BUY, ins.lotSize, ins.lotSize, "MIS", "MARKET", null,
+            ins.tickSize, "NFO", "iraorb")
+        val acct = runCatching {
+            Guard.liveAccount(Broker.positionBook(), runCatching { Broker.funds() }.getOrNull(), runCatching { Broker.orders().size }.getOrDefault(0))
+        }.getOrNull()
+        val refusals = Guard.check(Guard.liveOrder(o).copy(price = last), acct)
+        if (refusals.isNotEmpty()) return "guard_refused: " + refusals.joinToString(" ")
+        val why = com.optionslab.engine.Kite.refusals(o, s.limits(), Broker.sentToday(), false, refPrice = last)
+        if (why.isNotEmpty()) return "refused: " + why.joinToString("; ")
+        val id = try {
+            Broker.placeOrder(o)
+        } catch (e: Broker.KiteError) {
+            return "order_refused: " + (e.message ?: "Zerodha refused the order")
+        } catch (e: Broker.NotLoggedIn) {
+            return "refused: not logged in to Zerodha today"
+        } catch (e: Exception) {
+            // The answer was lost, not necessarily the order: look before calling it unsent.
+            runCatching { Broker.findRecent(o, emptyList()) }.getOrNull() ?: return "order_refused: ${e.message}; no matching order found at Zerodha"
+        }
+        Strategies.tagOwner("kite:$id", "${arm.label} · entry")
+        var f = runCatching { Broker.awaitOrder(id, 15_000) }.getOrNull()
+        if (f == null || f.filled <= 0) {
+            // Not filled in 15 s: take it out so it can never fill later as an untracked entry.
+            if (f?.status !in setOf("REJECTED", "CANCELLED")) runCatching { Broker.cancel(id) }
+            f = runCatching { Broker.orderState(id) }.getOrNull()
+            if (f == null || f.filled <= 0) return "order_refused: Zerodha ${f?.status?.lowercase() ?: "did not answer"}" +
+                (f?.message?.takeIf { it.isNotBlank() }?.let { ": $it" } ?: "")
+        }
+        val fill = f.avgPrice.takeIf { it > 0 } ?: last
+        Notifier.orderFilled(app, "BUY", f.filled, sym, fill, "Live", arm.label)
+        val trigger = OrbRules.stopTrigger(fill)?.let { com.optionslab.engine.Kite.onTick(it, ins.tickSize, com.optionslab.engine.Kite.Side.SELL) }
+        var stopId: String? = null
+        if (trigger != null) {
+            stopId = runCatching {
+                Broker.placeOrder(com.optionslab.engine.Kite.Order(sym, com.optionslab.engine.Kite.Side.SELL, f.filled, ins.lotSize, "MIS", "SL",
+                    stopLimit(trigger, ins.tickSize), ins.tickSize, "NFO", "iraorb", triggerPrice = trigger))
+            }.getOrNull()
+            if (stopId != null) Strategies.tagOwner("kite:$stopId", "${arm.label} · stop")
+            else com.optionslab.app.work.Alerts.error("${arm.label}: the −40 stop could not be placed at Zerodha; the app watches it instead.", "ORB live")
+        }
+        b.positions += Position(arm.source, c.symbol, c.right.name, f.filled, fill, now(), signalBar, id, stopId, trigger,
+            charges = kiteCharge("BUY", fill, f.filled), live = true, kite = sym)
+        marks[c.symbol] = fill
+        return "entered_live"
+    }
+
+    /** Stop, target, 15:10 and the operator stop for positions held at Zerodha. */
+    private suspend fun priceCheckLive(b: Book, t: LocalDateTime, open: List<IndexedValue<Position>>, stopped: Boolean) {
+        if (!Broker.loggedIn) return
+        val orders = Broker.orders().associateBy { it.id }
+        val net = Broker.positionBook().net
+        val keys = open.mapNotNull { it.value.kite }.map { "NFO:$it" }.distinct()
+        val q = runCatching { Broker.quotes(keys) }.getOrDefault(emptyMap())
+        for ((i, p) in open) {
+            val sym = p.kite ?: continue
+            val so = p.stopOrderId?.let { orders[it] }
+            if (so != null && so.status == "COMPLETE") {
+                val px = so.avg.takeIf { it > 0 } ?: p.stopTrigger ?: p.entry
+                Notifier.orderFilled(app, "SELL", so.filled, sym, px, "Live", "${armOf(p.arm).label} · stop")
+                b.positions[i] = p.copy(exit = px, exitTime = t, why = "stop", stopOrderId = null, charges = p.charges + kiteCharge("SELL", px, p.qty))
+                continue
+            }
+            if (so?.status == "REJECTED") com.optionslab.app.work.Alerts.error(
+                "${armOf(p.arm).label}: Zerodha rejected the stop (${so.message.ifBlank { "no reason given" }}). The app now watches the −40 stop itself.", "ORB live")
+            val cur = if (so != null && (so.status == "CANCELLED" || so.status == "REJECTED")) p.copy(stopOrderId = null).also { b.positions[i] = it } else p
+            val held = net.filter { it.symbol == sym && it.exchange == "NFO" && it.product == "MIS" }.sumOf { it.qty }
+            val ltp = q["NFO:$sym"]?.last?.takeIf { it > 0 }
+            ltp?.let { marks[p.symbol] = it }
+            // Gone at Zerodha without the arm selling it: Zerodha's MIS square-off, or closed by hand.
+            if (held <= 0) {
+                cur.stopOrderId?.let { runCatching { Broker.cancel(it) } }
+                val backstop = cur.day.isBefore(t.toLocalDate()) || !t.toLocalTime().isBefore(LocalTime.of(15, 15))
+                val px = ltp ?: cur.entry
+                b.positions[i] = cur.copy(exit = px, exitTime = t, why = if (backstop) "backstop_square_off" else "closed_by_you",
+                    stopOrderId = null, charges = cur.charges + kiteCharge("SELL", px, cur.qty))
+                continue
+            }
+            if (ltp == null) continue
+            // The price ran through the stop's limit without it filling: sell at market instead.
+            val tick = runCatching { Broker.spec("NFO", sym).tickSize }.getOrDefault(0.05)
+            val runThrough = cur.stopTrigger?.let { ltp < stopLimit(it, tick) } == true
+            val why = when {
+                stopped -> "operator_stop"
+                !t.toLocalTime().isBefore(OrbRules.SQUARE_OFF) -> "session_end"
+                else -> OrbRules.exitReason(cur.entry, ltp, t).takeIf { it == "target" || (it == "stop" && (cur.stopOrderId == null || runThrough)) }
+            } ?: continue
+            b.positions[i] = exitLive(cur, sym, minOf(held, cur.qty), why)
+        }
+    }
+
+    /** Take the resting stop out first, then MARKET SELL what is held; if the stop filled meanwhile, that is the exit. */
+    private suspend fun exitLive(p: Position, sym: String, held: Int, why: String): Position {
+        val label = armOf(p.arm).label
+        p.stopOrderId?.let { id ->
+            runCatching { Broker.cancel(id) }
+            val st = runCatching { Broker.orderState(id) }.getOrNull()
+            if (st?.status == "COMPLETE") {
+                val px = st.avgPrice.takeIf { it > 0 } ?: p.stopTrigger ?: p.entry
+                return p.copy(exit = px, exitTime = now(), why = "stop", stopOrderId = null, charges = p.charges + kiteCharge("SELL", px, p.qty))
+            }
+        }
+        // Read what is held again after the stop came out: a stop that part-filled meanwhile must not turn the sell into a short.
+        val still = runCatching { Broker.positionBook().net.filter { it.symbol == sym && it.exchange == "NFO" && it.product == "MIS" }.sumOf { it.qty } }
+            .getOrNull() ?: return p.copy(stopOrderId = null)
+        val qty = minOf(held, still)
+        if (qty <= 0) return p.copy(stopOrderId = null)                          // gone already: booked on the next pass
+        val spec = runCatching { Broker.spec("NFO", sym) }.getOrNull() ?: return p.copy(stopOrderId = null)
+        val o = com.optionslab.engine.Kite.Order(sym, com.optionslab.engine.Kite.Side.SELL, qty, spec.lotSize, "MIS", "MARKET", null, spec.tickSize, "NFO", "iraorb")
+        val bad = com.optionslab.engine.Kite.refusals(o, AppSettings.load().limits(), Broker.sentToday(), false, exit = true)
+        if (bad.isNotEmpty()) {
+            com.optionslab.app.work.Alerts.error("$label: the Zerodha exit was not sent (${bad.joinToString("; ")}). Close $sym in Trade.", "ORB live")
+            return p.copy(stopOrderId = null)
+        }
+        val id = try { Broker.placeOrder(o) } catch (e: Exception) {
+            runCatching { Broker.findRecent(o, emptyList()) }.getOrNull() ?: run {
+                com.optionslab.app.work.Alerts.error("$label: the Zerodha exit failed (${e.message}); retrying on the next pass.", "ORB live")
+                return p.copy(stopOrderId = null)
+            }
+        }
+        Strategies.tagOwner("kite:$id", "$label · $why")
+        val f = runCatching { Broker.awaitOrder(id, 15_000) }.getOrNull()
+        if (f == null || f.filled <= 0) return p.copy(stopOrderId = null)          // checked again next pass against the position book
+        Notifier.orderFilled(app, "SELL", f.filled, sym, f.avgPrice, "Live", label)
+        return p.copy(stopOrderId = null, exit = f.avgPrice, exitTime = now(), why = why, charges = p.charges + kiteCharge("SELL", f.avgPrice, f.filled))
     }
 
     data class Filled(val quantity: Int, val symbol: String, val price: Double)
@@ -474,7 +648,8 @@ object OrbArms {
     /** The arm's status in plain words. */
     fun describe(s: String): String = when {
         s.isEmpty() -> "Waits for the market watch."
-        s == "entered" -> "Entered."
+        s == "entered" -> "Entered (paper)."
+        s == "entered_live" -> "Entered at Zerodha (live)."
         s == "holding" -> "Holding a position."
         s == "waiting_for_opening_range" -> "Waiting for the opening range (09:15-10:00)."
         s == "inside_range" -> "Waiting for a breakout: the last bar closed inside the range."
@@ -483,13 +658,13 @@ object OrbArms {
         s == "no_decision_bar" -> "No decision bars now (entries only 10:05-14:25)."
         s == "flat_after_square_off" -> "Done for the day (square-off 15:10)."
         s == "stopped_for_today" -> "Stopped for today by you."
-        s == "awaiting_approval" -> "Breakout: waiting for your approval."
+        s == "awaiting_approval" -> if (liveNow()) "Breakout: waiting for your approval with PIN (live)." else "Breakout: waiting for your approval."
         s == "skipped_by_you" -> "You skipped the last signal."
         s == "no_contract" -> "The day's BANKNIFTY contracts could not be loaded."
         s == "no_index_data" -> "No BANKNIFTY bars yet."
         s.startsWith("guard_refused: ") -> "Refused by Bot settings: " + s.removePrefix("guard_refused: ")
         s.startsWith("refused: ") -> "Refused: " + s.removePrefix("refused: ")
-        s.startsWith("order_refused: ") -> "The paper order was refused: " + s.removePrefix("order_refused: ")
+        s.startsWith("order_refused: ") -> "The order was refused: " + s.removePrefix("order_refused: ")
         s.startsWith("error: ") -> "Could not check: " + s.removePrefix("error: ")
         else -> s
     }

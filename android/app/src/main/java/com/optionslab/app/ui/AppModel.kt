@@ -1134,7 +1134,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    /** The ORB and ORB Fresh paper arms (TODO A1): state, arming and approvals. */
+    /** The ORB and ORB Fresh arms (TODO A1): state, arming and approvals. Entries follow the Paper/Live switch. */
     val orb = MutableStateFlow<com.optionslab.app.data.OrbArms.View?>(null)
 
     /** Arming an ORB arm starts the market watch if it should be running, so the arm is actually checked. */
@@ -1144,7 +1144,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         msg
     }
 
-    fun approveOrb(source: String) = strategyDo { com.optionslab.app.data.OrbArms.approve(source) }
+    /** [pinConfirmed]: the UI took the PIN or fingerprint first (required when the app is in Live). */
+    fun approveOrb(source: String, pinConfirmed: Boolean = false) = strategyDo { com.optionslab.app.data.OrbArms.approve(source, pinConfirmed) }
     fun skipOrb(source: String) = strategyDo { com.optionslab.app.data.OrbArms.skip(source) }
 
     private fun strategyDo(block: suspend () -> String?) {
