@@ -34,7 +34,7 @@ object StaticIp {
     fun valid(ip: String) = IPV4.matches(ip.trim())
 
     /** Is a VPN (the WireGuard tunnel) carrying the phone's traffic right now? */
-    fun vpnOn(): Boolean = runCatching {
+    fun vpnOn(): Boolean = Relay.enabled && Relay.connected || runCatching {
         val cm = app.getSystemService(ConnectivityManager::class.java)
         cm.getNetworkCapabilities(cm.activeNetwork)?.hasTransport(NetworkCapabilities.TRANSPORT_VPN) == true
     }.getOrDefault(false)
@@ -45,7 +45,9 @@ object StaticIp {
     suspend fun current(force: Boolean = false): String? = withContext(Dispatchers.IO) {
         cached?.let { (at, ip) -> if (!force && System.currentTimeMillis() - at < 60_000) return@withContext ip }
         runCatching {
-            val c = URL("https://api.ipify.org").openConnection() as HttpsURLConnection
+            // With the relay on, ask through it: that is the IP Zerodha sees for orders.
+            val relay = Relay.proxy()
+            val c = (if (relay != null) URL("https://api.ipify.org").openConnection(relay) else URL("https://api.ipify.org").openConnection()) as HttpsURLConnection
             c.connectTimeout = 6_000; c.readTimeout = 6_000; c.useCaches = false
             try {
                 if (c.responseCode != 200) null
@@ -68,7 +70,7 @@ object StaticIp {
         val reg = registered ?: return null
         val now = current() ?: return null
         if (now == reg) return null
-        return "This phone is reaching Zerodha from $now, not your registered static IP $reg" +
-            (if (vpnOn()) " (a VPN is on, but not the relay)" else ": switch on the WireGuard VPN") + ". Zerodha would reject the order."
+        return "Orders would reach Zerodha from $now, not your registered static IP $reg" +
+            (if (Relay.enabled) " (check the relay server)" else ": switch on the relay (More → Zerodha → Static IP)") + ". Zerodha would reject the order."
     }
 }

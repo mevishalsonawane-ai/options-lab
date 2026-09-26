@@ -112,6 +112,8 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
     // The Kite live price stream (WebSocket). No logging interceptor: nothing about the connection is ever logged.
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    // SSH for the built-in static-IP relay (pure Java, no native code, no permissions).
+    implementation("com.github.mwiede:jsch:0.2.18")
     testImplementation(kotlin("test"))
 }
 

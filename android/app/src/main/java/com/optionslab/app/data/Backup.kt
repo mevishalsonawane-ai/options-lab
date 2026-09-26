@@ -40,7 +40,7 @@ object Backup {
     /** Preferences that stay on this phone only. */
     // Also never restored: trading mode and risk limits (k.), security switches (sec.) and the idle lock (lock.):
     // a file must not be able to switch on live trading, raise limits or weaken the locks.
-    private val PRIVATE = listOf("kite.", "draft.kite", "pin.", "tls.", "ol.vault", "hb.", "sq.", "report.", "k.", "sec.", "lock.", "intent.")
+    private val PRIVATE = listOf("kite.", "draft.kite", "pin.", "tls.", "ol.vault", "hb.", "sq.", "report.", "k.", "sec.", "lock.", "intent.", "relay.")
     const val DISARM = "restore.disarm"
 
     private fun file(ctx: Context, dir: String, name: String) = File(if (dir == "f") ctx.filesDir else ctx.noBackupFilesDir, name)

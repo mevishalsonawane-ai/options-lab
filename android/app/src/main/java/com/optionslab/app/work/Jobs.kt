@@ -358,6 +358,8 @@ object Tasks {
         runCatching { com.optionslab.app.data.OrbArms.tick() }
         // Zerodha's live price stream (Live mode, logged in, market hours).
         runCatching { com.optionslab.app.data.KiteStream.ensure() }
+        // The static-IP relay: connected ahead of the first order, kept alive during market hours.
+        if (com.optionslab.app.data.Market.isOpen()) runCatching { com.optionslab.app.data.Relay.warm() }
         // Stops, trailing stops and targets: one exit filled cancels the other; trails move up.
         runCatching { com.optionslab.app.data.Protections.tick() }
         // Every open position's notification, with its live P&L and a Close button.

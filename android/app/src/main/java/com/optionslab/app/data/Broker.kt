@@ -125,7 +125,10 @@ object Broker {
                              json: Boolean = false): Any {
         var attempt = 0
         while (true) {
-            val c = URL(Kite.API + path).openConnection() as HttpsURLConnection
+            // Orders and every other write go through the static-IP relay when it is on (it throws if it
+            // cannot connect, so nothing leaves from another IP); reads go direct.
+            val relay = if (method != "GET") Relay.proxy() else null
+            val c = (if (relay != null) URL(Kite.API + path).openConnection(relay) else URL(Kite.API + path).openConnection()) as HttpsURLConnection
             c.sslSocketFactory = com.optionslab.app.security.KitePin.socketFactory
             try {
                 c.requestMethod = method

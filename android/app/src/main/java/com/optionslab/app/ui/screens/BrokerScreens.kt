@@ -452,7 +452,13 @@ private fun StaticIpCard(model: AppModel) {
     var status by remember { mutableStateOf<com.optionslab.app.data.StaticIp.Status?>(null) }
     var checking by remember { mutableStateOf(false) }
     var ipText by remember { mutableStateOf(com.optionslab.app.data.StaticIp.registered.orEmpty()) }
-    var guide by rememberSaveable { mutableStateOf(com.optionslab.app.data.StaticIp.registered == null) }
+    var guide by rememberSaveable { mutableStateOf(false) }
+    val relay = com.optionslab.app.data.Relay
+    var pub by remember { mutableStateOf(relay.publicKey) }
+    var relayOn by remember { mutableStateOf(relay.enabled) }
+    var hostText by remember { mutableStateOf(relay.host ?: com.optionslab.app.data.StaticIp.registered.orEmpty()) }
+    var testing by remember { mutableStateOf(false) }
+    var relayMsg by remember { mutableStateOf<String?>(null) }
     fun check() { checking = true; scope.launch { status = com.optionslab.app.data.StaticIp.status(force = true); checking = false } }
     LaunchedEffect(Unit) { check() }
     fun open(url: String) = runCatching {
@@ -490,7 +496,72 @@ private fun StaticIpCard(model: AppModel) {
             }
             BrassButton(if (checking) "Checking…" else "Check now", Modifier.weight(1f), tone = p.inkSoft, enabled = !checking) { check() }
         }
-        Text(if (guide) "Hide the setup steps ▲" else "How to set up a static IP and the VPN ▼", style = Type.label.copy(color = p.ink, fontSize = 14.sp),
+        // ---- the built-in relay: 4 steps, nothing to install -----------------------------------
+        Text("Set up with your own server (recommended)", style = Type.body.copy(color = p.ink, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold),
+            modifier = Modifier.padding(top = 14.dp))
+        Note("IraAlgo sends your Zerodha orders through your own cloud server, so Zerodha sees the server's fixed IP. Nothing to install on the phone or the server.")
+        step("1", "Create the app's key", "IraAlgo makes a key only your server will accept. Copy it for step 2.")
+        if (pub == null) BrassButton("Create key", Modifier.fillMaxWidth().padding(top = 6.dp)) {
+            scope.launch { pub = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { relay.newKey() } }
+        } else {
+            Row(
+                Modifier.fillMaxWidth().padding(vertical = 6.dp).background(p.chip, RoundedCornerShape(10.dp)).padding(horizontal = 12.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(pub!!.take(40) + "…", style = Type.figure.copy(color = p.ink, fontSize = 12.sp), modifier = Modifier.weight(1f), maxLines = 1)
+                Text("Copy", style = Type.label.copy(color = p.ink, fontSize = 14.sp),
+                    modifier = Modifier.clickable { clipboard.setText(androidx.compose.ui.text.AnnotatedString(pub!!)); model.say("Key copied: paste it in Oracle's SSH keys box") }.padding(start = 12.dp))
+            }
+        }
+        step("2", "Create the server in Oracle and paste the key",
+            "Oracle console → Compute → Instances → Create instance. Image: Ubuntu. Under \"Add SSH keys\" choose \"Paste public keys\" and paste. " +
+                "Under networking choose \"Do not assign a public IPv4 address\", then Create. When it is running: the instance → Attached VNICs → the VNIC → " +
+                "IPv4 Addresses → ⋮ → Edit → Public IP: Reserved → pick your reserved IP (e.g. 144.24.125.164) → Update.")
+        link("Open the Oracle console", "https://cloud.oracle.com/compute/instances")
+        step("3", "Connect", "Enter the server's IP and tap Connect & test. It shows the IP Zerodha will see.")
+        androidx.compose.material3.OutlinedTextField(hostText, { hostText = it.filter { c -> c.isDigit() || c == '.' }.take(15) },
+            label = { Text("Server IP") }, singleLine = true, modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
+        BrassButton(if (testing) "Connecting…" else "Connect & test", Modifier.fillMaxWidth().padding(top = 8.dp), enabled = !testing && pub != null) {
+            if (!com.optionslab.app.data.StaticIp.valid(hostText)) { com.optionslab.app.work.Alerts.error("Enter the server's IP, like 144.24.125.164."); return@BrassButton }
+            testing = true; relayMsg = null
+            scope.launch {
+                val r = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    runCatching {
+                        relay.host = hostText.trim(); relay.enabled = true
+                        relay.proxy()                                        // throws with the reason if the server refuses or is unreachable
+                        com.optionslab.app.data.StaticIp.status(force = true)
+                    }
+                }
+                testing = false
+                r.onSuccess { st ->
+                    relayOn = true
+                    if (com.optionslab.app.data.StaticIp.registered == null && st.current != null) { com.optionslab.app.data.StaticIp.registered = st.current; ipText = st.current }
+                    relayMsg = if (st.current != null) "✓ Connected. Zerodha will see your orders from ${st.current}." else "Connected, but the IP check did not answer; try again."
+                    status = st
+                }.onFailure { e ->
+                    relay.enabled = false; relayOn = false
+                    relayMsg = e.message ?: "Could not connect"
+                }
+            }
+        }
+        relayMsg?.let { Text(it, style = Type.bodySmall.copy(color = if (it.startsWith("✓")) p.verdigris else p.oxblood), modifier = Modifier.padding(top = 6.dp)) }
+        step("4", "Register that IP with Zerodha", "On the Kite developer site open your app and enter the same IP in its static IP setting.")
+        link("Open My apps on developers.kite.trade", "https://developers.kite.trade/apps")
+        if (pub != null) Row(Modifier.fillMaxWidth().padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(if (relayOn) "Orders go through your server" else "Relay off: orders go direct", style = Type.bodySmall.copy(color = if (relayOn) p.verdigris else p.inkSoft), modifier = Modifier.weight(1f))
+            androidx.compose.material3.Switch(checked = relayOn, onCheckedChange = { on ->
+                if (on && relay.host == null) com.optionslab.app.work.Alerts.error("Connect & test first.") else { relay.enabled = on; relayOn = on; check() }
+            })
+        }
+        if (pub != null) Row(horizontalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.padding(top = 4.dp)) {
+            Text("New key", style = Type.label.copy(color = p.inkSoft), modifier = Modifier.clickable {
+                scope.launch { pub = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { relay.newKey() }; model.say("New key made: paste it into the server again") }
+            }.padding(4.dp))
+            Text("Forget server", style = Type.label.copy(color = p.inkSoft), modifier = Modifier.clickable { relay.forgetServer(); model.say("Server identity forgotten; the next connect trusts it anew") }.padding(4.dp))
+        }
+
+        Text(if (guide) "Hide the VPN steps ▲" else "Advanced: use a WireGuard VPN instead ▼", style = Type.label.copy(color = p.ink, fontSize = 14.sp),
             modifier = Modifier.padding(top = 12.dp).clickable { guide = !guide }.padding(vertical = 4.dp))
         if (guide) {
             Note("Why: a phone on mobile data or home Wi-Fi has an IP that keeps changing, so Zerodha would reject its orders. " +
