@@ -75,6 +75,7 @@ fun ChartScreen(model: AppModel, symbol: String, exchange: String, visible: Bool
     var ready by remember { mutableStateOf(false) }
     var retried by remember { mutableStateOf(false) }
     var failed by remember { mutableStateOf(false) }
+    var why by remember { mutableStateOf<String?>(null) }   // the load's own error, shown on the cover
 
     fun openOrder(buy: Boolean, price: Double?) {
         val (sym, _) = current
@@ -111,7 +112,8 @@ fun ChartScreen(model: AppModel, symbol: String, exchange: String, visible: Bool
     val tickVersion by com.optionslab.app.data.KiteStream.version.collectAsState()
     LaunchedEffect(tickVersion, liveToken, visible, ready) {
         val t = liveToken?.let { com.optionslab.app.data.KiteStream.tick(it) } ?: return@LaunchedEffect
-        if (!visible || !ready) return@LaunchedEffect
+        // Pre-open and after-close ticks would draw candles the exchange never had.
+        if (!visible || !ready || !com.optionslab.app.data.Market.isOpen()) return@LaunchedEffect
         val at = t.exchangeTime ?: (System.currentTimeMillis() / 1000)
         holder[0]?.evaluateJavascript("window.__iraTick && window.__iraTick(${t.last}, $at)", null)
     }
@@ -172,7 +174,8 @@ fun ChartScreen(model: AppModel, symbol: String, exchange: String, visible: Bool
                     settings.textZoom = 100
                     setBackgroundColor(if (p.dark) android.graphics.Color.BLACK else android.graphics.Color.WHITE)
                     addJavascriptInterface(Bridge(this, scope, onSymbol = { s, e -> current = s to e; hint = null },
-                        onOrder = { buy, price -> openOrder(buy, price) }, onData = { ready = true; failed = false }), "IraBridge")
+                        onOrder = { buy, price -> openOrder(buy, price) }, onData = { ready = true; failed = false; why = null },
+                        onFail = { m -> if (!ready) { failed = true; why = m } }), "IraBridge")
                     // A script error in the chart page shows as a red alert (the bundled chart only; no account data).
                     webChromeClient = object : android.webkit.WebChromeClient() {
                         override fun onConsoleMessage(m: android.webkit.ConsoleMessage): Boolean {
@@ -222,7 +225,7 @@ fun ChartScreen(model: AppModel, symbol: String, exchange: String, visible: Bool
         // Covers the blank page until the first candles are drawn, so the chart never shows as a white sheet.
         if (!ready) Box(Modifier.fillMaxSize().background(p.paper), contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(if (failed) "The chart could not load" else "Loading chart…", style = Type.bodySmall.copy(color = p.inkSoft))
+                Text(if (failed) (why ?: "The chart could not load") else "Loading chart…", style = Type.bodySmall.copy(color = p.inkSoft))
                 if (failed) Text("Retry", style = Type.label.copy(color = p.ink, fontWeight = FontWeight.SemiBold),
                     modifier = Modifier.padding(top = 10.dp).background(p.chip, RoundedCornerShape(50))
                         .clickable { failed = false; retried = false; gen++ }.padding(horizontal = 18.dp, vertical = 8.dp))
@@ -292,6 +295,7 @@ private class Bridge(
     private val onSymbol: (String, String) -> Unit,
     private val onOrder: (Boolean, Double?) -> Unit,
     private val onData: () -> Unit = {},
+    private val onFail: (String) -> Unit = {},
 ) {
     private fun reply(id: String, ok: Boolean, payload: String) {
         web.post { web.evaluateJavascript("window.__iraReply(${JSONObject.quote(id)}, $ok, ${JSONObject.quote(payload)})", null) }
@@ -310,7 +314,10 @@ private class Bridge(
                 reply(id, true, a.toString())
                 web.post { onData() }
             } catch (e: Exception) {
-                reply(id, false, "Could not load $symbol: ${e.message ?: "no data"}")
+                // Say why on the cover at once, instead of waiting for the watchdog to give up.
+                val m = "Could not load $symbol: ${e.message ?: "no data"}"
+                reply(id, false, m)
+                web.post { onFail(m) }
             }
         }
     }
