@@ -40,6 +40,8 @@ class IraAlgoApp : Application() {
         com.optionslab.app.data.History.init(this)
         com.optionslab.app.data.Strategies.init(this)
         com.optionslab.app.data.OrbArms.init(this)
+        com.optionslab.app.data.PineScripts.init(this)
+        com.optionslab.app.data.PineAuto.init(this)
         com.optionslab.app.data.Protections.init(this)
         com.optionslab.app.data.TradeBook.init(this)
         com.optionslab.app.data.Journal.init(this)
@@ -52,6 +54,7 @@ class IraAlgoApp : Application() {
                 kotlinx.coroutines.runBlocking {
                     com.optionslab.app.data.Strategies.disarmAll()
                     com.optionslab.app.data.OrbArms.disarmAll()
+                    com.optionslab.app.data.PineScripts.disarmAll()
                 }
                 SecurePrefs.put(com.optionslab.app.data.Backup.DISARM, null)
             }

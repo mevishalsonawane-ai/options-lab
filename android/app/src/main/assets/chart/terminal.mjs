@@ -2,6 +2,7 @@
 // widget (toolbar, drawing rail, 102 indicators, 51 drawing tools), fed by the
 // app through window.IraBridge. Nothing here talks to the network.
 import { createWidget } from './iraalgo-charts.widget.mjs';
+import { registerIndicator } from './iraalgo-charts.mjs';
 import './iraalgo-charts.indicators.mjs';
 import './iraalgo-charts.transform.mjs';
 import './iraalgo-charts.profile.mjs';
@@ -95,6 +96,58 @@ const exchange = q.get('exchange') || 'NSE';
 const theme = q.get('theme') === 'dark' ? 'dark' : 'light';
 document.body.classList.toggle('dark', theme === 'dark');
 
+// ---- the owner's Pine scripts (written in the app), as indicators ------------------------
+// Registered before the widget starts so a saved layout that shows one can restore it.
+const pineRuns = new Map();
+let pineList = [];
+function chartNow() {
+  try { return [widget.symbol(), widget.interval()]; } catch (e) { return [symbol, '5m']; }
+}
+function pineRegister() {
+  try { pineList = JSON.parse(bridge && bridge.pineList ? bridge.pineList() : '[]'); } catch (e) { pineList = []; }
+  for (const p of pineList) {
+    // Markers need a series to sit on: a script with none gets an invisible one.
+    const plots = p.plots.length ? p.plots : [{ key: '_m', title: 'Signals', color: '#00000000', style: 'hidden' }];
+    registerIndicator({
+      id: p.id, name: p.name, category: 'Pine', placement: p.overlay ? 'onchart' : 'pane',
+      inputs: [
+        ...p.inputs.map((i) => i.kind === 'bool' ? { key: i.key, type: 'boolean', label: i.label, default: !!i.default }
+          : i.kind === 'source' ? { key: i.key, type: 'source', label: i.label, default: i.default || 'close' }
+          : { key: i.key, type: 'number', label: i.label, default: Number(i.default) || 0,
+              ...(i.min != null ? { min: i.min } : {}), ...(i.max != null ? { max: i.max } : {}), step: i.kind === 'int' ? 1 : 0.1 }),
+        ...plots.map((pl) => ({ key: pl.key + 'Color', type: 'color', label: pl.title + ' colour', default: pl.color })),
+      ],
+      plots: plots.map((pl) => ({
+        key: pl.key, title: pl.title, colorKey: pl.key + 'Color',
+        type: pl.style === 'histogram' ? 'histogram' : pl.style === 'column' ? 'column' : 'line',
+        style: pl.style === 'points' ? { markersOnly: true, markerRadius: 1.5 } : { lineWidth: pl.style === 'hidden' ? 0 : pl.style === 'hline' ? 1 : 1.5 },
+      })),
+      calc: (bars, settings) => {
+        const ins = {};
+        for (const i of p.inputs) if (settings && settings[i.key] !== undefined) ins[i.key] = settings[i.key];
+        const [sym, iv] = chartNow();
+        let r = null;
+        try {
+          r = JSON.parse(bridge.pineCalc(p.id, sym, iv,
+            JSON.stringify(bars.map((b) => [b.time, b.open, b.high, b.low, b.close, b.volume ?? 0])), JSON.stringify(ins)));
+        } catch (e) { r = null; }
+        pineRuns.set(p.id, r);
+        const out = {};
+        for (const pl of plots) out[pl.key] = pl.key === '_m' ? bars.map((b) => b.close) : (r && r.values && r.values[pl.key]) || bars.map(() => null);
+        return out;
+      },
+      markers: ({ bars }) => {
+        const r = pineRuns.get(p.id);
+        if (!r || !r.markers) return [];
+        return r.markers.filter((m) => bars[m[0]]).map((m) => ({
+          time: bars[m[0]].time, position: m[1] ? 'aboveBar' : 'belowBar', shape: m[2], size: 'small', color: m[3], ...(m[4] ? { text: m[4] } : {}),
+        }));
+      },
+    });
+  }
+}
+pineRegister();
+
 const widget = createWidget('#t', {
   feed,
   symbol,
@@ -155,6 +208,15 @@ widget.on('data', (e) => {
     if (typeof ResizeObserver !== 'undefined' && !window.__iraSized) { window.__iraSized = true; new ResizeObserver(report).observe(el); }
   });
 });
+
+// The app changed its Pine scripts: register them again and show the ones marked for the chart.
+window.__iraPine = () => {
+  pineRegister();
+  try {
+    for (const ind of widget.chart.indicators().slice()) if (String(ind.indicatorId).startsWith("pine-")) widget.chart.removeIndicator(ind.id);
+    for (const p of pineList) if (p.onChart) { try { widget.chart.addIndicator(p.id); } catch (e) { window.__iraPineErr = String(e && e.message || e); } }
+  } catch (e) { window.__iraPineErr = String(e && e.message || e); }
+};
 
 // The app switches symbol (e.g. from the option chain) through this.
 window.__iraSetSymbol = (s, ex) => widget.setSymbol(s, ex);

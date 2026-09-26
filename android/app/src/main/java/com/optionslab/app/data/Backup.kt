@@ -34,7 +34,7 @@ object Backup {
     /** (directory, name): f = files, n = no-backup files. */
     // Not carried: protections (they name this phone's live Zerodha orders) and the holiday list
     // (fetched from NSE; a crafted one could mark every day closed and stop the market watch).
-    private val FILES = listOf("f" to "strategies.vault", "f" to "orb.vault", "f" to "paper.vault",
+    private val FILES = listOf("f" to "strategies.vault", "f" to "orb.vault", "f" to "paper.vault", "f" to "pine.vault",
         "n" to "ledger.vault", "n" to "alarms.vault", "n" to "live_trades.vault", "n" to "journal.vault")
 
     /** Preferences that stay on this phone only. */

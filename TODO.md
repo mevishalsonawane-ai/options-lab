@@ -92,6 +92,8 @@ Source paths prefixed `NTA:` are in D:\New Trading app.
 - [ ] L3. Protections (Zerodha stop / trailing stop) still send SL-M: confirm Zerodha accepts SL-M on
   index options, or switch them to SL with a limit like the ORB stop.
 - [ ] L4. Switch the Zerodha setup gate back on: `SKIP_ZERODHA_GATE = false` in `ui/Root.kt` (off while testing other features).
+- [ ] L5. Pine auto-trade: run a script on Paper for a few sessions first (Research -> Pine scripts -> Auto-trade),
+  then one live trade with the app open: confirm the ATM option BUY, the switch on the next signal, and the 15:15 sell in Kite.
 
 ## C. D:\New Trading app (still running the ORB paper forward test)
 

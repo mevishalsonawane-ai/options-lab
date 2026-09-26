@@ -147,6 +147,12 @@ fun ChartScreen(model: AppModel, symbol: String, exchange: String, visible: Bool
         else { failed = true; com.optionslab.app.work.Alerts.error("The chart could not load. Check the connection and tap Retry.") }
     }
 
+    // Pine scripts changed in the app (code, shown on the chart, inputs): the page redraws them.
+    val pineRev by com.optionslab.app.data.PineScripts.chartRev.collectAsState()
+    LaunchedEffect(pineRev, ready, gen) {
+        if (ready) holder[0]?.evaluateJavascript("window.__iraPine && window.__iraPine()", null)
+    }
+
     // A new symbol asked for from elsewhere (Home, the option chain) while the chart is open.
     DisposableEffect(symbol, exchange, ask) {
         if (current != symbol to exchange) {
@@ -404,6 +410,15 @@ private class Bridge(
 
     @JavascriptInterface
     fun symbol(symbol: String, exchange: String) { web.post { onSymbol(symbol, exchange) } }
+
+    /** terminal.mjs: the owner's Pine scripts, registered as indicators. */
+    @JavascriptInterface
+    fun pineList(): String = runCatching { com.optionslab.app.data.PineChart.list() }.getOrDefault("[]")
+
+    /** terminal.mjs: one Pine script run over the chart's candles. */
+    @JavascriptInterface
+    fun pineCalc(id: String, symbol: String, interval: String, bars: String, inputs: String): String =
+        com.optionslab.app.data.PineChart.calc(id, symbol, interval, bars, inputs)
 
     /** A long-press menu order from the chart: side and, for limit/stop, the price under the finger. */
     @JavascriptInterface

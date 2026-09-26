@@ -339,6 +339,8 @@ fun eraseEverything() {
     com.optionslab.app.data.Alarms.wipe()
     com.optionslab.app.data.Paper.wipe()
     com.optionslab.app.data.OrbArms.wipe()
+    com.optionslab.app.data.PineScripts.wipe()
+    com.optionslab.app.data.PineAuto.wipe()
     com.optionslab.app.data.Protections.wipe()
     com.optionslab.app.data.TradeBook.wipe()
     com.optionslab.app.data.Journal.wipe()
@@ -396,6 +398,7 @@ private fun Main(model: AppModel) {
             "strategy" -> if (linked) { tab = Tab.TRADE; tradePage = "strategies" } else { tab = Tab.CABINET; cabinetPage = "broker" }
             "health" -> { tab = Tab.LAB; labPage = "health" }
             "trials" -> { tab = Tab.LAB; labPage = "trials" }
+            "pine" -> { tab = Tab.LAB; labPage = "pine" }
             "tools" -> tab = Tab.TOOLS
             "pnl" -> tab = Tab.PNL
             "cabinet" -> { tab = Tab.CABINET; cabinetPage = "data" }
@@ -461,7 +464,7 @@ private fun Main(model: AppModel) {
                         Tab.TRADE -> TradeHub(model, tradePage) { tradePage = it }
                         Tab.PNL -> com.optionslab.app.ui.screens.PnlCalendarScreen(model)
                         Tab.TOOLS -> ToolsScreen(model, toolsView, { toolsView = it }) { s, e -> chartAsk = s to e; chartNonce++; tab = Tab.CHART }
-                        Tab.LAB -> LabScreen(model, labPage) { labPage = it }
+                        Tab.LAB -> LabScreen(model, labPage, { labPage = it }) { chartOpened = true; tab = Tab.CHART }
                         Tab.CABINET -> CabinetScreen(model, cabinetPage) { cabinetPage = it }
                     }
                 }

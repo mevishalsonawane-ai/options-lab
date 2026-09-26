@@ -356,6 +356,8 @@ object Tasks {
         runCatching { com.optionslab.app.data.Paper.tick() }.getOrNull()?.let { paperEvents(context, it) }
         // The ORB paper arms: manage open positions, then decide on the last completed 5-minute bar.
         runCatching { com.optionslab.app.data.OrbArms.tick() }
+        // Pine scripts set to auto-trade: decide on each completed candle, sell at 15:15.
+        runCatching { com.optionslab.app.data.PineAuto.tick() }
         // Zerodha's live price stream (Live mode, logged in, market hours).
         runCatching { com.optionslab.app.data.KiteStream.ensure() }
         // The static-IP relay: connected ahead of the first order, kept alive during market hours.
