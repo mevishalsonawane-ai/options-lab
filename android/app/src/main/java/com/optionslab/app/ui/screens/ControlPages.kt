@@ -159,19 +159,29 @@ fun DataPage(model: AppModel) {
     val job by model.jobState.collectAsState()
     val prov by model.provenance.collectAsState()
     var confirmWipe by remember { mutableStateOf(false) }
-    var device by remember { mutableStateOf(Store.deviceExpiryDays()) }
+    var wiping by remember { mutableStateOf(false) }
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    // The figures walk the phone's storage, so they are read off the main thread: on opening,
+    // after a harvest, and after a wipe ([reread]). Null until the first read is done.
+    var reread by remember { mutableStateOf(0) }
+    var device by remember { mutableStateOf<List<java.time.LocalDate>?>(null) }
+    var bytes by remember { mutableStateOf<Long?>(null) }
     var manifests by remember { mutableStateOf(mapOf<String, List<Manifest.Entry>>()) }
-    LaunchedEffect(job.running) {
-        device = Store.deviceExpiryDays()
-        manifests = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { listOf("NIFTY", "BANKNIFTY").associateWith { Store.manifest(it) } }
+    LaunchedEffect(job.running, reread) {
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            val d = Store.deviceExpiryDays()
+            val b = Store.deviceBytes()
+            val m = listOf("NIFTY", "BANKNIFTY").associateWith { Store.manifest(it) }
+            Triple(d, b, m)
+        }.let { (d, b, m) -> device = d; bytes = b; manifests = m }
     }
     Page {
         item { PageTitle("Data & Harvest", "No free source serves expired contracts: a day not collected is gone") }
         item {
             LedgerCard(title = "The Record") {
                 LedgerLine("Bundled expiry chains", "170 (2023-01-05 .. 2026-04-13)")
-                LedgerLine("Captured on this phone", "${device.size}" + (device.lastOrNull()?.let { ", latest $it" } ?: ""))
-                LedgerLine("Stored on device", "%.1f MB".format(Store.deviceBytes() / 1e6))
+                LedgerLine("Captured on this phone", device?.let { d -> "${d.size}" + (d.lastOrNull()?.let { ", latest $it" } ?: "") } ?: "…")
+                LedgerLine("Stored on device", bytes?.let { "%.1f MB".format(it / 1e6) } ?: "…")
                 ToggleRow("Include this phone's captures", "They extend the record forward - genuinely out of sample", s.includeDeviceSessions) { on ->
                     model.update { it.copy(includeDeviceSessions = on) }; Store.invalidate()
                 }
@@ -215,13 +225,21 @@ fun DataPage(model: AppModel) {
                 }
             }
         }
-        item { BrassButton("Delete this phone's harvested data", Modifier.fillMaxWidth(), tone = p.oxblood) { confirmWipe = true } }
+        item { BrassButton("Delete this phone's harvested data", Modifier.fillMaxWidth(), tone = p.oxblood, busy = wiping) { if (!wiping) confirmWipe = true } }
     }
     if (confirmWipe) AlertDialog(
         onDismissRequest = { confirmWipe = false }, properties = secure,
         title = { Text("Delete harvested data?", style = Type.title) },
         text = { Text("Partitions and captured expiry chains collected on this phone are deleted. They cannot be collected again: expired contracts are gone for good. The bundled record and your ledger are untouched.", style = Type.bodySmall) },
-        confirmButton = { TextButton({ Store.wipeDeviceData(); confirmWipe = false; device = emptyList(); model.say("Harvested data deleted.") }) { Text("Delete") } },
+        confirmButton = { TextButton({
+            confirmWipe = false; wiping = true
+            // Deleting the partitions walks the whole folder: off the main thread, then the figures are read again.
+            scope.launch {
+                val ok = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { runCatching { Store.wipeDeviceData() }.isSuccess }
+                wiping = false; reread++
+                model.say(if (ok) "Harvested data deleted." else "Could not delete all of the harvested data.")
+            }
+        }) { Text("Delete") } },
         dismissButton = { TextButton({ confirmWipe = false }) { Text("Keep") } },
     )
 }
@@ -642,33 +660,42 @@ private fun GuardCard(model: AppModel) {
 
 
 /**
- * Encrypted backup and restore (PIN-sealed file). Zerodha credentials, the PIN and
- * the pinned certificates are never in it.
+ * Encrypted backup and restore (a file sealed with a backup passphrase; older PIN-sealed
+ * files still open with their PIN). Zerodha credentials, the PIN and the pinned
+ * certificates are never in it.
  */
 @Composable
 private fun BackupCard(model: AppModel, wipeOnExhaustion: Boolean) {
     val p = LocalPalette.current
     val ctx = LocalContext.current
     val scope = androidx.compose.runtime.rememberCoroutineScope()
+    val minPass = com.optionslab.app.data.Backup.MIN_PASSPHRASE
     var busy by remember { mutableStateOf(false) }
-    var ask by remember { mutableStateOf<String?>(null) }          // "backup" | "restore": which PIN prompt is open
-    var pending by remember { mutableStateOf<ByteArray?>(null) }   // a backup made, waiting for its file / a file read, waiting for its PIN
+    var ask by remember { mutableStateOf<String?>(null) }          // "backup" | "restore": which prompt is open
+    var pending by remember { mutableStateOf<ByteArray?>(null) }   // a backup made, waiting for its file / a file read, waiting for its secret
+    var fileVersion by remember { mutableStateOf(0) }              // the picked file: 1 = old, PIN-sealed; 2 = passphrase-sealed
     var opened by remember { mutableStateOf<com.optionslab.app.data.Backup.Contents?>(null) }
     var restoreAuth by remember { mutableStateOf(false) }
     val save = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.CreateDocument("application/octet-stream")) { uri ->
         val bytes = pending; pending = null
         if (uri == null || bytes == null) return@rememberLauncherForActivityResult
         val ok = runCatching { ctx.contentResolver.openOutputStream(uri)?.use { it.write(bytes) } }.isSuccess
-        if (ok) com.optionslab.app.work.Alerts.success("Backup saved. Keep it with your PIN in mind: the PIN opens it.")
+        if (ok) com.optionslab.app.work.Alerts.success("Backup saved. Only its passphrase opens it: keep the passphrase safe, it cannot be recovered.")
         else com.optionslab.app.work.Alerts.error("Could not write the backup file.")
     }
     val pick = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.OpenDocument()) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
         val bytes = runCatching { ctx.contentResolver.openInputStream(uri)?.use { it.readBytes() } }.getOrNull()
-        if (bytes == null) com.optionslab.app.work.Alerts.error("Could not read that file.") else { pending = bytes; ask = "restore" }
+        val ver = bytes?.let { b -> runCatching { com.optionslab.app.data.Backup.version(b) }.getOrNull() }
+        when {
+            bytes == null -> com.optionslab.app.work.Alerts.error("Could not read that file.")
+            ver == null -> com.optionslab.app.work.Alerts.error("This is not an IraAlgo backup.")
+            else -> { pending = bytes; fileVersion = ver; ask = "restore" }
+        }
     }
     LedgerCard(title = "Backup and restore") {
-        Note("One file with your settings, strategies, ORB arms, paper account, ledger, alarms, protections, journal and trade history, sealed with your PIN. " +
+        Note("One file with your settings, strategies, ORB arms, paper account, ledger, alarms, protections, journal and trade history, " +
+            "sealed with a backup passphrase you choose (at least $minPass characters). " +
             "Zerodha keys and sessions are never in it: after a restore, link Zerodha again.")
         Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)) {
             BrassButton("Back up now", Modifier.weight(1f), busy = busy && ask == null) { ask = "backup" }
@@ -676,46 +703,83 @@ private fun BackupCard(model: AppModel, wipeOnExhaustion: Boolean) {
         }
     }
     ask?.let { mode ->
+        // A backup needs the app PIN (to authorise it) and a new passphrase (to seal it); a restore
+        // needs whichever the file was sealed with.
+        val usePin = mode == "backup" || fileVersion == 1
+        val usePass = mode == "backup" || fileVersion == 2
         var pin by remember(mode) { mutableStateOf("") }
+        var pass by remember(mode) { mutableStateOf("") }
+        var again by remember(mode) { mutableStateOf("") }
         com.optionslab.app.ui.components.AlertDialog(
             onDismissRequest = { ask = null; if (mode == "restore") pending = null },
             properties = androidx.compose.ui.window.DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy),
             title = { Text(if (mode == "backup") "Seal the backup" else "Open the backup", style = Type.title) },
             text = {
                 Column {
-                    Text(if (mode == "backup") "Enter your app PIN. The backup is sealed with it." else "Enter the PIN the backup was made with.", style = Type.bodySmall)
-                    androidx.compose.material3.OutlinedTextField(pin, { pin = it.filter(Char::isDigit).take(12) }, label = { Text("PIN") }, singleLine = true,
+                    Text(when {
+                        mode == "backup" -> "Enter your app PIN, then choose a backup passphrase. The file is sealed with the passphrase: " +
+                            "it cannot be recovered, so keep it somewhere safe."
+                        fileVersion == 1 -> "An older backup, sealed with a PIN. Enter the PIN it was made with."
+                        else -> "Enter the passphrase the backup was sealed with."
+                    }, style = Type.bodySmall)
+                    if (usePin) androidx.compose.material3.OutlinedTextField(pin, { pin = it.filter(Char::isDigit).take(12) }, label = { Text(if (mode == "backup") "App PIN" else "PIN") }, singleLine = true,
                         visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
                         keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.NumberPassword))
+                    if (usePass) androidx.compose.material3.OutlinedTextField(pass, { pass = it.take(128) }, label = { Text(if (mode == "backup") "Backup passphrase" else "Passphrase") }, singleLine = true,
+                        visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Password))
+                    if (mode == "backup") {
+                        androidx.compose.material3.OutlinedTextField(again, { again = it.take(128) }, label = { Text("Passphrase again") }, singleLine = true,
+                            visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Password))
+                        val probe = pass.toCharArray()
+                        val strength = com.optionslab.app.data.Backup.strength(probe)
+                        probe.fill('\u0000')
+                        val (hint, tone) = when (strength) {
+                            0 -> "${pass.length} of at least $minPass characters" to p.inkSoft
+                            1 -> "Weak: make it longer, or mix words, digits and symbols" to p.oxblood
+                            2 -> "Fair: a few more words would make it strong" to p.brass
+                            else -> "Strong" to p.verdigris
+                        }
+                        Text(hint, style = Type.bodySmall, color = tone)
+                        if (again.isNotEmpty() && again != pass) Text("The two passphrases differ.", style = Type.bodySmall, color = p.oxblood)
+                    }
                 }
             },
             confirmButton = {
                 TextButton({
-                    val typed = pin.toCharArray()
-                    busy = true
-                    scope.launch {
-                        try {
-                            if (mode == "backup") {
-                                // The PIN must be the app's own: a typo would seal a file nobody can open.
-                                // verify() wipes the array it is given, so it gets its own copy: the backup is sealed with [typed].
-                                val r = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { PinLock.verify(typed.copyOf(), wipeOnExhaustion) }
-                                when (r) {
-                                    PinLock.Result.Ok -> Unit
-                                    PinLock.Result.Wiped -> { typed.fill('\u0000'); ask = null; eraseEverything(); return@launch }
-                                    is PinLock.Result.LockedOut -> { typed.fill('\u0000'); com.optionslab.app.work.Alerts.error("Too many wrong PINs. Try again in ${r.secondsLeft} s."); return@launch }
-                                    else -> { typed.fill('\u0000'); com.optionslab.app.work.Alerts.error("Not the right PIN."); return@launch }
+                    if (mode == "backup" && pass.length < minPass) com.optionslab.app.work.Alerts.error("The backup passphrase needs at least $minPass characters.")
+                    else if (mode == "backup" && pass != again) com.optionslab.app.work.Alerts.error("The two passphrases differ.")
+                    else {
+                        val typed = pin.toCharArray()
+                        val phrase = pass.toCharArray()
+                        busy = true
+                        scope.launch {
+                            try {
+                                if (mode == "backup") {
+                                    // Only the owner may make a backup: the app PIN authorises it; the passphrase seals it.
+                                    val r = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { PinLock.verify(typed.copyOf(), wipeOnExhaustion) }
+                                    when (r) {
+                                        PinLock.Result.Ok -> Unit
+                                        PinLock.Result.Wiped -> { ask = null; eraseEverything(); return@launch }
+                                        is PinLock.Result.LockedOut -> { com.optionslab.app.work.Alerts.error("Too many wrong PINs. Try again in ${r.secondsLeft} s."); return@launch }
+                                        else -> { com.optionslab.app.work.Alerts.error("Not the right PIN."); return@launch }
+                                    }
+                                    typed.fill('\u0000')
+                                    // create() reads the data on IO and stretches the passphrase on Default.
+                                    pending = com.optionslab.app.data.Backup.create(ctx, phrase)
+                                    ask = null
+                                    save.launch("iraalgo-backup-${com.optionslab.app.data.Market.today()}.irabk")
+                                } else {
+                                    val bytes = pending ?: return@launch
+                                    val secret = if (fileVersion == 1) typed else phrase
+                                    opened = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { com.optionslab.app.data.Backup.open(bytes, secret) }
+                                    ask = null; pending = null
                                 }
-                                pending = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { com.optionslab.app.data.Backup.create(ctx, typed) }
-                                ask = null
-                                save.launch("iraalgo-backup-${com.optionslab.app.data.Market.today()}.irabk")
-                            } else {
-                                val bytes = pending ?: return@launch
-                                opened = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { com.optionslab.app.data.Backup.open(bytes, typed) }
-                                ask = null; pending = null
-                            }
-                        } catch (e: Exception) {
-                            com.optionslab.app.work.Alerts.error(e.message ?: "That did not work.")
-                        } finally { typed.fill('\u0000'); busy = false }
+                            } catch (e: Exception) {
+                                com.optionslab.app.work.Alerts.error(e.message ?: "That did not work.")
+                            } finally { typed.fill('\u0000'); phrase.fill('\u0000'); busy = false }
+                        }
                     }
                 }, enabled = !busy) { Text(if (busy) "Working…" else "Continue") }
             },
@@ -738,7 +802,7 @@ private fun BackupCard(model: AppModel, wipeOnExhaustion: Boolean) {
             dismissButton = { TextButton({ opened = null }) { Text("Cancel") } },
         )
     }
-    // The backup's own PIN is whoever made the file's choice: replacing this phone's data needs THIS app's PIN.
+    // The backup's passphrase (or old PIN) is whoever made the file's choice: replacing this phone's data needs THIS app's PIN.
     if (restoreAuth) opened?.let { c ->
         Reauth(model, onCancel = { restoreAuth = false }, why = "Enter this phone's app PIN to replace its data with the backup.", onOk = {
                     restoreAuth = false

@@ -467,7 +467,11 @@ private fun Main(model: AppModel) {
                         Tab.TRADE -> TradeHub(model, tradePage) { tradePage = it }
                         Tab.PNL -> com.optionslab.app.ui.screens.PnlCalendarScreen(model)
                         Tab.TOOLS -> ToolsScreen(model, toolsView, { toolsView = it }) { s, e -> chartAsk = s to e; chartNonce++; tab = Tab.CHART }
-                        Tab.LAB -> LabScreen(model, labPage, { labPage = it }) { chartOpened = true; tab = Tab.CHART }
+                        Tab.LAB -> LabScreen(model, labPage, { labPage = it }) {
+                            // A Pine backtest's "Show on chart" opens the chart on the index it ran on.
+                            com.optionslab.app.ui.screens.takePineChartAsk()?.let { chartAsk = it; chartNonce++ }
+                            chartOpened = true; tab = Tab.CHART
+                        }
                         Tab.CABINET -> CabinetScreen(model, cabinetPage) { cabinetPage = it }
                     }
                 }

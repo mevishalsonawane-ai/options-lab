@@ -65,9 +65,11 @@ import com.optionslab.app.ui.rs
 import com.optionslab.app.ui.theme.LocalPalette
 import com.optionslab.app.ui.theme.Type
 import com.optionslab.engine.pine.Pine
+import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.time.Instant
 import java.time.ZoneId
@@ -87,12 +89,40 @@ private val Mono = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 13.sp
  */
 @Composable
 fun PineScreen(model: AppModel, onOpenChart: () -> Unit = {}) {
-    var editing by remember { mutableStateOf<Long?>(null) }         // 0 = a new script
-    var draft by remember { mutableStateOf<PineScripts.Item?>(null) }
-    val e = editing
-    if (e == null) PineList(onOpen = { editing = it.id; draft = it }, onNew = { editing = 0; draft = it })
-    else draft?.let { d -> PineEditor(model, d, onOpenChart, onClose = { editing = null; draft = null }) }
+    // A draft from before "erase everything" is dropped with the data.
+    val wiped by com.optionslab.app.ui.wipes.collectAsState()
+    val d = PineSession.open?.takeIf { it.wipe == wiped }
+    if (d == null) PineList(onOpen = { PineSession.open = PineDraft(it, wiped) }, onNew = { PineSession.open = PineDraft(it, wiped) })
+    else androidx.compose.runtime.key(d) { PineEditor(model, d, onOpenChart, onClose = { PineSession.open = null }) }
 }
+
+/**
+ * The script being edited, held outside composition: the app composes only the page on show, so
+ * a tab switch or another Lab page would otherwise drop unsaved edits and the last backtest.
+ * Memory only: nothing here is written until Save.
+ */
+private class PineDraft(start: PineScripts.Item, val wipe: Int) {
+    var item by mutableStateOf(start)                      // as last saved (id 0 = a new script)
+    var name by mutableStateOf(start.name)
+    var code by mutableStateOf(TextFieldValue(start.code))
+    var saved by mutableStateOf(start.id != 0L)
+    var tab by mutableStateOf("code")
+    // The backtest: its result is kept, and a run carries on if the page is left meanwhile.
+    var test by mutableStateOf<TestRun?>(null)
+    var testing by mutableStateOf(false)
+    var stage by mutableStateOf<String?>(null)
+    var testError by mutableStateOf<String?>(null)
+    /** One save at a time, so a new script is never created twice. */
+    val saving = kotlinx.coroutines.sync.Mutex()
+}
+
+private object PineSession {
+    var open by mutableStateOf<PineDraft?>(null)
+}
+
+/** The index a backtest asked the chart to show, taken (once) by the app when the Lab opens the chart. */
+private var pineChartAsk: Pair<String, String>? = null
+fun takePineChartAsk(): Pair<String, String>? = pineChartAsk.also { pineChartAsk = null }
 
 @Composable
 private fun PineList(onOpen: (PineScripts.Item) -> Unit, onNew: (PineScripts.Item) -> Unit) {
@@ -105,17 +135,22 @@ private fun PineList(onOpen: (PineScripts.Item) -> Unit, onNew: (PineScripts.Ite
         BrassButton("New script", Modifier.fillMaxWidth()) { choosing = true }
         if (items.isEmpty()) Text("No scripts yet. Start from an example: they compile and backtest as they are.",
             style = Type.bodySmall.copy(color = p.inkSoft))
-        for (it in items.sortedByDescending { it.updated }) {
-            val c = remember(it.code) { PineScripts.compile(it.code) }
+        for (it in items.sortedByDescending { it.updated }) androidx.compose.runtime.key(it.id) {
+            // Compiled off the main thread (a long script takes a while); null until it is done.
+            val src = it.code
+            val c = androidx.compose.runtime.produceState<Pine.Compiled?>(null, src) {
+                value = withContext(Dispatchers.Default) { PineScripts.compile(src) }
+            }.value
             val ok = c as? Pine.Compiled.Ok
             LedgerCard(onClick = { onOpen(it) }, accent = if (it.auto.on) p.verdigris else null) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(it.name, style = Type.title.copy(color = p.ink, fontSize = 15.sp), maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                     Stamp(when {
+                        c == null -> "…"
                         ok == null -> "ERRORS"
                         ok.script.kind == Pine.Kind.STRATEGY -> "STRATEGY"
                         else -> "INDICATOR"
-                    }, if (ok == null) p.oxblood else p.ink)
+                    }, if (c is Pine.Compiled.Failed) p.oxblood else p.ink)
                 }
                 Spacer(Modifier.height(4.dp))
                 val bits = buildList {
@@ -146,45 +181,56 @@ private fun PineList(onOpen: (PineScripts.Item) -> Unit, onNew: (PineScripts.Ite
 }
 
 @Composable
-private fun PineEditor(model: AppModel, start: PineScripts.Item, onOpenChart: () -> Unit, onClose: () -> Unit) {
+private fun PineEditor(model: AppModel, d: PineDraft, onOpenChart: () -> Unit, onClose: () -> Unit) {
     val p = LocalPalette.current
-    val scope = rememberCoroutineScope()
-    var item by remember { mutableStateOf(start) }
-    var name by remember { mutableStateOf(start.name) }
-    var code by remember { mutableStateOf(TextFieldValue(start.code)) }
     var result by remember { mutableStateOf<Pine.Compiled?>(null) }
-    var saved by remember { mutableStateOf(start.id != 0L) }
-    var tab by remember { mutableStateOf("code") }
     var deleting by remember { mutableStateOf(false) }
-    androidx.activity.compose.BackHandler { onClose() }
+    var leaving by remember { mutableStateOf(false) }
+    var writing by remember { mutableStateOf(false) }
 
-    // Checked 0.4 s after the last keystroke.
-    LaunchedEffect(code.text) {
-        delay(400)
-        result = withContext(Dispatchers.Default) { PineScripts.compile(code.text) }
+    // Checked 0.4 s after the last keystroke (at once on coming back to the page).
+    LaunchedEffect(d.code.text) {
+        val text = d.code.text
+        if (result != null) delay(400)
+        result = withContext(Dispatchers.Default) { PineScripts.compile(text) }
     }
     val ok = (result as? Pine.Compiled.Ok)?.script
     val errors = (result as? Pine.Compiled.Failed)?.errors.orEmpty()
     val warnings = when (val r = result) { is Pine.Compiled.Ok -> r.script.warnings; is Pine.Compiled.Failed -> r.warnings; else -> emptyList() }
-    val dirty = code.text != item.code || name != item.name
+    val dirty = d.code.text != d.item.code || d.name != d.item.name
     // While it trades by itself its code and inputs stay as they were armed: a change would alter
     // real orders without the PIN. Switch auto-trade off to edit.
     val allItems by PineScripts.items.collectAsState()
-    val armed = allItems.firstOrNull { it.id == item.id }?.auto?.on == true
+    val armed = allItems.firstOrNull { it.id == d.item.id }?.auto?.on == true
 
-    fun save(): PineScripts.Item {
-        val s = PineScripts.put(item.copy(name = name.ifBlank { ok?.title ?: "Script" }, code = code.text))
-        item = s; saved = true
-        return s
+    // Saving writes the encrypted vault: off the main thread, one save at a time, and in the app's
+    // scope so a save already started still lands in the draft if the page is left meanwhile.
+    suspend fun saveNow(inputs: Map<String, String>? = null): PineScripts.Item = d.saving.withLock {
+        val want = d.item.copy(name = d.name.ifBlank { ok?.title ?: "Script" }, code = d.code.text)
+        val s = withContext(Dispatchers.IO) { PineScripts.put(if (inputs != null) want.copy(inputs = inputs) else want) }
+        d.item = s; d.saved = true
+        s
     }
+    fun later(what: suspend () -> Unit) {
+        writing = true
+        model.viewModelScope.launch {
+            try { what() }
+            catch (e: kotlinx.coroutines.CancellationException) { throw e }
+            catch (e: Throwable) { com.optionslab.app.work.Alerts.error("Could not save the script: ${e.message ?: e.javaClass.simpleName}") }
+            finally { writing = false }
+        }
+    }
+    // Unsaved edits are never dropped without asking.
+    fun close() { if (dirty) leaving = true else onClose() }
+    androidx.activity.compose.BackHandler { close() }
 
     Column(Modifier.fillMaxSize()) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            TextButton(onClose) { Text("‹ Scripts") }
+            TextButton({ close() }) { Text("‹ Scripts") }
             Spacer(Modifier.weight(1f))
             listOf("code" to "Code", "test" to "Backtest", "auto" to "Auto-trade").forEach { (k, l) ->
-                com.optionslab.app.ui.components.Token(l, tab == k) { tab = k }
+                com.optionslab.app.ui.components.Token(l, d.tab == k) { d.tab = k }
             }
         }
         // Status line: compiles, or how many errors.
@@ -197,47 +243,58 @@ private fun PineEditor(model: AppModel, start: PineScripts.Item, onOpenChart: ()
         }
         Text(status.first, style = Type.label.copy(color = status.second, fontSize = 12.sp),
             modifier = Modifier.fillMaxWidth().background(p.paperDeep).padding(horizontal = 14.dp, vertical = 6.dp))
-        when (tab) {
+        val notYet = if (result == null) "Checking the script…" else "The script has errors: fix them in Code first."
+        when (d.tab) {
             "code" -> Column(Modifier.weight(1f)) {
                 Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(name, { name = it.take(60) }, label = { Text("Name") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                    CodeField(code, { if (it.text.length <= Pine.MAX_CHARS) code = it }, errors.map { it.line }.toSet())
+                    OutlinedTextField(d.name, { d.name = it.take(60) }, label = { Text("Name") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                    CodeField(d.code, { if (it.text.length <= Pine.MAX_CHARS) d.code = it }, errors.map { it.line }.toSet())
                     errors.forEach { er ->
                         Text("Line ${er.line}:${er.col}  ${er.message}", style = Type.bodySmall.copy(color = p.oxblood),
-                            modifier = Modifier.fillMaxWidth().clickable { code = code.copy(selection = TextRange(offsetOf(code.text, er.line, er.col))) }
+                            modifier = Modifier.fillMaxWidth().clickable { d.code = d.code.copy(selection = TextRange(offsetOf(d.code.text, er.line, er.col))) }
                                 .padding(vertical = 2.dp))
                     }
                     warnings.forEach { w -> Text("Line ${w.line}: ${w.message}", style = Type.bodySmall.copy(color = p.amber)) }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        BrassButton(if (saved && !dirty) "Saved" else "Save", Modifier.weight(1f), enabled = (dirty || !saved) && !armed) { save() }
-                        BrassButton("Delete", Modifier.weight(1f), tone = p.inkSoft, enabled = saved) { deleting = true }
+                        BrassButton(if (d.saved && !dirty) "Saved" else "Save", Modifier.weight(1f), busy = writing,
+                            enabled = (dirty || !d.saved) && !armed && !writing) { later { saveNow() } }
+                        BrassButton("Delete", Modifier.weight(1f), tone = p.inkSoft, enabled = d.saved) { deleting = true }
                     }
                     if (armed && dirty) Note("Auto-trade is on: switch it off (Auto-trade tab) to save changes. Until then it trades with the code it was switched on with.")
                     if (ok != null) {
                         ToggleRow("Show on the chart", if (ok.overlay) "Drawn over the candles, with its buy/sell marks" else "Drawn in its own pane under the candles",
-                            item.onChart) { on ->
-                            val s = if (armed) item else save()
-                            PineScripts.setOnChart(s.id, on); item = PineScripts.get(s.id) ?: s
+                            d.item.onChart) { on ->
+                            later {
+                                val s = if (armed) d.item else saveNow()
+                                withContext(Dispatchers.IO) { PineScripts.setOnChart(s.id, on) }
+                                d.item = PineScripts.get(s.id) ?: s
+                            }
                         }
-                        if (item.onChart) TextButton(onOpenChart) { Text("Open the chart ›") }
+                        if (d.item.onChart) TextButton(onOpenChart) { Text("Open the chart ›") }
                     } else if (errors.isNotEmpty()) Note("Fix the errors to backtest it or put it on the chart. Tap an error to jump to it.")
                     Text("Supported: variables, var, :=, if / switch / for / for…in / while, functions and tuples, x[n] history, arrays (array.* and a.push()), inputs, request.security on higher timeframes of the same symbol, ta.* and math.*, plot, hline, plotshape, alertcondition, strategy.entry / exit (partial too) / close / cancel. Not yet: other symbols, matrices, maps, user types.",
                         style = Type.bodySmall.copy(color = p.inkFaint, fontSize = 11.sp))
                     Spacer(Modifier.height(12.dp))
                 }
-                KeyStrip { ins -> code = insert(code, ins) }
+                KeyStrip { ins -> d.code = insert(d.code, ins) }
             }
-            "test" -> if (ok == null) Box(Modifier.fillMaxSize().padding(20.dp)) { Note("The script has errors: fix them in Code first.") }
-                else PineBacktest(item, ok, onOpenChart) { inputs -> if (!armed) item = PineScripts.put(save().copy(inputs = inputs)) }
-            else -> if (ok == null) Box(Modifier.fillMaxSize().padding(20.dp)) { Note("The script has errors: fix them in Code first.") }
-                else PineAutoPanel(model, item, ok, save = { save() }) { item = it }
+            "test" -> if (ok == null) Box(Modifier.fillMaxSize().padding(20.dp)) { Note(notYet) }
+                else PineBacktest(model, d, ok, onOpenChart) { inputs -> if (!armed) later { saveNow(inputs) } }
+            else -> if (ok == null) Box(Modifier.fillMaxSize().padding(20.dp)) { Note(notYet) }
+                else PineAutoPanel(model, d.item, ok, save = { saveNow() }) { d.item = it }
         }
     }
+    if (leaving) AlertDialog(onDismissRequest = { leaving = false }, properties = secureDialog,
+        confirmButton = { TextButton({ leaving = false; onClose() }) { Text("Discard", color = p.oxblood) } },
+        dismissButton = { TextButton({ leaving = false }) { Text("Keep editing") } },
+        title = { Text("Discard your changes?") },
+        text = { Text("The changes to ${d.name.ifBlank { "this script" }} are not saved." +
+            (if (armed) " Auto-trade is on, so they cannot be saved until it is switched off." else " Keep editing and tap Save to keep them.")) })
     if (deleting) AlertDialog(onDismissRequest = { deleting = false }, properties = secureDialog,
-        confirmButton = { TextButton({ deleting = false; PineScripts.delete(item.id); onClose() }) { Text("Delete", color = p.oxblood) } },
+        confirmButton = { TextButton({ deleting = false; PineScripts.delete(d.item.id); onClose() }) { Text("Delete", color = p.oxblood) } },
         dismissButton = { TextButton({ deleting = false }) { Text("Keep") } },
-        title = { Text("Delete ${item.name}?") }, text = { Text("The script is removed from this phone and from the chart." +
+        title = { Text("Delete ${d.item.name}?") }, text = { Text("The script is removed from this phone and from the chart." +
             (if (armed) " It stops auto-trading and sells what it holds." else "") + " This cannot be undone.") })
 }
 
@@ -292,11 +349,13 @@ private data class TestRun(val run: Pine.Run, val report: Pine.Report?, val bars
                             val how: String, val note: String? = null)
 
 @Composable
-private fun PineBacktest(item: PineScripts.Item, s: Pine.Script, onChart: () -> Unit, onInputs: (Map<String, String>) -> Unit) {
+private fun PineBacktest(model: AppModel, d: PineDraft, s: Pine.Script, onChart: () -> Unit, onInputs: (Map<String, String>) -> Unit) {
     val p = LocalPalette.current
     val scope = rememberCoroutineScope()
-    var symbol by remember { mutableStateOf(item.auto.symbol) }
-    var interval by remember { mutableStateOf(item.auto.interval) }
+    val item = d.item
+    // Coming back to a kept result: the symbol and candles it was run on.
+    var symbol by remember { mutableStateOf(d.test?.symbol ?: item.auto.symbol) }
+    var interval by remember { mutableStateOf(d.test?.interval ?: item.auto.interval) }
     val periods = when (interval) { "1m" -> listOf(5, 15, 30); "5m", "15m" -> listOf(30, 90, 180); "1h" -> listOf(90, 180, 365); else -> listOf(365, 1095, 1825) }
     var days by remember(interval) { mutableStateOf(periods[1]) }
     val inputs = remember { mutableStateMapOf<String, String>().apply { s.inputs.forEach { d -> put(d.key, item.inputs[d.key] ?: d.default?.let { v -> if (v is Double && v == Math.floor(v)) v.toLong().toString() else v.toString() } ?: "") } } }
@@ -313,10 +372,7 @@ private fun PineBacktest(item: PineScripts.Item, s: Pine.Script, onChart: () -> 
     var buySig by remember { mutableStateOf(item.auto.buy.takeIf { it in s.signals } ?: guessBuy) }
     var sellSig by remember { mutableStateOf(item.auto.sell.takeIf { it in s.signals } ?: guessSell) }
     var reverse by remember { mutableStateOf(item.auto.shortWith != "exit") }
-    var busy by remember { mutableStateOf(false) }
-    var error by remember { mutableStateOf<String?>(null) }
-    var res by remember { mutableStateOf<TestRun?>(null) }
-    var stage by remember { mutableStateOf<String?>(null) }
+    val busy = d.testing
     val scroll = rememberScrollState()
     var resultTop by remember { mutableStateOf(0) }
     val strategy = s.kind == Pine.Kind.STRATEGY
@@ -370,7 +426,8 @@ private fun PineBacktest(item: PineScripts.Item, s: Pine.Script, onChart: () -> 
         }
         val canTrade = strategy || (buySig != null && sellSig != null)
         BrassButton(if (busy) "Running…" else "Run backtest", Modifier.fillMaxWidth().padding(top = 6.dp), busy = busy) {
-            busy = true; error = null; res = null; stage = "Loading $symbol $interval candles…"
+            if (d.testing) return@BrassButton
+            d.testing = true; d.testError = null; d.test = null; d.stage = "Loading $symbol $interval candles…"
             val ins = inputs.toMap()
             val bs = buySig; val ss = sellSig; val rev = reverse
             val q = qty.toDoubleOrNull()?.takeIf { it > 0 }
@@ -378,14 +435,16 @@ private fun PineBacktest(item: PineScripts.Item, s: Pine.Script, onChart: () -> 
             val costs = Pine.Costs(slippagePoints = if (premium) 0.0 else slippage.toDoubleOrNull() ?: 0.0, perOrder = if (premium) 0.0 else perOrder.toDoubleOrNull() ?: 0.0)
             val prem = premium; val nLots = lots.toIntOrNull()?.coerceIn(1, 100) ?: 1; val slipPrem = slippage.toDoubleOrNull() ?: 0.0
             runCatching { onInputs(ins) }                          // remembering the inputs must never stop the run
-            scope.launch {
+            // The run lives in the app's scope and reports into the draft, so leaving the page
+            // does not throw away a run of up to a minute; this page only scrolls to the result.
+            val job = model.viewModelScope.launch {
                 val r = withContext(Dispatchers.IO) {
                     try {
                         val to = System.currentTimeMillis() / 1000
                         val raw = ChartFeed.bars(symbol, interval, to - days * 86400L, null)
                         if (raw.isEmpty()) throw IllegalStateException("No $symbol $interval candles came back for that period. Check the connection, or pick a shorter period.")
                         val bars = raw.map { PineScripts.toPine(it) }
-                        withContext(Dispatchers.Main) { stage = "Running the script on ${"%,d".format(bars.size)} candles…" }
+                        withContext(Dispatchers.Main) { d.stage = "Running the script on ${"%,d".format(bars.size)} candles…" }
                         val values = PineScripts.inputValues(PineScripts.Item(0, "", "", inputs = ins), s)
                         val run = withContext(Dispatchers.Default) { Pine.run(s, bars, values, symbol, interval, if (strategy) q else null, budgetMs = 60_000, costs = costs) }
                         var report = when {
@@ -397,9 +456,9 @@ private fun PineBacktest(item: PineScripts.Item, s: Pine.Script, onChart: () -> 
                         }
                         var note: String? = null
                         if (prem && report != null) {
-                            withContext(Dispatchers.Main) { stage = "Pricing the trades on option data…" }
+                            withContext(Dispatchers.Main) { d.stage = "Pricing the trades on option data…" }
                             val pr = withContext(Dispatchers.Default) {
-                                com.optionslab.engine.pine.PinePremium.run(report!!.trades, bars, { d -> com.optionslab.app.data.Store.barSession(symbol, d) },
+                                com.optionslab.engine.pine.PinePremium.run(report!!.trades, bars, { day -> com.optionslab.app.data.Store.barSession(symbol, day) },
                                     com.optionslab.app.data.PineAuto.strikeStep(symbol), nLots, if (strategy) s.settings.initialCapital else cap,
                                     shortsBuyPuts = strategy || rev, slippage = slipPrem)
                             }
@@ -413,22 +472,30 @@ private fun PineBacktest(item: PineScripts.Item, s: Pine.Script, onChart: () -> 
                     } catch (e: kotlinx.coroutines.CancellationException) { throw e
                     } catch (e: Throwable) { Result.failure(e) }
                 }
-                busy = false; stage = null
-                r.onSuccess { res = it }.onFailure { error = "Backtest failed: " + (it.message ?: it.javaClass.simpleName) }
+                d.testing = false; d.stage = null
+                r.onSuccess { d.test = it }.onFailure { d.testError = "Backtest failed: " + (it.message ?: it.javaClass.simpleName) }
+            }
+            scope.launch {
+                job.join()
                 // The result sits below the inputs: bring it into view.
                 scroll.animateScrollTo(resultTop)
             }
         }
-        stage?.let { Text(it, style = Type.bodySmall.copy(color = p.inkSoft)) }
+        d.stage?.let { Text(it, style = Type.bodySmall.copy(color = p.inkSoft)) }
         Box(Modifier.fillMaxWidth().height(1.dp).onGloballyPositioned { resultTop = it.positionInParent().y.toInt() })
-        error?.let { LedgerCard(accent = p.oxblood) { Text(it, style = Type.bodySmall.copy(color = p.oxblood)) } }
-        res?.let { t ->
+        d.testError?.let { LedgerCard(accent = p.oxblood) { Text(it, style = Type.bodySmall.copy(color = p.oxblood)) } }
+        d.test?.let { t ->
             BacktestResult(t, s)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 6.dp)) {
                 ExportCsv(t, Modifier.weight(1f))
                 BrassButton("Show on chart", Modifier.weight(1f), tone = p.inkSoft) {
-                    if (item.id != 0L) PineScripts.setOnChart(item.id, true)
-                    onChart()
+                    val id = d.item.id
+                    scope.launch {
+                        if (id != 0L) withContext(Dispatchers.IO) { PineScripts.setOnChart(id, true) }
+                        // The chart opens on the index the backtest ran on.
+                        pineChartAsk = t.symbol to (if (t.symbol == "SENSEX") "BSE" else "NSE")
+                        onChart()
+                    }
                 }
             }
         }
@@ -749,7 +816,7 @@ private fun num(x: Double) = if (x == Math.floor(x) && kotlin.math.abs(x) < 1e12
 // ---- auto-trade ----------------------------------------------------------------------------
 
 @Composable
-private fun PineAutoPanel(model: AppModel, start: PineScripts.Item, s: Pine.Script, save: () -> PineScripts.Item, onItem: (PineScripts.Item) -> Unit) {
+private fun PineAutoPanel(model: AppModel, start: PineScripts.Item, s: Pine.Script, save: suspend () -> PineScripts.Item, onItem: (PineScripts.Item) -> Unit) {
     val p = LocalPalette.current
     val scope = rememberCoroutineScope()
     val items by PineScripts.items.collectAsState()
@@ -765,15 +832,50 @@ private fun PineAutoPanel(model: AppModel, start: PineScripts.Item, s: Pine.Scri
     val strategy = s.kind == Pine.Kind.STRATEGY
     val usable = strategy || s.signals.isNotEmpty()
 
-    fun set(new: PineScripts.Auto) {
-        val base = if (item.id == 0L) save() else item
-        PineScripts.setAuto(base.id, new)
-        PineScripts.get(base.id)?.let(onItem)
+    // Each change is written to the vault off the main thread, applied to the settings as they
+    // are then (so two quick taps never undo each other), in the app's scope so it still lands
+    // if the page closes meanwhile.
+    suspend fun write(change: (PineScripts.Auto) -> PineScripts.Auto) {
+        val id = (if (item.id == 0L) save() else item).id
+        val now = withContext(Dispatchers.IO) {
+            synchronized(PineScripts) { PineScripts.get(id)?.let { PineScripts.setAuto(id, change(it.auto)) } }
+            PineScripts.get(id)
+        }
+        now?.let(onItem)
+    }
+    fun set(change: (PineScripts.Auto) -> PineScripts.Auto) {
+        model.viewModelScope.launch {
+            try { write(change) }
+            catch (e: kotlinx.coroutines.CancellationException) { throw e }
+            catch (e: Throwable) { com.optionslab.app.work.Alerts.error("Could not save the auto-trade setting: ${e.message ?: e.javaClass.simpleName}") }
+        }
+    }
+    // The number boxes: what is typed waits here and is written 0.6 s after the last keystroke,
+    // before switching on, and when the panel closes, so the last value is never lost.
+    val typed = remember { mutableStateMapOf<String, Double>() }
+    fun withTyped(au: PineScripts.Auto, m: Map<String, Double>) =
+        if (au.on) au    // switched on meanwhile: its settings stay as they were armed
+        else au.copy(stopPts = m["stop"] ?: au.stopPts, targetPts = m["target"] ?: au.targetPts, maxDayLoss = m["day"] ?: au.maxDayLoss)
+    suspend fun flushTyped() {
+        val m = typed.toMap()
+        if (m.isEmpty()) return
+        write { withTyped(it, m) }
+        m.forEach { (k, v) -> if (typed[k] == v) typed.remove(k) }
+    }
+    val pending = typed.toMap()
+    LaunchedEffect(pending) {
+        if (pending.isEmpty()) return@LaunchedEffect
+        delay(600)
+        model.viewModelScope.launch { runCatching { flushTyped() } }
+    }
+    androidx.compose.runtime.DisposableEffect(Unit) {
+        onDispose { if (typed.isNotEmpty()) model.viewModelScope.launch { runCatching { flushTyped() } } }
     }
     fun arm(on: Boolean, pin: Boolean) {
         busy = true
         scope.launch {
             val id = (if (item.id == 0L) save() else item).id
+            if (on) runCatching { flushTyped() }               // what was just typed counts
             withContext(Dispatchers.IO) { com.optionslab.app.data.PineAuto.arm(id, on, pin) }
             PineScripts.get(id)?.let(onItem)
             busy = false
@@ -814,34 +916,34 @@ private fun PineAutoPanel(model: AppModel, start: PineScripts.Item, s: Pine.Scri
         val locked = a.on
         if (locked) Text("Switch it off to change these.", style = Type.bodySmall.copy(color = p.inkFaint))
         ParamTokens("What it does", listOf("Place orders" to (a.mode != "alert"), "Alerts only" to (a.mode == "alert"))) { i ->
-            if (!locked) set(a.copy(mode = if (i == 1) "alert" else "trade"))
+            if (!locked) set { au -> au.copy(mode = if (i == 1) "alert" else "trade") }
         }
-        ParamTokens("Symbol", PINE_SYMBOLS.map { it to (it == a.symbol) }) { if (!locked) set(a.copy(symbol = PINE_SYMBOLS[it])) }
+        ParamTokens("Symbol", PINE_SYMBOLS.map { it to (it == a.symbol) }) { if (!locked) set { au -> au.copy(symbol = PINE_SYMBOLS[it]) } }
         if (a.symbol == "SENSEX" && a.mode != "alert") Note("SENSEX options trade on BSE, where the app does not place orders: choose Alerts only for SENSEX.")
-        ParamTokens("Candles", listOf("1m", "5m", "15m", "1h").map { it to (it == a.interval) }) { if (!locked) set(a.copy(interval = listOf("1m", "5m", "15m", "1h")[it])) }
-        ParamTokens("Lots", listOf(1, 2, 3, 5, 10).map { "$it" to (it == a.lots) }) { if (!locked) set(a.copy(lots = listOf(1, 2, 3, 5, 10)[it])) }
+        ParamTokens("Candles", listOf("1m", "5m", "15m", "1h").map { it to (it == a.interval) }) { if (!locked) set { au -> au.copy(interval = listOf("1m", "5m", "15m", "1h")[it]) } }
+        ParamTokens("Lots", listOf(1, 2, 3, 5, 10).map { "$it" to (it == a.lots) }) { if (!locked) set { au -> au.copy(lots = listOf(1, 2, 3, 5, 10)[it]) } }
         if (strategy) {
             val opts = listOf("strategy") + s.signals
             ParamTokens("Go long on", opts.map { (if (it == "strategy") "the strategy's entries" else it) to (it == a.buy) }) { i ->
-                if (!locked) set(a.copy(buy = opts[i], sell = if (opts[i] == "strategy") "strategy" else a.sell.takeIf { it != "strategy" } ?: s.signals.getOrElse(1) { s.signals.first() }))
+                if (!locked) set { au -> au.copy(buy = opts[i], sell = if (opts[i] == "strategy") "strategy" else a.sell.takeIf { it != "strategy" } ?: s.signals.getOrElse(1) { s.signals.first() }) }
             }
-            if (a.buy != "strategy") ParamTokens("Go short on", s.signals.map { it to (it == a.sell) }) { i -> if (!locked) set(a.copy(sell = s.signals[i])) }
+            if (a.buy != "strategy") ParamTokens("Go short on", s.signals.map { it to (it == a.sell) }) { i -> if (!locked) set { au -> au.copy(sell = s.signals[i]) } }
         } else {
             val buy = a.buy.takeIf { it in s.signals } ?: s.signals.first()
             val sell = a.sell.takeIf { it in s.signals } ?: s.signals.getOrElse(1) { s.signals.first() }
-            if (buy != a.buy || sell != a.sell) LaunchedEffect(Unit) { set(a.copy(buy = buy, sell = sell)) }
-            ParamTokens("Buy signal", s.signals.map { it to (it == buy) }) { i -> if (!locked) set(a.copy(buy = s.signals[i])) }
-            ParamTokens("Sell signal", s.signals.map { it to (it == sell) }) { i -> if (!locked) set(a.copy(sell = s.signals[i])) }
+            if (buy != a.buy || sell != a.sell) LaunchedEffect(Unit) { set { au -> au.copy(buy = buy, sell = sell) } }
+            ParamTokens("Buy signal", s.signals.map { it to (it == buy) }) { i -> if (!locked) set { au -> au.copy(buy = s.signals[i]) } }
+            ParamTokens("Sell signal", s.signals.map { it to (it == sell) }) { i -> if (!locked) set { au -> au.copy(sell = s.signals[i]) } }
         }
         if (a.mode != "alert") {
             ParamTokens("On a sell signal", listOf("Buy a PUT" to (a.shortWith == "put"), "Just exit" to (a.shortWith == "exit"))) { i ->
-                if (!locked) set(a.copy(shortWith = if (i == 0) "put" else "exit"))
+                if (!locked) set { au -> au.copy(shortWith = if (i == 0) "put" else "exit") }
             }
             Text("PROTECTION ON THE OPTION", style = Type.label.copy(color = p.inkSoft, fontSize = 10.sp), modifier = Modifier.padding(top = 8.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                AutoNum("Stop-loss (pts)", a.stopPts, locked, Modifier.weight(1f)) { set(a.copy(stopPts = it)) }
-                AutoNum("Target (pts)", a.targetPts, locked, Modifier.weight(1f)) { set(a.copy(targetPts = it)) }
-                AutoNum("Day loss ₹", a.maxDayLoss, locked, Modifier.weight(1f)) { set(a.copy(maxDayLoss = it)) }
+                AutoNum("Stop-loss (pts)", a.stopPts, locked, Modifier.weight(1f)) { typed["stop"] = it }
+                AutoNum("Target (pts)", a.targetPts, locked, Modifier.weight(1f)) { typed["target"] = it }
+                AutoNum("Day loss ₹", a.maxDayLoss, locked, Modifier.weight(1f)) { typed["day"] = it }
             }
             Text("Checked every pass on the option's own price: below the stop or above the target it is sold at once; past the day's loss it is sold and the script trades no more today. 0 = off. The Bot settings daily loss limit also stops every bot.",
                 style = Type.bodySmall.copy(color = p.inkFaint, fontSize = 11.sp))
@@ -861,7 +963,7 @@ private fun PineAutoPanel(model: AppModel, start: PineScripts.Item, s: Pine.Scri
         why = "Enter your app PIN to let this Pine script trade on Zerodha. It then places real orders by itself until you switch it off.")
 }
 
-/** A number box for an auto-trade setting: saved when it parses, 0 when cleared. */
+/** A number box for an auto-trade setting: reported when it parses, 0 when cleared (the panel saves it). */
 @Composable
 private fun AutoNum(label: String, value: Double, locked: Boolean, modifier: Modifier, onValue: (Double) -> Unit) {
     var text by remember { mutableStateOf(if (value == 0.0) "" else if (value == Math.floor(value)) value.toLong().toString() else value.toString()) }
@@ -869,7 +971,7 @@ private fun AutoNum(label: String, value: Double, locked: Boolean, modifier: Mod
         if (locked) return@OutlinedTextField
         text = v.filter { it.isDigit() || it == '.' }.take(8)
         val d = text.toDoubleOrNull() ?: if (text.isEmpty()) 0.0 else return@OutlinedTextField
-        if (d != value) onValue(d)
+        onValue(d)
     }, label = { Text(label, fontSize = 11.sp) }, singleLine = true, enabled = !locked, modifier = modifier,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
 }

@@ -21,6 +21,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -56,7 +57,9 @@ private fun px(x: Double) = String.format(Locale.ENGLISH, "%,.2f", x)
  */
 fun LazyListScope.paperTrade(model: AppModel, snap: Load<Paper.Snapshot>, book: String, onBook: (String) -> Unit,
                              onReset: () -> Unit) {
-    item {
+    // Stable keys: a reset or reload adds and removes rows above the order form, which must not
+    // shift it to another slot and lose what was being typed.
+    item(key = "paper.head") {
         LedgerCard(accent = LocalPalette.current.verdigris) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("SANDBOX · PAPER ACCOUNT", style = Type.label.copy(color = LocalPalette.current.verdigris), modifier = Modifier.weight(1f))
@@ -65,25 +68,25 @@ fun LazyListScope.paperTrade(model: AppModel, snap: Load<Paper.Snapshot>, book: 
             Note("IraAlgo's sandbox engine on the phone: margin, fills, MIS square-off at 15:15 and expiry settlement are simulated from Upstox's public prices. Nothing reaches Zerodha.")
         }
     }
-    if (snap is Load.Done) item { PaperBalance(snap.value, onReset) }
-    item { PaperOrderForm(model) }
-    item {
+    if (snap is Load.Done) item(key = "paper.balance") { PaperBalance(snap.value, onReset) }
+    item(key = "paper.form") { PaperOrderForm(model) }
+    item(key = "paper.book") {
         ParamTokens("Book", listOf("Positions", "Orders", "Trades", "Funds").map { it to (it.lowercase() == book) }) { i ->
             onBook(listOf("positions", "orders", "trades", "funds")[i])
         }
     }
     when (snap) {
-        Load.Idle -> item { LedgerCard { FullSpinner("Opening the paper account") } }
-        is Load.Busy -> item { LedgerCard { FullSpinner(snap.label) } }
-        is Load.Failed -> item { com.optionslab.app.ui.components.AlertOn(snap.why) }
+        Load.Idle -> item(key = "paper.state") { LedgerCard { FullSpinner("Opening the paper account") } }
+        is Load.Busy -> item(key = "paper.state") { LedgerCard { FullSpinner(snap.label) } }
+        is Load.Failed -> item(key = "paper.state") { com.optionslab.app.ui.components.AlertOn(snap.why) }
         is Load.Done -> {
             val v = snap.value
-            if (!v.priced) item { LedgerCard(accent = LocalPalette.current.amber) { Note("No fresh prices from Upstox just now; resting orders wait and positions show their last mark.") } }
+            if (!v.priced) item(key = "paper.unpriced") { LedgerCard(accent = LocalPalette.current.amber) { Note("No fresh prices from Upstox just now; resting orders wait and positions show their last mark.") } }
             when (book) {
-                "orders" -> item { PaperOrders(model, v) }
-                "trades" -> item { PaperTrades(model, v) }
-                "funds" -> item { PaperFunds(v, onReset) }
-                else -> item { PaperPositions(model, v) }
+                "orders" -> item(key = "paper.orders") { PaperOrders(model, v) }
+                "trades" -> item(key = "paper.trades") { PaperTrades(model, v) }
+                "funds" -> item(key = "paper.funds") { PaperFunds(v, onReset) }
+                else -> item(key = "paper.positions") { PaperPositions(model, v) }
             }
         }
     }
@@ -92,19 +95,27 @@ fun LazyListScope.paperTrade(model: AppModel, snap: Load<Paper.Snapshot>, book: 
 @Composable
 private fun PaperOrderForm(model: AppModel) {
     val p = LocalPalette.current
-    var underlying by remember { mutableStateOf("NIFTY") }
+    // What is typed is saveable (plain strings and numbers), so it outlives the row scrolling
+    // out of the list; the listed expiries and strikes are simply fetched again.
+    var underlying by rememberSaveable { mutableStateOf("NIFTY") }
     var expiries by remember { mutableStateOf<List<LocalDate>>(emptyList()) }
-    var expiry by remember { mutableStateOf<LocalDate?>(null) }
-    var strike by remember { mutableStateOf("") }
-    var right by remember { mutableStateOf(Right.PE) }
-    var action by remember { mutableStateOf("SELL") }
-    var lots by remember { mutableStateOf(1) }
-    var type by remember { mutableStateOf("MARKET") }
-    var product by remember { mutableStateOf("NRML") }
-    var price by remember { mutableStateOf("") }
-    var trigger by remember { mutableStateOf("") }
-    var open by remember { mutableStateOf(false) }
-    LaunchedEffect(underlying) { expiries = model.paperExpiries(underlying); expiry = expiries.firstOrNull() }
+    var expiryIso by rememberSaveable { mutableStateOf<String?>(null) }
+    val expiry = expiryIso?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
+    var strike by rememberSaveable { mutableStateOf("") }
+    var rightName by rememberSaveable { mutableStateOf(Right.PE.name) }
+    val right = if (rightName == Right.CE.name) Right.CE else Right.PE
+    var action by rememberSaveable { mutableStateOf("SELL") }
+    var lots by rememberSaveable { mutableStateOf(1) }
+    var type by rememberSaveable { mutableStateOf("MARKET") }
+    var product by rememberSaveable { mutableStateOf("NRML") }
+    var price by rememberSaveable { mutableStateOf("") }
+    var trigger by rememberSaveable { mutableStateOf("") }
+    var open by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(underlying) {
+        expiries = model.paperExpiries(underlying)
+        // Keep the expiry already picked when it is still listed.
+        if (expiry == null || expiry !in expiries) expiryIso = expiries.firstOrNull()?.toString()
+    }
     // Only listed strikes can be chosen: the ones around the index, nearest first in the middle.
     var listed by remember { mutableStateOf<List<Double>>(emptyList()) }
     var spot by remember { mutableStateOf<Double?>(null) }
@@ -121,8 +132,8 @@ private fun PaperOrderForm(model: AppModel) {
         } else {
             ParamTokens("Underlying", listOf("NIFTY", "BANKNIFTY").map { it to (it == underlying) }) { underlying = listOf("NIFTY", "BANKNIFTY")[it] }
             if (expiries.isEmpty()) Note("Loading the listed expiries from Upstox…")
-            ParamTokens("Expiry", expiries.map { it.toString().substring(5) to (it == expiry) }) { expiry = expiries[it] }
-            ParamTokens("Option", listOf("PE" to (right == Right.PE), "CE" to (right == Right.CE))) { right = if (it == 0) Right.PE else Right.CE }
+            ParamTokens("Expiry", expiries.map { it.toString().substring(5) to (it == expiry) }) { expiryIso = expiries[it].toString() }
+            ParamTokens("Option", listOf("PE" to (right == Right.PE), "CE" to (right == Right.CE))) { rightName = if (it == 0) Right.PE.name else Right.CE.name }
             ParamTokens("Side", listOf("SELL" to (action == "SELL"), "BUY" to (action == "BUY"))) { action = if (it == 0) "SELL" else "BUY" }
             val lotChoices = listOf(1, 2, 3, 5, 10)
             ParamTokens("Lots", lotChoices.map { "$it" to (it == lots) }) { lots = lotChoices[it] }

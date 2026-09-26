@@ -760,9 +760,10 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             plan.value = try {
                 val b = com.optionslab.app.data.Broker
                 val q = b.quotes(positions.map { "${it.exchange}:${it.symbol}" })
-                val legs = positions.mapNotNull { ps ->
+                // A position above the exchange freeze quantity goes out as several orders, each one it accepts.
+                val legs = positions.flatMap { ps ->
                     val qt = q["${ps.exchange}:${ps.symbol}"]
-                    com.optionslab.engine.Kite.squareOff(b.spec(ps.exchange, ps.symbol), ps.product, ps.qty, qt?.bid, qt?.ask, qt?.last ?: ps.last)
+                    com.optionslab.engine.Kite.squareOffSlices(b.spec(ps.exchange, ps.symbol), ps.product, ps.qty, qt?.bid, qt?.ask, qt?.last ?: ps.last)
                 }
                 if (legs.isEmpty()) error("nothing is open")
                 Load.Done(OrderPlan(title, null, legs, q, gate(legs, false, exit = true), false, exit = true))
@@ -779,9 +780,9 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                 val key = "${h.exchange}:${h.symbol}"
                 val q = b.quotes(listOf(key))
                 val qt = q[key]
-                val leg = com.optionslab.engine.Kite.squareOff(b.spec(h.exchange, h.symbol), "CNC", quantity.coerceIn(1, h.qty), qt?.bid, qt?.ask, qt?.last ?: h.last)
-                    ?: error("nothing to sell")
-                Load.Done(OrderPlan("Sell ${h.symbol} from holdings", null, listOf(leg), q, gate(listOf(leg), false, exit = true), false, exit = true))
+                val legs = com.optionslab.engine.Kite.squareOffSlices(b.spec(h.exchange, h.symbol), "CNC", quantity.coerceIn(1, h.qty), qt?.bid, qt?.ask, qt?.last ?: h.last)
+                    .ifEmpty { error("nothing to sell") }
+                Load.Done(OrderPlan("Sell ${h.symbol} from holdings", null, legs, q, gate(legs, false, exit = true), false, exit = true))
             } catch (x: Exception) { Load.Failed(x.message ?: "could not prepare the sale") }
         }
     }
@@ -798,13 +799,16 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         for (o in legs) {
             if (o.product == "CNC") {
                 val h = held.firstOrNull { it.symbol == o.tradingSymbol && it.exchange == o.exchange }
-                if (o.side != com.optionslab.engine.Kite.Side.SELL || h == null || o.quantity > h.qty) return "${o.tradingSymbol}: you no longer hold ${o.quantity} to sell"
+                val sum = legs.filter { it.product == "CNC" && it.tradingSymbol == o.tradingSymbol && it.exchange == o.exchange }.sumOf { it.quantity }
+                if (o.side != com.optionslab.engine.Kite.Side.SELL || h == null || sum > h.qty) return "${o.tradingSymbol}: you no longer hold ${o.quantity} to sell"
                 continue
             }
             val ps = net.firstOrNull { it.symbol == o.tradingSymbol && it.exchange == o.exchange && it.product == o.product }
             val open = ps?.qty ?: 0
             val closes = (o.side == com.optionslab.engine.Kite.Side.BUY && open < 0) || (o.side == com.optionslab.engine.Kite.Side.SELL && open > 0)
-            if (!closes || o.quantity > kotlin.math.abs(open)) return "${o.tradingSymbol} changed since the review (open now ${open}); review the exit again"
+            // Freeze-size slices of one position are checked together: their sum must not exceed what is open.
+            val total = legs.filter { it.tradingSymbol == o.tradingSymbol && it.exchange == o.exchange && it.product == o.product && it.side == o.side }.sumOf { it.quantity }
+            if (!closes || total > kotlin.math.abs(open)) return "${o.tradingSymbol} changed since the review (open now ${open}); review the exit again"
         }
         return null
     }

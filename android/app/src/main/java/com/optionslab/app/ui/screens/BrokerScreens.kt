@@ -837,6 +837,19 @@ private fun CredentialsForm(model: AppModel, onDone: () -> Unit) {
     val fingerprint = st.biometric && activity != null && BiometricGate.available(activity) == BiometricGate.Kind.STRONG &&
         !(findings.isNotEmpty() && com.optionslab.app.security.Integrity.compromised(findings))
     fun draft(k: String, v: String) = com.optionslab.app.security.SecurePrefs.put(k, v.ifEmpty { null })
+    // Each draft write re-encrypts the vault file: the key is written 0.6 s after the last keystroke,
+    // off the main thread, and whatever is still pending when the form closes is written then.
+    var keyWritten by remember { mutableStateOf(key) }
+    LaunchedEffect(key) {
+        if (key == keyWritten) return@LaunchedEffect
+        kotlinx.coroutines.delay(600)
+        val v = key
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { draft(DRAFT_KEY, v) }
+        keyWritten = v
+    }
+    DisposableEffect(Unit) {
+        onDispose { val v = key; if (v != keyWritten) Thread { draft(DRAFT_KEY, v) }.start() }
+    }
     fun pasteInto(set: (String) -> Unit) = clipboard.getText()?.text?.trim()?.takeIf { it.isNotEmpty() }?.let(set)
     Column(Modifier.padding(top = 10.dp)) {
         Text("1. Create a Kite Connect app", style = Type.body.copy(color = p.ink, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold))
@@ -855,9 +868,9 @@ private fun CredentialsForm(model: AppModel, onDone: () -> Unit) {
         Note("IraAlgo catches this address inside the app during login, so it never opens and needs no website. Postback URL can stay empty.")
         Spacer(Modifier.height(10.dp))
         Text("2. Paste the app's key and secret", style = Type.body.copy(color = p.ink, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold))
-        OutlinedTextField(key, { key = it.trim(); draft(DRAFT_KEY, key) }, label = { Text("API key") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
+        OutlinedTextField(key, { key = it.trim() }, label = { Text("API key") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password), visualTransformation = PasswordVisualTransformation(),
-            trailingIcon = { TextButton({ pasteInto { key = it; draft(DRAFT_KEY, it) } }) { Text("Paste") } })
+            trailingIcon = { TextButton({ pasteInto { key = it } }) { Text("Paste") } })
         OutlinedTextField(secret, { secret = it.trim() }, label = { Text("API secret") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password), visualTransformation = PasswordVisualTransformation(),
             trailingIcon = { TextButton({
@@ -880,8 +893,8 @@ private fun CredentialsForm(model: AppModel, onDone: () -> Unit) {
                 val e = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { model.saveBrokerCredentials(k, s, pn, bioBlob) }
                 saving = false; err = e; pin = ""
                 if (e == null) {
-                    draft(DRAFT_KEY, ""); draft(DRAFT_SECRET, "")
-                    key = ""; secret = ""; onDone()
+                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { draft(DRAFT_KEY, ""); draft(DRAFT_SECRET, "") }
+                    keyWritten = ""; key = ""; secret = ""; onDone()
                     model.say("Saved, the secret sealed with your " + when { bioBlob != null && pn.isNotBlank() -> "fingerprint and PIN"; bioBlob != null -> "fingerprint"; else -> "PIN" } + ". Now log in to Zerodha.")
                 }
             }
