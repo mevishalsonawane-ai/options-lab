@@ -52,7 +52,7 @@ class VaultTest : RobolectricTest() {
     }
 
     @Test fun securePrefsPersistAcrossAReload() {
-        SecurePrefs.putAll(mapOf("s" to "text", "b" to true, "i" to 7, "l" to 1L shl 40, "d" to 2.5))
+        SecurePrefs.putAll(mapOf("s" to "text", "b" to true, "i" to 7, "l" to (1L shl 40), "d" to 2.5))
         assertTrue(SecurePrefs.reload())
         assertEquals("text", SecurePrefs.getString("s"))
         assertTrue(SecurePrefs.getBoolean("b", false))

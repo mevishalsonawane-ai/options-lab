@@ -31,7 +31,7 @@ import javax.crypto.spec.SecretKeySpec
  * containsAlias), and KeyGenerator AES and HmacSHA256 initialised with a KeyGenParameterSpec.
  * Keys are real random keys, so authentication failures behave as on a phone.
  */
-class FakeAndroidKeyStore : Provider(NAME, "1.0", "In-memory stand-in for the Android Keystore (tests only)") {
+class FakeAndroidKeyStore : Provider(NAME, 1.0, "In-memory stand-in for the Android Keystore (tests only)") {
     init {
         put("KeyStore.$NAME", Store::class.java.name)
         put("KeyGenerator.AES", AesGenerator::class.java.name)
