@@ -378,20 +378,44 @@ class PineScreensLayoutTest(private val config: DeviceConfig) : ScreenTest(confi
         capture("pine-editor"); lint("pine-editor", knownBugs = EDITOR_BUGS)
     }
 
-    @Test fun backtestResult() {
-        openLevel()
-        compose.pineTap("Backtest"); compose.pineTap("Run backtest"); compose.pineWaitFor("NET P&L")
-        capture("pine-backtest"); lint("pine-backtest", knownBugs = TOKEN_BUGS)
-    }
 
     @Test fun autoTrade() {
         openLevel()
         compose.pineTap("Auto-trade"); compose.pineWaitFor("Follows the app switch")
         capture("pine-auto"); lint("pine-auto", knownBugs = TOKEN_BUGS)
     }
+}
+
+/** The Pine page's secondary states (the backtest result, the discard dialog) on six set-ups. */
+@RunWith(ParameterizedRobolectricTestRunner::class)
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
+class PineDialogsLayoutTest(private val config: DeviceConfig) : ScreenTest(config) {
+    companion object {
+        @JvmStatic @ParameterizedRobolectricTestRunner.Parameters(name = "{0}")
+        fun configs(): List<Array<Any>> = DeviceConfig.matrix().filter { (it[0] as DeviceConfig).name in SIX_SETUPS }
+    }
+
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+    @Before fun up() {
+        AutomationSupport.freshPine(ApplicationProvider.getApplicationContext())
+        PineFakes.resetSession()
+    }
+
+    @After fun down() { scope.cancel(); PineFakes.resetSession() }
+
+    @Test fun backtestResult() {
+        PineScripts.put(PineScripts.Item(0, "Level", PineFakes.LEVEL))
+        show { PineContent(PineFakes.env(scope)) }
+        compose.pineWaitFor("Level"); compose.pineTap("Level"); compose.pineWaitFor("Compiles")
+        compose.pineTap("Backtest"); compose.pineTap("Run backtest"); compose.pineWaitFor("NET P&L")
+        capture("pine-backtest"); lint("pine-backtest", knownBugs = PineScreensLayoutTest.TOKEN_BUGS)
+    }
 
     @Test fun discardDialog() {
-        openLevel()
+        PineScripts.put(PineScripts.Item(0, "Level", PineFakes.LEVEL))
+        show { PineContent(PineFakes.env(scope)) }
+        compose.pineWaitFor("Level"); compose.pineTap("Level"); compose.pineWaitFor("Compiles")
         compose.onAllNodes(hasText("Name")).onFirst().performTextReplacement("Changed")
         compose.pineTap("‹ Scripts")
         areaCCaptureTop(compose, "pine-discard", config); lint("pine-discard")

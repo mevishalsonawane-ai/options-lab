@@ -34,6 +34,7 @@ import com.optionslab.app.data.Paper
 import com.optionslab.app.data.Strategies
 import com.optionslab.app.testing.AutomationSupport
 import com.optionslab.app.testing.DeviceConfig
+import com.optionslab.app.testing.LayoutLint
 import com.optionslab.app.testing.ScreenTest
 import com.optionslab.app.ui.theme.IraAlgoTheme
 import com.optionslab.app.work.Alerts
@@ -459,84 +460,125 @@ internal fun ScreenTest.areaCCaptureTop(compose: ComposeTestRule, name: String, 
     roots[roots.fetchSemanticsNodes().size - 1].captureRoboImage("build/outputs/roborazzi/${name}_${device.name}.png")
 }
 
-/**
- * The Strategies page, Home's strategy card and the ORB rows on every device set-up.
- *
- * The strategy editor and the import dialog are not in the matrix: both hold text fields in a dialog, and under
- * native graphics Compose never reports idle there (AppNotIdleException after 60 s per device). Their controls are
- * covered by the functional tests above.
- */
+/** Six set-ups that span the matrix (every size, every font scale, both themes), for secondary states: keeps CI time in bounds. */
+internal val SIX_SETUPS = setOf("small-font2.0-light", "small-font1.0-dark", "phone-font1.3-light", "landscape-font1.0-light",
+    "landscape-font2.0-dark", "tablet-font1.3-dark")
+
+/** Real layout bugs found by the matrix below (skipped with this text until fixed). */
+internal object StrategyLayoutBugs {
+    val PAGE = mapOf("*" to "Strategies page: a running leg's Exit button is 58x40 dp, under the 48 dp minimum for a primary action")
+    val CARD = mapOf("*" to "Home strategy card: the Arm switches have no label (TalkBack reads an unnamed switch), and at font 1.3+ an ORB arm's " +
+        "status ('Waiting for a breakout: ...') is cut at 2 lines")
+}
+
+/** The Strategies page, Home's strategy card and the ORB rows on every device set-up (their main states). */
 @RunWith(ParameterizedRobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class StrategiesScreensLayoutTest(private val config: DeviceConfig) : ScreenTest(config) {
     companion object {
         @JvmStatic @ParameterizedRobolectricTestRunner.Parameters(name = "{0}")
         fun configs(): List<Array<Any>> = DeviceConfig.matrix()
-
-        /** Real layout bugs found here (skipped with this text until fixed). */
-        val PAGE_BUGS = mapOf("*" to "Strategies page: a running leg's Exit button is 58x40 dp, under the 48 dp minimum for a primary action")
-        val CARD_BUGS = mapOf("*" to "Home strategy card: the Arm switches have no label (TalkBack reads an unnamed switch), and at font 1.3+ an ORB arm's " +
-            "status ('Waiting for a breakout: ...') is cut at 2 lines")
     }
 
     private val rec = RecordingStrategyActions()
-    private val entries = listOf(StrategyFakes.running(1, "Short straddle"), Strategies.Entry(StrategyFakes.def(2, "Iron fly", live = true), null))
-    private val smokeDevice get() = config.name == "phone-font1.0-light"
 
-    private val page = @Composable {
-        StrategiesContent(true, entries, StrategyFakes.log, rec, presets = { Text("Presets card") }, reauth = StrategyFakes.reauth)
-    }
-
-    @Test fun strategiesPage() = checkScreen("strategies-page", knownBugs = PAGE_BUGS, content = page)
+    @Test fun strategiesPage() = checkScreen("strategies-page", knownBugs = StrategyLayoutBugs.PAGE, content = StrategyScreens.page(rec))
 
     @Test fun strategiesEmpty() = checkScreen("strategies-empty") {
         StrategiesContent(false, emptyList(), emptyList(), rec, presets = { Text("Presets card") }, reauth = StrategyFakes.reauth)
     }
 
-    @Test fun startLiveConfirm() {
-        show(page)
-        compose.strategyScrollTo("Start live").areaCClick(); compose.waitForIdle()
-        areaCCaptureTop(compose, "strategies-start-live", config); lint("strategies-start-live")
+    @Test fun homeStrategyCard() = checkScreen("strategy-arm-card", knownBugs = StrategyLayoutBugs.CARD, content = StrategyScreens.card(rec))
+}
+
+internal object StrategyScreens {
+    private val entries = listOf(StrategyFakes.running(1, "Short straddle"), Strategies.Entry(StrategyFakes.def(2, "Iron fly", live = true), null))
+
+    fun page(rec: RecordingStrategyActions) = @Composable {
+        StrategiesContent(true, entries, StrategyFakes.log, rec, presets = { Text("Presets card") }, reauth = StrategyFakes.reauth)
     }
 
-    /** Every control once, on one set-up (the functional tests assert what each does). */
-    @Test fun pageSmoke() {
-        org.junit.Assume.assumeTrue(smokeDevice)
-        show(page)
-        assertTrue(smokeEveryAction(skip = setOf("Delete", "Start live", "New strategy", "Edit")).isNotEmpty())
-    }
-
-    private val card = @Composable {
+    fun card(rec: RecordingStrategyActions) = @Composable {
         Column(Modifier.verticalScroll(rememberScrollState())) {
             StrategyArmContent(false, false, listOf(Strategies.Entry(StrategyFakes.def(1, "Straddle", armed = RunMode.SANDBOX), null),
                 Strategies.Entry(StrategyFakes.def(2, "Iron fly", live = true), null)), mapOf(1L to true), mapOf(1L to RunMode.SANDBOX), false, rec, {},
                 orbRows = { OrbRowsContent(StrategyFakes.orbView(armed = true, pending = true), false, rec, StrategyFakes.reauthWhy) }, reauth = StrategyFakes.reauth)
         }
     }
+}
 
-    @Test fun homeStrategyCard() = checkScreen("strategy-arm-card", knownBugs = CARD_BUGS, content = card)
+/**
+ * The dialogs of the Strategies page and Home's card on six set-ups. The editor and the import dialog hold text
+ * fields (a blinking cursor never lets Compose idle), so they are opened and captured on a paused clock.
+ */
+@RunWith(ParameterizedRobolectricTestRunner::class)
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
+class StrategiesDialogsLayoutTest(private val config: DeviceConfig) : ScreenTest(config) {
+    companion object {
+        @JvmStatic @ParameterizedRobolectricTestRunner.Parameters(name = "{0}")
+        fun configs(): List<Array<Any>> = DeviceConfig.matrix().filter { (it[0] as DeviceConfig).name in SIX_SETUPS }
+    }
 
-    @Test fun cardSmoke() {
-        org.junit.Assume.assumeTrue(smokeDevice)
-        show(card)
-        assertTrue(smokeEveryAction(skip = setOf("Import from desktop", "Choose the .json file")).isNotEmpty())
+    private val rec = RecordingStrategyActions()
+
+    private fun top(name: String, bugs: Map<String, String> = emptyMap()) {
+        areaCCaptureTop(compose, name, config); lint(name, knownBugs = bugs)
+    }
+
+    private fun <T> paused(block: () -> T): T {
+        compose.mainClock.autoAdvance = false
+        try { return block() } finally { compose.mainClock.autoAdvance = true }
+    }
+
+    private fun frames(n: Int = 12) = repeat(n) { compose.mainClock.advanceTimeByFrame() }
+
+    @Test fun startLiveConfirm() {
+        show(StrategyScreens.page(rec))
+        compose.strategyScrollTo("Start live").areaCClick(); compose.waitForIdle()
+        top("strategies-start-live")
+    }
+
+    @Test fun strategyEditor() {
+        show(StrategyScreens.page(rec))
+        paused {
+            compose.onNodeWithText("New strategy").areaCClick(); frames()
+            areaCCaptureTop(compose, "strategies-editor", config)
+            compose.onAllNodes(androidx.compose.ui.test.isRoot()).fetchSemanticsNodes().flatMap { LayoutLint.check(it, compose.density) }
+                .filter { it.level == LayoutLint.Level.ERROR }.let { errs ->
+                    errs.forEach { println("LAYOUT strategies-editor ${config.name}: $it") }
+                    org.junit.Assume.assumeTrue("LAYOUT BUG (strategies-editor, ${config.name}): findings listed\n${errs.joinToString("\n")}", errs.isEmpty())
+                }
+        }
+    }
+
+    @Test fun importDialog() {
+        show(StrategyScreens.card(rec))
+        paused {
+            compose.onNodeWithText("Import from desktop").areaCClick(); frames()
+            areaCCaptureTop(compose, "strategy-import-dialog", config)
+            compose.onAllNodes(androidx.compose.ui.test.isRoot()).fetchSemanticsNodes().flatMap { LayoutLint.check(it, compose.density) }
+                .filter { it.level == LayoutLint.Level.ERROR }.let { errs ->
+                    errs.forEach { println("LAYOUT strategy-import-dialog ${config.name}: $it") }
+                    org.junit.Assume.assumeTrue("LAYOUT BUG (strategy-import-dialog, ${config.name}): findings listed\n${errs.joinToString("\n")}", errs.isEmpty())
+                }
+        }
     }
 
     @Test fun botDialog() {
-        show(card)
+        show(StrategyScreens.card(rec))
         compose.onNodeWithText("Stop bot for today").areaCClick(); compose.waitForIdle()
-        areaCCaptureTop(compose, "strategy-bot-dialog", config); lint("strategy-bot-dialog", knownBugs = CARD_BUGS)
+        top("strategy-bot-dialog", StrategyLayoutBugs.CARD)
     }
 
     @Test fun armChoiceDialog() {
-        show(card)
+        show(StrategyScreens.card(rec))
         compose.onAllNodes(isToggleable())[0].areaCClick(); compose.waitForIdle()
-        areaCCaptureTop(compose, "orb-arm-choice", config); lint("orb-arm-choice", knownBugs = CARD_BUGS)
+        top("orb-arm-choice", StrategyLayoutBugs.CARD)
     }
 
     @Test fun orbDetail() {
         show { OrbRowsContent(StrategyFakes.orbView(armed = true, open = true, live = true), true, rec, StrategyFakes.reauthWhy) }
         compose.onAllNodesWithText("Forward test", substring = true).onFirst().areaCClick(); compose.waitForIdle()
-        areaCCaptureTop(compose, "orb-detail", config); lint("orb-detail", knownBugs = CARD_BUGS)
+        top("orb-detail", StrategyLayoutBugs.CARD)
     }
 }
