@@ -336,4 +336,34 @@ class PineTest {
         val t = r.report!!.trades.single()
         assertEquals(108.0, t.exitPrice, 1e-9); assertEquals(-8.0, t.pnl, 1e-9)
     }
+
+    @Test fun indicatorSignalsBacktestWithFullStatistics() {
+        val src = """
+            indicator("sig", overlay = true)
+            buy = ta.crossover(close, ta.sma(close, 3))
+            sell = ta.crossunder(close, ta.sma(close, 3))
+            plotshape(buy, "Buy", shape.labelup, location.belowbar, color.green)
+            plotshape(sell, "Sell", shape.labeldown, location.abovebar, color.red)
+        """.trimIndent()
+        val s = ok(src)
+        val c = DoubleArray(400) { 100 + 10 * kotlin.math.sin(it / 6.0) }
+        val b = bars(*c)
+        val r = Pine.run(s, b)
+        val rev = Pine.signalBacktest(b, r.signals[0], r.signals[1], reverse = true, qty = 2.0)
+        assertTrue(rev.closedTrades > 10)
+        assertTrue(rev.trades.all { it.qty == 2.0 })
+        assertTrue(rev.trades.any { !it.long })                          // reversals go short
+        // Every entry fills at the open of the candle after its signal.
+        val firstBuy = r.signals[0].indexOfFirst { it }
+        assertEquals(b[firstBuy + 1].open, rev.trades.first { it.long }.entryPrice, 1e-9)
+        val exitOnly = Pine.signalBacktest(b, r.signals[0], r.signals[1], reverse = false)
+        assertTrue(exitOnly.trades.all { it.long })
+        val x = assertNotNull(rev.extra)
+        assertEquals(rev.closedTrades, x.long.trades + x.short.trades)
+        assertEquals(rev.netProfit, x.long.net + x.short.net, 1e-6)
+        assertEquals(rev.netProfit, x.days.sumOf { it.pnl }, 1e-6)
+        assertEquals(rev.netProfit, x.months.sumOf { it.pnl }, 1e-6)
+        assertTrue(x.exposurePct in 0.0..100.0 && x.maxConsecLosses >= 0 && x.tradingDays >= 1)
+        assertEquals(rev.winners, x.long.winners + x.short.winners)
+    }
 }

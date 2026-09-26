@@ -65,6 +65,31 @@ object Pine {
         val avgTrade: Double, val avgWin: Double, val avgLoss: Double, val largestWin: Double, val largestLoss: Double,
         val maxDrawdown: Double, val maxDrawdownPct: Double, val buyHoldPct: Double, val commission: Double,
         val openPnl: Double, val avgBarsInTrade: Double, val trades: List<Trade>, val equity: DoubleArray,
+        val extra: Extra? = null,
+    )
+
+    /** Longs or shorts on their own. */
+    data class Side(val trades: Int, val winners: Int, val winRate: Double, val net: Double, val avg: Double)
+    /** A day's or a month's closed trades. */
+    data class Period(val label: String, val pnl: Double, val trades: Int, val winners: Int)
+
+    /** Everything else a trader reads off a backtest. */
+    data class Extra(
+        val long: Side, val short: Side,
+        val maxConsecWins: Int, val maxConsecLosses: Int,
+        /** Average win over average loss. */
+        val payoffRatio: Double?,
+        /** Net profit over the largest drawdown. */
+        val recoveryFactor: Double?,
+        /** Annualised from daily equity changes (252 trading days); null with under 5 days. */
+        val sharpe: Double?, val sortino: Double?,
+        /** Share of candles with a position open. */
+        val exposurePct: Double,
+        val avgMinutesInTrade: Double, val tradesPerDay: Double,
+        val tradingDays: Int, val winningDays: Int, val losingDays: Int,
+        val bestDay: Period?, val worstDay: Period?,
+        val days: List<Period>, val months: List<Period>,
+        val returnPct: Double, val maxDrawdownDays: Int,
     )
 
     class Run(
@@ -200,6 +225,79 @@ object Pine {
     fun run(script: Script, bars: List<Bar>, inputs: Map<String, Any?> = emptyMap(), symbol: String = "NIFTY",
             interval: String = "5m", qty: Double? = null, mintick: Double = 0.05, budgetMs: Long = 10_000): Run =
         Interp(script, bars, inputs, symbol, interval, qty?.takeIf { it.isFinite() && it > 0 }?.coerceAtMost(1e9), mintick, budgetMs).go()
+
+    /**
+     * Trade an indicator's signals: [buy] goes long, [sell] goes short ([reverse]) or just
+     * exits. Orders fill at the next candle's open, as a strategy's would. [qty] units per trade.
+     */
+    fun signalBacktest(bars: List<Bar>, buy: BooleanArray, sell: BooleanArray, reverse: Boolean, qty: Double = 1.0,
+                       capital: Double = 100_000.0): Report {
+        val markers = ArrayList<Marker>()
+        val br = Broker(Settings(initialCapital = capital.takeIf { it > 0 && it.isFinite() } ?: 100_000.0), qty.coerceIn(1e-9, 1e9), 0.05, bars, markers)
+        for (i in bars.indices) {
+            br.beforeBar(i)
+            when {
+                buy.getOrElse(i) { false } -> br.entry("Buy", true, null, null, null, i, false)
+                sell.getOrElse(i) { false } -> if (reverse) br.entry("Sell", false, null, null, null, i, false) else br.close(null, i, false)
+            }
+            br.afterScript(i)
+        }
+        return br.report()
+    }
+
+    /** The extra statistics for a report, from its trades and equity curve. */
+    fun extraOf(r: Report, bars: List<Bar>): Extra {
+        val closed = r.trades.filter { !it.open }
+        fun side(l: List<Trade>): Side {
+            val w = l.count { it.pnl > 0 }
+            return Side(l.size, w, if (l.isEmpty()) 0.0 else w * 100.0 / l.size, l.sumOf { it.pnl }, if (l.isEmpty()) 0.0 else l.sumOf { it.pnl } / l.size)
+        }
+        var cw = 0; var cl = 0; var mw = 0; var ml = 0
+        for (t in closed) {
+            if (t.pnl > 0) { cw++; cl = 0 } else if (t.pnl < 0) { cl++; cw = 0 } else { cw = 0; cl = 0 }
+            mw = maxOf(mw, cw); ml = maxOf(ml, cl)
+        }
+        val day = { t: Long -> Instant.ofEpochSecond(t).atZone(IST).toLocalDate() }
+        val byDay = closed.groupBy { day(it.exitTime) }.toSortedMap().map { (d, l) -> Period(d.toString(), l.sumOf { it.pnl }, l.size, l.count { it.pnl > 0 }) }
+        val byMonth = closed.groupBy { day(it.exitTime).withDayOfMonth(1) }.toSortedMap()
+            .map { (d, l) -> Period("%s %d".format(java.util.Locale.ENGLISH, d.month.name.take(3).lowercase().replaceFirstChar { it.uppercase() }, d.year),
+                l.sumOf { it.pnl }, l.size, l.count { it.pnl > 0 }) }
+        // Daily returns from the equity at each day's last candle.
+        val closes = LinkedHashMap<java.time.LocalDate, Double>()
+        bars.forEachIndexed { i, b -> if (i < r.equity.size) closes[day(b.time)] = r.equity[i] }
+        val eq = listOf(r.initialCapital) + closes.values
+        val rets = (1 until eq.size).map { if (eq[it - 1] != 0.0) eq[it] / eq[it - 1] - 1 else 0.0 }
+        val mean = if (rets.isEmpty()) 0.0 else rets.average()
+        val sd = if (rets.size < 2) 0.0 else kotlin.math.sqrt(rets.sumOf { (it - mean) * (it - mean) } / (rets.size - 1))
+        val down = rets.filter { it < 0 }
+        val dsd = if (down.isEmpty()) 0.0 else kotlin.math.sqrt(down.sumOf { it * it } / rets.size)
+        val enough = rets.size >= 5
+        val inTrade = BooleanArray(bars.size)
+        for (t in r.trades) for (i in t.entryBar..minOf(t.exitBar, bars.size - 1)) if (i >= 0) inTrade[i] = true
+        // Longest time under the previous equity peak, in calendar days.
+        var peak = r.initialCapital; var peakAt = bars.firstOrNull()?.time ?: 0L; var longest = 0L
+        bars.forEachIndexed { i, b ->
+            if (i >= r.equity.size) return@forEachIndexed
+            if (r.equity[i] >= peak) { peak = r.equity[i]; peakAt = b.time } else longest = maxOf(longest, b.time - peakAt)
+        }
+        val tradingDays = closes.size
+        return Extra(
+            long = side(closed.filter { it.long }), short = side(closed.filter { !it.long }),
+            maxConsecWins = mw, maxConsecLosses = ml,
+            payoffRatio = if (r.avgLoss < 0 && r.avgWin > 0) r.avgWin / -r.avgLoss else null,
+            recoveryFactor = if (r.maxDrawdown > 0) r.netProfit / r.maxDrawdown else null,
+            sharpe = if (enough && sd > 0) mean / sd * kotlin.math.sqrt(252.0) else null,
+            sortino = if (enough && dsd > 0) mean / dsd * kotlin.math.sqrt(252.0) else null,
+            exposurePct = if (bars.isEmpty()) 0.0 else inTrade.count { it } * 100.0 / bars.size,
+            avgMinutesInTrade = if (closed.isEmpty()) 0.0 else closed.map { (it.exitTime - it.entryTime) / 60.0 }.average(),
+            tradesPerDay = if (tradingDays == 0) 0.0 else closed.size.toDouble() / tradingDays,
+            tradingDays = tradingDays, winningDays = byDay.count { it.pnl > 0 }, losingDays = byDay.count { it.pnl < 0 },
+            bestDay = byDay.maxByOrNull { it.pnl }?.takeIf { it.pnl > 0 }, worstDay = byDay.minByOrNull { it.pnl }?.takeIf { it.pnl < 0 },
+            days = byDay, months = byMonth,
+            returnPct = (r.equity.lastOrNull()?.let { it / r.initialCapital - 1 } ?: 0.0) * 100,
+            maxDrawdownDays = (longest / 86400).toInt(),
+        )
+    }
 
     /** A colour the chart can use: #RRGGBB or #RRGGBBAA, else null. */
     fun safeColor(c: String?): String? = c?.takeIf { COLOR.matches(it) }

@@ -285,7 +285,8 @@ private fun KeyStrip(onKey: (String) -> Unit) {
 
 // ---- backtest ------------------------------------------------------------------------------
 
-private data class TestRun(val run: Pine.Run, val bars: List<Pine.Bar>, val symbol: String, val interval: String)
+private data class TestRun(val run: Pine.Run, val report: Pine.Report?, val bars: List<Pine.Bar>, val symbol: String, val interval: String,
+                            val how: String)
 
 @Composable
 private fun PineBacktest(item: PineScripts.Item, s: Pine.Script, onInputs: (Map<String, String>) -> Unit) {
@@ -297,18 +298,34 @@ private fun PineBacktest(item: PineScripts.Item, s: Pine.Script, onInputs: (Map<
     var days by remember(interval) { mutableStateOf(periods[1]) }
     val inputs = remember { mutableStateMapOf<String, String>().apply { s.inputs.forEach { d -> put(d.key, item.inputs[d.key] ?: d.default?.let { v -> if (v is Double && v == Math.floor(v)) v.toLong().toString() else v.toString() } ?: "") } } }
     var qty by remember { mutableStateOf("") }
+    var capital by remember { mutableStateOf("100000") }
+    // An indicator trades its signals: which one buys, which one sells, and what a sell does.
+    val guessBuy = s.signals.firstOrNull { it.contains("buy", true) || it.contains("long", true) } ?: s.signals.firstOrNull()
+    val guessSell = s.signals.firstOrNull { it.contains("sell", true) || it.contains("short", true) } ?: s.signals.getOrNull(1)
+    var buySig by remember { mutableStateOf(item.auto.buy.takeIf { it in s.signals } ?: guessBuy) }
+    var sellSig by remember { mutableStateOf(item.auto.sell.takeIf { it in s.signals } ?: guessSell) }
+    var reverse by remember { mutableStateOf(item.auto.shortWith != "exit") }
     var busy by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     var res by remember { mutableStateOf<TestRun?>(null) }
     var stage by remember { mutableStateOf<String?>(null) }
     val scroll = rememberScrollState()
     var resultTop by remember { mutableStateOf(0) }
+    val strategy = s.kind == Pine.Kind.STRATEGY
 
     Column(Modifier.fillMaxSize().verticalScroll(scroll).padding(horizontal = 14.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp)) {
         ParamTokens("Symbol", listOf("NIFTY", "BANKNIFTY").map { it to (it == symbol) }) { symbol = listOf("NIFTY", "BANKNIFTY")[it] }
         ParamTokens("Candles", listOf("1m", "5m", "15m", "1h", "1D").map { it to (it == interval) }) { interval = listOf("1m", "5m", "15m", "1h", "1D")[it] }
         ParamTokens("Period", periods.map { (if (it >= 365) "${it / 365} yr" else "$it days") to (it == days) }) { days = periods[it] }
+        if (!strategy) {
+            if (s.signals.isEmpty()) Note("This indicator has no buy/sell signals to trade. Add plotshape(buy, \"Buy\") and plotshape(sell, \"Sell\") (or alertcondition) and it can be backtested for P&L.")
+            else {
+                ParamTokens("Buy on", s.signals.map { it to (it == buySig) }) { buySig = s.signals[it] }
+                ParamTokens("Sell on", s.signals.map { it to (it == sellSig) }) { sellSig = s.signals[it] }
+                ParamTokens("On a sell signal", listOf("Reverse to short" to reverse, "Just exit" to !reverse)) { reverse = it == 0 }
+            }
+        }
         if (s.inputs.isNotEmpty()) {
             Text("INPUTS", style = Type.label.copy(color = p.inkSoft, fontSize = 10.sp), modifier = Modifier.padding(top = 8.dp))
             s.inputs.forEach { d ->
@@ -324,12 +341,20 @@ private fun PineBacktest(item: PineScripts.Item, s: Pine.Script, onInputs: (Map<
                 }
             }
         }
-        if (s.kind == Pine.Kind.STRATEGY) OutlinedTextField(qty, { v -> qty = v.filter { it.isDigit() || it == '.' }.take(8) },
-            label = { Text("Quantity per order (blank: the script's own, ${s.settings.qtyValue.let { if (it == Math.floor(it)) it.toLong().toString() else it.toString() }} ${s.settings.qtyType.replace('_', ' ')})") },
-            singleLine = true, modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedTextField(qty, { v -> qty = v.filter { it.isDigit() || it == '.' }.take(8) },
+                label = { Text(if (strategy) "Qty (blank: script's ${s.settings.qtyValue.let { if (it == Math.floor(it)) it.toLong().toString() else it.toString() }})" else "Qty per trade (units)") },
+                singleLine = true, modifier = Modifier.weight(1f), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
+            if (!strategy) OutlinedTextField(capital, { v -> capital = v.filter { it.isDigit() }.take(10) }, label = { Text("Capital") },
+                singleLine = true, modifier = Modifier.weight(1f), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
+        }
+        val canTrade = strategy || (buySig != null && sellSig != null)
         BrassButton(if (busy) "Running…" else "Run backtest", Modifier.fillMaxWidth().padding(top = 6.dp), busy = busy) {
             busy = true; error = null; res = null; stage = "Loading $symbol $interval candles…"
             val ins = inputs.toMap()
+            val bs = buySig; val ss = sellSig; val rev = reverse
+            val q = qty.toDoubleOrNull()?.takeIf { it > 0 }
+            val cap = capital.toDoubleOrNull()?.takeIf { it > 0 } ?: 100_000.0
             runCatching { onInputs(ins) }                          // remembering the inputs must never stop the run
             scope.launch {
                 val r = withContext(Dispatchers.IO) {
@@ -340,9 +365,16 @@ private fun PineBacktest(item: PineScripts.Item, s: Pine.Script, onInputs: (Map<
                         val bars = raw.map { PineScripts.toPine(it) }
                         withContext(Dispatchers.Main) { stage = "Running the script on ${"%,d".format(bars.size)} candles…" }
                         val values = PineScripts.inputValues(PineScripts.Item(0, "", "", inputs = ins), s)
-                        Result.success(TestRun(withContext(Dispatchers.Default) {
-                            Pine.run(s, bars, values, symbol, interval, qty.toDoubleOrNull()?.takeIf { it > 0 }, budgetMs = 60_000)
-                        }, bars, symbol, interval))
+                        val run = withContext(Dispatchers.Default) { Pine.run(s, bars, values, symbol, interval, if (strategy) q else null, budgetMs = 60_000) }
+                        val report = when {
+                            strategy -> run.report
+                            canTrade && run.error == null -> withContext(Dispatchers.Default) {
+                                Pine.signalBacktest(bars, run.signals[s.signals.indexOf(bs!!)], run.signals[s.signals.indexOf(ss!!)], rev, q ?: 1.0, cap)
+                            }
+                            else -> null
+                        }
+                        val how = if (strategy) "the strategy's own orders" else "buy on \"$bs\", ${if (rev) "reverse to short" else "exit"} on \"$ss\""
+                        Result.success(TestRun(run, report, bars, symbol, interval, how))
                     } catch (e: kotlinx.coroutines.CancellationException) { throw e
                     } catch (e: Throwable) { Result.failure(e) }
                 }
@@ -363,58 +395,114 @@ private fun PineBacktest(item: PineScripts.Item, s: Pine.Script, onInputs: (Map<
 private fun fmtTime(t: Long, daily: Boolean): String = Instant.ofEpochSecond(t).atZone(IST)
     .format(DateTimeFormatter.ofPattern(if (daily) "d MMM yy" else "d MMM HH:mm", Locale.ENGLISH))
 
+private fun f2(x: Double) = String.format(Locale.ENGLISH, "%.2f", x)
+private fun pc(x: Double) = String.format(Locale.ENGLISH, "%.1f%%", x)
+private fun spc(x: Double) = String.format(Locale.ENGLISH, "%+.2f%%", x)
+private fun dur(minutes: Double): String = when {
+    minutes < 60 -> "${minutes.toInt()} min"
+    minutes < 60 * 24 -> String.format(Locale.ENGLISH, "%.1f h", minutes / 60)
+    else -> String.format(Locale.ENGLISH, "%.1f days", minutes / 1440)
+}
+
+/** One headline figure. */
+@Composable
+private fun Tile(label: String, value: String, tone: androidx.compose.ui.graphics.Color, modifier: Modifier) {
+    val p = LocalPalette.current
+    Column(modifier.background(p.card, RoundedCornerShape(12.dp)).border(1.dp, p.rule, RoundedCornerShape(12.dp)).padding(horizontal = 10.dp, vertical = 8.dp)) {
+        Text(label.uppercase(), style = Type.label.copy(color = p.inkSoft, fontSize = 9.sp), maxLines = 1)
+        Text(value, style = Type.figure.copy(color = tone, fontSize = 15.sp), maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+}
+
 @Composable
 private fun BacktestResult(t: TestRun, s: Pine.Script) {
     val p = LocalPalette.current
     val r = t.run
     val daily = t.interval == "1D"
     val first = t.bars.first().time; val last = t.bars.last().time
-    Text("${t.symbol} · ${t.interval} · ${t.bars.size} candles · ${fmtTime(first, true)} – ${fmtTime(last, true)}",
+    Text("${t.symbol} · ${t.interval} · ${"%,d".format(t.bars.size)} candles · ${fmtTime(first, true)} – ${fmtTime(last, true)} · ${t.how}",
         style = Type.bodySmall.copy(color = p.inkSoft), modifier = Modifier.padding(top = 8.dp))
     r.error?.let { Text("Stopped: $it", style = Type.bodySmall.copy(color = p.oxblood)) }
-    val rep = r.report
-    if (rep == null) {
-        LedgerCard(title = "Signals") {
-            if (s.signals.isEmpty()) Text("An indicator has no trades. Add plotshape(buy, \"Buy\") and plotshape(sell, \"Sell\") (or alertcondition) to get signals it can trade on.",
-                style = Type.bodySmall.copy(color = p.inkSoft))
-            s.signals.forEachIndexed { i, name ->
-                val hits = r.signals[i].indices.filter { r.signals[i][it] }
-                LedgerLine(name, "${hits.size} times" + (hits.lastOrNull()?.let { " · last ${fmtTime(t.bars[it].time, daily)}" } ?: ""))
-            }
+    // Every signal the script gave, and how often.
+    if (s.signals.isNotEmpty()) LedgerCard(title = "Signals") {
+        s.signals.forEachIndexed { i, name ->
+            val hits = r.signals[i].indices.filter { r.signals[i][it] }
+            LedgerLine(name, "${hits.size} times" + (hits.lastOrNull()?.let { " · last ${fmtTime(t.bars[it].time, daily)}" } ?: ""))
         }
-        return
     }
+    val rep = t.report ?: return
     if (rep.trades.isEmpty()) {
         LedgerCard(title = "No trades") {
-            Text("The script ran on every candle but never entered: its conditions were not met in this period. Try a longer period, other candles or other inputs.",
+            Text("It ran on every candle but never entered: the conditions were not met in this period. Try a longer period, other candles or other inputs.",
                 style = Type.bodySmall.copy(color = p.inkSoft))
         }
         return
     }
+    val x = rep.extra
     val gain = if (rep.netProfit >= 0) p.verdigris else p.oxblood
-    LedgerCard(title = "Result") {
-        LedgerLine("Net profit", "${rs(rep.netProfit, sign = true)}  (${String.format(Locale.ENGLISH, "%+.2f%%", rep.netProfitPct)})", gain)
-        LedgerLine("Closed trades", "${rep.closedTrades}  ·  ${rep.winners} won, ${rep.losers} lost")
-        LedgerLine("Win rate", String.format(Locale.ENGLISH, "%.1f%%", rep.winRate))
-        LedgerLine("Profit factor", rep.profitFactor?.let { String.format(Locale.ENGLISH, "%.2f", it) } ?: "—")
-        LedgerLine("Max drawdown", "${rs(-rep.maxDrawdown)}  (${String.format(Locale.ENGLISH, "%.2f%%", rep.maxDrawdownPct)})", p.oxblood)
-        LedgerLine("Average trade", rs(rep.avgTrade, sign = true))
-        LedgerLine("Largest win / loss", "${rs(rep.largestWin, sign = true)} / ${rs(rep.largestLoss, sign = true)}")
-        LedgerLine("Average bars in a trade", String.format(Locale.ENGLISH, "%.1f", rep.avgBarsInTrade))
-        LedgerLine("Commission", rs(rep.commission))
-        if (rep.trades.any { it.open }) LedgerLine("Open trade (not counted)", rs(rep.openPnl, sign = true))
-        LedgerLine("Buy & hold ${t.symbol}", String.format(Locale.ENGLISH, "%+.2f%%", rep.buyHoldPct))
-        Spacer(Modifier.height(8.dp))
-        val step = maxOf(1, rep.equity.size / 400)
-        val eq = rep.equity.toList().filterIndexed { i, _ -> i % step == 0 }
-        if (eq.size >= 2) {
-            Text("EQUITY", style = Type.label.copy(color = p.inkSoft, fontSize = 10.sp))
-            LinePlot(eq.indices.map { it.toDouble() }, listOf(PlotLine(eq, gain)), height = 140.dp)
-        }
-        Text("Fills follow TradingView: orders fill at the next candle's open; stops and targets inside a candle, open → nearer extreme → far extreme → close. Index points × quantity; no option premium, slippage or charges beyond the script's commission.",
-            style = Type.bodySmall.copy(color = p.inkFaint, fontSize = 11.sp), modifier = Modifier.padding(top = 6.dp))
+    fun tone(v: Double) = if (v >= 0) p.verdigris else p.oxblood
+
+    // Headline figures.
+    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Tile("Net P&L", rs(rep.netProfit, sign = true), gain, Modifier.weight(1f))
+        Tile("Win rate", pc(rep.winRate), if (rep.winRate >= 50) p.verdigris else p.ink, Modifier.weight(1f))
     }
-    var all by remember(r) { mutableStateOf(false) }
+    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Tile("Profit factor", rep.profitFactor?.let { f2(it) } ?: "—", if ((rep.profitFactor ?: 0.0) >= 1) p.verdigris else p.oxblood, Modifier.weight(1f))
+        Tile("Max drawdown", rs(-rep.maxDrawdown), p.oxblood, Modifier.weight(1f))
+        Tile("Trades", "${rep.closedTrades}", p.ink, Modifier.weight(1f))
+    }
+    val step = maxOf(1, rep.equity.size / 400)
+    val eq = rep.equity.toList().filterIndexed { i, _ -> i % step == 0 }
+    if (eq.size >= 2) LedgerCard(title = "Equity") {
+        LinePlot(eq.indices.map { it.toDouble() }, listOf(PlotLine(eq, gain)), height = 140.dp)
+        Text("${rs(rep.initialCapital)} → ${rs(rep.equity.last())}", style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 11.sp))
+    }
+    LedgerCard(title = "Performance") {
+        LedgerLine("Net profit", "${rs(rep.netProfit, sign = true)} (${spc(rep.netProfitPct)})", gain)
+        LedgerLine("Gross profit / loss", "${rs(rep.grossProfit)} / ${rs(-rep.grossLoss)}")
+        LedgerLine("Won / lost", "${rep.winners} / ${rep.losers}" + (if (rep.closedTrades - rep.winners - rep.losers > 0) " · ${rep.closedTrades - rep.winners - rep.losers} even" else ""))
+        LedgerLine("Average trade (expectancy)", rs(rep.avgTrade, sign = true), tone(rep.avgTrade))
+        LedgerLine("Average win / loss", "${rs(rep.avgWin, sign = true)} / ${rs(rep.avgLoss, sign = true)}")
+        x?.payoffRatio?.let { LedgerLine("Payoff ratio (avg win ÷ avg loss)", f2(it)) }
+        LedgerLine("Largest win / loss", "${rs(rep.largestWin, sign = true)} / ${rs(rep.largestLoss, sign = true)}")
+        x?.let { LedgerLine("Most wins / losses in a row", "${it.maxConsecWins} / ${it.maxConsecLosses}") }
+        LedgerLine("Max drawdown", "${rs(-rep.maxDrawdown)} (${f2(rep.maxDrawdownPct)}%)", p.oxblood)
+        x?.let { if (it.maxDrawdownDays > 0) LedgerLine("Longest time below a peak", "${it.maxDrawdownDays} days") }
+        x?.recoveryFactor?.let { LedgerLine("Recovery factor (net ÷ drawdown)", f2(it)) }
+        x?.sharpe?.let { LedgerLine("Sharpe ratio (annualised)", f2(it)) }
+        x?.sortino?.let { LedgerLine("Sortino ratio (annualised)", f2(it)) }
+        x?.let { LedgerLine("Return on capital", spc(it.returnPct), tone(it.returnPct)) }
+        LedgerLine("Buy & hold ${t.symbol}", spc(rep.buyHoldPct))
+        LedgerLine("Commission paid", rs(rep.commission))
+        if (rep.trades.any { it.open }) LedgerLine("Open trade (not counted)", rs(rep.openPnl, sign = true), tone(rep.openPnl))
+    }
+    x?.let { e ->
+        LedgerCard(title = "Long vs short") {
+            Row { listOf("", "Trades", "Win rate", "Net P&L").forEachIndexed { i, h ->
+                Text(h, style = Type.label.copy(color = p.inkSoft, fontSize = 10.sp), modifier = Modifier.weight(if (i == 0) 0.8f else 1f)) } }
+            listOf("Long" to e.long, "Short" to e.short).forEach { (name, sd) ->
+                Row(Modifier.padding(vertical = 3.dp)) {
+                    Text(name, style = Type.label.copy(color = p.ink, fontSize = 12.sp), modifier = Modifier.weight(0.8f))
+                    Text("${sd.trades}", style = Type.figure.copy(fontSize = 12.sp, color = p.ink), modifier = Modifier.weight(1f))
+                    Text(if (sd.trades == 0) "—" else pc(sd.winRate), style = Type.figure.copy(fontSize = 12.sp, color = p.ink), modifier = Modifier.weight(1f))
+                    Text(rs(sd.net, sign = true), style = Type.figure.copy(fontSize = 12.sp, color = tone(sd.net)), modifier = Modifier.weight(1f))
+                }
+            }
+        }
+        LedgerCard(title = "Time") {
+            LedgerLine("Average time in a trade", dur(e.avgMinutesInTrade))
+            LedgerLine("Average candles in a trade", String.format(Locale.ENGLISH, "%.1f", rep.avgBarsInTrade))
+            LedgerLine("In the market", pc(e.exposurePct))
+            LedgerLine("Trades per day", String.format(Locale.ENGLISH, "%.2f", e.tradesPerDay))
+            LedgerLine("Trading days", "${e.tradingDays} · ${e.winningDays} up, ${e.losingDays} down")
+            e.bestDay?.let { LedgerLine("Best day", "${it.label} · ${rs(it.pnl, sign = true)}", p.verdigris) }
+            e.worstDay?.let { LedgerLine("Worst day", "${it.label} · ${rs(it.pnl, sign = true)}", p.oxblood) }
+        }
+        if (e.months.isNotEmpty()) LedgerCard(title = "Month by month") { PeriodRows(e.months, false) }
+        if (e.days.isNotEmpty()) LedgerCard(title = "Day by day") { PeriodRows(e.days.asReversed(), true) }
+    }
+    var all by remember(t) { mutableStateOf(false) }
     val trades = rep.trades.asReversed()
     LedgerCard(title = "Trades (${rep.trades.size})") {
         (if (all) trades else trades.take(30)).forEach { tr ->
@@ -422,14 +510,40 @@ private fun BacktestResult(t: TestRun, s: Pine.Script) {
                 Column(Modifier.weight(1f)) {
                     Text("${if (tr.long) "LONG" else "SHORT"} ${tr.entryId} · ${num(tr.qty)}", style = Type.label.copy(color = if (tr.long) p.verdigris else p.oxblood, fontSize = 12.sp))
                     Text("${fmtTime(tr.entryTime, daily)} @ ${num(tr.entryPrice)} → ${if (tr.open) "open" else fmtTime(tr.exitTime, daily)} @ ${num(tr.exitPrice)}" +
-                        if (tr.open) "" else " · ${tr.exitId}", style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 11.sp))
+                        (if (tr.open) "" else " · ${tr.exitId}") + " · ${dur((tr.exitTime - tr.entryTime) / 60.0)}",
+                        style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 11.sp))
                 }
-                Text(rs(tr.pnl, sign = true), style = Type.figure.copy(color = if (tr.pnl >= 0) p.verdigris else p.oxblood, fontSize = 13.sp))
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(rs(tr.pnl, sign = true), style = Type.figure.copy(color = tone(tr.pnl), fontSize = 13.sp))
+                    Text(spc(tr.pnlPct), style = Type.bodySmall.copy(color = p.inkFaint, fontSize = 10.sp))
+                }
             }
             Rule()
         }
         if (!all && trades.size > 30) TextButton({ all = true }) { Text("Show all ${trades.size}") }
     }
+    Text("Fills follow TradingView: orders fill at the next candle's open; stops and targets inside a candle, open → nearer extreme → far extreme → close. " +
+        "P&L is index points × quantity (not option premium), after the script's commission; no slippage.",
+        style = Type.bodySmall.copy(color = p.inkFaint, fontSize = 11.sp), modifier = Modifier.padding(top = 6.dp))
+}
+
+/** Months or days: trades, win rate and P&L, the most recent 60 unless expanded. */
+@Composable
+private fun PeriodRows(rows: List<Pine.Period>, days: Boolean) {
+    val p = LocalPalette.current
+    var all by remember(rows) { mutableStateOf(false) }
+    Row { listOf(if (days) "Day" else "Month", "Trades", "Won", "P&L").forEachIndexed { i, h ->
+        Text(h, style = Type.label.copy(color = p.inkSoft, fontSize = 10.sp), modifier = Modifier.weight(if (i == 0) 1.3f else if (i == 3) 1.2f else 0.8f)) } }
+    (if (all) rows else rows.take(if (days) 20 else 24)).forEach { m ->
+        Row(Modifier.padding(vertical = 2.dp)) {
+            Text(m.label, style = Type.bodySmall.copy(color = p.ink, fontSize = 12.sp), modifier = Modifier.weight(1.3f))
+            Text("${m.trades}", style = Type.figure.copy(fontSize = 12.sp, color = p.ink), modifier = Modifier.weight(0.8f))
+            Text(if (m.trades == 0) "—" else pc(m.winners * 100.0 / m.trades), style = Type.figure.copy(fontSize = 12.sp, color = p.ink), modifier = Modifier.weight(0.8f))
+            Text(rs(m.pnl, sign = true), style = Type.figure.copy(fontSize = 12.sp, color = if (m.pnl >= 0) p.verdigris else p.oxblood), modifier = Modifier.weight(1.2f))
+        }
+    }
+    val cap = if (days) 20 else 24
+    if (!all && rows.size > cap) TextButton({ all = true }) { Text("Show all ${rows.size}") }
 }
 
 private fun num(x: Double) = if (x == Math.floor(x) && kotlin.math.abs(x) < 1e12) String.format(Locale.ENGLISH, "%,d", x.toLong()) else String.format(Locale.ENGLISH, "%,.2f", x)

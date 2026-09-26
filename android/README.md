@@ -256,10 +256,15 @@ TradingView Pine (v5) runs on the phone (`engine/.../pine`).
 - **Write or paste** a script, or start from an example. It is checked as you
   type: errors show with their line and column, and the line number turns red.
 - **Backtest** on NIFTY or BANKNIFTY candles (1m to 1D, days to years), with
-  the script's inputs editable. The report shows net profit, win rate, profit
-  factor, drawdown, the equity curve and every trade. Fills follow
-  TradingView: orders fill at the next open; stops and targets fill inside the
-  candle.
+  the script's inputs editable. An indicator trades its own signals (pick the
+  buy and sell signal, reverse or just exit). The report shows:
+  - net P&L, win rate, profit factor, drawdown and the equity curve;
+  - averages, payoff ratio, streaks, recovery factor, Sharpe and Sortino;
+  - long vs short, time in trades, best and worst day;
+  - month-by-month and day-by-day P&L, and every trade.
+
+  Fills follow TradingView: orders fill at the next open; stops and targets
+  fill inside the candle.
 - **On the chart:** "Show on the chart" adds the script as an indicator
   (category Pine). Its plots are drawn and its `plotshape` buy/sell marks
   appear on the candles.

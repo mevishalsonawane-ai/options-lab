@@ -1037,6 +1037,6 @@ internal class Broker(
             commission = commission, openPnl = openTrades.sumOf { it.pnl },
             avgBarsInTrade = if (closed.isEmpty()) 0.0 else closed.map { (it.exitBar - it.entryBar).toDouble() }.average(),
             trades = closed + openTrades, equity = equity.copyOf(),
-        )
+        ).let { it.copy(extra = runCatching { Pine.extraOf(it, bars) }.getOrNull()) }
     }
 }
