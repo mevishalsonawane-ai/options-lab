@@ -151,7 +151,7 @@ private fun Stat(label: String, value: String) {
 }
 
 @Composable
-private fun ChainCard(c: ChainSnapshot, onPick: (ChainPick) -> Unit) {
+fun ChainCard(c: ChainSnapshot, onPick: (ChainPick) -> Unit) {
     val p = LocalPalette.current
     // Tablets and a sideways phone have room for the open interest on each side.
     val wide = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp >= 600
