@@ -823,7 +823,8 @@ private fun CredentialsForm(model: AppModel, onDone: () -> Unit) {
     // What was typed is kept (encrypted, in the vault) until it is saved, so stepping out to the
     // Kite site, an idle lock or Android closing the app in the background never loses it.
     var key by remember { mutableStateOf(com.optionslab.app.security.SecurePrefs.getString(DRAFT_KEY).orEmpty()) }
-    var secret by remember { mutableStateOf(com.optionslab.app.security.SecurePrefs.getString(DRAFT_SECRET).orEmpty()) }
+    // The secret is held in memory only until it is sealed with the PIN; a draft left by an older version is erased.
+    var secret by remember { com.optionslab.app.security.SecurePrefs.run { if (getString(DRAFT_SECRET) != null) put(DRAFT_SECRET, null) }; mutableStateOf("") }
     val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current
     var pin by remember { mutableStateOf("") }
     var err by remember { mutableStateOf<String?>(null) }
@@ -857,10 +858,10 @@ private fun CredentialsForm(model: AppModel, onDone: () -> Unit) {
         OutlinedTextField(key, { key = it.trim(); draft(DRAFT_KEY, key) }, label = { Text("API key") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password), visualTransformation = PasswordVisualTransformation(),
             trailingIcon = { TextButton({ pasteInto { key = it; draft(DRAFT_KEY, it) } }) { Text("Paste") } })
-        OutlinedTextField(secret, { secret = it.trim(); draft(DRAFT_SECRET, secret) }, label = { Text("API secret") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
+        OutlinedTextField(secret, { secret = it.trim() }, label = { Text("API secret") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password), visualTransformation = PasswordVisualTransformation(),
             trailingIcon = { TextButton({
-                pasteInto { secret = it; draft(DRAFT_SECRET, it) }
+                pasteInto { secret = it }
                 // The secret must not linger on the clipboard (or in the keyboard's clipboard history).
                 clipboard.setText(androidx.compose.ui.text.AnnotatedString(""))
             }) { Text("Paste") } })

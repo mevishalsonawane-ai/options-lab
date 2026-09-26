@@ -314,11 +314,21 @@ object PineAuto {
             // Not filled in 15 s: take it out so it can never fill later as an untracked entry.
             if (f?.status !in setOf("REJECTED", "CANCELLED")) runCatching { Broker.cancel(orderId) }
             f = runCatching { Broker.orderState(orderId) }.getOrNull()
-            if (f == null || f.filled <= 0) { note(b, id, "Zerodha ${f?.status?.lowercase() ?: "did not answer"}: no position"); return }
+            if (f == null) {
+                // No answer: it may have filled. Tracked as held, so the exit (which re-reads the position
+                // book and removes it when nothing is there) owns it rather than leaving it unwatched.
+                b.held[id] = Held(c.symbol, right.name, o.quantity, ins.lotSize, quote, today.toString(), true, sym)
+                runCatching { save(b) }
+                com.optionslab.app.work.Alerts.error("${label(item)}: Zerodha did not confirm the buy of $sym. It is treated as held until the position book shows otherwise.", "Pine auto-trade")
+                note(b, id, "Zerodha did not confirm the buy of $sym: tracked as held until checked")
+                return
+            }
+            if (f.filled <= 0) { note(b, id, "Zerodha ${f.status.lowercase()}: no position"); return }
         }
         val px = f.avgPrice.takeIf { it > 0 } ?: quote
         Notifier.orderFilled(app, "BUY", f.filled, sym, px, "Live", label(item))
         b.held[id] = Held(c.symbol, right.name, f.filled, ins.lotSize, px, today.toString(), true, sym)
+        runCatching { save(b) }   // a live position is written down at once, not at the end of the pass
         note(b, id, "Bought ${f.filled} $sym at ${"%.2f".format(java.util.Locale.ENGLISH, px)} (LIVE)")
     }
 
