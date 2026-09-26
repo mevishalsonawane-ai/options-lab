@@ -103,8 +103,9 @@ live/paper switch: an operator flipping the platform to live while a paper posit
 open must not send its exit to the broker.
 
 **Phone app (IraAlgo), owner's decision 2026-09-26:** new ORB entries follow the app's
-Paper/Live switch at the moment they are placed. In Live each entry needs the owner's
-approval with the PIN or fingerprint (never automatic), goes to Zerodha as 1 lot MIS,
+Paper/Live switch at the moment they are placed. An automatic arm trades by itself until
+switched off; arming it while in Live takes the PIN or fingerprint once (owner's choice,
+2026-09-26). Live entries go to Zerodha as 1 lot MIS,
 and rests an SL stop (limit 5% under the trigger; the app sells at market if the price
 runs through it or Zerodha rejects it). Each position keeps its own account: its stop
 and exit never follow a later flip of the switch. This departs from the desktop pipe

@@ -1150,8 +1150,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     val orb = MutableStateFlow<com.optionslab.app.data.OrbArms.View?>(null)
 
     /** Arming an ORB arm starts the market watch if it should be running, so the arm is actually checked. */
-    fun armOrb(source: String, on: Boolean, automatic: Boolean) = strategyDo {
-        val msg = com.optionslab.app.data.OrbArms.setArmed(source, on, automatic)
+    fun armOrb(source: String, on: Boolean, automatic: Boolean, pinConfirmed: Boolean = false) = strategyDo {
+        val msg = com.optionslab.app.data.OrbArms.setArmed(source, on, automatic, pinConfirmed)
         if (on) withContext(Dispatchers.Main) { Jobs.ensureWatch(ctx) }
         msg
     }

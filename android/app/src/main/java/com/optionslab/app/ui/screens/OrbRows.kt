@@ -57,6 +57,8 @@ fun OrbRows(model: AppModel) {
     var choosing by remember { mutableStateOf<String?>(null) }
     var detail by remember { mutableStateOf(false) }
     var reauthFor by remember { mutableStateOf<String?>(null) }
+    // Arming while in Live: (source, automatic), after the PIN or fingerprint.
+    var armAuth by remember { mutableStateOf<Pair<String, Boolean>?>(null) }
     val settings by model.settings.collectAsState()
     val live = settings.live && settings.allowRealOrders
     // Home's own poll (only while the app is on screen) refreshes the arm states every 20 s.
@@ -71,7 +73,8 @@ fun OrbRows(model: AppModel) {
                     Spacer(Modifier.width(8.dp))
                     val (label, color) = when {
                         a.open != null -> if (a.open.live) "IN TRADE · LIVE" to p.oxblood else "IN TRADE · PAPER" to p.verdigris
-                        a.armed && live -> "ARMED · LIVE · APPROVE WITH PIN" to p.oxblood
+                        a.armed && live && a.liveOk -> "ARMED · LIVE · ${if (a.automatic) "AUTO" else "APPROVE"}" to p.oxblood
+                        a.armed && live -> "ARMED · LIVE · APPROVE (re-arm for auto)" to p.oxblood
                         a.armed -> "ARMED · PAPER · ${if (a.automatic) "AUTO" else "APPROVE"}" to p.verdigris
                         else -> "OFF" to p.inkFaint
                     }
@@ -124,13 +127,15 @@ fun OrbRows(model: AppModel) {
             title = { Text("Arm $label" + if (live) " (LIVE)" else " (paper)", style = Type.title) },
             text = {
                 Column {
-                    Text(if (live) "The app is in LIVE: each entry goes to Zerodha (1 lot MIS) only after you approve it with your PIN. " +
-                        "Switch to Paper and new entries go to the paper account. An open position always exits in the account it entered."
-                        else "The app is in Paper: entries go to the paper account. If you switch to Live, new entries go to Zerodha and each needs your PIN. How should paper entries go out?",
+                    Text(if (live) "The app is in LIVE: entries go to Zerodha, 1 lot MIS. Arming takes your PIN or fingerprint once. " +
+                        "An open position always exits in the account it entered."
+                        else "The app is in Paper: entries go to the paper account. To trade automatically on Zerodha, switch to Live and arm it again (PIN once).",
                         style = Type.bodySmall.copy(color = p.inkSoft))
-                    OrbChoice("Automatic", "The paper entry is placed on the breakout bar without asking.") { model.armOrb(src, true, true); choosing = null }
+                    OrbChoice("Automatic", "Buys on the breakout and sells on the stop, target or 15:10 by itself, every trading day, until you switch it off.") {
+                        if (live) armAuth = src to true else model.armOrb(src, true, true); choosing = null
+                    }
                     OrbChoice("Ask me to approve", "You get a notification on a breakout; the entry goes only if you approve before the next bar closes.") {
-                        model.armOrb(src, true, false); choosing = null
+                        if (live) armAuth = src to false else model.armOrb(src, true, false); choosing = null
                     }
                     Note("Either way the −40 stop rests as an order (paper book, or an SL order at Zerodha), and the +40 target and the 15:10 square-off run by themselves.", Modifier.padding(top = 8.dp))
                 }
@@ -139,6 +144,8 @@ fun OrbRows(model: AppModel) {
             dismissButton = { TextButton({ choosing = null }) { Text("Cancel") } },
         )
     }
+    armAuth?.let { (src, auto) -> Reauth(model, onOk = { armAuth = null; model.armOrb(src, true, auto, pinConfirmed = true) }, onCancel = { armAuth = null },
+        why = "Enter your app PIN to arm ORB on Zerodha. It then trades real money by itself until you switch it off.") }
     reauthFor?.let { src -> Reauth(model, onOk = { reauthFor = null; model.approveOrb(src, pinConfirmed = true) }, onCancel = { reauthFor = null }) }
     if (detail) OrbDetail(view) { detail = false }
 }

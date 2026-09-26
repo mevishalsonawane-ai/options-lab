@@ -34,8 +34,10 @@ import java.util.Locale
  *  - re-entry from the bar after the exit bar, one position per arm.
  *
  * WHERE: a new entry follows the app's Paper/Live switch at the moment it is
- * placed (the owner's choice, 2026-09-26). In Live every entry waits for the
- * owner's approval with the PIN or fingerprint, never automatic. Each position
+ * placed (the owner's choice, 2026-09-26). An automatic arm trades by itself in
+ * Paper and in Live until it is switched off; arming it while the app is in Live
+ * takes the PIN or fingerprint once (liveOk). An arm armed in Paper that finds
+ * the app in Live asks for approval until it is armed again in Live. Each position
  * remembers its own account, and its stop and exit only ever go there:
  * flipping the switch while a position is open never moves its exit. Every
  * entry goes through the account guard (and in Live the kill switch and the
@@ -77,6 +79,8 @@ object OrbArms {
     private data class Book(
         val armed: MutableMap<String, Boolean> = HashMap(),
         val auto: MutableMap<String, Boolean> = HashMap(),
+        /** Armed while in Live with the owner's PIN or fingerprint: automatic live entries allowed. */
+        val liveOk: MutableMap<String, Boolean> = HashMap(),
         var legs: Legs? = null,
         var range: Pair<Double, Double>? = null,
         var rangeDay: LocalDate? = null,
@@ -103,6 +107,7 @@ object OrbArms {
             val o = JSONObject(String(Vault.readFileSteady(file) ?: return@runCatching, Charsets.UTF_8))
             o.optJSONObject("armed")?.let { m -> m.keys().forEach { b.armed[it] = m.getBoolean(it) } }
             o.optJSONObject("auto")?.let { m -> m.keys().forEach { b.auto[it] = m.getBoolean(it) } }
+            o.optJSONObject("liveOk")?.let { m -> m.keys().forEach { b.liveOk[it] = m.getBoolean(it) } }
             o.optJSONObject("legs")?.let { l ->
                 b.legs = Legs(LocalDate.parse(l.getString("day")), l.getInt("strike"), LocalDate.parse(l.getString("expiry")),
                     contractOf(l.getJSONArray("ce")), contractOf(l.getJSONArray("pe")))
@@ -142,6 +147,7 @@ object OrbArms {
         val o = JSONObject()
         o.put("armed", JSONObject(b.armed as Map<*, *>))
         o.put("auto", JSONObject(b.auto as Map<*, *>))
+        o.put("liveOk", JSONObject(b.liveOk as Map<*, *>))
         b.legs?.let { l -> o.put("legs", JSONObject().put("day", l.day.toString()).put("strike", l.strike).put("expiry", l.expiry.toString())
             .put("ce", contractJson(l.ce)).put("pe", contractJson(l.pe))) }
         b.range?.let { o.put("range", JSONArray().put(it.first).put(it.second).put(b.rangeDay.toString())) }
@@ -176,7 +182,7 @@ object OrbArms {
 
     data class ArmView(
         val arm: Arm, val armed: Boolean, val automatic: Boolean, val status: String, val open: Position?, val mark: Double?,
-        val pending: Pending?, val today: List<Position>,
+        val pending: Pending?, val today: List<Position>, val liveOk: Boolean = false,
     )
 
     data class View(
@@ -192,7 +198,7 @@ object OrbArms {
         val arms = OrbRules.ARMS.map { a ->
             val open = b.positions.lastOrNull { it.arm == a.source && it.open }
             ArmView(a, b.armed[a.source] == true, b.auto[a.source] != false, b.status[a.source] ?: "", open, open?.let { marks[it.symbol] },
-                b.pending[a.source], b.positions.filter { it.arm == a.source && it.day == day })
+                b.pending[a.source], b.positions.filter { it.arm == a.source && it.day == day }, b.liveOk[a.source] == true)
         }
         val lastReplay = b.replays.entries.lastOrNull()
         View(arms, b.legs?.takeIf { it.day == day }, b.range?.takeIf { b.rangeDay == day }, forward(b), lastReplay?.value, lastReplay?.key)
@@ -208,22 +214,26 @@ object OrbArms {
 
     // ---- arming and approvals ------------------------------------------------------
 
-    suspend fun setArmed(source: String, on: Boolean, automatic: Boolean): String = lock.withLock {
+    /** [pinConfirmed]: the UI took the PIN or fingerprint (required to arm while the app is in Live). */
+    suspend fun setArmed(source: String, on: Boolean, automatic: Boolean, pinConfirmed: Boolean = false): String = lock.withLock {
         val b = book()
+        val live = liveNow()
+        if (on && live && !pinConfirmed) return@withLock "The app is in Live: arm it with your PIN or fingerprint."
         b.armed[source] = on
         b.auto[source] = automatic
+        b.liveOk[source] = on && live && pinConfirmed
         if (!on) b.pending.remove(source)
         save(b)
         val label = armOf(source).label
-        if (on) "$label armed. " + (if (liveNow()) "The app is in LIVE: entries go to Zerodha, 1 lot, each one after your approval with the PIN."
-            else "Paper account, ${if (automatic) "automatic" else "you approve each entry"}; entries follow the Paper/Live switch.") +
+        if (on) "$label armed" + (if (live) " on ZERODHA (live), " else " on paper, ") +
+            (if (automatic) "fully automatic: it buys and sells by itself every trading day until you switch it off." else "you approve each entry.") +
             " It decides on 5-minute BANKNIFTY bars from 10:05."
         else "$label disarmed." + if (b.positions.any { it.arm == source && it.open }) " Its open position is still managed to its exit." else ""
     }
 
     /** After a restore: both arms off, nothing waiting for approval. */
     suspend fun disarmAll() = lock.withLock {
-        val b = book(); b.armed.clear(); b.auto.clear(); b.pending.clear(); save(b)
+        val b = book(); b.armed.clear(); b.auto.clear(); b.liveOk.clear(); b.pending.clear(); save(b)
     }
 
     suspend fun approve(source: String, pinConfirmed: Boolean = false): String {
@@ -293,12 +303,14 @@ object OrbArms {
         val right = if (direction > 0) "CE" else "PE"
         val c = if (direction > 0) legs.ce else legs.pe
         val live = liveNow()
-        if (live || b.auto[arm.source] == false) {
+        // Automatic unless the owner chose approvals, or the arm was armed in Paper and now finds the app in Live.
+        if (b.auto[arm.source] == false || (live && b.liveOk[arm.source] != true)) {
             // Valid until the next bar completes: after that the signal is stale.
             b.pending[arm.source] = Pending(arm.source, right, last.start, last.start.plusMinutes(10))
             Notifier.post(app, 6960 + OrbRules.ARMS.indexOf(arm), Notifier.APPROVAL, "${arm.label}: approve BUY ${c.symbol}",
                 "BANKNIFTY closed ${if (direction > 0) "above" else "below"} the opening range on the ${hhmm(last.start)} bar. " +
-                    (if (live) "LIVE on Zerodha, 1 lot: approve with your PIN in the app" else "Paper account, 1 lot") +
+                    (if (live) "LIVE on Zerodha, 1 lot: approve with your PIN in the app" +
+                        (if (b.auto[arm.source] != false) " (arm it again while in Live to make it automatic)" else "") else "Paper account, 1 lot") +
                     ". Approve by ${hhmm(last.start.plusMinutes(10))} or it lapses.", "almanac")
             return "awaiting_approval"
         }

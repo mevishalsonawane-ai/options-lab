@@ -94,7 +94,7 @@ object DailyReports {
         ok(contracts > 0, if (contracts > 0) "Today's option contracts loaded ($contracts)" else "Option contracts could not be loaded")
         val orb = runCatching { OrbArms.view() }.getOrNull()
         val armed = orb?.arms?.filter { it.armed }?.map { it.arm.label }.orEmpty()
-        lines += "• ORB arms: " + if (armed.isEmpty()) "none armed" else armed.joinToString() + if (s.live && s.allowRealOrders) " (LIVE: approve each entry with PIN)" else " (paper)"
+        lines += "• ORB arms: " + if (armed.isEmpty()) "none armed" else armed.joinToString() + if (s.live && s.allowRealOrders) " (LIVE, automatic)" else " (paper)"
         val strat = runCatching { Strategies.all().count { it.def.scheduler?.enabled == true } }.getOrDefault(0)
         lines += "• Strategies armed: $strat" + if (runCatching { Strategies.stoppedToday() }.getOrDefault(false)) " · bot stopped for today" else ""
         ok(!s.guardKill, if (s.guardKill) "Kill switch is ON: every order is refused" else "Kill switch off")
