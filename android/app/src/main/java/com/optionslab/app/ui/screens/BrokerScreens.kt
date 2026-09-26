@@ -639,6 +639,7 @@ fun BrokerPage(model: AppModel) {
     Page {
         item { PageTitle("Zerodha", "Your broker, as the PC trading app uses it: Kite Connect") }
         item { StaticIpCard(model) }
+        if (b.configured) item { SelfTestCard() }
         item {
             LedgerCard(title = "Connection") {
                 LedgerLine("API key", b.maskedKey)
@@ -701,6 +702,33 @@ fun BrokerPage(model: AppModel) {
         confirmButton = { TextButton({ forgetting = false; model.forgetBroker() }) { Text("Erase") } },
         dismissButton = { TextButton({ forgetting = false }) { Text("Keep") } },
     )
+}
+
+/** Checks the real Zerodha connection with read-only calls: nothing it does can place an order. */
+@Composable
+private fun SelfTestCard() {
+    val p = LocalPalette.current
+    val scope = rememberCoroutineScope()
+    var steps by remember { mutableStateOf<List<com.optionslab.app.data.LiveSelfTest.Step>>(emptyList()) }
+    var running by remember { mutableStateOf(false) }
+    LedgerCard(title = "Live self-test") {
+        Note("Reads your session, funds, positions, orders, holdings, GTTs, a NIFTY quote and the contract list, and checks orders would leave from your static IP. It only reads: it cannot place, change or cancel anything.")
+        steps.forEach { st ->
+            LedgerLine((if (st.ok) "✓ " else "✗ ") + st.name, st.detail + " · ${st.ms} ms", if (st.ok) p.verdigris else p.oxblood)
+        }
+        if (steps.isNotEmpty() && !running) {
+            val bad = steps.count { !it.ok }
+            Note(if (bad == 0) "All ${steps.size} checks passed." else "$bad of ${steps.size} checks failed.")
+        }
+        BrassButton(if (running) "Checking…" else "Run the self-test", Modifier.fillMaxWidth().padding(top = 8.dp)) {
+            if (running) return@BrassButton
+            running = true; steps = emptyList()
+            scope.launch {
+                try { com.optionslab.app.data.LiveSelfTest.run { st -> steps = steps + st } }
+                finally { running = false }
+            }
+        }
+    }
 }
 
 /**
