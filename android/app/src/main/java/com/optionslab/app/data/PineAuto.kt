@@ -42,6 +42,10 @@ object PineAuto {
         val lastTarget: HashMap<Long, Int> = HashMap(),
         val liveOk: HashMap<Long, Boolean> = HashMap(),
         val log: ArrayList<Line> = ArrayList(),
+        /** Script -> "day|rupees": what it made or lost on closed trades today. */
+        val dayPnl: HashMap<Long, String> = HashMap(),
+        /** Script -> the day it hit its own daily loss limit (no new trades until tomorrow). */
+        val paused: HashMap<Long, String> = HashMap(),
     )
 
     private val _held = MutableStateFlow<Map<Long, Held>>(emptyMap())
@@ -67,6 +71,8 @@ object PineAuto {
             o.optJSONObject("lastTarget")?.let { m -> m.keys().forEach { k -> bk.lastTarget[k.toLong()] = m.getInt(k) } }
             o.optJSONObject("liveOk")?.let { m -> m.keys().forEach { k -> bk.liveOk[k.toLong()] = m.getBoolean(k) } }
             o.optJSONArray("log")?.let { a -> for (i in 0 until a.length()) { val l = a.getJSONArray(i); bk.log += Line(l.getLong(0), l.getLong(1), l.getString(2)) } }
+            o.optJSONObject("dayPnl")?.let { m -> m.keys().forEach { k -> bk.dayPnl[k.toLong()] = m.getString(k) } }
+            o.optJSONObject("paused")?.let { m -> m.keys().forEach { k -> bk.paused[k.toLong()] = m.getString(k) } }
             bk
         }.getOrNull()
         if (b == null && file.exists()) Vault.setAside(file)
@@ -82,6 +88,8 @@ object PineAuto {
         o.put("lastTarget", JSONObject().apply { b.lastTarget.forEach { (k, v) -> put(k.toString(), v) } })
         o.put("liveOk", JSONObject().apply { b.liveOk.forEach { (k, v) -> put(k.toString(), v) } })
         o.put("log", JSONArray().apply { b.log.forEach { put(JSONArray().put(it.at).put(it.script).put(it.text)) } })
+        o.put("dayPnl", JSONObject().apply { b.dayPnl.forEach { (k, v) -> put(k.toString(), v) } })
+        o.put("paused", JSONObject().apply { b.paused.forEach { (k, v) -> put(k.toString(), v) } })
         Vault.writeFile(file, o.toString().toByteArray(Charsets.UTF_8))
         cache = b
         publish(b)
@@ -108,7 +116,7 @@ object PineAuto {
             b.liveOk[id] = pinConfirmed
             b.lastTarget.remove(id); b.lastBar.remove(id)
             PineScripts.setAuto(id, item.auto.copy(on = true))
-            note(b, id, "Switched on (${if (OrbArms.liveNow()) "Live" else "Paper"}): waiting for the next signal on ${item.auto.symbol} ${item.auto.interval}")
+            note(b, id, "Switched on (${if (item.auto.mode == "alert") "alerts only" else if (OrbArms.liveNow()) "Live" else "Paper"}): waiting for the next signal on ${item.auto.symbol} ${item.auto.interval}")
         } else {
             PineScripts.setAuto(id, item.auto.copy(on = false))
             b.liveOk.remove(id)
@@ -149,6 +157,30 @@ object PineAuto {
         if (h != null && (stopped || (item.auto.squareOff && mins >= 15 * 60 + 15) || h.day != Market.today().toString())) {
             exit(b, id, item, h, if (stopped) "the day's stop" else "15:15 square-off"); return
         }
+        val a = item.auto
+        val today = Market.today().toString()
+        // The held option's own stop-loss, target and the script's daily loss limit: checked every pass.
+        if (h != null && Market.isOpen() && (a.stopPts > 0 || a.targetPts > 0 || a.maxDayLoss > 0)) {
+            val ltp = runCatching { optionLtp(h) }.getOrNull()
+            if (ltp != null) {
+                val why = when {
+                    a.stopPts > 0 && ltp <= h.entry - a.stopPts -> "stop-loss"
+                    a.targetPts > 0 && ltp >= h.entry + a.targetPts -> "target"
+                    a.maxDayLoss > 0 && realizedToday(b, id) + (ltp - h.entry) * h.qty <= -a.maxDayLoss -> "daily loss limit"
+                    else -> null
+                }
+                if (why != null) {
+                    note(b, id, "${h.symbol} at ${"%.2f".format(java.util.Locale.ENGLISH, ltp)}: $why")
+                    exit(b, id, item, h, why)
+                    if (why == "daily loss limit") { b.paused[id] = today; note(b, id, "Daily loss limit reached: no more trades today") }
+                    return
+                }
+            }
+        }
+        if (a.maxDayLoss > 0 && realizedToday(b, id) <= -a.maxDayLoss && b.paused[id] != today) {
+            b.paused[id] = today; note(b, id, "Daily loss limit reached: no more trades today")
+        }
+        if (b.paused[id] == today) return
         if (!Market.isOpen() || stopped || mins >= 15 * 60 + 15) return
         val script = PineScripts.script(item) ?: run { note(b, id, "The script has errors: nothing traded"); return }
         val step = stepSeconds(item.auto.interval)
@@ -172,6 +204,12 @@ object PineAuto {
             else -> null
         }
         note(b, id, "Signal: ${describe(target)} at ${"%.2f".format(java.util.Locale.ENGLISH, last.close)}")
+        if (a.mode == "alert") {
+            // Alerts only: tell the owner, place nothing.
+            Notifier.post(app, 5000 + (id % 1000).toInt(), Notifier.RISK, "${item.name}: ${describe(target)}",
+                "${a.symbol} ${a.interval} at ${"%,.2f".format(java.util.Locale.ENGLISH, last.close)} · Pine signal (alerts only, no order placed)", "pine")
+            return
+        }
         if (h?.right == want) return
         if (h != null) { exit(b, id, item, h, "signal changed"); if (b.held.containsKey(id)) return }
         if (want == null) return
@@ -184,6 +222,22 @@ object PineAuto {
     }
 
     private fun describe(t: Int) = when { t > 0 -> "BUY"; t < 0 -> "SELL"; else -> "FLAT" }
+
+    /** What [id] made or lost on closed trades today. */
+    private fun realizedToday(b: Book, id: Long): Double {
+        val v = b.dayPnl[id] ?: return 0.0
+        val (day, amt) = v.split('|', limit = 2).let { it[0] to it.getOrNull(1) }
+        return if (day == Market.today().toString()) amt?.toDoubleOrNull() ?: 0.0 else 0.0
+    }
+
+    private fun addPnl(b: Book, id: Long, pnl: Double) { b.dayPnl[id] = "${Market.today()}|${realizedToday(b, id) + pnl}" }
+
+    /** Today's P&L of script [id]: closed trades and, when it holds one, the open option. */
+    fun todayOf(id: Long): Double? = cache?.let { realizedToday(it, id) }
+
+    /** The held option's last price, paper or Zerodha. */
+    private suspend fun optionLtp(h: Held): Double? = if (!h.live) Paper.contractOf(h.symbol)?.let { Paper.lastPrice(it) }
+        else h.kite?.let { sym -> if (!Broker.loggedIn) null else Broker.quotes(listOf("NFO:$sym"))["NFO:$sym"]?.last?.takeIf { it > 0 } }
 
     /** +1 long, -1 short, 0 flat: the strategy's own position, or the last buy/sell signal. */
     private fun targetOf(item: PineScripts.Item, s: Pine.Script, r: Pine.Run, prev: Int): Int {
@@ -272,6 +326,7 @@ object PineAuto {
             val fill = filledOrCancelled(sell) ?: run { note(b, id, "Paper sell of ${h.symbol} not filled (${sell.message}); retrying next pass"); return }
             sell.orderId?.let { Strategies.tagOwner("paper:$it", "${label(item)} · $why") }
             Notifier.orderFilled(app, "SELL", fill.first, h.symbol, fill.second, "Paper", label(item))
+            addPnl(b, id, (fill.second - h.entry) * fill.first)
             b.held.remove(id)
             note(b, id, "Sold ${fill.first} ${h.symbol} at ${"%.2f".format(java.util.Locale.ENGLISH, fill.second)} ($why) · P&L ${"%+.0f".format(java.util.Locale.ENGLISH, (fill.second - h.entry) * fill.first)}")
             return
@@ -299,6 +354,7 @@ object PineAuto {
         val f = runCatching { Broker.awaitOrder(orderId, 15_000) }.getOrNull()
         if (f == null || f.filled <= 0) return                          // checked again next pass against the position book
         Notifier.orderFilled(app, "SELL", f.filled, sym, f.avgPrice, "Live", label(item))
+        addPnl(b, id, (f.avgPrice - h.entry) * f.filled)
         if (f.filled >= qty) b.held.remove(id) else b.held[id] = h.copy(qty = h.qty - f.filled)
         note(b, id, "Sold ${f.filled} $sym at ${"%.2f".format(java.util.Locale.ENGLISH, f.avgPrice)} ($why, LIVE)")
     }

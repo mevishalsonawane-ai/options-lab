@@ -789,12 +789,14 @@ private fun PineAutoPanel(model: AppModel, start: PineScripts.Item, s: Pine.Scri
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text(if (a.on) "Auto-trading" else "Off", style = Type.title.copy(color = p.ink))
-                    Text(if (live) "Follows the app switch: LIVE (real money at Zerodha)" else "Follows the app switch: PAPER",
-                        style = Type.bodySmall.copy(color = if (live) p.oxblood else p.inkSoft))
+                    Text(if (a.mode == "alert") "Alerts only: a notification on each signal, no orders"
+                        else if (live) "Follows the app switch: LIVE (real money at Zerodha)" else "Follows the app switch: PAPER",
+                        style = Type.bodySmall.copy(color = if (live && a.mode != "alert") p.oxblood else p.inkSoft))
                 }
                 androidx.compose.material3.Switch(a.on, { on ->
                     if (busy) return@Switch
-                    if (on && live) auth = true else arm(on, false)
+                    // Alerts only places nothing: no PIN needed.
+                    if (on && live && a.mode != "alert") auth = true else arm(on, false)
                 })
             }
             held[item.id]?.let { h ->
@@ -803,8 +805,14 @@ private fun PineAutoPanel(model: AppModel, start: PineScripts.Item, s: Pine.Scri
                 LedgerLine("Bought at", String.format(Locale.ENGLISH, "%.2f", h.entry))
             }
         }
+        com.optionslab.app.data.PineAuto.todayOf(item.id)?.takeIf { it != 0.0 }?.let {
+            LedgerLine("Closed trades today", rs(it, sign = true), if (it >= 0) p.verdigris else p.oxblood)
+        }
         val locked = a.on
         if (locked) Text("Switch it off to change these.", style = Type.bodySmall.copy(color = p.inkFaint))
+        ParamTokens("What it does", listOf("Place orders" to (a.mode != "alert"), "Alerts only" to (a.mode == "alert"))) { i ->
+            if (!locked) set(a.copy(mode = if (i == 1) "alert" else "trade"))
+        }
         ParamTokens("Symbol", listOf("NIFTY", "BANKNIFTY").map { it to (it == a.symbol) }) { if (!locked) set(a.copy(symbol = listOf("NIFTY", "BANKNIFTY")[it])) }
         ParamTokens("Candles", listOf("1m", "5m", "15m", "1h").map { it to (it == a.interval) }) { if (!locked) set(a.copy(interval = listOf("1m", "5m", "15m", "1h")[it])) }
         ParamTokens("Lots", listOf(1, 2, 3, 5, 10).map { "$it" to (it == a.lots) }) { if (!locked) set(a.copy(lots = listOf(1, 2, 3, 5, 10)[it])) }
@@ -821,8 +829,18 @@ private fun PineAutoPanel(model: AppModel, start: PineScripts.Item, s: Pine.Scri
             ParamTokens("Buy signal", s.signals.map { it to (it == buy) }) { i -> if (!locked) set(a.copy(buy = s.signals[i])) }
             ParamTokens("Sell signal", s.signals.map { it to (it == sell) }) { i -> if (!locked) set(a.copy(sell = s.signals[i])) }
         }
-        ParamTokens("On a sell signal", listOf("Buy a PUT" to (a.shortWith == "put"), "Just exit" to (a.shortWith == "exit"))) { i ->
-            if (!locked) set(a.copy(shortWith = if (i == 0) "put" else "exit"))
+        if (a.mode != "alert") {
+            ParamTokens("On a sell signal", listOf("Buy a PUT" to (a.shortWith == "put"), "Just exit" to (a.shortWith == "exit"))) { i ->
+                if (!locked) set(a.copy(shortWith = if (i == 0) "put" else "exit"))
+            }
+            Text("PROTECTION ON THE OPTION", style = Type.label.copy(color = p.inkSoft, fontSize = 10.sp), modifier = Modifier.padding(top = 8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                AutoNum("Stop-loss (pts)", a.stopPts, locked, Modifier.weight(1f)) { set(a.copy(stopPts = it)) }
+                AutoNum("Target (pts)", a.targetPts, locked, Modifier.weight(1f)) { set(a.copy(targetPts = it)) }
+                AutoNum("Day loss ₹", a.maxDayLoss, locked, Modifier.weight(1f)) { set(a.copy(maxDayLoss = it)) }
+            }
+            Text("Checked every pass on the option's own price: below the stop or above the target it is sold at once; past the day's loss it is sold and the script trades no more today. 0 = off. The Bot settings daily loss limit also stops every bot.",
+                style = Type.bodySmall.copy(color = p.inkFaint, fontSize = 11.sp))
         }
         val mine = log.filter { it.script == item.id }.takeLast(40).asReversed()
         if (mine.isNotEmpty()) LedgerCard(title = "Activity") {
@@ -837,4 +855,17 @@ private fun PineAutoPanel(model: AppModel, start: PineScripts.Item, s: Pine.Scri
     }
     if (auth) Reauth(model, onOk = { auth = false; arm(true, true) }, onCancel = { auth = false },
         why = "Enter your app PIN to let this Pine script trade on Zerodha. It then places real orders by itself until you switch it off.")
+}
+
+/** A number box for an auto-trade setting: saved when it parses, 0 when cleared. */
+@Composable
+private fun AutoNum(label: String, value: Double, locked: Boolean, modifier: Modifier, onValue: (Double) -> Unit) {
+    var text by remember { mutableStateOf(if (value == 0.0) "" else if (value == Math.floor(value)) value.toLong().toString() else value.toString()) }
+    OutlinedTextField(text, { v ->
+        if (locked) return@OutlinedTextField
+        text = v.filter { it.isDigit() || it == '.' }.take(8)
+        val d = text.toDoubleOrNull() ?: if (text.isEmpty()) 0.0 else return@OutlinedTextField
+        if (d != value) onValue(d)
+    }, label = { Text(label, fontSize = 11.sp) }, singleLine = true, enabled = !locked, modifier = modifier,
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
 }

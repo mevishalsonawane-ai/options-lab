@@ -354,6 +354,8 @@ object Tasks {
         // Sandbox paper account: resting orders fill, MIS squares off at 15:15, expiries settle.
         // Paper account (also used by paper strategy runs in LIVE mode): resting orders fill, MIS squares off, expiries settle.
         runCatching { com.optionslab.app.data.Paper.tick() }.getOrNull()?.let { paperEvents(context, it) }
+        // One daily loss limit over every bot: past it, all of them sell and stop for the day.
+        runCatching { com.optionslab.app.data.LossBreaker.check(context) }
         // The ORB paper arms: manage open positions, then decide on the last completed 5-minute bar.
         runCatching { com.optionslab.app.data.OrbArms.tick() }
         // Pine scripts set to auto-trade: decide on each completed candle, sell at 15:15.

@@ -30,6 +30,14 @@ object PineScripts {
         val squareOff: Boolean = true,
         /** On a sell signal: "put" buys a PUT, "exit" only sells what is held. */
         val shortWith: String = "put",
+        /** "trade" places orders; "alert" only notifies on each signal change. */
+        val mode: String = "trade",
+        /** Sell the option when it falls this many points below its buy price (0 = none). */
+        val stopPts: Double = 0.0,
+        /** Sell the option when it rises this many points above its buy price (0 = none). */
+        val targetPts: Double = 0.0,
+        /** Sell and stop for the day once this script has lost this many rupees today (0 = none). */
+        val maxDayLoss: Double = 0.0,
     )
 
     data class Item(
@@ -65,7 +73,10 @@ object PineScripts {
             val au = o.optJSONObject("auto")?.let { x ->
                 Auto(x.optBoolean("on"), x.optString("symbol", "BANKNIFTY"), x.optString("interval", "5m"), x.optInt("lots", 1).coerceIn(1, 50),
                     x.optString("buy", "strategy"), x.optString("sell", "strategy"), x.optBoolean("squareOff", true),
-                    x.optString("shortWith", "put"))
+                    x.optString("shortWith", "put"), x.optString("mode", "trade").takeIf { it == "alert" } ?: "trade",
+                    x.optDouble("stopPts", 0.0).takeIf { it.isFinite() && it >= 0 } ?: 0.0,
+                    x.optDouble("targetPts", 0.0).takeIf { it.isFinite() && it >= 0 } ?: 0.0,
+                    x.optDouble("maxDayLoss", 0.0).takeIf { it.isFinite() && it >= 0 } ?: 0.0)
             } ?: Auto()
             Item(o.getLong("id"), o.getString("name"), o.getString("code"), o.optBoolean("onChart"), ins, au, o.optLong("updated"))
         }
@@ -77,7 +88,8 @@ object PineScripts {
             .put("updated", it.updated)
             .put("inputs", JSONObject().apply { it.inputs.forEach { (k, v) -> put(k, v) } })
             .put("auto", JSONObject().put("on", it.auto.on).put("symbol", it.auto.symbol).put("interval", it.auto.interval)
-                .put("lots", it.auto.lots).put("buy", it.auto.buy).put("sell", it.auto.sell).put("squareOff", it.auto.squareOff).put("shortWith", it.auto.shortWith)))
+                .put("lots", it.auto.lots).put("buy", it.auto.buy).put("sell", it.auto.sell).put("squareOff", it.auto.squareOff).put("shortWith", it.auto.shortWith)
+                .put("mode", it.auto.mode).put("stopPts", it.auto.stopPts).put("targetPts", it.auto.targetPts).put("maxDayLoss", it.auto.maxDayLoss)))
         Vault.writeFile(file, a.toString().toByteArray(Charsets.UTF_8))
         _items.value = list
     }
