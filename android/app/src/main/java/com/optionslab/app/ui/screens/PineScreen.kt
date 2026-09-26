@@ -75,6 +75,9 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 private val IST: ZoneId = ZoneId.of("Asia/Kolkata")
+/** Indices a Pine script can run on (option data for premium backtests: NIFTY and BANKNIFTY). */
+private val PINE_SYMBOLS = listOf("NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY", "SENSEX")
+
 private val secureDialog get() = androidx.compose.ui.window.DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy)
 private val Mono = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 13.sp, lineHeight = 19.sp)
 
@@ -320,7 +323,7 @@ private fun PineBacktest(item: PineScripts.Item, s: Pine.Script, onChart: () -> 
 
     Column(Modifier.fillMaxSize().verticalScroll(scroll).padding(horizontal = 14.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        ParamTokens("Symbol", listOf("NIFTY", "BANKNIFTY").map { it to (it == symbol) }) { symbol = listOf("NIFTY", "BANKNIFTY")[it] }
+        ParamTokens("Symbol", PINE_SYMBOLS.map { it to (it == symbol) }) { symbol = PINE_SYMBOLS[it] }
         ParamTokens("Candles", listOf("1m", "5m", "15m", "1h", "1D").map { it to (it == interval) }) { interval = listOf("1m", "5m", "15m", "1h", "1D")[it] }
         ParamTokens("Period", periods.map { (if (it >= 365) "${it / 365} yr" else "$it days") to (it == days) }) { days = periods[it] }
         if (!strategy) {
@@ -397,7 +400,7 @@ private fun PineBacktest(item: PineScripts.Item, s: Pine.Script, onChart: () -> 
                             withContext(Dispatchers.Main) { stage = "Pricing the trades on option data…" }
                             val pr = withContext(Dispatchers.Default) {
                                 com.optionslab.engine.pine.PinePremium.run(report!!.trades, bars, { d -> com.optionslab.app.data.Store.barSession(symbol, d) },
-                                    if (symbol == "BANKNIFTY") 100 else 50, nLots, if (strategy) s.settings.initialCapital else cap,
+                                    com.optionslab.app.data.PineAuto.strikeStep(symbol), nLots, if (strategy) s.settings.initialCapital else cap,
                                     shortsBuyPuts = strategy || rev, slippage = slipPrem)
                             }
                             note = "Option premium: priced ${pr.priced} of ${pr.priced + pr.skipped} trades" +
@@ -813,7 +816,8 @@ private fun PineAutoPanel(model: AppModel, start: PineScripts.Item, s: Pine.Scri
         ParamTokens("What it does", listOf("Place orders" to (a.mode != "alert"), "Alerts only" to (a.mode == "alert"))) { i ->
             if (!locked) set(a.copy(mode = if (i == 1) "alert" else "trade"))
         }
-        ParamTokens("Symbol", listOf("NIFTY", "BANKNIFTY").map { it to (it == a.symbol) }) { if (!locked) set(a.copy(symbol = listOf("NIFTY", "BANKNIFTY")[it])) }
+        ParamTokens("Symbol", PINE_SYMBOLS.map { it to (it == a.symbol) }) { if (!locked) set(a.copy(symbol = PINE_SYMBOLS[it])) }
+        if (a.symbol == "SENSEX" && a.mode != "alert") Note("SENSEX options trade on BSE, where the app does not place orders: choose Alerts only for SENSEX.")
         ParamTokens("Candles", listOf("1m", "5m", "15m", "1h").map { it to (it == a.interval) }) { if (!locked) set(a.copy(interval = listOf("1m", "5m", "15m", "1h")[it])) }
         ParamTokens("Lots", listOf(1, 2, 3, 5, 10).map { "$it" to (it == a.lots) }) { if (!locked) set(a.copy(lots = listOf(1, 2, 3, 5, 10)[it])) }
         if (strategy) {

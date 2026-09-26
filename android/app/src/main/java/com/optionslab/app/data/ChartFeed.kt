@@ -36,8 +36,18 @@ object ChartFeed {
     }
 
     /** The Upstox instrument key for a chart symbol: an index name, or an option's trading symbol. */
+    /** Indices charted and backtested beyond the harvested NIFTY / BANKNIFTY. */
+    val EXTRA_INDICES = linkedMapOf(
+        "FINNIFTY" to "NSE_INDEX|Nifty Fin Service",
+        "MIDCPNIFTY" to "NSE_INDEX|NIFTY MID SELECT",
+        "SENSEX" to "BSE_INDEX|SENSEX",
+    )
+
+    fun isIndex(symbol: String) = symbol.uppercase().let { it in Upstox.INDEX_KEYS || it in EXTRA_INDICES }
+
     fun instrumentKey(symbol: String): String {
         Upstox.INDEX_KEYS[symbol.uppercase()]?.let { return it }
+        EXTRA_INDICES[symbol.uppercase()]?.let { return it }
         val c = contract(symbol) ?: throw IOException("$symbol is not an index or a listed NIFTY/BANKNIFTY option")
         if (c.isExpired(Market.today())) throw IOException("$symbol expired on ${c.expiry}; the free candle feed does not keep expired contracts")
         return c.instrumentKey
@@ -55,7 +65,7 @@ object ChartFeed {
 
     fun contract(symbol: String): Upstox.Contract? {
         // An index is never a contract: answer at once instead of downloading the master to find out.
-        if (symbol.uppercase() in Upstox.INDEX_KEYS) return null
+        if (isIndex(symbol)) return null
         known().firstOrNull { it.tradingSymbol.equals(symbol, ignoreCase = true) }?.let { return it }
         // Block on the (large) master download only when the phone has no list at all; on a weekend or
         // holiday the saved list is from an earlier day, so refresh it behind the chart instead.
@@ -132,7 +142,8 @@ object ChartFeed {
     fun search(text: String): List<Match> {
         refreshInBackground()
         val words = text.uppercase().split(Regex("\\s+")).filter { it.isNotBlank() }
-        val indices = Upstox.INDEX_KEYS.keys.filter { k -> words.all { k.contains(it) } }.map { Match(it, "NSE", "Index") }
+        val indices = (Upstox.INDEX_KEYS.keys + EXTRA_INDICES.keys).filter { k -> words.all { k.contains(it) } }
+            .map { Match(it, if (it == "SENSEX") "BSE" else "NSE", "Index") }
         if (words.isEmpty()) return indices
         val today = Market.today()
         val options = known().asSequence()

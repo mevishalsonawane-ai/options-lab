@@ -221,6 +221,9 @@ object PineAuto {
         enter(b, item, Right.valueOf(want), last.close, live)
     }
 
+    /** Strike spacing used for the ATM option. */
+    fun strikeStep(u: String) = when (u) { "BANKNIFTY", "SENSEX" -> 100; "MIDCPNIFTY" -> 25; else -> 50 }
+
     private fun describe(t: Int) = when { t > 0 -> "BUY"; t < 0 -> "SELL"; else -> "FLAT" }
 
     /** What [id] made or lost on closed trades today. */
@@ -257,7 +260,8 @@ object PineAuto {
     private suspend fun enter(b: Book, item: PineScripts.Item, right: Right, spot: Double, live: Boolean) {
         val id = item.id
         val u = item.auto.symbol
-        val strike = OrbRules.atmStrike(spot, if (u == "BANKNIFTY") 100 else 50)
+        if (u == "SENSEX") { note(b, id, "SENSEX options trade on BSE, which the app does not place orders on: use Alerts only"); return }
+        val strike = OrbRules.atmStrike(spot, strikeStep(u))
         val today = Market.today()
         val listed = Market.contracts().filter { it.underlying == u }.map { it.expiry }.distinct()
         val expiry = OrbRules.expiryAfter(today, listed) ?: run { note(b, id, "No $u expiry after today is listed: nothing bought"); return }

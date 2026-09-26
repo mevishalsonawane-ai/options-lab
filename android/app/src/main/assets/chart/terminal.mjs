@@ -218,6 +218,28 @@ window.__iraPine = () => {
   } catch (e) { window.__iraPineErr = String(e && e.message || e); }
 };
 
+// Each symbol keeps its own indicators: switching saves the old symbol's set (with settings)
+// and brings back the new one's. A symbol with nothing saved keeps what is on screen.
+// Pine scripts are not part of it: "Show on the chart" in the app decides those.
+const PER_SYMBOL = 'ira.ind.';
+function builtinIndicators() {
+  return widget.chart.indicators().filter((i) => !String(i.indicatorId).startsWith('pine-'));
+}
+let symbolNow = widget.symbol();
+widget.on('symbol', () => {
+  try {
+    const next = widget.symbol();
+    if (next === symbolNow) return;
+    localStorage.setItem(PER_SYMBOL + symbolNow, JSON.stringify(builtinIndicators().map((i) => ({ id: i.indicatorId, s: i.settings() }))));
+    const saved = localStorage.getItem(PER_SYMBOL + next);
+    if (saved) {
+      for (const i of builtinIndicators()) widget.chart.removeIndicator(i.id);
+      for (const x of JSON.parse(saved)) { try { widget.chart.addIndicator(x.id, x.s || {}); } catch (e) { /* no longer available */ } }
+    }
+    symbolNow = next;
+  } catch (e) { /* storage unavailable: indicators simply stay */ }
+});
+
 // The gear after an indicator's name in the legend opens its settings (inputs and style).
 widget.chart.on('indicatorSettings', (e) => {
   try { WIDGET_DIALOGS.indicatorSettings(widget.context, undefined, { instanceId: e && e.instanceId }); } catch (err) { /* older chart build */ }

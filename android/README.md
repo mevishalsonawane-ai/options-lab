@@ -276,8 +276,18 @@ TradingView Pine (v5) runs on the phone (`engine/.../pine`).
   - Every order passes the account guard, the limits, the kill switch and the
     static-IP check.
   - Everything is sold at 15:15.
-- **Not yet supported:** `request.security`, arrays, `switch`. Labels, lines
-  and boxes are accepted but not drawn.
+- **Backtest extras:** P&L on the ATM option itself (the phone's 1-minute
+  option data, Zerodha's charges), slippage and per-order costs, an optimiser
+  with an out-of-sample check, CSV export of the trades.
+- **Auto-trade protection:** a stop-loss and a target on the option, a
+  per-script daily loss limit, and "Alerts only" (a notification per signal,
+  no orders). The Bot settings daily loss limit sells and stops every bot.
+- **Symbols:** NIFTY, BANKNIFTY, FINNIFTY, MIDCPNIFTY and SENSEX. SENSEX is
+  alerts only, because its options trade on BSE.
+- **Language:** `switch`, arrays, `for…in`, and `request.security` on higher
+  timeframes of the same symbol are supported. Other symbols, matrices, maps
+  and user types are not. Labels, lines and boxes are accepted but not drawn.
+- **Chart:** each symbol keeps its own indicators.
 
 ## Paper trading (sandbox)
 

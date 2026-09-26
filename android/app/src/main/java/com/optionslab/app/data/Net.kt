@@ -120,7 +120,7 @@ object Net {
      * The instrument master, streamed: the file is tens of megabytes of JSON,
      * so it is parsed token by token and only NIFTY/BANKNIFTY options are kept.
      */
-    fun fetchMaster(underlyings: Set<String> = setOf("NIFTY", "BANKNIFTY")): List<Upstox.Contract> {
+    fun fetchMaster(underlyings: Set<String> = setOf("NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY")): List<Upstox.Contract> {
         val c = open(Upstox.MASTER_URL, 300_000)
         c.setRequestProperty("Accept", "*/*")
         try {

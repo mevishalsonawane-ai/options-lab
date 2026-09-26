@@ -316,7 +316,8 @@ object Broker {
     // ---- market data ----------------------------------------------------------------
 
     private val INDEX = mapOf("NIFTY" to ("NSE:NIFTY 50" to 256265L), "BANKNIFTY" to ("NSE:NIFTY BANK" to 260105L),
-        "INDIAVIX" to ("NSE:INDIA VIX" to 264969L))
+        "INDIAVIX" to ("NSE:INDIA VIX" to 264969L), "FINNIFTY" to ("NSE:NIFTY FIN SERVICE" to 257801L),
+        "MIDCPNIFTY" to ("NSE:NIFTY MID SELECT" to 288009L), "SENSEX" to ("BSE:SENSEX" to 265L))
 
     data class Quote(val last: Double, val bid: Double?, val ask: Double?, val open: Double, val oi: Long = 0, val volume: Long = 0)
 
@@ -435,7 +436,7 @@ object Broker {
             }
         }
         val text = call("GET", "/instruments/NFO", raw = true) as String
-        val list = Kite.parseInstruments(text.lineSequence(), setOf("NIFTY", "BANKNIFTY"))
+        val list = Kite.parseInstruments(text.lineSequence(), setOf("NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY"))
         val a = JSONArray()
         list.forEach { a.put(JSONArray().put(it.token).put(it.tradingSymbol).put(it.name).put(it.expiry.toString()).put(it.strike).put(it.lotSize).put(it.right.name).put(it.tickSize)) }
         f.writeText(JSONObject().put("day", Market.today().toString()).put("i", a).toString())
