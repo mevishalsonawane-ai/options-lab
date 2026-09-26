@@ -48,14 +48,23 @@ object Net {
         return c
     }
 
+    /** The longest a server-sent Retry-After is honoured for; a longer ask is treated as this. */
+    private const val MAX_RETRY_AFTER_MS = 60_000L
+
+    /** Retry-After in delta-seconds, in ms; an HTTP-date or anything malformed is ignored. */
+    private fun retryAfterMs(header: String?): Long? =
+        header?.trim()?.toLongOrNull()?.takeIf { it >= 0 }?.let { (it * 1_000L).coerceAtMost(MAX_RETRY_AFTER_MS) }
+
     /**
      * GET JSON with the PC harvester's retry policy: 401 is FATAL (the
-     * unauthenticated route has been withdrawn - stop and re-plan), a 429 backs
-     * off geometrically from 10 s, and transport errors retry briefly.
+     * unauthenticated route has been withdrawn - stop and re-plan), a 429 waits
+     * as long as Retry-After asks (capped) or backs off geometrically from 10 s,
+     * and transport errors retry briefly. Nothing waits after the last attempt.
      */
     suspend fun getJson(url: String, tries: Int = 6, timeoutMs: Int = 45_000): JSONObject {
         var last: IOException = Offline()
         for (attempt in 0 until tries) {
+            var wait = 1_500L * (attempt + 1)
             try {
                 val c = open(url, timeoutMs)
                 try {
@@ -64,11 +73,11 @@ object Net {
                         "Upstox now requires authentication for historical candles. The unauthenticated route has been withdrawn - stop and re-plan.")
                     if (code == 429) {
                         last = HttpFailure(429)
-                        delay(10_000L * (1L shl attempt))
-                        continue
+                        wait = retryAfterMs(c.getHeaderField("Retry-After")) ?: (10_000L * (1L shl attempt))
+                    } else {
+                        if (code != HttpURLConnection.HTTP_OK) throw HttpFailure(code)
+                        return JSONObject(c.inputStream.use { it.readBytes() }.toString(Charsets.UTF_8))
                     }
-                    if (code != HttpURLConnection.HTTP_OK) throw HttpFailure(code)
-                    return JSONObject(c.inputStream.use { it.readBytes() }.toString(Charsets.UTF_8))
                 } finally {
                     c.disconnect()
                 }
@@ -82,7 +91,7 @@ object Net {
             } catch (_: org.json.JSONException) {
                 last = IOException("Market data returned something that is not JSON")
             }
-            delay(1_500L * (attempt + 1))
+            if (attempt < tries - 1) delay(wait)
         }
         throw last
     }

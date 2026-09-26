@@ -14,6 +14,7 @@ import androidx.core.content.ContextCompat
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingWorkPolicy
+import androidx.work.ForegroundInfo
 import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.OutOfQuotaPolicy
@@ -125,7 +126,7 @@ object Jobs {
     /** Start work in the foreground service; from the UI this is always allowed. */
     fun start(context: Context, k: Kind, manual: Boolean = true) {
         if (k != Kind.LIVE && !com.optionslab.app.data.Broker.linked) return
-        // The harvest runs quietly in WorkManager: no foreground notification, no "complete" notice.
+        // The harvest runs in WorkManager: a silent low-importance notice while it runs, no "complete" notice.
         if (k == Kind.HARVEST) {
             val req = OneTimeWorkRequestBuilder<FallbackWorker>()
                 .setInputData(workDataOf(EXTRA_KIND to k.name, "manual" to manual))
@@ -605,17 +606,49 @@ class WatchService : Service() {
     }
 }
 
-/** Used only when the service may not be started (no exact-alarm permission). */
+/**
+ * The harvest, always; the other one-shot jobs only when the service may not be started (no
+ * exact-alarm permission).
+ */
 class FallbackWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx, params) {
+    private fun kind() = runCatching { Jobs.Kind.valueOf(inputData.getString(Jobs.EXTRA_KIND) ?: "") }.getOrNull()
+
+    /**
+     * The notice shown while this runs in the foreground: the harvest asks for it (a plain worker is
+     * stopped at ten minutes), and expedited work shows it on Android 11 and below.
+     */
+    override suspend fun getForegroundInfo(): ForegroundInfo {
+        val harvest = kind() == Jobs.Kind.HARVEST
+        val n = Notifier.builder(applicationContext, Notifier.LIVE,
+            if (harvest) "Harvesting market data" else "IraAlgo", if (harvest) "Collecting today's option chains" else "Running a scheduled job", "almanac")
+            .setOngoing(true).setOnlyAlertOnce(true).setAutoCancel(false).setSilent(true)
+            .build()
+        val type = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC else 0
+        return ForegroundInfo(if (harvest) Notifier.ID_HARVEST else Notifier.ID_HARVEST + 1, n, type)
+    }
+
     override suspend fun doWork(): Result {
-        val k = runCatching { Jobs.Kind.valueOf(inputData.getString(Jobs.EXTRA_KIND) ?: "") }.getOrNull() ?: return Result.failure()
+        val k = kind() ?: return Result.failure()
         val s = AppSettings.load()
+        if (k == Jobs.Kind.HARVEST) {
+            // A fresh master and ~1500 contracts outlast the ten minutes a plain worker gets. If the
+            // foreground is refused (background start not allowed, dataSync budget spent), run anyway:
+            // the harvest stores as it goes, so a stopped attempt's retry resumes where it was.
+            try {
+                setForeground(getForegroundInfo())
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (_: Exception) {
+            }
+        }
         return try {
             when (k) {
                 Jobs.Kind.TICKET -> Tasks.ticket(applicationContext, s)
                 Jobs.Kind.SETTLE -> Tasks.settle(applicationContext, s)
                 Jobs.Kind.HARVEST -> try {
                     Tasks.harvest(applicationContext, s) { stage, p -> Tasks.publish(Tasks.LiveState(true, stage, p, System.currentTimeMillis())) }
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    throw e      // stopped by the system: WorkManager reschedules it, and nothing failed
                 } catch (e: Exception) {
                     SecurePrefs.put("harvest.last", "${Market.today()}: did not complete (${e.message})")
                     throw e
@@ -624,6 +657,8 @@ class FallbackWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(c
                 Jobs.Kind.LIVE -> Unit
             }
             Result.success()
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
         } catch (e: Exception) {
             if (runAttemptCount < 2) Result.retry() else Result.failure()
         }

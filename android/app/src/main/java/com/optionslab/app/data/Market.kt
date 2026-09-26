@@ -32,6 +32,8 @@ object Market {
 
     const val OPEN = 9 * 60 + 15
     const val CLOSE = 15 * 60 + 30
+    /** Minutes after the open that an empty intraday read still means "no candle yet", not a failure. */
+    private const val FIRST_CANDLE_GRACE = 2
 
     fun isWeekday(d: LocalDate = today()) = d.dayOfWeek != DayOfWeek.SATURDAY && d.dayOfWeek != DayOfWeek.SUNDAY
 
@@ -40,7 +42,9 @@ object Market {
     fun isOpen(): Boolean = isTradingDay() && minuteNow() in OPEN until CLOSE
 
     data class Quote(val symbol: String, val last: Double, val open: Double, val high: Double, val low: Double,
-                     val minute: Int, val spark: List<Double>) {
+                     val minute: Int, val spark: List<Double>,
+                     /** True when this is the last traded session's close, not today's price. */
+                     val lastSession: Boolean = false) {
         val change: Double get() = last - open
         val changePct: Double get() = if (open != 0.0) change / open else 0.0
     }
@@ -56,16 +60,26 @@ object Market {
 
     private suspend fun upstoxQuote(symbol: String): Quote? {
         val key = Upstox.INDEX_KEYS.getValue(symbol)
-        var bars = runCatching { Net.intraday(key) }.getOrDefault(emptyList()).filter { it.istDate == today() }
-        // Weekend, holiday, before the open: the last session the market traded, not nothing.
-        if (bars.isEmpty()) {
+        val read = runCatching { Net.intraday(key) }
+        read.exceptionOrNull()?.let { if (it is kotlinx.coroutines.CancellationException) throw it }
+        var bars = read.getOrDefault(emptyList()).filter { it.istDate == today() }
+        if (bars.isEmpty() && isOpen()) {
+            // In session a failed read is an error, never the last close passed off as the live price.
+            read.exceptionOrNull()?.let { throw it }
+            // An empty read is normal only before the first candle prints; later it means no data.
+            if (minuteNow() > OPEN + FIRST_CANDLE_GRACE) return null
+        }
+        // Weekend, holiday, after the close, the first minutes of a session: the last session the
+        // market traded (its close as the last price), not nothing.
+        val fallback = bars.isEmpty()
+        if (fallback) {
             val past = runCatching { ChartFeed.bars(symbol, "1m", null, null) }.getOrDefault(emptyList())
             val day = past.lastOrNull()?.istDate
             bars = past.filter { it.istDate == day }
         }
         if (bars.isEmpty()) return null
         return Quote(symbol, bars.last().close, bars.first().open, bars.maxOf { it.high }, bars.minOf { it.low },
-            bars.last().istMinute, bars.map { it.close })
+            bars.last().istMinute, bars.map { it.close }, lastSession = fallback)
     }
 
     // ---- instrument master, cached per day ---------------------------------

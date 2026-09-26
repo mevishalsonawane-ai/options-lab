@@ -6,6 +6,8 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import kotlinx.coroutines.async
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 
 /**
  * Candles for the chart terminal, from Upstox's public v3 candles: the three
@@ -78,7 +80,15 @@ object ChartFeed {
      * first load a chart only asks for today's session, which is one small request.
      */
     private data class Past(val day: LocalDate, val from: LocalDate, val bars: List<Upstox.Bar>)
-    private val past = java.util.concurrent.ConcurrentHashMap<String, Past>()
+    private const val PAST_ENTRIES = 12          // charts remembered, least recently used dropped first
+    private const val PAST_BARS = 20_000         // a longer history is fetched each time, not held
+    /** Access-ordered, so the eldest entry is the least recently used; guarded by itself. */
+    private val past = object : java.util.LinkedHashMap<String, Past>(16, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Past>?): Boolean = size > PAST_ENTRIES
+    }
+
+    /** History chunks in flight at once, across every chart: Upstox answers a burst with 429s. */
+    private val chunkGate = Semaphore(4)
 
     suspend fun bars(symbol: String, interval: String, fromSec: Long?, toSec: Long?): List<Upstox.Bar> {
         val key = Upstox.quote(instrumentKey(symbol))
@@ -108,9 +118,16 @@ object ChartFeed {
         kotlinx.coroutines.coroutineScope {
             // Today's session lives on a separate endpoint; it is fetched alongside the history.
             val todays: kotlinx.coroutines.Deferred<List<Upstox.Bar>>? = if (live) async(kotlinx.coroutines.Dispatchers.IO) {
-                runCatching { Net.parseCandles(Net.getJson("$BASE/intraday/$key/${u.unit}/${u.n}", tries = 2)) }.getOrDefault(emptyList())
+                val r = runCatching { Net.parseCandles(Net.getJson("$BASE/intraday/$key/${u.unit}/${u.n}", tries = 2)) }
+                // While the market is open a failed read is an error, never history passed off as the whole chart.
+                r.exceptionOrNull()?.let { if (it is kotlinx.coroutines.CancellationException || Market.isOpen()) throw it }
+                r.getOrDefault(emptyList())
             } else null
-            val cached = past[cacheKey]?.takeIf { it.day == today && !it.from.isAfter(from) }
+            val cached = synchronized(past) {
+                // Yesterday's entries are stale once the day turns: dropped on every call.
+                past.values.removeAll { it.day != today }
+                past[cacheKey]?.takeIf { !it.from.isAfter(from) }
+            }
             if (cached != null) {
                 out += cached.bars
             } else {
@@ -122,14 +139,17 @@ object ChartFeed {
                     hi = lo.minusDays(1)
                 }
                 // One failed chunk costs only its own days; the load fails only if every chunk did.
-                val res = chunks.map { (lo, h) -> async(kotlinx.coroutines.Dispatchers.IO) { runCatching { Net.parseCandles(Net.getJson("$BASE/$key/${u.unit}/${u.n}/$h/$lo", tries = 3)) } } }
+                val res = chunks.map { (lo, h) -> async(kotlinx.coroutines.Dispatchers.IO) { chunkGate.withPermit { runCatching { Net.parseCandles(Net.getJson("$BASE/$key/${u.unit}/${u.n}/$h/$lo", tries = 3)) } } } }
                     .map { it.await() }
                 if (res.isNotEmpty() && res.all { it.isFailure }) throw res.first().exceptionOrNull()!!
                 val got = res.flatMap { it.getOrDefault(emptyList()) }
                 out += got
                 // Keep only finished sessions; today's bars always come fresh.
                 // A week or month bar is dated on its first day, so the current one would look finished: not cached.
-                if (res.all { it.isSuccess } && to == today && u.unit != "weeks" && u.unit != "months") past[cacheKey] = Past(today, from, got.filter { it.istDate.isBefore(today) })
+                if (res.all { it.isSuccess } && to == today && u.unit != "weeks" && u.unit != "months") {
+                    val done = got.filter { it.istDate.isBefore(today) }
+                    if (done.size <= PAST_BARS) synchronized(past) { past[cacheKey] = Past(today, from, done) }
+                }
             }
             todays?.let { out += it.await() }
         }

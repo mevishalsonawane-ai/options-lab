@@ -122,21 +122,48 @@ object Store {
 
     // ---- manifest -----------------------------------------------------------
 
+    // Its own lock, not the object's: a manifest read must never wait behind a minutes-long backtest.
+    private val manifestLock = Any()
+
+    /** Read under the lock [recordManifest] writes under, so a reader never sees a file mid-replace. */
     fun manifest(u: String): List<Manifest.Entry> {
         val f = File(root, "manifest_$u.csv")
-        if (f.exists()) return Manifest.parseCsv(f.readText())
+        synchronized(manifestLock) { if (f.exists()) return Manifest.parseCsv(f.readText()) }
         val asset = "manifest_${u.lowercase()}.csv"
         return if (app.assets.list("")?.contains(asset) == true) Manifest.parseCsv(app.assets.open(asset).bufferedReader().readText()) else emptyList()
     }
 
     /** Record one session, never downgrading a same_day chain on a later re-fetch. */
-    @Synchronized
-    fun recordManifest(u: String, e: Manifest.Entry) {
+    fun recordManifest(u: String, e: Manifest.Entry) = synchronized(manifestLock) {
         val cur = manifest(u)
         val prior = cur.firstOrNull { it.session == e.session }
         val entry = if (e.scope == Manifest.BACKFILL && prior?.scope == Manifest.SAME_DAY)
             e.copy(scope = Manifest.SAME_DAY, collectedOn = prior.collectedOn) else e
-        File(root, "manifest_$u.csv").writeText(Manifest.toCsv(Manifest.upsert(cur, entry)))
+        val csv = Manifest.toCsv(Manifest.upsert(cur, entry))
+        atomicWrite(File(root, "manifest_$u.csv")) { it.write(csv.toByteArray(Charsets.UTF_8)) }
+    }
+
+    // ---- harvest progress ---------------------------------------------------
+
+    private val harvestLock = Any()
+    private fun harvestedFile(u: String, day: LocalDate) = File(root, "harvest/$u/$day.done")
+
+    /** Contracts (instrument keys) whose bars for the [day] harvest are already in the partitions. */
+    fun harvested(u: String, day: LocalDate): Set<String> = synchronized(harvestLock) {
+        val f = harvestedFile(u, day)
+        if (f.exists()) f.readLines().filter { it.isNotBlank() }.toSet() else emptySet()
+    }
+
+    /** Called only once the keys' bars are upserted, so a retried harvest can skip them. Older days' lists go. */
+    fun markHarvested(u: String, day: LocalDate, keys: Collection<String>) {
+        if (keys.isEmpty()) return
+        synchronized(harvestLock) {
+            val f = harvestedFile(u, day)
+            val dir = f.parentFile!!.apply { mkdirs() }
+            dir.listFiles { x -> x.name.endsWith(".done") && x.name != f.name }?.forEach { it.delete() }
+            val all = ((if (f.exists()) f.readLines() else emptyList()) + keys).filter { it.isNotBlank() }.distinct()
+            atomicWrite(f) { it.write(all.joinToString("\n").toByteArray(Charsets.UTF_8)) }
+        }
     }
 
     fun provenanceCsv(): String = app.assets.open("provenance.csv").bufferedReader().readText()
@@ -173,15 +200,27 @@ object Store {
     fun wipeDeviceData() {
         File(root, "expiry").deleteRecursively()
         File(root, "bars").deleteRecursively()
+        File(root, "harvest").deleteRecursively()
         root.listFiles { f -> f.name.startsWith("manifest_") || f.name == "contracts.json" }?.forEach { it.delete() }
         invalidate()
     }
 
     fun deviceBytes(): Long = listOf(File(root, "expiry"), File(root, "bars")).sumOf { d -> d.walkTopDown().filter { it.isFile }.sumOf { it.length() } }
 
+    /** Temp file, flushed to disk, then renamed over the target: a crash leaves the old file or the new one. */
     private fun atomicWrite(target: File, write: (java.io.OutputStream) -> Unit) {
         val tmp = File(target.parentFile, target.name + ".tmp")
-        tmp.outputStream().use(write)
+        java.io.FileOutputStream(tmp).use { fos ->
+            // The writer may close what it is handed (Olx wraps it in GZIP): the file stays open to be synced.
+            val buffered = fos.buffered(1 shl 16)
+            val keepOpen = object : java.io.FilterOutputStream(buffered) {
+                override fun write(b: ByteArray, off: Int, len: Int) = buffered.write(b, off, len)
+                override fun close() = flush()
+            }
+            write(keepOpen)
+            keepOpen.flush()
+            fos.fd.sync()
+        }
         if (!tmp.renameTo(target)) { target.delete(); tmp.renameTo(target) }
     }
 }

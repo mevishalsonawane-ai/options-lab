@@ -129,6 +129,13 @@
                 android:value="Market-hours watch of the owner's own trading positions: live price updates, stop-loss and risk alerts" />
         </service>
 
+        <!-- WorkManager's own foreground service, which the nightly harvest runs in: Android 14+
+             refuses a foreground type the manifest does not declare. -->
+        <service
+            android:name="androidx.work.impl.foreground.SystemForegroundService"
+            android:foregroundServiceType="dataSync"
+            tools:node="merge" />
+
         <receiver
             android:name=".work.AlarmReceiver"
             android:exported="false" />
