@@ -479,12 +479,12 @@ private fun StaticIpCard(model: AppModel) {
             st.registered == null -> "Not set up yet. SEBI requires API orders to come from an IP you have registered with Zerodha."
             st.current == null -> "Could not read this phone's IP just now."
             st.matches -> "✓ This phone is on your registered IP ${st.registered}. Live orders can go."
-            else -> "✗ This phone is on ${st.current}, not your registered ${st.registered}. New live positions are refused until the VPN is on (exits still go)."
+            else -> "✗ This phone is on ${st.current}, not your registered ${st.registered}. New live positions are refused until the relay below is connected (exits still go)."
         }, style = Type.body.copy(color = tone))
-        st?.let { LedgerLine("VPN", if (it.vpn) "on" else "off", if (it.vpn) p.verdigris else p.inkSoft) }
+        st?.let { LedgerLine("Relay", if (com.optionslab.app.data.Relay.enabled && com.optionslab.app.data.Relay.connected) "connected" else if (it.vpn) "VPN on" else "off", if (it.vpn) p.verdigris else p.inkSoft) }
         st?.current?.let { LedgerLine("This phone's IP now", it) }
         androidx.compose.material3.OutlinedTextField(ipText, { ipText = it.filter { c -> c.isDigit() || c == '.' }.take(15) },
-            label = { Text("Your registered static IP (from your VPN server)") }, singleLine = true, modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
+            label = { Text("Your registered static IP (your server's IP)") }, singleLine = true, modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
         Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             BrassButton("Save IP", Modifier.weight(1f)) {
