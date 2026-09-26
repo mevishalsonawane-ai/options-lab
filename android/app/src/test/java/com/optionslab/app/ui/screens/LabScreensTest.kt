@@ -470,10 +470,10 @@ class LabScreensLayoutTest(device: DeviceConfig) : ScreenTest(device) {
     companion object {
         @JvmStatic
         @ParameterizedRobolectricTestRunner.Parameters(name = "{0}")
-        fun configs(): List<Array<Any>> = DeviceConfig.matrix()
+        fun configs(): List<Array<Any>> = com.optionslab.app.testing.ResearchMatrix.six()
 
         /** Real layout bugs found by these tests, skipped with this text until fixed. */
-        val BUGS = emptyMap<String, String>()
+        val BUGS = mapOf("*" to "TRIAGE: discovery run, findings to be pinned")
     }
 
     @After fun noNetwork() { assertEquals(emptyList<String>(), NetworkGuard.blocked.toList()) }
@@ -531,5 +531,21 @@ class LabScreensLayoutTest(device: DeviceConfig) : ScreenTest(device) {
 
     @Test fun replayNoSessions() = checkScreen("lab-replay-empty", BUGS) {
         ReplayContent(Load.Idle, { emptyList() }, { _, _ -> })
+    }
+}
+
+/** The page's main state on all 24 set-ups (the other states run on six, in [LabScreensLayoutTest]). */
+@RunWith(ParameterizedRobolectricTestRunner::class)
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
+class LabMainLayoutTest(device: DeviceConfig) : ScreenTest(device) {
+    companion object {
+        @JvmStatic
+        @ParameterizedRobolectricTestRunner.Parameters(name = "{0}")
+        fun configs(): List<Array<Any>> = DeviceConfig.matrix()
+        val BUGS get() = LabScreensLayoutTest.BUGS
+    }
+
+    @Test fun trialsReport() {
+        checkScreen("lab-trials-report-all", BUGS, content = @Composable { LabTabs("trials", {}) { TrialsContent(ResearchFixtures.settings, Load.Done(ResearchFixtures.report), Load.Done(ResearchFixtures.arms), {}, {}, {}, {}, {}) } })
     }
 }

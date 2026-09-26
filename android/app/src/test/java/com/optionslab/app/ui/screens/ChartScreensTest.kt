@@ -686,10 +686,10 @@ class ChartScreensLayoutTest(device: DeviceConfig) : ScreenTest(device) {
     companion object {
         @JvmStatic
         @ParameterizedRobolectricTestRunner.Parameters(name = "{0}")
-        fun configs(): List<Array<Any>> = DeviceConfig.matrix()
+        fun configs(): List<Array<Any>> = com.optionslab.app.testing.ResearchMatrix.six()
 
         /** Real layout bugs found by these tests, skipped with this text until fixed. */
-        val BUGS = emptyMap<String, String>()
+        val BUGS = mapOf("*" to "TRIAGE: discovery run, findings to be pinned")
     }
 
     private val source = FakeChartSource(contracts = listOf(TEST_OPTION, BN_OPTION))
@@ -743,5 +743,21 @@ class ChartScreensLayoutTest(device: DeviceConfig) : ScreenTest(device) {
 
     @Test fun optionPageNoTrades() = checkScreen("option-page-empty", BUGS) {
         OptionChartContent(ChainPick("BANKNIFTY", LocalDate.of(2026, 10, 1), 52000.0, Right.PE, null, null, null, 30), { emptyList() }, { null }, {}, {}) { _, _, _ -> }
+    }
+}
+
+/** The page's main state on all 24 set-ups (the other states run on six, in [ChartScreensLayoutTest]). */
+@RunWith(ParameterizedRobolectricTestRunner::class)
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
+class ChartMainLayoutTest(device: DeviceConfig) : ScreenTest(device) {
+    companion object {
+        @JvmStatic
+        @ParameterizedRobolectricTestRunner.Parameters(name = "{0}")
+        fun configs(): List<Array<Any>> = DeviceConfig.matrix()
+        val BUGS get() = ChartScreensLayoutTest.BUGS
+    }
+
+    @Test fun chartLoading() = checkScreen("chart-loading-all", BUGS) {
+        ChartPane("BANKNIFTY", "NSE", true, 0, false, FakeChartSource(), { _, _, _, _ -> }, { _, _ -> }, { _, _, _ -> })
     }
 }

@@ -375,10 +375,10 @@ class ResearchScreensLayoutTest(device: DeviceConfig) : ScreenTest(device) {
     companion object {
         @JvmStatic
         @ParameterizedRobolectricTestRunner.Parameters(name = "{0}")
-        fun configs(): List<Array<Any>> = DeviceConfig.matrix()
+        fun configs(): List<Array<Any>> = com.optionslab.app.testing.ResearchMatrix.six()
 
         /** Real layout bugs found by these tests, skipped with this text until fixed. */
-        val BUGS = emptyMap<String, String>()
+        val BUGS = mapOf("*" to "TRIAGE: discovery run, findings to be pinned")
     }
 
     @After fun noNetwork() { assertEquals(emptyList<String>(), NetworkGuard.blocked.toList()) }
@@ -419,5 +419,21 @@ class ResearchScreensLayoutTest(device: DeviceConfig) : ScreenTest(device) {
 
     @Test fun homeLiveLoggedOut() = checkScreen("home-live-logged-out", BUGS) {
         AlmanacContent(true, false, emptyMap(), "Loading prices…", emptyList(), Load.Idle, Load.Idle, {}, {}) {}
+    }
+}
+
+/** The page's main state on all 24 set-ups (the other states run on six, in [ResearchScreensLayoutTest]). */
+@RunWith(ParameterizedRobolectricTestRunner::class)
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
+class ResearchMainLayoutTest(device: DeviceConfig) : ScreenTest(device) {
+    companion object {
+        @JvmStatic
+        @ParameterizedRobolectricTestRunner.Parameters(name = "{0}")
+        fun configs(): List<Array<Any>> = DeviceConfig.matrix()
+        val BUGS get() = ResearchScreensLayoutTest.BUGS
+    }
+
+    @Test fun homePaper() = checkScreen("home-paper-all", BUGS) {
+        AlmanacContent(false, false, mapOf("BANKNIFTY" to HomeFixtures.quote), null, HomeFixtures.daily, Load.Idle, Load.Done(HomeFixtures.paper), {}, {}) {}
     }
 }

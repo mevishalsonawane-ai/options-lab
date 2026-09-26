@@ -139,3 +139,13 @@ class FakeChartSource(
     override fun contracts() = contracts
     override suspend fun streamToken(symbol: String): Long? = null
 }
+
+/**
+ * Six set-ups that span the device matrix (every size, every font scale, both themes): the secondary
+ * research / Lab / chart states run on these to keep CI time in bounds; each page's main state runs on all 24.
+ */
+object ResearchMatrix {
+    private val PICK = setOf("small-font2.0-light", "small-font1.0-dark", "phone-font1.3-light", "landscape-font1.0-light",
+        "landscape-font2.0-dark", "tablet-font1.3-dark")
+    fun six(): List<Array<Any>> = DeviceConfig.matrix().filter { (it[0] as DeviceConfig).name in PICK }
+}
