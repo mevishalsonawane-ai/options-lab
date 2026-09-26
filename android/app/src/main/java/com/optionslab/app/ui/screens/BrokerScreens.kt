@@ -379,9 +379,9 @@ private fun OrderReviewBody(model: AppModel) {
     }
 }
 
-/** A leg still working at Zerodha after the send stopped: the owner decides, the rest wait. */
+/** A leg still working at Zerodha after the send stopped: the owner decides, the rest wait. (`internal` for the JVM tests only.) */
 @Composable
-private fun StuckCard(st: com.optionslab.app.ui.AppModel.StuckLeg, onAction: (String) -> Unit) {
+internal fun StuckCard(st: com.optionslab.app.ui.AppModel.StuckLeg, onAction: (String) -> Unit) {
     val p = LocalPalette.current
     val leg = st.plan.legs[st.index]
     LedgerCard(title = "Leg ${st.index + 1} is still working", accent = p.amber, modifier = Modifier.padding(top = 10.dp)) {
@@ -466,7 +466,11 @@ internal fun PlanCard(
  * are refused from any other), and walks through setting up the relay and the VPN.
  */
 @Composable
-private fun StaticIpCard(model: AppModel) {
+internal fun StaticIpCard(
+    model: AppModel,
+    // Test seam (src/test): the status read. The app always uses this default; tests pass a fixed status instead of asking api.ipify.org.
+    readStatus: suspend () -> com.optionslab.app.data.StaticIp.Status = { com.optionslab.app.data.StaticIp.status(force = true) },
+) {
     val p = LocalPalette.current
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -481,7 +485,7 @@ private fun StaticIpCard(model: AppModel) {
     var hostText by remember { mutableStateOf(relay.host ?: com.optionslab.app.data.StaticIp.registered.orEmpty()) }
     var testing by remember { mutableStateOf(false) }
     var relayMsg by remember { mutableStateOf<String?>(null) }
-    fun check() { checking = true; scope.launch { status = com.optionslab.app.data.StaticIp.status(force = true); checking = false } }
+    fun check() { checking = true; scope.launch { status = readStatus(); checking = false } }
     LaunchedEffect(Unit) { check() }
     fun open(url: String) = runCatching {
         ctx.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url)).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
@@ -629,7 +633,11 @@ private fun StaticIpCard(model: AppModel) {
 // ---- the Zerodha page (Cabinet) ------------------------------------------------------------
 
 @Composable
-fun BrokerPage(model: AppModel) {
+fun BrokerPage(
+    model: AppModel,
+    // Test seam (src/test): passed on to [StaticIpCard]. The app never passes it, so the card reads the real status.
+    staticIpStatus: suspend () -> com.optionslab.app.data.StaticIp.Status = { com.optionslab.app.data.StaticIp.status(force = true) },
+) {
     val p = LocalPalette.current
     val s by model.settings.collectAsState()
     val b by model.broker.collectAsState()
@@ -638,7 +646,7 @@ fun BrokerPage(model: AppModel) {
     LaunchedEffect(Unit) { model.refreshBroker(); if (Broker.loggedIn) model.loadAccount() }
     Page {
         item { PageTitle("Zerodha", "Your broker, as the PC trading app uses it: Kite Connect") }
-        item { StaticIpCard(model) }
+        item { StaticIpCard(model, staticIpStatus) }
         if (b.configured) item { SelfTestCard() }
         item {
             LedgerCard(title = "Connection") {
@@ -704,9 +712,9 @@ fun BrokerPage(model: AppModel) {
     )
 }
 
-/** Checks the real Zerodha connection with read-only calls: nothing it does can place an order. */
+/** Checks the real Zerodha connection with read-only calls: nothing it does can place an order. (`internal` for the JVM tests only.) */
 @Composable
-private fun SelfTestCard() {
+internal fun SelfTestCard() {
     val p = LocalPalette.current
     val scope = rememberCoroutineScope()
     var steps by remember { mutableStateOf<List<com.optionslab.app.data.LiveSelfTest.Step>>(emptyList()) }
@@ -772,7 +780,7 @@ fun ConnectZerodhaScreen(model: AppModel) {
  * secret are, then the form to save them. Can be skipped by someone who has them.
  */
 @Composable
-private fun SetupGuide(model: AppModel) {
+internal fun SetupGuide(model: AppModel) {
     val p = LocalPalette.current
     val ctx = LocalContext.current
     val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current
@@ -863,7 +871,7 @@ private const val DRAFT_KEY = "draft.kite.key"
 private const val DRAFT_SECRET = "draft.kite.secret"
 
 @Composable
-private fun CredentialsForm(model: AppModel, onDone: () -> Unit) {
+internal fun CredentialsForm(model: AppModel, onDone: () -> Unit) {
     val p = LocalPalette.current
     // What was typed is kept (encrypted, in the vault) until it is saved, so stepping out to the
     // Kite site, an idle lock or Android closing the app in the background never loses it.
@@ -963,8 +971,9 @@ private fun CredentialsForm(model: AppModel, onDone: () -> Unit) {
     }
 }
 
+/** The hand-typed order card on the Zerodha page. (`internal` for the JVM tests only.) */
 @Composable
-private fun ManualOrder(model: AppModel) {
+internal fun ManualOrder(model: AppModel) {
     val p = LocalPalette.current
     val s by model.settings.collectAsState()
     var underlying by remember { mutableStateOf("NIFTY") }

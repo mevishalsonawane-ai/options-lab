@@ -145,10 +145,25 @@ private fun PortfolioReport(r: PortfolioResult, sources: Set<String>) {
 /** IraAlgo's Portfolio Backtester and Analyzer. */
 @Composable
 fun PortfolioLab(model: AppModel) {
-    val p = LocalPalette.current
     val s by model.settings.collectAsState()
     val res by model.portfolio.collectAsState()
     val an by model.analyzer.collectAsState()
+    PortfolioLabContent(s.live, res, an, onAnalyze = model::analyzeHoldings, onRun = model::runPortfolio)
+}
+
+/**
+ * [PortfolioLab] without the AppModel: the state in, the two actions out. `internal` (and split out)
+ * only so the JVM tests can render it with made-up results and record the calls; nothing it shows changed.
+ */
+@Composable
+internal fun PortfolioLabContent(
+    live: Boolean,
+    res: Load<AppModel.PortfolioView>,
+    an: Load<AppModel.AnalyzerView>,
+    onAnalyze: () -> Unit,
+    onRun: (List<Holding>, LocalDate, LocalDate, String?, String, Double) -> Unit,
+) {
+    val p = LocalPalette.current
     val rows = remember { mutableStateListOf("NIFTYBEES" to "50", "GOLDBEES" to "30", "ITC" to "20") }
     var years by remember { mutableStateOf(5) }
     var bench by remember { mutableStateOf<String?>("NIFTY") }
@@ -156,10 +171,10 @@ fun PortfolioLab(model: AppModel) {
     var capital by remember { mutableStateOf(100_000.0) }
     Page {
         item { PageTitle("Portfolio", "Backtest a basket of NSE holdings, or analyse the ones you own") }
-        if (s.live) item {
+        if (live) item {
             LedgerCard(title = "Your holdings") {
                 Note("Your Zerodha delivery holdings at today's weights, run through the backtester over the last year against NIFTY.")
-                BrassButton("Analyse my holdings", Modifier.fillMaxWidth()) { model.analyzeHoldings() }
+                BrassButton("Analyse my holdings", Modifier.fillMaxWidth()) { onAnalyze() }
                 when (val a = an) {
                     is Load.Busy -> FullSpinner(a.label)
                     is Load.Failed -> com.optionslab.app.ui.components.AlertOn(a.why)
@@ -201,7 +216,7 @@ fun PortfolioLab(model: AppModel) {
                 BrassButton("Run the backtest", Modifier.fillMaxWidth(), busy = res is Load.Busy) {
                     val hs = rows.filter { it.first.isNotBlank() }.map { Holding(it.first, "NSE", it.second.toDoubleOrNull() ?: 0.0) }
                     val end = Market.today()
-                    model.runPortfolio(hs, end.minusYears(years.toLong()), end, bench, rebalance, capital)
+                    onRun(hs, end.minusYears(years.toLong()), end, bench, rebalance, capital)
                 }
                 Note("Indian equity delivery costs (STT, exchange, SEBI, stamp, GST) are charged on every trade, as IraAlgo does.")
             }
@@ -218,8 +233,17 @@ fun PortfolioLab(model: AppModel) {
 /** IraAlgo's SIP Backtester. */
 @Composable
 fun SipLab(model: AppModel) {
-    val p = LocalPalette.current
     val res by model.sip.collectAsState()
+    SipLabContent(res, onRun = model::runSip)
+}
+
+/** [SipLab] without the AppModel (split out and `internal` only for the JVM tests; nothing it shows changed). */
+@Composable
+internal fun SipLabContent(
+    res: Load<AppModel.SipView>,
+    onRun: (String, String, LocalDate, LocalDate, Double, String, Int, Double, String?) -> Unit,
+) {
+    val p = LocalPalette.current
     var symbol by remember { mutableStateOf("NIFTYBEES") }
     var amount by remember { mutableStateOf("10000") }
     var years by remember { mutableStateOf(5) }
@@ -250,7 +274,7 @@ fun SipLab(model: AppModel) {
                 Spacer(Modifier.height(8.dp))
                 BrassButton("Run the SIP", Modifier.fillMaxWidth(), busy = res is Load.Busy, enabled = symbol.isNotBlank() && (amount.toDoubleOrNull() ?: 0.0) > 0) {
                     val end = Market.today()
-                    model.runSip(symbol, "NSE", end.minusYears(years.toLong()), end, amount.toDouble(), freq, day, stepUp, bench)
+                    onRun(symbol, "NSE", end.minusYears(years.toLong()), end, amount.toDouble(), freq, day, stepUp, bench)
                 }
             }
         }
