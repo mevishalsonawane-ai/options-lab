@@ -226,7 +226,7 @@ private fun PineEditor(model: AppModel, start: PineScripts.Item, onOpenChart: ()
                 KeyStrip { ins -> code = insert(code, ins) }
             }
             "test" -> if (ok == null) Box(Modifier.fillMaxSize().padding(20.dp)) { Note("The script has errors: fix them in Code first.") }
-                else PineBacktest(item, ok) { inputs -> if (!armed) item = PineScripts.put(save().copy(inputs = inputs)) }
+                else PineBacktest(item, ok, onOpenChart) { inputs -> if (!armed) item = PineScripts.put(save().copy(inputs = inputs)) }
             else -> if (ok == null) Box(Modifier.fillMaxSize().padding(20.dp)) { Note("The script has errors: fix them in Code first.") }
                 else PineAutoPanel(model, item, ok, save = { save() }) { item = it }
         }
@@ -286,10 +286,10 @@ private fun KeyStrip(onKey: (String) -> Unit) {
 // ---- backtest ------------------------------------------------------------------------------
 
 private data class TestRun(val run: Pine.Run, val report: Pine.Report?, val bars: List<Pine.Bar>, val symbol: String, val interval: String,
-                            val how: String)
+                            val how: String, val note: String? = null)
 
 @Composable
-private fun PineBacktest(item: PineScripts.Item, s: Pine.Script, onInputs: (Map<String, String>) -> Unit) {
+private fun PineBacktest(item: PineScripts.Item, s: Pine.Script, onChart: () -> Unit, onInputs: (Map<String, String>) -> Unit) {
     val p = LocalPalette.current
     val scope = rememberCoroutineScope()
     var symbol by remember { mutableStateOf(item.auto.symbol) }
@@ -299,6 +299,11 @@ private fun PineBacktest(item: PineScripts.Item, s: Pine.Script, onInputs: (Map<
     val inputs = remember { mutableStateMapOf<String, String>().apply { s.inputs.forEach { d -> put(d.key, item.inputs[d.key] ?: d.default?.let { v -> if (v is Double && v == Math.floor(v)) v.toLong().toString() else v.toString() } ?: "") } } }
     var qty by remember { mutableStateOf("") }
     var capital by remember { mutableStateOf("100000") }
+    // How P&L is counted: index points x quantity, or the ATM option the auto-trader would buy.
+    var premium by remember { mutableStateOf(false) }
+    var lots by remember { mutableStateOf("1") }
+    var slippage by remember { mutableStateOf("") }
+    var perOrder by remember { mutableStateOf("") }
     // An indicator trades its signals: which one buys, which one sells, and what a sell does.
     val guessBuy = s.signals.firstOrNull { it.contains("buy", true) || it.contains("long", true) } ?: s.signals.firstOrNull()
     val guessSell = s.signals.firstOrNull { it.contains("sell", true) || it.contains("short", true) } ?: s.signals.getOrNull(1)
@@ -348,6 +353,18 @@ private fun PineBacktest(item: PineScripts.Item, s: Pine.Script, onInputs: (Map<
             if (!strategy) OutlinedTextField(capital, { v -> capital = v.filter { it.isDigit() }.take(10) }, label = { Text("Capital") },
                 singleLine = true, modifier = Modifier.weight(1f), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
         }
+        ParamTokens("P&L counted in", listOf("Index points" to !premium, "Option premium (ATM)" to premium)) { premium = it == 1 }
+        if (premium) {
+            OutlinedTextField(lots, { v -> lots = v.filter { it.isDigit() }.take(3) }, label = { Text("Lots per trade") }, singleLine = true,
+                modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
+            Note("Each trade is re-priced on the ATM CALL (long) or PUT (short) of the nearest expiry after the entry day, at its own 1-minute prices, with Zerodha's charges. Only days with option data on the phone can be priced (about a month bundled, plus every day the harvester collects).")
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedTextField(slippage, { v -> slippage = v.filter { it.isDigit() || it == '.' }.take(6) }, label = { Text("Slippage (points a side)") },
+                singleLine = true, modifier = Modifier.weight(1f), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
+            if (!premium) OutlinedTextField(perOrder, { v -> perOrder = v.filter { it.isDigit() || it == '.' }.take(6) }, label = { Text("₹ per order (brokerage)") },
+                singleLine = true, modifier = Modifier.weight(1f), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
+        }
         val canTrade = strategy || (buySig != null && sellSig != null)
         BrassButton(if (busy) "Running…" else "Run backtest", Modifier.fillMaxWidth().padding(top = 6.dp), busy = busy) {
             busy = true; error = null; res = null; stage = "Loading $symbol $interval candles…"
@@ -355,6 +372,8 @@ private fun PineBacktest(item: PineScripts.Item, s: Pine.Script, onInputs: (Map<
             val bs = buySig; val ss = sellSig; val rev = reverse
             val q = qty.toDoubleOrNull()?.takeIf { it > 0 }
             val cap = capital.toDoubleOrNull()?.takeIf { it > 0 } ?: 100_000.0
+            val costs = Pine.Costs(slippagePoints = if (premium) 0.0 else slippage.toDoubleOrNull() ?: 0.0, perOrder = if (premium) 0.0 else perOrder.toDoubleOrNull() ?: 0.0)
+            val prem = premium; val nLots = lots.toIntOrNull()?.coerceIn(1, 100) ?: 1; val slipPrem = slippage.toDoubleOrNull() ?: 0.0
             runCatching { onInputs(ins) }                          // remembering the inputs must never stop the run
             scope.launch {
                 val r = withContext(Dispatchers.IO) {
@@ -365,16 +384,29 @@ private fun PineBacktest(item: PineScripts.Item, s: Pine.Script, onInputs: (Map<
                         val bars = raw.map { PineScripts.toPine(it) }
                         withContext(Dispatchers.Main) { stage = "Running the script on ${"%,d".format(bars.size)} candles…" }
                         val values = PineScripts.inputValues(PineScripts.Item(0, "", "", inputs = ins), s)
-                        val run = withContext(Dispatchers.Default) { Pine.run(s, bars, values, symbol, interval, if (strategy) q else null, budgetMs = 60_000) }
-                        val report = when {
+                        val run = withContext(Dispatchers.Default) { Pine.run(s, bars, values, symbol, interval, if (strategy) q else null, budgetMs = 60_000, costs = costs) }
+                        var report = when {
                             strategy -> run.report
                             canTrade && run.error == null -> withContext(Dispatchers.Default) {
-                                Pine.signalBacktest(bars, run.signals[s.signals.indexOf(bs!!)], run.signals[s.signals.indexOf(ss!!)], rev, q ?: 1.0, cap)
+                                Pine.signalBacktest(bars, run.signals[s.signals.indexOf(bs!!)], run.signals[s.signals.indexOf(ss!!)], rev, q ?: 1.0, cap, costs)
                             }
                             else -> null
                         }
-                        val how = if (strategy) "the strategy's own orders" else "buy on \"$bs\", ${if (rev) "reverse to short" else "exit"} on \"$ss\""
-                        Result.success(TestRun(run, report, bars, symbol, interval, how))
+                        var note: String? = null
+                        if (prem && report != null) {
+                            withContext(Dispatchers.Main) { stage = "Pricing the trades on option data…" }
+                            val pr = withContext(Dispatchers.Default) {
+                                com.optionslab.engine.pine.PinePremium.run(report!!.trades, bars, { d -> com.optionslab.app.data.Store.barSession(symbol, d) },
+                                    if (symbol == "BANKNIFTY") 100 else 50, nLots, if (strategy) s.settings.initialCapital else cap,
+                                    shortsBuyPuts = strategy || rev, slippage = slipPrem)
+                            }
+                            note = "Option premium: priced ${pr.priced} of ${pr.priced + pr.skipped} trades" +
+                                (if (pr.reasons.isNotEmpty()) " (skipped: " + pr.reasons.entries.joinToString { "${it.value} ${it.key}" } + ")" else "")
+                            report = pr.report
+                        }
+                        val how = (if (strategy) "the strategy's own orders" else "buy on \"$bs\", ${if (rev) "reverse to short" else "exit"} on \"$ss\"") +
+                            if (prem) " · ATM options × $nLots lot${if (nLots == 1) "" else "s"}" else ""
+                        Result.success(TestRun(run, report, bars, symbol, interval, how, note))
                     } catch (e: kotlinx.coroutines.CancellationException) { throw e
                     } catch (e: Throwable) { Result.failure(e) }
                 }
@@ -387,7 +419,22 @@ private fun PineBacktest(item: PineScripts.Item, s: Pine.Script, onInputs: (Map<
         stage?.let { Text(it, style = Type.bodySmall.copy(color = p.inkSoft)) }
         Box(Modifier.fillMaxWidth().height(1.dp).onGloballyPositioned { resultTop = it.positionInParent().y.toInt() })
         error?.let { LedgerCard(accent = p.oxblood) { Text(it, style = Type.bodySmall.copy(color = p.oxblood)) } }
-        res?.let { BacktestResult(it, s) }
+        res?.let { t ->
+            BacktestResult(t, s)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 6.dp)) {
+                ExportCsv(t, Modifier.weight(1f))
+                BrassButton("Show on chart", Modifier.weight(1f), tone = p.inkSoft) {
+                    if (item.id != 0L) PineScripts.setOnChart(item.id, true)
+                    onChart()
+                }
+            }
+        }
+        if (s.inputs.any { it.kind == "int" || it.kind == "float" }) Optimiser(s, strategy, symbol, interval, days, inputs, buySig, sellSig, reverse,
+            qty.toDoubleOrNull()?.takeIf { it > 0 }, capital.toDoubleOrNull()?.takeIf { it > 0 } ?: 100_000.0,
+            Pine.Costs(slippagePoints = slippage.toDoubleOrNull() ?: 0.0, perOrder = perOrder.toDoubleOrNull() ?: 0.0)) { picked ->
+            picked.forEach { (k, v) -> inputs[k] = if (v == Math.floor(v)) v.toLong().toString() else v.toString() }
+            scope.launch { scroll.animateScrollTo(0) }
+        }
         Spacer(Modifier.height(24.dp))
     }
 }
@@ -423,6 +470,7 @@ private fun BacktestResult(t: TestRun, s: Pine.Script) {
     Text("${t.symbol} · ${t.interval} · ${"%,d".format(t.bars.size)} candles · ${fmtTime(first, true)} – ${fmtTime(last, true)} · ${t.how}",
         style = Type.bodySmall.copy(color = p.inkSoft), modifier = Modifier.padding(top = 8.dp))
     r.error?.let { Text("Stopped: $it", style = Type.bodySmall.copy(color = p.oxblood)) }
+    t.note?.let { Text(it, style = Type.bodySmall.copy(color = p.amber)) }
     // Every signal the script gave, and how often.
     if (s.signals.isNotEmpty()) LedgerCard(title = "Signals") {
         s.signals.forEachIndexed { i, name ->
@@ -525,6 +573,152 @@ private fun BacktestResult(t: TestRun, s: Pine.Script) {
     Text("Fills follow TradingView: orders fill at the next candle's open; stops and targets inside a candle, open → nearer extreme → far extreme → close. " +
         "P&L is index points × quantity (not option premium), after the script's commission; no slippage.",
         style = Type.bodySmall.copy(color = p.inkFaint, fontSize = 11.sp), modifier = Modifier.padding(top = 6.dp))
+}
+
+/** The trades as a CSV file the owner saves where they like (a spreadsheet, the cloud). */
+@Composable
+private fun ExportCsv(t: TestRun, modifier: Modifier) {
+    val p = LocalPalette.current
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val rep = t.report
+    val launcher = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.CreateDocument("text/csv")) { uri ->
+        if (uri != null && rep != null) runCatching {
+            ctx.contentResolver.openOutputStream(uri)?.use { it.write(tradesCsv(rep).toByteArray(Charsets.UTF_8)) } ?: error("could not open the file")
+        }.onSuccess { com.optionslab.app.work.Alerts.success("Saved ${rep.trades.size} trades") }
+            .onFailure { com.optionslab.app.work.Alerts.error("Could not save the CSV: ${it.message}") }
+    }
+    BrassButton("Export CSV", modifier, tone = p.inkSoft, enabled = rep != null && rep.trades.isNotEmpty()) {
+        launcher.launch("pine-${t.symbol.lowercase()}-${t.interval}-${java.time.LocalDate.now()}.csv")
+    }
+}
+
+/** One row per trade. Text from the script is quoted, and a leading = + - @ is defused so a spreadsheet never runs it. */
+private fun tradesCsv(rep: Pine.Report): String {
+    val f = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm", Locale.ENGLISH)
+    fun t(x: Long) = Instant.ofEpochSecond(x).atZone(IST).format(f)
+    fun q(x: String): String { val v = if (x.isNotEmpty() && x[0] in "=+-@\t\r") "'$x" else x; return "\"" + v.replace("\"", "\"\"") + "\"" }
+    fun n(x: Double) = String.format(Locale.ENGLISH, "%.2f", x)
+    val sb = StringBuilder("entry_time,exit_time,side,entry,exit,qty,entry_price,exit_price,pnl,pnl_pct,charges,status\n")
+    for (tr in rep.trades) sb.append(listOf(t(tr.entryTime), t(tr.exitTime), if (tr.long) "LONG" else "SHORT", q(tr.entryId), q(tr.exitId),
+        n(tr.qty), n(tr.entryPrice), n(tr.exitPrice), n(tr.pnl), n(tr.pnlPct), n(tr.commission), if (tr.open) "open" else "closed").joinToString(",")).append('\n')
+    return sb.toString()
+}
+
+/**
+ * Try a range of values for one or two inputs, rank them, and check the best on the part of
+ * the period they were not picked on. Tap a row to use its values.
+ */
+@Composable
+private fun Optimiser(
+    s: Pine.Script, strategy: Boolean, symbol: String, interval: String, days: Int, inputs: Map<String, String>,
+    buySig: String?, sellSig: String?, reverse: Boolean, qty: Double?, capital: Double, costs: Pine.Costs,
+    onApply: (Map<String, Double>) -> Unit,
+) {
+    val p = LocalPalette.current
+    val scope = rememberCoroutineScope()
+    val numeric = s.inputs.filter { it.kind == "int" || it.kind == "float" }
+    var open by remember { mutableStateOf(false) }
+    var p1 by remember { mutableStateOf(numeric.first().key) }
+    var p2 by remember { mutableStateOf<String?>(null) }
+    val fields = remember { mutableStateMapOf<String, String>() }
+    var split by remember { mutableStateOf(70) }
+    var busy by remember { mutableStateOf(false) }
+    var progress by remember { mutableStateOf<String?>(null) }
+    var result by remember { mutableStateOf<com.optionslab.engine.pine.PineOptimise.Result?>(null) }
+    var failure by remember { mutableStateOf<String?>(null) }
+    fun def(k: String): Double = inputs[k]?.toDoubleOrNull() ?: (numeric.first { it.key == k }.default as? Double) ?: 10.0
+    fun isInt(k: String) = numeric.first { it.key == k }.kind == "int"
+    fun field(k: String, which: String): String = fields["$k|$which"] ?: run {
+        val d = def(k)
+        val v = when (which) {
+            "from" -> if (isInt(k)) maxOf(1.0, Math.floor(d / 2)) else d / 2
+            "to" -> if (isInt(k)) Math.ceil(d * 1.5) else d * 1.5
+            else -> if (isInt(k)) maxOf(1.0, Math.round(d / 5.0).toDouble()) else d / 5
+        }
+        if (v == Math.floor(v)) v.toLong().toString() else String.format(Locale.ENGLISH, "%.4f", v).trimEnd('0').trimEnd('.')
+    }
+    fun range(k: String) = com.optionslab.engine.pine.PineOptimise.Range(k, field(k, "from").toDoubleOrNull() ?: def(k),
+        field(k, "to").toDoubleOrNull() ?: def(k), field(k, "step").toDoubleOrNull() ?: 1.0)
+
+    LedgerCard(title = "Optimise inputs") {
+        if (!open) {
+            Text("Try a range of values for one or two inputs and rank them. The best are then checked on the last part of the period they were not chosen on, so an over-fitted pick shows up.",
+                style = Type.bodySmall.copy(color = p.inkSoft))
+            BrassButton("Set up", Modifier.fillMaxWidth().padding(top = 8.dp), tone = p.inkSoft) { open = true }
+            return@LedgerCard
+        }
+        ParamTokens("First input", numeric.map { it.key to (it.key == p1) }) { p1 = numeric[it].key; if (p2 == p1) p2 = null }
+        val others = numeric.filter { it.key != p1 }
+        if (others.isNotEmpty()) ParamTokens("Second input", (listOf("None") + others.map { it.key }).map { it to (it == (p2 ?: "None")) }) { i ->
+            p2 = if (i == 0) null else others[i - 1].key
+        }
+        listOfNotNull(p1, p2).forEach { k ->
+            Text(k, style = Type.label.copy(color = p.ink, fontSize = 12.sp), modifier = Modifier.padding(top = 6.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                listOf("from", "to", "step").forEach { w ->
+                    OutlinedTextField(field(k, w), { v -> fields["$k|$w"] = v.filter { it.isDigit() || it == '.' }.take(8) }, label = { Text(w) },
+                        singleLine = true, modifier = Modifier.weight(1f), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
+                }
+            }
+        }
+        ParamTokens("Check on unseen data", listOf("None" to (split == 100), "Last 30%" to (split == 70), "Last 40%" to (split == 60))) {
+            split = listOf(100, 70, 60)[it]
+        }
+        val ranges = listOfNotNull(p1, p2).map { range(it) }
+        val combos = com.optionslab.engine.pine.PineOptimise.combos(ranges)
+        Text("$combos combination${if (combos == 1) "" else "s"}" + (if (combos > 400) " (the first 400 are tried)" else ""),
+            style = Type.bodySmall.copy(color = if (combos > 400) p.amber else p.inkSoft))
+        BrassButton(if (busy) "Optimising…" else "Run optimiser", Modifier.fillMaxWidth().padding(top = 6.dp), busy = busy,
+            enabled = strategy || (buySig != null && sellSig != null)) {
+            busy = true; failure = null; result = null; progress = "Loading candles…"
+            val base = PineScripts.inputValues(PineScripts.Item(0, "", "", inputs = inputs.toMap()), s)
+            val sig = if (strategy) null else com.optionslab.engine.pine.PineOptimise.Signals(s.signals.indexOf(buySig!!), s.signals.indexOf(sellSig!!),
+                reverse, qty ?: 1.0, capital)
+            val plan = com.optionslab.engine.pine.PineOptimise.Plan(ranges, split, sig, if (strategy) qty else null, costs)
+            scope.launch {
+                val r = withContext(Dispatchers.IO) {
+                    try {
+                        val to = System.currentTimeMillis() / 1000
+                        val bars = ChartFeed.bars(symbol, interval, to - days * 86400L, null).map { PineScripts.toPine(it) }
+                        if (bars.size < 50) throw IllegalStateException("Too few candles to optimise on")
+                        Result.success(withContext(Dispatchers.Default) {
+                            com.optionslab.engine.pine.PineOptimise.run(s, bars, base, plan, symbol, interval) { done, all -> progress = "Tried $done of $all…" }
+                        })
+                    } catch (e: kotlinx.coroutines.CancellationException) { throw e
+                    } catch (e: Throwable) { Result.failure(e) }
+                }
+                busy = false; progress = null
+                r.onSuccess { result = it }.onFailure { failure = it.message ?: it.javaClass.simpleName }
+            }
+        }
+        progress?.let { Text(it, style = Type.bodySmall.copy(color = p.inkSoft)) }
+        failure?.let { Text("Optimiser failed: $it", style = Type.bodySmall.copy(color = p.oxblood)) }
+        result?.let { res ->
+            if (res.stoppedEarly) Text("Tried ${res.tried} of ${res.total} (limit or time reached).", style = Type.bodySmall.copy(color = p.amber))
+            res.splitTime?.let { Text("Chosen on candles before ${fmtTime(it, true)}, checked on the rest.", style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 11.sp)) }
+            Row(Modifier.padding(top = 6.dp)) {
+                listOf("Values" to 1.4f, "Net" to 1.1f, "Trades" to 0.7f, "Win" to 0.7f, "PF" to 0.6f, "Unseen" to 1.1f).forEach { (h, w) ->
+                    Text(h, style = Type.label.copy(color = p.inkSoft, fontSize = 10.sp), modifier = Modifier.weight(w))
+                }
+            }
+            res.rows.take(20).forEach { row ->
+                Row(Modifier.fillMaxWidth().clickable { onApply(row.values) }.padding(vertical = 4.dp)) {
+                    val st = Type.figure.copy(fontSize = 11.sp, color = p.ink)
+                    Text(row.values.values.joinToString(" / ") { if (it == Math.floor(it)) it.toLong().toString() else f2(it) }, style = st, modifier = Modifier.weight(1.4f))
+                    Text(rs(row.inSample.net, sign = true), style = st.copy(color = if (row.inSample.net >= 0) p.verdigris else p.oxblood), modifier = Modifier.weight(1.1f))
+                    Text("${row.inSample.trades}", style = st, modifier = Modifier.weight(0.7f))
+                    Text(if (row.inSample.trades == 0) "—" else String.format(Locale.ENGLISH, "%.0f%%", row.inSample.winRate), style = st, modifier = Modifier.weight(0.7f))
+                    Text(row.inSample.profitFactor?.let { f2(it) } ?: "—", style = st, modifier = Modifier.weight(0.6f))
+                    Text(row.outSample?.let { rs(it.net, sign = true) } ?: "—",
+                        style = st.copy(color = row.outSample?.let { if (it.net >= 0) p.verdigris else p.oxblood } ?: p.inkFaint), modifier = Modifier.weight(1.1f))
+                }
+                Rule()
+            }
+            Text("Tap a row to use its values, then Run backtest. Prefer values that also made money on the unseen part.",
+                style = Type.bodySmall.copy(color = p.inkFaint, fontSize = 11.sp), modifier = Modifier.padding(top = 4.dp))
+        }
+    }
 }
 
 /** Months or days: trades, win rate and P&L, the most recent 60 unless expanded. */

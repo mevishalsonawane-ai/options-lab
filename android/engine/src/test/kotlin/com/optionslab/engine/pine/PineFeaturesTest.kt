@@ -170,3 +170,31 @@ class PineFeaturesTest {
         assertEquals(full.sumOf { it.pnl }, one.inSample.net + one.outSample!!.net, 1e-6)
     }
 }
+
+class PinePremiumTest {
+    @Test fun tradesArePricedOnTheAtmOptionWithCharges() {
+        val day = java.time.LocalDate.of(2026, 9, 22)
+        val expiry = java.time.LocalDate.of(2026, 9, 23)
+        val mins = IntArray(60) { 555 + it }                   // 09:15 .. 10:14
+        fun opt(k: Double, r: com.optionslab.engine.Right, f: (Int) -> Double) =
+            com.optionslab.engine.Series(expiry, k, r, 75, mins, DoubleArray(60) { f(it) }, DoubleArray(60) { f(it) }, null, null, null, LongArray(60))
+        val session = com.optionslab.engine.Session(day, 75, listOf(
+            opt(25000.0, com.optionslab.engine.Right.CE) { 100.0 + it }, opt(25000.0, com.optionslab.engine.Right.PE) { 100.0 - it * 0.5 },
+            opt(25050.0, com.optionslab.engine.Right.CE) { 80.0 + it }))
+        val t0 = 1790048700L                                      // 09:15 IST
+        val bars = List(60) { Pine.Bar(t0 + it * 60L, 25000.0, 25001.0, 24999.0, 25000.0, 0.0) }
+        val trade = Pine.Trade("L", "S", true, 1.0, 5, t0 + 5 * 60, 25010.0, 25, t0 + 25 * 60, 25030.0, 20.0, 0.08, 0.0, false)
+        val short = Pine.Trade("S", "X", false, 1.0, 30, t0 + 30 * 60, 25004.0, 40, t0 + 40 * 60, 24990.0, 14.0, 0.05, 0.0, false)
+        val r = PinePremium.run(listOf(trade, short), bars, { if (it == day) session else null }, strikeStep = 50, lots = 2, capital = 100_000.0)
+        assertEquals(2, r.priced); assertEquals(0, r.skipped)
+        val ce = r.report!!.trades[0]
+        assertEquals(105.0, ce.entryPrice, 1e-9); assertEquals(125.0, ce.exitPrice, 1e-9); assertEquals(150.0, ce.qty, 1e-9)
+        assertTrue(ce.commission > 0); assertEquals((125.0 - 105.0) * 150 - ce.commission, ce.pnl, 1e-6)
+        val pe = r.report!!.trades[1]
+        assertTrue(pe.entryId.endsWith("PE")); assertEquals(85.0, pe.entryPrice, 1e-9); assertEquals(80.0, pe.exitPrice, 1e-9)
+        // A day without data is skipped with its reason.
+        val later = trade.copy(entryTime = t0 + 86400 * 3, exitTime = t0 + 86400 * 3 + 600)
+        val r2 = PinePremium.run(listOf(later), bars, { if (it == day) session else null }, 50, 1, 100_000.0)
+        assertEquals(0, r2.priced); assertEquals(1, r2.reasons["no option data for the entry day"])
+    }
+}
