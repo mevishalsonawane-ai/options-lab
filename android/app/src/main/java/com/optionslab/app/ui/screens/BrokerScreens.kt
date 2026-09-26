@@ -211,10 +211,19 @@ fun LoginPinDialog(model: AppModel) {
 fun Reauth(model: AppModel, onOk: () -> Unit, onCancel: () -> Unit) {
     val s by model.settings.collectAsState()
     val activity = LocalContext.current as? FragmentActivity
-    var usePin by remember { mutableStateOf(!(s.biometric && activity != null)) }
+    // A phone that failed the security check can fake a biometric callback: the PIN only, there.
+    val findings by model.integrity.collectAsState()
+    val compromised = findings.isNotEmpty() && com.optionslab.app.security.Integrity.compromised(findings)
+    var usePin by remember { mutableStateOf(!(s.biometric && activity != null && !compromised)) }
     LaunchedEffect(usePin) {
-        if (!usePin && activity != null) BiometricGate.authenticate(activity, allowWeakFace = false) { out ->
-            if (out == BiometricGate.Outcome.Success) onOk() else usePin = true
+        // Face unlock counts here too when the owner accepted it (More → Security); otherwise the fingerprint key.
+        if (!usePin && activity != null) BiometricGate.authenticate(activity, allowWeakFace = s.allowWeakFace) { out ->
+            when (out) {
+                BiometricGate.Outcome.Success -> onOk()
+                is BiometricGate.Outcome.Failed -> { com.optionslab.app.work.Alerts.error("Fingerprint / face: ${out.why}. Use your PIN."); usePin = true }
+                is BiometricGate.Outcome.Invalidated -> { com.optionslab.app.work.Alerts.error(out.why); model.update { it.copy(biometric = false) }; usePin = true }
+                BiometricGate.Outcome.UsePin -> usePin = true
+            }
         }
     }
     if (usePin) {

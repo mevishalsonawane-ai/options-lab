@@ -204,6 +204,13 @@ private fun Gate(activity: MainActivity, model: AppModel, settings: AppSettings,
     val bioAllowed = settings.biometric && checked && !compromised && kind != BiometricGate.Kind.NONE &&
         (kind == BiometricGate.Kind.STRONG || settings.allowWeakFace)
     val label = if (!bioAllowed) null else "Use fingerprint or face"
+    // Switched on but not offered: say why rather than silently asking for the PIN.
+    LaunchedEffect(settings.biometric, checked, kind) {
+        if (notice == null && settings.biometric && checked && !compromised && kind == BiometricGate.Kind.NONE)
+            notice = "No fingerprint or face is set up on this phone any more; unlock with your PIN."
+        else if (notice == null && settings.biometric && checked && !compromised && kind == BiometricGate.Kind.WEAK && !settings.allowWeakFace)
+            notice = "This phone's face unlock is the weaker class: turn on Accept face unlock in More → Security to use it."
+    }
 
     if (offerBio) {
         BiometricOffer(
