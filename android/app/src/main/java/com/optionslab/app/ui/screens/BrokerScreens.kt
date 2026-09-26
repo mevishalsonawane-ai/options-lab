@@ -43,6 +43,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -531,7 +532,7 @@ fun ConnectZerodhaScreen(model: AppModel) {
             Text("Connect to Zerodha", style = Type.masthead.copy(color = p.ink, fontSize = 22.sp))
             Text("IraAlgo works with your Zerodha account. Link it once to open the app.", style = Type.bodySmall.copy(color = p.inkSoft))
             Spacer(Modifier.height(12.dp))
-            if (!b.configured) CredentialsForm(model) { }
+            if (!b.configured) SetupGuide(model)
             else {
                 Text("Keys saved ✓", style = Type.body.copy(color = p.verdigris, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold))
                 Spacer(Modifier.height(6.dp))
@@ -544,6 +545,99 @@ fun ConnectZerodhaScreen(model: AppModel) {
             }
         }
     }
+}
+
+/**
+ * First-time setup, step by step, for someone who has never used the Kite Connect API:
+ * what is needed, where the developer site is, how to create the app, where the key and
+ * secret are, then the form to save them. Can be skipped by someone who has them.
+ */
+@Composable
+private fun SetupGuide(model: AppModel) {
+    val p = LocalPalette.current
+    val ctx = LocalContext.current
+    val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current
+    var step by rememberSaveable { mutableStateOf(0) }
+    fun open(url: String) = runCatching {
+        ctx.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url)).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+    }.onFailure { model.say("No browser found to open $url") }
+    val bold = Type.body.copy(color = p.ink, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
+    @Composable fun point(n: String, text: String) = Row(Modifier.padding(vertical = 3.dp)) {
+        Text(n, style = Type.bodySmall.copy(color = p.gold, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold), modifier = Modifier.width(22.dp))
+        Text(text, style = Type.bodySmall.copy(color = p.ink))
+    }
+    // A tappable link that opens in the browser.
+    @Composable fun link(label: String, url: String) = Text("↗  $label", style = Type.body.copy(color = p.verdigris,
+        textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold),
+        modifier = Modifier.fillMaxWidth().clickable { open(url) }.padding(vertical = 7.dp))
+    val titles = listOf("What you need", "Open the Kite developer site", "Create your app", "Copy the API key and secret", "Save them in IraAlgo")
+    // Progress: a bar per step.
+    Row(Modifier.fillMaxWidth().padding(bottom = 10.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        titles.indices.forEach { i ->
+            Box(Modifier.weight(1f).height(4.dp).background(if (i <= step) p.verdigris else p.rule, RoundedCornerShape(2.dp)))
+        }
+    }
+    Text("Step ${step + 1} of ${titles.size}", style = Type.label.copy(color = p.inkSoft))
+    Text(titles[step], style = Type.title.copy(color = p.ink, fontSize = 18.sp), modifier = Modifier.padding(bottom = 8.dp))
+    when (step) {
+        0 -> {
+            point("1", "A Zerodha trading account with F&O (derivatives) enabled.")
+            point("2", "Two-factor login (TOTP) set up on it: in the Kite app, open Account → Settings → Password & Security → External 2FA TOTP. You will type this code every time you log in.")
+            point("3", "A Kite Connect developer account at developers.kite.trade. This is Zerodha's official API; it is what lets IraAlgo read your account and place your orders. Check the current API pricing on that site.")
+            point("4", "About 10 minutes, and this phone's fingerprint set up (Settings → Security) so IraAlgo can protect your keys with it.")
+            link("No Zerodha account yet? Open one", "https://zerodha.com/open-account")
+            link("Set up TOTP on Kite web (Profile → Password & Security)", "https://kite.zerodha.com/")
+            link("Zerodha help centre", "https://support.zerodha.com/")
+            Note("IraAlgo never sees your Zerodha password or TOTP: you type them on Zerodha's own login page.")
+        }
+        1 -> {
+            point("1", "Tap the button below; the Kite developer site opens in your browser.")
+            point("2", "Sign up (or log in) with your email and mobile number and verify them.")
+            point("3", "If the site asks you to add credits or pick a plan for API access, do that there.")
+            point("4", "Keep that page open and come back here for the next step.")
+            BrassButton("Open developers.kite.trade", Modifier.fillMaxWidth().padding(top = 8.dp)) { open("https://developers.kite.trade/") }
+            link("Sign up on the developer site", "https://developers.kite.trade/signup")
+            link("Already signed up? Log in", "https://developers.kite.trade/login")
+            link("What Kite Connect is (official docs)", "https://kite.trade/docs/connect/v3/")
+        }
+        2 -> {
+            point("1", "On the developer site open \"My apps\" and tap \"Create new app\".")
+            point("2", "Type: Connect.")
+            point("3", "App name: IraAlgo (any name works).")
+            point("4", "Zerodha Client ID: your Zerodha user ID, for example AB1234.")
+            point("5", "Redirect URL: copy it from the box below and paste it exactly.")
+            Row(
+                Modifier.fillMaxWidth().padding(vertical = 6.dp).background(p.chip, RoundedCornerShape(10.dp)).padding(horizontal = 12.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(Broker.REDIRECT, style = Type.figure.copy(color = p.ink, fontSize = 14.sp), modifier = Modifier.weight(1f))
+                Text("Copy", style = Type.label.copy(color = p.ink, fontSize = 14.sp),
+                    modifier = Modifier.clickable { clipboard.setText(androidx.compose.ui.text.AnnotatedString(Broker.REDIRECT)); model.say("Redirect URL copied") }.padding(start = 12.dp))
+            }
+            point("6", "Postback URL: leave it empty. Description: anything, e.g. \"personal trading\".")
+            point("7", "Tap Create.")
+            link("Open My apps on the developer site", "https://developers.kite.trade/apps")
+            Note("The redirect address never opens a website: IraAlgo catches it inside the app when you log in.")
+        }
+        3 -> {
+            point("1", "In \"My apps\", open the app you just created.")
+            point("2", "The API key is shown on that page: copy it.")
+            point("3", "Tap \"Show API secret\" and copy the secret too. Treat it like a password: never share it or send a screenshot of it.")
+            point("4", "Come back here: the next step has Paste buttons for both.")
+            link("Open My apps to copy them", "https://developers.kite.trade/apps")
+            Note("Only one thing is copied at a time, so copy the key, paste it in the next step, then go back to the site for the secret.")
+        }
+        else -> {
+            CredentialsForm(model) { }
+            Note("After saving: tap \"Log in to Zerodha\", sign in with your Zerodha ID, password and TOTP. Zerodha ends the session early each morning, so you log in once every trading day; IraAlgo reminds you at 09:10.")
+        }
+    }
+    Row(Modifier.fillMaxWidth().padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        if (step > 0) BrassButton("Back", Modifier.weight(1f), tone = p.inkSoft) { step-- }
+        if (step < titles.size - 1) BrassButton(if (step == 0) "Start" else "Next", Modifier.weight(1f)) { step++ }
+    }
+    if (step < titles.size - 1) Text("I already have my API key and secret", style = Type.label.copy(color = p.inkSoft),
+        modifier = Modifier.padding(top = 10.dp).clickable { step = titles.size - 1 }.padding(4.dp))
 }
 
 private const val DRAFT_KEY = "draft.kite.key"
