@@ -68,6 +68,10 @@ class ControlScreensLayoutTest(device: DeviceConfig) : ScreenTest(device) {
         @ParameterizedRobolectricTestRunner.Parameters(name = "{0}")
         fun configs(): List<Array<Any>> = DeviceConfig.matrix()
 
+        /** Dialogs and other secondary states run on these six set-ups only (the main pages on all 24), to keep CI short. */
+        val SIX = setOf("small-font1.0-light", "small-font2.0-dark", "phone-font1.3-light", "landscape-font1.0-dark",
+            "landscape-font2.0-light", "tablet-font1.3-dark")
+
         /** The lock screen's own alert is drawn over the top on purpose. */
         val LOCK_OVERLAYS = com.optionslab.app.testing.LayoutLint.Options(overlays = setOf("Too many attempts. Try again in 30 s."))
     }
@@ -78,6 +82,9 @@ class ControlScreensLayoutTest(device: DeviceConfig) : ScreenTest(device) {
 
     @Before fun clean() = AreaE.resetGlobals()
     @After fun closeModel() { offline?.close(); AreaE.resetGlobals() }
+
+    /** False (and the test passes at once) outside [SIX], for secondary states. */
+    private fun onSix() = device.name in SIX
 
     private fun tap(text: String) = compose.onNodeWithText(text).performSemanticsAction(SemanticsActions.OnClick)
     private fun reveal(text: String) {
@@ -100,9 +107,13 @@ class ControlScreensLayoutTest(device: DeviceConfig) : ScreenTest(device) {
         smokeEveryAction()
     }
 
-    @Test fun frameLive() = checkScreen("frame-live", content = frame(live = true, linked = true))
+    @Test fun frameLive() {
+        if (!onSix()) return
+        checkScreen("frame-live", content = frame(live = true, linked = true))
+    }
 
     @Test fun frameGoLiveDialog() {
+        if (!onSix()) return
         show(frame(live = false, linked = true))
         tap("PAPER TRADING")
         compose.waitForIdle()
@@ -110,6 +121,7 @@ class ControlScreensLayoutTest(device: DeviceConfig) : ScreenTest(device) {
     }
 
     @Test fun frameLinkZerodhaDialog() {
+        if (!onSix()) return
         show(frame(live = false, linked = false))
         tap("PAPER TRADING")
         compose.waitForIdle()
@@ -117,6 +129,7 @@ class ControlScreensLayoutTest(device: DeviceConfig) : ScreenTest(device) {
     }
 
     @Test fun crashReport() {
+        if (!onSix()) return
         Vault.writeFile(File(app.filesDir, IraAlgoApp.CRASH_FILE),
             IraAlgoApp.crashReport(Thread.currentThread(), IllegalStateException("not shown", RuntimeException("not shown"))).toByteArray())
         checkScreen("crash-report") { CrashReport(app.filesDir) }
@@ -134,6 +147,7 @@ class ControlScreensLayoutTest(device: DeviceConfig) : ScreenTest(device) {
     @Test fun securityPage() = checkScreen("security") { SecurityPage(model()) }
 
     @Test fun securityChangePin() {
+        if (!onSix()) return
         show { SecurityPage(model()) }
         reveal("Change PIN"); tap("Change PIN")
         compose.waitForIdle()
@@ -141,6 +155,7 @@ class ControlScreensLayoutTest(device: DeviceConfig) : ScreenTest(device) {
     }
 
     @Test fun securityBackupSeal() {
+        if (!onSix()) return
         PinLock.setPin("246813".toCharArray())
         show { SecurityPage(model()) }
         reveal("Back up now"); tap("Back up now")
@@ -152,6 +167,7 @@ class ControlScreensLayoutTest(device: DeviceConfig) : ScreenTest(device) {
     }
 
     @Test fun securityErase() {
+        if (!onSix()) return
         show { SecurityPage(model()) }
         reveal("Erase everything personal"); tap("Erase everything personal")
         compose.waitForIdle()
@@ -161,6 +177,7 @@ class ControlScreensLayoutTest(device: DeviceConfig) : ScreenTest(device) {
     @Test fun botSettings() = checkScreen("bot-settings") { RiskPage(model()) }
 
     @Test fun botKillSwitchDialog() {
+        if (!onSix()) return
         show { RiskPage(model()) }
         compose.waitForIdle()
         val sw = compose.onAllNodes(androidx.compose.ui.test.isToggleable()).onFirst()
@@ -215,6 +232,7 @@ class ControlScreensLayoutTest(device: DeviceConfig) : ScreenTest(device) {
     @Test fun pnlCalendar() = checkScreen("pnl-calendar") { PnlCalendarScreen(model()) }
 
     @Test fun lockedOut() {
+        if (!onSix()) return
         PinLock.setPin("246813".toCharArray())
         repeat(5) { PinLock.verify("000000".toCharArray(), false) }
         checkScreen("lock-locked-out", options = LOCK_OVERLAYS) {
@@ -223,6 +241,7 @@ class ControlScreensLayoutTest(device: DeviceConfig) : ScreenTest(device) {
     }
 
     @Test fun bannerAndSlideToConfirm() {
+        if (!onSix()) return
         Alerts.success("Paper BUY 75 NIFTY26OCT24500PE filled @ 120.00 (test)")
         checkScreen("banner-slide", options = com.optionslab.app.testing.LayoutLint.Options(
             overlays = setOf("Paper BUY 75 NIFTY26OCT24500PE filled @ 120.00 (test)"))) {

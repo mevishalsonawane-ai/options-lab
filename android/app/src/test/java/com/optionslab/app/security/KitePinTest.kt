@@ -60,6 +60,7 @@ class KitePinTest : RobolectricTest() {
         server.start()
         try {
             val s = KitePin.socketFactory.createSocket(server.hostName, server.port) as SSLSocket
+            s.soTimeout = 5_000   // a stalled handshake fails the test instead of hanging it
             try { s.startHandshake(); fail("an untrusted server was accepted") } catch (_: Exception) {} finally { s.close() }
             assertEquals("no request got through", 0, server.requestCount)
             assertTrue("nothing pinned from an untrusted chain", KitePin.pins.isEmpty())
