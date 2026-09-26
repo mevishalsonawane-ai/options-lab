@@ -1,7 +1,6 @@
 package com.optionslab.engine.risk
 
 import java.time.LocalDate
-import org.junit.jupiter.api.Disabled as Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -223,7 +222,6 @@ class RiskCoverageTest {
         assertEquals(12.0, AccountGuard.nextPeak(10.0, 12.0)); assertEquals(12.0, AccountGuard.nextPeak(12.0, 10.0))
     }
 
-    @Ignore("BUG: AccountGuard.refusals fails OPEN on non-finite account figures: a NaN dayPnl or equity (e.g. an unpriced position marked NaN) makes every <=/>= comparison false, so the daily-loss and drawdown limits silently allow new entries; a NaN order price likewise skips the order-value limit")
     @Test fun `BUG - unknown account figures refuse new entries`() {
         val o = opt("N1", "BUY", price = 10.0)
         assertTrue(AccountGuard.refusals(o, acct(day = Double.NaN), limits).isNotEmpty(), "NaN day P&L")

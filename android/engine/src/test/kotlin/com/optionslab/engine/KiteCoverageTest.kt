@@ -2,7 +2,6 @@ package com.optionslab.engine
 
 import java.time.LocalDate
 import java.time.ZonedDateTime
-import org.junit.jupiter.api.Disabled as Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -202,7 +201,6 @@ class KiteCoverageTest {
         assertEquals(emptyList(), ref(order(product = "MIS"), hold = false))
     }
 
-    @Ignore("BUG: Kite.refusals lets a NaN price or trigger through - p <= 0 is false for NaN, and onGrid's abs(NaN - round(NaN)) > 1e-6 is false - so a LIMIT/SL order priced NaN (e.g. from \"NaN\".toDouble() on user input) passes every gate and is sent as price=NaN")
     @Test fun `BUG - a non-finite price or trigger is refused`() {
         assertTrue(ref(order(price = Double.NaN)).isNotEmpty(), "NaN price must be refused")
         assertTrue(ref(order(type = "SL-M", price = null, trigger = Double.NaN)).isNotEmpty(), "NaN trigger must be refused")

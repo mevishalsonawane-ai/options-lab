@@ -2,7 +2,6 @@ package com.optionslab.engine.strategy
 
 import com.optionslab.engine.risk.Side
 import java.time.LocalTime
-import org.junit.jupiter.api.Disabled as Ignore
 import java.time.ZonedDateTime
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -498,7 +497,6 @@ class RuntimeCoverageTest {
         assertTrue(alerts(a3).any { it.kind == "run_stop_failed" })
     }
 
-    @Ignore("BUG: onOrderAck(accepted=false) for a signal flip's closing order (exitOwner=\"live\") calls releaseLegExit on the NEW leg, not releaseSupersededExit; the outgoing position's exit stays bound to a dead order, is never retried, and the run can never finalise")
     @Test fun `BUG - a refused ack for a flip's closing order must release the outgoing position's exit claim`() {
         // BUG: the flip's closing order is placed while the old position is still the LIVE leg, so its
         // OrderRecord.exitOwner is "live". addLeg then moves that position (with exitOrderId) under

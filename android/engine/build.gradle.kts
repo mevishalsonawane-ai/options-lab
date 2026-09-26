@@ -29,6 +29,18 @@ tasks.jacocoTestReport {
     reports { xml.required.set(true); html.required.set(true) }
 }
 
+// The floor CI enforces: coverage may rise, never fall below this.
+tasks.jacocoTestCoverageVerification {
+    dependsOn(tasks.test)
+    violationRules {
+        rule {
+            limit { counter = "LINE"; minimum = "0.98".toBigDecimal() }
+            limit { counter = "BRANCH"; minimum = "0.90".toBigDecimal() }
+        }
+    }
+}
+tasks.check { dependsOn(tasks.jacocoTestCoverageVerification) }
+
 java {
     sourceCompatibility = JavaVersion.VERSION_17
     targetCompatibility = JavaVersion.VERSION_17

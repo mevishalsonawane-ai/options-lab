@@ -3,7 +3,6 @@ package com.optionslab.engine.strategy
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZonedDateTime
-import org.junit.jupiter.api.Disabled as Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -216,7 +215,6 @@ class ContractJsonCoverageTest {
         }
     }
 
-    @Ignore("BUG: Json.parse on truncated input ('{', '[1', '{\"a\":1', '\"\\u12') throws StringIndexOutOfBoundsException instead of Json.ParseError, so a caller catching ParseError/IllegalArgumentException for a truncated checkpoint crashes")
     @Test fun `BUG - truncated json is a ParseError`() {
         for (bad in listOf("{", "[1", "{\"a\":1", "[", "\"\\u12")) {
             assertFailsWith<Json.ParseError>(bad) { Json.parse(bad) }

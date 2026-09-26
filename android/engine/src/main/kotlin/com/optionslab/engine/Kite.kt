@@ -257,16 +257,21 @@ object Kite {
         if (o.hasPrice) {
             val p = o.price
             if (p == null || p <= 0) out += "a ${o.orderType} order needs a positive price"
+            // NaN slips past every comparison (p <= 0 and the tick grid alike), so refuse it by name.
+            else if (!p.isFinite()) out += "a ${o.orderType} order needs a finite price, not $p"
             else {
                 onGrid(p, "price")
                 if (!exit && p * o.quantity > limits.maxOrderValue) out += "order value Rs %,.0f exceeds the Rs %,.0f cap".format(p * o.quantity, limits.maxOrderValue)
             }
         }
-        if (!o.hasPrice && !exit && refPrice != null && refPrice > 0 && refPrice * o.quantity > limits.maxOrderValue)
+        if (!o.hasPrice && !exit && refPrice != null && !refPrice.isFinite())
+            out += "the last price $refPrice is not a usable price, so the order value is unknown"
+        else if (!o.hasPrice && !exit && refPrice != null && refPrice > 0 && refPrice * o.quantity > limits.maxOrderValue)
             out += "order value about Rs %,.0f (at the last price) exceeds the Rs %,.0f cap".format(refPrice * o.quantity, limits.maxOrderValue)
         if (o.hasTrigger) {
             val t = o.triggerPrice
             if (t == null || t <= 0) out += "a ${o.orderType} order needs a positive trigger price"
+            else if (!t.isFinite()) out += "a ${o.orderType} order needs a finite trigger price, not $t"
             else {
                 onGrid(t, "trigger")
                 val p = o.price
@@ -287,6 +292,8 @@ object Kite {
 
     /** Round a price to the instrument's tick, toward the side that fills. */
     fun onTick(price: Double, tick: Double, side: Side): Double {
+        // A non-finite price stays non-finite (NaN.toLong() is 0), so refusals still catches it.
+        if (!price.isFinite()) return price
         val t = price / tick
         val n = if (side == Side.SELL) kotlin.math.floor(t + 1e-9) else kotlin.math.ceil(t - 1e-9)
         // n ticks exactly, in decimal: 0.0025 ticks keep their four places.

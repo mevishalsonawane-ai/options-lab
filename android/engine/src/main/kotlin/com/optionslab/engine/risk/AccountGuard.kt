@@ -66,6 +66,13 @@ object AccountGuard {
         if (l.killSwitch) return listOf("The kill switch is on: no orders at all until it is cleared.")
         if (isExit(o, a)) return emptyList()
         val out = ArrayList<String>()
+        // A NaN figure fails every comparison below, which would let the entry through: an
+        // unknown figure a limit depends on refuses the entry instead (exits already returned).
+        if (!o.price.isFinite()) out += "Order price is unknown (${o.price}); entries need a usable price."
+        if (l.maxDailyLoss > 0 && !a.dayPnl.isFinite())
+            out += "Today's P&L is unknown (${a.dayPnl}); new entries are refused until it can be valued."
+        if (l.maxDrawdownPct > 0 && !(a.capital.isFinite() && a.equity.isFinite() && a.peakEquity.isFinite()))
+            out += "Equity is unknown (equity ${a.equity}, capital ${a.capital}, peak ${a.peakEquity}); new entries are refused until it can be valued."
         if (l.maxDailyLoss > 0 && a.dayPnl <= -l.maxDailyLoss)
             out += "Daily loss limit reached: today's P&L is Rs %,.0f (limit -Rs %,.0f). Only exits are allowed today.".format(a.dayPnl, l.maxDailyLoss)
         if (l.maxDrawdownPct > 0) {

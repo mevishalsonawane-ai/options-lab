@@ -3,7 +3,6 @@ package com.optionslab.engine.options
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZonedDateTime
-import org.junit.jupiter.api.Disabled as Ignore
 import kotlin.math.abs
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -99,7 +98,6 @@ class OptionMathCoverageTest {
         assertNull(OptionMath.legGreeksRounded(OptionType.PE, 100.0, 110.0, 0.0, 9.5))
     }
 
-    @Ignore("BUG: OptionMath.legGreeks / impliedVol accept a NaN price (or forward): 'price <= 0' is false for NaN, so solveIv bisects to ~MAX_VOL and a leg with no usable quote reports IV ~500% instead of null (chainGreeks correctly returns null for the same input)")
     @Test fun `BUG - a NaN price is not a price`() {
         assertNull(OptionMath.legGreeks(OptionType.CE, 24000.0, 24100.0, 7 / 365.0, Double.NaN))
         assertNull(OptionMath.impliedVol(Double.NaN, OptionType.CE, 24000.0, 24100.0, 7 / 365.0))

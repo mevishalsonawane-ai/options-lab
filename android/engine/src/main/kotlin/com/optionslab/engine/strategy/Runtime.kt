@@ -227,12 +227,16 @@ class StrategyRuntime {
             }
         } else {
             if (!accepted) {
-                if (order.exitOwner == "superseded") {
-                    if (Engine.releaseSupersededExit(r, order.legId, orderId)) {
-                        c.emit(Event("flip_outgoing_exit_rejected", "The exit for the outgoing side of a flip on leg ${order.legId} was refused; that position is still held", "critical", order.legId))
+                // Release whichever position the order is bound to now, not the owner recorded at
+                // placement: a flip's closing order is placed against the live leg, which addLeg then
+                // moves under `superseded` (the cancel-frame path does the same via releaseOrderExit).
+                val owner = Engine.releaseOrderExit(r, order.legId, orderId, order.positionRef)
+                    ?: when {
+                        order.exitOwner == "superseded" -> if (Engine.releaseSupersededExit(r, order.legId, orderId)) "superseded" else null
+                        else -> if (Engine.releaseLegExit(r, order.legId, orderId)) "live" else null
                     }
-                } else {
-                    Engine.releaseLegExit(r, order.legId, orderId)
+                if (owner == "superseded") {
+                    c.emit(Event("flip_outgoing_exit_rejected", "The exit for the outgoing side of a flip on leg ${order.legId} was refused; that position is still held", "critical", order.legId))
                 }
             }
             c.emit(

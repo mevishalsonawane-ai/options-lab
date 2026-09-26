@@ -42,7 +42,7 @@ jobs:
           java-version: "17"
       - uses: gradle/actions/setup-gradle@v4
       # No Android SDK on purpose: the engine must build on a bare JDK.
-      - run: env -u ANDROID_HOME -u ANDROID_SDK_ROOT ./gradlew --no-daemon :engine:test
+      - run: env -u ANDROID_HOME -u ANDROID_SDK_ROOT ./gradlew --no-daemon :engine:test :engine:jacocoTestCoverageVerification
 
   apk:
     name: Build APK
