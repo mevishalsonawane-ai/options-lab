@@ -29,6 +29,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -180,6 +183,9 @@ fun Root(activity: MainActivity) {
         var batteryOk by remember(locked) { mutableStateOf(com.optionslab.app.ui.screens.BatteryCheck.unrestricted(appCtx)) }
         AnimatedContent(
             targetState = locked || !PinLock.isSet,
+            // The keyboard takes its room from every screen (edge-to-edge draws under it otherwise),
+            // so the field being typed in scrolls into view above it.
+            modifier = Modifier.fillMaxSize().imePadding(),
             transitionSpec = { fadeIn(tween(220, delayMillis = 60)) togetherWith fadeOut(tween(160)) },
             label = "seal",
         ) { sealed ->
@@ -462,7 +468,9 @@ private fun Main(model: AppModel) {
                     com.optionslab.app.ui.screens.ChartScreen(model, chartAsk.first, chartAsk.second, visible = tab == Tab.CHART, ask = chartNonce)
                 }
             }
-            if (!fullChart) TabBar(tab, tabs) { if (it == tab && it == Tab.CABINET) cabinetPage = null; tab = it }
+            // While typing, the tab bar steps aside so the field keeps the room.
+            val typing = WindowInsets.ime.getBottom(androidx.compose.ui.platform.LocalDensity.current) > 0
+            if (!fullChart && !typing) TabBar(tab, tabs) { if (it == tab && it == Tab.CABINET) cabinetPage = null; tab = it }
         }
         // Order reviews open over any page, wherever the order was asked for.
         com.optionslab.app.ui.screens.OrderReviewDialog(model)
