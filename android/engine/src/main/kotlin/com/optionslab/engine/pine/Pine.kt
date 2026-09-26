@@ -169,10 +169,20 @@ object Pine {
             val def = argOf(c, s, "defval")?.let { constOf(it) }
             val t = argOf(c, s, "title")?.let { constOf(it) } as? String
             val kindName = when (c.name) {
-                "input" -> when (def) { is Boolean -> "bool"; is String -> if (argOf(c, s, "defval").let { it is Name }) "source" else "string"; else -> "float" }
+                "input" -> {
+                    val raw = argOf(c, s, "defval")
+                    when {
+                        raw is Name && raw.name in PRICE_SOURCES -> "source"
+                        raw is Name && raw.name.startsWith("color.") -> "color"
+                        def is Boolean -> "bool"
+                        def is String -> "string"
+                        else -> "float"
+                    }
+                }
                 else -> c.name.removePrefix("input.")
             }
-            val defVal = if (kindName == "source") (argOf(c, s, "defval") as? Name)?.name ?: "close" else def
+            val defVal = if (kindName == "source" && c.name == "input") (argOf(c, s, "defval") as Name).name
+                else if (kindName == "source") (argOf(c, s, "defval") as? Name)?.name ?: "close" else def
             @Suppress("UNCHECKED_CAST")
             val opts = (argOf(c, s, "options") as? TupleLit)?.items?.mapNotNull { constOf(it)?.toString() } ?: emptyList()
             inputIndex[c.id] = InputDef(t ?: "Input ${i + 1}", kindName, defVal, opts,
@@ -367,3 +377,6 @@ object Pine {
 
     internal fun weekOfYear(t: Long) = Instant.ofEpochSecond(t).atZone(IST).get(IsoFields.WEEK_OF_WEEK_BASED_YEAR)
 }
+
+/** The price series a plain `input(...)` default can name, which make it a source input. */
+private val PRICE_SOURCES = setOf("open", "high", "low", "close", "volume", "hl2", "hlc3", "ohlc4", "hlcc4")

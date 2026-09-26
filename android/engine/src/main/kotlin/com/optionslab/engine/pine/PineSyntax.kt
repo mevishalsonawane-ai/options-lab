@@ -44,7 +44,9 @@ internal object Lexer {
             while (p < raw.length && (raw[p] == ' ' || raw[p] == '\t')) { width += if (raw[p] == '\t') 4 else 1; p++ }
             val body = raw.substring(p)
             if (body.isEmpty() || body.startsWith("//")) continue
-            val continues = depth > 0 || (width % 4 != 0 && width > indents.last() && out.isNotEmpty() && out.last().t == T.NL)
+            // A wrapped line (TradingView style) is indented by a non-multiple of 4 past its block, after a
+            // line that either ended normally or dangled on an operator or comma.
+            val continues = depth > 0 || (width % 4 != 0 && width > indents.last() && out.isNotEmpty())
             if (continues) {
                 if (depth == 0 && out.isNotEmpty() && out.last().t == T.NL) out.removeAt(out.size - 1)
             } else {

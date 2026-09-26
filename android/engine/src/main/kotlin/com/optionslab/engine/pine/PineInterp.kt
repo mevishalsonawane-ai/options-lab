@@ -720,7 +720,18 @@ internal class Interp(
         "str.format" -> {
             var s = (v.firstOrNull()?.toString() ?: "").take(MAX_TEXT)
             v.drop(1).take(20).forEachIndexed { i, x ->
-                s = s.replace(Regex("\\{$i(,[^}]*)?\\}"), Regex.escapeReplacement(str(x)))
+                // {0}, or {0,number,#.##} / {0,number,integer} / {0,number,percent}: a number pattern formats it.
+                s = s.replace(Regex("\\{$i(,[^}]*)?\\}")) { m ->
+                    val spec = m.groupValues[1].removePrefix(",").split(',', limit = 2)
+                    val d = x as? Double
+                    if (d != null && spec.firstOrNull()?.trim() == "number") when (val pat = spec.getOrNull(1)?.trim()) {
+                        null, "" -> numberPattern(d, "#,##0.###") ?: str(x)
+                        "integer" -> numberPattern(d, "#,##0") ?: str(x)
+                        "percent" -> numberPattern(d * 100, "#,##0'%'") ?: str(x)
+                        "currency" -> numberPattern(d, "#,##0.00") ?: str(x)
+                        else -> numberPattern(d, pat) ?: str(x)
+                    } else str(x)
+                }
                 if (s.length > MAX_TEXT) fail(c.line, c.col, "Text longer than $MAX_TEXT characters")
             }
             s
@@ -1027,8 +1038,8 @@ internal class Interp(
                 val v = arg(a, 0)
                 val f = arg(a, 1) as? String
                 if (v is Double && f != null) {
-                    val dec = (if (f.startsWith("format.")) 2 else f.substringAfter('.', "").length).coerceAtMost(12)
-                    String.format(java.util.Locale.ENGLISH, "%.${dec}f", v)
+                    if (f.startsWith("format.")) String.format(java.util.Locale.ENGLISH, "%.2f", v)
+                    else numberPattern(v, f) ?: String.format(java.util.Locale.ENGLISH, "%.${f.substringAfter('.', "").length.coerceAtMost(12)}f", v)
                 } else str(v)
             }
             "time" -> {
@@ -1451,4 +1462,16 @@ internal class Broker(
             trades = closed + openTrades, equity = equity.copyOf(),
         ).let { it.copy(extra = runCatching { Pine.extraOf(it, bars) }.getOrNull()) }
     }
+}
+
+/**
+ * A number through a TradingView/Java number pattern ("#.##", "0.00", "#,##0.0"): `0` places are
+ * always shown, `#` places only when needed, half-up rounding. Null for a pattern Java refuses.
+ */
+internal fun numberPattern(v: Double, pattern: String): String? {
+    if (v.isNaN() || pattern.length > 64) return null
+    return runCatching {
+        java.text.DecimalFormat(pattern, java.text.DecimalFormatSymbols.getInstance(java.util.Locale.ENGLISH))
+            .apply { roundingMode = java.math.RoundingMode.HALF_UP }.format(v)
+    }.getOrNull()
 }
