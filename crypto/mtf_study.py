@@ -7,7 +7,7 @@ import pandas as pd
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "tools"))
 from marketlab.io import read, write_json  # noqa: E402
-from marketlab.extra_inputs import btc as extra_inputs  # noqa: E402
+from marketlab.extra_inputs import btc as extra_inputs, btc_more as more_inputs  # noqa: E402
 from marketlab.mtf_study import run  # noqa: E402
 
 HERE = os.path.dirname(__file__)
@@ -23,8 +23,11 @@ def main():
     dev_start = al.index[0].normalize() + pd.Timedelta(days=1)
     print(f"1m bars: {len(m1)}; development year from {dev_start.date()}, window from {win_start.date()}")
     extra = extra_inputs(os.path.join(HERE, ".."))
+    extra.update(more_inputs(os.path.join(HERE, "..")))
+    ev_path = os.path.join(HERE, "data_more", "events.csv")
+    events = pd.read_csv(ev_path) if os.path.exists(ev_path) else None
     print("extra inputs:", {k: v.shape for k, v in extra.items()})
-    res, alarms = run(m1, dev_start, win_start, extra=extra, cost=0.0006)
+    res, alarms = run(m1, dev_start, win_start, extra=extra, events=events, cost=0.0006)
     res.update({"market": "BTC/USDT", "dev": [str(dev_start), str(win_start)], "window": [str(win_start), str(h.index[-1])]})
     write_json(res, os.path.join(HERE, "results", "mtf.json"))
     alarms.index = alarms.index - pd.Timedelta(hours=1)  # key by bar OPEN time, like alarms_hourly.csv

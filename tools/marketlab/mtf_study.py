@@ -15,7 +15,10 @@ from .nn import Ensemble
 
 GROUPS = ["1m", "5m", "15m", "30m", "1h", "3h", "6h", "12h", "24h", "m1", "x_opt", "x_dvol", "x_fund", "x_pos", "x_flow",
           "x_sent", "x_vol", "x_macro", "x_cot", "x_cross"]
-GROUP_NAMES = {"m1": "inside-the-hour (1-minute detail)", "x_opt": "option surface", "x_dvol": "DVOL", "x_fund": "funding",
+GROUP_NAMES = {"m1": "inside-the-hour (1-minute detail)", "d": "order flow & path shape (from 1-minute bars)",
+               "cal": "event calendar (FOMC, jobs, expiries)", "x_etf": "ETF flows", "x_cme": "CME basis",
+               "x_tradfi": "stocks, VIX & rates", "x_stable": "stablecoin supply", "x_onchain": "on-chain",
+               "x_premium": "perp premium index", "x_fx": "currencies", "x_commod": "miners, copper, oil", "x_rates": "Treasury yields", "x_opt": "option surface", "x_dvol": "DVOL", "x_fund": "funding",
                "x_pos": "open interest & long/short", "x_flow": "perp basis & Coinbase premium", "x_sent": "Fear & Greed",
                "x_vol": "GVZ & VIX", "x_macro": "dollar, yields, breakevens", "x_cot": "COT positioning", "x_cross": "other markets"}
 
@@ -73,7 +76,7 @@ def extra_block(clock, frames):
     return join_asof(clock, fs) if fs else pd.DataFrame(index=clock)
 
 
-def run(m1, dev_start, win_start, cost, step=1000, n_models=3, log=print, extra=None):
+def run(m1, dev_start, win_start, cost, step=1000, n_models=3, log=print, extra=None, events=None, select=True):
     t0 = time.time()
     bars, X = build_all(m1)
     h1 = bars["1h"].set_index("close_time")
@@ -82,25 +85,59 @@ def run(m1, dev_start, win_start, cost, step=1000, n_models=3, log=print, extra=
     cal["hour_sin"], cal["hour_cos"] = np.sin(2 * np.pi * X.index.hour / 24), np.cos(2 * np.pi * X.index.hour / 24)
     cal["dow_sin"], cal["dow_cos"] = np.sin(2 * np.pi * X.index.dayofweek / 7), np.cos(2 * np.pi * X.index.dayofweek / 7)
     X = X.join(cal)
-    xcols = []
+    from .derived import calendar as event_calendar, from_minutes
+    blocks = [from_minutes(m1, X.index), event_calendar(X.index, events)]
     if extra:
-        E = extra_block(X.index, extra)
-        E = E.loc[:, E.notna().mean() > 0.5]  # drop inputs that are mostly missing
-        xcols = list(E.columns)
-        X = X.join(E)
+        blocks.append(extra_block(X.index, extra))
+    E = pd.concat(blocks, axis=1)
+    E = E.loc[:, E.notna().mean() > 0.5]  # drop inputs that are mostly missing
+    xcols = list(E.columns)
+    X = X.join(E)
     X = X.replace([np.inf, -np.inf], np.nan)
     X = X[X.drop(columns=xcols).notna().mean(axis=1) > 0.9]
     T = targets(h1).reindex(X.index)
     log(f"  features: {X.shape[1]} columns x {len(X)} hours, built in {time.time() - t0:.0f}s")
+    out = {"hours": int(len(X)), "timeframe_bars": {k: int(len(v)) for k, v in bars.items()}, "targets": {}}
+    base_cols = [c for c in X.columns if c not in xcols]
     sets = {"hourly only": [c for c in X.columns if c.startswith("1h_") or c in cal.columns],
-            "all timeframes": [c for c in X.columns if c not in xcols]}
-    if xcols:
-        sets["all timeframes + all market data"] = list(X.columns)
+            "all timeframes": base_cols,
+            "everything": list(X.columns)}
+    groups = {}
+    for c in xcols:
+        g = "d" if c.startswith("d_") else "cal" if c.startswith("cal_") else c.split("_")[1]
+        groups.setdefault(g, []).append(c)
+    out["input_groups"] = {g: len(v) for g, v in groups.items()}
     idx = X.index
+    T0 = T
+    if select and groups:
+        # keep a group only if adding it to "all timeframes" helps on the DEVELOPMENT year (quick networks)
+        quick = [("dir_24h", "clf", 24), ("big_up_24h", "clf", 24), ("big_down_24h", "clf", 24), ("vol_24h", "reg", 24)]
+        mid = dev_start + (win_start - dev_start) / 2
+        halves = [(idx >= dev_start) & (idx < mid), (idx >= mid) & (idx < win_start)]
+
+        def dev_score(cols):
+            """Skill per target in each half of the development year: array [half, target]."""
+            sc = np.zeros((2, len(quick)))
+            for j, (tname, task, hz) in enumerate(quick):
+                y = T0[tname].values
+                p = walk(X[cols].values.astype(float), y, idx, dev_start, hz, task, 2000, 2)
+                for i, hmask in enumerate(halves):
+                    r = score(task, y[hmask], p[hmask])
+                    sc[i, j] = (r["auc"] - 0.5) if task == "clf" else r["corr"]
+            return sc
+        base_sc = dev_score(base_cols)
+        gains = {}
+        for g, cols in groups.items():
+            gains[g] = dev_score(base_cols + cols) - base_sc
+            log(f"  group {g:>8} ({len(cols):2d} inputs): mean gain 1st half {gains[g][0].mean():+.4f}, 2nd half {gains[g][1].mean():+.4f}")
+        keep = [g for g, v in gains.items() if v[0].mean() > 0.005 and v[1].mean() > 0.005]
+        out["selection"] = {"base_dev_scores": base_sc.tolist(), "gains": {g: v.tolist() for g, v in gains.items()}, "kept": keep,
+                            "rule": "keep a group only if it raises the mean score by more than 0.005 in BOTH halves of the development year"}
+        sets["selected (chosen on dev year)"] = base_cols + [c for g in keep for c in groups[g]]
+        log(f"  kept groups: {keep}")
     specs = [("dir_1h", "clf", 1), ("dir_4h", "clf", 4), ("dir_24h", "clf", 24), ("big_up_24h", "clf", 24),
              ("big_down_24h", "clf", 24), ("vol_24h", "reg", 24)]
-    out = {"n_features": {k: len(v) for k, v in sets.items()}, "hours": int(len(X)),
-           "timeframe_bars": {k: int(len(v)) for k, v in bars.items()}, "targets": {}}
+    out["n_features"] = {k: len(v) for k, v in sets.items()}
     preds = {}
     for tname, task, hz in specs:
         y = T[tname].values
@@ -121,7 +158,7 @@ def run(m1, dev_start, win_start, cost, step=1000, n_models=3, log=print, extra=
         log(f"  {tname}: " + " | ".join(f"{s}: dev {list(res[s]['dev'].values())[0]:.3f} win {list(res[s]['window'].values())[0]:.3f}" for s in res)
             + f"  ({time.time() - t0:.0f}s)")
         # which timeframes does the all-timeframe network use? shuffle one group at a time on the dev year
-        cols = sets["all timeframes + all market data"] if xcols else sets["all timeframes"]
+        cols = sets.get("selected (chosen on dev year)") or sets["everything"]
         tr = np.where((idx < dev_start - pd.Timedelta(hours=hz)) & ~np.isnan(y))[0]
         ev = np.where((idx >= dev_start) & (idx < win_start) & ~np.isnan(y))[0]
         Xa = X[cols].values.astype(float)
@@ -130,8 +167,8 @@ def run(m1, dev_start, win_start, cost, step=1000, n_models=3, log=print, extra=
         base = metric(y[ev], m.predict(Xa[ev]))
         rng = np.random.default_rng(0)
         imp = {}
-        for g in GROUPS:
-            gi = [j for j, c in enumerate(cols) if c.startswith(g + "_")]
+        for g in GROUPS[:10] + sorted(groups):
+            gi = [j for j, c in enumerate(cols) if c.startswith(g + "_") or (g in groups and c in groups[g])]
             if not gi:
                 continue
             drops = []
@@ -140,10 +177,10 @@ def run(m1, dev_start, win_start, cost, step=1000, n_models=3, log=print, extra=
                 perm = rng.permutation(len(ev))
                 Xp[:, gi] = Xp[perm][:, gi]  # shuffle the whole timeframe block together, keeping it internally consistent
                 drops.append(base - metric(y[ev], m.predict(Xp)))
-            imp[GROUP_NAMES.get(g, g)] = float(np.mean(drops))
+            imp[GROUP_NAMES.get(g, GROUP_NAMES.get("x_" + g, g))] = float(np.mean(drops))
         res["importance_dev"] = {"base": float(base), "drop_when_shuffled": imp}
         out["targets"][tname] = res
-    best = "all timeframes + all market data" if xcols else "all timeframes"
+    best = "selected (chosen on dev year)" if "selected (chosen on dev year)" in sets else "everything"
     out["extra_inputs"] = xcols
     alarms = pd.DataFrame({"p_up": preds[("big_up_24h", best)], "p_dn": preds[("big_down_24h", best)]}, index=idx).dropna()
     return out, alarms

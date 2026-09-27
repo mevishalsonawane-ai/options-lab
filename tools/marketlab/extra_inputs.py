@@ -129,3 +129,88 @@ def gold(root):
     if cr is not None:
         out["cross"] = cr.sort_index()
     return out
+
+
+def _yahoo_daily(path, name, vol=False):
+    c = _r(path)
+    if c is None:
+        return {}
+    out = {f"{name}_ret1d": np.log(c["close"]).diff(), f"{name}_ret5d": np.log(c["close"]).diff(5)}
+    if vol and "volume" in c and c["volume"].fillna(0).sum() > 0:
+        lv = np.log1p(c["volume"])
+        out[f"{name}_volume_z"] = (lv - lv.rolling(20).mean()) / lv.rolling(20).std()
+    return out
+
+
+def btc_more(root):
+    """Second batch of BTC inputs (crypto/data_more), each shifted to when it was known."""
+    x = os.path.join(root, "crypto", "data_more")
+    out = {}
+    etf = {}
+    for n in ("ibit", "fbtc", "gbtc"):
+        etf.update(_yahoo_daily(f"{x}/yahoo_{n}.csv", n, vol=True))
+    if etf:
+        out["etf"] = _shift(pd.DataFrame(etf), D)
+    cme, spot = _r(f"{x}/yahoo_cme_btc.csv"), _r(os.path.join(root, "crypto", "data", "btc_1d.csv"))
+    if cme is not None and spot is not None:
+        s = spot["close"].copy()
+        s.index = s.index.normalize()
+        cm = cme["close"].copy()
+        cm.index = cm.index.normalize()
+        out["cme"] = _shift(pd.DataFrame({"cme_basis": cm / s.reindex(cm.index) - 1}).dropna(), D)
+    eq = {}
+    for n in ("mstr", "coin", "qqq"):
+        eq.update(_yahoo_daily(f"{x}/yahoo_{n}.csv", n))
+    for n in ("vix", "t_bill_13w", "treasury_5y"):
+        c = _r(f"{x}/yahoo_{n}.csv")
+        if c is not None:
+            eq[f"{n}_level"] = c["close"]
+            eq[f"{n}_chg5d"] = c["close"].diff(5)
+    if eq:
+        out["tradfi"] = _shift(pd.DataFrame(eq), D)
+    st = _r(f"{x}/stablecoins.csv")
+    if st is not None:
+        out["stable"] = _shift(pd.DataFrame({"stable_chg7d": np.log(st["total_usd"]).diff(7), "stable_chg30d": np.log(st["total_usd"]).diff(30)}), D)
+    oc = {}
+    for n in ("hash-rate", "n-transactions", "estimated-transaction-volume-usd", "n-unique-addresses", "miners-revenue"):
+        c = _r(f"{x}/onchain_{n}.csv")
+        if c is not None:
+            s = np.log(c.iloc[:, 0].replace(0, np.nan)).resample("D").last()
+            oc[f"{n}_chg7d"] = s.diff(7)
+            oc[f"{n}_z30"] = (s - s.rolling(30).mean()) / s.rolling(30).std()
+    if oc:
+        out["onchain"] = _shift(pd.DataFrame(oc), D)
+    pi = _r(f"{x}/premium_index_1h.csv")
+    if pi is not None:
+        out["premium"] = _shift(pd.DataFrame({"premium": pi["premium_close"], "premium_24h": pi["premium_close"].rolling(24).mean(),
+                                              "premium_range": pi["premium_high"] - pi["premium_low"]}), H)
+    return out
+
+
+def gold_more(root):
+    x = os.path.join(root, "forex", "data_more")
+    out = {}
+    fx = {}
+    for n in ("usdjpy", "eurusd", "usdcny"):
+        fx.update(_yahoo_daily(f"{x}/yahoo_{n}.csv", n))
+    if fx:
+        out["fx"] = _shift(pd.DataFrame(fx), D)
+    com = {}
+    for n in ("gdx", "copper", "oil"):
+        com.update(_yahoo_daily(f"{x}/yahoo_{n}.csv", n))
+    if com:
+        out["commod"] = _shift(pd.DataFrame(com), D)
+    rates = {}
+    for n in ("t_bill_13w", "treasury_5y", "treasury_30y"):
+        c = _r(f"{x}/yahoo_{n}.csv")
+        if c is not None:
+            rates[f"{n}_level"] = c["close"]
+            rates[f"{n}_chg5d"] = c["close"].diff(5)
+    if rates:
+        out["rates"] = _shift(pd.DataFrame(rates), D)
+    etf = {}
+    for n in ("gld", "iau", "slv"):
+        etf.update(_yahoo_daily(f"{x}/yahoo_{n}.csv", n, vol=True))
+    if etf:
+        out["etf"] = _shift(pd.DataFrame(etf), D)
+    return out
