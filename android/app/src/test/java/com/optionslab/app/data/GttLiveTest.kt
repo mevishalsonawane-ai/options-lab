@@ -43,7 +43,9 @@ class GttLiveTest : RobolectricTest() {
 
     @After fun down() {
         store.clear()
-        Thread.sleep(200)
+        // Account reads already under way when the model is cleared still finish (they swallow the cancellation):
+        // let them end against this fake before it closes, so none reaches the real host or the next test's fake.
+        BrokerArea.settle(1_500)
         kite.close()
         assertFalse("Kite REST calls must all go to the fake", "api.kite.trade" in NetworkGuard.blocked)
     }
