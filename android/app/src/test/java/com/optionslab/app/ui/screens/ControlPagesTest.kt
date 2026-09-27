@@ -438,6 +438,7 @@ class ControlPagesTest {
         val bytes = runBlocking { Backup.create(app, phrase.toCharArray()) }
         SecurePrefs.put("s.capital", 1.0)
         restoreFrom(bytes)
+        compose.waitForText("Open the backup")   // the file is read off the main thread
         field("Passphrase", phrase)
         tap("Continue")
         compose.waitForText("Restore this backup?")

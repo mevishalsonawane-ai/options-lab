@@ -219,13 +219,15 @@ abstract class TradeLayoutBase(device: DeviceConfig) : TradeScreenBase(device) {
 
     /** The BUY / SELL halves of the sheet's side switch are text with 10 dp padding. */
     /**
-     * Seen once, at font 2.0 on a small phone only, with the page scrolled to the order and the modify dialog open:
-     * the Book tab 'Funds · P&L' and the order row below it overlap in the lint's bounds (not on the same page
-     * unscrolled, trade-live-orders). Pinned by exactly those two nodes until it is understood.
+     * At font 2.0 on a small phone the page is scrolled to the order when the modify dialog opens, and the Book
+     * tabs are then above the top of the list (screenshot trade-live-modify_small-font2.0-light: no tab on screen,
+     * the order row whole at the top; unscrolled, trade-live-orders, the two are well apart). The list keeps the
+     * scrolled-off item composed, and the lint reads its tab 'Funds · P&L' at the list's clipped top edge, over the
+     * order row's first lines. Not an overlap anyone sees: pinned by exactly those two nodes.
      */
     protected val liveModifyScrolled = arrayOf(
         TradeScreenBase.Known(Regex("OVERLAP\\] '(WORKING|BUY NIFTY[0-9A-Z]+ ×75)' and 'Funds · P&L'"),
-            "Trade, live: the Book tab 'Funds · P&L' overlaps the order row at font 2.0 on a small phone, page scrolled, modify dialog open"),
+            "Trade, live, modify dialog at font 2.0 on a small phone: the Book tab 'Funds · P&L' is scrolled out of view; the lint reads it at the list's clipped top edge, over the order row (nothing overlaps on screen)"),
     )
 
     /** The BUY / SELL switch is 48 dp now; what stays is the sheet's backdrop, which lies under the whole sheet by design. */

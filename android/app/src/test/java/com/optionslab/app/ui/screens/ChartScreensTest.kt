@@ -712,8 +712,12 @@ class ChartScreensLayoutTest(device: DeviceConfig) : ScreenTest(device) {
         @ParameterizedRobolectricTestRunner.Parameters(name = "{0}")
         fun configs(): List<Array<Any>> = com.optionslab.app.testing.ResearchMatrix.six()
 
-        /** Real layout bugs found by these tests, skipped with this text until fixed. */
-        val BUGS = mapOf("*" to "TRIAGE: discovery run, findings to be pinned")
+        /**
+         * Real layout bugs found by these tests, skipped with this text until fixed. None: the discovery run's
+         * findings (BUY / SELL under 48 dp, SELL squeezed to nothing at font 2.0, the symbol and the contract title
+         * cut) were fixed in the app.
+         */
+        val BUGS = emptyMap<String, String>()
     }
 
     private val source = FakeChartSource(contracts = listOf(TEST_OPTION, BN_OPTION))

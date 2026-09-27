@@ -680,6 +680,12 @@ private fun GuardCard(model: AppModel) {
 }
 
 
+/** Runs [block] now when on the main thread, else posts it there (for calls only the main thread may make). */
+private fun onMainThread(block: () -> Unit) {
+    val main = android.os.Looper.getMainLooper()
+    if (android.os.Looper.myLooper() == main) block() else android.os.Handler(main).post(block)
+}
+
 /**
  * Encrypted backup and restore (a file sealed with a backup passphrase; older PIN-sealed
  * files still open with their PIN). Zerodha credentials, the PIN and the pinned
@@ -812,7 +818,10 @@ private fun BackupCard(model: AppModel, wipeOnExhaustion: Boolean) {
                                     // create() reads the data on IO and stretches the passphrase on Default.
                                     pending = com.optionslab.app.data.Backup.create(ctx, phrase)
                                     ask = null
-                                    save.launch("iraalgo-backup-${com.optionslab.app.data.Market.today()}.irabk")
+                                    // The file picker opens from the main thread only; after the off-thread work above
+                                    // this coroutine may be elsewhere (under a dispatcher that does not confine it).
+                                    val name = "iraalgo-backup-${com.optionslab.app.data.Market.today()}.irabk"
+                                    onMainThread { save.launch(name) }
                                 } else {
                                     val bytes = pending ?: return@launch
                                     val secret = if (fileVersion == 1) typed else phrase

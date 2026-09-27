@@ -105,11 +105,12 @@ fun ComposeTestRule.pause() { /* the clock keeps running */ }
 fun ComposeTestRule.frames(n: Int = 8) { if (!mainClock.autoAdvance) repeat(n) { mainClock.advanceTimeByFrame() } }
 
 /**
- * Waits for [ok] (real threads: PIN checks, file work). With the clock running this is [ComposeTestRule.waitUntil];
- * paused, each round moves one frame on and runs the main looper.
+ * Waits for [ok] (real threads: PIN checks, file work). Each round moves the compose clock one frame on and runs
+ * the Android main looper: work the app hands to the main thread (the model's viewModelScope, which resumes on
+ * Dispatchers.Main after its IO; a Handler post) runs there, and [ComposeTestRule.waitUntil] alone never runs
+ * that looper (it only advances the compose clock and sleeps).
  */
 fun ComposeTestRule.until(timeoutMs: Long = 20_000, what: String = "the condition", ok: () -> Boolean) {
-    if (mainClock.autoAdvance) { waitUntil(timeoutMs) { ok() }; return }
     val end = System.currentTimeMillis() + timeoutMs
     while (!ok()) {
         if (System.currentTimeMillis() > end) throw AssertionError("timed out after $timeoutMs ms waiting for $what")

@@ -10,6 +10,9 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -103,12 +106,13 @@ internal fun OptionChartContent(
             Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text("‹", style = Type.masthead.copy(color = p.ink, fontSize = 28.sp), modifier = Modifier.clickable(onClick = onClose).padding(horizontal = 12.dp, vertical = 4.dp))
                 Column(Modifier.weight(1f)) {
-                    Text(title, style = Type.title.copy(color = p.ink, fontSize = 16.sp), maxLines = 1)
+                    // Wraps at a large font on a narrow screen (on one line the strike and CE / PE were cut).
+                    Text(title, style = Type.title.copy(color = p.ink, fontSize = 16.sp))
                     Text("Lot ${pick.lotSize}" + (pick.ivPct?.let { " · IV %.1f%%".format(Locale.ENGLISH, it) } ?: "") +
                         (pick.delta?.let { " · Δ %.2f".format(Locale.ENGLISH, it) } ?: ""), style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp))
                 }
                 // The full chart: indicators, drawing tools, chart types.
-                Text("Full chart ›", style = Type.label.copy(color = p.ink, fontSize = 13.sp), modifier = Modifier.clickable {
+                Text("Full chart ›", textAlign = TextAlign.Center, style = Type.label.copy(color = p.ink, fontSize = 13.sp), modifier = Modifier.widthIn(max = 100.dp).clickable {
                     scope.launch {
                         val sym = symbolOf()
                         if (sym != null) onFullChart(sym)
@@ -157,9 +161,10 @@ internal fun OptionChartContent(
             // Buy / Sell, always in reach.
             Row(Modifier.fillMaxWidth().background(p.paperDeep).padding(12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 listOf(true to "BUY", false to "SELL").forEach { (isBuy, label) ->
+                    // At least 48 dp high at any font (it was 46 dp at the default one).
                     Text(label, textAlign = TextAlign.Center, style = Type.label.copy(color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold),
-                        modifier = Modifier.weight(1f).background(if (isBuy) p.verdigris else p.oxblood, androidx.compose.foundation.shape.RoundedCornerShape(50))
-                            .clickable { order = isBuy }.padding(vertical = 14.dp))
+                        modifier = Modifier.weight(1f).heightIn(min = 48.dp).background(if (isBuy) p.verdigris else p.oxblood, androidx.compose.foundation.shape.RoundedCornerShape(50))
+                            .clickable { order = isBuy }.wrapContentHeight(Alignment.CenterVertically).padding(vertical = 14.dp))
                 }
             }
         }

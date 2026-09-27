@@ -16,6 +16,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -100,6 +102,7 @@ internal object FeedChartSource : ChartSource {
  * [orderSheet]: (contract picked, buy, limit price or null for market, close).
  */
 @SuppressLint("SetJavaScriptEnabled", "JavascriptInterface")
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 internal fun ChartPane(
     symbol: String,
@@ -245,31 +248,39 @@ internal fun ChartPane(
         hint?.let {
             Text(it, style = Type.bodySmall.copy(color = p.inkSoft), modifier = Modifier.fillMaxWidth().background(p.chip).padding(horizontal = 14.dp, vertical = 8.dp))
         }
-        Row(Modifier.fillMaxWidth().background(p.paperDeep).padding(horizontal = 12.dp, vertical = 6.dp),
-            horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+        // One line when it fits; at a large font or on a narrow screen the chips flow onto a second line under the
+        // symbol (in one row the symbol was ellipsized and SELL squeezed to nothing).
+        androidx.compose.foundation.layout.FlowRow(Modifier.fillMaxWidth().background(p.paperDeep).padding(horizontal = 12.dp, vertical = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            val chip = Modifier.align(Alignment.CenterVertically).background(p.chip, RoundedCornerShape(50))
             returnTo?.let { (s0, e0) ->
                 Text("‹ $s0", style = Type.label.copy(color = p.ink, fontSize = 12.sp, fontWeight = FontWeight.Bold),
-                    modifier = Modifier.background(p.chip, RoundedCornerShape(50)).clickable { returnTo = null; showSymbol(s0, e0) }
+                    modifier = chip.clickable { returnTo = null; showSymbol(s0, e0) }
                         .padding(horizontal = 10.dp, vertical = 8.dp))
             }
-            Text(current.first, style = Type.label.copy(color = p.ink, fontSize = 13.sp), maxLines = 1,
-                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+            // The symbol takes what is left of its line, and shrinks rather than being cut.
+            com.optionslab.app.ui.components.FitText(current.first, Type.label.copy(color = p.ink, fontSize = 13.sp),
+                Modifier.weight(1f).align(Alignment.CenterVertically), minSize = 9.sp)
             // The option chain of the index: tap a price to chart that option (and buy or sell it there).
             if (chainUnderlying != null) Text("OPT", textAlign = TextAlign.Center, style = Type.label.copy(color = p.ink, fontSize = 12.sp, fontWeight = FontWeight.Bold),
-                modifier = Modifier.background(p.chip, RoundedCornerShape(50)).clickable { chainFor = chainUnderlying }.padding(horizontal = 10.dp, vertical = 8.dp))
+                modifier = chip.clickable { chainFor = chainUnderlying }.padding(horizontal = 10.dp, vertical = 8.dp))
             // Basic (drawn by the app) or Advanced (indicators, drawings; needs the phone's WebView).
             Text(if (basic) "BASIC" else "ADV", textAlign = TextAlign.Center, style = Type.label.copy(color = p.ink, fontSize = 12.sp, fontWeight = FontWeight.Bold),
-                modifier = Modifier.background(p.chip, RoundedCornerShape(50)).clickable {
+                modifier = chip.clickable {
                     if (basic) { basicChosen = false; autoBasic = null; com.optionslab.app.security.SecurePrefs.put("chart.basic", false); if (failed) { failed = false; retried = false; ready = false; gen++ } }
                     else { basicChosen = true; com.optionslab.app.security.SecurePrefs.put("chart.basic", true) }
                 }.padding(horizontal = 10.dp, vertical = 8.dp))
             // A price alert on whatever is charted, at a level you choose.
             Text("ALERT", textAlign = TextAlign.Center, style = Type.label.copy(color = p.ink, fontSize = 12.sp, fontWeight = FontWeight.Bold),
-                modifier = Modifier.background(p.chip, RoundedCornerShape(50)).clickable { alerting = true }.padding(horizontal = 10.dp, vertical = 8.dp))
+                modifier = chip.clickable { alerting = true }.padding(horizontal = 10.dp, vertical = 8.dp))
+            // Buy / Sell: a full 48 dp touch target, the label whole on one line.
             listOf(true to "BUY", false to "SELL").forEach { (isBuy, label) ->
-                Text(label, textAlign = TextAlign.Center, style = Type.label.copy(color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold),
-                    modifier = Modifier.background(if (isBuy) p.verdigris else p.oxblood, RoundedCornerShape(50))
-                        .clickable { openOrder(isBuy, null) }.padding(horizontal = 16.dp, vertical = 8.dp))
+                Box(Modifier.align(Alignment.CenterVertically).heightIn(min = 48.dp).widthIn(min = 64.dp)
+                    .background(if (isBuy) p.verdigris else p.oxblood, RoundedCornerShape(50))
+                    .clickable { openOrder(isBuy, null) }.padding(horizontal = 14.dp), contentAlignment = Alignment.Center) {
+                    Text(label, textAlign = TextAlign.Center, maxLines = 1, softWrap = false,
+                        style = Type.label.copy(color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold))
+                }
             }
         }
         Box(Modifier.weight(1f).fillMaxWidth()) {
