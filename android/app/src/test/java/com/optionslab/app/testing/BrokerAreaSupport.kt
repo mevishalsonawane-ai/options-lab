@@ -154,8 +154,8 @@ class Watchdog(private val seconds: Long = 240) : org.junit.rules.TestRule {
 
 /**
  * CI diagnostics: when the test JVM's threads have shown the same stacks for three minutes (a hang that no
- * interrupt breaks, e.g. a monitor deadlock or a busy loop), every thread's stack is written once to
- * build/test-results/testDebugUnitTest/stall-*.txt, which CI uploads with the test reports.
+ * interrupt breaks, e.g. a monitor deadlock or a busy loop), every thread's stack is written once to the
+ * test process's stderr, which shows in the CI log.
  */
 object StallDump {
     @Volatile private var started = false
@@ -172,9 +172,9 @@ object StallDump {
                     .joinToString("|") { (t, st) -> t.name + ":" + st.take(12).joinToString(",") }
                 if (sig == last) same++ else { same = 0; last = sig }
                 if (same == 6) runCatching {
-                    val f = java.io.File("build/test-results/testDebugUnitTest/stall-${System.currentTimeMillis()}.txt")
-                    f.parentFile?.mkdirs()
-                    f.writeText(all.entries.joinToString("\n\n") { (t, st) -> "${t.name} (${t.state})\n" + st.joinToString("\n") { "    at $it" } })
+                    // Straight to the process's own stderr (System.err is captured per test): it shows in the CI log.
+                    val text = "AREA-B STALL DUMP\n" + all.entries.joinToString("\n\n") { (t, st) -> "${t.name} (${t.state})\n" + st.take(60).joinToString("\n") { "    at $it" } } + "\n"
+                    java.io.FileOutputStream(java.io.FileDescriptor.err).apply { write(text.toByteArray()); flush() }
                 }
             }
         }, "area-b-stall-dump").apply { isDaemon = true }.start()
