@@ -1095,7 +1095,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                     }
                     val f = runCatching { b.awaitOrder(id) }.getOrElse { com.optionslab.app.data.Broker.Fill(id, "UNKNOWN", 0.0, 0, "status not confirmed; check the order book") }
                     fills += f
-                    if (f.filled > 0) com.optionslab.app.work.Notifier.orderFilled(ctx, leg.side.name, f.filled, leg.tradingSymbol, f.avgPrice, "Live", null)
+                    // The notification is posted beside the send, not before the next leg or the fill shown.
+                    if (f.filled > 0) launch { runCatching { com.optionslab.app.work.Notifier.orderFilled(ctx, leg.side.name, f.filled, leg.tradingSymbol, f.avgPrice, "Live", null) } }
                     if (f.status != "COMPLETE" || f.filled < leg.quantity) {
                         val working = f.status in WORKING
                         if (working) stuck.value = StuckLeg(cur, i, id, fills.toList(), f.status)
