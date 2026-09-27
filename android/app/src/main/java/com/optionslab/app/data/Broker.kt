@@ -720,10 +720,10 @@ object Broker {
      * exactly as the sequential reads were.
      */
     suspend fun accountNow(): com.optionslab.engine.risk.AccountGuard.Account? = kotlinx.coroutines.coroutineScope {
-        val book = async { runCatching { positionBook() }.getOrNull() }
-        val funds = async { runCatching { funds() }.getOrNull() }
-        val count = async { runCatching { orders().size }.getOrDefault(0) }
-        book.await()?.let { runCatching { Guard.liveAccount(it, funds.await(), count.await()) }.getOrNull() }
+        val bookQ = async { runCatching { positionBook() }.getOrNull() }
+        val fundsQ = async { runCatching { funds() }.getOrNull() }
+        val countQ = async { runCatching { orders().size }.getOrDefault(0) }
+        bookQ.await()?.let { runCatching { Guard.liveAccount(it, fundsQ.await(), countQ.await()) }.getOrNull() }
     }
 
     /** One order's latest state (last entry of its history), or null if Kite has none yet. */
