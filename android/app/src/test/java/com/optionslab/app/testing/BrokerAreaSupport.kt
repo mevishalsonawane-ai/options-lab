@@ -152,28 +152,25 @@ class Watchdog(private val seconds: Long = 240) : org.junit.rules.TestRule {
         }
 }
 
-/**
- * CI diagnostics: when the test JVM's threads have shown the same stacks for three minutes (a hang that no
- * interrupt breaks, e.g. a monitor deadlock or a busy loop), every thread's stack is written once to the
- * test process's stderr, which shows in the CI log.
- */
+/** CI diagnostics for a job that stops making progress (see [start]). */
 object StallDump {
     @Volatile private var started = false
 
+    /**
+     * Every 4 minutes, the stacks of the threads that run tests (the test worker and Robolectric's main thread)
+     * go to the process's own stderr (System.err is captured per test), which shows in the CI log: a job that
+     * stops making progress then shows where it sits, whether it is blocked or spinning.
+     */
     @Synchronized fun start() {
         if (started) return
         started = true
         Thread({
-            var last = ""; var same = 0
             while (true) {
-                try { Thread.sleep(30_000) } catch (_: InterruptedException) { return@Thread }
-                val all = Thread.getAllStackTraces()
-                val sig = all.entries.filter { !it.key.isDaemon || it.key.name.contains("Main", true) }.sortedBy { it.key.name }
-                    .joinToString("|") { (t, st) -> t.name + ":" + st.take(12).joinToString(",") }
-                if (sig == last) same++ else { same = 0; last = sig }
-                if (same == 6) runCatching {
-                    // Straight to the process's own stderr (System.err is captured per test): it shows in the CI log.
-                    val text = "AREA-B STALL DUMP\n" + all.entries.joinToString("\n\n") { (t, st) -> "${t.name} (${t.state})\n" + st.take(60).joinToString("\n") { "    at $it" } } + "\n"
+                try { Thread.sleep(240_000) } catch (_: InterruptedException) { return@Thread }
+                runCatching {
+                    val text = "AREA-B STACKS\n" + Thread.getAllStackTraces().entries
+                        .filter { (t, _) -> t.name.contains("Main", true) || t.name.startsWith("Test worker") }
+                        .joinToString("\n") { (t, st) -> "${t.name} (${t.state})\n" + st.take(40).joinToString("\n") { "    at $it" } } + "\n"
                     java.io.FileOutputStream(java.io.FileDescriptor.err).apply { write(text.toByteArray()); flush() }
                 }
             }
