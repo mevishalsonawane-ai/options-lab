@@ -10,6 +10,7 @@ on:
       - "crypto/*.py"
       - "forex/*.py"
       - "tools/marketlab/**"
+      - "!tools/marketlab/mtf.py"
       - ".github/workflows/markets.yml"
   workflow_dispatch:
 
