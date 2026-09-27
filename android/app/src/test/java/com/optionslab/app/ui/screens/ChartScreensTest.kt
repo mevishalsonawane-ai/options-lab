@@ -605,7 +605,6 @@ class ChartScreensTest {
 
     private fun alertDialog(): Pair<ArrayList<Pair<PriceAlarm, String>>, () -> Int> {
         val saved = ArrayList<Pair<PriceAlarm, String>>(); var closed = 0
-        compose.mainClock.autoAdvance = false        // the dialog's text field: frames by hand
         set { ChartAlertDialog(TEST_OPTION.tradingSymbol, source, onSave = { a, m -> saved += a to m }, onClose = { closed++ }) }
         return saved to { closed }
     }
@@ -749,7 +748,6 @@ class ChartScreensLayoutTest(device: DeviceConfig) : ScreenTest(device) {
     }
 
     @Test fun alertDialog() {
-        compose.mainClock.autoAdvance = false        // a dialog holding a text field never idles on a running clock
         show { ChartAlertDialog(TEST_OPTION.tradingSymbol, source, { _, _ -> }, {}) }
         val end = System.currentTimeMillis() + 5_000
         while (compose.onAllNodesWithText("Now 130.00").fetchSemanticsNodes().isEmpty()) {

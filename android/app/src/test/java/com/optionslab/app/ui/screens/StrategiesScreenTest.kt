@@ -534,10 +534,7 @@ class StrategiesDialogsLayoutTest(private val config: DeviceConfig) : ScreenTest
         areaCCaptureTop(compose, name, config); lint(name, knownBugs = bugs)
     }
 
-    private fun <T> paused(block: () -> T): T {
-        compose.mainClock.autoAdvance = false
-        try { return block() } finally { compose.mainClock.autoAdvance = true }
-    }
+    private fun <T> paused(block: () -> T): T = block()   // the clock runs now (see AreaESupport.pause)
 
     private fun frames(n: Int = 12) = repeat(n) { compose.mainClock.advanceTimeByFrame() }
 

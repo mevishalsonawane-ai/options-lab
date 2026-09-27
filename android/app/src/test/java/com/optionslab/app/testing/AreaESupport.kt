@@ -92,11 +92,12 @@ class FakePicker(private val app: Application) : ActivityResultRegistryOwner {
 }
 
 /**
- * Stops the compose clock. Under Robolectric a window holding a text field never reports idle while the
- * clock runs by itself (the cursor blinks for ever), so screens with text-field dialogs run paused and
- * move on by [frames] and [until].
+ * Was: stops the compose clock for screens with text-field dialogs. Those dialogs never settled because the
+ * dialog window re-measured at two widths for ever (fixed in the app's AlertDialog); on a paused clock
+ * Compose's idling loop has no time limit, so one such wait held a CI job for half an hour. The clock now
+ * runs; [frames] and [until] work either way.
  */
-fun ComposeTestRule.pause() { mainClock.autoAdvance = false }
+fun ComposeTestRule.pause() { /* the clock keeps running */ }
 
 /** A few frames on (only needed with the clock paused). */
 fun ComposeTestRule.frames(n: Int = 8) { if (!mainClock.autoAdvance) repeat(n) { mainClock.advanceTimeByFrame() } }

@@ -111,7 +111,7 @@ android {
                 // screen matrices draw thousands of screens, so a long-lived JVM fills its heap (one ran out of
                 // memory and failed every later class in it).
                 it.setForkEvery(4)
-                it.timeout.set(Duration.ofMinutes(35))   // imported: inside android {} "java" is the compile-options block
+                it.timeout.set(Duration.ofMinutes(20))   // imported: inside android {} "java" is the compile-options block
                 it.systemProperty("robolectric.logging.enabled", "false")
                 // Screen tests write their screenshots (build/outputs/roborazzi); nothing is compared or committed.
                 it.systemProperty("roborazzi.test.record", "true")

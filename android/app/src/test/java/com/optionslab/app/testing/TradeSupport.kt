@@ -243,14 +243,8 @@ abstract class TradeScreenBase(device: DeviceConfig) : ScreenTest(device) {
         lintKnown(name, known, options)
     }
 
-    /**
-     * Dialogs holding a text field never report idle under Robolectric while the clock runs by itself;
-     * [paused] stops the automatic clock for [block] and [frames] moves it by hand.
-     */
-    protected fun <T> paused(block: () -> T): T {
-        compose.mainClock.autoAdvance = false
-        try { return block() } finally { compose.mainClock.autoAdvance = true }
-    }
+    /** Was: the clock paused around text-field dialogs (they never settled; fixed in the app's AlertDialog). */
+    protected fun <T> paused(block: () -> T): T = block()   // the clock runs now (see AreaESupport.pause)
 
     protected fun frames(n: Int = 12) = repeat(n) { compose.mainClock.advanceTimeByFrame() }
 }

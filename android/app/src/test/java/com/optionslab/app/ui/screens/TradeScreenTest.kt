@@ -97,9 +97,7 @@ class TradeScreenTest {
         var p by mutableStateOf(page)
         compose.setContent { IraAlgoTheme("light") { Box(Modifier.fillMaxSize()) { TradeHub(m, p) { p = it }; RowActionPopup(m) } } }
         compose.waitForIdle()
-        // Dialogs with a text field never report idle while the clock runs by itself (Robolectric):
-        // the clock is moved by hand from here on, a few frames after each action.
-        compose.mainClock.autoAdvance = false
+        // The clock keeps running: text-field dialogs settle since the app's AlertDialog has one fixed width.
         frames()
         return m
     }
