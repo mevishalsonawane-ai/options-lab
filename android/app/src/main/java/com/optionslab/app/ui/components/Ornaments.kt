@@ -178,8 +178,10 @@ fun BrassButton(
             if (busy) { CircularProgressIndicator(Modifier.size(16.dp), color = textColor, strokeWidth = 2.dp); Spacer(Modifier.width(8.dp)) }
             // More centred lines when a large font or a narrow screen leaves no room for one: the button grows
             // rather than cutting its label.
-            Text(text, style = Type.label.copy(color = textColor.copy(alpha = alpha), fontSize = 14.sp), maxLines = 3,
-                overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
+            // A label that is one number ("+30") shrinks on one line instead: a number never breaks ("+3 / 0").
+            val style = Type.label.copy(color = textColor.copy(alpha = alpha), fontSize = 14.sp)
+            if (text.length <= 8 && text.any(Char::isDigit) && text.none(Char::isWhitespace)) FitText(text, style, minSize = 8.sp)
+            else Text(text, style = style, maxLines = 3, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
         }
     }
 }
