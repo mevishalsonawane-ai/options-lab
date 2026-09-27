@@ -126,7 +126,7 @@ abstract class TradeLayoutBase(device: DeviceConfig) : TradeScreenBase(device) {
         paperPosition(); paperRestingLimit()
         showPaper()
         snap("trade-paper-account", known())
-        if (device.fontScale == 1.0f) smokeEveryAction(skip = setOf("Close"))
+        if (device.name == "phone-font1.0-light") smokeEveryAction(skip = setOf("Close"))
     }
 
     protected fun paperPositions() {

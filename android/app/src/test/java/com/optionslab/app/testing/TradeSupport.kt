@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelStore
 import com.github.takahirom.roborazzi.captureRoboImage
 import com.optionslab.app.data.Market
+import com.optionslab.app.data.Net
 import com.optionslab.app.data.Paper
 import com.optionslab.app.security.SecurePrefs
 import com.optionslab.app.ui.AppModel
@@ -51,14 +52,9 @@ import javax.net.ssl.SSLSocketFactory
  * TEST ONLY (area A, the Trade tab): a fake Upstox candle feed on localhost, so the paper account
  * ([Paper], the real sandbox engine) gets prices without the internet.
  *
- * The app's [com.optionslab.app.data.Net] opens plain `HttpsURLConnection`s to api.upstox.com. While a
- * [FakeUpstox] is open, the JVM's default proxy selector sends only that host to a tiny CONNECT proxy
- * on 127.0.0.1, which tunnels to a MockWebServer holding a throwaway certificate for api.upstox.com;
- * the JVM's default TLS trust is set to that certificate for the duration. Every other host still goes
- * through [NetworkGuard] (and is blocked). [close] restores the guard and the default TLS settings.
- * No production code changes: Net runs unchanged, its retries and parsing included.
- *
- * Needs `@ConscryptMode(ConscryptMode.Mode.OFF)` on the test class (the JDK's TLS talks to the fake).
+ * While a [FakeUpstox] is open, [Net]'s debug-only `testEndpoint` sends every Upstox request to a
+ * MockWebServer on 127.0.0.1 (HTTPS, throwaway certificate); Net's retries and parsing run unchanged.
+ * [close] clears it. Needs `@ConscryptMode(ConscryptMode.Mode.OFF)` on the test class.
  *
  * Prices: [price] sets the last price of an instrument key; the intraday reply is three minute
  * candles of today (IST) closing there, with a range that holds the close (so the sandbox never
@@ -72,87 +68,24 @@ class FakeUpstox : Closeable {
     fun price(key: String, last: Double) { prices[key] = last }
 
     private val server = MockWebServer()
-    private val proxy = ServerSocket(0, 50, InetAddress.getByName("127.0.0.1"))
-    private val oldFactory: SSLSocketFactory = HttpsURLConnection.getDefaultSSLSocketFactory()
-    private val oldVerifier: HostnameVerifier = HttpsURLConnection.getDefaultHostnameVerifier()
-    @Volatile private var open = true
-
-    private val selector = object : ProxySelector() {
-        override fun select(uri: URI): List<Proxy> =
-            if (uri.host == HOST) listOf(Proxy(Proxy.Type.HTTP, InetSocketAddress("127.0.0.1", proxy.localPort))) else NetworkGuard.select(uri)
-        override fun connectFailed(uri: URI?, sa: SocketAddress?, ioe: IOException?) = Unit
-    }
 
     init {
         server.protocols = listOf(Protocol.HTTP_1_1)
         server.dispatcher = object : Dispatcher() {
             override fun dispatch(request: RecordedRequest): MockResponse = handle(request)
         }
-        val cert = HeldCertificate.Builder().addSubjectAlternativeName(HOST).build()
-        server.useHttps(HandshakeCertificates.Builder().heldCertificate(cert).build().sslSocketFactory(), false)
         server.start(InetAddress.getByName("127.0.0.1"), 0)
+        // A throwaway certificate for this run only, trusted through Net's debug-only test endpoint.
+        val cert = HeldCertificate.Builder().addSubjectAlternativeName(server.hostName).build()
+        server.useHttps(HandshakeCertificates.Builder().heldCertificate(cert).build().sslSocketFactory(), false)
         val trust = HandshakeCertificates.Builder().addTrustedCertificate(cert.certificate).build()
-        HttpsURLConnection.setDefaultSSLSocketFactory(trust.sslSocketFactory())
-        HttpsURLConnection.setDefaultHostnameVerifier { host, _ -> host == HOST }
-        ProxySelector.setDefault(selector)
-        Thread({ acceptLoop() }, "fake-upstox-proxy").apply { isDaemon = true }.start()
+        Market.testClock = null
+        Net.testEndpoint = Net.TestEndpoint(server.url("/").toString().trimEnd('/'), trust.sslSocketFactory())
     }
 
     override fun close() {
-        open = false
-        ProxySelector.setDefault(NetworkGuard)
-        HttpsURLConnection.setDefaultSSLSocketFactory(oldFactory)
-        HttpsURLConnection.setDefaultHostnameVerifier(oldVerifier)
-        runCatching { proxy.close() }
+        Net.testEndpoint = null
         runCatching { server.shutdown() }
-    }
-
-    // ---- the CONNECT proxy -------------------------------------------------------------
-
-    private fun acceptLoop() {
-        while (open) {
-            val client = try { proxy.accept() } catch (_: IOException) { return }
-            Thread({ tunnel(client) }, "fake-upstox-tunnel").apply { isDaemon = true }.start()
-        }
-    }
-
-    private fun readHead(input: InputStream): String {
-        val out = ByteArrayOutputStream()
-        var last4 = 0
-        while (true) {
-            val b = input.read()
-            if (b < 0) break
-            out.write(b)
-            last4 = (last4 shl 8) or b
-            if (last4 == 0x0D0A0D0A) break
-        }
-        return out.toString(Charsets.ISO_8859_1.name())
-    }
-
-    private fun tunnel(client: Socket) {
-        try {
-            val head = readHead(client.getInputStream())
-            if (!head.startsWith("CONNECT ")) { client.close(); return }
-            val upstream = Socket("127.0.0.1", server.port)
-            client.getOutputStream().apply { write("HTTP/1.1 200 Connection established\r\n\r\n".toByteArray()); flush() }
-            val a = Thread { pipe(client.getInputStream(), upstream.getOutputStream()); runCatching { upstream.shutdownOutput() } }
-            a.isDaemon = true; a.start()
-            pipe(upstream.getInputStream(), client.getOutputStream())
-            runCatching { client.close() }; runCatching { upstream.close() }
-        } catch (_: IOException) {
-            runCatching { client.close() }
-        }
-    }
-
-    private fun pipe(from: InputStream, to: OutputStream) {
-        val buf = ByteArray(8192)
-        try {
-            while (true) {
-                val n = from.read(buf)
-                if (n < 0) break
-                to.write(buf, 0, n); to.flush()
-            }
-        } catch (_: IOException) { }
     }
 
     // ---- replies ----------------------------------------------------------------------------
