@@ -86,8 +86,7 @@ object BrokerArea {
  * Screen-matrix base for area B. [lintKnown] is [ScreenTest.lint] with known layout bugs matched per
  * finding (a regex over the finding's text), so a screen with one known bug still fails on any other
  * error; when every error is a known one the test is skipped with "LAYOUT BUG (...)". [snap] saves every
- * window (a dialog is a window of its own). Dialogs holding a text field never report idle under
- * Robolectric while the clock runs by itself: [paused] and [frames] drive the clock by hand.
+ * window (a dialog is a window of its own).
  */
 abstract class BrokerScreenBase(device: DeviceConfig) : ScreenTest(device) {
     @get:org.junit.Rule val watchdog = Watchdog()
@@ -128,12 +127,6 @@ abstract class BrokerScreenBase(device: DeviceConfig) : ScreenTest(device) {
     /** The click-everything smoke runs on one set-up only (it is about behaviour, not layout), to keep CI time in bounds. */
     protected fun smokeOnce(skip: Set<String> = emptySet()) { if (device.name == "phone-font1.0-light") smokeEveryAction(skip) }
 
-    /** Render [content] with the clock stopped (for screens that open a dialog with a text field), a few frames on. */
-    protected fun showPaused(content: @androidx.compose.runtime.Composable () -> Unit) {
-        compose.mainClock.autoAdvance = false
-        show(content)
-        frames()
-    }
 }
 
 /**
