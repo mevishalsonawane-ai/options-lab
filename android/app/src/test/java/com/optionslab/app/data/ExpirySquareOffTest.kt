@@ -23,6 +23,7 @@ import org.robolectric.annotation.ConscryptMode
  */
 @ConscryptMode(ConscryptMode.Mode.OFF)
 class ExpirySquareOffTest : RobolectricTest() {
+    @get:org.junit.Rule val watchdog = com.optionslab.app.testing.AutomationWatchdog()
     private lateinit var kite: FakeKite
     private val ce = "NIFTY26SEP24500CE"
     private val pe = "NIFTY26SEP24500PE"

@@ -127,3 +127,29 @@ object AutomationSupport {
     private fun static(c: Class<*>, name: String, v: Any?) { field(c, name).set(null, v) }
 
 }
+
+/**
+ * A test of this area still running after [seconds] prints its stack and is interrupted, so a stuck wait fails with
+ * its place instead of holding the whole CI job (Robolectric runs every test on one thread).
+ */
+class AutomationWatchdog(private val seconds: Long = 240) : org.junit.rules.TestRule {
+    override fun apply(base: org.junit.runners.model.Statement, description: org.junit.runner.Description) =
+        object : org.junit.runners.model.Statement() {
+            override fun evaluate() {
+                val thread = Thread.currentThread()
+                val timer = java.util.Timer("automation-watchdog ${description.methodName}", true)
+                var dumped = false
+                timer.schedule(object : java.util.TimerTask() {
+                    override fun run() {
+                        if (!dumped) {
+                            dumped = true
+                            System.err.println("WATCHDOG ${description.displayName} still running after $seconds s; test thread:")
+                            thread.stackTrace.forEach { System.err.println("    at $it") }
+                        }
+                        thread.interrupt()
+                    }
+                }, seconds * 1000, 5_000)
+                try { base.evaluate() } finally { timer.cancel(); Thread.interrupted() }
+            }
+        }
+}

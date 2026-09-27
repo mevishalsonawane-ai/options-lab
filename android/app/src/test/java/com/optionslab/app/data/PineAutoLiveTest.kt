@@ -28,6 +28,7 @@ import java.time.ZonedDateTime
  */
 @ConscryptMode(ConscryptMode.Mode.OFF)
 class PineAutoLiveTest : RobolectricTest() {
+    @get:org.junit.Rule val watchdog = com.optionslab.app.testing.AutomationWatchdog()
     private lateinit var kite: FakeKite
     private val ce = "BANKNIFTY26OCT52000CE"
     private val pe = "BANKNIFTY26OCT52000PE"

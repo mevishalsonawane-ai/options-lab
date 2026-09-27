@@ -161,6 +161,7 @@ internal fun ComposeTestRule.strategyShown(text: String): Boolean {
 
 @RunWith(AndroidJUnit4::class)
 class StrategiesScreenTest {
+    @get:org.junit.Rule val watchdog = com.optionslab.app.testing.AutomationWatchdog()
     @get:Rule val compose = createComposeRule()
     private val rec = RecordingStrategyActions()
 
@@ -277,6 +278,7 @@ class StrategiesScreenTest {
 
 @RunWith(AndroidJUnit4::class)
 class StrategyArmCardTest {
+    @get:org.junit.Rule val watchdog = com.optionslab.app.testing.AutomationWatchdog()
     @get:Rule val compose = createComposeRule()
     private val rec = RecordingStrategyActions()
 
@@ -385,6 +387,7 @@ class StrategyArmCardTest {
 
 @RunWith(AndroidJUnit4::class)
 class OrbRowsTest {
+    @get:org.junit.Rule val watchdog = com.optionslab.app.testing.AutomationWatchdog()
     @get:Rule val compose = createComposeRule()
     private val rec = RecordingStrategyActions()
 
@@ -475,6 +478,7 @@ internal object StrategyLayoutBugs {
 @RunWith(ParameterizedRobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class StrategiesScreensLayoutTest(private val config: DeviceConfig) : ScreenTest(config) {
+    @get:org.junit.Rule val watchdog = com.optionslab.app.testing.AutomationWatchdog()
     companion object {
         @JvmStatic @ParameterizedRobolectricTestRunner.Parameters(name = "{0}")
         fun configs(): List<Array<Any>> = DeviceConfig.matrix()
@@ -514,6 +518,7 @@ internal object StrategyScreens {
 @RunWith(ParameterizedRobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class StrategiesDialogsLayoutTest(private val config: DeviceConfig) : ScreenTest(config) {
+    @get:org.junit.Rule val watchdog = com.optionslab.app.testing.AutomationWatchdog()
     companion object {
         @JvmStatic @ParameterizedRobolectricTestRunner.Parameters(name = "{0}")
         fun configs(): List<Array<Any>> = DeviceConfig.matrix().filter { (it[0] as DeviceConfig).name in SIX_SETUPS }

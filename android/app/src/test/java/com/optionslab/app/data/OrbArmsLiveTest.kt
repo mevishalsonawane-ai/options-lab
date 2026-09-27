@@ -31,6 +31,7 @@ import java.time.LocalDateTime
  */
 @ConscryptMode(ConscryptMode.Mode.OFF)
 class OrbArmsLiveTest : RobolectricTest() {
+    @get:org.junit.Rule val watchdog = com.optionslab.app.testing.AutomationWatchdog()
     private lateinit var kite: FakeKite
     private val sym = "BANKNIFTY26OCT52000CE"
     private val paperCe = "BANKNIFTY-TEST-52000CE"

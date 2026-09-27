@@ -95,6 +95,7 @@ internal fun ComposeTestRule.pineTap(text: String, exact: Boolean = true) {
 
 @RunWith(AndroidJUnit4::class)
 class PineScreenTest {
+    @get:org.junit.Rule val watchdog = com.optionslab.app.testing.AutomationWatchdog()
     @get:Rule val compose = createComposeRule()
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var onPage by mutableStateOf(true)
@@ -340,6 +341,7 @@ class PineScreenTest {
 @RunWith(ParameterizedRobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class PineScreensLayoutTest(private val config: DeviceConfig) : ScreenTest(config) {
+    @get:org.junit.Rule val watchdog = com.optionslab.app.testing.AutomationWatchdog()
     companion object {
         @JvmStatic @ParameterizedRobolectricTestRunner.Parameters(name = "{0}")
         fun configs(): List<Array<Any>> = DeviceConfig.matrix()
@@ -390,6 +392,7 @@ class PineScreensLayoutTest(private val config: DeviceConfig) : ScreenTest(confi
 @RunWith(ParameterizedRobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class PineDialogsLayoutTest(private val config: DeviceConfig) : ScreenTest(config) {
+    @get:org.junit.Rule val watchdog = com.optionslab.app.testing.AutomationWatchdog()
     companion object {
         @JvmStatic @ParameterizedRobolectricTestRunner.Parameters(name = "{0}")
         fun configs(): List<Array<Any>> = DeviceConfig.matrix().filter { (it[0] as DeviceConfig).name in SIX_SETUPS }

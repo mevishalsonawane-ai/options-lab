@@ -24,6 +24,7 @@ import org.robolectric.annotation.ConscryptMode
  */
 @ConscryptMode(ConscryptMode.Mode.OFF)
 class LossBreakerTest : RobolectricTest() {
+    @get:org.junit.Rule val watchdog = com.optionslab.app.testing.AutomationWatchdog()
     private lateinit var kite: FakeKite
     private val other = "NIFTY26OCT24000PE"
 
