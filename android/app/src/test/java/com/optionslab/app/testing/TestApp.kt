@@ -33,6 +33,7 @@ import com.optionslab.app.security.SecurePrefs
 class TestApp : Application() {
     override fun onCreate() {
         super.onCreate()
+        IdleSampler.install()
         NetworkGuard.install()
         NetworkGuard.blocked.clear()
         FakeAndroidKeyStore.install()
