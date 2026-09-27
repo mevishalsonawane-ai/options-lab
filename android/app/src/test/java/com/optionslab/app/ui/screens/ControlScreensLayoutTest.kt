@@ -88,6 +88,9 @@ class ControlScreensLayoutTest(device: DeviceConfig) : ScreenTest(device) {
     /** False (and the test passes at once) outside [SIX], for secondary states. */
     private fun onSix() = device.name in SIX
 
+    /** The click smoke is about behaviour, not layout: one set-up is enough. */
+    private fun smokeOnce() { if (device.name == "phone-font1.0-light") smokeEveryAction() }
+
     private fun tap(text: String) = compose.onNodeWithText(text).performSemanticsAction(SemanticsActions.OnClick)
     private fun reveal(text: String) {
         compose.onAllNodes(hasScrollToIndexAction()).onFirst().performScrollToNode(hasText(text))
@@ -109,7 +112,7 @@ class ControlScreensLayoutTest(device: DeviceConfig) : ScreenTest(device) {
 
     @Test fun framePaper() {
         checkScreen("frame-paper", content = frame(live = false, linked = true))
-        smokeEveryAction()
+        smokeOnce()
     }
 
     @Test fun frameLive() {
@@ -142,7 +145,7 @@ class ControlScreensLayoutTest(device: DeviceConfig) : ScreenTest(device) {
 
     @Test fun vaultUnreadable() {
         checkScreen("vault-unreadable") { VaultUnreadable(onRetry = {}, onErase = {}) }
-        smokeEveryAction()
+        smokeOnce()
     }
 
     // ---- More ------------------------------------------------------------------------------------
@@ -205,7 +208,7 @@ class ControlScreensLayoutTest(device: DeviceConfig) : ScreenTest(device) {
 
     @Test fun gettingStarted() {
         checkScreen("getting-started") { GettingStarted {} }
-        smokeEveryAction()
+        smokeOnce()
     }
 
     @Test fun batteryGate() = checkScreen("battery") { BatteryScreen {} }
@@ -259,6 +262,6 @@ class ControlScreensLayoutTest(device: DeviceConfig) : ScreenTest(device) {
                 AlertBanner()
             }
         }
-        smokeEveryAction()
+        smokeOnce()
     }
 }
