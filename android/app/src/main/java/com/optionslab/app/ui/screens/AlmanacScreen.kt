@@ -161,10 +161,10 @@ internal fun AlmanacContent(
                         if (usedShare < 1f) Spacer(Modifier.weight(1f - usedShare))
                     }
                 }
-                Row(Modifier.padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    MoneyFigure("Unused", money.unused?.let { inr(it) }, null, Modifier.weight(1f))
-                    MoneyFigure("Used", money.used?.let { inr(it) }, null, Modifier.weight(1f))
-                    MoneyFigure("P&L today", money.pnlToday?.let { inr(it, true) }, money.pnlToday?.let { if (it >= 0) p.verdigris else p.oxblood }, Modifier.weight(1f))
+                MoneyRow(Modifier.padding(top = 12.dp)) {
+                    MoneyFigure("Unused", money.unused?.let { inr(it) }, null, Modifier)
+                    MoneyFigure("Used", money.used?.let { inr(it) }, null, Modifier)
+                    MoneyFigure("P&L today", money.pnlToday?.let { inr(it, true) }, money.pnlToday?.let { if (it >= 0) p.verdigris else p.oxblood }, Modifier)
                 }
                 if (moneyNote != null) Note(moneyNote, Modifier.padding(top = 8.dp))
                 else if (cap != null && cap > 0) Text("${Math.round(100 * usedShare)}% of capital in use", style = Type.bodySmall.copy(color = p.inkSoft), modifier = Modifier.padding(top = 8.dp))
@@ -234,8 +234,9 @@ internal fun AlmanacContent(
                     if (i > 0) Rule()
                     Row(Modifier.fillMaxWidth().clickable { onRow(o.target) }.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
-                            Text(o.name, style = Type.body.copy(color = p.ink, fontSize = 14.sp, fontWeight = FontWeight.SemiBold), maxLines = 1)
-                            Text(o.detail, style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp), maxLines = 1)
+                            // Wrapped, not cut, when a large font leaves too little room beside the amount.
+                            Text(o.name, style = Type.body.copy(color = p.ink, fontSize = 14.sp, fontWeight = FontWeight.SemiBold))
+                            Text(o.detail, style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp))
                         }
                         Spacer(Modifier.padding(start = 8.dp))
                         Column(horizontalAlignment = Alignment.End) {
@@ -255,9 +256,33 @@ private data class ChartSpec(val values: List<Double>, val reference: Double?, v
 private fun MoneyFigure(label: String, value: String?, color: Color?, modifier: Modifier) {
     val p = LocalPalette.current
     Column(modifier) {
-        Text(label, style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp), maxLines = 1)
+        Text(label, style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp))
         Spacer(Modifier.height(2.dp))
-        Text(value ?: "—", style = Type.figure.copy(color = color ?: p.ink, fontSize = 15.sp, fontWeight = FontWeight.Bold), maxLines = 1)
+        Text(value ?: "—", style = Type.figure.copy(color = color ?: p.ink, fontSize = 15.sp, fontWeight = FontWeight.Bold))
+    }
+}
+
+/**
+ * The money figures side by side in equal columns, 8 dp apart, when each fits its column whole; otherwise
+ * (a small phone, a large font) one under the other at full width, so no amount is ever cut.
+ */
+@Composable
+private fun MoneyRow(modifier: Modifier, content: @Composable () -> Unit) {
+    androidx.compose.ui.layout.Layout(content, modifier.fillMaxWidth()) { ms, c ->
+        val gap = 8.dp.roundToPx()
+        val n = ms.size.coerceAtLeast(1)
+        val natural = ms.map { it.maxIntrinsicWidth(androidx.compose.ui.unit.Constraints.Infinity) }
+        val w = if (c.hasBoundedWidth) c.maxWidth else natural.sum() + gap * (n - 1)
+        val each = ((w - gap * (n - 1)) / n).coerceAtLeast(0)
+        if (natural.all { it <= each }) {
+            val ps = ms.map { it.measure(androidx.compose.ui.unit.Constraints(minWidth = each, maxWidth = each)) }
+            val h = ps.maxOfOrNull { it.height } ?: 0
+            layout(w, h) { ps.forEachIndexed { i, pl -> pl.placeRelative(i * (each + gap), 0) } }
+        } else {
+            val ps = ms.map { it.measure(androidx.compose.ui.unit.Constraints(maxWidth = w)) }
+            val h = ps.sumOf { it.height } + gap * (ps.size - 1).coerceAtLeast(0)
+            layout(w, h) { var y = 0; ps.forEach { pl -> pl.placeRelative(0, y); y += pl.height + gap } }
+        }
     }
 }
 

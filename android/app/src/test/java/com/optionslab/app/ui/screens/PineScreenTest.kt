@@ -97,6 +97,7 @@ internal fun ComposeTestRule.pineTap(text: String, exact: Boolean = true) {
 class PineScreenTest {
     @get:org.junit.Rule val watchdog = com.optionslab.app.testing.AutomationWatchdog()
     @get:Rule val compose = createComposeRule()
+    @get:Rule(order = 100) val dump = com.optionslab.app.testing.DumpOnFailure(compose)
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var onPage by mutableStateOf(true)
     private var charts = 0

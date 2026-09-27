@@ -19,6 +19,7 @@ import java.util.Collections
 @RunWith(AndroidJUnit4::class)
 class LockScreenTest {
     @get:Rule val compose = createComposeRule()
+    @get:Rule(order = 100) val dump = com.optionslab.app.testing.DumpOnFailure(compose)
 
     private fun type(digits: String) {
         digits.forEach { compose.onNodeWithText(it.toString()).performClick() }

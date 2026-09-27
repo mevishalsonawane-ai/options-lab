@@ -88,6 +88,7 @@ import kotlin.math.round
 class MiscScreensTest {
     @get:Rule val watchdog = AreaEWatchdog()
     @get:Rule val compose = createComposeRule()
+    @get:Rule(order = 100) val dump = com.optionslab.app.testing.DumpOnFailure(compose)
     private val app: Application get() = ApplicationProvider.getApplicationContext()
     private var offline: OfflineModel? = null
     private val model: AppModel get() = (offline ?: OfflineModel(app).also { offline = it }).model

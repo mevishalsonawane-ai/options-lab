@@ -64,9 +64,12 @@ internal fun alertTexts(): List<String> = Alerts.queue.value.map { it.text }
  * The Lab: its page tokens, the Backtests (trial + arms), Health, Presets and Replay pages, each driven
  * through plain state and recording callbacks - no AppModel, no network. Data is the bundled record.
  */
+// A tall phone: the functional checks are about behaviour, so every control is on screen to be tapped (layout is the matrix tests' job).
+@org.robolectric.annotation.Config(qualifiers = "w411dp-h2400dp")
 @RunWith(AndroidJUnit4::class)
 class LabScreensTest {
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
+    @get:Rule(order = 100) val dump = com.optionslab.app.testing.DumpOnFailure(compose)
     @get:Rule val watchdog = com.optionslab.app.testing.ResearchWatchdog()
 
     @Before fun fresh() { clearAlerts() }

@@ -58,6 +58,7 @@ import java.time.LocalDate
 @Config(qualifiers = "w411dp-h3200dp")
 class PaperScreenTest {
     @get:Rule val compose = createComposeRule()
+    @get:Rule(order = 100) val dump = com.optionslab.app.testing.DumpOnFailure(compose)
     @get:Rule val watchdog = com.optionslab.app.testing.TradeWatchdog()
 
     private lateinit var upstox: FakeUpstox

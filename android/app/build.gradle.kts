@@ -94,8 +94,8 @@ android {
             // Pure JVM tests: an Android call that is not under Robolectric answers a default.
             isReturnDefaultValues = true
             all {
-                it.maxHeapSize = "3g"
-                // Two test JVMs at once (the CI runner has 4 cores, 16 GB), each replaced after 100 classes so
+                it.maxHeapSize = "4g"
+                // Two test JVMs at once (the CI runner has 4 cores, 16 GB), each replaced every few classes so
                 // one area's static state cannot leak into - or stall - another's; and a hard limit, so a hang
                 // fails the build in minutes instead of holding CI for hours.
                 // CI runs the suite in shards (-PtestShard=i/n, one job each): a class - with its inner classes -
@@ -107,7 +107,10 @@ android {
                     })
                 }
                 it.maxParallelForks = 2
-                it.setForkEvery(100)
+                // A fresh JVM every 4 classes: Robolectric's text shadows never free their native objects and the
+                // screen matrices draw thousands of screens, so a long-lived JVM fills its heap (one ran out of
+                // memory and failed every later class in it).
+                it.setForkEvery(4)
                 it.timeout.set(Duration.ofMinutes(35))   // imported: inside android {} "java" is the compile-options block
                 it.systemProperty("robolectric.logging.enabled", "false")
                 // Screen tests write their screenshots (build/outputs/roborazzi); nothing is compared or committed.

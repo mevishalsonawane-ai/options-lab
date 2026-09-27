@@ -163,6 +163,7 @@ internal fun ComposeTestRule.strategyShown(text: String): Boolean {
 class StrategiesScreenTest {
     @get:org.junit.Rule val watchdog = com.optionslab.app.testing.AutomationWatchdog()
     @get:Rule val compose = createComposeRule()
+    @get:Rule(order = 100) val dump = com.optionslab.app.testing.DumpOnFailure(compose)
     private val rec = RecordingStrategyActions()
 
     @Before fun clear() = AutomationSupport.clearAlerts()
@@ -472,8 +473,9 @@ internal object StrategyLayoutBugs {
     // Fixed: the running leg's Exit and the Edit / Delete buttons were 40 dp high; the Arm switches had no label; an ORB arm's
     // status was cut at 2 lines and a strategy's summary line at 1.
     val PAGE = emptyMap<String, String>()
-    val CARD = mapOf("*" to "Home strategy card: at font 1.3+ on a small phone the approval buttons ('Approve & start', 'Approve entry') " +
-        "are ellipsized: the BrassButton label is one line and shares the row with 'Skip today' / 'Skip'")
+    // Fixed too: the approval buttons ('Approve & start', 'Approve entry') were ellipsized at font 1.3+ on a small phone
+    // (BrassButton now wraps to two lines), and the dialogs' Cancel / Confirm / Close were 40 dp high (TextButton is 48 dp).
+    val CARD = emptyMap<String, String>()
 }
 
 /** The Strategies page, Home's strategy card and the ORB rows on every device set-up (their main states). */
@@ -584,7 +586,8 @@ class StrategiesDialogsLayoutTest(private val config: DeviceConfig) : ScreenTest
     }
 
     @Test fun orbDetail() {
-        show { OrbRowsContent(StrategyFakes.orbView(armed = true, open = true, live = true), true, rec, StrategyFakes.reauthWhy) }
+        // The rows are a card's contents (the card is a Column): shown in one, not stacked on each other.
+        show { Column { OrbRowsContent(StrategyFakes.orbView(armed = true, open = true, live = true), true, rec, StrategyFakes.reauthWhy) } }
         compose.onAllNodesWithText("Forward test", substring = true).onFirst().areaCClick(); compose.waitForIdle()
         top("orb-detail", StrategyLayoutBugs.CARD)
     }

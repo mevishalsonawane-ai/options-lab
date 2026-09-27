@@ -34,7 +34,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import com.optionslab.app.ui.components.AlertDialog
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import com.optionslab.app.ui.components.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -53,6 +53,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.role
@@ -534,7 +535,8 @@ internal fun StaticIpCard(
                 Modifier.fillMaxWidth().padding(vertical = 6.dp).background(p.chip, RoundedCornerShape(10.dp)).padding(horizontal = 12.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(pub!!.take(40) + "…", style = Type.figure.copy(color = p.ink, fontSize = 12.sp), modifier = Modifier.weight(1f), maxLines = 1)
+                // The key's first 40 characters as a preview (Copy takes all of it); it wraps on a narrow screen rather than being cut.
+                Text(pub!!.take(40) + "…", style = Type.figure.copy(color = p.ink, fontSize = 12.sp), modifier = Modifier.weight(1f))
                 Text("Copy", style = Type.label.copy(color = p.ink, fontSize = 14.sp),
                     modifier = Modifier.clickable { clipboard.setText(androidx.compose.ui.text.AnnotatedString(pub!!)); model.say("Key copied: paste it in Oracle's SSH keys box") }.padding(start = 12.dp))
             }
@@ -576,9 +578,10 @@ internal fun StaticIpCard(
         link("Open My apps on developers.kite.trade", "https://developers.kite.trade/apps")
         if (pub != null) Row(Modifier.fillMaxWidth().padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(if (relayOn) "Orders go through your server" else "Relay off: orders go direct", style = Type.bodySmall.copy(color = if (relayOn) p.verdigris else p.inkSoft), modifier = Modifier.weight(1f))
+            // Named for TalkBack: a bare switch is read as just "switch".
             androidx.compose.material3.Switch(checked = relayOn, onCheckedChange = { on ->
                 if (on && relay.host == null) com.optionslab.app.work.Alerts.error("Connect & test first.") else { relay.enabled = on; relayOn = on; check() }
-            })
+            }, modifier = Modifier.semantics { contentDescription = "Send orders through your server" })
         }
         if (pub != null) Row(horizontalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.padding(top = 4.dp)) {
             Text("New key", style = Type.label.copy(color = p.inkSoft), modifier = Modifier.clickable {

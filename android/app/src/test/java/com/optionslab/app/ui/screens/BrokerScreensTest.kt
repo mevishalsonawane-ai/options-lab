@@ -93,6 +93,7 @@ import java.time.LocalDate
 class BrokerScreensTest {
     @get:Rule val watchdog = com.optionslab.app.testing.Watchdog()
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
+    @get:Rule(order = 100) val dump = com.optionslab.app.testing.DumpOnFailure(compose)
     private lateinit var kite: FakeKite
     private val store = androidx.lifecycle.ViewModelStore()
     private val app: Application get() = ApplicationProvider.getApplicationContext()
@@ -961,18 +962,9 @@ abstract class BrokerLayoutBase(device: DeviceConfig) : BrokerScreenBase(device)
         val NO_SMOKE = setOf("Connect & test", "New key", "Create key")
 
         /** Real layout and accessibility bugs these screens show, matched per finding (see [BrokerScreenBase.lintKnown]). */
-        val KNOWN = listOf(
-            BrokerScreenBase.Known(Regex("""'ssh-rsa .*' has more lines than it may show"""),
-                "Static IP card: the relay key row (Text maxLines = 1 with no overflow) is cut mid-line instead of ending in an ellipsis"),
-            BrokerScreenBase.Known(Regex("""A11Y\] clickable node \d+ has no text"""),
-                "unlabelled controls: the relay Switch (Static IP card), ToggleRow's Switch and the strike field's tap overlay (StrikeDropdown) have no text or description, so TalkBack announces an unnamed control"),
-            BrokerScreenBase.Known(Regex("""TEXT\] '.*' is cut off at the side: [\d.]+ dp of text in 0\.0 dp"""),
-                "LedgerLine: a long value takes the whole row and squeezes the label (weight 1f) to 0 dp, so it disappears on small phones and large fonts (self-test step names; 'Bid / offer / last' in the order review)"),
-            BrokerScreenBase.Known(Regex("""(TOUCH|EMPTY|TEXT)\] (clickable )?'(SELL|BUY)'"""),
-                "ParamTokens' Token: the selectable node is 34-43 dp tall (minimumInteractiveComponentSize sits outside .selectable), under 48 dp for the order's SELL/BUY choice"),
-            BrokerScreenBase.Known(Regex("""TEXT\] '.*' is ellipsized"""),
-                "BrassButton labels (e.g. 'Check now', 'Open the phone's VPN settings') are ellipsized at large font scales on narrow screens"),
-        )
+        // Fixed and no longer listed: the relay key row cut mid-line, the unlabelled relay / ToggleRow switches and
+        // strike overlay, LedgerLine squeezing its label to 0 dp, ParamTokens' 34-43 dp SELL/BUY, BrassButton ellipsis.
+        val KNOWN = emptyList<BrokerScreenBase.Known>()
     }
 
     private lateinit var kite: FakeKite

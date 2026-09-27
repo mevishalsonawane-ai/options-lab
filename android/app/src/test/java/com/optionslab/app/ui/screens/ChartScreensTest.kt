@@ -32,6 +32,7 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTouchInput
@@ -75,9 +76,12 @@ internal val BN_OPTION = Upstox.Contract("BANKNIFTY", LocalDate.of(2026, 10, 1),
  * IraBridge is played by the test calling the bridge directly), the basic chart, the option page, and the
  * alert and chain dialogs. Candles come from [FakeChartSource]; nothing reaches the network.
  */
+// A tall phone: the functional checks are about behaviour, so every control is on screen to be tapped (layout is the matrix tests' job).
+@org.robolectric.annotation.Config(qualifiers = "w411dp-h2400dp")
 @RunWith(AndroidJUnit4::class)
 class ChartScreensTest {
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
+    @get:Rule(order = 100) val dump = com.optionslab.app.testing.DumpOnFailure(compose)
     @get:Rule val watchdog = com.optionslab.app.testing.ResearchWatchdog()
 
     private val source = FakeChartSource(contracts = listOf(TEST_OPTION, BN_OPTION))
@@ -321,6 +325,7 @@ class ChartScreensTest {
         val s = pane()
         s.chainPick = ChainPick("BANKNIFTY", BN_OPTION.expiry, 52000.0, Right.PE, 210.0, -0.4, 15.0, 30)
         text("OPT").performClick()
+        until { s.chains.isNotEmpty() }                 // the dialog's effect runs on the next frame, not in the click
         assertEquals(listOf("BANKNIFTY"), s.chains)
         text("Pick from chain").performClick()
         until { shows(BN_OPTION.tradingSymbol, sub = false) }
@@ -413,8 +418,12 @@ class ChartScreensTest {
         val w = web()
         val client = shadowOf(w).webViewClient
         fun status(url: String) = client.shouldInterceptRequest(w, request(url))!!.statusCode
-        assertEquals(200, status("https://appassets.androidplatform.net/terminal.html"))
-        assertEquals(200, status("https://appassets.androidplatform.net/terminal.mjs"))
+        // A bundled file is served with its bytes and no error status (0 is the framework's default, which
+        // the WebView answers as 200 OK); anything else is refused with 403.
+        fun served(url: String) = client.shouldInterceptRequest(w, request(url))!!.let { r ->
+            r.data != null && r.statusCode in setOf(0, 200) && r.mimeType != null }
+        assertTrue(served("https://appassets.androidplatform.net/terminal.html"))
+        assertTrue(served("https://appassets.androidplatform.net/terminal.mjs"))
         assertEquals(403, status("https://appassets.androidplatform.net/missing.js"))
         assertEquals(403, status("https://appassets.androidplatform.net/../../shared_prefs/x.xml"))
         assertEquals(403, status("https://appassets.androidplatform.net/sub/dir.js"))
@@ -560,12 +569,14 @@ class ChartScreensTest {
         until { shows("₹130.00") }
         text("+30.00 (30.00%)").assertIsDisplayed()
         text("Change since today's open").assertIsDisplayed()
-        text("100.00").assertIsDisplayed()                              // open
-        text("%.2f".format(bars.maxOf { it.high })).assertIsDisplayed()
-        text("%.2f".format(bars.minOf { it.low })).assertIsDisplayed()
-        text("%,d".format(bars.sumOf { it.volume })).assertIsDisplayed()
-        text("%,d".format(bars.last().oi)).assertIsDisplayed()
-        text("BUY").performClick()
+        // The session's figures sit below the chart: scrolled to on a small screen, then seen.
+        fun seen(t: String) { text(t).apply { runCatching { performScrollTo() } }.assertIsDisplayed() }
+        seen("100.00")                                                  // open
+        seen("%.2f".format(bars.maxOf { it.high }))
+        seen("%.2f".format(bars.minOf { it.low }))
+        seen("%,d".format(bars.sumOf { it.volume }))
+        seen("%,d".format(bars.last().oi))
+        text("BUY").apply { runCatching { performScrollTo() } }.performClick()
         until { pg.sheets.isNotEmpty() }
         assertEquals(pick.copy(ltp = 130.0) to true, pg.sheets.single())
         text("Close sheet").performClick()

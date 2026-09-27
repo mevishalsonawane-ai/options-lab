@@ -17,7 +17,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import com.optionslab.app.ui.components.TextButton
 import java.util.Locale
 import kotlinx.coroutines.launch
 import androidx.lifecycle.viewModelScope
@@ -552,7 +552,7 @@ private fun HolidaysCard(model: AppModel) {
         up.take(12).forEach { (d, name) ->
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("${d.format(DateTimeFormatter.ofPattern("EEE d MMM yyyy"))} · $name", style = Type.bodySmall.copy(color = p.ink), modifier = Modifier.weight(1f))
-                androidx.compose.material3.TextButton({ model.removeHoliday(d) }) { Text("✕", style = Type.label.copy(color = p.oxblood)) }
+                com.optionslab.app.ui.components.TextButton({ model.removeHoliday(d) }) { Text("✕", style = Type.label.copy(color = p.oxblood)) }
             }
         }
         LedgerLine("From NSE", h.fetched?.let { "updated $it" } ?: "never")

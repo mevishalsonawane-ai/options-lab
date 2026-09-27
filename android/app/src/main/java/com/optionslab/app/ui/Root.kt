@@ -560,8 +560,8 @@ internal fun CrashReport(dir: java.io.File) {
                     }
                 }
             },
-            confirmButton = { androidx.compose.material3.TextButton({ clip.setText(androidx.compose.ui.text.AnnotatedString(text)) }) { Text("Copy") } },
-            dismissButton = { androidx.compose.material3.TextButton({
+            confirmButton = { com.optionslab.app.ui.components.TextButton({ clip.setText(androidx.compose.ui.text.AnnotatedString(text)) }) { Text("Copy") } },
+            dismissButton = { com.optionslab.app.ui.components.TextButton({
                 runCatching { java.io.File(dir, com.optionslab.app.IraAlgoApp.CRASH_FILE).delete() }; crash = null
             }) { Text("Dismiss") } },
         )
@@ -586,6 +586,7 @@ private fun ConnectGate(model: AppModel) {
     }
 }
 
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 internal fun Masthead(live: Boolean, calm: Boolean, linked: Boolean, onMode: (Boolean) -> Unit, onLink: () -> Unit = {}) {
     val p = LocalPalette.current
@@ -603,12 +604,16 @@ internal fun Masthead(live: Boolean, calm: Boolean, linked: Boolean, onMode: (Bo
             Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f)) {
                 Text("IraAlgo", style = Type.masthead.copy(color = p.ink, fontSize = 20.sp), maxLines = 1)
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                // The date, then the market's state: on a narrow bar (a small phone, large fonts) the state moves
+                // to a line of its own rather than being squeezed out beside the mode switch.
+                androidx.compose.foundation.layout.FlowRow(verticalArrangement = Arrangement.Center) {
                     Text(now.format(DateTimeFormatter.ofPattern("EEE d MMM, HH:mm", Locale.ENGLISH)) + "  ·  ",
-                        style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp), maxLines = 1)
-                    StatusDot(if (open) p.verdigris else p.inkFaint, pulsing = open && !calm, modifier = Modifier.size(6.dp))
-                    Spacer(Modifier.width(4.dp))
-                    Text(if (open) "Market open" else "Market closed", style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp), maxLines = 1)
+                        style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp), modifier = Modifier.align(Alignment.CenterVertically))
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.align(Alignment.CenterVertically)) {
+                        StatusDot(if (open) p.verdigris else p.inkFaint, pulsing = open && !calm, modifier = Modifier.size(6.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text(if (open) "Market open" else "Market closed", style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp))
+                    }
                 }
             }
             // The trading mode, on every screen. Tap to switch; going live asks first (and needs Zerodha linked).
@@ -640,16 +645,16 @@ internal fun Masthead(live: Boolean, calm: Boolean, linked: Boolean, onMode: (Bo
         properties = androidx.compose.ui.window.DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy),
         title = { Text("Switch to live trading?", style = Type.title) },
         text = { Text("Prices, positions and orders will come from your Zerodha account. Orders you send will use real money. Each order still needs your review, a long press and your PIN or fingerprint.", style = Type.bodySmall) },
-        confirmButton = { androidx.compose.material3.TextButton({ confirmLive = false; onMode(true) }) { Text("Go live", color = p.oxblood) } },
-        dismissButton = { androidx.compose.material3.TextButton({ confirmLive = false }) { Text("Stay on paper") } },
+        confirmButton = { com.optionslab.app.ui.components.TextButton({ confirmLive = false; onMode(true) }) { Text("Go live", color = p.oxblood) } },
+        dismissButton = { com.optionslab.app.ui.components.TextButton({ confirmLive = false }) { Text("Stay on paper") } },
     )
     if (needLink) com.optionslab.app.ui.components.AlertDialog(
         onDismissRequest = { needLink = false },
         properties = androidx.compose.ui.window.DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy),
         title = { Text("Link Zerodha for live trading", style = Type.title) },
         text = { Text("Paper trading works now with virtual money. Live trading needs your Zerodha account: add your Kite API key and log in once (More → Zerodha).", style = Type.bodySmall) },
-        confirmButton = { androidx.compose.material3.TextButton({ needLink = false; onLink() }) { Text("Link Zerodha") } },
-        dismissButton = { androidx.compose.material3.TextButton({ needLink = false }) { Text("Stay on paper") } },
+        confirmButton = { com.optionslab.app.ui.components.TextButton({ needLink = false; onLink() }) { Text("Link Zerodha") } },
+        dismissButton = { com.optionslab.app.ui.components.TextButton({ needLink = false }) { Text("Stay on paper") } },
     )
 }
 

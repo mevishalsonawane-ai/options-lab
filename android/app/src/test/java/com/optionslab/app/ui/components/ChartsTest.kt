@@ -16,9 +16,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.test.captureToImage
+import com.github.takahirom.roborazzi.captureRoboImage
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.unit.dp
@@ -46,6 +45,7 @@ import org.robolectric.annotation.GraphicsMode
 class ChartsTest {
     @get:Rule val compose = createComposeRule()
     @get:Rule val watchdog = com.optionslab.app.testing.ResearchWatchdog()
+    @get:Rule val testName = org.junit.rules.TestName()
 
     private val up = Light.verdigris
     private val down = Light.oxblood
@@ -64,9 +64,14 @@ class ChartsTest {
         }
         shown = (shown.first + 1) to content
         compose.waitForIdle()
-        val px = compose.onNodeWithTag("chart").captureToImage().toPixelMap()
+        // Roborazzi draws the node the way every screen test's screenshot is drawn (captureToImage waits for a
+        // hardware frame that Robolectric does not always deliver); the PNG is read back pixel by pixel.
+        val file = java.io.File("build/outputs/roborazzi/charts-test-${testName.methodName}-${shown.first}.png")
+        compose.onNodeWithTag("chart").captureRoboImage(file.path)
+        val bmp = android.graphics.BitmapFactory.decodeFile(file.path) ?: error("no image at $file")
         val out = HashSet<Int>()
-        for (y in 0 until px.height) for (x in 0 until px.width) out += px[x, y].toArgb()
+        val row = IntArray(bmp.width)
+        for (y in 0 until bmp.height) { bmp.getPixels(row, 0, bmp.width, 0, y, bmp.width, 1); row.forEach { out += it } }
         return out
     }
     private operator fun Set<Int>.contains(c: Color) = contains(c.toArgb())

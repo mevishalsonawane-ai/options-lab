@@ -85,9 +85,18 @@ abstract class ScreenTest(protected val device: DeviceConfig) {
         lint(name, knownBugs, options)
     }
 
-    /** A screenshot of the current screen: build/outputs/roborazzi/<name>_<device>.png. */
+    /**
+     * A screenshot of every window on screen: build/outputs/roborazzi/<name>_<device>.png for the first, then
+     * <name>-layer<i>_<device>.png for each window above it (a dialog, a popup). Windows with no size (a popup
+     * not shown) are left out: there is nothing to draw.
+     */
     protected fun capture(name: String) {
-        compose.onRoot().captureRoboImage("build/outputs/roborazzi/${name}_${device.name}.png")
+        val roots = compose.onAllNodes(isRoot())
+        val sized = roots.fetchSemanticsNodes().withIndex().filter { (_, n) -> n.size.width > 0 && n.size.height > 0 }.map { it.index }
+        if (sized.isEmpty()) { compose.onRoot().captureRoboImage("build/outputs/roborazzi/${name}_${device.name}.png"); return }
+        sized.forEachIndexed { layer, i ->
+            roots[i].captureRoboImage("build/outputs/roborazzi/${name}${if (layer == 0) "" else "-layer$layer"}_${device.name}.png")
+        }
     }
 
     /** [LayoutLint] over every root (dialogs are roots of their own); errors fail, warnings print. */

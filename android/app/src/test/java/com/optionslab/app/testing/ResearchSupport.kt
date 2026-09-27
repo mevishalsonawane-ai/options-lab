@@ -95,10 +95,15 @@ object ResearchFixtures {
     /** An option chain priced from the last bundled expiry session (for the chart's OPT dialog). */
     val chain: ChainSnapshot by lazy {
         val sess = Store.expirySessions(false).last()
-        val ix = sess.index!!
         val expiry = sess.options.mapNotNull { it.expiry }.min()
         val series = sess.options.filter { it.expiry == expiry }
-        val spot = ix.close.last()
+        // The bundled expiry chains carry no index series: the spot comes from put-call parity at the strike
+        // where the call and the put last traded closest (S = K + C - P), as a chain priced off the index would.
+        val spot = sess.index?.close?.last() ?: series.groupBy { it.strike }.mapNotNull { (k, s) ->
+            val c = s.firstOrNull { it.right == Right.CE }?.close?.lastOrNull() ?: return@mapNotNull null
+            val p = s.firstOrNull { it.right == Right.PE }?.close?.lastOrNull() ?: return@mapNotNull null
+            Triple(k, c, p)
+        }.minBy { (_, c, p) -> kotlin.math.abs(c - p) }.let { (k, c, p) -> k + c - p }
         val near = series.map { it.strike }.distinct().sortedBy { kotlin.math.abs(it - spot) }.take(8).toSet()
         val rows = ChainSnapshot.rowsFrom(series.filter { it.strike in near }, emptyMap(), 75)
         ChainSnapshot.of("NIFTY", expiry, spot, 75, rows, expiry.atTime(11, 0).atZone(ZoneId.of("Asia/Kolkata")))

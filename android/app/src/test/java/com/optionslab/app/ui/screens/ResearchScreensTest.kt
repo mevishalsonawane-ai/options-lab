@@ -80,9 +80,12 @@ internal object HomeFixtures {
  * The research pages (IC table, Signal Lab, Sizing, Costs, Lots, Notes) and Home, driven through plain
  * state and recording callbacks - no AppModel, no network. Numbers come from the bundled record.
  */
+// A tall phone: the functional checks are about behaviour, so every control is on screen to be tapped (layout is the matrix tests' job).
+@org.robolectric.annotation.Config(qualifiers = "w411dp-h2400dp")
 @RunWith(AndroidJUnit4::class)
 class ResearchScreensTest {
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
+    @get:Rule(order = 100) val dump = com.optionslab.app.testing.DumpOnFailure(compose)
     @get:Rule val watchdog = com.optionslab.app.testing.ResearchWatchdog()
 
     @Before fun fresh() { clearAlerts() }
@@ -246,6 +249,7 @@ class ResearchScreensTest {
         text("Premium Rs 100.00").assertIsDisplayed()
         text("75").performClick()
         text("stress").performClick()
+        compose.waitForIdle()                  // the figures are recomputed when the page recomposes, not in the click
         val last = asked.last()
         assertEquals(100.0, last[0] as Double, 1e-9); assertEquals(75, last[1]); assertEquals(1, last[2]); assertEquals("stress", last[3])
         text("Rs %.3f".format(0.009 * 100.0)).assertIsDisplayed()
@@ -262,7 +266,10 @@ class ResearchScreensTest {
         text("Lot History").assertIsDisplayed()
         for ((u, rows) in Lots.LOT_HISTORY) {
             scrollTo(u).assertIsDisplayed()
-            scrollTo("from ${rows.first().first}").assertIsDisplayed()
+            // Several underlyings start on the same day: their "from" lines have the same text.
+            val from = "from ${rows.first().first}"
+            val same = Lots.LOT_HISTORY.count { it.value.first().first == rows.first().first }
+            assertTrue("$u's history starts $from", compose.onAllNodesWithText(from).fetchSemanticsNodes().size in 1..same)
         }
         assertTrue(shows("Today", sub = false))
         scrollTo("On 2025-01-30 every NIFTY contract", sub = true).assertIsDisplayed()
