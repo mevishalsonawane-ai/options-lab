@@ -1,0 +1,79 @@
+name: Market study (BTC + XAU/USD)
+
+# Downloads 3 years of BTC (with Deribit options) and XAU/USD data, studies the charts, trains the
+# neural networks walk-forward, and publishes data + results to the market-data branch.
+# Separate from the Android app: nothing here is built into the APK.
+
+on:
+  push:
+    paths:
+      - "crypto/*.py"
+      - "forex/*.py"
+      - "tools/marketlab/**"
+      - ".github/workflows/markets.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: markets
+  cancel-in-progress: true
+
+jobs:
+  study:
+    name: ${{ matrix.market }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        market: [crypto, forex]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install "numpy>=1.26" "pandas>=2.2"
+      - name: Download 3 years of data
+        run: python ${{ matrix.market }}/fetch.py
+      - name: Study charts and train networks
+        run: python ${{ matrix.market }}/train.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: market-${{ matrix.market }}
+          path: |
+            ${{ matrix.market }}/data/
+            ${{ matrix.market }}/results/
+
+  publish:
+    name: Publish to market-data
+    runs-on: ubuntu-latest
+    needs: study
+    if: always()
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: market-*
+          path: out
+      - name: Push to market-data
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+        run: |
+          mkdir pub
+          for m in crypto forex; do
+            if [ -d "out/market-$m" ]; then mkdir -p "pub/$m" && cp -r "out/market-$m/." "pub/$m/"; fi
+          done
+          if [ -z "$(ls -A pub)" ]; then echo "nothing to publish"; exit 1; fi
+          cd pub
+          find . -type f -printf '%P %s\n' | sort > index.txt
+          git init -q -b market-data
+          git config user.name "ci-markets"; git config user.email "ci-markets@users.noreply.github.com"
+          git add -A && git commit -qm "Market data and results for $SHA"
+          git push -qf "https://x-access-token:${TOKEN}@github.com/${REPO}" HEAD:market-data
+          cat index.txt
