@@ -179,8 +179,9 @@ class OrderFlowLive2Test : RobolectricTest() {
         assertTrue(m.stuck.value != null)
 
         kite.fill(st.orderId, 100.05)
+        m.sending.value = Load.Idle                                        // the earlier "Leg 1 open" verdict, cleared to see the new one
         m.continueAfterStuck()
-        val fills = sent(m)
+        val fills = BrokerArea.await("the rest sent", 40_000) { (m.sending.value as? Load.Done)?.value }
         assertEquals(listOf(st.orderId, kite.orders.keys.last()), fills.map { it.orderId })
         val second = kite.placed.single()
         assertEquals(pe, second.form["tradingsymbol"]); assertEquals("BUY", second.form["transaction_type"]); assertEquals("75", second.form["quantity"])
