@@ -90,6 +90,7 @@ import java.time.LocalDate
 @RunWith(AndroidJUnit4::class)
 @ConscryptMode(ConscryptMode.Mode.OFF)
 class BrokerScreensTest {
+    @get:Rule val watchdog = com.optionslab.app.testing.Watchdog()
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
     private lateinit var kite: FakeKite
     private val store = androidx.lifecycle.ViewModelStore()

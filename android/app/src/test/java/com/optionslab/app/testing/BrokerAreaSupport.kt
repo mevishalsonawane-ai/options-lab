@@ -88,6 +88,7 @@ object BrokerArea {
  * Robolectric while the clock runs by itself: [paused] and [frames] drive the clock by hand.
  */
 abstract class BrokerScreenBase(device: DeviceConfig) : ScreenTest(device) {
+    @get:org.junit.Rule val watchdog = Watchdog()
     data class Known(val pattern: Regex, val bug: String)
 
     /** Set to true to list every finding as a skip (a first look at a new screen), never committed as true. */
@@ -131,4 +132,20 @@ abstract class BrokerScreenBase(device: DeviceConfig) : ScreenTest(device) {
         show(content)
         frames()
     }
+}
+
+/**
+ * A test that has not finished after [seconds] is interrupted (again every 5 s), so a wait that would
+ * never end fails with the place it was stuck in its stack trace instead of stalling the whole CI job.
+ */
+class Watchdog(private val seconds: Long = 240) : org.junit.rules.TestRule {
+    override fun apply(base: org.junit.runners.model.Statement, description: org.junit.runner.Description) =
+        object : org.junit.runners.model.Statement() {
+            override fun evaluate() {
+                val thread = Thread.currentThread()
+                val timer = java.util.Timer("watchdog ${description.methodName}", true)
+                timer.schedule(object : java.util.TimerTask() { override fun run() { thread.interrupt() } }, seconds * 1000, 5_000)
+                try { base.evaluate() } finally { timer.cancel(); Thread.interrupted() }
+            }
+        }
 }

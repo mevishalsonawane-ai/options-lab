@@ -21,6 +21,7 @@ import java.time.LocalDate
  */
 @ConscryptMode(ConscryptMode.Mode.OFF)
 class LiveSelfTestTest : RobolectricTest() {
+    @get:org.junit.Rule val watchdog = com.optionslab.app.testing.Watchdog()
     private lateinit var kite: FakeKite
     private val names = listOf("Session", "Funds", "Positions", "Order book", "Holdings", "GTT triggers", "Quote (NIFTY 50)", "Contract list", "Static IP for orders")
 

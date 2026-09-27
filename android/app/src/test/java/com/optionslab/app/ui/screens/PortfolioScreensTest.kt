@@ -74,6 +74,7 @@ internal object PortfolioFixtures {
  */
 @RunWith(AndroidJUnit4::class)
 class PortfolioScreensTest {
+    @get:Rule val watchdog = com.optionslab.app.testing.Watchdog()
     @get:Rule val compose = createComposeRule()
 
     data class PortfolioRun(val holdings: List<Holding>, val start: LocalDate, val end: LocalDate, val bench: String?, val rebalance: String, val capital: Double)
