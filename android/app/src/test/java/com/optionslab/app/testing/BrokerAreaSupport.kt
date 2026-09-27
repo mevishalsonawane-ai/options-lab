@@ -19,6 +19,8 @@ import java.time.LocalDate
  * Every value here is made up; nothing reaches the internet ([FakeKite] answers on localhost).
  */
 object BrokerArea {
+    init { StallDump.start() }
+
     const val PIN = "246813"
     const val WRONG_PIN = "135790"
     const val KEY = "testkey"
@@ -148,4 +150,33 @@ class Watchdog(private val seconds: Long = 240) : org.junit.rules.TestRule {
                 try { base.evaluate() } finally { timer.cancel(); Thread.interrupted() }
             }
         }
+}
+
+/**
+ * CI diagnostics: when the test JVM's threads have shown the same stacks for three minutes (a hang that no
+ * interrupt breaks, e.g. a monitor deadlock or a busy loop), every thread's stack is written once to
+ * build/test-results/testDebugUnitTest/stall-*.txt, which CI uploads with the test reports.
+ */
+object StallDump {
+    @Volatile private var started = false
+
+    @Synchronized fun start() {
+        if (started) return
+        started = true
+        Thread({
+            var last = ""; var same = 0
+            while (true) {
+                try { Thread.sleep(30_000) } catch (_: InterruptedException) { return@Thread }
+                val all = Thread.getAllStackTraces()
+                val sig = all.entries.filter { !it.key.isDaemon || it.key.name.contains("Main", true) }.sortedBy { it.key.name }
+                    .joinToString("|") { (t, st) -> t.name + ":" + st.take(12).joinToString(",") }
+                if (sig == last) same++ else { same = 0; last = sig }
+                if (same == 6) runCatching {
+                    val f = java.io.File("build/test-results/testDebugUnitTest/stall-${System.currentTimeMillis()}.txt")
+                    f.parentFile?.mkdirs()
+                    f.writeText(all.entries.joinToString("\n\n") { (t, st) -> "${t.name} (${t.state})\n" + st.joinToString("\n") { "    at $it" } })
+                }
+            }
+        }, "area-b-stall-dump").apply { isDaemon = true }.start()
+    }
 }

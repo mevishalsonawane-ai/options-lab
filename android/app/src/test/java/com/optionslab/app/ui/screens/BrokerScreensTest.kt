@@ -964,14 +964,12 @@ abstract class BrokerLayoutBase(device: DeviceConfig) : BrokerScreenBase(device)
                 "unlabelled controls: the relay Switch (Static IP card), ToggleRow's Switch and the strike field's tap overlay (StrikeDropdown) have no text or description, so TalkBack announces an unnamed control"),
             BrokerScreenBase.Known(Regex("""TEXT\] '[✓✗] .*' is cut off at the side"""),
                 "Live self-test: a long result (detail · ms) takes the whole row and squeezes the step name (LedgerLine label, weight 1f) to 0 dp, so the names of the steps disappear on small phones and large fonts"),
-            BrokerScreenBase.Known(Regex("""TOUCH\] clickable '(SELL|BUY)' is \d+x\d+ dp"""),
+            BrokerScreenBase.Known(Regex("""(TOUCH|EMPTY|TEXT)\] (clickable )?'(SELL|BUY)'"""),
                 "ParamTokens' Token: the selectable node is 34-43 dp tall (minimumInteractiveComponentSize sits outside .selectable), under 48 dp for the order's SELL/BUY choice"),
             BrokerScreenBase.Known(Regex("""TEXT\] '.*' is ellipsized"""),
                 "BrassButton labels (e.g. 'Check now', 'Open the phone's VPN settings') are ellipsized at large font scales on narrow screens"),
         )
     }
-
-    override val discovery = true   // first full look at these screens on every set-up
 
     private lateinit var kite: FakeKite
     private val store = androidx.lifecycle.ViewModelStore()

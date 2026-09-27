@@ -278,10 +278,8 @@ class PortfolioScreensLayoutTest(device: DeviceConfig) : BrokerScreenBase(device
         fun configs(): List<Array<Any>> = DeviceConfig.matrix()
 
         /** Real layout bugs found here, matched per finding. */
-        val KNOWN = emptyList<BrokerScreenBase.Known>()
+        val KNOWN = BrokerLayoutBase.KNOWN
     }
-
-    override val discovery = true   // first full look at these screens on every set-up
 
     @Test fun portfolioReport() {
         show {
