@@ -39,6 +39,10 @@ jobs:
         run: python ${{ matrix.market }}/fetch.py
       - name: Study charts and train networks
         run: python ${{ matrix.market }}/train.py
+      - name: Find when and where the big moves happen
+        run: python ${{ matrix.market }}/patterns.py
+      - name: Build the results page
+        run: python tools/marketlab/build_pages.py
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -46,6 +50,7 @@ jobs:
           path: |
             ${{ matrix.market }}/data/
             ${{ matrix.market }}/results/
+            ${{ matrix.market }}/index.html
 
   publish:
     name: Publish to market-data

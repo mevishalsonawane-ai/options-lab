@@ -14,7 +14,7 @@
     <p class="sub">{{LEDE}}</p>
     <nav class="toc" aria-label="Sections">
       <a href="#findings">Findings</a><a href="#chart">Chart</a><a href="#returns">Returns</a>
-      <a href="#risk">Volatility and trend</a>{{TOC_EXTRA}}<a href="#links">Other markets</a><a href="#network">Neural network</a><a href="#method">Method</a>
+      <a href="#risk">Volatility and trend</a><a href="#moves">Big moves</a>{{TOC_EXTRA}}<a href="#links">Other markets</a><a href="#network">Neural network</a><a href="#method">Method</a>
     </nav>
   </header>
 
@@ -58,6 +58,27 @@
       <div class="panel"><h3>Heaviest-traded price levels</h3><div id="levels"></div></div>
       <div class="panel"><h3>Where it stands now</h3><div id="state"></div></div>
     </div>
+  </section>
+
+
+  <section id="moves">
+    <div class="sec-head"><h2>When and where the big moves happen</h2>
+      <p>A big move is an hour beyond {{THR_H}} or a day beyond {{THR_D}} of that period's own normal size, so it is measured against the volatility of the time. "Lift" compares how often big moves happen in a slot with how often they happen overall: 2.0 means twice as often, 0.5 half as often. Every condition is read at the close of the bar before the move.</p></div>
+    <div class="figs" id="mv-figs"></div>
+    <div class="panel"><h3>Hour of the day (UTC): lift of big hourly rises and drops</h3><div class="cv" id="mv-hour"></div></div>
+    <div class="grid2">
+      <div class="panel"><h3>Day of the week</h3><div id="mv-dow"></div></div>
+      <div class="panel"><h3>What happens after a big move</h3><div id="mv-after"></div>
+        <p class="caveat">"Same way" is the share of cases where price kept going in the direction of the big move.</p></div>
+    </div>
+    <div class="sec-head"><h3>Where price was just before a big hour</h3></div>
+    <div class="grid2" id="mv-cond-h"></div>
+    <div class="sec-head"><h3>Where things stood the day before a big day</h3></div>
+    <div class="grid2" id="mv-cond-d"></div>
+    <div class="sec-head"><h2>A neural network that flags big moves 24 hours ahead</h2>
+      <p>Two more networks, one for big rises and one for big drops, each score every hour for the chance of a move beyond 2&times; the normal 24-hour move within the next 24 hours. They were tested walk-forward, with a one-day gap so no answer leaks into training. Opening up the hours they flag most strongly shows the pattern each one learned.</p></div>
+    <div id="mv-det" class="model"></div>
+    <div class="panel"><h3>The largest days in three years, and what came before them</h3><div id="mv-days"></div></div>
   </section>
 
   {{OPTIONS}}

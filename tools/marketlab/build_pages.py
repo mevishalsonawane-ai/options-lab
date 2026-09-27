@@ -73,10 +73,16 @@ def build(market, frag_dir=None):
         print(f"{market}: no results yet")
         return
     data = json.load(open(res_path))
+    pat_path = os.path.join(d, "results", "patterns.json")
+    if os.path.exists(pat_path):
+        data["patterns"] = json.load(open(pat_path))
     notes_path = os.path.join(d, "notes.html")
     notes = open(notes_path).read() if os.path.exists(notes_path) else '<div class="note"><b>Pending</b><p>Notes are written after the run.</p></div>'
     cfg = dict(MARKETS[market])
     cfg["NOTES"] = notes
+    pdef = data.get("patterns", {}).get("definition", {})
+    cfg["THR_H"] = f"{pdef.get('hourly_sigma', 3):g}&times;"
+    cfg["THR_D"] = f"{pdef.get('daily_sigma', 2):g}&times;"
     cfg["METHOD"] = METHOD.format(cost="0.05%" if market == "crypto" else "0.015%",
                                   days=data["study"]["summary"]["bars"])
     cfg["CSS"] = open(os.path.join(PAGE, "report.css")).read()

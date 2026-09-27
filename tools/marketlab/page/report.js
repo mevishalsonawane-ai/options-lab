@@ -29,6 +29,7 @@
       crosshair: { mode: 0 },
       handleScroll: { vertTouchDrag: false },
     }, opts));
+    ch.timeScale().applyOptions({ minBarSpacing: 0.05 });
     charts.push(ch);
     return ch;
   }
@@ -112,6 +113,10 @@
     cs.setData(s.t.map((t, i) => ({ time: t, open: s.o[i], high: s.h[i], low: s.l[i], close: s.c[i] })).filter((b) => isNum(b.close)));
     line(ch, s.t, s.sma50, c.accent, 1.5);
     line(ch, s.t, s.sma200, c.ink2, 1.5);
+    if (D.patterns && D.patterns.big_days) {
+      try { cs.setMarkers(D.patterns.big_days.map((b) => ({ time: b.date, position: b.side === "up" ? "belowBar" : "aboveBar",
+        color: b.side === "up" ? c.up : c.down, shape: b.side === "up" ? "arrowUp" : "arrowDown", size: 0.6 }))); } catch (e) { /* decoration */ }
+    }
     (D.study.volume_profile || []).forEach((lv) => cs.createPriceLine({ price: lv.price, color: c.ink3, lineWidth: 1, lineStyle: 2, axisLabelVisible: false }));
     ch.timeScale().fitContent();
     const dd = $("#dd-chart");
@@ -329,9 +334,94 @@
     }
   }
 
+
+  // ---- big moves ---------------------------------------------------------------------------------
+  const FEAT = {
+    rsi14: "RSI (14)", from_480h_high: "distance from 20-day high", from_480h_low: "distance above 20-day low",
+    mom5: "5-bar momentum", mom20: "20-bar momentum", mom60: "60-bar momentum", dist_sma20: "vs 20-bar average",
+    dist_sma50: "vs 50-bar average", dist_sma200: "vs 200-bar average", rv24_rv480: "24h vol vs 20-day vol",
+    rv5: "5-bar volatility", rv20: "20-bar volatility", rv60: "60-bar volatility", atr_pct: "average range (ATR)",
+    range_24h: "24-hour high–low range", dd60: "drop from 60-bar high", vol_ratio: "short vs long volatility",
+    ret_24h: "move over last 24h", dow_sin: "day of week", dow_cos: "day of week", hour_sin: "hour of day",
+    hour_cos: "hour of day", macd_hist: "MACD histogram", close_pos: "close within bar range", vol_z: "volume vs normal",
+    range_pct: "bar range", dvol: "DVOL (implied vol)",
+  };
+  const featName = (k) => FEAT[k] || k.replace(/^ret_l(\d+)$/, "return $1 bars ago");
+  const liftCell = (v) => {
+    if (!isNum(v)) return "–";
+    const c = v >= 1 ? css("--up") : css("--down");
+    const a = Math.min(Math.abs(Math.log(Math.max(v, 0.05))) / Math.log(4), 1) * 55;
+    return `<span class="mono" style="display:inline-block;min-width:44px;padding:2px 6px;border-radius:4px;background:color-mix(in srgb, ${v >= 1 ? css("--accent") : css("--ink-3")} ${a.toFixed(0)}%, transparent)">${v.toFixed(2)}</span>`;
+  };
+
+  function moves() {
+    const P = D.patterns, sec = $("#moves");
+    if (!P) { if (sec) sec.hidden = true; return; }
+    const c = colors(), det = P.detector;
+    $("#mv-figs").innerHTML = [
+      ["Big hours", `${P.hourly_counts.big_up} up · ${P.hourly_counts.big_down} down`, `of ${P.hourly_counts.bars.toLocaleString()} hours`],
+      ["Big days", `${P.daily_counts.big_up} up · ${P.daily_counts.big_down} down`, `of ${P.daily_counts.days.toLocaleString()} days`],
+      ["Big moves cluster", pct(P.cluster_h.p_another_big_within, 0), `chance of another within 24h (normally ${pct(P.cluster_h.p_any_window, 0)})`],
+      ["Rise alarm, top 10%", `${num(det.up.top10_lift, 1)}×`, `hit ${pct(det.up.top10_rate, 1)} vs ${pct(det.up.base_rate, 1)} normally`],
+      ["Drop alarm, top 10%", `${num(det.dn.top10_lift, 1)}×`, `hit ${pct(det.dn.top10_rate, 1)} vs ${pct(det.dn.base_rate, 1)} normally`],
+    ].map(([k, v, n]) => `<div class="fig"><span class="k">${k}</span><span class="v">${v}</span><span class="n">${esc(n)}</span></div>`).join("");
+    cj($("#mv-hour"), "bar", P.by_hour.map((r) => String(r.key).padStart(2, "0")), [
+      { label: "Big rises (lift)", data: P.by_hour.map((r) => r.up_lift), backgroundColor: c.up },
+      { label: "Big drops (lift)", data: P.by_hour.map((r) => r.down_lift), backgroundColor: c.down },
+    ], { scales: { x: { ticks: { color: c.ink3, font: { size: 10 } }, grid: { display: false }, title: { display: true, text: "hour (UTC)", color: c.ink3 } },
+      y: { ticks: { color: c.ink3 }, grid: { color: c.line2 }, title: { display: true, text: "1 = normal", color: c.ink3 } } } });
+    const dd = Object.fromEntries(P.by_weekday_d.map((r) => [r.key, r]));
+    $("#mv-dow").innerHTML = table(["Day", "Big-hour rises", "Big-hour drops", "Big-day rises", "Big-day drops"],
+      P.by_weekday_h.map((r) => [r.key, liftCell(r.up_lift), liftCell(r.down_lift), liftCell(dd[r.key] && dd[r.key].up_lift), liftCell(dd[r.key] && dd[r.key].down_lift)]));
+    const ah = P.after_h, ad = P.after_d;
+    const arow = (x, hs, unit) => [x.side + ` (${x.n})`, ...hs.map((h) => `<span class="${cls(x["ret_" + h])}">${spct(x["ret_" + h], 2)}</span>${x["same_dir_" + h] != null ? ` <span class="caveat">${pct(x["same_dir_" + h], 0)} same way</span>` : ""}`)];
+    $("#mv-after").innerHTML = table(["Hourly", "next 1h", "next 4h", "next 24h"], ah.map((x) => arow(x, [1, 4, 24]))) +
+      table(["Daily", "next day", "next 5 days", "next 20 days"], ad.map((x) => arow(x, [1, 5, 20])));
+    const condCards = (list) => list.map((cd) => `<div class="panel"><h3>${esc(cd.condition)}</h3>${table(["Before the bar", "Bars", "Rise lift", "Drop lift"],
+      cd.rows.map((r) => [esc(r.bucket), r.n.toLocaleString(), liftCell(r.up_lift), liftCell(r.down_lift)]))}</div>`).join("");
+    $("#mv-cond-h").innerHTML = condCards(P.conditions_h);
+    $("#mv-cond-d").innerHTML = condCards(P.conditions_d) + `<p class="caveat">Quintiles run Q1 (lowest fifth of days) to Q5 (highest). With only ${P.daily_counts.big_up + P.daily_counts.big_down} big days, a daily lift needs to be far from 1 before it means much.</p>`;
+    const box = $("#mv-det");
+    box.innerHTML = "";
+    [["up", "Big-rise alarm", c.up], ["dn", "Big-drop alarm", c.down]].forEach(([k, title, col]) => {
+      const x = det[k];
+      const good = x.auc >= 0.58 && x.top10_lift >= 1.5;
+      const card = document.createElement("div");
+      card.className = "panel model";
+      const maxDay = Math.max(...x.alert_by_day.map((r) => r.alert_share));
+      card.innerHTML = `<div class="model-head"><h2>${title}</h2><span class="verdict ${good ? "good" : "bad"}">${good ? "Finds a real pattern" : "Weak"}</span></div>
+        <p class="caveat">Tested ${x.test_start.slice(0, 10)} → ${x.test_end.slice(0, 10)}, ${x.n.toLocaleString()} hours it had never seen. Normally ${pct(x.base_rate, 1)} of hours are followed by a big ${k === "up" ? "rise" : "drop"} within 24 hours.</p>
+        <div class="figs">${[["Ranking skill (AUC)", num(x.auc, 3), "0.5 = none, 1 = perfect"],
+          ["Top 10% of alarms", pct(x.top10_rate, 1), `${num(x.top10_lift, 1)}× the normal rate`],
+          ["Top 2% of alarms", pct(x.top2_rate, 1), `${num(x.top2_lift, 1)}× the normal rate`],
+          ["Latest reading", pct(x.latest_p, 1), x.latest_time.slice(0, 16)]]
+          .map(([a, b, n]) => `<div class="fig"><span class="k">${a}</span><span class="v">${b}</span><span class="n">${esc(n)}</span></div>`).join("")}</div>
+        <div class="grid2">
+          <div class="panel"><h3>What its strongest alarms look like</h3>${table(["Reading", "In alarms", "Normally", "Tilt"],
+            x.profile.filter((q) => !/^(dow|hour)_/.test(q.feature)).slice(0, 8).map((q) => [featName(q.feature), num(q.mean_in_alerts, 3), num(q.mean_all, 3),
+              `<span class="${cls(q.z_in_alerts)}">${q.z_in_alerts > 0 ? "higher" : "lower"} (${num(Math.abs(q.z_in_alerts), 2)} sd)</span>`]))}</div>
+          <div class="panel"><h3>Share of hours in its top 10%, by day</h3>${bars(x.alert_by_day.map((r) => [r.day, r.alert_share, col]), (v) => pct(v, 0))}
+            <p class="caveat">10% would be even. The network was given the day of the week and learned which days to weight.</p></div>
+        </div>
+        <div class="chart short" id="det-${k}"></div>`;
+      box.appendChild(card);
+      const ch = lc($(`#det-${k}`));
+      const s = line(ch, x.daily_max_p.t, x.daily_max_p.p, col, 1.5);
+      const mk = (P.big_days || []).filter((b) => b.side === (k === "up" ? "up" : "down") && b.date >= x.daily_max_p.t[0])
+        .map((b) => ({ time: b.date, position: "aboveBar", color: css("--ink"), shape: k === "up" ? "arrowUp" : "arrowDown", text: "" }));
+      try { s.setMarkers(mk); } catch (e) { /* markers are decoration */ }
+      ch.timeScale().fitContent();
+    });
+    const rows = P.biggest_days.map((r) => [r.date, `${r.weekday}`, `<span class="${cls(r.ret)}">${spct(r.ret, 1)}</span>`, isNum(r.z) ? num(r.z, 1) + "σ" : "–",
+      `<span class="${cls(r.prior_5d)}">${spct(r.prior_5d, 1)}</span>`, num(r.vol_squeeze, 2), pct(r.from_20d_high, 1), pct(r.from_20d_low, 1),
+      ...Object.keys(r).filter((q) => !["date", "side", "ret", "z", "prior_5d", "vol_squeeze", "from_20d_high", "from_20d_low", "weekday"].includes(q)).map((q) => num(r[q], 2))]);
+    const extraHead = Object.keys(P.biggest_days[0] || {}).filter((q) => !["date", "side", "ret", "z", "prior_5d", "vol_squeeze", "from_20d_high", "from_20d_low", "weekday"].includes(q));
+    $("#mv-days").innerHTML = table(["Date", "Day", "Move", "Size", "Prior 5 days", "Vol 5d/60d", "From 20d high", "From 20d low", ...extraHead], rows);
+  }
+
   function render() {
     while (charts.length) { try { charts.pop().remove(); } catch (e) { /* already gone */ } }
-    header(); price(); returns(); volatility(); options(); sessions(); correlations(); models();
+    header(); price(); returns(); volatility(); moves(); options(); sessions(); correlations(); models();
     $("#generated").textContent = `Data to ${D.study.summary.end}; results generated ${D.generated.slice(0, 16).replace("T", " ")} UTC.`;
   }
 
