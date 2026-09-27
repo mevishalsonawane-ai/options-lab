@@ -1,6 +1,7 @@
 import org.gradle.testing.jacoco.plugins.JacocoTaskExtension
 import com.android.build.api.artifact.SingleArtifact
 import java.security.MessageDigest
+import java.time.Duration
 
 plugins {
     id("com.android.application")
@@ -99,7 +100,7 @@ android {
                 // fails the build in minutes instead of holding CI for hours.
                 it.maxParallelForks = 2
                 it.setForkEvery(100)
-                it.timeout.set(java.time.Duration.ofMinutes(35))
+                it.timeout.set(Duration.ofMinutes(35))   // imported: inside android {} "java" is the compile-options block
                 it.systemProperty("robolectric.logging.enabled", "false")
                 // Screen tests write their screenshots (build/outputs/roborazzi); nothing is compared or committed.
                 it.systemProperty("roborazzi.test.record", "true")
