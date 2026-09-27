@@ -74,6 +74,8 @@ import javax.crypto.spec.SecretKeySpec
  * Data & Harvest, Alarms, Schedules, and the More list itself. The pages run on a real, offline
  * [AppModel]; the file pickers are [FakePicker]. Test PINs and passphrases only.
  */
+// A tall phone: a More page is a lazy list, and its later cards (the standing alarms, the backup buttons) are composed only on screen.
+@org.robolectric.annotation.Config(qualifiers = "w411dp-h2400dp")
 @RunWith(AndroidJUnit4::class)
 class ControlPagesTest {
     @get:Rule val watchdog = AreaEWatchdog()
@@ -108,7 +110,7 @@ class ControlPagesTest {
     private fun tap(text: String) { compose.onNodeWithText(text).performSemanticsAction(SemanticsActions.OnClick); compose.frames() }
     private fun toggle(title: String) { compose.switchFor(title).performSemanticsAction(SemanticsActions.OnClick); compose.frames() }
     private fun field(label: String, value: String) { compose.onNodeWithText(label).performTextReplacement(value); compose.frames() }
-    private fun clearAlerts() = com.optionslab.app.work.Alerts.queue.value.forEach { com.optionslab.app.work.Alerts.dismiss(it.id) }
+    private fun clearAlerts() { com.optionslab.app.work.Alerts.queue.value.forEach { com.optionslab.app.work.Alerts.dismiss(it.id) }; com.optionslab.app.work.Alerts.forgetPosted() }
     private fun waitAlert(text: String) = compose.until(20_000, "the alert '$text'") { AreaE.alerted(text) }
     private fun waitSettings(timeoutMs: Long = 10_000, ok: (AppSettings) -> Boolean) = compose.until(timeoutMs, "the settings") { ok(model.settings.value) }
 
@@ -702,5 +704,5 @@ class ControlPagesTest {
 
 /** The error alerts currently posted (a refusal whose exact words come from elsewhere). */
 private object Alerts2 {
-    fun anyError() = com.optionslab.app.work.Alerts.queue.value.any { it.kind == com.optionslab.app.work.Alerts.Kind.ERROR }
+    fun anyError() = (com.optionslab.app.work.Alerts.queue.value + com.optionslab.app.work.Alerts.posted).any { it.kind == com.optionslab.app.work.Alerts.Kind.ERROR }
 }

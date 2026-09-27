@@ -39,14 +39,16 @@ object AreaE {
      */
     fun resetGlobals() {
         Alerts.queue.value.forEach { Alerts.dismiss(it.id) }
+        Alerts.forgetPosted()
         runCatching { Holidays::class.java.getDeclaredField("cache").apply { isAccessible = true }.set(null, null) }
         MainActivity.tabRequests.value = null
         MainActivity.closeRequests.value = null
         SessionLock.lock()
     }
 
-    /** Whether an alert containing [text] is showing (the banner / the dialog's inline alerts). */
-    fun alerted(text: String) = Alerts.queue.value.any { text in it.text }
+    /** Whether an alert containing [text] was posted since the last reset, shown or already hidden (a running test clock hides a banner at once). */
+    /** (Posted since the last reset, shown or already hidden (a running test clock hides a banner at once). */
+    fun alerted(text: String) = (Alerts.queue.value + Alerts.posted).any { text in it.text }
 }
 
 /**

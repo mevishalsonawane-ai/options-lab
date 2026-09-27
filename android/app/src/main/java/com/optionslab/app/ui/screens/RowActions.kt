@@ -282,7 +282,7 @@ fun ProtectDialog(model: AppModel, t: ProtectTarget, onDone: (Boolean) -> Unit) 
         properties = DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy),
         title = { Text("Protect ${t.symbol}", style = Type.title) },
         text = {
-            Column {
+            Column(Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState())) {  // scrolls at a large font / in landscape
                 Text("${if (long) "Long" else "Short"} ${abs(t.qty)} · last ${px(t.price)} · ${if (t.live) "Zerodha" else "paper"}", style = Type.bodySmall.copy(color = p.inkSoft))
                 PriceField(stop, { stop = it }, "Stop price (${if (long) "below" else "above"} ${px(t.price)})")
                 PriceField(trail, { trail = it }, "…or trail by (points)")

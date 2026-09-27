@@ -210,7 +210,7 @@ class StrategiesScreenTest {
         page(emptyList())
         tap("New strategy")
         tap("Save")
-        compose.waitUntil(3_000) { Alerts.queue.value.any { it.text == "legs[0].lots must be above zero" } }
+        compose.waitUntil(3_000) { (Alerts.queue.value + Alerts.posted).any { it.text == "legs[0].lots must be above zero" } }
         assertTrue("still editing", shown("LEG 1"))
     }
 

@@ -105,6 +105,6 @@ class OrderReviewTest {
     @Test fun shortOfMarginIsNotSendable() {
         show(planOf(leg, margin = Broker.Margin(required = 50_000.0, initial = 50_000.0, available = 49_000.0, charges = 0.0)))
         compose.onNodeWithText(send).assertIsNotEnabled()
-        compose.waitUntil(5_000) { Alerts.queue.value.any { it.text == "Short of margin by Rs 1,000: not sendable." } }
+        compose.waitUntil(5_000) { (Alerts.queue.value + Alerts.posted).any { it.text == "Short of margin by Rs 1,000: not sendable." } }
     }
 }

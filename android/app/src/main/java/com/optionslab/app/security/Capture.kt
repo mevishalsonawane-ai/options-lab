@@ -20,6 +20,8 @@ object Capture {
     val policy: SecureFlagPolicy get() = if (allowed) SecureFlagPolicy.SecureOff else SecureFlagPolicy.SecureOn
 
     fun apply(activity: Activity) {
+        // Window flags belong to the main thread; a caller resuming after an off-thread PIN check may not be on it.
+        if (android.os.Looper.myLooper() != android.os.Looper.getMainLooper()) { activity.runOnUiThread { apply(activity) }; return }
         if (allowed) activity.window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
         else activity.window.setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE)
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) activity.setRecentsScreenshotEnabled(allowed)

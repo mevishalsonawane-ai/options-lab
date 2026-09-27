@@ -48,10 +48,10 @@ object BrokerArea {
     }
 
     /** Alerts are an app-wide queue: a banner left by an earlier test must not satisfy this one's check. */
-    fun clearAlerts() = Alerts.queue.value.forEach { Alerts.dismiss(it.id) }
+    fun clearAlerts() { Alerts.queue.value.forEach { Alerts.dismiss(it.id) }; Alerts.forgetPosted() }
 
     fun alerted(text: String, substring: Boolean = false) =
-        Alerts.queue.value.any { if (substring) it.text.contains(text) else it.text == text }
+        (Alerts.queue.value + Alerts.posted).any { if (substring) it.text.contains(text) else it.text == text }
 
     /** Poll [get] (running the main looper, where the model's coroutines resume) until it answers. */
     fun <T> await(what: String, timeoutMs: Long = 20_000, get: () -> T?): T {

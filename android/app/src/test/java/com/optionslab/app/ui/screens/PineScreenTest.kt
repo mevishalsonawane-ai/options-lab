@@ -267,7 +267,7 @@ class PineScreenTest {
         compose.pineTap("Auto-trade")
         compose.pineWaitFor("Save the script first (Code tab)")
         compose.onAllNodes(isToggleable()).onFirst().areaCClick(); compose.waitForIdle()
-        compose.waitUntil(3_000) { Alerts.queue.value.any { it.text.startsWith("Save the script first") } }
+        compose.waitUntil(3_000) { (Alerts.queue.value + Alerts.posted).any { it.text.startsWith("Save the script first") } }
         assertFalse("not switched on", PineScripts.items.value.single().auto.on)
     }
 

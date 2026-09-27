@@ -2,6 +2,7 @@ package com.optionslab.app.ui.screens
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.heightIn
@@ -249,7 +250,7 @@ private fun PaperOrders(model: AppModel, v: Paper.Snapshot) {
             onDismissRequest = { editing = null }, properties = secure,
             title = { Text("Modify paper order", style = Type.title) },
             text = {
-                Column {
+                Column(Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState())) {  // scrolls at a large font / in landscape
                     OutlinedTextField(qty, { qty = it.filter(Char::isDigit) }, label = { Text("Quantity (units)") }, singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
                     if (o.priceType == "LIMIT" || o.priceType == "SL") OutlinedTextField(price, { price = it.filter { c -> c.isDigit() || c == '.' } },
@@ -339,7 +340,7 @@ fun PaperResetDialog(model: AppModel, onClose: () -> Unit) {
         onDismissRequest = onClose, properties = secure,
         title = { Text("Set paper amount", style = Type.title) },
         text = {
-            Column {
+            Column(Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState())) {  // scrolls at a large font / in landscape
                 Text("The paper account starts again with this amount. Every paper order, trade and position is cleared.", style = Type.bodySmall)
                 ParamTokens("Amount", choices.map { rs(it) to (typed.isEmpty() && it == pick) }) { pick = choices[it]; typed = "" }
                 OutlinedTextField(typed, { typed = it.filter(Char::isDigit).take(10) }, label = { Text("Or type an amount (Rs)") }, singleLine = true,

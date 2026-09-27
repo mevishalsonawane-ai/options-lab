@@ -577,8 +577,9 @@ private fun dur(minutes: Double): String = when {
 private fun Tile(label: String, value: String, tone: androidx.compose.ui.graphics.Color, modifier: Modifier) {
     val p = LocalPalette.current
     Column(modifier.background(p.card, RoundedCornerShape(12.dp)).border(1.dp, p.rule, RoundedCornerShape(12.dp)).padding(horizontal = 10.dp, vertical = 8.dp)) {
-        Text(label.uppercase(), style = Type.label.copy(color = p.inkSoft, fontSize = 9.sp), maxLines = 1)
-        Text(value, style = Type.figure.copy(color = tone, fontSize = 15.sp), maxLines = 1, overflow = TextOverflow.Ellipsis)
+        // At a large font on a narrow screen the label wraps and the figure shrinks to stay whole (it was cut to "Rs -8…").
+        Text(label.uppercase(), style = Type.label.copy(color = p.inkSoft, fontSize = 9.sp))
+        com.optionslab.app.ui.components.FitText(value, Type.figure.copy(color = tone, fontSize = 15.sp), minSize = 6.sp)
     }
 }
 

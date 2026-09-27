@@ -1,6 +1,7 @@
 package com.optionslab.app.ui.screens
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -181,7 +182,7 @@ fun TradeScreen(model: AppModel) {
             onDismissRequest = { selling = null }, properties = secure,
             title = { Text("Sell ${h.symbol}", style = Type.title) },
             text = {
-                Column {
+                Column(Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState())) {  // scrolls at a large font / in landscape
                     Text("You hold ${h.qty}${if (h.t1 > 0) " (+${h.t1} T1, not yet sellable)" else ""}. The sale opens for review first.", style = Type.bodySmall)
                     OutlinedTextField(qty, { qty = it.filter(Char::isDigit).take(7) }, label = { Text("Quantity") }, singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
@@ -408,7 +409,7 @@ internal fun ModifyDialog(model: AppModel, o: Broker.OrderRow, onClose: () -> Un
         onDismissRequest = onClose, properties = secure,
         title = { Text("Modify ${o.symbol}", style = Type.title) },
         text = {
-            Column {
+            Column(Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState())) {  // scrolls at a large font / in landscape
                 Text("${o.side} · ${o.product} · filled ${o.filled} of ${o.qty}", style = Type.bodySmall.copy(color = p.inkSoft))
                 ParamTokens("Type", types.map { it to (it == type) }) { type = types[it] }
                 OutlinedTextField(qty, { qty = it.filter(Char::isDigit).take(7) }, label = { Text("Quantity") }, singleLine = true,
@@ -471,7 +472,7 @@ private fun GttDialog(model: AppModel, t: GttTarget, onClose: () -> Unit) {
         onDismissRequest = { model.dismissGtt(); onClose() }, properties = secure,
         title = { Text("Protect ${t.symbol}", style = Type.title) },
         text = {
-            Column {
+            Column(Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState())) {  // scrolls at a large font / in landscape
                 Text("${if (long) "Long" else "Short"} ${kotlin.math.abs(t.netQty)} · ${t.product}. A GTT lives at Zerodha: it fires even if this phone is off. " +
                     "With both a stop and a target it is one-cancels-other.", style = Type.bodySmall)
                 OutlinedTextField(stop, { stop = it.filter { c -> c.isDigit() || c == '.' }; model.dismissGtt() }, singleLine = true,

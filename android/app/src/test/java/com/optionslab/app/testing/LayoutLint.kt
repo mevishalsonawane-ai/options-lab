@@ -134,7 +134,9 @@ object LayoutLint {
                     out += Finding("TOUCH", if (primary) Level.ERROR else Level.WARNING, "clickable '$name' is ${"%.0f".format(w)}x${"%.0f".format(h)} dp (under 48x48)")
                 }
                 // A11Y
-                if (!hasText) out += Finding("A11Y", Level.ERROR, "clickable node ${n.id} has no text, content description or action label")
+                if (!hasText) out += Finding("A11Y", Level.ERROR, "clickable node ${n.id} has no text, content description or action label " +
+                    "(at [${dp(f.left)},${dp(f.top)}-${dp(f.right)},${dp(f.bottom)}] dp, role ${n.config.getOrNull(SemanticsProperties.Role)}, " +
+                    "inside '${generateSequence(n.parent) { it.parent }.map { label(it) }.firstOrNull { it.isNotBlank() } ?: ""}')")
                 if (n.config.getOrNull(SemanticsProperties.Role) == null && n.config.getOrNull(SemanticsProperties.EditableText) == null)
                     out += Finding("A11Y", Level.WARNING, "clickable '$name' has no Role (TalkBack cannot say what it is)")
             }

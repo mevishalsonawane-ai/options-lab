@@ -226,7 +226,7 @@ class OptionOrderSheetTest {
         val trail = compose.onNode(hasSetTextAction() and hasText("…or trail by (points)"))
         stop.performTextInput("105")      // a buy's stop above the entry
         compose.onNodeWithText("Buy (paper)").assertIsNotEnabled()
-        compose.waitUntil(5_000) { Alerts.queue.value.any { it.text == "The stop must be below the current price (100.00)." } }
+        compose.waitUntil(5_000) { (Alerts.queue.value + Alerts.posted).any { it.text == "The stop must be below the current price (100.00)." } }
         stop.performTextClearance(); stop.performTextInput("90")
         compose.onNodeWithText("Buy (paper)").assertIsEnabled()
         target.performTextInput("95")     // a buy's target below the entry
