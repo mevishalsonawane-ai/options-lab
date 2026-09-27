@@ -134,7 +134,9 @@ jobs:
              sleep 300
            done) &
           dumper=$!
-          trap 'pkill -P $dumper 2>/dev/null; kill $dumper 2>/dev/null; true' EXIT
+          # Each step may fail (the dumper already gone, or between children): under bash -e a failing command in
+          # the trap ended a passing step with exit 1 ("BUILD SUCCESSFUL ... Terminated").
+          trap 'pkill -P $dumper 2>/dev/null || true; kill $dumper 2>/dev/null || true' EXIT
           ./gradlew --no-daemon -PtestShard=${{ matrix.shard }}/4 :app:testDebugUnitTest :app:createDebugUnitTestCoverageReport
       - name: Coverage summary
         if: always()
