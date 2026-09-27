@@ -88,7 +88,18 @@ class ChartScreensTest {
     private fun text(t: String, sub: Boolean = false) = compose.onNodeWithText(t, substring = sub)
     private fun shows(t: String, sub: Boolean = true) = compose.onAllNodesWithText(t, substring = sub).fetchSemanticsNodes().isNotEmpty()
     private fun idle() { shadowOf(Looper.getMainLooper()).idle(); compose.waitForIdle() }
-    private fun until(what: () -> Boolean) = compose.waitUntil(5_000) { idle(); what() }
+    private fun until(what: () -> Boolean) {
+        if (compose.mainClock.autoAdvance) return compose.waitUntil(5_000) { idle(); what() }
+        // A dialog holding a text field never reports idle while the clock runs by itself: frames by hand.
+        val end = System.currentTimeMillis() + 5_000
+        while (true) {
+            idle(); frames(2)
+            if (runCatching(what).getOrDefault(false)) return
+            if (System.currentTimeMillis() > end) throw AssertionError("condition not met in 5 s")
+            Thread.sleep(20)
+        }
+    }
+    private fun frames(n: Int = 12) = repeat(n) { compose.mainClock.advanceTimeByFrame() }
 
     // ---- the web chart's host -----------------------------------------------------------------------
 
@@ -583,6 +594,7 @@ class ChartScreensTest {
 
     private fun alertDialog(): Pair<ArrayList<Pair<PriceAlarm, String>>, () -> Int> {
         val saved = ArrayList<Pair<PriceAlarm, String>>(); var closed = 0
+        compose.mainClock.autoAdvance = false        // the dialog's text field: frames by hand
         set { ChartAlertDialog(TEST_OPTION.tradingSymbol, source, onSave = { a, m -> saved += a to m }, onClose = { closed++ }) }
         return saved to { closed }
     }
@@ -590,6 +602,7 @@ class ChartScreensTest {
     private fun level(v: String) {
         compose.onNode(hasSetTextAction()).performTextClearance()
         compose.onNode(hasSetTextAction()).performTextInput(v)
+        frames()
     }
 
     @Test fun alertAboveTheLastPriceFiresOnARise() {
@@ -724,8 +737,13 @@ class ChartScreensLayoutTest(device: DeviceConfig) : ScreenTest(device) {
     }
 
     @Test fun alertDialog() {
+        compose.mainClock.autoAdvance = false        // a dialog holding a text field never idles on a running clock
         show { ChartAlertDialog(TEST_OPTION.tradingSymbol, source, { _, _ -> }, {}) }
-        compose.waitUntil(5_000) { compose.onAllNodesWithText("Now 130.00").fetchSemanticsNodes().isNotEmpty() }
+        val end = System.currentTimeMillis() + 5_000
+        while (compose.onAllNodesWithText("Now 130.00").fetchSemanticsNodes().isEmpty()) {
+            check(System.currentTimeMillis() < end) { "the price never arrived" }
+            shadowOf(Looper.getMainLooper()).idle(); repeat(2) { compose.mainClock.advanceTimeByFrame() }; Thread.sleep(20)
+        }
         capture("chart-alert")
         lint("chart-alert", BUGS)
     }
