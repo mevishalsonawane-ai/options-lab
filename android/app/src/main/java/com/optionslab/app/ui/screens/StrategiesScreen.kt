@@ -333,9 +333,11 @@ private fun StrategyEditor(actions: StrategyActions, d: StrategyDef, onClose: ()
                         ParamTokens("Days", all.map { it.name.take(3) to (it in days) }) { i -> if (all[i] in days) days.remove(all[i]) else days.add(all[i]) }
                         ParamTokens("Scheduled start", listOf("Paper" to !schedLive, "Live (asks you)" to schedLive)) { schedLive = it == 1 }
                     }
-                    com.optionslab.app.ui.components.AlertOn(err, throttle = false)
                 }
             }
+            // Outside the list: its last item is only composed once scrolled to, and a save refused while the
+            // top of the form was on screen said nothing.
+            com.optionslab.app.ui.components.AlertOn(err, throttle = false)
         },
         confirmButton = {
             TextButton({

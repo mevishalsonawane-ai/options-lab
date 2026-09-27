@@ -71,7 +71,6 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
-import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -230,7 +229,6 @@ class BrokerScreensTest {
 
     // ---- the PIN re-check before a real order ------------------------------------------------------
 
-    @Ignore(com.optionslab.app.ui.OrderReviewLiveGateTest.PIN_DIALOG)
     @Test fun reauthWrongPinThenRightPin() {
         PinLock.setPin(BrokerArea.PIN.toCharArray())
         val m = model()
@@ -250,7 +248,6 @@ class BrokerScreensTest {
         assertEquals("a right PIN clears the count", 0, PinLock.failures())
     }
 
-    @Ignore(com.optionslab.app.ui.OrderReviewLiveGateTest.PIN_DIALOG)
     @Test fun reauthCancelAndACustomReason() {
         PinLock.setPin(BrokerArea.PIN.toCharArray())
         val m = model()
@@ -262,7 +259,6 @@ class BrokerScreensTest {
         assertEquals(1, cancelled); assertEquals(0, ok)
     }
 
-    @Ignore(com.optionslab.app.ui.OrderReviewLiveGateTest.PIN_DIALOG)
     @Test fun reauthLockedOut() {
         PinLock.setPin(BrokerArea.PIN.toCharArray())
         repeat(4) { PinLock.verify(BrokerArea.WRONG_PIN.toCharArray(), false) }
@@ -287,7 +283,6 @@ class BrokerScreensTest {
         if (ask) LoginPinDialog(m)
     }
 
-    @Ignore(com.optionslab.app.ui.OrderReviewLiveGateTest.PIN_DIALOG)
     @Test fun theLoginPinOpensTheSecretForKitesPageOnly() {
         BrokerArea.saveKeys()
         val m = model()
@@ -304,7 +299,6 @@ class BrokerScreensTest {
         assertTrue("nothing asked of Zerodha yet", kite.requests.isEmpty())
     }
 
-    @Ignore(com.optionslab.app.ui.OrderReviewLiveGateTest.PIN_DIALOG)
     @Test fun aWrongLoginPinKeepsThePromptAndCancelCloses() {
         BrokerArea.saveKeys()
         val m = model()
@@ -320,7 +314,6 @@ class BrokerScreensTest {
         assertFalse(m.showKiteLogin.value)
     }
 
-    @Ignore(com.optionslab.app.ui.OrderReviewLiveGateTest.PIN_DIALOG)
     @Test fun aLockedLoginPinSaysForHowLong() {
         BrokerArea.saveKeys()
         repeat(4) { PinLock.verify(BrokerArea.WRONG_PIN.toCharArray(), false) }
@@ -333,7 +326,6 @@ class BrokerScreensTest {
         assertFalse(m.showKiteLogin.value)
     }
 
-    @Ignore(com.optionslab.app.ui.OrderReviewLiveGateTest.PIN_DIALOG)
     @Test fun aFingerprintOnlySecretCannotBeOpenedWithThePin() {
         PinLock.setPin(BrokerArea.PIN.toCharArray())
         Broker.saveCredentials(BrokerArea.KEY, BrokerArea.SECRET, null, "bio-sealed-test-not-real")

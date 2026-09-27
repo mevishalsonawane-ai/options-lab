@@ -17,6 +17,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.border
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -576,12 +578,17 @@ internal fun StaticIpCard(
         relayMsg?.let { Text(it, style = Type.bodySmall.copy(color = if (it.startsWith("✓")) p.verdigris else p.oxblood), modifier = Modifier.padding(top = 6.dp)) }
         step("4", "Register that IP with Zerodha", "On the Kite developer site open your app and enter the same IP in its static IP setting.")
         link("Open My apps on developers.kite.trade", "https://developers.kite.trade/apps")
-        if (pub != null) Row(Modifier.fillMaxWidth().padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+        // The whole row is the switch (a 48 dp target; the bare switch was 52x32 dp), named for TalkBack.
+        if (pub != null) Row(
+            Modifier.fillMaxWidth().padding(top = 10.dp).heightIn(min = 48.dp)
+                .toggleable(value = relayOn, role = Role.Switch) { on ->
+                    if (on && relay.host == null) com.optionslab.app.work.Alerts.error("Connect & test first.") else { relay.enabled = on; relayOn = on; check() }
+                }
+                .semantics { contentDescription = "Send orders through your server" },
+            horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically,
+        ) {
             Text(if (relayOn) "Orders go through your server" else "Relay off: orders go direct", style = Type.bodySmall.copy(color = if (relayOn) p.verdigris else p.inkSoft), modifier = Modifier.weight(1f))
-            // Named for TalkBack: a bare switch is read as just "switch".
-            androidx.compose.material3.Switch(checked = relayOn, onCheckedChange = { on ->
-                if (on && relay.host == null) com.optionslab.app.work.Alerts.error("Connect & test first.") else { relay.enabled = on; relayOn = on; check() }
-            }, modifier = Modifier.semantics { contentDescription = "Send orders through your server" })
+            androidx.compose.material3.Switch(checked = relayOn, onCheckedChange = null)
         }
         if (pub != null) Row(horizontalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.padding(top = 4.dp)) {
             Text("New key", style = Type.label.copy(color = p.inkSoft), modifier = Modifier.clickable {

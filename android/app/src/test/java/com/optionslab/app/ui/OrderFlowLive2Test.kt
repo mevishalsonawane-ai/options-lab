@@ -36,7 +36,6 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
-import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -346,18 +345,6 @@ class OrderFlowLive2Test : RobolectricTest() {
 @RunWith(AndroidJUnit4::class)
 @ConscryptMode(ConscryptMode.Mode.OFF)
 class OrderReviewLiveGateTest {
-    companion object {
-        /**
-         * Test infrastructure, not the app: the PIN prompt ([com.optionslab.app.ui.screens.Reauth]) is a material3
-         * AlertDialog holding a text field, and under Robolectric Compose never reports idle while it is up
-         * (AppNotIdleException after 60 s; with the clock paused, the idling loop spins for ever and stalls the
-         * whole CI job, as seen in hold() -> performScrollTo). The gate these tests drive is covered without the
-         * dialog: HoldToSend (tap vs hold vs TalkBack action) in BrokerScreensTest, PlanCard in OrderReviewTest,
-         * and the send itself (exactly the reviewed order, nothing before sendPlan) in OrderFlowLiveTest/OrderFlowLive2Test.
-         */
-        const val PIN_DIALOG = "TEST INFRA: Robolectric never idles with the PIN AlertDialog (text field) open; the gate is covered without the dialog (see PIN_DIALOG)"
-    }
-
     @get:Rule val watchdog = com.optionslab.app.testing.Watchdog()
     @get:Rule val compose = createComposeRule()
     private lateinit var kite: FakeKite
@@ -428,7 +415,6 @@ class OrderReviewLiveGateTest {
         assertTrue(kite.writes.isEmpty())
     }
 
-    @Ignore(PIN_DIALOG)
     @Test fun holdThenTheRightPinSendsExactlyTheReviewedOrder() {
         val m = reviewed()
         hold()
@@ -444,7 +430,6 @@ class OrderReviewLiveGateTest {
         assertEquals(1, kite.placed.size)
     }
 
-    @Ignore(PIN_DIALOG)
     @Test fun aWrongPinSendsNothingAndCancellingClosesThePrompt() {
         reviewed()
         hold()
@@ -462,7 +447,6 @@ class OrderReviewLiveGateTest {
     /** The box is a password field: its semantics carry the masked text, so only its length is read. */
     private fun pinLength() = pin().fetchSemanticsNode().config[SemanticsProperties.EditableText].text.length
 
-    @Ignore(PIN_DIALOG)
     @Test fun thePinBoxTakesAtMostTwelveDigits() {
         reviewed()
         hold()
@@ -473,7 +457,6 @@ class OrderReviewLiveGateTest {
         assertTrue(kite.writes.isEmpty())
     }
 
-    @Ignore(PIN_DIALOG)
     @Test fun lettersTypedIntoThePinBoxAreDropped() {
         val m = reviewed()
         hold()
@@ -483,7 +466,6 @@ class OrderReviewLiveGateTest {
         assertEquals(1, kite.placed.size)
     }
 
-    @Ignore(PIN_DIALOG)
     @Test fun aLockedOutPinSendsNothingEvenWhenRightAfterwards() {
         reviewed()
         repeat(4) { PinLock.verify(BrokerArea.WRONG_PIN.toCharArray(), false) }
@@ -499,7 +481,6 @@ class OrderReviewLiveGateTest {
         assertTrue("nothing is sent while locked out: ${kite.writes}", kite.writes.isEmpty())
     }
 
-    @Ignore(PIN_DIALOG)
     @Test fun aDoubleTapOnHoldAndConfirmSendsOneOrder() {
         val m = reviewed()
         hold()
@@ -518,7 +499,6 @@ class OrderReviewLiveGateTest {
         assertEquals(1, kite.placed.size)
     }
 
-    @Ignore(PIN_DIALOG)
     @Test fun theStuckLegsCancelNeedsThePinToo() {
         val m = reviewed()
         val plan = (m.plan.value as Load.Done).value

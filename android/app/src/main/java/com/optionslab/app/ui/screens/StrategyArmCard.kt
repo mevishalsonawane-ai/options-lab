@@ -8,6 +8,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -97,6 +98,7 @@ internal interface StrategyArmActions {
  * Home's Strategies card from plain state and callbacks: [orbRows] is the built-in ORB arms ([OrbRows] in the
  * app), [reauth] the PIN or fingerprint prompt ([Reauth] in the app).
  */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 internal fun StrategyArmContent(
     live: Boolean, killOn: Boolean, all: List<com.optionslab.app.data.Strategies.Entry>, auto: Map<Long, Boolean>,
@@ -181,11 +183,13 @@ internal fun StrategyArmContent(
                 Column(Modifier.fillMaxWidth().padding(bottom = 10.dp).background(p.amber.copy(alpha = 0.12f), RoundedCornerShape(12.dp)).padding(12.dp)) {
                     Text("Start time reached: waiting for your approval (${if (mode == RunMode.LIVE) "live" else "paper"})",
                         style = Type.bodySmall.copy(color = p.ink, fontWeight = FontWeight.SemiBold))
-                    Row(Modifier.padding(top = 8.dp)) {
+                    // Side by side when both fit; on a narrow screen or a large font "Skip today" moves under the
+                    // approval (side by side, "Approve & start" was squeezed until even two lines cut it).
+                    androidx.compose.foundation.layout.FlowRow(Modifier.fillMaxWidth().padding(top = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         BrassButton("Approve & start", Modifier.weight(1f), tone = if (mode == RunMode.LIVE) p.oxblood else p.verdigris) {
                             if (mode == RunMode.LIVE) reauthApprove = d.id else actions.approve(d.id)
                         }
-                        Spacer(Modifier.width(8.dp))
                         BrassButton("Skip today", tone = p.inkSoft) { actions.skip(d.id) }
                     }
                 }

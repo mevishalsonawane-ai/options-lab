@@ -169,8 +169,8 @@ abstract class TradeLayoutBase(device: DeviceConfig) : TradeScreenBase(device) {
         paperRestingLimit(); paperPosition()
         showPaper()
         tapText("Orders")
-        compose.waitUntil(5_000) { exists("Modify") }
-        scrollTo("Modify")
+        // At a large font the order's row is below the fold (not composed until scrolled to): scroll while waiting.
+        compose.waitUntil(10_000) { runCatching { scrollTo("Modify"); true }.getOrDefault(false) }
         snap("trade-paper-orders", known())
     }
 
@@ -178,8 +178,8 @@ abstract class TradeLayoutBase(device: DeviceConfig) : TradeScreenBase(device) {
         paperRestingLimit()
         showPaper()
         tapText("Orders")
-        compose.waitUntil(5_000) { exists("Modify") }
-        scrollTo("Modify")
+        // At a large font the order's row is below the fold (not composed until scrolled to): scroll while waiting.
+        compose.waitUntil(10_000) { runCatching { scrollTo("Modify"); true }.getOrDefault(false) }
         paused {
             compose.onNodeWithText("Modify").performClick(); frames()
             snap("trade-paper-modify", known())

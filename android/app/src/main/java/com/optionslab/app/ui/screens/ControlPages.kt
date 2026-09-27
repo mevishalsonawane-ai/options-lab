@@ -4,6 +4,8 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -37,8 +39,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.SecureFlagPolicy
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import com.optionslab.app.data.Market
 import com.optionslab.app.data.PriceAlarm
 import com.optionslab.app.data.Store
@@ -72,14 +72,15 @@ import java.time.format.DateTimeFormatter
 @Composable
 fun ToggleRow(title: String, sub: String?, checked: Boolean, onChange: (Boolean) -> Unit) {
     val p = LocalPalette.current
-    Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+    // The whole row is the switch: a 48 dp target (the bare switch was 52x32 dp) read with its title by TalkBack.
+    Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).toggleable(value = checked, role = androidx.compose.ui.semantics.Role.Switch, onValueChange = onChange)
+        .padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
             Text(title, style = Type.body.copy(color = p.ink))
             if (sub != null) Text(sub, style = Type.italic.copy(color = p.inkSoft, fontSize = 13.sp))
         }
         Spacer(Modifier.width(8.dp))
-        // Labelled with the row's title: a bare switch is read by TalkBack as just "switch".
-        Switch(checked, onChange, Modifier.semantics { contentDescription = title }, colors = SwitchDefaults.colors(
+        Switch(checked, null, colors = SwitchDefaults.colors(
             checkedThumbColor = p.card, checkedTrackColor = p.brass, uncheckedThumbColor = p.inkFaint, uncheckedTrackColor = p.paperDeep,
             uncheckedBorderColor = p.rule))
     }

@@ -12,6 +12,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.hasScrollToIndexAction
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performScrollToNode
@@ -156,7 +157,6 @@ class ControlScreensLayoutTest(device: DeviceConfig) : ScreenTest(device) {
 
     @Test fun securityChangePin() {
         if (!onSix()) return
-        compose.mainClock.autoAdvance = false   // a dialog with a text field never idles on a running clock
         show { SecurityPage(model()) }
         frames()
         reveal("Change PIN"); tap("Change PIN")
@@ -167,11 +167,10 @@ class ControlScreensLayoutTest(device: DeviceConfig) : ScreenTest(device) {
     @Test fun securityBackupSeal() {
         if (!onSix()) return
         PinLock.setPin("246813".toCharArray())
-        compose.mainClock.autoAdvance = false   // a dialog with a text field never idles on a running clock
         show { SecurityPage(model()) }
         frames()
         reveal("Back up now"); tap("Back up now")
-        frames()
+        compose.waitUntil(10_000) { compose.onAllNodesWithText("Backup passphrase").fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithText("Backup passphrase").performTextReplacement("correct horse")
         compose.onNodeWithText("Passphrase again").performTextReplacement("correct horsx")
         frames()

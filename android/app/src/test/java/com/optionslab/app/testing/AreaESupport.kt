@@ -154,7 +154,9 @@ fun ComposeTestRule.switchFor(title: String): SemanticsNodeInteraction {
     reveal(title)
     val t = onAllNodesWithText(title, useUnmergedTree = true).fetchSemanticsNodes().first()
     val y = t.boundsInRoot.center.y
-    val sw: SemanticsNode = onAllNodes(isToggleable(), useUnmergedTree = true).fetchSemanticsNodes()
-        .minByOrNull { abs(it.boundsInRoot.center.y - y) } ?: throw AssertionError("no switch near '$title'")
+    val all = onAllNodes(isToggleable(), useUnmergedTree = true).fetchSemanticsNodes()
+    // A row that is itself the switch holds its title; otherwise the switch nearest the title's line.
+    val sw: SemanticsNode = all.filter { it.boundsInRoot.top <= y && y <= it.boundsInRoot.bottom }.minByOrNull { it.boundsInRoot.height }
+        ?: all.minByOrNull { abs(it.boundsInRoot.center.y - y) } ?: throw AssertionError("no switch near '$title'")
     return onNode(SemanticsMatcher("node ${sw.id}") { it.id == sw.id }, useUnmergedTree = true)
 }
