@@ -94,10 +94,16 @@ jobs:
           if-no-files-found: error
 
   app-tests:
-    name: App tests (JVM, Robolectric, Compose UI)
+    name: App tests (JVM, Robolectric, Compose UI) ${{ matrix.shard }}/4
     runs-on: ubuntu-latest
     timeout-minutes: 45
     needs: engine
+    # Four jobs at once, each a quarter of the test classes (by class-name hash): the whole suite
+    # fits the time limit, and one area's stall cannot hold up the others' results.
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3]
     defaults:
       run:
         working-directory: android
@@ -116,7 +122,7 @@ jobs:
       # No secrets here: the tests use made-up values and an in-memory stand-in for the Keystore.
       # Robolectric fetches its Android runtime jar from Maven Central on first use.
       - name: Unit and UI tests, with coverage
-        run: ./gradlew --no-daemon :app:testDebugUnitTest :app:createDebugUnitTestCoverageReport
+        run: ./gradlew --no-daemon -PtestShard=${{ matrix.shard }}/4 :app:testDebugUnitTest :app:createDebugUnitTestCoverageReport
       - name: Coverage summary
         if: always()
         run: python3 tools/coverage_summary.py "$(find app/build/reports/coverage -name report.xml 2>/dev/null | head -1)" app/build/test-results/testDebugUnitTest | tee -a "$GITHUB_STEP_SUMMARY"
@@ -124,19 +130,19 @@ jobs:
         if: always()
         run: |
           n=$(find app/build/outputs/roborazzi -name '*.png' 2>/dev/null | wc -l)
-          echo "$n screenshots in app/build/outputs/roborazzi (artifact app-screenshots)"
+          echo "$n screenshots in app/build/outputs/roborazzi (artifact app-screenshots-${{ matrix.shard }})"
           find app/build/outputs/roborazzi -name '*.png' -printf '%f\n' 2>/dev/null | sort | head -400
           grep -rhoE 'LAYOUT BUG \([^)]*\): [^<]*' app/build/test-results/testDebugUnitTest/*.xml 2>/dev/null | sort -u | head -100 || true
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: app-screenshots
+          name: app-screenshots-${{ matrix.shard }}
           path: android/app/build/outputs/roborazzi/
           if-no-files-found: warn
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: app-test-reports
+          name: app-test-reports-${{ matrix.shard }}
           path: |
             android/app/build/reports/tests/testDebugUnitTest/
             android/app/build/test-results/testDebugUnitTest/
@@ -155,7 +161,8 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: app-screenshots
+          pattern: app-screenshots-*
+          merge-multiple: true
           path: shots
       - name: Push to ui-screenshots
         env:

@@ -98,6 +98,14 @@ android {
                 // Two test JVMs at once (the CI runner has 4 cores, 16 GB), each replaced after 100 classes so
                 // one area's static state cannot leak into - or stall - another's; and a hard limit, so a hang
                 // fails the build in minutes instead of holding CI for hours.
+                // CI runs the suite in shards (-PtestShard=i/n, one job each): a class - with its inner classes -
+                // belongs to shard hash(name) % n. Without the property every class runs, as before.
+                (project.findProperty("testShard") as String?)?.split("/")?.map { v -> v.trim().toInt() }?.let { (i, n) ->
+                    it.exclude(org.gradle.api.specs.Spec<org.gradle.api.file.FileTreeElement> { e ->
+                        !e.isDirectory && e.name.endsWith(".class") &&
+                            (e.relativePath.pathString.substringBefore('$').removeSuffix(".class").hashCode() and 0x7fffffff) % n != i
+                    })
+                }
                 it.maxParallelForks = 2
                 it.setForkEvery(100)
                 it.timeout.set(Duration.ofMinutes(35))   // imported: inside android {} "java" is the compile-options block
