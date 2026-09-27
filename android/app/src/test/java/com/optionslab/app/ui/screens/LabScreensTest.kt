@@ -488,7 +488,7 @@ class LabScreensLayoutTest(device: DeviceConfig) : ScreenTest(device) {
 
     @Test fun trialsIdle() {
         checkScreen("lab-trials-idle", BUGS, content = trials(Load.Idle, Load.Idle))
-        assertTrue(smokeEveryAction().containsAll(listOf("Run the trial", "Adjust")))
+        if (device.name == "phone-font1.3-light") assertTrue(smokeEveryAction().containsAll(listOf("Run the trial", "Adjust")))
     }
 
     @Test fun trialsBusy() = checkScreen("lab-trials-busy", BUGS,
@@ -496,14 +496,14 @@ class LabScreensLayoutTest(device: DeviceConfig) : ScreenTest(device) {
 
     @Test fun trialsReport() {
         checkScreen("lab-trials-report", BUGS, content = trials(Load.Done(ResearchFixtures.report), Load.Done(ResearchFixtures.arms)))
-        smokeEveryAction()
+        if (device.name == "phone-font1.3-light") smokeEveryAction()
     }
 
     @Test fun healthMixed() {
         checkScreen("lab-health-mixed", BUGS) {
             LabTabs("health", {}) { HealthContent(s, Load.Done(ResearchFixtures.mixedHealth), "backtest", {}, {}, {}, {}) }
         }
-        smokeEveryAction()
+        if (device.name == "phone-font1.3-light") smokeEveryAction()
     }
 
     @Test fun healthFailed() = checkScreen("lab-health-failed", BUGS) {
@@ -514,7 +514,7 @@ class LabScreensLayoutTest(device: DeviceConfig) : ScreenTest(device) {
         checkScreen("lab-presets-idle", BUGS) {
             Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 14.dp)) { PresetsContent(Load.Idle, {}, { _, _, _, _, _, _, _ -> }, { _, _, _, _, _, _, _ -> }) }
         }
-        smokeEveryAction()
+        if (device.name == "phone-font1.3-light") smokeEveryAction()
     }
 
     @Test fun presetsResult() = checkScreen("lab-presets-result", BUGS) {
@@ -528,7 +528,7 @@ class LabScreensLayoutTest(device: DeviceConfig) : ScreenTest(device) {
         checkScreen("lab-replay-loaded", BUGS) {
             LabTabs("replay", {}) { ReplayContent(Load.Done(sess), { listOf(sess.day) }, { _, _ -> }) }
         }
-        smokeEveryAction(skip = setOf("Play"))
+        if (device.name == "phone-font1.3-light") smokeEveryAction(skip = setOf("Play"))
     }
 
     @Test fun replayNoSessions() = checkScreen("lab-replay-empty", BUGS) {

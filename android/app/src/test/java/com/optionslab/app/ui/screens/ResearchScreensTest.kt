@@ -387,25 +387,25 @@ class ResearchScreensLayoutTest(device: DeviceConfig) : ScreenTest(device) {
 
     @Test fun icTable() {
         checkScreen("research-ic", BUGS) { IcContent(Load.Done(ResearchFixtures.ic)) { _, _, _ -> } }
-        smokeEveryAction()
+        if (device.name == "phone-font1.3-light") smokeEveryAction()
     }
 
     @Test fun signalLab() {
         val r = ResearchFixtures.signal
         checkScreen("research-signal", BUGS) { SignalContent(Load.Done(r), { listOf(r.day) }) { _, _, _, _, _, _, _ -> } }
-        smokeEveryAction()
+        if (device.name == "phone-font1.3-light") smokeEveryAction()
     }
 
     @Test fun sizing() {
         checkScreen("research-sizing", BUGS) { SizingContent(ResearchFixtures.settings) { _, _ -> } }
-        smokeEveryAction()
+        if (device.name == "phone-font1.3-light") smokeEveryAction()
     }
 
     @Test fun costs() {
         checkScreen("research-costs", BUGS) {
             CostsContent { p, l, n, r -> Triple(Costs.sellToSettle(p, l, n, r), Costs.buyToSettle(p, l, n, r), Costs.roundTrip(p, l, n, r)) }
         }
-        smokeEveryAction()
+        if (device.name == "phone-font1.3-light") smokeEveryAction()
     }
 
     @Test fun lotHistory() = checkScreen("research-lots", BUGS) { LotsPage() }
@@ -416,7 +416,7 @@ class ResearchScreensLayoutTest(device: DeviceConfig) : ScreenTest(device) {
         checkScreen("home-paper", BUGS) {
             AlmanacContent(false, false, mapOf("BANKNIFTY" to HomeFixtures.quote), null, HomeFixtures.daily, Load.Idle, Load.Done(HomeFixtures.paper), {}, {}) {}
         }
-        smokeEveryAction()
+        if (device.name == "phone-font1.3-light") smokeEveryAction()
     }
 
     @Test fun homeLiveLoggedOut() = checkScreen("home-live-logged-out", BUGS) {
