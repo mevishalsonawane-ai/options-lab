@@ -38,6 +38,10 @@ import com.optionslab.app.testing.FakePicker
 import com.optionslab.app.testing.NetworkGuard
 import com.optionslab.app.testing.OfflineModel
 import com.optionslab.app.testing.has
+import com.optionslab.app.testing.AreaEWatchdog
+import com.optionslab.app.testing.frames
+import com.optionslab.app.testing.pause
+import com.optionslab.app.testing.until
 import com.optionslab.app.testing.reveal
 import com.optionslab.app.testing.switchFor
 import com.optionslab.app.testing.waitForNoText
@@ -72,6 +76,7 @@ import javax.crypto.spec.SecretKeySpec
  */
 @RunWith(AndroidJUnit4::class)
 class ControlPagesTest {
+    @get:Rule val watchdog = AreaEWatchdog()
     @get:Rule val compose = createComposeRule()
     private val app: Application get() = ApplicationProvider.getApplicationContext()
     private lateinit var offline: OfflineModel
@@ -91,16 +96,21 @@ class ControlPagesTest {
         assertEquals("no test may reach the network", emptyList<String>(), NetworkGuard.blocked.toList())
     }
 
-    private fun show(content: @Composable () -> Unit) = compose.setContent {
-        CompositionLocalProvider(LocalActivityResultRegistryOwner provides picker) { IraAlgoTheme("light") { content() } }
+    /** Every page here opens dialogs with text fields (PIN, passphrase): the clock runs paused (see [pause]). */
+    private fun show(content: @Composable () -> Unit) {
+        compose.pause()
+        compose.setContent {
+            CompositionLocalProvider(LocalActivityResultRegistryOwner provides picker) { IraAlgoTheme("light") { content() } }
+        }
+        compose.frames()
     }
 
-    private fun tap(text: String) = compose.onNodeWithText(text).performSemanticsAction(SemanticsActions.OnClick)
-    private fun toggle(title: String) = compose.switchFor(title).performSemanticsAction(SemanticsActions.OnClick)
-    private fun field(label: String, value: String) = compose.onNodeWithText(label).performTextReplacement(value)
+    private fun tap(text: String) { compose.onNodeWithText(text).performSemanticsAction(SemanticsActions.OnClick); compose.frames() }
+    private fun toggle(title: String) { compose.switchFor(title).performSemanticsAction(SemanticsActions.OnClick); compose.frames() }
+    private fun field(label: String, value: String) { compose.onNodeWithText(label).performTextReplacement(value); compose.frames() }
     private fun clearAlerts() = com.optionslab.app.work.Alerts.queue.value.forEach { com.optionslab.app.work.Alerts.dismiss(it.id) }
-    private fun waitAlert(text: String) = compose.waitUntil(20_000) { AreaE.alerted(text) }
-    private fun waitSettings(timeoutMs: Long = 10_000, ok: (AppSettings) -> Boolean) = compose.waitUntil(timeoutMs) { ok(model.settings.value) }
+    private fun waitAlert(text: String) = compose.until(20_000, "the alert '$text'") { AreaE.alerted(text) }
+    private fun waitSettings(timeoutMs: Long = 10_000, ok: (AppSettings) -> Boolean) = compose.until(timeoutMs, "the settings") { ok(model.settings.value) }
 
     /** The PIN step every protection-lowering switch asks for. */
     private fun reauth(with: String, expectWhy: String? = null) {
@@ -158,7 +168,7 @@ class ControlPagesTest {
         reauth(pin, "Enter your app PIN to keep the app open longer when idle.")
         waitSettings { it.idleSeconds == 600 }
         // Saved where the session lock reads it.
-        compose.waitUntil(10_000) { SecurePrefs.getInt(SessionLock.K_IDLE, 0) == 600 }
+        compose.until(10_000) { SecurePrefs.getInt(SessionLock.K_IDLE, 0) == 600 }
     }
 
     @Test fun screenshotsCanBeBlockedAtOnceAndAllowedOnlyWithThePin() {
@@ -172,7 +182,7 @@ class ControlPagesTest {
         assertEquals(androidx.compose.ui.window.SecureFlagPolicy.SecureOn, Capture.policy)
         toggle(title)
         reauth(pin, "Enter your app PIN to allow screenshots and screen recording.")
-        compose.waitUntil(10_000) { Capture.allowed }
+        compose.until(10_000) { Capture.allowed }
     }
 
     @Test fun widgetAndLockScreenPrivacySwitches() {
@@ -183,11 +193,11 @@ class ControlPagesTest {
         assertTrue(model.settings.value.hideAmountsOnLockScreen)
         toggle("Hide figures on the lock screen")
         waitSettings { !it.hideAmountsOnLockScreen }
-        compose.waitUntil(10_000) { AppSettings.load().widgetPnl && !AppSettings.load().hideAmountsOnLockScreen }
+        compose.until(10_000) { AppSettings.load().widgetPnl && !AppSettings.load().hideAmountsOnLockScreen }
     }
 
     @Test fun aFailedDeviceCheckPausesTheFingerprintAndIsListed() {
-        compose.waitUntil(15_000) { model.integrity.value.isNotEmpty() }   // the model's own first check
+        compose.until(15_000) { model.integrity.value.isNotEmpty() }   // the model's own first check
         model.integrity.value = listOf(Integrity.Finding("Root", Integrity.Severity.DANGER, "su binaries present (test)"),
             Integrity.Finding("Debugger", Integrity.Severity.OK, "none attached"))
         model.update { it.copy(biometric = true) }
@@ -229,12 +239,12 @@ class ControlPagesTest {
         clearAlerts()
         field("Current PIN", pin); field("New PIN (6 digits)", "111111")
         tap("Change")
-        compose.waitUntil(20_000) { Alerts2.anyError() }
+        compose.until(20_000) { Alerts2.anyError() }
         compose.onNodeWithText("Current PIN").assertExists()
         assertEquals("the old PIN still stands", PinLock.Result.Ok, PinLock.verify(pin.toCharArray(), false))
         field("Current PIN", pin); field("New PIN (6 digits)", "135792")
         tap("Change")
-        compose.waitUntil(20_000) { model.message.value == "PIN changed." }
+        compose.until(20_000) { model.message.value == "PIN changed." }
         compose.waitForNoText("Current PIN")
         assertEquals(PinLock.Result.Ok, PinLock.verify("135792".toCharArray(), false))
         assertTrue(PinLock.verify(pin.toCharArray(), false) is PinLock.Result.Wrong)
@@ -261,7 +271,7 @@ class ControlPagesTest {
         tap("Erase everything personal")
         compose.waitForText("Erase everything personal?")
         tap("Erase")
-        compose.waitUntil(10_000) { wipes.value == before + 1 }
+        compose.until(10_000) { wipes.value == before + 1 }
         assertFalse(PinLock.isSet)
         assertTrue(SessionLock.locked.value)
     }
@@ -284,7 +294,7 @@ class ControlPagesTest {
         assertEquals(2, KitePin.pins.size)
         tap("Re-trust (Zerodha changed its CA)")
         reauth(pin)
-        compose.waitUntil(20_000) { KitePin.pins.isEmpty() }
+        compose.until(20_000) { KitePin.pins.isEmpty() }
         compose.waitForText("Not pinned yet", substring = true)
         assertEquals("Pins cleared. The next connection, on a network you trust, records them again.", model.message.value)
     }
@@ -377,7 +387,7 @@ class ControlPagesTest {
         field("Backup passphrase", "correct horse battery staple")
         field("Passphrase again", "correct horse battery staple")
         tap("Continue")
-        compose.waitUntil(30_000) { picker.launched.isNotEmpty() }
+        compose.until(30_000) { picker.launched.isNotEmpty() }
         compose.waitForNoText("Seal the backup")
         assertFalse(AreaE.alerted("Backup saved."))
     }
@@ -403,7 +413,7 @@ class ControlPagesTest {
         clearAlerts()
         field("Passphrase", "Wrong passphrase 42")
         tap("Continue")
-        compose.waitUntil(30_000) { Alerts2.anyError() }
+        compose.until(30_000) { Alerts2.anyError() }
         compose.onNodeWithText("Open the backup").assertExists()
         field("Passphrase", phrase)
         tap("Continue")
@@ -415,7 +425,7 @@ class ControlPagesTest {
         assertEquals(321_000.0, SecurePrefs.getDouble("s.capital", 0.0), 0.0)
         assertTrue(SecurePrefs.getBoolean(Backup.DISARM, false))
         // Once: the confirmation cannot come back and a second restore cannot start.
-        compose.waitForIdle()
+        compose.frames(); compose.waitForIdle()
         assertFalse(compose.has("Restore this backup?"))
         assertFalse(compose.has("Confirm it is you"))
     }
@@ -477,7 +487,7 @@ class ControlPagesTest {
         show { SecurityPage(model) }
         compose.reveal("Restore…")
         tap("Restore…")
-        compose.waitForIdle()
+        compose.frames(); compose.waitForIdle()
         assertEquals(1, picker.launched.size)
         assertFalse(compose.has("Open the backup"))
         assertTrue(com.optionslab.app.work.Alerts.queue.value.isEmpty())
@@ -497,7 +507,7 @@ class ControlPagesTest {
         tap("Turn on")
         waitSettings { it.guardKill }
         compose.onNodeWithText("ON: every order is refused", substring = true).assertExists()
-        compose.waitUntil(10_000) { AppSettings.load().guardKill }
+        compose.until(10_000) { AppSettings.load().guardKill }
         toggle("Kill switch")
         compose.waitForText("Clear the kill switch?")
         tap("Clear")
@@ -538,7 +548,7 @@ class ControlPagesTest {
             waitSettings(ok = ok)
             compose.onNodeWithText(chip).assertIsSelected()
         }
-        compose.waitUntil(10_000) { AppSettings.load().let { it.guardDailyLoss == 5_000.0 && it.guardPaperTrades == 60 && it.guardCutoff == 14 * 60 } }
+        compose.until(10_000) { AppSettings.load().let { it.guardDailyLoss == 5_000.0 && it.guardPaperTrades == 60 && it.guardCutoff == 14 * 60 } }
     }
 
     @Test fun expirySquareOffAndNakedShortSwitches() {
@@ -580,7 +590,7 @@ class ControlPagesTest {
         tap("Delete this phone's harvested data")
         compose.waitForText("Delete harvested data?")
         tap("Delete")
-        compose.waitUntil(15_000) { model.message.value == "Harvested data deleted." }
+        compose.until(15_000) { model.message.value == "Harvested data deleted." }
         compose.waitForNoText("Delete harvested data?")
     }
 
@@ -594,17 +604,17 @@ class ControlPagesTest {
         field("Level", "24000")
         compose.onNodeWithText("Set alarm").assertIsEnabled()
         tap("Set alarm")
-        compose.waitUntil(10_000) { Alarms.all().size == 1 }
+        compose.until(10_000) { Alarms.all().size == 1 }
         val a = Alarms.all().single()
         assertEquals("NIFTY", a.symbol); assertFalse(a.above); assertEquals(24_000.0, a.level, 0.0); assertTrue(a.enabled)
         assertEquals("Alarm set. It rings once, then rests 30 minutes.", model.message.value)
         val row = a.describe()
         compose.waitForText(row)
         toggle(row)
-        compose.waitUntil(10_000) { Alarms.all().singleOrNull()?.enabled == false }
+        compose.until(10_000) { Alarms.all().singleOrNull()?.enabled == false }
         compose.reveal("Remove")
         tap("Remove")
-        compose.waitUntil(10_000) { Alarms.all().isEmpty() }
+        compose.until(10_000) { Alarms.all().isEmpty() }
         compose.waitForText("None yet.")
     }
 
@@ -618,7 +628,7 @@ class ControlPagesTest {
         field("EXCHANGE:SYMBOL, e.g. NSE:INFY or NFO:NIFTY26SEP24500PE", "nse:infy")
         compose.onNodeWithText("Set alarm").assertIsEnabled()
         tap("Set alarm")
-        compose.waitUntil(10_000) { Alarms.all().size == 1 }
+        compose.until(10_000) { Alarms.all().size == 1 }
         assertEquals("NSE:INFY", Alarms.all().single().symbol)
         assertTrue(Alarms.all().single().above)
     }
@@ -684,10 +694,10 @@ class ControlPagesTest {
             val (key, marker) = target
             compose.reveal(title)
             tap(title)
-            compose.waitUntil(5_000) { page == key }
+            compose.until(5_000) { page == key }
             compose.waitForText(marker)
             tap("‹  More")
-            compose.waitUntil(5_000) { page == null }
+            compose.until(5_000) { page == null }
             compose.waitForText("Zerodha")
         }
     }

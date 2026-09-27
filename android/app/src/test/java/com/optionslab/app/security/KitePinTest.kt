@@ -21,6 +21,7 @@ import javax.net.ssl.SSLSocket
  * before anything is pinned (fail closed), on both the REST and the stream trust managers.
  */
 class KitePinTest : RobolectricTest() {
+    @get:org.junit.Rule val watchdog = com.optionslab.app.testing.AreaEWatchdog(60)
     private fun selfSigned(host: String): HeldCertificate = HeldCertificate.Builder().commonName(host).addSubjectAlternativeName(host).build()
 
     @Test fun aFreshPhoneHasNoPins() {

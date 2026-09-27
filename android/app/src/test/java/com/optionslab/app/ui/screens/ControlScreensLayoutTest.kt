@@ -80,6 +80,8 @@ class ControlScreensLayoutTest(device: DeviceConfig) : ScreenTest(device) {
     private var offline: OfflineModel? = null
     private fun model() = (offline ?: OfflineModel(app).also { offline = it }).model
 
+    @get:org.junit.Rule val watchdog = com.optionslab.app.testing.AreaEWatchdog()
+
     @Before fun clean() = AreaE.resetGlobals()
     @After fun closeModel() { offline?.close(); AreaE.resetGlobals() }
 
@@ -89,8 +91,11 @@ class ControlScreensLayoutTest(device: DeviceConfig) : ScreenTest(device) {
     private fun tap(text: String) = compose.onNodeWithText(text).performSemanticsAction(SemanticsActions.OnClick)
     private fun reveal(text: String) {
         compose.onAllNodes(hasScrollToIndexAction()).onFirst().performScrollToNode(hasText(text))
+        frames()
         compose.waitForIdle()
     }
+
+    private fun frames(n: Int = 12) { if (!compose.mainClock.autoAdvance) repeat(n) { compose.mainClock.advanceTimeByFrame() } }
 
     private fun frame(live: Boolean, linked: Boolean) = @Composable {
         Column(Modifier.fillMaxSize()) {
@@ -148,21 +153,25 @@ class ControlScreensLayoutTest(device: DeviceConfig) : ScreenTest(device) {
 
     @Test fun securityChangePin() {
         if (!onSix()) return
+        compose.mainClock.autoAdvance = false   // a dialog with a text field never idles on a running clock
         show { SecurityPage(model()) }
+        frames()
         reveal("Change PIN"); tap("Change PIN")
-        compose.waitForIdle()
+        frames()
         capture("security-change-pin"); lint("security-change-pin")
     }
 
     @Test fun securityBackupSeal() {
         if (!onSix()) return
         PinLock.setPin("246813".toCharArray())
+        compose.mainClock.autoAdvance = false   // a dialog with a text field never idles on a running clock
         show { SecurityPage(model()) }
+        frames()
         reveal("Back up now"); tap("Back up now")
-        compose.waitForIdle()
+        frames()
         compose.onNodeWithText("Backup passphrase").performTextReplacement("correct horse")
         compose.onNodeWithText("Passphrase again").performTextReplacement("correct horsx")
-        compose.waitForIdle()
+        frames()
         capture("security-backup-seal"); lint("security-backup-seal")
     }
 

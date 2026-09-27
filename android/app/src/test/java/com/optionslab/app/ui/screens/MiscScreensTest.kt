@@ -41,6 +41,10 @@ import com.optionslab.app.testing.FakePicker
 import com.optionslab.app.testing.NetworkGuard
 import com.optionslab.app.testing.OfflineModel
 import com.optionslab.app.testing.has
+import com.optionslab.app.testing.AreaEWatchdog
+import com.optionslab.app.testing.frames
+import com.optionslab.app.testing.pause
+import com.optionslab.app.testing.until
 import com.optionslab.app.testing.reveal
 import com.optionslab.app.testing.waitForNoText
 import com.optionslab.app.testing.waitForText
@@ -82,6 +86,7 @@ import kotlin.math.round
  */
 @RunWith(AndroidJUnit4::class)
 class MiscScreensTest {
+    @get:Rule val watchdog = AreaEWatchdog()
     @get:Rule val compose = createComposeRule()
     private val app: Application get() = ApplicationProvider.getApplicationContext()
     private var offline: OfflineModel? = null
@@ -99,7 +104,7 @@ class MiscScreensTest {
         CompositionLocalProvider(LocalActivityResultRegistryOwner provides picker) { IraAlgoTheme("light") { content() } }
     }
 
-    private fun tap(text: String) = compose.onNodeWithText(text).performSemanticsAction(SemanticsActions.OnClick)
+    private fun tap(text: String) { compose.onNodeWithText(text).performSemanticsAction(SemanticsActions.OnClick); compose.frames() }
 
     // ---- Getting started --------------------------------------------------------------------------
 
@@ -183,41 +188,43 @@ class MiscScreensTest {
         Ledger.record(ticket(day), null, null)
         Ledger.record(ticket(day.minusDays(7)), null, null)
         model.refreshLedger()
+        compose.pause()   // the Settle dialog holds a text field
         show { TicketScreen(model) }
+        compose.frames()
         compose.waitForText("$day  NIFTY 24000 PE")
         // No Zerodha account: nothing offers to send it.
         assertFalse(compose.has("Send to Zerodha…"))
         assertFalse(compose.has("Log in to Zerodha to send it"))
         // Settle, cancelled then confirmed with the exchange's figure.
         compose.reveal("Settle")
-        compose.onAllNodesWithText("Settle")[0].performSemanticsAction(SemanticsActions.OnClick)
+        compose.onAllNodesWithText("Settle")[0].performSemanticsAction(SemanticsActions.OnClick); compose.frames()
         compose.waitForText("Settle $day")
         tap("Cancel")
         compose.waitForNoText("Settle $day")
-        compose.onAllNodesWithText("Settle")[0].performSemanticsAction(SemanticsActions.OnClick)
+        compose.onAllNodesWithText("Settle")[0].performSemanticsAction(SemanticsActions.OnClick); compose.frames()
         compose.waitForText("Settle $day")
-        compose.onNodeWithText("Settlement price (optional)").performTextReplacement("24100.5")
-        compose.onAllNodesWithText("Settle").onLast().performSemanticsAction(SemanticsActions.OnClick)
-        compose.waitUntil(10_000) { Ledger.all().first { it.row.ticket.session == day }.row.status == "settled" }
+        compose.onNodeWithText("Settlement price (optional)").performTextReplacement("24100.5"); compose.frames()
+        compose.onAllNodesWithText("Settle").onLast().performSemanticsAction(SemanticsActions.OnClick); compose.frames()
+        compose.until(10_000) { Ledger.all().first { it.row.ticket.session == day }.row.status == "settled" }
         assertEquals(24_100.5, Ledger.all().first { it.row.ticket.session == day }.row.settlement!!, 0.0)
         compose.waitForText("WIN")
         // Strike out: Keep, then confirm.
-        compose.onAllNodesWithText("Strike out")[0].performSemanticsAction(SemanticsActions.OnClick)
+        compose.onAllNodesWithText("Strike out")[0].performSemanticsAction(SemanticsActions.OnClick); compose.frames()
         compose.waitForText("Strike out $day?")
         tap("Keep")
         compose.waitForNoText("Strike out $day?")
         assertEquals(2, Ledger.all().size)
-        compose.onAllNodesWithText("Strike out")[0].performSemanticsAction(SemanticsActions.OnClick)
+        compose.onAllNodesWithText("Strike out")[0].performSemanticsAction(SemanticsActions.OnClick); compose.frames()
         compose.waitForText("Strike out $day?")
-        compose.onAllNodesWithText("Strike out").onLast().performSemanticsAction(SemanticsActions.OnClick)
-        compose.waitUntil(10_000) { Ledger.all().size == 1 }
+        compose.onAllNodesWithText("Strike out").onLast().performSemanticsAction(SemanticsActions.OnClick); compose.frames()
+        compose.until(10_000) { Ledger.all().size == 1 }
         // Export: to the file picked, the ledger as CSV.
         val out = picker.writable("ledger.csv")
         picker.answer = { out }
         compose.reveal("Export ledger (CSV)")
         tap("Export ledger (CSV)")
         assertEquals("paper_ledger.csv", picker.launched.single())
-        compose.waitUntil(10_000) { picker.written(out)?.isNotEmpty() == true }
+        compose.until(10_000) { picker.written(out)?.isNotEmpty() == true }
         assertTrue(String(picker.written(out)!!).startsWith("session,underlying"))
     }
 

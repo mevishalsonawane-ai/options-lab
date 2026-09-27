@@ -64,6 +64,7 @@ import java.time.LocalDate
  */
 @RunWith(AndroidJUnit4::class)
 class RootNavigationTest {
+    @get:Rule val watchdog = com.optionslab.app.testing.AreaEWatchdog()
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
     private val app: Application get() = ApplicationProvider.getApplicationContext()
 

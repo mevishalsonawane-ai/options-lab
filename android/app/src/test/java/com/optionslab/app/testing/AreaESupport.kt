@@ -91,12 +91,53 @@ class FakePicker(private val app: Application) : ActivityResultRegistryOwner {
     }
 }
 
-/** Waits (real threads: PIN checks, file work) until a node with [text] exists in any window. */
+/**
+ * Stops the compose clock. Under Robolectric a window holding a text field never reports idle while the
+ * clock runs by itself (the cursor blinks for ever), so screens with text-field dialogs run paused and
+ * move on by [frames] and [until].
+ */
+fun ComposeTestRule.pause() { mainClock.autoAdvance = false }
+
+/** A few frames on (only needed with the clock paused). */
+fun ComposeTestRule.frames(n: Int = 8) { if (!mainClock.autoAdvance) repeat(n) { mainClock.advanceTimeByFrame() } }
+
+/**
+ * Waits for [ok] (real threads: PIN checks, file work). With the clock running this is [ComposeTestRule.waitUntil];
+ * paused, each round moves one frame on and runs the main looper.
+ */
+fun ComposeTestRule.until(timeoutMs: Long = 20_000, what: String = "the condition", ok: () -> Boolean) {
+    if (mainClock.autoAdvance) { waitUntil(timeoutMs) { ok() }; return }
+    val end = System.currentTimeMillis() + timeoutMs
+    while (!ok()) {
+        if (System.currentTimeMillis() > end) throw AssertionError("timed out after $timeoutMs ms waiting for $what")
+        mainClock.advanceTimeByFrame()
+        shadowOf(android.os.Looper.getMainLooper()).idle()
+        Thread.sleep(5)
+    }
+}
+
+/** Waits until a node with [text] exists in any window. */
 fun ComposeTestRule.waitForText(text: String, substring: Boolean = false, timeoutMs: Long = 15_000) =
-    waitUntil(timeoutMs) { onAllNodesWithText(text, substring = substring, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
+    until(timeoutMs, "'$text'") { onAllNodesWithText(text, substring = substring, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
 
 fun ComposeTestRule.waitForNoText(text: String, substring: Boolean = false, timeoutMs: Long = 15_000) =
-    waitUntil(timeoutMs) { onAllNodesWithText(text, substring = substring, useUnmergedTree = true).fetchSemanticsNodes().isEmpty() }
+    until(timeoutMs, "no '$text'") { onAllNodesWithText(text, substring = substring, useUnmergedTree = true).fetchSemanticsNodes().isEmpty() }
+
+/**
+ * A test still running after [seconds] is interrupted (again every 5 s), so a wait that would never end
+ * fails with its stack instead of stalling the whole CI job.
+ */
+class AreaEWatchdog(private val seconds: Long = 180) : org.junit.rules.TestRule {
+    override fun apply(base: org.junit.runners.model.Statement, description: org.junit.runner.Description) =
+        object : org.junit.runners.model.Statement() {
+            override fun evaluate() {
+                val thread = Thread.currentThread()
+                val timer = java.util.Timer("watchdog ${description.methodName}", true)
+                timer.schedule(object : java.util.TimerTask() { override fun run() { thread.interrupt() } }, seconds * 1000, 5_000)
+                try { base.evaluate() } finally { timer.cancel(); Thread.interrupted() }
+            }
+        }
+}
 
 fun ComposeTestRule.has(text: String, substring: Boolean = false) =
     onAllNodesWithText(text, substring = substring, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
@@ -104,6 +145,7 @@ fun ComposeTestRule.has(text: String, substring: Boolean = false) =
 /** Brings the lazy page's item holding [text] into composition (a More page is a LazyColumn). */
 fun ComposeTestRule.reveal(text: String, substring: Boolean = false) {
     onAllNodes(hasScrollToIndexAction()).onFirst().performScrollToNode(hasText(text, substring = substring))
+    frames()
     waitForIdle()
 }
 

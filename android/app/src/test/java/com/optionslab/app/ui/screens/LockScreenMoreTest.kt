@@ -28,6 +28,7 @@ import java.util.concurrent.atomic.AtomicInteger
  */
 @RunWith(AndroidJUnit4::class)
 class LockScreenMoreTest {
+    @get:Rule val watchdog = com.optionslab.app.testing.AreaEWatchdog()
     @get:Rule val compose = createComposeRule()
     private val pin = "246813"
 
