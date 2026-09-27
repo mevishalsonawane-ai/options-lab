@@ -165,6 +165,7 @@ fun ChainCard(c: ChainSnapshot, onPick: (ChainPick) -> Unit) {
             }
         }
         Rule(Modifier.padding(vertical = 4.dp))
+        val fit = androidx.compose.runtime.remember(c) { androidx.compose.runtime.mutableFloatStateOf(1f) }
         c.rows.forEachIndexed { i, r ->
             val atm = r.strike == c.atm
             val itmCall = r.strike < c.spot
@@ -173,17 +174,17 @@ fun ChainCard(c: ChainSnapshot, onPick: (ChainPick) -> Unit) {
             Row(Modifier.padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
                 val ceTone = if (itmCall) p.ink else p.inkSoft
                 val peTone = if (!itmCall) p.ink else p.inkSoft
-                if (wide) NumCell(oi(r.ce?.oi), cell.copy(color = ceTone), Modifier.weight(1f))
-                NumCell(ce?.let { f2(it.delta) } ?: "—", cell.copy(color = ceTone), Modifier.weight(1f))
-                NumCell(ce?.let { f1(it.ivPct) } ?: "—", cell.copy(color = ceTone), Modifier.weight(1f))
+                if (wide) NumCell(oi(r.ce?.oi), cell.copy(color = ceTone), Modifier.weight(1f), fit)
+                NumCell(ce?.let { f2(it.delta) } ?: "—", cell.copy(color = ceTone), Modifier.weight(1f), fit)
+                NumCell(ce?.let { f1(it.ivPct) } ?: "—", cell.copy(color = ceTone), Modifier.weight(1f), fit)
                 val pickCe = { onPick(ChainPick(c.underlying, c.expiry, r.strike, com.optionslab.engine.Right.CE, r.ce?.ltp, ce?.delta, ce?.ivPct, c.lotSize)) }
                 val pickPe = { onPick(ChainPick(c.underlying, c.expiry, r.strike, com.optionslab.engine.Right.PE, r.pe?.ltp, pe?.delta, pe?.ivPct, c.lotSize)) }
-                NumCell(r.ce?.let { f2(it.ltp) } ?: "—", cell.copy(color = p.verdigris, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold), Modifier.weight(1f).background(p.verdigris.copy(alpha = 0.08f), androidx.compose.foundation.shape.RoundedCornerShape(6.dp)).clickable(enabled = r.ce != null, onClick = pickCe).padding(vertical = 5.dp))
-                NumCell(fmtG(r.strike), cell.copy(color = if (atm) p.gold else p.ink, fontSize = if (atm) 13.sp else 12.sp), Modifier.weight(1.25f))
-                NumCell(r.pe?.let { f2(it.ltp) } ?: "—", cell.copy(color = p.oxblood, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold), Modifier.weight(1f).background(p.oxblood.copy(alpha = 0.08f), androidx.compose.foundation.shape.RoundedCornerShape(6.dp)).clickable(enabled = r.pe != null, onClick = pickPe).padding(vertical = 5.dp))
-                NumCell(pe?.let { f1(it.ivPct) } ?: "—", cell.copy(color = peTone), Modifier.weight(1f))
-                NumCell(pe?.let { f2(it.delta) } ?: "—", cell.copy(color = peTone), Modifier.weight(1f))
-                if (wide) NumCell(oi(r.pe?.oi), cell.copy(color = peTone), Modifier.weight(1f))
+                NumCell(r.ce?.let { f2(it.ltp) } ?: "—", cell.copy(color = p.verdigris, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold), Modifier.weight(1f).background(p.verdigris.copy(alpha = 0.08f), androidx.compose.foundation.shape.RoundedCornerShape(6.dp)).clickable(enabled = r.ce != null, onClick = pickCe).padding(vertical = 5.dp), fit)
+                NumCell(fmtG(r.strike), cell.copy(color = if (atm) p.gold else p.ink, fontSize = if (atm) 13.sp else 12.sp), Modifier.weight(1.25f), fit)
+                NumCell(r.pe?.let { f2(it.ltp) } ?: "—", cell.copy(color = p.oxblood, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold), Modifier.weight(1f).background(p.oxblood.copy(alpha = 0.08f), androidx.compose.foundation.shape.RoundedCornerShape(6.dp)).clickable(enabled = r.pe != null, onClick = pickPe).padding(vertical = 5.dp), fit)
+                NumCell(pe?.let { f1(it.ivPct) } ?: "—", cell.copy(color = peTone), Modifier.weight(1f), fit)
+                NumCell(pe?.let { f2(it.delta) } ?: "—", cell.copy(color = peTone), Modifier.weight(1f), fit)
+                if (wide) NumCell(oi(r.pe?.oi), cell.copy(color = peTone), Modifier.weight(1f), fit)
             }
         }
         c.synthetic?.let {
@@ -195,12 +196,15 @@ fun ChainCard(c: ChainSnapshot, onPick: (ChainPick) -> Unit) {
 }
 
 /**
- * A chain cell: one centred line that shrinks to fit its column (at a large font on a small phone "192.05" wrapped
- * into "192.0 / 5").
+ * A chain cell: one centred line (at a large font on a small phone "192.05" wrapped into "192.0 / 5"). All cells of a
+ * table share [fit]: when any cell's number does not fit its column, every cell shrinks by the same step, so the
+ * table keeps one type size.
  */
 @Composable
-private fun NumCell(text: String, style: androidx.compose.ui.text.TextStyle, modifier: Modifier) =
-    com.optionslab.app.ui.components.FitText(text, style.copy(textAlign = TextAlign.Center), modifier, minSize = 6.sp)
+private fun NumCell(text: String, style: androidx.compose.ui.text.TextStyle, modifier: Modifier, fit: androidx.compose.runtime.MutableFloatState) =
+    Text(text, modifier.padding(horizontal = 1.dp), style = style.copy(textAlign = TextAlign.Center, fontSize = style.fontSize * fit.floatValue),
+        maxLines = 1, softWrap = false,
+        onTextLayout = { r -> if (r.didOverflowWidth && fit.floatValue > 0.5f) fit.floatValue = (fit.floatValue * 0.92f).coerceAtLeast(0.5f) })
 
 @Composable
 internal fun OiCard(c: ChainSnapshot) {

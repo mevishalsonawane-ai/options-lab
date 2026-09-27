@@ -151,14 +151,22 @@ fun NativeChart(
                         var lo = view.minOf { it.low }; var hi = view.maxOf { it.high }
                         if (hi - lo < 1e-9) { hi += 1; lo -= 1 }
                         val pad = (hi - lo) * 0.06; lo -= pad; hi += pad
-                        fun y(v: Double) = (plotH * (1 - (v - lo) / (hi - lo))).toFloat()
+                        // Half a label of room above the top grid line, so its price is not cut at the canvas edge.
+                        val topPad = timeProbe.size.height / 2f
+                        fun y(v: Double) = (topPad + (plotH - topPad) * (1 - (v - lo) / (hi - lo))).toFloat()
+                        // The last-price tag's text and where it will sit (grid prices under it are left out).
+                        val lp = shown.last().close
+                        val tag = if (lp in lo..hi) measurer.measureLine(lastLabel(lp), axisStyle.copy(color = tagInk)) else null
+                        val tagTop = tag?.let { (y(lp) - it.size.height / 2f).coerceIn(0f, max(0f, plotH - it.size.height)) }
                         // Price grid and axis labels, five steps, each on one line and inside the plot's height.
                         for (k in 0..4) {
                             val v = lo + (hi - lo) * k / 4
                             val yy = y(v)
                             drawLine(grid, Offset(0f, yy), Offset(plotW, yy), 1f)
                             val t = measurer.measureLine(priceLabel(v), axisStyle)
-                            drawText(t, topLeft = Offset(plotW + gap, (yy - t.size.height / 2f).coerceIn(0f, max(0f, plotH - t.size.height))))
+                            val top = (yy - t.size.height / 2f).coerceIn(0f, max(0f, plotH - t.size.height))
+                            if (tag != null && tagTop != null && top < tagTop + tag.size.height && top + t.size.height > tagTop) continue
+                            drawText(t, topLeft = Offset(plotW + gap, top))
                         }
                         // Candles.
                         view.forEachIndexed { i, b ->
@@ -181,17 +189,14 @@ fun NativeChart(
                             l to l + texts[j].size.width
                         }
                         for (j in nonOverlapping(spans, 6.dp.toPx())) drawText(texts[j], topLeft = Offset(spans[j].first, plotH + 2.dp.toPx()))
-                        // Last price line and a filled tag in the gutter (drawn over the grid label it covers, never clipped).
-                        val lp = shown.last().close
-                        if (lp in lo..hi) {
+                        // Last price line and a filled tag in the gutter, kept inside the canvas.
+                        if (tag != null && tagTop != null) {
                             val yy = y(lp)
                             drawLine(lastC, Offset(0f, yy), Offset(plotW, yy), 1f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(8f, 6f)))
-                            val t = measurer.measureLine(lastLabel(lp), axisStyle.copy(color = tagInk))
                             val tp = TAG_PAD.dp.toPx()
-                            val top = (yy - t.size.height / 2f).coerceIn(0f, max(0f, plotH - t.size.height))
-                            val left = min(plotW + gap, size.width - t.size.width - tp)
-                            drawRect(lastC, Offset(left - tp, top), Size(t.size.width + 2 * tp, t.size.height.toFloat()))
-                            drawText(t, topLeft = Offset(left, top))
+                            val left = min(plotW + gap, size.width - tag.size.width - tp)
+                            drawRect(lastC, Offset(left - tp, tagTop), Size(tag.size.width + 2 * tp, tag.size.height.toFloat()))
+                            drawText(tag, topLeft = Offset(left, tagTop))
                         }
                     }
                 }
