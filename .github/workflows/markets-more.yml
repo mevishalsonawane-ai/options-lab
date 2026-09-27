@@ -67,8 +67,8 @@ jobs:
           if [ -z "$(ls -A pub)" ]; then echo "nothing to publish"; exit 1; fi
           cd pub
           find . -type f -printf '%P %s\n' | sort > index.txt
-          git init -q -b market-data-mtf
+          git init -q -b market-data-more
           git config user.name "ci-markets"; git config user.email "ci-markets@users.noreply.github.com"
           git add -A && git commit -qm "More market inputs for $SHA"
-          git push -qf "https://x-access-token:${TOKEN}@github.com/${REPO}" HEAD:market-data-mtf
+          git push -qf "https://x-access-token:${TOKEN}@github.com/${REPO}" HEAD:market-data-more
           cat index.txt
