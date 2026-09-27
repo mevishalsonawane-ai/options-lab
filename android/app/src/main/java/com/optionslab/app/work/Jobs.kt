@@ -346,6 +346,9 @@ object Tasks {
         runCatching { com.optionslab.app.data.KiteStream.ensure() }
         // The static-IP relay: connected ahead of the first order, kept alive during market hours.
         if (com.optionslab.app.data.Market.isOpen()) runCatching { com.optionslab.app.data.Relay.warm() }
+        // A bot's entry or exit then finds a pooled connection through the relay and a fresh static-IP reading, not handshakes.
+        if (s.live && com.optionslab.app.data.Market.isOpen() && com.optionslab.app.data.Broker.loggedIn)
+            runCatching { com.optionslab.app.data.Broker.warmOrderRoute() }
         // Paper account (also used by paper strategy runs in LIVE mode): resting orders fill, MIS squares off, expiries settle.
         runCatching { com.optionslab.app.data.Paper.tick() }.getOrNull()?.let { paperEvents(context, it) }
         // One daily loss limit over every bot: past it, all of them sell and stop for the day.

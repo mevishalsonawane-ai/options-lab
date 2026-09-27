@@ -204,13 +204,13 @@ class BrokerScreensTest {
         compose.mainClock.autoAdvance = false
         val button = compose.onNodeWithText("Hold to send to Zerodha")
         button.performTouchInput { down(center) }
-        compose.mainClock.advanceTimeBy(700)
+        compose.mainClock.advanceTimeBy(HOLD_TO_SEND_MS / 2L)
         button.performTouchInput { up() }
         compose.mainClock.advanceTimeBy(1_500)
-        assertEquals("released at 0.7 s: nothing", 0, sent)
+        assertEquals("released half way: nothing", 0, sent)
         button.performTouchInput { down(center) }
-        compose.mainClock.advanceTimeBy(1_800)
-        assertEquals("held 1.5 s: sent once, before the finger lifts", 1, sent)
+        compose.mainClock.advanceTimeBy(HOLD_TO_SEND_MS + 300L)
+        assertEquals("held the full time: sent once, before the finger lifts", 1, sent)
         button.performTouchInput { up() }
         compose.mainClock.advanceTimeBy(500)
         assertEquals(1, sent)

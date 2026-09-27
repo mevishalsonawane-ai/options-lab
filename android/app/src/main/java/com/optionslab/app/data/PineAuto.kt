@@ -339,9 +339,7 @@ object PineAuto {
             ?: run { note(b, id, "No Zerodha quote for $sym: nothing sent"); return }
         val o = com.optionslab.engine.Kite.Order(sym, com.optionslab.engine.Kite.Side.BUY, lots * ins.lotSize, ins.lotSize, "MIS", "MARKET", null,
             ins.tickSize, "NFO", "irapine")
-        val acct = runCatching {
-            Guard.liveAccount(Broker.positionBook(), runCatching { Broker.funds() }.getOrNull(), runCatching { Broker.orders().size }.getOrDefault(0))
-        }.getOrNull()
+        val acct = Broker.accountNow()      // positions, funds and orders read in parallel
         val refusals = Guard.check(Guard.liveOrder(o).copy(price = quote), acct)
         if (refusals.isNotEmpty()) { note(b, id, "Guard refused: ${refusals.joinToString(" ")}"); return }
         val why = com.optionslab.engine.Kite.refusals(o, s.limits(), Broker.sentToday(), false, refPrice = quote)

@@ -41,9 +41,12 @@ object StaticIp {
 
     @Volatile private var cached: Pair<Long, String>? = null
 
-    /** The phone's public IPv4 as the internet sees it, cached for a minute (null when it cannot be read). */
-    suspend fun current(force: Boolean = false): String? = withContext(Dispatchers.IO) {
-        cached?.let { (at, ip) -> if (!force && System.currentTimeMillis() - at < 60_000) return@withContext ip }
+    /**
+     * The phone's public IPv4 as the internet sees it, cached for a minute (null when it cannot be read).
+     * [maxAgeMs]: a shorter reuse, for refreshing ahead of an order (Broker.warmOrderRoute).
+     */
+    suspend fun current(force: Boolean = false, maxAgeMs: Long = 60_000): String? = withContext(Dispatchers.IO) {
+        cached?.let { (at, ip) -> if (!force && System.currentTimeMillis() - at < maxAgeMs) return@withContext ip }
         runCatching {
             // With the relay on, ask through it: that is the IP Zerodha sees for orders.
             val relay = Relay.proxy()

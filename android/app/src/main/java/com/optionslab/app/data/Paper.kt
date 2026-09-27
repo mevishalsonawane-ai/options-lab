@@ -16,6 +16,7 @@ import com.optionslab.engine.sandbox.SandboxConfig
 import com.optionslab.engine.sandbox.SandboxEvent
 import com.optionslab.engine.sandbox.SandboxJson
 import com.optionslab.engine.sandbox.SandboxState
+import kotlinx.coroutines.async
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -106,8 +107,8 @@ object Paper {
 
     // ---- prices -----------------------------------------------------------------
 
-    /** The last minute's close, with the day's range so the stale-quote check works. */
-    private suspend fun quote(c: Contract): Quote? {
+    /** The last minute's close, with the day's range so the stale-quote check works (read now, from the feed). */
+    suspend fun quote(c: Contract): Quote? {
         val bars = Net.intraday(c.feedKey).filter { it.istDate == Market.today() }
         if (bars.isEmpty()) return null
         return Quote(bars.last().close, high = bars.maxOf { it.high }, low = bars.minOf { it.low }, open = bars.first().open,
@@ -117,12 +118,12 @@ object Paper {
     /** The contract's latest price from the paper feed, or null when there is none today. */
     suspend fun lastPrice(c: Contract): Double? = runCatching { quote(c) }.getOrNull()?.ltp
 
-    private suspend fun quotes(symbols: Collection<String>): Map<String, Quote> {
+    /** Every symbol's quote, fetched in parallel (one round trip for the whole book, not one per position). */
+    private suspend fun quotes(symbols: Collection<String>): Map<String, Quote> = kotlinx.coroutines.coroutineScope {
         val b = book()
-        return symbols.distinct().mapNotNull { s ->
-            val c = b.contracts[s] ?: return@mapNotNull null
-            runCatching { quote(c) }.getOrNull()?.let { Sandbox.key(s, "NFO") to it }
-        }.toMap()
+        symbols.distinct().mapNotNull { s -> b.contracts[s]?.let { c -> s to c } }
+            .map { (s, c) -> async { runCatching { quote(c) }.getOrNull()?.let { Sandbox.key(s, "NFO") to it } } }
+            .mapNotNull { it.await() }.toMap()
     }
 
     /** Symbols the engine needs prices for: open orders and open positions. */
@@ -152,8 +153,10 @@ object Paper {
     }
 
 
-    suspend fun place(c: Contract, action: String, lots: Int, priceType: String, product: String, price: Double?, trigger: Double?): Result {
-        val q = runCatching { quote(c) }.getOrNull()
+    /** [known]: the contract's quote when the caller has just read it (read here otherwise). */
+    suspend fun place(c: Contract, action: String, lots: Int, priceType: String, product: String, price: Double?, trigger: Double?,
+                      known: Quote? = null): Result {
+        val q = known ?: runCatching { quote(c) }.getOrNull()
         synchronized(this) {
             // Remember the contract and place in one step, so a concurrent place cannot overwrite either.
             val b0 = book()

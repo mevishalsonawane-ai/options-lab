@@ -290,7 +290,13 @@ fun Reauth(model: AppModel, onOk: () -> Unit, onCancel: () -> Unit, pinOnly: Boo
     }
 }
 
-/** Press and HOLD for a second and a half; a tap does nothing. */
+/**
+ * How long the send button must be held. Long enough that a tap, a brush or a scroll never sends (a tap is
+ * under ~150 ms), short enough not to be a wait: it was 1.5 s. The PIN or fingerprint still follows.
+ */
+const val HOLD_TO_SEND_MS = 600
+
+/** Press and HOLD for [HOLD_TO_SEND_MS]; a tap does nothing. */
 @Composable
 fun HoldToSend(text: String, enabled: Boolean, onComplete: () -> Unit) {
     val p = LocalPalette.current
@@ -308,7 +314,7 @@ fun HoldToSend(text: String, enabled: Boolean, onComplete: () -> Unit) {
                 detectTapGestures(onPress = {
                     if (!enabled) return@detectTapGestures
                     val job = scope.launch {
-                        progress.animateTo(1f, tween(1500))
+                        progress.animateTo(1f, tween(HOLD_TO_SEND_MS))
                         onComplete()
                         progress.snapTo(0f)
                     }

@@ -703,20 +703,25 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch(Dispatchers.IO) {
             account.value = try {
                 val b = com.optionslab.app.data.Broker
-                val book = b.positionBook()
-                runCatching { b.gtts() }.onSuccess { gtts.value = it }
+                // Every read at once: one round trip instead of six in a row (1-2 s on a phone network).
+                val fundsQ = async { runCatching { b.funds() }.getOrNull() }
+                val ordersQ = async { runCatching { b.orders() } }
+                val tradesQ = async { runCatching { b.trades() }.getOrDefault(emptyList()) }
+                val holdingsQ = async { runCatching { b.holdings() }.getOrDefault(emptyList()) }
+                val gttsQ = async { runCatching { b.gtts() } }
+                val book = try { b.positionBook() } catch (e: Exception) { listOf(fundsQ, ordersQ, tradesQ, holdingsQ, gttsQ).forEach { it.cancel() }; throw e }
+                gttsQ.await().onSuccess { gtts.value = it }
                 runCatching { orderOwners.value = com.optionslab.app.data.Strategies.owners() }
                 trackPnl(book)
                 livePositions.value = book.net
                 com.optionslab.app.data.KiteStream.want("positions", book.net.filter { it.qty != 0 }.map { it.token })
-                val trades = runCatching { b.trades() }.getOrDefault(emptyList())
+                val trades = tradesQ.await()
                 runCatching { com.optionslab.app.data.TradeBook.recordLive(trades) }
                 // Today's Zerodha P&L for the calendar (Zerodha has no past days through its API).
                 if (book.net.isNotEmpty() || trades.isNotEmpty()) runCatching {
                     com.optionslab.app.data.DailyPnl.record(true, book.m2m, trades.size); pnlDays.value = pnlDays.value + 1
                 }
-                Load.Done(Account(runCatching { b.funds() }.getOrNull(), book, b.orders(),
-                    trades, runCatching { b.holdings() }.getOrDefault(emptyList())))
+                Load.Done(Account(fundsQ.await(), book, ordersQ.await().getOrThrow(), trades, holdingsQ.await()))
             } catch (e: Exception) {
                 broker.value = brokerState()
                 Load.Failed(e.message ?: "could not read the account")
@@ -762,7 +767,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     }
 
     private fun planExits(title: String, positions: List<com.optionslab.app.data.Broker.Position>) {
-        plan.value = Load.Busy("Pricing the exit on Zerodha")
+        plan.value = Load.Busy("Pricing the exit on Zerodha"); prewarm(entry = false)
         viewModelScope.launch(Dispatchers.IO) {
             plan.value = try {
                 val b = com.optionslab.app.data.Broker
@@ -780,7 +785,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
 
     /** Sell (part of) a delivery holding. */
     fun planSellHolding(h: com.optionslab.app.data.Broker.Holding, quantity: Int) {
-        plan.value = Load.Busy("Pricing the sale on Zerodha")
+        plan.value = Load.Busy("Pricing the sale on Zerodha"); prewarm(entry = false)
         viewModelScope.launch(Dispatchers.IO) {
             plan.value = try {
                 val b = com.optionslab.app.data.Broker
@@ -803,9 +808,13 @@ class AppModel(app: Application) : AndroidViewModel(app) {
      */
     private suspend fun exitsStillValid(legs: List<com.optionslab.engine.Kite.Order>): String? {
         val b = com.optionslab.app.data.Broker
-        val net = b.positionBook().net
-        val held = if (legs.any { it.product == "CNC" }) b.holdings() else emptyList()
-        val orders = b.orders().filter { it.working }
+        // Read together (one round trip, not three); each is still read fresh, now.
+        val (net, held, orders) = kotlinx.coroutines.coroutineScope {
+            val net = async { b.positionBook().net }
+            val held = async { if (legs.any { it.product == "CNC" }) b.holdings() else emptyList() }
+            val orders = async { b.orders().filter { it.working } }
+            Triple(net.await(), held.await(), orders.await())
+        }
         // Units already on their way out of this instrument and product on this side, whoever placed them.
         fun busy(o: com.optionslab.engine.Kite.Order): Int = orders.filter { it.symbol == o.tradingSymbol && it.exchange == o.exchange &&
             it.product == o.product && it.side == o.side.name }.sumOf { com.optionslab.engine.risk.ExitQty.remaining(it.qty, it.filled, it.pending) }
@@ -935,6 +944,16 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /**
+     * An order review is opening: get the send path ready while the owner reads it - the device check's
+     * static part, the relay and a pooled connection to Zerodha, the static-IP reading. Nothing is sent,
+     * and every check still runs at send; this only removes waiting from after the confirmation.
+     */
+    private fun prewarm(entry: Boolean) {
+        viewModelScope.launch(Dispatchers.IO) { runCatching { Integrity.warmStatic(ctx) } }
+        runCatching { com.optionslab.app.data.Broker.warmOrderRoute(entry) }
+    }
+
     /** Ask Zerodha what the plan's legs would block together; a shortfall stops the send. */
     private suspend fun withMargin(p: OrderPlan): OrderPlan = try {
         p.copy(margin = com.optionslab.app.data.Broker.basketMargin(p.legs))
@@ -944,7 +963,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
 
     /** The strategy's ticket for [session], turned into Zerodha orders for review. */
     fun planTicket(e: Ledger.Entry) {
-        plan.value = Load.Busy("Looking up the contracts on Zerodha")
+        plan.value = Load.Busy("Looking up the contracts on Zerodha"); prewarm(entry = true)
         viewModelScope.launch(Dispatchers.IO) {
             plan.value = try {
                 val b = com.optionslab.app.data.Broker
@@ -968,7 +987,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     /** A single order typed by hand on the Zerodha page. */
     fun planManual(underlying: String, expiry: LocalDate, strike: Double, right: com.optionslab.engine.Right,
                    side: com.optionslab.engine.Kite.Side, lots: Int, product: String, limit: Double?, protect: ProtectSpec? = null) {
-        plan.value = Load.Busy("Looking up the contract")
+        plan.value = Load.Busy("Looking up the contract"); prewarm(entry = true)
         viewModelScope.launch(Dispatchers.IO) {
             plan.value = try {
                 val b = com.optionslab.app.data.Broker
@@ -1054,8 +1073,15 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             val b = com.optionslab.app.data.Broker
             val fills = ArrayList(before)
             try {
-                if (compromisedFresh()) { sending.value = Load.Failed("Refused: this device shows signs of compromise, so no real order is sent from it."); return@launch }
-                if (checks && cur.exit) exitsStillValid(cur.legs.drop(start))?.let { why -> sending.value = Load.Failed("Not sent: $why"); loadAccount(); return@launch }
+                // The device check and (for exits) the fresh read of the positions run side by side: both must pass before anything is sent.
+                val (bad, stale) = kotlinx.coroutines.coroutineScope {
+                    val exitCheck = async { if (checks && cur.exit) runCatching { exitsStillValid(cur.legs.drop(start)) } else Result.success(null) }
+                    val bad = compromisedFresh()
+                    if (bad) exitCheck.cancel()
+                    bad to (if (bad) null else exitCheck.await())
+                }
+                if (bad) { sending.value = Load.Failed("Refused: this device shows signs of compromise, so no real order is sent from it."); return@launch }
+                stale!!.getOrThrow()?.let { why -> sending.value = Load.Failed("Not sent: $why"); loadAccount(); return@launch }
                 for (i in start until cur.legs.size) {
                     val leg = cur.legs[i]
                     sending.value = Load.Busy("Leg ${i + 1} of ${cur.legs.size}: ${leg.side} ${leg.tradingSymbol}")
@@ -1195,7 +1221,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
      * hooking framework attached after launch must still stop an order.
      */
     private fun compromisedFresh(maxAgeMs: Long = 0): Boolean {
-        val r = Integrity.reportWithin(ctx, maxAgeMs)
+        // Fresh: root, hooks, debugger and ADB are read now; the APK's own static findings (read when the review opened) are reused for a minute.
+        val r = if (maxAgeMs == 0L) Integrity.reportForSend(ctx) else Integrity.reportWithin(ctx, maxAgeMs)
         integrity.value = r
         return Integrity.compromised(r)
     }
@@ -1449,7 +1476,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
      * short is covered by its wing before it is sold.
      */
     fun planBasket(title: String, underlying: String, expiry: LocalDate, legs: List<com.optionslab.engine.options.StrategyLeg>) {
-        plan.value = Load.Busy("Looking up the contracts on Zerodha")
+        plan.value = Load.Busy("Looking up the contracts on Zerodha"); prewarm(entry = true)
         viewModelScope.launch(Dispatchers.IO) {
             plan.value = try {
                 val b = com.optionslab.app.data.Broker
@@ -1570,13 +1597,18 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         val c = com.optionslab.app.data.Paper.contractFor(underlying, expiry, strike, right)
             ?: error("$underlying ${expiry} ${com.optionslab.engine.fmtG(strike)} $right is not listed")
         val g = com.optionslab.app.data.Guard
-        val snap = runCatching { com.optionslab.app.data.Paper.snapshot() }.getOrNull()
+        // The account and the contract's price are read side by side, and that one price read serves both the guard
+        // and the fill (it used to be fetched twice more, one after the other).
+        val (snap, quote) = kotlinx.coroutines.coroutineScope {
+            val q = async { runCatching { com.optionslab.app.data.Paper.quote(c) }.getOrNull() }
+            runCatching { com.optionslab.app.data.Paper.snapshot() }.getOrNull() to q.await()
+        }
         // A MARKET order is judged at the contract's current price, so the value and exposure limits apply to it too.
-        val order = g.paperOrder(c, action, lots, price ?: com.optionslab.app.data.Paper.lastPrice(c)
+        val order = g.paperOrder(c, action, lots, price ?: quote?.ltp
             ?: snap?.positions?.positions?.firstOrNull { it.symbol == c.symbol }?.ltp ?: 0.0)
         val refused = g.check(order, snap?.let { g.paperAccount(it) }, paper = true)
         if (refused.isNotEmpty()) return@paperDo com.optionslab.app.data.Paper.Result(false, "Not placed (account guard): " + refused.joinToString(" "), emptyList())
-        val r = com.optionslab.app.data.Paper.place(c, action, lots, priceType, product, price, trigger)
+        val r = com.optionslab.app.data.Paper.place(c, action, lots, priceType, product, price, trigger, quote)
         val fills = r.events.filterIsInstance<com.optionslab.engine.sandbox.SandboxEvent.Fill>()
         fills.forEach { com.optionslab.app.work.Notifier.orderFilled(ctx, it.action, it.quantity, it.symbol, it.price, "Paper", null) }
         // The bracket: the whole position gets the stop / trail / target once the entry has filled.

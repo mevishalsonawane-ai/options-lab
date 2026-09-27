@@ -37,8 +37,9 @@ import java.util.concurrent.CopyOnWriteArrayList
 class FakeKite : Closeable {
     // ---- what was sent -----------------------------------------------------------------
 
+    /** [atNanos]: System.nanoTime() when the whole request had arrived (the latency tests measure up to it). */
     data class Req(val method: String, val path: String, val query: Map<String, String>, val form: Map<String, String>,
-                   val body: String, val auth: String?)
+                   val body: String, val auth: String?, val atNanos: Long = System.nanoTime())
 
     val requests = CopyOnWriteArrayList<Req>()
 
@@ -80,6 +81,8 @@ class FakeKite : Closeable {
     private var gttSeq = 1_000L
 
     @Volatile var throttle = 0
+    /** Keep connections open between requests, as Zerodha does (default: every reply closes its connection). */
+    @Volatile var keepAlive = false
     @Volatile var sessionExpired = false
     val down = HashSet<String>()
 
@@ -99,6 +102,9 @@ class FakeKite : Closeable {
     }
 
     fun order(id: String): Order = synchronized(lock) { orders.getValue(id) }
+
+    /** No positions any more (the latency tests start every run flat). */
+    fun flat() = synchronized(lock) { positions.clear() }
 
     // ---- server -------------------------------------------------------------------------------
 
@@ -130,10 +136,12 @@ class FakeKite : Closeable {
 
     // ---- replies --------------------------------------------------------------------------------
 
-    private fun ok(data: Any?): MockResponse = MockResponse().setResponseCode(200).addHeader("Connection", "close")
+    private fun closing(r: MockResponse): MockResponse = if (keepAlive) r else r.addHeader("Connection", "close")
+
+    private fun ok(data: Any?): MockResponse = closing(MockResponse().setResponseCode(200))
         .addHeader("Content-Type", "application/json").setBody(JSONObject().put("status", "success").put("data", data ?: JSONObject.NULL).toString())
 
-    private fun error(code: Int, type: String, message: String): MockResponse = MockResponse().setResponseCode(code).addHeader("Connection", "close")
+    private fun error(code: Int, type: String, message: String): MockResponse = closing(MockResponse().setResponseCode(code))
         .addHeader("Content-Type", "application/json")
         .setBody(JSONObject().put("status", "error").put("error_type", type).put("message", message).put("data", JSONObject.NULL).toString())
 

@@ -25,7 +25,8 @@ object Guard {
     /** Record today's equity and return the highest seen (the peak only rises). */
     private fun peak(live: Boolean, equity: Double): Double {
         val next = AccountGuard.nextPeak(SecurePrefs.getDouble(peakKey(live), equity), equity)
-        if (next != SecurePrefs.getDouble(peakKey(live), Double.NaN)) SecurePrefs.put(peakKey(live), next)
+        // Kept in memory at once and written in the background: this runs on the send path (and on the main thread from the review).
+        if (next != SecurePrefs.getDouble(peakKey(live), Double.NaN)) SecurePrefs.putAllSoon(mapOf(peakKey(live) to next))
         return next
     }
 

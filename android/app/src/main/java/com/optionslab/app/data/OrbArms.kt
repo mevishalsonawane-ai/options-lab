@@ -506,9 +506,7 @@ object OrbArms {
         if (Strategies.stoppedToday()) return "stopped_for_today"
         val o = com.optionslab.engine.Kite.Order(sym, com.optionslab.engine.Kite.Side.BUY, ins.lotSize, ins.lotSize, "MIS", "MARKET", null,
             ins.tickSize, "NFO", "iraorb")
-        val acct = runCatching {
-            Guard.liveAccount(Broker.positionBook(), runCatching { Broker.funds() }.getOrNull(), runCatching { Broker.orders().size }.getOrDefault(0))
-        }.getOrNull()
+        val acct = Broker.accountNow()      // positions, funds and orders read in parallel
         val refusals = Guard.check(Guard.liveOrder(o).copy(price = last), acct)
         if (refusals.isNotEmpty()) return "guard_refused: " + refusals.joinToString(" ")
         val why = com.optionslab.engine.Kite.refusals(o, s.limits(), Broker.sentToday(), false, refPrice = last)

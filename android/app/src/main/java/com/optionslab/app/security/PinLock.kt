@@ -103,8 +103,12 @@ object PinLock {
         // PBKDF2 throws on an empty password; an empty PIN is simply wrong and costs no attempt.
         if (size == 0) return Result.Wrong(FREE_ATTEMPTS - SecurePrefs.getInt(K_FAILS, 0))
         val prior = SecurePrefs.getInt(K_FAILS, 0)
-        SecurePrefs.put(K_FAILS, prior + 1)
-        val raw = derive(pin, salt, SecurePrefs.getInt(K_ITER, ITERATIONS))
+        // The attempt is counted first; its vault write runs on the background writer WHILE the key is
+        // stretched, and is on disk (flush) before any answer is given, so the count is never skipped.
+        SecurePrefs.putAllSoon(mapOf(K_FAILS to prior + 1))
+        val raw = try { derive(pin, salt, SecurePrefs.getInt(K_ITER, ITERATIONS)) } finally {
+            if (!SecurePrefs.flush()) SecurePrefs.put(K_FAILS, prior + 1)      // the background write failed: write it here (throws as before)
+        }
         pin.fill('\u0000')
         val v2 = SecurePrefs.getInt(K_VER, 1) >= 2
         val got = if (!v2) raw else try {
@@ -121,7 +125,9 @@ object PinLock {
             // An old v1 verifier becomes v2 now; if the Keystore refuses, it stays v1 and is tried again next time.
             if (!v2) runCatching { PinPepper.mix(PinPepper.VERIFIER, raw) }.getOrNull()?.let { ok[K_HASH] = hex(it); ok[K_VER] = 2 }
             raw.fill(0)
-            SecurePrefs.putAll(ok)
+            // Clearing the count is written in the background: the unlock (and the order it confirms) does not wait for
+            // it. If the write were lost, the count would only stay one higher on disk - never lower.
+            SecurePrefs.putAllSoon(ok)
             return Result.Ok
         }
         raw.fill(0)
