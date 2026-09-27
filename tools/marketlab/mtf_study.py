@@ -13,8 +13,11 @@ from .evaluate import auc
 from .mtf import build_all
 from .nn import Ensemble
 
-GROUPS = ["1m", "5m", "15m", "30m", "1h", "3h", "6h", "12h", "24h", "m1"]
-GROUP_NAMES = {"m1": "inside-the-hour (1-minute detail)"}
+GROUPS = ["1m", "5m", "15m", "30m", "1h", "3h", "6h", "12h", "24h", "m1", "x_opt", "x_dvol", "x_fund", "x_pos", "x_flow",
+          "x_sent", "x_vol", "x_macro", "x_cot", "x_cross"]
+GROUP_NAMES = {"m1": "inside-the-hour (1-minute detail)", "x_opt": "option surface", "x_dvol": "DVOL", "x_fund": "funding",
+               "x_pos": "open interest & long/short", "x_flow": "perp basis & Coinbase premium", "x_sent": "Fear & Greed",
+               "x_vol": "GVZ & VIX", "x_macro": "dollar, yields, breakevens", "x_cot": "COT positioning", "x_cross": "other markets"}
 
 
 def targets(h1):
@@ -57,7 +60,20 @@ def score(task, y, p):
     return {"corr": float(np.corrcoef(y[ok], p[ok])[0, 1]), "n": int(ok.sum())}
 
 
-def run(m1, dev_start, win_start, cost, step=1000, n_models=3, log=print):
+def extra_block(clock, frames):
+    """Join extra market data onto the hourly clock. `frames` maps a prefix to a DataFrame already indexed by
+    the time each row became KNOWN (the caller applies publication lags)."""
+    from .mtf import join_asof
+    fs = []
+    for prefix, f in frames.items():
+        f = f.copy()
+        f.columns = [f"x_{prefix}_{c}" for c in f.columns]
+        f.index.name = "time"
+        fs.append(f.sort_index().ffill())  # a value stays the latest known value until its next update
+    return join_asof(clock, fs) if fs else pd.DataFrame(index=clock)
+
+
+def run(m1, dev_start, win_start, cost, step=1000, n_models=3, log=print, extra=None):
     t0 = time.time()
     bars, X = build_all(m1)
     h1 = bars["1h"].set_index("close_time")
@@ -65,12 +81,21 @@ def run(m1, dev_start, win_start, cost, step=1000, n_models=3, log=print):
     cal = pd.DataFrame(index=X.index)
     cal["hour_sin"], cal["hour_cos"] = np.sin(2 * np.pi * X.index.hour / 24), np.cos(2 * np.pi * X.index.hour / 24)
     cal["dow_sin"], cal["dow_cos"] = np.sin(2 * np.pi * X.index.dayofweek / 7), np.cos(2 * np.pi * X.index.dayofweek / 7)
-    X = X.join(cal).replace([np.inf, -np.inf], np.nan)
-    X = X[X.notna().mean(axis=1) > 0.9]
+    X = X.join(cal)
+    xcols = []
+    if extra:
+        E = extra_block(X.index, extra)
+        E = E.loc[:, E.notna().mean() > 0.5]  # drop inputs that are mostly missing
+        xcols = list(E.columns)
+        X = X.join(E)
+    X = X.replace([np.inf, -np.inf], np.nan)
+    X = X[X.drop(columns=xcols).notna().mean(axis=1) > 0.9]
     T = targets(h1).reindex(X.index)
     log(f"  features: {X.shape[1]} columns x {len(X)} hours, built in {time.time() - t0:.0f}s")
     sets = {"hourly only": [c for c in X.columns if c.startswith("1h_") or c in cal.columns],
-            "all timeframes": list(X.columns)}
+            "all timeframes": [c for c in X.columns if c not in xcols]}
+    if xcols:
+        sets["all timeframes + all market data"] = list(X.columns)
     idx = X.index
     specs = [("dir_1h", "clf", 1), ("dir_4h", "clf", 4), ("dir_24h", "clf", 24), ("big_up_24h", "clf", 24),
              ("big_down_24h", "clf", 24), ("vol_24h", "reg", 24)]
@@ -96,7 +121,7 @@ def run(m1, dev_start, win_start, cost, step=1000, n_models=3, log=print):
         log(f"  {tname}: " + " | ".join(f"{s}: dev {list(res[s]['dev'].values())[0]:.3f} win {list(res[s]['window'].values())[0]:.3f}" for s in res)
             + f"  ({time.time() - t0:.0f}s)")
         # which timeframes does the all-timeframe network use? shuffle one group at a time on the dev year
-        cols = sets["all timeframes"]
+        cols = sets["all timeframes + all market data"] if xcols else sets["all timeframes"]
         tr = np.where((idx < dev_start - pd.Timedelta(hours=hz)) & ~np.isnan(y))[0]
         ev = np.where((idx >= dev_start) & (idx < win_start) & ~np.isnan(y))[0]
         Xa = X[cols].values.astype(float)
@@ -118,6 +143,7 @@ def run(m1, dev_start, win_start, cost, step=1000, n_models=3, log=print):
             imp[GROUP_NAMES.get(g, g)] = float(np.mean(drops))
         res["importance_dev"] = {"base": float(base), "drop_when_shuffled": imp}
         out["targets"][tname] = res
-    alarms = pd.DataFrame({"p_up": preds[("big_up_24h", "all timeframes")], "p_dn": preds[("big_down_24h", "all timeframes")]},
-                          index=idx).dropna()
+    best = "all timeframes + all market data" if xcols else "all timeframes"
+    out["extra_inputs"] = xcols
+    alarms = pd.DataFrame({"p_up": preds[("big_up_24h", best)], "p_dn": preds[("big_down_24h", best)]}, index=idx).dropna()
     return out, alarms
