@@ -67,6 +67,7 @@ internal fun alertTexts(): List<String> = Alerts.queue.value.map { it.text }
 @RunWith(AndroidJUnit4::class)
 class LabScreensTest {
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
+    @get:Rule val watchdog = com.optionslab.app.testing.ResearchWatchdog()
 
     @Before fun fresh() { clearAlerts() }
     @After fun noNetwork() { assertEquals("no host may be reached", emptyList<String>(), NetworkGuard.blocked.toList()) }
@@ -467,6 +468,7 @@ class LabScreensTest {
 @RunWith(ParameterizedRobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class LabScreensLayoutTest(device: DeviceConfig) : ScreenTest(device) {
+    @get:Rule val watchdog = com.optionslab.app.testing.ResearchWatchdog()
     companion object {
         @JvmStatic
         @ParameterizedRobolectricTestRunner.Parameters(name = "{0}")
@@ -538,6 +540,7 @@ class LabScreensLayoutTest(device: DeviceConfig) : ScreenTest(device) {
 @RunWith(ParameterizedRobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class LabMainLayoutTest(device: DeviceConfig) : ScreenTest(device) {
+    @get:Rule val watchdog = com.optionslab.app.testing.ResearchWatchdog()
     companion object {
         @JvmStatic
         @ParameterizedRobolectricTestRunner.Parameters(name = "{0}")

@@ -45,6 +45,7 @@ import org.robolectric.annotation.GraphicsMode
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class ChartsTest {
     @get:Rule val compose = createComposeRule()
+    @get:Rule val watchdog = com.optionslab.app.testing.ResearchWatchdog()
 
     private val up = Light.verdigris
     private val down = Light.oxblood
@@ -157,6 +158,7 @@ class ChartsTest {
 @RunWith(ParameterizedRobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class ChartsLayoutTest(device: DeviceConfig) : ScreenTest(device) {
+    @get:Rule val watchdog = com.optionslab.app.testing.ResearchWatchdog()
     companion object {
         @JvmStatic
         @ParameterizedRobolectricTestRunner.Parameters(name = "{0}")

@@ -78,6 +78,7 @@ internal val BN_OPTION = Upstox.Contract("BANKNIFTY", LocalDate.of(2026, 10, 1),
 @RunWith(AndroidJUnit4::class)
 class ChartScreensTest {
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
+    @get:Rule val watchdog = com.optionslab.app.testing.ResearchWatchdog()
 
     private val source = FakeChartSource(contracts = listOf(TEST_OPTION, BN_OPTION))
 
@@ -696,6 +697,7 @@ class ChartScreensTest {
 @RunWith(ParameterizedRobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class ChartScreensLayoutTest(device: DeviceConfig) : ScreenTest(device) {
+    @get:Rule val watchdog = com.optionslab.app.testing.ResearchWatchdog()
     companion object {
         @JvmStatic
         @ParameterizedRobolectricTestRunner.Parameters(name = "{0}")
@@ -768,6 +770,7 @@ class ChartScreensLayoutTest(device: DeviceConfig) : ScreenTest(device) {
 @RunWith(ParameterizedRobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class ChartMainLayoutTest(device: DeviceConfig) : ScreenTest(device) {
+    @get:Rule val watchdog = com.optionslab.app.testing.ResearchWatchdog()
     companion object {
         @JvmStatic
         @ParameterizedRobolectricTestRunner.Parameters(name = "{0}")

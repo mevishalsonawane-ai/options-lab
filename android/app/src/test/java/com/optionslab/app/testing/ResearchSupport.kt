@@ -149,3 +149,29 @@ object ResearchMatrix {
         "landscape-font2.0-dark", "tablet-font1.3-dark")
     fun six(): List<Array<Any>> = DeviceConfig.matrix().filter { (it[0] as DeviceConfig).name in PICK }
 }
+
+/**
+ * A stuck research / Lab / chart test fails with its stack instead of holding the CI job: after [seconds]
+ * the test thread is interrupted (every 5 s until it ends), and its stack is printed once.
+ */
+class ResearchWatchdog(private val seconds: Long = 150) : org.junit.rules.TestRule {
+    override fun apply(base: org.junit.runners.model.Statement, description: org.junit.runner.Description) =
+        object : org.junit.runners.model.Statement() {
+            override fun evaluate() {
+                val thread = Thread.currentThread()
+                val timer = java.util.Timer("research-watchdog ${description.methodName}", true)
+                var dumped = false
+                timer.schedule(object : java.util.TimerTask() {
+                    override fun run() {
+                        if (!dumped) {
+                            dumped = true
+                            System.err.println("WATCHDOG ${description.displayName} still running after $seconds s; test thread:")
+                            thread.stackTrace.forEach { System.err.println("    at $it") }
+                        }
+                        thread.interrupt()
+                    }
+                }, seconds * 1000, 5_000)
+                try { base.evaluate() } finally { timer.cancel(); Thread.interrupted() }
+            }
+        }
+}

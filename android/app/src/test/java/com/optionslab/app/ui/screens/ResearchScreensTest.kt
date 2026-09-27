@@ -83,6 +83,7 @@ internal object HomeFixtures {
 @RunWith(AndroidJUnit4::class)
 class ResearchScreensTest {
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
+    @get:Rule val watchdog = com.optionslab.app.testing.ResearchWatchdog()
 
     @Before fun fresh() { clearAlerts() }
     @After fun noNetwork() { assertEquals("no host may be reached", emptyList<String>(), NetworkGuard.blocked.toList()) }
@@ -372,6 +373,7 @@ class ResearchScreensTest {
 @RunWith(ParameterizedRobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class ResearchScreensLayoutTest(device: DeviceConfig) : ScreenTest(device) {
+    @get:Rule val watchdog = com.optionslab.app.testing.ResearchWatchdog()
     companion object {
         @JvmStatic
         @ParameterizedRobolectricTestRunner.Parameters(name = "{0}")
@@ -426,6 +428,7 @@ class ResearchScreensLayoutTest(device: DeviceConfig) : ScreenTest(device) {
 @RunWith(ParameterizedRobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class ResearchMainLayoutTest(device: DeviceConfig) : ScreenTest(device) {
+    @get:Rule val watchdog = com.optionslab.app.testing.ResearchWatchdog()
     companion object {
         @JvmStatic
         @ParameterizedRobolectricTestRunner.Parameters(name = "{0}")
