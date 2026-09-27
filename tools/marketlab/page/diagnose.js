@@ -64,9 +64,9 @@
       { scales: { x: { ticks: { color: css("--ink-3"), font: { size: 9 } }, grid: { display: false }, title: { display: true, text: "entry hour (UTC)", color: css("--ink-3") } },
         y: { min: 40, max: 60, ticks: { color: css("--ink-3") }, grid: { color: css("--line-2") } } } });
     // autopsy
-    root.querySelector(".autopsy").innerHTML = table(["Trade", "Entry (UTC)", "Result", "Best it got", "Worst it got", "Kept of best", "Best came after", "Move before entry"],
+    root.querySelector(".autopsy").innerHTML = table(["Trade", "Entry (UTC)", "Result", "Best it got", "Worst it got", "Kept of best", "Best came after", "24h before entry, in its direction"],
       M.autopsy.map((a) => [`${esc(a.strategy)} · ${a.side}`, a.entry_time.slice(5, 16), `<span class="${cls(a.ret)}">${spct(a.ret, 2)}</span>`,
-        `<span class="pos">${spct(a.mfe, 2)}</span>`, `<span class="neg">${spct(a.mae, 2)}</span>`, isNum(a.kept) ? pct(a.kept, 0) : "–",
+        `<span class="pos">${spct(a.mfe, 2)}</span>`, `<span class="neg">${spct(a.mae, 2)}</span>`, isNum(a.kept) && a.mfe > 0.002 ? pct(a.kept, 0) : "never in profit",
         `${num(a.hours_to_best, 0)}h`, `<span class="${cls(a.move_before_entry_24h)}">${spct(a.move_before_entry_24h, 2)}</span>`]));
     const au = M.autopsy.filter((a) => isNum(a.mfe));
     const sumBest = au.reduce((s, a) => s + Math.max(a.mfe, 0), 0), sumRes = au.reduce((s, a) => s + a.ret, 0);
