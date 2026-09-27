@@ -9,7 +9,7 @@ def read(path, **kw):
     if not os.path.exists(path):
         return None
     df = pd.read_csv(path, index_col=0, **kw)
-    df.index = pd.to_datetime(df.index, utc=True)
+    df.index = pd.to_datetime(df.index, utc=True, format="ISO8601")
     return df.sort_index()
 
 

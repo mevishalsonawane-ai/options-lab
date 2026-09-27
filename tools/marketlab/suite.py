@@ -100,7 +100,11 @@ def stats(pnl, per_year=365):
             "days": int(len(x)), "active_days": int((x != 0).sum())}
 
 
-def split_stats(pnl, dev_start, win_start, per_year=365):
+def split_stats(pnl, dev_start, win_start, per_year=365, warmup=130):
+    """dev: the development year (alarms out-of-sample); pre: everything before the test window after a
+    warm-up for the slowest indicators; window: the last 3 months; full: all."""
+    pre_start = pnl.index[0] + pd.Timedelta(days=warmup)
     return {"dev": stats(pnl[(pnl.index >= dev_start) & (pnl.index < win_start)], per_year),
+            "pre": stats(pnl[(pnl.index >= pre_start) & (pnl.index < win_start)], per_year),
             "window": stats(pnl[pnl.index >= win_start], per_year),
             "full": stats(pnl[pnl.index >= pnl.index[0]], per_year)}

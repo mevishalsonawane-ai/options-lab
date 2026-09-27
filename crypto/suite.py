@@ -252,9 +252,9 @@ def main():
             carry_pnl[k] = pnl
     res["carry"] = carry
 
-    # ---------- E. portfolio: best of each family on the dev year (by Sharpe), inverse-vol weights from dev
+    # ---------- E. portfolios: the best variant of each family by Sharpe over everything BEFORE the window
     def best(fam, pnls):
-        k = max(fam, key=lambda n: fam[n]["dev"].get("sharpe", -9))
+        k = max(fam, key=lambda n: fam[n]["pre"].get("sharpe", -9))
         return k, pnls[k]
     parts = {}
     k, p = best(trend, trend_pnl)
@@ -265,34 +265,37 @@ def main():
         k, p = best(carry, carry_pnl)
         parts["Carry: " + k] = p
     dfp = pd.DataFrame(parts).fillna(0.0)
-    dev_mask = (dfp.index >= dev_start) & (dfp.index < win_start)
-    vol = dfp[dev_mask].resample("W").sum().std().replace(0, np.nan)  # weekly: straddle P&L lands once a week
-    wts = (1 / vol) / (1 / vol).sum()
-    wts = wts.fillna(0.0)
-    port = (dfp * wts).sum(axis=1)
-    res["portfolio"] = {"parts": list(parts), "weights": {k: float(v) for k, v in wts.items()},
-                        **split_stats(port, dev_start, win_start),
-                        "parts_stats": {k: split_stats(v, dev_start, win_start) for k, v in parts.items()}}
-    # $100 account, last 3 months, daily
-    wn = port[port.index >= win_start]
-    eq = 100 * (1 + wn).cumprod()
-    bh = 100 * np.exp(r[r.index >= win_start].fillna(0).cumsum())
-    parts_w = (dfp[dfp.index >= win_start] * wts)
-    res["account"] = {"end": float(eq.iloc[-1]), "hold_end": float(bh.iloc[-1]),
-                      "curve": {"t": [str(t.date()) for t in eq.index], "eq": [round(float(v), 3) for v in eq], "hold": [round(float(v), 3) for v in bh]},
-                      "days": [{"date": str(t.date()), "start": float(eq.shift(1).fillna(100)[t]), "end": float(eq[t]),
-                                "pnl": float(eq[t] - eq.shift(1).fillna(100)[t]), "btc_ret": float(math.expm1(r.get(t, 0) or 0)),
-                                "parts": {k: float(parts_w.loc[t, k] * eq.shift(1).fillna(100)[t]) for k in parts_w.columns}}
-                               for t in eq.index[-30:]]}
-    k_best = [k for k in strad_trades if k in res["portfolio"]["parts"][1]]
-    tr_sel = strad_trades[res["portfolio"]["parts"][1].split(": ", 1)[1]][0]
-    res["straddle_weeks_window"] = [{"start": str(t.start), "side": int(t.side), "iv": float(t.get("iv", np.nan)) if "iv" in t else None,
-                                     "move": float(t.get("move", np.nan)) if "move" in t else None, "pnl": float(t.pnl)}
+    res["portfolio"] = {"parts": list(parts), "selected_by": "highest Sharpe before the test window (about 2.75 years)",
+                        "parts_stats": {k: split_stats(v, dev_start, win_start, 365) for k, v in parts.items()}}
+    for pname, wts in (("balanced", pd.Series(1 / len(parts), index=dfp.columns)), ("stacked", pd.Series(1.0, index=dfp.columns))):
+        port = (dfp * wts).sum(axis=1)
+        wn = port[port.index >= win_start]
+        eq = 100 * (1 + wn).cumprod()
+        prev = eq.shift(1).fillna(100)
+        bh = 100 * np.exp(r[r.index >= win_start].fillna(0).cumsum())
+        pw = dfp[dfp.index >= win_start] * wts
+        mret = eq.resample("ME").last()
+        res["portfolio"][pname] = {"weights": {k: float(v) for k, v in wts.items()}, **split_stats(port, dev_start, win_start, 365),
+                                   "account": {"end": float(eq.iloc[-1]), "hold_end": float(bh.iloc[-1]),
+                                               "months": [{"month": str(t.date())[:7], "end": float(v)} for t, v in mret.items()],
+                                               "by_part_usd": {k: float((pw[k] * prev).sum()) for k in pw.columns},
+                                               "curve": {"t": [str(t.date()) for t in eq.index], "eq": [round(float(v), 3) for v in eq], "hold": [round(float(v), 3) for v in bh]},
+                                               "days": [{"date": str(t.date()), "start": float(prev[t]), "end": float(eq[t]), "pnl": float(eq[t] - prev[t]),
+                                                         "market_ret": float(math.expm1(r.get(t, 0) or 0)),
+                                                         "parts": {k: float(pw.loc[t, k] * prev[t]) for k in pw.columns}} for t in eq.index[-30:]]}}
+    sel = [p for p in parts if p.startswith("Straddle: ")][0].split(": ", 1)[1]
+    tr_sel = strad_trades[sel][0]
+    res["straddle_weeks_window"] = [{"start": str(t.start), "side": int(t.side), "iv": float(t["iv"]) if "iv" in t and pd.notna(t["iv"]) else None,
+                                     "move": float(t["move"]) if "move" in t and pd.notna(t["move"]) else None, "pnl": float(t.pnl)}
                                     for _, t in tr_sel[tr_sel.start >= win_start].iterrows()]
     write_json(res, f"{RES}/suite.json")
-    print(json.dumps({"trend": trend, "straddles": strad, "carry": carry}, indent=1, default=str)[:6000])
-    print("portfolio", res["portfolio"]["weights"], res["portfolio"]["dev"], res["portfolio"]["window"])
-    print("account", res["account"]["end"], "hold", res["account"]["hold_end"])
+    P = res["portfolio"]
+    print("parts", P["parts"])
+    for pname in ("balanced", "stacked"):
+        q = P[pname]
+        print(pname, "| pre", {k: round(v, 3) for k, v in q["pre"].items() if k in ("total_return", "sharpe", "max_drawdown")},
+              "| window", {k: round(v, 3) for k, v in q["window"].items() if k in ("total_return", "sharpe", "max_drawdown")},
+              "| $100 ->", round(q["account"]["end"], 2), "hold", round(q["account"]["hold_end"], 2), q["account"]["by_part_usd"])
 
 
 if __name__ == "__main__":
