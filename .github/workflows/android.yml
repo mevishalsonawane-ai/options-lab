@@ -96,6 +96,7 @@ jobs:
   app-tests:
     name: App tests (JVM, Robolectric, Compose UI)
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     needs: engine
     defaults:
       run:

@@ -94,6 +94,12 @@ android {
             isReturnDefaultValues = true
             all {
                 it.maxHeapSize = "3g"
+                // Two test JVMs at once (the CI runner has 4 cores, 16 GB), each replaced after 100 classes so
+                // one area's static state cannot leak into - or stall - another's; and a hard limit, so a hang
+                // fails the build in minutes instead of holding CI for hours.
+                it.maxParallelForks = 2
+                it.setForkEvery(100)
+                it.timeout.set(java.time.Duration.ofMinutes(35))
                 it.systemProperty("robolectric.logging.enabled", "false")
                 // Screen tests write their screenshots (build/outputs/roborazzi); nothing is compared or committed.
                 it.systemProperty("roborazzi.test.record", "true")
