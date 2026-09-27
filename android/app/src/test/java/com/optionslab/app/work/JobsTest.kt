@@ -379,7 +379,7 @@ class JobsTest : RobolectricTest() {
 
     // ---- the watch's pass ----------------------------------------------------------------------------
 
-    @Test fun riskStepsRunBeforeTheQuotesAndTheQuotesUseTheQuickLane() = runBlocking {
+    @Test fun riskStepsRunBeforeTheQuotesAndTheQuotesUseTheQuickLane() = com.optionslab.app.testing.bounded("riskStepsRunBeforeTheQuotesAndTheQuotesUseTheQuickLane") { runBlocking {
         val nm = Background.notifications(context)
         PositionCards.card(context, "Paper", "ZZTEST", 75, 100.0, 101.0, 75.0)
         val id = PositionCards.idOf("Paper", "ZZTEST")
@@ -395,24 +395,24 @@ class JobsTest : RobolectricTest() {
         assertEquals("Market watch", t.title)
         assertTrue(t.lines.isEmpty())
         assertEquals(-1, t.progress)
-    }
+    } }
 
-    @Test fun theWatchPassShowsIndexLevels() = runBlocking {
+    @Test fun theWatchPassShowsIndexLevels() = com.optionslab.app.testing.bounded("theWatchPassShowsIndexLevels") { runBlocking {
         upstox.reply = { p -> if (isIntraday(p)) UpstoxStub.candles(UpstoxStub.minutes(WED, LocalTime.of(9, 15), 30, 24_800.0)) else status(404) }
         val t = Tasks.watchTick(context, AppSettings.load(), HashSet())
         assertTrue(t.lines.toString(), t.lines.any { it.startsWith("NIFTY 24,814.8 (+0.06%)") })
         assertTrue(t.lines.any { it.startsWith("BANKNIFTY ") })
         assertTrue(t.lines.any { it.startsWith("VIX ") })
-    }
+    } }
 
-    @Test fun aHungFeedCannotStallTheWatch() = runBlocking {
+    @Test fun aHungFeedCannotStallTheWatch() = com.optionslab.app.testing.bounded("aHungFeedCannotStallTheWatch") { runBlocking {
         upstox.reply = { p -> if (isIntraday(p)) MockResponse().setSocketPolicy(SocketPolicy.NO_RESPONSE) else status(404) }
         val t0 = System.nanoTime()
         val t = Tasks.watchTick(context, AppSettings.load(), HashSet())
         val secs = (System.nanoTime() - t0) / 1e9
         assertTrue("took $secs s", secs < 35)
         assertTrue(t.lines.isEmpty())
-    }
+    } }
 
     @Test fun priceAlarmsFireOnceAndNotAgainWithinHalfAnHour() {
         ShadowSystemClock.advanceBy(Duration.ofHours(2))
@@ -440,7 +440,7 @@ class JobsTest : RobolectricTest() {
             .setInputData(workDataOf(*pairs.toTypedArray())).setRunAttemptCount(attempt).build()
     }
 
-    @Test fun aHarvestGetsThreeRealTriesPerSession() = runBlocking {
+    @Test fun aHarvestGetsThreeRealTriesPerSession() = com.optionslab.app.testing.bounded("aHarvestGetsThreeRealTriesPerSession") { runBlocking {
         Background.at(WED, 15, 50)
         upstox.reply = { status(503) }
         assertTrue(worker("HARVEST").doWork() is ListenableWorker.Result.Retry)
@@ -452,9 +452,9 @@ class JobsTest : RobolectricTest() {
         assertTrue(worker("HARVEST", session = WED.plusDays(1)).doWork() is ListenableWorker.Result.Retry)
         assertEquals("${WED.plusDays(1)}:1", SecurePrefs.getString("harvest.failures"))
         assertFalse(Tasks.state.value.running)
-    }
+    } }
 
-    @Test fun aHarvestStoppedBySystemIsNotCountedAsAFailure() = runBlocking {
+    @Test fun aHarvestStoppedBySystemIsNotCountedAsAFailure() = com.optionslab.app.testing.bounded("aHarvestStoppedBySystemIsNotCountedAsAFailure") { runBlocking {
         Background.at(WED, 15, 50)
         upstox.reply = { status(503) }
         val w = worker("HARVEST")
@@ -463,9 +463,10 @@ class JobsTest : RobolectricTest() {
         assertTrue(w.isStopped)
         try { w.doWork(); fail("a stopped harvest must end as stopped, not failed") } catch (_: kotlinx.coroutines.CancellationException) {}
         assertNull(SecurePrefs.getString("harvest.failures"))
-    }
+    } }
 
-    @Test fun theWorkerRunsTheOtherJobsAndRetriesThemTwice() = runBlocking {
+
+    @Test fun theWorkerRunsTheOtherJobsAndRetriesThemTwice() = com.optionslab.app.testing.bounded("theWorkerRunsTheOtherJobsAndRetriesThemTwice") { runBlocking {
         assertTrue(worker(null).doWork() is ListenableWorker.Result.Failure)
         assertTrue(worker("BOGUS").doWork() is ListenableWorker.Result.Failure)
         assertTrue(worker("LIVE").doWork() is ListenableWorker.Result.Success)
@@ -476,9 +477,9 @@ class JobsTest : RobolectricTest() {
         assertTrue(worker("TICKET", attempt = 0).doWork() is ListenableWorker.Result.Retry)
         assertTrue(worker("TICKET", attempt = 2).doWork() is ListenableWorker.Result.Failure)
         assertTrue("nothing open to settle", worker("SETTLE").doWork() is ListenableWorker.Result.Success)
-    }
+    } }
 
-    @Test fun theWorkersForegroundNoticeIsQuiet() = runBlocking {
+    @Test fun theWorkersForegroundNoticeIsQuiet() = com.optionslab.app.testing.bounded("theWorkersForegroundNoticeIsQuiet") { runBlocking {
         val h = worker("HARVEST").getForegroundInfo()
         assertEquals(Notifier.ID_HARVEST, h.notificationId)
         assertEquals("Harvesting market data", Background.title(h.notification))
@@ -486,7 +487,7 @@ class JobsTest : RobolectricTest() {
         val o = worker("TICKET").getForegroundInfo()
         assertEquals(Notifier.ID_HARVEST + 1, o.notificationId)
         assertEquals("IraAlgo", Background.title(o.notification))
-    }
+    } }
 
     @Test fun harvestFailuresAreCountedPerSession() {
         assertEquals(1, Tasks.harvestFailed(WED))
@@ -497,7 +498,7 @@ class JobsTest : RobolectricTest() {
 
     // ---- daily reports -----------------------------------------------------------------------------
 
-    @Test fun theMorningCheckListsWhatNeedsFixing() = runBlocking {
+    @Test fun theMorningCheckListsWhatNeedsFixing() = com.optionslab.app.testing.bounded("theMorningCheckListsWhatNeedsFixing") { runBlocking {
         Background.linkZerodha()
         Background.contracts(context, WED, listOf(Upstox.Contract("NIFTY", WED.plusDays(6), 24_500.0, Right.PE, 75, "NSE_FO|1", "N")))
         val (title, lines) = DailyReports.morning(context)
@@ -509,9 +510,9 @@ class JobsTest : RobolectricTest() {
         assertTrue(lines.contains("• Mode: Paper"))
         DailyReports.post(context, DailyReports.Kind.MORNING, title, lines)
         assertEquals(title, Background.title(Background.notifications(context).getNotification(DailyReports.Kind.MORNING.id)))
-    }
+    } }
 
-    @Test fun aQuietDayReportsNoTrades() = runBlocking {
+    @Test fun aQuietDayReportsNoTrades() = com.optionslab.app.testing.bounded("aQuietDayReportsNoTrades") { runBlocking {
         val (title, lines) = DailyReports.evening(context)
         assertEquals("Day report · Wed 15 Oct", title)
         assertEquals(listOf("No trades today."), lines)
@@ -521,7 +522,7 @@ class JobsTest : RobolectricTest() {
         assertTrue(l2.contains("⚠ The market watch stopped at least once today"))
         assertTrue(l2.contains("⚠ The kill switch is on"))
         assertTrue(t2.startsWith("Day report · Wed 15 Oct · "))
-    }
+    } }
 
     @Test fun reportsAreArmedOnlyForALinkedAccountAndFireOnlyOnTradingDays() {
         DailyReports.scheduleAll(context)

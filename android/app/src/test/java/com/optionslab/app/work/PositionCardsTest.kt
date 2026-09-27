@@ -87,13 +87,13 @@ class PositionCardsTest : RobolectricTest() {
         assertEquals(0, Background.notifications(context).size())
     }
 
-    @Test fun aCardWhosePositionVanishedIsTakenDown() = runBlocking {
+    @Test fun aCardWhosePositionVanishedIsTakenDown() = com.optionslab.app.testing.bounded("aCardWhosePositionVanishedIsTakenDown") { runBlocking {
         PositionCards.card(context, "Paper", "GONE", 75, 100.0, 101.0, 75.0)
         assertNotNull(posted("Paper", "GONE"))
         PositionCards.refresh(context)
         assertNull(posted("Paper", "GONE"))
         assertFalse(PositionCards.anyOpen)
-    }
+    } }
 
     @Test fun closingAPaperPositionThatIsNotOpenSaysSo() {
         context.sendBroadcast(Intent(PositionCards.ACTION_CLOSE_PAPER).setComponent(ComponentName(context, NotificationActionReceiver::class.java))

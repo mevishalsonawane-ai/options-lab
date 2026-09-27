@@ -224,3 +224,24 @@ class BackgroundWatchdog(private val seconds: Long = 150) : org.junit.rules.Test
             }
         }
 }
+
+/**
+ * Run [block] (which reaches into other areas' stores and locks: strategies, ORB arms, the paper account) on its
+ * own thread, and fail with that thread's stack if it is still running after [seconds]: a lock held elsewhere can
+ * then never hold the test thread, and with it the whole CI job.
+ */
+fun <T> bounded(what: String, seconds: Long = 90, block: () -> T): T {
+    var worker: Thread? = null
+    val pool = java.util.concurrent.Executors.newSingleThreadExecutor { r -> Thread(r, "bounded: $what").apply { isDaemon = true; worker = this } }
+    val f = pool.submit(java.util.concurrent.Callable { block() })
+    try {
+        return f.get(seconds, java.util.concurrent.TimeUnit.SECONDS)
+    } catch (e: java.util.concurrent.TimeoutException) {
+        val stack = worker?.stackTrace?.joinToString("\n    at ") ?: "?"
+        throw AssertionError("$what still running after $seconds s:\n    at $stack")
+    } catch (e: java.util.concurrent.ExecutionException) {
+        throw e.cause ?: e
+    } finally {
+        pool.shutdownNow()
+    }
+}
