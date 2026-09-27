@@ -1,0 +1,74 @@
+name: Market study more inputs (ETFs, CME, on-chain, stablecoins, events, macro)
+
+# Downloads the extra BTC and gold inputs (spot ETFs, CME futures, crypto stocks, on-chain, stablecoins, premium
+# index, macro and FX, FOMC and jobs-report days) and publishes them to the market-data-more branch.
+
+on:
+  push:
+    paths:
+      - "crypto/fetch_more.py"
+      - "forex/fetch_more.py"
+      - ".github/workflows/markets-more.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: markets-more
+  cancel-in-progress: true
+
+jobs:
+  fetch:
+    name: ${{ matrix.market }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        market: [crypto, forex]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install "numpy>=1.26" "pandas>=2.2"
+      - name: Download more inputs
+        run: python ${{ matrix.market }}/fetch_more.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: more-${{ matrix.market }}
+          path: ${{ matrix.market }}/data_more/
+          compression-level: 0
+
+  publish:
+    name: Publish to market-data-mtf
+    runs-on: ubuntu-latest
+    needs: fetch
+    if: always()
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: more-*
+          path: out
+      - name: Push to market-data-mtf
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+        run: |
+          mkdir pub
+          for m in crypto forex; do
+            if [ -d "out/more-$m" ]; then mkdir -p "pub/$m/data_more" && cp -r "out/more-$m/." "pub/$m/data_more/"; fi
+          done
+          if [ -z "$(ls -A pub)" ]; then echo "nothing to publish"; exit 1; fi
+          cd pub
+          find . -type f -printf '%P %s\n' | sort > index.txt
+          git init -q -b market-data-mtf
+          git config user.name "ci-markets"; git config user.email "ci-markets@users.noreply.github.com"
+          git add -A && git commit -qm "More market inputs for $SHA"
+          git push -qf "https://x-access-token:${TOKEN}@github.com/${REPO}" HEAD:market-data-mtf
+          cat index.txt
