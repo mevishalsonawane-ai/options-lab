@@ -43,7 +43,7 @@ jobs:
           compression-level: 0
 
   publish:
-    name: Publish to market-data-mtf
+    name: Publish to market-data-more
     runs-on: ubuntu-latest
     needs: fetch
     if: always()
@@ -54,7 +54,7 @@ jobs:
         with:
           pattern: more-*
           path: out
-      - name: Push to market-data-mtf
+      - name: Push to market-data-more
         env:
           TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
