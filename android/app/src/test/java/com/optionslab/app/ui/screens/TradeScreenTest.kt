@@ -331,7 +331,9 @@ class TradeScreenTest {
 
         // LIMIT 90 -> 95, after the PIN.
         tap("Modify")
-        val box = compose.onNode(hasSetTextAction() and hasText("90.00") and hasAnyAncestor(isDialog()))
+        compose.onNode(hasSetTextAction() and hasText("90.00") and hasAnyAncestor(isDialog())).assertExists()
+        // Addressed by its label: once cleared, the box no longer holds "90.00".
+        val box = compose.onNode(hasSetTextAction() and hasText("Price") and hasAnyAncestor(isDialog()))
         box.performTextClearance().also { frames() }; box.performTextInput("95").also { frames() }
         inDialog("Confirm change").performClick().also { frames() }
         enterPin()

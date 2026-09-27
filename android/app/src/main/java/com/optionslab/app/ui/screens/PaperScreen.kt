@@ -4,6 +4,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -57,36 +58,44 @@ private fun px(x: Double) = String.format(Locale.ENGLISH, "%,.2f", x)
  */
 fun LazyListScope.paperTrade(model: AppModel, snap: Load<Paper.Snapshot>, book: String, onBook: (String) -> Unit,
                              onReset: () -> Unit) {
-    // Stable keys: a reset or reload adds and removes rows above the order form, which must not
-    // shift it to another slot and lose what was being typed.
+    // Stable keys and a fixed number of rows: a reset or reload changes what the rows hold, never how many there
+    // are, so the order form keeps its slot (and what was being typed), and the list is never measured against a
+    // row count that just shrank (CI: "Index 5, size 5" inside the lazy list's measure after a reload).
     item(key = "paper.head") {
-        LedgerCard(accent = LocalPalette.current.verdigris) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("SANDBOX · PAPER ACCOUNT", style = Type.label.copy(color = LocalPalette.current.verdigris), modifier = Modifier.weight(1f))
-                Stamp("No broker", LocalPalette.current.verdigris, animate = false)
+        Column {
+            LedgerCard(accent = LocalPalette.current.verdigris) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("SANDBOX · PAPER ACCOUNT", style = Type.label.copy(color = LocalPalette.current.verdigris), modifier = Modifier.weight(1f))
+                    Stamp("No broker", LocalPalette.current.verdigris, animate = false)
+                }
+                Note("IraAlgo's sandbox engine on the phone: margin, fills, MIS square-off at 15:15 and expiry settlement are simulated from Upstox's public prices. Nothing reaches Zerodha.")
             }
-            Note("IraAlgo's sandbox engine on the phone: margin, fills, MIS square-off at 15:15 and expiry settlement are simulated from Upstox's public prices. Nothing reaches Zerodha.")
+            if (snap is Load.Done) { Spacer(Modifier.height(14.dp)); PaperBalance(snap.value, onReset) }
         }
     }
-    if (snap is Load.Done) item(key = "paper.balance") { PaperBalance(snap.value, onReset) }
     item(key = "paper.form") { PaperOrderForm(model) }
     item(key = "paper.book") {
         ParamTokens("Book", listOf("Positions", "Orders", "Trades", "Funds").map { it to (it.lowercase() == book) }) { i ->
             onBook(listOf("positions", "orders", "trades", "funds")[i])
         }
     }
-    when (snap) {
-        Load.Idle -> item(key = "paper.state") { LedgerCard { FullSpinner("Opening the paper account") } }
-        is Load.Busy -> item(key = "paper.state") { LedgerCard { FullSpinner(snap.label) } }
-        is Load.Failed -> item(key = "paper.state") { com.optionslab.app.ui.components.AlertOn(snap.why) }
-        is Load.Done -> {
-            val v = snap.value
-            if (!v.priced) item(key = "paper.unpriced") { LedgerCard(accent = LocalPalette.current.amber) { Note("No fresh prices from Upstox just now; resting orders wait and positions show their last mark.") } }
-            when (book) {
-                "orders" -> item(key = "paper.orders") { PaperOrders(model, v) }
-                "trades" -> item(key = "paper.trades") { PaperTrades(model, v) }
-                "funds" -> item(key = "paper.funds") { PaperFunds(v, onReset) }
-                else -> item(key = "paper.positions") { PaperPositions(model, v) }
+    item(key = "paper.body") {
+        when (snap) {
+            Load.Idle -> LedgerCard { FullSpinner("Opening the paper account") }
+            is Load.Busy -> LedgerCard { FullSpinner(snap.label) }
+            is Load.Failed -> com.optionslab.app.ui.components.AlertOn(snap.why)
+            is Load.Done -> Column {
+                val v = snap.value
+                if (!v.priced) {
+                    LedgerCard(accent = LocalPalette.current.amber) { Note("No fresh prices from Upstox just now; resting orders wait and positions show their last mark.") }
+                    Spacer(Modifier.height(14.dp))
+                }
+                when (book) {
+                    "orders" -> PaperOrders(model, v)
+                    "trades" -> PaperTrades(model, v)
+                    "funds" -> PaperFunds(v, onReset)
+                    else -> PaperPositions(model, v)
+                }
             }
         }
     }
@@ -217,12 +226,14 @@ private fun PaperOrders(model: AppModel, v: Paper.Snapshot) {
         v.orders.orders.forEach { o ->
             Rule(Modifier.padding(vertical = 5.dp))
             val tone = when (o.status) { "complete" -> p.verdigris; "rejected", "cancelled" -> p.oxblood; else -> p.amber }
-            Text("${o.action} ${o.symbol} ×${o.quantity}", style = Type.figure.copy(color = if (o.action == "SELL") p.oxblood else p.verdigris, fontSize = 13.sp),
-                modifier = Modifier.fillMaxWidth().clickable { model.rowAction.value = RowTarget.PaperOrder(o) })
-            Text("${o.product} · ${o.priceType}${if (o.price > 0) " ${px(o.price)}" else ""}${if (o.triggerPrice > 0) " trg ${px(o.triggerPrice)}" else ""} · ${o.timestamp.takeLast(8)}",
-                style = Type.figure.copy(color = p.inkSoft, fontSize = 11.sp))
-            Text("${o.status.uppercase()}${if (o.filledQuantity > 0) " · ${o.filledQuantity} @ ${px(o.averagePrice)}" else ""}${if (o.rejectionReason.isNotBlank()) " · ${o.rejectionReason}" else ""}",
-                style = Type.figure.copy(color = tone, fontSize = 11.sp))
+            // The whole order (its three lines) is the tap target, as on the live order book: the first line alone was 15 dp.
+            Column(Modifier.fillMaxWidth().heightIn(min = 48.dp).clickable { model.rowAction.value = RowTarget.PaperOrder(o) }) {
+                Text("${o.action} ${o.symbol} ×${o.quantity}", style = Type.figure.copy(color = if (o.action == "SELL") p.oxblood else p.verdigris, fontSize = 13.sp))
+                Text("${o.product} · ${o.priceType}${if (o.price > 0) " ${px(o.price)}" else ""}${if (o.triggerPrice > 0) " trg ${px(o.triggerPrice)}" else ""} · ${o.timestamp.takeLast(8)}",
+                    style = Type.figure.copy(color = p.inkSoft, fontSize = 11.sp))
+                Text("${o.status.uppercase()}${if (o.filledQuantity > 0) " · ${o.filledQuantity} @ ${px(o.averagePrice)}" else ""}${if (o.rejectionReason.isNotBlank()) " · ${o.rejectionReason}" else ""}",
+                    style = Type.figure.copy(color = tone, fontSize = 11.sp))
+            }
             OrderSourcePill(owners, "paper:${o.orderId}")
             if (o.status == "open" || o.status == "trigger pending") Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 TextButton({ editing = o }) { Text("Modify", style = Type.label.copy(color = p.inkSoft)) }

@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -70,6 +71,7 @@ data class ChainPick(
  * places a paper order; in LIVE mode it opens the usual review (margin
  * check, hold to send, PIN or fingerprint) - nothing is sent from here.
  */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 fun OptionOrderSheet(model: AppModel, pick: ChainPick, initialBuy: Boolean = true, initialLimit: Double? = null, onClose: () -> Unit) {
     val p = LocalPalette.current
@@ -127,10 +129,12 @@ fun OptionOrderSheet(model: AppModel, pick: ChainPick, initialBuy: Boolean = tru
                 Row(Modifier.fillMaxWidth().background(p.chip, RoundedCornerShape(50)).padding(3.dp)) {
                     listOf(true to "BUY", false to "SELL").forEach { (isBuy, label) ->
                         val sel = buy == isBuy
-                        Text(label, textAlign = TextAlign.Center,
-                            style = Type.label.copy(color = if (sel) Color.White else p.inkSoft, fontSize = 14.sp, fontWeight = FontWeight.Bold),
-                            modifier = Modifier.weight(1f).background(if (sel) (if (isBuy) p.verdigris else p.oxblood) else Color.Transparent, RoundedCornerShape(50))
-                                .clickable { buy = isBuy }.padding(vertical = 10.dp))
+                        // 48 dp high (it was 37): the label centred in it.
+                        Box(Modifier.weight(1f).heightIn(min = 48.dp).background(if (sel) (if (isBuy) p.verdigris else p.oxblood) else Color.Transparent, RoundedCornerShape(50))
+                            .clickable { buy = isBuy }.padding(vertical = 6.dp), contentAlignment = Alignment.Center) {
+                            Text(label, textAlign = TextAlign.Center,
+                                style = Type.label.copy(color = if (sel) Color.White else p.inkSoft, fontSize = 14.sp, fontWeight = FontWeight.Bold))
+                        }
                     }
                 }
                 Spacer(Modifier.height(12.dp))
@@ -141,11 +145,12 @@ fun OptionOrderSheet(model: AppModel, pick: ChainPick, initialBuy: Boolean = tru
                         Text("$qty qty", style = Type.bodySmall.copy(color = p.inkFaint))
                     }
                     Stepper("−") { if (lots > 1) lots-- }
-                    Text("$lots", style = Type.figureLarge.copy(color = p.ink, fontSize = 22.sp), textAlign = TextAlign.Center, modifier = Modifier.size(width = 56.dp, height = 32.dp))
+                    Text("$lots", style = Type.figureLarge.copy(color = p.ink, fontSize = 22.sp), textAlign = TextAlign.Center, modifier = Modifier.widthIn(min = 56.dp).heightIn(min = 32.dp))
                     Stepper("+") { if (lots < 50) lots++ }
                 }
                 Spacer(Modifier.height(14.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                // The product moves to a line of its own when a large font leaves no room (MIS was squeezed to nothing).
+                androidx.compose.foundation.layout.FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     Token("Market", !limit) { limit = false }
                     Token("Limit", limit) { limit = true }
                     Spacer(Modifier.weight(1f))

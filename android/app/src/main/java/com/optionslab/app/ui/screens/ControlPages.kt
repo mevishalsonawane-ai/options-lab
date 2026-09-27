@@ -4,6 +4,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.layout.Column
@@ -739,7 +740,8 @@ private fun BackupCard(model: AppModel, wipeOnExhaustion: Boolean) {
             properties = androidx.compose.ui.window.DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy),
             title = { Text(if (mode == "backup") "Seal the backup" else "Open the backup", style = Type.title) },
             text = {
-                Column {
+                // Scrolls: at a large font on a small or landscape screen the fields do not all fit (they were squeezed flat).
+                Column(Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState())) {
                     Text(when {
                         mode == "backup" -> "Enter your app PIN, then choose a backup passphrase. The file is sealed with the passphrase: " +
                             "it cannot be recovered, so keep it somewhere safe."

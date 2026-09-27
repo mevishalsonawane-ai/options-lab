@@ -314,7 +314,9 @@ class PaperScreenTest {
             tap("Modify"); frames()
             inDialog("Modify paper order").assertExists()
             compose.onNode(hasSetTextAction() and hasText("75") and hasAnyAncestor(isDialog())).assertExists()
-            val price = compose.onNode(hasSetTextAction() and hasText("90.00") and hasAnyAncestor(isDialog()))
+            compose.onNode(hasSetTextAction() and hasText("90.00") and hasAnyAncestor(isDialog())).assertExists()
+            // Addressed by its label: once cleared, the box no longer holds "90.00".
+            val price = compose.onNode(hasSetTextAction() and hasText("Price") and hasAnyAncestor(isDialog()))
             price.performTextClearance(); frames(); price.performTextInput("95"); frames()
             inDialog("Modify").performClick(); frames()
         }
@@ -325,7 +327,8 @@ class PaperScreenTest {
         // A quantity that is not whole lots is refused and changes nothing.
         paused {
             tap("Modify"); frames()
-            val qty = compose.onNode(hasSetTextAction() and hasText("75") and hasAnyAncestor(isDialog()))
+            compose.onNode(hasSetTextAction() and hasText("75") and hasAnyAncestor(isDialog())).assertExists()
+            val qty = compose.onNode(hasSetTextAction() and hasText("Quantity (units)") and hasAnyAncestor(isDialog()))
             qty.performTextClearance(); frames(); qty.performTextInput("100"); frames()
             inDialog("Modify").performClick(); frames()
         }

@@ -603,7 +603,7 @@ internal fun Masthead(live: Boolean, calm: Boolean, linked: Boolean, onMode: (Bo
             ) { com.optionslab.app.ui.components.BrandEmblem(24.dp, calm = true) }
             Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f)) {
-                Text("IraAlgo", style = Type.masthead.copy(color = p.ink, fontSize = 20.sp), maxLines = 1)
+                com.optionslab.app.ui.components.FitText("IraAlgo", Type.masthead.copy(color = p.ink, fontSize = 20.sp), minSize = 12.sp)
                 // The date, then the market's state: on a narrow bar (a small phone, large fonts) the state moves
                 // to a line of its own rather than being squeezed out beside the mode switch.
                 androidx.compose.foundation.layout.FlowRow(verticalArrangement = Arrangement.Center) {
@@ -674,8 +674,8 @@ internal fun TabBar(current: Tab, tabs: List<Tab>, onPick: (Tab) -> Unit) {
                 ) {
                     Icon(t.icon, contentDescription = null, tint = if (sel) p.ink else p.inkFaint, modifier = Modifier.size(22.dp))
                     Spacer(Modifier.height(3.dp))
-                    Text(t.label, style = Type.label.copy(fontSize = 11.sp, color = if (sel) p.ink else p.inkFaint,
-                        fontWeight = if (sel) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.Medium), maxLines = 1)
+                    com.optionslab.app.ui.components.FitText(t.label, Type.label.copy(fontSize = 11.sp, color = if (sel) p.ink else p.inkFaint,
+                        fontWeight = if (sel) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.Medium))
                 }
             }
         }

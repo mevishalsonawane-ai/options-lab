@@ -5,6 +5,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.optionslab.app.security.PinLock
 import com.optionslab.app.ui.theme.IraAlgoTheme
@@ -22,7 +23,7 @@ class LockScreenTest {
     @get:Rule(order = 100) val dump = com.optionslab.app.testing.DumpOnFailure(compose)
 
     private fun type(digits: String) {
-        digits.forEach { compose.onNodeWithText(it.toString()).performClick() }
+        digits.forEach { compose.onNodeWithText(it.toString()).performScrollTo().performClick() }
         compose.waitForIdle()
     }
 
@@ -72,9 +73,9 @@ class LockScreenTest {
         show(setup = false, onPin = { tried += String(it); PinLock.Result.Wrong(3) })
         compose.onNodeWithText("Enter your PIN").assertIsDisplayed()
         type("2468")
-        compose.onNodeWithText("⌫").performClick()
+        compose.onNodeWithText("⌫").performScrollTo().performClick()
         type("913")
-        compose.onNodeWithText("✓").performClick()
+        compose.onNodeWithText("✓").performScrollTo().performClick()
         waitForText("Not the right PIN. 3 before a pause.")
         assertEquals(listOf("246913"), tried)
     }

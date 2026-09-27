@@ -173,6 +173,7 @@ fun ReplayLab(model: AppModel) {
 }
 
 /** The Replay page from the loaded session and callbacks (what [ReplayLab] shows; tests drive it without an [AppModel]). */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 internal fun ReplayContent(loaded: Load<com.optionslab.engine.Session>, daysFor: (String) -> List<java.time.LocalDate>, onLoad: (String, java.time.LocalDate) -> Unit) {
     val p = LocalPalette.current
@@ -229,7 +230,8 @@ internal fun ReplayContent(loaded: Load<com.optionslab.engine.Session>, daysFor:
         }
         if (session != null) item {
             LedgerCard(title = "$u · ${session.day}") {
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) { listOf("Index", "ATM CE", "ATM PE").forEach { k -> Token(k, k == what) { what = k } } }
+                // Wraps to a second line when a large font leaves no room ('ATM PE' was cut).
+                androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) { listOf("Index", "ATM CE", "ATM PE").forEach { k -> Token(k, k == what) { what = k } } }
                 val s = series
                 if (s == null || s.size == 0) Note("That instrument has no bars on this day.") else {
                     rev.let { }   // read so trades redraw the figures

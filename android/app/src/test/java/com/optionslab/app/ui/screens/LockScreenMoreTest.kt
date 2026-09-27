@@ -6,6 +6,7 @@ import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.optionslab.app.security.PinLock
 import com.optionslab.app.testing.has
@@ -32,7 +33,9 @@ class LockScreenMoreTest {
     @get:Rule val compose = createComposeRule()
     private val pin = "246813"
 
-    private fun type(digits: String) = digits.forEach { compose.onNodeWithText(it.toString()).performClick() }
+    /** The page scrolls (the pad sits below the fold on a short screen): each key is scrolled into view, then tapped. */
+    private fun click(text: String) { compose.onNodeWithText(text).performScrollTo().performClick() }
+    private fun type(digits: String) = digits.forEach { click(it.toString()) }
 
     private fun show(setup: Boolean = false, bio: String? = null, notice: String? = null, onBio: () -> Unit = {},
                      onPin: (CharArray) -> PinLock.Result = { PinLock.Result.Ok }) = compose.setContent {
@@ -44,7 +47,7 @@ class LockScreenMoreTest {
         show(bio = "Use fingerprint", onBio = { asked.incrementAndGet() })
         compose.waitForIdle()
         val before = asked.get()
-        compose.onNodeWithText("Use fingerprint").performClick()
+        click("Use fingerprint")
         assertTrue(asked.get() >= before + 1)
         // The PIN pad still works alongside it.
         compose.onNodeWithText("1").assertIsEnabled()
@@ -82,20 +85,20 @@ class LockScreenMoreTest {
 
     @Test fun theLastWrongPinErasesAndSaysSo() {
         show(onPin = { PinLock.Result.Wiped })
-        type("2468"); compose.onNodeWithText("✓").performClick()
+        type("2468"); click("✓")
         compose.waitForText("Too many attempts: the vault has been erased.")
     }
 
     @Test fun aWrongPinWithNoFreeAttemptsLeftSaysOnlyThat() {
         show(onPin = { PinLock.Result.Wrong(0) })
-        type("2468"); compose.onNodeWithText("✓").performClick()
+        type("2468"); click("✓")
         compose.waitForText("Not the right PIN.")
     }
 
     @Test fun onceUnlockedThePadStaysShut() {
         val tried = AtomicInteger()
         show(onPin = { tried.incrementAndGet(); PinLock.Result.Ok })
-        type("2468"); compose.onNodeWithText("✓").performClick()
+        type("2468"); click("✓")
         compose.waitUntil(5_000) { tried.get() == 1 }
         compose.waitForIdle()
         compose.onNodeWithText("1").assertIsNotEnabled()
@@ -105,9 +108,9 @@ class LockScreenMoreTest {
     @Test fun anEmptyPinIsNeverSubmitted() {
         val tried = AtomicInteger()
         show(onPin = { tried.incrementAndGet(); PinLock.Result.Wrong(4) })
-        compose.onNodeWithText("✓").performClick()
-        type("1"); compose.onNodeWithText("⌫").performClick()
-        compose.onNodeWithText("✓").performClick()
+        click("✓")
+        type("1"); click("⌫")
+        click("✓")
         compose.waitForIdle()
         assertEquals(0, tried.get())
     }

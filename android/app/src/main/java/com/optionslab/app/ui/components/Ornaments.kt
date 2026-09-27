@@ -40,6 +40,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
@@ -175,9 +176,9 @@ fun BrassButton(
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             if (busy) { CircularProgressIndicator(Modifier.size(16.dp), color = textColor, strokeWidth = 2.dp); Spacer(Modifier.width(8.dp)) }
-            // Two centred lines when a large font or a narrow screen leaves no room for one: the button grows
+            // More centred lines when a large font or a narrow screen leaves no room for one: the button grows
             // rather than cutting its label.
-            Text(text, style = Type.label.copy(color = textColor.copy(alpha = alpha), fontSize = 14.sp), maxLines = 2,
+            Text(text, style = Type.label.copy(color = textColor.copy(alpha = alpha), fontSize = 14.sp), maxLines = 3,
                 overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
         }
     }
@@ -215,7 +216,8 @@ fun Stamp(text: String, color: Color, modifier: Modifier = Modifier, angle: Floa
             .background(color.copy(alpha = 0.12f), Pill)
             .padding(horizontal = 10.dp, vertical = 3.dp),
     ) {
-        Text(text.uppercase(), style = Type.label.copy(color = color, fontSize = 11.sp, letterSpacing = 0.6.sp), maxLines = 1)
+        // Wraps rather than cutting (a large font on a narrow screen).
+        Text(text.uppercase(), style = Type.label.copy(color = color, fontSize = 11.sp, letterSpacing = 0.6.sp))
     }
 }
 
@@ -395,3 +397,14 @@ fun Spaced(space: Dp = 14.dp, content: @Composable ColumnScope.() -> Unit) =
 /** Kept for callers that still draw one; draws nothing in this style. */
 @Suppress("UNUSED_PARAMETER")
 fun DrawScope.engravedFrame(color: Color, inset: Float = 0f) = Unit
+
+/**
+ * One line of [text] that shrinks (down to [minSize]) until it fits its width, for labels that cannot wrap: the tab
+ * bar's names and the masthead's title at a large font on a narrow screen (they were cut mid-word).
+ */
+@Composable
+fun FitText(text: String, style: androidx.compose.ui.text.TextStyle, modifier: Modifier = Modifier, minSize: androidx.compose.ui.unit.TextUnit = 8.sp) {
+    var size by remember(text, style.fontSize) { androidx.compose.runtime.mutableFloatStateOf(style.fontSize.value) }
+    Text(text, modifier, style = style.copy(fontSize = size.sp), maxLines = 1, softWrap = false,
+        onTextLayout = { r -> if (r.didOverflowWidth && size > minSize.value) size = (size * 0.92f).coerceAtLeast(minSize.value) })
+}

@@ -53,8 +53,35 @@ object IdleSampler {
         var since = 0L
         var inStall = 0
         var total = 0
+        var workerKey = ""
+        var workerSince = 0L
+        var dumpedKey = ""
         while (true) {
             try { Thread.sleep(1_000) } catch (_: InterruptedException) { return }
+            // A silent hang (not in Compose's idling loop, so nothing above reports it): the test thread's stack
+            // unchanged for 100 s. Every thread's stack goes to the CI log once, straight to the process's stderr
+            // (a test's own System.err is captured by Gradle and not shown).
+            runCatching {
+                val all = Thread.getAllStackTraces()
+                val worker = all.entries.firstOrNull { it.key.name.startsWith("Test worker") } ?: return@runCatching
+                // Robolectric runs each test body on its main thread while the worker waits: both must stand still.
+                val main = all.entries.filter { it.key.name.contains("Main Thread") }.joinToString("#") { it.value.take(14).joinToString("|") }
+                val key = worker.value.take(14).joinToString("|") + "##" + main
+                val now = System.currentTimeMillis()
+                if (key != workerKey) { workerKey = key; workerSince = now }
+                else if (now - workerSince >= 100_000 && dumpedKey != key) {
+                    dumpedKey = key
+                    write(buildString {
+                        append("HANG-SAMPLER: the test thread has not moved for ${(now - workerSince) / 1000} s; every thread:\n")
+                        all.entries.filter { (t, st) -> st.isNotEmpty() && (t.name.startsWith("Test worker") || t.name.contains("Main Thread") ||
+                            st.any { e -> e.className.startsWith("com.optionslab") }) }.forEach { (t, st) ->
+                            append("  ${t.name} (${t.state})\n")
+                            st.asSequence().filterNot { e -> e.className.startsWith("java.lang.invoke") || e.className.startsWith("jdk.internal") || e.methodName.contains("\$\$robo\$\$") }
+                                .take(45).forEach { append("    at $it\n") }
+                        }
+                    })
+                }
+            }
             runCatching {
                 val main = Looper.getMainLooper()?.thread ?: return@runCatching
                 val stack = main.stackTrace

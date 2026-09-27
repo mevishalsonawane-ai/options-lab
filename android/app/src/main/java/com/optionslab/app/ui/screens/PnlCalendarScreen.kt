@@ -6,6 +6,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -209,7 +210,8 @@ private fun Segmented(options: List<String>, selected: Int, onPick: (Int) -> Uni
 @Composable
 private fun NavArrow(label: String, enabled: Boolean, onClick: () -> Unit) {
     val p = LocalPalette.current
-    Box(Modifier.size(28.dp).clip(CircleShape).clickable(enabled = enabled, onClick = onClick), contentAlignment = Alignment.Center) {
+    // At least 48 dp (a touch target), and growing with a large font (at 28 dp the arrow was cut).
+    Box(Modifier.defaultMinSize(48.dp, 48.dp).clip(CircleShape).clickable(enabled = enabled, onClick = onClick), contentAlignment = Alignment.Center) {
         Text(label, style = Type.title.copy(color = if (enabled) p.ink else p.inkFaint, fontSize = 17.sp))
     }
 }
@@ -218,7 +220,7 @@ private fun NavArrow(label: String, enabled: Boolean, onClick: () -> Unit) {
 private fun Eyebrow(text: String, modifier: Modifier = Modifier) {
     val p = LocalPalette.current
     Text(text.uppercase(Locale.ENGLISH), style = Type.label.copy(color = p.inkSoft, fontSize = 9.5.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 0.9.sp),
-        modifier = modifier, maxLines = 1)
+        modifier = modifier)
 }
 
 /** The month's net, its change on the month before, and the cumulative P&L line. */

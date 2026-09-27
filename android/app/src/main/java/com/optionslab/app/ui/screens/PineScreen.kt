@@ -201,6 +201,7 @@ private fun PineList(onOpen: (PineScripts.Item) -> Unit, onNew: (PineScripts.Ite
         })
 }
 
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 private fun PineEditor(env: PineEnv, d: PineDraft, onOpenChart: () -> Unit, onClose: () -> Unit) {
     val p = LocalPalette.current
@@ -253,12 +254,13 @@ private fun PineEditor(env: PineEnv, d: PineDraft, onOpenChart: () -> Unit, onCl
     androidx.activity.compose.BackHandler { close() }
 
     Column(Modifier.fillMaxSize()) {
-        Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically,
+        // The tabs move under "‹ Scripts" when a large font leaves no room beside it (they were pushed off the screen).
+        androidx.compose.foundation.layout.FlowRow(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 4.dp),
             horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            TextButton({ close() }) { Text("‹ Scripts") }
+            TextButton({ close() }, Modifier.align(Alignment.CenterVertically)) { Text("‹ Scripts") }
             Spacer(Modifier.weight(1f))
             listOf("code" to "Code", "test" to "Backtest", "auto" to "Auto-trade").forEach { (k, l) ->
-                com.optionslab.app.ui.components.Token(l, d.tab == k) { d.tab = k }
+                com.optionslab.app.ui.components.Token(l, d.tab == k, Modifier.align(Alignment.CenterVertically)) { d.tab = k }
             }
         }
         // Status line: compiles, or how many errors.
