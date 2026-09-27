@@ -138,10 +138,6 @@ class OrderFlowLive2Test : RobolectricTest() {
         assertEquals("nothing more was sent", 1, kite.placed.size)
     }
 
-    @Ignore("UI BUG: order review, a leg left working: Kite answers \"status_message\": null for an open order and " +
-        "Broker.awaitOrder/orderState read it with optString, which gives the text \"null\" on Android; steps: send a plan whose " +
-        "leg stays OPEN; expected \"Leg 1 open. It is still working at Zerodha; decide below.\"; actual \"Leg 1 open: null. It is " +
-        "still working at Zerodha; decide below.\" (Broker.orderRow already maps \"null\" to \"\", the Fill readers do not)")
     @Test fun anOpenLegsReasonNamesNoNullStatusMessage() {
         // Kite sends "status_message": null for an order that is simply open; the reason must not print it.
         val m = model()

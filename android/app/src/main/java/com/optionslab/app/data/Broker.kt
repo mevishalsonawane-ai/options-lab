@@ -565,7 +565,9 @@ object Broker {
             delay(1_000)
         }
         val o = last ?: return Fill(orderId, "UNKNOWN", 0.0, 0, "no order history yet")
-        return Fill(orderId, o.optString("status"), o.optDouble("average_price", 0.0), o.optInt("filled_quantity"), o.optString("status_message", ""))
+        return Fill(orderId, o.optString("status"), o.optDouble("average_price", 0.0), o.optInt("filled_quantity"),
+            // Kite sends "status_message": null for an open order, which optString reads as the text "null".
+            o.optString("status_message", "").let { if (it == "null") "" else it })
     }
 
     /**
@@ -669,7 +671,9 @@ object Broker {
         val hist = call("GET", "/orders/${Kite.enc(orderId)}") as JSONArray
         if (hist.length() == 0) return null
         val o = hist.getJSONObject(hist.length() - 1)
-        return Fill(orderId, o.optString("status"), o.optDouble("average_price", 0.0), o.optInt("filled_quantity"), o.optString("status_message", ""))
+        return Fill(orderId, o.optString("status"), o.optDouble("average_price", 0.0), o.optInt("filled_quantity"),
+            // Kite sends "status_message": null for an open order, which optString reads as the text "null".
+            o.optString("status_message", "").let { if (it == "null") "" else it })
     }
 
     suspend fun cancel(orderId: String, variety: String = "regular") {
