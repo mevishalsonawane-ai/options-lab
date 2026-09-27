@@ -23,6 +23,8 @@ import androidx.compose.ui.unit.Density
  *  - CLIPPED     a node is cut by its parent (drawn bounds smaller than its size) outside a scroller;
  *  - TEXT        a Text whose layout overflowed (hasVisualOverflow: cut off) or ellipsized a line
  *                (unless the text is listed in [Options.ellipsisOk]);
+ *  - NUMBER      a Text line break inside a number ("₹20 / 0.0 / 0", "130.0 / 0"): a number must stay on one line
+ *                (see [brokenNumbers]);
  *  - TOUCH       a clickable smaller than 48x48 dp. An error for primary actions (send, place,
  *                order, close, confirm, cancel, save, delete, buy, sell, unlock, erase...), else a warning;
  *  - EMPTY       a clickable of zero size, or fully clipped away outside a scroller;
@@ -46,6 +48,20 @@ object LayoutLint {
         val touchDp: Float = 48f,
         val slackDp: Float = 1f,
     )
+
+    /** A word that is only a number: an amount, a price, a percentage ("₹200.00", "+100.00", "(100.00%)", "Rs 1,20,000" as "1,20,000"). */
+    private val NUMBER = Regex("^[+\\-−(]*(₹|Rs\\.?)?[0-9][0-9.,:]*%?\\)?[,.;]?$")
+
+    /**
+     * The number words of [text] that a line break at any of [breaks] (offsets where a line ends and the next
+     * begins, not after whitespace or a newline) cuts through.
+     */
+    fun brokenNumbers(text: String, breaks: List<Int>): List<String> = breaks.mapNotNull { e ->
+        if (e <= 0 || e >= text.length || text[e - 1].isWhitespace() || text[e].isWhitespace()) return@mapNotNull null
+        var a = e; while (a > 0 && !text[a - 1].isWhitespace()) a--
+        var b = e; while (b < text.length && !text[b].isWhitespace()) b++
+        text.substring(a, b).takeIf { NUMBER.matches(it) }
+    }
 
     fun check(root: SemanticsNode, density: Density, options: Options = Options()): List<Finding> {
         val out = ArrayList<Finding>()
@@ -115,6 +131,8 @@ object LayoutLint {
                     out += Finding("TEXT", Level.ERROR, "'${text.take(60)}' is cut off at the side: ${dp(widest)} dp of text in ${dp(t.size.width.toFloat())} dp")
                 else if (t.multiParagraph.didExceedMaxLines && !ellipsized)
                     out += Finding("TEXT", Level.ERROR, "'${text.take(60)}' has more lines than it may show; the rest is cut")
+                for (w in brokenNumbers(text, (0 until last).map { t.getLineEnd(it) }))
+                    out += Finding("NUMBER", Level.ERROR, "'$w' is broken across lines in '${text.take(60)}' (a number must stay on one line: maxLines = 1 / FitText)")
                 if (ellipsized && text !in options.ellipsisOk)
                     out += Finding("TEXT", Level.ERROR, "'${text.take(60)}' is ellipsized")
             }

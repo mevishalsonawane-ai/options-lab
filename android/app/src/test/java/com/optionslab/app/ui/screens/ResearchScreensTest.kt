@@ -355,7 +355,7 @@ class ResearchScreensTest {
         for (r in listOf("1W", "1M", "1Y")) { scrollTo(r).performClick(); text(r).assertIsSelected() }
         // 1Y: from the first close shown.
         text("+1,080.00", sub = true).assertIsDisplayed()
-        text("  Full chart ›").performClick()
+        text("Full chart ›").performClick()
         assertEquals(listOf("chart"), c.went)
     }
 

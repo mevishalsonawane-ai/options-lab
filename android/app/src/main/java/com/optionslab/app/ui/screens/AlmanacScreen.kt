@@ -94,6 +94,7 @@ fun AlmanacScreen(model: AppModel, onGo: (String) -> Unit) {
  * Home from plain state and callbacks (what [AlmanacScreen] shows; tests drive it without an [AppModel]).
  * [loggedIn]: a Zerodha session for today; [strategies]: the strategy card between the money and the chart.
  */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 internal fun AlmanacContent(
     live: Boolean,
@@ -154,7 +155,7 @@ internal fun AlmanacContent(
             val usedShare = if (cap != null && cap > 0) ((money.used ?: 0.0) / cap).toFloat().coerceIn(0f, 1f) else 0f
             LedgerCard {
                 Text("Capital", style = Type.label.copy(color = p.inkSoft, fontSize = 13.sp))
-                Text(cap?.let { inr(it) } ?: "—", style = Type.figureHuge.copy(color = p.ink, fontSize = 38.sp), maxLines = 1)
+                com.optionslab.app.ui.components.FitText(cap?.let { inr(it) } ?: "—", style = Type.figureHuge.copy(color = p.ink, fontSize = 38.sp), minSize = 14.sp)
                 if (cap != null && cap > 0) {
                     Row(Modifier.fillMaxWidth().padding(top = 10.dp).height(8.dp).background(p.chip, RoundedCornerShape(50))) {
                         if (usedShare > 0f) Spacer(Modifier.weight(usedShare).fillMaxHeight().background(p.ink, RoundedCornerShape(50)))
@@ -199,11 +200,14 @@ internal fun AlmanacContent(
             LedgerCard {
                 Row(verticalAlignment = Alignment.Top) {
                     Column(Modifier.weight(1f)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("BANKNIFTY", style = Type.label.copy(color = p.inkSoft, fontSize = 13.sp))
-                            Text("  Full chart ›", style = Type.label.copy(color = p.ink, fontSize = 12.sp), modifier = Modifier.clickable { onGo("chart") })
+                        // "Full chart ›" moves under the name when both do not fit (at font 2.0 it wrapped into the name).
+                        androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Text("BANKNIFTY", style = Type.label.copy(color = p.inkSoft, fontSize = 13.sp), modifier = Modifier.align(Alignment.CenterVertically))
+                            Text("Full chart ›", style = Type.label.copy(color = p.ink, fontSize = 12.sp), maxLines = 1, softWrap = false,
+                                modifier = Modifier.align(Alignment.CenterVertically).clickable { onGo("chart") })
                         }
-                        Text(last?.let { PX.format(it) } ?: "—", style = Type.figureLarge.copy(color = p.ink))
+                        // One line, shrunk to fit: a price never breaks mid-number.
+                        com.optionslab.app.ui.components.FitText(last?.let { PX.format(it) } ?: "—", style = Type.figureLarge.copy(color = p.ink), minSize = 12.sp)
                     }
                     if (change != null && base != null && base != 0.0) Text(
                         "${if (up) "+" else "−"}${PX.format(abs(change))}\n${if (up) "+" else "−"}${String.format(Locale.ENGLISH, "%.2f", abs(100 * change / base))}%",

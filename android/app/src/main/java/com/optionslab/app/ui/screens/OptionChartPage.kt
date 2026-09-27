@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -35,6 +36,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.SecureFlagPolicy
 import com.optionslab.app.ui.AppModel
+import com.optionslab.app.ui.components.FitText
 import com.optionslab.app.ui.components.LedgerCard
 import com.optionslab.app.ui.components.Note
 import com.optionslab.app.ui.components.PriceChart
@@ -72,6 +74,7 @@ fun OptionChartPage(model: AppModel, pick: ChainPick, onFullChart: (String) -> U
  * [AppModel]): [intraday] is the session's minute bars, [symbolOf] the option's trading symbol (null when not
  * listed), [orderSheet] the order sheet for (pick with the last price, buy, close).
  */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 internal fun OptionChartContent(
     pick: ChainPick,
@@ -122,11 +125,15 @@ internal fun OptionChartContent(
             Box(Modifier.fillMaxWidth().height(1.dp).background(p.rule))
             Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 LedgerCard {
-                    Row(verticalAlignment = Alignment.Bottom) {
-                        Text(last?.let { "₹%.2f".format(Locale.ENGLISH, it) } ?: "—", style = Type.figureHuge.copy(color = p.ink, fontSize = 34.sp), modifier = Modifier.weight(1f))
-                        if (change != null && open != null && open > 0) Text(
+                    // The price never breaks (it wrapped "₹20 / 0.0 / 0" at font 2.0 on a small phone): one line, shrunk to
+                    // fit; the change sits beside it when both fit, else on its own line under it.
+                    FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        FitText(last?.let { "₹%.2f".format(Locale.ENGLISH, it) } ?: "—", style = Type.figureHuge.copy(color = p.ink, fontSize = 34.sp),
+                            modifier = Modifier.align(Alignment.Bottom), minSize = 14.sp)
+                        if (change != null && open != null && open > 0) FitText(
                             "${if (up) "+" else "−"}%.2f (%.2f%%)".format(Locale.ENGLISH, kotlin.math.abs(change), kotlin.math.abs(100 * change / open)),
-                            style = Type.figure.copy(color = if (up) p.verdigris else p.oxblood, fontSize = 15.sp), modifier = Modifier.padding(bottom = 6.dp))
+                            style = Type.figure.copy(color = if (up) p.verdigris else p.oxblood, fontSize = 15.sp),
+                            modifier = Modifier.align(Alignment.Bottom).padding(bottom = 6.dp))
                     }
                     Text("Change since today's open", style = Type.bodySmall.copy(color = p.inkFaint, fontSize = 12.sp))
                     // Plotted by minute, not by candle: an illiquid option skips minutes, and the line
@@ -178,6 +185,6 @@ private fun Stat(label: String, value: String, modifier: Modifier) {
     Column(modifier) {
         Text(label, style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp))
         Spacer(Modifier.height(2.dp))
-        Text(value, style = Type.figure.copy(color = p.ink, fontSize = 15.sp))
+        FitText(value, style = Type.figure.copy(color = p.ink, fontSize = 15.sp))
     }
 }

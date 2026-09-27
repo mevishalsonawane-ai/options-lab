@@ -771,6 +771,10 @@ class ChartScreensLayoutTest(device: DeviceConfig) : ScreenTest(device) {
         compose.waitUntil(5_000) { compose.onAllNodesWithText("Open interest").fetchSemanticsNodes().isNotEmpty() }
         capture("option-page")
         lint("option-page", BUGS)
+        // The price is one line on every set-up (it wrapped "₹20 / 0.0 / 0" at font 2.0 on a small phone).
+        val layouts = ArrayList<androidx.compose.ui.text.TextLayoutResult>()
+        compose.onNodeWithText("₹200.00").fetchSemanticsNode().config.getOrNull(SemanticsActions.GetTextLayoutResult)?.action?.invoke(layouts)
+        assertEquals("the price's lines on ${device.name}", 1, layouts.single().lineCount)
     }
 
     @Test fun optionPageNoTrades() = checkScreen("option-page-empty", BUGS) {
