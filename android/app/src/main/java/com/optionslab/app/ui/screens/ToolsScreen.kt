@@ -160,8 +160,9 @@ fun ChainCard(c: ChainSnapshot, onPick: (ChainPick) -> Unit) {
         Row {
             val heads = listOf("CE Δ", "CE IV", "CE LTP", "STRIKE", "PE LTP", "PE IV", "PE Δ")
             (if (wide) listOf("CE OI") + heads + "PE OI" else heads).forEach { h ->
-                Text(h, style = Type.label.copy(color = p.inkSoft, fontSize = 9.sp), textAlign = TextAlign.Center,
-                    modifier = Modifier.weight(if (h == "STRIKE") 1.25f else 1f))
+                // One line each, shrunk to fit: a header never breaks inside a word ("STRI / KE" at large fonts).
+                com.optionslab.app.ui.components.FitText(h, style = Type.label.copy(color = p.inkSoft, fontSize = 9.sp, textAlign = TextAlign.Center),
+                    modifier = Modifier.weight(if (h == "STRIKE") 1.25f else 1f), minSize = 6.sp)
             }
         }
         Rule(Modifier.padding(vertical = 4.dp))

@@ -201,7 +201,7 @@ private fun PaperPositions(model: AppModel, v: Paper.Snapshot) {
             Rule(Modifier.padding(vertical = 6.dp))
             Row(Modifier.clickable { model.rowAction.value = RowTarget.PaperPosition(ps) }, verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text(ps.symbol, style = Type.figure.copy(color = p.ink, fontSize = 14.sp))
+                    com.optionslab.app.ui.components.FitText(ps.symbol, style = Type.figure.copy(color = p.ink, fontSize = 14.sp))   // a symbol never wraps mid-word
                     Text("${ps.product} · ${if (ps.quantity > 0) "LONG" else if (ps.quantity < 0) "SHORT" else "CLOSED"} ${kotlin.math.abs(ps.quantity)}" +
                         if (ps.quantity != 0) " · avg ${px(ps.averagePrice)} → ${px(ps.ltp)}" else "", style = Type.figure.copy(color = p.inkSoft, fontSize = 11.sp))
                 }
@@ -229,7 +229,7 @@ private fun PaperOrders(model: AppModel, v: Paper.Snapshot) {
             val tone = when (o.status) { "complete" -> p.verdigris; "rejected", "cancelled" -> p.oxblood; else -> p.amber }
             // The whole order (its three lines) is the tap target, as on the live order book: the first line alone was 15 dp.
             Column(Modifier.fillMaxWidth().heightIn(min = 48.dp).clickable { model.rowAction.value = RowTarget.PaperOrder(o) }) {
-                Text("${o.action} ${o.symbol} ×${o.quantity}", style = Type.figure.copy(color = if (o.action == "SELL") p.oxblood else p.verdigris, fontSize = 13.sp))
+                com.optionslab.app.ui.components.FitText("${o.action} ${o.symbol} ×${o.quantity}", style = Type.figure.copy(color = if (o.action == "SELL") p.oxblood else p.verdigris, fontSize = 13.sp))
                 Text("${o.product} · ${o.priceType}${if (o.price > 0) " ${px(o.price)}" else ""}${if (o.triggerPrice > 0) " trg ${px(o.triggerPrice)}" else ""} · ${o.timestamp.takeLast(8)}",
                     style = Type.figure.copy(color = p.inkSoft, fontSize = 11.sp))
                 Text("${o.status.uppercase()}${if (o.filledQuantity > 0) " · ${o.filledQuantity} @ ${px(o.averagePrice)}" else ""}${if (o.rejectionReason.isNotBlank()) " · ${o.rejectionReason}" else ""}",
@@ -282,7 +282,7 @@ private fun PaperTrades(model: AppModel, v: Paper.Snapshot) {
             if (i > 0) Rule(Modifier.padding(vertical = 4.dp))
             Row(Modifier.clickable { model.rowAction.value = RowTarget.PaperTrade(t) }, verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text("${t.action} ${t.symbol}", style = Type.figure.copy(color = if (t.action == "SELL") p.oxblood else p.verdigris, fontSize = 13.sp))
+                    com.optionslab.app.ui.components.FitText("${t.action} ${t.symbol}", style = Type.figure.copy(color = if (t.action == "SELL") p.oxblood else p.verdigris, fontSize = 13.sp))
                     Text("${t.product} · ${t.timestamp.takeLast(8)}", style = Type.figure.copy(color = p.inkSoft, fontSize = 11.sp))
                     OrderSourcePill(owners, "paper:${t.orderId}")
                 }
