@@ -197,9 +197,20 @@ abstract class TradeLayoutBase(device: DeviceConfig) : TradeScreenBase(device) {
 
     protected fun paperAmountDialog() {
         showPaper()
-        compose.waitUntil(10_000) { runCatching { scrollTo("Set paper amount"); true }.getOrDefault(false) }
+        // The button is in the balance card of the page's first row. Wait for it with the main looper running (the
+        // model's reloads resume there), then bring it into view if the list can; a failure says what the page held.
+        val end = System.currentTimeMillis() + 20_000
+        var why: Throwable? = null
+        while (!exists("Set paper amount")) {
+            if (System.currentTimeMillis() > end)
+                throw AssertionError("'Set paper amount' never appeared; the paper account is ${m.paper.value}", why)
+            org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle()
+            runCatching { scrollTo("Set paper amount") }.onFailure { why = it }
+            compose.mainClock.advanceTimeByFrame(); Thread.sleep(20)
+        }
+        runCatching { scrollTo("Set paper amount") }
         paused {
-            compose.onNodeWithText("Set paper amount").performClick(); frames()
+            compose.onNodeWithText("Set paper amount").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick); frames()
             compose.onNode(hasSetTextAction() and hasAnyAncestor(isDialog())).performTextInput("9999"); frames()
             snap("trade-paper-amount", known())
         }
