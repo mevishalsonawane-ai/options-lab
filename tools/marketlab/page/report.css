@@ -79,3 +79,4 @@ td.mono, .mono { font-family: var(--mono); }
 .seg button[aria-pressed="true"] { background: var(--chip); color: var(--ink); }
 .caveat { font-size: 13px; color: var(--ink-3); max-width: 80ch; }
 footer { margin-top: 48px; padding-top: 16px; border-top: 1px solid var(--line); font-size: 13px; color: var(--ink-3); display: grid; gap: 6px; }
+[hidden] { display: none !important; }
