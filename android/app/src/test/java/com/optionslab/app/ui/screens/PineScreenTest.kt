@@ -348,8 +348,8 @@ class PineScreensLayoutTest(private val config: DeviceConfig) : ScreenTest(confi
 
         /** Real layout bugs found here (skipped with this text until fixed). */
         val EDITOR_BUGS = mapOf("*" to "Pine editor: two clickables with no label (the 'Show on the chart' switch of ToggleRow and one more), unreadable by TalkBack")
-        val TOKEN_BUGS = mapOf("*" to "Pine backtest / auto-trade: the choice tokens (Buy, Sell, Just exit, Place orders, ...) are 29 dp high, under the 48 dp " +
-            "touch minimum; the auto-trade switch has no label")
+        /** Fixed: the choice tokens were 29 dp high and the auto-trade switch had no label. */
+        val TOKEN_BUGS = emptyMap<String, String>()
     }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)

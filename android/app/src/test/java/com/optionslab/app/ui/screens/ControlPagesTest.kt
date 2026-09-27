@@ -506,7 +506,7 @@ class ControlPagesTest {
         toggle("Kill switch")
         tap("Turn on")
         waitSettings { it.guardKill }
-        compose.onNodeWithText("ON: every order is refused", substring = true).assertExists()
+        compose.onNodeWithText("ON: new entries are refused", substring = true).assertExists()
         compose.until(10_000) { AppSettings.load().guardKill }
         toggle("Kill switch")
         compose.waitForText("Clear the kill switch?")
@@ -516,11 +516,8 @@ class ControlPagesTest {
 
     /**
      * The guard lets exits through with the kill switch on (data/Guard.kt: "An exit is never stopped: ... not by the
-     * kill switch", checked in data/GuardTest), but this page tells the owner the opposite.
+     * kill switch", checked in data/GuardTest); this page used to tell the owner the opposite.
      */
-    @org.junit.Ignore("UI BUG: More > Bot settings: turn the kill switch on; expected the switch text and its confirmation to say " +
-        "closing positions still goes through (Guard.check lets every exit pass with the kill switch on); actual: " +
-        "'ON: every order is refused, exits included' and 'Every order is refused, including closing positions'")
     @Test fun theKillSwitchTextMatchesWhatTheGuardDoes() {
         show { RiskPage(model) }
         toggle("Kill switch")

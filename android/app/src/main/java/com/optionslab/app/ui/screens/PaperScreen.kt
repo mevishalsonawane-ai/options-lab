@@ -162,7 +162,10 @@ private fun PaperOrderForm(model: AppModel) {
                 singleLine = true, modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
             Spacer(Modifier.height(8.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                val ready = expiry != null && listedFor == (underlying to expiry) && strike.toDoubleOrNull()?.let { it in listed } == true
+                // A LIMIT / SL needs its price, an SL / SL-M its trigger (above 0), as the chain's order sheet asks.
+                val priced = (type != "LIMIT" && type != "SL" || price.toDoubleOrNull()?.let { it > 0 } == true) &&
+                    (type != "SL" && type != "SL-M" || trigger.toDoubleOrNull()?.let { it > 0 } == true)
+                val ready = expiry != null && listedFor == (underlying to expiry) && strike.toDoubleOrNull()?.let { it in listed } == true && priced
                 BrassButton("Place paper order", Modifier.weight(1f), tone = p.verdigris, busy = placing != null, enabled = ready && placing == null) {
                     if (placing != null || !ready) return@BrassButton
                     placing = paperNow

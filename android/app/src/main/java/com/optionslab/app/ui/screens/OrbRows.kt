@@ -31,6 +31,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.SecureFlagPolicy
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import com.optionslab.app.data.OrbArms
 import com.optionslab.app.ui.AppModel
 import com.optionslab.app.ui.components.BrassButton
@@ -110,12 +112,13 @@ internal fun OrbRowsContent(
                     !a.armed -> "BANKNIFTY opening-range break" + if (a.arm.freshOnly) ", fresh breaks only" else ""
                     else -> OrbArms.describe(a.status) + (view.range?.let { r -> " Range ${px(r.second)}–${px(r.first)}." } ?: "")
                 }
-                Text(line, style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp), maxLines = 2)
+                Text(line, style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp))
                 val closed = a.today.filter { !it.open }
                 if (closed.isNotEmpty()) Text("Today: ${closed.size} closed · ${rs(closed.sumOf { (it.grossPnl ?: 0.0) - it.charges })} after charges",
                     style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp))
             }
             Switch(
+                modifier = Modifier.semantics { contentDescription = "Arm ${a.arm.label}" },
                 checked = a.armed,
                 onCheckedChange = { on -> if (on) choosing = a.arm.source else actions.arm(a.arm.source, false, a.automatic, false) },
                 colors = SwitchDefaults.colors(checkedTrackColor = p.verdigris, checkedThumbColor = p.card),

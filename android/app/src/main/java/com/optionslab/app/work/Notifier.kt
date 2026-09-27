@@ -22,8 +22,9 @@ import com.optionslab.app.data.AppSettings
  *   schedule  entry reminders, tickets, settlements, harvests
  *   health    the kill-condition verdict changing
  *
- * Every notification is PRIVATE: on a locked screen only a neutral line shows,
- * never a strike, a credit or a rupee figure.
+ * With "hide amounts on lock screen" on (the default), every notification is PRIVATE: on a
+ * locked screen only a neutral line shows, never a strike, a credit or a rupee figure. With it
+ * off they are PUBLIC and show in full on the lock screen.
  */
 object Notifier {
     const val LIVE = "live"

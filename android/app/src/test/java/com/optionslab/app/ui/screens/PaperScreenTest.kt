@@ -388,19 +388,22 @@ class PaperScreenTest {
 
     @Test fun aLimitWithNoPriceIsRefusedAndNothingIsPlaced() {
         val m = show()
-        openForm(); tap("BUY"); tap("LIMIT")
-        waitPlaceable(); placeButton().performClick()
-        compose.waitUntil(20_000) { m.message.value != null }
-        val msg = m.message.value!!
-        assertTrue("refused, not filled: $msg", !msg.contains("filled"))
+        openForm(); tap("BUY")
+        waitPlaceable()                                   // MARKET: ready, so only the missing price holds it back below
+        tap("LIMIT"); compose.waitForIdle()
+        // The button stays off with no price, and with a price of 0, as the chain's order sheet does.
+        placeButton().assertIsNotEnabled()
+        field("Price").performTextInput("0"); compose.waitForIdle()
+        placeButton().assertIsNotEnabled()
+        // An SL also needs its trigger.
+        field("Price").performTextClearance(); field("Price").performTextInput("101")
+        tap("SL"); compose.waitForIdle()
+        placeButton().assertIsNotEnabled()
+        field("Trigger").performTextInput("99"); compose.waitForIdle()
+        placeButton().assertIsEnabled()
         m.loadPaper(quiet = true)
         compose.waitUntil(10_000) { m.snap() != null }
-        assertTrue("no order may reach the book: ${m.snap()!!.orders.orders}", m.snap()!!.orders.orders.none { it.status != "rejected" })
-        assertTrue(m.snap()!!.positions.positions.none { it.quantity != 0 })
-        // The engine refused it safely, but the form offered it: the button was on with no price.
-        org.junit.Assume.assumeTrue("UI BUG: Trade tab (paper) order form: New paper order → BUY → LIMIT, leave Price empty; " +
-            "expected 'Place paper order' disabled until a price above 0 is typed (the chain's order sheet does this); " +
-            "actual it is enabled and the tap is refused afterwards by the sandbox ('$msg')", false)
+        assertTrue("nothing placed: ${m.snap()!!.orders.orders}", m.snap()!!.orders.orders.none { it.status != "rejected" })
     }
 
     // ---- guards -------------------------------------------------------------------------------

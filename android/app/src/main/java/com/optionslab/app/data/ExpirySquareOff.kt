@@ -37,7 +37,7 @@ object ExpirySquareOff {
     private fun tellOnce(context: Context, key: String, text: String) {
         val k = "${todayIst()}|$key"
         synchronized(told) { if (!told.add(k)) return }
-        com.optionslab.app.work.Alerts.error(text, "Expiry square-off")
+        // Notifier.post also drops it in as the in-app banner: one call, one banner.
         runCatching { Notifier.post(context, 2032, Notifier.RISK, "Expiry square-off", text, "trade") }
     }
 

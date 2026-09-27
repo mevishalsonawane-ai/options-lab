@@ -436,12 +436,8 @@ class ChartScreensTest {
 
     /**
      * After the web chart is rebuilt (renderer killed, the 12 s retry, ADV after a failure) the new page loads
-     * the symbol the tab was first opened with, and its first report resets the header to it: the symbol the
-     * owner was looking at (searched in the chart, or picked off the chain) is lost.
+     * the symbol on screen (searched in the chart, or picked off the chain), not the one the tab was first opened with.
      */
-    @org.junit.Ignore("UI BUG: Chart tab: open BANKNIFTY, pick an option in the chart's search (or off the OPT chain), then the web chart is rebuilt " +
-        "(renderer killed, the 12 s retry, or ADV after a failure); expected the rebuilt page to load the option on screen; actual it loads " +
-        "terminal.html?symbol=BANKNIFTY (the symbol the tab was opened with) and its first IraBridge.symbol report resets the header to BANKNIFTY")
     @Test fun aRebuiltChartKeepsTheSymbolOnScreen() {
         pane()
         loadCandles()

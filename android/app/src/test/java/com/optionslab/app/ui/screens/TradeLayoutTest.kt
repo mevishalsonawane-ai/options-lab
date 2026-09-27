@@ -118,7 +118,6 @@ abstract class TradeLayoutBase(device: DeviceConfig) : TradeScreenBase(device) {
 
     /** The StrikeDropdown's whole-field tap target: a bare clickable Box over the text field. */
     protected val strikeOverlay = arrayOf(
-        TradeScreenBase.Known(Regex("A11Y.*clickable node \\d+ has no text"), "StrikeDropdown: the full-field click overlay has no label or role for TalkBack"),
         TradeScreenBase.Known(Regex("OVERLAP.*Strike"), "StrikeDropdown: the click overlay is a separate node drawn over the strike text field"),
     )
 

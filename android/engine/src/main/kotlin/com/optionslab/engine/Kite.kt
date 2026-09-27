@@ -209,11 +209,11 @@ object Kite {
         f.entries.joinToString(",", "{", "}") { (k, v) -> "${jsonStr(k)}:$v" }
     }
 
-    /** The form body of PUT /orders/{variety}/{id}: only what may change. */
+    /** The form body of PUT /orders/{variety}/{id}: only what may change. A missing price or trigger the type needs is refused, by name. */
     fun modifyBody(quantity: Int, orderType: String, price: Double?, triggerPrice: Double?): String = form(listOf(
         "quantity" to quantity.toString(), "order_type" to orderType,
-        "price" to if (orderType == "LIMIT" || orderType == "SL") money(price!!) else null,
-        "trigger_price" to if (orderType == "SL" || orderType == "SL-M") money(triggerPrice!!) else null,
+        "price" to if (orderType == "LIMIT" || orderType == "SL") money(requireNotNull(price) { "a $orderType order needs a price" }) else null,
+        "trigger_price" to if (orderType == "SL" || orderType == "SL-M") money(requireNotNull(triggerPrice) { "a $orderType order needs a trigger price" }) else null,
         "validity" to "DAY",
     ))
 

@@ -184,9 +184,10 @@ fun darken(c: Color, f: Float) = Color(c.red * (1 - f), c.green * (1 - f), c.blu
 fun Token(text: String, selected: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
     val p = LocalPalette.current
     Box(
+        // Selectable outside the 48dp minimum, so the whole touch area (not just the pill) is the target.
         modifier
-            .minimumInteractiveComponentSize()
-            .selectable(selected = selected, role = Role.Tab, onClick = onClick),
+            .selectable(selected = selected, role = Role.Tab, onClick = onClick)
+            .minimumInteractiveComponentSize(),
         contentAlignment = Alignment.Center,
     ) {
         Box(
@@ -325,9 +326,12 @@ fun VerdictDial(level: Int, modifier: Modifier = Modifier, calm: Boolean = false
 /** A live-state dot; pulses while something is running. */
 @Composable
 fun StatusDot(color: Color, pulsing: Boolean, modifier: Modifier = Modifier) {
-    val t = rememberInfiniteTransition(label = "dot")
-    val a by t.animateFloat(0.4f, 1f, infiniteRepeatable(tween(1200), RepeatMode.Reverse), label = "a")
-    Box(modifier.size(8.dp).background(color.copy(alpha = if (pulsing) a else 1f), CircleShape))
+    // No infinite animation (a frame every vsync) for a dot that does not pulse.
+    val alpha = if (pulsing) {
+        val t = rememberInfiniteTransition(label = "dot")
+        t.animateFloat(0.4f, 1f, infiniteRepeatable(tween(1200), RepeatMode.Reverse), label = "a").value
+    } else 1f
+    Box(modifier.size(8.dp).background(color.copy(alpha = alpha), CircleShape))
 }
 
 /** A label on the left and its value on the right. */

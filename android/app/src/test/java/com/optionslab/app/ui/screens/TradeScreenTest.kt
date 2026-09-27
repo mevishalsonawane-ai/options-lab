@@ -40,7 +40,6 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
-import org.junit.Assume.assumeTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -362,20 +361,15 @@ class TradeScreenTest {
         loginConfigured()
         PinLock.setPin(pin.toCharArray())
         workingOrder()
-        val m = showAccount()
+        showAccount()
         tab("Orders"); waitText("WORKING")
         tap("Modify")
         compose.onNode(hasSetTextAction() and hasText("90.00") and hasAnyAncestor(isDialog())).performTextClearance().also { frames() }
-        val offered = runCatching { inDialog("Confirm change").assertIsNotEnabled() }.isFailure
-        if (offered) {
-            // Nothing wrong reaches Zerodha: the change is refused after the PIN.
-            inDialog("Confirm change").performClick().also { frames() }
-            enterPin()
-            val msg = waitMessage(m, "Not modified")
-            assertTrue("nothing sent: ${kite.writes}", kite.writes.isEmpty())
-            assumeTrue("UI BUG: Trade tab (live) Modify dialog: Orders → Modify on a LIMIT order, clear Price; expected 'Confirm change' " +
-                "disabled (there is no valid price); actual it is enabled, asks for the PIN, and only then fails with '$msg'", false)
-        }
+        inDialog("Confirm change").assertIsNotEnabled()
+        // A price again turns it back on.
+        compose.onNode(hasSetTextAction() and hasText("Price") and hasAnyAncestor(isDialog())).performTextInput("91").also { frames() }
+        inDialog("Confirm change").assertIsEnabled()
+        assertTrue("nothing sent: ${kite.writes}", kite.writes.isEmpty())
     }
 
     @Test fun finishedOrdersHaveNoActionsAndTheRowOpensThePopup() {

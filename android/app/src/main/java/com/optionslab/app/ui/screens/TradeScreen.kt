@@ -419,7 +419,13 @@ internal fun ModifyDialog(model: AppModel, o: Broker.OrderRow, onClose: () -> Un
                     singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
             }
         },
-        confirmButton = { TextButton({ confirming = true }) { Text("Confirm change") } },
+        // Off until the order type's own fields are there: a quantity, a price for LIMIT / SL, a trigger for SL / SL-M.
+        confirmButton = {
+            val valid = (qty.toIntOrNull() ?: 0) > 0 &&
+                (type != "LIMIT" && type != "SL" || price.toDoubleOrNull()?.let { it > 0 } == true) &&
+                (type != "SL" && type != "SL-M" || trigger.toDoubleOrNull()?.let { it > 0 } == true)
+            TextButton({ confirming = true }, enabled = valid) { Text("Confirm change") }
+        },
         dismissButton = { TextButton(onClose) { Text("Close") } },
     )
     if (confirming) Reauth(model, onOk = {

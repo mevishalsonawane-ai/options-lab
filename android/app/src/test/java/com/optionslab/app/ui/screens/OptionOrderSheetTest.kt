@@ -10,6 +10,8 @@ import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.click
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isDialog
@@ -42,7 +44,6 @@ import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
-import org.junit.Assume.assumeTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -319,12 +320,7 @@ class OptionOrderSheetTest {
         Thread.sleep(2_000)
         m.loadPaper(quiet = true)
         compose.waitUntil(10_000) { m.paper.value is Load.Done<*> }
-        val n = m.snap()!!.orders.orders.size
-        assumeTrue("UI BUG: OptionOrderSheet (paper): two taps on 'Buy (paper)' delivered before the sheet recomposes away " +
-            "(a fast double tap on a busy main thread) place two paper orders; expected one (the paper order form guards this " +
-            "with its 'placing' state, the sheet has no guard); actual $n orders, position ${m.snap()!!.positions.positions.sumOf { it.quantity }}",
-            n == 1)
-        assertEquals(1, n)
+        assertEquals("one order, position ${m.snap()!!.positions.positions.sumOf { it.quantity }}", 1, m.snap()!!.orders.orders.size)
     }
 
     @Test fun tappingTheBackdropClosesWithoutPlacing() {
@@ -348,17 +344,11 @@ class OptionOrderSheetTest {
     @Test fun theSheetsTextsAreNotPartOfTheBackdropsCloseAction() {
         show()
         val title = "NIFTY ${near.format(DateTimeFormatter.ofPattern("d MMM", Locale.ENGLISH)).uppercase()} 24500 PE"
-        val node = compose.onNodeWithText(title).fetchSemanticsNode()
-        val click = node.config.getOrNull(SemanticsActions.OnClick)
-        if (click != null) {
-            // What TalkBack does on a double tap of the contract's name:
-            compose.onNodeWithText(title).performSemanticsAction(SemanticsActions.OnClick)
-            compose.waitForIdle()
-            assumeTrue("UI BUG (accessibility): OptionOrderSheet: the full-screen backdrop is one clickable (it closes the sheet) with " +
-                "no label, and the sheet's texts (title, greeks, LTP, lots, value) merge into it; with TalkBack, focusing '$title' and " +
-                "double-tapping closes the sheet (closed=$closed). Expected: the texts readable on their own and the backdrop a separate " +
-                "'Close' action", false)
-        }
+        // TalkBack reads the contract's name on its own: a double tap on it has nothing to do (it used to close the sheet).
+        assertEquals(null, compose.onNodeWithText(title).fetchSemanticsNode().config.getOrNull(SemanticsActions.OnClick))
+        // The backdrop is its own "Close" button.
+        compose.onNode(hasContentDescription("Close") and hasAnyAncestor(isDialog())).performSemanticsAction(SemanticsActions.OnClick)
+        compose.waitUntil(5_000) { closed == 1 }
     }
 
     // ---- live: review only ------------------------------------------------------------------------

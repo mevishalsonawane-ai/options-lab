@@ -39,7 +39,7 @@ object LossBreaker {
         SecurePrefs.put(K_DAY, today)
         val text = "Today's %s P&L Rs %,.0f reached the Rs %,.0f daily loss limit. The bot sold what it held and stopped for today. %s"
             .format(hit.first, hit.second, hit.third, msg)
+        // Also the in-app banner (Notifier.post drops it in): one call, one banner.
         Notifier.post(context, 2040, Notifier.RISK, "Daily loss limit reached", text, "strategy")
-        com.optionslab.app.work.Alerts.error(text, "Daily loss limit")
     }
 }

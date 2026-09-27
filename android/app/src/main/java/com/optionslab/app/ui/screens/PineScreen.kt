@@ -49,6 +49,8 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import com.optionslab.app.data.ChartFeed
 import com.optionslab.app.data.PineScripts
 import com.optionslab.app.ui.AppModel
@@ -956,7 +958,7 @@ private fun PineAutoPanel(env: PineEnv, start: PineScripts.Item, s: Pine.Script,
                     if (on && dirty) { com.optionslab.app.work.Alerts.error(unsaved); return@Switch }
                     // Alerts only places nothing: no PIN needed.
                     if (on && live && a.mode != "alert") auth = true else arm(on, false)
-                })
+                }, Modifier.semantics { contentDescription = "Auto-trade" })
             }
             held[item.id]?.let { h ->
                 Spacer(Modifier.height(6.dp))

@@ -40,7 +40,7 @@ class ExpirySquareOffTest : RobolectricTest() {
         runBlocking { Broker.instruments() }                       // the day's contract list, as the watch loads it
         kite.requests.clear()
         AutomationSupport.resetExpiryTold()
-        AutomationSupport.clearAlerts()
+        com.optionslab.app.testing.Background.clearAlerts()            // and the banner's 20 s repeat filter
         at(15, 6)
     }
 
@@ -55,12 +55,10 @@ class ExpirySquareOffTest : RobolectricTest() {
     private fun done() = SecurePrefs.getString("sq.expiry.done") == com.optionslab.app.data.Market.today().toString()
     private fun sent() = kite.placed.map { Triple(it.form["tradingsymbol"], it.form["transaction_type"], it.form["quantity"]) }
 
-    /** What the banner said, each distinct text once (a notification drops in as a banner too; see the ignored test below). */
+    /** What the banner said, each distinct text once. */
     private fun texts() = com.optionslab.app.work.Alerts.queue.value.map { it.text }.distinct()
 
-    @org.junit.Ignore("UI BUG: expiry square-off (and the loss breaker) show every message twice in the in-app banner: " +
-        "steps: an expiring position whose exit Zerodha refuses at 15:05 (app open); expected one red banner; actual two identical " +
-        "banners, because tellOnce calls Alerts.error(text) and Notifier.post, which posts the same text to Alerts again.")
+    /** Was two identical banners: tellOnce called Alerts.error and Notifier.post, which drops the same text in again. */
     @Test fun aRefusalIsOneBannerNotTwo() {
         kite.position(ce, 75, 20.0)
         kite.nextPlace(reply = Reply.INPUT_EXCEPTION, message = "Instrument is blocked for trading.")
@@ -129,8 +127,7 @@ class ExpirySquareOffTest : RobolectricTest() {
         pass(); pass()
         val said = texts().filter { it.contains("Zerodha refused the expiry exit of $ce") }
         assertEquals(1, said.size)
-        // Told once: a second telling would add a third copy (the banner repeats a notification; see the ignored test).
-        assertTrue("told once, not every pass", com.optionslab.app.work.Alerts.queue.value.count { it.text == said.single() } in 1..2)
+        assertEquals("told once, not every pass", 1, com.optionslab.app.work.Alerts.queue.value.count { it.text == said.single() })
         assertTrue(said.single(), said.single().contains("Instrument is blocked for trading."))
         pass()
         assertEquals("tried every pass until it went", 3, kite.placed.size)
@@ -143,7 +140,7 @@ class ExpirySquareOffTest : RobolectricTest() {
         assertTrue("nothing sent", kite.placed.isEmpty())
         val said = texts().filter { it.contains("$ce expires today and its exit was not sent") }
         assertEquals(1, said.size)
-        assertTrue("told once", com.optionslab.app.work.Alerts.queue.value.count { it.text == said.single() } in 1..2)
+        assertEquals("told once", 1, com.optionslab.app.work.Alerts.queue.value.count { it.text == said.single() })
         assertTrue(said.single(), said.single().contains("product CO is not supported"))
         assertTrue(!done())
     }

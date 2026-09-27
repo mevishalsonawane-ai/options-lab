@@ -33,7 +33,7 @@ class LossBreakerTest : RobolectricTest() {
         AutomationSupport.niftyOptions(kite)
         kite.instruments += FakeKite.Ins(12_300_000, other, "NIFTY", AutomationSupport.expiryAfter(9), 24_000.0, "PE", 75)
         kite.quote("NFO:$NIFTY_CE", 100.0, 99.95, 100.05)
-        AutomationSupport.clearAlerts()
+        com.optionslab.app.testing.Background.clearAlerts()            // and the banner's 20 s repeat filter
     }
 
     @After fun down() {
@@ -130,8 +130,8 @@ class LossBreakerTest : RobolectricTest() {
         // The next pass (still past the limit) neither sells again nor repeats the alert.
         check()
         assertEquals(1, kite.placed.count { it.form["transaction_type"] == "SELL" })
-        // Said once: one banner, or two while a notification also drops in as a banner (see ExpirySquareOffTest's ignored test).
-        assertTrue(com.optionslab.app.work.Alerts.queue.value.count { it.text.startsWith("Today's Live P&L") } in 1..2)
+        // Said once: one banner.
+        assertEquals(1, com.optionslab.app.work.Alerts.queue.value.count { it.text.startsWith("Today's Live P&L") })
     }
 
     @Test fun onceTrippedAScheduledRunStillStartsNothingAndStaysStopped() {

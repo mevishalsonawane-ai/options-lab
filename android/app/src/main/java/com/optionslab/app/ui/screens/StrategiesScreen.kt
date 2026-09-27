@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
 import com.optionslab.app.ui.components.AlertDialog
@@ -192,7 +193,7 @@ private fun StrategyCard(actions: StrategyActions, e: Strategies.Entry, liveAllo
                     }
                     Column(horizontalAlignment = Alignment.End) {
                         Text(rs(l.mtm + l.realizedPnl, true), style = Type.figure.copy(color = if (l.mtm + l.realizedPnl >= 0) p.verdigris else p.oxblood, fontSize = 12.sp))
-                        if (e.running && l.status == "open") TextButton({ actions.closeLeg(d.id, l.legId) }) { Text("Exit", style = Type.label.copy(color = p.oxblood)) }
+                        if (e.running && l.status == "open") TextButton({ actions.closeLeg(d.id, l.legId) }, Modifier.heightIn(min = 48.dp)) { Text("Exit", style = Type.label.copy(color = p.oxblood)) }
                     }
                 }
             }

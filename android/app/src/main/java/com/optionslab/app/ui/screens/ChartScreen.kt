@@ -347,7 +347,9 @@ internal fun ChartPane(
                         }
                     }
                     val theme = if (p.dark) "dark" else "light"
-                    loadUrl("${ORIGIN}terminal.html?symbol=${android.net.Uri.encode(symbol)}&exchange=${android.net.Uri.encode(exchange)}&theme=$theme")
+                    // What is on screen now, not the symbol the tab opened with: a rebuild keeps an option picked since.
+                    val (sym, ex) = current
+                    loadUrl("${ORIGIN}terminal.html?symbol=${android.net.Uri.encode(sym)}&exchange=${android.net.Uri.encode(ex)}&theme=$theme")
                 }
             },
             onRelease = { w -> if (holder[0] === w) holder[0] = null; w.removeJavascriptInterface("IraBridge"); w.stopLoading(); w.destroy() },

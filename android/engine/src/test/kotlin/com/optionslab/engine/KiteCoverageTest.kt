@@ -126,6 +126,9 @@ class KiteCoverageTest {
         assertEquals("quantity=65&order_type=SL&price=10.50&trigger_price=11.00&validity=DAY", Kite.modifyBody(65, "SL", 10.5, 11.0))
         assertEquals("quantity=65&order_type=SL-M&trigger_price=11.00&validity=DAY", Kite.modifyBody(65, "SL-M", null, 11.0))
         assertEquals("quantity=65&order_type=MARKET&validity=DAY", Kite.modifyBody(65, "MARKET", null, null))
+        // A missing price or trigger is a clear refusal, not a NullPointerException with no message.
+        assertEquals("a LIMIT order needs a price", runCatching { Kite.modifyBody(65, "LIMIT", null, null) }.exceptionOrNull()?.message)
+        assertEquals("a SL-M order needs a trigger price", runCatching { Kite.modifyBody(65, "SL-M", null, null) }.exceptionOrNull()?.message)
     }
 
     // ------------------------------------------------------------- refusals

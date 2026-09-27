@@ -33,6 +33,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
@@ -84,10 +87,15 @@ fun OptionOrderSheet(model: AppModel, pick: ChainPick, initialBuy: Boolean = tru
     val side = if (buy) p.verdigris else p.oxblood
     val qty = lots * pick.lotSize
     val px = if (limit) price.toDoubleOrNull() else pick.ltp
+    // One tap, one order: a second tap delivered before the sheet recomposes away places nothing.
+    var placing by remember { mutableStateOf(false) }
     val title = "${pick.underlying} ${pick.expiry.format(DateTimeFormatter.ofPattern("d MMM", Locale.ENGLISH)).uppercase()} ${fmtG(pick.strike)} ${pick.right.name}"
 
     Dialog(onDismissRequest = onClose, properties = DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy, usePlatformDefaultWidth = false)) {
-        Box(Modifier.fillMaxSize().clickable(onClick = onClose), contentAlignment = Alignment.BottomCenter) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
+            // The backdrop closes the sheet: a sibling behind it (not its parent), so the sheet's texts do not
+            // merge into this one "Close" button for TalkBack, and a double tap on them does not close it.
+            Box(Modifier.matchParentSize().semantics { contentDescription = "Close" }.clickable(role = Role.Button, onClick = onClose))
             Column(
                 Modifier.fillMaxWidth()
                     .background(p.card, RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp))
@@ -176,7 +184,9 @@ fun OptionOrderSheet(model: AppModel, pick: ChainPick, initialBuy: Boolean = tru
                     }
                     Note("Live: Zerodha. The order opens for review; it is sent only after you hold the button and confirm with your PIN or fingerprint.")
                 } else {
-                    BrassButton("${if (buy) "Buy" else "Sell"} (paper)", Modifier.fillMaxWidth(), enabled = ok, tone = side) {
+                    BrassButton("${if (buy) "Buy" else "Sell"} (paper)", Modifier.fillMaxWidth(), enabled = ok, busy = placing, tone = side) {
+                        if (placing) return@BrassButton
+                        placing = true
                         model.paperPlace(pick.underlying, pick.expiry, pick.strike, pick.right, if (buy) "BUY" else "SELL", lots,
                             if (limit) "LIMIT" else "MARKET", product, if (limit) price.toDoubleOrNull() else null, null, protect)
                         onClose()

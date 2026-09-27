@@ -505,7 +505,8 @@ class WatchService : Service() {
 
     override fun onBind(intent: Intent?): IBinder? = null
 
-    private fun show(title: String, text: String, progress: Int = -1) {
+    /** False when Android refused the foreground (the service is then stopping: start nothing). */
+    private fun show(title: String, text: String, progress: Int = -1): Boolean {
         val n = Notifier.builder(this, Notifier.LIVE, title, text, "almanac")
             .setOngoing(true).setOnlyAlertOnce(true).setAutoCancel(false).setSilent(true)
             .apply { if (progress >= 0) setProgress(100, progress, false) }
@@ -519,6 +520,7 @@ class WatchService : Service() {
         }
         try {
             ServiceCompat.startForeground(this, Notifier.ID_LIVE, n, type)
+            return true
         } catch (_: Exception) {
             // Not allowed now (e.g. the dataSync budget is spent): say so and stop cleanly - a service
             // started in the foreground that never calls startForeground is killed by the system.
@@ -527,6 +529,7 @@ class WatchService : Service() {
             running.clear()
             watching = false
             stopSelf()
+            return false
         }
     }
 
@@ -541,7 +544,8 @@ class WatchService : Service() {
         // Foreground first, always: the system requires it within seconds.
         val k = runCatching { Jobs.Kind.valueOf(intent?.getStringExtra(Jobs.EXTRA_KIND) ?: "") }.getOrNull()
         if (k == Jobs.Kind.LIVE) watching = true   // show() then declares the specialUse type
-        show("IraAlgo", "Starting…")
+        // Refused: show() stopped the service, so no job is launched to run on after stopSelf.
+        if (!show("IraAlgo", "Starting…")) return START_NOT_STICKY
         if (intent?.action == STOP) { stopEverything(); return START_NOT_STICKY }
         // Paper trading needs no Zerodha account: only the Zerodha-only jobs stop when none is linked.
         if (!com.optionslab.app.data.Broker.linked && k != null && k != Jobs.Kind.LIVE) { stopEverything(); return START_NOT_STICKY }
@@ -598,7 +602,8 @@ class WatchService : Service() {
                 throw e
             } catch (e: Exception) {
                 // One bad pass (a Keystore or disk hiccup) must not end the watch: note it and go on.
-                Notifier.post(this, 2014, Notifier.SCHEDULE, "Market watch hiccup", "One pass failed (${e.javaClass.simpleName}); the watch goes on.")
+                // Its own id: 2014 is Heartbeat's "Market watch stopped", which every beat cancels.
+                Notifier.post(this, 2018, Notifier.SCHEDULE, "Market watch hiccup", "One pass failed (${e.javaClass.simpleName}); the watch goes on.")
                 delay(15_000)
             }
         }

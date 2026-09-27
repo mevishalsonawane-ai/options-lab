@@ -36,6 +36,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.SecureFlagPolicy
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import com.optionslab.app.ui.AppModel
 import com.optionslab.app.ui.components.BrassButton
 import com.optionslab.app.ui.components.LedgerCard
@@ -168,6 +170,7 @@ internal fun StrategyArmContent(
                             style = Type.bodySmall.copy(color = p.amber, fontSize = 12.sp))
                 }
                 Switch(
+                    modifier = Modifier.semantics { contentDescription = "Arm ${d.name}" },
                     enabled = !com.optionslab.app.data.Strategies.needsBreakoutRules(d),
                     checked = armed,
                     onCheckedChange = { on -> if (on) choosing = d else actions.arm(d.id, false, true) },

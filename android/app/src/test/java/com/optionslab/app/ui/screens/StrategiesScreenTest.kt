@@ -469,9 +469,9 @@ internal val SIX_SETUPS = setOf("small-font2.0-light", "small-font1.0-dark", "ph
 
 /** Real layout bugs found by the matrix below (skipped with this text until fixed). */
 internal object StrategyLayoutBugs {
-    val PAGE = mapOf("*" to "Strategies page: a running leg's Exit button is 58x40 dp, under the 48 dp minimum for a primary action")
-    val CARD = mapOf("*" to "Home strategy card: the Arm switches have no label (TalkBack reads an unnamed switch), and at font 1.3+ an ORB arm's " +
-        "status ('Waiting for a breakout: ...') is cut at 2 lines")
+    // Fixed: the running leg's Exit button was 58x40 dp; the Arm switches had no label and an ORB arm's status was cut at 2 lines.
+    val PAGE = emptyMap<String, String>()
+    val CARD = emptyMap<String, String>()
 }
 
 /** The Strategies page, Home's strategy card and the ORB rows on every device set-up (their main states). */

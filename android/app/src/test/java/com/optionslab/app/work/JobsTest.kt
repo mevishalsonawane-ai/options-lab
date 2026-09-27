@@ -323,6 +323,8 @@ class JobsTest : RobolectricTest() {
         val n = Background.notifications(context).getNotification(2011)
         assertEquals("IraAlgo could not run in the background", Background.title(n))
         assertTrue(Background.text(n)!!.startsWith("Open the app to continue: "))
+        val running = WatchService::class.java.getDeclaredField("running").apply { isAccessible = true }.get(svc) as Map<*, *>
+        assertTrue("no job launched to run on after stopSelf: $running", running.isEmpty())
     }
 
     @Test fun aFailedPassDoesNotEndTheWatch() {
