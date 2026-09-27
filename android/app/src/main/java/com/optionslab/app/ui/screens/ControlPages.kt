@@ -240,7 +240,7 @@ fun DataPage(model: AppModel) {
         confirmButton = { TextButton({
             confirmWipe = false; wiping = true
             // Deleting the partitions walks the whole folder: off the main thread, then the figures are read again.
-            scope.launch {
+            scope.launch(kotlinx.coroutines.Dispatchers.Main.immediate) {  // back on the main thread after the off-thread work
                 val ok = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { runCatching { Store.wipeDeviceData() }.isSuccess }
                 wiping = false; reread++
                 model.say(if (ok) "Harvested data deleted." else "Could not delete all of the harvested data.")
@@ -415,7 +415,7 @@ fun SecurityPage(model: AppModel) {
             confirmButton = {
                 TextButton({
                   err = null
-                  pinScope.launch {
+                  pinScope.launch(kotlinx.coroutines.Dispatchers.Main.immediate) {  // back on the main thread after the off-thread work
                     val r = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { PinLock.verify(cur.toCharArray(), s.wipeOnExhaustion) }
                     when (r) {
                         PinLock.Result.Ok -> try {
@@ -475,7 +475,22 @@ fun SchedulePage(model: AppModel) {
                 )
                 rows.forEach { (k, title, sub) ->
                     val on = Jobs.enabled(k, s)
-                    ToggleRow(title, if (on) "$sub · next ${Jobs.nextRun(k).format(fmt)}" else sub, on) { v ->
+                    // The switch shows the owner's choice; whether the job can run yet is said beside it. (It showed
+                    // whether the job runs: without Zerodha linked a switched-on job read "off", and tapping it
+                    // changed nothing.)
+                    val chosen = when (k) {
+                        Jobs.Kind.LIVE -> true
+                        Jobs.Kind.REMIND -> s.entryReminder
+                        Jobs.Kind.TICKET -> s.autoTicket
+                        Jobs.Kind.SETTLE -> s.autoSettle
+                        Jobs.Kind.HARVEST -> s.nightlyHarvest
+                    }
+                    val note = when {
+                        on -> "$sub · next ${Jobs.nextRun(k).format(fmt)}"
+                        chosen -> "$sub · runs once Zerodha is linked"
+                        else -> sub
+                    }
+                    ToggleRow(title, note, chosen) { v ->
                         model.update {
                             when (k) {
                                 Jobs.Kind.LIVE -> it.copy(liveWatch = v)
@@ -704,7 +719,7 @@ private fun BackupCard(model: AppModel, wipeOnExhaustion: Boolean) {
     val pick = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.OpenDocument()) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
         val resolver = ctx.applicationContext.contentResolver
-        scope.launch {
+        scope.launch(kotlinx.coroutines.Dispatchers.Main.immediate) {  // back on the main thread after the off-thread work
             // Read and checked off the main thread.
             val read = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                 val bytes = try { resolver.openInputStream(uri)?.use { it.readBytes() } } catch (e: Exception) { null }
@@ -782,7 +797,7 @@ private fun BackupCard(model: AppModel, wipeOnExhaustion: Boolean) {
                         val typed = pin.toCharArray()
                         val phrase = pass.toCharArray()
                         busy = true
-                        scope.launch {
+                        scope.launch(kotlinx.coroutines.Dispatchers.Main.immediate) {  // back on the main thread after the off-thread work
                             try {
                                 if (mode == "backup") {
                                     // Only the owner may make a backup: the app PIN authorises it; the passphrase seals it.

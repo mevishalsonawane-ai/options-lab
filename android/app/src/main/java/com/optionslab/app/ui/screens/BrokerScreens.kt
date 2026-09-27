@@ -216,7 +216,7 @@ fun LoginPinDialog(model: AppModel) {
         confirmButton = {
             TextButton({
                 val pn = pin; pin = ""; checking = true; err = null
-                scope.launch {
+                scope.launch(kotlinx.coroutines.Dispatchers.Main.immediate) {  // back on the main thread after the off-thread work
                     err = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { model.unlockForLogin(pn) }
                     checking = false
                 }
@@ -273,7 +273,7 @@ fun Reauth(model: AppModel, onOk: () -> Unit, onCancel: () -> Unit, pinOnly: Boo
                 TextButton({
                     checking = true; err = null
                     val typed = pin.toCharArray()
-                    pinScope.launch {
+                    pinScope.launch(kotlinx.coroutines.Dispatchers.Main.immediate) {  // back on the main thread after the off-thread work
                         val r = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { PinLock.verify(typed, s.wipeOnExhaustion) }
                         checking = false
                         when (r) {
@@ -964,7 +964,7 @@ internal fun CredentialsForm(model: AppModel, onDone: () -> Unit) {
             // The PIN check and the sealing are slow on purpose (key stretching): off the screen's thread.
             val k = key; val s = secret; val pn = pin
             saving = true; err = null
-            fun finish(bioBlob: String?) = scope.launch {
+            fun finish(bioBlob: String?) = scope.launch(kotlinx.coroutines.Dispatchers.Main.immediate) {  // back on the main thread after the off-thread work
                 val e = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { model.saveBrokerCredentials(k, s, pn, bioBlob) }
                 saving = false; err = e; pin = ""
                 if (e == null) {

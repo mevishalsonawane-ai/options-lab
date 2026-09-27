@@ -51,7 +51,9 @@ class OrderFlowLiveTest : RobolectricTest() {
 
     @After fun down() {
         store.clear()
-        Thread.sleep(200)
+        // Account reads already under way when the model is cleared still finish (they swallow the cancellation):
+        // let them end against this fake, running the main looper where they resume, before it closes.
+        com.optionslab.app.testing.BrokerArea.settle(1_500)
         kite.close()
         assertFalse("Kite REST calls must all go to the fake", "api.kite.trade" in NetworkGuard.blocked)
     }

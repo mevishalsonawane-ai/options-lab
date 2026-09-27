@@ -370,7 +370,9 @@ private fun CodeField(value: TextFieldValue, onChange: (TextFieldValue) -> Unit,
         Box(Modifier.weight(1f).horizontalScroll(rememberScrollState())) {
             BasicTextField(value, onChange, textStyle = Mono.copy(color = p.ink), cursorBrush = SolidColor(p.brass),
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.None, autoCorrectEnabled = false, keyboardType = KeyboardType.Ascii),
-                modifier = Modifier.widthIn(min = 280.dp).padding(end = 12.dp))
+                // Named for TalkBack: the code box has no visible label (it was read as an unnamed edit box).
+                modifier = Modifier.widthIn(min = 280.dp).padding(end = 12.dp)
+                    .semantics { contentDescription = "Script code" })
         }
     }
 }
