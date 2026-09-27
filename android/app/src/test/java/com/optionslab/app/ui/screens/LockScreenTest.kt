@@ -27,7 +27,7 @@ class LockScreenTest {
     }
 
     private fun waitForText(text: String) =
-        compose.waitUntil(5_000) { compose.onAllNodesWithText(text).fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(20_000) { compose.onAllNodesWithText(text).fetchSemanticsNodes().isNotEmpty() }   // the pad checks off the main thread: a slow CI runner
 
     private fun show(setup: Boolean, onPin: (CharArray) -> PinLock.Result = { PinLock.Result.Ok }, onCreate: (CharArray) -> String? = { null }) =
         compose.setContent {
