@@ -84,6 +84,8 @@ import kotlin.math.round
  * Ticket tab), the option-chain cards, the P&L calendar, the alert banner and the slide-to-confirm
  * control. Model-bound pages run on a real offline [AppModel]; nothing is fetched.
  */
+// A tall phone: the Expiry Put page's ledger is its third card, below the fold of Robolectric's default screen.
+@org.robolectric.annotation.Config(qualifiers = "w411dp-h2400dp")
 @RunWith(AndroidJUnit4::class)
 class MiscScreensTest {
     @get:Rule val watchdog = AreaEWatchdog()

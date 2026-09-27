@@ -93,6 +93,16 @@ abstract class TradeLayoutBase(device: DeviceConfig) : TradeScreenBase(device) {
 
     protected fun scrollTo(text: String) = compose.onNode(hasScrollToNodeAction()).performScrollToNode(hasText(text))
 
+    /**
+     * Brings [text] into the page (at a large font it may not be composed yet) and clicks it through its
+     * semantics action: a touch at a node's centre misses when the node sits at the window's edge.
+     */
+    protected fun tapText(text: String) {
+        runCatching { scrollTo(text) }
+        compose.onNodeWithText(text).performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
+        compose.waitForIdle()
+    }
+
     private val pick get() = ChainPick("NIFTY", near, 24_500.0, Right.PE, ltp = 100.0, delta = -0.45, ivPct = 14.2, lotSize = 75)
 
     private val sym = "NIFTY26OCT24500PE"
@@ -137,16 +147,16 @@ abstract class TradeLayoutBase(device: DeviceConfig) : TradeScreenBase(device) {
 
     protected fun paperOrderForm() {
         showPaper()
-        compose.onNodeWithText("New paper order").performClick()
+        tapText("New paper order")
         compose.waitUntil(20_000) { exists("24500") }
-        compose.onNodeWithText("SL").performClick()
+        tapText("SL")
         scrollTo("Place paper order")
         snap("trade-paper-form", known(*strikeOverlay))
     }
 
     protected fun paperStrikeList() {
         showPaper()
-        compose.onNodeWithText("New paper order").performClick()
+        tapText("New paper order")
         compose.waitUntil(20_000) { exists("24500") }
         scrollTo("24500")
         compose.onNodeWithText("24500").performClick()
@@ -157,8 +167,7 @@ abstract class TradeLayoutBase(device: DeviceConfig) : TradeScreenBase(device) {
     protected fun paperOrders() {
         paperRestingLimit(); paperPosition()
         showPaper()
-        scrollTo("Orders")
-        compose.onNodeWithText("Orders").performClick()
+        tapText("Orders")
         compose.waitUntil(5_000) { exists("Modify") }
         scrollTo("Modify")
         snap("trade-paper-orders", known())
@@ -167,8 +176,7 @@ abstract class TradeLayoutBase(device: DeviceConfig) : TradeScreenBase(device) {
     protected fun paperModifyDialog() {
         paperRestingLimit()
         showPaper()
-        scrollTo("Orders")
-        compose.onNodeWithText("Orders").performClick()
+        tapText("Orders")
         compose.waitUntil(5_000) { exists("Modify") }
         scrollTo("Modify")
         paused {
@@ -180,8 +188,7 @@ abstract class TradeLayoutBase(device: DeviceConfig) : TradeScreenBase(device) {
     protected fun paperFunds() {
         paperPosition()
         showPaper()
-        scrollTo("Funds")
-        compose.onNodeWithText("Funds").performClick()
+        tapText("Funds")
         compose.waitUntil(5_000) { exists("Realised, all time") }
         scrollTo("Set paper amount / reset")
         snap("trade-paper-funds", known())
@@ -250,7 +257,7 @@ abstract class TradeLayoutBase(device: DeviceConfig) : TradeScreenBase(device) {
         compose.waitUntil(5_000) { exists("Modify") }
         paused {
             compose.onNodeWithText("Modify").performClick(); frames()
-            compose.onNodeWithText("SL").performClick(); frames()
+            tapText("SL"); frames()
             snap("trade-live-modify", known())
         }
     }

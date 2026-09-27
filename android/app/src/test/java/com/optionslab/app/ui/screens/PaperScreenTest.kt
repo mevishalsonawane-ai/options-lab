@@ -111,11 +111,12 @@ class PaperScreenTest {
         return m.message.value!!
     }
 
-    /** Dialogs with a text field never report idle while the clock runs by itself (Robolectric): [paused] moves it by hand. */
-    private fun <T> paused(block: () -> T): T {
-        compose.mainClock.autoAdvance = false
-        try { return block() } finally { frames(); compose.mainClock.autoAdvance = true }
-    }
+    /**
+     * Was: the clock paused around text-field dialogs. On a paused clock such a dialog re-measures for ever
+     * (CI: the dialog window's layout never settles), so the clock now runs; kept as a named block for the
+     * dialog steps.
+     */
+    private fun <T> paused(block: () -> T): T = try { block() } finally { frames() }
 
     private fun frames(n: Int = 12) = repeat(n) { compose.mainClock.advanceTimeByFrame() }
 

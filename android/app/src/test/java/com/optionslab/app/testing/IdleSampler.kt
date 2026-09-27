@@ -20,6 +20,10 @@ import java.util.concurrent.TimeUnit
 object IdleSampler {
     const val IDLE_TIMEOUT_S = 20L
     @Volatile private var thread: Thread? = null
+    /** True while the main thread has sat in the idling loop for 5 s: state writes are then recorded, by writer. */
+    @Volatile private var stalled = false
+    private class Writes { val n = java.util.concurrent.atomic.AtomicInteger(); @Volatile var last = "" }
+    private val writes = java.util.concurrent.ConcurrentHashMap<String, Writes>()
 
     fun install() {
         runCatching {
@@ -30,6 +34,17 @@ object IdleSampler {
         if (thread != null) return
         synchronized(this) {
             if (thread != null) return
+            // Which state keeps changing while Compose cannot settle, and who writes it (the stack at the write).
+            Snapshot.registerGlobalWriteObserver { state ->
+                if (stalled && writes.size < 200) runCatching {
+                    // toString, not .value: a read here would count as a read of the measure pass under way.
+                    val value = state.toString().take(90)
+                    val at = Throwable().stackTrace.asSequence()
+                        .filter { (it.className.startsWith("androidx.compose") || it.className.startsWith("com.optionslab")) && !it.className.contains("snapshots.") }
+                        .take(14).joinToString("\n        ") { "at $it" }
+                    writes.getOrPut("${state.javaClass.name}\n        $at") { Writes() }.apply { n.incrementAndGet(); last = value }
+                }
+            }
             thread = Thread(::watch, "idle-sampler").apply { isDaemon = true; start() }
         }
     }
@@ -44,10 +59,11 @@ object IdleSampler {
                 val main = Looper.getMainLooper()?.thread ?: return@runCatching
                 val stack = main.stackTrace
                 if (stack.none { it.className.startsWith("androidx.compose.ui.test.RobolectricIdlingStrategy") }) {
-                    since = 0L; inStall = 0; return@runCatching
+                    since = 0L; inStall = 0; stalled = false; writes.clear(); return@runCatching
                 }
                 val now = System.currentTimeMillis()
                 if (since == 0L) since = now
+                if (now - since >= 4_000) stalled = true
                 if (now - since >= 5_000 && inStall < 3 && total < 40) {
                     inStall++; total++
                     write(report(stack, now - since))
@@ -73,6 +89,9 @@ object IdleSampler {
                 }
             }
         }.onFailure { append("  (windows unreadable: $it)\n") }
+        val top = writes.entries.sortedByDescending { it.value.n.get() }.take(4)
+        append("  state writes while stalled (${writes.values.sumOf { it.n.get() }} recorded, by writer):\n")
+        top.forEach { (k, w) -> append("    ${w.n.get()} x (last ${w.last}) $k\n") }
         append("  main thread:\n")
         stack.asSequence()
             .filterNot { e -> e.className.startsWith("java.lang.invoke") || e.className.startsWith("jdk.internal") || e.methodName.contains("\$\$robo\$\$") }
