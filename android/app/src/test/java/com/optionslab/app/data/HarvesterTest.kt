@@ -30,6 +30,7 @@ import java.time.LocalTime
  */
 @ConscryptMode(ConscryptMode.Mode.OFF)
 class HarvesterTest : RobolectricTest() {
+    @get:org.junit.Rule val watchdog = com.optionslab.app.testing.BackgroundWatchdog()
     private lateinit var upstox: UpstoxStub
     private val tue = WED.minusDays(1)
     private val next = WED.plusDays(6)

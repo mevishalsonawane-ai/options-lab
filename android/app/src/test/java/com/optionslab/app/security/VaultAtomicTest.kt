@@ -15,6 +15,7 @@ import java.io.File
  * one, and never an empty file when the Keystore fails part-way.
  */
 class VaultAtomicTest : RobolectricTest() {
+    @get:org.junit.Rule val watchdog = com.optionslab.app.testing.BackgroundWatchdog()
     private val alias = "ol.vault.data.v1"
 
     @Test fun aKeystoreFaultLeavesTheOldFileWholeAndNoTemp() {

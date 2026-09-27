@@ -39,6 +39,7 @@ import java.util.zip.GZIPOutputStream
 @OptIn(ExperimentalCoroutinesApi::class)
 @ConscryptMode(ConscryptMode.Mode.OFF)
 class NetTest : RobolectricTest() {
+    @get:org.junit.Rule val watchdog = com.optionslab.app.testing.BackgroundWatchdog()
     private lateinit var upstox: UpstoxStub
     private val url = "https://api.upstox.com/v3/historical-candle/probe"
 

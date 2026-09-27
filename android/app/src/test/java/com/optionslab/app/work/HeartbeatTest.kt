@@ -27,6 +27,7 @@ import kotlin.math.abs
  * the watch has gone quiet in market hours it restarts it and tells the owner once per stall.
  */
 class HeartbeatTest : RobolectricTest() {
+    @get:org.junit.Rule val watchdog = com.optionslab.app.testing.BackgroundWatchdog()
     private val am get() = shadowOf(context.getSystemService(AlarmManager::class.java))
     private val app get() = context.applicationContext as Application
     private fun beats() = am.scheduledAlarms.filter { shadowOf(it.operation).savedIntent.action == Heartbeat.ACTION }

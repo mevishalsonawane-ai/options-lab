@@ -28,6 +28,7 @@ import java.time.LocalTime
  */
 @ConscryptMode(ConscryptMode.Mode.OFF)
 class MarketTest : RobolectricTest() {
+    @get:org.junit.Rule val watchdog = com.optionslab.app.testing.BackgroundWatchdog()
     private lateinit var upstox: UpstoxStub
     private val tue = WED.minusDays(1)
     private val nifty = Upstox.INDEX_KEYS.getValue("NIFTY")

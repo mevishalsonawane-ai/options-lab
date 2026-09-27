@@ -20,6 +20,7 @@ import org.robolectric.Shadows.shadowOf
  * account P&L only when the owner turned it on (a home screen is seen by whoever holds the phone).
  */
 class IraWidgetTest : RobolectricTest() {
+    @get:org.junit.Rule val watchdog = com.optionslab.app.testing.BackgroundWatchdog()
     private var id = 0
     private val widgets get() = shadowOf(AppWidgetManager.getInstance(context))
     private fun view(): View = widgets.getViewFor(id)

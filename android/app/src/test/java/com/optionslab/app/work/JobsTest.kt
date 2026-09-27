@@ -71,6 +71,7 @@ class RefusingForegroundService : ShadowService() {
  */
 @ConscryptMode(ConscryptMode.Mode.OFF)
 class JobsTest : RobolectricTest() {
+    @get:org.junit.Rule val watchdog = com.optionslab.app.testing.BackgroundWatchdog()
     private lateinit var upstox: UpstoxStub
     private val app get() = context.applicationContext as Application
     private val services = ArrayList<ServiceController<WatchService>>()

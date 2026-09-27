@@ -22,6 +22,7 @@ import org.robolectric.Shadows.shadowOf
  * it), which notices reach the shade, and the in-app banner queue every notice also feeds.
  */
 class NotifierTest : RobolectricTest() {
+    @get:org.junit.Rule val watchdog = com.optionslab.app.testing.BackgroundWatchdog()
     private val nm get() = context.getSystemService(NotificationManager::class.java)
     private fun posted(id: Int): Notification? = Background.notifications(context).getNotification(id)
 

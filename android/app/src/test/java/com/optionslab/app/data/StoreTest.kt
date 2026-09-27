@@ -23,6 +23,7 @@ import java.util.concurrent.TimeUnit
  * read-modify-write never loses a concurrent update.
  */
 class StoreTest : RobolectricTest() {
+    @get:org.junit.Rule val watchdog = com.optionslab.app.testing.BackgroundWatchdog()
     private val day = LocalDate.of(2025, 10, 15)
     private val expiry = LocalDate.of(2025, 10, 21)
 

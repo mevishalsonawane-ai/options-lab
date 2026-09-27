@@ -24,6 +24,7 @@ import org.robolectric.Shadows.shadowOf
  * Zerodha card's Close only opens the app's own review, never sends an order from the shade.
  */
 class PositionCardsTest : RobolectricTest() {
+    @get:org.junit.Rule val watchdog = com.optionslab.app.testing.BackgroundWatchdog()
     private fun posted(venue: String, symbol: String): Notification? =
         Background.notifications(context).getNotification(PositionCards.idOf(venue, symbol))
 
