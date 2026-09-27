@@ -63,6 +63,7 @@ import java.util.Locale
 @Config(qualifiers = "w411dp-h1400dp")
 class OptionOrderSheetTest {
     @get:Rule val compose = createComposeRule()
+    @get:Rule val watchdog = com.optionslab.app.testing.TradeWatchdog()
 
     private lateinit var upstox: FakeUpstox
     private lateinit var holder: ModelHolder

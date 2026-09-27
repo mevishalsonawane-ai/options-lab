@@ -273,6 +273,8 @@ fun AppModel.awaitPaper(what: String = "the paper account", timeoutMs: Long = 20
  * "LAYOUT BUG (...)" and the findings, as [ScreenTest.checkScreen] does with its knownBugs.
  */
 abstract class TradeScreenBase(device: DeviceConfig) : ScreenTest(device) {
+    @get:org.junit.Rule val watchdog = TradeWatchdog()
+
     data class Known(val pattern: Regex, val bug: String)
 
     protected fun lintKnown(name: String, known: List<Known> = emptyList(), options: LayoutLint.Options = LayoutLint.Options()) {
@@ -318,4 +320,30 @@ abstract class TradeScreenBase(device: DeviceConfig) : ScreenTest(device) {
     }
 
     protected fun frames(n: Int = 12) = repeat(n) { compose.mainClock.advanceTimeByFrame() }
+}
+
+/**
+ * A stuck Trade-tab test fails with its stack instead of holding the CI job: after [seconds] the test
+ * thread is interrupted (every 5 s until it ends), and all threads' stacks are printed once.
+ */
+class TradeWatchdog(private val seconds: Long = 180) : org.junit.rules.TestRule {
+    override fun apply(base: org.junit.runners.model.Statement, description: org.junit.runner.Description) =
+        object : org.junit.runners.model.Statement() {
+            override fun evaluate() {
+                val thread = Thread.currentThread()
+                val timer = java.util.Timer("trade-watchdog ${description.methodName}", true)
+                var dumped = false
+                timer.schedule(object : java.util.TimerTask() {
+                    override fun run() {
+                        if (!dumped) {
+                            dumped = true
+                            System.err.println("WATCHDOG ${description.displayName} still running after $seconds s; test thread:")
+                            thread.stackTrace.forEach { System.err.println("    at $it") }
+                        }
+                        thread.interrupt()
+                    }
+                }, seconds * 1000, 5_000)
+                try { base.evaluate() } finally { timer.cancel(); Thread.interrupted() }
+            }
+        }
 }

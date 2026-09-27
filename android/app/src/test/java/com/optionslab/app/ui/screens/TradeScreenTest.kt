@@ -60,6 +60,7 @@ import java.time.LocalDate
 @Config(qualifiers = "w411dp-h2400dp")
 class TradeScreenTest {
     @get:Rule val compose = createComposeRule()
+    @get:Rule val watchdog = com.optionslab.app.testing.TradeWatchdog()
 
     private lateinit var kite: FakeKite
     private lateinit var holder: ModelHolder

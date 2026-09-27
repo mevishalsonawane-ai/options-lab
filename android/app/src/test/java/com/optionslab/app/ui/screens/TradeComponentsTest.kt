@@ -23,6 +23,7 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class TradeComponentsTest {
     @get:Rule val compose = createComposeRule()
+    @get:Rule val watchdog = com.optionslab.app.testing.TradeWatchdog()
 
     // ---- order source ---------------------------------------------------------------------
 
