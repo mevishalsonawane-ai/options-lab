@@ -7,6 +7,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -98,6 +99,7 @@ private val TILE = 26.dp
  * cumulative line; below it: the month's key figures and the year at a glance.
  * Paper and Zerodha each have their own calendar.
  */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 fun PnlCalendarScreen(model: AppModel) {
     val s by model.settings.collectAsState()
@@ -165,13 +167,16 @@ fun PnlCalendarScreen(model: AppModel) {
     Page {
         item {
             LedgerCard {
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                // The month navigator moves under the account switch, as one piece, when a large font leaves no room.
+                androidx.compose.foundation.layout.FlowRow(Modifier.fillMaxWidth()) {
                     Segmented(listOf("Paper", "Zerodha"), if (live) 1 else 0) { i -> live = i == 1; picked = null }
                     Spacer(Modifier.weight(1f))
-                    NavArrow("‹", first == null || month > first) { month = month.minusMonths(1); picked = null }
-                    Text("${mon(month)} ${month.year}", style = Type.body.copy(color = LocalPalette.current.ink, fontSize = 13.sp, fontWeight = FontWeight.SemiBold),
-                        textAlign = TextAlign.Center, modifier = Modifier.width(78.dp))
-                    NavArrow("›", month < thisMonth) { month = month.plusMonths(1); picked = null }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        NavArrow("‹", first == null || month > first) { month = month.minusMonths(1); picked = null }
+                        Text("${mon(month)} ${month.year}", style = Type.body.copy(color = LocalPalette.current.ink, fontSize = 13.sp, fontWeight = FontWeight.SemiBold),
+                            textAlign = TextAlign.Center, modifier = Modifier.widthIn(min = 78.dp))
+                        NavArrow("›", month < thisMonth) { month = month.plusMonths(1); picked = null }
+                    }
                 }
                 FilterRow(ownerNames, owner, yearView, onOwner = { owner = it; picked = null }, onYear = { yearView = it; picked = null },
                     onExport = { csv.launch("iraalgo-pnl-${if (live) "zerodha" else "paper"}-${month.year}.csv") })

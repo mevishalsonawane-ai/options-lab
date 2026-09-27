@@ -386,8 +386,12 @@ class ResearchScreensLayoutTest(device: DeviceConfig) : ScreenTest(device) {
         @ParameterizedRobolectricTestRunner.Parameters(name = "{0}")
         fun configs(): List<Array<Any>> = com.optionslab.app.testing.ResearchMatrix.six()
 
-        /** Real layout bugs found by these tests, skipped with this text until fixed. */
-        val BUGS = mapOf("*" to "TRIAGE: discovery run, findings to be pinned")
+        /**
+         * Real layout bugs found by these tests, skipped with this text until fixed. The triage run found 'Add to
+         * Strategies' ellipsized, the replay's 'ATM PE' token cut and the 'Unbounded beyond this move' badge cut at
+         * font 2.0 on a small phone: all fixed (buttons take three lines, tokens and badges wrap).
+         */
+        val BUGS = emptyMap<String, String>()
     }
 
     @After fun noNetwork() { assertEquals(emptyList<String>(), NetworkGuard.blocked.toList()) }

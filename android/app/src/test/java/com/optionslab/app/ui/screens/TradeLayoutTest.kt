@@ -46,8 +46,8 @@ import java.time.LocalDate
  */
 abstract class TradeLayoutBase(device: DeviceConfig) : TradeScreenBase(device) {
     companion object {
-        /** First runs on CI: every error is listed (as a skipped LAYOUT BUG) instead of failing, to be triaged. */
-        const val DISCOVERY = true
+        /** True lists every error as a skipped LAYOUT BUG instead of failing (a first look); triaged: off. */
+        const val DISCOVERY = false
         private val ALL = listOf(TradeScreenBase.Known(Regex("."), "DISCOVERY: findings to triage"))
         fun known(vararg k: TradeScreenBase.Known): List<TradeScreenBase.Known> = if (DISCOVERY) ALL else k.toList()
     }
@@ -218,8 +218,9 @@ abstract class TradeLayoutBase(device: DeviceConfig) : TradeScreenBase(device) {
     // ---- the order sheet ------------------------------------------------------------------------
 
     /** The BUY / SELL halves of the sheet's side switch are text with 10 dp padding. */
+    /** The BUY / SELL switch is 48 dp now; what stays is the sheet's backdrop, which lies under the whole sheet by design. */
     protected val sideSwitch = arrayOf(
-        TradeScreenBase.Known(Regex("TOUCH.*clickable '(BUY|SELL)'"), "OptionOrderSheet: the BUY / SELL switch is under 48 dp tall"),
+        TradeScreenBase.Known(Regex("OVERLAP\\] 'Close' and "), "OptionOrderSheet: the backdrop (TalkBack 'Close', a tap outside the sheet) lies under the sheet by design"),
     )
 
     protected fun orderSheetPaper() {

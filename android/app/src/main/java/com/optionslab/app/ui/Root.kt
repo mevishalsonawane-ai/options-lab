@@ -301,7 +301,9 @@ private fun BiometricOffer(activity: MainActivity, error: String?, onUse: () -> 
 internal fun VaultUnreadable(onRetry: () -> Unit, onErase: () -> Unit) {
     val p = com.optionslab.app.ui.theme.LocalPalette.current
     var confirm by remember { mutableStateOf(false) }
-    Column(Modifier.fillMaxSize().background(p.paper).padding(28.dp), verticalArrangement = Arrangement.Center) {
+    // Centred, and scrolling when a large font makes it taller than the screen (the last button was squeezed).
+    Box(Modifier.fillMaxSize().background(p.paper), contentAlignment = Alignment.Center) {
+    Column(Modifier.fillMaxWidth().verticalScroll(androidx.compose.foundation.rememberScrollState()).padding(28.dp)) {
         Text("THE VAULT IS SEALED SHUT", style = com.optionslab.app.ui.theme.Type.title.copy(color = p.oxblood))
         Spacer(Modifier.height(12.dp))
         Text("IraAlgo's encrypted settings could not be read on this start. That is usually a passing Android Keystore fault; " +
@@ -312,6 +314,7 @@ internal fun VaultUnreadable(onRetry: () -> Unit, onErase: () -> Unit) {
         Spacer(Modifier.height(10.dp))
         com.optionslab.app.ui.components.BrassButton(if (confirm) "Tap again: erase ALL IraAlgo data" else "Erase everything and start again",
             Modifier.fillMaxWidth(), tone = p.oxblood) { if (confirm) onErase() else confirm = true }
+    }
     }
 }
 
@@ -595,6 +598,28 @@ internal fun Masthead(live: Boolean, calm: Boolean, linked: Boolean, onMode: (Bo
     var now by remember { mutableStateOf(Market.now()) }
     LaunchedEffect(Unit) { while (true) { delay(15_000); now = Market.now() } }
     val open = Market.isOpen()
+    // The trading mode, on every screen. Tap to switch; going live asks first (and needs Zerodha linked).
+    val modePill: @Composable () -> Unit = {
+                val tint = if (live) p.oxblood else p.verdigris
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .background(if (live) p.oxblood else tint.copy(alpha = 0.12f), RoundedCornerShape(50))
+                        .selectable(selected = live, role = androidx.compose.ui.semantics.Role.Switch) {
+                            if (live) onMode(false) else if (linked) confirmLive = true else needLink = true
+                        }
+                        .padding(horizontal = 12.dp, vertical = 7.dp),
+                ) {
+                    Box(Modifier.size(7.dp).background(if (live) Color.White else tint, androidx.compose.foundation.shape.CircleShape))
+                    Spacer(Modifier.width(6.dp))
+                    Text(if (live) "LIVE TRADING" else "PAPER TRADING",
+                        style = Type.label.copy(color = if (live) Color.White else tint, fontSize = 12.sp, letterSpacing = 0.4.sp,
+                            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold), maxLines = 1)
+                    Text("  ▾", style = Type.label.copy(color = if (live) Color.White else tint, fontSize = 11.sp))
+                }
+                }
+    val narrow = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp /
+        androidx.compose.ui.platform.LocalDensity.current.fontScale < 190f
     Column(Modifier.fillMaxWidth().background(p.paperDeep).statusBarsPadding()) {
         Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 12.dp, top = 10.dp, bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(
@@ -616,27 +641,10 @@ internal fun Masthead(live: Boolean, calm: Boolean, linked: Boolean, onMode: (Bo
                     }
                 }
             }
-            // The trading mode, on every screen. Tap to switch; going live asks first (and needs Zerodha linked).
-            run {
-                val tint = if (live) p.oxblood else p.verdigris
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .background(if (live) p.oxblood else tint.copy(alpha = 0.12f), RoundedCornerShape(50))
-                        .selectable(selected = live, role = androidx.compose.ui.semantics.Role.Switch) {
-                            if (live) onMode(false) else if (linked) confirmLive = true else needLink = true
-                        }
-                        .padding(horizontal = 12.dp, vertical = 7.dp),
-                ) {
-                    Box(Modifier.size(7.dp).background(if (live) Color.White else tint, androidx.compose.foundation.shape.CircleShape))
-                    Spacer(Modifier.width(6.dp))
-                    Text(if (live) "LIVE TRADING" else "PAPER TRADING",
-                        style = Type.label.copy(color = if (live) Color.White else tint, fontSize = 12.sp, letterSpacing = 0.4.sp,
-                            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold), maxLines = 1)
-                    Text("  ▾", style = Type.label.copy(color = if (live) Color.White else tint, fontSize = 11.sp))
-                }
-            }
+            if (!narrow) modePill()
         }
+        // On a narrow bar at a large font the mode gets a line of its own (beside it the title was cut).
+        if (narrow) Box(Modifier.fillMaxWidth().padding(start = 16.dp, end = 12.dp, bottom = 8.dp)) { modePill() }
         // A red line under the bar while live, so real-money mode is never mistaken.
         Box(Modifier.fillMaxWidth().height(if (linked && live) 2.dp else 1.dp).background(if (linked && live) p.oxblood else p.rule))
     }
@@ -675,7 +683,7 @@ internal fun TabBar(current: Tab, tabs: List<Tab>, onPick: (Tab) -> Unit) {
                     Icon(t.icon, contentDescription = null, tint = if (sel) p.ink else p.inkFaint, modifier = Modifier.size(22.dp))
                     Spacer(Modifier.height(3.dp))
                     com.optionslab.app.ui.components.FitText(t.label, Type.label.copy(fontSize = 11.sp, color = if (sel) p.ink else p.inkFaint,
-                        fontWeight = if (sel) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.Medium))
+                        fontWeight = if (sel) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.Medium), minSize = 5.sp)
                 }
             }
         }

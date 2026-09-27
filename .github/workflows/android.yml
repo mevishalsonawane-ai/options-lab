@@ -122,7 +122,20 @@ jobs:
       # No secrets here: the tests use made-up values and an in-memory stand-in for the Keystore.
       # Robolectric fetches its Android runtime jar from Maven Central on first use.
       - name: Unit and UI tests, with coverage
-        run: ./gradlew --no-daemon -PtestShard=${{ matrix.shard }}/4 :app:testDebugUnitTest :app:createDebugUnitTestCoverageReport
+        run: |
+          # A stuck test JVM says nothing (not even the in-process samplers print when its heap thrashes):
+          # every 5 minutes each test JVM's heap and main threads go to this log from outside.
+          (sleep 240; while true; do
+             for pid in $(pgrep -f 'Gradle Test Executor'); do
+               echo "==== JVM $pid at $(date -u +%H:%M:%S)"
+               jcmd "$pid" GC.heap_info 2>&1 | head -12
+               jcmd "$pid" Thread.print 2>&1 | awk '/^"/{keep = ($0 ~ /Test worker|Main Thread|idle-sampler/)} keep' | grep -v 'java.lang.invoke\|LambdaForm\|\$\$robo\$\$' | head -160
+             done
+             sleep 300
+           done) &
+          dumper=$!
+          trap 'pkill -P $dumper 2>/dev/null; kill $dumper 2>/dev/null; true' EXIT
+          ./gradlew --no-daemon -PtestShard=${{ matrix.shard }}/4 :app:testDebugUnitTest :app:createDebugUnitTestCoverageReport
       - name: Coverage summary
         if: always()
         run: python3 tools/coverage_summary.py "$(find app/build/reports/coverage -name report.xml 2>/dev/null | head -1)" app/build/test-results/testDebugUnitTest | tee -a "$GITHUB_STEP_SUMMARY"
