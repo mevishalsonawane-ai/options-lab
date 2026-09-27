@@ -72,7 +72,7 @@ def nn_scan(d, extra_feats, dev_start, win_start):
 
 def main():
     d, h = read(f"{DATA}/xauusd_1d.csv"), read(f"{DATA}/xauusd_1h.csv")
-    al = read(f"{RES}/alarms_hourly.csv")
+    al = read(f"{RES}/{os.environ.get('ALARMS', 'alarms_hourly')}.csv")  # ALARMS=alarms_mtf_hourly for the multi-timeframe alarms
     end = h.index[-1]
     win_start = end.normalize() - pd.Timedelta(days=91)
     dev_start = al.index[0].normalize() + pd.Timedelta(days=1)
@@ -112,7 +112,7 @@ def main():
     res["extra_features"] = list(ef.columns)
 
     print("networks")
-    res["nn"] = nn_scan(d, ef, dev_start, win_start)
+    res["nn"] = {} if os.environ.get("SKIP_NN") else nn_scan(d, ef, dev_start, win_start)
 
     print("trend")
     trend, trend_pnl = {}, {}
@@ -199,7 +199,7 @@ def main():
         tr = strad_trades[sel][0]
         res["straddle_weeks_window"] = [{"start": str(t.start), "side": int(t.side), "iv": float(t.iv), "move": float(t.move), "pnl": float(t.pnl)}
                                         for _, t in tr[tr.start >= win_start].iterrows()]
-    write_json(res, f"{RES}/suite.json")
+    write_json(res, f"{RES}/suite{os.environ.get('SUITE_SUFFIX', '')}.json")
     P = res["portfolio"]
     print("parts", P["parts"])
     for pname in ("balanced", "stacked"):

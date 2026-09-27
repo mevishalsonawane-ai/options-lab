@@ -11,6 +11,13 @@ on:
       - "forex/*.py"
       - "tools/marketlab/**"
       - "!tools/marketlab/mtf.py"
+      - "!tools/marketlab/mtf_study.py"
+      - "!crypto/fetch_*.py"
+      - "!forex/fetch_*.py"
+      - "!crypto/*_study.py"
+      - "!forex/*_study.py"
+      - "!crypto/suite.py"
+      - "!forex/suite.py"
       - ".github/workflows/markets.yml"
   workflow_dispatch:
 

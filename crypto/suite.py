@@ -105,7 +105,7 @@ def main():
     d, h = read(f"{DATA}/btc_1d.csv"), read(f"{DATA}/btc_1h.csv")
     dv = daily_index(read(f"{DATA}/dvol_1d.csv"))
     od = daily_index(read(f"{DATA}/options_daily.csv"))
-    al = read(f"{RES}/alarms_hourly.csv")
+    al = read(f"{RES}/{os.environ.get('ALARMS', 'alarms_hourly')}.csv")  # ALARMS=alarms_mtf_hourly for the multi-timeframe alarms
     print("extra data")
     X = load_extra()
     end = h.index[-1]
@@ -160,7 +160,7 @@ def main():
 
     # ---------- D. networks with and without the extra data
     print("networks")
-    res["nn"], preds = nn_scan(d, ef, dev_start, win_start)
+    res["nn"] = {} if os.environ.get("SKIP_NN") else nn_scan(d, ef, dev_start, win_start)[0]
 
     # ---------- A. trend with volatility targeting
     print("trend")
@@ -288,7 +288,7 @@ def main():
     res["straddle_weeks_window"] = [{"start": str(t.start), "side": int(t.side), "iv": float(t["iv"]) if "iv" in t and pd.notna(t["iv"]) else None,
                                      "move": float(t["move"]) if "move" in t and pd.notna(t["move"]) else None, "pnl": float(t.pnl)}
                                     for _, t in tr_sel[tr_sel.start >= win_start].iterrows()]
-    write_json(res, f"{RES}/suite.json")
+    write_json(res, f"{RES}/suite{os.environ.get('SUITE_SUFFIX', '')}.json")
     P = res["portfolio"]
     print("parts", P["parts"])
     for pname in ("balanced", "stacked"):
