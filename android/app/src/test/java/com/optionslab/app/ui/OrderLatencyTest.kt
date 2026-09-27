@@ -68,6 +68,16 @@ class OrderLatencyTest : RobolectricTest() {
 
     private fun median(xs: List<Long>) = xs.sorted()[xs.size / 2]
 
+    private fun settledAccount(m: AppModel) {
+        m.loadAccount(quiet = true)
+        var steady = 0
+        await("the account") {
+            steady = if (m.account.value is Load.Done) steady + 1 else 0
+            Thread.sleep(10)
+            (steady >= 30).takeIf { it }
+        }
+    }
+
     @Test fun liveConfirmToOrderAndFillStayWithinBudget() {
         val k = FakeKite().also { kite = it }
         k.keepAlive = true
@@ -85,8 +95,8 @@ class OrderLatencyTest : RobolectricTest() {
         repeat(6) { run ->
             // Each run starts flat, so the account guard judges the same order every time.
             k.flat()
-            m.loadAccount(quiet = true)
-            await("the account") { m.account.value as? Load.Done }
+            // The account the review gates against: loaded, and no reload (the one after a fill) still under way.
+            settledAccount(m)
             m.planManual("NIFTY", expiry, 24_500.0, Right.CE, Kite.Side.BUY, 1, "NRML", null)
             val plan = await("the plan") { (m.plan.value as? Load.Done)?.value ?: (m.plan.value as? Load.Failed)?.let { throw AssertionError(it.why) } }
             assertTrue("refusals: ${plan.refusals}", plan.sendable)
