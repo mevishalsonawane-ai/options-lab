@@ -209,11 +209,11 @@ private fun StrategyCard(actions: StrategyActions, e: Strategies.Entry, liveAllo
                 BrassButton("Start live", Modifier.weight(1f), tone = p.oxblood, enabled = liveAllowed && d.liveEnabled, onClick = onLive)
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 6.dp)) {
-                TextButton(onEdit) { Text("Edit", style = Type.label.copy(color = p.inkSoft)) }
-                TextButton({ actions.setLive(d.id, !d.liveEnabled) }) {
+                TextButton(onEdit, Modifier.heightIn(min = 48.dp)) { Text("Edit", style = Type.label.copy(color = p.inkSoft)) }
+                TextButton({ actions.setLive(d.id, !d.liveEnabled) }, Modifier.heightIn(min = 48.dp)) {
                     Text(if (d.liveEnabled) "Disable live" else "Enable live", style = Type.label.copy(color = if (d.liveEnabled) p.oxblood else p.inkSoft))
                 }
-                TextButton({ deleting = true }) { Text("Delete", style = Type.label.copy(color = p.oxblood)) }
+                TextButton({ deleting = true }, Modifier.heightIn(min = 48.dp)) { Text("Delete", style = Type.label.copy(color = p.oxblood)) }
             }
             if (!liveAllowed) Note("Live runs need Live mode (the badge at the top) and \"Enable live\" on this strategy.")
         }

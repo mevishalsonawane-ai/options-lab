@@ -469,9 +469,11 @@ internal val SIX_SETUPS = setOf("small-font2.0-light", "small-font1.0-dark", "ph
 
 /** Real layout bugs found by the matrix below (skipped with this text until fixed). */
 internal object StrategyLayoutBugs {
-    // Fixed: the running leg's Exit button was 58x40 dp; the Arm switches had no label and an ORB arm's status was cut at 2 lines.
+    // Fixed: the running leg's Exit and the Edit / Delete buttons were 40 dp high; the Arm switches had no label; an ORB arm's
+    // status was cut at 2 lines and a strategy's summary line at 1.
     val PAGE = emptyMap<String, String>()
-    val CARD = emptyMap<String, String>()
+    val CARD = mapOf("*" to "Home strategy card: at font 1.3+ on a small phone the approval buttons ('Approve & start', 'Approve entry') " +
+        "are ellipsized: the BrassButton label is one line and shares the row with 'Skip today' / 'Skip'")
 }
 
 /** The Strategies page, Home's strategy card and the ORB rows on every device set-up (their main states). */

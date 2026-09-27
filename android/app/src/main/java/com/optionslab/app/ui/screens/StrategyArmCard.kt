@@ -164,7 +164,7 @@ internal fun StrategyArmContent(
                         else ds.joinToString(" ") { it.getDisplayName(TextStyle.SHORT, Locale.ENGLISH) }
                     }
                     Text(listOfNotNull(d.underlying, start?.let { st -> "$st–${stop ?: "close"}" }, days, "${d.legs.size} leg${if (d.legs.size == 1) "" else "s"}").joinToString(" · "),
-                        style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp), maxLines = 1)
+                        style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp))
                     if (com.optionslab.app.data.Strategies.needsBreakoutRules(d))
                         Text("Would enter at the start time without a breakout check, so it cannot be armed until the ORB rules are added.",
                             style = Type.bodySmall.copy(color = p.amber, fontSize = 12.sp))
