@@ -10,6 +10,7 @@ import lzma
 import os
 import struct
 import sys
+import time
 
 import pandas as pd
 
@@ -22,7 +23,11 @@ FEED = "https://datafeed.dukascopy.com/datafeed/XAUUSD"
 
 
 def day(d):
-    raw = get(f"{FEED}/{d.year}/{d.month - 1:02d}/{d.day:02d}/BID_candles_min_1.bi5")
+    """One day's 1-minute candles; None if the feed refused (retried later), [] if there is no file."""
+    try:
+        raw = get(f"{FEED}/{d.year}/{d.month - 1:02d}/{d.day:02d}/BID_candles_min_1.bi5", tries=6)
+    except Exception:  # noqa: BLE001 - 503s from the feed when busy
+        return None
     if not raw:
         return []
     data = lzma.decompress(raw)
@@ -40,12 +45,30 @@ def main():
     today = dt.date.today()
     days = [today - dt.timedelta(days=i) for i in range(3 * 365 + 5, 0, -1)]
     days = [d for d in days if d.weekday() != 5]  # no trading on Saturdays
-    rows = []
-    with cf.ThreadPoolExecutor(8) as ex:
-        for i, r in enumerate(ex.map(day, days)):
-            rows += r
+    rows, failed = [], []
+    with cf.ThreadPoolExecutor(3) as ex:
+        for i, (d, r) in enumerate(zip(days, ex.map(day, days))):
+            if r is None:
+                failed.append(d)
+            else:
+                rows += r
             if i % 200 == 0:
-                print(f"  day {i}/{len(days)}: {len(rows)} bars")
+                print(f"  day {i}/{len(days)}: {len(rows)} bars, {len(failed)} to retry")
+    for attempt in range(3):  # retry refused days slowly
+        again = []
+        for d in failed:
+            time.sleep(2)
+            r = day(d)
+            if r is None:
+                again.append(d)
+            else:
+                rows += r
+        failed = again
+        print(f"  retry round {attempt + 1}: {len(failed)} days still missing")
+        if not failed:
+            break
+    if failed:
+        print(f"  WARNING: {len(failed)} days could not be downloaded: {[str(d) for d in failed[:10]]}")
     m1 = pd.DataFrame(rows, columns=["time", "open", "high", "low", "close", "volume"]).set_index("time").sort_index()
     m1 = m1[~m1.index.duplicated()]
     med = m1["close"].median()
