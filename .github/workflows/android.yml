@@ -94,6 +94,11 @@ jobs:
         run: ./gradlew --no-daemon :app:assembleDebug :app:assembleRelease
       - name: Sandbox report (every permission the APK holds)
         run: cat app/build/reports/sandbox/*.txt
+      - name: Release signing certificate (public fingerprint only)
+        run: |
+          signer=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)
+          "$signer" verify --print-certs app/build/outputs/apk/release/*.apk | grep -E "SHA-256|DN" || true
+          if [ -n "$OL_KEYSTORE_PATH" ]; then echo "Signed with the owner's release key."; else echo "Signed with a throwaway key (no usable release keystore)."; fi
       - uses: actions/upload-artifact@v4
         with:
           name: options-lab-apk
