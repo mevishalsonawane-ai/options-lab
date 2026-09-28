@@ -96,8 +96,14 @@ class MiscScreensTest {
     private val model: AppModel get() = (offline ?: OfflineModel(app).also { offline = it }).model
     private lateinit var picker: FakePicker
 
-    @Before fun up() { AreaE.resetGlobals(); picker = FakePicker(app) }
+    @Before fun up() {
+        AreaE.resetGlobals(); picker = FakePicker(app)
+        // A morning in market hours: after 15:35 the model's refresh runs the ORB evening replay, which reads
+        // Upstox's candles (the test would pass or fail by the time of day CI ran it).
+        com.optionslab.app.data.OrbArms.testNow = com.optionslab.app.testing.AutomationSupport.tradingDayAt(11, 0)
+    }
     @After fun down() {
+        com.optionslab.app.data.OrbArms.testNow = null
         offline?.close()
         AreaE.resetGlobals()
         assertEquals("no test may reach the network", emptyList<String>(), NetworkGuard.blocked.toList())
