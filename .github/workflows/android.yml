@@ -82,22 +82,28 @@ jobs:
             for v in "$ks_pass" "$key_pass"; do [ -n "$v" ] && echo "::add-mask::$v"; done
             # make-release-key.sh gives the key the keystore's password, so that one password signs.
             # Sizes only (never the values), so a bad paste can be told apart from a wrong password.
+            echo "keystore text: ${#b64} characters (expected 5732); passwords: ${#ks_pass} and ${#key_pass} characters (32 each); alias: ${#alias} characters (7)" > "$RUNNER_TEMP/signing.txt"
             echo "keystore text: ${#b64} characters (make-release-key.sh prints 5732 for a 4298-byte key); passwords: ${#ks_pass} and ${#key_pass} characters (32 each); alias: ${#alias} characters (7)"
             if ! printf '%s' "$b64" | base64 -d > "$RUNNER_TEMP/release.jks" 2>/dev/null; then
+              echo "Result: OL_KEYSTORE_B64 is not valid base64 - re-paste the long line." >> "$RUNNER_TEMP/signing.txt"
               echo "::warning title=Release key not usable::OL_KEYSTORE_B64 is not valid base64 (cut short or changed while pasting). Re-paste the long line from github-secrets.txt. This APK is signed with a throwaway key."
               rm -f "$RUNNER_TEMP/release.jks"
             elif ! keytool -list -keystore "$RUNNER_TEMP/release.jks" -storepass "$ks_pass" >/dev/null 2>&1; then
+              echo "Result: keystore decoded to $(wc -c < "$RUNNER_TEMP/release.jks") bytes (expected 4298) and does not open with OL_KEYSTORE_PASSWORD." >> "$RUNNER_TEMP/signing.txt"
               echo "::warning title=Release key not usable::The keystore ($(wc -c < "$RUNNER_TEMP/release.jks") bytes) does not open with OL_KEYSTORE_PASSWORD. Re-paste the password from github-secrets.txt (or the keystore text if its size above is not 5732). This APK is signed with a throwaway key."
               rm -f "$RUNNER_TEMP/release.jks"
             elif ! keytool -list -keystore "$RUNNER_TEMP/release.jks" -storepass "$ks_pass" -alias "$alias" >/dev/null 2>&1; then
+              echo "Result: keystore opens; OL_KEY_ALIAS does not name its key (should be iraalgo)." >> "$RUNNER_TEMP/signing.txt"
               echo "::warning title=Release key not usable::The keystore opens, but has no key named by OL_KEY_ALIAS (it should be iraalgo). This APK is signed with a throwaway key."
               rm -f "$RUNNER_TEMP/release.jks"
             else
               echo "OL_KEYSTORE_PATH=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
               { echo "OL_KEYSTORE_PASSWORD=$ks_pass"; echo "OL_KEY_PASSWORD=$ks_pass"; echo "OL_KEY_ALIAS=$alias"; } >> "$GITHUB_ENV"
+              echo "Result: release keystore loaded and checked." >> "$RUNNER_TEMP/signing.txt"
               echo "Release keystore loaded and checked."
             fi
           else
+            echo "Result: no OL_KEYSTORE_B64 secret." > "$RUNNER_TEMP/signing.txt"
             echo "::warning title=Release APK signed with a throwaway key::No OL_KEYSTORE_B64 secret: this APK will not install over a previous build. Run android/tools/make-release-key.sh once and add the four secrets it prints."
           fi
       - name: Assemble
@@ -108,6 +114,7 @@ jobs:
         run: cat app/build/reports/sandbox/*.txt
       - name: Release signing certificate (public fingerprint only)
         run: |
+          cat "$RUNNER_TEMP/signing.txt" 2>/dev/null || true
           signer=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)
           "$signer" verify --print-certs app/build/outputs/apk/release/*.apk | grep -E "SHA-256|DN" || true
           if [ -n "$OL_KEYSTORE_PATH" ]; then echo "Signed with the owner's release key."; else echo "Signed with a throwaway key (no usable release keystore)."; fi
