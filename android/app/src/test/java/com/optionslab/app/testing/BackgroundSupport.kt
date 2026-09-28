@@ -186,7 +186,9 @@ object Background {
 
     /** The position cards shown so far (process-wide). */
     fun clearCards() {
-        (PositionCards::class.java.getDeclaredField("shown").apply { isAccessible = true }.get(null) as MutableMap<*, *>).clear()
+        listOf("shown", "sources", "sourceQty").forEach {
+            (PositionCards::class.java.getDeclaredField(it).apply { isAccessible = true }.get(null) as MutableMap<*, *>).clear()
+        }
     }
 
     /** WorkManager for this test's application: synchronous, and nothing with a network constraint runs. */

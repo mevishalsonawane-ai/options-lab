@@ -51,7 +51,9 @@ private fun inr(x: Double, sign: Boolean = false): String =
     (if (sign && x > 0) "+" else if (x < 0) "−" else "") + INR.format(abs(x))
 
 /** One line of the Home "Live orders" list: an open position or a working order. */
-private data class HomeOrder(val name: String, val detail: String, val value: String, val valueColor: Color?, val status: String, val target: RowTarget)
+private data class HomeOrder(val name: String, val detail: String, val value: String, val valueColor: Color?, val status: String, val target: RowTarget,
+                             /** Who placed the order / opened the position ([com.optionslab.app.data.Origins]). */
+                             val source: Pair<String, Boolean>? = null)
 
 /** What Home shows about the money, from the paper account or from Zerodha. */
 private data class Money(val pnlToday: Double?, val unused: Double?, val used: Double?) {
@@ -71,6 +73,7 @@ fun AlmanacScreen(model: AppModel, onGo: (String) -> Unit) {
     val daily by model.bankNiftyDaily.collectAsState()
     val account by model.account.collectAsState()
     val paper by model.paper.collectAsState()
+    val owners by model.orderOwners.collectAsState()
 
     // Prices poll only while Home is on screen and the app is in front.
     com.optionslab.app.ui.PollWhileStarted {
@@ -87,7 +90,7 @@ fun AlmanacScreen(model: AppModel, onGo: (String) -> Unit) {
     }
     LaunchedEffect(s.live) { model.loadBankNiftyDaily() }
     AlmanacContent(s.live, com.optionslab.app.data.Broker.loggedIn, quotes, note, daily, account, paper, onGo,
-        onRow = { model.rowAction.value = it }, strategies = { StrategyArmCard(model) { onGo("strategy") } })
+        onRow = { model.rowAction.value = it }, owners = owners, strategies = { StrategyArmCard(model) { onGo("strategy") } })
 }
 
 /**
@@ -106,6 +109,7 @@ internal fun AlmanacContent(
     paper: Load<com.optionslab.app.data.Paper.Snapshot>,
     onGo: (String) -> Unit,
     onRow: (RowTarget) -> Unit,
+    owners: Map<String, String> = emptyMap(),
     strategies: @Composable () -> Unit,
 ) {
     val p = LocalPalette.current
@@ -120,11 +124,12 @@ internal fun AlmanacContent(
         orders = a?.let { acc ->
             acc.positions.filter { it.qty != 0 }.map {
                 HomeOrder(it.symbol, "${if (it.qty < 0) "SELL" else "BUY"} ${abs(it.qty)} · avg ${PX.format(it.avg)} · LTP ${PX.format(it.last)}",
-                    inr(it.pnl, true), if (it.pnl >= 0) p.verdigris else p.oxblood, "OPEN", RowTarget.LivePosition(it))
+                    inr(it.pnl, true), if (it.pnl >= 0) p.verdigris else p.oxblood, "OPEN", RowTarget.LivePosition(it),
+                    com.optionslab.app.data.Origins.livePosition(owners, acc.trades, acc.orders, it.symbol, it.product, it.qty)?.let(com.optionslab.app.data.Origins::positionDisplay))
             } + acc.orders.filter { it.working }.map {
                 HomeOrder(it.symbol, "${it.side} ${it.pending.takeIf { n -> n > 0 } ?: it.qty} · ${it.type.lowercase()}${if (it.trigger > 0) " · trigger ${PX.format(it.trigger)}" else ""}",
                     "₹" + PX.format(if (it.price > 0) it.price else it.trigger), null, if (it.status == "TRIGGER PENDING") "TRIGGER PENDING" else "PENDING",
-                    RowTarget.LiveOrder(it))
+                    RowTarget.LiveOrder(it), orderSource(owners, "kite:${it.id}", it.tag))
             }
         } ?: emptyList()
         moneyNote = when {
@@ -138,11 +143,13 @@ internal fun AlmanacContent(
         orders = v?.let { snap ->
             snap.positions.positions.filter { it.quantity != 0 }.map {
                 HomeOrder(it.symbol, "${if (it.quantity < 0) "SELL" else "BUY"} ${abs(it.quantity)} · avg ${PX.format(it.averagePrice)} · LTP ${PX.format(it.ltp)}",
-                    inr(it.pnl, true), if (it.pnl >= 0) p.verdigris else p.oxblood, "OPEN", RowTarget.PaperPosition(it))
+                    inr(it.pnl, true), if (it.pnl >= 0) p.verdigris else p.oxblood, "OPEN", RowTarget.PaperPosition(it),
+                    com.optionslab.app.data.Origins.paperPosition(owners, snap.trades, it.symbol, it.product, it.quantity)?.let(com.optionslab.app.data.Origins::positionDisplay))
             } + snap.orders.orders.filter { it.pendingQuantity > 0 && it.status.uppercase() !in setOf("COMPLETE", "CANCELLED", "REJECTED") }.map {
                 HomeOrder(it.symbol, "${it.action} ${it.pendingQuantity} · ${it.priceType.lowercase()}${if (it.triggerPrice > 0) " · trigger ${PX.format(it.triggerPrice)}" else ""}",
                     "₹" + PX.format(if (it.price > 0) it.price else it.triggerPrice), null,
-                    if (it.status.uppercase().contains("TRIGGER")) "TRIGGER PENDING" else "PENDING", RowTarget.PaperOrder(it))
+                    if (it.status.uppercase().contains("TRIGGER")) "TRIGGER PENDING" else "PENDING", RowTarget.PaperOrder(it),
+                    orderSource(owners, "paper:${it.orderId}"))
             }
         } ?: emptyList()
         moneyNote = (paper as? Load.Failed)?.why
@@ -241,6 +248,7 @@ internal fun AlmanacContent(
                             // Wrapped, not cut, when a large font leaves too little room beside the amount.
                             Text(o.name, style = Type.body.copy(color = p.ink, fontSize = 14.sp, fontWeight = FontWeight.SemiBold))
                             Text(o.detail, style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp))
+                            o.source?.let { SourcePill(it) }
                         }
                         Spacer(Modifier.padding(start = 8.dp))
                         Column(horizontalAlignment = Alignment.End) {

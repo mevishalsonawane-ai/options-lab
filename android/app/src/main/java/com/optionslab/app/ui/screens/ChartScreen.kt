@@ -69,7 +69,7 @@ fun ChartScreen(model: AppModel, symbol: String, exchange: String, visible: Bool
     // Named apart from the WebView's own `settings`, which the pane's factory configures.
     val appSettings by model.settings.collectAsState()
     ChartPane(symbol, exchange, visible, ask, live = appSettings.live, source = FeedChartSource,
-        orderSheet = { pick, buy, limit, close -> OptionOrderSheet(model, pick, initialBuy = buy, initialLimit = limit, onClose = close) },
+        orderSheet = { pick, buy, limit, close -> OptionOrderSheet(model, pick, initialBuy = buy, initialLimit = limit, area = "Chart", onClose = close) },
         alertDialog = { sym, close -> ChartAlertDialog(sym, FeedChartSource, onSave = { alarm, said -> model.saveAlarm(alarm); model.say(said) }, onClose = close) },
         chainDialog = { u, close, pick -> ChartChainDialog(model, u, close, pick) })
 }

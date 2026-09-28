@@ -231,6 +231,7 @@ class NotificationActionReceiver : BroadcastReceiver() {
                     if (open.isEmpty()) Alerts.post("No open paper position in $symbol.", Alerts.Kind.ERROR)
                     for (p in open) {
                         val r = com.optionslab.app.data.Paper.close(p.symbol, p.product)
+                        r.orderId?.let { runCatching { com.optionslab.app.data.Strategies.tagOwner("paper:$it", com.optionslab.app.data.Origins.manual("Notification close")) } }
                         Alerts.post(r.message, if (r.ok) Alerts.Kind.SUCCESS else Alerts.Kind.ERROR, if (r.ok) "Paper position closed" else "Could not close")
                     }
                     // An ORB position closed this way is booked and its resting stop taken out now, not on the next pass.

@@ -191,6 +191,7 @@ private fun PaperOrderForm(model: AppModel) {
 private fun PaperPositions(model: AppModel, v: Paper.Snapshot) {
     val p = LocalPalette.current
     val book = v.positions
+    val owners by model.orderOwners.collectAsState()
     LedgerCard(title = "Paper positions") {
         Text("TODAY", style = Type.label.copy(color = p.inkSoft))
         RollingFigure(book.totalPnlToday, { rs(it, true) }, Type.figureLarge.copy(color = if (book.totalPnlToday >= 0) p.verdigris else p.oxblood), calm = true)
@@ -204,6 +205,7 @@ private fun PaperPositions(model: AppModel, v: Paper.Snapshot) {
                     com.optionslab.app.ui.components.FitText(ps.symbol, style = Type.figure.copy(color = p.ink, fontSize = 14.sp))   // a symbol never wraps mid-word
                     Text("${ps.product} · ${if (ps.quantity > 0) "LONG" else if (ps.quantity < 0) "SHORT" else "CLOSED"} ${kotlin.math.abs(ps.quantity)}" +
                         if (ps.quantity != 0) " · avg ${px(ps.averagePrice)} → ${px(ps.ltp)}" else "", style = Type.figure.copy(color = p.inkSoft, fontSize = 11.sp))
+                    com.optionslab.app.data.Origins.paperPosition(owners, v.trades, ps.symbol, ps.product, ps.quantity)?.let { SourcePill(com.optionslab.app.data.Origins.positionDisplay(it)) }
                 }
                 Column(horizontalAlignment = Alignment.End) {
                     Text(rs(ps.totalPnlToday, true), style = Type.figure.copy(color = if (ps.totalPnlToday >= 0) p.verdigris else p.oxblood))

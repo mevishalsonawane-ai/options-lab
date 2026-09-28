@@ -65,6 +65,7 @@ object ExpirySquareOff {
                 if (c.expiry != today || isTicketLeg(c.underlying, c.strike, c.right.name)) continue
                 stillOpen++
                 val r = Paper.close(p.symbol, p.product)
+                r.orderId?.let { runCatching { Strategies.tagOwner("paper:$it", Origins.EXPIRY) } }
                 if (r.ok) closed += "paper ${p.symbol}" else tellOnce(context, "paper ${p.symbol}", "Paper ${p.symbol} could not be closed: ${r.message}. Retrying.")
             }
         }.onFailure { unread = true }
@@ -112,7 +113,7 @@ object ExpirySquareOff {
                 val placed = ArrayList<String>()
                 for (o in orders) {
                     try {
-                        placed += Broker.placeOrder(o, exit = true)
+                        placed += Broker.placeOrder(o, exit = true).also { runCatching { Strategies.tagOwner("kite:$it", Origins.EXPIRY) } }
                     } catch (e: Exception) {
                         if (Broker.definite(e)) {
                             tellOnce(context, "rejected ${p.symbol} ${e.message}", "Zerodha refused the expiry exit of ${p.symbol}: ${e.message}. Retrying every pass until 15:30; close it yourself if it keeps failing.")

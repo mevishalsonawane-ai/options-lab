@@ -13,21 +13,26 @@ import com.optionslab.app.ui.theme.LocalPalette
 import com.optionslab.app.ui.theme.Type
 
 /**
- * Who placed an order: the strategy ("ORB · leg 1 entry") when this phone's
- * strategy module sent it, otherwise "Manual". [venueId] is "paper:<id>" or
- * "kite:<id>"; [tag] is Zerodha's order tag, which marks strategy orders
- * sent before the phone started keeping names.
+ * Who placed an order: the strategy ("Strategy: ORB · entry"), an automatic rule ("Auto: Protection · stop"),
+ * or the screen a hand order came from ("Manual · Chart"). [venueId] is "paper:<id>" or "kite:<id>"; [tag]
+ * is Zerodha's order tag (null when unknown), which names orders the phone kept no label for.
+ * See [com.optionslab.app.data.Origins].
  */
-fun orderSource(owners: Map<String, String>, venueId: String, tag: String = ""): Pair<String, Boolean> =
-    owners[venueId]?.let { "Strategy: $it" to true }
-        ?: if (tag == "iraalgostrat") "Strategy order" to true else "Manual" to false
+fun orderSource(owners: Map<String, String>, venueId: String, tag: String? = null): Pair<String, Boolean> =
+    com.optionslab.app.data.Origins.of(owners, venueId, tag)
 
 /** The label as a small pill under an order or trade. */
 @Composable
-fun OrderSourcePill(owners: Map<String, String>, venueId: String, tag: String = "") {
+fun OrderSourcePill(owners: Map<String, String>, venueId: String, tag: String? = null) {
+    SourcePill(orderSource(owners, venueId, tag))
+}
+
+/** A source label ([orderSource], or a position's [com.optionslab.app.data.Origins.position]) as a small pill. */
+@Composable
+fun SourcePill(source: Pair<String, Boolean>) {
     val p = LocalPalette.current
-    val (text, strategy) = orderSource(owners, venueId, tag)
-    Text(text, maxLines = 1,
+    val (text, strategy) = source
+    Text(text, maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
         style = Type.label.copy(color = if (strategy) p.ink else p.inkSoft, fontSize = 11.sp, fontWeight = if (strategy) FontWeight.SemiBold else FontWeight.Medium),
         modifier = Modifier.padding(top = 3.dp).background(p.chip, RoundedCornerShape(50)).padding(horizontal = 8.dp, vertical = 2.dp))
 }

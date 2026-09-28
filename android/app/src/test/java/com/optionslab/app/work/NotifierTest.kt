@@ -110,11 +110,11 @@ class NotifierTest : RobolectricTest() {
     @Test fun aFillBecomesItsPositionsCard() {
         Notifier.orderFilled(context, "buy", 75, "NIFTY25O2124500PE", 101.5, "Paper", "ORB")
         val a = Alerts.queue.value.single()
-        assertEquals("BUY filled · Paper · ORB", a.title)
+        assertEquals("BUY filled · Paper · Strategy: ORB", a.title)
         assertEquals("75 NIFTY25O2124500PE @ 101.50", a.text)
         assertEquals(Alerts.Kind.SUCCESS, a.kind)
         val n = posted(PositionCards.idOf("Paper", "NIFTY25O2124500PE"))!!
-        assertEquals("BUY filled · Paper · ORB", Background.title(n))
+        assertEquals("BUY filled · Paper · Strategy: ORB", Background.title(n))
         assertEquals(Notifier.BUY, n.channelId)
         assertEquals("Close position", n.actions.single().title.toString())
 

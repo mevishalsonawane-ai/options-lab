@@ -202,6 +202,8 @@ fun TradeScreen(model: AppModel) {
 @Composable
 private fun PositionsCard(model: AppModel, a: Account, onProtect: (GttTarget) -> Unit) {
     val p = LocalPalette.current
+    val owners by model.orderOwners.collectAsState()
+    fun by(ps: Broker.Position) = com.optionslab.app.data.Origins.livePosition(owners, a.trades, a.orders, ps.symbol, ps.product, ps.qty)
     val open = a.positions.filter { it.open }
     val closed = a.positions.filter { !it.open }
     LedgerCard(title = "Positions") {
@@ -219,7 +221,7 @@ private fun PositionsCard(model: AppModel, a: Account, onProtect: (GttTarget) ->
         if (open.isEmpty()) Note("Nothing open.")
         open.forEach { ps ->
             Rule(Modifier.padding(vertical = 6.dp))
-            PositionRow(ps) { model.rowAction.value = RowTarget.LivePosition(ps) }
+            PositionRow(ps, by(ps)) { model.rowAction.value = RowTarget.LivePosition(ps) }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 4.dp)) {
                 BrassButton("Square off", tone = p.oxblood) { model.planSquareOff(ps) }
                 BrassButton("Protect (GTT)", tone = p.inkSoft) { onProtect(GttTarget(ps.exchange, ps.symbol, ps.product, ps.qty)) }
@@ -229,15 +231,18 @@ private fun PositionsCard(model: AppModel, a: Account, onProtect: (GttTarget) ->
         if (closed.isNotEmpty()) {
             Spacer(Modifier.height(10.dp))
             Text("CLOSED TODAY", style = Type.label.copy(color = p.inkSoft))
-            closed.forEach { ps -> LedgerLine("${ps.symbol} ${ps.product}", rs(ps.pnl, true), if (ps.pnl >= 0) p.verdigris else p.oxblood,
-                Modifier.clickable { model.rowAction.value = RowTarget.LivePosition(ps) }) }
+            closed.forEach { ps ->
+                LedgerLine("${ps.symbol} ${ps.product}", rs(ps.pnl, true), if (ps.pnl >= 0) p.verdigris else p.oxblood,
+                    Modifier.clickable { model.rowAction.value = RowTarget.LivePosition(ps) })
+                by(ps)?.let { SourcePill(com.optionslab.app.data.Origins.positionDisplay(it)) }
+            }
         }
         if (a.book.day.isNotEmpty()) Note("Day book: bought ${a.book.day.sumOf { it.buyQty }}, sold ${a.book.day.sumOf { it.sellQty }} across ${a.book.day.size} instruments today.")
     }
 }
 
 @Composable
-private fun PositionRow(ps: Broker.Position, onTap: () -> Unit) {
+private fun PositionRow(ps: Broker.Position, source: String?, onTap: () -> Unit) {
     val p = LocalPalette.current
     Row(Modifier.clickable(onClick = onTap), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
@@ -245,6 +250,7 @@ private fun PositionRow(ps: Broker.Position, onTap: () -> Unit) {
             Text("${ps.exchange} · ${ps.product} · ${if (ps.qty > 0) "LONG" else "SHORT"} ${kotlin.math.abs(ps.qty)}" +
                 if (ps.overnight != 0) " (overnight ${ps.overnight})" else "", style = Type.figure.copy(color = p.inkSoft, fontSize = 11.sp))
             Text("avg ${px(ps.avg)} → ltp ${px(ps.last)}", style = Type.figure.copy(color = p.inkSoft, fontSize = 11.sp))
+            source?.let { SourcePill(com.optionslab.app.data.Origins.positionDisplay(it)) }
         }
         Text(rs(ps.pnl, true), style = Type.figure.copy(color = if (ps.pnl >= 0) p.verdigris else p.oxblood, fontSize = 15.sp))
     }
@@ -298,7 +304,7 @@ private fun TradesCard(a: Account, owners: Map<String, String>, onTap: (Broker.T
                 Column(Modifier.weight(1f)) {
                     Text("${t.side} ${t.symbol}", style = Type.figure.copy(color = if (t.side == "SELL") p.oxblood else p.verdigris, fontSize = 13.sp))
                     Text("${t.exchange} · ${t.product} · ${t.at.takeLast(8)} · order …${t.orderId.takeLast(6)}", style = Type.figure.copy(color = p.inkSoft, fontSize = 11.sp))
-                    OrderSourcePill(owners, "kite:${t.orderId}", a.orders.firstOrNull { it.id == t.orderId }?.tag.orEmpty())
+                    OrderSourcePill(owners, "kite:${t.orderId}", a.orders.firstOrNull { it.id == t.orderId }?.tag)
                 }
                 Text("${t.qty} @ ${px(t.price)}", style = Type.figure.copy(color = p.ink, fontSize = 13.sp))
             }

@@ -85,6 +85,8 @@ data class OrderPlan(
     /** A bracket: stop / trailing distance / target, set on the position once this order has filled. */
     val protect: ProtectSpec? = null,
     val marginNote: String? = null,
+    /** Who is sending it, shown on its orders, trades, positions and fill notices ([com.optionslab.app.data.Origins]). */
+    val source: String = com.optionslab.app.data.Origins.MANUAL,
 ) {
     val sendable: Boolean get() = legs.isNotEmpty() && refusals.all { it.isEmpty() } && margin?.short != true
 }
@@ -754,7 +756,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     // ---- closing what you hold ---------------------------------------------------------
 
     /** Square off one open position: the opposite side, the whole open quantity, for review. */
-    fun planSquareOff(pos: com.optionslab.app.data.Broker.Position) = planExits("Square off ${pos.symbol}", listOf(pos))
+    fun planSquareOff(pos: com.optionslab.app.data.Broker.Position, area: String = "Square off") =
+        planExits("Square off ${pos.symbol}", listOf(pos), com.optionslab.app.data.Origins.manual(area))
 
     /**
      * Close every open position. Shorts are bought back FIRST: selling a
@@ -763,10 +766,10 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     fun planSquareOffAll() {
         val open = livePositions.value.filter { it.open }
         if (open.isEmpty()) { say("No open positions."); return }
-        planExits("Square off all (${open.size})", open.sortedBy { if (it.qty < 0) 0 else 1 })
+        planExits("Square off all (${open.size})", open.sortedBy { if (it.qty < 0) 0 else 1 }, com.optionslab.app.data.Origins.manual("Square off all"))
     }
 
-    private fun planExits(title: String, positions: List<com.optionslab.app.data.Broker.Position>) {
+    private fun planExits(title: String, positions: List<com.optionslab.app.data.Broker.Position>, source: String) {
         plan.value = Load.Busy("Pricing the exit on Zerodha"); prewarm(entry = false)
         viewModelScope.launch(Dispatchers.IO) {
             plan.value = try {
@@ -778,7 +781,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                     com.optionslab.engine.Kite.squareOffSlices(b.spec(ps.exchange, ps.symbol), ps.product, ps.qty, qt?.bid, qt?.ask, qt?.last ?: ps.last)
                 }
                 if (legs.isEmpty()) error("nothing is open")
-                Load.Done(OrderPlan(title, null, legs, q, gate(legs, false, exit = true), false, exit = true))
+                Load.Done(OrderPlan(title, null, legs, q, gate(legs, false, exit = true), false, exit = true, source = source))
             } catch (x: Exception) { Load.Failed(x.message ?: "could not prepare the exit") }
         }
     }
@@ -794,7 +797,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                 val qt = q[key]
                 val legs = com.optionslab.engine.Kite.squareOffSlices(b.spec(h.exchange, h.symbol), "CNC", quantity.coerceIn(1, h.qty), qt?.bid, qt?.ask, qt?.last ?: h.last)
                     .ifEmpty { error("nothing to sell") }
-                Load.Done(OrderPlan("Sell ${h.symbol} from holdings", null, legs, q, gate(legs, false, exit = true), false, exit = true))
+                Load.Done(OrderPlan("Sell ${h.symbol} from holdings", null, legs, q, gate(legs, false, exit = true), false, exit = true,
+                    source = com.optionslab.app.data.Origins.manual("Sell holding")))
             } catch (x: Exception) { Load.Failed(x.message ?: "could not prepare the sale") }
         }
     }
@@ -979,14 +983,15 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                 // never a market order into an expiry-day book.
                 val legs = com.optionslab.engine.Kite.legsFor(tk, short, wing, _settings.value.orderProduct,
                     sq?.bid ?: sq?.last ?: (tk.credit + (tk.wingDebit ?: 0.0)), wq?.ask ?: wq?.last ?: tk.wingDebit)
-                Load.Done(withMargin(OrderPlan("Today's ticket: ${tk.underlying} ${com.optionslab.engine.fmtG(tk.strike)} PE", tk.session, legs, q, gate(legs, true), true)))
+                Load.Done(withMargin(OrderPlan("Today's ticket: ${tk.underlying} ${com.optionslab.engine.fmtG(tk.strike)} PE", tk.session, legs, q, gate(legs, true), true, source = "Expiry Put · ticket")))
             } catch (x: Exception) { Load.Failed(x.message ?: "could not prepare the order") }
         }
     }
 
     /** A single order typed by hand on the Zerodha page. */
     fun planManual(underlying: String, expiry: LocalDate, strike: Double, right: com.optionslab.engine.Right,
-                   side: com.optionslab.engine.Kite.Side, lots: Int, product: String, limit: Double?, protect: ProtectSpec? = null) {
+                   side: com.optionslab.engine.Kite.Side, lots: Int, product: String, limit: Double?, protect: ProtectSpec? = null,
+                   area: String = "Order form") {
         plan.value = Load.Busy("Looking up the contract"); prewarm(entry = true)
         viewModelScope.launch(Dispatchers.IO) {
             plan.value = try {
@@ -998,7 +1003,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                 val o = com.optionslab.engine.Kite.Order(ins.tradingSymbol, side, lots * ins.lotSize, ins.lotSize, product, "LIMIT",
                     com.optionslab.engine.Kite.onTick(px, ins.tickSize, side), ins.tickSize)
                 Load.Done(withMargin(OrderPlan("${side.name} ${ins.tradingSymbol}", null, listOf(o), q, gate(listOf(o), false), false,
-                    protect = protect?.takeIf { it.any })))
+                    protect = protect?.takeIf { it.any }, source = com.optionslab.app.data.Origins.manual(area))))
             } catch (x: Exception) { Load.Failed(x.message ?: "could not prepare the order") }
         }
     }
@@ -1093,10 +1098,12 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                         runCatching { b.findRecentRetrying(leg, fills.map { it.orderId }) }.getOrNull()
                             ?: throw java.io.IOException("${e.message}. No matching order was found at Zerodha; check the order book before trying again.")
                     }
+                    // Named before the fill is awaited, so the order book shows who sent it from its first refresh.
+                    launch { runCatching { com.optionslab.app.data.Strategies.tagOwner("kite:$id", cur.source) } }
                     val f = runCatching { b.awaitOrder(id) }.getOrElse { com.optionslab.app.data.Broker.Fill(id, "UNKNOWN", 0.0, 0, "status not confirmed; check the order book") }
                     fills += f
                     // The notification is posted beside the send, not before the next leg or the fill shown.
-                    if (f.filled > 0) launch { runCatching { com.optionslab.app.work.Notifier.orderFilled(ctx, leg.side.name, f.filled, leg.tradingSymbol, f.avgPrice, "Live", null) } }
+                    if (f.filled > 0) launch { runCatching { com.optionslab.app.work.Notifier.orderFilled(ctx, leg.side.name, f.filled, leg.tradingSymbol, f.avgPrice, "Live", cur.source) } }
                     if (f.status != "COMPLETE" || f.filled < leg.quantity) {
                         val working = f.status in WORKING
                         if (working) stuck.value = StuckLeg(cur, i, id, fills.toList(), f.status)
@@ -1476,7 +1483,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
      * A strategy's legs as Zerodha orders for review. Buys go first so every
      * short is covered by its wing before it is sold.
      */
-    fun planBasket(title: String, underlying: String, expiry: LocalDate, legs: List<com.optionslab.engine.options.StrategyLeg>) {
+    fun planBasket(title: String, underlying: String, expiry: LocalDate, legs: List<com.optionslab.engine.options.StrategyLeg>,
+                   area: String = "Strategy builder") {
         plan.value = Load.Busy("Looking up the contracts on Zerodha"); prewarm(entry = true)
         viewModelScope.launch(Dispatchers.IO) {
             plan.value = try {
@@ -1496,13 +1504,13 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                     com.optionslab.engine.Kite.Order(i.tradingSymbol, side, l.lots * i.lotSize, i.lotSize, product, "LIMIT",
                         com.optionslab.engine.Kite.onTick(px, i.tickSize, side), i.tickSize)
                 }
-                Load.Done(withMargin(OrderPlan(title, null, orders, q, gate(orders, false), false)))
+                Load.Done(withMargin(OrderPlan(title, null, orders, q, gate(orders, false), false, source = com.optionslab.app.data.Origins.manual(area))))
             } catch (x: Exception) { Load.Failed(x.message ?: "could not prepare the basket") }
         }
     }
 
     /** The same legs as paper MARKET orders (sandbox), buys first. */
-    fun paperBasket(underlying: String, expiry: LocalDate, legs: List<com.optionslab.engine.options.StrategyLeg>) = paperDo {
+    fun paperBasket(underlying: String, expiry: LocalDate, legs: List<com.optionslab.engine.options.StrategyLeg>, area: String = "Strategy builder") = paperDo {
         var last = com.optionslab.app.data.Paper.Result(false, "no legs", emptyList())
         val tradable = legs.filter { it.active && it.strike != null && it.optionType != null }
         // The account guard judges each leg as if the ones before it had filled (a wing counts as held for its short).
@@ -1516,6 +1524,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             if (refused.isNotEmpty()) return@paperDo com.optionslab.app.data.Paper.Result(false, "Stopped at ${c.symbol} (account guard): " + refused.joinToString(" "), last.events)
             acct = acct?.let { g.after(it, order) }
             last = com.optionslab.app.data.Paper.place(c, l.side.name, l.lots, "MARKET", "NRML", null, null)
+            last.orderId?.let { com.optionslab.app.data.Strategies.tagOwner("paper:$it", com.optionslab.app.data.Origins.manual(area)) }
             if (!last.ok) return@paperDo com.optionslab.app.data.Paper.Result(false, "Stopped at ${c.symbol}: ${last.message}", last.events)
         }
         last.copy(message = "Paper basket placed: ${tradable.size} legs")
@@ -1594,7 +1603,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun paperPlace(underlying: String, expiry: LocalDate, strike: Double, right: com.optionslab.engine.Right, action: String, lots: Int,
-                   priceType: String, product: String, price: Double?, trigger: Double?, protect: ProtectSpec? = null) = paperDo {
+                   priceType: String, product: String, price: Double?, trigger: Double?, protect: ProtectSpec? = null,
+                   area: String = "Order form") = paperDo {
         val c = com.optionslab.app.data.Paper.contractFor(underlying, expiry, strike, right)
             ?: error("$underlying ${expiry} ${com.optionslab.engine.fmtG(strike)} $right is not listed")
         val g = com.optionslab.app.data.Guard
@@ -1610,8 +1620,10 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         val refused = g.check(order, snap?.let { g.paperAccount(it) }, paper = true)
         if (refused.isNotEmpty()) return@paperDo com.optionslab.app.data.Paper.Result(false, "Not placed (account guard): " + refused.joinToString(" "), emptyList())
         val r = com.optionslab.app.data.Paper.place(c, action, lots, priceType, product, price, trigger, quote)
+        val source = com.optionslab.app.data.Origins.manual(area)
+        r.orderId?.let { com.optionslab.app.data.Strategies.tagOwner("paper:$it", source) }
         val fills = r.events.filterIsInstance<com.optionslab.engine.sandbox.SandboxEvent.Fill>()
-        fills.forEach { com.optionslab.app.work.Notifier.orderFilled(ctx, it.action, it.quantity, it.symbol, it.price, "Paper", null) }
+        fills.forEach { com.optionslab.app.work.Notifier.orderFilled(ctx, it.action, it.quantity, it.symbol, it.price, "Paper", source) }
         // The bracket: the whole position gets the stop / trail / target once the entry has filled.
         val f = fills.firstOrNull()
         if (protect?.any == true && f != null) {
@@ -1624,9 +1636,11 @@ class AppModel(app: Application) : AndroidViewModel(app) {
 
     fun paperCancel(id: String) = paperDo { com.optionslab.app.data.Paper.cancel(id) }
     fun paperModify(id: String, qty: Int?, price: Double?, trigger: Double?) = paperDo { com.optionslab.app.data.Paper.modify(id, qty, price, trigger) }
-    fun paperClose(symbol: String, product: String) = paperDo {
+    fun paperClose(symbol: String, product: String, area: String = "Close position") = paperDo {
         // Closing is an exit: nothing stops it, the kill switch included (it only refuses new entries).
-        com.optionslab.app.data.Paper.close(symbol, product)
+        com.optionslab.app.data.Paper.close(symbol, product).also { r ->
+            r.orderId?.let { com.optionslab.app.data.Strategies.tagOwner("paper:$it", com.optionslab.app.data.Origins.manual(area)) }
+        }
     }
 
     fun paperReset(capital: Double) {

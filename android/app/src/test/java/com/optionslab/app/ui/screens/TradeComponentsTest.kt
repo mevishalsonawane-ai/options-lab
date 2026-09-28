@@ -42,6 +42,17 @@ class TradeComponentsTest {
         assertEquals("Manual" to false, orderSource(emptyMap(), "paper:1"))
     }
 
+    @Test fun handOrdersNameTheirScreenAndRulesAreAutomatic() {
+        assertEquals("Manual · Chart" to false, orderSource(mapOf("paper:5" to "Manual · Chart"), "paper:5"))
+        assertEquals("Auto: Expiry square-off" to true, orderSource(emptyMap(), "kite:5", "iraalgoexpiry"))
+        assertEquals("Outside IraAlgo (Kite)" to false, orderSource(emptyMap(), "kite:5", ""))
+    }
+
+    @Test fun aPositionsPillSaysWhoOpenedIt() {
+        compose.setContent { IraAlgoTheme("light") { SourcePill(com.optionslab.app.data.Origins.positionDisplay("ORB + Manual")) } }
+        compose.onNodeWithText("Opened by ORB + Manual").assertExists()
+    }
+
     @Test fun thePillShowsTheSource() {
         compose.setContent { IraAlgoTheme("light") { OrderSourcePill(mapOf("paper:3" to "Straddle"), "paper:3") } }
         compose.onNodeWithText("Strategy: Straddle").assertExists()

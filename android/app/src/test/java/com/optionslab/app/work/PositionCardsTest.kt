@@ -81,6 +81,13 @@ class PositionCardsTest : RobolectricTest() {
         assertEquals("LONG 50 @ 0.00\nP&L +₹0", Background.text(posted("Paper", "Y")!!))
     }
 
+    @Test fun theCardSaysWhoOpenedThePositionAndKeepsItOnSilentUpdates() {
+        PositionCards.card(context, "Paper", "W", 75, 100.0, 110.0, 750.0, source = "ORB + Manual")
+        assertEquals("LONG 75 @ 100.00 · LTP 110.00\nP&L +₹750 (+10.0%)\nOpened by ORB + Manual", Background.text(posted("Paper", "W")!!))
+        PositionCards.card(context, "Paper", "W", 75, 100.0, 111.0, 825.0)
+        assertTrue(Background.text(posted("Paper", "W")!!)!!.endsWith("\nOpened by ORB + Manual"))
+    }
+
     @Test fun withoutThePermissionNoCard() {
         Background.denyNotifications(context)
         PositionCards.card(context, "Paper", "Z", 75, 100.0, 101.0, 75.0)

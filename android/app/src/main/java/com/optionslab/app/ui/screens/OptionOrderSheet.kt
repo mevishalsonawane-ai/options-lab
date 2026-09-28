@@ -73,7 +73,7 @@ data class ChainPick(
  */
 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
-fun OptionOrderSheet(model: AppModel, pick: ChainPick, initialBuy: Boolean = true, initialLimit: Double? = null, onClose: () -> Unit) {
+fun OptionOrderSheet(model: AppModel, pick: ChainPick, initialBuy: Boolean = true, initialLimit: Double? = null, area: String = "Option chart", onClose: () -> Unit) {
     val p = LocalPalette.current
     val s by model.settings.collectAsState()
     var buy by remember { mutableStateOf(initialBuy) }
@@ -184,7 +184,7 @@ fun OptionOrderSheet(model: AppModel, pick: ChainPick, initialBuy: Boolean = tru
                 if (s.live) {
                     BrassButton("Review ${if (buy) "buy" else "sell"} order", Modifier.fillMaxWidth(), enabled = ok, tone = side) {
                         model.planManual(pick.underlying, pick.expiry, pick.strike, pick.right,
-                            if (buy) com.optionslab.engine.Kite.Side.BUY else com.optionslab.engine.Kite.Side.SELL, lots, product, if (limit) price.toDoubleOrNull() else null, protect)
+                            if (buy) com.optionslab.engine.Kite.Side.BUY else com.optionslab.engine.Kite.Side.SELL, lots, product, if (limit) price.toDoubleOrNull() else null, protect, area)
                         onClose()
                     }
                     Note("Live: Zerodha. The order opens for review; it is sent only after you hold the button and confirm with your PIN or fingerprint.")
@@ -193,7 +193,7 @@ fun OptionOrderSheet(model: AppModel, pick: ChainPick, initialBuy: Boolean = tru
                         if (placing) return@BrassButton
                         placing = true
                         model.paperPlace(pick.underlying, pick.expiry, pick.strike, pick.right, if (buy) "BUY" else "SELL", lots,
-                            if (limit) "LIMIT" else "MARKET", product, if (limit) price.toDoubleOrNull() else null, null, protect)
+                            if (limit) "LIMIT" else "MARKET", product, if (limit) price.toDoubleOrNull() else null, null, protect, area)
                         onClose()
                     }
                     Note("Paper: simulated in your paper account. Nothing reaches Zerodha.")

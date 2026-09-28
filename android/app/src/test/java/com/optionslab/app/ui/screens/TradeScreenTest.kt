@@ -151,7 +151,7 @@ class TradeScreenTest {
     }
 
     private fun workingOrder(id: String = "250926000000901", type: String = "LIMIT", price: Double = 90.0, trigger: Double = 0.0) {
-        kite.orders[id] = FakeKite.Order(id, sym, "NFO", "BUY", 75, "NRML", type, price, trigger, "", if (type.startsWith("SL")) "TRIGGER PENDING" else "OPEN")
+        kite.orders[id] = FakeKite.Order(id, sym, "NFO", "BUY", 75, "NRML", type, price, trigger, "iraalgo", if (type.startsWith("SL")) "TRIGGER PENDING" else "OPEN")
     }
 
     // ---- set-up and session states --------------------------------------------------------------

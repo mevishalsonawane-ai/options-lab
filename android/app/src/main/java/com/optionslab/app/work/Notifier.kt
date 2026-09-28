@@ -109,12 +109,13 @@ object Notifier {
     }
 
     /**
-     * A buy or sell filled: "BUY filled · Paper · ORB" / "SELL filled · Live · Manual". It lands on the
+     * A buy or sell filled: "BUY filled · Paper · Strategy: ORB" / "SELL filled · Live · Manual · Chart". [source] is
+     * the order's label ([com.optionslab.app.data.Origins]; null for a hand order from an unnamed screen). It lands on the
      * position's own card (PositionCards), which the market watch then keeps live with its P&L and a Close button.
      */
     fun orderFilled(context: Context, action: String, qty: Int, symbol: String, price: Double, venue: String, source: String?) {
         val buy = action.equals("BUY", ignoreCase = true)
-        val headline = "${if (buy) "BUY" else "SELL"} filled · $venue · ${source ?: "Manual"}"
+        val headline = "${if (buy) "BUY" else "SELL"} filled · $venue · ${com.optionslab.app.data.Origins.display(source ?: com.optionslab.app.data.Origins.MANUAL).first}"
         val line = "$qty $symbol @ ${String.format(java.util.Locale.ENGLISH, "%.2f", price)}"
         Alerts.post(line, Alerts.Kind.SUCCESS, headline)
         if (!canPost(context)) return

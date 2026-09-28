@@ -202,6 +202,14 @@ object Paper {
      * expired contracts and T+1. Called by the Trade tab and the watch.
      */
     suspend fun tick(): List<SandboxEvent> {
+        val events = tickLocked()
+        // The engine's own 15:15 MIS square-off is named on the order it placed.
+        events.filterIsInstance<SandboxEvent.SquareOff>().mapNotNull { it.result.orderId }
+            .forEach { runCatching { Strategies.tagOwner("paper:$it", Origins.AUTO_SQUARE_OFF) } }
+        return events
+    }
+
+    private suspend fun tickLocked(): List<SandboxEvent> {
         val q = quotes(watched(book().state))
         synchronized(this) {
             val b = book()
