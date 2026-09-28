@@ -763,14 +763,17 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     // ---- closing what you hold ---------------------------------------------------------
 
     /** Square off one open position: the opposite side, the whole open quantity, for review. */
-    fun planSquareOff(pos: com.optionslab.app.data.Broker.Position, area: String = "Square off") =
+    fun planSquareOff(pos: com.optionslab.app.data.Broker.Position, area: String = "Square off") {
+        com.optionslab.app.data.Diag.record("tap", "Square off ${pos.symbol} qty ${pos.qty} ($area)")
         planExits("Square off ${pos.symbol}", listOf(pos), com.optionslab.app.data.Origins.manual(area))
+    }
 
     /**
      * Close every open position. Shorts are bought back FIRST: selling a
      * long hedge while its short is still open would leave a naked short.
      */
     fun planSquareOffAll() {
+        com.optionslab.app.data.Diag.record("tap", "Square off all")
         val open = livePositions.value.filter { it.open }
         if (open.isEmpty()) { say("No open positions."); return }
         planExits("Square off all (${open.size})", open.sortedBy { if (it.qty < 0) 0 else 1 }, com.optionslab.app.data.Origins.manual("Square off all"))
@@ -927,6 +930,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
 
     /** Modify a working order after the owner re-proved who they are. */
     fun modifyOrder(o: com.optionslab.app.data.Broker.OrderRow, quantity: Int, type: String, price: Double?, trigger: Double?) {
+        com.optionslab.app.data.Diag.record("tap", "Modify order ${o.id}: qty $quantity $type price $price trigger $trigger")
         val s = _settings.value
         if (!s.live || !s.allowRealOrders) { say("Modifying is a real order change: switch to Live with the badge at the top first."); return }
         viewModelScope.launch(Dispatchers.IO) {
@@ -999,6 +1003,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     fun planManual(underlying: String, expiry: LocalDate, strike: Double, right: com.optionslab.engine.Right,
                    side: com.optionslab.engine.Kite.Side, lots: Int, product: String, limit: Double?, protect: ProtectSpec? = null,
                    area: String = "Order form") {
+        com.optionslab.app.data.Diag.record("tap", "Plan ${side.name} $lots lot $underlying $expiry ${com.optionslab.engine.fmtG(strike)} $right $product ${limit?.let { "LIMIT $it" } ?: "MARKET"}${protect?.let { " protect=$it" } ?: ""} ($area)")
         plan.value = Load.Busy("Looking up the contract"); prewarm(entry = true)
         viewModelScope.launch(Dispatchers.IO) {
             plan.value = try {
@@ -1065,7 +1070,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     private val WORKING = setOf("OPEN", "TRIGGER PENDING", "UNKNOWN", "OPEN PENDING", "VALIDATION PENDING", "PUT ORDER REQ RECEIVED", "MODIFY PENDING", "AMO REQ RECEIVED")
 
     fun sendPlan() {
-        val cur = (plan.value as? Load.Done<OrderPlan>)?.value ?: return
+        val cur = (plan.value as? Load.Done<OrderPlan>)?.value ?: run { com.optionslab.app.data.Diag.record("tap", "Send pressed with no plan ready"); return }
+        com.optionslab.app.data.Diag.record("tap", "Send (confirmed) ${cur.title}")
         val s = _settings.value
         if (!s.live) { say("This is Paper mode: switch to Live with the badge at the top to send real orders."); return }
         if (!s.allowRealOrders) { say("This is Paper mode: switch to Live with the badge at the top to send real orders."); return }
@@ -1692,6 +1698,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun cancelOrder(id: String, variety: String = "regular") {
+        com.optionslab.app.data.Diag.record("tap", "Cancel order $id ($variety)")
         viewModelScope.launch(Dispatchers.IO) {
             try { com.optionslab.app.data.Broker.cancel(id, variety); say("Cancel requested for ${id.takeLast(6)}.") } catch (e: Exception) { say("Cancel failed: ${e.message}") }
             loadAccount()
