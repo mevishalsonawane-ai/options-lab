@@ -45,7 +45,7 @@ Source paths prefixed `NTA:` are in D:\New Trading app.
 
 ## B. IraAlgo housekeeping
 
-- [ ] B1. Re-point `tools/harvest_nightly.ps1` (hard-coded to `C:\Users\mevis\Downloads\files\options-lab`, Python310)
+- [x] B1. (not applicable, owner 2026-09-28: only the Android app is used from now on; no laptop harvest) Re-point `tools/harvest_nightly.ps1` (hard-coded to `C:\Users\mevis\Downloads\files\options-lab`, Python310)
       and re-register in Task Scheduler; harvested bars stop at 2026-09-10 (missed sessions are lost for good).
 - [ ] B2. Release signing: run `android/tools/make-release-key.sh`, add the 4 GitHub secrets
       (otherwise every update needs uninstall, which wipes the vault).
