@@ -18,6 +18,7 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performSemanticsAction
@@ -439,8 +440,12 @@ class ResearchScreensLayoutTest(device: DeviceConfig) : ScreenTest(device) {
             AlmanacContent(false, false, mapOf("BANKNIFTY" to HomeFixtures.quote), null, HomeFixtures.daily, Load.Idle,
                 Load.Done(HomeFixtures.paper.copy(trades = trades)), {}, {}, owners = owners) {}
         }
-        compose.onNodeWithText("Opened by ORB").assertExists()
-        compose.onNodeWithText("Strategy: ORB · stop").assertExists()
+        // Home is a lazy list: at a large font or in landscape the rows start below the fold.
+        for (label in listOf("Opened by ORB", "Strategy: ORB · stop")) {
+            compose.onAllNodes(hasScrollToIndexAction()).onFirst()
+                .performScrollToNode(hasText(label))
+            compose.onNodeWithText(label).assertExists()
+        }
     }
 
     @Test fun homeLiveLoggedOut() = checkScreen("home-live-logged-out", BUGS) {
