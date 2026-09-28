@@ -208,7 +208,11 @@ abstract class TradeLayoutBase(device: DeviceConfig) : TradeScreenBase(device) {
             org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle()
             // The button is in the list's first row: go straight to the top (a search from the bottom of a long
             // page at a large font sometimes gave up before reaching it).
-            runCatching { compose.onNode(androidx.compose.ui.test.hasScrollToIndexAction()).performScrollToIndex(0) }.onFailure { why = it }
+            // Every list that can (the page may hold more than one, and onNode would then refuse them all).
+            val lists = compose.onAllNodes(androidx.compose.ui.test.hasScrollToIndexAction())
+            val n = runCatching { lists.fetchSemanticsNodes().size }.getOrDefault(0)
+            for (i in 0 until n) runCatching { lists[i].performScrollToIndex(0) }.onFailure { why = it }
+            for (i in 0 until n) runCatching { lists[i].performScrollToNode(hasText("Set paper amount")) }
             compose.mainClock.advanceTimeByFrame(); Thread.sleep(20)
         }
         runCatching { scrollTo("Set paper amount") }
