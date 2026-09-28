@@ -95,7 +95,7 @@ fun OptionOrderSheet(model: AppModel, pick: ChainPick, initialBuy: Boolean = tru
 
     // The bars' height is measured here, on the screen, as well: some phones tell the dialog window nothing (the
     // sheet's button then sat under the gesture bar). clearOfBars keeps clear by the larger of the two.
-    val bars = com.optionslab.app.ui.components.outerBars()
+    val sysBars = com.optionslab.app.ui.components.outerBars()
     Dialog(onDismissRequest = onClose, properties = DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy, usePlatformDefaultWidth = false,
         decorFitsSystemWindows = false)) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
@@ -108,7 +108,7 @@ fun OptionOrderSheet(model: AppModel, pick: ChainPick, initialBuy: Boolean = tru
                     .border(1.dp, p.rule, RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp))
                     // Taps inside the sheet must not reach the backdrop, which closes it.
                     .pointerInput(Unit) { detectTapGestures { } }
-                    .clearOfBars(bars, top = false)
+                    .clearOfBars(sysBars, top = false)
                     .imePadding()
                     .heightIn(max = (LocalConfiguration.current.screenHeightDp * 0.92f).dp)
                     .padding(horizontal = 20.dp, vertical = 14.dp),

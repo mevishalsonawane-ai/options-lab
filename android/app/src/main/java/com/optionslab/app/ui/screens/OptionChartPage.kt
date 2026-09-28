@@ -103,12 +103,12 @@ internal fun OptionChartContent(
     val change = if (last != null && open != null) last - open else null
     val up = (change ?: 0.0) >= 0
 
-    val bars = com.optionslab.app.ui.components.outerBars()
+    val sysBars = com.optionslab.app.ui.components.outerBars()
     // The bars' height is measured here, on the screen, as well: some phones tell the dialog window nothing (the
     // sheet's button then sat under the gesture bar). clearOfBars keeps clear by the larger of the two.
     Dialog(onDismissRequest = onClose, properties = DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy, usePlatformDefaultWidth = false,
         decorFitsSystemWindows = false)) {
-        Column(Modifier.fillMaxSize().background(p.paper).clearOfBars(bars)) {
+        Column(Modifier.fillMaxSize().background(p.paper).clearOfBars(sysBars)) {
             Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text("‹", style = Type.masthead.copy(color = p.ink, fontSize = 28.sp), modifier = Modifier.clickable(onClick = onClose).padding(horizontal = 12.dp, vertical = 4.dp))
                 Column(Modifier.weight(1f)) {
