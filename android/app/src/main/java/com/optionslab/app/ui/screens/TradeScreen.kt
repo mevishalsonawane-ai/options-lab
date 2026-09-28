@@ -283,17 +283,17 @@ private fun OrdersCard(a: Account, owners: Map<String, String>, onTap: (Broker.O
 private fun OrderLine(o: Broker.OrderRow, owners: Map<String, String>, ltp: Double?, onTap: () -> Unit) {
     val p = LocalPalette.current
     val tone = when (o.status) { "COMPLETE" -> p.verdigris; "REJECTED", "CANCELLED" -> p.oxblood; else -> p.amber }
-    Row(Modifier.fillMaxWidth().clickable(onClick = onTap).padding(vertical = 3.dp)) {
-    Column(Modifier.weight(1f)) {
+    Column(Modifier.fillMaxWidth().clickable(onClick = onTap).padding(vertical = 3.dp)) {
         Text("${o.side} ${o.symbol} ×${o.qty}", style = Type.figure.copy(color = if (o.side == "SELL") p.oxblood else p.verdigris, fontSize = 13.sp))
         Text("${o.exchange} · ${o.product} · ${o.type}${if (o.price > 0) " ${px(o.price)}" else ""}${if (o.trigger > 0) " trg ${px(o.trigger)}" else ""}" +
             " · ${o.placedAt.takeLast(8)}", style = Type.figure.copy(color = p.inkSoft, fontSize = 11.sp))
-        Text("${o.status} · filled ${o.filled}${if (o.filled > 0) " @ ${px(o.avg)}" else ""}${if (o.message.isNotBlank()) " · ${o.message}" else ""}",
-            style = Type.figure.copy(color = tone, fontSize = 11.sp))
+        // The status line carries the P&L (at the live price) at its end; the symbol above keeps the whole width.
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("${o.status} · filled ${o.filled}${if (o.filled > 0) " @ ${px(o.avg)}" else ""}${if (o.message.isNotBlank()) " · ${o.message}" else ""}",
+                style = Type.figure.copy(color = tone, fontSize = 11.sp), modifier = Modifier.weight(1f))
+            PnlFigure(fillPnl(o.side == "BUY", o.avg, o.filled, ltp), Modifier.padding(start = 8.dp))
+        }
         OrderSourcePill(owners, "kite:${o.id}", o.tag)
-    }
-    // A filled order's P&L at the live price (the positions move with every tick).
-    PnlFigure(fillPnl(o.side == "BUY", o.avg, o.filled, ltp), Modifier.padding(start = 8.dp))
     }
 }
 

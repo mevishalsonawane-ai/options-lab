@@ -232,15 +232,16 @@ private fun PaperOrders(model: AppModel, v: Paper.Snapshot) {
             Rule(Modifier.padding(vertical = 5.dp))
             val tone = when (o.status) { "complete" -> p.verdigris; "rejected", "cancelled" -> p.oxblood; else -> p.amber }
             // The whole order (its three lines) is the tap target, as on the live order book: the first line alone was 15 dp.
-            Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).clickable { model.rowAction.value = RowTarget.PaperOrder(o) }) {
-              Column(Modifier.weight(1f)) {
+            Column(Modifier.fillMaxWidth().heightIn(min = 48.dp).clickable { model.rowAction.value = RowTarget.PaperOrder(o) }) {
                 com.optionslab.app.ui.components.FitText("${o.action} ${o.symbol} ×${o.quantity}", style = Type.figure.copy(color = if (o.action == "SELL") p.oxblood else p.verdigris, fontSize = 13.sp))
                 Text("${o.product} · ${o.priceType}${if (o.price > 0) " ${px(o.price)}" else ""}${if (o.triggerPrice > 0) " trg ${px(o.triggerPrice)}" else ""} · ${o.timestamp.takeLast(8)}",
                     style = Type.figure.copy(color = p.inkSoft, fontSize = 11.sp))
-                Text("${o.status.uppercase()}${if (o.filledQuantity > 0) " · ${o.filledQuantity} @ ${px(o.averagePrice)}" else ""}${if (o.rejectionReason.isNotBlank()) " · ${o.rejectionReason}" else ""}",
-                    style = Type.figure.copy(color = tone, fontSize = 11.sp))
-              }
-              PnlFigure(fillPnl(o.action.equals("BUY", true), o.averagePrice, o.filledQuantity, ltp[o.symbol]), Modifier.padding(start = 8.dp))
+                // The status line carries the P&L at its end: the contract's name above keeps the whole width.
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("${o.status.uppercase()}${if (o.filledQuantity > 0) " · ${o.filledQuantity} @ ${px(o.averagePrice)}" else ""}${if (o.rejectionReason.isNotBlank()) " · ${o.rejectionReason}" else ""}",
+                        style = Type.figure.copy(color = tone, fontSize = 11.sp), modifier = Modifier.weight(1f))
+                    PnlFigure(fillPnl(o.action.equals("BUY", true), o.averagePrice, o.filledQuantity, ltp[o.symbol]), Modifier.padding(start = 8.dp))
+                }
             }
             OrderSourcePill(owners, "paper:${o.orderId}")
             if (o.status == "open" || o.status == "trigger pending") Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
