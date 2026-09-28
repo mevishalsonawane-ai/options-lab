@@ -279,6 +279,17 @@ class MiscScreensTest {
         val peText = String.format(java.util.Locale.ENGLISH, "%,.2f", row.pe!!.ltp)
         compose.onAllNodesWithText(peText)[0].performSemanticsAction(SemanticsActions.OnClick)
         assertEquals(Right.PE, picks.last().right)
+        // The underlying's price is drawn between the strikes below and above it (24,500 and 24,550).
+        compose.onNodeWithText("NIFTY 24,512.00").performScrollTo().assertExists()
+    }
+
+    @Test fun theSpotLineSitsBetweenTheStrikesAroundThePrice() {
+        val ks = listOf(24_400.0, 24_450.0, 24_500.0, 24_550.0, 24_600.0)
+        assertEquals(3, spotLineIndex(ks, 24_512.0))    // before 24,550
+        assertEquals(2, spotLineIndex(ks, 24_500.0))    // on a strike: before it
+        assertEquals(0, spotLineIndex(ks, 24_000.0))    // below every strike: at the top
+        assertEquals(5, spotLineIndex(ks, 25_000.0))    // above every strike: at the bottom
+        assertEquals(0, spotLineIndex(emptyList(), 24_512.0))
     }
 
     // ---- The P&L calendar ------------------------------------------------------------------------
