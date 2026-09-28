@@ -1,0 +1,2 @@
+xauusd source: yahoo GC=F
+fetched: 2026-09-28T17:18:24.300709+00:00
