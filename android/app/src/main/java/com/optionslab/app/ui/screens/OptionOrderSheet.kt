@@ -170,7 +170,7 @@ fun OptionOrderSheet(model: AppModel, pick: ChainPick, initialBuy: Boolean = tru
                     PriceField(bStop, { bStop = it }, "Stop price")
                     PriceField(bTrail, { bTrail = it }, "…or trail by (points)")
                     PriceField(bTarget, { bTarget = it }, "Target price")
-                    Note("Set on the position once this order fills: the stop as an SL-M exit, the target as a LIMIT exit; one cancels the other. A trailing stop only tightens.")
+                    Note("Set on the position once this order fills: the stop as a stop-loss exit (SL with a limit at Zerodha), the target as a LIMIT exit; one cancels the other. A trailing stop only tightens.")
                 }
                 Spacer(Modifier.height(12.dp))
                 Row {

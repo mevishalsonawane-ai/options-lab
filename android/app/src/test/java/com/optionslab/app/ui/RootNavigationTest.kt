@@ -263,15 +263,17 @@ class RootNavigationTest {
     // ---- Screenshots policy (every sensitive dialog follows it) ----------------------------------
 
     @Test fun capturePolicyFollowsTheOwnersSwitch() {
-        assertTrue("allowed while testing (TODO: off before going live)", Capture.allowed)
-        assertEquals(androidx.compose.ui.window.SecureFlagPolicy.SecureOff, Capture.policy)
-        val activity = compose.activity
-        compose.runOnUiThread { Capture.set(activity, false) }
-        assertFalse(Capture.allowed)
+        assertFalse("blocked until the owner allows it", Capture.allowed)
         assertEquals(androidx.compose.ui.window.SecureFlagPolicy.SecureOn, Capture.policy)
+        val activity = compose.activity
+        compose.runOnUiThread { Capture.apply(activity) }
         assertTrue(activity.window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE != 0)
         compose.runOnUiThread { Capture.set(activity, true) }
+        assertTrue(Capture.allowed)
+        assertEquals(androidx.compose.ui.window.SecureFlagPolicy.SecureOff, Capture.policy)
         assertTrue(activity.window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE == 0)
+        compose.runOnUiThread { Capture.set(activity, false) }
+        assertTrue(activity.window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE != 0)
     }
 
     // ---- The crash report -------------------------------------------------------------------------

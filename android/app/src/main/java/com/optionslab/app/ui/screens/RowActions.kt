@@ -296,7 +296,7 @@ fun ProtectDialog(model: AppModel, t: ProtectTarget, onDone: (Boolean) -> Unit) 
                 PriceField(target, { target = it }, "Target price (optional)")
                 Note(if (spec.trail != null) "Trailing: the stop follows the best price at ${spec.trail} points behind and never loosens." +
                     (if (spec.stop != null) " It starts at your stop price." else "")
-                    else "The stop rests as an SL-M exit and the target as a LIMIT exit; when one fills the other is cancelled.", Modifier.padding(top = 8.dp))
+                    else "The stop rests as a stop-loss exit (SL-M on paper; SL with a limit at Zerodha, which refuses SL-M on options) and the target as a LIMIT exit; when one fills the other is cancelled.", Modifier.padding(top = 8.dp))
                 if (t.live) Note("Zerodha: real exit orders are placed now. You confirm once with your PIN or fingerprint.", Modifier.padding(top = 4.dp))
             }
         },

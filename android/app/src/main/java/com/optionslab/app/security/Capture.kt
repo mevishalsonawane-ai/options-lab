@@ -6,13 +6,12 @@ import androidx.compose.ui.window.SecureFlagPolicy
 
 /**
  * Screenshots and screen recording. Blocked (FLAG_SECURE on the app and every
- * dialog) unless the owner allows them in More -> Security. Allowed for now,
- * while the app is being tested and screens are shared; TODO.md has turning it
- * off before going live.
+ * dialog) unless the owner allows them in More -> Security (with the PIN).
  */
 object Capture {
-    private const val KEY = "sec.capture"
-    private const val DEFAULT_ALLOWED = true
+    // A new key: the testing phase's "allowed" is not carried into live use; everyone starts blocked.
+    private const val KEY = "sec.capture.live"
+    private const val DEFAULT_ALLOWED = false
 
     val allowed: Boolean get() = runCatching { SecurePrefs.getBoolean(KEY, DEFAULT_ALLOWED) }.getOrDefault(false)
 

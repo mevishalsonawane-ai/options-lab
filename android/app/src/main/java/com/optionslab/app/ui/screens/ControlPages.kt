@@ -355,7 +355,7 @@ fun SecurityPage(model: AppModel) {
                 }
                 var capture by remember { mutableStateOf(com.optionslab.app.security.Capture.allowed) }
                 ToggleRow("Allow screenshots and screen recording",
-                    if (capture) "On while testing: anyone with the phone can capture any screen, keys and P&L included. Turn off before going live."
+                    if (capture) "On: anyone with the phone can capture any screen, keys and P&L included. Turn it off when you are done."
                     else "Off: every screen and popup is blocked from screenshots, recordings and the recent-apps preview.", capture) { on ->
                     if (!on) { capture = false; com.optionslab.app.security.Capture.set(context as? android.app.Activity, false) }
                     else guard("Enter your app PIN to allow screenshots and screen recording.") {

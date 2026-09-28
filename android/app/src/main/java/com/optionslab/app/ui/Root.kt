@@ -180,8 +180,7 @@ fun Root(activity: MainActivity, splash: Boolean = false) {
             // Biometrics are offered only once the device check has run (a report is never empty).
             if (sealed) Gate(activity, model, settings, compromised, checked = findings.isNotEmpty())
             else if (!batteryOk) com.optionslab.app.ui.screens.BatteryScreen { batteryOk = true }
-            // TESTING: the Zerodha setup gate is switched off (SKIP_ZERODHA_GATE) so other features can be tried
-            // without linking; the Zerodha page in More still links an account. TODO.md L4: switch it back on.
+            // Until a Zerodha account is linked the app shows only the setup page.
             else if (!brokerNow.linked && !SKIP_ZERODHA_GATE) ConnectGate(model)
             else Main(model)
         }
@@ -578,8 +577,8 @@ internal fun CrashReport(dir: java.io.File) {
     }
 }
 
-/** Testing only: open the app without the Zerodha setup gate. Set back to false before going live. */
-const val SKIP_ZERODHA_GATE = true
+/** Testing only: open the app without the Zerodha setup gate. False for live use. */
+const val SKIP_ZERODHA_GATE = false
 
 /** Until a Zerodha account is linked the app shows only this: no tabs, no close. */
 @Composable

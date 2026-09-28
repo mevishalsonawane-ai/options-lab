@@ -177,14 +177,16 @@ class ControlPagesTest {
         PinLock.setPin(pin.toCharArray())
         show { SecurityPage(model) }
         val title = "Allow screenshots and screen recording"
-        compose.switchFor(title).assertIsOn()
-        toggle(title)
+        // Blocked on a fresh phone.
         compose.switchFor(title).assertIsOff()
         assertFalse(Capture.allowed)
         assertEquals(androidx.compose.ui.window.SecureFlagPolicy.SecureOn, Capture.policy)
         toggle(title)
         reauth(pin, "Enter your app PIN to allow screenshots and screen recording.")
         compose.until(10_000) { Capture.allowed }
+        toggle(title)
+        compose.switchFor(title).assertIsOff()
+        assertFalse(Capture.allowed)
     }
 
     @Test fun widgetAndLockScreenPrivacySwitches() {

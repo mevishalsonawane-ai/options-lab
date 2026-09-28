@@ -87,12 +87,12 @@ Source paths prefixed `NTA:` are in D:\New Trading app.
 
 ## L. Before going live (real money)
 
-- [ ] L1. Turn OFF "Allow screenshots and screen recording" (More -> Security), and set its default
+- [x] L1. (done 2026-09-28: blocked by default under a new setting key, so every phone starts blocked; allow it again only with the PIN) Turn OFF "Allow screenshots and screen recording" (More -> Security), and set its default
   back to off (`security/Capture.kt`, `DEFAULT_ALLOWED = false`). It is on only while testing.
 - [ ] L2. First live ORB trade with the app open: confirm the entry and the SL stop order appear in Kite,
   and that the +40 / 15:10 exit goes out.
-- [ ] L3. Protections (Zerodha stop / trailing stop) still send SL-M: confirm Zerodha accepts SL-M on
+- [x] L3. (checked 2026-09-28: Zerodha stops and trailing stops already go out as SL with a limit, like the ORB stop; only paper uses SL-M; the notes on screen now say so) Protections (Zerodha stop / trailing stop) still send SL-M: confirm Zerodha accepts SL-M on
   index options, or switch them to SL with a limit like the ORB stop.
-- [ ] L4. Switch the Zerodha setup gate back on: `SKIP_ZERODHA_GATE = false` in `ui/Root.kt` (off while testing other features).
+- [x] L4. (done 2026-09-28) Switch the Zerodha setup gate back on: `SKIP_ZERODHA_GATE = false` in `ui/Root.kt` (off while testing other features).
 - [ ] L5. Pine auto-trade: run a script on Paper for a few sessions first (Research -> Pine scripts -> Auto-trade),
   then one live trade with the app open: confirm the ATM option BUY, the switch on the next signal, and the 15:15 sell in Kite.
