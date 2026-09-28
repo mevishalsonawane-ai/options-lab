@@ -50,7 +50,7 @@ Source paths prefixed `NTA:` are in D:\New Trading app.
 - [x] B2. (done 2026-09-28: CI signs with the owner's key; the build log prints the public fingerprint) Release signing: run `android/tools/make-release-key.sh`, add the 4 GitHub secrets
       (otherwise every update needs uninstall, which wipes the vault).
 - [ ] B3. Static IP for live orders (SEBI): VPS (Oracle Always Free works) or a home static IP + `android/tools/wg-relay-setup.sh`; then enter the IP in the app (More → Zerodha → Static IP) and check it shows ✓. The app now refuses new live positions from any other IP.
-- [ ] B4. Research milestones in `docs/design.md`: M1 in progress, M4-M9 open, M9 forward holdout ~Dec 2026;
+- [x] B4. (dropped by the owner, 2026-09-28: Android app only; the PC research track is not pursued) Research milestones in `docs/design.md`: M1 in progress, M4-M9 open, M9 forward holdout ~Dec 2026;
       missing tests `test_theta_units`, `test_long_short_mirror`, `test_exits_fire`, `test_no_engine_import`; pricer/IV module;
       confirm M3 Kaggle splice reconciliation.
 - [ ] B5. Hedged variant undecided (`docs/hedged-variant.md`: wing helped 0/170).
