@@ -48,7 +48,9 @@ class MainActivity : FragmentActivity() {
             tabRequests.value = intent?.getStringExtra(EXTRA_TAB)
             closeRequests.value = intent?.getStringExtra(EXTRA_CLOSE)
         }
-        setContent { Root(this) }
+        // A fresh open (not a rotation, which brings saved state) holds the logo for a moment first.
+        val splash = savedInstanceState == null && com.optionslab.app.ui.components.Splash.enabled
+        setContent { Root(this, splash) }
     }
 
     /** Every touch counts as activity for the idle lock. */

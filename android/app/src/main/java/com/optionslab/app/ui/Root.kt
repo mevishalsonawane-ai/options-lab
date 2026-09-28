@@ -124,7 +124,7 @@ enum class Tab(val label: String, val icon: ImageVector) {
 }
 
 @Composable
-fun Root(activity: MainActivity) {
+fun Root(activity: MainActivity, splash: Boolean = false) {
     val model: AppModel = viewModel()
     // After an erase the view model outlives the data: reload it so the gates and the mode start clean.
     val wiped by wipes.collectAsState()
@@ -142,6 +142,13 @@ fun Root(activity: MainActivity) {
                 isAppearanceLightStatusBars = !dark
                 isAppearanceLightNavigationBars = !dark
             }
+        }
+        // The logo first, for a moment, when the app is opened fresh; kept across a rotation meanwhile.
+        var showSplash by rememberSaveable { mutableStateOf(splash) }
+        if (showSplash) {
+            LaunchedEffect(Unit) { delay(com.optionslab.app.ui.components.Splash.MS); showSplash = false }
+            com.optionslab.app.ui.components.SplashScreen()
+            return@IraAlgoTheme
         }
         val compromised = findings.isNotEmpty() && Integrity.compromised(findings)
         // The app stopped unexpectedly last time: show why, once, so it can be reported.
