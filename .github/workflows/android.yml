@@ -69,10 +69,19 @@ jobs:
       - name: Release keystore (optional)
         env:
           KEYSTORE_B64: ${{ secrets.OL_KEYSTORE_B64 }}
+          KS_PASS: ${{ secrets.OL_KEYSTORE_PASSWORD }}
+          KS_ALIAS: ${{ secrets.OL_KEY_ALIAS }}
         run: |
           if [ -n "$KEYSTORE_B64" ]; then
-            echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/release.jks"
-            echo "OL_KEYSTORE_PATH=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
+            # A secret pasted from a phone can carry line breaks or spaces: keep only base64 characters.
+            if printf '%s' "$KEYSTORE_B64" | tr -cd 'A-Za-z0-9+/=' | base64 -d > "$RUNNER_TEMP/release.jks" 2>/dev/null \
+               && keytool -list -keystore "$RUNNER_TEMP/release.jks" -storepass "$KS_PASS" -alias "$KS_ALIAS" >/dev/null 2>&1; then
+              echo "OL_KEYSTORE_PATH=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
+              echo "Release keystore loaded and checked."
+            else
+              rm -f "$RUNNER_TEMP/release.jks"
+              echo "::warning title=Release key not usable::OL_KEYSTORE_B64 does not decode to a keystore that opens with OL_KEYSTORE_PASSWORD and OL_KEY_ALIAS. Re-paste the secrets exactly as printed by android/tools/make-release-key.sh. This APK is signed with a throwaway key."
+            fi
           else
             echo "::warning title=Release APK signed with a throwaway key::No OL_KEYSTORE_B64 secret: this APK will not install over a previous build. Run android/tools/make-release-key.sh once and add the four secrets it prints."
           fi
