@@ -265,7 +265,7 @@ private fun OrdersCard(a: Account, owners: Map<String, String>, onTap: (Broker.O
         if (a.orders.isEmpty()) Note("No orders today.")
         if (working.isNotEmpty()) Text("WORKING", style = Type.label.copy(color = p.amber))
         working.forEach { o ->
-            OrderLine(o, owners) { onTap(o) }
+            OrderLine(o, owners, null) { onTap(o) }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 4.dp, bottom = 6.dp)) {
                 BrassButton("Modify", tone = p.inkSoft) { onModify(o) }
                 BrassButton("Cancel", tone = p.oxblood) { onCancel(o) }
@@ -274,22 +274,26 @@ private fun OrdersCard(a: Account, owners: Map<String, String>, onTap: (Broker.O
         if (done.isNotEmpty()) {
             if (working.isNotEmpty()) Rule(Modifier.padding(vertical = 6.dp))
             Text("FINISHED", style = Type.label.copy(color = p.inkSoft))
-            done.forEach { o -> OrderLine(o, owners) { onTap(o) } }
+            done.forEach { o -> OrderLine(o, owners, a.positions.firstOrNull { it.symbol == o.symbol && it.product == o.product }?.last) { onTap(o) } }
         }
     }
 }
 
 @Composable
-private fun OrderLine(o: Broker.OrderRow, owners: Map<String, String>, onTap: () -> Unit) {
+private fun OrderLine(o: Broker.OrderRow, owners: Map<String, String>, ltp: Double?, onTap: () -> Unit) {
     val p = LocalPalette.current
     val tone = when (o.status) { "COMPLETE" -> p.verdigris; "REJECTED", "CANCELLED" -> p.oxblood; else -> p.amber }
-    Column(Modifier.fillMaxWidth().clickable(onClick = onTap).padding(vertical = 3.dp)) {
+    Row(Modifier.fillMaxWidth().clickable(onClick = onTap).padding(vertical = 3.dp)) {
+    Column(Modifier.weight(1f)) {
         Text("${o.side} ${o.symbol} ×${o.qty}", style = Type.figure.copy(color = if (o.side == "SELL") p.oxblood else p.verdigris, fontSize = 13.sp))
         Text("${o.exchange} · ${o.product} · ${o.type}${if (o.price > 0) " ${px(o.price)}" else ""}${if (o.trigger > 0) " trg ${px(o.trigger)}" else ""}" +
             " · ${o.placedAt.takeLast(8)}", style = Type.figure.copy(color = p.inkSoft, fontSize = 11.sp))
         Text("${o.status} · filled ${o.filled}${if (o.filled > 0) " @ ${px(o.avg)}" else ""}${if (o.message.isNotBlank()) " · ${o.message}" else ""}",
             style = Type.figure.copy(color = tone, fontSize = 11.sp))
         OrderSourcePill(owners, "kite:${o.id}", o.tag)
+    }
+    // A filled order's P&L at the live price (the positions move with every tick).
+    PnlFigure(fillPnl(o.side == "BUY", o.avg, o.filled, ltp), Modifier.padding(start = 8.dp))
     }
 }
 
@@ -306,7 +310,10 @@ private fun TradesCard(a: Account, owners: Map<String, String>, onTap: (Broker.T
                     Text("${t.exchange} · ${t.product} · ${t.at.takeLast(8)} · order …${t.orderId.takeLast(6)}", style = Type.figure.copy(color = p.inkSoft, fontSize = 11.sp))
                     OrderSourcePill(owners, "kite:${t.orderId}", a.orders.firstOrNull { it.id == t.orderId }?.tag)
                 }
-                Text("${t.qty} @ ${px(t.price)}", style = Type.figure.copy(color = p.ink, fontSize = 13.sp))
+                Column(horizontalAlignment = Alignment.End) {
+                    Text("${t.qty} @ ${px(t.price)}", style = Type.figure.copy(color = p.ink, fontSize = 13.sp))
+                    PnlFigure(fillPnl(t.side == "BUY", t.price, t.qty, a.positions.firstOrNull { it.symbol == t.symbol && it.product == t.product }?.last))
+                }
             }
         }
         if (a.trades.isNotEmpty()) {

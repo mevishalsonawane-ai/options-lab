@@ -222,6 +222,8 @@ private fun PaperOrders(model: AppModel, v: Paper.Snapshot) {
     var editing by remember { mutableStateOf<com.optionslab.engine.sandbox.OrderRow?>(null) }
     val owners by model.orderOwners.collectAsState()
     val st = v.orders.statistics
+    // Each filled order's P&L, marked at its contract's current price (the positions carry the live LTP).
+    val ltp = v.positions.positions.associate { it.symbol to it.ltp }
     LedgerCard(title = "Paper order book") {
         LedgerLine("Buy / sell", "${st.totalBuyOrders} / ${st.totalSellOrders}")
         LedgerLine("Complete · open · pending · rejected", "${st.totalCompletedOrders} · ${st.totalOpenOrders} · ${st.totalTriggerPendingOrders} · ${st.totalRejectedOrders}")
@@ -230,12 +232,15 @@ private fun PaperOrders(model: AppModel, v: Paper.Snapshot) {
             Rule(Modifier.padding(vertical = 5.dp))
             val tone = when (o.status) { "complete" -> p.verdigris; "rejected", "cancelled" -> p.oxblood; else -> p.amber }
             // The whole order (its three lines) is the tap target, as on the live order book: the first line alone was 15 dp.
-            Column(Modifier.fillMaxWidth().heightIn(min = 48.dp).clickable { model.rowAction.value = RowTarget.PaperOrder(o) }) {
+            Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).clickable { model.rowAction.value = RowTarget.PaperOrder(o) }) {
+              Column(Modifier.weight(1f)) {
                 com.optionslab.app.ui.components.FitText("${o.action} ${o.symbol} ×${o.quantity}", style = Type.figure.copy(color = if (o.action == "SELL") p.oxblood else p.verdigris, fontSize = 13.sp))
                 Text("${o.product} · ${o.priceType}${if (o.price > 0) " ${px(o.price)}" else ""}${if (o.triggerPrice > 0) " trg ${px(o.triggerPrice)}" else ""} · ${o.timestamp.takeLast(8)}",
                     style = Type.figure.copy(color = p.inkSoft, fontSize = 11.sp))
                 Text("${o.status.uppercase()}${if (o.filledQuantity > 0) " · ${o.filledQuantity} @ ${px(o.averagePrice)}" else ""}${if (o.rejectionReason.isNotBlank()) " · ${o.rejectionReason}" else ""}",
                     style = Type.figure.copy(color = tone, fontSize = 11.sp))
+              }
+              PnlFigure(fillPnl(o.action.equals("BUY", true), o.averagePrice, o.filledQuantity, ltp[o.symbol]), Modifier.padding(start = 8.dp))
             }
             OrderSourcePill(owners, "paper:${o.orderId}")
             if (o.status == "open" || o.status == "trigger pending") Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -278,6 +283,7 @@ private fun PaperOrders(model: AppModel, v: Paper.Snapshot) {
 private fun PaperTrades(model: AppModel, v: Paper.Snapshot) {
     val p = LocalPalette.current
     val owners by model.orderOwners.collectAsState()
+    val ltp = v.positions.positions.associate { it.symbol to it.ltp }
     LedgerCard(title = "Paper trade book") {
         if (v.trades.isEmpty()) Note("No paper trades this session.")
         v.trades.forEachIndexed { i, t ->
@@ -288,7 +294,10 @@ private fun PaperTrades(model: AppModel, v: Paper.Snapshot) {
                     Text("${t.product} · ${t.timestamp.takeLast(8)}", style = Type.figure.copy(color = p.inkSoft, fontSize = 11.sp))
                     OrderSourcePill(owners, "paper:${t.orderId}")
                 }
-                Text("${t.quantity} @ ${px(t.price)}", style = Type.figure.copy(color = p.ink, fontSize = 13.sp))
+                Column(horizontalAlignment = Alignment.End) {
+                    Text("${t.quantity} @ ${px(t.price)}", style = Type.figure.copy(color = p.ink, fontSize = 13.sp))
+                    PnlFigure(fillPnl(t.action.equals("BUY", true), t.price, t.quantity, ltp[t.symbol]))
+                }
             }
         }
     }

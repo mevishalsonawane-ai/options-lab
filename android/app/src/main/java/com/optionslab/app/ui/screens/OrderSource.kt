@@ -36,3 +36,19 @@ fun SourcePill(source: Pair<String, Boolean>) {
         style = Type.label.copy(color = if (strategy) p.ink else p.inkSoft, fontSize = 11.sp, fontWeight = if (strategy) FontWeight.SemiBold else FontWeight.Medium),
         modifier = Modifier.padding(top = 3.dp).background(p.chip, RoundedCornerShape(50)).padding(horizontal = 8.dp, vertical = 2.dp))
 }
+
+/**
+ * The P&L of a filled order or trade at the current price [ltp]: what its fill is worth now against what was paid
+ * (a buy gains as the price rises, a sell as it falls). Null when there is no fill or no price.
+ */
+fun fillPnl(buy: Boolean, price: Double, qty: Int, ltp: Double?): Double? =
+    if (ltp == null || ltp <= 0 || price <= 0 || qty <= 0) null else (ltp - price) * qty * (if (buy) 1 else -1)
+
+/** A P&L figure on a row: green for a gain, red for a loss, one line. */
+@Composable
+fun PnlFigure(v: Double?, modifier: Modifier = Modifier) {
+    if (v == null) return
+    val p = LocalPalette.current
+    Text(com.optionslab.app.ui.rs(v, true), maxLines = 1, softWrap = false, modifier = modifier,
+        style = Type.figure.copy(color = if (v >= 0) p.verdigris else p.oxblood, fontSize = 13.sp, fontWeight = FontWeight.SemiBold))
+}
