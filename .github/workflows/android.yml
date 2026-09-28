@@ -186,7 +186,7 @@ jobs:
           REPO: ${{ github.repository }}
           SHA: ${{ github.sha }}
         run: |
-          cd shots
+          mkdir -p shots && cd shots   # no artifacts when the app tests were skipped
           n=$(find . -name '*.png' | wc -l)
           if [ "$n" -eq 0 ]; then echo "no screenshots"; exit 0; fi
           find . -name '*.png' -printf '%P\n' | sort > index.txt

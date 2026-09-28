@@ -1576,6 +1576,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     val pnlDays = MutableStateFlow(0)
 
     private val paperLoading = java.util.concurrent.atomic.AtomicBoolean(false)
+    /** A reload asked for while one was running: done right after it, so the book after an order is never missed. */
+    private val paperAgain = java.util.concurrent.atomic.AtomicBoolean(false)
 
     /**
      * How often an open paper page re-prices: every 2 s while Zerodha's stream is live (the prices are in memory,
@@ -1588,9 +1590,14 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun loadPaper(quiet: Boolean = false) {
-        // A quiet refresh while the last one is still running is skipped (the fast re-pricing never piles up).
-        if (quiet && paper.value is Load.Done && !paperLoading.compareAndSet(false, true)) return
-        if (!quiet) paperLoading.set(true)
+        // A quiet refresh while the last one is still running is not started beside it (the fast re-pricing never
+        // piles up); it runs once as soon as that one ends, so what an order just changed is always read.
+        if (quiet && paper.value is Load.Done) {
+            // Flag first, then try: a load ending in between either sees the flag or leaves the way free.
+            paperAgain.set(true)
+            if (!paperLoading.compareAndSet(false, true)) return
+            paperAgain.set(false)
+        } else paperLoading.set(true)
         if (!quiet || paper.value !is Load.Done) paper.value = Load.Busy("Opening the paper account")
         viewModelScope.launch(Dispatchers.IO) {
           try {
@@ -1604,7 +1611,10 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                 recordPaperDay(snap)
                 Load.Done(snap)
             } catch (e: Exception) { Load.Failed(e.message ?: "could not read the paper account") }
-          } finally { paperLoading.set(false) }
+          } finally {
+              paperLoading.set(false)
+              if (paperAgain.getAndSet(false)) loadPaper(quiet = true)
+          }
         }
     }
 

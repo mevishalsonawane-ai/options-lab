@@ -68,7 +68,7 @@ class OrbRulesTest {
         // Price broke out at 10:05 while the arm was paused; at 10:10 it is still above: no entry after the pause.
         val twoUp = session(55250.0, 55300.0)
         assertEquals(0 to "not_a_fresh_break", OrbRules.entrySignal(twoUp, rng, OrbRules.ORB, null, requireFresh = true))
-        assertEquals("without a pause the plain ORB still takes it", 1 to "break", OrbRules.entrySignal(twoUp, rng, OrbRules.ORB, null))
+        assertEquals(1 to "break", OrbRules.entrySignal(twoUp, rng, OrbRules.ORB, null), "without a pause the plain ORB still takes it")
         // Back inside, then out again: a fresh break is taken.
         assertEquals(1 to "break", OrbRules.entrySignal(session(55250.0, 55100.0, 55260.0), rng, OrbRules.ORB, null, requireFresh = true))
         // The first decision bar follows the range bars (inside by definition): its break is fresh.
