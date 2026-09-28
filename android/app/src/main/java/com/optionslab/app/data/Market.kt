@@ -52,6 +52,22 @@ object Market {
     fun isTradingDay(d: LocalDate = today()) = Holidays.isExtraSession(d) || (isWeekday(d) && !Holidays.isHoliday(d))
     fun isOpen(): Boolean = isTradingDay() && minuteNow() in OPEN until CLOSE
 
+    /** What a hand order placed outside market hours is told (paper trades by the exchange's hours too). */
+    const val CLOSED_FOR_ORDERS = "Market is closed now: orders are taken 09:15-15:30 on trading days."
+
+    /**
+     * TEST SEAM (JVM tests only): the screen tests place paper orders at whatever hour CI runs, so they
+     * take orders at any time unless a test turns this off. Its setter throws in a release build.
+     */
+    @Volatile internal var testOrdersAnyTime: Boolean = false
+        set(v) {
+            check(com.optionslab.app.BuildConfig.DEBUG) { "the order-hours seam exists only in debug builds" }
+            field = v
+        }
+
+    /** Whether a hand order may be placed now: in market hours on a trading day. */
+    fun acceptsOrders(): Boolean = testOrdersAnyTime || isOpen()
+
     data class Quote(val symbol: String, val last: Double, val open: Double, val high: Double, val low: Double,
                      val minute: Int, val spark: List<Double>,
                      /** True when this is the last traded session's close, not today's price. */

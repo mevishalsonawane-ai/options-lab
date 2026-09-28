@@ -1620,7 +1620,12 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    private fun paperDo(action: suspend () -> com.optionslab.app.data.Paper.Result) {
+    /**
+     * [inHoursOnly]: a new order, a close or a change is refused outside market hours, as at the exchange
+     * (the paper account would otherwise fill it at the last close). Cancelling a working order is always allowed.
+     */
+    private fun paperDo(inHoursOnly: Boolean = true, action: suspend () -> com.optionslab.app.data.Paper.Result) {
+        if (inHoursOnly && !Market.acceptsOrders()) { com.optionslab.app.work.Alerts.error(Market.CLOSED_FOR_ORDERS); message.value = Market.CLOSED_FOR_ORDERS; return }
         viewModelScope.launch(Dispatchers.IO) {
             try { say(action().message) } catch (e: Exception) { say("Paper order failed: ${e.message}") }
             loadPaper(quiet = true)
@@ -1650,7 +1655,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         r
     }
 
-    fun paperCancel(id: String) = paperDo { com.optionslab.app.data.Paper.cancel(id) }
+    fun paperCancel(id: String) = paperDo(inHoursOnly = false) { com.optionslab.app.data.Paper.cancel(id) }
     fun paperModify(id: String, qty: Int?, price: Double?, trigger: Double?) = paperDo { com.optionslab.app.data.Paper.modify(id, qty, price, trigger) }
     fun paperClose(symbol: String, product: String, area: String = "Close position") = paperDo {
         // Closing is an exit: nothing stops it, the kill switch included (it only refuses new entries).

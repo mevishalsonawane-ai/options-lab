@@ -227,8 +227,10 @@ class NotificationActionReceiver : BroadcastReceiver() {
             val done = goAsync()
             CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
                 try {
-                    val open = com.optionslab.app.data.Paper.state.positions.filter { it.symbol == symbol && it.quantity != 0 }
-                    if (open.isEmpty()) Alerts.post("No open paper position in $symbol.", Alerts.Kind.ERROR)
+                    val open = if (!com.optionslab.app.data.Market.acceptsOrders()) {
+                        Alerts.post(com.optionslab.app.data.Market.CLOSED_FOR_ORDERS, Alerts.Kind.ERROR); emptyList()
+                    } else com.optionslab.app.data.Paper.state.positions.filter { it.symbol == symbol && it.quantity != 0 }
+                    if (open.isEmpty() && com.optionslab.app.data.Market.acceptsOrders()) Alerts.post("No open paper position in $symbol.", Alerts.Kind.ERROR)
                     for (p in open) {
                         val r = com.optionslab.app.data.Paper.close(p.symbol, p.product)
                         r.orderId?.let { runCatching { com.optionslab.app.data.Strategies.tagOwner("paper:$it", com.optionslab.app.data.Origins.manual("Notification close")) } }

@@ -34,6 +34,8 @@ class TestApp : Application() {
     override fun onCreate() {
         super.onCreate()
         com.optionslab.app.ui.components.Splash.enabled = false
+        // Screen tests place paper orders at whatever hour CI runs; PaperMarketHoursTest turns this off.
+        Market.testOrdersAnyTime = true
         IdleSampler.install()
         NetworkGuard.install()
         NetworkGuard.blocked.clear()
