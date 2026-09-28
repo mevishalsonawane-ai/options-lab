@@ -424,7 +424,7 @@ class PaperScreenTest {
         assertTrue(m.message.value?.contains("account guard") != true)
         // Closing goes through too.
         closeForm()
-        tap("Close")        // the first position
+        compose.onAllNodesWithText("Close")[0].performClick()   // one of the two positions (each row has its Close)
         waitSnap(m, "the close under the kill switch") { s -> s.orders.orders.size == 3 }
     }
 

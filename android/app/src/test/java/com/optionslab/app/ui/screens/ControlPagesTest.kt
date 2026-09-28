@@ -538,9 +538,6 @@ class ControlPagesTest {
             "20%" to { it.guardDrawdownPct == 20.0 },
             "₹10L" to { it.guardMaxValue == 1_000_000.0 },
             "14:00" to { it.guardCutoff == 14 * 60 },
-            "₹6,000" to { it.guardPaperDailyLoss == 6_000.0 },
-            "30%" to { it.guardPaperDrawdownPct == 30.0 },
-            "60" to { it.guardPaperTrades == 60 },
         )
         for ((chip, ok) in picks) {
             compose.reveal(chip)
@@ -548,7 +545,10 @@ class ControlPagesTest {
             waitSettings(ok = ok)
             compose.onNodeWithText(chip).assertIsSelected()
         }
-        compose.until(10_000) { AppSettings.load().let { it.guardDailyLoss == 5_000.0 && it.guardPaperTrades == 60 && it.guardCutoff == 14 * 60 } }
+        compose.until(10_000) { AppSettings.load().let { it.guardDailyLoss == 5_000.0 && it.guardCutoff == 14 * 60 } }
+        // Paper has no limits of its own any more: the page says so and offers none.
+        compose.reveal("Paper is practice", substring = true)
+        assertTrue(compose.onAllNodesWithText("Paper daily loss limit").fetchSemanticsNodes().isEmpty())
     }
 
     @Test fun expirySquareOffAndNakedShortSwitches() {

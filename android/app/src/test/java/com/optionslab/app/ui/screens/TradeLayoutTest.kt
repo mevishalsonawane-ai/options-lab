@@ -14,6 +14,7 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTextInput
@@ -205,7 +206,9 @@ abstract class TradeLayoutBase(device: DeviceConfig) : TradeScreenBase(device) {
             if (System.currentTimeMillis() > end)
                 throw AssertionError("'Set paper amount' never appeared; the paper account is ${m.paper.value}", why)
             org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle()
-            runCatching { scrollTo("Set paper amount") }.onFailure { why = it }
+            // The button is in the list's first row: go straight to the top (a search from the bottom of a long
+            // page at a large font sometimes gave up before reaching it).
+            runCatching { compose.onNode(androidx.compose.ui.test.hasScrollToIndexAction()).performScrollToIndex(0) }.onFailure { why = it }
             compose.mainClock.advanceTimeByFrame(); Thread.sleep(20)
         }
         runCatching { scrollTo("Set paper amount") }
