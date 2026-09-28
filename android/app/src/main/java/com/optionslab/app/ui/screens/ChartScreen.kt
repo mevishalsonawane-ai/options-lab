@@ -273,13 +273,16 @@ internal fun ChartPane(
             // A price alert on whatever is charted, at a level you choose.
             Text("ALERT", textAlign = TextAlign.Center, style = Type.label.copy(color = p.ink, fontSize = 12.sp, fontWeight = FontWeight.Bold),
                 modifier = chip.clickable { alerting = true }.padding(horizontal = 10.dp, vertical = 8.dp))
-            // Buy / Sell: a full 48 dp touch target, the label whole on one line.
-            listOf(true to "BUY", false to "SELL").forEach { (isBuy, label) ->
-                Box(Modifier.align(Alignment.CenterVertically).heightIn(min = 48.dp).widthIn(min = 64.dp)
-                    .background(if (isBuy) p.verdigris else p.oxblood, RoundedCornerShape(50))
-                    .clickable { openOrder(isBuy, null) }.padding(horizontal = 14.dp), contentAlignment = Alignment.Center) {
-                    Text(label, textAlign = TextAlign.Center, maxLines = 1, softWrap = false,
-                        style = Type.label.copy(color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold))
+            // Buy / Sell: a full 48 dp touch target each, the label whole on one line; one unit, so when the chips
+            // wrap they move to the next line together (SELL alone on a line of its own looked like another toolbar).
+            Row(Modifier.align(Alignment.CenterVertically), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                listOf(true to "BUY", false to "SELL").forEach { (isBuy, label) ->
+                    Box(Modifier.heightIn(min = 48.dp).widthIn(min = 64.dp)
+                        .background(if (isBuy) p.verdigris else p.oxblood, RoundedCornerShape(50))
+                        .clickable { openOrder(isBuy, null) }.padding(horizontal = 14.dp), contentAlignment = Alignment.Center) {
+                        Text(label, textAlign = TextAlign.Center, maxLines = 1, softWrap = false,
+                            style = Type.label.copy(color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold))
+                    }
                 }
             }
         }

@@ -93,7 +93,10 @@ fun OptionOrderSheet(model: AppModel, pick: ChainPick, initialBuy: Boolean = tru
     var placing by remember { mutableStateOf(false) }
     val title = "${pick.underlying} ${pick.expiry.format(DateTimeFormatter.ofPattern("d MMM", Locale.ENGLISH)).uppercase()} ${fmtG(pick.strike)} ${pick.right.name}"
 
-    Dialog(onDismissRequest = onClose, properties = DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy, usePlatformDefaultWidth = false)) {
+    // decorFitsSystemWindows = false: the dialog window then receives the system bars' insets, so navigationBarsPadding()
+    // keeps the bottom clear of the gesture bar (with the default the insets are never delivered and read as 0).
+    Dialog(onDismissRequest = onClose, properties = DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy, usePlatformDefaultWidth = false,
+        decorFitsSystemWindows = false)) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
             // The backdrop closes the sheet: a sibling behind it (not its parent), so the sheet's texts do not
             // merge into this one "Close" button for TalkBack, and a double tap on them does not close it.

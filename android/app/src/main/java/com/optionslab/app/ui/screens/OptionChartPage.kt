@@ -104,7 +104,10 @@ internal fun OptionChartContent(
     val change = if (last != null && open != null) last - open else null
     val up = (change ?: 0.0) >= 0
 
-    Dialog(onDismissRequest = onClose, properties = DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy, usePlatformDefaultWidth = false)) {
+    // decorFitsSystemWindows = false: the dialog window then receives the system bars' insets, so navigationBarsPadding()
+    // keeps the bottom clear of the gesture bar (with the default the insets are never delivered and read as 0).
+    Dialog(onDismissRequest = onClose, properties = DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy, usePlatformDefaultWidth = false,
+        decorFitsSystemWindows = false)) {
         Column(Modifier.fillMaxSize().background(p.paper).statusBarsPadding().navigationBarsPadding()) {
             Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text("‹", style = Type.masthead.copy(color = p.ink, fontSize = 28.sp), modifier = Modifier.clickable(onClick = onClose).padding(horizontal = 12.dp, vertical = 4.dp))
