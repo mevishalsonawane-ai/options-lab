@@ -63,13 +63,18 @@ object OrbRules {
     fun mayDecide(bar: Bar): Boolean { val t = bar.start.toLocalTime(); return t.isAfter(OR_END) && t.isBefore(LAST_ENTRY_BAR) }
 
     /** (+1 CE / -1 PE / 0, why) on the last completed bar of [bars]. */
-    fun entrySignal(bars: List<Bar>, rng: Pair<Double, Double>, arm: Arm, lastExit: LocalDateTime?): Pair<Int, String> {
+    /**
+     * [requireFresh]: the arm was paused before this bar (stopped for the day, the kill switch, a refused entry, the
+     * app not running, armed just now), so a break already under way does not count: only a fresh one, as ORB Fresh.
+     */
+    fun entrySignal(bars: List<Bar>, rng: Pair<Double, Double>, arm: Arm, lastExit: LocalDateTime?,
+                    requireFresh: Boolean = false): Pair<Int, String> {
         val last = bars.last()
         if (!mayDecide(last)) return 0 to "no_decision_bar"
         if (lastExit != null && !last.start.isAfter(barOf(lastExit))) return 0 to "cooling_down_after_exit"
         val direction = breakDirection(last, rng.first, rng.second)
         if (direction == 0) return 0 to "inside_range"
-        if (arm.freshOnly && bars.size > 1 && breakDirection(bars[bars.size - 2], rng.first, rng.second) == direction) {
+        if ((arm.freshOnly || requireFresh) && bars.size > 1 && breakDirection(bars[bars.size - 2], rng.first, rng.second) == direction) {
             return 0 to "not_a_fresh_break"
         }
         return direction to "break"

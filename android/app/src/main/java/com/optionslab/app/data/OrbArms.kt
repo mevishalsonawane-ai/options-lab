@@ -90,6 +90,8 @@ object OrbArms {
         var range: Pair<Double, Double>? = null,
         var rangeDay: LocalDate? = null,
         val decided: MutableMap<String, MutableSet<String>> = HashMap(),   // "arm|day" -> bar starts
+        /** "arm|day" -> the last bar the arm watched while running; a gap before the current bar means it was paused. */
+        val watched: MutableMap<String, String> = HashMap(),
         val positions: MutableList<Position> = ArrayList(),
         val pending: MutableMap<String, Pending> = HashMap(),
         val status: MutableMap<String, String> = HashMap(),
@@ -119,6 +121,7 @@ object OrbArms {
             }
             o.optJSONArray("range")?.let { b.range = it.getDouble(0) to it.getDouble(1); b.rangeDay = LocalDate.parse(it.getString(2)) }
             o.optJSONObject("decided")?.let { m -> m.keys().forEach { k -> val a = m.getJSONArray(k); b.decided[k] = (0 until a.length()).map { a.getString(it) }.toMutableSet() } }
+            o.optJSONObject("watched")?.let { m -> m.keys().forEach { k -> b.watched[k] = m.getString(k) } }
             o.optJSONArray("positions")?.let { a ->
                 for (i in 0 until a.length()) {
                     val p = a.getJSONObject(i)
@@ -172,6 +175,7 @@ object OrbArms {
         // Only today's decided bars matter; older days are dropped.
         val today = Market.today().toString()
         o.put("decided", JSONObject().apply { b.decided.filterKeys { it.endsWith(today) }.forEach { (k, v) -> put(k, JSONArray(v.toList())) } })
+        o.put("watched", JSONObject().apply { b.watched.filterKeys { it.endsWith(today) }.forEach { (k, v) -> put(k, v) } })
         o.put("positions", JSONArray().apply {
             b.positions.takeLast(2000).forEach { p ->
                 put(JSONObject().put("arm", p.arm).put("symbol", p.symbol).put("right", p.right).put("qty", p.qty).put("entry", p.entry)
@@ -313,10 +317,13 @@ object OrbArms {
 
     private suspend fun cycle(b: Book, arm: Arm, t: LocalDateTime, bars: List<Bar>): String {
         val day = t.toLocalDate()
-        if (b.positions.any { it.arm == arm.source && it.open }) return "holding"
+        val watchKey = "${arm.source}|$day"
+        // Holding a position or waiting for the owner's approval is running, not paused: re-entries keep their rules.
+        fun watching() { bars.lastOrNull()?.let { b.watched[watchKey] = it.start.toString() } }
+        if (b.positions.any { it.arm == arm.source && it.open }) { watching(); return "holding" }
         if (!t.toLocalTime().isBefore(OrbRules.SQUARE_OFF)) return "flat_after_square_off"
         if (Strategies.stoppedToday()) return "stopped_for_today"
-        b.pending[arm.source]?.let { if (t.isAfter(it.expires)) b.pending.remove(arm.source) else return "awaiting_approval" }
+        b.pending[arm.source]?.let { if (t.isAfter(it.expires)) b.pending.remove(arm.source) else { watching(); return "awaiting_approval" } }
         val rng = OrbRules.openingRange(bars) ?: return "waiting_for_opening_range"
         b.range = rng; b.rangeDay = day
         val legs = contracts(b, day, bars) ?: return "no_contract"
@@ -324,8 +331,15 @@ object OrbArms {
         val spent = b.decided.getOrPut("${arm.source}|$day") { HashSet() }
         if (!spent.add(last.start.toString())) return "no_decision_bar"
         val lastExit = b.positions.filter { it.arm == arm.source && it.day == day }.mapNotNull { it.exitTime }.maxOrNull()
-        val (direction, why) = OrbRules.entrySignal(bars, rng, arm, lastExit)
-        if (direction == 0) return why
+        // After a pause (stopped for the day, the kill switch, a refused entry, the app not running, armed just now) the
+        // previous bar was not watched: a break already under way is not chased, only a fresh one is taken.
+        val prevBar = bars.getOrNull(bars.size - 2)
+        val resumed = prevBar != null && b.watched[watchKey] != prevBar.start.toString()
+        val (direction, why) = OrbRules.entrySignal(bars, rng, arm, lastExit, requireFresh = resumed)
+        if (direction == 0) {
+            watching()
+            return if (why == "not_a_fresh_break" && !arm.freshOnly) "waiting_for_fresh_break_after_pause" else why
+        }
         val right = if (direction > 0) "CE" else "PE"
         val c = if (direction > 0) legs.ce else legs.pe
         val live = liveNow()
@@ -338,9 +352,11 @@ object OrbArms {
                     (if (live) "LIVE on Zerodha, 1 lot: approve with your PIN in the app" +
                         (if (b.auto[arm.source] != false) " (arm it again while in Live to make it automatic)" else "") else "Paper account, 1 lot") +
                     ". Approve by ${hhmm(last.start.plusMinutes(10))} or it lapses.", "almanac")
+            watching()
             return "awaiting_approval"
         }
-        return enter(b, arm, c, last.start, live)
+        // A refused entry (the kill switch, the guard, no price) counts as a pause: the arm then waits for a fresh break.
+        return enter(b, arm, c, last.start, live).also { if (it.startsWith("entered")) watching() }
     }
 
     /** The day's strike from the first completed bar at or after 09:20, and the nearest expiry after today; held all day. */
@@ -812,6 +828,7 @@ object OrbArms {
         s == "waiting_for_opening_range" -> "Waiting for the opening range (09:15-10:00)."
         s == "inside_range" -> "Waiting for a breakout: the last bar closed inside the range."
         s == "not_a_fresh_break" -> "Last bar continued an earlier break; ORB Fresh waits for a fresh one."
+        s == "waiting_for_fresh_break_after_pause" -> "Was paused (stopped, kill switch, refused or app closed) while the price was already out of the range: waiting for a fresh breakout, not chasing this one."
         s == "cooling_down_after_exit" -> "Just exited; may re-enter from the next bar."
         s == "no_decision_bar" -> "No decision bars now (entries only 10:05-14:25)."
         s == "flat_after_square_off" -> "Done for the day (square-off 15:10)."

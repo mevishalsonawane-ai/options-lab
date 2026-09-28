@@ -234,6 +234,10 @@ object PineAuto {
         if (step < 86_400 && (java.time.Instant.ofEpochSecond(last.epochSecond).atZone(com.optionslab.engine.IST).toLocalDate() != todayIst() ||
                 now - last.epochSecond > step * 3 + 120)) return
         if (b.lastBar[id] == last.epochSecond) return
+        // The bar before this one not run means a pause (stopped for the day, the kill switch, the daily loss limit,
+        // the app not running): a signal that changed meanwhile is not chased.
+        val watchedBefore = b.lastBar[id]
+        val resumed = bars.size >= 2 && watchedBefore != bars[bars.size - 2].epochSecond
         b.lastBar[id] = last.epochSecond
         val r = Pine.run(script, bars.map { PineScripts.toPine(it) }, PineScripts.inputValues(item, script), item.auto.symbol, item.auto.interval,
             budgetMs = 5_000)
@@ -247,6 +251,12 @@ object PineAuto {
             target > 0 -> "CE"
             target < 0 -> if (item.auto.shortWith == "put") "PE" else null
             else -> null
+        }
+        if (resumed) {
+            // What it holds is sold if the signal no longer backs it; nothing new is bought until the next change.
+            note(b, id, "Back after a pause: the signal is now ${describe(target)}; it trades on the next change, not this one")
+            if (a.mode != "alert" && h != null && h.right != want) exit(b, id, item, h, "signal changed during a pause")
+            return
         }
         note(b, id, "Signal: ${describe(target)} at ${"%.2f".format(java.util.Locale.ENGLISH, last.close)}")
         if (a.mode == "alert") {
