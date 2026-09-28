@@ -75,7 +75,8 @@ jobs:
         run: |
           if [ -n "$KEYSTORE_B64" ]; then
             # Secrets pasted from a phone can carry line breaks or spaces: keep only the characters each can hold.
-            b64=$(printf '%s' "$KEYSTORE_B64" | tr -cd 'A-Za-z0-9+/=')
+            # A copy that took the file's label along ("---- OL_KEYSTORE_B64 ----") is still read: the label goes first.
+            b64=$(printf '%s' "$KEYSTORE_B64" | sed 's/OL_KEYSTORE_B64//g' | tr -cd 'A-Za-z0-9+/=')
             ks_pass=$(printf '%s' "$KS_PASS_RAW" | tr -d '[:space:]')
             key_pass=$(printf '%s' "$KEY_PASS_RAW" | tr -d '[:space:]')
             alias=$(printf '%s' "$KS_ALIAS_RAW" | tr -d '[:space:]')
