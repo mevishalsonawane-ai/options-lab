@@ -66,14 +66,19 @@ class PositionCardsTest : RobolectricTest() {
         assertNotNull(pi.savedIntent.getStringExtra(MainActivity.EXTRA_NONCE))
     }
 
-    @Test fun aClosedPositionBecomesItsResultAndCanBeSwipedAway() {
+    @Test fun aClosedPositionsCardIsTakenDown() {
+        PositionCards.card(context, "Paper", "X", 75, 100.0, 98.0, -150.0)
+        assertNotNull(posted("Paper", "X"))
+        // Squared off / settled: the card goes away (the result is in the app's P&L).
         PositionCards.card(context, "Paper", "X", 0, 100.0, null, -200.0)
-        val n = posted("Paper", "X")!!
-        assertEquals("Closed X · Paper · −₹200", Background.title(n))
-        assertEquals("Realised P&L −₹200", Background.text(n))
-        assertNull(n.actions)
-        assertEquals(0, n.flags and Notification.FLAG_ONGOING_EVENT)
-        assertTrue(n.flags and Notification.FLAG_AUTO_CANCEL != 0)
+        assertNull(posted("Paper", "X"))
+    }
+
+    @Test fun aPaperExitFillTakesTheCardDownInsteadOfPostingASell() {
+        PositionCards.card(context, "Paper", "NOPOS", 75, 100.0, 101.0, 75.0)
+        // No paper position is open in NOPOS: the SELL fill squared it off.
+        Notifier.orderFilled(context, "SELL", 75, "NOPOS", 101.0, "Paper", null)
+        assertNull(posted("Paper", "NOPOS"))
     }
 
     @Test fun anUnknownPriceIsLeftOut() {

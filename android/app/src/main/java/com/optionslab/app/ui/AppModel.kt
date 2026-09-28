@@ -588,6 +588,11 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                 com.optionslab.app.work.PositionCards.widgetFromStream(ctx, livePositions.value.takeIf { it.isNotEmpty() }?.sumOf { it.pnl })
             }
         }
+        // A position closed from its notification: the paper books on screen follow at once.
+        viewModelScope.launch {
+            var first = true
+            com.optionslab.app.work.PositionCards.closedFromShade.collect { if (first) first = false else loadPaper(quiet = true) }
+        }
         viewModelScope.launch {
             var first = true
             com.optionslab.app.data.KiteStream.orderEvents.collect { if (first) first = false else if (_settings.value.live) loadAccount(quiet = true) }

@@ -240,6 +240,7 @@ class NotificationActionReceiver : BroadcastReceiver() {
                     runCatching { com.optionslab.app.data.OrbArms.priceCheckOnly() }
                     runCatching { com.optionslab.app.data.Paper.tick() }
                     runCatching { PositionCards.refresh(context) }
+                    PositionCards.closedFromShade.value++
                 } finally { done.finish() }
             }
         }

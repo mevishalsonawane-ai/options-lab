@@ -64,6 +64,8 @@ object PositionCards {
      */
     fun card(context: Context, venue: String, symbol: String, qty: Int, avg: Double, ltp: Double?, pnl: Double,
              alert: Boolean = false, headline: String? = null, source: String? = null) {
+        // A position closed (squared off, stopped out, settled): its card is taken down, not left as a result.
+        if (qty == 0) { dismiss(context, venue, symbol); return }
         if (source != null) sources["$venue|$symbol"] = source
         if (!Notifier.canPost(context)) return
         val open = qty != 0
@@ -78,6 +80,16 @@ object PositionCards {
         if (open) b.addAction(closeAction(context, venue, symbol))
         try { NotificationManagerCompat.from(context).notify(idOf(venue, symbol), b.build()) } catch (_: SecurityException) {}
         if (open) shown["$venue|$symbol"] = true
+    }
+
+    /** Bumped when a position is closed from its card in the shade: the open app reloads its books at once. */
+    val closedFromShade = kotlinx.coroutines.flow.MutableStateFlow(0)
+
+    /** Take down [symbol]'s card on [venue] ("Paper" / "Live"): the position is closed. */
+    fun dismiss(context: Context, venue: String, symbol: String) {
+        val key = "$venue|$symbol"
+        shown.remove(key); sources.remove(key); sourceQty.remove(key)
+        runCatching { NotificationManagerCompat.from(context).cancel(idOf(venue, symbol)) }
     }
 
     @Volatile private var lastLive: Broker.Positions? = null

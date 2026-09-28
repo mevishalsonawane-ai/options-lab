@@ -1,5 +1,6 @@
 package com.optionslab.app.work
 
+import kotlinx.coroutines.launch
 import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -122,8 +123,16 @@ object Notifier {
         val line = "$qty $symbol @ ${String.format(java.util.Locale.ENGLISH, "%.2f", price)}"
         Alerts.post(line, Alerts.Kind.SUCCESS, headline)
         if (!canPost(context)) return
-        PositionCards.card(context, if (venue == "Paper") "Paper" else "Live", symbol, if (buy) qty else -qty, price, price, 0.0,
-            alert = true, headline = headline)
+        val card = if (venue == "Paper") "Paper" else "Live"
+        // A fill that squared the position off (an exit, a stop, a square-off) takes the card down instead.
+        if (venue == "Paper" && runCatching { com.optionslab.app.data.Paper.state.positions.filter { it.symbol == symbol }.sumOf { it.quantity } }.getOrNull() == 0) {
+            PositionCards.dismiss(context, card, symbol); return
+        }
+        PositionCards.card(context, card, symbol, if (buy) qty else -qty, price, price, 0.0, alert = true, headline = headline)
+        // Zerodha: read the book again shortly, so a fill that closed the position takes its card down.
+        if (venue != "Paper") kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO).launch {
+            kotlinx.coroutines.delay(2_000); runCatching { PositionCards.refresh(context) }
+        }
     }
 
     fun canPost(context: Context): Boolean =
