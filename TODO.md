@@ -47,7 +47,7 @@ Source paths prefixed `NTA:` are in D:\New Trading app.
 
 - [x] B1. (not applicable, owner 2026-09-28: only the Android app is used from now on; no laptop harvest) Re-point `tools/harvest_nightly.ps1` (hard-coded to `C:\Users\mevis\Downloads\files\options-lab`, Python310)
       and re-register in Task Scheduler; harvested bars stop at 2026-09-10 (missed sessions are lost for good).
-- [ ] B2. Release signing: run `android/tools/make-release-key.sh`, add the 4 GitHub secrets
+- [x] B2. (done 2026-09-28: CI signs with the owner's key; the build log prints the public fingerprint) Release signing: run `android/tools/make-release-key.sh`, add the 4 GitHub secrets
       (otherwise every update needs uninstall, which wipes the vault).
 - [ ] B3. Static IP for live orders (SEBI): VPS (Oracle Always Free works) or a home static IP + `android/tools/wg-relay-setup.sh`; then enter the IP in the app (More → Zerodha → Static IP) and check it shows ✓. The app now refuses new live positions from any other IP.
 - [ ] B4. Research milestones in `docs/design.md`: M1 in progress, M4-M9 open, M9 forward holdout ~Dec 2026;
