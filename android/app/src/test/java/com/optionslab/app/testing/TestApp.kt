@@ -1,0 +1,64 @@
+package com.optionslab.app.testing
+
+import android.app.Application
+import com.optionslab.app.data.Alarms
+import com.optionslab.app.data.Broker
+import com.optionslab.app.data.History
+import com.optionslab.app.data.Holidays
+import com.optionslab.app.data.Journal
+import com.optionslab.app.data.Ledger
+import com.optionslab.app.data.Market
+import com.optionslab.app.data.OrbArms
+import com.optionslab.app.data.Paper
+import com.optionslab.app.data.PineAuto
+import com.optionslab.app.data.Protections
+import com.optionslab.app.data.StaticIp
+import com.optionslab.app.data.Store
+import com.optionslab.app.data.Strategies
+import com.optionslab.app.data.TradeBook
+import com.optionslab.app.security.SecurePrefs
+
+/**
+ * The Application every Robolectric test runs in (set in robolectric.properties).
+ *
+ * Does what [com.optionslab.app.IraAlgoApp.onCreate] does to make the stores usable - every
+ * `init(context)` - and nothing else: no crash handler, no notification channels, no
+ * [com.optionslab.app.work.Jobs] (alarms / WorkManager), no process-lifecycle observer and
+ * no PineScripts background thread. [NetworkGuard] makes any attempt to reach the internet fail.
+ *
+ * Robolectric builds a new Application (with new, empty app directories) for every test, but
+ * the app's `object` singletons live on for the whole run; so each store's in-memory cache is
+ * dropped here too, and the fake Keystore is emptied - every test starts on a "fresh phone".
+ */
+class TestApp : Application() {
+    override fun onCreate() {
+        super.onCreate()
+        com.optionslab.app.ui.components.Splash.enabled = false
+        // Screen tests place paper orders at whatever hour CI runs; PaperMarketHoursTest turns this off.
+        Market.testOrdersAnyTime = true
+        IdleSampler.install()
+        NetworkGuard.install()
+        NetworkGuard.blocked.clear()
+        FakeAndroidKeyStore.install()
+        FakeAndroidKeyStore.reset()
+        SecurePrefs.init(this)
+        SecurePrefs.wipe()                 // clears the cache left by the previous test
+        Ledger.init(this)
+        Alarms.init(this)
+        Store.init(this)
+        Market.init(this)
+        Holidays.init(this)
+        Broker.init(this)
+        StaticIp.init(this)
+        Paper.init(this)
+        History.init(this)
+        Strategies.init(this)
+        OrbArms.init(this)
+        PineAuto.init(this)
+        Protections.init(this)
+        TradeBook.init(this)
+        Journal.init(this)
+        // Caches from an earlier test (the files behind them are already gone with its directories).
+        Paper.wipe(); Strategies.wipe(); OrbArms.wipe(); PineAuto.wipe(); Protections.wipe(); TradeBook.wipe(); Journal.wipe()
+    }
+}

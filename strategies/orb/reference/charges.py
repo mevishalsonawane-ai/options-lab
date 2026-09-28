@@ -66,8 +66,8 @@ def charge_for_fill(
     """Total statutory and brokerage cost of one executed leg, in rupees.
 
     Args:
-        symbol: OpenAlgo symbol, used to tell an option from a future.
-        exchange: OpenAlgo exchange code.
+        symbol: trading symbol, used to tell an option from a future.
+        exchange: exchange code (NFO, BFO, ...).
         product: ``MIS``, ``CNC`` or ``NRML``. Selects intraday or delivery on a
             cash venue, and is ignored on a derivatives venue.
         action: ``BUY`` or ``SELL``. Decides which single-sided charges apply.

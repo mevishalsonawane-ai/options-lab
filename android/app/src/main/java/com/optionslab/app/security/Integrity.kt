@@ -127,22 +127,51 @@ object Integrity {
         }
     }
 
-    fun report(context: Context): List<Finding> {
+    /** The parts of [report] that cannot change while the process runs: the installed APK, its assets, the device model. */
+    private class Static(val sandbox: Finding, val debuggable: Boolean, val recordOk: Boolean, val emulator: Boolean)
+
+    private fun static(context: Context) =
+        Static(sandbox(context), !BuildConfig.DEBUG && debuggableBuild(context), assetDigestOk(context), emulator())
+            .also { staticMemo = StaticMemo(context.applicationContext, android.os.SystemClock.elapsedRealtime(), it) }
+
+    /** The static findings plus the ones that can change at any moment (root, hooks, debugger, ADB), read now. */
+    private fun assemble(context: Context, st: Static): List<Finding> {
         val out = ArrayList<Finding>()
-        out += sandbox(context)
+        out += st.sandbox
         out += if (rooted()) Finding("Root", Severity.DANGER, "su binaries, Magisk or test-keys present")
         else Finding("Root", Severity.OK, "no root indicators found")
         out += if (hooked()) Finding("Hooking", Severity.DANGER, "an instrumentation framework is loaded or listening")
         else Finding("Hooking", Severity.OK, "no Frida/Xposed traces in this process")
         out += if (debuggerAttached()) Finding("Debugger", Severity.DANGER, "a debugger is attached to this process")
         else Finding("Debugger", Severity.OK, "none attached")
-        if (!BuildConfig.DEBUG && debuggableBuild(context)) out += Finding("Build", Severity.DANGER, "release build marked debuggable - repackaged?")
-        out += if (assetDigestOk(context)) Finding("Record", Severity.OK, "170-session chain file matches its build-time SHA-256")
+        if (st.debuggable) out += Finding("Build", Severity.DANGER, "release build marked debuggable - repackaged?")
+        out += if (st.recordOk) Finding("Record", Severity.OK, "170-session chain file matches its build-time SHA-256")
         else Finding("Record", Severity.DANGER, "bundled chains do not match their build-time hash")
-        if (emulator()) out += Finding("Device", Severity.NOTICE, "running on an emulator")
+        if (st.emulator) out += Finding("Device", Severity.NOTICE, "running on an emulator")
         val adb = runCatching { Settings.Global.getInt(context.contentResolver, Settings.Global.ADB_ENABLED, 0) == 1 }.getOrDefault(false)
         if (adb) out += Finding("USB debugging", Severity.NOTICE, "ADB is enabled; turn it off when not developing")
         return out
+    }
+
+    fun report(context: Context): List<Finding> = assemble(context, static(context))
+
+    /** The last static part, for the application (process) it was read in and when. */
+    private class StaticMemo(val app: Context, val at: Long, val st: Static)
+    @Volatile private var staticMemo: StaticMemo? = null
+
+    /** Compute the static part ahead of a send (when the order review opens), off the main thread. */
+    fun warmStatic(context: Context) { static(context) }
+
+    /**
+     * The check right before an order is sent. Root, hooks, a debugger and ADB are read fresh every time
+     * (they can appear at any moment); the APK's sandbox and the 10 MB asset hash - which cannot change
+     * while the app runs - are reused when computed within [staticMaxAgeMs] (the review computes them as
+     * it opens), so hashing 10 MB no longer sits between the owner's confirmation and the order.
+     */
+    fun reportForSend(context: Context, staticMaxAgeMs: Long = 60_000): List<Finding> {
+        val now = android.os.SystemClock.elapsedRealtime()
+        val st = staticMemo?.takeIf { it.app === context.applicationContext && now - it.at in 0..staticMaxAgeMs }?.st ?: static(context)
+        return assemble(context, st)
     }
 
     fun compromised(findings: List<Finding>): Boolean = findings.any { it.severity == Severity.DANGER }

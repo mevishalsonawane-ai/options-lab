@@ -40,6 +40,9 @@ object Heartbeat {
     /** Checks only make sense from a couple of minutes after the open to the close. */
     private fun inHours(): Boolean = Market.isTradingDay() && Market.minuteNow() in (Market.OPEN + 2) until Market.CLOSE
 
+    /** The same condition [Jobs] schedules the market watch on. */
+    private fun watched(): Boolean = Jobs.enabled(Jobs.Kind.LIVE, com.optionslab.app.data.AppSettings.load())
+
     fun stale(): Boolean = inHours() && System.currentTimeMillis() - last() > STALE_MS
 
     private fun intent(context: Context): PendingIntent = PendingIntent.getBroadcast(
@@ -52,7 +55,8 @@ object Heartbeat {
         val am = context.getSystemService(AlarmManager::class.java)
         val pi = intent(context)
         am.cancel(pi)
-        if (!com.optionslab.app.data.Broker.linked) return
+        // Armed whenever the watch is scheduled - paper bots run in it with no Zerodha account too.
+        if (!watched()) return
         val now = Market.now()
         val at = if (Market.isTradingDay() && Market.minuteNow() < Market.CLOSE && Market.minuteNow() >= Market.OPEN) {
             System.currentTimeMillis() + EVERY_MS
@@ -73,7 +77,7 @@ object Heartbeat {
     /** The alarm fired: re-arm, and if the watch is silent, restart it and say so once. */
     fun check(context: Context) {
         schedule(context)
-        if (!com.optionslab.app.data.Broker.linked || !stale()) return
+        if (!watched() || !stale()) return
         // An exact alarm may start the foreground service; this usually brings it straight back.
         runCatching { Jobs.ensureWatch(context) }
         val day = Market.today().toString()
@@ -81,7 +85,7 @@ object Heartbeat {
         SecurePrefs.putAll(mapOf(ALERTED to day, STALLED to day))
         val lastAt = java.time.Instant.ofEpochMilli(last()).atZone(Market.now().zone)
         val since = if (lastAt.toLocalDate() == Market.today()) lastAt.toLocalTime().withSecond(0).withNano(0).toString() else null
-        Notifier.post(context, NOTE_ID, Notifier.APPROVAL, "Market watch stopped",
+        Notifier.post(context, NOTE_ID, Notifier.APPROVAL, "Order watch stopped",
             (if (since != null) "No check since $since. " else "The watch has not run today. ") +
                 "Stops, targets and strategy exits are not being watched. Tap to open IraAlgo and restart it.", "almanac")
     }

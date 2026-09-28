@@ -1,7 +1,8 @@
 // IraAlgo's chart terminal inside the Android app: the PC app's IraAlgo Charts
 // widget (toolbar, drawing rail, 102 indicators, 51 drawing tools), fed by the
 // app through window.IraBridge. Nothing here talks to the network.
-import { createWidget } from './iraalgo-charts.widget.mjs';
+import { createWidget, WIDGET_DIALOGS } from './iraalgo-charts.widget.mjs';
+import { registerIndicator } from './iraalgo-charts.mjs';
 import './iraalgo-charts.indicators.mjs';
 import './iraalgo-charts.transform.mjs';
 import './iraalgo-charts.profile.mjs';
@@ -95,6 +96,58 @@ const exchange = q.get('exchange') || 'NSE';
 const theme = q.get('theme') === 'dark' ? 'dark' : 'light';
 document.body.classList.toggle('dark', theme === 'dark');
 
+// ---- the owner's Pine scripts (written in the app), as indicators ------------------------
+// Registered before the widget starts so a saved layout that shows one can restore it.
+const pineRuns = new Map();
+let pineList = [];
+function chartNow() {
+  try { return [widget.symbol(), widget.interval()]; } catch (e) { return [symbol, '5m']; }
+}
+function pineRegister() {
+  try { pineList = JSON.parse(bridge && bridge.pineList ? bridge.pineList() : '[]'); } catch (e) { pineList = []; }
+  for (const p of pineList) {
+    // Markers need a series to sit on: a script with none gets an invisible one.
+    const plots = p.plots.length ? p.plots : [{ key: '_m', title: 'Signals', color: '#00000000', style: 'hidden' }];
+    registerIndicator({
+      id: p.id, name: p.name, category: 'Pine', placement: p.overlay ? 'onchart' : 'pane',
+      inputs: [
+        ...p.inputs.map((i) => i.kind === 'bool' ? { key: i.key, type: 'boolean', label: i.label, default: !!i.default }
+          : i.kind === 'source' ? { key: i.key, type: 'source', label: i.label, default: i.default || 'close' }
+          : { key: i.key, type: 'number', label: i.label, default: Number(i.default) || 0,
+              ...(i.min != null ? { min: i.min } : {}), ...(i.max != null ? { max: i.max } : {}), step: i.kind === 'int' ? 1 : 0.1 }),
+        ...plots.map((pl) => ({ key: pl.key + 'Color', type: 'color', label: pl.title + ' colour', default: pl.color })),
+      ],
+      plots: plots.map((pl) => ({
+        key: pl.key, title: pl.title, colorKey: pl.key + 'Color',
+        type: pl.style === 'histogram' ? 'histogram' : pl.style === 'column' ? 'column' : 'line',
+        style: pl.style === 'points' ? { markersOnly: true, markerRadius: 1.5 } : { lineWidth: pl.style === 'hidden' ? 0 : pl.style === 'hline' ? 1 : 1.5 },
+      })),
+      calc: (bars, settings) => {
+        const ins = {};
+        for (const i of p.inputs) if (settings && settings[i.key] !== undefined) ins[i.key] = settings[i.key];
+        const [sym, iv] = chartNow();
+        let r = null;
+        try {
+          r = JSON.parse(bridge.pineCalc(p.id, sym, iv,
+            JSON.stringify(bars.map((b) => [b.time, b.open, b.high, b.low, b.close, b.volume ?? 0])), JSON.stringify(ins)));
+        } catch (e) { r = null; }
+        pineRuns.set(p.id, r);
+        const out = {};
+        for (const pl of plots) out[pl.key] = pl.key === '_m' ? bars.map((b) => b.close) : (r && r.values && r.values[pl.key]) || bars.map(() => null);
+        return out;
+      },
+      markers: ({ bars }) => {
+        const r = pineRuns.get(p.id);
+        if (!r || !r.markers) return [];
+        return r.markers.filter((m) => bars[m[0]]).map((m) => ({
+          time: bars[m[0]].time, position: m[1] ? 'aboveBar' : 'belowBar', shape: m[2], size: 'small', color: m[3], ...(m[4] ? { text: m[4] } : {}),
+        }));
+      },
+    });
+  }
+}
+pineRegister();
+
 const widget = createWidget('#t', {
   feed,
   symbol,
@@ -132,13 +185,64 @@ function placeAtNow() {
   // Intraday: at least 3 hours of candles (and never fewer than 40); daily and up: about 60 bars.
   const inView = step < 86400 ? Math.max(40, Math.ceil((3 * 3600) / step) + 4) : 60;
   widget.chart.setVisibleLogicalRange({ from: Math.max(0, n - inView), to: n + 3 });
+  // Fit the price axis to this symbol: a range kept from the previous symbol (or a saved
+  // layout) would leave e.g. NIFTY's candles far outside BANKNIFTY's 55,000s.
+  try { for (const pane of widget.chart.panes()) pane.priceScale.setAutoScale(true); } catch (err) { /* older build */ }
 }
+// Every new symbol or interval opens at the latest candle again.
+widget.on('symbol', () => placed.clear());
+widget.on('interval', () => placed.clear());
 widget.on('data', (e) => {
   if (!e || !e.bars) return;
   const key = `${e.symbol}|${e.interval}`;
   if (placed.has(key)) return;
   placed.add(key);
-  requestAnimationFrame(placeAtNow);
+  requestAnimationFrame(() => {
+    placeAtNow();
+    // Tell the app the chart actually drew, and at what size: a 0 x 0 or missing report
+    // means this phone's WebView cannot draw it, and the app shows its basic chart instead.
+    const el = document.getElementById('t');
+    const report = () => { try { bridge.painted && bridge.painted(el.clientWidth | 0, el.clientHeight | 0, e.bars | 0); } catch (err) { /* older app */ } };
+    report();
+    // Report again when the chart's size changes (it may start small and grow).
+    if (typeof ResizeObserver !== 'undefined' && !window.__iraSized) { window.__iraSized = true; new ResizeObserver(report).observe(el); }
+  });
+});
+
+// The app changed its Pine scripts: register them again and show the ones marked for the chart.
+window.__iraPine = () => {
+  pineRegister();
+  try {
+    for (const ind of widget.chart.indicators().slice()) if (String(ind.indicatorId).startsWith("pine-")) widget.chart.removeIndicator(ind.id);
+    for (const p of pineList) if (p.onChart) { try { widget.chart.addIndicator(p.id); } catch (e) { window.__iraPineErr = String(e && e.message || e); } }
+  } catch (e) { window.__iraPineErr = String(e && e.message || e); }
+};
+
+// Each symbol keeps its own indicators: switching saves the old symbol's set (with settings)
+// and brings back the new one's. A symbol with nothing saved keeps what is on screen.
+// Pine scripts are not part of it: "Show on the chart" in the app decides those.
+const PER_SYMBOL = 'ira.ind.';
+function builtinIndicators() {
+  return widget.chart.indicators().filter((i) => !String(i.indicatorId).startsWith('pine-'));
+}
+let symbolNow = widget.symbol();
+widget.on('symbol', () => {
+  try {
+    const next = widget.symbol();
+    if (next === symbolNow) return;
+    localStorage.setItem(PER_SYMBOL + symbolNow, JSON.stringify(builtinIndicators().map((i) => ({ id: i.indicatorId, s: i.settings() }))));
+    const saved = localStorage.getItem(PER_SYMBOL + next);
+    if (saved) {
+      for (const i of builtinIndicators()) widget.chart.removeIndicator(i.id);
+      for (const x of JSON.parse(saved)) { try { widget.chart.addIndicator(x.id, x.s || {}); } catch (e) { /* no longer available */ } }
+    }
+    symbolNow = next;
+  } catch (e) { /* storage unavailable: indicators simply stay */ }
+});
+
+// The gear after an indicator's name in the legend opens its settings (inputs and style).
+widget.chart.on('indicatorSettings', (e) => {
+  try { WIDGET_DIALOGS.indicatorSettings(widget.context, undefined, { instanceId: e && e.instanceId }); } catch (err) { /* older chart build */ }
 });
 
 // The app switches symbol (e.g. from the option chain) through this.

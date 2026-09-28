@@ -26,21 +26,52 @@ object Market {
 
     fun init(context: Context) { app = context.applicationContext }
 
-    fun now(): ZonedDateTime = ZonedDateTime.now(IST)
+    /**
+     * TEST SEAM (JVM tests only): a fixed or stepped wall clock for the market calendar. Its setter
+     * throws unless BuildConfig.DEBUG and no app code sets it; when null (always, in the app) [now]
+     * reads the system clock exactly as before.
+     */
+    @Volatile internal var testClock: java.time.Clock? = null
+        set(v) {
+            check(com.optionslab.app.BuildConfig.DEBUG) { "the test clock exists only in debug builds" }
+            field = v
+        }
+
+    fun now(): ZonedDateTime = testClock?.let { ZonedDateTime.now(it).withZoneSameInstant(IST) } ?: ZonedDateTime.now(IST)
     fun today(): LocalDate = now().toLocalDate()
     fun minuteNow(): Int = now().let { it.hour * 60 + it.minute }
 
     const val OPEN = 9 * 60 + 15
     const val CLOSE = 15 * 60 + 30
+    /** Minutes after the open that an empty intraday read still means "no candle yet", not a failure. */
+    private const val FIRST_CANDLE_GRACE = 2
 
     fun isWeekday(d: LocalDate = today()) = d.dayOfWeek != DayOfWeek.SATURDAY && d.dayOfWeek != DayOfWeek.SUNDAY
 
-    /** A weekday that is not an NSE trading holiday (see [Holidays]). */
-    fun isTradingDay(d: LocalDate = today()) = isWeekday(d) && !Holidays.isHoliday(d)
+    /** A weekday that is not an NSE trading holiday, or a special session NSE called (see [Holidays]). */
+    fun isTradingDay(d: LocalDate = today()) = Holidays.isExtraSession(d) || (isWeekday(d) && !Holidays.isHoliday(d))
     fun isOpen(): Boolean = isTradingDay() && minuteNow() in OPEN until CLOSE
 
+    /** What a hand order placed outside market hours is told (paper trades by the exchange's hours too). */
+    const val CLOSED_FOR_ORDERS = "Market is closed now: orders are taken 09:15-15:30 on trading days."
+
+    /**
+     * TEST SEAM (JVM tests only): the screen tests place paper orders at whatever hour CI runs, so they
+     * take orders at any time unless a test turns this off. Its setter throws in a release build.
+     */
+    @Volatile internal var testOrdersAnyTime: Boolean = false
+        set(v) {
+            check(com.optionslab.app.BuildConfig.DEBUG) { "the order-hours seam exists only in debug builds" }
+            field = v
+        }
+
+    /** Whether a hand order may be placed now: in market hours on a trading day. */
+    fun acceptsOrders(): Boolean = testOrdersAnyTime || isOpen()
+
     data class Quote(val symbol: String, val last: Double, val open: Double, val high: Double, val low: Double,
-                     val minute: Int, val spark: List<Double>) {
+                     val minute: Int, val spark: List<Double>,
+                     /** True when this is the last traded session's close, not today's price. */
+                     val lastSession: Boolean = false) {
         val change: Double get() = last - open
         val changePct: Double get() = if (open != 0.0) change / open else 0.0
     }
@@ -51,21 +82,32 @@ object Market {
      */
     fun liveMode(): Boolean = AppSettings.load().live
 
-    suspend fun quote(symbol: String): Quote? =
-        if (liveMode()) Broker.indexQuote(symbol) else upstoxQuote(symbol)
+    /** [quick]: short timeouts and no queueing behind chart loads, for the market watch (Upstox feed only). */
+    suspend fun quote(symbol: String, quick: Boolean = false): Quote? =
+        if (liveMode()) Broker.indexQuote(symbol) else upstoxQuote(symbol, quick)
 
-    private suspend fun upstoxQuote(symbol: String): Quote? {
+    private suspend fun upstoxQuote(symbol: String, quick: Boolean): Quote? {
         val key = Upstox.INDEX_KEYS.getValue(symbol)
-        var bars = runCatching { Net.intraday(key) }.getOrDefault(emptyList()).filter { it.istDate == today() }
-        // Weekend, holiday, before the open: the last session the market traded, not nothing.
-        if (bars.isEmpty()) {
-            val past = runCatching { ChartFeed.bars(symbol, "1m", null, null) }.getOrDefault(emptyList())
+        val read = runCatching { if (quick) Net.intradayQuick(key) else Net.intraday(key) }
+        read.exceptionOrNull()?.let { if (it is kotlinx.coroutines.CancellationException) throw it }
+        var bars = read.getOrDefault(emptyList()).filter { it.istDate == today() }
+        if (bars.isEmpty() && isOpen()) {
+            // In session a failed read is an error, never the last close passed off as the live price.
+            read.exceptionOrNull()?.let { throw it }
+            // An empty read is normal only before the first candle prints; later it means no data.
+            if (minuteNow() > OPEN + FIRST_CANDLE_GRACE) return null
+        }
+        // Weekend, holiday, after the close, the first minutes of a session: the last session the
+        // market traded (its close as the last price), not nothing.
+        val fallback = bars.isEmpty()
+        if (fallback) {
+            val past = runCatching { ChartFeed.bars(symbol, "1m", null, null, quick = quick) }.getOrDefault(emptyList())
             val day = past.lastOrNull()?.istDate
             bars = past.filter { it.istDate == day }
         }
         if (bars.isEmpty()) return null
         return Quote(symbol, bars.last().close, bars.first().open, bars.maxOf { it.high }, bars.minOf { it.low },
-            bars.last().istMinute, bars.map { it.close })
+            bars.last().istMinute, bars.map { it.close }, lastSession = fallback)
     }
 
     // ---- instrument master, cached per day ---------------------------------

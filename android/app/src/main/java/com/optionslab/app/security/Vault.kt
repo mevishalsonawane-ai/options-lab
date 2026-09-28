@@ -68,12 +68,29 @@ object Vault {
         return try { c.doFinal(blob, IV_BYTES, blob.size - IV_BYTES) } catch (_: javax.crypto.AEADBadTagException) { throw Tampered() }
     }
 
-    /** Atomic: an interrupted write can never leave a half-written vault file. */
+    /**
+     * Atomic and durable: the new file is synced before it is renamed over the old one, and the
+     * rename is synced too, so neither a crash nor a power cut leaves a half-written (or empty) vault file.
+     */
     fun writeFile(file: File, plain: ByteArray) {
         file.parentFile?.mkdirs()
+        val blob = encrypt(plain)   // before the file is opened: a Keystore failure leaves nothing half-written
         val tmp = File(file.parentFile, file.name + ".tmp")
-        tmp.writeBytes(encrypt(plain))
+        java.io.FileOutputStream(tmp).use { it.write(blob); it.fd.sync() }
         if (!tmp.renameTo(file)) { file.delete(); tmp.renameTo(file) }
+        syncDir(file.parentFile)
+    }
+
+    /**
+     * Sync a directory, so a rename into it survives a power cut. Best effort: a file system that
+     * cannot sync a directory still has the synced file under one of its two names.
+     */
+    fun syncDir(dir: File?) {
+        if (dir == null) return
+        runCatching {
+            val fd = android.system.Os.open(dir.path, android.system.OsConstants.O_RDONLY, 0)
+            try { android.system.Os.fsync(fd) } finally { android.system.Os.close(fd) }
+        }
     }
 
     fun readFile(file: File): ByteArray? = if (file.exists()) decrypt(file.readBytes()) else null

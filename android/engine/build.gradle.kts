@@ -1,5 +1,6 @@
 plugins {
     kotlin("jvm")
+    jacoco
 }
 
 kotlin {
@@ -17,7 +18,28 @@ tasks.test {
     systemProperty("olx.assets", rootProject.file("app/src/main/assets").absolutePath)
     maxHeapSize = "2g"
     testLogging { events("failed"); exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL }
+    finalizedBy(tasks.jacocoTestReport)
 }
+
+jacoco { toolVersion = "0.8.12" }
+
+// Line and branch coverage of the engine: build/reports/jacoco/test/html/index.html (and XML for CI).
+tasks.jacocoTestReport {
+    dependsOn(tasks.test)
+    reports { xml.required.set(true); html.required.set(true) }
+}
+
+// The floor CI enforces: coverage may rise, never fall below this.
+tasks.jacocoTestCoverageVerification {
+    dependsOn(tasks.test)
+    violationRules {
+        rule {
+            limit { counter = "LINE"; minimum = "0.98".toBigDecimal() }
+            limit { counter = "BRANCH"; minimum = "0.90".toBigDecimal() }
+        }
+    }
+}
+tasks.check { dependsOn(tasks.jacocoTestCoverageVerification) }
 
 java {
     sourceCompatibility = JavaVersion.VERSION_17

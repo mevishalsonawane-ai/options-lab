@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,8 +16,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.navigationBarsPadding
+import com.optionslab.app.ui.components.clearOfBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -33,6 +36,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
@@ -67,8 +73,9 @@ data class ChainPick(
  * places a paper order; in LIVE mode it opens the usual review (margin
  * check, hold to send, PIN or fingerprint) - nothing is sent from here.
  */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
-fun OptionOrderSheet(model: AppModel, pick: ChainPick, initialBuy: Boolean = true, initialLimit: Double? = null, onClose: () -> Unit) {
+fun OptionOrderSheet(model: AppModel, pick: ChainPick, initialBuy: Boolean = true, initialLimit: Double? = null, area: String = "Option chart", onClose: () -> Unit) {
     val p = LocalPalette.current
     val s by model.settings.collectAsState()
     var buy by remember { mutableStateOf(initialBuy) }
@@ -84,25 +91,61 @@ fun OptionOrderSheet(model: AppModel, pick: ChainPick, initialBuy: Boolean = tru
     val side = if (buy) p.verdigris else p.oxblood
     val qty = lots * pick.lotSize
     val px = if (limit) price.toDoubleOrNull() else pick.ltp
+    // One tap, one order: a second tap delivered before the sheet recomposes away places nothing.
+    var placing by remember { mutableStateOf(false) }
     val title = "${pick.underlying} ${pick.expiry.format(DateTimeFormatter.ofPattern("d MMM", Locale.ENGLISH)).uppercase()} ${fmtG(pick.strike)} ${pick.right.name}"
 
-    Dialog(onDismissRequest = onClose, properties = DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy, usePlatformDefaultWidth = false)) {
-        Box(Modifier.fillMaxSize().clickable(onClick = onClose), contentAlignment = Alignment.BottomCenter) {
+    // The bars' height is measured here, on the screen, as well: some phones tell the dialog window nothing (the
+    // sheet's button then sat under the gesture bar). clearOfBars keeps clear by the larger of the two.
+    val sysBars = com.optionslab.app.ui.components.outerBars()
+    Dialog(onDismissRequest = onClose, properties = DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy, usePlatformDefaultWidth = false,
+        decorFitsSystemWindows = false)) {
+        // Dragged by its handle: up opens it taller, down folds it back, and a long pull down closes it.
+        var expanded by remember { mutableStateOf(false) }
+        var drag by remember { androidx.compose.runtime.mutableFloatStateOf(0f) }
+        val density = androidx.compose.ui.platform.LocalDensity.current
+        val screenH = LocalConfiguration.current.screenHeightDp
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
+            // The backdrop closes the sheet: a sibling behind it (not its parent), so the sheet's texts do not
+            // merge into this one "Close" button for TalkBack, and a double tap on them does not close it.
+            Box(Modifier.matchParentSize().semantics { contentDescription = "Close" }.clickable(role = Role.Button, onClick = onClose))
             Column(
                 Modifier.fillMaxWidth()
+                    .offset { androidx.compose.ui.unit.IntOffset(0, drag.coerceAtLeast(0f).toInt()) }
                     .background(p.card, RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp))
                     .border(1.dp, p.rule, RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp))
                     // Taps inside the sheet must not reach the backdrop, which closes it.
                     .pointerInput(Unit) { detectTapGestures { } }
-                    .navigationBarsPadding()
+                    .clearOfBars(sysBars, top = false)
                     .imePadding()
-                    .heightIn(max = (LocalConfiguration.current.screenHeightDp * 0.92f).dp)
-                    .padding(horizontal = 20.dp, vertical = 14.dp),
+                    .heightIn(max = (screenH * (if (expanded) 0.92f else 0.72f)).dp)
+                    .padding(start = 20.dp, end = 20.dp, bottom = 14.dp),
             ) {
+              // The handle: a full-width strip that takes the drag (and a tap, which opens or folds the sheet).
+              Box(
+                  Modifier.fillMaxWidth().height(26.dp)
+                      .semantics { contentDescription = if (expanded) "Fold the order panel" else "Open the order panel fully" }
+                      .clickable(role = Role.Button) { expanded = !expanded }
+                      .pointerInput(Unit) {
+                          detectVerticalDragGestures(
+                              onDragEnd = {
+                                  val dp = drag / density.density
+                                  when {
+                                      dp > 120f -> onClose()
+                                      dp > 40f && expanded -> expanded = false
+                                      dp < -40f -> expanded = true
+                                  }
+                                  drag = 0f
+                              },
+                              onDragCancel = { drag = 0f },
+                          ) { change, dy -> change.consume(); drag += dy }
+                      },
+                  contentAlignment = Alignment.Center,
+              ) {
+                  Box(Modifier.size(width = 36.dp, height = 4.dp).background(p.rule, CircleShape))
+              }
               // The choices scroll; the order button below them is always on screen.
               Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState())) {
-                Box(Modifier.align(Alignment.CenterHorizontally).size(width = 36.dp, height = 4.dp).background(p.rule, CircleShape))
-                Spacer(Modifier.height(10.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
                         Text(title, style = Type.title.copy(color = p.ink, fontSize = 17.sp))
@@ -119,10 +162,12 @@ fun OptionOrderSheet(model: AppModel, pick: ChainPick, initialBuy: Boolean = tru
                 Row(Modifier.fillMaxWidth().background(p.chip, RoundedCornerShape(50)).padding(3.dp)) {
                     listOf(true to "BUY", false to "SELL").forEach { (isBuy, label) ->
                         val sel = buy == isBuy
-                        Text(label, textAlign = TextAlign.Center,
-                            style = Type.label.copy(color = if (sel) Color.White else p.inkSoft, fontSize = 14.sp, fontWeight = FontWeight.Bold),
-                            modifier = Modifier.weight(1f).background(if (sel) (if (isBuy) p.verdigris else p.oxblood) else Color.Transparent, RoundedCornerShape(50))
-                                .clickable { buy = isBuy }.padding(vertical = 10.dp))
+                        // 48 dp high (it was 37): the label centred in it.
+                        Box(Modifier.weight(1f).heightIn(min = 48.dp).background(if (sel) (if (isBuy) p.verdigris else p.oxblood) else Color.Transparent, RoundedCornerShape(50))
+                            .clickable { buy = isBuy }.padding(vertical = 6.dp), contentAlignment = Alignment.Center) {
+                            Text(label, textAlign = TextAlign.Center,
+                                style = Type.label.copy(color = if (sel) Color.White else p.inkSoft, fontSize = 14.sp, fontWeight = FontWeight.Bold))
+                        }
                     }
                 }
                 Spacer(Modifier.height(12.dp))
@@ -133,11 +178,12 @@ fun OptionOrderSheet(model: AppModel, pick: ChainPick, initialBuy: Boolean = tru
                         Text("$qty qty", style = Type.bodySmall.copy(color = p.inkFaint))
                     }
                     Stepper("−") { if (lots > 1) lots-- }
-                    Text("$lots", style = Type.figureLarge.copy(color = p.ink, fontSize = 22.sp), textAlign = TextAlign.Center, modifier = Modifier.size(width = 56.dp, height = 32.dp))
+                    Text("$lots", style = Type.figureLarge.copy(color = p.ink, fontSize = 22.sp), textAlign = TextAlign.Center, modifier = Modifier.widthIn(min = 56.dp).heightIn(min = 32.dp))
                     Stepper("+") { if (lots < 50) lots++ }
                 }
                 Spacer(Modifier.height(14.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                // The product moves to a line of its own when a large font leaves no room (MIS was squeezed to nothing).
+                androidx.compose.foundation.layout.FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     Token("Market", !limit) { limit = false }
                     Token("Limit", limit) { limit = true }
                     Spacer(Modifier.weight(1f))
@@ -154,7 +200,7 @@ fun OptionOrderSheet(model: AppModel, pick: ChainPick, initialBuy: Boolean = tru
                     PriceField(bStop, { bStop = it }, "Stop price")
                     PriceField(bTrail, { bTrail = it }, "…or trail by (points)")
                     PriceField(bTarget, { bTarget = it }, "Target price")
-                    Note("Set on the position once this order fills: the stop as an SL-M exit, the target as a LIMIT exit; one cancels the other. A trailing stop only tightens.")
+                    Note("Set on the position once this order fills: the stop as a stop-loss exit (SL with a limit at Zerodha), the target as a LIMIT exit; one cancels the other. A trailing stop only tightens.")
                 }
                 Spacer(Modifier.height(12.dp))
                 Row {
@@ -171,14 +217,16 @@ fun OptionOrderSheet(model: AppModel, pick: ChainPick, initialBuy: Boolean = tru
                 if (s.live) {
                     BrassButton("Review ${if (buy) "buy" else "sell"} order", Modifier.fillMaxWidth(), enabled = ok, tone = side) {
                         model.planManual(pick.underlying, pick.expiry, pick.strike, pick.right,
-                            if (buy) com.optionslab.engine.Kite.Side.BUY else com.optionslab.engine.Kite.Side.SELL, lots, product, if (limit) price.toDoubleOrNull() else null, protect)
+                            if (buy) com.optionslab.engine.Kite.Side.BUY else com.optionslab.engine.Kite.Side.SELL, lots, product, if (limit) price.toDoubleOrNull() else null, protect, area)
                         onClose()
                     }
                     Note("Live: Zerodha. The order opens for review; it is sent only after you hold the button and confirm with your PIN or fingerprint.")
                 } else {
-                    BrassButton("${if (buy) "Buy" else "Sell"} (paper)", Modifier.fillMaxWidth(), enabled = ok, tone = side) {
+                    BrassButton("${if (buy) "Buy" else "Sell"} (paper)", Modifier.fillMaxWidth(), enabled = ok, busy = placing, tone = side) {
+                        if (placing) return@BrassButton
+                        placing = true
                         model.paperPlace(pick.underlying, pick.expiry, pick.strike, pick.right, if (buy) "BUY" else "SELL", lots,
-                            if (limit) "LIMIT" else "MARKET", product, if (limit) price.toDoubleOrNull() else null, null, protect)
+                            if (limit) "LIMIT" else "MARKET", product, if (limit) price.toDoubleOrNull() else null, null, protect, area)
                         onClose()
                     }
                     Note("Paper: simulated in your paper account. Nothing reaches Zerodha.")

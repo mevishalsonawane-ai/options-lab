@@ -7,7 +7,10 @@ import com.optionslab.engine.Kite
 import com.optionslab.engine.Right
 import com.optionslab.engine.Series
 import com.optionslab.engine.Upstox
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -121,12 +124,39 @@ object Broker {
 
     // ---- HTTP ---------------------------------------------------------------------
 
+    /**
+     * TEST SEAM (JVM tests only): send [call]'s requests to a local fake Kite server instead of
+     * api.kite.trade, trusting that server's test certificate instead of the pinned Zerodha chain,
+     * and without the static-IP relay. Null - always, in the app - means Zerodha itself.
+     *
+     * It cannot be switched on in a release build: the setter throws unless BuildConfig.DEBUG, and
+     * nothing in the app calls it (only src/test does). Every other line of [call] - headers, auth,
+     * retries, error mapping - runs unchanged against the fake.
+     */
+    internal class TestEndpoint(val base: String, val ssl: javax.net.ssl.SSLSocketFactory)
+    @Volatile internal var testEndpoint: TestEndpoint? = null
+        set(v) {
+            check(com.optionslab.app.BuildConfig.DEBUG) { "the test endpoint exists only in debug builds" }
+            field = v
+        }
+
     private suspend fun call(method: String, path: String, body: String? = null, auth: Boolean = true, raw: Boolean = false,
-                             json: Boolean = false): Any {
+                             json: Boolean = false, viaRelay: Boolean = false): Any {
         var attempt = 0
         while (true) {
-            val c = URL(Kite.API + path).openConnection() as HttpsURLConnection
-            c.sslSocketFactory = com.optionslab.app.security.KitePin.socketFactory
+            // Orders and every other write go through the static-IP relay when it is on (it throws if it
+            // cannot connect, so nothing leaves from another IP); reads go direct ([viaRelay]: a read that
+            // warms the order route).
+            val test = testEndpoint
+            val relay = if ((method != "GET" || viaRelay) && test == null) Relay.proxy() else null
+            val url = URL((test?.base ?: Kite.API) + path)
+            val c = (if (relay != null) url.openConnection(relay) else url.openConnection()) as HttpsURLConnection
+            c.sslSocketFactory = test?.ssl ?: com.optionslab.app.security.KitePin.socketFactory
+            // Speed: a reply read to its end leaves its connection (TCP + TLS, and through the relay its SSH
+            // channel) in the HTTP stack's pool, so the next call - the order itself - skips the handshakes.
+            // Any failure closes it. A POST is never re-sent on a pooled connection: its body is streamed at
+            // a fixed length (below), which the stack cannot replay, and a non-GET gets a health check first.
+            var reusable = false
             try {
                 c.requestMethod = method
                 c.connectTimeout = 20_000
@@ -139,12 +169,17 @@ object Broker {
                 if (body != null) {
                     c.doOutput = true
                     c.setRequestProperty("Content-Type", if (json) "application/json" else "application/x-www-form-urlencoded")
-                    c.outputStream.use { it.write(body.toByteArray()) }
+                    // Streamed at a fixed length, the body cannot be replayed: neither the JVM's nor Android's
+                    // connection code may then silently re-send an order when a reply is lost (a second order).
+                    val bytes = body.toByteArray()
+                    c.setFixedLengthStreamingMode(bytes.size)
+                    c.outputStream.use { it.write(bytes) }
                 }
                 val code = c.responseCode
                 if (code == 429 && attempt < 3) { attempt++; delay(1_000L * attempt); continue }
                 val stream = if (code in 200..299) c.inputStream else c.errorStream
                 val text = stream?.use { it.readBytes().toString(Charsets.UTF_8) } ?: ""
+                reusable = true
                 if (raw && code in 200..299) return text
                 val json = runCatching { JSONObject(text) }.getOrNull() ?: throw IOException("Zerodha returned an unreadable reply ($code)")
                 if (json.optString("status") != "success") {
@@ -170,9 +205,28 @@ object Broker {
                         "check api.kite.trade in a browser, then re-trust it under More → Security.")
                 throw IOException("Could not reach Zerodha")
             } finally {
-                c.disconnect()
+                if (!reusable) c.disconnect()
             }
         }
+    }
+
+    @Volatile private var warmedAt = 0L
+    private val warmScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
+
+    /**
+     * Get the order route ready while the owner is still reviewing (or, for the bots, during market hours):
+     * the relay's SSH session and a pooled TLS connection to Zerodha through it, and the static-IP reading
+     * an entry is checked against. Only removes waiting: every check at send still runs. Returns at once
+     * (the work runs in the background), never throws, and does something at most every 20 s.
+     */
+    fun warmOrderRoute(entry: Boolean = true) {
+        val now = System.currentTimeMillis()
+        if (now - warmedAt < 20_000) return
+        warmedAt = now
+        if (testEndpoint != null) return            // JVM tests: the fake Kite needs no warming, and nothing may reach the internet
+        if (entry && StaticIp.registered != null) warmScope.launch { runCatching { StaticIp.current(maxAgeMs = 30_000) } }
+        // Without the relay, the review's own reads have already pooled the connection the order uses.
+        if (Relay.enabled && loggedIn) warmScope.launch { runCatching { call("GET", "/user/profile", viaRelay = true) } }
     }
 
     // ---- login --------------------------------------------------------------------
@@ -184,7 +238,12 @@ object Broker {
      * A secret saved before sealing existed is sealed now and the readable copy removed.
      */
     fun unsealSecret(pin: CharArray): String? {
-        SecurePrefs.getString(K_SEALED)?.let { return com.optionslab.app.security.SecretBox.open(it, pin) }
+        SecurePrefs.getString(K_SEALED)?.let { blob ->
+            val secret = com.optionslab.app.security.SecretBox.open(blob, pin) ?: return null
+            // An older (v1) seal is re-sealed in the device-bound format now that the PIN has opened it.
+            runCatching { com.optionslab.app.security.SecretBox.upgrade(blob, pin, secret)?.let { SecurePrefs.put(K_SEALED, it) } }
+            return secret
+        }
         val legacy = SecurePrefs.getString(K_SECRET) ?: return null
         SecurePrefs.putAll(mapOf(K_SEALED to com.optionslab.app.security.SecretBox.seal(legacy, pin), K_SECRET to null))
         return legacy
@@ -313,7 +372,8 @@ object Broker {
     // ---- market data ----------------------------------------------------------------
 
     private val INDEX = mapOf("NIFTY" to ("NSE:NIFTY 50" to 256265L), "BANKNIFTY" to ("NSE:NIFTY BANK" to 260105L),
-        "INDIAVIX" to ("NSE:INDIA VIX" to 264969L))
+        "INDIAVIX" to ("NSE:INDIA VIX" to 264969L), "FINNIFTY" to ("NSE:NIFTY FIN SERVICE" to 257801L),
+        "MIDCPNIFTY" to ("NSE:NIFTY MID SELECT" to 288009L), "SENSEX" to ("BSE:SENSEX" to 265L))
 
     data class Quote(val last: Double, val bid: Double?, val ask: Double?, val open: Double, val oi: Long = 0, val volume: Long = 0)
 
@@ -409,33 +469,39 @@ object Broker {
 
     // ---- instruments ---------------------------------------------------------------------
 
-    /** The last instruments list fetched (any day), without touching the network. */
-    fun cachedInstruments(): List<Kite.Instrument>? = runCatching {
-        val a = JSONObject(File(app.filesDir, "kite_instruments.json").readText()).getJSONArray("i")
-        (0 until a.length()).map { a.getJSONArray(it) }.map {
-            Kite.Instrument(it.getLong(0), it.getString(1), it.getString(2), LocalDate.parse(it.getString(3)), it.getDouble(4),
-                it.getInt(5), if (it.getString(6) == "CE") Right.CE else Right.PE, it.getDouble(7))
-        }
-    }.getOrNull()
+    /** The parsed list, the day it was fetched and the file stamp (modified time, length) it was parsed from. */
+    private class InstrumentsMemo(val stamp: Pair<Long, Long>, val day: String, val list: List<Kite.Instrument>)
+    @Volatile private var instrumentsMemo: InstrumentsMemo? = null
+
+    /** The instruments file, parsed once per change of the file (it is large: parsing it on every review cost a few hundred ms). */
+    private fun instrumentsFile(): InstrumentsMemo? {
+        val f = File(app.filesDir, "kite_instruments.json")
+        val stamp = f.lastModified() to f.length()
+        instrumentsMemo?.let { if (it.stamp == stamp && stamp.first != 0L) return it }
+        return runCatching {
+            val o = JSONObject(f.readText())
+            val a = o.getJSONArray("i")
+            val list = (0 until a.length()).map { a.getJSONArray(it) }.map {
+                Kite.Instrument(it.getLong(0), it.getString(1), it.getString(2), LocalDate.parse(it.getString(3)), it.getDouble(4),
+                    it.getInt(5), if (it.getString(6) == "CE") Right.CE else Right.PE, it.getDouble(7))
+            }
+            InstrumentsMemo(stamp, o.optString("day"), list).also { instrumentsMemo = it }
+        }.getOrNull()
+    }
+
+    /** The last instruments list fetched (any day), without touching the network; parsed again only when the file changes. */
+    fun cachedInstruments(): List<Kite.Instrument>? = instrumentsFile()?.list
 
     /** NIFTY and BANKNIFTY options from GET /instruments/NFO, cached for the day. */
     suspend fun instruments(): List<Kite.Instrument> {
         val f = File(app.filesDir, "kite_instruments.json")
-        runCatching {
-            val o = JSONObject(f.readText())
-            if (o.getString("day") == Market.today().toString()) {
-                val a = o.getJSONArray("i")
-                return (0 until a.length()).map { a.getJSONArray(it) }.map {
-                    Kite.Instrument(it.getLong(0), it.getString(1), it.getString(2), LocalDate.parse(it.getString(3)), it.getDouble(4),
-                        it.getInt(5), if (it.getString(6) == "CE") Right.CE else Right.PE, it.getDouble(7))
-                }
-            }
-        }
+        instrumentsFile()?.takeIf { it.day == Market.today().toString() }?.let { return it.list }
         val text = call("GET", "/instruments/NFO", raw = true) as String
-        val list = Kite.parseInstruments(text.lineSequence(), setOf("NIFTY", "BANKNIFTY"))
+        val list = Kite.parseInstruments(text.lineSequence(), setOf("NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY"))
         val a = JSONArray()
         list.forEach { a.put(JSONArray().put(it.token).put(it.tradingSymbol).put(it.name).put(it.expiry.toString()).put(it.strike).put(it.lotSize).put(it.right.name).put(it.tickSize)) }
         f.writeText(JSONObject().put("day", Market.today().toString()).put("i", a).toString())
+        instrumentsMemo = InstrumentsMemo(f.lastModified() to f.length(), Market.today().toString(), list)
         return list
     }
 
@@ -501,7 +567,11 @@ object Broker {
 
     fun sentToday(): Int = if (SecurePrefs.getString(K_SENT_DAY) == Market.today().toString()) SecurePrefs.getInt(K_SENT, 0) else 0
 
-    @Synchronized private fun countSent() = SecurePrefs.putAll(mapOf(K_SENT_DAY to Market.today().toString(), K_SENT to sentToday() + 1))
+    /**
+     * Counted in memory at once (the daily cap reads it from there), written to the vault in the background:
+     * the Keystore encryption and two disk syncs no longer sit between Zerodha's answer and the fill check.
+     */
+    @Synchronized private fun countSent() = SecurePrefs.putAllSoon(mapOf(K_SENT_DAY to Market.today().toString(), K_SENT to sentToday() + 1))
 
     data class Fill(val orderId: String, val status: String, val avgPrice: Double, val filled: Int, val message: String)
 
@@ -514,19 +584,36 @@ object Broker {
         return data.getString("order_id")
     }
 
-    /** Poll an order until it is terminal or [timeoutMs] passes. */
+    /**
+     * Waits between reads of an order's state: most options orders fill within a few hundred ms, so the
+     * first second is read closely, then it backs off to Kite's pace (about 5 reads in the first second,
+     * well inside its 10-a-second limit).
+     */
+    internal val POLL_MS = longArrayOf(150, 200, 250, 300, 400, 500, 750, 1_000)
+
+    /**
+     * Read an order until it is terminal or [timeoutMs] passes. The order's state always comes from Kite's
+     * REST order history; an order update pushed on the live stream only wakes the next read early.
+     */
     suspend fun awaitOrder(orderId: String, timeoutMs: Long = 20_000): Fill {
         val end = System.currentTimeMillis() + timeoutMs
         var last: JSONObject? = null
-        while (System.currentTimeMillis() < end) {
+        var i = 0
+        while (true) {
+            val seen = KiteStream.orderEvents.value
             val hist = call("GET", "/orders/$orderId") as JSONArray
             if (hist.length() > 0) last = hist.getJSONObject(hist.length() - 1)
             val st = last?.optString("status") ?: ""
             if (st in setOf("COMPLETE", "REJECTED", "CANCELLED")) break
-            delay(1_000)
+            val left = end - System.currentTimeMillis()
+            if (left <= 0) break
+            val wait = POLL_MS[minOf(i++, POLL_MS.size - 1)].coerceAtMost(left)
+            kotlinx.coroutines.withTimeoutOrNull(wait) { KiteStream.orderEvents.first { it != seen } }
         }
         val o = last ?: return Fill(orderId, "UNKNOWN", 0.0, 0, "no order history yet")
-        return Fill(orderId, o.optString("status"), o.optDouble("average_price", 0.0), o.optInt("filled_quantity"), o.optString("status_message", ""))
+        return Fill(orderId, o.optString("status"), o.optDouble("average_price", 0.0), o.optInt("filled_quantity"),
+            // Kite sends "status_message": null for an open order, which optString reads as the text "null".
+            o.optString("status_message", "").let { if (it == "null") "" else it })
     }
 
     /**
@@ -535,15 +622,62 @@ object Broker {
      * placed in the last three minutes, and not one of [known].
      */
     suspend fun findRecent(o: Kite.Order, known: Collection<String>): String? {
-        val since = java.time.LocalDateTime.now(IST).minusMinutes(3)
         val fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
-        val arr = call("GET", "/orders") as JSONArray
-        return rows(arr).lastOrNull {
+        val rs = rows(call("GET", "/orders") as JSONArray)
+        fun at(r: JSONObject) = runCatching { java.time.LocalDateTime.parse(r.optString("order_timestamp"), fmt) }.getOrNull()
+        // "Now" by Kite's own clock when the book has a later order than the phone's clock says (a phone running
+        // slow would otherwise widen the window); never earlier than the phone's.
+        val now = rs.mapNotNull(::at).fold(java.time.LocalDateTime.now(IST)) { a, t -> if (t.isAfter(a)) t else a }
+        val since = now.minusMinutes(3)
+        return rs.lastOrNull {
             it.optString("tradingsymbol") == o.tradingSymbol && it.optString("transaction_type") == o.side.name &&
                 it.optInt("quantity") == o.quantity && it.optString("tag") == o.tag.filter { c -> c.isLetterOrDigit() }.take(20) &&
-                it.optString("order_id") !in known &&
-                runCatching { !java.time.LocalDateTime.parse(it.optString("order_timestamp"), fmt).isBefore(since) }.getOrDefault(false)
+                it.optString("order_id") !in known && at(it)?.isBefore(since) == false
         }?.optString("order_id")?.also { countSent() }
+    }
+
+    /**
+     * True when [e] from [placeOrder] means the order was certainly NOT placed: Zerodha answered with a
+     * refusal, or nothing was sent (not logged in). A lost reply (timeout, dropped connection, an
+     * unreadable answer, Kite's own NetworkException) is not definite: the order may exist.
+     */
+    fun definite(e: Throwable): Boolean = e is NotLoggedIn || (e is KiteError && e.type != "NetworkException")
+
+    /**
+     * [findRecent] for a POST whose reply was lost, tried [tries] times [waitMs] apart (the order book can
+     * trail the POST by a moment). The order id; null when the book was read and holds no such order;
+     * throws when the book could not be read at all, so the caller knows the order's fate is unknown.
+     */
+    suspend fun findRecentRetrying(o: Kite.Order, known: Collection<String>, tries: Int = 3, waitMs: Long = 2_000): String? {
+        var read = false
+        var err: Exception? = null
+        for (i in 0 until tries) {
+            if (i > 0) delay(waitMs)
+            try {
+                findRecent(o, known)?.let { return it }
+                read = true
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                err = e
+            }
+        }
+        if (!read) throw err ?: IOException("Zerodha's order book could not be read")
+        return null
+    }
+
+    /**
+     * The newest of today's orders on [symbol] with [side] and [tag], placed at or after [since] (IST, Kite's
+     * timestamp, with two minutes' allowance for the phone's clock) and not in [exclude]: an entry whose order
+     * id was lost, found again.
+     */
+    suspend fun latestTagged(symbol: String, side: String, tag: String, since: java.time.LocalDateTime, exclude: Collection<String>): OrderRow? {
+        val fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+        val from = since.minusMinutes(2)
+        return orders().firstOrNull {
+            it.symbol == symbol && it.side == side && it.tag == tag && it.id !in exclude &&
+                runCatching { !java.time.LocalDateTime.parse(it.placedAt, fmt).isBefore(from) }.getOrDefault(false)
+        }
     }
 
     // ---- GTT ------------------------------------------------------------------------------
@@ -570,12 +704,26 @@ object Broker {
     }
 
     /** POST /margins/basket, counting open positions (so a hedge's benefit is included). */
-    suspend fun basketMargin(orders: List<Kite.Order>): Margin {
+    suspend fun basketMargin(orders: List<Kite.Order>): Margin = kotlinx.coroutines.coroutineScope {
+        // The free margin is read alongside the basket, not after it.
+        val free = async { funds() }
         val d = call("POST", "/margins/basket?consider_positions=true", Kite.basketJson(orders), json = true) as JSONObject
         val fin = d.optJSONObject("final")?.optDouble("total", Double.NaN) ?: Double.NaN
         val init = d.optJSONObject("initial")?.optDouble("total", Double.NaN) ?: Double.NaN
         val charges = rows(d.optJSONArray("orders")).sumOf { it.optJSONObject("charges")?.optDouble("total", 0.0) ?: 0.0 }
-        return Margin(if (fin.isNaN()) init else fin, init, funds().net, charges)
+        Margin(if (fin.isNaN()) init else fin, init, free.await().net, charges)
+    }
+
+    /**
+     * The account as the guard judges it - positions, funds, today's order count - read in parallel (one
+     * round trip instead of three). Null when the positions cannot be read; funds and orders are optional,
+     * exactly as the sequential reads were.
+     */
+    suspend fun accountNow(): com.optionslab.engine.risk.AccountGuard.Account? = kotlinx.coroutines.coroutineScope {
+        val bookQ = async { runCatching { positionBook() }.getOrNull() }
+        val fundsQ = async { runCatching { funds() }.getOrNull() }
+        val countQ = async { runCatching { orders().size }.getOrDefault(0) }
+        bookQ.await()?.let { runCatching { Guard.liveAccount(it, fundsQ.await(), countQ.await()) }.getOrNull() }
     }
 
     /** One order's latest state (last entry of its history), or null if Kite has none yet. */
@@ -583,7 +731,9 @@ object Broker {
         val hist = call("GET", "/orders/${Kite.enc(orderId)}") as JSONArray
         if (hist.length() == 0) return null
         val o = hist.getJSONObject(hist.length() - 1)
-        return Fill(orderId, o.optString("status"), o.optDouble("average_price", 0.0), o.optInt("filled_quantity"), o.optString("status_message", ""))
+        return Fill(orderId, o.optString("status"), o.optDouble("average_price", 0.0), o.optInt("filled_quantity"),
+            // Kite sends "status_message": null for an open order, which optString reads as the text "null".
+            o.optString("status_message", "").let { if (it == "null") "" else it })
     }
 
     suspend fun cancel(orderId: String, variety: String = "regular") {

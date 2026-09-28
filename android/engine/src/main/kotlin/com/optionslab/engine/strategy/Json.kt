@@ -121,18 +121,19 @@ object Json {
             val m = LinkedHashMap<String, Any?>()
             i++
             ws()
-            if (s[i] == '}') { i++; return m }
+            // getOrNull throughout: truncated input is a ParseError, never an index exception.
+            if (s.getOrNull(i) == '}') { i++; return m }
             while (true) {
                 ws()
-                if (s[i] != '"') throw ParseError("expected key at $i")
+                if (s.getOrNull(i) != '"') throw ParseError("expected key at $i")
                 val k = str()
                 ws()
-                if (s[i] != ':') throw ParseError("expected ':' at $i")
+                if (s.getOrNull(i) != ':') throw ParseError("expected ':' at $i")
                 i++
                 ws()
                 m[k] = value()
                 ws()
-                when (s[i]) {
+                when (s.getOrNull(i)) {
                     ',' -> i++
                     '}' -> { i++; return m }
                     else -> throw ParseError("expected ',' or '}' at $i")
@@ -144,12 +145,12 @@ object Json {
             val l = ArrayList<Any?>()
             i++
             ws()
-            if (s[i] == ']') { i++; return l }
+            if (s.getOrNull(i) == ']') { i++; return l }
             while (true) {
                 ws()
                 l.add(value())
                 ws()
-                when (s[i]) {
+                when (s.getOrNull(i)) {
                     ',' -> i++
                     ']' -> { i++; return l }
                     else -> throw ParseError("expected ',' or ']' at $i")
@@ -166,7 +167,7 @@ object Json {
                 when (c) {
                     '"' -> return b.toString()
                     '\\' -> {
-                        when (val e = s[i++]) {
+                        when (val e = s.getOrNull(i++) ?: throw ParseError("unterminated escape")) {
                             '"' -> b.append('"')
                             '\\' -> b.append('\\')
                             '/' -> b.append('/')
@@ -175,7 +176,10 @@ object Json {
                             'n' -> b.append('\n')
                             'r' -> b.append('\r')
                             't' -> b.append('\t')
-                            'u' -> { b.append(s.substring(i, i + 4).toInt(16).toChar()); i += 4 }
+                            'u' -> {
+                                val code = (if (i + 4 <= s.length) s.substring(i, i + 4).toIntOrNull(16) else null) ?: throw ParseError("bad \\u escape at $i")
+                                b.append(code.toChar()); i += 4
+                            }
                             else -> throw ParseError("bad escape '\\$e'")
                         }
                     }

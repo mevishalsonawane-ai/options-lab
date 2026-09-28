@@ -1,0 +1,265 @@
+package com.optionslab.app.data
+
+import com.jcraft.jsch.ChannelDirectTCPIP
+import com.jcraft.jsch.HostKey
+import com.jcraft.jsch.HostKeyRepository
+import com.jcraft.jsch.JSch
+import com.jcraft.jsch.KeyPair
+import com.jcraft.jsch.Session
+import com.jcraft.jsch.UserInfo
+import com.optionslab.app.security.SecurePrefs
+import java.io.ByteArrayOutputStream
+import java.io.DataInputStream
+import java.io.IOException
+import java.io.InputStream
+import java.io.OutputStream
+import java.net.InetAddress
+import java.net.InetSocketAddress
+import java.net.Proxy
+import java.net.ServerSocket
+import java.net.Socket
+
+/**
+ * The static-IP relay built into the app: an SSH connection to the owner's own cloud
+ * server (the IP registered with Zerodha), through which only the Zerodha ORDER calls
+ * travel. Nothing is installed on the server (every Ubuntu cloud image runs SSH) and
+ * nothing on the phone (no VPN app).
+ *
+ * How: a small SOCKS5 endpoint on the phone's loopback hands each connection to an SSH
+ * "direct-tcpip" channel, so TLS runs end to end between the app and api.kite.trade
+ * (certificate pinning included); the server only forwards bytes it cannot read.
+ * Only api.kite.trade and api.ipify.org (the IP check) may be reached through it.
+ * The endpoint asks for a SOCKS5 user name and password (RFC 1929) made fresh at random
+ * in each app process and handed only to this app's own connections (through
+ * java.net.Authenticator), so another app on the phone cannot borrow the relay.
+ *
+ * The key pair is made on the phone; only the public half is ever shown. The server's
+ * host key is remembered on first connect and any change is refused.
+ */
+object Relay {
+    private const val K_ON = "relay.on"
+    private const val K_HOST = "relay.host"
+    private const val K_USER = "relay.user"
+    private const val K_PRV = "relay.key"
+    private const val K_PUB = "relay.pub"
+    private const val K_HOSTKEY = "relay.hostkey"
+    private val ALLOWED = setOf("api.kite.trade", "api.ipify.org")
+
+    // The SOCKS credential: random per process, never stored, never shown or logged.
+    private const val SOCKS_USER = "iraalgo"
+    private val socksPass: String by lazy {
+        val b = ByteArray(24).also { java.security.SecureRandom().nextBytes(it) }
+        b.joinToString("") { "%02x".format(it.toInt() and 0xff) }.also { java.util.Arrays.fill(b, 0.toByte()) }
+    }
+
+    /**
+     * Hands the credential to this app's own SOCKS connections (Android's SocksSocketImpl asks
+     * the default Authenticator for "SOCKS5"), only for the relay's port, never to anyone else.
+     */
+    private object SocksAuth : java.net.Authenticator() {
+        override fun getPasswordAuthentication(): java.net.PasswordAuthentication? {
+            val port = socks?.takeIf { !it.isClosed }?.localPort ?: return null
+            if (!requestingProtocol.orEmpty().equals("SOCKS5", true) || requestingPort != port) return null
+            if (requestingSite?.isLoopbackAddress == false) return null
+            return java.net.PasswordAuthentication(SOCKS_USER, socksPass.toCharArray())
+        }
+    }
+
+    var enabled: Boolean
+        get() = SecurePrefs.getBoolean(K_ON, false)
+        set(v) { SecurePrefs.put(K_ON, v); if (!v) close() }
+    var host: String?
+        get() = SecurePrefs.getString(K_HOST)
+        set(v) { SecurePrefs.put(K_HOST, v?.trim()?.ifEmpty { null }); close() }
+    var user: String
+        get() = SecurePrefs.getString(K_USER) ?: "ubuntu"
+        set(v) { SecurePrefs.put(K_USER, v.trim().ifEmpty { "ubuntu" }); close() }
+
+    /** The public key to paste into the server ("Add SSH keys" when creating it). */
+    val publicKey: String? get() = SecurePrefs.getString(K_PUB)
+
+    /** Make the phone's key pair (RSA 3072). A new key replaces the old one: paste it again. */
+    @Synchronized fun newKey(): String {
+        val kp = KeyPair.genKeyPair(JSch(), KeyPair.RSA, 3072)
+        val prv = ByteArrayOutputStream().also { kp.writePrivateKey(it) }.toByteArray()
+        val pub = ByteArrayOutputStream().also { kp.writePublicKey(it, "iraalgo-relay") }.toString(Charsets.UTF_8.name()).trim()
+        kp.dispose()
+        SecurePrefs.putAll(mapOf(K_PRV to String(prv, Charsets.UTF_8), K_PUB to pub, K_HOSTKEY to null))
+        close()
+        return pub
+    }
+
+    /** Forget the server's remembered identity (after the server was rebuilt). */
+    fun forgetServer() { SecurePrefs.put(K_HOSTKEY, null); close() }
+
+    // ---- the SSH session ---------------------------------------------------------------
+
+    @Volatile private var session: Session? = null
+    @Volatile private var socks: ServerSocket? = null
+
+    /** Remembers the server's key on first use; a different key later is refused. */
+    private object Tofu : HostKeyRepository {
+        override fun check(host: String?, key: ByteArray?): Int {
+            val k = key?.let { android.util.Base64.encodeToString(it, android.util.Base64.NO_WRAP) } ?: return HostKeyRepository.NOT_INCLUDED
+            val known = SecurePrefs.getString(K_HOSTKEY)
+            if (known == null) { SecurePrefs.put(K_HOSTKEY, k); return HostKeyRepository.OK }
+            return if (known == k) HostKeyRepository.OK else HostKeyRepository.CHANGED
+        }
+        override fun add(hostkey: HostKey?, ui: UserInfo?) {}
+        override fun remove(host: String?, type: String?) {}
+        override fun remove(host: String?, type: String?, key: ByteArray?) {}
+        override fun getKnownHostsRepositoryID(): String = "iraalgo"
+        override fun getHostKey(): Array<HostKey> = emptyArray()
+        override fun getHostKey(host: String?, type: String?): Array<HostKey> = emptyArray()
+    }
+
+    @Synchronized private fun connect(): Session {
+        session?.takeIf { it.isConnected }?.let { return it }
+        runCatching { session?.disconnect() }
+        val h = host ?: throw IOException("Relay: no server IP set (More → Zerodha → Static IP)")
+        val prv = SecurePrefs.getString(K_PRV) ?: throw IOException("Relay: no key yet: tap Create key, then add it to the server")
+        val jsch = JSch()
+        jsch.addIdentity("iraalgo", prv.toByteArray(Charsets.UTF_8), SecurePrefs.getString(K_PUB)?.toByteArray(Charsets.UTF_8), null)
+        jsch.hostKeyRepository = Tofu
+        // The login name depends on the server image: ubuntu (Ubuntu), opc (Oracle Linux), ec2-user (Amazon Linux).
+        // The one that worked last is tried first and remembered.
+        val names = (listOf(user) + listOf("ubuntu", "opc", "ec2-user")).distinct()
+        var last: Exception? = null
+        var s: Session? = null
+        for (name in names) {
+            val t = jsch.getSession(name, h, 22)
+            t.setConfig("StrictHostKeyChecking", "yes")
+            t.setConfig("PreferredAuthentications", "publickey")
+            t.timeout = 15_000
+            t.setServerAliveInterval(15_000)
+            t.setServerAliveCountMax(3)
+            try {
+                t.connect(15_000)
+                if (name != user) SecurePrefs.put(K_USER, name)
+                s = t; break
+            } catch (e: Exception) {
+                last = e
+                if (!e.message.orEmpty().contains("Auth fail", true)) break      // only a refused login is worth another name
+            }
+        }
+        if (s == null) {
+            val m = last?.message.orEmpty()
+            throw IOException(when {
+                m.contains("HostKey has been changed", true) || m.contains("reject HostKey", true) ->
+                    "Relay: the server's identity changed. If you rebuilt the server, tap Forget server and connect again."
+                m.contains("Auth fail", true) -> "Relay: the server refused the app's key. Log in to the server once and add the key to ~/.ssh/authorized_keys (user ubuntu on Ubuntu, opc on Oracle Linux)."
+                m.contains("timeout", true) || m.contains("connect", true) -> "Relay: cannot reach $h on port 22 (is the server running, with the IP attached?)"
+                else -> "Relay: $m"
+            })
+        }
+        session = s
+        return s
+    }
+
+    @Synchronized private fun socksServer(): ServerSocket {
+        socks?.takeIf { !it.isClosed }?.let { return it }
+        java.net.Authenticator.setDefault(SocksAuth)
+        val ss = ServerSocket(0, 50, InetAddress.getLoopbackAddress())      // loopback only, never the network
+        socks = ss
+        Thread({
+            while (!ss.isClosed) {
+                val client = runCatching { ss.accept() }.getOrNull() ?: break
+                Thread({ runCatching { serve(client) } }, "relay-conn").apply { isDaemon = true }.start()
+            }
+        }, "relay-socks").apply { isDaemon = true }.start()
+        return ss
+    }
+
+    /**
+     * The proxy to reach Zerodha through, or null when the relay is off. When it is on
+     * and cannot connect this THROWS: an order must never slip out from another IP.
+     */
+    fun proxy(): Proxy? {
+        if (!enabled) return null
+        connect()
+        return Proxy(Proxy.Type.SOCKS, InetSocketAddress(InetAddress.getLoopbackAddress(), socksServer().localPort))
+    }
+
+    /** Connect ahead of time (market hours), so the first order does not wait for the handshake. */
+    fun warm() { if (enabled) runCatching { connect() } }
+
+    @Synchronized fun close() {
+        runCatching { socks?.close() }; socks = null
+        runCatching { session?.disconnect() }; session = null
+    }
+
+    val connected: Boolean get() = session?.isConnected == true
+
+    // ---- a minimal SOCKS5 CONNECT, loopback only, allow-listed destinations only ----------
+
+    private fun serve(client: Socket) {
+        client.use { c ->
+            val inp = DataInputStream(c.getInputStream())
+            val out = c.getOutputStream()
+            if (c.inetAddress?.isLoopbackAddress != true) return
+            c.soTimeout = 15_000                                               // a stalled handshake does not hold a thread
+            if (inp.readUnsignedByte() != 5) return
+            var userPass = false
+            repeat(inp.readUnsignedByte()) { if (inp.readUnsignedByte() == 2) userPass = true }
+            if (!userPass) { out.write(byteArrayOf(5, 0xFF.toByte())); out.flush(); return }   // no acceptable method
+            out.write(byteArrayOf(5, 2)); out.flush()                         // user name / password (RFC 1929)
+            if (!authOk(inp)) { out.write(byteArrayOf(1, 1)); out.flush(); return }
+            out.write(byteArrayOf(1, 0)); out.flush()
+            if (inp.readUnsignedByte() != 5 || inp.readUnsignedByte() != 1) return
+            inp.readUnsignedByte()
+            val dest = when (inp.readUnsignedByte()) {
+                1 -> ByteArray(4).also { inp.readFully(it) }.let { InetAddress.getByAddress(it).hostAddress }
+                3 -> ByteArray(inp.readUnsignedByte()).also { inp.readFully(it) }.toString(Charsets.US_ASCII)
+                4 -> ByteArray(16).also { inp.readFully(it) }.let { InetAddress.getByAddress(it).hostAddress }
+                else -> return
+            }
+            val port = inp.readUnsignedShort()
+            if (port != 443 || !allowed(dest)) { reply(out, 2); return }
+            val ch = try {
+                (connect().openChannel("direct-tcpip") as ChannelDirectTCPIP).apply { setHost(dest); setPort(port) }
+            } catch (e: Exception) { reply(out, 1); return }
+            val fromServer = ch.inputStream
+            val toServer = ch.outputStream
+            try { ch.connect(15_000) } catch (e: Exception) { reply(out, 5); return }
+            reply(out, 0)
+            c.soTimeout = 0                                                    // a quiet tunnel is not an error
+            val up = Thread({ pump(inp, toServer); runCatching { ch.disconnect() } }, "relay-up").apply { isDaemon = true; start() }
+            pump(fromServer, out)
+            runCatching { ch.disconnect() }
+            up.join(1_000)
+        }
+    }
+
+    /** Reads the RFC 1929 request and checks it in constant time; the bytes read are wiped. */
+    private fun authOk(inp: DataInputStream): Boolean {
+        if (inp.readUnsignedByte() != 1) return false
+        val u = ByteArray(inp.readUnsignedByte()).also { inp.readFully(it) }
+        val p = ByteArray(inp.readUnsignedByte()).also { inp.readFully(it) }
+        val want = socksPass.toByteArray(Charsets.US_ASCII)
+        val ok = java.security.MessageDigest.isEqual(u, SOCKS_USER.toByteArray(Charsets.US_ASCII)) and
+            java.security.MessageDigest.isEqual(p, want)
+        java.util.Arrays.fill(u, 0.toByte()); java.util.Arrays.fill(p, 0.toByte()); java.util.Arrays.fill(want, 0.toByte())
+        return ok
+    }
+
+    private fun reply(out: OutputStream, code: Int) {
+        runCatching { out.write(byteArrayOf(5, code.toByte(), 0, 1, 0, 0, 0, 0, 0, 0)); out.flush() }
+    }
+
+    private fun pump(from: InputStream, to: OutputStream) {
+        val buf = ByteArray(16 * 1024)
+        runCatching {
+            while (true) {
+                val n = from.read(buf)
+                if (n < 0) break
+                to.write(buf, 0, n); to.flush()
+            }
+        }
+    }
+
+    /** A destination by name, or an IP that one of the allowed names resolves to. */
+    private fun allowed(dest: String): Boolean {
+        if (dest in ALLOWED) return true
+        return ALLOWED.any { name -> runCatching { InetAddress.getAllByName(name).any { it.hostAddress == dest } }.getOrDefault(false) }
+    }
+}

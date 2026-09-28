@@ -16,7 +16,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import com.optionslab.app.ui.components.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -103,6 +103,8 @@ fun RowActionPopup(model: AppModel) {
             lines += "Unrealised P&L" to rs(r.unrealizedPnl, true)
             lines += "Realised today" to rs(r.todayRealizedPnl, true)
             lines += "Change" to String.format(Locale.ENGLISH, "%+.2f%%", r.pnlPercent)
+            (paper as? Load.Done)?.value?.let { v -> com.optionslab.app.data.Origins.paperPosition(owners, v.trades, r.symbol, r.product, r.quantity) }
+                ?.let { source = com.optionslab.app.data.Origins.positionDisplay(it) }
             if (r.quantity != 0) {
                 val pr = protections.lastOrNull { !it.live && it.symbol == r.symbol }
                 pr?.let { lines += "Protection" to it.describe() }
@@ -166,6 +168,8 @@ fun RowActionPopup(model: AppModel) {
             lines += "Unrealised · realised" to "${rs(r.unrealised, true)} · ${rs(r.realised, true)}"
             lines += "M2M" to rs(r.m2m, true)
             lines += "Bought · sold today" to "${r.buyQty} @ ${px(r.buyAvg)} · ${r.sellQty} @ ${px(r.sellAvg)}"
+            (account as? Load.Done)?.value?.let { a -> com.optionslab.app.data.Origins.livePosition(owners, a.trades, a.orders, r.symbol, r.product, r.qty) }
+                ?.let { source = com.optionslab.app.data.Origins.positionDisplay(it) }
             if (r.qty != 0) {
                 val pr = protections.lastOrNull { it.live && it.symbol == r.symbol }
                 pr?.let { lines += "Protection" to it.describe() }
@@ -216,7 +220,7 @@ fun RowActionPopup(model: AppModel) {
                 pnl = (pos.last - r.price) * r.qty * (if (r.side == "BUY") 1 else -1)
                 lines += "Last price (LTP)" to px(pos.last)
             }
-            source = orderSource(owners, "kite:${r.orderId}", (account as? Load.Done)?.value?.orders?.firstOrNull { it.id == r.orderId }?.tag.orEmpty())
+            source = orderSource(owners, "kite:${r.orderId}", (account as? Load.Done)?.value?.orders?.firstOrNull { it.id == r.orderId }?.tag)
             pos?.let { ps -> swipe("Slide to close position (${abs(ps.qty)})") { model.planSquareOff(ps); close() } }
         }
     }
@@ -234,7 +238,10 @@ fun RowActionPopup(model: AppModel) {
                     Spacer(Modifier.height(6.dp))
                 }
                 lines.forEach { (k, v) -> LedgerLine(k, v) }
-                source?.let { (label, _) -> LedgerLine("Placed by", label.removePrefix("Strategy: ")) }
+                source?.let { (label, _) ->
+                    if (label.startsWith("Opened by ")) LedgerLine("Opened by", label.removePrefix("Opened by "))
+                    else LedgerLine("Placed by", label.removePrefix("Strategy: "))
+                }
                 if (actions.isEmpty()) Note("Nothing to close or cancel: this order is finished and no position is open from it.", Modifier.padding(top = 8.dp))
                 Column(Modifier.padding(top = 14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     actions.forEach { a ->
@@ -282,14 +289,14 @@ fun ProtectDialog(model: AppModel, t: ProtectTarget, onDone: (Boolean) -> Unit) 
         properties = DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy),
         title = { Text("Protect ${t.symbol}", style = Type.title) },
         text = {
-            Column {
+            Column(Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState())) {  // scrolls at a large font / in landscape
                 Text("${if (long) "Long" else "Short"} ${abs(t.qty)} · last ${px(t.price)} · ${if (t.live) "Zerodha" else "paper"}", style = Type.bodySmall.copy(color = p.inkSoft))
                 PriceField(stop, { stop = it }, "Stop price (${if (long) "below" else "above"} ${px(t.price)})")
                 PriceField(trail, { trail = it }, "…or trail by (points)")
                 PriceField(target, { target = it }, "Target price (optional)")
                 Note(if (spec.trail != null) "Trailing: the stop follows the best price at ${spec.trail} points behind and never loosens." +
                     (if (spec.stop != null) " It starts at your stop price." else "")
-                    else "The stop rests as an SL-M exit and the target as a LIMIT exit; when one fills the other is cancelled.", Modifier.padding(top = 8.dp))
+                    else "The stop rests as a stop-loss exit (SL-M on paper; SL with a limit at Zerodha, which refuses SL-M on options) and the target as a LIMIT exit; when one fills the other is cancelled.", Modifier.padding(top = 8.dp))
                 if (t.live) Note("Zerodha: real exit orders are placed now. You confirm once with your PIN or fingerprint.", Modifier.padding(top = 4.dp))
             }
         },

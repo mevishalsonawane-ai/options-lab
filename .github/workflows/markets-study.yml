@@ -1,0 +1,99 @@
+name: Market study all-inputs network (runs the long network comparison on a runner)
+
+# One network over every timeframe plus every market input, input groups chosen on the development year,
+# compared with hourly-only / all-timeframes / everything; then the $100 strategies with its alarms.
+# Results are published to the market-results branch.
+
+on:
+  push:
+    paths:
+      - ".github/workflows/markets-study.yml"
+  workflow_dispatch:
+    inputs:
+      markets:
+        description: "Markets to run (crypto, forex or both)"
+        default: "both"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: markets-study
+  cancel-in-progress: false
+
+jobs:
+  study:
+    name: ${{ matrix.market }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    strategy:
+      fail-fast: false
+      matrix:
+        market: [crypto, forex]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install "numpy>=1.26" "pandas>=2.2"
+      - name: Get the 1-minute data if it is not in the branch
+        run: |
+          if [ ! -f "${{ matrix.market }}/data_mtf/$( [ ${{ matrix.market }} = crypto ] && echo btc || echo xauusd )_1m.csv.gz" ]; then
+            git fetch --depth=1 origin market-data-mtf && git archive FETCH_HEAD ${{ matrix.market }}/data_mtf | tar x || true
+          fi
+          ls -la ${{ matrix.market }}/data_mtf || echo "no 1-minute data for ${{ matrix.market }}"
+      - name: Network comparison
+        if: ${{ github.event.inputs.markets == '' || github.event.inputs.markets == 'both' || github.event.inputs.markets == matrix.market }}
+        run: |
+          if ls ${{ matrix.market }}/data_mtf/*_1m.csv.gz >/dev/null 2>&1; then
+            python -u ${{ matrix.market }}/mtf_study.py
+          else
+            echo "skipped: no 1-minute data yet"
+          fi
+      - name: $100 strategies with the new alarms
+        if: ${{ hashFiles(format('{0}/results/alarms_mtf_hourly.csv', matrix.market)) != '' }}
+        env:
+          SKIP_NN: "1"
+          ALARMS: alarms_mtf_hourly
+          SUITE_SUFFIX: _mtf
+        run: python -u ${{ matrix.market }}/suite.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: results-${{ matrix.market }}
+          path: |
+            ${{ matrix.market }}/results/mtf.json
+            ${{ matrix.market }}/results/alarms_mtf_hourly.csv
+            ${{ matrix.market }}/results/suite_mtf.json
+          if-no-files-found: ignore
+
+  publish:
+    name: Publish to market-results
+    runs-on: ubuntu-latest
+    needs: study
+    if: always()
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: results-*
+          path: out
+      - name: Push to market-results
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+        run: |
+          mkdir pub
+          for m in crypto forex; do
+            if [ -d "out/results-$m" ] && [ -n "$(ls -A out/results-$m)" ]; then mkdir -p "pub/$m/results" && cp -r "out/results-$m/." "pub/$m/results/"; fi
+          done
+          if [ -z "$(ls -A pub)" ]; then echo "nothing to publish"; exit 0; fi
+          cd pub
+          find . -type f -printf '%P %s\n' | sort > index.txt
+          git init -q -b market-results
+          git config user.name "ci-markets"; git config user.email "ci-markets@users.noreply.github.com"
+          git add -A && git commit -qm "Network study results for $SHA"
+          git push -qf "https://x-access-token:${TOKEN}@github.com/${REPO}" HEAD:market-results
+          cat index.txt

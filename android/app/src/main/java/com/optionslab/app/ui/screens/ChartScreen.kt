@@ -13,12 +13,17 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import com.optionslab.app.ui.components.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
@@ -59,15 +64,67 @@ private const val ORIGIN = "https://$HOST/"
  * so paper stays paper and live orders still need the review, the long press
  * and the PIN or fingerprint.
  */
-@SuppressLint("SetJavaScriptEnabled", "JavascriptInterface")
 @Composable
 fun ChartScreen(model: AppModel, symbol: String, exchange: String, visible: Boolean = true, ask: Int = 0) {
+    // Named apart from the WebView's own `settings`, which the pane's factory configures.
+    val appSettings by model.settings.collectAsState()
+    ChartPane(symbol, exchange, visible, ask, live = appSettings.live, source = FeedChartSource,
+        orderSheet = { pick, buy, limit, close -> OptionOrderSheet(model, pick, initialBuy = buy, initialLimit = limit, area = "Chart", onClose = close) },
+        alertDialog = { sym, close -> ChartAlertDialog(sym, FeedChartSource, onSave = { alarm, said -> model.saveAlarm(alarm); model.say(said) }, onClose = close) },
+        chainDialog = { u, close, pick -> ChartChainDialog(model, u, close, pick) })
+}
+
+/**
+ * Where the chart's candles, contracts and symbol search come from: [ChartFeed] and the day's
+ * contract list in the app ([FeedChartSource]); a fake in tests, so nothing reaches the network.
+ */
+internal interface ChartSource {
+    fun contract(symbol: String): com.optionslab.engine.Upstox.Contract?
+    suspend fun bars(symbol: String, interval: String, fromSec: Long?, toSec: Long?): List<com.optionslab.engine.Upstox.Bar>
+    fun search(text: String): List<ChartFeed.Match>
+    /** Today's listed options (an option picked off the chain is charted by its trading symbol from here). */
+    fun contracts(): List<com.optionslab.engine.Upstox.Contract>
+    /** The Zerodha instrument token streamed for a chart symbol, or null. */
+    suspend fun streamToken(symbol: String): Long?
+}
+
+internal object FeedChartSource : ChartSource {
+    override fun contract(symbol: String) = ChartFeed.contract(symbol)
+    override suspend fun bars(symbol: String, interval: String, fromSec: Long?, toSec: Long?) = ChartFeed.bars(symbol, interval, fromSec, toSec)
+    override fun search(text: String) = ChartFeed.search(text)
+    override fun contracts() = com.optionslab.app.data.Market.contracts()
+    override suspend fun streamToken(symbol: String) = streamTokenOf(symbol)
+}
+
+/**
+ * The Chart tab from plain values, a [source] and dialog slots (what [ChartScreen] shows; tests drive it,
+ * and the page's IraBridge, without an [AppModel] or the network). [live]: Live mode is on.
+ * [orderSheet]: (contract picked, buy, limit price or null for market, close).
+ */
+@SuppressLint("SetJavaScriptEnabled", "JavascriptInterface")
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable
+internal fun ChartPane(
+    symbol: String,
+    exchange: String,
+    visible: Boolean,
+    ask: Int,
+    live: Boolean,
+    source: ChartSource,
+    orderSheet: @Composable (ChainPick, Boolean, Double?, () -> Unit) -> Unit,
+    alertDialog: @Composable (String, () -> Unit) -> Unit,
+    chainDialog: @Composable (String, () -> Unit, (ChainPick) -> Unit) -> Unit,
+) {
     val p = LocalPalette.current
     val scope = rememberCoroutineScope()
     var current by remember { mutableStateOf(symbol to exchange) }
     var order by remember { mutableStateOf<Pair<ChainPick, Pair<Boolean, Double?>>?>(null) }
     var hint by remember { mutableStateOf<String?>(null) }
     var alerting by remember { mutableStateOf(false) }
+    // The option chain over the chart ([chainFor] = its underlying), and the index chart to go back to
+    // after an option was opened from it.
+    var chainFor by remember { mutableStateOf<String?>(null) }
+    var returnTo by remember { mutableStateOf<Pair<String, String>?>(null) }
     val holder = remember { arrayOfNulls<WebView>(1) }
     // [gen] rebuilds the WebView (after its renderer died, or a load that never finished);
     // [ready] turns true once the chart has received its first candles.
@@ -76,13 +133,30 @@ fun ChartScreen(model: AppModel, symbol: String, exchange: String, visible: Bool
     var retried by remember { mutableStateOf(false) }
     var failed by remember { mutableStateOf(false) }
     var why by remember { mutableStateOf<String?>(null) }   // the load's own error, shown on the cover
+    // The basic chart (drawn by the app, no WebView): chosen by the owner, or used automatically
+    // when the advanced chart reports it could not draw on this phone.
+    var basicChosen by remember { mutableStateOf(com.optionslab.app.security.SecurePrefs.getBoolean("chart.basic", false)) }
+    // The WebView drawing mode (hardware / software).
+    var softwareLayer by remember { mutableStateOf(com.optionslab.app.security.SecurePrefs.getBoolean("chart.sw", false)) }
+    var painted by remember { mutableStateOf<String?>(null) }        // "w×h, n bars" once the web chart drew
+    var paintedOk by remember { mutableStateOf(false) }
+    var autoBasic by remember { mutableStateOf<String?>(null) }      // why the basic chart was switched in
+    val basic = basicChosen || autoBasic != null
 
-    fun openOrder(buy: Boolean, price: Double?) {
+    fun openOrder(buy: Boolean, price: Double?, type: String = if (price == null) "MARKET" else "LIMIT") {
+        // A stop entry would become a LIMIT at the stop level here and fill at once: refused, not converted.
+        if (type != "MARKET" && type != "LIMIT") {
+            hint = "Stop entries cannot be placed from the chart. Use BUY / SELL for a market or limit order."
+            return
+        }
         val (sym, _) = current
         scope.launch {
-            val c = withContext(Dispatchers.IO) { runCatching { ChartFeed.contract(sym) }.getOrNull() }
+            val c = withContext(Dispatchers.IO) { runCatching { source.contract(sym) }.getOrNull() }
             if (c == null) { hint = "Indices cannot be traded. Search an option in the chart (e.g. NIFTY 24800 CE) to buy or sell it."; return@launch }
-            order = ChainPick(c.underlying, c.expiry, c.strike, c.right, price, null, null, c.lotSize) to (buy to price)
+            // The sheet's LTP is the last traded price, not the level under the finger.
+            val t = System.currentTimeMillis() / 1000
+            val last = withContext(Dispatchers.IO) { runCatching { source.bars(sym, "1m", t - 3 * 86400, t).lastOrNull()?.close }.getOrNull() }
+            order = ChainPick(c.underlying, c.expiry, c.strike, c.right, last, null, null, c.lotSize) to (buy to price)
         }
     }
 
@@ -99,13 +173,11 @@ fun ChartScreen(model: AppModel, symbol: String, exchange: String, visible: Bool
 
     // Live mode: every trade of the charted instrument comes from the Zerodha stream and moves the
     // last candle at once (the chart page's own 15 s poll stands back while ticks arrive).
-    // Named apart from the WebView's own `settings`, which the factory below configures.
-    val appSettings by model.settings.collectAsState()
     val streamStatus by com.optionslab.app.data.KiteStream.status.collectAsState()
-    val streaming = appSettings.live && streamStatus == com.optionslab.app.data.KiteStream.Status.LIVE
+    val streaming = live && streamStatus == com.optionslab.app.data.KiteStream.Status.LIVE
     var liveToken by remember { mutableStateOf<Long?>(null) }
     LaunchedEffect(current, streaming) {
-        liveToken = if (!streaming) null else withContext(Dispatchers.IO) { runCatching { streamToken(current.first) }.getOrNull() }
+        liveToken = if (!streaming) null else withContext(Dispatchers.IO) { runCatching { source.streamToken(current.first) }.getOrNull() }
         com.optionslab.app.data.KiteStream.want("chart", listOfNotNull(liveToken))
     }
     DisposableEffect(Unit) { onDispose { com.optionslab.app.data.KiteStream.want("chart", emptyList()) } }
@@ -118,6 +190,15 @@ fun ChartScreen(model: AppModel, symbol: String, exchange: String, visible: Bool
         holder[0]?.evaluateJavascript("window.__iraTick && window.__iraTick(${t.last}, $at)", null)
     }
 
+    // Data arrived but the page never said it drew: this phone's WebView is not drawing it.
+    LaunchedEffect(ready, visible, gen) {
+        if (!ready || !visible || paintedOk) return@LaunchedEffect
+        kotlinx.coroutines.delay(8_000)
+        if (!paintedOk) autoBasic = "The advanced chart could not draw on this phone."
+    }
+    // The page failed outright after the retry: the basic chart instead of an error.
+    LaunchedEffect(failed) { if (failed && autoBasic == null) autoBasic = why ?: "The advanced chart could not load." }
+
     // A chart that has not drawn its first candles in 12 s is rebuilt once; after that, say so.
     LaunchedEffect(gen, visible) {
         if (!visible || ready) return@LaunchedEffect
@@ -127,9 +208,36 @@ fun ChartScreen(model: AppModel, symbol: String, exchange: String, visible: Bool
         else { failed = true; com.optionslab.app.work.Alerts.error("The chart could not load. Check the connection and tap Retry.") }
     }
 
+    // Pine scripts changed in the app (code, shown on the chart, inputs): the page redraws them.
+    val pineRev by com.optionslab.app.data.PineScripts.chartRev.collectAsState()
+    LaunchedEffect(pineRev, ready, gen) {
+        if (ready) holder[0]?.evaluateJavascript("window.__iraPine && window.__iraPine()", null)
+    }
+
+    fun showSymbol(sym: String, ex: String) {
+        current = sym to ex; hint = null
+        holder[0]?.evaluateJavascript("window.__iraSetSymbol && window.__iraSetSymbol(${JSONObject.quote(sym)}, ${JSONObject.quote(ex)})", null)
+    }
+    // Back from an option opened off the chain: the index chart again.
+    androidx.activity.compose.BackHandler(enabled = visible && returnTo != null) {
+        returnTo?.let { (s0, e0) -> returnTo = null; showSymbol(s0, e0) }
+    }
+    // The underlying whose chain the OPT button shows: the index charted, or the option's own index.
+    val chainUnderlying = current.first.uppercase().let { u ->
+        when {
+            u == "NIFTY" || u == "BANKNIFTY" -> u
+            u.startsWith("BANKNIFTY") -> "BANKNIFTY"
+            u.startsWith("NIFTY") -> "NIFTY"
+            else -> null
+        }
+    }
+
     // A new symbol asked for from elsewhere (Home, the option chain) while the chart is open.
     DisposableEffect(symbol, exchange, ask) {
         if (current != symbol to exchange) {
+            returnTo = null
+            // Set here too: when the web chart has failed, the page never reports the change back.
+            current = symbol to exchange; hint = null
             holder[0]?.evaluateJavascript("window.__iraSetSymbol && window.__iraSetSymbol(${JSONObject.quote(symbol)}, ${JSONObject.quote(exchange)})", null)
         }
         onDispose { }
@@ -140,16 +248,42 @@ fun ChartScreen(model: AppModel, symbol: String, exchange: String, visible: Bool
         hint?.let {
             Text(it, style = Type.bodySmall.copy(color = p.inkSoft), modifier = Modifier.fillMaxWidth().background(p.chip).padding(horizontal = 14.dp, vertical = 8.dp))
         }
-        Row(Modifier.fillMaxWidth().background(p.paperDeep).padding(horizontal = 12.dp, vertical = 6.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(current.first, style = Type.label.copy(color = p.ink, fontSize = 13.sp), maxLines = 1, modifier = Modifier.weight(1f))
+        // One line when it fits; at a large font or on a narrow screen the chips flow onto a second line under the
+        // symbol (in one row the symbol was ellipsized and SELL squeezed to nothing).
+        androidx.compose.foundation.layout.FlowRow(Modifier.fillMaxWidth().background(p.paperDeep).padding(horizontal = 12.dp, vertical = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            val chip = Modifier.align(Alignment.CenterVertically).background(p.chip, RoundedCornerShape(50))
+            returnTo?.let { (s0, e0) ->
+                Text("‹ $s0", style = Type.label.copy(color = p.ink, fontSize = 12.sp, fontWeight = FontWeight.Bold),
+                    modifier = chip.clickable { returnTo = null; showSymbol(s0, e0) }
+                        .padding(horizontal = 10.dp, vertical = 8.dp))
+            }
+            // The symbol takes what is left of its line, and shrinks rather than being cut.
+            com.optionslab.app.ui.components.FitText(current.first, Type.label.copy(color = p.ink, fontSize = 13.sp),
+                Modifier.weight(1f).align(Alignment.CenterVertically), minSize = 9.sp)
+            // The option chain of the index: tap a price to chart that option (and buy or sell it there).
+            if (chainUnderlying != null) Text("OPT", textAlign = TextAlign.Center, style = Type.label.copy(color = p.ink, fontSize = 12.sp, fontWeight = FontWeight.Bold),
+                modifier = chip.clickable { chainFor = chainUnderlying }.padding(horizontal = 10.dp, vertical = 8.dp))
+            // Basic (drawn by the app) or Advanced (indicators, drawings; needs the phone's WebView).
+            Text(if (basic) "BASIC" else "ADV", textAlign = TextAlign.Center, style = Type.label.copy(color = p.ink, fontSize = 12.sp, fontWeight = FontWeight.Bold),
+                modifier = chip.clickable {
+                    if (basic) { basicChosen = false; autoBasic = null; com.optionslab.app.security.SecurePrefs.put("chart.basic", false); if (failed) { failed = false; retried = false; ready = false; gen++ } }
+                    else { basicChosen = true; com.optionslab.app.security.SecurePrefs.put("chart.basic", true) }
+                }.padding(horizontal = 10.dp, vertical = 8.dp))
             // A price alert on whatever is charted, at a level you choose.
-            Text("ALERT", textAlign = TextAlign.Center, style = Type.label.copy(color = p.ink, fontSize = 13.sp, fontWeight = FontWeight.Bold),
-                modifier = Modifier.background(p.chip, RoundedCornerShape(50)).clickable { alerting = true }.padding(horizontal = 14.dp, vertical = 8.dp))
-            listOf(true to "BUY", false to "SELL").forEach { (isBuy, label) ->
-                Text(label, textAlign = TextAlign.Center, style = Type.label.copy(color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold),
-                    modifier = Modifier.background(if (isBuy) p.verdigris else p.oxblood, RoundedCornerShape(50))
-                        .clickable { openOrder(isBuy, null) }.padding(horizontal = 22.dp, vertical = 8.dp))
+            Text("ALERT", textAlign = TextAlign.Center, style = Type.label.copy(color = p.ink, fontSize = 12.sp, fontWeight = FontWeight.Bold),
+                modifier = chip.clickable { alerting = true }.padding(horizontal = 10.dp, vertical = 8.dp))
+            // Buy / Sell: a full 48 dp touch target each, the label whole on one line; one unit, so when the chips
+            // wrap they move to the next line together (SELL alone on a line of its own looked like another toolbar).
+            Row(Modifier.align(Alignment.CenterVertically), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                listOf(true to "BUY", false to "SELL").forEach { (isBuy, label) ->
+                    Box(Modifier.heightIn(min = 48.dp).widthIn(min = 64.dp)
+                        .background(if (isBuy) p.verdigris else p.oxblood, RoundedCornerShape(50))
+                        .clickable { openOrder(isBuy, null) }.padding(horizontal = 14.dp), contentAlignment = Alignment.Center) {
+                        Text(label, textAlign = TextAlign.Center, maxLines = 1, softWrap = false,
+                            style = Type.label.copy(color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold))
+                    }
+                }
             }
         }
         Box(Modifier.weight(1f).fillMaxWidth()) {
@@ -161,6 +295,9 @@ fun ChartScreen(model: AppModel, symbol: String, exchange: String, visible: Bool
                 WebView.setWebContentsDebuggingEnabled(false)
                 WebView(ctx).apply {
                     holder[0] = this
+                    // Fill the space Compose gives it. Without MATCH_PARENT the WebView sizes its viewport to its
+                    // content, and the chart sizes itself to the viewport: both settle at 0 px high (seen as "drawn 411×0").
+                    layoutParams = android.view.ViewGroup.LayoutParams(android.view.ViewGroup.LayoutParams.MATCH_PARENT, android.view.ViewGroup.LayoutParams.MATCH_PARENT)
                     settings.javaScriptEnabled = true
                     settings.domStorageEnabled = true            // the chart keeps its layout and drawings
                     settings.allowFileAccess = false
@@ -173,10 +310,17 @@ fun ChartScreen(model: AppModel, symbol: String, exchange: String, visible: Bool
                     // The phone's font size would otherwise enlarge every label and push the time axis off the bottom.
                     settings.textZoom = 100
                     setBackgroundColor(if (p.dark) android.graphics.Color.BLACK else android.graphics.Color.WHITE)
-                    addJavascriptInterface(Bridge(this, scope, onSymbol = { s, e -> current = s to e; hint = null },
-                        onOrder = { buy, price -> openOrder(buy, price) }, onData = { if (holder[0] === this) { ready = true; failed = false; why = null } },
+                    // Some phones show a blank WebView inside Compose with hardware drawing; software drawing is the fallback.
+                    setLayerType(if (softwareLayer) android.view.View.LAYER_TYPE_SOFTWARE else android.view.View.LAYER_TYPE_HARDWARE, null)
+                    addJavascriptInterface(Bridge(this, scope, source, onSymbol = { s, e -> current = s to e; hint = null },
+                        onOrder = { buy, price, type -> openOrder(buy, price, type) }, onData = { if (holder[0] === this) { ready = true; failed = false; why = null } },
+                        onPainted = { w, h, n -> if (holder[0] === this) {
+                            painted = "${w}×${h}, $n bars"
+                            paintedOk = w >= 50 && h >= 50
+                        } },
                         onFail = { m -> if (holder[0] === this && !ready) { failed = true; why = m } },
-                        onPageError = { m -> if (holder[0] === this) { ready = false; failed = true; why = m } }), "IraBridge")
+                        // Only fatal before the first candles: one runtime error later must not drop the chart for the session.
+                        onPageError = { m -> if (holder[0] === this && !ready) { failed = true; why = m } }), "IraBridge")
                     // A script error in the chart page shows as a red alert (the bundled chart only; no account data).
                     webChromeClient = object : android.webkit.WebChromeClient() {
                         override fun onConsoleMessage(m: android.webkit.ConsoleMessage): Boolean {
@@ -217,14 +361,24 @@ fun ChartScreen(model: AppModel, symbol: String, exchange: String, visible: Bool
                         }
                     }
                     val theme = if (p.dark) "dark" else "light"
-                    loadUrl("${ORIGIN}terminal.html?symbol=${android.net.Uri.encode(symbol)}&exchange=${android.net.Uri.encode(exchange)}&theme=$theme")
+                    // What is on screen now, not the symbol the tab opened with: a rebuild keeps an option picked since.
+                    val (sym, ex) = current
+                    loadUrl("${ORIGIN}terminal.html?symbol=${android.net.Uri.encode(sym)}&exchange=${android.net.Uri.encode(ex)}&theme=$theme")
                 }
             },
             onRelease = { w -> if (holder[0] === w) holder[0] = null; w.removeJavascriptInterface("IraBridge"); w.stopLoading(); w.destroy() },
         )
         }
+        // The basic chart, drawn by the app: over the web chart when chosen or when that cannot draw.
+        if (basic) Column(Modifier.fillMaxSize().background(p.paper)) {
+            autoBasic?.let {
+                Text("$it Showing the basic chart. Tap ADV / BASIC above to try the advanced one again.",
+                    style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 11.sp), modifier = Modifier.fillMaxWidth().background(p.chip).padding(horizontal = 12.dp, vertical = 6.dp))
+            }
+            NativeChart(current.first, Modifier.weight(1f), visible) { s, iv -> source.bars(s, iv, null, null) }
+        }
         // Covers the blank page until the first candles are drawn, so the chart never shows as a white sheet.
-        if (!ready) Box(Modifier.fillMaxSize().background(p.paper), contentAlignment = Alignment.Center) {
+        if (!basic && !ready) Box(Modifier.fillMaxSize().background(p.paper), contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(if (failed) (why ?: "The chart could not load") else "Loading chart…", style = Type.bodySmall.copy(color = p.inkSoft))
                 if (failed) Text("Retry", style = Type.label.copy(color = p.ink, fontWeight = FontWeight.SemiBold),
@@ -234,21 +388,36 @@ fun ChartScreen(model: AppModel, symbol: String, exchange: String, visible: Bool
         }
         }
     }
-    if (alerting) ChartAlertDialog(model, current.first) { alerting = false }
+    if (alerting) alertDialog(current.first) { alerting = false }
+    chainFor?.let { u ->
+        chainDialog(u, { chainFor = null }) { pick ->
+            chainFor = null
+            scope.launch {
+                val sym = withContext(Dispatchers.IO) {
+                    runCatching { source.contracts().firstOrNull { c ->
+                        c.underlying == pick.underlying && c.expiry == pick.expiry && c.strike == pick.strike && c.right == pick.right }?.tradingSymbol }.getOrNull()
+                }
+                if (sym == null) { hint = "That option is not in today's contract list; try again in a moment."; return@launch }
+                // Back (the ‹ chip or the phone's back) returns to the index chart.
+                if (returnTo == null) returnTo = u to "NSE"
+                showSymbol(sym, "NFO")
+            }
+        }
+    }
     order?.let { (pick, how) ->
-        OptionOrderSheet(model, pick, initialBuy = how.first, initialLimit = how.second) { order = null }
+        orderSheet(pick, how.first, how.second) { order = null }
     }
 }
 
 /** Set a price alert on the charted symbol: above or below is decided from where the price is now. */
 @Composable
-private fun ChartAlertDialog(model: AppModel, symbol: String, onClose: () -> Unit) {
+internal fun ChartAlertDialog(symbol: String, source: ChartSource, onSave: (com.optionslab.app.data.PriceAlarm, String) -> Unit, onClose: () -> Unit) {
     val p = LocalPalette.current
     var now by remember { mutableStateOf<Double?>(null) }
     var level by remember { mutableStateOf("") }
     LaunchedEffect(symbol) {
         val t = System.currentTimeMillis() / 1000
-        now = withContext(Dispatchers.IO) { runCatching { ChartFeed.bars(symbol, "1m", t - 3 * 86400, t).lastOrNull()?.close }.getOrNull() }
+        now = withContext(Dispatchers.IO) { runCatching { source.bars(symbol, "1m", t - 3 * 86400, t).lastOrNull()?.close }.getOrNull() }
         if (level.isEmpty()) now?.let { level = String.format(java.util.Locale.ENGLISH, "%.2f", it) }
     }
     val lv = level.toDoubleOrNull()
@@ -269,8 +438,7 @@ private fun ChartAlertDialog(model: AppModel, symbol: String, onClose: () -> Uni
         confirmButton = {
             TextButton({
                 if (lv != null && lv > 0 && cur != null) {
-                    model.saveAlarm(com.optionslab.app.data.PriceAlarm(System.currentTimeMillis(), com.optionslab.app.data.PriceAlarm.CHART + symbol, lv >= cur, lv))
-                    model.say("Alert set: $symbol at ${level}")
+                    onSave(com.optionslab.app.data.PriceAlarm(System.currentTimeMillis(), com.optionslab.app.data.PriceAlarm.CHART + symbol, lv >= cur, lv), "Alert set: $symbol at ${level}")
                     onClose()
                 } else com.optionslab.app.work.Alerts.error("Enter a price above zero.")
             }) { Text("Set alert") }
@@ -280,7 +448,7 @@ private fun ChartAlertDialog(model: AppModel, symbol: String, onClose: () -> Uni
 }
 
 /** The Zerodha instrument token for a chart symbol: an index by name, an option through the day's instrument list. */
-private suspend fun streamToken(symbol: String): Long? {
+private suspend fun streamTokenOf(symbol: String): Long? {
     com.optionslab.app.data.Broker.indexToken(symbol.uppercase())?.let { return it }
     val c = ChartFeed.contract(symbol) ?: return null
     val list = com.optionslab.app.data.Broker.cachedInstruments() ?: return null
@@ -289,16 +457,22 @@ private suspend fun streamToken(symbol: String): Long? {
 
 private fun refused() = WebResourceResponse("text/plain", "utf-8", 403, "Refused", emptyMap(), ByteArrayInputStream(ByteArray(0)))
 
-/** What the chart page may ask of the app. Each answer goes back through window.__iraReply. */
-private class Bridge(
+/** What the chart page may ask of the app. Each answer goes back through window.__iraReply. (Internal: tests call it as the page would.) */
+internal class Bridge(
     private val web: WebView,
     private val scope: CoroutineScope,
+    private val source: ChartSource,
     private val onSymbol: (String, String) -> Unit,
-    private val onOrder: (Boolean, Double?) -> Unit,
+    private val onOrder: (Boolean, Double?, String) -> Unit,
     private val onData: () -> Unit = {},
     private val onFail: (String) -> Unit = {},
     private val onPageError: (String) -> Unit = {},
+    private val onPainted: (Int, Int, Int) -> Unit = { _, _, _ -> },
 ) {
+    /** terminal.mjs: the chart drew its first candles at this size. */
+    @JavascriptInterface
+    fun painted(w: Int, h: Int, bars: Int) { web.post { onPainted(w, h, bars) } }
+
     /** boot.js: the chart page itself failed (a script error, or it never started). */
     @JavascriptInterface
     fun fail(message: String) {
@@ -313,7 +487,7 @@ private class Bridge(
     fun bars(id: String, symbol: String, exchange: String, interval: String, from: String, to: String) {
         scope.launch(Dispatchers.IO) {
             try {
-                val bars = ChartFeed.bars(symbol, interval, from.toDoubleOrNull()?.toLong(), to.toDoubleOrNull()?.toLong())
+                val bars = source.bars(symbol, interval, from.toDoubleOrNull()?.toLong(), to.toDoubleOrNull()?.toLong())
                 val a = JSONArray()
                 bars.forEach { b ->
                     a.put(JSONObject().put("time", b.epochSecond).put("open", b.open).put("high", b.high)
@@ -335,7 +509,7 @@ private class Bridge(
         scope.launch(Dispatchers.IO) {
             try {
                 val a = JSONArray()
-                ChartFeed.search(text).forEach { a.put(JSONObject().put("symbol", it.symbol).put("exchange", it.exchange).put("name", it.name)) }
+                source.search(text).forEach { a.put(JSONObject().put("symbol", it.symbol).put("exchange", it.exchange).put("name", it.name)) }
                 reply(id, true, a.toString())
             } catch (e: Exception) { reply(id, true, "[]") }
         }
@@ -344,12 +518,73 @@ private class Bridge(
     @JavascriptInterface
     fun symbol(symbol: String, exchange: String) { web.post { onSymbol(symbol, exchange) } }
 
+    /** terminal.mjs: the owner's Pine scripts, registered as indicators. */
+    @JavascriptInterface
+    fun pineList(): String = runCatching { com.optionslab.app.data.PineChart.list() }.getOrDefault("[]")
+
+    /** terminal.mjs: one Pine script run over the chart's candles. */
+    @JavascriptInterface
+    fun pineCalc(id: String, symbol: String, interval: String, bars: String, inputs: String): String =
+        com.optionslab.app.data.PineChart.calc(id, symbol, interval, bars, inputs)
+
     /** A long-press menu order from the chart: side and, for limit/stop, the price under the finger. */
     @JavascriptInterface
     fun order(json: String) {
         val o = runCatching { JSONObject(json) }.getOrNull() ?: return
         val buy = o.optString("side") == "BUY"
-        val price = if (o.isNull("price") || o.optString("type") == "MARKET") null else o.optDouble("price").takeIf { !it.isNaN() }
-        web.post { onOrder(buy, price) }
+        val type = o.optString("type").uppercase().ifEmpty { "MARKET" }
+        val price = if (o.isNull("price") || type == "MARKET") null else o.optDouble("price").takeIf { !it.isNaN() }
+        // A LIMIT without a price would open as a market order: dropped instead.
+        if (type == "LIMIT" && price == null) return
+        web.post { onOrder(buy, price, type) }
+    }
+}
+
+/** The index's option chain over the chart: tap a CE or PE price to chart that option. */
+@Composable
+private fun ChartChainDialog(model: AppModel, underlying: String, onClose: () -> Unit, onPick: (ChainPick) -> Unit) {
+    val snap by model.tools.collectAsState()
+    val source by model.toolsSource.collectAsState()
+    LaunchedEffect(underlying) { model.loadTools(underlying) }
+    ChartChainContent(underlying, snap, source, onRetry = { model.loadTools(underlying) }, onClose = onClose, onPick = onPick)
+}
+
+/** The chain dialog from its state (what [ChartChainDialog] shows; tests drive it without an [AppModel]). [source]: where the prices came from. */
+@Composable
+internal fun ChartChainContent(
+    underlying: String,
+    snap: com.optionslab.app.ui.Load<com.optionslab.engine.options.ChainSnapshot>,
+    source: String,
+    onRetry: () -> Unit,
+    onClose: () -> Unit,
+    onPick: (ChainPick) -> Unit,
+) {
+    val p = LocalPalette.current
+    androidx.compose.ui.window.Dialog(onDismissRequest = onClose, properties = androidx.compose.ui.window.DialogProperties(
+        usePlatformDefaultWidth = false, securePolicy = com.optionslab.app.security.Capture.policy)) {
+        Column(Modifier.fillMaxWidth(0.96f).fillMaxHeight(0.86f)
+            .background(p.paper, RoundedCornerShape(16.dp)).padding(12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("$underlying options", style = Type.title.copy(color = p.ink), modifier = Modifier.weight(1f))
+                TextButton(onClose) { Text("Close") }
+            }
+            if (source.isNotBlank()) Text(source, style = Type.bodySmall.copy(color = p.inkFaint, fontSize = 11.sp))
+            Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
+                when (val l = snap) {
+                    is com.optionslab.app.ui.Load.Done -> if (l.value.underlying == underlying) {
+                        val c = l.value
+                        Text("Expiry ${c.expiry} · spot ${String.format(java.util.Locale.ENGLISH, "%,.2f", c.spot)} · lot ${c.lotSize}",
+                            style = Type.bodySmall.copy(color = p.inkSoft), modifier = Modifier.padding(vertical = 6.dp))
+                        ChainCard(c, onPick)
+                    } else com.optionslab.app.ui.components.FullSpinner("Pricing the $underlying chain")
+                    is com.optionslab.app.ui.Load.Failed -> {
+                        com.optionslab.app.ui.components.Note(l.why)
+                        com.optionslab.app.ui.components.BrassButton("Try again", Modifier.fillMaxWidth(), onClick = onRetry)
+                    }
+                    is com.optionslab.app.ui.Load.Busy -> com.optionslab.app.ui.components.FullSpinner(l.label)
+                    else -> com.optionslab.app.ui.components.FullSpinner("Pricing the $underlying chain")
+                }
+            }
+        }
     }
 }

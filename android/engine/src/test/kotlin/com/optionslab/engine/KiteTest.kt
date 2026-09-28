@@ -86,6 +86,15 @@ class KiteTest {
         assertEquals(4.85, Kite.onTick(4.85, 0.05, Kite.Side.SELL))
     }
 
+    @Test fun `sub-paisa ticks keep their precision on the tick and in the order body`() {
+        // CDS (USDINR) trades on a 0.0025 tick: two-decimal rounding would put it off the grid.
+        assertEquals(83.2525, Kite.onTick(83.2526, 0.0025, Kite.Side.SELL))
+        assertEquals(83.255, Kite.onTick(83.2526, 0.0025, Kite.Side.BUY))
+        val cds = Kite.Order("USDINR26SEPFUT", Kite.Side.BUY, 1, 1, "NRML", "LIMIT", 83.2525, exchange = "CDS")
+        assertTrue("price=83.2525&" in cds.formBody(), cds.formBody())
+        assertTrue("price=5.00&" in order(price = 5.0).formBody())
+    }
+
     @Test fun `a hedged ticket buys its wing before it sells the put`() {
         val tk = Live.Ticket(LocalDate.of(2026, 9, 29), "NIFTY", LocalDate.of(2026, 9, 29), "SELL", "PE", 24500.0, 65, 1, 65,
             credit = 3.0, forward = 24700.0, breakeven = 24497.0, margin = 0.0, maxLoss = 0.0, wingStrike = 24300.0, wingDebit = 1.5)
@@ -132,6 +141,46 @@ class KiteTest {
         val long = Kite.squareOff(spec, "NRML", 65, bid = 4.8, ask = 4.93, last = 4.85)!!
         assertEquals(Kite.Side.SELL to 4.8, long.side to long.price)
         assertEquals(null, Kite.squareOff(spec, "NRML", 0, null, null, 1.0))
+    }
+
+    @Test fun `the freeze quantity is read from the symbol, longest name first`() {
+        assertEquals("BANKNIFTY", Kite.underlyingOf("BANKNIFTY26SEP52000CE"))
+        assertEquals("NIFTY", Kite.underlyingOf("NIFTY26SEP24500PE"))
+        assertEquals("FINNIFTY", Kite.underlyingOf("FINNIFTY26SEP23000CE"))
+        assertEquals("MIDCPNIFTY", Kite.underlyingOf("MIDCPNIFTY26SEP12000PE"))
+        assertEquals("BANKEX", Kite.underlyingOf("BANKEX26SEP60000CE"))
+        // NIFTYNXT50 has its own freeze quantity and is never read as NIFTY.
+        assertEquals("NIFTYNXT50", Kite.underlyingOf("NIFTYNXT5026SEP70000CE"))
+        assertEquals(600, Kite.freezeQuantity("NFO", "NIFTYNXT5026SEP70000CE"))
+        assertEquals(1800, Kite.freezeQuantity("NFO", "NIFTY26SEP24500PE"))
+        assertEquals(900, Kite.freezeQuantity("NFO", "BANKNIFTY26SEP52000CE"))
+        assertEquals(2800, Kite.freezeQuantity("NFO", "MIDCPNIFTY26SEP12000PE"))
+        assertEquals(1000, Kite.freezeQuantity("BFO", "SENSEX26SEP80000CE"))
+        assertEquals(null, Kite.freezeQuantity("NFO", "RELIANCE26SEP3000CE"))
+        assertEquals(null, Kite.freezeQuantity("NSE", "NIFTYBEES"))
+    }
+
+    @Test fun `an order above the freeze quantity is refused, exits included`() {
+        val o = Kite.Order("NIFTY26SEP24500PE", Kite.Side.BUY, 1820, 65, "NRML", "LIMIT", 5.0)
+        val big = Kite.Limits(maxLotsPerOrder = 100, maxOrderValue = 1e9)
+        assertTrue(Kite.refusals(o, big, 0, false).any { "freeze quantity of 1800" in it && "split" in it })
+        assertTrue(Kite.refusals(o, big, 0, false, exit = true).any { "freeze quantity" in it })
+        assertEquals(emptyList(), Kite.refusals(o.copy(quantity = 1755), big, 0, false, exit = true))
+    }
+
+    @Test fun `a square-off above the freeze quantity goes as whole-lot slices`() {
+        val spec = Kite.Spec("NFO", "NIFTY26SEP24500PE", 1L, 65, 0.05)
+        // 1800 / 65 = 27 lots = 1755 per slice.
+        val out = Kite.squareOffSlices(spec, "NRML", -3965, bid = 4.8, ask = 4.93, last = 4.85)
+        assertEquals(listOf(1755, 1755, 455), out.map { it.quantity })
+        assertTrue(out.all { it.side == Kite.Side.BUY && it.price == 4.95 && it.quantity % 65 == 0 })
+        assertTrue(out.all { Kite.refusals(it, Kite.Limits(maxLotsPerOrder = 2), 9, false, exit = true).isEmpty() })
+        // Under the limit: the one order squareOff gives.
+        assertEquals(listOf(Kite.squareOff(spec, "NRML", 260, 4.8, 4.93, 4.85)), Kite.squareOffSlices(spec, "NRML", 260, 4.8, 4.93, 4.85))
+        assertEquals(emptyList(), Kite.squareOffSlices(spec, "NRML", 0, null, null, 1.0))
+        // BANKNIFTY at 30 a lot: 900 is exactly 30 lots.
+        assertEquals(listOf(900, 900, 300), Kite.slices(2100, 30, 900))
+        assertEquals(listOf(5000), Kite.slices(5000, 1, null))
     }
 
     @Test fun `the lookup finds lot and tick on any exchange, in lots where Kite quotes lots`() {

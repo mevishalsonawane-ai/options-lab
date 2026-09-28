@@ -8,6 +8,7 @@ import androidx.core.app.NotificationManagerCompat
 import com.optionslab.app.MainActivity
 import com.optionslab.app.data.AppSettings
 import com.optionslab.app.data.Broker
+import com.optionslab.app.data.Origins
 import com.optionslab.app.data.Paper
 import java.util.Locale
 import kotlin.math.abs
@@ -31,6 +32,9 @@ object PositionCards {
     const val EXTRA_SYMBOL = "symbol"
 
     private val shown = java.util.concurrent.ConcurrentHashMap<String, Boolean>()
+    /** Who opened each carded position ("venue|symbol" -> "ORB + Manual"), and the quantity that was read at. */
+    private val sources = java.util.concurrent.ConcurrentHashMap<String, String>()
+    private val sourceQty = java.util.concurrent.ConcurrentHashMap<String, Int>()
     @Volatile var anyOpen = false
         private set
 
@@ -55,21 +59,37 @@ object PositionCards {
 
     /**
      * Post or rewrite a position's card. [alert] makes it sound (a fill); updates are silent.
-     * [headline] replaces the first line (e.g. "BUY filled · Paper · ORB").
+     * [headline] replaces the first line (e.g. "BUY filled · Paper · Strategy: ORB"). [source] is who opened
+     * the position ("ORB + Manual"); the last one given is kept for the card's silent updates.
      */
     fun card(context: Context, venue: String, symbol: String, qty: Int, avg: Double, ltp: Double?, pnl: Double,
-             alert: Boolean = false, headline: String? = null) {
+             alert: Boolean = false, headline: String? = null, source: String? = null) {
+        // A position closed (squared off, stopped out, settled): its card is taken down, not left as a result.
+        if (qty == 0) { dismiss(context, venue, symbol); return }
+        if (source != null) sources["$venue|$symbol"] = source
         if (!Notifier.canPost(context)) return
         val open = qty != 0
+        val by = sources["$venue|$symbol"]?.let { "\n" + com.optionslab.app.data.Origins.positionDisplay(it).first } ?: ""
         val title = headline ?: if (open) "$symbol · $venue · ${rs(pnl)}" else "Closed $symbol · $venue · ${rs(pnl)}"
-        val text = if (open) "${if (qty > 0) "LONG" else "SHORT"} ${abs(qty)} @ ${px(avg)}" + (ltp?.let { " · LTP ${px(it)}" } ?: "") +
+        val text0 = if (open) "${if (qty > 0) "LONG" else "SHORT"} ${abs(qty)} @ ${px(avg)}" + (ltp?.let { " · LTP ${px(it)}" } ?: "") +
             "\nP&L ${rs(pnl)}" + (if (avg > 0 && ltp != null) " (%+.1f%%)".format(Locale.ENGLISH, 100 * (ltp - avg) / avg * (if (qty > 0) 1 else -1)) else "")
             else "Realised P&L ${rs(pnl)}"
+        val text = text0 + by
         val b = Notifier.builder(context, if (qty >= 0) Notifier.BUY else Notifier.SELL, title, text, "trade")
             .setOnlyAlertOnce(!alert).setSilent(!alert).setOngoing(open).setAutoCancel(!open)
         if (open) b.addAction(closeAction(context, venue, symbol))
         try { NotificationManagerCompat.from(context).notify(idOf(venue, symbol), b.build()) } catch (_: SecurityException) {}
         if (open) shown["$venue|$symbol"] = true
+    }
+
+    /** Bumped when a position is closed from its card in the shade: the open app reloads its books at once. */
+    val closedFromShade = kotlinx.coroutines.flow.MutableStateFlow(0)
+
+    /** Take down [symbol]'s card on [venue] ("Paper" / "Live"): the position is closed. */
+    fun dismiss(context: Context, venue: String, symbol: String) {
+        val key = "$venue|$symbol"
+        shown.remove(key); sources.remove(key); sourceQty.remove(key)
+        runCatching { NotificationManagerCompat.from(context).cancel(idOf(venue, symbol)) }
     }
 
     @Volatile private var lastLive: Broker.Positions? = null
@@ -107,15 +127,31 @@ object PositionCards {
     suspend fun refresh(context: Context) {
         val s = runCatching { AppSettings.load() }.getOrNull() ?: return
         val now = HashMap<String, Unit>()
-        runCatching { Paper.snapshot() }.getOrNull()?.positions?.positions?.forEach { p ->
+        val owners = runCatching { com.optionslab.app.data.Strategies.owners() }.getOrDefault(emptyMap())
+        runCatching { Paper.snapshot() }.getOrNull()?.let { snap -> snap.positions.positions.map { it to snap.trades } }?.forEach { (p, trades) ->
             val key = "Paper|${p.symbol}"
-            if (p.quantity != 0) { now[key] = Unit; card(context, "Paper", p.symbol, p.quantity, p.averagePrice, p.ltp.takeIf { it > 0 }, p.pnl) }
+            if (p.quantity != 0) {
+                now[key] = Unit
+                card(context, "Paper", p.symbol, p.quantity, p.averagePrice, p.ltp.takeIf { it > 0 }, p.pnl,
+                    source = com.optionslab.app.data.Origins.paperPosition(owners, trades, p.symbol, p.product, p.quantity))
+            }
             else if (shown.remove(key) != null) card(context, "Paper", p.symbol, 0, p.averagePrice, null, p.pnl)
         }
         if (s.live && Broker.loggedIn) runCatching { Broker.positionBook() }.getOrNull()?.also { book ->
             lastLive = book
             com.optionslab.app.data.KiteStream.want("positions", book.net.filter { it.qty != 0 }.map { it.token })
-        }?.let { com.optionslab.app.data.KiteStream.live(it) }?.net?.forEach { p ->
+        }?.let { com.optionslab.app.data.KiteStream.live(it) }?.net?.also { net ->
+            // Who opened a Zerodha position is read from the day's trades only when it is new or its size changed.
+            val stale = net.filter { it.qty != 0 && sourceQty["Live|${it.symbol}"] != it.qty }
+            if (stale.isNotEmpty()) runCatching {
+                val trades = Broker.trades()
+                val orders = Broker.orders()
+                stale.forEach { p ->
+                    Origins.livePosition(owners, trades, orders, p.symbol, p.product, p.qty)?.let { sources["Live|${p.symbol}"] = it }
+                    sourceQty["Live|${p.symbol}"] = p.qty
+                }
+            }
+        }?.forEach { p ->
             val key = "Live|${p.symbol}"
             if (p.qty != 0) { now[key] = Unit; card(context, "Live", p.symbol, p.qty, p.avg, p.last.takeIf { it > 0 }, p.pnl) }
             else if (shown.remove(key) != null) card(context, "Live", p.symbol, 0, p.avg, null, p.pnl)

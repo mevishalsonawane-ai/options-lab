@@ -42,7 +42,7 @@ jobs:
           java-version: "17"
       - uses: gradle/actions/setup-gradle@v4
       # No Android SDK on purpose: the engine must build on a bare JDK.
-      - run: env -u ANDROID_HOME -u ANDROID_SDK_ROOT ./gradlew --no-daemon :engine:test
+      - run: env -u ANDROID_HOME -u ANDROID_SDK_ROOT ./gradlew --no-daemon :engine:test :engine:jacocoTestCoverageVerification
 
   apk:
     name: Build APK
@@ -69,21 +69,56 @@ jobs:
       - name: Release keystore (optional)
         env:
           KEYSTORE_B64: ${{ secrets.OL_KEYSTORE_B64 }}
+          KS_PASS_RAW: ${{ secrets.OL_KEYSTORE_PASSWORD }}
+          KEY_PASS_RAW: ${{ secrets.OL_KEY_PASSWORD }}
+          KS_ALIAS_RAW: ${{ secrets.OL_KEY_ALIAS }}
         run: |
           if [ -n "$KEYSTORE_B64" ]; then
-            echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/release.jks"
-            echo "OL_KEYSTORE_PATH=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
+            # Secrets pasted from a phone can carry line breaks or spaces: keep only the characters each can hold.
+            # A copy that took the file's label along ("---- OL_KEYSTORE_B64 ----") is still read: the label goes first.
+            b64=$(printf '%s' "$KEYSTORE_B64" | sed 's/OL_KEYSTORE_B64//g' | tr -cd 'A-Za-z0-9+/=')
+            ks_pass=$(printf '%s' "$KS_PASS_RAW" | tr -d '[:space:]')
+            key_pass=$(printf '%s' "$KEY_PASS_RAW" | tr -d '[:space:]')
+            alias=$(printf '%s' "$KS_ALIAS_RAW" | tr -d '[:space:]')
+            for v in "$ks_pass" "$key_pass"; do [ -n "$v" ] && echo "::add-mask::$v"; done
+            # make-release-key.sh gives the key the keystore's password, so that one password signs.
+            # Sizes only (never the values), so a bad paste can be told apart from a wrong password.
+            echo "keystore text: ${#b64} characters (expected 5732); passwords: ${#ks_pass} and ${#key_pass} characters (32 each); alias: ${#alias} characters (7)" > "$RUNNER_TEMP/signing.txt"
+            echo "keystore text: ${#b64} characters (make-release-key.sh prints 5732 for a 4298-byte key); passwords: ${#ks_pass} and ${#key_pass} characters (32 each); alias: ${#alias} characters (7)"
+            if ! printf '%s' "$b64" | base64 -d > "$RUNNER_TEMP/release.jks" 2>/dev/null; then
+              echo "Result: OL_KEYSTORE_B64 is not valid base64 - re-paste the long line." >> "$RUNNER_TEMP/signing.txt"
+              echo "::warning title=Release key not usable::OL_KEYSTORE_B64 is not valid base64 (cut short or changed while pasting). Re-paste the long line from github-secrets.txt. This APK is signed with a throwaway key."
+              rm -f "$RUNNER_TEMP/release.jks"
+            elif ! keytool -list -keystore "$RUNNER_TEMP/release.jks" -storepass "$ks_pass" >/dev/null 2>&1; then
+              echo "Result: keystore decoded to $(wc -c < "$RUNNER_TEMP/release.jks") bytes (expected 4298) and does not open with OL_KEYSTORE_PASSWORD." >> "$RUNNER_TEMP/signing.txt"
+              echo "::warning title=Release key not usable::The keystore ($(wc -c < "$RUNNER_TEMP/release.jks") bytes) does not open with OL_KEYSTORE_PASSWORD. Re-paste the password from github-secrets.txt (or the keystore text if its size above is not 5732). This APK is signed with a throwaway key."
+              rm -f "$RUNNER_TEMP/release.jks"
+            elif ! keytool -list -keystore "$RUNNER_TEMP/release.jks" -storepass "$ks_pass" -alias "$alias" >/dev/null 2>&1; then
+              echo "Result: keystore opens; OL_KEY_ALIAS does not name its key (should be iraalgo)." >> "$RUNNER_TEMP/signing.txt"
+              echo "::warning title=Release key not usable::The keystore opens, but has no key named by OL_KEY_ALIAS (it should be iraalgo). This APK is signed with a throwaway key."
+              rm -f "$RUNNER_TEMP/release.jks"
+            else
+              echo "OL_KEYSTORE_PATH=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
+              { echo "OL_KEYSTORE_PASSWORD=$ks_pass"; echo "OL_KEY_PASSWORD=$ks_pass"; echo "OL_KEY_ALIAS=$alias"; } >> "$GITHUB_ENV"
+              echo "Result: release keystore loaded and checked." >> "$RUNNER_TEMP/signing.txt"
+              echo "Release keystore loaded and checked."
+            fi
           else
+            echo "Result: no OL_KEYSTORE_B64 secret." > "$RUNNER_TEMP/signing.txt"
             echo "::warning title=Release APK signed with a throwaway key::No OL_KEYSTORE_B64 secret: this APK will not install over a previous build. Run android/tools/make-release-key.sh once and add the four secrets it prints."
           fi
       - name: Assemble
-        env:
-          OL_KEYSTORE_PASSWORD: ${{ secrets.OL_KEYSTORE_PASSWORD }}
-          OL_KEY_ALIAS: ${{ secrets.OL_KEY_ALIAS }}
-          OL_KEY_PASSWORD: ${{ secrets.OL_KEY_PASSWORD }}
-        run: ./gradlew --no-daemon :app:testDebugUnitTest :app:assembleDebug :app:assembleRelease
+        # The keystore step puts the cleaned passwords and alias in the environment (masked in the log).
+        # The app's unit and UI tests run in the app-tests job, alongside this one.
+        run: ./gradlew --no-daemon :app:assembleDebug :app:assembleRelease
       - name: Sandbox report (every permission the APK holds)
         run: cat app/build/reports/sandbox/*.txt
+      - name: Release signing certificate (public fingerprint only)
+        run: |
+          cat "$RUNNER_TEMP/signing.txt" 2>/dev/null || true
+          signer=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)
+          "$signer" verify --print-certs app/build/outputs/apk/release/*.apk | grep -E "SHA-256|DN" || true
+          if [ -n "$OL_KEYSTORE_PATH" ]; then echo "Signed with the owner's release key."; else echo "Signed with a throwaway key (no usable release keystore)."; fi
       - uses: actions/upload-artifact@v4
         with:
           name: options-lab-apk
@@ -91,3 +126,106 @@ jobs:
             android/app/build/outputs/apk/release/*.apk
             android/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
+
+  app-tests:
+    name: App tests (JVM, Robolectric, Compose UI) ${{ matrix.shard }}/4
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    needs: engine
+    # Four jobs at once, each a quarter of the test classes (by class-name hash): the whole suite
+    # fits the time limit, and one area's stall cannot hold up the others' results.
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3]
+    defaults:
+      run:
+        working-directory: android
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Accept Android SDK licences
+        run: |
+          test -n "$ANDROID_HOME"
+          SDKM=$(ls -d "$ANDROID_HOME"/cmdline-tools/*/bin/sdkmanager | sort -V | tail -1)
+          yes | "$SDKM" --licenses > /dev/null || true
+      - uses: gradle/actions/setup-gradle@v4
+      # No secrets here: the tests use made-up values and an in-memory stand-in for the Keystore.
+      # Robolectric fetches its Android runtime jar from Maven Central on first use.
+      - name: Unit and UI tests, with coverage
+        run: |
+          # A stuck test JVM says nothing (not even the in-process samplers print when its heap thrashes):
+          # every 5 minutes each test JVM's heap and main threads go to this log from outside.
+          (sleep 240; while true; do
+             for pid in $(pgrep -f 'Gradle Test Executor'); do
+               echo "==== JVM $pid at $(date -u +%H:%M:%S)"
+               jcmd "$pid" GC.heap_info 2>&1 | head -12
+               jcmd "$pid" Thread.print 2>&1 | awk '/^"/{keep = ($0 ~ /Test worker|Main Thread|idle-sampler/)} keep' | grep -v 'java.lang.invoke\|LambdaForm\|\$\$robo\$\$' | head -160
+             done
+             sleep 300
+           done) &
+          dumper=$!
+          # Each step may fail (the dumper already gone, or between children): under bash -e a failing command in
+          # the trap ended a passing step with exit 1 ("BUILD SUCCESSFUL ... Terminated").
+          trap 'pkill -P $dumper 2>/dev/null || true; kill $dumper 2>/dev/null || true' EXIT
+          ./gradlew --no-daemon -PtestShard=${{ matrix.shard }}/4 :app:testDebugUnitTest :app:createDebugUnitTestCoverageReport
+      - name: Coverage summary
+        if: always()
+        run: python3 tools/coverage_summary.py "$(find app/build/reports/coverage -name report.xml 2>/dev/null | head -1)" app/build/test-results/testDebugUnitTest | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Screenshots captured
+        if: always()
+        run: |
+          n=$(find app/build/outputs/roborazzi -name '*.png' 2>/dev/null | wc -l)
+          echo "$n screenshots in app/build/outputs/roborazzi (artifact app-screenshots-${{ matrix.shard }})"
+          find app/build/outputs/roborazzi -name '*.png' -printf '%f\n' 2>/dev/null | sort | head -400
+          grep -rhoE 'LAYOUT BUG \([^)]*\): [^<]*' app/build/test-results/testDebugUnitTest/*.xml 2>/dev/null | sort -u | head -100 || true
+          grep -rhoE 'LATENCY [^<]*' app/build/test-results/testDebugUnitTest/*.xml 2>/dev/null | sort -u || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: app-screenshots-${{ matrix.shard }}
+          path: android/app/build/outputs/roborazzi/
+          if-no-files-found: warn
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: app-test-reports-${{ matrix.shard }}
+          path: |
+            android/app/build/reports/tests/testDebugUnitTest/
+            android/app/build/test-results/testDebugUnitTest/
+            android/app/build/reports/coverage/
+          if-no-files-found: warn
+
+  # The latest screenshots on branch ui-screenshots (force-replaced, one commit, images only),
+  # so they can be fetched with git. Only this job may write, and it runs no build or test code.
+  screenshots:
+    name: Publish screenshots
+    runs-on: ubuntu-latest
+    needs: app-tests
+    if: always() && github.event_name == 'push' && github.ref == 'refs/heads/claude/android-options-lab-kotlin-xgt1ym'
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: app-screenshots-*
+          merge-multiple: true
+          path: shots
+      - name: Push to ui-screenshots
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+        run: |
+          mkdir -p shots && cd shots   # no artifacts when the app tests were skipped
+          n=$(find . -name '*.png' | wc -l)
+          if [ "$n" -eq 0 ]; then echo "no screenshots"; exit 0; fi
+          find . -name '*.png' -printf '%P\n' | sort > index.txt
+          git init -q -b ui-screenshots
+          git config user.name "ci-screenshots"; git config user.email "ci-screenshots@users.noreply.github.com"
+          git add -A && git commit -qm "Screenshots for $SHA ($n images)"
+          git push -qf "https://x-access-token:${TOKEN}@github.com/${REPO}" HEAD:ui-screenshots
+          echo "published $n screenshots to ui-screenshots"

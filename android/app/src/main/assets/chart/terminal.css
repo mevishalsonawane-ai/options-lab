@@ -1,7 +1,9 @@
-html, body { margin: 0; height: 100%; overflow: hidden; background: #fff; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; height: 100%; min-height: 100vh; overflow: hidden; background: #fff; -webkit-tap-highlight-color: transparent; }
 body.dark { background: #000; }
 /* Sized to the WebView itself (not the phone's window), so the time axis is never below the visible edge. */
 #t { position: absolute; inset: 0; }
 html, body { position: relative; width: 100%; }
 #msg { position: fixed; left: 12px; right: 12px; top: 12px; padding: 10px 14px; border-radius: 12px;
        background: #e0322b; color: #fff; font: 13px system-ui, sans-serif; }
+/* A phone has no hover: a tooltip shown by a tap would stay stuck over the chart. */
+@media (hover: none) { .oac-tip { display: none !important; } }

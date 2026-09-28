@@ -51,7 +51,9 @@ private fun inr(x: Double, sign: Boolean = false): String =
     (if (sign && x > 0) "+" else if (x < 0) "−" else "") + INR.format(abs(x))
 
 /** One line of the Home "Live orders" list: an open position or a working order. */
-private data class HomeOrder(val name: String, val detail: String, val value: String, val valueColor: Color?, val status: String, val target: RowTarget)
+private data class HomeOrder(val name: String, val detail: String, val value: String, val valueColor: Color?, val status: String, val target: RowTarget,
+                             /** Who placed the order / opened the position ([com.optionslab.app.data.Origins]). */
+                             val source: Pair<String, Boolean>? = null)
 
 /** What Home shows about the money, from the paper account or from Zerodha. */
 private data class Money(val pnlToday: Double?, val unused: Double?, val used: Double?) {
@@ -65,48 +67,75 @@ private data class Money(val pnlToday: Double?, val unused: Double?, val used: D
  */
 @Composable
 fun AlmanacScreen(model: AppModel, onGo: (String) -> Unit) {
-    val p = LocalPalette.current
     val s by model.settings.collectAsState()
     val quotes by model.quotes.collectAsState()
     val note by model.quoteNote.collectAsState()
     val daily by model.bankNiftyDaily.collectAsState()
     val account by model.account.collectAsState()
     val paper by model.paper.collectAsState()
-    var range by rememberSaveable { mutableStateOf("1D") }
+    val owners by model.orderOwners.collectAsState()
 
     // Prices poll only while Home is on screen and the app is in front.
     com.optionslab.app.ui.PollWhileStarted {
         model.startQuotes()
         try { kotlinx.coroutines.awaitCancellation() } finally { model.stopQuotes() }
     }
-    // The money and the orders refresh every 20 s while Home is open.
+    // The money and the orders refresh every 20 s while Home is open; the paper account as fast as its prices move.
     com.optionslab.app.ui.PollWhileStarted(s.live) {
+        var last = 0L
         while (true) {
+            val now = System.currentTimeMillis()
             if (s.live) { if (com.optionslab.app.data.Broker.loggedIn) model.loadAccount(quiet = true) } else model.loadPaper(quiet = true)
-            model.refreshStrategies()
-            delay(20_000)
+            if (now - last >= 20_000) { model.refreshStrategies(); last = now }
+            delay(if (s.live) 20_000 else model.paperRefreshMs().coerceAtMost(20_000))
         }
     }
     LaunchedEffect(s.live) { model.loadBankNiftyDaily() }
+    AlmanacContent(s.live, com.optionslab.app.data.Broker.loggedIn, quotes, note, daily, account, paper, onGo,
+        onRow = { model.rowAction.value = it }, owners = owners, strategies = { StrategyArmCard(model) { onGo("strategy") } })
+}
+
+/**
+ * Home from plain state and callbacks (what [AlmanacScreen] shows; tests drive it without an [AppModel]).
+ * [loggedIn]: a Zerodha session for today; [strategies]: the strategy card between the money and the chart.
+ */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable
+internal fun AlmanacContent(
+    live: Boolean,
+    loggedIn: Boolean,
+    quotes: Map<String, Market.Quote>,
+    note: String?,
+    daily: List<Pair<java.time.LocalDate, Double>>,
+    account: Load<com.optionslab.app.ui.Account>,
+    paper: Load<com.optionslab.app.data.Paper.Snapshot>,
+    onGo: (String) -> Unit,
+    onRow: (RowTarget) -> Unit,
+    owners: Map<String, String> = emptyMap(),
+    strategies: @Composable () -> Unit,
+) {
+    val p = LocalPalette.current
+    var range by rememberSaveable { mutableStateOf("1D") }
 
     val money: Money
     val orders: List<HomeOrder>
     val moneyNote: String?
-    if (s.live) {
+    if (live) {
         val a = (account as? Load.Done)?.value
         money = Money(a?.book?.m2m, a?.funds?.available, a?.funds?.used)
         orders = a?.let { acc ->
             acc.positions.filter { it.qty != 0 }.map {
                 HomeOrder(it.symbol, "${if (it.qty < 0) "SELL" else "BUY"} ${abs(it.qty)} · avg ${PX.format(it.avg)} · LTP ${PX.format(it.last)}",
-                    inr(it.pnl, true), if (it.pnl >= 0) p.verdigris else p.oxblood, "OPEN", RowTarget.LivePosition(it))
+                    inr(it.pnl, true), if (it.pnl >= 0) p.verdigris else p.oxblood, "OPEN", RowTarget.LivePosition(it),
+                    com.optionslab.app.data.Origins.livePosition(owners, acc.trades, acc.orders, it.symbol, it.product, it.qty)?.let(com.optionslab.app.data.Origins::positionDisplay))
             } + acc.orders.filter { it.working }.map {
                 HomeOrder(it.symbol, "${it.side} ${it.pending.takeIf { n -> n > 0 } ?: it.qty} · ${it.type.lowercase()}${if (it.trigger > 0) " · trigger ${PX.format(it.trigger)}" else ""}",
                     "₹" + PX.format(if (it.price > 0) it.price else it.trigger), null, if (it.status == "TRIGGER PENDING") "TRIGGER PENDING" else "PENDING",
-                    RowTarget.LiveOrder(it))
+                    RowTarget.LiveOrder(it), orderSource(owners, "kite:${it.id}", it.tag))
             }
         } ?: emptyList()
         moneyNote = when {
-            !com.optionslab.app.data.Broker.loggedIn -> "Log in to Zerodha for today to see your money and orders."
+            !loggedIn -> "Log in to Zerodha for today to see your money and orders."
             account is Load.Failed -> (account as Load.Failed).why
             else -> null
         }
@@ -116,11 +145,13 @@ fun AlmanacScreen(model: AppModel, onGo: (String) -> Unit) {
         orders = v?.let { snap ->
             snap.positions.positions.filter { it.quantity != 0 }.map {
                 HomeOrder(it.symbol, "${if (it.quantity < 0) "SELL" else "BUY"} ${abs(it.quantity)} · avg ${PX.format(it.averagePrice)} · LTP ${PX.format(it.ltp)}",
-                    inr(it.pnl, true), if (it.pnl >= 0) p.verdigris else p.oxblood, "OPEN", RowTarget.PaperPosition(it))
+                    inr(it.pnl, true), if (it.pnl >= 0) p.verdigris else p.oxblood, "OPEN", RowTarget.PaperPosition(it),
+                    com.optionslab.app.data.Origins.paperPosition(owners, snap.trades, it.symbol, it.product, it.quantity)?.let(com.optionslab.app.data.Origins::positionDisplay))
             } + snap.orders.orders.filter { it.pendingQuantity > 0 && it.status.uppercase() !in setOf("COMPLETE", "CANCELLED", "REJECTED") }.map {
                 HomeOrder(it.symbol, "${it.action} ${it.pendingQuantity} · ${it.priceType.lowercase()}${if (it.triggerPrice > 0) " · trigger ${PX.format(it.triggerPrice)}" else ""}",
                     "₹" + PX.format(if (it.price > 0) it.price else it.triggerPrice), null,
-                    if (it.status.uppercase().contains("TRIGGER")) "TRIGGER PENDING" else "PENDING", RowTarget.PaperOrder(it))
+                    if (it.status.uppercase().contains("TRIGGER")) "TRIGGER PENDING" else "PENDING", RowTarget.PaperOrder(it),
+                    orderSource(owners, "paper:${it.orderId}"))
             }
         } ?: emptyList()
         moneyNote = (paper as? Load.Failed)?.why
@@ -133,17 +164,17 @@ fun AlmanacScreen(model: AppModel, onGo: (String) -> Unit) {
             val usedShare = if (cap != null && cap > 0) ((money.used ?: 0.0) / cap).toFloat().coerceIn(0f, 1f) else 0f
             LedgerCard {
                 Text("Capital", style = Type.label.copy(color = p.inkSoft, fontSize = 13.sp))
-                Text(cap?.let { inr(it) } ?: "—", style = Type.figureHuge.copy(color = p.ink, fontSize = 38.sp), maxLines = 1)
+                com.optionslab.app.ui.components.FitText(cap?.let { inr(it) } ?: "—", style = Type.figureHuge.copy(color = p.ink, fontSize = 38.sp), minSize = 14.sp)
                 if (cap != null && cap > 0) {
                     Row(Modifier.fillMaxWidth().padding(top = 10.dp).height(8.dp).background(p.chip, RoundedCornerShape(50))) {
                         if (usedShare > 0f) Spacer(Modifier.weight(usedShare).fillMaxHeight().background(p.ink, RoundedCornerShape(50)))
                         if (usedShare < 1f) Spacer(Modifier.weight(1f - usedShare))
                     }
                 }
-                Row(Modifier.padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    MoneyFigure("Unused", money.unused?.let { inr(it) }, null, Modifier.weight(1f))
-                    MoneyFigure("Used", money.used?.let { inr(it) }, null, Modifier.weight(1f))
-                    MoneyFigure("P&L today", money.pnlToday?.let { inr(it, true) }, money.pnlToday?.let { if (it >= 0) p.verdigris else p.oxblood }, Modifier.weight(1f))
+                MoneyRow(Modifier.padding(top = 12.dp)) {
+                    MoneyFigure("Unused", money.unused?.let { inr(it) }, null, Modifier)
+                    MoneyFigure("Used", money.used?.let { inr(it) }, null, Modifier)
+                    MoneyFigure("P&L today", money.pnlToday?.let { inr(it, true) }, money.pnlToday?.let { if (it >= 0) p.verdigris else p.oxblood }, Modifier)
                 }
                 if (moneyNote != null) Note(moneyNote, Modifier.padding(top = 8.dp))
                 else if (cap != null && cap > 0) Text("${Math.round(100 * usedShare)}% of capital in use", style = Type.bodySmall.copy(color = p.inkSoft), modifier = Modifier.padding(top = 8.dp))
@@ -151,7 +182,7 @@ fun AlmanacScreen(model: AppModel, onGo: (String) -> Unit) {
         }
 
         // ---- strategies: arm the ones you want ------------------------------------------
-        item { StrategyArmCard(model) { onGo("strategy") } }
+        item { strategies() }
 
         // ---- BANKNIFTY ------------------------------------------------------------------
         item {
@@ -178,11 +209,14 @@ fun AlmanacScreen(model: AppModel, onGo: (String) -> Unit) {
             LedgerCard {
                 Row(verticalAlignment = Alignment.Top) {
                     Column(Modifier.weight(1f)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("BANKNIFTY", style = Type.label.copy(color = p.inkSoft, fontSize = 13.sp))
-                            Text("  Full chart ›", style = Type.label.copy(color = p.ink, fontSize = 12.sp), modifier = Modifier.clickable { onGo("chart") })
+                        // "Full chart ›" moves under the name when both do not fit (at font 2.0 it wrapped into the name).
+                        androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Text("BANKNIFTY", style = Type.label.copy(color = p.inkSoft, fontSize = 13.sp), modifier = Modifier.align(Alignment.CenterVertically))
+                            Text("Full chart ›", style = Type.label.copy(color = p.ink, fontSize = 12.sp), maxLines = 1, softWrap = false,
+                                modifier = Modifier.align(Alignment.CenterVertically).clickable { onGo("chart") })
                         }
-                        Text(last?.let { PX.format(it) } ?: "—", style = Type.figureLarge.copy(color = p.ink))
+                        // One line, shrunk to fit: a price never breaks mid-number.
+                        com.optionslab.app.ui.components.FitText(last?.let { PX.format(it) } ?: "—", style = Type.figureLarge.copy(color = p.ink), minSize = 12.sp)
                     }
                     if (change != null && base != null && base != 0.0) Text(
                         "${if (up) "+" else "−"}${PX.format(abs(change))}\n${if (up) "+" else "−"}${String.format(Locale.ENGLISH, "%.2f", abs(100 * change / base))}%",
@@ -211,10 +245,12 @@ fun AlmanacScreen(model: AppModel, onGo: (String) -> Unit) {
                 if (orders.isEmpty()) Note("No open positions or pending orders.", Modifier.padding(top = 6.dp))
                 orders.forEachIndexed { i, o ->
                     if (i > 0) Rule()
-                    Row(Modifier.fillMaxWidth().clickable { model.rowAction.value = o.target }.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Row(Modifier.fillMaxWidth().clickable { onRow(o.target) }.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
-                            Text(o.name, style = Type.body.copy(color = p.ink, fontSize = 14.sp, fontWeight = FontWeight.SemiBold), maxLines = 1)
-                            Text(o.detail, style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp), maxLines = 1)
+                            // Wrapped, not cut, when a large font leaves too little room beside the amount.
+                            Text(o.name, style = Type.body.copy(color = p.ink, fontSize = 14.sp, fontWeight = FontWeight.SemiBold))
+                            Text(o.detail, style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp))
+                            o.source?.let { SourcePill(it) }
                         }
                         Spacer(Modifier.padding(start = 8.dp))
                         Column(horizontalAlignment = Alignment.End) {
@@ -234,9 +270,33 @@ private data class ChartSpec(val values: List<Double>, val reference: Double?, v
 private fun MoneyFigure(label: String, value: String?, color: Color?, modifier: Modifier) {
     val p = LocalPalette.current
     Column(modifier) {
-        Text(label, style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp), maxLines = 1)
+        Text(label, style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp))
         Spacer(Modifier.height(2.dp))
-        Text(value ?: "—", style = Type.figure.copy(color = color ?: p.ink, fontSize = 15.sp, fontWeight = FontWeight.Bold), maxLines = 1)
+        Text(value ?: "—", style = Type.figure.copy(color = color ?: p.ink, fontSize = 15.sp, fontWeight = FontWeight.Bold))
+    }
+}
+
+/**
+ * The money figures side by side in equal columns, 8 dp apart, when each fits its column whole; otherwise
+ * (a small phone, a large font) one under the other at full width, so no amount is ever cut.
+ */
+@Composable
+private fun MoneyRow(modifier: Modifier, content: @Composable () -> Unit) {
+    androidx.compose.ui.layout.Layout(content, modifier.fillMaxWidth()) { ms, c ->
+        val gap = 8.dp.roundToPx()
+        val n = ms.size.coerceAtLeast(1)
+        val natural = ms.map { it.maxIntrinsicWidth(androidx.compose.ui.unit.Constraints.Infinity) }
+        val w = if (c.hasBoundedWidth) c.maxWidth else natural.sum() + gap * (n - 1)
+        val each = ((w - gap * (n - 1)) / n).coerceAtLeast(0)
+        if (natural.all { it <= each }) {
+            val ps = ms.map { it.measure(androidx.compose.ui.unit.Constraints(minWidth = each, maxWidth = each)) }
+            val h = ps.maxOfOrNull { it.height } ?: 0
+            layout(w, h) { ps.forEachIndexed { i, pl -> pl.placeRelative(i * (each + gap), 0) } }
+        } else {
+            val ps = ms.map { it.measure(androidx.compose.ui.unit.Constraints(maxWidth = w)) }
+            val h = ps.sumOf { it.height } + gap * (ps.size - 1).coerceAtLeast(0)
+            layout(w, h) { var y = 0; ps.forEach { pl -> pl.placeRelative(0, y); y += pl.height + gap } }
+        }
     }
 }
 

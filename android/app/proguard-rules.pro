@@ -26,3 +26,14 @@
 -keepattributes !SourceFile,!LineNumberTable
 
 -keep class * extends androidx.work.ListenableWorker { <init>(...); }
+
+# JSch (static-IP relay): algorithms are loaded by class name from its config.
+-keep class com.jcraft.jsch.** { *; }
+-dontwarn com.jcraft.jsch.**
+-dontwarn org.bouncycastle.**
+-dontwarn com.sun.jna.**
+-dontwarn org.slf4j.**
+-dontwarn org.apache.logging.log4j.**
+-dontwarn org.newsclub.net.unix.**
+-dontwarn javax.security.auth.**
+-dontwarn org.ietf.jgss.**

@@ -92,6 +92,15 @@ object Strategies {
 
     private var cache: Book? = null
 
+    /**
+     * Whether any run is open, as of the last load or save: read without the lock (the main thread must never
+     * wait for a pass that is placing orders). Kept up to date wherever runs are loaded or saved.
+     */
+    @Volatile var runningHint: Boolean = false
+        private set
+
+    private fun hint(b: Book) { runningHint = b.defs.any { d -> b.runs[d.id]?.let { Entry(d, it).running } == true } }
+
     private fun book(): Book {
         cache?.let { return it }
         val b = runCatching {
@@ -127,7 +136,7 @@ object Strategies {
             val sc = d.scheduler
             if (needsBreakoutRules(d) && sc != null && sc.enabled) loaded.defs[i] = d.copy(scheduler = sc.copy(enabled = false))
         }
-        return loaded.also { cache = it }
+        return loaded.also { cache = it; hint(it) }
     }
 
     private fun save(b: Book) {
@@ -146,6 +155,7 @@ object Strategies {
         b.stoppedDay?.let { o.put("stoppedDay", it) }
         Vault.writeFile(file, o.toString().toByteArray(Charsets.UTF_8))
         cache = b
+        hint(b)
     }
 
     // ---- reading ---------------------------------------------------------------------
@@ -337,8 +347,10 @@ object Strategies {
     private fun kiteExec(b: Book, def: StrategyDef, v: Venue, compromised: Boolean, known: () -> Collection<String>) = object : StrategyHost.Executor {
         override fun place(order: Action.PlaceOrder): StrategyHost.Placed {
             val s = AppSettings.load()
-            if (!s.live || !s.allowRealOrders) return StrategyHost.Placed.Refused("the app is in Paper mode (switch to Live with the badge at the top)")
-            if (compromised) return StrategyHost.Placed.Refused("this device shows signs of compromise")
+            // Paper mode blocks new live entries only: a live run's stops, targets and square-off must still
+            // close what it holds at Zerodha (a stop that waits for the badge to say Live is not a stop).
+            if (order.kind == "entry" && (!s.live || !s.allowRealOrders)) return StrategyHost.Placed.Refused("the app is in Paper mode (switch to Live with the badge at the top)")
+            if (compromised && order.kind == "entry") return StrategyHost.Placed.Refused("this device shows signs of compromise")
             if (!Broker.loggedIn) return StrategyHost.Placed.Refused("not logged in to Zerodha today")
             val ref = v.refs[order.symbol] ?: return StrategyHost.Placed.Refused("${order.symbol} is not listed on Zerodha")
             val kiteSym = ref.kite ?: return StrategyHost.Placed.Refused("${order.symbol} has no Zerodha symbol")
@@ -347,33 +359,39 @@ object Strategies {
             return runBlocking {
                 // An automatic exit sends no PIN prompt, so it must only ever close what Zerodha
                 // says is held: a leg closed by hand in the Kite app must not be "exited" into a new position.
+                // It sends what is held less the exits already working on it (anyone's: the expiry square-off, a
+                // protection's stop, the owner's own limit), in whole lots, and at most the run's quantity: a leg
+                // part-closed by hand still gets the rest closed, and two exits never add up to a new position.
+                var qty = order.quantity
                 if (exit) {
                     val net = runCatching { Broker.positionBook().net }.getOrNull()
                         ?: return@runBlocking StrategyHost.Placed.Refused("could not read Zerodha positions to confirm the exit; will retry")
                     val held = net.filter { it.symbol == kiteSym && it.exchange == "NFO" && it.product == order.product }.sumOf { it.qty }
                     val closes = (side == Kite.Side.BUY && held < 0) || (side == Kite.Side.SELL && held > 0)
-                    if (!closes || kotlin.math.abs(held) < order.quantity) return@runBlocking StrategyHost.Placed.Refused(
-                        "Zerodha shows $kiteSym ${order.product} net $held, so a ${side.name} of ${order.quantity} would not simply close it; not sent")
+                    if (!closes) return@runBlocking StrategyHost.Placed.Refused(
+                        "Zerodha shows $kiteSym ${order.product} net $held, so a ${side.name} would not close it; not sent")
+                    val working = runCatching { Broker.orders() }.getOrNull()
+                        ?: return@runBlocking StrategyHost.Placed.Refused("could not read Zerodha's orders to confirm the exit; will retry")
+                    val busy = working.filter { it.working && it.symbol == kiteSym && it.exchange == "NFO" && it.product == order.product && it.side == side.name }
+                        .sumOf { com.optionslab.engine.risk.ExitQty.remaining(it.qty, it.filled, it.pending) }
+                    qty = com.optionslab.engine.risk.ExitQty.sendable(held, busy, order.quantity, ref.lot)
+                    if (qty <= 0) return@runBlocking StrategyHost.Placed.Refused(
+                        "Zerodha shows $kiteSym ${order.product} net $held with $busy already on its way out; nothing more sent")
                 }
                 val last = runCatching { Broker.quotes(listOf("NFO:$kiteSym"))["NFO:$kiteSym"]?.last }.getOrNull()
-                val o = Kite.Order(kiteSym, side, order.quantity, ref.lot, order.product, "MARKET", null, ref.tick, "NFO", "iraalgostrat")
+                val o = Kite.Order(kiteSym, side, qty, ref.lot, order.product, "MARKET", null, ref.tick, "NFO", "iraalgostrat")
                 // The account-wide guard, on a fresh read of the account.
-                val acct = runCatching {
-                    Guard.liveAccount(Broker.positionBook(), runCatching { Broker.funds() }.getOrNull(), runCatching { Broker.orders().size }.getOrDefault(0))
-                }.getOrNull()
+                val acct = Broker.accountNow()      // positions, funds and orders read in parallel
                 Guard.check(Guard.liveOrder(o).copy(price = last ?: 0.0), acct, exit).takeIf { it.isNotEmpty() }
                     ?.let { return@runBlocking StrategyHost.Placed.Refused("account guard: " + it.joinToString(" ")) }
                 val why = Kite.refusals(o, s.limits(), Broker.sentToday(), false, exit = exit, refPrice = last)
                 if (why.isNotEmpty()) return@runBlocking StrategyHost.Placed.Refused(why.joinToString("; "))
                 val id = try {
                     Broker.placeOrder(o, exit)
-                } catch (e: Broker.KiteError) {
-                    return@runBlocking StrategyHost.Placed.Refused(e.message ?: "Zerodha refused the order")
-                } catch (e: Broker.NotLoggedIn) {
-                    return@runBlocking StrategyHost.Placed.Refused(e.message ?: "not logged in")
                 } catch (e: Exception) {
-                    // The answer was lost, not necessarily the order: look before calling it unsent.
-                    runCatching { Broker.findRecent(o, known().map { it.removePrefix("kite:") }) }.getOrNull()
+                    if (Broker.definite(e)) return@runBlocking StrategyHost.Placed.Refused(e.message ?: "Zerodha refused the order")
+                    // The answer was lost, not necessarily the order: look (the book can trail the POST) before calling it unsent.
+                    runCatching { Broker.findRecentRetrying(o, known().map { it.removePrefix("kite:") }) }.getOrNull()
                         ?: return@runBlocking StrategyHost.Placed.Refused("${e.message}; no matching order found at Zerodha")
                 }
                 b.owners["kite:$id"] = ownerLabel(def, order)
@@ -536,6 +554,14 @@ object Strategies {
 
     suspend fun tickAll(compromised: Boolean): List<String> = lock.withLock {
         val b = book()
+        // Orders placed in this pass are written down even when the pass is cancelled part-way (the watch
+        // stopped, a time limit): a run's broker ids and state kept only in memory would be lost with the process.
+        try { tickAllLocked(b, compromised) } finally {
+            kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) { runCatching { save(b) } }
+        }
+    }
+
+    private suspend fun tickAllLocked(b: Book, compromised: Boolean): List<String> {
         val now = Market.now()
         val notes = ArrayList<String>()
         val last = b.lastCheck?.let { ZonedDateTime.ofInstant(Instant.ofEpochMilli(it), now.zone) }
@@ -594,14 +620,13 @@ object Strategies {
             val next = host.tick(run, def, q, now, banked, exec(b, def, v, run.mode, compromised), b.brokerIds.getOrPut(run.runId) { HashMap() }, checkpoint(b, def.id))
             b.runs[def.id] = next; finish(b, next)
         }
-        save(b)
-        notes
+        return notes
     }
 
     /** True when any run is live or entering, so the watch keeps polling. */
     suspend fun anyRunning(): Boolean = all().any { it.running }
 
-    fun wipe() { cache = null; file.delete() }
+    fun wipe() { cache = null; runningHint = false; file.delete() }
 
     @Suppress("unused") private fun today(): LocalDate = Market.today()
 }

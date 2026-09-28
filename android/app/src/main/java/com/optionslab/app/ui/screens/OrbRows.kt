@@ -16,7 +16,7 @@ import com.optionslab.app.ui.components.AlertDialog
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import com.optionslab.app.ui.components.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -31,6 +31,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.SecureFlagPolicy
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import com.optionslab.app.data.OrbArms
 import com.optionslab.app.ui.AppModel
 import com.optionslab.app.ui.components.BrassButton
@@ -52,17 +54,38 @@ private fun px(x: Double) = String.format(Locale.ENGLISH, "%.2f", x)
  */
 @Composable
 fun OrbRows(model: AppModel) {
-    val p = LocalPalette.current
     val v by model.orb.collectAsState()
+    val settings by model.settings.collectAsState()
+    // Home's own poll (only while the app is on screen) refreshes the arm states every 20 s.
+    val view = v ?: return
+    OrbRowsContent(view, live = settings.live && settings.allowRealOrders,
+        actions = object : OrbActions {
+            override fun arm(source: String, on: Boolean, automatic: Boolean, pinConfirmed: Boolean) { model.armOrb(source, on, automatic, pinConfirmed) }
+            override fun approve(source: String, pinConfirmed: Boolean) { model.approveOrb(source, pinConfirmed) }
+            override fun skip(source: String) { model.skipOrb(source) }
+        },
+        reauth = { why, onOk, onCancel -> if (why == null) Reauth(model, onOk = onOk, onCancel = onCancel) else Reauth(model, onOk = onOk, onCancel = onCancel, why = why) })
+}
+
+/** What the ORB rows ask the model to do (an interface so tests can record it without an [AppModel]). */
+internal interface OrbActions {
+    fun arm(source: String, on: Boolean, automatic: Boolean, pinConfirmed: Boolean)
+    fun approve(source: String, pinConfirmed: Boolean)
+    fun skip(source: String)
+}
+
+/** The ORB rows from the arms' [view] and callbacks; [reauth] is the PIN prompt ([Reauth] in the app), with its reason or the default. */
+@Composable
+internal fun OrbRowsContent(
+    view: OrbArms.View, live: Boolean, actions: OrbActions,
+    reauth: @Composable (why: String?, onOk: () -> Unit, onCancel: () -> Unit) -> Unit,
+) {
+    val p = LocalPalette.current
     var choosing by remember { mutableStateOf<String?>(null) }
     var detail by remember { mutableStateOf(false) }
     var reauthFor by remember { mutableStateOf<String?>(null) }
     // Arming while in Live: (source, automatic), after the PIN or fingerprint.
     var armAuth by remember { mutableStateOf<Pair<String, Boolean>?>(null) }
-    val settings by model.settings.collectAsState()
-    val live = settings.live && settings.allowRealOrders
-    // Home's own poll (only while the app is on screen) refreshes the arm states every 20 s.
-    val view = v ?: return
 
     view.arms.forEachIndexed { i, a ->
         if (i > 0) Rule()
@@ -89,14 +112,15 @@ fun OrbRows(model: AppModel) {
                     !a.armed -> "BANKNIFTY opening-range break" + if (a.arm.freshOnly) ", fresh breaks only" else ""
                     else -> OrbArms.describe(a.status) + (view.range?.let { r -> " Range ${px(r.second)}–${px(r.first)}." } ?: "")
                 }
-                Text(line, style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp), maxLines = 2)
+                Text(line, style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp))
                 val closed = a.today.filter { !it.open }
                 if (closed.isNotEmpty()) Text("Today: ${closed.size} closed · ${rs(closed.sumOf { (it.grossPnl ?: 0.0) - it.charges })} after charges",
                     style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp))
             }
             Switch(
+                modifier = Modifier.semantics { contentDescription = "Arm ${a.arm.label}" },
                 checked = a.armed,
-                onCheckedChange = { on -> if (on) choosing = a.arm.source else model.armOrb(a.arm.source, false, a.automatic) },
+                onCheckedChange = { on -> if (on) choosing = a.arm.source else actions.arm(a.arm.source, false, a.automatic, false) },
                 colors = SwitchDefaults.colors(checkedTrackColor = p.verdigris, checkedThumbColor = p.card),
             )
         }
@@ -107,10 +131,10 @@ fun OrbRows(model: AppModel) {
                     style = Type.bodySmall.copy(color = p.ink, fontWeight = FontWeight.SemiBold))
                 Row(Modifier.padding(top = 8.dp)) {
                     BrassButton(if (live) "Approve with PIN" else "Approve entry", Modifier.weight(1f), tone = if (live) p.oxblood else p.verdigris) {
-                        if (live) reauthFor = a.arm.source else model.approveOrb(a.arm.source)
+                        if (live) reauthFor = a.arm.source else actions.approve(a.arm.source, false)
                     }
                     Spacer(Modifier.width(8.dp))
-                    BrassButton("Skip", tone = p.inkSoft) { model.skipOrb(a.arm.source) }
+                    BrassButton("Skip", tone = p.inkSoft) { actions.skip(a.arm.source) }
                 }
             }
         }
@@ -132,10 +156,10 @@ fun OrbRows(model: AppModel) {
                         else "The app is in Paper: entries go to the paper account. To trade automatically on Zerodha, switch to Live and arm it again (PIN once).",
                         style = Type.bodySmall.copy(color = p.inkSoft))
                     OrbChoice("Automatic", "Buys on the breakout and sells on the stop, target or 15:10 by itself, every trading day, until you switch it off.") {
-                        if (live) armAuth = src to true else model.armOrb(src, true, true); choosing = null
+                        if (live) armAuth = src to true else actions.arm(src, true, true, false); choosing = null
                     }
                     OrbChoice("Ask me to approve", "You get a notification on a breakout; the entry goes only if you approve before the next bar closes.") {
-                        if (live) armAuth = src to false else model.armOrb(src, true, false); choosing = null
+                        if (live) armAuth = src to false else actions.arm(src, true, false, false); choosing = null
                     }
                     Note("Either way the −40 stop rests as an order (paper book, or an SL order at Zerodha), and the +40 target and the 15:10 square-off run by themselves.", Modifier.padding(top = 8.dp))
                 }
@@ -144,9 +168,9 @@ fun OrbRows(model: AppModel) {
             dismissButton = { TextButton({ choosing = null }) { Text("Cancel") } },
         )
     }
-    armAuth?.let { (src, auto) -> Reauth(model, onOk = { armAuth = null; model.armOrb(src, true, auto, pinConfirmed = true) }, onCancel = { armAuth = null },
-        why = "Enter your app PIN to arm ORB on Zerodha. It then trades real money by itself until you switch it off.") }
-    reauthFor?.let { src -> Reauth(model, onOk = { reauthFor = null; model.approveOrb(src, pinConfirmed = true) }, onCancel = { reauthFor = null }) }
+    armAuth?.let { (src, auto) -> reauth("Enter your app PIN to arm ORB on Zerodha. It then trades real money by itself until you switch it off.",
+        { armAuth = null; actions.arm(src, true, auto, true) }, { armAuth = null }) }
+    reauthFor?.let { src -> reauth(null, { reauthFor = null; actions.approve(src, true) }, { reauthFor = null }) }
     if (detail) OrbDetail(view) { detail = false }
 }
 

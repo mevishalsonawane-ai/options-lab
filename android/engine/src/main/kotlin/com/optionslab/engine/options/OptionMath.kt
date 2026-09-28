@@ -214,9 +214,15 @@ object OptionMath {
         return IvSolve.Solved(s)
     }
 
-    /** Implied volatility as a decimal, or null where opengreeks would raise. */
-    fun impliedVol(price: Double, type: OptionType, forward: Double, strike: Double, tYears: Double, rate: Double = 0.0): Double? =
-        (solveIv(price, type, forward, strike, tYears, rate) as? IvSolve.Solved)?.sigma
+    /**
+     * Implied volatility as a decimal, or null where opengreeks would raise. A
+     * non-finite price, forward or strike is null too: NaN fails every bracket
+     * test in [solveIv], which would otherwise clamp it to MAX_VOL.
+     */
+    fun impliedVol(price: Double, type: OptionType, forward: Double, strike: Double, tYears: Double, rate: Double = 0.0): Double? {
+        if (!(price.isFinite() && forward.isFinite() && strike.isFinite())) return null
+        return (solveIv(price, type, forward, strike, tYears, rate) as? IvSolve.Solved)?.sigma
+    }
 
     // ---------------------------------------------------------------- IraAlgo's leg rules
 
@@ -236,9 +242,10 @@ object OptionMath {
      * @param ratePct annualised percent, IraAlgo's unit; its default is 0 on every exchange.
      */
     fun legGreeks(type: OptionType, forward: Double, strike: Double, tYears: Double, price: Double, ratePct: Double = 0.0): LegGreeks? {
-        if (tYears <= 0) return null
-        if (forward <= 0 || price <= 0) return null
-        if (strike <= 0) return null
+        if (!(tYears > 0)) return null
+        // !(x > 0) so NaN is refused as well (x <= 0 is false for NaN), as chainGreeks does.
+        if (!(forward > 0 && forward.isFinite()) || !(price > 0 && price.isFinite())) return null
+        if (!(strike > 0 && strike.isFinite())) return null
         val intrinsic = if (type.isCall) max(forward - strike, 0.0) else max(strike - forward, 0.0)
         val timeValue = price - intrinsic
         val theoretical = LegGreeks(0.0, theoreticalGreeks(type), intrinsic, max(timeValue, 0.0), true)

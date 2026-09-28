@@ -6,6 +6,8 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import kotlinx.coroutines.async
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 
 /**
  * Candles for the chart terminal, from Upstox's public v3 candles: the three
@@ -36,8 +38,18 @@ object ChartFeed {
     }
 
     /** The Upstox instrument key for a chart symbol: an index name, or an option's trading symbol. */
+    /** Indices charted and backtested beyond the harvested NIFTY / BANKNIFTY. */
+    val EXTRA_INDICES = linkedMapOf(
+        "FINNIFTY" to "NSE_INDEX|Nifty Fin Service",
+        "MIDCPNIFTY" to "NSE_INDEX|NIFTY MID SELECT",
+        "SENSEX" to "BSE_INDEX|SENSEX",
+    )
+
+    fun isIndex(symbol: String) = symbol.uppercase().let { it in Upstox.INDEX_KEYS || it in EXTRA_INDICES }
+
     fun instrumentKey(symbol: String): String {
         Upstox.INDEX_KEYS[symbol.uppercase()]?.let { return it }
+        EXTRA_INDICES[symbol.uppercase()]?.let { return it }
         val c = contract(symbol) ?: throw IOException("$symbol is not an index or a listed NIFTY/BANKNIFTY option")
         if (c.isExpired(Market.today())) throw IOException("$symbol expired on ${c.expiry}; the free candle feed does not keep expired contracts")
         return c.instrumentKey
@@ -55,7 +67,7 @@ object ChartFeed {
 
     fun contract(symbol: String): Upstox.Contract? {
         // An index is never a contract: answer at once instead of downloading the master to find out.
-        if (symbol.uppercase() in Upstox.INDEX_KEYS) return null
+        if (isIndex(symbol)) return null
         known().firstOrNull { it.tradingSymbol.equals(symbol, ignoreCase = true) }?.let { return it }
         // Block on the (large) master download only when the phone has no list at all; on a weekend or
         // holiday the saved list is from an earlier day, so refresh it behind the chart instead.
@@ -68,9 +80,26 @@ object ChartFeed {
      * first load a chart only asks for today's session, which is one small request.
      */
     private data class Past(val day: LocalDate, val from: LocalDate, val bars: List<Upstox.Bar>)
-    private val past = java.util.concurrent.ConcurrentHashMap<String, Past>()
+    private const val PAST_ENTRIES = 12          // charts remembered, least recently used dropped first
+    private const val PAST_BARS = 20_000         // a longer history is fetched each time, not held
+    /** Access-ordered, so the eldest entry is the least recently used; guarded by itself. */
+    private val past = object : java.util.LinkedHashMap<String, Past>(16, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Past>?): Boolean = size > PAST_ENTRIES
+    }
 
-    suspend fun bars(symbol: String, interval: String, fromSec: Long?, toSec: Long?): List<Upstox.Bar> {
+    /** History chunks in flight at once, across every chart: Upstox answers a burst with 429s. */
+    private val chunkGate = Semaphore(4)
+    /** The market watch's own gate: its alarm pricing never queues behind a backtest's history load. */
+    private val quickGate = Semaphore(2)
+
+    /**
+     * [quick]: for a caller on a deadline (the market watch) - one attempt per request with short
+     * timeouts, and its own gate instead of the one the chart and backtests share.
+     */
+    suspend fun bars(symbol: String, interval: String, fromSec: Long?, toSec: Long?, quick: Boolean = false): List<Upstox.Bar> {
+        val gate = if (quick) quickGate else chunkGate
+        suspend fun get(url: String, tries: Int) =
+            if (quick) Net.getJson(url, tries = 1, timeoutMs = Net.QUICK_READ_MS, connectMs = Net.QUICK_CONNECT_MS) else Net.getJson(url, tries = tries)
         val key = Upstox.quote(instrumentKey(symbol))
         val u = unitOf(interval)
         val today = Market.today()
@@ -98,9 +127,16 @@ object ChartFeed {
         kotlinx.coroutines.coroutineScope {
             // Today's session lives on a separate endpoint; it is fetched alongside the history.
             val todays: kotlinx.coroutines.Deferred<List<Upstox.Bar>>? = if (live) async(kotlinx.coroutines.Dispatchers.IO) {
-                runCatching { Net.parseCandles(Net.getJson("$BASE/intraday/$key/${u.unit}/${u.n}", tries = 2)) }.getOrDefault(emptyList())
+                val r = runCatching { Net.parseCandles(get("$BASE/intraday/$key/${u.unit}/${u.n}", tries = 2)) }
+                // While the market is open a failed read is an error, never history passed off as the whole chart.
+                r.exceptionOrNull()?.let { if (it is kotlinx.coroutines.CancellationException || Market.isOpen()) throw it }
+                r.getOrDefault(emptyList())
             } else null
-            val cached = past[cacheKey]?.takeIf { it.day == today && !it.from.isAfter(from) }
+            val cached = synchronized(past) {
+                // Yesterday's entries are stale once the day turns: dropped on every call.
+                past.values.removeAll { it.day != today }
+                past[cacheKey]?.takeIf { !it.from.isAfter(from) }
+            }
             if (cached != null) {
                 out += cached.bars
             } else {
@@ -112,14 +148,17 @@ object ChartFeed {
                     hi = lo.minusDays(1)
                 }
                 // One failed chunk costs only its own days; the load fails only if every chunk did.
-                val res = chunks.map { (lo, h) -> async(kotlinx.coroutines.Dispatchers.IO) { runCatching { Net.parseCandles(Net.getJson("$BASE/$key/${u.unit}/${u.n}/$h/$lo", tries = 3)) } } }
+                val res = chunks.map { (lo, h) -> async(kotlinx.coroutines.Dispatchers.IO) { gate.withPermit { runCatching { Net.parseCandles(get("$BASE/$key/${u.unit}/${u.n}/$h/$lo", tries = 3)) } } } }
                     .map { it.await() }
                 if (res.isNotEmpty() && res.all { it.isFailure }) throw res.first().exceptionOrNull()!!
                 val got = res.flatMap { it.getOrDefault(emptyList()) }
                 out += got
                 // Keep only finished sessions; today's bars always come fresh.
                 // A week or month bar is dated on its first day, so the current one would look finished: not cached.
-                if (res.all { it.isSuccess } && to == today && u.unit != "weeks" && u.unit != "months") past[cacheKey] = Past(today, from, got.filter { it.istDate.isBefore(today) })
+                if (res.all { it.isSuccess } && to == today && u.unit != "weeks" && u.unit != "months") {
+                    val done = got.filter { it.istDate.isBefore(today) }
+                    if (done.size <= PAST_BARS) synchronized(past) { past[cacheKey] = Past(today, from, done) }
+                }
             }
             todays?.let { out += it.await() }
         }
@@ -132,7 +171,8 @@ object ChartFeed {
     fun search(text: String): List<Match> {
         refreshInBackground()
         val words = text.uppercase().split(Regex("\\s+")).filter { it.isNotBlank() }
-        val indices = Upstox.INDEX_KEYS.keys.filter { k -> words.all { k.contains(it) } }.map { Match(it, "NSE", "Index") }
+        val indices = (Upstox.INDEX_KEYS.keys + EXTRA_INDICES.keys).filter { k -> words.all { k.contains(it) } }
+            .map { Match(it, if (it == "SENSEX") "BSE" else "NSE", "Index") }
         if (words.isEmpty()) return indices
         val today = Market.today()
         val options = known().asSequence()

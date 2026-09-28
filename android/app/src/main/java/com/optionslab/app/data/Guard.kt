@@ -25,7 +25,8 @@ object Guard {
     /** Record today's equity and return the highest seen (the peak only rises). */
     private fun peak(live: Boolean, equity: Double): Double {
         val next = AccountGuard.nextPeak(SecurePrefs.getDouble(peakKey(live), equity), equity)
-        if (next != SecurePrefs.getDouble(peakKey(live), Double.NaN)) SecurePrefs.put(peakKey(live), next)
+        // Kept in memory at once and written in the background: this runs on the send path (and on the main thread from the review).
+        if (next != SecurePrefs.getDouble(peakKey(live), Double.NaN)) SecurePrefs.putAllSoon(mapOf(peakKey(live) to next))
         return next
     }
 
@@ -86,7 +87,7 @@ object Guard {
 
     /**
      * As the desktop's account_risk_service does: an entry refused for drawdown also
-     * turns the kill switch on, so nothing else opens until the owner clears it.
+     * turns the kill switch on, so nothing else opens until the owner clears it (exits still go).
      */
     fun onRefusal(refusals: List<String>) {
         if (refusals.none { it.startsWith("Drawdown limit") }) return
@@ -102,9 +103,14 @@ object Guard {
 
     private fun judge(order: AccountGuard.Order, account: AccountGuard.Account?, exit: Boolean, paper: Boolean): List<String> {
         val limits = AppSettings.load().guardLimits(paper)
-        val killed = listOf("The kill switch is on: no orders at all until it is cleared.")
-        // An exit is only ever stopped by the kill switch, even when the account cannot be read.
-        if (exit) return if (limits.killSwitch) killed else emptyList()
+        val killed = listOf("The kill switch is on: no new positions until it is cleared.")
+        // An exit is never stopped: not by the limits, not when the account cannot be read, and not by the
+        // kill switch (a drawdown turns it on by itself, and must not trap the account in what it holds).
+        if (exit) return emptyList()
+        // Paper is practice: nothing refuses a paper order - no loss, drawdown, count, exposure or naked-short limit,
+        // and not the kill switch. The owner's own paper orders and the paper bots (ORB, Pine, strategies) run
+        // side by side; the guard and its kill switch protect the Zerodha account only.
+        if (paper) return emptyList()
         // Without the account the limits cannot be judged, so entries wait.
         if (account == null) return if (limits.killSwitch) killed
             else listOf("The account could not be read to check its limits; try again in a moment.")

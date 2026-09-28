@@ -66,6 +66,13 @@ object AccountGuard {
         if (l.killSwitch) return listOf("The kill switch is on: no orders at all until it is cleared.")
         if (isExit(o, a)) return emptyList()
         val out = ArrayList<String>()
+        // A NaN figure fails every comparison below, which would let the entry through: an
+        // unknown figure a limit depends on refuses the entry instead (exits already returned).
+        if (!o.price.isFinite()) out += "Order price is unknown (${o.price}); entries need a usable price."
+        if (l.maxDailyLoss > 0 && !a.dayPnl.isFinite())
+            out += "Today's P&L is unknown (${a.dayPnl}); new entries are refused until it can be valued."
+        if (l.maxDrawdownPct > 0 && !(a.capital.isFinite() && a.equity.isFinite() && a.peakEquity.isFinite()))
+            out += "Equity is unknown (equity ${a.equity}, capital ${a.capital}, peak ${a.peakEquity}); new entries are refused until it can be valued."
         if (l.maxDailyLoss > 0 && a.dayPnl <= -l.maxDailyLoss)
             out += "Daily loss limit reached: today's P&L is Rs %,.0f (limit -Rs %,.0f). Only exits are allowed today.".format(a.dayPnl, l.maxDailyLoss)
         if (l.maxDrawdownPct > 0) {
@@ -96,8 +103,15 @@ object AccountGuard {
             if (a.minuteOfDay >= cut) out += "No new entries after %02d:%02d.".format(cut / 60, cut % 60)
         }
         if (l.blockNakedShort && o.right != null && o.side.equals("SELL", true)) {
-            val hedged = a.holdings.any { h -> h.qty > 0 && h.right == o.right && h.underlying == o.underlying && h.expiry == o.expiry }
-            if (!hedged) out += "Naked short: selling ${o.symbol} needs a bought ${o.right} of the same underlying and expiry held first."
+            // Net each instrument of this underlying/expiry/type after the order: the longs of OTHER
+            // strikes must cover every unit left short (selling what is held first uses it up, so the
+            // very symbol being sold never hedges itself).
+            val series = a.holdings.filter { h -> h.right == o.right && h.underlying == o.underlying && h.expiry == o.expiry }
+            val after = series.groupBy { it.symbol }.mapValues { (_, l) -> l.sumOf { it.qty } }.toMutableMap()
+            after[o.symbol] = (after[o.symbol] ?: 0) - o.qty
+            val longs = after.values.filter { it > 0 }.sum()
+            val shorts = -after.values.filter { it < 0 }.sum()
+            if (shorts > longs) out += "Naked short: selling ${o.symbol} needs a bought ${o.right} of the same underlying and expiry held first."
         }
         return out
     }

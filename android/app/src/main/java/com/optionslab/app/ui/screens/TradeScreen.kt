@@ -1,6 +1,7 @@
 package com.optionslab.app.ui.screens
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -12,7 +13,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import com.optionslab.app.ui.components.AlertDialog
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import com.optionslab.app.ui.components.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -86,7 +87,7 @@ fun TradeScreen(model: AppModel) {
         if (s.live) return@PollWhileStarted
         while (true) {
             model.loadPaper(quiet = true)
-            delay(if (Market.isOpen()) 30_000 else 300_000)
+            delay(model.paperRefreshMs())
         }
     }
 
@@ -181,7 +182,7 @@ fun TradeScreen(model: AppModel) {
             onDismissRequest = { selling = null }, properties = secure,
             title = { Text("Sell ${h.symbol}", style = Type.title) },
             text = {
-                Column {
+                Column(Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState())) {  // scrolls at a large font / in landscape
                     Text("You hold ${h.qty}${if (h.t1 > 0) " (+${h.t1} T1, not yet sellable)" else ""}. The sale opens for review first.", style = Type.bodySmall)
                     OutlinedTextField(qty, { qty = it.filter(Char::isDigit).take(7) }, label = { Text("Quantity") }, singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
@@ -201,6 +202,8 @@ fun TradeScreen(model: AppModel) {
 @Composable
 private fun PositionsCard(model: AppModel, a: Account, onProtect: (GttTarget) -> Unit) {
     val p = LocalPalette.current
+    val owners by model.orderOwners.collectAsState()
+    fun by(ps: Broker.Position) = com.optionslab.app.data.Origins.livePosition(owners, a.trades, a.orders, ps.symbol, ps.product, ps.qty)
     val open = a.positions.filter { it.open }
     val closed = a.positions.filter { !it.open }
     LedgerCard(title = "Positions") {
@@ -218,7 +221,7 @@ private fun PositionsCard(model: AppModel, a: Account, onProtect: (GttTarget) ->
         if (open.isEmpty()) Note("Nothing open.")
         open.forEach { ps ->
             Rule(Modifier.padding(vertical = 6.dp))
-            PositionRow(ps) { model.rowAction.value = RowTarget.LivePosition(ps) }
+            PositionRow(ps, by(ps)) { model.rowAction.value = RowTarget.LivePosition(ps) }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 4.dp)) {
                 BrassButton("Square off", tone = p.oxblood) { model.planSquareOff(ps) }
                 BrassButton("Protect (GTT)", tone = p.inkSoft) { onProtect(GttTarget(ps.exchange, ps.symbol, ps.product, ps.qty)) }
@@ -228,15 +231,18 @@ private fun PositionsCard(model: AppModel, a: Account, onProtect: (GttTarget) ->
         if (closed.isNotEmpty()) {
             Spacer(Modifier.height(10.dp))
             Text("CLOSED TODAY", style = Type.label.copy(color = p.inkSoft))
-            closed.forEach { ps -> LedgerLine("${ps.symbol} ${ps.product}", rs(ps.pnl, true), if (ps.pnl >= 0) p.verdigris else p.oxblood,
-                Modifier.clickable { model.rowAction.value = RowTarget.LivePosition(ps) }) }
+            closed.forEach { ps ->
+                LedgerLine("${ps.symbol} ${ps.product}", rs(ps.pnl, true), if (ps.pnl >= 0) p.verdigris else p.oxblood,
+                    Modifier.clickable { model.rowAction.value = RowTarget.LivePosition(ps) })
+                by(ps)?.let { SourcePill(com.optionslab.app.data.Origins.positionDisplay(it)) }
+            }
         }
         if (a.book.day.isNotEmpty()) Note("Day book: bought ${a.book.day.sumOf { it.buyQty }}, sold ${a.book.day.sumOf { it.sellQty }} across ${a.book.day.size} instruments today.")
     }
 }
 
 @Composable
-private fun PositionRow(ps: Broker.Position, onTap: () -> Unit) {
+private fun PositionRow(ps: Broker.Position, source: String?, onTap: () -> Unit) {
     val p = LocalPalette.current
     Row(Modifier.clickable(onClick = onTap), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
@@ -244,6 +250,7 @@ private fun PositionRow(ps: Broker.Position, onTap: () -> Unit) {
             Text("${ps.exchange} · ${ps.product} · ${if (ps.qty > 0) "LONG" else "SHORT"} ${kotlin.math.abs(ps.qty)}" +
                 if (ps.overnight != 0) " (overnight ${ps.overnight})" else "", style = Type.figure.copy(color = p.inkSoft, fontSize = 11.sp))
             Text("avg ${px(ps.avg)} → ltp ${px(ps.last)}", style = Type.figure.copy(color = p.inkSoft, fontSize = 11.sp))
+            source?.let { SourcePill(com.optionslab.app.data.Origins.positionDisplay(it)) }
         }
         Text(rs(ps.pnl, true), style = Type.figure.copy(color = if (ps.pnl >= 0) p.verdigris else p.oxblood, fontSize = 15.sp))
     }
@@ -258,7 +265,7 @@ private fun OrdersCard(a: Account, owners: Map<String, String>, onTap: (Broker.O
         if (a.orders.isEmpty()) Note("No orders today.")
         if (working.isNotEmpty()) Text("WORKING", style = Type.label.copy(color = p.amber))
         working.forEach { o ->
-            OrderLine(o, owners) { onTap(o) }
+            OrderLine(o, owners, null) { onTap(o) }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 4.dp, bottom = 6.dp)) {
                 BrassButton("Modify", tone = p.inkSoft) { onModify(o) }
                 BrassButton("Cancel", tone = p.oxblood) { onCancel(o) }
@@ -267,21 +274,25 @@ private fun OrdersCard(a: Account, owners: Map<String, String>, onTap: (Broker.O
         if (done.isNotEmpty()) {
             if (working.isNotEmpty()) Rule(Modifier.padding(vertical = 6.dp))
             Text("FINISHED", style = Type.label.copy(color = p.inkSoft))
-            done.forEach { o -> OrderLine(o, owners) { onTap(o) } }
+            done.forEach { o -> OrderLine(o, owners, a.positions.firstOrNull { it.symbol == o.symbol && it.product == o.product }?.last) { onTap(o) } }
         }
     }
 }
 
 @Composable
-private fun OrderLine(o: Broker.OrderRow, owners: Map<String, String>, onTap: () -> Unit) {
+private fun OrderLine(o: Broker.OrderRow, owners: Map<String, String>, ltp: Double?, onTap: () -> Unit) {
     val p = LocalPalette.current
     val tone = when (o.status) { "COMPLETE" -> p.verdigris; "REJECTED", "CANCELLED" -> p.oxblood; else -> p.amber }
     Column(Modifier.fillMaxWidth().clickable(onClick = onTap).padding(vertical = 3.dp)) {
         Text("${o.side} ${o.symbol} ×${o.qty}", style = Type.figure.copy(color = if (o.side == "SELL") p.oxblood else p.verdigris, fontSize = 13.sp))
         Text("${o.exchange} · ${o.product} · ${o.type}${if (o.price > 0) " ${px(o.price)}" else ""}${if (o.trigger > 0) " trg ${px(o.trigger)}" else ""}" +
             " · ${o.placedAt.takeLast(8)}", style = Type.figure.copy(color = p.inkSoft, fontSize = 11.sp))
-        Text("${o.status} · filled ${o.filled}${if (o.filled > 0) " @ ${px(o.avg)}" else ""}${if (o.message.isNotBlank()) " · ${o.message}" else ""}",
-            style = Type.figure.copy(color = tone, fontSize = 11.sp))
+        // The status line carries the P&L (at the live price) at its end; the symbol above keeps the whole width.
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("${o.status} · filled ${o.filled}${if (o.filled > 0) " @ ${px(o.avg)}" else ""}${if (o.message.isNotBlank()) " · ${o.message}" else ""}",
+                style = Type.figure.copy(color = tone, fontSize = 11.sp), modifier = Modifier.weight(1f))
+            PnlFigure(fillPnl(o.side == "BUY", o.avg, o.filled, ltp), Modifier.padding(start = 8.dp))
+        }
         OrderSourcePill(owners, "kite:${o.id}", o.tag)
     }
 }
@@ -297,9 +308,12 @@ private fun TradesCard(a: Account, owners: Map<String, String>, onTap: (Broker.T
                 Column(Modifier.weight(1f)) {
                     Text("${t.side} ${t.symbol}", style = Type.figure.copy(color = if (t.side == "SELL") p.oxblood else p.verdigris, fontSize = 13.sp))
                     Text("${t.exchange} · ${t.product} · ${t.at.takeLast(8)} · order …${t.orderId.takeLast(6)}", style = Type.figure.copy(color = p.inkSoft, fontSize = 11.sp))
-                    OrderSourcePill(owners, "kite:${t.orderId}", a.orders.firstOrNull { it.id == t.orderId }?.tag.orEmpty())
+                    OrderSourcePill(owners, "kite:${t.orderId}", a.orders.firstOrNull { it.id == t.orderId }?.tag)
                 }
-                Text("${t.qty} @ ${px(t.price)}", style = Type.figure.copy(color = p.ink, fontSize = 13.sp))
+                Column(horizontalAlignment = Alignment.End) {
+                    Text("${t.qty} @ ${px(t.price)}", style = Type.figure.copy(color = p.ink, fontSize = 13.sp))
+                    PnlFigure(fillPnl(t.side == "BUY", t.price, t.qty, a.positions.firstOrNull { it.symbol == t.symbol && it.product == t.product }?.last))
+                }
             }
         }
         if (a.trades.isNotEmpty()) {
@@ -408,7 +422,7 @@ internal fun ModifyDialog(model: AppModel, o: Broker.OrderRow, onClose: () -> Un
         onDismissRequest = onClose, properties = secure,
         title = { Text("Modify ${o.symbol}", style = Type.title) },
         text = {
-            Column {
+            Column(Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState())) {  // scrolls at a large font / in landscape
                 Text("${o.side} · ${o.product} · filled ${o.filled} of ${o.qty}", style = Type.bodySmall.copy(color = p.inkSoft))
                 ParamTokens("Type", types.map { it to (it == type) }) { type = types[it] }
                 OutlinedTextField(qty, { qty = it.filter(Char::isDigit).take(7) }, label = { Text("Quantity") }, singleLine = true,
@@ -419,7 +433,13 @@ internal fun ModifyDialog(model: AppModel, o: Broker.OrderRow, onClose: () -> Un
                     singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
             }
         },
-        confirmButton = { TextButton({ confirming = true }) { Text("Confirm change") } },
+        // Off until the order type's own fields are there: a quantity, a price for LIMIT / SL, a trigger for SL / SL-M.
+        confirmButton = {
+            val valid = (qty.toIntOrNull() ?: 0) > 0 &&
+                (type != "LIMIT" && type != "SL" || price.toDoubleOrNull()?.let { it > 0 } == true) &&
+                (type != "SL" && type != "SL-M" || trigger.toDoubleOrNull()?.let { it > 0 } == true)
+            TextButton({ confirming = true }, enabled = valid) { Text("Confirm change") }
+        },
         dismissButton = { TextButton(onClose) { Text("Close") } },
     )
     if (confirming) Reauth(model, onOk = {
@@ -465,7 +485,7 @@ private fun GttDialog(model: AppModel, t: GttTarget, onClose: () -> Unit) {
         onDismissRequest = { model.dismissGtt(); onClose() }, properties = secure,
         title = { Text("Protect ${t.symbol}", style = Type.title) },
         text = {
-            Column {
+            Column(Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState())) {  // scrolls at a large font / in landscape
                 Text("${if (long) "Long" else "Short"} ${kotlin.math.abs(t.netQty)} · ${t.product}. A GTT lives at Zerodha: it fires even if this phone is off. " +
                     "With both a stop and a target it is one-cancels-other.", style = Type.bodySmall)
                 OutlinedTextField(stop, { stop = it.filter { c -> c.isDigit() || c == '.' }; model.dismissGtt() }, singleLine = true,

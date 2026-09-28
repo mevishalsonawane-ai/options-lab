@@ -15,6 +15,8 @@ import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -55,6 +57,7 @@ import com.optionslab.app.ui.components.BrandEmblem
 import com.optionslab.app.ui.components.BrandLogo
 import com.optionslab.app.ui.theme.LocalPalette
 import com.optionslab.app.ui.theme.Type
+import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -82,9 +85,24 @@ fun LockScreen(
     var broken by remember { mutableStateOf(false) }
     val shake = remember { Animatable(0f) }
 
-    // Ask for the fingerprint as soon as it is allowed (the device check may finish a moment after this screen appears).
-    var asked by remember { mutableStateOf(false) }
-    LaunchedEffect(biometricLabel) { if (!setup && biometricLabel != null && !asked) { asked = true; delay(300); onBiometric() } }
+    // Ask for the fingerprint by itself once each time the app comes to the front. The app seals while it is in the
+    // background, so a prompt asked for then was cancelled by Android and never came back: it waits until the screen
+    // is actually in front (RESUMED). Once per visit: cancelling it (or its dialog pausing the screen) does not
+    // bring it back in a loop; leaving the app and returning arms it again. The device check may also finish a
+    // moment after this screen appears, so it waits for the label as well.
+    val owner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    var armed by remember { mutableStateOf(true) }
+    androidx.compose.runtime.DisposableEffect(owner) {
+        val watch = androidx.lifecycle.LifecycleEventObserver { _, e -> if (e == androidx.lifecycle.Lifecycle.Event.ON_STOP) armed = true }
+        owner.lifecycle.addObserver(watch)
+        onDispose { owner.lifecycle.removeObserver(watch) }
+    }
+    LaunchedEffect(owner, biometricLabel, armed) {
+        if (setup || biometricLabel == null || !armed) return@LaunchedEffect
+        owner.lifecycle.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.RESUMED) {
+            if (armed) { delay(300); armed = false; onBiometric() }
+        }
+    }
 
     // Exactly this many digits unlock; an older PIN of unknown length still uses the tick key.
     val target: Int? = if (setup) PinLock.LENGTH else PinLock.length()
@@ -114,7 +132,8 @@ fun LockScreen(
                 } else if (first != pin) {
                     first = null; reject("Those did not match. Start again.")
                 } else {
-                    val err = onCreate(pin.toCharArray())
+                    // Key stretching is slow on purpose: off the screen's thread.
+                    val err = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { onCreate(pin.toCharArray()) }
                     if (err != null) { first = null; reject(err) } else broken = true
                 }
                 return@launch
@@ -131,10 +150,17 @@ fun LockScreen(
 
     Parchment {
       Box(Modifier.fillMaxSize()) {
+       // At least a screen tall (the pad sits at the bottom, as before) and scrollable when the screen is
+       // shorter than the content - landscape, large fonts - so every key stays full size and reachable.
+       androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize().systemBarsPadding()) {
+        val screen = maxHeight
         Column(
-            Modifier.fillMaxSize().systemBarsPadding().padding(horizontal = 28.dp),
+            Modifier.fillMaxWidth().verticalScroll(androidx.compose.foundation.rememberScrollState())
+                .heightIn(min = screen).padding(horizontal = 28.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.SpaceBetween,
         ) {
+          Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Spacer(Modifier.height(48.dp))
             BrandLogo()
             Spacer(Modifier.height(36.dp))
@@ -157,7 +183,9 @@ fun LockScreen(
                     )
                 }
             }
-            Spacer(Modifier.weight(1f))
+          }
+          Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Spacer(Modifier.height(24.dp))
             PinPad(
                 enabled = lockout <= 0 && !broken,
                 showEnter = target == null,
@@ -182,7 +210,9 @@ fun LockScreen(
                 }
             }
             Spacer(Modifier.height(24.dp))
+          }
         }
+       }
         // The small alert: wrong PIN, lockout, biometric problems.
         val alert = if (lockout > 0) "Too many attempts. Try again in $lockout s." else message
         androidx.compose.animation.AnimatedVisibility(
@@ -247,7 +277,11 @@ private fun PadKey(label: String, enabled: Boolean, onClick: () -> Unit) {
 fun RefusedScreen(findings: List<String>, onQuit: () -> Unit) {
     val p = LocalPalette.current
     Parchment {
-        Column(Modifier.fillMaxSize().systemBarsPadding().padding(28.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+        // Scrolls when the findings or a large font do not fit (landscape): nothing is cut, Close stays full size.
+        androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize().systemBarsPadding()) {
+        val screen = maxHeight
+        Column(Modifier.fillMaxWidth().verticalScroll(androidx.compose.foundation.rememberScrollState()).heightIn(min = screen).padding(28.dp),
+            horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
             BrandEmblem(96.dp, calm = true)
             Spacer(Modifier.height(20.dp))
             Text("IraAlgo will not open on this device", style = Type.title.copy(color = p.oxblood), textAlign = TextAlign.Center)
@@ -257,6 +291,7 @@ fun RefusedScreen(findings: List<String>, onQuit: () -> Unit) {
             findings.forEach { Text("• $it", style = Type.bodySmall.copy(color = p.inkSoft)) }
             Spacer(Modifier.height(24.dp))
             BrassButton("Close", Modifier.fillMaxWidth(0.6f), onClick = onQuit)
+        }
         }
     }
 }

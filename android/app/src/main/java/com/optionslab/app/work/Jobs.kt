@@ -14,6 +14,7 @@ import androidx.core.content.ContextCompat
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingWorkPolicy
+import androidx.work.ForegroundInfo
 import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.OutOfQuotaPolicy
@@ -35,6 +36,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -54,9 +56,12 @@ import java.time.ZonedDateTime
  *   15:45  harvest             (market days), then the health check
  *
  * Exact alarms, because since Android 12 only an exact alarm (or the user)
- * may start the foreground service a six-hour watch or a ten-minute harvest
- * needs. Without that permission the jobs fall back to WorkManager, which is
- * reliable but may run late and cannot keep a watch alive all session.
+ * may start the foreground service a six-hour watch or a long harvest needs:
+ * the scheduled harvest runs in that service too. Without that permission the
+ * one-shot jobs fall back to WorkManager, which is reliable but may run late
+ * (a harvest there may be cut at ten minutes and resumes on its retry) and
+ * cannot keep a watch alive all session. "Harvest now" from the app runs in
+ * WorkManager, which may take the foreground while the app is open.
  */
 object Jobs {
     enum class Kind(val at: LocalTime, val expiryOnly: Boolean) {
@@ -68,9 +73,14 @@ object Jobs {
     }
 
     const val EXTRA_KIND = "kind"
+    /** The session a harvest collects (ISO date), fixed when it is requested: a retry after midnight keeps it. */
+    const val EXTRA_SESSION = "session"
 
-    /** Nothing runs in the background until a Zerodha account is linked. */
-    fun enabled(k: Kind, s: AppSettings) = com.optionslab.app.data.Broker.linked && when (k) {
+    /**
+     * The market watch runs on every market day (paper bots need no Zerodha account); the other
+     * jobs need a linked Zerodha account.
+     */
+    fun enabled(k: Kind, s: AppSettings) = (k == Kind.LIVE || com.optionslab.app.data.Broker.linked) && when (k) {
         Kind.LIVE -> true   // the market watch always runs on market days; it has no off switch
         Kind.REMIND -> s.entryReminder
         Kind.TICKET -> s.autoTicket || (s.prepareRealOrder && com.optionslab.app.data.Broker.configured)
@@ -118,26 +128,33 @@ object Jobs {
         }
     }
 
+    /** The harvest in WorkManager: a silent low-importance notice while it runs, no "complete" notice. */
+    fun enqueueHarvest(context: Context, session: java.time.LocalDate, manual: Boolean) {
+        val req = OneTimeWorkRequestBuilder<FallbackWorker>()
+            .setInputData(workDataOf(EXTRA_KIND to Kind.HARVEST.name, "manual" to manual, EXTRA_SESSION to session.toString()))
+            .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
+            .build()
+        WorkManager.getInstance(context).enqueueUniqueWork("job.${Kind.HARVEST.name}", ExistingWorkPolicy.KEEP, req)
+    }
+
     /** Start work in the foreground service; from the UI this is always allowed. */
     fun start(context: Context, k: Kind, manual: Boolean = true) {
-        if (!com.optionslab.app.data.Broker.linked) return
-        // The harvest runs quietly in WorkManager: no foreground notification, no "complete" notice.
-        if (k == Kind.HARVEST) {
-            val req = OneTimeWorkRequestBuilder<FallbackWorker>()
-                .setInputData(workDataOf(EXTRA_KIND to k.name, "manual" to manual))
-                .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
-                .build()
-            WorkManager.getInstance(context).enqueueUniqueWork("job.${k.name}", ExistingWorkPolicy.KEEP, req)
-            return
-        }
+        if (k != Kind.LIVE && !com.optionslab.app.data.Broker.linked) return
+        val session = Market.today()
+        // "Harvest now" runs in WorkManager (the app is open, so it may take the foreground). The scheduled
+        // one runs in the service below: an exact alarm may start it, where WorkManager's foreground is refused.
+        if (k == Kind.HARVEST && manual) { enqueueHarvest(context, session, manual); return }
         val i = Intent(context, WatchService::class.java).putExtra(EXTRA_KIND, k.name).putExtra("manual", manual)
+            .putExtra(EXTRA_SESSION, session.toString())
         try {
             ContextCompat.startForegroundService(context, i)
         } catch (_: Exception) {
             // Not permitted from here (Android 12+ background start). Hand
             // the one-shot jobs to WorkManager; the watch cannot run that way.
             if (k == Kind.LIVE) {
-                Notifier.post(context, 2010, Notifier.APPROVAL, "Market is open", "Tap to start the market watch.", "almanac")
+                Notifier.post(context, 2010, Notifier.APPROVAL, "Order watch is off", "Tap to start watching your orders and strategies.", "almanac")
+            } else if (k == Kind.HARVEST) {
+                enqueueHarvest(context, session, manual)
             } else {
                 val req = OneTimeWorkRequestBuilder<FallbackWorker>()
                     .setInputData(workDataOf(EXTRA_KIND to k.name, "manual" to manual))
@@ -163,6 +180,15 @@ object Jobs {
 /** Fires at each scheduled instant: re-arm tomorrow's, then run today's. */
 class AlarmReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
+        // Off the main thread: settings are a Keystore decrypt and the expiry check parses the instrument list.
+        // The service is still started inside the alarm's window, which is what lets it start from the background.
+        val pending = goAsync()
+        CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
+            try { handle(context, intent) } finally { pending.finish() }
+        }
+    }
+
+    private fun handle(context: Context, intent: Intent) {
         if (intent.action == Heartbeat.ACTION) { Heartbeat.check(context); return }
         DailyReports.of(intent.action)?.let { DailyReports.fired(context, it); return }
         val k = runCatching { Jobs.Kind.valueOf(intent.getStringExtra(Jobs.EXTRA_KIND) ?: return) }.getOrNull() ?: return
@@ -201,16 +227,20 @@ class NotificationActionReceiver : BroadcastReceiver() {
             val done = goAsync()
             CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
                 try {
-                    val open = com.optionslab.app.data.Paper.state.positions.filter { it.symbol == symbol && it.quantity != 0 }
-                    if (open.isEmpty()) Alerts.post("No open paper position in $symbol.", Alerts.Kind.ERROR)
+                    val open = if (!com.optionslab.app.data.Market.acceptsOrders()) {
+                        Alerts.post(com.optionslab.app.data.Market.CLOSED_FOR_ORDERS, Alerts.Kind.ERROR); emptyList()
+                    } else com.optionslab.app.data.Paper.state.positions.filter { it.symbol == symbol && it.quantity != 0 }
+                    if (open.isEmpty() && com.optionslab.app.data.Market.acceptsOrders()) Alerts.post("No open paper position in $symbol.", Alerts.Kind.ERROR)
                     for (p in open) {
                         val r = com.optionslab.app.data.Paper.close(p.symbol, p.product)
+                        r.orderId?.let { runCatching { com.optionslab.app.data.Strategies.tagOwner("paper:$it", com.optionslab.app.data.Origins.manual("Notification close")) } }
                         Alerts.post(r.message, if (r.ok) Alerts.Kind.SUCCESS else Alerts.Kind.ERROR, if (r.ok) "Paper position closed" else "Could not close")
                     }
                     // An ORB position closed this way is booked and its resting stop taken out now, not on the next pass.
                     runCatching { com.optionslab.app.data.OrbArms.priceCheckOnly() }
                     runCatching { com.optionslab.app.data.Paper.tick() }
                     runCatching { PositionCards.refresh(context) }
+                    PositionCards.closedFromShade.value++
                 } finally { done.finish() }
             }
         }
@@ -226,10 +256,34 @@ object Tasks {
         val lastUpdate: Long = 0L,
     )
 
+    // The harvest's progress (the Harvest card reads it) and the watch's, apart: one never shows the other's stage.
     private val _state = MutableStateFlow(LiveState())
     val state: StateFlow<LiveState> = _state
+    private val _watchState = MutableStateFlow(LiveState())
+    val watchState: StateFlow<LiveState> = _watchState
 
     fun publish(s: LiveState) { _state.value = s }
+    fun publishWatch(s: LiveState) { _watchState.value = s }
+
+    /**
+     * What a failure notice or the harvest line may say about [e]: never its message, which can carry
+     * a response body or an instrument; the app's own network failures are generic sentences already.
+     */
+    fun reason(e: Throwable): String = when (e) {
+        is com.optionslab.app.data.Net.HttpFailure, is com.optionslab.app.data.Net.Offline -> e.message ?: e.javaClass.simpleName
+        else -> e.javaClass.simpleName
+    }
+
+    /** Real harvest failures for [session] (system stops are not counted), persisted: the retry budget. */
+    fun harvestFailed(session: java.time.LocalDate): Int {
+        val prior = SecurePrefs.getString("harvest.failures")?.split(":")?.takeIf { it.size == 2 && it[0] == session.toString() }
+            ?.get(1)?.toIntOrNull() ?: 0
+        SecurePrefs.put("harvest.failures", "$session:${prior + 1}")
+        return prior + 1
+    }
+
+    /** Tries a harvest gets for one session before it gives up: its first run and two retries. */
+    const val HARVEST_TRIES = 3
 
     fun remind(context: Context, s: AppSettings) = Notifier.post(context, 2001, Notifier.SCHEDULE,
         "Expiry day - entry at ${s.entry}",
@@ -260,11 +314,11 @@ object Tasks {
             "${tk.underlying} settled at %,.1f against the ${fmtG(tk.strike)} strike.".format(settlement), "ticket")
     }
 
-    suspend fun harvest(context: Context, s: AppSettings, onProgress: (String, Float) -> Unit) {
+    suspend fun harvest(context: Context, s: AppSettings, session: java.time.LocalDate, onProgress: (String, Float) -> Unit) {
         if (Holidays.stale(Market.today())) runCatching { Holidays.refresh() }
-        val r = Harvester.run(onProgress = { p -> onProgress(p.stage, if (p.total > 0) p.done.toFloat() / p.total else -1f) })
+        val r = Harvester.run(session = session, onProgress = { p -> onProgress(p.stage, if (p.total > 0) p.done.toFloat() / p.total else -1f) })
         // No notification: the result is shown in More → Data and harvest.
-        SecurePrefs.put("harvest.last", "${Market.today()}: ${r.summary()}")
+        SecurePrefs.put("harvest.last", "$session: ${r.summary()}")
         if (s.healthAlerts) healthCheck(context, s)
         // The ORB evening replay (TODO A8): the day's bars, beside what the paper arms did. No orders.
         runCatching { com.optionslab.app.data.OrbArms.replayIfDue() }
@@ -286,17 +340,62 @@ object Tasks {
 
     data class Tick(val title: String, val lines: List<String>, val progress: Int)
 
+    /** The ongoing watch notice: no index levels or other market data, only the owner's orders and positions. */
+    const val WATCH_TITLE = "Order watch"
+    const val WATCH_IDLE = "Watching your orders and strategies"
+
+    /**
+     * The steps that protect money: fills, the daily loss limit, bot exits, stops and targets,
+     * the expiry square-off and strategy risk. Run first in every pass, so a slow quote or
+     * chart fetch never holds them up.
+     */
+    private suspend fun riskSteps(context: Context, s: AppSettings) {
+        // Zerodha's live price stream (Live mode, logged in, market hours).
+        runCatching { com.optionslab.app.data.KiteStream.ensure() }
+        // The static-IP relay: connected ahead of the first order, kept alive during market hours.
+        if (com.optionslab.app.data.Market.isOpen()) runCatching { com.optionslab.app.data.Relay.warm() }
+        // A bot's entry or exit then finds a pooled connection through the relay and a fresh static-IP reading, not handshakes.
+        if (s.live && com.optionslab.app.data.Market.isOpen() && com.optionslab.app.data.Broker.loggedIn)
+            runCatching { com.optionslab.app.data.Broker.warmOrderRoute() }
+        // Paper account (also used by paper strategy runs in LIVE mode): resting orders fill, MIS squares off, expiries settle.
+        runCatching { com.optionslab.app.data.Paper.tick() }.getOrNull()?.let { paperEvents(context, it) }
+        // One daily loss limit over every bot: past it, all of them sell and stop for the day.
+        runCatching { com.optionslab.app.data.LossBreaker.check(context) }
+        // The ORB paper arms: manage open positions, then decide on the last completed 5-minute bar.
+        runCatching { com.optionslab.app.data.OrbArms.tick() }
+        // Pine scripts set to auto-trade: decide on each completed candle, sell at 15:15.
+        runCatching { com.optionslab.app.data.PineAuto.tick() }
+        // Stops, trailing stops and targets: one exit filled cancels the other; trails move up.
+        runCatching { com.optionslab.app.data.Protections.tick() }
+        // Expiry day, 15:05: close every option position expiring today (paper and live, all products).
+        runCatching { com.optionslab.app.data.ExpirySquareOff.maybeRun(context, s) }
+        // Strategy Module: schedules, prices, per-leg and basket risk, exits.
+        runCatching {
+            val bad = com.optionslab.app.security.Integrity.compromised(com.optionslab.app.security.Integrity.reportWithin(context, 60_000))
+            com.optionslab.app.data.Strategies.tickAll(bad)
+        }
+        // Every open position's notification, with its live P&L and a Close button.
+        runCatching { PositionCards.refresh(context) }
+    }
+
+
     /**
      * One pass of the live watch: index levels, the open ticket's live mark and
      * cushion to breakeven, and every price alarm. Risk alerts fire once each.
      */
     suspend fun watchTick(context: Context, s: AppSettings, fired: MutableSet<String>): Tick {
-        val q = listOf("NIFTY", "BANKNIFTY", "INDIAVIX").mapNotNull { runCatching { Market.quote(it) }.getOrNull() }.associateBy { it.symbol }
+        riskSteps(context, s)
+        // The three index quotes at once, each given at most 20 s: a hung feed cannot stall the watch. The
+        // Upstox read uses short timeouts and is cancellable mid-read, so the deadline really ends it.
+        val q = kotlinx.coroutines.coroutineScope {
+            listOf("NIFTY", "BANKNIFTY", "INDIAVIX").map { sym ->
+                async(kotlinx.coroutines.Dispatchers.IO) { runCatching { kotlinx.coroutines.withTimeoutOrNull(20_000) { Market.quote(sym, quick = true) } }.getOrNull() }
+            }.mapNotNull { it.await() }.associateBy { it.symbol }
+        }
+        // The index quotes feed the alarms, the ticket's risk checks and the widget; the ongoing notice itself
+        // carries no market data, only the owner's positions and orders.
         val lines = ArrayList<String>()
-        q["NIFTY"]?.let { lines += "NIFTY %,.1f (%+.2f%%)".format(it.last, 100 * it.changePct) }
-        q["BANKNIFTY"]?.let { lines += "BANKNIFTY %,.1f (%+.2f%%)".format(it.last, 100 * it.changePct) }
-        q["INDIAVIX"]?.let { lines += "VIX %.2f".format(it.last) }
-        var title = "Market watch"
+        var title = WATCH_TITLE
         var progress = -1
         val open = Ledger.openTicket()
         if (open != null) {
@@ -323,9 +422,9 @@ object Tasks {
         var accountPnl: Double? = null
         if (s.live && b.loggedIn) {
             val keys = Alarms.all().filter { it.enabled && ':' in it.symbol }.map { it.symbol }.distinct()
-            if (keys.isNotEmpty()) runCatching { b.quotes(keys) }.getOrNull()?.forEach { (k, v) -> prices[k] = v.last }
+            if (keys.isNotEmpty()) runCatching { kotlinx.coroutines.withTimeoutOrNull(20_000) { b.quotes(keys) } }.getOrNull()?.forEach { (k, v) -> prices[k] = v.last }
             // The account's P&L: recorded for the day's curve, and alerted on the owner's levels.
-            runCatching { b.positionBook() }.getOrNull()?.takeIf { it.net.isNotEmpty() }?.let { book ->
+            runCatching { kotlinx.coroutines.withTimeoutOrNull(20_000) { b.positionBook() } }.getOrNull()?.takeIf { it.net.isNotEmpty() }?.let { book ->
                 com.optionslab.app.data.PnlTracker.record(book.pnl)
                 runCatching { com.optionslab.app.data.DailyPnl.record(true, book.m2m, -1) }
                 accountPnl = book.pnl
@@ -340,34 +439,24 @@ object Tasks {
                 lines.add(0, "Paper %s".format(if (s.hideAmountsOnLockScreen) "open: $n" else "P&L Rs %+,.0f · $n open".format(pnl)))
             }
         }
-        // Alarms set from the chart, priced from the chart's own feed (the last 1-minute close).
-        Alarms.all().filter { it.enabled && it.symbol.startsWith(com.optionslab.app.data.PriceAlarm.CHART) }.map { it.symbol }.distinct().forEach { key ->
-            val sym = key.removePrefix(com.optionslab.app.data.PriceAlarm.CHART)
-            val now = System.currentTimeMillis() / 1000
-            runCatching { com.optionslab.app.data.ChartFeed.bars(sym, "1m", now - 3 * 3600, now).lastOrNull()?.close }.getOrNull()?.let { prices[key] = it }
-        }
+        // Alarms set from the chart, priced from the chart's own feed (the last 1-minute close): all at once,
+        // each given at most 20 s, on the watch's own quick path (never queued behind a chart or backtest load).
+        val chartKeys = Alarms.all().filter { it.enabled && it.symbol.startsWith(com.optionslab.app.data.PriceAlarm.CHART) }.map { it.symbol }.distinct()
+        kotlinx.coroutines.coroutineScope {
+            chartKeys.map { key ->
+                async(kotlinx.coroutines.Dispatchers.IO) {
+                    val sym = key.removePrefix(com.optionslab.app.data.PriceAlarm.CHART)
+                    val now = System.currentTimeMillis() / 1000
+                    key to runCatching {
+                        kotlinx.coroutines.withTimeoutOrNull(20_000) { com.optionslab.app.data.ChartFeed.bars(sym, "1m", now - 3 * 3600, now, quick = true).lastOrNull()?.close }
+                    }.getOrNull()
+                }
+            }.map { it.await() }
+        }.forEach { (key, price) -> if (price != null) prices[key] = price }
         checkAlarms(context, prices, fired)
         runCatching {
             com.optionslab.app.widget.IraWidget.publish(context, q["NIFTY"]?.let { it.last to it.changePct },
                 q["BANKNIFTY"]?.let { it.last to it.changePct }, accountPnl)
-        }
-        // Sandbox paper account: resting orders fill, MIS squares off at 15:15, expiries settle.
-        // Paper account (also used by paper strategy runs in LIVE mode): resting orders fill, MIS squares off, expiries settle.
-        runCatching { com.optionslab.app.data.Paper.tick() }.getOrNull()?.let { paperEvents(context, it) }
-        // The ORB paper arms: manage open positions, then decide on the last completed 5-minute bar.
-        runCatching { com.optionslab.app.data.OrbArms.tick() }
-        // Zerodha's live price stream (Live mode, logged in, market hours).
-        runCatching { com.optionslab.app.data.KiteStream.ensure() }
-        // Stops, trailing stops and targets: one exit filled cancels the other; trails move up.
-        runCatching { com.optionslab.app.data.Protections.tick() }
-        // Every open position's notification, with its live P&L and a Close button.
-        runCatching { PositionCards.refresh(context) }
-        // Expiry day, 15:05: close every option position expiring today (paper and live, all products).
-        runCatching { com.optionslab.app.data.ExpirySquareOff.maybeRun(context, s) }
-        // Strategy Module: schedules, prices, per-leg and basket risk, exits.
-        runCatching {
-            val bad = com.optionslab.app.security.Integrity.compromised(com.optionslab.app.security.Integrity.reportWithin(context, 60_000))
-            com.optionslab.app.data.Strategies.tickAll(bad)
         }
         return Tick(title, lines, progress)
     }
@@ -404,7 +493,7 @@ object Tasks {
             val tag = "alarm.${a.id}"
             if (a.hit(price) && tag !in fired && System.currentTimeMillis() - a.firedAtMillis > 30 * 60_000) {
                 fired += tag
-                Alarms.upsert(a.copy(firedAtMillis = System.currentTimeMillis()))
+                Alarms.markFired(a.id, System.currentTimeMillis())
                 Notifier.post(context, 4000 + (a.id % 1000).toInt(), Notifier.RISK, "Alarm: ${a.describe()}",
                     "${a.symbol} is at %,.2f.${if (a.note.isNotBlank()) " ${a.note}" else ""}".format(price), "alarms")
             }
@@ -426,7 +515,8 @@ class WatchService : Service() {
 
     override fun onBind(intent: Intent?): IBinder? = null
 
-    private fun show(title: String, text: String, progress: Int = -1) {
+    /** False when Android refused the foreground (the service is then stopping: start nothing). */
+    private fun show(title: String, text: String, progress: Int = -1): Boolean {
         val n = Notifier.builder(this, Notifier.LIVE, title, text, "almanac")
             .setOngoing(true).setOnlyAlertOnce(true).setAutoCancel(false).setSilent(true)
             .apply { if (progress >= 0) setProgress(100, progress, false) }
@@ -440,9 +530,16 @@ class WatchService : Service() {
         }
         try {
             ServiceCompat.startForeground(this, Notifier.ID_LIVE, n, type)
+            return true
         } catch (_: Exception) {
-            // Not allowed now (e.g. the dataSync budget is spent): say so rather than crash.
+            // Not allowed now (e.g. the dataSync budget is spent): say so and stop cleanly - a service
+            // started in the foreground that never calls startForeground is killed by the system.
             Notifier.post(this, 2011, Notifier.APPROVAL, "IraAlgo could not run in the background", "Open the app to continue: $title", "almanac")
+            running.values.forEach { it.cancel() }
+            running.clear()
+            watching = false
+            stopSelf()
+            return false
         }
     }
 
@@ -457,11 +554,14 @@ class WatchService : Service() {
         // Foreground first, always: the system requires it within seconds.
         val k = runCatching { Jobs.Kind.valueOf(intent?.getStringExtra(Jobs.EXTRA_KIND) ?: "") }.getOrNull()
         if (k == Jobs.Kind.LIVE) watching = true   // show() then declares the specialUse type
-        show("IraAlgo", "Starting…")
+        // Refused: show() stopped the service, so no job is launched to run on after stopSelf.
+        if (!show("IraAlgo", "Starting…")) return START_NOT_STICKY
         if (intent?.action == STOP) { stopEverything(); return START_NOT_STICKY }
-        if (!com.optionslab.app.data.Broker.linked) { stopEverything(); return START_NOT_STICKY }
+        // Paper trading needs no Zerodha account: only the Zerodha-only jobs stop when none is linked.
+        if (!com.optionslab.app.data.Broker.linked && k != null && k != Jobs.Kind.LIVE) { stopEverything(); return START_NOT_STICKY }
         if (k == null) { maybeStop(); return START_NOT_STICKY }
         if (running[k]?.isActive == true) return START_NOT_STICKY
+        val session = intent?.getStringExtra(Jobs.EXTRA_SESSION)?.let { runCatching { java.time.LocalDate.parse(it) }.getOrNull() } ?: Market.today()
         running[k] = scope.launch {
             val s = AppSettings.load()
             try {
@@ -469,7 +569,7 @@ class WatchService : Service() {
                     Jobs.Kind.LIVE -> watch(s)
                     Jobs.Kind.TICKET -> Tasks.ticket(this@WatchService, s)
                     Jobs.Kind.SETTLE -> Tasks.settle(this@WatchService, s)
-                    Jobs.Kind.HARVEST -> Tasks.harvest(this@WatchService, s) { stage, p ->
+                    Jobs.Kind.HARVEST -> Tasks.harvest(this@WatchService, s, session) { stage, p ->
                         Tasks.publish(Tasks.LiveState(true, stage, p, System.currentTimeMillis()))
                         show("Harvesting · $stage", if (p >= 0) "${(100 * p).toInt()}%" else "", if (p >= 0) (100 * p).toInt() else -1)
                     }
@@ -478,10 +578,16 @@ class WatchService : Service() {
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
             } catch (e: Exception) {
-                Notifier.post(this@WatchService, 2900 + k.ordinal, Notifier.SCHEDULE,
-                    "${k.name.lowercase().replaceFirstChar { it.uppercase() }} did not complete", e.message ?: "unknown failure")
+                if (k == Jobs.Kind.HARVEST) {
+                    // No notice, as before: the harvest line says so, and WorkManager retries it (it resumes
+                    // where this stopped) until the session's retry budget is spent.
+                    SecurePrefs.put("harvest.last", "$session: did not complete (${Tasks.reason(e)})")
+                    if (Tasks.harvestFailed(session) < Tasks.HARVEST_TRIES) runCatching { Jobs.enqueueHarvest(this@WatchService, session, manual = false) }
+                } else Notifier.post(this@WatchService, 2900 + k.ordinal, Notifier.SCHEDULE,
+                    "${k.name.lowercase().replaceFirstChar { it.uppercase() }} did not complete",
+                    "It stopped with ${Tasks.reason(e)}. Open IraAlgo to check.")
             } finally {
-                Tasks.publish(Tasks.LiveState(false))
+                if (k == Jobs.Kind.LIVE) Tasks.publishWatch(Tasks.LiveState(false)) else if (k == Jobs.Kind.HARVEST) Tasks.publish(Tasks.LiveState(false))
                 running.remove(k)
                 if (k == Jobs.Kind.LIVE) watching = false
                 maybeStop()
@@ -500,15 +606,34 @@ class WatchService : Service() {
         // so its exit-time square-off and any retried exits are seen through.
         while (Market.isTradingDay() && (Market.minuteNow() <= Market.CLOSE ||
                 (Market.minuteNow() <= Market.CLOSE + 15 && com.optionslab.app.data.Strategies.anyRunning()))) {
+            try {
+                watchPass(fired)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // One bad pass (a Keystore or disk hiccup) must not end the watch: note it and go on.
+                // Its own id: 2014 is Heartbeat's "Market watch stopped", which every beat cancels.
+                Notifier.post(this, 2018, Notifier.SCHEDULE, "Order watch hiccup", "One pass failed (${e.javaClass.simpleName}); the watch goes on.")
+                delay(15_000)
+            }
+        }
+        // The watch is over for the day: the live price stream closes with it.
+        runCatching { com.optionslab.app.data.KiteStream.stop() }
+    }
+
+    /** One pass of the watch loop and the wait until the next one. */
+    private suspend fun watchPass(fired: HashSet<String>) {
+        run {
             Heartbeat.beat(this)
             if (Market.minuteNow() < Market.OPEN) {
-                show("Market watch", "Waiting for the 09:15 open")
+                show(Tasks.WATCH_TITLE, Tasks.WATCH_IDLE)
                 delay(30_000)
-                continue
+                return
             }
-            val t = Tasks.watchTick(this, s, fired)
-            Tasks.publish(Tasks.LiveState(true, t.title, t.progress / 100f, System.currentTimeMillis()))
-            show(t.title, t.lines.joinToString("\n").ifEmpty { "Waiting for prints" }, t.progress)
+            // Settings read fresh every pass: the kill switch, Paper / Live and limits changed mid-session take effect at once.
+            val t = Tasks.watchTick(this, AppSettings.load(), fired)
+            Tasks.publishWatch(Tasks.LiveState(true, t.title, t.progress / 100f, System.currentTimeMillis()))
+            show(t.title, t.lines.joinToString("\n").ifEmpty { Tasks.WATCH_IDLE }, t.progress)
             // While an ORB position is open its stop, target and 15:10 exit are checked every 15 s, not once a minute.
             val next = System.currentTimeMillis() + 60_000
             while (System.currentTimeMillis() < next) {
@@ -540,15 +665,19 @@ class WatchService : Service() {
         }
     }
 
+    /** Runs on the main thread (a STOP intent, Android's timeout): nothing here may block. */
     private fun stopEverything() {
-        if (kotlinx.coroutines.runBlocking { runCatching { com.optionslab.app.data.Strategies.anyRunning() || com.optionslab.app.data.OrbArms.holding() }.getOrDefault(false) })
-            Notifier.post(this, 2013, Notifier.APPROVAL, "Strategies are no longer being watched",
-                "A strategy run is open. Its stops and targets are only checked while the watch or the Strategies page is running.", "strategy")
+        val harvesting = running.containsKey(Jobs.Kind.HARVEST)
         running.values.forEach { it.cancel() }
         running.clear()
-        Tasks.publish(Tasks.LiveState(false))
+        if (harvesting) Tasks.publish(Tasks.LiveState(false))   // a WorkManager harvest may still be running: its card stays
+        Tasks.publishWatch(Tasks.LiveState(false))
         ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
         stopSelf()
+        // The non-blocking hints, never the locks: a strategy pass may hold its lock across network calls.
+        if (com.optionslab.app.data.Strategies.runningHint || com.optionslab.app.data.OrbArms.holdingHint)
+            Notifier.post(this, 2013, Notifier.APPROVAL, "Strategies are no longer being watched",
+                "A strategy run is open. Its stops and targets are only checked while the watch or the Strategies page is running.", "strategy")
     }
 
     override fun onDestroy() {
@@ -557,25 +686,62 @@ class WatchService : Service() {
     }
 }
 
-/** Used only when the service may not be started (no exact-alarm permission). */
+/**
+ * The harvest, always; the other one-shot jobs only when the service may not be started (no
+ * exact-alarm permission).
+ */
 class FallbackWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx, params) {
+    private fun kind() = runCatching { Jobs.Kind.valueOf(inputData.getString(Jobs.EXTRA_KIND) ?: "") }.getOrNull()
+
+    /**
+     * The notice shown while this runs in the foreground: the harvest asks for it (a plain worker is
+     * stopped at ten minutes), and expedited work shows it on Android 11 and below.
+     */
+    override suspend fun getForegroundInfo(): ForegroundInfo {
+        val harvest = kind() == Jobs.Kind.HARVEST
+        val n = Notifier.builder(applicationContext, Notifier.LIVE,
+            if (harvest) "Harvesting market data" else "IraAlgo", if (harvest) "Collecting today's option chains" else "Running a scheduled job", "almanac")
+            .setOngoing(true).setOnlyAlertOnce(true).setAutoCancel(false).setSilent(true)
+            .build()
+        val type = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC else 0
+        return ForegroundInfo(if (harvest) Notifier.ID_HARVEST else Notifier.ID_HARVEST + 1, n, type)
+    }
+
     override suspend fun doWork(): Result {
-        val k = runCatching { Jobs.Kind.valueOf(inputData.getString(Jobs.EXTRA_KIND) ?: "") }.getOrNull() ?: return Result.failure()
+        val k = kind() ?: return Result.failure()
         val s = AppSettings.load()
+        val session = inputData.getString(Jobs.EXTRA_SESSION)?.let { runCatching { java.time.LocalDate.parse(it) }.getOrNull() } ?: Market.today()
+        if (k == Jobs.Kind.HARVEST) {
+            // A fresh master and ~1500 contracts outlast the ten minutes a plain worker gets. If the
+            // foreground is refused (background start not allowed on Android 12+, dataSync budget spent),
+            // run anyway: the harvest stores as it goes, so a stopped attempt's rerun resumes where it was.
+            try {
+                setForeground(getForegroundInfo())
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (_: Exception) {
+            }
+        }
         return try {
             when (k) {
                 Jobs.Kind.TICKET -> Tasks.ticket(applicationContext, s)
                 Jobs.Kind.SETTLE -> Tasks.settle(applicationContext, s)
                 Jobs.Kind.HARVEST -> try {
-                    Tasks.harvest(applicationContext, s) { stage, p -> Tasks.publish(Tasks.LiveState(true, stage, p, System.currentTimeMillis())) }
+                    Tasks.harvest(applicationContext, s, session) { stage, p -> Tasks.publish(Tasks.LiveState(true, stage, p, System.currentTimeMillis())) }
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    throw e      // stopped by the system: WorkManager reschedules it, and nothing failed
                 } catch (e: Exception) {
-                    SecurePrefs.put("harvest.last", "${Market.today()}: did not complete (${e.message})")
-                    throw e
+                    if (isStopped) throw kotlinx.coroutines.CancellationException("stopped")   // a read cut by the stop: not a failure
+                    SecurePrefs.put("harvest.last", "$session: did not complete (${Tasks.reason(e)})")
+                    // System stops count toward runAttemptCount; the budget is the session's own count of real failures.
+                    return if (Tasks.harvestFailed(session) < Tasks.HARVEST_TRIES) Result.retry() else Result.failure()
                 } finally { Tasks.publish(Tasks.LiveState(false)) }
                 Jobs.Kind.REMIND -> Tasks.remind(applicationContext, s)
                 Jobs.Kind.LIVE -> Unit
             }
             Result.success()
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
         } catch (e: Exception) {
             if (runAttemptCount < 2) Result.retry() else Result.failure()
         }

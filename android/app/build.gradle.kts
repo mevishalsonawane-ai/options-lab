@@ -1,10 +1,13 @@
+import org.gradle.testing.jacoco.plugins.JacocoTaskExtension
 import com.android.build.api.artifact.SingleArtifact
 import java.security.MessageDigest
+import java.time.Duration
 
 plugins {
     id("com.android.application")
     kotlin("android")
     id("org.jetbrains.kotlin.plugin.compose")
+    jacoco
 }
 
 android {
@@ -55,6 +58,8 @@ android {
         }
         debug {
             applicationIdSuffix = ".debug"
+            // JaCoCo for the JVM/Robolectric tests: :app:createDebugUnitTestCoverageReport.
+            enableUnitTestCoverage = true
         }
     }
 
@@ -81,9 +86,38 @@ android {
         checkReleaseBuilds = false
     }
     testOptions {
-        // JVM unit tests of the app's own logic (no device); Android calls answer defaults.
-        unitTests.isReturnDefaultValues = true
-        unitTests.all { it.useJUnitPlatform() }
+        // JVM unit tests (no device): plain JUnit 4 for pure logic, Robolectric for anything that
+        // needs Android (the vault, settings, backups) and for Compose screens. See src/test/README.md.
+        unitTests {
+            // Robolectric reads the merged debug manifest and resources (Compose screens need them).
+            isIncludeAndroidResources = true
+            // Pure JVM tests: an Android call that is not under Robolectric answers a default.
+            isReturnDefaultValues = true
+            all {
+                it.maxHeapSize = "4g"
+                // Two test JVMs at once (the CI runner has 4 cores, 16 GB), each replaced every few classes so
+                // one area's static state cannot leak into - or stall - another's; and a hard limit, so a hang
+                // fails the build in minutes instead of holding CI for hours.
+                // CI runs the suite in shards (-PtestShard=i/n, one job each): a class - with its inner classes -
+                // belongs to shard hash(name) % n. Without the property every class runs, as before.
+                (project.findProperty("testShard") as String?)?.split("/")?.map { v -> v.trim().toInt() }?.let { (i, n) ->
+                    it.exclude(org.gradle.api.specs.Spec<org.gradle.api.file.FileTreeElement> { e ->
+                        !e.isDirectory && e.name.endsWith(".class") &&
+                            (e.relativePath.pathString.substringBefore('$').removeSuffix(".class").hashCode() and 0x7fffffff) % n != i
+                    })
+                }
+                it.maxParallelForks = 2
+                // A fresh JVM every 4 classes: Robolectric's text shadows never free their native objects and the
+                // screen matrices draw thousands of screens, so a long-lived JVM fills its heap (one ran out of
+                // memory and failed every later class in it).
+                it.setForkEvery(4)
+                it.timeout.set(Duration.ofMinutes(20))   // imported: inside android {} "java" is the compile-options block
+                it.systemProperty("robolectric.logging.enabled", "false")
+                // Screen tests write their screenshots (build/outputs/roborazzi); nothing is compared or committed.
+                it.systemProperty("roborazzi.test.record", "true")
+                it.testLogging { events("failed"); exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL }
+            }
+        }
     }
 }
 
@@ -112,7 +146,39 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
     // The Kite live price stream (WebSocket). No logging interceptor: nothing about the connection is ever logged.
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
-    testImplementation(kotlin("test"))
+    // SSH for the built-in static-IP relay (pure Java, no native code, no permissions).
+    implementation("com.github.mwiede:jsch:0.2.18")
+    // ---- tests (src/test: JVM + Robolectric + Compose UI; nothing here reaches the APK) ----
+    testImplementation(kotlin("test-junit"))
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("org.robolectric:robolectric:4.14.1")
+    testImplementation("androidx.test:core-ktx:1.6.1")
+    testImplementation("androidx.test.ext:junit-ktx:1.2.1")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
+    testImplementation(composeBom)
+    testImplementation("androidx.compose.ui:ui-test-junit4")
+    // Registers the empty ComponentActivity createComposeRule() launches. Debug variant only:
+    // the release manifest (and its sandbox report) is unchanged.
+    debugImplementation("androidx.compose.ui:ui-test-manifest")
+    // Screenshots of every tested screen on the JVM (Robolectric native graphics).
+    testImplementation("io.github.takahirom.roborazzi:roborazzi:1.36.0")
+    testImplementation("io.github.takahirom.roborazzi:roborazzi-compose:1.36.0")
+    testImplementation("io.github.takahirom.roborazzi:roborazzi-junit-rule:1.36.0")
+    // A fake Zerodha (Kite Connect) server on localhost for the live-order paths; same version as okhttp.
+    testImplementation("com.squareup.okhttp3:mockwebserver:4.12.0")
+    testImplementation("com.squareup.okhttp3:okhttp-tls:4.12.0")
+    // WorkManager in tests (synchronous executor, TestListenableWorkerBuilder); same version as work-runtime.
+    testImplementation("androidx.work:work-testing:2.10.0")
+}
+
+
+// Robolectric loads the app's classes through its own class loader, which gives them no code
+// location: JaCoCo must be told to count those too, or the coverage report reads ~0%.
+tasks.withType<Test>().configureEach {
+    extensions.configure<JacocoTaskExtension> {
+        isIncludeNoLocationClasses = true
+        excludes = listOf("jdk.internal.*")
+    }
 }
 
 

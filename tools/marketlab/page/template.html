@@ -1,0 +1,114 @@
+<title>{{TITLE}}</title>
+<meta name="description" content="{{DESCRIPTION}}">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+:root { --accent-l: {{ACCENT_L}}; --accent-d: {{ACCENT_D}}; }
+{{CSS}}
+</style>
+<div class="wrap">
+  <header class="top">
+    <span class="eyebrow">{{EYEBROW}}</span>
+    <h1>{{H1}}</h1>
+    <p class="sub">{{LEDE}}</p>
+    <nav class="toc" aria-label="Sections">
+      <a href="#findings">Findings</a><a href="#chart">Chart</a><a href="#returns">Returns</a>
+      <a href="#risk">Volatility and trend</a><a href="#moves">Big moves</a>{{TOC_EXTRA}}<a href="#links">Other markets</a><a href="#network">Neural network</a><a href="#method">Method</a>
+    </nav>
+  </header>
+
+  <section aria-label="Key figures"><div class="figs" id="figs"></div></section>
+
+  <section id="findings">
+    <div class="sec-head"><h2>What the study found</h2><p>Read from the numbers on this page; each point links to the chart behind it.</p></div>
+    <div class="notes">{{NOTES}}</div>
+  </section>
+
+  <section id="chart">
+    <div class="sec-head"><h2>Three years, day by day</h2>
+      <p>Daily candles with the 50-day (accent) and 200-day (grey) averages. Dotted lines are the prices where the most volume traded. Below it, how far price sat under its running high.</p></div>
+    <div class="panel">
+      <div class="seg" role="group" aria-label="Price scale"><button data-scale="log" aria-pressed="true">Log scale</button><button data-scale="lin" aria-pressed="false">Linear</button></div>
+      <div class="chart tall" id="price-chart"></div>
+      <h3>Distance below the high</h3>
+      <div class="chart short" id="dd-chart"></div>
+    </div>
+  </section>
+
+  <section id="returns">
+    <div class="sec-head"><h2>Returns by year, month, day and hour</h2></div>
+    <div class="grid2">
+      <div class="panel"><h3>Calendar years</h3><div id="yearly"></div></div>
+      <div class="panel"><h3>Day of the week</h3><div id="dow"></div>
+        <p class="caveat">A t-stat below 2 in size means the day's average could easily be chance.</p></div>
+    </div>
+    <div class="panel"><h3>Month by month (%)</h3><div id="monthly"></div></div>
+    <div class="panel"><h3>Hour of the day</h3><div class="cv" id="hod"></div></div>
+    {{SESSIONS}}
+  </section>
+
+  <section id="risk">
+    <div class="sec-head"><h2>Volatility, trend and key levels</h2></div>
+    <div class="figs" id="vol-figs"></div>
+    <div class="panel"><h3>Volatility, annualised %</h3><div class="chart" id="vol-chart"></div><div id="vol-legend"></div></div>
+    <div class="grid2">
+      <div class="panel"><h3>Biggest falls</h3><div id="drawdowns"></div></div>
+      <div class="panel"><h3>50/200-day crossings and what followed</h3><div id="crosses"></div></div>
+      <div class="panel"><h3>Heaviest-traded price levels</h3><div id="levels"></div></div>
+      <div class="panel"><h3>Where it stands now</h3><div id="state"></div></div>
+    </div>
+  </section>
+
+
+  <section id="moves">
+    <div class="sec-head"><h2>When and where the big moves happen</h2>
+      <p>A big move is an hour beyond {{THR_H}} or a day beyond {{THR_D}} of that period's own normal size, so it is measured against the volatility of the time. "Lift" compares how often big moves happen in a slot with how often they happen overall: 2.0 means twice as often, 0.5 half as often. Every condition is read at the close of the bar before the move.</p></div>
+    <div class="figs" id="mv-figs"></div>
+    <div class="panel"><h3>Hour of the day (UTC): lift of big hourly rises and drops</h3><div class="cv" id="mv-hour"></div></div>
+    <div class="grid2">
+      <div class="panel"><h3>Day of the week</h3><div id="mv-dow"></div></div>
+      <div class="panel"><h3>What happens after a big move</h3><div id="mv-after"></div>
+        <p class="caveat">"Same way" is the share of cases where price kept going in the direction of the big move.</p></div>
+    </div>
+    <div class="sec-head"><h3>Where price was just before a big hour</h3></div>
+    <div class="grid2" id="mv-cond-h"></div>
+    <div class="sec-head"><h3>Where things stood the day before a big day</h3></div>
+    <div class="grid2" id="mv-cond-d"></div>
+    <div class="sec-head"><h2>A neural network that flags big moves 24 hours ahead</h2>
+      <p>Two more networks, one for big rises and one for big drops, each score every hour for the chance of a move beyond 2&times; the normal 24-hour move within the next 24 hours. They were tested walk-forward, with a one-day gap so no answer leaks into training. Opening up the hours they flag most strongly shows the pattern each one learned.</p></div>
+    <div id="mv-det" class="model"></div>
+    <div class="panel"><h3>The largest days in three years, and what came before them</h3><div id="mv-days"></div></div>
+  </section>
+
+  {{OPTIONS}}
+
+  <section id="links">
+    <div class="sec-head"><h2>Links with other markets</h2><p>Correlation of daily moves, over rolling 90-day windows.</p></div>
+    <div class="panel"><div class="chart" id="corr-chart"></div><div id="corr-legend"></div></div>
+    <div class="panel"><div id="corr"></div></div>
+  </section>
+
+  <section id="network">
+    <div class="sec-head"><h2>Neural network</h2>
+      <p>Small neural networks, five trained per step and averaged, learn from about 30 inputs:
+      recent returns, trend, volatility, RSI, MACD, range and calendar{{NET_EXTRA}}. Each one is
+      tested walk-forward. It trains on the first 60% of the history, predicts the next block,
+      retrains with that block included, and repeats. Every number below is from bars the model
+      had not seen.</p></div>
+    <div id="models" class="model"></div>
+  </section>
+
+  <section id="method">
+    <div class="sec-head"><h2>Method and limits</h2></div>
+    <div class="notes">{{METHOD}}</div>
+  </section>
+
+  <footer><span id="generated"></span><span>{{SOURCES}}</span><span>Research only, not advice, and not part of the Options Lab app.</span></footer>
+</div>
+<script type="application/json" id="data">{{DATA}}</script>
+<script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
+<script>
+{{JS}}
+</script>

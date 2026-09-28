@@ -1,6 +1,6 @@
 # IraAlgo TODO
 
-Gap analysis of D:\New Trading app (OpenAlgo fork, branch `custom`) against
+Gap analysis of D:\New Trading app (desktop app, branch `custom`) against
 D:\IraAlgo (options-lab @ bba1def), 2026-09-25. Nothing below is implemented
 yet; each item waits for an explicit go-ahead.
 
@@ -40,24 +40,26 @@ Source paths prefixed `NTA:` are in D:\New Trading app.
       (incomplete on NTA too: `NTA:services/heartbeat_service.py`). Done on the phone: the market watch stamps
       a heartbeat each pass; an alarm checks it every 5 min from 09:17 to 15:30, restarts a watch silent for
       over 3 min and posts one "Market watch stopped" notice per stall (approval channel, so it always shows).
-- [ ] A11. Optional: Telegram alerts (NTA has them; IraAlgo uses phone notifications only).
+- [x] A11. (dropped by the owner, 2026-09-28: no Telegram; phone notifications only) Telegram alerts.
 - [ ] A12. Optional: pre-market routine (symbol refresh, daily report). AI Signals: skip unless revived (research refused it).
 
 ## B. IraAlgo housekeeping
 
-- [ ] B1. Re-point `tools/harvest_nightly.ps1` (hard-coded to `C:\Users\mevis\Downloads\files\options-lab`, Python310)
+- [x] B1. (not applicable, owner 2026-09-28: only the Android app is used from now on; no laptop harvest) Re-point `tools/harvest_nightly.ps1` (hard-coded to `C:\Users\mevis\Downloads\files\options-lab`, Python310)
       and re-register in Task Scheduler; harvested bars stop at 2026-09-10 (missed sessions are lost for good).
-- [ ] B2. Release signing: run `android/tools/make-release-key.sh`, add the 4 GitHub secrets
+- [x] B2. (done 2026-09-28: CI signs with the owner's key; the build log prints the public fingerprint) Release signing: run `android/tools/make-release-key.sh`, add the 4 GitHub secrets
       (otherwise every update needs uninstall, which wipes the vault).
 - [ ] B3. Static IP for live orders (SEBI): VPS (Oracle Always Free works) or a home static IP + `android/tools/wg-relay-setup.sh`; then enter the IP in the app (More → Zerodha → Static IP) and check it shows ✓. The app now refuses new live positions from any other IP.
 - [ ] B4. Research milestones in `docs/design.md`: M1 in progress, M4-M9 open, M9 forward holdout ~Dec 2026;
       missing tests `test_theta_units`, `test_long_short_mirror`, `test_exits_fire`, `test_no_engine_import`; pricer/IV module;
       confirm M3 Kaggle splice reconciliation.
 - [ ] B5. Hedged variant undecided (`docs/hedged-variant.md`: wing helped 0/170).
-- [ ] B6. Docs drift: `android/README.md` tab names; root README test count (206 -> ~332).
-- [ ] B7. App module has no unit/UI tests (engine only).
+- [x] B6. (done in D20) Docs drift: `android/README.md` tab names; root README test count (206 -> ~332).
+- [x] B7. (done in D4) App module has no unit/UI tests (engine only).
 - [ ] B8. Decide fate of the untracked `options_lab/data/banknifty_expiry_cache/` and modified bars in the old
       `D:\files\options-lab` clone (not present in D:\IraAlgo).
+- [ ] B9. Later (owner, 2026-09-28): replace the chart terminal in `android/app/src/main/assets/chart/` (Apache-2.0 code
+      that must keep its NOTICE/LICENSE while it ships) with the app's own native chart, then delete the folder and its notice.
 
 ## D. Enhancements (owner go-ahead 2026-09-26: all at once; answers: real-order changes need the PIN once;
 ##    no Telegram; morning check and end-of-day report always show)
@@ -85,33 +87,12 @@ Source paths prefixed `NTA:` are in D:\New Trading app.
 
 ## L. Before going live (real money)
 
-- [ ] L1. Turn OFF "Allow screenshots and screen recording" (More -> Security), and set its default
+- [x] L1. (done 2026-09-28: blocked by default under a new setting key, so every phone starts blocked; allow it again only with the PIN) Turn OFF "Allow screenshots and screen recording" (More -> Security), and set its default
   back to off (`security/Capture.kt`, `DEFAULT_ALLOWED = false`). It is on only while testing.
 - [ ] L2. First live ORB trade with the app open: confirm the entry and the SL stop order appear in Kite,
   and that the +40 / 15:10 exit goes out.
-- [ ] L3. Protections (Zerodha stop / trailing stop) still send SL-M: confirm Zerodha accepts SL-M on
+- [x] L3. (checked 2026-09-28: Zerodha stops and trailing stops already go out as SL with a limit, like the ORB stop; only paper uses SL-M; the notes on screen now say so) Protections (Zerodha stop / trailing stop) still send SL-M: confirm Zerodha accepts SL-M on
   index options, or switch them to SL with a limit like the ORB stop.
-
-## C. D:\New Trading app (still running the ORB paper forward test)
-
-- [ ] C1. Revert before live, `.env`: ACCOUNT_MAX_DAILY_LOSS 6000->2000, ACCOUNT_MAX_TRADES_TODAY 60->10,
-      ACCOUNT_MAX_DRAWDOWN_PCT 30->10, re-base `db/account_peak.json`.
-- [ ] C2. Revert before live, `services/ai_signals/config.py`: MIN_CONFIDENCE_FOR_SIGNAL 0.65->0.55,
-      MIN_RISK_REWARD_RATIO 1.2->1.5, RISK_PER_TRADE_PCT 2.0->0.7.
-- [ ] C3. `ACCOUNT_STARTING_CAPITAL=0` leaves the capital-based drawdown leg inert.
-- [ ] C4. Heartbeat not written by the ORB arms or the collector.
-- [ ] C5. ORB forward test needs ~57 trades before it means anything.
-- [ ] C6. Commit the uncommitted native-app work (Engine, AccountGuard, SqliteStore, service, UI, fake build,
-      PaperAccount `checkStop(orderId)` fix, make_vectors.py, test_fake_kite.py). Exclude `tools/__pycache__/`.
-      Never share that APK: `EngineConfig.kt` embeds the Kite secret.
-- [ ] C7. Native plan (`docs/superpowers/plans/2026-09-25-native-android-app.md`):
-      Task 8A not started; battery-exemption request missing (Task 9);
-      Task 10 E2E timed out waiting for ORB signals (suspect: EngineService stops itself with no alarm when the first
-      fake-clock read is outside 09:10-15:30; `KiteClient.options()` caches on real date, not engine clock);
-      Task 10 steps 3-4 not done; tick the plan checkboxes.
-- [ ] C8. Orphaned code: `services/timestone/`, `strategies/core/`, `strategies/directional/`,
-      `strategies/execution/order_router.py:486` TODO. Wire in or delete.
-- [ ] C9. `upgrade/seed_ai_signals_model.py` not registered in `upgrade/migrate_all.py`.
-- [ ] C10. Junk at repo root: file named `--force`, empty `cit.json`, debug `.txt` files, loose scratch scripts.
-- [ ] C11. All `docs/superpowers/plans/*` checkboxes unticked though work shipped; ADR-0005 still "Draft".
-- [ ] C12. `git pull` of branch `custom` from FinalProductTradingApp hung (likely credential prompt) and was stopped.
+- [x] L4. (done 2026-09-28) Switch the Zerodha setup gate back on: `SKIP_ZERODHA_GATE = false` in `ui/Root.kt` (off while testing other features).
+- [ ] L5. Pine auto-trade: run a script on Paper for a few sessions first (Research -> Pine scripts -> Auto-trade),
+  then one live trade with the app open: confirm the ATM option BUY, the switch on the next signal, and the 15:15 sell in Kite.

@@ -1,6 +1,7 @@
 package com.optionslab.app.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -23,6 +24,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -121,7 +123,7 @@ fun ToolsScreen(model: AppModel, view: String, onView: (String) -> Unit, onChart
 }
 
 @Composable
-private fun Header(c: ChainSnapshot, source: String, onRefresh: () -> Unit) {
+internal fun Header(c: ChainSnapshot, source: String, onRefresh: () -> Unit) {
     val p = LocalPalette.current
     LedgerCard {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -151,7 +153,7 @@ private fun Stat(label: String, value: String) {
 }
 
 @Composable
-private fun ChainCard(c: ChainSnapshot, onPick: (ChainPick) -> Unit) {
+fun ChainCard(c: ChainSnapshot, onPick: (ChainPick) -> Unit) {
     val p = LocalPalette.current
     // Tablets and a sideways phone have room for the open interest on each side.
     val wide = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp >= 600
@@ -160,45 +162,83 @@ private fun ChainCard(c: ChainSnapshot, onPick: (ChainPick) -> Unit) {
         Row {
             val heads = listOf("CE Δ", "CE IV", "CE LTP", "STRIKE", "PE LTP", "PE IV", "PE Δ")
             (if (wide) listOf("CE OI") + heads + "PE OI" else heads).forEach { h ->
-                Text(h, style = Type.label.copy(color = p.inkSoft, fontSize = 9.sp), textAlign = TextAlign.Center,
-                    modifier = Modifier.weight(if (h == "STRIKE") 1.25f else 1f))
+                // One line each, shrunk to fit: a header never breaks inside a word ("STRI / KE" at large fonts).
+                com.optionslab.app.ui.components.FitText(h, style = Type.label.copy(color = p.inkSoft, fontSize = 9.sp, textAlign = TextAlign.Center),
+                    modifier = Modifier.weight(if (h == "STRIKE") 1.25f else 1f), minSize = 5.sp)
             }
         }
         Rule(Modifier.padding(vertical = 4.dp))
+        val fit = androidx.compose.runtime.remember(c) { androidx.compose.runtime.mutableFloatStateOf(1f) }
+        // The underlying's price sits between the strike just below it and the one just above: a line there.
+        val spotAt = spotLineIndex(c.rows.map { it.strike }, c.spot)
         c.rows.forEachIndexed { i, r ->
+            if (i == spotAt) SpotLine(c.underlying, c.spot)
             val atm = r.strike == c.atm
             val itmCall = r.strike < c.spot
+            // In the money: calls below spot, puts above it, shaded on their own side of the table.
+            val ceItm = Modifier.background(if (itmCall) p.amber.copy(alpha = 0.13f) else androidx.compose.ui.graphics.Color.Transparent)
+            val peItm = Modifier.background(if (!itmCall && r.strike != c.spot) p.amber.copy(alpha = 0.13f) else androidx.compose.ui.graphics.Color.Transparent)
             val ce = c.ceGreeks.getOrNull(i); val pe = c.peGreeks.getOrNull(i)
             val cell = Type.figure.copy(fontSize = 11.sp)
             Row(Modifier.padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
                 val ceTone = if (itmCall) p.ink else p.inkSoft
                 val peTone = if (!itmCall) p.ink else p.inkSoft
-                if (wide) Text(oi(r.ce?.oi), style = cell.copy(color = ceTone), textAlign = TextAlign.Center, modifier = Modifier.weight(1f))
-                Text(ce?.let { f2(it.delta) } ?: "—", style = cell.copy(color = ceTone), textAlign = TextAlign.Center, modifier = Modifier.weight(1f))
-                Text(ce?.let { f1(it.ivPct) } ?: "—", style = cell.copy(color = ceTone), textAlign = TextAlign.Center, modifier = Modifier.weight(1f))
+                if (wide) NumCell(oi(r.ce?.oi), cell.copy(color = ceTone), Modifier.weight(1f).then(ceItm), fit)
+                NumCell(ce?.let { f2(it.delta) } ?: "—", cell.copy(color = ceTone), Modifier.weight(1f).then(ceItm), fit)
+                NumCell(ce?.let { f1(it.ivPct) } ?: "—", cell.copy(color = ceTone), Modifier.weight(1f).then(ceItm), fit)
                 val pickCe = { onPick(ChainPick(c.underlying, c.expiry, r.strike, com.optionslab.engine.Right.CE, r.ce?.ltp, ce?.delta, ce?.ivPct, c.lotSize)) }
                 val pickPe = { onPick(ChainPick(c.underlying, c.expiry, r.strike, com.optionslab.engine.Right.PE, r.pe?.ltp, pe?.delta, pe?.ivPct, c.lotSize)) }
-                Text(r.ce?.let { f2(it.ltp) } ?: "—", style = cell.copy(color = p.verdigris, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold), textAlign = TextAlign.Center,
-                    modifier = Modifier.weight(1f).background(p.verdigris.copy(alpha = 0.08f), androidx.compose.foundation.shape.RoundedCornerShape(6.dp)).clickable(enabled = r.ce != null, onClick = pickCe).padding(vertical = 5.dp))
-                Text(fmtG(r.strike), style = cell.copy(color = if (atm) p.gold else p.ink, fontSize = if (atm) 13.sp else 12.sp),
-                    textAlign = TextAlign.Center, modifier = Modifier.weight(1.25f))
-                Text(r.pe?.let { f2(it.ltp) } ?: "—", style = cell.copy(color = p.oxblood, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold), textAlign = TextAlign.Center,
-                    modifier = Modifier.weight(1f).background(p.oxblood.copy(alpha = 0.08f), androidx.compose.foundation.shape.RoundedCornerShape(6.dp)).clickable(enabled = r.pe != null, onClick = pickPe).padding(vertical = 5.dp))
-                Text(pe?.let { f1(it.ivPct) } ?: "—", style = cell.copy(color = peTone), textAlign = TextAlign.Center, modifier = Modifier.weight(1f))
-                Text(pe?.let { f2(it.delta) } ?: "—", style = cell.copy(color = peTone), textAlign = TextAlign.Center, modifier = Modifier.weight(1f))
-                if (wide) Text(oi(r.pe?.oi), style = cell.copy(color = peTone), textAlign = TextAlign.Center, modifier = Modifier.weight(1f))
+                NumCell(r.ce?.let { f2(it.ltp) } ?: "—", cell.copy(color = p.verdigris, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold), Modifier.weight(1f).background(p.verdigris.copy(alpha = 0.08f), androidx.compose.foundation.shape.RoundedCornerShape(6.dp)).clickable(enabled = r.ce != null, onClick = pickCe).padding(vertical = 5.dp), fit)
+                NumCell(fmtG(r.strike), cell.copy(color = if (atm) p.gold else p.ink, fontSize = if (atm) 13.sp else 12.sp,
+                    fontWeight = if (atm) androidx.compose.ui.text.font.FontWeight.Bold else null),
+                    Modifier.weight(1.25f).then(if (atm) Modifier.border(1.dp, p.gold, androidx.compose.foundation.shape.RoundedCornerShape(6.dp)).padding(vertical = 4.dp) else Modifier), fit)
+                NumCell(r.pe?.let { f2(it.ltp) } ?: "—", cell.copy(color = p.oxblood, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold), Modifier.weight(1f).background(p.oxblood.copy(alpha = 0.08f), androidx.compose.foundation.shape.RoundedCornerShape(6.dp)).clickable(enabled = r.pe != null, onClick = pickPe).padding(vertical = 5.dp), fit)
+                NumCell(pe?.let { f1(it.ivPct) } ?: "—", cell.copy(color = peTone), Modifier.weight(1f).then(peItm), fit)
+                NumCell(pe?.let { f2(it.delta) } ?: "—", cell.copy(color = peTone), Modifier.weight(1f).then(peItm), fit)
+                if (wide) NumCell(oi(r.pe?.oi), cell.copy(color = peTone), Modifier.weight(1f).then(peItm), fit)
             }
         }
+        if (spotAt == c.rows.size) SpotLine(c.underlying, c.spot)
         c.synthetic?.let {
             Spacer(Modifier.height(8.dp))
             LedgerLine("Synthetic future (K + C − P)", "${f2(it.price)} · basis ${f2(it.basis)}")
         }
-        Note("Tap a call (CE) or put (PE) price to open its chart. Black-76 Greeks off the parity forward; Δ per 1 of underlying, IV in percent.")
+        Note("The line with the price is ${c.underlying} now, between the strikes below and above it; the boxed strike is ATM. " +
+            "Shaded cells are in the money (calls below the price, puts above it). " +
+            "Tap a call (CE) or put (PE) price to open its chart. Black-76 Greeks off the parity forward; Δ per 1 of underlying, IV in percent.")
     }
 }
 
+/** Where the spot line goes: before the first strike at or above [spot] (strikes ascending); [strikes].size when all are below. */
+internal fun spotLineIndex(strikes: List<Double>, spot: Double): Int =
+    strikes.indexOfFirst { it >= spot }.let { if (it < 0) strikes.size else it }
+
+/** The underlying's current price as a gold rule across the chain, with the price in a pill at its centre. */
 @Composable
-private fun OiCard(c: ChainSnapshot) {
+private fun SpotLine(underlying: String, spot: Double) {
+    val p = LocalPalette.current
+    Row(Modifier.fillMaxWidth().padding(vertical = 3.dp).semantics(mergeDescendants = true) {}, verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.weight(1f).height(2.dp).background(p.gold))
+        Text("$underlying ${f2(spot)}", maxLines = 1, softWrap = false,
+            style = Type.figure.copy(color = p.onPrimary, fontSize = 11.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold),
+            modifier = Modifier.background(p.gold, androidx.compose.foundation.shape.RoundedCornerShape(50)).padding(horizontal = 10.dp, vertical = 2.dp))
+        Box(Modifier.weight(1f).height(2.dp).background(p.gold))
+    }
+}
+
+/**
+ * A chain cell: one centred line (at a large font on a small phone "192.05" wrapped into "192.0 / 5"). All cells of a
+ * table share [fit]: when any cell's number does not fit its column, every cell shrinks by the same step, so the
+ * table keeps one type size.
+ */
+@Composable
+private fun NumCell(text: String, style: androidx.compose.ui.text.TextStyle, modifier: Modifier, fit: androidx.compose.runtime.MutableFloatState) =
+    Text(text, modifier.padding(horizontal = 1.dp), style = style.copy(textAlign = TextAlign.Center, fontSize = style.fontSize * fit.floatValue),
+        maxLines = 1, softWrap = false,
+        onTextLayout = { r -> if (r.didOverflowWidth && fit.floatValue > 0.5f) fit.floatValue = (fit.floatValue * 0.92f).coerceAtLeast(0.5f) })
+
+@Composable
+internal fun OiCard(c: ChainSnapshot) {
     val p = LocalPalette.current
     val xs = c.rows.map { it.strike }
     LedgerCard(title = "Open interest") {
@@ -227,7 +267,7 @@ private fun OiCard(c: ChainSnapshot) {
 }
 
 @Composable
-private fun IvCard(c: ChainSnapshot) {
+internal fun IvCard(c: ChainSnapshot) {
     val p = LocalPalette.current
     val sm = c.ivSmile
     LedgerCard(title = "IV smile") {
@@ -242,7 +282,7 @@ private fun IvCard(c: ChainSnapshot) {
 }
 
 @Composable
-private fun GexCard(c: ChainSnapshot) {
+internal fun GexCard(c: ChainSnapshot) {
     val p = LocalPalette.current
     val g = c.gex
     LedgerCard(title = "Gamma exposure") {
@@ -258,7 +298,7 @@ private fun GexCard(c: ChainSnapshot) {
 }
 
 @Composable
-private fun MoveCard(c: ChainSnapshot) {
+internal fun MoveCard(c: ChainSnapshot) {
     val p = LocalPalette.current
     val gd = c.gammaDensity
     LedgerCard(title = "Expected move") {
@@ -351,7 +391,7 @@ private fun BuilderCard(model: AppModel, c: ChainSnapshot, live: Boolean) {
 
 /** OI added or shed today, per strike: from the day's first reading of each contract. */
 @Composable
-private fun OiChangeCard(c: ChainSnapshot) {
+internal fun OiChangeCard(c: ChainSnapshot) {
     val p = LocalPalette.current
     val ch = com.optionslab.engine.options.ChainAnalytics.oiChange(c.rows)
     LedgerCard(title = "OI change today") {

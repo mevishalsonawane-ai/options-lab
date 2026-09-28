@@ -19,7 +19,7 @@ object Costs {
     const val SEBI_PER_CRORE = 10.0
     const val STAMP_BUY_PCT = 0.00003
     const val GST_PCT = 0.18
-    const val STT_EXERCISE_PCT = 0.00125
+    const val STT_EXERCISE_PCT = 0.0015   // Budget 2026: exercise STT 0.125% -> 0.15%, with the 0.15% on option sells
 
     /** roll: in-session Roll estimator; quoted: NSE top-of-book; stress: beyond depth. */
     val SPREAD_PCT: Map<String, Double> = linkedMapOf("roll" to 0.0030, "quoted" to 0.0090, "stress" to 0.0200)
@@ -109,7 +109,7 @@ object Costs {
 
     /**
      * BUY an option and hold it to settlement: one order, stamp duty, exercise
-     * STT at 0.125% of intrinsic when it finishes in the money, half a spread.
+     * STT at 0.15% ([STT_EXERCISE_PCT]) of intrinsic when it finishes in the money, half a spread.
      */
     fun buyToSettle(premium: Double, lotSize: Int, lots: Int = 1, regime: String, intrinsic: Double = 0.0): Charges {
         check(regime)

@@ -10,6 +10,12 @@ import javax.crypto.spec.PBEKeySpec
  * vault, so the PIN itself exists nowhere on the device. Comparison is
  * constant-time. Failed attempts escalate a lockout that survives restarts,
  * and an optional wipe destroys the vault after too many.
+ *
+ * Verifier v2 (every PIN set now): HMAC-SHA256 under a non-exportable Android
+ * Keystore key ([PinPepper]) over the PBKDF2 output, so the verifier in a copied
+ * vault cannot be brute-forced off the phone. A v1 verifier (plain PBKDF2) still
+ * unlocks, and is moved to v2 on its first successful unlock (the PBKDF2 output is
+ * the same, so the PIN is not needed again).
  */
 object PinLock {
     private const val ITERATIONS = 150_000
@@ -27,6 +33,8 @@ object PinLock {
     private const val K_UNTIL = "pin.lockedUntilWall"
     private const val K_LOCK_SECS = "pin.lockSeconds"
     private const val K_LOCK_AT = "pin.lockAtElapsed"
+    /** 2 = peppered verifier; absent = v1. */
+    private const val K_VER = "pin.ver"
 
     sealed interface Result {
         data object Ok : Result
@@ -54,9 +62,15 @@ object PinLock {
         require(pin.size == LENGTH) { "The PIN must be $LENGTH digits" }
         require(pin.distinct().size > 1) { "a PIN of one repeated digit is too easy to guess" }
         val salt = ByteArray(16).also { SecureRandom().nextBytes(it) }
-        val hash = derive(pin, salt, ITERATIONS)
-        SecurePrefs.putAll(mapOf(K_SALT to hex(salt), K_HASH to hex(hash), K_ITER to ITERATIONS, K_LEN to pin.size, K_FAILS to 0, K_UNTIL to null, K_LOCK_SECS to 0L))
+        val raw = derive(pin, salt, ITERATIONS)
+        val len = pin.size
         pin.fill('\u0000')
+        // Peppered when the Keystore allows; if it refuses, a v1 verifier (as before) that the next unlock upgrades.
+        val peppered = runCatching { PinPepper.mix(PinPepper.VERIFIER, raw) }.getOrNull()
+        val hash = peppered ?: raw
+        SecurePrefs.putAll(mapOf(K_SALT to hex(salt), K_HASH to hex(hash), K_ITER to ITERATIONS, K_VER to (if (peppered != null) 2 else null),
+            K_LEN to len, K_FAILS to 0, K_UNTIL to null, K_LOCK_SECS to 0L))
+        raw.fill(0)
     }
 
     /**
@@ -89,13 +103,34 @@ object PinLock {
         // PBKDF2 throws on an empty password; an empty PIN is simply wrong and costs no attempt.
         if (size == 0) return Result.Wrong(FREE_ATTEMPTS - SecurePrefs.getInt(K_FAILS, 0))
         val prior = SecurePrefs.getInt(K_FAILS, 0)
-        SecurePrefs.put(K_FAILS, prior + 1)
-        val got = derive(pin, salt, SecurePrefs.getInt(K_ITER, ITERATIONS))
+        // The attempt is counted first; its vault write runs on the background writer WHILE the key is
+        // stretched, and is on disk (flush) before any answer is given, so the count is never skipped.
+        SecurePrefs.putAllSoon(mapOf(K_FAILS to prior + 1))
+        val raw = try { derive(pin, salt, SecurePrefs.getInt(K_ITER, ITERATIONS)) } finally {
+            if (!SecurePrefs.flush()) SecurePrefs.put(K_FAILS, prior + 1)      // the background write failed: write it here (throws as before)
+        }
         pin.fill('\u0000')
+        val v2 = SecurePrefs.getInt(K_VER, 1) >= 2
+        val got = if (!v2) raw else try {
+            PinPepper.mix(PinPepper.VERIFIER, raw)
+        } catch (_: Exception) {
+            // The Keystore failed, not the PIN: this attempt must not count (it could lead to a wipe),
+            // and nothing unlocks. Fail closed with a short wait (not stored: no lockout is recorded).
+            raw.fill(0)
+            SecurePrefs.put(K_FAILS, prior)
+            return Result.LockedOut(5)
+        }
         if (MessageDigest.isEqual(got, want)) {
-            SecurePrefs.putAll(mapOf(K_FAILS to 0, K_UNTIL to null, K_LOCK_SECS to 0L, K_LEN to size))
+            val ok = mutableMapOf<String, Any?>(K_FAILS to 0, K_UNTIL to null, K_LOCK_SECS to 0L, K_LEN to size)
+            // An old v1 verifier becomes v2 now; if the Keystore refuses, it stays v1 and is tried again next time.
+            if (!v2) runCatching { PinPepper.mix(PinPepper.VERIFIER, raw) }.getOrNull()?.let { ok[K_HASH] = hex(it); ok[K_VER] = 2 }
+            raw.fill(0)
+            // Clearing the count is written in the background: the unlock (and the order it confirms) does not wait for
+            // it. If the write were lost, the count would only stay one higher on disk - never lower.
+            SecurePrefs.putAllSoon(ok)
             return Result.Ok
         }
+        raw.fill(0)
         val fails = prior + 1
         if (wipeOnExhaustion && fails >= WIPE_AFTER) return Result.Wiped
         val updates = mutableMapOf<String, Any?>(K_FAILS to fails)

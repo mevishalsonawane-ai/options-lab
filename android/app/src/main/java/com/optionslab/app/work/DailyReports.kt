@@ -97,7 +97,7 @@ object DailyReports {
         lines += "• ORB arms: " + if (armed.isEmpty()) "none armed" else armed.joinToString() + if (s.live && s.allowRealOrders) " (LIVE, automatic)" else " (paper)"
         val strat = runCatching { Strategies.all().count { it.def.scheduler?.enabled == true } }.getOrDefault(0)
         lines += "• Strategies armed: $strat" + if (runCatching { Strategies.stoppedToday() }.getOrDefault(false)) " · bot stopped for today" else ""
-        ok(!s.guardKill, if (s.guardKill) "Kill switch is ON: every order is refused" else "Kill switch off")
+        ok(!s.guardKill, if (s.guardKill) "Kill switch is ON: every Zerodha order is refused (paper still trades)" else "Kill switch off")
         val carried = Paper.state.positions.count { it.quantity != 0 }
         if (carried > 0) lines += "• Paper positions carried overnight: $carried"
         lines += "• Mode: " + if (s.live) "LIVE (Zerodha)" else "Paper"

@@ -6,13 +6,12 @@ import androidx.compose.ui.window.SecureFlagPolicy
 
 /**
  * Screenshots and screen recording. Blocked (FLAG_SECURE on the app and every
- * dialog) unless the owner allows them in More -> Security. Allowed for now,
- * while the app is being tested and screens are shared; TODO.md has turning it
- * off before going live.
+ * dialog) unless the owner allows them in More -> Security (with the PIN).
  */
 object Capture {
-    private const val KEY = "sec.capture"
-    private const val DEFAULT_ALLOWED = true
+    // A new key: the testing phase's "allowed" is not carried into live use; everyone starts blocked.
+    private const val KEY = "sec.capture.live"
+    private const val DEFAULT_ALLOWED = false
 
     val allowed: Boolean get() = runCatching { SecurePrefs.getBoolean(KEY, DEFAULT_ALLOWED) }.getOrDefault(false)
 
@@ -20,6 +19,8 @@ object Capture {
     val policy: SecureFlagPolicy get() = if (allowed) SecureFlagPolicy.SecureOff else SecureFlagPolicy.SecureOn
 
     fun apply(activity: Activity) {
+        // Window flags belong to the main thread; a caller resuming after an off-thread PIN check may not be on it.
+        if (android.os.Looper.myLooper() != android.os.Looper.getMainLooper()) { activity.runOnUiThread { apply(activity) }; return }
         if (allowed) activity.window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
         else activity.window.setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE)
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) activity.setRecentsScreenshotEnabled(allowed)

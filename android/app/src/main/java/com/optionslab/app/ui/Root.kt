@@ -124,7 +124,7 @@ enum class Tab(val label: String, val icon: ImageVector) {
 }
 
 @Composable
-fun Root(activity: MainActivity) {
+fun Root(activity: MainActivity, splash: Boolean = false) {
     val model: AppModel = viewModel()
     // After an erase the view model outlives the data: reload it so the gates and the mode start clean.
     val wiped by wipes.collectAsState()
@@ -143,29 +143,17 @@ fun Root(activity: MainActivity) {
                 isAppearanceLightNavigationBars = !dark
             }
         }
+        // The logo first, for a moment, when the app is opened fresh; kept across a rotation meanwhile.
+        var showSplash by rememberSaveable { mutableStateOf(splash) }
+        if (showSplash) {
+            LaunchedEffect(Unit) { delay(com.optionslab.app.ui.components.Splash.MS); showSplash = false }
+            com.optionslab.app.ui.components.SplashScreen()
+            return@IraAlgoTheme
+        }
         val compromised = findings.isNotEmpty() && Integrity.compromised(findings)
         // The app stopped unexpectedly last time: show why, once, so it can be reported.
-        var crash by remember { mutableStateOf(runCatching { java.io.File(activity.filesDir, com.optionslab.app.IraAlgoApp.CRASH_FILE).takeIf { it.exists() }?.readText() }.getOrNull()) }
-        crash?.let { text ->
-            val clip = androidx.compose.ui.platform.LocalClipboardManager.current
-            com.optionslab.app.ui.components.AlertDialog(
-                onDismissRequest = {},
-                properties = androidx.compose.ui.window.DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy),
-                title = { Text("IraAlgo closed unexpectedly last time", style = Type.title) },
-                text = {
-                    Column(Modifier.heightIn(max = 360.dp).verticalScroll(androidx.compose.foundation.rememberScrollState())) {
-                        Text("This is what went wrong. Copy it and send it to get it fixed; it contains no keys, PIN or balances.", style = Type.bodySmall)
-                        androidx.compose.foundation.text.selection.SelectionContainer {
-                            Text(text, style = Type.bodySmall.copy(fontSize = 10.sp, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace), modifier = Modifier.padding(top = 8.dp))
-                        }
-                    }
-                },
-                confirmButton = { androidx.compose.material3.TextButton({ clip.setText(androidx.compose.ui.text.AnnotatedString(text)) }) { Text("Copy") } },
-                dismissButton = { androidx.compose.material3.TextButton({
-                    runCatching { java.io.File(activity.filesDir, com.optionslab.app.IraAlgoApp.CRASH_FILE).delete() }; crash = null
-                }) { Text("Dismiss") } },
-            )
-        }
+        // Sealed in the vault by IraAlgoApp's crash handler: class names and stack frames, no messages.
+        CrashReport(activity.filesDir)
         var vaultBad by remember { mutableStateOf(SecurePrefs.unreadable) }
         if (vaultBad) {
             VaultUnreadable(onRetry = { vaultBad = !SecurePrefs.reload() }, onErase = { eraseEverything(); vaultBad = false })
@@ -192,7 +180,8 @@ fun Root(activity: MainActivity) {
             // Biometrics are offered only once the device check has run (a report is never empty).
             if (sealed) Gate(activity, model, settings, compromised, checked = findings.isNotEmpty())
             else if (!batteryOk) com.optionslab.app.ui.screens.BatteryScreen { batteryOk = true }
-            else if (!brokerNow.linked) ConnectGate(model)
+            // Until a Zerodha account is linked the app shows only the setup page.
+            else if (!brokerNow.linked && !SKIP_ZERODHA_GATE) ConnectGate(model)
             else Main(model)
         }
     }
@@ -315,10 +304,12 @@ private fun BiometricOffer(activity: MainActivity, error: String?, onUse: () -> 
 /** Destroy the vault key and every personal file. Market data is public and stays. */
 /** The settings vault exists but cannot be decrypted: fail closed, never "choose a new PIN". */
 @Composable
-private fun VaultUnreadable(onRetry: () -> Unit, onErase: () -> Unit) {
+internal fun VaultUnreadable(onRetry: () -> Unit, onErase: () -> Unit) {
     val p = com.optionslab.app.ui.theme.LocalPalette.current
     var confirm by remember { mutableStateOf(false) }
-    Column(Modifier.fillMaxSize().background(p.paper).padding(28.dp), verticalArrangement = Arrangement.Center) {
+    // Centred, and scrolling when a large font makes it taller than the screen (the last button was squeezed).
+    Box(Modifier.fillMaxSize().background(p.paper), contentAlignment = Alignment.Center) {
+    Column(Modifier.fillMaxWidth().verticalScroll(androidx.compose.foundation.rememberScrollState()).padding(28.dp)) {
         Text("THE VAULT IS SEALED SHUT", style = com.optionslab.app.ui.theme.Type.title.copy(color = p.oxblood))
         Spacer(Modifier.height(12.dp))
         Text("IraAlgo's encrypted settings could not be read on this start. That is usually a passing Android Keystore fault; " +
@@ -330,6 +321,7 @@ private fun VaultUnreadable(onRetry: () -> Unit, onErase: () -> Unit) {
         com.optionslab.app.ui.components.BrassButton(if (confirm) "Tap again: erase ALL IraAlgo data" else "Erase everything and start again",
             Modifier.fillMaxWidth(), tone = p.oxblood) { if (confirm) onErase() else confirm = true }
     }
+    }
 }
 
 fun eraseEverything() {
@@ -337,6 +329,8 @@ fun eraseEverything() {
     com.optionslab.app.data.Alarms.wipe()
     com.optionslab.app.data.Paper.wipe()
     com.optionslab.app.data.OrbArms.wipe()
+    com.optionslab.app.data.PineScripts.wipe()
+    com.optionslab.app.data.PineAuto.wipe()
     com.optionslab.app.data.Protections.wipe()
     com.optionslab.app.data.TradeBook.wipe()
     com.optionslab.app.data.Journal.wipe()
@@ -345,12 +339,17 @@ fun eraseEverything() {
     com.optionslab.app.data.Market.wipe()
     runCatching { com.optionslab.app.data.Broker.forget() }
     runCatching { com.optionslab.app.data.Store.wipeDeviceData() }
-    runCatching {
-        android.webkit.CookieManager.getInstance().removeAllCookies(null)
-        android.webkit.WebStorage.getInstance().deleteAllData()
+    // WebView state (the Zerodha login's cookies and storage) must be cleared on the main thread;
+    // eraseEverything can be called from a background dispatcher, where these calls fail silently.
+    val web = Runnable {
+        runCatching { android.webkit.CookieManager.getInstance().removeAllCookies(null) }
+        runCatching { android.webkit.WebStorage.getInstance().deleteAllData() }
     }
+    val main = android.os.Looper.getMainLooper()
+    if (android.os.Looper.myLooper() == main) web.run() else android.os.Handler(main).post(web)
     SecurePrefs.wipe()
     BiometricGate.forget()
+    com.optionslab.app.security.PinPepper.destroy()
     Vault.destroy()
     SessionLock.lock()
     wipes.value = wipes.value + 1
@@ -379,27 +378,18 @@ private fun Main(model: AppModel) {
     // Trading (the Ticket and Trade tabs, live or paper) appears only once a Zerodha account is linked.
     val broker by model.broker.collectAsState()
     val linked = broker.linked
-    val tabs = if (linked) Tab.entries else Tab.entries.filter { it != Tab.TRADE }
+    // Paper trading needs no Zerodha account, so Trade is always there; live needs one linked.
+    val tabs = Tab.entries
     LaunchedEffect(linked) {
         if (!linked && tab !in tabs) tab = Tab.ALMANAC
         if (!linked && settings.live) model.update { it.copy(mode = "sandbox", allowRealOrders = false) }
     }
 
+    // Every move goes through [NavState], which holds the rules (and is what the tests drive).
+    fun navNow() = NavState(tab, cabinetPage, labPage, tradePage, toolsView)
+    fun go(n: NavState) { tab = n.tab; cabinetPage = n.cabinetPage; labPage = n.labPage; tradePage = n.tradePage; toolsView = n.toolsView }
     LaunchedEffect(requested) {
-        when (requested) {
-            "almanac" -> tab = Tab.ALMANAC
-            "ticket" -> { tab = Tab.TOOLS; toolsView = "expiryput" }
-            "chart" -> tab = Tab.CHART
-            "trade" -> if (linked) { tab = Tab.TRADE; tradePage = "account" } else { tab = Tab.CABINET; cabinetPage = "broker" }
-            "strategy" -> if (linked) { tab = Tab.TRADE; tradePage = "strategies" } else { tab = Tab.CABINET; cabinetPage = "broker" }
-            "health" -> { tab = Tab.LAB; labPage = "health" }
-            "trials" -> { tab = Tab.LAB; labPage = "trials" }
-            "tools" -> tab = Tab.TOOLS
-            "pnl" -> tab = Tab.PNL
-            "cabinet" -> { tab = Tab.CABINET; cabinetPage = "data" }
-            "alarms" -> { tab = Tab.CABINET; cabinetPage = "alarms" }
-            "broker" -> { tab = Tab.CABINET; cabinetPage = "broker" }
-        }
+        go(navNow().request(requested))
         MainActivity.tabRequests.value = null
     }
     // "Close…" on a Zerodha position's notification: that position's close popup, over the Trade tab.
@@ -423,15 +413,14 @@ private fun Main(model: AppModel) {
         }
     }
 
-    BackHandler(enabled = cabinetPage != null || tab != Tab.ALMANAC) {
-        if (cabinetPage != null) cabinetPage = null else tab = Tab.ALMANAC
-    }
+    NavBack(navNow()) { go(it) }
 
     Parchment(ruled = true) {
         Column(Modifier.fillMaxSize()) {
             // Turned sideways, the chart takes the whole screen.
             val fullChart = tab == Tab.CHART && LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
-            if (!fullChart) Masthead(settings.live, settings.reduceMotion, linked, onMode = { live -> model.update { it.copy(mode = if (live) "live" else "sandbox", allowRealOrders = live) } })
+            if (!fullChart) Masthead(settings.live, settings.reduceMotion, linked, onMode = { live -> model.update { it.copy(mode = if (live) "live" else "sandbox", allowRealOrders = live) } },
+                onLink = { tab = Tab.CABINET; cabinetPage = "broker" })
             Box(Modifier.weight(1f)) {
                 AnimatedContent(
                     targetState = tab,
@@ -445,21 +434,18 @@ private fun Main(model: AppModel) {
                 ) { t ->
                     when (t) {
                         Tab.ALMANAC -> AlmanacScreen(model, onGo = { dest ->
-                            when (dest) {
-                                "trials" -> { tab = Tab.LAB; labPage = "trials" }
-                                "trade" -> { tab = Tab.TRADE; tradePage = "account" }
-                                "strategy" -> { tab = Tab.TRADE; tradePage = "strategies" }
-                                "ticket" -> { tab = Tab.TOOLS; toolsView = "expiryput" }
-                                "chart" -> { chartAsk = "BANKNIFTY" to "NSE"; chartNonce++; tab = Tab.CHART }
-                                "health" -> { tab = Tab.LAB; labPage = "health" }
-                                else -> { tab = Tab.CABINET; cabinetPage = dest }
-                            }
+                            if (dest == "chart") { chartAsk = "BANKNIFTY" to "NSE"; chartNonce++ }
+                            go(navNow().home(dest))
                         })
                         Tab.CHART -> Box(Modifier.fillMaxSize())   // the chart itself is kept alive below
                         Tab.TRADE -> TradeHub(model, tradePage) { tradePage = it }
                         Tab.PNL -> com.optionslab.app.ui.screens.PnlCalendarScreen(model)
                         Tab.TOOLS -> ToolsScreen(model, toolsView, { toolsView = it }) { s, e -> chartAsk = s to e; chartNonce++; tab = Tab.CHART }
-                        Tab.LAB -> LabScreen(model, labPage) { labPage = it }
+                        Tab.LAB -> LabScreen(model, labPage, { labPage = it }) {
+                            // A Pine backtest's "Show on chart" opens the chart on the index it ran on.
+                            com.optionslab.app.ui.screens.takePineChartAsk()?.let { chartAsk = it; chartNonce++ }
+                            chartOpened = true; tab = Tab.CHART
+                        }
                         Tab.CABINET -> CabinetScreen(model, cabinetPage) { cabinetPage = it }
                     }
                 }
@@ -470,7 +456,7 @@ private fun Main(model: AppModel) {
             }
             // While typing, the tab bar steps aside so the field keeps the room.
             val typing = WindowInsets.ime.getBottom(androidx.compose.ui.platform.LocalDensity.current) > 0
-            if (!fullChart && !typing) TabBar(tab, tabs) { if (it == tab && it == Tab.CABINET) cabinetPage = null; tab = it }
+            if (!fullChart && !typing) TabBar(tab, tabs) { go(navNow().pick(it)) }
         }
         // Order reviews open over any page, wherever the order was asked for.
         // First use only: a short guide the first time the app opens after Zerodha is linked, never again.
@@ -479,11 +465,8 @@ private fun Main(model: AppModel) {
         if (tour || again) com.optionslab.app.ui.screens.GettingStarted(onGo = { dest ->
             SecurePrefs.put(com.optionslab.app.ui.screens.GETTING_STARTED, true); tour = false
             com.optionslab.app.ui.screens.showGettingStarted.value = false
-            when (dest) {
-                "orb" -> tab = Tab.ALMANAC
-                "chart" -> { chartAsk = "BANKNIFTY" to "NSE"; chartNonce++; tab = Tab.CHART }
-                "trade" -> { tab = Tab.TRADE; tradePage = "account" }
-            }
+            if (dest == "chart") { chartAsk = "BANKNIFTY" to "NSE"; chartNonce++ }
+            go(navNow().tour(dest))
         })
         com.optionslab.app.ui.screens.OrderReviewDialog(model)
         // Tapping any order, position or trade opens its close / cancel popup.
@@ -495,6 +478,107 @@ private fun Main(model: AppModel) {
         com.optionslab.app.ui.components.AlertBanner()
     }
 }
+
+/**
+ * Where the main screen is: the tab, and the page open inside each tab. Every move (a tab tap,
+ * Back, a Home shortcut, the first-use guide, a deep link from the app's own notification) is a
+ * pure function of it, so the rules can be tested without the screens behind them.
+ */
+internal data class NavState(
+    val tab: Tab = Tab.ALMANAC,
+    val cabinetPage: String? = null,
+    val labPage: String = "trials",
+    val tradePage: String = "account",
+    val toolsView: String = "chain",
+) {
+    /** A trusted deep link ([MainActivity.EXTRA_TAB]); an unknown or absent one changes nothing. */
+    fun request(dest: String?): NavState = when (dest) {
+        "almanac" -> copy(tab = Tab.ALMANAC)
+        "ticket" -> copy(tab = Tab.TOOLS, toolsView = "expiryput")
+        "chart" -> copy(tab = Tab.CHART)
+        "trade" -> copy(tab = Tab.TRADE, tradePage = "account")
+        "strategy" -> copy(tab = Tab.TRADE, tradePage = "strategies")
+        "health" -> copy(tab = Tab.LAB, labPage = "health")
+        "trials" -> copy(tab = Tab.LAB, labPage = "trials")
+        "pine" -> copy(tab = Tab.LAB, labPage = "pine")
+        "tools" -> copy(tab = Tab.TOOLS)
+        "pnl" -> copy(tab = Tab.PNL)
+        "cabinet" -> copy(tab = Tab.CABINET, cabinetPage = "data")
+        "alarms" -> copy(tab = Tab.CABINET, cabinetPage = "alarms")
+        "broker" -> copy(tab = Tab.CABINET, cabinetPage = "broker")
+        else -> this
+    }
+
+    /** A shortcut on Home; anything else it names is a More page. */
+    fun home(dest: String): NavState = when (dest) {
+        "trials" -> copy(tab = Tab.LAB, labPage = "trials")
+        "trade" -> copy(tab = Tab.TRADE, tradePage = "account")
+        "strategy" -> copy(tab = Tab.TRADE, tradePage = "strategies")
+        "ticket" -> copy(tab = Tab.TOOLS, toolsView = "expiryput")
+        "chart" -> copy(tab = Tab.CHART)
+        "health" -> copy(tab = Tab.LAB, labPage = "health")
+        else -> copy(tab = Tab.CABINET, cabinetPage = dest)
+    }
+
+    /** The first-use guide's buttons ("" just closes it). */
+    fun tour(dest: String): NavState = when (dest) {
+        "orb" -> copy(tab = Tab.ALMANAC)
+        "chart" -> copy(tab = Tab.CHART)
+        "trade" -> copy(tab = Tab.TRADE, tradePage = "account")
+        else -> this
+    }
+
+    /** A tab tapped; tapping More while on More goes back to its list. */
+    fun pick(t: Tab): NavState = if (t == tab && t == Tab.CABINET) copy(tab = t, cabinetPage = null) else copy(tab = t)
+
+    val backEnabled: Boolean get() = (cabinetPage != null && tab == Tab.CABINET) || tab != Tab.ALMANAC
+
+    /** Back: a More page closes to the More list; any other tab goes Home. A More page left open behind another tab is not what Back closes. */
+    fun back(): NavState = if (cabinetPage != null && tab == Tab.CABINET) copy(cabinetPage = null)
+        else copy(tab = Tab.ALMANAC, cabinetPage = if (tab != Tab.CABINET) null else cabinetPage)
+}
+
+/** The system Back button over the main screen, following [NavState.back]. */
+@Composable
+internal fun NavBack(nav: NavState, onNav: (NavState) -> Unit) {
+    BackHandler(enabled = nav.backEnabled) { onNav(nav.back()) }
+}
+
+/**
+ * The app stopped unexpectedly last time: show why, once, so it can be reported. The report in [dir]
+ * is sealed in the vault by IraAlgoApp's crash handler (class names and stack frames, no messages).
+ * Its own composable (internal) so the dialog can be tested with a hand-made report.
+ */
+@Composable
+internal fun CrashReport(dir: java.io.File) {
+    var crash by remember { mutableStateOf(runCatching {
+        Vault.readFile(java.io.File(dir, com.optionslab.app.IraAlgoApp.CRASH_FILE))?.toString(Charsets.UTF_8)
+    }.getOrNull()) }
+    crash?.let { text ->
+        val clip = androidx.compose.ui.platform.LocalClipboardManager.current
+        com.optionslab.app.ui.components.AlertDialog(
+            onDismissRequest = {},
+            properties = androidx.compose.ui.window.DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy),
+            title = { Text("IraAlgo closed unexpectedly last time", style = Type.title) },
+            text = {
+                Column(Modifier.heightIn(max = 360.dp).verticalScroll(androidx.compose.foundation.rememberScrollState())) {
+                    Text("This is where it went wrong: only the kinds of error and the lines of code, no error messages. " +
+                        "Copy it and send it to get it fixed; it contains no keys, PIN or balances.", style = Type.bodySmall)
+                    androidx.compose.foundation.text.selection.SelectionContainer {
+                        Text(text, style = Type.bodySmall.copy(fontSize = 10.sp, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace), modifier = Modifier.padding(top = 8.dp))
+                    }
+                }
+            },
+            confirmButton = { com.optionslab.app.ui.components.TextButton({ clip.setText(androidx.compose.ui.text.AnnotatedString(text)) }) { Text("Copy") } },
+            dismissButton = { com.optionslab.app.ui.components.TextButton({
+                runCatching { java.io.File(dir, com.optionslab.app.IraAlgoApp.CRASH_FILE).delete() }; crash = null
+            }) { Text("Dismiss") } },
+        )
+    }
+}
+
+/** Testing only: open the app without the Zerodha setup gate. False for live use. */
+const val SKIP_ZERODHA_GATE = false
 
 /** Until a Zerodha account is linked the app shows only this: no tabs, no close. */
 @Composable
@@ -511,39 +595,24 @@ private fun ConnectGate(model: AppModel) {
     }
 }
 
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
-private fun Masthead(live: Boolean, calm: Boolean, linked: Boolean, onMode: (Boolean) -> Unit) {
+internal fun Masthead(live: Boolean, calm: Boolean, linked: Boolean, onMode: (Boolean) -> Unit, onLink: () -> Unit = {}) {
     val p = LocalPalette.current
     var confirmLive by remember { mutableStateOf(false) }
+    var needLink by remember { mutableStateOf(false) }
     var now by remember { mutableStateOf(Market.now()) }
     LaunchedEffect(Unit) { while (true) { delay(15_000); now = Market.now() } }
     val open = Market.isOpen()
-    Column(Modifier.fillMaxWidth().background(p.paperDeep).statusBarsPadding()) {
-        Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 12.dp, top = 10.dp, bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                Modifier.size(28.dp).then(if (p.dark) Modifier.background(Color.White, RoundedCornerShape(8.dp)) else Modifier).padding(3.dp),
-                contentAlignment = Alignment.Center,
-            ) { com.optionslab.app.ui.components.BrandEmblem(24.dp, calm = true) }
-            Spacer(Modifier.width(10.dp))
-            Column(Modifier.weight(1f)) {
-                Text("IraAlgo", style = Type.masthead.copy(color = p.ink, fontSize = 20.sp), maxLines = 1)
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(now.format(DateTimeFormatter.ofPattern("EEE d MMM, HH:mm", Locale.ENGLISH)) + "  ·  ",
-                        style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp), maxLines = 1)
-                    StatusDot(if (open) p.verdigris else p.inkFaint, pulsing = open && !calm, modifier = Modifier.size(6.dp))
-                    Spacer(Modifier.width(4.dp))
-                    Text(if (open) "Market open" else "Market closed", style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp), maxLines = 1)
-                }
-            }
-            // The trading mode, on every screen. Tap to switch; going live asks first.
-            if (linked) {
+    // The trading mode, on every screen. Tap to switch; going live asks first (and needs Zerodha linked).
+    val modePill: @Composable () -> Unit = {
                 val tint = if (live) p.oxblood else p.verdigris
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
                         .background(if (live) p.oxblood else tint.copy(alpha = 0.12f), RoundedCornerShape(50))
                         .selectable(selected = live, role = androidx.compose.ui.semantics.Role.Switch) {
-                            if (live) onMode(false) else confirmLive = true
+                            if (live) onMode(false) else if (linked) confirmLive = true else needLink = true
                         }
                         .padding(horizontal = 12.dp, vertical = 7.dp),
                 ) {
@@ -554,8 +623,34 @@ private fun Masthead(live: Boolean, calm: Boolean, linked: Boolean, onMode: (Boo
                             fontWeight = androidx.compose.ui.text.font.FontWeight.Bold), maxLines = 1)
                     Text("  ▾", style = Type.label.copy(color = if (live) Color.White else tint, fontSize = 11.sp))
                 }
+                }
+    val narrow = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp /
+        androidx.compose.ui.platform.LocalDensity.current.fontScale < 190f
+    Column(Modifier.fillMaxWidth().background(p.paperDeep).statusBarsPadding()) {
+        Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 12.dp, top = 10.dp, bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                Modifier.size(28.dp).then(if (p.dark) Modifier.background(Color.White, RoundedCornerShape(8.dp)) else Modifier).padding(3.dp),
+                contentAlignment = Alignment.Center,
+            ) { com.optionslab.app.ui.components.BrandEmblem(24.dp, calm = true) }
+            Spacer(Modifier.width(10.dp))
+            Column(Modifier.weight(1f)) {
+                com.optionslab.app.ui.components.FitText("IraAlgo", Type.masthead.copy(color = p.ink, fontSize = 20.sp), minSize = 12.sp)
+                // The date, then the market's state: on a narrow bar (a small phone, large fonts) the state moves
+                // to a line of its own rather than being squeezed out beside the mode switch.
+                androidx.compose.foundation.layout.FlowRow(verticalArrangement = Arrangement.Center) {
+                    Text(now.format(DateTimeFormatter.ofPattern("EEE d MMM, HH:mm", Locale.ENGLISH)) + "  ·  ",
+                        style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp), modifier = Modifier.align(Alignment.CenterVertically))
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.align(Alignment.CenterVertically)) {
+                        StatusDot(if (open) p.verdigris else p.inkFaint, pulsing = open && !calm, modifier = Modifier.size(6.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text(if (open) "Market open" else "Market closed", style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp))
+                    }
+                }
             }
+            if (!narrow) modePill()
         }
+        // On a narrow bar at a large font the mode gets a line of its own (beside it the title was cut).
+        if (narrow) Box(Modifier.fillMaxWidth().padding(start = 16.dp, end = 12.dp, bottom = 8.dp)) { modePill() }
         // A red line under the bar while live, so real-money mode is never mistaken.
         Box(Modifier.fillMaxWidth().height(if (linked && live) 2.dp else 1.dp).background(if (linked && live) p.oxblood else p.rule))
     }
@@ -564,13 +659,21 @@ private fun Masthead(live: Boolean, calm: Boolean, linked: Boolean, onMode: (Boo
         properties = androidx.compose.ui.window.DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy),
         title = { Text("Switch to live trading?", style = Type.title) },
         text = { Text("Prices, positions and orders will come from your Zerodha account. Orders you send will use real money. Each order still needs your review, a long press and your PIN or fingerprint.", style = Type.bodySmall) },
-        confirmButton = { androidx.compose.material3.TextButton({ confirmLive = false; onMode(true) }) { Text("Go live", color = p.oxblood) } },
-        dismissButton = { androidx.compose.material3.TextButton({ confirmLive = false }) { Text("Stay on paper") } },
+        confirmButton = { com.optionslab.app.ui.components.TextButton({ confirmLive = false; onMode(true) }) { Text("Go live", color = p.oxblood) } },
+        dismissButton = { com.optionslab.app.ui.components.TextButton({ confirmLive = false }) { Text("Stay on paper") } },
+    )
+    if (needLink) com.optionslab.app.ui.components.AlertDialog(
+        onDismissRequest = { needLink = false },
+        properties = androidx.compose.ui.window.DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy),
+        title = { Text("Link Zerodha for live trading", style = Type.title) },
+        text = { Text("Paper trading works now with virtual money. Live trading needs your Zerodha account: add your Kite API key and log in once (More → Zerodha).", style = Type.bodySmall) },
+        confirmButton = { com.optionslab.app.ui.components.TextButton({ needLink = false; onLink() }) { Text("Link Zerodha") } },
+        dismissButton = { com.optionslab.app.ui.components.TextButton({ needLink = false }) { Text("Stay on paper") } },
     )
 }
 
 @Composable
-private fun TabBar(current: Tab, tabs: List<Tab>, onPick: (Tab) -> Unit) {
+internal fun TabBar(current: Tab, tabs: List<Tab>, onPick: (Tab) -> Unit) {
     val p = LocalPalette.current
     Column(Modifier.fillMaxWidth().background(p.paperDeep).navigationBarsPadding()) {
         Box(Modifier.fillMaxWidth().height(1.dp).background(p.rule))
@@ -585,8 +688,8 @@ private fun TabBar(current: Tab, tabs: List<Tab>, onPick: (Tab) -> Unit) {
                 ) {
                     Icon(t.icon, contentDescription = null, tint = if (sel) p.ink else p.inkFaint, modifier = Modifier.size(22.dp))
                     Spacer(Modifier.height(3.dp))
-                    Text(t.label, style = Type.label.copy(fontSize = 11.sp, color = if (sel) p.ink else p.inkFaint,
-                        fontWeight = if (sel) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.Medium), maxLines = 1)
+                    com.optionslab.app.ui.components.FitText(t.label, Type.label.copy(fontSize = 11.sp, color = if (sel) p.ink else p.inkFaint,
+                        fontWeight = if (sel) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.Medium), minSize = 5.sp)
                 }
             }
         }

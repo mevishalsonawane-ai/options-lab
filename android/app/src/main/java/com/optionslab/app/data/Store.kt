@@ -45,6 +45,11 @@ object Store {
         return bundled + device.asSequence().flatMap { d -> Olx.sequence(File(expiryDir(), "$d.olx").inputStream()) }
     }
 
+    /** How many series this phone's capture of [day]'s expiring chain holds (0 when none, or unreadable). */
+    fun deviceExpirySize(day: LocalDate): Int = runCatching {
+        File(expiryDir(), "$day.olx").takeIf { it.exists() }?.inputStream()?.use { Olx.read(it).firstOrNull()?.series?.size }
+    }.getOrNull() ?: 0
+
     fun writeExpiry(session: Session) {
         val dir = expiryDir().apply { mkdirs() }
         atomicWrite(File(dir, "${session.day}.olx")) { Olx.write(it, listOf(session)) }
@@ -82,11 +87,11 @@ object Store {
 
     fun barSession(u: String, day: LocalDate): Session? {
         val f = File(barsDir(u), "$day.olx")
-        if (f.exists()) return Olx.read(f.inputStream()).firstOrNull()
+        if (f.exists()) return f.inputStream().use { Olx.read(it).firstOrNull() }
         val asset = "bars_${u.lowercase()}.olx"
         if (app.assets.list("")?.contains(asset) != true) return null
         var hit: Session? = null
-        Olx.forEachUntil(app.assets.open(asset)) { s -> if (s.day == day) { hit = s; false } else true }
+        app.assets.open(asset).use { Olx.forEachUntil(it) { s -> if (s.day == day) { hit = s; false } else true } }
         return hit
     }
 
@@ -97,15 +102,25 @@ object Store {
     @Synchronized
     fun upsertDay(u: String, day: LocalDate, incoming: List<Series>) {
         if (incoming.isEmpty()) return
-        val existing = barSession(u, day)?.series ?: emptyList()
+        val f = File(barsDir(u), "$day.olx")
+        val existing = try {
+            barSession(u, day)?.series ?: emptyList()
+        } catch (e: Exception) {
+            if (!f.exists()) throw e
+            // A truncated or corrupt partition (a power cut mid-write): set it aside, never overwrite it,
+            // and start the day afresh. The done-lists vouched for bars that were in it, so they go too.
+            f.renameTo(File(f.parentFile, "${f.name}.corrupt.${System.currentTimeMillis()}"))
+            synchronized(harvestLock) { File(root, "harvest/$u").listFiles()?.forEach { it.delete() } }
+            emptyList()
+        }
         val byKey = LinkedHashMap<Triple<LocalDate?, Double, com.optionslab.engine.Right>, Series>()
         for (s in existing) byKey[Triple(s.expiry, s.strike, s.right)] = s
         for (s in incoming) {
             val k = Triple(s.expiry, s.strike, s.right)
             byKey[k] = byKey[k]?.let { merge(it, s) } ?: s
         }
-        val dir = barsDir(u).apply { mkdirs() }
-        atomicWrite(File(dir, "$day.olx")) { Olx.write(it, listOf(Session(day, null, byKey.values.toList()))) }
+        barsDir(u).mkdirs()
+        atomicWrite(f) { Olx.write(it, listOf(Session(day, null, byKey.values.toList()))) }
     }
 
     private fun merge(old: Series, new: Series): Series {
@@ -122,21 +137,48 @@ object Store {
 
     // ---- manifest -----------------------------------------------------------
 
+    // Its own lock, not the object's: a manifest read must never wait behind a minutes-long backtest.
+    private val manifestLock = Any()
+
+    /** Read under the lock [recordManifest] writes under, so a reader never sees a file mid-replace. */
     fun manifest(u: String): List<Manifest.Entry> {
         val f = File(root, "manifest_$u.csv")
-        if (f.exists()) return Manifest.parseCsv(f.readText())
+        synchronized(manifestLock) { if (f.exists()) return Manifest.parseCsv(f.readText()) }
         val asset = "manifest_${u.lowercase()}.csv"
         return if (app.assets.list("")?.contains(asset) == true) Manifest.parseCsv(app.assets.open(asset).bufferedReader().readText()) else emptyList()
     }
 
     /** Record one session, never downgrading a same_day chain on a later re-fetch. */
-    @Synchronized
-    fun recordManifest(u: String, e: Manifest.Entry) {
+    fun recordManifest(u: String, e: Manifest.Entry) = synchronized(manifestLock) {
         val cur = manifest(u)
         val prior = cur.firstOrNull { it.session == e.session }
         val entry = if (e.scope == Manifest.BACKFILL && prior?.scope == Manifest.SAME_DAY)
             e.copy(scope = Manifest.SAME_DAY, collectedOn = prior.collectedOn) else e
-        File(root, "manifest_$u.csv").writeText(Manifest.toCsv(Manifest.upsert(cur, entry)))
+        val csv = Manifest.toCsv(Manifest.upsert(cur, entry))
+        atomicWrite(File(root, "manifest_$u.csv")) { it.write(csv.toByteArray(Charsets.UTF_8)) }
+    }
+
+    // ---- harvest progress ---------------------------------------------------
+
+    private val harvestLock = Any()
+    private fun harvestedFile(u: String, day: LocalDate) = File(root, "harvest/$u/$day.done")
+
+    /** Contracts (instrument keys) whose bars for the [day] harvest are already in the partitions. */
+    fun harvested(u: String, day: LocalDate): Set<String> = synchronized(harvestLock) {
+        val f = harvestedFile(u, day)
+        if (f.exists()) f.readLines().filter { it.isNotBlank() }.toSet() else emptySet()
+    }
+
+    /** Called only once the keys' bars are upserted, so a retried harvest can skip them. Older days' lists go. */
+    fun markHarvested(u: String, day: LocalDate, keys: Collection<String>) {
+        if (keys.isEmpty()) return
+        synchronized(harvestLock) {
+            val f = harvestedFile(u, day)
+            val dir = f.parentFile!!.apply { mkdirs() }
+            dir.listFiles { x -> x.name.endsWith(".done") && x.name != f.name }?.forEach { it.delete() }
+            val all = ((if (f.exists()) f.readLines() else emptyList()) + keys).filter { it.isNotBlank() }.distinct()
+            atomicWrite(f) { it.write(all.joinToString("\n").toByteArray(Charsets.UTF_8)) }
+        }
     }
 
     fun provenanceCsv(): String = app.assets.open("provenance.csv").bufferedReader().readText()
@@ -173,15 +215,32 @@ object Store {
     fun wipeDeviceData() {
         File(root, "expiry").deleteRecursively()
         File(root, "bars").deleteRecursively()
+        File(root, "harvest").deleteRecursively()
         root.listFiles { f -> f.name.startsWith("manifest_") || f.name == "contracts.json" }?.forEach { it.delete() }
         invalidate()
     }
 
     fun deviceBytes(): Long = listOf(File(root, "expiry"), File(root, "bars")).sumOf { d -> d.walkTopDown().filter { it.isFile }.sumOf { it.length() } }
 
+    /**
+     * Temp file, flushed to disk, then renamed over the target, and the rename synced: a crash or a
+     * power cut leaves the old file or the new one, and a file written after this one (a .done
+     * marker after the bars it vouches for) can never survive without it.
+     */
     private fun atomicWrite(target: File, write: (java.io.OutputStream) -> Unit) {
         val tmp = File(target.parentFile, target.name + ".tmp")
-        tmp.outputStream().use(write)
+        java.io.FileOutputStream(tmp).use { fos ->
+            // The writer may close what it is handed (Olx wraps it in GZIP): the file stays open to be synced.
+            val buffered = fos.buffered(1 shl 16)
+            val keepOpen = object : java.io.FilterOutputStream(buffered) {
+                override fun write(b: ByteArray, off: Int, len: Int) = buffered.write(b, off, len)
+                override fun close() = flush()
+            }
+            write(keepOpen)
+            keepOpen.flush()
+            fos.fd.sync()
+        }
         if (!tmp.renameTo(target)) { target.delete(); tmp.renameTo(target) }
+        com.optionslab.app.security.Vault.syncDir(target.parentFile)
     }
 }

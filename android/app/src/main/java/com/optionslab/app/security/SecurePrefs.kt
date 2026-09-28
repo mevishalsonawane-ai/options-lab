@@ -21,7 +21,43 @@ object SecurePrefs {
         private set
 
     fun init(context: Context) {
+        synchronized(this) { generation++; pending = false }
         file = File(context.noBackupFilesDir, "prefs.vault")
+    }
+
+    // ---- write-behind, for writes that must not hold up an order -----------------------------------
+
+    /** One background writer: saves run in order, each writing the whole (latest) map. */
+    private val writer = java.util.concurrent.Executors.newSingleThreadExecutor { r -> Thread(r, "prefs-writer").apply { isDaemon = true } }
+    /** A save is queued and not yet written (guarded by this object's lock). */
+    private var pending = false
+    /** Bumped by [init] and [wipe]: a save queued before them is dropped, never written over the new state. */
+    private var generation = 0
+
+    /**
+     * [putAll], with the values readable at once (every get sees them) and the vault write - a Keystore
+     * encryption and two disk syncs - done on the background writer instead of the caller's thread.
+     * A later [put]/[putAll] writes them too; [flush] waits for them.
+     */
+    @Synchronized fun putAllSoon(values: Map<String, Any?>) {
+        val m = map()
+        for ((k, v) in values) if (v == null) m.remove(k) else m.put(k, v)
+        if (pending) return
+        pending = true
+        val gen = generation
+        writer.execute { synchronized(this) { if (pending && gen == generation) { pending = false; writeFailed = runCatching { save() }.isFailure } } }
+    }
+
+    /** The last background write failed (e.g. a Keystore fault); the values stay in memory and the next save retries. */
+    @Volatile private var writeFailed = false
+
+    /**
+     * Wait until every [putAllSoon] so far is on disk (never call it holding this object's lock).
+     * False when the background write failed: a caller that needs the value durable writes it itself.
+     */
+    fun flush(): Boolean {
+        if (synchronized(this) { pending }) runCatching { writer.submit(Runnable {}).get(30, java.util.concurrent.TimeUnit.SECONDS) }
+        return !writeFailed && synchronized(this) { !pending }
     }
 
     @Synchronized
@@ -40,13 +76,20 @@ object SecurePrefs {
     }
 
     /** Drop the cache and read the file again (the "try again" on the unreadable-vault screen). */
-    @Synchronized fun reload(): Boolean { cache = null; unreadable = false; map(); return !unreadable }
+    fun reload(): Boolean {
+        flush()
+        synchronized(this) { cache = null; unreadable = false; map(); return !unreadable }
+    }
 
     @Synchronized
     private fun save() {
         map()
         if (unreadable) return   // never write over a vault we could not read
-        Vault.writeFile(file, map().toString().toByteArray(Charsets.UTF_8))
+        pending = false          // this write carries every value set so far
+        try {
+            Vault.writeFile(file, map().toString().toByteArray(Charsets.UTF_8))
+            writeFailed = false
+        } catch (e: Exception) { writeFailed = true; throw e }
     }
 
     @Synchronized fun getString(k: String, d: String? = null): String? = map().optString(k, "").ifEmpty { d }
@@ -70,6 +113,7 @@ object SecurePrefs {
     @Synchronized fun snapshot(): Map<String, Any?> = map().let { m -> m.keys().asSequence().associateWith { m.opt(it) } }
 
     @Synchronized fun wipe() {
+        generation++; pending = false
         cache = JSONObject()
         unreadable = false
         file.delete()

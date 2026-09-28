@@ -8,6 +8,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -20,7 +21,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import com.optionslab.app.ui.components.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -36,6 +37,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.SecureFlagPolicy
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import com.optionslab.app.ui.AppModel
 import com.optionslab.app.ui.components.BrassButton
 import com.optionslab.app.ui.components.LedgerCard
@@ -56,20 +59,61 @@ import java.util.Locale
  */
 @Composable
 fun StrategyArmCard(model: AppModel, onManage: () -> Unit) {
-    val p = LocalPalette.current
     val s by model.settings.collectAsState()
     val all by model.strategies.collectAsState()
+    val auto by model.strategyAuto.collectAsState()
+    val pending by model.strategyPending.collectAsState()
+    val botStopped by model.botStopped.collectAsState()
+    StrategyArmContent(
+        live = s.live, killOn = s.guardKill, all = all, auto = auto, pending = pending, botStopped = botStopped,
+        actions = object : StrategyArmActions {
+            override fun arm(id: Long, on: Boolean, automatic: Boolean) { model.armStrategy(id, on, automatic) }
+            override fun approve(id: Long) { model.approveStrategy(id) }
+            override fun skip(id: Long) { model.skipStrategy(id) }
+            override fun importText(text: String) = model.importStrategies(text)
+            override fun say(text: String) = model.say(text)
+            override fun clearKill() = model.update { it.copy(guardKill = false) }
+            override fun startBot() { model.startBotAgain() }
+            override fun stopBot(alsoRunning: Boolean) { model.stopBotForToday(alsoRunning) }
+        },
+        onManage = onManage,
+        orbRows = { OrbRows(model) },
+        reauth = { onOk, onCancel -> Reauth(model, onOk = onOk, onCancel = onCancel) },
+    )
+}
+
+/** What Home's Strategies card asks the model to do (an interface so tests can record it without an [AppModel]). */
+internal interface StrategyArmActions {
+    fun arm(id: Long, on: Boolean, automatic: Boolean)
+    fun approve(id: Long)
+    fun skip(id: Long)
+    fun importText(text: String)
+    fun say(text: String)
+    fun clearKill()
+    fun startBot()
+    fun stopBot(alsoRunning: Boolean)
+}
+
+/**
+ * Home's Strategies card from plain state and callbacks: [orbRows] is the built-in ORB arms ([OrbRows] in the
+ * app), [reauth] the PIN or fingerprint prompt ([Reauth] in the app).
+ */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable
+internal fun StrategyArmContent(
+    live: Boolean, killOn: Boolean, all: List<com.optionslab.app.data.Strategies.Entry>, auto: Map<Long, Boolean>,
+    pending: Map<Long, RunMode>, botStopped: Boolean, actions: StrategyArmActions, onManage: () -> Unit,
+    orbRows: @Composable () -> Unit, reauth: @Composable (onOk: () -> Unit, onCancel: () -> Unit) -> Unit,
+) {
+    val p = LocalPalette.current
     // Imported copies of ORB / ORB Fresh are plain timed baskets; the built-in arms above replace them (TODO A4).
     val list = all.filter { !com.optionslab.app.data.Strategies.needsBreakoutRules(it.def) }
     val replaced = all.size - list.size
     var importing by remember { mutableStateOf(false) }
-    val auto by model.strategyAuto.collectAsState()
-    val pending by model.strategyPending.collectAsState()
     // Arming asks how orders should go out; a live choice is then confirmed with the PIN or fingerprint.
     var choosing by remember { mutableStateOf<com.optionslab.engine.strategy.StrategyDef?>(null) }
     var reauthArm by remember { mutableStateOf<Pair<Long, Boolean>?>(null) }
     var reauthApprove by remember { mutableStateOf<Long?>(null) }
-    val botStopped by model.botStopped.collectAsState()
     var confirmBot by remember { mutableStateOf(false) }
 
     LedgerCard {
@@ -80,7 +124,7 @@ fun StrategyArmCard(model: AppModel, onManage: () -> Unit) {
         }
         // One control for the whole bot: stop it for today, start it again, or clear the kill switch.
         val (botState, botAction, botTone) = when {
-            s.guardKill -> Triple("Kill switch ON: all orders blocked", "Clear kill switch", p.oxblood)
+            killOn -> Triple("Kill switch ON: Zerodha orders blocked", "Clear kill switch", p.oxblood)
             botStopped -> Triple("Bot stopped for today", "Start bot", p.verdigris)
             else -> Triple("Bot running: armed strategies start on time", "Stop bot for today", p.oxblood)
         }
@@ -89,7 +133,7 @@ fun StrategyArmCard(model: AppModel, onManage: () -> Unit) {
             Text(botState, style = Type.bodySmall.copy(color = p.ink, fontWeight = FontWeight.SemiBold), modifier = Modifier.weight(1f))
             BrassButton(botAction, tone = botTone) { confirmBot = true }
         }
-        OrbRows(model)
+        orbRows()
         if (replaced > 0) Note("$replaced imported ORB strateg${if (replaced == 1) "y is" else "ies are"} hidden here: the built-in ORB arms above run the real breakout rules. They stay in Trade → Strategies, blocked.",
             Modifier.padding(bottom = 6.dp))
         list.forEachIndexed { i, e ->
@@ -122,28 +166,31 @@ fun StrategyArmCard(model: AppModel, onManage: () -> Unit) {
                         else ds.joinToString(" ") { it.getDisplayName(TextStyle.SHORT, Locale.ENGLISH) }
                     }
                     Text(listOfNotNull(d.underlying, start?.let { st -> "$st–${stop ?: "close"}" }, days, "${d.legs.size} leg${if (d.legs.size == 1) "" else "s"}").joinToString(" · "),
-                        style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp), maxLines = 1)
+                        style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp))
                     if (com.optionslab.app.data.Strategies.needsBreakoutRules(d))
                         Text("Would enter at the start time without a breakout check, so it cannot be armed until the ORB rules are added.",
                             style = Type.bodySmall.copy(color = p.amber, fontSize = 12.sp))
                 }
                 Switch(
+                    modifier = Modifier.semantics { contentDescription = "Arm ${d.name}" },
                     enabled = !com.optionslab.app.data.Strategies.needsBreakoutRules(d),
                     checked = armed,
-                    onCheckedChange = { on -> if (on) choosing = d else model.armStrategy(d.id, false) },
-                    colors = SwitchDefaults.colors(checkedTrackColor = if (s.live) p.oxblood else p.verdigris, checkedThumbColor = p.card),
+                    onCheckedChange = { on -> if (on) choosing = d else actions.arm(d.id, false, true) },
+                    colors = SwitchDefaults.colors(checkedTrackColor = if (live) p.oxblood else p.verdigris, checkedThumbColor = p.card),
                 )
             }
             pending[d.id]?.let { mode ->
                 Column(Modifier.fillMaxWidth().padding(bottom = 10.dp).background(p.amber.copy(alpha = 0.12f), RoundedCornerShape(12.dp)).padding(12.dp)) {
                     Text("Start time reached: waiting for your approval (${if (mode == RunMode.LIVE) "live" else "paper"})",
                         style = Type.bodySmall.copy(color = p.ink, fontWeight = FontWeight.SemiBold))
-                    Row(Modifier.padding(top = 8.dp)) {
+                    // Side by side when both fit; on a narrow screen or a large font "Skip today" moves under the
+                    // approval (side by side, "Approve & start" was squeezed until even two lines cut it).
+                    androidx.compose.foundation.layout.FlowRow(Modifier.fillMaxWidth().padding(top = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         BrassButton("Approve & start", Modifier.weight(1f), tone = if (mode == RunMode.LIVE) p.oxblood else p.verdigris) {
-                            if (mode == RunMode.LIVE) reauthApprove = d.id else model.approveStrategy(d.id)
+                            if (mode == RunMode.LIVE) reauthApprove = d.id else actions.approve(d.id)
                         }
-                        Spacer(Modifier.width(8.dp))
-                        BrassButton("Skip today", tone = p.inkSoft) { model.skipStrategy(d.id) }
+                        BrassButton("Skip today", tone = p.inkSoft) { actions.skip(d.id) }
                     }
                 }
             }
@@ -153,15 +200,15 @@ fun StrategyArmCard(model: AppModel, onManage: () -> Unit) {
     }
 
     choosing?.let { d ->
-        ApprovalChoice(d.name, live = s.live, onPick = { automatic ->
+        ApprovalChoice(d.name, live = live, onPick = { automatic ->
             choosing = null
-            if (s.live) reauthArm = d.id to automatic else model.armStrategy(d.id, true, automatic)
+            if (live) reauthArm = d.id to automatic else actions.arm(d.id, true, automatic)
         }, onCancel = { choosing = null })
     }
-    reauthArm?.let { (id, automatic) -> Reauth(model, onOk = { reauthArm = null; model.armStrategy(id, true, automatic) }, onCancel = { reauthArm = null }) }
-    reauthApprove?.let { id -> Reauth(model, onOk = { reauthApprove = null; model.approveStrategy(id) }, onCancel = { reauthApprove = null }) }
-    if (importing) ImportDialog(model) { importing = false }
-    if (confirmBot) BotDialog(model, killOn = s.guardKill, stopped = botStopped, anyRunning = list.any { it.running }) { confirmBot = false }
+    reauthArm?.let { (id, automatic) -> reauth({ reauthArm = null; actions.arm(id, true, automatic) }, { reauthArm = null }) }
+    reauthApprove?.let { id -> reauth({ reauthApprove = null; actions.approve(id) }, { reauthApprove = null }) }
+    if (importing) ImportDialog(actions) { importing = false }
+    if (confirmBot) BotDialog(actions, killOn = killOn, stopped = botStopped, anyRunning = list.any { it.running }) { confirmBot = false }
 }
 
 /** The desktop app's local API lists strategies and returns each one in full; this is the command that collects them. */
@@ -170,14 +217,14 @@ ${'$'}ids = (Invoke-RestMethod -Method Post "${'$'}u/list" -ContentType 'applica
 ${'$'}ids | ForEach-Object { (Invoke-RestMethod -Method Post "${'$'}u/status" -ContentType 'application/json' -Body (@{apikey=${'$'}k; strategy_id=${'$'}_} | ConvertTo-Json)).data } | ConvertTo-Json -Depth 12 | Set-Content -Encoding utf8 iraalgo-strategies.json"""
 
 @Composable
-private fun ImportDialog(model: AppModel, onClose: () -> Unit) {
+private fun ImportDialog(actions: StrategyArmActions, onClose: () -> Unit) {
     val p = LocalPalette.current
     val ctx = LocalContext.current
     var text by remember { mutableStateOf("") }
     val pick = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) {
             val read = runCatching { ctx.contentResolver.openInputStream(uri)?.use { it.readBytes().toString(Charsets.UTF_8) } }.getOrNull()
-            if (read != null) { model.importStrategies(read); onClose() } else model.say("Could not read that file.")
+            if (read != null) { actions.importText(read); onClose() } else actions.say("Could not read that file.")
         }
     }
     AlertDialog(
@@ -199,7 +246,7 @@ private fun ImportDialog(model: AppModel, onClose: () -> Unit) {
                 Note("Strategies arrive disarmed and paper-only. Arm them on Home; enable live per strategy in Trade → Strategies.", Modifier.padding(top = 6.dp))
             }
         },
-        confirmButton = { TextButton({ if (text.isNotBlank()) { model.importStrategies(text); onClose() } }, enabled = text.isNotBlank()) { Text("Import") } },
+        confirmButton = { TextButton({ if (text.isNotBlank()) { actions.importText(text); onClose() } }, enabled = text.isNotBlank()) { Text("Import") } },
         dismissButton = { TextButton(onClose) { Text("Cancel") } },
     )
 }
@@ -237,7 +284,7 @@ private fun ChoiceRow(title: String, detail: String, onClick: () -> Unit) {
 
 /** The confirmation behind Home's single bot button. */
 @Composable
-private fun BotDialog(model: AppModel, killOn: Boolean, stopped: Boolean, anyRunning: Boolean, onClose: () -> Unit) {
+private fun BotDialog(actions: StrategyArmActions, killOn: Boolean, stopped: Boolean, anyRunning: Boolean, onClose: () -> Unit) {
     val p = LocalPalette.current
     var alsoStop by remember { mutableStateOf(false) }
     AlertDialog(
@@ -262,9 +309,9 @@ private fun BotDialog(model: AppModel, killOn: Boolean, stopped: Boolean, anyRun
         confirmButton = {
             TextButton({
                 when {
-                    killOn -> model.update { it.copy(guardKill = false) }
-                    stopped -> model.startBotAgain()
-                    else -> model.stopBotForToday(alsoStop)
+                    killOn -> actions.clearKill()
+                    stopped -> actions.startBot()
+                    else -> actions.stopBot(alsoStop)
                 }
                 onClose()
             }) { Text(when { killOn -> "Clear"; stopped -> "Start"; else -> "Stop for today" }, color = if (killOn || stopped) p.verdigris else p.oxblood) }

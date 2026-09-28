@@ -23,6 +23,11 @@ object Alerts {
     private val _queue = MutableStateFlow<List<Alert>>(emptyList())
     val queue: StateFlow<List<Alert>> = _queue
 
+    /** The last alerts posted, oldest first, whether or not their banner is still up (a banner hides after 2 s). */
+    private val _posted = java.util.concurrent.ConcurrentLinkedDeque<Alert>()
+    val posted: List<Alert> get() = _posted.toList()
+    internal fun forgetPosted() = _posted.clear()
+
     /**
      * [throttle]: for automatic sources (background events, a failed load shown on a page): the
      * same words again within 20 s (a retry loop, a list scrolled back into view) show once.
@@ -39,6 +44,8 @@ object Alerts {
         }
         val a = Alert(seq.incrementAndGet(), kind, title, text)
         _queue.update { q -> (q + a).takeLast(4) }
+        _posted.addLast(a)
+        while (_posted.size > 50) _posted.pollFirst()
     }
 
     fun success(text: String, title: String? = null) = post(text, Kind.SUCCESS, title)

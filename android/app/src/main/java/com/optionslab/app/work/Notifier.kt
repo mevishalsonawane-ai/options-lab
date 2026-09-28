@@ -1,5 +1,6 @@
 package com.optionslab.app.work
 
+import kotlinx.coroutines.launch
 import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -22,11 +23,13 @@ import com.optionslab.app.data.AppSettings
  *   schedule  entry reminders, tickets, settlements, harvests
  *   health    the kill-condition verdict changing
  *
- * Every notification is PRIVATE: on a locked screen only a neutral line shows,
- * never a strike, a credit or a rupee figure.
+ * With "hide amounts on lock screen" on (the default), every notification is PRIVATE: on a
+ * locked screen only a neutral line shows, never a strike, a credit or a rupee figure. With it
+ * off they are PUBLIC and show in full on the lock screen.
  */
 object Notifier {
-    const val LIVE = "live"
+    /** The ongoing watch (a foreground service must show one): minimum importance, so it stays collapsed with no status-bar icon. */
+    const val LIVE = "watch"
     const val RISK = "risk"
     const val SCHEDULE = "schedule"
     const val HEALTH = "health"
@@ -42,6 +45,8 @@ object Notifier {
     fun createChannels(context: Context) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         val nm = context.getSystemService(NotificationManager::class.java)
+        // The old "live" channel showed index levels at low importance; its successor is LIVE ("watch").
+        nm.deleteNotificationChannel("live")
         nm.createNotificationChannels(listOf(
             NotificationChannel(BUY, "Buy orders", NotificationManager.IMPORTANCE_HIGH).apply {
                 description = "A buy order was filled (paper or Zerodha), and by which strategy or by hand"
@@ -56,8 +61,8 @@ object Notifier {
                 lockscreenVisibility = android.app.Notification.VISIBILITY_PRIVATE
                 enableVibration(true)
             },
-            NotificationChannel(LIVE, "Market watch", NotificationManager.IMPORTANCE_LOW).apply {
-                description = "Index levels and your open paper ticket during market hours"
+            NotificationChannel(LIVE, "Order watch", NotificationManager.IMPORTANCE_MIN).apply {
+                description = "The background watch of your orders, positions and strategies during market hours (no market data)"
                 lockscreenVisibility = android.app.Notification.VISIBILITY_PRIVATE
                 setShowBadge(false)
             },
@@ -108,17 +113,26 @@ object Notifier {
     }
 
     /**
-     * A buy or sell filled: "BUY filled · Paper · ORB" / "SELL filled · Live · Manual". It lands on the
+     * A buy or sell filled: "BUY filled · Paper · Strategy: ORB" / "SELL filled · Live · Manual · Chart". [source] is
+     * the order's label ([com.optionslab.app.data.Origins]; null for a hand order from an unnamed screen). It lands on the
      * position's own card (PositionCards), which the market watch then keeps live with its P&L and a Close button.
      */
     fun orderFilled(context: Context, action: String, qty: Int, symbol: String, price: Double, venue: String, source: String?) {
         val buy = action.equals("BUY", ignoreCase = true)
-        val headline = "${if (buy) "BUY" else "SELL"} filled · $venue · ${source ?: "Manual"}"
+        val headline = "${if (buy) "BUY" else "SELL"} filled · $venue · ${com.optionslab.app.data.Origins.display(source ?: com.optionslab.app.data.Origins.MANUAL).first}"
         val line = "$qty $symbol @ ${String.format(java.util.Locale.ENGLISH, "%.2f", price)}"
         Alerts.post(line, Alerts.Kind.SUCCESS, headline)
         if (!canPost(context)) return
-        PositionCards.card(context, if (venue == "Paper") "Paper" else "Live", symbol, if (buy) qty else -qty, price, price, 0.0,
-            alert = true, headline = headline)
+        val card = if (venue == "Paper") "Paper" else "Live"
+        // A fill that squared the position off (an exit, a stop, a square-off) takes the card down instead.
+        if (venue == "Paper" && runCatching { com.optionslab.app.data.Paper.state.positions.filter { it.symbol == symbol }.sumOf { it.quantity } }.getOrNull() == 0) {
+            PositionCards.dismiss(context, card, symbol); return
+        }
+        PositionCards.card(context, card, symbol, if (buy) qty else -qty, price, price, 0.0, alert = true, headline = headline)
+        // Zerodha: read the book again shortly, so a fill that closed the position takes its card down.
+        if (venue != "Paper") kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO).launch {
+            kotlinx.coroutines.delay(2_000); runCatching { PositionCards.refresh(context) }
+        }
     }
 
     fun canPost(context: Context): Boolean =

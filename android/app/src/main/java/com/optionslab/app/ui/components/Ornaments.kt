@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -39,6 +40,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
@@ -159,19 +161,27 @@ fun BrassButton(
     Box(
         modifier
             .scale(scale)
-            .height(48.dp)
+            .heightIn(min = 48.dp)
             .background(fill.copy(alpha = if (outlined) 0f else fill.alpha * alpha), Pill)
             .then(if (outlined) Modifier.border(1.dp, p.rule, Pill) else Modifier)
             .clickable(interactionSource = src, indication = null, enabled = enabled && !busy, role = Role.Button) {
+                // Compose keeps a disabled clickable's accessibility click action: a disabled or busy button
+                // (Place order, Send, Run...) must still do nothing when an accessibility service invokes it.
+                if (!enabled || busy) return@clickable
                 haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                 onClick()
             }
-            .padding(horizontal = 20.dp),
+            .padding(horizontal = 20.dp, vertical = 6.dp),
         contentAlignment = Alignment.Center,
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             if (busy) { CircularProgressIndicator(Modifier.size(16.dp), color = textColor, strokeWidth = 2.dp); Spacer(Modifier.width(8.dp)) }
-            Text(text, style = Type.label.copy(color = textColor.copy(alpha = alpha), fontSize = 14.sp), maxLines = 1, overflow = TextOverflow.Ellipsis)
+            // More centred lines when a large font or a narrow screen leaves no room for one: the button grows
+            // rather than cutting its label.
+            // A label that is one number ("+30") shrinks on one line instead: a number never breaks ("+3 / 0").
+            val style = Type.label.copy(color = textColor.copy(alpha = alpha), fontSize = 14.sp)
+            if (text.length <= 8 && text.any(Char::isDigit) && text.none(Char::isWhitespace)) FitText(text, style, minSize = 8.sp)
+            else Text(text, style = style, maxLines = 3, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
         }
     }
 }
@@ -184,9 +194,10 @@ fun darken(c: Color, f: Float) = Color(c.red * (1 - f), c.green * (1 - f), c.blu
 fun Token(text: String, selected: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
     val p = LocalPalette.current
     Box(
+        // Selectable outside the 48dp minimum, so the whole touch area (not just the pill) is the target.
         modifier
-            .minimumInteractiveComponentSize()
-            .selectable(selected = selected, role = Role.Tab, onClick = onClick),
+            .selectable(selected = selected, role = Role.Tab, onClick = onClick)
+            .minimumInteractiveComponentSize(),
         contentAlignment = Alignment.Center,
     ) {
         Box(
@@ -207,7 +218,8 @@ fun Stamp(text: String, color: Color, modifier: Modifier = Modifier, angle: Floa
             .background(color.copy(alpha = 0.12f), Pill)
             .padding(horizontal = 10.dp, vertical = 3.dp),
     ) {
-        Text(text.uppercase(), style = Type.label.copy(color = color, fontSize = 11.sp, letterSpacing = 0.6.sp), maxLines = 1)
+        // Wraps rather than cutting (a large font on a narrow screen).
+        Text(text.uppercase(), style = Type.label.copy(color = color, fontSize = 11.sp, letterSpacing = 0.6.sp))
     }
 }
 
@@ -325,18 +337,51 @@ fun VerdictDial(level: Int, modifier: Modifier = Modifier, calm: Boolean = false
 /** A live-state dot; pulses while something is running. */
 @Composable
 fun StatusDot(color: Color, pulsing: Boolean, modifier: Modifier = Modifier) {
-    val t = rememberInfiniteTransition(label = "dot")
-    val a by t.animateFloat(0.4f, 1f, infiniteRepeatable(tween(1200), RepeatMode.Reverse), label = "a")
-    Box(modifier.size(8.dp).background(color.copy(alpha = if (pulsing) a else 1f), CircleShape))
+    // No infinite animation (a frame every vsync) for a dot that does not pulse.
+    val alpha = if (pulsing) {
+        val t = rememberInfiniteTransition(label = "dot")
+        t.animateFloat(0.4f, 1f, infiniteRepeatable(tween(1200), RepeatMode.Reverse), label = "a").value
+    } else 1f
+    Box(modifier.size(8.dp).background(color.copy(alpha = alpha), CircleShape))
 }
 
 /** A label on the left and its value on the right. */
 @Composable
 fun LedgerLine(label: String, value: String, valueColor: Color? = null, modifier: Modifier = Modifier) {
     val p = LocalPalette.current
-    Row(modifier.fillMaxWidth().padding(vertical = 5.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text(label, style = Type.bodySmall.copy(color = p.inkSoft), modifier = Modifier.weight(1f))
-        Text(value, style = Type.figure.copy(color = valueColor ?: p.ink), textAlign = TextAlign.End)
+    // Label on the left, value on the right, 12 dp apart. The label always keeps room for its longest word
+    // (it wraps rather than being squeezed away); when the value does not fit beside that, the value goes on
+    // a line of its own under the label, still right-aligned (small phones, large fonts, long values).
+    androidx.compose.ui.layout.Layout(
+        content = {
+            Text(label, style = Type.bodySmall.copy(color = p.inkSoft))
+            Text(value, style = Type.figure.copy(color = valueColor ?: p.ink), textAlign = TextAlign.End)
+        },
+        modifier = modifier.fillMaxWidth().padding(vertical = 5.dp),
+    ) { ms, c ->
+        val gap = 12.dp.roundToPx()
+        val labelWord = ms[0].minIntrinsicWidth(androidx.compose.ui.unit.Constraints.Infinity)
+        val labelFull = ms[0].maxIntrinsicWidth(androidx.compose.ui.unit.Constraints.Infinity)
+        val valueFull = ms[1].maxIntrinsicWidth(androidx.compose.ui.unit.Constraints.Infinity)
+        val w = if (c.hasBoundedWidth) c.maxWidth else labelFull + gap + valueFull
+        if (valueFull + gap + labelWord <= w) {
+            val v = ms[1].measure(androidx.compose.ui.unit.Constraints(maxWidth = valueFull.coerceAtMost(w)))
+            val lw = (w - gap - v.width).coerceAtLeast(0)
+            val l = ms[0].measure(androidx.compose.ui.unit.Constraints(minWidth = lw, maxWidth = lw))
+            val h = maxOf(l.height, v.height).coerceIn(c.minHeight, c.maxHeight)
+            layout(w, h) {
+                l.placeRelative(0, (h - l.height) / 2)
+                v.placeRelative(w - v.width, (h - v.height) / 2)
+            }
+        } else {
+            val l = ms[0].measure(androidx.compose.ui.unit.Constraints(minWidth = w, maxWidth = w))
+            val v = ms[1].measure(androidx.compose.ui.unit.Constraints(maxWidth = w))
+            val h = (l.height + v.height).coerceIn(c.minHeight, c.maxHeight)
+            layout(w, h) {
+                l.placeRelative(0, 0)
+                v.placeRelative(w - v.width, l.height)
+            }
+        }
     }
 }
 
@@ -354,3 +399,14 @@ fun Spaced(space: Dp = 14.dp, content: @Composable ColumnScope.() -> Unit) =
 /** Kept for callers that still draw one; draws nothing in this style. */
 @Suppress("UNUSED_PARAMETER")
 fun DrawScope.engravedFrame(color: Color, inset: Float = 0f) = Unit
+
+/**
+ * One line of [text] that shrinks (down to [minSize]) until it fits its width, for labels that cannot wrap: the tab
+ * bar's names and the masthead's title at a large font on a narrow screen (they were cut mid-word).
+ */
+@Composable
+fun FitText(text: String, style: androidx.compose.ui.text.TextStyle, modifier: Modifier = Modifier, minSize: androidx.compose.ui.unit.TextUnit = 8.sp) {
+    var size by remember(text, style.fontSize) { androidx.compose.runtime.mutableFloatStateOf(style.fontSize.value) }
+    Text(text, modifier, style = style.copy(fontSize = size.sp), maxLines = 1, softWrap = false,
+        onTextLayout = { r -> if (r.didOverflowWidth && size > minSize.value) size = (size * 0.92f).coerceAtLeast(minSize.value) })
+}

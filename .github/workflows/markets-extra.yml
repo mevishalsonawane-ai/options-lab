@@ -1,0 +1,73 @@
+name: Market study extra data (options surface, funding, positioning, macro)
+
+# Downloads the extra inputs for the deeper BTC and gold study and publishes them to the
+# market-data-extra branch. Separate from the main market study so its data stays unchanged.
+
+on:
+  push:
+    paths:
+      - "crypto/fetch_extra.py"
+      - "forex/fetch_extra.py"
+      - ".github/workflows/markets-extra.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: markets-extra
+  cancel-in-progress: true
+
+jobs:
+  fetch:
+    name: ${{ matrix.market }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    strategy:
+      fail-fast: false
+      matrix:
+        market: [crypto, forex]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install "numpy>=1.26" "pandas>=2.2"
+      - name: Download extra data
+        run: python ${{ matrix.market }}/fetch_extra.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: extra-${{ matrix.market }}
+          path: ${{ matrix.market }}/data_extra/
+
+  publish:
+    name: Publish to market-data-extra
+    runs-on: ubuntu-latest
+    needs: fetch
+    if: always()
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: extra-*
+          path: out
+      - name: Push to market-data-extra
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+        run: |
+          mkdir pub
+          for m in crypto forex; do
+            if [ -d "out/extra-$m" ]; then mkdir -p "pub/$m/data_extra" && cp -r "out/extra-$m/." "pub/$m/data_extra/"; fi
+          done
+          if [ -z "$(ls -A pub)" ]; then echo "nothing to publish"; exit 1; fi
+          cd pub
+          find . -type f -printf '%P %s\n' | sort > index.txt
+          git init -q -b market-data-extra
+          git config user.name "ci-markets"; git config user.email "ci-markets@users.noreply.github.com"
+          git add -A && git commit -qm "Extra market data for $SHA"
+          git push -qf "https://x-access-token:${TOKEN}@github.com/${REPO}" HEAD:market-data-extra
+          cat index.txt

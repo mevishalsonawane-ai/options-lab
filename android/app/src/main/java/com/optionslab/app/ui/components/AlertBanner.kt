@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -129,6 +130,13 @@ fun AlertOn(text: String?, kind: Alerts.Kind = Alerts.Kind.ERROR, throttle: Bool
 /**
  * material3's AlertDialog with the alerts shown at the top of its content, so a
  * validation error raised while a dialog is open is seen there too.
+ *
+ * The dialog sets its own width ([dialogWidth]) instead of the platform's default: with the platform width
+ * the window is WRAP_CONTENT and the view system measures it several times per layout pass under different
+ * widths (the preferred dialog width first, then wider). A text field or an alert banner writes its measured
+ * size to state while it is measured, so every pass invalidated the next one and the dialog re-laid itself
+ * out for ever (never idle: CI saw the sizes alternate 272/363 dp thousands of times a second). One fixed
+ * width means one measure result.
  */
 @Composable
 fun AlertDialog(
@@ -140,6 +148,20 @@ fun AlertDialog(
     text: (@Composable () -> Unit)? = null,
     properties: androidx.compose.ui.window.DialogProperties = androidx.compose.ui.window.DialogProperties(),
 ) = androidx.compose.material3.AlertDialog(
-    onDismissRequest = onDismissRequest, confirmButton = confirmButton, modifier = modifier, dismissButton = dismissButton,
-    title = title, text = { Column { InlineAlerts(); text?.invoke() } }, properties = properties,
+    onDismissRequest = onDismissRequest, confirmButton = confirmButton, modifier = modifier.width(dialogWidth()), dismissButton = dismissButton,
+    title = title, text = { Column { InlineAlerts(); text?.invoke() } },
+    properties = androidx.compose.ui.window.DialogProperties(
+        dismissOnBackPress = properties.dismissOnBackPress,
+        dismissOnClickOutside = properties.dismissOnClickOutside,
+        securePolicy = properties.securePolicy,
+        usePlatformDefaultWidth = false,
+        decorFitsSystemWindows = properties.decorFitsSystemWindows,
+    ),
 )
+
+/** A dialog's width: the screen less 24 dp a side, within material3's 280..560 dp (never wider than the screen). */
+@Composable
+internal fun dialogWidth(): androidx.compose.ui.unit.Dp {
+    val screen = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp.dp
+    return (screen - 48.dp).coerceIn(280.dp, 560.dp).coerceAtMost(screen)
+}

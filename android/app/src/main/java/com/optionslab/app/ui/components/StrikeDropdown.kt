@@ -18,6 +18,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.optionslab.app.ui.theme.LocalPalette
@@ -50,8 +53,10 @@ fun StrikeDropdown(strikes: List<Double>, spot: Double?, selected: String, under
             label = { Text("Strike" + (spot?.let { " · $underlying ${String.format(Locale.ENGLISH, "%,.0f", it)}" } ?: "")) },
             trailingIcon = { Text(if (open) "▲" else "▼", style = Type.label.copy(color = p.inkSoft)) },
         )
-        // The whole field opens the list.
-        Box(Modifier.matchParentSize().clickable(enabled = strikes.isNotEmpty()) { open = true })
+        // The whole field opens the list (named and typed for TalkBack, as the field under it is covered).
+        Box(Modifier.matchParentSize()
+            .semantics { contentDescription = if (selected.isEmpty()) "Strike" else "Strike $selected" }
+            .clickable(enabled = strikes.isNotEmpty(), onClickLabel = "Choose a strike", role = Role.DropdownList) { open = true })
         DropdownMenu(expanded = open, onDismissRequest = { open = false }, scrollState = scroll, modifier = Modifier.heightIn(max = 380.dp)) {
             strikes.forEach { k ->
                 val label = fmtG(k)
