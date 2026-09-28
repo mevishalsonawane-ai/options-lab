@@ -1,0 +1,2 @@
+1-minute source: PAXG/USDT 1-minute (Binance), a gold-backed token (1 token = 1 troy ounce) used because the spot feed throttled
+bars: 1450203 from 2023-09-24 17:50:00+00:00 to 2026-09-27 23:59:00+00:00
