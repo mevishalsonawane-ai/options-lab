@@ -19,7 +19,9 @@ object LiveSelfTest {
         suspend fun step(name: String, block: suspend () -> String) {
             val t0 = System.currentTimeMillis()
             val s = try {
-                val detail = withTimeoutOrNull(20_000) { block() }
+                // Off the screen's thread: Android refuses network calls on the main thread
+                // (every Zerodha read here failed with NetworkOnMainThreadException when run from the button).
+                val detail = withTimeoutOrNull(20_000) { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { block() } }
                 if (detail == null) Step(name, false, "no answer in 20 s", System.currentTimeMillis() - t0)
                 else Step(name, true, detail, System.currentTimeMillis() - t0)
             } catch (e: kotlinx.coroutines.CancellationException) {
