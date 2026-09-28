@@ -459,7 +459,8 @@ fun SchedulePage(model: AppModel) {
         item {
             LedgerCard(title = "Notifications") {
                 Note("You always get three: a buy filled, a sell filled, and an order or strategy start waiting for your approval. " +
-                    "The market watch also keeps one quiet ongoing notification while it runs, which Android requires; long-press it to hide it.")
+                    "While your orders and strategies are watched in market hours, Android requires one ongoing notice: it is kept at the lowest " +
+                    "priority (collapsed, no status-bar icon) and shows no market data, only your open positions.")
                 ToggleRow("Other notifications", "Risk and P&L alerts, price alarms, reminders, health changes and warnings", s.otherAlerts) { on ->
                     model.update { it.copy(otherAlerts = on) }
                 }

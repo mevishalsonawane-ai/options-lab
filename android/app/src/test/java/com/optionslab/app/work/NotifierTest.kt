@@ -34,7 +34,7 @@ class NotifierTest : RobolectricTest() {
         val expect = mapOf(
             Notifier.BUY to NotificationManager.IMPORTANCE_HIGH, Notifier.SELL to NotificationManager.IMPORTANCE_HIGH,
             Notifier.APPROVAL to NotificationManager.IMPORTANCE_HIGH, Notifier.RISK to NotificationManager.IMPORTANCE_HIGH,
-            Notifier.LIVE to NotificationManager.IMPORTANCE_LOW, Notifier.SCHEDULE to NotificationManager.IMPORTANCE_DEFAULT,
+            Notifier.LIVE to NotificationManager.IMPORTANCE_MIN, Notifier.SCHEDULE to NotificationManager.IMPORTANCE_DEFAULT,
             Notifier.HEALTH to NotificationManager.IMPORTANCE_DEFAULT,
         )
         for ((id, importance) in expect) {

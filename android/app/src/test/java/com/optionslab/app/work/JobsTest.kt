@@ -269,7 +269,7 @@ class JobsTest : RobolectricTest() {
         }
         Jobs.start(refusing, Jobs.Kind.LIVE, manual = false)
         val n = Background.notifications(context).getNotification(2010)
-        assertEquals("the watch cannot run in WorkManager: the owner is asked", "Market is open", Background.title(n))
+        assertEquals("the watch cannot run in WorkManager: the owner is asked", "Order watch is off", Background.title(n))
         Jobs.start(refusing, Jobs.Kind.HARVEST, manual = false)
         assertEquals(WorkInfo.State.ENQUEUED, Background.unique(context, "job.HARVEST").single().state)
         Jobs.start(refusing, Jobs.Kind.TICKET, manual = false)
@@ -293,8 +293,8 @@ class JobsTest : RobolectricTest() {
         assertEquals(Notifier.ID_LIVE, shadow.lastForegroundNotificationId)
         assertEquals(Notifier.LIVE, shadow.lastForegroundNotification.channelId)
         assertTrue(shadow.lastForegroundNotification.flags and Notification.FLAG_ONGOING_EVENT != 0)
-        Background.await("the first pass") { Background.title(shadow.lastForegroundNotification) == "Market watch" }
-        assertEquals("Waiting for the 09:15 open", Background.text(shadow.lastForegroundNotification))
+        Background.await("the first pass") { Background.title(shadow.lastForegroundNotification) == Tasks.WATCH_TITLE }
+        assertEquals(Tasks.WATCH_IDLE, Background.text(shadow.lastForegroundNotification))
         assertTrue("the pass stamped the heartbeat", Heartbeat.last() > 0L || SecurePrefs.snapshot().containsKey("hb.last"))
         assertFalse(shadow.isStoppedBySelf)
 
@@ -331,13 +331,13 @@ class JobsTest : RobolectricTest() {
         Background.at(WED, 9, 5)
         FakeAndroidKeyStore.failing += "ol.vault.data.v1"   // every settings write (the heartbeat) now fails
         val svc = startService(Jobs.Kind.LIVE)
-        Background.await("the hiccup notice") { alert("Market watch hiccup") != null }
-        val a = alert("Market watch hiccup")!!
+        Background.await("the hiccup notice") { alert("Order watch hiccup") != null }
+        val a = alert("Order watch hiccup")!!
         assertEquals("One pass failed (UnrecoverableKeyException); the watch goes on.", a.text)
         assertFalse("no raw exception message", a.text.contains("simulated"))
         assertFalse(shadowOf(svc).isStoppedBySelf)
         FakeAndroidKeyStore.failing.clear()
-        Background.await("the next pass", timeoutMs = 30_000) { Background.title(shadowOf(svc).lastForegroundNotification) == "Market watch" }
+        Background.await("the next pass", timeoutMs = 30_000) { Background.title(shadowOf(svc).lastForegroundNotification) == Tasks.WATCH_TITLE }
         assertFalse(shadowOf(svc).isStoppedBySelf)
     }
 
@@ -394,17 +394,18 @@ class JobsTest : RobolectricTest() {
         val t = Tasks.watchTick(context, AppSettings.load(), HashSet())
         assertFalse("the position pass (a risk step) had already run when the first quote was asked for", cardAtFirstQuote.first())
         for (k in Upstox.INDEX_KEYS.values) assertEquals(k, 2, upstox.count { it == "${UpstoxStub.BASE}/intraday/$k/minutes/1" })
-        assertEquals("Market watch", t.title)
+        assertEquals(Tasks.WATCH_TITLE, t.title)
         assertTrue(t.lines.isEmpty())
         assertEquals(-1, t.progress)
     } }
 
-    @Test fun theWatchPassShowsIndexLevels() = com.optionslab.app.testing.bounded("theWatchPassShowsIndexLevels") { runBlocking {
+    @Test fun theWatchNoticeCarriesNoMarketData() = com.optionslab.app.testing.bounded("theWatchNoticeCarriesNoMarketData") { runBlocking {
         upstox.reply = { p -> if (isIntraday(p)) UpstoxStub.candles(UpstoxStub.minutes(WED, LocalTime.of(9, 15), 30, 24_800.0)) else status(404) }
         val t = Tasks.watchTick(context, AppSettings.load(), HashSet())
-        assertTrue(t.lines.toString(), t.lines.any { it.startsWith("NIFTY 24,814.8 (+0.06%)") })
-        assertTrue(t.lines.any { it.startsWith("BANKNIFTY ") })
-        assertTrue(t.lines.any { it.startsWith("VIX ") })
+        // The index quotes were read (for alarms and the widget) but none reaches the notice: only orders and positions do.
+        assertTrue(upstox.count(::isIntraday) > 0)
+        assertTrue(t.lines.toString(), t.lines.none { it.startsWith("NIFTY") || it.startsWith("BANKNIFTY") || it.startsWith("VIX") })
+        assertEquals(Tasks.WATCH_TITLE, t.title)
     } }
 
     @Test fun aHungFeedCannotStallTheWatch() = com.optionslab.app.testing.bounded("aHungFeedCannotStallTheWatch") { runBlocking {

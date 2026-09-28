@@ -152,7 +152,7 @@ object Jobs {
             // Not permitted from here (Android 12+ background start). Hand
             // the one-shot jobs to WorkManager; the watch cannot run that way.
             if (k == Kind.LIVE) {
-                Notifier.post(context, 2010, Notifier.APPROVAL, "Market is open", "Tap to start the market watch.", "almanac")
+                Notifier.post(context, 2010, Notifier.APPROVAL, "Order watch is off", "Tap to start watching your orders and strategies.", "almanac")
             } else if (k == Kind.HARVEST) {
                 enqueueHarvest(context, session, manual)
             } else {
@@ -337,6 +337,10 @@ object Tasks {
 
     data class Tick(val title: String, val lines: List<String>, val progress: Int)
 
+    /** The ongoing watch notice: no index levels or other market data, only the owner's orders and positions. */
+    const val WATCH_TITLE = "Order watch"
+    const val WATCH_IDLE = "Watching your orders and strategies"
+
     /**
      * The steps that protect money: fills, the daily loss limit, bot exits, stops and targets,
      * the expiry square-off and strategy risk. Run first in every pass, so a slow quote or
@@ -385,11 +389,10 @@ object Tasks {
                 async(kotlinx.coroutines.Dispatchers.IO) { runCatching { kotlinx.coroutines.withTimeoutOrNull(20_000) { Market.quote(sym, quick = true) } }.getOrNull() }
             }.mapNotNull { it.await() }.associateBy { it.symbol }
         }
+        // The index quotes feed the alarms, the ticket's risk checks and the widget; the ongoing notice itself
+        // carries no market data, only the owner's positions and orders.
         val lines = ArrayList<String>()
-        q["NIFTY"]?.let { lines += "NIFTY %,.1f (%+.2f%%)".format(it.last, 100 * it.changePct) }
-        q["BANKNIFTY"]?.let { lines += "BANKNIFTY %,.1f (%+.2f%%)".format(it.last, 100 * it.changePct) }
-        q["INDIAVIX"]?.let { lines += "VIX %.2f".format(it.last) }
-        var title = "Market watch"
+        var title = WATCH_TITLE
         var progress = -1
         val open = Ledger.openTicket()
         if (open != null) {
@@ -607,7 +610,7 @@ class WatchService : Service() {
             } catch (e: Exception) {
                 // One bad pass (a Keystore or disk hiccup) must not end the watch: note it and go on.
                 // Its own id: 2014 is Heartbeat's "Market watch stopped", which every beat cancels.
-                Notifier.post(this, 2018, Notifier.SCHEDULE, "Market watch hiccup", "One pass failed (${e.javaClass.simpleName}); the watch goes on.")
+                Notifier.post(this, 2018, Notifier.SCHEDULE, "Order watch hiccup", "One pass failed (${e.javaClass.simpleName}); the watch goes on.")
                 delay(15_000)
             }
         }
@@ -620,14 +623,14 @@ class WatchService : Service() {
         run {
             Heartbeat.beat(this)
             if (Market.minuteNow() < Market.OPEN) {
-                show("Market watch", "Waiting for the 09:15 open")
+                show(Tasks.WATCH_TITLE, Tasks.WATCH_IDLE)
                 delay(30_000)
                 return
             }
             // Settings read fresh every pass: the kill switch, Paper / Live and limits changed mid-session take effect at once.
             val t = Tasks.watchTick(this, AppSettings.load(), fired)
             Tasks.publishWatch(Tasks.LiveState(true, t.title, t.progress / 100f, System.currentTimeMillis()))
-            show(t.title, t.lines.joinToString("\n").ifEmpty { "Waiting for prints" }, t.progress)
+            show(t.title, t.lines.joinToString("\n").ifEmpty { Tasks.WATCH_IDLE }, t.progress)
             // While an ORB position is open its stop, target and 15:10 exit are checked every 15 s, not once a minute.
             val next = System.currentTimeMillis() + 60_000
             while (System.currentTimeMillis() < next) {

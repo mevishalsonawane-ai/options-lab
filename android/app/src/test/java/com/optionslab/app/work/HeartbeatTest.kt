@@ -90,7 +90,7 @@ class HeartbeatTest : RobolectricTest() {
         Heartbeat.check(context)
         val n = stalled()
         assertNotNull(n)
-        assertEquals("Market watch stopped", Background.title(n))
+        assertEquals("Order watch stopped", Background.title(n))
         assertTrue(Background.text(n)!!.startsWith("The watch has not run today. Stops, targets and strategy exits are not being watched."))
         assertEquals(Notifier.APPROVAL, n.channelId)
         assertEquals("the watch was restarted", "LIVE", shadowOf(app).nextStartedService.getStringExtra(Jobs.EXTRA_KIND))

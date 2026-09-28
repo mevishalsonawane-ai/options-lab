@@ -27,7 +27,8 @@ import com.optionslab.app.data.AppSettings
  * off they are PUBLIC and show in full on the lock screen.
  */
 object Notifier {
-    const val LIVE = "live"
+    /** The ongoing watch (a foreground service must show one): minimum importance, so it stays collapsed with no status-bar icon. */
+    const val LIVE = "watch"
     const val RISK = "risk"
     const val SCHEDULE = "schedule"
     const val HEALTH = "health"
@@ -43,6 +44,8 @@ object Notifier {
     fun createChannels(context: Context) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         val nm = context.getSystemService(NotificationManager::class.java)
+        // The old "live" channel showed index levels at low importance; its successor is LIVE ("watch").
+        nm.deleteNotificationChannel("live")
         nm.createNotificationChannels(listOf(
             NotificationChannel(BUY, "Buy orders", NotificationManager.IMPORTANCE_HIGH).apply {
                 description = "A buy order was filled (paper or Zerodha), and by which strategy or by hand"
@@ -57,8 +60,8 @@ object Notifier {
                 lockscreenVisibility = android.app.Notification.VISIBILITY_PRIVATE
                 enableVibration(true)
             },
-            NotificationChannel(LIVE, "Market watch", NotificationManager.IMPORTANCE_LOW).apply {
-                description = "Index levels and your open paper ticket during market hours"
+            NotificationChannel(LIVE, "Order watch", NotificationManager.IMPORTANCE_MIN).apply {
+                description = "The background watch of your orders, positions and strategies during market hours (no market data)"
                 lockscreenVisibility = android.app.Notification.VISIBILITY_PRIVATE
                 setShowBadge(false)
             },
