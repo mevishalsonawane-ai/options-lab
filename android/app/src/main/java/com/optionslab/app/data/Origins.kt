@@ -75,7 +75,7 @@ object Origins {
             left -= f.qty
             if (left <= 0) break
         }
-        return names.reversed().joinToString(" + ").ifEmpty { null }
+        return names.toList().asReversed().joinToString(" + ").ifEmpty { null }
     }
 
     /** A position's [position] label as a pill: "Opened by ORB + Manual"; bold when the app opened any of it. */
