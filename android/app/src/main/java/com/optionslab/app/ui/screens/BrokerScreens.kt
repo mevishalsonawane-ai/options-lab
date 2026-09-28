@@ -744,6 +744,16 @@ internal fun SelfTestCard() {
             val bad = steps.count { !it.ok }
             Note(if (bad == 0) "All ${steps.size} checks passed." else "$bad of ${steps.size} checks failed.")
         }
+        // Diagnostics: the app's own diary (banners, self-test, bot notes), redacted, copied for the owner to paste to whoever helps.
+        val ctx = androidx.compose.ui.platform.LocalContext.current
+        androidx.compose.material3.TextButton({
+            scope.launch {
+                val text = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { com.optionslab.app.data.Diag.report() }
+                val cm = ctx.getSystemService(android.content.ClipboardManager::class.java)
+                cm?.setPrimaryClip(android.content.ClipData.newPlainText("IraAlgo diagnostics", text))
+                com.optionslab.app.work.Alerts.success("Diagnostics copied: paste them in the chat. Keys, tokens and passwords are never included.")
+            }
+        }, Modifier.fillMaxWidth()) { Text("Copy diagnostics") }
         BrassButton(if (running) "Checking…" else "Run the self-test", Modifier.fillMaxWidth().padding(top = 8.dp)) {
             if (running) return@BrassButton
             running = true; steps = emptyList()

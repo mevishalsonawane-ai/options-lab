@@ -30,6 +30,7 @@ object LiveSelfTest {
                 Step(name, false, reason(e), System.currentTimeMillis() - t0)
             }
             out += s; onStep(s)
+            Diag.record("self-test", "${if (s.ok) "ok" else "FAILED"} ${s.name}: ${s.detail} (${s.ms} ms)")
         }
         step("Session") {
             if (!Broker.configured) error("Zerodha is not set up on this phone")
