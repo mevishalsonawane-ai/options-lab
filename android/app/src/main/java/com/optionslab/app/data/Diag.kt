@@ -47,11 +47,11 @@ object Diag {
     fun record(area: String, text: String) {
         if (!::file.isInitialized) return
         val line = "${TIME.format(Instant.now())} [$area] ${redact(text.replace('\n', ' '))}"
-        runCatching { writer.execute { append(line) } }
+        runCatching { writer.execute { keep(line) } }
     }
 
     @Synchronized
-    private fun append(line: String) {
+    private fun keep(line: String) {
         runCatching {
             val l = lines()
             l.addLast(line)

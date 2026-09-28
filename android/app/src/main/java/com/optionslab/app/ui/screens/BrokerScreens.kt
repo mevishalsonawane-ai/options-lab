@@ -747,7 +747,7 @@ internal fun SelfTestCard() {
         // Diagnostics: the app's own diary (banners, self-test, bot notes), redacted, copied for the owner to paste to whoever helps.
         val ctx = androidx.compose.ui.platform.LocalContext.current
         androidx.compose.material3.TextButton({
-            scope.launch {
+            scope.launch(kotlinx.coroutines.Dispatchers.Main) {
                 val text = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { com.optionslab.app.data.Diag.report() }
                 val cm = ctx.getSystemService(android.content.ClipboardManager::class.java)
                 cm?.setPrimaryClip(android.content.ClipData.newPlainText("IraAlgo diagnostics", text))
@@ -757,7 +757,8 @@ internal fun SelfTestCard() {
         BrassButton(if (running) "Checking…" else "Run the self-test", Modifier.fillMaxWidth().padding(top = 8.dp)) {
             if (running) return@BrassButton
             running = true; steps = emptyList()
-            scope.launch {
+            // On the main dispatcher itself: each step hops to IO and back, and its result lands on the screen's thread.
+            scope.launch(kotlinx.coroutines.Dispatchers.Main) {
                 try { com.optionslab.app.data.LiveSelfTest.run { st -> steps = steps + st } }
                 finally { running = false }
             }

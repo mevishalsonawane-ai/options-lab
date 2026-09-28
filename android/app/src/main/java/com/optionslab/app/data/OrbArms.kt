@@ -173,9 +173,9 @@ object OrbArms {
             .put("ce", contractJson(l.ce)).put("pe", contractJson(l.pe))) }
         b.range?.let { o.put("range", JSONArray().put(it.first).put(it.second).put(b.rangeDay.toString())) }
         // Only today's decided bars matter; older days are dropped.
-        val today = Market.today().toString()
-        o.put("decided", JSONObject().apply { b.decided.filterKeys { it.endsWith(today) }.forEach { (k, v) -> put(k, JSONArray(v.toList())) } })
-        o.put("watched", JSONObject().apply { b.watched.filterKeys { it.endsWith(today) }.forEach { (k, v) -> put(k, v) } })
+        val day = today().toString()
+        o.put("decided", JSONObject().apply { b.decided.filterKeys { it.endsWith(day) }.forEach { (k, v) -> put(k, JSONArray(v.toList())) } })
+        o.put("watched", JSONObject().apply { b.watched.filterKeys { it.endsWith(day) }.forEach { (k, v) -> put(k, v) } })
         o.put("positions", JSONArray().apply {
             b.positions.takeLast(2000).forEach { p ->
                 put(JSONObject().put("arm", p.arm).put("symbol", p.symbol).put("right", p.right).put("qty", p.qty).put("entry", p.entry)
@@ -207,6 +207,8 @@ object OrbArms {
     @Volatile internal var testNow: java.time.ZonedDateTime? = null
         set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test clock exists only in debug builds" }; field = v }
     private fun now(): LocalDateTime = (testNow ?: Market.now()).toLocalDateTime()
+    /** Today by the same clock as [now] (the tests pin both, so a run just after midnight IST sees the same day). */
+    private fun today(): java.time.LocalDate = testNow?.toLocalDate() ?: Market.today()
 
     // ---- views for the UI ---------------------------------------------------------
 
@@ -224,7 +226,7 @@ object OrbArms {
 
     suspend fun view(): View = lock.withLock {
         val b = book()
-        val day = Market.today()
+        val day = today()
         val arms = OrbRules.ARMS.map { a ->
             val open = b.positions.lastOrNull { it.arm == a.source && it.open }
             ArmView(a, b.armed[a.source] == true, b.auto[a.source] != false, b.status[a.source] ?: "", open, open?.let { marks[it.symbol] },
@@ -571,7 +573,7 @@ object OrbArms {
      */
     private suspend fun settleEntry(b: Book, p: Position, sym: String): Position? {
         val label = armOf(p.arm).label
-        if (p.day.isBefore(Market.today())) {
+        if (p.day.isBefore(today())) {
             com.optionslab.app.work.Alerts.error("$label: the buy of $sym on ${p.day} was never confirmed by Zerodha; check that day's contract note.", "ORB live")
             return null
         }
@@ -803,7 +805,7 @@ object OrbArms {
 
     /** Up or down day (index close vs open) for past trade days the evening replay never recorded, for the pass rule. */
     private suspend fun backfillUpDays() {
-        val missing = lock.withLock { book().let { b -> b.positions.map { it.day }.distinct().filter { it.isBefore(Market.today()) && !b.upDays.containsKey(it.toString()) } } }
+        val missing = lock.withLock { book().let { b -> b.positions.map { it.day }.distinct().filter { it.isBefore(today()) && !b.upDays.containsKey(it.toString()) } } }
         if (missing.isEmpty()) return
         val key = Upstox.INDEX_KEYS.getValue(OrbRules.UNDERLYING)
         val found = HashMap<String, Boolean>()
