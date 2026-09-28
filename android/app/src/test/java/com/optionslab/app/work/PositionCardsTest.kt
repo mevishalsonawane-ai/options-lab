@@ -74,13 +74,6 @@ class PositionCardsTest : RobolectricTest() {
         assertNull(posted("Paper", "X"))
     }
 
-    @Test fun aPaperExitFillTakesTheCardDownInsteadOfPostingASell() {
-        PositionCards.card(context, "Paper", "NOPOS", 75, 100.0, 101.0, 75.0)
-        // No paper position is open in NOPOS: the SELL fill squared it off.
-        Notifier.orderFilled(context, "SELL", 75, "NOPOS", 101.0, "Paper", null)
-        assertNull(posted("Paper", "NOPOS"))
-    }
-
     @Test fun anUnknownPriceIsLeftOut() {
         PositionCards.card(context, "Paper", "Y", 50, 0.0, null, 0.0)
         assertEquals("LONG 50 @ 0.00\nP&L +₹0", Background.text(posted("Paper", "Y")!!))

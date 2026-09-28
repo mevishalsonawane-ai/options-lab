@@ -125,7 +125,9 @@ object Notifier {
         if (!canPost(context)) return
         val card = if (venue == "Paper") "Paper" else "Live"
         // A fill that squared the position off (an exit, a stop, a square-off) takes the card down instead.
-        if (venue == "Paper" && runCatching { com.optionslab.app.data.Paper.state.positions.filter { it.symbol == symbol }.sumOf { it.quantity } }.getOrNull() == 0) {
+        // (Only when the paper book holds that contract and it is now flat; no row at all is not a close.)
+        if (venue == "Paper" && runCatching { com.optionslab.app.data.Paper.state.positions.filter { it.symbol == symbol }
+                .takeIf { it.isNotEmpty() }?.sumOf { it.quantity } }.getOrNull() == 0) {
             PositionCards.dismiss(context, card, symbol); return
         }
         PositionCards.card(context, card, symbol, if (buy) qty else -qty, price, price, 0.0, alert = true, headline = headline)
