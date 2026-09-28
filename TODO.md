@@ -40,7 +40,7 @@ Source paths prefixed `NTA:` are in D:\New Trading app.
       (incomplete on NTA too: `NTA:services/heartbeat_service.py`). Done on the phone: the market watch stamps
       a heartbeat each pass; an alarm checks it every 5 min from 09:17 to 15:30, restarts a watch silent for
       over 3 min and posts one "Market watch stopped" notice per stall (approval channel, so it always shows).
-- [ ] A11. Optional: Telegram alerts (NTA has them; IraAlgo uses phone notifications only).
+- [x] A11. (dropped by the owner, 2026-09-28: no Telegram; phone notifications only) Telegram alerts.
 - [ ] A12. Optional: pre-market routine (symbol refresh, daily report). AI Signals: skip unless revived (research refused it).
 
 ## B. IraAlgo housekeeping
