@@ -99,9 +99,12 @@ object KiteStream {
 
     // ---- running --------------------------------------------------------------------------
 
-    /** Start or stop to match the app's state: Live mode, a Zerodha session, market day hours. */
+    /**
+     * Start or stop to match the app's state: a Zerodha session and market day hours. It runs in Paper mode too:
+     * the paper account is priced from the same live ticks (read-only market data, the owner's own session).
+     */
     fun ensure() {
-        val should = runCatching { AppSettings.load().live }.getOrDefault(false) && Broker.loggedIn && Broker.apiKey != null &&
+        val should = Broker.loggedIn && Broker.apiKey != null &&
             Market.isTradingDay() && Market.minuteNow() in (9 * 60)..(15 * 60 + 45)
         if (should) start() else stop()
     }
@@ -113,7 +116,7 @@ object KiteStream {
         loop = scope.launch {
             var backoff = 1_000L
             while (isActive) {
-                if (!Broker.loggedIn || !runCatching { AppSettings.load().live }.getOrDefault(false)) break
+                if (!Broker.loggedIn) break
                 _status.value = if (backoff == 1_000L) Status.CONNECTING else Status.RETRYING
                 val closed = kotlinx.coroutines.CompletableDeferred<Unit>()
                 val opened = java.util.concurrent.atomic.AtomicBoolean(false)

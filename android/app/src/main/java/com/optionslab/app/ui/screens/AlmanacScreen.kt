@@ -80,12 +80,14 @@ fun AlmanacScreen(model: AppModel, onGo: (String) -> Unit) {
         model.startQuotes()
         try { kotlinx.coroutines.awaitCancellation() } finally { model.stopQuotes() }
     }
-    // The money and the orders refresh every 20 s while Home is open.
+    // The money and the orders refresh every 20 s while Home is open; the paper account as fast as its prices move.
     com.optionslab.app.ui.PollWhileStarted(s.live) {
+        var last = 0L
         while (true) {
+            val now = System.currentTimeMillis()
             if (s.live) { if (com.optionslab.app.data.Broker.loggedIn) model.loadAccount(quiet = true) } else model.loadPaper(quiet = true)
-            model.refreshStrategies()
-            delay(20_000)
+            if (now - last >= 20_000) { model.refreshStrategies(); last = now }
+            delay(if (s.live) 20_000 else model.paperRefreshMs().coerceAtMost(20_000))
         }
     }
     LaunchedEffect(s.live) { model.loadBankNiftyDaily() }

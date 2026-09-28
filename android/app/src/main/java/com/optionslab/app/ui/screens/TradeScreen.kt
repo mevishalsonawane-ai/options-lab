@@ -87,7 +87,7 @@ fun TradeScreen(model: AppModel) {
         if (s.live) return@PollWhileStarted
         while (true) {
             model.loadPaper(quiet = true)
-            delay(if (Market.isOpen()) 30_000 else 300_000)
+            delay(model.paperRefreshMs())
         }
     }
 

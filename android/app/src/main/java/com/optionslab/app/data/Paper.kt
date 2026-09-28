@@ -107,12 +107,39 @@ object Paper {
 
     // ---- prices -----------------------------------------------------------------
 
-    /** The last minute's close, with the day's range so the stale-quote check works (read now, from the feed). */
+    /**
+     * The contract's price. With a Zerodha session the live tick from Zerodha's stream (updated many times a second,
+     * the same price the exchange shows); otherwise, or until the stream has a tick for it, the last minute's close
+     * from Upstox's public feed, with the day's range so the stale-quote check works.
+     */
     suspend fun quote(c: Contract): Quote? {
+        streamQuote(c)?.let { return it }
         val bars = Net.intraday(c.feedKey).filter { it.istDate == Market.today() }
         if (bars.isEmpty()) return null
         return Quote(bars.last().close, high = bars.maxOf { it.high }, low = bars.minOf { it.low }, open = bars.first().open,
             volume = bars.sumOf { it.volume })
+    }
+
+    /** Zerodha's instrument token per paper symbol (0 = not listed there), looked up once. */
+    private val kiteTokens = java.util.concurrent.ConcurrentHashMap<String, Long>()
+
+    private fun kiteToken(c: Contract): Long? {
+        kiteTokens[c.symbol]?.let { return it.takeIf { t -> t > 0 } }
+        if (!Broker.loggedIn) return null
+        val list = Broker.cachedInstruments() ?: return null
+        val t = Broker.find(list, c.underlying, c.expiry, c.strike, c.right)?.token ?: 0L
+        kiteTokens[c.symbol] = t
+        return t.takeIf { it > 0 }
+    }
+
+    /** The live tick from Zerodha's stream, if there is a fresh one; asking also keeps the contract subscribed. */
+    private fun streamQuote(c: Contract): Quote? {
+        val token = runCatching { kiteToken(c) }.getOrNull() ?: return null
+        KiteStream.touch(listOf(token))
+        val t = KiteStream.tick(token) ?: return null
+        if (t.last <= 0) return null
+        return Quote(t.last, bid = t.bid ?: 0.0, ask = t.ask ?: 0.0, high = t.high, low = t.low, open = t.open,
+            prevClose = t.close, volume = t.volume)
     }
 
     /** The contract's latest price from the paper feed, or null when there is none today. */

@@ -1575,10 +1575,28 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     /** Bumped whenever a day's figure is recorded, so an open P&L calendar redraws. */
     val pnlDays = MutableStateFlow(0)
 
+    private val paperLoading = java.util.concurrent.atomic.AtomicBoolean(false)
+
+    /**
+     * How often an open paper page re-prices: every 2 s while Zerodha's stream is live (the prices are in memory,
+     * so nothing is fetched), 10 s on the public feed in market hours, 5 min when closed.
+     */
+    fun paperRefreshMs(): Long = when {
+        com.optionslab.app.data.KiteStream.status.value == com.optionslab.app.data.KiteStream.Status.LIVE -> 2_000
+        Market.isOpen() -> 10_000
+        else -> 300_000
+    }
+
     fun loadPaper(quiet: Boolean = false) {
+        // A quiet refresh while the last one is still running is skipped (the fast re-pricing never piles up).
+        if (quiet && paper.value is Load.Done && !paperLoading.compareAndSet(false, true)) return
+        if (!quiet) paperLoading.set(true)
         if (!quiet || paper.value !is Load.Done) paper.value = Load.Busy("Opening the paper account")
         viewModelScope.launch(Dispatchers.IO) {
+          try {
             paper.value = try {
+                // With a Zerodha session the paper account is priced from its live stream.
+                runCatching { com.optionslab.app.data.KiteStream.ensure() }
                 runCatching { com.optionslab.app.data.Paper.tick() }
                 runCatching { com.optionslab.app.data.Protections.tick(); protections.value = com.optionslab.app.data.Protections.active() }
                 runCatching { orderOwners.value = com.optionslab.app.data.Strategies.owners() }
@@ -1586,6 +1604,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                 recordPaperDay(snap)
                 Load.Done(snap)
             } catch (e: Exception) { Load.Failed(e.message ?: "could not read the paper account") }
+          } finally { paperLoading.set(false) }
         }
     }
 
