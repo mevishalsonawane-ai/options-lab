@@ -1513,16 +1513,10 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     fun paperBasket(underlying: String, expiry: LocalDate, legs: List<com.optionslab.engine.options.StrategyLeg>, area: String = "Strategy builder") = paperDo {
         var last = com.optionslab.app.data.Paper.Result(false, "no legs", emptyList())
         val tradable = legs.filter { it.active && it.strike != null && it.optionType != null }
-        // The account guard judges each leg as if the ones before it had filled (a wing counts as held for its short).
-        val g = com.optionslab.app.data.Guard
-        var acct = runCatching { com.optionslab.app.data.Paper.snapshot() }.getOrNull()?.let { g.paperAccount(it) }
+        // Paper is practice: the owner's own paper orders are never refused by the account guard (it guards Zerodha).
         for (l in tradable.sortedBy { if (it.side == com.optionslab.engine.options.Side.BUY) 0 else 1 }) {
             val right = if (l.optionType == com.optionslab.engine.options.OptionType.CE) com.optionslab.engine.Right.CE else com.optionslab.engine.Right.PE
             val c = com.optionslab.app.data.Paper.contractFor(underlying, expiry, l.strike!!, right) ?: error("${com.optionslab.engine.fmtG(l.strike!!)} $right is not listed")
-            val order = g.paperOrder(c, l.side.name, l.lots, com.optionslab.app.data.Paper.lastPrice(c) ?: 0.0)
-            val refused = g.check(order, acct, paper = true)
-            if (refused.isNotEmpty()) return@paperDo com.optionslab.app.data.Paper.Result(false, "Stopped at ${c.symbol} (account guard): " + refused.joinToString(" "), last.events)
-            acct = acct?.let { g.after(it, order) }
             last = com.optionslab.app.data.Paper.place(c, l.side.name, l.lots, "MARKET", "NRML", null, null)
             last.orderId?.let { com.optionslab.app.data.Strategies.tagOwner("paper:$it", com.optionslab.app.data.Origins.manual(area)) }
             if (!last.ok) return@paperDo com.optionslab.app.data.Paper.Result(false, "Stopped at ${c.symbol}: ${last.message}", last.events)
@@ -1607,18 +1601,9 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                    area: String = "Order form") = paperDo {
         val c = com.optionslab.app.data.Paper.contractFor(underlying, expiry, strike, right)
             ?: error("$underlying ${expiry} ${com.optionslab.engine.fmtG(strike)} $right is not listed")
-        val g = com.optionslab.app.data.Guard
-        // The account and the contract's price are read side by side, and that one price read serves both the guard
-        // and the fill (it used to be fetched twice more, one after the other).
-        val (snap, quote) = kotlinx.coroutines.coroutineScope {
-            val q = async { runCatching { com.optionslab.app.data.Paper.quote(c) }.getOrNull() }
-            runCatching { com.optionslab.app.data.Paper.snapshot() }.getOrNull() to q.await()
-        }
-        // A MARKET order is judged at the contract's current price, so the value and exposure limits apply to it too.
-        val order = g.paperOrder(c, action, lots, price ?: quote?.ltp
-            ?: snap?.positions?.positions?.firstOrNull { it.symbol == c.symbol }?.ltp ?: 0.0)
-        val refused = g.check(order, snap?.let { g.paperAccount(it) }, paper = true)
-        if (refused.isNotEmpty()) return@paperDo com.optionslab.app.data.Paper.Result(false, "Not placed (account guard): " + refused.joinToString(" "), emptyList())
+        // Paper is practice: the owner's own paper orders are never refused by the account guard, the kill switch
+        // included (it guards Zerodha orders and halts the bots). The one price read serves the fill.
+        val quote = runCatching { com.optionslab.app.data.Paper.quote(c) }.getOrNull()
         val r = com.optionslab.app.data.Paper.place(c, action, lots, priceType, product, price, trigger, quote)
         val source = com.optionslab.app.data.Origins.manual(area)
         r.orderId?.let { com.optionslab.app.data.Strategies.tagOwner("paper:$it", source) }

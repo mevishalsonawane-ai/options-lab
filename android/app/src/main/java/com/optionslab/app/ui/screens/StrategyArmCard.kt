@@ -124,7 +124,7 @@ internal fun StrategyArmContent(
         }
         // One control for the whole bot: stop it for today, start it again, or clear the kill switch.
         val (botState, botAction, botTone) = when {
-            killOn -> Triple("Kill switch ON: all orders blocked", "Clear kill switch", p.oxblood)
+            killOn -> Triple("Kill switch ON: Zerodha orders blocked", "Clear kill switch", p.oxblood)
             botStopped -> Triple("Bot stopped for today", "Start bot", p.verdigris)
             else -> Triple("Bot running: armed strategies start on time", "Stop bot for today", p.oxblood)
         }

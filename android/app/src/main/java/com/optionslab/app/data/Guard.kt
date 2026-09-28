@@ -107,6 +107,10 @@ object Guard {
         // An exit is never stopped: not by the limits, not when the account cannot be read, and not by the
         // kill switch (a drawdown turns it on by itself, and must not trap the account in what it holds).
         if (exit) return emptyList()
+        // Paper is practice: nothing refuses a paper order - no loss, drawdown, count, exposure or naked-short limit,
+        // and not the kill switch. The owner's own paper orders and the paper bots (ORB, Pine, strategies) run
+        // side by side; the guard and its kill switch protect the Zerodha account only.
+        if (paper) return emptyList()
         // Without the account the limits cannot be judged, so entries wait.
         if (account == null) return if (limits.killSwitch) killed
             else listOf("The account could not be read to check its limits; try again in a moment.")

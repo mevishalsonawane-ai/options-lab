@@ -413,41 +413,36 @@ class PaperScreenTest {
 
     // ---- guards -------------------------------------------------------------------------------
 
-    @Test fun theKillSwitchRefusesNewEntriesButStillLetsAPositionClose() {
+    @Test fun theKillSwitchNeverStopsAPaperOrderOfYourOwn() {
         val m = show()
         buyMarket(m)
         TradeFixtures.killSwitch(true)
-        // A new entry: refused by the account guard, nothing placed.
+        // Paper is practice: the kill switch guards Zerodha (and halts the bots), not the owner's paper orders.
         openForm(); tap("BUY"); tap("CE")
         waitPlaceable(); placeButton().performClick()
-        assertTrue(waitMessage(m, "Not placed (account guard)").contains("The kill switch is on"))
-        assertEquals("only the first order exists", 1, m.snap()!!.orders.orders.size)
-        // Closing is an exit: it goes through.
+        waitSnap(m, "the second order under the kill switch") { s -> s.orders.orders.size == 2 }
+        assertTrue(m.message.value?.contains("account guard") != true)
+        // Closing goes through too.
         closeForm()
-        tap("Close")        // the position
-        waitSnap(m, "the close under the kill switch") { s -> s.positions.positions.all { it.quantity == 0 } && s.orders.orders.size == 2 }
+        tap("Close")        // the first position
+        waitSnap(m, "the close under the kill switch") { s -> s.orders.orders.size == 3 }
     }
 
-    @Test fun aNakedShortIsRefusedByTheAccountGuard() {
+    @Test fun anUncoveredPaperSellGoesThrough() {
         val m = show()
         openForm()   // SELL is the default side
         waitPlaceable(); placeButton().performClick()
-        assertTrue(waitMessage(m, "Not placed (account guard)").contains("Naked short"))
-        assertTrue(m.snap()!!.orders.orders.isEmpty())
+        val s = waitSnap(m, "the short") { x -> x.positions.positions.any { it.quantity == -75 } }
+        assertEquals(1, s.orders.orders.size)
     }
 
-    @Test fun lotsUpToTheExposureCapGoAndOneMoreIsRefused() {
+    @Test fun paperLotsAreNotCappedByTheZerodhaLimits() {
         val m = show()
         openForm(); tap("BUY")
         tap("3"); compose.onNodeWithText("3").assertIsSelected()
         waitPlaceable(); placeButton().performClick()
-        assertTrue(waitMessage(m, "Not placed (account guard)").contains("Exposure limit"))
-        assertTrue(m.snap()!!.orders.orders.isEmpty())
-        m.message.value = null
-        tap("2")
-        waitPlaceable(); placeButton().performClick()
-        val s = waitSnap(m, "two lots") { x -> x.positions.positions.any { it.quantity == 150 } }
-        assertEquals(150, s.orders.orders.single().quantity)
+        val s = waitSnap(m, "three lots") { x -> x.positions.positions.any { it.quantity == 225 } }
+        assertEquals(225, s.orders.orders.single().quantity)
     }
 
     @Test fun aDoubleTapPlacesOneOrder() {

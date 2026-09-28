@@ -40,6 +40,16 @@ class GuardTest : RobolectricTest() {
         assertEquals(emptyList<String>(), Guard.check(order(side = "SELL"), null, exit = true))
     }
 
+    @Test fun paperKnowsNoLimitsAndNoKillSwitch() {
+        limits { it.copy(guardDailyLoss = 1_000.0, guardPaperDailyLoss = 1_000.0, guardMaxTrades = 1, guardPaperTrades = 1, guardCutoff = 14 * 60) }
+        val tired = account(dayPnl = -50_000.0, orders = 99, minute = 15 * 60)
+        assertEquals(emptyList<String>(), Guard.check(order(side = "SELL"), tired, paper = true))   // loss, count, cut-off, naked short
+        assertEquals("even with no account to read", emptyList<String>(), Guard.check(order(), null, paper = true))
+        limits { it.copy(guardKill = true) }
+        assertEquals("the kill switch guards Zerodha, not paper", emptyList<String>(), Guard.check(order(), account(), paper = true))
+        assertTrue(Guard.check(order(), account()).single().startsWith("The kill switch is on"))
+    }
+
     @Test fun withoutTheAccountEntriesWait() {
         limits { it }
         assertEquals(listOf("The account could not be read to check its limits; try again in a moment."), Guard.check(order(), null))
@@ -66,7 +76,7 @@ class GuardTest : RobolectricTest() {
     @Test fun aLiveDrawdownTurnsTheKillSwitchOnAPaperOneDoesNot() {
         limits { it.copy(guardDrawdownPct = 10.0, guardPaperDrawdownPct = 10.0, guardDailyLoss = 0.0, guardPaperDailyLoss = 0.0) }
         val down = account(capital = 100_000.0, equity = 85_000.0, peak = 100_000.0)
-        assertTrue(Guard.check(order(), down, paper = true).any { it.startsWith("Drawdown limit") })
+        assertEquals("paper is never refused for its drawdown", emptyList<String>(), Guard.check(order(), down, paper = true))
         assertFalse("a paper drawdown must not block live exits", AppSettings.load().guardKill)
         assertTrue(Guard.check(order(), down).any { it.startsWith("Drawdown limit") })
         assertTrue("a live drawdown engages the kill switch", AppSettings.load().guardKill)

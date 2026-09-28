@@ -168,7 +168,8 @@ object PineAuto {
             runCatching { exit(b, id, item, h, "no longer auto-trading") }
         }
         val s = AppSettings.load()
-        val stopped = Strategies.stoppedToday() || s.guardKill
+        // The kill switch guards Zerodha only: in Paper mode the scripts keep trading ("Stop for today" still stops them).
+        val stopped = Strategies.stoppedToday() || (s.guardKill && OrbArms.liveNow())
         for (item in on) runCatching { one(b, item, stopped) }.onFailure { e -> note(b, item.id, "Error: ${e.message ?: e.javaClass.simpleName}") }
         save(b)
     }

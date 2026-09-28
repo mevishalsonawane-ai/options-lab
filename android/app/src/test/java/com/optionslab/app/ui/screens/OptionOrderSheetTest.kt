@@ -284,19 +284,17 @@ class OptionOrderSheetTest {
         assertEquals(symbol, p.symbol); assertEquals(false, p.live); assertEquals(75, p.qty)
     }
 
-    @Test fun theKillSwitchRefusesTheOrderAndSaysWhy() {
+    @Test fun aPaperOrderGoesEvenWithTheKillSwitchOn() {
         TradeFixtures.killSwitch(true)
         val m = show()
         tap("Buy (paper)")
-        assertTrue(waitMessage(m, "Not placed (account guard)").contains("kill switch"))
-        m.loadPaper()
-        waitSnap(m, "the book") { true }.let { assertTrue(it.orders.orders.isEmpty()) }
+        waitSnap(m, "the paper buy") { it.orders.orders.size == 1 }
     }
 
-    @Test fun aSellWithNoCoverIsRefusedAsANakedShort() {
+    @Test fun anUncoveredPaperSellGoesThrough() {
         val m = show(initialBuy = false)
         tap("Sell (paper)")
-        assertTrue(waitMessage(m, "Not placed (account guard)").contains("Naked short"))
+        waitSnap(m, "the paper sell") { s -> s.orders.orders.size == 1 && s.orders.orders.single().action == "SELL" }
     }
 
     @Test fun aDoubleTapPlacesOneOrder() {

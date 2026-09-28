@@ -638,7 +638,7 @@ private fun GuardCard(model: AppModel) {
     }
     fun rupees(x: Double) = if (x >= 100_000) "₹${(x / 100_000).let { if (it % 1.0 == 0.0) it.toInt().toString() else it.toString() }}L" else "₹%,.0f".format(Locale.ENGLISH, x)
     LedgerCard(title = "Account guard", accent = if (s.guardKill) p.oxblood else null) {
-        Note("Checked on every order, paper and live, from a strategy or by hand. Closing a position is never blocked, not even by the kill switch.")
+        Note("Checked on every Zerodha order, from a strategy or by hand (paper is never refused). Closing a position is never blocked, not even by the kill switch.")
         ToggleRow("Kill switch", if (s.guardKill) "ON: new entries are refused until you turn it off; exits and square-offs still go through" else "Off. Turn on to stop all new entries at once", s.guardKill) { on -> confirmKill = on }
         val loss = listOf(1_000.0, 2_000.0, 5_000.0, 10_000.0, 0.0)
         ParamTokens("Daily loss limit", loss.map { (if (it == 0.0) "off" else rupees(it)) to (it == s.guardDailyLoss) }) { i -> model.update { it.copy(guardDailyLoss = loss[i]) } }
@@ -657,14 +657,8 @@ private fun GuardCard(model: AppModel) {
         val cut = listOf(14 * 60, 14 * 60 + 30, 14 * 60 + 55, 15 * 60, -1)
         ParamTokens("No new entries after", cut.map { (if (it < 0) "off" else "%02d:%02d".format(it / 60, it % 60)) to (it == s.guardCutoff) }) { i -> model.update { it.copy(guardCutoff = cut[i]) } }
         Text("Paper account", style = Type.body.copy(color = p.ink, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold), modifier = Modifier.padding(top = 12.dp))
-        Note("The paper account keeps its own loss, drawdown and order-count limits, raised as on the desktop for the ORB forward test (every entry, resting stop and exit counts as an order). The limits above apply to Zerodha.")
-        val pLoss = listOf(2_000.0, 6_000.0, 10_000.0, 0.0)
-        ParamTokens("Paper daily loss limit", pLoss.map { (if (it == 0.0) "off" else rupees(it)) to (it == s.guardPaperDailyLoss) }) { i -> model.update { it.copy(guardPaperDailyLoss = pLoss[i]) } }
-        val pDd = listOf(10.0, 30.0, 0.0)
-        ParamTokens("Paper max drawdown", pDd.map { (if (it == 0.0) "off" else "${it.toInt()}%") to (it == s.guardPaperDrawdownPct) }) { i -> model.update { it.copy(guardPaperDrawdownPct = pDd[i]) } }
-        val pTrades = listOf(10, 30, 60, 0)
-        ParamTokens("Paper orders per day", pTrades.map { (if (it == 0) "off" else "$it") to (it == s.guardPaperTrades) }) { i -> model.update { it.copy(guardPaperTrades = pTrades[i]) } }
-        Note("Hitting the drawdown limit also turns the kill switch on, as the desktop does.")
+        Note("Paper is practice: the limits above and the kill switch apply to Zerodha only. On paper your own orders and the bots (ORB, Pine, strategies) all go through, side by side; \"Stop for today\" still stops the bots.")
+        Note("Hitting the Zerodha drawdown limit also turns the kill switch on, as the desktop does.")
         ToggleRow("Square off on expiry day at 15:05", "Closes every option position expiring today, paper and live, MIS and NRML", s.expirySquareOff) { on ->
             model.update { it.copy(expirySquareOff = on) }
         }

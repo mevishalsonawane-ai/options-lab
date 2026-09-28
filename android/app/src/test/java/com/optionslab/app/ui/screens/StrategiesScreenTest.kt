@@ -370,7 +370,7 @@ class StrategyArmCardTest {
 
     @Test fun theKillSwitchIsClearedFromTheCard() {
         card(emptyList(), kill = true)
-        assertTrue(shown("Kill switch ON: all orders blocked"))
+        assertTrue(shown("Kill switch ON: Zerodha orders blocked"))
         tap("Clear kill switch"); tap("Clear")
         assertEquals(listOf("clearKill"), rec.calls)
     }
