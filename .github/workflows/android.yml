@@ -69,27 +69,39 @@ jobs:
       - name: Release keystore (optional)
         env:
           KEYSTORE_B64: ${{ secrets.OL_KEYSTORE_B64 }}
-          KS_PASS: ${{ secrets.OL_KEYSTORE_PASSWORD }}
-          KS_ALIAS: ${{ secrets.OL_KEY_ALIAS }}
+          KS_PASS_RAW: ${{ secrets.OL_KEYSTORE_PASSWORD }}
+          KEY_PASS_RAW: ${{ secrets.OL_KEY_PASSWORD }}
+          KS_ALIAS_RAW: ${{ secrets.OL_KEY_ALIAS }}
         run: |
           if [ -n "$KEYSTORE_B64" ]; then
-            # A secret pasted from a phone can carry line breaks or spaces: keep only base64 characters.
-            if printf '%s' "$KEYSTORE_B64" | tr -cd 'A-Za-z0-9+/=' | base64 -d > "$RUNNER_TEMP/release.jks" 2>/dev/null \
-               && keytool -list -keystore "$RUNNER_TEMP/release.jks" -storepass "$KS_PASS" -alias "$KS_ALIAS" >/dev/null 2>&1; then
-              echo "OL_KEYSTORE_PATH=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
-              echo "Release keystore loaded and checked."
-            else
+            # Secrets pasted from a phone can carry line breaks or spaces: keep only the characters each can hold.
+            b64=$(printf '%s' "$KEYSTORE_B64" | tr -cd 'A-Za-z0-9+/=')
+            ks_pass=$(printf '%s' "$KS_PASS_RAW" | tr -d '[:space:]')
+            key_pass=$(printf '%s' "$KEY_PASS_RAW" | tr -d '[:space:]')
+            alias=$(printf '%s' "$KS_ALIAS_RAW" | tr -d '[:space:]')
+            for v in "$ks_pass" "$key_pass"; do [ -n "$v" ] && echo "::add-mask::$v"; done
+            # make-release-key.sh gives the key the keystore's password, so that one password signs.
+            # Sizes only (never the values), so a bad paste can be told apart from a wrong password.
+            echo "keystore text: ${#b64} characters (make-release-key.sh prints 5732 for a 4298-byte key); passwords: ${#ks_pass} and ${#key_pass} characters (32 each); alias: ${#alias} characters (7)"
+            if ! printf '%s' "$b64" | base64 -d > "$RUNNER_TEMP/release.jks" 2>/dev/null; then
+              echo "::warning title=Release key not usable::OL_KEYSTORE_B64 is not valid base64 (cut short or changed while pasting). Re-paste the long line from github-secrets.txt. This APK is signed with a throwaway key."
               rm -f "$RUNNER_TEMP/release.jks"
-              echo "::warning title=Release key not usable::OL_KEYSTORE_B64 does not decode to a keystore that opens with OL_KEYSTORE_PASSWORD and OL_KEY_ALIAS. Re-paste the secrets exactly as printed by android/tools/make-release-key.sh. This APK is signed with a throwaway key."
+            elif ! keytool -list -keystore "$RUNNER_TEMP/release.jks" -storepass "$ks_pass" >/dev/null 2>&1; then
+              echo "::warning title=Release key not usable::The keystore ($(wc -c < "$RUNNER_TEMP/release.jks") bytes) does not open with OL_KEYSTORE_PASSWORD. Re-paste the password from github-secrets.txt (or the keystore text if its size above is not 5732). This APK is signed with a throwaway key."
+              rm -f "$RUNNER_TEMP/release.jks"
+            elif ! keytool -list -keystore "$RUNNER_TEMP/release.jks" -storepass "$ks_pass" -alias "$alias" >/dev/null 2>&1; then
+              echo "::warning title=Release key not usable::The keystore opens, but has no key named by OL_KEY_ALIAS (it should be iraalgo). This APK is signed with a throwaway key."
+              rm -f "$RUNNER_TEMP/release.jks"
+            else
+              echo "OL_KEYSTORE_PATH=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
+              { echo "OL_KEYSTORE_PASSWORD=$ks_pass"; echo "OL_KEY_PASSWORD=$ks_pass"; echo "OL_KEY_ALIAS=$alias"; } >> "$GITHUB_ENV"
+              echo "Release keystore loaded and checked."
             fi
           else
             echo "::warning title=Release APK signed with a throwaway key::No OL_KEYSTORE_B64 secret: this APK will not install over a previous build. Run android/tools/make-release-key.sh once and add the four secrets it prints."
           fi
       - name: Assemble
-        env:
-          OL_KEYSTORE_PASSWORD: ${{ secrets.OL_KEYSTORE_PASSWORD }}
-          OL_KEY_ALIAS: ${{ secrets.OL_KEY_ALIAS }}
-          OL_KEY_PASSWORD: ${{ secrets.OL_KEY_PASSWORD }}
+        # The keystore step puts the cleaned passwords and alias in the environment (masked in the log).
         # The app's unit and UI tests run in the app-tests job, alongside this one.
         run: ./gradlew --no-daemon :app:assembleDebug :app:assembleRelease
       - name: Sandbox report (every permission the APK holds)
