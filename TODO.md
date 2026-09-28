@@ -60,6 +60,10 @@ Source paths prefixed `NTA:` are in D:\New Trading app.
       `D:\files\options-lab` clone (not present in D:\IraAlgo).
 - [ ] B9. Later (owner, 2026-09-28): replace the chart terminal in `android/app/src/main/assets/chart/` (Apache-2.0 code
       that must keep its NOTICE/LICENSE while it ships) with the app's own native chart, then delete the folder and its notice.
+- [ ] B10. (owner, 2026-09-28) Faster app updates: take the tests out of the APK build path so a fix reaches the
+      phone in minutes. Note: the "Build APK" job already runs alongside the tests and uploads the signed APK even when
+      a test fails (about 9 minutes); the remaining work is to skip or trim the test shards on a quick-fix push
+      (e.g. a "[quick]" commit tag or a separate build-only workflow) while keeping the full tests on main.
 
 ## D. Enhancements (owner go-ahead 2026-09-26: all at once; answers: real-order changes need the PIN once;
 ##    no Telegram; morning check and end-of-day report always show)
