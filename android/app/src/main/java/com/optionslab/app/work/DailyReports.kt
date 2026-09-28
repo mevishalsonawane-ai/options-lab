@@ -92,6 +92,11 @@ object DailyReports {
         ok(!Holidays.stale(Market.today()), "NSE holiday list up to date")
         val contracts = runCatching { Market.contracts().size }.getOrDefault(0)
         ok(contracts > 0, if (contracts > 0) "Today's option contracts loaded ($contracts)" else "Option contracts could not be loaded")
+        // Zerodha's own instrument list, read now so the first live order after 09:15 does not wait for it.
+        if (Broker.loggedIn) {
+            val kite = runCatching { Broker.instruments().size }.getOrDefault(0)
+            ok(kite > 0, if (kite > 0) "Zerodha instrument list ready ($kite)" else "Zerodha instrument list could not be read")
+        }
         val orb = runCatching { OrbArms.view() }.getOrNull()
         val armed = orb?.arms?.filter { it.armed }?.map { it.arm.label }.orEmpty()
         lines += "• ORB arms: " + if (armed.isEmpty()) "none armed" else armed.joinToString() + if (s.live && s.allowRealOrders) " (LIVE, automatic)" else " (paper)"

@@ -41,7 +41,7 @@ Source paths prefixed `NTA:` are in D:\New Trading app.
       a heartbeat each pass; an alarm checks it every 5 min from 09:17 to 15:30, restarts a watch silent for
       over 3 min and posts one "Market watch stopped" notice per stall (approval channel, so it always shows).
 - [x] A11. (dropped by the owner, 2026-09-28: no Telegram; phone notifications only) Telegram alerts.
-- [ ] A12. Optional: pre-market routine (symbol refresh, daily report). AI Signals: skip unless revived (research refused it).
+- [x] A12. (done 2026-09-28: the 09:00 morning check loads today's contract list and, when logged in, Zerodha's instrument list; 15:45 day report; AI Signals skipped) Optional: pre-market routine (symbol refresh, daily report). AI Signals: skip unless revived (research refused it).
 
 ## B. IraAlgo housekeeping
 

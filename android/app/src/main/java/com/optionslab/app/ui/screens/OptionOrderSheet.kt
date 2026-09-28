@@ -123,7 +123,7 @@ fun OptionOrderSheet(model: AppModel, pick: ChainPick, initialBuy: Boolean = tru
             ) {
               // The handle: a full-width strip that takes the drag (and a tap, which opens or folds the sheet).
               Box(
-                  Modifier.fillMaxWidth().height(26.dp)
+                  Modifier.fillMaxWidth().height(48.dp)
                       .semantics { contentDescription = if (expanded) "Fold the order panel" else "Open the order panel fully" }
                       .clickable(role = Role.Button) { expanded = !expanded }
                       .pointerInput(Unit) {
