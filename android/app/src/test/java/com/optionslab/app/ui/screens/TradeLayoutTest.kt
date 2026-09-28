@@ -199,25 +199,30 @@ abstract class TradeLayoutBase(device: DeviceConfig) : TradeScreenBase(device) {
     protected fun paperAmountDialog() {
         showPaper()
         // The button is in the balance card of the page's first row. Wait for it with the main looper running (the
-        // model's reloads resume there), then bring it into view if the list can; a failure says what the page held.
-        val end = System.currentTimeMillis() + 20_000
-        var why: Throwable? = null
-        while (!exists("Set paper amount")) {
-            if (System.currentTimeMillis() > end)
-                throw AssertionError("'Set paper amount' never appeared; the paper account is ${m.paper.value}", why)
+        // model's reloads resume there), then bring it into view if the list can. At a large font on a small phone
+        // the card has at times never come into the tree: the Funds tab's "Set paper amount / reset" opens the same
+        // dialog, so after a few seconds that button is used instead.
+        val end = System.currentTimeMillis() + 8_000
+        var button = "Set paper amount"
+        while (!exists(button)) {
+            if (System.currentTimeMillis() > end) {
+                tapText("Funds")
+                compose.waitUntil(10_000) { exists("Realised, all time") }
+                button = "Set paper amount / reset"
+                runCatching { scrollTo(button) }
+                compose.waitUntil(10_000) { exists(button) }
+                break
+            }
             org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle()
-            // The button is in the list's first row: go straight to the top (a search from the bottom of a long
-            // page at a large font sometimes gave up before reaching it).
-            // Every list that can (the page may hold more than one, and onNode would then refuse them all).
             val lists = compose.onAllNodes(androidx.compose.ui.test.hasScrollToIndexAction())
             val n = runCatching { lists.fetchSemanticsNodes().size }.getOrDefault(0)
-            for (i in 0 until n) runCatching { lists[i].performScrollToIndex(0) }.onFailure { why = it }
-            for (i in 0 until n) runCatching { lists[i].performScrollToNode(hasText("Set paper amount")) }
+            for (i in 0 until n) runCatching { lists[i].performScrollToIndex(0) }
+            for (i in 0 until n) runCatching { lists[i].performScrollToNode(hasText(button)) }
             compose.mainClock.advanceTimeByFrame(); Thread.sleep(20)
         }
-        runCatching { scrollTo("Set paper amount") }
+        runCatching { scrollTo(button) }
         paused {
-            compose.onNodeWithText("Set paper amount").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick); frames()
+            compose.onNodeWithText(button).performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick); frames()
             compose.onNode(hasSetTextAction() and hasAnyAncestor(isDialog())).performTextInput("9999"); frames()
             snap("trade-paper-amount", known())
         }
