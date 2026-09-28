@@ -1026,9 +1026,14 @@ internal fun ManualOrder(model: AppModel) {
         clearContract()
         try {
             // The index price first, so the strike chosen below is the one nearest THIS index.
-            spot = try { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { Broker.indexQuote(underlying)?.last } }
+            // Each read gets one more try a second later: a blip (another screen loading the same list) must not
+            // leave the form with no strike picked.
+            suspend fun <T> twice(read: suspend () -> T): T = try { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { read() } }
+                catch (e: kotlinx.coroutines.CancellationException) { throw e }
+                catch (e: Exception) { kotlinx.coroutines.delay(1_000); kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { read() } }
+            spot = try { twice { Broker.indexQuote(underlying)?.last ?: error("no index price") } }
                 catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { null }
-            val list = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            val list = twice {
                 Broker.instruments().filter { it.name == underlying && !it.expiry.isBefore(Market.today()) }.map { it.expiry }.distinct().sorted().take(6)
             }
             expiries = list
