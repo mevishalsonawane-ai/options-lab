@@ -1,0 +1,7 @@
+crypto/results/alarms_mtf_hourly.csv 705135
+crypto/results/mtf.json 14196
+crypto/results/suite_mtf.json 39859
+forex/results/alarms_mtf_hourly.csv 702344
+forex/results/mtf.json 12507
+forex/results/suite_mtf.json 30866
+index.txt 0
