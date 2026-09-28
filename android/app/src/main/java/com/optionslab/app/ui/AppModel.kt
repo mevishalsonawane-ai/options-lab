@@ -699,9 +699,11 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    /** [quiet]: a background refresh keeps the last figures on screen instead of a spinner. */
+    /** Every refresh keeps the last figures on screen instead of a spinner; [quiet] is kept for the callers' intent. */
+    @Suppress("UNUSED_PARAMETER")
     fun loadAccount(quiet: Boolean = false) {
-        if (!quiet || account.value !is Load.Done) account.value = Load.Busy("Reading your Zerodha account")
+        // A refresh keeps the books on screen while it reads (a spinner only while there is nothing to show yet).
+        if (account.value !is Load.Done) account.value = Load.Busy("Reading your Zerodha account")
         viewModelScope.launch(Dispatchers.IO) {
             account.value = try {
                 val b = com.optionslab.app.data.Broker
