@@ -57,6 +57,7 @@ import com.optionslab.app.ui.components.BrandEmblem
 import com.optionslab.app.ui.components.BrandLogo
 import com.optionslab.app.ui.theme.LocalPalette
 import com.optionslab.app.ui.theme.Type
+import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -84,9 +85,24 @@ fun LockScreen(
     var broken by remember { mutableStateOf(false) }
     val shake = remember { Animatable(0f) }
 
-    // Ask for the fingerprint as soon as it is allowed (the device check may finish a moment after this screen appears).
-    var asked by remember { mutableStateOf(false) }
-    LaunchedEffect(biometricLabel) { if (!setup && biometricLabel != null && !asked) { asked = true; delay(300); onBiometric() } }
+    // Ask for the fingerprint by itself once each time the app comes to the front. The app seals while it is in the
+    // background, so a prompt asked for then was cancelled by Android and never came back: it waits until the screen
+    // is actually in front (RESUMED). Once per visit: cancelling it (or its dialog pausing the screen) does not
+    // bring it back in a loop; leaving the app and returning arms it again. The device check may also finish a
+    // moment after this screen appears, so it waits for the label as well.
+    val owner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    var armed by remember { mutableStateOf(true) }
+    androidx.compose.runtime.DisposableEffect(owner) {
+        val watch = androidx.lifecycle.LifecycleEventObserver { _, e -> if (e == androidx.lifecycle.Lifecycle.Event.ON_STOP) armed = true }
+        owner.lifecycle.addObserver(watch)
+        onDispose { owner.lifecycle.removeObserver(watch) }
+    }
+    LaunchedEffect(owner, biometricLabel, armed) {
+        if (setup || biometricLabel == null || !armed) return@LaunchedEffect
+        owner.lifecycle.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.RESUMED) {
+            if (armed) { delay(300); armed = false; onBiometric() }
+        }
+    }
 
     // Exactly this many digits unlock; an older PIN of unknown length still uses the tick key.
     val target: Int? = if (setup) PinLock.LENGTH else PinLock.length()
