@@ -29,7 +29,7 @@ object Diag {
     fun redact(s: String): String = SECRETISH.replace(s, "‹redacted›")
 
     @Synchronized
-    private fun lines(): ArrayDeque<String> {
+    private fun diary(): ArrayDeque<String> {
         cache?.let { return it }
         val out = ArrayDeque<String>()
         runCatching {
@@ -53,7 +53,7 @@ object Diag {
     @Synchronized
     private fun keep(line: String) {
         runCatching {
-            val l = lines()
+            val l = diary()
             l.addLast(line)
             while (l.size > MAX) l.removeFirst()
             Vault.writeFile(file, JSONArray(l.toList()).toString().toByteArray(Charsets.UTF_8))
@@ -73,7 +73,7 @@ object Diag {
         append("Market open: ${Market.isOpen()} · Zerodha linked: ${Broker.linked} · logged in: ${Broker.loggedIn}\n")
         append("Static IP set: ${StaticIp.registered != null} · relay on: ${Relay.enabled} · relay connected: ${runCatching { Relay.connected }.getOrDefault(false)}\n")
         append("\n-- Events (newest last) --\n")
-        synchronized(this@Diag) { lines().toList() }.takeLast(400).forEach { append(it).append('\n') }
+        synchronized(this@Diag) { diary().toList() }.takeLast(400).forEach { append(it).append('\n') }
         append("\n-- Strategy notes --\n")
         runCatching { Strategies.log().take(40).reversed() }.getOrDefault(emptyList()).forEach {
             append("${TIME.format(Instant.ofEpochMilli(it.at))} ${it.strategy}: ${redact(it.message)}\n")
