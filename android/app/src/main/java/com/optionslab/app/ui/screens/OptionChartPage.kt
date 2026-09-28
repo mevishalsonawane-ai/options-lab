@@ -14,9 +14,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentHeight
-import androidx.compose.foundation.layout.navigationBarsPadding
+import com.optionslab.app.ui.components.clearOfBars
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
@@ -104,11 +103,12 @@ internal fun OptionChartContent(
     val change = if (last != null && open != null) last - open else null
     val up = (change ?: 0.0) >= 0
 
-    // decorFitsSystemWindows = false: the dialog window then receives the system bars' insets, so navigationBarsPadding()
-    // keeps the bottom clear of the gesture bar (with the default the insets are never delivered and read as 0).
+    val bars = com.optionslab.app.ui.components.outerBars()
+    // The bars' height is measured here, on the screen, as well: some phones tell the dialog window nothing (the
+    // sheet's button then sat under the gesture bar). clearOfBars keeps clear by the larger of the two.
     Dialog(onDismissRequest = onClose, properties = DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy, usePlatformDefaultWidth = false,
         decorFitsSystemWindows = false)) {
-        Column(Modifier.fillMaxSize().background(p.paper).statusBarsPadding().navigationBarsPadding()) {
+        Column(Modifier.fillMaxSize().background(p.paper).clearOfBars(bars)) {
             Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text("‹", style = Type.masthead.copy(color = p.ink, fontSize = 28.sp), modifier = Modifier.clickable(onClick = onClose).padding(horizontal = 12.dp, vertical = 4.dp))
                 Column(Modifier.weight(1f)) {

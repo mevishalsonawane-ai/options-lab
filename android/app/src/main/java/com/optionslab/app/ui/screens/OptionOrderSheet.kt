@@ -17,7 +17,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.navigationBarsPadding
+import com.optionslab.app.ui.components.clearOfBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -93,8 +93,9 @@ fun OptionOrderSheet(model: AppModel, pick: ChainPick, initialBuy: Boolean = tru
     var placing by remember { mutableStateOf(false) }
     val title = "${pick.underlying} ${pick.expiry.format(DateTimeFormatter.ofPattern("d MMM", Locale.ENGLISH)).uppercase()} ${fmtG(pick.strike)} ${pick.right.name}"
 
-    // decorFitsSystemWindows = false: the dialog window then receives the system bars' insets, so navigationBarsPadding()
-    // keeps the bottom clear of the gesture bar (with the default the insets are never delivered and read as 0).
+    // The bars' height is measured here, on the screen, as well: some phones tell the dialog window nothing (the
+    // sheet's button then sat under the gesture bar). clearOfBars keeps clear by the larger of the two.
+    val bars = com.optionslab.app.ui.components.outerBars()
     Dialog(onDismissRequest = onClose, properties = DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy, usePlatformDefaultWidth = false,
         decorFitsSystemWindows = false)) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
@@ -107,7 +108,7 @@ fun OptionOrderSheet(model: AppModel, pick: ChainPick, initialBuy: Boolean = tru
                     .border(1.dp, p.rule, RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp))
                     // Taps inside the sheet must not reach the backdrop, which closes it.
                     .pointerInput(Unit) { detectTapGestures { } }
-                    .navigationBarsPadding()
+                    .clearOfBars(bars, top = false)
                     .imePadding()
                     .heightIn(max = (LocalConfiguration.current.screenHeightDp * 0.92f).dp)
                     .padding(horizontal = 20.dp, vertical = 14.dp),
