@@ -113,11 +113,26 @@ object Paper {
      * from Upstox's public feed, with the day's range so the stale-quote check works.
      */
     suspend fun quote(c: Contract): Quote? {
-        streamQuote(c)?.let { return it }
+        streamQuote(c)?.let { return it.also { remember(c.symbol, it) } }
         val bars = Net.intraday(c.feedKey).filter { it.istDate == Market.today() }
         if (bars.isEmpty()) return null
         return Quote(bars.last().close, high = bars.maxOf { it.high }, low = bars.minOf { it.low }, open = bars.first().open,
-            volume = bars.sumOf { it.volume })
+            volume = bars.sumOf { it.volume }).also { remember(c.symbol, it) }
+    }
+
+    /** The last price read for each symbol and when (the screen re-prices every few seconds). */
+    private val lastQuotes = java.util.concurrent.ConcurrentHashMap<String, Pair<Long, Quote>>()
+    private fun remember(symbol: String, q: Quote) { lastQuotes[symbol] = System.currentTimeMillis() to q }
+
+    /**
+     * A price for a close or a cancel the owner just slid: the stream's tick, else one read in the last
+     * [maxAgeMs], else a fresh read. The slide acts at once instead of waiting on the day's candles.
+     */
+    private suspend fun quickQuote(symbol: String, maxAgeMs: Long = 5_000): Quote? {
+        val c = book().contracts[symbol] ?: return null
+        streamQuote(c)?.let { return it }
+        lastQuotes[symbol]?.let { (at, q) -> if (System.currentTimeMillis() - at <= maxAgeMs) return q }
+        return runCatching { quote(c) }.getOrNull()
     }
 
     /** Zerodha's instrument token per paper symbol (0 = not listed there), looked up once. */
@@ -204,7 +219,7 @@ object Paper {
 
     suspend fun cancel(orderId: String): Result {
         val sym = book().state.orders.firstOrNull { it.orderId == orderId }?.symbol
-        val q = sym?.let { quotes(listOf(it))[Sandbox.key(it, "NFO")] }
+        val q = sym?.let { quickQuote(it) }
         synchronized(this) {
             val b = book()
             val out = engine(b.capital, b.contracts).cancel(b.state, orderId, Market.now(), q)
@@ -214,7 +229,7 @@ object Paper {
     }
 
     suspend fun close(symbol: String, product: String): Result {
-        val q = quotes(listOf(symbol))[Sandbox.key(symbol, "NFO")]
+        val q = quickQuote(symbol)
         synchronized(this) {
             val b = book()
             val out = engine(b.capital, b.contracts).closePosition(b.state, symbol, "NFO", product, q, Market.now())
@@ -284,5 +299,5 @@ object Paper {
     fun reset(capital: BigDecimal) { save(fresh(capital, book().contracts)) }
 
     @Synchronized
-    fun wipe() { cache = null; file.delete() }
+    fun wipe() { cache = null; file.delete(); lastQuotes.clear() }
 }
