@@ -1,6 +1,6 @@
 # IraAlgo TODO
 
-Gap analysis of D:\New Trading app (OpenAlgo fork, branch `custom`) against
+Gap analysis of D:\New Trading app (desktop app, branch `custom`) against
 D:\IraAlgo (options-lab @ bba1def), 2026-09-25. Nothing below is implemented
 yet; each item waits for an explicit go-ahead.
 
