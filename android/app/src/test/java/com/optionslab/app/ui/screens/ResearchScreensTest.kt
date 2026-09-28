@@ -430,6 +430,19 @@ class ResearchScreensLayoutTest(device: DeviceConfig) : ScreenTest(device) {
         if (device.name == "phone-font1.3-light") smokeEveryAction()
     }
 
+    /** Who placed each row: a strategy's short and its resting stop on paper, a hand order on Zerodha. */
+    @Test fun homeSources() {
+        val trades = listOf(com.optionslab.engine.sandbox.TradeRow("T0", "P0", HomeFixtures.position.symbol, "NFO", "SELL", 75, 120.0, 120.0, 9_000.0,
+            "NRML", "", "2026-09-28 10:05:00"))
+        val owners = mapOf("paper:P0" to "ORB · entry", "paper:P1" to "ORB · stop")
+        checkScreen("home-sources", BUGS) {
+            AlmanacContent(false, false, mapOf("BANKNIFTY" to HomeFixtures.quote), null, HomeFixtures.daily, Load.Idle,
+                Load.Done(HomeFixtures.paper.copy(trades = trades)), {}, {}, owners = owners) {}
+        }
+        compose.onNodeWithText("Opened by ORB").assertExists()
+        compose.onNodeWithText("Strategy: ORB · stop").assertExists()
+    }
+
     @Test fun homeLiveLoggedOut() = checkScreen("home-live-logged-out", BUGS) {
         AlmanacContent(true, false, emptyMap(), "Loading prices…", emptyList(), Load.Idle, Load.Idle, {}, {}) {}
     }
