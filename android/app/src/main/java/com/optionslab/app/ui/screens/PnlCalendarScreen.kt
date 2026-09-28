@@ -191,6 +191,8 @@ fun PnlCalendarScreen(model: AppModel) {
                 if (owner != "All") Note("$owner: realised round trips by the day they closed, after charges.", Modifier.padding(top = 6.dp))
             }
         }
+        // A past date's orders, trades and positions live here only (the Trade tab shows today's): tap a date to list its fills.
+        picked?.takeIf { !yearView }?.let { d -> item(key = "day-$d") { DayTrades(live, d, trips, owners, tick) } }
         item { Summary(month, days) }
         item { YearStrip(month.year, all, live) }
         item { StrategyComparison(trips, owners) }
@@ -612,5 +614,42 @@ private fun JournalCard(trips: List<com.optionslab.engine.RoundTrips.Trip>) {
         }
         if (notes.isNotEmpty()) Eyebrow("Latest notes", Modifier.padding(top = 10.dp))
         notes.forEach { e -> Text("• " + e.note + if (e.tags.isNotEmpty()) "  [${e.tags.joinToString()}]" else "", style = Type.bodySmall.copy(color = p.ink, fontSize = 12.sp), modifier = Modifier.padding(top = 3.dp)) }
+    }
+}
+
+/** Every fill on [day] (time, side, contract, qty at price, who placed it) and the day's closed round trips after charges. */
+@Composable
+private fun DayTrades(live: Boolean, day: LocalDate, trips: List<com.optionslab.engine.RoundTrips.Trip>, owners: Map<String, String>, tick: Int) {
+    val p = LocalPalette.current
+    val fills by produceState<List<com.optionslab.engine.RoundTrips.Fill>>(emptyList(), live, day, tick) {
+        value = withContext(Dispatchers.IO) {
+            runCatching { com.optionslab.app.data.TradeBook.fills(live).filter { it.at.toLocalDate() == day }.sortedBy { it.at } }.getOrDefault(emptyList())
+        }
+    }
+    val closed = trips.filter { it.day == day }
+    val title = day.format(java.time.format.DateTimeFormatter.ofPattern("EEE d MMM yyyy", Locale.ENGLISH))
+    LedgerCard(title = "Trades on $title") {
+        if (fills.isEmpty()) { Note(if (live) "No Zerodha trades recorded that day." else "No paper trades that day.", Modifier.padding(top = 4.dp)); return@LedgerCard }
+        fills.forEach { f ->
+            val buy = f.side > 0
+            val who = com.optionslab.app.data.Origins.display(owners[f.orderId] ?: com.optionslab.app.data.Origins.MANUAL).first
+            Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(f.at.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm", Locale.ENGLISH)),
+                    style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp), modifier = Modifier.widthIn(min = 44.dp))
+                androidx.compose.foundation.layout.Column(Modifier.weight(1f)) {
+                    Text("${if (buy) "BUY" else "SELL"} ${f.symbol} ×${f.qty}", style = Type.body.copy(color = if (buy) p.verdigris else p.oxblood, fontSize = 13.sp, fontWeight = FontWeight.SemiBold))
+                    Text(who, style = Type.label.copy(color = p.inkSoft, fontSize = 11.sp))
+                }
+                Text(String.format(Locale.ENGLISH, "₹%,.2f", f.price), style = Type.figure.copy(color = p.ink, fontSize = 13.sp))
+            }
+        }
+        if (closed.isNotEmpty()) {
+            val net = closed.sumOf { it.net }
+            Spacer(Modifier.height(6.dp))
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text("${closed.size} closed trade${if (closed.size == 1) "" else "s"}, after charges", style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp), modifier = Modifier.weight(1f))
+                Text(rupees(net), style = Type.figure.copy(color = if (net >= 0) p.verdigris else p.oxblood, fontSize = 15.sp, fontWeight = FontWeight.SemiBold))
+            }
+        }
     }
 }

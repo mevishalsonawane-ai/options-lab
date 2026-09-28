@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.imePadding
 import com.optionslab.app.ui.components.clearOfBars
@@ -98,25 +100,52 @@ fun OptionOrderSheet(model: AppModel, pick: ChainPick, initialBuy: Boolean = tru
     val sysBars = com.optionslab.app.ui.components.outerBars()
     Dialog(onDismissRequest = onClose, properties = DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy, usePlatformDefaultWidth = false,
         decorFitsSystemWindows = false)) {
+        // Dragged by its handle: up opens it taller, down folds it back, and a long pull down closes it.
+        var expanded by remember { mutableStateOf(false) }
+        var drag by remember { androidx.compose.runtime.mutableFloatStateOf(0f) }
+        val density = androidx.compose.ui.platform.LocalDensity.current
+        val screenH = LocalConfiguration.current.screenHeightDp
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
             // The backdrop closes the sheet: a sibling behind it (not its parent), so the sheet's texts do not
             // merge into this one "Close" button for TalkBack, and a double tap on them does not close it.
             Box(Modifier.matchParentSize().semantics { contentDescription = "Close" }.clickable(role = Role.Button, onClick = onClose))
             Column(
                 Modifier.fillMaxWidth()
+                    .offset { androidx.compose.ui.unit.IntOffset(0, drag.coerceAtLeast(0f).toInt()) }
                     .background(p.card, RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp))
                     .border(1.dp, p.rule, RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp))
                     // Taps inside the sheet must not reach the backdrop, which closes it.
                     .pointerInput(Unit) { detectTapGestures { } }
                     .clearOfBars(sysBars, top = false)
                     .imePadding()
-                    .heightIn(max = (LocalConfiguration.current.screenHeightDp * 0.92f).dp)
-                    .padding(horizontal = 20.dp, vertical = 14.dp),
+                    .heightIn(max = (screenH * (if (expanded) 0.92f else 0.72f)).dp)
+                    .padding(start = 20.dp, end = 20.dp, bottom = 14.dp),
             ) {
+              // The handle: a full-width strip that takes the drag (and a tap, which opens or folds the sheet).
+              Box(
+                  Modifier.fillMaxWidth().height(26.dp)
+                      .semantics { contentDescription = if (expanded) "Fold the order panel" else "Open the order panel fully" }
+                      .clickable(role = Role.Button) { expanded = !expanded }
+                      .pointerInput(Unit) {
+                          detectVerticalDragGestures(
+                              onDragEnd = {
+                                  val dp = drag / density.density
+                                  when {
+                                      dp > 120f -> onClose()
+                                      dp > 40f && expanded -> expanded = false
+                                      dp < -40f -> expanded = true
+                                  }
+                                  drag = 0f
+                              },
+                              onDragCancel = { drag = 0f },
+                          ) { change, dy -> change.consume(); drag += dy }
+                      },
+                  contentAlignment = Alignment.Center,
+              ) {
+                  Box(Modifier.size(width = 36.dp, height = 4.dp).background(p.rule, CircleShape))
+              }
               // The choices scroll; the order button below them is always on screen.
               Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState())) {
-                Box(Modifier.align(Alignment.CenterHorizontally).size(width = 36.dp, height = 4.dp).background(p.rule, CircleShape))
-                Spacer(Modifier.height(10.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
                         Text(title, style = Type.title.copy(color = p.ink, fontSize = 17.sp))
