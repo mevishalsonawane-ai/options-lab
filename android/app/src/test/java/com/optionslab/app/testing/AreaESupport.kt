@@ -41,6 +41,8 @@ object AreaE {
         Alerts.queue.value.forEach { Alerts.dismiss(it.id) }
         Alerts.forgetPosted()
         runCatching { Holidays::class.java.getDeclaredField("cache").apply { isAccessible = true }.set(null, null) }
+        // A paper book left by an earlier test in this JVM would be priced from Upstox's feed: start with none.
+        com.optionslab.app.data.Paper.wipe()
         MainActivity.tabRequests.value = null
         MainActivity.closeRequests.value = null
         SessionLock.lock()

@@ -134,6 +134,24 @@ class PineAutoLiveTest : RobolectricTest() {
         assertEquals("fresh candles with the same signal do trade", 1, kite.placed.size)
     }
 
+    @Test fun aChangeMissedDuringAPauseIsNotChased() {
+        switchOn()
+        pass(51_900.0)
+        // The watch did not run for 15 minutes; the signal turned BUY two candles ago, while it was away.
+        candles = { AutomationSupport.bars(now, List(7) { 51_900.0 } + List(3) { 52_010.0 }) }
+        pass(52_010.0, minutes = 15)
+        assertTrue("a change made during the pause is not bought late", kite.placed.isEmpty())
+        assertTrue(log(), log().contains("Back after a pause: the signal is now BUY"))
+    }
+
+    @Test fun aChangeOnTheNewestCandleAfterAPauseStillTrades() {
+        switchOn()
+        pass(51_900.0)
+        // Away for 15 minutes, but the signal stayed SELL until the newest candle turned it BUY.
+        pass(52_010.0, minutes = 15)
+        assertEquals(1, kite.placed.size)
+    }
+
     @Test fun nothingIsDecidedOutsideMarketHours() {
         switchOn()
         pass(51_900.0)

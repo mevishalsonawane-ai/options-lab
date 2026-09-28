@@ -252,7 +252,7 @@ object PineAuto {
             target < 0 -> if (item.auto.shortWith == "put") "PE" else null
             else -> null
         }
-        if (resumed) {
+        if (resumed && !changedOnLastBar(item, script, r, bars, watchedBefore, prev, target)) {
             // What it holds is sold if the signal no longer backs it; nothing new is bought until the next change.
             note(b, id, "Back after a pause: the signal is now ${describe(target)}; it trades on the next change, not this one")
             if (a.mode != "alert" && h != null && h.right != want) exit(b, id, item, h, "signal changed during a pause")
@@ -298,6 +298,29 @@ object PineAuto {
         else h.kite?.let { sym -> if (!Broker.loggedIn) null else Broker.quotes(listOf("NFO:$sym"))["NFO:$sym"]?.last?.takeIf { it > 0 } }
 
     /** +1 long, -1 short, 0 flat: the strategy's own position, or the last buy/sell signal. */
+    /**
+     * Whether the change from [prev] to [target] was made by the newest candle itself, not by one the pause hid:
+     * the candles after the last one watched ([watched], epoch seconds; null when none) are replayed up to the
+     * one before the newest, and the change is the newest candle's own when the signal was still [prev] there.
+     * A feed that stalled for a while and came back does not lose a change made just now.
+     */
+    private fun changedOnLastBar(item: PineScripts.Item, s: Pine.Script, r: Pine.Run, bars: List<com.optionslab.engine.Upstox.Bar>,
+                                 watched: Long?, prev: Int, target: Int): Boolean {
+        val n = r.position.size - 1
+        if (n < 1 || n != bars.size - 1) return false
+        // A strategy's position after the newest candle holds the orders of the candles before it.
+        if (item.auto.buy == "strategy" && s.kind == Pine.Kind.STRATEGY) return Math.signum(r.position[n]).toInt() != target
+        val bi = s.signals.indexOf(item.auto.buy); val si = s.signals.indexOf(item.auto.sell)
+        val from = if (watched == null) 0 else bars.indexOfLast { it.epochSecond <= watched } + 1
+        var t = prev
+        for (i in from until n) t = when {
+            bi >= 0 && r.signals[bi][i] -> 1
+            si >= 0 && r.signals[si][i] -> -1
+            else -> t
+        }
+        return t == prev
+    }
+
     private fun targetOf(item: PineScripts.Item, s: Pine.Script, r: Pine.Run, prev: Int): Int {
         val n = r.position.size - 1
         if (n < 0) return prev

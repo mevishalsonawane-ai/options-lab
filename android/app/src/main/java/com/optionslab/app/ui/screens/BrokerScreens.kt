@@ -974,9 +974,11 @@ internal fun CredentialsForm(model: AppModel, onDone: () -> Unit) {
                 val e = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { model.saveBrokerCredentials(k, s, pn, bioBlob) }
                 saving = false; err = e; pin = ""
                 if (e == null) {
-                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { draft(DRAFT_KEY, ""); draft(DRAFT_SECRET, "") }
-                    keyWritten = ""; key = ""; secret = ""; onDone()
+                    // Said first: once the keys are saved this form leaves the page and its scope ends, so nothing
+                    // after the next suspension would run. The drafts are cleared even then (NonCancellable).
                     model.say("Saved, the secret sealed with your " + when { bioBlob != null && pn.isNotBlank() -> "fingerprint and PIN"; bioBlob != null -> "fingerprint"; else -> "PIN" } + ". Now log in to Zerodha.")
+                    keyWritten = ""; key = ""; secret = ""; onDone()
+                    kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable + kotlinx.coroutines.Dispatchers.IO) { draft(DRAFT_KEY, ""); draft(DRAFT_SECRET, "") }
                 }
             }
             if (fingerprint && activity != null && s.isNotBlank()) BiometricGate.sealWithFingerprint(activity, s.trim()) { blob, why ->
