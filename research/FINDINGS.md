@@ -153,3 +153,8 @@ ATM straddle level and change, CE/PE skew, OI change and PCR over ATM +-200, CE/
   won the second year (+Rs 83k, 33 trades) and lost the first; option buying loses for almost everything held 3-5
   days (decay). Using the daily trend as an intraday filter for the big-candle pullback: with-trend better in one
   year, against-trend better in the other - no consistent value.
+- DIRECTION MODEL (DIRECTION_MODEL.md; 498 days Feb 2024 - Feb 2026, 30,378 decision points, walk-forward by month,
+  35 inputs incl. OI walls, PCR, GEX-like straddle/skew, breadth, per-bank leads, NIFTY lead-lag, India VIX, futures
+  basis): 50.9-51.7% right on all moments, 51-55% on the most confident 5-10%; adding NIFTY/VIX/basis changed nothing
+  (best 55.4% -> 53.7%). Every classic rule 48-52% (NIFTY led 49.7-50.0%, VIX falling 48.7-49.5%, basis rising
+  50.4-51.6%, HDFC+ICICI lead 50.2-50.7%). No input gets near 80%; do not look for it again without new information.
