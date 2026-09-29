@@ -18,7 +18,7 @@ import numpy as np
 import pandas as pd
 
 sys.path.insert(0, os.path.dirname(__file__))
-from range_fade_long import CHG, LOT, SLIP, archive_days, five_min, local_days  # noqa: E402
+from range_fade_long import CHG, LOT, SLIP, days_from, five_min  # noqa: E402
 
 
 def legs_for(day, b, opts):
@@ -41,7 +41,7 @@ def legs_for(day, b, opts):
 
 def load(src):
     """[(day, 5-minute index bars, legs)] with only the two ATM legs kept, so a year fits in memory."""
-    gen = local_days() if src == "local" else archive_days(int(src))
+    gen = days_from(src)
     out = []
     for day, ix, opts in gen:
         if ix is None or len(ix) == 0 or opts.empty:

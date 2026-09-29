@@ -158,11 +158,11 @@ def from_archive(sess: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
     if s.ts.dt.tz is not None:
         s["ts"] = s.ts.dt.tz_convert("Asia/Kolkata").dt.tz_localize(None)
     s["expiry"] = pd.to_datetime(s["expiry"]).dt.date
-    opts = s[s.instrument_type.isin(["CE", "PE"])].rename(columns={"instrument_type": "right"})
+    opts = s[s.instrument_type.isin(["CE", "PE"])].rename(columns={"instrument_type": "right", "oi": "open_interest"})
     fut = s[s.instrument_type == "FUT"]
     if not fut.empty:
         fut = fut[fut.expiry == fut.expiry.min()].sort_values("ts").set_index("ts")[["open", "high", "low", "close"]]
-    return opts[["expiry", "strike", "right", "ts", "open", "high", "low", "close"]], fut
+    return opts[["expiry", "strike", "right", "ts", "open", "high", "low", "close", "volume", "open_interest"]], fut
 
 
 def local_days():
@@ -175,6 +175,23 @@ def local_days():
         day = date.fromisoformat(f[-18:-8])
         ix = d[d.right == "IX"].sort_values("ts").set_index("ts")[["open", "high", "low", "close"]]
         yield day, ix, d[d.right != "IX"]
+
+
+def file_days(path: str):
+    """Days from a research/dump_year.py parquet."""
+    df = pd.read_parquet(path)
+    df["expiry"] = df["expiry"].dt.date
+    for day, g in df.groupby(df["day"].dt.date):
+        ix = g[g.right == "IX"].sort_values("ts").set_index("ts")[["open", "high", "low", "close"]]
+        yield day, ix, g[g.right != "IX"]
+
+
+def days_from(src: str):
+    if src == "local":
+        return local_days()
+    if src.startswith("file:"):
+        return file_days(src[5:])
+    return archive_days(int(src))
 
 
 def archive_days(n_sessions: int):
@@ -203,7 +220,7 @@ def archive_days(n_sessions: int):
 
 def main():
     src = sys.argv[1] if len(sys.argv) > 1 else "local"
-    gen = local_days() if src == "local" else archive_days(int(src))
+    gen = days_from(src)
     res = {t: [] for t in TARGETS}
     info = []
     for day, ix, opts in gen:
