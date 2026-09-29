@@ -142,3 +142,8 @@ ATM straddle level and change, CE/PE skew, OI change and PCR over ATM +-200, CE/
   (base 15-20%) and a >50-pt range 73-83%; after a quiet half hour (avg range < 30) only ~2%. DIRECTION does not:
   50-55% green whatever came before. Inside a candle, a 40+ pt first 2 minutes finishes > 50 that way 58-59% of the
   time but adds ~0 pts after minute 2 - catching it once it has started earns nothing.
+- Options during >50-pt 5-min candles (BIG_BAR_OPTIONS.md): the ATM call/put move ~+-5% (current year, monthly
+  options, premium ~Rs 720; ~33 pts on a 68-pt index move) / ~+-8.5% (previous year, weekly options, ~Rs 455). Buying
+  the right side at the candle's open would reach +10% by its close only 18% / 41% of the time; the wrong side is the
+  mirror. Call + put together barely move (+-0.5%): a 50-pt candle is not a volatility event for the straddle, so a
+  straddle bought after a big candle loses in every exit (-Rs 90 .. -170 a trade, both years).
