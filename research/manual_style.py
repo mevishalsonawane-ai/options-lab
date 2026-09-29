@@ -22,6 +22,7 @@ from sell_levels import load  # noqa: E402
 
 LOT, SLIP, CHG = 30, 0.5, 40.0
 LAST = 15 * 60 + 25 - (9 * 60 + 15)
+TARGET = 0.10                     # take profit at +10% of the premium
 
 
 def direction(d, t, rule, rng):
@@ -62,7 +63,7 @@ def trade(days, i, t, sign, capital, stop):
     k, _ = b
     right = "CE" if sign > 0 else "PE"
     e = d["chain"][(k, right)]["open"][t] + SLIP
-    tgt, stp = e * 1.10, (e * (1 - stop) if stop else -1)
+    tgt, stp = e * (1 + TARGET), (e * (1 - stop) if stop else -1)
     for h in range(0, 5):
         if i + h >= len(days):
             break
