@@ -1,0 +1,30 @@
+name: Research (long backtests)
+
+on:
+  push:
+    paths:
+      - "research/**"
+      - ".github/workflows/research.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  range-fade:
+    name: Range Fade on a year of BANKNIFTY
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install pandas numpy pyarrow requests
+      - run: python research/range_fade_long.py 250
+      - uses: actions/upload-artifact@v4
+        continue-on-error: true
+        with:
+          name: range-fade-trades
+          path: range_fade_trades.csv
+          retention-days: 5
