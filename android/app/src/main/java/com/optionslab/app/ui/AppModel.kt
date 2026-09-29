@@ -158,6 +158,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         // Which mode orders go to is the first thing to check when an order is "missing" at Zerodha.
         if (prev.live != next.live || prev.allowRealOrders != next.allowRealOrders)
             com.optionslab.app.data.Diag.record("mode", "${if (next.live) "LIVE (Zerodha)" else "Paper"} · real orders allowed: ${next.allowRealOrders}")
+        if (prev.oneTapOrders != next.oneTapOrders) com.optionslab.app.data.Diag.record("mode", "live orders without PIN ${if (next.oneTapOrders) "ON" else "off"}")
         if (prev.guardKill != next.guardKill) com.optionslab.app.data.Diag.record("mode", "kill switch ${if (next.guardKill) "ON" else "off"}")
         viewModelScope.launch(Dispatchers.IO) {
             settingsWriter.lock()

@@ -234,8 +234,11 @@ fun LoginPinDialog(model: AppModel) {
  * phone may have been handed over unlocked.
  */
 @Composable
-fun Reauth(model: AppModel, onOk: () -> Unit, onCancel: () -> Unit, pinOnly: Boolean = false, why: String = "Enter your app PIN to send this order to Zerodha.") {
+fun Reauth(model: AppModel, onOk: () -> Unit, onCancel: () -> Unit, pinOnly: Boolean = false, why: String = "Enter your app PIN to send this order to Zerodha.",
+           orderAction: Boolean = false) {
     val s by model.settings.collectAsState()
+    // Live orders without PIN (the owner's setting): confirming an order, cancel or square-off is enough.
+    if (orderAction && s.oneTapOrders) { LaunchedEffect(Unit) { onOk() }; return }
     val activity = LocalContext.current as? FragmentActivity
     // A phone that failed the security check can fake a biometric callback: the PIN only, there.
     val findings by model.integrity.collectAsState()
@@ -379,7 +382,7 @@ private fun OrderReviewBody(model: AppModel) {
             st?.takeIf { it.plan == pl.value }?.let { stk -> StuckCard(stk) { stuckAction = it } }
         }
     }
-    if (confirming) Reauth(model, onOk = { confirming = false; model.sendPlan() }, onCancel = { confirming = false })
+    if (confirming) Reauth(model, onOk = { confirming = false; model.sendPlan() }, onCancel = { confirming = false }, orderAction = true)
     stuckAction?.let { a ->
         Reauth(model, onOk = {
             stuckAction = null
@@ -694,7 +697,11 @@ fun BrokerPage(
         }
         item {
             LedgerCard(title = "Real orders") {
-                Note("Live trading sends real orders to Zerodha; Paper never does. Switch with the PAPER / LIVE badge at the top. Every order still needs your review, a long press and your PIN or fingerprint.")
+                Note("Live trading sends real orders to Zerodha; Paper never does. Switch with the PAPER / LIVE badge at the top." +
+                    if (s.oneTapOrders) " No PIN is on: an order goes to Zerodha when you confirm it in the review; cancels and square-offs need no PIN either." else " Every order needs your review and your PIN or fingerprint.")
+                ToggleRow("Live orders without PIN", "Confirming the order review sends it to Zerodha at once: no PIN or fingerprint (also for Cancel, Square off and Protect). The margin check, kill switch and account limits still apply.", s.oneTapOrders) { on ->
+                    model.update { it.copy(oneTapOrders = on) }
+                }
                 ToggleRow("Prepare the expiry order at 11:01", "Builds today's ticket and notifies you to review it. It is never sent by itself.", s.prepareRealOrder) { on ->
                     model.update { it.copy(prepareRealOrder = on) }
                 }

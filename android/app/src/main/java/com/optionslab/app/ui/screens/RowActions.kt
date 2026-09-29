@@ -260,7 +260,7 @@ fun RowActionPopup(model: AppModel) {
     // Cancelling a working order (it may be a stop-loss) is proved like a send.
     removeAuth?.let { id -> Reauth(model, onOk = { removeAuth = null; model.removeProtection(id); close() }, onCancel = { removeAuth = null },
         why = "Enter your app PIN to cancel this position's stop and target at Zerodha.") }
-    cancelAuth?.let { o -> Reauth(model, onOk = { cancelAuth = null; model.cancelOrder(o.id, o.variety); close() }, onCancel = { cancelAuth = null }) }
+    cancelAuth?.let { o -> Reauth(model, onOk = { cancelAuth = null; model.cancelOrder(o.id, o.variety); close() }, onCancel = { cancelAuth = null }, orderAction = true) }
 }
 
 
@@ -283,7 +283,7 @@ fun ProtectDialog(model: AppModel, t: ProtectTarget, onDone: (Boolean) -> Unit) 
     val spec = com.optionslab.app.ui.ProtectSpec(stop.toDoubleOrNull(), trail.toDoubleOrNull(), target.toDoubleOrNull())
     val problem = com.optionslab.engine.risk.Protection.validate(if (long) 1 else -1, t.price, spec.stop, spec.trail, spec.target)
     fun go() = model.protect(t.live, t.symbol, t.exchange, t.product, t.qty, t.price, spec).also { onDone(true) }
-    if (auth) { Reauth(model, onOk = { auth = false; go() }, onCancel = { auth = false }); return }
+    if (auth) { Reauth(model, onOk = { auth = false; go() }, onCancel = { auth = false }, orderAction = true); return }
     AlertDialog(
         onDismissRequest = { onDone(false) },
         properties = DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy),
