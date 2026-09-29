@@ -351,7 +351,7 @@ class OrderReviewLiveGateTest {
     private val store = androidx.lifecycle.ViewModelStore()
     private val expiry = LocalDate.now().plusDays(9)
     private val ce = BrokerArea.symbol("NIFTY", expiry, 24_500.0, "CE")
-    private val send = "Hold to send to Zerodha"
+    private val send = "Swipe to send to Zerodha  ›››"
 
     @Before fun up() {
         kite = FakeKite()

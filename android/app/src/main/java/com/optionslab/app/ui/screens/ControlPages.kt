@@ -387,7 +387,7 @@ fun SecurityPage(model: AppModel) {
                     "The ledger, alarms and settings are AES-256-GCM encrypted with a key held in the Android Keystore (StrongBox where present).",
                     "The PIN is never stored: only a salted PBKDF2 verifier, compared in constant time, with escalating lockouts.",
                     "HTTPS only, and only the system's certificate authorities - a user-installed CA cannot read the traffic.",
-                    "Zerodha API key, secret and the day's access token live only in the encrypted vault; a real order needs your review, a long press and a fresh PIN or fingerprint, and is refused on a compromised device.",
+                    "Zerodha API key, secret and the day's access token live only in the encrypted vault; a real order needs your review, a swipe and (unless switched off) a fresh PIN or fingerprint, and is refused on a compromised device.",
                     "Nothing is written to the system log. Errors never carry a URL, an instrument key or a response.",
                     "No backups, no device transfer, no exported components beyond the launcher.",
                     "Touches through another app's overlay are ignored.",

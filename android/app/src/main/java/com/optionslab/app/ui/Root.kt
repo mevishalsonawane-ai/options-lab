@@ -666,7 +666,7 @@ internal fun Masthead(live: Boolean, calm: Boolean, linked: Boolean, onMode: (Bo
         onDismissRequest = { confirmLive = false },
         properties = androidx.compose.ui.window.DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy),
         title = { Text("Switch to live trading?", style = Type.title) },
-        text = { Text("Prices, positions and orders will come from your Zerodha account. Orders you send will use real money. Each order still needs your review, a long press and your PIN or fingerprint.", style = Type.bodySmall) },
+        text = { Text("Prices, positions and orders will come from your Zerodha account. Orders you send will use real money. Each order still needs your review and a swipe to send (plus your PIN or fingerprint unless you switch that off).", style = Type.bodySmall) },
         confirmButton = { com.optionslab.app.ui.components.TextButton({ confirmLive = false; onMode(true) }) { Text("Go live", color = p.oxblood) } },
         dismissButton = { com.optionslab.app.ui.components.TextButton({ confirmLive = false }) { Text("Stay on paper") } },
     )

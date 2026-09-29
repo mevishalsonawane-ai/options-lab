@@ -71,7 +71,7 @@ data class ChainPick(
  * The order sheet for one call or put, opened by tapping its price in the
  * chain. Buy or sell, lots, market or limit, product. In PAPER mode it
  * places a paper order; in LIVE mode it opens the usual review (margin
- * check, hold to send, PIN or fingerprint) - nothing is sent from here.
+ * check, swipe to send, PIN or fingerprint) - nothing is sent from here.
  */
 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable

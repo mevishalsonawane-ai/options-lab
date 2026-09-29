@@ -462,7 +462,7 @@ internal fun PlanCard(
             Load.Idle -> {
                 if (!allowed) Note("This is Paper mode. To send real orders, tap the PAPER TRADING badge at the top and switch to Live.")
                 if (priceMismatch) Note("A limit price box does not hold a valid price; fix it before sending.")
-                HoldToSend("Hold to send to Zerodha", allowed && plan.sendable && !priceMismatch, onSend)
+                com.optionslab.app.ui.components.SwipeToConfirm("Swipe to send to Zerodha", p.oxblood, enabled = allowed && plan.sendable && !priceMismatch, onConfirm = onSend)
             }
         }
         Spacer(Modifier.height(8.dp))
