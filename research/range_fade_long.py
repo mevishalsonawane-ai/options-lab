@@ -197,12 +197,13 @@ def days_from(src: str):
     return archive_days(int(src))
 
 
-def archive_days(n_sessions: int, underlying: str = "BANKNIFTY", only=None):
+def archive_days(n_sessions: int, underlying: str = "BANKNIFTY", only=None, skip: int = 0):
     """[only]: an optional predicate on the day's option rows - sessions it rejects are skipped after reading."""
     sys.path.insert(0, ".")
     from options_lab.backfill import archive
     zf = archive.open_archive()
     days = archive.available_days(zf.namelist(), underlying)
+    days = days[: len(days) - skip] if skip else days
     days = days[-n_sessions:]
     print(f"archive: {underlying} sessions {days[0]} .. {days[-1]} (using {len(days)})", flush=True)
     ix_all = upstox_index(days[0], days[-1], underlying)
