@@ -42,3 +42,14 @@ ATM straddle level and change, CE/PE skew, OI change and PCR over ATM +-200, CE/
    costs (~Rs 70 a trip incl. slippage) plus time decay exceed what direction calls recover.
 2. One month of data is not evidence; test every idea on the year file first, walk-forward, out of sample.
 3. Not yet tested: defined-risk premium selling (credit spreads / iron fly), which has time decay on its side.
+
+## Green candles (green_candles.py, full stats in GREEN_CANDLES.md)
+- During green candles put OI rises and call OI falls (big green 15-min: calls -0.7%, puts +1.9%); big red is the
+  mirror (calls +2.4%, puts -0.7%) and the ATM straddle rises. This is concurrent - option sellers moving with price.
+  None of the OI / PCR / straddle conditions predicts the NEXT candle (all noise in both halves).
+- Next-candle colour: only a small reversal effect survives both halves (after a red / 3+ reds / big red / far below
+  TWAP / low RSI: 51-56% green vs 50%), worth +1 to +4 index points on average - below the ~Rs 70 round-trip cost.
+- The 20-25 candles before a green candle look the same as before a red one (greens 10.0 vs 10.1 of 20; no steady
+  difference in net move, slope, range, OI or straddle). Only the last 1-2 candles carry anything.
+- Daily: first 30 minutes green -> 72% green days (red -> 28%); above the opening range at 10:30 -> 74% (below -> 23%);
+  gap down > 0.3% -> 69% green days (42 days). Largely mechanical (the early move is part of the day's candle).
