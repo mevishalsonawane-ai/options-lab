@@ -66,3 +66,10 @@ ATM straddle level and change, CE/PE skew, OI change and PCR over ATM +-200, CE/
   BIG 15-min candles (top 20% body, ~150 pts) are different: the green's low is still unbroken after 2 h in ~70% of
   cases vs ~47% for an equally distant level (1st/2nd half 68%/73%), the red's high ~60% vs ~38% (62%/59%).
   Big 15-min candles are rarely fully retraced - but the follow-through test shows no reliable continuation either.
+- Volatility (VOLATILITY.md; IV from the ATM straddle, median 12%, 10-90% range 10-17%): big candles come with higher
+  IV (~12.8-13 vs ~11.9) and higher recent realised vol, and are ~1.2x the recent average candle range; IV barely moves
+  during or after them (+-0.1 pt). The big-15-min "level holds" effect is strongest when IV / recent RV are LOW
+  (green low held 2 h: 81% vs 22% baseline in low IV; weaker in high IV: 68% vs 49%). By the candle's own volatility
+  (range vs the last 20 candles), WILD 15-min candles hold their level 2 h ~55-57% vs 32-37% baseline; calm ones don't
+  (27% vs 27%). Next-candle colour does not change with any volatility measure (reversal after red stays ~51-53%).
+  High-IV days are wider (631 vs 464 pts range) and greener (58% vs 41%).
