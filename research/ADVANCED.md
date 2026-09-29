@@ -27,3 +27,18 @@ GEX: 249 days, 44% of days net negative (puts dominate).
 | GEX below zero (puts dominate) | 136 | +0.31 (2.47) | 156 | +0.12 (1.06) |
 
 Short-gamma trades by quarter of the year: Q1: 20 trades, R +0.77, Rs 10,117, Q2: 39 trades, R +0.13, Rs 854, Q3: 41 trades, R +0.41, Rs 8,039, Q4: 33 trades, R +0.40, Rs 15,743
+
+**Which option to buy? (same trades; the strike moved into the money)**
+
+| version | strike | trades | option win | option net Rs | per trade Rs | 1st / 2nd half | avg premium Rs |
+|---|---|---|---|---|---|---|---|
+| all days | ATM | 292 | 41% | 10,983 | 38 | 3,635 / 7,348 | |
+| all days | 1 strike ITM | 292 | 42% | 12,369 | 42 | 4,453 / 7,916 | |
+| all days | 2 strikes ITM | 292 | 42% | 11,807 | 40 | 3,781 / 8,026 | |
+| all days | 3 strikes ITM | 292 | 42% | 10,914 | 37 | 6,226 / 4,688 | |
+| all days | 5 strikes ITM | 292 | 41% | -8,265 | -28 | -4,103 / -4,162 | |
+| short-gamma days | ATM | 131 | 49% | 38,063 | 291 | 15,106 / 22,957 | |
+| short-gamma days | 1 strike ITM | 131 | 50% | 40,665 | 310 | 16,008 / 24,657 | |
+| short-gamma days | 2 strikes ITM | 131 | 50% | 41,822 | 319 | 15,185 / 26,637 | |
+| short-gamma days | 3 strikes ITM | 131 | 50% | 42,782 | 327 | 18,520 / 24,262 | |
+| short-gamma days | 5 strikes ITM | 131 | 48% | 28,139 | 215 | 11,086 / 17,053 | |

@@ -31,6 +31,7 @@ from sell_levels import load, CUT  # noqa: E402
 from combined import prepare  # noqa: E402
 
 LOT, SLIP, CHG = 30, 0.5, 40.0
+ITM = 0            # strikes in the money: 0 = ATM, 200 = two strikes ITM (CE below the index, PE above)
 
 
 def gex_by_day(path, days):
@@ -80,7 +81,7 @@ def trade_one(d, sign, lvl, entry, k=2.0):
     if risk < 5:
         return None
     tgt = e_ix + sign * k * risk
-    kk = d["ks"][np.argmin(np.abs(d["ks"] - e_ix))]
+    kk = d["ks"][np.argmin(np.abs(d["ks"] - (e_ix - sign * ITM)))]
     leg = d["chain"].get((kk, "CE" if sign > 0 else "PE"))
     if leg is None:
         return None
