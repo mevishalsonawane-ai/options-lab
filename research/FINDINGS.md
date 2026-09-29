@@ -158,3 +158,11 @@ ATM straddle level and change, CE/PE skew, OI change and PCR over ATM +-200, CE/
   basis): 50.9-51.7% right on all moments, 51-55% on the most confident 5-10%; adding NIFTY/VIX/basis changed nothing
   (best 55.4% -> 53.7%). Every classic rule 48-52% (NIFTY led 49.7-50.0%, VIX falling 48.7-49.5%, basis rising
   50.4-51.6%, HDFC+ICICI lead 50.2-50.7%). No input gets near 80%; do not look for it again without new information.
+- NON-DIRECTIONAL SELLING (NONDIRECTIONAL.md, both years): naked ATM short straddle is the only structure positive in
+  both years - intraday 09:20-15:10 with a 50%-of-credit stop +Rs 60k / +29k per lot; overnight 15:15 -> 15:10 next
+  day with a 30-50% stop +Rs 26-28k / +91-104k (t 1.5, worst day ~-Rs 17-28k, margin ~Rs 2 lakh+). The hedged
+  versions (iron fly / condor) show large losses but the fill model is too pessimistic for the far strikes (every
+  leg at its worst price in the same minute) - not trustworthy yet.
+- BUY BOTH SIDES, stop the loser, ladder the winner (BOTH_SIDES.md): loses in all 54 versions, both years
+  (t -2.8 .. -5.7). The losing side's stop is usually hit before a move big enough to pay for it, then the
+  survivor decays or reverses; about 1 day in 4-7 both sides stop out.
