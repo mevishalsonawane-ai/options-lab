@@ -124,9 +124,12 @@ def report(trades: pd.DataFrame, days: pd.DataFrame, title: str) -> str:
 
 # ---- data -------------------------------------------------------------------------------------------------------
 
-def upstox_index(frm: date, to: date) -> pd.DataFrame | None:
+INDEX_KEYS = {"BANKNIFTY": "NSE_INDEX%7CNifty%20Bank", "NIFTY": "NSE_INDEX%7CNifty%2050"}
+
+
+def upstox_index(frm: date, to: date, underlying: str = "BANKNIFTY") -> pd.DataFrame | None:
     import requests
-    key = "NSE_INDEX%7CNifty%20Bank"
+    key = INDEX_KEYS[underlying]
     parts, cur = [], frm
     while cur <= to:
         end = min(cur + timedelta(days=27), to)
@@ -194,20 +197,23 @@ def days_from(src: str):
     return archive_days(int(src))
 
 
-def archive_days(n_sessions: int):
+def archive_days(n_sessions: int, underlying: str = "BANKNIFTY", only=None):
+    """[only]: an optional predicate on the day's option rows - sessions it rejects are skipped after reading."""
     sys.path.insert(0, ".")
     from options_lab.backfill import archive
     zf = archive.open_archive()
-    days = archive.available_days(zf.namelist(), "BANKNIFTY")
+    days = archive.available_days(zf.namelist(), underlying)
     days = days[-n_sessions:]
-    print(f"archive: BANKNIFTY sessions {days[0]} .. {days[-1]} (using {len(days)})", flush=True)
-    ix_all = upstox_index(days[0], days[-1])
+    print(f"archive: {underlying} sessions {days[0]} .. {days[-1]} (using {len(days)})", flush=True)
+    ix_all = upstox_index(days[0], days[-1], underlying)
     for i, day in enumerate(days):
         try:
-            sess = archive.read_session(zf, "BANKNIFTY", day)
+            sess = archive.read_session(zf, underlying, day)
         except Exception as e:  # noqa: BLE001
             print(f"{day}: read failed {e}", flush=True); continue
         opts, fut = from_archive(sess)
+        if only is not None and not only(day, opts):
+            continue
         ix = None
         if ix_all is not None:
             ix = ix_all[ix_all.index.date == day]

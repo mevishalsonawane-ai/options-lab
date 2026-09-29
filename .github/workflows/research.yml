@@ -39,6 +39,12 @@ jobs:
         run: |
           python research/dump_year.py 250 banknifty_year_wide.parquet 1000
           gh release upload research-data banknifty_year_wide.parquet --clobber
+      - name: Expiry-day chains, BANKNIFTY and NIFTY
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python research/dump_expiry.py 250 expiry_days.parquet BANKNIFTY NIFTY
+          gh release upload research-data expiry_days.parquet --clobber
       - name: The 12 bank stocks, 1-minute (for advance-decline)
         env:
           GH_TOKEN: ${{ github.token }}
