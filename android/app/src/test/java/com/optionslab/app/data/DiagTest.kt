@@ -13,6 +13,7 @@ class DiagTest : RobolectricTest() {
         val token = "a1B2c3D4e5F6g7H8i9J0k1L2m3N4"
         assertFalse(Diag.redact("session token $token refused").contains(token))
         assertTrue(Diag.redact("Order 250928000123 rejected: RMS margin").contains("250928000123"))
+        assertTrue("the option stays readable", Diag.redact("tradingsymbol: BANKNIFTY26SEP54000CE exchange: NFO").contains("BANKNIFTY26SEP54000CE"))
     }
 
     @Test fun bannersAndSelfTestStepsReachTheReport() = runBlocking {

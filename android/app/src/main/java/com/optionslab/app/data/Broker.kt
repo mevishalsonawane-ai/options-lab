@@ -157,7 +157,7 @@ object Broker {
         val t0 = System.currentTimeMillis()
         val where = "$method ${path.substringBefore('?')}"
         val asked = if (body == null || json) "" else body.split('&').mapNotNull { kv ->
-            val k = kv.substringBefore('='); if (k in DIAG_FIELDS) "$k=${java.net.URLDecoder.decode(kv.substringAfter('='), "UTF-8")}" else null
+            val k = kv.substringBefore('='); if (k in DIAG_FIELDS) "$k: ${java.net.URLDecoder.decode(kv.substringAfter('='), "UTF-8")}" else null
         }.joinToString(" ", prefix = " {", postfix = "}").takeIf { it != " {}" }.orEmpty()
         val route = if ((method != "GET" || viaRelay) && testEndpoint == null && Relay.enabled) " via relay" else ""
         return try {
@@ -219,6 +219,9 @@ object Broker {
                     // freeze quantity); it carries no credential, so it is shown.
                     val msg = json.optString("message", "request failed").take(300)
                     if (type == "TokenException") { dropSession(); sessionEnded.value++; throw KiteError(type, "Zerodha session ended: $msg") }
+                    // SEBI's static-IP rule: Zerodha takes orders only from an IP listed in the Kite Connect app.
+                    if (msg.contains("No IPs configured", ignoreCase = true) || msg.contains("not allowed to place orders", ignoreCase = true))
+                        throw KiteError(type, "Zerodha does not know your order IP yet. Add ${StaticIp.registered ?: "your static IP"} in developers.kite.trade → My apps → your app → IP whitelist, save, then try again. (Zerodha: $msg)")
                     throw KiteError(type, msg)
                 }
                 return json.opt("data") ?: JSONObject.NULL

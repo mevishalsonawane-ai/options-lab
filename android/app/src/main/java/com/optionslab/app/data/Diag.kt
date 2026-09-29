@@ -26,7 +26,12 @@ object Diag {
     private val TIME = DateTimeFormatter.ofPattern("MM-dd HH:mm:ss").withZone(com.optionslab.engine.IST)
 
     /** Anything that could be a key, token, secret or password is replaced; the rest is kept as said. */
-    fun redact(s: String): String = SECRETISH.replace(s, "‹redacted›")
+    fun redact(s: String): String {
+        var out = SECRETISH.replace(s, "‹redacted›")
+        // The account holder's name (Zerodha's welcome line) never reaches the report the owner shares.
+        runCatching { Broker.userName }.getOrNull()?.takeIf { it.length >= 3 }?.let { out = out.replace(it, "‹name›", ignoreCase = true) }
+        return out
+    }
 
     @Synchronized
     private fun diary(): ArrayDeque<String> {
@@ -73,7 +78,7 @@ object Diag {
         append("Market open: ${Market.isOpen()} · Zerodha linked: ${Broker.linked} · logged in: ${Broker.loggedIn}\n")
         append("Static IP set: ${StaticIp.registered != null} · relay on: ${Relay.enabled} · relay connected: ${runCatching { Relay.connected }.getOrDefault(false)}\n")
         append("\n-- Events (newest last) --\n")
-        synchronized(this@Diag) { diary().toList() }.takeLast(400).forEach { append(it).append('\n') }
+        synchronized(this@Diag) { diary().toList() }.takeLast(400).forEach { append(redact(it)).append('\n') }
         append("\n-- Strategy notes --\n")
         runCatching { Strategies.log().take(40).reversed() }.getOrDefault(emptyList()).forEach {
             append("${TIME.format(Instant.ofEpochMilli(it.at))} ${it.strategy}: ${redact(it.message)}\n")
