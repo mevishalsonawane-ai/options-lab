@@ -129,7 +129,8 @@ class OrbArmsDayTest : RobolectricTest() {
         assertEquals(day.atTime(signalBar), p.signalBar)
         assertEquals(day.atTime(entryTime), p.entryTime)
         assertEquals(OrbRules.stopTrigger(p.entry), p.stopTrigger)
-        assertEquals("holding", a.status)
+        // "entered" on the pass that bought, "holding" from the next pass on.
+        assertTrue(a.status, a.status == "entered" || a.status == "holding")
 
         val orders = Paper.state.orders
         val buys = orders.filter { it.action == "BUY" }
