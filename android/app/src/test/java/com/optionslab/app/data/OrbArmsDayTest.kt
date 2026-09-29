@@ -45,19 +45,25 @@ class OrbArmsDayTest : RobolectricTest() {
     /** The opening range's swing, one value a minute from 09:15 (high 54,000, low 53,800; 53,900 at 09:24). */
     private val swing = listOf(53_900.0, 53_950.0, 54_000.0, 53_950.0, 53_900.0, 53_850.0, 53_800.0, 53_850.0, 53_900.0, 53_900.0)
 
+    /** A failed-break day for ORB Sweep: no break, but at 10:31 a wick to 54,060 that closes back at 53,950. */
+    private var sweepDay = false
+
     /** The index at the minute of day [m] (minutes since midnight). */
     private fun price(m: Int): Double = when {
         m < 10 * 60 + 5 -> swing[(m - (9 * 60 + 15)) % swing.size]
-        m < 10 * 60 + 30 -> 53_950.0
+        m < 10 * 60 + 30 || sweepDay -> 53_950.0
         else -> 54_150.0
     }
+
+    /** The minute's high: the price, except the sweep day's 10:31 wick above the range high. */
+    private fun high(m: Int): Double = if (sweepDay && m == 10 * 60 + 31) 54_060.0 else price(m)
 
     /** The day's 1-minute bars the feed has at [t]: every minute that has finished by then. */
     private fun feed(t: LocalDateTime): List<Upstox.Bar> = (9 * 60 + 15 until 15 * 60 + 30)
         .map { day.atTime(it / 60, it % 60) }
         .filter { !it.plusMinutes(1).isAfter(t) }
         .map { start -> val p = price(start.hour * 60 + start.minute)
-            Upstox.Bar(start.atZone(IST).toEpochSecond(), p, p, p, p, 1000, 0) }
+            Upstox.Bar(start.atZone(IST).toEpochSecond(), p, high(start.hour * 60 + start.minute), p, p, 1000, 0) }
 
     @Before fun up() {
         upstox = FakeUpstox()                               // (clears Market.testClock: set it after)
@@ -200,5 +206,23 @@ class OrbArmsDayTest : RobolectricTest() {
         assertNothingBought()
         tick(LocalTime.of(10, 55))
         assertOneCeBuy(signalBar = LocalTime.of(10, 50), entryTime = LocalTime.of(10, 55))
+    }
+
+    // ---- ORB Sweep (paper only) ----------------------------------------------------------------------
+
+    @Test fun orbSweepFadesAFailedBreakOfTheRangeOnPaper() {
+        sweepDay = true
+        at(LocalTime.of(9, 50))
+        val msg = runBlocking { OrbArms.setArmed("orb_sweep", true, automatic = true) }
+        assertTrue(msg, msg.startsWith("ORB Sweep armed on paper (it never trades on Zerodha)"))
+        passes(LocalTime.of(9, 50), LocalTime.of(10, 34))
+        assertTrue("no sweep before the 10:30 bar closes", arm("orb_sweep").today.isEmpty())
+        passes(LocalTime.of(10, 35), LocalTime.of(10, 40))
+        // The 10:30 bar went above 54,000 and closed back at 53,950: the break failed, so the PUT is bought.
+        val p = arm("orb_sweep").today.single()
+        assertTrue(p.open)
+        assertEquals("PE", p.right); assertEquals(30, p.qty); assertTrue("paper, never live", !p.live)
+        assertEquals(day.atTime(10, 30), p.signalBar)
+        assertTrue("the ORB itself stays off", arm("orb").today.isEmpty())
     }
 }

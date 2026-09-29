@@ -10,6 +10,7 @@ import com.optionslab.engine.orb.Bar
 import com.optionslab.engine.orb.OrbRules
 import com.optionslab.engine.orb.PassRule
 import com.optionslab.engine.orb.Replay
+import com.optionslab.engine.orb.SweepRules
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.json.JSONArray
@@ -195,7 +196,10 @@ object OrbArms {
         holdingHint = b.positions.any { it.open }
     }
 
-    private fun armOf(source: String): Arm = OrbRules.ARMS.first { it.source == source }
+    /** ORB and ORB Fresh (the pre-registered forward test), plus ORB Sweep (paper only, outside that test). */
+    private val ALL_ARMS: List<Arm> = OrbRules.ARMS + SweepRules.ARM
+
+    private fun armOf(source: String): Arm = ALL_ARMS.first { it.source == source }
 
     /** New entries follow the app's Paper/Live switch. */
     fun liveNow(): Boolean = AppSettings.load().let { it.live && it.allowRealOrders }
@@ -227,7 +231,7 @@ object OrbArms {
     suspend fun view(): View = lock.withLock {
         val b = book()
         val day = today()
-        val arms = OrbRules.ARMS.map { a ->
+        val arms = ALL_ARMS.map { a ->
             val open = b.positions.lastOrNull { it.arm == a.source && it.open }
             ArmView(a, b.armed[a.source] == true, b.auto[a.source] != false, b.status[a.source] ?: "", open, open?.let { marks[it.symbol] },
                 b.pending[a.source], b.positions.filter { it.arm == a.source && it.day == day }, b.liveOk[a.source] == true)
@@ -238,7 +242,8 @@ object OrbArms {
 
     /** The pre-registered forward test on the closed arm trades, operator-closed trades excluded. */
     private fun forward(b: Book): PassRule.Verdict = PassRule.judge(
-        b.positions.filter { !it.open && it.why != "operator_stop" && it.why != "closed_by_you" }.map { p ->
+        // ORB Sweep's trades are not part of the ORB's pre-registered forward test.
+        b.positions.filter { !it.open && it.why != "operator_stop" && it.why != "closed_by_you" && it.arm != SweepRules.ARM.source }.map { p ->
             PassRule.Closed(p.day, (p.grossPnl ?: 0.0) - p.charges, b.upDays[p.day.toString()])
         })
 
@@ -249,7 +254,8 @@ object OrbArms {
     /** [pinConfirmed]: the UI took the PIN or fingerprint (required to arm while the app is in Live). */
     suspend fun setArmed(source: String, on: Boolean, automatic: Boolean, pinConfirmed: Boolean = false): String = lock.withLock {
         val b = book()
-        val live = liveNow()
+        val paperOnly = armOf(source).paperOnly
+        val live = liveNow() && !paperOnly
         if (on && live && !pinConfirmed) return@withLock "The app is in Live: arm it with your PIN or fingerprint."
         b.armed[source] = on
         b.auto[source] = automatic
@@ -259,7 +265,10 @@ object OrbArms {
         if (!on) b.pending.remove(source)
         save(b)
         val label = armOf(source).label
-        if (on) "$label armed" + (if (live) " on ZERODHA (live), " else " on paper, ") +
+        if (on && paperOnly) "$label armed on paper (it never trades on Zerodha), fully automatic: it fades a failed break of the " +
+            "opening range - a 5-minute bar through the range high or low that closes back inside - with 1 lot, a 40-point stop, " +
+            "an 80-point target and the 15:10 exit, at most ${SweepRules.MAX_ENTRIES} a day, from 10:05."
+        else if (on) "$label armed" + (if (live) " on ZERODHA (live), " else " on paper, ") +
             (if (automatic) "fully automatic: it buys and sells by itself every trading day until you switch it off." else "you approve each entry.") +
             " It decides on 5-minute BANKNIFTY bars from 10:05."
         else "$label disarmed." + if (b.positions.any { it.arm == source && it.open }) " Its open position is still managed to its exit." else ""
@@ -303,10 +312,10 @@ object OrbArms {
             val b = book()
             val t = now()
             runCatching { priceCheck(b, t) }
-            val anyArmed = OrbRules.ARMS.any { b.armed[it.source] == true }
+            val anyArmed = ALL_ARMS.any { b.armed[it.source] == true }
             if (!anyArmed || !OrbRules.inWindow(t.toLocalTime())) { save(b); return@withLock }
             val bars = runCatching { indexBars(t) }.getOrNull()
-            for (arm in OrbRules.ARMS) {
+            for (arm in ALL_ARMS) {
                 if (b.armed[arm.source] != true) continue
                 val s = if (bars == null) "no_index_data" else runCatching { cycle(b, arm, t, bars) }.getOrElse { "error: ${it.message}" }
                 // "no_decision_bar" repeats within a bar; keep the bar's own verdict on screen.
@@ -343,6 +352,14 @@ object OrbArms {
         val spent = b.decided.getOrPut("${arm.source}|$day") { HashSet() }
         if (!spent.add(last.start.toString())) return "no_decision_bar"
         val lastExit = b.positions.filter { it.arm == arm.source && it.day == day }.mapNotNull { it.exitTime }.maxOrNull()
+        if (arm.sweep) {
+            // ORB Sweep: a single bar's failed break is the signal (nothing to chase), paper only, automatic.
+            val entries = b.positions.count { it.arm == arm.source && it.day == day }
+            val (dir, why) = SweepRules.entrySignal(bars, rng, lastExit, entries)
+            watching()
+            if (dir == 0) return why
+            return enter(b, arm, if (dir > 0) legs.ce else legs.pe, last.start, live = false)
+        }
         // After a pause (stopped for the day, the kill switch, a refused entry, the app not running, armed just now) the
         // previous bar was not watched: a break already under way is not chased, only a fresh one is taken.
         // A pause is only one the owner made - armed just now, stopped for the day, the kill switch - never missed data
@@ -363,7 +380,7 @@ object OrbArms {
         if (b.auto[arm.source] == false || (live && b.liveOk[arm.source] != true)) {
             // Valid until the next bar completes: after that the signal is stale.
             b.pending[arm.source] = Pending(arm.source, right, last.start, last.start.plusMinutes(10))
-            Notifier.post(app, 6960 + OrbRules.ARMS.indexOf(arm), Notifier.APPROVAL, "${arm.label}: approve BUY ${c.symbol}",
+            Notifier.post(app, 6960 + ALL_ARMS.indexOf(arm), Notifier.APPROVAL, "${arm.label}: approve BUY ${c.symbol}",
                 "BANKNIFTY closed ${if (direction > 0) "above" else "below"} the opening range on the ${hhmm(last.start)} bar. " +
                     (if (live) "LIVE on Zerodha, 1 lot: approve it on Home in the app" +
                         (if (b.auto[arm.source] != false) " (arm it again while in Live to make it automatic)" else "") else "Paper account, 1 lot") +
@@ -456,7 +473,8 @@ object OrbArms {
             val why = when {
                 stopped -> "operator_stop"
                 !t.toLocalTime().isBefore(OrbRules.SQUARE_OFF) -> "session_end"
-                else -> OrbRules.exitReason(cur.entry, ltp, t).takeIf { it == "target" || (it == "stop" && cur.stopOrderId == null) }
+                else -> (if (armOf(cur.arm).sweep) SweepRules.exitReason(cur.entry, ltp, t) else OrbRules.exitReason(cur.entry, ltp, t))
+                    .takeIf { it == "target" || (it == "stop" && cur.stopOrderId == null) }
             } ?: continue
             b.positions[i] = exit(cur, c, why)
         }
@@ -855,6 +873,8 @@ object OrbArms {
         s == "holding" -> "Holding a position."
         s == "waiting_for_opening_range" -> "Waiting for the opening range (09:15-10:00)."
         s == "inside_range" -> "Waiting for a breakout: the last bar closed inside the range."
+        s == "no_sweep" -> "Waiting for a failed break: no bar has gone through the range and closed back inside."
+        s == "day_limit_reached" -> "Done for today: ${SweepRules.MAX_ENTRIES} entries taken."
         s == "not_a_fresh_break" -> "Last bar continued an earlier break; ORB Fresh waits for a fresh one."
         s == "waiting_for_fresh_break_after_pause" -> "Armed or restarted while the price was already out of the range: this bar is not chased; the next bar out of the range is taken."
         s == "cooling_down_after_exit" -> "Just exited; may re-enter from the next bar."
