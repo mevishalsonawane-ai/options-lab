@@ -140,10 +140,10 @@ def run(days, big=True, wide=1.2, depth=0.4, stretch=None, iv=False, k=2.0, cont
                     break
             if R is None:
                 R = sign * (I["close"][CUT] - e_ix) / risk
-            out.append(dict(day=d["day"], R=R, net=(leg["close"][x] - SLIP - ep) * LOT - CHG, risk=risk))
+            out.append(dict(day=d["day"], R=R, net=(leg["close"][x] - SLIP - ep) * LOT - CHG, risk=risk, sign=sign))
             n += 1
             busy = x
-    return pd.DataFrame(out, columns=["day", "R", "net", "risk"])
+    return pd.DataFrame(out, columns=["day", "R", "net", "risk", "sign"])
 
 
 def line(tr, alld, label):

@@ -147,3 +147,9 @@ ATM straddle level and change, CE/PE skew, OI change and PCR over ATM +-200, CE/
   the right side at the candle's open would reach +10% by its close only 18% / 41% of the time; the wrong side is the
   mirror. Call + put together barely move (+-0.5%): a 50-pt candle is not a volatility event for the straddle, so a
   straddle bought after a big candle loses in every exit (-Rs 90 .. -170 a trade, both years).
+- SWING (SWING.md, both years): daily-chart direction for 1/3/5-day option holds - EMA 20/50, Donchian 20-day
+  breakout, daily Supertrend, RSI(2), 5-day momentum/reversal, inside-day, gap recovery. No rule is right on the
+  index in both years: every-day rules sit at 42-52% (coin flip 40-60% over 50-250 trades); the Donchian breakout
+  won the second year (+Rs 83k, 33 trades) and lost the first; option buying loses for almost everything held 3-5
+  days (decay). Using the daily trend as an intraday filter for the big-candle pullback: with-trend better in one
+  year, against-trend better in the other - no consistent value.
