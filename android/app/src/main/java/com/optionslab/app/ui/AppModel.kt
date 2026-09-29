@@ -117,6 +117,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     val ic = MutableStateFlow<Load<Ic.IcResult>>(Load.Idle)
     val signal = MutableStateFlow<Load<SignalResult>>(Load.Idle)
     val preset = MutableStateFlow<Load<com.optionslab.engine.strategy.Presets.Result>>(Load.Idle)
+    val armsBacktest = MutableStateFlow<Load<com.optionslab.engine.orb.ArmsBacktest.Result>>(Load.Idle)
     val replay = MutableStateFlow<Load<com.optionslab.engine.Session>>(Load.Idle)
     val integrity = MutableStateFlow<List<Integrity.Finding>>(emptyList())
     val provenance = MutableStateFlow<Load<List<Provenance.Drift>>>(Load.Idle)
@@ -427,6 +428,19 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                 Load.Done(Ic.measure(underlying, days, regime) { n -> ic.value = Load.Busy("Session $n", n.toFloat() / total) })
             } catch (e: Exception) {
                 Load.Failed(e.message ?: "nothing to measure")
+            }
+        }
+    }
+
+    /** Replay every ORB arm over the bundled month plus every BANKNIFTY day the phone has harvested, on the real option bars. */
+    fun runArmsBacktest() {
+        armsBacktest.value = Load.Busy("Replaying the arms")
+        viewModelScope.launch(Dispatchers.Default) {
+            armsBacktest.value = try {
+                val r = com.optionslab.engine.orb.ArmsBacktest.run(Store.barSessions("BANKNIFTY"))
+                if (r.days == 0) Load.Failed("No BANKNIFTY day with index and option bars yet.") else Load.Done(r)
+            } catch (e: Exception) {
+                Load.Failed(e.message ?: "The replay failed")
             }
         }
     }

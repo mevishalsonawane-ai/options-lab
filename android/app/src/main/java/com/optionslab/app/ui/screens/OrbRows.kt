@@ -110,6 +110,7 @@ internal fun OrbRowsContent(
                     "${o.right} ${o.symbol.takeLast(7).dropLast(2)} · in ${px(o.entry)}" + (m?.let { " · now ${px(it)} · ${rs((it - o.entry) * o.qty)}" } ?: "") +
                         (o.stopTrigger?.let { " · stop ${px(it)}" } ?: "")
                 } ?: when {
+                    !a.armed && a.arm.fade -> "BANKNIFTY touch of the range edge, faded to the middle · paper only · -40 / +40"
                     !a.armed && a.arm.sweep -> "BANKNIFTY failed break of the opening range, faded · paper only · -40 / +80"
                     !a.armed -> "BANKNIFTY opening-range break" + if (a.arm.freshOnly) ", fresh breaks only" else ""
                     else -> OrbArms.describe(a.status) + (view.range?.let { r -> " Range ${px(r.second)}–${px(r.first)}." } ?: "")
@@ -122,7 +123,7 @@ internal fun OrbRowsContent(
             Switch(
                 modifier = Modifier.semantics { contentDescription = "Arm ${a.arm.label}" },
                 checked = a.armed,
-                // ORB Sweep is paper only and always automatic: nothing to choose, no PIN.
+                // ORB Sweep and Range Fade are paper only and always automatic: nothing to choose, no PIN.
                 onCheckedChange = { on -> if (on && a.arm.paperOnly) actions.arm(a.arm.source, true, true, false)
                     else if (on) choosing = a.arm.source else actions.arm(a.arm.source, false, a.automatic, false) },
                 colors = SwitchDefaults.colors(checkedTrackColor = p.verdigris, checkedThumbColor = p.card),

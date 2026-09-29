@@ -10,6 +10,7 @@ import com.optionslab.engine.orb.Bar
 import com.optionslab.engine.orb.OrbRules
 import com.optionslab.engine.orb.PassRule
 import com.optionslab.engine.orb.Replay
+import com.optionslab.engine.orb.RangeFadeRules
 import com.optionslab.engine.orb.SweepRules
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -196,8 +197,8 @@ object OrbArms {
         holdingHint = b.positions.any { it.open }
     }
 
-    /** ORB and ORB Fresh (the pre-registered forward test), plus ORB Sweep (paper only, outside that test). */
-    private val ALL_ARMS: List<Arm> = OrbRules.ARMS + SweepRules.ARM
+    /** ORB and ORB Fresh (the pre-registered forward test), plus ORB Sweep and Range Fade (paper only, outside that test). */
+    private val ALL_ARMS: List<Arm> = OrbRules.ARMS + SweepRules.ARM + RangeFadeRules.ARM
 
     private fun armOf(source: String): Arm = ALL_ARMS.first { it.source == source }
 
@@ -242,8 +243,8 @@ object OrbArms {
 
     /** The pre-registered forward test on the closed arm trades, operator-closed trades excluded. */
     private fun forward(b: Book): PassRule.Verdict = PassRule.judge(
-        // ORB Sweep's trades are not part of the ORB's pre-registered forward test.
-        b.positions.filter { !it.open && it.why != "operator_stop" && it.why != "closed_by_you" && it.arm != SweepRules.ARM.source }.map { p ->
+        // The paper-only arms' trades (ORB Sweep, Range Fade) are not part of the ORB's pre-registered forward test.
+        b.positions.filter { !it.open && it.why != "operator_stop" && it.why != "closed_by_you" && ALL_ARMS.none { a -> a.source == it.arm && a.paperOnly } }.map { p ->
             PassRule.Closed(p.day, (p.grossPnl ?: 0.0) - p.charges, b.upDays[p.day.toString()])
         })
 
@@ -265,7 +266,10 @@ object OrbArms {
         if (!on) b.pending.remove(source)
         save(b)
         val label = armOf(source).label
-        if (on && paperOnly) "$label armed on paper (it never trades on Zerodha), fully automatic: it fades a failed break of the " +
+        if (on && armOf(source).fade) "$label armed on paper (it never trades on Zerodha), fully automatic: when a 5-minute bar " +
+            "reaches the outer tenth of the opening range and closes back inside, it buys the option toward the middle - 1 lot, " +
+            "a 40-point stop, a 40-point target and the 15:10 exit, at most ${RangeFadeRules.MAX_ENTRIES} a day, from 10:30."
+        else if (on && paperOnly) "$label armed on paper (it never trades on Zerodha), fully automatic: it fades a failed break of the " +
             "opening range - a 5-minute bar through the range high or low that closes back inside - with 1 lot, a 40-point stop, " +
             "an 80-point target and the 15:10 exit, at most ${SweepRules.MAX_ENTRIES} a day, from 10:05."
         else if (on) "$label armed" + (if (live) " on ZERODHA (live), " else " on paper, ") +
@@ -352,6 +356,14 @@ object OrbArms {
         val spent = b.decided.getOrPut("${arm.source}|$day") { HashSet() }
         if (!spent.add(last.start.toString())) return "no_decision_bar"
         val lastExit = b.positions.filter { it.arm == arm.source && it.day == day }.mapNotNull { it.exitTime }.maxOrNull()
+        if (arm.fade) {
+            // Range Fade: a bar at the edge of the range that closes back inside is faded toward the middle; paper only, automatic.
+            val entries = b.positions.count { it.arm == arm.source && it.day == day }
+            val (dir, why) = RangeFadeRules.entrySignal(bars, rng, lastExit, entries)
+            watching()
+            if (dir == 0) return why
+            return enter(b, arm, if (dir > 0) legs.ce else legs.pe, last.start, live = false)
+        }
         if (arm.sweep) {
             // ORB Sweep: a single bar's failed break is the signal (nothing to chase), paper only, automatic.
             val entries = b.positions.count { it.arm == arm.source && it.day == day }
@@ -874,6 +886,8 @@ object OrbArms {
         s == "waiting_for_opening_range" -> "Waiting for the opening range (09:15-10:00)."
         s == "inside_range" -> "Waiting for a breakout: the last bar closed inside the range."
         s == "no_sweep" -> "Waiting for a failed break: no bar has gone through the range and closed back inside."
+        s == "not_at_the_edge" -> "Waiting for a bar at the edge of the range that closes back inside (Range Fade, 10:30-13:55)."
+        s == "no_range" -> "The opening range is too narrow to fade."
         s == "day_limit_reached" -> "Done for today: ${SweepRules.MAX_ENTRIES} entries taken."
         s == "not_a_fresh_break" -> "Last bar continued an earlier break; ORB Fresh waits for a fresh one."
         s == "waiting_for_fresh_break_after_pause" -> "Armed or restarted while the price was already out of the range: this bar is not chased; the next bar out of the range is taken."

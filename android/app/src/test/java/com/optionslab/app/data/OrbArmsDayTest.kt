@@ -226,4 +226,21 @@ class OrbArmsDayTest : RobolectricTest() {
         assertEquals(day.atTime(10, 30), p.signalBar)
         assertTrue("the ORB itself stays off", arm("orb").today.isEmpty())
     }
+
+    // ---- Range Fade (paper only) ---------------------------------------------------------------------
+
+    @Test fun rangeFadeBuysThePutWhenABarAtTheTopEdgeClosesBackInside() {
+        sweepDay = true                                     // 10:05-10:25 sit mid-range; the 10:30 bar touches 54,060
+        at(LocalTime.of(9, 50))
+        val msg = runBlocking { OrbArms.setArmed("range_fade", true, automatic = true) }
+        assertTrue(msg, msg.startsWith("Range Fade armed on paper (it never trades on Zerodha)"))
+        passes(LocalTime.of(9, 50), LocalTime.of(10, 34))
+        assertTrue("nothing while the bars sit mid-range", arm("range_fade").today.isEmpty())
+        passes(LocalTime.of(10, 35), LocalTime.of(10, 40))
+        val p = arm("range_fade").today.single()
+        assertTrue(p.open)
+        assertEquals("PE", p.right); assertTrue("paper, never live", !p.live)
+        assertEquals(day.atTime(10, 30), p.signalBar)
+        assertTrue("the ORB itself stays off", arm("orb").today.isEmpty())
+    }
 }
