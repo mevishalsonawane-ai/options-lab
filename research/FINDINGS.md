@@ -53,3 +53,7 @@ ATM straddle level and change, CE/PE skew, OI change and PCR over ATM +-200, CE/
   difference in net move, slope, range, OI or straddle). Only the last 1-2 candles carry anything.
 - Daily: first 30 minutes green -> 72% green days (red -> 28%); above the opening range at 10:30 -> 74% (below -> 23%);
   gap down > 0.3% -> 69% green days (42 days). Largely mechanical (the early move is part of the day's candle).
+- Red candles (RED_CANDLES.md) mirror the green ones: the only steady next-candle effects are small reversals
+  (after a green / 3+ greens on 15-min: 51.7% / 54.9% red; after 3+ reds or a big red on 5-min: 46-48% red).
+  The 20-25 candles before a red candle look the same as before a green one. Red days: first 30 min red -> 72%,
+  below the opening range at 10:30 -> 77% (mechanical); gap down > 0.3% -> only 31% red.

@@ -1,6 +1,6 @@
-"""Green candles on the year file: how often, what happens during them, and what comes before them.
+"""Green (or red) candles on the year file: how often, what happens during them, and what comes before them.
 
-    python research/green_candles.py <year.parquet>
+    python research/green_candles.py <year.parquet> [green|red]
 
 A condition "comes before green" only counts if its green rate beats the base rate in BOTH halves of the year
 (chronological split), by more than two standard errors overall. Rates are over the NEXT candle; nothing uses
@@ -12,6 +12,12 @@ import sys
 
 import numpy as np
 import pandas as pd
+
+W = "green"            # the colour being explained: "green" (close > open) or "red" (close < open)
+
+
+def is_target(open_, close):
+    return close > open_ if W == "green" else close < open_
 
 
 def load(path):
@@ -53,8 +59,8 @@ def lift_table(b, conds, title, fwd_pts):
     y = b.green_next
     base = y.mean()
     half = b.index[len(b) // 2]
-    lines = [f"### {title}", "", f"base rate: {100 * base:.1f}% green of {len(y)} candles", "",
-             "| condition | candles | next green | 1st half | 2nd half | next candle avg pts | verdict |",
+    lines = [f"### {title}", "", f"base rate: {100 * base:.1f}% {W} of {len(y)} candles", "",
+             f"| condition | candles | next {W} | 1st half | 2nd half | next candle avg pts | verdict |",
              "|---|---|---|---|---|---|---|"]
     for name, m in conds.items():
         m = pd.Series(m.values if hasattr(m, "values") else m, index=b.index).fillna(False).astype(bool)
@@ -66,7 +72,7 @@ def lift_table(b, conds, title, fwd_pts):
         h2 = y[m & (b.index >= half)].mean()
         z = (p - base) / se
         steady = (h1 - base) * (h2 - base) > 0 and abs(z) > 2
-        verdict = ("MORE green" if p > base else "LESS green") if steady else "noise"
+        verdict = (f"MORE {W}" if p > base else f"LESS {W}") if steady else "noise"
         lines.append(f"| {name} | {n} | {100 * p:.1f}% | {100 * h1:.1f}% | {100 * h2:.1f}% | "
                      f"{fwd_pts[m].mean():+.1f} | {verdict} |")
     return "\n".join(lines) + "\n"
@@ -77,9 +83,9 @@ def param_stats(params, y, pts, rule):
     base = y.mean()
     half = params.index[len(params) // 2]
     lines = [f"### Every parameter vs the NEXT {rule} candle (quintiles, lowest to highest)", "",
-             f"Base rate {100 * base:.1f}% green. Each cell: next green % / next avg points. "
+             f"Base rate {100 * base:.1f}% {W}. Each cell: next {W} % / next avg points. "
              "'steady' = the top-minus-bottom gap has the same sign in both halves of the year and exceeds 2 standard errors.", "",
-             "| parameter | Q1 (low) | Q2 | Q3 | Q4 | Q5 (high) | Q5-Q1 green | steady? |", "|---|---|---|---|---|---|---|---|"]
+             f"| parameter | Q1 (low) | Q2 | Q3 | Q4 | Q5 (high) | Q5-Q1 {W} | steady? |", "|---|---|---|---|---|---|---|---|"]
     for name in params.columns:
         x = params[name]
         ok = x.notna()
@@ -128,7 +134,7 @@ def during(b, oi, vol, strad, rule):
 def intraday(ix, oi, strad, rule):
     b = candles(ix, rule)
     day = pd.Series(b.index.date, index=b.index)
-    b["green_next"] = b.groupby(day).green.shift(-1)
+    b["green_next"] = b.groupby(day).apply(lambda g: is_target(g.open, g.close).shift(-1)).droplevel(0)
     b["pts_next"] = b.groupby(day).body.shift(-1)
     b = b.dropna(subset=["green_next"])
     b["green_next"] = b.green_next.astype(float)
@@ -191,7 +197,7 @@ def intraday(ix, oi, strad, rule):
         "RSI(14) on 1-min": rsi, "call OI change 30 min (%)": oi_ce * 100, "put OI change 30 min (%)": oi_pe * 100,
         "PCR (put OI / call OI)": pcr, "ATM straddle change 30 min (%)": st * 100,
     }, index=b.index).replace([np.inf, -np.inf], np.nan)
-    return b, lift_table(b, conds, f"What comes before a green {rule} candle", b.pts_next) + "\n" + \
+    return b, lift_table(b, conds, f"What comes before a {W} {rule} candle", b.pts_next) + "\n" + \
         param_stats(params, b.green_next, b.pts_next, rule)
 
 
@@ -207,7 +213,7 @@ def daily(ix, oi, strad):
     orng.index = pd.to_datetime(orng.index)
     c1030 = ix.between_time("10:30", "10:30").close
     c1030.index = pd.to_datetime(c1030.index.date)
-    d["green_next"] = d.green.astype(float)          # daily: explain today's colour from what is known by the time given
+    d["green_next"] = is_target(d.open, d.close).astype(float)          # daily: explain today's colour from what is known by the time given
     gap = d.open / d.close.shift() - 1
     prev_green = d.green.shift()
     oiday = oi.groupby(oi.index.date).last()
@@ -230,7 +236,7 @@ def daily(ix, oi, strad):
         "yesterday's PCR < 0.8 (known 09:15)": (oi_prev.PE / oi_prev.CE) < 0.8,
     }
     d = d.dropna(subset=["green_next"])
-    return lift_table(d, conds, "What goes with a green DAY (known by the time in brackets)", d.pts), d
+    return lift_table(d, conds, f"What goes with a {W} DAY (known by the time in brackets)", d.pts), d
 
 
 def lookback(ix, oi, strad, rule, ns=(20, 25)):
@@ -291,10 +297,12 @@ def lookback(ix, oi, strad, rule, ns=(20, 25)):
 
 
 def main():
+    global W
+    W = sys.argv[2] if len(sys.argv) > 2 else "green"
     ix, oi, vol, strad = load(sys.argv[1])
-    out = [f"## Green candles, BANKNIFTY {ix.index.min().date()} .. {ix.index.max().date()}", ""]
+    out = [f"## {W.title()} candles, BANKNIFTY {ix.index.min().date()} .. {ix.index.max().date()}", ""]
     t, d = daily(ix, oi, strad)
-    out += [f"Days: {len(d)}, green {100 * d.green.mean():.0f}%, average green day {d.pts[d.green].mean():+.0f} pts, "
+    out += [f"Days: {len(d)}, green {100 * d.green.mean():.0f}%, red {100 * (d.close < d.open).mean():.0f}%, average green day {d.pts[d.green].mean():+.0f} pts, "
             f"average red day {d.pts[~d.green].mean():+.0f} pts", "", t]
     for rule in ("15min", "5min"):
         b, tab = intraday(ix, oi, strad, rule)
