@@ -763,9 +763,19 @@ object OrbArms {
 
     // ---- data ------------------------------------------------------------------
 
+    /**
+     * TEST ONLY: the BANKNIFTY 1-minute bars as the feed would return them at a given moment, so a test can run the
+     * minute cycle over a whole day. Null in the app, always: [indexBars] then reads [Net.intraday], exactly as before.
+     * Its setter throws unless BuildConfig.DEBUG (as [testNow]); no app code sets it.
+     */
+    @Volatile internal var testIndexBars: ((LocalDateTime) -> List<Upstox.Bar>)? = null
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test index feed exists only in debug builds" }; field = v }
+
     /** Today's completed 5-minute BANKNIFTY bars, built from the 1-minute feed. */
-    private suspend fun indexBars(t: LocalDateTime): List<Bar> =
-        OrbRules.completed(fiveMinute(Net.intraday(Upstox.INDEX_KEYS.getValue(OrbRules.UNDERLYING)), t.toLocalDate(), t), t)
+    private suspend fun indexBars(t: LocalDateTime): List<Bar> {
+        val ones = testIndexBars?.invoke(t) ?: Net.intraday(Upstox.INDEX_KEYS.getValue(OrbRules.UNDERLYING))
+        return OrbRules.completed(fiveMinute(ones, t.toLocalDate(), t), t)
+    }
 
     /**
      * 1-minute bars folded into 5-minute bars labelled by their start. A bar still
