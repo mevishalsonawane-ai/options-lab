@@ -939,8 +939,8 @@ class BrokerScreensTest {
         val m = model()
         compose.setContent { IraAlgoTheme("light") { OrderReviewDialog(m) } }
         m.plan.value = Load.Done(OrderPlan("Test order", null, listOf(leg), emptyMap(), listOf(emptyList()), false))
-        until("the review") { shown("Hold to send to Zerodha") }
-        node("Hold to send to Zerodha").assertIsNotEnabled()
+        until("the review") { shown("Swipe to send to Zerodha  ›››") }
+        node("Swipe to send to Zerodha  ›››").assertIsNotEnabled()
         assertTrue(shown("This is Paper mode. To send real orders, tap the PAPER TRADING badge at the top and switch to Live."))
         click("Close")
         until("closed") { m.plan.value == Load.Idle }

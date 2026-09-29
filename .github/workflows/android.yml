@@ -206,6 +206,10 @@ jobs:
     runs-on: ubuntu-latest
     needs: app-tests
     if: always() && github.event_name == 'push' && github.ref == 'refs/heads/claude/android-options-lab-kotlin-xgt1ym'
+    # Two pushes close together both force-push the branch; one at a time (the newer waits) avoids "cannot lock ref".
+    concurrency:
+      group: publish-ui-screenshots
+      cancel-in-progress: false
     permissions:
       contents: write
     steps:
