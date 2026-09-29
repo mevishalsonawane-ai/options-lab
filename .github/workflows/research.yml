@@ -33,6 +33,12 @@ jobs:
             gh release create research-data --prerelease --title "Research data" \
               --notes "BANKNIFTY 1-minute index and near-ATM option bars for the research scripts (research/dump_year.py)."
           gh release upload research-data banknifty_year.parquet --clobber
+      - name: The year again with strikes within 1,000 points (multi-day option holds)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python research/dump_year.py 250 banknifty_year_wide.parquet 1000
+          gh release upload research-data banknifty_year_wide.parquet --clobber
       - name: The 12 bank stocks, 1-minute (for advance-decline)
         env:
           GH_TOKEN: ${{ github.token }}
