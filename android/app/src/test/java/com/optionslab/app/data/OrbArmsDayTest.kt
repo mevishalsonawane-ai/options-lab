@@ -243,4 +243,71 @@ class OrbArmsDayTest : RobolectricTest() {
         assertEquals(day.atTime(10, 30), p.signalBar)
         assertTrue("the ORB itself stays off", arm("orb").today.isEmpty())
     }
+
+    // ---- Straddle Sell (paper only, no direction) ----------------------------------------------------
+
+    private fun armStraddle(t: LocalTime) {
+        at(t)
+        val msg = runBlocking { OrbArms.setArmed("straddle_sell", true, automatic = true) }
+        assertTrue(msg, msg.startsWith("Straddle Sell armed on paper (it never trades on Zerodha)"))
+    }
+
+    /** Both of the day's ATM legs sold once, 1 lot each, short in the paper book; nothing bought. */
+    private fun assertPairSold() {
+        val a = arm("straddle_sell")
+        val legs = a.today
+        assertEquals(listOf("CE", "PE"), legs.map { it.right })
+        assertTrue(legs.all { it.open && it.short && !it.live && it.qty == 30 })
+        assertEquals(300.0, legs[0].entry, 0.5); assertEquals(280.0, legs[1].entry, 0.5)
+        val sells = Paper.state.orders.filter { it.action == "SELL" }
+        assertEquals("exactly two paper sells", 2, sells.size)
+        assertTrue(sells.all { it.status == "complete" })
+        assertTrue("nothing bought yet", Paper.state.orders.none { it.action == "BUY" })
+        for (p in legs) assertEquals(-30, Paper.state.positions.filter { it.symbol == p.symbol && it.product == "MIS" }.sumOf { it.quantity })
+        assertNotNull("the pair's line is shown", a.pairLine)
+    }
+
+    @Test fun straddleSellsBothSidesOnceAndBuysBothBackAt1510() {
+        armStraddle(LocalTime.of(9, 20))
+        passes(LocalTime.of(9, 20), LocalTime.of(9, 24))
+        assertTrue("nothing before the 09:20 strike is known", Paper.state.orders.isEmpty())
+        assertEquals("waiting_for_0920_strike", arm("straddle_sell").status)
+        tick(LocalTime.of(9, 25))
+        assertPairSold()
+        passes(LocalTime.of(9, 30), LocalTime.of(15, 5), every = 5)
+        assertPairSold()                                            // prices unchanged: held, never sold twice
+        tick(LocalTime.of(15, 10))
+        val legs = arm("straddle_sell").today
+        assertTrue(legs.all { !it.open && it.why == "session_end" })
+        assertEquals("both bought back", 2, Paper.state.orders.count { it.action == "BUY" && it.status == "complete" })
+        for (p in legs) assertEquals(0, Paper.state.positions.filter { it.symbol == p.symbol && it.product == "MIS" }.sumOf { it.quantity })
+        tick(LocalTime.of(15, 11))
+        assertEquals("one straddle a day", 2, Paper.state.orders.count { it.action == "SELL" })
+    }
+
+    @Test fun straddleBuysBothBackWhenHalfTheCreditIsLost() {
+        armStraddle(LocalTime.of(9, 20))
+        passes(LocalTime.of(9, 24), LocalTime.of(9, 25))
+        assertPairSold()
+        // credit ~580: the call jumps to 560, the pair now costs ~840 to buy back - a loss under half the credit: held
+        upstox.price(ceKey, 560.0)
+        tick(LocalTime.of(11, 0))
+        assertTrue(arm("straddle_sell").today.all { it.open })
+        // the call at 600: the pair costs ~880, a 300 loss >= half of 580 - both legs bought back together
+        upstox.price(ceKey, 600.0)
+        tick(LocalTime.of(11, 1))
+        val legs = arm("straddle_sell").today
+        assertTrue(legs.all { !it.open && it.why == "stop" })
+        assertTrue("the pair lost", legs.sumOf { it.grossPnl ?: 0.0 } < 0)
+        assertEquals(2, Paper.state.orders.count { it.action == "BUY" && it.status == "complete" })
+        tick(LocalTime.of(11, 5))
+        assertEquals("not sold again the same day", 2, Paper.state.orders.count { it.action == "SELL" })
+    }
+
+    @Test fun straddleArmedAfter1030SellsNothingThatDay() {
+        armStraddle(LocalTime.of(10, 31))
+        passes(LocalTime.of(10, 31), LocalTime.of(10, 40))
+        assertTrue(Paper.state.orders.isEmpty())
+        assertEquals("too_late_to_sell_today", arm("straddle_sell").status)
+    }
 }

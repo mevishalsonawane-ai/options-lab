@@ -11,6 +11,7 @@ import com.optionslab.engine.orb.OrbRules
 import com.optionslab.engine.orb.PassRule
 import com.optionslab.engine.orb.Replay
 import com.optionslab.engine.orb.RangeFadeRules
+import com.optionslab.engine.orb.StraddleRules
 import com.optionslab.engine.orb.SweepRules
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -72,10 +73,12 @@ object OrbArms {
          * filled, and no stop rests yet. Kept as open (so the arm buys nothing more) until the books settle it.
          */
         val unconfirmed: Boolean = false,
+        /** A SOLD option (Straddle Sell): the profit is entry - exit. */
+        val short: Boolean = false,
     ) {
         val open: Boolean get() = exit == null
         val day: LocalDate get() = entryTime.toLocalDate()
-        val points: Double? get() = exit?.let { it - entry }
+        val points: Double? get() = exit?.let { if (short) entry - it else it - entry }
         val grossPnl: Double? get() = points?.let { it * qty }
     }
 
@@ -134,7 +137,7 @@ object OrbArms {
                         if (p.has("exit")) p.getDouble("exit") else null,
                         p.optString("exitTime").ifEmpty { null }?.let { LocalDateTime.parse(it) }, p.optString("why").ifEmpty { null },
                         p.optDouble("charges", 0.0), p.optBoolean("live", false), p.optString("kite").ifEmpty { null },
-                        p.optBoolean("unconfirmed", false))
+                        p.optBoolean("unconfirmed", false), p.optBoolean("short", false))
                 }
             }
             o.optJSONObject("pending")?.let { m -> m.keys().forEach { k -> val p = m.getJSONObject(k)
@@ -185,7 +188,7 @@ object OrbArms {
                     .put("entryOrderId", p.entryOrderId ?: "").put("stopOrderId", p.stopOrderId ?: "")
                     .apply { p.stopTrigger?.let { put("stopTrigger", it) }; p.exit?.let { put("exit", it) } }
                     .put("exitTime", p.exitTime?.toString() ?: "").put("why", p.why ?: "").put("charges", p.charges)
-                    .put("live", p.live).put("kite", p.kite ?: "").put("unconfirmed", p.unconfirmed))
+                    .put("live", p.live).put("kite", p.kite ?: "").put("unconfirmed", p.unconfirmed).put("short", p.short))
             }
         })
         o.put("pending", JSONObject().apply { b.pending.forEach { (k, p) -> put(k, JSONObject().put("right", p.right).put("bar", p.signalBar.toString()).put("expires", p.expires.toString())) } })
@@ -197,8 +200,8 @@ object OrbArms {
         holdingHint = b.positions.any { it.open }
     }
 
-    /** ORB and ORB Fresh (the pre-registered forward test), plus ORB Sweep and Range Fade (paper only, outside that test). */
-    private val ALL_ARMS: List<Arm> = OrbRules.ARMS + SweepRules.ARM + RangeFadeRules.ARM
+    /** ORB and ORB Fresh (the pre-registered forward test), plus ORB Sweep, Range Fade and Straddle Sell (paper only, outside it). */
+    private val ALL_ARMS: List<Arm> = OrbRules.ARMS + SweepRules.ARM + RangeFadeRules.ARM + StraddleRules.ARM
 
     private fun armOf(source: String): Arm = ALL_ARMS.first { it.source == source }
 
@@ -220,6 +223,8 @@ object OrbArms {
     data class ArmView(
         val arm: Arm, val armed: Boolean, val automatic: Boolean, val status: String, val open: Position?, val mark: Double?,
         val pending: Pending?, val today: List<Position>, val liveOk: Boolean = false,
+        /** Straddle Sell while both legs are open: "sold ... for X, now Y, P&L Z". */
+        val pairLine: String? = null,
     )
 
     data class View(
@@ -235,10 +240,23 @@ object OrbArms {
         val arms = ALL_ARMS.map { a ->
             val open = b.positions.lastOrNull { it.arm == a.source && it.open }
             ArmView(a, b.armed[a.source] == true, b.auto[a.source] != false, b.status[a.source] ?: "", open, open?.let { marks[it.symbol] },
-                b.pending[a.source], b.positions.filter { it.arm == a.source && it.day == day }, b.liveOk[a.source] == true)
+                b.pending[a.source], b.positions.filter { it.arm == a.source && it.day == day }, b.liveOk[a.source] == true,
+                if (a.straddle) pairLine(b.positions.filter { it.arm == a.source && it.open }) else null)
         }
         val lastReplay = b.replays.entries.lastOrNull()
         View(arms, b.legs?.takeIf { it.day == day }, b.range?.takeIf { b.rangeDay == day }, forward(b), lastReplay?.value, lastReplay?.key)
+    }
+
+    private fun pairLine(legs: List<Position>): String? {
+        if (legs.isEmpty()) return null
+        val credit = legs.sumOf { it.entry }
+        val now = legs.map { marks[it.symbol] }
+        val names = legs.joinToString(" + ") { "${it.right} ${it.symbol.takeLast(7).dropLast(2)} %.1f".format(Locale.ENGLISH, it.entry) }
+        if (now.any { it == null }) return "Sold $names = %.1f".format(Locale.ENGLISH, credit)
+        val back = now.sumOf { it!! }
+        val pnl = (credit - back) * legs.first().qty
+        return "Sold $names = %.1f · now %.1f · %s%,.0f · stop at %.1f".format(Locale.ENGLISH, credit, back,
+            if (pnl < 0) "-Rs " else "Rs ", kotlin.math.abs(pnl), credit * (1 + StraddleRules.STOP_FRACTION))
     }
 
     /** The pre-registered forward test on the closed arm trades, operator-closed trades excluded. */
@@ -266,7 +284,10 @@ object OrbArms {
         if (!on) b.pending.remove(source)
         save(b)
         val label = armOf(source).label
-        if (on && armOf(source).fade) "$label armed on paper (it never trades on Zerodha), fully automatic: when a 5-minute bar " +
+        if (on && armOf(source).straddle) "$label armed on paper (it never trades on Zerodha), fully automatic: once a day it " +
+            "SELLS the ATM call and put (1 lot each) when the 09:20 strike is known, and buys both back at 15:10 - or earlier " +
+            "if the pair has lost half the premium collected. No direction call; it earns the time decay."
+        else if (on && armOf(source).fade) "$label armed on paper (it never trades on Zerodha), fully automatic: when a 5-minute bar " +
             "reaches the outer tenth of the opening range and closes back inside, it buys the option toward the middle - 1 lot, " +
             "a 40-point stop, a 40-point target and the 15:10 exit, at most ${RangeFadeRules.MAX_ENTRIES} a day, from 10:30."
         else if (on && paperOnly) "$label armed on paper (it never trades on Zerodha), fully automatic: it fades a failed break of the " +
@@ -349,6 +370,13 @@ object OrbArms {
         if (!t.toLocalTime().isBefore(OrbRules.SQUARE_OFF)) return "flat_after_square_off"
         if (Strategies.stoppedToday()) { b.watched.remove(watchKey); return "stopped_for_today" }
         b.pending[arm.source]?.let { if (t.isAfter(it.expires)) b.pending.remove(arm.source) else { watching(); return "awaiting_approval" } }
+        if (arm.straddle) {
+            watching()
+            val (go, why) = StraddleRules.entryDecision(t, b.positions.any { it.arm == arm.source && it.day == day })
+            if (!go) return why
+            val legs = contracts(b, day, bars) ?: return "no_contract"
+            return sellPair(b, arm, legs, bars.last().start)
+        }
         val rng = OrbRules.openingRange(bars) ?: return "waiting_for_opening_range"
         b.range = rng; b.rangeDay = day
         val legs = contracts(b, day, bars) ?: return "no_contract"
@@ -445,12 +473,81 @@ object OrbArms {
         return "entered"
     }
 
+    /** Straddle Sell: sell the call, then the put; if the put cannot be sold, the call is bought straight back. */
+    private suspend fun sellPair(b: Book, arm: Arm, legs: Legs, signalBar: LocalDateTime): String {
+        val sold = ArrayList<Position>()
+        for (c in listOf(legs.ce, legs.pe)) {
+            if (Paper.lastPrice(c) == null) { unwind(sold); return "refused: no quote for ${c.symbol}" }
+            if (Strategies.stoppedToday()) { unwind(sold); return "stopped_for_today" }
+            val sell = Paper.place(c, "SELL", 1, "MARKET", "MIS", null, null)
+            val fill = filledOrCancelled(sell)
+            if (fill == null) { unwind(sold); return "order_refused: ${if (sell.ok) "no price to fill at; the order was cancelled" else sell.message}" }
+            sell.orderId?.let { Strategies.tagOwner("paper:$it", "${arm.label} · sell ${c.right.name}") }
+            Notifier.orderFilled(app, "SELL", fill.quantity, fill.symbol, fill.price, "Paper", arm.label)
+            sold += Position(arm.source, c.symbol, c.right.name, fill.quantity, fill.price, now(), signalBar, sell.orderId, null, null,
+                charges = chargesOf(sell.orderId), short = true)
+            marks[c.symbol] = fill.price
+        }
+        b.positions += sold
+        return "entered"
+    }
+
+    /** Buys back legs that were sold when the rest of the pair could not be (nothing is left half-open). */
+    private suspend fun unwind(sold: List<Position>) {
+        for (p in sold) {
+            val c = Paper.contractOf(p.symbol) ?: continue
+            runCatching { Paper.place(c, "BUY", p.qty / c.lotSize.coerceAtLeast(1), "MARKET", "MIS", null, null) }
+        }
+    }
+
+    /** Buy back one sold leg at market. */
+    private suspend fun buyBack(p: Position, c: Paper.Contract, why: String): Position {
+        val buy = Paper.place(c, "BUY", p.qty / c.lotSize.coerceAtLeast(1), "MARKET", "MIS", null, null)
+        val fill = filledOrCancelled(buy) ?: return p                              // retried on the next pass
+        buy.orderId?.let { Strategies.tagOwner("paper:$it", "${armOf(p.arm).label} · $why") }
+        Notifier.orderFilled(app, "BUY", fill.quantity, fill.symbol, fill.price, "Paper", armOf(p.arm).label)
+        return p.copy(exit = fill.price, exitTime = now(), why = why, charges = p.charges + chargesOf(buy.orderId))
+    }
+
+    /** Straddle Sell's sold legs: the pair's stop, 15:10, the operator stop, and legs closed outside the arm. */
+    private suspend fun priceCheckPairs(b: Book, t: LocalDateTime, stopped: Boolean) {
+        val open = b.positions.withIndex().filter { it.value.open && it.value.short && !it.value.live }
+        if (open.isEmpty()) return
+        for ((i, p) in open) {
+            val c = Paper.contractOf(p.symbol) ?: continue
+            Paper.lastPrice(c)?.let { marks[p.symbol] = it }
+            // Gone from the paper book without the arm buying it back: the 15:15 square-off, or the owner closed it.
+            val net = Paper.state.positions.filter { it.symbol == p.symbol && it.product == "MIS" }.sumOf { it.quantity }
+            if (net >= 0) {
+                val sq = Paper.state.trades.lastOrNull { it.symbol == p.symbol && it.action == "BUY" && it.strategy == "AUTO_SQUARE_OFF" && !it.timestamp.isBefore(p.entryTime) }
+                val backstop = p.day.isBefore(t.toLocalDate()) || !t.toLocalTime().isBefore(LocalTime.of(15, 15))
+                b.positions[i] = p.copy(exit = sq?.price?.toDouble() ?: marks[p.symbol] ?: p.entry, exitTime = sq?.timestamp ?: t,
+                    why = if (backstop) "backstop_square_off" else "closed_by_you", charges = p.charges + (sq?.charges?.toDouble() ?: 0.0))
+            }
+        }
+        for ((arm, group) in b.positions.withIndex().filter { it.value.open && it.value.short && !it.value.live }.groupBy { it.value.arm to it.value.day }) {
+            val legs = group.map { it.value }
+            val prices = legs.map { marks[it.symbol] }
+            val why = when {
+                stopped -> "operator_stop"
+                prices.any { it == null } -> if (!t.toLocalTime().isBefore(OrbRules.SQUARE_OFF)) "session_end" else null
+                else -> StraddleRules.exitReason(legs.sumOf { it.entry }, prices.sumOf { it!! }, t)
+            } ?: continue
+            for ((i, p) in group) {
+                val c = Paper.contractOf(p.symbol) ?: continue
+                b.positions[i] = buyBack(p, c, why)
+            }
+            runCatching { Diag.record("orb", "${armOf(arm.first).label}: bought back ($why)") }
+        }
+    }
+
     /** Resting stop, +40 target, 15:10 exit, the 15:15 backstop and the operator stop, for every open position. */
     private suspend fun priceCheck(b: Book, t: LocalDateTime) {
         val stopped = Strategies.stoppedToday()
         val liveOpen = b.positions.withIndex().filter { it.value.open && it.value.live }
         if (liveOpen.isNotEmpty()) runCatching { priceCheckLive(b, t, liveOpen, stopped) }
-        val open = b.positions.withIndex().filter { it.value.open && !it.value.live }
+        runCatching { priceCheckPairs(b, t, stopped) }
+        val open = b.positions.withIndex().filter { it.value.open && !it.value.live && !it.value.short }
         if (open.isEmpty()) return
         val orders = Paper.state.orders.associateBy { it.orderId }
         for ((i, p) in open) {
@@ -888,6 +985,9 @@ object OrbArms {
         s == "no_sweep" -> "Waiting for a failed break: no bar has gone through the range and closed back inside."
         s == "not_at_the_edge" -> "Waiting for a bar at the edge of the range that closes back inside (Range Fade, 10:30-13:55)."
         s == "no_range" -> "The opening range is too narrow to fade."
+        s == "waiting_for_0920_strike" -> "Sells the ATM call and put once the 09:20 strike is known (09:25)."
+        s == "too_late_to_sell_today" -> "Not sold today: the app was not running between 09:25 and 10:30."
+        s == "done_for_today" -> "Done for today: the straddle was sold and closed."
         s == "day_limit_reached" -> "Done for today: ${SweepRules.MAX_ENTRIES} entries taken."
         s == "not_a_fresh_break" -> "Last bar continued an earlier break; ORB Fresh waits for a fresh one."
         s == "waiting_for_fresh_break_after_pause" -> "Armed or restarted while the price was already out of the range: this bar is not chased; the next bar out of the range is taken."
