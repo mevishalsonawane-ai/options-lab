@@ -236,12 +236,11 @@ object PineAuto {
         if (step < 86_400 && (java.time.Instant.ofEpochSecond(last.epochSecond).atZone(com.optionslab.engine.IST).toLocalDate() != todayIst() ||
                 now - last.epochSecond > step * 3 + 120)) return
         if (b.lastBar[id] == last.epochSecond) return
-        // A real pause (stopped for the day, the kill switch, the daily loss limit, the app not running for 3+ bars) means a
-        // signal that changed meanwhile is not chased. One or two bars skipped by a slow pass are not a pause: that
-        // dropped signals on a phone whose pass can take minutes (29 Sep).
+        // Only a pause the owner made (stopped for the day, the kill switch, its daily loss limit) means a signal that changed
+        // meanwhile is not chased. Missed candles (a slow pass, a failed fetch, the app away) are not a pause: every pass
+        // reads the day's candles again and acts on the signal as it is now (29 Sep).
         val watchedBefore = b.lastBar[id]
-        val resumed = bars.size >= 2 && b.lastTarget[id] != null &&
-            (watchedBefore == null || last.epochSecond - watchedBefore >= step * 3)
+        val resumed = bars.size >= 2 && b.lastTarget[id] != null && watchedBefore == null
         b.lastBar[id] = last.epochSecond
         val r = Pine.run(script, bars.map { PineScripts.toPine(it) }, PineScripts.inputValues(item, script), item.auto.symbol, item.auto.interval,
             budgetMs = 5_000)

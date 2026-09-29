@@ -345,12 +345,12 @@ object OrbArms {
         val lastExit = b.positions.filter { it.arm == arm.source && it.day == day }.mapNotNull { it.exitTime }.maxOrNull()
         // After a pause (stopped for the day, the kill switch, a refused entry, the app not running, armed just now) the
         // previous bar was not watched: a break already under way is not chased, only a fresh one is taken.
-        // A pause is a real one - armed just now, stopped for the day, the kill switch - never a slow or failed pass that
-        // skipped a bar (on a phone a pass can take minutes); that made ORB wait for a fresh break all day (29 Sep).
+        // A pause is only one the owner made - armed just now, stopped for the day, the kill switch - never missed data
+        // (a slow pass, a failed fetch, the app away); treating those as pauses left ORB idle all day on 29 Sep.
         val prevBar = bars.getOrNull(bars.size - 2)
-        val seen = b.watched[watchKey]?.let { runCatching { LocalDateTime.parse(it) }.getOrNull() }
-        // ... or the app not running for 3+ bars (a slow pass skips one or two at most).
-        val resumed = prevBar != null && (seen == null || !seen.plusMinutes(15).isAfter(last.start))
+        // Missed bars are never a pause: every pass reads the whole day's bars again, so after a slow pass, a failed fetch or
+        // the app being away the arm decides on where the market is now (a break still under way is taken).
+        val resumed = prevBar != null && !b.watched.containsKey(watchKey)
         val (direction, why) = OrbRules.entrySignal(bars, rng, arm, lastExit, requireFresh = resumed)
         if (direction == 0) {
             watching()
