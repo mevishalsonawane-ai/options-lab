@@ -91,3 +91,9 @@ ATM straddle level and change, CE/PE skew, OI change and PCR over ATM +-200, CE/
   Gross is near zero; the ~Rs 140 round trip (4 fills + charges) is the loss. The same spread after ORDINARY candles
   does about the same, so the big candle adds nothing tradable. Expiry week (<= 7 days) comes closest to break-even
   (200 wide: -Rs 28 to -43 a trade) but is still negative.
+- The owner's manual method (MANUAL_METHOD.md): guess the direction from the last candles, buy the CE/PE of a
+  non-expiry-week contract that fits the capital, sell at +10%, no stop (held up to 5 days). It wins 70-81% of trades,
+  but the average loss is ~4x the average win, so the year nets about zero: best mechanical direction rule
+  +Rs 18.8k on Rs 20k capital, others -Rs 8k to -41k; 20 coin-flip runs of the same method range -Rs 74k .. +92k
+  (median +4.8k) - the direction rule adds nothing beyond luck. Stops (-10/-20/-30%) lower the win rate and do not fix
+  it; later entries (11:00, 13:00) are worse. Break-even needs a win rate of ~avg loss / (avg win + avg loss) = 80%.
