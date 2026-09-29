@@ -8,7 +8,7 @@ Signal: a 15-minute candle (09:15 .. 14:30) whose body is in the top 20% of the 
 Entry at the first minute after the candle (sell at the minute's open -0.5, buy the wing at open +0.5).
 Exits: "15:10"  hold to 15:10 the same day
        "level"  buy back when a 5-minute close goes through the candle's low (green) / high (red), else 15:10
-       "next day" hold to 15:10 the NEXT day (same expiry and strikes needed), level exit active on both days
+       "next day" / "2 days"  hold to 15:10 one / two trading days later (same expiry; the level exit stays active)
 Costs: Rs 80 a round trip (two legs), 1 lot of 30. Filters: the EMA/VWAP direction (the 5-minute close on the
 candle's side of the 9 EMA and the day's VWAP), and skipping wide-CPR days (the year's widest third).
 Comparisons: buying the ATM option in the candle's direction (level exit), and the same spread sold at an ordinary
@@ -94,7 +94,7 @@ def level_broken(d, m, lvl, sign):
     return (m % 5 == 4) and ((sign > 0 and d["I"]["close"][m] < lvl) or (sign < 0 and d["I"]["close"][m] > lvl))
 
 
-def sell(days, i, cand, sign, W, exit_rule, dist=None):
+def sell(days, i, cand, sign, W, exit_rule, dist=None, use_level=True):
     d = days[i]
     ch = d["chain"]
     right = "PE" if sign > 0 else "CE"
@@ -123,19 +123,21 @@ def sell(days, i, cand, sign, W, exit_rule, dist=None):
     if credit <= 1:
         return None
     for m in range(m0, CUT + 1):
-        if exit_rule != "15:10" and level_broken(d, m, lvl, sign):
+        if use_level and exit_rule != "15:10" and level_broken(d, m, lvl, sign):
             return (credit - spread_value(ch, right, k1, k2, m, sign)) * LOT - CHG2, credit
-    if exit_rule != "next day":
+    if exit_rule in ("15:10", "level"):
         return (credit - spread_value(ch, right, k1, k2, CUT, sign)) * LOT - CHG2, credit
-    if i + 1 >= len(days):
-        return None
-    d2 = days[i + 1]
-    if d2["exp"] != d["exp"] or (k1, right) not in d2["chain"] or (k2, right) not in d2["chain"]:
-        return None
-    for m in range(0, CUT + 1):
-        if level_broken(d2, m, lvl, sign):
-            return (credit - spread_value(d2["chain"], right, k1, k2, m, sign)) * LOT - CHG2, credit
-    return (credit - spread_value(d2["chain"], right, k1, k2, CUT, sign)) * LOT - CHG2, credit
+    hold = 1 if exit_rule == "next day" else 2
+    for h in range(1, hold + 1):
+        if i + h >= len(days):
+            return None
+        dn = days[i + h]
+        if dn["exp"] != d["exp"] or (k1, right) not in dn["chain"] or (k2, right) not in dn["chain"]:
+            return None
+        for m in range(0, CUT + 1):
+            if use_level and level_broken(dn, m, lvl, sign):
+                return (credit - spread_value(dn["chain"], right, k1, k2, m, sign)) * LOT - CHG2, credit
+    return (credit - spread_value(dn["chain"], right, k1, k2, CUT, sign)) * LOT - CHG2, credit
 
 
 def buy(days, i, cand, sign):
@@ -156,10 +158,13 @@ def buy(days, i, cand, sign):
     return (leg["close"][CUT] - SLIP - e) * LOT - CHG1, e
 
 
-def run(days, kind, W=100, exit_rule="level", direction=False, skip_wide=False, control=False, dists=None):
+def run(days, kind, W=100, exit_rule="level", direction=False, skip_wide=False, control=False, dists=None,
+        use_level=True, max_dte=None):
     out = []
     for i, d in enumerate(days):
         if skip_wide and d["wide"]:
+            continue
+        if max_dte is not None and (d["exp"] - d["day"]).days > max_dte:
             continue
         used = 0
         for j, c in enumerate(d["c15"]):
@@ -185,7 +190,7 @@ def run(days, kind, W=100, exit_rule="level", direction=False, skip_wide=False, 
                 dist = None
                 if control:
                     dist = dists[len(out) % len(dists)]
-                r = sell(days, i, c, sign, W, exit_rule, dist)
+                r = sell(days, i, c, sign, W, exit_rule, dist, use_level)
             else:
                 r = buy(days, i, c, sign)
             if r is None:
@@ -215,7 +220,7 @@ def main():
            "|---|---|---|---|---|---|---|---|---|"]
     rows = []
     for W in (100, 200):
-        for ex in ("15:10", "level", "next day"):
+        for ex in ("15:10", "level", "next day", "2 days"):
             for dirf, sw in ((False, False), (True, False), (True, True)):
                 label = f"SELL spread {W} wide, exit {ex}" + (", EMA/VWAP filter" if dirf else "") + (", skip wide CPR" if sw else "")
                 tr = run(days, "sell", W, ex, dirf, sw)
@@ -231,8 +236,23 @@ def main():
             ("CONTROL: same 100-wide spread, level exit, after ORDINARY candles at the same distance",
              run(days, "sell", 100, "level", control=True, dists=dists)),
             ("CONTROL: same, held to 15:10", run(days, "sell", 100, "15:10", control=True, dists=dists)),
-            ("CONTROL: same, held to next day", run(days, "sell", 100, "next day", control=True, dists=dists))):
+            ("CONTROL: same, held to next day", run(days, "sell", 100, "next day", control=True, dists=dists)),
+            ("CONTROL: same, held 2 days", run(days, "sell", 100, "2 days", control=True, dists=dists))):
         out.append(line(tr, alld, label))
+        print(out[-1], flush=True)
+    out += ["", "**Last week before expiry only (days to expiry <= 7), where time decay is fastest**", "",
+            "| version | trades | win | net Rs | per trade | t | 1st / 2nd half | green months | worst trade |",
+            "|---|---|---|---|---|---|---|---|---|"]
+    for W in (100, 200):
+        for ex, lv in (("15:10", False), ("next day", True), ("next day", False), ("2 days", False)):
+            label = f"SELL {W} wide, <= 7 days to expiry, exit {ex}" + ("" if lv else " (no level exit)")
+            out.append(line(run(days, "sell", W, ex, use_level=lv, max_dte=7), alld, label))
+            print(out[-1], flush=True)
+        out.append(line(run(days, "sell", W, "next day", use_level=False, max_dte=7, control=True, dists=dists), alld,
+                        f"CONTROL {W} wide, <= 7 days, ordinary candles, next day (no level exit)"))
+        print(out[-1], flush=True)
+    for W in (100, 200):
+        out.append(line(run(days, "sell", W, "2 days", use_level=False), alld, f"SELL {W} wide, any expiry, 2 days (no level exit)"))
         print(out[-1], flush=True)
     sb = run(days, "sell", 100, "level")
     out += ["", f"Average credit collected on the 100-wide spread: {sb.credit.mean():.1f} pts (Rs {sb.credit.mean() * LOT:,.0f}); "

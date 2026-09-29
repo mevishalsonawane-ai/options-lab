@@ -84,3 +84,10 @@ ATM straddle level and change, CE/PE skew, OI change and PCR over ATM +-200, CE/
   ICICI at their day high/low as well it fires only 10 times a year. Breadth does not call the next 5-30 minutes
   (every advance count: 50% up after 5 min). Narrow-CPR days are NOT more trending: day range 513 vs 583 pts on wide
   -CPR days. Skipping wide-CPR days does cut losses (-28k vs -53k).
+- Selling beyond big 15-min candles (SELL_LEVELS.md, on banknifty_year_wide.parquet = strikes within 1,000 pts;
+  the 300-pt file biases multi-day holds because far strikes drop out when the market moves away): put spread below a
+  big green candle's low / call spread above a big red's high, 100 or 200 wide, exits 15:10 / level break / next day
+  / 2 days, with the EMA/VWAP and CPR filters: every version loses (-Rs 110 to -260 a trade, 17-38% winners net).
+  Gross is near zero; the ~Rs 140 round trip (4 fills + charges) is the loss. The same spread after ORDINARY candles
+  does about the same, so the big candle adds nothing tradable. Expiry week (<= 7 days) comes closest to break-even
+  (200 wide: -Rs 28 to -43 a trade) but is still negative.
