@@ -122,6 +122,9 @@ object Broker {
 
     private fun dropSession() { KiteStream.stop(); SecurePrefs.putAll(mapOf(K_TOKEN to null, K_LOGIN_AT to null)) }
 
+    /** Bumped when Zerodha itself ends the session (expired or logged out elsewhere): the app asks to log in again. */
+    val sessionEnded = kotlinx.coroutines.flow.MutableStateFlow(0)
+
     // ---- HTTP ---------------------------------------------------------------------
 
     /**
@@ -215,7 +218,7 @@ object Broker {
                     // Kite's own message names the problem (margin, price band,
                     // freeze quantity); it carries no credential, so it is shown.
                     val msg = json.optString("message", "request failed").take(300)
-                    if (type == "TokenException") { dropSession(); throw KiteError(type, "Zerodha session ended: $msg") }
+                    if (type == "TokenException") { dropSession(); sessionEnded.value++; throw KiteError(type, "Zerodha session ended: $msg") }
                     throw KiteError(type, msg)
                 }
                 return json.opt("data") ?: JSONObject.NULL

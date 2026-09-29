@@ -597,6 +597,10 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             var first = true
             com.optionslab.app.data.KiteStream.orderEvents.collect { if (first) first = false else if (_settings.value.live) loadAccount(quiet = true) }
         }
+        viewModelScope.launch {
+            var first = true
+            com.optionslab.app.data.Broker.sessionEnded.collect { if (first) first = false else promptLoginIfExpired(force = true) }
+        }
     }
     val plan = MutableStateFlow<Load<OrderPlan>>(Load.Idle)
     val sending = MutableStateFlow<Load<List<com.optionslab.app.data.Broker.Fill>>>(Load.Idle)
@@ -668,6 +672,28 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun startKiteLogin() { if (com.optionslab.app.data.Broker.configured) askLoginPin.value = true else say("Add your Kite API key and secret first.") }
+
+    @Volatile private var loginPromptedAt = 0L
+
+    /**
+     * Opening the app (or coming back to it) with a linked account whose Zerodha session has expired - every
+     * morning, as Kite sessions end overnight - asks for the PIN / fingerprint and opens Zerodha's login page.
+     * Cancelled, it stays quiet for 15 minutes; [force] (Zerodha just ended the session) asks again at once.
+     */
+    fun promptLoginIfExpired(force: Boolean = false) {
+        if (!LoginPrompt.enabled) return
+        viewModelScope.launch(Dispatchers.IO) {
+            val b = com.optionslab.app.data.Broker
+            val now = System.currentTimeMillis()
+            if (!b.configured || !b.linked || b.loggedIn) return@launch
+            broker.value = brokerState()
+            if (askLoginPin.value || showKiteLogin.value) return@launch
+            if (!force && now - loginPromptedAt < 15 * 60_000L) return@launch
+            loginPromptedAt = now
+            com.optionslab.app.data.Diag.record("info", "Zerodha session expired: asked to log in again")
+            askLoginPin.value = true
+        }
+    }
 
     /** Called by the login page for every navigation; true means "stop, it was ours". */
     fun onKiteNavigation(url: String): Boolean {
@@ -1705,3 +1731,6 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         }
     }
 }
+
+/** The automatic "log in to Zerodha again" prompt. Screen tests switch it off (a dialog over every page); LoginPromptTest turns it on. */
+object LoginPrompt { @Volatile var enabled = true }

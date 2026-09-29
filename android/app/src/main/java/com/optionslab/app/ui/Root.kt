@@ -475,6 +475,13 @@ private fun Main(model: AppModel) {
         if (kiteLogin) com.optionslab.app.ui.screens.KiteLoginPage(model)
         val askPin by model.askLoginPin.collectAsState()
         if (askPin) com.optionslab.app.ui.screens.LoginPinDialog(model)
+        // A new day (or a session Zerodha ended): the login popup opens by itself when the app opens or comes back.
+        val owner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+        androidx.compose.runtime.DisposableEffect(owner) {
+            val obs = androidx.lifecycle.LifecycleEventObserver { _, e -> if (e == androidx.lifecycle.Lifecycle.Event.ON_RESUME) model.promptLoginIfExpired() }
+            owner.lifecycle.addObserver(obs)
+            onDispose { owner.lifecycle.removeObserver(obs) }
+        }
         // Every event, success or error, drops in at the top of the screen.
         com.optionslab.app.ui.components.AlertBanner()
     }
