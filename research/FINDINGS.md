@@ -78,3 +78,9 @@ ATM straddle level and change, CE/PE skew, OI change and PCR over ATM +-200, CE/
   the close it is gone. Buying ATM options on it: best version (3 HH/HL, -40/+40, sideways filter on) breaks even
   (-Rs 126 on 462 trades, +11k / -11k by half); every other version loses; the 9-EMA trend exit wins only 32%.
   The sideways (VWAP-chop) filter is the useful part: it cuts losses by Rs 16-23k in every pairing.
+- 1-minute "institutional" scalp (SCALP_1MIN.md; bank_stocks_year.parquet on the research-data release holds the 12
+  constituents' 1-minute bars): HMA(21) turns + VWAP + candle colour + swing-low/high stop with a 1:2 target lose in
+  every combination (-Rs 20k to -128k, 27-34% winners). Advance-decline 8:4 makes it worse (27% winners); with HDFC &
+  ICICI at their day high/low as well it fires only 10 times a year. Breadth does not call the next 5-30 minutes
+  (every advance count: 50% up after 5 min). Narrow-CPR days are NOT more trending: day range 513 vs 583 pts on wide
+  -CPR days. Skipping wide-CPR days does cut losses (-28k vs -53k).
