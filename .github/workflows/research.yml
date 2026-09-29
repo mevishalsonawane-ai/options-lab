@@ -45,6 +45,12 @@ jobs:
         run: |
           python research/dump_year.py 250 banknifty_prev_year_wide.parquet 1000 250
           gh release upload research-data banknifty_prev_year_wide.parquet --clobber
+      - name: NIFTY, India VIX and BANKNIFTY futures, 1-minute, both years
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python research/dump_extra.py extra_series.parquet
+          gh release upload research-data extra_series.parquet --clobber
       - name: Expiry-day chains, BANKNIFTY and NIFTY
         env:
           GH_TOKEN: ${{ github.token }}
