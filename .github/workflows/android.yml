@@ -48,6 +48,8 @@ jobs:
     name: Build APK
     runs-on: ubuntu-latest
     needs: engine
+    permissions:
+      contents: write   # only to publish the signed APK on the latest-apk release
     defaults:
       run:
         working-directory: android
@@ -119,9 +121,29 @@ jobs:
           signer=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)
           "$signer" verify --print-certs app/build/outputs/apk/release/*.apk | grep -E "SHA-256|DN" || true
           if [ -n "$OL_KEYSTORE_PATH" ]; then echo "Signed with the owner's release key."; else echo "Signed with a throwaway key (no usable release keystore)."; fi
+      # The signed APK on one fixed link (a release asset, not an Actions artifact, so a full artifact quota never
+      # blocks an update): https://github.com/<repo>/releases/download/latest-apk/IraAlgo.apk
+      - name: Publish the APK to the latest-apk release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/claude/android-options-lab-kotlin-xgt1ym'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SHA: ${{ github.sha }}
+        run: |
+          apk=$(ls app/build/outputs/apk/release/*.apk | head -1)
+          cp "$apk" "$RUNNER_TEMP/IraAlgo.apk"
+          notes="Build of ${SHA::7} ($(date -u '+%Y-%m-%d %H:%M UTC')). Installs over the previous one (same signing key)."
+          if gh release view latest-apk >/dev/null 2>&1; then
+            gh release edit latest-apk --notes "$notes"
+          else
+            gh release create latest-apk --prerelease --title "IraAlgo - latest build" --notes "$notes" --target "$SHA"
+          fi
+          gh release upload latest-apk "$RUNNER_TEMP/IraAlgo.apk" --clobber
+          echo "APK: https://github.com/${{ github.repository }}/releases/download/latest-apk/IraAlgo.apk"
       - uses: actions/upload-artifact@v4
+        continue-on-error: true   # a full artifact quota must not turn a good build red; the release above has the APK
         with:
           name: options-lab-apk
+          retention-days: 7
           path: |
             android/app/build/outputs/apk/release/*.apk
             android/app/build/outputs/apk/debug/*.apk
@@ -185,14 +207,18 @@ jobs:
           grep -rhoE 'LATENCY [^<]*' app/build/test-results/testDebugUnitTest/*.xml 2>/dev/null | sort -u || true
       - uses: actions/upload-artifact@v4
         if: always()
+        continue-on-error: true
         with:
           name: app-screenshots-${{ matrix.shard }}
+          retention-days: 2
           path: android/app/build/outputs/roborazzi/
           if-no-files-found: warn
       - uses: actions/upload-artifact@v4
         if: always()
+        continue-on-error: true
         with:
           name: app-test-reports-${{ matrix.shard }}
+          retention-days: 5
           path: |
             android/app/build/reports/tests/testDebugUnitTest/
             android/app/build/test-results/testDebugUnitTest/
@@ -214,6 +240,7 @@ jobs:
       contents: write
     steps:
       - uses: actions/download-artifact@v4
+        continue-on-error: true
         with:
           pattern: app-screenshots-*
           merge-multiple: true
