@@ -73,3 +73,8 @@ ATM straddle level and change, CE/PE skew, OI change and PCR over ATM +-200, CE/
   (range vs the last 20 candles), WILD 15-min candles hold their level 2 h ~55-57% vs 32-37% baseline; calm ones don't
   (27% vs 27%). Next-candle colour does not change with any volatility measure (reversal after red stays ~51-53%).
   High-IV days are wider (631 vs 464 pts range) and greener (58% vs 41%).
+- 9 EMA + VWAP + HH/HL direction filter (TREND_FILTER.md, VWAP = time-weighted, the index has no volume): the next
+  15 min go AGAINST the signal slightly (bullish: 47% up); 30-60 min lean its way by only ~2-8 pts over the drift; by
+  the close it is gone. Buying ATM options on it: best version (3 HH/HL, -40/+40, sideways filter on) breaks even
+  (-Rs 126 on 462 trades, +11k / -11k by half); every other version loses; the 9-EMA trend exit wins only 32%.
+  The sideways (VWAP-chop) filter is the useful part: it cuts losses by Rs 16-23k in every pairing.
