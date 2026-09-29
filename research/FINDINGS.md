@@ -57,3 +57,7 @@ ATM straddle level and change, CE/PE skew, OI change and PCR over ATM +-200, CE/
   (after a green / 3+ greens on 15-min: 51.7% / 54.9% red; after 3+ reds or a big red on 5-min: 46-48% red).
   The 20-25 candles before a red candle look the same as before a green one. Red days: first 30 min red -> 72%,
   below the opening range at 10:30 -> 77% (mechanical); gap down > 0.3% -> only 31% red.
+- Runs (RUNS.md): same-colour runs are as long as coin flips on 1-min (2.01 vs 2.00 candles) and slightly SHORTER on
+  5-min (1.93) and 15-min (1.86): after 2-4 in a row the next candle keeps the colour only 43-48%. Long runs (5+) are
+  rarer than chance. After a candle the price is still beyond its close h candles later 46-52% of the time - a coin
+  flip, even after big candles. Days: green after green 45%, red after red 43%; streaks average 1.8 days.
