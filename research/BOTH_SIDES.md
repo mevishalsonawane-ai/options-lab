@@ -58,3 +58,15 @@
 | 11:00 | -35% | +30/60/100/150% | yes | 29% / -388,392 / 18% | 31% / -419,822 / 4% | -4.20 |
 | 11:00 | -35% | +15/30/45% (3 targets) | no | 31% / -299,318 / 4% | 31% / -419,338 / 0% | -4.21 |
 | 11:00 | -35% | +15/30/45% (3 targets) | yes | 31% / -279,262 / 18% | 31% / -412,668 / 5% | -4.32 |
+## The owner's settings: stop -3% per side, targets +5 / +8 / +10% (3 lots per side, one per target)
+
+| version | Feb24-Feb25: trades / win / net Rs / worst day | Feb25-Feb26: same | t (both) |
+|---|---|---|---|
+| once a day at 09:20, break-even after first stop: no | 249 / 48% / -106,960 / -6,146 | 249 / 54% / -35,923 / -5,770 | -2.60 |
+| once a day at 10:00, break-even after first stop: no | 249 / 38% / -209,817 / -6,770 | 249 / 49% / -101,217 / -6,204 | -5.80 |
+| once a day at 11:00, break-even after first stop: no | 249 / 43% / -172,454 / -6,741 | 249 / 44% / -153,696 / -6,494 | -5.76 |
+| REPEATED all day 09:20-14:30, break-even: no | 9987 (40 a day) / 43% / -5,488,864 / -74,899 | 4410 (18 a day) / 45% / -2,276,384 / -73,346 | -32.51 |
+| once a day at 09:20, break-even after first stop: yes | 249 / 38% / -105,199 / -3,504 | 249 / 43% / -15,462 / -5,745 | -2.87 |
+| once a day at 10:00, break-even after first stop: yes | 249 / 29% / -169,977 / -3,946 | 249 / 32% / -121,137 / -3,667 | -7.69 |
+| once a day at 11:00, break-even after first stop: yes | 249 / 29% / -148,208 / -4,790 | 249 / 30% / -124,720 / -3,625 | -6.88 |
+| REPEATED all day 09:20-14:30, break-even: yes | 14860 (60 a day) / 32% / -7,461,155 / -82,714 | 7015 (28 a day) / 31% / -3,511,941 / -89,503 | -50.70 |

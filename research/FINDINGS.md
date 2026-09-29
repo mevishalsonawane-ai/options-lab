@@ -166,3 +166,6 @@ ATM straddle level and change, CE/PE skew, OI change and PCR over ATM +-200, CE/
 - BUY BOTH SIDES, stop the loser, ladder the winner (BOTH_SIDES.md): loses in all 54 versions, both years
   (t -2.8 .. -5.7). The losing side's stop is usually hit before a move big enough to pay for it, then the
   survivor decays or reverses; about 1 day in 4-7 both sides stop out.
+  Owner's settings (-3% stop, +5/8/10% targets, 3 lots a side): loses every way - once a day -Rs 15k .. -210k a
+  year, repeated all day -Rs 22-75 lakh (costs on 18-60 round trips a day). A 3% stop is ~15-25 option points,
+  inside the normal minute-to-minute wobble.

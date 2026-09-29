@@ -53,7 +53,7 @@ def trade(d, m0, stop, targets, be):
     ce, pe = d["chain"].get((k, "CE")), d["chain"].get((k, "PE"))
     if ce is None or pe is None:
         return None
-    lots = 4
+    lots = len(targets)
     ec, ep = ce["open"][m0] + SLIP, pe["open"][m0] + SLIP
     # first pass without break-even to find when a side stops
     c1 = side(ce, m0, ec, stop, targets, lots)
