@@ -338,7 +338,8 @@ object Tasks {
         }
     }
 
-    data class Tick(val title: String, val lines: List<String>, val progress: Int)
+    /** [dest]: where a tap on the card opens - the page that shows what the card is about. */
+    data class Tick(val title: String, val lines: List<String>, val progress: Int, val dest: String = "almanac")
 
     /** The ongoing watch notice: no index levels or other market data, only the owner's orders and positions. */
     const val WATCH_TITLE = "Order watch"
@@ -458,7 +459,13 @@ object Tasks {
             com.optionslab.app.widget.IraWidget.publish(context, q["NIFTY"]?.let { it.last to it.changePct },
                 q["BANKNIFTY"]?.let { it.last to it.changePct }, accountPnl)
         }
-        return Tick(title, lines, progress)
+        // A tap opens what the card is about: the expiry ticket, else the positions it lists, else Home.
+        val dest = when {
+            open != null -> "ticket"
+            accountPnl != null || lines.any { it.startsWith("Paper ") } -> "trade"
+            else -> "almanac"
+        }
+        return Tick(title, lines, progress, dest)
     }
 
     fun paperEventsPublic(context: Context, events: List<com.optionslab.engine.sandbox.SandboxEvent>) = paperEvents(context, events)
@@ -516,8 +523,8 @@ class WatchService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     /** False when Android refused the foreground (the service is then stopping: start nothing). */
-    private fun show(title: String, text: String, progress: Int = -1): Boolean {
-        val n = Notifier.builder(this, Notifier.LIVE, title, text, "almanac")
+    private fun show(title: String, text: String, progress: Int = -1, dest: String = "almanac"): Boolean {
+        val n = Notifier.builder(this, Notifier.LIVE, title, text, dest)
             .setOngoing(true).setOnlyAlertOnce(true).setAutoCancel(false).setSilent(true)
             .apply { if (progress >= 0) setProgress(100, progress, false) }
             .build()
@@ -633,7 +640,7 @@ class WatchService : Service() {
             // Settings read fresh every pass: the kill switch, Paper / Live and limits changed mid-session take effect at once.
             val t = Tasks.watchTick(this, AppSettings.load(), fired)
             Tasks.publishWatch(Tasks.LiveState(true, t.title, t.progress / 100f, System.currentTimeMillis()))
-            show(t.title, t.lines.joinToString("\n").ifEmpty { Tasks.WATCH_IDLE }, t.progress)
+            show(t.title, t.lines.joinToString("\n").ifEmpty { Tasks.WATCH_IDLE }, t.progress, t.dest)
             // While an ORB position is open its stop, target and 15:10 exit are checked every 15 s, not once a minute.
             val next = System.currentTimeMillis() + 60_000
             while (System.currentTimeMillis() < next) {
