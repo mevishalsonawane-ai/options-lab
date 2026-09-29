@@ -61,3 +61,8 @@ ATM straddle level and change, CE/PE skew, OI change and PCR over ATM +-200, CE/
   5-min (1.93) and 15-min (1.86): after 2-4 in a row the next candle keeps the colour only 43-48%. Long runs (5+) are
   rarer than chance. After a candle the price is still beyond its close h candles later 46-52% of the time - a coin
   flip, even after big candles. Days: green after green 45%, red after red 43%; streaks average 1.8 days.
+- Candle levels (HOLD_LEVELS.md): an ordinary candle's low (green) / high (red) holds no longer than any level at the
+  same distance (5-min: ~49% still unbroken after 15 min, ~23% after 2 h; the open, being closer, breaks sooner).
+  BIG 15-min candles (top 20% body, ~150 pts) are different: the green's low is still unbroken after 2 h in ~70% of
+  cases vs ~47% for an equally distant level (1st/2nd half 68%/73%), the red's high ~60% vs ~38% (62%/59%).
+  Big 15-min candles are rarely fully retraced - but the follow-through test shows no reliable continuation either.
