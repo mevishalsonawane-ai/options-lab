@@ -300,7 +300,7 @@ object Tasks {
                 .format(t.credit, t.credit * t.qty, t.breakeven), "ticket")
         // The real order is PREPARED, never sent: it waits for your review.
         if (s.prepareRealOrder && com.optionslab.app.data.Broker.loggedIn) Notifier.post(context, 2004, Notifier.APPROVAL,
-            "Review today's Zerodha order", "SELL ${t.underlying} ${fmtG(t.strike)} PE x${t.lots} is ready. Open Options → Expiry Put, review it and hold to send - nothing goes until you do.", "ticket")
+            "Review today's Zerodha order", "SELL ${t.underlying} ${fmtG(t.strike)} PE x${t.lots} is ready. Open Options → Expiry Put, review it and swipe to send - nothing goes until you do.", "ticket")
     }
 
     suspend fun settle(context: Context, s: AppSettings) {
@@ -592,7 +592,7 @@ class WatchService : Service() {
                     if (Tasks.harvestFailed(session) < Tasks.HARVEST_TRIES) runCatching { Jobs.enqueueHarvest(this@WatchService, session, manual = false) }
                 } else Notifier.post(this@WatchService, 2900 + k.ordinal, Notifier.SCHEDULE,
                     "${k.name.lowercase().replaceFirstChar { it.uppercase() }} did not complete",
-                    "It stopped with ${Tasks.reason(e)}. Open IraAlgo to check.")
+                    "It stopped with ${Tasks.reason(e)}. Open IraAlgo to check.", "almanac")
             } finally {
                 if (k == Jobs.Kind.LIVE) Tasks.publishWatch(Tasks.LiveState(false)) else if (k == Jobs.Kind.HARVEST) Tasks.publish(Tasks.LiveState(false))
                 running.remove(k)

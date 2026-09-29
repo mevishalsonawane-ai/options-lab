@@ -145,7 +145,7 @@ object OrbArms {
             // Never overwrite what could not be read: set it aside and start clean, and say so.
             if (file.exists()) Vault.setAside(file)
             Notifier.post(app, 2016, Notifier.APPROVAL, "ORB arms could not be read",
-                "Their saved state was set aside and both arms are disarmed. If an ORB position was open, check Trade → Paper now.", "almanac")
+                "Their saved state was set aside and both arms are disarmed. If an ORB position was open, check Trade → Paper now.", "trade")
             return Book().also { cache = it; holdingHint = false }
         }
         // A restore not yet disarmed (the app clears the flag once it has): the restored arms act as disarmed.
@@ -351,7 +351,7 @@ object OrbArms {
             b.pending[arm.source] = Pending(arm.source, right, last.start, last.start.plusMinutes(10))
             Notifier.post(app, 6960 + OrbRules.ARMS.indexOf(arm), Notifier.APPROVAL, "${arm.label}: approve BUY ${c.symbol}",
                 "BANKNIFTY closed ${if (direction > 0) "above" else "below"} the opening range on the ${hhmm(last.start)} bar. " +
-                    (if (live) "LIVE on Zerodha, 1 lot: approve with your PIN in the app" +
+                    (if (live) "LIVE on Zerodha, 1 lot: approve it on Home in the app" +
                         (if (b.auto[arm.source] != false) " (arm it again while in Live to make it automatic)" else "") else "Paper account, 1 lot") +
                     ". Approve by ${hhmm(last.start.plusMinutes(10))} or it lapses.", "almanac")
             watching()
