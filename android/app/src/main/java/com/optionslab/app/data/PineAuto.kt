@@ -215,8 +215,10 @@ object PineAuto {
         if (a.maxDayLoss > 0 && realizedToday(b, id) <= -a.maxDayLoss && b.paused[id] != today) {
             b.paused[id] = today; note(b, id, "Daily loss limit reached: no more trades today")
         }
-        if (b.paused[id] == today) return
-        if (!isOpen() || stopped || mins >= 15 * 60 + 15) return
+        if (b.paused[id] == today) { b.lastBar.remove(id); return }
+        // Stopped for the day or the kill switch: a real pause - on the way back a signal that changed meanwhile is not chased.
+        if (stopped) { b.lastBar.remove(id); return }
+        if (!isOpen() || mins >= 15 * 60 + 15) return
         val script = PineScripts.script(item) ?: run { note(b, id, "The script has errors: nothing traded"); return }
         val step = stepSeconds(item.auto.interval)
         val now = epochSecondNow()
@@ -234,10 +236,12 @@ object PineAuto {
         if (step < 86_400 && (java.time.Instant.ofEpochSecond(last.epochSecond).atZone(com.optionslab.engine.IST).toLocalDate() != todayIst() ||
                 now - last.epochSecond > step * 3 + 120)) return
         if (b.lastBar[id] == last.epochSecond) return
-        // The bar before this one not run means a pause (stopped for the day, the kill switch, the daily loss limit,
-        // the app not running): a signal that changed meanwhile is not chased.
+        // A real pause (stopped for the day, the kill switch, the daily loss limit, the app not running for 3+ bars) means a
+        // signal that changed meanwhile is not chased. One or two bars skipped by a slow pass are not a pause: that
+        // dropped signals on a phone whose pass can take minutes (29 Sep).
         val watchedBefore = b.lastBar[id]
-        val resumed = bars.size >= 2 && watchedBefore != bars[bars.size - 2].epochSecond
+        val resumed = bars.size >= 2 && b.lastTarget[id] != null &&
+            (watchedBefore == null || last.epochSecond - watchedBefore >= step * 3)
         b.lastBar[id] = last.epochSecond
         val r = Pine.run(script, bars.map { PineScripts.toPine(it) }, PineScripts.inputValues(item, script), item.auto.symbol, item.auto.interval,
             budgetMs = 5_000)

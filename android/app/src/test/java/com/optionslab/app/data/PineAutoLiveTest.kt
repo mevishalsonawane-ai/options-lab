@@ -144,6 +144,15 @@ class PineAutoLiveTest : RobolectricTest() {
         assertTrue(log(), log().contains("Back after a pause: the signal is now BUY"))
     }
 
+    @Test fun aSlowPassThatSkippedACandleIsNotAPause() {
+        switchOn()
+        pass(51_900.0)
+        // One pass took 10 minutes (a slow phone network): the signal turned BUY on the candle it skipped. Still bought.
+        candles = { AutomationSupport.bars(now, List(8) { 51_900.0 } + List(2) { 52_010.0 }) }
+        pass(52_010.0, minutes = 10)
+        assertEquals("a skipped candle is not a pause", 1, kite.placed.size)
+    }
+
     @Test fun aChangeOnTheNewestCandleAfterAPauseStillTrades() {
         switchOn()
         pass(51_900.0)

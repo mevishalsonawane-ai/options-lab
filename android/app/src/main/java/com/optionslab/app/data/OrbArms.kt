@@ -253,6 +253,8 @@ object OrbArms {
         if (on && live && !pinConfirmed) return@withLock "The app is in Live: arm it with your PIN or fingerprint."
         b.armed[source] = on
         b.auto[source] = automatic
+        // Armed (or disarmed) just now: the next decision takes only a fresh break, never one already under way.
+        b.watched.keys.removeAll { it.startsWith("$source|") }
         b.liveOk[source] = on && live && pinConfirmed
         if (!on) b.pending.remove(source)
         save(b)
@@ -332,7 +334,7 @@ object OrbArms {
         fun watching() { bars.lastOrNull()?.let { b.watched[watchKey] = it.start.toString() } }
         if (b.positions.any { it.arm == arm.source && it.open }) { watching(); return "holding" }
         if (!t.toLocalTime().isBefore(OrbRules.SQUARE_OFF)) return "flat_after_square_off"
-        if (Strategies.stoppedToday()) return "stopped_for_today"
+        if (Strategies.stoppedToday()) { b.watched.remove(watchKey); return "stopped_for_today" }
         b.pending[arm.source]?.let { if (t.isAfter(it.expires)) b.pending.remove(arm.source) else { watching(); return "awaiting_approval" } }
         val rng = OrbRules.openingRange(bars) ?: return "waiting_for_opening_range"
         b.range = rng; b.rangeDay = day
@@ -343,8 +345,12 @@ object OrbArms {
         val lastExit = b.positions.filter { it.arm == arm.source && it.day == day }.mapNotNull { it.exitTime }.maxOrNull()
         // After a pause (stopped for the day, the kill switch, a refused entry, the app not running, armed just now) the
         // previous bar was not watched: a break already under way is not chased, only a fresh one is taken.
+        // A pause is a real one - armed just now, stopped for the day, the kill switch - never a slow or failed pass that
+        // skipped a bar (on a phone a pass can take minutes); that made ORB wait for a fresh break all day (29 Sep).
         val prevBar = bars.getOrNull(bars.size - 2)
-        val resumed = prevBar != null && b.watched[watchKey] != prevBar.start.toString()
+        val seen = b.watched[watchKey]?.let { runCatching { LocalDateTime.parse(it) }.getOrNull() }
+        // ... or the app not running for 3+ bars (a slow pass skips one or two at most).
+        val resumed = prevBar != null && (seen == null || !seen.plusMinutes(15).isAfter(last.start))
         val (direction, why) = OrbRules.entrySignal(bars, rng, arm, lastExit, requireFresh = resumed)
         if (direction == 0) {
             watching()
@@ -365,8 +371,10 @@ object OrbArms {
             watching()
             return "awaiting_approval"
         }
-        // A refused entry (the kill switch, the guard, no price) counts as a pause: the arm then waits for a fresh break.
-        return enter(b, arm, c, last.start, live).also { if (it.startsWith("entered")) watching() }
+        // A refused entry (no price, a limit) is tried again on the next bar; only the kill switch counts as a pause.
+        return enter(b, arm, c, last.start, live).also {
+            if (!it.startsWith("entered") && runCatching { AppSettings.load().guardKill }.getOrDefault(false)) b.watched.remove(watchKey) else watching()
+        }
     }
 
     /** The day's strike from the first completed bar at or after 09:20, and the nearest expiry after today; held all day. */
@@ -838,7 +846,7 @@ object OrbArms {
         s == "waiting_for_opening_range" -> "Waiting for the opening range (09:15-10:00)."
         s == "inside_range" -> "Waiting for a breakout: the last bar closed inside the range."
         s == "not_a_fresh_break" -> "Last bar continued an earlier break; ORB Fresh waits for a fresh one."
-        s == "waiting_for_fresh_break_after_pause" -> "Was paused (stopped, kill switch, refused or app closed) while the price was already out of the range: waiting for a fresh breakout, not chasing this one."
+        s == "waiting_for_fresh_break_after_pause" -> "Armed or restarted while the price was already out of the range: this bar is not chased; the next bar out of the range is taken."
         s == "cooling_down_after_exit" -> "Just exited; may re-enter from the next bar."
         s == "no_decision_bar" -> "No decision bars now (entries only 10:05-14:25)."
         s == "flat_after_square_off" -> "Done for the day (square-off 15:10)."
