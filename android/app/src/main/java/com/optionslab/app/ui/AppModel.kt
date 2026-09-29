@@ -152,8 +152,13 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     private val settingsWriter = kotlinx.coroutines.sync.Mutex()
 
     fun update(transform: (AppSettings) -> AppSettings) {
-        val next = transform(_settings.value)
+        val prev = _settings.value
+        val next = transform(prev)
         _settings.value = next
+        // Which mode orders go to is the first thing to check when an order is "missing" at Zerodha.
+        if (prev.live != next.live || prev.allowRealOrders != next.allowRealOrders)
+            com.optionslab.app.data.Diag.record("mode", "${if (next.live) "LIVE (Zerodha)" else "Paper"} · real orders allowed: ${next.allowRealOrders}")
+        if (prev.guardKill != next.guardKill) com.optionslab.app.data.Diag.record("mode", "kill switch ${if (next.guardKill) "ON" else "off"}")
         viewModelScope.launch(Dispatchers.IO) {
             settingsWriter.lock()
             try {
@@ -1029,7 +1034,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     fun planManual(underlying: String, expiry: LocalDate, strike: Double, right: com.optionslab.engine.Right,
                    side: com.optionslab.engine.Kite.Side, lots: Int, product: String, limit: Double?, protect: ProtectSpec? = null,
                    area: String = "Order form") {
-        com.optionslab.app.data.Diag.record("tap", "Plan ${side.name} $lots lot $underlying $expiry ${com.optionslab.engine.fmtG(strike)} $right $product ${limit?.let { "LIMIT $it" } ?: "MARKET"}${protect?.let { " protect=$it" } ?: ""} ($area)")
+        com.optionslab.app.data.Diag.record("tap", "Plan ${side.name} $lots lot $underlying $expiry ${com.optionslab.engine.fmtG(strike)} $right $product ${limit?.let { "LIMIT $it" } ?: "MARKET"}${protect?.let { " protect=$it" } ?: ""} ($area, ${if (_settings.value.live) "LIVE" else "Paper"})")
         plan.value = Load.Busy("Looking up the contract"); prewarm(entry = true)
         viewModelScope.launch(Dispatchers.IO) {
             plan.value = try {
