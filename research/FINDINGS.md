@@ -110,3 +110,10 @@ ATM straddle level and change, CE/PE skew, OI change and PCR over ATM +-200, CE/
   winners but a loser costs ~10-13 winners (the option dies by 15:10); several trades a day lose heavily (-Rs 8k ..
   -82k NIFTY); one trade a day at 09:30 was positive for some rules (+Rs 4k..12k) but "follow" and "fade" both were,
   and coin flips reach +Rs 6-11k, so it is the timing / luck, not the direction read.
+- COMBINED (COMBINED.md): big 15-min candle (top-20% body) -> wait for a 40% pullback toward its low/high that does
+  not break it -> trade its direction, stop at the level, target 2R. The INDEX moves our way: +0.20 R a trade,
+  t = 2.35, 285 trades, +0.17 / +0.23 R by half, 9/13 months positive; the same entry after ordinary candles: +0.01 R.
+  First direction edge in the study. Bought as ATM options it nets only +Rs 7.5k a year (t 0.27): ~11 index pts a
+  trade become ~5.5 option pts, less ~2.3 pts costs and decay. Width (>= 1.2x ATR), low IV and VWAP-band stretch do
+  not improve the R edge; RSI(2) hurts; pullback depth matters (25% and 60% lose). Next: carry it with a higher-delta
+  instrument (ITM option / futures) and re-check out of sample.
