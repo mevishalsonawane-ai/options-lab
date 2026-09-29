@@ -308,7 +308,15 @@ object OrbArms {
                 if (b.armed[arm.source] != true) continue
                 val s = if (bars == null) "no_index_data" else runCatching { cycle(b, arm, t, bars) }.getOrElse { "error: ${it.message}" }
                 // "no_decision_bar" repeats within a bar; keep the bar's own verdict on screen.
-                if (s != "no_decision_bar" || b.status[arm.source].isNullOrEmpty()) b.status[arm.source] = s
+                if (s != "no_decision_bar" || b.status[arm.source].isNullOrEmpty()) {
+                    // Each bar's verdict goes to the diagnostics once (why it did or did not enter), with the range and the bar.
+                    if (s != "no_decision_bar" && s != b.status[arm.source]) runCatching {
+                        val last = bars?.lastOrNull()
+                        Diag.record("orb", "${arm.label}: $s" + (b.range?.let { " · range %.1f-%.1f".format(java.util.Locale.ENGLISH, it.second, it.first) } ?: "") +
+                            (last?.let { " · bar ${it.start.toLocalTime()} close %.1f".format(java.util.Locale.ENGLISH, it.close) } ?: ""))
+                    }
+                    b.status[arm.source] = s
+                }
             }
             save(b)
         }
