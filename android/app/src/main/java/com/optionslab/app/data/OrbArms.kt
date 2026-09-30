@@ -119,9 +119,11 @@ object OrbArms {
         val b = Book()
         val ok = runCatching {
             val o = JSONObject(String(Vault.readFileSteady(file) ?: return@runCatching, Charsets.UTF_8))
-            o.optJSONObject("armed")?.let { m -> m.keys().forEach { b.armed[it] = m.getBoolean(it) } }
-            o.optJSONObject("auto")?.let { m -> m.keys().forEach { b.auto[it] = m.getBoolean(it) } }
-            o.optJSONObject("liveOk")?.let { m -> m.keys().forEach { b.liveOk[it] = m.getBoolean(it) } }
+            // A book saved under its old name (FINNIFTY's 15-minute liquidity book, now its 30-minute one) carries on under the new.
+            fun key(k: String) = LiquidityRules.RENAMED[k] ?: k
+            o.optJSONObject("armed")?.let { m -> m.keys().forEach { b.armed[key(it)] = m.getBoolean(it) } }
+            o.optJSONObject("auto")?.let { m -> m.keys().forEach { b.auto[key(it)] = m.getBoolean(it) } }
+            o.optJSONObject("liveOk")?.let { m -> m.keys().forEach { b.liveOk[key(it)] = m.getBoolean(it) } }
             o.optJSONObject("legs")?.let { l ->
                 b.legs = Legs(LocalDate.parse(l.getString("day")), l.getInt("strike"), LocalDate.parse(l.getString("expiry")),
                     contractOf(l.getJSONArray("ce")), contractOf(l.getJSONArray("pe")))
@@ -132,7 +134,7 @@ object OrbArms {
             o.optJSONArray("positions")?.let { a ->
                 for (i in 0 until a.length()) {
                     val p = a.getJSONObject(i)
-                    b.positions += Position(p.getString("arm"), p.getString("symbol"), p.getString("right"), p.getInt("qty"), p.getDouble("entry"),
+                    b.positions += Position(key(p.getString("arm")), p.getString("symbol"), p.getString("right"), p.getInt("qty"), p.getDouble("entry"),
                         LocalDateTime.parse(p.getString("entryTime")), LocalDateTime.parse(p.getString("signalBar")),
                         p.optString("entryOrderId").ifEmpty { null }, p.optString("stopOrderId").ifEmpty { null },
                         if (p.has("stopTrigger")) p.getDouble("stopTrigger") else null,
@@ -144,10 +146,10 @@ object OrbArms {
                 }
             }
             o.optJSONObject("pending")?.let { m -> m.keys().forEach { k -> val p = m.getJSONObject(k)
-                b.pending[k] = Pending(k, p.getString("right"), LocalDateTime.parse(p.getString("bar")), LocalDateTime.parse(p.getString("expires")),
+                b.pending[key(k)] = Pending(key(k), p.getString("right"), LocalDateTime.parse(p.getString("bar")), LocalDateTime.parse(p.getString("expires")),
                     if (p.has("strike")) p.getInt("strike") else null, if (p.has("level")) p.getDouble("level") else null,
                     if (p.has("target")) p.getDouble("target") else null) } }
-            o.optJSONObject("status")?.let { m -> m.keys().forEach { b.status[it] = m.getString(it) } }
+            o.optJSONObject("status")?.let { m -> m.keys().forEach { b.status[key(it)] = m.getString(it) } }
             o.optJSONObject("replays")?.let { m -> m.keys().forEach { b.replays[it] = m.getJSONObject(it) } }
             o.optJSONObject("upDays")?.let { m -> m.keys().forEach { b.upDays[it] = m.getBoolean(it) } }
         }.isSuccess

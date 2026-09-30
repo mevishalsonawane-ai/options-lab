@@ -110,7 +110,7 @@ internal fun OrbRowsContent(
                     "${o.right} ${o.symbol.takeLast(7).dropLast(2)} · in ${px(o.entry)}" + (m?.let { " · now ${px(it)} · ${rs((it - o.entry) * o.qty)}" } ?: "") +
                         (o.stopTrigger?.let { " · stop ${px(it)}" } ?: "")
                 } ?: when {
-                    !a.armed && a.arm.liquidity -> "BANKNIFTY + FINNIFTY liquidity pool taken on a swing zone · 15-min + 5-min · stop −15% · out at the next liquidity"
+                    !a.armed && a.arm.liquidity -> "BANKNIFTY (15 + 5-min) + FINNIFTY (30 + 5-min) liquidity pool taken on a swing zone · stop −15% · out at the next liquidity"
                     a.arm.liquidity -> a.status
                     !a.armed && a.arm.fade -> "BANKNIFTY touch of the range edge, faded to the middle · paper only · -40 / +40"
                     !a.armed && a.arm.sweep -> "BANKNIFTY failed break of the opening range, faded · paper only · -40 / +80"

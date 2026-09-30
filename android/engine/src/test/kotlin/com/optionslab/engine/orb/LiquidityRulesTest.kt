@@ -30,8 +30,8 @@ class LiquidityRulesTest {
     @Test fun theArmIsOneSwitchOverTwoBooks() {
         assertTrue(LiquidityRules.ARM.liquidity)
         assertFalse(LiquidityRules.ARM.paperOnly, "it follows the Paper / Live switch like the ORB")
-        assertEquals(listOf("liquidity15", "liquidity5", "liquidity15_fin", "liquidity5_fin"), LiquidityRules.BOOKS.map { it.source })
-        assertEquals(listOf(15, 5, 15, 5), LiquidityRules.BOOKS.map { LiquidityRules.minutesOf(it) })
+        assertEquals(listOf("liquidity15", "liquidity5", "liquidity30_fin", "liquidity5_fin"), LiquidityRules.BOOKS.map { it.source })
+        assertEquals(listOf(15, 5, 30, 5), LiquidityRules.BOOKS.map { LiquidityRules.minutesOf(it) })
         assertEquals(listOf("BANKNIFTY", "BANKNIFTY", "FINNIFTY", "FINNIFTY"), LiquidityRules.BOOKS.map { LiquidityRules.underlyingOf(it) })
         assertEquals(100, LiquidityRules.strikeStep("BANKNIFTY")); assertEquals(50, LiquidityRules.strikeStep("FINNIFTY"))
         assertEquals(24_050, OrbRules.atmStrike(24_070.0, LiquidityRules.strikeStep("FINNIFTY")))
@@ -39,6 +39,8 @@ class LiquidityRulesTest {
         assertTrue(LiquidityRules.BOOKS.all { !it.paperOnly && it.liquidity })
         assertEquals(15, LiquidityRules.minutesOf(LiquidityRules.ARM15))
         assertEquals(5, LiquidityRules.minutesOf(LiquidityRules.ARM5))
+        assertEquals(30, LiquidityRules.minutesOf(LiquidityRules.FIN30))
+        assertEquals(mapOf("liquidity15_fin" to "liquidity30_fin"), LiquidityRules.RENAMED)
         assertFalse(OrbRules.ORB.liquidity)                              // the ORB's arms are unchanged
         assertTrue(LiquidityRules.ARM !in OrbRules.ARMS)
     }
@@ -116,6 +118,9 @@ class LiquidityRulesTest {
         assertEquals(2, LiquidityRules.completed(fifteen, 15, day.atTime(10, 0)).size)
         assertEquals(1, LiquidityRules.completed(fifteen, 15, day.atTime(9, 44)).size)
         assertEquals(7, LiquidityRules.fold(ones, 5).size)            // 6 today + 1 tomorrow
+        val thirty = LiquidityRules.fold(ones, 30)
+        assertEquals(Bar(day.atTime(9, 15), 100.0, 130.0, 99.0, 129.5), thirty[0])     // 09:15-09:44 in one bar
+        assertEquals(2, thirty.size)
     }
 
     @Test fun theStopIs15PercentBelowTheFillOnTheTick() {

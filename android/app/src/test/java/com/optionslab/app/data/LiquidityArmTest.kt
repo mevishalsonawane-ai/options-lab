@@ -247,6 +247,24 @@ class LiquidityArmTest : RobolectricTest() {
         assertTrue("nothing bought on BANKNIFTY", Paper.state.orders.none { it.symbol.startsWith("BANKNIFTY") })
     }
 
+    /** A build that ran FINNIFTY on 15 + 5 minutes saved its 15-minute book as "liquidity15_fin": it carries on as the 30-minute book. */
+    @Test fun finniftysOld15MinuteBookCarriesOnAsItsThirtyMinuteBook() {
+        val books = listOf("liquidity15", "liquidity5", "liquidity15_fin", "liquidity5_fin")
+        fun flags(v: Boolean) = org.json.JSONObject().apply { books.forEach { put(it, v) } }
+        val t = day.atTime(12, 50)
+        AutomationSupport.orbState(context, org.json.JSONObject()
+            .put("armed", flags(true)).put("auto", flags(true)).put("liveOk", flags(false))
+            .put("positions", org.json.JSONArray().put(org.json.JSONObject().put("arm", "liquidity15_fin")
+                .put("symbol", "FINNIFTY-LIQ-24050CE").put("right", "CE").put("qty", 65).put("entry", 120.0)
+                .put("entryTime", t.minusMinutes(20).toString()).put("signalBar", t.minusMinutes(50).toString())
+                .put("level", 24_050.0))))
+        val r = row()
+        assertTrue(r.armed); assertTrue(r.automatic)
+        assertEquals("liquidity30_fin", r.open!!.arm)
+        assertTrue(r.status, r.status.contains("FINNIFTY 30-min:") && r.status.contains("FINNIFTY 5-min:") && !r.status.contains("FINNIFTY 15-min"))
+        assertTrue(r.status, r.status.contains("BANKNIFTY 15-min:") && r.status.contains("BANKNIFTY 5-min:"))
+    }
+
     @Test fun disarmedItBuysNothing() {
         passes(LocalTime.of(12, 50), LocalTime.of(13, 15))
         assertTrue(row().today.isEmpty())
