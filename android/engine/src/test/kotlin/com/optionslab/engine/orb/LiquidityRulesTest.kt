@@ -29,7 +29,7 @@ class LiquidityRulesTest {
 
     @Test fun theArmIsOneSwitchOverTwoBooks() {
         assertTrue(LiquidityRules.ARM.liquidity)
-        assertFalse("it follows the Paper / Live switch like the ORB", LiquidityRules.ARM.paperOnly)
+        assertFalse(LiquidityRules.ARM.paperOnly, "it follows the Paper / Live switch like the ORB")
         assertEquals(listOf("liquidity15", "liquidity5"), LiquidityRules.BOOKS.map { it.source })
         assertTrue(LiquidityRules.BOOKS.all { !it.paperOnly && it.liquidity })
         assertEquals(15, LiquidityRules.minutesOf(LiquidityRules.ARM15))
