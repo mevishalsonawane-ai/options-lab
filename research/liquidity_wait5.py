@@ -46,7 +46,7 @@ def read(b, i, how, level=None, side=0):
     if how == "colour":
         return int(np.sign(sum(np.sign(C[k] - O[k]) for k in w)))
     if how == "hhhl":
-        return int(np.sign(sum((H[k] > H[k - 1] and L[k] > L[k - 1]) - (H[k] < H[k - 1] and L[k] < L[k - 1]) for k in w)))
+        return int(np.sign(sum(int(H[k] > H[k - 1] and L[k] > L[k - 1]) - int(H[k] < H[k - 1] and L[k] < L[k - 1]) for k in w)))
     if how == "held":
         beyond = (C[i + WAIT] > level) if side > 0 else (C[i + WAIT] < level)
         return side if beyond else -side
