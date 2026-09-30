@@ -281,8 +281,8 @@ object OrbArms {
             val holding = b.positions.any { it.open && it.arm in LiquidityRules.BOOKS.map { a -> a.source } }
             return@withLock if (on) "${LiquidityRules.ARM.label} armed on paper (it never trades on Zerodha), fully automatic: on the " +
                 "15-minute and the 5-minute BANKNIFTY chart, when a close takes a liquidity pool that sits on a swing zone, it buys " +
-                "the ATM call (up) or put (down), 1 lot, and sells at the next liquidity level, when new liquidity forms, when the " +
-                "break fails, or at 15:10. Entries 09:20-14:30, one position per chart."
+                "the ATM call (up) or put (down), 1 lot, with a stop 15% below the price paid, and sells at the next liquidity level, " +
+                "when new liquidity forms, when the break fails, or at 15:10. Entries 09:20-14:30, one position per chart."
             else "${LiquidityRules.ARM.label} disarmed." + if (holding) " Its open position is still managed to its exit." else ""
         }
         val paperOnly = armOf(source).paperOnly
@@ -534,8 +534,9 @@ object OrbArms {
             val why = when {
                 stopped -> "operator_stop"
                 !t.toLocalTime().isBefore(OrbRules.SQUARE_OFF) -> "session_end"
-                // Liquidity 15+5 exits on index levels (liquidityExits), never on premium points.
-                armOf(cur.arm).liquidity -> null
+                // Liquidity 15+5 exits on index levels (liquidityExits); its 15% stop rests in the book, and if that order is
+                // gone the app sells at the stop level itself.
+                armOf(cur.arm).liquidity -> "stop".takeIf { cur.stopOrderId == null && cur.stopTrigger?.let { ltp <= it } == true }
                 else -> (if (armOf(cur.arm).sweep) SweepRules.exitReason(cur.entry, ltp, t) else OrbRules.exitReason(cur.entry, ltp, t))
                     .takeIf { it == "target" || (it == "stop" && cur.stopOrderId == null) }
             } ?: continue
@@ -858,7 +859,7 @@ object OrbArms {
         return enterLiquidity(b, arm, s, last)
     }
 
-    /** A paper MARKET BUY of 1 lot of the ATM option on the break; no resting stop (the exits are index levels). */
+    /** A paper MARKET BUY of 1 lot of the ATM option on the break, with its resting stop 15% below the fill. */
     private suspend fun enterLiquidity(b: Book, arm: Arm, s: LiquidityRules.Signal, signal: Bar): String {
         val right = if (s.side > 0) Right.CE else Right.PE
         val day = signal.start.toLocalDate()
@@ -874,7 +875,14 @@ object OrbArms {
         val fill = filledOrCancelled(buy) ?: return "order_refused: ${if (buy.ok) "no price to fill at; the order was cancelled" else buy.message}"
         buy.orderId?.let { Strategies.tagOwner("paper:$it", "${LiquidityRules.ARM.label} · entry") }
         Notifier.orderFilled(app, "BUY", fill.quantity, fill.symbol, fill.price, "Paper", LiquidityRules.ARM.label)
-        b.positions += Position(arm.source, c.symbol, c.right.name, fill.quantity, fill.price, now(), signal.start, buy.orderId, null, null,
+        // The owner's stop: a resting SL-M sell 15% below the fill (the book owns it, as the ORB's -40).
+        val trigger = LiquidityRules.stopTrigger(fill.price)
+        var stopId: String? = null
+        if (trigger != null) {
+            val stop = Paper.place(c, "SELL", 1, "SL-M", "MIS", null, trigger)
+            if (stop.ok) { stopId = stop.orderId; stopId?.let { Strategies.tagOwner("paper:$it", "${LiquidityRules.ARM.label} · stop") } }
+        }
+        b.positions += Position(arm.source, c.symbol, c.right.name, fill.quantity, fill.price, now(), signal.start, buy.orderId, stopId, trigger,
             charges = chargesOf(buy.orderId), level = s.level, target = s.target)
         marks[c.symbol] = fill.price
         return "entered"

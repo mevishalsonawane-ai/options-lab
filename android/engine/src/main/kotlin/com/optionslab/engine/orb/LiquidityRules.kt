@@ -15,9 +15,9 @@ import java.time.LocalTime
  *   taken     a close beyond a level's outer edge (above a high's top, below a low's bottom)
  *   entry     the last completed bar takes a POOL that overlaps a still-active SWING zone of the same side (both
  *             tools agree): above -> BUY the ATM CE, below -> BUY the ATM PE, at the next bar's open, 09:20-14:30
- *   exits     the first of: the index touches the next active liquidity level beyond the entry (target); a completed
- *             bar closes back through the broken level (failed break); a new level forms on the trade's side (new
- *             liquidity); 15:10
+ *   exits     the first of: the option falls 15% below the price paid (a resting stop, the owner's 2026-10-01 choice);
+ *             the index touches the next active liquidity level beyond the entry (target); a completed bar closes back
+ *             through the broken level (failed break); a new level forms on the trade's side (new liquidity); 15:10
  *
  * Backtested on two BANKNIFTY years with real option prices (research/LIQUIDITY_MORE.md): the two charts together
  * about 2 trades a day, +Rs 58k and +Rs 32k per lot a year (t about 1.1 each): a candidate, not a proven edge.
@@ -38,6 +38,16 @@ object LiquidityRules {
     val SESSION_OPEN: LocalTime = LocalTime.of(9, 15)
     val FIRST_ENTRY: LocalTime = LocalTime.of(9, 20)
     val LAST_ENTRY: LocalTime = LocalTime.of(14, 30)
+
+    /** The owner's stop: 15% of the premium paid (a resting SL-M sell at 85% of the fill). */
+    const val PREMIUM_STOP = 0.15
+
+    /** The stop's trigger for a [fill]: 15% below, rounded down to the 0.05 tick; null for a price with no room. */
+    fun stopTrigger(fill: Double): Double? {
+        val t = kotlin.math.floor(fill * (1 - PREMIUM_STOP) / OrbRules.TICK + 1e-9) * OrbRules.TICK
+        val r = kotlin.math.round(t * 100) / 100.0
+        return r.takeIf { it >= OrbRules.TICK && it < fill }
+    }
 
     fun minutesOf(arm: Arm): Int = if (arm.source == ARM15.source) 15 else 5
 

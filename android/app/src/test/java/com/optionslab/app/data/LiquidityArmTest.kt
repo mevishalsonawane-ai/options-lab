@@ -127,7 +127,11 @@ class LiquidityArmTest : RobolectricTest() {
         assertEquals(54_100.0, p.level!!, 0.0)
         assertNull("no liquidity above yet: no target", p.target)
         assertEquals(day.atTime(13, 0), p.signalBar)
-        assertNull("no resting premium stop: the exits are index levels", p.stopOrderId)
+        // The owner's 15% stop rests in the book at 85% of the fill.
+        assertEquals(com.optionslab.engine.orb.LiquidityRules.stopTrigger(p.entry), p.stopTrigger)
+        assertEquals(p.entry * 0.85, p.stopTrigger!!, 0.06)
+        val stop = Paper.state.orders.single { it.action == "SELL" }
+        assertEquals(p.stopOrderId, stop.orderId); assertEquals("trigger pending", stop.status)
         val buys = Paper.state.orders.filter { it.action == "BUY" }
         assertEquals(1, buys.size); assertTrue(buys.single().symbol.endsWith("CE")); assertEquals("complete", buys.single().status)
         passes(LocalTime.of(13, 6), LocalTime.of(13, 9))
@@ -137,6 +141,7 @@ class LiquidityArmTest : RobolectricTest() {
         assertFalse(closed.open)
         assertEquals("failed_break", closed.why)
         assertEquals(1, Paper.state.orders.count { it.action == "SELL" && it.status == "complete" })
+        assertEquals("the resting stop was taken out first", "cancelled", Paper.state.orders.single { it.orderId == p.stopOrderId }.status)
         assertEquals(0, Paper.state.positions.filter { it.product == "MIS" }.sumOf { it.quantity })
         // One trade only: no second entry on the same break.
         passes(LocalTime.of(13, 11), LocalTime.of(13, 30))
@@ -154,6 +159,22 @@ class LiquidityArmTest : RobolectricTest() {
         val p = row().today.single()
         assertFalse(p.open)
         assertEquals("session_end", p.why)
+    }
+
+    @Test fun theOptionFalling15PercentIsSoldByItsStop() {
+        failDay = false
+        armLiquidity()
+        passes(LocalTime.of(13, 0), LocalTime.of(13, 5))
+        val p = row().today.single()
+        assertTrue(p.open)
+        upstox.price(ceKey, p.entry * 0.80)                                 // the call drops 20%: through its 15% stop
+        at(LocalTime.of(13, 20))
+        runBlocking { Paper.tick() }                                        // the market watch matches the resting stop
+        tick(LocalTime.of(13, 20))
+        val closed = row().today.single()
+        assertFalse(closed.open)
+        assertEquals("stop", closed.why)
+        assertEquals(0, Paper.state.positions.filter { it.product == "MIS" }.sumOf { it.quantity })
     }
 
     @Test fun disarmedItBuysNothing() {

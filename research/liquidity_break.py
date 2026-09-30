@@ -44,7 +44,7 @@ def bars(days, tf):
     return pd.DataFrame(rows, columns=["di", "s", "e", "open", "high", "low", "close"])
 
 
-def simulate(days, b, zones, source, stop, carry=False):
+def simulate(days, b, zones, source, stop, carry=False, prem_stop=None):
     DI, S, E, C = b.di.values, b.s.values, b.e.values, b.close.values
     # events by bar: breaks (zone, bar) and new zones known at a bar
     breaks, known = {}, {}
@@ -64,6 +64,9 @@ def simulate(days, b, zones, source, stop, carry=False):
                 if m >= CUT and not carry:
                     why, xm = "15:10", m
                     break
+                if prem_stop and pos["key"] is not None and d["chain"][pos["key"]]["low"][m] <= pos["px"] * (1 - prem_stop):
+                    why, xm = "premium stop", m
+                    break
                 if pos["target"] is not None and ((sg > 0 and I["high"][m] >= pos["target"]) or
                                                   (sg < 0 and I["low"][m] <= pos["target"])):
                     why, xm = "next liquidity", m
@@ -80,6 +83,8 @@ def simulate(days, b, zones, source, stop, carry=False):
             if why:
                 ix = I["close"][xm] if why != "next liquidity" else pos["target"]
                 opt = d["chain"][pos["key"]]["close"][xm] if pos["key"] is not None else np.nan
+                if why == "premium stop":
+                    opt = min(opt, pos["px"] * (1 - prem_stop))        # the resting stop's level (or worse if it gapped)
                 trades.append(dict(day=pos["day"], sign=sg, why=why, pts=sg * (ix - pos["ix"]),
                                    rs=(opt - SLIP - pos["px"]) * LOT - CHG,
                                    held=xm - pos["m"] + 375 * (DI[i] - pos["di"])))

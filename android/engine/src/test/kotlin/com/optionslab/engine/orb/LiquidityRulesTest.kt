@@ -112,6 +112,13 @@ class LiquidityRulesTest {
         assertEquals(7, LiquidityRules.fold(ones, 5).size)            // 6 today + 1 tomorrow
     }
 
+    @Test fun theStopIs15PercentBelowTheFillOnTheTick() {
+        assertEquals(255.0, LiquidityRules.stopTrigger(300.0)!!, 0.0)
+        assertEquals(170.0, LiquidityRules.stopTrigger(200.03)!!, 0.0)      // 170.0255 rounded down to the tick
+        assertEquals(0.85, LiquidityRules.stopTrigger(1.0)!!, 0.0)
+        assertNull(LiquidityRules.stopTrigger(0.05))                          // no room below the smallest tick
+    }
+
     @Test fun entriesOnlyFrom0920To1430() {
         assertFalse(LiquidityRules.mayEnterAt(day.atTime(9, 15)))
         assertTrue(LiquidityRules.mayEnterAt(day.atTime(9, 20)))
