@@ -941,15 +941,13 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     fun planGtt(exchange: String, symbol: String, product: String, netQty: Int, stop: Double?, target: Double?) {
         gttPlan.value = Load.Busy("Pricing the protection")
         viewModelScope.launch(Dispatchers.IO) {
-            val plan = try {
+            gttPlan.value = try {
                 val b = com.optionslab.app.data.Broker
                 val spec = b.spec(exchange, symbol)
                 val last = b.quotes(listOf("$exchange:$symbol"))["$exchange:$symbol"]?.last ?: error("no last price for $symbol")
                 val (g, why) = com.optionslab.engine.Kite.protect(spec, product, netQty, last, stop, target)
                 Load.Done(GttPlan("Protect $symbol", g, why))
             } catch (e: Exception) { Load.Failed(e.message ?: "could not prepare the GTT") }
-            // The dialog reads this: publish it on the main thread (under the test clock a background write recomposed off it).
-            withContext(Dispatchers.Main) { gttPlan.value = plan }
         }
     }
 
