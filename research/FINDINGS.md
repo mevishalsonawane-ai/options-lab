@@ -199,3 +199,8 @@ ATM straddle level and change, CE/PE skew, OI change and PCR over ATM +-200, CE/
   the failed-break stop +Rs 28k / +25k (134 / 112 trades, 0.5 a day, t 1.47 / 0.73, index +19.5 / +16.8 pts a trade),
   15-min no stop +18k / +37k, 5-min with stop +3k / +33k. Pooled t about 1.3 and it is the best of 48 variants a
   year, so it is a candidate for paper testing, not a proven edge.
+- LIQUIDITY + WAIT 5 CANDLES (LIQUIDITY_WAIT5.md): after a liquidity level is found or broken, wait 5 candles, read
+  the direction (net move / candle colours / higher highs-lows / held beyond the level), buy the call or put, sell at
+  the next liquidity. 3, 5 and 15-minute, swings / pools / either / both: 0 of 88 versions make money in both years
+  (most lose -Rs 0.2 to -3 lakh a year); win rates 36-60%, index move per trade around 0. The same 5-candle read
+  after an ordinary candle (control) does about as well or badly: the liquidity event adds nothing to the read.
