@@ -44,7 +44,7 @@ def bars(days, tf):
     return pd.DataFrame(rows, columns=["di", "s", "e", "open", "high", "low", "close"])
 
 
-def simulate(days, b, zones, source, stop):
+def simulate(days, b, zones, source, stop, carry=False):
     DI, S, E, C = b.di.values, b.s.values, b.e.values, b.close.values
     # events by bar: breaks (zone, bar) and new zones known at a bar
     breaks, known = {}, {}
@@ -60,8 +60,8 @@ def simulate(days, b, zones, source, stop):
         if pos is not None:
             sg = pos["sign"]
             why, xm = None, None
-            for m in range(max(S[i], pos["m"]), E[i]):
-                if m >= CUT:
+            for m in range(max(S[i], pos["m"]) if DI[i] == pos["di"] else S[i], E[i]):
+                if m >= CUT and not carry:
                     why, xm = "15:10", m
                     break
                 if pos["target"] is not None and ((sg > 0 and I["high"][m] >= pos["target"]) or
@@ -73,12 +73,16 @@ def simulate(days, b, zones, source, stop):
             if why is None and any(z.side == sg and z.known == i for z in known.get(i, [])):
                 why, xm = "new liquidity", E[i] - 1
             if why is None and (i + 1 >= len(b) or DI[i + 1] != DI[i]):
-                why, xm = "15:10", min(E[i] - 1, 374)
+                nxt = days[DI[i] + 1] if DI[i] + 1 < len(days) else None
+                # carry: held overnight while the same contract trades tomorrow (no expiry in between)
+                if not (carry and nxt is not None and nxt["exp"] == d["exp"] and pos["key"] in nxt["chain"]):
+                    why, xm = "15:10", min(E[i] - 1, 374)
             if why:
                 leg = d["chain"][pos["key"]]
                 ix = I["close"][xm] if why != "next liquidity" else pos["target"]
-                trades.append(dict(day=d["day"], sign=sg, why=why, pts=sg * (ix - pos["ix"]),
-                                   rs=(leg["close"][xm] - SLIP - pos["px"]) * LOT - CHG, held=xm - pos["m"]))
+                trades.append(dict(day=pos["day"], sign=sg, why=why, pts=sg * (ix - pos["ix"]),
+                                   rs=(leg["close"][xm] - SLIP - pos["px"]) * LOT - CHG,
+                                   held=xm - pos["m"] + 375 * (DI[i] - pos["di"])))
                 pos = None
         if pos is not None or i + 1 >= len(b) or DI[i + 1] != DI[i]:
             continue
@@ -112,7 +116,7 @@ def simulate(days, b, zones, source, stop):
         if not len(ks):
             continue
         k = ks[np.argmin(np.abs(ks - ix))]
-        pos = dict(sign=sg, m=m, ix=ix, level=z.edge, target=target, key=(k, right),
+        pos = dict(day=d["day"], di=DI[i], sign=sg, m=m, ix=ix, level=z.edge, target=target, key=(k, right),
                    px=d["chain"][(k, right)]["open"][m] + SLIP)
     return pd.DataFrame(trades)
 
@@ -136,7 +140,8 @@ def main():
          "| timeframe, levels, stop | trades | win (Rs) | index pts/trade | per trade | t | net (1 lot) | 1st / 2nd half | green months |",
          "|---|---|---|---|---|---|---|---|---|"]
     notes = []
-    for tf in (1, 3, 5, 15):
+    tfs = [int(x) for x in sys.argv[3].split(",")] if len(sys.argv) > 3 else [1, 3, 5, 15]
+    for tf in tfs:
         b = bars(days, tf)
         zones = swing_zones(b, 20, "full") + pool_zones(b, 2, 5, 10)
         nsw = sum(z.kind == "swing" for z in zones)
@@ -144,9 +149,10 @@ def main():
         notes.append(f"{tf}-min: {nsw} swing levels, {npl} pools; median bars from a level forming to its break "
                      f"{np.median([z.broken - z.known for z in zones if z.broken >= 0]):.0f}")
         for source in ("swing", "pool", "either", "both"):
-            for stop in (False, True):
-                tr = simulate(days, b, zones, source, stop)
-                L.append(row(f"{tf}-min, {source}, {'stop on failed break' if stop else 'no stop'}", tr, alld))
+            for stop, carry in [(False, False), (True, False)] + ([(False, True), (True, True)] if tf >= 60 else []):
+                tr = simulate(days, b, zones, source, stop, carry)
+                L.append(row(f"{tf}-min, {source}, {'stop on failed break' if stop else 'no stop'}"
+                             f"{', held overnight' if carry else ''}", tr, alld))
                 print(L[-1], flush=True)
                 if tf == 5 and source == "either" and not stop and not tr.empty:
                     notes.append("5-min, either, no stop: exits " + ", ".join(
