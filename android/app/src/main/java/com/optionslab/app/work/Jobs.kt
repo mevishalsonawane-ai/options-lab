@@ -437,7 +437,11 @@ object Tasks {
             runCatching { com.optionslab.app.data.Paper.snapshot() }.getOrNull()?.let { snap ->
                 val pnl = snap.funds.todayRealizedPnl + snap.funds.m2mUnrealized
                 runCatching { com.optionslab.app.data.DailyPnl.record(false, pnl, snap.trades.size) }
-                lines.add(0, "Paper %s".format(if (s.hideAmountsOnLockScreen) "open: $n" else "P&L Rs %+,.0f · $n open".format(pnl)))
+                // Orders on the same contract net into one position (two arms buying it = one position of 2 lots),
+                // so the line says positions and the quantity they hold, not orders.
+                val qty = snap.positions.positions.sumOf { kotlin.math.abs(it.quantity) }
+                val held = "$n position${if (n == 1) "" else "s"} · qty $qty"
+                lines.add(0, "Paper %s".format(if (s.hideAmountsOnLockScreen) "open: $held" else "P&L Rs %+,.0f · $held".format(pnl)))
             }
         }
         // Alarms set from the chart, priced from the chart's own feed (the last 1-minute close): all at once,
