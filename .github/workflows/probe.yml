@@ -40,7 +40,7 @@ jobs:
               if i != "1_cYjZwk6bc-3c-NCX4LiWUth66vr2D4f":        # the FINNIFTY page's own sample
                   continue
               print("== downloading", i)
-              r = subprocess.run(["gdown", "--fuzzy", f"https://drive.google.com/file/d/{i}/view", "-O", f"dl/{i}"], capture_output=True, text=True)
+              r = subprocess.run(["gdown", i, "-O", f"dl/{i}"], capture_output=True, text=True)
               print(r.stdout[-400:], r.stderr[-600:])
           for f in glob.glob("dl/*"):
               print("== file", f, os.path.getsize(f), "bytes")
