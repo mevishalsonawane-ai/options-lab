@@ -37,8 +37,7 @@ jobs:
               print(i, "::", ctx)
           os.makedirs("dl", exist_ok=True)
           for i in ids:
-              ctx = html[max(0, html.find(i) - 900):html.find(i)].lower()
-              if "fin" not in ctx:
+              if i != "1_cYjZwk6bc-3c-NCX4LiWUth66vr2D4f":        # the FINNIFTY page's own sample
                   continue
               print("== downloading", i)
               r = subprocess.run(["gdown", "--fuzzy", f"https://drive.google.com/file/d/{i}/view", "-O", f"dl/{i}"], capture_output=True, text=True)
@@ -48,7 +47,9 @@ jobs:
               try:
                   if zipfile.is_zipfile(f):
                       z = zipfile.ZipFile(f); names = z.namelist(); print(len(names), "members:", names[:30])
-                      first = [n for n in names if n.lower().endswith(".csv")][:1]
+                      csvs = [n for n in names if n.lower().endswith(".csv")]
+                      print("csv members:", len(csvs), csvs[:60])
+                      first = csvs[:1]
                       if first:
                           df = pd.read_csv(z.open(first[0]), nrows=200000); print(first[0], df.shape); print(df.head(5).to_string()); print(df.columns.tolist())
                   else:
