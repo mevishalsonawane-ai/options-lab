@@ -175,3 +175,8 @@ ATM straddle level and change, CE/PE skew, OI change and PCR over ATM +-200, CE/
   day). The pivot + ATR stop sits ~265-330 index pts away, so TP1 (1R) is reached on only 1-17% of trades; 67-70%
   end on the opposite CHoCH and ~28% at 15:10, and the index result is ~0 R (direction a coin flip). The one
   positive row (15-min CHoCH only, +22k, t 0.15, previous year) is -56k in the other year: noise.
+- MATRIX PINE (MATRIX_PINE.md), the owner's script exactly: close crossing EMA(20) on 5-min, SL 2.7x ATR(14), exit
+  at 2.5R or 15:15, no signals 11:00-13:15. Loses in both years: -Rs 1.09 lakh / -1.09 lakh a year on 1 ATM lot
+  (1.4 trades a day, 35-38% winners, t -2.1 / -1.4); ITM no better; the TP1 half-exit + breakeven doubles the loss
+  on 2 lots; without the dead zone -83k / -48k. TP2 (~390-480 pts away) is reached on 5-7% of trades; 55% end at
+  15:15 and ~38% at the stop. The 09:xx entries lose the most (-62k / -77k).
