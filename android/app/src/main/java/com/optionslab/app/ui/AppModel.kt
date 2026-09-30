@@ -117,6 +117,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     val ic = MutableStateFlow<Load<Ic.IcResult>>(Load.Idle)
     val signal = MutableStateFlow<Load<SignalResult>>(Load.Idle)
     val preset = MutableStateFlow<Load<com.optionslab.engine.strategy.Presets.Result>>(Load.Idle)
+    val armsBacktest = MutableStateFlow<Load<com.optionslab.engine.orb.ArmsBacktest.Result>>(Load.Idle)
     val replay = MutableStateFlow<Load<com.optionslab.engine.Session>>(Load.Idle)
     val integrity = MutableStateFlow<List<Integrity.Finding>>(emptyList())
     val provenance = MutableStateFlow<Load<List<Provenance.Drift>>>(Load.Idle)
@@ -152,8 +153,19 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     private val settingsWriter = kotlinx.coroutines.sync.Mutex()
 
     fun update(transform: (AppSettings) -> AppSettings) {
-        val next = transform(_settings.value)
+        val prev = _settings.value
+        val next = transform(prev)
         _settings.value = next
+        // Which mode orders go to is the first thing to check when an order is "missing" at Zerodha.
+        if (prev.live != next.live || prev.allowRealOrders != next.allowRealOrders)
+            com.optionslab.app.data.Diag.record("mode", "${if (next.live) "LIVE (Zerodha)" else "Paper"} · real orders allowed: ${next.allowRealOrders}")
+        // Switching Live <-> Paper: each side keeps its own books (nothing is cleared); the side switched to is read
+        // again at once, so its P&L, positions, orders and funds show as they are now, with the last figures in view meanwhile.
+        if (prev.live != next.live) {
+            if (next.live) { if (com.optionslab.app.data.Broker.loggedIn) loadAccount(quiet = true) } else loadPaper(quiet = true)
+        }
+        if (prev.oneTapOrders != next.oneTapOrders) com.optionslab.app.data.Diag.record("mode", "live orders without PIN ${if (next.oneTapOrders) "ON" else "off"}")
+        if (prev.guardKill != next.guardKill) com.optionslab.app.data.Diag.record("mode", "kill switch ${if (next.guardKill) "ON" else "off"}")
         viewModelScope.launch(Dispatchers.IO) {
             settingsWriter.lock()
             try {
@@ -420,6 +432,19 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** Replay every ORB arm over the bundled month plus every BANKNIFTY day the phone has harvested, on the real option bars. */
+    fun runArmsBacktest() {
+        armsBacktest.value = Load.Busy("Replaying the arms")
+        viewModelScope.launch(Dispatchers.Default) {
+            armsBacktest.value = try {
+                val r = com.optionslab.engine.orb.ArmsBacktest.run(Store.barSessions("BANKNIFTY"))
+                if (r.days == 0) Load.Failed("No BANKNIFTY day with index and option bars yet.") else Load.Done(r)
+            } catch (e: Exception) {
+                Load.Failed(e.message ?: "The replay failed")
+            }
+        }
+    }
+
     /** Replay a preset over every harvested session of [underlying]. */
     fun runPreset(id: String, underlying: String, lots: Int, entry: java.time.LocalTime, exit: java.time.LocalTime, stop: Double?, target: Double?) {
         val p = com.optionslab.engine.strategy.Presets.byId(id) ?: return
@@ -597,6 +622,10 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             var first = true
             com.optionslab.app.data.KiteStream.orderEvents.collect { if (first) first = false else if (_settings.value.live) loadAccount(quiet = true) }
         }
+        viewModelScope.launch {
+            var first = true
+            com.optionslab.app.data.Broker.sessionEnded.collect { if (first) first = false else promptLoginIfExpired(force = true) }
+        }
     }
     val plan = MutableStateFlow<Load<OrderPlan>>(Load.Idle)
     val sending = MutableStateFlow<Load<List<com.optionslab.app.data.Broker.Fill>>>(Load.Idle)
@@ -668,6 +697,28 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun startKiteLogin() { if (com.optionslab.app.data.Broker.configured) askLoginPin.value = true else say("Add your Kite API key and secret first.") }
+
+    @Volatile private var loginPromptedAt = 0L
+
+    /**
+     * Opening the app (or coming back to it) with a linked account whose Zerodha session has expired - every
+     * morning, as Kite sessions end overnight - asks for the PIN / fingerprint and opens Zerodha's login page.
+     * Cancelled, it stays quiet for 15 minutes; [force] (Zerodha just ended the session) asks again at once.
+     */
+    fun promptLoginIfExpired(force: Boolean = false) {
+        if (!LoginPrompt.enabled) return
+        viewModelScope.launch(Dispatchers.IO) {
+            val b = com.optionslab.app.data.Broker
+            val now = System.currentTimeMillis()
+            if (!b.configured || !b.linked || b.loggedIn) return@launch
+            broker.value = brokerState()
+            if (askLoginPin.value || showKiteLogin.value) return@launch
+            if (!force && now - loginPromptedAt < 15 * 60_000L) return@launch
+            loginPromptedAt = now
+            com.optionslab.app.data.Diag.record("info", "Zerodha session expired: asked to log in again")
+            askLoginPin.value = true
+        }
+    }
 
     /** Called by the login page for every navigation; true means "stop, it was ours". */
     fun onKiteNavigation(url: String): Boolean {
@@ -763,14 +814,17 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     // ---- closing what you hold ---------------------------------------------------------
 
     /** Square off one open position: the opposite side, the whole open quantity, for review. */
-    fun planSquareOff(pos: com.optionslab.app.data.Broker.Position, area: String = "Square off") =
+    fun planSquareOff(pos: com.optionslab.app.data.Broker.Position, area: String = "Square off") {
+        com.optionslab.app.data.Diag.record("tap", "Square off ${pos.symbol} qty ${pos.qty} ($area)")
         planExits("Square off ${pos.symbol}", listOf(pos), com.optionslab.app.data.Origins.manual(area))
+    }
 
     /**
      * Close every open position. Shorts are bought back FIRST: selling a
      * long hedge while its short is still open would leave a naked short.
      */
     fun planSquareOffAll() {
+        com.optionslab.app.data.Diag.record("tap", "Square off all")
         val open = livePositions.value.filter { it.open }
         if (open.isEmpty()) { say("No open positions."); return }
         planExits("Square off all (${open.size})", open.sortedBy { if (it.qty < 0) 0 else 1 }, com.optionslab.app.data.Origins.manual("Square off all"))
@@ -927,6 +981,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
 
     /** Modify a working order after the owner re-proved who they are. */
     fun modifyOrder(o: com.optionslab.app.data.Broker.OrderRow, quantity: Int, type: String, price: Double?, trigger: Double?) {
+        com.optionslab.app.data.Diag.record("tap", "Modify order ${o.id}: qty $quantity $type price $price trigger $trigger")
         val s = _settings.value
         if (!s.live || !s.allowRealOrders) { say("Modifying is a real order change: switch to Live with the badge at the top first."); return }
         viewModelScope.launch(Dispatchers.IO) {
@@ -999,6 +1054,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     fun planManual(underlying: String, expiry: LocalDate, strike: Double, right: com.optionslab.engine.Right,
                    side: com.optionslab.engine.Kite.Side, lots: Int, product: String, limit: Double?, protect: ProtectSpec? = null,
                    area: String = "Order form") {
+        com.optionslab.app.data.Diag.record("tap", "Plan ${side.name} $lots lot $underlying $expiry ${com.optionslab.engine.fmtG(strike)} $right $product ${limit?.let { "LIMIT $it" } ?: "MARKET"}${protect?.let { " protect=$it" } ?: ""} ($area, ${if (_settings.value.live) "LIVE" else "Paper"})")
         plan.value = Load.Busy("Looking up the contract"); prewarm(entry = true)
         viewModelScope.launch(Dispatchers.IO) {
             plan.value = try {
@@ -1065,7 +1121,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     private val WORKING = setOf("OPEN", "TRIGGER PENDING", "UNKNOWN", "OPEN PENDING", "VALIDATION PENDING", "PUT ORDER REQ RECEIVED", "MODIFY PENDING", "AMO REQ RECEIVED")
 
     fun sendPlan() {
-        val cur = (plan.value as? Load.Done<OrderPlan>)?.value ?: return
+        val cur = (plan.value as? Load.Done<OrderPlan>)?.value ?: run { com.optionslab.app.data.Diag.record("tap", "Send pressed with no plan ready"); return }
+        com.optionslab.app.data.Diag.record("tap", "Send (confirmed) ${cur.title}")
         val s = _settings.value
         if (!s.live) { say("This is Paper mode: switch to Live with the badge at the top to send real orders."); return }
         if (!s.allowRealOrders) { say("This is Paper mode: switch to Live with the badge at the top to send real orders."); return }
@@ -1678,6 +1735,30 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /**
+     * Paper back to how the app first starts: the default amount, no orders, trades or positions, an empty paper
+     * P&L calendar, and no paper positions, stops, runs or notes left in the arms, strategies, Pine scripts or
+     * journal (every arm not armed for Zerodha is switched off). Nothing about Zerodha is touched.
+     */
+    fun paperResetAll() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val default = com.optionslab.engine.sandbox.SandboxConfig().startingCapital
+            com.optionslab.app.data.Paper.reset(default)
+            runCatching { com.optionslab.app.data.OrbArms.resetPaper() }
+            runCatching { com.optionslab.app.data.PineAuto.resetPaper() }
+            runCatching { com.optionslab.app.data.Strategies.resetPaper() }
+            runCatching { com.optionslab.app.data.Protections.resetPaper() }
+            runCatching { com.optionslab.app.data.Journal.resetPaper() }
+            com.optionslab.app.data.DailyPnl.resetPaper()
+            com.optionslab.app.data.Guard.resetPeak(live = false)
+            runCatching { com.optionslab.app.work.PositionCards.dismissAll(ctx, "Paper") }
+            pnlDays.value = pnlDays.value + 1
+            say("Paper reset to default: ${rs(default.toDouble())}, nothing held, no history.")
+            loadPaper()
+            runCatching { refreshStrategies() }
+        }
+    }
+
     /** Listed expiries (Upstox master) for the paper order form. */
     /** The listed strikes for one expiry, and the index level (the last session's when closed) to centre them on. */
     suspend fun paperStrikes(underlying: String, expiry: LocalDate): Pair<List<Double>, Double?> = withContext(Dispatchers.IO) {
@@ -1692,9 +1773,13 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun cancelOrder(id: String, variety: String = "regular") {
+        com.optionslab.app.data.Diag.record("tap", "Cancel order $id ($variety)")
         viewModelScope.launch(Dispatchers.IO) {
             try { com.optionslab.app.data.Broker.cancel(id, variety); say("Cancel requested for ${id.takeLast(6)}.") } catch (e: Exception) { say("Cancel failed: ${e.message}") }
             loadAccount()
         }
     }
 }
+
+/** The automatic "log in to Zerodha again" prompt. Screen tests switch it off (a dialog over every page); LoginPromptTest turns it on. */
+object LoginPrompt { @Volatile var enabled = true }

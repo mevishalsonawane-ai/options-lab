@@ -240,7 +240,7 @@ fun DataPage(model: AppModel) {
         confirmButton = { TextButton({
             confirmWipe = false; wiping = true
             // Deleting the partitions walks the whole folder: off the main thread, then the figures are read again.
-            scope.launch {
+            scope.launch(kotlinx.coroutines.Dispatchers.Main) {
                 val ok = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { runCatching { Store.wipeDeviceData() }.isSuccess }
                 wiping = false; reread++
                 model.say(if (ok) "Harvested data deleted." else "Could not delete all of the harvested data.")
@@ -387,7 +387,7 @@ fun SecurityPage(model: AppModel) {
                     "The ledger, alarms and settings are AES-256-GCM encrypted with a key held in the Android Keystore (StrongBox where present).",
                     "The PIN is never stored: only a salted PBKDF2 verifier, compared in constant time, with escalating lockouts.",
                     "HTTPS only, and only the system's certificate authorities - a user-installed CA cannot read the traffic.",
-                    "Zerodha API key, secret and the day's access token live only in the encrypted vault; a real order needs your review, a long press and a fresh PIN or fingerprint, and is refused on a compromised device.",
+                    "Zerodha API key, secret and the day's access token live only in the encrypted vault; a real order needs your review, a swipe and (unless switched off) a fresh PIN or fingerprint, and is refused on a compromised device.",
                     "Nothing is written to the system log. Errors never carry a URL, an instrument key or a response.",
                     "No backups, no device transfer, no exported components beyond the launcher.",
                     "Touches through another app's overlay are ignored.",
@@ -415,7 +415,7 @@ fun SecurityPage(model: AppModel) {
             confirmButton = {
                 TextButton({
                   err = null
-                  pinScope.launch {
+                  pinScope.launch(kotlinx.coroutines.Dispatchers.Main) {
                     val r = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { PinLock.verify(cur.toCharArray(), s.wipeOnExhaustion) }
                     when (r) {
                         PinLock.Result.Ok -> try {
@@ -720,7 +720,7 @@ private fun BackupCard(model: AppModel, wipeOnExhaustion: Boolean) {
     val pick = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.OpenDocument()) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
         val resolver = ctx.applicationContext.contentResolver
-        scope.launch {
+        scope.launch(kotlinx.coroutines.Dispatchers.Main) {
             // Read and checked off the main thread.
             val read = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                 val bytes = try { resolver.openInputStream(uri)?.use { it.readBytes() } } catch (e: Exception) { null }
@@ -798,7 +798,7 @@ private fun BackupCard(model: AppModel, wipeOnExhaustion: Boolean) {
                         val typed = pin.toCharArray()
                         val phrase = pass.toCharArray()
                         busy = true
-                        scope.launch {
+                        scope.launch(kotlinx.coroutines.Dispatchers.Main) {
                             try {
                                 if (mode == "backup") {
                                     // Only the owner may make a backup: the app PIN authorises it; the passphrase seals it.

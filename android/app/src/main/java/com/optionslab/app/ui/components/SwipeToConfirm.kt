@@ -32,6 +32,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
@@ -48,7 +49,7 @@ import kotlin.math.roundToInt
  * never close a position or cancel an order. Let go early and it springs back.
  */
 @Composable
-fun SwipeToConfirm(label: String, tone: Color, modifier: Modifier = Modifier, onConfirm: () -> Unit) {
+fun SwipeToConfirm(label: String, tone: Color, modifier: Modifier = Modifier, enabled: Boolean = true, onConfirm: () -> Unit) {
     val p = LocalPalette.current
     val haptics = LocalHapticFeedback.current
     val scope = rememberCoroutineScope()
@@ -61,7 +62,8 @@ fun SwipeToConfirm(label: String, tone: Color, modifier: Modifier = Modifier, on
         // At least 60 dp, taller when a large font wraps the label (it was cut at 60).
         modifier.fillMaxWidth().heightIn(min = 60.dp).background(tone.copy(alpha = 0.14f), RoundedCornerShape(50))
             // Screen readers cannot drag: the same confirmation as a button action (any PIN step still follows).
-            .semantics(mergeDescendants = true) { role = Role.Button; onClick(label = label) { onConfirm(); true } },
+            .semantics(mergeDescendants = true) { role = Role.Button; if (enabled) onClick(label = label) { onConfirm(); true } else disabled() }
+            .alpha(if (enabled) 1f else 0.45f),
         contentAlignment = Alignment.CenterStart,
     ) {
         val maxPx = with(density) { (maxWidth - knob - 8.dp).toPx() }.coerceAtLeast(1f)
@@ -72,7 +74,8 @@ fun SwipeToConfirm(label: String, tone: Color, modifier: Modifier = Modifier, on
         Box(
             Modifier.matchParentSize()
                 // The whole track takes the slide, not only the knob: a thumb anywhere on it moves the knob.
-                .pointerInput(maxPx) {
+                .pointerInput(maxPx, enabled) {
+                    if (!enabled) return@pointerInput
                     detectHorizontalDragGestures(
                         onDragStart = { done = false },
                         onDragEnd = {

@@ -13,7 +13,7 @@ import androidx.compose.ui.unit.dp
 import com.optionslab.app.ui.AppModel
 import com.optionslab.app.ui.components.Token
 
-/** The research bench: Pine scripts (write, check, backtest, chart, auto-trade), the strategy's trials (arms), its health checks, and the portfolio and SIP backtesters, and the candle-by-candle replay. */
+/** The research bench: Pine scripts (write, check, backtest, chart, auto-trade), the strategy's trials (arms), its health checks, and the portfolio and SIP backtesters, the candle-by-candle replay, and the ORB arms replayed on every recorded day. */
 @Composable
 fun LabScreen(model: AppModel, page: String, onPage: (String) -> Unit, onChart: () -> Unit = {}) {
     LabTabs(page, onPage) { current ->
@@ -23,6 +23,7 @@ fun LabScreen(model: AppModel, page: String, onPage: (String) -> Unit, onChart: 
             "portfolio" -> PortfolioLab(model)
             "sip" -> SipLab(model)
             "replay" -> ReplayLab(model)
+            "arms" -> ArmsBacktestPage(model)
             else -> TrialsScreen(model)
         }
     }
@@ -40,6 +41,7 @@ internal fun LabTabs(page: String, onPage: (String) -> Unit, content: @Composabl
             Token("Portfolio", page == "portfolio") { onPage("portfolio") }
             Token("SIP", page == "sip") { onPage("sip") }
             Token("Replay", page == "replay") { onPage("replay") }
+            Token("Arms", page == "arms") { onPage("arms") }
         }
         Box(Modifier.weight(1f)) { content(page) }
     }

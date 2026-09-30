@@ -43,6 +43,8 @@ object Alerts {
             recent[key] = now
         }
         val a = Alert(seq.incrementAndGet(), kind, title, text)
+        // The owner's diagnostics diary keeps every banner (words already on screen; redacted again there).
+        com.optionslab.app.data.Diag.record(if (kind == Kind.ERROR) "error" else "info", listOfNotNull(title, text).joinToString(": "))
         _queue.update { q -> (q + a).takeLast(4) }
         _posted.addLast(a)
         while (_posted.size > 50) _posted.pollFirst()

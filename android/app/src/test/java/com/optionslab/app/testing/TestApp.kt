@@ -34,6 +34,7 @@ class TestApp : Application() {
     override fun onCreate() {
         super.onCreate()
         com.optionslab.app.ui.components.Splash.enabled = false
+        com.optionslab.app.ui.LoginPrompt.enabled = false
         // Screen tests place paper orders at whatever hour CI runs; PaperMarketHoursTest turns this off.
         Market.testOrdersAnyTime = true
         IdleSampler.install()
@@ -58,7 +59,8 @@ class TestApp : Application() {
         Protections.init(this)
         TradeBook.init(this)
         Journal.init(this)
+        com.optionslab.app.data.Diag.init(this)
         // Caches from an earlier test (the files behind them are already gone with its directories).
-        Paper.wipe(); Strategies.wipe(); OrbArms.wipe(); PineAuto.wipe(); Protections.wipe(); TradeBook.wipe(); Journal.wipe()
+        Paper.wipe(); Strategies.wipe(); OrbArms.wipe(); PineAuto.wipe(); Protections.wipe(); TradeBook.wipe(); Journal.wipe(); com.optionslab.app.data.Diag.wipe()
     }
 }

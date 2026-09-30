@@ -61,7 +61,7 @@ private const val ORIGIN = "https://$HOST/"
  * indicators, chart types, long-press order menu) running on bundled files in
  * a WebView that can load nothing else and reach no network. Candles and
  * symbol search come from the app; Buy / Sell open the app's own order sheet,
- * so paper stays paper and live orders still need the review, the long press
+ * so paper stays paper and live orders still need the review, the swipe
  * and the PIN or fingerprint.
  */
 @Composable

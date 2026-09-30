@@ -1,0 +1,26 @@
+name: Fetch recent BANKNIFTY candles
+
+on:
+  push:
+    paths:
+      - "tools/fetch_day.py"
+      - ".github/workflows/day.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install pandas requests
+      - run: python tools/fetch_day.py 2026-09-15 2026-09-29 banknifty_recent.csv
+      - env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload research-data banknifty_recent.csv --clobber

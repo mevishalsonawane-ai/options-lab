@@ -234,8 +234,11 @@ fun LoginPinDialog(model: AppModel) {
  * phone may have been handed over unlocked.
  */
 @Composable
-fun Reauth(model: AppModel, onOk: () -> Unit, onCancel: () -> Unit, pinOnly: Boolean = false, why: String = "Enter your app PIN to send this order to Zerodha.") {
+fun Reauth(model: AppModel, onOk: () -> Unit, onCancel: () -> Unit, pinOnly: Boolean = false, why: String = "Enter your app PIN to send this order to Zerodha.",
+           orderAction: Boolean = false) {
     val s by model.settings.collectAsState()
+    // Live orders without PIN (the owner's setting): confirming an order, cancel or square-off is enough.
+    if (orderAction && s.oneTapOrders) { LaunchedEffect(Unit) { onOk() }; return }
     val activity = LocalContext.current as? FragmentActivity
     // A phone that failed the security check can fake a biometric callback: the PIN only, there.
     val findings by model.integrity.collectAsState()
@@ -379,7 +382,7 @@ private fun OrderReviewBody(model: AppModel) {
             st?.takeIf { it.plan == pl.value }?.let { stk -> StuckCard(stk) { stuckAction = it } }
         }
     }
-    if (confirming) Reauth(model, onOk = { confirming = false; model.sendPlan() }, onCancel = { confirming = false })
+    if (confirming) Reauth(model, onOk = { confirming = false; model.sendPlan() }, onCancel = { confirming = false }, orderAction = true)
     stuckAction?.let { a ->
         Reauth(model, onOk = {
             stuckAction = null
@@ -459,7 +462,7 @@ internal fun PlanCard(
             Load.Idle -> {
                 if (!allowed) Note("This is Paper mode. To send real orders, tap the PAPER TRADING badge at the top and switch to Live.")
                 if (priceMismatch) Note("A limit price box does not hold a valid price; fix it before sending.")
-                HoldToSend("Hold to send to Zerodha", allowed && plan.sendable && !priceMismatch, onSend)
+                com.optionslab.app.ui.components.SwipeToConfirm("Swipe to send to Zerodha", p.oxblood, enabled = allowed && plan.sendable && !priceMismatch, onConfirm = onSend)
             }
         }
         Spacer(Modifier.height(8.dp))
@@ -694,9 +697,13 @@ fun BrokerPage(
         }
         item {
             LedgerCard(title = "Real orders") {
-                Note("Live trading sends real orders to Zerodha; Paper never does. Switch with the PAPER / LIVE badge at the top. Every order still needs your review, a long press and your PIN or fingerprint.")
+                Note("Live trading sends real orders to Zerodha; Paper never does. Switch with the PAPER / LIVE badge at the top." +
+                    if (s.oneTapOrders) " No PIN is on: an order goes to Zerodha when you confirm it in the review; cancels and square-offs need no PIN either." else " Every order needs your review and your PIN or fingerprint.")
                 ToggleRow("Prepare the expiry order at 11:01", "Builds today's ticket and notifies you to review it. It is never sent by itself.", s.prepareRealOrder) { on ->
                     model.update { it.copy(prepareRealOrder = on) }
+                }
+                ToggleRow("Live orders without PIN", "Confirming the order review sends it to Zerodha at once: no PIN or fingerprint (also for Cancel, Square off and Protect). The margin check, kill switch and account limits still apply.", s.oneTapOrders) { on ->
+                    model.update { it.copy(oneTapOrders = on) }
                 }
                 ParamTokens("Product", listOf("NRML" to (s.orderProduct == "NRML"), "MIS" to (s.orderProduct == "MIS"))) { i -> model.update { it.copy(orderProduct = if (i == 0) "NRML" else "MIS") } }
                 if (s.orderProduct == "MIS") Note("MIS positions are squared off by Zerodha before the close. The expiry put holds to settlement, so its orders are refused under MIS.")
@@ -744,10 +751,21 @@ internal fun SelfTestCard() {
             val bad = steps.count { !it.ok }
             Note(if (bad == 0) "All ${steps.size} checks passed." else "$bad of ${steps.size} checks failed.")
         }
+        // Diagnostics: the app's own diary (banners, self-test, bot notes), redacted, copied for the owner to paste to whoever helps.
+        val ctx = androidx.compose.ui.platform.LocalContext.current
+        androidx.compose.material3.TextButton({
+            scope.launch(kotlinx.coroutines.Dispatchers.Main) {
+                val text = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { com.optionslab.app.data.Diag.report() }
+                val cm = ctx.getSystemService(android.content.ClipboardManager::class.java)
+                cm?.setPrimaryClip(android.content.ClipData.newPlainText("IraAlgo diagnostics", text))
+                com.optionslab.app.work.Alerts.success("Diagnostics copied: paste them in the chat. Keys, tokens and passwords are never included.")
+            }
+        }, Modifier.fillMaxWidth()) { Text("Copy diagnostics") }
         BrassButton(if (running) "Checking…" else "Run the self-test", Modifier.fillMaxWidth().padding(top = 8.dp)) {
             if (running) return@BrassButton
             running = true; steps = emptyList()
-            scope.launch {
+            // On the main dispatcher itself: each step hops to IO and back, and its result lands on the screen's thread.
+            scope.launch(kotlinx.coroutines.Dispatchers.Main) {
                 try { com.optionslab.app.data.LiveSelfTest.run { st -> steps = steps + st } }
                 finally { running = false }
             }
@@ -1015,9 +1033,14 @@ internal fun ManualOrder(model: AppModel) {
         clearContract()
         try {
             // The index price first, so the strike chosen below is the one nearest THIS index.
-            spot = try { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { Broker.indexQuote(underlying)?.last } }
+            // Each read gets one more try a second later: a blip (another screen loading the same list) must not
+            // leave the form with no strike picked.
+            suspend fun <T> twice(read: suspend () -> T): T = try { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { read() } }
+                catch (e: kotlinx.coroutines.CancellationException) { throw e }
+                catch (e: Exception) { kotlinx.coroutines.delay(1_000); kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { read() } }
+            spot = try { twice { Broker.indexQuote(underlying)?.last ?: error("no index price") } }
                 catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { null }
-            val list = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            val list = twice {
                 Broker.instruments().filter { it.name == underlying && !it.expiry.isBefore(Market.today()) }.map { it.expiry }.distinct().sorted().take(6)
             }
             expiries = list

@@ -333,6 +333,7 @@ fun eraseEverything() {
     com.optionslab.app.data.PineAuto.wipe()
     com.optionslab.app.data.Protections.wipe()
     com.optionslab.app.data.TradeBook.wipe()
+    com.optionslab.app.data.Diag.wipe()
     com.optionslab.app.data.Journal.wipe()
     com.optionslab.app.data.Strategies.wipe()
     com.optionslab.app.data.History.wipe()
@@ -474,6 +475,13 @@ private fun Main(model: AppModel) {
         if (kiteLogin) com.optionslab.app.ui.screens.KiteLoginPage(model)
         val askPin by model.askLoginPin.collectAsState()
         if (askPin) com.optionslab.app.ui.screens.LoginPinDialog(model)
+        // A new day (or a session Zerodha ended): the login popup opens by itself when the app opens or comes back.
+        val owner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+        androidx.compose.runtime.DisposableEffect(owner) {
+            val obs = androidx.lifecycle.LifecycleEventObserver { _, e -> if (e == androidx.lifecycle.Lifecycle.Event.ON_RESUME) model.promptLoginIfExpired() }
+            owner.lifecycle.addObserver(obs)
+            onDispose { owner.lifecycle.removeObserver(obs) }
+        }
         // Every event, success or error, drops in at the top of the screen.
         com.optionslab.app.ui.components.AlertBanner()
     }
@@ -658,7 +666,7 @@ internal fun Masthead(live: Boolean, calm: Boolean, linked: Boolean, onMode: (Bo
         onDismissRequest = { confirmLive = false },
         properties = androidx.compose.ui.window.DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy),
         title = { Text("Switch to live trading?", style = Type.title) },
-        text = { Text("Prices, positions and orders will come from your Zerodha account. Orders you send will use real money. Each order still needs your review, a long press and your PIN or fingerprint.", style = Type.bodySmall) },
+        text = { Text("Prices, positions and orders will come from your Zerodha account. Orders you send will use real money. Each order still needs your review and a swipe to send (plus your PIN or fingerprint unless you switch that off).", style = Type.bodySmall) },
         confirmButton = { com.optionslab.app.ui.components.TextButton({ confirmLive = false; onMode(true) }) { Text("Go live", color = p.oxblood) } },
         dismissButton = { com.optionslab.app.ui.components.TextButton({ confirmLive = false }) { Text("Stay on paper") } },
     )

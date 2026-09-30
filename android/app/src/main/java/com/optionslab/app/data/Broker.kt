@@ -122,6 +122,9 @@ object Broker {
 
     private fun dropSession() { KiteStream.stop(); SecurePrefs.putAll(mapOf(K_TOKEN to null, K_LOGIN_AT to null)) }
 
+    /** Bumped when Zerodha itself ends the session (expired or logged out elsewhere): the app asks to log in again. */
+    val sessionEnded = kotlinx.coroutines.flow.MutableStateFlow(0)
+
     // ---- HTTP ---------------------------------------------------------------------
 
     /**
@@ -140,8 +143,36 @@ object Broker {
             field = v
         }
 
+    /** Order fields kept in the diagnostics diary (what was asked, never who asked or with what key). */
+    private val DIAG_FIELDS = setOf("tradingsymbol", "exchange", "transaction_type", "quantity", "order_type", "product",
+        "price", "trigger_price", "validity", "variety", "tag")
+
+    /**
+     * Every Zerodha write (orders, changes, cancels, GTTs) and every failed read goes into the owner's diagnostics
+     * diary: the path, the order's fields, Zerodha's answer or the failure, how long it took, and whether it went
+     * through the static-IP relay. No header, token or key is ever read here.
+     */
     private suspend fun call(method: String, path: String, body: String? = null, auth: Boolean = true, raw: Boolean = false,
                              json: Boolean = false, viaRelay: Boolean = false): Any {
+        val t0 = System.currentTimeMillis()
+        val where = "$method ${path.substringBefore('?')}"
+        val asked = if (body == null || json) "" else body.split('&').mapNotNull { kv ->
+            val k = kv.substringBefore('='); if (k in DIAG_FIELDS) "$k: ${java.net.URLDecoder.decode(kv.substringAfter('='), "UTF-8")}" else null
+        }.joinToString(" ", prefix = " {", postfix = "}").takeIf { it != " {}" }.orEmpty()
+        val route = if ((method != "GET" || viaRelay) && testEndpoint == null && Relay.enabled) " via relay" else ""
+        return try {
+            callInner(method, path, body, auth, raw, json, viaRelay).also { r ->
+                if (method != "GET") Diag.record("zerodha", "$where$asked$route -> ok ${(r as? JSONObject)?.optString("order_id")?.takeIf { it.isNotEmpty() }?.let { "order $it " } ?: ""}(${System.currentTimeMillis() - t0} ms)")
+            }
+        } catch (e: Exception) {
+            if (e !is kotlinx.coroutines.CancellationException)
+                Diag.record("zerodha", "$where$asked$route -> FAILED ${e.javaClass.simpleName}: ${e.message} (${System.currentTimeMillis() - t0} ms)")
+            throw e
+        }
+    }
+
+    private suspend fun callInner(method: String, path: String, body: String?, auth: Boolean, raw: Boolean,
+                                  json: Boolean, viaRelay: Boolean): Any {
         var attempt = 0
         while (true) {
             // Orders and every other write go through the static-IP relay when it is on (it throws if it
@@ -187,7 +218,10 @@ object Broker {
                     // Kite's own message names the problem (margin, price band,
                     // freeze quantity); it carries no credential, so it is shown.
                     val msg = json.optString("message", "request failed").take(300)
-                    if (type == "TokenException") { dropSession(); throw KiteError(type, "Zerodha session ended: $msg") }
+                    if (type == "TokenException") { dropSession(); sessionEnded.value++; throw KiteError(type, "Zerodha session ended: $msg") }
+                    // SEBI's static-IP rule: Zerodha takes orders only from an IP listed in the Kite Connect app.
+                    if (msg.contains("No IPs configured", ignoreCase = true) || msg.contains("not allowed to place orders", ignoreCase = true))
+                        throw KiteError(type, "Zerodha does not know your order IP yet. Add ${StaticIp.registered ?: "your static IP"} in developers.kite.trade → My apps → your app → IP whitelist, save, then try again. (Zerodha: $msg)")
                     throw KiteError(type, msg)
                 }
                 return json.opt("data") ?: JSONObject.NULL

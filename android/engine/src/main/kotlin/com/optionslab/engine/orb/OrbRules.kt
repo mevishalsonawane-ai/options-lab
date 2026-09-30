@@ -10,7 +10,12 @@ import kotlin.math.floor
 /** A 5-minute bar, labelled by its START in IST. Usable only once it has closed. */
 data class Bar(val start: LocalDateTime, val open: Double, val high: Double, val low: Double, val close: Double)
 
-data class Arm(val source: String, val label: String, val freshOnly: Boolean = false)
+/**
+ * [sweep]: the liquidity-sweep reversal (SweepRules), not the break; [fade]: the range-edge fade (RangeFadeRules);
+ * [paperOnly]: it never sends to Zerodha.
+ */
+data class Arm(val source: String, val label: String, val freshOnly: Boolean = false, val sweep: Boolean = false, val paperOnly: Boolean = false,
+               val fade: Boolean = false)
 
 /**
  * The opening-range-break rule, exactly as the desktop's

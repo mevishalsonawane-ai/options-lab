@@ -86,6 +86,8 @@ object Relay {
         kp.dispose()
         SecurePrefs.putAll(mapOf(K_PRV to String(prv, Charsets.UTF_8), K_PUB to pub, K_HOSTKEY to null))
         close()
+        // Why the server wants a key again is the first question when the relay stops: every new key is in the diary.
+        Diag.record("relay", "NEW relay key made (the old one no longer works): paste the new one into the server")
         return pub
     }
 
@@ -136,6 +138,7 @@ object Relay {
             try {
                 t.connect(15_000)
                 if (name != user) SecurePrefs.put(K_USER, name)
+                Diag.record("relay", "connected as $name")
                 s = t; break
             } catch (e: Exception) {
                 last = e
@@ -144,6 +147,7 @@ object Relay {
         }
         if (s == null) {
             val m = last?.message.orEmpty()
+            Diag.record("relay", "connect FAILED to the server as ${names.joinToString("/")}: ${last?.javaClass?.simpleName}: $m")
             throw IOException(when {
                 m.contains("HostKey has been changed", true) || m.contains("reject HostKey", true) ->
                     "Relay: the server's identity changed. If you rebuilt the server, tap Forget server and connect again."

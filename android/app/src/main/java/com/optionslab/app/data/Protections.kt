@@ -415,5 +415,8 @@ object Protections {
 
     private fun Int.sign() = if (this > 0) 1 else if (this < 0) -1 else 0
 
+    /** Reset paper: every paper stop / target / trail is dropped; Zerodha's are untouched. */
+    suspend fun resetPaper(): Unit = lock.withLock { save(load().filter { it.live }) }
+
     fun wipe() { cache = null; if (::file.isInitialized) file.delete() }
 }

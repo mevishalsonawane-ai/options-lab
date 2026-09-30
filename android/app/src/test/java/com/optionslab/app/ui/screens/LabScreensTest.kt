@@ -99,7 +99,7 @@ class LabScreensTest {
         set { LabTabs(page, { asked += it; page = it }) { Text("page=$it") } }
         text("page=trials").assertIsDisplayed()
         text("Backtests").assertIsSelected()
-        val tokens = listOf("Pine scripts" to "pine", "Health" to "health", "Portfolio" to "portfolio", "SIP" to "sip", "Replay" to "replay", "Backtests" to "trials")
+        val tokens = listOf("Pine scripts" to "pine", "Health" to "health", "Portfolio" to "portfolio", "SIP" to "sip", "Replay" to "replay", "Arms" to "arms", "Backtests" to "trials")
         for ((label, id) in tokens) {
             text(label).performClick()
             text("page=$id").assertIsDisplayed()
@@ -107,6 +107,26 @@ class LabScreensTest {
             tokens.filter { it.first != label }.forEach { text(it.first).assertIsNotSelected() }
         }
         assertEquals(tokens.map { it.second }, asked)
+    }
+
+    // ---- Arms backtest ----------------------------------------------------------------------------------
+
+    @Test fun armsBacktestRunsAndShowsEachArm() {
+        var st by mutableStateOf<Load<com.optionslab.engine.orb.ArmsBacktest.Result>>(Load.Idle)
+        var runs = 0
+        set { ArmsBacktestContent(st) { runs++ } }
+        text("Run").performClick()
+        assertEquals(1, runs)
+        val a = com.optionslab.engine.orb.ArmsBacktest.ARMS
+        st = Load.Done(com.optionslab.engine.orb.ArmsBacktest.Result(22, LocalDate.of(2026, 8, 10), LocalDate.of(2026, 9, 10), listOf(
+            com.optionslab.engine.orb.ArmsBacktest.Row(a[3], 28, 21, 14_133.0, 505.0, 2.6, 9_798.0, 4_335.0),
+            com.optionslab.engine.orb.ArmsBacktest.Row(a[0], 38, 19, -3_109.0, -82.0, null, -1_915.0, -1_194.0)), emptyList()))
+        text("22 days").assertIsDisplayed()
+        text("Range Fade · paper only").assertIsDisplayed()
+        compose.onNode(hasScrollToIndexAction()).performScrollToNode(hasText("ORB"))
+        text("ORB").assertIsDisplayed()
+        st = Load.Failed("No BANKNIFTY day with index and option bars yet.")
+        text("No BANKNIFTY day with index and option bars yet.").assertIsDisplayed()
     }
 
     // ---- Backtests: the trial ------------------------------------------------------------------------

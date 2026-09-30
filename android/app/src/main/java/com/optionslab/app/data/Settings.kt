@@ -53,6 +53,8 @@ data class AppSettings(
     // Zerodha: real orders are OFF until the owner turns them on
     val allowRealOrders: Boolean = false,
     val orderProduct: String = "NRML",
+    /** Live orders without PIN: the review's confirm sends it (and a cancel, square-off or protect) - no PIN or fingerprint. The owner's choice. */
+    val oneTapOrders: Boolean = false,
     val maxOrdersPerDay: Int = 4,
     val maxLotsPerOrder: Int = 2,
     val maxOrderValue: Double = 500_000.0,
@@ -146,6 +148,7 @@ data class AppSettings(
                 // Live trading means real orders; the separate switch is gone, so Live always allows them.
                 allowRealOrders = p.getBoolean("k.allow", d.allowRealOrders) || p.getString("k.mode", d.mode) == "live",
                 orderProduct = p.getString("k.product", d.orderProduct)!!,
+                oneTapOrders = p.getBoolean("k.oneTap", d.oneTapOrders),
                 maxOrdersPerDay = p.getInt("k.maxOrders", d.maxOrdersPerDay),
                 maxLotsPerOrder = p.getInt("k.maxLots", d.maxLotsPerOrder),
                 maxOrderValue = p.getDouble("k.maxValue", d.maxOrderValue),
@@ -176,7 +179,7 @@ data class AppSettings(
                 "sec.wipe" to s.wipeOnExhaustion, "sec.hideAmounts" to s.hideAmountsOnLockScreen,
                 "ui.theme" to s.theme, "ui.calm" to s.reduceMotion, "ui.widgetPnl" to s.widgetPnl,
                 "n.pnlLoss" to s.pnlLossAlert, "n.pnlProfit" to s.pnlProfitAlert,
-                "k.mode" to s.mode, "k.allow" to s.allowRealOrders, "k.product" to s.orderProduct, "k.maxOrders" to s.maxOrdersPerDay,
+                "k.mode" to s.mode, "k.allow" to s.allowRealOrders, "k.product" to s.orderProduct, "k.oneTap" to s.oneTapOrders, "k.maxOrders" to s.maxOrdersPerDay,
                 "k.maxLots" to s.maxLotsPerOrder, "k.maxValue" to s.maxOrderValue,
                 "g.kill" to s.guardKill, "g.loss" to s.guardDailyLoss, "g.dd" to s.guardDrawdownPct, "g.open" to s.guardMaxOpen,
                 "g.trades" to s.guardMaxTrades, "g.value" to s.guardMaxValue, "g.lots" to s.guardMaxLots, "g.cutoff" to s.guardCutoff,

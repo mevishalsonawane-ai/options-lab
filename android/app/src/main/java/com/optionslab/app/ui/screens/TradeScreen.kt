@@ -164,7 +164,7 @@ fun TradeScreen(model: AppModel) {
         )
     }
     gttDeleteAuth?.let { g -> Reauth(model, onOk = { gttDeleteAuth = null; model.deleteGtt(g.id) }, onCancel = { gttDeleteAuth = null }) }
-    cancelAuth?.let { o -> Reauth(model, onOk = { cancelAuth = null; model.cancelOrder(o.id, o.variety) }, onCancel = { cancelAuth = null }) }
+    cancelAuth?.let { o -> Reauth(model, onOk = { cancelAuth = null; model.cancelOrder(o.id, o.variety) }, onCancel = { cancelAuth = null }, orderAction = true) }
     modifying?.let { o -> ModifyDialog(model, o) { modifying = null } }
     cancelling?.let { o ->
         AlertDialog(

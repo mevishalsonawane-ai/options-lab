@@ -34,7 +34,7 @@ import org.junit.runner.RunWith
 class OrderReviewTest {
     @get:Rule val compose = createComposeRule()
 
-    private val send = "Hold to send to Zerodha"
+    private val send = "Swipe to send to Zerodha  ›››"
     private val mismatchNote = "A limit price box does not hold a valid price; fix it before sending."
     private val leg = Kite.Order("NIFTY26OCT24500PE", Kite.Side.BUY, 75, 75, "NRML", "LIMIT", 120.0)
 

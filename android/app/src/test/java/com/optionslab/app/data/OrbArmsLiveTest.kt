@@ -66,9 +66,12 @@ class OrbArmsLiveTest : RobolectricTest() {
     private fun contract(symbol: String, right: String) =
         JSONArray().put(symbol).put("BANKNIFTY").put(expiry.toString()).put(52_000.0).put(right).put(30).put("NSE_FO|TEST$right")
 
+    /** Minutes before [now], but never yesterday (a run just after midnight IST would otherwise hold yesterday's positions). */
+    private fun ago(minutes: Long) = maxOf(now.minusMinutes(minutes), now.toLocalDate().atStartOfDay())
+
     private fun position(arm: String, qty: Int, entry: Double, entryId: String?, stopId: String? = null, stop: Double? = null) =
         JSONObject().put("arm", arm).put("symbol", paperCe).put("right", "CE").put("qty", qty).put("entry", entry)
-            .put("entryTime", now.minusMinutes(30).toString()).put("signalBar", now.minusMinutes(35).toString())
+            .put("entryTime", ago(30).toString()).put("signalBar", ago(35).toString())
             .put("entryOrderId", entryId ?: "").put("stopOrderId", stopId ?: "").apply { stop?.let { put("stopTrigger", it) } }
             .put("exitTime", "").put("why", "").put("charges", 0.0).put("live", true).put("kite", sym).put("unconfirmed", false)
 
@@ -78,7 +81,7 @@ class OrbArmsLiveTest : RobolectricTest() {
             .put("legs", JSONObject().put("day", now.toLocalDate().toString()).put("strike", 52_000).put("expiry", expiry.toString())
                 .put("ce", contract(paperCe, "CE")).put("pe", contract(paperPe, "PE")))
             .put("positions", JSONArray(positions))
-        if (pending) o.put("pending", JSONObject().put("orb", JSONObject().put("right", "CE").put("bar", now.minusMinutes(1).toString()).put("expires", expires.toString())))
+        if (pending) o.put("pending", JSONObject().put("orb", JSONObject().put("right", "CE").put("bar", ago(1).toString()).put("expires", expires.toString())))
         AutomationSupport.orbState(context, o)
     }
 

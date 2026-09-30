@@ -300,7 +300,7 @@ object Tasks {
                 .format(t.credit, t.credit * t.qty, t.breakeven), "ticket")
         // The real order is PREPARED, never sent: it waits for your review.
         if (s.prepareRealOrder && com.optionslab.app.data.Broker.loggedIn) Notifier.post(context, 2004, Notifier.APPROVAL,
-            "Review today's Zerodha order", "SELL ${t.underlying} ${fmtG(t.strike)} PE x${t.lots} is ready. Open Options → Expiry Put, review it and hold to send - nothing goes until you do.", "ticket")
+            "Review today's Zerodha order", "SELL ${t.underlying} ${fmtG(t.strike)} PE x${t.lots} is ready. Open Options → Expiry Put, review it and swipe to send - nothing goes until you do.", "ticket")
     }
 
     suspend fun settle(context: Context, s: AppSettings) {
@@ -338,7 +338,8 @@ object Tasks {
         }
     }
 
-    data class Tick(val title: String, val lines: List<String>, val progress: Int)
+    /** [dest]: where a tap on the card opens - the page that shows what the card is about. */
+    data class Tick(val title: String, val lines: List<String>, val progress: Int, val dest: String = "almanac")
 
     /** The ongoing watch notice: no index levels or other market data, only the owner's orders and positions. */
     const val WATCH_TITLE = "Order watch"
@@ -436,7 +437,11 @@ object Tasks {
             runCatching { com.optionslab.app.data.Paper.snapshot() }.getOrNull()?.let { snap ->
                 val pnl = snap.funds.todayRealizedPnl + snap.funds.m2mUnrealized
                 runCatching { com.optionslab.app.data.DailyPnl.record(false, pnl, snap.trades.size) }
-                lines.add(0, "Paper %s".format(if (s.hideAmountsOnLockScreen) "open: $n" else "P&L Rs %+,.0f · $n open".format(pnl)))
+                // Orders on the same contract net into one position (two arms buying it = one position of 2 lots),
+                // so the line says positions and the quantity they hold, not orders.
+                val qty = snap.positions.positions.sumOf { kotlin.math.abs(it.quantity) }
+                val held = "$n position${if (n == 1) "" else "s"} · qty $qty"
+                lines.add(0, "Paper %s".format(if (s.hideAmountsOnLockScreen) "open: $held" else "P&L Rs %+,.0f · $held".format(pnl)))
             }
         }
         // Alarms set from the chart, priced from the chart's own feed (the last 1-minute close): all at once,
@@ -458,7 +463,13 @@ object Tasks {
             com.optionslab.app.widget.IraWidget.publish(context, q["NIFTY"]?.let { it.last to it.changePct },
                 q["BANKNIFTY"]?.let { it.last to it.changePct }, accountPnl)
         }
-        return Tick(title, lines, progress)
+        // A tap opens what the card is about: the expiry ticket, else the positions it lists, else Home.
+        val dest = when {
+            open != null -> "ticket"
+            accountPnl != null || lines.any { it.startsWith("Paper ") } -> "trade"
+            else -> "almanac"
+        }
+        return Tick(title, lines, progress, dest)
     }
 
     fun paperEventsPublic(context: Context, events: List<com.optionslab.engine.sandbox.SandboxEvent>) = paperEvents(context, events)
@@ -516,8 +527,8 @@ class WatchService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     /** False when Android refused the foreground (the service is then stopping: start nothing). */
-    private fun show(title: String, text: String, progress: Int = -1): Boolean {
-        val n = Notifier.builder(this, Notifier.LIVE, title, text, "almanac")
+    private fun show(title: String, text: String, progress: Int = -1, dest: String = "almanac"): Boolean {
+        val n = Notifier.builder(this, Notifier.LIVE, title, text, dest)
             .setOngoing(true).setOnlyAlertOnce(true).setAutoCancel(false).setSilent(true)
             .apply { if (progress >= 0) setProgress(100, progress, false) }
             .build()
@@ -585,7 +596,7 @@ class WatchService : Service() {
                     if (Tasks.harvestFailed(session) < Tasks.HARVEST_TRIES) runCatching { Jobs.enqueueHarvest(this@WatchService, session, manual = false) }
                 } else Notifier.post(this@WatchService, 2900 + k.ordinal, Notifier.SCHEDULE,
                     "${k.name.lowercase().replaceFirstChar { it.uppercase() }} did not complete",
-                    "It stopped with ${Tasks.reason(e)}. Open IraAlgo to check.")
+                    "It stopped with ${Tasks.reason(e)}. Open IraAlgo to check.", "almanac")
             } finally {
                 if (k == Jobs.Kind.LIVE) Tasks.publishWatch(Tasks.LiveState(false)) else if (k == Jobs.Kind.HARVEST) Tasks.publish(Tasks.LiveState(false))
                 running.remove(k)
@@ -633,7 +644,7 @@ class WatchService : Service() {
             // Settings read fresh every pass: the kill switch, Paper / Live and limits changed mid-session take effect at once.
             val t = Tasks.watchTick(this, AppSettings.load(), fired)
             Tasks.publishWatch(Tasks.LiveState(true, t.title, t.progress / 100f, System.currentTimeMillis()))
-            show(t.title, t.lines.joinToString("\n").ifEmpty { Tasks.WATCH_IDLE }, t.progress)
+            show(t.title, t.lines.joinToString("\n").ifEmpty { Tasks.WATCH_IDLE }, t.progress, t.dest)
             // While an ORB position is open its stop, target and 15:10 exit are checked every 15 s, not once a minute.
             val next = System.currentTimeMillis() + 60_000
             while (System.currentTimeMillis() < next) {
