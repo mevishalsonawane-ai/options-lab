@@ -133,7 +133,9 @@ fun PnlCalendarScreen(model: AppModel) {
     val today = Market.today()
     val paperNow by model.paper.collectAsState()
     val accountNow by model.account.collectAsState()
-    val todayLive: DailyPnl.Day? = if (live) (accountNow as? com.optionslab.app.ui.Load.Done)?.value
+    // After midnight (paper, until its 03:00 reset) or before 09:00 (Zerodha) the account still shows the
+    // previous day, which is already on its own tile.
+    val todayLive: DailyPnl.Day? = if (DailyPnl.sessionDay(live) != today) null else if (live) (accountNow as? com.optionslab.app.ui.Load.Done)?.value
         ?.takeIf { it.book.net.isNotEmpty() || it.trades.isNotEmpty() }?.let { DailyPnl.Day(today, it.book.m2m, it.trades.size) }
         else (paperNow as? com.optionslab.app.ui.Load.Done)?.value?.let { sn ->
             val pnl = sn.funds.todayRealizedPnl + sn.funds.m2mUnrealized

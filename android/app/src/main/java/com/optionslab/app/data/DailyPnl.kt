@@ -3,8 +3,11 @@ package com.optionslab.app.data
 import com.optionslab.app.security.SecurePrefs
 import org.json.JSONArray
 import org.json.JSONObject
+import com.optionslab.engine.sandbox.SandboxRules
 import java.time.LocalDate
+import java.time.LocalTime
 import java.time.YearMonth
+import java.time.ZonedDateTime
 import kotlin.math.abs
 import kotlin.math.sign
 
@@ -28,12 +31,24 @@ object DailyPnl {
     @Synchronized
     private fun read(live: Boolean): JSONObject = runCatching { JSONObject(SecurePrefs.getString(key(live)) ?: "{}") }.getOrDefault(JSONObject())
 
-    /** Today's figure for the account; [trades] < 0 keeps the count already stored. */
+    /**
+     * The trading day a reading at [now] belongs to, or null when it belongs to none. The paper account's day
+     * runs to its 03:00 reset, so a reading after midnight is still the day before (its trades and "today"
+     * P&L are that day's). Zerodha still shows yesterday's positions in the early morning, so nothing before
+     * 09:00 is recorded for it.
+     */
+    fun sessionDay(live: Boolean, now: ZonedDateTime = Market.now()): LocalDate? {
+        val t = now.withZoneSameInstant(SandboxRules.IST).toLocalDateTime()
+        return if (live) t.toLocalDate().takeIf { !t.toLocalTime().isBefore(LocalTime.of(9, 0)) }
+        else SandboxRules.lastSessionExpiry("03:00", t).toLocalDate()
+    }
+
+    /** The current trading day's figure for the account; [trades] < 0 keeps the count already stored. */
     @Synchronized
     fun record(live: Boolean, pnl: Double, trades: Int) {
         if (!pnl.isFinite()) return
+        val today = (sessionDay(live) ?: return).toString()
         val o = read(live)
-        val today = Market.today().toString()
         val keepTrades = o.optJSONArray(today)?.optInt(1, 0) ?: 0
         o.put(today, JSONArray().put(Math.round(pnl * 100) / 100.0).put(if (trades >= 0) trades else keepTrades))
         // About three years of days is plenty; the oldest go first.
@@ -49,10 +64,15 @@ object DailyPnl {
     fun all(live: Boolean): Map<LocalDate, Day> {
         val out = HashMap<LocalDate, Day>()
         if (!live) runCatching { rebuildPaper() }.getOrNull()?.let { out.putAll(it) }
+        val rebuilt = out.keys.toSet()
         val o = read(live)
         o.keys().forEach { k ->
             val d = runCatching { LocalDate.parse(k) }.getOrNull() ?: return@forEach
             val a = o.getJSONArray(k)
+            // Older builds recorded after midnight under the new date: a copy of the day before, with no trade of its own.
+            val prev = o.optJSONArray(d.minusDays(1).toString())
+            if (d !in rebuilt && prev != null && a.optInt(1, 0) > 0 && prev.optInt(1, 0) == a.optInt(1, 0) &&
+                prev.getDouble(0) == a.getDouble(0)) return@forEach
             // A recorded day wins: it includes expiry settlements and open positions the trade book cannot see.
             out[d] = Day(d, a.getDouble(0), maxOf(a.optInt(1, 0), out[d]?.trades ?: 0))
         }
