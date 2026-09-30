@@ -42,6 +42,13 @@ jobs:
               print("== downloading", i)
               r = subprocess.run(["gdown", i, "-O", f"dl/{i}"], capture_output=True, text=True)
               print(r.stdout[-400:], r.stderr[-600:])
+              if not os.path.exists(f"dl/{i}"):
+                  # Drive's direct download address, as a browser would ask for it
+                  r = subprocess.run(["curl", "-sL", "-A", "Mozilla/5.0", "-o", f"dl/{i}", "-w", "%{http_code} %{content_type} %{size_download}",
+                                      f"https://drive.usercontent.google.com/download?id={i}&export=download&confirm=t"], capture_output=True, text=True)
+                  print("direct:", r.stdout)
+                  if os.path.exists(f"dl/{i}") and os.path.getsize(f"dl/{i}") < 20000:
+                      print(open(f"dl/{i}", errors="ignore").read()[:1500]); os.remove(f"dl/{i}")
           for f in glob.glob("dl/*"):
               print("== file", f, os.path.getsize(f), "bytes")
               try:
