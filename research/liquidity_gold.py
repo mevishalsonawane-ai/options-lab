@@ -41,7 +41,8 @@ def read(path):
         df["ts"] = pd.to_datetime(v, unit="ms", utc=True).dt.tz_localize(None)
     else:
         df["ts"] = pd.to_datetime(v, utc=True).dt.tz_localize(None)
-    return df.set_index("ts")[["open", "high", "low", "close"]]
+    df = df.set_index("ts")[["open", "high", "low", "close"]].sort_index()
+    return df[~df.index.duplicated()]          # monthly downloads overlap by a day
 
 
 def sessions(bid, ask, start, end):
