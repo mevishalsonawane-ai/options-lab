@@ -27,10 +27,11 @@ class LiquidityRulesTest {
         return (0 until n).map { Bar(LocalDateTime.of(2026, 1, 1, 0, 0).plusMinutes(5L * it), o[it], h[it], l[it], c[it]) }
     }
 
-    @Test fun theArmIsOneSwitchOverTwoPaperOnlyBooks() {
-        assertTrue(LiquidityRules.ARM.liquidity && LiquidityRules.ARM.paperOnly)
+    @Test fun theArmIsOneSwitchOverTwoBooks() {
+        assertTrue(LiquidityRules.ARM.liquidity)
+        assertFalse("it follows the Paper / Live switch like the ORB", LiquidityRules.ARM.paperOnly)
         assertEquals(listOf("liquidity15", "liquidity5"), LiquidityRules.BOOKS.map { it.source })
-        assertTrue(LiquidityRules.BOOKS.all { it.paperOnly && it.liquidity })
+        assertTrue(LiquidityRules.BOOKS.all { !it.paperOnly && it.liquidity })
         assertEquals(15, LiquidityRules.minutesOf(LiquidityRules.ARM15))
         assertEquals(5, LiquidityRules.minutesOf(LiquidityRules.ARM5))
         assertFalse(OrbRules.ORB.liquidity)                              // the ORB's arms are unchanged

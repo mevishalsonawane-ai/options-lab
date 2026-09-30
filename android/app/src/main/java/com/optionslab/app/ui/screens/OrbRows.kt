@@ -110,7 +110,7 @@ internal fun OrbRowsContent(
                     "${o.right} ${o.symbol.takeLast(7).dropLast(2)} · in ${px(o.entry)}" + (m?.let { " · now ${px(it)} · ${rs((it - o.entry) * o.qty)}" } ?: "") +
                         (o.stopTrigger?.let { " · stop ${px(it)}" } ?: "")
                 } ?: when {
-                    !a.armed && a.arm.liquidity -> "BANKNIFTY liquidity pool taken on a swing zone · 15-min + 5-min · paper only · stop −15% · out at the next liquidity"
+                    !a.armed && a.arm.liquidity -> "BANKNIFTY liquidity pool taken on a swing zone · 15-min + 5-min · stop −15% · out at the next liquidity"
                     a.arm.liquidity -> a.status
                     !a.armed && a.arm.fade -> "BANKNIFTY touch of the range edge, faded to the middle · paper only · -40 / +40"
                     !a.armed && a.arm.sweep -> "BANKNIFTY failed break of the opening range, faded · paper only · -40 / +80"
@@ -168,14 +168,17 @@ internal fun OrbRowsContent(
                     OrbChoice("Ask me to approve", "You get a notification on a breakout; the entry goes only if you approve before the next bar closes.") {
                         if (live) armAuth = src to false else actions.arm(src, true, false, false); choosing = null
                     }
-                    Note("Either way the −40 stop rests as an order (paper book, or an SL order at Zerodha), and the +40 target and the 15:10 square-off run by themselves.", Modifier.padding(top = 8.dp))
+                    Note(if (view.arms.first { it.arm.source == src }.arm.liquidity)
+                        "Either way the stop 15% below the price paid rests as an order (paper book, or an SL order at Zerodha), and the exits at the next liquidity, on a failed break, on new liquidity and at 15:10 run by themselves."
+                        else "Either way the −40 stop rests as an order (paper book, or an SL order at Zerodha), and the +40 target and the 15:10 square-off run by themselves.", Modifier.padding(top = 8.dp))
                 }
             },
             confirmButton = {},
             dismissButton = { TextButton({ choosing = null }) { Text("Cancel") } },
         )
     }
-    armAuth?.let { (src, auto) -> reauth("Enter your app PIN to arm ORB on Zerodha. It then trades real money by itself until you switch it off.",
+    armAuth?.let { (src, auto) -> reauth("Enter your app PIN to arm ${view.arms.firstOrNull { it.arm.source == src }?.arm?.label ?: "ORB"} on Zerodha. " +
+        (if (auto) "It then trades real money by itself until you switch it off." else "Each entry still waits for your approval with the PIN."),
         { armAuth = null; actions.arm(src, true, auto, true) }, { armAuth = null }) }
     reauthFor?.let { src -> reauth(null, { reauthFor = null; actions.approve(src, true) }, { reauthFor = null }) }
     if (detail) OrbDetail(view) { detail = false }

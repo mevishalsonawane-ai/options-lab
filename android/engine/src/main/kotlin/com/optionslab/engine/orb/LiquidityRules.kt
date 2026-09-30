@@ -4,8 +4,8 @@ import java.time.LocalDateTime
 import java.time.LocalTime
 
 /**
- * Liquidity 15+5: the owner's liquidity-break idea, paper only, run on two charts side by side (15-minute and
- * 5-minute, one position each). Levels as in research/liquidity_break.py and indicator/liquidity.py, written from
+ * Liquidity 15+5: the owner's liquidity-break idea, run on two charts side by side (15-minute and 5-minute, one
+ * position each). Like the ORB it follows the app's Paper / Live switch (Live is armed with the PIN). Levels as in research/liquidity_break.py and indicator/liquidity.py, written from
  * the published descriptions of LuxAlgo's Liquidity Swings (pivot lookback 20, full range) and Liquidity Pools
  * (2 contacts, 5 bars apart, 10 confirmation bars):
  *
@@ -24,9 +24,10 @@ import java.time.LocalTime
  * Pure: no clock, no network, no orders.
  */
 object LiquidityRules {
-    val ARM = Arm("liquidity", "Liquidity 15+5", paperOnly = true, liquidity = true)
-    val ARM15 = Arm("liquidity15", "Liquidity 15m", paperOnly = true, liquidity = true)
-    val ARM5 = Arm("liquidity5", "Liquidity 5m", paperOnly = true, liquidity = true)
+    // Follows the app's Paper / Live switch like the ORB (the owner's go-ahead, 2026-10-01): Live is armed with the PIN.
+    val ARM = Arm("liquidity", "Liquidity 15+5", liquidity = true)
+    val ARM15 = Arm("liquidity15", "Liquidity 15m", liquidity = true)
+    val ARM5 = Arm("liquidity5", "Liquidity 5m", liquidity = true)
     /** The two books behind the one switch. */
     val BOOKS = listOf(ARM15, ARM5)
 

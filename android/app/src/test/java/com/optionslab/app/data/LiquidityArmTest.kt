@@ -97,9 +97,9 @@ class LiquidityArmTest : RobolectricTest() {
 
     private fun row() = runBlocking { OrbArms.view() }.arms.single { it.arm.source == "liquidity" }
 
-    private fun armLiquidity() {
-        val msg = runBlocking { OrbArms.setArmed("liquidity", true, automatic = true) }
-        assertTrue(msg, msg.startsWith("Liquidity 15+5 armed on paper (it never trades on Zerodha)"))
+    private fun armLiquidity(automatic: Boolean = true) {
+        val msg = runBlocking { OrbArms.setArmed("liquidity", true, automatic = automatic) }
+        assertTrue(msg, msg.startsWith("Liquidity 15+5 armed on paper, " + if (automatic) "fully automatic" else "you approve each entry"))
     }
 
     @Test fun oneRowOneSwitchForBothBooks() {
@@ -175,6 +175,38 @@ class LiquidityArmTest : RobolectricTest() {
         assertFalse(closed.open)
         assertEquals("stop", closed.why)
         assertEquals(0, Paper.state.positions.filter { it.product == "MIS" }.sumOf { it.quantity })
+    }
+
+    @Test fun armedToAskItWaitsForTheApprovalThenBuys() {
+        armLiquidity(automatic = false)
+        passes(LocalTime.of(12, 50), LocalTime.of(13, 5))
+        val r = row()
+        assertTrue("nothing bought before the approval", Paper.state.orders.isEmpty())
+        val pd = r.pending!!
+        assertEquals("CE", pd.right); assertEquals(54_100, pd.strike); assertEquals(54_100.0, pd.level!!, 0.0)
+        assertEquals(day.atTime(13, 10), pd.expires)                         // valid until the next 5-minute bar closes
+        assertTrue(r.status, r.status.contains("Breakout: waiting for your approval."))
+        val msg = runBlocking { OrbArms.approve("liquidity") }
+        assertEquals("Entered (paper).", msg)
+        val p = row().today.single()
+        assertTrue(p.open); assertEquals("CE", p.right); assertEquals(54_100.0, p.level!!, 0.0)
+        assertNull("the approval is used up", row().pending)
+        assertEquals(1, Paper.state.orders.count { it.action == "BUY" })
+    }
+
+    @Test fun aSkippedSignalBuysNothing() {
+        armLiquidity(automatic = false)
+        passes(LocalTime.of(12, 50), LocalTime.of(13, 5))
+        assertEquals("Skipped.", runBlocking { OrbArms.skip("liquidity") })
+        assertNull(row().pending)
+        assertTrue(Paper.state.orders.isEmpty())
+    }
+
+    @Test fun itsTradesAreNotInTheOrbForwardTest() {
+        armLiquidity()
+        passes(LocalTime.of(12, 50), LocalTime.of(13, 10))                   // bought at 13:05, sold at 13:10 (failed break)
+        assertFalse(row().today.single().open)
+        assertEquals(0, runBlocking { OrbArms.view() }.forward.trades)
     }
 
     @Test fun disarmedItBuysNothing() {
