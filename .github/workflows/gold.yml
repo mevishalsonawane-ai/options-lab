@@ -12,23 +12,33 @@ permissions:
 jobs:
   gold:
     runs-on: ubuntu-latest
-    timeout-minutes: 180
+    timeout-minutes: 300
     permissions:
       contents: write          # the research-data release only
     steps:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-      - name: Dukascopy XAUUSD 1-minute bid and ask candles, Oct 2023 - Sep 2026
+      - name: Dukascopy XAUUSD 1-minute bid candles, Oct 2023 - Sep 2026, a month at a time
         run: |
-          npx --yes dukascopy-node@1.50.0 -i xauusd -from 2023-10-01 -to 2026-09-30 -t m1 -p bid -f csv \
-            -v false -dir out -fn xauusd_m1_bid -bs 10 -bp 1000 -r 10 -rp 5000 -s
-          sleep 90
-          # Dukascopy rate-limits (429): the ask side goes slower and is optional (the bid alone plus a typical spread still works)
-          npx --yes dukascopy-node@1.50.0 -i xauusd -from 2023-10-01 -to 2026-09-30 -t m1 -p ask -f csv \
-            -v false -dir out -fn xauusd_m1_ask -bs 3 -bp 3000 -r 10 -rp 10000 -s || echo "ask side failed"
-          ls -la out
-          head -3 out/xauusd_m1_bid.csv; tail -2 out/xauusd_m1_bid.csv; wc -l out/*.csv
+          # Dukascopy rate-limits (429): one month per request run, a pause between, and retries that wait longer each time.
+          # Bid only (the research adds a typical 0.30 spread for the ask).
+          mkdir -p parts
+          m=2023-10-01
+          while [ "$m" \< 2026-10-01 ]; do
+            n=$(date -d "$m +1 month" +%F)
+            for try in 1 2 3 4 5 6; do
+              if npx --yes dukascopy-node@1.50.0 -i xauusd -from $m -to $n -t m1 -p bid -f csv -v false \
+                   -dir parts -fn b_$m -bs 5 -bp 1500 -r 5 -rp 5000 -s; then break; fi
+              echo "429 on $m, try $try"; sleep $((try * 60))
+            done
+            [ -f parts/b_$m.csv ] || { echo "gave up on $m"; exit 1; }
+            sleep 10
+            m=$n
+          done
+          mkdir -p out
+          { head -1 parts/b_2023-10-01.csv; for f in $(ls parts/*.csv | sort); do tail -n +2 $f; done; } > out/xauusd_m1_bid.csv
+          head -3 out/xauusd_m1_bid.csv; tail -2 out/xauusd_m1_bid.csv; wc -l out/xauusd_m1_bid.csv
           gzip -9 out/*.csv
       - name: Save the data to the research-data release
         env:
