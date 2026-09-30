@@ -1,0 +1,33 @@
+name: Probe a data source
+
+on:
+  push:
+    paths:
+      - ".github/workflows/probe.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write          # the research-data release only
+    steps:
+      - name: The free expired-options page and its FINNIFTY links
+        run: |
+          UA="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36"
+          curl -sL -A "$UA" "https://shoonyatrader.in/free-historical-expired-options-contract-data/" -o page.html || true
+          {
+            echo "== size"; wc -c page.html
+            echo "== title"; grep -o '<title>[^<]*' page.html | head -3
+            echo "== every link"; grep -oE 'href="[^"]+"' page.html | sed 's/href=//; s/"//g' | sort -u
+            echo "== lines mentioning FINNIFTY / FIN"; grep -oiE '.{0,200}fin ?nifty.{0,300}' page.html | head -40
+          } > probe.txt
+          cat probe.txt | head -300
+      - name: Save it
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload research-data probe.txt --clobber -R ${{ github.repository }}
