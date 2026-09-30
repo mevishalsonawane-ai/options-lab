@@ -204,3 +204,7 @@ ATM straddle level and change, CE/PE skew, OI change and PCR over ATM +-200, CE/
   the next liquidity. 3, 5 and 15-minute, swings / pools / either / both: 0 of 88 versions make money in both years
   (most lose -Rs 0.2 to -3 lakh a year); win rates 36-60%, index move per trade around 0. The same 5-candle read
   after an ordinary candle (control) does about as well or badly: the liquidity event adds nothing to the read.
+- LIQUIDITY, MORE TRADES (LIQUIDITY_MORE.md): shorter swing lookback (5/10), faster pool confirmation (5), 3-minute
+  charts and "either" levels raise trades to 3-10 a day but every version with 5+ trades a day loses in BOTH years
+  (-Rs 0.5 to -2.8 lakh a year). The most that stayed positive in both years: the 15-min and 5-min "both, lookback
+  20, confirm 10, stop" rules run side by side, ~2 trades a day, +Rs 58k / +32k (t 1.05 / 1.08) - still not proven.
