@@ -100,3 +100,10 @@ Source paths prefixed `NTA:` are in D:\New Trading app.
 - [x] L4. (done 2026-09-28) Switch the Zerodha setup gate back on: `SKIP_ZERODHA_GATE = false` in `ui/Root.kt` (off while testing other features).
 - [ ] L5. Pine auto-trade: run a script on Paper for a few sessions first (Research -> Pine scripts -> Auto-trade),
   then one live trade with the app open: confirm the ATM option BUY, the switch on the next signal, and the 15:15 sell in Kite.
+
+## R. Research queue (owner, 2026-09-30)
+
+- [ ] R1. Liquidity 15+5 on NIFTY / FINNIFTY / SENSEX (research/liquidity_indices.py, Actions job indices.yml):
+  report the results first; only then add the Liquidity 15+5 arm to the app (engine rules in `orb/LiquidityRules.kt`).
+- [ ] R2. AFTER the Liquidity 15+5 arm is tested and pushed: run the same liquidity rules on XAUUSD (gold vs US dollar,
+  forex) - the `forex/` folder has the fetch scripts. Note: forex is not tradable from Zerodha / the app; research only.
