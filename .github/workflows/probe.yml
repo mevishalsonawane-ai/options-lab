@@ -12,23 +12,51 @@ permissions:
 jobs:
   probe:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     permissions:
       contents: write          # the research-data release only
     steps:
-      - name: The free FINNIFTY expired-options page and its download links
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install gdown pandas pyarrow
+      - name: Which Drive file is the FINNIFTY sample, then fetch and describe it
         run: |
           UA="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36"
-          curl -sL -A "$UA" "https://cloudtraderpro.in/free-historical-finnifty-expired-options-data/" -o page.html || true
-          {
-            echo "== size"; wc -c page.html
-            echo "== title"; grep -o '<title>[^<]*' page.html | head -3
-            echo "== every link"; grep -oE 'href="[^"]+"' page.html | sed 's/href=//; s/"//g' | sort -u
-            echo "== download-looking strings"; grep -oiE '(https?:)?//[^" ]+\.(zip|csv|parquet|feather|gz|7z|rar)[^" ]*' page.html | sort -u | head -80
-            echo "== drive / mega / dropbox / github"; grep -oiE 'https?://[^" ]*(drive\.google|docs\.google|mega\.nz|dropbox|github|kaggle|onedrive|1drv|gofile|mediafire)[^" ]*' page.html | sort -u | head -80
-            echo "== text around download / month / year"; sed 's/<[^>]*>/ /g' page.html | tr -s ' ' | grep -oiE '.{0,160}(download|2024|2025|2026|month|expiry|login|sign ?up|register).{0,160}' | head -60
-          } > probe.txt
-          cat probe.txt | head -300
+          curl -sL -A "$UA" "https://cloudtraderpro.in/free-historical-finnifty-expired-options-data/" -o page.html
+          python - <<'PY' > probe.txt
+          import re, subprocess, os, glob, zipfile
+          import pandas as pd
+          html = open("page.html", encoding="utf-8", errors="ignore").read()
+          text = re.sub(r"<[^>]+>", " ", html)
+          ids = sorted(set(re.findall(r"drive\.google\.com/file/d/([\w-]+)", html)))
+          print("== drive links and the words just before each")
+          for i in ids:
+              k = html.find(i)
+              ctx = re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", html[max(0, k - 900):k]))[-260:]
+              print(i, "::", ctx)
+          os.makedirs("dl", exist_ok=True)
+          for i in ids:
+              ctx = html[max(0, html.find(i) - 900):html.find(i)].lower()
+              if "fin" not in ctx:
+                  continue
+              print("== downloading", i)
+              r = subprocess.run(["gdown", "--fuzzy", f"https://drive.google.com/file/d/{i}/view", "-O", f"dl/{i}"], capture_output=True, text=True)
+              print(r.stdout[-400:], r.stderr[-600:])
+          for f in glob.glob("dl/*"):
+              print("== file", f, os.path.getsize(f), "bytes")
+              try:
+                  if zipfile.is_zipfile(f):
+                      z = zipfile.ZipFile(f); names = z.namelist(); print(len(names), "members:", names[:30])
+                      first = [n for n in names if n.lower().endswith(".csv")][:1]
+                      if first:
+                          df = pd.read_csv(z.open(first[0]), nrows=200000); print(first[0], df.shape); print(df.head(5).to_string()); print(df.columns.tolist())
+                  else:
+                      df = pd.read_csv(f, nrows=200000); print(df.shape); print(df.head(5).to_string()); print(df.columns.tolist())
+              except Exception as e:
+                  print("could not read:", e)
+          PY
+          cat probe.txt
       - name: Save it
         env:
           GH_TOKEN: ${{ github.token }}
