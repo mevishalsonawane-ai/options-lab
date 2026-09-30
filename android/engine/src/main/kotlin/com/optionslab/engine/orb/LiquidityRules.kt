@@ -4,8 +4,8 @@ import java.time.LocalDateTime
 import java.time.LocalTime
 
 /**
- * Liquidity 15+5: the owner's liquidity-break idea, run on two charts side by side (15-minute and 5-minute, one
- * position each). Like the ORB it follows the app's Paper / Live switch (Live is armed with the PIN). Levels as in research/liquidity_break.py and indicator/liquidity.py, written from
+ * Liquidity 15+5: the owner's liquidity-break idea, run on BANKNIFTY and FINNIFTY, each on two charts side by side
+ * (15-minute and 5-minute, one position per chart). Like the ORB it follows the app's Paper / Live switch (Live is armed with the PIN). Levels as in research/liquidity_break.py and indicator/liquidity.py, written from
  * the published descriptions of LuxAlgo's Liquidity Swings (pivot lookback 20, full range) and Liquidity Pools
  * (2 contacts, 5 bars apart, 10 confirmation bars):
  *
@@ -28,8 +28,14 @@ object LiquidityRules {
     val ARM = Arm("liquidity", "Liquidity 15+5", liquidity = true)
     val ARM15 = Arm("liquidity15", "Liquidity 15m", liquidity = true)
     val ARM5 = Arm("liquidity5", "Liquidity 5m", liquidity = true)
-    /** The two books behind the one switch. */
-    val BOOKS = listOf(ARM15, ARM5)
+    /** FINNIFTY too (the owner's choice, 2026-10-01): the same rules on its own charts and options. */
+    val FIN15 = Arm("liquidity15_fin", "Liquidity 15m FINNIFTY", liquidity = true)
+    val FIN5 = Arm("liquidity5_fin", "Liquidity 5m FINNIFTY", liquidity = true)
+    /** The books behind the one switch: BANKNIFTY and FINNIFTY, 15-minute and 5-minute each, one position per book. */
+    val BOOKS = listOf(ARM15, ARM5, FIN15, FIN5)
+    val UNDERLYINGS = listOf("BANKNIFTY", "FINNIFTY")
+    /** Upstox index keys for the charts the levels are read from. */
+    val INDEX_KEYS = mapOf("BANKNIFTY" to "NSE_INDEX|Nifty Bank", "FINNIFTY" to "NSE_INDEX|Nifty Fin Service")
 
     const val SWING_LOOKBACK = 20
     const val CONTACTS = 2
@@ -50,7 +56,10 @@ object LiquidityRules {
         return r.takeIf { it >= OrbRules.TICK && it < fill }
     }
 
-    fun minutesOf(arm: Arm): Int = if (arm.source == ARM15.source) 15 else 5
+    fun minutesOf(arm: Arm): Int = if (arm.source.startsWith("liquidity15")) 15 else 5
+    fun underlyingOf(arm: Arm): String = if (arm.source.endsWith("_fin")) "FINNIFTY" else "BANKNIFTY"
+    /** Strike spacing of the index's options: BANKNIFTY 100, FINNIFTY 50. */
+    fun strikeStep(underlying: String): Int = if (underlying == "FINNIFTY") 50 else 100
 
     class Zone(val kind: String, val side: Int, val top: Double, val bottom: Double, val origin: Int, val known: Int) {
         var broken: Int = -1

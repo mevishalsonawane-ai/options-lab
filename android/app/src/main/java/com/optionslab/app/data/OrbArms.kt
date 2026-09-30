@@ -258,7 +258,8 @@ object OrbArms {
     private fun liquidityView(b: Book, day: LocalDate): ArmView {
         val books = LiquidityRules.BOOKS.map { it.source }
         val open = b.positions.lastOrNull { it.arm in books && it.open }
-        val status = LiquidityRules.BOOKS.joinToString("  ") { a -> "${LiquidityRules.minutesOf(a)}-min: ${describe(b.status[a.source] ?: "")}" }
+        val status = LiquidityRules.BOOKS.joinToString("  ") { a ->
+            "${LiquidityRules.underlyingOf(a)} ${LiquidityRules.minutesOf(a)}-min: ${describe(b.status[a.source] ?: "")}" }
         return ArmView(LiquidityRules.ARM, books.any { b.armed[it] == true }, books.all { b.auto[it] != false }, status, open,
             open?.let { marks[it.symbol] }, books.firstNotNullOfOrNull { b.pending[it] }, b.positions.filter { it.arm in books && it.day == day },
             books.all { b.liveOk[it] == true })
@@ -289,7 +290,7 @@ object OrbArms {
             save(b)
             val holding = b.positions.any { it.open && it.arm in LiquidityRules.BOOKS.map { a -> a.source } }
             return@withLock if (on) "${LiquidityRules.ARM.label} armed" + (if (live) " on ZERODHA (live), " else " on paper, ") +
-                (if (automatic) "fully automatic" else "you approve each entry") + ": on the 15-minute and the 5-minute BANKNIFTY chart, " +
+                (if (automatic) "fully automatic" else "you approve each entry") + ": on the 15-minute and the 5-minute BANKNIFTY and FINNIFTY charts, " +
                 "when a close takes a liquidity pool that sits on a swing zone, it buys the ATM call (up) or put (down), 1 lot, with a stop " +
                 "15% below the price paid, and sells at the next liquidity level, when new liquidity forms, when the break fails, or at " +
                 "15:10. Entries 09:20-14:30, one position per chart."
@@ -883,7 +884,8 @@ object OrbArms {
     /** One book's decision on its chart's last completed bar: a pool taken on a swing zone buys the option, paper only. */
     private suspend fun liquidityCycle(b: Book, arm: Arm, t: LocalDateTime): String {
         val tf = LiquidityRules.minutesOf(arm)
-        val bars = LiquidityRules.completed(LiquidityRules.fold(liquidityMinutes(t), tf), tf, t)
+        val und = LiquidityRules.underlyingOf(arm)
+        val bars = LiquidityRules.completed(LiquidityRules.fold(liquidityMinutes(t, und), tf), tf, t)
         if (bars.size < 2 * LiquidityRules.SWING_LOOKBACK + 2) return "liquidity_history_loading"
         val last = bars.last()
         val day = t.toLocalDate()
@@ -891,15 +893,15 @@ object OrbArms {
         if (!b.decided.getOrPut("${arm.source}|$day") { HashSet() }.add(last.start.toString())) return "no_decision_bar"
         if (!LiquidityRules.mayEnterAt(last.start.plusMinutes(tf.toLong()))) return "liquidity_outside_entry_hours"
         val s = LiquidityRules.signal(bars, LiquidityRules.zones(bars)) ?: return "no_liquidity_break"
-        val strike = OrbRules.atmStrike(last.close)
+        val strike = OrbRules.atmStrike(last.close, LiquidityRules.strikeStep(und))
         val live = liveNow()
         // As the ORB: automatic unless the owner chose approvals, or it was armed in Paper and now finds the app in Live.
         if (b.auto[arm.source] == false || (live && b.liveOk[arm.source] != true)) {
             val right = if (s.side > 0) "CE" else "PE"
             val expires = last.start.plusMinutes(2L * tf)                    // until the next bar completes
             b.pending[arm.source] = Pending(arm.source, right, last.start, expires, strike, s.level, s.target)
-            Notifier.post(app, 6960 + ALL_ARMS.indexOf(arm), Notifier.APPROVAL, "${LiquidityRules.ARM.label}: approve BUY BANKNIFTY $strike $right",
-                "The ${tf}-minute ${hhmm(last.start)} bar took a liquidity pool ${if (s.side > 0) "above" else "below"}. " +
+            Notifier.post(app, 6960 + ALL_ARMS.indexOf(arm), Notifier.APPROVAL, "${LiquidityRules.ARM.label}: approve BUY $und $strike $right",
+                "The $und ${tf}-minute ${hhmm(last.start)} bar took a liquidity pool ${if (s.side > 0) "above" else "below"}. " +
                     (if (live) "LIVE on Zerodha, 1 lot: approve it on Home in the app" else "Paper account, 1 lot") +
                     ". Approve by ${hhmm(expires)} or it lapses.", "almanac")
             return "awaiting_approval"
@@ -911,9 +913,10 @@ object OrbArms {
     private suspend fun enterLiquidity(b: Book, arm: Arm, s: LiquidityRules.Signal, signalBar: LocalDateTime, strike: Int, live: Boolean): String {
         val right = if (s.side > 0) Right.CE else Right.PE
         val day = signalBar.toLocalDate()
-        val listed = Market.contracts().filter { it.underlying == OrbRules.UNDERLYING }.map { it.expiry }.distinct()
+        val und = LiquidityRules.underlyingOf(arm)
+        val listed = Market.contracts().filter { it.underlying == und }.map { it.expiry }.distinct()
         val expiry = OrbRules.expiryAfter(day, listed) ?: return "no_contract"
-        val c = Paper.contractFor(OrbRules.UNDERLYING, expiry, strike.toDouble(), right) ?: return "no_contract"
+        val c = Paper.contractFor(und, expiry, strike.toDouble(), right) ?: return "no_contract"
         if (live) return enterLive(b, arm, c, signalBar, liquidity = s)
         val ltp = Paper.lastPrice(c) ?: return "refused: no quote"
         if (Strategies.stoppedToday()) return "stopped_for_today"
@@ -941,8 +944,10 @@ object OrbArms {
     private suspend fun liquidityExits(b: Book, t: LocalDateTime) {
         val open = b.positions.withIndex().filter { it.value.open && !it.value.unconfirmed && armOf(it.value.arm).liquidity }
         if (open.isEmpty()) return
-        val ones = liquidityMinutes(t).filter { !it.start.plusMinutes(1).isAfter(t) }
+        val minutes = HashMap<String, List<Bar>>()
         for ((i, p) in open) {
+            val und = LiquidityRules.underlyingOf(armOf(p.arm))
+            val ones = minutes.getOrPut(und) { liquidityMinutes(t, und).filter { !it.start.plusMinutes(1).isAfter(t) } }
             val tf = LiquidityRules.minutesOf(armOf(p.arm))
             val bars = LiquidityRules.completed(LiquidityRules.fold(ones, tf), tf, t)
             val side = if (p.right == "CE") 1 else -1
@@ -968,30 +973,43 @@ object OrbArms {
     @Volatile internal var testHistoryBars: ((java.time.LocalDate) -> List<Upstox.Bar>)? = null
         set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test history feed exists only in debug builds" }; field = v }
 
-    /** Earlier sessions' minutes, fetched once a day (the levels need a few days of 15-minute bars). */
-    @Volatile private var liquidityHistory: Pair<java.time.LocalDate, List<Bar>>? = null
-    /** The minutes read on this pass (both books and the exits share one fetch). */
-    @Volatile private var liquidityPass: Pair<LocalDateTime, List<Bar>>? = null
+    /**
+     * TEST ONLY: today's 1-minute bars of an index other than BANKNIFTY (FINNIFTY) at a given moment. Null in the app,
+     * always. While [testIndexBars] is set and this is not, the other indices have no bars (a test never reaches the network).
+     */
+    @Volatile internal var testOtherIndexBars: ((String, LocalDateTime) -> List<Upstox.Bar>)? = null
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test index feed exists only in debug builds" }; field = v }
+
+    /** Earlier sessions' minutes per index, fetched once a day (the levels need a few days of 15-minute bars). */
+    private val liquidityHistory = java.util.concurrent.ConcurrentHashMap<String, Pair<java.time.LocalDate, List<Bar>>>()
+    /** The minutes read on this pass per index (its books and the exits share one fetch). */
+    private val liquidityPass = java.util.concurrent.ConcurrentHashMap<String, Pair<LocalDateTime, List<Bar>>>()
 
     private fun toBars(ones: List<Upstox.Bar>): List<Bar> = ones.map {
         Bar(java.time.Instant.ofEpochSecond(it.epochSecond).atZone(com.optionslab.engine.IST).toLocalDateTime(), it.open, it.high, it.low, it.close)
     }.filter { val m = it.start.hour * 60 + it.start.minute; m in (9 * 60 + 15)..(15 * 60 + 29) }
 
-    /** BANKNIFTY 1-minute bars: the last ten calendar days' sessions plus today's. */
-    private suspend fun liquidityMinutes(t: LocalDateTime): List<Bar> {
+    /** An index's 1-minute bars (BANKNIFTY or FINNIFTY): the last ten calendar days' sessions plus today's. */
+    private suspend fun liquidityMinutes(t: LocalDateTime, underlying: String = OrbRules.UNDERLYING): List<Bar> {
         val minute = t.withSecond(0).withNano(0)
         // The test feeds are read fresh every time (a cached pass must never carry one test's bars into another).
-        val cache = testIndexBars == null && testHistoryBars == null
-        if (cache) liquidityPass?.let { if (it.first == minute) return it.second }
+        val testing = testIndexBars != null || testHistoryBars != null || testOtherIndexBars != null
+        if (!testing) liquidityPass[underlying]?.let { if (it.first == minute) return it.second }
         val day = t.toLocalDate()
-        val key = Upstox.INDEX_KEYS.getValue(OrbRules.UNDERLYING)
-        val hist = (if (cache) liquidityHistory?.takeIf { it.first == day }?.second else null) ?: run {
-            val raw = testHistoryBars?.invoke(day)
-                ?: if (testIndexBars != null) emptyList() else runCatching { Net.history(key, day.minusDays(10), day.minusDays(1)) }.getOrDefault(emptyList())
-            toBars(raw).filter { it.start.toLocalDate().isBefore(day) }.also { if (cache && it.isNotEmpty()) liquidityHistory = day to it }
+        val bank = underlying == OrbRules.UNDERLYING
+        val key = LiquidityRules.INDEX_KEYS.getValue(underlying)
+        val hist = (if (!testing) liquidityHistory[underlying]?.takeIf { it.first == day }?.second else null) ?: run {
+            val raw = if (testing) (if (bank) testHistoryBars?.invoke(day) else null).orEmpty()
+                else runCatching { Net.history(key, day.minusDays(10), day.minusDays(1)) }.getOrDefault(emptyList())
+            toBars(raw).filter { it.start.toLocalDate().isBefore(day) }.also { if (!testing && it.isNotEmpty()) liquidityHistory[underlying] = day to it }
         }
-        val today = toBars(testIndexBars?.invoke(t) ?: Net.intraday(key)).filter { it.start.toLocalDate() == day }
-        return (hist + today).distinctBy { it.start }.sortedBy { it.start }.also { if (cache) liquidityPass = minute to it }
+        val raw = when {
+            !testing -> Net.intraday(key)
+            bank -> testIndexBars?.invoke(t).orEmpty()
+            else -> testOtherIndexBars?.invoke(underlying, t).orEmpty()
+        }
+        val today = toBars(raw).filter { it.start.toLocalDate() == day }
+        return (hist + today).distinctBy { it.start }.sortedBy { it.start }.also { if (!testing) liquidityPass[underlying] = minute to it }
     }
 
     // ---- data ------------------------------------------------------------------

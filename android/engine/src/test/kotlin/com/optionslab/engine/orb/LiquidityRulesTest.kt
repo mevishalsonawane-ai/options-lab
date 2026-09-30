@@ -30,7 +30,12 @@ class LiquidityRulesTest {
     @Test fun theArmIsOneSwitchOverTwoBooks() {
         assertTrue(LiquidityRules.ARM.liquidity)
         assertFalse(LiquidityRules.ARM.paperOnly, "it follows the Paper / Live switch like the ORB")
-        assertEquals(listOf("liquidity15", "liquidity5"), LiquidityRules.BOOKS.map { it.source })
+        assertEquals(listOf("liquidity15", "liquidity5", "liquidity15_fin", "liquidity5_fin"), LiquidityRules.BOOKS.map { it.source })
+        assertEquals(listOf(15, 5, 15, 5), LiquidityRules.BOOKS.map { LiquidityRules.minutesOf(it) })
+        assertEquals(listOf("BANKNIFTY", "BANKNIFTY", "FINNIFTY", "FINNIFTY"), LiquidityRules.BOOKS.map { LiquidityRules.underlyingOf(it) })
+        assertEquals(100, LiquidityRules.strikeStep("BANKNIFTY")); assertEquals(50, LiquidityRules.strikeStep("FINNIFTY"))
+        assertEquals(24_050, OrbRules.atmStrike(24_070.0, LiquidityRules.strikeStep("FINNIFTY")))
+        assertEquals(LiquidityRules.UNDERLYINGS.toSet(), LiquidityRules.INDEX_KEYS.keys)
         assertTrue(LiquidityRules.BOOKS.all { !it.paperOnly && it.liquidity })
         assertEquals(15, LiquidityRules.minutesOf(LiquidityRules.ARM15))
         assertEquals(5, LiquidityRules.minutesOf(LiquidityRules.ARM5))

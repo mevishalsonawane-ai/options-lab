@@ -39,9 +39,12 @@ class LiquidityArmTest : RobolectricTest() {
     private val ceKey = "NSE_FO|LIQCE"
     private val peKey = "NSE_FO|LIQPE"
     private var failDay = true
+    /** BANKNIFTY flat all day (the FINNIFTY test: only FINNIFTY breaks). */
+    private var bankFlat = false
 
     /** The 5-minute bar k (09:15 + 5k) as (open, high, low, close). */
     private fun bar(k: Int): DoubleArray = when {
+        bankFlat -> doubleArrayOf(54_000.0, 54_010.0, 53_990.0, 54_000.0)
         k == 20 -> doubleArrayOf(54_050.0, 54_100.0, 54_040.0, 54_060.0)
         k == 26 -> doubleArrayOf(54_040.0, 54_070.0, 54_020.0, 54_030.0)
         k == 45 -> doubleArrayOf(54_020.0, 54_150.0, 54_015.0, 54_140.0)
@@ -105,7 +108,7 @@ class LiquidityArmTest : RobolectricTest() {
     @Test fun oneRowOneSwitchForBothBooks() {
         val arms = runBlocking { OrbArms.view() }.arms.map { it.arm.source }
         assertEquals(1, arms.count { it == "liquidity" })
-        assertTrue("the books never show as rows of their own", arms.none { it == "liquidity15" || it == "liquidity5" })
+        assertTrue("the books never show as rows of their own", arms.none { it.startsWith("liquidity") && it != "liquidity" })
         assertTrue("the other arms are all still there", arms.containsAll(listOf("orb", "orb_fresh", "orb_sweep", "range_fade")))
         assertFalse(row().armed)
         armLiquidity()
@@ -207,6 +210,41 @@ class LiquidityArmTest : RobolectricTest() {
         passes(LocalTime.of(12, 50), LocalTime.of(13, 10))                   // bought at 13:05, sold at 13:10 (failed break)
         assertFalse(row().today.single().open)
         assertEquals(0, runBlocking { OrbArms.view() }.forward.trades)
+    }
+
+    /** FINNIFTY's day: the BANKNIFTY shape at 24,000 (swing high 24,050 at 10:55, second rejection 11:25, break at 13:00). */
+    private fun finBar(k: Int): DoubleArray = when (k) {
+        20 -> doubleArrayOf(24_025.0, 24_050.0, 24_020.0, 24_030.0)
+        26 -> doubleArrayOf(24_020.0, 24_035.0, 24_010.0, 24_015.0)
+        45 -> doubleArrayOf(24_010.0, 24_075.0, 24_008.0, 24_070.0)
+        else -> if (k > 45) doubleArrayOf(24_070.0, 24_070.0, 24_065.0, 24_070.0) else doubleArrayOf(24_000.0, 24_005.0, 23_995.0, 24_000.0)
+    }
+
+    @Test fun finniftyIsTradedTooOnItsOwnChartAndOptions() {
+        bankFlat = true
+        val expiry = day.plusDays(7)
+        AutomationSupport.contracts(context, listOf(
+            Upstox.Contract("BANKNIFTY", expiry, 54_100.0, Right.CE, 30, ceKey, "BANKNIFTY-LIQ-54100CE"),
+            Upstox.Contract("BANKNIFTY", expiry, 54_100.0, Right.PE, 30, peKey, "BANKNIFTY-LIQ-54100PE"),
+            Upstox.Contract("FINNIFTY", expiry, 24_050.0, Right.CE, 65, "NSE_FO|LIQFINCE", "FINNIFTY-LIQ-24050CE"),
+            Upstox.Contract("FINNIFTY", expiry, 24_050.0, Right.PE, 65, "NSE_FO|LIQFINPE", "FINNIFTY-LIQ-24050PE")))
+        upstox.price("NSE_FO|LIQFINCE", 120.0)
+        upstox.price("NSE_FO|LIQFINPE", 110.0)
+        OrbArms.testOtherIndexBars = { u, t ->
+            if (u != "FINNIFTY") emptyList() else (9 * 60 + 15 until 15 * 60 + 30).map { day.atTime(it / 60, it % 60) }
+                .filter { !it.plusMinutes(1).isAfter(t) }
+                .map { start -> val b = finBar((start.hour * 60 + start.minute - (9 * 60 + 15)) / 5)
+                    Upstox.Bar(start.atZone(IST).toEpochSecond(), b[0], b[1], b[2], b[3], 1000, 0) }
+        }
+        armLiquidity()
+        passes(LocalTime.of(12, 50), LocalTime.of(13, 5))
+        val p = row().today.single()
+        assertEquals("liquidity5_fin", p.arm)
+        assertTrue(p.symbol, p.symbol.startsWith("FINNIFTY") && p.symbol.endsWith("24050CE"))
+        assertEquals(65, p.qty)                                              // FINNIFTY's own lot
+        assertEquals(24_050.0, p.level!!, 0.0)
+        assertEquals(p.entry * 0.85, p.stopTrigger!!, 0.06)                  // the same 15% stop
+        assertTrue("nothing bought on BANKNIFTY", Paper.state.orders.none { it.symbol.startsWith("BANKNIFTY") })
     }
 
     @Test fun disarmedItBuysNothing() {
