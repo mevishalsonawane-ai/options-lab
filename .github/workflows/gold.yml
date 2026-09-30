@@ -1,0 +1,34 @@
+name: XAUUSD minute data
+
+on:
+  push:
+    paths:
+      - ".github/workflows/gold.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  gold:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    permissions:
+      contents: write          # the research-data release only
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Dukascopy XAUUSD 1-minute bid and ask candles, Oct 2023 - Sep 2026
+        run: |
+          for side in bid ask; do
+            npx --yes dukascopy-node@1.50.0 -i xauusd -from 2023-10-01 -to 2026-09-30 -t m1 -p $side -f csv \
+              -v false -dir out -fn xauusd_m1_$side -bs 15 -bp 500 -r 5 -s
+          done
+          ls -la out
+          head -3 out/xauusd_m1_bid.csv; tail -2 out/xauusd_m1_bid.csv; wc -l out/*.csv
+          gzip -9 out/*.csv
+      - name: Save the data to the research-data release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload research-data out/xauusd_m1_bid.csv.gz out/xauusd_m1_ask.csv.gz --clobber -R ${{ github.repository }}
