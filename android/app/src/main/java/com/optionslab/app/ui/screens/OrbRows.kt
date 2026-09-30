@@ -110,6 +110,8 @@ internal fun OrbRowsContent(
                     "${o.right} ${o.symbol.takeLast(7).dropLast(2)} · in ${px(o.entry)}" + (m?.let { " · now ${px(it)} · ${rs((it - o.entry) * o.qty)}" } ?: "") +
                         (o.stopTrigger?.let { " · stop ${px(it)}" } ?: "")
                 } ?: when {
+                    !a.armed && a.arm.liquidity -> "BANKNIFTY liquidity pool taken on a swing zone · 15-min + 5-min · paper only · out at the next liquidity"
+                    a.arm.liquidity -> a.status
                     !a.armed && a.arm.fade -> "BANKNIFTY touch of the range edge, faded to the middle · paper only · -40 / +40"
                     !a.armed && a.arm.sweep -> "BANKNIFTY failed break of the opening range, faded · paper only · -40 / +80"
                     !a.armed -> "BANKNIFTY opening-range break" + if (a.arm.freshOnly) ", fresh breaks only" else ""
@@ -123,7 +125,7 @@ internal fun OrbRowsContent(
             Switch(
                 modifier = Modifier.semantics { contentDescription = "Arm ${a.arm.label}" },
                 checked = a.armed,
-                // ORB Sweep and Range Fade are paper only and always automatic: nothing to choose, no PIN.
+                // ORB Sweep, Range Fade and Liquidity 15+5 are paper only and always automatic: nothing to choose, no PIN.
                 onCheckedChange = { on -> if (on && a.arm.paperOnly) actions.arm(a.arm.source, true, true, false)
                     else if (on) choosing = a.arm.source else actions.arm(a.arm.source, false, a.automatic, false) },
                 colors = SwitchDefaults.colors(checkedTrackColor = p.verdigris, checkedThumbColor = p.card),

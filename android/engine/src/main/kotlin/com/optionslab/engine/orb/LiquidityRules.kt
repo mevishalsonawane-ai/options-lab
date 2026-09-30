@@ -86,8 +86,10 @@ object LiquidityRules {
                 val touched = if (z.side > 0) b.high >= z.bottom && b.close < z.top else b.low <= z.top && b.close > z.bottom
                 if (touched && i - z.last >= gap && z.count < contacts) { z.count++; z.last = i }
                 if (z.count >= contacts && i - z.last >= confirm) {
-                    val dup = out.takeLast(50).any { q -> q.side == z.side && q.broken < 0 && q.bottom <= z.top && z.bottom <= q.top }
-                    if (!dup) out += Zone("pool", z.side, z.top, z.bottom, z.origin, i).also { markBreaks(listOf(it), bars) }
+                    // As the research version: a pool overlapping one of the last 50 of its side is the same pool (whether
+                    // or not that one has since been taken - breaks are marked after the scan).
+                    val dup = out.takeLast(50).any { q -> q.side == z.side && q.bottom <= z.top && z.bottom <= q.top }
+                    if (!dup) out += Zone("pool", z.side, z.top, z.bottom, z.origin, i)
                     continue
                 }
                 keep += z
@@ -98,6 +100,7 @@ object LiquidityRules {
             if (b.high > bodyHi) cand += Cand(1, b.high, bodyHi, i, 1, i)
             if (b.low < bodyLo) cand += Cand(-1, bodyLo, b.low, i, 1, i)
         }
+        markBreaks(out, bars)
         return out
     }
 
