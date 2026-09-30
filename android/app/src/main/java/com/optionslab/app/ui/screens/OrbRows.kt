@@ -177,8 +177,11 @@ internal fun OrbRowsContent(
             dismissButton = { TextButton({ choosing = null }) { Text("Cancel") } },
         )
     }
-    armAuth?.let { (src, auto) -> reauth("Enter your app PIN to arm ${view.arms.firstOrNull { it.arm.source == src }?.arm?.label ?: "ORB"} on Zerodha. " +
-        (if (auto) "It then trades real money by itself until you switch it off." else "Each entry still waits for your approval with the PIN."),
+    // The ORB arms keep their own words; Liquidity 15+5 names itself (and says when each entry still waits for approval).
+    armAuth?.let { (src, auto) -> reauth(if (view.arms.firstOrNull { it.arm.source == src }?.arm?.liquidity == true)
+            "Enter your app PIN to arm Liquidity 15+5 on Zerodha. " +
+                (if (auto) "It then trades real money by itself until you switch it off." else "Each entry still waits for your approval with the PIN.")
+        else "Enter your app PIN to arm ORB on Zerodha. It then trades real money by itself until you switch it off.",
         { armAuth = null; actions.arm(src, true, auto, true) }, { armAuth = null }) }
     reauthFor?.let { src -> reauth(null, { reauthFor = null; actions.approve(src, true) }, { reauthFor = null }) }
     if (detail) OrbDetail(view) { detail = false }
