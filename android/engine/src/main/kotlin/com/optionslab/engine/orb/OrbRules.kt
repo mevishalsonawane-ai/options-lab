@@ -12,10 +12,10 @@ data class Bar(val start: LocalDateTime, val open: Double, val high: Double, val
 
 /**
  * [sweep]: the liquidity-sweep reversal (SweepRules), not the break; [fade]: the range-edge fade (RangeFadeRules);
- * [paperOnly]: it never sends to Zerodha.
+ * [liquidity]: the liquidity-pool break on 15- and 5-minute charts (LiquidityRules); [paperOnly]: it never sends to Zerodha.
  */
 data class Arm(val source: String, val label: String, val freshOnly: Boolean = false, val sweep: Boolean = false, val paperOnly: Boolean = false,
-               val fade: Boolean = false)
+               val fade: Boolean = false, val liquidity: Boolean = false)
 
 /**
  * The opening-range-break rule, exactly as the desktop's

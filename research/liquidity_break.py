@@ -78,10 +78,10 @@ def simulate(days, b, zones, source, stop, carry=False):
                 if not (carry and nxt is not None and nxt["exp"] == d["exp"] and pos["key"] in nxt["chain"]):
                     why, xm = "15:10", min(E[i] - 1, 374)
             if why:
-                leg = d["chain"][pos["key"]]
                 ix = I["close"][xm] if why != "next liquidity" else pos["target"]
+                opt = d["chain"][pos["key"]]["close"][xm] if pos["key"] is not None else np.nan
                 trades.append(dict(day=pos["day"], sign=sg, why=why, pts=sg * (ix - pos["ix"]),
-                                   rs=(leg["close"][xm] - SLIP - pos["px"]) * LOT - CHG,
+                                   rs=(opt - SLIP - pos["px"]) * LOT - CHG,
                                    held=xm - pos["m"] + 375 * (DI[i] - pos["di"])))
                 pos = None
         if pos is not None or i + 1 >= len(b) or DI[i + 1] != DI[i]:
@@ -112,6 +112,9 @@ def simulate(days, b, zones, source, stop, carry=False):
                  and sg * (q.edge - ix) > 0]
         target = (min(ahead) if sg > 0 else max(ahead)) if ahead else None
         right = "CE" if sg > 0 else "PE"
+        if not d["chain"]:                              # an index without option history: index points only
+            pos = dict(day=d["day"], di=DI[i], sign=sg, m=m, ix=ix, level=z.edge, target=target, key=None, px=np.nan)
+            continue
         ks = np.array(sorted({k for k, r in d["chain"] if r == right}))
         if not len(ks):
             continue

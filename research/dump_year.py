@@ -18,8 +18,9 @@ def main():
     n, path = int(sys.argv[1]), sys.argv[2]
     width = float(sys.argv[3]) if len(sys.argv) > 3 else 300.0
     skip = int(sys.argv[4]) if len(sys.argv) > 4 else 0          # leave out the latest `skip` sessions (an earlier year)
+    underlying = sys.argv[5] if len(sys.argv) > 5 else "BANKNIFTY"
     parts = []
-    for day, ix, opts in archive_days(n, skip=skip):
+    for day, ix, opts in archive_days(n, underlying, skip=skip):
         if ix is None or len(ix) < 300 or opts.empty:
             continue
         spot = ix.between_time("09:20", "09:20").close
