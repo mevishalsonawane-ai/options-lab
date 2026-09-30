@@ -16,15 +16,17 @@ jobs:
     permissions:
       contents: write          # the research-data release only
     steps:
-      - name: The free expired-options page and its FINNIFTY links
+      - name: The free FINNIFTY expired-options page and its download links
         run: |
           UA="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36"
-          curl -sL -A "$UA" "https://shoonyatrader.in/free-historical-expired-options-contract-data/" -o page.html || true
+          curl -sL -A "$UA" "https://cloudtraderpro.in/free-historical-finnifty-expired-options-data/" -o page.html || true
           {
             echo "== size"; wc -c page.html
             echo "== title"; grep -o '<title>[^<]*' page.html | head -3
             echo "== every link"; grep -oE 'href="[^"]+"' page.html | sed 's/href=//; s/"//g' | sort -u
-            echo "== lines mentioning FINNIFTY / FIN"; grep -oiE '.{0,200}fin ?nifty.{0,300}' page.html | head -40
+            echo "== download-looking strings"; grep -oiE '(https?:)?//[^" ]+\.(zip|csv|parquet|feather|gz|7z|rar)[^" ]*' page.html | sort -u | head -80
+            echo "== drive / mega / dropbox / github"; grep -oiE 'https?://[^" ]*(drive\.google|docs\.google|mega\.nz|dropbox|github|kaggle|onedrive|1drv|gofile|mediafire)[^" ]*' page.html | sort -u | head -80
+            echo "== text around download / month / year"; sed 's/<[^>]*>/ /g' page.html | tr -s ' ' | grep -oiE '.{0,160}(download|2024|2025|2026|month|expiry|login|sign ?up|register).{0,160}' | head -60
           } > probe.txt
           cat probe.txt | head -300
       - name: Save it
