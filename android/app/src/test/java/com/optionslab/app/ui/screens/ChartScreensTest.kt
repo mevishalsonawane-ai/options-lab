@@ -188,7 +188,8 @@ class ChartScreensTest {
         until { shows("Showing the basic chart") }
         text("Could not load BANKNIFTY: HTTP 503 Showing the basic chart. Tap ADV / BASIC above to try the advanced one again.").assertIsDisplayed()
         text("BASIC").assertIsDisplayed()
-        assertTrue(lastJs()!!.startsWith("window.__iraReply(\"2\", false"))
+        // The page's answer is posted to the web view after the basic chart shows: wait for it rather than race it.
+        until { lastJs()?.startsWith("window.__iraReply(\"2\", false") == true }
     }
 
     @Test fun aPageErrorBeforeTheFirstCandlesIsFatal() {
