@@ -13,10 +13,11 @@ from __future__ import annotations
 
 import pandas as pd
 
-from . import candles, levels, momentum, moving_averages, statistics, trend, volatility, volume  # noqa: F401
+from . import candles, levels, liquidity, momentum, moving_averages, statistics, trend, volatility, volume  # noqa: F401
 from .candles import *  # noqa: F401,F403
 from .core import REGISTRY
 from .levels import *  # noqa: F401,F403
+from .liquidity import *  # noqa: F401,F403
 from .momentum import *  # noqa: F401,F403
 from .moving_averages import *  # noqa: F401,F403
 from .statistics import *  # noqa: F401,F403

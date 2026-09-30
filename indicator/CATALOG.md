@@ -1,6 +1,6 @@
 # Indicator catalog
 
-155 indicators, each written from its author's published formula (see the source for the exact definition used where platforms differ). Import with `import indicator as ind` and call `ind.<Name>(df, ...)` on a DataFrame with open, high, low, close (and volume where marked).
+157 indicators, each written from its author's published formula (see the source for the exact definition used where platforms differ). Import with `import indicator as ind` and call `ind.<Name>(df, ...)` on a DataFrame with open, high, low, close (and volume where marked).
 
 ## Candlestick patterns (13)
 
@@ -20,7 +20,7 @@
 | `ThreeSoldiersCrows` | Three white soldiers (+1) / three black crows (-1): three strong candles in a row, each closing further. |  |
 | `Tweezer` | Tweezer bottom (+1) / top (-1): two bars with matching lows / highs (within tol of the range). |  |
 
-## Levels & structure (16)
+## Levels & structure (18)
 
 | name | what it is | needs volume |
 |---|---|---|
@@ -29,6 +29,8 @@
 | `FibRetracement` | Fibonacci retracements of the last n bars' swing: 0, 23.6, 38.2, 50, 61.8, 78.6, 100 %. |  |
 | `Fractals` | Williams fractals: a high with 2 lower highs each side (bearish), and the mirror for lows. |  |
 | `HHHL` | Higher highs / higher lows count: +1 per bar that makes both, -1 for lower highs and lower lows. |  |
+| `LiquidityPools` | Liquidity pools (after LuxAlgo): wick areas rejected N times, gap bars apart, held for confirm bars; 1 on the bar a close takes a pool above (break_up) or below (break_down). |  |
+| `LiquiditySwings` | Liquidity swings (after LuxAlgo): pivot zones of the full candle or the wick; 1 on the bar a close takes a swing high (break_up) or a swing low (break_down). |  |
 | `MarketStructure` | Market structure: break of structure (BOS, with the trend) and change of character (CHoCH, against it) on closes through the last confirmed swing high / low; +1 bullish / -1 bearish. |  |
 | `OpeningRange` | Opening range: the first n minutes' high and low each day (the ORB levels). |  |
 | `OrderBlocks` | Order blocks (common SMC definition): the last opposite candle before a move of k x ATR. |  |
