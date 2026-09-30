@@ -57,6 +57,10 @@ object DailyPnl {
         SecurePrefs.put(key(live), o.toString())
     }
 
+    /** The paper calendar starts empty again (Reset paper); the Zerodha days are kept. */
+    @Synchronized
+    fun resetPaper() { SecurePrefs.put(key(false), "{}") }
+
     /** Every day of [month] that has a figure. */
     fun month(live: Boolean, month: YearMonth): Map<LocalDate, Day> = all(live).filterKeys { YearMonth.from(it) == month }
 

@@ -44,4 +44,15 @@ class DailyPnlTest : RobolectricTest() {
         assertEquals(589.0, days.getValue(tue).pnl, 0.0)
         assertNull(days[wed])
     }
+
+    @Test fun resetPaperClearsPaperHistoryAndKeepsZerodha() {
+        at(wed.atTime(10, 0))
+        DailyPnl.record(false, 300.0, 2); DailyPnl.record(true, 900.0, -1)
+        Journal.put("paper:1", "paper note", setOf("Breakout")); Journal.put("kite:9", "live note", emptySet())
+        DailyPnl.resetPaper(); Journal.resetPaper()
+        assertNull(DailyPnl.all(false)[wed])
+        assertEquals(900.0, DailyPnl.all(true).getValue(wed).pnl, 0.0)
+        assertNull(Journal.of("paper:1"))
+        assertEquals("live note", Journal.of("kite:9")?.note)
+    }
 }

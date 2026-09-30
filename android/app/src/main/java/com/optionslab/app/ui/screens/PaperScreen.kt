@@ -71,7 +71,7 @@ fun LazyListScope.paperTrade(model: AppModel, snap: Load<Paper.Snapshot>, book: 
                 }
                 Note("IraAlgo's sandbox engine on the phone: margin, fills, MIS square-off at 15:15 and expiry settlement are simulated from Upstox's public prices. Nothing reaches Zerodha.")
             }
-            if (snap is Load.Done) { Spacer(Modifier.height(14.dp)); PaperBalance(snap.value, onReset) }
+            if (snap is Load.Done) { Spacer(Modifier.height(14.dp)); PaperBalance(model, snap.value, onReset) }
         }
     }
     item(key = "paper.form") { PaperOrderForm(model) }
@@ -323,9 +323,11 @@ private fun PaperFunds(v: Paper.Snapshot, onReset: () -> Unit) {
 
 /** The paper money, always in view: what is free to trade, what is in use, and the P&L. */
 @Composable
-private fun PaperBalance(v: Paper.Snapshot, onChange: () -> Unit) {
+private fun PaperBalance(model: AppModel, v: Paper.Snapshot, onChange: () -> Unit) {
     val p = LocalPalette.current
     val f = v.funds
+    var toDefault by remember { mutableStateOf(false) }
+    if (toDefault) PaperDefaultDialog(model) { toDefault = false }
     LedgerCard {
         Text("Paper balance", style = Type.label.copy(color = p.inkSoft, fontSize = 13.sp))
         RollingFigure(f.availableCash, { rs(it) }, Type.figureLarge.copy(color = p.ink))
@@ -335,7 +337,30 @@ private fun PaperBalance(v: Paper.Snapshot, onChange: () -> Unit) {
         LedgerLine("Total P&L", rs(f.totalPnl, true), if (f.totalPnl >= 0) p.verdigris else p.oxblood)
         Spacer(Modifier.height(8.dp))
         BrassButton("Set paper amount", Modifier.fillMaxWidth(), tone = p.ink, onClick = onChange)
+        Spacer(Modifier.height(8.dp))
+        BrassButton("Reset paper to default", Modifier.fillMaxWidth(), tone = p.oxblood) { toDefault = true }
     }
+}
+
+/** Confirm resetting everything on paper (never Zerodha) to how the app first starts. */
+@Composable
+fun PaperDefaultDialog(model: AppModel, onClose: () -> Unit) {
+    val default = com.optionslab.engine.sandbox.SandboxConfig().startingCapital.toDouble()
+    AlertDialog(
+        onDismissRequest = onClose, properties = secure,
+        title = { Text("Reset paper to default?", style = Type.title) },
+        text = {
+            Column(Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState())) {
+                Text("Paper only - nothing at Zerodha changes.", style = Type.body)
+                Spacer(Modifier.height(6.dp))
+                Text("The paper account starts again with ${rs(default)}. Every paper order, trade and position is cleared, " +
+                    "the paper P&L calendar is emptied, and the arms, strategies, Pine scripts, stops and journal notes " +
+                    "forget their paper trades. ORB arms not armed for Zerodha are switched off.", style = Type.bodySmall)
+            }
+        },
+        confirmButton = { TextButton({ model.paperResetAll(); onClose() }) { Text("Reset paper") } },
+        dismissButton = { TextButton(onClose) { Text("Keep") } },
+    )
 }
 
 /** Starting capital for a fresh paper account: a preset, or any amount typed in. */

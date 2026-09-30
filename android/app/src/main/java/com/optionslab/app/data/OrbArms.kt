@@ -283,6 +283,23 @@ object OrbArms {
         val b = book(); b.armed.clear(); b.auto.clear(); b.liveOk.clear(); b.pending.clear(); save(b)
     }
 
+    /**
+     * Reset paper: the arms' paper positions, their paper day (bars decided, status) and waiting paper approvals go,
+     * and every arm not armed for Zerodha is switched off. Zerodha positions and live-armed arms are untouched.
+     */
+    suspend fun resetPaper() = lock.withLock {
+        val b = book()
+        b.positions.removeAll { !it.live }
+        val live = b.positions.filter { it.open }.map { it.arm }.toSet() + b.liveOk.filterValues { it }.keys
+        if (!liveNow()) b.pending.clear()
+        for (k in b.armed.keys.toList()) if (k !in live) { b.armed.remove(k); b.auto.remove(k) }
+        b.decided.keys.removeAll { it.substringBefore('|') !in live }
+        b.watched.keys.removeAll { it.substringBefore('|') !in live }
+        b.status.keys.removeAll { it !in live }
+        save(b)
+        holdingHint = b.positions.any { it.open }
+    }
+
     suspend fun approve(source: String, pinConfirmed: Boolean = false): String {
         // A live entry is sent only after the owner's PIN or fingerprint (the UI asks first).
         if (liveNow() && !pinConfirmed) return "The app is in Live: approve with your PIN on Home → Strategies."

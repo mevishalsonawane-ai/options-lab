@@ -85,6 +85,11 @@ object PositionCards {
     /** Bumped when a position is closed from its card in the shade: the open app reloads its books at once. */
     val closedFromShade = kotlinx.coroutines.flow.MutableStateFlow(0)
 
+    /** Take down every card on [venue] ("Paper" after the paper account is reset). */
+    fun dismissAll(context: Context, venue: String) {
+        shown.keys.filter { it.startsWith("$venue|") }.forEach { dismiss(context, venue, it.substringAfter('|')) }
+    }
+
     /** Take down [symbol]'s card on [venue] ("Paper" / "Live"): the position is closed. */
     fun dismiss(context: Context, venue: String, symbol: String) {
         val key = "$venue|$symbol"

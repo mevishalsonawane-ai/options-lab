@@ -1735,6 +1735,30 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /**
+     * Paper back to how the app first starts: the default amount, no orders, trades or positions, an empty paper
+     * P&L calendar, and no paper positions, stops, runs or notes left in the arms, strategies, Pine scripts or
+     * journal (every arm not armed for Zerodha is switched off). Nothing about Zerodha is touched.
+     */
+    fun paperResetAll() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val default = com.optionslab.engine.sandbox.SandboxConfig().startingCapital
+            com.optionslab.app.data.Paper.reset(default)
+            runCatching { com.optionslab.app.data.OrbArms.resetPaper() }
+            runCatching { com.optionslab.app.data.PineAuto.resetPaper() }
+            runCatching { com.optionslab.app.data.Strategies.resetPaper() }
+            runCatching { com.optionslab.app.data.Protections.resetPaper() }
+            runCatching { com.optionslab.app.data.Journal.resetPaper() }
+            com.optionslab.app.data.DailyPnl.resetPaper()
+            com.optionslab.app.data.Guard.resetPeak(live = false)
+            runCatching { com.optionslab.app.work.PositionCards.dismissAll(ctx, "Paper") }
+            pnlDays.value = pnlDays.value + 1
+            say("Paper reset to default: ${rs(default.toDouble())}, nothing held, no history.")
+            loadPaper()
+            runCatching { refreshStrategies() }
+        }
+    }
+
     /** Listed expiries (Upstox master) for the paper order form. */
     /** The listed strikes for one expiry, and the index level (the last session's when closed) to centre them on. */
     suspend fun paperStrikes(underlying: String, expiry: LocalDate): Pair<List<Double>, Double?> = withContext(Dispatchers.IO) {

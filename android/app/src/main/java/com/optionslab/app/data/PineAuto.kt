@@ -130,6 +130,15 @@ object PineAuto {
 
     @Synchronized fun wipe() { cache = null; if (::file.isInitialized) file.delete(); _held.value = emptyMap(); _log.value = emptyList() }
 
+    /** Reset paper: paper holdings and their day's P&L / pause go; scripts holding at Zerodha keep theirs. */
+    suspend fun resetPaper() = lock.withLock {
+        val b = book()
+        b.held.entries.removeAll { !it.value.live }
+        b.dayPnl.keys.removeAll { it !in b.held }
+        b.paused.keys.removeAll { it !in b.held }
+        save(b); publish(b)
+    }
+
     suspend fun load() = lock.withLock { book(); Unit }
 
     /**

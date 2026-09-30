@@ -244,6 +244,16 @@ object Strategies {
         save(b)
     }
 
+    /** Reset paper: paper runs, their history, order names and waiting paper starts go; Zerodha runs are untouched. */
+    suspend fun resetPaper() = lock.withLock {
+        val b = book()
+        b.runs.entries.removeAll { it.value.mode != RunMode.LIVE }
+        b.history.removeAll { it.mode != RunMode.LIVE }
+        b.owners.keys.removeAll { it.startsWith("paper:") }
+        b.pending.entries.removeAll { !it.value.startsWith("${RunMode.LIVE.wire}|") }
+        save(b)
+    }
+
     suspend fun delete(id: Long): String? = lock.withLock {
         val b = book()
         if (b.runs[id]?.let { r -> b.defs.firstOrNull { it.id == id }?.let { Entry(it, r).running } } == true) return@withLock "Stop it first."

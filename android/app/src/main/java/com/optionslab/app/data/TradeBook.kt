@@ -153,6 +153,16 @@ object Journal {
         cache = m
     }
 
+    /** Reset paper: notes on paper trades go (the fresh account numbers its trades from 1 again). */
+    @Synchronized
+    fun resetPaper() {
+        val m = all().filterKeys { !it.startsWith("paper:") }
+        val o = JSONObject()
+        m.forEach { (k, e) -> o.put(k, JSONObject().put("n", e.note).put("t", JSONArray(e.tags.toList())).put("at", e.at)) }
+        Vault.writeFile(file, o.toString().toByteArray(Charsets.UTF_8))
+        cache = m.toMutableMap()
+    }
+
     fun of(key: String): Entry? = all()[key]
 
     /** Tags on a round trip: those of every fill in it. */
