@@ -70,9 +70,9 @@ class GoldPaperTest : RobolectricTest() {
         val mon = LocalDate.of(2026, 9, 28)
         assertEquals("11:00 UTC (16:30 IST)", GoldPaper.nextDecision(mon.atTime(10, 26)))
         assertEquals("04:00 UTC (09:30 IST)", GoldPaper.nextDecision(mon.atTime(3, 0)))
-        assertEquals("22:00 UTC (03:30 IST)", GoldPaper.nextDecision(mon.atTime(20, 30)), "the 21:00 break is skipped")
-        assertEquals("Tue 01:00 UTC (06:30 IST)", GoldPaper.nextDecision(mon.atTime(23, 30)), "not midnight")
-        assertEquals("Mon 01:00 UTC (06:30 IST)", GoldPaper.nextDecision(LocalDate.of(2026, 10, 2).atTime(20, 0)), "the weekend")
+        assertEquals("the 21:00 break is skipped", "22:00 UTC (03:30 IST)", GoldPaper.nextDecision(mon.atTime(20, 30)))
+        assertEquals("not midnight", "Tue 01:00 UTC (06:30 IST)", GoldPaper.nextDecision(mon.atTime(23, 30)))
+        assertEquals("the weekend", "Mon 01:00 UTC (06:30 IST)", GoldPaper.nextDecision(LocalDate.of(2026, 10, 2).atTime(20, 0)))
         // Armed at 10:26 (too late for the 10:00 decision): it says when it decides next, not "no entry".
         at(mon.plusDays(14).atTime(10, 26))
         runBlocking { GoldPaper.setArmed(true) }

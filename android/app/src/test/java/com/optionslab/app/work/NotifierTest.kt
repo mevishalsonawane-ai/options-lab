@@ -74,7 +74,8 @@ class NotifierTest : RobolectricTest() {
         assertEquals("the title and text stay for screen readers", "XAUUSD paper buy", Background.title(n))
         assertEquals("Unlock to read", Background.text(n.publicVersion!!))
         val t = Notifier.tile(context, "SELL", 144, 104)
-        assertEquals(Notifier.sideColor("SELL"), t.getPixel(t.width / 2, 3))
+        // (The simulated phone does not paint pixels, so the tile is checked by size; its colour by sideColor.)
+        assertTrue(t.width > t.height); assertEquals(0xFFE0322B.toInt(), Notifier.sideColor("SELL"))
         assertEquals(0xFFE0322B.toInt(), Notifier.sideColor("SHORT")); assertEquals(0xFF00A86B.toInt(), Notifier.sideColor("LONG"))
         // Other notices keep the plain layout.
         assertNull(Notifier.builder(context, Notifier.RISK, "Risk", "text").build().contentView)
