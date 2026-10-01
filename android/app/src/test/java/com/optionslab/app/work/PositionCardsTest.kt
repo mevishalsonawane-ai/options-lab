@@ -66,11 +66,11 @@ class PositionCardsTest : RobolectricTest() {
         assertNotNull(pi.savedIntent.getStringExtra(MainActivity.EXTRA_NONCE))
     }
 
-    @Test fun aDayInProfitOnATradeNowBelowItsPriceShowsBothApart() {
-        // The owner's card: earlier trades on the option made money, the open one is down 1.9%.
-        assertEquals("Open trade −₹600 (-1.9%)\nToday on this option +₹2,474", PositionCards.pnlLine(30, 1028.40, 1008.40, 2474.0))
-        assertEquals("P&L −₹600 (-1.9%)", PositionCards.pnlLine(30, 1028.40, 1008.40, -600.0))
-        assertEquals("P&L +₹2,474", PositionCards.pnlLine(30, 1028.40, null, 2474.0))
+    @Test fun thePercentageIsOfTheProfitSoItsSignMatches() {
+        // The owner's card: +₹2,474 on the day with the open trade below its price read "(-1.9%)"; it is +8.0% of the cost.
+        assertEquals("P&L +₹2,474 (+8.0%)", PositionCards.pnlLine(30, 1028.40, 2474.0))
+        assertEquals("P&L −₹600 (-1.9%)", PositionCards.pnlLine(30, 1028.40, -600.0))
+        assertEquals("P&L +₹0", PositionCards.pnlLine(50, 0.0, 0.0))
     }
 
     @Test fun aClosedPositionsCardIsTakenDown() {
