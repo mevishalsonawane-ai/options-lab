@@ -108,6 +108,8 @@ object Jobs {
     )
 
     fun scheduleAll(context: Context) {
+        // IraGoldAlgo has one clock of its own and none of IraAlgo's NSE jobs.
+        if (com.optionslab.app.BuildConfig.GOLD) { GoldAlarm.schedule(context); return }
         val s = AppSettings.load()
         Kind.entries.forEach { schedule(context, it, s) }
         Heartbeat.schedule(context)

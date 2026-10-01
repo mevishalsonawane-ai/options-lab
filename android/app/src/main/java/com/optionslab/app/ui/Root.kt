@@ -180,6 +180,8 @@ fun Root(activity: MainActivity, splash: Boolean = false) {
             // Biometrics are offered only once the device check has run (a report is never empty).
             if (sealed) Gate(activity, model, settings, compromised, checked = findings.isNotEmpty())
             else if (!batteryOk) com.optionslab.app.ui.screens.BatteryScreen { batteryOk = true }
+            // IraGoldAlgo: its own three screens, no Zerodha.
+            else if (com.optionslab.app.BuildConfig.GOLD) com.optionslab.app.ui.screens.GoldMain(model)
             // Until a Zerodha account is linked the app shows only the setup page.
             else if (!brokerNow.linked && !SKIP_ZERODHA_GATE) ConnectGate(model)
             else Main(model)

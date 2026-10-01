@@ -277,8 +277,9 @@ fun SecurityPage(model: AppModel) {
     }
     Page {
         item { PageTitle("Security", "Nothing personal leaves this phone, and nothing is logged") }
-        item { KitePinCard(model) }
-        item { BackupCard(model, s.wipeOnExhaustion) }
+        // The Zerodha PIN and IraAlgo's backup are IraAlgo's; the gold build has neither.
+        if (!com.optionslab.app.BuildConfig.GOLD) item { KitePinCard(model) }
+        if (!com.optionslab.app.BuildConfig.GOLD) item { BackupCard(model, s.wipeOnExhaustion) }
         item {
             LedgerCard(title = "Home-screen widget") {
                 ToggleRow("Show my P&L on the widget", "Off by default: a home screen is seen by anyone holding the unlocked phone. Index levels are always shown.", s.widgetPnl) { on ->
