@@ -87,7 +87,7 @@ class GoldScreensTest {
         assertTrue(compose.has("0.01 lot (1 oz)"))
         assertTrue(compose.has("Not armed"))
         assertTrue(compose.has("Gold (COMEX futures)"))
-        assertTrue(compose.has("12:30-02:30 IST", substring = true))
+        assertTrue(compose.has("24x5: Monday 05:30 IST to Saturday 02:30 IST", substring = true))
         assertTrue(compose.has("Last signal")); assertTrue(compose.has("none yet"))
         shot("home-light")
         compose.switchFor("Armed").performSemanticsAction(SemanticsActions.OnClick); compose.frames()
@@ -131,7 +131,7 @@ class GoldScreensTest {
         assertTrue(compose.has("+$24.79"))
         assertTrue(compose.has("reached the next liquidity level", substring = true))
         assertTrue(compose.has("the break failed", substring = true))
-        assertTrue(compose.has("02:10 IST) cut-off", substring = true))
+        assertTrue(compose.has("cut-off before the weekend", substring = true))
         // Three trades: the balance curve, best, worst and the deepest drawdown (+19.93, -5.07, +9.93 in time order).
         assertTrue(compose.has("Best trade")); assertTrue(compose.has("+$19.93"))
         assertTrue(compose.has("Worst trade")); assertTrue(compose.has("-$5.07"))

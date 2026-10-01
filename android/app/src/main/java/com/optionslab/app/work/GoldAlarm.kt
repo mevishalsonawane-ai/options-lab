@@ -15,9 +15,9 @@ import java.time.LocalDateTime
 import java.time.ZoneOffset
 
 /**
- * IraGoldAlgo's clock: a pass of [GoldPaper] 30 seconds after every 5th minute during the gold session (Monday to
- * Friday, 07:00-21:00 UTC), so a 1-hour candle is decided half a minute after it closes and an exit is caught within
- * five minutes. Outside the session the next alarm is the next session's start. Each alarm sets the next one.
+ * IraGoldAlgo's clock: a pass of [GoldPaper] 30 seconds after every 5th minute while gold trades (24x5: Monday to
+ * Friday UTC, but for the 21:00-22:00 break), so a 1-hour candle is decided half a minute after it closes and an exit is
+ * caught within five minutes. Over the break and the weekend the next alarm is the reopening. Each alarm sets the next.
  */
 object GoldAlarm {
     private const val ACTION = "ol.gold.pass"
@@ -38,7 +38,7 @@ object GoldAlarm {
         var t = now.withSecond(30).withNano(0)
         t = t.plusMinutes((5 - t.minute % 5).toLong())
         repeat(8 * 24 * 12) {
-            if (GoldLiquidity.inSession(t) || t.toLocalTime() == GoldLiquidity.SESSION_END.withSecond(30)) return t
+            if (GoldLiquidity.inSession(t)) return t
             t = t.plusMinutes(5)
         }
         return t

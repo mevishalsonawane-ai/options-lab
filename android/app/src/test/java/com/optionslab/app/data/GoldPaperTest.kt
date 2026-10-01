@@ -69,9 +69,10 @@ class GoldPaperTest : RobolectricTest() {
     @Test fun theStatusSaysWhenTheNextDecisionIsInUtcAndIst() {
         val mon = LocalDate.of(2026, 9, 28)
         assertEquals("11:00 UTC (16:30 IST)", GoldPaper.nextDecision(mon.atTime(10, 26)))
-        assertEquals("08:00 UTC (13:30 IST)", GoldPaper.nextDecision(mon.atTime(3, 0)))
-        assertEquals("Tue 08:00 UTC (13:30 IST)", GoldPaper.nextDecision(mon.atTime(19, 30)))
-        assertEquals("Mon 08:00 UTC (13:30 IST)", GoldPaper.nextDecision(LocalDate.of(2026, 10, 2).atTime(20, 0)))
+        assertEquals("04:00 UTC (09:30 IST)", GoldPaper.nextDecision(mon.atTime(3, 0)))
+        assertEquals("22:00 UTC (03:30 IST)", GoldPaper.nextDecision(mon.atTime(20, 30)), "the 21:00 break is skipped")
+        assertEquals("Tue 01:00 UTC (06:30 IST)", GoldPaper.nextDecision(mon.atTime(23, 30)), "not midnight")
+        assertEquals("Mon 01:00 UTC (06:30 IST)", GoldPaper.nextDecision(LocalDate.of(2026, 10, 2).atTime(20, 0)), "the weekend")
         // Armed at 10:26 (too late for the 10:00 decision): it says when it decides next, not "no entry".
         at(mon.plusDays(14).atTime(10, 26))
         runBlocking { GoldPaper.setArmed(true) }
@@ -87,7 +88,7 @@ class GoldPaperTest : RobolectricTest() {
         assertTrue(b.trades.isEmpty())
     }
 
-    @Test fun armedItBuysOnABreakAndSellsByTheCutOff() {
+    @Test fun armedItBuysOnABreakAndSellsByTheWeekendCut() {
         // The first buy signal on a candle whose next open may take an entry, after enough history.
         val (i, sig) = (60 until hours.size).asSequence().mapNotNull { i ->
             val entry = hours[i].start.plusHours(1)
@@ -106,14 +107,15 @@ class GoldPaperTest : RobolectricTest() {
         // The same candle is never decided twice.
         at(bar.start.plusMinutes(61))
         assertEquals(pos, GoldPaper.book.value.position)
-        // Pass every five minutes until it is sold; it is sold the same day at the latest.
+        // Pass every five minutes until it is sold; held overnight if need be, sold by Friday's cut-off at the latest.
         var t = bar.start.plusMinutes(65)
-        while (GoldPaper.book.value.position != null && t.toLocalDate() == bar.start.toLocalDate()) { at(t); t = t.plusMinutes(5) }
+        val cut = GoldLiquidity.weekendCut(pos.entryTime)
+        while (GoldPaper.book.value.position != null && !t.isAfter(cut.plusMinutes(5))) { at(t); t = t.plusMinutes(5) }
         val b = GoldPaper.book.value
         assertNull(b.position)
         val tr = b.trades.single()
         assertTrue(tr.why, tr.why in setOf("next_liquidity", "failed_break", "new_liquidity", "cut_off"))
-        assertFalse(tr.exitTime.toLocalTime().isAfter(GoldLiquidity.CUT_OFF.plusMinutes(5)))
+        assertFalse(tr.exitTime.isAfter(cut.plusMinutes(5)))
         assertEquals(GoldLiquidity.pnl(tr.entry, tr.exit, 0.01), tr.pnl, 1e-9)
         assertEquals(1_000.0 + tr.pnl, b.balance, 1e-9)
     }

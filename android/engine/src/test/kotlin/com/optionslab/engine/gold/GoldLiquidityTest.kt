@@ -38,30 +38,40 @@ class GoldLiquidityTest {
         return (0 until n).map { Bar(t[it], o[it], h[it], l[it], c[it]) }
     }
 
-    @Test fun onlyTheSessionsHoursMakeTheChart() {
+    @Test fun theChartIs24x5WithoutTheDailyBreakOrTheWeekend() {
+        val fri = LocalDate.of(2026, 10, 2)
         val sat = LocalDate.of(2026, 10, 3)
         val minutes = listOf(
-            Bar(monday.atTime(6, 59), 1.0, 1.0, 1.0, 1.0),                                   // before the session
+            Bar(monday.atTime(6, 59), 1.0, 1.0, 1.0, 1.0),                                   // an early hour: on the chart now
             Bar(monday.atTime(7, 0), 10.0, 12.0, 9.0, 11.0), Bar(monday.atTime(7, 30), 11.0, 15.0, 8.0, 14.0),
             Bar(monday.atTime(7, 59), 14.0, 14.0, 13.0, 13.5),
-            Bar(monday.atTime(8, 0), 13.5, 13.6, 13.4, 13.5),
-            Bar(monday.atTime(21, 0), 99.0, 99.0, 99.0, 99.0),                               // after it
-            Bar(sat.atTime(10, 0), 99.0, 99.0, 99.0, 99.0),                                  // a weekend
+            Bar(monday.atTime(21, 10), 99.0, 99.0, 99.0, 99.0),                              // the daily break
+            Bar(monday.atTime(23, 0), 5.0, 5.0, 5.0, 5.0),                                   // after it: trading again
+            Bar(fri.atTime(21, 30), 99.0, 99.0, 99.0, 99.0),                                 // Friday after the close
+            Bar(sat.atTime(10, 0), 99.0, 99.0, 99.0, 99.0),                                  // the weekend
         )
         val h = GoldLiquidity.hourly(minutes.shuffled(java.util.Random(1)))
-        assertEquals(listOf(monday.atTime(7, 0), monday.atTime(8, 0)), h.map { it.start })
-        assertEquals(Bar(monday.atTime(7, 0), 10.0, 15.0, 8.0, 13.5), h[0])
-        assertEquals(listOf(h[0]), GoldLiquidity.completed(h, monday.atTime(8, 59)))
-        assertEquals(h, GoldLiquidity.completed(h, monday.atTime(9, 0)))
-        assertTrue(GoldLiquidity.inSession(monday.atTime(20, 59)))
+        assertEquals(listOf(monday.atTime(6, 0), monday.atTime(7, 0), monday.atTime(23, 0)), h.map { it.start })
+        assertEquals(Bar(monday.atTime(7, 0), 10.0, 15.0, 8.0, 13.5), h[1])
+        assertEquals(h.take(2), GoldLiquidity.completed(h, monday.atTime(8, 0)))
+        assertTrue(GoldLiquidity.inSession(monday.atTime(3, 0)))
+        assertFalse(GoldLiquidity.inSession(monday.atTime(21, 30)))
+        assertTrue(GoldLiquidity.inSession(monday.atTime(22, 0)))
+        assertTrue(GoldLiquidity.inSession(fri.atTime(20, 59)))
+        assertFalse(GoldLiquidity.inSession(fri.atTime(22, 0)))
         assertFalse(GoldLiquidity.inSession(sat.atTime(12, 0)))
     }
 
-    @Test fun buysOnlyAndOnlyFrom0800To1900Utc() {
-        assertTrue(GoldLiquidity.mayEnterAt(monday.atTime(8, 0)))
-        assertTrue(GoldLiquidity.mayEnterAt(monday.atTime(19, 0)))
-        assertFalse(GoldLiquidity.mayEnterAt(monday.atTime(7, 0)))
-        assertFalse(GoldLiquidity.mayEnterAt(monday.atTime(20, 0)))
+    @Test fun buysOnlyAnyTradingHourButMidnightAndLateFriday() {
+        val fri = LocalDate.of(2026, 10, 2)
+        assertTrue(GoldLiquidity.mayEnterAt(monday.atTime(1, 0)))
+        assertTrue(GoldLiquidity.mayEnterAt(monday.atTime(7, 0)))
+        assertTrue(GoldLiquidity.mayEnterAt(monday.atTime(20, 0)))
+        assertTrue(GoldLiquidity.mayEnterAt(monday.atTime(23, 0)))
+        assertFalse(GoldLiquidity.mayEnterAt(monday.atTime(0, 0)))
+        assertFalse(GoldLiquidity.mayEnterAt(monday.atTime(21, 0)), "the break")
+        assertTrue(GoldLiquidity.mayEnterAt(fri.atTime(19, 0)))
+        assertFalse(GoldLiquidity.mayEnterAt(fri.atTime(20, 0)), "too near the weekend")
         assertFalse(GoldLiquidity.mayEnterAt(LocalDate.of(2026, 10, 4).atTime(10, 0)))
         // On the shared series: every buy LiquidityRules finds, and none of its sells.
         val b = wave()
@@ -69,17 +79,19 @@ class GoldLiquidityTest {
         val all = (60 until b.size).mapNotNull { i -> val s = b.subList(0, i + 1); LiquidityRules.signal(s, LiquidityRules.zones(s))?.let { i to it } }
         assertTrue(gold.isNotEmpty() && all.any { it.second.side < 0 }, "the series has buys and sells: ${all.map { it.second.side }}")
         assertEquals(all.filter { it.second.side > 0 }, gold)
-        assertTrue(gold.all { it.second.side > 0 })
         assertNull(GoldLiquidity.signal(b.take(10)), "too little history for a swing")
     }
 
-    @Test fun exitsAtTheCutOffOrAnotherDayElseTheLiquidityRules() {
+    @Test fun heldOvernightAndSoldBeforeTheWeekend() {
         val entry = monday.atTime(10, 0)
         val signal = monday.atTime(9, 0)
         val flat = listOf(Bar(monday.atTime(9, 0), 2400.0, 2401.0, 2399.0, 2400.0), Bar(monday.atTime(10, 0), 2400.0, 2401.0, 2399.0, 2400.5))
-        assertEquals("cut_off", GoldLiquidity.exitReason(2399.0, null, signal, entry, flat, emptyList(), monday.atTime(20, 40)))
-        assertEquals("cut_off", GoldLiquidity.exitReason(2399.0, null, signal, entry, flat, emptyList(), monday.plusDays(1).atTime(9, 0)))
-        assertNull(GoldLiquidity.exitReason(2399.0, null, signal, entry, flat, emptyList(), monday.atTime(11, 5)))
+        assertEquals(LocalDate.of(2026, 10, 2).atTime(20, 40), GoldLiquidity.weekendCut(entry))
+        assertNull(GoldLiquidity.exitReason(2399.0, null, signal, entry, flat, emptyList(), monday.atTime(20, 40)), "Monday evening: held")
+        assertNull(GoldLiquidity.exitReason(2399.0, null, signal, entry, flat, emptyList(), monday.plusDays(1).atTime(9, 0)), "overnight: held")
+        assertEquals("cut_off", GoldLiquidity.exitReason(2399.0, null, signal, entry, flat, emptyList(), LocalDate.of(2026, 10, 2).atTime(20, 40)))
+        assertEquals("cut_off", GoldLiquidity.exitReason(2399.0, null, signal, entry, flat, emptyList(), LocalDate.of(2026, 10, 5).atTime(1, 0)),
+            "the phone was off over the weekend")
         val touched = listOf(Bar(monday.atTime(10, 30), 2400.0, 2412.0, 2400.0, 2411.0))
         assertEquals("next_liquidity", GoldLiquidity.exitReason(2399.0, 2410.0, signal, entry, flat, touched, monday.atTime(10, 31)))
         val failed = flat + Bar(monday.atTime(11, 0), 2400.0, 2400.0, 2390.0, 2395.0)

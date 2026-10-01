@@ -17,7 +17,7 @@ import java.time.LocalDateTime
 import java.time.ZoneOffset
 
 /**
- * IraGoldAlgo's paper account and its one strategy ([GoldLiquidity], XAUUSD 1-hour liquidity, buys only). Paper only:
+ * IraGoldAlgo's paper account and its one strategy ([GoldLiquidity], XAUUSD 1-hour liquidity, buys only, 24x5). Paper only:
  * nothing here can place an order anywhere. On every signal it notifies the owner, who may act in their own broker app.
  *
  * Prices: COMEX gold futures (GC=F) 1-minute and 1-hour candles from Yahoo's public chart feed (no key, no account).
@@ -187,7 +187,7 @@ object GoldPaper {
         "next_liquidity" -> "reached the next liquidity level"
         "failed_break" -> "the break failed"
         "new_liquidity" -> "new liquidity formed above"
-        "cut_off" -> "20:40 UTC (02:10 IST) cut-off"
+        "cut_off" -> "Friday 20:40 UTC (Sat 02:10 IST) cut-off before the weekend"
         else -> why
     }
 
@@ -198,7 +198,7 @@ object GoldPaper {
     fun stale(b: Book, t: LocalDateTime = now()): Boolean =
         GoldLiquidity.inSession(t) && (b.priceAt == null || b.priceAt.isBefore(t.minusMinutes(10)))
 
-    /** The next time a candle can be decided into a buy (a candle's close inside 08:00-19:00 UTC on a weekday), UTC and IST. */
+    /** The next time a candle can be decided into a buy ([GoldLiquidity.mayEnterAt]), UTC and IST. */
     fun nextDecision(t: LocalDateTime): String {
         var h = t.withMinute(0).withSecond(0).withNano(0).plusHours(1)
         while (!GoldLiquidity.mayEnterAt(h)) h = h.plusHours(1)

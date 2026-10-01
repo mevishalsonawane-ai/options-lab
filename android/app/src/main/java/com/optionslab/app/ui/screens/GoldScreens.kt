@@ -100,7 +100,7 @@ private fun GoldHome() {
                 Text(b.price?.let { "$%,.2f".format(Locale.ENGLISH, it) } ?: "—", style = Type.figureLarge.copy(color = p.ink))
                 if (chart.size >= 2) {
                     com.optionslab.app.ui.components.Sparkline(chart, p.brass, Modifier.fillMaxWidth().height(56.dp).padding(vertical = 6.dp))
-                    Note("The last ${chart.size} one-hour candles (London + New York session).")
+                    Note("The last ${chart.size} one-hour candles.")
                 }
                 if (GoldPaper.stale(b)) LedgerLine("Price feed", "delayed: last price ${b.priceAt?.let { GoldPaper.when_(it) } ?: "none yet"}", p.oxblood)
                 else b.priceAt?.let { LedgerLine("Last price", GoldPaper.when_(it)) }
@@ -118,7 +118,7 @@ private fun GoldHome() {
         }
         item {
             LedgerCard(title = "Liquidity 1h") {
-                ToggleRow("Armed", "Buys only, 1-hour candles, London + New York: 12:30-02:30 IST (07:00-21:00 UTC). Paper: a notification on every buy and sell.",
+                ToggleRow("Armed", "Buys only, 1-hour candles, 24x5: Monday 05:30 IST to Saturday 02:30 IST, held overnight. Paper: a notification on every buy and sell.",
                     b.armed) { on -> scope.launch(Dispatchers.IO) { GoldPaper.setArmed(on) } }
                 LedgerLine("Status", b.status)
                 if (b.armed && b.position == null) LedgerLine("Next decision", GoldPaper.nextDecision(GoldPaper.now()))
@@ -129,8 +129,10 @@ private fun GoldHome() {
                     LedgerLine("Broken level", "%.2f".format(Locale.ENGLISH, pos.level))
                     LedgerLine("Target (next liquidity)", pos.target?.let { "%.2f".format(Locale.ENGLISH, it) } ?: "none above: out on the other exits")
                 }
-                Note("Buys from 13:30 to 00:30 IST. Out at the first of: the next liquidity level, a candle closing back below the broken level, " +
-                    "new liquidity above, or 02:10 IST (20:40 UTC). Backtest (three years, 1 lot): +$21.4k, 59% won, t 1.62 - a candidate, not a proven edge.")
+                Note("Buys at any trading hour (not 05:30 IST, the 02:30-03:30 IST break, or Friday after 00:30 IST). Held overnight until the first of: " +
+                    "the next liquidity level, a candle closing back below the broken level, new liquidity above, or Saturday 02:10 IST before the weekend. " +
+                    "Backtest (three years, 1 lot): +$96.8k (+$93.9k after a $40-a-night swap; XM's swap varies), 48% won, t 2.10, " +
+                    "most of it in the last year - a candidate, not a proven edge.")
             }
         }
     }
