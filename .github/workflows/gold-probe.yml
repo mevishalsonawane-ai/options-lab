@@ -1,4 +1,5 @@
 name: Gold arm probe
+# Re-run on demand: change this line. Last run 2026-10-01 (owner asked why no trade since the afternoon).
 
 # A diagnosis of IraGoldAlgo's arm on live data: Yahoo's GC=F (the app's feed) replayed through the app's rule.
 on:
