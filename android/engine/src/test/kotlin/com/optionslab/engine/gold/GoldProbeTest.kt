@@ -35,6 +35,21 @@ class GoldProbeTest {
             if (ups.any { it.broken == i }) a[0]++
             if (GoldLiquidity.signal(hours.subList(0, i + 1)) != null) { a[1]++; if (GoldLiquidity.mayEnterAt(hours[i].start.plusHours(1))) a[2]++ }
         }
+        // The last 24 candles, each with why it did or did not buy.
+        out.append("last 24 candles (UTC): close, and the decision\n")
+        for (i in maxOf(0, hours.size - 24) until hours.size) {
+            val sub = hours.subList(0, i + 1)
+            val z = com.optionslab.engine.orb.LiquidityRules.zones(sub)
+            val takenUp = z.filter { it.kind == "pool" && it.side > 0 && it.broken == i }
+            val takenDown = z.filter { it.kind == "pool" && it.side < 0 && it.broken == i }
+            val why = when {
+                GoldLiquidity.signal(sub) != null -> if (GoldLiquidity.mayEnterAt(hours[i].start.plusHours(1))) "BUY" else "buy signal, but no entry at that hour"
+                takenUp.isNotEmpty() -> "took a pool above at %.2f, but not on an active swing zone".format(takenUp.first().edge)
+                takenDown.isNotEmpty() -> "took a pool below at %.2f (a sell set-up; this app only buys)".format(takenDown.first().edge)
+                else -> "no liquidity pool taken"
+            }
+            out.append("  ${hours[i].start}  %.2f  $why\n".format(hours[i].close))
+        }
         out.append("week of     up-pools-taken  buy-signals  in-entry-hours\n")
         byWeek.forEach { (w, a) -> out.append("$w  ${a[0]}  ${a[1]}  ${a[2]}\n") }
         val from = hours.last().start.minusDays(DAYS)
