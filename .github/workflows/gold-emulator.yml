@@ -14,7 +14,7 @@ permissions:
 jobs:
   emulator:
     runs-on: ubuntu-latest
-    if: "!contains(github.event.head_commit.message, '[quick]')"   # a "[quick]" push skips it (see android.yml)
+    if: "!startsWith(github.event.head_commit.message, '[quick]')"   # a "[quick]" push skips it (see android.yml)
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4

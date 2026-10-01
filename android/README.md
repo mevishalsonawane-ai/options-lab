@@ -71,7 +71,8 @@ your own key, add repository secrets `OL_KEYSTORE_B64` (base64 of a .jks),
 `OL_KEYSTORE_PASSWORD`, `OL_KEY_ALIAS` and `OL_KEY_PASSWORD`; without them the
 release APK is signed with the debug key so it still installs.
 
-**A faster build for a quick fix:** put `[quick]` in the commit message. The engine tests still run and the signed
+**A faster build for a quick fix:** start the commit message with `[quick]` (only at the very start: a
+message that merely mentions it runs the full checks). The engine tests still run and the signed
 APKs are still published, but the app test shards, the PC harness tests, the screenshots and the gold emulator run
 are skipped, and only the release APKs are built. The next ordinary push runs everything again.
 
