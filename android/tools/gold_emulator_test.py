@@ -174,7 +174,9 @@ adb("shell", "input", "swipe", "540", "1500", "540", "700", "300")
 time.sleep(1)
 armed = texts()
 shot("03-home-armed")
-step("arming changes the status", not any(t == "Not armed" for t in armed))
+# The liquidity arm's status changes (the Trend 4h card below keeps its own "Not armed" until its switch is used).
+step("arming changes the status", any(t.startswith("Armed: waiting for the next candle") for t in armed))
+step("the trend arm is shown", "Trend 4h" in armed)
 
 # Trades.
 step("Trades opens", tap("Trades", scroll=False) and wait("Closed trades", timeout=15))

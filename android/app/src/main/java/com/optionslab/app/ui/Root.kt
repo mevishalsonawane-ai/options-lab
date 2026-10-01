@@ -648,8 +648,11 @@ internal fun Masthead(live: Boolean, calm: Boolean, linked: Boolean, onMode: (Bo
                 // The date, then the market's state: on a narrow bar (a small phone, large fonts) the state moves
                 // to a line of its own rather than being squeezed out beside the mode switch.
                 androidx.compose.foundation.layout.FlowRow(verticalArrangement = Arrangement.Center) {
-                    Text(now.format(DateTimeFormatter.ofPattern("EEE d MMM, HH:mm", Locale.ENGLISH)) + "  ·  ",
+                    // The date and the separator are separate items, so a long date ("Fri 2 Oct, 00:24") never has to
+                    // fit with the separator in the first line's width (it was cut off at 1.3x fonts on small phones).
+                    Text(now.format(DateTimeFormatter.ofPattern("EEE d MMM, HH:mm", Locale.ENGLISH)), maxLines = 1,
                         style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp), modifier = Modifier.align(Alignment.CenterVertically))
+                    Text("  ·  ", maxLines = 1, style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp), modifier = Modifier.align(Alignment.CenterVertically))
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.align(Alignment.CenterVertically)) {
                         StatusDot(if (open) p.verdigris else p.inkFaint, pulsing = open && !calm, modifier = Modifier.size(6.dp))
                         Spacer(Modifier.width(4.dp))
