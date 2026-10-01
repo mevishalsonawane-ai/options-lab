@@ -308,6 +308,8 @@ abstract class TradeLayoutBase(device: DeviceConfig) : TradeScreenBase(device) {
     protected fun liveGttDialog() {
         live(sym to 75)
         showLive()
+        // As Modify above: the button may still be settling into its merged row on the first frame.
+        compose.waitUntil(5_000) { exists("Protect (GTT)") }
         paused {
             compose.onNodeWithText("Protect (GTT)").performClick(); frames()
             snap("trade-live-gtt", known())
