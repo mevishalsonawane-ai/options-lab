@@ -589,6 +589,8 @@ class ControlPagesTest {
         compose.waitForText("Delete harvested data?")
         tap("Keep")
         compose.waitForNoText("Delete harvested data?")
+        // The closing dialog can still hold the button's words for a frame: wait for the page's one button alone.
+        compose.waitUntil(5_000) { compose.onAllNodesWithText("Delete this phone's harvested data").fetchSemanticsNodes().size == 1 }
         tap("Delete this phone's harvested data")
         compose.waitForText("Delete harvested data?")
         tap("Delete")

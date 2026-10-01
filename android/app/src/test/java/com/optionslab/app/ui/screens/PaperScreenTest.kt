@@ -567,7 +567,7 @@ class PaperScreenTest {
 
     @Test fun emptyBooksSayTheyAreEmpty() {
         show()
-        assertTrue(exists("No paper positions."))
+        compose.waitUntil(5_000) { exists("No paper positions.") }
         tap("Orders"); compose.waitUntil(5_000) { exists("No paper orders this session.") }
         compose.onNodeWithText("Orders").assertIsSelected()
         tap("Trades"); compose.waitUntil(5_000) { exists("No paper trades this session.") }
