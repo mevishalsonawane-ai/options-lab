@@ -137,7 +137,7 @@ class GoldScreensTest {
         assertTrue(compose.has("This month · 2 trades · 50% won"))
         assertTrue(compose.has("All · 3 trades · 67% won"))
         assertTrue(compose.has("+$24.79"))
-        assertTrue(compose.has("reached the next liquidity level", substring = true))
+        assertTrue(compose.has("reached its target liquidity level", substring = true))
         assertTrue(compose.has("the break failed", substring = true))
         assertTrue(compose.has("cut-off before the weekend", substring = true))
         // Three trades: the balance curve, best, worst and the deepest drawdown (+19.93, -5.07, +9.93 in time order).

@@ -158,7 +158,7 @@ object GoldPaper {
             lastSignal = "${when_(bar.start)}: broke %.2f, bought at %.2f".format(java.util.Locale.ENGLISH, s.level, px)))
         notify("BUY XAUUSD now (paper): liquidity break",
             ("The ${when_(bar.start)} 1-hour candle took a liquidity pool above %.2f. Paper bought %.2f lot at %.2f" +
-                (s.target?.let { ", target the next level %.2f".format(java.util.Locale.ENGLISH, it) } ?: "") +
+                (s.target?.let { ", target %.2f (the second level up)".format(java.util.Locale.ENGLISH, it) } ?: "") +
                 ". Futures price: XM's XAUUSD sits a few dollars lower.").format(java.util.Locale.ENGLISH, s.level, b.lots, px), Notifier.BUY)
         return "Bought at %.2f".format(java.util.Locale.ENGLISH, px)
     }
@@ -207,7 +207,7 @@ object GoldPaper {
     // ---- helpers -------------------------------------------------------------------
 
     fun label(why: String): String = when (why) {
-        "next_liquidity" -> "reached the next liquidity level"
+        "next_liquidity" -> "reached its target liquidity level"
         "failed_break" -> "the break failed"
         "new_liquidity" -> "new liquidity formed above"
         "cut_off" -> "Friday 20:40 UTC (Sat 02:10 IST) cut-off before the weekend"

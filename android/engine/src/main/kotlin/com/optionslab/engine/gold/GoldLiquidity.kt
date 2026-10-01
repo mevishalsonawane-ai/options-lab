@@ -15,10 +15,13 @@ import java.time.temporal.ChronoUnit
  *
  *   chart     every 1-hour candle Monday to Friday (UTC), continuous across days; gold's daily break (21:00-22:00
  *             UTC) and the weekend have no candles
- *   levels    LiquidityRules' swing zones (lookback 20) and pools (2 contacts, 5 apart, 10 confirmation)
+ *   levels    LiquidityRules' swing zones (lookback 20) and pools (2 contacts, 5 apart, 15 confirmation - 10 on the
+ *             indices; research/GOLD_1H_PLUS.md)
  *   entry     a completed candle takes a POOL overlapping an active SWING zone above it: BUY at the next candle's open,
  *             any hour but 00:00 and the 21:00 break, not after 19:00 on Friday; a break downwards is ignored
- *   exits     the first of: the price touches the next liquidity level above (target); a candle closes back below the
+ *   exits     the first of: the price touches the second liquidity level above (target; the first if there is only
+ *             one - research/GOLD_1H_PLUS.md: with confirmation 15, three years +$119.5k a lot, t 3.09, drawdown -7.3k,
+ *             better than the old rule in the two fitting years and the held-out one); a candle closes back below the
  *             broken level (failed break); a new level forms above (new liquidity); Friday 20:40 UTC, before the
  *             weekend (cut-off). A buy is held overnight until one of those.
  *   costs     buys at mid + half the spread, sells at mid - half the spread (a 0.30 spread), $7 a lot round trip
@@ -65,10 +68,26 @@ object GoldLiquidity {
     fun weekendCut(entry: LocalDateTime): LocalDateTime =
         entry.toLocalDate().with(java.time.temporal.TemporalAdjusters.nextOrSame(DayOfWeek.FRIDAY)).atTime(CUT_OFF)
 
-    /** The buy on the last completed candle, or null (no signal, or a break downwards: no short sales). */
-    fun signal(completed: List<Bar>): LiquidityRules.Signal? =
-        if (completed.size < 2 * LiquidityRules.SWING_LOOKBACK + 2) null
-        else LiquidityRules.signal(completed, LiquidityRules.zones(completed))?.takeIf { it.side > 0 }
+    /** Pools need 15 bars of confirmation on gold's 1-hour chart (10 on the indices). */
+    const val POOL_CONFIRM = 15
+
+    /** Gold's levels: the indices' swing zones, pools confirmed over [POOL_CONFIRM] candles. */
+    fun zones(bars: List<Bar>): List<LiquidityRules.Zone> =
+        LiquidityRules.swingZones(bars) + LiquidityRules.poolZones(bars, confirm = POOL_CONFIRM)
+
+    /**
+     * The buy on the last completed candle, or null (no signal, or a break downwards: no short sales). Its target is the
+     * second liquidity level above the close (the first when there is only one).
+     */
+    fun signal(completed: List<Bar>): LiquidityRules.Signal? {
+        if (completed.size < 2 * LiquidityRules.SWING_LOOKBACK + 2) return null
+        val zones = zones(completed)
+        val s = LiquidityRules.signal(completed, zones)?.takeIf { it.side > 0 } ?: return null
+        val i = completed.lastIndex
+        val close = completed[i].close
+        val ahead = zones.filter { q -> q.side > 0 && q.known <= i && (q.broken < 0 || q.broken > i) && q.edge > close }.map { it.edge }.sorted()
+        return s.copy(target = ahead.getOrNull(1) ?: ahead.firstOrNull())
+    }
 
     fun buyPrice(mid: Double) = mid + SPREAD / 2
     fun sellPrice(mid: Double) = mid - SPREAD / 2
@@ -81,7 +100,7 @@ object GoldLiquidity {
     fun exitReason(level: Double, target: Double?, signalBar: LocalDateTime, entryTime: LocalDateTime, completed: List<Bar>,
                    since: List<Bar>, now: LocalDateTime): String? {
         if (!now.isBefore(weekendCut(entryTime))) return "cut_off"
-        return LiquidityRules.exitReason(1, level, target, signalBar, completed, LiquidityRules.zones(completed), since)
+        return LiquidityRules.exitReason(1, level, target, signalBar, completed, zones(completed), since)
     }
 
     /** The price a buy is sold at for [why]: the target itself (less half the spread) when it was touched, else the bid. */

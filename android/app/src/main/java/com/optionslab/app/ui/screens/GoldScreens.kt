@@ -157,12 +157,12 @@ private fun GoldHome() {
                     Rule(Modifier.padding(vertical = 6.dp))
                     LedgerLine("Bought", "%.2f at %s".format(Locale.ENGLISH, pos.entry, GoldPaper.when_(pos.entryTime)))
                     LedgerLine("Broken level", "%.2f".format(Locale.ENGLISH, pos.level))
-                    LedgerLine("Target (next liquidity)", pos.target?.let { "%.2f".format(Locale.ENGLISH, it) } ?: "none above: out on the other exits")
+                    LedgerLine("Target (2nd level up)", pos.target?.let { "%.2f".format(Locale.ENGLISH, it) } ?: "none above: out on the other exits")
                 }
                 Note("Each candle is decided about 10 minutes after it closes: the gold price feed (COMEX, via Yahoo) runs 10 minutes late.")
                 Note("Buys at any trading hour (not 05:30 IST, the 02:30-03:30 IST break, or Friday after 00:30 IST). Held overnight until the first of: " +
-                    "the next liquidity level, a candle closing back below the broken level, new liquidity above, or Saturday 02:10 IST before the weekend. " +
-                    "Backtest (three years, 1 lot): +$96.8k (+$93.9k after a $40-a-night swap; XM's swap varies), 48% won, t 2.10, " +
+                    "the second liquidity level above, a candle closing back below the broken level, new liquidity above, or Saturday 02:10 IST before the weekend. " +
+                    "Backtest (three years, 1 lot): +$119.5k before swap (XM's overnight swap varies), 46% won, t 3.09, deepest drawdown -$7.3k, " +
                     "most of it in the last year - a candidate, not a proven edge.")
             }
         }

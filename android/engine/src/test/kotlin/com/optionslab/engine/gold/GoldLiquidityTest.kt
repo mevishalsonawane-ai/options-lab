@@ -76,9 +76,15 @@ class GoldLiquidityTest {
         // On the shared series: every buy LiquidityRules finds, and none of its sells.
         val b = wave()
         val gold = (60 until b.size).mapNotNull { i -> GoldLiquidity.signal(b.subList(0, i + 1))?.let { i to it } }
-        val all = (60 until b.size).mapNotNull { i -> val s = b.subList(0, i + 1); LiquidityRules.signal(s, LiquidityRules.zones(s))?.let { i to it } }
+        val all = (60 until b.size).mapNotNull { i -> val s = b.subList(0, i + 1); LiquidityRules.signal(s, GoldLiquidity.zones(s))?.let { i to it } }
         assertTrue(gold.isNotEmpty() && all.any { it.second.side < 0 }, "the series has buys and sells: ${all.map { it.second.side }}")
-        assertEquals(all.filter { it.second.side > 0 }, gold)
+        // The same buys at the same levels; the target is the second level up (never nearer than the first).
+        assertEquals(all.filter { it.second.side > 0 }.map { it.first to it.second.level }, gold.map { it.first to it.second.level })
+        all.filter { it.second.side > 0 }.zip(gold).forEach { (first, second) ->
+            val near = first.second.target
+            if (near != null) assertTrue(second.second.target!! >= near, "target ${second.second.target} is past the first level $near")
+            else assertNull(second.second.target)
+        }
         assertNull(GoldLiquidity.signal(b.take(10)), "too little history for a swing")
     }
 
