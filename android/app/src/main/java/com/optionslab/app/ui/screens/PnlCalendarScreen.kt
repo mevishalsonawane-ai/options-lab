@@ -559,9 +559,9 @@ private fun StrategyComparison(trips: List<com.optionslab.engine.RoundTrips.Trip
         groups.forEach { (name, st) ->
             Row(Modifier.fillMaxWidth().padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text(name, style = Type.bodySmall.copy(color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 12.sp), modifier = Modifier.weight(1.6f), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text("${st.trips}", style = Type.figure.copy(fontSize = 11.sp), modifier = Modifier.weight(0.8f), textAlign = TextAlign.End)
-                Text("${Math.round(100 * st.winRate)}%", style = Type.figure.copy(fontSize = 11.sp), modifier = Modifier.weight(0.8f), textAlign = TextAlign.End)
-                Text(st.profitFactor?.let { String.format(Locale.ENGLISH, "%.2f", it) } ?: "∞", style = Type.figure.copy(fontSize = 11.sp), modifier = Modifier.weight(0.8f), textAlign = TextAlign.End)
+                Text("${st.trips}", style = Type.figure.copy(color = p.ink, fontSize = 11.sp), modifier = Modifier.weight(0.8f), textAlign = TextAlign.End)
+                Text("${Math.round(100 * st.winRate)}%", style = Type.figure.copy(color = p.ink, fontSize = 11.sp), modifier = Modifier.weight(0.8f), textAlign = TextAlign.End)
+                Text(st.profitFactor?.let { String.format(Locale.ENGLISH, "%.2f", it) } ?: "∞", style = Type.figure.copy(color = p.ink, fontSize = 11.sp), modifier = Modifier.weight(0.8f), textAlign = TextAlign.End)
                 Text(short(st.net), style = Type.figure.copy(fontSize = 11.sp, color = if (st.net >= 0) p.verdigris else p.oxblood, fontWeight = FontWeight.SemiBold),
                     modifier = Modifier.weight(1.2f), textAlign = TextAlign.End)
             }
@@ -586,7 +586,7 @@ private fun ChargesCard(live: Boolean, month: YearMonth, tick: Int) {
         lines.forEach { (k, v) ->
             Row(Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
                 Text(k, style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp), modifier = Modifier.weight(1f))
-                Text(String.format(Locale.ENGLISH, "₹%,.2f", v), style = Type.figure.copy(fontSize = 12.sp))
+                Text(String.format(Locale.ENGLISH, "₹%,.2f", v), style = Type.figure.copy(color = p.ink, fontSize = 12.sp))
             }
         }
         Note(if (live) "Zerodha: estimated with the F&O schedule from the trades IraAlgo recorded; your contract note is the final word."

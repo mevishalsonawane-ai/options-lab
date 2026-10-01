@@ -106,6 +106,10 @@ fun IraAlgoTheme(mode: String, content: @Composable () -> Unit) {
         surfaceVariant = p.chip, onSurfaceVariant = p.inkSoft, outline = p.rule,
     )
     CompositionLocalProvider(LocalPalette provides p) {
-        MaterialTheme(colorScheme = scheme, content = content)
+        // Text given no colour takes the theme's ink, not Material's black default (unreadable on the dark theme:
+        // the P&L page's charges and strategy figures were black on black). Material components still set their own.
+        MaterialTheme(colorScheme = scheme) {
+            CompositionLocalProvider(androidx.compose.material3.LocalContentColor provides p.ink, content = content)
+        }
     }
 }
