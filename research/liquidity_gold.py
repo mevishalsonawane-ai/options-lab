@@ -84,7 +84,7 @@ def bars(days, tf):
     return pd.DataFrame(rows, columns=["di", "s", "e", "open", "high", "low", "close"])
 
 
-def simulate(days, b, zones, first, last, cut):
+def simulate(days, b, zones, first, last, cut, carry=False):
     DI, S, E, C = b.di.values, b.s.values, b.e.values, b.close.values
     breaks, known = {}, {}
     for z in zones:
@@ -97,9 +97,9 @@ def simulate(days, b, zones, first, last, cut):
         d = days[DI[i]]
         if pos is not None:
             sg = pos["sign"]
-            why, px = None, None
-            for m in range(max(S[i], pos["m"]), E[i]):
-                if m >= cut:
+            why, px, m = None, None, None
+            for m in range(max(S[i], pos["m"]) if DI[i] == pos["di"] else S[i], E[i]):
+                if m >= cut and not carry:
                     why, px = "cut-off", d["bclose" if sg > 0 else "aclose"][m]
                     break
                 if pos["target"] is not None and ((sg > 0 and d["mhigh"][m] >= pos["target"]) or (sg < 0 and d["mlow"][m] <= pos["target"])):
@@ -110,10 +110,12 @@ def simulate(days, b, zones, first, last, cut):
                 why, px = "failed break", d["bclose" if sg > 0 else "aclose"][E[i] - 1]
             if why is None and any(z.side == sg for z in known.get(i, [])):
                 why, px = "new liquidity", d["bclose" if sg > 0 else "aclose"][E[i] - 1]
-            if why is None and (i + 1 >= len(b) or DI[i + 1] != DI[i]):
+            if why is None and (i + 1 >= len(b) or (DI[i + 1] != DI[i] and not carry)):
                 why, px = "cut-off", d["bclose" if sg > 0 else "aclose"][E[i] - 1]
             if why:
-                trades.append(dict(day=pos["day"], sign=sg, why=why, usd=sg * (px - pos["px"]) - COMM))
+                xm = m if why in ("cut-off", "next liquidity") and m is not None and m < E[i] else E[i] - 1
+                trades.append(dict(day=pos["day"], sign=sg, why=why, usd=sg * (px - pos["px"]) - COMM,
+                                   held=xm - pos["m"] + d["n"] * (DI[i] - pos["di"])))
                 pos = None
         if pos is not None or i + 1 >= len(b) or DI[i + 1] != DI[i]:
             continue
@@ -131,7 +133,7 @@ def simulate(days, b, zones, first, last, cut):
         mid = d["mopen"][m]
         ahead = [q.edge for q in zones if q.side == sg and q.known <= i and (q.broken < 0 or q.broken > i) and sg * (q.edge - mid) > 0]
         target = (min(ahead) if sg > 0 else max(ahead)) if ahead else None
-        pos = dict(day=d["day"], sign=sg, m=m, px=px, level=z.edge, target=target)
+        pos = dict(day=d["day"], di=DI[i], sign=sg, m=m, px=px, level=z.edge, target=target)
     return pd.DataFrame(trades)
 
 
