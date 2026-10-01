@@ -23,6 +23,20 @@ class GoldProbeTest {
         out.append("raw ${raw.size} bars ${raw.first().start} .. ${raw.last().start}; hourly ${hours.size}\n")
         val offHour = raw.count { it.start.minute != 0 }
         out.append("bars not on the hour: $offHour\n")
+        // Over the whole chart: the rule's raw ingredients by week (upward pools taken, of those on an active swing zone).
+        val zones = com.optionslab.engine.orb.LiquidityRules.zones(hours)
+        val ups = zones.filter { it.kind == "pool" && it.side > 0 && it.broken >= 0 }
+        val swings = zones.filter { it.kind == "swing" && it.side > 0 }
+        out.append("zones: ${zones.count { it.kind == "swing" }} swing (${swings.size} up), ${zones.count { it.kind == "pool" }} pool (${zones.count { it.kind == "pool" && it.side > 0 }} up); up pools taken ${ups.size}\n")
+        val byWeek = sortedMapOf<String, IntArray>()
+        for (i in 2 * com.optionslab.engine.orb.LiquidityRules.SWING_LOOKBACK + 2 until hours.size) {
+            val wk = hours[i].start.toLocalDate().with(java.time.DayOfWeek.MONDAY).toString()
+            val a = byWeek.getOrPut(wk) { IntArray(3) }
+            if (ups.any { it.broken == i }) a[0]++
+            if (GoldLiquidity.signal(hours.subList(0, i + 1)) != null) { a[1]++; if (GoldLiquidity.mayEnterAt(hours[i].start.plusHours(1))) a[2]++ }
+        }
+        out.append("week of     up-pools-taken  buy-signals  in-entry-hours\n")
+        byWeek.forEach { (w, a) -> out.append("$w  ${a[0]}  ${a[1]}  ${a[2]}\n") }
         val from = hours.last().start.minusDays(DAYS)
         var pos: Triple<Int, Double, LiquidityRulesSignal>? = null
         var signals = 0; var blocked = 0
