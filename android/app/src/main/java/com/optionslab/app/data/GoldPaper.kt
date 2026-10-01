@@ -82,7 +82,7 @@ object GoldPaper {
 
     // ---- the owner's switches ---------------------------------------------------
 
-    suspend fun setArmed(on: Boolean) = edit { it.copy(armed = on, status = if (on) "Armed: waiting for the next 1-hour candle" else "Not armed") }
+    suspend fun setArmed(on: Boolean) = edit { it.copy(armed = on, status = if (on) "Armed: next decision at ${nextDecision(now())}" else "Not armed") }
 
     suspend fun setLots(lots: Double) = edit { it.copy(lots = lots) }
 
@@ -127,9 +127,11 @@ object GoldPaper {
         if (!GoldLiquidity.weekday(t)) return "Weekend: gold is closed"
         val bar = hourly.lastOrNull() ?: return "Loading the 1-hour candles"
         val entryAt = bar.start.plusMinutes(GoldLiquidity.MINUTES.toLong())
-        if (b.decided == bar.start.toString()) return if (GoldLiquidity.inSession(t)) "Armed: waiting for the next 1-hour candle" else "Outside 07:00-21:00 UTC"
+        if (b.decided == bar.start.toString()) return "Armed: next decision at ${nextDecision(t)}"
         save(b.copy(decided = bar.start.toString()))
-        if (!GoldLiquidity.mayEnterAt(entryAt) || t.isAfter(entryAt.plusMinutes(20))) return "No entry now (entries 08:00-19:00 UTC)"
+        // Armed after a candle's decision time, or a candle whose buy would start outside 08:00-19:00 UTC: say when the
+        // next decision is (UTC and IST), not "no entry", which read as if the hours were wrong.
+        if (!GoldLiquidity.mayEnterAt(entryAt) || t.isAfter(entryAt.plusMinutes(20))) return "Armed: next decision at ${nextDecision(t)}"
         val s = GoldLiquidity.signal(hourly) ?: return "No liquidity break on the ${hhmm(bar.start)} candle"
         val mid = last?.close ?: return "No price to buy at"
         val px = GoldLiquidity.buyPrice(mid)
@@ -181,6 +183,15 @@ object GoldPaper {
         "new_liquidity" -> "new liquidity formed above"
         "cut_off" -> "20:40 UTC cut-off"
         else -> why
+    }
+
+    /** The next time a candle can be decided into a buy (a candle's close inside 08:00-19:00 UTC on a weekday), UTC and IST. */
+    fun nextDecision(t: LocalDateTime): String {
+        var h = t.withMinute(0).withSecond(0).withNano(0).plusHours(1)
+        while (!GoldLiquidity.mayEnterAt(h)) h = h.plusHours(1)
+        val ist = h.plusMinutes(330)
+        val day = if (h.toLocalDate() == t.toLocalDate()) "" else "${h.dayOfWeek.getDisplayName(java.time.format.TextStyle.SHORT, java.util.Locale.ENGLISH)} "
+        return "$day${hhmm(h)} UTC (${hhmm(ist)} IST)"
     }
 
     fun usd(x: Double): String = (if (x < 0) "-$" else "+$") + "%,.2f".format(java.util.Locale.ENGLISH, kotlin.math.abs(x))

@@ -66,6 +66,19 @@ class GoldPaperTest : RobolectricTest() {
         assertEquals(4186.2, b[1].close, 1e-9)
     }
 
+    @Test fun theStatusSaysWhenTheNextDecisionIsInUtcAndIst() {
+        val mon = LocalDate.of(2026, 9, 28)
+        assertEquals("11:00 UTC (16:30 IST)", GoldPaper.nextDecision(mon.atTime(10, 26)))
+        assertEquals("08:00 UTC (13:30 IST)", GoldPaper.nextDecision(mon.atTime(3, 0)))
+        assertEquals("Tue 08:00 UTC (13:30 IST)", GoldPaper.nextDecision(mon.atTime(19, 30)))
+        assertEquals("Mon 08:00 UTC (13:30 IST)", GoldPaper.nextDecision(LocalDate.of(2026, 10, 2).atTime(20, 0)))
+        // Armed at 10:26 (too late for the 10:00 decision): it says when it decides next, not "no entry".
+        at(mon.plusDays(14).atTime(10, 26))
+        runBlocking { GoldPaper.setArmed(true) }
+        at(mon.plusDays(14).atTime(10, 27))
+        assertEquals("Armed: next decision at 11:00 UTC (16:30 IST)", GoldPaper.book.value.status)
+    }
+
     @Test fun unarmedItOnlyFollowsThePrice() {
         at(monday.plusDays(14).atTime(12, 0, 30))
         val b = GoldPaper.book.value
