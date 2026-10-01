@@ -44,9 +44,10 @@ def bars(days, tf):
     return pd.DataFrame(rows, columns=["di", "s", "e", "open", "high", "low", "close"])
 
 
-def simulate(days, b, zones, source, stop, carry=False, prem_stop=None, lock_ref=None):
+def simulate(days, b, zones, source, stop, carry=False, prem_stop=None, lock_ref=None, prem_target=None, abs_stop=None):
     """lock_ref: the profit-lock ladder (25% of the way -> price paid, 50% -> +25%, 75% -> +50%) against a reference
-    target of lock_ref x the premium paid; a rung counts from the next minute. None: no ladder (as before)."""
+    target of lock_ref x the premium paid; a rung counts from the next minute. None: no ladder (as before).
+    prem_target: a fixed premium target in points (sold at price paid + it); with it the ladder measures that target."""
     DI, S, E, C = b.di.values, b.s.values, b.e.values, b.close.values
     # events by bar: breaks (zone, bar) and new zones known at a bar
     breaks, known = {}, {}
@@ -69,12 +70,18 @@ def simulate(days, b, zones, source, stop, carry=False, prem_stop=None, lock_ref
                 if prem_stop and pos["key"] is not None and d["chain"][pos["key"]]["low"][m] <= pos["px"] * (1 - prem_stop):
                     why, xm = "premium stop", m
                     break
-                if lock_ref and pos["key"] is not None:
+                if abs_stop and pos["key"] is not None and d["chain"][pos["key"]]["low"][m] <= pos["px"] - abs_stop:
+                    why, xm = "points stop", m
+                    break
+                if prem_target and pos["key"] is not None and d["chain"][pos["key"]]["high"][m] >= pos["px"] + prem_target:
+                    why, xm = "premium target", m
+                    break
+                if (lock_ref or prem_target) and pos["key"] is not None and lock_ref is not False:
                     opt = d["chain"][pos["key"]]
                     if pos.get("lock") is not None and opt["low"][m] <= pos["lock"]:
                         why, xm = "profit lock", m
                         break
-                    tg = pos["px"] * lock_ref
+                    tg = prem_target if prem_target else pos["px"] * lock_ref
                     for reached, keep in ((0.25, 0.0), (0.50, 0.25), (0.75, 0.50)):
                         if opt["high"][m] >= pos["px"] + reached * tg:
                             lvl = pos["px"] + keep * tg
@@ -98,6 +105,10 @@ def simulate(days, b, zones, source, stop, carry=False, prem_stop=None, lock_ref
                 opt = d["chain"][pos["key"]]["close"][xm] if pos["key"] is not None else np.nan
                 if why == "premium stop":
                     opt = min(opt, pos["px"] * (1 - prem_stop))        # the resting stop's level (or worse if it gapped)
+                if why == "points stop":
+                    opt = min(opt, pos["px"] - abs_stop)
+                if why == "premium target":
+                    opt = pos["px"] + prem_target
                 if why == "profit lock":
                     opt = min(opt, pos["lock"])                         # sold at the lock (or worse if it gapped)
                 trades.append(dict(day=pos["day"], sign=sg, why=why, pts=sg * (ix - pos["ix"]),
