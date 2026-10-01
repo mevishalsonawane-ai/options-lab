@@ -310,7 +310,7 @@ object OrbArms {
                 (if (automatic) "fully automatic" else "you approve each entry") + ": on the 15-minute and the 5-minute BANKNIFTY and FINNIFTY charts, " +
                 "when a close takes a liquidity pool that sits on a swing zone, it buys the ATM call (up) or put (down), 1 lot, with a stop " +
                 "15% below the price paid, and sells at the next liquidity level, when new liquidity forms, when the break fails, or at " +
-                "15:10. Entries 09:20-14:30, one position per chart."
+                "15:10. Entries 09:20-14:00, one position per chart."
             else "${LiquidityRules.ARM.label} disarmed." + if (holding) " Its open position is still managed to its exit." else ""
         }
         val paperOnly = armOf(source).paperOnly
@@ -1197,7 +1197,7 @@ object OrbArms {
         s == "not_a_fresh_break" -> "Last bar continued an earlier break; ORB Fresh waits for a fresh one."
         s == "waiting_for_fresh_break_after_pause" -> "Armed or restarted while the price was already out of the range: this bar is not chased; the next bar out of the range is taken."
         s == "cooling_down_after_exit" -> "Just exited; may re-enter from the next bar."
-        s == "no_decision_bar" -> "No decision bars now (entries only 10:05-14:25)."
+        s == "no_decision_bar" -> "No decision bars now (entries 10:05-13:55; ORB Sweep to 14:25)."
         s == "flat_after_square_off" -> "Done for the day (square-off 15:10)."
         s == "stopped_for_today" -> "Stopped for today by you."
         s == "awaiting_approval" -> if (liveNow()) "Breakout: waiting for your approval with PIN (live)." else "Breakout: waiting for your approval."
@@ -1206,7 +1206,7 @@ object OrbArms {
         s == "no_index_data" -> "No BANKNIFTY bars yet."
         s == "no_liquidity_break" -> "Waiting for a close through a liquidity pool that sits on a swing zone."
         s == "liquidity_history_loading" -> "Loading the last days' BANKNIFTY candles for the liquidity levels."
-        s == "liquidity_outside_entry_hours" -> "No new entries now (liquidity entries 09:20-14:30)."
+        s == "liquidity_outside_entry_hours" -> "No new entries now (liquidity entries 09:20-14:00)."
         s.startsWith("guard_refused: ") -> "Refused by Bot settings: " + s.removePrefix("guard_refused: ")
         s.startsWith("refused: ") -> "Refused: " + s.removePrefix("refused: ")
         s.startsWith("order_refused: ") -> "The order was refused: " + s.removePrefix("order_refused: ")

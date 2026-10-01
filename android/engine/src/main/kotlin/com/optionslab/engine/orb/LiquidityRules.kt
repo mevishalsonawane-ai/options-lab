@@ -14,7 +14,7 @@ import java.time.LocalTime
  *             10 bars; a close through it before that discards it
  *   taken     a close beyond a level's outer edge (above a high's top, below a low's bottom)
  *   entry     the last completed bar takes a POOL that overlaps a still-active SWING zone of the same side (both
- *             tools agree): above -> BUY the ATM CE, below -> BUY the ATM PE, at the next bar's open, 09:20-14:30
+ *             tools agree): above -> BUY the ATM CE, below -> BUY the ATM PE, at the next bar's open, 09:20-14:00
  *   exits     the first of: the option falls 15% below the price paid (a resting stop, the owner's 2026-10-01 choice);
  *             the index trades 30 points (FINNIFTY 15) back through the broken level (index stop); not +5% after 20 minutes
  *             (time stop);
@@ -52,7 +52,8 @@ object LiquidityRules {
     const val MAX_AGE = 300
     val SESSION_OPEN: LocalTime = LocalTime.of(9, 15)
     val FIRST_ENTRY: LocalTime = LocalTime.of(9, 20)
-    val LAST_ENTRY: LocalTime = LocalTime.of(14, 30)
+    /** 14:00 (was 14:30): better in both years tested (research/ENTRY_CUTOFF.md). */
+    val LAST_ENTRY: LocalTime = LocalTime.of(14, 0)
 
     /** The owner's stop: 15% of the premium paid (a resting SL-M sell at 85% of the fill). */
     const val PREMIUM_STOP = 0.15

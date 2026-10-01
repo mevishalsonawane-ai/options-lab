@@ -25,7 +25,8 @@ data class Arm(val source: String, val label: String, val freshOnly: Boolean = f
  *
  *   range     high/low of the bars labelled 09:15 .. 10:00 (exists once 10:00 has closed)
  *   strike    ATM from the first completed bar at or after 09:20, half-up to 100, held all day
- *   decide    completed bars labelled after 10:00 and before 14:30
+ *   decide    completed bars labelled after 10:00 and before 14:00 (entries by 14:00; research/ENTRY_CUTOFF.md: better
+ *             than 14:30 in both years for ORB, about even for ORB Fresh)
  *   entry     close above the range buys the CE, below buys the PE
  *   exits     -40 / +40 premium points, 15:10 square-off
  */
@@ -41,7 +42,9 @@ object OrbRules {
     const val TICK = 0.05
     val OR_START: LocalTime = LocalTime.of(9, 15)
     val OR_END: LocalTime = LocalTime.of(10, 0)
-    val LAST_ENTRY_BAR: LocalTime = LocalTime.of(14, 30)
+    val LAST_ENTRY_BAR: LocalTime = LocalTime.of(14, 0)
+    /** ORB Sweep keeps the 14:30 window: an earlier last entry made it worse (research/ENTRY_CUTOFF.md). */
+    val SWEEP_LAST_ENTRY_BAR: LocalTime = LocalTime.of(14, 30)
     val STRIKE_BAR: LocalTime = LocalTime.of(9, 20)
     val SQUARE_OFF: LocalTime = LocalTime.of(15, 10)
     val WINDOW_FROM: LocalTime = LocalTime.of(9, 20)
@@ -65,7 +68,7 @@ object OrbRules {
         else -> 0
     }
 
-    fun mayDecide(bar: Bar): Boolean { val t = bar.start.toLocalTime(); return t.isAfter(OR_END) && t.isBefore(LAST_ENTRY_BAR) }
+    fun mayDecide(bar: Bar, until: LocalTime = LAST_ENTRY_BAR): Boolean { val t = bar.start.toLocalTime(); return t.isAfter(OR_END) && t.isBefore(until) }
 
     /** (+1 CE / -1 PE / 0, why) on the last completed bar of [bars]. */
     /**

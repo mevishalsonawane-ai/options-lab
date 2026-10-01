@@ -48,8 +48,12 @@ class OrbRulesTest {
     }
 
     @Test fun lastDecisionBarIs1425() {
-        assertTrue(OrbRules.mayDecide(bar(14, 25, 1.0)))
-        assertTrue(!OrbRules.mayDecide(bar(14, 30, 1.0)))
+        // The ORB decides on bars before 14:00 (entries by 14:00); ORB Sweep keeps its 14:30 window.
+        assertTrue(OrbRules.mayDecide(bar(13, 55, 1.0)))
+        assertTrue(!OrbRules.mayDecide(bar(14, 0, 1.0)))
+        assertTrue(!OrbRules.mayDecide(bar(14, 25, 1.0)))
+        assertTrue(OrbRules.mayDecide(bar(14, 25, 1.0), OrbRules.SWEEP_LAST_ENTRY_BAR))
+        assertTrue(!OrbRules.mayDecide(bar(14, 30, 1.0), OrbRules.SWEEP_LAST_ENTRY_BAR))
         assertTrue(!OrbRules.mayDecide(bar(10, 0, 1.0)))
         assertTrue(OrbRules.mayDecide(bar(10, 5, 1.0)))
     }

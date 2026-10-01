@@ -16,10 +16,14 @@ on:
 permissions:
   contents: read
 
+# A push whose commit message holds "[quick]" gets its APK sooner: the engine tests still gate the build and the APK
+# is still published, but the app test shards, the PC harness tests and the screenshots are skipped, and only the
+# release APKs are built. The next ordinary push runs everything again.
 jobs:
   python:
     name: PC harness tests
     runs-on: ubuntu-latest
+    if: "!contains(github.event.head_commit.message, '[quick]')"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -112,7 +116,12 @@ jobs:
       - name: Assemble
         # The keystore step puts the cleaned passwords and alias in the environment (masked in the log).
         # The app's unit and UI tests run in the app-tests job, alongside this one.
-        run: ./gradlew --no-daemon :app:assembleIraDebug :app:assembleRelease
+        # A "[quick]" push builds only the release APKs (the ones published).
+        env:
+          QUICK: ${{ contains(github.event.head_commit.message, '[quick]') }}
+        run: |
+          if [ "$QUICK" = "true" ]; then ./gradlew --no-daemon :app:assembleRelease
+          else ./gradlew --no-daemon :app:assembleIraDebug :app:assembleRelease; fi
       - name: Sandbox report (every permission the APK holds)
         run: cat app/build/reports/sandbox/*.txt
       - name: Release signing certificate (public fingerprint only)
@@ -155,6 +164,7 @@ jobs:
   app-tests:
     name: App tests (JVM, Robolectric, Compose UI) ${{ matrix.shard }}/4
     runs-on: ubuntu-latest
+    if: "!contains(github.event.head_commit.message, '[quick]')"
     timeout-minutes: 45
     needs: engine
     # Four jobs at once, each a quarter of the test classes (by class-name hash): the whole suite
@@ -234,7 +244,7 @@ jobs:
     name: Publish screenshots
     runs-on: ubuntu-latest
     needs: app-tests
-    if: always() && github.event_name == 'push' && github.ref == 'refs/heads/claude/android-options-lab-kotlin-xgt1ym'
+    if: always() && github.event_name == 'push' && github.ref == 'refs/heads/claude/android-options-lab-kotlin-xgt1ym' && !contains(github.event.head_commit.message, '[quick]')
     # Two pushes close together both force-push the branch; one at a time (the newer waits) avoids "cannot lock ref".
     concurrency:
       group: publish-ui-screenshots

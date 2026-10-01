@@ -147,8 +147,9 @@ class LiquidityRulesTest {
     @Test fun entriesOnlyFrom0920To1430() {
         assertFalse(LiquidityRules.mayEnterAt(day.atTime(9, 15)))
         assertTrue(LiquidityRules.mayEnterAt(day.atTime(9, 20)))
-        assertTrue(LiquidityRules.mayEnterAt(day.atTime(14, 30)))
-        assertFalse(LiquidityRules.mayEnterAt(day.atTime(14, 35)))
+        assertTrue(LiquidityRules.mayEnterAt(day.atTime(14, 0)))
+        assertFalse(LiquidityRules.mayEnterAt(day.atTime(14, 5)))
+        assertFalse(LiquidityRules.mayEnterAt(day.atTime(14, 30)))
     }
 
     @Test fun poolsBrokenBeforeConfirmationAreDiscardedAndNothingIsAnEmptySeries() {
