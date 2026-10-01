@@ -81,6 +81,8 @@ object OrbArms {
          * [peak]: the best premium seen since the entry, which sets how much of the target is locked.
          */
         val ladder: Boolean = false, val peak: Double? = null,
+        /** Liquidity 15+5: its 20-minute time stop has been decided (held, or sold). */
+        val timed: Boolean = false,
     ) {
         val open: Boolean get() = exit == null
         val day: LocalDate get() = entryTime.toLocalDate()
@@ -149,7 +151,7 @@ object OrbArms {
                         p.optDouble("charges", 0.0), p.optBoolean("live", false), p.optString("kite").ifEmpty { null },
                         p.optBoolean("unconfirmed", false),
                         if (p.has("level")) p.getDouble("level") else null, if (p.has("target")) p.getDouble("target") else null,
-                        p.optBoolean("ladder", false), if (p.has("peak")) p.getDouble("peak") else null)
+                        p.optBoolean("ladder", false), if (p.has("peak")) p.getDouble("peak") else null, p.optBoolean("timed", false))
                 }
             }
             o.optJSONObject("pending")?.let { m -> m.keys().forEach { k -> val p = m.getJSONObject(k)
@@ -204,7 +206,7 @@ object OrbArms {
                     .put("exitTime", p.exitTime?.toString() ?: "").put("why", p.why ?: "").put("charges", p.charges)
                     .put("live", p.live).put("kite", p.kite ?: "").put("unconfirmed", p.unconfirmed)
                     .apply { p.level?.let { put("level", it) }; p.target?.let { put("target", it) } }
-                    .put("ladder", p.ladder).apply { p.peak?.let { put("peak", it) } })
+                    .put("ladder", p.ladder).apply { p.peak?.let { put("peak", it) } }.put("timed", p.timed))
             }
         })
         o.put("pending", JSONObject().apply { b.pending.forEach { (k, p) -> put(k, JSONObject().put("right", p.right).put("bar", p.signalBar.toString()).put("expires", p.expires.toString())
@@ -982,17 +984,29 @@ object OrbArms {
             val bars = LiquidityRules.completed(LiquidityRules.fold(ones, tf), tf, t)
             val side = if (p.right == "CE") 1 else -1
             val since = ones.filter { !it.start.isBefore(p.entryTime.withSecond(0).withNano(0)) }
-            val why = LiquidityRules.exitReason(side, p.level ?: continue, p.target, p.signalBar, bars, LiquidityRules.zones(bars), since) ?: continue
+            val level = p.level ?: continue
+            // The turn exits first: the index back through the broken level, then the 20-minute time stop (read once, on the
+            // option's latest price), then the arm's own exits.
+            var cur = p
+            val timeStop = if (!p.timed && LiquidityRules.timeStopDue(p.entryTime, t)) marks[p.symbol]?.let { ltp ->
+                cur = p.copy(timed = true); b.positions[i] = cur
+                LiquidityRules.timeStopFails(p.entry, ltp)
+            } == true else false
+            val why = when {
+                LiquidityRules.indexStopHit(side, level, LiquidityRules.indexStopPoints(und), since) -> "index_stop"
+                timeStop -> "time_stop"
+                else -> LiquidityRules.exitReason(side, level, p.target, p.signalBar, bars, LiquidityRules.zones(bars), since)
+            } ?: continue
             if (p.live) {
                 // At Zerodha: the resting stop comes out first, then a MARKET sell (exitLive), in the account it entered.
                 if (!Broker.loggedIn) continue
-                val (done, rest) = exitLive(b, p, p.kite ?: continue, why)
+                val (done, rest) = exitLive(b, cur, cur.kite ?: continue, why)
                 b.positions[i] = done
                 rest?.let { b.positions += it }
                 continue
             }
             val c = Paper.contractOf(p.symbol) ?: continue
-            b.positions[i] = exit(p, c, why)
+            b.positions[i] = exit(cur, c, why)
         }
     }
 

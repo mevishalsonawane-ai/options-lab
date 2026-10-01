@@ -114,7 +114,7 @@ internal fun OrbRowsContent(
                             ?.let { tg -> com.optionslab.engine.orb.ProfitLock.level(o.entry, tg, o.peak ?: o.entry) }
                             ?.let { " · locked ${px(it)}" } ?: "")
                 } ?: when {
-                    !a.armed && a.arm.liquidity -> "BANKNIFTY (15 + 5-min) + FINNIFTY (30 + 5-min) liquidity pool taken on a swing zone · stop −15% · out at the next liquidity"
+                    !a.armed && a.arm.liquidity -> "BANKNIFTY (15 + 5-min) + FINNIFTY (30 + 5-min) liquidity pool taken on a swing zone · stop −15% · out 30 index pts back (FINNIFTY 15) or not +5% in 20 min · else at the next liquidity"
                     a.arm.liquidity -> a.status
                     !a.armed && a.arm.fade -> "BANKNIFTY touch of the range edge, faded to the middle · paper only · -40 / +40 · profit lock"
                     !a.armed && a.arm.sweep -> "BANKNIFTY failed break of the opening range, faded · paper only · -40 / +80 · profit lock"

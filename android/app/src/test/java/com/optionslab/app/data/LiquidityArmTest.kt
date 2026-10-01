@@ -39,6 +39,8 @@ class LiquidityArmTest : RobolectricTest() {
     private val ceKey = "NSE_FO|LIQCE"
     private val peKey = "NSE_FO|LIQPE"
     private var failDay = true
+    /** The 13:05 bar dips to 54,060 (40 under the broken 54,100) and closes back above it: the index stop, not a failed break. */
+    private var dipDay = false
     /** BANKNIFTY flat all day (the FINNIFTY test: only FINNIFTY breaks). */
     private var bankFlat = false
 
@@ -49,6 +51,7 @@ class LiquidityArmTest : RobolectricTest() {
         k == 26 -> doubleArrayOf(54_040.0, 54_070.0, 54_020.0, 54_030.0)
         k == 45 -> doubleArrayOf(54_020.0, 54_150.0, 54_015.0, 54_140.0)
         k == 46 && failDay -> doubleArrayOf(54_140.0, 54_145.0, 54_080.0, 54_090.0)
+        k == 46 && dipDay -> doubleArrayOf(54_150.0, 54_150.0, 54_060.0, 54_150.0)
         k >= 46 && !failDay -> doubleArrayOf(54_150.0, 54_150.0, 54_145.0, 54_150.0)   // no upper wick: no new liquidity above
         else -> doubleArrayOf(54_000.0, 54_010.0, 53_990.0, 54_000.0)
     }
@@ -156,12 +159,48 @@ class LiquidityArmTest : RobolectricTest() {
         armLiquidity()
         passes(LocalTime.of(13, 0), LocalTime.of(13, 5))
         assertTrue(row().today.single().open)
+        upstox.price(ceKey, row().today.single().entry * 1.10)              // +10%: past the 20-minute time stop's +5%
         tick(LocalTime.of(14, 0)); tick(LocalTime.of(15, 0))
         assertTrue("no failed break, no liquidity reached: still open", row().today.single().open)
         tick(LocalTime.of(15, 10))
         val p = row().today.single()
         assertFalse(p.open)
         assertEquals("session_end", p.why)
+    }
+
+    @Test fun notFivePercentUpAfterTwentyMinutesIsSoldByTheTimeStop() {
+        failDay = false
+        armLiquidity()
+        passes(LocalTime.of(13, 0), LocalTime.of(13, 5))
+        val p = row().today.single()
+        upstox.price(ceKey, p.entry * 1.03)                                 // +3% only
+        passes(LocalTime.of(13, 6), LocalTime.of(13, 24))
+        assertTrue("held for the first 20 minutes", row().today.single().open)
+        tick(LocalTime.of(13, 25))
+        val closed = row().today.single()
+        assertEquals("time_stop", closed.why)
+        assertTrue(closed.timed)
+    }
+
+    @Test fun fivePercentUpAfterTwentyMinutesKeepsTheTrade() {
+        failDay = false
+        armLiquidity()
+        passes(LocalTime.of(13, 0), LocalTime.of(13, 5))
+        upstox.price(ceKey, row().today.single().entry * 1.06)
+        passes(LocalTime.of(13, 6), LocalTime.of(13, 40))
+        val p = row().today.single()
+        assertTrue("+6% at 20 minutes: held", p.open)
+        assertTrue("decided once", p.timed)
+    }
+
+    @Test fun theIndexTradingThirtyPointsBackThroughTheLevelSellsAtOnce() {
+        failDay = false; dipDay = true
+        armLiquidity()
+        passes(LocalTime.of(13, 0), LocalTime.of(13, 5))
+        assertTrue(row().today.single().open)
+        tick(LocalTime.of(13, 6))     // the 13:05 minute traded down to 54,060: 40 points under 54,100, though it closed above
+        val closed = row().today.single()
+        assertEquals("index_stop", closed.why)
     }
 
     @Test fun theOptionFalling15PercentIsSoldByItsStop() {

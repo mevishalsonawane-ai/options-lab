@@ -130,6 +130,20 @@ class LiquidityRulesTest {
         assertNull(LiquidityRules.stopTrigger(0.05))                          // no room below the smallest tick
     }
 
+    @Test fun theTurnExitsIndexStopAndTimeStop() {
+        assertEquals(30.0, LiquidityRules.indexStopPoints("BANKNIFTY")); assertEquals(15.0, LiquidityRules.indexStopPoints("FINNIFTY"))
+        val t = day.atTime(13, 5)
+        val dip = listOf(Bar(t, 54_150.0, 54_150.0, 54_071.0, 54_140.0))
+        assertFalse(LiquidityRules.indexStopHit(1, 54_100.0, 30.0, dip), "29 points back: held")
+        assertTrue(LiquidityRules.indexStopHit(1, 54_100.0, 30.0, dip + Bar(t.plusMinutes(1), 54_100.0, 54_100.0, 54_069.0, 54_090.0)))
+        assertTrue(LiquidityRules.indexStopHit(-1, 54_100.0, 30.0, listOf(Bar(t, 54_050.0, 54_131.0, 54_040.0, 54_060.0))), "a put: above")
+        assertFalse(LiquidityRules.indexStopHit(-1, 54_100.0, 30.0, emptyList()))
+        assertFalse(LiquidityRules.timeStopDue(t, t.plusMinutes(19)))
+        assertTrue(LiquidityRules.timeStopDue(t, t.plusMinutes(20)))
+        assertTrue(LiquidityRules.timeStopFails(200.0, 209.9))
+        assertFalse(LiquidityRules.timeStopFails(200.0, 210.0))
+    }
+
     @Test fun entriesOnlyFrom0920To1430() {
         assertFalse(LiquidityRules.mayEnterAt(day.atTime(9, 15)))
         assertTrue(LiquidityRules.mayEnterAt(day.atTime(9, 20)))

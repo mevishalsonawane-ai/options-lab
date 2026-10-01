@@ -16,6 +16,8 @@ import java.time.LocalTime
  *   entry     the last completed bar takes a POOL that overlaps a still-active SWING zone of the same side (both
  *             tools agree): above -> BUY the ATM CE, below -> BUY the ATM PE, at the next bar's open, 09:20-14:30
  *   exits     the first of: the option falls 15% below the price paid (a resting stop, the owner's 2026-10-01 choice);
+ *             the index trades 30 points (FINNIFTY 15) back through the broken level (index stop); not +5% after 20 minutes
+ *             (time stop);
  *             the index touches the next active liquidity level beyond the entry (target); a completed bar closes back
  *             through the broken level (failed break); a new level forms on the trade's side (new liquidity); 15:10
  *
@@ -176,6 +178,27 @@ object LiquidityRules {
         if (zones.any { it.side == side && it.known >= first }) return "new_liquidity"
         return null
     }
+
+    /**
+     * The owner's exits for a turn in direction (2026-10-01; research/LIQUIDITY_REVERSAL.md: +55.6k / +21.6k ->
+     * +103.0k / +30.3k over two BANKNIFTY years, worst trade -15.7k -> -9.6k):
+     *   index stop  out the minute the index trades [indexStopPoints] back beyond the level the entry broke
+     *   time stop   [TIME_STOP_MINUTES] after the entry, out if the option is not [TIME_STOP_GAIN] above the price paid
+     */
+    const val TIME_STOP_MINUTES = 20L
+    const val TIME_STOP_GAIN = 0.05
+
+    /** BANKNIFTY 30 points; FINNIFTY, about half its size, 15. */
+    fun indexStopPoints(underlying: String): Double = if (underlying == "FINNIFTY") 15.0 else 30.0
+
+    /** True when a 1-minute bar since the entry traded [points] back through [level] against [side]. */
+    fun indexStopHit(side: Int, level: Double, points: Double, minutesSince: List<Bar>): Boolean =
+        minutesSince.any { if (side > 0) it.low < level - points else it.high > level + points }
+
+    fun timeStopDue(entryTime: LocalDateTime, now: LocalDateTime): Boolean = !now.isBefore(entryTime.plusMinutes(TIME_STOP_MINUTES))
+
+    /** True when the option at [ltp] is short of the gain the time stop asks for. */
+    fun timeStopFails(entry: Double, ltp: Double): Boolean = ltp < entry * (1 + TIME_STOP_GAIN) - 1e-9
 
     fun mayEnterAt(entry: LocalDateTime): Boolean { val t = entry.toLocalTime(); return !t.isBefore(FIRST_ENTRY) && !t.isAfter(LAST_ENTRY) }
 }
