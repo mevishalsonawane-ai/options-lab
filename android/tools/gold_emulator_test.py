@@ -170,6 +170,16 @@ step("Trades opens", tap("Trades", scroll=False) and wait("Closed trades", timeo
 step("no trades yet", wait("No trades yet.", timeout=5))
 shot("04-trades")
 
+# Chart: IraAlgo's chart on gold, nothing to order.
+step("Chart opens", tap("Chart", scroll=False) and wait("XAUUSD", timeout=15))
+time.sleep(12)
+shot("04b-chart")
+step("no order buttons on the chart", not any(t in ("BUY", "SELL", "ALERT", "OPT") for t in texts()))
+
+# P&L: IraAlgo's calendar in dollars.
+step("P&L opens", tap("P&L", scroll=False) and wait("Less", timeout=15))
+shot("04c-pnl")
+
 # Settings.
 step("Settings opens", tap("Settings", scroll=False) and wait("LOT SIZE", timeout=15))
 shot("05-settings")

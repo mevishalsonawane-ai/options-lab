@@ -114,6 +114,8 @@ internal fun ChartPane(
     orderSheet: @Composable (ChainPick, Boolean, Double?, () -> Unit) -> Unit,
     alertDialog: @Composable (String, () -> Unit) -> Unit,
     chainDialog: @Composable (String, () -> Unit, (ChainPick) -> Unit) -> Unit,
+    trading: Boolean = true,
+    marketOpen: () -> Boolean = { com.optionslab.app.data.Market.isOpen() },
 ) {
     val p = LocalPalette.current
     val scope = rememberCoroutineScope()
@@ -144,6 +146,8 @@ internal fun ChartPane(
     val basic = basicChosen || autoBasic != null
 
     fun openOrder(buy: Boolean, price: Double?, type: String = if (price == null) "MARKET" else "LIMIT") {
+        // IraGoldAlgo: paper only, its strategy buys by itself; the chart can place nothing.
+        if (!trading) { hint = "Paper only: the strategy buys and sells by itself. Nothing can be ordered from the chart."; return }
         // A stop entry would become a LIMIT at the stop level here and fill at once: refused, not converted.
         if (type != "MARKET" && type != "LIMIT") {
             hint = "Stop entries cannot be placed from the chart. Use BUY / SELL for a market or limit order."
@@ -262,7 +266,7 @@ internal fun ChartPane(
             com.optionslab.app.ui.components.FitText(current.first, Type.label.copy(color = p.ink, fontSize = 13.sp),
                 Modifier.weight(1f).align(Alignment.CenterVertically), minSize = 9.sp)
             // The option chain of the index: tap a price to chart that option (and buy or sell it there).
-            if (chainUnderlying != null) Text("OPT", textAlign = TextAlign.Center, style = Type.label.copy(color = p.ink, fontSize = 12.sp, fontWeight = FontWeight.Bold),
+            if (trading && chainUnderlying != null) Text("OPT", textAlign = TextAlign.Center, style = Type.label.copy(color = p.ink, fontSize = 12.sp, fontWeight = FontWeight.Bold),
                 modifier = chip.clickable { chainFor = chainUnderlying }.padding(horizontal = 10.dp, vertical = 8.dp))
             // Basic (drawn by the app) or Advanced (indicators, drawings; needs the phone's WebView).
             Text(if (basic) "BASIC" else "ADV", textAlign = TextAlign.Center, style = Type.label.copy(color = p.ink, fontSize = 12.sp, fontWeight = FontWeight.Bold),
@@ -271,11 +275,11 @@ internal fun ChartPane(
                     else { basicChosen = true; com.optionslab.app.security.SecurePrefs.put("chart.basic", true) }
                 }.padding(horizontal = 10.dp, vertical = 8.dp))
             // A price alert on whatever is charted, at a level you choose.
-            Text("ALERT", textAlign = TextAlign.Center, style = Type.label.copy(color = p.ink, fontSize = 12.sp, fontWeight = FontWeight.Bold),
+            if (trading) Text("ALERT", textAlign = TextAlign.Center, style = Type.label.copy(color = p.ink, fontSize = 12.sp, fontWeight = FontWeight.Bold),
                 modifier = chip.clickable { alerting = true }.padding(horizontal = 10.dp, vertical = 8.dp))
             // Buy / Sell: a full 48 dp touch target each, the label whole on one line; one unit, so when the chips
             // wrap they move to the next line together (SELL alone on a line of its own looked like another toolbar).
-            Row(Modifier.align(Alignment.CenterVertically), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            if (trading) Row(Modifier.align(Alignment.CenterVertically), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 listOf(true to "BUY", false to "SELL").forEach { (isBuy, label) ->
                     Box(Modifier.heightIn(min = 48.dp).widthIn(min = 64.dp)
                         .background(if (isBuy) p.verdigris else p.oxblood, RoundedCornerShape(50))
@@ -375,7 +379,7 @@ internal fun ChartPane(
                 Text("$it Showing the basic chart. Tap ADV / BASIC above to try the advanced one again.",
                     style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 11.sp), modifier = Modifier.fillMaxWidth().background(p.chip).padding(horizontal = 12.dp, vertical = 6.dp))
             }
-            NativeChart(current.first, Modifier.weight(1f), visible) { s, iv -> source.bars(s, iv, null, null) }
+            NativeChart(current.first, Modifier.weight(1f), visible, open = marketOpen) { s, iv -> source.bars(s, iv, null, null) }
         }
         // Covers the blank page until the first candles are drawn, so the chart never shows as a white sheet.
         if (!basic && !ready) Box(Modifier.fillMaxSize().background(p.paper), contentAlignment = Alignment.Center) {

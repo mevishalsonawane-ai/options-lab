@@ -60,6 +60,7 @@ import kotlin.math.min
 @Composable
 fun NativeChart(
     symbol: String, modifier: Modifier = Modifier, visible: Boolean = true,
+    open: () -> Boolean = { Market.isOpen() },
     feed: suspend (symbol: String, interval: String) -> List<Upstox.Bar> = { s, iv -> ChartFeed.bars(s, iv, null, null) },
 ) {
     val p = LocalPalette.current
@@ -86,7 +87,7 @@ fun NativeChart(
             r.onSuccess { bars = it; error = if (it.isEmpty()) "No candles for $symbol $interval yet." else null }
                 .onFailure { error = "Could not load $symbol: ${it.message ?: "no data"}" }
             loading = false
-            delay(if (Market.isOpen()) 15_000 else 300_000)
+            delay(if (open()) 15_000 else 300_000)
         }
     }
 
@@ -202,7 +203,7 @@ fun NativeChart(
                 }
             }
         }
-        Text(if (Market.isOpen()) "Basic chart · refreshes every 15 s · drag to scroll, tap a candle" else "Basic chart · market closed: last sessions · drag to scroll, tap a candle",
+        Text(if (open()) "Basic chart · refreshes every 15 s · drag to scroll, tap a candle" else "Basic chart · market closed: last sessions · drag to scroll, tap a candle",
             style = Type.bodySmall.copy(color = p.inkFaint, fontSize = 10.sp), modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp))
     }
 }

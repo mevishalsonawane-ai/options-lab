@@ -76,11 +76,27 @@ import kotlin.math.abs
 import kotlin.math.sign
 import kotlin.math.sqrt
 
-private fun rupees(x: Double) = (if (x < 0) "−₹" else if (x > 0) "+₹" else "₹") + String.format(Locale.ENGLISH, "%,.0f", abs(x))
+/** The calendar shows IraGoldAlgo's paper account (USD, gold's 24x5 weekdays) rather than IraAlgo's (rupees, NSE days). */
+private val LocalGold = androidx.compose.runtime.staticCompositionLocalOf { false }
 
-/** +6.4k / −18.4k / +1.2L: compact figures for the tiles and the week column. */
+/** Rupees in IraAlgo; US dollars and cents in IraGoldAlgo (its paper account is in USD). */
+@Composable @androidx.compose.runtime.ReadOnlyComposable
+private fun cur() = if (LocalGold.current) "$" else "₹"
+
+@Composable @androidx.compose.runtime.ReadOnlyComposable
+private fun rupees(x: Double) = (if (x < 0) "−${cur()}" else if (x > 0) "+${cur()}" else cur()) +
+    String.format(Locale.ENGLISH, if (LocalGold.current) "%,.2f" else "%,.0f", abs(x))
+
+/** +6.4k / −18.4k / +1.2L: compact figures for the tiles and the week column (gold: +12.40 / +1.2k / +1.2M). */
+@Composable @androidx.compose.runtime.ReadOnlyComposable
 private fun short(x: Double): String {
     val a = abs(x); val s = if (x < 0) "−" else if (x > 0) "+" else ""
+    if (LocalGold.current) return s + when {
+        a >= 1e6 -> String.format(Locale.ENGLISH, "%.1fM", a / 1e6)
+        a >= 1e3 -> String.format(Locale.ENGLISH, "%.1fk", a / 1e3)
+        a >= 100 -> String.format(Locale.ENGLISH, "%.0f", a)
+        else -> String.format(Locale.ENGLISH, "%.2f", a)
+    }
     return s + when {
         a >= 1e5 -> String.format(Locale.ENGLISH, "%.1fL", a / 1e5)
         a >= 1e3 -> String.format(Locale.ENGLISH, "%.1fk", a / 1e3)
@@ -300,7 +316,7 @@ private fun MonthRows(month: YearMonth, days: Map<LocalDate, DailyPnl.Day>, pick
         Row(Modifier.padding(top = gap), verticalAlignment = Alignment.CenterVertically) {
             (week + List(7 - week.size) { null }).forEach { d ->
                 if (d == null) Spacer(Modifier.size(TILE)) else Box(Modifier.onGloballyPositioned { tiles[d] = it.boundsInWindow() }) {
-                    DayTile(d, days[d], biggest, d == today, d == picked, !Market.isTradingDay(d), animKey, index++) { onPick(d) }
+                    DayTile(d, days[d], biggest, d == today, d == picked, closedDay(d), animKey, index++) { onPick(d) }
                 }
                 Spacer(Modifier.width(gap))
             }
@@ -345,6 +361,11 @@ private fun DayTile(d: LocalDate, day: DailyPnl.Day?, biggest: Double, today: Bo
         if (today) Box(Modifier.align(Alignment.TopEnd).offset(2.dp, (-2).dp).size(6.dp).background(p.ink, CircleShape).border(1.5.dp, p.card, CircleShape))
     }
 }
+
+/** A day the market does not trade: NSE's holidays and weekends; gold trades every weekday. */
+@Composable @androidx.compose.runtime.ReadOnlyComposable
+private fun closedDay(d: LocalDate): Boolean =
+    if (LocalGold.current) d.dayOfWeek == DayOfWeek.SATURDAY || d.dayOfWeek == DayOfWeek.SUNDAY else !Market.isTradingDay(d)
 
 private fun lerp(a: Color, b: Color, t: Float) = Color(
     a.red + (b.red - a.red) * t, a.green + (b.green - a.green) * t, a.blue + (b.blue - a.blue) * t, a.alpha + (b.alpha - a.alpha) * t)
@@ -429,7 +450,7 @@ private fun Summary(month: YearMonth, days: Map<LocalDate, DailyPnl.Day>) {
             Tile("Avg / day", short(net / all.size), if (net >= 0) p.verdigris else p.oxblood, "${all.size} days"),
             Tile("Best day", best?.takeIf { it.pnl > 0 }?.let { short(it.pnl) } ?: "–", p.verdigris, best?.takeIf { it.pnl > 0 }?.let { "${it.date.dayOfMonth} ${mon(month)}" } ?: ""),
             Tile("Worst day", worst?.takeIf { it.pnl < 0 }?.let { short(it.pnl) } ?: "–", p.oxblood, worst?.takeIf { it.pnl < 0 }?.let { "${it.date.dayOfMonth} ${mon(month)}" } ?: ""),
-            Tile("Drawdown", if (dd < 0) short(dd) else "₹0", if (dd < 0) p.oxblood else null, "from peak"),
+            Tile("Drawdown", if (dd < 0) short(dd) else "${cur()}0", if (dd < 0) p.oxblood else null, "from peak"),
             Tile("Streak", if (streak > 0) "$streak ${if (sType > 0) "W" else "L"}" else "–", if (sType > 0) p.verdigris else p.oxblood, "current"),
             Tile("Trades", "$trades", null, String.format(Locale.ENGLISH, "%.1f / day", trades.toDouble() / all.size)),
             Tile("Gross", short(gp), p.verdigris, "${short(-gl)} loss"),
@@ -445,7 +466,8 @@ private fun Summary(month: YearMonth, days: Map<LocalDate, DailyPnl.Day>) {
             if (share > 0f) Box(Modifier.weight(share.coerceAtLeast(0.001f)).height(5.dp).background(p.verdigris))
             if (share < 1f) Box(Modifier.weight((1f - share).coerceAtLeast(0.001f)).height(5.dp).background(p.oxblood))
         }
-        Note("Each day is realised plus open P&L after charges, as it stood at the day's last reading.", Modifier.padding(top = 8.dp))
+        Note(if (LocalGold.current) "Each day is the trades closed that day (India time), after the spread and commission."
+            else "Each day is realised plus open P&L after charges, as it stood at the day's last reading.", Modifier.padding(top = 8.dp))
     }
 }
 
@@ -653,5 +675,54 @@ private fun DayTrades(live: Boolean, day: LocalDate, trips: List<com.optionslab.
                 Text(rupees(net), style = Type.figure.copy(color = if (net >= 0) p.verdigris else p.oxblood, fontSize = 15.sp, fontWeight = FontWeight.SemiBold))
             }
         }
+    }
+}
+
+/** IraGoldAlgo's paper trades as days (India time, by the day each trade closed), for its P&L calendar. */
+internal fun goldDays(trades: List<com.optionslab.app.data.GoldPaper.Trade>): Map<LocalDate, DailyPnl.Day> =
+    trades.groupBy { it.exitTime.plusMinutes(330).toLocalDate() }
+        .mapValues { (d, ts) -> DailyPnl.Day(d, Math.round(ts.sumOf { it.pnl } * 100) / 100.0, ts.size) }
+
+/**
+ * IraGoldAlgo's P&L page: IraAlgo's calendar (the month's net and its line, a tile a day, each week's total, month or
+ * year view) and its summary and year strip, over the gold paper trades, in USD.
+ */
+@Composable
+fun GoldPnlCalendar() {
+    val book by com.optionslab.app.data.GoldPaper.book.collectAsState()
+    val all = remember(book.trades) { goldDays(book.trades) }
+    val thisMonth = YearMonth.from(com.optionslab.app.data.GoldPaper.now().plusMinutes(330).toLocalDate())
+    var month by remember { mutableStateOf(thisMonth) }
+    var picked by remember { mutableStateOf<LocalDate?>(null) }
+    var yearView by remember { mutableStateOf(false) }
+    val first = all.keys.minOrNull()?.let { YearMonth.from(it) }
+    val days = all.filterKeys { YearMonth.from(it) == month }
+    val prev = all.filterKeys { YearMonth.from(it) == month.minusMonths(1) }
+    androidx.compose.runtime.CompositionLocalProvider(LocalGold provides true) {
+    Page {
+        item {
+            LedgerCard {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Segmented(listOf("Month", "Year"), if (yearView) 1 else 0) { yearView = it == 1; picked = null }
+                    Spacer(Modifier.weight(1f))
+                    NavArrow("‹", first == null || month > first) { month = month.minusMonths(1); picked = null }
+                    Text("${mon(month)} ${month.year}", style = Type.body.copy(color = LocalPalette.current.ink, fontSize = 13.sp, fontWeight = FontWeight.SemiBold),
+                        textAlign = TextAlign.Center, modifier = Modifier.widthIn(min = 78.dp))
+                    NavArrow("›", month < thisMonth) { month = month.plusMonths(1); picked = null }
+                }
+                if (yearView) {
+                    YearGrid(month.year, all, thisMonth) { m -> month = m; yearView = false }
+                } else {
+                    Headline(month, days, prev)
+                    Spacer(Modifier.height(12.dp))
+                    MonthGrid(month, days, picked, animKey = "gold|$month") { d -> picked = if (picked == d) null else d }
+                    Legend()
+                }
+                if (book.position != null) Note("The open trade counts on the day it closes.", Modifier.padding(top = 6.dp))
+            }
+        }
+        item { Summary(month, days) }
+        item { YearStrip(month.year, all, live = false) }
+    }
     }
 }

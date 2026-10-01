@@ -62,10 +62,18 @@ class GoldScreensTest {
         GoldPaper.testMinutes = { t -> (0 until 300).map { Bar(monday.atTime(7, 0).plusMinutes(it.toLong()), 2400.0, 2400.0, 2400.0, 2400.0) }
             .filter { !it.start.plusMinutes(1).isAfter(t) } }
         runBlocking { GoldPaper.replaceForTest(GoldPaper.Book()) }
+        // The chart's candles: a flat 2400 hour from a test feed, never the network.
+        com.optionslab.app.data.GoldChart.resetForTest()
+        com.optionslab.app.data.GoldChart.testFetch = { _ ->
+            val q = org.json.JSONObject().apply { listOf("open", "high", "low", "close").forEach { put(it, org.json.JSONArray().put(2400.0).put(2401.0)) } }
+            org.json.JSONObject().put("chart", org.json.JSONObject().put("result", org.json.JSONArray().put(org.json.JSONObject()
+                .put("timestamp", org.json.JSONArray().put(1_790_000_000L).put(1_790_000_300L))
+                .put("indicators", org.json.JSONObject().put("quote", org.json.JSONArray().put(q))))))
+        }
     }
 
     @After fun down() {
-        GoldPaper.testMinutes = null; GoldPaper.testNow = null
+        GoldPaper.testMinutes = null; GoldPaper.testNow = null; com.optionslab.app.data.GoldChart.testFetch = null
         offline.close()
         AreaE.resetGlobals()
         assertEquals("no test may reach the network", emptyList<String>(), NetworkGuard.blocked.toList())
@@ -180,6 +188,31 @@ class GoldScreensTest {
         tap("‹ Settings")
         compose.waitForText("Lot size".uppercase())
         assertFalse(compose.has("‹ Settings"))
+    }
+
+    @Test fun theChartTabIsIraAlgosChartOnGoldWithNothingToOrder() {
+        show()
+        tap("Chart")
+        compose.waitForText("XAUUSD")
+        assertTrue(compose.has("ADV") || compose.has("BASIC"))
+        listOf("BUY", "SELL", "ALERT", "OPT").forEach { assertFalse("$it on the gold chart", compose.has(it)) }
+        shot("chart-light")
+    }
+
+    @Test fun thePnlTabIsIraAlgosCalendarInDollars() {
+        val trades = listOf(
+            GoldPaper.Trade(2400.0, 2410.0, monday.atTime(9, 0), monday.atTime(10, 0), 0.01, "next_liquidity", 9.93),
+            // Closed at 20:00 UTC on Friday the 25th: Saturday 01:30 in India, so it counts on the 26th.
+            GoldPaper.Trade(2400.0, 2395.0, monday.minusDays(4).atTime(9, 0), monday.minusDays(3).atTime(20, 0), 0.01, "cut_off", -5.07),
+        )
+        runBlocking { GoldPaper.replaceForTest(GoldPaper.Book(trades = trades)) }
+        val days = goldDays(trades)
+        assertEquals(setOf(monday, LocalDate.of(2026, 9, 26)), days.keys)
+        show()
+        tap("P&L")
+        compose.waitForText("+$4.86")                          // September's net: 9.93 - 5.07
+        assertFalse(compose.has("₹", substring = true))
+        shot("pnl-light")
     }
 
     @Test fun noTradesShowADashNotZeroPercent() {

@@ -50,8 +50,8 @@ import java.time.LocalDate
 import java.util.Locale
 
 /**
- * IraGoldAlgo's whole app (the gold build only): Home (XAUUSD, the paper account, the one strategy), Trades (closed
- * trades and totals) and Settings (paper amount, lot size, theme, security, diagnostics). Paper only: nothing here
+ * IraGoldAlgo's whole app (the gold build only): Home (XAUUSD, the paper account, the one strategy), Chart (IraAlgo's
+ * chart on gold, without its order buttons), P&L (IraAlgo's calendar over the gold trades), Trades (closed trades and totals) and Settings (paper amount, lot size, theme, security, diagnostics). Paper only: nothing here
  * can send an order anywhere.
  */
 @Composable
@@ -70,13 +70,15 @@ fun GoldMain(model: AppModel) {
         }
         Box(Modifier.weight(1f)) {
             when (tab) {
+                "chart" -> GoldChartTab()
+                "pnl" -> GoldPnlCalendar()
                 "trades" -> GoldTrades()
                 "settings" -> GoldSettings(model)
                 else -> GoldHome()
             }
         }
         Row(Modifier.fillMaxWidth().background(p.card).navigationBarsPadding()) {
-            listOf("home" to "Home", "trades" to "Trades", "settings" to "Settings").forEach { (k, label) ->
+            listOf("home" to "Home", "chart" to "Chart", "pnl" to "P&L", "trades" to "Trades", "settings" to "Settings").forEach { (k, label) ->
                 Text(label, style = Type.label.copy(color = if (tab == k) p.brass else p.inkSoft, fontSize = 14.sp,
                     fontWeight = if (tab == k) FontWeight.Bold else FontWeight.Medium), textAlign = TextAlign.Center,
                     modifier = Modifier.weight(1f).heightIn(min = 52.dp).clickable { tab = k }.padding(top = 16.dp))
@@ -85,6 +87,24 @@ fun GoldMain(model: AppModel) {
     }
     AlertBanner()
     }
+}
+
+/** Gold's candles for IraAlgo's chart: no contracts, no stream, nothing to trade. */
+internal object GoldChartSource : ChartSource {
+    override fun contract(symbol: String): com.optionslab.engine.Upstox.Contract? = null
+    override suspend fun bars(symbol: String, interval: String, fromSec: Long?, toSec: Long?) =
+        com.optionslab.app.data.GoldChart.bars(interval, fromSec, toSec)
+    override fun search(text: String) = com.optionslab.app.data.GoldChart.search(text)
+    override fun contracts(): List<com.optionslab.engine.Upstox.Contract> = emptyList()
+    override suspend fun streamToken(symbol: String): Long? = null
+}
+
+/** The Chart tab: IraAlgo's chart (advanced, or the basic one) on gold; no BUY / SELL, ALERT or option chain. */
+@Composable
+private fun GoldChartTab() {
+    ChartPane(com.optionslab.app.data.GoldChart.SYMBOL, "COMEX", visible = true, ask = 0, live = false, source = GoldChartSource,
+        orderSheet = { _, _, _, _ -> }, alertDialog = { _, _ -> }, chainDialog = { _, _, _ -> }, trading = false,
+        marketOpen = { GoldLiquidity.inSession(GoldPaper.now()) })
 }
 
 @Composable
