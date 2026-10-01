@@ -104,8 +104,19 @@ def step(name, ok):
 
 
 def crashed():
-    lc = adb("logcat", "-d", "-b", "crash", check=False)
-    return [l for l in lc.splitlines() if PKG in l or "FATAL EXCEPTION" in l]
+    """The app's own crashes. Others on the device (the uiautomator tool that reads the screen crashed once, on its
+    'UiAutomation' thread) are printed but not counted: each FATAL EXCEPTION block names its process on the next line."""
+    lines = adb("logcat", "-d", "-b", "crash", check=False).splitlines()
+    ours = []
+    for i, l in enumerate(lines):
+        if "FATAL EXCEPTION" not in l:
+            continue
+        block = lines[i:i + 3]
+        if any(f"Process: {PKG}" in b for b in block):
+            ours += lines[i:i + 12]
+        else:
+            say("(another process crashed, not counted) " + " | ".join(x.strip() for x in block))
+    return ours
 
 
 say(f"APK {APK}")
