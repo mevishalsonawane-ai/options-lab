@@ -284,8 +284,8 @@ private fun GoldSettings(model: AppModel) {
 
 /**
  * What the arm needs from the phone to decide every candle on time with the app closed: notifications (or the buys and
- * sells are silent), precise alarms (or Android runs the 5-minute check late, and a check more than 30 minutes after a
- * candle skips it) and no battery optimisation (or Android stops the checks). [compact]: only what is missing, on Home.
+ * sells are silent), precise alarms (or Android runs the 5-minute check late, and a check more than 20 minutes after a
+ * candle's prices arrive skips it) and no battery optimisation (or Android stops the checks). [compact]: only what is missing, on Home.
  */
 @Composable
 internal fun GoldBackgroundCheck(compact: Boolean) {
@@ -301,7 +301,7 @@ internal fun GoldBackgroundCheck(compact: Boolean) {
     if (!compact || !notif) LedgerLine("Notifications", if (notif) "allowed" else "blocked: buys and sells are silent", if (notif) p.verdigris else p.oxblood)
     if (!compact || !exact) LedgerLine("Precise alarms", if (exact) "allowed" else "off: candles can be missed", if (exact) p.verdigris else p.oxblood)
     if (!compact || !battery) LedgerLine("Battery saving", if (battery) "app left out" else "on: Android may stop the checks", if (battery) p.verdigris else p.oxblood)
-    if (!exact) Note("Without precise alarms Android runs the background check late when the phone is idle; a check more than 30 minutes after a candle closes cannot buy it.")
+    if (!exact) Note("Without precise alarms Android runs the background check late when the phone is idle; a check more than 20 minutes after a candle's prices arrive cannot buy it.")
     Row(Modifier.padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         if (!notif) BrassButton("Allow notifications", Modifier.weight(1f)) {
             context.startActivity(android.content.Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS)

@@ -123,7 +123,7 @@ object GoldPaper {
                 } else b = b.copy(status = "Holding the buy from %.2f".format(java.util.Locale.ENGLISH, pos.entry))
             } else if (b.armed) {
                 save(b)
-                val status = decide(_book.value, hourly, last, t)
+                val status = decide(_book.value, hourly, last, t, fed)
                 b = _book.value.copy(status = status)
             }
             save(b)
@@ -131,7 +131,7 @@ object GoldPaper {
     }
 
     /** The buy decision on the last completed candle; returns the status line. */
-    private suspend fun decide(b: Book, hourly: List<Bar>, last: Bar?, t: LocalDateTime): String {
+    private suspend fun decide(b: Book, hourly: List<Bar>, last: Bar?, t: LocalDateTime, fed: LocalDateTime = t): String {
         if (!GoldLiquidity.weekday(t)) return "Weekend: gold is closed"
         val bar = hourly.lastOrNull() ?: return "Loading the 1-hour candles"
         val entryAt = bar.start.plusMinutes(GoldLiquidity.MINUTES.toLong())
@@ -143,7 +143,7 @@ object GoldPaper {
         if (!GoldLiquidity.mayEnterAt(entryAt)) return "Armed: next decision at ${nextDecision(t)}"
         // The phone ran the check too late to buy at this candle's close (Android delays alarms that are not precise):
         // say so, and record it, instead of passing over the candle silently.
-        if (t.isAfter(entryAt.plusMinutes(LATE_MINUTES))) {
+        if (fed.isAfter(entryAt.plusMinutes(LATE_MINUTES))) {
             if (justArmed) return "Armed: next decision at ${nextDecision(t)}"
             if (t.isBefore(entryAt.plusMinutes(60))) runCatching { Diag.record("gold", "missed the ${when_(bar.start)} candle: checked ${java.time.Duration.between(entryAt, t).toMinutes()} min late") }
             return if (t.isBefore(entryAt.plusMinutes(60))) "Missed the ${when_(bar.start)} candle: the phone checked " +
@@ -167,8 +167,11 @@ object GoldPaper {
     /** [Book.decided] right after arming: the first candle seen then was not missed, it came before the arming. */
     private const val ARMED = "armed"
 
-    /** How late after a candle's close a buy may still be taken: the feed's ~10 minutes, plus two 5-minute checks. */
-    const val LATE_MINUTES = 30L
+    /**
+     * How far past a candle's close the prices may have moved for a buy still to be taken. Counted on the feed (which
+     * runs ~10 minutes behind the clock), so its delay does not use the margin up; a check later than that skips the candle.
+     */
+    const val LATE_MINUTES = 20L
 
     private var historyCache: Pair<LocalDateTime, List<Bar>>? = null
 

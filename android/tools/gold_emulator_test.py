@@ -32,7 +32,7 @@ def say(s):
 
 
 def adb(*a, check=True):
-    r = subprocess.run(["adb", *a], capture_output=True, text=True, timeout=120)
+    r = subprocess.run(["adb", *a], capture_output=True, text=True, errors="replace", timeout=120)
     if check and r.returncode != 0:
         raise RuntimeError(f"adb {' '.join(a)}: {r.stderr.strip()}")
     return r.stdout

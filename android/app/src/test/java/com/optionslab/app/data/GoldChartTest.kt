@@ -8,8 +8,11 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
 
 /** IraGoldAlgo's chart candles: which Yahoo request each chart interval makes, folding, parsing and the time window. */
+@RunWith(RobolectricTestRunner::class)
 class GoldChartTest {
     @org.junit.Before fun up() = GoldChart.resetForTest()
     @After fun down() { GoldChart.testFetch = null; GoldChart.resetForTest() }
