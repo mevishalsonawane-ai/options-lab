@@ -32,4 +32,29 @@ class DiagTest : RobolectricTest() {
         Alerts.post("login failed for key $secret")
         assertFalse(Diag.report().contains(secret))
     }
+
+    @Test fun theGoldSectionShowsBothArmsAndTheirTrades() = runBlocking {
+        val t = java.time.LocalDateTime.of(2026, 9, 29, 12, 5)
+        GoldPaper.testNow = t
+        try {
+            GoldPaper.replaceForTest(GoldPaper.Book(armed = true, status = "No liquidity break on the 11:00 UTC (16:30 IST) candle", price = 4210.5, priceAt = t.minusMinutes(11),
+                trades = listOf(GoldPaper.Trade(4180.0, 4190.0, t.minusDays(1), t.minusHours(20), 0.01, "next_liquidity", 9.93))))
+            GoldTrendPaper.replaceForTest(GoldTrendPaper.Book(armed = true, status = "Holding the buy from 4150.00: trend up", up = true, line = 4120.25,
+                position = GoldTrendPaper.Position(4150.0, t.minusDays(2), 0.01, 30.0, 4215.0, t.minusMinutes(12)),
+                trades = listOf(GoldPaper.Trade(4000.0, 4100.0, t.minusDays(9), t.minusDays(5), 0.01, "giveback", 99.93))))
+            val g = Diag.gold()
+            assertTrue(g, g.contains("-- Gold --"))
+            assertTrue(g, g.contains("Price 4210.50"))
+            assertTrue(g, g.contains("Liquidity 1h: armed true · status \"No liquidity break"))
+            assertTrue(g, g.contains("Trend 4h: armed true · status \"Holding the buy from 4150.00"))
+            assertTrue(g, g.contains("trend up · line 4120.25 · waiting for a flip after a lock sale: false"))
+            assertTrue("the lock: 4215 - 4 x 30", g.contains("lock 4095.00"))
+            assertTrue(g, g.contains("realised +$109.86"))
+            assertTrue("newest trade first", g.indexOf("Liquidity 1h: 12:05") < g.indexOf("Trend 4h: 12:05"))
+            assertTrue(g, g.contains("giveback · +$99.93"))
+        } finally {
+            GoldPaper.testNow = null
+            GoldPaper.replaceForTest(GoldPaper.Book()); GoldTrendPaper.replaceForTest(GoldTrendPaper.Book())
+        }
+    }
 }
