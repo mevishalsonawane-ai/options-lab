@@ -458,7 +458,7 @@ private fun Summary(month: YearMonth, days: Map<LocalDate, DailyPnl.Day>, tradeN
             if (byTrade) Tile("Win rate", "${Math.round(100.0 * tw / tradeNets!!.size)}%", null, "${tw}W · ${tl}L trades")
             else Tile("Green days", "${Math.round(100.0 * wins.size / all.size)}%", null, "${wins.size} up · ${losses.size} down"),
             Tile("P. factor", if (pfGl > 0) String.format(Locale.ENGLISH, "%.2f", pfGp / pfGl) else "∞", if (pfGp >= pfGl) p.verdigris else p.oxblood,
-                if (byTrade) "won ÷ lost, trades" else "profit ÷ loss"),
+                when { pfGl <= 0 && byTrade -> "no losing trade yet"; byTrade -> "won ÷ lost, after charges"; else -> "profit ÷ loss" }),
             Tile("Avg / day", short(net / all.size), if (net >= 0) p.verdigris else p.oxblood, "${all.size} days"),
             Tile("Best day", best?.takeIf { it.pnl > 0 }?.let { short(it.pnl) } ?: "–", p.verdigris, best?.takeIf { it.pnl > 0 }?.let { "${it.date.dayOfMonth} ${mon(month)}" } ?: ""),
             Tile("Worst day", worst?.takeIf { it.pnl < 0 }?.let { short(it.pnl) } ?: "–", p.oxblood, worst?.takeIf { it.pnl < 0 }?.let { "${it.date.dayOfMonth} ${mon(month)}" } ?: ""),

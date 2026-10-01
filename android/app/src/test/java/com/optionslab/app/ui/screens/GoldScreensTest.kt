@@ -215,6 +215,8 @@ class GoldScreensTest {
         // The win rate is by trade (one won, one lost), not by day (both days count as one each way, never "100%").
         compose.reveal("1W · 1L trades")
         assertTrue(compose.has("50%"))
+        // Profit factor over the trades, after costs: 9.93 won ÷ 5.07 lost.
+        assertTrue(compose.has("1.96"))
         shot("pnl-light")
     }
 
