@@ -287,6 +287,11 @@ in your own broker app (for example XM).
 4. **Settings → Paper:** choose the lot size and starting amount. On $500, 0.01 lot (1 oz) is sensible; larger lots
    scale the drawdown with them.
 5. Home: turn on **Armed**. The arm starts off and does nothing until you do.
+6. Optional: the second arm, **Trend 4h**, further down Home, has its own **Armed** switch. It buys while gold's
+   4-hour trend (Supertrend 10, 3) points up and sells when a 4-hour candle closes with the trend down, or earlier by
+   its profit lock (once 1 ATR up, a fall of 4 ATRs from the top). It decides about 10 minutes after each 4-hour close
+   (00:00, 04:00 … 20:00 UTC) and holds overnight and over weekends (swap). Its falls are deep: allow about $2,000 per
+   0.01 lot. Both arms share the lot size and the paper account; Trades and P&L show both, each trade named for its arm.
 
 <br clear="right">
 

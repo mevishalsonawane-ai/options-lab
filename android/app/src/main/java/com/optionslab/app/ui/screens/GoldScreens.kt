@@ -121,8 +121,11 @@ private fun GoldHome() {
     val p = LocalPalette.current
     val b by GoldPaper.book.collectAsState()
     val chart by GoldPaper.chart.collectAsState()
+    val tb by com.optionslab.app.data.GoldTrendPaper.book.collectAsState()
     val scope = rememberCoroutineScope()
     val open = b.open(b.price)
+    val trendOpen = tb.open(b.price)
+    val anyOpen = if (open == null && trendOpen == null) null else (open ?: 0.0) + (trendOpen ?: 0.0)
     Page {
         item {
             LedgerCard(title = "Gold (COMEX futures)") {
@@ -138,10 +141,11 @@ private fun GoldHome() {
         }
         item {
             LedgerCard(title = "Paper account") {
-                Text(GoldPaper.usd(b.balance + (open ?: 0.0)).removePrefix("+"), style = Type.figureLarge.copy(color = p.ink))
-                LedgerLine("Balance (closed trades)", GoldPaper.usd(b.balance).removePrefix("+"))
-                LedgerLine("Realised", GoldPaper.usd(b.realized), if (b.realized >= 0) p.verdigris else p.oxblood)
-                open?.let { LedgerLine("Open trade", GoldPaper.usd(it), if (it >= 0) p.verdigris else p.oxblood) }
+                val realized = b.realized + tb.realized
+                Text(GoldPaper.usd(b.balance + tb.realized + (anyOpen ?: 0.0)).removePrefix("+"), style = Type.figureLarge.copy(color = p.ink))
+                LedgerLine("Balance (closed trades)", GoldPaper.usd(b.balance + tb.realized).removePrefix("+"))
+                LedgerLine("Realised", GoldPaper.usd(realized), if (realized >= 0) p.verdigris else p.oxblood)
+                anyOpen?.let { LedgerLine("Open trades", GoldPaper.usd(it), if (it >= 0) p.verdigris else p.oxblood) }
                 LedgerLine("Size", "%.2f lot (%.0f oz)".format(Locale.ENGLISH, b.lots, b.lots * GoldLiquidity.OZ_PER_LOT))
             }
         }
@@ -166,13 +170,38 @@ private fun GoldHome() {
                     "most of it in the last year - a candidate, not a proven edge.")
             }
         }
+        item {
+            LedgerCard(title = com.optionslab.app.data.GoldTrendPaper.NAME) {
+                ToggleRow("Armed", "Buys only while gold's 4-hour trend (Supertrend 10, 3) points up; held overnight and over weekends. Paper: a notification on every buy and sell.",
+                    tb.armed) { on -> scope.launch(Dispatchers.IO) { com.optionslab.app.data.GoldTrendPaper.setArmed(on) } }
+                LedgerLine("Status", tb.status)
+                tb.up?.let { up -> LedgerLine("4-hour trend", if (up) "up · line %.2f".format(Locale.ENGLISH, tb.line ?: 0.0) else "down",
+                    if (up) p.verdigris else p.oxblood) }
+                if (tb.armed && tb.position == null) LedgerLine("Next decision", "about " + com.optionslab.app.data.GoldTrendPaper.nextDecision(GoldPaper.now()))
+                LedgerLine("Last signal", tb.lastSignal ?: "none yet")
+                tb.position?.let { pos ->
+                    Rule(Modifier.padding(vertical = 6.dp))
+                    LedgerLine("Bought", "%.2f at %s".format(Locale.ENGLISH, pos.entry, GoldPaper.when_(pos.entryTime)))
+                    trendOpen?.let { LedgerLine("Open P&L", GoldPaper.usd(it), if (it >= 0) p.verdigris else p.oxblood) }
+                    LedgerLine("Profit lock", tb.stop?.let { "sells below %.2f".format(Locale.ENGLISH, it) }
+                        ?: "starts at %.2f (1 ATR up)".format(Locale.ENGLISH, pos.entry + pos.atr))
+                }
+                Note("Each 4-hour candle (closing 00:00, 04:00 ... 20:00 UTC) is decided about 10 minutes after it closes. Sells when a 4-hour candle closes " +
+                    "with the trend down, or by the profit lock: once 1 ATR up, a fall of 4 ATRs from the top. After a lock sale it waits for the trend to turn down and up again.")
+                Note("Backtest (three years, 1 lot, swap included): +$321.9k, 52 trades, 63% won, t 2.79, deepest drawdown -$39.2k - in years when gold rose about 140%. " +
+                    "Its falls are deep for a small account: about $2,000 per 0.01 lot.")
+            }
+        }
     }
 }
 
 @Composable
 private fun GoldTrades() {
     val p = LocalPalette.current
-    val b by GoldPaper.book.collectAsState()
+    val book by GoldPaper.book.collectAsState()
+    val tb by com.optionslab.app.data.GoldTrendPaper.book.collectAsState()
+    val trades = remember(book.trades, tb.trades) { (book.trades + tb.trades).sortedBy { it.exitTime } }
+    val b = book.copy(trades = trades)
     val today = GoldPaper.now().toLocalDate()
     Page {
         item {
@@ -185,6 +214,10 @@ private fun GoldTrades() {
                         LedgerLine("$label · ${ts.size} trades · $won", if (ts.isEmpty()) "—" else GoldPaper.usd(x),
                             if (ts.isEmpty()) null else if (x >= 0) p.verdigris else p.oxblood)
                     }
+                if (tb.trades.isNotEmpty()) listOf("Liquidity 1h" to book.trades, com.optionslab.app.data.GoldTrendPaper.NAME to tb.trades).forEach { (arm, ts) ->
+                    val x = ts.sumOf { it.pnl }
+                    LedgerLine("$arm · ${ts.size} trades", if (ts.isEmpty()) "—" else GoldPaper.usd(x), if (ts.isEmpty()) null else if (x >= 0) p.verdigris else p.oxblood)
+                }
                 if (b.trades.size >= 2) {
                     // The paper balance after each closed trade, from the starting amount.
                     var run = b.start
@@ -208,7 +241,7 @@ private fun GoldTrades() {
                     Column(Modifier.padding(vertical = 4.dp)) {
                         LedgerLine("${t.exitTime.toLocalDate()} · %.2f → %.2f".format(Locale.ENGLISH, t.entry, t.exit), GoldPaper.usd(t.pnl),
                             if (t.pnl >= 0) p.verdigris else p.oxblood)
-                        Note("${GoldPaper.when_(t.entryTime)} → ${GoldPaper.when_(t.exitTime)} · %.2f lot · ".format(Locale.ENGLISH, t.lots) + GoldPaper.label(t.why))
+                        Note("${GoldPaper.arm(t)} · ${GoldPaper.when_(t.entryTime)} → ${GoldPaper.when_(t.exitTime)} · %.2f lot · ".format(Locale.ENGLISH, t.lots) + GoldPaper.label(t.why))
                     }
                 }
             }

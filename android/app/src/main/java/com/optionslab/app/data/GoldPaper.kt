@@ -91,7 +91,10 @@ object GoldPaper {
     suspend fun setLots(lots: Double) = edit { it.copy(lots = lots) }
 
     /** A fresh paper account with [balance]; the switch and the lot size are kept, an open trade and history go. */
-    suspend fun reset(balance: Double) = edit { it.copy(start = balance, position = null, trades = emptyList(), decided = null) }
+    suspend fun reset(balance: Double) {
+        edit { it.copy(start = balance, position = null, trades = emptyList(), decided = null) }
+        GoldTrendPaper.reset()
+    }
 
     // ---- the minute pass ---------------------------------------------------------
 
@@ -127,6 +130,8 @@ object GoldPaper {
                 b = _book.value.copy(status = status)
             }
             save(b)
+            // The trend arm on the same prices (its own book: nothing it does can touch this one's).
+            GoldTrendPaper.step(hourly, minutes, t, fed, b.lots)
         }
     }
 
@@ -211,10 +216,15 @@ object GoldPaper {
         "failed_break" -> "the break failed"
         "new_liquidity" -> "new liquidity formed above"
         "cut_off" -> "Friday 20:40 UTC (Sat 02:10 IST) cut-off before the weekend"
+        "trend_down" -> "the 4-hour trend turned down"
+        "giveback" -> "profit lock: fell 4 ATR from its top"
         else -> why
     }
 
     /** A UTC time with its IST beside it: "10:00 UTC (15:30 IST)". */
+    /** The arm a closed trade came from (the trend arm's exits are its own). */
+    fun arm(t: Trade): String = if (t.why == "trend_down" || t.why == "giveback") GoldTrendPaper.NAME else "Liquidity 1h"
+
     fun when_(t: LocalDateTime): String = "${hhmm(t)} UTC (${hhmm(t.plusMinutes(330))} IST)"
 
     /** True when the last price is more than 20 minutes old while gold is trading (the feed is down; it always runs ~10 late). */
