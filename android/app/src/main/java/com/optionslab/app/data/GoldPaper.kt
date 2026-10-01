@@ -86,7 +86,7 @@ object GoldPaper {
 
     // ---- the owner's switches ---------------------------------------------------
 
-    suspend fun setArmed(on: Boolean) = edit { it.copy(armed = on, status = if (on) "Armed: next decision at ${nextDecision(now())}" else "Not armed") }
+    suspend fun setArmed(on: Boolean) = edit { it.copy(armed = on, decided = if (on) ARMED else it.decided, status = if (on) "Armed: next decision at ${nextDecision(now())}" else "Not armed") }
 
     suspend fun setLots(lots: Double) = edit { it.copy(lots = lots) }
 
@@ -100,7 +100,10 @@ object GoldPaper {
         lock.withLock {
             val t = now()
             val minutes = minutes(t)
-            val hourly = GoldLiquidity.completed(GoldLiquidity.hourly(history() + minutes), t)
+            // A candle is complete when the feed has reached its end, not when the clock has: Yahoo's COMEX prices run
+            // about 10 minutes late, and deciding at the hour read a candle without its last 10 minutes.
+            val fed = minutes.lastOrNull()?.start?.plusMinutes(1)?.let { if (it.isBefore(t)) it else t } ?: t
+            val hourly = GoldLiquidity.completed(GoldLiquidity.hourly(history() + minutes), fed)
             if (hourly.isNotEmpty()) _chart.value = hourly.takeLast(30).map { it.close }
             val last = minutes.lastOrNull()
             var b = _book.value
@@ -133,10 +136,20 @@ object GoldPaper {
         val bar = hourly.lastOrNull() ?: return "Loading the 1-hour candles"
         val entryAt = bar.start.plusMinutes(GoldLiquidity.MINUTES.toLong())
         if (b.decided == bar.start.toString()) return "Armed: next decision at ${nextDecision(t)}"
+        val justArmed = b.decided == ARMED
         save(b.copy(decided = bar.start.toString()))
         // Armed after a candle's decision time, or a candle whose buy would start outside 08:00-19:00 UTC: say when the
         // next decision is (UTC and IST), not "no entry", which read as if the hours were wrong.
-        if (!GoldLiquidity.mayEnterAt(entryAt) || t.isAfter(entryAt.plusMinutes(20))) return "Armed: next decision at ${nextDecision(t)}"
+        if (!GoldLiquidity.mayEnterAt(entryAt)) return "Armed: next decision at ${nextDecision(t)}"
+        // The phone ran the check too late to buy at this candle's close (Android delays alarms that are not precise):
+        // say so, and record it, instead of passing over the candle silently.
+        if (t.isAfter(entryAt.plusMinutes(LATE_MINUTES))) {
+            if (justArmed) return "Armed: next decision at ${nextDecision(t)}"
+            if (t.isBefore(entryAt.plusMinutes(60))) runCatching { Diag.record("gold", "missed the ${when_(bar.start)} candle: checked ${java.time.Duration.between(entryAt, t).toMinutes()} min late") }
+            return if (t.isBefore(entryAt.plusMinutes(60))) "Missed the ${when_(bar.start)} candle: the phone checked " +
+                "${java.time.Duration.between(entryAt, t).toMinutes()} min late. Next decision at ${nextDecision(t)}"
+            else "Armed: next decision at ${nextDecision(t)}"
+        }
         val s = GoldLiquidity.signal(hourly) ?: return "No liquidity break on the ${when_(bar.start)} candle"
         val mid = last?.close ?: return "No price to buy at"
         val px = GoldLiquidity.buyPrice(mid)
@@ -150,6 +163,12 @@ object GoldPaper {
     }
 
     // ---- prices ------------------------------------------------------------------
+
+    /** [Book.decided] right after arming: the first candle seen then was not missed, it came before the arming. */
+    private const val ARMED = "armed"
+
+    /** How late after a candle's close a buy may still be taken: the feed's ~10 minutes, plus two 5-minute checks. */
+    const val LATE_MINUTES = 30L
 
     private var historyCache: Pair<LocalDateTime, List<Bar>>? = null
 
@@ -194,9 +213,9 @@ object GoldPaper {
     /** A UTC time with its IST beside it: "10:00 UTC (15:30 IST)". */
     fun when_(t: LocalDateTime): String = "${hhmm(t)} UTC (${hhmm(t.plusMinutes(330))} IST)"
 
-    /** True when the last price is more than 10 minutes old while gold is trading (the feed is delayed or down). */
+    /** True when the last price is more than 20 minutes old while gold is trading (the feed is down; it always runs ~10 late). */
     fun stale(b: Book, t: LocalDateTime = now()): Boolean =
-        GoldLiquidity.inSession(t) && (b.priceAt == null || b.priceAt.isBefore(t.minusMinutes(10)))
+        GoldLiquidity.inSession(t) && (b.priceAt == null || b.priceAt.isBefore(t.minusMinutes(20)))
 
     /** The next time a candle can be decided into a buy ([GoldLiquidity.mayEnterAt]), UTC and IST. */
     fun nextDecision(t: LocalDateTime): String {

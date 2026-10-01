@@ -80,6 +80,23 @@ class GoldPaperTest : RobolectricTest() {
         assertEquals("Armed: next decision at 11:00 UTC (16:30 IST)", GoldPaper.book.value.status)
     }
 
+    @Test fun aCandleCheckedTooLateIsSaidToBeMissedNotPassedOverSilently() {
+        // A candle mid-history whose next hour may take an entry, with the hour after it on the chart.
+        val i = (60 until hours.size - 2).first { hours[it + 1].start == hours[it].start.plusHours(1) && GoldLiquidity.mayEnterAt(hours[it + 1].start) }
+        val bar = hours[i]
+        // Armed half an hour into the candle: the one before it came before the arming, so it is not "missed".
+        at(bar.start.plusMinutes(30))
+        runBlocking { GoldPaper.setArmed(true) }
+        at(bar.start.plusMinutes(31))
+        assertTrue(GoldPaper.book.value.status, GoldPaper.book.value.status.startsWith("Armed: next decision"))
+        // The phone sleeps through the candle's close; the next check is 35 minutes after it.
+        val late = bar.start.plusMinutes(95)
+        at(late)
+        assertEquals("Missed the ${GoldPaper.when_(bar.start)} candle: the phone checked 35 min late. Next decision at ${GoldPaper.nextDecision(late)}",
+            GoldPaper.book.value.status)
+        assertNull("no buy on a stale candle", GoldPaper.book.value.position)
+    }
+
     @Test fun unarmedItOnlyFollowsThePrice() {
         at(monday.plusDays(14).atTime(12, 0, 30))
         val b = GoldPaper.book.value

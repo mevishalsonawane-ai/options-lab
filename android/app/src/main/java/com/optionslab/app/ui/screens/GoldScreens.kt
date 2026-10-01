@@ -60,6 +60,15 @@ fun GoldMain(model: AppModel) {
     var tab by rememberSaveable { mutableStateOf("home") }
     // While the app is open the pass runs every minute (the alarm does it every five in the background).
     LaunchedEffect(Unit) { while (true) { withContext(Dispatchers.IO) { GoldPaper.tick() }; delay(60_000) } }
+    // Android 13+: the buy / sell notifications need the owner's permission, asked once (IraAlgo asks on its own main
+    // screen, which this app never shows - without this the gold alerts were silently blocked).
+    val notify = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestPermission()) { }
+    LaunchedEffect(Unit) {
+        if (android.os.Build.VERSION.SDK_INT >= 33 && !com.optionslab.app.security.SecurePrefs.getBoolean("asked.notify", false)) {
+            com.optionslab.app.security.SecurePrefs.put("asked.notify", true)
+            notify.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
     // The alert banner is a full-screen overlay (as in IraAlgo): it goes on top of the column, never inside it, where
     // its fillMaxSize took every pixel and left the tabs' content zero high (found on the emulator).
     Box(Modifier.fillMaxSize().background(p.paper)) {
@@ -141,6 +150,7 @@ private fun GoldHome() {
                 ToggleRow("Armed", "Buys only, 1-hour candles, 24x5: Monday 05:30 IST to Saturday 02:30 IST, held overnight. Paper: a notification on every buy and sell.",
                     b.armed) { on -> scope.launch(Dispatchers.IO) { GoldPaper.setArmed(on) } }
                 LedgerLine("Status", b.status)
+                if (b.armed) GoldBackgroundCheck(compact = true)
                 if (b.armed && b.position == null) LedgerLine("Next decision", GoldPaper.nextDecision(GoldPaper.now()))
                 LedgerLine("Last signal", b.lastSignal ?: "none yet")
                 b.position?.let { pos ->
@@ -149,6 +159,7 @@ private fun GoldHome() {
                     LedgerLine("Broken level", "%.2f".format(Locale.ENGLISH, pos.level))
                     LedgerLine("Target (next liquidity)", pos.target?.let { "%.2f".format(Locale.ENGLISH, it) } ?: "none above: out on the other exits")
                 }
+                Note("Each candle is decided about 10 minutes after it closes: the gold price feed (COMEX, via Yahoo) runs 10 minutes late.")
                 Note("Buys at any trading hour (not 05:30 IST, the 02:30-03:30 IST break, or Friday after 00:30 IST). Held overnight until the first of: " +
                     "the next liquidity level, a candle closing back below the broken level, new liquidity above, or Saturday 02:10 IST before the weekend. " +
                     "Backtest (three years, 1 lot): +$96.8k (+$93.9k after a $40-a-night swap; XM's swap varies), 48% won, t 2.10, " +
@@ -240,6 +251,9 @@ private fun GoldSettings(model: AppModel) {
             }
         }
         item {
+            LedgerCard(title = "Running in the background") { GoldBackgroundCheck(compact = false) }
+        }
+        item {
             LedgerCard(title = "Look") {
                 val themes = listOf("system" to "Phone", "light" to "Light", "dark" to "Dark")
                 ParamTokens("Theme", themes.map { it.second to (it.first == s.theme) }) { i -> model.update { it.copy(theme = themes[i].first) } }
@@ -265,5 +279,38 @@ private fun GoldSettings(model: AppModel) {
                 Note("This app: build ${com.optionslab.app.BuildConfig.COMMIT}")
             }
         }
+    }
+}
+
+/**
+ * What the arm needs from the phone to decide every candle on time with the app closed: notifications (or the buys and
+ * sells are silent), precise alarms (or Android runs the 5-minute check late, and a check more than 30 minutes after a
+ * candle skips it) and no battery optimisation (or Android stops the checks). [compact]: only what is missing, on Home.
+ */
+@Composable
+internal fun GoldBackgroundCheck(compact: Boolean) {
+    val p = LocalPalette.current
+    val context = androidx.compose.ui.platform.LocalContext.current
+    // Re-read every 2 s while shown, so coming back from Settings updates it.
+    var n by remember { mutableStateOf(0) }
+    LaunchedEffect(Unit) { while (true) { delay(2_000); n++ } }
+    val notif = remember(n) { com.optionslab.app.work.Notifier.canPost(context) }
+    val exact = remember(n) { com.optionslab.app.work.Jobs.canExact(context) }
+    val battery = remember(n) { BatteryCheck.unrestricted(context) }
+    if (compact && notif && exact && battery) return
+    if (!compact || !notif) LedgerLine("Notifications", if (notif) "allowed" else "blocked: buys and sells are silent", if (notif) p.verdigris else p.oxblood)
+    if (!compact || !exact) LedgerLine("Precise alarms", if (exact) "allowed" else "off: candles can be missed", if (exact) p.verdigris else p.oxblood)
+    if (!compact || !battery) LedgerLine("Battery saving", if (battery) "app left out" else "on: Android may stop the checks", if (battery) p.verdigris else p.oxblood)
+    if (!exact) Note("Without precise alarms Android runs the background check late when the phone is idle; a check more than 30 minutes after a candle closes cannot buy it.")
+    Row(Modifier.padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        if (!notif) BrassButton("Allow notifications", Modifier.weight(1f)) {
+            context.startActivity(android.content.Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                .putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, context.packageName).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+        }
+        if (!exact && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) BrassButton("Allow alarms", Modifier.weight(1f)) {
+            runCatching { context.startActivity(android.content.Intent(android.provider.Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,
+                android.net.Uri.parse("package:${context.packageName}")).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
+        }
+        if (!battery) BrassButton("Battery", Modifier.weight(1f)) { BatteryCheck.ask(context) }
     }
 }
