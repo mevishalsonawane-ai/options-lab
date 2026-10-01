@@ -1,7 +1,6 @@
 name: Gold feed probe
-# One-off check (run on push of this file) of which free XAUUSD price feeds answer (IraGoldAlgo's price source). Read-only, no secrets.
+# One-off check (run on push of this file) of free XAUUSD spot feeds for IraGoldAlgo. Read-only, no secrets.
 on:
-  workflow_dispatch:
   push:
     paths: [".github/workflows/gold-feed-probe.yml"]
 jobs:
@@ -9,19 +8,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: |
-          for s in "XAUUSD%3DX" "GC%3DF" "XAU%3DX"; do
-            for q in "interval=60m&range=5d" "interval=1m&range=1d"; do
-              u="https://query1.finance.yahoo.com/v8/finance/chart/$s?$q"
-              code=$(curl -s -m 20 -A "Mozilla/5.0" -o out.json -w "%{http_code}" "$u")
-              echo "== $s $q -> $code"
-              python3 - <<'PY' || true
-          import json
-          d = json.load(open("out.json"))["chart"]
-          if d.get("error"): print("error", d["error"]); raise SystemExit
-          r = d["result"][0]; m = r["meta"]; ts = r.get("timestamp", [])
-          q = r["indicators"]["quote"][0]
-          print(m.get("symbol"), m.get("currency"), m.get("exchangeName"), m.get("regularMarketPrice"), "bars", len(ts))
-          if ts: print("first", ts[0], "last", ts[-1], "close", q["close"][-3:], "gmtoffset", m.get("gmtoffset"))
-          PY
-            done
+          now=$(date -u +%s)
+          for back in 0 1 2 3; do
+            t=$((now - back*3600))
+            y=$(date -u -d @$t +%Y); mo=$(( $(date -u -d @$t +%-m) - 1 )); d=$(date -u -d @$t +%d); h=$(date -u -d @$t +%H)
+            u=$(printf "https://datafeed.dukascopy.com/datafeed/XAUUSD/%s/%02d/%s/%sh_ticks.bi5" $y $mo $d $h)
+            code=$(curl -s -m 20 -A "Mozilla/5.0" -o t.bi5 -w "%{http_code}" "$u"); echo "$(date -u +%H:%M) hour $h (back $back): $code $(stat -c %s t.bi5 2>/dev/null) bytes"
+          done
+          for p in "api/lastPrice?instrument=XAU/USD" "api/historicalPrices?instrument=XAU/USD&timeFrame=1min&count=5" ; do
+            code=$(curl -s -m 20 -A "Mozilla/5.0" -o f.out -w "%{http_code}" "https://freeserv.dukascopy.com/2.0/?path=$p&key=")
+            echo "freeserv $p -> $code"; head -c 300 f.out; echo
           done
