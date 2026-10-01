@@ -48,6 +48,7 @@ object GoldPaper {
         val status: String = "Not armed",
         val price: Double? = null,
         val priceAt: LocalDateTime? = null,
+        val lastSignal: String? = null,        // the last buy, said for Home ("Mon 10:00 UTC (15:30 IST): broke 2388.00")
     ) {
         val realized: Double get() = trades.sumOf { it.pnl }
         val balance: Double get() = start + realized
@@ -59,6 +60,9 @@ object GoldPaper {
     private val lock = Mutex()
     private val _book = MutableStateFlow(Book())
     val book: StateFlow<Book> = _book
+    /** The last 30 one-hour closes of the session (Home's small chart); not saved. */
+    private val _chart = MutableStateFlow<List<Double>>(emptyList())
+    val chart: StateFlow<List<Double>> = _chart
 
     /** TEST ONLY: the feed's 1-minute bars at a moment (UTC), so a test can run the strategy without the network. */
     @Volatile internal var testMinutes: ((LocalDateTime) -> List<Bar>)? = null
@@ -97,6 +101,7 @@ object GoldPaper {
             val t = now()
             val minutes = minutes(t)
             val hourly = GoldLiquidity.completed(GoldLiquidity.hourly(history() + minutes), t)
+            if (hourly.isNotEmpty()) _chart.value = hourly.takeLast(30).map { it.close }
             val last = minutes.lastOrNull()
             var b = _book.value
             if (last != null) b = b.copy(price = last.close, priceAt = last.start)
@@ -110,7 +115,7 @@ object GoldPaper {
                     val tr = Trade(pos.entry, px, pos.entryTime, t, b.lots, why, GoldLiquidity.pnl(pos.entry, px, b.lots))
                     b = b.copy(position = null, trades = b.trades + tr, status = "Sold: ${label(why)}")
                     notify("SELL XAUUSD now (paper): ${label(why)}",
-                        "Paper sold %.2f lot at %.2f, P&L %s. Futures price: XM's XAUUSD sits a few dollars lower.".format(
+                        "${when_(t)}: paper sold %.2f lot at %.2f, P&L %s. Futures price: XM's XAUUSD sits a few dollars lower.".format(
                             java.util.Locale.ENGLISH, b.lots, px, usd(tr.pnl)), Notifier.SELL)
                 } else b = b.copy(status = "Holding the buy from %.2f".format(java.util.Locale.ENGLISH, pos.entry))
             } else if (b.armed) {
@@ -132,12 +137,13 @@ object GoldPaper {
         // Armed after a candle's decision time, or a candle whose buy would start outside 08:00-19:00 UTC: say when the
         // next decision is (UTC and IST), not "no entry", which read as if the hours were wrong.
         if (!GoldLiquidity.mayEnterAt(entryAt) || t.isAfter(entryAt.plusMinutes(20))) return "Armed: next decision at ${nextDecision(t)}"
-        val s = GoldLiquidity.signal(hourly) ?: return "No liquidity break on the ${hhmm(bar.start)} candle"
+        val s = GoldLiquidity.signal(hourly) ?: return "No liquidity break on the ${when_(bar.start)} candle"
         val mid = last?.close ?: return "No price to buy at"
         val px = GoldLiquidity.buyPrice(mid)
-        save(_book.value.copy(position = Position(px, t, bar.start, s.level, s.target)))
+        save(_book.value.copy(position = Position(px, t, bar.start, s.level, s.target),
+            lastSignal = "${when_(bar.start)}: broke %.2f, bought at %.2f".format(java.util.Locale.ENGLISH, s.level, px)))
         notify("BUY XAUUSD now (paper): liquidity break",
-            ("The ${hhmm(bar.start)} UTC 1-hour candle took a liquidity pool above %.2f. Paper bought %.2f lot at %.2f" +
+            ("The ${when_(bar.start)} 1-hour candle took a liquidity pool above %.2f. Paper bought %.2f lot at %.2f" +
                 (s.target?.let { ", target the next level %.2f".format(java.util.Locale.ENGLISH, it) } ?: "") +
                 ". Futures price: XM's XAUUSD sits a few dollars lower.").format(java.util.Locale.ENGLISH, s.level, b.lots, px), Notifier.BUY)
         return "Bought at %.2f".format(java.util.Locale.ENGLISH, px)
@@ -181,9 +187,16 @@ object GoldPaper {
         "next_liquidity" -> "reached the next liquidity level"
         "failed_break" -> "the break failed"
         "new_liquidity" -> "new liquidity formed above"
-        "cut_off" -> "20:40 UTC cut-off"
+        "cut_off" -> "20:40 UTC (02:10 IST) cut-off"
         else -> why
     }
+
+    /** A UTC time with its IST beside it: "10:00 UTC (15:30 IST)". */
+    fun when_(t: LocalDateTime): String = "${hhmm(t)} UTC (${hhmm(t.plusMinutes(330))} IST)"
+
+    /** True when the last price is more than 10 minutes old while gold is trading (the feed is delayed or down). */
+    fun stale(b: Book, t: LocalDateTime = now()): Boolean =
+        GoldLiquidity.inSession(t) && (b.priceAt == null || b.priceAt.isBefore(t.minusMinutes(10)))
 
     /** The next time a candle can be decided into a buy (a candle's close inside 08:00-19:00 UTC on a weekday), UTC and IST. */
     fun nextDecision(t: LocalDateTime): String {
@@ -212,7 +225,8 @@ object GoldPaper {
     private fun read(): Book? = Vault.readFileSteady(file)?.let { fromJson(JSONObject(String(it, Charsets.UTF_8))) }
 
     private fun toJson(b: Book) = JSONObject().put("start", b.start).put("lots", b.lots).put("armed", b.armed).put("status", b.status)
-        .apply { b.decided?.let { put("decided", it) }; b.price?.let { put("price", it) }; b.priceAt?.let { put("priceAt", it.toString()) } }
+        .apply { b.decided?.let { put("decided", it) }; b.price?.let { put("price", it) }; b.priceAt?.let { put("priceAt", it.toString()) }
+            b.lastSignal?.let { put("lastSignal", it) } }
         .apply {
             b.position?.let { p -> put("pos", JSONObject().put("entry", p.entry).put("at", p.entryTime.toString()).put("bar", p.signalBar.toString())
                 .put("level", p.level).apply { p.target?.let { put("target", it) } }) }
@@ -235,6 +249,7 @@ object GoldPaper {
         } ?: emptyList()
         return Book(o.optDouble("start", DEFAULT_BALANCE), o.optDouble("lots", DEFAULT_LOTS), o.optBoolean("armed", false), pos, tr,
             o.optString("decided").ifBlank { null }, o.optString("status", "Not armed"),
-            if (o.has("price")) o.getDouble("price") else null, o.optString("priceAt").ifBlank { null }?.let { LocalDateTime.parse(it) })
+            if (o.has("price")) o.getDouble("price") else null, o.optString("priceAt").ifBlank { null }?.let { LocalDateTime.parse(it) },
+            o.optString("lastSignal").ifBlank { null })
     }
 }

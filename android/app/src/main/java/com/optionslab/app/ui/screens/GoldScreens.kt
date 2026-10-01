@@ -90,14 +90,20 @@ fun GoldMain(model: AppModel) {
 private fun GoldHome() {
     val p = LocalPalette.current
     val b by GoldPaper.book.collectAsState()
+    val chart by GoldPaper.chart.collectAsState()
     val scope = rememberCoroutineScope()
     val open = b.open(b.price)
     Page {
         item {
-            LedgerCard(title = "XAUUSD") {
+            LedgerCard(title = "Gold (COMEX futures)") {
                 Text(b.price?.let { "$%,.2f".format(Locale.ENGLISH, it) } ?: "—", style = Type.figureLarge.copy(color = p.ink))
-                Note("COMEX gold futures (${GoldPaper.FEED_SYMBOL}), the free live feed: XM's XAUUSD sits a few dollars lower; the levels and signals are the same." +
-                    (b.priceAt?.let { " Last candle ${it.toLocalTime()} UTC." } ?: ""))
+                if (chart.size >= 2) {
+                    com.optionslab.app.ui.components.Sparkline(chart, p.brass, Modifier.fillMaxWidth().height(56.dp).padding(vertical = 6.dp))
+                    Note("The last ${chart.size} one-hour candles (London + New York session).")
+                }
+                if (GoldPaper.stale(b)) LedgerLine("Price feed", "delayed: last price ${b.priceAt?.let { GoldPaper.when_(it) } ?: "none yet"}", p.oxblood)
+                else b.priceAt?.let { LedgerLine("Last price", GoldPaper.when_(it)) }
+                Note("GC=F, the free live gold feed. XM's XAUUSD (spot) sits a few dollars lower; the levels and signals are the same.")
             }
         }
         item {
@@ -111,17 +117,19 @@ private fun GoldHome() {
         }
         item {
             LedgerCard(title = "Liquidity 1h") {
-                ToggleRow("Armed", "Buys only, 1-hour candles, London + New York (07:00-21:00 UTC). Paper: you get a notification on every buy and sell.",
+                ToggleRow("Armed", "Buys only, 1-hour candles, London + New York: 12:30-02:30 IST (07:00-21:00 UTC). Paper: a notification on every buy and sell.",
                     b.armed) { on -> scope.launch(Dispatchers.IO) { GoldPaper.setArmed(on) } }
                 LedgerLine("Status", b.status)
+                if (b.armed && b.position == null) LedgerLine("Next decision", GoldPaper.nextDecision(GoldPaper.now()))
+                LedgerLine("Last signal", b.lastSignal ?: "none yet")
                 b.position?.let { pos ->
                     Rule(Modifier.padding(vertical = 6.dp))
-                    LedgerLine("Bought", "%.2f at %s UTC".format(Locale.ENGLISH, pos.entry, pos.entryTime.toLocalTime().withNano(0)))
+                    LedgerLine("Bought", "%.2f at %s".format(Locale.ENGLISH, pos.entry, GoldPaper.when_(pos.entryTime)))
                     LedgerLine("Broken level", "%.2f".format(Locale.ENGLISH, pos.level))
                     LedgerLine("Target (next liquidity)", pos.target?.let { "%.2f".format(Locale.ENGLISH, it) } ?: "none above: out on the other exits")
                 }
-                Note("Out at the first of: the next liquidity level, a candle closing back below the broken level, new liquidity above, or 20:40 UTC. " +
-                    "Backtest (three years, 1 lot): +$21.4k, 59% won, t 1.62 - a candidate, not a proven edge.")
+                Note("Buys from 13:30 to 00:30 IST. Out at the first of: the next liquidity level, a candle closing back below the broken level, " +
+                    "new liquidity above, or 02:10 IST (20:40 UTC). Backtest (three years, 1 lot): +$21.4k, 59% won, t 1.62 - a candidate, not a proven edge.")
             }
         }
     }
@@ -139,9 +147,24 @@ private fun GoldTrades() {
                 listOf("Today" to sum { it == today }, "This month" to sum { it.year == today.year && it.month == today.month }, "All" to b.trades)
                     .forEach { (label, ts) ->
                         val x = ts.sumOf { it.pnl }
-                        LedgerLine("$label · ${ts.size} trades · ${if (ts.isEmpty()) 0 else Math.round(100.0 * ts.count { it.pnl > 0 } / ts.size)}% won",
-                            GoldPaper.usd(x), if (x >= 0) p.verdigris else p.oxblood)
+                        val won = if (ts.isEmpty()) "—" else "${Math.round(100.0 * ts.count { it.pnl > 0 } / ts.size)}% won"
+                        LedgerLine("$label · ${ts.size} trades · $won", if (ts.isEmpty()) "—" else GoldPaper.usd(x),
+                            if (ts.isEmpty()) null else if (x >= 0) p.verdigris else p.oxblood)
                     }
+                if (b.trades.size >= 2) {
+                    // The paper balance after each closed trade, from the starting amount.
+                    var run = b.start
+                    val curve = listOf(b.start) + b.trades.map { run += it.pnl; run }
+                    var peak = b.start; var dd = 0.0
+                    curve.forEach { v -> peak = maxOf(peak, v); dd = minOf(dd, v - peak) }
+                    Rule(Modifier.padding(vertical = 6.dp))
+                    com.optionslab.app.ui.components.Sparkline(curve, if (curve.last() >= b.start) p.verdigris else p.oxblood,
+                        Modifier.fillMaxWidth().height(56.dp).padding(vertical = 6.dp))
+                    Note("The paper balance after each closed trade.")
+                    LedgerLine("Best trade", GoldPaper.usd(b.trades.maxOf { it.pnl }), p.verdigris)
+                    LedgerLine("Worst trade", GoldPaper.usd(b.trades.minOf { it.pnl }), p.oxblood)
+                    LedgerLine("Deepest drawdown", GoldPaper.usd(dd), if (dd < 0) p.oxblood else null)
+                }
             }
         }
         item {
@@ -151,7 +174,7 @@ private fun GoldTrades() {
                     Column(Modifier.padding(vertical = 4.dp)) {
                         LedgerLine("${t.exitTime.toLocalDate()} · %.2f → %.2f".format(Locale.ENGLISH, t.entry, t.exit), GoldPaper.usd(t.pnl),
                             if (t.pnl >= 0) p.verdigris else p.oxblood)
-                        Note("${t.entryTime.toLocalTime().withNano(0)}-${t.exitTime.toLocalTime().withNano(0)} UTC · %.2f lot · ".format(Locale.ENGLISH, t.lots) + GoldPaper.label(t.why))
+                        Note("${GoldPaper.when_(t.entryTime)} → ${GoldPaper.when_(t.exitTime)} · %.2f lot · ".format(Locale.ENGLISH, t.lots) + GoldPaper.label(t.why))
                     }
                 }
             }

@@ -86,10 +86,15 @@ class GoldScreensTest {
         assertTrue(compose.has("$1,000.00"))
         assertTrue(compose.has("0.01 lot (1 oz)"))
         assertTrue(compose.has("Not armed"))
+        assertTrue(compose.has("Gold (COMEX futures)"))
+        assertTrue(compose.has("12:30-02:30 IST", substring = true))
+        assertTrue(compose.has("Last signal")); assertTrue(compose.has("none yet"))
         shot("home-light")
         compose.switchFor("Armed").performSemanticsAction(SemanticsActions.OnClick); compose.frames()
         compose.until(10_000, "armed") { GoldPaper.book.value.armed }
-        compose.waitForText("Armed", substring = true)
+        // Armed: the next decision time shows; the status is a decision's (no break on the last candle, or the next one).
+        compose.waitForText("Next decision")
+        compose.until(10_000, "an armed status") { GoldPaper.book.value.status != "Not armed" }
         compose.switchFor("Armed").performSemanticsAction(SemanticsActions.OnClick); compose.frames()
         compose.until(10_000, "disarmed") { !GoldPaper.book.value.armed }
         compose.waitForText("Not armed")
@@ -126,7 +131,11 @@ class GoldScreensTest {
         assertTrue(compose.has("+$24.79"))
         assertTrue(compose.has("reached the next liquidity level", substring = true))
         assertTrue(compose.has("the break failed", substring = true))
-        assertTrue(compose.has("20:40 UTC cut-off", substring = true))
+        assertTrue(compose.has("02:10 IST) cut-off", substring = true))
+        // Three trades: the balance curve, best, worst and the deepest drawdown (+19.93, -5.07, +9.93 in time order).
+        assertTrue(compose.has("Best trade")); assertTrue(compose.has("+$19.93"))
+        assertTrue(compose.has("Worst trade")); assertTrue(compose.has("-$5.07"))
+        assertTrue(compose.has("Deepest drawdown"))
         shot("trades-light")
         // Home counts the closed trades into the balance.
         tap("Home")
@@ -171,6 +180,21 @@ class GoldScreensTest {
         tap("‹ Settings")
         compose.waitForText("Lot size".uppercase())
         assertFalse(compose.has("‹ Settings"))
+    }
+
+    @Test fun noTradesShowADashNotZeroPercent() {
+        show()
+        tap("Trades")
+        compose.waitForText("Today · 0 trades · —")
+        assertFalse(compose.has("0% won", substring = true))
+    }
+
+    @Test fun aDelayedFeedIsSaidOnHome() {
+        // The last price is from 11:30, it is 12:00:30 and gold is trading: more than 10 minutes old.
+        GoldPaper.testMinutes = { _ -> listOf(Bar(monday.atTime(11, 30), 2400.0, 2400.0, 2400.0, 2400.0)) }
+        show()
+        compose.waitForText("Price feed")
+        assertTrue(compose.has("delayed: last price 11:30 UTC (17:00 IST)"))
     }
 
     @Test fun nothingHereCanPlaceARealOrder() {
