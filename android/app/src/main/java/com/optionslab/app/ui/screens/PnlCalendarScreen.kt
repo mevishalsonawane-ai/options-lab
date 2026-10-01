@@ -76,11 +76,27 @@ import kotlin.math.abs
 import kotlin.math.sign
 import kotlin.math.sqrt
 
-private fun rupees(x: Double) = (if (x < 0) "−₹" else if (x > 0) "+₹" else "₹") + String.format(Locale.ENGLISH, "%,.0f", abs(x))
+/** The calendar shows IraGoldAlgo's paper account (USD, gold's 24x5 weekdays) rather than IraAlgo's (rupees, NSE days). */
+private val LocalGold = androidx.compose.runtime.staticCompositionLocalOf { false }
 
-/** +6.4k / −18.4k / +1.2L: compact figures for the tiles and the week column. */
+/** Rupees in IraAlgo; US dollars and cents in IraGoldAlgo (its paper account is in USD). */
+@Composable @androidx.compose.runtime.ReadOnlyComposable
+private fun cur() = if (LocalGold.current) "$" else "₹"
+
+@Composable @androidx.compose.runtime.ReadOnlyComposable
+private fun rupees(x: Double) = (if (x < 0) "−${cur()}" else if (x > 0) "+${cur()}" else cur()) +
+    String.format(Locale.ENGLISH, if (LocalGold.current) "%,.2f" else "%,.0f", abs(x))
+
+/** +6.4k / −18.4k / +1.2L: compact figures for the tiles and the week column (gold: +12.40 / +1.2k / +1.2M). */
+@Composable @androidx.compose.runtime.ReadOnlyComposable
 private fun short(x: Double): String {
     val a = abs(x); val s = if (x < 0) "−" else if (x > 0) "+" else ""
+    if (LocalGold.current) return s + when {
+        a >= 1e6 -> String.format(Locale.ENGLISH, "%.1fM", a / 1e6)
+        a >= 1e3 -> String.format(Locale.ENGLISH, "%.1fk", a / 1e3)
+        a >= 100 -> String.format(Locale.ENGLISH, "%.0f", a)
+        else -> String.format(Locale.ENGLISH, "%.2f", a)
+    }
     return s + when {
         a >= 1e5 -> String.format(Locale.ENGLISH, "%.1fL", a / 1e5)
         a >= 1e3 -> String.format(Locale.ENGLISH, "%.1fk", a / 1e3)
@@ -138,7 +154,7 @@ fun PnlCalendarScreen(model: AppModel) {
     val todayLive: DailyPnl.Day? = if (DailyPnl.sessionDay(live) != today) null else if (live) (accountNow as? com.optionslab.app.ui.Load.Done)?.value
         ?.takeIf { it.book.net.isNotEmpty() || it.trades.isNotEmpty() }?.let { DailyPnl.Day(today, it.book.m2m, it.trades.size) }
         else (paperNow as? com.optionslab.app.ui.Load.Done)?.value?.let { sn ->
-            val pnl = sn.funds.todayRealizedPnl + sn.funds.m2mUnrealized
+            val pnl = sn.dayPnl
             if (sn.trades.isNotEmpty() || pnl != 0.0 || sn.positions.positions.any { it.quantity != 0 }) DailyPnl.Day(today, pnl, sn.trades.size) else null
         }
     val days = all.filterKeys { YearMonth.from(it) == month }.let { m ->
@@ -166,6 +182,10 @@ fun PnlCalendarScreen(model: AppModel) {
         }
     }
 
+    // The month's closed trades (this filter), for the win rate by trade.
+    val monthTrips = remember(trips, owners, owner, month) {
+        trips.filter { YearMonth.from(it.day) == month && (owner == "All" || com.optionslab.app.data.TradeBook.ownerOf(it, owners) == owner) }.map { it.net }
+    }
     Page {
         item {
             LedgerCard {
@@ -195,7 +215,7 @@ fun PnlCalendarScreen(model: AppModel) {
         }
         // A past date's orders, trades and positions live here only (the Trade tab shows today's): tap a date to list its fills.
         picked?.takeIf { !yearView }?.let { d -> item(key = "day-$d") { DayTrades(live, d, trips, owners, tick) } }
-        item { Summary(month, days) }
+        item { Summary(month, days, monthTrips) }
         item { YearStrip(month.year, all, live) }
         item { StrategyComparison(trips, owners) }
         item { ChargesCard(live, month, tick) }
@@ -300,7 +320,7 @@ private fun MonthRows(month: YearMonth, days: Map<LocalDate, DailyPnl.Day>, pick
         Row(Modifier.padding(top = gap), verticalAlignment = Alignment.CenterVertically) {
             (week + List(7 - week.size) { null }).forEach { d ->
                 if (d == null) Spacer(Modifier.size(TILE)) else Box(Modifier.onGloballyPositioned { tiles[d] = it.boundsInWindow() }) {
-                    DayTile(d, days[d], biggest, d == today, d == picked, !Market.isTradingDay(d), animKey, index++) { onPick(d) }
+                    DayTile(d, days[d], biggest, d == today, d == picked, closedDay(d), animKey, index++) { onPick(d) }
                 }
                 Spacer(Modifier.width(gap))
             }
@@ -345,6 +365,11 @@ private fun DayTile(d: LocalDate, day: DailyPnl.Day?, biggest: Double, today: Bo
         if (today) Box(Modifier.align(Alignment.TopEnd).offset(2.dp, (-2).dp).size(6.dp).background(p.ink, CircleShape).border(1.5.dp, p.card, CircleShape))
     }
 }
+
+/** A day the market does not trade: NSE's holidays and weekends; gold trades every weekday. */
+@Composable @androidx.compose.runtime.ReadOnlyComposable
+private fun closedDay(d: LocalDate): Boolean =
+    if (LocalGold.current) d.dayOfWeek == DayOfWeek.SATURDAY || d.dayOfWeek == DayOfWeek.SUNDAY else !Market.isTradingDay(d)
 
 private fun lerp(a: Color, b: Color, t: Float) = Color(
     a.red + (b.red - a.red) * t, a.green + (b.green - a.green) * t, a.blue + (b.blue - a.blue) * t, a.alpha + (b.alpha - a.alpha) * t)
@@ -408,7 +433,7 @@ private fun Swatch(c: Color) = Box(Modifier.padding(horizontal = 1.dp).size(9.dp
 
 /** Nine key figures for the month, and the profit / loss split. */
 @Composable
-private fun Summary(month: YearMonth, days: Map<LocalDate, DailyPnl.Day>) {
+private fun Summary(month: YearMonth, days: Map<LocalDate, DailyPnl.Day>, tradeNets: List<Double>? = null) {
     val p = LocalPalette.current
     val all = days.values.sortedBy { it.date }
     LedgerCard {
@@ -422,17 +447,25 @@ private fun Summary(month: YearMonth, days: Map<LocalDate, DailyPnl.Day>) {
         var streak = 0; val sType = all.lastOrNull()?.pnl?.sign ?: 0.0
         for (d in all.asReversed()) { if (d.pnl.sign != sType || sType == 0.0) break; streak++ }
         val best = all.maxByOrNull { it.pnl }; val worst = all.minByOrNull { it.pnl }
-        val trades = all.sumOf { it.trades }
+        // Win rate, profit factor, gross and the count are by closed trade (each buy-to-sell round trip) when the trades
+        // are known: by day they read "100%" on a green day that had losing trades in it.
+        val byTrade = !tradeNets.isNullOrEmpty()
+        val tw = tradeNets.orEmpty().count { it > 0 }; val tl = tradeNets.orEmpty().count { it < 0 }
+        val tgp = tradeNets.orEmpty().filter { it > 0 }.sum(); val tgl = -tradeNets.orEmpty().filter { it < 0 }.sum()
+        val pfGp = if (byTrade) tgp else gp; val pfGl = if (byTrade) tgl else gl
+        val trades = if (byTrade) tradeNets!!.size else all.sumOf { it.trades }
         val tiles = listOf(
-            Tile("Win rate", "${Math.round(100.0 * wins.size / all.size)}%", null, "${wins.size}W · ${losses.size}L"),
-            Tile("P. factor", if (gl > 0) String.format(Locale.ENGLISH, "%.2f", gp / gl) else "∞", if (gp >= gl) p.verdigris else p.oxblood, "profit ÷ loss"),
+            if (byTrade) Tile("Win rate", "${Math.round(100.0 * tw / tradeNets!!.size)}%", null, "${tw}W · ${tl}L trades")
+            else Tile("Green days", "${Math.round(100.0 * wins.size / all.size)}%", null, "${wins.size} up · ${losses.size} down"),
+            Tile("P. factor", if (pfGl > 0) String.format(Locale.ENGLISH, "%.2f", pfGp / pfGl) else "∞", if (pfGp >= pfGl) p.verdigris else p.oxblood,
+                when { pfGl <= 0 && byTrade -> "no losing trade yet"; byTrade -> "won ÷ lost, after charges"; else -> "profit ÷ loss" }),
             Tile("Avg / day", short(net / all.size), if (net >= 0) p.verdigris else p.oxblood, "${all.size} days"),
             Tile("Best day", best?.takeIf { it.pnl > 0 }?.let { short(it.pnl) } ?: "–", p.verdigris, best?.takeIf { it.pnl > 0 }?.let { "${it.date.dayOfMonth} ${mon(month)}" } ?: ""),
             Tile("Worst day", worst?.takeIf { it.pnl < 0 }?.let { short(it.pnl) } ?: "–", p.oxblood, worst?.takeIf { it.pnl < 0 }?.let { "${it.date.dayOfMonth} ${mon(month)}" } ?: ""),
-            Tile("Drawdown", if (dd < 0) short(dd) else "₹0", if (dd < 0) p.oxblood else null, "from peak"),
-            Tile("Streak", if (streak > 0) "$streak ${if (sType > 0) "W" else "L"}" else "–", if (sType > 0) p.verdigris else p.oxblood, "current"),
-            Tile("Trades", "$trades", null, String.format(Locale.ENGLISH, "%.1f / day", trades.toDouble() / all.size)),
-            Tile("Gross", short(gp), p.verdigris, "${short(-gl)} loss"),
+            Tile("Drawdown", if (dd < 0) short(dd) else "${cur()}0", if (dd < 0) p.oxblood else null, "from peak"),
+            Tile("Day streak", if (streak > 0) "$streak ${if (sType > 0) "up" else "down"}" else "–", if (sType > 0) p.verdigris else p.oxblood, "days in a row"),
+            Tile(if (byTrade) "Trades" else "Fills", "$trades", null, String.format(Locale.ENGLISH, "%.1f / day", trades.toDouble() / all.size)),
+            Tile("Gross", short(pfGp), p.verdigris, "${short(-pfGl)} loss"),
         )
         tiles.chunked(3).forEach { row ->
             Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -445,7 +478,8 @@ private fun Summary(month: YearMonth, days: Map<LocalDate, DailyPnl.Day>) {
             if (share > 0f) Box(Modifier.weight(share.coerceAtLeast(0.001f)).height(5.dp).background(p.verdigris))
             if (share < 1f) Box(Modifier.weight((1f - share).coerceAtLeast(0.001f)).height(5.dp).background(p.oxblood))
         }
-        Note("Each day is realised plus open P&L after charges, as it stood at the day's last reading.", Modifier.padding(top = 8.dp))
+        Note(if (LocalGold.current) "Each day is the trades closed that day (India time), after the spread and commission."
+            else "Each day is realised plus open P&L after charges, as it stood at the day's last reading.", Modifier.padding(top = 8.dp))
     }
 }
 
@@ -559,9 +593,9 @@ private fun StrategyComparison(trips: List<com.optionslab.engine.RoundTrips.Trip
         groups.forEach { (name, st) ->
             Row(Modifier.fillMaxWidth().padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text(name, style = Type.bodySmall.copy(color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 12.sp), modifier = Modifier.weight(1.6f), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text("${st.trips}", style = Type.figure.copy(fontSize = 11.sp), modifier = Modifier.weight(0.8f), textAlign = TextAlign.End)
-                Text("${Math.round(100 * st.winRate)}%", style = Type.figure.copy(fontSize = 11.sp), modifier = Modifier.weight(0.8f), textAlign = TextAlign.End)
-                Text(st.profitFactor?.let { String.format(Locale.ENGLISH, "%.2f", it) } ?: "∞", style = Type.figure.copy(fontSize = 11.sp), modifier = Modifier.weight(0.8f), textAlign = TextAlign.End)
+                Text("${st.trips}", style = Type.figure.copy(color = p.ink, fontSize = 11.sp), modifier = Modifier.weight(0.8f), textAlign = TextAlign.End)
+                Text("${Math.round(100 * st.winRate)}%", style = Type.figure.copy(color = p.ink, fontSize = 11.sp), modifier = Modifier.weight(0.8f), textAlign = TextAlign.End)
+                Text(st.profitFactor?.let { String.format(Locale.ENGLISH, "%.2f", it) } ?: "∞", style = Type.figure.copy(color = p.ink, fontSize = 11.sp), modifier = Modifier.weight(0.8f), textAlign = TextAlign.End)
                 Text(short(st.net), style = Type.figure.copy(fontSize = 11.sp, color = if (st.net >= 0) p.verdigris else p.oxblood, fontWeight = FontWeight.SemiBold),
                     modifier = Modifier.weight(1.2f), textAlign = TextAlign.End)
             }
@@ -586,7 +620,7 @@ private fun ChargesCard(live: Boolean, month: YearMonth, tick: Int) {
         lines.forEach { (k, v) ->
             Row(Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
                 Text(k, style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp), modifier = Modifier.weight(1f))
-                Text(String.format(Locale.ENGLISH, "₹%,.2f", v), style = Type.figure.copy(fontSize = 12.sp))
+                Text(String.format(Locale.ENGLISH, "₹%,.2f", v), style = Type.figure.copy(color = p.ink, fontSize = 12.sp))
             }
         }
         Note(if (live) "Zerodha: estimated with the F&O schedule from the trades IraAlgo recorded; your contract note is the final word."
@@ -653,5 +687,56 @@ private fun DayTrades(live: Boolean, day: LocalDate, trips: List<com.optionslab.
                 Text(rupees(net), style = Type.figure.copy(color = if (net >= 0) p.verdigris else p.oxblood, fontSize = 15.sp, fontWeight = FontWeight.SemiBold))
             }
         }
+    }
+}
+
+/** IraGoldAlgo's paper trades as days (India time, by the day each trade closed), for its P&L calendar. */
+internal fun goldDays(trades: List<com.optionslab.app.data.GoldPaper.Trade>): Map<LocalDate, DailyPnl.Day> =
+    trades.groupBy { it.exitTime.plusMinutes(330).toLocalDate() }
+        .mapValues { (d, ts) -> DailyPnl.Day(d, Math.round(ts.sumOf { it.pnl } * 100) / 100.0, ts.size) }
+
+/**
+ * IraGoldAlgo's P&L page: IraAlgo's calendar (the month's net and its line, a tile a day, each week's total, month or
+ * year view) and its summary and year strip, over the gold paper trades, in USD.
+ */
+@Composable
+fun GoldPnlCalendar() {
+    val book by com.optionslab.app.data.GoldPaper.book.collectAsState()
+    val trend by com.optionslab.app.data.GoldTrendPaper.book.collectAsState()
+    val allTrades = remember(book.trades, trend.trades) { (book.trades + trend.trades).sortedBy { it.exitTime } }
+    val all = remember(allTrades) { goldDays(allTrades) }
+    val thisMonth = YearMonth.from(com.optionslab.app.data.GoldPaper.now().plusMinutes(330).toLocalDate())
+    var month by remember { mutableStateOf(thisMonth) }
+    var picked by remember { mutableStateOf<LocalDate?>(null) }
+    var yearView by remember { mutableStateOf(false) }
+    val first = all.keys.minOrNull()?.let { YearMonth.from(it) }
+    val days = all.filterKeys { YearMonth.from(it) == month }
+    val prev = all.filterKeys { YearMonth.from(it) == month.minusMonths(1) }
+    androidx.compose.runtime.CompositionLocalProvider(LocalGold provides true) {
+    Page {
+        item {
+            LedgerCard {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Segmented(listOf("Month", "Year"), if (yearView) 1 else 0) { yearView = it == 1; picked = null }
+                    Spacer(Modifier.weight(1f))
+                    NavArrow("‹", first == null || month > first) { month = month.minusMonths(1); picked = null }
+                    Text("${mon(month)} ${month.year}", style = Type.body.copy(color = LocalPalette.current.ink, fontSize = 13.sp, fontWeight = FontWeight.SemiBold),
+                        textAlign = TextAlign.Center, modifier = Modifier.widthIn(min = 78.dp))
+                    NavArrow("›", month < thisMonth) { month = month.plusMonths(1); picked = null }
+                }
+                if (yearView) {
+                    YearGrid(month.year, all, thisMonth) { m -> month = m; yearView = false }
+                } else {
+                    Headline(month, days, prev)
+                    Spacer(Modifier.height(12.dp))
+                    MonthGrid(month, days, picked, animKey = "gold|$month") { d -> picked = if (picked == d) null else d }
+                    Legend()
+                }
+                if (book.position != null || trend.position != null) Note("The open trade counts on the day it closes.", Modifier.padding(top = 6.dp))
+            }
+        }
+        item { Summary(month, days, allTrades.filter { YearMonth.from(it.exitTime.plusMinutes(330).toLocalDate()) == month }.map { it.pnl }) }
+        item { YearStrip(month.year, all, live = false) }
+    }
     }
 }

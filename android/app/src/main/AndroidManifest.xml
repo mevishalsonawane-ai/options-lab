@@ -146,6 +146,11 @@
             android:name=".work.NotificationActionReceiver"
             android:exported="false" />
 
+        <!-- IraGoldAlgo's 5-minute pass (the IraAlgo build never schedules it). -->
+        <receiver
+            android:name=".work.GoldReceiver"
+            android:exported="false" />
+
         <!-- The home-screen widget. Exported because the launcher binds it; it only draws. -->
         <receiver
             android:name=".widget.IraWidget"

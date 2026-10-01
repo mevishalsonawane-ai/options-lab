@@ -71,7 +71,7 @@ fun LazyListScope.paperTrade(model: AppModel, snap: Load<Paper.Snapshot>, book: 
                 }
                 Note("IraAlgo's sandbox engine on the phone: margin, fills, MIS square-off at 15:15 and expiry settlement are simulated from Upstox's public prices. Nothing reaches Zerodha.")
             }
-            if (snap is Load.Done) { Spacer(Modifier.height(14.dp)); PaperBalance(model, snap.value, onReset) }
+            if (snap is Load.Done) { Spacer(Modifier.height(14.dp)); PaperBalance(snap.value, onReset) }
         }
     }
     item(key = "paper.form") { PaperOrderForm(model) }
@@ -94,7 +94,7 @@ fun LazyListScope.paperTrade(model: AppModel, snap: Load<Paper.Snapshot>, book: 
                 when (book) {
                     "orders" -> PaperOrders(model, v)
                     "trades" -> PaperTrades(model, v)
-                    "funds" -> PaperFunds(v, onReset)
+                    "funds" -> PaperFunds(model, v, onReset)
                     else -> PaperPositions(model, v)
                 }
             }
@@ -193,10 +193,13 @@ private fun PaperPositions(model: AppModel, v: Paper.Snapshot) {
     val book = v.positions
     val owners by model.orderOwners.collectAsState()
     LedgerCard(title = "Paper positions") {
-        Text("TODAY", style = Type.label.copy(color = p.inkSoft))
-        RollingFigure(book.totalPnlToday, { rs(it, true) }, Type.figureLarge.copy(color = if (book.totalPnlToday >= 0) p.verdigris else p.oxblood), calm = true)
+        Text("TODAY AFTER CHARGES", style = Type.label.copy(color = p.inkSoft))
+        // The same figure as Home's "P&L today", the calendar and the loss limits (Paper.Snapshot.dayPnl).
+        RollingFigure(v.dayPnl, { rs(it, true) }, Type.figureLarge.copy(color = if (v.dayPnl >= 0) p.verdigris else p.oxblood), calm = true)
         LedgerLine("Unrealised", rs(book.totalUnrealizedPnl, true))
         LedgerLine("Realised today", rs(book.totalTodayRealizedPnl, true))
+        val charges = v.trades.sumOf { it.charges }
+        if (charges > 0) LedgerLine("Charges today", rs(-charges, true))
         if (book.positions.isEmpty()) Note("No paper positions.")
         book.positions.forEach { ps ->
             Rule(Modifier.padding(vertical = 6.dp))
@@ -305,9 +308,11 @@ private fun PaperTrades(model: AppModel, v: Paper.Snapshot) {
 }
 
 @Composable
-private fun PaperFunds(v: Paper.Snapshot, onReset: () -> Unit) {
+private fun PaperFunds(model: AppModel, v: Paper.Snapshot, onReset: () -> Unit) {
     val p = LocalPalette.current
     val f = v.funds
+    var toDefault by remember { mutableStateOf(false) }
+    if (toDefault) PaperDefaultDialog(model) { toDefault = false }
     LedgerCard(title = "Paper funds") {
         LedgerLine("Available", rs(f.availableCash), p.verdigris)
         LedgerLine("Used margin", rs(f.utilisedDebits))
@@ -318,16 +323,16 @@ private fun PaperFunds(v: Paper.Snapshot, onReset: () -> Unit) {
         LedgerLine("Resets", "${f.resetCount} · last ${f.lastReset.take(10)}")
         Spacer(Modifier.height(8.dp))
         BrassButton("Set paper amount / reset", Modifier.fillMaxWidth(), tone = p.oxblood, onClick = onReset)
+        Spacer(Modifier.height(8.dp))
+        BrassButton("Reset paper to default", Modifier.fillMaxWidth(), tone = p.oxblood) { toDefault = true }
     }
 }
 
 /** The paper money, always in view: what is free to trade, what is in use, and the P&L. */
 @Composable
-private fun PaperBalance(model: AppModel, v: Paper.Snapshot, onChange: () -> Unit) {
+private fun PaperBalance(v: Paper.Snapshot, onChange: () -> Unit) {
     val p = LocalPalette.current
     val f = v.funds
-    var toDefault by remember { mutableStateOf(false) }
-    if (toDefault) PaperDefaultDialog(model) { toDefault = false }
     LedgerCard {
         Text("Paper balance", style = Type.label.copy(color = p.inkSoft, fontSize = 13.sp))
         RollingFigure(f.availableCash, { rs(it) }, Type.figureLarge.copy(color = p.ink))
@@ -337,8 +342,6 @@ private fun PaperBalance(model: AppModel, v: Paper.Snapshot, onChange: () -> Uni
         LedgerLine("Total P&L", rs(f.totalPnl, true), if (f.totalPnl >= 0) p.verdigris else p.oxblood)
         Spacer(Modifier.height(8.dp))
         BrassButton("Set paper amount", Modifier.fillMaxWidth(), tone = p.ink, onClick = onChange)
-        Spacer(Modifier.height(8.dp))
-        BrassButton("Reset paper to default", Modifier.fillMaxWidth(), tone = p.oxblood) { toDefault = true }
     }
 }
 

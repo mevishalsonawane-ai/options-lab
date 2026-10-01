@@ -66,6 +66,21 @@ class NotifierTest : RobolectricTest() {
         assertTrue(open.isImmutable)
     }
 
+    @Test fun aBuyOrSellShowsABigColouredTileAndStaysPrivate() {
+        val n = Notifier.builder(context, Notifier.BUY, "XAUUSD paper buy", "0.01 lot at 2390.15\nlevel 2388.00", side = "BUY").build()
+        assertNotNull("collapsed view", n.contentView); assertNotNull("expanded view", n.bigContentView)
+        assertEquals(com.optionslab.app.R.layout.notif_trade, n.contentView.layoutId)
+        assertEquals(com.optionslab.app.R.layout.notif_trade_big, n.bigContentView.layoutId)
+        assertEquals("the title and text stay for screen readers", "XAUUSD paper buy", Background.title(n))
+        assertEquals("Unlock to read", Background.text(n.publicVersion!!))
+        val t = Notifier.tile(context, "SELL", 144, 104)
+        // (The simulated phone does not paint pixels, so the tile is checked by size; its colour by sideColor.)
+        assertTrue(t.width > t.height); assertEquals(0xFFE0322B.toInt(), Notifier.sideColor("SELL"))
+        assertEquals(0xFFE0322B.toInt(), Notifier.sideColor("SHORT")); assertEquals(0xFF00A86B.toInt(), Notifier.sideColor("LONG"))
+        // Other notices keep the plain layout.
+        assertNull(Notifier.builder(context, Notifier.RISK, "Risk", "text").build().contentView)
+    }
+
     @Test fun theOwnerMayChooseToShowAmountsOnTheLockScreen() {
         AppSettings.save(AppSettings.load().copy(hideAmountsOnLockScreen = false))
         val n = Notifier.builder(context, Notifier.SCHEDULE, "Settled WIN", "Rs +1,200", null).build()

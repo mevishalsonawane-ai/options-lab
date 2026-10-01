@@ -12,10 +12,10 @@ data class Bar(val start: LocalDateTime, val open: Double, val high: Double, val
 
 /**
  * [sweep]: the liquidity-sweep reversal (SweepRules), not the break; [fade]: the range-edge fade (RangeFadeRules);
- * [paperOnly]: it never sends to Zerodha.
+ * [liquidity]: the liquidity-pool break on 15- and 5-minute charts (LiquidityRules); [paperOnly]: it never sends to Zerodha.
  */
 data class Arm(val source: String, val label: String, val freshOnly: Boolean = false, val sweep: Boolean = false, val paperOnly: Boolean = false,
-               val fade: Boolean = false)
+               val fade: Boolean = false, val liquidity: Boolean = false)
 
 /**
  * The opening-range-break rule, exactly as the desktop's
@@ -25,7 +25,8 @@ data class Arm(val source: String, val label: String, val freshOnly: Boolean = f
  *
  *   range     high/low of the bars labelled 09:15 .. 10:00 (exists once 10:00 has closed)
  *   strike    ATM from the first completed bar at or after 09:20, half-up to 100, held all day
- *   decide    completed bars labelled after 10:00 and before 14:30
+ *   decide    completed bars labelled after 10:00 and before 14:00 (entries by 14:00; research/ENTRY_CUTOFF.md: better
+ *             than 14:30 in both years for ORB, about even for ORB Fresh)
  *   entry     close above the range buys the CE, below buys the PE
  *   exits     -40 / +40 premium points, 15:10 square-off
  */
@@ -41,7 +42,9 @@ object OrbRules {
     const val TICK = 0.05
     val OR_START: LocalTime = LocalTime.of(9, 15)
     val OR_END: LocalTime = LocalTime.of(10, 0)
-    val LAST_ENTRY_BAR: LocalTime = LocalTime.of(14, 30)
+    val LAST_ENTRY_BAR: LocalTime = LocalTime.of(14, 0)
+    /** ORB Sweep keeps the 14:30 window: an earlier last entry made it worse (research/ENTRY_CUTOFF.md). */
+    val SWEEP_LAST_ENTRY_BAR: LocalTime = LocalTime.of(14, 30)
     val STRIKE_BAR: LocalTime = LocalTime.of(9, 20)
     val SQUARE_OFF: LocalTime = LocalTime.of(15, 10)
     val WINDOW_FROM: LocalTime = LocalTime.of(9, 20)
@@ -65,7 +68,7 @@ object OrbRules {
         else -> 0
     }
 
-    fun mayDecide(bar: Bar): Boolean { val t = bar.start.toLocalTime(); return t.isAfter(OR_END) && t.isBefore(LAST_ENTRY_BAR) }
+    fun mayDecide(bar: Bar, until: LocalTime = LAST_ENTRY_BAR): Boolean { val t = bar.start.toLocalTime(); return t.isAfter(OR_END) && t.isBefore(until) }
 
     /** (+1 CE / -1 PE / 0, why) on the last completed bar of [bars]. */
     /**
@@ -95,8 +98,15 @@ object OrbRules {
     /** The first completed bar at or after 09:20. */
     fun strikeBar(bars: List<Bar>): Bar? = bars.firstOrNull { !it.start.toLocalTime().isBefore(STRIKE_BAR) }
 
-    /** The nearest listed expiry strictly after [day]: never today's. */
+    /** The nearest listed expiry strictly after [day]: never today's (Liquidity 15+5). */
     fun expiryAfter(day: LocalDate, listed: Collection<LocalDate>): LocalDate? = listed.filter { it.isAfter(day) }.minOrNull()
+
+    /**
+     * The ORB family's contract expiry (ORB, ORB Fresh, ORB Sweep, Range Fade): on an expiry day the option expiring
+     * that day, otherwise the nearest after it. The owner's choice, 2026-10-01 (research/EXPIRY_SAME_DAY.md: on 11
+     * BANKNIFTY expiry days the four arms made +13.9k with the same-day option against +1.3k with the next one).
+     */
+    fun expiryOnOrAfter(day: LocalDate, listed: Collection<LocalDate>): LocalDate? = listed.filter { !it.isBefore(day) }.minOrNull()
 
     fun optionSymbol(expiry: LocalDate, strike: Int, right: String, underlying: String = UNDERLYING) =
         "%s%02d%s%02d%d%s".format(underlying, expiry.dayOfMonth, MONTHS[expiry.monthValue - 1], expiry.year % 100, strike, right)

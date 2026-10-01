@@ -1631,7 +1631,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     /** Today's paper P&L for the calendar, on days the account did anything. */
     private fun recordPaperDay(snap: com.optionslab.app.data.Paper.Snapshot) = runCatching {
         val open = snap.positions.positions.any { it.quantity != 0 }
-        val pnl = snap.funds.todayRealizedPnl + snap.funds.m2mUnrealized
+        val pnl = snap.dayPnl
         if (snap.trades.isNotEmpty() || open || pnl != 0.0) com.optionslab.app.data.DailyPnl.record(false, pnl, snap.trades.size)
         pnlDays.value = pnlDays.value + 1
     }

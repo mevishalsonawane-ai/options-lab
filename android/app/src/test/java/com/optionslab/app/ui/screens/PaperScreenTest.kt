@@ -233,6 +233,7 @@ class PaperScreenTest {
         assertEquals(0.0, s.funds.utilisedDebits, 0.001)
         compose.waitUntil(10_000) { exists("NRML · CLOSED 0") }
         assertTrue(exists(rs(s.positions.totalTodayRealizedPnl, true)))
+        assertEquals("one day figure everywhere: the positions less today's charges = the funds' today", s.funds.todayRealizedPnl, s.dayPnl, 0.01)
 
         // Orders: two complete, nothing open.
         tap("Orders")
@@ -265,6 +266,20 @@ class PaperScreenTest {
             .performSemanticsAction(SemanticsActions.OnClick)
         waitSnap(m, "the close") { s -> s.positions.positions.all { it.quantity == 0 } }
         compose.waitUntil(5_000) { m.rowAction.value == null }
+    }
+
+    @Test fun theRowPopupShowsThePositionAsPricedNowNotAsTapped() {
+        val m = show()
+        buyMarket(m)
+        // The price moves after the row was drawn: the popup re-reads the account and shows the new LTP and P&L.
+        upstox.price(TradeFixtures.key("NIFTY", near, 24_500.0, "PE"), 130.0)
+        compose.onAllNodesWithText(sym(24_500.0))[0].performClick()
+        compose.waitUntil(5_000) { m.rowAction.value is RowTarget.PaperPosition }
+        compose.waitUntil(20_000) {
+            compose.onAllNodes(hasText("130.00") and hasAnyAncestor(isDialog())).fetchSemanticsNodes().isNotEmpty()
+        }
+        val pos = m.snap()!!.positions.positions.single { it.symbol == sym(24_500.0) }
+        assertTrue(compose.onAllNodes(hasText(rs(pos.unrealizedPnl, true)) and hasAnyAncestor(isDialog())).fetchSemanticsNodes().isNotEmpty())
     }
 
     @Test fun theRowPopupClosesWithoutActingWhenDismissed() {
@@ -552,7 +567,7 @@ class PaperScreenTest {
 
     @Test fun emptyBooksSayTheyAreEmpty() {
         show()
-        assertTrue(exists("No paper positions."))
+        compose.waitUntil(5_000) { exists("No paper positions.") }
         tap("Orders"); compose.waitUntil(5_000) { exists("No paper orders this session.") }
         compose.onNodeWithText("Orders").assertIsSelected()
         tap("Trades"); compose.waitUntil(5_000) { exists("No paper trades this session.") }

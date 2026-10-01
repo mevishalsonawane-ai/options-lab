@@ -334,6 +334,26 @@ class Sandbox(
             return true
         }
 
+        /**
+         * A close's margin back and its realised P&L to the funds. With [SandboxConfig.pnlAlwaysToFunds] (the app's paper
+         * account) IraAlgo departs from the Python here: there, a
+         * position with no margin left to release (a short opened by a stop that rested after its long was gone, a
+         * margin already reconciled away) books its P&L on the position but never on the funds, so the balance and
+         * "P&L today" fell behind the positions' realised total. The P&L now always reaches the funds; the margin
+         * released is at most what is still used.
+         */
+        fun settleClose(release: BigDecimal, pnl: BigDecimal) {
+            if (!config.pnlAlwaysToFunds) {
+                // Python parity: with nothing to release, the P&L never reaches the funds.
+                if (release.signum() > 0) releaseMargin(release, pnl)
+                return
+            }
+            val r = release.min(funds.usedMargin)
+            if (r.signum() > 0 && releaseMargin(r, pnl)) return
+            if (pnl.signum() == 0) return
+            editFunds { available += pnl; realized += pnl; today += pnl; total = realized + unrealized }
+        }
+
         /** transfer_margin_to_holdings: T+1 moves the cost out of used margin without crediting cash. */
         fun transferMarginToHoldings(amount: BigDecimal): Boolean {
             if (amount.signum() <= 0 || amount > funds.usedMargin) return false
@@ -460,9 +480,7 @@ class Sandbox(
                     }
                     final == 0 -> {
                         val realized = realizedPnl(old, p.averagePrice, kotlin.math.abs(signed), px, contractValue(o.symbol, o.exchange))
-                        val release = p.marginBlocked
-                        // Python parity: with nothing to release, the P&L never reaches the funds.
-                        if (release.signum() > 0) releaseMargin(release, realized)
+                        settleClose(p.marginBlocked, realized)
                         editPosition(i) {
                             accumulated += realized; today += realized; quantity = 0; margin = BigDecimal.ZERO
                             ltp = px; pnl = today; pnlPercent = BigDecimal.ZERO
@@ -481,7 +499,7 @@ class Sandbox(
                         val realized = realizedPnl(old, p.averagePrice, reduced, px, contractValue(o.symbol, o.exchange))
                         val current = p.marginBlocked
                         val release = current * div(BigDecimal(reduced), BigDecimal(kotlin.math.abs(old)))
-                        if (release.signum() > 0) releaseMargin(release, realized)
+                        settleClose(release, realized)
                         val remaining = current - release
                         editPosition(i) {
                             accumulated += realized; today += realized
@@ -873,8 +891,11 @@ class Sandbox(
             val qty = BigDecimal(kotlin.math.abs(p.quantity))
             val closePnl = if (p.quantity > 0) (settle - p.averagePrice) * qty else (p.averagePrice - settle) * qty
             val total = p.accumulatedRealizedPnl + closePnl
-            releaseMargin(p.marginBlocked, closePnl)
-            editPosition(i) { quantity = 0; ltp = settle; pnl = total; accumulated = total; margin = BigDecimal.ZERO }
+            // With pnlAlwaysToFunds the settlement P&L always reaches the funds and also counts in the position's today,
+            // so the positions' today and the funds' today agree after expiry; off, it is Python's behaviour.
+            val app = config.pnlAlwaysToFunds
+            if (app) settleClose(p.marginBlocked, closePnl) else releaseMargin(p.marginBlocked, closePnl)
+            editPosition(i) { quantity = 0; ltp = settle; pnl = total; accumulated = total; margin = BigDecimal.ZERO; if (app) today += closePnl }
             val expiry = contractExpiry(p.symbol, p.exchange, instruments.lookup(p.symbol, p.exchange)) ?: now.toLocalDate()
             positions[i] = positions[i].copy(updatedAt = expiry.atStartOfDay(java.time.ZoneOffset.UTC).withZoneSameInstant(SandboxRules.IST).toLocalDateTime())
             events += SandboxEvent.ExpirySettled(p.symbol, p.exchange, p.product, store(settle), store(closePnl))
@@ -1025,7 +1046,29 @@ class Sandbox(
                 )
             }
             updateUnrealizedPnl(totalUnrealized)
+            if (config.pnlAlwaysToFunds) repairTally(boundary)
             return PositionBook(rows, totalPnlToday.toDouble(), totalUnrealized.toDouble(), totalToday.toDouble(), totalPnlToday.toDouble())
+        }
+
+        /**
+         * With pnlAlwaysToFunds: the funds' realised P&L (all time and today) brought back to what the books say it is -
+         * every position's realised P&L less every charge paid since the last reset. A close a build before the funds fix
+         * booked on the position only (or anything else that ever missed the funds) is credited here, so the balance,
+         * Total P&L and the day's P&L agree with the positions and the trades. Skipped with holdings (a T+1 settlement
+         * moves P&L out of the positions, so they are no longer the whole ledger).
+         */
+        fun repairTally(boundary: LocalDateTime) {
+            if (holdings.any { it.quantity != 0 }) return
+            val since = trades.filter { !it.timestamp.isBefore(funds.lastResetDate) }
+            val charges = since.fold(BigDecimal.ZERO) { a, t -> a + t.charges }
+            val chargesToday = since.filter { !it.timestamp.isBefore(boundary) }.fold(BigDecimal.ZERO) { a, t -> a + t.charges }
+            val realized = positions.fold(BigDecimal.ZERO) { a, p -> a + p.accumulatedRealizedPnl } - charges
+            val today = positions.filter { !it.updatedAt.isBefore(boundary) }.fold(BigDecimal.ZERO) { a, p -> a + p.todayRealizedPnl } - chargesToday
+            val dR = realized - funds.realizedPnl
+            val dT = today - funds.todayRealizedPnl
+            val cent = BigDecimal("0.01")
+            if (dR.abs() < cent && dT.abs() < cent) return
+            editFunds { available += dR; this.realized += dR; this.today += dT; total = this.realized + unrealized }
         }
 
         fun holdingsBookTx(quotes: Map<String, Quote>): HoldingsBook {

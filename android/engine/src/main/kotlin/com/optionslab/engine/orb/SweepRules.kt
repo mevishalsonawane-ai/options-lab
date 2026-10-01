@@ -6,7 +6,7 @@ import java.time.LocalDateTime
  * ORB Sweep: the liquidity-sweep reversal at the opening range. Paper only.
  *
  *   range     the ORB's own opening range (09:15 .. 10:00), and its day strike / next expiry
- *   decide    completed 5-minute bars after 10:00 and before 14:30 (as the ORB)
+ *   decide    completed 5-minute bars after 10:00 and before 14:30 (its own window; the ORB stops at 14:00)
  *   entry     a bar whose high goes above the range high and CLOSES back below it buys the PE (the breakout
  *             failed); a bar whose low goes below the range low and closes back above it buys the CE
  *   exits     -40 premium points (the resting SL-M, as the ORB), +80 premium points, 15:10 square-off
@@ -27,7 +27,7 @@ object SweepRules {
     /** (+1 CE / -1 PE / 0, why) on the last completed bar of [bars]; [entriesToday] = the arm's entries so far today. */
     fun entrySignal(bars: List<Bar>, rng: Pair<Double, Double>, lastExit: LocalDateTime?, entriesToday: Int): Pair<Int, String> {
         val last = bars.lastOrNull() ?: return 0 to "no_decision_bar"
-        if (!OrbRules.mayDecide(last)) return 0 to "no_decision_bar"
+        if (!OrbRules.mayDecide(last, OrbRules.SWEEP_LAST_ENTRY_BAR)) return 0 to "no_decision_bar"
         if (entriesToday >= MAX_ENTRIES) return 0 to "day_limit_reached"
         if (lastExit != null && !last.start.isAfter(OrbRules.barOf(lastExit))) return 0 to "cooling_down_after_exit"
         val (orh, orl) = rng

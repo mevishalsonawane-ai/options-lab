@@ -61,13 +61,23 @@ object Origins {
     /**
      * Who opened what a position holds now. The orders on the position's side are read newest first
      * until they cover the open quantity; their names are joined ("ORB", "ORB + Manual"). A closed
-     * position is named by whoever opened it first today. Null when no order explains it (carried overnight).
+     * position is named by everyone who opened a trade on it today, in order ("ORB + Range Fade"): several arms
+     * trade the same option in a day, and its P&L is all of theirs. Null when no order explains it (carried overnight).
      */
     fun position(owners: Map<String, String>, fills: List<Fill>, netQty: Int): String? {
         if (fills.isEmpty()) return null
         val names = LinkedHashSet<String>()
         fun name(f: Fill) = of(owners, f.venueId, f.tag).first.removePrefix("Strategy: ").removePrefix("Auto: ").let(::base)
-        if (netQty == 0) return name(fills.first())
+        if (netQty == 0) {
+            // A fill opens when it moves the running quantity away from zero (a buy from flat or long, a sell from flat or short).
+            var running = 0
+            for (f in fills) {
+                val signed = if (f.buy) f.qty else -f.qty
+                if (running == 0 || (running > 0) == f.buy) names += name(f)
+                running += signed
+            }
+            return names.joinToString(" + ").ifEmpty { name(fills.first()) }
+        }
         var left = kotlin.math.abs(netQty)
         for (f in fills.asReversed()) {
             if (f.buy != (netQty > 0) || f.qty <= 0) continue

@@ -48,8 +48,12 @@ class OrbRulesTest {
     }
 
     @Test fun lastDecisionBarIs1425() {
-        assertTrue(OrbRules.mayDecide(bar(14, 25, 1.0)))
-        assertTrue(!OrbRules.mayDecide(bar(14, 30, 1.0)))
+        // The ORB decides on bars before 14:00 (entries by 14:00); ORB Sweep keeps its 14:30 window.
+        assertTrue(OrbRules.mayDecide(bar(13, 55, 1.0)))
+        assertTrue(!OrbRules.mayDecide(bar(14, 0, 1.0)))
+        assertTrue(!OrbRules.mayDecide(bar(14, 25, 1.0)))
+        assertTrue(OrbRules.mayDecide(bar(14, 25, 1.0), OrbRules.SWEEP_LAST_ENTRY_BAR))
+        assertTrue(!OrbRules.mayDecide(bar(14, 30, 1.0), OrbRules.SWEEP_LAST_ENTRY_BAR))
         assertTrue(!OrbRules.mayDecide(bar(10, 0, 1.0)))
         assertTrue(OrbRules.mayDecide(bar(10, 5, 1.0)))
     }
@@ -93,6 +97,10 @@ class OrbRulesTest {
     @Test fun expiryIsNeverToday() {
         val listed = listOf(day, LocalDate.of(2026, 10, 27), LocalDate.of(2026, 11, 24))
         assertEquals(LocalDate.of(2026, 10, 27), OrbRules.expiryAfter(day, listed))
+        // The ORB family on an expiry day buys the option expiring that day; on other days the nearest after it.
+        assertEquals(day, OrbRules.expiryOnOrAfter(day, listed))
+        assertEquals(LocalDate.of(2026, 10, 27), OrbRules.expiryOnOrAfter(day.plusDays(1), listed))
+        assertEquals(null, OrbRules.expiryOnOrAfter(LocalDate.of(2026, 12, 1), listed))
         assertEquals("BANKNIFTY27OCT2656300CE", OrbRules.optionSymbol(LocalDate.of(2026, 10, 27), 56300, "CE"))
     }
 
@@ -127,6 +135,18 @@ class OrbRulesTest {
             it[12] = Bar(at(10, 15), 250.0, 255.0, 240.0, 245.0)    // opens 60 below: fills at the open, not 270
         }
         assertEquals(250.0, Replay.day(OrbRules.ORB, index, ce, flat)[0].exit)
+    }
+
+    @Test fun replayLeavesAtTheProfitLockAsTheArmTrades() {
+        val index = session(55300.0, 55300.0, 55300.0, 55300.0)
+        val flat = index.map { Bar(it.start, 300.0, 300.0, 300.0, 300.0) }
+        val ce = flat.toMutableList().also {
+            it[11] = Bar(at(10, 10), 310.0, 312.0, 305.0, 311.0)    // entry at 310
+            it[12] = Bar(at(10, 15), 315.0, 341.0, 314.0, 335.0)    // +31: past 75% of the target, 50% (330) locked
+            it[13] = Bar(at(10, 20), 328.0, 329.0, 300.0, 302.0)    // back through the lock: out at the open under it
+        }
+        assertEquals(ReplayTrade("10:05", "10:20", "CE", 310.0, 328.0, "profit_lock"), Replay.day(OrbRules.ORB, index, ce, flat)[0])
+        assertEquals("last_bar", Replay.day(OrbRules.ORB, index, ce, flat, ladder = false)[0].why)
     }
 
     @Test fun passRule() {

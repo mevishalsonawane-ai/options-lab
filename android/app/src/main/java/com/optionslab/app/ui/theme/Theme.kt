@@ -67,6 +67,23 @@ val Dark = Palette(
     seal = Color(0xFFFF5A52), dark = true, onPrimary = Color(0xFF000000), chip = Color(0xFF1C1C1E),
 )
 
+/** IraGoldAlgo's palettes: warm ivory or warm black, with gold where IraAlgo has black / white. */
+val GoldLight = Palette(
+    paper = Color(0xFFFFFBF2), paperDeep = Color(0xFFFBF3E2), card = Color(0xFFFFFFFF),
+    ink = Color(0xFF1A1408), inkSoft = Color(0xFF6B5E45), inkFaint = Color(0xFF7D705A),
+    brass = Color(0xFF8C6A12), gold = Color(0xFFB8860B), oxblood = Color(0xFFD12F26),
+    verdigris = Color(0xFF00965F), amber = Color(0xFFB45309), rule = Color(0xFFEFE4CC),
+    seal = Color(0xFFD12F26), dark = false, onPrimary = Color(0xFFFFFFFF), chip = Color(0xFFF6EDD9),
+)
+
+val GoldDark = Palette(
+    paper = Color(0xFF0B0A07), paperDeep = Color(0xFF0B0A07), card = Color(0xFF17140D),
+    ink = Color(0xFFF5EEDC), inkSoft = Color(0xFFB5A98E), inkFaint = Color(0xFF9A8E74),
+    brass = Color(0xFFE3B23C), gold = Color(0xFFE3B23C), oxblood = Color(0xFFFF5A52),
+    verdigris = Color(0xFF1FCC84), amber = Color(0xFFF5B942), rule = Color(0xFF2E281A),
+    seal = Color(0xFFFF5A52), dark = true, onPrimary = Color(0xFF0B0A07), chip = Color(0xFF221D12),
+)
+
 val LocalPalette = staticCompositionLocalOf { Light }
 
 /** The platform sans-serif throughout; figures use tabular digits so columns line up. */
@@ -93,9 +110,9 @@ object Type {
 
 /** [mode]: "light", "dark" or "system" (older saved values "parchment"/"mahogany" map to light/dark). */
 @Composable
-fun IraAlgoTheme(mode: String, content: @Composable () -> Unit) {
+fun IraAlgoTheme(mode: String, gold: Boolean = com.optionslab.app.BuildConfig.GOLD, content: @Composable () -> Unit) {
     val dark = when (mode) { "light", "parchment" -> false; "dark", "mahogany" -> true; else -> isSystemInDarkTheme() }
-    val p = if (dark) Dark else Light
+    val p = if (gold) (if (dark) GoldDark else GoldLight) else if (dark) Dark else Light
     val scheme = if (dark) darkColorScheme(
         primary = p.brass, onPrimary = p.onPrimary, secondary = p.inkSoft, error = p.oxblood,
         background = p.paper, surface = p.card, onBackground = p.ink, onSurface = p.ink,
@@ -106,6 +123,10 @@ fun IraAlgoTheme(mode: String, content: @Composable () -> Unit) {
         surfaceVariant = p.chip, onSurfaceVariant = p.inkSoft, outline = p.rule,
     )
     CompositionLocalProvider(LocalPalette provides p) {
-        MaterialTheme(colorScheme = scheme, content = content)
+        // Text given no colour takes the theme's ink, not Material's black default (unreadable on the dark theme:
+        // the P&L page's charges and strategy figures were black on black). Material components still set their own.
+        MaterialTheme(colorScheme = scheme) {
+            CompositionLocalProvider(androidx.compose.material3.LocalContentColor provides p.ink, content = content)
+        }
     }
 }

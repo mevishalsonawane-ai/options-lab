@@ -115,7 +115,7 @@ object DailyReports {
         val lines = ArrayList<String>()
         var total = 0.0
         runCatching { Paper.snapshot() }.getOrNull()?.let { sn ->
-            val pnl = sn.funds.todayRealizedPnl + sn.funds.m2mUnrealized
+            val pnl = sn.dayPnl
             if (sn.trades.isNotEmpty() || pnl != 0.0) {
                 total += pnl
                 lines += "Paper: ${rs(pnl)} · ${sn.trades.size} trade${if (sn.trades.size == 1) "" else "s"}"

@@ -66,6 +66,14 @@ class OriginsTest {
         assertEquals("ORB", Origins.position(owners, fills, 0))
     }
 
+    @Test fun aClosedOptionTradedByTwoArmsTodayNamesBoth() {
+        // ORB in and out, then another opener in and out: the closed row's P&L is both of theirs.
+        val fills = listOf(fill("paper:1", true, 30), fill("paper:3", false, 30), fill("paper:2", true, 30), fill("paper:4", false, 30))
+        assertEquals("ORB + Manual", Origins.position(owners, fills, 0))
+        // The exits never name anyone; the same arm twice is named once.
+        assertEquals("ORB", Origins.position(owners, listOf(fill("paper:1", true, 30), fill("paper:3", false, 30), fill("paper:1", true, 30), fill("paper:3", false, 30)), 0))
+    }
+
     @Test fun noFillsNoName() {
         assertNull(Origins.position(owners, emptyList(), 75))
         // Carried overnight: today only sold part of it, nothing on the buy side explains the long.

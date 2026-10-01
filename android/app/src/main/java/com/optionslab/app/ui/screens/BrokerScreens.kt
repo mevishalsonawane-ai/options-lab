@@ -662,6 +662,11 @@ fun BrokerPage(
     val b by model.broker.collectAsState()
     var editing by remember { mutableStateOf(!b.configured) }
     var forgetting by remember { mutableStateOf(false) }
+    // Switching "Live orders without PIN" on lowers the protection, so it asks for the PIN itself (as the security
+    // switches do); switching it off is free.
+    var noPinAuth by remember { mutableStateOf(false) }
+    if (noPinAuth) Reauth(model, onOk = { noPinAuth = false; model.update { it.copy(oneTapOrders = true) } }, onCancel = { noPinAuth = false },
+        pinOnly = true, why = "Enter your app PIN to send live orders without a PIN.")
     LaunchedEffect(Unit) { model.refreshBroker(); if (Broker.loggedIn) model.loadAccount() }
     Page {
         item { PageTitle("Zerodha", "Your broker, as the PC trading app uses it: Kite Connect") }
@@ -702,8 +707,8 @@ fun BrokerPage(
                 ToggleRow("Prepare the expiry order at 11:01", "Builds today's ticket and notifies you to review it. It is never sent by itself.", s.prepareRealOrder) { on ->
                     model.update { it.copy(prepareRealOrder = on) }
                 }
-                ToggleRow("Live orders without PIN", "Confirming the order review sends it to Zerodha at once: no PIN or fingerprint (also for Cancel, Square off and Protect). The margin check, kill switch and account limits still apply.", s.oneTapOrders) { on ->
-                    model.update { it.copy(oneTapOrders = on) }
+                ToggleRow("Live orders without PIN", "Confirming the order review sends it to Zerodha at once: no PIN or fingerprint (also for Cancel, Square off and Protect). The margin check, kill switch and account limits still apply. Turning it on asks for your PIN.", s.oneTapOrders) { on ->
+                    if (on) noPinAuth = true else model.update { it.copy(oneTapOrders = false) }
                 }
                 ParamTokens("Product", listOf("NRML" to (s.orderProduct == "NRML"), "MIS" to (s.orderProduct == "MIS"))) { i -> model.update { it.copy(orderProduct = if (i == 0) "NRML" else "MIS") } }
                 if (s.orderProduct == "MIS") Note("MIS positions are squared off by Zerodha before the close. The expiry put holds to settlement, so its orders are refused under MIS.")
@@ -761,6 +766,7 @@ internal fun SelfTestCard() {
                 com.optionslab.app.work.Alerts.success("Diagnostics copied: paste them in the chat. Keys, tokens and passwords are never included.")
             }
         }, Modifier.fillMaxWidth()) { Text("Copy diagnostics") }
+        Note("This app: build ${com.optionslab.app.BuildConfig.COMMIT}")
         BrassButton(if (running) "Checking…" else "Run the self-test", Modifier.fillMaxWidth().padding(top = 8.dp)) {
             if (running) return@BrassButton
             running = true; steps = emptyList()

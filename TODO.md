@@ -53,14 +53,14 @@ Source paths prefixed `NTA:` are in D:\New Trading app.
 - [x] B4. (dropped by the owner, 2026-09-28: Android app only; the PC research track is not pursued) Research milestones in `docs/design.md`: M1 in progress, M4-M9 open, M9 forward holdout ~Dec 2026;
       missing tests `test_theta_units`, `test_long_short_mirror`, `test_exits_fire`, `test_no_engine_import`; pricer/IV module;
       confirm M3 Kaggle splice reconciliation.
-- [ ] B5. Hedged variant undecided (`docs/hedged-variant.md`: wing helped 0/170).
+- [x] B5. (skipped by the owner, 2026-10-01: stays unhedged) Hedged variant undecided (`docs/hedged-variant.md`: wing helped 0/170).
 - [x] B6. (done in D20) Docs drift: `android/README.md` tab names; root README test count (206 -> ~332).
 - [x] B7. (done in D4) App module has no unit/UI tests (engine only).
 - [ ] B8. Decide fate of the untracked `options_lab/data/banknifty_expiry_cache/` and modified bars in the old
       `D:\files\options-lab` clone (not present in D:\IraAlgo).
-- [ ] B9. Later (owner, 2026-09-28): replace the chart terminal in `android/app/src/main/assets/chart/` (Apache-2.0 code
+- [x] B9. (skipped by the owner, 2026-10-01: the chart terminal stays) Later (owner, 2026-09-28): replace the chart terminal in `android/app/src/main/assets/chart/` (Apache-2.0 code
       that must keep its NOTICE/LICENSE while it ships) with the app's own native chart, then delete the folder and its notice.
-- [ ] B10. (owner, 2026-09-28) Faster app updates: take the tests out of the APK build path so a fix reaches the
+- [x] B10. (done 2026-10-01: a commit message starting "[quick]" builds and publishes the APKs after the engine tests only, skipping the app test shards, PC tests, screenshots and the gold emulator run; see android/README.md) (owner, 2026-09-28) Faster app updates: take the tests out of the APK build path so a fix reaches the
       phone in minutes. Note: the "Build APK" job already runs alongside the tests and uploads the signed APK even when
       a test fails (about 9 minutes); the remaining work is to skip or trim the test shards on a quick-fix push
       (e.g. a "[quick]" commit tag or a separate build-only workflow) while keeping the full tests on main.
@@ -100,3 +100,16 @@ Source paths prefixed `NTA:` are in D:\New Trading app.
 - [x] L4. (done 2026-09-28) Switch the Zerodha setup gate back on: `SKIP_ZERODHA_GATE = false` in `ui/Root.kt` (off while testing other features).
 - [ ] L5. Pine auto-trade: run a script on Paper for a few sessions first (Research -> Pine scripts -> Auto-trade),
   then one live trade with the app open: confirm the ATM option BUY, the switch on the next signal, and the 15:15 sell in Kite.
+
+## E. Entry cut-off (owner go-ahead 2026-10-01)
+
+- [x] E1. Last new entry at 14:00 (was 14:30) for ORB, ORB Fresh and Liquidity 15+5 (research/ENTRY_CUTOFF.md: better in
+  both years for ORB and Liquidity, about even for ORB Fresh). ORB Sweep keeps 14:25 (14:00 made it worse); Range Fade
+  already stops at 13:55. The 15:10 exit is unchanged.
+
+## R. Research queue (owner, 2026-09-30)
+
+- [ ] R1. Liquidity 15+5 on NIFTY / FINNIFTY / SENSEX (research/liquidity_indices.py, Actions job indices.yml):
+  report the results first; only then add the Liquidity 15+5 arm to the app (engine rules in `orb/LiquidityRules.kt`).
+- [ ] R2. AFTER the Liquidity 15+5 arm is tested and pushed: run the same liquidity rules on XAUUSD (gold vs US dollar,
+  forex) - the `forex/` folder has the fetch scripts. Note: forex is not tradable from Zerodha / the app; research only.

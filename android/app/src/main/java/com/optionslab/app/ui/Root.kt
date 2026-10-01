@@ -180,6 +180,8 @@ fun Root(activity: MainActivity, splash: Boolean = false) {
             // Biometrics are offered only once the device check has run (a report is never empty).
             if (sealed) Gate(activity, model, settings, compromised, checked = findings.isNotEmpty())
             else if (!batteryOk) com.optionslab.app.ui.screens.BatteryScreen { batteryOk = true }
+            // IraGoldAlgo: its own three screens, no Zerodha.
+            else if (com.optionslab.app.BuildConfig.GOLD) com.optionslab.app.ui.screens.GoldMain(model)
             // Until a Zerodha account is linked the app shows only the setup page.
             else if (!brokerNow.linked && !SKIP_ZERODHA_GATE) ConnectGate(model)
             else Main(model)
@@ -646,8 +648,12 @@ internal fun Masthead(live: Boolean, calm: Boolean, linked: Boolean, onMode: (Bo
                 // The date, then the market's state: on a narrow bar (a small phone, large fonts) the state moves
                 // to a line of its own rather than being squeezed out beside the mode switch.
                 androidx.compose.foundation.layout.FlowRow(verticalArrangement = Arrangement.Center) {
-                    Text(now.format(DateTimeFormatter.ofPattern("EEE d MMM, HH:mm", Locale.ENGLISH)) + "  ·  ",
+                    // The date and the separator are separate items, so a long date ("Fri 2 Oct, 00:24") never has to
+                    // fit with the separator in the first line's width (it was cut off at 1.3x fonts on small phones); at 2x
+                    // fonts the date itself may wrap.
+                    Text(now.format(DateTimeFormatter.ofPattern("EEE d MMM, HH:mm", Locale.ENGLISH)),
                         style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp), modifier = Modifier.align(Alignment.CenterVertically))
+                    Text("  ·  ", style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp), modifier = Modifier.align(Alignment.CenterVertically))
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.align(Alignment.CenterVertically)) {
                         StatusDot(if (open) p.verdigris else p.inkFaint, pulsing = open && !calm, modifier = Modifier.size(6.dp))
                         Spacer(Modifier.width(4.dp))

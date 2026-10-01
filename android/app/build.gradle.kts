@@ -31,6 +31,25 @@ android {
 
         // The permission allowlist, so the running app can check itself too.
         buildConfigField("String", "ALLOWED_PERMISSIONS", "\"${allowedPermissions().joinToString(",")}\"")
+
+        // The commit the build was made from (CI sets GITHUB_SHA): every build is "1.0.0", so this tells them apart.
+        buildConfigField("String", "COMMIT", "\"${(System.getenv("GITHUB_SHA") ?: "local").take(7)}\"")
+    }
+
+    // Two apps from one project: IraAlgo (NSE options, Zerodha, paper) and IraGoldAlgo (XAUUSD only, paper and alerts,
+    // no broker). Each has its own package, name, colours and logo; `assembleRelease` builds both.
+    flavorDimensions += "brand"
+    productFlavors {
+        create("ira") {
+            dimension = "brand"
+            isDefault = true
+            buildConfigField("boolean", "GOLD", "false")
+        }
+        create("gold") {
+            dimension = "brand"
+            applicationId = "com.iragoldalgo.app"
+            buildConfigField("boolean", "GOLD", "true")
+        }
     }
 
     signingConfigs {

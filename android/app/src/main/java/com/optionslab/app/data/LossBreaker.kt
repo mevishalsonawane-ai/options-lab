@@ -28,7 +28,7 @@ object LossBreaker {
         }
         val s = AppSettings.load()
         // Both accounts are watched whatever the badge shows: a live position is real money in Paper mode too.
-        val paper = runCatching { Paper.snapshot().funds }.getOrNull()?.let { it.todayRealizedPnl + it.m2mUnrealized }
+        val paper = runCatching { Paper.snapshot() }.getOrNull()?.dayPnl
         val live = if (Broker.loggedIn) runCatching { Broker.positionBook().m2m }.getOrNull() else null
         val hit = when {
             live != null && s.guardDailyLoss > 0 && live <= -s.guardDailyLoss -> Triple("Live", live, s.guardDailyLoss)

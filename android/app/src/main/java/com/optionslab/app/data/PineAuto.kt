@@ -130,12 +130,20 @@ object PineAuto {
 
     @Synchronized fun wipe() { cache = null; if (::file.isInitialized) file.delete(); _held.value = emptyMap(); _log.value = emptyList() }
 
-    /** Reset paper: paper holdings and their day's P&L / pause go; scripts holding at Zerodha keep theirs. */
+    /**
+     * Reset paper: paper holdings and their day's P&L / pause go; scripts holding at Zerodha keep theirs. A flat script's
+     * tally and daily-loss pause are not marked paper or live, so they are cleared only while the app is in Paper: in Live
+     * they are the Zerodha account's, as are those of a script cleared to trade live, and a reset of the paper account must never lift a live daily-loss pause.
+     */
     suspend fun resetPaper() = lock.withLock {
         val b = book()
+        val dropped = b.held.filterValues { !it.live }.keys.toSet()
         b.held.entries.removeAll { !it.value.live }
-        b.dayPnl.keys.removeAll { it !in b.held }
-        b.paused.keys.removeAll { it !in b.held }
+        // Never for a script cleared for Zerodha (even with the app back in Paper): its pause may be a live one.
+        val live = OrbArms.liveNow()
+        val clear = { id: Long -> b.liveOk[id] != true && (id in dropped || (!live && id !in b.held)) }
+        b.dayPnl.keys.removeAll(clear)
+        b.paused.keys.removeAll(clear)
         save(b); publish(b)
     }
 

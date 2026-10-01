@@ -21,7 +21,8 @@ object Replay {
     private fun r2(x: Double) = BigDecimal(x).setScale(2, RoundingMode.HALF_EVEN).toDouble()
     private fun hhmm(t: LocalDateTime) = "%02d:%02d".format(t.hour, t.minute)
 
-    fun day(arm: Arm, index: List<Bar>, ce: List<Bar>, pe: List<Bar>, points: Double = OrbRules.STOP_POINTS): List<ReplayTrade> {
+    fun day(arm: Arm, index: List<Bar>, ce: List<Bar>, pe: List<Bar>, points: Double = OrbRules.STOP_POINTS,
+            ladder: Boolean = true): List<ReplayTrade> {
         val rng = OrbRules.openingRange(index) ?: return emptyList()
         val n = minOf(index.size, ce.size, pe.size)
         val trades = mutableListOf<ReplayTrade>()
@@ -35,11 +36,17 @@ object Replay {
             val entry = leg[k + 1].open
             if (!(entry > 0)) { k++; continue }
             var exitPx = leg[n - 1].close; var x = n - 1; var why = "last_bar"
+            // The profit-lock ladder as the arm trades it: a rung earned on a bar's high counts from the next bar on.
+            val target = ProfitLock.targetOf(arm)?.takeIf { ladder }
+            var peak = entry
             for (j in k + 1 until n) {
                 val t = index[j].start
                 if (!t.toLocalTime().isBefore(OrbRules.SQUARE_OFF)) { exitPx = leg[j].open; x = j; why = "session_end"; break }
                 if (OrbRules.exitReason(entry, leg[j].low, t, points) == "stop") { exitPx = minOf(entry - points, leg[j].open); x = j; why = "stop"; break }
+                val lock = target?.let { ProfitLock.level(entry, it, peak) }
+                if (lock != null && leg[j].low <= lock) { exitPx = minOf(lock, leg[j].open); x = j; why = "profit_lock"; break }
                 if (OrbRules.exitReason(entry, leg[j].high, t, points) == "target") { exitPx = entry + points; x = j; why = "target"; break }
+                peak = maxOf(peak, leg[j].high)
             }
             trades += ReplayTrade(hhmm(index[k].start), hhmm(index[x].start), right, r2(entry), r2(exitPx), why)
             lastExit = index[x].start

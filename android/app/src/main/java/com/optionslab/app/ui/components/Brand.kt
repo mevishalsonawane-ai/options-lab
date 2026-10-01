@@ -32,7 +32,7 @@ fun BrandEmblem(size: Dp, modifier: Modifier = Modifier, unlocked: Boolean = fal
     val lift by animateFloatAsState(if (unlocked && !calm) 1f else 0f, tween(200), label = "lift")
     Image(
         painter = painterResource(R.drawable.iraalgo_emblem),
-        contentDescription = "IraAlgo",
+        contentDescription = BrandName.name,
         contentScale = ContentScale.Fit,
         modifier = modifier
             .size(size)
@@ -50,17 +50,23 @@ fun BrandLogo(modifier: Modifier = Modifier) {
     val p = LocalPalette.current
     androidx.compose.foundation.layout.Row(modifier, verticalAlignment = Alignment.CenterVertically) {
         Box(
-            Modifier.size(44.dp).then(if (p.dark) Modifier.background(Color.White, RoundedCornerShape(12.dp)) else Modifier).padding(4.dp),
+            Modifier.size(44.dp).then(if (p.dark && !com.optionslab.app.BuildConfig.GOLD) Modifier.background(Color.White, RoundedCornerShape(12.dp)) else Modifier).padding(4.dp),
             contentAlignment = Alignment.Center,
         ) {
             Image(painterResource(R.drawable.iraalgo_emblem), contentDescription = null, contentScale = ContentScale.Fit)
         }
         androidx.compose.foundation.layout.Spacer(Modifier.size(10.dp))
         androidx.compose.foundation.layout.Column {
-            androidx.compose.material3.Text("IraAlgo", style = com.optionslab.app.ui.theme.Type.masthead.copy(color = p.ink, fontSize = 26.sp))
-            androidx.compose.material3.Text("Intelligent algorithmic trading", style = com.optionslab.app.ui.theme.Type.bodySmall.copy(color = p.inkSoft))
+            androidx.compose.material3.Text(BrandName.name, style = com.optionslab.app.ui.theme.Type.masthead.copy(color = p.ink, fontSize = 26.sp))
+            androidx.compose.material3.Text(BrandName.line, style = com.optionslab.app.ui.theme.Type.bodySmall.copy(color = p.inkSoft))
         }
     }
+}
+
+/** The app's name and line: IraAlgo, or IraGoldAlgo in the gold build. */
+object BrandName {
+    val name: String get() = if (com.optionslab.app.BuildConfig.GOLD) "IraGoldAlgo" else "IraAlgo"
+    val line: String get() = if (com.optionslab.app.BuildConfig.GOLD) "Gold liquidity, on paper" else "Intelligent algorithmic trading"
 }
 
 /** The logo held on screen when the app is opened fresh (not on a rotation or a return from the background). */
@@ -77,14 +83,14 @@ fun SplashScreen() {
     Box(Modifier.fillMaxSize().background(p.paper), contentAlignment = Alignment.Center) {
         androidx.compose.foundation.layout.Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Box(
-                Modifier.size(140.dp).then(if (p.dark) Modifier.background(Color.White, RoundedCornerShape(32.dp)) else Modifier).padding(12.dp),
+                Modifier.size(140.dp).then(if (p.dark && !com.optionslab.app.BuildConfig.GOLD) Modifier.background(Color.White, RoundedCornerShape(32.dp)) else Modifier).padding(12.dp),
                 contentAlignment = Alignment.Center,
             ) {
-                Image(painterResource(R.drawable.iraalgo_emblem), contentDescription = "IraAlgo", contentScale = ContentScale.Fit)
+                Image(painterResource(R.drawable.iraalgo_emblem), contentDescription = BrandName.name, contentScale = ContentScale.Fit)
             }
             androidx.compose.foundation.layout.Spacer(Modifier.size(20.dp))
-            androidx.compose.material3.Text("IraAlgo", style = com.optionslab.app.ui.theme.Type.masthead.copy(color = p.ink, fontSize = 34.sp))
-            androidx.compose.material3.Text("Intelligent algorithmic trading", style = com.optionslab.app.ui.theme.Type.bodySmall.copy(color = p.inkSoft))
+            androidx.compose.material3.Text(BrandName.name, style = com.optionslab.app.ui.theme.Type.masthead.copy(color = p.ink, fontSize = 34.sp))
+            androidx.compose.material3.Text(BrandName.line, style = com.optionslab.app.ui.theme.Type.bodySmall.copy(color = p.inkSoft))
         }
     }
 }

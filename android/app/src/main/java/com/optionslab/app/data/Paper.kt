@@ -91,7 +91,9 @@ object Paper {
     private fun engine(capital: BigDecimal, contracts: Map<String, Contract>) = Sandbox(
         // The desktop sandbox's execution costs (TODO A9): stops slip 10 bps, a MARKET fill with no
         // bid/ask (the Upstox candle feed has none) slips 5 bps, and every leg pays its charges.
-        SandboxConfig(startingCapital = capital, stopSlippageBps = BigDecimal("10"), spreadFallbackBps = BigDecimal("5"), chargesEnabled = true),
+        // Every close's P&L reaches the balance (the desktop drops it when the position has no margin left to release).
+        SandboxConfig(startingCapital = capital, stopSlippageBps = BigDecimal("10"), spreadFallbackBps = BigDecimal("5"), chargesEnabled = true,
+            pnlAlwaysToFunds = true),
         InstrumentMaster { sym, ex ->
             if (ex != "NFO") null else contracts[sym]?.let {
                 Instrument(sym, "NFO", "OPTIDX", it.lotSize, 0.05, it.expiry, it.strike)
@@ -280,8 +282,10 @@ object Paper {
             val funds = e.funds(b.state, now)
             val pos = e.positionBook(funds.state, now, q)
             val hold = e.holdings(pos.state, now, q)
-            if (hold.state != b.state) save(b.copy(state = hold.state))
-            return Snapshot(funds.result, pos.result, e.orderBook(hold.state, now), e.tradeBook(hold.state, now), hold.result, q.isNotEmpty() || watched(hold.state).isEmpty())
+            // The funds read again after re-pricing (and any expiry settlement), so they agree with the positions shown.
+            val after = e.funds(hold.state, now)
+            if (after.state != b.state) save(b.copy(state = after.state))
+            return Snapshot(after.result, pos.result, e.orderBook(after.state, now), e.tradeBook(after.state, now), hold.result, q.isNotEmpty() || watched(after.state).isEmpty())
         }
     }
 
@@ -292,7 +296,14 @@ object Paper {
         val trades: List<com.optionslab.engine.sandbox.TradeRow>,
         val holdings: com.optionslab.engine.sandbox.HoldingsBook,
         val priced: Boolean,
-    )
+    ) {
+        /**
+         * The day's P&L after charges, as every screen shows it: the positions' (realised today + unrealised) less the
+         * charges of today's trades. Read from the positions, not the funds' running tally, so Home, the positions card,
+         * the calendar and the loss limits can never disagree (a build before the funds fix left the tally short).
+         */
+        val dayPnl: Double get() = positions.totalPnlToday - trades.sumOf { it.charges }
+    }
 
     /** Back to a fresh account with [capital]; the contracts seen are kept. */
     @Synchronized

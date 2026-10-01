@@ -1,0 +1,45 @@
+name: Liquidity 15+5 on other indices
+
+on:
+  push:
+    paths:
+      - ".github/workflows/indices.yml"
+      - "research/liquidity_indices.py"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  indices:
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    permissions:
+      contents: write          # the research-data release only
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install pandas numpy pyarrow requests
+      - name: NIFTY, two years, index + options within 500 points
+        run: |
+          python research/dump_year.py 250 nifty_year.parquet 500 0 NIFTY
+          python research/dump_year.py 250 nifty_prev.parquet 500 250 NIFTY
+      - name: FINNIFTY and SENSEX index minutes (no option history exists for them)
+        run: |
+          python research/dump_index.py FINNIFTY 2024-02-12 2026-02-24 finnifty_index.parquet
+          python research/dump_index.py SENSEX 2024-02-12 2026-02-24 sensex_index.parquet
+      - name: Save the data to the research-data release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload research-data nifty_year.parquet nifty_prev.parquet finnifty_index.parquet sensex_index.parquet --clobber
+      - name: The rule on each index
+        run: |
+          python research/liquidity_indices.py LIQUIDITY_INDICES.md NIFTY:75:nifty_prev.parquet:nifty_year.parquet \
+            FINNIFTY:65:finnifty_index.parquet SENSEX:20:sensex_index.parquet
+          cat LIQUIDITY_INDICES.md
+      - name: Publish the result
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload research-data LIQUIDITY_INDICES.md --clobber

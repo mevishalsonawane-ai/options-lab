@@ -124,7 +124,8 @@ def report(trades: pd.DataFrame, days: pd.DataFrame, title: str) -> str:
 
 # ---- data -------------------------------------------------------------------------------------------------------
 
-INDEX_KEYS = {"BANKNIFTY": "NSE_INDEX%7CNifty%20Bank", "NIFTY": "NSE_INDEX%7CNifty%2050"}
+INDEX_KEYS = {"BANKNIFTY": "NSE_INDEX%7CNifty%20Bank", "NIFTY": "NSE_INDEX%7CNifty%2050",
+              "FINNIFTY": "NSE_INDEX%7CNifty%20Fin%20Service", "SENSEX": "BSE_INDEX%7CSENSEX"}
 
 
 def upstox_index(frm: date, to: date, underlying: str = "BANKNIFTY") -> pd.DataFrame | None:

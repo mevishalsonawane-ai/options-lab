@@ -16,10 +16,14 @@ on:
 permissions:
   contents: read
 
+# A push whose commit message starts with "[quick]" gets its APK sooner: the engine tests still gate the build and the APK
+# is still published, but the app test shards, the PC harness tests and the screenshots are skipped, and only the
+# release APKs are built. The next ordinary push runs everything again.
 jobs:
   python:
     name: PC harness tests
     runs-on: ubuntu-latest
+    if: "!startsWith(github.event.head_commit.message, '[quick]')"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -112,14 +116,19 @@ jobs:
       - name: Assemble
         # The keystore step puts the cleaned passwords and alias in the environment (masked in the log).
         # The app's unit and UI tests run in the app-tests job, alongside this one.
-        run: ./gradlew --no-daemon :app:assembleDebug :app:assembleRelease
+        # A push starting "[quick]" builds only the release APKs (the ones published).
+        env:
+          QUICK: ${{ startsWith(github.event.head_commit.message, '[quick]') }}
+        run: |
+          if [ "$QUICK" = "true" ]; then ./gradlew --no-daemon :app:assembleRelease
+          else ./gradlew --no-daemon :app:assembleIraDebug :app:assembleRelease; fi
       - name: Sandbox report (every permission the APK holds)
         run: cat app/build/reports/sandbox/*.txt
       - name: Release signing certificate (public fingerprint only)
         run: |
           cat "$RUNNER_TEMP/signing.txt" 2>/dev/null || true
           signer=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)
-          "$signer" verify --print-certs app/build/outputs/apk/release/*.apk | grep -E "SHA-256|DN" || true
+          "$signer" verify --print-certs app/build/outputs/apk/ira/release/*.apk | grep -E "SHA-256|DN" || true
           if [ -n "$OL_KEYSTORE_PATH" ]; then echo "Signed with the owner's release key."; else echo "Signed with a throwaway key (no usable release keystore)."; fi
       # The signed APK on one fixed link (a release asset, not an Actions artifact, so a full artifact quota never
       # blocks an update): https://github.com/<repo>/releases/download/latest-apk/IraAlgo.apk
@@ -129,29 +138,33 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SHA: ${{ github.sha }}
         run: |
-          apk=$(ls app/build/outputs/apk/release/*.apk | head -1)
+          apk=$(ls app/build/outputs/apk/ira/release/*.apk | head -1)
           cp "$apk" "$RUNNER_TEMP/IraAlgo.apk"
+          gold=$(ls app/build/outputs/apk/gold/release/*.apk | head -1)
+          cp "$gold" "$RUNNER_TEMP/IraGoldAlgo.apk"
           notes="Build of ${SHA::7} ($(date -u '+%Y-%m-%d %H:%M UTC')). Installs over the previous one (same signing key)."
           if gh release view latest-apk >/dev/null 2>&1; then
             gh release edit latest-apk --notes "$notes"
           else
             gh release create latest-apk --prerelease --title "IraAlgo - latest build" --notes "$notes" --target "$SHA"
           fi
-          gh release upload latest-apk "$RUNNER_TEMP/IraAlgo.apk" --clobber
+          gh release upload latest-apk "$RUNNER_TEMP/IraAlgo.apk" "$RUNNER_TEMP/IraGoldAlgo.apk" --clobber
           echo "APK: https://github.com/${{ github.repository }}/releases/download/latest-apk/IraAlgo.apk"
+          echo "APK: https://github.com/${{ github.repository }}/releases/download/latest-apk/IraGoldAlgo.apk"
       - uses: actions/upload-artifact@v4
         continue-on-error: true   # a full artifact quota must not turn a good build red; the release above has the APK
         with:
           name: options-lab-apk
           retention-days: 7
           path: |
-            android/app/build/outputs/apk/release/*.apk
-            android/app/build/outputs/apk/debug/*.apk
+            android/app/build/outputs/apk/*/release/*.apk
+            android/app/build/outputs/apk/ira/debug/*.apk
           if-no-files-found: error
 
   app-tests:
     name: App tests (JVM, Robolectric, Compose UI) ${{ matrix.shard }}/4
     runs-on: ubuntu-latest
+    if: "!startsWith(github.event.head_commit.message, '[quick]')"
     timeout-minutes: 45
     needs: engine
     # Four jobs at once, each a quarter of the test classes (by class-name hash): the whole suite
@@ -193,18 +206,18 @@ jobs:
           # Each step may fail (the dumper already gone, or between children): under bash -e a failing command in
           # the trap ended a passing step with exit 1 ("BUILD SUCCESSFUL ... Terminated").
           trap 'pkill -P $dumper 2>/dev/null || true; kill $dumper 2>/dev/null || true' EXIT
-          ./gradlew --no-daemon -PtestShard=${{ matrix.shard }}/4 :app:testDebugUnitTest :app:createDebugUnitTestCoverageReport
+          ./gradlew --no-daemon -PtestShard=${{ matrix.shard }}/4 :app:testIraDebugUnitTest :app:createIraDebugUnitTestCoverageReport
       - name: Coverage summary
         if: always()
-        run: python3 tools/coverage_summary.py "$(find app/build/reports/coverage -name report.xml 2>/dev/null | head -1)" app/build/test-results/testDebugUnitTest | tee -a "$GITHUB_STEP_SUMMARY"
+        run: python3 tools/coverage_summary.py "$(find app/build/reports/coverage -name report.xml 2>/dev/null | head -1)" app/build/test-results/testIraDebugUnitTest | tee -a "$GITHUB_STEP_SUMMARY"
       - name: Screenshots captured
         if: always()
         run: |
           n=$(find app/build/outputs/roborazzi -name '*.png' 2>/dev/null | wc -l)
           echo "$n screenshots in app/build/outputs/roborazzi (artifact app-screenshots-${{ matrix.shard }})"
           find app/build/outputs/roborazzi -name '*.png' -printf '%f\n' 2>/dev/null | sort | head -400
-          grep -rhoE 'LAYOUT BUG \([^)]*\): [^<]*' app/build/test-results/testDebugUnitTest/*.xml 2>/dev/null | sort -u | head -100 || true
-          grep -rhoE 'LATENCY [^<]*' app/build/test-results/testDebugUnitTest/*.xml 2>/dev/null | sort -u || true
+          grep -rhoE 'LAYOUT BUG \([^)]*\): [^<]*' app/build/test-results/testIraDebugUnitTest/*.xml 2>/dev/null | sort -u | head -100 || true
+          grep -rhoE 'LATENCY [^<]*' app/build/test-results/testIraDebugUnitTest/*.xml 2>/dev/null | sort -u || true
       - uses: actions/upload-artifact@v4
         if: always()
         continue-on-error: true
@@ -220,8 +233,8 @@ jobs:
           name: app-test-reports-${{ matrix.shard }}
           retention-days: 5
           path: |
-            android/app/build/reports/tests/testDebugUnitTest/
-            android/app/build/test-results/testDebugUnitTest/
+            android/app/build/reports/tests/testIraDebugUnitTest/
+            android/app/build/test-results/testIraDebugUnitTest/
             android/app/build/reports/coverage/
           if-no-files-found: warn
 
@@ -231,7 +244,7 @@ jobs:
     name: Publish screenshots
     runs-on: ubuntu-latest
     needs: app-tests
-    if: always() && github.event_name == 'push' && github.ref == 'refs/heads/claude/android-options-lab-kotlin-xgt1ym'
+    if: always() && github.event_name == 'push' && github.ref == 'refs/heads/claude/android-options-lab-kotlin-xgt1ym' && !startsWith(github.event.head_commit.message, '[quick]')
     # Two pushes close together both force-push the branch; one at a time (the newer waits) avoids "cannot lock ref".
     concurrency:
       group: publish-ui-screenshots

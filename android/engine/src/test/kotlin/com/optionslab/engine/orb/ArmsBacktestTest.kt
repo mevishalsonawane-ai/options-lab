@@ -27,7 +27,7 @@ class ArmsBacktestTest {
         assertTrue(row.getValue("orb_sweep").net > 0)
         assertTrue(row.getValue("orb").net < 0)
         r.rows.forEach { assertEquals(it.net, it.firstHalf + it.secondHalf, 1e-6) }
-        assertTrue(r.trades.all { it.why in setOf("stop", "target", "session_end", "last_bar") })
+        assertTrue(r.trades.all { it.why in setOf("stop", "profit_lock", "target", "session_end", "last_bar") })
         assertTrue(r.trades.filter { it.arm != "orb" && it.arm != "orb_fresh" }
             .groupBy { it.day to it.arm }.values.all { it.size <= 2 }, "no arm beyond its daily cap")
     }
@@ -67,6 +67,29 @@ class ArmsBacktestTest {
         val short = series(Right.CE, 54_000.0, 9 * 60 + 15..10 * 60 + 20, { 300.0 })
         val t3 = ArmsBacktest.day(Session(day, 30, listOf(ix, pe, short)), 0.0, 0.0)!!.first { it.arm == "orb" }
         assertEquals("last_bar", t3.why)
+    }
+
+    @Test fun aTradeThatGotHalfwayAndTurnedBackLeavesAtItsLockAndCheapOptionsAreNotBought() {
+        // ORB buys the CE at 300 after the 10:05 break; it trades to 322 (past 50% of the +40 target) then falls back.
+        val ix = series(Right.IX, 0.0, all, { m -> if (m < 605) 53_800.0 + (m % 3) * 100 else 54_200.0 })
+        val pe = series(Right.PE, 54_000.0, all, { 200.0 })
+        val ce = series(Right.CE, 54_000.0, all, { m -> if (m < 620) 300.0 else if (m < 630) 322.0 else 290.0 })
+        val t = ArmsBacktest.day(Session(day, 30, listOf(ix, pe, ce)), 0.0, 0.0)!!.first { it.arm == "orb" }
+        assertEquals("profit_lock", t.why); assertEquals(10.0 * 30, t.net, 1e-9)              // 25% of 40 locked
+        // A premium of 40 or less has no 40-point stop: the arms refuse it, so the backtest does too.
+        val cheap = series(Right.CE, 54_000.0, all, { 35.0 })
+        assertTrue(ArmsBacktest.day(Session(day, 30, listOf(ix, pe, cheap)), 0.0, 0.0)!!.none { it.arm == "orb" })
+    }
+
+    @Test fun onAnExpiryDayTheBacktestBuysTheOptionExpiringThatDay() {
+        val ix = series(Right.IX, 0.0, all, { m -> if (m < 605) 53_800.0 + (m % 3) * 100 else 54_200.0 })
+        val m = all.toList().toIntArray()
+        fun leg(r: Right, exp: LocalDate, px: Double) = Series(exp, 54_000.0, r, 30, m, DoubleArray(m.size) { px }, DoubleArray(m.size) { px },
+            DoubleArray(m.size) { px }, DoubleArray(m.size) { px }, null, LongArray(m.size))
+        val today = listOf(leg(Right.CE, day, 150.0), leg(Right.PE, day, 150.0))
+        val next = listOf(leg(Right.CE, day.plusDays(7), 300.0), leg(Right.PE, day.plusDays(7), 300.0))
+        val t = ArmsBacktest.day(Session(day, 30, listOf(ix) + today + next), 0.0, 0.0)!!.first { it.arm == "orb" }
+        assertEquals(150.0, t.entry, 1e-9)
     }
 
     @Test fun aDayWithoutItsIndexOrOptionsIsSkipped() {

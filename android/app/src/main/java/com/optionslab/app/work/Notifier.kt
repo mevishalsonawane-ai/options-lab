@@ -8,6 +8,13 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Paint
+import android.graphics.RectF
+import android.graphics.Typeface
+import android.widget.RemoteViews
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -96,7 +103,11 @@ object Notifier {
             .setContentText("Unlock to read")
             .build()
 
-    fun builder(context: Context, channel: String, title: String, text: String, tab: String? = null): NotificationCompat.Builder {
+    /**
+     * [side] ("BUY" / "SELL" / "LONG" / "SHORT") makes it a trade notification: a green or red tile with the word, drawn
+     * as an image (the same size on every phone, whatever its font setting), 40% of the width, the details beside it.
+     */
+    fun builder(context: Context, channel: String, title: String, text: String, tab: String? = null, side: String? = null): NotificationCompat.Builder {
         val hide = AppSettings.load().hideAmountsOnLockScreen
         return NotificationCompat.Builder(context, channel)
             .setSmallIcon(R.drawable.ic_notification_art)
@@ -110,6 +121,45 @@ object Notifier {
             .setPublicVersion(publicVersion(context, channel))
             .setPriority(if (channel == RISK || channel in ALWAYS) NotificationCompat.PRIORITY_HIGH else NotificationCompat.PRIORITY_DEFAULT)
             .setCategory(if (channel == RISK) NotificationCompat.CATEGORY_ALARM else NotificationCompat.CATEGORY_STATUS)
+            .apply { if (side != null) runCatching { tradeViews(context, side, title, text) } }
+    }
+
+    private fun NotificationCompat.Builder.tradeViews(context: Context, side: String, title: String, text: String) {
+        fun views(layout: Int, hDp: Int, firstLine: Boolean) = RemoteViews(context.packageName, layout).apply {
+            setImageViewBitmap(R.id.side, tile(context, side, 144, hDp))
+            setContentDescription(R.id.side, side)
+            setTextViewText(R.id.title, title)
+            setTextViewText(R.id.line, if (firstLine) text.substringBefore('\n') else text)
+        }
+        setStyle(NotificationCompat.DecoratedCustomViewStyle())
+        setCustomContentView(views(R.layout.notif_trade, 44, true))
+        setCustomBigContentView(views(R.layout.notif_trade_big, 104, false))
+    }
+
+    /** Green for a buy / long, red for a sell / short. */
+    internal fun sideColor(side: String): Int =
+        if (side.uppercase() in setOf("SELL", "SHORT")) 0xFFE0322B.toInt() else 0xFF00A86B.toInt()
+
+    /**
+     * The [side] tile, [wDp] x [hDp]: a rounded block of its colour with the word in white, as large as fits. Drawn at
+     * no more than 2 px a dp, so the notification stays small (it is scaled to the screen).
+     */
+    internal fun tile(context: Context, side: String, wDp: Int, hDp: Int): Bitmap {
+        val d = context.resources.displayMetrics.density.coerceIn(1f, 2f)
+        val w = (wDp * d).toInt(); val h = (hDp * d).toInt()
+        val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+        val c = Canvas(bmp)
+        val bg = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = sideColor(side) }
+        c.drawRoundRect(RectF(0f, 0f, w.toFloat(), h.toFloat()), 10 * d, 10 * d, bg)
+        val ink = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.WHITE; typeface = Typeface.DEFAULT_BOLD; textAlign = Paint.Align.CENTER; textSize = h * 0.62f
+        }
+        val word = side.uppercase()
+        val fit = w * 0.84f / ink.measureText(word).coerceAtLeast(1f)
+        if (fit < 1f) ink.textSize *= fit
+        val m = ink.fontMetrics
+        c.drawText(word, w / 2f, h / 2f - (m.ascent + m.descent) / 2, ink)
+        return bmp
     }
 
     /**
@@ -153,7 +203,8 @@ object Notifier {
         // Only buy / sell / approval notifications unless the owner turned the others on (More → Schedules).
         if (channel !in ALWAYS && !runCatching { AppSettings.load().otherAlerts }.getOrDefault(false)) return
         try {
-            NotificationManagerCompat.from(context).notify(id, builder(context, channel, title, text, tab).build())
+            NotificationManagerCompat.from(context).notify(id, builder(context, channel, title, text, tab,
+                side = when (channel) { BUY -> "BUY"; SELL -> "SELL"; else -> null }).build())
         } catch (_: SecurityException) {
             // Permission revoked between the check and the post; nothing to do.
         }

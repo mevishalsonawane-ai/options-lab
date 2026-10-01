@@ -108,11 +108,17 @@ internal fun OrbRowsContent(
                 val line = a.open?.let { o ->
                     val m = a.mark
                     "${o.right} ${o.symbol.takeLast(7).dropLast(2)} · in ${px(o.entry)}" + (m?.let { " · now ${px(it)} · ${rs((it - o.entry) * o.qty)}" } ?: "") +
-                        (o.stopTrigger?.let { " · stop ${px(it)}" } ?: "")
+                        (o.stopTrigger?.let { " · stop ${px(it)}" } ?: "") +
+                        // The profit lock earned so far (25 / 50 / 75 % of the target reached -> breakeven / +25% / +50%).
+                        (com.optionslab.engine.orb.ProfitLock.targetOf(a.arm)?.takeIf { o.ladder }
+                            ?.let { tg -> com.optionslab.engine.orb.ProfitLock.level(o.entry, tg, o.peak ?: o.entry) }
+                            ?.let { " · locked ${px(it)}" } ?: "")
                 } ?: when {
-                    !a.armed && a.arm.fade -> "BANKNIFTY touch of the range edge, faded to the middle · paper only · -40 / +40"
-                    !a.armed && a.arm.sweep -> "BANKNIFTY failed break of the opening range, faded · paper only · -40 / +80"
-                    !a.armed -> "BANKNIFTY opening-range break" + if (a.arm.freshOnly) ", fresh breaks only" else ""
+                    !a.armed && a.arm.liquidity -> "BANKNIFTY (15 + 5-min) + FINNIFTY (30 + 5-min) liquidity pool taken on a swing zone · stop −15% · out 30 index pts back (FINNIFTY 15) or not +5% in 20 min · else at the next liquidity"
+                    a.arm.liquidity -> a.status
+                    !a.armed && a.arm.fade -> "BANKNIFTY touch of the range edge, faded to the middle · paper only · -40 / +40 · profit lock"
+                    !a.armed && a.arm.sweep -> "BANKNIFTY failed break of the opening range, faded · paper only · -40 / +80 · profit lock"
+                    !a.armed -> "BANKNIFTY opening-range break" + (if (a.arm.freshOnly) ", fresh breaks only" else "") + " · profit lock"
                     else -> OrbArms.describe(a.status) + (view.range?.let { r -> " Range ${px(r.second)}–${px(r.first)}." } ?: "")
                 }
                 Text(line, style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp))
@@ -123,7 +129,7 @@ internal fun OrbRowsContent(
             Switch(
                 modifier = Modifier.semantics { contentDescription = "Arm ${a.arm.label}" },
                 checked = a.armed,
-                // ORB Sweep and Range Fade are paper only and always automatic: nothing to choose, no PIN.
+                // ORB Sweep, Range Fade and Liquidity 15+5 are paper only and always automatic: nothing to choose, no PIN.
                 onCheckedChange = { on -> if (on && a.arm.paperOnly) actions.arm(a.arm.source, true, true, false)
                     else if (on) choosing = a.arm.source else actions.arm(a.arm.source, false, a.automatic, false) },
                 colors = SwitchDefaults.colors(checkedTrackColor = p.verdigris, checkedThumbColor = p.card),
@@ -166,14 +172,20 @@ internal fun OrbRowsContent(
                     OrbChoice("Ask me to approve", "You get a notification on a breakout; the entry goes only if you approve before the next bar closes.") {
                         if (live) armAuth = src to false else actions.arm(src, true, false, false); choosing = null
                     }
-                    Note("Either way the −40 stop rests as an order (paper book, or an SL order at Zerodha), and the +40 target and the 15:10 square-off run by themselves.", Modifier.padding(top = 8.dp))
+                    Note(if (view.arms.first { it.arm.source == src }.arm.liquidity)
+                        "Either way the stop 15% below the price paid rests as an order (paper book, or an SL order at Zerodha), and the exits at the next liquidity, on a failed break, on new liquidity and at 15:10 run by themselves."
+                        else "Either way the −40 stop rests as an order (paper book, or an SL order at Zerodha), and the +40 target, the profit lock (a quarter of the way up the stop moves to the price paid, half way to +10, three quarters to +20) and the 15:10 square-off run by themselves.", Modifier.padding(top = 8.dp))
                 }
             },
             confirmButton = {},
             dismissButton = { TextButton({ choosing = null }) { Text("Cancel") } },
         )
     }
-    armAuth?.let { (src, auto) -> reauth("Enter your app PIN to arm ORB on Zerodha. It then trades real money by itself until you switch it off.",
+    // The ORB arms keep their own words; Liquidity 15+5 names itself (and says when each entry still waits for approval).
+    armAuth?.let { (src, auto) -> reauth(if (view.arms.firstOrNull { it.arm.source == src }?.arm?.liquidity == true)
+            "Enter your app PIN to arm Liquidity 15+5 on Zerodha. " +
+                (if (auto) "It then trades real money by itself until you switch it off." else "Each entry still waits for your approval with the PIN.")
+        else "Enter your app PIN to arm ORB on Zerodha. It then trades real money by itself until you switch it off.",
         { armAuth = null; actions.arm(src, true, auto, true) }, { armAuth = null }) }
     reauthFor?.let { src -> reauth(null, { reauthFor = null; actions.approve(src, true) }, { reauthFor = null }) }
     if (detail) OrbDetail(view) { detail = false }

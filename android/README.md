@@ -1,5 +1,7 @@
 # IraAlgo for Android
 
+**Setting up the apps (install, Zerodha, Oracle static IP, IraGoldAlgo): [docs/setup-guide.md](docs/setup-guide.md).**
+
 The PC harness, standalone on a phone. No server of its own: the 170 expiry
 chains and the harvested partitions ship inside the APK, every backtest and
 health check runs on the device, and the only network it touches is the same
@@ -68,6 +70,11 @@ uploads them as the `options-lab-apk` artifact. To sign the release APK with
 your own key, add repository secrets `OL_KEYSTORE_B64` (base64 of a .jks),
 `OL_KEYSTORE_PASSWORD`, `OL_KEY_ALIAS` and `OL_KEY_PASSWORD`; without them the
 release APK is signed with the debug key so it still installs.
+
+**A faster build for a quick fix:** start the commit message with `[quick]` (only at the very start: a
+message that merely mentions it runs the full checks). The engine tests still run and the signed
+APKs are still published, but the app test shards, the PC harness tests, the screenshots and the gold emulator run
+are skipped, and only the release APKs are built. The next ordinary push runs everything again.
 
 ## Signing: install updates without losing data
 

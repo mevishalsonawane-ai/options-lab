@@ -58,6 +58,15 @@ object PositionCards {
     }
 
     /**
+     * The card's P&L line: [pnl] (the symbol's day, trades already closed on it plus the open one) and that P&L as a
+     * percentage of what the open position cost (qty x average), so the sign of the two always agrees.
+     */
+    internal fun pnlLine(qty: Int, avg: Double, pnl: Double): String {
+        val cost = avg * abs(qty)
+        return "P&L ${rs(pnl)}" + (if (cost > 0) " (%+.1f%%)".format(Locale.ENGLISH, 100 * pnl / cost) else "")
+    }
+
+    /**
      * Post or rewrite a position's card. [alert] makes it sound (a fill); updates are silent.
      * [headline] replaces the first line (e.g. "BUY filled · Paper · Strategy: ORB"). [source] is who opened
      * the position ("ORB + Manual"); the last one given is kept for the card's silent updates.
@@ -72,10 +81,11 @@ object PositionCards {
         val by = sources["$venue|$symbol"]?.let { "\n" + com.optionslab.app.data.Origins.positionDisplay(it).first } ?: ""
         val title = headline ?: if (open) "$symbol · $venue · ${rs(pnl)}" else "Closed $symbol · $venue · ${rs(pnl)}"
         val text0 = if (open) "${if (qty > 0) "LONG" else "SHORT"} ${abs(qty)} @ ${px(avg)}" + (ltp?.let { " · LTP ${px(it)}" } ?: "") +
-            "\nP&L ${rs(pnl)}" + (if (avg > 0 && ltp != null) " (%+.1f%%)".format(Locale.ENGLISH, 100 * (ltp - avg) / avg * (if (qty > 0) 1 else -1)) else "")
+            "\n" + pnlLine(qty, avg, pnl)
             else "Realised P&L ${rs(pnl)}"
         val text = text0 + by
-        val b = Notifier.builder(context, if (qty >= 0) Notifier.BUY else Notifier.SELL, title, text, "trade")
+        val b = Notifier.builder(context, if (qty >= 0) Notifier.BUY else Notifier.SELL, title, text, "trade",
+            side = if (headline?.startsWith("SELL") == true) "SELL" else if (headline?.startsWith("BUY") == true) "BUY" else if (qty > 0) "LONG" else "SHORT")
             .setOnlyAlertOnce(!alert).setSilent(!alert).setOngoing(open).setAutoCancel(!open)
         if (open) b.addAction(closeAction(context, venue, symbol))
         try { NotificationManagerCompat.from(context).notify(idOf(venue, symbol), b.build()) } catch (_: SecurityException) {}

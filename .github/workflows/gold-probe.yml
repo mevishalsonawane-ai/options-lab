@@ -1,0 +1,49 @@
+name: Gold arm probe
+# Re-run on demand: change this line. Last run 2026-10-01 (owner asked why no trade since the afternoon).
+
+# A diagnosis of IraGoldAlgo's arm on live data: Yahoo's GC=F (the app's feed) replayed through the app's rule.
+on:
+  push:
+    paths:
+      - ".github/workflows/gold-probe.yml"
+      - "android/engine/src/test/kotlin/com/optionslab/engine/gold/GoldProbeTest.kt"
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: "17" }
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Yahoo GC=F, as the app reads it
+        run: |
+          date -u
+          for iv in "60m&range=3mo" "1m&range=1d"; do
+            curl -sS -A "Mozilla/5.0" "https://query1.finance.yahoo.com/v8/finance/chart/GC%3DF?interval=$iv" -o "gc_${iv%%&*}.json" -w "$iv %{http_code} %{size_download}\n"
+          done
+          python3 - <<'PY'
+          import json, datetime as d, time
+          for f in ["gc_60m.json", "gc_1m.json"]:
+              r = json.load(open(f))["chart"]["result"][0]; ts = r["timestamp"]; m = r["meta"]
+              q = r["indicators"]["quote"][0]
+              print(f, len(ts), "first", d.datetime.utcfromtimestamp(ts[0]), "last", d.datetime.utcfromtimestamp(ts[-1]),
+                    "behind now by", round((time.time() - ts[-1]) / 60, 1), "min;", m.get("exchangeName"), m.get("dataGranularity"),
+                    "regularMarketTime", d.datetime.utcfromtimestamp(m.get("regularMarketTime", 0)))
+              if f == "gc_60m.json":
+                  print("last 6 hourly starts:", [str(d.datetime.utcfromtimestamp(t)) for t in ts[-6:]])
+                  with open("gc60.csv", "w") as o:
+                      o.write("t,o,h,l,c\n")
+                      for i, t in enumerate(ts):
+                          v = [q[k][i] for k in ("open", "high", "low", "close")]
+                          if None not in v: o.write(f"{t},{v[0]},{v[1]},{v[2]},{v[3]}\n")
+          PY
+      - name: The app's rule replayed over the last 10 days
+        working-directory: android
+        run: |
+          GOLD_PROBE_CSV=$GITHUB_WORKSPACE/gc60.csv env -u ANDROID_HOME -u ANDROID_SDK_ROOT ./gradlew --no-daemon -q :engine:test --tests 'com.optionslab.engine.gold.GoldProbeTest' || true
+          cat engine/build/gold-probe.txt

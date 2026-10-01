@@ -58,11 +58,13 @@ fun SwipeToConfirm(label: String, tone: Color, modifier: Modifier = Modifier, en
     // The knob follows the finger in the same frame (a plain state, no coroutine per move); only the release animates.
     var x by remember { mutableFloatStateOf(0f) }
     var done by remember { mutableStateOf(false) }
+    // The gesture outlives recompositions: it always runs the action now on screen, never the one it was first drawn with.
+    val confirm by androidx.compose.runtime.rememberUpdatedState(onConfirm)
     BoxWithConstraints(
         // At least 60 dp, taller when a large font wraps the label (it was cut at 60).
         modifier.fillMaxWidth().heightIn(min = 60.dp).background(tone.copy(alpha = 0.14f), RoundedCornerShape(50))
             // Screen readers cannot drag: the same confirmation as a button action (any PIN step still follows).
-            .semantics(mergeDescendants = true) { role = Role.Button; if (enabled) onClick(label = label) { onConfirm(); true } else disabled() }
+            .semantics(mergeDescendants = true) { role = Role.Button; if (enabled) onClick(label = label) { confirm(); true } else disabled() }
             .alpha(if (enabled) 1f else 0.45f),
         contentAlignment = Alignment.CenterStart,
     ) {
@@ -83,8 +85,9 @@ fun SwipeToConfirm(label: String, tone: Color, modifier: Modifier = Modifier, en
                             if (!done && x >= maxPx * 0.66f) {
                                 done = true
                                 haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                                onConfirm()
-                                settle(maxPx, 80)
+                                confirm()
+                                // Back to the start: a knob left at the far end confirmed again on the slightest drag.
+                                settle(maxPx, 80) { settle(0f, 160) }
                             } else settle(0f, 160)
                         },
                         onDragCancel = { settle(0f, 160) },

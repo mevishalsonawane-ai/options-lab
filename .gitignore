@@ -17,3 +17,6 @@ venv/
 
 # harvester run logs
 logs/
+
+# Downloaded APKs to hand to the owner; never committed
+apk/

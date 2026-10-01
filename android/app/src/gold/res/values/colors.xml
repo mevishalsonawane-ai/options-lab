@@ -1,0 +1,6 @@
+<resources>
+    <!-- IraGoldAlgo: warm black and gold (IraAlgo is white and navy). -->
+    <color name="window_light">#FFFFFBF2</color>
+    <color name="window_dark">#FF0B0A07</color>
+    <color name="ic_launcher_background">#FF14110A</color>
+</resources>
