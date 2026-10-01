@@ -77,8 +77,9 @@ object Diag {
         append("Mode: ${if (s?.live == true) "LIVE" else "Paper"} · real orders allowed: ${s?.allowRealOrders} · kill switch: ${s?.guardKill}\n")
         append("Market open: ${Market.isOpen()} · Zerodha linked: ${Broker.linked} · logged in: ${Broker.loggedIn}\n")
         append("Static IP set: ${StaticIp.registered != null} · relay on: ${Relay.enabled} · relay connected: ${runCatching { Relay.connected }.getOrDefault(false)}\n")
-        append("\n-- Events (newest last) --\n")
-        synchronized(this@Diag) { diary().toList() }.takeLast(400).forEach { append(redact(it)).append('\n') }
+        // Newest first: a long report pasted into a chat is cut at its end, and today's events are the ones that matter.
+        append("\n-- Events (newest first) --\n")
+        synchronized(this@Diag) { diary().toList() }.takeLast(400).asReversed().forEach { append(redact(it)).append('\n') }
         append("\n-- Strategy notes --\n")
         runCatching { Strategies.log().take(40).reversed() }.getOrDefault(emptyList()).forEach {
             append("${TIME.format(Instant.ofEpochMilli(it.at))} ${it.strategy}: ${redact(it.message)}\n")

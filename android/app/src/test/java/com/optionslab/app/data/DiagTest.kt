@@ -23,6 +23,7 @@ class DiagTest : RobolectricTest() {
         assertTrue(r, r.contains("[error] Kite: Order refused: Markets are closed right now"))
         assertTrue(r, r.contains("[self-test] FAILED Funds: timeout"))
         assertTrue(r, r.startsWith("IraAlgo diagnostics"))
+        assertTrue("newest first, so a cut-off paste keeps today", r.indexOf("[self-test] FAILED Funds") < r.indexOf("Kite: Order refused"))
         assertFalse("no identities in the header", r.contains("Chavan"))
     }
 
