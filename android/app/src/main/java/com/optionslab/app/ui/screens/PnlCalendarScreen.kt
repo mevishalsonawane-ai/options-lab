@@ -138,7 +138,7 @@ fun PnlCalendarScreen(model: AppModel) {
     val todayLive: DailyPnl.Day? = if (DailyPnl.sessionDay(live) != today) null else if (live) (accountNow as? com.optionslab.app.ui.Load.Done)?.value
         ?.takeIf { it.book.net.isNotEmpty() || it.trades.isNotEmpty() }?.let { DailyPnl.Day(today, it.book.m2m, it.trades.size) }
         else (paperNow as? com.optionslab.app.ui.Load.Done)?.value?.let { sn ->
-            val pnl = sn.funds.todayRealizedPnl + sn.funds.m2mUnrealized
+            val pnl = sn.dayPnl
             if (sn.trades.isNotEmpty() || pnl != 0.0 || sn.positions.positions.any { it.quantity != 0 }) DailyPnl.Day(today, pnl, sn.trades.size) else null
         }
     val days = all.filterKeys { YearMonth.from(it) == month }.let { m ->

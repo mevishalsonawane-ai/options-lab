@@ -435,7 +435,7 @@ object Tasks {
         }
         runCatching { com.optionslab.app.data.Paper.state.positions.count { it.quantity != 0 } }.getOrDefault(0).takeIf { it > 0 }?.let { n ->
             runCatching { com.optionslab.app.data.Paper.snapshot() }.getOrNull()?.let { snap ->
-                val pnl = snap.funds.todayRealizedPnl + snap.funds.m2mUnrealized
+                val pnl = snap.dayPnl
                 runCatching { com.optionslab.app.data.DailyPnl.record(false, pnl, snap.trades.size) }
                 // Orders on the same contract net into one position (two arms buying it = one position of 2 lots),
                 // so the line says positions and the quantity they hold, not orders.

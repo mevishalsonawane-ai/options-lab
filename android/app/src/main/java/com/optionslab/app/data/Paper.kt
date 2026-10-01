@@ -296,7 +296,14 @@ object Paper {
         val trades: List<com.optionslab.engine.sandbox.TradeRow>,
         val holdings: com.optionslab.engine.sandbox.HoldingsBook,
         val priced: Boolean,
-    )
+    ) {
+        /**
+         * The day's P&L after charges, as every screen shows it: the positions' (realised today + unrealised) less the
+         * charges of today's trades. Read from the positions, not the funds' running tally, so Home, the positions card,
+         * the calendar and the loss limits can never disagree (a build before the funds fix left the tally short).
+         */
+        val dayPnl: Double get() = positions.totalPnlToday - trades.sumOf { it.charges }
+    }
 
     /** Back to a fresh account with [capital]; the contracts seen are kept. */
     @Synchronized

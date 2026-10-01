@@ -40,7 +40,7 @@ object Guard {
         val today = Market.today().toString()
         return AccountGuard.Account(
             capital = capital, equity = equity, peakEquity = peak(false, equity),
-            dayPnl = f.todayRealizedPnl + f.m2mUnrealized,
+            dayPnl = snap.dayPnl,
             holdings = snap.positions.positions.filter { it.quantity != 0 }.map { p ->
                 val c = Paper.contractOf(p.symbol)
                 AccountGuard.Holding(p.symbol, p.quantity, c?.lotSize ?: p.lotSize.toInt().coerceAtLeast(1), c?.underlying, c?.expiry, c?.right?.name)

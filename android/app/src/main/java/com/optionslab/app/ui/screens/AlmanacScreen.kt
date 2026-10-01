@@ -141,7 +141,7 @@ internal fun AlmanacContent(
         }
     } else {
         val v = (paper as? Load.Done)?.value
-        money = Money(v?.funds?.let { it.todayRealizedPnl + it.m2mUnrealized }, v?.funds?.availableCash, v?.funds?.utilisedDebits)
+        money = Money(v?.dayPnl, v?.funds?.availableCash, v?.funds?.utilisedDebits)
         orders = v?.let { snap ->
             snap.positions.positions.filter { it.quantity != 0 }.map {
                 HomeOrder(it.symbol, "${if (it.quantity < 0) "SELL" else "BUY"} ${abs(it.quantity)} · avg ${PX.format(it.averagePrice)} · LTP ${PX.format(it.ltp)}",

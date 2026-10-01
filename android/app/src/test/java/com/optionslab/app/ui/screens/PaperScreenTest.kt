@@ -233,6 +233,7 @@ class PaperScreenTest {
         assertEquals(0.0, s.funds.utilisedDebits, 0.001)
         compose.waitUntil(10_000) { exists("NRML · CLOSED 0") }
         assertTrue(exists(rs(s.positions.totalTodayRealizedPnl, true)))
+        assertEquals("one day figure everywhere: the positions less today's charges = the funds' today", s.funds.todayRealizedPnl, s.dayPnl, 0.01)
 
         // Orders: two complete, nothing open.
         tap("Orders")
