@@ -84,7 +84,8 @@ object PositionCards {
             "\n" + pnlLine(qty, avg, pnl)
             else "Realised P&L ${rs(pnl)}"
         val text = text0 + by
-        val b = Notifier.builder(context, if (qty >= 0) Notifier.BUY else Notifier.SELL, title, text, "trade")
+        val b = Notifier.builder(context, if (qty >= 0) Notifier.BUY else Notifier.SELL, title, text, "trade",
+            side = if (headline?.startsWith("SELL") == true) "SELL" else if (headline?.startsWith("BUY") == true) "BUY" else if (qty > 0) "LONG" else "SHORT")
             .setOnlyAlertOnce(!alert).setSilent(!alert).setOngoing(open).setAutoCancel(!open)
         if (open) b.addAction(closeAction(context, venue, symbol))
         try { NotificationManagerCompat.from(context).notify(idOf(venue, symbol), b.build()) } catch (_: SecurityException) {}
