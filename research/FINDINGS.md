@@ -249,3 +249,6 @@ ATM straddle level and change, CE/PE skew, OI change and PCR over ATM +-200, CE/
   exits (next liquidity, failed break) already do this job; the ladder cuts its big winners. Not added.
 - LIQUIDITY 15+5 WITH A +40 TARGET (LIQUIDITY_TARGET40.md): +40 alone -36.9k / +35.9k, +40 with the profit lock
   -61.9k / +21.5k, against the arm's +55.6k / +21.6k. Capping the target cuts the winners that pay for the arm. Not added.
+- LIQUIDITY 15+5, EXITING SOONER ON A TURN (LIQUIDITY_REVERSAL.md): a 30-point index stop beyond the broken level plus a
+  time stop (not +5% after 20 min) lifts the arm from +55.6k / +21.6k to +103.0k / +30.3k and cuts the worst trade from
+  -15.7k to -9.6k; better in both years (best of 11 variants). A 10% premium stop fails year B.

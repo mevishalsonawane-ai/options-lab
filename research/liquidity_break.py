@@ -44,7 +44,11 @@ def bars(days, tf):
     return pd.DataFrame(rows, columns=["di", "s", "e", "open", "high", "low", "close"])
 
 
-def simulate(days, b, zones, source, stop, carry=False, prem_stop=None, lock_ref=None, prem_target=None, abs_stop=None):
+def simulate(days, b, zones, source, stop, carry=False, prem_stop=None, lock_ref=None, prem_target=None, abs_stop=None,
+             fb_every=None, time_stop=None, ix_buffer=None):
+    """fb_every: also check the failed break on every fb_every-minute close of the index (1 or 5), not only the chart
+    bar's close. time_stop: (minutes, min_gain) - out if the option is not min_gain x premium up after that long.
+    ix_buffer: out the minute the index trades ix_buffer points back beyond the broken level (an index stop)."""
     """lock_ref: the profit-lock ladder (25% of the way -> price paid, 50% -> +25%, 75% -> +50%) against a reference
     target of lock_ref x the premium paid; a rung counts from the next minute. None: no ladder (as before).
     prem_target: a fixed premium target in points (sold at price paid + it); with it the ladder measures that target."""
@@ -73,6 +77,17 @@ def simulate(days, b, zones, source, stop, carry=False, prem_stop=None, lock_ref
                 if abs_stop and pos["key"] is not None and d["chain"][pos["key"]]["low"][m] <= pos["px"] - abs_stop:
                     why, xm = "points stop", m
                     break
+                if ix_buffer is not None and sg * ((I["low"][m] if sg > 0 else I["high"][m]) - pos["level"]) < -ix_buffer:
+                    why, xm = "index stop", m
+                    break
+                if fb_every and m > pos["m"] and (m + 1) % fb_every == 0 and sg * (I["close"][m] - pos["level"]) < 0:
+                    why, xm = "failed break (fast)", m
+                    break
+                if time_stop and pos["key"] is not None and m - pos["m"] >= time_stop[0] and not pos.get("timed"):
+                    pos["timed"] = True
+                    if d["chain"][pos["key"]]["close"][m] < pos["px"] * (1 + time_stop[1]):
+                        why, xm = "time stop", m
+                        break
                 if prem_target and pos["key"] is not None and d["chain"][pos["key"]]["high"][m] >= pos["px"] + prem_target:
                     why, xm = "premium target", m
                     break
