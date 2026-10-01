@@ -139,7 +139,8 @@ def simulate(days, b, zones, source, stop, carry=False, prem_stop=None, lock_ref
                     opt = min(d["chain"][pos["key"]]["close"][xm], pos["trail"])
                 if why == "profit lock":
                     opt = min(opt, pos["lock"])                         # sold at the lock (or worse if it gapped)
-                trades.append(dict(day=pos["day"], sign=sg, why=why, pts=sg * (ix - pos["ix"]),
+                trades.append(dict(day=pos["day"], sign=sg, why=why, pts=sg * (ix - pos["ix"]), m0=pos["m"],
+                                   key=pos["key"], px=pos["px"],
                                    rs=(opt - SLIP - pos["px"]) * LOT - CHG,
                                    held=xm - pos["m"] + 375 * (DI[i] - pos["di"])))
                 pos = None
