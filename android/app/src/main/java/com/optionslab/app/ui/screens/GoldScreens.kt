@@ -151,7 +151,7 @@ private fun GoldHome() {
                     b.armed) { on -> scope.launch(Dispatchers.IO) { GoldPaper.setArmed(on) } }
                 LedgerLine("Status", b.status)
                 if (b.armed) GoldBackgroundCheck(compact = true)
-                if (b.armed && b.position == null) LedgerLine("Next decision", GoldPaper.nextDecision(GoldPaper.now()))
+                if (b.armed && b.position == null) LedgerLine("Next decision", "about " + GoldPaper.nextDecision(GoldPaper.now()))
                 LedgerLine("Last signal", b.lastSignal ?: "none yet")
                 b.position?.let { pos ->
                     Rule(Modifier.padding(vertical = 6.dp))

@@ -68,16 +68,17 @@ class GoldPaperTest : RobolectricTest() {
 
     @Test fun theStatusSaysWhenTheNextDecisionIsInUtcAndIst() {
         val mon = LocalDate.of(2026, 9, 28)
-        assertEquals("11:00 UTC (16:30 IST)", GoldPaper.nextDecision(mon.atTime(10, 26)))
-        assertEquals("04:00 UTC (09:30 IST)", GoldPaper.nextDecision(mon.atTime(3, 0)))
-        assertEquals("the 21:00 break is skipped", "22:00 UTC (03:30 IST)", GoldPaper.nextDecision(mon.atTime(20, 30)))
-        assertEquals("not midnight", "Tue 01:00 UTC (06:30 IST)", GoldPaper.nextDecision(mon.atTime(23, 30)))
-        assertEquals("the weekend", "Mon 01:00 UTC (06:30 IST)", GoldPaper.nextDecision(LocalDate.of(2026, 10, 2).atTime(20, 0)))
+        assertEquals("11:10 UTC (16:40 IST)", GoldPaper.nextDecision(mon.atTime(10, 26)))
+        assertEquals("the 03:00 close is decided at 03:10", "03:10 UTC (08:40 IST)", GoldPaper.nextDecision(mon.atTime(3, 0)))
+        assertEquals("04:10 UTC (09:40 IST)", GoldPaper.nextDecision(mon.atTime(3, 10)))
+        assertEquals("the 21:00 break is skipped", "22:10 UTC (03:40 IST)", GoldPaper.nextDecision(mon.atTime(20, 30)))
+        assertEquals("not midnight", "Tue 01:10 UTC (06:40 IST)", GoldPaper.nextDecision(mon.atTime(23, 30)))
+        assertEquals("the weekend", "Mon 01:10 UTC (06:40 IST)", GoldPaper.nextDecision(LocalDate.of(2026, 10, 2).atTime(20, 0)))
         // Armed at 10:26 (too late for the 10:00 decision): it says when it decides next, not "no entry".
         at(mon.plusDays(14).atTime(10, 26))
         runBlocking { GoldPaper.setArmed(true) }
         at(mon.plusDays(14).atTime(10, 27))
-        assertEquals("Armed: next decision at 11:00 UTC (16:30 IST)", GoldPaper.book.value.status)
+        assertEquals(GoldPaper.WAITING, GoldPaper.book.value.status)
     }
 
     @Test fun aCandleCheckedTooLateIsSaidToBeMissedNotPassedOverSilently() {
@@ -88,11 +89,11 @@ class GoldPaperTest : RobolectricTest() {
         at(bar.start.plusMinutes(30))
         runBlocking { GoldPaper.setArmed(true) }
         at(bar.start.plusMinutes(31))
-        assertTrue(GoldPaper.book.value.status, GoldPaper.book.value.status.startsWith("Armed: next decision"))
+        assertTrue(GoldPaper.book.value.status, GoldPaper.book.value.status == GoldPaper.WAITING)
         // The phone sleeps through the candle's close; the next check is 35 minutes after it.
         val late = bar.start.plusMinutes(95)
         at(late)
-        assertEquals("Missed the ${GoldPaper.when_(bar.start)} candle: the phone checked 35 min late. Next decision at ${GoldPaper.nextDecision(late)}",
+        assertEquals("Missed the ${GoldPaper.when_(bar.start)} candle: the phone checked 35 min late.",
             GoldPaper.book.value.status)
         assertNull("no buy on a stale candle", GoldPaper.book.value.position)
     }

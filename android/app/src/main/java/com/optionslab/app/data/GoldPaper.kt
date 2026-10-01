@@ -86,7 +86,7 @@ object GoldPaper {
 
     // ---- the owner's switches ---------------------------------------------------
 
-    suspend fun setArmed(on: Boolean) = edit { it.copy(armed = on, decided = if (on) ARMED else it.decided, status = if (on) "Armed: next decision at ${nextDecision(now())}" else "Not armed") }
+    suspend fun setArmed(on: Boolean) = edit { it.copy(armed = on, decided = if (on) ARMED else it.decided, status = if (on) WAITING else "Not armed") }
 
     suspend fun setLots(lots: Double) = edit { it.copy(lots = lots) }
 
@@ -135,20 +135,21 @@ object GoldPaper {
         if (!GoldLiquidity.weekday(t)) return "Weekend: gold is closed"
         val bar = hourly.lastOrNull() ?: return "Loading the 1-hour candles"
         val entryAt = bar.start.plusMinutes(GoldLiquidity.MINUTES.toLong())
-        if (b.decided == bar.start.toString()) return "Armed: next decision at ${nextDecision(t)}"
+        // Already decided: keep what that decision said (it used to be replaced 5 minutes later by a stale "next decision").
+        if (b.decided == bar.start.toString()) return b.status
         val justArmed = b.decided == ARMED
         save(b.copy(decided = bar.start.toString()))
         // Armed after a candle's decision time, or a candle whose buy would start outside 08:00-19:00 UTC: say when the
         // next decision is (UTC and IST), not "no entry", which read as if the hours were wrong.
-        if (!GoldLiquidity.mayEnterAt(entryAt)) return "Armed: next decision at ${nextDecision(t)}"
+        if (!GoldLiquidity.mayEnterAt(entryAt)) return WAITING
         // The phone ran the check too late to buy at this candle's close (Android delays alarms that are not precise):
         // say so, and record it, instead of passing over the candle silently.
         if (fed.isAfter(entryAt.plusMinutes(LATE_MINUTES))) {
-            if (justArmed) return "Armed: next decision at ${nextDecision(t)}"
+            if (justArmed) return WAITING
             if (t.isBefore(entryAt.plusMinutes(60))) runCatching { Diag.record("gold", "missed the ${when_(bar.start)} candle: checked ${java.time.Duration.between(entryAt, t).toMinutes()} min late") }
             return if (t.isBefore(entryAt.plusMinutes(60))) "Missed the ${when_(bar.start)} candle: the phone checked " +
-                "${java.time.Duration.between(entryAt, t).toMinutes()} min late. Next decision at ${nextDecision(t)}"
-            else "Armed: next decision at ${nextDecision(t)}"
+                "${java.time.Duration.between(entryAt, t).toMinutes()} min late."
+            else WAITING
         }
         val s = GoldLiquidity.signal(hourly) ?: return "No liquidity break on the ${when_(bar.start)} candle"
         val mid = last?.close ?: return "No price to buy at"
@@ -220,13 +221,22 @@ object GoldPaper {
     fun stale(b: Book, t: LocalDateTime = now()): Boolean =
         GoldLiquidity.inSession(t) && (b.priceAt == null || b.priceAt.isBefore(t.minusMinutes(20)))
 
-    /** The next time a candle can be decided into a buy ([GoldLiquidity.mayEnterAt]), UTC and IST. */
+    /** The status while armed with nothing decided yet (the time is on its own line, worked out afresh each time). */
+    const val WAITING = "Armed: waiting for the next candle"
+
+    /** Yahoo's COMEX prices arrive about this many minutes late, so a candle is decided that long after it closes. */
+    const val FEED_DELAY_MINUTES = 10L
+
+    /**
+     * When the next candle that may take a buy ([GoldLiquidity.mayEnterAt]) will be decided, UTC and IST: its close plus
+     * the feed's delay ("11:10 UTC (16:40 IST)"). Between a close and its decision, that pending decision is the next one.
+     */
     fun nextDecision(t: LocalDateTime): String {
-        var h = t.withMinute(0).withSecond(0).withNano(0).plusHours(1)
+        var h = t.minusMinutes(FEED_DELAY_MINUTES).withMinute(0).withSecond(0).withNano(0).plusHours(1)
         while (!GoldLiquidity.mayEnterAt(h)) h = h.plusHours(1)
-        val ist = h.plusMinutes(330)
-        val day = if (h.toLocalDate() == t.toLocalDate()) "" else "${h.dayOfWeek.getDisplayName(java.time.format.TextStyle.SHORT, java.util.Locale.ENGLISH)} "
-        return "$day${hhmm(h)} UTC (${hhmm(ist)} IST)"
+        val at = h.plusMinutes(FEED_DELAY_MINUTES)
+        val day = if (at.toLocalDate() == t.toLocalDate()) "" else "${at.dayOfWeek.getDisplayName(java.time.format.TextStyle.SHORT, java.util.Locale.ENGLISH)} "
+        return "$day${hhmm(at)} UTC (${hhmm(at.plusMinutes(330))} IST)"
     }
 
     fun usd(x: Double): String = (if (x < 0) "-$" else "+$") + "%,.2f".format(java.util.Locale.ENGLISH, kotlin.math.abs(x))
