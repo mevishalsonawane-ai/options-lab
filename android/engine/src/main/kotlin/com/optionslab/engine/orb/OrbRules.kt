@@ -95,8 +95,15 @@ object OrbRules {
     /** The first completed bar at or after 09:20. */
     fun strikeBar(bars: List<Bar>): Bar? = bars.firstOrNull { !it.start.toLocalTime().isBefore(STRIKE_BAR) }
 
-    /** The nearest listed expiry strictly after [day]: never today's. */
+    /** The nearest listed expiry strictly after [day]: never today's (Liquidity 15+5). */
     fun expiryAfter(day: LocalDate, listed: Collection<LocalDate>): LocalDate? = listed.filter { it.isAfter(day) }.minOrNull()
+
+    /**
+     * The ORB family's contract expiry (ORB, ORB Fresh, ORB Sweep, Range Fade): on an expiry day the option expiring
+     * that day, otherwise the nearest after it. The owner's choice, 2026-10-01 (research/EXPIRY_SAME_DAY.md: on 11
+     * BANKNIFTY expiry days the four arms made +13.9k with the same-day option against +1.3k with the next one).
+     */
+    fun expiryOnOrAfter(day: LocalDate, listed: Collection<LocalDate>): LocalDate? = listed.filter { !it.isBefore(day) }.minOrNull()
 
     fun optionSymbol(expiry: LocalDate, strike: Int, right: String, underlying: String = UNDERLYING) =
         "%s%02d%s%02d%d%s".format(underlying, expiry.dayOfMonth, MONTHS[expiry.monthValue - 1], expiry.year % 100, strike, right)

@@ -498,13 +498,17 @@ object OrbArms {
         }
     }
 
-    /** The day's strike from the first completed bar at or after 09:20, and the nearest expiry after today; held all day. */
+    /**
+     * The day's strike from the first completed bar at or after 09:20 and its expiry, held all day: on an expiry day the
+     * option expiring today (the owner's choice, 2026-10-01), otherwise the nearest expiry after today. ORB, ORB Fresh,
+     * ORB Sweep and Range Fade trade these legs; Liquidity 15+5 picks its own contract (always the next expiry).
+     */
     private fun contracts(b: Book, day: LocalDate, bars: List<Bar>): Legs? {
         b.legs?.let { if (it.day == day) return it }
         val ref = OrbRules.strikeBar(bars) ?: return null
         val strike = OrbRules.atmStrike(ref.close)
         val listed = Market.contracts().filter { it.underlying == OrbRules.UNDERLYING }.map { it.expiry }.distinct()
-        val expiry = OrbRules.expiryAfter(day, listed) ?: return null
+        val expiry = OrbRules.expiryOnOrAfter(day, listed) ?: return null
         val ce = Paper.contractFor(OrbRules.UNDERLYING, expiry, strike.toDouble(), Right.CE) ?: return null
         val pe = Paper.contractFor(OrbRules.UNDERLYING, expiry, strike.toDouble(), Right.PE) ?: return null
         return Legs(day, strike, expiry, ce, pe).also { b.legs = it }

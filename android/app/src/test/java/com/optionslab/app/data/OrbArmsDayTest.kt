@@ -209,6 +209,26 @@ class OrbArmsDayTest : RobolectricTest() {
         assertOneCeBuy(signalBar = LocalTime.of(10, 50), entryTime = LocalTime.of(10, 55))
     }
 
+    // ---- expiry day -----------------------------------------------------------------------------------
+
+    @Test fun onAnExpiryDayTheOrbBuysTheOptionExpiringToday() {
+        // Today's contracts and next month's are both listed: the ORB family takes today's (the owner's choice).
+        AutomationSupport.contracts(context, listOf(
+            Upstox.Contract("BANKNIFTY", day, strike.toDouble(), Right.CE, 30, "NSE_FO|ORBTODAYCE", "BANKNIFTY-ORB-TODAY-${strike}CE"),
+            Upstox.Contract("BANKNIFTY", day, strike.toDouble(), Right.PE, 30, "NSE_FO|ORBTODAYPE", "BANKNIFTY-ORB-TODAY-${strike}PE"),
+            Upstox.Contract("BANKNIFTY", day.plusDays(28), strike.toDouble(), Right.CE, 30, ceKey, "BANKNIFTY-ORB-NEXT-${strike}CE"),
+            Upstox.Contract("BANKNIFTY", day.plusDays(28), strike.toDouble(), Right.PE, 30, peKey, "BANKNIFTY-ORB-NEXT-${strike}PE")))
+        upstox.price("NSE_FO|ORBTODAYCE", 120.0)
+        upstox.price("NSE_FO|ORBTODAYPE", 110.0)
+        armOrb(LocalTime.of(9, 50))
+        passes(LocalTime.of(9, 50), LocalTime.of(10, 35))
+        val legs = runBlocking { OrbArms.view() }.legs!!
+        assertEquals("today's expiry", day, legs.expiry)
+        val p = arm().open!!
+        assertEquals(legs.ce.symbol, p.symbol)
+        assertEquals(120.0, p.entry, 0.5)
+    }
+
     // ---- the profit lock (25 / 50 / 75 % of the target) ------------------------------------------------
 
     @Test fun aTradeThatGotAQuarterOfTheWayIsSoldAtThePricePaidNotTheFullStop() {

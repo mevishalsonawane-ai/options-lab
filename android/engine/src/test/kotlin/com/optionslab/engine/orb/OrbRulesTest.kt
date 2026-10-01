@@ -93,6 +93,10 @@ class OrbRulesTest {
     @Test fun expiryIsNeverToday() {
         val listed = listOf(day, LocalDate.of(2026, 10, 27), LocalDate.of(2026, 11, 24))
         assertEquals(LocalDate.of(2026, 10, 27), OrbRules.expiryAfter(day, listed))
+        // The ORB family on an expiry day buys the option expiring that day; on other days the nearest after it.
+        assertEquals(day, OrbRules.expiryOnOrAfter(day, listed))
+        assertEquals(LocalDate.of(2026, 10, 27), OrbRules.expiryOnOrAfter(day.plusDays(1), listed))
+        assertEquals(null, OrbRules.expiryOnOrAfter(LocalDate.of(2026, 12, 1), listed))
         assertEquals("BANKNIFTY27OCT2656300CE", OrbRules.optionSymbol(LocalDate.of(2026, 10, 27), 56300, "CE"))
     }
 
