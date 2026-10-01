@@ -766,6 +766,7 @@ internal fun SelfTestCard() {
                 com.optionslab.app.work.Alerts.success("Diagnostics copied: paste them in the chat. Keys, tokens and passwords are never included.")
             }
         }, Modifier.fillMaxWidth()) { Text("Copy diagnostics") }
+        Note("This app: build ${com.optionslab.app.BuildConfig.COMMIT}")
         BrassButton(if (running) "Checking…" else "Run the self-test", Modifier.fillMaxWidth().padding(top = 8.dp)) {
             if (running) return@BrassButton
             running = true; steps = emptyList()

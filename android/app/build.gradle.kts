@@ -31,6 +31,9 @@ android {
 
         // The permission allowlist, so the running app can check itself too.
         buildConfigField("String", "ALLOWED_PERMISSIONS", "\"${allowedPermissions().joinToString(",")}\"")
+
+        // The commit the build was made from (CI sets GITHUB_SHA): every build is "1.0.0", so this tells them apart.
+        buildConfigField("String", "COMMIT", "\"${(System.getenv("GITHUB_SHA") ?: "local").take(7)}\"")
     }
 
     signingConfigs {
