@@ -209,6 +209,53 @@ class OrbArmsDayTest : RobolectricTest() {
         assertOneCeBuy(signalBar = LocalTime.of(10, 50), entryTime = LocalTime.of(10, 55))
     }
 
+    // ---- the profit lock (25 / 50 / 75 % of the target) ------------------------------------------------
+
+    @Test fun aTradeThatGotAQuarterOfTheWayIsSoldAtThePricePaidNotTheFullStop() {
+        armOrb(LocalTime.of(9, 50))
+        passes(LocalTime.of(9, 50), LocalTime.of(10, 35))
+        val p = arm().open!!
+        assertTrue("entered under the ladder", p.ladder)
+        upstox.price(ceKey, p.entry + 12)                           // +12: past 25% of the +40 target
+        passes(LocalTime.of(10, 36), LocalTime.of(10, 37))
+        assertTrue("still held while it runs", arm().open != null)
+        assertEquals(p.entry + 12, arm().open!!.peak!!, 0.5)
+        upstox.price(ceKey, p.entry - 1)                            // back under the price paid
+        tick(LocalTime.of(10, 38))
+        val closed = arm().today.single()
+        assertEquals("profit_lock", closed.why)
+        assertEquals(p.entry - 1, closed.exit!!, 0.5)
+        assertTrue("the resting -40 stop came out of the book",
+            Paper.state.orders.none { it.orderId == p.stopOrderId && it.status == "trigger pending" })
+    }
+
+    @Test fun threeQuartersOfTheWayLocksHalfTheTarget() {
+        armOrb(LocalTime.of(9, 50))
+        passes(LocalTime.of(9, 50), LocalTime.of(10, 35))
+        val p = arm().open!!
+        upstox.price(ceKey, p.entry + 31)                           // +31: past 75%, so +20 is locked
+        tick(LocalTime.of(10, 36))
+        upstox.price(ceKey, p.entry + 22)                           // above the lock: held
+        tick(LocalTime.of(10, 37))
+        assertTrue(arm().open != null)
+        upstox.price(ceKey, p.entry + 19)                           // under +20: sold
+        tick(LocalTime.of(10, 38))
+        val closed = arm().today.single()
+        assertEquals("profit_lock", closed.why)
+        assertTrue("sold with a profit, not at the -40 stop", closed.exit!! > p.entry + 15)
+    }
+
+    @Test fun belowTheFirstRungTheTradeKeepsItsUsualStop() {
+        armOrb(LocalTime.of(9, 50))
+        passes(LocalTime.of(9, 50), LocalTime.of(10, 35))
+        val p = arm().open!!
+        upstox.price(ceKey, p.entry + 8)                            // only +8 (20%): nothing locked
+        tick(LocalTime.of(10, 36))
+        upstox.price(ceKey, p.entry - 10)
+        passes(LocalTime.of(10, 37), LocalTime.of(10, 40))
+        assertTrue("held: -10 is above the -40 stop", arm().open != null)
+    }
+
     // ---- ORB Sweep (paper only) ----------------------------------------------------------------------
 
     @Test fun orbSweepFadesAFailedBreakOfTheRangeOnPaper() {

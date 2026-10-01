@@ -108,13 +108,17 @@ internal fun OrbRowsContent(
                 val line = a.open?.let { o ->
                     val m = a.mark
                     "${o.right} ${o.symbol.takeLast(7).dropLast(2)} · in ${px(o.entry)}" + (m?.let { " · now ${px(it)} · ${rs((it - o.entry) * o.qty)}" } ?: "") +
-                        (o.stopTrigger?.let { " · stop ${px(it)}" } ?: "")
+                        (o.stopTrigger?.let { " · stop ${px(it)}" } ?: "") +
+                        // The profit lock earned so far (25 / 50 / 75 % of the target reached -> breakeven / +25% / +50%).
+                        (com.optionslab.engine.orb.ProfitLock.targetOf(a.arm)?.takeIf { o.ladder }
+                            ?.let { tg -> com.optionslab.engine.orb.ProfitLock.level(o.entry, tg, o.peak ?: o.entry) }
+                            ?.let { " · locked ${px(it)}" } ?: "")
                 } ?: when {
                     !a.armed && a.arm.liquidity -> "BANKNIFTY (15 + 5-min) + FINNIFTY (30 + 5-min) liquidity pool taken on a swing zone · stop −15% · out at the next liquidity"
                     a.arm.liquidity -> a.status
-                    !a.armed && a.arm.fade -> "BANKNIFTY touch of the range edge, faded to the middle · paper only · -40 / +40"
-                    !a.armed && a.arm.sweep -> "BANKNIFTY failed break of the opening range, faded · paper only · -40 / +80"
-                    !a.armed -> "BANKNIFTY opening-range break" + if (a.arm.freshOnly) ", fresh breaks only" else ""
+                    !a.armed && a.arm.fade -> "BANKNIFTY touch of the range edge, faded to the middle · paper only · -40 / +40 · profit lock"
+                    !a.armed && a.arm.sweep -> "BANKNIFTY failed break of the opening range, faded · paper only · -40 / +80 · profit lock"
+                    !a.armed -> "BANKNIFTY opening-range break" + (if (a.arm.freshOnly) ", fresh breaks only" else "") + " · profit lock"
                     else -> OrbArms.describe(a.status) + (view.range?.let { r -> " Range ${px(r.second)}–${px(r.first)}." } ?: "")
                 }
                 Text(line, style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp))
@@ -170,7 +174,7 @@ internal fun OrbRowsContent(
                     }
                     Note(if (view.arms.first { it.arm.source == src }.arm.liquidity)
                         "Either way the stop 15% below the price paid rests as an order (paper book, or an SL order at Zerodha), and the exits at the next liquidity, on a failed break, on new liquidity and at 15:10 run by themselves."
-                        else "Either way the −40 stop rests as an order (paper book, or an SL order at Zerodha), and the +40 target and the 15:10 square-off run by themselves.", Modifier.padding(top = 8.dp))
+                        else "Either way the −40 stop rests as an order (paper book, or an SL order at Zerodha), and the +40 target, the profit lock (a quarter of the way up the stop moves to the price paid, half way to +10, three quarters to +20) and the 15:10 square-off run by themselves.", Modifier.padding(top = 8.dp))
                 }
             },
             confirmButton = {},

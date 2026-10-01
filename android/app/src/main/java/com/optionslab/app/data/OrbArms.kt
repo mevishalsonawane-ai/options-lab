@@ -10,6 +10,7 @@ import com.optionslab.engine.orb.Bar
 import com.optionslab.engine.orb.LiquidityRules
 import com.optionslab.engine.orb.OrbRules
 import com.optionslab.engine.orb.PassRule
+import com.optionslab.engine.orb.ProfitLock
 import com.optionslab.engine.orb.Replay
 import com.optionslab.engine.orb.RangeFadeRules
 import com.optionslab.engine.orb.SweepRules
@@ -75,6 +76,11 @@ object OrbArms {
         val unconfirmed: Boolean = false,
         /** Liquidity 15+5 only: the index level the entry broke, and the next liquidity level (the target) or null. */
         val level: Double? = null, val target: Double? = null,
+        /**
+         * [ladder]: entered under the profit-lock ladder ([ProfitLock], the owner's 2026-10-01 choice; every fixed-target arm);
+         * [peak]: the best premium seen since the entry, which sets how much of the target is locked.
+         */
+        val ladder: Boolean = false, val peak: Double? = null,
     ) {
         val open: Boolean get() = exit == null
         val day: LocalDate get() = entryTime.toLocalDate()
@@ -142,7 +148,8 @@ object OrbArms {
                         p.optString("exitTime").ifEmpty { null }?.let { LocalDateTime.parse(it) }, p.optString("why").ifEmpty { null },
                         p.optDouble("charges", 0.0), p.optBoolean("live", false), p.optString("kite").ifEmpty { null },
                         p.optBoolean("unconfirmed", false),
-                        if (p.has("level")) p.getDouble("level") else null, if (p.has("target")) p.getDouble("target") else null)
+                        if (p.has("level")) p.getDouble("level") else null, if (p.has("target")) p.getDouble("target") else null,
+                        p.optBoolean("ladder", false), if (p.has("peak")) p.getDouble("peak") else null)
                 }
             }
             o.optJSONObject("pending")?.let { m -> m.keys().forEach { k -> val p = m.getJSONObject(k)
@@ -196,7 +203,8 @@ object OrbArms {
                     .apply { p.stopTrigger?.let { put("stopTrigger", it) }; p.exit?.let { put("exit", it) } }
                     .put("exitTime", p.exitTime?.toString() ?: "").put("why", p.why ?: "").put("charges", p.charges)
                     .put("live", p.live).put("kite", p.kite ?: "").put("unconfirmed", p.unconfirmed)
-                    .apply { p.level?.let { put("level", it) }; p.target?.let { put("target", it) } })
+                    .apply { p.level?.let { put("level", it) }; p.target?.let { put("target", it) } }
+                    .put("ladder", p.ladder).apply { p.peak?.let { put("peak", it) } })
             }
         })
         o.put("pending", JSONObject().apply { b.pending.forEach { (k, p) -> put(k, JSONObject().put("right", p.right).put("bar", p.signalBar.toString()).put("expires", p.expires.toString())
@@ -270,7 +278,8 @@ object OrbArms {
     /** The pre-registered forward test on the closed arm trades, operator-closed trades excluded. */
     private fun forward(b: Book): PassRule.Verdict = PassRule.judge(
         // The paper-only arms' trades (ORB Sweep, Range Fade) and Liquidity 15+5's are not part of the ORB's pre-registered forward test.
-        b.positions.filter { !it.open && it.why != "operator_stop" && it.why != "closed_by_you" && ALL_ARMS.none { a -> a.source == it.arm && (a.paperOnly || a.liquidity) } }.map { p ->
+        // The profit lock changed the ORB's exits (2026-10-01), so the test restarted: only trades entered under it count.
+        b.positions.filter { !it.open && it.ladder && it.why != "operator_stop" && it.why != "closed_by_you" && ALL_ARMS.none { a -> a.source == it.arm && (a.paperOnly || a.liquidity) } }.map { p ->
             PassRule.Closed(p.day, (p.grossPnl ?: 0.0) - p.charges, b.upDays[p.day.toString()])
         })
 
@@ -521,7 +530,7 @@ object OrbArms {
             if (stop.ok) { stopId = stop.orderId; stopId?.let { Strategies.tagOwner("paper:$it", "${arm.label} · stop") } }
         }
         b.positions += Position(arm.source, c.symbol, c.right.name, fill.quantity, fill.price, now(), signalBar, buy.orderId, stopId, trigger,
-            charges = chargesOf(buy.orderId))
+            charges = chargesOf(buy.orderId), ladder = ProfitLock.targetOf(arm) != null)
         marks[c.symbol] = fill.price
         return "entered"
     }
@@ -563,16 +572,19 @@ object OrbArms {
                 continue
             }
             if (ltp == null) continue                                               // no price at all: hold
+            val (seen, locked) = ladder(cur, ltp)
+            if (seen !== cur) b.positions[i] = seen
             val why = when {
                 stopped -> "operator_stop"
                 !t.toLocalTime().isBefore(OrbRules.SQUARE_OFF) -> "session_end"
                 // Liquidity 15+5 exits on index levels (liquidityExits); its 15% stop rests in the book, and if that order is
                 // gone the app sells at the stop level itself.
                 armOf(cur.arm).liquidity -> "stop".takeIf { cur.stopOrderId == null && cur.stopTrigger?.let { ltp <= it } == true }
+                locked -> "profit_lock"
                 else -> (if (armOf(cur.arm).sweep) SweepRules.exitReason(cur.entry, ltp, t) else OrbRules.exitReason(cur.entry, ltp, t))
                     .takeIf { it == "target" || (it == "stop" && cur.stopOrderId == null) }
             } ?: continue
-            b.positions[i] = exit(cur, c, why)
+            b.positions[i] = exit(seen, c, why)
         }
     }
 
@@ -589,6 +601,18 @@ object OrbArms {
         sell.orderId?.let { Strategies.tagOwner("paper:$it", "${armOf(p.arm).label} · $why") }
         Notifier.orderFilled(app, "SELL", fill.quantity, fill.symbol, fill.price, "Paper", armOf(p.arm).label)
         return p.copy(stopOrderId = null, exit = fill.price, exitTime = now(), why = why, charges = p.charges + chargesOf(sell.orderId))
+    }
+
+    /**
+     * The profit-lock ladder ([ProfitLock]) for a laddered position at [ltp]: the position with its best price updated,
+     * and whether [ltp] gave back to the lock its earlier best had earned (then the app sells at market; the resting
+     * -40 stop stays in place underneath until that sale takes it out).
+     */
+    private fun ladder(p: Position, ltp: Double): Pair<Position, Boolean> {
+        val target = ProfitLock.targetOf(armOf(p.arm))?.takeIf { p.ladder } ?: return p to false
+        val before = p.peak ?: p.entry
+        val locked = ProfitLock.exits(p.entry, target, before, ltp)
+        return (if (ltp > before) p.copy(peak = ltp) else p) to locked
     }
 
     // ---- Zerodha (the app in Live) --------------------------------------------------
@@ -683,7 +707,7 @@ object OrbArms {
         if (f == null || f.status !in DONE) {
             // Zerodha has not said how it ended: held as unconfirmed (so the arm buys nothing more) until the books settle it.
             b.positions += Position(arm.source, c.symbol, c.right.name, o.quantity, last, now(), signalBar, id, null, null,
-                live = true, kite = sym, unconfirmed = true, level = liquidity?.level, target = liquidity?.target)
+                live = true, kite = sym, unconfirmed = true, level = liquidity?.level, target = liquidity?.target, ladder = ProfitLock.targetOf(arm) != null)
             runCatching { save(b) }
             com.optionslab.app.work.Alerts.error("${arm.label}: Zerodha did not confirm the buy of $sym. It is treated as held (no stop yet) " +
                 "until the order book shows what filled.", "ORB live")
@@ -694,7 +718,8 @@ object OrbArms {
         Notifier.orderFilled(app, "BUY", f.filled, sym, fill, "Live", arm.label)
         val (stopId, trigger) = placeStop(arm.label, sym, f.filled, ins.lotSize, ins.tickSize, fill, known + listOfNotNull(id), liquidity = liquidity != null)
         b.positions += Position(arm.source, c.symbol, c.right.name, f.filled, fill, now(), signalBar, id, stopId, trigger,
-            charges = kiteCharge("BUY", fill, f.filled), live = true, kite = sym, level = liquidity?.level, target = liquidity?.target)
+            charges = kiteCharge("BUY", fill, f.filled), live = true, kite = sym, level = liquidity?.level, target = liquidity?.target,
+            ladder = ProfitLock.targetOf(arm) != null)
         runCatching { save(b) }   // a live position is written down at once, not at the end of the pass
         marks[c.symbol] = fill
         return "entered_live"
@@ -790,14 +815,17 @@ object OrbArms {
             // The price ran through the stop's limit without it filling: sell at market instead.
             val tick = runCatching { Broker.spec("NFO", sym).tickSize }.getOrDefault(0.05)
             val runThrough = cur.stopTrigger?.let { ltp < stopLimit(it, tick) } == true
+            val (seen, locked) = ladder(cur, ltp)
+            if (seen !== cur) b.positions[i] = seen
             val why = when {
                 stopped -> "operator_stop"
                 !t.toLocalTime().isBefore(OrbRules.SQUARE_OFF) -> "session_end"
                 // Liquidity 15+5: its 15% stop rests at Zerodha; the app sells only if that is gone or the price ran through it.
                 armOf(cur.arm).liquidity -> "stop".takeIf { (cur.stopOrderId == null || runThrough) && cur.stopTrigger?.let { ltp <= it } == true }
+                locked -> "profit_lock"
                 else -> OrbRules.exitReason(cur.entry, ltp, t).takeIf { it == "target" || (it == "stop" && (cur.stopOrderId == null || runThrough)) }
             } ?: continue
-            val (done, rest) = exitLive(b, cur, sym, why)
+            val (done, rest) = exitLive(b, seen, sym, why)
             b.positions[i] = done
             rest?.let { b.positions += it }
         }
