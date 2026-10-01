@@ -39,6 +39,12 @@ object OrderStatus {
  */
 data class SandboxConfig(
     val startingCapital: BigDecimal = BigDecimal("10000000.00"),
+    /**
+     * True: a close's realised P&L always reaches the funds, even when the position has no margin left to release
+     * (IraAlgo's paper account). False (the default): the Python sandbox's behaviour, which books it on the position
+     * only - kept for the parity tests against the desktop.
+     */
+    val pnlAlwaysToFunds: Boolean = false,
     /** "Never" disables the automatic fund reset; otherwise an English weekday ("Sunday"). */
     val resetDay: String = "Never",
     val resetTime: String = "00:00",

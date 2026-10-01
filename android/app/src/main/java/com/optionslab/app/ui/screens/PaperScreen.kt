@@ -197,6 +197,12 @@ private fun PaperPositions(model: AppModel, v: Paper.Snapshot) {
         RollingFigure(book.totalPnlToday, { rs(it, true) }, Type.figureLarge.copy(color = if (book.totalPnlToday >= 0) p.verdigris else p.oxblood), calm = true)
         LedgerLine("Unrealised", rs(book.totalUnrealizedPnl, true))
         LedgerLine("Realised today", rs(book.totalTodayRealizedPnl, true))
+        // The figures above are before charges; the balance and Home's "P&L today" are after them.
+        val charges = v.trades.sumOf { it.charges }
+        if (charges > 0) {
+            LedgerLine("Charges today", rs(-charges, true))
+            LedgerLine("Net today after charges", rs(book.totalPnlToday - charges, true), if (book.totalPnlToday - charges >= 0) p.verdigris else p.oxblood)
+        }
         if (book.positions.isEmpty()) Note("No paper positions.")
         book.positions.forEach { ps ->
             Rule(Modifier.padding(vertical = 6.dp))

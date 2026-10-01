@@ -91,7 +91,9 @@ object Paper {
     private fun engine(capital: BigDecimal, contracts: Map<String, Contract>) = Sandbox(
         // The desktop sandbox's execution costs (TODO A9): stops slip 10 bps, a MARKET fill with no
         // bid/ask (the Upstox candle feed has none) slips 5 bps, and every leg pays its charges.
-        SandboxConfig(startingCapital = capital, stopSlippageBps = BigDecimal("10"), spreadFallbackBps = BigDecimal("5"), chargesEnabled = true),
+        // Every close's P&L reaches the balance (the desktop drops it when the position has no margin left to release).
+        SandboxConfig(startingCapital = capital, stopSlippageBps = BigDecimal("10"), spreadFallbackBps = BigDecimal("5"), chargesEnabled = true,
+            pnlAlwaysToFunds = true),
         InstrumentMaster { sym, ex ->
             if (ex != "NFO") null else contracts[sym]?.let {
                 Instrument(sym, "NFO", "OPTIDX", it.lotSize, 0.05, it.expiry, it.strike)

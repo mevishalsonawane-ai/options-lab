@@ -334,6 +334,26 @@ class Sandbox(
             return true
         }
 
+        /**
+         * A close's margin back and its realised P&L to the funds. With [SandboxConfig.pnlAlwaysToFunds] (the app's paper
+         * account) IraAlgo departs from the Python here: there, a
+         * position with no margin left to release (a short opened by a stop that rested after its long was gone, a
+         * margin already reconciled away) books its P&L on the position but never on the funds, so the balance and
+         * "P&L today" fell behind the positions' realised total. The P&L now always reaches the funds; the margin
+         * released is at most what is still used.
+         */
+        fun settleClose(release: BigDecimal, pnl: BigDecimal) {
+            if (!config.pnlAlwaysToFunds) {
+                // Python parity: with nothing to release, the P&L never reaches the funds.
+                if (release.signum() > 0) releaseMargin(release, pnl)
+                return
+            }
+            val r = release.min(funds.usedMargin)
+            if (r.signum() > 0 && releaseMargin(r, pnl)) return
+            if (pnl.signum() == 0) return
+            editFunds { available += pnl; realized += pnl; today += pnl; total = realized + unrealized }
+        }
+
         /** transfer_margin_to_holdings: T+1 moves the cost out of used margin without crediting cash. */
         fun transferMarginToHoldings(amount: BigDecimal): Boolean {
             if (amount.signum() <= 0 || amount > funds.usedMargin) return false
@@ -460,9 +480,7 @@ class Sandbox(
                     }
                     final == 0 -> {
                         val realized = realizedPnl(old, p.averagePrice, kotlin.math.abs(signed), px, contractValue(o.symbol, o.exchange))
-                        val release = p.marginBlocked
-                        // Python parity: with nothing to release, the P&L never reaches the funds.
-                        if (release.signum() > 0) releaseMargin(release, realized)
+                        settleClose(p.marginBlocked, realized)
                         editPosition(i) {
                             accumulated += realized; today += realized; quantity = 0; margin = BigDecimal.ZERO
                             ltp = px; pnl = today; pnlPercent = BigDecimal.ZERO
@@ -481,7 +499,7 @@ class Sandbox(
                         val realized = realizedPnl(old, p.averagePrice, reduced, px, contractValue(o.symbol, o.exchange))
                         val current = p.marginBlocked
                         val release = current * div(BigDecimal(reduced), BigDecimal(kotlin.math.abs(old)))
-                        if (release.signum() > 0) releaseMargin(release, realized)
+                        settleClose(release, realized)
                         val remaining = current - release
                         editPosition(i) {
                             accumulated += realized; today += realized
