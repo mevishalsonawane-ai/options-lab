@@ -244,3 +244,6 @@ ATM straddle level and change, CE/PE skew, OI change and PCR over ATM +-200, CE/
 - PROFIT-LOCK LADDERS (PROFIT_LOCK.md): 25% of target -> breakeven, 50% -> lock 25%, 75% -> lock 50% cuts ORB's loss
   from -218k / -194k to -77k / -70k and ORB Fresh's from -69k / -57k to -17k / -6k (both years), but neither turns
   profitable; no ladder helps ORB Sweep or Range Fade.
+- PROFIT LOCK ON LIQUIDITY 15+5 (LIQUIDITY_LOCK.md): the 25/50/75 ladder against a reference target of 15-100% of the
+  premium never beats the arm in both years (arm +55.6k / +21.6k; best ladder 60%: +40.5k / +29.6k). The arm's own
+  exits (next liquidity, failed break) already do this job; the ladder cuts its big winners. Not added.

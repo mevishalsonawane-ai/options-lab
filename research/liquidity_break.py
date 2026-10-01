@@ -44,7 +44,9 @@ def bars(days, tf):
     return pd.DataFrame(rows, columns=["di", "s", "e", "open", "high", "low", "close"])
 
 
-def simulate(days, b, zones, source, stop, carry=False, prem_stop=None):
+def simulate(days, b, zones, source, stop, carry=False, prem_stop=None, lock_ref=None):
+    """lock_ref: the profit-lock ladder (25% of the way -> price paid, 50% -> +25%, 75% -> +50%) against a reference
+    target of lock_ref x the premium paid; a rung counts from the next minute. None: no ladder (as before)."""
     DI, S, E, C = b.di.values, b.s.values, b.e.values, b.close.values
     # events by bar: breaks (zone, bar) and new zones known at a bar
     breaks, known = {}, {}
@@ -67,6 +69,17 @@ def simulate(days, b, zones, source, stop, carry=False, prem_stop=None):
                 if prem_stop and pos["key"] is not None and d["chain"][pos["key"]]["low"][m] <= pos["px"] * (1 - prem_stop):
                     why, xm = "premium stop", m
                     break
+                if lock_ref and pos["key"] is not None:
+                    opt = d["chain"][pos["key"]]
+                    if pos.get("lock") is not None and opt["low"][m] <= pos["lock"]:
+                        why, xm = "profit lock", m
+                        break
+                    tg = pos["px"] * lock_ref
+                    for reached, keep in ((0.25, 0.0), (0.50, 0.25), (0.75, 0.50)):
+                        if opt["high"][m] >= pos["px"] + reached * tg:
+                            lvl = pos["px"] + keep * tg
+                            if pos.get("lock") is None or lvl > pos["lock"]:
+                                pos["lock"] = lvl
                 if pos["target"] is not None and ((sg > 0 and I["high"][m] >= pos["target"]) or
                                                   (sg < 0 and I["low"][m] <= pos["target"])):
                     why, xm = "next liquidity", m
@@ -85,6 +98,8 @@ def simulate(days, b, zones, source, stop, carry=False, prem_stop=None):
                 opt = d["chain"][pos["key"]]["close"][xm] if pos["key"] is not None else np.nan
                 if why == "premium stop":
                     opt = min(opt, pos["px"] * (1 - prem_stop))        # the resting stop's level (or worse if it gapped)
+                if why == "profit lock":
+                    opt = min(opt, pos["lock"])                         # sold at the lock (or worse if it gapped)
                 trades.append(dict(day=pos["day"], sign=sg, why=why, pts=sg * (ix - pos["ix"]),
                                    rs=(opt - SLIP - pos["px"]) * LOT - CHG,
                                    held=xm - pos["m"] + 375 * (DI[i] - pos["di"])))
