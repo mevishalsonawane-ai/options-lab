@@ -252,3 +252,5 @@ ATM straddle level and change, CE/PE skew, OI change and PCR over ATM +-200, CE/
 - LIQUIDITY 15+5, EXITING SOONER ON A TURN (LIQUIDITY_REVERSAL.md): a 30-point index stop beyond the broken level plus a
   time stop (not +5% after 20 min) lifts the arm from +55.6k / +21.6k to +103.0k / +30.3k and cuts the worst trade from
   -15.7k to -9.6k; better in both years (best of 11 variants). A 10% premium stop fails year B.
+- LIQUIDITY 15+5 WITH A TRAILING PROFIT STOP (LIQUIDITY_TRAIL.md): keeping 50% of the best profit (the owner's idea)
+  turns year A negative when it starts early and is mixed when it starts late; it halves the average winner. Not added.

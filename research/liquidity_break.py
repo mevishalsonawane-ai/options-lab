@@ -45,10 +45,12 @@ def bars(days, tf):
 
 
 def simulate(days, b, zones, source, stop, carry=False, prem_stop=None, lock_ref=None, prem_target=None, abs_stop=None,
-             fb_every=None, time_stop=None, ix_buffer=None):
+             fb_every=None, time_stop=None, ix_buffer=None, trail=None):
     """fb_every: also check the failed break on every fb_every-minute close of the index (1 or 5), not only the chart
     bar's close. time_stop: (minutes, min_gain) - out if the option is not min_gain x premium up after that long.
-    ix_buffer: out the minute the index trades ix_buffer points back beyond the broken level (an index stop)."""
+    ix_buffer: out the minute the index trades ix_buffer points back beyond the broken level (an index stop).
+    trail: (keep, start) - once the option's best gain is at least start x premium, a stop at price paid + keep x the
+    best gain so far (rises with it, never falls); a new best counts from the next minute."""
     """lock_ref: the profit-lock ladder (25% of the way -> price paid, 50% -> +25%, 75% -> +50%) against a reference
     target of lock_ref x the premium paid; a rung counts from the next minute. None: no ladder (as before).
     prem_target: a fixed premium target in points (sold at price paid + it); with it the ladder measures that target."""
@@ -77,6 +79,15 @@ def simulate(days, b, zones, source, stop, carry=False, prem_stop=None, lock_ref
                 if abs_stop and pos["key"] is not None and d["chain"][pos["key"]]["low"][m] <= pos["px"] - abs_stop:
                     why, xm = "points stop", m
                     break
+                if trail and pos["key"] is not None:
+                    opt = d["chain"][pos["key"]]
+                    if pos.get("trail") is not None and opt["low"][m] <= pos["trail"]:
+                        why, xm = "trailing profit stop", m
+                        break
+                    best = max(pos.get("best", pos["px"]), opt["high"][m])
+                    pos["best"] = best
+                    if best - pos["px"] >= trail[1] * pos["px"]:
+                        pos["trail"] = max(pos.get("trail") or 0, pos["px"] + trail[0] * (best - pos["px"]))
                 if ix_buffer is not None and sg * ((I["low"][m] if sg > 0 else I["high"][m]) - pos["level"]) < -ix_buffer:
                     why, xm = "index stop", m
                     break
@@ -124,6 +135,8 @@ def simulate(days, b, zones, source, stop, carry=False, prem_stop=None, lock_ref
                     opt = min(opt, pos["px"] - abs_stop)
                 if why == "premium target":
                     opt = pos["px"] + prem_target
+                if why == "trailing profit stop":
+                    opt = min(d["chain"][pos["key"]]["close"][xm], pos["trail"])
                 if why == "profit lock":
                     opt = min(opt, pos["lock"])                         # sold at the lock (or worse if it gapped)
                 trades.append(dict(day=pos["day"], sign=sg, why=why, pts=sg * (ix - pos["ix"]),
