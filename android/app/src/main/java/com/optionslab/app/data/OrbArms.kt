@@ -327,8 +327,8 @@ object OrbArms {
         if (on && armOf(source).fade) "$label armed on paper (it never trades on Zerodha), fully automatic: when a 5-minute bar " +
             "reaches the outer tenth of the opening range and closes back inside, it buys the option toward the middle - 1 lot, " +
             "a 40-point stop, a 40-point target and the 15:10 exit, at most ${RangeFadeRules.MAX_ENTRIES} a day, from 10:30."
-        else if (on && paperOnly) "$label armed on paper (it never trades on Zerodha), fully automatic: it fades a failed break of the " +
-            "opening range - a 5-minute bar through the range high or low that closes back inside - with 1 lot, a 40-point stop, " +
+        else if (on && paperOnly) "$label armed on paper (it never trades on Zerodha), fully automatic: it fades a break of the " +
+            "opening range that falls back - a 5-minute bar through the range high or low that closes back inside - with 1 lot, a 40-point stop, " +
             "an 80-point target and the 15:10 exit, at most ${SweepRules.MAX_ENTRIES} a day, from 10:05."
         else if (on) "$label armed" + (if (live) " on ZERODHA (live), " else " on paper, ") +
             (if (automatic) "fully automatic: it buys and sells by itself every trading day until you switch it off." else "you approve each entry.") +
@@ -985,7 +985,7 @@ object OrbArms {
         val buy = Paper.place(c, "BUY", 1, "MARKET", "MIS", null, null)
         val fill = filledOrCancelled(buy) ?: return "order_refused: ${if (buy.ok) "no price to fill at; the order was cancelled" else buy.message}"
         buy.orderId?.let { Strategies.tagOwner("paper:$it", "${LiquidityRules.ARM.label} · entry") }
-        Notifier.orderFilled(app, "BUY", fill.quantity, fill.symbol, fill.price, "Paper", LiquidityRules.ARM.label)
+        Notifier.orderFilled(app, "BUY", fill.quantity, fill.symbol, fill.price, "Paper", arm.label)
         // The owner's stop: a resting SL-M sell 15% below the fill (the book owns it, as the ORB's -40).
         val trigger = LiquidityRules.stopTrigger(fill.price)
         var stopId: String? = null
