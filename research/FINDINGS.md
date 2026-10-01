@@ -254,3 +254,5 @@ ATM straddle level and change, CE/PE skew, OI change and PCR over ATM +-200, CE/
   -15.7k to -9.6k; better in both years (best of 11 variants). A 10% premium stop fails year B.
 - LIQUIDITY 15+5 WITH A TRAILING PROFIT STOP (LIQUIDITY_TRAIL.md): keeping 50% of the best profit (the owner's idea)
   turns year A negative when it starts early and is mixed when it starts late; it halves the average winner. Not added.
+- EXPIRY DAY, SAME-DAY OPTION (EXPIRY_SAME_DAY.md): on 11 BANKNIFTY monthly expiry days, buying the expiring option
+  instead of next month's gives +11.7k vs +0.8k (ORB family better, Liquidity 15+5 slightly worse). Small sample.
