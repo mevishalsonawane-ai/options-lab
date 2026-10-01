@@ -1,5 +1,5 @@
 name: Gold feed probe
-# One-off check of which free XAUUSD price feeds answer (IraGoldAlgo's price source). Read-only, no secrets.
+# One-off check (run on push of this file) of which free XAUUSD price feeds answer (IraGoldAlgo's price source). Read-only, no secrets.
 on:
   workflow_dispatch:
   push:
