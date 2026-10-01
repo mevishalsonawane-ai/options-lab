@@ -212,6 +212,9 @@ class GoldScreensTest {
         tap("P&L")
         compose.waitForText("+$4.86")                          // September's net: 9.93 - 5.07
         assertFalse(compose.has("₹", substring = true))
+        // The win rate is by trade (one won, one lost), not by day (both days count as one each way, never "100%").
+        compose.reveal("1W · 1L trades")
+        assertTrue(compose.has("50%"))
         shot("pnl-light")
     }
 

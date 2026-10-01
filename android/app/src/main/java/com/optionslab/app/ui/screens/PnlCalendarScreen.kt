@@ -182,6 +182,10 @@ fun PnlCalendarScreen(model: AppModel) {
         }
     }
 
+    // The month's closed trades (this filter), for the win rate by trade.
+    val monthTrips = remember(trips, owners, owner, month) {
+        trips.filter { YearMonth.from(it.day) == month && (owner == "All" || com.optionslab.app.data.TradeBook.ownerOf(it, owners) == owner) }.map { it.net }
+    }
     Page {
         item {
             LedgerCard {
@@ -211,7 +215,7 @@ fun PnlCalendarScreen(model: AppModel) {
         }
         // A past date's orders, trades and positions live here only (the Trade tab shows today's): tap a date to list its fills.
         picked?.takeIf { !yearView }?.let { d -> item(key = "day-$d") { DayTrades(live, d, trips, owners, tick) } }
-        item { Summary(month, days) }
+        item { Summary(month, days, monthTrips) }
         item { YearStrip(month.year, all, live) }
         item { StrategyComparison(trips, owners) }
         item { ChargesCard(live, month, tick) }
@@ -429,7 +433,7 @@ private fun Swatch(c: Color) = Box(Modifier.padding(horizontal = 1.dp).size(9.dp
 
 /** Nine key figures for the month, and the profit / loss split. */
 @Composable
-private fun Summary(month: YearMonth, days: Map<LocalDate, DailyPnl.Day>) {
+private fun Summary(month: YearMonth, days: Map<LocalDate, DailyPnl.Day>, tradeNets: List<Double>? = null) {
     val p = LocalPalette.current
     val all = days.values.sortedBy { it.date }
     LedgerCard {
@@ -443,17 +447,25 @@ private fun Summary(month: YearMonth, days: Map<LocalDate, DailyPnl.Day>) {
         var streak = 0; val sType = all.lastOrNull()?.pnl?.sign ?: 0.0
         for (d in all.asReversed()) { if (d.pnl.sign != sType || sType == 0.0) break; streak++ }
         val best = all.maxByOrNull { it.pnl }; val worst = all.minByOrNull { it.pnl }
-        val trades = all.sumOf { it.trades }
+        // Win rate, profit factor, gross and the count are by closed trade (each buy-to-sell round trip) when the trades
+        // are known: by day they read "100%" on a green day that had losing trades in it.
+        val byTrade = !tradeNets.isNullOrEmpty()
+        val tw = tradeNets.orEmpty().count { it > 0 }; val tl = tradeNets.orEmpty().count { it < 0 }
+        val tgp = tradeNets.orEmpty().filter { it > 0 }.sum(); val tgl = -tradeNets.orEmpty().filter { it < 0 }.sum()
+        val pfGp = if (byTrade) tgp else gp; val pfGl = if (byTrade) tgl else gl
+        val trades = if (byTrade) tradeNets!!.size else all.sumOf { it.trades }
         val tiles = listOf(
-            Tile("Win rate", "${Math.round(100.0 * wins.size / all.size)}%", null, "${wins.size}W · ${losses.size}L"),
-            Tile("P. factor", if (gl > 0) String.format(Locale.ENGLISH, "%.2f", gp / gl) else "∞", if (gp >= gl) p.verdigris else p.oxblood, "profit ÷ loss"),
+            if (byTrade) Tile("Win rate", "${Math.round(100.0 * tw / tradeNets!!.size)}%", null, "${tw}W · ${tl}L trades")
+            else Tile("Green days", "${Math.round(100.0 * wins.size / all.size)}%", null, "${wins.size} up · ${losses.size} down"),
+            Tile("P. factor", if (pfGl > 0) String.format(Locale.ENGLISH, "%.2f", pfGp / pfGl) else "∞", if (pfGp >= pfGl) p.verdigris else p.oxblood,
+                if (byTrade) "won ÷ lost, trades" else "profit ÷ loss"),
             Tile("Avg / day", short(net / all.size), if (net >= 0) p.verdigris else p.oxblood, "${all.size} days"),
             Tile("Best day", best?.takeIf { it.pnl > 0 }?.let { short(it.pnl) } ?: "–", p.verdigris, best?.takeIf { it.pnl > 0 }?.let { "${it.date.dayOfMonth} ${mon(month)}" } ?: ""),
             Tile("Worst day", worst?.takeIf { it.pnl < 0 }?.let { short(it.pnl) } ?: "–", p.oxblood, worst?.takeIf { it.pnl < 0 }?.let { "${it.date.dayOfMonth} ${mon(month)}" } ?: ""),
             Tile("Drawdown", if (dd < 0) short(dd) else "${cur()}0", if (dd < 0) p.oxblood else null, "from peak"),
-            Tile("Streak", if (streak > 0) "$streak ${if (sType > 0) "W" else "L"}" else "–", if (sType > 0) p.verdigris else p.oxblood, "current"),
-            Tile("Trades", "$trades", null, String.format(Locale.ENGLISH, "%.1f / day", trades.toDouble() / all.size)),
-            Tile("Gross", short(gp), p.verdigris, "${short(-gl)} loss"),
+            Tile("Day streak", if (streak > 0) "$streak ${if (sType > 0) "up" else "down"}" else "–", if (sType > 0) p.verdigris else p.oxblood, "days in a row"),
+            Tile(if (byTrade) "Trades" else "Fills", "$trades", null, String.format(Locale.ENGLISH, "%.1f / day", trades.toDouble() / all.size)),
+            Tile("Gross", short(pfGp), p.verdigris, "${short(-pfGl)} loss"),
         )
         tiles.chunked(3).forEach { row ->
             Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -721,7 +733,7 @@ fun GoldPnlCalendar() {
                 if (book.position != null) Note("The open trade counts on the day it closes.", Modifier.padding(top = 6.dp))
             }
         }
-        item { Summary(month, days) }
+        item { Summary(month, days, book.trades.filter { YearMonth.from(it.exitTime.plusMinutes(330).toLocalDate()) == month }.map { it.pnl }) }
         item { YearStrip(month.year, all, live = false) }
     }
     }
