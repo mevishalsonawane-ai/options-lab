@@ -59,12 +59,14 @@ fun GoldMain(model: AppModel) {
     var tab by rememberSaveable { mutableStateOf("home") }
     // While the app is open the pass runs every minute (the alarm does it every five in the background).
     LaunchedEffect(Unit) { while (true) { withContext(Dispatchers.IO) { GoldPaper.tick() }; delay(60_000) } }
-    Column(Modifier.fillMaxSize().background(p.paper).statusBarsPadding()) {
+    // The alert banner is a full-screen overlay (as in IraAlgo): it goes on top of the column, never inside it, where
+    // its fillMaxSize took every pixel and left the tabs' content zero high (found on the emulator).
+    Box(Modifier.fillMaxSize().background(p.paper)) {
+    Column(Modifier.fillMaxSize().statusBarsPadding()) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
             BrandLogo(Modifier.weight(1f))
             Text("PAPER", style = Type.label.copy(color = p.brass, fontWeight = FontWeight.Bold))
         }
-        AlertBanner()
         Box(Modifier.weight(1f)) {
             when (tab) {
                 "trades" -> GoldTrades()
@@ -79,6 +81,8 @@ fun GoldMain(model: AppModel) {
                     modifier = Modifier.weight(1f).heightIn(min = 52.dp).clickable { tab = k }.padding(top = 16.dp))
             }
         }
+    }
+    AlertBanner()
     }
 }
 

@@ -128,9 +128,8 @@ if wait("Not now", timeout=8, exact=True):
     tap("Not now", scroll=False)
 
 def shot(name):
-    png = subprocess.run(["adb", "exec-out", "screencap", "-p"], capture_output=True, timeout=60).stdout
-    with open(os.path.join(OUT, f"{name}.png"), "wb") as f:
-        f.write(png)
+    adb("shell", "screencap", "-p", "/sdcard/shot.png", check=False)
+    adb("pull", "/sdcard/shot.png", os.path.join(OUT, f"{name}.png"), check=False)
     screen(name)
 
 

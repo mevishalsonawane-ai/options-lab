@@ -40,6 +40,7 @@ jobs:
           api-level: 34
           arch: x86_64
           target: google_apis
+          profile: pixel_6
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           script: python3 android/tools/gold_emulator_test.py "$(ls android/app/build/outputs/apk/gold/release/*.apk | head -1)" gold-emulator
