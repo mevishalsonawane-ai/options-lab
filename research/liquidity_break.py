@@ -32,6 +32,7 @@ from indicator.liquidity import pool_zones, swing_zones  # noqa: E402
 
 LOT, SLIP, CHG = 30, 0.5, 40.0
 CUT = 355
+LAST_M = 315       # the last entry minute after 09:15 (315 = 14:30); research/entry_cutoff.py varies it
 
 
 def bars(days, tf):
@@ -147,7 +148,7 @@ def simulate(days, b, zones, source, stop, carry=False, prem_stop=None, lock_ref
         if pos is not None or i + 1 >= len(b) or DI[i + 1] != DI[i]:
             continue
         m = S[i + 1]
-        if not (5 <= m <= 315):
+        if not (5 <= m <= LAST_M):
             continue
         brk = breaks.get(i, [])
         sw = [z for z in brk if z.kind == "swing"]
