@@ -186,7 +186,10 @@ def main():
         rows += orb_family(al.load("file:" + path), od)
         rows += liquidity(path, od)
     df = pd.DataFrame(rows)
+    allrows = df.copy()
     df = df[df.f.notna()].copy()
+    if len(sys.argv) > 4:
+        allrows.to_pickle(sys.argv[4])
     A = set(odA)
     df["yr"] = np.where(df.day.isin(A), "A", "B")
     singles = OI_CHECKS + VOL_CHECKS + ["long buildup with volume", "short covering with volume"]
