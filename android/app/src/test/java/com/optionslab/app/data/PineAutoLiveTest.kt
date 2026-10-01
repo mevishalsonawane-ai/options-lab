@@ -223,6 +223,18 @@ class PineAutoLiveTest : RobolectricTest() {
         assertEquals(1, side("BUY").size)
     }
 
+    @Test fun resettingThePaperAccountNeverLiftsALiveDailyLossPause() {
+        auto { it.copy(maxDayLoss = 1_000.0) }
+        bought()
+        kite.quote("NFO:$ce", 250.0, 249.95, 250.05)
+        pass(52_010.0)
+        assertTrue(log(), log().contains("Daily loss limit reached: no more trades today"))
+        runBlocking { PineAuto.resetPaper() }
+        assertEquals("the live day's loss is kept", -1_500.0, PineAuto.todayOf(id)!!, 0.01)
+        pass(51_900.0); pass(52_010.0)
+        assertEquals("still paused: no new live buy today", 1, side("BUY").size)
+    }
+
     @Test fun alertsOnlyPlacesNothing() {
         auto { it.copy(mode = "alert") }
         switchOn()

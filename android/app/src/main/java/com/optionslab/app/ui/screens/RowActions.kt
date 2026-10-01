@@ -259,8 +259,11 @@ fun RowActionPopup(model: AppModel) {
                 if (actions.isEmpty()) Note("Nothing to close or cancel: this order is finished and no position is open from it.", Modifier.padding(top = 8.dp))
                 Column(Modifier.padding(top = 14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     actions.forEach { a ->
-                        if (a.swipe) com.optionslab.app.ui.components.SwipeToConfirm(a.label, a.tone, onConfirm = a.run)
-                        else BrassButton(a.label, Modifier.fillMaxWidth(), tone = a.tone, onClick = a.run)
+                        // Keyed by its label: when the live books change the list, a slider never moves into another's slot.
+                        androidx.compose.runtime.key(a.label) {
+                            if (a.swipe) com.optionslab.app.ui.components.SwipeToConfirm(a.label, a.tone, onConfirm = a.run)
+                            else BrassButton(a.label, Modifier.fillMaxWidth(), tone = a.tone, onClick = a.run)
+                        }
                     }
                 }
             }

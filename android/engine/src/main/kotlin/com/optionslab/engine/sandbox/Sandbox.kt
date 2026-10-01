@@ -891,8 +891,11 @@ class Sandbox(
             val qty = BigDecimal(kotlin.math.abs(p.quantity))
             val closePnl = if (p.quantity > 0) (settle - p.averagePrice) * qty else (p.averagePrice - settle) * qty
             val total = p.accumulatedRealizedPnl + closePnl
-            releaseMargin(p.marginBlocked, closePnl)
-            editPosition(i) { quantity = 0; ltp = settle; pnl = total; accumulated = total; margin = BigDecimal.ZERO }
+            // With pnlAlwaysToFunds the settlement P&L always reaches the funds and also counts in the position's today,
+            // so the positions' today and the funds' today agree after expiry; off, it is Python's behaviour.
+            val app = config.pnlAlwaysToFunds
+            if (app) settleClose(p.marginBlocked, closePnl) else releaseMargin(p.marginBlocked, closePnl)
+            editPosition(i) { quantity = 0; ltp = settle; pnl = total; accumulated = total; margin = BigDecimal.ZERO; if (app) today += closePnl }
             val expiry = contractExpiry(p.symbol, p.exchange, instruments.lookup(p.symbol, p.exchange)) ?: now.toLocalDate()
             positions[i] = positions[i].copy(updatedAt = expiry.atStartOfDay(java.time.ZoneOffset.UTC).withZoneSameInstant(SandboxRules.IST).toLocalDateTime())
             events += SandboxEvent.ExpirySettled(p.symbol, p.exchange, p.product, store(settle), store(closePnl))

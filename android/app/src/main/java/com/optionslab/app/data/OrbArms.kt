@@ -253,6 +253,10 @@ object OrbArms {
     )
 
     private val marks = java.util.concurrent.ConcurrentHashMap<String, Double>()
+    /** When each [marks] price was last read from a quote (a fill's seed has none): a decision needs a fresh one. */
+    private val markedAt = java.util.concurrent.ConcurrentHashMap<String, LocalDateTime>()
+
+    private fun mark(sym: String, px: Double, t: LocalDateTime) { marks[sym] = px; markedAt[sym] = t }
 
     suspend fun view(): View = lock.withLock {
         val b = book()
@@ -563,7 +567,7 @@ object OrbArms {
             // The paper account squared the MIS off at 15:15 (the backstop): book it at the last price.
             val net = Paper.state.positions.filter { it.symbol == p.symbol && it.product == "MIS" }.sumOf { it.quantity }
             val ltp = Paper.lastPrice(c)
-            ltp?.let { marks[p.symbol] = it }
+            ltp?.let { mark(p.symbol, it, t) }
             // The position is gone from the paper book without the arm selling it: the 15:15 square-off
             // (or a restart after it), or the owner closed it (a notification's Close button, the Trade tab).
             // Its resting stop comes out of the book at once, so it can never fill as a short.
@@ -603,10 +607,19 @@ object OrbArms {
                 charges = p.charges + chargesOf(id))
         }
         val sell = Paper.place(c, "SELL", p.qty / c.lotSize.coerceAtLeast(1), "MARKET", "MIS", null, null)
-        val fill = filledOrCancelled(sell) ?: return p.copy(stopOrderId = null)    // nothing left working; retried on the next pass
+        // Nothing sold (no price): the resting stop goes back in the book so the position is never left without one; the
+        // sale is tried again on the next pass.
+        val fill = filledOrCancelled(sell) ?: return p.copy(stopOrderId = p.stopOrderId?.let { restop(p, c) })
         sell.orderId?.let { Strategies.tagOwner("paper:$it", "${armOf(p.arm).label} · $why") }
         Notifier.orderFilled(app, "SELL", fill.quantity, fill.symbol, fill.price, "Paper", armOf(p.arm).label)
         return p.copy(stopOrderId = null, exit = fill.price, exitTime = now(), why = why, charges = p.charges + chargesOf(sell.orderId))
+    }
+
+    /** The resting stop placed again at its trigger after an exit sold nothing; null when it cannot be. */
+    private suspend fun restop(p: Position, c: Paper.Contract): String? {
+        val trigger = p.stopTrigger ?: return null
+        val r = runCatching { Paper.place(c, "SELL", p.qty / c.lotSize.coerceAtLeast(1), "SL-M", "MIS", null, trigger) }.getOrNull()
+        return r?.takeIf { it.ok }?.orderId?.also { Strategies.tagOwner("paper:$it", "${armOf(p.arm).label} · stop") }
     }
 
     /**
@@ -802,7 +815,7 @@ object OrbArms {
             val cur = if (so != null && (so.status == "CANCELLED" || so.status == "REJECTED")) p.copy(stopOrderId = null).also { b.positions[i] = it } else p
             val held = net.filter { it.symbol == sym && it.exchange == "NFO" && it.product == "MIS" }.sumOf { it.qty }
             val ltp = q["NFO:$sym"]?.last?.takeIf { it > 0 }
-            ltp?.let { marks[p.symbol] = it }
+            ltp?.let { mark(p.symbol, it, t) }
             // Gone at Zerodha without the arm selling it: Zerodha's MIS square-off, or closed by hand.
             if (held <= 0) {
                 // Its stop must be confirmed out first: left resting, it would sell into a short.
@@ -844,6 +857,13 @@ object OrbArms {
      */
     private suspend fun exitLive(b: Book, p: Position, sym: String, why: String): Pair<Position, Position?> {
         val label = armOf(p.arm).label
+        // The sell certainly did not go: a stop that was taken out is placed again so the position is never left unprotected.
+        suspend fun unsold(): Pair<Position, Position?> {
+            if (p.stopOrderId == null) return p to null
+            val spec = runCatching { Broker.spec("NFO", sym) }.getOrNull() ?: return p.copy(stopOrderId = null) to null
+            val (id, _) = placeStop(label, sym, p.qty, spec.lotSize, spec.tickSize, p.entry, knownKite(b), liquidity = armOf(p.arm).liquidity)
+            return p.copy(stopOrderId = id) to null
+        }
         p.stopOrderId?.let { id ->
             runCatching { Broker.cancel(id) }
             val st = runCatching { Broker.orderState(id) }.getOrNull()
@@ -869,13 +889,15 @@ object OrbArms {
         val bad = com.optionslab.engine.Kite.refusals(o, AppSettings.load().limits(), Broker.sentToday(), false, exit = true)
         if (bad.isNotEmpty()) {
             com.optionslab.app.work.Alerts.error("$label: the Zerodha exit was not sent (${bad.joinToString("; ")}). Close $sym in Trade.", "ORB live")
-            return p.copy(stopOrderId = null) to null
+            return unsold()
         }
         val id = try { Broker.placeOrder(o, exit = true) } catch (e: Exception) {
-            val found = if (Broker.definite(e)) null else runCatching { Broker.findRecentRetrying(o, knownKite(b) + working.map { it.id }) }.getOrNull()
+            val definite = Broker.definite(e)
+            val found = if (definite) null else runCatching { Broker.findRecentRetrying(o, knownKite(b) + working.map { it.id }) }.getOrNull()
             found ?: run {
                 com.optionslab.app.work.Alerts.error("$label: the Zerodha exit failed (${e.message}); retrying on the next pass.", "ORB live")
-                return p.copy(stopOrderId = null) to null
+                // Refused outright: nothing went, so the stop goes back. A lost reply with no order found may still have gone.
+                return if (definite) unsold() else p.copy(stopOrderId = null) to null
             }
         }
         Strategies.tagOwner("kite:$id", "$label · $why")
@@ -885,7 +907,8 @@ object OrbArms {
             runCatching { Broker.cancel(id) }
             f = runCatching { Broker.orderState(id) }.getOrNull() ?: f
         }
-        if (f == null || f.filled <= 0) return p.copy(stopOrderId = null) to null
+        // Known to have filled nothing and to be finished (cancelled or rejected): the stop goes back.
+        if (f == null || f.filled <= 0) return if (f != null && f.status in DONE) unsold() else p.copy(stopOrderId = null) to null
         val px = f.avgPrice.takeIf { it > 0 } ?: p.entry
         Notifier.orderFilled(app, "SELL", f.filled, sym, px, "Live", label)
         if (f.filled >= p.qty) return p.copy(stopOrderId = null, exit = px, exitTime = now(), why = why, charges = p.charges + kiteCharge("SELL", px, f.filled)) to null
@@ -921,7 +944,7 @@ object OrbArms {
     private suspend fun liquidityCycle(b: Book, arm: Arm, t: LocalDateTime): String {
         val tf = LiquidityRules.minutesOf(arm)
         val und = LiquidityRules.underlyingOf(arm)
-        val bars = LiquidityRules.completed(LiquidityRules.fold(liquidityMinutes(t, und), tf), tf, t)
+        val bars = liquidityBars(liquidityMinutes(t, und), tf, t)
         if (bars.size < 2 * LiquidityRules.SWING_LOOKBACK + 2) return "liquidity_history_loading"
         val last = bars.last()
         val day = t.toLocalDate()
@@ -976,6 +999,17 @@ object OrbArms {
         return "entered"
     }
 
+    /**
+     * The chart's completed bars. As [fiveMinute]: a bar still missing its last minute is kept out for two minutes after
+     * it ends, so a late print cannot turn into a different decision (an entry, or a failed break) once decided.
+     */
+    private fun liquidityBars(ones: List<Bar>, tf: Int, t: LocalDateTime): List<Bar> {
+        val have = ones.mapTo(HashSet()) { it.start }
+        return LiquidityRules.completed(LiquidityRules.fold(ones, tf), tf, t).filter { b ->
+            !t.isBefore(b.start.plusMinutes(tf + 2L)) || b.start.plusMinutes(tf - 1L) in have
+        }
+    }
+
     /** Next liquidity touched, the break failed, or new liquidity formed: the open liquidity positions are sold. */
     private suspend fun liquidityExits(b: Book, t: LocalDateTime) {
         val open = b.positions.withIndex().filter { it.value.open && !it.value.unconfirmed && armOf(it.value.arm).liquidity }
@@ -985,17 +1019,19 @@ object OrbArms {
             val und = LiquidityRules.underlyingOf(armOf(p.arm))
             val ones = minutes.getOrPut(und) { liquidityMinutes(t, und).filter { !it.start.plusMinutes(1).isAfter(t) } }
             val tf = LiquidityRules.minutesOf(armOf(p.arm))
-            val bars = LiquidityRules.completed(LiquidityRules.fold(ones, tf), tf, t)
+            val bars = liquidityBars(ones, tf, t)
             val side = if (p.right == "CE") 1 else -1
             val since = ones.filter { !it.start.isBefore(p.entryTime.withSecond(0).withNano(0)) }
             val level = p.level ?: continue
             // The turn exits first: the index back through the broken level, then the 20-minute time stop (read once, on the
             // option's latest price), then the arm's own exits.
+            // Decided only on a price read on this pass (never the fill's seed or a stale one). Held, it is marked decided;
+            // sold, it stays undecided until the sale went through, so a failed sale is tried again next pass.
             var cur = p
-            val timeStop = if (!p.timed && LiquidityRules.timeStopDue(p.entryTime, t)) marks[p.symbol]?.let { ltp ->
-                cur = p.copy(timed = true); b.positions[i] = cur
-                LiquidityRules.timeStopFails(p.entry, ltp)
-            } == true else false
+            val fresh = marks[p.symbol]?.takeIf { markedAt[p.symbol]?.isBefore(t.minusMinutes(1)) == false }
+            val timeStop = if (!p.timed && LiquidityRules.timeStopDue(p.entryTime, t) && fresh != null) {
+                LiquidityRules.timeStopFails(p.entry, fresh).also { fails -> if (!fails) { cur = p.copy(timed = true); b.positions[i] = cur } }
+            } else false
             val why = when {
                 LiquidityRules.indexStopHit(side, level, LiquidityRules.indexStopPoints(und), since) -> "index_stop"
                 timeStop -> "time_stop"

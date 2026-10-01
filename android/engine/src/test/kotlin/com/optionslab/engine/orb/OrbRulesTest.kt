@@ -133,6 +133,18 @@ class OrbRulesTest {
         assertEquals(250.0, Replay.day(OrbRules.ORB, index, ce, flat)[0].exit)
     }
 
+    @Test fun replayLeavesAtTheProfitLockAsTheArmTrades() {
+        val index = session(55300.0, 55300.0, 55300.0, 55300.0)
+        val flat = index.map { Bar(it.start, 300.0, 300.0, 300.0, 300.0) }
+        val ce = flat.toMutableList().also {
+            it[11] = Bar(at(10, 10), 310.0, 312.0, 305.0, 311.0)    // entry at 310
+            it[12] = Bar(at(10, 15), 315.0, 341.0, 314.0, 335.0)    // +31: past 75% of the target, 50% (330) locked
+            it[13] = Bar(at(10, 20), 328.0, 329.0, 300.0, 302.0)    // back through the lock: out at the open under it
+        }
+        assertEquals(ReplayTrade("10:05", "10:20", "CE", 310.0, 328.0, "profit_lock"), Replay.day(OrbRules.ORB, index, ce, flat)[0])
+        assertEquals("last_bar", Replay.day(OrbRules.ORB, index, ce, flat, ladder = false)[0].why)
+    }
+
     @Test fun passRule() {
         val d = LocalDate.of(2026, 9, 23)
         val v = PassRule.judge(listOf(

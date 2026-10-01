@@ -13,9 +13,10 @@ import kotlin.math.abs
  * minute bars, so every arm is judged on the same days and the same fills.
  *
  *   bars      5-minute BANKNIFTY bars folded from the index minutes
- *   contract  ATM from the 09:20 bar (nearest recorded strike), the nearest expiry after the day, as the arms trade
+ *   contract  ATM from the 09:20 bar (nearest recorded strike), the nearest expiry on or after the day, as the arms trade
  *   entry     the option's first minute after the signal bar closes, plus [slip]
- *   exits     each arm's own stop / target on the option minute lows and highs, 15:10 square-off, minus [slip]
+ *   exits     each arm's own stop / target and the profit-lock ladder on the option minute lows and highs, 15:10
+ *             square-off, minus [slip]; a premium at or under 40 is not bought (the arms refuse it)
  *   costs     [charges] rupees a round trip, one lot
  *
  * Rows also split the days in two halves (first / second): an arm that only works in one half is not an edge.
@@ -62,7 +63,7 @@ object ArmsBacktest {
         OrbRules.openingRange(bars) ?: return null
         val spot = OrbRules.strikeBar(bars)?.close ?: return null
         val strike = OrbRules.atmStrike(spot)
-        val expiry = OrbRules.expiryAfter(s.day, s.options.mapNotNull { it.expiry }.toSet()) ?: return null
+        val expiry = OrbRules.expiryOnOrAfter(s.day, s.options.mapNotNull { it.expiry }.toSet()) ?: return null
         fun leg(r: Right) = s.options.filter { it.expiry == expiry && it.right == r && it.size > 0 }.minByOrNull { abs(it.strike - strike) }
         val ce = leg(Right.CE) ?: return null
         val pe = leg(Right.PE) ?: return null
@@ -102,7 +103,7 @@ object ArmsBacktest {
             val leg = if (dir > 0) ce else pe
             val signal = bars[k].start
             val from = signal.hour * 60 + signal.minute + 5
-            val t = fill(leg, from, stopOf(arm), targetOf(arm), slip)
+            val t = fill(leg, from, stopOf(arm), targetOf(arm), slip, ProfitLock.targetOf(arm))
             if (t == null) { k++; continue }
             val (entry, exit, why, exitMinute) = t
             out += Trade(day, arm.source, if (dir > 0) "CE" else "PE", "%02d:%02d".format(signal.hour, signal.minute),
@@ -115,19 +116,25 @@ object ArmsBacktest {
 
     private data class Fill(val entry: Double, val exit: Double, val why: String, val minute: Int)
 
-    /** Bought at the first minute at or after [from]; exits on the stop, the target, or the 15:10 square-off. */
-    private fun fill(leg: Series, from: Int, stop: Double, target: Double, slip: Double): Fill? {
+    /** Bought at the first minute at or after [from]; exits on the stop, the profit lock, the target, or the 15:10 square-off. */
+    private fun fill(leg: Series, from: Int, stop: Double, target: Double, slip: Double, ladder: Double? = null): Fill? {
         var i = leg.lastAtOrBefore(from - 1) + 1
         if (i >= leg.size) return null
         val squareOff = OrbRules.SQUARE_OFF.hour * 60 + OrbRules.SQUARE_OFF.minute
         if (leg.minutes[i] >= squareOff) return null
         val e = (leg.open?.get(i) ?: leg.close[i]) + slip
+        if (OrbRules.stopTrigger(e) == null) return null                    // at or under 40: the arms refuse the entry
+        var peak = e
         while (i < leg.size) {
             val m = leg.minutes[i]
             val lo = leg.low?.get(i) ?: leg.close[i]
             val hi = leg.high?.get(i) ?: leg.close[i]
             if (e - stop > 0 && lo <= e - stop) return Fill(e, e - stop - slip, "stop", m)
+            // A rung earned on an earlier minute's high: out at the lock (as research/PROFIT_LOCK.md).
+            val lock = ladder?.let { ProfitLock.level(e, it, peak) }
+            if (lock != null && lo <= lock) return Fill(e, lock - slip, "profit_lock", m)
             if (hi >= e + target) return Fill(e, e + target - slip, "target", m)
+            peak = maxOf(peak, hi)
             if (m >= squareOff) return Fill(e, leg.close[i] - slip, "session_end", m)
             i++
         }

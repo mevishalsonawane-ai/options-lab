@@ -282,8 +282,10 @@ object Paper {
             val funds = e.funds(b.state, now)
             val pos = e.positionBook(funds.state, now, q)
             val hold = e.holdings(pos.state, now, q)
-            if (hold.state != b.state) save(b.copy(state = hold.state))
-            return Snapshot(funds.result, pos.result, e.orderBook(hold.state, now), e.tradeBook(hold.state, now), hold.result, q.isNotEmpty() || watched(hold.state).isEmpty())
+            // The funds read again after re-pricing (and any expiry settlement), so they agree with the positions shown.
+            val after = e.funds(hold.state, now)
+            if (after.state != b.state) save(b.copy(state = after.state))
+            return Snapshot(after.result, pos.result, e.orderBook(after.state, now), e.tradeBook(after.state, now), hold.result, q.isNotEmpty() || watched(after.state).isEmpty())
         }
     }
 

@@ -179,7 +179,24 @@ class LiquidityArmTest : RobolectricTest() {
         tick(LocalTime.of(13, 25))
         val closed = row().today.single()
         assertEquals("time_stop", closed.why)
-        assertTrue(closed.timed)
+        assertFalse(closed.open)
+    }
+
+    @Test fun theTimeStopWaitsForAFreshPriceRatherThanTheFillOrAnOldOne() {
+        failDay = false
+        armLiquidity()
+        passes(LocalTime.of(13, 0), LocalTime.of(13, 5))
+        val p = row().today.single()
+        upstox.price(ceKey, p.entry * 1.03)
+        passes(LocalTime.of(13, 6), LocalTime.of(13, 20))
+        upstox.prices.remove(ceKey)                                         // the option's feed goes quiet
+        passes(LocalTime.of(13, 21), LocalTime.of(13, 27))
+        val held = row().today.single()
+        assertTrue("no fresh price at 20 minutes: nothing decided", held.open)
+        assertFalse(held.timed)
+        upstox.price(ceKey, p.entry * 1.02)                                 // back, and still under +5%
+        tick(LocalTime.of(13, 28))
+        assertEquals("time_stop", row().today.single().why)
     }
 
     @Test fun fivePercentUpAfterTwentyMinutesKeepsTheTrade() {

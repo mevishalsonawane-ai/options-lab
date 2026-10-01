@@ -75,4 +75,19 @@ class SandboxPnlAgreementTest {
         assertEquals(0, s.positions.single().quantity)
         agree(s, "13:13", 660.0)
     }
+    @Test fun anExpirySettlementAlwaysReachesTheFundsAndTheDaysPositions() {
+        val day = ZonedDateTime.of(LocalDateTime.of(LocalDate.parse("2026-10-27"), LocalTime.parse("10:00")), ist)
+        var s = sb.newState(day)
+        s = sb.place(s, req("BUY").copy(product = "NRML"), q(700.0), day).state
+        s = sb.positionBook(s, day, mapOf("NFO:$sym" to q(750.0))).state
+        // A cancelled reducing order's fallback can leave used margin below this position's margin (the desktop then drops the P&L).
+        s = s.copy(funds = s.funds.copy(usedMargin = s.funds.usedMargin.divide(BigDecimal(2))))
+        val before = s.funds.todayRealizedPnl
+        val r = sb.settleExpiries(s, day.withHour(15).withMinute(40))
+        val pnl = r.events.filterIsInstance<SandboxEvent.ExpirySettled>().single().pnl
+        kotlin.test.assertTrue(pnl.signum() > 0)
+        assertEquals((before + pnl).toDouble(), r.state.funds.todayRealizedPnl.toDouble(), 0.011)
+        assertEquals(pnl.toDouble(), r.state.positions.single().todayRealizedPnl.toDouble(), 0.011)
+        assertEquals(0, r.state.funds.usedMargin.signum())
+    }
 }
