@@ -67,6 +67,8 @@ fun RowActionPopup(model: AppModel) {
     val owners by model.orderOwners.collectAsState()
     val paper by model.paper.collectAsState()
     val account by model.account.collectAsState()
+    // Home's live position rows (moved by Zerodha's stream), for a popup opened before the account was read.
+    val liveRows by model.livePositions.collectAsState()
     var modify by remember { mutableStateOf<Broker.OrderRow?>(null) }
     var cancelAuth by remember { mutableStateOf<Broker.OrderRow?>(null) }
     // Removing a Zerodha protection cancels its real stop / target orders: proved like a send.
@@ -75,6 +77,16 @@ fun RowActionPopup(model: AppModel) {
     var journalFor by remember { mutableStateOf<Pair<String, String>?>(null) }
     val protections by model.protections.collectAsState()
     LaunchedEffect(t) { model.refreshProtections() }
+    // Live figures while the popup is open: the paper account is re-priced on its usual cadence (the Zerodha account
+    // already moves with every tick of its price stream), and the rows below are read from the current books.
+    val paperTarget = t is RowTarget.PaperPosition || t is RowTarget.PaperOrder || t is RowTarget.PaperTrade
+    com.optionslab.app.ui.PollWhileStarted(paperTarget) {
+        if (!paperTarget) return@PollWhileStarted
+        while (true) {
+            model.loadPaper(quiet = true)
+            kotlinx.coroutines.delay(model.paperRefreshMs())
+        }
+    }
     fun close() { model.rowAction.value = null }
 
     // The open position a finished order or trade belongs to, so it can be closed from here too.
@@ -92,7 +104,8 @@ fun RowActionPopup(model: AppModel) {
     var pnl: Double? = null
     when (t) {
         is RowTarget.PaperPosition -> {
-            val r = t.row
+            // The same position as now priced (the row tapped is a snapshot); a closed one keeps its last figures.
+            val r = (paper as? Load.Done)?.value?.positions?.positions?.firstOrNull { it.symbol == t.row.symbol && it.product == t.row.product } ?: t.row
             title = r.symbol
             pnl = r.totalPnlToday
             lines += "Account" to "Paper"
@@ -157,7 +170,8 @@ fun RowActionPopup(model: AppModel) {
             pos?.let { ps -> swipe("Slide to close position (${abs(ps.quantity)})") { model.paperClose(ps.symbol, ps.product); close() } }
         }
         is RowTarget.LivePosition -> {
-            val r = t.row
+            fun same(x: Broker.Position) = x.symbol == t.row.symbol && x.product == t.row.product && x.exchange == t.row.exchange
+            val r = (account as? Load.Done)?.value?.positions?.firstOrNull(::same) ?: liveRows.firstOrNull(::same) ?: t.row
             title = r.symbol
             pnl = r.pnl
             lines += "Account" to "Zerodha (live)"

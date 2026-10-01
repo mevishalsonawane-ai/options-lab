@@ -267,6 +267,20 @@ class PaperScreenTest {
         compose.waitUntil(5_000) { m.rowAction.value == null }
     }
 
+    @Test fun theRowPopupShowsThePositionAsPricedNowNotAsTapped() {
+        val m = show()
+        buyMarket(m)
+        // The price moves after the row was drawn: the popup re-reads the account and shows the new LTP and P&L.
+        upstox.price(TradeFixtures.key("NIFTY", near, 24_500.0, "PE"), 130.0)
+        compose.onAllNodesWithText(sym(24_500.0))[0].performClick()
+        compose.waitUntil(5_000) { m.rowAction.value is RowTarget.PaperPosition }
+        compose.waitUntil(20_000) {
+            compose.onAllNodes(hasText("130.00") and hasAnyAncestor(isDialog())).fetchSemanticsNodes().isNotEmpty()
+        }
+        val pos = m.snap()!!.positions.positions.single { it.symbol == sym(24_500.0) }
+        assertTrue(compose.onAllNodes(hasText(rs(pos.unrealizedPnl, true)) and hasAnyAncestor(isDialog())).fetchSemanticsNodes().isNotEmpty())
+    }
+
     @Test fun theRowPopupClosesWithoutActingWhenDismissed() {
         val m = show()
         buyMarket(m)
