@@ -90,4 +90,27 @@ class SandboxPnlAgreementTest {
         assertEquals(pnl.toDouble(), r.state.positions.single().todayRealizedPnl.toDouble(), 0.011)
         assertEquals(0, r.state.funds.usedMargin.signum())
     }
+    @Test fun aBalanceThatMissedAClosesPnlIsRepairedFromTheBooks() {
+        // An account kept by a build before the fix: a stop left resting fills into a short that is bought back, and
+        // the buy-back's P&L reaches the position but never the funds.
+        val old = Sandbox(sb.config.copy(pnlAlwaysToFunds = false), InstrumentMaster.of(listOf(Instrument(sym, "NFO", "OPTIDX", lotSize = 30))))
+        var s = old.newState(at("09:00"))
+        s = old.place(s, req("BUY"), q(700.0), at("13:00")).state
+        s = old.place(s, req("SELL", "SL-M", 690.0), q(700.0), at("13:00")).state
+        s = old.place(s, req("SELL"), q(750.0), at("13:05")).state
+        s = old.onQuotes(s, mapOf("NFO:$sym" to q(689.0)), at("13:10")).state
+        s = old.place(s, req("BUY"), q(660.0), at("13:12")).state
+        val charges = s.trades.fold(BigDecimal.ZERO) { a, t -> a + t.charges }
+        val books = s.positions.fold(BigDecimal.ZERO) { a, p -> a + p.accumulatedRealizedPnl } - charges
+        kotlin.test.assertTrue((books - s.funds.realizedPnl).toDouble() > 100, "the old build left the funds short")
+        val gap = books - s.funds.realizedPnl
+        val cashBefore = s.funds.availableBalance
+        // The app (pnlAlwaysToFunds) reads the book: the funds are brought back to the books, cash included.
+        val r = sb.positionBook(s, at("13:15"), mapOf("NFO:$sym" to q(660.0))).state
+        assertEquals(books.toDouble(), r.funds.realizedPnl.toDouble(), 0.011)
+        assertEquals((cashBefore + gap).toDouble(), r.funds.availableBalance.toDouble(), 0.011)
+        agree(r, "13:15", 660.0)
+        // Nothing more to repair: a second read changes nothing.
+        assertEquals(r.funds, sb.positionBook(r, at("13:15"), mapOf("NFO:$sym" to q(660.0))).state.funds)
+    }
 }

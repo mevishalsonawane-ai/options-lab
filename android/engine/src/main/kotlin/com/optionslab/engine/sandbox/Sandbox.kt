@@ -1046,7 +1046,29 @@ class Sandbox(
                 )
             }
             updateUnrealizedPnl(totalUnrealized)
+            if (config.pnlAlwaysToFunds) repairTally(boundary)
             return PositionBook(rows, totalPnlToday.toDouble(), totalUnrealized.toDouble(), totalToday.toDouble(), totalPnlToday.toDouble())
+        }
+
+        /**
+         * With pnlAlwaysToFunds: the funds' realised P&L (all time and today) brought back to what the books say it is -
+         * every position's realised P&L less every charge paid since the last reset. A close a build before the funds fix
+         * booked on the position only (or anything else that ever missed the funds) is credited here, so the balance,
+         * Total P&L and the day's P&L agree with the positions and the trades. Skipped with holdings (a T+1 settlement
+         * moves P&L out of the positions, so they are no longer the whole ledger).
+         */
+        fun repairTally(boundary: LocalDateTime) {
+            if (holdings.any { it.quantity != 0 }) return
+            val since = trades.filter { !it.timestamp.isBefore(funds.lastResetDate) }
+            val charges = since.fold(BigDecimal.ZERO) { a, t -> a + t.charges }
+            val chargesToday = since.filter { !it.timestamp.isBefore(boundary) }.fold(BigDecimal.ZERO) { a, t -> a + t.charges }
+            val realized = positions.fold(BigDecimal.ZERO) { a, p -> a + p.accumulatedRealizedPnl } - charges
+            val today = positions.filter { !it.updatedAt.isBefore(boundary) }.fold(BigDecimal.ZERO) { a, p -> a + p.todayRealizedPnl } - chargesToday
+            val dR = realized - funds.realizedPnl
+            val dT = today - funds.todayRealizedPnl
+            val cent = BigDecimal("0.01")
+            if (dR.abs() < cent && dT.abs() < cent) return
+            editFunds { available += dR; this.realized += dR; this.today += dT; total = this.realized + unrealized }
         }
 
         fun holdingsBookTx(quotes: Map<String, Quote>): HoldingsBook {
