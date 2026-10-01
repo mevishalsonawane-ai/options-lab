@@ -207,10 +207,16 @@ abstract class TradeLayoutBase(device: DeviceConfig) : TradeScreenBase(device) {
         while (!exists(button)) {
             if (System.currentTimeMillis() > end) {
                 tapText("Funds")
-                compose.waitUntil(10_000) { exists("Realised, all time") }
+                // As above, the main looper runs while waiting: the paper account's reload lands there, and a bare
+                // waitUntil never ran it (the Funds tab then stayed empty for the whole timeout on a slow runner).
                 button = "Set paper amount / reset"
-                runCatching { scrollTo(button) }
-                compose.waitUntil(10_000) { exists(button) }
+                val until = System.currentTimeMillis() + 20_000
+                while (!(exists("Realised, all time") && exists(button))) {
+                    check(System.currentTimeMillis() < until) { "the Funds tab never showed its reset button" }
+                    org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle()
+                    runCatching { scrollTo(button) }
+                    compose.mainClock.advanceTimeByFrame(); Thread.sleep(20)
+                }
                 break
             }
             org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle()

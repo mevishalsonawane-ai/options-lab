@@ -62,7 +62,7 @@ class GoldPaperTest : RobolectricTest() {
             "indicators":{"quote":[{"open":[4180.0,null,4185.5],"high":[4190.0,null,4188.0],"low":[4175.0,null,4181.0],"close":[4182.8,null,4186.2]}]}}],"error":null}}""")
         val b = GoldPaper.parse(json)
         assertEquals(2, b.size)
-        assertEquals(LocalDateTime.of(2026, 9, 28, 22, 0), b[0].start)
+        assertEquals(LocalDateTime.of(2026, 9, 27, 22, 0), b[0].start)        // 1790546400 s, UTC
         assertEquals(4186.2, b[1].close, 1e-9)
     }
 
