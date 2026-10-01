@@ -110,9 +110,8 @@ object Type {
 
 /** [mode]: "light", "dark" or "system" (older saved values "parchment"/"mahogany" map to light/dark). */
 @Composable
-fun IraAlgoTheme(mode: String, content: @Composable () -> Unit) {
+fun IraAlgoTheme(mode: String, gold: Boolean = com.optionslab.app.BuildConfig.GOLD, content: @Composable () -> Unit) {
     val dark = when (mode) { "light", "parchment" -> false; "dark", "mahogany" -> true; else -> isSystemInDarkTheme() }
-    val gold = com.optionslab.app.BuildConfig.GOLD
     val p = if (gold) (if (dark) GoldDark else GoldLight) else if (dark) Dark else Light
     val scheme = if (dark) darkColorScheme(
         primary = p.brass, onPrimary = p.onPrimary, secondary = p.inkSoft, error = p.oxblood,

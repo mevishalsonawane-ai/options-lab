@@ -66,6 +66,12 @@ object GoldPaper {
     @Volatile internal var testNow: LocalDateTime? = null
         set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test clock exists only in debug builds" }; field = v }
 
+    /** TEST ONLY: replace the book (screens are tested on prepared accounts). Throws outside debug builds. */
+    internal suspend fun replaceForTest(b: Book) {
+        check(com.optionslab.app.BuildConfig.DEBUG) { "test seam" }
+        lock.withLock { save(b) }
+    }
+
     fun init(context: Context) {
         app = context.applicationContext
         file = File(app.noBackupFilesDir, "gold.vault")
