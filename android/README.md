@@ -1,5 +1,7 @@
 # IraAlgo for Android
 
+**Setting up the apps (install, Zerodha, Oracle static IP, IraGoldAlgo): [docs/setup-guide.md](docs/setup-guide.md).**
+
 The PC harness, standalone on a phone. No server of its own: the 170 expiry
 chains and the harvested partitions ship inside the APK, every backtest and
 health check runs on the device, and the only network it touches is the same
