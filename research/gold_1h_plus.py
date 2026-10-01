@@ -58,7 +58,8 @@ def simulate(days, b, zones, allow=None, new_liq_exit=True, second_target=False)
             if why is None and (friday and (i + 1 >= len(b) or DI[i + 1] != DI[i]) or i + 1 >= len(b)):
                 why, px = "cut-off", d["bclose"][E[i] - 1]
             if why:
-                trades.append(dict(day=pos["day"], why=why, usd=100 * (px - pos["px"] - g.COMM)))
+                trades.append(dict(day=pos["day"], at=pd.Timestamp(pos["day"]) + pd.Timedelta(minutes=int(pos["m"]) + START),
+                                   why=why, usd=100 * (px - pos["px"] - g.COMM)))
                 pos = None
         if pos is not None or i + 1 >= len(b) or DI[i + 1] != DI[i]:
             continue
