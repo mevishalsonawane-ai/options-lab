@@ -416,7 +416,7 @@ private fun VoiceStyle() {
     }
     fun sample() {
         val t = tts[0] ?: return
-        if (JarvisVoice.applyStyle(t)) t.speak("Hello, I am Jarvis. Nifty is at twenty four thousand six hundred, up zero point two percent today.",
+        if (JarvisVoice.applyStyle(t)) t.speak("Hello Boss, I am Jarvis. Nifty is at twenty four thousand six hundred, up zero point two percent today.",
             android.speech.tts.TextToSpeech.QUEUE_FLUSH, null, "sample")
     }
     Text("Voice style", style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp), modifier = Modifier.padding(top = 8.dp))
@@ -425,7 +425,7 @@ private fun VoiceStyle() {
             val on = st == style
             Text(st.label, style = Type.label.copy(color = if (on) p.onPrimary else p.ink, fontSize = 13.sp),
                 modifier = Modifier.background(if (on) p.brass else p.card, RoundedCornerShape(14.dp))
-                    .clickable { style = st; JarvisVoice.style = st; sample() }.padding(horizontal = 12.dp, vertical = 6.dp))
+                    .clickable { style = st; JarvisVoice.style = st; JarvisVoice.voiceName = null; chosen = null; sample() }.padding(horizontal = 12.dp, vertical = 6.dp))
         }
     }
     if (voices.size > 1) {

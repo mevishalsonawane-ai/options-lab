@@ -49,7 +49,7 @@ class JarvisVoice : Service() {
     data class VoiceState(val mode: Mode = Mode.OFF, val problem: String? = null)
     /** How Jarvis sounds (see [style]). */
     enum class Style(val label: String, val pitch: Float, val rate: Float) {
-        GIRL("Young girl", 1.6f, 1.08f), WOMAN("Woman", 1.1f, 1.0f), DEEP("Deep", 0.8f, 0.95f)
+        MAN("Man", 0.92f, 1.0f), GIRL("Young girl", 1.6f, 1.08f), WOMAN("Woman", 1.1f, 1.0f), DEEP("Deep", 0.8f, 0.95f)
     }
 
     companion object {
@@ -126,13 +126,24 @@ class JarvisVoice : Service() {
          * little quicker (the owner's choice, 2026-10-02).
          */
         var style: Style
-            get() = runCatching { Style.valueOf(com.optionslab.app.security.SecurePrefs.getString("jarvis.voice.style") ?: "GIRL") }.getOrDefault(Style.GIRL)
-            set(v) { runCatching { com.optionslab.app.security.SecurePrefs.put("jarvis.voice.style", v.name) } }
+            // A normal male voice by default (the owner's wish, 2026-10-02); a new key, so an earlier choice starts from it.
+            get() = runCatching { Style.valueOf(com.optionslab.app.security.SecurePrefs.getString("jarvis.voice.style2") ?: "MAN") }.getOrDefault(Style.MAN)
+            set(v) { runCatching { com.optionslab.app.security.SecurePrefs.put("jarvis.voice.style2", v.name) } }
 
         /** The phone voice chosen by name, or null for the first offline English one (an Indian English one first). */
         var voiceName: String?
-            get() = runCatching { com.optionslab.app.security.SecurePrefs.getString("jarvis.voice.name") }.getOrNull()
-            set(v) { runCatching { com.optionslab.app.security.SecurePrefs.put("jarvis.voice.name", v) } }
+            get() = runCatching { com.optionslab.app.security.SecurePrefs.getString("jarvis.voice.name2") }.getOrNull()
+            set(v) { runCatching { com.optionslab.app.security.SecurePrefs.put("jarvis.voice.name2", v) } }
+
+        /**
+         * Android does not say which voices are male, so the known male voices of Google's speech engine come first
+         * (Indian English first), then any voice named or marked male; without one, the phone's voice a little lower.
+         */
+        private val MALE = listOf("en-in-x-end", "en-in-x-ene", "en-us-x-iom", "en-us-x-iol", "en-us-x-tpd", "en-gb-x-rjs", "en-gb-x-gbd", "en-au-x-aud", "en-au-x-aub")
+        fun maleVoice(all: List<android.speech.tts.Voice>): android.speech.tts.Voice? =
+            MALE.firstNotNullOfOrNull { k -> all.firstOrNull { it.name.lowercase().startsWith(k) } }
+                ?: all.firstOrNull { v -> val n = v.name.lowercase(); (Regex("(^|[^e])male").containsMatchIn(n) && "female" !in n) ||
+                    v.features.orEmpty().any { it.lowercase() == "male" || it.lowercase().endsWith("gender=male") } }
 
         /** The phone's English voices that need no network (nothing Jarvis says leaves the phone). */
         fun offlineVoices(t: TextToSpeech): List<android.speech.tts.Voice> = runCatching { t.voices }.getOrNull().orEmpty()
@@ -142,7 +153,7 @@ class JarvisVoice : Service() {
         /** Sets [t] to the chosen offline voice and style; false when the phone has no offline English voice. */
         fun applyStyle(t: TextToSpeech): Boolean {
             val all = offlineVoices(t)
-            val v = all.firstOrNull { it.name == voiceName } ?: all.firstOrNull() ?: return false
+            val v = all.firstOrNull { it.name == voiceName } ?: (if (style == Style.MAN || style == Style.DEEP) maleVoice(all) else null) ?: all.firstOrNull() ?: return false
             t.voice = v
             t.setPitch(style.pitch); t.setSpeechRate(style.rate)
             return true

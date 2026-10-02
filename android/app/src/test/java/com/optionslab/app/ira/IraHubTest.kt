@@ -435,4 +435,9 @@ class IraHubTest : RobolectricTest() {
         assertTrue(!VoiceGuard.isBoss(null) && !VoiceGuard.isBoss(ShortArray(16_000)))
         assertTrue(VoiceGuard.blocked() != null)
     }
+
+    @Test fun jarvisSpeaksInANormalMaleVoiceByDefault() {
+        assertEquals(JarvisVoice.Style.MAN, JarvisVoice.style)
+        assertEquals(JarvisVoice.Style.MAN, JarvisVoice.Style.entries.first())
+    }
 }
