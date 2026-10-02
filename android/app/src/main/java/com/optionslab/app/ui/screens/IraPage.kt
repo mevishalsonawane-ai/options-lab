@@ -14,6 +14,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -153,7 +155,7 @@ fun IraPage(orders: IraOrderPaths? = null) {
         if (com.optionslab.app.BuildConfig.JARVIS) Text("‹  Back to Jarvis", style = Type.label.copy(color = Color(0xFF4AA8FF), fontSize = 14.sp),
             modifier = Modifier.fillMaxWidth().background(Color.Black).clickable { chat = false }.padding(horizontal = 14.dp, vertical = 8.dp))
         // The keyboard is up: the globe steps aside so the question box and Ask keep their room.
-        val imeOpen = androidx.compose.foundation.layout.WindowInsets.ime.getBottom(androidx.compose.ui.platform.LocalDensity.current) > 0
+        val imeOpen = WindowInsets.ime.getBottom(androidx.compose.ui.platform.LocalDensity.current) > 0
         if (!imeOpen) Box(Modifier.fillMaxWidth().height(280.dp).background(Color.Black)) {
             val s = st.snaps[focus]
             // Tapping the globe in the chat hides the chat again (JarvisAlgo).
