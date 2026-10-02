@@ -225,7 +225,7 @@ private fun GoldHome() {
         }
         item {
             LedgerCard(title = com.optionslab.app.data.GoldTasPaper.NAME) {
-                ToggleRow("Armed", "Buys when the 1-hour trend tracker turns up with a trend score of +50% or more; sells in thirds at targets and the rest when the tracker turns down. Paper: a notification on every buy and sell.",
+                ToggleRow("Armed", "Buys when the 1-hour trend tracker turns up with a trend score of +50% or more; sells when the tracker turns down, or at its stop. Paper: a notification on every buy and sell.",
                     sb.armed) { on -> scope.launch(Dispatchers.IO) { com.optionslab.app.data.GoldTasPaper.setArmed(on); com.optionslab.app.work.GoldService.ensure(ctx) } }
                 LedgerLine("Status", sb.status)
                 sb.up?.let { up -> LedgerLine("1-hour tracker", (if (up) "up" else "down") +
@@ -237,13 +237,13 @@ private fun GoldHome() {
                     LedgerLine("Bought", "%.2f at %s".format(Locale.ENGLISH, pos.entry, GoldPaper.when_(pos.entryTime)))
                     LedgerLine("Held", "%.2f of %.2f lot".format(Locale.ENGLISH, pos.left, pos.lots))
                     tasOpen?.let { LedgerLine("Open P&L", GoldPaper.usd(it), if (it >= 0) p.verdigris else p.oxblood) }
-                    LedgerLine("Stop", "%.2f".format(Locale.ENGLISH, pos.stop) + if (pos.hit > 0) " (the buy price)" else " (the tracker line)")
+                    LedgerLine("Stop", "%.2f".format(Locale.ENGLISH, pos.stop) + if (pos.hit > 0) " (the buy price)" else " (the tracker line at the buy)")
                     if (sb.targets.isNotEmpty()) LedgerLine("Targets left", sb.targets.joinToString(" · ") { "%.2f".format(Locale.ENGLISH, it) })
                 }
                 Note("Each 1-hour candle is decided about 10 minutes after it closes. A buy may come up to 10 hours after the tracker turns up, once the " +
-                    "score passes; one buy per turn. Stop on the tracker line; a third sold at 1.5 R and 2.5 R (the stop then moves to the buy price), " +
-                    "the rest at 3.5 R or when a 1-hour candle closes with the tracker down. Held overnight.")
-                Note("Backtest (three years, 1 lot): +$165.5k (+47.6k, +52.2k, +65.7k), 222 trades, 45% won, t 2.21, deepest drawdown -$38.1k - " +
+                    "score passes; one buy per turn. Stop on the tracker line at the buy; sold when a 1-hour candle closes with the tracker down. " +
+                    "No targets. Held overnight.")
+                Note("Backtest (three years, 1 lot): +$213.1k (+45.9k, +82.6k, +84.5k), 222 trades, 44% won, t 2.37, deepest drawdown -$42.6k - " +
                     "in years when gold rose about 140%. A paper candidate.")
             }
         }

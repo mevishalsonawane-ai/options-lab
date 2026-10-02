@@ -18,8 +18,8 @@ import java.util.Locale
 
 /**
  * IraGoldAlgo's fourth arm, [GoldTas] ("TAS 1h"): buy when the 1-hour trend tracker turns up with a good trend score;
- * the stop on the tracker line, a third sold at each of 1.5 / 2.5 / 3.5 R (the stop at the buy price after the first),
- * the rest sold when the tracker turns down. Paper only, like the others: it never sends an order; it notifies the
+ * the stop on the tracker line, sold when the tracker turns down (no targets: [GoldTas.TARGETS] is empty; the parts
+ * logic below stays for a target list). Paper only, like the others: it never sends an order; it notifies the
  * owner on every buy and sell. It runs on [GoldPaper]'s price pass, shares its lot size and paper account, and keeps
  * its own switch, open trade and closed trades here, encrypted. All times UTC.
  */
@@ -137,14 +137,13 @@ object GoldTasPaper {
                         val risk = px - r.line
                         if (risk <= 0) b = b.copy(status = "The price is under the tracker line: no buy")
                         else {
-                            val tg = GoldTas.targets(px, r.line)
                             b = b.copy(position = Position(px, t, lots, lots, r.line, risk, 0, last.start), usedTurn = r.turn.toString(),
                                 status = "Bought at %.2f".format(Locale.ENGLISH, px),
                                 lastSignal = "${GoldPaper.when_(r.bar)}: tracker up, score %+.0f%%, bought at %.2f".format(Locale.ENGLISH, r.score, px))
                             notify("BUY XAUUSD now (paper): 1-hour tracker turned up",
                                 ("The ${GoldPaper.when_(r.bar)} 1-hour candle: the trend tracker is up and the trend score is %+.0f%%. Paper bought %.2f lot at %.2f. " +
-                                    "Stop %.2f (the tracker line); a third sold at %.2f, %.2f and %.2f (1.5 / 2.5 / 3.5 R); the rest when the tracker turns down. " +
-                                    "Futures price: XM's XAUUSD sits a few dollars lower.").format(Locale.ENGLISH, r.score, lots, px, r.line, tg[0], tg[1], tg[2]), Notifier.BUY)
+                                    "Stop %.2f (the tracker line); held until the tracker turns down. " +
+                                    "Futures price: XM's XAUUSD sits a few dollars lower.").format(Locale.ENGLISH, r.score, lots, px, r.line), Notifier.BUY)
                         }
                     }
                 }

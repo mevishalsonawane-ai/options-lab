@@ -11,7 +11,7 @@ import kotlin.test.assertEquals
 /**
  * A check of the TAS arm's rule on history, not a unit test: with GOLD_REPLAY_CSV set (Dukascopy XAUUSD 1-minute bid),
  * [GoldTas] is run on 1-hour candles as research/gold_tas.py runs it (decide on each completed candle, buy at the next
- * one's open, the stop then the targets checked on each candle, out at the next open after the tracker turns down; one
+ * one's open, the stop (and the targets, if any) checked on each candle, out at the next open after the tracker turns down; one
  * buy per up-turn). Trades go to build/gold-tas-replay.csv. Without the variable it does nothing.
  */
 class GoldTasReplayTest {

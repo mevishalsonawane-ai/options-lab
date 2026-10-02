@@ -39,3 +39,6 @@ entry up to 10 bars, one trade per up-trend) follows the inputs' descriptions ra
 
 **Added to IraGoldAlgo as the fourth paper arm, "TAS 1h" (2026-10-02)**: engine/gold/GoldTas.kt, replayed over the same
 history by GoldTasReplayTest - 222 trades, +$165,479, the same as this script.
+
+**2026-10-02, the owner's choice:** the arm now runs without the targets (research/GOLD_TAS_LOCK.md): the whole buy is
+held until the stop or the tracker turning down. GoldTasReplayTest: 222 trades, +$213,064 a lot.

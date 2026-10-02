@@ -27,8 +27,9 @@ class GoldTasPaperTest : RobolectricTest() {
     private val fallHours = 120
 
     @Before fun up() {
-        // Trading hours from Monday: 120 falling hours, then 45 rising ones.
-        val steps = List(fallHours) { if (it % 3 == 2) 2.0 else -4.0 } + List(45) { if (it % 3 == 2) -2.0 else 8.0 }
+        // Trading hours from Monday: 120 falling hours, 45 rising ones, then 25 falling again.
+        val steps = List(fallHours) { if (it % 3 == 2) 2.0 else -4.0 } + List(45) { if (it % 3 == 2) -2.0 else 8.0 } +
+            List(25) { if (it % 3 == 2) 2.0 else -8.0 }
         val hs = ArrayList<LocalDateTime>()
         var h = monday
         while (hs.size < steps.size) { if (GoldLiquidity.inSession(h)) hs += h; h = h.plusHours(1) }
@@ -53,7 +54,7 @@ class GoldTasPaperTest : RobolectricTest() {
     /** A pass 5 minutes after the [i]th hour closes. */
     private fun after(i: Int) { GoldPaper.testNow = hourStarts[i].plusMinutes(65); runBlocking { GoldPaper.tick() } }
 
-    @Test fun armedItBuysTheTurnAndSellsInParts() {
+    @Test fun armedItBuysTheTurnAndSellsWhenTheTrackerTurnsDown() {
         after(fallHours - 5)
         runBlocking { GoldTasPaper.setArmed(true) }
         after(fallHours - 4)
@@ -61,29 +62,34 @@ class GoldTasPaperTest : RobolectricTest() {
         assertNull(GoldTasPaper.book.value.position)
         assertTrue(GoldTasPaper.book.value.status, GoldTasPaper.book.value.status.startsWith("Tracker down"))
         var bought: Int? = null
-        for (i in fallHours - 3 until hourStarts.size - 1) {
+        for (i in fallHours - 3 until fallHours + 45) {
             after(i)
             if (bought == null && GoldTasPaper.book.value.position != null) bought = i
         }
         assertNotNull("bought once the tracker turned up", bought)
         assertTrue("within the late window of the turn", bought!! - fallHours <= GoldTas.LATE_BARS)
-        val b = GoldTasPaper.book.value
+        var b = GoldTasPaper.book.value
         assertNotNull(b.usedTurn)
         assertTrue(b.lastSignal!!, b.lastSignal!!.contains("tracker up"))
-        // Sold in parts at the targets; every part is this arm's, and the parts add up to the lot bought.
-        assertTrue(b.trades.map { it.why }.toString(), b.trades.first().why == "tas_t1")
-        val held = b.position?.left ?: 0.0
-        assertEquals(0.01, b.trades.sumOf { it.lots } + held, 1e-9)
-        b.trades.forEach { tr ->
-            assertEquals(GoldTasPaper.NAME, GoldPaper.arm(tr))
-            assertEquals(GoldLiquidity.pnl(tr.entry, tr.exit, tr.lots), tr.pnl, 1e-9)
-            assertTrue(tr.pnl > 0)
-        }
-        b.position?.let { assertEquals("after the first target the stop is the buy price", it.entry, it.stop, 1e-9) }
+        // No targets: the whole lot is still held at the top of the rise, the stop where it was put.
+        val pos = assertNotNullPos(b.position)
+        assertEquals(0.01, pos.left, 1e-12)
+        assertEquals(0, pos.hit)
+        assertTrue(b.trades.isEmpty())
+        assertTrue(pos.stop < pos.entry)
+        // The fall turns the tracker down: all of it sold, once, on this arm.
+        for (i in fallHours + 45 until hourStarts.size - 1) after(i)
+        b = GoldTasPaper.book.value
+        assertNull(b.position)
+        val tr = b.trades.single()
+        assertTrue(tr.why, tr.why in setOf("tas_down", "tas_stop"))
+        assertEquals(0.01, tr.lots, 1e-12)
+        assertEquals(GoldTasPaper.NAME, GoldPaper.arm(tr))
+        assertEquals(GoldLiquidity.pnl(tr.entry, tr.exit, tr.lots), tr.pnl, 1e-9)
         assertTrue(GoldPaper.book.value.trades.isEmpty())
-        // One buy per up-turn: nothing more is bought while the same turn lasts.
-        assertEquals(1, b.trades.map { it.entryTime }.toSet().size)
     }
+
+    private fun assertNotNullPos(p: GoldTasPaper.Position?): GoldTasPaper.Position { assertNotNull("a buy is held", p); return p!! }
 
     @Test fun notArmedItNeverBuys() {
         for (i in fallHours - 3 until hourStarts.size - 1) after(i)

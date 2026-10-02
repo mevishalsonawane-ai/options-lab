@@ -294,8 +294,8 @@ in your own broker app (for example XM).
    0.01 lot. All arms share the lot size and the paper account; Trades and P&L show them all, each trade named for its arm.
 7. Optional: **Dip 1h+30m** and **TAS 1h** have their own **Armed** switches too. TAS 1h buys when the 1-hour trend
    tracker (from the "Trend Analysis Strategy", ATR 19) turns up with a trend score of +50% or more, puts its stop on
-   the tracker line, sells a third at 1.5 R and 2.5 R (the stop then moves to the buy price) and the rest at 3.5 R or
-   when a 1-hour candle closes with the tracker down. One buy per up-turn; held overnight.
+   the tracker line and sells all of it when a 1-hour candle closes with the tracker down (no targets). One buy per
+   up-turn; held overnight.
 
 <br clear="right">
 

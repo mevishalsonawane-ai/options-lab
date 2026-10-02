@@ -65,9 +65,9 @@ class GoldTasTest {
         assertFalse(GoldTas.buys(ok.copy(up = false)))
     }
 
-    @Test fun targetsAreMultiplesOfTheRisk() {
-        assertEquals(listOf(2015.0, 2025.0, 2035.0), GoldTas.targets(2000.0, 1990.0))
-        assertEquals(1.0, GoldTas.TARGETS.sumOf { it.second }, 1e-9)
+    @Test fun noTargets() {
+        assertTrue(GoldTas.TARGETS.isEmpty())
+        assertTrue(GoldTas.targets(2000.0, 1990.0).isEmpty())
     }
 
     @Test fun weightedAverageNeedsAFullWindow() {

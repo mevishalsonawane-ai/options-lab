@@ -13,11 +13,11 @@ import java.time.LocalDateTime
  *            line), the equilibrium's slope, RSI(14) vs 50, RSI vs its 14-candle average, +DI vs -DI (14); as % of 6
  *   entry    on a completed hour: the tracker turned up at most 10 candles ago (the turn's own candle counts 0) and the
  *            score is at least +50%; one buy per up-turn. BUY at the price then
- *   stop     the tracker line at the buy; R = entry - stop
- *   targets  1.5 R (33%), 2.5 R (33%), 3.5 R (the rest); once the first is reached the stop moves to the entry
- *   exits    also a completed hour with the tracker turned down (sell the rest)
- * Backtest, three years a standard lot after costs: +$165.5k (+47.6k, +52.2k, +65.7k), 222 trades, 45% won, t 2.21,
- * deepest drawdown -$38.1k.
+ *   stop     the tracker line at the buy (it stays there)
+ *   exit     a completed hour with the tracker turned down: sell it all. No targets: the owner's choice 2026-10-02
+ *            (research/GOLD_TAS_LOCK.md) - the script's 1.5 / 2.5 / 3.5 R thirds made less in every year
+ * Backtest, three years a standard lot after costs: +$213.1k (+45.9k, +82.6k, +84.5k), 222 trades, 44% won, t 2.37,
+ * deepest drawdown -$42.6k (with the script's targets: +$165.5k, -$38.1k).
  *
  * Pure: no clock, no network, no orders. Times UTC; prices mid.
  */
@@ -32,8 +32,11 @@ object GoldTas {
     const val MIN_SCORE = 50.0
     /** A buy may come this many candles after the turn, if the score blocked it at first. */
     const val LATE_BARS = 10
-    /** The targets in R and the share of the buy each sells (the last sells what is left). */
-    val TARGETS: List<Pair<Double, Double>> = listOf(1.5 to 0.33, 2.5 to 0.33, 3.5 to 0.34)
+    /**
+     * The targets in R and the share of the buy each sells (the last sells what is left): none - the whole buy is held
+     * until the stop or the tracker turning down. The script's were 1.5 / 2.5 / 3.5 R (a third each).
+     */
+    val TARGETS: List<Pair<Double, Double>> = emptyList()
     /** Fewer completed 1-hour candles than this: no decision (the equilibrium alone needs 66). */
     const val MIN_BARS = 100
 
