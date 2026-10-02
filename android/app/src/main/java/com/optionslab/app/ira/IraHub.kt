@@ -500,6 +500,9 @@ object IraHub {
         }
     }
 
+    /** A message from Jarvis itself (the morning check). */
+    fun note(text: String) = reply(text)
+
     private fun reply(text: String) {
         _state.update { it.copy(messages = (it.messages + Msg(true, text)).takeLast(MAX_MESSAGES)) }
     }

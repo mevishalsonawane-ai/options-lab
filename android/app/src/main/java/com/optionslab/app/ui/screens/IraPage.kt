@@ -174,7 +174,7 @@ private fun Bubble(m: IraHub.Msg, orders: IraOrderPaths?) {
     var open by remember { mutableStateOf(false) }
     Column(Modifier.fillMaxWidth(), horizontalAlignment = if (m.fromIra) Alignment.Start else Alignment.End) {
         Text(if (m.fromIra) "IRA" else "YOU", style = Type.label.copy(color = if (m.fromIra) Color(0xFF4AA8FF) else p.inkSoft, fontSize = 10.sp, letterSpacing = 2.sp))
-        Text(m.text, style = Type.label.copy(color = p.ink, fontSize = 15.sp),
+        Text(if (m.fromIra && com.optionslab.app.BuildConfig.JARVIS) com.optionslab.ira.Address.boss(m.text) else m.text, style = Type.label.copy(color = p.ink, fontSize = 15.sp),
             modifier = Modifier.background(p.card, RoundedCornerShape(14.dp)).padding(horizontal = 14.dp, vertical = 10.dp))
         m.order?.let { o ->
             if (o.missing.isNotEmpty() || o.refusal != null) Note("Nothing was sent.")

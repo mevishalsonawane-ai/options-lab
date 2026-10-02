@@ -53,7 +53,8 @@ object DailyReports {
         val am = context.getSystemService(AlarmManager::class.java)
         val pi = intent(context, k)
         am.cancel(pi)
-        if (!Broker.linked) return
+        // JarvisAlgo's morning check runs whether or not Zerodha is set up (it says so); the rest need Zerodha.
+        if (!Broker.linked && !(com.optionslab.app.BuildConfig.JARVIS && k == Kind.MORNING)) return
         val now = Market.now()
         var d = now.toLocalDate()
         if (!now.toLocalTime().isBefore(k.at)) d = d.plusDays(1)
@@ -106,6 +107,30 @@ object DailyReports {
         val carried = Paper.state.positions.count { it.quantity != 0 }
         if (carried > 0) lines += "• Paper positions carried overnight: $carried"
         lines += "• Mode: " + if (s.live) "LIVE (Zerodha)" else "Paper"
+        if (com.optionslab.app.BuildConfig.JARVIS) {
+            // Jarvis's own checks: the Zerodha connection itself, the static IP, the live prices, the data, its model and voice.
+            if (Broker.loggedIn) {
+                val f = kotlinx.coroutines.withTimeoutOrNull(10_000) { runCatching { Broker.funds() }.getOrNull() }
+                ok(f != null, if (f != null) "Zerodha connection tested: ${rs(f.available).removePrefix("+")} available to trade" else "Zerodha did not answer the connection test")
+            } else if (!Broker.configured) lines += "• Zerodha not set up: Paper only"
+            com.optionslab.app.data.StaticIp.registered?.let { reg ->
+                val st = runCatching { com.optionslab.app.data.StaticIp.status(force = true) }.getOrNull()
+                ok(st?.matches == true, if (st?.matches == true) "On your registered static IP $reg" else "Not on your registered static IP $reg: new live positions will be refused")
+            }
+            runCatching { com.optionslab.app.ira.IraHub.refresh() }
+            val ira = com.optionslab.app.ira.IraHub.state.value
+            ok(ira.liveMissing.size < 3, if (ira.liveMissing.isEmpty()) "Live prices reaching the app" else "No live prices yet from ${ira.liveMissing.joinToString { it.label }}")
+            com.optionslab.app.security.SecurePrefs.getString("harvest.last")?.let { lines += "• Last data harvest: $it" }
+            val pine = com.optionslab.app.data.PineScripts.items.value.count { it.auto.on }
+            if (pine > 0) lines += "• Pine scripts switched on: $pine"
+            lines += "• Jarvis: AI model ${if (com.optionslab.app.ira.IraModel.state.value.status == com.optionslab.app.ira.IraModel.Status.READY) "ready" else "not on the phone"}, " +
+                "voice ${if (com.optionslab.app.ira.JarvisVoice.wanted) "on" else "off"}"
+            val title = "Good morning Boss · " + if (bad == 0) "we are set for today's trading" else "$bad thing${if (bad > 1) "s" else ""} need you"
+            com.optionslab.app.ira.IraHub.note(com.optionslab.ira.Address.boss("Good morning. " +
+                (if (bad == 0) "We are set for today's trading. " else "$bad thing${if (bad > 1) "s" else ""} need you before 09:15. ") +
+                lines.joinToString(" ") { it.removePrefix("✓ ").removePrefix("✗ ").removePrefix("• ").trimEnd('.') + "." }))
+            return title to lines
+        }
         val title = "Morning check · ${Market.today().format(DAY)}" + if (bad == 0) " · all set" else " · $bad to fix"
         return title to lines
     }
@@ -149,7 +174,9 @@ object DailyReports {
     }
 
     fun post(context: Context, k: Kind, title: String, lines: List<String>) =
-        Notifier.post(context, k.id, Notifier.APPROVAL, title, lines.joinToString("\n"), if (k == Kind.EVENING) "pnl" else "almanac")
+        Notifier.post(context, k.id, Notifier.APPROVAL, title, lines.joinToString("\n"),
+            // Not logged in: the notification opens the Zerodha page, one login and done.
+            if (k == Kind.EVENING) "pnl" else if (!Broker.loggedIn && Broker.configured) "broker" else "almanac")
 }
 
 class ReportWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx, params) {

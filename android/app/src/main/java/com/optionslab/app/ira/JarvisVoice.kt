@@ -222,8 +222,8 @@ class JarvisVoice : Service() {
         val h = alternatives.asSequence().map { Wake.heard(it, awake) }.firstOrNull { it !is Wake.Heard.Ignore } ?: Wake.Heard.Ignore
         when (h) {
             Wake.Heard.Ignore -> again()
-            Wake.Heard.Awake -> { awakeUntil = SystemClock.elapsedRealtime() + AWAKE_MS; say("Yes?") }
-            Wake.Heard.Stop -> { wanted = false; say("Going to sleep. Switch me on again in JarvisAlgo.", STOP_AFTER) }
+            Wake.Heard.Awake -> { awakeUntil = SystemClock.elapsedRealtime() + AWAKE_MS; say("Yes, Boss?") }
+            Wake.Heard.Stop -> { wanted = false; say("Going to sleep, Boss. Switch me on again in JarvisAlgo.", STOP_AFTER) }
             is Wake.Heard.Ask -> { awakeUntil = 0; answer(h.question) }
         }
     }
@@ -246,7 +246,7 @@ class JarvisVoice : Service() {
                 a == null -> "I could not work that out."
                 o != null && o.missing.isEmpty() && o.refusal == null -> "I have put that order on the Ira screen. Nothing is sent until you confirm it there."
                 a.action != null -> "Tap Confirm on the Ira screen to do that."
-                else -> Wake.spoken(a.text)
+                else -> com.optionslab.ira.Address.boss(Wake.spoken(a.text))
             })
         }
     }
