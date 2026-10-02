@@ -382,6 +382,8 @@ object Tasks {
         runCatching { com.optionslab.app.data.PineAuto.tick() }
         // JarvisAlgo: every 15 minutes in market hours, Jarvis looks for a pattern worth a strategy and notifies it.
         runCatching { com.optionslab.app.ira.IraHub.backgroundCheck() }
+        // JarvisAlgo: the news every 5 minutes, judged for your arms and positions.
+        runCatching { com.optionslab.app.ira.IraHub.newsWatch() }
         // Stops, trailing stops and targets: one exit filled cancels the other; trails move up.
         runCatching { com.optionslab.app.data.Protections.tick() }
         // Expiry day, 15:05: close every option position expiring today (paper and live, all products).

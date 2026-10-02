@@ -21,7 +21,16 @@ internal object IraAccount {
     /** A Zerodha read waits at most this long; a slow one is left out and said so. */
     private const val ZERODHA_MS = 8_000L
 
-    suspend fun read(sections: Set<Section>): AppView? {
+    /** The option chain of [u] (nearest expiry, the strikes near the money) as the Options tab prices it, or null. */
+    suspend fun chain(u: String): com.optionslab.engine.options.ChainSnapshot? = runCatching {
+        val lc = com.optionslab.app.data.Market.liveChain(u, near = 12)
+        val symbols = lc.contracts.associate { (it.strike to it.right) to it.tradingSymbol }
+        val rows = com.optionslab.app.data.OiBaseline.apply(com.optionslab.engine.options.ChainSnapshot.rowsFrom(lc.series, symbols, lc.lotSize))
+        com.optionslab.engine.options.ChainSnapshot.of(u, lc.expiry, lc.spot, lc.lotSize, rows, com.optionslab.app.data.Market.now())
+    }.getOrNull()
+
+    /** [markets]: the indices the question names (the chain of Nifty and BankNifty when none). */
+    suspend fun read(sections: Set<Section>, markets: List<com.optionslab.ira.Market> = emptyList()): AppView? {
         testView?.let { return it(sections) }
         return runCatching {
             val s = AppSettings.load()
@@ -148,6 +157,14 @@ internal object IraAccount {
                     com.optionslab.app.security.SecurePrefs.getString("harvest.last")?.let { "Last data harvest: $it." },
                     com.optionslab.app.data.StaticIp.registered?.let { "Registered static IP: $it." },
                 )
+            }
+            if (wants(Section.FLOWS)) out[Section.FLOWS] = com.optionslab.ira.Flows.lines(withTimeoutOrNull(20_000) { IraHub.flows() } ?: emptyList())
+            if (wants(Section.CHAIN)) {
+                val us = markets.mapNotNull { mk -> when (mk) { com.optionslab.ira.Market.NIFTY -> "NIFTY"; com.optionslab.ira.Market.BANKNIFTY -> "BANKNIFTY"
+                    com.optionslab.ira.Market.FINNIFTY -> "FINNIFTY"; else -> null } }.ifEmpty { listOf("NIFTY", "BANKNIFTY") }
+                out[Section.CHAIN] = us.flatMap { u -> withTimeoutOrNull(25_000) { chain(u) }?.let { com.optionslab.ira.ChainRead.lines(it) }
+                    ?: listOf("The $u option chain did not load just now.") } +
+                    (if (markets.any { it == com.optionslab.ira.Market.SENSEX || it == com.optionslab.ira.Market.GOLD }) listOf("Option chains are read for Nifty, BankNifty and FinNifty.") else emptyList())
             }
             if (wants(Section.EVENTS)) out[Section.EVENTS] = IraEvents.upcoming().map { com.optionslab.ira.Events.line(it, today) }
                 .ifEmpty { listOf("No events in the next two weeks.") }

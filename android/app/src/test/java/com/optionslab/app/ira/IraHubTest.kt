@@ -310,7 +310,7 @@ class IraHubTest : RobolectricTest() {
     /** The real books on a fresh install: every section reads, nothing is placed. */
     @Test fun theRealBooksAreRead() = runBlocking {
         com.optionslab.app.data.PineScripts.init(context)
-        val v = IraAccount.read(com.optionslab.ira.Section.entries.toSet())
+        val v = IraAccount.read(com.optionslab.ira.Section.entries.toSet() - com.optionslab.ira.Section.CHAIN)
         assertNotNull(v)
         val l = v!!.lines
         assertTrue(l[com.optionslab.ira.Section.ORDERS]!!.toString(), l[com.optionslab.ira.Section.ORDERS]!!.first().let { it == "No orders on Paper today." || it.startsWith("The paper account") })

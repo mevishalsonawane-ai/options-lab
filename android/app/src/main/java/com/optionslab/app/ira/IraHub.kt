@@ -109,9 +109,24 @@ object IraHub {
         "BusinessLine" to "https://www.thehindubusinessline.com/markets/feeder/default.rss",
         "Moneycontrol" to "https://www.moneycontrol.com/rss/marketreports.xml",
         "FXStreet" to "https://www.fxstreet.com/rss/news",
+        // Official sources (probed 2026-10-02, .github/workflows/official-probe.yml).
+        "RBI" to "https://www.rbi.org.in/pressreleases_rss.xml",
+        "SEBI" to "https://www.sebi.gov.in/sebirss.xml",
+        "NSE" to "https://nsearchives.nseindia.com/content/RSS/Circulars.xml",
     )
+    /** NSE's daily FII/DII cash-market figures (JSON). */
+    const val FLOWS_URL = "https://www.nseindia.com/api/fiidiiTradeReact"
+    @Volatile private var flowsCache: Pair<Instant, List<com.optionslab.ira.Flows.Flow>>? = null
+
+    /** The latest FII/DII figures from NSE, read at most once an hour. */
+    suspend fun flows(): List<com.optionslab.ira.Flows.Flow> {
+        flowsCache?.takeIf { it.first.isAfter(Instant.now().minusSeconds(3600)) }?.let { return it.second }
+        val f = runCatching { com.optionslab.ira.Flows.parse(testFeed?.invoke(FLOWS_URL) ?: Net.getText(FLOWS_URL)) }.getOrDefault(emptyList())
+        if (f.isNotEmpty()) flowsCache = Instant.now() to f
+        return f
+    }
     /** News is fetched at most this often; headlines older than [NEWS_DAYS] days are dropped. */
-    const val NEWS_EVERY_MINUTES = 10L
+    const val NEWS_EVERY_MINUTES = 5L
     const val NEWS_DAYS = 3L
     private val IST: ZoneId = ZoneId.of("Asia/Kolkata")
     /** Days of candles kept in memory for the snapshots (learning has already seen the older ones). */
@@ -238,6 +253,7 @@ object IraHub {
                     liveAt = if (live.isNotEmpty()) Instant.now() else it.liveAt, liveMissing = missing,
                     news = news?.first ?: it.news, newsAt = if (news != null) Instant.now() else it.newsAt,
                     newsMissing = news?.second ?: it.newsMissing, best = book.best()) }
+                if (news != null && com.optionslab.app.BuildConfig.JARVIS) runCatching { judgeNews(news.first) }
                 nightlyIfDue()
             }.onFailure {
                 _state.update { s -> s.copy(loading = false, problem = "Could not read the market data") }
@@ -369,6 +385,54 @@ object IraHub {
         lastBackground = now
         refresh()
         runCatching { watchAlerts() }
+        runCatching { keepChains() }
+    }
+
+    /**
+     * Every 5 minutes (JarvisAlgo, market hours): the news, read and judged; each new headline that matters is told once,
+     * with what it means for your arms and positions. Called often by the market watch; it gates itself.
+     */
+    suspend fun newsWatch(now: Instant = Instant.now()) {
+        if (!com.optionslab.app.BuildConfig.JARVIS) return
+        if (!IraMarket.NIFTY.trading(now.atZone(IST).toLocalDateTime())) return
+        val got = newsIfDue() ?: return
+        _state.update { it.copy(news = got.first, newsAt = Instant.now(), newsMissing = got.second) }
+        judgeNews(got.first)
+    }
+
+    private val newsSeen = HashSet<String>()
+    @Volatile private var newsPrimed = false
+
+    /** New headlines that matter, told once (a pop-up and a line in the conversation); the first read only primes. */
+    private suspend fun judgeNews(heads: List<Headline>) {
+        val c = app ?: return
+        val fresh = synchronized(newsSeen) { heads.filter { newsSeen.add(it.link.ifBlank { it.title }) } }
+        if (!newsPrimed) { newsPrimed = true; return }
+        val recent = fresh.filter { h -> h.at?.isAfter(Instant.now().minusSeconds(30 * 60)) != false }.filter { com.optionslab.ira.NewsAnalyst.matters(it) }.take(3)
+        if (recent.isEmpty()) return
+        val arms = HashMap<String, IraMarket>()
+        runCatching { com.optionslab.app.data.OrbArms.view().arms }.getOrDefault(emptyList()).filter { it.armed }.forEach { arms[it.arm.label] = IraMarket.BANKNIFTY }
+        com.optionslab.app.data.PineScripts.items.value.filter { it.auto.on }.forEach { x -> IraMarket.entries.firstOrNull { it.name == x.auto.symbol }?.let { arms[x.name] = it } }
+        val held = runCatching { com.optionslab.app.data.Paper.state.positions.filter { it.quantity != 0 }.mapNotNull { p ->
+            listOf(IraMarket.BANKNIFTY, IraMarket.FINNIFTY, IraMarket.NIFTY, IraMarket.SENSEX).firstOrNull { p.symbol.startsWith(it.name) } }.toSet() }.getOrDefault(emptySet())
+        for (h in recent) {
+            val t = com.optionslab.ira.NewsAnalyst.take(h, arms, held)
+            JarvisPopup.show(c, t.title, t.text)
+            reply(t.text)
+        }
+    }
+
+    /**
+     * JarvisAlgo, every 15 minutes in market hours: the near-the-money option chains (Nifty, BankNifty, FinNifty) as
+     * they trade - each contract's 1-minute OHLC, volume and OI - kept into the app's record, like the evening harvest.
+     */
+    private suspend fun keepChains() {
+        val today = LocalDate.now(IST)
+        for (u in listOf("NIFTY", "BANKNIFTY", "FINNIFTY")) runCatching {
+            val lc = withTimeoutOrNull(40_000) { com.optionslab.app.data.Market.liveChain(u, near = 12) } ?: return@runCatching
+            if (lc.pricedAt != null) return@runCatching          // a quote snapshot, not minute candles: nothing to keep
+            Store.upsertDay(u, today, lc.series.filter { it.expiry != null })
+        }
     }
 
     /** Alerts already given ("type|...|day"), so each is given once. */
@@ -476,7 +540,7 @@ object IraHub {
         val user = Msg(false, q)
         _state.update { it.copy(messages = (it.messages + user).takeLast(MAX_MESSAGES)) }
         scope.launch {
-            val v = IraAccount.read(com.optionslab.ira.AppAnswers.sections(q))
+            val v = IraAccount.read(com.optionslab.ira.AppAnswers.sections(q), IraMarket.mentioned(q))
             val a = Ira(book).answer(q, emptyMap(), emptyList(), app = v)
             val write = v != null && IraModel.usable() && a.facts.isNotEmpty()
             val msg = Msg(true, a.text, a.facts, writing = write)
