@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -725,7 +726,7 @@ private fun headline(s: Snapshot): String =
 @Composable
 private fun Orb(vol: Float, trend: Float, mode: Int, onTap: (() -> Unit)? = null, onLongPress: (() -> Unit)? = null) {
     if (Build.FINGERPRINT == "robolectric") {
-        Canvas(Modifier.fillMaxSize().let { m -> if (onTap != null || onLongPress != null) m.pointerInput(onTap, onLongPress) { androidx.compose.foundation.gestures.detectTapGestures(onTap = { onTap?.invoke() }, onLongPress = { onLongPress?.invoke() }) } else m }) {
+        Canvas(Modifier.fillMaxSize().let { m -> if (onTap != null || onLongPress != null) m.pointerInput(onTap, onLongPress) { detectTapGestures(onTap = { onTap?.invoke() }, onLongPress = { onLongPress?.invoke() }) } else m }) {
             val r = size.minDimension * 0.32f
             for (i in 0 until 400) {
                 val a = i * 2.39996; val y = 1 - (i / 399.0) * 2; val rr = kotlin.math.sqrt(1 - y * y)
