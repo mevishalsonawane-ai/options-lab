@@ -15,9 +15,9 @@ it on the index only; every chart; with and without a profit lock; rupees.
            (a third each; the stop then at the entry's index level) or none, the profit lock (once the index has moved
            START x ATR(14) of the chart our way, out on a move of GIVEBACK ATRs back from its best), the tracker turning
            (out at the next candle's open), 15:10 square-off (intraday, as IraAlgo trades)
-  rupees   the option's real minute prices for NIFTY and BANKNIFTY (sold at the minute's close - 0.5; Rs 40 a lot round
-           trip); FINNIFTY and SENSEX have no option history, so their rupees are ESTIMATED from how NIFTY / BANKNIFTY
-           options moved for the same kind of trades (option points = a x index points - b x index level x minutes held)
+  rupees   the option's real minute prices only (sold at the minute's close - 0.5; Rs 40 a lot round trip): NIFTY and
+           BANKNIFTY two years of chains (BANKNIFTY also Aug-Sep 2026), FINNIFTY the owner's upload (4 expiries; the
+           index file + the upload folder, joined by '+'); SENSEX has no option prices and is not tested in rupees
   lots     NIFTY 75, BANKNIFTY 35, FINNIFTY 65, SENSEX 20; per lot (the thirds as fractions of a lot)
 """
 from __future__ import annotations
@@ -45,6 +45,10 @@ TFS = (5, 15, 30, 60, 240)
 
 
 def load(path):
+    if "+" in path:                    # FINNIFTY: its index file + the owner's option upload folder (real prices)
+        import finnifty_upload as fu
+        idx, folder = path.split("+")
+        return [d for d in fu.load_days(idx, folder)[0] if d["src"] == "index"]
     df = pd.read_parquet(path, columns=["right"])
     if (df.right.astype(str) != "IX").any():
         from sell_levels import load as ld
@@ -146,14 +150,14 @@ def run(days, b, trk, d, pct, atr, side, tps, lock, confirm=0):
 def main():
     out = sys.argv[1]
     specs = [s.split(":") for s in sys.argv[2:]]
-    results, fit = {}, []
+    results = {}
     for name, lot, files in specs:
         lot = int(lot)
         parts = [load(f) for f in files.split(",")]
         split = parts[1][0]["day"] if len(parts) > 1 else pd.Timestamp("2025-02-15").date()
+        opt_days = sum(1 for p_ in parts for dd in p_ if dd["chain"])
         days = sorted(sum(parts, []), key=lambda x: x["day"])
         del parts
-        has_opt = any(dd["chain"] for dd in days)
         for tf in TFS:
             b = lb.bars(days, tf)
             trk, d, pct = gt.indicators(b, 19)
@@ -164,27 +168,22 @@ def main():
                 for lock in LOCKS:
                   for cf in CONFIRMS:
                     t = pd.DataFrame(run(days, b, trk, d, pct, atr, 1, tps, lock, cf) + run(days, b, trk, d, pct, atr, -1, tps, lock, cf))
-                    results[(name, tf, tname, lock, cf)] = (t, lot, split, has_opt)
-                    if has_opt and len(t):
-                        fit.append(t[["pts", "held", "level", "opt"]])
+                    results[(name, tf, tname, lock, cf)] = (t, lot, split, opt_days)
             print(name, tf, "done", flush=True)
         del days
-    f = pd.concat(fit).dropna()
-    A = np.c_[f.pts.values, -(f.held * f.level).values]
-    coef, *_ = np.linalg.lstsq(A, f.opt.values, rcond=None)
-    print("fit: option pts = %.3f x index pts - %.3g x level x minutes" % tuple(coef), flush=True)
     L = ["## TAS on index options (research/tas_options.py)", "",
          "Signals and exits on the index, the ATM option bought (CE on an up-turn, PE on a down-turn), intraday (15:10), "
-         "per lot after Rs 40 a round trip and 0.5 slippage a side. NIFTY / BANKNIFTY: real option prices. FINNIFTY / "
-         f"SENSEX: estimated (option points = {coef[0]:.3f} x index points - {coef[1]:.3g} x index level x minutes held, "
-         "fitted on the NIFTY / BANKNIFTY trades).", "",
-         "| index | chart | wait (candles) | targets | lock (start / giveback ATR) | trades | win | Rs 1st year | Rs 2nd year | Rs total | Rs CE | Rs PE | t | deepest drawdown Rs | Rs a month |",
+         "per lot after Rs 40 a round trip and 0.5 slippage a side. Real option prices only: a trade counts only on a day "
+         "with the option's minute prices (no estimates); the number after the index is how many days had them.", "",
+         "| index (option days) | chart | wait (candles) | targets | lock (start / giveback ATR) | trades | win | Rs 1st year | Rs 2nd year | Rs total | Rs CE | Rs PE | t | deepest drawdown Rs | Rs a month |",
          "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
-    for (name, tf, tname, lock, cf), (t, lot, split, has_opt) in results.items():
-        if t.empty:
+    for (name, tf, tname, lock, cf), (t, lot, split, opt_days) in results.items():
+        if t.empty or not opt_days:
             continue
-        o = t.opt if has_opt else coef[0] * t.pts - coef[1] * t.level * t.held - 2 * SLIP
-        rs = (o.fillna(0) * lot - CHG).values
+        t = t[np.isfinite(t.opt)]
+        if len(t) < 2:
+            continue
+        rs = (t.opt * lot - CHG).values
         ts = pd.to_datetime(t.day)
         order = np.argsort(ts.values, kind="stable"); rs_o = rs[order]
         eq = np.cumsum(rs_o); dd = (eq - np.maximum.accumulate(eq)).min()
@@ -193,7 +192,7 @@ def main():
         tt = rs.mean() / (rs.std(ddof=1) / len(rs) ** 0.5) if len(rs) > 1 else 0
         lk = "none" if lock is None else f"{lock[0]:g} / {lock[1]:g}"
         lab = f"{tf}m" if tf < 60 else f"{tf // 60}h"
-        L.append(f"| {name}{'' if has_opt else ' (est.)'} | {lab} | {cf} | {tname} | {lk} | {len(rs)} | {100 * (rs > 0).mean():.0f}% | "
+        L.append(f"| {name} ({opt_days}) | {lab} | {cf} | {tname} | {lk} | {len(rs)} | {100 * (rs > 0).mean():.0f}% | "
                  f"{y1:+,.0f} | {y2:+,.0f} | {rs.sum():+,.0f} | {rs[(t.side > 0).values].sum():+,.0f} | {rs[(t.side < 0).values].sum():+,.0f} | "
                  f"{tt:.2f} | {dd:,.0f} | {rs.sum() / months:+,.0f} |")
     open(out, "w").write("\n".join(L))
