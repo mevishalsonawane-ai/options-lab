@@ -181,6 +181,15 @@ internal object IraActions {
                     "Alarm set: ${m.label} ${if (above) "above" else "below"} ${"%,.2f".format(java.util.Locale.ENGLISH, lvl)}."
                 }
             }
+            Command.Kind.JTRADES_RISK -> {
+                val v = c.level
+                if (v != null && v < 500) "Tell me the risk in rupees, at least 500, or say risk off." to null
+                else Commands.describe(c) to suspend {
+                    IraNewsTrades.riskPerTrade = v
+                    if (v == null) "My trades take 1 lot again."
+                    else "Each of my trades will risk about Rs %,.0f once my paper record is proven; until then 1 lot.".format(java.util.Locale.ENGLISH, v)
+                }
+            }
             Command.Kind.JTRADES_PAPER -> Commands.describe(c) to suspend { IraNewsTrades.paperFirst = true; "My suggested trades stay on paper now, Boss." }
             Command.Kind.JTRADES_LIVE -> {
                 val why = com.optionslab.ira.JarvisTrades.proven(IraNewsTrades.closedRecord())

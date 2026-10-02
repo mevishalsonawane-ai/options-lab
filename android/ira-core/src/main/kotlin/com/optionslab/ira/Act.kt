@@ -15,7 +15,7 @@ data class Command(val kind: Kind, val target: String? = null, val number: Int? 
         KILL_ON(true), KILL_OFF(false), MODE_PAPER(true), MODE_LIVE(false),
         ALARM_ADD(false), ALARM_REMOVE(true), EVENT_ADD(false), EVENT_REMOVE(true), AUTOPILOT_ON(false), AUTOPILOT_OFF(true),
         /** Jarvis's own suggested trades: on paper (the default until proven) or in the app's mode; their daily loss limit. */
-        JTRADES_PAPER(true), JTRADES_LIVE(false), JTRADES_LIMIT(false),
+        JTRADES_PAPER(true), JTRADES_LIVE(false), JTRADES_LIMIT(false), JTRADES_RISK(false),
     }
 }
 
@@ -24,7 +24,8 @@ object Commands {
     private val QUESTION = Regex("^ (how|where|what|why|which|when|should|is there|are there|do i|does) ")
     private val ARM_NOUN = "(?:the )?(?:strategy|strategies|arm|arms|bot|bots|algo|script)?"
 
-    fun parse(text: String): Command? {
+    fun parse(said: String): Command? {
+        val text = Hinglish.normalize(said)
         val t = " " + text.lowercase().replace(Regex("[^a-z0-9. ]"), " ").replace(Regex("\\s+"), " ").trim() + " "
         if (QUESTION.containsMatchIn(t)) return null
         val s = t.replace(Regex(" (please|jarvis|now|right now|immediately|can you|could you|will you|for me) "), " ")
@@ -35,6 +36,10 @@ object Commands {
         // Jarvis's own trades (before Live / Paper mode: "let your trades go live" is not the app's mode).
         if (has(" (your|jarvis s|jarvis) (own )?trades? (go |to |on )?live | (let|put|send|switch|move|take) (your|jarvis s) (own )?trades? (go )?(to )?live ")) return Command(Command.Kind.JTRADES_LIVE)
         if (has(" (your|jarvis s) (own )?trades? (on|to|back to|go to) paper | keep (your|jarvis s) (own )?trades? (on )?paper ")) return Command(Command.Kind.JTRADES_PAPER)
+        if (Regex(" (?:your|jarvis s|jarvis) (?:own )?(?:trades? )?risk (?:per trade )?(?:off|none|zero) ").containsMatchIn(t)) return Command(Command.Kind.JTRADES_RISK)
+        Regex(" (?:your|jarvis s|jarvis) (?:own )?(?:trades? )?risk (?:per trade )?(?:to |at |of )?(?:rs |rupees )?(\\d{3,7}) ").find(t)?.let { m ->
+            return Command(Command.Kind.JTRADES_RISK, level = m.groupValues[1].toDouble())
+        }
         Regex(" (?:your|jarvis s|jarvis) (?:own )?(?:trades? )?(?:daily )?loss limit (?:to |at |of )?(?:rs |rupees )?(\\d{3,7}) ").find(t)?.let { m ->
             return Command(Command.Kind.JTRADES_LIMIT, level = m.groupValues[1].toDouble())
         }
@@ -129,6 +134,7 @@ object Commands {
         Command.Kind.AUTOPILOT_OFF -> "turn the autopilot off"
         Command.Kind.JTRADES_PAPER -> "keep my suggested trades on paper"
         Command.Kind.JTRADES_LIVE -> "let my suggested trades go live (in the app's mode, real Zerodha orders in Live)"
+        Command.Kind.JTRADES_RISK -> c.level?.let { "risk about Rs %,.0f on each of my trades (once proven)".format(java.util.Locale.ENGLISH, it) } ?: "take 1 lot on each of my trades"
         Command.Kind.JTRADES_LIMIT -> "set my trades' daily loss limit to ${c.level?.let { "Rs %,.0f".format(java.util.Locale.ENGLISH, it) } ?: "?"}"
         Command.Kind.EVENT_ADD -> "note the event \"${c.target}\" on ${c.day ?: "?"}"
         Command.Kind.EVENT_REMOVE -> "remove ${name ?: "that event"}"

@@ -64,4 +64,11 @@ class ActTest {
         assertEquals(Command.Kind.MODE_LIVE, Commands.parse("switch to live mode")?.kind)
         assertEquals(true, Command.Kind.JTRADES_PAPER.reduces); assertEquals(false, Command.Kind.JTRADES_LIVE.reduces)
     }
+
+    @Test fun jarvisRiskPerTrade() {
+        val r = Commands.parse("set Jarvis risk per trade to 2000")
+        assertEquals(Command.Kind.JTRADES_RISK, r?.kind); assertEquals(2000.0, r?.level)
+        val off = Commands.parse("Jarvis risk off")
+        assertEquals(Command.Kind.JTRADES_RISK, off?.kind); assertEquals(null, off?.level)
+    }
 }

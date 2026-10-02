@@ -85,7 +85,7 @@ class JarvisVoice : Service() {
         /** Pauses listening while the owner teaches Jarvis their voice (the microphone is needed for that). */
         fun hold(on: Boolean) {
             val v = instance?.get() ?: return
-            v.main.post { v.held = on; if (on) { runCatching { v.rec?.cancel() }; v.endTap() } else v.again(300) }
+            v.main.post { v.held = on; if (on) { runCatching { v.rec?.cancel() }; v.listening = false; v.endTap() } else v.again(300) }
         }
 
         /** [id] was answered elsewhere (a button, the Ira screen) or lapsed: stop waiting for it. */
@@ -173,6 +173,11 @@ class JarvisVoice : Service() {
     private var voiceReady = false
     private var stopped = false
     private var awakeUntil = 0L
+    /** Jarvis is talking; it keeps listening meanwhile, but only for its name (the owner can cut in). */
+    @Volatile private var speaking = false
+    /** The recognizer is running a turn now (never started twice). */
+    private var listening = false
+    private val WAKE = Regex("\\bj[ae]rv[ia]s+\\b|\\bjar vis\\b", RegexOption.IGNORE_CASE)
     @Volatile private var held = false
     /** This turn's own capture, shared with the recognizer (Android 13+ with a taught voice), or null. */
     private var tap: VoiceGuard.Tap? = null
@@ -249,12 +254,13 @@ class JarvisVoice : Service() {
     private fun awake() = SystemClock.elapsedRealtime() < awakeUntil
 
     private fun listen() {
-        if (stopped || held) return
+        if (stopped || held || listening) return
         val i = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
             .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
             .putExtra(RecognizerIntent.EXTRA_LANGUAGE, lang)
             .putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true)
             .putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3)
+            .putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
             // End the turn soon after Boss stops speaking (recognizers that honour it answer sooner).
             .putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 700L)
             .putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 500L)
@@ -269,7 +275,8 @@ class JarvisVoice : Service() {
                     .putExtra(RecognizerIntent.EXTRA_AUDIO_SOURCE_SAMPLING_RATE, com.optionslab.ira.VoicePrint.RATE)
             }
         }
-        runCatching { rec?.startListening(i) }.onFailure { endTap(); again(1_000) }
+        listening = true
+        runCatching { rec?.startListening(i) }.onFailure { listening = false; endTap(); again(1_000) }
         _state.value = VoiceState(if (awake()) Mode.AWAKE else Mode.LISTENING)
     }
 
@@ -290,16 +297,22 @@ class JarvisVoice : Service() {
         override fun onRmsChanged(rmsdB: Float) {}
         override fun onBufferReceived(buffer: ByteArray?) {}
         override fun onEndOfSpeech() {}
-        override fun onPartialResults(partialResults: Bundle?) {}
+        override fun onPartialResults(partialResults: Bundle?) {
+            // The owner says "Jarvis" while Jarvis is talking: stop at once and listen (the question follows).
+            val words = partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION).orEmpty()
+            if (speaking && words.any { WAKE.containsMatchIn(it) }) interrupt()
+        }
         override fun onEvent(eventType: Int, params: Bundle?) {}
 
         override fun onResults(results: Bundle?) {
+            listening = false
             errorsInRow = 0
             endTap()
             heard(results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION).orEmpty())
         }
 
         override fun onError(error: Int) {
+            listening = false
             val shared = tap != null
             endTap(); lastHeard = null
             if (stopped) return
@@ -320,7 +333,21 @@ class JarvisVoice : Service() {
         }
     }
 
+    /** Cut in on: Jarvis stops talking and waits for the owner's question. */
+    private fun interrupt() {
+        if (!speaking) return
+        speaking = false
+        runCatching { tts?.stop() }
+        awakeUntil = SystemClock.elapsedRealtime() + AWAKE_MS
+        _state.value = VoiceState(Mode.AWAKE)
+    }
+
     private fun heard(alternatives: List<String>) {
+        // While Jarvis talks it hears itself too: only its name counts then, and it stops to listen.
+        if (speaking) {
+            if (alternatives.none { WAKE.containsMatchIn(it) }) { again(); return }
+            interrupt()
+        }
         // The answer to Jarvis's yes-or-no question: only the recognizer's best reading, and anything unclear is not a yes.
         val id = asking
         if (id != null && SystemClock.elapsedRealtime() < askingUntil) {
@@ -388,17 +415,25 @@ class JarvisVoice : Service() {
         }
     }
 
-    /** Speaks (not listening meanwhile, so Jarvis never hears itself), then listens again - or stops after [id] STOP_AFTER. */
+    /**
+     * Speaks, still listening - but only for "Jarvis" while it talks, so the owner can cut in and it never answers
+     * itself (its own name is spelled out, J.A.R.V.I.S., so it does not hear it) - then listens again, or stops after
+     * [id] STOP_AFTER.
+     */
     private fun say(text: String, id: String = "say") {
-        runCatching { rec?.cancel() }
         val t = tts
         if (!voiceReady || t == null) { afterSpeech(id); return }
         _state.value = VoiceState(Mode.SPEAKING)
         applyStyle(t)                                   // a style or voice changed on the Ira screen takes effect now
-        if (t.speak(text, TextToSpeech.QUEUE_FLUSH, null, id) != TextToSpeech.SUCCESS) afterSpeech(id)
+        speaking = true
+        if (t.speak(spokenName(text), TextToSpeech.QUEUE_FLUSH, null, id) != TextToSpeech.SUCCESS) { speaking = false; afterSpeech(id); return }
+        if (id != STOP_AFTER) listen()
     }
 
+    private fun spokenName(text: String) = WAKE.replace(text, "J.A.R.V.I.S.")
+
     private fun afterSpeech(id: String?) {
+        speaking = false
         if (stopped) return
         if (id == STOP_AFTER) { stopSelf(); return }
         if (id == "answer") awakeUntil = SystemClock.elapsedRealtime() + FOLLOW_MS   // a follow-up needs no "Jarvis"

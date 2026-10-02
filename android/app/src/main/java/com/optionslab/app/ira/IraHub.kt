@@ -165,6 +165,13 @@ object IraHub {
 
     fun init(context: Context) {
         app = context.applicationContext
+        // JarvisAlgo: the home-screen widget follows what Jarvis says and what waits for an answer.
+        if (com.optionslab.app.BuildConfig.JARVIS) scope.launch {
+            _state.collect { st ->
+                val key = (st.messages.lastOrNull { it.fromIra }?.text ?: "") + "|" + st.pending.joinToString()
+                if (key != widgetKey) { widgetKey = key; runCatching { com.optionslab.app.widget.JarvisWidget.refresh(context.applicationContext) } }
+            }
+        }
         IraModel.init(context)
         val f = File(context.applicationContext.noBackupFilesDir, "ira-book.vault")
         bookFile = f
@@ -469,6 +476,8 @@ object IraHub {
         }
     }
 
+    @Volatile private var widgetKey: String? = null
+
     private val newsSeen = HashSet<String>()
     @Volatile private var newsPrimed = false
 
@@ -518,10 +527,17 @@ object IraHub {
      * arm's 15% stop, a +40 target and the profit lock - placed only on the owner's yes (aloud, Approve on the pop-up or
      * Confirm on the Ira screen); unanswered in 10 minutes it lapses. [said] opens the spoken question.
      */
-    private fun proposeTrade(c: Context, idea: com.optionslab.ira.NewsTrade.Idea, title: String, text: String, said: String, source: String) {
+    private suspend fun proposeTrade(c: Context, idea: com.optionslab.ira.NewsTrade.Idea, title: String, text: String, said: String, source: String) {
         val m = idea.market
         val snap = _state.value.snaps[m]
         val side = if (idea.call) "call" else "put"
+        // Are options cheap or dear now? In the dearest tenth of the year, no buy is suggested.
+        val iv = snap?.price?.let { runCatching { IraNewsTrades.ivNow(idea, it) }.getOrNull() }
+        if (iv != null && iv.first >= com.optionslab.ira.IvRank.BLOCK) {
+            reply("$text ${com.optionslab.ira.IvRank.say(iv.first, iv.second)}")
+            return
+        }
+        val ivLine = iv?.let { " " + com.optionslab.ira.IvRank.say(it.first, it.second) } ?: ""
         val what = "buy 1 lot of the ${m.label} $side at the money, nearest expiry, with a 15% stop, a +${IraNewsTrades.TARGET_POINTS.toInt()} target and the profit lock"
         val id = System.nanoTime()
         synchronized(actions) {
@@ -530,7 +546,7 @@ object IraHub {
         }
         IraNewsTrades.suggested(id, idea, snap?.price ?: 0.0, source)
         val where = if (IraNewsTrades.paperFirst && com.optionslab.app.data.AppSettings.load().live) " (on paper: my trades stay there until proven)" else ""
-        val full = "$text Shall I $what$where? Approve or reject."
+        val full = "$text$ivLine Shall I $what$where? Approve or reject."
         _state.update { it.copy(pending = it.pending + id, messages = (it.messages + Msg(true, full, action = id)).takeLast(MAX_MESSAGES)) }
         JarvisApproval.show(c, id, title, full)
         JarvisVoice.askYesNo(id, "$said Shall I buy 1 lot of the ${m.label} $side? Yes or no?")
@@ -546,6 +562,9 @@ object IraHub {
     }
 
     private fun expiryToday(m: IraMarket) = runCatching { com.optionslab.app.data.Market.isExpiryDay(m.name) }.getOrDefault(false)
+
+    /** The suggested trade waiting for the owner's answer now (its action id), or null - for the home-screen widget. */
+    fun waitingTrade(): Long? = synchronized(actions) { newsAsks.firstOrNull() }
 
     /** Is [id] a suggested trade Jarvis asks a yes or no about (so the voice does not also say "tap Confirm")? */
     fun asksYesNo(id: Long): Boolean = synchronized(actions) { id in newsAsks }

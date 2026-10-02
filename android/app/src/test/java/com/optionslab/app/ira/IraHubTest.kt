@@ -457,4 +457,17 @@ class IraHubTest : RobolectricTest() {
         assertEquals("The market is closed today (weekend). Prices shown are from the last session.", IraHub.closedToday(LocalDate.of(2026, 10, 4)))
         assertNull(IraHub.closedToday(LocalDate.of(2026, 10, 1)))
     }
+
+    @Test fun riskPerTradeWaitsForTheProvenRecordAndHinglishCommandsWork() = runBlocking {
+        IraHub.ask("set Jarvis risk per trade to 2000")
+        waitFor("the risk") { IraHub.state.value.messages.lastOrNull()?.fromIra == true }
+        IraHub.state.value.pending.singleOrNull()?.let { IraHub.confirm(it) }
+        assertEquals(2000.0, IraNewsTrades.riskPerTrade!!, 0.0)
+        assertEquals(1, IraNewsTrades.lotsFor(100.0, 75))              // not proven yet: 1 lot
+        IraHub.ask("kill switch on karo")
+        waitFor("the command") { IraHub.state.value.messages.lastOrNull()?.fromIra == true }
+        assertTrue(IraHub.state.value.messages.last().text, IraHub.state.value.messages.last().text.contains("kill switch"))
+        assertEquals(null, IraHub.waitingTrade())
+        Unit
+    }
 }

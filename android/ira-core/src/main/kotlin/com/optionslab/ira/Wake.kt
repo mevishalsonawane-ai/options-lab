@@ -50,6 +50,11 @@ object Wake {
      * answer never places a trade.
      */
     fun yesNo(text: String): Boolean? {
+        val h = Hinglish.yesNo(text); val e = english(text)
+        return if (h == false || e == false) false else if (h == true || e == true) true else null
+    }
+
+    private fun english(text: String): Boolean? {
         val t = " " + text.lowercase().replace(Regex("[^a-z ]"), " ").replace(Regex("\\s+"), " ").trim() + " "
         if (t.isBlank()) return null
         if (Regex(" (no|nope|nah|not|don t|dont|do not|reject|rejected|cancel|skip|leave it|stop|wait|never|negative) ").containsMatchIn(t)) return false
