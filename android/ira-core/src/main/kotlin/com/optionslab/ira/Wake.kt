@@ -43,4 +43,17 @@ object Wake {
             .replace(Regex("(?:Rs|₹)\\s?([+-]?[\\d,]+(?:\\.\\d+)?)"), "$1 rupees")
             .replace("+", "plus ").replace(" -", " minus ")
     }
+
+    /**
+     * The owner's answer when Jarvis asked a yes-or-no question (a news trade to approve): true for yes, false for no,
+     * null when it is neither or unclear. Any "no" word wins over a "yes" ("yes... no, leave it" is a no), so a muddled
+     * answer never places a trade.
+     */
+    fun yesNo(text: String): Boolean? {
+        val t = " " + text.lowercase().replace(Regex("[^a-z ]"), " ").replace(Regex("\\s+"), " ").trim() + " "
+        if (t.isBlank()) return null
+        if (Regex(" (no|nope|nah|not|don t|dont|do not|reject|rejected|cancel|skip|leave it|stop|wait|never|negative) ").containsMatchIn(t)) return false
+        if (Regex(" (yes|yeah|yep|yup|sure|approve|approved|confirm|confirmed|go ahead|do it|place it|buy it|take it|ok|okay|affirmative|positive) ").containsMatchIn(t)) return true
+        return null
+    }
 }

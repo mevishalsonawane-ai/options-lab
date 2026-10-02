@@ -178,6 +178,12 @@ object DailyReports {
             if (closed.isNotEmpty()) lines += "${a.arm.label}: ${closed.size} trade${if (closed.size == 1) "" else "s"} · ${rs(closed.sumOf { (it.grossPnl ?: 0.0) - it.charges })}"
         }
         if (Heartbeat.stalledToday()) lines += "⚠ The market watch stopped at least once today"
+        // JarvisAlgo: after the week's last session, the weekly review.
+        if (com.optionslab.app.BuildConfig.JARVIS) {
+            var d = Market.today().plusDays(1)
+            while (!Market.isTradingDay(d)) d = d.plusDays(1)
+            if (d.toEpochDay() - Market.today().toEpochDay() > 1 || d.dayOfWeek == java.time.DayOfWeek.MONDAY) runCatching { com.optionslab.app.ira.IraHub.weeklyReview() }
+        }
         if (AppSettings.load().guardKill) lines += "⚠ The kill switch is on"
         if (lines.isEmpty()) lines += "No trades today."
         val title = "Day report · ${Market.today().format(DAY)}" + if (lines.first() != "No trades today.") " · ${rs(total)}" else ""

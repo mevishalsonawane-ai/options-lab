@@ -18,6 +18,12 @@ internal object IraAccount {
     @Volatile var testView: (suspend (Set<Section>) -> AppView?)? = null
         set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "test seam" }; field = v }
 
+    /** The app's round trips (paper or Zerodha) with who made each, for the review. */
+    fun trips(live: Boolean, owners: Map<String, String>): List<com.optionslab.ira.Insights.Trip> =
+        runCatching { com.optionslab.app.data.TradeBook.trips(live) }.getOrDefault(emptyList()).map { t ->
+            com.optionslab.ira.Insights.Trip(t.symbol, t.openedAt, t.closedAt, t.net, com.optionslab.app.data.TradeBook.ownerOf(t, owners))
+        }
+
     /** A Zerodha read waits at most this long; a slow one is left out and said so. */
     private const val ZERODHA_MS = 8_000L
 
@@ -157,6 +163,19 @@ internal object IraAccount {
                     com.optionslab.app.security.SecurePrefs.getString("harvest.last")?.let { "Last data harvest: $it." },
                     com.optionslab.app.data.StaticIp.registered?.let { "Registered static IP: $it." },
                 )
+            }
+            if (wants(Section.REVIEW)) {
+                val owners = runCatching { com.optionslab.app.data.Strategies.owners() }.getOrDefault(emptyMap())
+                val r = ArrayList<String>()
+                for (live in listOf(false, true)) {
+                    val trips = IraAccount.trips(live, owners)
+                    if (live && trips.isEmpty()) continue
+                    val label = if (live) "Zerodha" else "Paper"
+                    r += com.optionslab.ira.Insights.week(label, trips, today) + com.optionslab.ira.Insights.patterns(label, trips).drop(1)
+                }
+                if (com.optionslab.app.BuildConfig.JARVIS) r += IraNewsTrades.record()
+                r += "Autopilot: ${if (IraHub.autopilot) "on" else "off"}."
+                out[Section.REVIEW] = r
             }
             if (wants(Section.FLOWS)) out[Section.FLOWS] = com.optionslab.ira.Flows.lines(withTimeoutOrNull(20_000) { IraHub.flows() } ?: emptyList())
             if (wants(Section.CHAIN)) {

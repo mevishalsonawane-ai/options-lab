@@ -22,6 +22,7 @@ import com.optionslab.ira.StrategyLab
 import com.optionslab.ira.Topic
 import com.optionslab.ira.Ask
 import com.optionslab.ira.PatternKind
+import com.optionslab.ira.Wake
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -280,7 +281,9 @@ object IraHub {
             val r = lab(p.kind, m, p.minutes) ?: continue
             if (!r.recommended) continue
             val prop = propose(r, "I found a ${p.kind.label} on ${m.label} ${chartWord(p.minutes)} at ${Brain.when_(p.at, m, p.at.toLocalDate())} and backtested it as a strategy. ")
-            notifyProposal(prop)
+            // Autopilot: a strategy that passed the two-year test is added on paper without asking.
+            if (autopilot) { val said = approve(prop.id); app?.let { JarvisPopup.show(it, "Autopilot added ${r.name}", said) } }
+            else notifyProposal(prop)
         }
         if (tried) saveState()
     }
@@ -304,6 +307,43 @@ object IraHub {
                 }
             })
         }.getOrNull()
+    }
+
+    /**
+     * The owner's autopilot (off until switched on): strategies that pass the two-year test are added on paper without
+     * asking, and the ones Jarvis added that stop working are retired at the weekly review.
+     */
+    var autopilot: Boolean
+        get() = runCatching { com.optionslab.app.security.SecurePrefs.getBoolean("jarvis.autopilot", false) }.getOrDefault(false)
+        set(v) { runCatching { com.optionslab.app.security.SecurePrefs.put("jarvis.autopilot", v) } }
+
+    /**
+     * The weekly review (JarvisAlgo, after the last session of the week): the week and its patterns, then each strategy
+     * Jarvis added checked on its last four weeks of trades - one that is losing is retired (autopilot) or offered to stop.
+     */
+    suspend fun weeklyReview() {
+        val c = app ?: return
+        val owners = runCatching { com.optionslab.app.data.Strategies.owners() }.getOrDefault(emptyMap())
+        val today = LocalDate.now(IST)
+        val paper = IraAccount.trips(false, owners)
+        val lines = com.optionslab.ira.Insights.week("Paper", paper, today) + com.optionslab.ira.Insights.patterns("Paper", paper).drop(1).take(3)
+        JarvisPopup.show(c, "Boss, your week", lines.first())
+        reply(com.optionslab.ira.Address.boss("Your weekly review. " + lines.joinToString(" ")))
+        for (p in _state.value.proposals.filter { it.status == Proposal.APPROVED && it.pineId != null }) {
+            val item = com.optionslab.app.data.PineScripts.get(p.pineId!!) ?: continue
+            if (!item.auto.on) continue
+            val recent = paper.filter { it.owner.contains(item.name) && it.closedAt.toLocalDate().isAfter(today.minusDays(28)) }
+            val sick = com.optionslab.ira.Insights.health(item.name, recent) ?: continue
+            if (autopilot) {
+                com.optionslab.app.data.PineAuto.arm(item.id, false)
+                reply("$sick Autopilot retired it.")
+                JarvisPopup.show(c, "Retired: ${item.name}", sick)
+            } else {
+                val id = System.nanoTime()
+                synchronized(actions) { actions[id] = "stop ${item.name}" to suspend { com.optionslab.app.data.PineAuto.arm(item.id, false).let { r -> if (r == "ok") "Stopped ${item.name}." else r } } }
+                _state.update { it.copy(pending = it.pending + id, messages = (it.messages + Msg(true, "$sick Tap Confirm to stop it.", action = id)).takeLast(MAX_MESSAGES)) }
+            }
+        }
     }
 
     /** TEST ONLY: the long history for a backtest instead of Upstox's. */
@@ -417,9 +457,58 @@ object IraHub {
             listOf(IraMarket.BANKNIFTY, IraMarket.FINNIFTY, IraMarket.NIFTY, IraMarket.SENSEX).firstOrNull { p.symbol.startsWith(it.name) } }.toSet() }.getOrDefault(emptySet())
         for (h in recent) {
             val t = com.optionslab.ira.NewsAnalyst.take(h, arms, held)
+            if (runCatching { newsTrade(c, h, t) }.getOrDefault(false)) continue
             JarvisPopup.show(c, t.title, t.text)
             reply(t.text)
         }
+    }
+
+    /** How long a news trade waits for the owner's answer before it lapses (nothing placed). */
+    const val NEWS_ANSWER_MS = 10 * 60_000L
+
+    /**
+     * Strong news the candles agree with ([com.optionslab.ira.NewsTrade]): Jarvis says the news, whether it is good or
+     * bad and why, and asks; the trade (picked as the Liquidity arm picks, with its stop, target and the profit lock) is
+     * placed only on the owner's yes - said aloud, or Approve on the pop-up or the Ira screen. No answer in 10 minutes:
+     * nothing is placed. True when a trade was proposed (the news was told with it).
+     */
+    private suspend fun newsTrade(c: Context, h: Headline, t: com.optionslab.ira.NewsAnalyst.Take): Boolean {
+        val m = h.markets.firstOrNull { it in listOf(IraMarket.BANKNIFTY, IraMarket.NIFTY, IraMarket.FINNIFTY) } ?: return false
+        val snap = _state.value.snaps[m]
+        val waiting = synchronized(actions) { newsAsks.size }
+        val level = runCatching { tradeCheck().level }.getOrNull()
+        val idea = com.optionslab.ira.NewsTrade.idea(h, snap, histories[m]?.bars.orEmpty(), LocalDateTime.now(IST), level,
+            IraNewsTrades.today() + waiting) ?: return false
+        val side = if (idea.call) "call" else "put"
+        val what = "buy 1 lot of the ${m.label} $side at the money, nearest expiry, with a 15% stop, a +${IraNewsTrades.TARGET_POINTS.toInt()} target and the profit lock"
+        val id = System.nanoTime()
+        synchronized(actions) {
+            actions[id] = what to suspend { IraNewsTrades.place(idea, _state.value.snaps[m]?.price ?: snap!!.price, h.title) }
+            newsAsks += id
+        }
+        val text = "${t.text} ${idea.why} Shall I $what? Approve or reject."
+        _state.update { it.copy(pending = it.pending + id, messages = (it.messages + Msg(true, text, action = id)).takeLast(MAX_MESSAGES)) }
+        JarvisApproval.show(c, id, t.title, text)
+        JarvisVoice.askYesNo(id, "Hey Boss, news. ${Wake.spoken(t.text, 2)} The candles agree. Shall I buy 1 lot of the ${m.label} $side? Yes or no?")
+        scope.launch {
+            kotlinx.coroutines.delay(NEWS_ANSWER_MS)
+            if (synchronized(actions) { actions.remove(id) } != null) {
+                settled(id)
+                _state.update { it.copy(pending = it.pending - id) }
+                reply("No answer in 10 minutes, so the ${m.label} news trade lapsed; nothing was placed.")
+            }
+        }
+        return true
+    }
+
+    /** News trades waiting for an answer (at most [com.optionslab.ira.NewsTrade.MAX_A_DAY] a day with those placed). */
+    private val newsAsks = HashSet<Long>()
+
+    /** [id] was answered or lapsed: its pop-up hides and Jarvis stops waiting for a yes or no. */
+    private fun settled(id: Long) {
+        synchronized(actions) { newsAsks.remove(id) }
+        app?.let { JarvisApproval.hide(it, id) }
+        JarvisVoice.answered(id)
     }
 
     /**
@@ -574,15 +663,17 @@ object IraHub {
         }
     }
 
-    /** The owner tapped Confirm on [id]. */
-    suspend fun confirm(id: Long) {
-        val a = synchronized(actions) { actions.remove(id) } ?: return
+    /** The owner tapped Confirm (or said yes) on [id]: what happened, or null when it was already settled. */
+    suspend fun confirm(id: Long): String? {
+        val a = synchronized(actions) { actions.remove(id) } ?: return null
+        settled(id)
         _state.update { it.copy(pending = it.pending - id) }
-        reply(IraActions.run(a.first, a.second))
+        return IraActions.run(a.first, a.second).also { reply(it) }
     }
 
     fun cancelAction(id: Long) {
         synchronized(actions) { actions.remove(id) }
+        settled(id)
         _state.update { it.copy(pending = it.pending - id, messages = (it.messages + Msg(true, "Cancelled; nothing was done.")).takeLast(MAX_MESSAGES)) }
     }
 

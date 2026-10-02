@@ -80,4 +80,9 @@ class AccountTest {
         assertEquals("Paper this week: +Rs 300.00 over 2 days.", h[1])
         assertTrue(h.last().startsWith("Paper best day 2026-09-30 +Rs 500.00; worst day 2026-10-01 -Rs 200.00; 2 days recorded"))
     }
+
+    @Test fun newsTradesAreAskedAsTheReview() {
+        assertTrue(Section.REVIEW in AppAnswers.sections("how are my news trades doing"))
+        assertEquals(Topic.ACCOUNT, Ask.parse("how are the news trades doing?").topics.first())
+    }
 }

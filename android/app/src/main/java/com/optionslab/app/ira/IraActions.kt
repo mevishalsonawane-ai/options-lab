@@ -181,6 +181,11 @@ internal object IraActions {
                     "Alarm set: ${m.label} ${if (above) "above" else "below"} ${"%,.2f".format(java.util.Locale.ENGLISH, lvl)}."
                 }
             }
+            Command.Kind.AUTOPILOT_ON, Command.Kind.AUTOPILOT_OFF -> Commands.describe(c) to suspend {
+                IraHub.autopilot = c.kind == Command.Kind.AUTOPILOT_ON
+                if (IraHub.autopilot) "Autopilot on, Boss: strategies that pass two years of testing are added on paper by themselves, and ones I added that stop working are retired. Live still follows your mode switch."
+                else "Autopilot off: I will ask before adding a strategy."
+            }
             Command.Kind.EVENT_ADD -> {
                 val d = c.day; val n = c.target
                 if (d == null || n.isNullOrBlank()) "Tell me the event and the day: \"add event RBI policy on 5 Dec\"." to null

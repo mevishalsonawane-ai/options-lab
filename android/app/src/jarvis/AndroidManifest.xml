@@ -20,5 +20,9 @@
             android:name="com.optionslab.app.ira.ModelDownload"
             android:exported="false"
             android:foregroundServiceType="dataSync" />
+        <!-- Approve / Reject on a news-trade pop-up: the app's own buttons only. -->
+        <receiver
+            android:name="com.optionslab.app.ira.JarvisActionReceiver"
+            android:exported="false" />
     </application>
 </manifest>

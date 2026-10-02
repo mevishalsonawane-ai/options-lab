@@ -11,7 +11,7 @@ import java.util.Locale
 enum class Section(val title: String) {
     STATUS("App status"), SETTINGS("Settings"), FUNDS("Funds"), ORDERS("Orders"), POSITIONS("Positions"), PNL("P&L today"),
     HISTORY("P&L by day"), STRATEGIES("Strategies"), RISK("Risk limits"), PROTECTIONS("Stops and targets"), ALARMS("Alarms"),
-    HOWTO("Where to find it"), EVENTS("Events"), CHAIN("Option chain"), FLOWS("Institutional flows"),
+    HOWTO("Where to find it"), EVENTS("Events"), CHAIN("Option chain"), FLOWS("Institutional flows"), REVIEW("Review"),
 }
 
 /** Fact lines per section, each a finished sentence; [mode] "Paper" or "Live". */
@@ -107,6 +107,7 @@ object AppAnswers {
         Section.SETTINGS to Regex(" (settings|setting|mode|paper mode|live mode|product|nrml|mis|preferences|one tap|biometric|pin) "),
         Section.STATUS to Regex(" (status|market open|is the market|open today|holiday|holidays|expiry|expiries|harvest|data|zerodha|kite|login|logged|connected|static ip|relay|app) "),
         Section.HOWTO to Regex(" (where|how do i|how can i|how to|find|which tab|which page|switch to) "),
+        Section.REVIEW to Regex(" (review|weekly review|insight|insights|mistake|mistakes|habits|patterns in my|what am i doing wrong|how did my week|my week|news trades?) "),
         Section.FLOWS to Regex(" (fii|fiis|dii|diis|fpi|fpis|institutional|institutions|flows|foreign funds|mutual funds) "),
         Section.CHAIN to Regex(" (oi|open interest|pcr|put call|put-call|max pain|option chain|chain|iv|implied volatility|skew|call writing|put writing|writers) "),
         Section.EVENTS to Regex(" (event|events|calendar|fed|fomc|rbi|budget|policy|cpi|news events|this week|expiry day|expiries) "),
@@ -125,6 +126,7 @@ object AppAnswers {
         if (Section.HISTORY in out && Regex(" (made|lost|earned|p l|pnl|profit|loss) ").containsMatchIn(t)) out.remove(Section.PNL)
         if (Section.EVENTS in out && Regex(" (event|events|fed|fomc|rbi|budget|cpi) ").containsMatchIn(t)) out.remove(Section.HISTORY)
         if (Section.FLOWS in out || Section.CHAIN in out) { out.remove(Section.HISTORY); out.remove(Section.STATUS) }
+        if (Section.REVIEW in out) { out.remove(Section.HISTORY); out.remove(Section.ORDERS); out.remove(Section.PNL) }
         if (out.isEmpty() || out == setOf(Section.STATUS) && Regex(" (how am i doing|how did i do|my account|account) ").containsMatchIn(t))
             out += listOf(Section.PNL, Section.POSITIONS, Section.ORDERS, Section.STRATEGIES)
         return out

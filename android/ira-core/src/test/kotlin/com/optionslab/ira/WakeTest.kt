@@ -26,4 +26,21 @@ class WakeTest {
         assertEquals("Options: plus 1,200 rupees a lot.", Wake.spoken("Options: Rs +1,200 a lot."))
         assertEquals("Nifty is at 24,612.40 (plus 0.21%).", Wake.spoken("Nifty is at 24,612.40 (+0.21%)."))
     }
+
+    @Test fun aYesOrNoAnswerAndNoWinsWhenMuddled() {
+        assertEquals(true, Wake.yesNo("Yes"))
+        assertEquals(true, Wake.yesNo("yeah go ahead"))
+        assertEquals(true, Wake.yesNo("Jarvis, approve it"))
+        assertEquals(false, Wake.yesNo("No"))
+        assertEquals(false, Wake.yesNo("reject"))
+        assertEquals(false, Wake.yesNo("yes... no, leave it"))
+        assertEquals(false, Wake.yesNo("don't"))
+        assertEquals(false, Wake.yesNo("not okay"))
+        assertEquals(true, Wake.yesNo("Positive"))
+        assertEquals(true, Wake.yesNo("approved"))
+        assertEquals(false, Wake.yesNo("Negative"))
+        assertEquals(false, Wake.yesNo("rejected"))
+        assertEquals(null, Wake.yesNo("what is nifty doing"))
+        assertEquals(null, Wake.yesNo(""))
+    }
 }

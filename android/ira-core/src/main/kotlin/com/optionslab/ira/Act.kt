@@ -13,7 +13,7 @@ data class Command(val kind: Kind, val target: String? = null, val number: Int? 
         STOP_ALL(true), START_ALL(false), STOP_ONE(true), START_ONE(false),
         CANCEL_ALL(true), CANCEL_ONE(true), CLOSE_ALL(true), CLOSE_ONE(true),
         KILL_ON(true), KILL_OFF(false), MODE_PAPER(true), MODE_LIVE(false),
-        ALARM_ADD(false), ALARM_REMOVE(true), EVENT_ADD(false), EVENT_REMOVE(true),
+        ALARM_ADD(false), ALARM_REMOVE(true), EVENT_ADD(false), EVENT_REMOVE(true), AUTOPILOT_ON(false), AUTOPILOT_OFF(true),
     }
 }
 
@@ -36,6 +36,8 @@ object Commands {
             has(" (switch|go|change|move) (to |back to )?live( mode| trading)? | live mode on | (start|use) live (mode|trading) ") -> return Command(Command.Kind.MODE_LIVE)
             has(" (switch|go|change|move) (to |back to )?paper( mode| trading)? | paper mode on | (start|use) paper (mode|trading) ") -> return Command(Command.Kind.MODE_PAPER)
         }
+        if (has(" (turn|switch) on (the )?autopilot | (enable|start) (the )?autopilot | autopilot on ")) return Command(Command.Kind.AUTOPILOT_ON)
+        if (has(" (turn|switch) off (the )?autopilot | (disable|stop) (the )?autopilot | autopilot off ")) return Command(Command.Kind.AUTOPILOT_OFF)
         // Events: "add event RBI policy on 5 Dec", "remove event 2".
         Regex(" (add|note|remember|mark) (an |the )?event (.+?) (on|for) (.+) $").find(s)?.let { m ->
             return Command(Command.Kind.EVENT_ADD, target = m.groupValues[3].trim(), day = Events.date(m.groupValues[5], java.time.LocalDate.now(java.time.ZoneId.of("Asia/Kolkata"))))
@@ -115,6 +117,8 @@ object Commands {
         Command.Kind.MODE_LIVE -> "switch to Live mode (real Zerodha orders)"
         Command.Kind.ALARM_ADD -> "set an alarm: ${c.market?.label ?: "?"} ${if (c.above == false) "below" else "above"} ${c.level?.let { "%,.2f".format(java.util.Locale.ENGLISH, it) } ?: "?"}"
         Command.Kind.ALARM_REMOVE -> "remove ${name ?: "that alarm"}"
+        Command.Kind.AUTOPILOT_ON -> "turn the autopilot on (Jarvis adds the strategies that pass two years of testing, on paper, and retires its own that stop working)"
+        Command.Kind.AUTOPILOT_OFF -> "turn the autopilot off"
         Command.Kind.EVENT_ADD -> "note the event \"${c.target}\" on ${c.day ?: "?"}"
         Command.Kind.EVENT_REMOVE -> "remove ${name ?: "that event"}"
     }

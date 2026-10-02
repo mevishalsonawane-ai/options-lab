@@ -40,7 +40,8 @@ import java.util.Locale
  * speech recognizer only (Android 12+: the audio never leaves the phone; there is no fallback to an online one), wakes
  * on "Jarvis", answers through [IraHub] like a typed question and speaks with an offline voice of the phone's own
  * text-to-speech. Nothing heard is recorded, logged or kept beyond the question in the conversation. An order asked
- * by voice is only prepared on the Ira screen: voice can never confirm or send anything. A microphone foreground
+ * by voice is only prepared on the Ira screen. The one spoken yes: when Jarvis itself asks about a news trade, the
+ * owner's yes or no (approve / reject, positive / negative) within a minute answers it. A microphone foreground
  * service with its own notification (and a Stop button) while it runs; only JarvisAlgo declares it.
  */
 class JarvisVoice : Service() {
@@ -66,6 +67,25 @@ class JarvisVoice : Service() {
             val v = instance?.get() ?: return false
             v.main.post { v.say(text, "answer") }
             return true
+        }
+
+        /** After Jarvis asks a yes-or-no question (a news trade), the answer is heard for this long without "Jarvis". */
+        private const val ANSWER_MS = 60_000L
+
+        /**
+         * Says [text] (the news, good or bad, and the trade) and waits for the owner's yes or no to action [id]: yes
+         * approves it, no rejects it. False when Jarvis is not listening (the pop-up and the Ira screen still ask).
+         */
+        fun askYesNo(id: Long, text: String): Boolean {
+            val v = instance?.get() ?: return false
+            v.main.post { v.asking = id; v.askingUntil = 0; v.say(text, "question") }
+            return true
+        }
+
+        /** [id] was answered elsewhere (a button, the Ira screen) or lapsed: stop waiting for it. */
+        fun answered(id: Long) {
+            val v = instance?.get() ?: return
+            v.main.post { if (v.asking == id) v.asking = null }
         }
 
         /** The utterance after which the service stops ("Jarvis, stop listening"). */
@@ -130,6 +150,9 @@ class JarvisVoice : Service() {
     private var voiceReady = false
     private var stopped = false
     private var awakeUntil = 0L
+    /** The action Jarvis asked a yes or no about, heard until [askingUntil]. */
+    private var asking: Long? = null
+    private var askingUntil = 0L
     private var lang = "en-IN"
     private var triedOtherLanguage = false
     private var errorsInRow = 0
@@ -231,6 +254,21 @@ class JarvisVoice : Service() {
     }
 
     private fun heard(alternatives: List<String>) {
+        // The answer to Jarvis's yes-or-no question: only the recognizer's best reading, and anything unclear is not a yes.
+        val id = asking
+        if (id != null && SystemClock.elapsedRealtime() < askingUntil) {
+            val yes = alternatives.firstOrNull()?.let { Wake.yesNo(it) }
+            if (yes != null) {
+                asking = null
+                _state.value = VoiceState(Mode.THINKING)
+                scope.launch {
+                    val r = if (yes) withContext(Dispatchers.Default) { IraHub.confirm(id) } ?: "That had already lapsed; nothing was placed."
+                        else { IraHub.cancelAction(id); "Rejected. Nothing was placed." }
+                    say(com.optionslab.ira.Address.boss(Wake.spoken(r)), "answer")
+                }
+                return
+            }
+        }
         val awake = awake()
         val h = alternatives.asSequence().map { Wake.heard(it, awake) }.firstOrNull { it !is Wake.Heard.Ignore } ?: Wake.Heard.Ignore
         when (h) {
@@ -285,6 +323,7 @@ class JarvisVoice : Service() {
         if (stopped) return
         if (id == STOP_AFTER) { stopSelf(); return }
         if (id == "answer") awakeUntil = SystemClock.elapsedRealtime() + FOLLOW_MS   // a follow-up needs no "Jarvis"
+        if (id == "question") askingUntil = SystemClock.elapsedRealtime() + ANSWER_MS
         again(150)
     }
 
