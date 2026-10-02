@@ -177,9 +177,9 @@ shot("03-home-armed")
 # The liquidity arm's status changes (the Trend 4h card below keeps its own "Not armed" until its switch is used).
 # The liquidity arm's own status line (the card's first "Status"): anything but "Not armed" - the always-on service may
 # already have decided the last candle ("No liquidity break on ...") by the time the screen is read.
+# The page is scrolled by then, so the card's title may be off the screen: its "Status" is the first one shown.
 def liq_status(ts):
-    i = ts.index("Liquidity 1h") if "Liquidity 1h" in ts else -1
-    j = ts.index("Status", i) if i >= 0 and "Status" in ts[i:] else -1
+    j = ts.index("Status") if "Status" in ts else -1
     return ts[j + 1] if j >= 0 and j + 1 < len(ts) else None
 step("arming changes the status", liq_status(armed) not in (None, "Not armed"))
 step("the trend arm is shown", "Trend 4h" in armed)
