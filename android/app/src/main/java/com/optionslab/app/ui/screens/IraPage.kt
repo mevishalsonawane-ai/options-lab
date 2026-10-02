@@ -139,7 +139,6 @@ fun IraPage(orders: IraOrderPaths? = null) {
                 modifier = Modifier.align(Alignment.TopCenter).padding(top = 18.dp))
             Column(Modifier.align(Alignment.BottomCenter).padding(bottom = 24.dp), horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                st.snaps[focus]?.let { snap -> Text(headline(snap), style = Type.label.copy(color = Color(0xFFB8C0E8), fontSize = 12.sp)) }
                 val waiting = st.pending.size
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
                     MicButton("🎙  Talk")
