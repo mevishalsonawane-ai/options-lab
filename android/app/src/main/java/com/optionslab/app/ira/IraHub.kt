@@ -284,19 +284,27 @@ object IraHub {
         val markets = parsed.markets.filter { it in StrategyLab.MARKETS }.ifEmpty { StrategyLab.MARKETS }
         val seen = markets.flatMap { m -> snaps[m]?.patterns.orEmpty().filter { StrategyLab.supported(it.kind, m) }.map { m to it } }
             .sortedByDescending { it.second.at }
-        val pick = when {
-            parsed.pattern != null -> (parsed.markets.firstOrNull { it in StrategyLab.MARKETS } ?: seen.firstOrNull { it.second.kind == parsed.pattern }?.first ?: IraMarket.NIFTY) to
-                (parsed.pattern to (parsed.minutes ?: 15))
-            seen.isNotEmpty() -> seen.first().first to (seen.first().second.kind to (parsed.minutes ?: seen.first().second.minutes))
-            else -> null
+        val named = parsed.pattern
+        val badMarket = parsed.markets.firstOrNull { it !in StrategyLab.MARKETS }
+        if (badMarket != null && parsed.markets.none { it in StrategyLab.MARKETS }) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, "I can't write a strategy for ${badMarket.label}: " +
+                "strategies trade index options (Nifty, BankNifty, FinNifty, Sensex).")).takeLast(MAX_MESSAGES)) }
+            return
         }
-        if (pick == null) {
+        val m: IraMarket
+        val kind: PatternKind
+        val minutes: Int
+        if (named != null) {
+            kind = named
+            m = parsed.markets.firstOrNull { it in StrategyLab.MARKETS } ?: seen.firstOrNull { it.second.kind == named }?.first ?: IraMarket.NIFTY
+            minutes = parsed.minutes ?: 15
+        } else if (seen.isNotEmpty()) {
+            m = seen.first().first; kind = seen.first().second.kind; minutes = parsed.minutes ?: seen.first().second.minutes
+        } else {
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, "I see no pattern I can turn into a strategy today. " +
                 "Name one: engulfing, bearish engulfing, hammer, shooting star, three green, three red, breakout or breakdown - and the index.")).takeLast(MAX_MESSAGES)) }
             return
         }
-        val (m, kp) = pick
-        val (kind, minutes) = kp
         if (!StrategyLab.supported(kind, m)) {
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, "I can't write a strategy for a ${kind.label} on ${m.label}.")).takeLast(MAX_MESSAGES)) }
             return

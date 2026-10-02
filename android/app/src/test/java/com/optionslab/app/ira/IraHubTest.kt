@@ -82,7 +82,7 @@ class IraHubTest : RobolectricTest() {
         IraHub.dismiss(p.id)
         assertEquals(IraHub.Proposal.DISMISSED, IraHub.state.value.proposals.single().status)
         IraHub.ask("backtest the hammer on gold")
-        assertTrue(IraHub.state.value.messages.last().text.startsWith("I can't write a strategy"))
+        assertTrue(IraHub.state.value.messages.last().text.startsWith("I can't write a strategy for Gold"))
     }
 
     @Test fun theAutomaticHuntOffersOnlyWhatIsWorthATrial() = runBlocking {
