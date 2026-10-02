@@ -36,6 +36,11 @@ from ml_long import grid  # noqa: E402
 
 SLIP, CHG, CUT, LAST_M = 0.5, 40.0, 355, 315
 LOCKS = (None, (1.0, 1.5), (1.0, 2.0), (1.0, 3.0), (1.0, 4.0), (2.0, 3.0))
+# TAS_CONFIRM=0,3,5 runs each with a wait of that many candles after the turn (research/TAS_CONFIRM.md); TAS_LOCKS=short
+# keeps none / 1-1.5 / 1-2 / 1-3
+CONFIRMS = tuple(int(x) for x in os.environ.get("TAS_CONFIRM", "0").split(","))
+if os.environ.get("TAS_LOCKS") == "short":
+    LOCKS = LOCKS[:4]
 TFS = (5, 15, 30, 60, 240)
 
 
@@ -55,7 +60,7 @@ def load(path):
     return days
 
 
-def run(days, b, trk, d, pct, atr, side, tps, lock):
+def run(days, b, trk, d, pct, atr, side, tps, lock, confirm=0):
     """Trades of one side: dicts with the day, index points, option points (NaN without options), minutes held, level."""
     DI, S, E = b.di.values, b.s.values, b.e.values
     n, out, i, flip = len(b), [], 1, None
@@ -65,7 +70,8 @@ def run(days, b, trk, d, pct, atr, side, tps, lock):
             flip = i
         if d[i] != side:
             flip = None
-        ok = flip is not None and i - flip <= gt.LATE and np.isfinite(pct[i]) and side * pct[i] >= gt.MIN_SCORE
+        # [confirm]: the tracker must have held its new direction this many candles after the turn before a buy
+        ok = flip is not None and confirm <= i - flip <= confirm + gt.LATE and np.isfinite(pct[i]) and side * pct[i] >= gt.MIN_SCORE
         if not ok or DI[i + 1] != DI[i] or S[i + 1] > LAST_M:
             i += 1; continue
         day = days[DI[i]]; I = day["I"]; m0 = S[i + 1]; ix0 = I["open"][m0]
@@ -156,8 +162,9 @@ def main():
             atr = gt.rma(tr, 14).values
             for tname, tps in (("1.5/2.5/3.5 R", gt.TPS), ("none", ())):
                 for lock in LOCKS:
-                    t = pd.DataFrame(run(days, b, trk, d, pct, atr, 1, tps, lock) + run(days, b, trk, d, pct, atr, -1, tps, lock))
-                    results[(name, tf, tname, lock)] = (t, lot, split, has_opt)
+                  for cf in CONFIRMS:
+                    t = pd.DataFrame(run(days, b, trk, d, pct, atr, 1, tps, lock, cf) + run(days, b, trk, d, pct, atr, -1, tps, lock, cf))
+                    results[(name, tf, tname, lock, cf)] = (t, lot, split, has_opt)
                     if has_opt and len(t):
                         fit.append(t[["pts", "held", "level", "opt"]])
             print(name, tf, "done", flush=True)
@@ -171,9 +178,9 @@ def main():
          "per lot after Rs 40 a round trip and 0.5 slippage a side. NIFTY / BANKNIFTY: real option prices. FINNIFTY / "
          f"SENSEX: estimated (option points = {coef[0]:.3f} x index points - {coef[1]:.3g} x index level x minutes held, "
          "fitted on the NIFTY / BANKNIFTY trades).", "",
-         "| index | chart | targets | lock (start / giveback ATR) | trades | win | Rs 1st year | Rs 2nd year | Rs total | Rs CE | Rs PE | t | deepest drawdown Rs | Rs a month |",
-         "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
-    for (name, tf, tname, lock), (t, lot, split, has_opt) in results.items():
+         "| index | chart | wait (candles) | targets | lock (start / giveback ATR) | trades | win | Rs 1st year | Rs 2nd year | Rs total | Rs CE | Rs PE | t | deepest drawdown Rs | Rs a month |",
+         "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
+    for (name, tf, tname, lock, cf), (t, lot, split, has_opt) in results.items():
         if t.empty:
             continue
         o = t.opt if has_opt else coef[0] * t.pts - coef[1] * t.level * t.held - 2 * SLIP
@@ -186,7 +193,7 @@ def main():
         tt = rs.mean() / (rs.std(ddof=1) / len(rs) ** 0.5) if len(rs) > 1 else 0
         lk = "none" if lock is None else f"{lock[0]:g} / {lock[1]:g}"
         lab = f"{tf}m" if tf < 60 else f"{tf // 60}h"
-        L.append(f"| {name}{'' if has_opt else ' (est.)'} | {lab} | {tname} | {lk} | {len(rs)} | {100 * (rs > 0).mean():.0f}% | "
+        L.append(f"| {name}{'' if has_opt else ' (est.)'} | {lab} | {cf} | {tname} | {lk} | {len(rs)} | {100 * (rs > 0).mean():.0f}% | "
                  f"{y1:+,.0f} | {y2:+,.0f} | {rs.sum():+,.0f} | {rs[(t.side > 0).values].sum():+,.0f} | {rs[(t.side < 0).values].sum():+,.0f} | "
                  f"{tt:.2f} | {dd:,.0f} | {rs.sum() / months:+,.0f} |")
     open(out, "w").write("\n".join(L))
