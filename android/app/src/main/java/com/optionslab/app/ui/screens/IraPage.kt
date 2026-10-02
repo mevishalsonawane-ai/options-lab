@@ -82,7 +82,7 @@ fun IraHome(orders: IraOrderPaths? = null, dashboard: @Composable () -> Unit) {
 }
 
 /** Example questions shown before the first one is asked. */
-private val EXAMPLES = listOf("What is BankNifty doing today?", "Nifty levels", "Is gold up today?", "Any news on banks?", "Backtest the breakout on BankNifty 15m", "Any pattern on FinNifty?", "Buy 1 lot Nifty ATM CE", "Should I trade now?", "Nifty PCR and max pain", "What did FIIs do?", "My weekly review", "Analyze my orders", "Any events this week?", "What can you do?")
+private val EXAMPLES = listOf("What is BankNifty doing today?", "Nifty levels", "Is gold up today?", "Any news on banks?", "Backtest the breakout on BankNifty 15m", "Any pattern on FinNifty?", "Buy 1 lot Nifty ATM CE", "Should I trade now?", "What did you study last night?", "Nifty PCR and max pain", "What did FIIs do?", "My weekly review", "Analyze my orders", "Any events this week?", "What can you do?")
 
 /**
  * Ira: the orb (the market at a glance) above the conversation. Answers come from IraAlgo's own data only; an order
@@ -144,6 +144,7 @@ fun IraPage(orders: IraOrderPaths? = null) {
             if (com.optionslab.app.BuildConfig.JARVIS) item { VoiceSwitch() }
             if (com.optionslab.app.BuildConfig.JARVIS) item { ModelCard() }
             item { HowIraIsDoing(st) }
+            if (com.optionslab.app.BuildConfig.JARVIS) item { JarvisStudyCard() }
             if (st.messages.isEmpty()) item {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -488,6 +489,25 @@ internal fun HowIraIsDoing(st: IraHub.State) {
                 "dismissed ${ps.count { it.status == IraHub.Proposal.DISMISSED }}, waiting ${ps.count { it.status == IraHub.Proposal.NEW }}.")
             Note("This is a record of what happened, not a forecast.")
         }
+    }
+}
+
+/**
+ * Jarvis's study (JarvisAlgo): what two years of each index's candles say about today's setups, the findings that
+ * held in both years, and the news that mattered overnight. History, not a forecast.
+ */
+@Composable
+internal fun JarvisStudyCard() {
+    val p = LocalPalette.current
+    val k by com.optionslab.app.ira.IraStudy.state.collectAsState()
+    var open by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
+    val lines = androidx.compose.runtime.remember(k) { com.optionslab.app.ira.IraStudy.lines() }
+    LedgerCard(title = "Jarvis's study") {
+        Note(lines.first())
+        val rest = lines.drop(1)
+        rest.take(if (open) rest.size else 3).forEach { Text("• $it", style = Type.label.copy(color = p.ink, fontSize = 13.sp)) }
+        if (rest.size > 3) Text(if (open) "Less" else "More", style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp),
+            modifier = Modifier.clickable { open = !open }.padding(vertical = 4.dp))
     }
 }
 

@@ -395,4 +395,15 @@ class IraHubTest : RobolectricTest() {
         assertTrue(t, Regex("(Don't trade now|Careful today|Conditions are normal)").containsMatchIn(t))
         assertTrue(t, t.contains("Nifty is ") && t.endsWith("not a forecast."))
     }
+
+    @Test fun theStudyRunsAtNightOnTwoYearsAndIsAskable() = runBlocking {
+        org.junit.Assume.assumeTrue(com.optionslab.app.BuildConfig.JARVIS)
+        IraHub.testLabBars = { _, _ -> twoYears }
+        IraStudy.studyIfDue(java.time.ZonedDateTime.of(2026, 10, 2, 21, 0, 0, 0, java.time.ZoneId.of("Asia/Kolkata")))
+        assertTrue(IraStudy.state.value.findings.isNotEmpty())
+        assertTrue(IraStudy.lines().first().startsWith("Studied "))
+        assertTrue(IraStudy.lines().any { it.contains("not a promise") })
+        IraStudy.overnight(java.time.Instant.now(), "RBI keeps rates unchanged: market-wide policy news.")
+        assertTrue(IraStudy.brief().any { it.startsWith("Overnight, 1 headline mattered.") })
+    }
 }

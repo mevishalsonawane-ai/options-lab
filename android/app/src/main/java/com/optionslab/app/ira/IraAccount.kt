@@ -164,6 +164,7 @@ internal object IraAccount {
                     com.optionslab.app.data.StaticIp.registered?.let { "Registered static IP: $it." },
                 )
             }
+            if (wants(Section.STUDY)) out[Section.STUDY] = IraStudy.lines()
             if (wants(Section.REVIEW)) {
                 val owners = runCatching { com.optionslab.app.data.Strategies.owners() }.getOrDefault(emptyMap())
                 val r = ArrayList<String>()

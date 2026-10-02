@@ -352,7 +352,7 @@ object IraHub {
     /** Two years and a month of [minutes]-minute candles, fetched once a day per market and chart. */
     private val longCache = HashMap<String, Pair<LocalDate, List<Candle>>>()
 
-    private suspend fun twoYears(m: IraMarket, minutes: Int): List<Candle>? {
+    internal suspend fun twoYears(m: IraMarket, minutes: Int): List<Candle>? {
         testLabBars?.let { return it(m, minutes) }
         if (m == IraMarket.GOLD || m == IraMarket.VIX) return null
         val key = "$m|$minutes"
@@ -438,6 +438,26 @@ object IraHub {
         val got = newsIfDue() ?: return
         _state.update { it.copy(news = got.first, newsAt = Instant.now(), newsMissing = got.second) }
         judgeNews(got.first)
+    }
+
+    /** The index's recent candles as Jarvis last read them (for the study's "today"). */
+    internal fun recentBars(m: IraMarket): List<Candle> = histories[m]?.bars.orEmpty()
+
+    /**
+     * Through the night (JarvisAlgo, outside market hours, called hourly): the trusted feeds read, and each new headline
+     * that matters kept quietly with what it means, for the 9 AM brief - no pop-up, no voice at night.
+     */
+    suspend fun nightNews(now: Instant = Instant.now()) {
+        if (!com.optionslab.app.BuildConfig.JARVIS) return
+        if (IraMarket.NIFTY.trading(now.atZone(IST).toLocalDateTime())) return
+        val got = newsIfDue() ?: return
+        _state.update { it.copy(news = got.first, newsAt = Instant.now(), newsMissing = got.second) }
+        val fresh = synchronized(newsSeen) { got.first.filter { newsSeen.add(it.link.ifBlank { it.title }) } }
+        newsPrimed = true
+        val cut = now.minusSeconds(18 * 3600)
+        fresh.filter { h -> h.at?.isAfter(cut) == true && com.optionslab.ira.NewsAnalyst.matters(h) }.take(6).forEach { h ->
+            IraStudy.overnight(h.at!!, com.optionslab.ira.NewsAnalyst.take(h, emptyMap(), emptySet()).text)
+        }
     }
 
     private val newsSeen = HashSet<String>()

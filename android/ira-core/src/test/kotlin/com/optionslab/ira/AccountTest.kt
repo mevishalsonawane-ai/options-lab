@@ -85,4 +85,10 @@ class AccountTest {
         assertTrue(Section.REVIEW in AppAnswers.sections("how are my news trades doing"))
         assertEquals(Topic.ACCOUNT, Ask.parse("how are the news trades doing?").topics.first())
     }
+
+    @Test fun theStudyIsAskedInPlainWords() {
+        assertEquals(setOf(Section.STUDY), AppAnswers.sections("what did you study last night?"))
+        assertEquals(setOf(Section.STUDY), AppAnswers.sections("how will the market work today"))
+        assertEquals(Topic.ACCOUNT, Ask.parse("what does history say about gaps?").topics.first())
+    }
 }

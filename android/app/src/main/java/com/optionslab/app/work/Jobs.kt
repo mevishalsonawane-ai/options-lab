@@ -116,6 +116,7 @@ object Jobs {
         Kind.entries.forEach { schedule(context, it, s) }
         Heartbeat.schedule(context)
         DailyReports.scheduleAll(context)
+        com.optionslab.app.ira.StudyWorker.schedule(context)
     }
 
     fun schedule(context: Context, k: Kind, s: AppSettings = AppSettings.load()) {
