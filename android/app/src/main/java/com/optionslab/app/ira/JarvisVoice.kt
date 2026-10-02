@@ -300,6 +300,8 @@ class JarvisVoice : Service() {
                     .messages.let { ms -> ms.drop(ms.indexOfLast { !it.fromIra && it.text == said } + 1).first { it.fromIra } }
             }
             val o = a?.order
+            // A suggested trade is asked aloud by itself (yes or no): nothing more to say here.
+            if (a?.action != null && IraHub.asksYesNo(a.action)) return@launch
             say(when {
                 a == null -> "I could not work that out."
                 o != null && o.missing.isEmpty() && o.refusal == null -> "I have put that order on the Ira screen. Nothing is sent until you confirm it there."

@@ -406,4 +406,15 @@ class IraHubTest : RobolectricTest() {
         IraStudy.overnight(java.time.Instant.now(), "RBI keeps rates unchanged: market-wide policy news.")
         assertTrue(IraStudy.brief().any { it.startsWith("Overnight, 1 headline mattered.") })
     }
+
+    @Test fun patternsAreExplainedAndTradesAreNeverGivenOnDemand() {
+        IraHub.ask("What is a hammer?")
+        waitFor("the explanation") { IraHub.state.value.messages.lastOrNull()?.fromIra == true }
+        assertTrue(IraHub.state.value.messages.last().text.startsWith("A hammer: a small body at the top"))
+        IraHub.ask("what should I buy now?")
+        waitFor("the answer") { IraHub.state.value.messages.lastOrNull()?.fromIra == true }
+        val m = IraHub.state.value.messages.last()
+        assertTrue(m.text, m.text.contains("bring you a trade for approval"))
+        assertNull(m.action); assertTrue(IraHub.state.value.pending.isEmpty())
+    }
 }

@@ -1,7 +1,7 @@
 package com.optionslab.ira
 
 /** What a question is about. */
-enum class Topic { OVERVIEW, WHY, TREND, LEVELS, PATTERNS, NEWS, VOLATILITY, ADVICE, ORDER, BACKTEST, ACCOUNT, HELP, COMMAND, TRADE_CHECK, GREETING, OFF_TOPIC }
+enum class Topic { OVERVIEW, WHY, TREND, LEVELS, PATTERNS, NEWS, VOLATILITY, ADVICE, ORDER, BACKTEST, ACCOUNT, HELP, COMMAND, TRADE_CHECK, GREETING, OFF_TOPIC, SUGGEST, EXPLAIN }
 
 /**
  * An order the owner asked for in words. Ira never sends it: the app opens its own order review filled with this, and
@@ -56,6 +56,11 @@ object Ask {
     fun parse(text: String): Question {
         val t = " " + text.lowercase().replace(Regex("[^a-z0-9 ]"), " ").replace(Regex("\\s+"), " ").trim() + " "
         Commands.parse(text)?.let { c -> return Question(text, Market.mentioned(text), setOf(Topic.COMMAND), null, command = c) }
+        // "What should I buy?" - the pattern expert's suggestion (with why), or why there is none now.
+        if (SUGGEST.containsMatchIn(t)) return Question(text, Market.mentioned(text), setOf(Topic.SUGGEST), null)
+        // "What is a hammer?" - the pattern explained, with its own record.
+        if (Regex(" (what is|what s|whats|what are|explain|meaning of|tell me about|define) (a |an |the )?").containsMatchIn(t) && named(t) != null && !Regex(" (backtest|back test) ").containsMatchIn(t))
+            return Question(text, Market.mentioned(text), setOf(Topic.EXPLAIN), null, pattern = named(t))
         // "Should I trade now?" - Jarvis's trade check (never a direction, never a single instrument).
         if (!Regex(" (backtest|back test|engulfing|pattern|patterns|strategy|candle|candles) ").containsMatchIn(t) && Regex(" (bullish|bearish|market (good|bad|mood|today)|how is the market|is (the )?market (good|bad|up|down|bullish|bearish|trending|sideways)|which way is the market) ").containsMatchIn(t) ||
             Regex(" (should|shall|can|could) i (trade|be trading|stay out|sit out|take (a |any )?trades?)| (safe|good|right|ok|okay) (time )?to trade| trade (now|today) or not| should i stay out | is today (a )?(good|bad) (day )?(to|for) trad").containsMatchIn(t))
@@ -81,6 +86,17 @@ object Ask {
             Regex(" (15 minute|15m|15 min|fifteen minute) ").containsMatchIn(t) -> 15
             else -> null
         })
+    }
+
+    private val SUGGEST = Regex(" (what should i (buy|trade)|what (to|can i|could i) (buy|trade)|suggest (an |a |me |some |any )*(order|trade|buy)|any (trade|setup|order|buy) (now|today|ideas?|for me)|any good (trade|setup)|trade ideas?|give me (a |an )?(trade|order)|which (option|order|trade) (should|to) |best (trade|setup|order) (now|today)|should i buy (anything|something|now)|anything to buy) ")
+
+    /** Any pattern named in [t], the ones that cannot be backtested too (for "what is a doji?"). */
+    private fun named(t: String): PatternKind? = pattern(t) ?: when {
+        t.contains(" doji ") -> PatternKind.DOJI
+        t.contains(" inside bar ") || t.contains(" inside candle ") -> PatternKind.INSIDE_BAR
+        t.contains(" double top ") -> PatternKind.DOUBLE_TOP
+        t.contains(" double bottom ") -> PatternKind.DOUBLE_BOTTOM
+        else -> null
     }
 
     /** A pattern named in [t] (already lower-case, spaced). */

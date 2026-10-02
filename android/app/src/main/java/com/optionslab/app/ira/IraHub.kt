@@ -499,26 +499,102 @@ object IraHub {
         val level = runCatching { tradeCheck().level }.getOrNull()
         val idea = com.optionslab.ira.NewsTrade.idea(h, snap, histories[m]?.bars.orEmpty(), LocalDateTime.now(IST), level,
             IraNewsTrades.today() + waiting) ?: return false
+        proposeTrade(c, idea, t.title, t.text + " " + idea.why,
+            "Hey Boss, news. ${Wake.spoken(t.text, 2)} The candles agree.", "news: " + h.title)
+        return true
+    }
+
+    /**
+     * A trade Jarvis suggests (strong news, or the pattern expert): 1 lot of the index's ATM option, nearest expiry, the
+     * arm's 15% stop, a +40 target and the profit lock - placed only on the owner's yes (aloud, Approve on the pop-up or
+     * Confirm on the Ira screen); unanswered in 10 minutes it lapses. [said] opens the spoken question.
+     */
+    private fun proposeTrade(c: Context, idea: com.optionslab.ira.NewsTrade.Idea, title: String, text: String, said: String, source: String) {
+        val m = idea.market
+        val snap = _state.value.snaps[m]
         val side = if (idea.call) "call" else "put"
         val what = "buy 1 lot of the ${m.label} $side at the money, nearest expiry, with a 15% stop, a +${IraNewsTrades.TARGET_POINTS.toInt()} target and the profit lock"
         val id = System.nanoTime()
         synchronized(actions) {
-            actions[id] = what to suspend { IraNewsTrades.place(idea, _state.value.snaps[m]?.price ?: snap!!.price, h.title) }
+            actions[id] = what to suspend { IraNewsTrades.place(idea, _state.value.snaps[m]?.price ?: snap?.price ?: error("no ${m.label} price"), source) }
             newsAsks += id
         }
-        val text = "${t.text} ${idea.why} Shall I $what? Approve or reject."
-        _state.update { it.copy(pending = it.pending + id, messages = (it.messages + Msg(true, text, action = id)).takeLast(MAX_MESSAGES)) }
-        JarvisApproval.show(c, id, t.title, text)
-        JarvisVoice.askYesNo(id, "Hey Boss, news. ${Wake.spoken(t.text, 2)} The candles agree. Shall I buy 1 lot of the ${m.label} $side? Yes or no?")
+        val full = "$text Shall I $what? Approve or reject."
+        _state.update { it.copy(pending = it.pending + id, messages = (it.messages + Msg(true, full, action = id)).takeLast(MAX_MESSAGES)) }
+        JarvisApproval.show(c, id, title, full)
+        JarvisVoice.askYesNo(id, "$said Shall I buy 1 lot of the ${m.label} $side? Yes or no?")
         scope.launch {
             kotlinx.coroutines.delay(NEWS_ANSWER_MS)
             if (synchronized(actions) { actions.remove(id) } != null) {
                 settled(id)
                 _state.update { it.copy(pending = it.pending - id) }
-                reply("No answer in 10 minutes, so the ${m.label} news trade lapsed; nothing was placed.")
+                reply("No answer in 10 minutes, so the ${m.label} trade lapsed; nothing was placed.")
             }
         }
-        return true
+    }
+
+    /** Is [id] a suggested trade Jarvis asks a yes or no about (so the voice does not also say "tap Confirm")? */
+    fun asksYesNo(id: Long): Boolean = synchronized(actions) { id in newsAsks }
+
+    @Volatile private var lastExpertSlot: LocalDateTime? = null
+    private val suggested = HashSet<String>()
+
+    /**
+     * The pattern expert on watch (JarvisAlgo, market hours, called by the market watch; it gates itself): at each 5- and
+     * 15-minute close, the indices' last candle judged by [com.optionslab.ira.PatternExpert]; a pattern with a record
+     * that held in both years, in the right place, becomes a suggested trade with its reasons. One at a time.
+     */
+    suspend fun expertWatch(now: Instant = Instant.now()) {
+        if (!com.optionslab.app.BuildConfig.JARVIS) return
+        val t = now.atZone(IST).toLocalDateTime()
+        if (!IraMarket.NIFTY.trading(t) || t.minute % 5 > 2) return
+        val slot = t.withSecond(0).withNano(0).withMinute(t.minute / 5 * 5)
+        if (lastExpertSlot == slot) return
+        lastExpertSlot = slot
+        val edges = IraStudy.state.value.edges
+        if (edges.none { it.held }) return
+        val c = app ?: return
+        if (synchronized(actions) { newsAsks.isNotEmpty() }) return
+        refresh()
+        val level = runCatching { tradeCheck().level }.getOrNull()
+        expertIdea(t, edges, level, IraStudy.MARKETS, every = true)?.let { (idea, key) ->
+            if (synchronized(suggested) { suggested.add(key) })
+                proposeTrade(c, idea, "Trade idea: ${idea.market.label}", idea.why, "Hey Boss, a trade idea. ${Wake.spoken(idea.why, 1)}", "pattern: " + key)
+        }
+    }
+
+    /** The first suggestion on [markets]' 5- and 15-minute charts now, with its key (market, chart, candle); or null. */
+    private fun expertIdea(t: LocalDateTime, edges: List<com.optionslab.ira.PatternExpert.Edge>, level: com.optionslab.ira.TradeCheck.Level?,
+                           markets: List<IraMarket>, every: Boolean, why: MutableList<String>? = null): Pair<com.optionslab.ira.NewsTrade.Idea, String>? {
+        for (m in markets) for (min in listOf(15, 5)) {
+            if (every && min == 15 && t.minute % 15 > 2) continue
+            val candles = com.optionslab.ira.Candles.closed(com.optionslab.ira.Candles.fold(recentBars(m), min, m), min, t)
+            val v = com.optionslab.ira.PatternExpert.judge(min, candles, _state.value.snaps[m], edges, level, t,
+                IraNewsTrades.today() + synchronized(actions) { newsAsks.size })
+            v.idea?.let { return it to "${m.name}|$min|${candles.last().t}" }
+            why?.addAll(v.reasons)
+        }
+        return null
+    }
+
+    /**
+     * "What should I buy?": the owner does not want trades on demand (2026-10-02) - the expert brings them by itself at
+     * each candle close. Asked, Jarvis says what it watches and why nothing qualifies right now; it never proposes here.
+     */
+    private fun suggestAsked(q: String, markets: List<IraMarket>) {
+        _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+        scope.launch {
+            val edges = IraStudy.state.value.edges
+            if (edges.isEmpty()) { reply("I have not studied the candle patterns yet: I learn each pattern's two-year record every night after the close. Then I watch every 5- and 15-minute candle and bring you a trade for approval when one qualifies."); return@launch }
+            if (_state.value.liveAt?.isAfter(Instant.now().minusSeconds(120)) != true) runCatching { refresh() }
+            val level = runCatching { tradeCheck().level }.getOrNull()
+            val why = ArrayList<String>()
+            val got = expertIdea(LocalDateTime.now(IST), edges, level, markets.filter { it in IraStudy.MARKETS }.ifEmpty { IraStudy.MARKETS }, every = false, why = why)
+            reply("I watch every 5- and 15-minute candle of Nifty, BankNifty and FinNifty and bring you a trade for approval when one qualifies. " +
+                (if (got != null) "One is forming on ${got.first.market.label}: I will bring it at the candle close if it still qualifies. "
+                 else "Nothing qualifies right now: " + why.distinct().take(3).joinToString(" ") + " ") +
+                "Patterns that held in both years: " + com.optionslab.ira.PatternExpert.best(edges, 3).joinToString(" "))
+        }
     }
 
     /** News trades waiting for an answer (at most [com.optionslab.ira.NewsTrade.MAX_A_DAY] a day with those placed). */
@@ -582,6 +658,13 @@ object IraHub {
         if (Topic.BACKTEST in parsed.topics) { backtestAsked(q, parsed); return }
         if (Topic.ACCOUNT in parsed.topics) { accountAsked(q); return }
         if (Topic.COMMAND in parsed.topics) { commandAsked(q, parsed.command!!); return }
+        if (Topic.SUGGEST in parsed.topics) { suggestAsked(q, parsed.markets); return }
+        val explain = parsed.pattern?.takeIf { Topic.EXPLAIN in parsed.topics }
+        if (explain != null) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            reply(com.optionslab.ira.PatternExpert.explain(explain, IraStudy.state.value.edges))
+            return
+        }
         if (Topic.TRADE_CHECK in parsed.topics) {
             _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
             scope.launch { reply(runCatching { tradeCheck().say() }.getOrElse { "I could not run the trade check just now." }) }

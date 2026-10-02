@@ -385,6 +385,8 @@ object Tasks {
         runCatching { com.optionslab.app.ira.IraHub.backgroundCheck() }
         // JarvisAlgo: the news every 5 minutes, judged for your arms and positions.
         runCatching { com.optionslab.app.ira.IraHub.newsWatch() }
+        // JarvisAlgo: the candle-pattern expert at each 5- and 15-minute close; a qualifying pattern becomes a trade to approve.
+        runCatching { com.optionslab.app.ira.IraHub.expertWatch() }
         // JarvisAlgo: approved news trades - the best price seen, the profit-lock stop moved up, the result recorded.
         if (com.optionslab.app.BuildConfig.JARVIS) runCatching { com.optionslab.app.ira.IraNewsTrades.tick() }
         // Stops, trailing stops and targets: one exit filled cancels the other; trails move up.

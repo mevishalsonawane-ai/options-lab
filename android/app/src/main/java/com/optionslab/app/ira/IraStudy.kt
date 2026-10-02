@@ -26,7 +26,9 @@ internal object IraStudy {
     private const val OVERNIGHT_HOURS = 18L
 
     data class Kept(val at: Instant? = null, val findings: List<Study.Finding> = emptyList(),
-                    val overnight: List<Pair<Instant, String>> = emptyList())
+                    val overnight: List<Pair<Instant, String>> = emptyList(),
+                    /** Each candle pattern's two-year record per index and chart (the pattern expert's knowledge). */
+                    val edges: List<com.optionslab.ira.PatternExpert.Edge> = emptyList())
 
     private val _state = MutableStateFlow(load())
     val state: StateFlow<Kept> = _state
@@ -35,11 +37,15 @@ internal object IraStudy {
         val o = JSONObject(com.optionslab.app.security.SecurePrefs.getString(KEY) ?: return Kept())
         val f = o.optJSONArray("f") ?: JSONArray()
         val n = o.optJSONArray("n") ?: JSONArray()
+        val e = o.optJSONArray("e") ?: JSONArray()
         Kept(o.optString("at").takeIf { it.isNotEmpty() }?.let(Instant::parse),
             (0 until f.length()).mapNotNull { i -> runCatching { f.getJSONObject(i).let { x ->
                 Study.Finding(IraMarket.valueOf(x.getString("m")), x.getString("k"), x.getString("s"), x.getString("o"),
                     x.getInt("d"), x.getDouble("r"), x.getDouble("a"), x.getDouble("b")) } }.getOrNull() },
-            (0 until n.length()).mapNotNull { i -> runCatching { n.getJSONObject(i).let { Instant.parse(it.getString("t")) to it.getString("x") } }.getOrNull() })
+            (0 until n.length()).mapNotNull { i -> runCatching { n.getJSONObject(i).let { Instant.parse(it.getString("t")) to it.getString("x") } }.getOrNull() },
+            (0 until e.length()).mapNotNull { i -> runCatching { e.getJSONObject(i).let { x ->
+                com.optionslab.ira.PatternExpert.Edge(IraMarket.valueOf(x.getString("m")), x.getInt("min"), com.optionslab.ira.PatternKind.valueOf(x.getString("k")),
+                    x.getInt("n"), x.getDouble("r"), x.getDouble("a"), x.getDouble("b"), x.getDouble("v")) } }.getOrNull() })
     }.getOrDefault(Kept())
 
     private fun save(k: Kept) {
@@ -50,6 +56,8 @@ internal object IraStudy {
                 .put("f", JSONArray().apply { k.findings.forEach { x -> put(JSONObject().put("m", x.market.name).put("k", x.key).put("s", x.setup)
                     .put("o", x.outcome).put("d", x.days).put("r", x.rate).put("a", x.first).put("b", x.second)) } })
                 .put("n", JSONArray().apply { k.overnight.forEach { (t, x) -> put(JSONObject().put("t", t.toString()).put("x", x)) } })
+                .put("e", JSONArray().apply { k.edges.forEach { x -> put(JSONObject().put("m", x.market.name).put("min", x.minutes).put("k", x.kind.name)
+                    .put("n", x.cases).put("r", x.rate).put("a", x.first).put("b", x.second).put("v", x.avgMovePct)) } })
                 .toString())
         }
     }
@@ -64,9 +72,16 @@ internal object IraStudy {
         if (t >= LocalTime.of(9, 0) && t < LocalTime.of(15, 45)) return
         val last = _state.value.at
         if (last != null && last.isAfter(now.toInstant().minusSeconds(12 * 3600))) return
-        val found = MARKETS.flatMap { m -> runCatching { IraHub.twoYears(m, 5)?.let { Study.run(m, it) } }.getOrNull().orEmpty() }
-        if (found.isEmpty()) return
-        save(_state.value.copy(at = Instant.now(), findings = found))
+        val found = ArrayList<Study.Finding>()
+        val edges = ArrayList<com.optionslab.ira.PatternExpert.Edge>()
+        for (m in MARKETS) runCatching {
+            val bars = IraHub.twoYears(m, 5) ?: return@runCatching
+            found += Study.run(m, bars)
+            // The pattern expert: every candle pattern's record on the 5- and 15-minute charts.
+            for (min in listOf(5, 15)) edges += com.optionslab.ira.PatternExpert.edges(m, min, com.optionslab.ira.Candles.fold(bars, min, m))
+        }
+        if (found.isEmpty() && edges.isEmpty()) return
+        save(_state.value.copy(at = Instant.now(), findings = found, edges = edges))
     }
 
     /** A headline read overnight that matters, with what it means (kept 18 hours). */
@@ -118,6 +133,7 @@ internal object IraStudy {
                 " IST: ${k.findings.size} setups counted over two years, ${k.findings.count { it.held }} held in both years."
             out += today()
             out += Study.summary(k.findings)
+            out += "Candle patterns that held in both years: " + com.optionslab.ira.PatternExpert.best(k.edges).joinToString(" ")
         }
         val night = overnightNow()
         out += if (night.isEmpty()) "No overnight news that matters." else listOf("Overnight news:") + night
