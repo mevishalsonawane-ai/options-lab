@@ -57,11 +57,27 @@ object IraModel {
     fun init(context: Context) {
         val c = context.applicationContext
         app = c
-        _state.value = State(status = when {
+        val status = when {
             !supported(c) -> Status.UNSUPPORTED
             ready(c) -> Status.READY
+            file(c).length() == SIZE -> Status.VERIFYING   // the whole file is here but its check was not remembered
             else -> Status.ABSENT
-        }, done = part(c).length())
+        }
+        _state.value = State(status = status, done = part(c).length())
+        if (status == Status.VERIFYING) scope.launch(Dispatchers.IO) { recheck(c) }
+    }
+
+    /**
+     * A model file already on the phone: checked against its fingerprint again instead of downloaded again. A match is
+     * remembered and used; anything else is deleted. True when it matched.
+     */
+    internal fun recheck(c: Context): Boolean {
+        val f = file(c)
+        _state.update { it.copy(status = Status.VERIFYING, message = null) }
+        val ok = f.length() == SIZE && runCatching { ModelDownload.sha256(f) }.getOrNull() == SHA256
+        if (ok) { markVerified(c); _state.value = State(status = Status.READY, done = SIZE) }
+        else { f.delete(); _state.value = State(status = if (supported(c)) Status.ABSENT else Status.UNSUPPORTED, done = part(c).length()) }
+        return ok
     }
 
     /** JarvisAlgo on a 64-bit ARM phone with the dot-product and half-precision instructions and at least ~6 GB of RAM. */

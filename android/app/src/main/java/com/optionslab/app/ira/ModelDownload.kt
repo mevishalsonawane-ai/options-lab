@@ -87,6 +87,8 @@ class ModelDownload : Service() {
         val c = applicationContext
         val part = IraModel.part(c)
         val dest = IraModel.file(c)
+        // Already on the phone (its check was not remembered): check it again, download nothing.
+        if (dest.length() == IraModel.SIZE && IraModel.recheck(c)) return
         val cm = getSystemService(ConnectivityManager::class.java)
         if (cm.activeNetwork == null) throw IOException("No connection")
         if (cm.isActiveNetworkMetered) throw IOException("Connect to Wi-Fi first: the model is ${IraModel.SIZE / 1_000_000} MB")

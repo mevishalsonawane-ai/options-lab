@@ -254,4 +254,12 @@ class IraHubTest : RobolectricTest() {
         ModelDownload.start(context)                                  // a no-op here
         assertTrue(!IraModel.file(context).exists() && !IraModel.part(context).exists())
     }
+
+    /** A file already in the model's place is checked, never trusted: one that does not match its fingerprint is deleted. */
+    @Test fun aModelFileOnThePhoneIsCheckedAgainNotTrusted() {
+        val f = IraModel.file(context).also { it.parentFile?.mkdirs(); it.writeText("not the model") }
+        assertTrue(!IraModel.recheck(context))
+        assertTrue("a wrong file is deleted", !f.exists())
+        assertEquals(IraModel.Status.UNSUPPORTED, IraModel.state.value.status)   // outside JarvisAlgo
+    }
 }
