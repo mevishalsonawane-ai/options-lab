@@ -141,7 +141,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     fun refreshHolidays() {
         viewModelScope.launch(Dispatchers.IO) {
             val h = com.optionslab.app.data.Holidays
-            try { say("NSE holiday list: ${h.refresh()} dates.") } catch (e: Exception) { say(e.message ?: "could not read NSE's holiday list") }
+            try { say("Holidays updated: ${h.refresh()} dates.") } catch (e: Exception) { say(e.message ?: "could not update the holidays") }
             holidays.value = h.book(); Jobs.scheduleAll(ctx)
         }
     }

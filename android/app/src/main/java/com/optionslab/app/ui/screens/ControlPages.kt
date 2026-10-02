@@ -568,21 +568,22 @@ private fun HolidaysCard(model: AppModel) {
     LedgerCard(title = "Market holidays") {
         val up = h.upcoming(com.optionslab.app.data.Market.today())
         if (up.isEmpty()) Note("No holiday list yet. Without one, a holiday is treated as a trading day: the watch runs and alarms fire.")
-        else if (h.fetched == null) Note("NSE's list has not been fetched yet: these are the app's built-in NSE dates.")
+        else if (h.fetched == null) Note("Not updated online yet: these are the app's built-in NSE dates.")
         up.take(12).forEach { (d, name) ->
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("${d.format(DateTimeFormatter.ofPattern("EEE d MMM yyyy"))} · $name", style = Type.bodySmall.copy(color = p.ink), modifier = Modifier.weight(1f))
                 com.optionslab.app.ui.components.TextButton({ model.removeHoliday(d) }) { Text("✕", style = Type.label.copy(color = p.oxblood)) }
             }
         }
-        LedgerLine("From NSE", h.fetched?.let { "updated $it" } ?: "never")
-        BrassButton("Refresh from NSE", Modifier.fillMaxWidth().padding(top = 6.dp), tone = p.inkSoft) { model.refreshHolidays() }
+        LedgerLine("Updated online", h.fetched?.let { "on $it" } ?: "never")
+        BrassButton("Update holidays now", Modifier.fillMaxWidth().padding(top = 6.dp), tone = p.inkSoft) { model.refreshHolidays() }
         androidx.compose.material3.OutlinedTextField(text, { text = it.filter { c -> c.isDigit() || c == '-' }.take(10) },
             label = { Text("Add a holiday (yyyy-mm-dd)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
         BrassButton("Add", Modifier.fillMaxWidth().padding(top = 4.dp), tone = p.inkSoft, enabled = runCatching { java.time.LocalDate.parse(text) }.isSuccess) {
             model.addHoliday(java.time.LocalDate.parse(text)); text = ""
         }
-        Note("Refreshed weekly by itself. On a holiday the watch, the expiry jobs, the harvest and strategy schedules stand down.")
+        Note("Updated by itself every week (Upstox's public list, or NSE's), so each new year's dates arrive once they are published. " +
+            "On a holiday the watch, the expiry jobs, the harvest and strategy schedules stand down.")
     }
 }
 

@@ -50,6 +50,17 @@ class HolidaysTest : RobolectricTest() {
         assertTrue(Holidays.isHoliday(LocalDate.of(2026, 10, 20)))
     }
 
+    @Test fun upstoxsPublicListGivesTheDaysTheDerivativesAreShut() {
+        // Upstox's reply on 2026-10-02 (CI probe), shortened: a trading holiday, a Sunday budget session, a settlement holiday.
+        val body = """{"status":"success","data":[
+            {"date":"2026-01-15","description":"Municipal Corporation Election","holiday_type":"TRADING_HOLIDAY","closed_exchanges":["NSE","NFO","CDS","BSE","BFO","BCD"],"open_exchanges":[]},
+            {"date":"2026-02-01","description":"Budget Day Session","holiday_type":"SPECIAL_TIMING","closed_exchanges":["CDS","BCD"],"open_exchanges":[{"exchange":"NFO","start_time":1769917500000,"end_time":1769940000000}]},
+            {"date":"2026-02-19","description":"Chhatrapati Shivaji Maharaj Jayanti","holiday_type":"SETTLEMENT_HOLIDAY","closed_exchanges":[],"open_exchanges":[]},
+            {"date":"2026-10-02","description":"Gandhi Jayanti","holiday_type":"TRADING_HOLIDAY","closed_exchanges":["NSE","NFO","CDS","BSE","BFO","BCD","MCX","NSCOM"],"open_exchanges":[]}]}"""
+        assertEquals(mapOf(LocalDate.of(2026, 1, 15) to "Municipal Corporation Election", LocalDate.of(2026, 10, 2) to "Gandhi Jayanti"),
+            Holidays.parseUpstox(body))
+    }
+
     @Test fun holidaysAddedByHandCloseTheMarketAndCanBeUndone() {
         Holidays.add(monday)
         assertTrue(Holidays.isHoliday(monday))
