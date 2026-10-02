@@ -4,6 +4,8 @@ import android.app.Application
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTextInput
 import androidx.test.core.app.ApplicationProvider
@@ -39,6 +41,16 @@ class IraPageTest {
         runBlocking { IraHub.forgetAll() }
         AreaE.resetGlobals()
         assertEquals("no test may reach the network", emptyList<String>(), NetworkGuard.blocked.toList())
+    }
+
+    @Test fun homeOpensOnIraWithTheDashboardOneTapAway() {
+        compose.setContent { IraAlgoTheme("light") { IraHome { androidx.compose.material3.Text("The usual dashboard") } } }
+        compose.frames()
+        compose.waitForText("Ask Ira about the market")
+        compose.onNodeWithText("Dashboard").performSemanticsAction(SemanticsActions.OnClick); compose.frames()
+        compose.waitForText("The usual dashboard")
+        compose.onAllNodesWithText("Ira").onFirst().performSemanticsAction(SemanticsActions.OnClick); compose.frames()
+        compose.waitForText("Ask Ira about the market")
     }
 
     @Test fun asksAnExampleAndGetsAnAnswer() {

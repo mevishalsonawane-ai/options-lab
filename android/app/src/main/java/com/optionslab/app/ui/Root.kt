@@ -436,10 +436,16 @@ private fun Main(model: AppModel) {
                     label = "page",
                 ) { t ->
                     when (t) {
-                        Tab.ALMANAC -> AlmanacScreen(model, onGo = { dest ->
-                            if (dest == "chart") { chartAsk = "BANKNIFTY" to "NSE"; chartNonce++ }
-                            go(navNow().home(dest))
-                        })
+                        Tab.ALMANAC -> {
+                            val dashboard: @Composable () -> Unit = {
+                                AlmanacScreen(model, onGo = { dest ->
+                                    if (dest == "chart") { chartAsk = "BANKNIFTY" to "NSE"; chartNonce++ }
+                                    go(navNow().home(dest))
+                                })
+                            }
+                            // JarvisAlgo: Home opens on Ira, with the usual dashboard one tap away.
+                            if (com.optionslab.app.BuildConfig.JARVIS) com.optionslab.app.ui.screens.IraHome(dashboard) else dashboard()
+                        }
                         Tab.CHART -> Box(Modifier.fillMaxSize())   // the chart itself is kept alive below
                         Tab.TRADE -> TradeHub(model, tradePage) { tradePage = it }
                         Tab.PNL -> com.optionslab.app.ui.screens.PnlCalendarScreen(model)

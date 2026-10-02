@@ -37,6 +37,8 @@ android {
 
         // The launcher name; the JarvisAlgo build (the ira flavor, below) replaces it.
         manifestPlaceholders["appLabel"] = "@string/app_name"
+        // JarvisAlgo opens on Ira (the Home tab shows the assistant first); IraAlgo and IraGoldAlgo are unchanged.
+        buildConfigField("boolean", "JARVIS", "false")
     }
 
     // Two apps from one project: IraAlgo (NSE options, Zerodha, paper) and IraGoldAlgo (XAUUSD only, paper and alerts,
@@ -52,6 +54,7 @@ android {
             if (project.findProperty("jarvis") == "true") {
                 applicationIdSuffix = ".jarvis"
                 manifestPlaceholders["appLabel"] = "JarvisAlgo"
+                buildConfigField("boolean", "JARVIS", "true")
             }
         }
         create("gold") {

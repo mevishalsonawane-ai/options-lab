@@ -53,6 +53,28 @@ import kotlinx.coroutines.launch
 import java.util.Locale
 import com.optionslab.ira.Market as IraMarket
 
+/**
+ * JarvisAlgo's Home: Ira first, the usual dashboard (prices, P&L, strategies) behind the second switch. The choice is
+ * kept while the app runs.
+ */
+@Composable
+fun IraHome(dashboard: @Composable () -> Unit) {
+    val p = LocalPalette.current
+    var showIra by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(true) }
+    Column(Modifier.fillMaxSize()) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 6.dp).background(p.card, RoundedCornerShape(12.dp)).padding(4.dp)) {
+            listOf("Ira" to true, "Dashboard" to false).forEach { (label, ira) ->
+                val on = showIra == ira
+                Text(label, style = Type.label.copy(color = if (on) p.onPrimary else p.inkSoft, fontSize = 14.sp),
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    modifier = Modifier.weight(1f).background(if (on) p.brass else Color.Transparent, RoundedCornerShape(9.dp))
+                        .clickable { showIra = ira }.padding(vertical = 8.dp))
+            }
+        }
+        Box(Modifier.weight(1f)) { if (showIra) IraPage() else dashboard() }
+    }
+}
+
 /** Example questions shown before the first one is asked. */
 private val EXAMPLES = listOf("What is BankNifty doing today?", "Nifty levels", "Is India VIX high?", "Any pattern on Nifty?", "Why is BankNifty down?")
 
