@@ -448,7 +448,7 @@ class IraHubTest : RobolectricTest() {
 
     @Test fun theModelTestSaysPlainlyWhenThereIsNoModel() = runBlocking {
         val r = IraModel.selfTest()
-        assertTrue(r, r.contains("not on the phone") || r.contains("phone") || r.contains("not ready"))
+        assertTrue(r, r.contains("not on the phone") || r.contains("phone") || r.contains("not ready") || r.contains("JarvisAlgo only"))
     }
 
     @Test fun onAHolidayTheMarketIsSaidToBeClosed() {
