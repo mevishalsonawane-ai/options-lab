@@ -4,6 +4,7 @@ import android.content.Context
 import com.optionslab.app.data.AppSettings
 import com.optionslab.app.data.Broker
 import com.optionslab.ira.Command
+import com.optionslab.ira.SettingsTalk
 import com.optionslab.ira.Commands
 import com.optionslab.engine.strategy.RunMode
 import java.lang.ref.WeakReference
@@ -202,6 +203,19 @@ internal object IraActions {
                     else "Each of my trades will risk about Rs %,.0f once my paper record is proven; until then 1 lot.".format(java.util.Locale.ENGLISH, v)
                 }
             }
+            // The app's limits: said back old -> new and confirmed; security settings never change by voice.
+            Command.Kind.SET_REFUSED -> "Boss, the PIN, fingerprint, real orders, one-tap orders and the lock change only in Settings, never through me." to null
+            Command.Kind.SET_LIMIT -> {
+                val key = c.target?.let { runCatching { SettingsTalk.Key.valueOf(it) }.getOrNull() } ?: return "I could not tell which setting." to null
+                val v = c.level ?: return "Tell me the new value for ${key.label}." to null
+                val old = setting(key, AppSettings.load())
+                if (old == v) return "${key.label.replaceFirstChar { it.uppercase() }} is already ${SettingsTalk.show(key, v)}." to null
+                val more = if (SettingsTalk.loosens(key, old, v)) " (this allows more risk)" else ""
+                SettingsTalk.describe(key, old, v) + more to suspend {
+                    setSettings { applySetting(key, v, it) }
+                    "Done: ${key.label} is now ${SettingsTalk.show(key, v)}."
+                }
+            }
             // Jarvis's voice and language: done at once (nothing to confirm, nothing at risk).
             Command.Kind.MUTE -> { JarvisVoice.muted = true; IraActivity.add("Muted my voice."); "Muted, Boss. I'll reply on screen only. Say \"Jarvis, unmute\" or \"Jarvis, speak again\" to hear me." to null }
             Command.Kind.UNMUTE -> { JarvisVoice.muted = false; IraActivity.add("Voice back on."); "Voice on, Boss." to null }
@@ -252,6 +266,54 @@ internal object IraActions {
         IraAccount.invalidate()
         return runCatching { act() }.getOrElse { "That did not work: ${it.message ?: "an error"}." }
             .also { IraActivity.add("$what: ${IraActivity.short(it)}") }
+    }
+
+    /** A setting's value now, in [SettingsTalk]'s terms. */
+    fun setting(k: SettingsTalk.Key, s: AppSettings): Double = when (k) {
+        SettingsTalk.Key.DAILY_LOSS -> s.guardDailyLoss
+        SettingsTalk.Key.PAPER_DAILY_LOSS -> s.guardPaperDailyLoss
+        SettingsTalk.Key.MAX_LOTS -> s.guardMaxLots.toDouble()
+        SettingsTalk.Key.LOTS_PER_ORDER -> s.maxLotsPerOrder.toDouble()
+        SettingsTalk.Key.MAX_OPEN -> s.guardMaxOpen.toDouble()
+        SettingsTalk.Key.MAX_TRADES -> s.guardMaxTrades.toDouble()
+        SettingsTalk.Key.PAPER_TRADES -> s.guardPaperTrades.toDouble()
+        SettingsTalk.Key.ORDERS_PER_DAY -> s.maxOrdersPerDay.toDouble()
+        SettingsTalk.Key.DRAWDOWN -> s.guardDrawdownPct
+        SettingsTalk.Key.ORDER_VALUE -> s.guardMaxValue
+        SettingsTalk.Key.EXPOSURE -> s.guardMaxExposure
+        SettingsTalk.Key.CUTOFF -> s.guardCutoff.toDouble()
+        SettingsTalk.Key.LOSS_ALERT -> s.pnlLossAlert
+        SettingsTalk.Key.PROFIT_ALERT -> s.pnlProfitAlert
+        SettingsTalk.Key.PRODUCT -> if (s.orderProduct == "MIS") 0.0 else 1.0
+        SettingsTalk.Key.EXPIRY_SQUARE_OFF -> if (s.expirySquareOff) 1.0 else 0.0
+        SettingsTalk.Key.NAKED_SHORTS -> if (s.guardNakedShort) 1.0 else 0.0
+    }
+
+    private fun applySetting(k: SettingsTalk.Key, v: Double, s: AppSettings): AppSettings = when (k) {
+        SettingsTalk.Key.DAILY_LOSS -> s.copy(guardDailyLoss = v)
+        SettingsTalk.Key.PAPER_DAILY_LOSS -> s.copy(guardPaperDailyLoss = v)
+        SettingsTalk.Key.MAX_LOTS -> s.copy(guardMaxLots = v.toInt())
+        SettingsTalk.Key.LOTS_PER_ORDER -> s.copy(maxLotsPerOrder = v.toInt())
+        SettingsTalk.Key.MAX_OPEN -> s.copy(guardMaxOpen = v.toInt())
+        SettingsTalk.Key.MAX_TRADES -> s.copy(guardMaxTrades = v.toInt())
+        SettingsTalk.Key.PAPER_TRADES -> s.copy(guardPaperTrades = v.toInt())
+        SettingsTalk.Key.ORDERS_PER_DAY -> s.copy(maxOrdersPerDay = v.toInt())
+        SettingsTalk.Key.DRAWDOWN -> s.copy(guardDrawdownPct = v)
+        SettingsTalk.Key.ORDER_VALUE -> s.copy(guardMaxValue = v)
+        SettingsTalk.Key.EXPOSURE -> s.copy(guardMaxExposure = v)
+        SettingsTalk.Key.CUTOFF -> s.copy(guardCutoff = v.toInt())
+        SettingsTalk.Key.LOSS_ALERT -> s.copy(pnlLossAlert = v)
+        SettingsTalk.Key.PROFIT_ALERT -> s.copy(pnlProfitAlert = v)
+        SettingsTalk.Key.PRODUCT -> s.copy(orderProduct = if (v == 0.0) "MIS" else "NRML")
+        SettingsTalk.Key.EXPIRY_SQUARE_OFF -> s.copy(expirySquareOff = v != 0.0)
+        SettingsTalk.Key.NAKED_SHORTS -> s.copy(guardNakedShort = v != 0.0)
+    }
+
+    /** Would [c] loosen one of the app's limits (so only Boss's voice may ask for it)? */
+    fun loosens(c: Command): Boolean {
+        if (c.kind != Command.Kind.SET_LIMIT) return false
+        val key = c.target?.let { runCatching { SettingsTalk.Key.valueOf(it) }.getOrNull() } ?: return false
+        return SettingsTalk.loosens(key, setting(key, AppSettings.load()), c.level ?: return false)
     }
 
     private fun setSettings(f: (AppSettings) -> AppSettings) {

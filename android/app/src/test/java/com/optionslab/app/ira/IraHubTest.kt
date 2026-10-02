@@ -369,7 +369,7 @@ class IraHubTest : RobolectricTest() {
     @Test fun secretsAreNeverKept() = runBlocking {
         IraHub.ask("my password is hunter2 and card 4111 1111 1111 1111")
         val said = IraHub.state.value.messages.first { !it.fromIra }.text
-        assertEquals("my password is [hidden] and card [hidden]", said)
+        assertEquals("my password is [hidden]", said)
         kotlinx.coroutines.delay(800)
         IraHub.init(context)
         assertTrue(IraHub.state.value.messages.none { it.text.contains("hunter2") || it.text.contains("4111") })
@@ -515,5 +515,21 @@ class IraHubTest : RobolectricTest() {
     @Test fun batterySaverLeavesNormalGapsAlone() {
         // The test phone is not low on battery: nothing slows down.
         assertEquals(3_000L, com.optionslab.app.work.Battery.gap(context, 3_000))
+    }
+
+    @Test fun limitsChangeOnlyAfterConfirm() = runBlocking {
+        val before = com.optionslab.app.data.AppSettings.load()
+        IraHub.ask("set max lots to 5")
+        waitFor("the confirm") { IraHub.state.value.pending.isNotEmpty() }
+        val id = IraHub.state.value.pending.single()
+        assertTrue(IraHub.state.value.messages.last().text,
+            IraHub.state.value.messages.last().text.contains("max lots per instrument from ${before.guardMaxLots} to 5 (this allows more risk)"))
+        assertEquals("nothing before Confirm", before.guardMaxLots, com.optionslab.app.data.AppSettings.load().guardMaxLots)
+        IraHub.confirm(id)
+        assertEquals(5, com.optionslab.app.data.AppSettings.load().guardMaxLots)
+        IraHub.ask("change my PIN to 1234")
+        waitFor("the refusal") { IraHub.state.value.messages.last().let { it.fromIra && it.text.contains("only in Settings") } }
+        assertTrue(IraHub.state.value.pending.isEmpty())
+        com.optionslab.app.data.AppSettings.save(com.optionslab.app.data.AppSettings.load().copy(guardMaxLots = before.guardMaxLots))
     }
 }

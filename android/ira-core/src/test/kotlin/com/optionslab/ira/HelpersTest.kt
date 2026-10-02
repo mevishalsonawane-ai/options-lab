@@ -115,3 +115,51 @@ class MuteTest {
         assertEquals(Wake.Heard.Ask("mute"), Wake.heard("Jarvis mute", false))
     }
 }
+
+class SettingsTalkTest {
+    private fun c(s: String) = Commands.parse(s)
+    private fun set(s: String): Pair<String?, Double?> = c(s).let { assertEquals(Command.Kind.SET_LIMIT, it?.kind, s); it!!.target to it.level }
+
+    @Test fun limitsAreRead() {
+        assertEquals("MAX_LOTS" to 3.0, set("set max lots to 3"))
+        assertEquals("MAX_LOTS" to 5.0, set("Jarvis, max lots 5"))
+        assertEquals("DAILY_LOSS" to 5000.0, set("set max loss to 5000"))
+        assertEquals("DAILY_LOSS" to 5000.0, set("change daily loss limit to 5k"))
+        assertEquals("DAILY_LOSS" to 10000.0, set("increase the loss limit to 10,000"))
+        assertEquals("DAILY_LOSS" to 0.0, set("turn off the daily loss limit"))
+        assertEquals("PAPER_DAILY_LOSS" to 8000.0, set("set paper daily loss to 8000"))
+        assertEquals("ORDER_VALUE" to 100000.0, set("set order value to 1 lakh"))
+        assertEquals("MAX_OPEN" to 2.0, set("set max open positions to 2"))
+        assertEquals("MAX_TRADES" to 20.0, set("set max trades per day to 20"))
+        assertEquals("DRAWDOWN" to 15.0, set("set drawdown to 15"))
+        assertEquals("CUTOFF" to (14 * 60 + 30.0), set("no new entries after 2:30 pm"))
+        assertEquals("CUTOFF" to (14 * 60 + 30.0), set("set cutoff to 14:30"))
+        assertEquals("PRODUCT" to 0.0, set("set order product to MIS"))
+        assertEquals("EXPIRY_SQUARE_OFF" to 0.0, set("turn off expiry square off"))
+        assertEquals("EXPIRY_SQUARE_OFF" to 1.0, set("turn on expiry square off"))
+        assertEquals("LOSS_ALERT" to 3000.0, set("set loss alert at 3000"))
+    }
+
+    @Test fun notSettings() {
+        assertNull(c("what is my max lots?"))
+        assertNull(c("set max lots"))
+        assertEquals(Command.Kind.SET_REFUSED, c("change my PIN to 1234")?.kind)
+        assertEquals(Command.Kind.SET_REFUSED, c("turn on real orders")?.kind)
+        assertEquals(Command.Kind.KILL_OFF, c("turn off the kill switch")?.kind)
+        assertEquals(Command.Kind.JTRADES_LIMIT, c("set your loss limit to 2000")?.kind)
+        assertEquals(Command.Kind.ALARM_ADD, c("alert me when nifty goes above 25000")?.kind)
+        assertEquals(Command.Kind.STOP_ALL, c("stop all strategies")?.kind)
+    }
+
+    @Test fun looseningIsKnown() {
+        val k = SettingsTalk.Key.DAILY_LOSS
+        assertTrue(SettingsTalk.loosens(k, 2000.0, 5000.0))
+        assertTrue(SettingsTalk.loosens(k, 2000.0, 0.0))
+        assertFalse(SettingsTalk.loosens(k, 5000.0, 2000.0))
+        assertFalse(SettingsTalk.loosens(k, 0.0, 2000.0))
+        assertTrue(SettingsTalk.loosens(SettingsTalk.Key.CUTOFF, 14 * 60 + 55.0, 15 * 60.0))
+        assertTrue(SettingsTalk.loosens(SettingsTalk.Key.NAKED_SHORTS, 1.0, 0.0))
+        assertFalse(SettingsTalk.loosens(SettingsTalk.Key.LOSS_ALERT, 3000.0, 0.0))
+        assertEquals("change the daily loss limit from Rs 2,000 to Rs 5,000", SettingsTalk.describe(k, 2000.0, 5000.0))
+    }
+}

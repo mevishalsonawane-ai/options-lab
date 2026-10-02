@@ -18,6 +18,8 @@ data class Command(val kind: Kind, val target: String? = null, val number: Int? 
         JTRADES_PAPER(true), JTRADES_LIVE(false), JTRADES_LIMIT(false), JTRADES_RISK(false),
         /** Jarvis's voice: silent (replies on screen only) or speaking again; replies in Hindi or English. */
         MUTE(true), UNMUTE(true), HINDI(true), ENGLISH(true),
+        /** One of the app's limits changed ([SettingsTalk]): always said back and confirmed; loosening needs Boss's voice. */
+        SET_LIMIT(true), SET_REFUSED(true),
     }
 }
 
@@ -62,6 +64,9 @@ object Commands {
         fun has(r: String) = Regex(r).containsMatchIn(s)
         fun num(r: String) = Regex(r).find(s)?.groupValues?.get(1)?.toIntOrNull()
 
+        // The app's limits ("set max lots to 3"); never the PIN, real orders or the lock.
+        if (SettingsTalk.forbidden(s)) return Command(Command.Kind.SET_REFUSED)
+        if (!Regex(" (your|jarvis s) | jarvis (own )?(trades? )?(daily )?(loss limit|risk) ").containsMatchIn(t)) SettingsTalk.parse(s)?.let { return it }
         // Jarvis's own trades (before Live / Paper mode: "let your trades go live" is not the app's mode).
         if (has(" (your|jarvis s|jarvis) (own )?trades? (go |to |on )?live | (let|put|send|switch|move|take) (your|jarvis s) (own )?trades? (go )?(to )?live ")) return Command(Command.Kind.JTRADES_LIVE)
         if (has(" (your|jarvis s) (own )?trades? (on|to|back to|go to) paper | keep (your|jarvis s) (own )?trades? (on )?paper ")) return Command(Command.Kind.JTRADES_PAPER)
@@ -176,5 +181,8 @@ object Commands {
         Command.Kind.UNMUTE -> "speak again"
         Command.Kind.HINDI -> "reply in Hindi"
         Command.Kind.ENGLISH -> "reply in English"
+        Command.Kind.SET_LIMIT -> c.target?.let { k -> runCatching { SettingsTalk.Key.valueOf(k) }.getOrNull() }
+            ?.let { SettingsTalk.describe(it, null, c.level ?: 0.0) } ?: "change a setting"
+        Command.Kind.SET_REFUSED -> "change a security setting"
     }
 }

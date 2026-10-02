@@ -510,12 +510,14 @@ class JarvisVoice : Service() {
                     // Boss's own voice; without it a command is asked as a yes or no instead of done at once, and
                     // the riskiest ones are refused. Stopping, closing and questions need only the name.
                     val cmd = com.optionslab.ira.Ask.parse(h.question).command
-                    val risky = cmd != null && !cmd.kind.reduces
+                    // Loosening one of the app's limits (more lots, a bigger loss limit, a limit off) is Boss's alone.
+                    val loosens = cmd != null && runCatching { IraActions.loosens(cmd) }.getOrDefault(true)
+                    val risky = cmd != null && (!cmd.kind.reduces || loosens)
                     val verified = (com.optionslab.ira.Topic.ORDER in topics || risky) && boss()
                     when {
                         com.optionslab.ira.Topic.ORDER in topics && !verified ->
                             say(VoiceGuard.blocked() ?: "Boss, that didn't sound like you, so I won't place it. Say it again, or use the Ira screen.")
-                        risky && !verified && cmd!!.kind in HIGH_RISK ->
+                        risky && !verified && (cmd!!.kind in HIGH_RISK || loosens) ->
                             say(VoiceGuard.blocked() ?: "Boss, that didn't sound like you, so I won't do it. Use the Ira screen.")
                         else -> answer(h.question, confirm = risky && !verified)
                     }
