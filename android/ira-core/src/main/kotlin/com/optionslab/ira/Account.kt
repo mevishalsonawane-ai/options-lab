@@ -31,7 +31,8 @@ object AppFacts {
     data class ArmLine(val name: String, val kind: String, val on: Boolean, val detail: String, val todayPnl: Double?,
                        val holding: String?, val tradesToday: Int = 0)
 
-    fun orders(account: String, o: List<OrderLine>, byWho: Boolean): List<String> {
+    /** [from]: the number of this account's first open order in Jarvis's list ("cancel order 2"). */
+    fun orders(account: String, o: List<OrderLine>, byWho: Boolean, from: Int = 1): List<String> {
         if (o.isEmpty()) return listOf("No orders on $account today.")
         val done = o.count { it.status.equals("COMPLETE", true) }
         val open = o.count { it.status.equals("OPEN", true) || it.status.contains("PENDING", true) || it.status.contains("TRIGGER", true) }
@@ -40,16 +41,21 @@ object AppFacts {
         out += "$account: ${o.size} order${if (o.size > 1) "s" else ""} today, $done filled, $open open, $rej rejected or cancelled."
         o.takeLast(5).reversed().forEach { out += "$account order ${it.time}: ${it.action} ${it.qty} ${it.symbol}, ${it.status.lowercase()}" +
             (if (it.avgPrice > 0) " at ${px(it.avgPrice)}" else "") + (it.by?.let { b -> " ($b)" } ?: "") + "." }
+        val working = o.filter { isOpen(it.status) }
+        if (working.isNotEmpty()) out += "$account open orders: " + working.mapIndexed { i, w -> "${from + i}. ${w.action} ${w.qty} ${w.symbol}" }.joinToString("; ") + "."
         o.lastOrNull { it.reason != null && it.status.equals("REJECTED", true) }?.let { out += "$account's last rejection: ${it.reason!!.trimEnd('.')}." }
         if (byWho) out += "$account orders by who placed them: " + o.groupBy { it.by ?: "unknown" }.entries.sortedByDescending { it.value.size }
             .joinToString(", ") { "${it.key} ${it.value.size}" } + "."
         return out
     }
 
-    fun positions(account: String, p: List<Held>): List<String> =
+    fun isOpen(status: String) = status.equals("OPEN", true) || status.contains("PENDING", true) || status.contains("TRIGGER", true)
+
+    /** [from]: the number of this account's first position in Jarvis's list ("close position 2"). */
+    fun positions(account: String, p: List<Held>, from: Int = 1): List<String> =
         if (p.isEmpty()) listOf("No open positions on $account.")
         else listOf("$account: ${p.size} open position${if (p.size > 1) "s" else ""}.") +
-            p.map { "$account position ${it.symbol}: ${it.qty} at ${px(it.avg)}, now ${px(it.ltp)}, ${rs(it.pnl)}." }
+            p.mapIndexed { i, it -> "${from + i}. $account position ${it.symbol}: ${it.qty} at ${px(it.avg)}, now ${px(it.ltp)}, ${rs(it.pnl)}." }
 
     fun pnl(account: String, day: Double?, realized: Double?, unrealized: Double?): String =
         if (day == null) "No P&L on $account today."
@@ -60,7 +66,8 @@ object AppFacts {
         val on = a.filter { it.on }
         val out = ArrayList<String>()
         out += "${on.size} of ${a.size} strategies and arms are switched on."
-        a.sortedByDescending { it.on }.forEach { x -> out += "${x.name} (${x.kind}, ${x.detail}): ${if (x.on) "on" else "off"}" +
+        // Numbered in the app's order, so "stop strategy 2" means the second one listed here.
+        a.forEachIndexed { i, x -> out += "${i + 1}. ${x.name} (${x.kind}, ${x.detail}): ${if (x.on) "on" else "off"}" +
             (x.todayPnl?.let { " today ${rs(it)}" } ?: "") + (if (x.tradesToday > 0) ", ${x.tradesToday} trade${if (x.tradesToday > 1) "s" else ""} today" else "") +
             (x.holding?.let { h -> ", holding $h" } ?: "") + "." }
         val ranked = a.filter { it.todayPnl != null }.sortedByDescending { it.todayPnl }

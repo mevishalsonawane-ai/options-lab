@@ -14,18 +14,24 @@ import java.time.LocalDate
  * conversation. A part that does not read back is dropped, never guessed.
  */
 internal object IraSaved {
-    data class Read(val proposals: List<IraHub.Proposal>, val journal: List<IraHub.DayScore>, val nightlyAt: Instant?, val tested: List<String>)
+    data class Read(val proposals: List<IraHub.Proposal>, val journal: List<IraHub.DayScore>, val nightlyAt: Instant?, val tested: List<String>,
+                    val messages: List<IraHub.Msg> = emptyList())
 
     /** Tried-pattern keys end with the pattern's day; older than this many days they are not kept. */
     private const val TESTED_DAYS = 7L
 
-    fun write(proposals: List<IraHub.Proposal>, journal: List<IraHub.DayScore>, nightlyAt: Instant?, tested: List<String>, today: LocalDate): String {
+    fun write(proposals: List<IraHub.Proposal>, journal: List<IraHub.DayScore>, nightlyAt: Instant?, tested: List<String>, today: LocalDate,
+              messages: List<IraHub.Msg> = emptyList()): String {
         val o = JSONObject()
         o.put("v", 1)
         o.put("proposals", JSONArray().apply { proposals.forEach { p -> runCatching { put(proposal(p)) } } })
         o.put("journal", JSONArray().apply { journal.forEach { put(JSONArray().put(it.day.toString()).put(it.seen).put(it.worked)) } })
         nightlyAt?.let { o.put("nightlyAt", it.toString()) }
         o.put("tested", JSONArray().apply { tested.filter { fresh(it, today) }.forEach { put(it) } })
+        // The conversation: what was said and the facts shown (an order card or a pending action is not brought back).
+        o.put("messages", JSONArray().apply { messages.filter { !it.writing }.forEach { m ->
+            put(JSONObject().put("ira", m.fromIra).put("text", m.text).put("facts", JSONArray(m.facts))
+                .apply { m.draft?.let { put("draft", it) }; m.proposal?.let { put("proposal", it) } }) } })
         return o.toString()
     }
 
@@ -39,6 +45,12 @@ internal object IraSaved {
             (0 until js.length()).mapNotNull { i -> runCatching { js.getJSONArray(i).let { a -> IraHub.DayScore(LocalDate.parse(a.getString(0)), a.getInt(1), a.getInt(2)) } }.getOrNull() },
             o.optString("nightlyAt").takeIf { it.isNotEmpty() }?.let { runCatching { Instant.parse(it) }.getOrNull() },
             (0 until ts.length()).map { ts.getString(it) }.filter { fresh(it, today) },
+            (o.optJSONArray("messages") ?: JSONArray()).let { a -> (0 until a.length()).mapNotNull { i -> runCatching {
+                val m = a.getJSONObject(i)
+                val f = m.optJSONArray("facts") ?: JSONArray()
+                IraHub.Msg(m.getBoolean("ira"), m.getString("text"), (0 until f.length()).map { f.getString(it) },
+                    draft = m.optString("draft").takeIf { it.isNotEmpty() }, proposal = if (m.has("proposal")) m.getLong("proposal") else null)
+            }.getOrNull() } },
         )
     }
 

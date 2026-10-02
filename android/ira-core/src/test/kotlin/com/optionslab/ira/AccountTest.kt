@@ -66,7 +66,7 @@ class AccountTest {
         assertTrue(ira.answer("my alarms", emptyMap(), emptyList(), app = view).text.startsWith("Nothing to show for alarms"))
         assertTrue(ira.answer("my orders", emptyMap(), emptyList(), app = null).text.startsWith("I could not read the app"))
         val all = ira.answer("how am i doing", emptyMap(), emptyList(), app = view).text
-        assertTrue(all.contains("Paper position NIFTY25O0724500CE: 75 at 120.50, now 125.00, +Rs 337.50."), all)
+        assertTrue(all.contains("1. Paper position NIFTY25O0724500CE: 75 at 120.50, now 125.00, +Rs 337.50."), all)
     }
 
     @Test fun factBuilders() {

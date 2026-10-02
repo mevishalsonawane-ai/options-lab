@@ -56,7 +56,8 @@ object IraHub {
     data class Msg(val fromIra: Boolean, val text: String, val facts: List<String> = emptyList(), val order: OrderRequest? = null,
                    /** A strategy proposal this message carries (its [Proposal.id]). */ val proposal: Long? = null,
                    /** Ira's own words when [text] was rewritten by the on-device model (numbers checked); [writing] while it works. */
-                   val draft: String? = null, val writing: Boolean = false)
+                   val draft: String? = null, val writing: Boolean = false,
+                   /** An action waiting for the owner's one tap (its id in [State.pending]). */ val action: Long? = null)
 
     /** A strategy Jarvis wrote from a pattern and backtested: new until the owner approves (armed on paper) or dismisses it. */
     data class Proposal(val id: Long, val result: StrategyLab.Result, val status: String = NEW, val pineId: Long? = null) {
@@ -81,6 +82,7 @@ object IraHub {
         val journal: List<DayScore> = emptyList(),     // how Ira's patterns did, session by session (oldest first)
         val nightlyAt: Instant? = null,                // the last evening review
         val best: List<PatternBook.Entry> = emptyList(), // the patterns that went their way most often so far
+        val pending: Set<Long> = emptySet(),            // actions waiting for Confirm
     )
 
     /** One session's review: the patterns Ira saw on the index charts (15 and 60 minutes) and how many went their way. */
@@ -143,6 +145,8 @@ object IraHub {
     @Volatile internal var testFeed: (suspend (String) -> String)? = null
         set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "test seam" }; field = v }
 
+    fun appContext(): Context? = app
+
     fun init(context: Context) {
         app = context.applicationContext
         IraModel.init(context)
@@ -154,19 +158,29 @@ object IraHub {
         val saved = runCatching { Vault.readFileSteady(sf)?.let { IraSaved.read(String(it, Charsets.UTF_8)) } }.getOrNull()
         synchronized(tested) { tested.clear(); saved?.tested?.let { tested += it } }
         // The process started again: what was kept comes back; a strategy still waiting is offered again in the conversation.
-        val waiting = saved?.proposals.orEmpty().filter { it.status == Proposal.NEW }
+        // The conversation comes back as it was (the owner's wish, 2026-10-02); a strategy still waiting is offered again.
+        val talk = saved?.messages.orEmpty()
+        val waiting = saved?.proposals.orEmpty().filter { it.status == Proposal.NEW && talk.none { m -> m.proposal == it.id } }
             .map { Msg(true, "Still waiting for your decision. " + it.result.summary(), proposal = it.id) }
         _state.value = State(learned = book.size, best = book.best(), proposals = saved?.proposals.orEmpty(),
-            journal = saved?.journal.orEmpty(), nightlyAt = saved?.nightlyAt, messages = waiting.takeLast(MAX_MESSAGES))
+            journal = saved?.journal.orEmpty(), nightlyAt = saved?.nightlyAt, messages = (talk + waiting).takeLast(MAX_MESSAGES))
+        if (keeper == null) keeper = scope.launch {
+            var last: List<Msg>? = null
+            _state.collect { st -> if (st.messages !== last) { last = st.messages; kotlinx.coroutines.delay(300); saveState() } }
+        }
     }
+
+    /** Saves the conversation as it changes. */
+    private var keeper: kotlinx.coroutines.Job? = null
 
     /** Writes the proposals, the journal and the tried patterns (never the conversation). */
     private fun saveState() {
         val f = stateFile ?: return
         val st = _state.value
         val tried = synchronized(tested) { tested.toList() }
+        if (st.proposals.isEmpty() && st.journal.isEmpty() && st.messages.isEmpty() && tried.isEmpty()) { f.delete(); return }
         runCatching { Vault.writeFile(f, IraSaved.write(st.proposals.takeLast(KEEP_PROPOSALS), st.journal, st.nightlyAt, tried,
-            LocalDate.now(IST)).toByteArray(Charsets.UTF_8)) }
+            LocalDate.now(IST), st.messages.takeLast(MAX_MESSAGES)).toByteArray(Charsets.UTF_8)) }
     }
 
     /**
@@ -359,11 +373,15 @@ object IraHub {
 
     /** A question in, Ira's answer appended to the conversation. */
     fun ask(text: String) {
-        val q = text.trim()
+        // Secrets never go further than this line: not into the conversation, the saved history or the model.
+        val q = com.optionslab.ira.Secrets.redact(text.trim())
         if (q.isEmpty()) return
         val parsed = Ask.parse(q)
         if (Topic.BACKTEST in parsed.topics) { backtestAsked(q, parsed); return }
         if (Topic.ACCOUNT in parsed.topics) { accountAsked(q); return }
+        if (Topic.COMMAND in parsed.topics) { commandAsked(q, parsed.command!!); return }
+        // JarvisAlgo: a complete order is placed at once (the owner's rule); IraAlgo keeps the review.
+        parsed.order?.takeIf { com.optionslab.app.BuildConfig.JARVIS && it.missing.isEmpty() && it.refusal == null }?.let { o -> tradeAsked(q, o); return }
         val a = runCatching { Ira(book).answer(q, _state.value.snaps, _state.value.news, voice = com.optionslab.app.BuildConfig.JARVIS) }.getOrElse { com.optionslab.ira.Answer("I could not work that out.", emptyList()) }
         // JarvisAlgo with the model ready: the answer shows at once, then the model rewrites it in place if it passes the checks.
         val write = IraModel.usable() && com.optionslab.ira.Writer.worthRewriting(parsed, a)
@@ -436,6 +454,54 @@ object IraHub {
                 }) }
             }
         }
+    }
+
+    private val actions = HashMap<Long, Pair<String, suspend () -> String>>()
+
+    /**
+     * "Stop strategy 1", "cancel all orders", "switch to live"... In JarvisAlgo what adds risk runs at once; what stops or
+     * closes waits for Confirm. In IraAlgo everything waits for Confirm.
+     */
+    private fun commandAsked(q: String, c: com.optionslab.ira.Command) {
+        _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+        scope.launch {
+            val (what, act) = runCatching { IraActions.prepare(c) }.getOrElse { ("I could not do that: ${it.message}") to null }
+            if (act == null) { reply(what); return@launch }
+            if (c.kind.reduces || !com.optionslab.app.BuildConfig.JARVIS) {
+                val id = System.nanoTime()
+                synchronized(actions) { actions[id] = what to act }
+                _state.update { it.copy(pending = it.pending + id,
+                    messages = (it.messages + Msg(true, "Tap Confirm to ${what}.", action = id)).takeLast(MAX_MESSAGES)) }
+            } else reply(IraActions.run(what, act))
+        }
+    }
+
+    /** The owner tapped Confirm on [id]. */
+    suspend fun confirm(id: Long) {
+        val a = synchronized(actions) { actions.remove(id) } ?: return
+        _state.update { it.copy(pending = it.pending - id) }
+        reply(IraActions.run(a.first, a.second))
+    }
+
+    fun cancelAction(id: Long) {
+        synchronized(actions) { actions.remove(id) }
+        _state.update { it.copy(pending = it.pending - id, messages = (it.messages + Msg(true, "Cancelled; nothing was done.")).takeLast(MAX_MESSAGES)) }
+    }
+
+    /** A complete order in JarvisAlgo: the contract is found and the trade placed at once, in the app's mode. */
+    private fun tradeAsked(q: String, o: OrderRequest) {
+        _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+        scope.launch {
+            val s = com.optionslab.app.data.AppSettings.load()
+            val spot = o.market?.let { m -> _state.value.snaps[m] }?.price
+            val r = runCatching { IraOrders.prepare(o, s.live, s.guardMaxLots, spot) }.getOrElse { Result.failure(it) }
+            reply(r.fold({ t -> runCatching { IraActions.trade(t, s.live) }.getOrElse { e -> "That order failed: ${e.message}" } },
+                { e -> e.message ?: "I could not prepare that order." }))
+        }
+    }
+
+    private fun reply(text: String) {
+        _state.update { it.copy(messages = (it.messages + Msg(true, text)).takeLast(MAX_MESSAGES)) }
     }
 
     /** Wipes the conversation (the owner's button). */

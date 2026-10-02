@@ -182,6 +182,7 @@ private fun Bubble(m: IraHub.Msg, orders: IraOrderPaths?) {
             else OrderActions(o, orders)
         }
         m.proposal?.let { id -> ProposalActions(id) }
+        m.action?.let { id -> ActionConfirm(id) }
         if (m.writing) Text("Jarvis is writing this on the phone...", style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp))
         m.draft?.let { d ->
             var showDraft by remember { mutableStateOf(false) }
@@ -227,7 +228,7 @@ class IraOrderPaths(val live: () -> Boolean, val maxLots: () -> Int,
                     val paper: (IraOrders.Ticket) -> Unit, val review: (IraOrders.Ticket) -> Unit)
 
 /** [IraOrderPaths] on the app's [model]: a market order (the review shows the best price for Live), the usual product. */
-fun iraOrderPathsFor(model: com.optionslab.app.ui.AppModel) = with(model) { IraOrderPaths(
+fun iraOrderPathsFor(model: com.optionslab.app.ui.AppModel) = with(model) { com.optionslab.app.ira.IraActions.attach(model); IraOrderPaths(
     live = { settings.value.live }, maxLots = { settings.value.guardMaxLots },
     paper = { t -> paperPlace(t.underlying, t.expiry, t.strike, t.right, if (t.buy) "BUY" else "SELL", t.lots, "MARKET",
         settings.value.orderProduct, null, null, null, "Ira") },
@@ -434,6 +435,18 @@ private fun VoiceStyle() {
         true -> BrassButton("Hear a sample", tone = p.inkSoft) { sample() }
         false -> Note("No offline English voice on this phone: add one in Settings, Accessibility, Text-to-speech (install voice data). Jarvis never uses an online voice.")
         null -> Unit
+    }
+}
+
+/** Confirm / Cancel under something Jarvis will stop or close when the owner taps (one tap, no PIN: the owner's rule). */
+@Composable
+private fun ActionConfirm(id: Long) {
+    val st by IraHub.state.collectAsState()
+    val scope = rememberCoroutineScope()
+    if (id !in st.pending) return
+    Row(Modifier.padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        BrassButton("Confirm", tone = LocalPalette.current.oxblood) { scope.launch { IraHub.confirm(id) } }
+        BrassButton("Cancel", tone = LocalPalette.current.inkSoft) { IraHub.cancelAction(id) }
     }
 }
 

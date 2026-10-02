@@ -220,13 +220,13 @@ class IraHubTest : RobolectricTest() {
         var st = IraHub.state.value
         assertEquals(j, st.journal)
         assertEquals(listOf(p), st.proposals)
-        val m = st.messages.single()
-        assertEquals(p.id, m.proposal); assertTrue(m.text, m.text.startsWith("Still waiting for your decision. Backtest of"))
+        assertTrue("the conversation is remembered", st.messages.any { it.proposal == p.id && it.text.contains("Backtest of") })
+        assertTrue(st.messages.any { !it.fromIra && it.text == "backtest the hammer on banknifty 1 hour" })
         IraHub.dismiss(p.id)
         IraHub.init(context)
         st = IraHub.state.value
         assertEquals(IraHub.Proposal.DISMISSED, st.proposals.single().status)
-        assertTrue("only a waiting strategy comes back into the conversation", st.messages.isEmpty())
+        assertEquals("Dismissed. I won't offer that one again today.", st.messages.last().text)
         val f = File(context.noBackupFilesDir, "ira-state.vault")
         assertTrue(f.exists())
         assertTrue("kept encrypted", !String(f.readBytes(), Charsets.ISO_8859_1).contains("Backtest") && !String(f.readBytes(), Charsets.ISO_8859_1).contains("hammer"))
@@ -331,5 +331,43 @@ class IraHubTest : RobolectricTest() {
         val p = IraHub.state.value.proposals.single()
         assertTrue(p.result.error!!, p.result.error!!.endsWith("needs at least 2 years"))
         assertTrue(!p.result.recommended)
+    }
+
+    /** "Turn on the kill switch", "set an alarm": in IraAlgo every action waits for Confirm; nothing happens before it. */
+    @Test fun actionsWaitForConfirmAndUseTheAppsOwnControls() = runBlocking {
+        IraHub.ask("turn on the kill switch")
+        waitFor("the confirm") { IraHub.state.value.pending.isNotEmpty() }
+        val id = IraHub.state.value.pending.single()
+        assertEquals("Tap Confirm to turn the kill switch on (no new live positions).", IraHub.state.value.messages.last().text)
+        assertTrue("nothing before Confirm", !com.optionslab.app.data.AppSettings.load().guardKill)
+        IraHub.confirm(id)
+        assertTrue(com.optionslab.app.data.AppSettings.load().guardKill)
+        assertTrue(IraHub.state.value.messages.last().text.startsWith("Kill switch on"))
+        IraHub.ask("alert me when nifty goes above 25000")
+        waitFor("the alarm confirm") { IraHub.state.value.pending.isNotEmpty() }
+        IraHub.cancelAction(IraHub.state.value.pending.single())
+        assertTrue(com.optionslab.app.data.Alarms.all().isEmpty())
+        IraHub.ask("set an alarm on banknifty below 51000")
+        waitFor("the alarm confirm") { IraHub.state.value.pending.isNotEmpty() }
+        IraHub.confirm(IraHub.state.value.pending.single())
+        val a = com.optionslab.app.data.Alarms.all().single()
+        assertEquals("BANKNIFTY", a.symbol); assertTrue(!a.above); assertEquals(51000.0, a.level, 0.0)
+        com.optionslab.app.data.Alarms.remove(a.id)
+        com.optionslab.app.data.AppSettings.save(com.optionslab.app.data.AppSettings.load().copy(guardKill = false))
+        IraHub.ask("stop strategy 3")
+        waitFor("the answer") { IraHub.state.value.messages.last().let { it.fromIra && it.text != "Kill switch off." } && IraHub.state.value.messages.dropLast(1).last().text == "stop strategy 3" }
+        val ans = IraHub.state.value.messages.last()
+        assertTrue(ans.text, ans.text.startsWith("Tap Confirm to stop ") || ans.text.startsWith("There are no strategies or arms") || ans.text.startsWith("Which one?"))
+        ans.action?.let { IraHub.cancelAction(it) }
+    }
+
+    /** A secret said or typed is never kept: not in the conversation, not in the saved history. */
+    @Test fun secretsAreNeverKept() = runBlocking {
+        IraHub.ask("my password is hunter2 and card 4111 1111 1111 1111")
+        val said = IraHub.state.value.messages.first { !it.fromIra }.text
+        assertEquals("my password is [hidden] and card [hidden]", said)
+        kotlinx.coroutines.delay(800)
+        IraHub.init(context)
+        assertTrue(IraHub.state.value.messages.none { it.text.contains("hunter2") || it.text.contains("4111") })
     }
 }

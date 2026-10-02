@@ -1,7 +1,7 @@
 package com.optionslab.ira
 
 /** What a question is about. */
-enum class Topic { OVERVIEW, WHY, TREND, LEVELS, PATTERNS, NEWS, VOLATILITY, ADVICE, ORDER, BACKTEST, ACCOUNT, HELP, GREETING, OFF_TOPIC }
+enum class Topic { OVERVIEW, WHY, TREND, LEVELS, PATTERNS, NEWS, VOLATILITY, ADVICE, ORDER, BACKTEST, ACCOUNT, HELP, COMMAND, GREETING, OFF_TOPIC }
 
 /**
  * An order the owner asked for in words. Ira never sends it: the app opens its own order review filled with this, and
@@ -26,6 +26,7 @@ data class OrderRequest(
 }
 
 data class Question(val text: String, val markets: List<Market>, val topics: Set<Topic>, val order: OrderRequest?,
+                    /** Something to do in the app ("stop strategy 1"), when the words ask for one. */ val command: Command? = null,
                     /** A pattern named in the words ("backtest the hammer on nifty"), if any. */
                     val pattern: PatternKind? = null, /** A chart named in the words: 15 or 60 minutes, if any. */ val minutes: Int? = null)
 
@@ -54,6 +55,7 @@ object Ask {
 
     fun parse(text: String): Question {
         val t = " " + text.lowercase().replace(Regex("[^a-z0-9 ]"), " ").replace(Regex("\\s+"), " ").trim() + " "
+        Commands.parse(text)?.let { c -> return Question(text, Market.mentioned(text), setOf(Topic.COMMAND), null, command = c) }
         // An order to place names its lots ("buy 2 lots..."); anything else about orders, P&L, strategies, limits or the app
         // is a question about the app.
         val placed = order(t)
@@ -70,7 +72,7 @@ object Ask {
         // The owner's own trading: unless a backtest is named outright, it is about the account, not the market.
         if (account && !Regex(" (backtest|back test|backtested|test this|test it|test the pattern|make it an arm|(create|make|build|write|turn) .*(strategy|arm)) ").containsMatchIn(t)) { topics.clear(); topics += Topic.ACCOUNT }
         else if (order == null && markets.isEmpty() && Topic.BACKTEST !in topics && HELP.containsMatchIn(t)) { topics.clear(); topics += Topic.HELP }
-        return Question(text, markets, topics, order, pattern(t), when {
+        return Question(text, markets, topics, order, pattern = pattern(t), minutes = when {
             Regex(" (1 hour|1h|hourly|60 minute|60m|one hour) ").containsMatchIn(t) -> 60
             Regex(" (15 minute|15m|15 min|fifteen minute) ").containsMatchIn(t) -> 15
             else -> null
