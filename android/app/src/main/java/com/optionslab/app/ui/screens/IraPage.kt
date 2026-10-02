@@ -122,7 +122,13 @@ fun IraPage(orders: IraOrderPaths? = null) {
     // JarvisAlgo: only the globe until the owner opens the chat (the owner's wish, 2026-10-02); voice works either way.
     var chat by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(!com.optionslab.app.BuildConfig.JARVIS) }
     if (!chat) {
-        val orbMode = if (mode == 0 && text.isNotEmpty()) 1 else mode
+        val writing by com.optionslab.app.ira.IraModel.state.collectAsState()
+        // Analysing in the background (reading the market, a backtest, the model writing) shows as thinking too.
+        val orbMode = when {
+            mode == 0 && text.isNotEmpty() -> 1
+            mode == 0 && (st.busy || st.loading || writing.writing) -> 2
+            else -> mode
+        }
         Box(Modifier.fillMaxSize().background(Color.Black)) {
             Box(Modifier.fillMaxWidth().fillMaxHeight(0.62f).align(Alignment.Center)) {
                 Orb(vol = orbVol(st.snaps), trend = orbTrend(st.snaps[focus]), mode = orbMode)

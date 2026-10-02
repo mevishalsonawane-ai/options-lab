@@ -18,6 +18,10 @@ import kotlin.math.sin
  * Ira's orb: a folded grid of about 18,000 dots drawn on the graphics chip (OpenGL ES 2.0), from the approved concept.
  * Volatility folds it, the trend colours it (blue-violet flat, cyan-green up, magenta down), each tick ripples across
  * it, and it listens, thinks and answers with its own motion. Set [vol], [trend] and [mode]; it eases to them.
+ *
+ * Thinking (the owner's wish, 2026-10-02: "like Age of Ultron"): the surface splinters into shards, three dashed
+ * orbital rings spin up around it, data streams out from the core, the core pulses, scan bands sweep it and the whole
+ * globe drifts and breathes as if weighing something. Pinch to zoom, drag to turn it, double-tap to put it back.
  */
 class OrbView(context: Context) : GLSurfaceView(context) {
     /** 0 calm .. 1 wild. */
@@ -26,6 +30,32 @@ class OrbView(context: Context) : GLSurfaceView(context) {
     @Volatile var trend = 0f
     /** 0 idle, 1 listening, 2 thinking, 3 answering. */
     @Volatile var mode = 0
+
+    /** The owner's zoom (pinch) and turn (drag), eased to in the renderer. */
+    @Volatile private var zoom = 1f
+    @Volatile private var yaw = 0f
+    @Volatile private var pitch = 0f
+
+    private val scaler = android.view.ScaleGestureDetector(context, object : android.view.ScaleGestureDetector.SimpleOnScaleGestureListener() {
+        override fun onScale(d: android.view.ScaleGestureDetector): Boolean { zoom = (zoom * d.scaleFactor).coerceIn(0.6f, 2.8f); return true }
+    })
+    private val gestures = android.view.GestureDetector(context, object : android.view.GestureDetector.SimpleOnGestureListener() {
+        override fun onDown(e: android.view.MotionEvent) = true
+        override fun onScroll(e1: android.view.MotionEvent?, e2: android.view.MotionEvent, dx: Float, dy: Float): Boolean {
+            if (scaler.isInProgress) return false
+            yaw -= dx / max(1, width) * 3.2f
+            pitch = (pitch - dy / max(1, height) * 2.4f).coerceIn(-1.2f, 1.2f)
+            return true
+        }
+        override fun onDoubleTap(e: android.view.MotionEvent): Boolean { zoom = 1f; yaw = 0f; pitch = 0f; return true }
+    })
+
+    @android.annotation.SuppressLint("ClickableViewAccessibility")
+    override fun onTouchEvent(e: android.view.MotionEvent): Boolean {
+        parent?.requestDisallowInterceptTouchEvent(true)
+        scaler.onTouchEvent(e); gestures.onTouchEvent(e)
+        return true
+    }
 
     private val renderer = R()
 
@@ -46,6 +76,10 @@ class OrbView(context: Context) : GLSurfaceView(context) {
         private var last = t0
         private var rot = 0f; private var speak = 0f; private var voice = 0f; private var listen = 0f; private var think = 0f
         private var v = 0.1f; private var tr = 0f
+        private var answer = 0f; private var z = 1f; private var yw = 0f; private var pt = 0f
+        private var ringProg = 0; private var ringCount = 0
+        private lateinit var ringBuf: FloatBuffer
+        private val ru2 = HashMap<String, Int>()
         private val rips = ArrayDeque<FloatArray>()     // x, y, z, start time, up(1/0)
         private var nextTick = 0f
         private val rnd = java.util.Random(7)
@@ -62,8 +96,18 @@ class OrbView(context: Context) : GLSurfaceView(context) {
             count = pts.size / 3
             buf = ByteBuffer.allocateDirect(pts.size * 4).order(ByteOrder.nativeOrder()).asFloatBuffer().apply { put(pts.toFloatArray()); position(0) }
             prog = link(VS, FS)
-            listOf("uTime", "uAmp", "uSpeed", "uRot", "uTilt", "uVoice", "uListen", "uThink", "uSize", "uAspect", "uTop", "uBot", "uRip", "uRipUp")
+            listOf("uTime", "uAmp", "uSpeed", "uRot", "uTilt", "uVoice", "uListen", "uThink", "uSize", "uAspect", "uTop", "uBot", "uRip", "uRipUp", "uZoom", "uOff")
                 .forEach { u[it] = GLES20.glGetUniformLocation(prog, it) }
+            // The halo: three orbital rings, the data streaming from the core, and the core itself (one point).
+            val hp = ArrayList<Float>()
+            for (ring in 0 until 3) for (j in 0 until 520) { hp += (j / 520f * 6.2832f); hp += ring.toFloat(); hp += rnd.nextFloat(); hp += rnd.nextFloat() }
+            for (j in 0 until 420) { hp += 0f; hp += -1f; hp += rnd.nextFloat(); hp += rnd.nextFloat() }
+            hp += 0f; hp += -2f; hp += 0f; hp += 0f
+            ringCount = hp.size / 4
+            ringBuf = ByteBuffer.allocateDirect(hp.size * 4).order(ByteOrder.nativeOrder()).asFloatBuffer().apply { put(hp.toFloatArray()); position(0) }
+            ringProg = link(RING_VS, RING_FS)
+            listOf("uTime", "uThink", "uAns", "uRot", "uTilt", "uZoom", "uAspect", "uSize", "uOff", "uTop")
+                .forEach { ru2[it] = GLES20.glGetUniformLocation(ringProg, it) }
             GLES20.glClearColor(0f, 0f, 0f, 1f)
             GLES20.glEnable(GLES20.GL_BLEND)
             GLES20.glBlendFunc(GLES20.GL_ONE, GLES20.GL_ONE)
@@ -82,6 +126,14 @@ class OrbView(context: Context) : GLSurfaceView(context) {
             voice += (target - voice) * 0.3f
             listen += ((if (mode == 1) 1f else 0f) - listen) * 0.08f
             think += ((if (mode == 2) 1f else 0f) - think) * 0.08f
+            answer += ((if (mode == 3) 1f else 0f) - answer) * 0.08f
+            z += (zoom - z) * 0.2f; yw += (yaw - yw) * 0.2f; pt += (pitch - pt) * 0.2f
+            // Thinking: the globe drifts and breathes, as if weighing something.
+            val offX = think * (sin(t * 0.9f) * 0.07f + sin(t * 2.3f) * 0.02f)
+            val offY = think * (cos(t * 1.3f) * 0.05f)
+            val zoomNow = z * (1f + think * 0.05f * sin(t * 3.1f) + answer * 0.02f * sin(t * 7f))
+            val tiltNow = 0.28f + sin(t * 0.2f) * 0.06f + think * 0.12f * sin(t * 0.7f) + pt
+            val rotNow = rot + yw
             if (t > nextTick) {
                 val up = rnd.nextFloat() < 0.5f + tr * 0.4f
                 val lat = if (up) rnd.nextFloat() * 1.1f else (PI.toFloat() - rnd.nextFloat() * 1.1f)
@@ -103,8 +155,10 @@ class OrbView(context: Context) : GLSurfaceView(context) {
             GLES20.glUniform1f(u["uTime"]!!, t)
             GLES20.glUniform1f(u["uAmp"]!!, 0.13f + v * 0.2f)
             GLES20.glUniform1f(u["uSpeed"]!!, 0.6f + v * 1.4f + think * 0.8f)
-            GLES20.glUniform1f(u["uRot"]!!, rot)
-            GLES20.glUniform1f(u["uTilt"]!!, 0.28f + sin(t * 0.2f) * 0.06f)
+            GLES20.glUniform1f(u["uRot"]!!, rotNow)
+            GLES20.glUniform1f(u["uTilt"]!!, tiltNow)
+            GLES20.glUniform1f(u["uZoom"]!!, zoomNow)
+            GLES20.glUniform2f(u["uOff"]!!, offX, offY)
             GLES20.glUniform1f(u["uVoice"]!!, voice)
             GLES20.glUniform1f(u["uListen"]!!, listen)
             GLES20.glUniform1f(u["uThink"]!!, think)
@@ -118,6 +172,25 @@ class OrbView(context: Context) : GLSurfaceView(context) {
             GLES20.glEnableVertexAttribArray(a)
             GLES20.glVertexAttribPointer(a, 3, GLES20.GL_FLOAT, false, 0, buf)
             GLES20.glDrawArrays(GLES20.GL_POINTS, 0, count)
+            GLES20.glDisableVertexAttribArray(a)
+
+            // The halo, faint at rest, alive when thinking or answering.
+            GLES20.glUseProgram(ringProg)
+            GLES20.glUniform1f(ru2["uTime"]!!, t)
+            GLES20.glUniform1f(ru2["uThink"]!!, think)
+            GLES20.glUniform1f(ru2["uAns"]!!, answer)
+            GLES20.glUniform1f(ru2["uRot"]!!, rotNow)
+            GLES20.glUniform1f(ru2["uTilt"]!!, tiltNow)
+            GLES20.glUniform1f(ru2["uZoom"]!!, zoomNow)
+            GLES20.glUniform1f(ru2["uAspect"]!!, w.toFloat() / h)
+            GLES20.glUniform1f(ru2["uSize"]!!, max(2f, w / 260f))
+            GLES20.glUniform2f(ru2["uOff"]!!, offX, offY)
+            GLES20.glUniform3fv(ru2["uTop"]!!, 1, top, 0)
+            val b = GLES20.glGetAttribLocation(ringProg, "aP")
+            GLES20.glEnableVertexAttribArray(b)
+            GLES20.glVertexAttribPointer(b, 4, GLES20.GL_FLOAT, false, 0, ringBuf)
+            GLES20.glDrawArrays(GLES20.GL_POINTS, 0, ringCount)
+            GLES20.glDisableVertexAttribArray(b)
         }
 
         private fun mix(a: FloatArray, b: FloatArray, k: Float) = FloatArray(3) { a[it] + (b[it] - a[it]) * k }
@@ -167,7 +240,8 @@ float snoise(vec3 v){
         private val VS = """
 precision highp float;
 attribute vec3 aPos;
-uniform float uTime, uAmp, uSpeed, uRot, uTilt, uVoice, uListen, uThink, uSize, uAspect;
+uniform float uTime, uAmp, uSpeed, uRot, uTilt, uVoice, uListen, uThink, uSize, uAspect, uZoom;
+uniform vec2 uOff;
 uniform vec4 uRip[6];
 uniform float uRipUp[6];
 varying float vLight, vFace, vLat, vHit, vHitUp, vBand;
@@ -191,6 +265,9 @@ vec3 shape(vec3 p){
   float up; d += 0.06 * hitAt(p, up);
   float lat = acos(clamp(p.y, -1.0, 1.0));
   d += uListen * 0.05 * max(0.0, sin(lat * 9.0 - uTime * 6.0)) * exp(-lat * 1.3);
+  // Thinking: the surface splinters into shards that rise and fall, and a heartbeat runs through it.
+  float shard = max(0.0, snoise(floor(p * 7.0) * 0.37 + vec3(uTime * 0.9, 0.0, uTime * 0.6)));
+  d += uThink * (0.22 * shard * shard + 0.025 * sin(uTime * 5.0));
   return p * d;
 }
 vec3 rotate(vec3 v){
@@ -212,10 +289,77 @@ void main(){
   vFace = nw.z;
   vLat = p.y;
   float up; vHit = hitAt(p, up); vHitUp = up;
-  vBand = uThink * exp(-sq((p.y - sin(uTime * 1.6)) * 6.0));
+  vBand = uThink * max(exp(-sq((p.y - sin(uTime * 1.6)) * 6.0)), 0.8 * exp(-sq((p.x * cos(uTime) + p.z * sin(uTime) - sin(uTime * 2.3)) * 9.0)));
   float persp = 1.0 / (2.4 - w.z * 0.6);
-  gl_Position = vec4(w.x * persp * 1.3 / uAspect, w.y * persp * 1.3, 0.0, 1.0);
-  gl_PointSize = uSize * (0.75 + 0.5 * (w.z * 0.5 + 0.5)) * (1.0 + uVoice * 2.0);
+  gl_Position = vec4(w.x * persp * 1.3 * uZoom / uAspect + uOff.x, w.y * persp * 1.3 * uZoom + uOff.y, 0.0, 1.0);
+  gl_PointSize = uSize * (0.75 + 0.5 * (w.z * 0.5 + 0.5)) * (1.0 + uVoice * 2.0) * (0.7 + 0.3 * uZoom);
+}
+"""
+
+        /** The halo: rings (y = ring 0..2), streaming particles (y = -1) and the core (y = -2). */
+        private const val RING_VS = """
+precision highp float;
+attribute vec4 aP;
+uniform float uTime, uThink, uAns, uRot, uTilt, uZoom, uAspect, uSize;
+uniform vec2 uOff;
+uniform vec3 uTop;
+varying float vA;
+varying vec3 vC;
+vec3 rotate(vec3 v){
+  float cr = cos(uRot), sr = sin(uRot), ct = cos(uTilt), st = sin(uTilt);
+  vec3 a = vec3(v.x * cr + v.z * sr, v.y, -v.x * sr + v.z * cr);
+  return vec3(a.x, a.y * ct - a.z * st, a.y * st + a.z * ct);
+}
+vec3 tiltRing(vec3 v, float ax, float az){
+  vec3 a = vec3(v.x, v.y * cos(ax) - v.z * sin(ax), v.y * sin(ax) + v.z * cos(ax));
+  return vec3(a.x * cos(az) - a.y * sin(az), a.x * sin(az) + a.y * cos(az), a.z);
+}
+void main(){
+  float live = clamp(uThink + uAns * 0.5, 0.0, 1.0);
+  vec3 q; float size = 1.0;
+  if (aP.y > -0.5) {
+    float i = aP.y;
+    float spin = uTime * (0.15 + 0.25 * i + live * (1.2 + 0.6 * i)) * (mod(i, 2.0) < 0.5 ? 1.0 : -1.0);
+    float a = aP.x + spin;
+    float r = 1.38 + 0.2 * i + live * 0.06 * sin(uTime * 2.0 + i);
+    q = tiltRing(vec3(cos(a) * r, 0.0, sin(a) * r), 1.1 + 0.55 * i + 0.3 * sin(uTime * 0.3 + i), 0.5 * i + 0.2 * sin(uTime * 0.21));
+    float dash = step(0.38, fract(aP.x * 9.0 / 6.2832 + i * 0.3));
+    float node = step(0.985, fract(aP.x * 3.0 / 6.2832 + uTime * 0.05));
+    vA = (0.06 + 0.55 * live) * dash + node * (0.25 + 0.75 * live);
+    size = 0.8 + node * 2.2;
+    vC = mix(uTop, vec3(0.85, 0.95, 1.0), 0.5 + 0.3 * node);
+  } else if (aP.y > -1.5) {
+    float th = aP.z * 6.2832, ph = acos(2.0 * aP.w - 1.0);
+    vec3 dir = vec3(sin(ph) * cos(th), cos(ph), sin(ph) * sin(th));
+    float f = fract(uTime * (0.25 + 0.35 * live) + aP.z * 7.0 + aP.w * 3.0);
+    q = dir * (0.35 + f * 1.9);
+    vA = live * (1.0 - f) * 0.9;
+    size = 0.7 + 1.3 * (1.0 - f);
+    vC = vec3(0.75, 0.9, 1.0);
+  } else {
+    q = vec3(0.0);
+    float beat = 0.5 + 0.5 * sin(uTime * (3.0 + 4.0 * live));
+    vA = 0.08 + live * (0.35 + 0.35 * beat);
+    size = 26.0 + live * 30.0 * beat;
+    vC = mix(uTop, vec3(1.0), 0.6);
+  }
+  vec3 w = rotate(q);
+  float persp = 1.0 / (2.4 - w.z * 0.6);
+  gl_Position = vec4(w.x * persp * 1.3 * uZoom / uAspect + uOff.x, w.y * persp * 1.3 * uZoom + uOff.y, 0.0, 1.0);
+  gl_PointSize = uSize * size * (0.75 + 0.5 * (w.z * 0.5 + 0.5)) * (0.7 + 0.3 * uZoom);
+}
+"""
+
+        private const val RING_FS = """
+precision mediump float;
+varying float vA;
+varying vec3 vC;
+void main(){
+  vec2 c = gl_PointCoord - 0.5;
+  float r = length(c);
+  if (r > 0.5) discard;
+  float a = smoothstep(0.5, 0.0, r) * vA;
+  gl_FragColor = vec4(vC * a, a);
 }
 """
 
