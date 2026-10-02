@@ -24,7 +24,21 @@ object Commands {
     private val QUESTION = Regex("^ (how|where|what|why|which|when|should|is there|are there|do i|does) ")
     private val ARM_NOUN = "(?:the )?(?:strategy|strategies|arm|arms|bot|bots|algo|script)?"
 
+    /**
+     * [said] as typed; with a misspelt word ("start all statergies") read again with it fixed ([Spelling]) when that
+     * finds a command and the words as typed found none, or only a name to look for.
+     */
     fun parse(said: String): Command? {
+        val raw = parseAs(said)
+        val fixed = Spelling.fix(said)
+        if (fixed != said) {
+            val f = parseAs(fixed)
+            if (f != null && (raw == null || raw.number == null && raw.target != null && f.kind != raw.kind)) return f
+        }
+        return raw
+    }
+
+    private fun parseAs(said: String): Command? {
         val text = Hinglish.normalize(said)
         val t = " " + text.lowercase().replace(Regex("[^a-z0-9. ]"), " ").replace(Regex("\\s+"), " ").trim() + " "
         if (QUESTION.containsMatchIn(t)) return null

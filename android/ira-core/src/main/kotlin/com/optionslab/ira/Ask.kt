@@ -53,7 +53,14 @@ object Ask {
     private val HELP = Regex(" (what can you do|what do you do|who are you|what are you|help|how do i use|how to use|can you (hear|listen)|" +
         "listen to me|hear me|your voice|voice|speak to me|talk to me|can you talk|can you speak) ")
 
+    /** [said] as typed; when nothing in it is understood, read again with its near-miss words fixed ([Spelling]). */
     fun parse(said: String): Question {
+        val q = parseAs(said)
+        if (q.topics == setOf(Topic.OFF_TOPIC)) Spelling.fix(said).takeIf { it != said }?.let { return parseAs(it) }
+        return q
+    }
+
+    private fun parseAs(said: String): Question {
         val text = Hinglish.normalize(said)
         val t = " " + text.lowercase().replace(Regex("[^a-z0-9 ]"), " ").replace(Regex("\\s+"), " ").trim() + " "
         Commands.parse(text)?.let { c -> return Question(text, Market.mentioned(text), setOf(Topic.COMMAND), null, command = c) }
