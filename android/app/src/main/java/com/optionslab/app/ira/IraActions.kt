@@ -181,6 +181,16 @@ internal object IraActions {
                     "Alarm set: ${m.label} ${if (above) "above" else "below"} ${"%,.2f".format(java.util.Locale.ENGLISH, lvl)}."
                 }
             }
+            Command.Kind.JTRADES_PAPER -> Commands.describe(c) to suspend { IraNewsTrades.paperFirst = true; "My suggested trades stay on paper now, Boss." }
+            Command.Kind.JTRADES_LIVE -> {
+                val why = com.optionslab.ira.JarvisTrades.proven(IraNewsTrades.closedRecord())
+                if (why != null) "$why I'll tell you when they have earned it." to null
+                else Commands.describe(c) to suspend { IraNewsTrades.paperFirst = false; "My suggested trades now follow the app's mode: real Zerodha orders in Live, after your yes each time." }
+            }
+            Command.Kind.JTRADES_LIMIT -> {
+                val v = c.level?.takeIf { it >= 500 } ?: return "Tell me the limit in rupees, at least 500." to null
+                Commands.describe(c) to suspend { IraNewsTrades.dailyLimit = v; "My trades now stop for the day after losing Rs %,.0f.".format(java.util.Locale.ENGLISH, v) }
+            }
             Command.Kind.AUTOPILOT_ON, Command.Kind.AUTOPILOT_OFF -> Commands.describe(c) to suspend {
                 IraHub.autopilot = c.kind == Command.Kind.AUTOPILOT_ON
                 if (IraHub.autopilot) "Autopilot on, Boss: strategies that pass two years of testing are added on paper by themselves, and ones I added that stop working are retired. Live still follows your mode switch."

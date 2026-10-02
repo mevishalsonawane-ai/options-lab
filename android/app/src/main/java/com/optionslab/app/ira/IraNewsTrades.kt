@@ -7,6 +7,7 @@ import com.optionslab.engine.orb.LiquidityRules
 import com.optionslab.engine.orb.OrbRules
 import com.optionslab.engine.orb.ProfitLock
 import com.optionslab.ira.NewsTrade
+import com.optionslab.ira.JarvisTrades
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -41,16 +42,84 @@ internal object IraNewsTrades {
 
     fun today(): Int { val d = com.optionslab.app.data.Market.today().toString(); return all().count { it.day == d } }
 
+    // ---- the owner's rules for Jarvis's own trades --------------------------------------------------------------------
+
+    /** Jarvis's trades stay on paper (even in Live mode) until their paper record earns live ([JarvisTrades.proven]). */
+    var paperFirst: Boolean
+        get() = runCatching { com.optionslab.app.security.SecurePrefs.getBoolean("jarvis.trades.paper", true) }.getOrDefault(true)
+        set(v) { runCatching { com.optionslab.app.security.SecurePrefs.put("jarvis.trades.paper", v) } }
+
+    const val DEFAULT_LIMIT = 3_000.0
+    /** Rupees Jarvis's trades may lose in a day before it suggests no more (its own limit, apart from the app's). */
+    var dailyLimit: Double
+        get() = runCatching { com.optionslab.app.security.SecurePrefs.getString("jarvis.trades.limit")?.toDouble() }.getOrNull() ?: DEFAULT_LIMIT
+        set(v) { runCatching { com.optionslab.app.security.SecurePrefs.put("jarvis.trades.limit", v.toString()) } }
+
+    /** Today's closed Jarvis trades have lost [dailyLimit] or more. */
+    fun lossLimitHit(): Boolean {
+        val d = com.optionslab.app.data.Market.today().toString()
+        return all().filter { it.day == d && it.closed }.sumOf { it.result ?: 0.0 } <= -dailyLimit
+    }
+
+    fun closedRecord(): List<JarvisTrades.Closed> = all().filter { it.closed && it.result != null }
+        .map { JarvisTrades.Closed(java.time.LocalDate.parse(it.day), it.result!!, it.live) }
+
+    // ---- every suggestion, for the evening scorecard ------------------------------------------------------------------
+
+    private const val SKEY = "jarvis.suggestions"
+
+    private fun suggestions(): List<Pair<Long, JarvisTrades.Suggestion>> = runCatching {
+        val a = JSONArray(com.optionslab.app.security.SecurePrefs.getString(SKEY) ?: "[]")
+        (0 until a.length()).map { a.getJSONObject(it) }.mapNotNull { o -> runCatching {
+            o.getLong("id") to JarvisTrades.Suggestion(java.time.LocalDateTime.parse(o.getString("at")), com.optionslab.ira.Market.valueOf(o.getString("m")),
+                o.getBoolean("c"), o.getDouble("s"), o.getString("src"), o.getString("a"), if (o.has("p")) o.getDouble("p") else null, if (o.has("l")) o.getInt("l") else null)
+        }.getOrNull() }
+    }.getOrDefault(emptyList())
+
+    private fun saveSuggestions(l: List<Pair<Long, JarvisTrades.Suggestion>>) = runCatching {
+        com.optionslab.app.security.SecurePrefs.put(SKEY, JSONArray().apply { l.takeLast(300).forEach { (id, x) ->
+            put(JSONObject().put("id", id).put("at", x.at.toString()).put("m", x.market.name).put("c", x.call).put("s", x.spot).put("src", x.source).put("a", x.answer)
+                .apply { x.points?.let { put("p", it) }; x.lot?.let { put("l", it) } }) } }.toString())
+    }
+
+    @Synchronized fun suggested(id: Long, idea: NewsTrade.Idea, spot: Double, source: String) =
+        saveSuggestions(suggestions() + (id to JarvisTrades.Suggestion(java.time.LocalDateTime.now(java.time.ZoneId.of("Asia/Kolkata")), idea.market, idea.call, spot, source, "waiting")))
+
+    @Synchronized fun answered(id: Long, answer: String) =
+        saveSuggestions(suggestions().map { (i, x) -> if (i == id && x.answer == "waiting") i to x.copy(answer = answer) else i to x })
+
+    /**
+     * The evening scorecard (after the day's option prices are kept): each of today's suggestions played on the real
+     * option prices - what it made, or would have made - and whether the owner's answer was the better choice.
+     */
+    @Synchronized fun scorecard(day: java.time.LocalDate = com.optionslab.app.data.Market.today()): List<String> {
+        val l = suggestions()
+        val sessions = HashMap<String, com.optionslab.engine.Session?>()
+        val out = l.map { (i, x) ->
+            if (x.at.toLocalDate() != day || x.points != null) return@map i to x
+            val u = x.market.name
+            val sess = sessions.getOrPut(u) { runCatching { com.optionslab.app.data.Store.barSession(u, day) }.getOrNull() } ?: return@map i to x
+            val p = runCatching { JarvisTrades.OptionSim.trade(sess, x.at, x.call, x.spot, JarvisTrades.strikeStep(u)) }.getOrNull()
+            i to x.copy(points = p, lot = sess.lotHint ?: sess.options.firstOrNull()?.lot, answer = if (x.answer == "waiting") "lapsed" else x.answer)
+        }
+        saveSuggestions(out)
+        return JarvisTrades.scorecard(day, out.map { it.second })
+    }
+
     /** The record so far: trades, wins, net (for "how are news trades doing"). */
     fun record(): String {
         val c = all().filter { it.closed && it.result != null }
-        if (c.isEmpty()) return "No news trades closed yet."
-        return "News trades: ${c.size} closed, ${c.count { it.result!! > 0 }} won, net ${com.optionslab.ira.AppFacts.rs(c.sumOf { it.result!! })}."
+        val where = if (paperFirst) "on paper until proven" else "in the app's mode"
+        val limit = " Daily loss limit for my trades: ${com.optionslab.ira.AppFacts.rs(dailyLimit).removePrefix("+")}" + if (lossLimitHit()) ", hit today." else "."
+        if (c.isEmpty()) return "No trades of mine closed yet (they go $where).$limit"
+        fun line(name: String, l: List<Pos>) = if (l.isEmpty()) null else "$name ${l.size} closed, ${l.count { it.result!! > 0 }} won, net ${com.optionslab.ira.AppFacts.rs(l.sumOf { it.result!! })}"
+        return "My trades (they go $where): " + listOfNotNull(line("news", c.filter { !it.headline.startsWith("pattern:") }), line("patterns", c.filter { it.headline.startsWith("pattern:") }))
+            .joinToString("; ") + "." + (JarvisTrades.proven(closedRecord())?.let { " $it" } ?: " The paper record has earned live trading.") + limit
     }
 
     /** The option as Liquidity 15+5 picks it for [u] at [spot]: ATM on the strike step, next expiry after today. */
     private fun contract(u: String, spot: Double, call: Boolean): Paper.Contract? {
-        val step = if (u == "NIFTY") 50 else LiquidityRules.strikeStep(u)
+        val step = JarvisTrades.strikeStep(u)
         val strike = OrbRules.atmStrike(spot, step)
         val listed = com.optionslab.app.data.Market.contracts().filter { it.underlying == u }.map { it.expiry }.distinct()
         val expiry = OrbRules.expiryAfter(com.optionslab.app.data.Market.today(), listed) ?: return null
@@ -63,7 +132,8 @@ internal object IraNewsTrades {
         val c = contract(u, spot, idea.call) ?: return "No ${u} option is listed for the next expiry."
         val s = AppSettings.load()
         val day = com.optionslab.app.data.Market.today().toString()
-        if (!s.live) {
+        // Paper first: until their own record is proven, Jarvis's trades go on paper even in Live mode.
+        if (!s.live || paperFirst) {
             val q = runCatching { Paper.quote(c) }.getOrNull()
             val r = Paper.place(c, "BUY", 1, "MARKET", "MIS", null, null, q)
             val fill = r.events.filterIsInstance<com.optionslab.engine.sandbox.SandboxEvent.Fill>().firstOrNull()
@@ -73,7 +143,7 @@ internal object IraNewsTrades {
             val prot = com.optionslab.app.data.Protections.protectPaper(c.symbol, "MIS", fill.quantity, fill.price, stop, null, fill.price + TARGET_POINTS)
             save(all() + Pos(c.symbol, false, fill.price, fill.quantity, fill.price, stop, headline, day))
             IraHub.appContext()?.let { com.optionslab.app.work.Notifier.orderFilled(it, "BUY", fill.quantity, c.symbol, fill.price, "Paper", "Jarvis news") }
-            return "Bought ${c.symbol} at ${"%.2f".format(fill.price)} on paper. $prot Profit lock on."
+            return "Bought ${c.symbol} at ${"%.2f".format(fill.price)} on paper${if (s.live) " (my trades stay on paper until proven)" else ""}. $prot Profit lock on."
         }
         val t = IraOrders.Ticket(u, c.expiry, c.strike, c.right, 1, true, c.lotSize)
         val sent = IraActions.trade(t, live = true)

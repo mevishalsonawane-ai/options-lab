@@ -45,7 +45,8 @@ internal object IraStudy {
             (0 until n.length()).mapNotNull { i -> runCatching { n.getJSONObject(i).let { Instant.parse(it.getString("t")) to it.getString("x") } }.getOrNull() },
             (0 until e.length()).mapNotNull { i -> runCatching { e.getJSONObject(i).let { x ->
                 com.optionslab.ira.PatternExpert.Edge(IraMarket.valueOf(x.getString("m")), x.getInt("min"), com.optionslab.ira.PatternKind.valueOf(x.getString("k")),
-                    x.getInt("n"), x.getDouble("r"), x.getDouble("a"), x.getDouble("b"), x.getDouble("v")) } }.getOrNull() })
+                    x.getInt("n"), x.getDouble("r"), x.getDouble("a"), x.getDouble("b"), x.getDouble("v"),
+                    x.optInt("pn"), x.optDouble("pv", 0.0), x.optDouble("pa", 0.0), x.optDouble("pb", 0.0), x.optInt("pna"), x.optInt("pnb")) } }.getOrNull() })
     }.getOrDefault(Kept())
 
     private fun save(k: Kept) {
@@ -57,7 +58,8 @@ internal object IraStudy {
                     .put("o", x.outcome).put("d", x.days).put("r", x.rate).put("a", x.first).put("b", x.second)) } })
                 .put("n", JSONArray().apply { k.overnight.forEach { (t, x) -> put(JSONObject().put("t", t.toString()).put("x", x)) } })
                 .put("e", JSONArray().apply { k.edges.forEach { x -> put(JSONObject().put("m", x.market.name).put("min", x.minutes).put("k", x.kind.name)
-                    .put("n", x.cases).put("r", x.rate).put("a", x.first).put("b", x.second).put("v", x.avgMovePct)) } })
+                    .put("n", x.cases).put("r", x.rate).put("a", x.first).put("b", x.second).put("v", x.avgMovePct)
+                    .put("pn", x.priced).put("pv", x.optAvg).put("pa", x.optFirst).put("pb", x.optSecond).put("pna", x.pricedFirst).put("pnb", x.pricedSecond)) } })
                 .toString())
         }
     }
@@ -78,7 +80,9 @@ internal object IraStudy {
             val bars = IraHub.twoYears(m, 5) ?: return@runCatching
             found += Study.run(m, bars)
             // The pattern expert: every candle pattern's record on the 5- and 15-minute charts.
-            for (min in listOf(5, 15)) edges += com.optionslab.ira.PatternExpert.edges(m, min, com.optionslab.ira.Candles.fold(bars, min, m))
+            // Played as option trades on the real option prices the phone keeps (bundled and harvested days).
+            for (min in listOf(5, 15)) edges += com.optionslab.ira.PatternExpert.edges(m, min, com.optionslab.ira.Candles.fold(bars, min, m),
+                runCatching { com.optionslab.app.data.Store.barSessions(m.name) }.getOrNull())
         }
         if (found.isEmpty() && edges.isEmpty()) return
         save(_state.value.copy(at = Instant.now(), findings = found, edges = edges))

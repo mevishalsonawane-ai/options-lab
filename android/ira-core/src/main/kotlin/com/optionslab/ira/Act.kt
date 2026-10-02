@@ -14,6 +14,8 @@ data class Command(val kind: Kind, val target: String? = null, val number: Int? 
         CANCEL_ALL(true), CANCEL_ONE(true), CLOSE_ALL(true), CLOSE_ONE(true),
         KILL_ON(true), KILL_OFF(false), MODE_PAPER(true), MODE_LIVE(false),
         ALARM_ADD(false), ALARM_REMOVE(true), EVENT_ADD(false), EVENT_REMOVE(true), AUTOPILOT_ON(false), AUTOPILOT_OFF(true),
+        /** Jarvis's own suggested trades: on paper (the default until proven) or in the app's mode; their daily loss limit. */
+        JTRADES_PAPER(true), JTRADES_LIVE(false), JTRADES_LIMIT(false),
     }
 }
 
@@ -30,6 +32,12 @@ object Commands {
         fun has(r: String) = Regex(r).containsMatchIn(s)
         fun num(r: String) = Regex(r).find(s)?.groupValues?.get(1)?.toIntOrNull()
 
+        // Jarvis's own trades (before Live / Paper mode: "let your trades go live" is not the app's mode).
+        if (has(" (your|jarvis s|jarvis) (own )?trades? (go |to |on )?live | (let|put|send|switch|move|take) (your|jarvis s) (own )?trades? (go )?(to )?live ")) return Command(Command.Kind.JTRADES_LIVE)
+        if (has(" (your|jarvis s) (own )?trades? (on|to|back to|go to) paper | keep (your|jarvis s) (own )?trades? (on )?paper ")) return Command(Command.Kind.JTRADES_PAPER)
+        Regex(" (?:your|jarvis s|jarvis) (?:own )?(?:trades? )?(?:daily )?loss limit (?:to |at |of )?(?:rs |rupees )?(\\d{3,7}) ").find(t)?.let { m ->
+            return Command(Command.Kind.JTRADES_LIMIT, level = m.groupValues[1].toDouble())
+        }
         when {
             has(" (turn|switch|put) (on )?(the )?kill switch on | (turn|switch) on (the )?kill switch | (activate|enable|engage) (the )?kill switch | kill switch on ") -> return Command(Command.Kind.KILL_ON)
             has(" (turn|switch) off (the )?kill switch | (turn|switch) (the )?kill switch off | (deactivate|disable|release|clear) (the )?kill switch | kill switch off ") -> return Command(Command.Kind.KILL_OFF)
@@ -119,6 +127,9 @@ object Commands {
         Command.Kind.ALARM_REMOVE -> "remove ${name ?: "that alarm"}"
         Command.Kind.AUTOPILOT_ON -> "turn the autopilot on (Jarvis adds the strategies that pass two years of testing, on paper, and retires its own that stop working)"
         Command.Kind.AUTOPILOT_OFF -> "turn the autopilot off"
+        Command.Kind.JTRADES_PAPER -> "keep my suggested trades on paper"
+        Command.Kind.JTRADES_LIVE -> "let my suggested trades go live (in the app's mode, real Zerodha orders in Live)"
+        Command.Kind.JTRADES_LIMIT -> "set my trades' daily loss limit to ${c.level?.let { "Rs %,.0f".format(java.util.Locale.ENGLISH, it) } ?: "?"}"
         Command.Kind.EVENT_ADD -> "note the event \"${c.target}\" on ${c.day ?: "?"}"
         Command.Kind.EVENT_REMOVE -> "remove ${name ?: "that event"}"
     }

@@ -222,7 +222,16 @@ object IraHub {
     }
 
     /** After the close (the evening harvest, JarvisAlgo): read the day's candles, learn them and review the session. */
-    suspend fun evening() { if (com.optionslab.app.BuildConfig.JARVIS) refresh() }
+    suspend fun evening() {
+        if (!com.optionslab.app.BuildConfig.JARVIS) return
+        refresh()
+        // The scorecard of today's suggestions, on the day's real option prices (kept by the harvest just before).
+        val lines = runCatching { IraNewsTrades.scorecard() }.getOrDefault(emptyList())
+        if (lines.isNotEmpty() && lines.first() != "No trades suggested today.") {
+            app?.let { JarvisPopup.show(it, "Boss, my scorecard", lines.first()) }
+            reply(com.optionslab.ira.Address.boss("My scorecard today. " + lines.joinToString(" ")))
+        }
+    }
 
     private val EVENING: java.time.LocalTime = java.time.LocalTime.of(15, 35)
     /** Sessions reviewed at most on the first run; the journal keeps this many; proposals kept. */
@@ -498,7 +507,7 @@ object IraHub {
         val waiting = synchronized(actions) { newsAsks.size }
         val level = runCatching { tradeCheck().level }.getOrNull()
         val idea = com.optionslab.ira.NewsTrade.idea(h, snap, histories[m]?.bars.orEmpty(), LocalDateTime.now(IST), level,
-            IraNewsTrades.today() + waiting) ?: return false
+            IraNewsTrades.today() + waiting, expiryToday(m), IraNewsTrades.lossLimitHit()) ?: return false
         proposeTrade(c, idea, t.title, t.text + " " + idea.why,
             "Hey Boss, news. ${Wake.spoken(t.text, 2)} The candles agree.", "news: " + h.title)
         return true
@@ -519,7 +528,9 @@ object IraHub {
             actions[id] = what to suspend { IraNewsTrades.place(idea, _state.value.snaps[m]?.price ?: snap?.price ?: error("no ${m.label} price"), source) }
             newsAsks += id
         }
-        val full = "$text Shall I $what? Approve or reject."
+        IraNewsTrades.suggested(id, idea, snap?.price ?: 0.0, source)
+        val where = if (IraNewsTrades.paperFirst && com.optionslab.app.data.AppSettings.load().live) " (on paper: my trades stay there until proven)" else ""
+        val full = "$text Shall I $what$where? Approve or reject."
         _state.update { it.copy(pending = it.pending + id, messages = (it.messages + Msg(true, full, action = id)).takeLast(MAX_MESSAGES)) }
         JarvisApproval.show(c, id, title, full)
         JarvisVoice.askYesNo(id, "$said Shall I buy 1 lot of the ${m.label} $side? Yes or no?")
@@ -527,11 +538,14 @@ object IraHub {
             kotlinx.coroutines.delay(NEWS_ANSWER_MS)
             if (synchronized(actions) { actions.remove(id) } != null) {
                 settled(id)
+                IraNewsTrades.answered(id, "lapsed")
                 _state.update { it.copy(pending = it.pending - id) }
                 reply("No answer in 10 minutes, so the ${m.label} trade lapsed; nothing was placed.")
             }
         }
     }
+
+    private fun expiryToday(m: IraMarket) = runCatching { com.optionslab.app.data.Market.isExpiryDay(m.name) }.getOrDefault(false)
 
     /** Is [id] a suggested trade Jarvis asks a yes or no about (so the voice does not also say "tap Confirm")? */
     fun asksYesNo(id: Long): Boolean = synchronized(actions) { id in newsAsks }
@@ -570,7 +584,7 @@ object IraHub {
             if (every && min == 15 && t.minute % 15 > 2) continue
             val candles = com.optionslab.ira.Candles.closed(com.optionslab.ira.Candles.fold(recentBars(m), min, m), min, t)
             val v = com.optionslab.ira.PatternExpert.judge(min, candles, _state.value.snaps[m], edges, level, t,
-                IraNewsTrades.today() + synchronized(actions) { newsAsks.size })
+                IraNewsTrades.today() + synchronized(actions) { newsAsks.size }, expiryToday(m), IraNewsTrades.lossLimitHit())
             v.idea?.let { return it to "${m.name}|$min|${candles.last().t}" }
             why?.addAll(v.reasons)
         }
@@ -650,14 +664,17 @@ object IraHub {
     private const val NOTIFY_BASE = 7300
 
     /** A question in, Ira's answer appended to the conversation. */
-    fun ask(text: String) {
+    fun ask(text: String) = ask(text, understood = false)
+
+    /** [understood]: [text] is the model's reading of the owner's words (its actions always wait for Confirm). */
+    private fun ask(text: String, understood: Boolean) {
         // Secrets never go further than this line: not into the conversation, the saved history or the model.
         val q = com.optionslab.ira.Secrets.redact(text.trim())
         if (q.isEmpty()) return
         val parsed = Ask.parse(q)
         if (Topic.BACKTEST in parsed.topics) { backtestAsked(q, parsed); return }
         if (Topic.ACCOUNT in parsed.topics) { accountAsked(q); return }
-        if (Topic.COMMAND in parsed.topics) { commandAsked(q, parsed.command!!); return }
+        if (Topic.COMMAND in parsed.topics) { commandAsked(q, parsed.command!!, confirmAlways = understood); return }
         if (Topic.SUGGEST in parsed.topics) { suggestAsked(q, parsed.markets); return }
         val explain = parsed.pattern?.takeIf { Topic.EXPLAIN in parsed.topics }
         if (explain != null) {
@@ -670,6 +687,8 @@ object IraHub {
             scope.launch { reply(runCatching { tradeCheck().say() }.getOrElse { "I could not run the trade check just now." }) }
             return
         }
+        // JarvisAlgo, words Jarvis does not know: the model maps them to one line of a fixed list (never an order).
+        if (parsed.topics == setOf(Topic.OFF_TOPIC) && com.optionslab.app.BuildConfig.JARVIS && IraModel.usable() && !understood) { freeFormAsked(q); return }
         // JarvisAlgo: a complete order is placed at once (the owner's rule); IraAlgo keeps the review.
         parsed.order?.takeIf { com.optionslab.app.BuildConfig.JARVIS && it.missing.isEmpty() && it.refusal == null }?.let { o -> tradeAsked(q, o); return }
         val a = runCatching { Ira(book).answer(q, _state.value.snaps, _state.value.news, voice = com.optionslab.app.BuildConfig.JARVIS) }.getOrElse { com.optionslab.ira.Answer("I could not work that out.", emptyList()) }
@@ -752,12 +771,25 @@ object IraHub {
      * "Stop strategy 1", "cancel all orders", "switch to live"... In JarvisAlgo what adds risk runs at once; what stops or
      * closes waits for Confirm. In IraAlgo everything waits for Confirm.
      */
-    private fun commandAsked(q: String, c: com.optionslab.ira.Command) {
+    /**
+     * Free-form words: the on-device model picks one line of [com.optionslab.ira.Intents.LINES]; only a valid line is
+     * used, said back ("I understood: ..."), and any action from it waits for Confirm. Otherwise the usual answer.
+     */
+    private fun freeFormAsked(q: String) {
+        scope.launch {
+            val line = runCatching { IraModel.complete(com.optionslab.ira.Intents.prompt(q))?.let { com.optionslab.ira.Intents.pick(it) } }.getOrNull()
+            if (line == null) { ask(q, understood = true); return@launch }
+            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, "I understood: \"$line\".")).takeLast(MAX_MESSAGES)) }
+            ask(line, understood = true)
+        }
+    }
+
+    private fun commandAsked(q: String, c: com.optionslab.ira.Command, confirmAlways: Boolean = false) {
         _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
         scope.launch {
             val (what, act) = runCatching { IraActions.prepare(c) }.getOrElse { ("I could not do that: ${it.message}") to null }
             if (act == null) { reply(what); return@launch }
-            if (c.kind.reduces || !com.optionslab.app.BuildConfig.JARVIS) {
+            if (c.kind.reduces || !com.optionslab.app.BuildConfig.JARVIS || confirmAlways) {
                 val id = System.nanoTime()
                 synchronized(actions) { actions[id] = what to act }
                 _state.update { it.copy(pending = it.pending + id,
@@ -769,12 +801,14 @@ object IraHub {
     /** The owner tapped Confirm (or said yes) on [id]: what happened, or null when it was already settled. */
     suspend fun confirm(id: Long): String? {
         val a = synchronized(actions) { actions.remove(id) } ?: return null
+        if (asksYesNo(id)) IraNewsTrades.answered(id, "approved")
         settled(id)
         _state.update { it.copy(pending = it.pending - id) }
         return IraActions.run(a.first, a.second).also { reply(it) }
     }
 
     fun cancelAction(id: Long) {
+        if (asksYesNo(id)) IraNewsTrades.answered(id, "rejected")
         synchronized(actions) { actions.remove(id) }
         settled(id)
         _state.update { it.copy(pending = it.pending - id, messages = (it.messages + Msg(true, "Cancelled; nothing was done.")).takeLast(MAX_MESSAGES)) }

@@ -40,21 +40,37 @@ object PatternExpert {
     )
 
     data class Edge(val market: Market, val minutes: Int, val kind: PatternKind, val cases: Int, val rate: Double,
-                    val first: Double, val second: Double, val avgMovePct: Double) {
+                    val first: Double, val second: Double, val avgMovePct: Double,
+                    /** The same cases as option trades on real prices ([JarvisTrades.OptionSim]): how many, points a trade, by year. */
+                    val priced: Int = 0, val optAvg: Double = 0.0, val optFirst: Double = 0.0, val optSecond: Double = 0.0, val pricedFirst: Int = 0, val pricedSecond: Int = 0) {
+        /** The index moved its way often enough in both years. */
         val held: Boolean get() = cases >= MIN_CASES && first >= EDGE && second >= EDGE && avgMovePct > 0
+        /** The option trade made money in both years too: only this is ever suggested. */
+        val optionHeld: Boolean get() = priced >= MIN_CASES && pricedFirst >= MIN_HALF && pricedSecond >= MIN_HALF && optFirst > 0 && optSecond > 0
+        val tradable: Boolean get() = held && optionHeld
         fun text(): String = "${market.label} ${minutes}-minute, ${kind.label}: went its way over the next ${HORIZON * minutes} minutes on " +
             "${pct(rate)} of $cases cases (${pct(first)} and ${pct(second)} by year), ${"%+.2f".format(Locale.ENGLISH, avgMovePct)}% on average" +
-            if (held) "." else " - no edge."
+            (if (held) "." else " - no edge.") + optionText()
+        fun optionText(): String = when {
+            !held -> ""
+            priced < MIN_CASES -> " Not enough real option prices to test it as a trade ($priced cases), so I don't suggest it."
+            else -> " As an option trade on real prices (ATM, 15% stop, +40 target, profit lock, ${"%.0f".format(Locale.ENGLISH, JarvisTrades.COST_POINTS)} point for costs): " +
+                "${"%+.1f".format(Locale.ENGLISH, optAvg)} points a trade over $priced trades (${"%+.1f".format(Locale.ENGLISH, optFirst)} and ${"%+.1f".format(Locale.ENGLISH, optSecond)} by year)" +
+                if (optionHeld) "." else " - it lost in a year, so I don't suggest it."
+        }
     }
 
     private fun pct(x: Double) = "%.0f%%".format(Locale.ENGLISH, x * 100)
     private fun px(x: Double) = "%,.2f".format(Locale.ENGLISH, x)
 
-    /** Every directional pattern's record on [candles] (completed [minutes]-minute candles of [m], two years). */
-    fun edges(m: Market, minutes: Int, candles: List<Candle>): List<Edge> {
+    /**
+     * Every directional pattern's record on [candles] (completed [minutes]-minute candles of [m], two years); with
+     * [sessions] (the days' option minute prices, streamed in day order) each case is also played as the option trade.
+     */
+    fun edges(m: Market, minutes: Int, candles: List<Candle>, sessions: Sequence<com.optionslab.engine.Session>? = null): List<Edge> {
         if (candles.size < Patterns.LOOKBACK + HORIZON + 1) return emptyList()
         val mid = candles[candles.size / 2].t.toLocalDate()
-        data class Case(val day: LocalDate, val move: Double)
+        class Case(val day: LocalDate, val move: Double, val at: LocalDateTime, val call: Boolean, val spot: Double) { var option: Double? = null }
         val by = HashMap<PatternKind, ArrayList<Case>>()
         for (i in Patterns.LOOKBACK until candles.size - HORIZON) {
             val later = candles[i + HORIZON]
@@ -62,14 +78,22 @@ object PatternExpert {
             for (k in Patterns.at(candles, i)) {
                 if (k.bias == 0) continue
                 val move = (later.c - candles[i].c) / candles[i].c * 100 * k.bias
-                by.getOrPut(k) { ArrayList() } += Case(candles[i].t.toLocalDate(), move)
+                by.getOrPut(k) { ArrayList() } += Case(candles[i].t.toLocalDate(), move, candles[i].t.plusMinutes(minutes.toLong()), k.bias > 0, candles[i].c)
             }
+        }
+        if (sessions != null) {
+            val byDay = by.values.flatten().groupBy { it.day }
+            val step = JarvisTrades.strikeStep(m.name)
+            for (s in sessions) byDay[s.day]?.forEach { c -> c.option = runCatching { JarvisTrades.OptionSim.trade(s, c.at, c.call, c.spot, step) }.getOrNull() }
         }
         return by.mapNotNull { (k, cs) ->
             val a = cs.filter { it.day < mid }; val b = cs.filter { it.day >= mid }
             if (a.size < MIN_HALF || b.size < MIN_HALF) return@mapNotNull null
             fun rate(l: List<Case>) = l.count { it.move > 0 }.toDouble() / l.size
-            Edge(m, minutes, k, cs.size, rate(cs), rate(a), rate(b), cs.map { it.move }.average())
+            val pa = a.mapNotNull { it.option }; val pb = b.mapNotNull { it.option }
+            Edge(m, minutes, k, cs.size, rate(cs), rate(a), rate(b), cs.map { it.move }.average(),
+                pa.size + pb.size, (pa + pb).average().takeIf { !it.isNaN() } ?: 0.0,
+                pa.average().takeIf { !it.isNaN() } ?: 0.0, pb.average().takeIf { !it.isNaN() } ?: 0.0, pa.size, pb.size)
         }.sortedByDescending { it.rate }
     }
 
@@ -81,13 +105,15 @@ object PatternExpert {
      * pattern with a held record closed on it, fresh, in entry hours, the trend agreeing and room to the next level.
      */
     fun judge(minutes: Int, candles: List<Candle>, snap: Snapshot?, edges: List<Edge>, check: TradeCheck.Level?,
-              now: LocalDateTime, today: Int): Verdict {
+              now: LocalDateTime, today: Int, expiryToday: Boolean = false, lossLimitHit: Boolean = false): Verdict {
         val s = snap ?: return Verdict(null, listOf("No live prices yet."))
         val m = s.market
         val minute = now.hour * 60 + now.minute
         if (minute < 9 * 60 + 20 || minute > 14 * 60 + 30) return Verdict(null, listOf("Suggestions are made between 09:20 and 14:30 only."))
         if (check == TradeCheck.Level.STOP) return Verdict(null, listOf("The trade check says don't trade now."))
         if (today >= MAX_A_DAY) return Verdict(null, listOf("Already $MAX_A_DAY suggested trades today: that is the day's limit."))
+        if (lossLimitHit) return Verdict(null, listOf("My trades hit their own daily loss limit today: no more suggestions."))
+        JarvisTrades.expiryBlock(expiryToday, now)?.let { return Verdict(null, listOf(it)) }
         val i = candles.lastIndex
         if (i < Patterns.LOOKBACK) return Verdict(null, listOf("Not enough ${m.label} candles yet."))
         val last = candles[i]
@@ -99,7 +125,7 @@ object PatternExpert {
         val reasons = ArrayList<String>()
         for (k in found) {
             val e = edges.firstOrNull { it.market == m && it.minutes == minutes && it.kind == k }
-            if (e == null || !e.held) { reasons += e?.text() ?: "${m.label} ${minutes}-minute, ${k.label}: not enough cases in two years to trust it."; continue }
+            if (e == null || !e.tradable) { reasons += e?.text() ?: "${m.label} ${minutes}-minute, ${k.label}: not enough cases in two years to trust it."; continue }
             val up = k.bias > 0
             val trend = s.trend(minutes)?.up
             if (trend != null && trend != up) { reasons += "A ${k.label} on ${m.label} ${minutes}-minute, but against the ${if (trend) "up" else "down"}trend: not suggested."; continue }
@@ -128,8 +154,8 @@ object PatternExpert {
 
     /** The patterns that held in both years, best first: the expert's short list. */
     fun best(edges: List<Edge>, n: Int = 5): List<String> {
-        val h = edges.filter { it.held }.sortedByDescending { it.rate }.take(n)
-        return if (h.isEmpty()) listOf("No candle pattern held up in both years on these charts: I will not suggest trades from patterns until one does.")
+        val h = edges.filter { it.tradable }.sortedByDescending { it.optAvg }.take(n)
+        return if (h.isEmpty()) listOf("No candle pattern held up in both years, on the index and as an option trade: I will not suggest trades from patterns until one does.")
         else h.map { it.text() }
     }
 }

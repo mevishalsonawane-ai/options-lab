@@ -417,4 +417,22 @@ class IraHubTest : RobolectricTest() {
         assertTrue(m.text, m.text.contains("bring you a trade for approval"))
         assertNull(m.action); assertTrue(IraHub.state.value.pending.isEmpty())
     }
+
+    @Test fun jarvisTradesStayOnPaperUntilProvenAndKeepTheirOwnLimit() = runBlocking {
+        assertTrue(IraNewsTrades.paperFirst)
+        IraHub.ask("Jarvis, let your trades go live")
+        waitFor("the refusal") { IraHub.state.value.messages.lastOrNull()?.fromIra == true }
+        assertTrue(IraHub.state.value.messages.last().text, IraHub.state.value.messages.last().text.contains("stay on paper until 20"))
+        assertTrue(IraNewsTrades.paperFirst)
+        IraHub.ask("set Jarvis loss limit to 2000")
+        waitFor("the limit") { IraHub.state.value.messages.lastOrNull()?.fromIra == true }
+        IraHub.state.value.pending.singleOrNull()?.let { IraHub.confirm(it) }
+        assertEquals(2000.0, IraNewsTrades.dailyLimit, 0.0)
+        assertTrue(!IraNewsTrades.lossLimitHit())
+        assertTrue(IraNewsTrades.record().contains("Daily loss limit for my trades: Rs 2,000.00."))
+        assertEquals(listOf("No trades suggested today."), IraNewsTrades.scorecard())
+        // Without a taught voice, voice cannot trade.
+        assertTrue(!VoiceGuard.isBoss(null) && !VoiceGuard.isBoss(ShortArray(16_000)))
+        assertTrue(VoiceGuard.blocked() != null)
+    }
 }

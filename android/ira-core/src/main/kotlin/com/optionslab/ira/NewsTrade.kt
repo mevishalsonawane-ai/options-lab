@@ -19,8 +19,10 @@ object NewsTrade {
     data class Idea(val market: Market, val call: Boolean, val why: String)
 
     /** [snap] and [bars] (1-minute) of the index the headline concerns; [minute]: IST minute now. */
-    fun idea(h: Headline, snap: Snapshot?, bars: List<Candle>, now: LocalDateTime, check: TradeCheck.Level?, today: Int): Idea? {
-        if (today >= MAX_A_DAY) return null
+    fun idea(h: Headline, snap: Snapshot?, bars: List<Candle>, now: LocalDateTime, check: TradeCheck.Level?, today: Int,
+             expiryToday: Boolean = false, lossLimitHit: Boolean = false): Idea? {
+        if (today >= MAX_A_DAY || lossLimitHit) return null
+        if (JarvisTrades.expiryBlock(expiryToday, now) != null) return null
         if (kotlin.math.abs(h.tone) < MIN_TONE) return null
         val m = h.markets.firstOrNull { it in listOf(Market.BANKNIFTY, Market.NIFTY, Market.FINNIFTY) } ?: return null
         if (h.at?.isBefore(now.atZone(java.time.ZoneId.of("Asia/Kolkata")).toInstant().minusSeconds(FRESH_MINUTES * 60)) == true) return null

@@ -313,6 +313,7 @@ private fun VoiceSwitch() {
             })
         }
         VoiceStyle()
+        VoiceTeach()
         Note(note ?: vs.problem ?: when (vs.mode) {
             JarvisVoice.Mode.OFF -> if (on) "Starting..." else "Off. Switch on and say \"Jarvis, how is Nifty?\" - or \"Jarvis\", then your question."
             JarvisVoice.Mode.AWAKE -> "Yes? Ask your question."
@@ -490,6 +491,34 @@ internal fun HowIraIsDoing(st: IraHub.State) {
             Note("This is a record of what happened, not a forecast.")
         }
     }
+}
+
+/**
+ * "Only Boss's voice can trade": teach Jarvis the owner's voice (five phrases), or forget it. Until it is taught, voice
+ * can ask but not trade.
+ */
+@Composable
+private fun VoiceTeach() {
+    val p = LocalPalette.current
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val t by com.optionslab.app.ira.VoiceGuard.teach.collectAsState()
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    var enrolled by remember { mutableStateOf(com.optionslab.app.ira.VoiceGuard.enrolled) }
+    LaunchedEffect(t) { enrolled = com.optionslab.app.ira.VoiceGuard.enrolled }
+    val g = com.optionslab.app.ira.VoiceGuard
+    Text(if (enrolled) "Your voice: taught. Only your voice can trade by voice." else "Your voice: not taught yet. Voice can ask, not trade.",
+        style = Type.label.copy(color = p.ink, fontSize = 13.sp), modifier = Modifier.padding(top = 6.dp))
+    if (!g.supported) Note("This phone needs Android 13 or later to check your voice: approve trades with the buttons.")
+    else {
+        if (!enrolled || t.step > 0) Note("Say: \"${g.PHRASES[t.step % g.PHRASES.size]}\" (${t.step + 1} of ${com.optionslab.ira.VoicePrint.SAMPLES_NEEDED})")
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            BrassButton(if (t.busy) "Listening..." else if (enrolled && t.step == 0) "Teach again" else "Record phrase") {
+                if (!t.busy) scope.launch { g.teachNext(ctx) }
+            }
+            if (enrolled) BrassButton("Forget my voice", tone = p.inkSoft) { g.forget(); enrolled = false }
+        }
+    }
+    t.message?.let { Note(it) }
 }
 
 /**

@@ -82,6 +82,12 @@ class JarvisVoice : Service() {
             return true
         }
 
+        /** Pauses listening while the owner teaches Jarvis their voice (the microphone is needed for that). */
+        fun hold(on: Boolean) {
+            val v = instance?.get() ?: return
+            v.main.post { v.held = on; if (on) { runCatching { v.rec?.cancel() }; v.endTap() } else v.again(300) }
+        }
+
         /** [id] was answered elsewhere (a button, the Ira screen) or lapsed: stop waiting for it. */
         fun answered(id: Long) {
             val v = instance?.get() ?: return
@@ -150,6 +156,13 @@ class JarvisVoice : Service() {
     private var voiceReady = false
     private var stopped = false
     private var awakeUntil = 0L
+    @Volatile private var held = false
+    /** This turn's own capture, shared with the recognizer (Android 13+ with a taught voice), or null. */
+    private var tap: VoiceGuard.Tap? = null
+    /** The phone's recognizer refused our audio: plain microphone from now on (voice cannot trade then). */
+    private var tapFailed = false
+    /** What the recognizer heard last turn (for the voice check), then dropped. */
+    private var lastHeard: ShortArray? = null
     /** The action Jarvis asked a yes or no about, heard until [askingUntil]. */
     private var asking: Long? = null
     private var askingUntil = 0L
@@ -211,17 +224,37 @@ class JarvisVoice : Service() {
     private fun awake() = SystemClock.elapsedRealtime() < awakeUntil
 
     private fun listen() {
-        if (stopped) return
+        if (stopped || held) return
         val i = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
             .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
             .putExtra(RecognizerIntent.EXTRA_LANGUAGE, lang)
             .putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true)
             .putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3)
-        runCatching { rec?.startListening(i) }.onFailure { again(1_000) }
+        // With a taught voice (Android 13+): our own capture feeds the recognizer, so the words are also voice-checked.
+        endTap()
+        if (VoiceGuard.supported && VoiceGuard.enrolled && !tapFailed && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            tap = runCatching { VoiceGuard.Tap() }.getOrNull()
+            tap?.let { t ->
+                i.putExtra(RecognizerIntent.EXTRA_AUDIO_SOURCE, t.read)
+                    .putExtra(RecognizerIntent.EXTRA_AUDIO_SOURCE_CHANNEL_COUNT, 1)
+                    .putExtra(RecognizerIntent.EXTRA_AUDIO_SOURCE_ENCODING, android.media.AudioFormat.ENCODING_PCM_16BIT)
+                    .putExtra(RecognizerIntent.EXTRA_AUDIO_SOURCE_SAMPLING_RATE, com.optionslab.ira.VoicePrint.RATE)
+            }
+        }
+        runCatching { rec?.startListening(i) }.onFailure { endTap(); again(1_000) }
         _state.value = VoiceState(if (awake()) Mode.AWAKE else Mode.LISTENING)
     }
 
     private fun again(delayMs: Long = 250) { if (!stopped) main.postDelayed({ listen() }, delayMs) }
+
+    /** Ends this turn's capture, keeping what it heard for the voice check. */
+    private fun endTap() {
+        tap?.let { t -> lastHeard = t.heard(); t.close() }
+        tap = null
+    }
+
+    /** Was the last thing heard said by the owner? (False without a taught voice or a shared capture.) */
+    private fun boss(): Boolean = VoiceGuard.isBoss(lastHeard).also { lastHeard = null }
 
     private val listener = object : RecognitionListener {
         override fun onReadyForSpeech(params: Bundle?) {}
@@ -234,11 +267,17 @@ class JarvisVoice : Service() {
 
         override fun onResults(results: Bundle?) {
             errorsInRow = 0
+            endTap()
             heard(results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION).orEmpty())
         }
 
         override fun onError(error: Int) {
+            val shared = tap != null
+            endTap(); lastHeard = null
             if (stopped) return
+            // The recognizer would not take our audio: back to its own microphone (voice can ask, not trade).
+            if (shared && (error == SpeechRecognizer.ERROR_CLIENT || error == SpeechRecognizer.ERROR_AUDIO ||
+                    (Build.VERSION.SDK_INT >= 33 && error == SpeechRecognizer.ERROR_CANNOT_CHECK_SUPPORT))) { tapFailed = true; again(500); return }
             when (error) {
                 SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> giveUp("Jarvis lost the microphone permission.")
                 SpeechRecognizer.ERROR_LANGUAGE_NOT_SUPPORTED, SpeechRecognizer.ERROR_LANGUAGE_UNAVAILABLE ->
@@ -259,6 +298,8 @@ class JarvisVoice : Service() {
         if (id != null && SystemClock.elapsedRealtime() < askingUntil) {
             val yes = alternatives.firstOrNull()?.let { Wake.yesNo(it) }
             if (yes != null) {
+                // Only Boss's voice approves a trade; a no from anyone is still a no.
+                if (yes && !boss()) { say(VoiceGuard.blocked() ?: "Boss, that didn't sound like you, so I won't place it. Say yes again, or tap Approve.", "question"); return }
                 asking = null
                 _state.value = VoiceState(Mode.THINKING)
                 scope.launch {
@@ -280,7 +321,10 @@ class JarvisVoice : Service() {
                 // A follow-up (no "Jarvis" in it) may ask, never act: trades and commands need the name, so talk nearby cannot trigger one.
                 val named = alternatives.any { Regex("\\bj[ae]rv[ia]s").containsMatchIn(it.lowercase()) }
                 val topics = com.optionslab.ira.Ask.parse(h.question).topics
-                if (!named && (com.optionslab.ira.Topic.COMMAND in topics || com.optionslab.ira.Topic.ORDER in topics)) say("Boss, say Jarvis first for that.")
+                val acts = com.optionslab.ira.Topic.COMMAND in topics || com.optionslab.ira.Topic.ORDER in topics
+                if (!named && acts) say("Boss, say Jarvis first for that.")
+                // Orders and commands by voice: only Boss's voice.
+                else if (acts && !boss()) say(VoiceGuard.blocked() ?: "Boss, that didn't sound like you, so I won't do it. Say it again, or use the Ira screen.")
                 else answer(h.question)
             }
         }
@@ -325,7 +369,7 @@ class JarvisVoice : Service() {
         if (stopped) return
         if (id == STOP_AFTER) { stopSelf(); return }
         if (id == "answer") awakeUntil = SystemClock.elapsedRealtime() + FOLLOW_MS   // a follow-up needs no "Jarvis"
-        if (id == "question") askingUntil = SystemClock.elapsedRealtime() + ANSWER_MS
+        if (id == "question" && askingUntil < SystemClock.elapsedRealtime()) askingUntil = SystemClock.elapsedRealtime() + ANSWER_MS
         again(150)
     }
 
@@ -335,6 +379,7 @@ class JarvisVoice : Service() {
         stopped = true
         if (instance?.get() === this) instance = null
         main.removeCallbacksAndMessages(null)
+        endTap(); lastHeard = null
         runCatching { rec?.destroy() }; rec = null
         runCatching { tts?.stop(); tts?.shutdown() }; tts = null
         scope.cancel()

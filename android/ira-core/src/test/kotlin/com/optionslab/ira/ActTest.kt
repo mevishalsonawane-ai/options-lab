@@ -55,4 +55,13 @@ class ActTest {
         assertNull(Commands.pick(Command(Command.Kind.STOP_ONE, target = "gold"), names))
         assertTrue(Command.Kind.STOP_ONE.reduces && !Command.Kind.START_ONE.reduces && Command.Kind.CLOSE_ALL.reduces && !Command.Kind.KILL_OFF.reduces)
     }
+
+    @Test fun jarvisOwnTradesAreNotTheAppsMode() {
+        assertEquals(Command.Kind.JTRADES_LIVE, Commands.parse("Jarvis, let your trades go live")?.kind)
+        assertEquals(Command.Kind.JTRADES_PAPER, Commands.parse("keep your trades on paper")?.kind)
+        val l = Commands.parse("set Jarvis loss limit to 3000")
+        assertEquals(Command.Kind.JTRADES_LIMIT, l?.kind); assertEquals(3000.0, l?.level)
+        assertEquals(Command.Kind.MODE_LIVE, Commands.parse("switch to live mode")?.kind)
+        assertEquals(true, Command.Kind.JTRADES_PAPER.reduces); assertEquals(false, Command.Kind.JTRADES_LIVE.reduces)
+    }
 }

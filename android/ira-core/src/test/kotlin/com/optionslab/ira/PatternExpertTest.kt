@@ -1,5 +1,8 @@
 package com.optionslab.ira
 
+import com.optionslab.engine.Right
+import com.optionslab.engine.Series
+import com.optionslab.engine.Session
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
@@ -29,6 +32,16 @@ class PatternExpertTest {
         return out
     }
 
+    /** The day's option prices: every BankNifty call near [spot], rising 1 point a minute after 11:30 ([up]) or falling. */
+    private fun options(d: LocalDate, spot: Double, up: Boolean): Session {
+        val mins = IntArray(376) { 555 + it }
+        val atm = Math.round(spot / 100) * 100.0
+        val series = (-8..8).flatMap { k -> listOf(Right.CE, Right.PE).map { r ->
+            val close = DoubleArray(mins.size) { j -> val m = mins[j]; 200.0 + (if (m > 690) (m - 690) * (if (up == (r == Right.CE)) 1.0 else -1.0) else 0.0) }
+            Series(d.plusDays(2), atm + k * 100, r, 15, mins, close.map { maxOf(it, 1.0) }.toDoubleArray(), null, null, null, null, LongArray(mins.size)) } }
+        return Session(d, 15, series)
+    }
+
     private fun weekdays(n: Int): List<LocalDate> {
         var d = LocalDate.of(2024, 10, 1); val out = ArrayList<LocalDate>()
         while (out.size < n) { if (d.dayOfWeek.value <= 5) out += d; d = d.plusDays(1) }
@@ -42,10 +55,15 @@ class PatternExpertTest {
     @Test fun aPatternThatWorkedInBothYearsIsSuggestedWithWhy() {
         var p = 52_000.0
         val ds = weekdays(80)
-        val c = ds.flatMap { d -> session(d, p, true).also { p = it.last().c } }
-        val e = PatternExpert.edges(Market.BANKNIFTY, 15, c)
+        val spots = ArrayList<Double>()
+        val c = ds.flatMap { d -> session(d, p, true).also { spots += it[8].c; p = it.last().c } }
+        // On the index alone it held, but untested as an option trade it is never suggested.
+        val bare = PatternExpert.edges(Market.BANKNIFTY, 15, c).single { it.kind == PatternKind.BULLISH_ENGULFING }
+        assertTrue(bare.held && !bare.tradable, bare.text()); assertTrue(bare.text().contains("Not enough real option prices"))
+        val e = PatternExpert.edges(Market.BANKNIFTY, 15, c, ds.mapIndexed { i, d -> options(d, spots[i], up = true) }.asSequence())
         val eng = e.single { it.kind == PatternKind.BULLISH_ENGULFING }
-        assertTrue(eng.held, eng.text()); assertEquals(1.0, eng.rate)
+        assertTrue(eng.tradable, eng.text()); assertEquals(1.0, eng.rate)
+        assertEquals(eng.cases, eng.priced); assertEquals(39.0, eng.optAvg, 1e-9)
         // Today: the engulfing has just closed (11:30 close, now 11:31).
         val today = session(LocalDate.of(2026, 10, 1), p, true).take(9)
         val now = today.last().t.plusMinutes(16)
@@ -59,6 +77,13 @@ class PatternExpertTest {
         assertNull(PatternExpert.judge(15, c + today, snap(today.last().c, up = true), e, TradeCheck.Level.STOP, now, 0).idea)
         assertNull(PatternExpert.judge(15, c + today, snap(today.last().c, up = true), e, TradeCheck.Level.GO, now, 2).idea)
         assertNull(PatternExpert.judge(15, c + today, snap(today.last().c, up = true), e, TradeCheck.Level.GO, now.plusMinutes(40), 0).idea)
+        // Expiry day after 13:00, or the trades' own loss limit hit: none.
+        assertNull(PatternExpert.judge(15, c + today, snap(today.last().c, up = true), e, TradeCheck.Level.GO, now, 0, lossLimitHit = true).idea)
+        // When the option trade lost in the second year, the index record alone is not enough.
+        val half = ds.size / 2
+        val mixed = PatternExpert.edges(Market.BANKNIFTY, 15, c, ds.mapIndexed { i, d -> options(d, spots[i], up = i < half) }.asSequence())
+            .single { it.kind == PatternKind.BULLISH_ENGULFING }
+        assertTrue(mixed.held && !mixed.tradable, mixed.text()); assertTrue(mixed.text().endsWith("so I don't suggest it."))
     }
 
     @Test fun aCoinTossPatternIsNeverSuggested() {
