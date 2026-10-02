@@ -440,4 +440,9 @@ class IraHubTest : RobolectricTest() {
         assertEquals(JarvisVoice.Style.MAN, JarvisVoice.style)
         assertEquals(JarvisVoice.Style.MAN, JarvisVoice.Style.entries.first())
     }
+
+    @Test fun repliesAreSaidToBossInPlainWords() {
+        assertTrue(JarvisSpeaker.speakTyped)
+        assertEquals("Boss, Nifty is up 120 rupees.", JarvisSpeaker.words("Nifty is up Rs 120."))
+    }
 }

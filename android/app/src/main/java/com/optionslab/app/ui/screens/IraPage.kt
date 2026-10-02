@@ -105,12 +105,15 @@ fun IraPage(orders: IraOrderPaths? = null) {
     val list = rememberLazyListState()
     LaunchedEffect(st.messages.size) { if (st.messages.isNotEmpty()) list.animateScrollToItem(st.messages.size) }
 
+    val ctxSpeak = androidx.compose.ui.platform.LocalContext.current
     fun send(q: String) {
         if (q.isBlank()) return
         IraMarket.mentioned(q).firstOrNull()?.let { focus = it }
         text = ""
         // The answer is ready at once (it is built from facts); the orb still shows a beat of thinking, then answers.
         IraHub.ask(q)
+        // JarvisAlgo: the reply to a typed question is said aloud too (the owner's switch, on by default).
+        scope.launch { com.optionslab.app.ira.JarvisSpeaker.replyTo(ctxSpeak, q) }
         typed = 2
         scope.launch { delay(600); typed = 3; delay(1_800); typed = 0 }
     }
@@ -177,6 +180,11 @@ private fun Bubble(m: IraHub.Msg, orders: IraOrderPaths?) {
         Text(if (m.fromIra) "IRA" else "YOU", style = Type.label.copy(color = if (m.fromIra) Color(0xFF4AA8FF) else p.inkSoft, fontSize = 10.sp, letterSpacing = 2.sp))
         Text(if (m.fromIra && com.optionslab.app.BuildConfig.JARVIS) com.optionslab.ira.Address.boss(m.text) else m.text, style = Type.label.copy(color = p.ink, fontSize = 15.sp),
             modifier = Modifier.background(p.card, RoundedCornerShape(14.dp)).padding(horizontal = 14.dp, vertical = 10.dp))
+        if (m.fromIra && com.optionslab.app.BuildConfig.JARVIS && !m.writing) {
+            val ctx = androidx.compose.ui.platform.LocalContext.current
+            Text("▶ Listen", style = Type.label.copy(color = Color(0xFF4AA8FF), fontSize = 13.sp),
+                modifier = Modifier.clickable { com.optionslab.app.ira.JarvisSpeaker.speak(ctx, m.text) }.padding(top = 4.dp, bottom = 2.dp))
+        }
         m.order?.let { o ->
             if (o.missing.isNotEmpty() || o.refusal != null) Note("Nothing was sent.")
             else if (orders == null) Note("Orders from Ira work on the Home screen; nothing was sent.")
@@ -313,6 +321,12 @@ private fun VoiceSwitch() {
             })
         }
         VoiceStyle()
+        var speakTyped by remember { mutableStateOf(com.optionslab.app.ira.JarvisSpeaker.speakTyped) }
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
+            Text("Say replies to typed questions aloud", style = Type.label.copy(color = p.ink, fontSize = 14.sp), modifier = Modifier.weight(1f))
+            androidx.compose.material3.Switch(checked = speakTyped, onCheckedChange = { v ->
+                speakTyped = v; com.optionslab.app.ira.JarvisSpeaker.speakTyped = v; if (!v) com.optionslab.app.ira.JarvisSpeaker.stop() })
+        }
         VoiceTeach()
         Note(note ?: vs.problem ?: when (vs.mode) {
             JarvisVoice.Mode.OFF -> if (on) "Starting..." else "Off. Switch on and say \"Jarvis, how is Nifty?\" - or \"Jarvis\", then your question."
