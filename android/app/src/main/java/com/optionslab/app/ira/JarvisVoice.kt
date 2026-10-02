@@ -46,7 +46,8 @@ import java.util.Locale
  */
 class JarvisVoice : Service() {
     enum class Mode { OFF, LISTENING, AWAKE, THINKING, SPEAKING }
-    data class VoiceState(val mode: Mode = Mode.OFF, val problem: String? = null)
+    data class VoiceState(val mode: Mode = Mode.OFF, val problem: String? = null,
+                          /** What the recognizer last heard (shown in Settings to check the voice; never stored). */ val heard: String? = null)
     /** How Jarvis sounds (see [style]). */
     enum class Style(val label: String, val pitch: Float, val rate: Float) {
         MAN("Man", 0.92f, 1.0f), GIRL("Young girl", 1.6f, 1.08f), WOMAN("Woman", 1.1f, 1.0f), DEEP("Deep", 0.8f, 0.95f)
@@ -130,6 +131,17 @@ class JarvisVoice : Service() {
             get() = runCatching { Style.valueOf(com.optionslab.app.security.SecurePrefs.getString("jarvis.voice.style2") ?: "MAN") }.getOrDefault(Style.MAN)
             set(v) { runCatching { com.optionslab.app.security.SecurePrefs.put("jarvis.voice.style2", v.name) } }
 
+        /**
+         * Cutting in while Jarvis talks: it listens during its own speech (only for "Jarvis"). Off by default: on
+         * many phones listening silences the speech. Switched off by itself when the phone does that.
+         */
+        var cutIn: Boolean
+            get() = runCatching { com.optionslab.app.security.SecurePrefs.getBoolean("jarvis.cutin", false) }.getOrDefault(false)
+            set(v) { runCatching { com.optionslab.app.security.SecurePrefs.put("jarvis.cutin", v) } }
+
+        /** What the recognizer heard last, for the Settings check. */
+        @Volatile var heardText: String? = null; private set
+
         /** The phone voice chosen by name, or null for the first offline English one (an Indian English one first). */
         var voiceName: String?
             get() = runCatching { com.optionslab.app.security.SecurePrefs.getString("jarvis.voice.name2") }.getOrNull()
@@ -180,6 +192,25 @@ class JarvisVoice : Service() {
     /** Ends the recognizer's turn early (its results come at once). */
     private val finish = Runnable { if (listening && !speaking) runCatching { rec?.stopListening() } }
     private val END_AFTER_MS = 800L
+    /** The sentence being spoken now ("id#n"), so a replaced one is ignored. */
+    @Volatile private var utterance: String? = null
+    private var said = 0
+    @Volatile private var stoppedByUs = false
+    /** The recognizer's turn began while Jarvis was talking: its words may be Jarvis's own. */
+    @Volatile private var turnInSpeech = false
+    private var listenedAt = 0L
+    private var spokeAt = 0L
+    /** Nothing may stick: a recognizer turn that never ends, or speech that never reports its end, is reset. */
+    private val watchdog = object : Runnable {
+        override fun run() {
+            if (stopped) return
+            val now = SystemClock.elapsedRealtime()
+            if (listening && now - listenedAt > 25_000) { runCatching { rec?.cancel() }; listening = false; endTap(); again() }
+            if (speaking && now - spokeAt > 60_000) { speaking = false; again() }
+            if (!listening && !speaking && !held && _state.value.mode != Mode.THINKING) again()
+            main.postDelayed(this, 5_000)
+        }
+    }
     private val WAKE = Regex("\\bj[ae]rv[ia]s+\\b|\\bjar vis\\b", RegexOption.IGNORE_CASE)
     @Volatile private var held = false
     /** This turn's own capture, shared with the recognizer (Android 13+ with a taught voice), or null. */
@@ -218,6 +249,7 @@ class JarvisVoice : Service() {
             rec = SpeechRecognizer.createOnDeviceSpeechRecognizer(this).also { it.setRecognitionListener(listener) }
             tts = TextToSpeech(this) { status -> main.post { voiceReady = status == TextToSpeech.SUCCESS && pickOfflineVoice() } }
             listen()
+            main.postDelayed(watchdog, 5_000)
             // While listening, the slow answers are kept ready so none waits: prices every minute in market hours, your
             // account and the trade check every 30 seconds.
             scope.launch(Dispatchers.Default) {
@@ -240,8 +272,20 @@ class JarvisVoice : Service() {
         if (!applyStyle(t)) return false
         t.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
             override fun onStart(id: String?) {}
-            override fun onDone(id: String?) { main.post { afterSpeech(id) } }
-            @Deprecated("Deprecated in Java") override fun onError(id: String?) { main.post { afterSpeech(id) } }
+            override fun onDone(id: String?) { main.post { if (id == utterance) afterSpeech(id.substringBefore('#')) } }
+            @Deprecated("Deprecated in Java") override fun onError(id: String?) { main.post { if (id == utterance) afterSpeech(id.substringBefore('#')) } }
+            override fun onStop(id: String?, interrupted: Boolean) {
+                main.post {
+                    if (id != utterance) return@post                     // replaced by a newer sentence: nothing to do
+                    if (stoppedByUs) { stoppedByUs = false; return@post }  // Boss cut in
+                    // The speech was cut off by something else - listening at the same time, on this phone.
+                    if (turnInSpeech) {
+                        cutIn = false
+                        _state.value = VoiceState(Mode.LISTENING, problem = "Cutting in is off: this phone stops speaking while it listens.")
+                    }
+                    afterSpeech(id?.substringBefore('#'))
+                }
+            }
         })
         return true
     }
@@ -262,6 +306,8 @@ class JarvisVoice : Service() {
 
     private fun listen() {
         if (stopped || held || listening) return
+        turnInSpeech = speaking
+        listenedAt = SystemClock.elapsedRealtime()
         val i = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
             .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
             .putExtra(RecognizerIntent.EXTRA_LANGUAGE, lang)
@@ -321,6 +367,7 @@ class JarvisVoice : Service() {
         override fun onResults(results: Bundle?) {
             main.removeCallbacks(finish)
             listening = false
+            results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()?.let { heardText = com.optionslab.ira.Secrets.redact(it) }
             errorsInRow = 0
             endTap()
             heard(results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION).orEmpty())
@@ -353,14 +400,16 @@ class JarvisVoice : Service() {
     private fun interrupt() {
         if (!speaking) return
         speaking = false
+        stoppedByUs = true
         runCatching { tts?.stop() }
         awakeUntil = SystemClock.elapsedRealtime() + AWAKE_MS
         _state.value = VoiceState(Mode.AWAKE)
     }
 
     private fun heard(alternatives: List<String>) {
-        // While Jarvis talks it hears itself too: only its name counts then, and it stops to listen.
-        if (speaking) {
+        // While Jarvis talks (or the turn began while it talked) it hears itself too: only its name counts then.
+        if (speaking || turnInSpeech) {
+            turnInSpeech = false
             if (alternatives.none { WAKE.containsMatchIn(it) }) { again(); return }
             interrupt()
         }
@@ -441,9 +490,18 @@ class JarvisVoice : Service() {
         if (!voiceReady || t == null) { afterSpeech(id); return }
         _state.value = VoiceState(Mode.SPEAKING)
         applyStyle(t)                                   // a style or voice changed on the Ira screen takes effect now
+        if (cutIn) {
+            // Keep listening (for "Jarvis" only) once the sentence is under way.
+            if (id != STOP_AFTER) main.postDelayed({ if (speaking) listen() }, 900)
+        } else {
+            // Take turns: not listening while speaking, so Jarvis never hears itself.
+            main.removeCallbacks(finish)
+            runCatching { rec?.cancel() }; listening = false; endTap(); lastHeard = null
+        }
         speaking = true
-        if (t.speak(spokenName(text), TextToSpeech.QUEUE_FLUSH, null, id) != TextToSpeech.SUCCESS) { speaking = false; afterSpeech(id); return }
-        if (id != STOP_AFTER) listen()
+        spokeAt = SystemClock.elapsedRealtime()
+        utterance = "$id#${++said}"
+        if (t.speak(spokenName(text), TextToSpeech.QUEUE_FLUSH, null, utterance) != TextToSpeech.SUCCESS) { speaking = false; afterSpeech(id) }
     }
 
     private fun spokenName(text: String) = WAKE.replace(text, "J.A.R.V.I.S.")

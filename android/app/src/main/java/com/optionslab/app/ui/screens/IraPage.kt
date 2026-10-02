@@ -151,7 +151,9 @@ fun IraPage(orders: IraOrderPaths? = null) {
             modifier = Modifier.fillMaxWidth().background(Color.Black).clickable { chat = false }.padding(horizontal = 14.dp, vertical = 8.dp))
         Box(Modifier.fillMaxWidth().height(280.dp).background(Color.Black)) {
             val s = st.snaps[focus]
-            Orb(vol = orbVol(st.snaps), trend = orbTrend(s), mode = if (mode == 0 && text.isNotEmpty()) 1 else mode)
+            // Tapping the globe in the chat hides the chat again (JarvisAlgo).
+            Orb(vol = orbVol(st.snaps), trend = orbTrend(s), mode = if (mode == 0 && text.isNotEmpty()) 1 else mode,
+                onTap = if (com.optionslab.app.BuildConfig.JARVIS) ({ chat = false }) else null)
             Text(listOf("Idle", "Listening", "Thinking", "Answering")[if (mode == 0 && text.isNotEmpty()) 1 else mode].uppercase(),
                 style = Type.label.copy(color = Color(0xFF4AA8FF), fontSize = 11.sp, letterSpacing = 2.sp), modifier = Modifier.padding(12.dp))
             s?.let { snap ->
@@ -355,6 +357,14 @@ internal fun VoiceSwitch() {
             androidx.compose.material3.Switch(checked = speakTyped, onCheckedChange = { v ->
                 speakTyped = v; com.optionslab.app.ira.JarvisSpeaker.speakTyped = v; if (!v) com.optionslab.app.ira.JarvisSpeaker.stop() })
         }
+        var cut by remember { mutableStateOf(JarvisVoice.cutIn) }
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
+            Text("Let me cut in while Jarvis talks", style = Type.label.copy(color = p.ink, fontSize = 14.sp), modifier = Modifier.weight(1f))
+            androidx.compose.material3.Switch(checked = cut, onCheckedChange = { v -> cut = v; JarvisVoice.cutIn = v })
+        }
+        Note("Say \"Jarvis\" while it speaks and it stops to listen. Some phones go silent when they listen while speaking: " +
+            "then Jarvis switches this off by itself.")
+        JarvisVoice.heardText?.let { Note("Last heard: \"$it\"") }
         VoiceTeach()
         Note(note ?: vs.problem ?: when (vs.mode) {
             JarvisVoice.Mode.OFF -> if (on) "Starting..." else "Off. Switch on and say \"Jarvis, how is Nifty?\" - or \"Jarvis\", then your question."
@@ -647,7 +657,7 @@ private fun headline(s: Snapshot): String =
 
 /** The orb on the graphics chip; a still drawing where there is no GL (the JVM screen tests). */
 @Composable
-private fun Orb(vol: Float, trend: Float, mode: Int) {
+private fun Orb(vol: Float, trend: Float, mode: Int, onTap: (() -> Unit)? = null) {
     if (Build.FINGERPRINT == "robolectric") {
         Canvas(Modifier.fillMaxSize()) {
             val r = size.minDimension * 0.32f
@@ -661,7 +671,7 @@ private fun Orb(vol: Float, trend: Float, mode: Int) {
     val owner = LocalLifecycleOwner.current
     var view by remember { mutableStateOf<OrbView?>(null) }
     AndroidView(factory = { ctx -> OrbView(ctx).also { view = it } }, modifier = Modifier.fillMaxSize()) { v ->
-        v.vol = vol; v.trend = trend; v.mode = mode
+        v.vol = vol; v.trend = trend; v.mode = mode; v.onTap = onTap
     }
     DisposableEffect(owner, view) {
         val v = view

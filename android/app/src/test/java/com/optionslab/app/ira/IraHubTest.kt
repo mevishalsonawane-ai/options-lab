@@ -482,4 +482,8 @@ class IraHubTest : RobolectricTest() {
         assertNotNull(IraAccount.readFast(setOf(com.optionslab.ira.Section.STATUS)))
         Unit
     }
+
+    @Test fun jarvisTakesTurnsByDefault() {
+        assertTrue("cutting in is off until Boss switches it on", !JarvisVoice.cutIn)
+    }
 }

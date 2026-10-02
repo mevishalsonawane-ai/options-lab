@@ -31,6 +31,9 @@ class OrbView(context: Context) : GLSurfaceView(context) {
     /** 0 idle, 1 listening, 2 thinking, 3 answering. */
     @Volatile var mode = 0
 
+    /** A single tap on the globe (the chat hides). */
+    @Volatile var onTap: (() -> Unit)? = null
+
     /** The owner's zoom (pinch) and turn (drag), eased to in the renderer. */
     @Volatile private var zoom = 1f
     @Volatile private var yaw = 0f
@@ -48,6 +51,7 @@ class OrbView(context: Context) : GLSurfaceView(context) {
             return true
         }
         override fun onDoubleTap(e: android.view.MotionEvent): Boolean { zoom = 1f; yaw = 0f; pitch = 0f; return true }
+        override fun onSingleTapConfirmed(e: android.view.MotionEvent): Boolean { onTap?.invoke(); return onTap != null }
     })
 
     @android.annotation.SuppressLint("ClickableViewAccessibility")
