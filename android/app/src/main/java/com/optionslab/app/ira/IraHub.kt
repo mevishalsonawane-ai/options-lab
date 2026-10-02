@@ -240,6 +240,10 @@ object IraHub {
             app?.let { JarvisPopup.show(it, "Boss, my scorecard", lines.first()) }
             reply(com.optionslab.ira.Address.boss("My scorecard today. " + lines.joinToString(" ")))
         }
+        // Losses outgrowing wins this week: said with the numbers.
+        IraCoach.lossSizeLine()?.let { w -> app?.let { JarvisPopup.show(it, "Boss, a pattern in your trades", w) }; reply(com.optionslab.ira.Address.boss(w)) }
+        // The spoken wrap-up of the day.
+        runCatching { IraCoach.daySummary(lines.firstOrNull()) }
     }
 
     private val EVENING: java.time.LocalTime = java.time.LocalTime.of(15, 35)
@@ -454,6 +458,7 @@ object IraHub {
         refresh()
         runCatching { watchAlerts() }
         runCatching { keepChains() }
+        runCatching { IraCoach.oiWatch() }
     }
 
     /**
@@ -546,8 +551,16 @@ object IraHub {
             if (synchronized(coolSaid) { coolSaid.add(until.toString()) }) { reply(com.optionslab.ira.CoolOff.say(until)); IraActivity.add(com.optionslab.ira.CoolOff.say(until)) }
             return
         }
+        // A kind of suggestion the owner always turns down is no longer offered (said once).
+        val kind = com.optionslab.ira.Preference.kind(source)
+        if (com.optionslab.ira.Preference.skip(kind, IraNewsTrades.answers())) {
+            if (IraNewsTrades.toldSkip(kind)) reply(com.optionslab.ira.Preference.say(kind))
+            return
+        }
         val snap = _state.value.snaps[m]
         val side = if (idea.call) "call" else "put"
+        // Money for it, with room to spare (Zerodha's funds when it would go live, else the paper account's).
+        snap?.price?.let { px -> runCatching { IraNewsTrades.marginProblem(idea, px) }.getOrNull() }?.let { why -> reply("$text $why"); return }
         // Are options cheap or dear now? In the dearest tenth of the year, no buy is suggested.
         val iv = snap?.price?.let { runCatching { IraNewsTrades.ivNow(idea, it) }.getOrNull() }
         if (iv != null && iv.first >= com.optionslab.ira.IvRank.BLOCK) {
@@ -706,7 +719,7 @@ object IraHub {
         val level = runCatching { tradeCheck().level }.getOrNull()
         expertIdea(t, edges, level, IraStudy.MARKETS, every = true)?.let { (idea, key) ->
             if (synchronized(suggested) { suggested.add(key) })
-                proposeTrade(c, idea, "Trade idea: ${idea.market.label}", idea.why, "Hey Boss, a trade idea. ${Wake.spoken(idea.why, 1)}", "pattern: " + key)
+                proposeTrade(c, idea, "Trade idea: ${idea.market.label}", idea.why, "Hey Boss, a trade idea. ${Wake.spoken(idea.why, 1)}", "pattern: " + (idea.kind?.let { "$it|" } ?: "") + key)
         }
     }
 
@@ -1012,6 +1025,13 @@ object IraHub {
      * possible, today's risks, your day so far, and each arm's tested record; with how Nifty and BankNifty are moving.
      */
     @Volatile private var checked: Pair<Long, com.optionslab.ira.TradeCheck.Verdict>? = null
+
+    /** 0 when the last trade check said go (or none yet), 1 careful, 2 don't trade: the globe's amber. */
+    fun caution(): Float = when (checked?.second?.level) {
+        com.optionslab.ira.TradeCheck.Level.CAREFUL -> 1f
+        com.optionslab.ira.TradeCheck.Level.STOP -> 2f
+        else -> 0f
+    }
 
     /** The trade check as worked out in the last minute (kept ready while Jarvis listens), else afresh. */
     suspend fun tradeCheckFast(): com.optionslab.ira.TradeCheck.Verdict {

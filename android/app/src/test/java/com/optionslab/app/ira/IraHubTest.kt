@@ -561,4 +561,17 @@ class IraHubTest : RobolectricTest() {
         if (com.optionslab.app.BuildConfig.JARVIS) assertTrue(IraNewsTrades.whatIf("what if I had taken the 10:30 suggestion").single().isNotEmpty())
         Unit
     }
+
+    @Test fun coachDefaultsAndAnswers() = runBlocking {
+        assertTrue("trailing is automatic by default", IraCoach.autoTrail)
+        assertEquals(0f, IraHub.caution(), 0f)
+        val v = IraAccount.read(setOf(com.optionslab.ira.Section.EXPLAIN_POS))
+        assertTrue(v.toString(), v!!.lines[com.optionslab.ira.Section.EXPLAIN_POS]!!.isNotEmpty())
+        IraHub.ask("reset my preferences")
+        waitFor("the reset") { IraHub.state.value.messages.lastOrNull()?.let { it.fromIra && it.text.contains("every kind of suggestion") } == true }
+        assertTrue(IraHub.state.value.pending.isEmpty())
+        // Nothing to trail, overtrade or warn about on an empty book: these never throw.
+        IraCoach.trailWatch(); IraCoach.overtradeWatch(); IraCoach.gapWatch()
+        assertNull(IraCoach.lossSizeLine())
+    }
 }

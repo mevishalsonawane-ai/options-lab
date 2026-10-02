@@ -16,7 +16,7 @@ object NewsTrade {
     const val FRESH_MINUTES = 15L
     const val MAX_A_DAY = 2
 
-    data class Idea(val market: Market, val call: Boolean, val why: String, /** The pattern's two-year hit rate, when a pattern brought it. */ val hitRate: Double? = null)
+    data class Idea(val market: Market, val call: Boolean, val why: String, /** The pattern's two-year hit rate, when a pattern brought it. */ val hitRate: Double? = null, /** The candle pattern's name, when a pattern brought it. */ val kind: String? = null)
 
     /** [snap] and [bars] (1-minute) of the index the headline concerns; [minute]: IST minute now. */
     fun idea(h: Headline, snap: Snapshot?, bars: List<Candle>, now: LocalDateTime, check: TradeCheck.Level?, today: Int,

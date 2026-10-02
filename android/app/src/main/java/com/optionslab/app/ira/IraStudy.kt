@@ -128,16 +128,19 @@ internal object IraStudy {
         var bankRegimes: Map<LocalDate, com.optionslab.ira.Regime.Kind> = emptyMap()
         var bankNow: com.optionslab.ira.Regime.Kind? = null
         val kinds = HashMap<String, String>()
+        var bankGaps: Map<LocalDate, Double> = emptyMap()
         for (m in MARKETS) {
             val days = Study.days(IraHub.twoYears(m, 5) ?: continue)
             val k = com.optionslab.ira.Regime.of(days) ?: continue
             out += com.optionslab.ira.Regime.say(m, k, days)
             kinds[m.name] = k.name
-            if (m == com.optionslab.ira.Market.BANKNIFTY) { bankRegimes = com.optionslab.ira.Regime.history(days); bankNow = k }
+            if (m == com.optionslab.ira.Market.BANKNIFTY) { bankRegimes = com.optionslab.ira.Regime.history(days); bankNow = k
+                bankGaps = days.mapNotNull { d -> d.gapPct?.let { d.date to it } }.toMap() }
         }
         if (bankRegimes.isNotEmpty()) {
             val r = com.optionslab.engine.orb.ArmsBacktest.run(com.optionslab.app.data.Store.barSessions("BANKNIFTY"))
             val trades = r.trades.map { com.optionslab.ira.ArmHealth.T(it.day, it.arm, it.net) }
+            runCatching { IraCoach.saveGapRecord(com.optionslab.ira.GapPlan.arms(trades, bankGaps)) }
             val by = com.optionslab.ira.Regime.armsBy(trades, bankRegimes)
             if (by.isNotEmpty()) out += listOf("BankNifty arms by regime:") + by
             bankNow?.let { k -> com.optionslab.ira.Regime.suits(trades, bankRegimes, k).takeIf { it.isNotEmpty() }

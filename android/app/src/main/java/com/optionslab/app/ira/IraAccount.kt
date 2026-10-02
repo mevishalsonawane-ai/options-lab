@@ -233,6 +233,7 @@ internal object IraAccount {
             if (wants(Section.WHATIF)) out[Section.WHATIF] = if (com.optionslab.app.BuildConfig.JARVIS) IraNewsTrades.whatIf(question.orEmpty())
                 else listOf("Replays of Jarvis's suggestions are in JarvisAlgo.")
             if (wants(Section.CHANGES)) out[Section.CHANGES] = com.optionslab.app.data.SettingsLog.lines()
+            if (wants(Section.EXPLAIN_POS)) out[Section.EXPLAIN_POS] = IraCoach.explainPositions()
             if (wants(Section.REVIEW)) {
                 val owners = runCatching { com.optionslab.app.data.Strategies.owners() }.getOrDefault(emptyMap())
                 val r = ArrayList<String>()

@@ -263,11 +263,23 @@ class JarvisVoice : Service() {
             // The mic button's one question was asked and answered (or never came): listening stops again.
             if (oneShot && !speaking && !awake() && _state.value.mode != Mode.THINKING && now - talkAt > 14_000) { stopSelf(); return }
             if (!listening && !speaking && !held && _state.value.mode != Mode.THINKING) again()
+            // Self-healing: no listening turn for 3 minutes (the phone took the microphone, the recognizer died):
+            // a new recognizer, noted in the activity log.
+            if (com.optionslab.ira.VoiceHealth.stuck(now, readyAt, speaking, !held && _state.value.mode != Mode.THINKING) && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                readyAt = now
+                runCatching { rec?.destroy() }
+                rec = runCatching { SpeechRecognizer.createOnDeviceSpeechRecognizer(this@JarvisVoice).also { it.setRecognitionListener(listener) } }.getOrNull()
+                listening = false; endTap()
+                IraActivity.add("Restarted listening (the microphone had gone quiet).")
+                again()
+            }
             main.postDelayed(this, 5_000)
         }
     }
     private val WAKE = Regex("\\bj[ae]rv[ia]s+\\b|\\bjar vis\\b", RegexOption.IGNORE_CASE)
     @Volatile private var held = false
+    /** When the recognizer last opened the microphone (for the self-healing check). */
+    @Volatile private var readyAt = SystemClock.elapsedRealtime()
     /** This turn's own capture, shared with the recognizer (Android 13+ with a taught voice), or null. */
     private var tap: VoiceGuard.Tap? = null
     /** The phone's recognizer refused our audio: plain microphone from now on (voice cannot trade then). */
@@ -367,9 +379,20 @@ class JarvisVoice : Service() {
         .setPriority(NotificationCompat.PRIORITY_LOW)
         .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
         .setContentIntent(Notifier.openApp(this, "almanac"))
+        .addAction(0, "Talk", talkIntent())
         .addAction(0, "Stop", PendingIntent.getService(this, 1, Intent(this, JarvisVoice::class.java).setAction(ACTION_STOP),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE))
+        // On the lock screen: only "Jarvis" and a Talk button (nothing private); while locked Jarvis answers
+        // questions but trades and changes nothing.
+        .setPublicVersion(NotificationCompat.Builder(this, Notifier.VOICE)
+            .setSmallIcon(R.drawable.ic_notification_art).setContentTitle("Jarvis").setOngoing(true)
+            .setPriority(NotificationCompat.PRIORITY_LOW).addAction(0, "Talk", talkIntent()).build())
         .build()
+
+    private fun talkIntent() = PendingIntent.getService(this, 2, Intent(this, JarvisVoice::class.java).setAction(ACTION_TALK),
+        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+
+    private fun locked(): Boolean = runCatching { (getSystemService(Context.KEYGUARD_SERVICE) as android.app.KeyguardManager).isKeyguardLocked }.getOrDefault(false)
 
     private fun awake() = SystemClock.elapsedRealtime() < awakeUntil
 
@@ -416,7 +439,7 @@ class JarvisVoice : Service() {
     private fun boss(): Boolean = VoiceGuard.isBoss(lastHeard).also { lastHeard = null }
 
     private val listener = object : RecognitionListener {
-        override fun onReadyForSpeech(params: Bundle?) { errorsInRow = 0 }
+        override fun onReadyForSpeech(params: Bundle?) { errorsInRow = 0; readyAt = SystemClock.elapsedRealtime() }
         override fun onBeginningOfSpeech() {}
         override fun onRmsChanged(rmsdB: Float) {}
         override fun onBufferReceived(buffer: ByteArray?) {}
@@ -515,7 +538,11 @@ class JarvisVoice : Service() {
                 // Muting, unmuting and the reply language are not actions: a follow-up "mute" works without the name.
                 val voiceOnly = com.optionslab.ira.Ask.parse(h.question).command?.kind in VOICE_KINDS
                 val acts = !voiceOnly && (com.optionslab.ira.Topic.COMMAND in topics || com.optionslab.ira.Topic.ORDER in topics)
-                if (!named && acts) say("Boss, say Jarvis first for that.")
+                // Locked phone: questions only; the account needs Boss's own voice.
+                val lockedNo = if (locked()) com.optionslab.ira.LockRule.refuse(true, acts || com.optionslab.ira.Topic.COMMAND in topics,
+                    com.optionslab.ira.Topic.ACCOUNT in topics, com.optionslab.ira.Topic.ACCOUNT in topics && boss()) else null
+                if (lockedNo != null) say(lockedNo)
+                else if (!named && acts) say("Boss, say Jarvis first for that.")
                 else {
                     // Trades, and commands that add risk (live mode, kill switch off, autopilot, starting arms), need
                     // Boss's own voice; without it a command is asked as a yes or no instead of done at once, and

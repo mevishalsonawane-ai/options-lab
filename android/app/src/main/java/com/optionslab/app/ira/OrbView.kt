@@ -28,6 +28,8 @@ class OrbView(context: Context) : GLSurfaceView(context) {
     @Volatile var vol = 0.1f
     /** -1 down .. +1 up. */
     @Volatile var trend = 0f
+    /** 0 normal, 1 the trade check says careful (amber), 2 don't trade (deeper amber). */
+    @Volatile var caution = 0f
     /** 0 idle, 1 listening, 2 thinking, 3 answering. */
     @Volatile var mode = 0
 
@@ -82,7 +84,7 @@ class OrbView(context: Context) : GLSurfaceView(context) {
         private val t0 = System.nanoTime()
         private var last = t0
         private var rot = 0f; private var speak = 0f; private var voice = 0f; private var listen = 0f; private var think = 0f
-        private var v = 0.1f; private var tr = 0f
+        private var v = 0.1f; private var tr = 0f; private var ca = 0f
         private var answer = 0f; private var z = 1f; private var yw = 0f; private var pt = 0f
         private var ringProg = 0; private var ringCount = 0
         private lateinit var ringBuf: FloatBuffer
@@ -126,7 +128,7 @@ class OrbView(context: Context) : GLSurfaceView(context) {
             val now = System.nanoTime()
             val dt = min(0.05f, (now - last) / 1e9f); last = now
             val t = (now - t0) / 1e9f
-            v += (vol - v) * 0.05f; tr += (trend - tr) * 0.05f
+            v += (vol - v) * 0.05f; tr += (trend - tr) * 0.05f; ca += (caution - ca) * 0.05f
             rot += dt * (if (mode == 2) 0.45f else 0.12f)
             speak += dt
             val target = if (mode == 3) (0.5f + 0.5f * sin(speak * 10) * sin(speak * 2.6f)) * 0.05f else 0f
@@ -154,8 +156,11 @@ class OrbView(context: Context) : GLSurfaceView(context) {
                 val r = rips.elementAtOrNull(i)
                 if (r != null) { rv[i * 4] = r[0]; rv[i * 4 + 1] = r[1]; rv[i * 4 + 2] = r[2]; rv[i * 4 + 3] = t - r[3]; ru[i] = r[4] } else rv[i * 4 + 3] = -1f
             }
-            val top = if (tr >= 0) mix(REST_TOP, UP_TOP, tr) else mix(REST_TOP, DOWN_TOP, -tr)
-            val bot = if (tr >= 0) mix(REST_BOT, UP_BOT, tr) else mix(REST_BOT, DOWN_BOT, -tr)
+            val top0 = if (tr >= 0) mix(REST_TOP, UP_TOP, tr) else mix(REST_TOP, DOWN_TOP, -tr)
+            val bot0 = if (tr >= 0) mix(REST_BOT, UP_BOT, tr) else mix(REST_BOT, DOWN_BOT, -tr)
+            // The trade check's caution tints it amber.
+            val top = mix(top0, AMBER_TOP, min(1f, ca * 0.35f))
+            val bot = mix(bot0, AMBER_BOT, min(1f, ca * 0.35f))
 
             GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT)
             GLES20.glUseProgram(prog)
@@ -214,6 +219,7 @@ class OrbView(context: Context) : GLSurfaceView(context) {
 
     companion object {
         private val REST_TOP = floatArrayOf(0.29f, 0.66f, 1.0f); private val REST_BOT = floatArrayOf(0.73f, 0.50f, 1.0f)
+        private val AMBER_TOP = floatArrayOf(1.0f, 0.72f, 0.20f); private val AMBER_BOT = floatArrayOf(0.95f, 0.45f, 0.10f)
         private val UP_TOP = floatArrayOf(0.30f, 0.95f, 1.0f); private val UP_BOT = floatArrayOf(0.25f, 0.95f, 0.70f)
         private val DOWN_TOP = floatArrayOf(0.62f, 0.42f, 1.0f); private val DOWN_BOT = floatArrayOf(1.0f, 0.36f, 0.66f)
 

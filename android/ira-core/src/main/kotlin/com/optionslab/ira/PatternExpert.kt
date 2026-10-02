@@ -140,7 +140,7 @@ object PatternExpert {
                 (behind?.let { "${it.name} at ${px(it.price)} is ${if (up) "below" else "above"}. " } ?: "") +
                 "Trade check: ${when (check) { TradeCheck.Level.GO -> "normal"; TradeCheck.Level.CAREFUL -> "careful today"; else -> "not known" }}. " +
                 "What can go wrong: it failed ${pct(1 - e.rate)} of the time; the stop 15% below the price paid and the profit lock limit that. History, not a promise."
-            return Verdict(NewsTrade.Idea(m, up, why, e.rate), reasons)
+            return Verdict(NewsTrade.Idea(m, up, why, e.rate, k.name), reasons)
         }
         return Verdict(null, reasons)
     }

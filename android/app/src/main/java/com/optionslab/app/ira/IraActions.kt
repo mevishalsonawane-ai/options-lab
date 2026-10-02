@@ -234,6 +234,7 @@ internal object IraActions {
                 }
             }
             Command.Kind.QUIET_ON -> { JarvisVoice.quietHours = true; "Quiet hours on, Boss: from 22:00 to 07:00 I say nothing unless you ask." to null }
+            Command.Kind.PREF_RESET -> { IraNewsTrades.resetPreferences(); "Done, Boss: I'll offer every kind of suggestion again." to null }
             Command.Kind.QUIET_OFF -> { JarvisVoice.quietHours = false; "Quiet hours off." to null }
             // Jarvis's voice and language: done at once (nothing to confirm, nothing at risk).
             Command.Kind.MUTE -> { JarvisVoice.muted = true; IraActivity.add("Muted my voice."); "Muted, Boss. I'll reply on screen only. Say \"Jarvis, unmute\" or \"Jarvis, speak again\" to hear me." to null }

@@ -397,6 +397,12 @@ internal fun VoiceSwitch() {
             androidx.compose.material3.Switch(checked = mute, onCheckedChange = { v -> mute = v; JarvisVoice.muted = v })
         }
         Note("Or say \"Jarvis, mute\" and \"Jarvis, unmute\".")
+        var trail by remember { mutableStateOf(com.optionslab.app.ira.IraCoach.autoTrail) }
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
+            Text("Trail my stops automatically", style = Type.label.copy(color = p.ink, fontSize = 14.sp), modifier = Modifier.weight(1f))
+            androidx.compose.material3.Switch(checked = trail, onCheckedChange = { v -> trail = v; com.optionslab.app.ira.IraCoach.autoTrail = v })
+        }
+        Note("Your own bought options with a stop: once up 20% the stop moves to what you paid, then trails 15% under the best price. It only moves up; bots keep their own stops.")
         var quiet by remember { mutableStateOf(JarvisVoice.quietHours) }
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
             Text("Quiet hours 22:00 to 07:00", style = Type.label.copy(color = p.ink, fontSize = 14.sp), modifier = Modifier.weight(1f))
@@ -745,6 +751,8 @@ private fun Orb(vol: Float, trend: Float, mode: Int, onTap: (() -> Unit)? = null
     var view by remember { mutableStateOf<OrbView?>(null) }
     AndroidView(factory = { ctx -> OrbView(ctx).also { view = it } }, modifier = Modifier.fillMaxSize()) { v ->
         v.vol = vol; v.trend = trend; v.mode = mode; v.onTap = onTap; v.onLongPress = onLongPress
+        // The trade check's last word tints the globe amber (careful) or deeper amber (don't trade).
+        v.caution = IraHub.caution()
     }
     DisposableEffect(owner, view) {
         val v = view

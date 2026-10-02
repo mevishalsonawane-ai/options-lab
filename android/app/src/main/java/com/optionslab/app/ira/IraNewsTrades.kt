@@ -272,6 +272,37 @@ internal object IraNewsTrades {
         Unit
     }
 
+    /** Answered suggestions since the last preferences reset: (kind, approved). */
+    fun answers(): List<Pair<String, Boolean>> {
+        val since = runCatching { com.optionslab.app.security.SecurePrefs.getString("jarvis.pref.reset")?.let(java.time.LocalDateTime::parse) }.getOrNull()
+        return suggestions().map { it.second }.filter { (it.answer == "approved" || it.answer == "rejected") && (since == null || it.at.isAfter(since)) }
+            .map { com.optionslab.ira.Preference.kind(it.source) to (it.answer == "approved") }
+    }
+
+    /** True the first time a kind is skipped (so it is said once). */
+    @Synchronized fun toldSkip(kind: String): Boolean {
+        val k = "jarvis.pref.told"
+        val told = com.optionslab.app.security.SecurePrefs.getString(k).orEmpty().split('\n').filter { it.isNotBlank() }.toSet()
+        if (kind in told) return false
+        com.optionslab.app.security.SecurePrefs.put(k, (told + kind).joinToString("\n"))
+        return true
+    }
+
+    /** "Reset my preferences": every kind is offered again. */
+    fun resetPreferences() {
+        com.optionslab.app.security.SecurePrefs.put("jarvis.pref.reset", java.time.LocalDateTime.now(java.time.ZoneId.of("Asia/Kolkata")).toString())
+        com.optionslab.app.security.SecurePrefs.put("jarvis.pref.told", null)
+    }
+
+    /** Not enough money for 1 lot (the lots it would take) with 20% to spare, or null. */
+    suspend fun marginProblem(idea: NewsTrade.Idea, spot: Double): String? {
+        val c = contract(idea.market.name, spot, idea.call) ?: return null
+        val px = runCatching { Paper.lastPrice(c) }.getOrNull()?.takeIf { it > 0 } ?: return null
+        val cost = px * c.lotSize * maxOf(1, lotsFor(px, c.lotSize))
+        return if (goesLive()) com.optionslab.ira.MarginCheck.problem(runCatching { com.optionslab.app.data.Broker.funds().available }.getOrNull(), cost, "Zerodha")
+            else com.optionslab.ira.MarginCheck.problem(runCatching { Paper.snapshot().funds.availableCash }.getOrNull(), cost, "the paper account")
+    }
+
     /** Each closed trade's close time and result, for the cooling-off after losses. */
     fun closedTimes(): List<Pair<java.time.LocalDateTime, Double>> = all().filter { it.closed && it.result != null && it.minuteOut != null }.mapNotNull { p ->
         runCatching { java.time.LocalDate.parse(p.day).atTime(p.minuteOut!! / 60, p.minuteOut % 60) to p.result!! }.getOrNull() }

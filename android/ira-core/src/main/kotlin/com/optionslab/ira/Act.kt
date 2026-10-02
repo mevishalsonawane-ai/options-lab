@@ -25,6 +25,8 @@ data class Command(val kind: Kind, val target: String? = null, val number: Int? 
         UNDO(true),
         /** Quiet hours (nothing spoken unasked at night) on or off. */
         QUIET_ON(true), QUIET_OFF(true),
+        /** The suggestions the owner always rejected are offered again. */
+        PREF_RESET(true),
     }
 }
 
@@ -70,6 +72,7 @@ object Commands {
         fun num(r: String) = Regex(r).find(s)?.groupValues?.get(1)?.toIntOrNull()
 
         if (Regex("^ (undo|undo (that|it|the last change|my last change|last change|the change)|revert( that| it| the last change)?|put (it|that) back|change (it|that) back) $").containsMatchIn(s)) return Command(Command.Kind.UNDO)
+        if (Regex("^ (reset|clear|forget) (my |your )?(preferences|suggestion preferences|what i reject(ed)?) $").containsMatchIn(s)) return Command(Command.Kind.PREF_RESET)
         if (Regex("^ (turn|switch) (on|off) (the )?quiet hours | quiet hours (on|off) |^ (enable|disable) (the )?quiet hours ").containsMatchIn(s))
             return Command(if (Regex(" (off|disable) ").containsMatchIn(s.replace(" quiet hours ", " "))) Command.Kind.QUIET_OFF else Command.Kind.QUIET_ON)
         // "Tell me if BankNifty falls 1% from here": an alarm at a level worked out from the price now.
@@ -200,5 +203,6 @@ object Commands {
         Command.Kind.UNDO -> "undo the last limit change"
         Command.Kind.QUIET_ON -> "turn quiet hours on (nothing said unasked from 22:00 to 07:00)"
         Command.Kind.QUIET_OFF -> "turn quiet hours off"
+        Command.Kind.PREF_RESET -> "offer every kind of suggestion again"
     }
 }
