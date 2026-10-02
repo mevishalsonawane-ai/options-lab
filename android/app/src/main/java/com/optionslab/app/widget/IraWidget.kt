@@ -30,6 +30,9 @@ class IraWidget : AppWidgetProvider() {
         private const val K_PNL = "w.pnl"
         private const val K_AT = "w.at"
 
+        /** The account P&L last published (the live watch refreshes it every minute), or null. */
+        fun lastPnl(): Double? = if (SecurePrefs.getString(K_PNL) != null) SecurePrefs.getDouble(K_PNL, 0.0) else null
+
         /** Record the latest figures and redraw every placed widget. */
         fun publish(context: Context, nifty: Pair<Double, Double>?, bank: Pair<Double, Double>?, pnl: Double?) {
             val m = HashMap<String, Any?>()
