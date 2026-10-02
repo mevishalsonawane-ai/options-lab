@@ -230,6 +230,7 @@ internal object IraActions {
     /** Runs a prepared action, logged as Jarvis's; never throws. */
     suspend fun run(what: String, act: suspend () -> String): String {
         log(what)
+        IraAccount.invalidate()
         return runCatching { act() }.getOrElse { "That did not work: ${it.message ?: "an error"}." }
     }
 
@@ -245,6 +246,7 @@ internal object IraActions {
      * Live goes through the app's order review and its checks, sent without the swipe or PIN (the app must be open).
      */
     suspend fun trade(t: IraOrders.Ticket, live: Boolean): String {
+        IraAccount.invalidate()
         log("trade ${t.title} ${if (live) "LIVE" else "paper"}")
         if (!live) {
             val c = com.optionslab.app.data.Paper.contractFor(t.underlying, t.expiry, t.strike, t.right) ?: return "${t.title} is not listed."

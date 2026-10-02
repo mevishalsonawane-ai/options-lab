@@ -703,7 +703,7 @@ object IraHub {
         }
         if (Topic.TRADE_CHECK in parsed.topics) {
             _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
-            scope.launch { reply(runCatching { tradeCheck().say() }.getOrElse { "I could not run the trade check just now." }) }
+            scope.launch { reply(runCatching { tradeCheckFast().say() }.getOrElse { "I could not run the trade check just now." }) }
             return
         }
         // JarvisAlgo, words Jarvis does not know: the model maps them to one line of a fixed list (never an order).
@@ -773,7 +773,7 @@ object IraHub {
         val user = Msg(false, q)
         _state.update { it.copy(messages = (it.messages + user).takeLast(MAX_MESSAGES)) }
         scope.launch {
-            val v = IraAccount.read(com.optionslab.ira.AppAnswers.sections(q), IraMarket.mentioned(q))
+            val v = IraAccount.readFast(com.optionslab.ira.AppAnswers.sections(q), IraMarket.mentioned(q))
             val a = Ira(book).answer(q, emptyMap(), emptyList(), app = v)
             val write = v != null && IraModel.usable() && a.facts.isNotEmpty()
             val msg = Msg(true, a.text, a.facts, writing = write)
@@ -826,7 +826,7 @@ object IraHub {
         if (asksYesNo(id)) IraNewsTrades.answered(id, "approved")
         settled(id)
         _state.update { it.copy(pending = it.pending - id) }
-        return IraActions.run(a.first, a.second).also { reply(it) }
+        return IraActions.run(a.first, a.second).also { IraAccount.invalidate(); checked = null; reply(it) }
     }
 
     fun cancelAction(id: Long) {
@@ -852,6 +852,21 @@ object IraHub {
      * "Should I trade now?" - everything the app knows, weighed by [com.optionslab.ira.TradeCheck]: whether trading is
      * possible, today's risks, your day so far, and each arm's tested record; with how Nifty and BankNifty are moving.
      */
+    @Volatile private var checked: Pair<Long, com.optionslab.ira.TradeCheck.Verdict>? = null
+
+    /** The trade check as worked out in the last minute (kept ready while Jarvis listens), else afresh. */
+    suspend fun tradeCheckFast(): com.optionslab.ira.TradeCheck.Verdict {
+        val now = android.os.SystemClock.elapsedRealtime()
+        checked?.takeIf { now - it.first < 60_000 && testHistories == null }?.let { return it.second }
+        return tradeCheck().also { checked = now to it }
+    }
+
+    /** Keeps the slow answers ready (called every 30 s while Jarvis listens): your account and the trade check. */
+    suspend fun warm() {
+        runCatching { IraAccount.warm() }
+        runCatching { checked = android.os.SystemClock.elapsedRealtime() to tradeCheck() }
+    }
+
     suspend fun tradeCheck(): com.optionslab.ira.TradeCheck.Verdict {
         val s = com.optionslab.app.data.AppSettings.load()
         val m = com.optionslab.app.data.Market

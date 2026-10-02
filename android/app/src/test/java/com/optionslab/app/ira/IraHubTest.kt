@@ -473,4 +473,13 @@ class IraHubTest : RobolectricTest() {
         assertEquals(null, IraHub.waitingTrade())
         Unit
     }
+
+    @Test fun accountAnswersAreKeptReadyAndReadAfreshAfterAnAction() = runBlocking {
+        val first = IraAccount.readFast(setOf(com.optionslab.ira.Section.STATUS))
+        assertNotNull(first)
+        assertEquals(first, IraAccount.readFast(setOf(com.optionslab.ira.Section.STATUS)))
+        IraAccount.invalidate()
+        assertNotNull(IraAccount.readFast(setOf(com.optionslab.ira.Section.STATUS)))
+        Unit
+    }
 }

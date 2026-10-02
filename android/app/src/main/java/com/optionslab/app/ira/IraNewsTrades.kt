@@ -155,6 +155,7 @@ internal object IraNewsTrades {
 
     /** The owner approved [idea]: place it (Paper, or Zerodha through the app's order review), stop, target, record. */
     suspend fun place(idea: NewsTrade.Idea, spot: Double, headline: String): String {
+        IraAccount.invalidate()
         val u = idea.market.name
         val c = contract(u, spot, idea.call) ?: return "No ${u} option is listed for the next expiry."
         val s = AppSettings.load()

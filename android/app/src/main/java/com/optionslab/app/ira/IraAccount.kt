@@ -36,6 +36,36 @@ internal object IraAccount {
     }.getOrNull()
 
     /** [markets]: the indices the question names (the chain of Nifty and BankNifty when none). */
+    /** Each section's lines as last read, and when (so a spoken question is answered at once). */
+    private val cache = HashMap<Section, Pair<Long, List<String>>>()
+    @Volatile private var cacheMode: String? = null
+    const val FRESH_MS = 30_000L
+    /** What Jarvis keeps ready while it listens: the questions asked most. */
+    val WARM = setOf(Section.STATUS, Section.PNL, Section.POSITIONS, Section.ORDERS, Section.FUNDS, Section.RISK,
+        Section.PROTECTIONS, Section.STRATEGIES, Section.ALARMS)
+
+    /** Something changed (an order, a command): the next question reads afresh. */
+    fun invalidate() = synchronized(cache) { cache.clear() }
+
+    /**
+     * [read], but from what was read in the last [FRESH_MS] when every section asked is there (questions naming a
+     * market always read afresh).
+     */
+    suspend fun readFast(sections: Set<Section>, markets: List<com.optionslab.ira.Market> = emptyList()): AppView? {
+        val now = android.os.SystemClock.elapsedRealtime()
+        if (markets.isEmpty() && testView == null) synchronized(cache) {
+            val mode = cacheMode
+            if (mode != null && sections.all { s -> cache[s]?.let { now - it.first < FRESH_MS } == true })
+                return AppView(mode, sections.associateWith { cache.getValue(it).second })
+        }
+        val v = read(sections, markets) ?: return null
+        if (markets.isEmpty() && testView == null) synchronized(cache) { v.lines.forEach { (k, l) -> cache[k] = now to l }; cacheMode = v.mode }
+        return v
+    }
+
+    /** Reads [WARM] ahead (the listening keeper calls it), so those answers need no wait. */
+    suspend fun warm() { invalidate(); readFast(WARM) }
+
     suspend fun read(sections: Set<Section>, markets: List<com.optionslab.ira.Market> = emptyList()): AppView? {
         testView?.let { return it(sections) }
         return runCatching {

@@ -177,6 +177,9 @@ class JarvisVoice : Service() {
     @Volatile private var speaking = false
     /** The recognizer is running a turn now (never started twice). */
     private var listening = false
+    /** Ends the recognizer's turn early (its results come at once). */
+    private val finish = Runnable { if (listening && !speaking) runCatching { rec?.stopListening() } }
+    private val END_AFTER_MS = 800L
     private val WAKE = Regex("\\bj[ae]rv[ia]s+\\b|\\bjar vis\\b", RegexOption.IGNORE_CASE)
     @Volatile private var held = false
     /** This turn's own capture, shared with the recognizer (Android 13+ with a taught voice), or null. */
@@ -215,12 +218,16 @@ class JarvisVoice : Service() {
             rec = SpeechRecognizer.createOnDeviceSpeechRecognizer(this).also { it.setRecognitionListener(listener) }
             tts = TextToSpeech(this) { status -> main.post { voiceReady = status == TextToSpeech.SUCCESS && pickOfflineVoice() } }
             listen()
-            // Prices kept fresh every minute while listening in market hours, so answers never wait for them.
+            // While listening, the slow answers are kept ready so none waits: prices every minute in market hours, your
+            // account and the trade check every 30 seconds.
             scope.launch(Dispatchers.Default) {
+                var n = 0
                 while (true) {
-                    if (com.optionslab.ira.Market.NIFTY.trading(java.time.LocalDateTime.now(java.time.ZoneId.of("Asia/Kolkata"))))
-                        runCatching { IraHub.refresh() }
-                    kotlinx.coroutines.delay(60_000)
+                    val open = com.optionslab.ira.Market.NIFTY.trading(java.time.LocalDateTime.now(java.time.ZoneId.of("Asia/Kolkata")))
+                    if (open && n % 2 == 0) runCatching { IraHub.refresh() }
+                    if (open || n % 10 == 0) runCatching { IraHub.warm() }
+                    n++
+                    kotlinx.coroutines.delay(30_000)
                 }
             }
         }
@@ -300,11 +307,19 @@ class JarvisVoice : Service() {
         override fun onPartialResults(partialResults: Bundle?) {
             // The owner says "Jarvis" while Jarvis is talking: stop at once and listen (the question follows).
             val words = partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION).orEmpty()
-            if (speaking && words.any { WAKE.containsMatchIn(it) }) interrupt()
+            if (speaking) { if (words.any { WAKE.containsMatchIn(it) }) interrupt(); return }
+            // Boss is speaking to Jarvis: once the words stop changing for a moment, end the turn now instead of
+            // waiting for the recognizer's own long silence.
+            val first = words.firstOrNull()?.trim().orEmpty()
+            if (first.isNotEmpty() && (WAKE.containsMatchIn(first) || awake() || asking != null)) {
+                main.removeCallbacks(finish)
+                main.postDelayed(finish, END_AFTER_MS)
+            }
         }
         override fun onEvent(eventType: Int, params: Bundle?) {}
 
         override fun onResults(results: Bundle?) {
+            main.removeCallbacks(finish)
             listening = false
             errorsInRow = 0
             endTap()
@@ -312,6 +327,7 @@ class JarvisVoice : Service() {
         }
 
         override fun onError(error: Int) {
+            main.removeCallbacks(finish)
             listening = false
             val shared = tap != null
             endTap(); lastHeard = null
@@ -395,7 +411,7 @@ class JarvisVoice : Service() {
             else if (st.liveAt?.isBefore(java.time.Instant.now().minusSeconds(120)) != false) launch(Dispatchers.Default) { runCatching { IraHub.refresh() } }
             IraHub.ask(q)
             // A slow answer (your account, the trade check): say so at once instead of going quiet.
-            val hold = launch { kotlinx.coroutines.delay(1_500); say("One moment, Boss.", "wait") }
+            val hold = launch { kotlinx.coroutines.delay(1_000); say("One moment, Boss.", "wait") }
             val said = com.optionslab.ira.Secrets.redact(q.trim())
             // Some answers (your account, a backtest) arrive a moment later: wait for Ira's reply to THIS question.
             val a = kotlinx.coroutines.withTimeoutOrNull(15_000) {
