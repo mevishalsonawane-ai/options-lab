@@ -216,7 +216,9 @@ fun LoginPinDialog(model: AppModel) {
         confirmButton = {
             TextButton({
                 val pn = pin; pin = ""; checking = true; err = null
-                scope.launch {
+                // Back on the main thread explicitly after the slow check (the screen's state is written there; in the UI
+                // tests the scope's own dispatcher could apply that write on the worker thread and fail).
+                scope.launch(kotlinx.coroutines.Dispatchers.Main) {
                     err = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { model.unlockForLogin(pn) }
                     checking = false
                 }
@@ -276,7 +278,7 @@ fun Reauth(model: AppModel, onOk: () -> Unit, onCancel: () -> Unit, pinOnly: Boo
                 TextButton({
                     checking = true; err = null
                     val typed = pin.toCharArray()
-                    pinScope.launch {
+                    pinScope.launch(kotlinx.coroutines.Dispatchers.Main) {
                         val r = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { PinLock.verify(typed, s.wipeOnExhaustion) }
                         checking = false
                         when (r) {
