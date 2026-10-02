@@ -11,15 +11,15 @@ data class Answer(val text: String, val facts: List<String>, val order: OrderReq
  */
 class Ira(private val book: PatternBook = PatternBook()) {
 
-    /** [account]: the owner's trading as the app read it (null: not read); [voice]: this app can listen (JarvisAlgo). */
-    fun answer(question: String, snaps: Map<Market, Snapshot>, news: List<Headline>, account: AccountView? = null, voice: Boolean = false): Answer {
+    /** [app]: the app and the owner's trading as the app read it (null: not read); [voice]: this app can listen (JarvisAlgo). */
+    fun answer(question: String, snaps: Map<Market, Snapshot>, news: List<Headline>, app: AppView? = null, voice: Boolean = false): Answer {
         val q = Ask.parse(question)
         val facts = ArrayList<String>()
         val parts = ArrayList<String>()
         if (Topic.ORDER in q.topics) return orderAnswer(q.order!!)
         if (Topic.BACKTEST in q.topics) return Answer("Backtesting needs the app's candles; ask me on the Ira screen.", emptyList())
-        if (Topic.HELP in q.topics) return AccountAnswers.help(q, voice)
-        if (Topic.ACCOUNT in q.topics) return AccountAnswers.answer(q, account)
+        if (Topic.HELP in q.topics) return AppAnswers.help(q, voice)
+        if (Topic.ACCOUNT in q.topics) return AppAnswers.answer(q, app)
         if (Topic.OFF_TOPIC in q.topics) return Answer("I only know the Indian indices (Nifty, BankNifty, FinNifty, Sensex, India VIX) and gold. Ask me about one of them.", emptyList())
         if (q.topics == setOf(Topic.GREETING)) return Answer("Hello. Ask me about Nifty, BankNifty, FinNifty, Sensex, VIX or gold.", emptyList())
         val markets = q.markets.ifEmpty { listOf(Market.NIFTY) }

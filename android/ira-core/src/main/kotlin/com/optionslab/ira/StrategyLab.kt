@@ -20,6 +20,22 @@ object StrategyLab {
     const val TARGET_ATR = 2.0
     /** A strategy is offered as worth a paper trial only with at least this many trades... */
     const val MIN_TRADES = 30
+    /**
+     * ...and every backtest runs on at least two years of candles (the owner's rule, 2026-10-02): this many sessions
+     * (about 248 a year, less a little for holidays and gaps), spanning two calendar years. Less is refused, not judged.
+     */
+    const val MIN_DAYS = 480
+    const val MIN_YEARS = 2L
+
+    /** Why [days] (the sessions a backtest would use) are not enough, or null when they cover two years. */
+    fun tooShort(days: List<java.time.LocalDate>, minDays: Int = MIN_DAYS): String? {
+        if (minDays <= 0) return null
+        if (days.isEmpty()) return "no candles"
+        val first = days.first(); val last = days.last()
+        return if (days.size < minDays || first.isAfter(last.minusYears(MIN_YEARS).plusDays(14)))
+            "only ${days.size} sessions ($first to $last); a backtest needs at least $MIN_YEARS years"
+        else null
+    }
     private val IST: ZoneId = ZoneId.of("Asia/Kolkata")
 
     val SUPPORTED = listOf(PatternKind.BULLISH_ENGULFING, PatternKind.BEARISH_ENGULFING, PatternKind.HAMMER, PatternKind.SHOOTING_STAR,
@@ -109,15 +125,16 @@ object StrategyLab {
      * (from the app) prices the trades with real option prices: (trades, bars) -> (rupees, priced trades), or null.
      */
     fun backtest(k: PatternKind, m: Market, minutes: Int, bars: List<Candle>,
-                 premium: ((List<Pine.Trade>, List<Pine.Bar>) -> Pair<Double, Int>?)? = null): Result {
+                 premium: ((List<Pine.Trade>, List<Pine.Bar>) -> Pair<Double, Int>?)? = null, minDays: Int = MIN_DAYS): Result {
         val name = name(k, m, minutes)
         val script = runCatching { pine(k, m, minutes) }.getOrElse { return fail(name, k, m, minutes, "", it.message ?: "not supported") }
         val compiled = Pine.compile(script)
         if (compiled !is Pine.Compiled.Ok) return fail(name, k, m, minutes, script, "the strategy did not compile")
         val candles = Candles.fold(bars, minutes, m)
         if (candles.size < 50) return fail(name, k, m, minutes, script, "too few candles (${candles.size})")
+        tooShort(candles.map { it.t.toLocalDate() }.distinct(), minDays)?.let { return fail(name, k, m, minutes, script, it) }
         val pb = candles.map { Pine.Bar(it.t.atZone(IST).toEpochSecond(), it.o, it.h, it.l, it.c, 0.0) }
-        val run = Pine.run(compiled.script, pb, symbol = m.name, interval = chart(minutes), qty = 1.0, budgetMs = 20_000)
+        val run = Pine.run(compiled.script, pb, symbol = m.name, interval = chart(minutes), qty = 1.0, budgetMs = 60_000)
         val rep = run.report ?: return fail(name, k, m, minutes, script, run.error?.message ?: "no report")
         val closed = rep.trades.filter { !it.open }
         val days = candles.map { it.t.toLocalDate() }.distinct()

@@ -89,7 +89,8 @@ object IraHub {
     }
 
     /** The app's harvested underlyings Ira reads from storage. */
-    val SOURCES = listOf(IraMarket.NIFTY to "NIFTY", IraMarket.BANKNIFTY to "BANKNIFTY", IraMarket.VIX to "INDIAVIX")
+    val SOURCES = listOf(IraMarket.NIFTY to "NIFTY", IraMarket.BANKNIFTY to "BANKNIFTY", IraMarket.FINNIFTY to "FINNIFTY",
+        IraMarket.SENSEX to "SENSEX", IraMarket.VIX to "INDIAVIX")
 
     /** Each market's live feed symbol (ChartFeed for the indices; gold comes from GoldChart). */
     val LIVE = linkedMapOf(IraMarket.NIFTY to "NIFTY", IraMarket.BANKNIFTY to "BANKNIFTY", IraMarket.FINNIFTY to "FINNIFTY",
@@ -235,7 +236,7 @@ object IraHub {
      * Jarvis's own look for strategies: today's newest pattern on each index chart, backtested once a day; a result worth
      * a paper trial is offered in the conversation and notified. (Results not worth one are not offered unasked.)
      */
-    private fun autoLab() {
+    private suspend fun autoLab() {
         if (!com.optionslab.app.BuildConfig.JARVIS && !testAutoLab) return
         val st = _state.value
         var tried = false
@@ -256,19 +257,42 @@ object IraHub {
 
     private fun chartWord(minutes: Int) = if (minutes == 60) "1-hour" else "$minutes-minute"
 
-    /** Backtests a pattern on the candles read last; rupees from real option prices where the phone has them. */
-    private fun lab(kind: PatternKind, m: IraMarket, minutes: Int): StrategyLab.Result? {
-        val h = histories[m] ?: return null
+    /**
+     * Backtests a pattern on at least two years of [m]'s candles at the chart's own interval (Upstox's public history,
+     * kept from January 2022; the owner's rule: never less than two years); rupees from real option prices where the
+     * phone has them. Less than two years is refused by [StrategyLab], never judged.
+     */
+    private suspend fun lab(kind: PatternKind, m: IraMarket, minutes: Int): StrategyLab.Result? {
         val u = LIVE[m] ?: return null
+        val bars = twoYears(m, minutes) ?: histories[m]?.bars ?: return null
         return runCatching {
-            StrategyLab.backtest(kind, m, minutes, h.bars) { trades, bars ->
+            StrategyLab.backtest(kind, m, minutes, bars, premium = { trades, bars ->
                 if (testHistories != null) null else {
                     val r = com.optionslab.engine.pine.PinePremium.run(trades, bars, { d -> Store.barSession(u, d) },
                         com.optionslab.app.data.PineAuto.strikeStep(u), 1, 100_000.0)
                     if (r.priced == 0) null else (r.report?.netProfit ?: 0.0) to r.priced
                 }
-            }
+            })
         }.getOrNull()
+    }
+
+    /** TEST ONLY: the long history for a backtest instead of Upstox's. */
+    @Volatile internal var testLabBars: ((IraMarket, Int) -> List<Candle>)? = null
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "test seam" }; field = v }
+    /** Two years and a month of [minutes]-minute candles, fetched once a day per market and chart. */
+    private val longCache = HashMap<String, Pair<LocalDate, List<Candle>>>()
+
+    private suspend fun twoYears(m: IraMarket, minutes: Int): List<Candle>? {
+        testLabBars?.let { return it(m, minutes) }
+        if (m == IraMarket.GOLD || m == IraMarket.VIX) return null
+        val key = "$m|$minutes"
+        val today = LocalDate.now(IST)
+        synchronized(longCache) { longCache[key]?.takeIf { it.first == today }?.let { return it.second } }
+        val from = today.minusYears(StrategyLab.MIN_YEARS).minusDays(45).atStartOfDay(IST).toEpochSecond()
+        val bars = runCatching { ChartFeed.bars(LIVE.getValue(m), "${minutes}m", from, null) }.getOrNull()?.takeIf { it.isNotEmpty() } ?: return null
+        val out = bars.map { b -> candle(Instant.ofEpochSecond(b.epochSecond).atZone(IST).toLocalDateTime(), b) }
+        synchronized(longCache) { longCache[key] = today to out }
+        return out
     }
 
     private fun propose(r: StrategyLab.Result, lead: String): Proposal {
@@ -400,8 +424,8 @@ object IraHub {
         val user = Msg(false, q)
         _state.update { it.copy(messages = (it.messages + user).takeLast(MAX_MESSAGES)) }
         scope.launch {
-            val v = IraAccount.read()
-            val a = Ira(book).answer(q, emptyMap(), emptyList(), account = v)
+            val v = IraAccount.read(com.optionslab.ira.AppAnswers.sections(q))
+            val a = Ira(book).answer(q, emptyMap(), emptyList(), app = v)
             val write = v != null && IraModel.usable() && a.facts.isNotEmpty()
             val msg = Msg(true, a.text, a.facts, writing = write)
             _state.update { it.copy(messages = (it.messages + msg).takeLast(MAX_MESSAGES)) }
@@ -449,7 +473,27 @@ object IraHub {
         return if (m == IraMarket.GOLD)
             GoldChart.bars("1m", null, null).map { b -> candle(LocalDateTime.ofEpochSecond(b.epochSecond, 0, ZoneOffset.UTC), b) }
         else ChartFeed.bars(LIVE.getValue(m), "1m", null, null, quick = true)
+            .also { keepDay(m, it) }
             .map { b -> candle(Instant.ofEpochSecond(b.epochSecond).atZone(IST).toLocalDateTime(), b) }
+    }
+
+    private val keptAt = HashMap<IraMarket, Long>()
+    /** Live index minutes are written to the app's record at most this often (JarvisAlgo). */
+    const val KEEP_EVERY_MS = 5 * 60_000L
+
+    /**
+     * JarvisAlgo keeps the live day as it trades: each index's 1-minute candles (with volume and OI where the feed has
+     * them) are merged into the app's own record, the same files the evening harvest fills - so a day is kept even if the
+     * harvest does not run. The option chains (1-minute OHLC, volume and OI for every contract) are kept by the harvest.
+     */
+    private fun keepDay(m: IraMarket, bars: List<com.optionslab.engine.Upstox.Bar>) {
+        if (!com.optionslab.app.BuildConfig.JARVIS || bars.isEmpty()) return
+        val now = System.currentTimeMillis()
+        synchronized(keptAt) { if (now - (keptAt[m] ?: 0L) < KEEP_EVERY_MS) return; keptAt[m] = now }
+        val name = LIVE.getValue(m)
+        runCatching {
+            for ((day, b) in bars.groupBy { it.istDate }) Store.upsertDay(name, day, listOf(com.optionslab.engine.Upstox.toSeries(null, b, day)))
+        }
     }
 
     private fun candle(t: LocalDateTime, b: com.optionslab.engine.Upstox.Bar) = Candle(t, b.open, b.high, b.low, b.close)

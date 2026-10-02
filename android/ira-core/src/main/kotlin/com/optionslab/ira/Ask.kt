@@ -54,8 +54,11 @@ object Ask {
 
     fun parse(text: String): Question {
         val t = " " + text.lowercase().replace(Regex("[^a-z0-9 ]"), " ").replace(Regex("\\s+"), " ").trim() + " "
-        val account = ACCOUNT.containsMatchIn(t)
-        val order = if (account) null else order(t)
+        // An order to place names its lots ("buy 2 lots..."); anything else about orders, P&L, strategies, limits or the app
+        // is a question about the app.
+        val placed = order(t)
+        val account = ACCOUNT.containsMatchIn(t) || AppAnswers.about(t) && placed?.lots == null
+        val order = if (account) null else placed
         val markets = Market.mentioned(text)
         val topics = LinkedHashSet<Topic>()
         if (order != null) topics += Topic.ORDER
@@ -65,7 +68,7 @@ object Ask {
         }
         if (Topic.BACKTEST in topics) { topics.remove(Topic.OVERVIEW); topics.remove(Topic.PATTERNS) }
         // The owner's own trading: unless a backtest is named outright, it is about the account, not the market.
-        if (account && !Regex(" (backtest|back test) ").containsMatchIn(t)) { topics.clear(); topics += Topic.ACCOUNT }
+        if (account && !Regex(" (backtest|back test|backtested|test this|test it|test the pattern|make it an arm|(create|make|build|write|turn) .*(strategy|arm)) ").containsMatchIn(t)) { topics.clear(); topics += Topic.ACCOUNT }
         else if (order == null && markets.isEmpty() && Topic.BACKTEST !in topics && HELP.containsMatchIn(t)) { topics.clear(); topics += Topic.HELP }
         return Question(text, markets, topics, order, pattern(t), when {
             Regex(" (1 hour|1h|hourly|60 minute|60m|one hour) ").containsMatchIn(t) -> 60

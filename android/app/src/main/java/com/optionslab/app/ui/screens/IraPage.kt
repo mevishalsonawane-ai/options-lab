@@ -310,6 +310,7 @@ private fun VoiceSwitch() {
                 }
             })
         }
+        VoiceStyle()
         Note(note ?: vs.problem ?: when (vs.mode) {
             JarvisVoice.Mode.OFF -> if (on) "Starting..." else "Off. Switch on and say \"Jarvis, how is Nifty?\" - or \"Jarvis\", then your question."
             JarvisVoice.Mode.AWAKE -> "Yes? Ask your question."
@@ -386,6 +387,53 @@ private fun ModelCard() {
                     modifier = Modifier.clickable { confirmDelete = true }.padding(top = 6.dp))
             }
         }
+    }
+}
+
+/**
+ * How Jarvis sounds: Young girl (the phone's voice pitched up), Woman or Deep; which of the phone's offline voices; and
+ * a sample to hear. Uses its own text-to-speech while this card is on screen, offline voices only.
+ */
+@Composable
+private fun VoiceStyle() {
+    val p = LocalPalette.current
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    var style by remember { mutableStateOf(JarvisVoice.style) }
+    var voices by remember { mutableStateOf<List<String>>(emptyList()) }
+    var chosen by remember { mutableStateOf(JarvisVoice.voiceName) }
+    var ready by remember { mutableStateOf<Boolean?>(null) }
+    val tts = remember { arrayOfNulls<android.speech.tts.TextToSpeech>(1) }
+    DisposableEffect(Unit) {
+        if (Build.FINGERPRINT != "robolectric") tts[0] = android.speech.tts.TextToSpeech(ctx.applicationContext) { status ->
+            val t = tts[0]
+            ready = status == android.speech.tts.TextToSpeech.SUCCESS && t != null && JarvisVoice.offlineVoices(t).isNotEmpty()
+            if (t != null && ready == true) voices = JarvisVoice.offlineVoices(t).map { it.name }
+        }
+        onDispose { runCatching { tts[0]?.stop(); tts[0]?.shutdown() }; tts[0] = null }
+    }
+    fun sample() {
+        val t = tts[0] ?: return
+        if (JarvisVoice.applyStyle(t)) t.speak("Hello, I am Jarvis. Nifty is at twenty four thousand six hundred, up zero point two percent today.",
+            android.speech.tts.TextToSpeech.QUEUE_FLUSH, null, "sample")
+    }
+    Text("Voice style", style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp), modifier = Modifier.padding(top = 8.dp))
+    Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(vertical = 4.dp)) {
+        JarvisVoice.Style.entries.forEach { st ->
+            val on = st == style
+            Text(st.label, style = Type.label.copy(color = if (on) p.onPrimary else p.ink, fontSize = 13.sp),
+                modifier = Modifier.background(if (on) p.brass else p.card, RoundedCornerShape(14.dp))
+                    .clickable { style = st; JarvisVoice.style = st; sample() }.padding(horizontal = 12.dp, vertical = 6.dp))
+        }
+    }
+    if (voices.size > 1) {
+        val idx = voices.indexOf(chosen).coerceAtLeast(0)
+        Text("Phone voice ${idx + 1} of ${voices.size} (tap for the next)", style = Type.label.copy(color = p.ink, fontSize = 13.sp),
+            modifier = Modifier.clickable { chosen = voices[(idx + 1) % voices.size]; JarvisVoice.voiceName = chosen; sample() }.padding(vertical = 4.dp))
+    }
+    when (ready) {
+        true -> BrassButton("Hear a sample", tone = p.inkSoft) { sample() }
+        false -> Note("No offline English voice on this phone: add one in Settings, Accessibility, Text-to-speech (install voice data). Jarvis never uses an online voice.")
+        null -> Unit
     }
 }
 

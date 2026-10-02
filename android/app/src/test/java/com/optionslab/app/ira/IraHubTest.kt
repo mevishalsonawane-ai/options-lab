@@ -42,7 +42,7 @@ class IraHubTest : RobolectricTest() {
         IraMarket.VIX to History(IraMarket.VIX, days(25, 13.0, 0.02, 3)),
     )
 
-    @After fun down() { IraAccount.testView = null; IraHub.testHistories = null; IraHub.testAutoLab = false; runBlocking { IraHub.forgetAll() } }
+    @After fun down() { IraHub.testLabBars = null; IraAccount.testView = null; IraHub.testHistories = null; IraHub.testAutoLab = false; runBlocking { IraHub.forgetAll() } }
 
     private fun waitFor(what: String, ok: () -> Boolean) {
         val t0 = System.currentTimeMillis()
@@ -50,8 +50,25 @@ class IraHubTest : RobolectricTest() {
     }
 
     private val sixty = mapOf(IraMarket.BANKNIFTY to History(IraMarket.BANKNIFTY, days(60, 52_000.0, 9.0, 4)))
+    /** Two years of 15-minute candles (the lab's rule: never less), built once. */
+    private val twoYears: List<Candle> by lazy {
+        val r = java.util.Random(4); val out = ArrayList<Candle>()
+        var px = 52_000.0; var d = LocalDate.of(2024, 8, 1)
+        while (out.size < 530 * 25) {
+            if (d.dayOfWeek.value <= 5) {
+                var t = d.atTime(LocalTime.of(9, 15))
+                while (t.toLocalTime().isBefore(LocalTime.of(15, 30))) {
+                    val o = px; px += r.nextGaussian() * 35
+                    out += Candle(t, o, maxOf(o, px) + 15, minOf(o, px) - 15, px); t = t.plusMinutes(15)
+                }
+            }
+            d = d.plusDays(1)
+        }
+        out
+    }
 
     @Test fun aBacktestIsOfferedAndApprovedAsAPaperArm() = runBlocking {
+        IraHub.testLabBars = { _, _ -> twoYears }
         com.optionslab.app.data.PineScripts.init(context)
         IraHub.testHistories = { sixty }
         IraHub.refresh()
@@ -60,7 +77,7 @@ class IraHubTest : RobolectricTest() {
         val p = IraHub.state.value.proposals.single()
         assertEquals(com.optionslab.ira.PatternKind.BREAKOUT_UP, p.result.kind)
         assertEquals(IraMarket.BANKNIFTY, p.result.market); assertEquals(15, p.result.minutes)
-        assertNull(p.result.error); assertEquals(60, p.result.days)
+        assertNull(p.result.error); assertTrue(p.result.days >= com.optionslab.ira.StrategyLab.MIN_DAYS)
         assertTrue(IraHub.state.value.messages.any { it.proposal == p.id && it.text.contains("Backtest of Jarvis: breakout") })
         val said = IraHub.approve(p.id)
         assertTrue(said, said.startsWith("Added"))
@@ -73,6 +90,7 @@ class IraHubTest : RobolectricTest() {
     }
 
     @Test fun dismissedAndNothingToTest() = runBlocking {
+        IraHub.testLabBars = { _, _ -> twoYears }
         IraHub.testHistories = { sixty }
         IraHub.refresh()
         IraHub.ask("backtest the hammer on banknifty 1 hour")
@@ -86,6 +104,7 @@ class IraHubTest : RobolectricTest() {
     }
 
     @Test fun theAutomaticHuntOffersOnlyWhatIsWorthATrial() = runBlocking {
+        IraHub.testLabBars = { _, _ -> twoYears }
         IraHub.testAutoLab = true
         IraHub.testHistories = { sixty }
         IraHub.refresh()
@@ -185,6 +204,7 @@ class IraHubTest : RobolectricTest() {
 
     /** The evening review scores each completed session once; the journal and the proposals survive a restart, the conversation does not. */
     @Test fun sessionsAreReviewedOnceAndKeptWithTheProposals() = runBlocking {
+        IraHub.testLabBars = { _, _ -> twoYears }
         IraHub.testHistories = { sixty }
         IraHub.refresh()
         val j = IraHub.state.value.journal
@@ -265,30 +285,51 @@ class IraHubTest : RobolectricTest() {
 
     /** "Analyze my orders": the app's own books, answered as facts; "can you listen to me": what Ira can do. */
     @Test fun yourOwnTradingAndIraItself() = runBlocking {
-        IraAccount.testView = { com.optionslab.ira.AccountView("Paper", "Paper", 500.0, 500.0, 0.0, emptyList(),
-            listOf(com.optionslab.ira.AccountView.OrderLine("09:31", "NIFTY25O0724500CE", "BUY", 75, "COMPLETE", 120.5, "Manual · Ira")),
-            listOf(com.optionslab.ira.AccountView.ArmLine("Jarvis: breakout", "Pine", true, "BANKNIFTY 15m", 500.0, null, 1))) }
+        var asked: Set<com.optionslab.ira.Section> = emptySet()
+        IraAccount.testView = { secs -> asked = secs; com.optionslab.ira.AppView("Paper", mapOf(
+            com.optionslab.ira.Section.ORDERS to com.optionslab.ira.AppFacts.orders("Paper",
+                listOf(com.optionslab.ira.AppFacts.OrderLine("09:31", "NIFTY25O0724500CE", "BUY", 75, "COMPLETE", 120.5, "Manual · Ira")), true),
+            com.optionslab.ira.Section.STRATEGIES to com.optionslab.ira.AppFacts.arms(
+                listOf(com.optionslab.ira.AppFacts.ArmLine("Jarvis: breakout", "Pine", true, "BANKNIFTY 15m", 500.0, null, 1)), true))) }
         IraHub.ask("can you analyze my strategies orders")
-        waitFor("the account answer") { IraHub.state.value.messages.size == 2 }
+        waitFor("the app answer") { IraHub.state.value.messages.size == 2 }
         val a = IraHub.state.value.messages.last()
-        assertTrue(a.text, a.text.contains("1 order today: 1 filled") && a.text.contains("Jarvis: breakout (Pine, BANKNIFTY 15m) today +Rs 500.00"))
+        assertTrue(a.text, a.text.contains("Paper: 1 order today, 1 filled") && a.text.contains("Jarvis: breakout (Pine, BANKNIFTY 15m): on today +Rs 500.00"))
+        assertEquals(setOf(com.optionslab.ira.Section.ORDERS, com.optionslab.ira.Section.STRATEGIES), asked)
         assertNull("never an order", a.order)
         IraAccount.testView = { null }
         IraHub.ask("my pnl")
         waitFor("the second answer") { IraHub.state.value.messages.size == 4 }
-        assertTrue(IraHub.state.value.messages.last().text.startsWith("I could not read your account"))
+        assertTrue(IraHub.state.value.messages.last().text.startsWith("I could not read the app"))
         IraHub.ask("you can listen to me")
         assertTrue(IraHub.state.value.messages.last().text, IraHub.state.value.messages.last().text.startsWith("Voice is in JarvisAlgo only"))
         IraHub.ask("what can you do")
         assertTrue(IraHub.state.value.messages.last().text.startsWith("I can tell you about Nifty"))
     }
 
-    /** The real books on a fresh install: an empty paper account reads as such. */
+    /** The real books on a fresh install: every section reads, nothing is placed. */
     @Test fun theRealBooksAreRead() = runBlocking {
         com.optionslab.app.data.PineScripts.init(context)
-        val v = IraAccount.read()
+        val v = IraAccount.read(com.optionslab.ira.Section.entries.toSet())
         assertNotNull(v)
-        assertEquals("Paper", v!!.account)
-        assertTrue(v.orders.isEmpty() && v.positions.isEmpty())
+        val l = v!!.lines
+        assertTrue(l[com.optionslab.ira.Section.ORDERS]!!.toString(), l[com.optionslab.ira.Section.ORDERS]!!.first().let { it == "No orders on Paper today." || it.startsWith("The paper account") })
+        assertTrue(l[com.optionslab.ira.Section.RISK]!!.first().startsWith("Kill switch: off"))
+        assertEquals(listOf("No price alarms are set."), l[com.optionslab.ira.Section.ALARMS])
+        assertTrue(l[com.optionslab.ira.Section.SETTINGS]!!.first().startsWith("Mode: Paper"))
+        assertTrue(l[com.optionslab.ira.Section.STATUS]!!.toString(), l[com.optionslab.ira.Section.STATUS]!!.any { it.startsWith("Zerodha: not set up") })
+    }
+
+
+    /** A backtest on less than two years of candles is refused, not judged (the owner's rule). */
+    @Test fun lessThanTwoYearsIsRefused() = runBlocking {
+        IraHub.testHistories = { sixty }
+        IraHub.testLabBars = { m, _ -> sixty.getValue(m).bars }
+        IraHub.refresh()
+        IraHub.ask("Backtest the breakout on BankNifty 15m")
+        waitFor("the backtest") { IraHub.state.value.proposals.isNotEmpty() }
+        val p = IraHub.state.value.proposals.single()
+        assertTrue(p.result.error!!, p.result.error!!.endsWith("needs at least 2 years"))
+        assertTrue(!p.result.recommended)
     }
 }

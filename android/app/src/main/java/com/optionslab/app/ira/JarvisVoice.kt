@@ -78,6 +78,37 @@ class JarvisVoice : Service() {
         }
 
         fun stop(context: Context) { context.stopService(Intent(context, JarvisVoice::class.java)) }
+
+        /**
+         * How Jarvis sounds. Android's voices are adult ones; a young girl's voice is the phone's voice pitched up and a
+         * little quicker (the owner's choice, 2026-10-02).
+         */
+        enum class Style(val label: String, val pitch: Float, val rate: Float) {
+            GIRL("Young girl", 1.6f, 1.08f), WOMAN("Woman", 1.1f, 1.0f), DEEP("Deep", 0.8f, 0.95f)
+        }
+
+        var style: Style
+            get() = runCatching { Style.valueOf(com.optionslab.app.security.SecurePrefs.getString("jarvis.voice.style") ?: "GIRL") }.getOrDefault(Style.GIRL)
+            set(v) { runCatching { com.optionslab.app.security.SecurePrefs.put("jarvis.voice.style", v.name) } }
+
+        /** The phone voice chosen by name, or null for the first offline English one (an Indian English one first). */
+        var voiceName: String?
+            get() = runCatching { com.optionslab.app.security.SecurePrefs.getString("jarvis.voice.name") }.getOrNull()
+            set(v) { runCatching { com.optionslab.app.security.SecurePrefs.put("jarvis.voice.name", v) } }
+
+        /** The phone's English voices that need no network (nothing Jarvis says leaves the phone). */
+        fun offlineVoices(t: TextToSpeech): List<android.speech.tts.Voice> = runCatching { t.voices }.getOrNull().orEmpty()
+            .filter { !it.isNetworkConnectionRequired && it.locale.language == "en" }
+            .sortedWith(compareBy({ if (it.locale.country == "IN") 0 else 1 }, { it.name }))
+
+        /** Sets [t] to the chosen offline voice and style; false when the phone has no offline English voice. */
+        fun applyStyle(t: TextToSpeech): Boolean {
+            val all = offlineVoices(t)
+            val v = all.firstOrNull { it.name == voiceName } ?: all.firstOrNull() ?: return false
+            t.voice = v
+            t.setPitch(style.pitch); t.setSpeechRate(style.rate)
+            return true
+        }
     }
 
     private val main = Handler(Looper.getMainLooper())
@@ -120,10 +151,7 @@ class JarvisVoice : Service() {
     /** An English voice that needs no network; without one Jarvis answers on screen only. */
     private fun pickOfflineVoice(): Boolean {
         val t = tts ?: return false
-        val v = runCatching { t.voices }.getOrNull().orEmpty()
-            .filter { !it.isNetworkConnectionRequired && it.locale.language == "en" }
-            .minByOrNull { if (it.locale.country == "IN") 0 else 1 } ?: return false
-        t.voice = v
+        if (!applyStyle(t)) return false
         t.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
             override fun onStart(id: String?) {}
             override fun onDone(id: String?) { main.post { afterSpeech(id) } }
@@ -227,6 +255,7 @@ class JarvisVoice : Service() {
         val t = tts
         if (!voiceReady || t == null) { afterSpeech(id); return }
         _state.value = VoiceState(Mode.SPEAKING)
+        applyStyle(t)                                   // a style or voice changed on the Ira screen takes effect now
         if (t.speak(text, TextToSpeech.QUEUE_FLUSH, null, id) != TextToSpeech.SUCCESS) afterSpeech(id)
     }
 

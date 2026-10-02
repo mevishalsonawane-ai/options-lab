@@ -80,7 +80,9 @@ object Jobs {
      * The market watch runs on every market day (paper bots need no Zerodha account); the other
      * jobs need a linked Zerodha account.
      */
-    fun enabled(k: Kind, s: AppSettings) = (k == Kind.LIVE || com.optionslab.app.data.Broker.linked) && when (k) {
+    // JarvisAlgo keeps the day's data (Upstox's public candles, no login) whether or not Zerodha is linked.
+    fun enabled(k: Kind, s: AppSettings) = (k == Kind.LIVE || com.optionslab.app.data.Broker.linked ||
+        k == Kind.HARVEST && com.optionslab.app.BuildConfig.JARVIS) && when (k) {
         Kind.LIVE -> true   // the market watch always runs on market days; it has no off switch
         Kind.REMIND -> s.entryReminder
         Kind.TICKET -> s.autoTicket || (s.prepareRealOrder && com.optionslab.app.data.Broker.configured)
@@ -322,7 +324,11 @@ object Tasks {
 
     suspend fun harvest(context: Context, s: AppSettings, session: java.time.LocalDate, onProgress: (String, Float) -> Unit) {
         if (Holidays.stale(Market.today())) runCatching { Holidays.refresh() }
-        val r = Harvester.run(session = session, onProgress = { p -> onProgress(p.stage, if (p.total > 0) p.done.toFloat() / p.total else -1f) })
+        // JarvisAlgo: FINNIFTY's chain too, and the FINNIFTY and SENSEX index candles (1-minute OHLC, volume and OI for every contract).
+        val r = if (com.optionslab.app.BuildConfig.JARVIS) Harvester.run(underlyings = listOf("NIFTY", "BANKNIFTY", "FINNIFTY"), session = session,
+            extraIndices = linkedMapOf("FINNIFTY" to "NSE_INDEX|Nifty Fin Service", "SENSEX" to "BSE_INDEX|SENSEX"),
+            onProgress = { p -> onProgress(p.stage, if (p.total > 0) p.done.toFloat() / p.total else -1f) })
+        else Harvester.run(session = session, onProgress = { p -> onProgress(p.stage, if (p.total > 0) p.done.toFloat() / p.total else -1f) })
         // No notification: the result is shown in More → Data and harvest.
         SecurePrefs.put("harvest.last", "$session: ${r.summary()}")
         if (s.healthAlerts) healthCheck(context, s)
