@@ -297,8 +297,8 @@ class JarvisVoice : Service() {
         if (!applyStyle(t)) return false
         t.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
             override fun onStart(id: String?) {}
-            override fun onDone(id: String?) { main.post { if (id == utterance) afterSpeech(id.substringBefore('#')) } }
-            @Deprecated("Deprecated in Java") override fun onError(id: String?) { main.post { if (id == utterance) afterSpeech(id.substringBefore('#')) } }
+            override fun onDone(id: String?) { main.post { if (id == utterance) afterSpeech(id?.substringBefore('#')) } }
+            @Deprecated("Deprecated in Java") override fun onError(id: String?) { main.post { if (id == utterance) afterSpeech(id?.substringBefore('#')) } }
             override fun onStop(id: String?, interrupted: Boolean) {
                 main.post {
                     if (id != utterance) return@post                     // replaced by a newer sentence: nothing to do
