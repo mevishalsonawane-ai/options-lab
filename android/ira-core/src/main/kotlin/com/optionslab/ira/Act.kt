@@ -77,7 +77,9 @@ object Commands {
         }
         // The bots: everything at once, or one strategy / arm by its number or name.
         if (has(" (stop|halt|pause|disarm|switch off|turn off) (all|every|everything)( the| my)?( strategies| arms| bots| algos| scripts| trading)? | stop trading | stop (the |my )?(bots|algos|arms|strategies) ")) return Command(Command.Kind.STOP_ALL)
-        if (has(" (start|resume|restart) (all |the |my )?(bots|arms|strategies|algos|trading) again | (resume|restart) (all|trading|the bots|everything) | start trading again ")) return Command(Command.Kind.START_ALL)
+        if (has(" (start|resume|restart) (all |the |my )?(bots|arms|strategies|algos|trading) again | (resume|restart) (all|trading|the bots|everything) | start trading again ") ||
+            has(" (start|arm|switch on|turn on|run|enable|resume) (all|every|everything)( the| my)?( strategies| strategy| arms| arm| bots| algos| scripts)? | (start|arm|switch on|turn on|run|enable) (the |my )?(strategies|arms|bots|algos) $"))
+            return Command(Command.Kind.START_ALL)
         Regex(" (stop|disarm|switch off|turn off|pause|halt) $ARM_NOUN ?(.+)$").find(s)?.let { m ->
             val what = m.groupValues[2].trim()
             if (what.isNotEmpty() && what != "listening") return one(Command.Kind.STOP_ONE, what)
@@ -117,7 +119,7 @@ object Commands {
     /** The command in a few words, for the confirm button and the reply. */
     fun describe(c: Command, name: String? = null): String = when (c.kind) {
         Command.Kind.STOP_ALL -> "stop every strategy and arm for today (and close what they hold)"
-        Command.Kind.START_ALL -> "let the strategies and arms trade again today"
+        Command.Kind.START_ALL -> "start every strategy and arm (and let them trade again today)"
         Command.Kind.STOP_ONE -> "stop ${name ?: "that strategy"}"
         Command.Kind.START_ONE -> "start ${name ?: "that strategy"}"
         Command.Kind.CANCEL_ALL -> "cancel every open order"

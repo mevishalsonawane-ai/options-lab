@@ -124,7 +124,12 @@ internal object IraActions {
         fun pick(names: List<String>, what: String): Int? = Commands.pick(c, names)
         return when (c.kind) {
             Command.Kind.STOP_ALL -> Commands.describe(c) to suspend { com.optionslab.app.data.Strategies.stopForToday(true, compromised()) }
-            Command.Kind.START_ALL -> Commands.describe(c) to suspend { com.optionslab.app.data.Strategies.startAgain() }
+            Command.Kind.START_ALL -> Commands.describe(c) to suspend {
+                // Lift today's stop, then switch on every strategy, Pine script and arm the app has.
+                val again = runCatching { com.optionslab.app.data.Strategies.startAgain() }.getOrNull()
+                val each = arms().map { (name, act) -> runCatching { act.first() }.getOrElse { e -> "$name: ${e.message ?: "failed"}." } }
+                (listOfNotNull(again) + each).joinToString(" ").ifBlank { "There are no strategies or arms to start." }
+            }
             Command.Kind.STOP_ONE, Command.Kind.START_ONE -> {
                 val all = arms()
                 if (all.isEmpty()) return "There are no strategies or arms to ${if (c.kind == Command.Kind.START_ONE) "start" else "stop"}." to null

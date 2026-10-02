@@ -71,4 +71,11 @@ class ActTest {
         val off = Commands.parse("Jarvis risk off")
         assertEquals(Command.Kind.JTRADES_RISK, off?.kind); assertEquals(null, off?.level)
     }
+
+    @Test fun startAllMeansEveryStrategy() {
+        for (q in listOf("start all strategies", "Jarvis, start all the strategies", "start all arms", "turn on all bots", "start everything", "start the strategies", "sab strategies chalu karo"))
+            assertEquals(Command.Kind.START_ALL, Commands.parse(q)?.kind, q)
+        assertEquals(Command.Kind.START_ONE, Commands.parse("start strategy 2")?.kind)
+        assertEquals(Command.Kind.STOP_ALL, Commands.parse("stop all strategies")?.kind)
+    }
 }

@@ -79,7 +79,7 @@ class JarvisVoice : Service() {
          */
         fun askYesNo(id: Long, text: String): Boolean {
             val v = instance?.get() ?: return false
-            v.main.post { v.asking = id; v.askingUntil = 0; v.say(text, "question") }
+            v.main.post { v.asking = id; v.askingNeedsBoss = true; v.askingUntil = 0; v.say(text, "question") }
             return true
         }
 
@@ -238,6 +238,8 @@ class JarvisVoice : Service() {
     private var lastHeard: ShortArray? = null
     /** The action Jarvis asked a yes or no about, heard until [askingUntil]. */
     private var asking: Long? = null
+    /** A trade needs Boss's own voice for its yes; a command (start, stop...) needs only a yes. */
+    private var askingNeedsBoss = true
     private var askingUntil = 0L
     private var lang = "en-IN"
     private var triedOtherLanguage = false
@@ -444,7 +446,7 @@ class JarvisVoice : Service() {
             val yes = alternatives.firstOrNull()?.let { Wake.yesNo(it) }
             if (yes != null) {
                 // Only Boss's voice approves a trade; a no from anyone is still a no.
-                if (yes && !boss()) { say(VoiceGuard.blocked() ?: "Boss, that didn't sound like you, so I won't place it. Say yes again, or tap Approve.", "question"); return }
+                if (yes && askingNeedsBoss && !boss()) { say(VoiceGuard.blocked() ?: "Boss, that didn't sound like you, so I won't place it. Say yes again, or tap Approve.", "question"); return }
                 asking = null
                 _state.value = VoiceState(Mode.THINKING)
                 scope.launch {
@@ -468,8 +470,8 @@ class JarvisVoice : Service() {
                 val topics = com.optionslab.ira.Ask.parse(h.question).topics
                 val acts = com.optionslab.ira.Topic.COMMAND in topics || com.optionslab.ira.Topic.ORDER in topics
                 if (!named && acts) say("Boss, say Jarvis first for that.")
-                // Orders and commands by voice: only Boss's voice.
-                else if (acts && !boss()) say(VoiceGuard.blocked() ?: "Boss, that didn't sound like you, so I won't do it. Say it again, or use the Ira screen.")
+                // Trades by voice: only Boss's voice (commands like start / stop need only the name).
+                else if (com.optionslab.ira.Topic.ORDER in topics && !boss()) say(VoiceGuard.blocked() ?: "Boss, that didn't sound like you, so I won't place it. Say it again, or use the Ira screen.")
                 else answer(h.question)
             }
         }
@@ -499,7 +501,12 @@ class JarvisVoice : Service() {
             say(when {
                 a == null -> "I could not work that out."
                 o != null && o.missing.isEmpty() && o.refusal == null -> "I have put that order on the Ira screen. Nothing is sent until you confirm it there."
-                a.action != null -> "Tap Confirm on the Ira screen to do that."
+                a.action != null -> {
+                    // Asked aloud instead of a button hidden in the chat: "Shall I stop ORB? Yes or no?"
+                    asking = a.action; askingNeedsBoss = false; askingUntil = 0
+                    say(com.optionslab.ira.Address.boss("Shall I " + a.text.removePrefix("Tap Confirm to ").trimEnd('.') + "? Yes or no?"), "question")
+                    return@launch
+                }
                 else -> com.optionslab.ira.Address.boss(Wake.spoken(a.text))
             }, "answer")
         }
