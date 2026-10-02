@@ -43,6 +43,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import com.optionslab.app.ira.IraHub
 import com.optionslab.app.ira.IraOrders
 import com.optionslab.app.ira.JarvisVoice
+import com.optionslab.app.ira.IraModel.Status as ModelStatus
 import com.optionslab.app.ira.OrbView
 import com.optionslab.app.ui.components.BrassButton
 import com.optionslab.app.ui.components.LedgerCard
@@ -332,7 +333,6 @@ private fun ModelCard() {
     val scope = rememberCoroutineScope()
     val ms by com.optionslab.app.ira.IraModel.state.collectAsState()
     val M = com.optionslab.app.ira.IraModel
-    val S = com.optionslab.app.ira.IraModel.Status
     var asking by remember { mutableStateOf(M.shouldAsk()) }
     var use by remember { mutableStateOf(M.enabled) }
     var confirmDelete by remember { mutableStateOf(false) }
@@ -362,20 +362,20 @@ private fun ModelCard() {
     )
     LedgerCard(title = "AI model") {
         when (ms.status) {
-            S.UNSUPPORTED -> Note(M.unsupportedWhy(ctx) + " Ira answers in its own words.")
-            S.ABSENT, S.FAILED -> {
+            ModelStatus.UNSUPPORTED -> Note(M.unsupportedWhy(ctx) + " Ira answers in its own words.")
+            ModelStatus.ABSENT, ModelStatus.FAILED -> {
                 Note(ms.message ?: ("Not on the phone. ${M.NAME}, ${mb(M.SIZE)}, Wi-Fi." +
                     if (ms.done > 0) " ${mb(ms.done)} already downloaded." else ""))
                 BrassButton(if (ms.done > 0) "Resume the download" else "Download the model", Modifier.fillMaxWidth().padding(top = 6.dp)) { asking = true }
             }
-            S.DOWNLOADING -> {
+            ModelStatus.DOWNLOADING -> {
                 Note("Downloading ${M.NAME}: ${mb(ms.done)} of ${mb(M.SIZE)}.")
                 androidx.compose.material3.LinearProgressIndicator(progress = { (ms.done.toFloat() / M.SIZE).coerceIn(0f, 1f) },
                     modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp))
                 BrassButton("Cancel", tone = p.inkSoft) { M.cancel(ctx) }
             }
-            S.VERIFYING -> Note("Checking the file against its fingerprint...")
-            S.READY -> {
+            ModelStatus.VERIFYING -> Note("Checking the file against its fingerprint...")
+            ModelStatus.READY -> {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("Write answers with ${M.NAME}", style = Type.label.copy(color = p.ink, fontSize = 15.sp), modifier = Modifier.weight(1f))
                     androidx.compose.material3.Switch(checked = use, onCheckedChange = { use = it; M.enabled = it })
