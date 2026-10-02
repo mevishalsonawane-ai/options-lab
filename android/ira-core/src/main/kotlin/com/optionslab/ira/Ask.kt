@@ -75,7 +75,8 @@ object Ask {
             return Question(text, Market.mentioned(text), setOf(Topic.TRADE_CHECK), null)
         // An order to place names its lots ("buy 2 lots..."); anything else about orders, P&L, strategies, limits or the app
         // is a question about the app.
-        val placed = order(t)
+        // A question ("Did I buy 2 lots of Nifty?") is never an order.
+        val placed = if (said.trim().endsWith("?")) null else order(t)
         val account = ACCOUNT.containsMatchIn(t) || AppAnswers.about(t) && placed?.lots == null
         val order = if (account) null else placed
         val markets = Market.mentioned(text)
@@ -125,7 +126,8 @@ object Ask {
         val buy = Regex(" (buy|purchase) ").containsMatchIn(t)
         val sell = Regex(" (sell(?! off)|square off) ").containsMatchIn(t)
         if (!buy && !sell) return null
-        if (Regex(" (should|shall|can|could|would|is it|worth) ").containsMatchIn(t)) return null    // a question about buying, not an order
+        // A question about buying ("what if I buy...", "why did I buy...", "how much margin to buy...") is not an order.
+        if (Regex(" (should|shall|can|could|would|is it|worth|what|why|how|when|where|which|did|does|if|need to|do i|have i|has) ").containsMatchIn(t)) return null
         val market = Market.mentioned(t).firstOrNull { it != Market.VIX }
         val lots = Regex(" (\\d+) (lot|lots) ").find(t)?.groupValues?.get(1)?.toIntOrNull()
             ?: Regex(" (one|two|three|four|five) (lot|lots) ").find(t)?.groupValues?.get(1)?.let { listOf("one", "two", "three", "four", "five").indexOf(it) + 1 }

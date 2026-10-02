@@ -41,7 +41,7 @@ object Wake {
         val parts = Regex("(?<=[.!?])\\s+").split(text.trim()).filter { it.isNotBlank() }
         return parts.take(sentences).joinToString(" ")
             .replace(Regex("(?:Rs|₹)\\s?([+-]?[\\d,]+(?:\\.\\d+)?)"), "$1 rupees")
-            .replace("+", "plus ").replace(" -", " minus ")
+            .replace("+", "plus ").replace(Regex("(^|\\s)-(?=\\d)"), "$1minus ")
     }
 
     /**
@@ -57,7 +57,7 @@ object Wake {
     private fun english(text: String): Boolean? {
         val t = " " + text.lowercase().replace(Regex("[^a-z ]"), " ").replace(Regex("\\s+"), " ").trim() + " "
         if (t.isBlank()) return null
-        if (Regex(" (no|nope|nah|not|don t|dont|do not|reject|rejected|cancel|skip|leave it|stop|wait|never|negative) ").containsMatchIn(t)) return false
+        if (Regex(" (no+|nope|nah|not|not now|don t|dont|do not|reject|rejected|cancel|skip|leave it|stop|wait|never|negative|abort|hold off|hold on|decline|declined|deny|denied|later) ").containsMatchIn(t)) return false
         if (Regex(" (yes|yeah|yep|yup|sure|approve|approved|confirm|confirmed|go ahead|do it|place it|buy it|take it|ok|okay|affirmative|positive) ").containsMatchIn(t)) return true
         return null
     }

@@ -33,13 +33,15 @@ class PatternBook {
         for (i in 1 until candles.size - HORIZON) {
             val t = candles[i].t
             if (after != null && !t.isAfter(after)) continue
+            last = t
+            // The outcome is measured inside the session only: never across the night's gap.
+            if (candles[i + HORIZON].t.toLocalDate() != t.toLocalDate()) continue
             for (k in Patterns.at(candles, i)) {
                 val (worked, move) = outcome(candles, i, k)
                 val s = stats[key(m, minutes, k)] ?: Stat()
                 stats[key(m, minutes, k)] = Stat(s.seen + 1, s.worked + if (worked) 1 else 0, s.sumMovePct + move)
                 added++
             }
-            last = t
         }
         if (last != null) learnedTo[mk] = last
         return added
@@ -61,7 +63,8 @@ class PatternBook {
     private fun typicalMovePct(c: List<Candle>, i: Int): Double {
         val from = maxOf(HORIZON, i - 100)
         if (i - from < 5) return 0.0
-        val moves = (from until i).map { kotlin.math.abs((c[it].c - c[it - HORIZON].c) / c[it - HORIZON].c * 100) }.sorted()
+        val moves = (from until i).filter { c[it].t.toLocalDate() == c[it - HORIZON].t.toLocalDate() }
+            .map { kotlin.math.abs((c[it].c - c[it - HORIZON].c) / c[it - HORIZON].c * 100) }.sorted()
         return moves[moves.size / 2]
     }
 
@@ -93,7 +96,7 @@ class PatternBook {
     fun score(candles: List<Candle>, day: LocalDate): Score {
         var seen = 0; var worked = 0
         for (i in 1 until candles.size - HORIZON) {
-            if (candles[i].t.toLocalDate() != day) continue
+            if (candles[i].t.toLocalDate() != day || candles[i + HORIZON].t.toLocalDate() != day) continue
             for (k in Patterns.at(candles, i)) { seen++; if (outcome(candles, i, k).first) worked++ }
         }
         return Score(seen, worked)

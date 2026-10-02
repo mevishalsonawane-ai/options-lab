@@ -13,13 +13,14 @@ object Spelling {
         "close", "start", "stop", "today", "yesterday", "journal", "review", "pattern", "patterns", "backtest", "breakout",
         "breakdown", "engulfing", "hammer", "shooting", "events", "levels", "support", "resistance", "trend", "bullish",
         "bearish", "market", "nifty", "banknifty", "finnifty", "sensex", "options", "option", "expiry", "volatility",
-        "autopilot", "paper", "live", "zerodha", "protections", "targets", "trailing", "losses", "weekly", "monthly",
+        "autopilot", "zerodha", "protections", "targets", "trailing", "losses", "weekly", "monthly",
         "chain", "studied", "study", "suggest", "approve", "reject", "positive", "negative", "everything", "scripts",
     )
     private val KNOWN = WORDS.toSet() + setOf("the", "and", "any", "see", "on", "off", "my", "what", "how", "is", "are", "show", "tell", "me",
         "stock", "stocks", "start", "stars", "state", "other", "today", "about", "doing", "there", "where", "which", "should", "would",
         "trade", "alert", "above", "below", "studies", "tomorrow", "please", "price", "prices", "level", "close", "closed", "orders",
-        "stops", "start", "started", "stopped", "events", "event", "today's", "week", "month", "money", "lots", "lot", "call", "calls")
+        "stops", "start", "started", "stopped", "events", "event", "today's", "week", "month", "money", "lots", "lot", "call", "calls",
+        "five", "like", "line", "life", "give", "love", "shop", "smart", "older", "order", "minute", "minutes", "chart", "charts", "store")
 
     fun fix(text: String): String {
         var changed = false

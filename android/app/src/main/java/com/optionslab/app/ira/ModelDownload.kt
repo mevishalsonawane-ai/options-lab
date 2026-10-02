@@ -92,7 +92,9 @@ class ModelDownload : Service() {
         val cm = getSystemService(ConnectivityManager::class.java)
         if (cm.activeNetwork == null) throw IOException("No connection")
         if (cm.isActiveNetworkMetered) throw IOException("Connect to Wi-Fi first: the model is ${IraModel.SIZE / 1_000_000} MB")
-        val have = part.length().coerceAtMost(IraModel.SIZE)
+        // A part file larger than the model (an earlier overrun) can never complete: start again.
+        if (part.length() > IraModel.SIZE) part.delete()
+        val have = part.length()
         if (c.noBackupFilesDir.usableSpace < IraModel.SIZE - have + 200_000_000L) throw IOException("Not enough free space on the phone (about 2.3 GB needed)")
         IraModel.publish { it.copy(status = IraModel.Status.DOWNLOADING, done = have, message = null) }
 
@@ -123,8 +125,8 @@ class ModelDownload : Service() {
                     while (true) {
                         if (job?.isCancelled == true) throw IOException("Stopped")
                         val n = inp.read(buf); if (n < 0) break
+                        if (done + n > IraModel.SIZE) { out.close(); part.delete(); throw IOException("The file is bigger than expected; it will start again") }
                         out.write(buf, 0, n); done += n
-                        if (done > IraModel.SIZE) throw IOException("The file is bigger than expected")
                         val now = System.currentTimeMillis()
                         if (now - lastNote > 1_000) {
                             lastNote = now

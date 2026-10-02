@@ -17,7 +17,7 @@ object Flows {
             fun f(k: String) = Regex("\"$k\"\\s*:\\s*\"?([^\",}]*)\"?").find(o)?.groupValues?.get(1)?.trim()
             val who = f("category") ?: continue
             val net = f("netValue")?.replace(",", "")?.toDoubleOrNull() ?: continue
-            out += Flow(if (who.contains("FII", true) || who.contains("FPI", true)) "FII" else who.uppercase(), f("date") ?: "",
+            out += Flow(if (who.contains("FII", true) || who.contains("FPI", true)) "FII" else if (who.contains("DII", true)) "DII" else who.uppercase(), f("date") ?: "",
                 f("buyValue")?.replace(",", "")?.toDoubleOrNull() ?: 0.0, f("sellValue")?.replace(",", "")?.toDoubleOrNull() ?: 0.0, net)
         }
         return out
@@ -28,6 +28,7 @@ object Flows {
     fun lines(f: List<Flow>): List<String> {
         if (f.isEmpty()) return listOf("No FII/DII figures from NSE just now.")
         val fii = f.firstOrNull { it.who == "FII" }; val dii = f.firstOrNull { it.who == "DII" }
+        if (fii == null && dii == null) return listOf("No FII/DII figures from NSE just now.")
         val out = ArrayList<String>()
         out += "Institutional flows (${(fii ?: dii)!!.date}, NSE): " + listOfNotNull(fii?.let { "FIIs net ${cr(it.net)}" }, dii?.let { "DIIs net ${cr(it.net)}" }).joinToString(", ") + "."
         if (fii != null && dii != null) out += when {

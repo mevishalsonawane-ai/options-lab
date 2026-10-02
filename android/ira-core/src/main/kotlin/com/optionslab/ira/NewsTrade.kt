@@ -25,7 +25,9 @@ object NewsTrade {
         if (JarvisTrades.expiryBlock(expiryToday, now) != null) return null
         if (kotlin.math.abs(h.tone) < MIN_TONE) return null
         val m = h.markets.firstOrNull { it in listOf(Market.BANKNIFTY, Market.NIFTY, Market.FINNIFTY) } ?: return null
-        if (h.at?.isBefore(now.atZone(java.time.ZoneId.of("Asia/Kolkata")).toInstant().minusSeconds(FRESH_MINUTES * 60)) == true) return null
+        // Undated news is never fresh enough to trade on.
+        val at = h.at ?: return null
+        if (at.isBefore(now.atZone(java.time.ZoneId.of("Asia/Kolkata")).toInstant().minusSeconds(FRESH_MINUTES * 60))) return null
         val minute = now.hour * 60 + now.minute
         if (minute < 9 * 60 + 20 || minute > 14 * 60 + 30) return null
         if (check == TradeCheck.Level.STOP) return null
@@ -35,6 +37,8 @@ object NewsTrade {
         val t15 = s.trend(15)?.up ?: return null
         if (t15 != up) return null
         if (bars.size < 16) return null
+        // The last 15 minutes of today's session only (never from last night's close).
+        if (bars[bars.size - 16].t.toLocalDate() != now.toLocalDate()) return null
         val last = bars.last().c; val ago = bars[bars.size - 16].c
         val move = (last - ago) / ago * 100
         if (if (up) move < MIN_MOVE_PCT else move > -MIN_MOVE_PCT) return null

@@ -17,8 +17,9 @@ import kotlinx.coroutines.withContext
 
 /**
  * "Only Boss's voice can trade" (JarvisAlgo; the owner's wish, 2026-10-02). The owner teaches Jarvis their voice once
- * (five short phrases, on the Ira screen); from then on a spoken yes to a trade, or a spoken order or command, is
- * done only when the voice that said it matches ([VoicePrint]). Before the voice is taught, or on a phone that cannot
+ * (five short phrases, on the Ira screen); from then on a spoken yes to a trade, a spoken order, or a spoken command
+ * that adds risk is done at once only when the voice that said it matches ([VoicePrint]); otherwise a command waits for
+ * a spoken yes and the riskiest are refused. Before the voice is taught, or on a phone that cannot
  * share the audio with its on-device recognizer (Android 13+ is needed), voice can ask but not trade - Approve on the
  * pop-up or the Ira screen still works. The audio is never stored: only the print's numbers, encrypted.
  */
@@ -120,10 +121,18 @@ object VoiceGuard {
             val p = android.os.ParcelFileDescriptor.createPipe()
             read = p[0]; write = p[1]
             val min = AudioRecord.getMinBufferSize(VoicePrint.RATE, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT)
-            rec = AudioRecord(MediaRecorder.AudioSource.VOICE_RECOGNITION, VoicePrint.RATE, AudioFormat.CHANNEL_IN_MONO,
-                AudioFormat.ENCODING_PCM_16BIT, maxOf(min, VoicePrint.RATE))
-            check(rec.state == AudioRecord.STATE_INITIALIZED) { "no microphone" }
-            rec.startRecording()
+            var r: AudioRecord? = null
+            try {
+                r = AudioRecord(MediaRecorder.AudioSource.VOICE_RECOGNITION, VoicePrint.RATE, AudioFormat.CHANNEL_IN_MONO,
+                    AudioFormat.ENCODING_PCM_16BIT, maxOf(min, VoicePrint.RATE))
+                check(r.state == AudioRecord.STATE_INITIALIZED) { "no microphone" }
+                r.startRecording()
+            } catch (e: Exception) {
+                // Nothing may leak when the microphone cannot be had: both ends of the pipe and the recorder go.
+                runCatching { r?.release() }; runCatching { read.close() }; runCatching { write.close() }
+                throw e
+            }
+            rec = r!!
             thread = Thread {
                 val chunk = ShortArray(800)
                 val bytes = ByteArray(chunk.size * 2)

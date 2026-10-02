@@ -109,7 +109,11 @@ object Study {
      */
     fun today(findings: List<Finding>, bars: List<Candle>): List<String> {
         val d = days(bars).lastOrNull() ?: return emptyList()
-        val keys = SETUPS.filter { it.applies(d) == true }.map { it.key }.toSet()
+        val last = bars.lastOrNull() ?: return emptyList()
+        if (d.date != last.t.toLocalDate()) return emptyList()            // today's session has too few candles yet
+        // The opening range is only known once it is complete (10:00).
+        val orDone = last.t.toLocalTime() >= java.time.LocalTime.of(9, 59)
+        val keys = SETUPS.filter { (orDone || it.key !in setOf("narrowor", "wideor")) && it.applies(d) == true }.map { it.key }.toSet()
         return findings.filter { it.held && it.key in keys }.map { "Today: ${it.setup}. ${it.text()}" }
     }
 

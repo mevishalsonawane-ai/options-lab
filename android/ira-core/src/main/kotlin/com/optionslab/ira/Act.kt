@@ -21,7 +21,11 @@ data class Command(val kind: Kind, val target: String? = null, val number: Int? 
 
 object Commands {
     /** A question about doing something ("how do I stop...") is not a command. */
-    private val QUESTION = Regex("^ (how|where|what|why|which|when|should|is there|are there|do i|does) ")
+    private val QUESTION = Regex("^ (how|where|what|why|which|when|should|is|are|am|can i|could i|did|do you|do i|does|has|have|will|was|were|would) ")
+    /** "Don't switch to live", "never start...": a negation is never a command. */
+    private val NEGATION = Regex(" (don t|dont|do not|never|not|doesn t|didn t|won t) ")
+    /** Commands a misspelt word may never become (only what the owner typed correctly). */
+    private val NEVER_FROM_TYPO = setOf(Command.Kind.MODE_LIVE, Command.Kind.KILL_OFF, Command.Kind.JTRADES_LIVE, Command.Kind.AUTOPILOT_ON)
     private val ARM_NOUN = "(?:the )?(?:strategy|strategies|arm|arms|bot|bots|algo|script)?"
 
     /**
@@ -33,17 +37,21 @@ object Commands {
         val fixed = Spelling.fix(said)
         if (fixed != said) {
             val f = parseAs(fixed)
-            if (f != null && (raw == null || raw.number == null && raw.target != null && f.kind != raw.kind)) return f
+            if (f != null && f.kind !in NEVER_FROM_TYPO && (raw == null || raw.number == null && raw.target != null && f.kind != raw.kind)) return f
         }
         return raw
     }
 
     private fun parseAs(said: String): Command? {
+        // A question ("is live mode on?") is never a command.
+        if (said.trim().endsWith("?")) return null
         val text = Hinglish.normalize(said)
-        val t = " " + text.lowercase().replace(Regex("[^a-z0-9. ]"), " ").replace(Regex("\\s+"), " ").trim() + " "
-        if (QUESTION.containsMatchIn(t)) return null
-        val s = t.replace(Regex(" (please|jarvis|now|right now|immediately|can you|could you|will you|for me) "), " ")
+        // "25,000" is one number; a full stop ends a sentence (but "52.5" keeps its point).
+        val t = " " + text.lowercase().replace(Regex("(\\d),(?=\\d{3})"), "$1").replace(Regex("\\.(?!\\d)"), " ")
+            .replace(Regex("[^a-z0-9. ]"), " ").replace(Regex("\\s+"), " ").trim() + " "
+        val s = t.replace(Regex(" (please|jarvis|hey|ok|okay|now|right now|immediately|can you|could you|will you|for me) "), " ")
             .replace(Regex("\\s+"), " ").let { " ${it.trim()} " }
+        if (QUESTION.containsMatchIn(s) || NEGATION.containsMatchIn(s)) return null
         fun has(r: String) = Regex(r).containsMatchIn(s)
         fun num(r: String) = Regex(r).find(s)?.groupValues?.get(1)?.toIntOrNull()
 
@@ -59,14 +67,14 @@ object Commands {
         }
         when {
             has(" (turn|switch|put) (on )?(the )?kill switch on | (turn|switch) on (the )?kill switch | (activate|enable|engage) (the )?kill switch | kill switch on ") -> return Command(Command.Kind.KILL_ON)
-            has(" (turn|switch) off (the )?kill switch | (turn|switch) (the )?kill switch off | (deactivate|disable|release|clear) (the )?kill switch | kill switch off ") -> return Command(Command.Kind.KILL_OFF)
+            has(" (turn|switch) off (the )?kill switch | (turn|switch) (the )?kill switch off | (deactivate|disable|release|clear|stop) (the )?kill switch | kill switch off ") -> return Command(Command.Kind.KILL_OFF)
             has(" (switch|go|change|move) (to |back to )?live( mode| trading)? | live mode on | (start|use) live (mode|trading) ") -> return Command(Command.Kind.MODE_LIVE)
             has(" (switch|go|change|move) (to |back to )?paper( mode| trading)? | paper mode on | (start|use) paper (mode|trading) ") -> return Command(Command.Kind.MODE_PAPER)
         }
         if (has(" (turn|switch) on (the )?autopilot | (enable|start) (the )?autopilot | autopilot on ")) return Command(Command.Kind.AUTOPILOT_ON)
         if (has(" (turn|switch) off (the )?autopilot | (disable|stop) (the )?autopilot | autopilot off ")) return Command(Command.Kind.AUTOPILOT_OFF)
         // Events: "add event RBI policy on 5 Dec", "remove event 2".
-        Regex(" (add|note|remember|mark) (an |the )?event (.+?) (on|for) (.+) $").find(s)?.let { m ->
+        Regex(" (add|note|remember|mark) (an |the )?event (.+) (on|for) (.+?) $").find(s)?.let { m ->
             return Command(Command.Kind.EVENT_ADD, target = m.groupValues[3].trim(), day = Events.date(m.groupValues[5], java.time.LocalDate.now(java.time.ZoneId.of("Asia/Kolkata"))))
         }
         if (has(" (remove|delete|cancel|clear) (the |my )?event")) return Command(Command.Kind.EVENT_REMOVE, number = num(" event (\\d+) "), target = rest(s, " event "))
@@ -74,9 +82,10 @@ object Commands {
         if (has(" (remove|delete|cancel|clear) (the |my )?(last )?(alarm|alert)s? ")) {
             return Command(Command.Kind.ALARM_REMOVE, number = num(" (?:alarm|alert) (\\d+) "), target = if (has(" last ")) "last" else null)
         }
-        if (has(" (alert|alarm|notify|tell|ping|wake) ") && has(" (above|below|over|under|crosses|rises|falls|drops|goes|reaches) ")) {
+        // An alarm needs its level: the number after above / below / reaches ("... above 25000 in 15 minutes" is 25000).
+        val lvl = Regex(" (?:above|below|over|under|crosses|cross|rises to|falls to|drops to|reaches|to) (\\d{2,6}(?:\\.\\d+)?) ").find(s)?.groupValues?.get(1)?.toDouble()
+        if (lvl != null && has(" (alert|alarm|notify|tell|ping|wake) ") && has(" (above|below|over|under|crosses|cross|rises|falls|drops|goes|reaches) ")) {
             val m = Market.mentioned(s).firstOrNull()
-            val lvl = Regex(" (\\d{2,6}(?:\\.\\d+)?) ").findAll(s).map { it.groupValues[1].toDouble() }.lastOrNull()
             val above = when { has(" (below|under|falls|drops|down to) ") -> false; has(" (above|over|rises|crosses|up to|reaches) ") -> true; else -> null }
             return Command(Command.Kind.ALARM_ADD, market = m, above = above, level = lvl)
         }
@@ -92,15 +101,17 @@ object Commands {
         // The bots: everything at once, or one strategy / arm by its number or name.
         if (has(" (stop|halt|pause|disarm|switch off|turn off) (all|every|everything)( the| my)?( strategies| arms| bots| algos| scripts| trading)? | stop trading | stop (the |my )?(bots|algos|arms|strategies) ")) return Command(Command.Kind.STOP_ALL)
         if (has(" (start|resume|restart) (all |the |my )?(bots|arms|strategies|algos|trading) again | (resume|restart) (all|trading|the bots|everything) | start trading again ") ||
-            has(" (start|arm|switch on|turn on|run|enable|resume) (all|every|everything)( the| my)?( strategies| strategy| arms| arm| bots| algos| scripts)? | (start|arm|switch on|turn on|run|enable) (the |my )?(strategies|arms|bots|algos) $"))
+            has(" (start|arm|switch on|turn on|run|enable|resume) (all|every)( the| my)? (strategies|strategy|arms|arm|bots|algos|scripts) | (start|arm|switch on|turn on|run|enable|resume) (everything|all) $| (start|arm|switch on|turn on|run|enable) (the |my )?(strategies|arms|bots|algos) $"))
             return Command(Command.Kind.START_ALL)
-        Regex(" (stop|disarm|switch off|turn off|pause|halt) $ARM_NOUN ?(.+)$").find(s)?.let { m ->
+        // One strategy or arm: the verb comes first ("stop strategy 2"), and settings are never read as a name.
+        val notArm = Regex("kill switch|\\blive\\b|paper|\\bmode\\b|alert|alarm|autopilot|listening|^trading$")
+        Regex("^ (stop|disarm|switch off|turn off|pause|halt) $ARM_NOUN ?(.+)$").find(s)?.let { m ->
             val what = m.groupValues[2].trim()
-            if (what.isNotEmpty() && what != "listening") return one(Command.Kind.STOP_ONE, what)
+            if (what.isNotEmpty() && !notArm.containsMatchIn(what)) return one(Command.Kind.STOP_ONE, what)
         }
-        Regex(" (start|arm|switch on|turn on|resume|run|enable) $ARM_NOUN ?(.+)$").find(s)?.let { m ->
+        Regex("^ (start|arm|switch on|turn on|resume|run|enable) $ARM_NOUN ?(.+)$").find(s)?.let { m ->
             val what = m.groupValues[2].trim()
-            if (what.isNotEmpty() && !Regex("^(listening|trading)$").matches(what)) return one(Command.Kind.START_ONE, what)
+            if (what.isNotEmpty() && !notArm.containsMatchIn(what)) return one(Command.Kind.START_ONE, what)
         }
         return null
     }

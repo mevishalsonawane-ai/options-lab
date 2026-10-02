@@ -107,7 +107,10 @@ fun IraPage(orders: IraOrderPaths? = null) {
     // Live prices every minute while Ira is on screen (and news every ten minutes, inside the hub).
     com.optionslab.app.ui.PollWhileStarted { while (true) { IraHub.refresh(); delay(60_000) } }
     val list = rememberLazyListState()
-    LaunchedEffect(st.messages.size) { if (st.messages.isNotEmpty()) list.animateScrollToItem(st.messages.size) }
+    // The newest message in view: after each new or rewritten one (the cards above it counted).
+    LaunchedEffect(st.messages.lastOrNull()?.id, st.messages.lastOrNull()?.text) {
+        if (st.messages.isNotEmpty()) list.animateScrollToItem((list.layoutInfo.totalItemsCount - 1).coerceAtLeast(0))
+    }
 
     val ctxSpeak = androidx.compose.ui.platform.LocalContext.current
     fun send(q: String) {
@@ -124,6 +127,8 @@ fun IraPage(orders: IraOrderPaths? = null) {
 
     // JarvisAlgo: only the globe until the owner opens the chat (the owner's wish, 2026-10-02); voice works either way.
     var chat by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(!com.optionslab.app.BuildConfig.JARVIS) }
+    // The phone's Back closes the chat (back to the globe) in JarvisAlgo.
+    androidx.activity.compose.BackHandler(enabled = chat && com.optionslab.app.BuildConfig.JARVIS) { chat = false }
     if (!chat) {
         val writing by com.optionslab.app.ira.IraModel.state.collectAsState()
         // Analysing in the background (reading the market, a backtest, the model writing) shows as thinking too.
@@ -195,7 +200,7 @@ fun IraPage(orders: IraOrderPaths? = null) {
                     }
                 }
             }
-            items(st.messages) { m -> Bubble(m, orders) }
+            items(st.messages, key = { it.id }) { m -> Bubble(m, orders) }
             if (st.messages.isNotEmpty()) item {
                 Text("Forget this conversation", style = Type.label.copy(color = p.inkSoft, fontSize = 13.sp),
                     modifier = Modifier.clickable { IraHub.forgetConversation() }.padding(6.dp))

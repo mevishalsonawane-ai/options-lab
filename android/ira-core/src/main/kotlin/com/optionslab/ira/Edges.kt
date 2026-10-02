@@ -65,10 +65,11 @@ object IvRank {
 object RiskSizing {
     const val STOP_SHARE = 0.15
 
+    /** Lots within [riskRs]: 1 when no risk is set; 0 when even one lot would risk more than the owner allows. */
     fun lots(riskRs: Double?, premium: Double, lotSize: Int, maxLots: Int): Int {
         if (riskRs == null || riskRs <= 0 || premium <= 0 || lotSize <= 0) return 1
         val perLot = premium * STOP_SHARE * lotSize
-        return kotlin.math.floor(riskRs / perLot).toInt().coerceIn(1, maxOf(1, maxLots))
+        return kotlin.math.floor(riskRs / perLot).toInt().coerceIn(0, maxOf(1, maxLots))
     }
 
     fun say(lots: Int, premium: Double, lotSize: Int): String =
@@ -111,7 +112,9 @@ object EventStudy {
         fun big(d: Study.Day) = d.changePct?.let { kotlin.math.abs(it) >= 1.0 } == true
         return Kind.entries.mapNotNull { k ->
             val on = dates(k, set)
-            val ev = days.filter { it.date in on }; val rest = days.filter { it.date !in on }
+            // RBI dates are listed to the end of 2025: later days are left out rather than counted as "other days".
+            val known = if (k == Kind.RBI) days.filter { !it.date.isAfter(RBI.max()) } else days
+            val ev = known.filter { it.date in on }; val rest = known.filter { it.date !in on }
             if (ev.size < 2) return@mapNotNull null
             Line(market, k, ev.size, ev.map(::range).average(), rest.map(::range).average(), ev.count(::big).toDouble() / ev.size, rest.count(::big).toDouble() / rest.size)
         }

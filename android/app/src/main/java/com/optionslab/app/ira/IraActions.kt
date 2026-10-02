@@ -92,6 +92,13 @@ internal object IraActions {
     }
 
     /** Zerodha exits go through the app's own square-off (the order review's checks), sent without the swipe or PIN. */
+    /** Closes Jarvis's own Zerodha position in [symbol] through the app's square-off (the app must be open). */
+    suspend fun closeLiveSymbol(symbol: String): String {
+        val ps = runCatching { Broker.positionBook().net.filter { it.symbol == symbol && it.qty != 0 } }.getOrNull() ?: return "Zerodha did not answer: close $symbol yourself."
+        if (ps.isEmpty()) return "Already closed."
+        return liveClose(ps)
+    }
+
     private suspend fun liveClose(ps: List<Broker.Position>): String {
         val m = model() ?: return "Closing a Zerodha position needs JarvisAlgo open: open it and ask again."
         if (ps.size == 1) m.planSquareOff(ps.single(), "Jarvis") else m.planSquareOffAll()

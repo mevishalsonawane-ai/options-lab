@@ -59,9 +59,11 @@ object JarvisTrades {
                 val lo = o.low?.get(i) ?: o.close[i]; val hi = o.high?.get(i) ?: o.close[i]
                 val lock = ProfitLock.level(entry, TARGET_POINTS, peak)
                 val floor = maxOf(stop, lock ?: Double.NEGATIVE_INFINITY)
-                if (lo <= floor) return floor - entry - COST_POINTS
+                // Out at 15:15: the last price before it (the 15:14 minute's close).
+                if (m >= EXIT_MINUTE) return o.close[i - 1] - entry - COST_POINTS
+                // A stop fills at the stop, or worse when the minute opened below it (a jump).
+                if (lo <= floor) return minOf(floor, o.open?.get(i) ?: floor) - entry - COST_POINTS
                 if (hi >= target) return target - entry - COST_POINTS
-                if (m >= EXIT_MINUTE) return o.close[i] - entry - COST_POINTS
                 peak = maxOf(peak, hi)
                 i++
             }

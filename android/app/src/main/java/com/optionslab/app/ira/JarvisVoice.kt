@@ -252,6 +252,9 @@ class JarvisVoice : Service() {
         // The mic button with listening off: this one question only.
         val talkNow = intent?.action == ACTION_TALK
         if (talkNow && rec == null) oneShot = !wanted
+        if (!talkNow) oneShot = false                    // the switch turned on: listening stays on
+        // Restarted by the system after a one-question listen with the switch off: do not listen.
+        if (intent == null && !wanted) { stopSelf(); return START_NOT_STICKY }
         val why = when {
             !com.optionslab.app.BuildConfig.JARVIS -> "Voice is in JarvisAlgo only."
             !permitted(this) -> "Jarvis needs the microphone permission to listen."
@@ -290,7 +293,7 @@ class JarvisVoice : Service() {
             // Wait for the voice to be ready (the first time), then ask.
             main.postDelayed({ awakeUntil = SystemClock.elapsedRealtime() + AWAKE_MS + 4_000; say("Yes, Boss?") }, if (voiceReady) 0L else 800L)
         }
-        return START_STICKY
+        return if (oneShot) START_NOT_STICKY else START_STICKY
     }
 
     /** An English voice that needs no network; without one Jarvis answers on screen only. */
@@ -333,6 +336,7 @@ class JarvisVoice : Service() {
 
     private fun listen() {
         if (stopped || held || listening) return
+        lastHeard = null                                 // a voice check only ever uses this turn's own audio
         turnInSpeech = speaking
         listenedAt = SystemClock.elapsedRealtime()
         val i = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
@@ -348,6 +352,7 @@ class JarvisVoice : Service() {
         endTap()
         if (VoiceGuard.supported && VoiceGuard.enrolled && !tapFailed && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             tap = runCatching { VoiceGuard.Tap() }.getOrNull()
+            if (tap == null) tapFailed = true                // the microphone could not be shared: do not retry each turn
             tap?.let { t ->
                 i.putExtra(RecognizerIntent.EXTRA_AUDIO_SOURCE, t.read)
                     .putExtra(RecognizerIntent.EXTRA_AUDIO_SOURCE_CHANNEL_COUNT, 1)
@@ -470,14 +475,30 @@ class JarvisVoice : Service() {
                 val topics = com.optionslab.ira.Ask.parse(h.question).topics
                 val acts = com.optionslab.ira.Topic.COMMAND in topics || com.optionslab.ira.Topic.ORDER in topics
                 if (!named && acts) say("Boss, say Jarvis first for that.")
-                // Trades by voice: only Boss's voice (commands like start / stop need only the name).
-                else if (com.optionslab.ira.Topic.ORDER in topics && !boss()) say(VoiceGuard.blocked() ?: "Boss, that didn't sound like you, so I won't place it. Say it again, or use the Ira screen.")
-                else answer(h.question)
+                else {
+                    // Trades, and commands that add risk (live mode, kill switch off, autopilot, starting arms), need
+                    // Boss's own voice; without it a command is asked as a yes or no instead of done at once, and
+                    // the riskiest ones are refused. Stopping, closing and questions need only the name.
+                    val cmd = com.optionslab.ira.Ask.parse(h.question).command
+                    val risky = cmd != null && !cmd.kind.reduces
+                    val verified = (com.optionslab.ira.Topic.ORDER in topics || risky) && boss()
+                    when {
+                        com.optionslab.ira.Topic.ORDER in topics && !verified ->
+                            say(VoiceGuard.blocked() ?: "Boss, that didn't sound like you, so I won't place it. Say it again, or use the Ira screen.")
+                        risky && !verified && cmd!!.kind in HIGH_RISK ->
+                            say(VoiceGuard.blocked() ?: "Boss, that didn't sound like you, so I won't do it. Use the Ira screen.")
+                        else -> answer(h.question, confirm = risky && !verified)
+                    }
+                }
             }
         }
     }
 
-    private fun answer(q: String) {
+    /** Commands that are never done on an unrecognised voice, even with a yes. */
+    private val HIGH_RISK = setOf(com.optionslab.ira.Command.Kind.MODE_LIVE, com.optionslab.ira.Command.Kind.KILL_OFF,
+        com.optionslab.ira.Command.Kind.JTRADES_LIVE, com.optionslab.ira.Command.Kind.AUTOPILOT_ON)
+
+    private fun answer(q: String, confirm: Boolean = false) {
         _state.value = VoiceState(Mode.THINKING)
         scope.launch {
             // Answer at once from what Jarvis already knows (kept fresh every minute while listening in market hours);
@@ -485,7 +506,7 @@ class JarvisVoice : Service() {
             val st = IraHub.state.value
             if (st.snaps.isEmpty()) runCatching { withContext(Dispatchers.Default) { IraHub.refresh() } }
             else if (st.liveAt?.isBefore(java.time.Instant.now().minusSeconds(120)) != false) launch(Dispatchers.Default) { runCatching { IraHub.refresh() } }
-            IraHub.ask(q)
+            if (confirm) IraHub.askConfirmed(q) else IraHub.ask(q)
             // A slow answer (your account, the trade check): say so at once instead of going quiet.
             val hold = launch { kotlinx.coroutines.delay(1_000); say("One moment, Boss.", "wait") }
             val said = com.optionslab.ira.Secrets.redact(q.trim())

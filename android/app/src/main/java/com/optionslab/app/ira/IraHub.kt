@@ -58,7 +58,9 @@ object IraHub {
                    /** A strategy proposal this message carries (its [Proposal.id]). */ val proposal: Long? = null,
                    /** Ira's own words when [text] was rewritten by the on-device model (numbers checked); [writing] while it works. */
                    val draft: String? = null, val writing: Boolean = false,
-                   /** An action waiting for the owner's one tap (its id in [State.pending]). */ val action: Long? = null)
+                   /** An action waiting for the owner's one tap (its id in [State.pending]). */ val action: Long? = null,
+                   /** Stable for the message's life (kept through rewrites), so the screen keeps each message's own state. */
+                   val id: Long = msgSeq.incrementAndGet())
 
     /** A strategy Jarvis wrote from a pattern and backtested: new until the owner approves (armed on paper) or dismisses it. */
     data class Proposal(val id: Long, val result: StrategyLab.Result, val status: String = NEW, val pineId: Long? = null) {
@@ -196,8 +198,8 @@ object IraHub {
     /** Saves the conversation as it changes. */
     private var keeper: kotlinx.coroutines.Job? = null
 
-    /** Writes the proposals, the journal and the tried patterns (never the conversation). */
-    private fun saveState() {
+    /** Writes the proposals, the journal, the tried patterns and the conversation (one writer at a time). */
+    @Synchronized private fun saveState() {
         val f = stateFile ?: return
         val st = _state.value
         val tried = synchronized(tested) { tested.toList() }
@@ -351,13 +353,12 @@ object IraHub {
             val recent = paper.filter { it.owner.contains(item.name) && it.closedAt.toLocalDate().isAfter(today.minusDays(28)) }
             val sick = com.optionslab.ira.Insights.health(item.name, recent) ?: continue
             if (autopilot) {
-                com.optionslab.app.data.PineAuto.arm(item.id, false)
-                reply("$sick Autopilot retired it.")
-                JarvisPopup.show(c, "Retired: ${item.name}", sick)
+                val r = com.optionslab.app.data.PineAuto.arm(item.id, false)
+                if (r == "ok") { reply("$sick Autopilot retired it."); JarvisPopup.show(c, "Retired: ${item.name}", sick) }
+                else reply("$sick Autopilot could not retire it ($r): switch it off in Research → Pine.")
             } else {
-                val id = System.nanoTime()
-                synchronized(actions) { actions[id] = "stop ${item.name}" to suspend { com.optionslab.app.data.PineAuto.arm(item.id, false).let { r -> if (r == "ok") "Stopped ${item.name}." else r } } }
-                _state.update { it.copy(pending = it.pending + id, messages = (it.messages + Msg(true, "$sick Tap Confirm to stop it.", action = id)).takeLast(MAX_MESSAGES)) }
+                pend("stop ${item.name}", suspend { com.optionslab.app.data.PineAuto.arm(item.id, false).let { r -> if (r == "ok") "Stopped ${item.name}." else r } },
+                    "$sick Tap Confirm to stop it.")
             }
         }
     }
@@ -382,13 +383,15 @@ object IraHub {
     }
 
     private fun propose(r: StrategyLab.Result, lead: String): Proposal {
-        val id = (_state.value.proposals.maxOfOrNull { it.id } ?: 0L) + 1
-        val prop = Proposal(id, r)
         val tail = if (r.recommended) " Approve it to add it as an arm on paper." else " You can still add it as a paper arm, but I don't recommend it."
-        _state.update { it.copy(proposals = it.proposals + prop,
-            messages = (it.messages + Msg(true, lead + r.summary() + tail, proposal = id)).takeLast(MAX_MESSAGES)) }
+        // The id is taken inside the update, so two proposals made at once never share one.
+        var prop: Proposal? = null
+        _state.update { s ->
+            val p = Proposal((s.proposals.maxOfOrNull { it.id } ?: 0L) + 1, r).also { prop = it }
+            s.copy(proposals = s.proposals + p, messages = (s.messages + Msg(true, lead + r.summary() + tail, proposal = p.id)).takeLast(MAX_MESSAGES))
+        }
         saveState()
-        return prop
+        return prop!!
     }
 
     private fun notifyProposal(p: Proposal) {
@@ -408,7 +411,15 @@ object IraHub {
      * The owner approved: the strategy is saved as a Pine script and switched on for auto-trading on paper (a live
      * account still needs the owner's PIN in the Pine screen before it sends anything). Returns what was done.
      */
+    private val approving = HashSet<Long>()
+
     suspend fun approve(id: Long): String {
+        // One approval at a time per proposal (a double tap, or the autopilot at the same moment, adds it once).
+        if (!synchronized(approving) { approving.add(id) }) return "Already being added."
+        try { return approveOnce(id) } finally { synchronized(approving) { approving.remove(id) } }
+    }
+
+    private suspend fun approveOnce(id: Long): String {
         val p = _state.value.proposals.firstOrNull { it.id == id } ?: return "That strategy is gone."
         if (p.status != Proposal.NEW) return "Already ${p.status}."
         val r = p.result
@@ -685,6 +696,9 @@ object IraHub {
     /** A question in, Ira's answer appended to the conversation. */
     fun ask(text: String) = ask(text, understood = false)
 
+    /** A spoken request on a voice that was not recognised: any command in it waits for a yes / Confirm. */
+    fun askConfirmed(text: String) = ask(text, understood = true)
+
     /** [understood]: [text] is the model's reading of the owner's words (its actions always wait for Confirm). */
     private fun ask(text: String, understood: Boolean) {
         // Secrets never go further than this line: not into the conversation, the saved history or the model.
@@ -775,8 +789,8 @@ object IraHub {
         val user = Msg(false, q)
         _state.update { it.copy(messages = (it.messages + user).takeLast(MAX_MESSAGES)) }
         scope.launch {
-            val v = IraAccount.readFast(com.optionslab.ira.AppAnswers.sections(q), IraMarket.mentioned(q))
-            val a = Ira(book).answer(q, emptyMap(), emptyList(), app = v)
+            val v = runCatching { IraAccount.readFast(com.optionslab.ira.AppAnswers.sections(q), IraMarket.mentioned(q)) }.getOrNull()
+            val a = runCatching { Ira(book).answer(q, emptyMap(), emptyList(), app = v) }.getOrElse { com.optionslab.ira.Answer("I could not work that out.", emptyList()) }
             val write = v != null && IraModel.usable() && a.facts.isNotEmpty()
             val msg = Msg(true, a.text, a.facts, writing = write)
             _state.update { it.copy(messages = (it.messages + msg).takeLast(MAX_MESSAGES)) }
@@ -814,10 +828,7 @@ object IraHub {
             val (what, act) = runCatching { IraActions.prepare(c) }.getOrElse { ("I could not do that: ${it.message}") to null }
             if (act == null) { reply(what); return@launch }
             if (c.kind.reduces || !com.optionslab.app.BuildConfig.JARVIS || confirmAlways) {
-                val id = System.nanoTime()
-                synchronized(actions) { actions[id] = what to act }
-                _state.update { it.copy(pending = it.pending + id,
-                    messages = (it.messages + Msg(true, "Tap Confirm to ${what}.", action = id)).takeLast(MAX_MESSAGES)) }
+                pend(what, act, "Tap Confirm to ${what}.")
             } else reply(IraActions.run(what, act))
         }
     }
@@ -832,10 +843,40 @@ object IraHub {
     }
 
     fun cancelAction(id: Long) {
-        if (asksYesNo(id)) IraNewsTrades.answered(id, "rejected")
-        synchronized(actions) { actions.remove(id) }
+        // Only what is still waiting can be cancelled: one already confirmed (or lapsed) is not said to be undone.
+        val (was, trade) = synchronized(actions) { (actions.remove(id) != null) to (id in newsAsks) }
+        if (!was) { _state.update { it.copy(pending = it.pending - id) }; return }
+        if (trade) IraNewsTrades.answered(id, "rejected")
         settled(id)
         _state.update { it.copy(pending = it.pending - id, messages = (it.messages + Msg(true, "Cancelled; nothing was done.")).takeLast(MAX_MESSAGES)) }
+    }
+
+    /** How long a request waiting for Confirm stays open before it lapses (nothing done). */
+    const val CONFIRM_LAPSE_MS = 30 * 60_000L
+
+    /** A request that waits for Confirm, with its message; it lapses after [CONFIRM_LAPSE_MS]. */
+    private fun pend(what: String, act: suspend () -> String, text: String) {
+        val id = System.nanoTime()
+        synchronized(actions) { actions[id] = what to act }
+        _state.update { it.copy(pending = it.pending + id, messages = (it.messages + Msg(true, text, action = id)).takeLast(MAX_MESSAGES)) }
+        scope.launch {
+            kotlinx.coroutines.delay(CONFIRM_LAPSE_MS)
+            if (synchronized(actions) { actions.remove(id) } != null) {
+                _state.update { it.copy(pending = it.pending - id) }
+                reply("Nothing was done about \"$what\": it waited 30 minutes for your Confirm.")
+            }
+        }
+    }
+
+    /** Every request still waiting is dropped (the conversation was cleared). */
+    private fun dropPending() {
+        val ids = synchronized(actions) { actions.keys.toList() }
+        ids.forEach { id ->
+            val (was, trade) = synchronized(actions) { (actions.remove(id) != null) to (id in newsAsks) }
+            if (was && trade) IraNewsTrades.answered(id, "rejected")
+            if (was) settled(id)
+        }
+        _state.update { it.copy(pending = emptySet()) }
     }
 
     /** A complete order in JarvisAlgo: the contract is found and the trade placed at once, in the app's mode. */
@@ -924,10 +965,11 @@ object IraHub {
     }
 
     /** Wipes the conversation (the owner's button). */
-    fun forgetConversation() { _state.update { it.copy(messages = emptyList()) } }
+    fun forgetConversation() { dropPending(); _state.update { it.copy(messages = emptyList()) } }
 
     /** Wipes what Ira learned too; it relearns from the data on the next refresh. */
     suspend fun forgetAll() = lock.withLock {
+        dropPending()
         book = PatternBook()
         lastNews = null
         lastBackground = null
@@ -939,9 +981,10 @@ object IraHub {
     }
 
     const val MAX_MESSAGES = 60
+    private val msgSeq = java.util.concurrent.atomic.AtomicLong()
     private val MARKET_TOPICS = setOf(Topic.OVERVIEW, Topic.WHY, Topic.TREND, Topic.LEVELS, Topic.PATTERNS, Topic.VOLATILITY, Topic.ADVICE, Topic.NEWS)
 
-    private fun save() {
+    @Synchronized private fun save() {
         val f = bookFile ?: return
         runCatching { Vault.writeFile(f, book.save().toByteArray(Charsets.UTF_8)) }
     }

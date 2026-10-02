@@ -85,7 +85,7 @@ object StrategyLab {
             isDoji = body <= 0.1 * rng and rng >= 0.5 * avgBody
             atr = ta.atr(14)
             mins = hour * 60 + minute
-            canEnter = mins >= 555 and mins <= 870
+            canEnter = mins >= 555 and mins + 2 * $minutes <= 900
             signal = ${condition(k)}
             var int held = 0
             if strategy.position_size != 0

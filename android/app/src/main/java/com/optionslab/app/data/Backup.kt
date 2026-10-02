@@ -65,7 +65,9 @@ object Backup {
         "ui.widgetPnl", "w.", "intent.", "relay.", "breaker.",
         // Jarvis: the owner's voice print never leaves the phone; its trades' safety (paper first, loss limit, risk) and
         // the autopilot are this phone's alone, like the other limits. Its learning (the study, records) is carried.
-        "jarvis.voiceprint", "jarvis.trades.", "jarvis.autopilot")
+        "jarvis.voiceprint", "jarvis.trades.", "jarvis.autopilot",
+        // The record that earns live trading and lot sizing, and the model's verified mark, are never taken from a file.
+        "jarvis.newstrades", "ira.model.verified")
     const val DISARM = "restore.disarm"
 
     private fun file(ctx: Context, dir: String, name: String) = File(if (dir == "f") ctx.filesDir else ctx.noBackupFilesDir, name)

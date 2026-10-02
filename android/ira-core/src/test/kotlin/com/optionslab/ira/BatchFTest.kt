@@ -45,7 +45,7 @@ class BatchFTest {
         assertEquals(1, RiskSizing.lots(null, 100.0, 75, 10))
         // 100 premium x 15% x 75 = 1,125 a lot: Rs 3,000 risk -> 2 lots; capped by the app's max lots.
         assertEquals(2, RiskSizing.lots(3_000.0, 100.0, 75, 10))
-        assertEquals(1, RiskSizing.lots(500.0, 100.0, 75, 10))
+        assertEquals(0, RiskSizing.lots(500.0, 100.0, 75, 10))               // one lot would risk more than allowed
         assertEquals(3, RiskSizing.lots(50_000.0, 100.0, 75, 3))
         assertTrue(RiskSizing.say(2, 100.0, 75).startsWith("2 lots: the 15% stop risks about Rs 2,250"))
     }

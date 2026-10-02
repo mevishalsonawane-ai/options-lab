@@ -50,7 +50,7 @@ object TradeCheck {
     /** Today's 09:15-10:00 range against the average of the previous [days] sessions' (after 10:00), or null. */
     fun openingRangeRatio(bars: List<Candle>, days: Int = 20): Double? {
         val byDay = bars.groupBy { it.t.toLocalDate() }
-        fun or(d: List<Candle>): Double? = d.filter { it.t.hour == 9 && it.t.minute >= 15 }.takeIf { it.size >= 40 }?.let { w -> w.maxOf { it.h } - w.minOf { it.l } }
+        fun or(d: List<Candle>): Double? = d.filter { it.t.hour == 9 && it.t.minute >= 15 }.takeIf { it.size >= 45 }?.let { w -> w.maxOf { it.h } - w.minOf { it.l } }
         val keys = byDay.keys.sorted()
         val today = keys.lastOrNull() ?: return null
         val now = or(byDay.getValue(today)) ?: return null
@@ -124,6 +124,7 @@ object TradeCheck {
         for (a in n.armsOn) {
             val rec = RECORD[a] ?: continue
             if (rec.first > 0 && rec.second > 0) ok("Tested: $a made money in both years (${rs(rec.first)}, ${rs(rec.second)}): fine to run.")
+            else if (rec.first > 0 || rec.second > 0) careful("Tested: $a made money in one year and lost in the other (${rs(rec.first)}, ${rs(rec.second)}): no steady edge.")
             else careful("Tested: $a lost in both years (${rs(rec.first)}, ${rs(rec.second)}): better switched off." +
                 if (narrow && a.startsWith("ORB")) " Today's opening range is narrow, when ORB breakouts failed most." else "")
         }

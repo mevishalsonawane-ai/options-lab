@@ -10,8 +10,8 @@ import java.time.LocalDate
 
 /**
  * What Ira keeps between runs besides the pattern book, as JSON (encrypted by the caller): the strategy proposals with
- * their backtests, the session review journal, and the patterns already tried (the last week only). Never the
- * conversation. A part that does not read back is dropped, never guessed.
+ * their backtests, the session review journal, the patterns already tried (the last week only) and the conversation
+ * (secrets already redacted). A part that does not read back is dropped, never guessed.
  */
 internal object IraSaved {
     data class Read(val proposals: List<IraHub.Proposal>, val journal: List<IraHub.DayScore>, val nightlyAt: Instant?, val tested: List<String>,

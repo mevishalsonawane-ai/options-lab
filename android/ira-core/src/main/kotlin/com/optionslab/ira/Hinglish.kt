@@ -9,7 +9,7 @@ package com.optionslab.ira
 object Hinglish {
     /** Words that only Hindi uses (so English text, "Bollinger band" included, is left alone). */
     private val HINDI = Regex("\\b(kya|kaisa|kaise|kaisi|hai|hain|batao|bataiye|dikhao|dikhaiye|karo|kardo|karu|karun|karna|chahiye|" +
-        "roko|chalu|shuru|khareedo|kharido|lelo|mera|meri|mere|aaj|abhi|haan|nahi|nahin|rehne|bilkul|wala|wali|sabhi|saare)\\b")
+        "roko|chalu|shuru|khareedo|kharido|lelo|mera|meri|aaj|abhi|haan|nahi|nahin|rehne|bilkul|wala|wali|sabhi|saare)\\b")
 
     /** Verb last -> English command first: (pattern, English verb). */
     private val VERBS = listOf(
@@ -46,7 +46,7 @@ object Hinglish {
     /** "haan" / "nahi" and friends: true, false, or null when it is neither. */
     fun yesNo(text: String): Boolean? {
         val t = " " + text.lowercase().replace(Regex("[^a-z ]"), " ").replace(Regex("\\s+"), " ").trim() + " "
-        if (Regex(" (nahi|nahin|nai|na|mat karo|mat|rehne do|ruko|cancel karo) ").containsMatchIn(t)) return false
+        if (Regex(" (nahi|nahin|nahii|nhi|nai|na|mat karo|mat|rehne do|ruko|cancel karo) ").containsMatchIn(t)) return false
         if (Regex(" (haan|haa|ha|han|ji|ji haan|bilkul|theek hai|thik hai|kar do|kardo|le lo|lelo|chalo) ").containsMatchIn(t)) return true
         return null
     }

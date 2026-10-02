@@ -10,10 +10,10 @@ object Address {
     fun boss(text: String): String {
         val t = text.trim()
         if (t.isEmpty() || t.startsWith(NAME)) return t
-        if (Regex("^(Hello|Hi|Good (morning|afternoon|evening))\\b").containsMatchIn(t))
-            return Regex("^(Hello|Hi|Good (morning|afternoon|evening))[.,!]?").replace(t) { "${it.groupValues[1]} $NAME." }
+        if (Regex("^(Hello|Hi|Hey|Good (morning|afternoon|evening))\\b").containsMatchIn(t))
+            return Regex("^(Hello|Hi|Hey|Good (morning|afternoon|evening))( there)?[.,!]?").replace(t) { "${it.groupValues[1]} $NAME." }
         val word = t.takeWhile { !it.isWhitespace() }
-        val keep = word.trimEnd(',', '.', ':', ';', '!', '?') in KEEP || word.length > 1 && word[1].isUpperCase() || word.first().isDigit()
+        val keep = word.trimEnd(',', '.', ':', ';', '!', '?').removeSuffix("'s").removeSuffix("’s") in KEEP || word.length > 1 && word[1].isUpperCase() || word.first().isDigit()
         return "$NAME, " + (if (keep) t else t.replaceFirstChar { it.lowercase() })
     }
 }
