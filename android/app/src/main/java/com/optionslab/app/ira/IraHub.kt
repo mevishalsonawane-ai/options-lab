@@ -432,6 +432,7 @@ object IraHub {
         _state.update { s -> s.copy(proposals = s.proposals.map { if (it.id == id) it.copy(status = Proposal.APPROVED, pineId = item.id) else it },
             messages = (s.messages + Msg(true, text)).takeLast(MAX_MESSAGES)) }
         saveState()
+        IraActivity.add(text)
         return text
     }
 
@@ -556,6 +557,7 @@ object IraHub {
             newsAsks += id
         }
         IraNewsTrades.suggested(id, idea, snap?.price ?: 0.0, source)
+        IraActivity.add("Suggested: $what (${source.substringBefore(':')}).")
         val where = if (IraNewsTrades.paperFirst && com.optionslab.app.data.AppSettings.load().live) " (on paper: my trades stay there until proven)" else ""
         val full = "$text$ivLine Shall I $what$where? Approve or reject."
         _state.update { it.copy(pending = it.pending + id, messages = (it.messages + Msg(true, full, action = id)).takeLast(MAX_MESSAGES)) }
@@ -568,6 +570,7 @@ object IraHub {
                 IraNewsTrades.answered(id, "lapsed")
                 _state.update { it.copy(pending = it.pending - id) }
                 reply("No answer in 10 minutes, so the ${m.label} trade lapsed; nothing was placed.")
+                IraActivity.add("The ${m.label} trade I suggested lapsed unanswered.")
             }
         }
     }
@@ -834,7 +837,12 @@ object IraHub {
     }
 
     /** The owner tapped Confirm (or said yes) on [id]: what happened, or null when it was already settled. */
-    suspend fun confirm(id: Long): String? {
+    suspend fun confirm(id: Long, fingerprint: Boolean = false): String? {
+        // A trade that goes to Zerodha with real money needs the owner's fingerprint on the Jarvis screen (a spoken yes or
+        // the notification's Approve is not enough); it stays waiting until then.
+        if (asksYesNo(id) && !fingerprint && IraNewsTrades.goesLive() && fingerprintNeeded())
+            return synchronized(actions) { actions.containsKey(id) }.let { waiting -> if (!waiting) null else
+                "This trade goes to Zerodha with real money: approve it with your fingerprint on the Jarvis screen.".also { reply(it) } }
         val a = synchronized(actions) { actions.remove(id) } ?: return null
         if (asksYesNo(id)) IraNewsTrades.answered(id, "approved")
         settled(id)
@@ -842,12 +850,19 @@ object IraHub {
         return IraActions.run(a.first, a.second).also { IraAccount.invalidate(); checked = null; reply(it) }
     }
 
+    /** Does a live trade's approval ask for the fingerprint? (whenever the phone has one; without one the app lock covers it) */
+    fun fingerprintNeeded(): Boolean = app?.let { com.optionslab.app.security.BiometricGate.fingerprintOn(it) } ?: true
+
+    /** Is [id] a trade waiting that will need the fingerprint (the Jarvis screen shows the fingerprint button)? */
+    fun needsFingerprint(id: Long): Boolean = asksYesNo(id) && IraNewsTrades.goesLive() && fingerprintNeeded()
+
     fun cancelAction(id: Long) {
         // Only what is still waiting can be cancelled: one already confirmed (or lapsed) is not said to be undone.
         val (was, trade) = synchronized(actions) { (actions.remove(id) != null) to (id in newsAsks) }
         if (!was) { _state.update { it.copy(pending = it.pending - id) }; return }
         if (trade) IraNewsTrades.answered(id, "rejected")
         settled(id)
+        IraActivity.add(if (trade) "You rejected a suggested trade; nothing was placed." else "Cancelled a request; nothing was done.")
         _state.update { it.copy(pending = it.pending - id, messages = (it.messages + Msg(true, "Cancelled; nothing was done.")).takeLast(MAX_MESSAGES)) }
     }
 

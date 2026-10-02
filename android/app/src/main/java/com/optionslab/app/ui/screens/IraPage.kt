@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -130,6 +131,8 @@ fun IraPage(orders: IraOrderPaths? = null) {
     // The phone's Back closes the chat (back to the globe) in JarvisAlgo.
     androidx.activity.compose.BackHandler(enabled = chat && com.optionslab.app.BuildConfig.JARVIS) { chat = false }
     if (!chat) {
+        var quick by remember { mutableStateOf(false) }
+        val ctx = androidx.compose.ui.platform.LocalContext.current
         val writing by com.optionslab.app.ira.IraModel.state.collectAsState()
         // Analysing in the background (reading the market, a backtest, the model writing) shows as thinking too.
         val orbMode = when {
@@ -139,7 +142,15 @@ fun IraPage(orders: IraOrderPaths? = null) {
         }
         Box(Modifier.fillMaxSize().background(Color.Black)) {
             Box(Modifier.fillMaxWidth().fillMaxHeight(0.62f).align(Alignment.Center)) {
-                Orb(vol = orbVol(st.snaps), trend = orbTrend(st.snaps[focus]), mode = orbMode)
+                Orb(vol = orbVol(st.snaps), trend = orbTrend(st.snaps[focus]), mode = orbMode,
+                    onLongPress = if (com.optionslab.app.BuildConfig.JARVIS) ({ quick = true }) else null)
+            }
+            // Long-press the globe: the quick commands.
+            if (quick) QuickCommands(onDismiss = { quick = false }) { q, showChat ->
+                quick = false
+                IraHub.ask(q)
+                scope.launch { com.optionslab.app.ira.JarvisSpeaker.replyTo(ctx, q) }
+                if (showChat) chat = true
             }
             Text(listOf("Idle", "Listening", "Thinking", "Answering")[orbMode].uppercase(),
                 style = Type.label.copy(color = Color(0xFF4AA8FF), fontSize = 12.sp, letterSpacing = 3.sp),
@@ -379,6 +390,18 @@ internal fun VoiceSwitch() {
         }
         Note("Say \"Jarvis\" while it speaks and it stops to listen. Some phones go silent when they listen while speaking: " +
             "then Jarvis switches this off by itself.")
+        var mute by remember { mutableStateOf(JarvisVoice.muted) }
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
+            Text("Mute Jarvis (replies on screen only)", style = Type.label.copy(color = p.ink, fontSize = 14.sp), modifier = Modifier.weight(1f))
+            androidx.compose.material3.Switch(checked = mute, onCheckedChange = { v -> mute = v; JarvisVoice.muted = v })
+        }
+        Note("Or say \"Jarvis, mute\" and \"Jarvis, unmute\".")
+        var hin by remember { mutableStateOf(JarvisVoice.hindi) }
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
+            Text("Spoken replies in Hindi", style = Type.label.copy(color = p.ink, fontSize = 14.sp), modifier = Modifier.weight(1f))
+            androidx.compose.material3.Switch(checked = hin, onCheckedChange = { v -> hin = v; JarvisVoice.hindi = v })
+        }
+        Note("The AI model translates each answer and every figure is checked (English is used when it cannot). Needs the model and the phone's offline Hindi voice.")
         JarvisVoice.heardText?.let { Note("Last heard: \"$it\"") }
         VoiceTeach()
         Note(note ?: vs.problem ?: when (vs.mode) {
@@ -536,7 +559,15 @@ private fun ActionConfirm(id: Long) {
     val scope = rememberCoroutineScope()
     if (id !in st.pending) return
     Row(Modifier.padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        BrassButton("Confirm", tone = LocalPalette.current.oxblood) { scope.launch { IraHub.confirm(id) } }
+        val activity = androidx.compose.ui.platform.LocalContext.current as? androidx.fragment.app.FragmentActivity
+        if (IraHub.needsFingerprint(id) && activity != null) {
+            // A live Jarvis trade: real money, so the owner's fingerprint approves it.
+            BrassButton("Approve with fingerprint", tone = LocalPalette.current.oxblood) {
+                com.optionslab.app.security.BiometricGate.verify(activity, "Approve the live trade", "Jarvis places it on Zerodha") { ok ->
+                    if (ok) scope.launch { IraHub.confirm(id, fingerprint = true) }
+                }
+            }
+        } else BrassButton("Confirm", tone = LocalPalette.current.oxblood) { scope.launch { IraHub.confirm(id) } }
         BrassButton("Cancel", tone = LocalPalette.current.inkSoft) { IraHub.cancelAction(id) }
     }
 }
@@ -667,14 +698,34 @@ private fun orbTrend(s: Snapshot?): Float {
     return (tr + day).coerceIn(-1.0, 1.0).toFloat()
 }
 
+/** The quick commands (a long press on the globe): one tap asks Jarvis; stopping or starting opens the chat for Confirm. */
+@Composable
+private fun QuickCommands(onDismiss: () -> Unit, pick: (String, Boolean) -> Unit) {
+    val items = listOf(
+        "Status" to ("app status" to false), "My P&L" to ("my p&l today" to false), "Positions" to ("my positions" to false),
+        "Should I trade now?" to ("should i trade now" to false), "Stop all strategies" to ("stop all strategies" to true),
+        "Start all strategies" to ("start all strategies" to true),
+        (if (com.optionslab.app.ira.JarvisVoice.muted) "Unmute" else "Mute") to ((if (com.optionslab.app.ira.JarvisVoice.muted) "unmute" else "mute") to false),
+    )
+    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
+        Column(Modifier.background(Color(0xFF0B1220), androidx.compose.foundation.shape.RoundedCornerShape(14.dp)).padding(vertical = 8.dp).width(260.dp)) {
+            Text("QUICK COMMANDS", style = Type.label.copy(color = Color(0xFF4AA8FF), fontSize = 11.sp, letterSpacing = 2.sp), modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+            items.forEach { (label, a) ->
+                Text(label, style = Type.label.copy(color = Color(0xFFE6ECFF), fontSize = 16.sp),
+                    modifier = Modifier.fillMaxWidth().clickable { pick(a.first, a.second) }.padding(horizontal = 16.dp, vertical = 12.dp))
+            }
+        }
+    }
+}
+
 private fun headline(s: Snapshot): String =
     "${s.market.label} ${s.market.price(s.price)}" + (s.changePct?.let { " %+.2f%%".format(Locale.ENGLISH, it) } ?: "")
 
 /** The orb on the graphics chip; a still drawing where there is no GL (the JVM screen tests). */
 @Composable
-private fun Orb(vol: Float, trend: Float, mode: Int, onTap: (() -> Unit)? = null) {
+private fun Orb(vol: Float, trend: Float, mode: Int, onTap: (() -> Unit)? = null, onLongPress: (() -> Unit)? = null) {
     if (Build.FINGERPRINT == "robolectric") {
-        Canvas(Modifier.fillMaxSize().let { m -> if (onTap != null) m.clickable { onTap() } else m }) {
+        Canvas(Modifier.fillMaxSize().let { m -> if (onTap != null || onLongPress != null) m.pointerInput(onTap, onLongPress) { androidx.compose.foundation.gestures.detectTapGestures(onTap = { onTap?.invoke() }, onLongPress = { onLongPress?.invoke() }) } else m }) {
             val r = size.minDimension * 0.32f
             for (i in 0 until 400) {
                 val a = i * 2.39996; val y = 1 - (i / 399.0) * 2; val rr = kotlin.math.sqrt(1 - y * y)
@@ -686,7 +737,7 @@ private fun Orb(vol: Float, trend: Float, mode: Int, onTap: (() -> Unit)? = null
     val owner = LocalLifecycleOwner.current
     var view by remember { mutableStateOf<OrbView?>(null) }
     AndroidView(factory = { ctx -> OrbView(ctx).also { view = it } }, modifier = Modifier.fillMaxSize()) { v ->
-        v.vol = vol; v.trend = trend; v.mode = mode; v.onTap = onTap
+        v.vol = vol; v.trend = trend; v.mode = mode; v.onTap = onTap; v.onLongPress = onLongPress
     }
     DisposableEffect(owner, view) {
         val v = view

@@ -151,6 +151,19 @@ class JarvisVoice : Service() {
             get() = runCatching { com.optionslab.app.security.SecurePrefs.getBoolean("jarvis.cutin", false) }.getOrDefault(false)
             set(v) { runCatching { com.optionslab.app.security.SecurePrefs.put("jarvis.cutin", v) } }
 
+        /**
+         * Muted (the owner's wish, 2026-10-02: "Jarvis, mute"): nothing is spoken - replies, news and questions stay on
+         * the screen and in pop-ups - while Jarvis still listens, so "Jarvis, unmute" brings the voice back.
+         */
+        var muted: Boolean
+            get() = runCatching { com.optionslab.app.security.SecurePrefs.getBoolean("jarvis.mute", false) }.getOrDefault(false)
+            set(v) { runCatching { com.optionslab.app.security.SecurePrefs.put("jarvis.mute", v) }; if (v) { instance?.get()?.hush(); JarvisSpeaker.stop() } }
+
+        /** Replies in Hindi (the AI model translates; figures are checked, and English is used when it cannot). */
+        var hindi: Boolean
+            get() = runCatching { com.optionslab.app.security.SecurePrefs.getBoolean("jarvis.hindi", false) }.getOrDefault(false)
+            set(v) { runCatching { com.optionslab.app.security.SecurePrefs.put("jarvis.hindi", v) } }
+
         /** What the recognizer heard last, for the Settings check. */
         @Volatile var heardText: String? = null; private set
 
@@ -173,6 +186,20 @@ class JarvisVoice : Service() {
         fun offlineVoices(t: TextToSpeech): List<android.speech.tts.Voice> = runCatching { t.voices }.getOrNull().orEmpty()
             .filter { !it.isNetworkConnectionRequired && it.locale.language == "en" }
             .sortedWith(compareBy({ if (it.locale.country == "IN") 0 else 1 }, { it.name }))
+
+        /** The phone's offline Hindi voice (a male one first), or null when none is installed. */
+        fun hindiVoice(t: TextToSpeech): android.speech.tts.Voice? = runCatching { t.voices }.getOrNull().orEmpty()
+            .filter { !it.isNetworkConnectionRequired && it.locale.language == "hi" }
+            .sortedWith(compareBy({ if (it.name.contains("male", true) && !it.name.contains("female", true)) 0 else 1 }, { it.name })).firstOrNull()
+
+        /**
+         * [english] in Hindi when the owner chose Hindi replies and the model is ready (every figure checked), else null.
+         */
+        suspend fun inHindi(english: String): String? {
+            if (!hindi || IraModel.state.value.status != IraModel.Status.READY) return null
+            val out = runCatching { IraModel.complete(com.optionslab.ira.Hindi.prompt(english), maxTokens = 200) }.getOrNull()
+            return com.optionslab.ira.Hindi.accept(english, out)
+        }
 
         /** What each speech engine was last set to: setting the same voice again is skipped (it can take a moment). */
         private val applied = java.util.WeakHashMap<TextToSpeech, String>()
@@ -284,7 +311,8 @@ class JarvisVoice : Service() {
                     if (open && n % 2 == 0) runCatching { IraHub.refresh() }
                     if (open || n % 10 == 0) runCatching { IraHub.warm() }
                     n++
-                    kotlinx.coroutines.delay(30_000)
+                    // Low battery and not charging: kept ready less often (answers then read afresh when asked).
+                    kotlinx.coroutines.delay(com.optionslab.app.work.Battery.gap(this@JarvisVoice, 30_000))
                 }
             }
         }
@@ -473,7 +501,9 @@ class JarvisVoice : Service() {
                 // A follow-up (no "Jarvis" in it) may ask, never act: trades and commands need the name, so talk nearby cannot trigger one.
                 val named = alternatives.any { Regex("\\bj[ae]rv[ia]s").containsMatchIn(it.lowercase()) }
                 val topics = com.optionslab.ira.Ask.parse(h.question).topics
-                val acts = com.optionslab.ira.Topic.COMMAND in topics || com.optionslab.ira.Topic.ORDER in topics
+                // Muting, unmuting and the reply language are not actions: a follow-up "mute" works without the name.
+                val voiceOnly = com.optionslab.ira.Ask.parse(h.question).command?.kind in VOICE_KINDS
+                val acts = !voiceOnly && (com.optionslab.ira.Topic.COMMAND in topics || com.optionslab.ira.Topic.ORDER in topics)
                 if (!named && acts) say("Boss, say Jarvis first for that.")
                 else {
                     // Trades, and commands that add risk (live mode, kill switch off, autopilot, starting arms), need
@@ -493,6 +523,9 @@ class JarvisVoice : Service() {
             }
         }
     }
+
+    private val VOICE_KINDS = setOf(com.optionslab.ira.Command.Kind.MUTE, com.optionslab.ira.Command.Kind.UNMUTE,
+        com.optionslab.ira.Command.Kind.HINDI, com.optionslab.ira.Command.Kind.ENGLISH)
 
     /** Commands that are never done on an unrecognised voice, even with a yes. */
     private val HIGH_RISK = setOf(com.optionslab.ira.Command.Kind.MODE_LIVE, com.optionslab.ira.Command.Kind.KILL_OFF,
@@ -533,6 +566,9 @@ class JarvisVoice : Service() {
         }
     }
 
+    /** Stops any speech now (muted). */
+    fun hush() { main.post { runCatching { tts?.stop() }; if (speaking) afterSpeech(null) } }
+
     /**
      * Speaks, still listening - but only for "Jarvis" while it talks, so the owner can cut in and it never answers
      * itself (its own name is spelled out, J.A.R.V.I.S., so it does not hear it) - then listens again, or stops after
@@ -540,6 +576,11 @@ class JarvisVoice : Service() {
      */
     private fun say(text: String, id: String = "say") {
         val t = tts
+        // Muted: the words go on screen as a pop-up instead (answers and questions only; "One moment" is dropped).
+        if (muted && !text.startsWith("Voice on")) {
+            if (id == "answer" || id == "question") runCatching { JarvisPopup.show(this, "Jarvis", text) }
+            afterSpeech(id); return
+        }
         if (!voiceReady || t == null) { afterSpeech(id); return }
         _state.value = VoiceState(Mode.SPEAKING)
         applyStyle(t)                                   // a style or voice changed on the Ira screen takes effect now
@@ -554,6 +595,18 @@ class JarvisVoice : Service() {
         speaking = true
         spokeAt = SystemClock.elapsedRealtime()
         utterance = "$id#${++said}"
+        // Hindi replies: an answer is translated by the model (figures checked) and said in the phone's Hindi voice.
+        if (hindi && id == "answer") {
+            val u = utterance
+            scope.launch {
+                val h = withContext(Dispatchers.Default) { inHindi(text) }
+                val hv = if (h != null) hindiVoice(t) else null
+                if (utterance != u) return@launch
+                if (h != null && hv != null) { t.voice = hv; synchronized(applied) { applied.remove(t) } }
+                if (t.speak(spokenName(if (h != null && hv != null) h else text), TextToSpeech.QUEUE_FLUSH, null, u) != TextToSpeech.SUCCESS) { speaking = false; afterSpeech(id) }
+            }
+            return
+        }
         if (t.speak(spokenName(text), TextToSpeech.QUEUE_FLUSH, null, utterance) != TextToSpeech.SUCCESS) { speaking = false; afterSpeech(id) }
     }
 

@@ -66,6 +66,21 @@ internal object IraAccount {
     /** Reads [WARM] ahead (the listening keeper calls it), so those answers need no wait. */
     suspend fun warm() { invalidate(); readFast(WARM) }
 
+    /** "Am I ready to go live?": each thing that should be in place first. */
+    private suspend fun readyLines(s: AppSettings, today: java.time.LocalDate): List<String> {
+        val protectedSymbols = runCatching { com.optionslab.app.data.Protections.active() }.getOrDefault(emptyList()).map { it.symbol }.toSet()
+        val paperOpen = runCatching { com.optionslab.app.data.Paper.state.positions }.getOrNull()?.filter { it.quantity != 0 }?.map { it.symbol }.orEmpty()
+        val liveOpen = if (Broker.loggedIn) withTimeoutOrNull(ZERODHA_MS) { runCatching { Broker.positionBook().net.filter { it.open }.map { it.symbol } }.getOrNull() }.orEmpty() else emptyList()
+        val unguarded = (paperOpen + liveOpen).count { it !in protectedSymbols }
+        val ctx = IraHub.appContext()
+        return com.optionslab.ira.LiveReady.check(com.optionslab.ira.LiveReady.Facts(
+            proven = if (com.optionslab.app.BuildConfig.JARVIS) com.optionslab.ira.JarvisTrades.proven(IraNewsTrades.closedRecord()) else null,
+            zerodhaLoggedIn = Broker.loggedIn, killSwitchOn = s.guardKill, dailyLossLimit = s.guardDailyLoss, maxLots = s.guardMaxLots,
+            voiceEnrolled = runCatching { VoiceGuard.enrolled }.getOrDefault(false),
+            fingerprint = ctx?.let { com.optionslab.app.security.BiometricGate.fingerprintOn(it) } ?: false,
+            marketOpenToday = com.optionslab.app.data.Market.isTradingDay(today), unguardedPositions = unguarded))
+    }
+
     suspend fun read(sections: Set<Section>, markets: List<com.optionslab.ira.Market> = emptyList()): AppView? {
         testView?.let { return it(sections) }
         return runCatching {
@@ -205,6 +220,11 @@ internal object IraAccount {
                 )
             }
             if (wants(Section.STUDY)) out[Section.STUDY] = IraStudy.lines()
+            if (wants(Section.ACTIVITY)) out[Section.ACTIVITY] = IraActivity.lines()
+            if (wants(Section.REGIME)) out[Section.REGIME] = IraStudy.regimeLines()
+            if (wants(Section.LOSSES)) out[Section.LOSSES] = if (com.optionslab.app.BuildConfig.JARVIS) IraNewsTrades.lossReasons() +
+                "For your own trades, ask \"review my week\": it shows where they lose." else listOf("Ask \"review my week\": it shows where your trades lose.")
+            if (wants(Section.READY)) out[Section.READY] = readyLines(s, today)
             if (wants(Section.REVIEW)) {
                 val owners = runCatching { com.optionslab.app.data.Strategies.owners() }.getOrDefault(emptyMap())
                 val r = ArrayList<String>()

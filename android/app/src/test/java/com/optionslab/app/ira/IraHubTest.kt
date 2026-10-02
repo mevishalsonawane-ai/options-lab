@@ -486,4 +486,34 @@ class IraHubTest : RobolectricTest() {
     @Test fun jarvisTakesTurnsByDefault() {
         assertTrue("cutting in is off until Boss switches it on", !JarvisVoice.cutIn)
     }
+
+    @Test fun muteAndUnmuteAtOnce() = runBlocking {
+        IraHub.ask("Jarvis, mute")
+        waitFor("muted") { JarvisVoice.muted }
+        waitFor("the reply") { IraHub.state.value.messages.lastOrNull()?.let { it.fromIra && it.text.startsWith("Muted") } == true }
+        assertTrue("nothing waits for Confirm", IraHub.state.value.pending.isEmpty())
+        IraHub.ask("unmute")
+        waitFor("unmuted") { !JarvisVoice.muted }
+        Unit
+    }
+
+    @Test fun theNewQuestionsAreAnswered() = runBlocking {
+        val v = IraAccount.read(setOf(com.optionslab.ira.Section.ACTIVITY, com.optionslab.ira.Section.READY,
+            com.optionslab.ira.Section.REGIME, com.optionslab.ira.Section.LOSSES))
+        assertNotNull(v)
+        val l = v!!.lines
+        assertTrue(l.toString(), l[com.optionslab.ira.Section.READY]!!.first().let { it.startsWith("Not yet") || it.startsWith("Yes Boss") })
+        assertTrue(l[com.optionslab.ira.Section.REGIME]!!.isNotEmpty())
+        assertTrue(l[com.optionslab.ira.Section.LOSSES]!!.isNotEmpty())
+        if (com.optionslab.app.BuildConfig.JARVIS) {
+            IraActivity.add("Stopped ORB 5.")
+            assertTrue(IraActivity.lines().last().endsWith("Stopped ORB 5."))
+        }
+        Unit
+    }
+
+    @Test fun batterySaverLeavesNormalGapsAlone() {
+        // The test phone is not low on battery: nothing slows down.
+        assertEquals(3_000L, com.optionslab.app.work.Battery.gap(context, 3_000))
+    }
 }

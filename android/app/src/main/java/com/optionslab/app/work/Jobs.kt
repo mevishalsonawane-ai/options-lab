@@ -676,7 +676,9 @@ class WatchService : Service() {
                 val streaming = com.optionslab.app.data.KiteStream.status.value == com.optionslab.app.data.KiteStream.Status.LIVE
                 if (holding && streaming) {
                     val until = System.currentTimeMillis() + 15_000
-                    while (System.currentTimeMillis() < until) { delay(3_000); runCatching { PositionCards.tickLive(this) } }
+                    // The cards are for the eye: on a low battery (not charging) they move less often (stops are not affected).
+                    val step = Battery.gap(this, 3_000)
+                    while (System.currentTimeMillis() < until) { delay(step); runCatching { PositionCards.tickLive(this) } }
                 } else delay(if (holding) 15_000 else next - System.currentTimeMillis())
                 if (holding) {
                     runCatching {

@@ -16,6 +16,8 @@ data class Command(val kind: Kind, val target: String? = null, val number: Int? 
         ALARM_ADD(false), ALARM_REMOVE(true), EVENT_ADD(false), EVENT_REMOVE(true), AUTOPILOT_ON(false), AUTOPILOT_OFF(true),
         /** Jarvis's own suggested trades: on paper (the default until proven) or in the app's mode; their daily loss limit. */
         JTRADES_PAPER(true), JTRADES_LIVE(false), JTRADES_LIMIT(false), JTRADES_RISK(false),
+        /** Jarvis's voice: silent (replies on screen only) or speaking again; replies in Hindi or English. */
+        MUTE(true), UNMUTE(true), HINDI(true), ENGLISH(true),
     }
 }
 
@@ -51,6 +53,11 @@ object Commands {
             .replace(Regex("[^a-z0-9. ]"), " ").replace(Regex("\\s+"), " ").trim() + " "
         val s = t.replace(Regex(" (please|jarvis|hey|ok|okay|now|right now|immediately|can you|could you|will you|for me) "), " ")
             .replace(Regex("\\s+"), " ").let { " ${it.trim()} " }
+        // Jarvis's voice (before the negation check: "don't speak" is a mute).
+        if (Regex("^ (un ?mute|unmute yourself|speak again|talk again|voice on|turn (on )?(your )?voice( on)?|you can (speak|talk)( now| again)?|start (speaking|talking)) $").containsMatchIn(s)) return Command(Command.Kind.UNMUTE)
+        if (Regex("^ ((be |go |stay |keep )?(mute|muted|silent|quiet)|mute (yourself|your voice|the voice)|(be|go|stay|keep) (on )?silent|shut up|(don t|do not|stop) (speak|speaking|talk|talking)|voice off|turn (off )?(your )?voice( off)?|silence|no voice) $").containsMatchIn(s)) return Command(Command.Kind.MUTE)
+        if (Regex("^ (reply|answer|speak|talk|respond)( to me)? in hindi $|^ hindi (mein|me) (bolo|baat karo|jawab do) $|^ hindi (replies|mode)( on)? $").containsMatchIn(s)) return Command(Command.Kind.HINDI)
+        if (Regex("^ (reply|answer|speak|talk|respond)( to me)? in english( again)? $|^ english (replies|mode)( on)? $").containsMatchIn(s)) return Command(Command.Kind.ENGLISH)
         if (QUESTION.containsMatchIn(s) || NEGATION.containsMatchIn(s)) return null
         fun has(r: String) = Regex(r).containsMatchIn(s)
         fun num(r: String) = Regex(r).find(s)?.groupValues?.get(1)?.toIntOrNull()
@@ -165,5 +172,9 @@ object Commands {
         Command.Kind.JTRADES_LIMIT -> "set my trades' daily loss limit to ${c.level?.let { "Rs %,.0f".format(java.util.Locale.ENGLISH, it) } ?: "?"}"
         Command.Kind.EVENT_ADD -> "note the event \"${c.target}\" on ${c.day ?: "?"}"
         Command.Kind.EVENT_REMOVE -> "remove ${name ?: "that event"}"
+        Command.Kind.MUTE -> "stop speaking (replies on screen only)"
+        Command.Kind.UNMUTE -> "speak again"
+        Command.Kind.HINDI -> "reply in Hindi"
+        Command.Kind.ENGLISH -> "reply in English"
     }
 }

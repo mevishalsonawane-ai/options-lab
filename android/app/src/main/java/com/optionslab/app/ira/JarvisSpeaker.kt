@@ -23,7 +23,7 @@ object JarvisSpeaker {
     fun words(text: String): String = com.optionslab.ira.Address.boss(com.optionslab.ira.Wake.spoken(text, 6))
 
     fun speak(context: Context, text: String) {
-        if (!com.optionslab.app.BuildConfig.JARVIS) return
+        if (!com.optionslab.app.BuildConfig.JARVIS || JarvisVoice.muted && !text.startsWith("Voice on")) return
         val said = words(text)
         if (JarvisVoice.announce(said)) return
         if (android.os.Build.FINGERPRINT == "robolectric") return

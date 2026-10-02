@@ -111,10 +111,43 @@ internal object IraStudy {
             for (min in listOf(5, 15)) edges += com.optionslab.ira.PatternExpert.edges(m, min, com.optionslab.ira.Candles.fold(bars, min, m),
                 runCatching { com.optionslab.app.data.Store.barSessions(m.name) }.getOrNull())
         }
+        runCatching { regimeStudy(now) }
         if (found.isEmpty() && edges.isEmpty()) return
         save(_state.value.copy(at = Instant.now(), findings = found, edges = edges, iv = ivs.ifEmpty { _state.value.iv }, events = events))
         runCatching { armRetestIfDue(now) }
     }
+
+    private const val REGIME_KEY = "jarvis.regime"
+
+    /**
+     * The market's regime now for each index, and how each arm did on days of each regime (BankNifty, the days the phone
+     * keeps): saved for "what is the market regime" and "which arms suit this market".
+     */
+    private suspend fun regimeStudy(now: ZonedDateTime) {
+        val out = ArrayList<String>()
+        var bankRegimes: Map<LocalDate, com.optionslab.ira.Regime.Kind> = emptyMap()
+        var bankNow: com.optionslab.ira.Regime.Kind? = null
+        for (m in MARKETS) {
+            val days = Study.days(IraHub.twoYears(m, 5) ?: continue)
+            val k = com.optionslab.ira.Regime.of(days) ?: continue
+            out += com.optionslab.ira.Regime.say(m, k, days)
+            if (m == com.optionslab.ira.Market.BANKNIFTY) { bankRegimes = com.optionslab.ira.Regime.history(days); bankNow = k }
+        }
+        if (bankRegimes.isNotEmpty()) {
+            val r = com.optionslab.engine.orb.ArmsBacktest.run(com.optionslab.app.data.Store.barSessions("BANKNIFTY"))
+            val trades = r.trades.map { com.optionslab.ira.ArmHealth.T(it.day, it.arm, it.net) }
+            val by = com.optionslab.ira.Regime.armsBy(trades, bankRegimes)
+            if (by.isNotEmpty()) out += listOf("BankNifty arms by regime:") + by
+            bankNow?.let { k -> com.optionslab.ira.Regime.suits(trades, bankRegimes, k).takeIf { it.isNotEmpty() }
+                ?.let { out += "On ${k.label} days like now, these arms made money: ${it.joinToString(", ")}." } }
+        }
+        if (out.isNotEmpty()) com.optionslab.app.security.SecurePrefs.put(REGIME_KEY, org.json.JSONArray(out + "Read ${now.toLocalDate()}.").toString())
+    }
+
+    fun regimeLines(): List<String> = runCatching {
+        val a = org.json.JSONArray(com.optionslab.app.security.SecurePrefs.getString(REGIME_KEY) ?: "[]")
+        (0 until a.length()).map { a.getString(it) }
+    }.getOrDefault(emptyList()).ifEmpty { listOf("I read the market regime in the nightly study; it has not run yet.") }
 
     fun ivHistory(u: String): List<Pair<LocalDate, Double>> = _state.value.iv[u].orEmpty()
 

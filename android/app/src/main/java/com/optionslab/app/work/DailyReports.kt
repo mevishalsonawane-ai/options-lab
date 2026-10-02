@@ -132,6 +132,29 @@ object DailyReports {
             runCatching { kotlinx.coroutines.withTimeoutOrNull(15_000) { com.optionslab.app.ira.IraHub.flows() } }.getOrNull()
                 ?.takeIf { it.isNotEmpty() }?.let { lines += "• " + com.optionslab.ira.Flows.lines(it).first() }
             com.optionslab.app.ira.IraEvents.upcoming(1).forEach { e -> lines += "• " + com.optionslab.ira.Events.line(e, Market.today()).removeSuffix(".") }
+            // Jarvis's own self-check: each part it needs, working or not (a part switched off is not counted).
+            run {
+                val vs = com.optionslab.app.ira.JarvisVoice.state.value
+                val voiceOn = com.optionslab.app.ira.JarvisVoice.wanted
+                val mic = androidx.core.content.ContextCompat.checkSelfPermission(context, android.Manifest.permission.RECORD_AUDIO) ==
+                    android.content.pm.PackageManager.PERMISSION_GRANTED
+                val model = com.optionslab.app.ira.IraModel.state.value.status
+                val studied = com.optionslab.app.ira.IraStudy.state.value.at?.isAfter(java.time.Instant.now().minusSeconds(36 * 3600)) == true
+                val (battery, charging) = Battery.state(context)
+                val parts = listOf(
+                    "Voice" to (if (voiceOn) vs.problem == null else null),
+                    "Microphone permission" to (if (voiceOn) mic else null),
+                    "Spoken replies" to (if (com.optionslab.app.ira.JarvisVoice.muted) null else true),
+                    "AI model" to (if (model == com.optionslab.app.ira.IraModel.Status.READY) true else null),
+                    "Data feed" to (com.optionslab.app.ira.IraHub.state.value.liveMissing.size < 3),
+                    "Night study" to studied,
+                    "Battery" to (battery?.let { it > com.optionslab.ira.BatterySaver.LOW || charging }),
+                )
+                val sc = com.optionslab.ira.SelfCheck.lines(parts)
+                ok(parts.none { it.second == false }, sc.first().removeSuffix("."))
+                sc.drop(1).filter { it.endsWith("not working.") }.forEach { lines += "• $it" }
+                if (com.optionslab.app.ira.JarvisVoice.muted) lines += "• Jarvis is muted (say \"Jarvis, unmute\" to hear me)"
+            }
             // After everything is checked: what the night's study and the overnight news say about today.
             val brief = runCatching { com.optionslab.app.ira.IraStudy.brief() }.getOrDefault(emptyList())
             brief.forEach { lines += "• Study: $it" }

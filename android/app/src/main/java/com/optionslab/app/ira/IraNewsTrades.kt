@@ -25,14 +25,19 @@ internal object IraNewsTrades {
 
     /** One news trade: the contract, entry, the best price seen and the stop in force; [closed] once out. */
     data class Pos(val symbol: String, val live: Boolean, val entry: Double, val qty: Int, val peak: Double, val stop: Double?,
-                   val headline: String, val day: String, val closed: Boolean = false, val result: Double? = null)
+                   val headline: String, val day: String, val closed: Boolean = false, val result: Double? = null,
+                   /** For "why did it lose": the index, side and minute at entry, and the index and minute at the exit. */
+                   val underlying: String? = null, val call: Boolean? = null, val spotIn: Double? = null, val minuteIn: Int? = null,
+                   val spotOut: Double? = null, val minuteOut: Int? = null)
 
     /** Every news / pattern trade; an entry that does not read back is skipped, never the whole record. */
     fun all(): List<Pos> = runCatching {
         val a = JSONArray(com.optionslab.app.security.SecurePrefs.getString(KEY) ?: "[]")
         (0 until a.length()).mapNotNull { i -> runCatching { a.getJSONObject(i).let { o ->
             Pos(o.getString("s"), o.getBoolean("l"), o.getDouble("e"), o.getInt("q"), o.getDouble("p"), if (o.has("st")) o.getDouble("st") else null,
-                o.getString("h"), o.getString("d"), o.optBoolean("c"), if (o.has("r")) o.getDouble("r") else null)
+                o.getString("h"), o.getString("d"), o.optBoolean("c"), if (o.has("r")) o.getDouble("r") else null,
+                o.optString("u").ifEmpty { null }, if (o.has("cl")) o.getBoolean("cl") else null, if (o.has("si")) o.getDouble("si") else null,
+                if (o.has("mi")) o.getInt("mi") else null, if (o.has("so")) o.getDouble("so") else null, if (o.has("mo")) o.getInt("mo") else null)
         } }.getOrNull() }
     }.getOrDefault(emptyList())
 
@@ -42,7 +47,8 @@ internal object IraNewsTrades {
     private fun save(list: List<Pos>) = runCatching {
         com.optionslab.app.security.SecurePrefs.put(KEY, JSONArray().apply { list.takeLast(200).forEach { p ->
             put(JSONObject().put("s", p.symbol).put("l", p.live).put("e", p.entry).put("q", p.qty).put("p", p.peak)
-                .apply { p.stop?.let { put("st", it) }; p.result?.let { put("r", it) } }.put("h", p.headline).put("d", p.day).put("c", p.closed)) } }.toString())
+                .apply { p.stop?.let { put("st", it) }; p.result?.let { put("r", it) }; p.underlying?.let { put("u", it) }; p.call?.let { put("cl", it) }
+                    p.spotIn?.let { put("si", it) }; p.minuteIn?.let { put("mi", it) }; p.spotOut?.let { put("so", it) }; p.minuteOut?.let { put("mo", it) } }.put("h", p.headline).put("d", p.day).put("c", p.closed)) } }.toString())
     }
 
     fun today(): Int { val d = com.optionslab.app.data.Market.today().toString(); return all().count { it.day == d } }
@@ -167,20 +173,25 @@ internal object IraNewsTrades {
         val c = contract(u, spot, idea.call) ?: return "No ${u} option is listed for the next expiry."
         val s = AppSettings.load()
         val day = com.optionslab.app.data.Market.today().toString()
-        val premium = runCatching { Paper.lastPrice(c) }.getOrNull() ?: 0.0
+        val quote = runCatching { Paper.quote(c) }.getOrNull()
+        val premium = quote?.ltp ?: 0.0
+        // A thin strike (a wide gap between buyers and sellers, or hardly traded) is not bought: the fill and the exit would be poor.
+        quote?.let { q -> com.optionslab.ira.StrikeLiquidity.problem(q.bid, q.ask, q.volume, c.lotSize) }?.let { return "$it Not placed." }
         val lots = lotsFor(premium, c.lotSize)
+        val nowMin = java.time.LocalTime.now(java.time.ZoneId.of("Asia/Kolkata")).let { it.hour * 60 + it.minute }
         if (lots < 1) return "Your risk per trade is smaller than one lot's stop risk (about ${com.optionslab.ira.AppFacts.rs(premium * 0.15 * c.lotSize).removePrefix("+")}): not placed."
         // Paper first: until their own record is proven (checked again now), Jarvis's trades go on paper even in Live mode.
         if (!s.live || paperFirst || JarvisTrades.proven(closedRecord()) != null) {
-            val q = runCatching { Paper.quote(c) }.getOrNull()
-            val r = Paper.place(c, "BUY", lots, "MARKET", "MIS", null, null, q)
+            val r = Paper.place(c, "BUY", lots, "MARKET", "MIS", null, null, quote)
             val fill = r.events.filterIsInstance<com.optionslab.engine.sandbox.SandboxEvent.Fill>().firstOrNull()
                 ?: return "Paper: ${r.message}"
             r.orderId?.let { com.optionslab.app.data.Strategies.tagOwner("paper:$it", "Jarvis news · entry") }
             val stop = LiquidityRules.stopTrigger(fill.price)
             val prot = com.optionslab.app.data.Protections.protectPaper(c.symbol, "MIS", fill.quantity, fill.price, stop, null, fill.price + TARGET_POINTS)
             val guarded = prot.startsWith("Protected")
-            save(all() + Pos(c.symbol, false, fill.price, fill.quantity, fill.price, if (guarded) stop else null, headline, day))
+            save(all() + Pos(c.symbol, false, fill.price, fill.quantity, fill.price, if (guarded) stop else null, headline, day,
+                underlying = u, call = idea.call, spotIn = spot, minuteIn = nowMin))
+            IraActivity.add("Bought ${c.symbol} on paper at ${"%.2f".format(fill.price)} ($headline).")
             IraHub.appContext()?.let { com.optionslab.app.work.Notifier.orderFilled(it, "BUY", fill.quantity, c.symbol, fill.price, "Paper", "Jarvis news") }
             if (!guarded) unguarded(c.symbol, prot)
             return "Bought ${c.symbol} at ${"%.2f".format(fill.price)} on paper${if (s.live) " (my trades stay on paper until proven)" else ""}. $prot" +
@@ -197,7 +208,9 @@ internal object IraNewsTrades {
             .getOrNull() ?: return "$sent But I could not find its Zerodha symbol to set the stop: set it from the position now."
         val prot = com.optionslab.app.data.Protections.protectLive(zs, "NFO", s.orderProduct, c.lotSize * lots, avg, stop, null, avg + TARGET_POINTS)
         val guarded = prot.startsWith("Protected")
-        save(all() + Pos(zs, true, avg, c.lotSize * lots, avg, if (guarded) stop else null, headline, day))
+        save(all() + Pos(zs, true, avg, c.lotSize * lots, avg, if (guarded) stop else null, headline, day,
+            underlying = u, call = idea.call, spotIn = spot, minuteIn = nowMin))
+        IraActivity.add("Bought $zs on Zerodha at ${"%.2f".format(avg)} ($headline).")
         if (!guarded) unguarded(zs, prot)
         return "$sent $prot" + if (guarded) " Profit lock on." else ""
     }
@@ -232,7 +245,9 @@ internal object IraNewsTrades {
             if (net == 0) {
                 val r = tripOf(p)
                 IraHub.appContext()?.let { JarvisPopup.show(it, "News trade closed: ${p.symbol}", r?.let { x -> "Result ${com.optionslab.ira.AppFacts.rs(x)}. " }.orEmpty() + record()) }
-                return@map p.copy(closed = true, result = r)
+                IraActivity.add("${p.symbol} closed" + (r?.let { x -> ", ${com.optionslab.ira.AppFacts.rs(x)}" } ?: "") + ".")
+                return@map p.copy(closed = true, result = r, spotOut = p.underlying?.let { spotOf(it) },
+                    minuteOut = java.time.LocalTime.now(java.time.ZoneId.of("Asia/Kolkata")).let { it.hour * 60 + it.minute })
             }
             val ltp = runCatching { if (p.live) com.optionslab.app.data.Broker.quotes(listOf("NFO:${p.symbol}"))["NFO:${p.symbol}"]?.last
                 else Paper.contractOf(p.symbol)?.let { Paper.lastPrice(it) } }.getOrNull() ?: return@map p
@@ -255,6 +270,27 @@ internal object IraNewsTrades {
         }
         save(out)
         Unit
+    }
+
+    /** The index's latest price as Jarvis last read it. */
+    private fun spotOf(u: String): Double? = runCatching { IraHub.state.value.snaps[com.optionslab.ira.Market.valueOf(u)]?.price }.getOrNull()
+
+    /** Will Jarvis's next trade go to Zerodha with real money (Live mode, paper-first off, the paper record proven)? */
+    fun goesLive(): Boolean = AppSettings.load().live && !paperFirst && JarvisTrades.proven(closedRecord()) == null
+
+    /** Why each of Jarvis's recent losing trades lost (the last five), in words. */
+    fun lossReasons(): List<String> {
+        val lost = all().filter { it.closed && (it.result ?: 0.0) < 0 }.takeLast(5)
+        if (lost.isEmpty()) return listOf("None of my trades has lost yet.")
+        return lost.reversed().map { p ->
+            val res = p.result ?: 0.0
+            val head = "${p.day} ${p.symbol} (${com.optionslab.ira.AppFacts.rs(res)}): "
+            val qty = maxOf(1, p.qty)
+            val trip = if (p.call != null && p.spotIn != null && p.spotOut != null && p.minuteIn != null && p.minuteOut != null)
+                com.optionslab.ira.LossReason.Trip(p.call, p.spotIn, p.spotOut, p.entry, p.entry + res / qty,
+                    maxOf(0, p.minuteOut - p.minuteIn), p.minuteOut, p.stop != null && p.entry + res / qty <= p.stop + 0.5) else null
+            head + (trip?.let { com.optionslab.ira.LossReason.why(it) } ?: "it hit its stop; the index prices around it were not recorded.")
+        }
     }
 
     private fun recent(p: Pos) = runCatching { !java.time.LocalDate.parse(p.day).isBefore(com.optionslab.app.data.Market.today().minusDays(4)) }.getOrDefault(false)

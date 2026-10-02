@@ -33,6 +33,8 @@ class OrbView(context: Context) : GLSurfaceView(context) {
 
     /** A single tap on the globe (the chat hides). */
     @Volatile var onTap: (() -> Unit)? = null
+    /** A long press on the globe (the quick commands). */
+    @Volatile var onLongPress: (() -> Unit)? = null
 
     /** The owner's zoom (pinch) and turn (drag), eased to in the renderer. */
     @Volatile private var zoom = 1f
@@ -52,6 +54,7 @@ class OrbView(context: Context) : GLSurfaceView(context) {
         }
         override fun onDoubleTap(e: android.view.MotionEvent): Boolean { zoom = 1f; yaw = 0f; pitch = 0f; return true }
         override fun onSingleTapConfirmed(e: android.view.MotionEvent): Boolean { onTap?.invoke(); return onTap != null }
+        override fun onLongPress(e: android.view.MotionEvent) { if (!scaler.isInProgress) { performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS); onLongPress?.invoke() } }
     })
 
     @android.annotation.SuppressLint("ClickableViewAccessibility")

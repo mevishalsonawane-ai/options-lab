@@ -202,6 +202,13 @@ internal object IraActions {
                     else "Each of my trades will risk about Rs %,.0f once my paper record is proven; until then 1 lot.".format(java.util.Locale.ENGLISH, v)
                 }
             }
+            // Jarvis's voice and language: done at once (nothing to confirm, nothing at risk).
+            Command.Kind.MUTE -> { JarvisVoice.muted = true; IraActivity.add("Muted my voice."); "Muted, Boss. I'll reply on screen only. Say \"Jarvis, unmute\" or \"Jarvis, speak again\" to hear me." to null }
+            Command.Kind.UNMUTE -> { JarvisVoice.muted = false; IraActivity.add("Voice back on."); "Voice on, Boss." to null }
+            Command.Kind.HINDI -> { JarvisVoice.hindi = true
+                (if (IraModel.state.value.status == IraModel.Status.READY) "Ab main Hindi mein jawab doonga, Boss." else
+                    "Boss, Hindi replies need the AI model on the phone (Settings, Voice and AI model); until then I reply in English.") to null }
+            Command.Kind.ENGLISH -> { JarvisVoice.hindi = false; "Back to English, Boss." to null }
             Command.Kind.JTRADES_PAPER -> Commands.describe(c) to suspend { IraNewsTrades.paperFirst = true; "My suggested trades stay on paper now, Boss." }
             Command.Kind.JTRADES_LIVE -> {
                 val why = com.optionslab.ira.JarvisTrades.proven(IraNewsTrades.closedRecord())
@@ -244,6 +251,7 @@ internal object IraActions {
         log(what)
         IraAccount.invalidate()
         return runCatching { act() }.getOrElse { "That did not work: ${it.message ?: "an error"}." }
+            .also { IraActivity.add("$what: ${IraActivity.short(it)}") }
     }
 
     private fun setSettings(f: (AppSettings) -> AppSettings) {
