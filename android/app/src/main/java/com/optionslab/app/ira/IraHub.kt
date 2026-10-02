@@ -409,6 +409,11 @@ object IraHub {
         if (Topic.BACKTEST in parsed.topics) { backtestAsked(q, parsed); return }
         if (Topic.ACCOUNT in parsed.topics) { accountAsked(q); return }
         if (Topic.COMMAND in parsed.topics) { commandAsked(q, parsed.command!!); return }
+        if (Topic.TRADE_CHECK in parsed.topics) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            scope.launch { reply(runCatching { tradeCheck().say() }.getOrElse { "I could not run the trade check just now." }) }
+            return
+        }
         // JarvisAlgo: a complete order is placed at once (the owner's rule); IraAlgo keeps the review.
         parsed.order?.takeIf { com.optionslab.app.BuildConfig.JARVIS && it.missing.isEmpty() && it.refusal == null }?.let { o -> tradeAsked(q, o); return }
         val a = runCatching { Ira(book).answer(q, _state.value.snaps, _state.value.news, voice = com.optionslab.app.BuildConfig.JARVIS) }.getOrElse { com.optionslab.ira.Answer("I could not work that out.", emptyList()) }
@@ -527,6 +532,43 @@ object IraHub {
             reply(r.fold({ t -> runCatching { IraActions.trade(t, s.live) }.getOrElse { e -> "That order failed: ${e.message}" } },
                 { e -> e.message ?: "I could not prepare that order." }))
         }
+    }
+
+    /**
+     * "Should I trade now?" - everything the app knows, weighed by [com.optionslab.ira.TradeCheck]: whether trading is
+     * possible, today's risks, your day so far, and each arm's tested record; with how Nifty and BankNifty are moving.
+     */
+    suspend fun tradeCheck(): com.optionslab.ira.TradeCheck.Verdict {
+        val s = com.optionslab.app.data.AppSettings.load()
+        val m = com.optionslab.app.data.Market
+        val st = _state.value
+        val bn = histories[IraMarket.BANKNIFTY]?.bars.orEmpty()
+        val bnSnap = st.snaps[IraMarket.BANKNIFTY]
+        val dayPnl = if (s.live) runCatching { kotlinx.coroutines.withTimeoutOrNull(8_000) { com.optionslab.app.data.Broker.positionBook().m2m } }.getOrNull()
+            else runCatching { com.optionslab.app.data.Paper.snapshot().dayPnl }.getOrNull()
+        val arms = ArrayList<String>()
+        runCatching { com.optionslab.app.data.OrbArms.view().arms }.getOrDefault(emptyList()).filter { it.armed }.forEach { arms += it.arm.label }
+        com.optionslab.app.data.PineScripts.items.value.filter { it.auto.on }.forEach { arms += it.name }
+        runCatching { com.optionslab.app.data.Strategies.all() }.getOrDefault(emptyList()).filter { it.def.scheduler?.enabled == true }.forEach { arms += it.def.name }
+        val today = m.today()
+        val events = runCatching { IraEvents.upcoming(0) }.getOrDefault(emptyList()).filter { it.day == today && !it.name.endsWith("expiry") }.map { it.name }
+        val ipOk = com.optionslab.app.data.StaticIp.registered?.let { runCatching { com.optionslab.app.data.StaticIp.status(force = false).matches }.getOrNull() }
+        val burst = if (bn.isNotEmpty()) com.optionslab.ira.Watch.move30(bn)?.first else null
+        return com.optionslab.ira.TradeCheck.check(com.optionslab.ira.TradeCheck.Now(
+            marketOpen = m.isOpen(), tradingDay = m.isTradingDay(today), minute = m.minuteNow(),
+            liveMode = s.live, zerodhaLoggedIn = com.optionslab.app.data.Broker.loggedIn, staticIpOk = ipOk,
+            pricesFresh = !m.isOpen() || st.liveAt?.isAfter(Instant.now().minusSeconds(180)) == true,
+            killSwitch = s.guardKill, breakerTripped = com.optionslab.app.data.LossBreaker.trippedToday(),
+            botsStopped = runCatching { com.optionslab.app.data.Strategies.stoppedToday() }.getOrDefault(false),
+            dayPnl = dayPnl, dayLossLimit = if (s.live) s.guardDailyLoss else s.guardPaperDailyLoss,
+            vix = st.snaps[IraMarket.VIX]?.price, vixChangePct = st.snaps[IraMarket.VIX]?.changePct,
+            indexChangePct = bnSnap?.changePct, gapPct = bnSnap?.prevClose?.let { pc -> (bnSnap.open - pc) / pc * 100 },
+            burst30Pct = burst, usual30Pct = com.optionslab.ira.Watch.typical30(bn),
+            openingRangeRatio = if (m.minuteNow() >= 10 * 60) com.optionslab.ira.TradeCheck.openingRangeRatio(bn) else null,
+            eventsToday = events, expiryToday = listOf("NIFTY", "BANKNIFTY", "FINNIFTY").any { runCatching { m.isExpiryDay(it) }.getOrDefault(false) },
+            armsOn = arms,
+            reads = listOf(IraMarket.NIFTY, IraMarket.BANKNIFTY).mapNotNull { mk -> st.snaps[mk]?.let { com.optionslab.ira.TradeCheck.read(it) } },
+        ))
     }
 
     /** A message from Jarvis itself (the morning check). */

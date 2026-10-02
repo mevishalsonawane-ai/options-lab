@@ -384,4 +384,15 @@ class IraHubTest : RobolectricTest() {
         IraEvents.remove(IraEvents.owner().single())
         assertTrue(IraEvents.owner().isEmpty())
     }
+
+    /** "Should I trade now?": a verdict with reasons, whatever the hour the test runs at. */
+    @Test fun theTradeCheckAnswers() = runBlocking {
+        IraHub.testHistories = { histories }
+        IraHub.refresh()
+        IraHub.ask("Jarvis, should I trade now?")
+        waitFor("the verdict") { IraHub.state.value.messages.size == 2 }
+        val t = IraHub.state.value.messages.last().text
+        assertTrue(t, Regex("(Don't trade now|Careful today|Conditions are normal)").containsMatchIn(t))
+        assertTrue(t, t.contains("Nifty is ") && t.endsWith("not a forecast."))
+    }
 }

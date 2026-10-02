@@ -52,7 +52,7 @@ object Watch {
     }
 
     /** The last 30 minutes' move (%) of today's candles and the hour it ends in, or null. */
-    private fun move30(b: List<Candle>): Pair<Double, Int>? {
+    fun move30(b: List<Candle>): Pair<Double, Int>? {
         if (b.size < 31) return null
         val last = b.last(); val ago = b[b.size - 31]
         if (ago.t.toLocalDate() != last.t.toLocalDate()) return null

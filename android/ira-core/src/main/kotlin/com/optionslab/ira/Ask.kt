@@ -1,7 +1,7 @@
 package com.optionslab.ira
 
 /** What a question is about. */
-enum class Topic { OVERVIEW, WHY, TREND, LEVELS, PATTERNS, NEWS, VOLATILITY, ADVICE, ORDER, BACKTEST, ACCOUNT, HELP, COMMAND, GREETING, OFF_TOPIC }
+enum class Topic { OVERVIEW, WHY, TREND, LEVELS, PATTERNS, NEWS, VOLATILITY, ADVICE, ORDER, BACKTEST, ACCOUNT, HELP, COMMAND, TRADE_CHECK, GREETING, OFF_TOPIC }
 
 /**
  * An order the owner asked for in words. Ira never sends it: the app opens its own order review filled with this, and
@@ -56,6 +56,10 @@ object Ask {
     fun parse(text: String): Question {
         val t = " " + text.lowercase().replace(Regex("[^a-z0-9 ]"), " ").replace(Regex("\\s+"), " ").trim() + " "
         Commands.parse(text)?.let { c -> return Question(text, Market.mentioned(text), setOf(Topic.COMMAND), null, command = c) }
+        // "Should I trade now?" - Jarvis's trade check (never a direction, never a single instrument).
+        if (!Regex(" (backtest|back test|engulfing|pattern|patterns|strategy|candle|candles) ").containsMatchIn(t) && Regex(" (bullish|bearish|market (good|bad|mood|today)|how is the market|is (the )?market (good|bad|up|down|bullish|bearish|trending|sideways)|which way is the market) ").containsMatchIn(t) ||
+            Regex(" (should|shall|can|could) i (trade|be trading|stay out|sit out|take (a |any )?trades?)| (safe|good|right|ok|okay) (time )?to trade| trade (now|today) or not| should i stay out | is today (a )?(good|bad) (day )?(to|for) trad").containsMatchIn(t))
+            return Question(text, Market.mentioned(text), setOf(Topic.TRADE_CHECK), null)
         // An order to place names its lots ("buy 2 lots..."); anything else about orders, P&L, strategies, limits or the app
         // is a question about the app.
         val placed = order(t)
