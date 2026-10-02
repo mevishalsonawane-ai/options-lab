@@ -15,5 +15,10 @@
             android:name="com.optionslab.app.ira.JarvisVoice"
             android:exported="false"
             android:foregroundServiceType="microphone" />
+        <!-- The model download (only after the owner taps Download): Hugging Face only, checked against its SHA-256. -->
+        <service
+            android:name="com.optionslab.app.ira.ModelDownload"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
     </application>
 </manifest>

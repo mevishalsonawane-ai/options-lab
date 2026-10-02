@@ -238,4 +238,20 @@ class IraHubTest : RobolectricTest() {
         assertEquals(JarvisVoice.Mode.OFF, JarvisVoice.state.value.mode)
         svc.destroy()
     }
+
+    /** The model is one pinned file from Hugging Face only, checked by SHA-256; outside JarvisAlgo nothing about it runs. */
+    @Test fun theModelIsPinnedAndComesFromHuggingFaceOnly() {
+        assertTrue(IraModel.URL.startsWith("https://huggingface.co/Qwen/Qwen2.5-3B-Instruct-GGUF/resolve/${IraModel.COMMIT}/"))
+        assertEquals(64, IraModel.SHA256.length)
+        for (ok in listOf("huggingface.co", "us.aws.cdn.hf.co", "cdn-lfs.huggingface.co")) assertTrue(ok, IraModel.hostAllowed(ok))
+        for (bad in listOf("evil.com", "huggingface.co.evil.com", "nothf.co", "hf.co.evil.net", null)) assertTrue("$bad", !IraModel.hostAllowed(bad))
+        val f = File(context.cacheDir, "abc.txt").also { it.writeText("abc") }
+        assertEquals("ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad", ModelDownload.sha256(f))
+        IraModel.init(context)
+        assertEquals(IraModel.Status.UNSUPPORTED, IraModel.state.value.status)
+        assertTrue("never asked outside JarvisAlgo", !IraModel.shouldAsk())
+        assertTrue(!IraModel.usable())
+        ModelDownload.start(context)                                  // a no-op here
+        assertTrue(!IraModel.file(context).exists() && !IraModel.part(context).exists())
+    }
 }

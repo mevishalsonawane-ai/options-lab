@@ -65,6 +65,13 @@ android {
         }
     }
 
+    // JarvisAlgo only: the on-device model runner (llama.cpp, fixed release) for 64-bit ARM phones. IraAlgo and
+    // IraGoldAlgo have no native code.
+    if (project.findProperty("jarvis") == "true") {
+        externalNativeBuild { cmake { path = file("src/jarvis/cpp/CMakeLists.txt"); version = "3.22.1" } }
+        defaultConfig { ndk { abiFilters += "arm64-v8a" } }
+    }
+
     // The microphone: JarvisAlgo's manifest adds it ("Jarvis"); IraAlgo and IraGoldAlgo's manifest removes it.
     sourceSets {
         getByName("ira").manifest.srcFile(if (project.findProperty("jarvis") == "true") "src/jarvis/AndroidManifest.xml" else "src/noaudio/AndroidManifest.xml")
@@ -286,5 +293,7 @@ androidComponents {
             report.set(layout.buildDirectory.file("reports/sandbox/${variant.name}.txt"))
         }
         tasks.matching { it.name == "assemble$cap" || it.name == "bundle$cap" }.configureEach { dependsOn(guard) }
+        // The model runner is JarvisAlgo's alone: never packaged into IraGoldAlgo.
+        if (variant.flavorName == "gold") variant.packaging.jniLibs.excludes.add("**/libjarvis_llm.so")
     }
 }

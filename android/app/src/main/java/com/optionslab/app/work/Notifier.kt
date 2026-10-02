@@ -124,8 +124,8 @@ object Notifier {
             },
         ))
         if (com.optionslab.app.BuildConfig.JARVIS) nm.createNotificationChannel(
-            NotificationChannel(VOICE, "Jarvis listening", NotificationManager.IMPORTANCE_LOW).apply {
-                description = "Shown while Jarvis listens for its name, with a Stop button. What it hears stays on the phone."
+            NotificationChannel(VOICE, "Jarvis in the background", NotificationManager.IMPORTANCE_LOW).apply {
+                description = "Shown while Jarvis listens for its name or downloads its model, with a Stop or Cancel button. What it hears stays on the phone."
                 lockscreenVisibility = android.app.Notification.VISIBILITY_PRIVATE
                 setShowBadge(false); setSound(null, null); enableVibration(false)
             })

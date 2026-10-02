@@ -141,6 +141,7 @@ fun IraPage(orders: IraOrderPaths? = null) {
                 }
             }
             if (com.optionslab.app.BuildConfig.JARVIS) item { VoiceSwitch() }
+            if (com.optionslab.app.BuildConfig.JARVIS) item { ModelCard() }
             item { HowIraIsDoing(st) }
             if (st.messages.isEmpty()) item {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -180,6 +181,12 @@ private fun Bubble(m: IraHub.Msg, orders: IraOrderPaths?) {
             else OrderActions(o, orders)
         }
         m.proposal?.let { id -> ProposalActions(id) }
+        if (m.writing) Text("Jarvis is writing this on the phone...", style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp))
+        m.draft?.let { d ->
+            var showDraft by remember { mutableStateOf(false) }
+            Text(if (showDraft) "Ira's words: $d" else "Written on the phone by ${com.optionslab.app.ira.IraModel.NAME} · every number checked · show Ira's words",
+                style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp), modifier = Modifier.clickable { showDraft = !showDraft }.padding(top = 4.dp))
+        }
         if (m.fromIra && m.facts.isNotEmpty()) {
             Text(if (open) "Hide the facts used" else "Facts used (${m.facts.size})", style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp),
                 modifier = Modifier.clickable { open = !open }.padding(top = 4.dp))
@@ -310,6 +317,75 @@ private fun VoiceSwitch() {
             JarvisVoice.Mode.LISTENING -> "Listening for \"Jarvis\" on this phone only. Say \"Jarvis, stop listening\" or use the notification to stop. " +
                 "Orders you ask for by voice are only prepared here: you confirm them on screen."
         })
+    }
+}
+
+/**
+ * JarvisAlgo: the on-device model. When the Ira screen opens and the model is not on the phone, the owner is asked
+ * (Download / Later / Don't ask again); nothing is downloaded without that tap. Then: progress with Cancel, or the
+ * switch to use it, and Delete.
+ */
+@Composable
+private fun ModelCard() {
+    val p = LocalPalette.current
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val scope = rememberCoroutineScope()
+    val ms by com.optionslab.app.ira.IraModel.state.collectAsState()
+    val M = com.optionslab.app.ira.IraModel
+    val S = com.optionslab.app.ira.IraModel.Status
+    var asking by remember { mutableStateOf(M.shouldAsk()) }
+    var use by remember { mutableStateOf(M.enabled) }
+    var confirmDelete by remember { mutableStateOf(false) }
+    val mb = { b: Long -> "%,d MB".format(Locale.ENGLISH, b / 1_000_000) }
+    if (asking) androidx.compose.material3.AlertDialog(
+        onDismissRequest = { M.later(); asking = false },
+        properties = androidx.compose.ui.window.DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy),
+        title = { Text("Download Jarvis's AI model?") },
+        text = { Text("${M.NAME} (${mb(M.SIZE)}) from Hugging Face, over Wi-Fi only. It lets Jarvis write its answers in natural " +
+            "language on this phone: nothing you ask leaves the phone, and every number it writes is checked against the market data. " +
+            "The file is checked against its fingerprint before use, and you can delete it any time.") },
+        confirmButton = { androidx.compose.material3.TextButton(onClick = { asking = false; M.download(ctx) }) { Text("Download") } },
+        dismissButton = {
+            Row {
+                androidx.compose.material3.TextButton(onClick = { M.never(); asking = false }) { Text("Don't ask again") }
+                androidx.compose.material3.TextButton(onClick = { M.later(); asking = false }) { Text("Later") }
+            }
+        },
+    )
+    if (confirmDelete) androidx.compose.material3.AlertDialog(
+        onDismissRequest = { confirmDelete = false },
+        properties = androidx.compose.ui.window.DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy),
+        title = { Text("Delete the model?") },
+        text = { Text("Frees ${mb(M.SIZE)}. Ira keeps answering in its own words; you can download the model again later.") },
+        confirmButton = { androidx.compose.material3.TextButton(onClick = { confirmDelete = false; scope.launch { M.delete(ctx) } }) { Text("Delete") } },
+        dismissButton = { androidx.compose.material3.TextButton(onClick = { confirmDelete = false }) { Text("Keep") } },
+    )
+    LedgerCard(title = "AI model") {
+        when (ms.status) {
+            S.UNSUPPORTED -> Note(M.unsupportedWhy(ctx) + " Ira answers in its own words.")
+            S.ABSENT, S.FAILED -> {
+                Note(ms.message ?: ("Not on the phone. ${M.NAME}, ${mb(M.SIZE)}, Wi-Fi." +
+                    if (ms.done > 0) " ${mb(ms.done)} already downloaded." else ""))
+                BrassButton(if (ms.done > 0) "Resume the download" else "Download the model", Modifier.fillMaxWidth().padding(top = 6.dp)) { asking = true }
+            }
+            S.DOWNLOADING -> {
+                Note("Downloading ${M.NAME}: ${mb(ms.done)} of ${mb(M.SIZE)}.")
+                androidx.compose.material3.LinearProgressIndicator(progress = { (ms.done.toFloat() / M.SIZE).coerceIn(0f, 1f) },
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp))
+                BrassButton("Cancel", tone = p.inkSoft) { M.cancel(ctx) }
+            }
+            S.VERIFYING -> Note("Checking the file against its fingerprint...")
+            S.READY -> {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("Write answers with ${M.NAME}", style = Type.label.copy(color = p.ink, fontSize = 15.sp), modifier = Modifier.weight(1f))
+                    androidx.compose.material3.Switch(checked = use, onCheckedChange = { use = it; M.enabled = it })
+                }
+                Note((ms.message ?: if (ms.writing) "Writing..." else if (ms.loaded) "Loaded." else "Ready; it loads when first needed.") +
+                    " Runs on this phone only. An answer whose numbers do not match the facts is never shown.")
+                Text("Delete the model", style = Type.label.copy(color = p.inkSoft, fontSize = 13.sp),
+                    modifier = Modifier.clickable { confirmDelete = true }.padding(top = 6.dp))
+            }
+        }
     }
 }
 

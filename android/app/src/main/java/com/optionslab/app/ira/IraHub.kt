@@ -54,7 +54,9 @@ import com.optionslab.ira.Market as IraMarket
  */
 object IraHub {
     data class Msg(val fromIra: Boolean, val text: String, val facts: List<String> = emptyList(), val order: OrderRequest? = null,
-                   /** A strategy proposal this message carries (its [Proposal.id]). */ val proposal: Long? = null)
+                   /** A strategy proposal this message carries (its [Proposal.id]). */ val proposal: Long? = null,
+                   /** Ira's own words when [text] was rewritten by the on-device model (numbers checked); [writing] while it works. */
+                   val draft: String? = null, val writing: Boolean = false)
 
     /** A strategy Jarvis wrote from a pattern and backtested: new until the owner approves (armed on paper) or dismisses it. */
     data class Proposal(val id: Long, val result: StrategyLab.Result, val status: String = NEW, val pineId: Long? = null) {
@@ -142,6 +144,7 @@ object IraHub {
 
     fun init(context: Context) {
         app = context.applicationContext
+        IraModel.init(context)
         val f = File(context.applicationContext.noBackupFilesDir, "ira-book.vault")
         bookFile = f
         book = runCatching { Vault.readFileSteady(f)?.let { PatternBook.load(String(it, Charsets.UTF_8)) } }.getOrNull() ?: PatternBook()
@@ -337,7 +340,16 @@ object IraHub {
         val parsed = Ask.parse(q)
         if (Topic.BACKTEST in parsed.topics) { backtestAsked(q, parsed); return }
         val a = runCatching { Ira(book).answer(q, _state.value.snaps, _state.value.news) }.getOrElse { com.optionslab.ira.Answer("I could not work that out.", emptyList()) }
-        _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, a.text, a.facts, a.order)).takeLast(MAX_MESSAGES)) }
+        // JarvisAlgo with the model ready: the answer shows at once, then the model rewrites it in place if it passes the checks.
+        val write = IraModel.usable() && com.optionslab.ira.Writer.worthRewriting(parsed, a)
+        val msg = Msg(true, a.text, a.facts, a.order, writing = write)
+        _state.update { it.copy(messages = (it.messages + Msg(false, q) + msg).takeLast(MAX_MESSAGES)) }
+        if (write) scope.launch {
+            val better = runCatching { IraModel.rewrite(q, a.facts, a.text) }.getOrNull()
+            _state.update { s -> s.copy(messages = s.messages.map { m ->
+                if (m !== msg) m else if (better != null && better != a.text) m.copy(text = better, draft = a.text, writing = false) else m.copy(writing = false)
+            }) }
+        }
     }
 
     /**
