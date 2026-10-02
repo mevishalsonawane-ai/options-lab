@@ -144,8 +144,7 @@ fun IraPage(orders: IraOrderPaths? = null) {
                     })
                 }
             }
-            if (com.optionslab.app.BuildConfig.JARVIS) item { VoiceSwitch() }
-            if (com.optionslab.app.BuildConfig.JARVIS) item { ModelCard() }
+            if (com.optionslab.app.BuildConfig.JARVIS) item { ModelAsk() }
             item { HowIraIsDoing(st) }
             if (com.optionslab.app.BuildConfig.JARVIS) item { JarvisStudyCard() }
             if (st.messages.isEmpty()) item {
@@ -295,7 +294,7 @@ private fun OrderActions(o: com.optionslab.ira.OrderRequest, orders: IraOrderPat
  * on-device recognizer only; a phone without one is told so, and nothing is sent anywhere instead.
  */
 @Composable
-private fun VoiceSwitch() {
+internal fun VoiceSwitch() {
     val p = LocalPalette.current
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val vs by JarvisVoice.state.collectAsState()
@@ -344,16 +343,12 @@ private fun VoiceSwitch() {
  * (Download / Later / Don't ask again); nothing is downloaded without that tap. Then: progress with Cancel, or the
  * switch to use it, and Delete.
  */
+/** "Download Jarvis's AI model?" - asked when Jarvis is opened (Download / Later / Don't ask again) until answered. */
 @Composable
-private fun ModelCard() {
-    val p = LocalPalette.current
+internal fun ModelAsk() {
     val ctx = androidx.compose.ui.platform.LocalContext.current
-    val scope = rememberCoroutineScope()
-    val ms by com.optionslab.app.ira.IraModel.state.collectAsState()
     val M = com.optionslab.app.ira.IraModel
     var asking by remember { mutableStateOf(M.shouldAsk()) }
-    var use by remember { mutableStateOf(M.enabled) }
-    var confirmDelete by remember { mutableStateOf(false) }
     val mb = { b: Long -> "%,d MB".format(Locale.ENGLISH, b / 1_000_000) }
     if (asking) androidx.compose.material3.AlertDialog(
         onDismissRequest = { M.later(); asking = false },
@@ -370,6 +365,19 @@ private fun ModelCard() {
             }
         },
     )
+}
+
+@Composable
+internal fun ModelCard() {
+    val p = LocalPalette.current
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val scope = rememberCoroutineScope()
+    val ms by com.optionslab.app.ira.IraModel.state.collectAsState()
+    val M = com.optionslab.app.ira.IraModel
+    var use by remember { mutableStateOf(M.enabled) }
+    var confirmDelete by remember { mutableStateOf(false) }
+    val mb = { b: Long -> "%,d MB".format(Locale.ENGLISH, b / 1_000_000) }
+    ModelAsk()
     if (confirmDelete) androidx.compose.material3.AlertDialog(
         onDismissRequest = { confirmDelete = false },
         properties = androidx.compose.ui.window.DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy),
@@ -620,5 +628,15 @@ private fun Orb(vol: Float, trend: Float, mode: Int) {
         }
         owner.lifecycle.addObserver(obs)
         onDispose { owner.lifecycle.removeObserver(obs); v?.onPause() }
+    }
+}
+
+/** Settings → Jarvis (JarvisAlgo): the voice (listening, style, your voice print, spoken replies) and the AI model. */
+@Composable
+fun JarvisSettingsPage() {
+    com.optionslab.app.ui.Page {
+        item { PageTitle("Jarvis settings", "Voice and the on-device AI model. Nothing you say or type leaves the phone.") }
+        item { VoiceSwitch() }
+        item { ModelCard() }
     }
 }

@@ -88,7 +88,7 @@ object DailyReports {
         val lines = ArrayList<String>()
         var bad = 0
         fun ok(yes: Boolean, text: String) { if (!yes) bad++; lines += (if (yes) "✓ " else "✗ ") + text }
-        ok(Broker.loggedIn, if (Broker.loggedIn) "Zerodha logged in for today" else "Zerodha not logged in: log in before 09:15 (More → Zerodha)")
+        ok(Broker.loggedIn, if (Broker.loggedIn) "Zerodha logged in for today" else "Zerodha not logged in: log in before 09:15 (${com.optionslab.app.ui.Tab.CABINET.label} → Zerodha)")
         if (Holidays.stale(Market.today())) runCatching { Holidays.refresh() }
         ok(!Holidays.stale(Market.today()), "NSE holiday list up to date")
         val contracts = runCatching { Market.contracts().size }.getOrDefault(0)
@@ -209,7 +209,7 @@ class ReportWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
                 DailyReports.Kind.MORNING -> DailyReports.morning(applicationContext).let { (t, l) -> DailyReports.post(applicationContext, k, t, l) }
                 // The reminder speaks only if the session is still missing.
                 DailyReports.Kind.LOGIN -> if (!Broker.loggedIn) DailyReports.post(applicationContext, k, "Log in to Zerodha now",
-                    listOf("The market opens at 09:15 and there is no Zerodha session today. Open IraAlgo → More → Zerodha."))
+                    listOf("The market opens at 09:15 and there is no Zerodha session today. Open the app → ${com.optionslab.app.ui.Tab.CABINET.label} → Zerodha."))
                 DailyReports.Kind.EVENING -> DailyReports.evening(applicationContext).let { (t, l) -> DailyReports.post(applicationContext, k, t, l) }
             }
             Result.success()

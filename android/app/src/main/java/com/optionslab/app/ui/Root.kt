@@ -120,7 +120,8 @@ enum class Tab(val label: String, val icon: ImageVector) {
     PNL("P&L", CalendarIcon),
     TOOLS("Options", Icons.Filled.Search),
     LAB("Research", Icons.Filled.DateRange),
-    CABINET("More", Icons.Filled.Menu),
+    // JarvisAlgo calls it Settings (the owner's word); Jarvis's own settings are a section of it.
+    CABINET(if (com.optionslab.app.BuildConfig.JARVIS) "Settings" else "More", Icons.Filled.Menu),
 }
 
 @Composable
