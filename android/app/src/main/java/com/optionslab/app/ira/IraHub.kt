@@ -712,7 +712,7 @@ object IraHub {
         parsed.order?.takeIf { com.optionslab.app.BuildConfig.JARVIS && it.missing.isEmpty() && it.refusal == null }?.let { o -> tradeAsked(q, o); return }
         val a0 = runCatching { Ira(book).answer(q, _state.value.snaps, _state.value.news, voice = com.optionslab.app.BuildConfig.JARVIS) }.getOrElse { com.optionslab.ira.Answer("I could not work that out.", emptyList()) }
         // A holiday or a weekend: said first, so the last session's prices are not taken for today's.
-        val closed = closedToday()?.takeIf { parsed.topics.any { it in MARKET_TOPICS } }
+        val closed = closedToday()?.takeIf { parsed.topics.any { it in MARKET_TOPICS } && testHistories == null }
         val a = if (closed == null) a0 else a0.copy(text = closed.substringBefore(" Prices") + " " + a0.text, facts = listOf(closed) + a0.facts)
         // JarvisAlgo with the model ready: the answer shows at once, then the model rewrites it in place if it passes the checks.
         val write = IraModel.usable() && com.optionslab.ira.Writer.worthRewriting(parsed, a)

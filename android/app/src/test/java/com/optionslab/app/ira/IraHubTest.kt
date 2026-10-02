@@ -208,7 +208,10 @@ class IraHubTest : RobolectricTest() {
         IraHub.testHistories = { sixty }
         IraHub.refresh()
         val j = IraHub.state.value.journal
-        assertEquals(sixty.getValue(IraMarket.BANKNIFTY).days.takeLast(IraHub.BACKFILL), j.map { it.day })
+        // Only sessions that have closed are reviewed (today's after 15:35 IST): the expectation follows the clock.
+        val nowIst = java.time.ZonedDateTime.now(java.time.ZoneId.of("Asia/Kolkata"))
+        val closed = sixty.getValue(IraMarket.BANKNIFTY).days.filter { it.isBefore(nowIst.toLocalDate()) || !nowIst.toLocalTime().isBefore(LocalTime.of(15, 35)) }
+        assertEquals(closed.takeLast(IraHub.BACKFILL), j.map { it.day })
         assertTrue(j.all { it.worked in 0..it.seen }); assertTrue(j.sumOf { it.seen } > 0)
         assertNotNull(IraHub.state.value.nightlyAt)
         IraHub.refresh()
