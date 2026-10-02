@@ -2,7 +2,7 @@
 (the owner's ask, 2026-10-02: "cross check the 5 min timeframe, how and when and why the candles are green and red,
 check multiple candles at once, and find a better solution").
 
-    python research/gold_5m_patterns.py <xauusd_m1_bid.csv.gz> [out.md]
+    python research/gold_5m_patterns.py <xauusd_m1_bid.csv.gz> [out.md] [minutes, default 5]
 
 Part 1 describes: green share and size by UTC hour and weekday; how the next candle's colour depends on the last one's
 colour, size (body in units of the 14-candle ATR) and wicks, and on the 1-hour trend (close vs its 50-hour EMA).
@@ -31,7 +31,8 @@ H, COMM = 0.15, 0.07
 
 def main():
     mid = s.load(sys.argv[1])
-    b = s.bars(mid, 5)
+    tf = int(sys.argv[3]) if len(sys.argv) > 3 else 5
+    b = s.bars(mid, tf)
     b = b[(b.index.hour != 21)]                                     # gold's daily break
     o, h, l, c = (b[k].values for k in ("open", "high", "low", "close"))
     n = len(c)
@@ -50,10 +51,10 @@ def main():
     hour = idx.hour.values
     sess = np.where(hour < 7, "Asia", np.where(hour < 13, "London", np.where(hour < 21, "New York", "late")))
     # Next-candle facts: same trading stretch (no gap over 10 minutes).
-    gap_ok = np.r_[(idx[1:] - idx[:-1]) <= pd.Timedelta(minutes=10), False]
+    gap_ok = np.r_[(idx[1:] - idx[:-1]) <= pd.Timedelta(minutes=2 * tf), False]
     nxt_green = np.r_[col[1:] > 0, False]
-    L = ["## Gold's 5-minute candles: green, red, and what comes next (research/gold_5m_patterns.py)", "",
-         f"XAUUSD {idx[0]:%Y-%m-%d} .. {idx[-1]:%Y-%m-%d}, {n:,} five-minute candles (mid price). Green = close above open.", ""]
+    L = [f"## Gold's {tf}-minute candles: green, red, and what comes next (research/gold_5m_patterns.py)", "",
+         f"XAUUSD {idx[0]:%Y-%m-%d} .. {idx[-1]:%Y-%m-%d}, {n:,} {tf}-minute candles (mid price). Green = close above open.", ""]
     # ---- Part 1 -------------------------------------------------------------
     L += ["### Part 1: when, and after what", "",
           f"All candles: {100 * (col > 0).mean():.1f}% green, {100 * (col < 0).mean():.1f}% red, {100 * (col == 0).mean():.1f}% doji.", "",
@@ -152,6 +153,12 @@ def main():
     for r in picked[:30]:
         L.append(f"| {r['name']} | {r['nf']} / {r['nh']} | {r['per']:+.0f} / {r['perh']:+.0f} | {r['fit']:+,.0f} ({r['tf']:.2f}) | "
                  f"{r['hold']:+,.0f} ({r['th']:.2f}) | {r['win']:.0f}% |")
+    L += ["", "### The red-run bounce as a trade (buy after 3-5 red candles in a row; every holding time, any trend, any session)", "",
+          "| version | trades fit / held out | per trade fit / held out | fitting (t) | held out (t) | win |", "|---|---|---|---|---|---|"]
+    for r in rows:
+        if r["name"].split(",")[0] in ("RRR", "RRRR", "RRRRR") and ", any, any," in r["name"]:
+            L.append(f"| {r['name']} | {r['nf']} / {r['nh']} | {r['per']:+.0f} / {r['perh']:+.0f} | {r['fit']:+,.0f} ({r['tf']:.2f}) | "
+                     f"{r['hold']:+,.0f} ({r['th']:.2f}) | {r['win']:.0f}% |")
     text = "\n".join(L)
     print(text)
     if len(sys.argv) > 2:
