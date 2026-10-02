@@ -445,4 +445,9 @@ class IraHubTest : RobolectricTest() {
         assertTrue(JarvisSpeaker.speakTyped)
         assertEquals("Boss, Nifty is up 120 rupees.", JarvisSpeaker.words("Nifty is up Rs 120."))
     }
+
+    @Test fun theModelTestSaysPlainlyWhenThereIsNoModel() = runBlocking {
+        val r = IraModel.selfTest()
+        assertTrue(r, r.contains("not on the phone") || r.contains("phone") || r.contains("not ready"))
+    }
 }

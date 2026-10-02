@@ -4,6 +4,7 @@ import android.app.ActivityManager
 import android.content.Context
 import android.os.Build
 import com.optionslab.ira.Writer
+import java.util.Locale
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -196,6 +197,33 @@ object IraModel {
                 _state.update { it.copy(writing = false) }
                 idle = scope.launch { delay(IDLE_MS); lock.withLock { unloadLocked() } }
             }
+        }
+    }
+
+    /**
+     * Settings → Test the model: is it set up right? The file's fingerprint was checked when it arrived (READY); this
+     * loads it on the phone's processor and asks for a fixed short reply, timing both. Plain words back, never throws.
+     */
+    suspend fun selfTest(): String = withContext(Dispatchers.Default) {
+        val c = app ?: return@withContext "The app is not ready yet."
+        when (_state.value.status) {
+            Status.UNSUPPORTED -> return@withContext unsupportedWhy(c)
+            Status.READY -> Unit
+            else -> return@withContext "The model is not on the phone yet (or the download is not finished)."
+        }
+        if (!enabled) return@withContext "The model is switched off: switch on \"Write answers with $NAME\" first."
+        val wasLoaded = _state.value.loaded
+        val t0 = System.nanoTime()
+        val reply = runCatching { complete("<|im_start|>system\nReply with exactly the words asked for.<|im_end|>\n" +
+            "<|im_start|>user\nSay: Jarvis is ready.<|im_end|>\n<|im_start|>assistant\n", 16) }.getOrNull()
+        val secs = (System.nanoTime() - t0) / 1e9
+        val said = reply?.trim()?.lineSequence()?.firstOrNull()?.take(60)?.replace("%", "")
+        when {
+            reply == null -> _state.value.message ?: "The model did not answer: delete it and download it again."
+            said.isNullOrBlank() -> "The model loaded but wrote nothing: delete it and download it again."
+            !said.lowercase().contains("ready") -> "The model answered \"$said\" in %.1f s, not the words asked for: it runs, but delete and download it again if answers look odd.".format(Locale.ENGLISH, secs)
+            else -> "Working: $NAME answered \"$said\" in %.1f s%s on this phone. The file matched its fingerprint when it was downloaded.".format(Locale.ENGLISH, secs,
+                if (wasLoaded) "" else " (including loading it into memory)")
         }
     }
 
