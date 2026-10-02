@@ -278,7 +278,7 @@ fun Reauth(model: AppModel, onOk: () -> Unit, onCancel: () -> Unit, pinOnly: Boo
                 TextButton({
                     checking = true; err = null
                     val typed = pin.toCharArray()
-                    pinScope.launch(kotlinx.coroutines.Dispatchers.Main) {
+                    pinScope.launch {
                         val r = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { PinLock.verify(typed, s.wipeOnExhaustion) }
                         checking = false
                         when (r) {
