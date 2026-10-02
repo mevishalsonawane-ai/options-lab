@@ -97,6 +97,7 @@ object Diag {
         val t = GoldPaper.now()
         val liq = GoldPaper.book.value
         val tr = GoldTrendPaper.book.value
+        val dp = GoldDipPaper.book.value
         append("\n-- Gold --\n")
         append("Now ${GoldPaper.when_(t)} · gold trading: ${com.optionslab.engine.gold.GoldLiquidity.inSession(t)}\n")
         append("Price ${liq.price?.let { "%.2f".format(Locale.ENGLISH, it) } ?: "none"} at ${liq.priceAt?.let { GoldPaper.when_(it) } ?: "-"} · feed delayed: ${GoldPaper.stale(liq, t)}\n")
@@ -105,7 +106,7 @@ object Diag {
                 "${runCatching { com.optionslab.app.work.Jobs.canExact(c) }.getOrNull()} · left out of battery saving: " +
                 "${runCatching { com.optionslab.app.ui.screens.BatteryCheck.unrestricted(c) }.getOrNull()}\n")
         }
-        append("Paper account: start ${GoldPaper.usd(liq.start)} · lot ${liq.lots} · realised ${GoldPaper.usd(liq.realized + tr.realized)}\n")
+        append("Paper account: start ${GoldPaper.usd(liq.start)} · lot ${liq.lots} · realised ${GoldPaper.usd(liq.realized + tr.realized + dp.realized)}\n")
         append("Liquidity 1h: armed ${liq.armed} · status \"${redact(liq.status)}\" · decided ${liq.decided ?: "-"}" +
             (if (liq.armed && liq.position == null) " · next ${GoldPaper.nextDecision(t)}" else "") + "\n")
         liq.position?.let { p -> append("  open: bought %.2f at ${GoldPaper.when_(p.entryTime)} · level %.2f · target ${p.target?.let { "%.2f".format(Locale.ENGLISH, it) } ?: "none"}\n".format(Locale.ENGLISH, p.entry, p.level)) }
@@ -118,7 +119,11 @@ object Diag {
         tr.position?.let { p -> append(("  open: bought %.2f at ${GoldPaper.when_(p.entryTime)} · %.2f lot · ATR %.2f · top (bid) %.2f · lock " +
             "${tr.stop?.let { "%.2f".format(Locale.ENGLISH, it) } ?: "not started"}\n").format(Locale.ENGLISH, p.entry, p.lots, p.atr, p.peak)) }
         append("  trades ${tr.trades.size} · realised ${GoldPaper.usd(tr.realized)} · last signal ${tr.lastSignal ?: "none"}\n")
-        (liq.trades + tr.trades).sortedBy { it.exitTime }.takeLast(10).asReversed().forEach { x ->
+        append("${GoldDipPaper.NAME}: armed ${dp.armed} · status \"${redact(dp.status)}\" · decided ${dp.decided ?: "-"}\n")
+        dp.position?.let { p -> append(("  open: bought %.2f at ${GoldPaper.when_(p.entryTime)} · %.2f lot · ATR %.2f · top (bid) %.2f · lock " +
+            "${dp.stop?.let { "%.2f".format(Locale.ENGLISH, it) } ?: "not started"}\n").format(Locale.ENGLISH, p.entry, p.lots, p.atr, p.peak)) }
+        append("  trades ${dp.trades.size} · realised ${GoldPaper.usd(dp.realized)} · last signal ${dp.lastSignal ?: "none"}\n")
+        (liq.trades + tr.trades + dp.trades).sortedBy { it.exitTime }.takeLast(10).asReversed().forEach { x ->
             append("  ${GoldPaper.arm(x)}: ${GoldPaper.when_(x.entryTime)} -> ${GoldPaper.when_(x.exitTime)} · %.2f -> %.2f · ${x.why} · ${GoldPaper.usd(x.pnl)}\n"
                 .format(Locale.ENGLISH, x.entry, x.exit))
         }

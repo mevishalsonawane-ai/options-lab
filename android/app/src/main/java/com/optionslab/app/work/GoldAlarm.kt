@@ -78,7 +78,8 @@ class GoldService : android.app.Service() {
         fun needed(now: LocalDateTime = GoldPaper.now()): Boolean {
             val liq = GoldPaper.book.value
             val tr = com.optionslab.app.data.GoldTrendPaper.book.value
-            return (liq.armed || liq.position != null || tr.armed || tr.position != null) && GoldLiquidity.inSession(now)
+            val dp = com.optionslab.app.data.GoldDipPaper.book.value
+            return (liq.armed || liq.position != null || tr.armed || tr.position != null || dp.armed || dp.position != null) && GoldLiquidity.inSession(now)
         }
 
         /** Start it when it is needed and not running (from the screen, the alarm or a reboot). Never throws. */
@@ -96,8 +97,10 @@ class GoldService : android.app.Service() {
     private fun text(): Pair<String, String> {
         val b = GoldPaper.book.value
         val tr = com.optionslab.app.data.GoldTrendPaper.book.value
-        val arms = listOfNotNull(if (b.armed) "Liquidity 1h" else null, if (tr.armed) com.optionslab.app.data.GoldTrendPaper.NAME else null)
-        val held = listOfNotNull(b.position?.let { "Liquidity buy" }, tr.position?.let { "Trend buy" })
+        val dp = com.optionslab.app.data.GoldDipPaper.book.value
+        val arms = listOfNotNull(if (b.armed) "Liquidity 1h" else null, if (tr.armed) com.optionslab.app.data.GoldTrendPaper.NAME else null,
+            if (dp.armed) com.optionslab.app.data.GoldDipPaper.NAME else null)
+        val held = listOfNotNull(b.position?.let { "Liquidity buy" }, tr.position?.let { "Trend buy" }, dp.position?.let { "Dip buy" })
         val title = "IraGoldAlgo running" + (b.price?.let { " · gold %,.2f".format(java.util.Locale.ENGLISH, it) } ?: "")
         val line = (if (arms.isEmpty()) "No arm armed" else "Armed: " + arms.joinToString(", ")) +
             (if (held.isEmpty()) "" else " · holding: " + held.joinToString(", ")) + " · paper"

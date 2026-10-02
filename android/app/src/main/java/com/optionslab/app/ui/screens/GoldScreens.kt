@@ -124,11 +124,13 @@ private fun GoldHome() {
     val b by GoldPaper.book.collectAsState()
     val chart by GoldPaper.chart.collectAsState()
     val tb by com.optionslab.app.data.GoldTrendPaper.book.collectAsState()
+    val db by com.optionslab.app.data.GoldDipPaper.book.collectAsState()
     val scope = rememberCoroutineScope()
     val ctx = androidx.compose.ui.platform.LocalContext.current.applicationContext
     val open = b.open(b.price)
     val trendOpen = tb.open(b.price)
-    val anyOpen = if (open == null && trendOpen == null) null else (open ?: 0.0) + (trendOpen ?: 0.0)
+    val dipOpen = db.open(b.price)
+    val anyOpen = if (open == null && trendOpen == null && dipOpen == null) null else (open ?: 0.0) + (trendOpen ?: 0.0) + (dipOpen ?: 0.0)
     Page {
         item {
             LedgerCard(title = "Gold (COMEX futures)") {
@@ -144,9 +146,9 @@ private fun GoldHome() {
         }
         item {
             LedgerCard(title = "Paper account") {
-                val realized = b.realized + tb.realized
-                Text(GoldPaper.usd(b.balance + tb.realized + (anyOpen ?: 0.0)).removePrefix("+"), style = Type.figureLarge.copy(color = p.ink))
-                LedgerLine("Balance (closed trades)", GoldPaper.usd(b.balance + tb.realized).removePrefix("+"))
+                val realized = b.realized + tb.realized + db.realized
+                Text(GoldPaper.usd(b.balance + tb.realized + db.realized + (anyOpen ?: 0.0)).removePrefix("+"), style = Type.figureLarge.copy(color = p.ink))
+                LedgerLine("Balance (closed trades)", GoldPaper.usd(b.balance + tb.realized + db.realized).removePrefix("+"))
                 LedgerLine("Realised", GoldPaper.usd(realized), if (realized >= 0) p.verdigris else p.oxblood)
                 anyOpen?.let { LedgerLine("Open trades", GoldPaper.usd(it), if (it >= 0) p.verdigris else p.oxblood) }
                 LedgerLine("Size", "%.2f lot (%.0f oz)".format(Locale.ENGLISH, b.lots, b.lots * GoldLiquidity.OZ_PER_LOT))
@@ -196,6 +198,27 @@ private fun GoldHome() {
                     "Its falls are deep for a small account: about $2,000 per 0.01 lot.")
             }
         }
+        item {
+            LedgerCard(title = com.optionslab.app.data.GoldDipPaper.NAME) {
+                ToggleRow("Armed", "Buys a 30-minute dip that turns up after two green 1-hour candles; out within 8 hours, before the daily break. Paper: a notification on every buy and sell.",
+                    db.armed) { on -> scope.launch(Dispatchers.IO) { com.optionslab.app.data.GoldDipPaper.setArmed(on); com.optionslab.app.work.GoldService.ensure(ctx) } }
+                LedgerLine("Status", db.status)
+                LedgerLine("Last signal", db.lastSignal ?: "none yet")
+                db.position?.let { pos ->
+                    Rule(Modifier.padding(vertical = 6.dp))
+                    LedgerLine("Bought", "%.2f at %s".format(Locale.ENGLISH, pos.entry, GoldPaper.when_(pos.entryTime)))
+                    dipOpen?.let { LedgerLine("Open P&L", GoldPaper.usd(it), if (it >= 0) p.verdigris else p.oxblood) }
+                    LedgerLine("Profit lock", db.stop?.let { "sells below %.2f".format(Locale.ENGLISH, it) }
+                        ?: "starts at %.2f (1 ATR up)".format(Locale.ENGLISH, pos.entry + pos.atr))
+                    LedgerLine("Out by", GoldPaper.when_(minOf(pos.entryTime.plusHours(com.optionslab.engine.gold.GoldDip.MAX_HOURS),
+                        com.optionslab.engine.gold.GoldDip.cutAfter(pos.entryTime))))
+                }
+                Note("Each 30-minute candle is decided about 10 minutes after it closes. Sells by the profit lock (once 1 ATR up, a fall of 2 ATRs " +
+                    "from the top), 8 hours after the buy, or at 20:55 UTC (02:25 IST) before the daily break.")
+                Note("Backtest (three years, 1 lot): +$131.0k (+11.8k, +44.5k, +74.6k), 961 trades, 48% won, t 2.09, deepest drawdown -$42.3k. " +
+                    "Weaker than Trend 4h: a paper candidate.")
+            }
+        }
     }
 }
 
@@ -204,7 +227,8 @@ private fun GoldTrades() {
     val p = LocalPalette.current
     val book by GoldPaper.book.collectAsState()
     val tb by com.optionslab.app.data.GoldTrendPaper.book.collectAsState()
-    val trades = remember(book.trades, tb.trades) { (book.trades + tb.trades).sortedBy { it.exitTime } }
+    val db by com.optionslab.app.data.GoldDipPaper.book.collectAsState()
+    val trades = remember(book.trades, tb.trades, db.trades) { (book.trades + tb.trades + db.trades).sortedBy { it.exitTime } }
     val b = book.copy(trades = trades)
     val today = GoldPaper.now().toLocalDate()
     Page {
@@ -218,7 +242,8 @@ private fun GoldTrades() {
                         LedgerLine("$label · ${ts.size} trades · $won", if (ts.isEmpty()) "—" else GoldPaper.usd(x),
                             if (ts.isEmpty()) null else if (x >= 0) p.verdigris else p.oxblood)
                     }
-                if (tb.trades.isNotEmpty()) listOf("Liquidity 1h" to book.trades, com.optionslab.app.data.GoldTrendPaper.NAME to tb.trades).forEach { (arm, ts) ->
+                if (tb.trades.isNotEmpty() || db.trades.isNotEmpty()) listOf("Liquidity 1h" to book.trades, com.optionslab.app.data.GoldTrendPaper.NAME to tb.trades,
+                    com.optionslab.app.data.GoldDipPaper.NAME to db.trades).forEach { (arm, ts) ->
                     val x = ts.sumOf { it.pnl }
                     LedgerLine("$arm · ${ts.size} trades", if (ts.isEmpty()) "—" else GoldPaper.usd(x), if (ts.isEmpty()) null else if (x >= 0) p.verdigris else p.oxblood)
                 }

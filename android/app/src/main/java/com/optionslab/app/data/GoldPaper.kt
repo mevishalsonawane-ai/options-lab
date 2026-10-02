@@ -97,6 +97,7 @@ object GoldPaper {
     suspend fun reset(balance: Double) {
         edit { it.copy(start = balance, position = null, trades = emptyList(), decided = null) }
         GoldTrendPaper.reset()
+        GoldDipPaper.reset()
     }
 
     // ---- the minute pass ---------------------------------------------------------
@@ -139,6 +140,11 @@ object GoldPaper {
             save(b)
             // The trend arm on the same prices (its own book: nothing it does can touch this one's).
             GoldTrendPaper.step(hourly, minutes, t, fed, b.lots)
+            // The Dip arm on its 30-minute candles (five days of Yahoo's 30-minute feed and today's minutes).
+            if (GoldDipPaper.book.value.let { it.armed || it.position != null }) {
+                val thirty = com.optionslab.engine.gold.GoldDip.completed(com.optionslab.engine.gold.GoldDip.thirty(history30() + minutes), fed)
+                GoldDipPaper.step(thirty, hourly, minutes, t, fed, b.lots)
+            }
         }
     }
 
@@ -205,6 +211,24 @@ object GoldPaper {
         return bars
     }
 
+    private const val THIRTY_URL = "https://query1.finance.yahoo.com/v8/finance/chart/GC%3DF?interval=30m&range=5d"
+    private var history30Cache: Pair<LocalDateTime, List<Bar>>? = null
+
+    /** TEST ONLY: the feed's 30-minute candles at a moment (UTC). */
+    @Volatile internal var testHistory30: ((LocalDateTime) -> List<Bar>)? = null
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test feed exists only in debug builds" }; field = v }
+
+    /** 30-minute candles of the last five days (refreshed every 25 minutes): the Dip arm's ATR and colours. */
+    private suspend fun history30(): List<Bar> {
+        testHistory30?.let { return it(now()) }
+        if (testMinutes != null) return emptyList()
+        val t = now()
+        history30Cache?.let { (at, bars) -> if (at.plusMinutes(25).isAfter(t)) return bars }
+        val bars = runCatching { parse(Net.getJson(THIRTY_URL, tries = 3, timeoutMs = Net.QUICK_READ_MS, connectMs = Net.QUICK_CONNECT_MS)) }.getOrDefault(emptyList())
+        if (bars.isNotEmpty()) history30Cache = t to bars
+        return bars
+    }
+
     /** Today's 1-minute candles (the latest price, the hour being formed, and the target check). */
     private suspend fun minutes(t: LocalDateTime): List<Bar> =
         testMinutes?.invoke(t) ?: runCatching {
@@ -232,12 +256,19 @@ object GoldPaper {
         "cut_off" -> "Friday 20:40 UTC (Sat 02:10 IST) cut-off before the weekend"
         "trend_down" -> "the 4-hour trend turned down"
         "giveback" -> "profit lock: fell 4 ATR from its top"
+        "dip_lock" -> "profit lock: fell 2 ATR from its top"
+        "dip_time" -> "8 hours after the buy"
+        "dip_break" -> "before the daily break (02:25 IST)"
         else -> why
     }
 
     /** A UTC time with its IST beside it: "10:00 UTC (15:30 IST)". */
     /** The arm a closed trade came from (the trend arm's exits are its own). */
-    fun arm(t: Trade): String = if (t.why == "trend_down" || t.why == "giveback") GoldTrendPaper.NAME else "Liquidity 1h"
+    fun arm(t: Trade): String = when {
+        t.why == "trend_down" || t.why == "giveback" -> GoldTrendPaper.NAME
+        t.why.startsWith("dip_") -> GoldDipPaper.NAME
+        else -> "Liquidity 1h"
+    }
 
     fun when_(t: LocalDateTime): String = "${hhmm(t)} UTC (${hhmm(t.plusMinutes(330))} IST)"
 
