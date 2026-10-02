@@ -34,10 +34,10 @@ class BotTile : TileService() {
 
     private var live: kotlinx.coroutines.Job? = null
 
-    /** While the panel is open the tile's second line is today's P&L, refreshed every 5 seconds. */
+    /** While the panel is open the tile's second line is today's P&L, refreshed every second. */
     override fun onStartListening() {
         live?.cancel()
-        live = scope.launch { while (true) { refresh(); kotlinx.coroutines.delay(5_000) } }
+        live = scope.launch { while (true) { refresh(); kotlinx.coroutines.delay(1_000) } }
     }
 
     override fun onStopListening() { live?.cancel(); live = null }
@@ -84,7 +84,7 @@ class BotTile : TileService() {
             val open = (GoldPaper.book.value.open(px) ?: 0.0) + (GoldTrendPaper.book.value.open(px) ?: 0.0) + (GoldDipPaper.book.value.open(px) ?: 0.0)
             "Today " + GoldPaper.usd(closed + open)
         } else {
-            val v = if (com.optionslab.app.data.AppSettings.load().live) com.optionslab.app.widget.IraWidget.lastPnl()
+            val v = if (com.optionslab.app.data.AppSettings.load().live) PositionCards.livePnl ?: com.optionslab.app.widget.IraWidget.lastPnl()
                 else com.optionslab.app.data.Paper.snapshot().dayPnl
             v?.let { "Today " + (if (it < 0) "-₹" else "+₹") + "%,.0f".format(java.util.Locale.ENGLISH, kotlin.math.abs(it)) }
         }
