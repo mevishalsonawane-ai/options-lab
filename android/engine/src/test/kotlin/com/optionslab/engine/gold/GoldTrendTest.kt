@@ -53,7 +53,9 @@ class GoldTrendTest {
         assertTrue(up.line < rising.last().close)
         assertTrue(up.atr > 0)
         val falling = fours(List(60) { 2600.0 - 10 * it })
-        assertFalse(assertNotNull(GoldTrend.state(falling)).up)
+        val down = assertNotNull(GoldTrend.state(falling))
+        assertFalse(down.up)
+        assertTrue(down.line > falling.last().close, "while down the line is the one above the price")
         // Up, then a crash far below the line: down.
         val crash = fours(List(60) { 2000.0 + 10 * it } + listOf(2300.0, 2200.0))
         assertFalse(assertNotNull(GoldTrend.state(crash)).up)

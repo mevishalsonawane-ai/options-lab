@@ -291,7 +291,11 @@ in your own broker app (for example XM).
    4-hour trend (Supertrend 10, 3) points up and sells when a 4-hour candle closes with the trend down, or earlier by
    its profit lock (once 1 ATR up, a fall of 4 ATRs from the top). It decides about 10 minutes after each 4-hour close
    (00:00, 04:00 … 20:00 UTC) and holds overnight and over weekends (swap). Its falls are deep: allow about $2,000 per
-   0.01 lot. Both arms share the lot size and the paper account; Trades and P&L show both, each trade named for its arm.
+   0.01 lot. All arms share the lot size and the paper account; Trades and P&L show them all, each trade named for its arm.
+7. Optional: **Dip 1h+30m** and **TAS 1h** have their own **Armed** switches too. TAS 1h buys when the 1-hour trend
+   tracker (from the "Trend Analysis Strategy", ATR 19) turns up with a trend score of +50% or more, puts its stop on
+   the tracker line and sells all of it when a 1-hour candle closes with the tracker down (no targets). One buy per
+   up-turn; held overnight.
 
 <br clear="right">
 

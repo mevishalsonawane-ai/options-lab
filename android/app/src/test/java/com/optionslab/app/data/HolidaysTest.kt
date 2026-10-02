@@ -35,12 +35,38 @@ class HolidaysTest : RobolectricTest() {
         assertTrue(Holidays.stale(monday))
     }
 
+    @Test fun withoutNsesListTheBuiltInHolidaysCloseTheMarket() {
+        val gandhi = LocalDate.of(2026, 10, 2)
+        assertTrue("nothing fetched: the built-in list", Holidays.isHoliday(gandhi))
+        assertFalse(Market.isTradingDay(gandhi))
+        assertEquals(gandhi to "Mahatma Gandhi Jayanti", Holidays.book().upcoming(LocalDate.of(2026, 10, 1)).first())
+        // The owner can still overrule it.
+        Holidays.remove(gandhi)
+        assertTrue(Market.isTradingDay(gandhi))
+        Holidays.add(gandhi)
+        // A fetched NSE list for the year replaces the built-in one.
+        writeNse(LocalDate.of(2026, 9, 20), mapOf(LocalDate.of(2026, 10, 20) to "Dussehra"))
+        assertFalse(Holidays.isHoliday(gandhi))
+        assertTrue(Holidays.isHoliday(LocalDate.of(2026, 10, 20)))
+    }
+
+    @Test fun upstoxsPublicListGivesTheDaysTheDerivativesAreShut() {
+        // Upstox's reply on 2026-10-02 (CI probe), shortened: a trading holiday, a Sunday budget session, a settlement holiday.
+        val body = """{"status":"success","data":[
+            {"date":"2026-01-15","description":"Municipal Corporation Election","holiday_type":"TRADING_HOLIDAY","closed_exchanges":["NSE","NFO","CDS","BSE","BFO","BCD"],"open_exchanges":[]},
+            {"date":"2026-02-01","description":"Budget Day Session","holiday_type":"SPECIAL_TIMING","closed_exchanges":["CDS","BCD"],"open_exchanges":[{"exchange":"NFO","start_time":1769917500000,"end_time":1769940000000}]},
+            {"date":"2026-02-19","description":"Chhatrapati Shivaji Maharaj Jayanti","holiday_type":"SETTLEMENT_HOLIDAY","closed_exchanges":[],"open_exchanges":[]},
+            {"date":"2026-10-02","description":"Gandhi Jayanti","holiday_type":"TRADING_HOLIDAY","closed_exchanges":["NSE","NFO","CDS","BSE","BFO","BCD","MCX","NSCOM"],"open_exchanges":[]}]}"""
+        assertEquals(mapOf(LocalDate.of(2026, 1, 15) to "Municipal Corporation Election", LocalDate.of(2026, 10, 2) to "Gandhi Jayanti"),
+            Holidays.parseUpstox(body))
+    }
+
     @Test fun holidaysAddedByHandCloseTheMarketAndCanBeUndone() {
         Holidays.add(monday)
         assertTrue(Holidays.isHoliday(monday))
         assertFalse(Market.isTradingDay(monday))
-        assertEquals(listOf(monday to "added by you"), Holidays.book().upcoming(monday.minusDays(1)))
-        assertTrue("past days are not upcoming", Holidays.book().upcoming(monday.plusDays(1)).isEmpty())
+        assertEquals(monday to "added by you", Holidays.book().upcoming(monday.minusDays(1)).first())
+        assertTrue("past days are not upcoming", Holidays.book().upcoming(monday.plusDays(1)).none { it.first == monday })
         restart()
         assertTrue("kept on disk", Holidays.isHoliday(monday))
         Holidays.remove(monday)

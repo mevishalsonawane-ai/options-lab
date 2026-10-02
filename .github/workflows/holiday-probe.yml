@@ -1,0 +1,34 @@
+name: Holiday source probe
+# Re-run on demand: change this line. Run 2 (the first was skipped by its commit tag). Which public holiday lists answer without a login.
+
+on:
+  push:
+    paths:
+      - ".github/workflows/holiday-probe.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Upstox and NSE holiday lists, no account
+        run: |
+          date -u
+          curl -sS -m 20 -H "Accept: application/json" "https://api.upstox.com/v2/market/holidays" -o upstox.json -w "upstox %{http_code} %{size_download}\n" || true
+          head -c 1200 upstox.json; echo
+          python3 - <<'PY' || true
+          import json
+          d = json.load(open("upstox.json"))
+          rows = d.get("data") or []
+          print("rows", len(rows), "keys", sorted(rows[0].keys()) if rows else None)
+          for r in rows:
+              if "NFO" in (r.get("closed_exchanges") or []) or r.get("holiday_type") == "TRADING_HOLIDAY":
+                  print(r.get("date"), r.get("holiday_type"), r.get("description"), r.get("closed_exchanges"))
+          PY
+          curl -sS -m 20 -H "Accept: application/json" "https://api.upstox.com/v2/market/holidays/2026-10-02" -w "\nupstox-day %{http_code}\n" || true
+          curl -sS -m 20 -A "Mozilla/5.0" -c c.txt "https://www.nseindia.com/" -o /dev/null -w "nse-home %{http_code}\n" || true
+          curl -sS -m 20 -A "Mozilla/5.0" -b c.txt "https://www.nseindia.com/api/holiday-master?type=trading" -o nse.json -w "nse-api %{http_code} %{size_download}\n" || true
+          head -c 400 nse.json; echo

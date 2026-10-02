@@ -59,7 +59,9 @@ fun GoldMain(model: AppModel) {
     val p = LocalPalette.current
     var tab by rememberSaveable { mutableStateOf("home") }
     // While the app is open the pass runs every minute (the alarm does it every five in the background).
-    LaunchedEffect(Unit) { while (true) { withContext(Dispatchers.IO) { GoldPaper.tick() }; delay(60_000) } }
+    // It also (re)starts the always-on background service whenever an arm needs it.
+    val appContext = androidx.compose.ui.platform.LocalContext.current.applicationContext
+    LaunchedEffect(Unit) { while (true) { withContext(Dispatchers.IO) { GoldPaper.tick() }; com.optionslab.app.work.GoldService.ensure(appContext); delay(60_000) } }
     // Android 13+: the buy / sell notifications need the owner's permission, asked once (IraAlgo asks on its own main
     // screen, which this app never shows - without this the gold alerts were silently blocked).
     val notify = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestPermission()) { }
@@ -122,10 +124,16 @@ private fun GoldHome() {
     val b by GoldPaper.book.collectAsState()
     val chart by GoldPaper.chart.collectAsState()
     val tb by com.optionslab.app.data.GoldTrendPaper.book.collectAsState()
+    val db by com.optionslab.app.data.GoldDipPaper.book.collectAsState()
+    val sb by com.optionslab.app.data.GoldTasPaper.book.collectAsState()
     val scope = rememberCoroutineScope()
+    val ctx = androidx.compose.ui.platform.LocalContext.current.applicationContext
     val open = b.open(b.price)
     val trendOpen = tb.open(b.price)
-    val anyOpen = if (open == null && trendOpen == null) null else (open ?: 0.0) + (trendOpen ?: 0.0)
+    val dipOpen = db.open(b.price)
+    val tasOpen = sb.open(b.price)
+    val anyOpen = if (open == null && trendOpen == null && dipOpen == null && tasOpen == null) null
+        else (open ?: 0.0) + (trendOpen ?: 0.0) + (dipOpen ?: 0.0) + (tasOpen ?: 0.0)
     Page {
         item {
             LedgerCard(title = "Gold (COMEX futures)") {
@@ -141,9 +149,10 @@ private fun GoldHome() {
         }
         item {
             LedgerCard(title = "Paper account") {
-                val realized = b.realized + tb.realized
-                Text(GoldPaper.usd(b.balance + tb.realized + (anyOpen ?: 0.0)).removePrefix("+"), style = Type.figureLarge.copy(color = p.ink))
-                LedgerLine("Balance (closed trades)", GoldPaper.usd(b.balance + tb.realized).removePrefix("+"))
+                val others = tb.realized + db.realized + sb.realized
+                val realized = b.realized + others
+                Text(GoldPaper.usd(b.balance + others + (anyOpen ?: 0.0)).removePrefix("+"), style = Type.figureLarge.copy(color = p.ink))
+                LedgerLine("Balance (closed trades)", GoldPaper.usd(b.balance + others).removePrefix("+"))
                 LedgerLine("Realised", GoldPaper.usd(realized), if (realized >= 0) p.verdigris else p.oxblood)
                 anyOpen?.let { LedgerLine("Open trades", GoldPaper.usd(it), if (it >= 0) p.verdigris else p.oxblood) }
                 LedgerLine("Size", "%.2f lot (%.0f oz)".format(Locale.ENGLISH, b.lots, b.lots * GoldLiquidity.OZ_PER_LOT))
@@ -152,7 +161,7 @@ private fun GoldHome() {
         item {
             LedgerCard(title = "Liquidity 1h") {
                 ToggleRow("Armed", "Buys only, 1-hour candles, 24x5: Monday 05:30 IST to Saturday 02:30 IST, held overnight. Paper: a notification on every buy and sell.",
-                    b.armed) { on -> scope.launch(Dispatchers.IO) { GoldPaper.setArmed(on) } }
+                    b.armed) { on -> scope.launch(Dispatchers.IO) { GoldPaper.setArmed(on); com.optionslab.app.work.GoldService.ensure(ctx) } }
                 LedgerLine("Status", b.status)
                 if (b.armed) GoldBackgroundCheck(compact = true)
                 if (b.armed && b.position == null) LedgerLine("Next decision", "about " + GoldPaper.nextDecision(GoldPaper.now()))
@@ -173,10 +182,11 @@ private fun GoldHome() {
         item {
             LedgerCard(title = com.optionslab.app.data.GoldTrendPaper.NAME) {
                 ToggleRow("Armed", "Buys only while gold's 4-hour trend (Supertrend 10, 3) points up; held overnight and over weekends. Paper: a notification on every buy and sell.",
-                    tb.armed) { on -> scope.launch(Dispatchers.IO) { com.optionslab.app.data.GoldTrendPaper.setArmed(on) } }
+                    tb.armed) { on -> scope.launch(Dispatchers.IO) { com.optionslab.app.data.GoldTrendPaper.setArmed(on); com.optionslab.app.work.GoldService.ensure(ctx) } }
                 LedgerLine("Status", tb.status)
-                tb.up?.let { up -> LedgerLine("4-hour trend", if (up) "up · line %.2f".format(Locale.ENGLISH, tb.line ?: 0.0) else "down",
-                    if (up) p.verdigris else p.oxblood) }
+                tb.up?.let { up -> LedgerLine("4-hour trend", tb.line?.let { l ->
+                    if (up) "up · line %.2f".format(Locale.ENGLISH, l) else "down · turns up on a close above %.2f".format(Locale.ENGLISH, l)
+                } ?: if (up) "up" else "down", if (up) p.verdigris else p.oxblood) }
                 if (tb.armed && tb.position == null) LedgerLine("Next decision", "about " + com.optionslab.app.data.GoldTrendPaper.nextDecision(GoldPaper.now()))
                 LedgerLine("Last signal", tb.lastSignal ?: "none yet")
                 tb.position?.let { pos ->
@@ -192,6 +202,51 @@ private fun GoldHome() {
                     "Its falls are deep for a small account: about $2,000 per 0.01 lot.")
             }
         }
+        item {
+            LedgerCard(title = com.optionslab.app.data.GoldDipPaper.NAME) {
+                ToggleRow("Armed", "Buys a 30-minute dip that turns up after two green 1-hour candles; out within 8 hours, before the daily break. Paper: a notification on every buy and sell.",
+                    db.armed) { on -> scope.launch(Dispatchers.IO) { com.optionslab.app.data.GoldDipPaper.setArmed(on); com.optionslab.app.work.GoldService.ensure(ctx) } }
+                LedgerLine("Status", db.status)
+                LedgerLine("Last signal", db.lastSignal ?: "none yet")
+                db.position?.let { pos ->
+                    Rule(Modifier.padding(vertical = 6.dp))
+                    LedgerLine("Bought", "%.2f at %s".format(Locale.ENGLISH, pos.entry, GoldPaper.when_(pos.entryTime)))
+                    dipOpen?.let { LedgerLine("Open P&L", GoldPaper.usd(it), if (it >= 0) p.verdigris else p.oxblood) }
+                    LedgerLine("Profit lock", db.stop?.let { "sells below %.2f".format(Locale.ENGLISH, it) }
+                        ?: "starts at %.2f (1 ATR up)".format(Locale.ENGLISH, pos.entry + pos.atr))
+                    LedgerLine("Out by", GoldPaper.when_(minOf(pos.entryTime.plusHours(com.optionslab.engine.gold.GoldDip.MAX_HOURS),
+                        com.optionslab.engine.gold.GoldDip.cutAfter(pos.entryTime))))
+                }
+                Note("Each 30-minute candle is decided about 10 minutes after it closes. Sells by the profit lock (once 1 ATR up, a fall of 2 ATRs " +
+                    "from the top), 8 hours after the buy, or at 20:55 UTC (02:25 IST) before the daily break.")
+                Note("Backtest (three years, 1 lot): +$131.0k (+11.8k, +44.5k, +74.6k), 961 trades, 48% won, t 2.09, deepest drawdown -$42.3k. " +
+                    "Weaker than Trend 4h: a paper candidate.")
+            }
+        }
+        item {
+            LedgerCard(title = com.optionslab.app.data.GoldTasPaper.NAME) {
+                ToggleRow("Armed", "Buys when the 1-hour trend tracker turns up with a trend score of +50% or more; sells when the tracker turns down, or at its stop. Paper: a notification on every buy and sell.",
+                    sb.armed) { on -> scope.launch(Dispatchers.IO) { com.optionslab.app.data.GoldTasPaper.setArmed(on); com.optionslab.app.work.GoldService.ensure(ctx) } }
+                LedgerLine("Status", sb.status)
+                sb.up?.let { up -> LedgerLine("1-hour tracker", (if (up) "up" else "down") +
+                    (sb.line?.let { " · line %.2f".format(Locale.ENGLISH, it) } ?: "") + (sb.score?.let { " · score %+.0f%%".format(Locale.ENGLISH, it) } ?: ""),
+                    if (up) p.verdigris else p.oxblood) }
+                LedgerLine("Last signal", sb.lastSignal ?: "none yet")
+                sb.position?.let { pos ->
+                    Rule(Modifier.padding(vertical = 6.dp))
+                    LedgerLine("Bought", "%.2f at %s".format(Locale.ENGLISH, pos.entry, GoldPaper.when_(pos.entryTime)))
+                    LedgerLine("Held", "%.2f of %.2f lot".format(Locale.ENGLISH, pos.left, pos.lots))
+                    tasOpen?.let { LedgerLine("Open P&L", GoldPaper.usd(it), if (it >= 0) p.verdigris else p.oxblood) }
+                    LedgerLine("Stop", "%.2f".format(Locale.ENGLISH, pos.stop) + if (pos.hit > 0) " (the buy price)" else " (the tracker line at the buy)")
+                    if (sb.targets.isNotEmpty()) LedgerLine("Targets left", sb.targets.joinToString(" · ") { "%.2f".format(Locale.ENGLISH, it) })
+                }
+                Note("Each 1-hour candle is decided about 10 minutes after it closes. A buy may come up to 10 hours after the tracker turns up, once the " +
+                    "score passes; one buy per turn. Stop on the tracker line at the buy; sold when a 1-hour candle closes with the tracker down. " +
+                    "No targets. Held overnight.")
+                Note("Backtest (three years, 1 lot): +$213.1k (+45.9k, +82.6k, +84.5k), 222 trades, 44% won, t 2.37, deepest drawdown -$42.6k - " +
+                    "in years when gold rose about 140%. A paper candidate.")
+            }
+        }
     }
 }
 
@@ -200,7 +255,9 @@ private fun GoldTrades() {
     val p = LocalPalette.current
     val book by GoldPaper.book.collectAsState()
     val tb by com.optionslab.app.data.GoldTrendPaper.book.collectAsState()
-    val trades = remember(book.trades, tb.trades) { (book.trades + tb.trades).sortedBy { it.exitTime } }
+    val db by com.optionslab.app.data.GoldDipPaper.book.collectAsState()
+    val sb by com.optionslab.app.data.GoldTasPaper.book.collectAsState()
+    val trades = remember(book.trades, tb.trades, db.trades, sb.trades) { (book.trades + tb.trades + db.trades + sb.trades).sortedBy { it.exitTime } }
     val b = book.copy(trades = trades)
     val today = GoldPaper.now().toLocalDate()
     Page {
@@ -214,7 +271,9 @@ private fun GoldTrades() {
                         LedgerLine("$label · ${ts.size} trades · $won", if (ts.isEmpty()) "—" else GoldPaper.usd(x),
                             if (ts.isEmpty()) null else if (x >= 0) p.verdigris else p.oxblood)
                     }
-                if (tb.trades.isNotEmpty()) listOf("Liquidity 1h" to book.trades, com.optionslab.app.data.GoldTrendPaper.NAME to tb.trades).forEach { (arm, ts) ->
+                if (tb.trades.isNotEmpty() || db.trades.isNotEmpty() || sb.trades.isNotEmpty()) listOf("Liquidity 1h" to book.trades,
+                    com.optionslab.app.data.GoldTrendPaper.NAME to tb.trades, com.optionslab.app.data.GoldDipPaper.NAME to db.trades,
+                    com.optionslab.app.data.GoldTasPaper.NAME to sb.trades).forEach { (arm, ts) ->
                     val x = ts.sumOf { it.pnl }
                     LedgerLine("$arm · ${ts.size} trades", if (ts.isEmpty()) "—" else GoldPaper.usd(x), if (ts.isEmpty()) null else if (x >= 0) p.verdigris else p.oxblood)
                 }
@@ -330,6 +389,9 @@ internal fun GoldBackgroundCheck(compact: Boolean) {
     val notif = remember(n) { com.optionslab.app.work.Notifier.canPost(context) }
     val exact = remember(n) { com.optionslab.app.work.Jobs.canExact(context) }
     val battery = remember(n) { BatteryCheck.unrestricted(context) }
+    val service by com.optionslab.app.work.GoldService.running.collectAsState()
+    if (!compact) LedgerLine("Background service", if (service) "running" else if (com.optionslab.app.work.GoldService.needed()) "starting" else "off (nothing armed, or gold closed)",
+        if (service) p.verdigris else null)
     if (compact && notif && exact && battery) return
     if (!compact || !notif) LedgerLine("Notifications", if (notif) "allowed" else "blocked: buys and sells are silent", if (notif) p.verdigris else p.oxblood)
     if (!compact || !exact) LedgerLine("Precise alarms", if (exact) "allowed" else "off: candles can be missed", if (exact) p.verdigris else p.oxblood)

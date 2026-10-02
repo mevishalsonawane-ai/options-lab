@@ -57,4 +57,25 @@ class DiagTest : RobolectricTest() {
             GoldPaper.replaceForTest(GoldPaper.Book()); GoldTrendPaper.replaceForTest(GoldTrendPaper.Book())
         }
     }
+
+    @Test fun theGoldSectionShowsTheTasArm() = runBlocking {
+        val t = java.time.LocalDateTime.of(2026, 9, 29, 12, 5)
+        GoldPaper.testNow = t
+        try {
+            GoldTasPaper.replaceForTest(GoldTasPaper.Book(armed = true, status = "Holding 0.01 lot from 4150.00 · stop 4140.00", up = true, line = 4140.0,
+                score = 66.7, usedTurn = "2026-09-29T08:00",
+                position = GoldTasPaper.Position(4150.0, t.minusHours(3), 0.01, 0.0067, 4150.0, 10.0, 1, t.minusMinutes(12)),
+                trades = listOf(GoldPaper.Trade(4150.0, 4165.0, t.minusHours(3), t.minusHours(1), 0.0033, "tas_t1", 4.927))))
+            val g = Diag.gold()
+            assertTrue(g, g.contains("TAS 1h: armed true · status \"Holding 0.01 lot from 4150.00"))
+            assertTrue(g, g.contains("bought turn 2026-09-29T08:00"))
+            assertTrue(g, g.contains("tracker up · line 4140.00 · score +67%"))
+            assertTrue(g, g.contains("0.01 of 0.01 lot left · stop 4150.00 · R 10.00 · targets hit 1"))
+            assertTrue(g, g.contains("TAS 1h: 09:05"))
+            assertTrue(g, g.contains("tas_t1 · +$4.93"))
+        } finally {
+            GoldPaper.testNow = null
+            GoldTasPaper.replaceForTest(GoldTasPaper.Book())
+        }
+    }
 }

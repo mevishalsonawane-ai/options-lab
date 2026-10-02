@@ -703,7 +703,9 @@ internal fun goldDays(trades: List<com.optionslab.app.data.GoldPaper.Trade>): Ma
 fun GoldPnlCalendar() {
     val book by com.optionslab.app.data.GoldPaper.book.collectAsState()
     val trend by com.optionslab.app.data.GoldTrendPaper.book.collectAsState()
-    val allTrades = remember(book.trades, trend.trades) { (book.trades + trend.trades).sortedBy { it.exitTime } }
+    val dip by com.optionslab.app.data.GoldDipPaper.book.collectAsState()
+    val tas by com.optionslab.app.data.GoldTasPaper.book.collectAsState()
+    val allTrades = remember(book.trades, trend.trades, dip.trades, tas.trades) { (book.trades + trend.trades + dip.trades + tas.trades).sortedBy { it.exitTime } }
     val all = remember(allTrades) { goldDays(allTrades) }
     val thisMonth = YearMonth.from(com.optionslab.app.data.GoldPaper.now().plusMinutes(330).toLocalDate())
     var month by remember { mutableStateOf(thisMonth) }
@@ -732,7 +734,7 @@ fun GoldPnlCalendar() {
                     MonthGrid(month, days, picked, animKey = "gold|$month") { d -> picked = if (picked == d) null else d }
                     Legend()
                 }
-                if (book.position != null || trend.position != null) Note("The open trade counts on the day it closes.", Modifier.padding(top = 6.dp))
+                if (book.position != null || trend.position != null || dip.position != null) Note("The open trade counts on the day it closes.", Modifier.padding(top = 6.dp))
             }
         }
         item { Summary(month, days, allTrades.filter { YearMonth.from(it.exitTime.plusMinutes(330).toLocalDate()) == month }.map { it.pnl }) }

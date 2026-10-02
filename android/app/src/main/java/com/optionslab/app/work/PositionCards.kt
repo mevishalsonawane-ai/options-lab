@@ -125,10 +125,15 @@ object PositionCards {
 
     @Volatile private var widgetAt = 0L
 
+    /** The Zerodha P&L from the live stream at its latest tick (not throttled): the quick-settings tile reads it. */
+    @Volatile var livePnl: Double? = null
+        private set
+
     /** The home-screen widget from the live stream: index levels and the Zerodha P&L, at most every 5 s. */
     fun widgetFromStream(context: Context, pnl: Double?) {
         val st = com.optionslab.app.data.KiteStream
         if (st.status.value != com.optionslab.app.data.KiteStream.Status.LIVE) return
+        if (pnl != null) livePnl = pnl
         val now = System.currentTimeMillis()
         if (now - widgetAt < 5_000) return
         widgetAt = now

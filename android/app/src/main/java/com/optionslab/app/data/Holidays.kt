@@ -16,8 +16,9 @@ import javax.net.ssl.HttpsURLConnection
  * shut: on a holiday the watch, the 11:01 ticket, the harvest and every
  * strategy schedule must stand down, and the masthead must not say OPEN.
  *
- * The list comes from NSE's own holiday master (fetched on the phone, cached,
- * refreshed weekly) and can be corrected by hand in More → Schedule.
+ * The list comes from Upstox's public market-holiday list, or NSE's own holiday master when Upstox fails (fetched on
+ * the phone, cached, refreshed weekly and from More → Schedule), with a built-in list for a year neither has given; it
+ * can be corrected by hand in More → Schedule.
  * Not sensitive, so it is a plain file.
  */
 object Holidays {
@@ -28,10 +29,38 @@ object Holidays {
     /** [extra]: special sessions NSE calls on a weekend (budget day, a live-site drill), added by hand. */
     data class Book(val fetched: LocalDate?, val nse: Map<LocalDate, String>, val added: Set<LocalDate>, val removed: Set<LocalDate>,
                     val extra: Set<LocalDate> = emptySet()) {
-        fun holiday(d: LocalDate) = (d in nse || d in added) && d !in removed
+        /** NSE's list where it covers the day's year, else the built-in one ([BUILT_IN]): a failed fetch no longer opens a holiday. */
+        private fun listed(d: LocalDate): String? =
+            nse[d] ?: if (nse.keys.none { it.year == d.year }) BUILT_IN[d] else null
+        fun holiday(d: LocalDate) = (listed(d) != null || d in added) && d !in removed
         fun upcoming(from: LocalDate): List<Pair<LocalDate, String>> =
-            ((nse.keys + added) - removed).filter { !it.isBefore(from) }.sorted().map { it to (nse[it] ?: "added by you") }
+            ((nse.keys + BUILT_IN.keys.filter { listed(it) != null } + added) - removed).filter { !it.isBefore(from) }.sorted()
+                .map { it to (listed(it) ?: "added by you") }
     }
+
+    /**
+     * NSE's published trading holidays (weekdays only), used for a year NSE's own list has not been fetched for: NSE
+     * often refuses apps, and on 2 Oct 2026 a phone with no fetched list showed "Market open" and ran the arms. The
+     * owner can still remove a date or add one in More → Schedule.
+     */
+    val BUILT_IN: Map<LocalDate, String> = mapOf(
+        LocalDate.of(2026, 1, 15) to "Municipal Corporation Election",
+        LocalDate.of(2026, 1, 26) to "Republic Day",
+        LocalDate.of(2026, 3, 3) to "Holi",
+        LocalDate.of(2026, 3, 26) to "Shri Ram Navami",
+        LocalDate.of(2026, 3, 31) to "Shri Mahavir Jayanti",
+        LocalDate.of(2026, 4, 3) to "Good Friday",
+        LocalDate.of(2026, 4, 14) to "Dr. Baba Saheb Ambedkar Jayanti",
+        LocalDate.of(2026, 5, 1) to "Maharashtra Day",
+        LocalDate.of(2026, 5, 28) to "Bakri Id",
+        LocalDate.of(2026, 6, 26) to "Muharram",
+        LocalDate.of(2026, 9, 14) to "Ganesh Chaturthi",
+        LocalDate.of(2026, 10, 2) to "Mahatma Gandhi Jayanti",
+        LocalDate.of(2026, 10, 20) to "Dussehra",
+        LocalDate.of(2026, 11, 10) to "Diwali Balipratipada",
+        LocalDate.of(2026, 11, 24) to "Prakash Gurpurb Sri Guru Nanak Dev",
+        LocalDate.of(2026, 12, 25) to "Christmas",
+    )
 
     @Volatile private var cache: Book? = null
 
@@ -88,12 +117,46 @@ object Holidays {
     private val NSE_DATE = DateTimeFormatter.ofPattern("dd-MMM-yyyy", Locale.ENGLISH)
 
     /**
-     * Fetch NSE's trading-holiday master. NSE answers its API only to a
-     * browser that visited the site first, so the home page is read for its
-     * cookies and those are sent with the API call. Nothing of the owner's is sent.
+     * Update the list by itself (weekly, and from the button): Upstox's public market-holiday list first (it answers
+     * without a login; checked 2026-10-02), NSE's own holiday master if Upstox fails. Nothing of the owner's is sent.
+     * Returns how many holidays were read.
      */
     fun refresh(): Int {
-        val cookies = get("https://www.nseindia.com/", null).second
+        val upstox = runCatching { fromUpstox() }
+        val out = upstox.getOrNull()?.takeIf { it.isNotEmpty() }
+            ?: runCatching { fromNse() }.getOrElse { e ->
+                throw IOException("Could not update the holidays: Upstox (${upstox.exceptionOrNull()?.message ?: "no dates"}), NSE (${e.message})")
+            }
+        val b = book()
+        save(b.copy(fetched = Market.today(), nse = out))
+        return out.size
+    }
+
+    const val UPSTOX_URL = "https://api.upstox.com/v2/market/holidays"
+
+    /** Upstox's list: the days NFO (the derivatives the app trades) is shut for trading. */
+    internal fun fromUpstox(): Map<LocalDate, String> = parseUpstox(get(UPSTOX_URL, null, nse = false).first)
+
+    internal fun parseUpstox(body: String): Map<LocalDate, String> {
+        val a = JSONObject(body).optJSONArray("data") ?: throw IOException("Upstox returned no list")
+        val out = HashMap<LocalDate, String>()
+        for (i in 0 until a.length()) {
+            val h = a.getJSONObject(i)
+            if (h.optString("holiday_type") != "TRADING_HOLIDAY") continue
+            val closed = h.optJSONArray("closed_exchanges")?.let { c -> (0 until c.length()).map { c.getString(it) } } ?: continue
+            if ("NFO" !in closed && "NSE" !in closed) continue
+            val d = runCatching { LocalDate.parse(h.getString("date").trim()) }.getOrNull() ?: continue
+            out[d] = h.optString("description", "NSE holiday").ifBlank { "NSE holiday" }
+        }
+        return out
+    }
+
+    /**
+     * NSE's own holiday master. NSE answers its API best to a browser that visited the site first, so the home page is
+     * read for its cookies - but the home page often refuses apps (403) while the API still answers, so that visit may fail.
+     */
+    private fun fromNse(): Map<LocalDate, String> {
+        val cookies = runCatching { get("https://www.nseindia.com/", null).second }.getOrNull()
         val (body, _) = get("https://www.nseindia.com/api/holiday-master?type=trading", cookies)
         val o = JSONObject(body)
         val out = HashMap<LocalDate, String>()
@@ -108,12 +171,10 @@ object Holidays {
             if (out.isNotEmpty()) break
         }
         if (out.isEmpty()) throw IOException("NSE returned no holidays")
-        val b = book()
-        save(b.copy(fetched = Market.today(), nse = out))
-        return out.size
+        return out
     }
 
-    private fun get(url: String, cookie: String?): Pair<String, String?> {
+    private fun get(url: String, cookie: String?, nse: Boolean = true): Pair<String, String?> {
         val c = URL(url).openConnection() as HttpsURLConnection
         try {
             c.connectTimeout = 15_000; c.readTimeout = 20_000
@@ -121,15 +182,15 @@ object Holidays {
             c.setRequestProperty("User-Agent", UA)
             c.setRequestProperty("Accept", "application/json,text/html;q=0.9,*/*;q=0.8")
             c.setRequestProperty("Accept-Language", "en-IN,en;q=0.9")
-            c.setRequestProperty("Referer", "https://www.nseindia.com/resources/exchange-communication-holidays")
+            if (nse) c.setRequestProperty("Referer", "https://www.nseindia.com/resources/exchange-communication-holidays")
             if (cookie != null) c.setRequestProperty("Cookie", cookie)
-            if (c.responseCode !in 200..299) throw IOException("NSE answered ${c.responseCode}")
+            if (c.responseCode !in 200..299) throw IOException("${c.url.host} answered ${c.responseCode}")
             val set = c.headerFields.entries.filter { it.key.equals("Set-Cookie", true) }.flatMap { it.value }
                 .map { it.substringBefore(';') }.filter { "=" in it }.joinToString("; ").ifEmpty { null }
             val body = c.inputStream.use { it.readBytes().toString(Charsets.UTF_8) }
             return body to set
         } catch (e: IOException) {
-            throw IOException("Could not read NSE's holiday list: ${e.message}")
+            throw IOException("Could not read ${URL(url).host}'s holiday list: ${e.message}")
         } finally {
             c.disconnect()
         }

@@ -120,6 +120,10 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- Holding the quick-settings tile opens the app (its PIN lock still applies) instead of Android's app info. -->
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE_PREFERENCES" />
+            </intent-filter>
         </activity>
 
         <service
@@ -145,6 +149,29 @@
         <receiver
             android:name=".work.NotificationActionReceiver"
             android:exported="false" />
+
+        <!-- The quick-settings tile: a power button to stop / start the bot (each build its own). -->
+        <service
+            android:name=".work.BotTile"
+            android:exported="true"
+            android:icon="@drawable/ic_notification_art"
+            android:label="@string/tile_label"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+            <meta-data android:name="android.service.quicksettings.TOGGLEABLE_TILE" android:value="true" />
+        </service>
+
+        <!-- IraGoldAlgo's always-on pass while an arm is armed (the IraAlgo build never starts it). -->
+        <service
+            android:name=".work.GoldService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="The owner's own paper gold strategy, checked every minute while armed: price updates and buy / sell alerts" />
+        </service>
 
         <!-- IraGoldAlgo's 5-minute pass (the IraAlgo build never schedules it). -->
         <receiver
