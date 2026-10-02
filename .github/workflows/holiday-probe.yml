@@ -1,5 +1,5 @@
 name: Holiday source probe
-# Re-run on demand: change this line. Which public holiday lists answer without a login (2026-10-02, Gandhi Jayanti).
+# Re-run on demand: change this line. Run 2 (the first was skipped by its commit tag). Which public holiday lists answer without a login.
 
 on:
   push:
