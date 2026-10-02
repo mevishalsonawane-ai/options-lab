@@ -150,6 +150,7 @@ internal object IraAccount {
                 val m = com.optionslab.app.data.Market
                 val hol = runCatching { com.optionslab.app.data.Holidays.book() }.getOrNull()
                 out[Section.STATUS] = listOfNotNull(
+                    IraHub.closedToday(today)?.substringBefore(" Prices"),
                     "Mode: $mode.",
                     "Market: ${if (m.isOpen()) "open now" else "closed now"}; today is ${if (m.isTradingDay(today)) "a trading day" else "not a trading day"}.",
                     hol?.upcoming(today.plusDays(1))?.firstOrNull()?.let { (d, n) -> "Next market holiday: $d ($n)." },

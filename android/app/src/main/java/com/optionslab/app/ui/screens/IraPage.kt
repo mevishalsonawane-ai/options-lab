@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -118,7 +119,30 @@ fun IraPage(orders: IraOrderPaths? = null) {
         scope.launch { delay(600); typed = 3; delay(1_800); typed = 0 }
     }
 
+    // JarvisAlgo: only the globe until the owner opens the chat (the owner's wish, 2026-10-02); voice works either way.
+    var chat by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(!com.optionslab.app.BuildConfig.JARVIS) }
+    if (!chat) {
+        val orbMode = if (mode == 0 && text.isNotEmpty()) 1 else mode
+        Box(Modifier.fillMaxSize().background(Color.Black)) {
+            Box(Modifier.fillMaxWidth().fillMaxHeight(0.62f).align(Alignment.Center)) {
+                Orb(vol = orbVol(st.snaps), trend = orbTrend(st.snaps[focus]), mode = orbMode)
+            }
+            Text(listOf("Idle", "Listening", "Thinking", "Answering")[orbMode].uppercase(),
+                style = Type.label.copy(color = Color(0xFF4AA8FF), fontSize = 12.sp, letterSpacing = 3.sp),
+                modifier = Modifier.align(Alignment.TopCenter).padding(top = 18.dp))
+            Column(Modifier.align(Alignment.BottomCenter).padding(bottom = 24.dp), horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                st.snaps[focus]?.let { snap -> Text(headline(snap), style = Type.label.copy(color = Color(0xFFB8C0E8), fontSize = 12.sp)) }
+                val waiting = st.pending.size
+                BrassButton(if (waiting > 0) "Open chat · $waiting waiting for you" else "Open chat") { chat = true }
+            }
+        }
+        if (com.optionslab.app.BuildConfig.JARVIS) ModelAsk()
+        return
+    }
     Column(Modifier.fillMaxSize()) {
+        if (com.optionslab.app.BuildConfig.JARVIS) Text("‹  Back to Jarvis", style = Type.label.copy(color = Color(0xFF4AA8FF), fontSize = 14.sp),
+            modifier = Modifier.fillMaxWidth().background(Color.Black).clickable { chat = false }.padding(horizontal = 14.dp, vertical = 8.dp))
         Box(Modifier.fillMaxWidth().height(280.dp).background(Color.Black)) {
             val s = st.snaps[focus]
             Orb(vol = orbVol(st.snaps), trend = orbTrend(s), mode = if (mode == 0 && text.isNotEmpty()) 1 else mode)
@@ -144,7 +168,6 @@ fun IraPage(orders: IraOrderPaths? = null) {
                     })
                 }
             }
-            if (com.optionslab.app.BuildConfig.JARVIS) item { ModelAsk() }
             item { HowIraIsDoing(st) }
             if (com.optionslab.app.BuildConfig.JARVIS) item { JarvisStudyCard() }
             if (st.messages.isEmpty()) item {

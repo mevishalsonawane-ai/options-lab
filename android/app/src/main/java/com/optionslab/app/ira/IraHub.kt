@@ -691,7 +691,10 @@ object IraHub {
         if (parsed.topics == setOf(Topic.OFF_TOPIC) && com.optionslab.app.BuildConfig.JARVIS && IraModel.usable() && !understood) { freeFormAsked(q); return }
         // JarvisAlgo: a complete order is placed at once (the owner's rule); IraAlgo keeps the review.
         parsed.order?.takeIf { com.optionslab.app.BuildConfig.JARVIS && it.missing.isEmpty() && it.refusal == null }?.let { o -> tradeAsked(q, o); return }
-        val a = runCatching { Ira(book).answer(q, _state.value.snaps, _state.value.news, voice = com.optionslab.app.BuildConfig.JARVIS) }.getOrElse { com.optionslab.ira.Answer("I could not work that out.", emptyList()) }
+        val a0 = runCatching { Ira(book).answer(q, _state.value.snaps, _state.value.news, voice = com.optionslab.app.BuildConfig.JARVIS) }.getOrElse { com.optionslab.ira.Answer("I could not work that out.", emptyList()) }
+        // A holiday or a weekend: said first, so the last session's prices are not taken for today's.
+        val closed = closedToday()?.takeIf { parsed.topics.any { it in MARKET_TOPICS } }
+        val a = if (closed == null) a0 else a0.copy(text = closed.substringBefore(" Prices") + " " + a0.text, facts = listOf(closed) + a0.facts)
         // JarvisAlgo with the model ready: the answer shows at once, then the model rewrites it in place if it passes the checks.
         val write = IraModel.usable() && com.optionslab.ira.Writer.worthRewriting(parsed, a)
         val msg = Msg(true, a.text, a.facts, a.order, writing = write)
@@ -863,6 +866,20 @@ object IraHub {
         ))
     }
 
+    /**
+     * "The market is closed today (Gandhi Jayanti)." on a holiday or a weekend, else null: said first in market answers
+     * and the status, so old prices are never mistaken for today's.
+     */
+    fun closedToday(today: LocalDate = com.optionslab.app.data.Market.today()): String? {
+        if (runCatching { com.optionslab.app.data.Market.isTradingDay(today) }.getOrDefault(true)) return null
+        val name = runCatching { com.optionslab.app.data.Holidays.book().upcoming(today).firstOrNull { it.first == today }?.second }.getOrNull()
+        return when {
+            name != null -> "The market is closed today ($name, an NSE holiday)."
+            today.dayOfWeek == java.time.DayOfWeek.SATURDAY || today.dayOfWeek == java.time.DayOfWeek.SUNDAY -> "The market is closed today (weekend)."
+            else -> "The market is closed today."
+        } + " Prices shown are from the last session."
+    }
+
     /** A message from Jarvis itself (the morning check). */
     fun note(text: String) = reply(text)
 
@@ -886,6 +903,7 @@ object IraHub {
     }
 
     const val MAX_MESSAGES = 60
+    private val MARKET_TOPICS = setOf(Topic.OVERVIEW, Topic.WHY, Topic.TREND, Topic.LEVELS, Topic.PATTERNS, Topic.VOLATILITY, Topic.ADVICE, Topic.NEWS)
 
     private fun save() {
         val f = bookFile ?: return

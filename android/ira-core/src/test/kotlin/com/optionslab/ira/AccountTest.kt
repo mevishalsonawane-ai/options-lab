@@ -91,4 +91,13 @@ class AccountTest {
         assertEquals(setOf(Section.STUDY), AppAnswers.sections("how will the market work today"))
         assertEquals(Topic.ACCOUNT, Ask.parse("what does history say about gaps?").topics.first())
     }
+
+    @Test fun statusIsTheMarketsAndAppStatusIsTheApp() {
+        // A bare "status" is the markets' overview (the app says first when the market is closed); the app's status:
+        assertEquals(Topic.OVERVIEW, Ask.parse("status").topics.first())
+        for (q in listOf("app status")) {
+            assertEquals(Topic.ACCOUNT, Ask.parse(q).topics.first(), q)
+            assertTrue(Section.STATUS in AppAnswers.sections(q), q)
+        }
+    }
 }

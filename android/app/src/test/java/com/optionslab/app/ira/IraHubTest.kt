@@ -450,4 +450,11 @@ class IraHubTest : RobolectricTest() {
         val r = IraModel.selfTest()
         assertTrue(r, r.contains("not on the phone") || r.contains("phone") || r.contains("not ready"))
     }
+
+    @Test fun onAHolidayTheMarketIsSaidToBeClosed() {
+        // 2 Oct 2026 (Gandhi Jayanti) and a Sunday; a normal Thursday says nothing.
+        assertTrue(IraHub.closedToday(LocalDate.of(2026, 10, 2))!!.startsWith("The market is closed today ("))
+        assertEquals("The market is closed today (weekend). Prices shown are from the last session.", IraHub.closedToday(LocalDate.of(2026, 10, 4)))
+        assertNull(IraHub.closedToday(LocalDate.of(2026, 10, 1)))
+    }
 }
