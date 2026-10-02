@@ -18,7 +18,14 @@ import com.optionslab.ira.Ira
 import com.optionslab.ira.OrderRequest
 import com.optionslab.ira.PatternBook
 import com.optionslab.ira.Snapshot
+import com.optionslab.ira.StrategyLab
+import com.optionslab.ira.Topic
+import com.optionslab.ira.Ask
+import com.optionslab.ira.PatternKind
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -46,7 +53,13 @@ import com.optionslab.ira.Market as IraMarket
  * pattern book is kept encrypted in the app's no-backup folder.
  */
 object IraHub {
-    data class Msg(val fromIra: Boolean, val text: String, val facts: List<String> = emptyList(), val order: OrderRequest? = null)
+    data class Msg(val fromIra: Boolean, val text: String, val facts: List<String> = emptyList(), val order: OrderRequest? = null,
+                   /** A strategy proposal this message carries (its [Proposal.id]). */ val proposal: Long? = null)
+
+    /** A strategy Jarvis wrote from a pattern and backtested: new until the owner approves (armed on paper) or dismisses it. */
+    data class Proposal(val id: Long, val result: StrategyLab.Result, val status: String = NEW, val pineId: Long? = null) {
+        companion object { const val NEW = "new"; const val APPROVED = "approved"; const val DISMISSED = "dismissed" }
+    }
 
     data class State(
         val loading: Boolean = false,
@@ -61,6 +74,8 @@ object IraHub {
         val news: List<Headline> = emptyList(),
         val newsAt: Instant? = null,
         val newsMissing: List<String> = emptyList(),  // feeds that did not answer last time
+        val proposals: List<Proposal> = emptyList(),
+        val busy: Boolean = false,                     // a backtest is running
     )
 
     /** The app's harvested underlyings Ira reads from storage. */
@@ -90,6 +105,13 @@ object IraHub {
     const val KEEP_DAYS = 60
 
     private val _state = MutableStateFlow(State())
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private var app: Context? = null
+    /** The last candles read (stored + live), for backtests. */
+    @Volatile private var histories: Map<IraMarket, History> = emptyMap()
+    /** Pattern, market, chart and day already backtested automatically (each is tried once a day). */
+    private val tested = HashSet<String>()
+    @Volatile private var lastBackground: Instant? = null
     val state: StateFlow<State> = _state
     private val lock = Mutex()
     @Volatile private var book = PatternBook()
@@ -101,11 +123,15 @@ object IraHub {
     /** TEST ONLY: a market's live candles instead of the network (the test app sets one that returns none). */
     @Volatile internal var testLive: (suspend (IraMarket) -> List<Candle>)? = null
         set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "test seam" }; field = v }
+    /** TEST ONLY: run the automatic strategy hunt outside JarvisAlgo. */
+    @Volatile internal var testAutoLab = false
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "test seam" }; field = v }
     /** TEST ONLY: a feed's text instead of the network. */
     @Volatile internal var testFeed: (suspend (String) -> String)? = null
         set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "test seam" }; field = v }
 
     fun init(context: Context) {
+        app = context.applicationContext
         val f = File(context.applicationContext.noBackupFilesDir, "ira-book.vault")
         bookFile = f
         book = runCatching { Vault.readFileSteady(f)?.let { PatternBook.load(String(it, Charsets.UTF_8)) } }.getOrNull() ?: PatternBook()
@@ -129,6 +155,7 @@ object IraHub {
                 }
                 if (added > 0) save()
                 val snaps = hs.mapNotNull { (m, h) -> Brain.read(h)?.let { m to it } }.toMap()
+                histories = hs
                 val days = hs.values.maxOfOrNull { it.days.size } ?: 0
                 _state.update { it.copy(loading = false, snaps = snaps, lastDay = snaps.values.maxOfOrNull { s -> s.at.toLocalDate() },
                     days = days, learned = book.size, problem = if (snaps.isEmpty()) "No market data on this phone yet" else null,
@@ -139,14 +166,147 @@ object IraHub {
                 _state.update { s -> s.copy(loading = false, problem = "Could not read the market data") }
             }
         }
+        autoLab()
     }
+
+    /**
+     * Jarvis's own look for strategies: today's newest pattern on each index chart, backtested once a day; a result worth
+     * a paper trial is offered in the conversation and notified. (Results not worth one are not offered unasked.)
+     */
+    private fun autoLab() {
+        if (!com.optionslab.app.BuildConfig.JARVIS && !testAutoLab) return
+        val st = _state.value
+        for ((m, snap) in st.snaps) {
+            if (m !in StrategyLab.MARKETS) continue
+            val p = snap.patterns.firstOrNull { StrategyLab.supported(it.kind, m) } ?: continue
+            val key = "${p.kind}|$m|${p.minutes}|${p.at.toLocalDate()}"
+            val fresh = synchronized(tested) { tested.add(key) }
+            if (!fresh) continue
+            val r = lab(p.kind, m, p.minutes) ?: continue
+            if (!r.recommended) continue
+            val prop = propose(r, "I found a ${p.kind.label} on ${m.label} ${chartWord(p.minutes)} at ${Brain.when_(p.at, m, p.at.toLocalDate())} and backtested it as a strategy. ")
+            notifyProposal(prop)
+        }
+    }
+
+    private fun chartWord(minutes: Int) = if (minutes == 60) "1-hour" else "$minutes-minute"
+
+    /** Backtests a pattern on the candles read last; rupees from real option prices where the phone has them. */
+    private fun lab(kind: PatternKind, m: IraMarket, minutes: Int): StrategyLab.Result? {
+        val h = histories[m] ?: return null
+        val u = LIVE[m] ?: return null
+        return runCatching {
+            StrategyLab.backtest(kind, m, minutes, h.bars) { trades, bars ->
+                if (testHistories != null) null else {
+                    val r = com.optionslab.engine.pine.PinePremium.run(trades, bars, { d -> Store.barSession(u, d) },
+                        com.optionslab.app.data.PineAuto.strikeStep(u), 1, 100_000.0)
+                    if (r.priced == 0) null else (r.report?.netProfit ?: 0.0) to r.priced
+                }
+            }
+        }.getOrNull()
+    }
+
+    private fun propose(r: StrategyLab.Result, lead: String): Proposal {
+        val id = (_state.value.proposals.maxOfOrNull { it.id } ?: 0L) + 1
+        val prop = Proposal(id, r)
+        val tail = if (r.recommended) " Approve it to add it as an arm on paper." else " You can still add it as a paper arm, but I don't recommend it."
+        _state.update { it.copy(proposals = it.proposals + prop,
+            messages = (it.messages + Msg(true, lead + r.summary() + tail, proposal = id)).takeLast(MAX_MESSAGES)) }
+        return prop
+    }
+
+    private fun notifyProposal(p: Proposal) {
+        val c = app ?: return
+        val r = p.result
+        val money = r.rupees?.let { " Options: ${"%+,.0f".format(java.util.Locale.ENGLISH, it).replace("+", "+Rs ").replace("-", "-Rs ")} a lot." } ?: ""
+        runCatching {
+            com.optionslab.app.work.Notifier.post(c, NOTIFY_BASE + p.id.toInt(), com.optionslab.app.work.Notifier.IRA,
+                "Jarvis found a strategy: ${r.kind.label} on ${r.market.label} ${chartWord(r.minutes)}",
+                "${r.trades} trades, ${Math.round(r.winRate)}% won, ${"%+,.1f".format(java.util.Locale.ENGLISH, r.netPoints)} points over ${r.days} days; " +
+                    "both halves positive.$money Open Jarvis to approve or dismiss.", tab = "almanac")
+        }
+    }
+
+    /**
+     * The owner approved: the strategy is saved as a Pine script and switched on for auto-trading on paper (a live
+     * account still needs the owner's PIN in the Pine screen before it sends anything). Returns what was done.
+     */
+    suspend fun approve(id: Long): String {
+        val p = _state.value.proposals.firstOrNull { it.id == id } ?: return "That strategy is gone."
+        if (p.status != Proposal.NEW) return "Already ${p.status}."
+        val r = p.result
+        val item = com.optionslab.app.data.PineScripts.put(com.optionslab.app.data.PineScripts.Item(0, r.name, r.script))
+        com.optionslab.app.data.PineScripts.setAuto(item.id, com.optionslab.app.data.PineScripts.Auto(
+            on = false, symbol = r.market.name, interval = if (r.minutes == 60) "1h" else "${r.minutes}m", lots = 1, shortWith = "put"))
+        val armed = com.optionslab.app.data.PineAuto.arm(item.id, on = true, pinConfirmed = false)
+        val text = if (armed == "ok") "Added ${r.name} as an arm and switched it on: on paper it trades 1 lot; in Live it waits for your PIN in Research → Pine. " +
+            "You can switch it off there any time." else "Saved ${r.name} in Research → Pine, but could not switch it on ($armed)."
+        _state.update { s -> s.copy(proposals = s.proposals.map { if (it.id == id) it.copy(status = Proposal.APPROVED, pineId = item.id) else it },
+            messages = (s.messages + Msg(true, text)).takeLast(MAX_MESSAGES)) }
+        return text
+    }
+
+    fun dismiss(id: Long) {
+        _state.update { s -> s.copy(proposals = s.proposals.map { if (it.id == id && it.status == Proposal.NEW) it.copy(status = Proposal.DISMISSED) else it },
+            messages = (s.messages + Msg(true, "Dismissed. I won't offer that one again today.")).takeLast(MAX_MESSAGES)) }
+    }
+
+    /**
+     * From the market watch (JarvisAlgo only): refresh and look for strategies at most every [BACKGROUND_MINUTES] while
+     * an index market is open, so a new strategy is notified even when the app is closed.
+     */
+    suspend fun backgroundCheck(now: Instant = Instant.now()) {
+        if (!com.optionslab.app.BuildConfig.JARVIS) return
+        if (!IraMarket.NIFTY.trading(now.atZone(IST).toLocalDateTime())) return
+        if (lastBackground?.let { now.isBefore(it.plusSeconds(BACKGROUND_MINUTES * 60)) } == true) return
+        lastBackground = now
+        refresh()
+    }
+    const val BACKGROUND_MINUTES = 15L
+    private const val NOTIFY_BASE = 7300
 
     /** A question in, Ira's answer appended to the conversation. */
     fun ask(text: String) {
         val q = text.trim()
         if (q.isEmpty()) return
+        val parsed = Ask.parse(q)
+        if (Topic.BACKTEST in parsed.topics) { backtestAsked(q, parsed); return }
         val a = runCatching { Ira(book).answer(q, _state.value.snaps, _state.value.news) }.getOrElse { com.optionslab.ira.Answer("I could not work that out.", emptyList()) }
         _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, a.text, a.facts, a.order)).takeLast(MAX_MESSAGES)) }
+    }
+
+    /**
+     * "Backtest the hammer on Nifty": the named pattern (or today's newest one) on the named market and chart (or the
+     * one it was seen on), backtested in the background; the result is offered with Approve / Dismiss.
+     */
+    private fun backtestAsked(q: String, parsed: com.optionslab.ira.Question) {
+        val snaps = _state.value.snaps
+        val markets = parsed.markets.filter { it in StrategyLab.MARKETS }.ifEmpty { StrategyLab.MARKETS }
+        val seen = markets.flatMap { m -> snaps[m]?.patterns.orEmpty().filter { StrategyLab.supported(it.kind, m) }.map { m to it } }
+            .sortedByDescending { it.second.at }
+        val pick = when {
+            parsed.pattern != null -> (parsed.markets.firstOrNull { it in StrategyLab.MARKETS } ?: seen.firstOrNull { it.second.kind == parsed.pattern }?.first ?: IraMarket.NIFTY) to
+                (parsed.pattern to (parsed.minutes ?: 15))
+            seen.isNotEmpty() -> seen.first().first to (seen.first().second.kind to (parsed.minutes ?: seen.first().second.minutes))
+            else -> null
+        }
+        if (pick == null) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, "I see no pattern I can turn into a strategy today. " +
+                "Name one: engulfing, bearish engulfing, hammer, shooting star, three green, three red, breakout or breakdown - and the index.")).takeLast(MAX_MESSAGES)) }
+            return
+        }
+        val (m, kp) = pick
+        val (kind, minutes) = kp
+        if (!StrategyLab.supported(kind, m)) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, "I can't write a strategy for a ${kind.label} on ${m.label}.")).takeLast(MAX_MESSAGES)) }
+            return
+        }
+        _state.update { it.copy(busy = true, messages = (it.messages + Msg(false, q) + Msg(true, "Backtesting ${StrategyLab.name(kind, m, minutes)} on the candles I have...")).takeLast(MAX_MESSAGES)) }
+        scope.launch {
+            val r = lab(kind, m, minutes)
+            if (r == null) _state.update { it.copy(busy = false, messages = (it.messages + Msg(true, "I have no ${m.label} candles to backtest on yet.")).takeLast(MAX_MESSAGES)) }
+            else { propose(r, ""); _state.update { it.copy(busy = false) } }
+        }
     }
 
     /** Wipes the conversation (the owner's button). */
@@ -156,6 +316,9 @@ object IraHub {
     suspend fun forgetAll() = lock.withLock {
         book = PatternBook()
         lastNews = null
+        lastBackground = null
+        histories = emptyMap()
+        synchronized(tested) { tested.clear() }
         bookFile?.delete()
         _state.update { State() }
     }

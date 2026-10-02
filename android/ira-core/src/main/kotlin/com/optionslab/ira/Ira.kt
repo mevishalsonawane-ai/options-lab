@@ -16,6 +16,7 @@ class Ira(private val book: PatternBook = PatternBook()) {
         val facts = ArrayList<String>()
         val parts = ArrayList<String>()
         if (Topic.ORDER in q.topics) return orderAnswer(q.order!!)
+        if (Topic.BACKTEST in q.topics) return Answer("Backtesting needs the app's candles; ask me on the Ira screen.", emptyList())
         if (Topic.OFF_TOPIC in q.topics) return Answer("I only know the Indian indices (Nifty, BankNifty, FinNifty, Sensex, India VIX) and gold. Ask me about one of them.", emptyList())
         if (q.topics == setOf(Topic.GREETING)) return Answer("Hello. Ask me about Nifty, BankNifty, FinNifty, Sensex, VIX or gold.", emptyList())
         val markets = q.markets.ifEmpty { listOf(Market.NIFTY) }

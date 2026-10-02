@@ -1,7 +1,7 @@
 package com.optionslab.ira
 
 /** What a question is about. */
-enum class Topic { OVERVIEW, WHY, TREND, LEVELS, PATTERNS, NEWS, VOLATILITY, ADVICE, ORDER, GREETING, OFF_TOPIC }
+enum class Topic { OVERVIEW, WHY, TREND, LEVELS, PATTERNS, NEWS, VOLATILITY, ADVICE, ORDER, BACKTEST, GREETING, OFF_TOPIC }
 
 /**
  * An order the owner asked for in words. Ira never sends it: the app opens its own order review filled with this, and
@@ -12,11 +12,14 @@ data class OrderRequest(
     val missing: List<String>,
 )
 
-data class Question(val text: String, val markets: List<Market>, val topics: Set<Topic>, val order: OrderRequest?)
+data class Question(val text: String, val markets: List<Market>, val topics: Set<Topic>, val order: OrderRequest?,
+                    /** A pattern named in the words ("backtest the hammer on nifty"), if any. */
+                    val pattern: PatternKind? = null, /** A chart named in the words: 15 or 60 minutes, if any. */ val minutes: Int? = null)
 
 /** Reads a question: which markets, what about, and whether it asks for an order. Pure, no model. */
 object Ask {
     private val TOPIC_WORDS: List<Pair<Topic, List<String>>> = listOf(
+        Topic.BACKTEST to listOf("backtest", "back test", "backtested", "strategy", "test this", "test the pattern", "test it", "make it an arm"),
         Topic.WHY to listOf("why", "reason", "what happened", "behind"),
         Topic.TREND to listOf("trend", "direction", "bullish", "bearish", "going up", "going down", "heading"),
         Topic.LEVELS to listOf("level", "levels", "support", "resistance", "target", "range", "high", "low", "pool", "liquidity"),
@@ -38,7 +41,25 @@ object Ask {
         if (topics.isEmpty() || topics == setOf(Topic.GREETING) && markets.isNotEmpty()) {
             topics.clear(); if (markets.isNotEmpty()) topics += Topic.OVERVIEW else topics += Topic.OFF_TOPIC
         }
-        return Question(text, markets, topics, order)
+        if (Topic.BACKTEST in topics) { topics.remove(Topic.OVERVIEW); topics.remove(Topic.PATTERNS) }
+        return Question(text, markets, topics, order, pattern(t), when {
+            Regex(" (1 hour|1h|hourly|60 minute|60m|one hour) ").containsMatchIn(t) -> 60
+            Regex(" (15 minute|15m|15 min|fifteen minute) ").containsMatchIn(t) -> 15
+            else -> null
+        })
+    }
+
+    /** A pattern named in [t] (already lower-case, spaced). */
+    private fun pattern(t: String): PatternKind? = when {
+        t.contains(" bearish engulfing ") -> PatternKind.BEARISH_ENGULFING
+        t.contains(" engulfing ") -> PatternKind.BULLISH_ENGULFING
+        t.contains(" shooting star ") -> PatternKind.SHOOTING_STAR
+        t.contains(" hammer ") -> PatternKind.HAMMER
+        t.contains(" three white soldiers ") || t.contains(" three green ") -> PatternKind.THREE_WHITE_SOLDIERS
+        t.contains(" three black crows ") || t.contains(" three red ") -> PatternKind.THREE_BLACK_CROWS
+        t.contains(" breakdown ") || t.contains(" break down ") -> PatternKind.BREAKOUT_DOWN
+        t.contains(" breakout ") || t.contains(" break out ") -> PatternKind.BREAKOUT_UP
+        else -> null
     }
 
     /** "buy 2 lots banknifty 52000 ce" -> an [OrderRequest]; null when the words do not ask for an order. */

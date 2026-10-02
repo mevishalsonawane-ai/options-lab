@@ -11,6 +11,8 @@ kotlin {
 }
 
 dependencies {
+    // The Strategy Lab writes Pine strategies and backtests them with the engine's own Pine interpreter.
+    implementation(project(":engine"))
     testImplementation(kotlin("test"))
 }
 

@@ -50,7 +50,9 @@ object Notifier {
     const val BUY = "orders.buy"
     const val SELL = "orders.sell"
     const val APPROVAL = "orders.approval"
-    private val ALWAYS = setOf(BUY, SELL, APPROVAL)
+    /** A strategy Jarvis found and backtested, waiting for the owner's approval. */
+    const val IRA = "ira.strategies"
+    private val ALWAYS = setOf(BUY, SELL, APPROVAL, IRA)
 
     const val ID_LIVE = 1001
     const val ID_HARVEST = 1002
@@ -112,6 +114,10 @@ object Notifier {
             },
             NotificationChannel(HEALTH, "Strategy health", NotificationManager.IMPORTANCE_DEFAULT).apply {
                 description = "When a kill condition changes state"
+                lockscreenVisibility = android.app.Notification.VISIBILITY_PRIVATE
+            },
+            NotificationChannel(IRA, "Jarvis strategies", NotificationManager.IMPORTANCE_DEFAULT).apply {
+                description = "A strategy Jarvis found in a pattern and backtested, with its results, waiting for your approval"
                 lockscreenVisibility = android.app.Notification.VISIBILITY_PRIVATE
             },
         ))

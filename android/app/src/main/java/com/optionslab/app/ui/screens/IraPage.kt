@@ -76,7 +76,7 @@ fun IraHome(dashboard: @Composable () -> Unit) {
 }
 
 /** Example questions shown before the first one is asked. */
-private val EXAMPLES = listOf("What is BankNifty doing today?", "Nifty levels", "Is gold up today?", "Any news on banks?", "Is India VIX high?", "Any pattern on FinNifty?")
+private val EXAMPLES = listOf("What is BankNifty doing today?", "Nifty levels", "Is gold up today?", "Any news on banks?", "Backtest the breakout on BankNifty 15m", "Any pattern on FinNifty?")
 
 /**
  * Ira: the orb (the market at a glance) above the conversation. Answers come from IraAlgo's own data only; an order
@@ -165,11 +165,35 @@ private fun Bubble(m: IraHub.Msg) {
         m.order?.let {
             Note(if (it.missing.isEmpty()) "Order review from Ira comes in a later build; nothing was sent." else "Nothing was sent.")
         }
+        m.proposal?.let { id -> ProposalActions(id) }
         if (m.fromIra && m.facts.isNotEmpty()) {
             Text(if (open) "Hide the facts used" else "Facts used (${m.facts.size})", style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp),
                 modifier = Modifier.clickable { open = !open }.padding(top = 4.dp))
             if (open) m.facts.forEach { f -> Text("• $f", style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp)) }
         }
+    }
+}
+
+/** Approve / Dismiss under a strategy Jarvis backtested, or what was decided. */
+@Composable
+private fun ProposalActions(id: Long) {
+    val st by IraHub.state.collectAsState()
+    val p = st.proposals.firstOrNull { it.id == id } ?: return
+    val scope = rememberCoroutineScope()
+    var open by remember { mutableStateOf(false) }
+    Column(Modifier.padding(top = 6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        when (p.status) {
+            IraHub.Proposal.NEW -> Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                BrassButton(if (p.result.recommended) "Approve as a paper arm" else "Add anyway (paper)") { scope.launch { IraHub.approve(id) } }
+                BrassButton("Dismiss", tone = LocalPalette.current.inkSoft) { IraHub.dismiss(id) }
+            }
+            IraHub.Proposal.APPROVED -> Note("Approved: armed on paper in Research → Pine.")
+            else -> Note("Dismissed.")
+        }
+        Text(if (open) "Hide the strategy" else "See the strategy (Pine)", style = Type.label.copy(color = LocalPalette.current.inkSoft, fontSize = 12.sp),
+            modifier = Modifier.clickable { open = !open })
+        if (open) Text(p.result.script, style = Type.label.copy(color = LocalPalette.current.inkSoft, fontSize = 11.sp,
+            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace))
     }
 }
 

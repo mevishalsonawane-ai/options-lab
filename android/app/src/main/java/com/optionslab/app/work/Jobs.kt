@@ -372,6 +372,8 @@ object Tasks {
         runCatching { com.optionslab.app.data.OrbArms.tick() }
         // Pine scripts set to auto-trade: decide on each completed candle, sell at 15:15.
         runCatching { com.optionslab.app.data.PineAuto.tick() }
+        // JarvisAlgo: every 15 minutes in market hours, Jarvis looks for a pattern worth a strategy and notifies it.
+        runCatching { com.optionslab.app.ira.IraHub.backgroundCheck() }
         // Stops, trailing stops and targets: one exit filled cancels the other; trails move up.
         runCatching { com.optionslab.app.data.Protections.tick() }
         // Expiry day, 15:05: close every option position expiring today (paper and live, all products).

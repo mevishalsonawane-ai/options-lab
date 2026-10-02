@@ -42,7 +42,58 @@ class IraHubTest : RobolectricTest() {
         IraMarket.VIX to History(IraMarket.VIX, days(25, 13.0, 0.02, 3)),
     )
 
-    @After fun down() { IraHub.testHistories = null; runBlocking { IraHub.forgetAll() } }
+    @After fun down() { IraHub.testHistories = null; IraHub.testAutoLab = false; runBlocking { IraHub.forgetAll() } }
+
+    private fun waitFor(what: String, ok: () -> Boolean) {
+        val t0 = System.currentTimeMillis()
+        while (!ok()) { check(System.currentTimeMillis() - t0 < 60_000) { "timed out waiting for $what" }; Thread.sleep(50) }
+    }
+
+    private val sixty = mapOf(IraMarket.BANKNIFTY to History(IraMarket.BANKNIFTY, days(60, 52_000.0, 9.0, 4)))
+
+    @Test fun aBacktestIsOfferedAndApprovedAsAPaperArm() = runBlocking {
+        com.optionslab.app.data.PineScripts.init(context)
+        IraHub.testHistories = { sixty }
+        IraHub.refresh()
+        IraHub.ask("Backtest the breakout on BankNifty 15m")
+        waitFor("the backtest") { IraHub.state.value.proposals.isNotEmpty() }
+        val p = IraHub.state.value.proposals.single()
+        assertEquals(com.optionslab.ira.PatternKind.BREAKOUT_UP, p.result.kind)
+        assertEquals(IraMarket.BANKNIFTY, p.result.market); assertEquals(15, p.result.minutes)
+        assertNull(p.result.error); assertEquals(60, p.result.days)
+        assertTrue(IraHub.state.value.messages.any { it.proposal == p.id && it.text.contains("Backtest of Jarvis: breakout") })
+        val said = IraHub.approve(p.id)
+        assertTrue(said, said.startsWith("Added"))
+        val item = com.optionslab.app.data.PineScripts.items.value.single { it.name == p.result.name }
+        assertTrue(item.auto.on); assertEquals("BANKNIFTY", item.auto.symbol); assertEquals("15m", item.auto.interval); assertEquals(1, item.auto.lots)
+        assertEquals(p.result.script, item.code)
+        assertEquals(IraHub.Proposal.APPROVED, IraHub.state.value.proposals.single().status)
+        assertEquals("Already approved.", IraHub.approve(p.id))
+        assertEquals("That strategy is gone.", IraHub.approve(99))
+    }
+
+    @Test fun dismissedAndNothingToTest() = runBlocking {
+        IraHub.testHistories = { sixty }
+        IraHub.refresh()
+        IraHub.ask("backtest the hammer on banknifty 1 hour")
+        waitFor("the backtest") { IraHub.state.value.proposals.isNotEmpty() }
+        val p = IraHub.state.value.proposals.single()
+        assertEquals(60, p.result.minutes)
+        IraHub.dismiss(p.id)
+        assertEquals(IraHub.Proposal.DISMISSED, IraHub.state.value.proposals.single().status)
+        IraHub.ask("backtest the hammer on gold")
+        assertTrue(IraHub.state.value.messages.last().text.startsWith("I can't write a strategy"))
+    }
+
+    @Test fun theAutomaticHuntOffersOnlyWhatIsWorthATrial() = runBlocking {
+        IraHub.testAutoLab = true
+        IraHub.testHistories = { sixty }
+        IraHub.refresh()
+        IraHub.refresh()                                           // each pattern is tried once a day
+        val ps = IraHub.state.value.proposals
+        assertTrue(ps.all { it.result.recommended })
+        assertEquals(ps.size, ps.map { it.result.name }.toSet().size)
+    }
 
     @Test fun learnsBuildsSnapshotsAndAnswers() = runBlocking {
         IraHub.testHistories = { histories }

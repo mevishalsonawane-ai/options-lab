@@ -110,6 +110,17 @@ class AskTest {
         assertEquals(setOf(Topic.OVERVIEW), Ask.parse("hey sensex").topics)
     }
 
+    @Test fun backtestRequests() {
+        val q = Ask.parse("Backtest the hammer on Nifty 15 minute chart")
+        assertTrue(Topic.BACKTEST in q.topics); assertEquals(PatternKind.HAMMER, q.pattern); assertEquals(15, q.minutes); assertEquals(listOf(Market.NIFTY), q.markets)
+        assertEquals(PatternKind.BEARISH_ENGULFING, Ask.parse("make a strategy from the bearish engulfing on banknifty 1h").pattern)
+        assertEquals(60, Ask.parse("strategy for breakout on finnifty hourly").minutes)
+        assertEquals(PatternKind.BREAKOUT_DOWN, Ask.parse("backtest the breakdown").pattern)
+        val plain = Ask.parse("backtest this")
+        assertTrue(Topic.BACKTEST in plain.topics); assertNull(plain.pattern); assertNull(plain.minutes)
+        assertTrue(Ira().answer("backtest this", emptyMap(), emptyList()).text.startsWith("Backtesting needs"))
+    }
+
     @Test fun ordersAreReadNotGuessed() {
         val o = assertNotNull(Ask.parse("Buy 2 lots BankNifty 52000 CE").order)
         assertEquals(Market.BANKNIFTY, o.market); assertTrue(o.buy); assertEquals(2, o.lots); assertEquals(52000, o.strike); assertEquals("CE", o.right)
