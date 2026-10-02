@@ -150,12 +150,18 @@ class JarvisVoice : Service() {
             .filter { !it.isNetworkConnectionRequired && it.locale.language == "en" }
             .sortedWith(compareBy({ if (it.locale.country == "IN") 0 else 1 }, { it.name }))
 
+        /** What each speech engine was last set to: setting the same voice again is skipped (it can take a moment). */
+        private val applied = java.util.WeakHashMap<TextToSpeech, String>()
+
         /** Sets [t] to the chosen offline voice and style; false when the phone has no offline English voice. */
         fun applyStyle(t: TextToSpeech): Boolean {
+            val key = "${style.name}|${voiceName}"
+            if (synchronized(applied) { applied[t] } == key) return true
             val all = offlineVoices(t)
             val v = all.firstOrNull { it.name == voiceName } ?: (if (style == Style.MAN || style == Style.DEEP) maleVoice(all) else null) ?: all.firstOrNull() ?: return false
             t.voice = v
             t.setPitch(style.pitch); t.setSpeechRate(style.rate)
+            synchronized(applied) { applied[t] = key }
             return true
         }
     }
@@ -204,6 +210,14 @@ class JarvisVoice : Service() {
             rec = SpeechRecognizer.createOnDeviceSpeechRecognizer(this).also { it.setRecognitionListener(listener) }
             tts = TextToSpeech(this) { status -> main.post { voiceReady = status == TextToSpeech.SUCCESS && pickOfflineVoice() } }
             listen()
+            // Prices kept fresh every minute while listening in market hours, so answers never wait for them.
+            scope.launch(Dispatchers.Default) {
+                while (true) {
+                    if (com.optionslab.ira.Market.NIFTY.trading(java.time.LocalDateTime.now(java.time.ZoneId.of("Asia/Kolkata"))))
+                        runCatching { IraHub.refresh() }
+                    kotlinx.coroutines.delay(60_000)
+                }
+            }
         }
         return START_STICKY
     }
@@ -241,6 +255,9 @@ class JarvisVoice : Service() {
             .putExtra(RecognizerIntent.EXTRA_LANGUAGE, lang)
             .putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true)
             .putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3)
+            // End the turn soon after Boss stops speaking (recognizers that honour it answer sooner).
+            .putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 700L)
+            .putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 500L)
         // With a taught voice (Android 13+): our own capture feeds the recognizer, so the words are also voice-checked.
         endTap()
         if (VoiceGuard.supported && VoiceGuard.enrolled && !tapFailed && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -268,7 +285,7 @@ class JarvisVoice : Service() {
     private fun boss(): Boolean = VoiceGuard.isBoss(lastHeard).also { lastHeard = null }
 
     private val listener = object : RecognitionListener {
-        override fun onReadyForSpeech(params: Bundle?) {}
+        override fun onReadyForSpeech(params: Bundle?) { errorsInRow = 0 }
         override fun onBeginningOfSpeech() {}
         override fun onRmsChanged(rmsdB: Float) {}
         override fun onBufferReceived(buffer: ByteArray?) {}
@@ -297,7 +314,7 @@ class JarvisVoice : Service() {
                 else -> {
                     // Silence and no-match are normal between sentences; a run of other errors backs off up to 5 s.
                     if (error != SpeechRecognizer.ERROR_NO_MATCH && error != SpeechRecognizer.ERROR_SPEECH_TIMEOUT) errorsInRow++
-                    again(minOf(5_000L, 250L shl minOf(errorsInRow, 5)))
+                    again(minOf(1_000L, 200L shl minOf(errorsInRow, 3)))
                 }
             }
         }
@@ -344,16 +361,21 @@ class JarvisVoice : Service() {
     private fun answer(q: String) {
         _state.value = VoiceState(Mode.THINKING)
         scope.launch {
+            // Answer at once from what Jarvis already knows (kept fresh every minute while listening in market hours);
+            // only with no prices at all is the first answer held for a refresh.
             val st = IraHub.state.value
-            val stale = st.snaps.isEmpty() || st.liveAt?.isBefore(java.time.Instant.now().minusSeconds(120)) != false
-            if (stale) runCatching { withContext(Dispatchers.Default) { IraHub.refresh() } }
+            if (st.snaps.isEmpty()) runCatching { withContext(Dispatchers.Default) { IraHub.refresh() } }
+            else if (st.liveAt?.isBefore(java.time.Instant.now().minusSeconds(120)) != false) launch(Dispatchers.Default) { runCatching { IraHub.refresh() } }
             IraHub.ask(q)
+            // A slow answer (your account, the trade check): say so at once instead of going quiet.
+            val hold = launch { kotlinx.coroutines.delay(1_500); say("One moment, Boss.", "wait") }
             val said = com.optionslab.ira.Secrets.redact(q.trim())
             // Some answers (your account, a backtest) arrive a moment later: wait for Ira's reply to THIS question.
             val a = kotlinx.coroutines.withTimeoutOrNull(15_000) {
                 IraHub.state.first { st -> st.messages.indexOfLast { !it.fromIra && it.text == said }.let { i -> i >= 0 && st.messages.drop(i + 1).any { it.fromIra } } }
                     .messages.let { ms -> ms.drop(ms.indexOfLast { !it.fromIra && it.text == said } + 1).first { it.fromIra } }
             }
+            hold.cancel()
             val o = a?.order
             // A suggested trade is asked aloud by itself (yes or no): nothing more to say here.
             if (a?.action != null && IraHub.asksYesNo(a.action)) return@launch

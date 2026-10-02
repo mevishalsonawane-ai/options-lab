@@ -44,14 +44,14 @@ object JarvisSpeaker {
 
     fun stop() { synchronized(this) { runCatching { tts?.stop() } } }
 
-    /** After a typed [question]: waits for Jarvis's finished reply to it (the model's rewrite included) and says it. */
+    /** After a typed [question]: says Jarvis's reply the moment it is there (never waiting for the model's rewrite). */
     suspend fun replyTo(context: Context, question: String) {
         if (!com.optionslab.app.BuildConfig.JARVIS || !speakTyped) return
         val said = com.optionslab.ira.Secrets.redact(question.trim())
-        val reply = withTimeoutOrNull(30_000) {
+        val reply = withTimeoutOrNull(20_000) {
             IraHub.state.first { st ->
                 val i = st.messages.indexOfLast { !it.fromIra && it.text == said }
-                i >= 0 && st.messages.drop(i + 1).firstOrNull { it.fromIra }?.writing == false
+                i >= 0 && st.messages.drop(i + 1).any { it.fromIra }
             }.messages.let { ms -> ms.drop(ms.indexOfLast { !it.fromIra && it.text == said } + 1).first { it.fromIra } }
         } ?: return
         // A trade Jarvis asks about aloud by itself: nothing more to say.
