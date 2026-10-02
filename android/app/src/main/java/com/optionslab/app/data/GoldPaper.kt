@@ -67,6 +67,9 @@ object GoldPaper {
     /** TEST ONLY: the feed's 1-minute bars at a moment (UTC), so a test can run the strategy without the network. */
     @Volatile internal var testMinutes: ((LocalDateTime) -> List<Bar>)? = null
         set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test feed exists only in debug builds" }; field = v }
+    /** TEST ONLY: the feed's three months of 1-hour candles at a moment (UTC); without it a test has no history. */
+    @Volatile internal var testHistory: ((LocalDateTime) -> List<Bar>)? = null
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test feed exists only in debug builds" }; field = v }
     @Volatile internal var testNow: LocalDateTime? = null
         set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test clock exists only in debug builds" }; field = v }
 
@@ -114,7 +117,11 @@ object GoldPaper {
             val pos = b.position
             if (pos != null) {
                 val mid = last?.close
-                val since = minutes.filter { !it.start.isBefore(pos.entryTime.withSecond(0).withNano(0)) }
+                // The target is checked on today's 1-minute bars since the buy, and on the completed 1-hour candles that
+                // began after the buy's hour: a target touched while the phone slept (overnight) is no longer missed.
+                val afterHour = pos.entryTime.truncatedTo(java.time.temporal.ChronoUnit.HOURS)
+                val since = hourly.filter { it.start.isAfter(afterHour) } +
+                    minutes.filter { !it.start.isBefore(pos.entryTime.withSecond(0).withNano(0)) }
                 val why = GoldLiquidity.exitReason(pos.level, pos.target, pos.signalBar, pos.entryTime, hourly, since, t)
                 if (why != null && mid != null) {
                     val px = GoldLiquidity.exitPrice(why, pos.target, mid)
@@ -139,6 +146,9 @@ object GoldPaper {
     private suspend fun decide(b: Book, hourly: List<Bar>, last: Bar?, t: LocalDateTime, fed: LocalDateTime = t): String {
         if (!GoldLiquidity.weekday(t)) return "Weekend: gold is closed"
         val bar = hourly.lastOrNull() ?: return "Loading the 1-hour candles"
+        // Too few candles to find levels (the three-month history did not arrive): say so, and leave the candle undecided
+        // so it is decided once the history comes - it used to read "No liquidity break", as if it had looked.
+        if (hourly.size < MIN_CANDLES) return "Waiting for the 1-hour price history (${hourly.size} of $MIN_CANDLES candles)"
         val entryAt = bar.start.plusMinutes(GoldLiquidity.MINUTES.toLong())
         // Already decided: keep what that decision said (it used to be replaced 5 minutes later by a stale "next decision").
         if (b.decided == bar.start.toString()) return b.status
@@ -170,6 +180,9 @@ object GoldPaper {
 
     // ---- prices ------------------------------------------------------------------
 
+    /** The fewest completed 1-hour candles the levels need (the swing lookback each side, and two). */
+    val MIN_CANDLES = 2 * com.optionslab.engine.orb.LiquidityRules.SWING_LOOKBACK + 2
+
     /** [Book.decided] right after arming: the first candle seen then was not missed, it came before the arming. */
     private const val ARMED = "armed"
 
@@ -183,6 +196,7 @@ object GoldPaper {
 
     /** 1-hour candles of the last three months (refreshed once an hour). */
     private suspend fun history(): List<Bar> {
+        testHistory?.let { return it(now()) }
         if (testMinutes != null) return emptyList()
         val t = now()
         historyCache?.let { (at, bars) -> if (at.plusMinutes(55).isAfter(t)) return bars }

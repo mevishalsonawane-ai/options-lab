@@ -53,7 +53,44 @@ class GoldPaperTest : RobolectricTest() {
         runBlocking { GoldPaper.reset(1_000.0); GoldPaper.setLots(0.01); GoldPaper.setArmed(false) }
     }
 
-    @After fun down() { GoldPaper.testMinutes = null; GoldPaper.testNow = null }
+    @After fun down() { GoldPaper.testMinutes = null; GoldPaper.testHistory = null; GoldPaper.testNow = null }
+
+    @Test fun withoutTheHistoryItSaysItIsWaitingNotThatThereWasNoBreak() {
+        // Only Monday's first three candles (the three-month history did not arrive): too few to find levels.
+        val t = monday.atTime(10, 5)
+        at(t)
+        runBlocking { GoldPaper.setArmed(true) }
+        at(t.plusMinutes(1))
+        val s = GoldPaper.book.value.status
+        assertTrue(s, s.startsWith("Waiting for the 1-hour price history (3 of ${GoldPaper.MIN_CANDLES} candles)"))
+        assertNull(GoldPaper.book.value.position)
+    }
+
+    @Test fun aTargetTouchedWhileThePhoneSleptIsCaughtFromTheHourlyCandles() {
+        // The feeds as they are: three months of 1-hour candles, and 1-minute bars of the current day only.
+        GoldPaper.testHistory = { now -> hours.filter { !it.start.plusHours(1).isAfter(now) } }
+        GoldPaper.testMinutes = { now -> minutes.filter { it.start.toLocalDate() == now.toLocalDate() && !it.start.plusMinutes(1).isAfter(now) } }
+        // A buy held from yesterday 10:10, its target touched by a later candle yesterday, the phone asleep since.
+        // A morning (not a Monday: the weekend cut would come first) whose first candle stays below the target, so only
+        // yesterday's candles can show it was touched.
+        val day2 = (61 until hours.size).first {
+            hours[it].start.toLocalDate() != hours[it - 1].start.toLocalDate() && hours[it].start.dayOfWeek != DayOfWeek.MONDAY &&
+                hours.subList(it - 10, it).maxOf { b -> b.high } - 0.5 > hours[it].high
+        }
+        val yesterday = hours[day2 - 14]                             // 07:00 the day before
+        val entry = yesterday.start.plusHours(3).plusMinutes(10)
+        val later = hours.subList(day2 - 10, day2)                   // the rest of yesterday's candles after the buy's hour
+        val top = later.maxOf { it.high }
+        val target = top - 0.5
+        runBlocking {
+            GoldPaper.replaceForTest(GoldPaper.Book(armed = true, position = GoldPaper.Position(target - 30, entry, entry.minusMinutes(70), target - 40, target),
+                decided = hours[day2 - 1].start.toString()))
+        }
+        at(hours[day2].start.plusMinutes(20))                       // the next morning
+        val tr = GoldPaper.book.value.trades.single()
+        assertEquals("next_liquidity", tr.why)
+        assertEquals(GoldLiquidity.exitPrice("next_liquidity", target, 0.0), tr.exit, 1e-9)
+    }
 
     private fun at(t: LocalDateTime) { GoldPaper.testNow = t; runBlocking { GoldPaper.tick() } }
 

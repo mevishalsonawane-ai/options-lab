@@ -82,6 +82,19 @@ class GoldProbeTest {
             }
         }
         out.append("signals $signals (of which $blocked outside entry hours) in the last $DAYS days\n")
+        // The Trend 4h arm on the same candles: each 4-hour candle's trend after it closed, and the flips.
+        val four = GoldTrend.chart(hours)
+        out.append("\nTREND 4h: ${four.size} four-hour candles ${four.first().start} .. ${four.last().start}\n")
+        var prev: Boolean? = null
+        for (k in four.indices) {
+            val st = GoldTrend.state(four.subList(0, k + 1)) ?: continue
+            if (prev != null && st.up != prev) out.append("  flip ${if (st.up) "UP  " else "DOWN"} after the ${four[k].start} candle, close %.2f, line %.2f\n".format(four[k].close, st.line))
+            prev = st.up
+        }
+        for (k in maxOf(0, four.size - 18) until four.size) {
+            val st = GoldTrend.state(four.subList(0, k + 1)) ?: continue
+            out.append("  ${four[k].start}  close %.2f  trend ${if (st.up) "up  " else "down"}  line %.2f  atr14 %.2f\n".format(four[k].close, st.line, st.atr))
+        }
         File("build/gold-probe.txt").writeText(out.toString())
         println(out)
     }

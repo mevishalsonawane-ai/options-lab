@@ -1,5 +1,5 @@
 name: Gold arm probe
-# Re-run on demand: change this line. Last run 2026-10-01 (owner asked why no trade since the afternoon).
+# Re-run on demand: change this line. Last run 2026-10-02 (owner: no alert from either gold arm; the trend arm added).
 
 # A diagnosis of IraGoldAlgo's arm on live data: Yahoo's GC=F (the app's feed) replayed through the app's rule.
 on:
