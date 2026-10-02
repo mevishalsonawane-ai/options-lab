@@ -60,6 +60,7 @@ class TestApp : Application() {
         TradeBook.init(this)
         Journal.init(this)
         com.optionslab.app.data.Diag.init(this)
+        com.optionslab.app.ira.IraHub.init(this)
         // Caches from an earlier test (the files behind them are already gone with its directories).
         Paper.wipe(); Strategies.wipe(); OrbArms.wipe(); PineAuto.wipe(); Protections.wipe(); TradeBook.wipe(); Journal.wipe(); com.optionslab.app.data.Diag.wipe()
     }

@@ -34,6 +34,9 @@ android {
 
         // The commit the build was made from (CI sets GITHUB_SHA): every build is "1.0.0", so this tells them apart.
         buildConfigField("String", "COMMIT", "\"${(System.getenv("GITHUB_SHA") ?: "local").take(7)}\"")
+
+        // The launcher name; the JarvisAlgo build (the ira flavor, below) replaces it.
+        manifestPlaceholders["appLabel"] = "@string/app_name"
     }
 
     // Two apps from one project: IraAlgo (NSE options, Zerodha, paper) and IraGoldAlgo (XAUUSD only, paper and alerts,
@@ -44,6 +47,12 @@ android {
             dimension = "brand"
             isDefault = true
             buildConfigField("boolean", "GOLD", "false")
+            // -Pjarvis=true (CI on the claude/ira-assistant branch): "JarvisAlgo", IraAlgo with the Ira assistant, installs
+            // BESIDE the owner's IraAlgo - its own package, name and data - instead of over it.
+            if (project.findProperty("jarvis") == "true") {
+                applicationIdSuffix = ".jarvis"
+                manifestPlaceholders["appLabel"] = "JarvisAlgo"
+            }
         }
         create("gold") {
             dimension = "brand"
@@ -141,6 +150,8 @@ android {
 }
 
 dependencies {
+    // Ira, the on-device trading assistant (plain Kotlin: the brain, patterns, learning, news, answers).
+    implementation(project(":ira-core"))
     implementation(project(":engine"))
 
     val composeBom = platform("androidx.compose:compose-bom:2024.12.01")

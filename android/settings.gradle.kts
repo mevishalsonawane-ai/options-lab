@@ -32,6 +32,9 @@ rootProject.name = "IraAlgo"
 // the strategy can be verified against the PC's numbers without an Android SDK.
 include(":engine")
 
+// Ira, the trading AI: built and tested on its own (plain JVM), not part of IraAlgo until the owner approves.
+include(":ira-core")
+
 // The app needs the Android SDK. Include it whenever one is configured, and
 // never silently: a machine without one says so instead of failing to resolve.
 val sdkConfigured = System.getenv("ANDROID_HOME") != null ||

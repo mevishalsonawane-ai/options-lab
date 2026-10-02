@@ -46,7 +46,7 @@ jobs:
           java-version: "17"
       - uses: gradle/actions/setup-gradle@v4
       # No Android SDK on purpose: the engine must build on a bare JDK.
-      - run: env -u ANDROID_HOME -u ANDROID_SDK_ROOT ./gradlew --no-daemon :engine:test :engine:jacocoTestCoverageVerification
+      - run: env -u ANDROID_HOME -u ANDROID_SDK_ROOT ./gradlew --no-daemon :engine:test :engine:jacocoTestCoverageVerification :ira-core:test
 
   apk:
     name: Build APK
@@ -119,9 +119,12 @@ jobs:
         # A push starting "[quick]" builds only the release APKs (the ones published).
         env:
           QUICK: ${{ startsWith(github.event.head_commit.message, '[quick]') }}
+          # The Ira branch builds "JarvisAlgo": IraAlgo with the assistant, under its own package, beside IraAlgo.
+          JARVIS: ${{ github.ref == 'refs/heads/claude/ira-assistant' }}
         run: |
-          if [ "$QUICK" = "true" ]; then ./gradlew --no-daemon :app:assembleRelease
-          else ./gradlew --no-daemon :app:assembleIraDebug :app:assembleRelease; fi
+          extra=""; if [ "$JARVIS" = "true" ]; then extra="-Pjarvis=true"; fi
+          if [ "$QUICK" = "true" ]; then ./gradlew --no-daemon $extra :app:assembleRelease
+          else ./gradlew --no-daemon $extra :app:assembleIraDebug :app:assembleRelease; fi
       - name: Sandbox report (every permission the APK holds)
         run: cat app/build/reports/sandbox/*.txt
       - name: Release signing certificate (public fingerprint only)
@@ -151,6 +154,24 @@ jobs:
           gh release upload latest-apk "$RUNNER_TEMP/IraAlgo.apk" "$RUNNER_TEMP/IraGoldAlgo.apk" --clobber
           echo "APK: https://github.com/${{ github.repository }}/releases/download/latest-apk/IraAlgo.apk"
           echo "APK: https://github.com/${{ github.repository }}/releases/download/latest-apk/IraGoldAlgo.apk"
+      # The Ira branch's build on its own link, so the owner's IraAlgo link above is never replaced by work in progress:
+      # https://github.com/<repo>/releases/download/jarvis-apk/JarvisAlgo.apk
+      - name: Publish JarvisAlgo to the jarvis-apk release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/claude/ira-assistant'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SHA: ${{ github.sha }}
+        run: |
+          apk=$(ls app/build/outputs/apk/ira/release/*.apk | head -1)
+          cp "$apk" "$RUNNER_TEMP/JarvisAlgo.apk"
+          notes="JarvisAlgo (IraAlgo with the Ira assistant), build ${SHA::7} ($(date -u '+%Y-%m-%d %H:%M UTC')). Installs beside IraAlgo."
+          if gh release view jarvis-apk >/dev/null 2>&1; then
+            gh release edit jarvis-apk --notes "$notes"
+          else
+            gh release create jarvis-apk --prerelease --title "JarvisAlgo - latest build" --notes "$notes" --target "$SHA"
+          fi
+          gh release upload jarvis-apk "$RUNNER_TEMP/JarvisAlgo.apk" --clobber
+          echo "APK: https://github.com/${{ github.repository }}/releases/download/jarvis-apk/JarvisAlgo.apk"
       - uses: actions/upload-artifact@v4
         continue-on-error: true   # a full artifact quota must not turn a good build red; the release above has the APK
         with:
