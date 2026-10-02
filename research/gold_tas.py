@@ -87,9 +87,11 @@ def indicators(b, n):
     return trk, d, np.where(ok, score / 6 * 100, np.nan)
 
 
-def trades(b, trk, d, pct, side=1, late=True, day_end=None):
+def trades(b, trk, d, pct, side=1, late=True, day_end=None, lock=None, atr=None, tps=TPS):
     """Buys (side 1) or sells (-1): a list of (signal time, USD a standard lot). [day_end]: True on each day's last
-    candle - out at its close, and no buy on it (intraday use, research/tas_indices.py)."""
+    candle - out at its close, and no buy on it (intraday use, research/tas_indices.py). [lock] (start, giveback) in
+    ATRs of [atr] at the signal: once the best price has been `start` ATRs past the entry, out on a move of `giveback`
+    ATRs back from it (research/gold_tas_lock.py). [tps] the targets ((R, share), ...); () for none."""
     o, h, l, c = (b[k].values for k in ("open", "high", "low", "close"))
     n, out, i, flip_at = len(c), [], 1, None
     while i < n - 1:
@@ -106,21 +108,27 @@ def trades(b, trk, d, pct, side=1, late=True, day_end=None):
         if r <= 0:
             i += 1; continue
         left, pnl, be, j, done = 1.0, 0.0, False, i + 1, False
-        hit = [False] * len(TPS)
+        hit = [False] * len(tps)
+        a_e = atr[i] if lock is not None else np.nan
+        peak = -np.inf if side > 0 else np.inf
         while j < n:
+            if lock is not None and np.isfinite(a_e) and side * (peak - e) >= lock[0] * a_e:
+                ls = peak - side * lock[1] * a_e
+                stop = max(stop, ls) if side > 0 else min(stop, ls)
             lo, hi = (l[j] - H, h[j] - H) if side > 0 else (l[j] + H, h[j] + H)
             ox = o[j] - side * H
             if (side > 0 and lo <= stop) or (side < 0 and hi >= stop):
                 px = min(stop, ox) if side > 0 else max(stop, ox)
                 pnl += left * side * (px - e); left = 0; done = True; break
             moved = False
-            for k, (m, q) in enumerate(TPS):
+            for k, (m, q) in enumerate(tps):
                 tgt = e + side * m * r
                 if not hit[k] and ((side > 0 and hi >= tgt) or (side < 0 and lo <= tgt)):
-                    q = left if k == len(TPS) - 1 else q
+                    q = left if k == len(tps) - 1 else q
                     pnl += q * side * (tgt - e); left -= q; hit[k] = True; moved = True
             if left <= 1e-9:
                 done = True; break
+            peak = max(peak, hi) if side > 0 else min(peak, lo)
             if moved and not be:
                 stop, be = e, True          # breakeven from the next bar
             if day_end is not None and day_end[j]:
