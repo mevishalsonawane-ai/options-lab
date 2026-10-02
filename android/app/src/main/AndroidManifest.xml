@@ -146,6 +146,19 @@
             android:name=".work.NotificationActionReceiver"
             android:exported="false" />
 
+        <!-- The quick-settings tile: a power button to stop / start the bot (each build its own). -->
+        <service
+            android:name=".work.BotTile"
+            android:exported="true"
+            android:icon="@drawable/ic_tile_power"
+            android:label="@string/tile_label"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+            <meta-data android:name="android.service.quicksettings.TOGGLEABLE_TILE" android:value="true" />
+        </service>
+
         <!-- IraGoldAlgo's always-on pass while an arm is armed (the IraAlgo build never starts it). -->
         <service
             android:name=".work.GoldService"
