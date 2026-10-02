@@ -55,6 +55,7 @@ android {
                 applicationIdSuffix = ".jarvis"
                 manifestPlaceholders["appLabel"] = "JarvisAlgo"
                 buildConfigField("boolean", "JARVIS", "true")
+                buildConfigField("String", "ALLOWED_PERMISSIONS", "\"${allowedPermissions(jarvis = true).joinToString(",")}\"")
             }
         }
         create("gold") {
@@ -62,6 +63,12 @@ android {
             applicationId = "com.iragoldalgo.app"
             buildConfigField("boolean", "GOLD", "true")
         }
+    }
+
+    // The microphone: JarvisAlgo's manifest adds it ("Jarvis"); IraAlgo and IraGoldAlgo's manifest removes it.
+    sourceSets {
+        getByName("ira").manifest.srcFile(if (project.findProperty("jarvis") == "true") "src/jarvis/AndroidManifest.xml" else "src/noaudio/AndroidManifest.xml")
+        getByName("gold").manifest.srcFile("src/noaudio/AndroidManifest.xml")
     }
 
     signingConfigs {
@@ -225,9 +232,11 @@ tasks.withType<Test>().configureEach {
 // notification-listener service (the two ways an app can read other apps' screens
 // and notifications).
 
-fun allowedPermissions(): List<String> = file("permissions-allowlist.txt").readLines()
-    .map { it.substringBefore("#").trim() }
-    .filter { it.isNotEmpty() }
+fun allowedPermissions(jarvis: Boolean = false): List<String> =
+    (listOf("permissions-allowlist.txt") + if (jarvis) listOf("permissions-allowlist-jarvis.txt") else emptyList())
+        .flatMap { file(it).readLines() }
+        .map { it.substringBefore("#").trim() }
+        .filter { it.isNotEmpty() }
 
 abstract class CheckSandbox : DefaultTask() {
     @get:InputFile
@@ -242,6 +251,11 @@ abstract class CheckSandbox : DefaultTask() {
     @get:OutputFile
     abstract val report: RegularFileProperty
 
+    /** A <queries> block that only asks for text-to-speech engines (JarvisAlgo's voice) shows no other app: allowed. */
+    private fun queriesOnlyTts(xml: String): Boolean = Regex("<queries\\b[^>]*>(.*?)</queries>", RegexOption.DOT_MATCHES_ALL).findAll(xml).all { q ->
+        q.groupValues[1].replace(Regex("<intent>\\s*<action\\s+android:name=\"android\\.intent\\.action\\.TTS_SERVICE\"\\s*/>\\s*</intent>"), "").isBlank()
+    } && !Regex("<queries\\b[^>]*/>").containsMatchIn(xml)
+
     @TaskAction
     fun check() {
         val xml = manifest.get().asFile.readText()
@@ -250,7 +264,7 @@ abstract class CheckSandbox : DefaultTask() {
         val ok = allowed.get().map { it.replace("\${applicationId}", applicationId.get()) }.toSet()
         val problems = ArrayList<String>()
         (held - ok).forEach { problems += "permission not on the allowlist: $it" }
-        if (Regex("<queries\\b").containsMatchIn(xml)) problems += "<queries> present: the app could see other installed apps"
+        if (Regex("<queries\\b").containsMatchIn(xml) && !queriesOnlyTts(xml)) problems += "<queries> present: the app could see other installed apps"
         for (bind in listOf("BIND_ACCESSIBILITY_SERVICE", "BIND_NOTIFICATION_LISTENER_SERVICE", "BIND_DEVICE_ADMIN")) {
             if (xml.contains("android.permission.$bind")) problems += "declares a $bind component"
         }
@@ -267,7 +281,7 @@ androidComponents {
         val cap = variant.name.replaceFirstChar { it.uppercase() }
         val guard = tasks.register<CheckSandbox>("check${cap}Sandbox") {
             manifest.set(variant.artifacts.get(SingleArtifact.MERGED_MANIFEST))
-            allowed.set(allowedPermissions())
+            allowed.set(allowedPermissions(jarvis = variant.flavorName == "ira" && project.findProperty("jarvis") == "true"))
             applicationId.set(variant.applicationId)
             report.set(layout.buildDirectory.file("reports/sandbox/${variant.name}.txt"))
         }

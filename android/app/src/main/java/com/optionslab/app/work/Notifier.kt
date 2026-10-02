@@ -52,6 +52,8 @@ object Notifier {
     const val APPROVAL = "orders.approval"
     /** A strategy Jarvis found and backtested, waiting for the owner's approval. */
     const val IRA = "ira.strategies"
+    /** JarvisAlgo only: the line shown while Jarvis listens for its name. */
+    const val VOICE = "ira.voice"
     private val ALWAYS = setOf(BUY, SELL, APPROVAL, IRA)
 
     const val ID_LIVE = 1001
@@ -121,6 +123,12 @@ object Notifier {
                 lockscreenVisibility = android.app.Notification.VISIBILITY_PRIVATE
             },
         ))
+        if (com.optionslab.app.BuildConfig.JARVIS) nm.createNotificationChannel(
+            NotificationChannel(VOICE, "Jarvis listening", NotificationManager.IMPORTANCE_LOW).apply {
+                description = "Shown while Jarvis listens for its name, with a Stop button. What it hears stays on the phone."
+                lockscreenVisibility = android.app.Notification.VISIBILITY_PRIVATE
+                setShowBadge(false); setSound(null, null); enableVibration(false)
+            })
     }
 
     fun openApp(context: Context, tab: String? = null): PendingIntent = PendingIntent.getActivity(

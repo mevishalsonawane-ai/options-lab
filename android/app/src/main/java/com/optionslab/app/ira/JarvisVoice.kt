@@ -1,0 +1,244 @@
+package com.optionslab.app.ira
+
+import android.Manifest
+import android.app.PendingIntent
+import android.app.Service
+import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.content.pm.ServiceInfo
+import android.os.Build
+import android.os.Bundle
+import android.os.Handler
+import android.os.IBinder
+import android.os.Looper
+import android.os.SystemClock
+import android.speech.RecognitionListener
+import android.speech.RecognizerIntent
+import android.speech.SpeechRecognizer
+import android.speech.tts.TextToSpeech
+import android.speech.tts.UtteranceProgressListener
+import androidx.core.app.NotificationCompat
+import androidx.core.app.ServiceCompat
+import androidx.core.content.ContextCompat
+import com.optionslab.app.R
+import com.optionslab.app.work.Notifier
+import com.optionslab.ira.Wake
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.util.Locale
+
+/**
+ * JarvisAlgo's ears and voice, always on while the owner keeps it switched on. It listens with Android's ON-DEVICE
+ * speech recognizer only (Android 12+: the audio never leaves the phone; there is no fallback to an online one), wakes
+ * on "Jarvis", answers through [IraHub] like a typed question and speaks with an offline voice of the phone's own
+ * text-to-speech. Nothing heard is recorded, logged or kept beyond the question in the conversation. An order asked
+ * by voice is only prepared on the Ira screen: voice can never confirm or send anything. A microphone foreground
+ * service with its own notification (and a Stop button) while it runs; only JarvisAlgo declares it.
+ */
+class JarvisVoice : Service() {
+    enum class Mode { OFF, LISTENING, AWAKE, THINKING, SPEAKING }
+    data class VoiceState(val mode: Mode = Mode.OFF, val problem: String? = null)
+
+    companion object {
+        const val ACTION_STOP = "com.optionslab.app.ira.JarvisVoice.STOP"
+        private const val ID = 1050
+        /** How long "Jarvis" alone keeps it awake for the question. */
+        private const val AWAKE_MS = 8_000L
+        /** The utterance after which the service stops ("Jarvis, stop listening"). */
+        private const val STOP_AFTER = "stop"
+
+        private val _state = MutableStateFlow(VoiceState())
+        val state: StateFlow<VoiceState> = _state
+
+        /** The owner's switch, kept on the phone: listening starts again when the app is opened. */
+        var wanted: Boolean
+            get() = runCatching { com.optionslab.app.security.SecurePrefs.getBoolean("jarvis.listen", false) }.getOrDefault(false)
+            set(v) { runCatching { com.optionslab.app.security.SecurePrefs.put("jarvis.listen", v) } }
+
+        /** Can this phone listen on the device alone? (Android 12+ with an on-device recognizer.) */
+        fun available(context: Context): Boolean = com.optionslab.app.BuildConfig.JARVIS &&
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && runCatching { SpeechRecognizer.isOnDeviceRecognitionAvailable(context) }.getOrDefault(false)
+
+        fun permitted(context: Context) =
+            ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+
+        /** From the app on screen only (Android lets a microphone service start only then). */
+        fun start(context: Context) {
+            if (!available(context) || !permitted(context)) return
+            runCatching { ContextCompat.startForegroundService(context, Intent(context, JarvisVoice::class.java)) }
+                .onFailure { _state.value = VoiceState(problem = "Android did not let Jarvis start listening; try the switch again.") }
+        }
+
+        fun stop(context: Context) { context.stopService(Intent(context, JarvisVoice::class.java)) }
+    }
+
+    private val main = Handler(Looper.getMainLooper())
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    private var rec: SpeechRecognizer? = null
+    private var tts: TextToSpeech? = null
+    private var voiceReady = false
+    private var stopped = false
+    private var awakeUntil = 0L
+    private var lang = "en-IN"
+    private var triedOtherLanguage = false
+    private var errorsInRow = 0
+
+    override fun onBind(intent: Intent?): IBinder? = null
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (intent?.action == ACTION_STOP) { wanted = false; stopSelf(); return START_NOT_STICKY }
+        val why = when {
+            !com.optionslab.app.BuildConfig.JARVIS -> "Voice is in JarvisAlgo only."
+            !permitted(this) -> "Jarvis needs the microphone permission to listen."
+            !available(this) -> "This phone has no on-device speech recognizer (Android 12 or later), so Jarvis does not listen: it never sends your voice off the phone."
+            else -> null
+        }
+        if (why != null) { _state.value = VoiceState(problem = why); stopSelf(); return START_NOT_STICKY }
+        try {
+            ServiceCompat.startForeground(this, ID, notification(),
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE else 0)
+        } catch (e: Exception) {
+            _state.value = VoiceState(problem = "Android did not let Jarvis listen in the background; open JarvisAlgo to start it again.")
+            stopSelf(); return START_NOT_STICKY
+        }
+        if (rec == null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            rec = SpeechRecognizer.createOnDeviceSpeechRecognizer(this).also { it.setRecognitionListener(listener) }
+            tts = TextToSpeech(this) { status -> main.post { voiceReady = status == TextToSpeech.SUCCESS && pickOfflineVoice() } }
+            listen()
+        }
+        return START_STICKY
+    }
+
+    /** An English voice that needs no network; without one Jarvis answers on screen only. */
+    private fun pickOfflineVoice(): Boolean {
+        val t = tts ?: return false
+        val v = runCatching { t.voices }.getOrNull().orEmpty()
+            .filter { !it.isNetworkConnectionRequired && it.locale.language == "en" }
+            .minByOrNull { if (it.locale.country == "IN") 0 else 1 } ?: return false
+        t.voice = v
+        t.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
+            override fun onStart(id: String?) {}
+            override fun onDone(id: String?) { main.post { afterSpeech(id) } }
+            @Deprecated("Deprecated in Java") override fun onError(id: String?) { main.post { afterSpeech(id) } }
+        })
+        return true
+    }
+
+    private fun notification() = NotificationCompat.Builder(this, Notifier.VOICE)
+        .setSmallIcon(R.drawable.ic_notification_art)
+        .setContentTitle("Jarvis is listening")
+        .setContentText("Say \"Jarvis\" and your question. What it hears stays on this phone.")
+        .setOngoing(true)
+        .setPriority(NotificationCompat.PRIORITY_LOW)
+        .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
+        .setContentIntent(Notifier.openApp(this, "almanac"))
+        .addAction(0, "Stop", PendingIntent.getService(this, 1, Intent(this, JarvisVoice::class.java).setAction(ACTION_STOP),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE))
+        .build()
+
+    private fun awake() = SystemClock.elapsedRealtime() < awakeUntil
+
+    private fun listen() {
+        if (stopped) return
+        val i = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+            .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            .putExtra(RecognizerIntent.EXTRA_LANGUAGE, lang)
+            .putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true)
+            .putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3)
+        runCatching { rec?.startListening(i) }.onFailure { again(1_000) }
+        _state.value = VoiceState(if (awake()) Mode.AWAKE else Mode.LISTENING)
+    }
+
+    private fun again(delayMs: Long = 250) { if (!stopped) main.postDelayed({ listen() }, delayMs) }
+
+    private val listener = object : RecognitionListener {
+        override fun onReadyForSpeech(params: Bundle?) {}
+        override fun onBeginningOfSpeech() {}
+        override fun onRmsChanged(rmsdB: Float) {}
+        override fun onBufferReceived(buffer: ByteArray?) {}
+        override fun onEndOfSpeech() {}
+        override fun onPartialResults(partialResults: Bundle?) {}
+        override fun onEvent(eventType: Int, params: Bundle?) {}
+
+        override fun onResults(results: Bundle?) {
+            errorsInRow = 0
+            heard(results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION).orEmpty())
+        }
+
+        override fun onError(error: Int) {
+            if (stopped) return
+            when (error) {
+                SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> giveUp("Jarvis lost the microphone permission.")
+                SpeechRecognizer.ERROR_LANGUAGE_NOT_SUPPORTED, SpeechRecognizer.ERROR_LANGUAGE_UNAVAILABLE ->
+                    if (!triedOtherLanguage) { triedOtherLanguage = true; lang = "en-US"; again() }
+                    else giveUp("No on-device English speech model: add one in the phone's Settings (System → Languages → On-device speech recognition).")
+                else -> {
+                    // Silence and no-match are normal between sentences; a run of other errors backs off up to 5 s.
+                    if (error != SpeechRecognizer.ERROR_NO_MATCH && error != SpeechRecognizer.ERROR_SPEECH_TIMEOUT) errorsInRow++
+                    again(minOf(5_000L, 250L shl minOf(errorsInRow, 5)))
+                }
+            }
+        }
+    }
+
+    private fun heard(alternatives: List<String>) {
+        val awake = awake()
+        val h = alternatives.asSequence().map { Wake.heard(it, awake) }.firstOrNull { it !is Wake.Heard.Ignore } ?: Wake.Heard.Ignore
+        when (h) {
+            Wake.Heard.Ignore -> again()
+            Wake.Heard.Awake -> { awakeUntil = SystemClock.elapsedRealtime() + AWAKE_MS; say("Yes?") }
+            Wake.Heard.Stop -> { wanted = false; say("Going to sleep. Switch me on again in JarvisAlgo.", STOP_AFTER) }
+            is Wake.Heard.Ask -> { awakeUntil = 0; answer(h.question) }
+        }
+    }
+
+    private fun answer(q: String) {
+        _state.value = VoiceState(Mode.THINKING)
+        scope.launch {
+            val st = IraHub.state.value
+            val stale = st.snaps.isEmpty() || st.liveAt?.isBefore(java.time.Instant.now().minusSeconds(120)) != false
+            if (stale) runCatching { withContext(Dispatchers.Default) { IraHub.refresh() } }
+            IraHub.ask(q)
+            val a = IraHub.state.value.messages.lastOrNull { it.fromIra }
+            val o = a?.order
+            say(when {
+                a == null -> "I could not work that out."
+                o != null && o.missing.isEmpty() && o.refusal == null -> "I have put that order on the Ira screen. Nothing is sent until you confirm it there."
+                else -> Wake.spoken(a.text)
+            })
+        }
+    }
+
+    /** Speaks (not listening meanwhile, so Jarvis never hears itself), then listens again - or stops after [id] STOP_AFTER. */
+    private fun say(text: String, id: String = "say") {
+        runCatching { rec?.cancel() }
+        val t = tts
+        if (!voiceReady || t == null) { afterSpeech(id); return }
+        _state.value = VoiceState(Mode.SPEAKING)
+        if (t.speak(text, TextToSpeech.QUEUE_FLUSH, null, id) != TextToSpeech.SUCCESS) afterSpeech(id)
+    }
+
+    private fun afterSpeech(id: String?) {
+        if (stopped) return
+        if (id == STOP_AFTER) stopSelf() else again(150)
+    }
+
+    private fun giveUp(why: String) { _state.value = VoiceState(problem = why); stopSelf() }
+
+    override fun onDestroy() {
+        stopped = true
+        main.removeCallbacksAndMessages(null)
+        runCatching { rec?.destroy() }; rec = null
+        runCatching { tts?.stop(); tts?.shutdown() }; tts = null
+        scope.cancel()
+        _state.value = VoiceState(problem = _state.value.problem)
+        super.onDestroy()
+    }
+}

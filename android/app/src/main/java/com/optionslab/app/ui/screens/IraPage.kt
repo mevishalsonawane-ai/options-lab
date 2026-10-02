@@ -42,6 +42,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.optionslab.app.ira.IraHub
 import com.optionslab.app.ira.IraOrders
+import com.optionslab.app.ira.JarvisVoice
 import com.optionslab.app.ira.OrbView
 import com.optionslab.app.ui.components.BrassButton
 import com.optionslab.app.ui.components.LedgerCard
@@ -62,6 +63,9 @@ import com.optionslab.ira.Market as IraMarket
 fun IraHome(orders: IraOrderPaths? = null, dashboard: @Composable () -> Unit) {
     val p = LocalPalette.current
     var showIra by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(true) }
+    // JarvisAlgo: listening was left on - start it again now the app is on screen (Android allows it only then).
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    LaunchedEffect(Unit) { if (com.optionslab.app.BuildConfig.JARVIS && JarvisVoice.wanted) JarvisVoice.start(ctx) }
     Column(Modifier.fillMaxSize()) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 6.dp).background(p.card, RoundedCornerShape(12.dp)).padding(4.dp)) {
             listOf("Ira" to true, "Dashboard" to false).forEach { (label, ira) ->
@@ -87,9 +91,13 @@ private val EXAMPLES = listOf("What is BankNifty doing today?", "Nifty levels", 
 fun IraPage(orders: IraOrderPaths? = null) {
     val p = LocalPalette.current
     val st by IraHub.state.collectAsState()
+    val voice by JarvisVoice.state.collectAsState()
     val scope = rememberCoroutineScope()
     var text by remember { mutableStateOf("") }
-    var mode by remember { mutableIntStateOf(0) }
+    var typed by remember { mutableIntStateOf(0) }
+    // The orb shows the typed exchange first, else what the voice is doing (plain listening for the name is "idle").
+    val mode = if (typed != 0) typed else when (voice.mode) {
+        JarvisVoice.Mode.AWAKE -> 1; JarvisVoice.Mode.THINKING -> 2; JarvisVoice.Mode.SPEAKING -> 3; else -> 0 }
     var focus by remember { mutableStateOf(IraMarket.NIFTY) }
     // Live prices every minute while Ira is on screen (and news every ten minutes, inside the hub).
     com.optionslab.app.ui.PollWhileStarted { while (true) { IraHub.refresh(); delay(60_000) } }
@@ -102,8 +110,8 @@ fun IraPage(orders: IraOrderPaths? = null) {
         text = ""
         // The answer is ready at once (it is built from facts); the orb still shows a beat of thinking, then answers.
         IraHub.ask(q)
-        mode = 2
-        scope.launch { delay(600); mode = 3; delay(1_800); mode = 0 }
+        typed = 2
+        scope.launch { delay(600); typed = 3; delay(1_800); typed = 0 }
     }
 
     Column(Modifier.fillMaxSize()) {
@@ -132,6 +140,7 @@ fun IraPage(orders: IraOrderPaths? = null) {
                     })
                 }
             }
+            if (com.optionslab.app.BuildConfig.JARVIS) item { VoiceSwitch() }
             item { HowIraIsDoing(st) }
             if (st.messages.isEmpty()) item {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -260,6 +269,47 @@ private fun OrderActions(o: com.optionslab.ira.OrderRequest, orders: IraOrderPat
                 }
             }
         }
+    }
+}
+
+/**
+ * JarvisAlgo: the switch for listening to "Jarvis" (the microphone permission is asked the first time). The phone's
+ * on-device recognizer only; a phone without one is told so, and nothing is sent anywhere instead.
+ */
+@Composable
+private fun VoiceSwitch() {
+    val p = LocalPalette.current
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val vs by JarvisVoice.state.collectAsState()
+    var on by remember { mutableStateOf(JarvisVoice.wanted) }
+    var note by remember { mutableStateOf<String?>(null) }
+    fun begin() { JarvisVoice.wanted = true; on = true; note = null; JarvisVoice.start(ctx) }
+    val ask = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestPermission()) { ok ->
+        if (ok) begin() else note = "Without the microphone permission Jarvis cannot hear its name. Typing works as before."
+    }
+    // The service stopped on its own ("Jarvis, stop listening", or the notification's Stop): the switch follows.
+    LaunchedEffect(vs.mode) { if (vs.mode == JarvisVoice.Mode.OFF && !JarvisVoice.wanted) on = false }
+    LedgerCard(title = "Voice") {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("Listen for \"Jarvis\"", style = Type.label.copy(color = p.ink, fontSize = 15.sp), modifier = Modifier.weight(1f))
+            androidx.compose.material3.Switch(checked = on, onCheckedChange = { want ->
+                when {
+                    !want -> { JarvisVoice.wanted = false; on = false; JarvisVoice.stop(ctx) }
+                    !JarvisVoice.available(ctx) -> note = "This phone has no on-device speech recognizer (it needs Android 12 or later), so Jarvis " +
+                        "will not listen: your voice is never sent off the phone."
+                    JarvisVoice.permitted(ctx) -> begin()
+                    else -> ask.launch(android.Manifest.permission.RECORD_AUDIO)
+                }
+            })
+        }
+        Note(note ?: vs.problem ?: when (vs.mode) {
+            JarvisVoice.Mode.OFF -> if (on) "Starting..." else "Off. Switch on and say \"Jarvis, how is Nifty?\" - or \"Jarvis\", then your question."
+            JarvisVoice.Mode.AWAKE -> "Yes? Ask your question."
+            JarvisVoice.Mode.THINKING -> "Working it out..."
+            JarvisVoice.Mode.SPEAKING -> "Answering."
+            JarvisVoice.Mode.LISTENING -> "Listening for \"Jarvis\" on this phone only. Say \"Jarvis, stop listening\" or use the notification to stop. " +
+                "Orders you ask for by voice are only prepared here: you confirm them on screen."
+        })
     }
 }
 

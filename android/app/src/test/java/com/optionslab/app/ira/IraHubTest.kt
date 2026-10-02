@@ -227,4 +227,15 @@ class IraHubTest : RobolectricTest() {
         val odd = IraSaved.read("""{"proposals":[{"id":1,"status":"weird"}],"journal":[["bad",1,1]]}""", today)
         assertTrue(odd.proposals.isEmpty() && odd.journal.isEmpty() && odd.nightlyAt == null)
     }
+
+    /** Outside JarvisAlgo the voice never starts: no microphone, nothing listening. */
+    @Test fun voiceIsJarvisAlgosAlone() {
+        assertTrue(!JarvisVoice.available(context))
+        JarvisVoice.start(context)                                  // a no-op here
+        val svc = org.robolectric.Robolectric.buildService(JarvisVoice::class.java).create()
+        svc.startCommand(0, 1)
+        assertEquals("Voice is in JarvisAlgo only.", JarvisVoice.state.value.problem)
+        assertEquals(JarvisVoice.Mode.OFF, JarvisVoice.state.value.mode)
+        svc.destroy()
+    }
 }

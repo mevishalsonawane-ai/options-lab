@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- JarvisAlgo only (-Pjarvis=true): the microphone for "Jarvis", heard by the phone's ON-DEVICE recognizer. IraAlgo and
+     IraGoldAlgo use src/noaudio instead and hold no microphone permission. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <!-- Only the text-to-speech engines, so Jarvis can answer aloud: no other app is visible. -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.TTS_SERVICE" />
+        </intent>
+    </queries>
+    <application>
+        <service
+            android:name="com.optionslab.app.ira.JarvisVoice"
+            android:exported="false"
+            android:foregroundServiceType="microphone" />
+    </application>
+</manifest>

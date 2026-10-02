@@ -1,0 +1,3 @@
+# JarvisAlgo only (-Pjarvis=true), on top of permissions-allowlist.txt. IraAlgo and IraGoldAlgo never hold these.
+android.permission.RECORD_AUDIO                    # "Jarvis": the phone's on-device speech recognizer hears it; audio never leaves the phone
+android.permission.FOREGROUND_SERVICE_MICROPHONE   # listening for "Jarvis" while the app is in the background (its own notification, with Stop)
