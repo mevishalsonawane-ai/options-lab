@@ -87,8 +87,9 @@ def indicators(b, n):
     return trk, d, np.where(ok, score / 6 * 100, np.nan)
 
 
-def trades(b, trk, d, pct, side=1, late=True):
-    """Buys (side 1) or sells (-1): a list of (signal time, USD a standard lot)."""
+def trades(b, trk, d, pct, side=1, late=True, day_end=None):
+    """Buys (side 1) or sells (-1): a list of (signal time, USD a standard lot). [day_end]: True on each day's last
+    candle - out at its close, and no buy on it (intraday use, research/tas_indices.py)."""
     o, h, l, c = (b[k].values for k in ("open", "high", "low", "close"))
     n, out, i, flip_at = len(c), [], 1, None
     while i < n - 1:
@@ -97,7 +98,7 @@ def trades(b, trk, d, pct, side=1, late=True):
         if d[i] != side:
             flip_at = None
         go = flip_at is not None and (i - flip_at <= (LATE if late else 0)) and np.isfinite(pct[i]) and side * pct[i] >= MIN_SCORE
-        if not go:
+        if not go or (day_end is not None and day_end[i]):
             i += 1; continue
         e = o[i + 1] + side * H
         stop = trk[i]
@@ -122,6 +123,8 @@ def trades(b, trk, d, pct, side=1, late=True):
                 done = True; break
             if moved and not be:
                 stop, be = e, True          # breakeven from the next bar
+            if day_end is not None and day_end[j]:
+                pnl += left * side * (c[j] - side * H - e); left = 0; done = True; break
             if d[j] != side and j + 1 < n:  # the tracker turned: out at the next open
                 pnl += left * side * (o[j + 1] - side * H - e); left = 0; j += 1; done = True; break
             j += 1
