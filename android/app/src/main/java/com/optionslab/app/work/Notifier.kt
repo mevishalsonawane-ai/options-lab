@@ -54,6 +54,25 @@ object Notifier {
         val nm = context.getSystemService(NotificationManager::class.java)
         // The old "live" channel showed index levels at low importance; its successor is LIVE ("watch").
         nm.deleteNotificationChannel("live")
+        if (com.optionslab.app.BuildConfig.GOLD) {
+            // IraGoldAlgo: buys and sells, and the silent line Android requires for the always-on service - nothing else.
+            listOf(APPROVAL, RISK, SCHEDULE, HEALTH).forEach { nm.deleteNotificationChannel(it) }
+            nm.createNotificationChannels(listOf(
+                NotificationChannel(BUY, "Buy", NotificationManager.IMPORTANCE_HIGH).apply {
+                    description = "A paper buy by a gold arm"; lockscreenVisibility = android.app.Notification.VISIBILITY_PRIVATE
+                },
+                NotificationChannel(SELL, "Sell", NotificationManager.IMPORTANCE_HIGH).apply {
+                    description = "A paper sell by a gold arm"; lockscreenVisibility = android.app.Notification.VISIBILITY_PRIVATE
+                },
+                NotificationChannel(LIVE, "Running in the background", NotificationManager.IMPORTANCE_MIN).apply {
+                    description = "Android requires this silent line while the arms are checked in the background. You can turn this " +
+                        "channel off: the app keeps running and the buy / sell notifications still come."
+                    lockscreenVisibility = android.app.Notification.VISIBILITY_SECRET
+                    setShowBadge(false); setSound(null, null); enableVibration(false)
+                },
+            ))
+            return
+        }
         nm.createNotificationChannels(listOf(
             NotificationChannel(BUY, "Buy orders", NotificationManager.IMPORTANCE_HIGH).apply {
                 description = "A buy order was filled (paper or Zerodha), and by which strategy or by hand"
@@ -192,6 +211,8 @@ object Notifier {
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
 
     fun post(context: Context, id: Int, channel: String, title: String, text: String, tab: String? = null) {
+        // IraGoldAlgo notifies buys and sells only (the owner's choice, 2026-10-02); anything else is never posted there.
+        if (com.optionslab.app.BuildConfig.GOLD && channel != BUY && channel != SELL) return
         // Everything notified also drops in at the top of the app when it is open (green / red).
         Alerts.post(text, when (channel) {
             BUY, SELL -> Alerts.Kind.SUCCESS

@@ -59,7 +59,9 @@ fun GoldMain(model: AppModel) {
     val p = LocalPalette.current
     var tab by rememberSaveable { mutableStateOf("home") }
     // While the app is open the pass runs every minute (the alarm does it every five in the background).
-    LaunchedEffect(Unit) { while (true) { withContext(Dispatchers.IO) { GoldPaper.tick() }; delay(60_000) } }
+    // It also (re)starts the always-on background service whenever an arm needs it.
+    val appContext = androidx.compose.ui.platform.LocalContext.current.applicationContext
+    LaunchedEffect(Unit) { while (true) { withContext(Dispatchers.IO) { GoldPaper.tick() }; com.optionslab.app.work.GoldService.ensure(appContext); delay(60_000) } }
     // Android 13+: the buy / sell notifications need the owner's permission, asked once (IraAlgo asks on its own main
     // screen, which this app never shows - without this the gold alerts were silently blocked).
     val notify = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestPermission()) { }
@@ -123,6 +125,7 @@ private fun GoldHome() {
     val chart by GoldPaper.chart.collectAsState()
     val tb by com.optionslab.app.data.GoldTrendPaper.book.collectAsState()
     val scope = rememberCoroutineScope()
+    val ctx = androidx.compose.ui.platform.LocalContext.current.applicationContext
     val open = b.open(b.price)
     val trendOpen = tb.open(b.price)
     val anyOpen = if (open == null && trendOpen == null) null else (open ?: 0.0) + (trendOpen ?: 0.0)
@@ -152,7 +155,7 @@ private fun GoldHome() {
         item {
             LedgerCard(title = "Liquidity 1h") {
                 ToggleRow("Armed", "Buys only, 1-hour candles, 24x5: Monday 05:30 IST to Saturday 02:30 IST, held overnight. Paper: a notification on every buy and sell.",
-                    b.armed) { on -> scope.launch(Dispatchers.IO) { GoldPaper.setArmed(on) } }
+                    b.armed) { on -> scope.launch(Dispatchers.IO) { GoldPaper.setArmed(on); com.optionslab.app.work.GoldService.ensure(ctx) } }
                 LedgerLine("Status", b.status)
                 if (b.armed) GoldBackgroundCheck(compact = true)
                 if (b.armed && b.position == null) LedgerLine("Next decision", "about " + GoldPaper.nextDecision(GoldPaper.now()))
@@ -173,7 +176,7 @@ private fun GoldHome() {
         item {
             LedgerCard(title = com.optionslab.app.data.GoldTrendPaper.NAME) {
                 ToggleRow("Armed", "Buys only while gold's 4-hour trend (Supertrend 10, 3) points up; held overnight and over weekends. Paper: a notification on every buy and sell.",
-                    tb.armed) { on -> scope.launch(Dispatchers.IO) { com.optionslab.app.data.GoldTrendPaper.setArmed(on) } }
+                    tb.armed) { on -> scope.launch(Dispatchers.IO) { com.optionslab.app.data.GoldTrendPaper.setArmed(on); com.optionslab.app.work.GoldService.ensure(ctx) } }
                 LedgerLine("Status", tb.status)
                 tb.up?.let { up -> LedgerLine("4-hour trend", tb.line?.let { l ->
                     if (up) "up · line %.2f".format(Locale.ENGLISH, l) else "down · turns up on a close above %.2f".format(Locale.ENGLISH, l)
@@ -331,6 +334,9 @@ internal fun GoldBackgroundCheck(compact: Boolean) {
     val notif = remember(n) { com.optionslab.app.work.Notifier.canPost(context) }
     val exact = remember(n) { com.optionslab.app.work.Jobs.canExact(context) }
     val battery = remember(n) { BatteryCheck.unrestricted(context) }
+    val service by com.optionslab.app.work.GoldService.running.collectAsState()
+    if (!compact) LedgerLine("Background service", if (service) "running" else if (com.optionslab.app.work.GoldService.needed()) "starting" else "off (nothing armed, or gold closed)",
+        if (service) p.verdigris else null)
     if (compact && notif && exact && battery) return
     if (!compact || !notif) LedgerLine("Notifications", if (notif) "allowed" else "blocked: buys and sells are silent", if (notif) p.verdigris else p.oxblood)
     if (!compact || !exact) LedgerLine("Precise alarms", if (exact) "allowed" else "off: candles can be missed", if (exact) p.verdigris else p.oxblood)

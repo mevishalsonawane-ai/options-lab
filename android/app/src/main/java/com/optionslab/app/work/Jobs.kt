@@ -172,7 +172,11 @@ object Jobs {
     fun watchDue(): Boolean = Market.isTradingDay() && Market.minuteNow() in (Market.OPEN - 1)..Market.CLOSE
 
     /** Start the watch now if it should be running; it is a no-op when it already is. */
-    fun ensureWatch(context: Context) { if (watchDue()) start(context, Kind.LIVE, manual = false) }
+    fun ensureWatch(context: Context) {
+        // IraGoldAlgo has no NSE watch: its own always-on service instead.
+        if (com.optionslab.app.BuildConfig.GOLD) { GoldService.ensure(context); return }
+        if (watchDue()) start(context, Kind.LIVE, manual = false)
+    }
 
     fun stopLive(context: Context) {
         context.startService(Intent(context, WatchService::class.java).setAction(WatchService.STOP))

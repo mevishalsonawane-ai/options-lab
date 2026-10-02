@@ -146,6 +146,16 @@
             android:name=".work.NotificationActionReceiver"
             android:exported="false" />
 
+        <!-- IraGoldAlgo's always-on pass while an arm is armed (the IraAlgo build never starts it). -->
+        <service
+            android:name=".work.GoldService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="The owner's own paper gold strategy, checked every minute while armed: price updates and buy / sell alerts" />
+        </service>
+
         <!-- IraGoldAlgo's 5-minute pass (the IraAlgo build never schedules it). -->
         <receiver
             android:name=".work.GoldReceiver"
