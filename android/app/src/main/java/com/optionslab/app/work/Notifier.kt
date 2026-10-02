@@ -59,13 +59,14 @@ object Notifier {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         val nm = context.getSystemService(NotificationManager::class.java)
         // The old "live" channel showed index levels at low importance; its successor is LIVE ("watch").
-        nm.deleteNotificationChannel("live")
+        // Deleting a channel a running foreground service still uses throws (SecurityException): never let that stop the app.
+        runCatching { nm.deleteNotificationChannel("live") }
         // The watch's visible channel ("watch", minimum importance) is replaced by one created switched off: the owner
         // wants buy / sell / approval notifications, not the ongoing line (2026-10-02). The watch itself is unchanged.
-        nm.deleteNotificationChannel("watch")
+        runCatching { nm.deleteNotificationChannel("watch") }
         if (com.optionslab.app.BuildConfig.GOLD) {
             // IraGoldAlgo: buys and sells, and the silent line Android requires for the always-on service - nothing else.
-            listOf(APPROVAL, RISK, SCHEDULE, HEALTH, LIVE).forEach { nm.deleteNotificationChannel(it) }
+            listOf(APPROVAL, RISK, SCHEDULE, HEALTH, LIVE).forEach { runCatching { nm.deleteNotificationChannel(it) } }
             nm.createNotificationChannels(listOf(
                 NotificationChannel(BUY, "Buy", NotificationManager.IMPORTANCE_HIGH).apply {
                     description = "A paper buy by a gold arm"; lockscreenVisibility = android.app.Notification.VISIBILITY_PRIVATE
