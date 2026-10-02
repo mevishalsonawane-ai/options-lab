@@ -182,4 +182,49 @@ class IraHubTest : RobolectricTest() {
         assertEquals(11.0, c[1].c, 0.0); assertEquals(11.0, c[1].o, 0.0)
         assertTrue(IraHub.candles(LocalDate.of(2026, 9, 1), Series(null, 1.0, Right.CE, 1, intArrayOf(555), doubleArrayOf(1.0), null, null, null, null, longArrayOf(0))).isEmpty())
     }
+
+    /** The evening review scores each completed session once; the journal and the proposals survive a restart, the conversation does not. */
+    @Test fun sessionsAreReviewedOnceAndKeptWithTheProposals() = runBlocking {
+        IraHub.testHistories = { sixty }
+        IraHub.refresh()
+        val j = IraHub.state.value.journal
+        assertEquals(sixty.getValue(IraMarket.BANKNIFTY).days.takeLast(IraHub.BACKFILL), j.map { it.day })
+        assertTrue(j.all { it.worked in 0..it.seen }); assertTrue(j.sumOf { it.seen } > 0)
+        assertNotNull(IraHub.state.value.nightlyAt)
+        IraHub.refresh()
+        assertEquals("a session is reviewed once", j, IraHub.state.value.journal)
+        IraHub.ask("backtest the hammer on banknifty 1 hour")
+        waitFor("the backtest") { IraHub.state.value.proposals.isNotEmpty() }
+        val p = IraHub.state.value.proposals.single()
+        IraHub.init(context)                                       // the app starts again
+        var st = IraHub.state.value
+        assertEquals(j, st.journal)
+        assertEquals(listOf(p), st.proposals)
+        val m = st.messages.single()
+        assertEquals(p.id, m.proposal); assertTrue(m.text, m.text.startsWith("Still waiting for your decision. Backtest of"))
+        IraHub.dismiss(p.id)
+        IraHub.init(context)
+        st = IraHub.state.value
+        assertEquals(IraHub.Proposal.DISMISSED, st.proposals.single().status)
+        assertTrue("only a waiting strategy comes back into the conversation", st.messages.isEmpty())
+        val f = File(context.noBackupFilesDir, "ira-state.vault")
+        assertTrue(f.exists())
+        assertTrue("kept encrypted", !String(f.readBytes(), Charsets.ISO_8859_1).contains("Backtest") && !String(f.readBytes(), Charsets.ISO_8859_1).contains("hammer"))
+        IraHub.forgetAll()
+        assertTrue(!f.exists())
+    }
+
+    @Test fun whatIsKeptReadsBackAndOldTriesAreDropped() {
+        val today = LocalDate.of(2026, 10, 2)
+        val day = IraHub.DayScore(LocalDate.of(2026, 10, 1), 9, 5)
+        val text = IraSaved.write(emptyList(), listOf(day), java.time.Instant.parse("2026-10-01T10:10:00Z"),
+            listOf("HAMMER|NIFTY|15|2026-09-20", "HAMMER|NIFTY|15|2026-09-30", "junk"), today)
+        val r = IraSaved.read(text, today)
+        assertEquals(listOf(day), r.journal)
+        assertEquals(java.time.Instant.parse("2026-10-01T10:10:00Z"), r.nightlyAt)
+        assertEquals(listOf("HAMMER|NIFTY|15|2026-09-30"), r.tested)
+        assertEquals(5.0 / 9, day.rate, 1e-12); assertEquals(0.0, IraHub.DayScore(today, 0, 0).rate, 0.0)
+        val odd = IraSaved.read("""{"proposals":[{"id":1,"status":"weird"}],"journal":[["bad",1,1]]}""", today)
+        assertTrue(odd.proposals.isEmpty() && odd.journal.isEmpty() && odd.nightlyAt == null)
+    }
 }

@@ -1,5 +1,6 @@
 package com.optionslab.ira
 
+import java.time.LocalDate
 import java.time.LocalDateTime
 
 /**
@@ -33,14 +34,9 @@ class PatternBook {
             val t = candles[i].t
             if (after != null && !t.isAfter(after)) continue
             for (k in Patterns.at(candles, i)) {
-                val entry = candles[i].c
-                val exit = candles[i + HORIZON].c
-                val movePct = (exit - entry) / entry * 100
-                val dir = if (k.bias == 0) 1 else k.bias
-                // A neutral pattern "works" when the move afterwards is bigger than usual either way.
-                val worked = if (k.bias == 0) kotlin.math.abs(movePct) > typicalMovePct(candles, i) else movePct * dir > 0
+                val (worked, move) = outcome(candles, i, k)
                 val s = stats[key(m, minutes, k)] ?: Stat()
-                stats[key(m, minutes, k)] = Stat(s.seen + 1, s.worked + if (worked) 1 else 0, s.sumMovePct + movePct * dir)
+                stats[key(m, minutes, k)] = Stat(s.seen + 1, s.worked + if (worked) 1 else 0, s.sumMovePct + move)
                 added++
             }
             last = t
@@ -48,6 +44,19 @@ class PatternBook {
         if (last != null) learnedTo[mk] = last
         return added
     }
+
+    /** One market, chart and pattern, as the book holds it. */
+    data class Entry(val market: Market, val minutes: Int, val kind: PatternKind, val stat: Stat)
+
+    /** Everything learned, one entry per market, chart and pattern. */
+    fun entries(): List<Entry> = stats.mapNotNull { (k, s) ->
+        val p = k.split('/')
+        runCatching { Entry(Market.valueOf(p[0]), p[1].toInt(), PatternKind.valueOf(p[2]), s) }.getOrNull()
+    }
+
+    /** The patterns that went their way most often, among those seen at least [min] times. */
+    fun best(n: Int = 3, min: Int = ENOUGH): List<Entry> =
+        entries().filter { it.stat.seen >= min }.sortedWith(compareByDescending<Entry> { it.stat.rate }.thenByDescending { it.stat.seen }).take(n)
 
     private fun typicalMovePct(c: List<Candle>, i: Int): Double {
         val from = maxOf(HORIZON, i - 100)
@@ -60,6 +69,34 @@ class PatternBook {
     fun save(): String = buildString {
         stats.toSortedMap().forEach { (k, s) -> append("S|$k|${s.seen}|${s.worked}|${s.sumMovePct}\n") }
         learnedTo.toSortedMap().forEach { (k, t) -> append("L|$k|$t\n") }
+    }
+
+    /** How the patterns of one session did: how many were seen with a known outcome, how many went their way. */
+    data class Score(val seen: Int, val worked: Int) {
+        operator fun plus(o: Score) = Score(seen + o.seen, worked + o.worked)
+        val rate: Double get() = if (seen == 0) 0.0 else worked.toDouble() / seen
+    }
+
+    /**
+     * Did the move after pattern [k] at candle [i] go its way, and the move in its direction (%). A neutral pattern
+     * "works" when the move afterwards is bigger than usual either way.
+     */
+    private fun outcome(candles: List<Candle>, i: Int, k: PatternKind): Pair<Boolean, Double> {
+        val entry = candles[i].c
+        val movePct = (candles[i + HORIZON].c - entry) / entry * 100
+        val dir = if (k.bias == 0) 1 else k.bias
+        val worked = if (k.bias == 0) kotlin.math.abs(movePct) > typicalMovePct(candles, i) else movePct * dir > 0
+        return worked to movePct * dir
+    }
+
+    /** The patterns found on [day]'s candles of [candles] (completed, one chart) whose outcome is known: the same test as learning. */
+    fun score(candles: List<Candle>, day: LocalDate): Score {
+        var seen = 0; var worked = 0
+        for (i in 1 until candles.size - HORIZON) {
+            if (candles[i].t.toLocalDate() != day) continue
+            for (k in Patterns.at(candles, i)) { seen++; if (outcome(candles, i, k).first) worked++ }
+        }
+        return Score(seen, worked)
     }
 
     companion object {

@@ -132,6 +132,7 @@ fun IraPage(orders: IraOrderPaths? = null) {
                     })
                 }
             }
+            item { HowIraIsDoing(st) }
             if (st.messages.isEmpty()) item {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -258,6 +259,64 @@ private fun OrderActions(o: com.optionslab.ira.OrderRequest, orders: IraOrderPat
                     }
                 }
             }
+        }
+    }
+}
+
+/**
+ * Ira's own record, facts only: what it has learned, how the patterns it saw went in each reviewed session (the
+ * evening review), the patterns that went their way most often so far, and what became of the strategies it offered.
+ */
+@Composable
+internal fun HowIraIsDoing(st: IraHub.State) {
+    val p = LocalPalette.current
+    var open by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
+    val j = st.journal
+    val pct = { x: Double -> "${Math.round(x * 100)}%" }
+    val dm = { d: java.time.LocalDate -> "${d.dayOfMonth} ${d.month.getDisplayName(java.time.format.TextStyle.SHORT, Locale.ENGLISH)}" }
+    LedgerCard(title = "How Ira is doing") {
+        val last = j.lastOrNull()
+        val recent = j.takeLast(20)
+        val rs = recent.sumOf { it.seen }; val rw = recent.sumOf { it.worked }
+        Note(when {
+            last == null -> "No session reviewed yet: Ira reviews each session after the close (15:35)."
+            else -> "Last session (${dm(last.day)}): ${last.worked} of ${last.seen} patterns went their way" +
+                (if (last.seen > 0) " (${pct(last.rate)})" else "") + ". " +
+                "Last ${recent.size} sessions: $rw of $rs" + (if (rs > 0) " (${pct(rw.toDouble() / rs)})." else ".")
+        })
+        if (recent.isNotEmpty()) SessionBars(recent)
+        Text(if (open) "Less" else "More", style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp),
+            modifier = Modifier.clickable { open = !open }.padding(vertical = 4.dp))
+        if (open) {
+            Note("Learned ${st.learned} pattern outcomes from ${st.days} days of candles." +
+                (st.nightlyAt?.let { " Last review ${it.atZone(java.time.ZoneId.of("Asia/Kolkata")).let { z -> "${dm(z.toLocalDate())}, %02d:%02d".format(z.hour, z.minute) }} IST." } ?: ""))
+            if (st.best.isEmpty()) Note("No pattern seen ${com.optionslab.ira.PatternBook.ENOUGH} times yet on one chart.")
+            else {
+                Note("Went their way most often so far (at least ${com.optionslab.ira.PatternBook.ENOUGH} cases):")
+                st.best.forEach { e -> Text("• ${e.kind.label} on ${e.market.label} ${if (e.minutes == 60) "1-hour" else "${e.minutes}-minute"}: " +
+                    "${pct(e.stat.rate)} of ${e.stat.seen}", style = Type.label.copy(color = p.ink, fontSize = 13.sp)) }
+            }
+            val ps = st.proposals
+            Note("Strategies offered: ${ps.size}; approved ${ps.count { it.status == IraHub.Proposal.APPROVED }}, " +
+                "dismissed ${ps.count { it.status == IraHub.Proposal.DISMISSED }}, waiting ${ps.count { it.status == IraHub.Proposal.NEW }}.")
+            Note("This is a record of what happened, not a forecast.")
+        }
+    }
+}
+
+/** One bar a session: its height the share of patterns that went their way (half-way line at 50%). */
+@Composable
+private fun SessionBars(days: List<IraHub.DayScore>) {
+    val p = LocalPalette.current
+    Canvas(Modifier.fillMaxWidth().height(36.dp).padding(vertical = 4.dp)) {
+        val n = days.size
+        val w = size.width / n
+        drawLine(p.inkFaint, Offset(0f, size.height / 2), Offset(size.width, size.height / 2), 1f)
+        days.forEachIndexed { i, d ->
+            if (d.seen == 0) return@forEachIndexed
+            val h = (d.rate * size.height).toFloat().coerceAtLeast(2f)
+            drawRect(if (d.rate >= 0.5) p.verdigris else p.oxblood, Offset(i * w + w * 0.15f, size.height - h),
+                androidx.compose.ui.geometry.Size(w * 0.7f, h))
         }
     }
 }

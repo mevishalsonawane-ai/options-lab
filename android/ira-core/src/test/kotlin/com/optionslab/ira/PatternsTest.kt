@@ -74,4 +74,21 @@ class PatternsTest {
         assertEquals(0.0, PatternBook.Stat().rate); assertEquals(0.0, PatternBook.Stat().avgMovePct)
         assertEquals(0, PatternBook.load("junk\nS|bad\n").size)
     }
+
+    @Test fun eachSessionIsScoredTheWayTheBookLearns() {
+        val c15 = Candles.fold(Fixtures.indexDays(30, seed = 11), 15, Market.BANKNIFTY)
+        val b = PatternBook()
+        b.learn(Market.BANKNIFTY, 15, c15)
+        val days = c15.map { it.t.toLocalDate() }.distinct()
+        val all = days.map { b.score(c15, it) }.reduce { x, y -> x + y }
+        assertEquals(b.size, all.seen, "every pattern outcome learned is scored on its own day")
+        assertEquals(b.entries().sumOf { it.stat.worked }, all.worked)
+        assertEquals(b.size, b.entries().sumOf { it.stat.seen })
+        assertTrue(all.rate in 0.0..1.0); assertEquals(0.0, PatternBook.Score(0, 0).rate)
+        assertEquals(PatternBook.Score(0, 0), b.score(c15, days.first().minusDays(1)))
+        val best = b.best(n = 2, min = 5)
+        assertTrue(best.size <= 2 && best.all { it.stat.seen >= 5 && it.market == Market.BANKNIFTY && it.minutes == 15 })
+        assertTrue(best.zipWithNext().all { (x, y) -> x.stat.rate >= y.stat.rate })
+        assertTrue(b.best(min = 100_000).isEmpty())
+    }
 }

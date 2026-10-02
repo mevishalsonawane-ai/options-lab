@@ -76,7 +76,15 @@ object IraHub {
         val newsMissing: List<String> = emptyList(),  // feeds that did not answer last time
         val proposals: List<Proposal> = emptyList(),
         val busy: Boolean = false,                     // a backtest is running
+        val journal: List<DayScore> = emptyList(),     // how Ira's patterns did, session by session (oldest first)
+        val nightlyAt: Instant? = null,                // the last evening review
+        val best: List<PatternBook.Entry> = emptyList(), // the patterns that went their way most often so far
     )
+
+    /** One session's review: the patterns Ira saw on the index charts (15 and 60 minutes) and how many went their way. */
+    data class DayScore(val day: LocalDate, val seen: Int, val worked: Int) {
+        val rate: Double get() = if (seen == 0) 0.0 else worked.toDouble() / seen
+    }
 
     /** The app's harvested underlyings Ira reads from storage. */
     val SOURCES = listOf(IraMarket.NIFTY to "NIFTY", IraMarket.BANKNIFTY to "BANKNIFTY", IraMarket.VIX to "INDIAVIX")
@@ -116,6 +124,8 @@ object IraHub {
     private val lock = Mutex()
     @Volatile private var book = PatternBook()
     private var bookFile: File? = null
+    /** Proposals, the review journal and the patterns already tried: kept encrypted beside the book. */
+    private var stateFile: File? = null
 
     /** TEST ONLY: histories instead of the app's store. */
     @Volatile internal var testHistories: (() -> Map<IraMarket, History>)? = null
@@ -135,8 +145,56 @@ object IraHub {
         val f = File(context.applicationContext.noBackupFilesDir, "ira-book.vault")
         bookFile = f
         book = runCatching { Vault.readFileSteady(f)?.let { PatternBook.load(String(it, Charsets.UTF_8)) } }.getOrNull() ?: PatternBook()
-        _state.update { it.copy(learned = book.size) }
+        val sf = File(context.applicationContext.noBackupFilesDir, "ira-state.vault")
+        stateFile = sf
+        val saved = runCatching { Vault.readFileSteady(sf)?.let { IraSaved.read(String(it, Charsets.UTF_8)) } }.getOrNull()
+        synchronized(tested) { tested.clear(); saved?.tested?.let { tested += it } }
+        // The process started again: what was kept comes back; a strategy still waiting is offered again in the conversation.
+        val waiting = saved?.proposals.orEmpty().filter { it.status == Proposal.NEW }
+            .map { Msg(true, "Still waiting for your decision. " + it.result.summary(), proposal = it.id) }
+        _state.value = State(learned = book.size, best = book.best(), proposals = saved?.proposals.orEmpty(),
+            journal = saved?.journal.orEmpty(), nightlyAt = saved?.nightlyAt, messages = waiting.takeLast(MAX_MESSAGES))
     }
+
+    /** Writes the proposals, the journal and the tried patterns (never the conversation). */
+    private fun saveState() {
+        val f = stateFile ?: return
+        val st = _state.value
+        val tried = synchronized(tested) { tested.toList() }
+        runCatching { Vault.writeFile(f, IraSaved.write(st.proposals.takeLast(KEEP_PROPOSALS), st.journal, st.nightlyAt, tried,
+            LocalDate.now(IST)).toByteArray(Charsets.UTF_8)) }
+    }
+
+    /**
+     * The evening review: each completed session not reviewed yet (the latest [BACKFILL] at most) is scored - every
+     * pattern on the index charts whose outcome is now known, and whether it went its way. A session counts as
+     * completed after 15:35 IST, or on any later day. Learning itself happens on every refresh.
+     */
+    private fun nightlyIfDue(now: Instant = Instant.now()) {
+        val idx = histories.filterKeys { it in StrategyLab.MARKETS }
+        if (idx.isEmpty()) return
+        val t = now.atZone(IST).toLocalDateTime()
+        val have = _state.value.journal.map { it.day }
+        val newest = have.maxOrNull()
+        val days = idx.values.flatMap { it.days }.distinct()
+            .filter { d -> (d.isBefore(t.toLocalDate()) || !t.toLocalTime().isBefore(EVENING)) && (newest == null || d.isAfter(newest)) }
+            .sorted().takeLast(BACKFILL)
+        if (days.isEmpty()) return
+        val charts = idx.flatMap { (m, h) -> listOf(15, 60).map { minutes ->
+            Candles.closed(Candles.fold(h.bars, minutes, m), minutes, h.bars.last().t.plusMinutes(1)) } }
+        val add = days.map { d -> charts.map { book.score(it, d) }.reduce { a, b -> a + b }.let { DayScore(d, it.seen, it.worked) } }
+        _state.update { it.copy(journal = (it.journal + add).takeLast(KEEP_JOURNAL), nightlyAt = now) }
+        saveState()
+    }
+
+    /** After the close (the evening harvest, JarvisAlgo): read the day's candles, learn them and review the session. */
+    suspend fun evening() { if (com.optionslab.app.BuildConfig.JARVIS) refresh() }
+
+    private val EVENING: java.time.LocalTime = java.time.LocalTime.of(15, 35)
+    /** Sessions reviewed at most on the first run; the journal keeps this many; proposals kept. */
+    const val BACKFILL = 20
+    const val KEEP_JOURNAL = 120
+    const val KEEP_PROPOSALS = 40
 
     /** Re-reads the candles, learns from the new ones and rebuilds the snapshots. Never throws. */
     suspend fun refresh() = withContext(Dispatchers.Default) {
@@ -161,7 +219,8 @@ object IraHub {
                     days = days, learned = book.size, problem = if (snaps.isEmpty()) "No market data on this phone yet" else null,
                     liveAt = if (live.isNotEmpty()) Instant.now() else it.liveAt, liveMissing = missing,
                     news = news?.first ?: it.news, newsAt = if (news != null) Instant.now() else it.newsAt,
-                    newsMissing = news?.second ?: it.newsMissing) }
+                    newsMissing = news?.second ?: it.newsMissing, best = book.best()) }
+                nightlyIfDue()
             }.onFailure {
                 _state.update { s -> s.copy(loading = false, problem = "Could not read the market data") }
             }
@@ -176,17 +235,20 @@ object IraHub {
     private fun autoLab() {
         if (!com.optionslab.app.BuildConfig.JARVIS && !testAutoLab) return
         val st = _state.value
+        var tried = false
         for ((m, snap) in st.snaps) {
             if (m !in StrategyLab.MARKETS) continue
             val p = snap.patterns.firstOrNull { StrategyLab.supported(it.kind, m) } ?: continue
             val key = "${p.kind}|$m|${p.minutes}|${p.at.toLocalDate()}"
             val fresh = synchronized(tested) { tested.add(key) }
             if (!fresh) continue
+            tried = true
             val r = lab(p.kind, m, p.minutes) ?: continue
             if (!r.recommended) continue
             val prop = propose(r, "I found a ${p.kind.label} on ${m.label} ${chartWord(p.minutes)} at ${Brain.when_(p.at, m, p.at.toLocalDate())} and backtested it as a strategy. ")
             notifyProposal(prop)
         }
+        if (tried) saveState()
     }
 
     private fun chartWord(minutes: Int) = if (minutes == 60) "1-hour" else "$minutes-minute"
@@ -212,6 +274,7 @@ object IraHub {
         val tail = if (r.recommended) " Approve it to add it as an arm on paper." else " You can still add it as a paper arm, but I don't recommend it."
         _state.update { it.copy(proposals = it.proposals + prop,
             messages = (it.messages + Msg(true, lead + r.summary() + tail, proposal = id)).takeLast(MAX_MESSAGES)) }
+        saveState()
         return prop
     }
 
@@ -243,12 +306,14 @@ object IraHub {
             "You can switch it off there any time." else "Saved ${r.name} in Research → Pine, but could not switch it on ($armed)."
         _state.update { s -> s.copy(proposals = s.proposals.map { if (it.id == id) it.copy(status = Proposal.APPROVED, pineId = item.id) else it },
             messages = (s.messages + Msg(true, text)).takeLast(MAX_MESSAGES)) }
+        saveState()
         return text
     }
 
     fun dismiss(id: Long) {
         _state.update { s -> s.copy(proposals = s.proposals.map { if (it.id == id && it.status == Proposal.NEW) it.copy(status = Proposal.DISMISSED) else it },
             messages = (s.messages + Msg(true, "Dismissed. I won't offer that one again today.")).takeLast(MAX_MESSAGES)) }
+        saveState()
     }
 
     /**
@@ -328,6 +393,7 @@ object IraHub {
         histories = emptyMap()
         synchronized(tested) { tested.clear() }
         bookFile?.delete()
+        stateFile?.delete()
         _state.update { State() }
     }
 

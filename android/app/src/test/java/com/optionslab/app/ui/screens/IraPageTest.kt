@@ -58,6 +58,8 @@ class IraPageTest {
         compose.frames()
         compose.until(20_000, "the data read") { !IraHub.state.value.loading && IraHub.state.value.snaps.isNotEmpty() }
         compose.waitForText("pattern outcomes learned", substring = true)
+        compose.waitForText("How Ira is doing")
+        compose.waitForText("Last session", substring = true)
         compose.onNodeWithText("What is BankNifty doing today?").performSemanticsAction(SemanticsActions.OnClick); compose.frames()
         compose.until(10_000, "an answer") { IraHub.state.value.messages.size == 2 }
         compose.waitForText("BankNifty is at", substring = true)

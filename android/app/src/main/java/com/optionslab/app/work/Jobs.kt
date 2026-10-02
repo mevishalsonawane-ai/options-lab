@@ -328,6 +328,8 @@ object Tasks {
         if (s.healthAlerts) healthCheck(context, s)
         // The ORB evening replay (TODO A8): the day's bars, beside what the paper arms did. No orders.
         runCatching { com.optionslab.app.data.OrbArms.replayIfDue() }
+        // JarvisAlgo: Ira reads the day's candles, learns them and reviews how its patterns did. No orders.
+        runCatching { com.optionslab.app.ira.IraHub.evening() }
     }
 
     fun healthCheck(context: Context, s: AppSettings) {
