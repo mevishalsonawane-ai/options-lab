@@ -46,6 +46,10 @@ import java.util.Locale
 class JarvisVoice : Service() {
     enum class Mode { OFF, LISTENING, AWAKE, THINKING, SPEAKING }
     data class VoiceState(val mode: Mode = Mode.OFF, val problem: String? = null)
+    /** How Jarvis sounds (see [style]). */
+    enum class Style(val label: String, val pitch: Float, val rate: Float) {
+        GIRL("Young girl", 1.6f, 1.08f), WOMAN("Woman", 1.1f, 1.0f), DEEP("Deep", 0.8f, 0.95f)
+    }
 
     companion object {
         const val ACTION_STOP = "com.optionslab.app.ira.JarvisVoice.STOP"
@@ -83,10 +87,6 @@ class JarvisVoice : Service() {
          * How Jarvis sounds. Android's voices are adult ones; a young girl's voice is the phone's voice pitched up and a
          * little quicker (the owner's choice, 2026-10-02).
          */
-        enum class Style(val label: String, val pitch: Float, val rate: Float) {
-            GIRL("Young girl", 1.6f, 1.08f), WOMAN("Woman", 1.1f, 1.0f), DEEP("Deep", 0.8f, 0.95f)
-        }
-
         var style: Style
             get() = runCatching { Style.valueOf(com.optionslab.app.security.SecurePrefs.getString("jarvis.voice.style") ?: "GIRL") }.getOrDefault(Style.GIRL)
             set(v) { runCatching { com.optionslab.app.security.SecurePrefs.put("jarvis.voice.style", v.name) } }
