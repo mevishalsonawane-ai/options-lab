@@ -71,4 +71,33 @@ class IraPageTest {
         compose.onNodeWithText("Forget this conversation").performSemanticsAction(SemanticsActions.OnClick); compose.frames()
         compose.until(5_000, "forgotten") { IraHub.state.value.messages.isEmpty() }
     }
+
+    /** "buy …" on Paper: Review shows the contract, and only Confirm places it; on Live it opens the order review instead. */
+    @Test fun anOrderGoesOnlyThroughConfirmOrTheReview() {
+        val placed = ArrayList<com.optionslab.app.ira.IraOrders.Ticket>(); val reviewed = ArrayList<com.optionslab.app.ira.IraOrders.Ticket>()
+        var live = false
+        val paths = IraOrderPaths({ live }, { 2 }, { placed += it }, { reviewed += it })
+        com.optionslab.app.ira.IraOrders.testListed = { _, _, _ ->
+            listOf(com.optionslab.app.ira.IraOrders.Listed(java.time.LocalDate.now().plusDays(3), 24_000.0, 75))
+        }
+        try {
+            compose.setContent { IraAlgoTheme("light") { IraPage(paths) } }
+            compose.frames()
+            IraHub.ask("buy 1 lot nifty 24000 ce"); compose.frames()
+            compose.waitForText("Ready for review", substring = true)
+            compose.onNodeWithText("Review (paper)").performSemanticsAction(SemanticsActions.OnClick); compose.frames()
+            compose.waitForText("Confirm (paper)")
+            assertTrue("nothing is placed before Confirm", placed.isEmpty())
+            compose.onNodeWithText("Confirm (paper)").performSemanticsAction(SemanticsActions.OnClick); compose.frames()
+            assertEquals(listOf(24_000.0 to com.optionslab.engine.Right.CE), placed.map { it.strike to it.right })
+            compose.waitForText("Sent to the paper account", substring = true)
+            live = true
+            IraHub.ask("sell 1 lot nifty 24000 pe"); compose.frames()
+            compose.waitForText("Review (Live, Zerodha)")
+            compose.onNodeWithText("Review (Live, Zerodha)").performSemanticsAction(SemanticsActions.OnClick); compose.frames()
+            compose.until(5_000, "the review opened") { reviewed.isNotEmpty() }
+            assertEquals(1, placed.size); assertEquals(false, reviewed.single().buy)
+            compose.waitForText("Only the swipe and your PIN send it", substring = true)
+        } finally { com.optionslab.app.ira.IraOrders.testListed = null }
+    }
 }

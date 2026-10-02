@@ -41,6 +41,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.optionslab.app.ira.IraHub
+import com.optionslab.app.ira.IraOrders
 import com.optionslab.app.ira.OrbView
 import com.optionslab.app.ui.components.BrassButton
 import com.optionslab.app.ui.components.LedgerCard
@@ -58,7 +59,7 @@ import com.optionslab.ira.Market as IraMarket
  * kept while the app runs.
  */
 @Composable
-fun IraHome(dashboard: @Composable () -> Unit) {
+fun IraHome(orders: IraOrderPaths? = null, dashboard: @Composable () -> Unit) {
     val p = LocalPalette.current
     var showIra by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(true) }
     Column(Modifier.fillMaxSize()) {
@@ -71,19 +72,19 @@ fun IraHome(dashboard: @Composable () -> Unit) {
                         .clickable { showIra = ira }.padding(vertical = 8.dp))
             }
         }
-        Box(Modifier.weight(1f)) { if (showIra) IraPage() else dashboard() }
+        Box(Modifier.weight(1f)) { if (showIra) IraPage(orders) else dashboard() }
     }
 }
 
 /** Example questions shown before the first one is asked. */
-private val EXAMPLES = listOf("What is BankNifty doing today?", "Nifty levels", "Is gold up today?", "Any news on banks?", "Backtest the breakout on BankNifty 15m", "Any pattern on FinNifty?")
+private val EXAMPLES = listOf("What is BankNifty doing today?", "Nifty levels", "Is gold up today?", "Any news on banks?", "Backtest the breakout on BankNifty 15m", "Any pattern on FinNifty?", "Buy 1 lot Nifty ATM CE")
 
 /**
  * Ira: the orb (the market at a glance) above the conversation. Answers come from IraAlgo's own data only; an order
- * request is shown for review and never sent from here.
+ * request goes through [orders] (the app's own paths) only after the owner confirms it.
  */
 @Composable
-fun IraPage() {
+fun IraPage(orders: IraOrderPaths? = null) {
     val p = LocalPalette.current
     val st by IraHub.state.collectAsState()
     val scope = rememberCoroutineScope()
@@ -121,7 +122,8 @@ fun IraPage() {
             item {
                 LedgerCard(title = "Ira") {
                     Note("Ask about Nifty, BankNifty, FinNifty, Sensex, India VIX or gold. Ira answers only from the market data and news it reads, " +
-                        "and says when it does not know. It never gives buy or sell advice, and never sends an order.")
+                        "and says when it does not know. It never gives buy or sell advice. An order you ask for is sent only after you confirm it " +
+                        "(Paper: Confirm; Live: the order review, swipe and PIN).")
                     val day = st.lastDay?.let { " Latest data: ${it.dayOfMonth} ${it.month.getDisplayName(java.time.format.TextStyle.SHORT, Locale.ENGLISH)} ${it.year}." } ?: ""
                     Note(when {
                         st.loading -> "Reading the market data..."
@@ -140,7 +142,7 @@ fun IraPage() {
                     }
                 }
             }
-            items(st.messages) { m -> Bubble(m) }
+            items(st.messages) { m -> Bubble(m, orders) }
             if (st.messages.isNotEmpty()) item {
                 Text("Forget this conversation", style = Type.label.copy(color = p.inkSoft, fontSize = 13.sp),
                     modifier = Modifier.clickable { IraHub.forgetConversation() }.padding(6.dp))
@@ -155,15 +157,17 @@ fun IraPage() {
 }
 
 @Composable
-private fun Bubble(m: IraHub.Msg) {
+private fun Bubble(m: IraHub.Msg, orders: IraOrderPaths?) {
     val p = LocalPalette.current
     var open by remember { mutableStateOf(false) }
     Column(Modifier.fillMaxWidth(), horizontalAlignment = if (m.fromIra) Alignment.Start else Alignment.End) {
         Text(if (m.fromIra) "IRA" else "YOU", style = Type.label.copy(color = if (m.fromIra) Color(0xFF4AA8FF) else p.inkSoft, fontSize = 10.sp, letterSpacing = 2.sp))
         Text(m.text, style = Type.label.copy(color = p.ink, fontSize = 15.sp),
             modifier = Modifier.background(p.card, RoundedCornerShape(14.dp)).padding(horizontal = 14.dp, vertical = 10.dp))
-        m.order?.let {
-            Note(if (it.missing.isEmpty()) "Order review from Ira comes in a later build; nothing was sent." else "Nothing was sent.")
+        m.order?.let { o ->
+            if (o.missing.isNotEmpty() || o.refusal != null) Note("Nothing was sent.")
+            else if (orders == null) Note("Orders from Ira work on the Home screen; nothing was sent.")
+            else OrderActions(o, orders)
         }
         m.proposal?.let { id -> ProposalActions(id) }
         if (m.fromIra && m.facts.isNotEmpty()) {
@@ -194,6 +198,67 @@ private fun ProposalActions(id: Long) {
             modifier = Modifier.clickable { open = !open })
         if (open) Text(p.result.script, style = Type.label.copy(color = LocalPalette.current.inkSoft, fontSize = 11.sp,
             fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace))
+    }
+}
+
+/**
+ * The app's own order paths, as Ira uses them. [paper] places on the paper account; [review] opens IraAlgo's order
+ * review (swipe and PIN) for Zerodha. Read at the moment of the tap: [live] and [maxLots] from the settings.
+ */
+class IraOrderPaths(val live: () -> Boolean, val maxLots: () -> Int,
+                    val paper: (IraOrders.Ticket) -> Unit, val review: (IraOrders.Ticket) -> Unit)
+
+/** [IraOrderPaths] on the app's [model]: a market order (the review shows the best price for Live), the usual product. */
+fun iraOrderPathsFor(model: com.optionslab.app.ui.AppModel) = with(model) { IraOrderPaths(
+    live = { settings.value.live }, maxLots = { settings.value.guardMaxLots },
+    paper = { t -> paperPlace(t.underlying, t.expiry, t.strike, t.right, if (t.buy) "BUY" else "SELL", t.lots, "MARKET",
+        settings.value.orderProduct, null, null, null, "Ira") },
+    review = { t -> planManual(t.underlying, t.expiry, t.strike, t.right,
+        if (t.buy) com.optionslab.engine.Kite.Side.BUY else com.optionslab.engine.Kite.Side.SELL, t.lots, settings.value.orderProduct, null, null, "Ira") },
+) }
+
+/**
+ * Under an order Ira read: Review looks the contract up (nearest expiry; ATM from the live price). Paper then shows
+ * the contract with Confirm / Cancel; Live opens the order review, where only the swipe and the PIN send it.
+ */
+@Composable
+private fun OrderActions(o: com.optionslab.ira.OrderRequest, orders: IraOrderPaths) {
+    val pal = LocalPalette.current
+    val scope = rememberCoroutineScope()
+    var busy by remember { mutableStateOf(false) }
+    var ticket by remember { mutableStateOf<IraOrders.Ticket?>(null) }
+    var problem by remember { mutableStateOf<String?>(null) }
+    var done by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf<String?>(null) }
+    Column(Modifier.padding(top = 6.dp).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        val t = ticket
+        when {
+            done != null -> Note(done!!)
+            t != null -> LedgerCard(title = "Paper order") {
+                Text(t.title, style = Type.figure.copy(color = if (t.buy) pal.verdigris else pal.oxblood))
+                Note("Market order on the paper account, ${t.lots * t.lotSize} quantity (lot ${t.lotSize}). Nothing is placed until you press Confirm.")
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    BrassButton("Confirm (paper)") { orders.paper(t); ticket = null; done = "Sent to the paper account: ${t.title}. See Trade → Orders." }
+                    BrassButton("Cancel", tone = pal.inkSoft) { ticket = null; done = "Cancelled; nothing was sent." }
+                }
+            }
+            else -> {
+                problem?.let { Note(it) }
+                val live = orders.live()
+                BrassButton(if (busy) "Looking up the contract…" else if (live) "Review (Live, Zerodha)" else "Review (paper)", enabled = !busy) {
+                    busy = true; problem = null
+                    scope.launch {
+                        val r = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                            IraOrders.prepare(o, live, orders.maxLots(), o.market?.let { m -> IraHub.state.value.snaps[m] }?.price)
+                        }
+                        busy = false
+                        r.onSuccess { tk ->
+                            if (live) { orders.review(tk); done = "Opened in the order review: ${tk.title}. Only the swipe and your PIN send it." }
+                            else ticket = tk
+                        }.onFailure { problem = it.message ?: "Could not prepare the order." }
+                    }
+                }
+            }
+        }
     }
 }
 

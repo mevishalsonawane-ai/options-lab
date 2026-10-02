@@ -83,7 +83,7 @@ fun CabinetScreen(model: AppModel, page: String?, onPage: (String?) -> Unit) {
 private fun DrawerPage(model: AppModel, pg: String, onPage: (String?) -> Unit) {
     run {
         when (pg) {
-            "ira" -> IraPage()
+            "ira" -> IraPage(androidx.compose.runtime.remember(model) { iraOrderPathsFor(model) })
             "broker" -> BrokerPage(model)
             "alarms" -> AlarmsPage(model)
             "risk" -> RiskPage(model)

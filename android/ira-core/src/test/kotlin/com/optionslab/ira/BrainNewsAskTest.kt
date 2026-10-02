@@ -135,6 +135,12 @@ class AskTest {
         assertNull(Ask.parse("why the sell off in banks").order)
         assertNull(Ask.parse("where did nifty close").order)
         assertEquals(listOf("which index", "how many lots", "call or put", "which strike"), Ask.parse("buy something").order!!.missing)
+        val atm = assertNotNull(Ask.parse("buy 1 lot nifty atm ce").order)
+        assertTrue(atm.atm); assertNull(atm.strike); assertTrue(atm.missing.isEmpty()); assertEquals("BUY 1 lot Nifty ATM CE", atm.describe())
+        assertFalse(assertNotNull(Ask.parse("buy 1 lot nifty 24500 ce atm").order).atm, "a strike named wins")
+        assertNotNull(Ask.parse("buy 1 lot gold").order!!.refusal)
+        assertNotNull(Ask.parse("buy 1 lot sensex 80000 ce").order!!.refusal)
+        assertNull(Ask.parse("buy 1 lot finnifty 23000 pe").order!!.refusal)
     }
 }
 
@@ -170,9 +176,11 @@ class IraTest {
     @Test fun ordersGoToReview() {
         val a = ira.answer("buy 1 lot banknifty 52000 ce", emptyMap(), emptyList())
         assertNotNull(a.order)
-        assertTrue(a.text.contains("BUY 1 lot BankNifty 52000 CE") && a.text.contains("Nothing is sent until you press Confirm"), a.text)
+        assertTrue(a.text.contains("BUY 1 lot BankNifty 52000 CE") && a.text.contains("nothing is sent until you press Confirm"), a.text)
         assertTrue(ira.answer("buy nifty", emptyMap(), emptyList()).text.startsWith("To prepare that order I need"))
-        assertTrue(ira.answer("buy 2 lots gold", emptyMap(), emptyList()).text.contains("paper only"))
+        val gold = ira.answer("buy 2 lots gold", emptyMap(), emptyList())
+        assertTrue(gold.text.startsWith("I can't place gold orders") && gold.order == null, gold.text)
+        assertNull(ira.answer("buy 1 lot sensex 80000 ce", emptyMap(), emptyList()).order)
     }
 
     @Test fun theNumberCheck() {

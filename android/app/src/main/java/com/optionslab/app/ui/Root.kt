@@ -444,7 +444,7 @@ private fun Main(model: AppModel) {
                                 })
                             }
                             // JarvisAlgo: Home opens on Ira, with the usual dashboard one tap away.
-                            if (com.optionslab.app.BuildConfig.JARVIS) com.optionslab.app.ui.screens.IraHome(dashboard) else dashboard()
+                            if (com.optionslab.app.BuildConfig.JARVIS) com.optionslab.app.ui.screens.IraHome(remember(model) { com.optionslab.app.ui.screens.iraOrderPathsFor(model) }, dashboard) else dashboard()
                         }
                         Tab.CHART -> Box(Modifier.fillMaxSize())   // the chart itself is kept alive below
                         Tab.TRADE -> TradeHub(model, tradePage) { tradePage = it }

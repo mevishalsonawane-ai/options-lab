@@ -10,7 +10,20 @@ enum class Topic { OVERVIEW, WHY, TREND, LEVELS, PATTERNS, NEWS, VOLATILITY, ADV
 data class OrderRequest(
     val market: Market?, val buy: Boolean, val lots: Int?, val strike: Int?, val right: String?,   // "CE" / "PE"
     val missing: List<String>,
-)
+    /** "at the money": the listed strike nearest the index when the order is prepared. */
+    val atm: Boolean = false,
+) {
+    /** Why the app cannot prepare this order at all, or null. Gold has no options here; Sensex options trade on BSE. */
+    val refusal: String? get() = when (market) {
+        Market.GOLD -> "I can't place gold orders: gold trades only through its own buy arms on the Gold page."
+        Market.SENSEX -> "I can't place Sensex orders: its options trade on BSE, and IraAlgo orders go to NSE only."
+        Market.VIX -> "India VIX can't be traded."
+        else -> null
+    }
+
+    /** "BUY 2 lots BankNifty 52000 CE" (or "ATM CE"). */
+    fun describe(): String = "${if (buy) "BUY" else "SELL"} $lots lot${if ((lots ?: 0) > 1) "s" else ""} ${market?.label} ${if (atm) "ATM" else "$strike"} $right"
+}
 
 data class Question(val text: String, val markets: List<Market>, val topics: Set<Topic>, val order: OrderRequest?,
                     /** A pattern named in the words ("backtest the hammer on nifty"), if any. */
@@ -77,11 +90,12 @@ object Ask {
             else -> null
         }
         val strike = Regex(" (\\d{4,6}) ").findAll(t).map { it.groupValues[1].toInt() }.firstOrNull { it >= 1000 }
+        val atm = strike == null && Regex(" (atm|at the money) ").containsMatchIn(t)
         val missing = buildList {
             if (market == null) add("which index")
             if (lots == null) add("how many lots")
-            if (market != Market.GOLD) { if (right == null) add("call or put"); if (strike == null) add("which strike") }
+            if (market != Market.GOLD) { if (right == null) add("call or put"); if (strike == null && !atm) add("which strike") }
         }
-        return OrderRequest(market, buy, lots, strike, right, missing)
+        return OrderRequest(market, buy, lots, strike, right, missing, atm)
     }
 }

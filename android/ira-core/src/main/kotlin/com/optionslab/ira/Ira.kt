@@ -108,10 +108,10 @@ class Ira(private val book: PatternBook = PatternBook()) {
     }
 
     private fun orderAnswer(o: OrderRequest): Answer {
+        o.refusal?.let { return Answer(it, emptyList()) }
         if (o.missing.isNotEmpty()) return Answer("To prepare that order I need: ${o.missing.joinToString(", ")}.", emptyList(), o)
-        val what = if (o.market == Market.GOLD) "${o.lots} lot gold" else "${o.lots} lot${if (o.lots!! > 1) "s" else ""} ${o.market!!.label} ${o.strike} ${o.right}"
-        return Answer("I have filled the order review: ${if (o.buy) "BUY" else "SELL"} $what. Nothing is sent until you press Confirm" +
-            (if (o.market == Market.GOLD) " (gold is paper only)." else " (and enter your PIN in Live)."), emptyList(), o)
+        return Answer("Ready for review: ${o.describe()}, nearest expiry. Tap Review; nothing is sent until you press Confirm " +
+            "(and, in Live, swipe and enter your PIN).", emptyList(), o)
     }
 
     /** Every number written in [text] appears in [facts]: the check a model's answer must pass (rule 4). */
