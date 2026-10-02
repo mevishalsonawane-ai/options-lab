@@ -181,6 +181,18 @@ internal object IraActions {
                     "Alarm set: ${m.label} ${if (above) "above" else "below"} ${"%,.2f".format(java.util.Locale.ENGLISH, lvl)}."
                 }
             }
+            Command.Kind.EVENT_ADD -> {
+                val d = c.day; val n = c.target
+                if (d == null || n.isNullOrBlank()) "Tell me the event and the day: \"add event RBI policy on 5 Dec\"." to null
+                else Commands.describe(c) to suspend { IraEvents.add(d, n); "Noted, Boss: ${n} on $d. I will remind you in the morning check." }
+            }
+            Command.Kind.EVENT_REMOVE -> {
+                val e = IraEvents.owner()
+                if (e.isEmpty()) return "You have not added any events." to null
+                val i = c.number?.let { (it - 1).takeIf { x -> x in e.indices } } ?: Commands.pick(c, e.map { it.name })
+                    ?: return ("Which event? " + e.mapIndexed { n, x -> "${n + 1}. ${x.name} on ${x.day}" }.joinToString("; ") + ".") to null
+                Commands.describe(c, "the event ${e[i].name} on ${e[i].day}") to suspend { IraEvents.remove(e[i]); "Event removed." }
+            }
             Command.Kind.ALARM_REMOVE -> {
                 val a = com.optionslab.app.data.Alarms.all()
                 if (a.isEmpty()) return "There are no alarms to remove." to null

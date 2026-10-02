@@ -322,6 +322,7 @@ object IraHub {
     private fun notifyProposal(p: Proposal) {
         val c = app ?: return
         val r = p.result
+        runCatching { JarvisPopup.show(c, "Boss, a new strategy: ${r.kind.label} on ${r.market.label}", "${r.trades} trades, ${Math.round(r.winRate)}% won over ${r.days} days. Open Jarvis to approve or dismiss.") }
         val money = r.rupees?.let { " Options: ${"%+,.0f".format(java.util.Locale.ENGLISH, it).replace("+", "+Rs ").replace("-", "-Rs ")} a lot." } ?: ""
         runCatching {
             com.optionslab.app.work.Notifier.post(c, NOTIFY_BASE + p.id.toInt(), com.optionslab.app.work.Notifier.IRA,
@@ -367,6 +368,34 @@ object IraHub {
         if (lastBackground?.let { now.isBefore(it.plusSeconds(BACKGROUND_MINUTES * 60)) } == true) return
         lastBackground = now
         refresh()
+        runCatching { watchAlerts() }
+    }
+
+    /** Alerts already given ("type|...|day"), so each is given once. */
+    private val alerted = HashSet<String>()
+
+    /**
+     * Jarvis's watch (JarvisAlgo, every 15 minutes in market hours): India VIX jumping, an index moving a lot or suddenly,
+     * an arm losing half the day's loss limit - each a 3-second pop-up and a line in the conversation, once.
+     */
+    private suspend fun watchAlerts() {
+        val c = app ?: return
+        val s = com.optionslab.app.data.AppSettings.load()
+        val limit = if (s.live) s.guardDailyLoss else s.guardPaperDailyLoss
+        val arms = ArrayList<com.optionslab.ira.Watch.ArmDay>()
+        com.optionslab.app.data.PineScripts.items.value.forEach { x -> com.optionslab.app.data.PineAuto.todayOf(x.id)?.let { arms += com.optionslab.ira.Watch.ArmDay(x.name, it) } }
+        runCatching { com.optionslab.app.data.OrbArms.view().arms }.getOrDefault(emptyList()).forEach { a ->
+            val closed = a.today.filter { !it.open }
+            if (closed.isNotEmpty()) arms += com.optionslab.ira.Watch.ArmDay(a.arm.label, closed.sumOf { (it.grossPnl ?: 0.0) - it.charges })
+        }
+        runCatching { com.optionslab.app.data.Strategies.all() }.getOrDefault(emptyList()).forEach { e -> e.run?.let { r -> arms += com.optionslab.ira.Watch.ArmDay(e.def.name, r.pnlTotal) } }
+        val day = LocalDate.now(IST)
+        val alerts = com.optionslab.ira.Watch.check(_state.value.snaps, histories.mapValues { it.value.bars.takeLast(KEEP_DAYS * 375) }, arms, limit)
+        for (a in alerts) {
+            if (!synchronized(alerted) { alerted.add("${a.key}|$day") }) continue
+            JarvisPopup.show(c, a.title, a.text)
+            reply(a.text)
+        }
     }
     const val BACKGROUND_MINUTES = 15L
     private const val NOTIFY_BASE = 7300

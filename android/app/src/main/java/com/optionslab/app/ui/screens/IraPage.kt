@@ -82,7 +82,7 @@ fun IraHome(orders: IraOrderPaths? = null, dashboard: @Composable () -> Unit) {
 }
 
 /** Example questions shown before the first one is asked. */
-private val EXAMPLES = listOf("What is BankNifty doing today?", "Nifty levels", "Is gold up today?", "Any news on banks?", "Backtest the breakout on BankNifty 15m", "Any pattern on FinNifty?", "Buy 1 lot Nifty ATM CE", "Analyze my orders", "What can you do?")
+private val EXAMPLES = listOf("What is BankNifty doing today?", "Nifty levels", "Is gold up today?", "Any news on banks?", "Backtest the breakout on BankNifty 15m", "Any pattern on FinNifty?", "Buy 1 lot Nifty ATM CE", "Analyze my orders", "Any events this week?", "What can you do?")
 
 /**
  * Ira: the orb (the market at a glance) above the conversation. Answers come from IraAlgo's own data only; an order

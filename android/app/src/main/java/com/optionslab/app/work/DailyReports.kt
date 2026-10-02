@@ -125,7 +125,12 @@ object DailyReports {
             if (pine > 0) lines += "• Pine scripts switched on: $pine"
             lines += "• Jarvis: AI model ${if (com.optionslab.app.ira.IraModel.state.value.status == com.optionslab.app.ira.IraModel.Status.READY) "ready" else "not on the phone"}, " +
                 "voice ${if (com.optionslab.app.ira.JarvisVoice.wanted) "on" else "off"}"
+            com.optionslab.app.ira.IraEvents.upcoming(1).forEach { e -> lines += "• " + com.optionslab.ira.Events.line(e, Market.today()).removeSuffix(".") }
             val title = "Good morning Boss · " + if (bad == 0) "we are set for today's trading" else "$bad thing${if (bad > 1) "s" else ""} need you"
+            runCatching { com.optionslab.app.ira.JarvisPopup.show(context, title, lines.take(3).joinToString(" · ")) }
+            // Listening now: Jarvis says it too.
+            runCatching { com.optionslab.app.ira.JarvisVoice.announce("Good morning, Boss. " + if (bad == 0) "We are set for today's trading." else
+                "$bad thing${if (bad > 1) "s" else ""} need you: " + lines.filter { it.startsWith("✗") }.joinToString(". ") { it.removePrefix("✗ ") } + ".") }
             com.optionslab.app.ira.IraHub.note(com.optionslab.ira.Address.boss("Good morning. " +
                 (if (bad == 0) "We are set for today's trading. " else "$bad thing${if (bad > 1) "s" else ""} need you before 09:15. ") +
                 lines.joinToString(" ") { it.removePrefix("✓ ").removePrefix("✗ ").removePrefix("• ").trimEnd('.') + "." }))

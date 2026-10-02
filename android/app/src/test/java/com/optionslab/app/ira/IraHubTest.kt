@@ -359,6 +359,7 @@ class IraHubTest : RobolectricTest() {
         val ans = IraHub.state.value.messages.last()
         assertTrue(ans.text, ans.text.startsWith("Tap Confirm to stop ") || ans.text.startsWith("There are no strategies or arms") || ans.text.startsWith("Which one?"))
         ans.action?.let { IraHub.cancelAction(it) }
+        Unit
     }
 
     /** A secret said or typed is never kept: not in the conversation, not in the saved history. */
@@ -369,5 +370,18 @@ class IraHubTest : RobolectricTest() {
         kotlinx.coroutines.delay(800)
         IraHub.init(context)
         assertTrue(IraHub.state.value.messages.none { it.text.contains("hunter2") || it.text.contains("4111") })
+    }
+
+    /** "Add event RBI policy on 5 Dec" is kept and comes back in "any events"; the Fed's 2026 days are built in. */
+    @Test fun eventsAreNotedAndListed() = runBlocking {
+        IraHub.ask("add event RBI policy on 5 Dec")
+        waitFor("the confirm") { IraHub.state.value.pending.isNotEmpty() }
+        IraHub.confirm(IraHub.state.value.pending.single())
+        assertTrue(IraHub.state.value.messages.last().text, IraHub.state.value.messages.last().text.startsWith("Noted, Boss: rbi policy"))
+        assertEquals("Rbi policy", IraEvents.owner().single().name)
+        val upcoming = IraEvents.upcoming(400).map { it.name }
+        assertTrue(upcoming.toString(), "Rbi policy" in upcoming)
+        IraEvents.remove(IraEvents.owner().single())
+        assertTrue(IraEvents.owner().isEmpty())
     }
 }

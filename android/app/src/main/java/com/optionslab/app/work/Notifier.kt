@@ -54,6 +54,8 @@ object Notifier {
     const val IRA = "ira.strategies"
     /** JarvisAlgo only: the line shown while Jarvis listens for its name. */
     const val VOICE = "ira.voice"
+    /** JarvisAlgo only: Jarvis's short pop-ups (heads-up, gone after a few seconds). */
+    const val POPUP = "ira.popup"
     private val ALWAYS = setOf(BUY, SELL, APPROVAL, IRA)
 
     const val ID_LIVE = 1001
@@ -126,6 +128,12 @@ object Notifier {
         if (com.optionslab.app.BuildConfig.JARVIS) nm.createNotificationChannel(
             NotificationChannel(VOICE, "Jarvis in the background", NotificationManager.IMPORTANCE_LOW).apply {
                 description = "Shown while Jarvis listens for its name or downloads its model, with a Stop or Cancel button. What it hears stays on the phone."
+                lockscreenVisibility = android.app.Notification.VISIBILITY_PRIVATE
+                setShowBadge(false); setSound(null, null); enableVibration(false)
+            })
+        if (com.optionslab.app.BuildConfig.JARVIS) nm.createNotificationChannel(
+            NotificationChannel(POPUP, "Jarvis pop-ups", NotificationManager.IMPORTANCE_HIGH).apply {
+                description = "Jarvis's short messages at the top of the screen: alerts, results, the morning check. They hide after a few seconds."
                 lockscreenVisibility = android.app.Notification.VISIBILITY_PRIVATE
                 setShowBadge(false); setSound(null, null); enableVibration(false)
             })

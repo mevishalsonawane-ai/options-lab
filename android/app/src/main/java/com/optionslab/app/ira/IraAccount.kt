@@ -149,6 +149,8 @@ internal object IraAccount {
                     com.optionslab.app.data.StaticIp.registered?.let { "Registered static IP: $it." },
                 )
             }
+            if (wants(Section.EVENTS)) out[Section.EVENTS] = IraEvents.upcoming().map { com.optionslab.ira.Events.line(it, today) }
+                .ifEmpty { listOf("No events in the next two weeks.") }
             AppView(mode, out)
         }.getOrNull()
     }

@@ -7,12 +7,13 @@ package com.optionslab.ira
  * still apply. Pure: words in, the command out.
  */
 data class Command(val kind: Kind, val target: String? = null, val number: Int? = null,
-                   val market: Market? = null, val above: Boolean? = null, val level: Double? = null) {
+                   val market: Market? = null, val above: Boolean? = null, val level: Double? = null,
+                   /** An event's day ([Kind.EVENT_ADD]). */ val day: java.time.LocalDate? = null) {
     enum class Kind(val reduces: Boolean) {
         STOP_ALL(true), START_ALL(false), STOP_ONE(true), START_ONE(false),
         CANCEL_ALL(true), CANCEL_ONE(true), CLOSE_ALL(true), CLOSE_ONE(true),
         KILL_ON(true), KILL_OFF(false), MODE_PAPER(true), MODE_LIVE(false),
-        ALARM_ADD(false), ALARM_REMOVE(true),
+        ALARM_ADD(false), ALARM_REMOVE(true), EVENT_ADD(false), EVENT_REMOVE(true),
     }
 }
 
@@ -35,6 +36,11 @@ object Commands {
             has(" (switch|go|change|move) (to |back to )?live( mode| trading)? | live mode on | (start|use) live (mode|trading) ") -> return Command(Command.Kind.MODE_LIVE)
             has(" (switch|go|change|move) (to |back to )?paper( mode| trading)? | paper mode on | (start|use) paper (mode|trading) ") -> return Command(Command.Kind.MODE_PAPER)
         }
+        // Events: "add event RBI policy on 5 Dec", "remove event 2".
+        Regex(" (add|note|remember|mark) (an |the )?event (.+?) (on|for) (.+) $").find(s)?.let { m ->
+            return Command(Command.Kind.EVENT_ADD, target = m.groupValues[3].trim(), day = Events.date(m.groupValues[5], java.time.LocalDate.now(java.time.ZoneId.of("Asia/Kolkata"))))
+        }
+        if (has(" (remove|delete|cancel|clear) (the |my )?event")) return Command(Command.Kind.EVENT_REMOVE, number = num(" event (\\d+) "), target = rest(s, " event "))
         // Alarms: "alert me when nifty goes above 25000", "set an alarm on banknifty below 51000", "remove alarm 2".
         if (has(" (remove|delete|cancel|clear) (the |my )?(last )?(alarm|alert)s? ")) {
             return Command(Command.Kind.ALARM_REMOVE, number = num(" (?:alarm|alert) (\\d+) "), target = if (has(" last ")) "last" else null)
@@ -109,5 +115,7 @@ object Commands {
         Command.Kind.MODE_LIVE -> "switch to Live mode (real Zerodha orders)"
         Command.Kind.ALARM_ADD -> "set an alarm: ${c.market?.label ?: "?"} ${if (c.above == false) "below" else "above"} ${c.level?.let { "%,.2f".format(java.util.Locale.ENGLISH, it) } ?: "?"}"
         Command.Kind.ALARM_REMOVE -> "remove ${name ?: "that alarm"}"
+        Command.Kind.EVENT_ADD -> "note the event \"${c.target}\" on ${c.day ?: "?"}"
+        Command.Kind.EVENT_REMOVE -> "remove ${name ?: "that event"}"
     }
 }

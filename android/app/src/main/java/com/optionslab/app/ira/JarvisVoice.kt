@@ -56,6 +56,18 @@ class JarvisVoice : Service() {
         private const val ID = 1050
         /** How long "Jarvis" alone keeps it awake for the question. */
         private const val AWAKE_MS = 8_000L
+        /** After an answer, a question without "Jarvis" is still heard for this long (questions only, never an action). */
+        private const val FOLLOW_MS = 30_000L
+        /** The running service, to speak a notice (the morning briefing). */
+        @Volatile private var instance: java.lang.ref.WeakReference<JarvisVoice>? = null
+
+        /** Speaks [text] if Jarvis is listening now; false when it is not. */
+        fun announce(text: String): Boolean {
+            val v = instance?.get() ?: return false
+            v.main.post { v.say(text, "answer") }
+            return true
+        }
+
         /** The utterance after which the service stops ("Jarvis, stop listening"). */
         private const val STOP_AFTER = "stop"
 
@@ -140,6 +152,7 @@ class JarvisVoice : Service() {
             _state.value = VoiceState(problem = "Android did not let Jarvis listen in the background; open JarvisAlgo to start it again.")
             stopSelf(); return START_NOT_STICKY
         }
+        instance = java.lang.ref.WeakReference(this)
         if (rec == null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             rec = SpeechRecognizer.createOnDeviceSpeechRecognizer(this).also { it.setRecognitionListener(listener) }
             tts = TextToSpeech(this) { status -> main.post { voiceReady = status == TextToSpeech.SUCCESS && pickOfflineVoice() } }
@@ -224,7 +237,14 @@ class JarvisVoice : Service() {
             Wake.Heard.Ignore -> again()
             Wake.Heard.Awake -> { awakeUntil = SystemClock.elapsedRealtime() + AWAKE_MS; say("Yes, Boss?") }
             Wake.Heard.Stop -> { wanted = false; say("Going to sleep, Boss. Switch me on again in JarvisAlgo.", STOP_AFTER) }
-            is Wake.Heard.Ask -> { awakeUntil = 0; answer(h.question) }
+            is Wake.Heard.Ask -> {
+                awakeUntil = 0
+                // A follow-up (no "Jarvis" in it) may ask, never act: trades and commands need the name, so talk nearby cannot trigger one.
+                val named = alternatives.any { Regex("\\bj[ae]rv[ia]s").containsMatchIn(it.lowercase()) }
+                val topics = com.optionslab.ira.Ask.parse(h.question).topics
+                if (!named && (com.optionslab.ira.Topic.COMMAND in topics || com.optionslab.ira.Topic.ORDER in topics)) say("Boss, say Jarvis first for that.")
+                else answer(h.question)
+            }
         }
     }
 
@@ -247,7 +267,7 @@ class JarvisVoice : Service() {
                 o != null && o.missing.isEmpty() && o.refusal == null -> "I have put that order on the Ira screen. Nothing is sent until you confirm it there."
                 a.action != null -> "Tap Confirm on the Ira screen to do that."
                 else -> com.optionslab.ira.Address.boss(Wake.spoken(a.text))
-            })
+            }, "answer")
         }
     }
 
@@ -263,13 +283,16 @@ class JarvisVoice : Service() {
 
     private fun afterSpeech(id: String?) {
         if (stopped) return
-        if (id == STOP_AFTER) stopSelf() else again(150)
+        if (id == STOP_AFTER) { stopSelf(); return }
+        if (id == "answer") awakeUntil = SystemClock.elapsedRealtime() + FOLLOW_MS   // a follow-up needs no "Jarvis"
+        again(150)
     }
 
     private fun giveUp(why: String) { _state.value = VoiceState(problem = why); stopSelf() }
 
     override fun onDestroy() {
         stopped = true
+        if (instance?.get() === this) instance = null
         main.removeCallbacksAndMessages(null)
         runCatching { rec?.destroy() }; rec = null
         runCatching { tts?.stop(); tts?.shutdown() }; tts = null
