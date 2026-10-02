@@ -28,10 +28,37 @@ object Holidays {
     /** [extra]: special sessions NSE calls on a weekend (budget day, a live-site drill), added by hand. */
     data class Book(val fetched: LocalDate?, val nse: Map<LocalDate, String>, val added: Set<LocalDate>, val removed: Set<LocalDate>,
                     val extra: Set<LocalDate> = emptySet()) {
-        fun holiday(d: LocalDate) = (d in nse || d in added) && d !in removed
+        /** NSE's list where it covers the day's year, else the built-in one ([BUILT_IN]): a failed fetch no longer opens a holiday. */
+        private fun listed(d: LocalDate): String? =
+            nse[d] ?: if (nse.keys.none { it.year == d.year }) BUILT_IN[d] else null
+        fun holiday(d: LocalDate) = (listed(d) != null || d in added) && d !in removed
         fun upcoming(from: LocalDate): List<Pair<LocalDate, String>> =
-            ((nse.keys + added) - removed).filter { !it.isBefore(from) }.sorted().map { it to (nse[it] ?: "added by you") }
+            ((nse.keys + BUILT_IN.keys.filter { listed(it) != null } + added) - removed).filter { !it.isBefore(from) }.sorted()
+                .map { it to (listed(it) ?: "added by you") }
     }
+
+    /**
+     * NSE's published trading holidays (weekdays only), used for a year NSE's own list has not been fetched for: NSE
+     * often refuses apps, and on 2 Oct 2026 a phone with no fetched list showed "Market open" and ran the arms. The
+     * owner can still remove a date or add one in More → Schedule.
+     */
+    val BUILT_IN: Map<LocalDate, String> = mapOf(
+        LocalDate.of(2026, 1, 26) to "Republic Day",
+        LocalDate.of(2026, 3, 3) to "Holi",
+        LocalDate.of(2026, 3, 26) to "Shri Ram Navami",
+        LocalDate.of(2026, 3, 31) to "Shri Mahavir Jayanti",
+        LocalDate.of(2026, 4, 3) to "Good Friday",
+        LocalDate.of(2026, 4, 14) to "Dr. Baba Saheb Ambedkar Jayanti",
+        LocalDate.of(2026, 5, 1) to "Maharashtra Day",
+        LocalDate.of(2026, 5, 28) to "Bakri Id",
+        LocalDate.of(2026, 6, 26) to "Muharram",
+        LocalDate.of(2026, 9, 14) to "Ganesh Chaturthi",
+        LocalDate.of(2026, 10, 2) to "Mahatma Gandhi Jayanti",
+        LocalDate.of(2026, 10, 20) to "Dussehra",
+        LocalDate.of(2026, 11, 10) to "Diwali Balipratipada",
+        LocalDate.of(2026, 11, 24) to "Prakash Gurpurb Sri Guru Nanak Dev",
+        LocalDate.of(2026, 12, 25) to "Christmas",
+    )
 
     @Volatile private var cache: Book? = null
 

@@ -568,6 +568,7 @@ private fun HolidaysCard(model: AppModel) {
     LedgerCard(title = "Market holidays") {
         val up = h.upcoming(com.optionslab.app.data.Market.today())
         if (up.isEmpty()) Note("No holiday list yet. Without one, a holiday is treated as a trading day: the watch runs and alarms fire.")
+        else if (h.fetched == null) Note("NSE's list has not been fetched yet: these are the app's built-in NSE dates.")
         up.take(12).forEach { (d, name) ->
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("${d.format(DateTimeFormatter.ofPattern("EEE d MMM yyyy"))} · $name", style = Type.bodySmall.copy(color = p.ink), modifier = Modifier.weight(1f))

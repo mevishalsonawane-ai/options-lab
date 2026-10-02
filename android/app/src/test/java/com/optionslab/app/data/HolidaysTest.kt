@@ -35,12 +35,27 @@ class HolidaysTest : RobolectricTest() {
         assertTrue(Holidays.stale(monday))
     }
 
+    @Test fun withoutNsesListTheBuiltInHolidaysCloseTheMarket() {
+        val gandhi = LocalDate.of(2026, 10, 2)
+        assertTrue("nothing fetched: the built-in list", Holidays.isHoliday(gandhi))
+        assertFalse(Market.isTradingDay(gandhi))
+        assertEquals(gandhi to "Mahatma Gandhi Jayanti", Holidays.book().upcoming(LocalDate.of(2026, 10, 1)).first())
+        // The owner can still overrule it.
+        Holidays.remove(gandhi)
+        assertTrue(Market.isTradingDay(gandhi))
+        Holidays.add(gandhi)
+        // A fetched NSE list for the year replaces the built-in one.
+        writeNse(LocalDate.of(2026, 9, 20), mapOf(LocalDate.of(2026, 10, 20) to "Dussehra"))
+        assertFalse(Holidays.isHoliday(gandhi))
+        assertTrue(Holidays.isHoliday(LocalDate.of(2026, 10, 20)))
+    }
+
     @Test fun holidaysAddedByHandCloseTheMarketAndCanBeUndone() {
         Holidays.add(monday)
         assertTrue(Holidays.isHoliday(monday))
         assertFalse(Market.isTradingDay(monday))
-        assertEquals(listOf(monday to "added by you"), Holidays.book().upcoming(monday.minusDays(1)))
-        assertTrue("past days are not upcoming", Holidays.book().upcoming(monday.plusDays(1)).isEmpty())
+        assertEquals(monday to "added by you", Holidays.book().upcoming(monday.minusDays(1)).first())
+        assertTrue("past days are not upcoming", Holidays.book().upcoming(monday.plusDays(1)).none { it.first == monday })
         restart()
         assertTrue("kept on disk", Holidays.isHoliday(monday))
         Holidays.remove(monday)

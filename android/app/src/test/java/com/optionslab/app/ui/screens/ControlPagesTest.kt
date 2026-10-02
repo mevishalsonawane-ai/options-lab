@@ -640,9 +640,12 @@ class ControlPagesTest {
     // ---- Schedules & notices -------------------------------------------------------------------------
 
     @Test fun holidaysAreAddedByHandAndRemoved() {
+        // The built-in dates are taken out first, so the one added by hand is the only row (and its ✕ the only one).
+        Holidays.BUILT_IN.keys.forEach { Holidays.remove(it) }
+        model.holidays.value = Holidays.book()
         show { SchedulePage(model) }
         compose.waitForText("Market holidays")
-        compose.onNodeWithText("No holiday list yet", substring = true).assertExists()
+        compose.onNodeWithText("never").assertExists()                 // NSE's list not fetched (the built-in dates may show)
         val label = "Add a holiday (yyyy-mm-dd)"
         field(label, "2026-13-40")
         compose.onNodeWithText("Add").assertIsNotEnabled()
@@ -654,7 +657,7 @@ class ControlPagesTest {
         compose.waitForText("added by you", substring = true)
         tap("✕")
         assertFalse(Holidays.isHoliday(day))
-        compose.waitForText("No holiday list yet", substring = true)
+        compose.waitUntil(5_000) { compose.onAllNodesWithText("added by you", substring = true).fetchSemanticsNodes().isEmpty() }
     }
 
     @Test fun notificationsTheDayAndAppearanceAreSaved() {
