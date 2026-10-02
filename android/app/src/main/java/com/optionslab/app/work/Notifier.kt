@@ -37,6 +37,12 @@ import com.optionslab.app.data.AppSettings
 object Notifier {
     /** The ongoing watch (a foreground service must show one): minimum importance, so it stays collapsed with no status-bar icon. */
     const val LIVE = "watch"
+    /**
+     * IraGoldAlgo's always-on service: Android requires a notification for it, so it goes to a channel created switched
+     * OFF - nothing is shown (the owner wants buy / sell notifications only); the app then appears only under the
+     * system's "Active apps".
+     */
+    const val GOLD_BG = "gold.background"
     const val RISK = "risk"
     const val SCHEDULE = "schedule"
     const val HEALTH = "health"
@@ -56,7 +62,7 @@ object Notifier {
         nm.deleteNotificationChannel("live")
         if (com.optionslab.app.BuildConfig.GOLD) {
             // IraGoldAlgo: buys and sells, and the silent line Android requires for the always-on service - nothing else.
-            listOf(APPROVAL, RISK, SCHEDULE, HEALTH).forEach { nm.deleteNotificationChannel(it) }
+            listOf(APPROVAL, RISK, SCHEDULE, HEALTH, LIVE).forEach { nm.deleteNotificationChannel(it) }
             nm.createNotificationChannels(listOf(
                 NotificationChannel(BUY, "Buy", NotificationManager.IMPORTANCE_HIGH).apply {
                     description = "A paper buy by a gold arm"; lockscreenVisibility = android.app.Notification.VISIBILITY_PRIVATE
@@ -64,9 +70,8 @@ object Notifier {
                 NotificationChannel(SELL, "Sell", NotificationManager.IMPORTANCE_HIGH).apply {
                     description = "A paper sell by a gold arm"; lockscreenVisibility = android.app.Notification.VISIBILITY_PRIVATE
                 },
-                NotificationChannel(LIVE, "Running in the background", NotificationManager.IMPORTANCE_MIN).apply {
-                    description = "Android requires this silent line while the arms are checked in the background. You can turn this " +
-                        "channel off: the app keeps running and the buy / sell notifications still come."
+                NotificationChannel(GOLD_BG, "Running in the background", NotificationManager.IMPORTANCE_NONE).apply {
+                    description = "Off: the background checks run without showing anything. Only buys and sells are notified."
                     lockscreenVisibility = android.app.Notification.VISIBILITY_SECRET
                     setShowBadge(false); setSound(null, null); enableVibration(false)
                 },

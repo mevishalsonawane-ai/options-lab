@@ -109,7 +109,7 @@ class GoldService : android.app.Service() {
 
     private fun show(): Boolean {
         val (title, line) = text()
-        val n = Notifier.builder(this, Notifier.LIVE, title, line)
+        val n = Notifier.builder(this, Notifier.GOLD_BG, title, line)
             .setOngoing(true).setOnlyAlertOnce(true).setAutoCancel(false).setSilent(true).build()
         val type = if (android.os.Build.VERSION.SDK_INT >= 34) android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
             else if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC else 0
