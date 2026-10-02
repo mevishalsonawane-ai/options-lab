@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -140,7 +141,10 @@ fun IraPage(orders: IraOrderPaths? = null) {
                 verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 st.snaps[focus]?.let { snap -> Text(headline(snap), style = Type.label.copy(color = Color(0xFFB8C0E8), fontSize = 12.sp)) }
                 val waiting = st.pending.size
-                BrassButton(if (waiting > 0) "Open chat · $waiting waiting for you" else "Open chat") { chat = true }
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                    MicButton("🎙  Talk")
+                    BrassButton(if (waiting > 0) "Open chat · $waiting waiting" else "Open chat") { chat = true }
+                }
             }
         }
         if (com.optionslab.app.BuildConfig.JARVIS) ModelAsk()
@@ -149,7 +153,9 @@ fun IraPage(orders: IraOrderPaths? = null) {
     Column(Modifier.fillMaxSize()) {
         if (com.optionslab.app.BuildConfig.JARVIS) Text("‹  Back to Jarvis", style = Type.label.copy(color = Color(0xFF4AA8FF), fontSize = 14.sp),
             modifier = Modifier.fillMaxWidth().background(Color.Black).clickable { chat = false }.padding(horizontal = 14.dp, vertical = 8.dp))
-        Box(Modifier.fillMaxWidth().height(280.dp).background(Color.Black)) {
+        // The keyboard is up: the globe steps aside so the question box and Ask keep their room.
+        val imeOpen = androidx.compose.foundation.layout.WindowInsets.ime.getBottom(androidx.compose.ui.platform.LocalDensity.current) > 0
+        if (!imeOpen) Box(Modifier.fillMaxWidth().height(280.dp).background(Color.Black)) {
             val s = st.snaps[focus]
             // Tapping the globe in the chat hides the chat again (JarvisAlgo).
             Orb(vol = orbVol(st.snaps), trend = orbTrend(s), mode = if (mode == 0 && text.isNotEmpty()) 1 else mode,
@@ -194,10 +200,13 @@ fun IraPage(orders: IraOrderPaths? = null) {
                     modifier = Modifier.clickable { IraHub.forgetConversation() }.padding(6.dp))
             }
         }
-        Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            OutlinedTextField(text, { text = it.take(300) }, placeholder = { Text("Ask Ira about the market") }, singleLine = true, modifier = Modifier.weight(1f))
+        Row(Modifier.fillMaxWidth().heightIn(min = 72.dp).padding(horizontal = 14.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            OutlinedTextField(text, { text = it.take(300) }, placeholder = { Text("Ask Ira about the market") }, singleLine = true, modifier = Modifier.weight(1f),
+                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Send),
+                keyboardActions = androidx.compose.foundation.text.KeyboardActions(onSend = { send(text) }))
             Spacer(Modifier.width(8.dp))
-            BrassButton("Ask", enabled = text.isNotBlank()) { send(text) }
+            if (com.optionslab.app.BuildConfig.JARVIS && text.isBlank()) MicButton("🎙")
+            else BrassButton("Ask", enabled = text.isNotBlank()) { send(text) }
         }
     }
 }
@@ -659,7 +668,7 @@ private fun headline(s: Snapshot): String =
 @Composable
 private fun Orb(vol: Float, trend: Float, mode: Int, onTap: (() -> Unit)? = null) {
     if (Build.FINGERPRINT == "robolectric") {
-        Canvas(Modifier.fillMaxSize()) {
+        Canvas(Modifier.fillMaxSize().let { m -> if (onTap != null) m.clickable { onTap() } else m }) {
             val r = size.minDimension * 0.32f
             for (i in 0 until 400) {
                 val a = i * 2.39996; val y = 1 - (i / 399.0) * 2; val rr = kotlin.math.sqrt(1 - y * y)
@@ -680,6 +689,30 @@ private fun Orb(vol: Float, trend: Float, mode: Int, onTap: (() -> Unit)? = null
         }
         owner.lifecycle.addObserver(obs)
         onDispose { owner.lifecycle.removeObserver(obs); v?.onPause() }
+    }
+}
+
+/**
+ * The mic: tap and talk to Jarvis, no "Jarvis" needed - it says "Yes, Boss?" and answers aloud. With listening off it
+ * listens for that one question only. Asks for the microphone the first time.
+ */
+@Composable
+private fun MicButton(label: String) {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    var note by remember { mutableStateOf<String?>(null) }
+    val ask = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestPermission()) { ok ->
+        if (ok) JarvisVoice.talk(ctx) else note = "Jarvis needs the microphone to hear you."
+    }
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        BrassButton(label) {
+            note = null
+            when {
+                !JarvisVoice.available(ctx) -> note = "This phone has no on-device speech recognizer (Android 12 or later needed)."
+                !JarvisVoice.permitted(ctx) -> ask.launch(android.Manifest.permission.RECORD_AUDIO)
+                !JarvisVoice.talk(ctx) -> note = "Jarvis could not start listening; try again."
+            }
+        }
+        note?.let { Text(it, style = Type.label.copy(color = Color(0xFFB8C0E8), fontSize = 11.sp)) }
     }
 }
 

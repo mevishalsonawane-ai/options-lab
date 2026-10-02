@@ -690,6 +690,8 @@ object IraHub {
         // Secrets never go further than this line: not into the conversation, the saved history or the model.
         val q = com.optionslab.ira.Secrets.redact(text.trim())
         if (q.isEmpty()) return
+        // A new question: the model stops polishing the last answer (it stands as shown).
+        IraModel.stopWriting()
         val parsed = Ask.parse(q)
         if (Topic.BACKTEST in parsed.topics) { backtestAsked(q, parsed); return }
         if (Topic.ACCOUNT in parsed.topics) { accountAsked(q); return }

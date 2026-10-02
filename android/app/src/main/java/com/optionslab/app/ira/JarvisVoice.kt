@@ -122,6 +122,18 @@ class JarvisVoice : Service() {
 
         fun stop(context: Context) { context.stopService(Intent(context, JarvisVoice::class.java)) }
 
+        const val ACTION_TALK = "com.optionslab.app.ira.JarvisVoice.TALK"
+
+        /**
+         * The mic button: Jarvis says "Yes, Boss?" and takes the next sentence as the question, no "Jarvis" needed.
+         * With listening off it listens just for that one question, then stops again. False when it cannot listen.
+         */
+        fun talk(context: Context): Boolean {
+            if (!available(context) || !permitted(context)) return false
+            return runCatching { ContextCompat.startForegroundService(context, Intent(context, JarvisVoice::class.java).setAction(ACTION_TALK)) }
+                .onFailure { _state.value = VoiceState(problem = "Android did not let Jarvis listen; try again with the app open.") }.isSuccess
+        }
+
         /**
          * How Jarvis sounds. Android's voices are adult ones; a young girl's voice is the phone's voice pitched up and a
          * little quicker (the owner's choice, 2026-10-02).
@@ -198,6 +210,9 @@ class JarvisVoice : Service() {
     @Volatile private var stoppedByUs = false
     /** The recognizer's turn began while Jarvis was talking: its words may be Jarvis's own. */
     @Volatile private var turnInSpeech = false
+    /** Started by the mic button with listening off: stop after the one question. */
+    @Volatile private var oneShot = false
+    private var talkAt = 0L
     private var listenedAt = 0L
     private var spokeAt = 0L
     /** Nothing may stick: a recognizer turn that never ends, or speech that never reports its end, is reset. */
@@ -207,6 +222,8 @@ class JarvisVoice : Service() {
             val now = SystemClock.elapsedRealtime()
             if (listening && now - listenedAt > 25_000) { runCatching { rec?.cancel() }; listening = false; endTap(); again() }
             if (speaking && now - spokeAt > 60_000) { speaking = false; again() }
+            // The mic button's one question was asked and answered (or never came): listening stops again.
+            if (oneShot && !speaking && !awake() && _state.value.mode != Mode.THINKING && now - talkAt > 14_000) { stopSelf(); return }
             if (!listening && !speaking && !held && _state.value.mode != Mode.THINKING) again()
             main.postDelayed(this, 5_000)
         }
@@ -230,6 +247,9 @@ class JarvisVoice : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == ACTION_STOP) { wanted = false; stopSelf(); return START_NOT_STICKY }
+        // The mic button with listening off: this one question only.
+        val talkNow = intent?.action == ACTION_TALK
+        if (talkNow && rec == null) oneShot = !wanted
         val why = when {
             !com.optionslab.app.BuildConfig.JARVIS -> "Voice is in JarvisAlgo only."
             !permitted(this) -> "Jarvis needs the microphone permission to listen."
@@ -262,6 +282,11 @@ class JarvisVoice : Service() {
                     kotlinx.coroutines.delay(30_000)
                 }
             }
+        }
+        if (talkNow) {
+            talkAt = SystemClock.elapsedRealtime()
+            // Wait for the voice to be ready (the first time), then ask.
+            main.postDelayed({ awakeUntil = SystemClock.elapsedRealtime() + AWAKE_MS + 4_000; say("Yes, Boss?") }, if (voiceReady) 0L else 800L)
         }
         return START_STICKY
     }

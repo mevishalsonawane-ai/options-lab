@@ -111,6 +111,15 @@ internal object IraAccount {
                 out[Section.ORDERS] = orders; out[Section.POSITIONS] = pos; out[Section.PNL] = pnl; out[Section.FUNDS] = funds
             }
 
+            // No session today (a holiday or a weekend): "today's P&L" also gives the last session's.
+            val closedDay = !com.optionslab.app.data.Market.isTradingDay(today)
+            if (closedDay && Section.PNL in sections && Section.HISTORY !in sections) {
+                val last = listOf(false, true).flatMap { live ->
+                    val days = com.optionslab.app.data.DailyPnl.all(live).mapValues { it.value.pnl to it.value.trades }
+                    if (!live || days.isNotEmpty()) AppFacts.history(if (live) "Zerodha" else "Paper", days, today).take(1) else emptyList()
+                }
+                out[Section.PNL] = listOf("No trading today: the market is closed.") + last + out[Section.PNL].orEmpty()
+            }
             if (wants(Section.HISTORY)) {
                 val h = ArrayList<String>()
                 for (live in listOf(false, true)) {

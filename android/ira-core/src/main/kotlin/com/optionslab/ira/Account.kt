@@ -129,6 +129,9 @@ object AppAnswers {
         if (Section.EVENTS in out && Regex(" (event|events|fed|fomc|rbi|budget|cpi) ").containsMatchIn(t)) out.remove(Section.HISTORY)
         if (Section.FLOWS in out || Section.CHAIN in out) { out.remove(Section.HISTORY); out.remove(Section.STATUS) }
         if (Section.STUDY in out) { out.remove(Section.STRATEGIES); out.remove(Section.HISTORY); out.remove(Section.STATUS) }
+        // "My last P&L", "previous day's profit": the last session, from the record.
+        if (Regex(" (last|previous|yesterday|yesterday s|last session s|last day s|last trading day s) (p l|pnl|profit|loss|day|session|result)").containsMatchIn(t) &&
+            Regex(" (p l|pnl|profit|loss|made|lost|result) ").containsMatchIn(t)) { out.remove(Section.PNL); out += Section.HISTORY }
         if (Section.REVIEW in out) { out.remove(Section.HISTORY); out.remove(Section.ORDERS); out.remove(Section.PNL) }
         if (out.isEmpty() || out == setOf(Section.STATUS) && Regex(" (how am i doing|how did i do|my account|account) ").containsMatchIn(t))
             out += listOf(Section.PNL, Section.POSITIONS, Section.ORDERS, Section.STRATEGIES)

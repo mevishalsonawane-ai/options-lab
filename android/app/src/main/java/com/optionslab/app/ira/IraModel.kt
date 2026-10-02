@@ -164,7 +164,7 @@ object IraModel {
                     _state.update { it.copy(loaded = true, message = null) }
                 }
                 val watchdog = scope.launch { delay(TIMEOUT_MS); LlmNative.cancel() }
-                val bytes = try { LlmNative.generate(handle, Writer.prompt(question, facts, draft), MAX_TOKENS) } finally { watchdog.cancel() }
+                val bytes = try { gently { LlmNative.generate(handle, Writer.prompt(question, facts, draft), MAX_TOKENS) } } finally { watchdog.cancel() }
                 bytes?.let { Writer.check(String(it, Charsets.UTF_8), facts, draft) }
             } finally {
                 _state.update { it.copy(writing = false) }
@@ -191,7 +191,7 @@ object IraModel {
                     _state.update { it.copy(loaded = true, message = null) }
                 }
                 val watchdog = scope.launch { delay(TIMEOUT_MS) ; LlmNative.cancel() }
-                val bytes = try { LlmNative.generate(handle, prompt, maxTokens) } finally { watchdog.cancel() }
+                val bytes = try { gently { LlmNative.generate(handle, prompt, maxTokens) } } finally { watchdog.cancel() }
                 bytes?.let { String(it, Charsets.UTF_8) }
             } finally {
                 _state.update { it.copy(writing = false) }
@@ -231,10 +231,23 @@ object IraModel {
         if (handle != 0L) { runCatching { LlmNative.free(handle) }; handle = 0L; _state.update { it.copy(loaded = false) } }
     }
 
-    private fun threads() = Runtime.getRuntime().availableProcessors().coerceIn(2, 4)
+    /** Two cores at most, so the screen and the voice stay quick while the model writes. */
+    private fun threads() = 2
+
+    /** Stops what the model is writing now (a new question came): the answer already shown stands. */
+    fun stopWriting() { if (_state.value.writing) runCatching { LlmNative.cancel() } }
+
+    /** Runs [f] at background priority (the model's threads inherit it), so the screen is never starved. */
+    private inline fun <T> gently(f: () -> T): T {
+        val tid = android.os.Process.myTid()
+        val was = runCatching { android.os.Process.getThreadPriority(tid) }.getOrDefault(0)
+        runCatching { android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_BACKGROUND) }
+        try { return f() } finally { runCatching { android.os.Process.setThreadPriority(was) } }
+    }
 
     const val MAX_TOKENS = 160
-    const val TIMEOUT_MS = 90_000L
+    /** A rewrite not done by then is dropped (the answer already shown stands). */
+    const val TIMEOUT_MS = 30_000L
     /** The model leaves memory after this long unused. */
     const val IDLE_MS = 10 * 60_000L
 }

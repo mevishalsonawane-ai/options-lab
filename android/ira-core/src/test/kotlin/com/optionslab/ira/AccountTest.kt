@@ -100,4 +100,12 @@ class AccountTest {
             assertTrue(Section.STATUS in AppAnswers.sections(q), q)
         }
     }
+
+    @Test fun lastPnlIsTheLastSession() {
+        for (q in listOf("what was my last p&l", "previous day profit", "yesterday's p&l")) {
+            val s = AppAnswers.sections(q)
+            assertTrue(Section.HISTORY in s && Section.PNL !in s, "$q -> $s")
+        }
+        assertTrue(Section.PNL in AppAnswers.sections("what is my p&l today"))
+    }
 }
