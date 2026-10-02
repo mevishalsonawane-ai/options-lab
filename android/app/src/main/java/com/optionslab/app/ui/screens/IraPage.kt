@@ -76,7 +76,7 @@ fun IraHome(dashboard: @Composable () -> Unit) {
 }
 
 /** Example questions shown before the first one is asked. */
-private val EXAMPLES = listOf("What is BankNifty doing today?", "Nifty levels", "Is India VIX high?", "Any pattern on Nifty?", "Why is BankNifty down?")
+private val EXAMPLES = listOf("What is BankNifty doing today?", "Nifty levels", "Is gold up today?", "Any news on banks?", "Is India VIX high?", "Any pattern on FinNifty?")
 
 /**
  * Ira: the orb (the market at a glance) above the conversation. Answers come from IraAlgo's own data only; an order
@@ -90,7 +90,8 @@ fun IraPage() {
     var text by remember { mutableStateOf("") }
     var mode by remember { mutableIntStateOf(0) }
     var focus by remember { mutableStateOf(IraMarket.NIFTY) }
-    LaunchedEffect(Unit) { IraHub.refresh() }
+    // Live prices every minute while Ira is on screen (and news every ten minutes, inside the hub).
+    com.optionslab.app.ui.PollWhileStarted { while (true) { IraHub.refresh(); delay(60_000) } }
     val list = rememberLazyListState()
     LaunchedEffect(st.messages.size) { if (st.messages.isNotEmpty()) list.animateScrollToItem(st.messages.size) }
 
@@ -119,13 +120,13 @@ fun IraPage() {
             contentPadding = androidx.compose.foundation.layout.PaddingValues(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             item {
                 LedgerCard(title = "Ira") {
-                    Note("Ask about Nifty, BankNifty or India VIX. Ira answers only from IraAlgo's own market data and says when it does not know. " +
-                        "It never gives buy or sell advice, and never sends an order.")
+                    Note("Ask about Nifty, BankNifty, FinNifty, Sensex, India VIX or gold. Ira answers only from the market data and news it reads, " +
+                        "and says when it does not know. It never gives buy or sell advice, and never sends an order.")
                     val day = st.lastDay?.let { " Latest data: ${it.dayOfMonth} ${it.month.getDisplayName(java.time.format.TextStyle.SHORT, Locale.ENGLISH)} ${it.year}." } ?: ""
                     Note(when {
                         st.loading -> "Reading the market data..."
                         st.problem != null -> st.problem!!
-                        else -> "${st.days} days of candles read; ${st.learned} pattern outcomes learned.$day Live prices arrive in the next build."
+                        else -> "${st.days} days of candles read; ${st.learned} pattern outcomes learned.$day " + liveLine(st)
                     })
                 }
             }
@@ -170,6 +171,15 @@ private fun Bubble(m: IraHub.Msg) {
             if (open) m.facts.forEach { f -> Text("• $f", style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp)) }
         }
     }
+}
+
+/** Where the prices and the news stand: when they last came in, and what did not answer. */
+private fun liveLine(st: IraHub.State): String {
+    val hm = { i: java.time.Instant -> i.atZone(java.time.ZoneId.of("Asia/Kolkata")).let { "%02d:%02d".format(it.hour, it.minute) } }
+    val live = st.liveAt?.let { "Live prices at ${hm(it)} IST" + (if (st.liveMissing.isNotEmpty()) " (no answer from ${st.liveMissing.joinToString { m -> m.label }})" else "") + "." }
+        ?: "Live prices not reached yet."
+    val news = st.newsAt?.let { " ${st.news.size} headlines at ${hm(it)}" + (if (st.newsMissing.isNotEmpty()) " (${st.newsMissing.joinToString()} not answering)" else "") + "." } ?: ""
+    return live + news
 }
 
 /** Volatility for the orb from India VIX: 10 calm .. 28 wild. */

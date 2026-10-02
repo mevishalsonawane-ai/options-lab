@@ -72,6 +72,43 @@ class IraHubTest : RobolectricTest() {
         assertEquals(learned, IraHub.state.value.learned)
     }
 
+    @Test fun liveCandlesJoinTheStoredOnesAndHeadlinesAreRead() = runBlocking {
+        IraHub.testHistories = { histories }
+        val liveDay = histories.getValue(IraMarket.NIFTY).days.last().plusDays(1)
+        val fresh = (0 until 120).map { Candle(liveDay.atTime(9, 15).plusMinutes(it.toLong()), 25_000.0 + it, 25_001.0 + it, 24_999.0 + it, 25_000.5 + it) }
+        IraHub.testLive = { m -> if (m == IraMarket.NIFTY || m == IraMarket.GOLD) fresh else emptyList() }
+        IraHub.testFeed = { url ->
+            if (url.contains("economictimes")) "<rss><channel><item><title>Nifty rallies as banks surge</title><link>https://e.com/1</link></item></channel></rss>"
+            else throw java.io.IOException("down")
+        }
+        IraHub.refresh()
+        val st = IraHub.state.value
+        assertEquals(25_119.5, st.snaps.getValue(IraMarket.NIFTY).price, 1e-9)
+        assertEquals(liveDay, st.lastDay)
+        assertNotNull("gold comes from its live feed alone", st.snaps[IraMarket.GOLD])
+        assertNotNull(st.liveAt)
+        assertTrue(st.liveMissing.containsAll(listOf(IraMarket.FINNIFTY, IraMarket.SENSEX)))
+        assertEquals("Nifty rallies as banks surge", st.news.single().title)
+        assertEquals(IraHub.NEWS_FEEDS.size - 1, st.newsMissing.size)
+        IraHub.ask("any news on nifty?")
+        assertTrue(IraHub.state.value.messages.last().text, IraHub.state.value.messages.last().text.contains("Nifty rallies as banks surge"))
+        // the news is not fetched again within ten minutes
+        IraHub.testFeed = { throw java.io.IOException("should not be called") }
+        IraHub.refresh()
+        assertEquals(1, IraHub.state.value.news.size)
+    }
+
+    @Test fun aLiveDayReplacesTheStoredCopy() {
+        val day = histories.getValue(IraMarket.NIFTY).days.last()
+        val live = listOf(Candle(day.atTime(9, 15), 1.0, 2.0, 0.5, 1.5))
+        val m = IraHub.merge(histories, mapOf(IraMarket.NIFTY to live))
+        val bars = m.getValue(IraMarket.NIFTY).bars
+        assertEquals(1, bars.count { it.t.toLocalDate() == day })
+        assertEquals(histories.getValue(IraMarket.NIFTY).bars.count { it.t.toLocalDate() != day } + 1, bars.size)
+        assertEquals(histories.getValue(IraMarket.VIX).bars.size, m.getValue(IraMarket.VIX).bars.size)
+        assertTrue(IraHub.merge(emptyMap(), mapOf(IraMarket.GOLD to emptyList())).isEmpty())
+    }
+
     @Test fun noDataSaysSo() = runBlocking {
         IraHub.testHistories = { emptyMap() }
         IraHub.refresh()

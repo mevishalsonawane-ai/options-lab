@@ -142,6 +142,40 @@ object Net {
         throw last
     }
 
+    /** The most a text download (a news feed) may be; a bigger answer is refused, not read. */
+    const val MAX_TEXT_BYTES = 1_500_000
+
+    /**
+     * GET a news feed as text: HTTPS only, no redirects, short timeouts, one retry, at most [MAX_TEXT_BYTES]. Errors carry
+     * no URL and no body, like every other request here.
+     */
+    suspend fun getText(url: String, tries: Int = 2): String {
+        var last: IOException = Offline()
+        for (attempt in 0 until tries) {
+            try {
+                val c = open(url, QUICK_READ_MS, QUICK_CONNECT_MS)
+                c.setRequestProperty("Accept", "application/rss+xml, application/atom+xml, application/xml, text/xml")
+                try {
+                    val r = exchange(c)
+                    if (r.code != HttpURLConnection.HTTP_OK) throw HttpFailure(r.code)
+                    val body = r.body ?: throw IOException("empty answer")
+                    if (body.size > MAX_TEXT_BYTES) throw IOException("answer too large")
+                    return body.toString(Charsets.UTF_8)
+                } finally {
+                    c.disconnect()
+                }
+            } catch (e: HttpFailure) {
+                if (e.code in 400..499) throw e
+                last = e
+            } catch (_: IOException) {
+                last = Offline()
+            }
+            kotlinx.coroutines.currentCoroutineContext().ensureActive()
+            if (attempt < tries - 1) delay(1_500L)
+        }
+        throw last
+    }
+
     /** Upstox returns candles newest-first; they are stored ascending. Errors are never "empty". */
     fun parseCandles(payload: JSONObject): List<Upstox.Bar> {
         if (payload.optString("status") != "success") {
