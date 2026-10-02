@@ -25,7 +25,7 @@ object JarvisSpeaker {
     fun speak(context: Context, text: String) {
         if (!com.optionslab.app.BuildConfig.JARVIS || JarvisVoice.muted && !text.startsWith("Voice on")) return
         val said = words(text)
-        if (JarvisVoice.announce(said)) return
+        if (JarvisVoice.announce(said, prompted = true)) return
         if (android.os.Build.FINGERPRINT == "robolectric") return
         synchronized(this) {
             val t = tts

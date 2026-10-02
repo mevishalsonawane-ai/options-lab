@@ -127,10 +127,12 @@ internal object IraStudy {
         val out = ArrayList<String>()
         var bankRegimes: Map<LocalDate, com.optionslab.ira.Regime.Kind> = emptyMap()
         var bankNow: com.optionslab.ira.Regime.Kind? = null
+        val kinds = HashMap<String, String>()
         for (m in MARKETS) {
             val days = Study.days(IraHub.twoYears(m, 5) ?: continue)
             val k = com.optionslab.ira.Regime.of(days) ?: continue
             out += com.optionslab.ira.Regime.say(m, k, days)
+            kinds[m.name] = k.name
             if (m == com.optionslab.ira.Market.BANKNIFTY) { bankRegimes = com.optionslab.ira.Regime.history(days); bankNow = k }
         }
         if (bankRegimes.isNotEmpty()) {
@@ -141,13 +143,44 @@ internal object IraStudy {
             bankNow?.let { k -> com.optionslab.ira.Regime.suits(trades, bankRegimes, k).takeIf { it.isNotEmpty() }
                 ?.let { out += "On ${k.label} days like now, these arms made money: ${it.joinToString(", ")}." } }
         }
+        if (kinds.isNotEmpty()) com.optionslab.app.security.SecurePrefs.put("jarvis.regime.kinds", JSONObject(kinds as Map<*, *>).toString())
         if (out.isNotEmpty()) com.optionslab.app.security.SecurePrefs.put(REGIME_KEY, org.json.JSONArray(out + "Read ${now.toLocalDate()}.").toString())
     }
+
+    /** The regime the nightly study read for [m], or null. */
+    fun regimeOf(m: IraMarket): com.optionslab.ira.Regime.Kind? = runCatching {
+        com.optionslab.ira.Regime.Kind.valueOf(JSONObject(com.optionslab.app.security.SecurePrefs.getString("jarvis.regime.kinds") ?: "{}").getString(m.name))
+    }.getOrNull()
 
     fun regimeLines(): List<String> = runCatching {
         val a = org.json.JSONArray(com.optionslab.app.security.SecurePrefs.getString(REGIME_KEY) ?: "[]")
         (0 until a.length()).map { a.getString(it) }
     }.getOrDefault(emptyList()).ifEmpty { listOf("I read the market regime in the nightly study; it has not run yet.") }
+
+    /**
+     * The Saturday report card (from 09:00, once a week): the week's P&L in the app's mode, Jarvis's suggestions taken
+     * and skipped and how they did, the best and worst arm, and one habit to fix - shown, noted and said.
+     */
+    suspend fun reportCardIfDue(now: ZonedDateTime = ZonedDateTime.now(IST)) {
+        if (now.dayOfWeek != java.time.DayOfWeek.SATURDAY || now.toLocalTime() < LocalTime.of(9, 0)) return
+        val key = "jarvis.reportcard"
+        val week = now.toLocalDate().toString()
+        if (com.optionslab.app.security.SecurePrefs.getString(key) == week) return
+        com.optionslab.app.security.SecurePrefs.put(key, week)
+        val live = com.optionslab.app.data.AppSettings.load().live
+        val owners = runCatching { com.optionslab.app.data.Strategies.owners() }.getOrDefault(emptyMap())
+        val today = now.toLocalDate()
+        val all = IraAccount.trips(live, owners)
+        val trips = all.filter { !it.closedAt.toLocalDate().isBefore(today.minusDays(6)) }
+        val arms = trips.groupBy { it.owner }.map { (o, l) -> com.optionslab.ira.ReportCard.ArmWeek(o, l.sumOf { it.net }, l.size) }
+        val habit = com.optionslab.ira.Insights.patterns(if (live) "Zerodha" else "Paper", all).drop(1).firstOrNull()
+        val lines = com.optionslab.ira.ReportCard.lines(if (trips.isEmpty()) null else trips.sumOf { it.net }, trips.size,
+            IraNewsTrades.weekSuggestions(today), arms, habit)
+        IraHub.appContext()?.let { JarvisPopup.show(it, "Boss, your week's report card", lines.joinToString(" ")) }
+        IraHub.note(com.optionslab.ira.Address.boss("Your week's report card. " + lines.joinToString(" ")))
+        JarvisVoice.announce("Good morning, Boss. Your week's report card. " + lines.joinToString(" ") { com.optionslab.ira.Wake.spoken(it, 1) })
+        IraActivity.add("Gave the weekly report card.")
+    }
 
     fun ivHistory(u: String): List<Pair<LocalDate, Double>> = _state.value.iv[u].orEmpty()
 
@@ -250,6 +283,7 @@ class StudyWorker(ctx: android.content.Context, params: androidx.work.WorkerPara
         if (!com.optionslab.app.BuildConfig.JARVIS) return Result.success()
         runCatching { IraHub.nightNews() }
         runCatching { IraStudy.studyIfDue() }
+        runCatching { IraStudy.reportCardIfDue() }
         return Result.success()
     }
 

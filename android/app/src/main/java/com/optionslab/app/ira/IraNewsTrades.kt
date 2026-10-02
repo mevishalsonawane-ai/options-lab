@@ -272,6 +272,38 @@ internal object IraNewsTrades {
         Unit
     }
 
+    /** Each closed trade's close time and result, for the cooling-off after losses. */
+    fun closedTimes(): List<Pair<java.time.LocalDateTime, Double>> = all().filter { it.closed && it.result != null && it.minuteOut != null }.mapNotNull { p ->
+        runCatching { java.time.LocalDate.parse(p.day).atTime(p.minuteOut!! / 60, p.minuteOut % 60) to p.result!! }.getOrNull() }
+
+    /** The last 7 days' suggestions, for the Saturday report card. */
+    fun weekSuggestions(today: java.time.LocalDate): List<JarvisTrades.Suggestion> =
+        suggestions().map { it.second }.filter { !it.at.toLocalDate().isBefore(today.minusDays(6)) }
+
+    /**
+     * "What if I had taken the 10:30 suggestion?": the suggestion nearest that time (today, else the last day with
+     * one), played on the real option prices the phone keeps.
+     */
+    fun whatIf(question: String): List<String> {
+        val minute = com.optionslab.ira.WhatIf.minute(question)
+        val all = suggestions().map { it.second }
+        if (all.isEmpty()) return listOf("I have not suggested any trade yet.")
+        val day = all.map { it.at.toLocalDate() }.filter { !it.isAfter(com.optionslab.app.data.Market.today()) }.maxOrNull() ?: return listOf("I have not suggested any trade yet.")
+        val onDay = all.filter { it.at.toLocalDate() == day }
+        val s = if (minute == null) onDay.last() else onDay.minByOrNull { kotlin.math.abs(it.at.hour * 60 + it.at.minute - minute) }!!
+        if (minute != null && kotlin.math.abs(s.at.hour * 60 + s.at.minute - minute) > 15)
+            return listOf("I made no suggestion near %02d:%02d on $day; the nearest was at %02d:%02d.".format(minute / 60, minute % 60, s.at.hour, s.at.minute))
+        val what = "The %02d:%02d ${s.market.label} ${if (s.call) "call" else "put"} on $day (${s.answer})".format(s.at.hour, s.at.minute)
+        val u = s.market.name
+        val sess = runCatching { com.optionslab.app.data.Store.barSession(u, day) }.getOrNull()
+            ?: return listOf("$what: I can replay it once that day's option prices are saved (after the close).")
+        val p = runCatching { JarvisTrades.OptionSim.trade(sess, s.at, s.call, s.spot, JarvisTrades.strikeStep(u)) }.getOrNull()
+            ?: return listOf("$what: that option has no prices for the time, so I cannot replay it.")
+        val lot = sess.lotHint ?: sess.options.firstOrNull()?.lot
+        return listOf("$what would have made %+.1f points".format(java.util.Locale.ENGLISH, p) + (lot?.let { " (${com.optionslab.ira.AppFacts.rs(p * it)} a lot)" } ?: "") +
+            ", with the 15% stop, the +40 target, the profit lock and the 15:15 exit, after costs.")
+    }
+
     /** The index's latest price as Jarvis last read it. */
     private fun spotOf(u: String): Double? = runCatching { IraHub.state.value.snaps[com.optionslab.ira.Market.valueOf(u)]?.price }.getOrNull()
 

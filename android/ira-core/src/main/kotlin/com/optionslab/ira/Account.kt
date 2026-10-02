@@ -13,6 +13,7 @@ enum class Section(val title: String) {
     HISTORY("P&L by day"), STRATEGIES("Strategies"), RISK("Risk limits"), PROTECTIONS("Stops and targets"), ALARMS("Alarms"),
     HOWTO("Where to find it"), EVENTS("Events"), CHAIN("Option chain"), FLOWS("Institutional flows"), REVIEW("Review"),
     STUDY("Jarvis's study"), ACTIVITY("What I did"), READY("Ready for live"), REGIME("Market regime"), LOSSES("Why trades lost"),
+    WHATIF("What if"), CHANGES("Settings changes"),
 }
 
 /** Fact lines per section, each a finished sentence; [mode] "Paper" or "Live". */
@@ -112,6 +113,8 @@ object AppAnswers {
         Section.FLOWS to Regex(" (fii|fiis|dii|diis|fpi|fpis|institutional|institutions|flows|foreign funds|mutual funds) "),
         Section.CHAIN to Regex(" (oi|open interest|pcr|put call|put-call|max pain|option chain|chain|iv|implied volatility|skew|call writing|put writing|writers) "),
         Section.STUDY to Regex(" (what did you study|your study|you studied|you learn|you learned|history say|history says|history shows|what usually happens|usually happens|overnight|last night|night news|how will the market|how the market will|will the market|market will|how markets? works?|edge|edges) "),
+        Section.WHATIF to Regex(" (what if (i|we) (had )?(taken|took|take|bought|approved)|would (i|it) have (made|lost)|if i had (taken|approved|bought)) "),
+        Section.CHANGES to Regex(" (what did i change|what have i changed|settings? (history|changes)|changes? to (my )?(settings|limits)|limit changes|who changed|changed my (limits|settings)) "),
         Section.ACTIVITY to Regex(" (what did you do|what have you done|what you did|your activity|activity log|what did jarvis do|did you do anything) "),
         Section.READY to Regex(" (ready (to|for) (go )?live|ready for live trading|can i go live|should i go live|go live checklist|live checklist|am i ready) "),
         Section.REGIME to Regex(" (regime|market mood|market phase|trending or sideways|is the market trending|sideways or trending|which arms suit|arms suit|which strateg(y|ies) suits?|suits? (this|the) market) "),
@@ -137,8 +140,8 @@ object AppAnswers {
         if (Regex(" (last|previous|yesterday|yesterday s|last session s|last day s|last trading day s) (p l|pnl|profit|loss|day|session|result)").containsMatchIn(t) &&
             Regex(" (p l|pnl|profit|loss|made|lost|result) ").containsMatchIn(t)) { out.remove(Section.PNL); out += Section.HISTORY }
         // The new sections are asked on their own: drop the broad matches their words also hit.
-        if (out.any { it == Section.ACTIVITY || it == Section.READY || it == Section.REGIME || it == Section.LOSSES })
-            out.removeAll(setOf(Section.STATUS, Section.STRATEGIES, Section.ORDERS, Section.PNL, Section.SETTINGS, Section.HISTORY, Section.HOWTO, Section.STUDY, Section.REVIEW))
+        if (out.any { it == Section.ACTIVITY || it == Section.READY || it == Section.REGIME || it == Section.LOSSES || it == Section.WHATIF || it == Section.CHANGES })
+            out.removeAll(setOf(Section.EVENTS, Section.STATUS, Section.STRATEGIES, Section.ORDERS, Section.PNL, Section.SETTINGS, Section.HISTORY, Section.HOWTO, Section.STUDY, Section.REVIEW))
         if (Section.REVIEW in out) { out.remove(Section.HISTORY); out.remove(Section.ORDERS); out.remove(Section.PNL) }
         if (out.isEmpty() || out == setOf(Section.STATUS) && Regex(" (how am i doing|how did i do|my account|account) ").containsMatchIn(t))
             out += listOf(Section.PNL, Section.POSITIONS, Section.ORDERS, Section.STRATEGIES)

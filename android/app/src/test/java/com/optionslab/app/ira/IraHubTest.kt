@@ -532,4 +532,33 @@ class IraHubTest : RobolectricTest() {
         assertTrue(IraHub.state.value.pending.isEmpty())
         com.optionslab.app.data.AppSettings.save(com.optionslab.app.data.AppSettings.load().copy(guardMaxLots = before.guardMaxLots))
     }
+
+    @Test fun aChangeIsLoggedAndUndone() = runBlocking {
+        val before = com.optionslab.app.data.AppSettings.load()
+        IraHub.ask("set max open positions to 4")
+        waitFor("the confirm") { IraHub.state.value.pending.isNotEmpty() }
+        IraHub.confirm(IraHub.state.value.pending.single())
+        assertEquals(4, com.optionslab.app.data.AppSettings.load().guardMaxOpen)
+        val last = com.optionslab.app.data.SettingsLog.all().last()
+        assertEquals(com.optionslab.ira.SettingsTalk.Key.MAX_OPEN, last.key); assertEquals("Jarvis", last.by)
+        assertTrue(com.optionslab.app.data.SettingsLog.lines().any { it.contains("max open positions") })
+        IraHub.ask("undo")
+        waitFor("the undo confirm") { IraHub.state.value.pending.isNotEmpty() }
+        assertTrue(IraHub.state.value.messages.last().text, IraHub.state.value.messages.last().text.startsWith("Tap Confirm to undo: change max open positions from 4 to"))
+        IraHub.confirm(IraHub.state.value.pending.single())
+        assertEquals(before.guardMaxOpen, com.optionslab.app.data.AppSettings.load().guardMaxOpen)
+        // A change on the Settings screen is logged too.
+        com.optionslab.app.data.AppSettings.save(com.optionslab.app.data.AppSettings.load().copy(guardMaxTrades = before.guardMaxTrades + 1))
+        assertEquals("Settings screen", com.optionslab.app.data.SettingsLog.all().last().by)
+        com.optionslab.app.data.AppSettings.save(before)
+    }
+
+    @Test fun quietHoursAndReplays() = runBlocking {
+        assertTrue("quiet hours on by default", JarvisVoice.quietHours)
+        IraHub.ask("turn off quiet hours")
+        waitFor("quiet off") { !JarvisVoice.quietHours }
+        JarvisVoice.quietHours = true
+        if (com.optionslab.app.BuildConfig.JARVIS) assertTrue(IraNewsTrades.whatIf("what if I had taken the 10:30 suggestion").single().isNotEmpty())
+        Unit
+    }
 }

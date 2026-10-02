@@ -8,7 +8,8 @@ package com.optionslab.ira
  */
 data class Command(val kind: Kind, val target: String? = null, val number: Int? = null,
                    val market: Market? = null, val above: Boolean? = null, val level: Double? = null,
-                   /** An event's day ([Kind.EVENT_ADD]). */ val day: java.time.LocalDate? = null) {
+                   /** An event's day ([Kind.EVENT_ADD]). */ val day: java.time.LocalDate? = null,
+                   /** An alarm by a move from the price now, in percent ([Kind.ALARM_ADD] without a level). */ val pct: Double? = null) {
     enum class Kind(val reduces: Boolean) {
         STOP_ALL(true), START_ALL(false), STOP_ONE(true), START_ONE(false),
         CANCEL_ALL(true), CANCEL_ONE(true), CLOSE_ALL(true), CLOSE_ONE(true),
@@ -20,6 +21,10 @@ data class Command(val kind: Kind, val target: String? = null, val number: Int? 
         MUTE(true), UNMUTE(true), HINDI(true), ENGLISH(true),
         /** One of the app's limits changed ([SettingsTalk]): always said back and confirmed; loosening needs Boss's voice. */
         SET_LIMIT(true), SET_REFUSED(true),
+        /** The last limit change put back (confirmed; Boss's voice when that loosens a limit). */
+        UNDO(true),
+        /** Quiet hours (nothing spoken unasked at night) on or off. */
+        QUIET_ON(true), QUIET_OFF(true),
     }
 }
 
@@ -51,7 +56,7 @@ object Commands {
         if (said.trim().endsWith("?")) return null
         val text = Hinglish.normalize(said)
         // "25,000" is one number; a full stop ends a sentence (but "52.5" keeps its point).
-        val t = " " + text.lowercase().replace(Regex("(\\d),(?=\\d{3})"), "$1").replace(Regex("\\.(?!\\d)"), " ")
+        val t = " " + text.lowercase().replace("%", " percent ").replace(Regex("(\\d),(?=\\d{3})"), "$1").replace(Regex("\\.(?!\\d)"), " ")
             .replace(Regex("[^a-z0-9. ]"), " ").replace(Regex("\\s+"), " ").trim() + " "
         val s = t.replace(Regex(" (please|jarvis|hey|ok|okay|now|right now|immediately|can you|could you|will you|for me) "), " ")
             .replace(Regex("\\s+"), " ").let { " ${it.trim()} " }
@@ -64,6 +69,13 @@ object Commands {
         fun has(r: String) = Regex(r).containsMatchIn(s)
         fun num(r: String) = Regex(r).find(s)?.groupValues?.get(1)?.toIntOrNull()
 
+        if (Regex("^ (undo|undo (that|it|the last change|my last change|last change|the change)|revert( that| it| the last change)?|put (it|that) back|change (it|that) back) $").containsMatchIn(s)) return Command(Command.Kind.UNDO)
+        if (Regex("^ (turn|switch) (on|off) (the )?quiet hours | quiet hours (on|off) |^ (enable|disable) (the )?quiet hours ").containsMatchIn(s))
+            return Command(if (Regex(" (off|disable) ").containsMatchIn(s.replace(" quiet hours ", " "))) Command.Kind.QUIET_OFF else Command.Kind.QUIET_ON)
+        // "Tell me if BankNifty falls 1% from here": an alarm at a level worked out from the price now.
+        if (has(" (alert|alarm|notify|tell|ping|wake|warn) ")) MoveAlarm.read(s)?.let { mv ->
+            return Command(Command.Kind.ALARM_ADD, market = Market.mentioned(s).firstOrNull(), above = mv.up, pct = mv.pct)
+        }
         // The app's limits ("set max lots to 3"); never the PIN, real orders or the lock.
         if (SettingsTalk.forbidden(s)) return Command(Command.Kind.SET_REFUSED)
         if (!Regex(" (your|jarvis s) | jarvis (own )?(trades? )?(daily )?(loss limit|risk) ").containsMatchIn(t)) SettingsTalk.parse(s)?.let { return it }
@@ -167,7 +179,8 @@ object Commands {
         Command.Kind.KILL_OFF -> "turn the kill switch off"
         Command.Kind.MODE_PAPER -> "switch to Paper mode"
         Command.Kind.MODE_LIVE -> "switch to Live mode (real Zerodha orders)"
-        Command.Kind.ALARM_ADD -> "set an alarm: ${c.market?.label ?: "?"} ${if (c.above == false) "below" else "above"} ${c.level?.let { "%,.2f".format(java.util.Locale.ENGLISH, it) } ?: "?"}"
+        Command.Kind.ALARM_ADD -> "set an alarm: ${c.market?.label ?: "?"} ${if (c.above == false) "below" else "above"} " +
+            (c.level?.let { "%,.2f".format(java.util.Locale.ENGLISH, it) } ?: c.pct?.let { "a ${if (c.above == false) "fall" else "rise"} of $it% from here" } ?: "?")
         Command.Kind.ALARM_REMOVE -> "remove ${name ?: "that alarm"}"
         Command.Kind.AUTOPILOT_ON -> "turn the autopilot on (Jarvis adds the strategies that pass two years of testing, on paper, and retires its own that stop working)"
         Command.Kind.AUTOPILOT_OFF -> "turn the autopilot off"
@@ -184,5 +197,8 @@ object Commands {
         Command.Kind.SET_LIMIT -> c.target?.let { k -> runCatching { SettingsTalk.Key.valueOf(k) }.getOrNull() }
             ?.let { SettingsTalk.describe(it, null, c.level ?: 0.0) } ?: "change a setting"
         Command.Kind.SET_REFUSED -> "change a security setting"
+        Command.Kind.UNDO -> "undo the last limit change"
+        Command.Kind.QUIET_ON -> "turn quiet hours on (nothing said unasked from 22:00 to 07:00)"
+        Command.Kind.QUIET_OFF -> "turn quiet hours off"
     }
 }

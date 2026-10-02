@@ -541,6 +541,11 @@ object IraHub {
      */
     private suspend fun proposeTrade(c: Context, idea: com.optionslab.ira.NewsTrade.Idea, title: String, text: String, said: String, source: String) {
         val m = idea.market
+        // Two losses in a row: a cooling-off, said once.
+        com.optionslab.ira.CoolOff.until(IraNewsTrades.closedTimes(), LocalDateTime.now(IST))?.let { until ->
+            if (synchronized(coolSaid) { coolSaid.add(until.toString()) }) { reply(com.optionslab.ira.CoolOff.say(until)); IraActivity.add(com.optionslab.ira.CoolOff.say(until)) }
+            return
+        }
         val snap = _state.value.snaps[m]
         val side = if (idea.call) "call" else "put"
         // Are options cheap or dear now? In the dearest tenth of the year, no buy is suggested.
@@ -559,10 +564,12 @@ object IraHub {
         IraNewsTrades.suggested(id, idea, snap?.price ?: 0.0, source)
         IraActivity.add("Suggested: $what (${source.substringBefore(':')}).")
         val where = if (IraNewsTrades.paperFirst && com.optionslab.app.data.AppSettings.load().live) " (on paper: my trades stay there until proven)" else ""
-        val full = "$text$ivLine Shall I $what$where? Approve or reject."
+        // How sure: the pattern's record, the regime, how dear options are, the trade check.
+        val conf = com.optionslab.ira.Confidence.score(idea.call, idea.hitRate, IraStudy.regimeOf(m), iv?.first, runCatching { tradeCheckFast().level }.getOrNull())
+        val full = "$text$ivLine ${conf.text()} Shall I $what$where? Approve or reject."
         _state.update { it.copy(pending = it.pending + id, messages = (it.messages + Msg(true, full, action = id)).takeLast(MAX_MESSAGES)) }
         JarvisApproval.show(c, id, title, full)
-        JarvisVoice.askYesNo(id, "$said Shall I buy 1 lot of the ${m.label} $side? Yes or no?")
+        JarvisVoice.askYesNo(id, "$said Confidence ${conf.stars} out of 5. Shall I buy 1 lot of the ${m.label} $side? Yes or no?")
         scope.launch {
             kotlinx.coroutines.delay(NEWS_ANSWER_MS)
             if (synchronized(actions) { actions.remove(id) } != null) {
@@ -572,6 +579,99 @@ object IraHub {
                 reply("No answer in 10 minutes, so the ${m.label} trade lapsed; nothing was placed.")
                 IraActivity.add("The ${m.label} trade I suggested lapsed unanswered.")
             }
+        }
+    }
+
+    private val coolSaid = HashSet<String>()
+
+    // ---- watchers the market watch calls (JarvisAlgo; each gates itself) ---------------------------------------------
+
+    /** When each open position was first seen without a stop, and those already asked about (today). */
+    private val unguardedSince = HashMap<String, Instant>()
+    private val rescueAsked = HashSet<String>()
+
+    /**
+     * A bought option open two minutes with no stop: Jarvis offers one 15% under the price paid (asked, never set alone).
+     */
+    suspend fun rescueWatch(now: Instant = Instant.now()) {
+        if (!com.optionslab.app.BuildConfig.JARVIS || !com.optionslab.app.data.Market.isOpen()) return
+        val c = app ?: return
+        val guarded = runCatching { com.optionslab.app.data.Protections.active() }.getOrNull()?.map { (if (it.live) "L:" else "P:") + it.symbol }?.toSet() ?: return
+        val open = ArrayList<Pair<com.optionslab.ira.Rescue.Open, String>>()
+        runCatching { com.optionslab.app.data.Paper.snapshot().positions.positions.filter { it.quantity != 0 }
+            .forEach { open += com.optionslab.ira.Rescue.Open(it.symbol, false, it.quantity, it.averagePrice, it.ltp) to it.product } }
+        if (com.optionslab.app.data.Broker.loggedIn) runCatching { com.optionslab.app.data.Broker.positionBook().net.filter { it.open && it.exchange == "NFO" }
+            .forEach { open += com.optionslab.ira.Rescue.Open(it.symbol, true, it.qty, it.avg, it.last) to it.product } }
+        // The bots (ORB arms, Pine scripts, strategy runs) manage their own exits: only positions they do not hold.
+        val bots = HashSet<String>()
+        runCatching { com.optionslab.app.data.OrbArms.view().arms.mapNotNull { it.open?.symbol }.forEach { bots += it } }
+        runCatching { com.optionslab.app.data.PineAuto.held.value.values.forEach { bots += it.symbol } }
+        runCatching { com.optionslab.app.data.Strategies.all().mapNotNull { it.run }.forEach { r -> r.openLegs().forEach { bots += it.symbol } } }
+        val day = com.optionslab.app.data.Market.today().toString()
+        val bare = open.filter { (p, _) -> (if (p.live) "L:" else "P:") + p.symbol !in guarded && p.symbol !in bots }
+        synchronized(unguardedSince) { unguardedSince.keys.retainAll(bare.map { (p, _) -> (if (p.live) "L:" else "P:") + p.symbol }.toSet()) }
+        for ((p, product) in bare) {
+            val k = (if (p.live) "L:" else "P:") + p.symbol
+            val since = synchronized(unguardedSince) { unguardedSince.getOrPut(k) { now } }
+            if (since.isAfter(now.minusSeconds(com.optionslab.ira.Rescue.GRACE_MINUTES * 60))) continue
+            if (!synchronized(rescueAsked) { rescueAsked.add("$day|$k") }) continue
+            val stop = com.optionslab.ira.Rescue.stopFor(p)
+            val text = com.optionslab.ira.Rescue.say(p, stop)
+            if (stop == null) { JarvisPopup.show(c, "Boss, ${p.symbol} has no stop", text); reply(text); continue }
+            val id = System.nanoTime()
+            val what = "set a stop on ${p.symbol} at %.2f".format(java.util.Locale.ENGLISH, stop)
+            synchronized(actions) { actions[id] = what to suspend {
+                if (p.live) com.optionslab.app.data.Protections.protectLive(p.symbol, "NFO", product, p.qty, p.avg, stop, null, null)
+                else com.optionslab.app.data.Protections.protectPaper(p.symbol, product, p.qty, p.avg, stop, null, null)
+            } }
+            _state.update { it.copy(pending = it.pending + id, messages = (it.messages + Msg(true, "$text Tap Confirm to $what.", action = id)).takeLast(MAX_MESSAGES)) }
+            JarvisPopup.show(c, "Boss, ${p.symbol} has no stop", text)
+            JarvisVoice.askYesNo(id, "Boss, $text Yes or no?")
+            IraActivity.add("Offered a stop on ${p.symbol} (it had none).")
+        }
+    }
+
+    /** Expiry day at 14:55: what the 15:05 square-off will close (or, when it is off, what will be settled). */
+    suspend fun expiryPreview() {
+        if (!com.optionslab.app.BuildConfig.JARVIS) return
+        val mk = com.optionslab.app.data.Market
+        val today = mk.today()
+        if (!mk.isTradingDay(today) || mk.minuteNow() !in com.optionslab.ira.ExpiryPreview.AT until 15 * 60 + 5) return
+        val key = "jarvis.expiry.preview"
+        if (com.optionslab.app.security.SecurePrefs.getString(key) == today.toString()) return
+        val names = ArrayList<String>()
+        runCatching { com.optionslab.app.data.Paper.snapshot().positions.positions.filter { it.quantity != 0 }.forEach { p ->
+            if (com.optionslab.app.data.Paper.contractOf(p.symbol)?.expiry == today) names += "paper ${p.symbol} (${p.quantity})" } }
+        if (com.optionslab.app.data.Broker.loggedIn) runCatching {
+            val ins = com.optionslab.app.data.Broker.cachedInstruments().orEmpty().associateBy { it.tradingSymbol }
+            com.optionslab.app.data.Broker.positionBook().net.filter { it.qty != 0 && ins[it.symbol]?.expiry == today }.forEach { names += "Zerodha ${it.symbol} (${it.qty})" }
+        }
+        com.optionslab.app.security.SecurePrefs.put(key, today.toString())
+        val lines = com.optionslab.ira.ExpiryPreview.lines(names, com.optionslab.app.data.AppSettings.load().expirySquareOff)
+        if (lines.isEmpty()) return
+        app?.let { JarvisPopup.show(it, "Expiry day: 15:05 square-off", lines.first()) }
+        reply(lines.first())
+        JarvisVoice.announce(com.optionslab.ira.Address.boss(lines.first()))
+    }
+
+    @Volatile private var feedWarned = false
+
+    /** Live prices stopped for two minutes in market hours: told once, and again only after they came back. */
+    suspend fun feedWatch() {
+        if (!com.optionslab.app.BuildConfig.JARVIS) return
+        val open = com.optionslab.app.data.Market.isOpen()
+        fun last() = _state.value.liveAt?.atZone(IST)?.toLocalDateTime()
+        val now = LocalDateTime.now(IST)
+        if (com.optionslab.ira.FeedHealth.stale(last(), now, open)) runCatching { refresh() }
+        val stale = com.optionslab.ira.FeedHealth.stale(last(), LocalDateTime.now(IST), open)
+        if (stale && !feedWarned) {
+            feedWarned = true
+            val text = com.optionslab.ira.FeedHealth.say(last())
+            app?.let { JarvisPopup.show(it, "Live prices stopped", text) }
+            reply(text); JarvisVoice.announce(text); IraActivity.add("Warned: live prices stopped.")
+        } else if (!stale && feedWarned) {
+            feedWarned = false
+            reply("Live prices are back, Boss.")
         }
     }
 
@@ -792,6 +892,7 @@ object IraHub {
         val user = Msg(false, q)
         _state.update { it.copy(messages = (it.messages + user).takeLast(MAX_MESSAGES)) }
         scope.launch {
+            IraAccount.question = q
             val v = runCatching { IraAccount.readFast(com.optionslab.ira.AppAnswers.sections(q), IraMarket.mentioned(q)) }.getOrNull()
             val a = runCatching { Ira(book).answer(q, emptyMap(), emptyList(), app = v) }.getOrElse { com.optionslab.ira.Answer("I could not work that out.", emptyList()) }
             val write = v != null && IraModel.usable() && a.facts.isNotEmpty()

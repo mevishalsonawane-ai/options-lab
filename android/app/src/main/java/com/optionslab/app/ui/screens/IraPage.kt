@@ -397,6 +397,12 @@ internal fun VoiceSwitch() {
             androidx.compose.material3.Switch(checked = mute, onCheckedChange = { v -> mute = v; JarvisVoice.muted = v })
         }
         Note("Or say \"Jarvis, mute\" and \"Jarvis, unmute\".")
+        var quiet by remember { mutableStateOf(JarvisVoice.quietHours) }
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
+            Text("Quiet hours 22:00 to 07:00", style = Type.label.copy(color = p.ink, fontSize = 14.sp), modifier = Modifier.weight(1f))
+            androidx.compose.material3.Switch(checked = quiet, onCheckedChange = { v -> quiet = v; JarvisVoice.quietHours = v })
+        }
+        Note("Nothing is said unasked at night (pop-ups instead); Jarvis still answers when you ask.")
         var hin by remember { mutableStateOf(JarvisVoice.hindi) }
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
             Text("Spoken replies in Hindi", style = Type.label.copy(color = p.ink, fontSize = 14.sp), modifier = Modifier.weight(1f))

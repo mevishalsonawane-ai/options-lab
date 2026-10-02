@@ -167,6 +167,8 @@ data class AppSettings(
         }
 
         fun save(s: AppSettings) {
+            // The limits' history ("what did I change this week", "Jarvis, undo"); never stops a save.
+            runCatching { SettingsLog.diff(load(), s) }
             SecurePrefs.putAll(mapOf(
                 "s.otm" to s.otmPct, "s.entry" to s.entry, "s.regime" to s.regime, "s.dated" to s.datedLot,
                 "s.lot" to s.pinnedLot, "s.wing" to (s.wingPct ?: -1.0), "s.capital" to s.capital,

@@ -63,12 +63,23 @@ class JarvisVoice : Service() {
         /** The running service, to speak a notice (the morning briefing). */
         @Volatile private var instance: java.lang.ref.WeakReference<JarvisVoice>? = null
 
-        /** Speaks [text] if Jarvis is listening now; false when it is not. */
-        fun announce(text: String): Boolean {
+        /**
+         * Speaks [text] if Jarvis is listening now; false when it is not. Unasked ([prompted] false) during quiet hours
+         * it is shown as a pop-up instead.
+         */
+        fun announce(text: String, prompted: Boolean = false): Boolean {
             val v = instance?.get() ?: return false
+            if (!prompted && quietNow()) { runCatching { JarvisPopup.show(v, "Jarvis", text) }; return true }
             v.main.post { v.say(text, "answer") }
             return true
         }
+
+        /** Quiet hours: nothing said unasked from 22:00 to 07:00 (on by default; "Jarvis, quiet hours off"). */
+        var quietHours: Boolean
+            get() = runCatching { com.optionslab.app.security.SecurePrefs.getBoolean("jarvis.quiet", true) }.getOrDefault(true)
+            set(v) { runCatching { com.optionslab.app.security.SecurePrefs.put("jarvis.quiet", v) } }
+
+        fun quietNow(): Boolean = quietHours && com.optionslab.ira.Quiet.now(java.time.LocalTime.now(java.time.ZoneId.of("Asia/Kolkata")))
 
         /** After Jarvis asks a yes-or-no question (a news trade), the answer is heard for this long without "Jarvis". */
         private const val ANSWER_MS = 60_000L
@@ -527,7 +538,8 @@ class JarvisVoice : Service() {
     }
 
     private val VOICE_KINDS = setOf(com.optionslab.ira.Command.Kind.MUTE, com.optionslab.ira.Command.Kind.UNMUTE,
-        com.optionslab.ira.Command.Kind.HINDI, com.optionslab.ira.Command.Kind.ENGLISH)
+        com.optionslab.ira.Command.Kind.HINDI, com.optionslab.ira.Command.Kind.ENGLISH,
+        com.optionslab.ira.Command.Kind.QUIET_ON, com.optionslab.ira.Command.Kind.QUIET_OFF)
 
     /** Commands that are never done on an unrecognised voice, even with a yes. */
     private val HIGH_RISK = setOf(com.optionslab.ira.Command.Kind.MODE_LIVE, com.optionslab.ira.Command.Kind.KILL_OFF,

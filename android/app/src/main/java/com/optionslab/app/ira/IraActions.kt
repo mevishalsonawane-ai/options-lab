@@ -180,7 +180,12 @@ internal object IraActions {
             Command.Kind.MODE_LIVE -> if (!Broker.linked) "Zerodha is not set up yet: More, then Zerodha." to null
                 else Commands.describe(c) to suspend { setSettings { it.copy(mode = "live", allowRealOrders = true) }; "Live mode: orders now go to Zerodha." }
             Command.Kind.ALARM_ADD -> {
-                val m = c.market; val lvl = c.level; val above = c.above
+                val m = c.market; val above = c.above
+                // "Falls 1% from here": the level from the price now.
+                val lvl = c.level ?: c.pct?.let { pct ->
+                    val px = m?.let { IraHub.state.value.snaps[it]?.price } ?: return "I don't have a ${m?.label ?: "market"} price just now to measure $pct% from. Try again in a moment." to null
+                    com.optionslab.ira.MoveAlarm.level(px, com.optionslab.ira.MoveAlarm.Move(pct, above == true))
+                }
                 if (m == null || lvl == null || above == null) return "Tell me the index, above or below, and the level: \"alert me when Nifty goes above 25000\"." to null
                 val sym = when (m) {
                     com.optionslab.ira.Market.NIFTY -> "NIFTY"; com.optionslab.ira.Market.BANKNIFTY -> "BANKNIFTY"; com.optionslab.ira.Market.VIX -> "INDIAVIX"
@@ -188,7 +193,7 @@ internal object IraActions {
                     com.optionslab.ira.Market.SENSEX -> com.optionslab.app.data.PriceAlarm.CHART + "SENSEX"
                     com.optionslab.ira.Market.GOLD -> return "Gold alarms are in IraGoldAlgo." to null
                 }
-                Commands.describe(c) to suspend {
+                Commands.describe(c.copy(level = lvl)) to suspend {
                     com.optionslab.app.data.Alarms.upsert(com.optionslab.app.data.PriceAlarm(System.currentTimeMillis(), sym, above, lvl, note = "set by Jarvis"))
                     model()?.refreshAlarms()
                     "Alarm set: ${m.label} ${if (above) "above" else "below"} ${"%,.2f".format(java.util.Locale.ENGLISH, lvl)}."
@@ -212,10 +217,24 @@ internal object IraActions {
                 if (old == v) return "${key.label.replaceFirstChar { it.uppercase() }} is already ${SettingsTalk.show(key, v)}." to null
                 val more = if (SettingsTalk.loosens(key, old, v)) " (this allows more risk)" else ""
                 SettingsTalk.describe(key, old, v) + more to suspend {
+                    com.optionslab.app.data.SettingsLog.nextBy = "Jarvis"
                     setSettings { applySetting(key, v, it) }
                     "Done: ${key.label} is now ${SettingsTalk.show(key, v)}."
                 }
             }
+            Command.Kind.UNDO -> {
+                val last = com.optionslab.app.data.SettingsLog.all().lastOrNull() ?: return "No limit has been changed yet, so there is nothing to undo." to null
+                val now = setting(last.key, AppSettings.load())
+                if (now != last.new) return "${last.key.label.replaceFirstChar { it.uppercase() }} has changed again since, so I won't undo it: tell me the value you want." to null
+                val more = if (SettingsTalk.loosens(last.key, now, last.old)) " (this allows more risk)" else ""
+                "undo: " + SettingsTalk.describe(last.key, now, last.old) + more to suspend {
+                    com.optionslab.app.data.SettingsLog.nextBy = "Jarvis (undo)"
+                    setSettings { applySetting(last.key, last.old, it) }
+                    "Undone: ${last.key.label} is back to ${SettingsTalk.show(last.key, last.old)}."
+                }
+            }
+            Command.Kind.QUIET_ON -> { JarvisVoice.quietHours = true; "Quiet hours on, Boss: from 22:00 to 07:00 I say nothing unless you ask." to null }
+            Command.Kind.QUIET_OFF -> { JarvisVoice.quietHours = false; "Quiet hours off." to null }
             // Jarvis's voice and language: done at once (nothing to confirm, nothing at risk).
             Command.Kind.MUTE -> { JarvisVoice.muted = true; IraActivity.add("Muted my voice."); "Muted, Boss. I'll reply on screen only. Say \"Jarvis, unmute\" or \"Jarvis, speak again\" to hear me." to null }
             Command.Kind.UNMUTE -> { JarvisVoice.muted = false; IraActivity.add("Voice back on."); "Voice on, Boss." to null }
@@ -311,6 +330,10 @@ internal object IraActions {
 
     /** Would [c] loosen one of the app's limits (so only Boss's voice may ask for it)? */
     fun loosens(c: Command): Boolean {
+        if (c.kind == Command.Kind.UNDO) {
+            val last = com.optionslab.app.data.SettingsLog.all().lastOrNull() ?: return false
+            return SettingsTalk.loosens(last.key, setting(last.key, AppSettings.load()), last.old)
+        }
         if (c.kind != Command.Kind.SET_LIMIT) return false
         val key = c.target?.let { runCatching { SettingsTalk.Key.valueOf(it) }.getOrNull() } ?: return false
         return SettingsTalk.loosens(key, setting(key, AppSettings.load()), c.level ?: return false)

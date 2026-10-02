@@ -389,6 +389,10 @@ object Tasks {
         runCatching { com.optionslab.app.ira.IraHub.expertWatch() }
         // JarvisAlgo: approved news trades - the best price seen, the profit-lock stop moved up, the result recorded.
         if (com.optionslab.app.BuildConfig.JARVIS) runCatching { com.optionslab.app.ira.IraNewsTrades.tick() }
+        // JarvisAlgo: a position with no stop is offered one; the 14:55 expiry heads-up; live prices that stopped.
+        runCatching { com.optionslab.app.ira.IraHub.rescueWatch() }
+        runCatching { com.optionslab.app.ira.IraHub.expiryPreview() }
+        runCatching { com.optionslab.app.ira.IraHub.feedWatch() }
         // Stops, trailing stops and targets: one exit filled cancels the other; trails move up.
         runCatching { com.optionslab.app.data.Protections.tick() }
         // Expiry day, 15:05: close every option position expiring today (paper and live, all products).

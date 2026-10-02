@@ -69,6 +69,9 @@ object Ask {
         // "What is a hammer?" - the pattern explained, with its own record.
         if (Regex(" (what is|what s|whats|what are|explain|meaning of|tell me about|define) (a |an |the )?").containsMatchIn(t) && named(t) != null && !Regex(" (backtest|back test) ").containsMatchIn(t))
             return Question(text, Market.mentioned(text), setOf(Topic.EXPLAIN), null, pattern = named(t))
+        // "Describe the Nifty chart": the trend, levels, today's range and the latest candle pattern.
+        if (Regex(" (describe|read|explain|walk me through|tell me about) (the |my )?([a-z]+ )?chart ").containsMatchIn(t))
+            return Question(text, Market.mentioned(text).ifEmpty { listOf(Market.NIFTY) }, setOf(Topic.OVERVIEW, Topic.TREND, Topic.LEVELS, Topic.PATTERNS), null)
         // "Should I trade now?" - Jarvis's trade check (never a direction, never a single instrument).
         if (!Regex(" (backtest|back test|engulfing|pattern|patterns|strategy|candle|candles) ").containsMatchIn(t) && Regex(" (bullish|bearish|market (good|bad|mood|today)|how is the market|is (the )?market (good|bad|up|down|bullish|bearish|trending|sideways)|which way is the market) ").containsMatchIn(t) ||
             Regex(" (should|shall|can|could) i (trade|be trading|stay out|sit out|take (a |any )?trades?)| (safe|good|right|ok|okay) (time )?to trade| trade (now|today) or not| should i stay out | is today (a )?(good|bad) (day )?(to|for) trad").containsMatchIn(t))
