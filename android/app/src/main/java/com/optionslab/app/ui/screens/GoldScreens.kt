@@ -175,8 +175,9 @@ private fun GoldHome() {
                 ToggleRow("Armed", "Buys only while gold's 4-hour trend (Supertrend 10, 3) points up; held overnight and over weekends. Paper: a notification on every buy and sell.",
                     tb.armed) { on -> scope.launch(Dispatchers.IO) { com.optionslab.app.data.GoldTrendPaper.setArmed(on) } }
                 LedgerLine("Status", tb.status)
-                tb.up?.let { up -> LedgerLine("4-hour trend", if (up) "up · line %.2f".format(Locale.ENGLISH, tb.line ?: 0.0) else "down",
-                    if (up) p.verdigris else p.oxblood) }
+                tb.up?.let { up -> LedgerLine("4-hour trend", tb.line?.let { l ->
+                    if (up) "up · line %.2f".format(Locale.ENGLISH, l) else "down · turns up on a close above %.2f".format(Locale.ENGLISH, l)
+                } ?: if (up) "up" else "down", if (up) p.verdigris else p.oxblood) }
                 if (tb.armed && tb.position == null) LedgerLine("Next decision", "about " + com.optionslab.app.data.GoldTrendPaper.nextDecision(GoldPaper.now()))
                 LedgerLine("Last signal", tb.lastSignal ?: "none yet")
                 tb.position?.let { pos ->

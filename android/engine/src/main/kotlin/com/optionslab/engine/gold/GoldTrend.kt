@@ -55,7 +55,11 @@ object GoldTrend {
         return a
     }
 
-    /** The trend after the last completed candle: up or not, the Supertrend line under it, and the lock's ATR. */
+    /**
+     * The trend after the last completed candle: up or not; [line] the Supertrend line that matters now - under the price
+     * while up (a close below it turns the trend down), above it while down (a close above it turns the trend up); and the
+     * lock's ATR.
+     */
     data class State(val up: Boolean, val line: Double, val atr: Double)
 
     fun state(completed: List<Bar>): State? {
@@ -74,7 +78,7 @@ object GoldTrend {
             fl = if (lb > pl || pc < pl) lb else pl
             up = if (b.close > pu) true else if (b.close < pl) false else up
         }
-        return State(up, fl, atr(completed, LOCK_ATR_LENGTH).last())
+        return State(up, if (up) fl else fu, atr(completed, LOCK_ATR_LENGTH).last())
     }
 
     /** The lock's stop (a bid price) for a buy at [entry] (ask) whose highest bid since is [peak], or null before it starts. */

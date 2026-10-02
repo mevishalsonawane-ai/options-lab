@@ -113,7 +113,8 @@ object Diag {
         append("${GoldTrendPaper.NAME}: armed ${tr.armed} · status \"${redact(tr.status)}\" · decided ${tr.decided ?: "-"}" +
             (if (tr.armed && tr.position == null) " · next ${GoldTrendPaper.nextDecision(t)}" else "") + "\n")
         append("  trend ${when (tr.up) { true -> "up"; false -> "down"; null -> "not known yet" }}" +
-            (tr.line?.let { " · line %.2f".format(Locale.ENGLISH, it) } ?: "") + " · waiting for a flip after a lock sale: ${tr.waitFlip}\n")
+            (tr.line?.let { (if (tr.up == false) " · turns up on a 4-hour close above %.2f" else " · line %.2f").format(Locale.ENGLISH, it) } ?: "") +
+            " · waiting for a flip after a lock sale: ${tr.waitFlip}\n")
         tr.position?.let { p -> append(("  open: bought %.2f at ${GoldPaper.when_(p.entryTime)} · %.2f lot · ATR %.2f · top (bid) %.2f · lock " +
             "${tr.stop?.let { "%.2f".format(Locale.ENGLISH, it) } ?: "not started"}\n").format(Locale.ENGLISH, p.entry, p.lots, p.atr, p.peak)) }
         append("  trades ${tr.trades.size} · realised ${GoldPaper.usd(tr.realized)} · last signal ${tr.lastSignal ?: "none"}\n")
