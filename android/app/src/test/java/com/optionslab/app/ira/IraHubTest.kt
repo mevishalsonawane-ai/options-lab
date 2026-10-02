@@ -42,7 +42,7 @@ class IraHubTest : RobolectricTest() {
         IraMarket.VIX to History(IraMarket.VIX, days(25, 13.0, 0.02, 3)),
     )
 
-    @After fun down() { IraHub.testHistories = null; IraHub.testAutoLab = false; runBlocking { IraHub.forgetAll() } }
+    @After fun down() { IraAccount.testView = null; IraHub.testHistories = null; IraHub.testAutoLab = false; runBlocking { IraHub.forgetAll() } }
 
     private fun waitFor(what: String, ok: () -> Boolean) {
         val t0 = System.currentTimeMillis()
@@ -261,5 +261,34 @@ class IraHubTest : RobolectricTest() {
         assertTrue(!IraModel.recheck(context))
         assertTrue("a wrong file is deleted", !f.exists())
         assertEquals(IraModel.Status.UNSUPPORTED, IraModel.state.value.status)   // outside JarvisAlgo
+    }
+
+    /** "Analyze my orders": the app's own books, answered as facts; "can you listen to me": what Ira can do. */
+    @Test fun yourOwnTradingAndIraItself() = runBlocking {
+        IraAccount.testView = { com.optionslab.ira.AccountView("Paper", "Paper", 500.0, 500.0, 0.0, emptyList(),
+            listOf(com.optionslab.ira.AccountView.OrderLine("09:31", "NIFTY25O0724500CE", "BUY", 75, "COMPLETE", 120.5, "Manual · Ira")),
+            listOf(com.optionslab.ira.AccountView.ArmLine("Jarvis: breakout", "Pine", true, "BANKNIFTY 15m", 500.0, null, 1))) }
+        IraHub.ask("can you analyze my strategies orders")
+        waitFor("the account answer") { IraHub.state.value.messages.size == 2 }
+        val a = IraHub.state.value.messages.last()
+        assertTrue(a.text, a.text.contains("1 order today: 1 filled") && a.text.contains("Jarvis: breakout (Pine, BANKNIFTY 15m) today +Rs 500.00"))
+        assertNull("never an order", a.order)
+        IraAccount.testView = { null }
+        IraHub.ask("my pnl")
+        waitFor("the second answer") { IraHub.state.value.messages.size == 4 }
+        assertTrue(IraHub.state.value.messages.last().text.startsWith("I could not read your account"))
+        IraHub.ask("you can listen to me")
+        assertTrue(IraHub.state.value.messages.last().text, IraHub.state.value.messages.last().text.startsWith("Voice is in JarvisAlgo only"))
+        IraHub.ask("what can you do")
+        assertTrue(IraHub.state.value.messages.last().text.startsWith("I can tell you about Nifty"))
+    }
+
+    /** The real books on a fresh install: an empty paper account reads as such. */
+    @Test fun theRealBooksAreRead() = runBlocking {
+        com.optionslab.app.data.PineScripts.init(context)
+        val v = IraAccount.read()
+        assertNotNull(v)
+        assertEquals("Paper", v!!.account)
+        assertTrue(v.orders.isEmpty() && v.positions.isEmpty())
     }
 }

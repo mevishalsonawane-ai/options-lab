@@ -1,7 +1,7 @@
 package com.optionslab.ira
 
 /** What a question is about. */
-enum class Topic { OVERVIEW, WHY, TREND, LEVELS, PATTERNS, NEWS, VOLATILITY, ADVICE, ORDER, BACKTEST, GREETING, OFF_TOPIC }
+enum class Topic { OVERVIEW, WHY, TREND, LEVELS, PATTERNS, NEWS, VOLATILITY, ADVICE, ORDER, BACKTEST, ACCOUNT, HELP, GREETING, OFF_TOPIC }
 
 /**
  * An order the owner asked for in words. Ira never sends it: the app opens its own order review filled with this, and
@@ -44,9 +44,18 @@ object Ask {
         Topic.GREETING to listOf("hello", "hi", "hey", "good morning", "good evening", "jarvis", "ira"),
     )
 
+    /** The owner's own trading: "my orders", "how are my strategies doing", "today's p&l". */
+    private val ACCOUNT = Regex(" (my|mine|our) ([a-z]+ ){0,3}(order|orders|trade|trades|position|positions|holding|holdings|p l|pnl|profit|profits|" +
+        "loss|losses|strategy|strategies|arm|arms|bot|bots|algo|algos|studies|study|scripts?|account|portfolio|fills) " +
+        "|( how am i doing | how did i do | today s p l | todays p l | today s pnl | todays pnl | p l today | pnl today )")
+    /** About Ira itself: what it can do, the voice. */
+    private val HELP = Regex(" (what can you do|what do you do|who are you|what are you|help|how do i use|how to use|can you (hear|listen)|" +
+        "listen to me|hear me|your voice|voice|speak to me|talk to me|can you talk|can you speak) ")
+
     fun parse(text: String): Question {
         val t = " " + text.lowercase().replace(Regex("[^a-z0-9 ]"), " ").replace(Regex("\\s+"), " ").trim() + " "
-        val order = order(t)
+        val account = ACCOUNT.containsMatchIn(t)
+        val order = if (account) null else order(t)
         val markets = Market.mentioned(text)
         val topics = LinkedHashSet<Topic>()
         if (order != null) topics += Topic.ORDER
@@ -55,6 +64,9 @@ object Ask {
             topics.clear(); if (markets.isNotEmpty()) topics += Topic.OVERVIEW else topics += Topic.OFF_TOPIC
         }
         if (Topic.BACKTEST in topics) { topics.remove(Topic.OVERVIEW); topics.remove(Topic.PATTERNS) }
+        // The owner's own trading: unless a backtest is named outright, it is about the account, not the market.
+        if (account && !Regex(" (backtest|back test) ").containsMatchIn(t)) { topics.clear(); topics += Topic.ACCOUNT }
+        else if (order == null && markets.isEmpty() && Topic.BACKTEST !in topics && HELP.containsMatchIn(t)) { topics.clear(); topics += Topic.HELP }
         return Question(text, markets, topics, order, pattern(t), when {
             Regex(" (1 hour|1h|hourly|60 minute|60m|one hour) ").containsMatchIn(t) -> 60
             Regex(" (15 minute|15m|15 min|fifteen minute) ").containsMatchIn(t) -> 15

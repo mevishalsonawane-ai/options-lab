@@ -339,7 +339,8 @@ object IraHub {
         if (q.isEmpty()) return
         val parsed = Ask.parse(q)
         if (Topic.BACKTEST in parsed.topics) { backtestAsked(q, parsed); return }
-        val a = runCatching { Ira(book).answer(q, _state.value.snaps, _state.value.news) }.getOrElse { com.optionslab.ira.Answer("I could not work that out.", emptyList()) }
+        if (Topic.ACCOUNT in parsed.topics) { accountAsked(q); return }
+        val a = runCatching { Ira(book).answer(q, _state.value.snaps, _state.value.news, voice = com.optionslab.app.BuildConfig.JARVIS) }.getOrElse { com.optionslab.ira.Answer("I could not work that out.", emptyList()) }
         // JarvisAlgo with the model ready: the answer shows at once, then the model rewrites it in place if it passes the checks.
         val write = IraModel.usable() && com.optionslab.ira.Writer.worthRewriting(parsed, a)
         val msg = Msg(true, a.text, a.facts, a.order, writing = write)
@@ -391,6 +392,25 @@ object IraHub {
             val r = lab(kind, m, minutes)
             if (r == null) _state.update { it.copy(busy = false, messages = (it.messages + Msg(true, "I have no ${m.label} candles to backtest on yet.")).takeLast(MAX_MESSAGES)) }
             else { propose(r, ""); _state.update { it.copy(busy = false) } }
+        }
+    }
+
+    /** "Analyze my orders": the app's own books read off the main thread, answered as facts; the model may reword it. */
+    private fun accountAsked(q: String) {
+        val user = Msg(false, q)
+        _state.update { it.copy(messages = (it.messages + user).takeLast(MAX_MESSAGES)) }
+        scope.launch {
+            val v = IraAccount.read()
+            val a = Ira(book).answer(q, emptyMap(), emptyList(), account = v)
+            val write = v != null && IraModel.usable() && a.facts.isNotEmpty()
+            val msg = Msg(true, a.text, a.facts, writing = write)
+            _state.update { it.copy(messages = (it.messages + msg).takeLast(MAX_MESSAGES)) }
+            if (write) {
+                val better = runCatching { IraModel.rewrite(q, a.facts, a.text) }.getOrNull()
+                _state.update { s -> s.copy(messages = s.messages.map { m ->
+                    if (m !== msg) m else if (better != null && better != a.text) m.copy(text = better, draft = a.text, writing = false) else m.copy(writing = false)
+                }) }
+            }
         }
     }
 

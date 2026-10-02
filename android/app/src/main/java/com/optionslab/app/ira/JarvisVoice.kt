@@ -30,6 +30,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.Locale
@@ -206,7 +207,11 @@ class JarvisVoice : Service() {
             val stale = st.snaps.isEmpty() || st.liveAt?.isBefore(java.time.Instant.now().minusSeconds(120)) != false
             if (stale) runCatching { withContext(Dispatchers.Default) { IraHub.refresh() } }
             IraHub.ask(q)
-            val a = IraHub.state.value.messages.lastOrNull { it.fromIra }
+            // Some answers (your account, a backtest) arrive a moment later: wait for Ira's reply to THIS question.
+            val a = kotlinx.coroutines.withTimeoutOrNull(15_000) {
+                IraHub.state.first { st -> st.messages.indexOfLast { !it.fromIra && it.text == q }.let { i -> i >= 0 && st.messages.drop(i + 1).any { it.fromIra } } }
+                    .messages.let { ms -> ms.drop(ms.indexOfLast { !it.fromIra && it.text == q } + 1).first { it.fromIra } }
+            }
             val o = a?.order
             say(when {
                 a == null -> "I could not work that out."
