@@ -36,7 +36,7 @@ import com.optionslab.app.data.AppSettings
  */
 object Notifier {
     /** The ongoing watch (a foreground service must show one): minimum importance, so it stays collapsed with no status-bar icon. */
-    const val LIVE = "watch"
+    const val LIVE = "watch.quiet"
     /**
      * IraGoldAlgo's always-on service: Android requires a notification for it, so it goes to a channel created switched
      * OFF - nothing is shown (the owner wants buy / sell notifications only); the app then appears only under the
@@ -60,6 +60,9 @@ object Notifier {
         val nm = context.getSystemService(NotificationManager::class.java)
         // The old "live" channel showed index levels at low importance; its successor is LIVE ("watch").
         nm.deleteNotificationChannel("live")
+        // The watch's visible channel ("watch", minimum importance) is replaced by one created switched off: the owner
+        // wants buy / sell / approval notifications, not the ongoing line (2026-10-02). The watch itself is unchanged.
+        nm.deleteNotificationChannel("watch")
         if (com.optionslab.app.BuildConfig.GOLD) {
             // IraGoldAlgo: buys and sells, and the silent line Android requires for the always-on service - nothing else.
             listOf(APPROVAL, RISK, SCHEDULE, HEALTH, LIVE).forEach { nm.deleteNotificationChannel(it) }
@@ -92,8 +95,8 @@ object Notifier {
                 lockscreenVisibility = android.app.Notification.VISIBILITY_PRIVATE
                 enableVibration(true)
             },
-            NotificationChannel(LIVE, "Order watch", NotificationManager.IMPORTANCE_MIN).apply {
-                description = "The background watch of your orders, positions and strategies during market hours (no market data)"
+            NotificationChannel(LIVE, "Order watch", NotificationManager.IMPORTANCE_NONE).apply {
+                description = "Off: the background watch of your orders, positions and strategies runs during market hours without showing anything"
                 lockscreenVisibility = android.app.Notification.VISIBILITY_PRIVATE
                 setShowBadge(false)
             },
