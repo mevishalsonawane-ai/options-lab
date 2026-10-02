@@ -704,7 +704,8 @@ fun GoldPnlCalendar() {
     val book by com.optionslab.app.data.GoldPaper.book.collectAsState()
     val trend by com.optionslab.app.data.GoldTrendPaper.book.collectAsState()
     val dip by com.optionslab.app.data.GoldDipPaper.book.collectAsState()
-    val allTrades = remember(book.trades, trend.trades, dip.trades) { (book.trades + trend.trades + dip.trades).sortedBy { it.exitTime } }
+    val tas by com.optionslab.app.data.GoldTasPaper.book.collectAsState()
+    val allTrades = remember(book.trades, trend.trades, dip.trades, tas.trades) { (book.trades + trend.trades + dip.trades + tas.trades).sortedBy { it.exitTime } }
     val all = remember(allTrades) { goldDays(allTrades) }
     val thisMonth = YearMonth.from(com.optionslab.app.data.GoldPaper.now().plusMinutes(330).toLocalDate())
     var month by remember { mutableStateOf(thisMonth) }

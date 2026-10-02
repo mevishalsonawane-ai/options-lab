@@ -125,12 +125,15 @@ private fun GoldHome() {
     val chart by GoldPaper.chart.collectAsState()
     val tb by com.optionslab.app.data.GoldTrendPaper.book.collectAsState()
     val db by com.optionslab.app.data.GoldDipPaper.book.collectAsState()
+    val sb by com.optionslab.app.data.GoldTasPaper.book.collectAsState()
     val scope = rememberCoroutineScope()
     val ctx = androidx.compose.ui.platform.LocalContext.current.applicationContext
     val open = b.open(b.price)
     val trendOpen = tb.open(b.price)
     val dipOpen = db.open(b.price)
-    val anyOpen = if (open == null && trendOpen == null && dipOpen == null) null else (open ?: 0.0) + (trendOpen ?: 0.0) + (dipOpen ?: 0.0)
+    val tasOpen = sb.open(b.price)
+    val anyOpen = if (open == null && trendOpen == null && dipOpen == null && tasOpen == null) null
+        else (open ?: 0.0) + (trendOpen ?: 0.0) + (dipOpen ?: 0.0) + (tasOpen ?: 0.0)
     Page {
         item {
             LedgerCard(title = "Gold (COMEX futures)") {
@@ -146,9 +149,10 @@ private fun GoldHome() {
         }
         item {
             LedgerCard(title = "Paper account") {
-                val realized = b.realized + tb.realized + db.realized
-                Text(GoldPaper.usd(b.balance + tb.realized + db.realized + (anyOpen ?: 0.0)).removePrefix("+"), style = Type.figureLarge.copy(color = p.ink))
-                LedgerLine("Balance (closed trades)", GoldPaper.usd(b.balance + tb.realized + db.realized).removePrefix("+"))
+                val others = tb.realized + db.realized + sb.realized
+                val realized = b.realized + others
+                Text(GoldPaper.usd(b.balance + others + (anyOpen ?: 0.0)).removePrefix("+"), style = Type.figureLarge.copy(color = p.ink))
+                LedgerLine("Balance (closed trades)", GoldPaper.usd(b.balance + others).removePrefix("+"))
                 LedgerLine("Realised", GoldPaper.usd(realized), if (realized >= 0) p.verdigris else p.oxblood)
                 anyOpen?.let { LedgerLine("Open trades", GoldPaper.usd(it), if (it >= 0) p.verdigris else p.oxblood) }
                 LedgerLine("Size", "%.2f lot (%.0f oz)".format(Locale.ENGLISH, b.lots, b.lots * GoldLiquidity.OZ_PER_LOT))
@@ -219,6 +223,30 @@ private fun GoldHome() {
                     "Weaker than Trend 4h: a paper candidate.")
             }
         }
+        item {
+            LedgerCard(title = com.optionslab.app.data.GoldTasPaper.NAME) {
+                ToggleRow("Armed", "Buys when the 1-hour trend tracker turns up with a trend score of +50% or more; sells in thirds at targets and the rest when the tracker turns down. Paper: a notification on every buy and sell.",
+                    sb.armed) { on -> scope.launch(Dispatchers.IO) { com.optionslab.app.data.GoldTasPaper.setArmed(on); com.optionslab.app.work.GoldService.ensure(ctx) } }
+                LedgerLine("Status", sb.status)
+                sb.up?.let { up -> LedgerLine("1-hour tracker", (if (up) "up" else "down") +
+                    (sb.line?.let { " · line %.2f".format(Locale.ENGLISH, it) } ?: "") + (sb.score?.let { " · score %+.0f%%".format(Locale.ENGLISH, it) } ?: ""),
+                    if (up) p.verdigris else p.oxblood) }
+                LedgerLine("Last signal", sb.lastSignal ?: "none yet")
+                sb.position?.let { pos ->
+                    Rule(Modifier.padding(vertical = 6.dp))
+                    LedgerLine("Bought", "%.2f at %s".format(Locale.ENGLISH, pos.entry, GoldPaper.when_(pos.entryTime)))
+                    LedgerLine("Held", "%.2f of %.2f lot".format(Locale.ENGLISH, pos.left, pos.lots))
+                    tasOpen?.let { LedgerLine("Open P&L", GoldPaper.usd(it), if (it >= 0) p.verdigris else p.oxblood) }
+                    LedgerLine("Stop", "%.2f".format(Locale.ENGLISH, pos.stop) + if (pos.hit > 0) " (the buy price)" else " (the tracker line)")
+                    if (sb.targets.isNotEmpty()) LedgerLine("Targets left", sb.targets.joinToString(" · ") { "%.2f".format(Locale.ENGLISH, it) })
+                }
+                Note("Each 1-hour candle is decided about 10 minutes after it closes. A buy may come up to 10 hours after the tracker turns up, once the " +
+                    "score passes; one buy per turn. Stop on the tracker line; a third sold at 1.5 R and 2.5 R (the stop then moves to the buy price), " +
+                    "the rest at 3.5 R or when a 1-hour candle closes with the tracker down. Held overnight.")
+                Note("Backtest (three years, 1 lot): +$165.5k (+47.6k, +52.2k, +65.7k), 222 trades, 45% won, t 2.21, deepest drawdown -$38.1k - " +
+                    "in years when gold rose about 140%. A paper candidate.")
+            }
+        }
     }
 }
 
@@ -228,7 +256,8 @@ private fun GoldTrades() {
     val book by GoldPaper.book.collectAsState()
     val tb by com.optionslab.app.data.GoldTrendPaper.book.collectAsState()
     val db by com.optionslab.app.data.GoldDipPaper.book.collectAsState()
-    val trades = remember(book.trades, tb.trades, db.trades) { (book.trades + tb.trades + db.trades).sortedBy { it.exitTime } }
+    val sb by com.optionslab.app.data.GoldTasPaper.book.collectAsState()
+    val trades = remember(book.trades, tb.trades, db.trades, sb.trades) { (book.trades + tb.trades + db.trades + sb.trades).sortedBy { it.exitTime } }
     val b = book.copy(trades = trades)
     val today = GoldPaper.now().toLocalDate()
     Page {
@@ -242,8 +271,9 @@ private fun GoldTrades() {
                         LedgerLine("$label · ${ts.size} trades · $won", if (ts.isEmpty()) "—" else GoldPaper.usd(x),
                             if (ts.isEmpty()) null else if (x >= 0) p.verdigris else p.oxblood)
                     }
-                if (tb.trades.isNotEmpty() || db.trades.isNotEmpty()) listOf("Liquidity 1h" to book.trades, com.optionslab.app.data.GoldTrendPaper.NAME to tb.trades,
-                    com.optionslab.app.data.GoldDipPaper.NAME to db.trades).forEach { (arm, ts) ->
+                if (tb.trades.isNotEmpty() || db.trades.isNotEmpty() || sb.trades.isNotEmpty()) listOf("Liquidity 1h" to book.trades,
+                    com.optionslab.app.data.GoldTrendPaper.NAME to tb.trades, com.optionslab.app.data.GoldDipPaper.NAME to db.trades,
+                    com.optionslab.app.data.GoldTasPaper.NAME to sb.trades).forEach { (arm, ts) ->
                     val x = ts.sumOf { it.pnl }
                     LedgerLine("$arm · ${ts.size} trades", if (ts.isEmpty()) "—" else GoldPaper.usd(x), if (ts.isEmpty()) null else if (x >= 0) p.verdigris else p.oxblood)
                 }

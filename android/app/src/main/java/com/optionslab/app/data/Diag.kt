@@ -92,12 +92,13 @@ object Diag {
         PineAuto.log.value.takeLast(40).forEach { append("${TIME.format(Instant.ofEpochMilli(it.at))} #${it.script}: ${redact(it.text)}\n") }
     }
 
-    /** IraGoldAlgo: both arms' state, the price feed and what the phone allows in the background. No keys exist in this app. */
+    /** IraGoldAlgo: every arm's state, the price feed and what the phone allows in the background. No keys exist in this app. */
     internal fun gold(): String = buildString {
         val t = GoldPaper.now()
         val liq = GoldPaper.book.value
         val tr = GoldTrendPaper.book.value
         val dp = GoldDipPaper.book.value
+        val ts = GoldTasPaper.book.value
         append("\n-- Gold --\n")
         append("Now ${GoldPaper.when_(t)} · gold trading: ${com.optionslab.engine.gold.GoldLiquidity.inSession(t)}\n")
         append("Price ${liq.price?.let { "%.2f".format(Locale.ENGLISH, it) } ?: "none"} at ${liq.priceAt?.let { GoldPaper.when_(it) } ?: "-"} · feed delayed: ${GoldPaper.stale(liq, t)}\n")
@@ -106,7 +107,7 @@ object Diag {
                 "${runCatching { com.optionslab.app.work.Jobs.canExact(c) }.getOrNull()} · left out of battery saving: " +
                 "${runCatching { com.optionslab.app.ui.screens.BatteryCheck.unrestricted(c) }.getOrNull()}\n")
         }
-        append("Paper account: start ${GoldPaper.usd(liq.start)} · lot ${liq.lots} · realised ${GoldPaper.usd(liq.realized + tr.realized + dp.realized)}\n")
+        append("Paper account: start ${GoldPaper.usd(liq.start)} · lot ${liq.lots} · realised ${GoldPaper.usd(liq.realized + tr.realized + dp.realized + ts.realized)}\n")
         append("Liquidity 1h: armed ${liq.armed} · status \"${redact(liq.status)}\" · decided ${liq.decided ?: "-"}" +
             (if (liq.armed && liq.position == null) " · next ${GoldPaper.nextDecision(t)}" else "") + "\n")
         liq.position?.let { p -> append("  open: bought %.2f at ${GoldPaper.when_(p.entryTime)} · level %.2f · target ${p.target?.let { "%.2f".format(Locale.ENGLISH, it) } ?: "none"}\n".format(Locale.ENGLISH, p.entry, p.level)) }
@@ -123,7 +124,13 @@ object Diag {
         dp.position?.let { p -> append(("  open: bought %.2f at ${GoldPaper.when_(p.entryTime)} · %.2f lot · ATR %.2f · top (bid) %.2f · lock " +
             "${dp.stop?.let { "%.2f".format(Locale.ENGLISH, it) } ?: "not started"}\n").format(Locale.ENGLISH, p.entry, p.lots, p.atr, p.peak)) }
         append("  trades ${dp.trades.size} · realised ${GoldPaper.usd(dp.realized)} · last signal ${dp.lastSignal ?: "none"}\n")
-        (liq.trades + tr.trades + dp.trades).sortedBy { it.exitTime }.takeLast(10).asReversed().forEach { x ->
+        append("${GoldTasPaper.NAME}: armed ${ts.armed} · status \"${redact(ts.status)}\" · decided ${ts.decided ?: "-"} · bought turn ${ts.usedTurn ?: "-"}\n")
+        append("  tracker ${when (ts.up) { true -> "up"; false -> "down"; null -> "not known yet" }}" +
+            (ts.line?.let { " · line %.2f".format(Locale.ENGLISH, it) } ?: "") + (ts.score?.let { " · score %+.0f%%".format(Locale.ENGLISH, it) } ?: "") + "\n")
+        ts.position?.let { p -> append(("  open: bought %.2f at ${GoldPaper.when_(p.entryTime)} · %.2f of %.2f lot left · stop %.2f · R %.2f · targets hit ${p.hit}\n")
+            .format(Locale.ENGLISH, p.entry, p.left, p.lots, p.stop, p.risk)) }
+        append("  trades ${ts.trades.size} · realised ${GoldPaper.usd(ts.realized)} · last signal ${ts.lastSignal ?: "none"}\n")
+        (liq.trades + tr.trades + dp.trades + ts.trades).sortedBy { it.exitTime }.takeLast(10).asReversed().forEach { x ->
             append("  ${GoldPaper.arm(x)}: ${GoldPaper.when_(x.entryTime)} -> ${GoldPaper.when_(x.exitTime)} · %.2f -> %.2f · ${x.why} · ${GoldPaper.usd(x.pnl)}\n"
                 .format(Locale.ENGLISH, x.entry, x.exit))
         }

@@ -36,3 +36,6 @@
 
 Caveat: the paste stopped before the entry / exit block, so the entry (tracker flip with the score filter, delayed
 entry up to 10 bars, one trade per up-trend) follows the inputs' descriptions rather than the script's own code.
+
+**Added to IraGoldAlgo as the fourth paper arm, "TAS 1h" (2026-10-02)**: engine/gold/GoldTas.kt, replayed over the same
+history by GoldTasReplayTest - 222 trades, +$165,479, the same as this script.

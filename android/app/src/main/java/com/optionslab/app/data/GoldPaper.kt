@@ -98,6 +98,7 @@ object GoldPaper {
         edit { it.copy(start = balance, position = null, trades = emptyList(), decided = null) }
         GoldTrendPaper.reset()
         GoldDipPaper.reset()
+        GoldTasPaper.reset()
     }
 
     // ---- the minute pass ---------------------------------------------------------
@@ -145,6 +146,8 @@ object GoldPaper {
                 val thirty = com.optionslab.engine.gold.GoldDip.completed(com.optionslab.engine.gold.GoldDip.thirty(history30() + minutes), fed)
                 GoldDipPaper.step(thirty, hourly, minutes, t, fed, b.lots)
             }
+            // The TAS arm on the same 1-hour candles.
+            if (GoldTasPaper.book.value.let { it.armed || it.position != null }) GoldTasPaper.step(hourly, minutes, t, fed, b.lots)
         }
     }
 
@@ -259,6 +262,12 @@ object GoldPaper {
         "dip_lock" -> "profit lock: fell 2 ATR from its top"
         "dip_time" -> "8 hours after the buy"
         "dip_break" -> "before the daily break (02:25 IST)"
+        "tas_t1" -> "first target (1.5 R)"
+        "tas_t2" -> "second target (2.5 R)"
+        "tas_t3" -> "third target (3.5 R)"
+        "tas_stop" -> "stop: the tracker line"
+        "tas_even" -> "stop at the buy price after the first target"
+        "tas_down" -> "the 1-hour tracker turned down"
         else -> why
     }
 
@@ -267,6 +276,7 @@ object GoldPaper {
     fun arm(t: Trade): String = when {
         t.why == "trend_down" || t.why == "giveback" -> GoldTrendPaper.NAME
         t.why.startsWith("dip_") -> GoldDipPaper.NAME
+        t.why.startsWith("tas_") -> GoldTasPaper.NAME
         else -> "Liquidity 1h"
     }
 

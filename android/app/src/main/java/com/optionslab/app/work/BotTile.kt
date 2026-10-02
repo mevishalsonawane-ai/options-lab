@@ -7,6 +7,7 @@ import android.service.quicksettings.TileService
 import com.optionslab.app.R
 import com.optionslab.app.data.Diag
 import com.optionslab.app.data.GoldDipPaper
+import com.optionslab.app.data.GoldTasPaper
 import com.optionslab.app.data.GoldPaper
 import com.optionslab.app.data.GoldTrendPaper
 import com.optionslab.app.data.Strategies
@@ -72,16 +73,18 @@ class BotTile : TileService() {
 
     /**
      * Today's P&L, live: IraAlgo - the paper account's day P&L after charges (Home's "P&L today"), or in Live the
-     * Zerodha figure the watch publishes each minute; IraGoldAlgo - today's closed trades of the three arms (by the
+     * Zerodha figure the watch publishes each minute; IraGoldAlgo - today's closed trades of the four arms (by the
      * Indian day, as the P&L calendar) plus the open trades at the last price.
      */
     private suspend fun todayPnl(): String? =
         if (com.optionslab.app.BuildConfig.GOLD) {
             val today = GoldPaper.now().plusMinutes(330).toLocalDate()
-            val closed = (GoldPaper.book.value.trades + GoldTrendPaper.book.value.trades + GoldDipPaper.book.value.trades)
+            val closed = (GoldPaper.book.value.trades + GoldTrendPaper.book.value.trades + GoldDipPaper.book.value.trades +
+                GoldTasPaper.book.value.trades)
                 .filter { it.exitTime.plusMinutes(330).toLocalDate() == today }.sumOf { it.pnl }
             val px = GoldPaper.book.value.price
-            val open = (GoldPaper.book.value.open(px) ?: 0.0) + (GoldTrendPaper.book.value.open(px) ?: 0.0) + (GoldDipPaper.book.value.open(px) ?: 0.0)
+            val open = (GoldPaper.book.value.open(px) ?: 0.0) + (GoldTrendPaper.book.value.open(px) ?: 0.0) + (GoldDipPaper.book.value.open(px) ?: 0.0) +
+                (GoldTasPaper.book.value.open(px) ?: 0.0)
             "Today " + GoldPaper.usd(closed + open)
         } else {
             val v = if (com.optionslab.app.data.AppSettings.load().live) PositionCards.livePnl ?: com.optionslab.app.widget.IraWidget.lastPnl()
@@ -90,15 +93,16 @@ class BotTile : TileService() {
         }
 
     private suspend fun running(): Boolean =
-        if (com.optionslab.app.BuildConfig.GOLD) GoldPaper.book.value.armed || GoldTrendPaper.book.value.armed || GoldDipPaper.book.value.armed
+        if (com.optionslab.app.BuildConfig.GOLD) GoldPaper.book.value.armed || GoldTrendPaper.book.value.armed || GoldDipPaper.book.value.armed ||
+            GoldTasPaper.book.value.armed
         else !Strategies.stoppedToday()
 
     private suspend fun stop() {
         if (com.optionslab.app.BuildConfig.GOLD) {
             val was = listOfNotNull(if (GoldPaper.book.value.armed) "liquidity" else null, if (GoldTrendPaper.book.value.armed) "trend" else null,
-                if (GoldDipPaper.book.value.armed) "dip" else null)
+                if (GoldDipPaper.book.value.armed) "dip" else null, if (GoldTasPaper.book.value.armed) "tas" else null)
             if (was.isNotEmpty()) SecurePrefs.put(GOLD_ARMED, was.joinToString(","))
-            GoldPaper.setArmed(false); GoldTrendPaper.setArmed(false); GoldDipPaper.setArmed(false)
+            GoldPaper.setArmed(false); GoldTrendPaper.setArmed(false); GoldDipPaper.setArmed(false); GoldTasPaper.setArmed(false)
             runCatching { Diag.record("gold", "tile: all arms stopped (were: ${was.joinToString()})") }
         } else {
             val msg = Strategies.stopForToday(stopRunning = false, compromised = false)
@@ -112,6 +116,7 @@ class BotTile : TileService() {
             if ("liquidity" in arms) GoldPaper.setArmed(true)
             if ("trend" in arms) GoldTrendPaper.setArmed(true)
             if ("dip" in arms) GoldDipPaper.setArmed(true)
+            if ("tas" in arms) GoldTasPaper.setArmed(true)
             runCatching { GoldService.ensure(this) }
             runCatching { Diag.record("gold", "tile: arms started: ${arms.joinToString()}") }
         } else {
