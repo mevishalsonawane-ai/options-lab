@@ -19,7 +19,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
- * The quick-settings tile (the owner's ask, 2026-10-02): a power button to stop or start the bot without opening the app.
+ * The quick-settings tile (the owner's ask, 2026-10-02): the app's logo as a button to stop or start the bot without opening the app.
  *
  *   IraAlgo      the same switch as Home's "Stop bot for today" / "Start bot": stopping means no armed strategy or arm
  *                starts again today (running ones keep managing their own exits); it does not touch the kill switch.
@@ -50,7 +50,7 @@ class BotTile : TileService() {
             val on = runCatching { running() }.getOrDefault(false)
             withContext(Dispatchers.Main) {
                 val t = qsTile ?: return@withContext
-                t.icon = Icon.createWithResource(this@BotTile, R.drawable.ic_tile_power)
+                t.icon = Icon.createWithResource(this@BotTile, R.drawable.ic_notification_art)
                 t.label = if (com.optionslab.app.BuildConfig.GOLD) "Gold bot" else "IraAlgo bot"
                 t.state = if (on) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) t.subtitle = if (on) "Running · tap to stop" else "Stopped · tap to start"
