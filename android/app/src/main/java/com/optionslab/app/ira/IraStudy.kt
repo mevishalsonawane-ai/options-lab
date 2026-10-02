@@ -136,7 +136,7 @@ internal object IraStudy {
             out += "Candle patterns that held in both years: " + com.optionslab.ira.PatternExpert.best(k.edges).joinToString(" ")
         }
         val night = overnightNow()
-        out += if (night.isEmpty()) "No overnight news that matters." else listOf("Overnight news:") + night
+        if (night.isEmpty()) out += "No overnight news that matters." else { out += "Overnight news:"; out += night }
         return out
     }
 
