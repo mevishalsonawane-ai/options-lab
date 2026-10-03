@@ -600,3 +600,17 @@ class AlarmByMarketTest {
         assertTrue(Commands.parse("alert me when nifty goes above 25000")?.kind == Command.Kind.ALARM_ADD)
     }
 }
+
+class HindiOddsTest {
+    @Test fun hindiLevelQuestionsGetTheOdds() {
+        for (q in listOf("kya nifty aaj 25000 cross karega", "nifty 25000 pahunchega kya", "kya banknifty 51000 tak jayega", "nifty aaj 25000 touch karega")) {
+            val t = Ask.parse(q).text
+            assertEquals(true, Odds.asked(t)?.touch, "$q -> $t")
+            assertNull(Commands.parse(t), q); assertNull(Ask.parse(q).order, q)
+        }
+        assertEquals(false, Odds.asked(Ask.parse("nifty 25000 ke upar band hoga kya").text)?.touch)
+        assertEquals(false, Odds.asked(Ask.parse("nifty 24000 ke neeche band hoga kya").text)?.above)
+        // An alarm in Hindi stays an alarm.
+        assertEquals(Command.Kind.ALARM_ADD, Commands.parse(Hinglish.normalize("nifty 25000 pe alert lagao"))?.kind)
+    }
+}
