@@ -297,6 +297,12 @@ internal object IraSolo {
         MARKETS.mapNotNull { m -> synchronized(learned) { learned[m]?.takeIf { it.first == today }?.second }?.let { Solo.form(it, RULES, m.label) } }.takeIf { it.isNotEmpty() }?.joinToString("; ", prefix = " Lately: ", postfix = ".")
     }.getOrNull() ?: ""
 
+    /** Solo's day for the 15:35 wrap-up (null when it was off and did nothing). */
+    fun daySummary(): String? = runCatching {
+        val today = com.optionslab.app.data.Market.today().toString()
+        Solo.daySay(all().filter { it.day == today && it.closed }.map { it.net to it.exit }, on, paused != null)
+    }.getOrNull()
+
     /** "How is Solo doing": on or off, paused or not, and the record. */
     fun status(): String = (if (on) "Solo is on, Boss (paper only; switch it off in Jarvis settings)." else "Solo is off, Boss: switch it on in Jarvis settings (paper only).") +
         (paused?.let { " $it" } ?: "") + " " + record() + form() + (watch?.takeIf { on && paused == null && com.optionslab.app.data.Market.isOpen() && it.first.toLocalDate() == com.optionslab.app.data.Market.today() &&

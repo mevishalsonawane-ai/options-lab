@@ -285,6 +285,23 @@ object Solo {
         return main + optionNote
     }
 
+    /**
+     * Solo's day in the 15:35 wrap-up: each closed trade's result and why it ended, the day's net - or, switched on with
+     * no trade, that it found no setup worth taking. Null when Solo was off and did nothing.
+     */
+    fun daySay(trades: List<Pair<Double?, String?>>, on: Boolean, paused: Boolean): String? {
+        if (trades.isEmpty()) return when {
+            paused -> "Solo stayed paused today."
+            on -> "Solo watched all day and found no setup worth taking - no trade is a decision too."
+            else -> null
+        }
+        val each = trades.joinToString("; ") { (net, why) ->
+            (net?.let { (if (it >= 0) "+" else "-") + "Rs " + "%,.0f".format(Locale.ENGLISH, abs(it)) } ?: "result not read") + (why?.let { " ($it)" } ?: "") }
+        val total = trades.mapNotNull { it.first }.takeIf { it.isNotEmpty() }?.sum()
+        return "Solo today on paper: ${trades.size} trade${if (trades.size > 1) "s" else ""} - $each" +
+            (total?.takeIf { trades.size > 1 }?.let { "; net " + (if (it >= 0) "+" else "-") + "Rs " + "%,.0f".format(Locale.ENGLISH, abs(it)) } ?: "") + "."
+    }
+
     /** The day's risk book: whether a new trade may be taken. */
     data class Day(val trades: Int = 0, val losses: Int = 0, val pnl: Double = 0.0) {
         fun canTrade(r: Rules, lossLimit: Double): String? = when {

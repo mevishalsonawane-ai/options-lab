@@ -258,7 +258,7 @@ internal object IraCoach {
         val events = runCatching { IraEvents.upcoming(2).map { com.optionslab.ira.Events.line(it, com.optionslab.app.data.Market.today()) } }.getOrDefault(emptyList())
         // How Nifty's day went comes first: the market's story, then Boss's own.
         val story = IraHub.dayStory(com.optionslab.ira.Market.NIFTY)
-        val text = listOfNotNull(story, com.optionslab.ira.DaySummary.say(pnl, scorecard, events)).joinToString(" ")
+        val text = listOfNotNull(story, com.optionslab.ira.DaySummary.say(pnl, scorecard, events), IraSolo.daySummary()).joinToString(" ")
         IraHub.note(text)
         JarvisVoice.announce(com.optionslab.ira.Wake.spoken(text, 7))
         Automations.acted(Automations.Auto.SUMMARY, text)
