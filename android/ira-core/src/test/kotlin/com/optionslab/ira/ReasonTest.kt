@@ -421,3 +421,15 @@ class LevelInfoTest {
         assertTrue("yesterday's high (24,505.00)" in t && "today's high (24,510.00)" in t && "a round 500" in t, t)
     }
 }
+
+class BigPictureTest {
+    @Test fun theDailyTrend() {
+        val d0 = java.time.LocalDate.of(2026, 7, 1)
+        val bars = (0 until 60).map { i -> val c = 24_000.0 + i * 10; Candle(d0.plusDays(i.toLong()).atTime(15, 29), c, c + 5, c - 5, c) }
+        val s = BigPicture.say(Market.NIFTY, bars)!!
+        assertTrue(s.startsWith("Nifty at 24,590.00 is above both averages, with the 20-day over the 50-day: an uptrend."), s)
+        assertTrue(BigPicture.asked("what's the bigger picture on nifty"))
+        assertTrue(BigPicture.asked("is nifty above its 20 day moving average"))
+        assertNull(BigPicture.say(Market.NIFTY, bars.take(10)))
+    }
+}

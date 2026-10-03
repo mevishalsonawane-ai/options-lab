@@ -611,3 +611,34 @@ object LevelInfo {
         return parts.joinToString(" ")
     }
 }
+
+/**
+ * The bigger picture (Jarvis self-improvement, 2026-10-03): "bigger picture on Nifty", "daily trend", "is Nifty above its
+ * 20-day average" - the price against the 20- and 50-day averages of daily closes, and the 20-day high and low. Pure.
+ */
+object BigPicture {
+    private val ASK = Regex(" (bigger picture|big picture|long term|longer term|daily trend|daily chart|positional|20 day|50 day|20 dma|50 dma|dma|moving average|moving averages|medium term) ")
+
+    fun asked(text: String): Boolean = ASK.containsMatchIn(norm(text))
+
+    fun say(m: Market, bars: List<Candle>): String? {
+        val closes = bars.groupBy { it.t.toLocalDate() }.toSortedMap().values.map { d -> Triple(d.last().c, d.maxOf { it.h }, d.minOf { it.l }) }
+        if (closes.size < 20) return null
+        val px = closes.last().first
+        val ma20 = closes.takeLast(20).map { it.first }.average()
+        val ma50 = closes.takeIf { it.size >= 50 }?.takeLast(50)?.map { it.first }?.average()
+        val hi20 = closes.takeLast(20).maxOf { it.second }; val lo20 = closes.takeLast(20).minOf { it.third }
+        fun vs(ma: Double) = if (px >= ma) "above" else "below"
+        val trend = when {
+            ma50 == null -> if (px >= ma20) "above its 20-day average: the short-term picture is up" else "below its 20-day average: the short-term picture is down"
+            px >= ma20 && ma20 >= ma50 -> "above both averages, with the 20-day over the 50-day: an uptrend"
+            px < ma20 && ma20 < ma50 -> "below both averages, with the 20-day under the 50-day: a downtrend"
+            else -> "between its averages: a mixed, turning picture"
+        }
+        val parts = ArrayList<String>()
+        parts += "${m.label} at ${n(px)} is $trend."
+        parts += "20-day average ${n(ma20)} (${vs(ma20)})" + (ma50?.let { ", 50-day ${n(it)} (${vs(it)})" } ?: "") + "."
+        parts += "The last 20 sessions ranged ${n(lo20)} to ${n(hi20)}."
+        return parts.joinToString(" ")
+    }
+}

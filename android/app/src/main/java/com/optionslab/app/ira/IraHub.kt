@@ -1215,6 +1215,7 @@ object IraHub {
         com.optionslab.ira.Lookback.time(q)?.let { at ->
             return com.optionslab.ira.Lookback.priceAt(m, histories[m]?.bars ?: return null, at, yesterday = Regex("(?i)\\byesterday\\b").containsMatchIn(q), today = today)
         }
+        if (com.optionslab.ira.BigPicture.asked(q)) return com.optionslab.ira.BigPicture.say(m, histories[m]?.bars ?: return null)
         com.optionslab.ira.LevelInfo.asked(q)?.let { x -> return com.optionslab.ira.LevelInfo.say(st.snaps[m] ?: return null, x) }
         if (com.optionslab.ira.OpeningRange.asked(q)) return com.optionslab.ira.OpeningRange.say(st.snaps[m] ?: return null)
         com.optionslab.ira.PeriodMove.asked(q)?.let { span -> return com.optionslab.ira.PeriodMove.say(m, histories[m]?.bars ?: return null, span, today) }
