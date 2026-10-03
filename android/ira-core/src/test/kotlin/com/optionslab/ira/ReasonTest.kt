@@ -237,3 +237,16 @@ class BriefingTest {
         assertTrue("Fear is rising" in s && s.endsWith("Event today: RBI policy."), s)
     }
 }
+
+class VixRankTest {
+    @Test fun vixAgainstItsPast() {
+        val d0 = java.time.LocalDate.of(2025, 10, 1)
+        val bars = (0 until 100).map { i -> val v = 10.0 + i * 0.1; Candle(d0.plusDays(i.toLong()).atTime(15, 29), v, v, v, v) }   // 10.0 .. 19.9
+        assertEquals(50.0, VixRank.rank(bars, 15.0)!!.first)
+        assertTrue(VixRank.say(bars, 19.5)!!.contains("high: fear is well above usual"))
+        assertTrue(VixRank.asked("is vix high"))
+        assertTrue(VixRank.asked("how high is india vix"))
+        assertFalse(VixRank.asked("how is nifty"))
+        assertNull(VixRank.rank(bars.take(5), 12.0))
+    }
+}

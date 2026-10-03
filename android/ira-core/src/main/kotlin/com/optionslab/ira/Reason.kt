@@ -445,3 +445,23 @@ object Briefing {
         return parts.joinToString(" ")
     }
 }
+
+/** India VIX against its own past (Jarvis self-improvement, 2026-10-03): "is VIX high?". Pure. */
+object VixRank {
+    private val ASK = Regex(" (vix|india vix|volatility index|fear gauge|fear index) (is |s )?(high|low|elevated|normal|calm|usual)| (is|s) (the )?(india )?vix (high|low|elevated|normal)|how (high|low) is (the )?(india )?vix | vix (percentile|rank|history) ")
+
+    fun asked(text: String): Boolean = ASK.containsMatchIn(norm(text))
+
+    /** Where [now] sits among the daily closes of the last [days] sessions in [bars] (0..100), with the session count. */
+    fun rank(bars: List<Candle>, now: Double, days: Int = 250): Pair<Double, Int>? {
+        val closes = bars.groupBy { it.t.toLocalDate() }.toSortedMap().values.map { it.last().c }.takeLast(days)
+        if (closes.size < 20) return null
+        return closes.count { it < now } * 100.0 / closes.size to closes.size
+    }
+
+    fun say(bars: List<Candle>, now: Double): String? {
+        val (r, n) = rank(bars, now) ?: return null
+        val word = when { r >= 80 -> "high: fear is well above usual, options are dear"; r <= 20 -> "low: the market is calm, options are cheap"; else -> "around its usual level" }
+        return "India VIX at %.2f is higher than %.0f%% of the last $n sessions' closes - $word.".format(Locale.ENGLISH, now, r)
+    }
+}

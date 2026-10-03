@@ -1139,6 +1139,10 @@ object IraHub {
         // "Why did Nifty fall in the last hour": the why-story and the news answer it, not bare figures.
         if (Topic.WHY in parsed.topics) return null
         val st = _state.value
+        if (com.optionslab.ira.VixRank.asked(q)) {
+            val v = st.snaps[IraMarket.VIX]?.price ?: return null
+            return com.optionslab.ira.VixRank.say(histories[IraMarket.VIX]?.bars ?: return null, v)
+        }
         if (com.optionslab.ira.Briefing.asked(q)) {
             val today = com.optionslab.app.data.Market.today()
             val ev = runCatching { IraEvents.upcoming(1).filter { it.day == today }.map { com.optionslab.ira.Events.line(it, today) } }.getOrNull().orEmpty()
