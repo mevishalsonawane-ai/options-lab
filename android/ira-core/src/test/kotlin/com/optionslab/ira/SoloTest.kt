@@ -42,7 +42,7 @@ class SoloTest {
         assertEquals(Solo.Exit.TARGET, Solo.exit(s, bar(60, 24_100.0, 24_151.0, 24_090.0, 24_140.0), 60))
         assertEquals(Solo.Exit.TIME, Solo.exit(s, bar(Solo.CUT, 24_060.0, 24_070.0, 24_050.0, 24_060.0), Solo.CUT))
         assertNull(Solo.exit(s, bar(60, 24_060.0, 24_070.0, 24_050.0, 24_060.0), 60))
-        val slow = Solo.Rules(slowMinutes = 20)
+        val slow = Solo.Rules(slowMinutes = 20, profitLock = false)
         assertEquals(Solo.Exit.SLOW, Solo.exit(s, bar(70, 24_050.0, 24_055.0, 24_045.0, 24_050.0), 70, best = 10.0, r = slow))
         assertNull(Solo.exit(s, bar(70, 24_050.0, 24_055.0, 24_045.0, 24_050.0), 70, best = 30.0, r = slow))
         val r = Solo.Rules(maxPerDay = 2)
@@ -139,5 +139,22 @@ class SoloWatchReviewTest {
             else if (m < 270) bar(m, 24_000.0, 24_005.0, 23_995.0, 24_000.0) else bar(m, 24_095.0, 24_097.0, 24_093.0, 24_095.0) }
         val w = Solo.watching(late, 299, 50.0, "Nifty")
         assertEquals(1, w.size, w.toString()); assertTrue(w[0].contains("at 13:45") && w[0].contains("(until 14:30)"), w[0])
+    }
+}
+
+class SoloLockTest {
+    @Test fun theProfitLockHoldsTheEntryOnceThreeQuartersAreDone() {
+        val d = LocalDate.of(2026, 10, 1)
+        fun bar(m: Int, h: Double, l: Double) = Candle(d.atTime(9, 15).plusMinutes(m.toLong()), l, h, l, h)
+        val s = Solo.Signal(true, 50, 24_050.0, 24_000.0, 24_150.0, 30, "")      // target 100 points away
+        val r = Solo.Rules(ladder = listOf(0.75 to 0.0))
+        assertNull(Solo.lock(s, 70.0, r.ladder), "under three quarters: no lock")
+        assertEquals(24_050.0, Solo.lock(s, 75.0, r.ladder)!!, 0.01)
+        // Best so far +80: a minute that comes back to the entry is closed by the lock, not left to the stop.
+        assertEquals(Solo.Exit.LOCK, Solo.exit(s, bar(70, 24_060.0, 24_049.0), 70, best = 80.0, r = r))
+        assertNull(Solo.exit(s, bar(70, 24_060.0, 24_049.0), 70, best = 60.0, r = r))
+        assertNull(Solo.exit(s, bar(70, 24_060.0, 24_049.0), 70, best = 80.0, r = r.copy(profitLock = false)))
+        // The app's full ladder: half way locks a quarter.
+        assertEquals(24_075.0, Solo.lock(s, 50.0)!!, 0.01)
     }
 }

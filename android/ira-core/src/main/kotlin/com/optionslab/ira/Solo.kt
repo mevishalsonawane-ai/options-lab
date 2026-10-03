@@ -45,12 +45,31 @@ object Solo {
         val recentMinR: Double = 0.0,
         /** No entry once the day's range so far is this many times a normal day's (null: no such rule). */
         val maxRangeUsed: Double? = null,
+        /** The profit lock (Boss's rule, 3 Oct): the app's ladder on the index - see [lock]. */
+        val profitLock: Boolean = true,
+        /** The lock's rungs: (share of the target reached, share of the target locked in). */
+        val ladder: List<Pair<Double, Double>> = LADDER,
     )
 
     /** A trade to take at minute [entryMinute] (the next minute's price). [level]: the stop; [target]: the index target. */
     data class Signal(val call: Boolean, val entryMinute: Int, val index: Double, val level: Double, val target: Double, val candleStart: Int, val why: String)
 
-    enum class Exit { STOP, TARGET, TIME, SLOW }
+    enum class Exit { STOP, TARGET, TIME, SLOW, LOCK }
+
+    /** The app's profit-lock ladder: (share of the target reached, share of the target locked in). */
+    val LADDER = listOf(0.25 to 0.0, 0.50 to 0.25, 0.75 to 0.50)
+
+    /**
+     * The index level the profit lock holds, from the best move our way so far ([best], index points), or null below
+     * the first rung: a quarter of the way to the target moves the stop to the entry, half locks a quarter, three
+     * quarters lock half.
+     */
+    fun lock(s: Signal, best: Double, ladder: List<Pair<Double, Double>> = LADDER): Double? {
+        val t = abs(s.target - s.index)
+        if (t <= 0) return null
+        val rung = ladder.lastOrNull { best >= it.first * t - 1e-9 } ?: return null
+        return if (s.call) s.index + rung.second * t else s.index - rung.second * t
+    }
 
     /** The body size a 15-minute candle needs to count as big, from earlier days' 15-minute candles (null: too little history). */
     fun bigBody(earlier15: List<Candle>, q: Double = Rules().bigQuantile): Double? {
@@ -148,6 +167,8 @@ object Solo {
     fun exit(s: Signal, bar: Candle, m: Int, best: Double = 0.0, r: Rules = Rules()): Exit? = when {
         if (s.call) bar.l <= s.level else bar.h >= s.level -> Exit.STOP
         if (s.call) bar.h >= s.target else bar.l <= s.target -> Exit.TARGET
+        // The lock earned by the best price BEFORE this minute (a rung counts from the next minute on).
+        r.profitLock && lock(s, best, r.ladder)?.let { lv -> if (s.call) bar.l <= lv else bar.h >= lv } == true -> Exit.LOCK
         m >= CUT -> Exit.TIME
         // A trade that has not moved our way in time is a wrong read: out before the option decays.
         r.slowMinutes != null && m - s.entryMinute >= r.slowMinutes && best < r.slowR * abs(s.index - s.level) -> Exit.SLOW
@@ -290,8 +311,10 @@ object Solo {
                     val ep = inBar.o + slip
                     var x = CUT; var how = Exit.TIME
                     var best = 0.0
+                    var lockBest = 0.0
                     for (j in s.entryMinute..CUT) {
                         val e = exit(s, d.index[j], j, best, r)
+                        lockBest = best
                         best = favour(s, d.index[j], best)
                         if (e == null) continue
                         x = j; how = e; break
@@ -300,7 +323,8 @@ object Solo {
                     val xp = outBar.c - slip
                     val net = (xp - ep) * lot - costs
                     val risk = abs(s.index - s.level)
-                    val rr = when (how) { Exit.STOP -> -1.0; Exit.TARGET -> r.k; Exit.TIME, Exit.SLOW -> (if (s.call) 1 else -1) * (d.index[x].c - s.index) / risk }
+                    val rr = when (how) { Exit.STOP -> -1.0; Exit.TARGET -> r.k; Exit.TIME, Exit.SLOW -> (if (s.call) 1 else -1) * (d.index[x].c - s.index) / risk
+                        Exit.LOCK -> (if (s.call) 1 else -1) * ((lock(s, lockBest, r.ladder) ?: s.index) - s.index) / risk }
                     out += Trade(d.date, s.call, k, s.entryMinute, x, how, ep, xp, net, rr)
                     book = book.after(net)
                     busy = x

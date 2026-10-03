@@ -33,7 +33,13 @@ internal object IraSolo {
      * One trade a day, and only while the setup's last 60 signals (on the index, before costs) averaged above zero:
      * chosen on 2024-25, checked on the other years; see SOLO.md.
      */
-    val RULES = Solo.Rules(maxPerDay = 1, recentN = 60)
+    val RULES = Solo.Rules(maxPerDay = 1, recentN = 60, profitLock = true, ladder = LOCK)
+    /**
+     * Always a profit lock (Boss's rule, 3 Oct): three quarters of the way to the target, the stop moves to the entry -
+     * of the ladders tested on two years, the one that gives up least (see SOLO.md).
+     */
+    val LOCK = listOf(0.75 to 0.0)
+
     /** The day's loss limit for Solo's trades, and the drawdown from its best at which it pauses itself. */
     const val DAY_LOSS = 5_000.0
     const val PAUSE_DRAWDOWN = 15_000.0
@@ -42,10 +48,10 @@ internal object IraSolo {
 
     /** The two-year test, in one line each (research data, real option prices, Rs 60 a trip), for Boss to judge. */
     val BACKTEST = listOf(
-        "NIFTY Apr 2024-Apr 2025: 186 trades, 40% winners, +Rs 65,280 (1 lot of 75), worst drawdown Rs 18,450.",
-        "NIFTY Apr 2025-Apr 2026: 170 trades, 35% winners, -Rs 31,808, worst drawdown Rs 41,363.",
-        "BANKNIFTY Feb 2025-Feb 2026: 155 trades, 43% winners, +Rs 12,711 (1 lot of 30), worst drawdown Rs 15,657.",
-        "(It stands aside while its last 60 signals lost on average; without that: +52k / -43k / +7k.)",
+        "NIFTY Apr 2024-Apr 2025: 186 trades, 40% winners, +Rs 57,686 (1 lot of 75), worst drawdown Rs 24,878.",
+        "NIFTY Apr 2025-Apr 2026: 170 trades, 34% winners, -Rs 29,813, worst drawdown Rs 38,940.",
+        "BANKNIFTY Feb 2025-Feb 2026: 155 trades, 42% winners, +Rs 5,767 (1 lot of 30), worst drawdown Rs 15,825.",
+        "(With the profit lock - breakeven at 3/4 of the target - and standing aside while its last 60 signals lost; without the lock: +65k / -32k / +13k.)",
     )
 
     var on: Boolean
@@ -189,7 +195,8 @@ internal object IraSolo {
         val t = T(today.toString(), u, c.symbol, sig.call, fill.quantity, fill.price, sig.entryMinute, sig.index, sig.level, sig.target, sig.why)
         save(list + t)
         val line = "Solo (paper): bought ${c.symbol} at ${"%.2f".format(fill.price)}. Why: ${sig.why}. Out if ${m.label} " +
-            "${if (sig.call) "falls to" else "rises to"} ${"%,.0f".format(sig.level)}; target ${"%,.0f".format(sig.target)}; 15:10 at the latest." +
+            "${if (sig.call) "falls to" else "rises to"} ${"%,.0f".format(sig.level)}; target ${"%,.0f".format(sig.target)}; 15:10 at the latest. " +
+            "Profit lock: once it reaches ${"%,.0f".format(sig.index + 0.75 * (sig.target - sig.index))}, the stop moves to ${"%,.0f".format(sig.index)}." +
             (if (read.isNotEmpty()) " My read: $read" else "")
         tell(line)
         IraHub.appContext()?.let { com.optionslab.app.work.Notifier.orderFilled(it, "BUY", fill.quantity, c.symbol, fill.price, "Paper", "Jarvis solo") }
@@ -230,6 +237,7 @@ internal object IraSolo {
             Solo.Exit.STOP -> "stop: ${m.label} through ${"%,.0f".format(t.level)}"
             Solo.Exit.TARGET -> "target reached"
             Solo.Exit.SLOW -> "no follow-through"
+            Solo.Exit.LOCK -> "profit lock: back to the entry after getting three quarters of the way to the target"
             Solo.Exit.TIME -> "15:10"
         })
     }

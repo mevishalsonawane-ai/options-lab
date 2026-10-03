@@ -49,6 +49,21 @@ k 0.8: +18,754 / -29,520 / +8,343; k 1.0: +30,293 / -24,143 / +15,489; k 1.2: +2
 It narrows the losing year and cuts drawdowns, but halves the 2024-25 profit (the year rules are chosen on), so it is
 NOT used (kept in the code as an off-by-default rule).
 
+Profit lock (3 Oct, the owner's rule: Solo always runs with one), on top of N = 60, rungs = (share of the target
+reached -> share locked; 0 = the entry):
+
+| ladder | NIFTY 24-25 | NIFTY 25-26 | BANKNIFTY 25-26 | sum |
+|---|---|---|---|---|
+| none | +65,280 | -31,808 | +12,711 | +46k |
+| app ladder 25->0, 50->25, 75->50 | +31,253 | -24,131 | -12,717 | -6k |
+| 50->0, 75->25 | +53,771 | -34,373 | +9,018 | +28k |
+| 75->25 | +51,083 | -32,036 | -4,455 | +15k |
+| **75->0 (chosen on 24-25)** | **+57,686 (DD 25k)** | **-29,813 (DD 39k)** | **+5,767 (DD 16k)** | **+34k** |
+| 50->0 | +55,526 | -32,708 | +19,785 | +43k |
+
+Every lock costs something: it closes trades on ordinary pullbacks that would have gone on to the target (the app
+ladder hits the target 15-29 times vs 56-75 without). The latest, breakeven-only rung gives up the least.
+
 Index edge (R before option costs) is positive in all three files (+0.02 .. +0.21 R), but small; the option's spread,
 costs and decay take about all of it. NIFTY 2025-26 loses with every variant.
 
