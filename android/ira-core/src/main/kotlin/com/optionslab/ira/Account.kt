@@ -103,7 +103,7 @@ object AppAnswers {
         Section.ALARMS to Regex(" (alarm|alarms|alert|alerts) "),
         Section.FUNDS to Regex(" (funds|fund|margin|margins|balance|cash|capital|money) "),
         Section.HISTORY to Regex(" (yesterday|week|weekly|month|monthly|history|calendar|journal|last \\d+ days|best day|worst day|so far|this year|all time) "),
-        Section.PNL to Regex(" (p l|pnl|profit|profits|made|lost|earned|returns?|loss|losses) "),
+        Section.PNL to Regex(" (p l|pnl|profit|profits|made|lost|earned|returns?|loss|losses|mtm|m2m) "),
         Section.ORDERS to Regex(" (order|orders|trades|fills|filled|rejected|rejection|rejections) "),
         Section.POSITIONS to Regex(" (position|positions|holding|holdings|open trades|exposure) "),
         Section.STRATEGIES to Regex(" (strategy|strategies|arm|arms|bot|bots|algo|algos|pine|orb|script|scripts|studies|study|running) "),

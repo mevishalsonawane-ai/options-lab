@@ -183,13 +183,15 @@ class IraHubTest : RobolectricTest() {
     }
 
     @Test fun bossWordsAreRememberedNeverActedOn() = runBlocking {
-        IraTools.forgetMemory()
-        IraHub.ask("Jarvis, remember that I stop trading after two losses")
-        waitFor("noted") { IraHub.state.value.messages.lastOrNull()?.text?.startsWith("Noted, Boss") == true }
-        assertTrue(IraHub.state.value.pending.isEmpty())
-        IraHub.ask("what did I tell you")
-        waitFor("recalled") { IraHub.state.value.messages.lastOrNull()?.text?.contains("I stop trading after two losses") == true }
-        IraTools.forgetMemory()
+        IraTools.forgetMemory(); IraTools.forgetLearned()
+        try {
+            IraHub.ask("Jarvis, remember that I stop trading after two losses")
+            waitFor("noted") { IraHub.state.value.messages.lastOrNull()?.text?.startsWith("Noted, Boss") == true }
+            assertTrue(IraHub.state.value.pending.isEmpty())
+            waitFor("kept") { IraTools.memory().isNotEmpty() }
+            IraHub.ask("what did I tell you")
+            waitFor("recalled") { IraHub.state.value.messages.lastOrNull()?.text?.contains("I stop trading after two losses") == true }
+        } finally { IraTools.forgetMemory() }
     }
 
     @Test fun aTradingWordIsExplained() = runBlocking {

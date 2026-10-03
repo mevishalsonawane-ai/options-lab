@@ -61,7 +61,7 @@ object Backup {
      * must never be able to switch on live trading, clear the kill switch, loosen a limit or
      * weaken a lock. A new setting of that kind needs its prefix added here.
      */
-    private val PRIVATE = listOf("kite.", "draft.kite", "pin.", "tls.", "ol.vault", "hb.", "sq.", "report.", "k.", "g.", "sec.", "lock.",
+    private val PRIVATE = listOf("jarvis.memory", "kite.", "draft.kite", "pin.", "tls.", "ol.vault", "hb.", "sq.", "report.", "k.", "g.", "sec.", "lock.",
         "ui.widgetPnl", "w.", "intent.", "relay.", "breaker.",
         // Jarvis: the owner's voice print never leaves the phone; its trades' safety (paper first, loss limit, risk) and
         // the autopilot are this phone's alone, like the other limits. Its learning (the study, records) is carried.

@@ -34,7 +34,7 @@ data class Question(val text: String, val markets: List<Market>, val topics: Set
 object Ask {
     private val TOPIC_WORDS: List<Pair<Topic, List<String>>> = listOf(
         Topic.BACKTEST to listOf("backtest", "back test", "backtested", "strategy", "test this", "test the pattern", "test it", "make it an arm"),
-        Topic.WHY to listOf("why", "reason", "what happened", "behind", "what moved", "moved the market", "what drove", "fell", "rose"),
+        Topic.WHY to listOf("why", "reason", "what happened", "behind", "what moved", "moved the market", "what drove"),
         Topic.TREND to listOf("trend", "direction", "bullish", "bearish", "going up", "going down", "heading"),
         Topic.LEVELS to listOf("level", "levels", "support", "resistance", "target", "range", "high", "low", "pool", "liquidity"),
         Topic.PATTERNS to listOf("pattern", "patterns", "candle", "candles", "engulfing", "hammer", "doji", "breakout", "breakdown", "double top", "double bottom"),
@@ -47,7 +47,7 @@ object Ask {
 
     /** The owner's own trading: "my orders", "how are my strategies doing", "today's p&l". */
     private val ACCOUNT = Regex(" (my|mine|our) ([a-z]+ ){0,3}(order|orders|trade|trades|position|positions|holding|holdings|p l|pnl|profit|profits|" +
-        "loss|losses|strategy|strategies|arm|arms|bot|bots|algo|algos|studies|study|scripts?|account|portfolio|fills) " +
+        "loss|losses|strategy|strategies|arm|arms|bot|bots|algo|algos|studies|study|scripts?|account|portfolio|fills|mtm|m2m) " +
         "|( how am i doing | how did i do | today s p l | todays p l | today s pnl | todays pnl | p l today | pnl today )")
     private val GREET = Regex(" (hello|hi|hey|good morning|good afternoon|good evening|jarvis|ira|boss|ok|okay|please|there) ")
     /** About Ira itself: what it can do, the voice. */
@@ -85,9 +85,16 @@ object Ask {
         val priceAsk = Market.mentioned(text).isNotEmpty() && Regex("^ (where is|where s|wheres|where) ").containsMatchIn(t) &&
             !Regex(" (my|mine|our|order|orders|position|positions|chain|page|tab|screen|see|find|do i|can i) ").containsMatchIn(t)
         // "Yesterday's high on Nifty": the market's own figures, not the owner's history.
+        // ("This week", "since the open", "pivots", "RSI"... on a named market are the market's too; stops, targets, alarms,
+        // orders and positions stay the owner's.)
         val marketFigure = Market.mentioned(text).isNotEmpty() && !Regex(" (my|mine|our|i|me) ").containsMatchIn(t) &&
-            Regex(" (high|low|close|closing|open|opening|price|level|levels|range) ").containsMatchIn(t)
-        val account = !priceAsk && !marketFigure && (ACCOUNT.containsMatchIn(t) || AppAnswers.about(t) && placed?.lots == null)
+            !Regex(" (stop|stop loss|stoploss|sl|target|alarm|alert|order|orders|position|positions|square|squareoff) ").containsMatchIn(t) &&
+            (Regex(" (high|low|close|closing|open|opening|price|level|levels|range|history|performance|returns?|week|weekly|month|monthly|so far|running|risk) ").containsMatchIn(t) ||
+                PeriodMove.asked(text) != null || Moves.asked(text) != null || Lookback.time(text) != null || Lookback.prevAsked(text) ||
+                Pivots.asked(text) || OpeningRange.asked(text) || Momentum.asked(text) || DayStory.asked(text))
+        // "If I bought the 24500 CE at 120, what is my profit at 24700": the payoff sum, not the account.
+        val payoff = Payoff.asked(text) != null
+        val account = !priceAsk && !marketFigure && !payoff && (ACCOUNT.containsMatchIn(t) || AppAnswers.about(t) && placed?.lots == null)
         val order = if (account) null else placed
         // "Levels on all indices", "how are all the markets": the four indices.
         val markets = Market.mentioned(text).ifEmpty { if (ALL_INDICES.containsMatchIn(t)) Reasoning.INDICES else emptyList() }

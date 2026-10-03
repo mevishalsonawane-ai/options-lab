@@ -11,7 +11,7 @@ object Chat {
     private data class Talk(val rx: Regex, val replies: List<String>)
 
     private val TALK = listOf(
-        Talk(Regex("^ (how are you|how r you|how are you doing|how s it going|how is it going|how do you do|you ok|are you ok|kaise ho|kaisa hai jarvis|how have you been) $"), listOf(
+        Talk(Regex("^ (how are you|how r you|how are you doing|how are you doing today|how are you today|how s it going|how is it going|how do you do|you ok|are you ok|kaise ho|kaisa hai jarvis|how have you been) $"), listOf(
             "I'm doing well, Boss, thanks for asking. Ready when you are.",
             "All good here, Boss. Watching the markets for you.",
             "Sharp and listening, Boss. How are you?",
@@ -39,8 +39,10 @@ object Chat {
             "Jarvis, Boss. I read the markets and your account, suggest trades, and never act without your yes.")),
         Talk(Regex("^ (who made you|who created you|who built you) $"), listOf(
             "I was built for you, Boss, as part of JarvisAlgo, and everything I know stays on this phone.")),
-        Talk(Regex("^ (good night|goodnight|bye|bye bye|see you|see you later|talk later|that s all|thats all|nothing|never mind|nevermind) $"), listOf(
-            "Good night, Boss. I'll keep an eye on things.", "See you, Boss.", "Alright, Boss. I'm here when you need me.", "Talk soon, Boss.")),
+        Talk(Regex("^ (good night|goodnight) $"), listOf(
+            "Good night, Boss. I'll keep an eye on things.", "Good night, Boss. Sleep well.")),
+        Talk(Regex("^ (bye|bye bye|see you|see you later|talk later|that s all|thats all|nothing|never mind|nevermind|forget it|leave it) $"), listOf(
+            "Alright, Boss. I'm here when you need me.", "See you, Boss.", "Talk soon, Boss.", "Okay, Boss.")),
         Talk(Regex("^ (tell me a joke|say something funny|make me laugh|joke) $"), listOf(
             "Why did the trader bring a ladder? Because the market was going up, Boss.",
             "I asked the market for a straight answer. It gave me a candle with two long wicks.",

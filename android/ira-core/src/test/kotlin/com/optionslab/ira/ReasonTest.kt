@@ -167,7 +167,10 @@ class LookbackTest {
         assertTrue(Lookback.prevAsked("what was yesterday's high on nifty"))
         assertTrue(Lookback.prevAsked("previous close of banknifty"))
         assertFalse(Lookback.prevAsked("how is nifty"))
-        assertEquals("Nifty on 2026-09-30: open 100.00, high 110.00, low 90.00, close 104.00.", Lookback.prevDay(Market.NIFTY, bars, trading = true))
+        assertEquals("Nifty on 2026-09-30: open 100.00, high 110.00, low 90.00, close 104.00.", Lookback.prevDay(Market.NIFTY, bars, d2))
+        // On a Saturday after Thursday 1 Oct, "yesterday" is Thursday (the last session before today), not Wednesday.
+        assertTrue(Lookback.prevDay(Market.NIFTY, bars, java.time.LocalDate.of(2026, 10, 3))!!.startsWith("Nifty on 2026-10-01"))
+        assertTrue(Lookback.priceAt(Market.NIFTY, bars, LocalTime.of(11, 30), yesterday = true, today = java.time.LocalDate.of(2026, 10, 3))!!.contains("on 2026-10-01"))
     }
 }
 
@@ -298,5 +301,37 @@ class NewsAnswerTest {
         val b = ira.answer("any news on banknifty", emptyMap(), news).text
         assertTrue(b.contains("Nothing specific on BankNifty lately.") && b.contains("Sensex jumps"), b)
         assertTrue(ira.answer("what's the news", emptyMap(), emptyList()).text.startsWith("I have no headlines yet"))
+    }
+}
+
+class ReviewNTest {
+    @Test fun periodQuestionsOnAMarketAreTheMarkets() {
+        for (q in listOf("how did nifty do this week", "nifty weekly performance", "banknifty this week", "how much is nifty up this month", "has nifty broken the orb", "nifty pivots"))
+            assertFalse(Topic.ACCOUNT in Ask.parse(q).topics, q)
+        for (q in listOf("how did my trades do this week", "what is my stop loss on nifty", "nifty alarm level", "what's my mtm"))
+            assertTrue(Topic.ACCOUNT in Ask.parse(q).topics, q)
+        assertFalse(Topic.WHY in Ask.parse(Hinglish.normalize("pichle ghante nifty kitna gira")).topics)
+        assertFalse(Topic.ACCOUNT in Ask.parse("if i bought 24500 ce at 120 what is my profit at 24700").topics)
+    }
+
+    @Test fun memoryKeepsNoSecretAndNoEvent() {
+        for (q in listOf("remember that my tpin is 123456", "remember my kite login is hunter2", "remember my api-key is sk-abc123", "remember my pwd is hunter2",
+                "remember that my backup passphrase is tiger lily", "remember the event RBI policy on friday"))
+            assertNull(Memory.toKeep(q), q)
+        assertEquals("close all positions at 3", Memory.toKeep("remember: close all positions at 3"))
+    }
+
+    @Test fun payoffOddsVixMomentumEdges() {
+        assertEquals(2.0, Payoff.asked("payoff of 25000 ce at 25200 for 2 lots")?.paid ?: 2.0, "\"for 2 lots\" is no price")
+        assertNull(Payoff.asked("payoff of 25000 ce at 25200 for 2 lots")?.paid)
+        val b = Payoff.asked("52000 ce worth bought at 1200 if banknifty is at 52500 at expiry")!!
+        assertEquals(52_500.0, b.at); assertEquals(1_200.0, b.paid)
+        assertNull(Odds.asked("chances nifty closes above 26000 this week"))
+        assertFalse(VixRank.asked("what was the vix high today"))
+        assertTrue(VixRank.asked("is vix too high"))
+        assertFalse(Momentum.asked("is the premium too high"))
+        assertTrue(Momentum.asked("is nifty too high"))
+        assertEquals(50.0, Momentum.rsi(List(30) { 100.0 }))
+        assertNull(Chat.smallTalk("never mind", 0)?.takeIf { it.startsWith("Good night") })
     }
 }

@@ -17,10 +17,12 @@ object Memory {
 
     /** What to remember from "remember (that) ...", in Boss's own words, or null. */
     fun toKeep(text: String): String? {
-        val m = Regex("(?i)^\\s*(?:jarvis[,!.]?\\s+|hey jarvis[,!.]?\\s+|please\\s+)?(?:remember|keep in mind|note down|make a note)\\s+(?:that\\s+|this[:,]?\\s+)?(.{3,300})$").find(text.trim()) ?: return null
+        val m = Regex("(?i)^\\s*(?:jarvis[,!.]?\\s+|hey jarvis[,!.]?\\s+|please\\s+)?(?:remember|keep in mind|note down|make a note)[:,-]?\\s+(?:that\\s+|this[:,]?\\s+)?(.{3,300})$").find(text.trim()) ?: return null
         val what = m.groupValues[1].trim().trimEnd('.', '!')
         // "Remember my PIN is..." - nothing secret is kept, and "remember me" is not a note.
-        if (Regex("(?i)\\b(pin|password|otp|totp|api key|secret|cvv)\\b").containsMatchIn(what)) return null
+        if (Secrets.hasSecret(what) || Regex("(?i)\\b(m?pin|tpin|pass(word|code|wd|phrase|key)?|pass phrase|pwd|otp|totp|2fa|api[ _-]?key|secret|token|login|cvv|cvc|security (answer|question)|card number|account number)\\b").containsMatchIn(what)) return null
+        // "Remember the event RBI policy on Friday" is the events command, not a note.
+        if (Regex("(?i)^(an |the )?event\\b").containsMatchIn(what)) return null
         return what.takeIf { it.split(" ").size >= 2 }
     }
 

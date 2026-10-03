@@ -232,14 +232,17 @@ object Pivots {
      * Pivots for the session after the last complete one in [bars]. While [trading], today's candles are not complete,
      * so today's pivots come from the day before.
      */
-    fun say(m: Market, bars: List<Candle>, trading: Boolean): String? {
+    fun say(m: Market, bars: List<Candle>, trading: Boolean, today: java.time.LocalDate? = null, tomorrow: Boolean = false): String? {
         val days = bars.groupBy { it.t.toLocalDate() }.toSortedMap()
         if (days.isEmpty()) return null
-        val base = if (trading) days.keys.toList().dropLast(1).lastOrNull() ?: return null else days.lastKey()
+        // While the market trades, today's candles are not complete: today's pivots come from the session before today.
+        val base = if (trading) (if (today != null) days.keys.lastOrNull { it.isBefore(today) } else days.keys.toList().dropLast(1).lastOrNull()) ?: return null
+            else days.lastKey()
         val d = days.getValue(base)
         val lv = of(d.maxOf { it.h }, d.minOf { it.l }, d.last().c)
         val forWhat = if (trading) "today" else "the next session"
-        return "${m.label}'s classic pivots for $forWhat, from $base's high, low and close: R2 ${n(lv.r2)}, R1 ${n(lv.r1)}, pivot ${n(lv.p)}, S1 ${n(lv.s1)}, S2 ${n(lv.s2)}. " +
+        val note = if (trading && tomorrow) "Tomorrow's pivots need today's close; for today: " else ""
+        return note + "${m.label}'s classic pivots for $forWhat, from $base's high, low and close: R2 ${n(lv.r2)}, R1 ${n(lv.r1)}, pivot ${n(lv.p)}, S1 ${n(lv.s1)}, S2 ${n(lv.s2)}. " +
             "Above the pivot buyers have the edge; R1 and S1 are the usual first stops."
     }
 }
@@ -262,24 +265,24 @@ object Lookback {
         return LocalTime.of(h, mi)
     }
 
-    fun priceAt(m: Market, bars: List<Candle>, at: LocalTime, yesterday: Boolean = false): String? {
+    /** [today]: the calendar day now, so "yesterday" is the last session before it (not just the one before the last). */
+    fun priceAt(m: Market, bars: List<Candle>, at: LocalTime, yesterday: Boolean = false, today: java.time.LocalDate? = null): String? {
         val days = bars.map { it.t.toLocalDate() }.distinct().sorted()
-        val day = (if (yesterday) days.dropLast(1).lastOrNull() else days.lastOrNull()) ?: return null
+        val day = (if (yesterday) (if (today != null) days.lastOrNull { it.isBefore(today) } else days.dropLast(1).lastOrNull()) else days.lastOrNull()) ?: return null
         val bar = bars.filter { it.t.toLocalDate() == day && !it.t.toLocalTime().isAfter(at) }.lastOrNull() ?: return null
         val last = bars.last()
         val since = if (!yesterday && day == last.t.toLocalDate()) " Since then it has moved ${pts(last.c - bar.c)} to ${n(last.c)}." else ""
         return "At ${"%02d:%02d".format(Locale.ENGLISH, bar.t.hour, bar.t.minute)} on $day ${m.label} was at ${n(bar.c)}.$since"
     }
 
-    private val PREV = Regex(" (yesterday s|yesterdays|yesterday|previous day s|previous days|previous|last session s|last sessions|prior day s) (high|low|close|closing|open|opening|range) | (high|low|close|open|range) (of |on )?(yesterday|the previous day|the last session) ")
+    private val PREV = Regex(" (yesterday s|yesterdays|yesterday|previous day s|previous days|previous day|previous|last session s|last sessions|last session|prior day s) (high|low|close|closing|open|opening|range) | (high|low|close|open|range) (of |on )?(yesterday|the previous day|the last session) | (pdh|pdl|pdc) ")
 
     fun prevAsked(text: String): Boolean = PREV.containsMatchIn(norm(text))
 
-    /** The last complete session's open, high, low and close ([trading]: today is not complete). */
-    fun prevDay(m: Market, bars: List<Candle>, trading: Boolean): String? {
+    /** The previous session's open, high, low and close: the last one before [today]. */
+    fun prevDay(m: Market, bars: List<Candle>, today: java.time.LocalDate): String? {
         val days = bars.groupBy { it.t.toLocalDate() }.toSortedMap()
-        if (days.isEmpty()) return null
-        val base = if (trading) days.keys.toList().dropLast(1).lastOrNull() ?: return null else days.lastKey()
+        val base = days.keys.lastOrNull { it.isBefore(today) } ?: return null
         val d = days.getValue(base)
         return "${m.label} on $base: open ${n(d.first().o)}, high ${n(d.maxOf { it.h })}, low ${n(d.minOf { it.l })}, close ${n(d.last().c)}."
     }
@@ -290,9 +293,14 @@ object Lookback {
  * momentum" - Wilder's 14-period RSI on the 15-minute and 1-hour charts, read plainly. Never a buy or sell call. Pure.
  */
 object Momentum {
-    private val ASK = Regex(" (rsi|overbought|oversold|over bought|over sold|momentum|stretched|too high|too low) ")
+    private val ASK = Regex(" (rsi|overbought|oversold|over bought|over sold|momentum) ")
+    /** "Is Nifty stretched / too high": only with a market named ("is the premium too high" is not this). */
+    private val LOOSE = Regex(" (stretched|too high|too low|overextended) ")
 
-    fun asked(text: String): Boolean = ASK.containsMatchIn(norm(text))
+    fun asked(text: String): Boolean {
+        val t = norm(text)
+        return ASK.containsMatchIn(t) || LOOSE.containsMatchIn(t) && Market.mentioned(text).any { it != Market.VIX }
+    }
 
     /** Wilder's RSI of [closes] over [period], or null with too few closes. */
     fun rsi(closes: List<Double>, period: Int = 14): Double? {
@@ -305,7 +313,7 @@ object Momentum {
             gain = (gain * (period - 1) + maxOf(d, 0.0)) / period
             loss = (loss * (period - 1) + maxOf(-d, 0.0)) / period
         }
-        if (loss == 0.0) return 100.0
+        if (loss == 0.0) return if (gain == 0.0) 50.0 else 100.0     // a flat stretch (a stalled feed) is neutral
         return 100 - 100 / (1 + gain / loss)
     }
 
@@ -318,8 +326,10 @@ object Momentum {
     }
 
     fun say(m: Market, bars: List<Candle>, now: LocalDateTime): String? {
+        // Gold's candles keep their own clock: "now" is just after its last candle.
+        val at = if (m == Market.GOLD) bars.lastOrNull()?.t?.plusMinutes(1) ?: now else now
         val parts = listOf(15, 60).mapNotNull { mins ->
-            val c = Candles.closed(Candles.fold(bars, mins, m), mins, now)
+            val c = Candles.closed(Candles.fold(bars, mins, m), mins, at)
             rsi(c.map { it.c })?.let { r -> "the ${if (mins == 60) "1-hour" else "15-minute"} RSI is " + "%.0f".format(Locale.ENGLISH, r) + ", " + word(r) }
         }
         if (parts.isEmpty()) return null
@@ -340,6 +350,8 @@ object Odds {
     fun asked(text: String): Ask? {
         val t = norm(text.replace(",", ""))
         val m = ASK.find(t) ?: return null
+        // The odds are for the day (the VIX move for the time left); a week or an expiry away is not that.
+        if (Regex(" (week|weekly|month|monthly|expiry|friday|monday|tuesday|wednesday|thursday|next) ").containsMatchIn(t)) return null
         return Ask(m.groupValues[3] in setOf("above", "over"), m.groupValues[4].toDouble())
     }
 
@@ -353,6 +365,8 @@ object Odds {
 
     fun say(s: Snapshot, vix: Double, a: Ask, now: LocalDateTime): String? {
         if (vix <= 0 || s.market == Market.GOLD || s.market == Market.VIX) return null
+        // A level nowhere near the price (a VIX level asked of Nifty) is not this market's.
+        if (abs(a.level - s.price) > s.price * 0.3) return null
         val close = s.market.close ?: return null
         val left = if (s.trading && now.toLocalTime().isBefore(close)) java.time.Duration.between(now.toLocalTime(), close).toMinutes().toInt() else null
         val sigma = ExpectedRange.points(s.price, vix, left)
@@ -410,10 +424,11 @@ object PeriodMove {
         }
     }
 
-    fun say(m: Market, bars: List<Candle>, span: Span): String? {
+    fun say(m: Market, bars: List<Candle>, span: Span, today: java.time.LocalDate? = null): String? {
         val days = bars.groupBy { it.t.toLocalDate() }.toSortedMap()
         if (days.isEmpty()) return null
-        val last = days.lastKey()
+        // The calendar's week and month (before Monday's open "this week" has no sessions yet, not last week's).
+        val last = today ?: days.lastKey()
         val monday = last.with(java.time.DayOfWeek.MONDAY)
         val (from, to) = when (span) {
             Span.WEEK -> monday to last
@@ -421,7 +436,7 @@ object PeriodMove {
             Span.MONTH -> last.withDayOfMonth(1) to last
         }
         val inSpan = days.filterKeys { !it.isBefore(from) && !it.isAfter(to) }
-        if (inSpan.isEmpty()) return null
+        if (inSpan.isEmpty()) return "No ${m.label} sessions yet ${span.label}."
         // From the close before the span began (else the span's first open) to its last close.
         val before = days.headMap(inSpan.keys.first()).values.lastOrNull()?.last()?.c
         val start = before ?: inSpan.values.first().first().o
@@ -459,7 +474,7 @@ object Briefing {
 
 /** India VIX against its own past (Jarvis self-improvement, 2026-10-03): "is VIX high?". Pure. */
 object VixRank {
-    private val ASK = Regex(" (vix|india vix|volatility index|fear gauge|fear index) (is |s )?(high|low|elevated|normal|calm|usual)| (is|s) (the )?(india )?vix (high|low|elevated|normal)|how (high|low) is (the )?(india )?vix | vix (percentile|rank|history) ")
+    private val ASK = Regex(" (is|s|isn t) (the )?(india )?vix (too )?(high|low|elevated|normal|calm|usual) | how (high|low) is (the )?(india )?vix | (vix|india vix|fear gauge|fear index|volatility index) is (too )?(high|low|elevated|normal|calm) | vix (percentile|rank|history) ")
 
     fun asked(text: String): Boolean = ASK.containsMatchIn(norm(text))
 
@@ -487,13 +502,14 @@ object Payoff {
 
     fun asked(text: String): Ask? {
         val t = norm(text.replace(",", ""))
-        if (!Regex(" (worth|value|payoff|pay off|expiry|expire|expires|settle|settles|p l|profit|loss|make|lose) ").containsMatchIn(t)) return null
+        if (!Regex(" (worth|value|payoff|pay off|expiry|expire|expires|settle|settles|p l|profit|loss|make|lose|bought) ").containsMatchIn(t)) return null
         val opt = Regex(" (\\d{4,6}) ?(ce|call|pe|put) ").find(t) ?: return null
         val strike = opt.groupValues[1].toDouble()
         val call = opt.groupValues[2] == "ce" || opt.groupValues[2] == "call"
+        // The index level: near the strike (a premium of 1,200 is not an index at 1,200).
         val at = Regex(" (?:at|to|is at|goes to|closes at|ends at|expires at|settles at) (\\d{4,6}(?:\\.\\d+)?) ").findAll(t)
-            .map { it.groupValues[1].toDouble() }.firstOrNull { it != strike } ?: return null
-        val paid = Regex(" (?:bought at|paid|premium of|premium|cost|for) (\\d{1,5}(?:\\.\\d+)?) ").find(t)?.groupValues?.get(1)?.toDouble()
+            .map { it.groupValues[1].toDouble() }.firstOrNull { it != strike && abs(it - strike) <= strike * 0.3 } ?: return null
+        val paid = Regex(" (?:bought at|bought for|paid|premium of|premium|cost) (\\d{1,5}(?:\\.\\d+)?) ").find(t)?.groupValues?.get(1)?.toDouble()
         return Ask(strike, call, at, paid)
     }
 

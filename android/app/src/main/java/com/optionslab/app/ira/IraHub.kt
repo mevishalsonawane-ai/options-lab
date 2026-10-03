@@ -464,7 +464,6 @@ object IraHub {
         runCatching { watchAlerts() }
         runCatching { keepChains() }
         runCatching { IraCoach.oiWatch() }
-        runCatching { IraCoach.orbWatch() }
     }
 
     /**
@@ -897,7 +896,7 @@ object IraHub {
         // (questions only), when that was asked in the last five minutes.
         val recent = System.currentTimeMillis() - lastAskAt < FOLLOW_MS
         lastAskAt = System.currentTimeMillis()
-        if (!understood && recent) {
+        if (!understood && recent && !com.optionslab.ira.Sources.asked(q)) {
             val prev = _state.value.messages.lastOrNull { !it.fromIra }?.text
             runCatching { com.optionslab.ira.FollowUp.resolve(prev, q) }.getOrNull()?.takeIf { !lockedAccount(q, it) }?.let { full ->
                 _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, "$TOOK_AS\"$full\".")).takeLast(MAX_MESSAGES)) }
@@ -925,12 +924,15 @@ object IraHub {
             }
         // "Remember that ...", "what did I tell you?", "forget what I told you": Boss's own words, kept - never acted on.
         if (!understood) {
-            val keep = com.optionslab.ira.Memory.toKeep(q)
+            val keep = com.optionslab.ira.Memory.toKeep(q)?.let { com.optionslab.ira.Secrets.redact(it) }
+            val asks = keep != null || com.optionslab.ira.Memory.recallAsked(q) || com.optionslab.ira.Memory.forgetAsked(q)
             val said = when {
-                keep != null -> { runCatching { IraTools.remember(keep) }; "Noted, Boss: \"$keep\". Ask \"what did I tell you?\" any time." }
-                com.optionslab.ira.Memory.recallAsked(q) -> if (phoneLocked()) "Unlock the phone for that, Boss." else com.optionslab.ira.Memory.lines(IraTools.memory())
-                com.optionslab.ira.Memory.forgetAsked(q) -> { IraTools.forgetMemory(); "Done, Boss: I've forgotten what you asked me to remember." }
-                else -> null
+                !asks -> null
+                // Notes are Boss's: not kept, read or cleared on a locked phone.
+                phoneLocked() -> "Unlock the phone for that, Boss."
+                keep != null -> { scope.launch(Dispatchers.IO) { runCatching { IraTools.remember(keep) } }; "Noted, Boss: \"$keep\". Ask \"what did I tell you?\" any time." }
+                com.optionslab.ira.Memory.recallAsked(q) -> com.optionslab.ira.Memory.lines(IraTools.memory())
+                else -> { scope.launch(Dispatchers.IO) { IraTools.forgetMemory() }; "Done, Boss: I've forgotten what you asked me to remember." }
             }
             if (said != null) {
                 _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
@@ -968,7 +970,7 @@ object IraHub {
             }
         }
         // A trading word explained ("what is theta", "explain max pain"): at once, before anything is looked up.
-        if (parsed.order == null && parsed.command == null && Topic.ACCOUNT !in parsed.topics && Topic.EXPLAIN !in parsed.topics) runCatching { com.optionslab.ira.Glossary.explain(q) }.getOrNull()?.let { text ->
+        if (parsed.order == null && parsed.command == null && (Topic.ACCOUNT !in parsed.topics || !Regex("(?i)\\b(my|mine|our|me|i)\\b").containsMatchIn(q)) && Topic.EXPLAIN !in parsed.topics) runCatching { com.optionslab.ira.Glossary.explain(q) }.getOrNull()?.let { text ->
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, text)).takeLast(MAX_MESSAGES)) }
             return
         }
@@ -993,7 +995,7 @@ object IraHub {
         // Reasoning over the data on the phone: a move over a stretch of time, which market is stronger, the expected range.
         // (Not for an advice question: the usual answer says Jarvis gives no buy or sell advice.)
         if (parsed.order == null && parsed.command == null && Topic.ADVICE !in parsed.topics) runCatching { reasoned(q, parsed) }.getOrNull()?.let { text ->
-            val said = offlineNote()?.let { "$it $text" } ?: text
+            val said = (offlineNote() ?: staleNote(parsed.markets))?.let { "$it $text" } ?: text
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said, listOf(text))).takeLast(MAX_MESSAGES)) }
             return
         }
@@ -1160,8 +1162,9 @@ object IraHub {
     private fun reasoned(raw: String, parsed: com.optionslab.ira.Question): String? {
         // The words as understood (Hinglish turned into English: "pichle ghante kitna gira" -> "in the last hour how much fell").
         val q = parsed.text.ifBlank { raw }
-        // "Why did Nifty fall in the last hour": the why-story and the news answer it, not bare figures.
-        if (Topic.WHY in parsed.topics) return null
+        // "Why did Nifty fall in the last hour": the why-story and the news answer it, not bare figures ("how much did it
+        // fall" is a figure).
+        if (Topic.WHY in parsed.topics && !Regex("(?i)\\bhow much\\b").containsMatchIn(q)) return null
         val st = _state.value
         com.optionslab.ira.Payoff.asked(q)?.let { return com.optionslab.ira.Payoff.say(it) }
         if (com.optionslab.ira.VixRank.asked(q)) {
@@ -1174,25 +1177,33 @@ object IraHub {
             return com.optionslab.ira.Briefing.say(st.snaps, LocalDateTime.now(IST), ev)
         }
         if (com.optionslab.ira.Compare.asked(q)) return com.optionslab.ira.Compare.say(com.optionslab.ira.Compare.markets(q), st.snaps)
-        val m = parsed.markets.firstOrNull { it != IraMarket.VIX } ?: IraMarket.NIFTY
+        // A question about the owner ("how much did I lose this week") is the account's, never a market's figure.
+        if (Regex("(?i)\\b(i|me|my|we|our)\\b").containsMatchIn(q)) return null
+        // India VIX named: its own candles for the time questions; the range and the odds are an index's.
+        val vixAsked = parsed.markets.firstOrNull() == IraMarket.VIX
+        val m = if (vixAsked) IraMarket.VIX else parsed.markets.firstOrNull { it != IraMarket.VIX } ?: IraMarket.NIFTY
         com.optionslab.ira.Odds.asked(q)?.let { odd ->
+            if (vixAsked) return null
             val vix = st.snaps[IraMarket.VIX]?.price ?: return null
             return com.optionslab.ira.Odds.say(st.snaps[m] ?: return null, vix, odd, LocalDateTime.now(IST))
         }
         if (com.optionslab.ira.ExpectedRange.asked(q)) {
+            if (vixAsked) return null
             val vix = st.snaps[IraMarket.VIX]?.price ?: return null
             return com.optionslab.ira.ExpectedRange.say(st.snaps[m] ?: return null, vix, LocalDateTime.now(IST))
         }
         com.optionslab.ira.Moves.asked(q)?.let { w -> return com.optionslab.ira.Moves.say(m, histories[m]?.bars ?: return null, w) }
         val trading = m.trading(LocalDateTime.now(IST)) && closedToday() == null
-        if (com.optionslab.ira.Lookback.prevAsked(q)) return com.optionslab.ira.Lookback.prevDay(m, histories[m]?.bars ?: return null, trading)
+        val today = com.optionslab.app.data.Market.today()
+        if (com.optionslab.ira.Lookback.prevAsked(q)) return com.optionslab.ira.Lookback.prevDay(m, histories[m]?.bars ?: return null, today)
         com.optionslab.ira.Lookback.time(q)?.let { at ->
-            return com.optionslab.ira.Lookback.priceAt(m, histories[m]?.bars ?: return null, at, yesterday = Regex("(?i)\\byesterday\\b").containsMatchIn(q))
+            return com.optionslab.ira.Lookback.priceAt(m, histories[m]?.bars ?: return null, at, yesterday = Regex("(?i)\\byesterday\\b").containsMatchIn(q), today = today)
         }
         if (com.optionslab.ira.OpeningRange.asked(q)) return com.optionslab.ira.OpeningRange.say(st.snaps[m] ?: return null)
-        com.optionslab.ira.PeriodMove.asked(q)?.let { span -> return com.optionslab.ira.PeriodMove.say(m, histories[m]?.bars ?: return null, span) }
+        com.optionslab.ira.PeriodMove.asked(q)?.let { span -> return com.optionslab.ira.PeriodMove.say(m, histories[m]?.bars ?: return null, span, today) }
         if (com.optionslab.ira.Momentum.asked(q)) return com.optionslab.ira.Momentum.say(m, histories[m]?.bars ?: return null, LocalDateTime.now(IST))
-        if (com.optionslab.ira.Pivots.asked(q)) return com.optionslab.ira.Pivots.say(m, histories[m]?.bars ?: return null, m.trading(LocalDateTime.now(IST)) && closedToday() == null)
+        if (com.optionslab.ira.Pivots.asked(q)) return com.optionslab.ira.Pivots.say(m, histories[m]?.bars ?: return null, trading, today,
+            tomorrow = Regex("(?i)\\b(tomorrow|next session|monday)\\b").containsMatchIn(q))
         if (com.optionslab.ira.DayStory.asked(q)) return com.optionslab.ira.DayStory.say(m, histories[m]?.bars ?: return null)
         return null
     }
@@ -1489,6 +1500,7 @@ object IraHub {
     suspend fun forgetAll() = lock.withLock {
         dropPending()
         IraTools.forgetHabits()
+        IraTools.forgetMemory()
         checked = null
         book = PatternBook()
         lastNews = null

@@ -161,8 +161,13 @@ internal object IraCoach {
     }
 
     private val orbTold = HashSet<String>()
+    /** Where each index stood against its range at the last look (day|market -> true above, false below, null inside). */
+    private val orbLast = HashMap<String, Boolean?>()
 
-    /** Nifty or BankNifty leaving its opening range: told once per side per day (after 09:30, market hours). */
+    /**
+     * Nifty or BankNifty leaving its opening range: told once per side per day (after 09:30, market hours), and only on
+     * the move out - a break seen already outside at the first look (a restart, the app opened late) is not news.
+     */
     fun orbWatch() {
         if (!com.optionslab.app.BuildConfig.JARVIS || !Automations.on(Automations.Auto.ORB) || !com.optionslab.app.data.Market.isOpen()) return
         val now = java.time.LocalTime.now(IST)
@@ -171,7 +176,12 @@ internal object IraCoach {
         for (m in listOf(com.optionslab.ira.Market.NIFTY, com.optionslab.ira.Market.BANKNIFTY)) {
             val s = IraHub.state.value.snaps[m] ?: continue
             if (s.at.toLocalDate().toString() != day) continue
-            val up = com.optionslab.ira.OpeningRange.broken(s) ?: continue
+            val now = com.optionslab.ira.OpeningRange.broken(s)
+            val key = "$day|${m.name}"
+            val seen = synchronized(orbLast) { orbLast.containsKey(key) }
+            val before = synchronized(orbLast) { orbLast.put(key, now) }
+            val up = now ?: continue
+            if (!seen || before == up) continue
             if (!synchronized(orbTold) { orbTold.add("$day|${m.name}|$up") }) continue
             val line = com.optionslab.ira.OpeningRange.alert(s, up)
             IraHub.appContext()?.let { JarvisPopup.show(it, "${m.label}: opening range", line) }
