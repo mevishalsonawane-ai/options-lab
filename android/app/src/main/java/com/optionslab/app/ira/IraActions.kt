@@ -319,6 +319,9 @@ internal object IraActions {
             Command.Kind.ALARM_REMOVE -> {
                 val a = com.optionslab.app.data.Alarms.all()
                 if (a.isEmpty()) return "There are no alarms to remove." to null
+                if (c.target == "all") return Commands.describe(c, "all ${a.size} alarms") to suspend {
+                    a.forEach { com.optionslab.app.data.Alarms.remove(it.id) }; model()?.refreshAlarms(); "All alarms removed."
+                }
                 val i = if (c.target == "last") a.lastIndex else c.number?.let { (it - 1).takeIf { x -> x in a.indices } }
                     ?: return ("Which alarm? " + a.mapIndexed { n, x -> "${n + 1}. ${x.describe()}" }.joinToString("; ") + ".") to null
                 Commands.describe(c, "the alarm ${a[i].describe()}") to suspend { com.optionslab.app.data.Alarms.remove(a[i].id); model()?.refreshAlarms(); "Alarm removed." }

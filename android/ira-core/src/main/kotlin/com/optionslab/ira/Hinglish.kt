@@ -9,7 +9,7 @@ package com.optionslab.ira
 object Hinglish {
     /** Words that only Hindi uses (so English text, "Bollinger band" included, is left alone). */
     private val HINDI = Regex("\\b(kya|kaisa|kaise|kaisi|hai|hain|batao|bataiye|dikhao|dikhaiye|karo|kardo|karu|karun|karna|chahiye|" +
-        "roko|chalu|shuru|khareedo|kharido|lelo|mera|meri|aaj|abhi|haan|nahi|nahin|rehne|bilkul|wala|wali|sabhi|saare|kyun|kyu|kyon|gira|giri|chadha|chadhi|badha|upar|neeche|jayega|jaega|jayegi|pichle|pichhle|ghante|ghanta|kitna|kitne|kitni|hafte|hafta|mahine|mahina)\\b")
+        "roko|chalu|shuru|khareedo|kharido|lelo|mera|meri|aaj|abhi|haan|nahi|nahin|rehne|bilkul|wala|wali|sabhi|saare|kyun|kyu|kyon|gira|giri|chadha|chadhi|badha|upar|neeche|jayega|jaega|jayegi|pichle|pichhle|ghante|ghanta|kitna|kitne|kitni|hafte|hafta|mahine|mahina|lagao|batana|kar)\\b")
 
     /** Verb last -> English command first: (pattern, English verb). */
     private val VERBS = listOf(
@@ -19,6 +19,8 @@ object Hinglish {
         Regex("^(.*?)\\s*(?:ko\\s+)?(?:close\\s+kar\\s+do|close\\s+karo|exit\\s+karo|square\\s+off\\s+karo)$") to "close",
         Regex("^(.*?)\\s*(?:khareedo|kharido|le\\s+lo|lelo|buy\\s+karo|buy\\s+kar\\s+do)$") to "buy",
         Regex("^(.*?)\\s*(?:dikhao|dikhaiye|batao|bataiye|bata\\s+do)$") to "show",
+        // "max lots 5 kar do": a setting (last, after the verbs above).
+        Regex("^(.*?)\\s*(?:kar\\s+do|kardo|kar\\s+de)$") to "set",
     )
 
     private val WORDS = listOf(

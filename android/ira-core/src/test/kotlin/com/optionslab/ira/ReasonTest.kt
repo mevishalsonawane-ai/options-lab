@@ -335,3 +335,22 @@ class ReviewNTest {
         assertNull(Chat.smallTalk("never mind", 0)?.takeIf { it.startsWith("Good night") })
     }
 }
+
+class CommandPhrasingTest {
+    @Test fun everydayCommandPhrasings() {
+        fun k(s: String) = Commands.parse(s)?.kind
+        for (q in listOf("close the nifty position", "close my nifty call", "exit 24500 ce", "sell my nifty position", "book profit in nifty", "book profit"))
+            assertEquals(Command.Kind.CLOSE_ONE, k(q), q)
+        assertEquals("nifty call", Commands.parse("close my nifty call")?.target)
+        assertNull(k("sell nifty 24500 ce"), "a new sell is an order, never a close")
+        assertEquals(Command.Kind.CLOSE_ALL, k("close all positions"))
+        for (q in listOf("remind me when nifty hits 25000", "set alarm nifty 24500", "nifty 24500 pe alert lagao", "ping me when nifty touches 24400"))
+            assertEquals(Command.Kind.ALARM_ADD, k(q), q)
+        assertEquals(25_000.0, Commands.parse("remind me when nifty hits 25000")?.level)
+        assertEquals("all", Commands.parse("remove all alarms")?.target)
+        for (q in listOf("stop loss hit hua kya", "stop it", "stop the voice", "stop jarvis", "turn off notifications")) assertNull(k(q), q)
+        assertEquals(Command.Kind.STOP_ONE, k("stop strategy 2"))
+        assertEquals(Command.Kind.SET_LIMIT, k(Hinglish.normalize("max lots 5 kar do")))
+        assertEquals(Command.Kind.TARGET_SET, k("target 3000 today"))
+    }
+}
