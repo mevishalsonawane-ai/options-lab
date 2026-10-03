@@ -456,7 +456,7 @@ object PeriodMove {
  * indices' moves, the strongest and weakest, the expected range and the day's events, in a few sentences. Pure.
  */
 object Briefing {
-    private val ASK = Regex("^ (brief me|give me a brief(ing)?|briefing|catch me up|what do i need to know|what should i know|what s important|whats important|market briefing|quick update|bring me up to speed|update me on everything)( today| now| jarvis)? $")
+    private val ASK = Regex("^ (brief me|give me a brief(ing)?|briefing|catch me up|what do i need to know|what should i know|what s important|whats important|market briefing|morning briefing|morning brief|quick update|bring me up to speed|update me on everything)( today| now| jarvis)? $")
 
     fun asked(text: String): Boolean = ASK.containsMatchIn(norm(text).replace(Regex("^ (jarvis|hey jarvis|ok jarvis|boss) "), " "))
 

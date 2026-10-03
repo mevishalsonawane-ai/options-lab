@@ -9,7 +9,7 @@ package com.optionslab.ira
 object Hinglish {
     /** Words that only Hindi uses (so English text, "Bollinger band" included, is left alone). */
     private val HINDI = Regex("\\b(kya|kaisa|kaise|kaisi|hai|hain|batao|bataiye|dikhao|dikhaiye|karo|kardo|karu|karun|karna|chahiye|" +
-        "roko|chalu|shuru|khareedo|kharido|lelo|mera|meri|aaj|abhi|haan|nahi|nahin|rehne|bilkul|wala|wali|sabhi|saare|kyun|kyu|kyon|gira|giri|chadha|chadhi|badha|upar|neeche|jayega|jaega|jayegi|pichle|pichhle|ghante|ghanta|kitna|kitne|kitni|hafte|hafta|mahine|mahina|lagao|batana|kar)\\b")
+        "roko|chalu|shuru|khareedo|kharido|lelo|mera|meri|aaj|abhi|haan|nahi|nahin|rehne|bilkul|wala|wali|sabhi|saare|kyun|kyu|kyon|gira|giri|chadha|chadhi|badha|upar|neeche|jayega|jaega|jayegi|pichle|pichhle|ghante|ghanta|kitna|kitne|kitni|hafte|hafta|mahine|mahina|lagao|batana|kar|kamaya|kamaye|kamai|hatao|hata)\\b")
 
     /** Verb last -> English command first: (pattern, English verb). */
     private val VERBS = listOf(
@@ -21,6 +21,7 @@ object Hinglish {
         Regex("^(.*?)\\s*(?:ko\\s+)?(?:close\\s+kar\\s+do|close\\s+karo|exit\\s+karo|square\\s+off\\s+karo)$") to "close",
         Regex("^(.*?)\\s*(?:khareedo|kharido|le\\s+lo|lelo|buy\\s+karo|buy\\s+kar\\s+do)$") to "buy",
         Regex("^(.*?)\\s*(?:dikhao|dikhaiye|batao|bataiye|bata\\s+do)$") to "show",
+        Regex("^(.*?)\\s*(?:ko\\s+)?(?:hata\\s+do|hatao|hata\\s+de)$") to "remove",
         // "max lots 5 kar do": a setting (last, after the verbs above).
         Regex("^(?!.*\\b(?:alert|alarm)\\s+set\\s+(?:kar|kardo))(.*?)\\s*(?:kar\\s+do|kardo|kar\\s+de)$") to "set",
     )
@@ -32,6 +33,7 @@ object Hinglish {
         Regex("^(.*?)\\s+kya\\s+(?:hai|hua)$") to "what is $1",
         Regex("\\bmera\\b|\\bmeri\\b|\\bmere\\b") to "my",
         Regex("\\b(?:kyun|kyu|kyon)\\b") to "why",
+        Regex("\\b(?:kamaya|kamaye|kamai)\\b") to "did i make",
         Regex("\\b(?:gira|giri|gire)\\b") to "fell",
         Regex("\\b(?:chadha|chadhi|badha|badhi)\\b") to "rose",
         Regex("\\b(?:upar)\\b") to "going up",

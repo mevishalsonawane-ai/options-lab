@@ -42,7 +42,7 @@ data class Command(val kind: Kind, val target: String? = null, val number: Int? 
 
 object Commands {
     /** A question about doing something ("how do I stop...") is not a command. */
-    private val QUESTION = Regex("^ (how|where|what|whats|why|which|when|should|is|are|am|can i|could i|did|do you|do i|does|has|have|will|was|were|would|if|wonder|i wonder) | tell me (whether|what|why|how|where|when|which) | is it [a-z0-9]* $| right $| or not $| (hua|hai|tha|hoga) kya $| kya (hua|hai) $")
+    private val QUESTION = Regex("^ (how|where|what|whats|why|which|when|should|is|are|am|can i|could i|did|do you|do i|does|has|have|will|was|were|would|if|wonder|i wonder) | tell me (whether|what|why|how|where|when(?! [a-z0-9 ]{0,30}(crosses|hits|reaches|touches|goes above|goes below|is above|is below|falls below|rises above|falls to|rises to))|which) | is it [a-z0-9]* $| right $| or not $| (hua|hai|tha|hoga) kya $| kya (hua|hai) $")
     /** "Don't switch to live", "never start...": a negation is never a command. */
     private val NEGATION = Regex(" (don t|dont|do not|never|not|doesn t|didn t|won t) ")
     /** Commands a misspelt word may never become (only what the owner typed correctly). */
@@ -161,7 +161,7 @@ object Commands {
         val setAlarm = !optionWords && has(" set (an |a )?(alarm|alert) | (alarm|alert) (lagao|laga do|set karo|set kar do|set) | (pahunche|pahunch jaye|aaye|aa jaye|cross kare|hit kare|touch kare) (to )?(batana|bata dena) ")
         val lvl = Regex(" (?:above|below|over|under|crosses|crossing|cross|rises to|falls to|drops to|reaches|hits|hit|touches|touch|to) (\\d{2,6}(?:\\.\\d+)?) ").find(s)?.groupValues?.get(1)?.toDouble()
             ?: if (setAlarm) Regex(" (\\d{4,6}(?:\\.\\d+)?) ").find(s)?.groupValues?.get(1)?.toDouble() else null
-        if (lvl != null && (has(" (alert|alarm|notify|tell|ping|wake|remind) ") || setAlarm) &&
+        if (lvl != null && (has(" (alert|alarm|notify|tell|ping|wake|remind|let me know) ") || setAlarm) &&
             (setAlarm || has(" (above|below|over|under|crosses|crossing|cross|rises|falls|drops|goes|reaches|hits|hit|touches|touch) "))) {
             val m = Market.mentioned(s).firstOrNull()
             val above = when { has(" (below|under|falls|drops|down to) ") -> false; has(" (above|over|rises|crosses|up to|reaches) ") -> true; else -> null }

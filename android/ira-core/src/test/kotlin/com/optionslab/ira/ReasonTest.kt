@@ -521,3 +521,15 @@ class RoutingAuditTest {
         assertTrue(OptionQuote.asked(Hinglish.normalize("24500 ce kitne ka hai")) != null)
     }
 }
+
+class RoutingAuditTwoTest {
+    @Test fun alarmsAndHindiWordsAreHeard() {
+        val a = Commands.parse("tell me when nifty crosses 25000")!!
+        assertEquals(Command.Kind.ALARM_ADD, a.kind); assertEquals(25000.0, a.level)
+        assertEquals(Command.Kind.ALARM_ADD, Commands.parse("let me know when nifty is above 25000")?.kind)
+        assertNull(Commands.parse("tell me when the market opens"))
+        assertEquals(Command.Kind.ALARM_REMOVE, Commands.parse(Hinglish.normalize("alarm hata do"))?.kind)
+        assertTrue(Hinglish.normalize("aaj kitna kamaya").contains("did i make"))
+        assertTrue(Briefing.asked("morning briefing"))
+    }
+}
