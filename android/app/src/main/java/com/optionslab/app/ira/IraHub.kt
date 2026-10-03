@@ -1135,7 +1135,9 @@ object IraHub {
      * "How much did Nifty move in the last hour", "is BankNifty stronger than Nifty", "the expected range today": worked
      * out from the candles and snapshots on the phone, or null when the question is none of these (or the data is missing).
      */
-    private fun reasoned(q: String, parsed: com.optionslab.ira.Question): String? {
+    private fun reasoned(raw: String, parsed: com.optionslab.ira.Question): String? {
+        // The words as understood (Hinglish turned into English: "pichle ghante kitna gira" -> "in the last hour how much fell").
+        val q = parsed.text.ifBlank { raw }
         // "Why did Nifty fall in the last hour": the why-story and the news answer it, not bare figures.
         if (Topic.WHY in parsed.topics) return null
         val st = _state.value

@@ -250,3 +250,11 @@ class VixRankTest {
         assertNull(VixRank.rank(bars.take(5), 12.0))
     }
 }
+
+class HinglishReasonTest {
+    @Test fun hinglishReachesTheReasoning() {
+        assertEquals(60, Moves.asked(Hinglish.normalize("pichle ghante nifty kitna gira"))?.minutes)
+        assertEquals(PeriodMove.Span.WEEK, PeriodMove.asked(Hinglish.normalize("is hafte banknifty kitna chadha")))
+        assertEquals(PeriodMove.Span.MONTH, PeriodMove.asked(Hinglish.normalize("is mahine nifty kitna gira")))
+    }
+}

@@ -9,7 +9,7 @@ package com.optionslab.ira
 object Hinglish {
     /** Words that only Hindi uses (so English text, "Bollinger band" included, is left alone). */
     private val HINDI = Regex("\\b(kya|kaisa|kaise|kaisi|hai|hain|batao|bataiye|dikhao|dikhaiye|karo|kardo|karu|karun|karna|chahiye|" +
-        "roko|chalu|shuru|khareedo|kharido|lelo|mera|meri|aaj|abhi|haan|nahi|nahin|rehne|bilkul|wala|wali|sabhi|saare|kyun|kyu|kyon|gira|giri|chadha|chadhi|badha|upar|neeche|jayega|jaega|jayegi)\\b")
+        "roko|chalu|shuru|khareedo|kharido|lelo|mera|meri|aaj|abhi|haan|nahi|nahin|rehne|bilkul|wala|wali|sabhi|saare|kyun|kyu|kyon|gira|giri|chadha|chadhi|badha|upar|neeche|jayega|jaega|jayegi|pichle|pichhle|ghante|ghanta|kitna|kitne|kitni|hafte|hafta|mahine|mahina)\\b")
 
     /** Verb last -> English command first: (pattern, English verb). */
     private val VERBS = listOf(
@@ -33,6 +33,11 @@ object Hinglish {
         Regex("\\b(?:upar)\\b") to "going up",
         Regex("\\b(?:neeche)\\b") to "going down",
         Regex("\\b(?:jayega|jaega|jayegi|jaegi)\\b") to "",
+        Regex("\\b(?:pichle|pichhle)\\s+(?:ek\\s+)?(?:ghante|ghanta)\\b") to "in the last hour",
+        Regex("\\b(?:is|iss)\\s+(?:hafte|hafta)\\b") to "this week",
+        Regex("\\b(?:pichle|pichhle)\\s+(?:hafte|hafta)\\b") to "last week",
+        Regex("\\b(?:is|iss)\\s+(?:mahine|mahina)\\b") to "this month",
+        Regex("\\b(?:kitna|kitne|kitni)\\b") to "how much",
         Regex("\\baaj\\b") to "today",
         Regex("\\babhi\\b") to "now",
         Regex("\\bsab\\b|\\bsaare\\b|\\bsabhi\\b") to "all",
