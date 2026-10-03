@@ -134,3 +134,17 @@ class SourcesTest {
         assertEquals(Command.Kind.MORE, Commands.parse("Jarvis, repeat that")?.kind)
     }
 }
+
+class PivotsTest {
+    @Test fun pivotsAreWorkedOut() {
+        val lv = Pivots.of(110.0, 90.0, 100.0)
+        assertEquals(100.0, lv.p); assertEquals(110.0, lv.r1); assertEquals(90.0, lv.s1); assertEquals(120.0, lv.r2); assertEquals(80.0, lv.s2)
+        assertTrue(Pivots.asked("what are tomorrow's levels for nifty"))
+        assertTrue(Pivots.asked("banknifty pivots"))
+        assertFalse(Pivots.asked("what are the levels"))
+        val d1 = java.time.LocalDate.of(2026, 9, 30); val d2 = java.time.LocalDate.of(2026, 10, 1)
+        val bars = listOf(Candle(d1.atTime(9, 15), 100.0, 110.0, 90.0, 100.0), Candle(d2.atTime(9, 15), 100.0, 130.0, 95.0, 120.0))
+        assertTrue(Pivots.say(Market.NIFTY, bars, trading = true)!!.contains("for today, from 2026-09-30"))
+        assertTrue(Pivots.say(Market.NIFTY, bars, trading = false)!!.contains("for the next session, from 2026-10-01"))
+    }
+}

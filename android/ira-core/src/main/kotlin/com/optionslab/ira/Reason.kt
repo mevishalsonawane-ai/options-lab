@@ -211,3 +211,35 @@ object Sources {
         if (facts.isEmpty()) "That answer came from my own rules, Boss, not from figures I can list."
         else "I worked that out from: " + facts.take(8).joinToString("; ") + "."
 }
+
+/**
+ * Classic pivot levels (Jarvis self-improvement, 2026-10-03): "Nifty pivots", "levels for tomorrow". From the last full
+ * session's high, low and close: P = (H+L+C)/3, R1 = 2P-L, S1 = 2P-H, R2 = P+(H-L), S2 = P-(H-L). Pure.
+ */
+object Pivots {
+    private val ASK = Regex(" (pivot|pivots|pivot points?|cpr|tomorrow s levels|tomorrows levels|levels for tomorrow|tomorrow levels|next session levels|levels for the next session|levels for monday) ")
+
+    fun asked(text: String): Boolean = ASK.containsMatchIn(norm(text))
+
+    data class Levels(val r2: Double, val r1: Double, val p: Double, val s1: Double, val s2: Double)
+
+    fun of(h: Double, l: Double, c: Double): Levels {
+        val p = (h + l + c) / 3
+        return Levels(p + (h - l), 2 * p - l, p, 2 * p - h, p - (h - l))
+    }
+
+    /**
+     * Pivots for the session after the last complete one in [bars]. While [trading], today's candles are not complete,
+     * so today's pivots come from the day before.
+     */
+    fun say(m: Market, bars: List<Candle>, trading: Boolean): String? {
+        val days = bars.groupBy { it.t.toLocalDate() }.toSortedMap()
+        if (days.isEmpty()) return null
+        val base = if (trading) days.keys.toList().dropLast(1).lastOrNull() ?: return null else days.lastKey()
+        val d = days.getValue(base)
+        val lv = of(d.maxOf { it.h }, d.minOf { it.l }, d.last().c)
+        val forWhat = if (trading) "today" else "the next session"
+        return "${m.label}'s classic pivots for $forWhat, from $base's high, low and close: R2 ${n(lv.r2)}, R1 ${n(lv.r1)}, pivot ${n(lv.p)}, S1 ${n(lv.s1)}, S2 ${n(lv.s2)}. " +
+            "Above the pivot buyers have the edge; R1 and S1 are the usual first stops."
+    }
+}
