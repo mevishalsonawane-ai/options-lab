@@ -532,7 +532,7 @@ object OrbArms {
         val buy = Paper.place(c, "BUY", 1, "MARKET", "MIS", null, null)
         val fill = filledOrCancelled(buy) ?: return "order_refused: ${if (buy.ok) "no price to fill at; the order was cancelled" else buy.message}"
         buy.orderId?.let { Strategies.tagOwner("paper:$it", "${arm.label} · entry") }
-        Notifier.orderFilled(app, "BUY", fill.quantity, fill.symbol, fill.price, "Paper", "${arm.label} · entry", fill.orderId)
+        Notifier.orderFilled(app, "BUY", fill.quantity, fill.symbol, fill.price, "Paper", "${arm.label} · entry", buy.orderId)
         val trigger = OrbRules.stopTrigger(fill.price)
         var stopId: String? = null
         if (trigger != null) {
@@ -611,7 +611,7 @@ object OrbArms {
         // sale is tried again on the next pass.
         val fill = filledOrCancelled(sell) ?: return p.copy(stopOrderId = p.stopOrderId?.let { restop(p, c) })
         sell.orderId?.let { Strategies.tagOwner("paper:$it", "${armOf(p.arm).label} · $why") }
-        Notifier.orderFilled(app, "SELL", fill.quantity, fill.symbol, fill.price, "Paper", "${armOf(p.arm).label} · exit", fill.orderId)
+        Notifier.orderFilled(app, "SELL", fill.quantity, fill.symbol, fill.price, "Paper", "${armOf(p.arm).label} · exit", sell.orderId)
         return p.copy(stopOrderId = null, exit = fill.price, exitTime = now(), why = why, charges = p.charges + chargesOf(sell.orderId))
     }
 
@@ -985,7 +985,7 @@ object OrbArms {
         val buy = Paper.place(c, "BUY", 1, "MARKET", "MIS", null, null)
         val fill = filledOrCancelled(buy) ?: return "order_refused: ${if (buy.ok) "no price to fill at; the order was cancelled" else buy.message}"
         buy.orderId?.let { Strategies.tagOwner("paper:$it", "${LiquidityRules.ARM.label} · entry") }
-        Notifier.orderFilled(app, "BUY", fill.quantity, fill.symbol, fill.price, "Paper", "${LiquidityRules.ARM.label} · entry", fill.orderId)
+        Notifier.orderFilled(app, "BUY", fill.quantity, fill.symbol, fill.price, "Paper", "${LiquidityRules.ARM.label} · entry", buy.orderId)
         // The owner's stop: a resting SL-M sell 15% below the fill (the book owns it, as the ORB's -40).
         val trigger = LiquidityRules.stopTrigger(fill.price)
         var stopId: String? = null
