@@ -36,13 +36,13 @@ import kotlinx.coroutines.withContext
 import java.util.Locale
 
 /**
- * JarvisAlgo's ears and voice, always on while the owner keeps it switched on. It listens with Android's ON-DEVICE
+ * Jarvis's ears and voice, always on while the owner keeps it switched on. It listens with Android's ON-DEVICE
  * speech recognizer only (Android 12+: the audio never leaves the phone; there is no fallback to an online one), wakes
  * on "Jarvis", answers through [IraHub] like a typed question and speaks with an offline voice of the phone's own
  * text-to-speech. Nothing heard is recorded, logged or kept beyond the question in the conversation. An order asked
  * by voice is only prepared on the Ira screen. The one spoken yes: when Jarvis itself asks about a news trade, the
  * owner's yes or no (approve / reject, positive / negative) within a minute answers it. A microphone foreground
- * service with its own notification (and a Stop button) while it runs; only JarvisAlgo declares it.
+ * service with its own notification (and a Stop button) while it runs; only Jarvis declares it.
  */
 class JarvisVoice : Service() {
     enum class Mode { OFF, LISTENING, AWAKE, THINKING, SPEAKING }
@@ -337,7 +337,7 @@ class JarvisVoice : Service() {
         // Restarted by the system after a one-question listen with the switch off: do not listen.
         if (intent == null && !wanted) { stopSelf(); return START_NOT_STICKY }
         val why = when {
-            !com.optionslab.app.BuildConfig.JARVIS -> "Voice is in JarvisAlgo only."
+            !com.optionslab.app.BuildConfig.JARVIS -> "Voice is in IraAlgo only."
             !permitted(this) -> "Jarvis needs the microphone permission to listen."
             !available(this) -> "This phone has no on-device speech recognizer (Android 12 or later), so Jarvis does not listen: it never sends your voice off the phone."
             else -> null
@@ -347,7 +347,7 @@ class JarvisVoice : Service() {
             ServiceCompat.startForeground(this, ID, notification(),
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE else 0)
         } catch (e: Exception) {
-            _state.value = VoiceState(problem = "Android did not let Jarvis listen in the background; open JarvisAlgo to start it again.")
+            _state.value = VoiceState(problem = "Android did not let Jarvis listen in the background; open IraAlgo to start it again.")
             stopSelf(); return START_NOT_STICKY
         }
         instance = java.lang.ref.WeakReference(this)
@@ -590,7 +590,7 @@ class JarvisVoice : Service() {
         when (h) {
             Wake.Heard.Ignore -> again()
             Wake.Heard.Awake -> { awakeUntil = SystemClock.elapsedRealtime() + AWAKE_MS; say("Yes, Boss?") }
-            Wake.Heard.Stop -> { wanted = false; say("Going to sleep, Boss. Switch me on again in JarvisAlgo.", STOP_AFTER) }
+            Wake.Heard.Stop -> { wanted = false; say("Going to sleep, Boss. Switch me on again in IraAlgo.", STOP_AFTER) }
             is Wake.Heard.Ask -> {
                 // "Jarvis, stop talking" said over Jarvis: it has already stopped; that is not a lasting mute.
                 if (cutIn && Regex("^(stop|please stop|ok stop) (talking|speaking)$").matches(h.question.lowercase().trim())) { again(); return }

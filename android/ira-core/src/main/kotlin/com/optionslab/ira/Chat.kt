@@ -35,10 +35,10 @@ object Chat {
         Talk(Regex("^ (thanks|thank you|thank you jarvis|thanks a lot|thx|shukriya|dhanyavaad|great thanks|nice|good job|well done|awesome|perfect) $"), listOf(
             "Always, Boss.", "Happy to help, Boss.", "Anytime, Boss.", "My pleasure, Boss.")),
         Talk(Regex("^ (who are you|what are you|what is your name|what s your name|whats your name|your name|introduce yourself) $"), listOf(
-            "I'm Jarvis, Boss: your trading assistant inside JarvisAlgo. I watch the markets, your positions and the news, and I only act when you approve.",
+            "I'm Jarvis, Boss: your trading assistant inside IraAlgo. I watch the markets, your positions and the news, and I only act when you approve.",
             "Jarvis, Boss. I read the markets and your account, suggest trades, and never act without your yes.")),
         Talk(Regex("^ (who made you|who created you|who built you) $"), listOf(
-            "I was built for you, Boss, as part of JarvisAlgo, and everything I know stays on this phone.")),
+            "I was built for you, Boss, as part of IraAlgo, and everything I know stays on this phone.")),
         Talk(Regex("^ (good night|goodnight) $"), listOf(
             "Good night, Boss. I'll keep an eye on things.", "Good night, Boss. Sleep well.")),
         Talk(Regex("^ (bye|bye bye|see you|see you later|talk later|that s all|thats all|nothing|never mind|nevermind|forget it|leave it) $"), listOf(

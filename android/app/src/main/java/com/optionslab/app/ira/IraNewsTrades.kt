@@ -13,7 +13,7 @@ import org.json.JSONObject
 import kotlinx.coroutines.sync.withLock
 
 /**
- * News trades (JarvisAlgo): an idea from [NewsTrade] becomes a trade only on the owner's Approve. The option is picked as
+ * News trades (Jarvis): an idea from [NewsTrade] becomes a trade only on the owner's Approve. The option is picked as
  * the Liquidity 15+5 arm picks it (ATM on the index's strike step, the next expiry after today, 1 lot, a market buy);
  * it gets the arm's resting stop 15% below the price paid, a target of the ORB arms' +40 premium points, and the owner's
  * profit-lock ladder ([ProfitLock]) moves the stop up as the option gains - all through the app's own protections.

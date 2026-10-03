@@ -9,7 +9,7 @@ import com.optionslab.app.work.Notifier
 /**
  * Jarvis's pop-up: a short message that drops in at the top of the screen over any app, stays about 3 seconds and
  * hides by itself (the owner's wish, 2026-10-02). A heads-up notification - no "draw over other apps" permission;
- * private on the lock screen. JarvisAlgo only.
+ * private on the lock screen. Jarvis only.
  */
 object JarvisPopup {
     const val SHOW_MS = 3_500L

@@ -120,7 +120,7 @@ enum class Tab(val label: String, val icon: ImageVector) {
     PNL("P&L", CalendarIcon),
     TOOLS("Options", Icons.Filled.Search),
     LAB("Research", Icons.Filled.DateRange),
-    // JarvisAlgo calls it Settings (the owner's word); Jarvis's own settings are a section of it.
+    // Jarvis calls it Settings (the owner's word); Jarvis's own settings are a section of it.
     CABINET(if (com.optionslab.app.BuildConfig.JARVIS) "Settings" else "More", Icons.Filled.Menu),
 }
 
@@ -444,7 +444,7 @@ private fun Main(model: AppModel) {
                                     go(navNow().home(dest))
                                 })
                             }
-                            // JarvisAlgo: Home opens on Ira, with the usual dashboard one tap away.
+                            // Jarvis: Home opens on Ira, with the usual dashboard one tap away.
                             if (com.optionslab.app.BuildConfig.JARVIS) com.optionslab.app.ui.screens.IraHome(remember(model) { com.optionslab.app.ui.screens.iraOrderPathsFor(model) }, dashboard) else dashboard()
                         }
                         Tab.CHART -> Box(Modifier.fillMaxSize())   // the chart itself is kept alive below

@@ -6,7 +6,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeoutOrNull
 
 /**
- * Jarvis's replies read aloud on the Ira screen (JarvisAlgo; the owner's wish, 2026-10-02): a typed question is
+ * Jarvis's replies read aloud on the Ira screen (Jarvis; the owner's wish, 2026-10-02): a typed question is
  * answered aloud too (the owner's switch, on by default), and every reply has a Listen button. The phone's offline
  * voice in the chosen style; when Jarvis is listening, through its own voice so it never hears itself.
  */

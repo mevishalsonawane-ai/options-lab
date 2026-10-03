@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- JarvisAlgo home-screen widget: Jarvis's last word, and a trade waiting for Boss's answer. -->
+<!-- Jarvis home-screen widget: Jarvis's last word, and a trade waiting for Boss's answer. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/j_root"
     android:layout_width="match_parent"

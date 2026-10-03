@@ -1,4 +1,4 @@
-# JarvisAlgo only: the on-device model runner. llama.cpp is fetched at a fixed release (b6800) and built for arm64 with
+# Jarvis only: the on-device model runner. llama.cpp is fetched at a fixed release (b6800) and built for arm64 with
 # the dot-product and half-precision instructions; the app checks the phone's CPU has both before it loads this.
 cmake_minimum_required(VERSION 3.22.1)
 project(jarvis_llm C CXX)

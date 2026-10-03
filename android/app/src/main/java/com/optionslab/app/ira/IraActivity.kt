@@ -7,7 +7,7 @@ import java.time.LocalDateTime
 import java.time.ZoneId
 
 /**
- * What Jarvis did (JarvisAlgo): each command run, trade suggested, answered, placed or closed, kept on the phone
+ * What Jarvis did (Jarvis): each command run, trade suggested, answered, placed or closed, kept on the phone
  * (encrypted, the last [Activity.KEEP]) for "what did you do today". Words only: never a secret (they are hidden first).
  */
 internal object IraActivity {

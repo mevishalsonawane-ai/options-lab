@@ -20,7 +20,7 @@ import kotlinx.coroutines.withContext
 import java.io.File
 
 /**
- * JarvisAlgo's on-device language model: Qwen2.5 Instruct (Q4_K_M, GGUF) - the fast 1.5B or the quality 3B, the owner's
+ * Jarvis's on-device language model: Qwen2.5 Instruct (Q4_K_M, GGUF) - the fast 1.5B or the quality 3B, the owner's
  * choice - one exact file from Hugging Face, pinned by commit, size and SHA-256. It is downloaded only after the owner
  * says yes (the Ira screen asks), on Wi-Fi or mobile data, into the app's no-backup folder; a file that does not match
  * the fingerprint is deleted, never loaded.
@@ -144,7 +144,7 @@ object IraModel {
         return ok
     }
 
-    /** JarvisAlgo on a 64-bit ARM phone with the dot-product and half-precision instructions and at least ~6 GB of RAM. */
+    /** Jarvis on a 64-bit ARM phone with the dot-product and half-precision instructions and at least ~6 GB of RAM. */
     fun supported(c: Context): Boolean {
         if (!com.optionslab.app.BuildConfig.JARVIS || "arm64-v8a" !in Build.SUPPORTED_ABIS) return false
         val features = runCatching { File("/proc/cpuinfo").readLines().filter { it.startsWith("Features") }.joinToString(" ") }.getOrDefault("")
@@ -155,7 +155,7 @@ object IraModel {
 
     /** Why it cannot run here, in words. */
     fun unsupportedWhy(c: Context): String = when {
-        !com.optionslab.app.BuildConfig.JARVIS -> "The model is in JarvisAlgo only."
+        !com.optionslab.app.BuildConfig.JARVIS -> "The model is in IraAlgo only."
         "arm64-v8a" !in Build.SUPPORTED_ABIS -> "The model needs a 64-bit ARM phone."
         else -> "This phone's processor or memory is not enough for the model (it needs ARMv8.2 with dot-product instructions and about ${(choice.minRam + 500_000_000L) / 1_000_000_000} GB of RAM)."
     }
@@ -354,7 +354,7 @@ object IraModel {
     const val IDLE_MS = 10 * 60_000L
 }
 
-/** The JNI bridge to llama.cpp (src/jarvis/cpp), present in JarvisAlgo only. */
+/** The JNI bridge to llama.cpp (src/jarvis/cpp), present in Jarvis only. */
 internal object LlmNative {
     @Volatile private var ok: Boolean? = null
     fun ensure(): Boolean = synchronized(this) {

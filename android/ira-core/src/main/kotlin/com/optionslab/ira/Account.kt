@@ -206,7 +206,7 @@ object AppAnswers {
         val voiceLine = if (voice) "Voice: switch on \"Listen for Jarvis\" in the Voice card at the top of this page and allow the microphone. " +
             "Then say \"Jarvis, how is Nifty?\" - or \"Jarvis\", wait for \"Yes?\", and ask. Say \"Jarvis, stop listening\" to switch it off. " +
             "It hears you on this phone only."
-        else "Voice is in JarvisAlgo only; here you type."
+        else "Voice is in IraAlgo only; here you type."
         if (aboutVoice) return Answer((if (voice) "Yes. " else "") + voiceLine, emptyList())
         return Answer("I can tell you about Nifty, BankNifty, FinNifty, Sensex, India VIX and gold: prices, trend, levels, " +
             "patterns, volatility and the news. I know the app: your orders (paper and Zerodha), positions, P&L today and by day, " +

@@ -48,7 +48,7 @@ object Harvester {
     suspend fun run(
         underlyings: List<String> = listOf("NIFTY", "BANKNIFTY"),
         expiries: Int = 3, days: Long = 1, indices: Boolean = true,
-        /** More indices to keep 1-minute candles of, name -> Upstox key (JarvisAlgo: FINNIFTY, SENSEX). */
+        /** More indices to keep 1-minute candles of, name -> Upstox key (Jarvis: FINNIFTY, SENSEX). */
         extraIndices: Map<String, String> = emptyMap(),
         onProgress: (Progress) -> Unit = {},
         session: LocalDate = Market.today(),

@@ -35,10 +35,9 @@ android {
         // The commit the build was made from (CI sets GITHUB_SHA): every build is "1.0.0", so this tells them apart.
         buildConfigField("String", "COMMIT", "\"${(System.getenv("GITHUB_SHA") ?: "local").take(7)}\"")
 
-        // The launcher name; the JarvisAlgo build (the ira flavor, below) replaces it.
         manifestPlaceholders["appLabel"] = "@string/app_name"
-        // JarvisAlgo opens on Ira (the Home tab shows the assistant first); IraAlgo and IraGoldAlgo are unchanged.
-        buildConfigField("boolean", "JARVIS", "false")
+        // Jarvis, the assistant (voice, chat, on-device model): in IraAlgo; IraGoldAlgo sets its own (below).
+        buildConfigField("boolean", "JARVIS", "true")
     }
 
     // Two apps from one project: IraAlgo (NSE options, Zerodha, paper) and IraGoldAlgo (XAUUSD only, paper and alerts,
@@ -49,32 +48,23 @@ android {
             dimension = "brand"
             isDefault = true
             buildConfigField("boolean", "GOLD", "false")
-            // -Pjarvis=true (CI on the claude/ira-assistant branch): "JarvisAlgo", IraAlgo with the Ira assistant, installs
-            // BESIDE the owner's IraAlgo - its own package, name and data - instead of over it.
-            if (project.findProperty("jarvis") == "true") {
-                applicationIdSuffix = ".jarvis"
-                manifestPlaceholders["appLabel"] = "JarvisAlgo"
-                buildConfigField("boolean", "JARVIS", "true")
-                buildConfigField("String", "ALLOWED_PERMISSIONS", "\"${allowedPermissions(jarvis = true).joinToString(",")}\"")
-            }
+            buildConfigField("String", "ALLOWED_PERMISSIONS", "\"${allowedPermissions(jarvis = true).joinToString(",")}\"")
         }
         create("gold") {
             dimension = "brand"
             applicationId = "com.iragoldalgo.app"
             buildConfigField("boolean", "GOLD", "true")
+            buildConfigField("boolean", "JARVIS", "false")
         }
     }
 
-    // JarvisAlgo only: the on-device model runner (llama.cpp, fixed release) for 64-bit ARM phones. IraAlgo and
-    // IraGoldAlgo have no native code.
-    if (project.findProperty("jarvis") == "true") {
-        externalNativeBuild { cmake { path = file("src/jarvis/cpp/CMakeLists.txt"); version = "3.22.1" } }
-        defaultConfig { ndk { abiFilters += "arm64-v8a" } }
-    }
+    // Jarvis's on-device model runner (llama.cpp, fixed release) for 64-bit ARM phones.
+    externalNativeBuild { cmake { path = file("src/jarvis/cpp/CMakeLists.txt"); version = "3.22.1" } }
+    defaultConfig { ndk { abiFilters += "arm64-v8a" } }
 
-    // The microphone: JarvisAlgo's manifest adds it ("Jarvis"); IraAlgo and IraGoldAlgo's manifest removes it.
+    // The microphone: Jarvis's manifest adds it; IraGoldAlgo's manifest removes it.
     sourceSets {
-        getByName("ira").manifest.srcFile(if (project.findProperty("jarvis") == "true") "src/jarvis/AndroidManifest.xml" else "src/noaudio/AndroidManifest.xml")
+        getByName("ira").manifest.srcFile("src/jarvis/AndroidManifest.xml")
         getByName("gold").manifest.srcFile("src/noaudio/AndroidManifest.xml")
     }
 
@@ -258,7 +248,7 @@ abstract class CheckSandbox : DefaultTask() {
     @get:OutputFile
     abstract val report: RegularFileProperty
 
-    /** A <queries> block that only asks for text-to-speech engines (JarvisAlgo's voice) shows no other app: allowed. */
+    /** A <queries> block that only asks for text-to-speech engines (Jarvis's voice) shows no other app: allowed. */
     private fun queriesOnlyTts(xml: String): Boolean = Regex("<queries\\b[^>]*>(.*?)</queries>", RegexOption.DOT_MATCHES_ALL).findAll(xml).all { q ->
         q.groupValues[1].replace(Regex("<intent>\\s*<action\\s+android:name=\"android\\.intent\\.action\\.TTS_SERVICE\"\\s*/>\\s*</intent>"), "").isBlank()
     } && !Regex("<queries\\b[^>]*/>").containsMatchIn(xml)
@@ -288,12 +278,12 @@ androidComponents {
         val cap = variant.name.replaceFirstChar { it.uppercase() }
         val guard = tasks.register<CheckSandbox>("check${cap}Sandbox") {
             manifest.set(variant.artifacts.get(SingleArtifact.MERGED_MANIFEST))
-            allowed.set(allowedPermissions(jarvis = variant.flavorName == "ira" && project.findProperty("jarvis") == "true"))
+            allowed.set(allowedPermissions(jarvis = variant.flavorName == "ira"))
             applicationId.set(variant.applicationId)
             report.set(layout.buildDirectory.file("reports/sandbox/${variant.name}.txt"))
         }
         tasks.matching { it.name == "assemble$cap" || it.name == "bundle$cap" }.configureEach { dependsOn(guard) }
-        // The model runner is JarvisAlgo's alone: never packaged into IraGoldAlgo.
+        // The model runner is Jarvis's: not packaged into IraGoldAlgo.
         if (variant.flavorName == "gold") variant.packaging.jniLibs.excludes.add("**/libjarvis_llm.so")
     }
 }

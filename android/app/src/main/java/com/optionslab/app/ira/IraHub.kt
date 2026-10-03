@@ -157,7 +157,7 @@ object IraHub {
     /** TEST ONLY: a market's live candles instead of the network (the test app sets one that returns none). */
     @Volatile internal var testLive: (suspend (IraMarket) -> List<Candle>)? = null
         set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "test seam" }; field = v }
-    /** TEST ONLY: run the automatic strategy hunt outside JarvisAlgo. */
+    /** TEST ONLY: run the automatic strategy hunt outside Jarvis. */
     @Volatile internal var testAutoLab = false
         set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "test seam" }; field = v }
     /** TEST ONLY: a feed's text instead of the network. */
@@ -168,7 +168,7 @@ object IraHub {
 
     fun init(context: Context) {
         app = context.applicationContext
-        // JarvisAlgo: the home-screen widget follows what Jarvis says and what waits for an answer.
+        // Jarvis: the home-screen widget follows what Jarvis says and what waits for an answer.
         if (com.optionslab.app.BuildConfig.JARVIS) scope.launch {
             _state.collect { st ->
                 val key = (st.messages.lastOrNull { it.fromIra }?.text ?: "") + "|" + st.pending.joinToString()
@@ -235,7 +235,7 @@ object IraHub {
         saveState()
     }
 
-    /** After the close (the evening harvest, JarvisAlgo): read the day's candles, learn them and review the session. */
+    /** After the close (the evening harvest, Jarvis): read the day's candles, learn them and review the session. */
     suspend fun evening() {
         if (!com.optionslab.app.BuildConfig.JARVIS) return
         refresh()
@@ -349,7 +349,7 @@ object IraHub {
         set(v) { runCatching { com.optionslab.app.security.SecurePrefs.put("jarvis.autopilot", v) } }
 
     /**
-     * The weekly review (JarvisAlgo, after the last session of the week): the week and its patterns, then each strategy
+     * The weekly review (Jarvis, after the last session of the week): the week and its patterns, then each strategy
      * Jarvis added checked on its last four weeks of trades - one that is losing is retired (autopilot) or offered to stop.
      */
     suspend fun weeklyReview() {
@@ -456,7 +456,7 @@ object IraHub {
     }
 
     /**
-     * From the market watch (JarvisAlgo only): refresh and look for strategies at most every [BACKGROUND_MINUTES] while
+     * From the market watch (Jarvis only): refresh and look for strategies at most every [BACKGROUND_MINUTES] while
      * an index market is open, so a new strategy is notified even when the app is closed.
      */
     suspend fun backgroundCheck(now: Instant = Instant.now()) {
@@ -471,7 +471,7 @@ object IraHub {
     }
 
     /**
-     * Every 5 minutes (JarvisAlgo, market hours): the news, read and judged; each new headline that matters is told once,
+     * Every 5 minutes (Jarvis, market hours): the news, read and judged; each new headline that matters is told once,
      * with what it means for your arms and positions. Called often by the market watch; it gates itself.
      */
     suspend fun newsWatch(now: Instant = Instant.now()) {
@@ -490,7 +490,7 @@ object IraHub {
         withTimeoutOrNull(20_000) { runCatching { liveOf(m) }.getOrNull() }.orEmpty()
 
     /**
-     * Through the night (JarvisAlgo, outside market hours, called hourly): the trusted feeds read, and each new headline
+     * Through the night (Jarvis, outside market hours, called hourly): the trusted feeds read, and each new headline
      * that matters kept quietly with what it means, for the 9 AM brief - no pop-up, no voice at night.
      */
     suspend fun nightNews(now: Instant = Instant.now()) {
@@ -644,7 +644,7 @@ object IraHub {
 
     private val coolSaid = HashSet<String>()
 
-    // ---- watchers the market watch calls (JarvisAlgo; each gates itself) ---------------------------------------------
+    // ---- watchers the market watch calls (Jarvis; each gates itself) ---------------------------------------------
 
     /** When each open position was first seen without a stop, and those already asked about (today). */
     private val unguardedSince = HashMap<String, Instant>()
@@ -788,7 +788,7 @@ object IraHub {
     private val suggested = HashSet<String>()
 
     /**
-     * The pattern expert on watch (JarvisAlgo, market hours, called by the market watch; it gates itself): at each 5- and
+     * The pattern expert on watch (Jarvis, market hours, called by the market watch; it gates itself): at each 5- and
      * 15-minute close, the indices' last candle judged by [com.optionslab.ira.PatternExpert]; a pattern with a record
      * that held in both years, in the right place, becomes a suggested trade with its reasons. One at a time.
      */
@@ -856,7 +856,7 @@ object IraHub {
     }
 
     /**
-     * JarvisAlgo, every 15 minutes in market hours: the near-the-money option chains (Nifty, BankNifty, FinNifty) as
+     * Jarvis, every 15 minutes in market hours: the near-the-money option chains (Nifty, BankNifty, FinNifty) as
      * they trade - each contract's 1-minute OHLC, volume and OI - kept into the app's record, like the evening harvest.
      */
     private suspend fun keepChains() {
@@ -872,7 +872,7 @@ object IraHub {
     private val alerted = HashSet<String>()
 
     /**
-     * Jarvis's watch (JarvisAlgo, every 15 minutes in market hours): India VIX jumping, an index moving a lot or suddenly,
+     * Jarvis's watch (Jarvis, every 15 minutes in market hours): India VIX jumping, an index moving a lot or suddenly,
      * an arm losing half the day's loss limit - each a 3-second pop-up and a line in the conversation, once.
      */
     private suspend fun watchAlerts() {
@@ -1053,15 +1053,15 @@ object IraHub {
         }
         // Not understood (counted only now: a briefing or "what changed" was answered by the reasoning above).
         if (Topic.OFF_TOPIC in parsed.topics) IraTools.count("misunderstood")
-        // JarvisAlgo, words Jarvis does not know: the model maps them to one line of a fixed list (never an order).
+        // Jarvis, words Jarvis does not know: the model maps them to one line of a fixed list (never an order).
         if (parsed.topics == setOf(Topic.OFF_TOPIC) && com.optionslab.app.BuildConfig.JARVIS && IraModel.usable() && !understood) { freeFormAsked(q); return }
-        // JarvisAlgo without the model: a varied "I don't know that" instead of the same line every time.
+        // Jarvis without the model: a varied "I don't know that" instead of the same line every time.
         if (parsed.topics == setOf(Topic.OFF_TOPIC) && com.optionslab.app.BuildConfig.JARVIS) {
             val said = if (com.optionslab.ira.Chat.personal(q)) com.optionslab.ira.Chat.aboutMe(chatTurn.getAndIncrement()) else com.optionslab.ira.Chat.fallback(chatTurn.getAndIncrement())
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
             return
         }
-        // JarvisAlgo: a complete order is placed at once (the owner's rule); IraAlgo keeps the review.
+        // Jarvis: a complete order is placed at once (the owner's rule); IraAlgo keeps the review.
         parsed.order?.takeIf { com.optionslab.app.BuildConfig.JARVIS && it.missing.isEmpty() && it.refusal == null }?.let { o -> tradeAsked(q, o); return }
         // A greeting is answered with the time of day, today's session and where the indices stand.
         val today = com.optionslab.app.data.Market.today()
@@ -1080,7 +1080,7 @@ object IraHub {
             runCatching { val today = com.optionslab.app.data.Market.today(); IraEvents.upcoming(1).filter { it.day == today }.take(2).map { com.optionslab.ira.Events.line(it, today) } }.getOrNull().orEmpty()
         else emptyList()
         val a = if (ev.isEmpty()) a2 else a2.copy(text = a2.text + " " + ev.joinToString(" "), facts = a2.facts + ev)
-        // JarvisAlgo with the model ready: the answer shows at once, then the model rewrites it in place if it passes the checks.
+        // Jarvis with the model ready: the answer shows at once, then the model rewrites it in place if it passes the checks.
         // When Boss asked about each market, and its price then (for "what changed since I last asked").
         if (parsed.topics.any { it in MARKET_TOPICS }) (parsed.markets.ifEmpty { listOf(IraMarket.NIFTY) }).forEach { mk ->
             _state.value.snaps[mk]?.let { sn -> synchronized(askedAt) { askedAt.remove(mk); askedAt[mk] = sn.price to LocalDateTime.now(IST) } }
@@ -1172,7 +1172,7 @@ object IraHub {
     private val actions = HashMap<Long, Pair<String, suspend () -> String>>()
 
     /**
-     * "Stop strategy 1", "cancel all orders", "switch to live"... In JarvisAlgo what adds risk runs at once; what stops or
+     * "Stop strategy 1", "cancel all orders", "switch to live"... In Jarvis what adds risk runs at once; what stops or
      * closes waits for Confirm. In IraAlgo everything waits for Confirm.
      */
     /**
@@ -1458,7 +1458,7 @@ object IraHub {
         _state.update { it.copy(pending = emptySet()) }
     }
 
-    /** A complete order in JarvisAlgo: the contract is found and the trade placed at once, in the app's mode. */
+    /** A complete order in Jarvis: the contract is found and the trade placed at once, in the app's mode. */
     private fun tradeAsked(q: String, o: OrderRequest) {
         _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
         scope.launch {
@@ -1631,11 +1631,11 @@ object IraHub {
     }
 
     private val keptAt = HashMap<IraMarket, Long>()
-    /** Live index minutes are written to the app's record at most this often (JarvisAlgo). */
+    /** Live index minutes are written to the app's record at most this often (Jarvis). */
     const val KEEP_EVERY_MS = 5 * 60_000L
 
     /**
-     * JarvisAlgo keeps the live day as it trades: each index's 1-minute candles (with volume and OI where the feed has
+     * Jarvis keeps the live day as it trades: each index's 1-minute candles (with volume and OI where the feed has
      * them) are merged into the app's own record, the same files the evening harvest fills - so a day is kept even if the
      * harvest does not run. The option chains (1-minute OHLC, volume and OI for every contract) are kept by the harvest.
      */

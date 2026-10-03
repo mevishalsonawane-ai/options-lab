@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- JarvisAlgo only (declared in src/jarvis): redrawn by the app when Jarvis speaks or a trade waits. -->
+<!-- Jarvis only (declared in src/jarvis): redrawn by the app when Jarvis speaks or a trade waits. -->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
     android:minWidth="250dp"
     android:minHeight="110dp"

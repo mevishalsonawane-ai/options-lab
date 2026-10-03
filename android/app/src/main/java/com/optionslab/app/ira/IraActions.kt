@@ -101,7 +101,7 @@ internal object IraActions {
     }
 
     private suspend fun liveClose(ps: List<Broker.Position>): String {
-        val m = model() ?: return "Closing a Zerodha position needs JarvisAlgo open: open it and ask again."
+        val m = model() ?: return "Closing a Zerodha position needs IraAlgo open: open it and ask again."
         if (ps.size == 1) m.planSquareOff(ps.single(), "Jarvis") else m.planSquareOffAll()
         return sendPlan(m)
     }
@@ -435,7 +435,7 @@ internal object IraActions {
             model()?.loadPaper(quiet = true)
             return "Paper: ${r.message}" + (com.optionslab.app.data.Origins.shortId(r.orderId)?.let { " (order $it)" } ?: "")
         }
-        val m = model() ?: return "A Zerodha order needs JarvisAlgo open: open it and ask again."
+        val m = model() ?: return "A Zerodha order needs IraAlgo open: open it and ask again."
         m.planManual(t.underlying, t.expiry, t.strike, t.right, if (t.buy) com.optionslab.engine.Kite.Side.BUY else com.optionslab.engine.Kite.Side.SELL,
             t.lots, AppSettings.load().orderProduct, null, null, "Jarvis")
         return sendPlan(m)

@@ -46,7 +46,7 @@ class AccountTest {
         val voice = Ira().answer("you can listen to me", emptyMap(), emptyList(), voice = true)
         assertTrue(voice.text.startsWith("Yes. Voice: switch on") && voice.text.contains("Jarvis, how is Nifty?"), voice.text)
         assertTrue(Ira().answer("what can you do", emptyMap(), emptyList()).text.contains("analyze my orders"))
-        assertTrue(Ira().answer("can you hear me", emptyMap(), emptyList(), voice = false).text.startsWith("Voice is in JarvisAlgo only"))
+        assertTrue(Ira().answer("can you hear me", emptyMap(), emptyList(), voice = false).text.startsWith("Voice is in IraAlgo only"))
     }
 
     @Test fun eachQuestionGetsItsSectionsAsFacts() {

@@ -52,9 +52,9 @@ object Notifier {
     const val APPROVAL = "orders.approval"
     /** A strategy Jarvis found and backtested, waiting for the owner's approval. */
     const val IRA = "ira.strategies"
-    /** JarvisAlgo only: the line shown while Jarvis listens for its name. */
+    /** Jarvis only: the line shown while Jarvis listens for its name. */
     const val VOICE = "ira.voice"
-    /** JarvisAlgo only: Jarvis's short pop-ups (heads-up, gone after a few seconds). */
+    /** Jarvis only: Jarvis's short pop-ups (heads-up, gone after a few seconds). */
     const val POPUP = "ira.popup"
     private val ALWAYS = setOf(BUY, SELL, APPROVAL, IRA)
 

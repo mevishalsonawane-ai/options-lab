@@ -9,7 +9,7 @@ import java.time.LocalDateTime
 import java.time.ZoneId
 
 /**
- * The owner's own trading journal with Jarvis (JarvisAlgo, the owner's wishes 2026-10-03): searching past trades,
+ * The owner's own trading journal with Jarvis (Jarvis, the owner's wishes 2026-10-03): searching past trades,
  * the best and worst time of day, notes on why a trade was taken, the day's target, trades going nowhere, and news on
  * the positions held.
  */

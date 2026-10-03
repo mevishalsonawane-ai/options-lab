@@ -14,7 +14,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
 /**
- * A news trade to approve (JarvisAlgo): a heads-up pop-up with the news, its impact and the order, and Approve /
+ * A news trade to approve (Jarvis): a heads-up pop-up with the news, its impact and the order, and Approve /
  * Reject buttons. It stays until the owner answers - by a button, by saying yes or no to Jarvis, or on the Ira
  * screen - and then hides itself; unanswered, it lapses with the trade after 10 minutes. The buttons need the phone
  * unlocked, and they only reach the app's own receiver (not exported).

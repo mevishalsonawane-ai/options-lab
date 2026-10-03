@@ -16,7 +16,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.withContext
 
 /**
- * "Only Boss's voice can trade" (JarvisAlgo; the owner's wish, 2026-10-02). The owner teaches Jarvis their voice once
+ * "Only Boss's voice can trade" (Jarvis; the owner's wish, 2026-10-02). The owner teaches Jarvis their voice once
  * (five short phrases, on the Ira screen); from then on a spoken yes to a trade, a spoken order, or a spoken command
  * that adds risk is done at once only when the voice that said it matches ([VoicePrint]); otherwise a command waits for
  * a spoken yes and the riskiest are refused. Before the voice is taught, or on a phone that cannot

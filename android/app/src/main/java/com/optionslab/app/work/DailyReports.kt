@@ -53,12 +53,12 @@ object DailyReports {
         val am = context.getSystemService(AlarmManager::class.java)
         val pi = intent(context, k)
         am.cancel(pi)
-        // JarvisAlgo's morning check runs whether or not Zerodha is set up (it says so); the rest need Zerodha.
+        // Jarvis's morning check runs whether or not Zerodha is set up (it says so); the rest need Zerodha.
         if (!Broker.linked && !(com.optionslab.app.BuildConfig.JARVIS && k == Kind.MORNING)) return
         val now = Market.now()
         var d = now.toLocalDate()
         if (!now.toLocalTime().isBefore(k.at)) d = d.plusDays(1)
-        // JarvisAlgo's morning comes every day (a closed day gets its own short morning); the rest only on trading days.
+        // Jarvis's morning comes every day (a closed day gets its own short morning); the rest only on trading days.
         if (!(com.optionslab.app.BuildConfig.JARVIS && k == Kind.MORNING)) while (!Market.isTradingDay(d)) d = d.plusDays(1)
         val at = d.atTime(k.at).atZone(now.zone).toInstant().toEpochMilli()
         try {
@@ -84,7 +84,7 @@ object DailyReports {
     private val DAY = DateTimeFormatter.ofPattern("EEE d MMM", Locale.ENGLISH)
 
     /**
-     * JarvisAlgo's morning on a day with no session (a weekend, a holiday): why it is closed and when it opens, the
+     * Jarvis's morning on a day with no session (a weekend, a holiday): why it is closed and when it opens, the
      * night's study and overnight news, the coming events, Saturday's report card - shown, noted and said.
      */
     suspend fun closedMorning(context: Context): Pair<String, List<String>> {
@@ -254,7 +254,7 @@ object DailyReports {
             if (closed.isNotEmpty()) lines += "${a.arm.label}: ${closed.size} trade${if (closed.size == 1) "" else "s"} · ${rs(closed.sumOf { (it.grossPnl ?: 0.0) - it.charges })}"
         }
         if (Heartbeat.stalledToday()) lines += "⚠ The market watch stopped at least once today"
-        // JarvisAlgo: after the week's last session, the weekly review.
+        // Jarvis: after the week's last session, the weekly review.
         if (com.optionslab.app.BuildConfig.JARVIS) {
             var d = Market.today().plusDays(1)
             while (!Market.isTradingDay(d)) d = d.plusDays(1)

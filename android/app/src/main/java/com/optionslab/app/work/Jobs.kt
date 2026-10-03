@@ -80,7 +80,7 @@ object Jobs {
      * The market watch runs on every market day (paper bots need no Zerodha account); the other
      * jobs need a linked Zerodha account.
      */
-    // JarvisAlgo keeps the day's data (Upstox's public candles, no login) whether or not Zerodha is linked.
+    // Jarvis keeps the day's data (Upstox's public candles, no login) whether or not Zerodha is linked.
     fun enabled(k: Kind, s: AppSettings) = (k == Kind.LIVE || com.optionslab.app.data.Broker.linked ||
         k == Kind.HARVEST && com.optionslab.app.BuildConfig.JARVIS) && when (k) {
         Kind.LIVE -> true   // the market watch always runs on market days; it has no off switch
@@ -325,7 +325,7 @@ object Tasks {
 
     suspend fun harvest(context: Context, s: AppSettings, session: java.time.LocalDate, onProgress: (String, Float) -> Unit) {
         if (Holidays.stale(Market.today())) runCatching { Holidays.refresh() }
-        // JarvisAlgo: FINNIFTY's chain too, and the FINNIFTY and SENSEX index candles (1-minute OHLC, volume and OI for every contract).
+        // Jarvis: FINNIFTY's chain too, and the FINNIFTY and SENSEX index candles (1-minute OHLC, volume and OI for every contract).
         val r = if (com.optionslab.app.BuildConfig.JARVIS) Harvester.run(underlyings = listOf("NIFTY", "BANKNIFTY", "FINNIFTY"), session = session,
             extraIndices = linkedMapOf("FINNIFTY" to "NSE_INDEX|Nifty Fin Service", "SENSEX" to "BSE_INDEX|SENSEX"),
             onProgress = { p -> onProgress(p.stage, if (p.total > 0) p.done.toFloat() / p.total else -1f) })
@@ -335,7 +335,7 @@ object Tasks {
         if (s.healthAlerts) healthCheck(context, s)
         // The ORB evening replay (TODO A8): the day's bars, beside what the paper arms did. No orders.
         runCatching { com.optionslab.app.data.OrbArms.replayIfDue() }
-        // JarvisAlgo: Ira reads the day's candles, learns them and reviews how its patterns did. No orders.
+        // Jarvis: Ira reads the day's candles, learns them and reviews how its patterns did. No orders.
         runCatching { com.optionslab.app.ira.IraHub.evening() }
     }
 
@@ -381,27 +381,27 @@ object Tasks {
         runCatching { com.optionslab.app.data.OrbArms.tick() }
         // Pine scripts set to auto-trade: decide on each completed candle, sell at 15:15.
         runCatching { com.optionslab.app.data.PineAuto.tick() }
-        // JarvisAlgo: every 15 minutes in market hours, Jarvis looks for a pattern worth a strategy and notifies it.
+        // Jarvis: every 15 minutes in market hours, Jarvis looks for a pattern worth a strategy and notifies it.
         runCatching { com.optionslab.app.ira.IraHub.backgroundCheck() }
-        // JarvisAlgo: the news every 5 minutes, judged for your arms and positions.
+        // Jarvis: the news every 5 minutes, judged for your arms and positions.
         runCatching { com.optionslab.app.ira.IraHub.newsWatch() }
-        // JarvisAlgo: the candle-pattern expert at each 5- and 15-minute close; a qualifying pattern becomes a trade to approve.
+        // Jarvis: the candle-pattern expert at each 5- and 15-minute close; a qualifying pattern becomes a trade to approve.
         runCatching { com.optionslab.app.ira.IraHub.expertWatch() }
-        // JarvisAlgo: approved news trades - the best price seen, the profit-lock stop moved up, the result recorded.
+        // Jarvis: approved news trades - the best price seen, the profit-lock stop moved up, the result recorded.
         if (com.optionslab.app.BuildConfig.JARVIS) runCatching { com.optionslab.app.ira.IraNewsTrades.tick() }
         // Solo (paper only, Boss's switch): its open trade managed, or the next one looked for.
         if (com.optionslab.app.BuildConfig.JARVIS) runCatching { com.optionslab.app.ira.IraSolo.tick() }
-        // JarvisAlgo: a position with no stop is offered one; the 14:55 expiry heads-up; live prices that stopped.
+        // Jarvis: a position with no stop is offered one; the 14:55 expiry heads-up; live prices that stopped.
         runCatching { com.optionslab.app.ira.IraHub.rescueWatch() }
         runCatching { com.optionslab.app.ira.IraHub.expiryPreview() }
         runCatching { com.optionslab.app.ira.IraHub.feedWatch() }
         runCatching { com.optionslab.app.ira.IraCoach.orbWatch() }
         runCatching { com.optionslab.app.ira.IraCoach.vixWatch() }
-        // JarvisAlgo: your own stops trailed up automatically; too many trades too fast; the opening gap plan.
+        // Jarvis: your own stops trailed up automatically; too many trades too fast; the opening gap plan.
         runCatching { com.optionslab.app.ira.IraCoach.trailWatch() }
         runCatching { com.optionslab.app.ira.IraCoach.overtradeWatch() }
         runCatching { com.optionslab.app.ira.IraCoach.gapWatch() }
-        // JarvisAlgo: the day's target reached; a trade of yours going nowhere is offered a close (asked first).
+        // Jarvis: the day's target reached; a trade of yours going nowhere is offered a close (asked first).
         runCatching { com.optionslab.app.ira.IraJournal.targetWatch() }
         runCatching { com.optionslab.app.ira.IraJournal.staleWatch() }
         // Stops, trailing stops and targets: one exit filled cancels the other; trails move up.

@@ -9,7 +9,7 @@ import java.time.LocalDateTime
 import java.time.ZoneId
 
 /**
- * Jarvis watching over the owner's own trading (JarvisAlgo, the owner's wishes 2026-10-02): the automatic trailing
+ * Jarvis watching over the owner's own trading (Jarvis, the owner's wishes 2026-10-02): the automatic trailing
  * stop, too many trades too fast, losses outgrowing wins, the opening-gap plan, open interest walls moving, "explain my
  * position" and the 15:35 wrap-up. The bots (ORB, Pine, strategy runs) and Jarvis's own trades manage their own exits.
  */

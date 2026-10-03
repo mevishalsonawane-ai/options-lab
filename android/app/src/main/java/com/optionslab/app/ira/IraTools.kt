@@ -6,7 +6,7 @@ import java.time.LocalDateTime
 import java.time.ZoneId
 
 /**
- * Making real use count (JarvisAlgo, the owner's wishes 2026-10-03): the mistakes list, the day's usage counts for the
+ * Making real use count (Jarvis, the owner's wishes 2026-10-03): the mistakes list, the day's usage counts for the
  * evening summary, short spoken answers, the wake-word sensitivity, Jarvis's weekly loss cap, and practice on a past
  * day. Words are kept with secrets hidden.
  */

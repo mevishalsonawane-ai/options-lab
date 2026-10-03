@@ -63,14 +63,14 @@ import java.util.Locale
 import com.optionslab.ira.Market as IraMarket
 
 /**
- * JarvisAlgo's Home: Ira first, the usual dashboard (prices, P&L, strategies) behind the second switch. The choice is
+ * Jarvis's Home: Ira first, the usual dashboard (prices, P&L, strategies) behind the second switch. The choice is
  * kept while the app runs.
  */
 @Composable
 fun IraHome(orders: IraOrderPaths? = null, dashboard: @Composable () -> Unit) {
     val p = LocalPalette.current
     var showIra by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(true) }
-    // JarvisAlgo: listening was left on - start it again now the app is on screen (Android allows it only then).
+    // Jarvis: listening was left on - start it again now the app is on screen (Android allows it only then).
     val ctx = androidx.compose.ui.platform.LocalContext.current
     LaunchedEffect(Unit) { if (com.optionslab.app.BuildConfig.JARVIS && JarvisVoice.wanted) JarvisVoice.start(ctx) }
     Column(Modifier.fillMaxSize()) {
@@ -121,15 +121,15 @@ fun IraPage(orders: IraOrderPaths? = null) {
         text = ""
         // The answer is ready at once (it is built from facts); the orb still shows a beat of thinking, then answers.
         IraHub.ask(q)
-        // JarvisAlgo: the reply to a typed question is said aloud too (the owner's switch, on by default).
+        // Jarvis: the reply to a typed question is said aloud too (the owner's switch, on by default).
         scope.launch { com.optionslab.app.ira.JarvisSpeaker.replyTo(ctxSpeak, q) }
         typed = 2
         scope.launch { delay(600); typed = 3; delay(1_800); typed = 0 }
     }
 
-    // JarvisAlgo: only the globe until the owner opens the chat (the owner's wish, 2026-10-02); voice works either way.
+    // Jarvis: only the globe until the owner opens the chat (the owner's wish, 2026-10-02); voice works either way.
     var chat by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(!com.optionslab.app.BuildConfig.JARVIS) }
-    // The phone's Back closes the chat (back to the globe) in JarvisAlgo.
+    // The phone's Back closes the chat (back to the globe) in Jarvis.
     androidx.activity.compose.BackHandler(enabled = chat && com.optionslab.app.BuildConfig.JARVIS) { chat = false }
     if (!chat) {
         var quick by remember { mutableStateOf(false) }
@@ -180,7 +180,7 @@ fun IraPage(orders: IraOrderPaths? = null) {
         val imeOpen = WindowInsets.ime.getBottom(androidx.compose.ui.platform.LocalDensity.current) > 0
         if (!imeOpen) Box(Modifier.fillMaxWidth().height(280.dp).background(Color.Black)) {
             val s = st.snaps[focus]
-            // Tapping the globe in the chat hides the chat again (JarvisAlgo).
+            // Tapping the globe in the chat hides the chat again (Jarvis).
             Orb(vol = orbVol(st.snaps), trend = orbTrend(s), mode = if (mode == 0 && text.isNotEmpty()) 1 else mode,
                 onTap = if (com.optionslab.app.BuildConfig.JARVIS) ({ chat = false }) else null)
             Text(listOf("Idle", "Listening", "Thinking", "Answering")[if (mode == 0 && text.isNotEmpty()) 1 else mode].uppercase(),
@@ -353,7 +353,7 @@ private fun OrderActions(o: com.optionslab.ira.OrderRequest, orders: IraOrderPat
 }
 
 /**
- * JarvisAlgo: the switch for listening to "Jarvis" (the microphone permission is asked the first time). The phone's
+ * Jarvis: the switch for listening to "Jarvis" (the microphone permission is asked the first time). The phone's
  * on-device recognizer only; a phone without one is told so, and nothing is sent anywhere instead.
  */
 @Composable
@@ -446,7 +446,7 @@ internal fun VoiceSwitch() {
 }
 
 /**
- * JarvisAlgo: the on-device model. When the Ira screen opens and the model is not on the phone, the owner is asked
+ * Jarvis: the on-device model. When the Ira screen opens and the model is not on the phone, the owner is asked
  * (Download / Later / Don't ask again); nothing is downloaded without that tap. Then: progress with Cancel, or the
  * switch to use it, and Delete.
  */
@@ -694,7 +694,7 @@ private fun VoiceTeach() {
 }
 
 /**
- * Jarvis's study (JarvisAlgo): what two years of each index's candles say about today's setups, the findings that
+ * Jarvis's study (Jarvis): what two years of each index's candles say about today's setups, the findings that
  * held in both years, and the news that mattered overnight. History, not a forecast.
  */
 @Composable
@@ -829,7 +829,7 @@ private fun MicButton(label: String) {
     }
 }
 
-/** Settings → Jarvis (JarvisAlgo): the voice (listening, style, your voice print, spoken replies) and the AI model. */
+/** Settings → Jarvis (Jarvis): the voice (listening, style, your voice print, spoken replies) and the AI model. */
 @Composable
 fun JarvisSettingsPage() {
     com.optionslab.app.ui.Page {
@@ -872,7 +872,7 @@ private fun SoloCard() {
 private fun AutomationsCard() {
     val p = LocalPalette.current
     LedgerCard(title = "What Jarvis does by itself") {
-        Note("Each runs on its own while JarvisAlgo watches the market. Nothing here places a trade without asking you (Solo, above, is the one exception, on paper only); the trailing stop only moves your stop up.")
+        Note("Each runs on its own while IraAlgo watches the market. Nothing here places a trade without asking you (Solo, above, is the one exception, on paper only); the trailing stop only moves your stop up.")
         com.optionslab.app.ira.Automations.Auto.entries.forEach { a ->
             var on by remember { mutableStateOf(com.optionslab.app.ira.Automations.on(a)) }
             val last = remember(on) { com.optionslab.app.ira.Automations.last(a) }

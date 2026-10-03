@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- IraAlgo and IraGoldAlgo: no microphone, whatever a library asks for. (JarvisAlgo uses src/jarvis.) -->
+<!-- IraGoldAlgo: no microphone, whatever a library asks for. (IraAlgo uses src/jarvis, for "Jarvis".) -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
     <uses-permission android:name="android.permission.RECORD_AUDIO" tools:node="remove" />

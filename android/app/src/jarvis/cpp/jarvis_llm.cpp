@@ -1,4 +1,4 @@
-// JarvisAlgo's bridge to llama.cpp: load a model file, write replies to prompts, free it. No logging of prompts or
+// Jarvis's bridge to llama.cpp: load a model file, write replies to prompts, free it. No logging of prompts or
 // replies (llama.cpp's own log is silenced), no network, no files written.
 #include <jni.h>
 #include <atomic>

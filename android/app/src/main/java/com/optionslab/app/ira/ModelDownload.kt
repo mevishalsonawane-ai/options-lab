@@ -31,7 +31,7 @@ import javax.net.ssl.HttpsURLConnection
 /**
  * Downloads [IraModel]'s one file, started only by the owner's tap: HTTPS to Hugging Face and its CDN only (every
  * redirect is checked), on Wi-Fi or mobile data (the owner's choice), resumed where it stopped, then checked against its SHA-256 before
- * it can be used. A foreground service (data sync) with its progress and a Cancel button. JarvisAlgo only.
+ * it can be used. A foreground service (data sync) with its progress and a Cancel button. Jarvis only.
  */
 class ModelDownload : Service() {
     companion object {
@@ -108,7 +108,7 @@ class ModelDownload : Service() {
             val h = u.openConnection() as HttpsURLConnection
             h.instanceFollowRedirects = false
             h.connectTimeout = 20_000; h.readTimeout = 60_000
-            h.setRequestProperty("User-Agent", "JarvisAlgo")
+            h.setRequestProperty("User-Agent", "IraAlgo")
             if (have > 0) h.setRequestProperty("Range", "bytes=$have-")
             val code = h.responseCode
             if (code in 300..399) { url = URL(u, h.getHeaderField("Location") ?: throw IOException("Bad redirect")).toString(); h.disconnect(); continue }

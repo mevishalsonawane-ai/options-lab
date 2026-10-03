@@ -308,18 +308,19 @@ class IraHubTest : RobolectricTest() {
         assertTrue(odd.proposals.isEmpty() && odd.journal.isEmpty() && odd.nightlyAt == null)
     }
 
-    /** Outside JarvisAlgo the voice never starts: no microphone, nothing listening. */
-    @Test fun voiceIsJarvisAlgosAlone() {
-        assertTrue(!JarvisVoice.available(context))
+    /** Without the microphone permission (and outside IraAlgo) the voice never starts: nothing listening. */
+    @Test fun voiceNeverStartsWithoutTheMicrophone() {
+        assertTrue(!JarvisVoice.permitted(context))
         JarvisVoice.start(context)                                  // a no-op here
         val svc = org.robolectric.Robolectric.buildService(JarvisVoice::class.java).create()
         svc.startCommand(0, 1)
-        assertEquals("Voice is in JarvisAlgo only.", JarvisVoice.state.value.problem)
+        assertEquals(if (com.optionslab.app.BuildConfig.JARVIS) "Jarvis needs the microphone permission to listen." else "Voice is in IraAlgo only.",
+            JarvisVoice.state.value.problem)
         assertEquals(JarvisVoice.Mode.OFF, JarvisVoice.state.value.mode)
         svc.destroy()
     }
 
-    /** The model is one pinned file from Hugging Face only, checked by SHA-256; outside JarvisAlgo nothing about it runs. */
+    /** The model is one pinned file from Hugging Face only, checked by SHA-256; where it cannot run nothing about it runs. */
     @Test fun theModelIsPinnedAndComesFromHuggingFaceOnly() {
         // The fast model is the default; both are pinned to an exact commit and fingerprint.
         assertEquals(IraModel.FAST, IraModel.choice)
@@ -331,7 +332,7 @@ class IraHubTest : RobolectricTest() {
         assertEquals("ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad", ModelDownload.sha256(f))
         IraModel.init(context)
         assertEquals(IraModel.Status.UNSUPPORTED, IraModel.state.value.status)
-        assertTrue("never asked outside JarvisAlgo", !IraModel.shouldAsk())
+        assertTrue("never asked where the model cannot run", !IraModel.shouldAsk())
         assertTrue(!IraModel.usable())
         ModelDownload.start(context)                                  // a no-op here
         assertTrue(!IraModel.file(context).exists() && !IraModel.part(context).exists())
@@ -342,7 +343,7 @@ class IraHubTest : RobolectricTest() {
         val f = IraModel.file(context).also { it.parentFile?.mkdirs(); it.writeText("not the model") }
         assertTrue(!IraModel.recheck(context))
         assertTrue("a wrong file is deleted", !f.exists())
-        assertEquals(IraModel.Status.UNSUPPORTED, IraModel.state.value.status)   // outside JarvisAlgo
+        assertEquals(IraModel.Status.UNSUPPORTED, IraModel.state.value.status)   // not a phone the model runs on
     }
 
     /** "Analyze my orders": the app's own books, answered as facts; "can you listen to me": what Ira can do. */
@@ -364,7 +365,8 @@ class IraHubTest : RobolectricTest() {
         waitFor("the second answer") { IraHub.state.value.messages.size == 4 }
         assertTrue(IraHub.state.value.messages.last().text.startsWith("I could not read the app"))
         IraHub.ask("you can listen to me")
-        assertTrue(IraHub.state.value.messages.last().text, IraHub.state.value.messages.last().text.startsWith("Voice is in JarvisAlgo only"))
+        assertTrue(IraHub.state.value.messages.last().text, IraHub.state.value.messages.last().text.startsWith(
+            if (com.optionslab.app.BuildConfig.JARVIS) "Yes. Voice: switch on" else "Voice is in IraAlgo only"))
         IraHub.ask("what can you do")
         assertTrue(IraHub.state.value.messages.last().text.startsWith("I can tell you about Nifty"))
     }
@@ -510,7 +512,7 @@ class IraHubTest : RobolectricTest() {
 
     @Test fun theModelTestSaysPlainlyWhenThereIsNoModel() = runBlocking {
         val r = IraModel.selfTest()
-        assertTrue(r, r.contains("not on the phone") || r.contains("phone") || r.contains("not ready") || r.contains("JarvisAlgo only"))
+        assertTrue(r, r.contains("not on the phone") || r.contains("phone") || r.contains("not ready") || r.contains("IraAlgo only"))
     }
 
     @Test fun onAHolidayTheMarketIsSaidToBeClosed() {

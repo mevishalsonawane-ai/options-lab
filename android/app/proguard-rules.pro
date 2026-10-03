@@ -38,5 +38,5 @@
 -dontwarn javax.security.auth.**
 -dontwarn org.ietf.jgss.**
 
-# JarvisAlgo: the llama.cpp bridge (src/jarvis/cpp) finds these by name.
+# Jarvis: the llama.cpp bridge (src/jarvis/cpp) finds these by name.
 -keepclasseswithmembernames class com.optionslab.app.ira.LlmNative { native <methods>; }

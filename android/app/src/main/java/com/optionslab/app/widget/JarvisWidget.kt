@@ -15,7 +15,7 @@ import com.optionslab.app.ira.JarvisActionReceiver
 import com.optionslab.app.ira.JarvisApproval
 
 /**
- * Jarvis on the home screen (JarvisAlgo; the owner's wish, 2026-10-02): its last message, and when a trade it
+ * Jarvis on the home screen (Jarvis; the owner's wish, 2026-10-02): its last message, and when a trade it
  * suggested waits for Boss's answer, Approve and Reject right there (they reach only the app's own receiver; a home
  * screen is shown only on an unlocked phone). Tapping it opens the app, which still asks for the PIN or fingerprint.
  */

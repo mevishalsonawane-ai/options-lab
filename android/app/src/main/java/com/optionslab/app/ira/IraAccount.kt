@@ -233,7 +233,7 @@ internal object IraAccount {
                 "For your own trades, ask \"review my week\": it shows where they lose." else listOf("Ask \"review my week\": it shows where your trades lose.")
             if (wants(Section.READY)) out[Section.READY] = readyLines(s, today)
             if (wants(Section.WHATIF)) out[Section.WHATIF] = if (com.optionslab.app.BuildConfig.JARVIS) IraNewsTrades.whatIf(question)
-                else listOf("Replays of Jarvis's suggestions are in JarvisAlgo.")
+                else listOf("Replays of Jarvis's suggestions are in IraAlgo.")
             if (wants(Section.CHANGES)) out[Section.CHANGES] = com.optionslab.app.data.SettingsLog.lines()
             if (wants(Section.EXPLAIN_POS)) out[Section.EXPLAIN_POS] = IraCoach.explainPositions()
             if (wants(Section.SEARCH)) out[Section.SEARCH] = IraJournal.search(question)

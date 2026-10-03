@@ -7,7 +7,7 @@ import android.os.BatteryManager
 import com.optionslab.ira.BatterySaver
 
 /**
- * Battery saver (JarvisAlgo, the owner's wish 2026-10-02): when the battery is low and not charging, Jarvis's own
+ * Battery saver (Jarvis, the owner's wish 2026-10-02): when the battery is low and not charging, Jarvis's own
  * background work (its listening keeper, the live position cards) refreshes less often. Stops, targets, exits and the
  * minute watch never slow down.
  */
@@ -21,7 +21,7 @@ object Battery {
         (if (level >= 0 && scale > 0) level * 100 / scale else null) to charging
     }.getOrDefault(null to false)
 
-    /** [normalMs], or longer while the battery is low and not charging (JarvisAlgo only). */
+    /** [normalMs], or longer while the battery is low and not charging (Jarvis only). */
     fun gap(context: Context?, normalMs: Long): Long {
         if (context == null || !com.optionslab.app.BuildConfig.JARVIS) return normalMs
         val (p, c) = state(context)

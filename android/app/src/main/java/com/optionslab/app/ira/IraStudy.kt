@@ -13,7 +13,7 @@ import java.time.ZoneId
 import java.time.ZonedDateTime
 
 /**
- * Jarvis's study, round the clock (JarvisAlgo; the owner's wish, 2026-10-02): every night it counts, over the last two
+ * Jarvis's study, round the clock (Jarvis; the owner's wish, 2026-10-02): every night it counts, over the last two
  * years of Nifty, BankNifty and FinNifty candles, what usually followed each known setup ([Study]) and keeps only what
  * held in both years; through the night it reads the trusted news feeds hourly and keeps what matters, quietly. At
  * 9 AM the morning check tells it all after the set-up checks; the Ira screen shows it; "what did you study?" asks it.
@@ -281,7 +281,7 @@ internal object IraStudy {
     }
 }
 
-/** Every hour, day and night (JarvisAlgo): the night's news read quietly, and the study once after each close. */
+/** Every hour, day and night (Jarvis): the night's news read quietly, and the study once after each close. */
 class StudyWorker(ctx: android.content.Context, params: androidx.work.WorkerParameters) : androidx.work.CoroutineWorker(ctx, params) {
     override suspend fun doWork(): Result {
         if (!com.optionslab.app.BuildConfig.JARVIS) return Result.success()
