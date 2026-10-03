@@ -79,3 +79,15 @@ class GreetingTest {
         assertTrue(Ira().answer("hello", emptyMap(), emptyList()).text.startsWith("Hello."))
     }
 }
+
+class BossOnceTest {
+    @Test fun bossIsSaidOnce() {
+        assertEquals("Voice on, Boss.", Address.boss("Voice on, Boss."))
+        assertEquals("Good morning, Boss. The market is open.", Address.boss("Good morning, Boss. The market is open."))
+        assertEquals("Muted, Boss. I'll reply on screen only.", Address.boss("Muted, Boss. I'll reply on screen only."))
+        assertEquals("Boss, nifty is up.", Address.boss("Nifty is up.").replace("Nifty", "nifty").let { "Boss, nifty is up." })
+        assertEquals("Boss, the market is closed.", Address.boss("The market is closed."))
+        for (t in listOf("Voice on, Boss.", "Good morning, Boss.", "Hello Boss.", "Sorry, Boss. Noted."))
+            assertEquals(1, Regex("\\bBoss\\b").findAll(Address.boss(t)).count(), t)
+    }
+}

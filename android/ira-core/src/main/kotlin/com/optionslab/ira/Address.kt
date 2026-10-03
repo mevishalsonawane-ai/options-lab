@@ -9,7 +9,8 @@ object Address {
 
     fun boss(text: String): String {
         val t = text.trim()
-        if (t.isEmpty() || t.startsWith(NAME)) return t
+        // Already addresses Boss anywhere ("Voice on, Boss.", "Good morning, Boss."): said once, never twice.
+        if (t.isEmpty() || Regex("\\b$NAME\\b").containsMatchIn(t)) return t
         if (Regex("^(Hello|Hi|Hey|Good (morning|afternoon|evening))\\b").containsMatchIn(t))
             return Regex("^(Hello|Hi|Hey|Good (morning|afternoon|evening))( there)?[.,!]?").replace(t) { "${it.groupValues[1]} $NAME." }
         val word = t.takeWhile { !it.isWhitespace() }
