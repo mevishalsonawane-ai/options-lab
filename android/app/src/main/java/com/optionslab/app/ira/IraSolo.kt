@@ -30,10 +30,11 @@ internal object IraSolo {
     private val MARKETS = listOf(IraMarket.NIFTY, IraMarket.BANKNIFTY)
 
     /**
-     * One trade a day, and only while the setup's last 60 signals (on the index, before costs) averaged above zero:
-     * chosen on 2024-25, checked on the other years; see SOLO.md.
+     * Paper only, and no cap on how many trades a day (Boss, 3 Oct: "no limit, but only paper orders, even on a live
+     * market" - Solo decides for itself): every setup it finds is taken, one at a time, while the setup's last 60
+     * signals (on the index, before costs) averaged above zero. (The 2-year test in SOLO.md was run at one a day.)
      */
-    val RULES = Solo.Rules(maxPerDay = 1, recentN = 60, profitLock = false, premiumStop = STOP_LOSS)
+    val RULES = Solo.Rules(maxPerDay = Int.MAX_VALUE, lossesToStop = Int.MAX_VALUE, recentN = 60, profitLock = false, premiumStop = STOP_LOSS)
     /**
      * Always a stop-loss on the option itself (Boss's rule, 3 Oct: no ladder), sized by Solo's own study: tighter stops
      * (15-25%) sit inside an option's normal swings and are hit too often; at 30% it fired on only 10 of 511 tested
