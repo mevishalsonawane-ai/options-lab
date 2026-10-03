@@ -404,6 +404,18 @@ internal fun VoiceSwitch() {
             androidx.compose.material3.Switch(checked = trail, onCheckedChange = { v -> trail = v; com.optionslab.app.ira.IraCoach.autoTrail = v })
         }
         Note("Your own bought options with a stop: once up 20% the stop moves to what you paid, then trails 15% under the best price. It only moves up; bots keep their own stops.")
+        var brief by remember { mutableStateOf(com.optionslab.app.ira.IraTools.brief) }
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
+            Text("Short spoken answers", style = Type.label.copy(color = p.ink, fontSize = 14.sp), modifier = Modifier.weight(1f))
+            androidx.compose.material3.Switch(checked = brief, onCheckedChange = { v -> brief = v; com.optionslab.app.ira.IraTools.brief = v })
+        }
+        Note("Only the key line is said; say \"Jarvis, tell me more\" for the rest. The full answer is always on screen.")
+        var strict by remember { mutableStateOf(com.optionslab.app.ira.IraTools.wakeStrict) }
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
+            Text("Harder to wake", style = Type.label.copy(color = p.ink, fontSize = 14.sp), modifier = Modifier.weight(1f))
+            androidx.compose.material3.Switch(checked = strict, onCheckedChange = { v -> strict = v; com.optionslab.app.ira.IraTools.wakeStrict = v })
+        }
+        Note("Wakes only when \"Jarvis\" starts what you say: fewer false starts from the TV or other people.")
         var quiet by remember { mutableStateOf(JarvisVoice.quietHours) }
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
             Text("Quiet hours 22:00 to 07:00", style = Type.label.copy(color = p.ink, fontSize = 14.sp), modifier = Modifier.weight(1f))
@@ -716,6 +728,7 @@ private fun orbTrend(s: Snapshot?): Float {
 @Composable
 private fun QuickCommands(onDismiss: () -> Unit, pick: (String, Boolean) -> Unit) {
     val items = listOf(
+        "Exit everything (emergency)" to ("exit everything" to true),
         "Status" to ("app status" to false), "My P&L" to ("my p&l today" to false), "Positions" to ("my positions" to false),
         "Should I trade now?" to ("should i trade now" to false), "Stop all strategies" to ("stop all strategies" to true),
         "Start all strategies" to ("start all strategies" to true),

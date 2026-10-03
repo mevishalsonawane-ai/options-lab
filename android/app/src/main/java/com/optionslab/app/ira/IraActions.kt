@@ -254,6 +254,25 @@ internal object IraActions {
                 }
             }
             Command.Kind.QUIET_ON -> { JarvisVoice.quietHours = true; "Quiet hours on, Boss: from 22:00 to 07:00 I say nothing unless you ask." to null }
+            Command.Kind.MISTAKE -> IraTools.markWrong() to null
+            // The emergency exit (always confirmed): the kill switch first (nothing new opens), the bots stopped, then
+            // every position closed - each step said, none skipped because another failed.
+            Command.Kind.EXIT_ALL -> Commands.describe(c) to suspend {
+                val out = ArrayList<String>()
+                runCatching { setSettings { it.copy(guardKill = true) }; out += "Kill switch on." }.onFailure { e -> out += "Kill switch not set: ${e.message}." }
+                out += runCatching { com.optionslab.app.data.Strategies.stopForToday(true, compromised()) }.getOrElse { e -> "Stopping the bots failed: ${e.message}." }
+                val (what, act) = runCatching { prepare(Command(Command.Kind.CLOSE_ALL)) }.getOrElse { e -> ("Closing failed: ${e.message}.") to null }
+                out += if (act == null) what else runCatching { act() }.getOrElse { e -> "Closing failed: ${e.message}." }
+                IraActivity.add("Emergency exit: " + out.joinToString(" "))
+                out.joinToString(" ")
+            }
+            Command.Kind.BRIEF_ON -> { IraTools.brief = true; "Short answers, Boss. Say \"tell me more\" for the rest." to null }
+            Command.Kind.BRIEF_OFF -> { IraTools.brief = false; "Full answers again." to null }
+            Command.Kind.MORE -> (IraHub.lastFullAnswer() ?: "There is no answer of mine to say more about.") to null
+            Command.Kind.PRACTICE -> "Replaying the day..." to null
+            Command.Kind.JTRADES_WEEKLY -> { val v = c.level ?: return "Tell me the limit in rupees." to null
+                if (v < 1000) "Tell me a weekly limit of at least Rs 1,000." to null
+                else Commands.describe(c) to suspend { IraTools.weeklyLimit = v; "My trades' weekly loss limit is now ${com.optionslab.ira.AppFacts.amt(v)}." } }
             Command.Kind.TARGET_SET -> { val v = c.level ?: return "Tell me the target in rupees." to null
                 IraJournal.setTarget(v); IraActivity.add("Set today's target to ${com.optionslab.ira.AppFacts.amt(v)}.")
                 "Today's target is ${com.optionslab.ira.AppFacts.amt(v)}, Boss. I'll tell you when you reach it." to null }
@@ -310,7 +329,7 @@ internal object IraActions {
         log(what)
         IraAccount.invalidate()
         return runCatching { act() }.getOrElse { "That did not work: ${it.message ?: "an error"}." }
-            .also { IraActivity.add("$what: ${IraActivity.short(it)}") }
+            .also { IraActivity.add("$what: ${IraActivity.short(it)}"); if (it.startsWith("That did not work")) IraTools.count("failed") }
     }
 
     /** A setting's value now, in [SettingsTalk]'s terms. */

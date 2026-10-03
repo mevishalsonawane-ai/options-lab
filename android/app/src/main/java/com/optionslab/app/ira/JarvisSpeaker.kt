@@ -20,7 +20,7 @@ object JarvisSpeaker {
     private var waiting: String? = null
 
     /** How a reply is said: addressed to Boss, rupees read as rupees, the first few sentences. */
-    fun words(text: String): String = com.optionslab.ira.Address.boss(com.optionslab.ira.Wake.spoken(text, 6))
+    fun words(text: String): String = com.optionslab.ira.Address.boss(com.optionslab.ira.Wake.spoken(text, if (IraTools.brief) 1 else 6))
 
     fun speak(context: Context, text: String) {
         if (!com.optionslab.app.BuildConfig.JARVIS || JarvisVoice.muted && !text.startsWith("Voice on")) return

@@ -237,6 +237,7 @@ internal object IraAccount {
             if (wants(Section.SEARCH)) out[Section.SEARCH] = IraJournal.search(question)
             if (wants(Section.TIMEOFDAY)) out[Section.TIMEOFDAY] = IraJournal.timeOfDay()
             if (wants(Section.REASONS)) out[Section.REASONS] = IraJournal.reasons()
+            if (wants(Section.MISTAKES)) out[Section.MISTAKES] = com.optionslab.ira.Mistakes.lines(IraTools.mistakes())
             if (wants(Section.REVIEW)) {
                 val owners = runCatching { com.optionslab.app.data.Strategies.owners() }.getOrDefault(emptyMap())
                 val r = ArrayList<String>()

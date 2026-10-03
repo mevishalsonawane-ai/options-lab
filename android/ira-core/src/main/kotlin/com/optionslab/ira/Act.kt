@@ -29,6 +29,10 @@ data class Command(val kind: Kind, val target: String? = null, val number: Int? 
         PREF_RESET(true),
         /** The day's P&L target set or cleared; a note on why the owner took a trade. */
         TARGET_SET(true), TARGET_CLEAR(true), NOTE(true),
+        /** "That was wrong" (kept for fixing); the emergency exit (close all, kill switch on, stop the bots). */
+        MISTAKE(true), EXIT_ALL(true),
+        /** Short spoken answers on or off; "tell me more"; a past day replayed; Jarvis's weekly loss limit. */
+        BRIEF_ON(true), BRIEF_OFF(true), MORE(true), PRACTICE(true), JTRADES_WEEKLY(false),
     }
 }
 
@@ -68,6 +72,9 @@ object Commands {
             .replace(Regex("[^a-z0-9. ]"), " ").replace(Regex("\\s+"), " ").trim() + " "
         val s = t.replace(Regex(" (please|jarvis|hey|ok|okay|now|right now|immediately|can you|could you|will you|for me) "), " ")
             .replace(Regex("\\s+"), " ").let { " ${it.trim()} " }
+        // "That was wrong": kept with what was said and answered (before the negation check: "not what I asked").
+        if (Regex("^ (that was wrong|that s wrong|thats wrong|that is wrong|wrong answer|you got (that|it) wrong|that s not right|thats not right|not what i asked|you misheard( me)?|you misunderstood( me)?) $").containsMatchIn(s))
+            return Command(Command.Kind.MISTAKE)
         // Jarvis's voice (before the negation check: "don't speak" is a mute).
         if (Regex("^ (un ?mute|unmute yourself|speak again|talk again|voice on|turn (on )?(your )?voice( on)?|you can (speak|talk)( now| again)?|start (speaking|talking)) $").containsMatchIn(s)) return Command(Command.Kind.UNMUTE)
         if (Regex("^ ((be |go |stay |keep )?(mute|muted|silent|quiet)|mute (yourself|your voice|the voice)|(be|go|stay|keep) (on )?silent|shut up|(don t|do not|stop) (speak|speaking|talk|talking)|voice off|turn (off )?(your )?voice( off)?|silence|no voice) $").containsMatchIn(s)) return Command(Command.Kind.MUTE)
@@ -90,6 +97,16 @@ object Commands {
         // "Tell me if BankNifty falls 1% from here": an alarm at a level worked out from the price now.
         if (has(" (alert|alarm|notify|tell|ping|wake|warn) ")) MoveAlarm.read(s)?.let { mv ->
             return Command(Command.Kind.ALARM_ADD, market = Market.mentioned(s).firstOrNull(), above = mv.up, pct = mv.pct)
+        }
+        // The emergency exit: everything closed, the kill switch on, the bots stopped.
+        if (Regex("^ (emergency exit|exit everything|panic( exit| button)?|close everything and stop|get me out( of everything)?|exit all( now)?|square off everything and stop) $").containsMatchIn(s))
+            return Command(Command.Kind.EXIT_ALL)
+        if (Regex("^ (brief mode( on)?|short answers( please)?|keep it short|be brief|shorter answers) $").containsMatchIn(s)) return Command(Command.Kind.BRIEF_ON)
+        if (Regex("^ (brief mode off|full answers|detailed answers|long answers|answer in full) $").containsMatchIn(s)) return Command(Command.Kind.BRIEF_OFF)
+        if (Regex("^ (tell me more|more|more details|go on|details|explain more|the full answer) $").containsMatchIn(s)) return Command(Command.Kind.MORE)
+        if (Practice.asked(s) && Regex("^ (practi[cs]e|replay|simulate|rehearse) ").containsMatchIn(s)) return Command(Command.Kind.PRACTICE, target = text)
+        Regex(" (?:your|jarvis s|jarvis) (?:own )?(?:trades? )?weekly loss limit (?:to |at |of )?(?:rs |rupees )?(\\d{3,7}) ").find(t)?.let { m ->
+            return Command(Command.Kind.JTRADES_WEEKLY, level = m.groupValues[1].toDouble())
         }
         // The app's limits ("set max lots to 3"); never the PIN, real orders or the lock.
         if (SettingsTalk.forbidden(s)) return Command(Command.Kind.SET_REFUSED)
@@ -219,5 +236,12 @@ object Commands {
         Command.Kind.TARGET_SET -> "set today's target to ${c.level?.let { AppFacts.amt(it) } ?: "?"}"
         Command.Kind.TARGET_CLEAR -> "clear today's target"
         Command.Kind.NOTE -> "note why you took the trade"
+        Command.Kind.MISTAKE -> "note that my last answer was wrong"
+        Command.Kind.EXIT_ALL -> "exit everything: close every open position, turn the kill switch on and stop every strategy and arm for today"
+        Command.Kind.BRIEF_ON -> "give short spoken answers"
+        Command.Kind.BRIEF_OFF -> "give full spoken answers"
+        Command.Kind.MORE -> "say the full last answer"
+        Command.Kind.PRACTICE -> "replay a past day"
+        Command.Kind.JTRADES_WEEKLY -> "set my trades' weekly loss limit to ${c.level?.let { "Rs %,.0f".format(java.util.Locale.ENGLISH, it) } ?: "?"}"
     }
 }

@@ -294,6 +294,15 @@ internal object IraNewsTrades {
         com.optionslab.app.security.SecurePrefs.put("jarvis.pref.told", null)
     }
 
+    /** "If the stop hits you lose about Rs X (Y% of your capital)" for the trade Jarvis would place. */
+    suspend fun riskLine(idea: NewsTrade.Idea, spot: Double): String? {
+        val c = contract(idea.market.name, spot, idea.call) ?: return null
+        val px = runCatching { Paper.lastPrice(c) }.getOrNull()?.takeIf { it > 0 } ?: return null
+        val capital = if (goesLive()) runCatching { com.optionslab.app.data.Broker.funds().net }.getOrNull()
+            else runCatching { Paper.snapshot().funds.let { it.availableCash + it.utilisedDebits } }.getOrNull()
+        return com.optionslab.ira.TradeRisk.say(px, c.lotSize, lotsFor(px, c.lotSize), capital)
+    }
+
     /** Not enough money for 1 lot (the lots it would take) with 20% to spare, or null. */
     suspend fun marginProblem(idea: NewsTrade.Idea, spot: Double): String? {
         val c = contract(idea.market.name, spot, idea.call) ?: return null

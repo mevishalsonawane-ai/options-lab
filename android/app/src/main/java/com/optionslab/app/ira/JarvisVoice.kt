@@ -521,7 +521,8 @@ class JarvisVoice : Service() {
                 asking = null
                 _state.value = VoiceState(Mode.THINKING)
                 scope.launch {
-                    val r = if (yes) withContext(Dispatchers.Default) { IraHub.confirm(id) } ?: "That had already lapsed; nothing was placed."
+                    // The emergency exit takes Boss's own voice in place of the fingerprint (checked just above).
+                    val r = if (yes) withContext(Dispatchers.Default) { IraHub.confirm(id, ownerVoice = askingNeedsBoss && IraHub.isExit(id)) } ?: "That had already lapsed; nothing was placed."
                         else { IraHub.cancelAction(id); "Rejected. Nothing was placed." }
                     say(com.optionslab.ira.Address.boss(Wake.spoken(r)), "answer")
                 }
@@ -529,7 +530,9 @@ class JarvisVoice : Service() {
             }
         }
         val awake = awake()
-        val h = alternatives.asSequence().map { Wake.heard(it, awake) }.firstOrNull { it !is Wake.Heard.Ignore } ?: Wake.Heard.Ignore
+        // Strict wake word (the owner's setting): only the best reading, with "Jarvis" first, wakes it.
+        val alts = if (IraTools.wakeStrict && !awake) com.optionslab.ira.WakeSense.accept(alternatives, com.optionslab.ira.WakeSense.Level.STRICT) else alternatives
+        val h = alts.asSequence().map { Wake.heard(it, awake) }.firstOrNull { it !is Wake.Heard.Ignore } ?: Wake.Heard.Ignore
         when (h) {
             Wake.Heard.Ignore -> again()
             Wake.Heard.Awake -> { awakeUntil = SystemClock.elapsedRealtime() + AWAKE_MS; say("Yes, Boss?") }
@@ -546,7 +549,7 @@ class JarvisVoice : Service() {
                 val lockedNo = if (locked()) com.optionslab.ira.LockRule.refuse(true, acts || com.optionslab.ira.Topic.COMMAND in topics,
                     com.optionslab.ira.Topic.ACCOUNT in topics, com.optionslab.ira.Topic.ACCOUNT in topics && boss()) else null
                 if (lockedNo != null) say(lockedNo)
-                else if (!named && acts) say("Boss, say Jarvis first for that.")
+                else if (!named && acts) { IraTools.count("nameFirst"); say("Boss, say Jarvis first for that.") }
                 else {
                     // Trades, and commands that add risk (live mode, kill switch off, autopilot, starting arms), need
                     // Boss's own voice; without it a command is asked as a yes or no instead of done at once, and
@@ -602,11 +605,15 @@ class JarvisVoice : Service() {
                 o != null && o.missing.isEmpty() && o.refusal == null -> "I have put that order on the Ira screen. Nothing is sent until you confirm it there."
                 a.action != null -> {
                     // Asked aloud instead of a button hidden in the chat: "Shall I stop ORB? Yes or no?"
-                    asking = a.action; askingNeedsBoss = false; askingUntil = 0
+                    asking = a.action; askingNeedsBoss = IraHub.isExit(a.action); askingUntil = 0
                     say(com.optionslab.ira.Address.boss("Shall I " + a.text.removePrefix("Tap Confirm to ").trimEnd('.') + "? Yes or no?"), "question")
                     return@launch
                 }
-                else -> com.optionslab.ira.Address.boss(Wake.spoken(a.text))
+                // Short answers (the owner's setting): the first sentence; "tell me more" says the whole answer.
+                else -> com.optionslab.ira.Address.boss(Wake.spoken(a.text, when {
+                    com.optionslab.ira.Ask.parse(q).command?.kind == com.optionslab.ira.Command.Kind.MORE -> 8
+                    IraTools.brief -> 1
+                    else -> 3 }))
             }, "answer")
         }
     }

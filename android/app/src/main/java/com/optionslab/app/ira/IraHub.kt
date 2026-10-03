@@ -244,6 +244,8 @@ object IraHub {
         IraCoach.lossSizeLine()?.let { w -> app?.let { JarvisPopup.show(it, "Boss, a pattern in your trades", w) }; reply(com.optionslab.ira.Address.boss(w)) }
         // The spoken wrap-up of the day.
         runCatching { IraCoach.daySummary(lines.firstOrNull()) }
+        // How Jarvis did today (questions heard, misunderstood, failed): in the conversation, for fixing what annoys.
+        com.optionslab.ira.Usage.line(IraTools.usageToday())?.let { reply("How I did today: $it") }
     }
 
     private val EVENING: java.time.LocalTime = java.time.LocalTime.of(15, 35)
@@ -565,6 +567,13 @@ object IraHub {
             if (IraNewsTrades.toldSkip(kind)) reply(com.optionslab.ira.Preference.say(kind))
             return
         }
+        // Past the weekly loss limit: no suggestions until Monday (the news is still told).
+        if (IraTools.weeklyHit()) {
+            if (source.startsWith("news")) reply(text)
+            if (synchronized(coolSaid) { coolSaid.add("weekly|" + com.optionslab.app.data.Market.today().with(java.time.DayOfWeek.MONDAY)) })
+                reply(com.optionslab.ira.WeeklyCap.say(IraTools.weeklyLimit))
+            return
+        }
         val snap = _state.value.snaps[m]
         val side = if (idea.call) "call" else "put"
         // Money for it, with room to spare (Zerodha's funds when it would go live, else the paper account's).
@@ -587,7 +596,9 @@ object IraHub {
         val where = if (IraNewsTrades.paperFirst && com.optionslab.app.data.AppSettings.load().live) " (on paper: my trades stay there until proven)" else ""
         // How sure: the pattern's record, the regime, how dear options are, the trade check.
         val conf = com.optionslab.ira.Confidence.score(idea.call, idea.hitRate, IraStudy.regimeOf(m), iv?.first, runCatching { tradeCheckFast().level }.getOrNull())
-        val full = "$text$ivLine ${conf.text()} Shall I $what$where? Approve or reject."
+        // What it risks, in rupees and of the capital.
+        val risk = runCatching { IraNewsTrades.riskLine(idea, snap?.price ?: 0.0) }.getOrNull()?.let { " $it" } ?: ""
+        val full = "$text$ivLine ${conf.text()}$risk Shall I $what$where? Approve or reject."
         _state.update { it.copy(pending = it.pending + id, messages = (it.messages + Msg(true, full, action = id)).takeLast(MAX_MESSAGES)) }
         JarvisApproval.show(c, id, title, full)
         JarvisVoice.askYesNo(id, "$said Confidence ${conf.stars} out of 5. Shall I buy 1 lot of the ${m.label} $side? Yes or no?")
@@ -870,6 +881,8 @@ object IraHub {
         // A new question: the model stops polishing the last answer (it stands as shown).
         IraModel.stopWriting()
         val parsed = Ask.parse(q)
+        IraTools.count("heard")
+        if (Topic.OFF_TOPIC in parsed.topics) IraTools.count("misunderstood")
         if (Topic.BACKTEST in parsed.topics) { backtestAsked(q, parsed); return }
         if (Topic.ACCOUNT in parsed.topics) { accountAsked(q); return }
         if (Topic.COMMAND in parsed.topics) { commandAsked(q, parsed.command!!, confirmAlways = understood); return }
@@ -987,23 +1000,38 @@ object IraHub {
 
     private fun commandAsked(q: String, c: com.optionslab.ira.Command, confirmAlways: Boolean = false) {
         _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+        // Practice on a past day: replayed into the conversation, nothing traded.
+        if (c.kind == com.optionslab.ira.Command.Kind.PRACTICE) { scope.launch { runCatching { IraTools.practice(c.target ?: q) { reply(it) } } }; return }
         scope.launch {
             val (what, act) = runCatching { IraActions.prepare(c) }.getOrElse { ("I could not do that: ${it.message}") to null }
             if (act == null) { reply(what); return@launch }
             if (c.kind.reduces || !com.optionslab.app.BuildConfig.JARVIS || confirmAlways) {
-                pend(what, act, "Tap Confirm to ${what}.")
+                val id = pend(what, act, "Tap Confirm to ${what}.")
+                // The emergency exit asks for the fingerprint on the screen (or Boss's own voice, aloud).
+                if (c.kind == com.optionslab.ira.Command.Kind.EXIT_ALL) synchronized(actions) { exitIds += id }
             } else reply(IraActions.run(what, act))
         }
     }
 
     /** The owner tapped Confirm (or said yes) on [id]: what happened, or null when it was already settled. */
-    suspend fun confirm(id: Long, fingerprint: Boolean = false): String? {
+    /** Emergency exits waiting: confirmed with the fingerprint on the screen, or a yes in Boss's own voice. */
+    private val exitIds = HashSet<Long>()
+
+    fun isExit(id: Long): Boolean = synchronized(actions) { id in exitIds }
+
+    /** The last answer in full (for "tell me more"). */
+    fun lastFullAnswer(): String? = _state.value.messages.lastOrNull { it.fromIra }?.text
+
+    suspend fun confirm(id: Long, fingerprint: Boolean = false, ownerVoice: Boolean = false): String? {
+        if (isExit(id) && !fingerprint && !ownerVoice && fingerprintNeeded())
+            return synchronized(actions) { actions.containsKey(id) }.let { waiting -> if (!waiting) null else
+                "The emergency exit is confirmed with your fingerprint on the Jarvis screen, or by saying yes in your own voice.".also { reply(it) } }
         // A trade that goes to Zerodha with real money needs the owner's fingerprint on the Jarvis screen (a spoken yes or
         // the notification's Approve is not enough); it stays waiting until then.
         if (asksYesNo(id) && !fingerprint && IraNewsTrades.goesLive() && fingerprintNeeded())
             return synchronized(actions) { actions.containsKey(id) }.let { waiting -> if (!waiting) null else
                 "This trade goes to Zerodha with real money: approve it with your fingerprint on the Jarvis screen.".also { reply(it) } }
-        val a = synchronized(actions) { actions.remove(id) } ?: return null
+        val a = synchronized(actions) { exitIds.remove(id); actions.remove(id) } ?: return null
         if (asksYesNo(id)) IraNewsTrades.answered(id, "approved")
         settled(id)
         _state.update { it.copy(pending = it.pending - id) }
@@ -1014,7 +1042,7 @@ object IraHub {
     fun fingerprintNeeded(): Boolean = app?.let { com.optionslab.app.security.BiometricGate.fingerprintOn(it) } ?: true
 
     /** Is [id] a trade waiting that will need the fingerprint (the Jarvis screen shows the fingerprint button)? */
-    fun needsFingerprint(id: Long): Boolean = asksYesNo(id) && IraNewsTrades.goesLive() && fingerprintNeeded()
+    fun needsFingerprint(id: Long): Boolean = (isExit(id) || asksYesNo(id) && IraNewsTrades.goesLive()) && fingerprintNeeded()
 
     fun cancelAction(id: Long) {
         // Only what is still waiting can be cancelled: one already confirmed (or lapsed) is not said to be undone.

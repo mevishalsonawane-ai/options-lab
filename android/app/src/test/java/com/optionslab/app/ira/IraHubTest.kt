@@ -610,4 +610,27 @@ class IraHubTest : RobolectricTest() {
         IraJournal.targetWatch(); IraJournal.staleWatch()
         Unit
     }
+
+    @Test fun mistakesUsageBriefAndExit() = runBlocking {
+        IraHub.ask("how is nifty")
+        waitFor("the answer") { IraHub.state.value.messages.lastOrNull()?.fromIra == true }
+        IraHub.ask("Jarvis, that was wrong")
+        waitFor("the mistake noted") { IraHub.state.value.messages.lastOrNull()?.text?.startsWith("Sorry, Boss") == true }
+        assertEquals("how is nifty", IraTools.mistakes().last().said)
+        assertTrue(IraTools.usageToday().heard >= 2)
+        IraHub.ask("short answers please")
+        waitFor("brief on") { IraTools.brief }
+        IraHub.ask("detailed answers")
+        waitFor("brief off") { !IraTools.brief }
+        // The emergency exit always waits for Confirm, and asks for the fingerprint where the phone has one.
+        IraHub.ask("Jarvis, exit everything")
+        waitFor("the confirm") { IraHub.state.value.pending.isNotEmpty() }
+        val id = IraHub.state.value.pending.single()
+        assertTrue(IraHub.isExit(id))
+        val r = IraHub.confirm(id)
+        assertTrue(r.toString(), r != null)
+        assertTrue("the kill switch is on after the exit", com.optionslab.app.data.AppSettings.load().guardKill)
+        com.optionslab.app.data.AppSettings.save(com.optionslab.app.data.AppSettings.load().copy(guardKill = false))
+        assertTrue(!IraTools.weeklyHit())
+    }
 }
