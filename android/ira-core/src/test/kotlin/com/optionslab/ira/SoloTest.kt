@@ -183,3 +183,12 @@ class SoloReviewTest {
         assertTrue(Solo.review(s, up, 60, Solo.Exit.TARGET, 100.0, 150.0, "Nifty").startsWith("Nifty reached the target in 10 minutes."))
     }
 }
+
+class SoloFormTest {
+    @Test fun recentFormIsSaid() {
+        val r = Solo.Rules(recentN = 4)
+        assertEquals("Nifty: only 2 of the 4 signals it learns from studied yet - trading", Solo.form(listOf(2.0, -1.0), r, "Nifty"))
+        assertEquals("Nifty: its last 4 signals averaged +0.25 R (1 reached the target) - trading", Solo.form(listOf(2.0, -1.0, 1.0, -1.0), r, "Nifty"))
+        assertTrue(Solo.form(listOf(-1.0, -1.0, 2.0, -1.0), r, "BankNifty").endsWith("standing aside"))
+    }
+}

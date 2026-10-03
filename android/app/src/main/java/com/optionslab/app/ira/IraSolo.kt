@@ -270,9 +270,16 @@ internal object IraSolo {
         runCatching { JarvisVoice.announce(line) }
     }
 
+    /** How the setup has been doing lately in each market (as learned by today's passes; empty before the first). */
+    private fun form(): String = runCatching {
+        val today = com.optionslab.app.data.Market.today()
+        // Only what today's passes already learned (never worked out here: this may run on the main thread).
+        MARKETS.mapNotNull { m -> synchronized(learned) { learned[m]?.takeIf { it.first == today }?.second }?.let { Solo.form(it, RULES, m.label) } }.takeIf { it.isNotEmpty() }?.joinToString("; ", prefix = " Lately: ", postfix = ".")
+    }.getOrNull() ?: ""
+
     /** "How is Solo doing": on or off, paused or not, and the record. */
     fun status(): String = (if (on) "Solo is on, Boss (paper only; switch it off in Jarvis settings)." else "Solo is off, Boss: switch it on in Jarvis settings (paper only).") +
-        (paused?.let { " $it" } ?: "") + " " + record() + (watch?.takeIf { on && paused == null && com.optionslab.app.data.Market.isOpen() && it.first.toLocalDate() == com.optionslab.app.data.Market.today() &&
+        (paused?.let { " $it" } ?: "") + " " + record() + form() + (watch?.takeIf { on && paused == null && com.optionslab.app.data.Market.isOpen() && it.first.toLocalDate() == com.optionslab.app.data.Market.today() &&
             all().none { t -> !t.closed } }?.let { (at, w) ->
             if (w.isEmpty()) " At %02d:%02d nothing was set up yet.".format(at.hour, at.minute) else " Watching (at %02d:%02d): ".format(at.hour, at.minute) + w + "."
         } ?: "")

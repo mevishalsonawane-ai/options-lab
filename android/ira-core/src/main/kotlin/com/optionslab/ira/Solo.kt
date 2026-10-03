@@ -229,6 +229,16 @@ object Solo {
         return out
     }
 
+    /** How the setup has been doing lately in one market, in a line: its recent results and whether Solo trades it. */
+    fun form(recent: List<Double>, r: Rules, label: String): String {
+        val n = r.recentN ?: return "$label: traded on every signal (no learning)"
+        if (recent.size < n) return "$label: only ${recent.size} of the $n signals it learns from studied yet - trading"
+        val last = recent.takeLast(n)
+        val hits = last.count { it >= r.k - 1e-9 }
+        return "%s: its last %d signals averaged %+.2f R (%d reached the target) - %s".format(Locale.ENGLISH, label, n, last.average(), hits,
+            if (working(recent, r)) "trading" else "standing aside")
+    }
+
     /** Whether the setup is working lately: the mean of its last [Rules.recentN] shadow results (true when too few yet). */
     fun working(recent: List<Double>, r: Rules): Boolean {
         val n = r.recentN ?: return true
