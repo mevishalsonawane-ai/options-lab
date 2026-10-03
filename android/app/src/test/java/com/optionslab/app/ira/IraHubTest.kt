@@ -165,6 +165,14 @@ class IraHubTest : RobolectricTest() {
         assertEquals("BankNifty is at 52,000.", IraHub.replyAfter(done, "How is BankNifty?")?.text)
     }
 
+    /** "Pause all bots" is read at once as "stop all strategies", and it still waits for Confirm. */
+    @Test fun everydayWordsAreReadAtOnceAndStillConfirmed() = runBlocking {
+        IraHub.ask("pause all bots")
+        waitFor("read as meant") { IraHub.state.value.messages.any { it.text == "I took that as: \"stop all strategies\"." } }
+        waitFor("the confirm") { IraHub.state.value.pending.isNotEmpty() }
+        IraHub.state.value.pending.forEach { IraHub.cancelAction(it) }
+    }
+
     @Test fun liveCandlesJoinTheStoredOnesAndHeadlinesAreRead() = runBlocking {
         IraHub.testHistories = { histories }
         val liveDay = histories.getValue(IraMarket.NIFTY).days.last().plusDays(1)

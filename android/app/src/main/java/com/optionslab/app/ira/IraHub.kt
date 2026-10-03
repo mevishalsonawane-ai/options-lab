@@ -915,6 +915,16 @@ object IraHub {
                 _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
                 return
             }
+        // Everyday words for the commonest requests ("pause all bots", "am I up today"): read at once by fixed rules,
+        // then asked as that line - an action waits for Confirm, as when the model picks it.
+        if (!understood && parsed.command == null && parsed.order == null) {
+            val line = runCatching { com.optionslab.ira.Intents.quick(q) }.getOrNull()
+            if (line != null && !lockedAccount(q, line)) {
+                _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, "$TOOK_AS\"$line\".")).takeLast(MAX_MESSAGES)) }
+                ask(line, understood = true)
+                return
+            }
+        }
         if (Topic.OFF_TOPIC in parsed.topics) IraTools.count("misunderstood")
         if (Topic.BACKTEST in parsed.topics) { backtestAsked(q, parsed); return }
         if (Topic.ACCOUNT in parsed.topics) { accountAsked(q); return }
