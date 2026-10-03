@@ -31,6 +31,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
@@ -1019,12 +1020,32 @@ object IraHub {
      * used, said back ("I understood: ..."), and any action from it waits for Confirm. Otherwise the usual answer.
      */
     private fun freeFormAsked(q: String) {
+        // Said at once (spoken while the model reads the words), then the real answer when it is ready - never silence.
+        _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, "One moment, Boss, let me think about that.")).takeLast(MAX_MESSAGES)) }
         scope.launch {
             val line = runCatching { IraModel.complete(com.optionslab.ira.Intents.prompt(q))?.let { com.optionslab.ira.Intents.pick(it) } }.getOrNull()
-            if (line == null) { ask(q, understood = true); return@launch }
-            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, "I understood: \"$line\".")).takeLast(MAX_MESSAGES)) }
+            if (line == null) {
+                val a = runCatching { Ira(book).answer(q, _state.value.snaps, _state.value.news, voice = com.optionslab.app.BuildConfig.JARVIS) }.getOrNull()
+                val text = a?.text ?: "I could not work that out."
+                reply(text); speakLater(text)
+                return@launch
+            }
+            reply("I understood: \"$line\".")
+            val said = com.optionslab.ira.Secrets.redact(line.trim())
             ask(line, understood = true)
+            // Its answer, spoken as soon as it is there (the voice already said "one moment").
+            val ans = kotlinx.coroutines.withTimeoutOrNull(20_000) {
+                _state.first { st -> st.messages.indexOfLast { !it.fromIra && it.text == said }.let { i -> i >= 0 && st.messages.drop(i + 1).any { it.fromIra } } }
+                    .messages.let { ms -> ms.drop(ms.indexOfLast { !it.fromIra && it.text == said } + 1).first { it.fromIra } }
+            }
+            ans?.let { speakLater(it.text) }
         }
+    }
+
+    /** Says a reply that came after the first words (the free-form answer), when Jarvis speaks replies. */
+    private fun speakLater(text: String) {
+        val c = app ?: return
+        if (JarvisVoice.wanted || JarvisSpeaker.speakTyped) runCatching { JarvisSpeaker.speak(c, text) }
     }
 
     private fun commandAsked(q: String, c: com.optionslab.ira.Command, confirmAlways: Boolean = false) {
