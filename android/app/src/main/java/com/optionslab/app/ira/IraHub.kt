@@ -261,9 +261,11 @@ object IraHub {
             _state.update { it.copy(loading = true) }
             runCatching {
                 val stored = testHistories?.invoke() ?: load()
-                val (live, missing) = live()
+                // No internet: the prices saved on the phone at once (no feed waited on until it times out).
+                val net = online()
+                val (live, missing) = if (net) live() else emptyMap<IraMarket, List<Candle>>() to LIVE.keys.toList()
                 val hs = merge(stored, live)
-                val news = newsIfDue()
+                val news = if (net) newsIfDue() else null
                 var added = 0
                 for ((m, h) in hs) for (minutes in listOf(15, 60)) {
                     if (h.bars.isEmpty()) continue
@@ -945,7 +947,9 @@ object IraHub {
             now = LocalDateTime.now(IST), closedReason = closedReason) }.getOrElse { com.optionslab.ira.Answer("I could not work that out.", emptyList()) }
         // A holiday or a weekend: said first, so the last session's prices are not taken for today's.
         val closed = closedToday()?.takeIf { parsed.topics.any { it in MARKET_TOPICS } && testHistories == null }
-        val a = if (closed == null) a0 else a0.copy(text = closed.substringBefore(" Prices") + " " + a0.text, facts = listOf(closed) + a0.facts)
+        val a1 = if (closed == null) a0 else a0.copy(text = closed.substringBefore(" Prices") + " " + a0.text, facts = listOf(closed) + a0.facts)
+        val off = if (parsed.topics.any { it in MARKET_TOPICS }) offlineNote() else null
+        val a = if (off == null) a1 else a1.copy(text = off + " " + a1.text, facts = listOf(off) + a1.facts)
         // JarvisAlgo with the model ready: the answer shows at once, then the model rewrites it in place if it passes the checks.
         val write = IraModel.usable() && com.optionslab.ira.Writer.worthRewriting(parsed, a)
         val msg = Msg(true, a.text, a.facts, a.order, writing = write)
@@ -1010,7 +1014,14 @@ object IraHub {
         val user = Msg(false, q)
         _state.update { it.copy(messages = (it.messages + user).takeLast(MAX_MESSAGES)) }
         scope.launch {
-            val v = runCatching { IraAccount.readFast(com.optionslab.ira.AppAnswers.sections(q), IraMarket.mentioned(q), question = q) }.getOrNull()
+            // Offline: what the phone keeps is read, and the broker is not waited on past a few seconds.
+            val net = online()
+            val read = scope.async { runCatching { IraAccount.readFast(com.optionslab.ira.AppAnswers.sections(q), IraMarket.mentioned(q), question = q) }.getOrNull() }
+            val v = if (net) read.await() else kotlinx.coroutines.withTimeoutOrNull(5_000) { read.await() }
+            if (v == null && !net) {
+                _state.update { it.copy(messages = (it.messages + Msg(true, "I'm offline, Boss: your account needs the internet. I can still answer about the markets from the prices saved on the phone.")).takeLast(MAX_MESSAGES)) }
+                return@launch
+            }
             val a = runCatching { Ira(book).answer(q, emptyMap(), emptyList(), app = v) }.getOrElse { com.optionslab.ira.Answer("I could not work that out.", emptyList()) }
             val write = v != null && IraModel.usable() && a.facts.isNotEmpty()
             val msg = Msg(true, a.text, a.facts, writing = write)
@@ -1261,6 +1272,27 @@ object IraHub {
             armsOn = arms,
             reads = listOf(IraMarket.NIFTY, IraMarket.BANKNIFTY).mapNotNull { mk -> st.snaps[mk]?.let { com.optionslab.ira.TradeCheck.read(it) } },
         ))
+    }
+
+    /**
+     * Is the phone on a network? False only when it plainly is not (no network, or one without internet), so a phone
+     * whose state cannot be read is treated as online.
+     */
+    fun online(): Boolean {
+        if (testLive != null || testHistories != null) return true
+        val c = app ?: return true
+        return runCatching {
+            val cm = c.getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
+            val n = cm.activeNetwork ?: return@runCatching false
+            cm.getNetworkCapabilities(n)?.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET) != false
+        }.getOrDefault(true)
+    }
+
+    /** Said before a market answer when offline: where the figures come from. */
+    private fun offlineNote(): String? {
+        if (online()) return null
+        val last = _state.value.lastDay?.let { " (up to $it)" } ?: ""
+        return "I'm offline, Boss, so this is from the prices saved on the phone$last."
     }
 
     /**

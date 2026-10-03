@@ -363,7 +363,8 @@ class JarvisVoice : Service() {
                 while (true) {
                     val open = com.optionslab.ira.Market.NIFTY.trading(java.time.LocalDateTime.now(java.time.ZoneId.of("Asia/Kolkata")))
                     if (open && n % 2 == 0) runCatching { IraHub.refresh() }
-                    if (open || n % 10 == 0) runCatching { IraHub.warm() }
+                    // The account and the trade check need the internet: not tried while offline.
+                    if ((open || n % 10 == 0) && IraHub.online()) runCatching { IraHub.warm() }
                     n++
                     // Low battery and not charging: kept ready less often (answers then read afresh when asked).
                     kotlinx.coroutines.delay(com.optionslab.app.work.Battery.gap(this@JarvisVoice, 30_000))
@@ -641,10 +642,11 @@ class JarvisVoice : Service() {
             val st = IraHub.state.value
             // Small talk ("how are you") needs no prices: never held for a refresh.
             val chat = com.optionslab.ira.Chat.smallTalk(q, 0) != null
-            if (!chat && st.snaps.isEmpty()) runCatching { withContext(Dispatchers.Default) { IraHub.refresh() } }
+            // Waited on for 4 seconds at most (no internet, a slow feed): the answer then comes from what the phone keeps.
+            if (!chat && st.snaps.isEmpty()) { val r = launch(Dispatchers.Default) { runCatching { IraHub.refresh() } }; kotlinx.coroutines.withTimeoutOrNull(4_000) { r.join() } }
             // Prices are re-read in the background only while the market trades (a closed day's prices do not change, and
             // a full re-read competes with the voice for the phone's processor).
-            else if (!chat && com.optionslab.ira.Market.NIFTY.trading(java.time.LocalDateTime.now(java.time.ZoneId.of("Asia/Kolkata"))) &&
+            else if (!chat && IraHub.online() && com.optionslab.ira.Market.NIFTY.trading(java.time.LocalDateTime.now(java.time.ZoneId.of("Asia/Kolkata"))) &&
                 st.liveAt?.isBefore(java.time.Instant.now().minusSeconds(120)) != false) launch(Dispatchers.Default) { runCatching { IraHub.refresh() } }
             if (confirm) IraHub.askConfirmed(q) else IraHub.ask(q)
             // A slow answer (your account, the trade check): say so at once instead of going quiet.
