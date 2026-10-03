@@ -857,7 +857,7 @@ private fun SoloCard() {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text(if (on) "Solo is on" else "Solo is off", style = Type.label.copy(color = p.ink, fontSize = 14.sp))
-                Text("Paper account only - never real money. It decides for itself: every setup it finds, one trade at a time, 1 lot, out by 15:10, always with a stop-loss order 30% below the option's entry (insurance against a sharp fall); it stops for the day Rs 5,000 down, and pauses itself Rs 15,000 below its best.",
+                Text("Paper account only - never real money. No strategy made in advance: every minute it reads the market, guesses the next 15 minutes and learns from what really happened. It trades (1 lot, one at a time, out after 15 minutes or by 15:10, a stop-loss 30% below the option's entry) only when it is sure and its own recent guesses have mostly been right. It stops for the day Rs 5,000 down, and pauses itself Rs 15,000 below its best.",
                     style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp))
             }
             androidx.compose.material3.Switch(checked = on, onCheckedChange = { v -> on = v; com.optionslab.app.ira.IraSolo.on = v })

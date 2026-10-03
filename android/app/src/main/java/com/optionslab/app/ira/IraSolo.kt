@@ -50,10 +50,11 @@ internal object IraSolo {
 
     /** The two-year test, in one line each (research data, real option prices, Rs 60 a trip), for Boss to judge. */
     val BACKTEST = listOf(
-        "NIFTY Apr 2024-Apr 2025: 186 trades, 40% winners, +Rs 69,393 (1 lot of 75), worst drawdown Rs 13,553.",
-        "NIFTY Apr 2025-Apr 2026: 170 trades, 35% winners, -Rs 32,796, worst drawdown Rs 42,351.",
-        "BANKNIFTY Feb 2025-Feb 2026: 155 trades, 43% winners, +Rs 14,853 (1 lot of 30), worst drawdown Rs 15,657.",
-        "(Always a 30% stop-loss on the option - in the test it fired on only 10 of 511 trades: insurance, not an edge - and standing aside while its last 60 signals lost.)",
+        "Its learning brain replayed minute by minute over two years of real prices (learning only from what had already happened):",
+        "NIFTY Apr 2024-Apr 2025: 987 trades, 40% winners, -Rs 1,31,183 (1 lot of 75).",
+        "NIFTY Apr 2025-Apr 2026: 963 trades, 42% winners, -Rs 1,15,255.",
+        "BANKNIFTY Feb 2025-Feb 2026: 744 trades, 45% winners, -Rs 1,00,924 (1 lot of 30).",
+        "It has not found an edge after costs yet - which is why it is on paper only. It keeps learning every minute.",
     )
 
     var on: Boolean
@@ -145,12 +146,83 @@ internal object IraSolo {
         return Solo.bigBody(earlier15, RULES.bigQuantile)
     }
 
+    // ---- the learning brain (Boss, 3 Oct: Solo learns from the market itself, no strategy made in advance) -------------
+
+    /** Why a trade came from the learning brain (its exit is the brain's: [Learner.Cfg.horizon] minutes at most). */
+    private const val LEARNED = "Learned:"
+
+    private class Brain(val l: com.optionslab.ira.Learner) {
+        var day: LocalDate? = null
+        var done = 0
+        val pending = ArrayDeque<Triple<Int, DoubleArray, Double>>()
+        var prevClose: Double? = null
+        var lastP: Double? = null
+        var lastPrice = 0.0
+    }
+    private val brains = HashMap<IraMarket, Brain>()
+    private fun brainKey(m: IraMarket) = "solo.brain.${m.name}"
+
+    /** Reads minutes [Brain.done]+1..[upTo] of [day]: learns each answer as it comes due, then guesses again. */
+    private fun feed(b: Brain, day: List<Candle>, upTo: Int) {
+        val h = com.optionslab.ira.Learner.Cfg().horizon
+        for (m in maxOf(1, b.done + 1)..upTo) {
+            b.l.tick(day[m - 1], day[m])
+            while (b.pending.isNotEmpty() && b.pending.first().first + h <= m) {
+                val (m0, x, g) = b.pending.removeFirst()
+                b.l.learn(x, day[m0 + h].c > day[m0].c, g)
+            }
+            val x = b.l.features(day, m, b.prevClose) ?: continue
+            val g = b.l.p(x)
+            b.pending.addLast(Triple(m, x, g)); b.lastP = g
+        }
+        b.done = maxOf(b.done, upTo)
+        b.lastPrice = day[upTo].c
+    }
+
+    /** The market's brain: kept on the phone; the first time, it learns from the earlier days the phone holds. */
+    private fun brain(m: IraMarket, held: List<Candle>, today: LocalDate): Brain = brains.getOrPut(m) {
+        val b = Brain(com.optionslab.ira.Learner())
+        val kept = runCatching { com.optionslab.app.security.SecurePrefs.getString(brainKey(m)) }.getOrNull()
+        val earlier = held.filter { it.t.toLocalDate().isBefore(today) }.groupBy { it.t.toLocalDate() }.toSortedMap().values
+            .map { d -> session(d, d.first().t.toLocalDate(), 375) }.filter { it.size > com.optionslab.ira.Learner.FIRST }
+        if (kept == null || !b.l.load(kept)) for (d in earlier) {
+            b.done = 0; b.pending.clear(); feed(b, d, d.lastIndex); b.prevClose = d.last().c
+        }
+        b.prevClose = earlier.lastOrNull()?.last()?.c
+        b
+    }
+
+    /** Every pass in market hours: each market's brain reads the new minutes and learns (whether Solo trades or not). */
+    private suspend fun learnTick(today: LocalDate, now: Int) {
+        for (m in MARKETS) {
+            val bars = runCatching { IraHub.freshBars(m) }.getOrNull() ?: continue
+            val day = session(bars, today, now)
+            if (day.size < 2) continue
+            runCatching {
+                synchronized(brains) {
+                    val b = brain(m, IraHub.recentBars(m) + bars, today)
+                    if (b.day != today) { b.day = today; b.done = 0; b.pending.clear(); b.lastP = null }
+                    if (day.lastIndex > b.done) {
+                        feed(b, day, day.lastIndex)
+                        com.optionslab.app.security.SecurePrefs.put(brainKey(m), b.l.save())
+                    }
+                }
+            }
+        }
+    }
+
+    /** "How is Solo's learning going", per market. */
+    fun learning(): String = synchronized(brains) { MARKETS.mapNotNull { m -> brains[m]?.let { runCatching { it.l.say(m.label) }.getOrNull() } } }
+        .ifEmpty { listOf("it starts learning at the next market session") }.joinToString("; ")
+
     /** Every market-watch pass while Solo is on: manage the open trade, or look for the next one. */
     suspend fun tick() = lock.withLock {
         if (!com.optionslab.app.BuildConfig.JARVIS) return@withLock
         if (!com.optionslab.app.data.Market.isOpen()) return@withLock
         val today = com.optionslab.app.data.Market.today()
         val now = minuteNow()
+        // The brains learn every pass, Solo on or off.
+        learnTick(today, now)
         val list = all()
         // An open trade is always seen through to its exit, even after Solo is switched off.
         list.lastOrNull { !it.closed }?.let { manage(it, list, today, now); return@withLock }
@@ -168,27 +240,26 @@ internal object IraSolo {
         // The trade check must say yes: an error reading it is a no (fail closed).
         val level = runCatching { IraHub.tradeCheckFast().level }.getOrNull() ?: return@withLock
         if (level == com.optionslab.ira.TradeCheck.Level.STOP) return@withLock
-        val busy = mine.maxOfOrNull { it.entryMinute } ?: -1
         val seen = ArrayList<String>()
         for (m in MARKETS) {
-            val bars = IraHub.freshBars(m)
-            val day = session(bars, today, now)
-            if (day.size < 20) continue
-            val held = IraHub.recentBars(m) + bars
-            val big = big(held, today) ?: continue
-            // Learning: a market whose setup has not been working lately is watched, not traded.
-            if (!Solo.working(learnedFor(m, held, today), RULES)) { seen += "${m.label}: the setup has not been working lately (its last 60 signals lost on average) - standing aside"; watch = java.time.LocalDateTime.now(IST) to seen.joinToString("; "); continue }
-            // Waiting candles are said as the watch; with none, why nothing is set up (what became of today's big candles).
-            seen += Solo.watching(day, day.size - 1, big, m.label, RULES).ifEmpty { listOfNotNull(Solo.story(day, day.size - 1, big, m.label, RULES)) }
+            val b = synchronized(brains) { brains[m] } ?: continue
+            if (b.day != today || b.done < com.optionslab.ira.Learner.FIRST) continue
+            seen += b.l.say(m.label)
             watch = java.time.LocalDateTime.now(IST) to seen.joinToString("; ")
-            // The last two closes only (a pass can come a minute late); an older signal is not chased.
-            val sig = (day.size - 1 downTo maxOf(0, day.size - 2)).firstNotNullOfOrNull { k -> Solo.signal(day, k, big, busy, RULES) } ?: continue
-            val read = Solo.read(day, typicalRange(held, today), m.label)
+            val p = b.lastP ?: continue
+            // No setup made in advance: the brain's own guess, only when it is sure and its record says it has learned.
+            val call = b.l.decide(p) ?: continue
+            if (b.done + 1 >= Solo.LAST_ENTRY) continue
+            val ix = b.lastPrice
+            val sig = Solo.Signal(call, b.done + 1, ix, if (call) ix * 0.95 else ix * 1.05, if (call) ix * 1.05 else ix * 0.95, 0,
+                "$LEARNED it reads a %.0f%% chance ${m.label} goes ${if (call) "up" else "down"} over the next %d minutes; %s"
+                    .format(java.util.Locale.ENGLISH, (if (call) p else 1 - p) * 100, com.optionslab.ira.Learner.Cfg().horizon, b.l.say(m.label)))
+            val day = session(IraHub.freshBars(m), today, now)
+            val read = Solo.read(day, typicalRange(IraHub.recentBars(m), today), m.label)
             if (offering) {
                 val key = "$today|${m.name}"
                 if (synchronized(offered) { key in offered }) continue
-                // (Approved, it is managed like Jarvis's other trades: their stop, target and profit lock.)
-                val text = "Solo's setup on ${m.label}: ${sig.why}. $read"
+                val text = "Solo's read on ${m.label}: ${sig.why}. $read"
                 if (IraHub.offerSoloIdea(com.optionslab.ira.NewsTrade.Idea(m, sig.call, text, kind = "solo"), text)) synchronized(offered) { offered += key }
                 return@withLock
             }
@@ -253,6 +324,8 @@ internal object IraSolo {
         var how: Solo.Exit? = null
         var at = day.lastIndex
         for (j in t.entryMinute until day.size) {
+            // The brain's trades are for its horizon: out when it has passed (the stop-loss on the option still guards it).
+            if (t.why.startsWith(LEARNED) && j >= t.entryMinute + com.optionslab.ira.Learner.Cfg().horizon) { how = Solo.Exit.TIME; at = j; break }
             how = Solo.exit(s, day[j], j, best, RULES)
             best = Solo.favour(s, day[j], best)
             if (how != null) { at = j; break }
@@ -325,7 +398,7 @@ internal object IraSolo {
 
     /** "How is Solo doing": on or off, paused or not, and the record. */
     fun status(): String = (if (on) "Solo is on, Boss (paper only; switch it off in Jarvis settings)." else "Solo is off, Boss: switch it on in Jarvis settings (paper only).") +
-        (paused?.let { " $it" } ?: "") + " " + record() + form() + (watch?.takeIf { on && paused == null && com.optionslab.app.data.Market.isOpen() && it.first.toLocalDate() == com.optionslab.app.data.Market.today() &&
+        (paused?.let { " $it" } ?: "") + " " + record() + " Learning: ${learning()}." + (watch?.takeIf { on && paused == null && com.optionslab.app.data.Market.isOpen() && it.first.toLocalDate() == com.optionslab.app.data.Market.today() &&
             all().none { t -> !t.closed } }?.let { (at, w) ->
             if (w.isEmpty()) " At %02d:%02d nothing was set up yet.".format(at.hour, at.minute) else " At %02d:%02d Solo saw: ".format(at.hour, at.minute) + w + "."
         } ?: "")

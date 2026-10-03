@@ -97,3 +97,25 @@ next expiry, so live and test agree.
 No version is profitable in both NIFTY years. Solo ships ON PAPER ONLY, off by default, one trade a day, with a
 self-pause at Rs 15,000 below its best: a live test of the rules, not a money-maker. It must earn a live record on paper
 before real money is even discussed (and that is the owner's decision, in the app, not Jarvis's).
+
+## Solo's learning brain (3 Oct, Boss: "learn from the market itself, not a strategy made in advance")
+
+`ira-core/Learner.kt`: an online logistic model over 12 readings of the last 1-60 minutes (moves scaled by the learned
+minute volatility, place in the day's range, distance from the open and the previous close, time of day, the last 15
+minutes' range and up-bars). Every minute it guesses whether the next H minutes go up; H minutes later it learns the
+answer. It trades only when |p - 0.5| >= edge and its last 400 confident guesses were at least 55% right (200 at
+least). Replayed minute by minute (`LearnerTest.learnerOverHistory`, no look-ahead), 1 lot, real option prices,
+Rs 60 a trip, 0.5 slippage a fill, 30% premium stop:
+
+| set | edge / H / min hit | trades | won | net |
+|---|---|---|---|---|
+| NIFTY Apr 24-Apr 25 | 0.10 / 15 / 55% | 987 | 392 | -Rs 1,31,183 |
+| NIFTY Apr 25-Apr 26 | 0.10 / 15 / 55% | 963 | 403 | -Rs 1,15,255 |
+| BANKNIFTY Feb 25-Feb 26 | 0.10 / 15 / 55% | 744 | 336 | -Rs 1,00,924 |
+| NIFTY Apr 24-Apr 25 | 0.15 / 60 / 57% | 342 | 141 | -Rs 38,532 |
+| NIFTY Apr 25-Apr 26 | 0.15 / 60 / 57% | 358 | 139 | -Rs 43,685 |
+| BANKNIFTY Feb 25-Feb 26 | 0.20 / 30 / 60% | 155 | 74 | -Rs 10,366 |
+
+Every version loses after costs: from price alone it guesses the next 15-60 minutes about as well as a coin (its own
+record swings between 36% and 73% as the market changes, and it learns the change late). Boss chose to run it anyway,
+on paper only, learning live (the app keeps each market's model from day to day). No real money until it proves itself.

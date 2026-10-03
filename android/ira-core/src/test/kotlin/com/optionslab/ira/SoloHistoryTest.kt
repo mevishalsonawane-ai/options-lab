@@ -10,7 +10,7 @@ import kotlin.test.Test
  * the folder with the exported files (day,expiry,right,strike,m,o,h,l,c); prints the report.
  */
 class SoloHistoryTest {
-    private fun days(f: File): Sequence<Solo.HistDay> = sequence {
+    internal fun days(f: File): Sequence<Solo.HistDay> = sequence {
         GZIPInputStream(f.inputStream()).bufferedReader().use { rd ->
             rd.readLine()
             var day: String? = null; var expiry = ""
