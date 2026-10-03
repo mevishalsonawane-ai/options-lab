@@ -145,9 +145,9 @@ private fun PortfolioReport(r: PortfolioResult, sources: Set<String>) {
 /** IraAlgo's Portfolio Backtester and Analyzer. */
 @Composable
 fun PortfolioLab(model: AppModel) {
-    val s by model.settings.collectAsState()
-    val res by model.portfolio.collectAsState()
-    val an by model.analyzer.collectAsState()
+    val s by model.settings.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val res by model.portfolio.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val an by model.analyzer.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     PortfolioLabContent(s.live, res, an, onAnalyze = model::analyzeHoldings, onRun = model::runPortfolio)
 }
 
@@ -233,7 +233,7 @@ internal fun PortfolioLabContent(
 /** IraAlgo's SIP Backtester. */
 @Composable
 fun SipLab(model: AppModel) {
-    val res by model.sip.collectAsState()
+    val res by model.sip.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     SipLabContent(res, onRun = model::runSip)
 }
 

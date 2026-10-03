@@ -184,8 +184,8 @@ fun LoginPinDialog(model: AppModel) {
     var err by remember { mutableStateOf<String?>(null) }
     var checking by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
-    val s by model.settings.collectAsState()
-    val findings by model.integrity.collectAsState()
+    val s by model.settings.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val findings by model.integrity.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     val activity = LocalContext.current as? FragmentActivity
     val blob = remember { Broker.bioSealedSecret }
     val bio = s.biometric && activity != null && blob != null && !(findings.isNotEmpty() && com.optionslab.app.security.Integrity.compromised(findings))
@@ -238,12 +238,12 @@ fun LoginPinDialog(model: AppModel) {
 @Composable
 fun Reauth(model: AppModel, onOk: () -> Unit, onCancel: () -> Unit, pinOnly: Boolean = false, why: String = "Enter your app PIN to send this order to Zerodha.",
            orderAction: Boolean = false) {
-    val s by model.settings.collectAsState()
+    val s by model.settings.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     // Live orders without PIN (the owner's setting): confirming an order, cancel or square-off is enough.
     if (orderAction && s.oneTapOrders) { LaunchedEffect(Unit) { onOk() }; return }
     val activity = LocalContext.current as? FragmentActivity
     // A phone that failed the security check can fake a biometric callback: the PIN only, there.
-    val findings by model.integrity.collectAsState()
+    val findings by model.integrity.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     val compromised = findings.isNotEmpty() && com.optionslab.app.security.Integrity.compromised(findings)
     var usePin by remember { mutableStateOf(pinOnly || !(s.biometric && activity != null && !compromised)) }
     LaunchedEffect(usePin) {
@@ -346,8 +346,8 @@ fun HoldToSend(text: String, enabled: Boolean, onComplete: () -> Unit) {
 @Composable
 fun OrderReviewDialog(model: AppModel) {
     val p = LocalPalette.current
-    val plan by model.plan.collectAsState()
-    val sending by model.sending.collectAsState()
+    val plan by model.plan.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val sending by model.sending.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     if (plan == Load.Idle) return
     androidx.compose.ui.window.Dialog(
         onDismissRequest = { if (sending !is Load.Busy) model.dismissPlan() },
@@ -368,11 +368,11 @@ fun OrderReviewDialog(model: AppModel) {
 @Composable
 private fun OrderReviewBody(model: AppModel) {
     val p = LocalPalette.current
-    val s by model.settings.collectAsState()
-    val plan by model.plan.collectAsState()
-    val sending by model.sending.collectAsState()
+    val s by model.settings.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val plan by model.plan.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val sending by model.sending.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     var confirming by remember { mutableStateOf(false) }
-    val st by model.stuck.collectAsState()
+    val st by model.stuck.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     var stuckAction by remember { mutableStateOf<String?>(null) }
     when (val pl = plan) {
         Load.Idle -> Unit
@@ -660,8 +660,8 @@ fun BrokerPage(
     staticIpStatus: suspend () -> com.optionslab.app.data.StaticIp.Status = { com.optionslab.app.data.StaticIp.status(force = true) },
 ) {
     val p = LocalPalette.current
-    val s by model.settings.collectAsState()
-    val b by model.broker.collectAsState()
+    val s by model.settings.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val b by model.broker.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     var editing by remember { mutableStateOf(!b.configured) }
     var forgetting by remember { mutableStateOf(false) }
     // Switching "Live orders without PIN" on lowers the protection, so it asks for the PIN itself (as the security
@@ -789,7 +789,7 @@ internal fun SelfTestCard() {
 @Composable
 fun ConnectZerodhaScreen(model: AppModel) {
     val p = LocalPalette.current
-    val b by model.broker.collectAsState()
+    val b by model.broker.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     Box(Modifier.fillMaxSize().background(p.paper).statusBarsPadding().navigationBarsPadding(), contentAlignment = Alignment.Center) {
         Column(
             Modifier.fillMaxWidth().padding(16.dp)
@@ -926,8 +926,8 @@ internal fun CredentialsForm(model: AppModel, onDone: () -> Unit) {
     var saving by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     // With the fingerprint on, it seals the secret too (the PIN then becomes optional).
-    val st by model.settings.collectAsState()
-    val findings by model.integrity.collectAsState()
+    val st by model.settings.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val findings by model.integrity.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     val activity = LocalContext.current as? FragmentActivity
     val fingerprint = st.biometric && activity != null && BiometricGate.available(activity) == BiometricGate.Kind.STRONG &&
         !(findings.isNotEmpty() && com.optionslab.app.security.Integrity.compromised(findings))
@@ -1019,7 +1019,7 @@ internal fun CredentialsForm(model: AppModel, onDone: () -> Unit) {
 @Composable
 internal fun ManualOrder(model: AppModel) {
     val p = LocalPalette.current
-    val s by model.settings.collectAsState()
+    val s by model.settings.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     var underlying by remember { mutableStateOf("NIFTY") }
     var expiries by remember { mutableStateOf<List<java.time.LocalDate>>(emptyList()) }
     var expiry by remember { mutableStateOf<java.time.LocalDate?>(null) }
@@ -1036,7 +1036,8 @@ internal fun ManualOrder(model: AppModel) {
     var listing by remember { mutableStateOf(false) }
     // Nothing of the old index may stay selected (or selectable) while the new one loads.
     fun clearContract() { spot = null; strikes = emptyList(); expiries = emptyList(); expiry = null; strike = "" }
-    LaunchedEffect(underlying) {
+    // (On the main thread throughout: the reads hop to IO and come back here before the form's state is set.)
+    LaunchedEffect(underlying) { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main.immediate) {
         loading = true; loadErr = null
         clearContract()
         try {
@@ -1056,10 +1057,10 @@ internal fun ManualOrder(model: AppModel) {
         } catch (e: kotlinx.coroutines.CancellationException) { throw e
         } catch (e: Exception) { loadErr = "Could not load Zerodha's contract list: ${e.message}" }
         loading = false
-    }
+    } }
     // The strikes actually listed for this expiry and option, the eleven nearest the index.
-    LaunchedEffect(underlying, expiry, right, spot) {
-        val e = expiry ?: run { listing = false; return@LaunchedEffect }
+    LaunchedEffect(underlying, expiry, right, spot) { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main.immediate) {
+        val e = expiry ?: run { listing = false; return@withContext }
         listing = true
         val all = try { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
             Broker.instruments().filter { it.name == underlying && it.expiry == e && it.right == right }.map { it.strike }.distinct().sorted()
@@ -1069,7 +1070,7 @@ internal fun ManualOrder(model: AppModel) {
         strikes = all
         if (strike.toDoubleOrNull() !in all) strike = s0?.let { x -> all.minByOrNull { kotlin.math.abs(it - x) } }?.let { com.optionslab.engine.fmtG(it) } ?: ""
         listing = false
-    }
+    } }
     LedgerCard(title = "Place an order") {
         ParamTokens("Underlying", listOf("NIFTY", "BANKNIFTY").map { it to (it == underlying) }) {
             val u = listOf("NIFTY", "BANKNIFTY")[it]

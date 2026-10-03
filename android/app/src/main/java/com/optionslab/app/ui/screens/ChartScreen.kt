@@ -67,7 +67,7 @@ private const val ORIGIN = "https://$HOST/"
 @Composable
 fun ChartScreen(model: AppModel, symbol: String, exchange: String, visible: Boolean = true, ask: Int = 0) {
     // Named apart from the WebView's own `settings`, which the pane's factory configures.
-    val appSettings by model.settings.collectAsState()
+    val appSettings by model.settings.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     ChartPane(symbol, exchange, visible, ask, live = appSettings.live, source = FeedChartSource,
         orderSheet = { pick, buy, limit, close -> OptionOrderSheet(model, pick, initialBuy = buy, initialLimit = limit, area = "Chart", onClose = close) },
         alertDialog = { sym, close -> ChartAlertDialog(sym, FeedChartSource, onSave = { alarm, said -> model.saveAlarm(alarm); model.say(said) }, onClose = close) },
@@ -177,7 +177,7 @@ internal fun ChartPane(
 
     // Live mode: every trade of the charted instrument comes from the Zerodha stream and moves the
     // last candle at once (the chart page's own 15 s poll stands back while ticks arrive).
-    val streamStatus by com.optionslab.app.data.KiteStream.status.collectAsState()
+    val streamStatus by com.optionslab.app.data.KiteStream.status.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     val streaming = live && streamStatus == com.optionslab.app.data.KiteStream.Status.LIVE
     var liveToken by remember { mutableStateOf<Long?>(null) }
     LaunchedEffect(current, streaming) {
@@ -185,7 +185,7 @@ internal fun ChartPane(
         com.optionslab.app.data.KiteStream.want("chart", listOfNotNull(liveToken))
     }
     DisposableEffect(Unit) { onDispose { com.optionslab.app.data.KiteStream.want("chart", emptyList()) } }
-    val tickVersion by com.optionslab.app.data.KiteStream.version.collectAsState()
+    val tickVersion by com.optionslab.app.data.KiteStream.version.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     LaunchedEffect(tickVersion, liveToken, visible, ready) {
         val t = liveToken?.let { com.optionslab.app.data.KiteStream.tick(it) } ?: return@LaunchedEffect
         // Pre-open and after-close ticks would draw candles the exchange never had.
@@ -213,7 +213,7 @@ internal fun ChartPane(
     }
 
     // Pine scripts changed in the app (code, shown on the chart, inputs): the page redraws them.
-    val pineRev by com.optionslab.app.data.PineScripts.chartRev.collectAsState()
+    val pineRev by com.optionslab.app.data.PineScripts.chartRev.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     LaunchedEffect(pineRev, ready, gen) {
         if (ready) holder[0]?.evaluateJavascript("window.__iraPine && window.__iraPine()", null)
     }
@@ -547,8 +547,8 @@ internal class Bridge(
 /** The index's option chain over the chart: tap a CE or PE price to chart that option. */
 @Composable
 private fun ChartChainDialog(model: AppModel, underlying: String, onClose: () -> Unit, onPick: (ChainPick) -> Unit) {
-    val snap by model.tools.collectAsState()
-    val source by model.toolsSource.collectAsState()
+    val snap by model.tools.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val source by model.toolsSource.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     LaunchedEffect(underlying) { model.loadTools(underlying) }
     ChartChainContent(underlying, snap, source, onRetry = { model.loadTools(underlying) }, onClose = onClose, onPick = onPick)
 }

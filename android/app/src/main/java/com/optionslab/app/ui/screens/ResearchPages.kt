@@ -55,7 +55,7 @@ import java.time.LocalDate
 
 @Composable
 fun IcPage(model: AppModel) {
-    val st by model.ic.collectAsState()
+    val st by model.ic.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     IcContent(st) { u, regime, complete -> model.runIc(u, regime, complete) }
 }
 
@@ -130,7 +130,7 @@ private fun IcRowCard(r: Ic.IcRow) {
 
 @Composable
 fun SignalPage(model: AppModel) {
-    val st by model.signal.collectAsState()
+    val st by model.signal.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     SignalContent(st, daysFor = { Store.barDays(it) }) { u, day, indicator, key, atr, length, lot -> model.runSignal(u, day, indicator, key, atr, length, lot) }
 }
 
@@ -236,7 +236,7 @@ private fun SignalChart(r: SignalResult) {
 
 @Composable
 fun SizingPage(model: AppModel) {
-    val s by model.settings.collectAsState()
+    val s by model.settings.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     SizingContent(s) { capital, survive ->
         model.update { it.copy(capital = capital, survive = survive) }
         model.say("Sizing saved for the trial.")

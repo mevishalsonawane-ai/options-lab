@@ -51,7 +51,7 @@ import kotlin.math.roundToInt
  */
 @Composable
 fun AlertBanner(modifier: Modifier = Modifier) {
-    val queue by Alerts.queue.collectAsState()
+    val queue by Alerts.queue.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     val fresh = queue.filter { System.currentTimeMillis() - it.at < 15_000 }
     // Old ones (posted while the app was closed) are dropped without showing.
     LaunchedEffect(queue) { queue.filter { it !in fresh }.forEach { Alerts.dismiss(it.id) } }
@@ -113,7 +113,7 @@ private fun Banner(a: Alerts.Alert) {
 /** The same alerts, inside a dialog (a dialog sits above the screen's own banner). */
 @Composable
 fun InlineAlerts() {
-    val queue by Alerts.queue.collectAsState()
+    val queue by Alerts.queue.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     val fresh = queue.filter { System.currentTimeMillis() - it.at < 15_000 }.takeLast(2)
     if (fresh.isEmpty()) return
     Column(Modifier.fillMaxWidth().padding(bottom = 10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {

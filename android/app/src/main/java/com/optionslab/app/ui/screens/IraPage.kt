@@ -97,8 +97,8 @@ private val EXAMPLES = listOf("What is BankNifty doing today?", "Nifty levels", 
 @Composable
 fun IraPage(orders: IraOrderPaths? = null) {
     val p = LocalPalette.current
-    val st by IraHub.state.collectAsState()
-    val voice by JarvisVoice.state.collectAsState()
+    val st by IraHub.state.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val voice by JarvisVoice.state.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     val scope = rememberCoroutineScope()
     var text by remember { mutableStateOf("") }
     var typed by remember { mutableIntStateOf(0) }
@@ -134,7 +134,7 @@ fun IraPage(orders: IraOrderPaths? = null) {
     if (!chat) {
         var quick by remember { mutableStateOf(false) }
         val ctx = androidx.compose.ui.platform.LocalContext.current
-        val writing by com.optionslab.app.ira.IraModel.state.collectAsState()
+        val writing by com.optionslab.app.ira.IraModel.state.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
         // Analysing in the background (reading the market, a backtest, the model writing) shows as thinking too.
         val orbMode = when {
             mode == 0 && text.isNotEmpty() -> 1
@@ -271,7 +271,7 @@ private fun Bubble(m: IraHub.Msg, orders: IraOrderPaths?) {
 /** Approve / Dismiss under a strategy Jarvis backtested, or what was decided. */
 @Composable
 private fun ProposalActions(id: Long) {
-    val st by IraHub.state.collectAsState()
+    val st by IraHub.state.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     val p = st.proposals.firstOrNull { it.id == id } ?: return
     val scope = rememberCoroutineScope()
     var open by remember { mutableStateOf(false) }
@@ -336,7 +336,7 @@ private fun OrderActions(o: com.optionslab.ira.OrderRequest, orders: IraOrderPat
                 val live = orders.live()
                 BrassButton(if (busy) "Looking up the contract…" else if (live) "Review (Live, Zerodha)" else "Review (paper)", enabled = !busy) {
                     busy = true; problem = null
-                    scope.launch {
+                    scope.launch(kotlinx.coroutines.Dispatchers.Main) {
                         val r = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                             IraOrders.prepare(o, live, orders.maxLots(), o.market?.let { m -> IraHub.state.value.snaps[m] }?.price)
                         }
@@ -360,7 +360,7 @@ private fun OrderActions(o: com.optionslab.ira.OrderRequest, orders: IraOrderPat
 internal fun VoiceSwitch() {
     val p = LocalPalette.current
     val ctx = androidx.compose.ui.platform.LocalContext.current
-    val vs by JarvisVoice.state.collectAsState()
+    val vs by JarvisVoice.state.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     var on by remember { mutableStateOf(JarvisVoice.wanted) }
     var note by remember { mutableStateOf<String?>(null) }
     fun begin() { JarvisVoice.wanted = true; on = true; note = null; JarvisVoice.start(ctx) }
@@ -484,7 +484,7 @@ internal fun ModelCard() {
     val p = LocalPalette.current
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val scope = rememberCoroutineScope()
-    val ms by com.optionslab.app.ira.IraModel.state.collectAsState()
+    val ms by com.optionslab.app.ira.IraModel.state.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     val M = com.optionslab.app.ira.IraModel
     var use by remember { mutableStateOf(M.enabled) }
     var confirmDelete by remember { mutableStateOf(false) }
@@ -607,7 +607,7 @@ private fun VoiceStyle() {
 /** Confirm / Cancel under something Jarvis will stop or close when the owner taps (one tap, no PIN: the owner's rule). */
 @Composable
 private fun ActionConfirm(id: Long) {
-    val st by IraHub.state.collectAsState()
+    val st by IraHub.state.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     val scope = rememberCoroutineScope()
     if (id !in st.pending) return
     Row(Modifier.padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -673,7 +673,7 @@ internal fun HowIraIsDoing(st: IraHub.State) {
 private fun VoiceTeach() {
     val p = LocalPalette.current
     val ctx = androidx.compose.ui.platform.LocalContext.current
-    val t by com.optionslab.app.ira.VoiceGuard.teach.collectAsState()
+    val t by com.optionslab.app.ira.VoiceGuard.teach.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     val scope = androidx.compose.runtime.rememberCoroutineScope()
     var enrolled by remember { mutableStateOf(com.optionslab.app.ira.VoiceGuard.enrolled) }
     LaunchedEffect(t) { enrolled = com.optionslab.app.ira.VoiceGuard.enrolled }
@@ -700,7 +700,7 @@ private fun VoiceTeach() {
 @Composable
 internal fun JarvisStudyCard() {
     val p = LocalPalette.current
-    val k by com.optionslab.app.ira.IraStudy.state.collectAsState()
+    val k by com.optionslab.app.ira.IraStudy.state.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     var open by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
     val lines = androidx.compose.runtime.remember(k) { com.optionslab.app.ira.IraStudy.lines() }
     LedgerCard(title = "Jarvis's study") {

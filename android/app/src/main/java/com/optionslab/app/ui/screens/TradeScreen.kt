@@ -64,11 +64,11 @@ private fun px(x: Double) = String.format(Locale.ENGLISH, "%,.2f", x)
 @Composable
 fun TradeScreen(model: AppModel) {
     val p = LocalPalette.current
-    val s by model.settings.collectAsState()
-    val b by model.broker.collectAsState()
-    val acct by model.account.collectAsState()
-    val pnl by model.pnlSeries.collectAsState()
-    val owners by model.orderOwners.collectAsState()
+    val s by model.settings.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val b by model.broker.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val acct by model.account.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val pnl by model.pnlSeries.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val owners by model.orderOwners.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     var book by rememberSaveable { mutableStateOf("positions") }
     var modifying by remember { mutableStateOf<Broker.OrderRow?>(null) }
     var cancelling by remember { mutableStateOf<Broker.OrderRow?>(null) }
@@ -76,9 +76,9 @@ fun TradeScreen(model: AppModel) {
     var protecting by remember { mutableStateOf<GttTarget?>(null) }
     var gttDelete by remember { mutableStateOf<Broker.GttRow?>(null) }
     var gttDeleteAuth by remember { mutableStateOf<Broker.GttRow?>(null) }
-    val gtts by model.gtts.collectAsState()
+    val gtts by model.gtts.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     var selling by remember { mutableStateOf<Broker.Holding?>(null) }
-    val paperSnap by model.paper.collectAsState()
+    val paperSnap by model.paper.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     var paperBook by rememberSaveable { mutableStateOf("positions") }
     var resetting by remember { mutableStateOf(false) }
 
@@ -202,7 +202,7 @@ fun TradeScreen(model: AppModel) {
 @Composable
 private fun PositionsCard(model: AppModel, a: Account, onProtect: (GttTarget) -> Unit) {
     val p = LocalPalette.current
-    val owners by model.orderOwners.collectAsState()
+    val owners by model.orderOwners.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     fun by(ps: Broker.Position) = com.optionslab.app.data.Origins.livePosition(owners, a.trades, a.orders, ps.symbol, ps.product, ps.qty)
     val open = a.positions.filter { it.open }
     val closed = a.positions.filter { !it.open }
@@ -474,7 +474,7 @@ private fun GttCard(list: List<Broker.GttRow>, onDelete: (Broker.GttRow) -> Unit
 @Composable
 private fun GttDialog(model: AppModel, t: GttTarget, onClose: () -> Unit) {
     val p = LocalPalette.current
-    val plan by model.gttPlan.collectAsState()
+    val plan by model.gttPlan.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     var stop by remember { mutableStateOf("") }
     var target by remember { mutableStateOf("") }
     var auth by remember { mutableStateOf(false) }

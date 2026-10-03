@@ -61,21 +61,21 @@ private val PAPER_WORKING = setOf("open", "trigger pending", "pending")
  */
 @Composable
 fun RowActionPopup(model: AppModel) {
-    val target by model.rowAction.collectAsState()
+    val target by model.rowAction.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     val t = target ?: return
     val p = LocalPalette.current
-    val owners by model.orderOwners.collectAsState()
-    val paper by model.paper.collectAsState()
-    val account by model.account.collectAsState()
+    val owners by model.orderOwners.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val paper by model.paper.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val account by model.account.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     // Home's live position rows (moved by Zerodha's stream), for a popup opened before the account was read.
-    val liveRows by model.livePositions.collectAsState()
+    val liveRows by model.livePositions.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     var modify by remember { mutableStateOf<Broker.OrderRow?>(null) }
     var cancelAuth by remember { mutableStateOf<Broker.OrderRow?>(null) }
     // Removing a Zerodha protection cancels its real stop / target orders: proved like a send.
     var removeAuth by remember { mutableStateOf<Long?>(null) }
     var protectFor by remember { mutableStateOf<ProtectTarget?>(null) }
     var journalFor by remember { mutableStateOf<Pair<String, String>?>(null) }
-    val protections by model.protections.collectAsState()
+    val protections by model.protections.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     LaunchedEffect(t) { model.refreshProtections() }
     // Live figures while the popup is open: the paper account is re-priced on its usual cadence (the Zerodha account
     // already moves with every tick of its price stream), and the rows below are read from the current books.

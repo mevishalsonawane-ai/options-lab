@@ -70,9 +70,9 @@ private fun p2(x: Double?) = x?.let { String.format(Locale.ENGLISH, "%,.2f", it)
  */
 @Composable
 fun StrategiesScreen(model: AppModel) {
-    val s by model.settings.collectAsState()
-    val list by model.strategies.collectAsState()
-    val log by model.strategyLog.collectAsState()
+    val s by model.settings.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val list by model.strategies.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val log by model.strategyLog.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
 
     com.optionslab.app.ui.PollWhileStarted {
         model.refreshStrategies()

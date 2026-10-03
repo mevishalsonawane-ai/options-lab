@@ -37,8 +37,8 @@ import com.optionslab.engine.Monitor
 
 @Composable
 fun HealthScreen(model: AppModel) {
-    val s by model.settings.collectAsState()
-    val h by model.health.collectAsState()
+    val s by model.settings.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val h by model.health.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     var source by remember { mutableStateOf((h as? Load.Done<com.optionslab.app.ui.HealthResult>)?.value?.source ?: "backtest") }
     val pick = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> uri?.let { source = "imported"; model.importLedger(it) } }
 

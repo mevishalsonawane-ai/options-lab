@@ -121,11 +121,11 @@ private fun GoldChartTab() {
 @Composable
 private fun GoldHome() {
     val p = LocalPalette.current
-    val b by GoldPaper.book.collectAsState()
-    val chart by GoldPaper.chart.collectAsState()
-    val tb by com.optionslab.app.data.GoldTrendPaper.book.collectAsState()
-    val db by com.optionslab.app.data.GoldDipPaper.book.collectAsState()
-    val sb by com.optionslab.app.data.GoldTasPaper.book.collectAsState()
+    val b by GoldPaper.book.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val chart by GoldPaper.chart.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val tb by com.optionslab.app.data.GoldTrendPaper.book.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val db by com.optionslab.app.data.GoldDipPaper.book.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val sb by com.optionslab.app.data.GoldTasPaper.book.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     val scope = rememberCoroutineScope()
     val ctx = androidx.compose.ui.platform.LocalContext.current.applicationContext
     val open = b.open(b.price)
@@ -253,10 +253,10 @@ private fun GoldHome() {
 @Composable
 private fun GoldTrades() {
     val p = LocalPalette.current
-    val book by GoldPaper.book.collectAsState()
-    val tb by com.optionslab.app.data.GoldTrendPaper.book.collectAsState()
-    val db by com.optionslab.app.data.GoldDipPaper.book.collectAsState()
-    val sb by com.optionslab.app.data.GoldTasPaper.book.collectAsState()
+    val book by GoldPaper.book.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val tb by com.optionslab.app.data.GoldTrendPaper.book.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val db by com.optionslab.app.data.GoldDipPaper.book.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val sb by com.optionslab.app.data.GoldTasPaper.book.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     val trades = remember(book.trades, tb.trades, db.trades, sb.trades) { (book.trades + tb.trades + db.trades + sb.trades).sortedBy { it.exitTime } }
     val b = book.copy(trades = trades)
     val today = GoldPaper.now().toLocalDate()
@@ -311,8 +311,8 @@ private fun GoldTrades() {
 @Composable
 private fun GoldSettings(model: AppModel) {
     val p = LocalPalette.current
-    val b by GoldPaper.book.collectAsState()
-    val s by model.settings.collectAsState()
+    val b by GoldPaper.book.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val s by model.settings.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     val scope = rememberCoroutineScope()
     var resetAsk by remember { mutableStateOf<Double?>(null) }
     var security by rememberSaveable { mutableStateOf(false) }
@@ -389,7 +389,7 @@ internal fun GoldBackgroundCheck(compact: Boolean) {
     val notif = remember(n) { com.optionslab.app.work.Notifier.canPost(context) }
     val exact = remember(n) { com.optionslab.app.work.Jobs.canExact(context) }
     val battery = remember(n) { BatteryCheck.unrestricted(context) }
-    val service by com.optionslab.app.work.GoldService.running.collectAsState()
+    val service by com.optionslab.app.work.GoldService.running.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     if (!compact) LedgerLine("Background service", if (service) "running" else if (com.optionslab.app.work.GoldService.needed()) "starting" else "off (nothing armed, or gold closed)",
         if (service) p.verdigris else null)
     if (compact && notif && exact && battery) return

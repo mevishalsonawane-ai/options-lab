@@ -128,11 +128,11 @@ enum class Tab(val label: String, val icon: ImageVector) {
 fun Root(activity: MainActivity, splash: Boolean = false) {
     val model: AppModel = viewModel()
     // After an erase the view model outlives the data: reload it so the gates and the mode start clean.
-    val wiped by wipes.collectAsState()
+    val wiped by wipes.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     LaunchedEffect(wiped) { if (wiped > 0) model.resetAfterWipe() }
-    val settings by model.settings.collectAsState()
-    val locked by SessionLock.locked.collectAsState()
-    val findings by model.integrity.collectAsState()
+    val settings by model.settings.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val locked by SessionLock.locked.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val findings by model.integrity.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
 
     IraAlgoTheme(settings.theme) {
         // Status and navigation bar icons follow the app's theme, not only the phone's.
@@ -164,7 +164,7 @@ fun Root(activity: MainActivity, splash: Boolean = false) {
             RefusedScreen(findings.filter { it.severity == Integrity.Severity.DANGER }.map { "${it.name}: ${it.detail}" }) { activity.finishAndRemoveTask() }
             return@IraAlgoTheme
         }
-        val brokerNow by model.broker.collectAsState()
+        val brokerNow by model.broker.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
         // The idle lock: checked every few seconds while the session is open.
         LaunchedEffect(locked) { while (!locked) { delay(5_000); SessionLock.checkIdle() } }
         // Battery: checked on every start; the app stays closed until it is unrestricted.
@@ -365,8 +365,8 @@ val wipes = kotlinx.coroutines.flow.MutableStateFlow(0)
 @Composable
 private fun Main(model: AppModel) {
     val p = LocalPalette.current
-    val settings by model.settings.collectAsState()
-    val requested by MainActivity.tabRequests.collectAsState()
+    val settings by model.settings.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val requested by MainActivity.tabRequests.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     var tab by rememberSaveable { mutableStateOf(Tab.ALMANAC) }
     var cabinetPage by rememberSaveable { mutableStateOf<String?>(null) }
     var labPage by rememberSaveable { mutableStateOf("trials") }
@@ -377,10 +377,10 @@ private fun Main(model: AppModel) {
     var chartNonce by remember { mutableStateOf(0) }
     var chartOpened by remember { mutableStateOf(false) }
     LaunchedEffect(tab) { if (tab == Tab.CHART) chartOpened = true }
-    val message by model.message.collectAsState()
-    val kiteLogin by model.showKiteLogin.collectAsState()
+    val message by model.message.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val kiteLogin by model.showKiteLogin.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     // Trading (the Ticket and Trade tabs, live or paper) appears only once a Zerodha account is linked.
-    val broker by model.broker.collectAsState()
+    val broker by model.broker.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     val linked = broker.linked
     // Paper trading needs no Zerodha account, so Trade is always there; live needs one linked.
     val tabs = Tab.entries
@@ -397,7 +397,7 @@ private fun Main(model: AppModel) {
         MainActivity.tabRequests.value = null
     }
     // "Close…" on a Zerodha position's notification: that position's close popup, over the Trade tab.
-    val closeAsk by MainActivity.closeRequests.collectAsState()
+    val closeAsk by MainActivity.closeRequests.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     LaunchedEffect(closeAsk) {
         val sym = closeAsk ?: return@LaunchedEffect
         if (linked) { tab = Tab.TRADE; tradePage = "account"; model.openLiveClose(sym) }
@@ -471,7 +471,7 @@ private fun Main(model: AppModel) {
         // Order reviews open over any page, wherever the order was asked for.
         // First use only: a short guide the first time the app opens after Zerodha is linked, never again.
         var tour by remember { mutableStateOf(!SecurePrefs.getBoolean(com.optionslab.app.ui.screens.GETTING_STARTED, false)) }
-        val again by com.optionslab.app.ui.screens.showGettingStarted.collectAsState()
+        val again by com.optionslab.app.ui.screens.showGettingStarted.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
         if (tour || again) com.optionslab.app.ui.screens.GettingStarted(onGo = { dest ->
             SecurePrefs.put(com.optionslab.app.ui.screens.GETTING_STARTED, true); tour = false
             com.optionslab.app.ui.screens.showGettingStarted.value = false
@@ -482,7 +482,7 @@ private fun Main(model: AppModel) {
         // Tapping any order, position or trade opens its close / cancel popup.
         com.optionslab.app.ui.screens.RowActionPopup(model)
         if (kiteLogin) com.optionslab.app.ui.screens.KiteLoginPage(model)
-        val askPin by model.askLoginPin.collectAsState()
+        val askPin by model.askLoginPin.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
         if (askPin) com.optionslab.app.ui.screens.LoginPinDialog(model)
         // A new day (or a session Zerodha ended): the login popup opens by itself when the app opens or comes back.
         val owner = androidx.lifecycle.compose.LocalLifecycleOwner.current
@@ -600,9 +600,9 @@ const val SKIP_ZERODHA_GATE = false
 /** Until a Zerodha account is linked the app shows only this: no tabs, no close. */
 @Composable
 private fun ConnectGate(model: AppModel) {
-    val message by model.message.collectAsState()
-    val kiteLogin by model.showKiteLogin.collectAsState()
-    val askPin by model.askLoginPin.collectAsState()
+    val message by model.message.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val kiteLogin by model.showKiteLogin.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val askPin by model.askLoginPin.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     LaunchedEffect(Unit) { model.refreshBroker() }
     Box(Modifier.fillMaxSize()) {
         com.optionslab.app.ui.screens.ConnectZerodhaScreen(model)

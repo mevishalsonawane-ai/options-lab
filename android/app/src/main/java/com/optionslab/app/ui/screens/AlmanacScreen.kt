@@ -67,13 +67,13 @@ private data class Money(val pnlToday: Double?, val unused: Double?, val used: D
  */
 @Composable
 fun AlmanacScreen(model: AppModel, onGo: (String) -> Unit) {
-    val s by model.settings.collectAsState()
-    val quotes by model.quotes.collectAsState()
-    val note by model.quoteNote.collectAsState()
-    val daily by model.bankNiftyDaily.collectAsState()
-    val account by model.account.collectAsState()
-    val paper by model.paper.collectAsState()
-    val owners by model.orderOwners.collectAsState()
+    val s by model.settings.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val quotes by model.quotes.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val note by model.quoteNote.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val daily by model.bankNiftyDaily.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val account by model.account.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val paper by model.paper.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val owners by model.orderOwners.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
 
     // Prices poll only while Home is on screen and the app is in front.
     com.optionslab.app.ui.PollWhileStarted {

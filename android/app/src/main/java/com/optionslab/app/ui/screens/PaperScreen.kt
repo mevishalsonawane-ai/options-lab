@@ -121,25 +121,25 @@ private fun PaperOrderForm(model: AppModel) {
     var price by rememberSaveable { mutableStateOf("") }
     var trigger by rememberSaveable { mutableStateOf("") }
     var open by rememberSaveable { mutableStateOf(false) }
-    LaunchedEffect(underlying) {
+    LaunchedEffect(underlying) { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main.immediate) {
         expiries = model.paperExpiries(underlying)
         // Keep the expiry already picked when it is still listed.
         if (expiry == null || expiry !in expiries) expiryIso = expiries.firstOrNull()?.toString()
-    }
+    } }
     // Only listed strikes can be chosen: the ones around the index, nearest first in the middle.
     var listed by remember { mutableStateOf<List<Double>>(emptyList()) }
     var spot by remember { mutableStateOf<Double?>(null) }
     // Which underlying and expiry [listed] belongs to: nothing can be placed until it matches the form.
     var listedFor by remember { mutableStateOf<Pair<String, LocalDate>?>(null) }
-    LaunchedEffect(underlying, expiry) {
-        val e = expiry ?: return@LaunchedEffect
+    LaunchedEffect(underlying, expiry) { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main.immediate) {
+        val e = expiry ?: return@withContext
         val (ks, sp) = model.paperStrikes(underlying, e)
         listed = ks; spot = sp; listedFor = underlying to e
         val atm = sp?.let { x -> ks.minByOrNull { kotlin.math.abs(it - x) } }
         if (strike.toDoubleOrNull() !in ks) strike = atm?.let { com.optionslab.engine.fmtG(it) } ?: ""
-    }
+    } }
     // One tap, one order: the button stays off until the paper book reloads after it (or 8 s pass).
-    val paperNow by model.paper.collectAsState()
+    val paperNow by model.paper.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     var placing by remember { mutableStateOf<Any?>(null) }
     LaunchedEffect(placing, paperNow) {
         val sent = placing ?: return@LaunchedEffect
@@ -191,7 +191,7 @@ private fun PaperOrderForm(model: AppModel) {
 private fun PaperPositions(model: AppModel, v: Paper.Snapshot) {
     val p = LocalPalette.current
     val book = v.positions
-    val owners by model.orderOwners.collectAsState()
+    val owners by model.orderOwners.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     LedgerCard(title = "Paper positions") {
         Text("TODAY AFTER CHARGES", style = Type.label.copy(color = p.inkSoft))
         // The same figure as Home's "P&L today", the calendar and the loss limits (Paper.Snapshot.dayPnl).
@@ -223,7 +223,7 @@ private fun PaperPositions(model: AppModel, v: Paper.Snapshot) {
 private fun PaperOrders(model: AppModel, v: Paper.Snapshot) {
     val p = LocalPalette.current
     var editing by remember { mutableStateOf<com.optionslab.engine.sandbox.OrderRow?>(null) }
-    val owners by model.orderOwners.collectAsState()
+    val owners by model.orderOwners.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     val st = v.orders.statistics
     // Each filled order's P&L, marked at its contract's current price (the positions carry the live LTP).
     val ltp = v.positions.positions.associate { it.symbol to it.ltp }
@@ -286,7 +286,7 @@ private fun PaperOrders(model: AppModel, v: Paper.Snapshot) {
 @Composable
 private fun PaperTrades(model: AppModel, v: Paper.Snapshot) {
     val p = LocalPalette.current
-    val owners by model.orderOwners.collectAsState()
+    val owners by model.orderOwners.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     val ltp = v.positions.positions.associate { it.symbol to it.ltp }
     LedgerCard(title = "Paper trade book") {
         if (v.trades.isEmpty()) Note("No paper trades this session.")
