@@ -149,7 +149,8 @@ fun IraPage(orders: IraOrderPaths? = null) {
             // Long-press the globe: the quick commands.
             if (quick) QuickCommands(onDismiss = { quick = false }) { q, showChat ->
                 quick = false
-                IraHub.ask(q)
+                // Starting or stopping everything from a menu tap always waits for Confirm (a mis-tap does nothing).
+                if (showChat) IraHub.askConfirmed(q) else IraHub.ask(q)
                 scope.launch { com.optionslab.app.ira.JarvisSpeaker.replyTo(ctx, q) }
                 if (showChat) chat = true
             }
@@ -751,9 +752,10 @@ private fun Orb(vol: Float, trend: Float, mode: Int, onTap: (() -> Unit)? = null
     var view by remember { mutableStateOf<OrbView?>(null) }
     AndroidView(factory = { ctx -> OrbView(ctx).also { view = it } }, modifier = Modifier.fillMaxSize()) { v ->
         v.vol = vol; v.trend = trend; v.mode = mode; v.onTap = onTap; v.onLongPress = onLongPress
-        // The trade check's last word tints the globe amber (careful) or deeper amber (don't trade).
         v.caution = IraHub.caution()
     }
+    // The trade check's last word tints the globe amber (careful) or deeper amber (don't trade): read every few seconds.
+    LaunchedEffect(view) { while (true) { view?.caution = IraHub.caution(); kotlinx.coroutines.delay(3_000) } }
     DisposableEffect(owner, view) {
         val v = view
         val obs = LifecycleEventObserver { _, e ->
@@ -794,6 +796,32 @@ fun JarvisSettingsPage() {
     com.optionslab.app.ui.Page {
         item { PageTitle("Jarvis settings", "Voice and the on-device AI model. Nothing you say or type leaves the phone.") }
         item { VoiceSwitch() }
+        item { AutomationsCard() }
         item { ModelCard() }
+    }
+}
+
+/**
+ * Jarvis's health (the owner's wish, 2026-10-03): everything it does by itself, each with its own switch and when it
+ * last acted - one place to see and stop any of it.
+ */
+@Composable
+private fun AutomationsCard() {
+    val p = LocalPalette.current
+    LedgerCard(title = "What Jarvis does by itself") {
+        Note("Each runs on its own while JarvisAlgo watches the market. Nothing here places a trade without asking you; the trailing stop only moves your stop up.")
+        com.optionslab.app.ira.Automations.Auto.entries.forEach { a ->
+            var on by remember { mutableStateOf(com.optionslab.app.ira.Automations.on(a)) }
+            val last = remember(on) { com.optionslab.app.ira.Automations.last(a) }
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp)) {
+                Column(Modifier.weight(1f)) {
+                    Text(a.label, style = Type.label.copy(color = p.ink, fontSize = 14.sp))
+                    Text(a.what, style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp))
+                    Text(last?.let { (t, w) -> "Last: ${t.toLocalDate()} ${"%02d:%02d".format(t.hour, t.minute)} - $w" } ?: "Has not acted yet.",
+                        style = Type.label.copy(color = p.inkSoft, fontSize = 11.sp))
+                }
+                androidx.compose.material3.Switch(checked = on, onCheckedChange = { v -> on = v; com.optionslab.app.ira.Automations.set(a, v) })
+            }
+        }
     }
 }

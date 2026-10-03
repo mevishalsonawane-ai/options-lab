@@ -130,7 +130,7 @@ object Backup {
                 c.updateAAD(MAGIC)
                 MAGIC + salt + iv + c.doFinal(body)
             } finally { body.fill(0) }
-        }
+        }.also { runCatching { SecurePrefs.put("backup.last", Market.today().toString()) } }   // for the backup reminder
     }
 
     private fun snapshot(ctx: Context): ByteArray {

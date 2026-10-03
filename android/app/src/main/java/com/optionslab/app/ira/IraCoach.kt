@@ -18,8 +18,8 @@ internal object IraCoach {
 
     /** The automatic trailing stop (on by default: the owner asked for it to be automatic). */
     var autoTrail: Boolean
-        get() = runCatching { com.optionslab.app.security.SecurePrefs.getBoolean("jarvis.autotrail", true) }.getOrDefault(true)
-        set(v) { runCatching { com.optionslab.app.security.SecurePrefs.put("jarvis.autotrail", v) } }
+        get() = Automations.on(Automations.Auto.TRAIL)
+        set(v) = Automations.set(Automations.Auto.TRAIL, v)
 
     /** Positions whose exits belong to a bot or to Jarvis's own trades. */
     suspend fun botSymbols(): Set<String> {
@@ -35,14 +35,20 @@ internal object IraCoach {
      * Every market-watch pass: each of the owner's own bought options with a stop (and no trail of its own) has its
      * stop moved up by [com.optionslab.ira.AutoTrail] - to the price paid once up 20%, then 15% under the best price.
      */
+    /** A move that failed, per protection: (the stop tried, when) - not tried again for [RETRY_MINUTES]. */
+    private val failedTrail = HashMap<Long, Pair<Double, LocalDateTime>>()
+    private const val RETRY_MINUTES = 15L
+
     suspend fun trailWatch() {
-        if (!com.optionslab.app.BuildConfig.JARVIS || !autoTrail || !com.optionslab.app.data.Market.isOpen()) return
+        if (!com.optionslab.app.BuildConfig.JARVIS || !Automations.on(Automations.Auto.TRAIL) || !com.optionslab.app.data.Market.isOpen()) return
         val items = runCatching { com.optionslab.app.data.Protections.active() }.getOrNull() ?: return
-        val mine = items.filter { it.qty > 0 && it.stop != null && it.trail == null }
+        // Only the owner's own bought options with a resting stop, no trail of their own, not being removed.
+        val mine = items.filter { it.qty > 0 && it.stop != null && it.trail == null && it.stopOrderId != null && it.note != "removing" }
         if (mine.isEmpty()) return
         val bots = botSymbols()
         val paper = runCatching { Paper.snapshot().positions.positions.filter { it.quantity > 0 }.associateBy { it.symbol } }.getOrDefault(emptyMap())
         val live = if (mine.any { it.live } && Broker.loggedIn) runCatching { Broker.positionBook().net.filter { it.qty > 0 }.associateBy { it.symbol } }.getOrDefault(emptyMap()) else emptyMap()
+        val now = LocalDateTime.now(IST)
         for (it in mine) {
             if (it.symbol in bots) continue
             val (avg, ltp) = if (it.live) live[it.symbol]?.let { p -> p.avg to p.last } ?: continue
@@ -50,12 +56,21 @@ internal object IraCoach {
             val peak = maxOf(it.best, ltp)
             val stop = com.optionslab.ira.AutoTrail.next(avg, peak, it.stop) ?: continue
             if (ltp <= stop) continue                              // a stop must sit under the price
-            val r = if (it.live) com.optionslab.app.data.Protections.protectLive(it.symbol, it.exchange, it.product, it.qty, ltp, stop, null, it.target)
-                else com.optionslab.app.data.Protections.protectPaper(it.symbol, it.product, it.qty, ltp, stop, null, it.target)
-            val said = if (r.startsWith("Protected")) com.optionslab.ira.AutoTrail.say(it.symbol, stop, avg) else "Could not move the stop on ${it.symbol}: $r"
-            IraHub.note(said)
-            IraActivity.add(said)
-            if (!r.startsWith("Protected")) IraHub.appContext()?.let { c -> JarvisPopup.show(c, "Boss, check the stop on ${it.symbol}", said) }
+            val failed = synchronized(failedTrail) { failedTrail[it.id] }
+            if (failed != null && failed.second.plusMinutes(RETRY_MINUTES).isAfter(now)) continue
+            // Moved in place: if the broker refuses, the old stop stays exactly where it was.
+            val why = com.optionslab.app.data.Protections.moveStop(it.id, stop)
+            if (why == null) {
+                synchronized(failedTrail) { failedTrail.remove(it.id) }
+                val said = com.optionslab.ira.AutoTrail.say(it.symbol, stop, avg)
+                IraHub.note(said); IraActivity.add(said); Automations.acted(Automations.Auto.TRAIL, said)
+            } else {
+                synchronized(failedTrail) { failedTrail[it.id] = stop to now }
+                fun px(x: Double?) = x?.let { v -> "%.2f".format(java.util.Locale.ENGLISH, v) } ?: "?"
+                val said = "Could not trail the stop on ${it.symbol} up to ${px(stop)}: $why Your stop stays at ${px(it.stop)}."
+                IraHub.note(said); IraActivity.add(said)
+                IraHub.appContext()?.let { c -> JarvisPopup.show(c, "Boss, check the stop on ${it.symbol}", said) }
+            }
         }
     }
 
@@ -63,23 +78,25 @@ internal object IraCoach {
 
     /** More than 3 of the owner's own buys in 30 minutes: a word, at most once every 30 minutes. */
     suspend fun overtradeWatch() {
-        if (!com.optionslab.app.BuildConfig.JARVIS || !com.optionslab.app.data.Market.isOpen()) return
+        if (!com.optionslab.app.BuildConfig.JARVIS || !Automations.on(Automations.Auto.OVERTRADE) || !com.optionslab.app.data.Market.isOpen()) return
         val now = LocalDateTime.now(IST)
         if (overtradeToldAt?.isAfter(now.minusMinutes(com.optionslab.ira.Overtrade.WINDOW_MINUTES)) == true) return
         val today = com.optionslab.app.data.Market.today().toString()
         val owners = runCatching { com.optionslab.app.data.Strategies.owners() }.getOrDefault(emptyMap())
-        fun manual(owner: String?) = owner == null || owner.startsWith(com.optionslab.app.data.Origins.MANUAL) && !owner.contains("Jarvis")
+        fun manual(owner: String?) = owner == null || owner == com.optionslab.app.data.Origins.OUTSIDE ||
+            owner.startsWith(com.optionslab.app.data.Origins.MANUAL) && !owner.contains("Jarvis")
         fun at(ts: String) = runCatching { LocalDateTime.parse(ts.take(19).replace(' ', 'T')) }.getOrNull()
         val times = ArrayList<LocalDateTime>()
         runCatching { Paper.snapshot().orders.orders.filter { it.timestamp.startsWith(today) && it.status.equals("COMPLETE", true) && it.action.equals("BUY", true) &&
             manual(owners["paper:${it.orderId}"] ?: it.strategy.takeIf { s -> s.isNotBlank() }) }.mapNotNull { at(it.timestamp) }.forEach { times += it } }
         if (Broker.loggedIn) runCatching { Broker.orders().filter { it.placedAt.startsWith(today) && it.status.equals("COMPLETE", true) && it.side.equals("BUY", true) &&
-            manual(owners[it.id] ?: it.tag.takeIf { t -> t.isNotBlank() }) }.mapNotNull { at(it.placedAt) }.forEach { times += it } }
+            manual(owners["kite:${it.id}"] ?: owners[it.id] ?: com.optionslab.app.data.Origins.fromTag(it.tag)) }.mapNotNull { at(it.placedAt) }.forEach { times += it } }
         val n = com.optionslab.ira.Overtrade.count(times, now) ?: return
         overtradeToldAt = now
         val text = com.optionslab.ira.Overtrade.say(n)
         IraHub.appContext()?.let { JarvisPopup.show(it, "Boss, slow down?", text) }
         IraHub.note(text); JarvisVoice.announce(text); IraActivity.add("Warned: $n trades in 30 minutes.")
+        Automations.acted(Automations.Auto.OVERTRADE, "Warned: $n trades in 30 minutes.")
     }
 
     /** The evening's check of the week: losses outgrowing wins. */
@@ -105,7 +122,7 @@ internal object IraCoach {
 
     /** Just after the open (09:16 to 09:30), once a day: BankNifty's gap and how the arms did on such days. */
     suspend fun gapWatch() {
-        if (!com.optionslab.app.BuildConfig.JARVIS) return
+        if (!com.optionslab.app.BuildConfig.JARVIS || !Automations.on(Automations.Auto.GAP)) return
         val m = com.optionslab.app.data.Market
         val minute = m.minuteNow()
         if (!m.isTradingDay(m.today()) || minute < 9 * 60 + 16 || minute > 9 * 60 + 30) return
@@ -118,6 +135,7 @@ internal object IraCoach {
         val gap = (snap.open - prev) / prev * 100
         val text = com.optionslab.ira.GapPlan.say(com.optionslab.ira.Market.BANKNIFTY, gap, gapRecord(com.optionslab.ira.GapPlan.of(gap)))
         IraHub.note(com.optionslab.ira.Address.boss(text)); JarvisVoice.announce(com.optionslab.ira.Address.boss(text))
+        Automations.acted(Automations.Auto.GAP, text)
     }
 
     private val walls = HashMap<String, com.optionslab.ira.OiShift.Walls>()
@@ -125,7 +143,7 @@ internal object IraCoach {
 
     /** Every 15 minutes in market hours: the biggest call and put open interest strikes; a move is told once a day. */
     suspend fun oiWatch() {
-        if (!com.optionslab.app.BuildConfig.JARVIS || !com.optionslab.app.data.Market.isOpen()) return
+        if (!com.optionslab.app.BuildConfig.JARVIS || !Automations.on(Automations.Auto.OI) || !com.optionslab.app.data.Market.isOpen()) return
         val day = com.optionslab.app.data.Market.today().toString()
         for (u in listOf("NIFTY", "BANKNIFTY")) runCatching {
             val c = kotlinx.coroutines.withTimeoutOrNull(25_000) { IraAccount.chain(u) } ?: return@runCatching
@@ -136,7 +154,7 @@ internal object IraCoach {
             com.optionslab.ira.OiShift.say(u, before, now).forEach { line ->
                 if (synchronized(wallTold) { wallTold.add("$day|$line") }) {
                     IraHub.appContext()?.let { JarvisPopup.show(it, "$u: open interest moved", line) }
-                    IraHub.note(line); JarvisVoice.announce(line)
+                    IraHub.note(line); JarvisVoice.announce(line); Automations.acted(Automations.Auto.OI, line)
                 }
             }
         }
@@ -182,12 +200,15 @@ internal object IraCoach {
     suspend fun daySummary(scorecard: String?) {
         if (!com.optionslab.app.BuildConfig.JARVIS) return
         val live = AppSettings.load().live
+        if (!Automations.on(Automations.Auto.SUMMARY)) return
+        val zerodha = live && Broker.loggedIn
         val pnl = runCatching {
-            if (live && Broker.loggedIn) Broker.positionBook().net.sumOf { it.pnl } else Paper.snapshot().dayPnl
-        }.getOrNull()?.let { "${if (live) "Zerodha" else "Paper"} today: ${AppFacts.rs(it)}." }
+            if (zerodha) Broker.positionBook().net.sumOf { it.pnl } else Paper.snapshot().dayPnl
+        }.getOrNull()?.let { "${if (zerodha) "Zerodha" else "Paper"} today: ${AppFacts.rs(it)}." }
         val events = runCatching { IraEvents.upcoming(2).map { com.optionslab.ira.Events.line(it, com.optionslab.app.data.Market.today()) } }.getOrDefault(emptyList())
         val text = com.optionslab.ira.DaySummary.say(pnl, scorecard, events)
         IraHub.note(text)
         JarvisVoice.announce(com.optionslab.ira.Wake.spoken(text, 5))
+        Automations.acted(Automations.Auto.SUMMARY, text)
     }
 }

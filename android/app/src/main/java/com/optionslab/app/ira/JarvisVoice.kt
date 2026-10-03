@@ -97,7 +97,7 @@ class JarvisVoice : Service() {
         /** Pauses listening while the owner teaches Jarvis their voice (the microphone is needed for that). */
         fun hold(on: Boolean) {
             val v = instance?.get() ?: return
-            v.main.post { v.held = on; if (on) { runCatching { v.rec?.cancel() }; v.listening = false; v.endTap() } else v.again(300) }
+            v.main.post { v.held = on; v.readyAt = SystemClock.elapsedRealtime(); if (on) { runCatching { v.rec?.cancel() }; v.listening = false; v.endTap() } else v.again(300) }
         }
 
         /** [id] was answered elsewhere (a button, the Ira screen) or lapsed: stop waiting for it. */
@@ -265,12 +265,13 @@ class JarvisVoice : Service() {
             if (!listening && !speaking && !held && _state.value.mode != Mode.THINKING) again()
             // Self-healing: no listening turn for 3 minutes (the phone took the microphone, the recognizer died):
             // a new recognizer, noted in the activity log.
-            if (com.optionslab.ira.VoiceHealth.stuck(now, readyAt, speaking, !held && _state.value.mode != Mode.THINKING) && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (Automations.on(Automations.Auto.SELFHEAL) && com.optionslab.ira.VoiceHealth.stuck(now, readyAt, speaking, !held && _state.value.mode != Mode.THINKING) && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 readyAt = now
                 runCatching { rec?.destroy() }
                 rec = runCatching { SpeechRecognizer.createOnDeviceSpeechRecognizer(this@JarvisVoice).also { it.setRecognitionListener(listener) } }.getOrNull()
                 listening = false; endTap()
                 IraActivity.add("Restarted listening (the microphone had gone quiet).")
+                Automations.acted(Automations.Auto.SELFHEAL, "Restarted listening.")
                 again()
             }
             main.postDelayed(this, 5_000)
@@ -494,7 +495,8 @@ class JarvisVoice : Service() {
     private fun interrupt() {
         if (!speaking) return
         speaking = false
-        stoppedByUs = true
+        // The utterance is forgotten: its onStop is then not ours to judge, and a reply still being prepared (Hindi) is not said.
+        utterance = null
         runCatching { tts?.stop() }
         awakeUntil = SystemClock.elapsedRealtime() + AWAKE_MS
         _state.value = VoiceState(Mode.AWAKE)
@@ -512,6 +514,8 @@ class JarvisVoice : Service() {
         if (id != null && SystemClock.elapsedRealtime() < askingUntil) {
             val yes = alternatives.firstOrNull()?.let { Wake.yesNo(it) }
             if (yes != null) {
+                // A locked phone: a "no" still cancels, a "yes" never acts (trades and commands wait for the unlock).
+                if (yes && locked()) { say(com.optionslab.ira.LockRule.refuse(true, true, false, false)!!, "question"); return }
                 // Only Boss's voice approves a trade; a no from anyone is still a no.
                 if (yes && askingNeedsBoss && !boss()) { say(VoiceGuard.blocked() ?: "Boss, that didn't sound like you, so I won't place it. Say yes again, or tap Approve.", "question"); return }
                 asking = null
@@ -608,7 +612,12 @@ class JarvisVoice : Service() {
     }
 
     /** Stops any speech now (muted). */
-    fun hush() { main.post { runCatching { tts?.stop() }; if (speaking) afterSpeech(null) } }
+    fun hush() { main.post {
+        val id = utterance?.substringBefore('#')
+        utterance = null                                 // nothing still being prepared is said, and its onStop is ignored
+        runCatching { tts?.stop() }
+        if (speaking) afterSpeech(id)
+    } }
 
     /**
      * Speaks, still listening - but only for "Jarvis" while it talks, so the owner can cut in and it never answers
@@ -642,7 +651,7 @@ class JarvisVoice : Service() {
             scope.launch {
                 val h = withContext(Dispatchers.Default) { inHindi(text) }
                 val hv = if (h != null) hindiVoice(t) else null
-                if (utterance != u) return@launch
+                if (utterance != u || !speaking || muted) return@launch
                 if (h != null && hv != null) { t.voice = hv; synchronized(applied) { applied.remove(t) } }
                 if (t.speak(spokenName(if (h != null && hv != null) h else text), TextToSpeech.QUEUE_FLUSH, null, u) != TextToSpeech.SUCCESS) { speaking = false; afterSpeech(id) }
             }

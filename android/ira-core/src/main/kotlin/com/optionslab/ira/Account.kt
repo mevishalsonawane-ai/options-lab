@@ -14,6 +14,7 @@ enum class Section(val title: String) {
     HOWTO("Where to find it"), EVENTS("Events"), CHAIN("Option chain"), FLOWS("Institutional flows"), REVIEW("Review"),
     STUDY("Jarvis's study"), ACTIVITY("What I did"), READY("Ready for live"), REGIME("Market regime"), LOSSES("Why trades lost"),
     WHATIF("What if"), CHANGES("Settings changes"), EXPLAIN_POS("Your positions explained"),
+    SEARCH("Your trades found"), TIMEOFDAY("Your time of day"), REASONS("Your reasons"),
 }
 
 /** Fact lines per section, each a finished sentence; [mode] "Paper" or "Live". */
@@ -113,7 +114,9 @@ object AppAnswers {
         Section.FLOWS to Regex(" (fii|fiis|dii|diis|fpi|fpis|institutional|institutions|flows|foreign funds|mutual funds) "),
         Section.CHAIN to Regex(" (oi|open interest|pcr|put call|put-call|max pain|option chain|chain|iv|implied volatility|skew|call writing|put writing|writers) "),
         Section.STUDY to Regex(" (what did you study|your study|you studied|you learn|you learned|history say|history says|history shows|what usually happens|usually happens|overnight|last night|night news|how will the market|how the market will|will the market|market will|how markets? works?|edge|edges) "),
-        Section.EXPLAIN_POS to Regex(" (explain|walk me through|break down|tell me about|how is) (my |the )?([a-z]+ )?(position|positions|trade|trades)( now)? "),
+        Section.TIMEOFDAY to Regex(" (best time|worst time|time of day|which hour|what time do i (lose|make|win)|when do i (lose|make|win)) "),
+        Section.REASONS to Regex(" (my (trade )?notes|which (of my )?reasons|reasons (work|worked)|why i (took|take) (my )?trades) "),
+        Section.EXPLAIN_POS to Regex(" (explain|walk me through|break down|tell me about|how is) (my |the )?([a-z]+ )?(position|positions|trade|trades)(?! check)( now)? "),
         Section.WHATIF to Regex(" (what if (i|we) (had )?(taken|took|take|bought|approved)|would (i|it) have (made|lost)|if i had (taken|approved|bought)) "),
         Section.CHANGES to Regex(" (what did i change|what have i changed|settings? (history|changes)|changes? to (my )?(settings|limits)|limit changes|who changed|changed my (limits|settings)) "),
         Section.ACTIVITY to Regex(" (what did you do|what have you done|what you did|your activity|activity log|what did jarvis do|did you do anything) "),
@@ -140,8 +143,11 @@ object AppAnswers {
         // "My last P&L", "previous day's profit": the last session, from the record.
         if (Regex(" (last|previous|yesterday|yesterday s|last session s|last day s|last trading day s) (p l|pnl|profit|loss|day|session|result)").containsMatchIn(t) &&
             Regex(" (p l|pnl|profit|loss|made|lost|result) ").containsMatchIn(t)) { out.remove(Section.PNL); out += Section.HISTORY }
+        // "How did my Thursday expiry trades do this month?": a search of the owner's own trades.
+        if (TradeSearch.asked(text) && out.none { it == Section.TIMEOFDAY || it == Section.REASONS }) { out.clear(); out += Section.SEARCH }
         // The new sections are asked on their own: drop the broad matches their words also hit.
-        if (out.any { it == Section.ACTIVITY || it == Section.READY || it == Section.REGIME || it == Section.LOSSES || it == Section.WHATIF || it == Section.CHANGES || it == Section.EXPLAIN_POS })
+        if (!Regex(" and | also | plus ").containsMatchIn(t) && out.any { it == Section.ACTIVITY || it == Section.READY || it == Section.REGIME || it == Section.LOSSES || it == Section.WHATIF || it == Section.CHANGES || it == Section.EXPLAIN_POS ||
+                it == Section.SEARCH || it == Section.TIMEOFDAY || it == Section.REASONS })
             out.removeAll(setOf(Section.EVENTS, Section.POSITIONS, Section.STATUS, Section.STRATEGIES, Section.ORDERS, Section.PNL, Section.SETTINGS, Section.HISTORY, Section.HOWTO, Section.STUDY, Section.REVIEW))
         if (Section.REVIEW in out) { out.remove(Section.HISTORY); out.remove(Section.ORDERS); out.remove(Section.PNL) }
         if (out.isEmpty() || out == setOf(Section.STATUS) && Regex(" (how am i doing|how did i do|my account|account) ").containsMatchIn(t))

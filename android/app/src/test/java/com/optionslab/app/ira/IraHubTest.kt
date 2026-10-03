@@ -574,4 +574,40 @@ class IraHubTest : RobolectricTest() {
         IraCoach.trailWatch(); IraCoach.overtradeWatch(); IraCoach.gapWatch()
         assertNull(IraCoach.lossSizeLine())
     }
+
+    @Test fun undoWalksBackAndAChangeIsCheckedAtConfirm() = runBlocking {
+        val before = com.optionslab.app.data.AppSettings.load()
+        suspend fun change(q: String) {
+            IraHub.ask(q)
+            waitFor("the confirm for $q") { IraHub.state.value.pending.isNotEmpty() }
+            IraHub.confirm(IraHub.state.value.pending.single())
+        }
+        change("set max lots to 3"); change("set max lots to 4")
+        assertEquals(4, com.optionslab.app.data.AppSettings.load().guardMaxLots)
+        change("undo"); assertEquals(3, com.optionslab.app.data.AppSettings.load().guardMaxLots)
+        change("undo"); assertEquals("a second undo goes further back, never redoes", before.guardMaxLots, com.optionslab.app.data.AppSettings.load().guardMaxLots)
+        // Asked, then changed by hand before Confirm: nothing is applied.
+        IraHub.ask("set max lots to 6")
+        waitFor("the confirm") { IraHub.state.value.pending.isNotEmpty() }
+        com.optionslab.app.data.AppSettings.save(com.optionslab.app.data.AppSettings.load().copy(guardMaxLots = 1))
+        val r = IraHub.confirm(IraHub.state.value.pending.single())
+        assertTrue(r.toString(), r!!.contains("changed since you asked"))
+        assertEquals(1, com.optionslab.app.data.AppSettings.load().guardMaxLots)
+        com.optionslab.app.data.AppSettings.save(before)
+    }
+
+    @Test fun journalTargetsNotesAndAutomations() = runBlocking {
+        IraHub.ask("Jarvis, my target today is 3000")
+        waitFor("the target") { IraJournal.target() == 3000.0 }
+        IraHub.ask("clear my target")
+        waitFor("cleared") { IraJournal.target() == null }
+        IraHub.ask("Jarvis, note: I bought because of the hammer at support")
+        waitFor("the note") { IraHub.state.value.messages.lastOrNull()?.text?.startsWith("Noted, Boss") == true }
+        assertTrue(IraJournal.reasons().single().startsWith("Not enough noted trades"))
+        assertEquals("No Thursday trades found.", IraJournal.search("how did my thursday trades do").single())
+        assertTrue(Automations.Auto.entries.all { Automations.on(it) })
+        Automations.set(Automations.Auto.STALE, false); assertTrue(!Automations.on(Automations.Auto.STALE)); Automations.set(Automations.Auto.STALE, true)
+        IraJournal.targetWatch(); IraJournal.staleWatch()
+        Unit
+    }
 }

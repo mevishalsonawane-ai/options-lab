@@ -169,7 +169,6 @@ internal object IraStudy {
         val key = "jarvis.reportcard"
         val week = now.toLocalDate().toString()
         if (com.optionslab.app.security.SecurePrefs.getString(key) == week) return
-        com.optionslab.app.security.SecurePrefs.put(key, week)
         val live = com.optionslab.app.data.AppSettings.load().live
         val owners = runCatching { com.optionslab.app.data.Strategies.owners() }.getOrDefault(emptyMap())
         val today = now.toLocalDate()
@@ -178,11 +177,13 @@ internal object IraStudy {
         val arms = trips.groupBy { it.owner }.map { (o, l) -> com.optionslab.ira.ReportCard.ArmWeek(o, l.sumOf { it.net }, l.size) }
         val habit = com.optionslab.ira.Insights.patterns(if (live) "Zerodha" else "Paper", all).drop(1).firstOrNull()
         val lines = com.optionslab.ira.ReportCard.lines(if (trips.isEmpty()) null else trips.sumOf { it.net }, trips.size,
-            IraNewsTrades.weekSuggestions(today), arms, habit)
+            IraNewsTrades.weekSuggestions(today), arms, habit) +
+            listOfNotNull(com.optionslab.ira.TimeOfDay.line(IraJournal.trips())) + com.optionslab.ira.TradeReasons.lines(IraJournal.noted())
         IraHub.appContext()?.let { JarvisPopup.show(it, "Boss, your week's report card", lines.joinToString(" ")) }
         IraHub.note(com.optionslab.ira.Address.boss("Your week's report card. " + lines.joinToString(" ")))
         JarvisVoice.announce("Good morning, Boss. Your week's report card. " + lines.joinToString(" ") { com.optionslab.ira.Wake.spoken(it, 1) })
         IraActivity.add("Gave the weekly report card.")
+        com.optionslab.app.security.SecurePrefs.put(key, week)
     }
 
     fun ivHistory(u: String): List<Pair<LocalDate, Double>> = _state.value.iv[u].orEmpty()

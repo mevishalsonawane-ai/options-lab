@@ -182,8 +182,14 @@ internal object IraActions {
             Command.Kind.ALARM_ADD -> {
                 val m = c.market; val above = c.above
                 // "Falls 1% from here": the level from the price now.
+                if (c.level == null && c.pct != null && m == null) return "Tell me the index: \"tell me if BankNifty falls 1% from here\"." to null
+                var base: Double? = null
                 val lvl = c.level ?: c.pct?.let { pct ->
-                    val px = m?.let { IraHub.state.value.snaps[it]?.price } ?: return "I don't have a ${m?.label ?: "market"} price just now to measure $pct% from. Try again in a moment." to null
+                    // A fresh price only (in market hours the last 3 minutes): a level from an old price would be wrong.
+                    val st = IraHub.state.value
+                    val fresh = !com.optionslab.app.data.Market.isOpen() || st.liveAt?.isAfter(java.time.Instant.now().minusSeconds(180)) == true
+                    val px = st.snaps[m!!]?.price?.takeIf { fresh } ?: return "I don't have a fresh ${m.label} price just now to measure $pct% from. Try again in a moment." to null
+                    base = px
                     com.optionslab.ira.MoveAlarm.level(px, com.optionslab.ira.MoveAlarm.Move(pct, above == true))
                 }
                 if (m == null || lvl == null || above == null) return "Tell me the index, above or below, and the level: \"alert me when Nifty goes above 25000\"." to null
@@ -193,7 +199,7 @@ internal object IraActions {
                     com.optionslab.ira.Market.SENSEX -> com.optionslab.app.data.PriceAlarm.CHART + "SENSEX"
                     com.optionslab.ira.Market.GOLD -> return "Gold alarms are in IraGoldAlgo." to null
                 }
-                Commands.describe(c.copy(level = lvl)) to suspend {
+                Commands.describe(c.copy(level = lvl)) + (base?.let { " (" + c.pct + "% from " + "%,.2f".format(java.util.Locale.ENGLISH, it) + ")" } ?: "") to suspend {
                     com.optionslab.app.data.Alarms.upsert(com.optionslab.app.data.PriceAlarm(System.currentTimeMillis(), sym, above, lvl, note = "set by Jarvis"))
                     model()?.refreshAlarms()
                     "Alarm set: ${m.label} ${if (above) "above" else "below"} ${"%,.2f".format(java.util.Locale.ENGLISH, lvl)}."
@@ -217,23 +223,42 @@ internal object IraActions {
                 if (old == v) return "${key.label.replaceFirstChar { it.uppercase() }} is already ${SettingsTalk.show(key, v)}." to null
                 val more = if (SettingsTalk.loosens(key, old, v)) " (this allows more risk)" else ""
                 SettingsTalk.describe(key, old, v) + more to suspend {
-                    com.optionslab.app.data.SettingsLog.nextBy = "Jarvis"
-                    setSettings { applySetting(key, v, it) }
-                    "Done: ${key.label} is now ${SettingsTalk.show(key, v)}."
+                    // Checked again at Confirm: changed meanwhile (by hand, or another request), nothing is applied.
+                    val nowV = setting(key, AppSettings.load())
+                    if (nowV != old) "${key.label.replaceFirstChar { it.uppercase() }} changed since you asked (now ${SettingsTalk.show(key, nowV)}), so I left it. Ask again."
+                    else {
+                        com.optionslab.app.data.SettingsLog.nextBy = "Jarvis"
+                        setSettings { applySetting(key, v, it) }
+                        "Done: ${key.label} is now ${SettingsTalk.show(key, v)}."
+                    }
                 }
             }
             Command.Kind.UNDO -> {
-                val last = com.optionslab.app.data.SettingsLog.all().lastOrNull() ?: return "No limit has been changed yet, so there is nothing to undo." to null
-                val now = setting(last.key, AppSettings.load())
-                if (now != last.new) return "${last.key.label.replaceFirstChar { it.uppercase() }} has changed again since, so I won't undo it: tell me the value you want." to null
-                val more = if (SettingsTalk.loosens(last.key, now, last.old)) " (this allows more risk)" else ""
-                "undo: " + SettingsTalk.describe(last.key, now, last.old) + more to suspend {
-                    com.optionslab.app.data.SettingsLog.nextBy = "Jarvis (undo)"
-                    setSettings { applySetting(last.key, last.old, it) }
-                    "Undone: ${last.key.label} is back to ${SettingsTalk.show(last.key, last.old)}."
+                val group = com.optionslab.app.data.SettingsLog.lastUndoable()
+                if (group.isEmpty()) return "No limit change is left to undo." to null
+                val cur = AppSettings.load()
+                group.firstOrNull { setting(it.key, cur) != it.new }?.let { ch ->
+                    return "${ch.key.label.replaceFirstChar { it.uppercase() }} has changed again since, so I won't undo it: tell me the value you want." to null
+                }
+                val more = if (group.any { SettingsTalk.loosens(it.key, it.new, it.old) }) " (this allows more risk)" else ""
+                "undo: " + group.joinToString(", ") { SettingsTalk.describe(it.key, it.new, it.old) } + more to suspend {
+                    val again = AppSettings.load()
+                    if (group.any { setting(it.key, again) != it.new } || com.optionslab.app.data.SettingsLog.lastUndoable() != group)
+                        "The limits changed since you asked, so I left them. Ask again."
+                    else {
+                        com.optionslab.app.data.SettingsLog.nextBy = com.optionslab.app.data.SettingsLog.UNDO_BY
+                        setSettings { s -> group.fold(s) { acc, ch -> applySetting(ch.key, ch.old, acc) } }
+                        com.optionslab.app.data.SettingsLog.markUndone(group)
+                        "Undone: " + group.joinToString(", ") { "${it.key.label} is back to ${SettingsTalk.show(it.key, it.old)}" } + "."
+                    }
                 }
             }
             Command.Kind.QUIET_ON -> { JarvisVoice.quietHours = true; "Quiet hours on, Boss: from 22:00 to 07:00 I say nothing unless you ask." to null }
+            Command.Kind.TARGET_SET -> { val v = c.level ?: return "Tell me the target in rupees." to null
+                IraJournal.setTarget(v); IraActivity.add("Set today's target to ${com.optionslab.ira.AppFacts.amt(v)}.")
+                "Today's target is ${com.optionslab.ira.AppFacts.amt(v)}, Boss. I'll tell you when you reach it." to null }
+            Command.Kind.TARGET_CLEAR -> { IraJournal.setTarget(null); "Today's target is cleared." to null }
+            Command.Kind.NOTE -> { val n = c.target ?: return "Tell me the note." to null; IraJournal.note(n) to null }
             Command.Kind.PREF_RESET -> { IraNewsTrades.resetPreferences(); "Done, Boss: I'll offer every kind of suggestion again." to null }
             Command.Kind.QUIET_OFF -> { JarvisVoice.quietHours = false; "Quiet hours off." to null }
             // Jarvis's voice and language: done at once (nothing to confirm, nothing at risk).
@@ -332,8 +357,8 @@ internal object IraActions {
     /** Would [c] loosen one of the app's limits (so only Boss's voice may ask for it)? */
     fun loosens(c: Command): Boolean {
         if (c.kind == Command.Kind.UNDO) {
-            val last = com.optionslab.app.data.SettingsLog.all().lastOrNull() ?: return false
-            return SettingsTalk.loosens(last.key, setting(last.key, AppSettings.load()), last.old)
+            val cur = AppSettings.load()
+            return com.optionslab.app.data.SettingsLog.lastUndoable().any { SettingsTalk.loosens(it.key, setting(it.key, cur), it.old) }
         }
         if (c.kind != Command.Kind.SET_LIMIT) return false
         val key = c.target?.let { runCatching { SettingsTalk.Key.valueOf(it) }.getOrNull() } ?: return false
@@ -342,7 +367,8 @@ internal object IraActions {
 
     private fun setSettings(f: (AppSettings) -> AppSettings) {
         val m = model()
-        if (m != null) m.update(f) else AppSettings.save(f(AppSettings.load()))
+        // Applied to what is stored (not the screen's copy, which can lag a kill switch the guard turned on by itself).
+        if (m != null) m.update { f(AppSettings.load()) } else AppSettings.save(f(AppSettings.load()))
     }
 
     // ---- trades -------------------------------------------------------------------------------------------------------

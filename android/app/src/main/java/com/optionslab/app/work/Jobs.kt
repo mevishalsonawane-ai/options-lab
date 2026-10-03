@@ -397,6 +397,9 @@ object Tasks {
         runCatching { com.optionslab.app.ira.IraCoach.trailWatch() }
         runCatching { com.optionslab.app.ira.IraCoach.overtradeWatch() }
         runCatching { com.optionslab.app.ira.IraCoach.gapWatch() }
+        // JarvisAlgo: the day's target reached; a trade of yours going nowhere is offered a close (asked first).
+        runCatching { com.optionslab.app.ira.IraJournal.targetWatch() }
+        runCatching { com.optionslab.app.ira.IraJournal.staleWatch() }
         // Stops, trailing stops and targets: one exit filled cancels the other; trails move up.
         runCatching { com.optionslab.app.data.Protections.tick() }
         // Expiry day, 15:05: close every option position expiring today (paper and live, all products).

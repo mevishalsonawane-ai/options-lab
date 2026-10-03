@@ -38,7 +38,7 @@ object SettingsTalk {
         Key.PAPER_TRADES to "paper (max )?(orders|trades)( per day| a day)?",
         Key.LOSS_ALERT to "(p l |pnl )?loss alert",
         Key.PROFIT_ALERT to "(p l |pnl )?profit alert",
-        Key.DAILY_LOSS to "(daily loss( limit)?|max(imum)? (daily )?loss|loss limit|stop loss limit for the day)",
+        Key.DAILY_LOSS to "(daily loss( limit)?|max(imum)? (daily )?loss|(?<!stop )loss limit|stop loss limit for the day)",
         Key.LOTS_PER_ORDER to "(max(imum)? )?lots (per|an|each|a) order",
         Key.MAX_LOTS to "max(imum)? lots( per instrument)?|lot limit",
         Key.MAX_OPEN to "max(imum)? (open )?positions|open positions limit",
@@ -61,22 +61,32 @@ object SettingsTalk {
      * ([Command.Kind.SET_LIMIT], [Command.target] the key, [Command.level] the value), or null when it is not one.
      */
     fun parse(s: String): Command? {
-        val verb = Regex("^ (set|change|make|update|edit|put|increase|raise|decrease|reduce|lower|turn (on|off)|switch (on|off)|disable|enable|remove|keep) ").containsMatchIn(s)
+        // A change is asked for with a verb first ("set max lots to 3", "turn off the loss limit"), or as the whole
+        // sentence "<name> <value>" ("max lots 5", "daily loss limit off"); anything else ("the loss limit is 5000
+        // right?", "tell me if max lots is 3") is a question, never a change.
+        val verb = Regex("^ (set|change|make|update|edit|put|increase|raise|decrease|reduce|lower|turn (on|off)|switch (on|off)|disable|enable|remove|keep|allow|block) ").containsMatchIn(s)
         val (key, named) = NAMES.firstNotNullOfOrNull { (k, r) -> Regex(" ($r) ").find(s)?.let { k to it } } ?: return null
-        // On / off read from the words around the name ("square off" is a name, not "off").
+        val nameRx = NAMES.first { it.first == key }.second
+        val bare = Regex("^ (the |my )?($nameRx) (is |to |at |of )?(\\S+( \\S+)?) $").containsMatchIn(s)
+        val cutoffPhrase = key == Key.CUTOFF && Regex("^ no new (entries|positions|trades) after ").containsMatchIn(s)
+        if (!verb && !bare && !cutoffPhrase) return null
+        // "By 2000" is a change by an amount, not to it: asked again rather than guessed.
+        if (Regex(" by \\d").containsMatchIn(s)) return null
+        val after = s.substring(named.range.last)
         val rest = s.replaceRange(named.range, " ")
-        val off = Regex(" (off|none|no limit|unlimited|disable|disabled|remove|removed) ").containsMatchIn(rest) ||
-            Regex("^ (turn|switch) off | disable ").containsMatchIn(rest)
-        val on = Regex(" on $|^ (turn|switch) on |^ enable ").containsMatchIn(rest)
-        // Asked by name with a value ("max lots 3") or with a verb ("set max lots to 3").
+        // Off only when the words say so next to the name or as the verb ("square off" elsewhere is not "off").
+        val off = Regex("^ (off|none|no limit|unlimited|disabled|removed)( |$)").containsMatchIn(after) ||
+            Regex("^ (turn|switch) off |^ (disable|remove) ").containsMatchIn(s)
+        val on = Regex("^ on( |$)").containsMatchIn(after) || Regex("^ (turn|switch) on |^ enable ").containsMatchIn(s)
         val value: Double = when (key.unit) {
-            Unit.SWITCH -> when { off -> 0.0; on || verb && !off -> 1.0; else -> return null }
-            Unit.PRODUCT -> when { Regex(" mis ").containsMatchIn(s) -> 0.0; Regex(" nrml| normal | carry ?forward ").containsMatchIn(s) -> 1.0; else -> return null }
-            Unit.TIME -> if (off) -1.0 else time(rest)?.toDouble() ?: return null
-            else -> if (off) { if (!key.canOff) return null; 0.0 } else number(rest, key) ?: return null
+            Unit.SWITCH -> if (key == Key.NAKED_SHORTS && !named.value.contains("block")) {
+                // "Naked shorts" bare: what is said is about the shorts themselves - blocking them is the switch on.
+                when { off || Regex("^ block ").containsMatchIn(s) -> 1.0; on || Regex("^ allow ").containsMatchIn(s) -> 0.0; else -> return null }
+            } else when { off -> 0.0; on -> 1.0; key == Key.NAKED_SHORTS && Regex("^ block ").containsMatchIn(s) -> 1.0; else -> return null }
+            Unit.PRODUCT -> if (!verb) return null else when { Regex(" mis ").containsMatchIn(rest) -> 0.0; Regex(" nrml | normal | carry ?forward ").containsMatchIn(rest) -> 1.0; else -> return null }
+            Unit.TIME -> time(rest)?.toDouble() ?: if (off) -1.0 else return null
+            else -> number(rest, key) ?: if (off && key.canOff) 0.0 else return null
         }
-        if (key.unit != Unit.SWITCH && key.unit != Unit.PRODUCT && !verb && !Regex(" (to|at|is|=|of|be) ").containsMatchIn(s) &&
-            !Regex("^ (${NAMES.first { it.first == key }.second}) [0-9]").containsMatchIn(s) && !off) return null
         return Command(Command.Kind.SET_LIMIT, target = key.name, level = value)
     }
 

@@ -28,18 +28,41 @@ object SettingsLog {
 
     /** The changes between [old] and [new] (only the limits Jarvis knows), recorded. */
     @Synchronized fun diff(old: AppSettings, new: AppSettings) {
+        val now = LocalDateTime.now(IST).withNano(0)
+        val changed = SettingsTalk.Key.entries.mapNotNull { k ->
+            val a = com.optionslab.app.ira.IraActions.setting(k, old); val b = com.optionslab.app.ira.IraActions.setting(k, new)
+            if (a == b) null else Triple(k, a, b)
+        }
+        // A save that changes no limit (the kill switch, the theme) leaves Jarvis's mark for the save it was meant for.
+        if (changed.isEmpty()) return
         val by = nextBy ?: "Settings screen"
         nextBy = null
-        val now = LocalDateTime.now(IST).withNano(0)
-        val changes = SettingsTalk.Key.entries.mapNotNull { k ->
-            val a = com.optionslab.app.ira.IraActions.setting(k, old); val b = com.optionslab.app.ira.IraActions.setting(k, new)
-            if (a == b) null else SettingsHistory.Change(now, k, a, b, by)
-        }
-        if (changes.isEmpty()) return
+        val changes = changed.map { (k, a, b) -> SettingsHistory.Change(now, k, a, b, by) }
         val list = (all() + changes).takeLast(KEEP)
         runCatching { com.optionslab.app.security.SecurePrefs.put(KEY, JSONArray().apply { list.forEach { c ->
             put(JSONObject().put("t", c.at.toString()).put("k", c.key.name).put("o", c.old).put("n", c.new).put("b", c.by)) } }.toString()) }
     }
 
     fun lines(): List<String> = SettingsHistory.lines(all(), Market.today())
+
+    private const val UNDONE = "settings.undone"
+    const val UNDO_BY = "Jarvis (undo)"
+
+    private fun undone(): Set<String> = com.optionslab.app.security.SecurePrefs.getString(UNDONE).orEmpty().split('\n').filter { it.isNotBlank() }.toSet()
+    private fun id(c: SettingsHistory.Change) = "${c.at}|${c.key.name}"
+
+    /**
+     * What "undo" puts back: the latest save's changes (all limits one save changed, together) that are not an undo
+     * themselves and not undone already - so a second "undo" goes one step further back, never redoes.
+     */
+    fun lastUndoable(): List<SettingsHistory.Change> {
+        val done = undone()
+        val open = all().filter { it.by != UNDO_BY && id(it) !in done }
+        val at = open.lastOrNull()?.at ?: return emptyList()
+        return open.filter { it.at == at }
+    }
+
+    @Synchronized fun markUndone(list: List<SettingsHistory.Change>) = runCatching {
+        com.optionslab.app.security.SecurePrefs.put(UNDONE, (undone() + list.map { id(it) }).toList().takeLast(400).joinToString("\n"))
+    }
 }

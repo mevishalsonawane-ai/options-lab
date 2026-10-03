@@ -146,14 +146,22 @@ object DailyReports {
                     "Microphone permission" to (if (voiceOn) mic else null),
                     "Spoken replies" to (if (com.optionslab.app.ira.JarvisVoice.muted) null else true),
                     "AI model" to (if (model == com.optionslab.app.ira.IraModel.Status.READY) true else null),
-                    "Data feed" to (com.optionslab.app.ira.IraHub.state.value.liveMissing.size < 3),
                     "Night study" to studied,
-                    "Battery" to (battery?.let { it > com.optionslab.ira.BatterySaver.LOW || charging }),
                 )
                 val sc = com.optionslab.ira.SelfCheck.lines(parts)
                 ok(parts.none { it.second == false }, sc.first().removeSuffix("."))
                 sc.drop(1).filter { it.endsWith("not working.") }.forEach { lines += "• $it" }
                 if (com.optionslab.app.ira.JarvisVoice.muted) lines += "• Jarvis is muted (say \"Jarvis, unmute\" to hear me)"
+                // A low battery is not a fault: a note, and the battery saver slows Jarvis's own refreshes.
+                if (battery != null && battery <= com.optionslab.ira.BatterySaver.LOW && !charging) lines += "• Battery at $battery%: charge the phone for the trading day"
+                // The backup reminder: the records live only on this phone.
+                if (com.optionslab.app.ira.Automations.on(com.optionslab.app.ira.Automations.Auto.BACKUP)) {
+                    val last = runCatching { com.optionslab.app.security.SecurePrefs.getString("backup.last")?.let(java.time.LocalDate::parse) }.getOrNull()
+                    if (com.optionslab.ira.BackupNudge.due(last, Market.today())) {
+                        lines += "• " + com.optionslab.ira.BackupNudge.say(last)
+                        com.optionslab.app.ira.Automations.acted(com.optionslab.app.ira.Automations.Auto.BACKUP, com.optionslab.ira.BackupNudge.say(last))
+                    }
+                }
             }
             // After everything is checked: what the night's study and the overnight news say about today.
             val brief = runCatching { com.optionslab.app.ira.IraStudy.brief() }.getOrDefault(emptyList())

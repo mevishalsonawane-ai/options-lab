@@ -27,12 +27,14 @@ data class Command(val kind: Kind, val target: String? = null, val number: Int? 
         QUIET_ON(true), QUIET_OFF(true),
         /** The suggestions the owner always rejected are offered again. */
         PREF_RESET(true),
+        /** The day's P&L target set or cleared; a note on why the owner took a trade. */
+        TARGET_SET(true), TARGET_CLEAR(true), NOTE(true),
     }
 }
 
 object Commands {
     /** A question about doing something ("how do I stop...") is not a command. */
-    private val QUESTION = Regex("^ (how|where|what|why|which|when|should|is|are|am|can i|could i|did|do you|do i|does|has|have|will|was|were|would) ")
+    private val QUESTION = Regex("^ (how|where|what|whats|why|which|when|should|is|are|am|can i|could i|did|do you|do i|does|has|have|will|was|were|would|if|wonder|i wonder) | tell me (whether|what|why|how) | is it [a-z0-9]* $| right $| or not $")
     /** "Don't switch to live", "never start...": a negation is never a command. */
     private val NEGATION = Regex(" (don t|dont|do not|never|not|doesn t|didn t|won t) ")
     /** Commands a misspelt word may never become (only what the owner typed correctly). */
@@ -54,6 +56,10 @@ object Commands {
     }
 
     private fun parseAs(said: String): Command? {
+        // "Jarvis, note: I bought because of the hammer at support" - kept as said (before the question and negation checks).
+        Regex("(?i)^\\s*(?:(?:hey |ok |okay )?jarvis[,.!]?\\s+)?(?:note|journal)(?: that| down)?\\s*[:,-]?\\s+(.{3,300})$").find(said.trim())?.let { m ->
+            return Command(Command.Kind.NOTE, target = m.groupValues[1].trim())
+        }
         // A question ("is live mode on?") is never a command.
         if (said.trim().endsWith("?")) return null
         val text = Hinglish.normalize(said)
@@ -72,6 +78,12 @@ object Commands {
         fun num(r: String) = Regex(r).find(s)?.groupValues?.get(1)?.toIntOrNull()
 
         if (Regex("^ (undo|undo (that|it|the last change|my last change|last change|the change)|revert( that| it| the last change)?|put (it|that) back|change (it|that) back) $").containsMatchIn(s)) return Command(Command.Kind.UNDO)
+        // The day's target: "my target today is 3000", "set my daily target to 5k", "clear my target".
+        if (Regex(" (clear|remove|cancel|delete|drop) (my |the |today s )?(daily |day s |day )?target ").containsMatchIn(s)) return Command(Command.Kind.TARGET_CLEAR)
+        Regex(" (?:my (?:daily |day s |day )?target(?: for today| for the day| today)?|(?:daily|day s|today s) target|target (?:for today|for the day|today)) (?:is |to |at |of |=|be )?(?:rs |rupees )?(\\d+(?:\\.\\d+)?) ?(k|thousand|lakh)?(?: rupees)? ").find(s)?.let { m ->
+            val v = m.groupValues[1].toDouble() * when (m.groupValues[2]) { "k", "thousand" -> 1_000.0; "lakh" -> 100_000.0; else -> 1.0 }
+            if (v >= 100) return Command(Command.Kind.TARGET_SET, level = v)
+        }
         if (Regex("^ (reset|clear|forget) (my |your )?(preferences|suggestion preferences|what i reject(ed)?) $").containsMatchIn(s)) return Command(Command.Kind.PREF_RESET)
         if (Regex("^ (turn|switch) (on|off) (the )?quiet hours | quiet hours (on|off) |^ (enable|disable) (the )?quiet hours ").containsMatchIn(s))
             return Command(if (Regex(" (off|disable) ").containsMatchIn(s.replace(" quiet hours ", " "))) Command.Kind.QUIET_OFF else Command.Kind.QUIET_ON)
@@ -204,5 +216,8 @@ object Commands {
         Command.Kind.QUIET_ON -> "turn quiet hours on (nothing said unasked from 22:00 to 07:00)"
         Command.Kind.QUIET_OFF -> "turn quiet hours off"
         Command.Kind.PREF_RESET -> "offer every kind of suggestion again"
+        Command.Kind.TARGET_SET -> "set today's target to ${c.level?.let { AppFacts.amt(it) } ?: "?"}"
+        Command.Kind.TARGET_CLEAR -> "clear today's target"
+        Command.Kind.NOTE -> "note why you took the trade"
     }
 }

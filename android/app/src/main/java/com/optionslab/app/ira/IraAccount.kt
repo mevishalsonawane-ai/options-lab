@@ -51,9 +51,9 @@ internal object IraAccount {
      * [read], but from what was read in the last [FRESH_MS] when every section asked is there (questions naming a
      * market always read afresh).
      */
-    suspend fun readFast(sections: Set<Section>, markets: List<com.optionslab.ira.Market> = emptyList()): AppView? {
+    suspend fun readFast(sections: Set<Section>, markets: List<com.optionslab.ira.Market> = emptyList(), question: String = ""): AppView? {
         // Asked with its own words (a time, this week's changes): always read afresh.
-        if (Section.WHATIF in sections || Section.CHANGES in sections) return read(sections, markets)
+        if (sections.any { it in ASKED }) return read(sections, markets, question)
         val now = android.os.SystemClock.elapsedRealtime()
         if (markets.isEmpty() && testView == null) synchronized(cache) {
             val mode = cacheMode
@@ -67,9 +67,6 @@ internal object IraAccount {
 
     /** Reads [WARM] ahead (the listening keeper calls it), so those answers need no wait. */
     suspend fun warm() { invalidate(); readFast(WARM) }
-
-    /** The question being answered (for "what if I had taken the 10:30 suggestion"). */
-    @Volatile var question: String? = null
 
     /** "Am I ready to go live?": each thing that should be in place first. */
     private suspend fun readyLines(s: AppSettings, today: java.time.LocalDate): List<String> {
@@ -86,7 +83,10 @@ internal object IraAccount {
             marketOpenToday = com.optionslab.app.data.Market.isTradingDay(today), unguardedPositions = unguarded))
     }
 
-    suspend fun read(sections: Set<Section>, markets: List<com.optionslab.ira.Market> = emptyList()): AppView? {
+    /** Sections answered from the question's own words: never from the cache. */
+    private val ASKED = setOf(Section.WHATIF, Section.CHANGES, Section.SEARCH, Section.TIMEOFDAY, Section.REASONS, Section.EXPLAIN_POS)
+
+    suspend fun read(sections: Set<Section>, markets: List<com.optionslab.ira.Market> = emptyList(), question: String = ""): AppView? {
         testView?.let { return it(sections) }
         return runCatching {
             val s = AppSettings.load()
@@ -230,10 +230,13 @@ internal object IraAccount {
             if (wants(Section.LOSSES)) out[Section.LOSSES] = if (com.optionslab.app.BuildConfig.JARVIS) IraNewsTrades.lossReasons() +
                 "For your own trades, ask \"review my week\": it shows where they lose." else listOf("Ask \"review my week\": it shows where your trades lose.")
             if (wants(Section.READY)) out[Section.READY] = readyLines(s, today)
-            if (wants(Section.WHATIF)) out[Section.WHATIF] = if (com.optionslab.app.BuildConfig.JARVIS) IraNewsTrades.whatIf(question.orEmpty())
+            if (wants(Section.WHATIF)) out[Section.WHATIF] = if (com.optionslab.app.BuildConfig.JARVIS) IraNewsTrades.whatIf(question)
                 else listOf("Replays of Jarvis's suggestions are in JarvisAlgo.")
             if (wants(Section.CHANGES)) out[Section.CHANGES] = com.optionslab.app.data.SettingsLog.lines()
             if (wants(Section.EXPLAIN_POS)) out[Section.EXPLAIN_POS] = IraCoach.explainPositions()
+            if (wants(Section.SEARCH)) out[Section.SEARCH] = IraJournal.search(question)
+            if (wants(Section.TIMEOFDAY)) out[Section.TIMEOFDAY] = IraJournal.timeOfDay()
+            if (wants(Section.REASONS)) out[Section.REASONS] = IraJournal.reasons()
             if (wants(Section.REVIEW)) {
                 val owners = runCatching { com.optionslab.app.data.Strategies.owners() }.getOrDefault(emptyMap())
                 val r = ArrayList<String>()

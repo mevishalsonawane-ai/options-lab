@@ -192,7 +192,9 @@ object Hindi {
         "Translate this into simple spoken Hindi in Devanagari script. Keep every number, name and symbol exactly as written. " +
             "Reply with the translation only.\n\n$english"
 
-    private fun numbers(s: String) = Regex("\\d+(?:[.,]\\d+)*").findAll(s).map { it.value.replace(",", "") }.toList().sorted()
+    /** Every figure with its sign, also when "Rs" or "₹" sits between them ("+Rs 4,200" is +4200). */
+    private fun numbers(s: String) = Regex("([+-]?)\\s*(?:Rs\\.?\\s*|₹\\s*)?(\\d+(?:[.,]\\d+)*)").findAll(s)
+        .map { it.groupValues[1] + it.groupValues[2].replace(",", "") }.toList().sorted()
 
     /** The translation when it is Hindi and keeps every number, else null. */
     fun accept(english: String, hindi: String?): String? {

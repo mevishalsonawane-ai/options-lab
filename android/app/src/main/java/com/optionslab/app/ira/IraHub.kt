@@ -511,6 +511,8 @@ object IraHub {
         val held = runCatching { com.optionslab.app.data.Paper.state.positions.filter { it.quantity != 0 }.mapNotNull { p ->
             listOf(IraMarket.BANKNIFTY, IraMarket.FINNIFTY, IraMarket.NIFTY, IraMarket.SENSEX).firstOrNull { p.symbol.startsWith(it.name) } }.toSet() }.getOrDefault(emptySet())
         for (h in recent) {
+            // A headline on an index the owner holds: good or bad for the side held, at once.
+            runCatching { IraJournal.positionNews(h) }
             val t = com.optionslab.ira.NewsAnalyst.take(h, arms, held)
             if (runCatching { newsTrade(c, h, t) }.getOrDefault(false)) continue
             JarvisPopup.show(c, t.title, t.text)
@@ -547,13 +549,19 @@ object IraHub {
     private suspend fun proposeTrade(c: Context, idea: com.optionslab.ira.NewsTrade.Idea, title: String, text: String, said: String, source: String) {
         val m = idea.market
         // Two losses in a row: a cooling-off, said once.
-        com.optionslab.ira.CoolOff.until(IraNewsTrades.closedTimes(), LocalDateTime.now(IST))?.let { until ->
-            if (synchronized(coolSaid) { coolSaid.add(until.toString()) }) { reply(com.optionslab.ira.CoolOff.say(until)); IraActivity.add(com.optionslab.ira.CoolOff.say(until)) }
+        // (The news itself is still told: only the trade is held back.)
+        if (Automations.on(Automations.Auto.COOLOFF)) com.optionslab.ira.CoolOff.until(IraNewsTrades.closedTimes(), LocalDateTime.now(IST))?.let { until ->
+            if (source.startsWith("news")) reply(text)
+            if (synchronized(coolSaid) { coolSaid.add(until.toString()) }) {
+                reply(com.optionslab.ira.CoolOff.say(until)); IraActivity.add(com.optionslab.ira.CoolOff.say(until))
+                Automations.acted(Automations.Auto.COOLOFF, com.optionslab.ira.CoolOff.say(until))
+            }
             return
         }
         // A kind of suggestion the owner always turns down is no longer offered (said once).
         val kind = com.optionslab.ira.Preference.kind(source)
         if (com.optionslab.ira.Preference.skip(kind, IraNewsTrades.answers())) {
+            if (source.startsWith("news")) reply(text)
             if (IraNewsTrades.toldSkip(kind)) reply(com.optionslab.ira.Preference.say(kind))
             return
         }
@@ -609,7 +617,14 @@ object IraHub {
     suspend fun rescueWatch(now: Instant = Instant.now()) {
         if (!com.optionslab.app.BuildConfig.JARVIS || !com.optionslab.app.data.Market.isOpen()) return
         val c = app ?: return
-        val guarded = runCatching { com.optionslab.app.data.Protections.active() }.getOrNull()?.map { (if (it.live) "L:" else "P:") + it.symbol }?.toSet() ?: return
+        if (!Automations.on(Automations.Auto.RESCUE)) return
+        // Guarded: a protection with a stop (or a trail), or a stop order the owner placed directly (ticket, Kite web).
+        val guarded = runCatching { com.optionslab.app.data.Protections.active() }.getOrNull()?.filter { it.stop != null || it.trail != null }
+            ?.map { (if (it.live) "L:" else "P:") + it.symbol }?.toMutableSet() ?: return
+        runCatching { com.optionslab.app.data.Paper.snapshot().orders.orders.filter { o -> o.priceType.uppercase() in setOf("SL", "SL-M") &&
+            o.status.lowercase() !in setOf("complete", "cancelled", "rejected") }.forEach { guarded += "P:" + it.symbol } }
+        if (com.optionslab.app.data.Broker.loggedIn) runCatching { com.optionslab.app.data.Broker.orders().filter { o -> o.working && o.type in setOf("SL", "SL-M") }
+            .forEach { guarded += "L:" + it.symbol } }
         val open = ArrayList<Pair<com.optionslab.ira.Rescue.Open, String>>()
         runCatching { com.optionslab.app.data.Paper.snapshot().positions.positions.filter { it.quantity != 0 }
             .forEach { open += com.optionslab.ira.Rescue.Open(it.symbol, false, it.quantity, it.averagePrice, it.ltp) to it.product } }
@@ -631,22 +646,50 @@ object IraHub {
             val stop = com.optionslab.ira.Rescue.stopFor(p)
             val text = com.optionslab.ira.Rescue.say(p, stop)
             if (stop == null) { JarvisPopup.show(c, "Boss, ${p.symbol} has no stop", text); reply(text); continue }
-            val id = System.nanoTime()
-            val what = "set a stop on ${p.symbol} at %.2f".format(java.util.Locale.ENGLISH, stop)
-            synchronized(actions) { actions[id] = what to suspend {
-                if (p.live) com.optionslab.app.data.Protections.protectLive(p.symbol, "NFO", product, p.qty, p.avg, stop, null, null)
-                else com.optionslab.app.data.Protections.protectPaper(p.symbol, product, p.qty, p.avg, stop, null, null)
-            } }
-            _state.update { it.copy(pending = it.pending + id, messages = (it.messages + Msg(true, "$text Tap Confirm to $what.", action = id)).takeLast(MAX_MESSAGES)) }
+            val what = "set a stop on ${p.symbol} at " + "%.2f".format(java.util.Locale.ENGLISH, stop)
+            // Checked again when confirmed (it can come later): the position as it is then, still bare, still above the stop.
+            val id = pend(what, suspend {
+                val nowPos = if (p.live) runCatching { com.optionslab.app.data.Broker.positionBook().net.filter { it.symbol == p.symbol && it.product == product }
+                        .let { l -> l.sumOf { it.qty } to l.firstOrNull()?.last } }.getOrNull()
+                    else runCatching { com.optionslab.app.data.Paper.snapshot().positions.positions.filter { it.symbol == p.symbol && it.product == product }
+                        .let { l -> l.sumOf { it.quantity } to l.firstOrNull()?.ltp } }.getOrNull()
+                val qty = nowPos?.first ?: 0; val ltp = nowPos?.second
+                val has = runCatching { com.optionslab.app.data.Protections.forSymbol(p.live, p.symbol) }.getOrNull()?.let { it.stop != null || it.trail != null } == true
+                when {
+                    qty <= 0 -> "${p.symbol} is no longer held, so no stop was set."
+                    has -> "${p.symbol} has a stop now, so I left it."
+                    ltp == null || ltp <= stop -> "${p.symbol} is already at or under " + "%.2f".format(java.util.Locale.ENGLISH, stop) + ": close it or set a stop from the position."
+                    p.live -> com.optionslab.app.data.Protections.protectLive(p.symbol, "NFO", product, qty, ltp, stop, null, null)
+                    else -> com.optionslab.app.data.Protections.protectPaper(p.symbol, product, qty, ltp, stop, null, null)
+                }
+            }, "$text Tap Confirm to $what.")
             JarvisPopup.show(c, "Boss, ${p.symbol} has no stop", text)
             JarvisVoice.askYesNo(id, "Boss, $text Yes or no?")
             IraActivity.add("Offered a stop on ${p.symbol} (it had none).")
+            Automations.acted(Automations.Auto.RESCUE, "Offered a stop on ${p.symbol}.")
         }
+    }
+
+    /**
+     * Offers to close [symbol] (asked yes or no and on the Ira screen; never done alone). Checked again when confirmed:
+     * still held, then sold at market (paper) or squared off through the app (Zerodha).
+     */
+    fun offerClose(symbol: String, live: Boolean, text: String) {
+        val c = app ?: return
+        val id = pend("close $symbol", suspend {
+            if (live) IraActions.closeLiveSymbol(symbol)
+            else {
+                val p = runCatching { com.optionslab.app.data.Paper.snapshot().positions.positions.firstOrNull { it.symbol == symbol && it.quantity != 0 } }.getOrNull()
+                if (p == null) "$symbol is no longer held." else com.optionslab.app.data.Paper.close(p.symbol, p.product).let { r -> "Paper: ${r.message}" }
+            }
+        }, "$text Tap Confirm to close $symbol.")
+        JarvisPopup.show(c, "Boss, $symbol is going nowhere", text)
+        JarvisVoice.askYesNo(id, "Boss, $text Yes or no?")
     }
 
     /** Expiry day at 14:55: what the 15:05 square-off will close (or, when it is off, what will be settled). */
     suspend fun expiryPreview() {
-        if (!com.optionslab.app.BuildConfig.JARVIS) return
+        if (!com.optionslab.app.BuildConfig.JARVIS || !Automations.on(Automations.Auto.EXPIRY)) return
         val mk = com.optionslab.app.data.Market
         val today = mk.today()
         if (!mk.isTradingDay(today) || mk.minuteNow() !in com.optionslab.ira.ExpiryPreview.AT until 15 * 60 + 5) return
@@ -659,9 +702,10 @@ object IraHub {
             val ins = com.optionslab.app.data.Broker.cachedInstruments().orEmpty().associateBy { it.tradingSymbol }
             com.optionslab.app.data.Broker.positionBook().net.filter { it.qty != 0 && ins[it.symbol]?.expiry == today }.forEach { names += "Zerodha ${it.symbol} (${it.qty})" }
         }
-        com.optionslab.app.security.SecurePrefs.put(key, today.toString())
         val lines = com.optionslab.ira.ExpiryPreview.lines(names, com.optionslab.app.data.AppSettings.load().expirySquareOff)
+        com.optionslab.app.security.SecurePrefs.put(key, today.toString())
         if (lines.isEmpty()) return
+        Automations.acted(Automations.Auto.EXPIRY, lines.first())
         app?.let { JarvisPopup.show(it, "Expiry day: 15:05 square-off", lines.first()) }
         reply(lines.first())
         JarvisVoice.announce(com.optionslab.ira.Address.boss(lines.first()))
@@ -671,8 +715,10 @@ object IraHub {
 
     /** Live prices stopped for two minutes in market hours: told once, and again only after they came back. */
     suspend fun feedWatch() {
-        if (!com.optionslab.app.BuildConfig.JARVIS) return
+        if (!com.optionslab.app.BuildConfig.JARVIS || !Automations.on(Automations.Auto.FEED)) return
         val open = com.optionslab.app.data.Market.isOpen()
+        // After the close nothing "comes back": a warning still standing is simply cleared.
+        if (!open) { feedWarned = false; return }
         fun last() = _state.value.liveAt?.atZone(IST)?.toLocalDateTime()
         val now = LocalDateTime.now(IST)
         if (com.optionslab.ira.FeedHealth.stale(last(), now, open)) runCatching { refresh() }
@@ -682,6 +728,7 @@ object IraHub {
             val text = com.optionslab.ira.FeedHealth.say(last())
             app?.let { JarvisPopup.show(it, "Live prices stopped", text) }
             reply(text); JarvisVoice.announce(text); IraActivity.add("Warned: live prices stopped.")
+            Automations.acted(Automations.Auto.FEED, text)
         } else if (!stale && feedWarned) {
             feedWarned = false
             reply("Live prices are back, Boss.")
@@ -905,8 +952,7 @@ object IraHub {
         val user = Msg(false, q)
         _state.update { it.copy(messages = (it.messages + user).takeLast(MAX_MESSAGES)) }
         scope.launch {
-            IraAccount.question = q
-            val v = runCatching { IraAccount.readFast(com.optionslab.ira.AppAnswers.sections(q), IraMarket.mentioned(q)) }.getOrNull()
+            val v = runCatching { IraAccount.readFast(com.optionslab.ira.AppAnswers.sections(q), IraMarket.mentioned(q), question = q) }.getOrNull()
             val a = runCatching { Ira(book).answer(q, emptyMap(), emptyList(), app = v) }.getOrElse { com.optionslab.ira.Answer("I could not work that out.", emptyList()) }
             val write = v != null && IraModel.usable() && a.facts.isNotEmpty()
             val msg = Msg(true, a.text, a.facts, writing = write)
@@ -984,7 +1030,7 @@ object IraHub {
     const val CONFIRM_LAPSE_MS = 30 * 60_000L
 
     /** A request that waits for Confirm, with its message; it lapses after [CONFIRM_LAPSE_MS]. */
-    private fun pend(what: String, act: suspend () -> String, text: String) {
+    private fun pend(what: String, act: suspend () -> String, text: String): Long {
         val id = System.nanoTime()
         synchronized(actions) { actions[id] = what to act }
         _state.update { it.copy(pending = it.pending + id, messages = (it.messages + Msg(true, text, action = id)).takeLast(MAX_MESSAGES)) }
@@ -995,6 +1041,7 @@ object IraHub {
                 reply("Nothing was done about \"$what\": it waited 30 minutes for your Confirm.")
             }
         }
+        return id
     }
 
     /** Every request still waiting is dropped (the conversation was cleared). */
@@ -1106,6 +1153,7 @@ object IraHub {
     /** Wipes what Ira learned too; it relearns from the data on the next refresh. */
     suspend fun forgetAll() = lock.withLock {
         dropPending()
+        checked = null
         book = PatternBook()
         lastNews = null
         lastBackground = null
