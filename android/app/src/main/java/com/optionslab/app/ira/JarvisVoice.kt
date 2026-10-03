@@ -89,6 +89,7 @@ class JarvisVoice : Service() {
                 if (am.getStreamVolume(android.media.AudioManager.STREAM_MUSIC) == 0) out += "Your phone's media volume is at zero: turn it up."
             } }
             if (!wanted) out += "Listening is off, so I only speak replies to typed questions (switch on Jarvis voice to talk to me)."
+            if (lastLatencyMs > 0) out += "My last spoken reply took %.1f seconds.".format(java.util.Locale.ENGLISH, lastLatencyMs / 1000.0)
             return if (out.isEmpty()) "Boss, my voice looks fine: not muted, volume up, a voice ready. If you still hear nothing, tap Listen under a reply."
                 else "Boss, here's why you may not hear me: " + out.joinToString(" ")
         }
@@ -194,6 +195,12 @@ class JarvisVoice : Service() {
             get() = runCatching { com.optionslab.app.security.SecurePrefs.getBoolean("jarvis.hindi", false) }.getOrDefault(false)
             set(v) { runCatching { com.optionslab.app.security.SecurePrefs.put("jarvis.hindi", v) } }
 
+        /** How long the last spoken reply took, from Boss's last word to Jarvis's first sound (ms), or 0. */
+        @Volatile var lastLatencyMs = 0L
+
+        /** Jarvis is speaking now (the model waits, so the voice is not slowed). */
+        val speakingNow: Boolean get() = instance?.get()?.speaking == true
+
         /** What the recognizer heard last, for the Settings check. */
         @Volatile var heardText: String? = null; private set
 
@@ -260,7 +267,7 @@ class JarvisVoice : Service() {
     private var listening = false
     /** Ends the recognizer's turn early (its results come at once). */
     private val finish = Runnable { if (listening && !speaking) runCatching { rec?.stopListening() } }
-    private val END_AFTER_MS = 800L
+    private val END_AFTER_MS = 600L
     /** The sentence being spoken now ("id#n"), so a replaced one is ignored. */
     @Volatile private var utterance: String? = null
     private var said = 0
@@ -372,7 +379,10 @@ class JarvisVoice : Service() {
         val t = tts ?: return false
         if (!applyStyle(t)) return false
         t.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
-            override fun onStart(id: String?) {}
+            override fun onStart(id: String?) {
+                val h = heardAt
+                if (h > 0 && id?.startsWith("answer") == true) { lastLatencyMs = SystemClock.elapsedRealtime() - h; heardAt = 0L }
+            }
             override fun onDone(id: String?) { main.post { if (id == utterance) afterSpeech(id?.substringBefore('#')) } }
             @Deprecated("Deprecated in Java") override fun onError(id: String?) { main.post { if (id == utterance) afterSpeech(id?.substringBefore('#')) } }
             override fun onStop(id: String?, interrupted: Boolean) {
@@ -521,6 +531,9 @@ class JarvisVoice : Service() {
         _state.value = VoiceState(Mode.AWAKE)
     }
 
+    /** When Boss's last words were heard (for the reply time). */
+    @Volatile private var heardAt = 0L
+
     private fun heard(alternatives: List<String>) {
         // While Jarvis talks (or the turn began while it talked) it hears itself too: only its name counts then.
         if (speaking || turnInSpeech) {
@@ -600,13 +613,17 @@ class JarvisVoice : Service() {
         com.optionslab.ira.Command.Kind.JTRADES_LIVE, com.optionslab.ira.Command.Kind.AUTOPILOT_ON)
 
     private fun answer(q: String, confirm: Boolean = false) {
+        heardAt = SystemClock.elapsedRealtime()
         _state.value = VoiceState(Mode.THINKING)
         scope.launch {
             // Answer at once from what Jarvis already knows (kept fresh every minute while listening in market hours);
             // only with no prices at all is the first answer held for a refresh.
             val st = IraHub.state.value
             if (st.snaps.isEmpty()) runCatching { withContext(Dispatchers.Default) { IraHub.refresh() } }
-            else if (st.liveAt?.isBefore(java.time.Instant.now().minusSeconds(120)) != false) launch(Dispatchers.Default) { runCatching { IraHub.refresh() } }
+            // Prices are re-read in the background only while the market trades (a closed day's prices do not change, and
+            // a full re-read competes with the voice for the phone's processor).
+            else if (com.optionslab.ira.Market.NIFTY.trading(java.time.LocalDateTime.now(java.time.ZoneId.of("Asia/Kolkata"))) &&
+                st.liveAt?.isBefore(java.time.Instant.now().minusSeconds(120)) != false) launch(Dispatchers.Default) { runCatching { IraHub.refresh() } }
             if (confirm) IraHub.askConfirmed(q) else IraHub.ask(q)
             // A slow answer (your account, the trade check): say so at once instead of going quiet.
             val hold = launch { kotlinx.coroutines.delay(1_000); say("One moment, Boss.", "wait") }

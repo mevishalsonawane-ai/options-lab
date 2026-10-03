@@ -935,6 +935,10 @@ object IraHub {
         val msg = Msg(true, a.text, a.facts, a.order, writing = write)
         _state.update { it.copy(messages = (it.messages + Msg(false, q) + msg).takeLast(MAX_MESSAGES)) }
         if (write) scope.launch {
+            // The model waits until the answer has been spoken: it shares the phone's processor with the voice.
+            kotlinx.coroutines.delay(400)
+            var waited = 0
+            while (JarvisVoice.speakingNow && waited < 30_000) { kotlinx.coroutines.delay(250); waited += 250 }
             val better = runCatching { IraModel.rewrite(q, a.facts, a.text) }.getOrNull()
             _state.update { s -> s.copy(messages = s.messages.map { m ->
                 if (m !== msg) m else if (better != null && better != a.text) m.copy(text = better, draft = a.text, writing = false) else m.copy(writing = false)
