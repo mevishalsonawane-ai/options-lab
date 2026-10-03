@@ -482,6 +482,10 @@ object IraHub {
     /** The index's recent candles as Jarvis last read them (for the study's "today"). */
     internal fun recentBars(m: IraMarket): List<Candle> = histories[m]?.bars.orEmpty()
 
+    /** [m]'s 1-minute candles read now from the feed (Solo needs every minute, not the 15-minute refresh); empty on failure. */
+    internal suspend fun freshBars(m: IraMarket): List<Candle> =
+        withTimeoutOrNull(20_000) { runCatching { liveOf(m) }.getOrNull() }.orEmpty()
+
     /**
      * Through the night (JarvisAlgo, outside market hours, called hourly): the trusted feeds read, and each new headline
      * that matters kept quietly with what it means, for the 9 AM brief - no pop-up, no voice at night.
@@ -1013,6 +1017,11 @@ object IraHub {
         if (Topic.TRADE_CHECK in parsed.topics) {
             _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
             scope.launch { reply(runCatching { tradeCheckFast().say() }.getOrElse { "I could not run the trade check just now." }) }
+            return
+        }
+        // "How is Solo doing": its switch and its paper record (switched only on the Jarvis settings page, never by voice).
+        if (parsed.order == null && parsed.command == null && Regex("(?i)\\bsolo\\b").containsMatchIn(q)) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, IraSolo.status())).takeLast(MAX_MESSAGES)) }
             return
         }
         // Reasoning over the data on the phone: a move over a stretch of time, which market is stronger, the expected range.

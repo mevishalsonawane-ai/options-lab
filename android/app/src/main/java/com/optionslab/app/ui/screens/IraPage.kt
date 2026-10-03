@@ -835,8 +835,32 @@ fun JarvisSettingsPage() {
     com.optionslab.app.ui.Page {
         item { PageTitle("Jarvis settings", "Voice and the on-device AI model. Nothing you say or type leaves the phone.") }
         item { VoiceSwitch() }
+        item { SoloCard() }
         item { AutomationsCard() }
         item { ModelCard() }
+    }
+}
+
+/** Solo (the owner's wish, 2026-10-03): Jarvis trades by himself on paper; the switch, the two-year test and the record. */
+@Composable
+private fun SoloCard() {
+    val p = LocalPalette.current
+    LedgerCard(title = "Solo: Jarvis trades by himself (paper)") {
+        var on by remember { mutableStateOf(com.optionslab.app.ira.IraSolo.on) }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(if (on) "Solo is on" else "Solo is off", style = Type.label.copy(color = p.ink, fontSize = 14.sp))
+                Text("Paper account only - never real money. One trade a day at most, 1 lot, out by 15:10; stops after 2 losses or Rs 5,000 down in a day, and pauses itself Rs 15,000 below its best.",
+                    style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp))
+            }
+            androidx.compose.material3.Switch(checked = on, onCheckedChange = { v -> on = v; com.optionslab.app.ira.IraSolo.on = v })
+        }
+        Note("The setup: a big 15-minute candle, then a 40% pullback that holds its low (or high); bought the candle's way, stop at that level, target twice the risk. Tested on two years of real option prices:")
+        com.optionslab.app.ira.IraSolo.BACKTEST.forEach { Note(it) }
+        Note("Honest reading: the index edge is real but small, and option costs and decay eat most of it - one year won, one lost. Treat Solo as a test on paper, not a money-maker yet.")
+        val rec = remember(on) { com.optionslab.app.ira.IraSolo.record() }
+        Note(rec)
+        com.optionslab.app.ira.IraSolo.paused?.let { Note(it) }
     }
 }
 
@@ -848,7 +872,7 @@ fun JarvisSettingsPage() {
 private fun AutomationsCard() {
     val p = LocalPalette.current
     LedgerCard(title = "What Jarvis does by itself") {
-        Note("Each runs on its own while JarvisAlgo watches the market. Nothing here places a trade without asking you; the trailing stop only moves your stop up.")
+        Note("Each runs on its own while JarvisAlgo watches the market. Nothing here places a trade without asking you (Solo, above, is the one exception, on paper only); the trailing stop only moves your stop up.")
         com.optionslab.app.ira.Automations.Auto.entries.forEach { a ->
             var on by remember { mutableStateOf(com.optionslab.app.ira.Automations.on(a)) }
             val last = remember(on) { com.optionslab.app.ira.Automations.last(a) }
