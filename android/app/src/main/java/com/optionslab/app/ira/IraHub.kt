@@ -185,7 +185,8 @@ object IraHub {
         synchronized(tested) { tested.clear(); saved?.tested?.let { tested += it } }
         // The process started again: what was kept comes back; a strategy still waiting is offered again in the conversation.
         // The conversation comes back as it was (the owner's wish, 2026-10-02); a strategy still waiting is offered again.
-        val talk = saved?.messages.orEmpty()
+        // An option-chain read cut short by the process ending never finishes: its placeholder is told as not read.
+        val talk = saved?.messages.orEmpty().map { if (it.fromIra && it.text.startsWith(CHAIN_NOTE)) it.copy(text = "I couldn't read the option chain just now, Boss.") else it }
         val waiting = saved?.proposals.orEmpty().filter { it.status == Proposal.NEW && talk.none { m -> m.proposal == it.id } }
             .map { Msg(true, "Still waiting for your decision. " + it.result.summary(), proposal = it.id) }
         _state.value = State(learned = book.size, best = book.best(), proposals = saved?.proposals.orEmpty(),
@@ -980,7 +981,7 @@ object IraHub {
                 val named = parsed.markets.filter { it != IraMarket.VIX && it != IraMarket.GOLD }
                 val m = named.firstOrNull { it in LIVE.keys } ?: IraMarket.NIFTY
                 fun answer(text: String) = _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, text)).takeLast(MAX_MESSAGES)) }
-                if (parsed.markets.isNotEmpty() && named.isEmpty()) { answer("There are no options on that here, Boss: option prices are for Nifty, BankNifty, FinNifty, MidcapNifty and Sensex."); return }
+                if (parsed.markets.isNotEmpty() && named.isEmpty()) { answer("There are no options on that here, Boss: option prices are for Nifty, BankNifty, FinNifty and Sensex."); return }
                 if (!com.optionslab.app.data.Market.isOpen()) { answer("The market is closed, Boss: option prices are read live, from 9:15 to 3:30 on trading days."); return }
                 if (!online()) { answer("I'm offline, Boss: option prices need the internet."); return }
                 // A placeholder answer at once (so a later question is never answered with this quote), replaced when read.
@@ -991,8 +992,9 @@ object IraHub {
                     val ch = kotlinx.coroutines.withTimeoutOrNull(8_000) { read.await() }
                     if (ch == null) read.cancel()
                     val text = if (ch == null) "I couldn't read the ${m.label} option chain just now, Boss."
-                        else com.optionslab.ira.OptionQuote.say(ch, oq, m.label) ?: com.optionslab.ira.OptionQuote.near(ch, oq)
-                    _state.update { st -> st.copy(messages = st.messages.map { if (it === wait) Msg(true, text) else it }) }
+                        else runCatching { com.optionslab.ira.OptionQuote.say(ch, oq, m.label) ?: com.optionslab.ira.OptionQuote.near(ch, oq) }
+                            .getOrDefault("I couldn't read the ${m.label} option chain just now, Boss.")
+                    _state.update { st -> st.copy(messages = st.messages.map { if (it === wait) it.copy(text = text) else it }) }
                 }
                 return
             }
