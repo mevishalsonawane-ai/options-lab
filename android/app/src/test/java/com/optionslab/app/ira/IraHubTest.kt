@@ -581,8 +581,10 @@ class IraHubTest : RobolectricTest() {
         IraHub.ask("set max lots to 5")
         waitFor("the confirm") { IraHub.state.value.pending.isNotEmpty() }
         val id = IraHub.state.value.pending.single()
-        assertTrue(IraHub.state.value.messages.last().text,
-            IraHub.state.value.messages.last().text.contains("max lots per instrument from ${before.guardMaxLots} to 5 (this allows more risk)"))
+        // The confirm anywhere after the question (a late note from an earlier test may land after it).
+        val after = IraHub.state.value.messages.let { ms -> ms.drop(ms.indexOfLast { !it.fromIra && it.text == "set max lots to 5" } + 1) }
+        assertTrue(after.joinToString(" | ") { it.text },
+            after.any { it.fromIra && it.text.contains("max lots per instrument from ${before.guardMaxLots} to 5 (this allows more risk)") })
         assertEquals("nothing before Confirm", before.guardMaxLots, com.optionslab.app.data.AppSettings.load().guardMaxLots)
         IraHub.confirm(id)
         assertEquals(5, com.optionslab.app.data.AppSettings.load().guardMaxLots)
