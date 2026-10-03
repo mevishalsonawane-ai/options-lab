@@ -210,6 +210,9 @@ object AppAnswers {
             "patterns, volatility and the news. I know the app: your orders (paper and Zerodha), positions, P&L today and by day, " +
             "every strategy and arm, risk limits, stops and targets, alarms, settings, and where things are (try \"analyze my orders\" " +
             "or \"where is the kill switch\"). I can backtest a pattern as a strategy (\"backtest the breakout on BankNifty 15m\") and " +
-            "prepare an order for you to confirm (\"buy 1 lot Nifty ATM CE\"). I don't give buy or sell advice. " + voiceLine, emptyList())
+            "prepare an order for you to confirm (\"buy 1 lot Nifty ATM CE\"). I can also reason over the data: \"why is Nifty down\", " +
+            "\"how much did BankNifty move in the last hour\", \"which index is strongest\", \"expected range today\", \"chances Nifty closes " +
+            "above 25000\", \"pivots\", \"is Nifty overbought\", \"recap the day\", \"how did Nifty do this week\", \"brief me\", " +
+            "\"what is theta\", and \"the usual\". I don't give buy or sell advice. " + voiceLine, emptyList())
     }
 }
