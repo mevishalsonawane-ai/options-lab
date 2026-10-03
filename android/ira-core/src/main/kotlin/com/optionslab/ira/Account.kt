@@ -129,6 +129,9 @@ object AppAnswers {
         Section.EVENTS to Regex(" (event|events|calendar|fed|fomc|rbi|budget|policy|cpi|news events|this week|expiry day|expiries) "),
     )
 
+    /** The daily loss limit in other words: "daily stop loss", "day's SL", "stop loss for the day", "max loss per day". */
+    val DAY_STOP = Regex(" ((daily|day s|days|today s|per day|intraday) (stop ?loss|sl|max loss|loss cap)|(stop ?loss|sl|max loss|maximum loss) (for|of|per|in) (the |a )?day|daily max(imum)? loss) ")
+
     /** Does [t] (lower-case, spaced) ask about the app or the owner's trading? */
     fun about(t: String): Boolean = WORDS.any { (s, r) -> s != Section.HOWTO && s != Section.STATUS && r.containsMatchIn(t) } ||
         Regex(" (my|mine|our|i|me) ").containsMatchIn(t) && WORDS.any { it.second.containsMatchIn(t) } ||
@@ -138,6 +141,9 @@ object AppAnswers {
         val t = " " + text.lowercase().replace("p&l", "p l").replace(Regex("[^a-z0-9 ]"), " ").replace(Regex("\\s+"), " ").trim() + " "
         val out = LinkedHashSet<Section>()
         for ((s, r) in WORDS) if (r.containsMatchIn(t)) out += s
+        // "My daily stop loss", "stop loss for the day", "max loss per day": the daily loss limit (Boss's words, 3 Oct),
+        // not the stops on positions nor the P&L.
+        if (DAY_STOP.containsMatchIn(t)) { out += Section.RISK; out.remove(Section.PROTECTIONS); out.remove(Section.PNL) }
         if (Section.RISK in out && Regex(" (daily loss|loss limit) ").containsMatchIn(t)) out.remove(Section.PNL)
         if (Section.HISTORY in out && Regex(" (made|lost|earned|p l|pnl|profit|loss) ").containsMatchIn(t)) out.remove(Section.PNL)
         if (Section.EVENTS in out && Regex(" (event|events|fed|fomc|rbi|budget|cpi) ").containsMatchIn(t)) out.remove(Section.HISTORY)

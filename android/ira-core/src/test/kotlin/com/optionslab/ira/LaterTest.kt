@@ -40,3 +40,21 @@ class LaterTest {
             assertTrue(k !in Later.ALLOWED, k.name)
     }
 }
+
+class DailyStopLossTest {
+    @Test fun theDailyStopLossIsTheDailyLossLimit() {
+        for (q in listOf("whats my daily stop loss", "what is my daily SL", "stop loss for the day?", "what's my max loss per day")) {
+            val p = Ask.parse(q)
+            assertNull(p.command, "$q is a question, not a command: ${p.command}")
+            assertNull(p.order, q)
+            val s = AppAnswers.sections(q)
+            assertTrue(Section.RISK in s && Section.PROTECTIONS !in s && Section.PNL !in s, "$q -> $s")
+        }
+        // The stops on positions are still the stops.
+        assertTrue(Section.PROTECTIONS in AppAnswers.sections("what are my stop losses on open positions"))
+        // A change in those words sets the daily loss limit.
+        val c = Ask.parse("set my daily stop loss to 5000").command
+        assertEquals(Command.Kind.SET_LIMIT, c?.kind, "$c")
+        assertEquals(SettingsTalk.Key.DAILY_LOSS.name, c?.target)
+    }
+}

@@ -38,7 +38,7 @@ object SettingsTalk {
         Key.PAPER_TRADES to "paper (max )?(orders|trades)( per day| a day)?",
         Key.LOSS_ALERT to "(p l |pnl )?loss alert",
         Key.PROFIT_ALERT to "(p l |pnl )?profit alert",
-        Key.DAILY_LOSS to "(daily loss( limit)?|max(imum)? (daily )?loss|(?<!stop )loss limit|stop loss limit for the day)",
+        Key.DAILY_LOSS to "(daily (stop ?loss|sl)( limit)?|(stop ?loss|sl|max loss) (for|per) (the |a )?day|daily loss( limit)?|max(imum)? (daily )?loss|(?<!stop )loss limit|stop loss limit for the day)",
         Key.LOTS_PER_ORDER to "(max(imum)? )?lots (per|an|each|a) order",
         Key.MAX_LOTS to "max(imum)? lots( per instrument)?|lot limit",
         Key.MAX_OPEN to "max(imum)? (open )?positions|open positions limit",
