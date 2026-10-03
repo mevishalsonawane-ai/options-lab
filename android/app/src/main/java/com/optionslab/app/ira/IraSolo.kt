@@ -25,6 +25,7 @@ internal object IraSolo {
     private const val KEY_ON = "jarvis.solo"
     private const val KEY_PAUSED = "jarvis.solo.paused"
     private const val KEY = "jarvis.solo.trades"
+    private const val KEY_FROM = "jarvis.solo.from"
     private val IST = ZoneId.of("Asia/Kolkata")
     private val MARKETS = listOf(IraMarket.NIFTY, IraMarket.BANKNIFTY)
 
@@ -47,7 +48,8 @@ internal object IraSolo {
         get() = runCatching { com.optionslab.app.security.SecurePrefs.getBoolean(KEY_ON, false) }.getOrDefault(false)
         set(v) {
             runCatching { com.optionslab.app.security.SecurePrefs.put(KEY_ON, v) }
-            if (v) runCatching { com.optionslab.app.security.SecurePrefs.put(KEY_PAUSED, null) }
+            // Switched on again: the drawdown that paused it is not counted again (measured from here).
+            if (v) runCatching { com.optionslab.app.security.SecurePrefs.put(KEY_PAUSED, null); com.optionslab.app.security.SecurePrefs.put(KEY_FROM, all().size) }
             IraActivity.add(if (v) "Solo switched on (paper only)." else "Solo switched off.")
         }
 
@@ -89,9 +91,11 @@ internal object IraSolo {
             if (m in 0 until now) byMin[m] = b
         }
         val first = byMin[0] ?: return emptyList()
-        val out = ArrayList<Candle>(now)
+        // Up to the last minute the feed has published (a copied minute is never read as a 5-minute close).
+        val end = byMin.keys.max() + 1
+        val out = ArrayList<Candle>(end)
         var last = first
-        for (m in 0 until now) { val b = byMin[m] ?: last; out += b; last = b }
+        for (m in 0 until end) { val b = byMin[m] ?: last; out += b; last = b }
         return out
     }
 
@@ -104,20 +108,23 @@ internal object IraSolo {
 
     /** Every market-watch pass while Solo is on: manage the open trade, or look for the next one. */
     suspend fun tick() = lock.withLock {
-        if (!com.optionslab.app.BuildConfig.JARVIS || !on) return@withLock
+        if (!com.optionslab.app.BuildConfig.JARVIS) return@withLock
         if (!com.optionslab.app.data.Market.isOpen()) return@withLock
         val today = com.optionslab.app.data.Market.today()
         val now = minuteNow()
         val list = all()
+        // An open trade is always seen through to its exit, even after Solo is switched off.
         list.lastOrNull { !it.closed }?.let { manage(it, list, today, now); return@withLock }
-        if (paused != null) return@withLock
+        if (!on || paused != null) return@withLock
         // The risk book: a professional's day.
         val mine = list.filter { it.day == today.toString() && it.closed }
         val book = mine.fold(Solo.Day()) { b, t -> b.after(t.net ?: 0.0) }
         if (book.canTrade(RULES, DAY_LOSS) != null) return@withLock
         val s = AppSettings.load()
         if (s.guardKill || com.optionslab.app.data.LossBreaker.trippedToday()) return@withLock
-        if (runCatching { IraHub.tradeCheckFast().level }.getOrNull() == com.optionslab.ira.TradeCheck.Level.STOP) return@withLock
+        // The trade check must say yes: an error reading it is a no (fail closed).
+        val level = runCatching { IraHub.tradeCheckFast().level }.getOrNull() ?: return@withLock
+        if (level == com.optionslab.ira.TradeCheck.Level.STOP) return@withLock
         val busy = mine.maxOfOrNull { it.entryMinute } ?: -1
         for (m in MARKETS) {
             val bars = IraHub.freshBars(m)
@@ -134,13 +141,21 @@ internal object IraSolo {
     private suspend fun enter(m: IraMarket, sig: Solo.Signal, list: List<T>, today: LocalDate) {
         val u = m.name
         val c = IraNewsTrades.contract(u, sig.index, sig.call) ?: return
+        // Boss's own paper position in this contract is never mixed with Solo's (its stop and close would touch it).
+        if (runCatching { Paper.snapshot().positions.positions.any { it.symbol == c.symbol && it.quantity != 0 } }.getOrDefault(true)) return
         val q = runCatching { Paper.quote(c) }.getOrNull() ?: return
         com.optionslab.ira.StrikeLiquidity.problem(q.bid, q.ask, q.volume, c.lotSize)?.let { IraActivity.add("Solo skipped ${c.symbol}: $it"); return }
         val r = Paper.place(c, "BUY", 1, "MARKET", "MIS", null, null, q)
-        val fill = r.events.filterIsInstance<com.optionslab.engine.sandbox.SandboxEvent.Fill>().firstOrNull() ?: return
+        val fill = r.events.filterIsInstance<com.optionslab.engine.sandbox.SandboxEvent.Fill>().firstOrNull()
+        if (fill == null) {
+            // Not filled now (a stale quote): the order is cancelled, never left to fill later with no stop and no record.
+            r.orderId?.let { runCatching { Paper.cancel(it) } }
+            return
+        }
         r.orderId?.let { com.optionslab.app.data.Strategies.tagOwner("paper:$it", "Jarvis solo · entry") }
         // A safety stop on the premium in case the app is stopped: Solo's own exit is on the index.
-        com.optionslab.app.data.Protections.protectPaper(c.symbol, "MIS", fill.quantity, fill.price, fill.price * 0.6, null, null)
+        val prot = com.optionslab.app.data.Protections.protectPaper(c.symbol, "MIS", fill.quantity, fill.price, fill.price * 0.6, null, null)
+        if (!prot.startsWith("Protected")) IraActivity.add("Solo: the safety stop on ${c.symbol} was not set ($prot); Solo's own exit still watches it.")
         val t = T(today.toString(), u, c.symbol, sig.call, fill.quantity, fill.price, sig.entryMinute, sig.index, sig.level, sig.target, sig.why)
         save(list + t)
         val line = "Solo (paper): bought ${c.symbol} at ${"%.2f".format(fill.price)}. Why: ${sig.why}. Out if ${m.label} " +
@@ -153,9 +168,11 @@ internal object IraSolo {
         val m = IraMarket.valueOf(t.market)
         val held = runCatching { Paper.snapshot().positions.positions.any { it.symbol == t.symbol && it.quantity != 0 } }.getOrDefault(true)
         if (!held) {
-            // Closed outside Solo (its safety stop or the 15:15 square-off): the last sell is the exit.
-            val px = runCatching { Paper.snapshot().trades.lastOrNull { it.symbol == t.symbol && it.action == "SELL" }?.price }.getOrNull()
-            finish(t, list, px, "closed by the safety stop or the square-off")
+            // Closed outside Solo (its safety stop or the 15:15 square-off): the newest sell today is the exit. When no
+            // sell is seen (settled overnight), it is counted at the safety stop - the worst it could have been.
+            val sold = if (t.day == today.toString())
+                runCatching { Paper.snapshot().trades.firstOrNull { it.symbol == t.symbol && it.action == "SELL" }?.price }.getOrNull() else null
+            finish(t, list, sold ?: t.entry * 0.6, if (sold != null) "closed by the safety stop or the square-off" else "closed while the app was away (counted at the safety stop)")
             return
         }
         val day = session(IraHub.freshBars(m), today, now)
@@ -172,6 +189,11 @@ internal object IraSolo {
         how ?: return
         val r = Paper.close(t.symbol, "MIS")
         val px = r.events.filterIsInstance<com.optionslab.engine.sandbox.SandboxEvent.Fill>().firstOrNull()?.price
+        if (px == null) {
+            // Not filled (no fresh price): the exit order is cancelled and tried again next pass; the safety stop stays.
+            r.orderId?.let { runCatching { Paper.cancel(it) } }
+            return
+        }
         runCatching { com.optionslab.app.data.Protections.removeSymbol(false, "NFO", t.symbol) }
         finish(t, list, px, when (how) {
             Solo.Exit.STOP -> "stop: ${m.label} through ${"%,.0f".format(t.level)}"
@@ -190,7 +212,8 @@ internal object IraSolo {
             (net?.let { "Result ${com.optionslab.ira.AppFacts.rs(it)}." } ?: "") + " " + record(all))
         // Discipline: a drawdown this deep from Solo's best means the setup is not working now - it stops and says so.
         var peak = 0.0; var eq = 0.0
-        for (x in all.filter { it.closed }) { eq += x.net ?: 0.0; peak = maxOf(peak, eq) }
+        val from = runCatching { com.optionslab.app.security.SecurePrefs.getInt(KEY_FROM, 0) }.getOrDefault(0).coerceIn(0, all.size)
+        for (x in all.drop(from).filter { it.closed }) { eq += x.net ?: 0.0; peak = maxOf(peak, eq) }
         if (peak - eq >= PAUSE_DRAWDOWN && paused == null) {
             val why2 = "Solo is down ${com.optionslab.ira.AppFacts.rs(eq - peak).removePrefix("-")} from its best: paused until you switch it on again."
             runCatching { com.optionslab.app.security.SecurePrefs.put(KEY_PAUSED, why2) }
@@ -205,7 +228,7 @@ internal object IraSolo {
     }
 
     /** "How is Solo doing": on or off, paused or not, and the record. */
-    fun status(): String = (if (on) "Solo is on, Boss (paper only)." else "Solo is off, Boss: switch it on in Jarvis settings (paper only).") +
+    fun status(): String = (if (on) "Solo is on, Boss (paper only; switch it off in Jarvis settings)." else "Solo is off, Boss: switch it on in Jarvis settings (paper only).") +
         (paused?.let { " $it" } ?: "") + " " + record()
 
     /** Solo's paper record in one line. */
