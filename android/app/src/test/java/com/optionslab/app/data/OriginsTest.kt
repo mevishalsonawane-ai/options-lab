@@ -104,4 +104,15 @@ class OriginsTest {
             product = "MIS", tag = "iraorb"))
         assertEquals("ORB", Origins.livePosition(emptyMap(), trades, orders, "BANKNIFTY55000PE", "MIS", 35))
     }
+
+    @Test fun jarvisOrdersAreNamedAndEveryOrderHasItsId() {
+        assertEquals("Jarvis: solo · entry" to true, Origins.of(mapOf("paper:9" to "Jarvis solo · entry"), "paper:9"))
+        assertEquals("Jarvis: news · exit" to true, Origins.display("Jarvis news · exit"))
+        assertEquals("Jarvis: close (you confirmed)" to true, Origins.display("Jarvis · close (you confirmed)"))
+        assertEquals("Manual · Jarvis" to false, Origins.display("Manual · Jarvis"))           // Boss's own order, given through Jarvis
+        assertEquals("#12345678", Origins.shortId("ABC12345678"))
+        assertEquals("#7", Origins.shortId("7"))
+        assertNull(Origins.shortId(" "))
+        assertNull(Origins.shortId(null))
+    }
 }

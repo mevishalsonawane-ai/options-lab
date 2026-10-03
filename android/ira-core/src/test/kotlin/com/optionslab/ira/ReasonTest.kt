@@ -634,3 +634,10 @@ class ReviewQTest {
         assertEquals(true, Odds.asked(Ask.parse("nifty 25000 pahunchega kya").text)?.touch)
     }
 }
+
+class OrderIdTest {
+    @Test fun ordersAreSaidWithTheirIds() {
+        val l = AppFacts.orders("Paper", listOf(AppFacts.OrderLine("09:31", "NIFTY25O0724500CE", "BUY", 75, "COMPLETE", 120.5, "Jarvis solo · entry", id = "PAPER-00001234")), byWho = false)
+        assertTrue(l.any { it.contains("(Jarvis solo · entry), order #00001234.") }, l.toString())
+    }
+}

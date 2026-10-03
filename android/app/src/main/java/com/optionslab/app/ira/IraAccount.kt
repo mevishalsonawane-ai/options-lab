@@ -103,7 +103,7 @@ internal object IraAccount {
                 if (snap != null) {
                     orders += AppFacts.orders("Paper", snap.orders.orders.filter { it.timestamp.startsWith(today.toString()) }.sortedBy { it.timestamp }.map {
                         AppFacts.OrderLine(it.timestamp.drop(11).take(5), it.symbol, it.action, it.quantity, it.status, it.averagePrice,
-                            owners["paper:${it.orderId}"] ?: it.strategy.takeIf { x -> x.isNotBlank() }, it.rejectionReason.takeIf { r -> r.isNotBlank() })
+                            owners["paper:${it.orderId}"] ?: it.strategy.takeIf { x -> x.isNotBlank() }, it.rejectionReason.takeIf { r -> r.isNotBlank() }, it.orderId)
                     }, byWho = true)
                     pos += AppFacts.positions("Paper", snap.positions.positions.filter { it.quantity != 0 }.map {
                         AppFacts.Held(it.symbol, it.quantity, it.averagePrice, it.ltp, it.pnl) })
@@ -121,7 +121,9 @@ internal object IraAccount {
                         val (zo, zp, zf) = z
                         orders += AppFacts.orders("Zerodha", zo.filter { it.placedAt.startsWith(today.toString()) || it.placedAt.length < 10 }.sortedBy { it.placedAt }.map {
                             AppFacts.OrderLine(it.placedAt.drop(11).take(5).ifBlank { it.placedAt.take(5) }, it.symbol, it.side, it.qty, it.status, it.avg,
-                                owners[it.id] ?: it.tag.takeIf { t -> t.isNotBlank() }, it.message.takeIf { m -> m.isNotBlank() })
+                                // Zerodha orders are kept under "kite:<id>" (the bare id never matched: the raw tag showed).
+                                owners["kite:${it.id}"] ?: com.optionslab.app.data.Origins.fromTag(it.tag.takeIf { t -> t.isNotBlank() }) ?: it.tag.takeIf { t -> t.isNotBlank() },
+                                it.message.takeIf { m -> m.isNotBlank() }, it.id)
                         }, byWho = true)
                         pos += AppFacts.positions("Zerodha", zp.net.filter { it.open }.map { AppFacts.Held(it.symbol, it.qty, it.avg, it.last, it.pnl) })
                         pnl += AppFacts.pnl("Zerodha", zp.net.sumOf { it.pnl }, zp.net.sumOf { it.realised }, zp.net.sumOf { it.unrealised })

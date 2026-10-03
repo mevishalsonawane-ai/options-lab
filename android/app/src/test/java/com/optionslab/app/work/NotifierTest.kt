@@ -122,6 +122,13 @@ class NotifierTest : RobolectricTest() {
         assertEquals(0, Background.notifications(context).size())
     }
 
+    @Test fun aFillSaysItsOrderId() {
+        Notifier.orderFilled(context, "BUY", 75, "NIFTY25O2124500CE", 101.5, "Paper", "Jarvis solo · entry", "PAPER-00000042")
+        val a = Alerts.queue.value.last()
+        assertEquals("BUY filled · Paper · Jarvis: solo · entry", a.title)
+        assertEquals("75 NIFTY25O2124500CE @ 101.50 · order #00000042", a.text)
+    }
+
     @Test fun aFillBecomesItsPositionsCard() {
         Notifier.orderFilled(context, "buy", 75, "NIFTY25O2124500PE", 101.5, "Paper", "ORB")
         val a = Alerts.queue.value.single()

@@ -532,7 +532,7 @@ object OrbArms {
         val buy = Paper.place(c, "BUY", 1, "MARKET", "MIS", null, null)
         val fill = filledOrCancelled(buy) ?: return "order_refused: ${if (buy.ok) "no price to fill at; the order was cancelled" else buy.message}"
         buy.orderId?.let { Strategies.tagOwner("paper:$it", "${arm.label} · entry") }
-        Notifier.orderFilled(app, "BUY", fill.quantity, fill.symbol, fill.price, "Paper", arm.label)
+        Notifier.orderFilled(app, "BUY", fill.quantity, fill.symbol, fill.price, "Paper", "${arm.label} · entry", fill.orderId)
         val trigger = OrbRules.stopTrigger(fill.price)
         var stopId: String? = null
         if (trigger != null) {
@@ -611,7 +611,7 @@ object OrbArms {
         // sale is tried again on the next pass.
         val fill = filledOrCancelled(sell) ?: return p.copy(stopOrderId = p.stopOrderId?.let { restop(p, c) })
         sell.orderId?.let { Strategies.tagOwner("paper:$it", "${armOf(p.arm).label} · $why") }
-        Notifier.orderFilled(app, "SELL", fill.quantity, fill.symbol, fill.price, "Paper", armOf(p.arm).label)
+        Notifier.orderFilled(app, "SELL", fill.quantity, fill.symbol, fill.price, "Paper", "${armOf(p.arm).label} · exit", fill.orderId)
         return p.copy(stopOrderId = null, exit = fill.price, exitTime = now(), why = why, charges = p.charges + chargesOf(sell.orderId))
     }
 
@@ -734,7 +734,7 @@ object OrbArms {
         }
         if (f.filled <= 0) return "order_refused: Zerodha ${f.status.lowercase()}" + (f.message.takeIf { it.isNotBlank() }?.let { ": $it" } ?: "")
         val fill = f.avgPrice.takeIf { it > 0 } ?: last
-        Notifier.orderFilled(app, "BUY", f.filled, sym, fill, "Live", arm.label)
+        Notifier.orderFilled(app, "BUY", f.filled, sym, fill, "Live", "${arm.label} · entry", f.orderId)
         val (stopId, trigger) = placeStop(arm.label, sym, f.filled, ins.lotSize, ins.tickSize, fill, known + listOfNotNull(id), liquidity = liquidity != null)
         b.positions += Position(arm.source, c.symbol, c.right.name, f.filled, fill, now(), signalBar, id, stopId, trigger,
             charges = kiteCharge("BUY", fill, f.filled), live = true, kite = sym, level = liquidity?.level, target = liquidity?.target,
@@ -777,7 +777,7 @@ object OrbArms {
             return null
         }
         val fill = st.avgPrice.takeIf { it > 0 } ?: p.entry
-        Notifier.orderFilled(app, "BUY", st.filled, sym, fill, "Live", label)
+        Notifier.orderFilled(app, "BUY", st.filled, sym, fill, "Live", label, oid)
         val spec = runCatching { Broker.spec("NFO", sym) }.getOrNull()
         val liq = armOf(p.arm).liquidity
         val (stopId, trigger) = if (spec != null) placeStop(label, sym, st.filled, spec.lotSize, spec.tickSize, fill, known + oid, liquidity = liq)
@@ -804,7 +804,7 @@ object OrbArms {
             val so = p.stopOrderId?.let { orders[it] }
             if (so != null && so.status == "COMPLETE") {
                 val px = so.avg.takeIf { it > 0 } ?: p.stopTrigger ?: p.entry
-                Notifier.orderFilled(app, "SELL", so.filled, sym, px, "Live", "${armOf(p.arm).label} · stop")
+                Notifier.orderFilled(app, "SELL", so.filled, sym, px, "Live", "${armOf(p.arm).label} · stop", p.stopOrderId)
                 b.positions[i] = p.copy(exit = px, exitTime = t, why = "stop", stopOrderId = null, charges = p.charges + kiteCharge("SELL", px, p.qty))
                 continue
             }
@@ -910,7 +910,7 @@ object OrbArms {
         // Known to have filled nothing and to be finished (cancelled or rejected): the stop goes back.
         if (f == null || f.filled <= 0) return if (f != null && f.status in DONE) unsold() else p.copy(stopOrderId = null) to null
         val px = f.avgPrice.takeIf { it > 0 } ?: p.entry
-        Notifier.orderFilled(app, "SELL", f.filled, sym, px, "Live", label)
+        Notifier.orderFilled(app, "SELL", f.filled, sym, px, "Live", label, f.orderId)
         if (f.filled >= p.qty) return p.copy(stopOrderId = null, exit = px, exitTime = now(), why = why, charges = p.charges + kiteCharge("SELL", px, f.filled)) to null
         // Only part sold: that part is booked as closed, the rest stays open (no stop: the app watches it) and is sold next pass.
         val share = f.filled.toDouble() / p.qty
@@ -985,7 +985,7 @@ object OrbArms {
         val buy = Paper.place(c, "BUY", 1, "MARKET", "MIS", null, null)
         val fill = filledOrCancelled(buy) ?: return "order_refused: ${if (buy.ok) "no price to fill at; the order was cancelled" else buy.message}"
         buy.orderId?.let { Strategies.tagOwner("paper:$it", "${LiquidityRules.ARM.label} · entry") }
-        Notifier.orderFilled(app, "BUY", fill.quantity, fill.symbol, fill.price, "Paper", LiquidityRules.ARM.label)
+        Notifier.orderFilled(app, "BUY", fill.quantity, fill.symbol, fill.price, "Paper", "${LiquidityRules.ARM.label} · entry", fill.orderId)
         // The owner's stop: a resting SL-M sell 15% below the fill (the book owns it, as the ORB's -40).
         val trigger = LiquidityRules.stopTrigger(fill.price)
         var stopId: String? = null

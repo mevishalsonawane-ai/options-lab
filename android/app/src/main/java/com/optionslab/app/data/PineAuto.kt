@@ -373,7 +373,7 @@ object PineAuto {
             val buy = Paper.place(c, "BUY", lots, "MARKET", "MIS", null, null)
             val fill = filledOrCancelled(buy) ?: run { note(b, id, "Paper buy not filled: ${buy.message}"); return }
             buy.orderId?.let { Strategies.tagOwner("paper:$it", "${label(item)} · entry") }
-            Notifier.orderFilled(app, "BUY", fill.first, c.symbol, fill.second, "Paper", label(item))
+            Notifier.orderFilled(app, "BUY", fill.first, c.symbol, fill.second, "Paper", label(item), buy.orderId)
             b.held[id] = Held(c.symbol, right.name, fill.first, c.lotSize, fill.second, today.toString(), false, null)
             note(b, id, "Bought ${fill.first} ${c.symbol} at ${"%.2f".format(java.util.Locale.ENGLISH, fill.second)} (paper)")
             return
@@ -424,7 +424,7 @@ object PineAuto {
         }
         if (f.filled <= 0) { note(b, id, "Zerodha ${f.status.lowercase()}: no position"); return }
         val px = f.avgPrice.takeIf { it > 0 } ?: quote
-        Notifier.orderFilled(app, "BUY", f.filled, sym, px, "Live", label(item))
+        Notifier.orderFilled(app, "BUY", f.filled, sym, px, "Live", label(item), f.orderId)
         b.held[id] = Held(c.symbol, right.name, f.filled, ins.lotSize, px, today.toString(), true, sym)
         runCatching { save(b) }   // a live position is written down at once, not at the end of the pass
         note(b, id, "Bought ${f.filled} $sym at ${"%.2f".format(java.util.Locale.ENGLISH, px)} (LIVE)")
@@ -480,7 +480,7 @@ object PineAuto {
             val sell = Paper.place(c, "SELL", lots, "MARKET", "MIS", null, null)
             val fill = filledOrCancelled(sell) ?: run { note(b, id, "Paper sell of ${h.symbol} not filled (${sell.message}); retrying next pass"); return }
             sell.orderId?.let { Strategies.tagOwner("paper:$it", "${label(item)} · $why") }
-            Notifier.orderFilled(app, "SELL", fill.first, h.symbol, fill.second, "Paper", label(item))
+            Notifier.orderFilled(app, "SELL", fill.first, h.symbol, fill.second, "Paper", label(item), sell.orderId)
             addPnl(b, id, (fill.second - h.entry) * fill.first)
             b.held.remove(id)
             note(b, id, "Sold ${fill.first} ${h.symbol} at ${"%.2f".format(java.util.Locale.ENGLISH, fill.second)} ($why) · P&L ${"%+.0f".format(java.util.Locale.ENGLISH, (fill.second - h.entry) * fill.first)}")
@@ -532,7 +532,7 @@ object PineAuto {
         }
         if (f == null || f.filled <= 0) return
         val px = f.avgPrice.takeIf { it > 0 } ?: h.entry
-        Notifier.orderFilled(app, "SELL", f.filled, sym, px, "Live", label(item))
+        Notifier.orderFilled(app, "SELL", f.filled, sym, px, "Live", label(item), f.orderId)
         addPnl(b, id, (px - h.entry) * f.filled)
         if (f.filled >= h.qty && !h.unconfirmed) b.held.remove(id) else b.held[id] = h.copy(qty = (h.qty - f.filled).coerceAtLeast(0))
         note(b, id, "Sold ${f.filled} $sym at ${"%.2f".format(java.util.Locale.ENGLISH, px)} ($why, LIVE)")

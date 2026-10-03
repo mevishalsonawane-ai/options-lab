@@ -191,10 +191,11 @@ internal object IraNewsTrades {
             val guarded = prot.startsWith("Protected")
             save(all() + Pos(c.symbol, false, fill.price, fill.quantity, fill.price, if (guarded) stop else null, headline, day,
                 underlying = u, call = idea.call, spotIn = spot, minuteIn = nowMin))
-            IraActivity.add("Bought ${c.symbol} on paper at ${"%.2f".format(fill.price)} ($headline).")
-            IraHub.appContext()?.let { com.optionslab.app.work.Notifier.orderFilled(it, "BUY", fill.quantity, c.symbol, fill.price, "Paper", "Jarvis news") }
+            val oid = com.optionslab.app.data.Origins.shortId(r.orderId)?.let { " Order $it." } ?: ""
+            IraActivity.add("Bought ${c.symbol} on paper at ${"%.2f".format(fill.price)} ($headline).$oid")
+            IraHub.appContext()?.let { com.optionslab.app.work.Notifier.orderFilled(it, "BUY", fill.quantity, c.symbol, fill.price, "Paper", "Jarvis news · entry", r.orderId) }
             if (!guarded) unguarded(c.symbol, prot)
-            return "Bought ${c.symbol} at ${"%.2f".format(fill.price)} on paper${if (s.live) " (my trades stay on paper until proven)" else ""}. $prot" +
+            return "Bought ${c.symbol} at ${"%.2f".format(fill.price)} on paper${if (s.live) " (my trades stay on paper until proven)" else ""}.$oid $prot" +
                 if (guarded) " Profit lock on." else ""
         }
         val t = IraOrders.Ticket(u, c.expiry, c.strike, c.right, lots, true, c.lotSize)
@@ -377,6 +378,7 @@ internal object IraNewsTrades {
         val c = Paper.contractOf(p.symbol) ?: return "The paper contract was not found."
         val lots = (p.qty / maxOf(1, c.lotSize)).coerceAtLeast(1)
         val r = Paper.place(c, "SELL", lots, "MARKET", "MIS", null, null, runCatching { Paper.quote(c) }.getOrNull())
-        return "Paper: ${r.message}"
+        r.orderId?.let { com.optionslab.app.data.Strategies.tagOwner("paper:$it", "Jarvis news · exit") }
+        return "Paper: ${r.message}" + (com.optionslab.app.data.Origins.shortId(r.orderId)?.let { " (order $it)" } ?: "")
     }
 }

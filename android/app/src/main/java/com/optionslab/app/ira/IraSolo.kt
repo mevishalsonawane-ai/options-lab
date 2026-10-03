@@ -70,14 +70,17 @@ internal object IraSolo {
     /** One Solo trade; [closed] once out, with [exitPrice] and [net] (rupees after costs). */
     data class T(val day: String, val market: String, val symbol: String, val call: Boolean, val qty: Int, val entry: Double,
                  val entryMinute: Int, val index: Double, val level: Double, val target: Double, val why: String,
-                 val closed: Boolean = false, val exitPrice: Double? = null, val net: Double? = null, val exit: String? = null)
+                 val closed: Boolean = false, val exitPrice: Double? = null, val net: Double? = null, val exit: String? = null,
+                 /** The paper order ids of the entry and the exit (for the order book: "who placed it, which order"). */
+                 val orderId: String? = null, val exitOrderId: String? = null)
 
     fun all(): List<T> = runCatching {
         val a = JSONArray(com.optionslab.app.security.SecurePrefs.getString(KEY) ?: "[]")
         (0 until a.length()).mapNotNull { i -> runCatching { a.getJSONObject(i).let { o ->
             T(o.getString("d"), o.getString("m"), o.getString("s"), o.getBoolean("c"), o.getInt("q"), o.getDouble("e"), o.getInt("em"),
                 o.getDouble("i"), o.getDouble("lv"), o.getDouble("tg"), o.getString("w"), o.optBoolean("x"),
-                if (o.has("xp")) o.getDouble("xp") else null, if (o.has("n")) o.getDouble("n") else null, o.optString("xr").ifEmpty { null })
+                if (o.has("xp")) o.getDouble("xp") else null, if (o.has("n")) o.getDouble("n") else null, o.optString("xr").ifEmpty { null },
+                o.optString("oid").ifEmpty { null }, o.optString("xoid").ifEmpty { null })
         } }.getOrNull() }
     }.getOrDefault(emptyList())
 
@@ -85,7 +88,8 @@ internal object IraSolo {
         com.optionslab.app.security.SecurePrefs.put(KEY, JSONArray().apply { list.takeLast(500).forEach { t ->
             put(JSONObject().put("d", t.day).put("m", t.market).put("s", t.symbol).put("c", t.call).put("q", t.qty).put("e", t.entry)
                 .put("em", t.entryMinute).put("i", t.index).put("lv", t.level).put("tg", t.target).put("w", t.why).put("x", t.closed)
-                .apply { t.exitPrice?.let { put("xp", it) }; t.net?.let { put("n", it) }; t.exit?.let { put("xr", it) } })
+                .apply { t.exitPrice?.let { put("xp", it) }; t.net?.let { put("n", it) }; t.exit?.let { put("xr", it) }
+                    t.orderId?.let { put("oid", it) }; t.exitOrderId?.let { put("xoid", it) } })
         } }.toString())
     }
 
@@ -195,14 +199,16 @@ internal object IraSolo {
         val stopPx = kotlin.math.floor(fill.price * (1 - STOP_LOSS) / 0.05) * 0.05
         val prot = com.optionslab.app.data.Protections.protectPaper(c.symbol, "MIS", fill.quantity, fill.price, stopPx, null, null)
         if (!prot.startsWith("Protected")) IraActivity.add("Solo: the stop-loss on ${c.symbol} was not set ($prot); Solo's own exit still watches it.")
-        val t = T(today.toString(), u, c.symbol, sig.call, fill.quantity, fill.price, sig.entryMinute, sig.index, sig.level, sig.target, sig.why)
+        val t = T(today.toString(), u, c.symbol, sig.call, fill.quantity, fill.price, sig.entryMinute, sig.index, sig.level, sig.target, sig.why,
+            orderId = r.orderId)
         save(list + t)
-        val line = "Solo (paper): bought ${c.symbol} at ${"%.2f".format(fill.price)}. Why: ${sig.why}. Out if ${m.label} " +
+        val line = "Solo (paper): bought ${c.symbol} at ${"%.2f".format(fill.price)}" +
+            (com.optionslab.app.data.Origins.shortId(r.orderId)?.let { " (order $it)" } ?: "") + ". Why: ${sig.why}. Out if ${m.label} " +
             "${if (sig.call) "falls to" else "rises to"} ${"%,.0f".format(sig.level)}; target ${"%,.0f".format(sig.target)}; 15:10 at the latest. " +
             "Stop-loss on the option at ${"%.2f".format(kotlin.math.floor(fill.price * (1 - STOP_LOSS) / 0.05) * 0.05)} (30% down)." +
             (if (read.isNotEmpty()) " My read: $read" else "")
         tell(line)
-        IraHub.appContext()?.let { com.optionslab.app.work.Notifier.orderFilled(it, "BUY", fill.quantity, c.symbol, fill.price, "Paper", "Jarvis solo") }
+        IraHub.appContext()?.let { com.optionslab.app.work.Notifier.orderFilled(it, "BUY", fill.quantity, c.symbol, fill.price, "Paper", "Jarvis solo · entry", r.orderId) }
     }
 
     private suspend fun manage(t: T, list: List<T>, today: LocalDate, now: Int) {
@@ -237,6 +243,11 @@ internal object IraSolo {
         how ?: return
         val r = Paper.close(t.symbol, "MIS")
         val px = r.events.filterIsInstance<com.optionslab.engine.sandbox.SandboxEvent.Fill>().firstOrNull()?.price
+        // Solo's exit is labelled as its own (who placed it, which order) and notified like any fill.
+        if (px != null) r.orderId?.let { oid ->
+            com.optionslab.app.data.Strategies.tagOwner("paper:$oid", "Jarvis solo · exit")
+            IraHub.appContext()?.let { com.optionslab.app.work.Notifier.orderFilled(it, "SELL", t.qty, t.symbol, px, "Paper", "Jarvis solo · exit", oid) }
+        }
         if (px == null) {
             // Not filled (no fresh price): the exit order is cancelled and tried again next pass; the safety stop stays.
             r.orderId?.let { runCatching { Paper.cancel(it) } }
@@ -244,7 +255,7 @@ internal object IraSolo {
         }
         runCatching { com.optionslab.app.data.Protections.removeSymbol(false, "NFO", t.symbol) }
         val lesson = runCatching { Solo.review(s, day, at, how, t.entry, px, m.label) }.getOrNull()
-        finish(t, list, px, lesson = lesson, why = when (how) {
+        finish(t, list, px, lesson = lesson, exitOrderId = r.orderId, why = when (how) {
             Solo.Exit.STOP -> "stop: ${m.label} through ${"%,.0f".format(t.level)}"
             Solo.Exit.TARGET -> "target reached"
             Solo.Exit.SLOW -> "no follow-through"
@@ -254,12 +265,13 @@ internal object IraSolo {
         })
     }
 
-    private fun finish(t: T, list: List<T>, px: Double?, why: String, lesson: String? = null) {
+    private fun finish(t: T, list: List<T>, px: Double?, why: String, lesson: String? = null, exitOrderId: String? = null) {
         val net = px?.let { (it - t.entry) * t.qty - COSTS }
-        val done = t.copy(closed = true, exitPrice = px, net = net, exit = why)
+        val done = t.copy(closed = true, exitPrice = px, net = net, exit = why, exitOrderId = exitOrderId)
         val all = list.map { if (it === t) done else it }
         save(all)
-        tell("Solo (paper): closed ${t.symbol}" + (px?.let { " at ${"%.2f".format(it)}" } ?: "") + " - $why. " +
+        tell("Solo (paper): closed ${t.symbol}" + (px?.let { " at ${"%.2f".format(it)}" } ?: "") +
+            (com.optionslab.app.data.Origins.shortId(exitOrderId)?.let { " (order $it)" } ?: "") + " - $why. " +
             (net?.let { "Result ${com.optionslab.ira.AppFacts.rs(it)}." } ?: "") + (lesson?.let { " Review: $it" } ?: "") + " " + record(all))
         // Discipline: a drawdown this deep from Solo's best means the setup is not working now - it stops and says so.
         var peak = 0.0; var eq = 0.0

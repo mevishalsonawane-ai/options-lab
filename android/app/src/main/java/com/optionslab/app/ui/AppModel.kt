@@ -1167,7 +1167,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                     val f = runCatching { b.awaitOrder(id) }.getOrElse { com.optionslab.app.data.Broker.Fill(id, "UNKNOWN", 0.0, 0, "status not confirmed; check the order book") }
                     fills += f
                     // The notification is posted beside the send, not before the next leg or the fill shown.
-                    if (f.filled > 0) launch { runCatching { com.optionslab.app.work.Notifier.orderFilled(ctx, leg.side.name, f.filled, leg.tradingSymbol, f.avgPrice, "Live", cur.source) } }
+                    if (f.filled > 0) launch { runCatching { com.optionslab.app.work.Notifier.orderFilled(ctx, leg.side.name, f.filled, leg.tradingSymbol, f.avgPrice, "Live", cur.source, f.orderId) } }
                     if (f.status != "COMPLETE" || f.filled < leg.quantity) {
                         val working = f.status in WORKING
                         if (working) stuck.value = StuckLeg(cur, i, id, fills.toList(), f.status)
@@ -1706,7 +1706,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         val source = com.optionslab.app.data.Origins.manual(area)
         r.orderId?.let { com.optionslab.app.data.Strategies.tagOwner("paper:$it", source) }
         val fills = r.events.filterIsInstance<com.optionslab.engine.sandbox.SandboxEvent.Fill>()
-        fills.forEach { com.optionslab.app.work.Notifier.orderFilled(ctx, it.action, it.quantity, it.symbol, it.price, "Paper", source) }
+        fills.forEach { com.optionslab.app.work.Notifier.orderFilled(ctx, it.action, it.quantity, it.symbol, it.price, "Paper", source, it.orderId) }
         // The bracket: the whole position gets the stop / trail / target once the entry has filled.
         val f = fills.firstOrNull()
         if (protect?.any == true && f != null) {

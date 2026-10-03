@@ -29,7 +29,8 @@ object AppFacts {
     data class Held(val symbol: String, val qty: Int, val avg: Double, val ltp: Double, val pnl: Double)
     /** One of today's orders; [by] is who placed it ("Manual · Ira", a strategy's name...). */
     data class OrderLine(val time: String, val symbol: String, val action: String, val qty: Int, val status: String,
-                         val avgPrice: Double, val by: String?, val reason: String? = null)
+                         val avgPrice: Double, val by: String?, val reason: String? = null,
+                         /** The order's id, said as "order #a1b2c3d4" (its last 8 characters). */ val id: String? = null)
     /** A strategy or arm: [kind] "Strategy", "Pine", "ORB"...; [todayPnl] in rupees when known; [holding] what it holds now. */
     data class ArmLine(val name: String, val kind: String, val on: Boolean, val detail: String, val todayPnl: Double?,
                        val holding: String?, val tradesToday: Int = 0)
@@ -43,7 +44,8 @@ object AppFacts {
         val out = ArrayList<String>()
         out += "$account: ${o.size} order${if (o.size > 1) "s" else ""} today, $done filled, $open open, $rej rejected or cancelled."
         o.takeLast(5).reversed().forEach { out += "$account order ${it.time}: ${it.action} ${it.qty} ${it.symbol}, ${it.status.lowercase()}" +
-            (if (it.avgPrice > 0) " at ${px(it.avgPrice)}" else "") + (it.by?.let { b -> " ($b)" } ?: "") + "." }
+            (if (it.avgPrice > 0) " at ${px(it.avgPrice)}" else "") + (it.by?.let { b -> " ($b)" } ?: "") +
+            (it.id?.trim()?.takeIf { s -> s.isNotEmpty() }?.let { s -> ", order #" + s.takeLast(8) } ?: "") + "." }
         val working = o.filter { isOpen(it.status) }
         if (working.isNotEmpty()) out += "$account open orders: " + working.mapIndexed { i, w -> "${from + i}. ${w.action} ${w.qty} ${w.symbol}" }.joinToString("; ") + "."
         o.lastOrNull { it.reason != null && it.status.equals("REJECTED", true) }?.let { out += "$account's last rejection: ${it.reason!!.trimEnd('.')}." }

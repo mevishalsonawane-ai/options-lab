@@ -119,7 +119,8 @@ internal object IraActions {
             m.sending.first { it is com.optionslab.app.ui.Load.Done || it is com.optionslab.app.ui.Load.Failed }
         }
         return when (sent) {
-            is com.optionslab.app.ui.Load.Done -> "Sent to Zerodha: ${p.title}. " + sent.value.joinToString("; ") { "${it.status} ${it.filled} at ${"%.2f".format(it.avgPrice)}" }
+            is com.optionslab.app.ui.Load.Done -> "Sent to Zerodha: ${p.title}. " + sent.value.joinToString("; ") { "${it.status} ${it.filled} at ${"%.2f".format(it.avgPrice)}" +
+                (com.optionslab.app.data.Origins.shortId(it.orderId)?.let { id -> " (order $id)" } ?: "") }
             is com.optionslab.app.ui.Load.Failed -> "Zerodha refused: ${sent.why}"
             else -> "Sent; Zerodha has not confirmed yet - see Trade, then Account."
         }
@@ -430,9 +431,9 @@ internal object IraActions {
             val source = com.optionslab.app.data.Origins.manual("Jarvis")
             r.orderId?.let { com.optionslab.app.data.Strategies.tagOwner("paper:$it", source) }
             ctx()?.let { c2 -> r.events.filterIsInstance<com.optionslab.engine.sandbox.SandboxEvent.Fill>().forEach {
-                com.optionslab.app.work.Notifier.orderFilled(c2, it.action, it.quantity, it.symbol, it.price, "Paper", source) } }
+                com.optionslab.app.work.Notifier.orderFilled(c2, it.action, it.quantity, it.symbol, it.price, "Paper", source, it.orderId) } }
             model()?.loadPaper(quiet = true)
-            return "Paper: ${r.message}"
+            return "Paper: ${r.message}" + (com.optionslab.app.data.Origins.shortId(r.orderId)?.let { " (order $it)" } ?: "")
         }
         val m = model() ?: return "A Zerodha order needs JarvisAlgo open: open it and ask again."
         m.planManual(t.underlying, t.expiry, t.strike, t.right, if (t.buy) com.optionslab.engine.Kite.Side.BUY else com.optionslab.engine.Kite.Side.SELL,
