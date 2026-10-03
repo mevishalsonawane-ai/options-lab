@@ -476,3 +476,37 @@ object VixRank {
         return "India VIX at %.2f is higher than %.0f%% of the last $n sessions' closes - $word.".format(Locale.ENGLISH, now, r)
     }
 }
+
+/**
+ * An option's worth at expiry (Jarvis self-improvement, 2026-10-03): "what is a 24800 call worth if Nifty is at 25000 at
+ * expiry", "24800 pe at 24500, bought at 120" - its intrinsic value, and the profit or loss per unit when a price paid is
+ * given. Teaching arithmetic, not advice. Pure.
+ */
+object Payoff {
+    data class Ask(val strike: Double, val call: Boolean, val at: Double, val paid: Double?)
+
+    fun asked(text: String): Ask? {
+        val t = norm(text.replace(",", ""))
+        if (!Regex(" (worth|value|payoff|pay off|expiry|expire|expires|settle|settles|p l|profit|loss|make|lose) ").containsMatchIn(t)) return null
+        val opt = Regex(" (\\d{4,6}) ?(ce|call|pe|put) ").find(t) ?: return null
+        val strike = opt.groupValues[1].toDouble()
+        val call = opt.groupValues[2] == "ce" || opt.groupValues[2] == "call"
+        val at = Regex(" (?:at|to|is at|goes to|closes at|ends at|expires at|settles at) (\\d{4,6}(?:\\.\\d+)?) ").findAll(t)
+            .map { it.groupValues[1].toDouble() }.firstOrNull { it != strike } ?: return null
+        val paid = Regex(" (?:bought at|paid|premium of|premium|cost|for) (\\d{1,5}(?:\\.\\d+)?) ").find(t)?.groupValues?.get(1)?.toDouble()
+        return Ask(strike, call, at, paid)
+    }
+
+    fun say(a: Ask): String {
+        val value = if (a.call) maxOf(0.0, a.at - a.strike) else maxOf(0.0, a.strike - a.at)
+        val name = "${n(a.strike).removeSuffix(".00")} ${if (a.call) "call" else "put"}"
+        val base = "At expiry with the index at ${n(a.at)}, the $name is worth ${n(value)} points" +
+            (if (value == 0.0) " - it expires worthless." else ".")
+        val pl = a.paid?.let { p ->
+            val r = value - p
+            val be = if (a.call) a.strike + p else a.strike - p
+            " Bought at ${n(p)}, that is ${pts(r)} per unit (multiply by the lot size for rupees); it breaks even at ${n(be)}."
+        } ?: ""
+        return base + pl
+    }
+}

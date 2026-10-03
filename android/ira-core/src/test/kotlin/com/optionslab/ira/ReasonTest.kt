@@ -269,3 +269,17 @@ class OrbAlertTest {
         assertEquals("Nifty broke above its opening range at 24,060.00 (the first 15 minutes' high was 24,050.00).", OpeningRange.alert(snap(24_060.0), true))
     }
 }
+
+class PayoffTest {
+    @Test fun valueAtExpiry() {
+        val a = Payoff.asked("what is a 24800 call worth if nifty is at 25000 at expiry")!!
+        assertEquals(24_800.0, a.strike); assertTrue(a.call); assertEquals(25_000.0, a.at)
+        assertTrue(Payoff.say(a).startsWith("At expiry with the index at 25,000.00, the 24,800 call is worth 200.00 points."), Payoff.say(a))
+        val b = Payoff.asked("24800 pe if nifty expires at 24500, bought at 120")!!
+        assertEquals(120.0, b.paid)
+        val s = Payoff.say(b)
+        assertTrue("worth 300.00 points" in s && "+180.00 per unit" in s && "breaks even at 24,680.00" in s, s)
+        assertTrue(Payoff.say(Payoff.Ask(25_000.0, true, 24_900.0, null)).contains("expires worthless"))
+        assertNull(Payoff.asked("buy 1 lot nifty 24800 ce"))
+    }
+}
