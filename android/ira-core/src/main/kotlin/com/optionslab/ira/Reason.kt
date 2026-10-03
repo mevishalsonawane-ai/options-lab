@@ -55,11 +55,24 @@ object Moves {
     }
 }
 
+/** The four indices Jarvis follows. */
+object Reasoning {
+    val INDICES = listOf(Market.NIFTY, Market.BANKNIFTY, Market.FINNIFTY, Market.SENSEX)
+}
+
 /** Which market is stronger today (Jarvis self-improvement, 2026-10-03): "is BankNifty stronger than Nifty?". Pure. */
 object Compare {
     private val ASK = Regex(" (stronger|weaker|strongest|weakest|better|worse|outperform\\w*|underperform\\w*|compare|comparison|vs|versus|leading|lagging|which one|which is|which of) ")
+    /** "Which index is strongest today?" - no market named: all four compared. */
+    private val ANY = Regex(" (which|what) (index|indices|market|markets)( is| are)? (the )?(strongest|weakest|best|worst|leading|lagging|stronger|weaker)| (strongest|weakest|best performing|worst performing) (index|market) ")
 
-    fun asked(text: String): Boolean = Market.mentioned(text).filter { it != Market.VIX }.size >= 2 && ASK.containsMatchIn(norm(text))
+    fun asked(text: String): Boolean {
+        val t = norm(text)
+        return Market.mentioned(text).filter { it != Market.VIX }.size >= 2 && ASK.containsMatchIn(t) || ANY.containsMatchIn(t)
+    }
+
+    /** The markets to compare for [text]: those named, else the four indices. */
+    fun markets(text: String): List<Market> = Market.mentioned(text).filter { it != Market.VIX }.takeIf { it.size >= 2 } ?: Reasoning.INDICES
 
     /** [markets] compared by today's change; null when fewer than two have a previous close. */
     fun say(markets: List<Market>, snaps: Map<Market, Snapshot>): String? {
@@ -121,7 +134,7 @@ object Freshness {
  * is rising or easing. The news lines are added by the answer itself. Pure.
  */
 object Why {
-    private val INDICES = listOf(Market.NIFTY, Market.BANKNIFTY, Market.FINNIFTY, Market.SENSEX)
+    private val INDICES = Reasoning.INDICES
 
     fun story(s: Snapshot, snaps: Map<Market, Snapshot>): String? {
         if (s.market == Market.VIX) return null

@@ -1119,7 +1119,7 @@ object IraHub {
      */
     private fun reasoned(q: String, parsed: com.optionslab.ira.Question): String? {
         val st = _state.value
-        if (com.optionslab.ira.Compare.asked(q)) return com.optionslab.ira.Compare.say(IraMarket.mentioned(q), st.snaps)
+        if (com.optionslab.ira.Compare.asked(q)) return com.optionslab.ira.Compare.say(com.optionslab.ira.Compare.markets(q), st.snaps)
         val m = parsed.markets.firstOrNull { it != IraMarket.VIX } ?: IraMarket.NIFTY
         if (com.optionslab.ira.ExpectedRange.asked(q)) {
             val vix = st.snaps[IraMarket.VIX]?.price ?: return null

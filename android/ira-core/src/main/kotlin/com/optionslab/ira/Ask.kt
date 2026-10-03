@@ -85,7 +85,8 @@ object Ask {
         val priceAsk = Market.mentioned(text).isNotEmpty() && Regex("^ (where is|where s|wheres|where) ").containsMatchIn(t)
         val account = !priceAsk && (ACCOUNT.containsMatchIn(t) || AppAnswers.about(t) && placed?.lots == null)
         val order = if (account) null else placed
-        val markets = Market.mentioned(text)
+        // "Levels on all indices", "how are all the markets": the four indices.
+        val markets = Market.mentioned(text).ifEmpty { if (ALL_INDICES.containsMatchIn(t)) Reasoning.INDICES else emptyList() }
         val topics = LinkedHashSet<Topic>()
         if (order != null) topics += Topic.ORDER
         for ((topic, ws) in TOPIC_WORDS) if (ws.any { t.contains(" $it ") }) topics += topic
@@ -108,6 +109,8 @@ object Ask {
             else -> null
         })
     }
+
+    private val ALL_INDICES = Regex(" (all|every|each of) (the |my )?(indices|indexes|index|markets) | all of them | across (the )?(indices|markets) ")
 
     private val SUGGEST = Regex(" (what should i (buy|trade)|what (to|can i|could i) (buy|trade)|suggest (an |a |me |some |any )*(order|trade|buy)|any (trade|setup|order|buy) (now|today|ideas?|for me)|any good (trade|setup)|trade ideas?|give me (a |an )?(trade|order)|which (option|order|trade) (should|to) |best (trade|setup|order) (now|today)|should i buy (anything|something|now)|anything to buy) ")
 

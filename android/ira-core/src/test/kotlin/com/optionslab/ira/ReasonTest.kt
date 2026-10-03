@@ -98,3 +98,14 @@ class WhyTest {
         assertTrue("BankNifty is moving on its own" in s, s)
     }
 }
+
+class AllIndicesTest {
+    @Test fun allIndicesAndTheStrongest() {
+        assertEquals(Reasoning.INDICES, Ask.parse("levels on all indices").markets)
+        assertEquals(listOf(Market.NIFTY), Ask.parse("levels on nifty").markets)
+        assertTrue(Compare.asked("which index is strongest today"))
+        assertEquals(Reasoning.INDICES, Compare.markets("which index is strongest today"))
+        assertEquals(setOf(Market.NIFTY, Market.SENSEX), Compare.markets("nifty vs sensex").toSet())
+        assertFalse(Compare.asked("what are the levels"))
+    }
+}
