@@ -915,6 +915,14 @@ object IraHub {
                 _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
                 return
             }
+        // "How do you know that?": the facts the last answer was built from.
+        if (com.optionslab.ira.Sources.asked(q)) {
+            val last = _state.value.messages.lastOrNull { it.fromIra && !it.text.startsWith(TOOK_AS) }
+            // The facts may be the account's: never read out on a locked phone.
+            val said = if (phoneLocked()) "Unlock the phone for that, Boss." else com.optionslab.ira.Sources.say(last?.facts.orEmpty())
+            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
+            return
+        }
         // "The usual": the market question Boss asks most around this hour.
         if (!understood && com.optionslab.ira.Habits.asked(q)) {
             val usual = runCatching { com.optionslab.ira.Habits.usual(IraTools.habits(), LocalDateTime.now(IST).hour)?.let { com.optionslab.ira.Habits.question(it) } }.getOrNull()
@@ -1092,6 +1100,10 @@ object IraHub {
     /** [rewrite] would read the account where [original] did not, on a locked phone (the lock was checked on [original]). */
     private fun lockedAccount(original: String, rewrite: String): Boolean {
         if (Topic.ACCOUNT !in Ask.parse(rewrite).topics || Topic.ACCOUNT in Ask.parse(original).topics) return false
+        return phoneLocked()
+    }
+
+    private fun phoneLocked(): Boolean {
         val c = app ?: return false
         return runCatching { (c.getSystemService(Context.KEYGUARD_SERVICE) as android.app.KeyguardManager).isKeyguardLocked }.getOrDefault(false)
     }

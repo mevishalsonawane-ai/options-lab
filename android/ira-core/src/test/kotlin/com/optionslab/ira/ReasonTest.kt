@@ -123,3 +123,14 @@ class DayStoryTest {
         assertFalse(DayStory.asked("how is nifty"))
     }
 }
+
+class SourcesTest {
+    @Test fun theFactsAreShown() {
+        assertTrue(Sources.asked("how do you know that?"))
+        assertTrue(Sources.asked("Jarvis, what is that based on"))
+        assertFalse(Sources.asked("how do you know the levels on nifty"))
+        assertEquals("I worked that out from: Nifty: last price 24,000.00; day high 24,100.00.", Sources.say(listOf("Nifty: last price 24,000.00", "day high 24,100.00")))
+        assertEquals(Command.Kind.MORE, Commands.parse("say that again")?.kind)
+        assertEquals(Command.Kind.MORE, Commands.parse("Jarvis, repeat that")?.kind)
+    }
+}

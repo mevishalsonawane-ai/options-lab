@@ -110,7 +110,7 @@ object Commands {
         if (Regex("^ (forget|reset|clear) (what you (have )?learned|your learning|what you learnt|the corrections) $").containsMatchIn(s)) return Command(Command.Kind.LEARN_RESET)
         if (Regex("^ (brief mode( on)?|short answers( please)?|keep it short|be brief|shorter answers) $").containsMatchIn(s)) return Command(Command.Kind.BRIEF_ON)
         if (Regex("^ (brief mode off|full answers|detailed answers|long answers|answer in full) $").containsMatchIn(s)) return Command(Command.Kind.BRIEF_OFF)
-        if (Regex("^ (tell me more|more|more details|go on|details|explain more|the full answer) $").containsMatchIn(s)) return Command(Command.Kind.MORE)
+        if (Regex("^ (tell me more|more|more details|go on|details|explain more|the full answer|repeat|repeat that|repeat it|say that again|say it again|say again|come again|pardon|sorry what|what did you say|once more|one more time) $").containsMatchIn(s)) return Command(Command.Kind.MORE)
         if (Practice.asked(s) && Regex("^ (practi[cs]e|replay|simulate|rehearse) ").containsMatchIn(s)) return Command(Command.Kind.PRACTICE, target = text)
         Regex(" (?:your|jarvis s|jarvis) (?:own )?(?:trades? )?weekly loss limit (?:to |at |of )?(?:rs |rupees )?(\\d{3,7}) ").find(t)?.let { m ->
             return Command(Command.Kind.JTRADES_WEEKLY, level = m.groupValues[1].toDouble())

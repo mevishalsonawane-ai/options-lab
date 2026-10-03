@@ -200,3 +200,14 @@ object DayStory {
         return "${m.label} opened at ${n(open.o)}, $path. It is now ${n(last.c)} (${pts(net)} from the open), $where."
     }
 }
+
+/** "How do you know that?" (Jarvis self-improvement, 2026-10-03): the facts the last answer was built from. Pure. */
+object Sources {
+    private val ASK = Regex("^ (how do you know( that| this)?|where did you get (that|this)( from)?|what is that based on|what s that based on|whats that based on|source|sources|your source|show (me )?your (work|working|sources)|why do you say (that|so)|how did you work (that|it) out|based on what) $")
+
+    fun asked(text: String): Boolean = ASK.containsMatchIn(norm(text).replace(Regex("^ (jarvis|hey jarvis|ok jarvis|boss) "), " "))
+
+    fun say(facts: List<String>): String =
+        if (facts.isEmpty()) "That answer came from my own rules, Boss, not from figures I can list."
+        else "I worked that out from: " + facts.take(8).joinToString("; ") + "."
+}
