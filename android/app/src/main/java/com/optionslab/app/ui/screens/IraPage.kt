@@ -850,7 +850,7 @@ private fun SoloCard() {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text(if (on) "Solo is on" else "Solo is off", style = Type.label.copy(color = p.ink, fontSize = 14.sp))
-                Text("Paper account only - never real money. One trade a day at most, 1 lot, out by 15:10, always with a profit lock (stop to the entry at 3/4 of the target); stops after 2 losses or Rs 5,000 down in a day, and pauses itself Rs 15,000 below its best.",
+                Text("Paper account only - never real money. One trade a day at most, 1 lot, out by 15:10, always with a stop-loss order 30% below the option's entry (sized by its own study); stops after 2 losses or Rs 5,000 down in a day, and pauses itself Rs 15,000 below its best.",
                     style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp))
             }
             androidx.compose.material3.Switch(checked = on, onCheckedChange = { v -> on = v; com.optionslab.app.ira.IraSolo.on = v })

@@ -64,6 +64,22 @@ reached -> share locked; 0 = the entry):
 Every lock costs something: it closes trades on ordinary pullbacks that would have gone on to the target (the app
 ladder hits the target 15-29 times vs 56-75 without). The latest, breakeven-only rung gives up the least.
 
+Stop-loss on the option (3 Oct, the owner's rule: no ladder, always a stop-loss, sized by the study), on top of N = 60,
+a resting stop filled at the stop (or the open if it gapped through) -0.5:
+
+| stop | NIFTY 24-25 | NIFTY 25-26 | BANKNIFTY 25-26 | sum |
+|---|---|---|---|---|
+| none (index stop only) | +65,280 | -31,808 | +12,711 | +46k |
+| 15% of premium | -11,496 | -32,687 | +22,419 | -22k |
+| 20% | +64,118 | -39,332 | +19,338 | +44k |
+| 25% | +59,004 | -40,865 | +16,904 | +35k |
+| **30% (chosen on 24-25)** | **+69,393 (DD 14k)** | **-32,796 (DD 42k)** | **+14,853 (DD 16k)** | **+51k** |
+| 40% | +68,779 | -31,808 | +13,349 | +50k |
+| entry - 0.5 x index risk | +42,546 | -23,940 | +27,774 | +46k |
+| entry - 0.7 x index risk | +62,639 | -28,405 | +20,797 | +55k |
+
+The app now uses the 30% stop (a real stop-loss order) with the index stop; the profit-lock ladder is off.
+
 Index edge (R before option costs) is positive in all three files (+0.02 .. +0.21 R), but small; the option's spread,
 costs and decay take about all of it. NIFTY 2025-26 loses with every variant.
 

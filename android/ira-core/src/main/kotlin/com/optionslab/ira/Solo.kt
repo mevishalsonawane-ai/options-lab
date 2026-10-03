@@ -49,12 +49,23 @@ object Solo {
         val profitLock: Boolean = true,
         /** The lock's rungs: (share of the target reached, share of the target locked in). */
         val ladder: List<Pair<Double, Double>> = LADDER,
+        /** A stop-loss on the option's premium as a share of the entry (0.25 = out 25% down); null: none. */
+        val premiumStop: Double? = null,
+        /** Or the premium stop from the trade's own index risk: entry - [stopDelta] x the points to the index stop. */
+        val stopDelta: Double? = null,
     )
 
     /** A trade to take at minute [entryMinute] (the next minute's price). [level]: the stop; [target]: the index target. */
     data class Signal(val call: Boolean, val entryMinute: Int, val index: Double, val level: Double, val target: Double, val candleStart: Int, val why: String)
 
-    enum class Exit { STOP, TARGET, TIME, SLOW, LOCK }
+    enum class Exit { STOP, TARGET, TIME, SLOW, LOCK, PREMIUM_STOP }
+
+    /** The option's stop-loss price for a trade bought at [premium] (null: no premium stop in [r]). */
+    fun premiumStop(s: Signal, premium: Double, r: Rules): Double? = when {
+        r.premiumStop != null -> premium * (1 - r.premiumStop)
+        r.stopDelta != null -> premium - r.stopDelta * abs(s.index - s.level)
+        else -> null
+    }?.coerceAtLeast(0.05)
 
     /** The app's profit-lock ladder: (share of the target reached, share of the target locked in). */
     val LADDER = listOf(0.25 to 0.0, 0.50 to 0.25, 0.75 to 0.50)
@@ -312,7 +323,12 @@ object Solo {
                     var x = CUT; var how = Exit.TIME
                     var best = 0.0
                     var lockBest = 0.0
+                    val ps = premiumStop(s, ep, r)
+                    var stopFill: Double? = null
                     for (j in s.entryMinute..CUT) {
+                        // The option's own stop-loss first (a resting order): filled at the stop, or the open if it gapped through.
+                        val ob = leg[j]
+                        if (ps != null && ob != null && ob.l <= ps) { x = j; how = Exit.PREMIUM_STOP; stopFill = minOf(ps, ob.o) - slip; break }
                         val e = exit(s, d.index[j], j, best, r)
                         lockBest = best
                         best = favour(s, d.index[j], best)
@@ -320,10 +336,10 @@ object Solo {
                         x = j; how = e; break
                     }
                     val outBar = (x downTo s.entryMinute).firstNotNullOfOrNull { leg[it] } ?: inBar
-                    val xp = outBar.c - slip
+                    val xp = stopFill ?: (outBar.c - slip)
                     val net = (xp - ep) * lot - costs
                     val risk = abs(s.index - s.level)
-                    val rr = when (how) { Exit.STOP -> -1.0; Exit.TARGET -> r.k; Exit.TIME, Exit.SLOW -> (if (s.call) 1 else -1) * (d.index[x].c - s.index) / risk
+                    val rr = when (how) { Exit.STOP -> -1.0; Exit.TARGET -> r.k; Exit.TIME, Exit.SLOW, Exit.PREMIUM_STOP -> (if (s.call) 1 else -1) * (d.index[x].c - s.index) / risk
                         Exit.LOCK -> (if (s.call) 1 else -1) * ((lock(s, lockBest, r.ladder) ?: s.index) - s.index) / risk }
                     out += Trade(d.date, s.call, k, s.entryMinute, x, how, ep, xp, net, rr)
                     book = book.after(net)

@@ -33,12 +33,12 @@ internal object IraSolo {
      * One trade a day, and only while the setup's last 60 signals (on the index, before costs) averaged above zero:
      * chosen on 2024-25, checked on the other years; see SOLO.md.
      */
-    val RULES = Solo.Rules(maxPerDay = 1, recentN = 60, profitLock = true, ladder = LOCK)
+    val RULES = Solo.Rules(maxPerDay = 1, recentN = 60, profitLock = false, premiumStop = STOP_LOSS)
     /**
-     * Always a profit lock (Boss's rule, 3 Oct): three quarters of the way to the target, the stop moves to the entry -
-     * of the ladders tested on two years, the one that gives up least (see SOLO.md).
+     * Always a stop-loss on the option itself (Boss's rule, 3 Oct: no ladder), sized by Solo's own study: of the stops
+     * tested on two years (15-40% of the premium, or from the trade's index risk), 30% did best on 2024-25 (see SOLO.md).
      */
-    val LOCK = listOf(0.75 to 0.0)
+    const val STOP_LOSS = 0.30
 
     /** The day's loss limit for Solo's trades, and the drawdown from its best at which it pauses itself. */
     const val DAY_LOSS = 5_000.0
@@ -48,10 +48,10 @@ internal object IraSolo {
 
     /** The two-year test, in one line each (research data, real option prices, Rs 60 a trip), for Boss to judge. */
     val BACKTEST = listOf(
-        "NIFTY Apr 2024-Apr 2025: 186 trades, 40% winners, +Rs 57,686 (1 lot of 75), worst drawdown Rs 24,878.",
-        "NIFTY Apr 2025-Apr 2026: 170 trades, 34% winners, -Rs 29,813, worst drawdown Rs 38,940.",
-        "BANKNIFTY Feb 2025-Feb 2026: 155 trades, 42% winners, +Rs 5,767 (1 lot of 30), worst drawdown Rs 15,825.",
-        "(With the profit lock - breakeven at 3/4 of the target - and standing aside while its last 60 signals lost; without the lock: +65k / -32k / +13k.)",
+        "NIFTY Apr 2024-Apr 2025: 186 trades, 40% winners, +Rs 69,393 (1 lot of 75), worst drawdown Rs 13,553.",
+        "NIFTY Apr 2025-Apr 2026: 170 trades, 35% winners, -Rs 32,796, worst drawdown Rs 42,351.",
+        "BANKNIFTY Feb 2025-Feb 2026: 155 trades, 43% winners, +Rs 14,853 (1 lot of 30), worst drawdown Rs 15,657.",
+        "(Always a 30% stop-loss on the option, and standing aside while its last 60 signals lost.)",
     )
 
     var on: Boolean
@@ -189,14 +189,15 @@ internal object IraSolo {
             return
         }
         r.orderId?.let { com.optionslab.app.data.Strategies.tagOwner("paper:$it", "Jarvis solo · entry") }
-        // A safety stop on the premium in case the app is stopped: Solo's own exit is on the index.
-        val prot = com.optionslab.app.data.Protections.protectPaper(c.symbol, "MIS", fill.quantity, fill.price, fill.price * 0.6, null, null)
-        if (!prot.startsWith("Protected")) IraActivity.add("Solo: the safety stop on ${c.symbol} was not set ($prot); Solo's own exit still watches it.")
+        // Always a stop-loss order on the option (30% below the fill, from Solo's study), besides its index stop.
+        val stopPx = fill.price * (1 - STOP_LOSS)
+        val prot = com.optionslab.app.data.Protections.protectPaper(c.symbol, "MIS", fill.quantity, fill.price, stopPx, null, null)
+        if (!prot.startsWith("Protected")) IraActivity.add("Solo: the stop-loss on ${c.symbol} was not set ($prot); Solo's own exit still watches it.")
         val t = T(today.toString(), u, c.symbol, sig.call, fill.quantity, fill.price, sig.entryMinute, sig.index, sig.level, sig.target, sig.why)
         save(list + t)
         val line = "Solo (paper): bought ${c.symbol} at ${"%.2f".format(fill.price)}. Why: ${sig.why}. Out if ${m.label} " +
             "${if (sig.call) "falls to" else "rises to"} ${"%,.0f".format(sig.level)}; target ${"%,.0f".format(sig.target)}; 15:10 at the latest. " +
-            "Profit lock: once it reaches ${"%,.0f".format(sig.index + 0.75 * (sig.target - sig.index))}, the stop moves to ${"%,.0f".format(sig.index)}." +
+            "Stop-loss on the option at ${"%.2f".format(fill.price * (1 - STOP_LOSS))} (30% down)." +
             (if (read.isNotEmpty()) " My read: $read" else "")
         tell(line)
         IraHub.appContext()?.let { com.optionslab.app.work.Notifier.orderFilled(it, "BUY", fill.quantity, c.symbol, fill.price, "Paper", "Jarvis solo") }
@@ -210,7 +211,7 @@ internal object IraSolo {
             // sell is seen (settled overnight), it is counted at the safety stop - the worst it could have been.
             val sold = if (t.day == today.toString())
                 runCatching { Paper.snapshot().trades.firstOrNull { it.symbol == t.symbol && it.action == "SELL" }?.price }.getOrNull() else null
-            finish(t, list, sold ?: t.entry * 0.6, if (sold != null) "closed by the safety stop or the square-off" else "closed while the app was away (counted at the safety stop)")
+            finish(t, list, sold ?: t.entry * (1 - STOP_LOSS), if (sold != null) "closed by its stop-loss or the square-off" else "closed while the app was away (counted at its stop-loss)")
             return
         }
         val day = session(IraHub.freshBars(m), today, now)
@@ -237,7 +238,8 @@ internal object IraSolo {
             Solo.Exit.STOP -> "stop: ${m.label} through ${"%,.0f".format(t.level)}"
             Solo.Exit.TARGET -> "target reached"
             Solo.Exit.SLOW -> "no follow-through"
-            Solo.Exit.LOCK -> "profit lock: back to the entry after getting three quarters of the way to the target"
+            Solo.Exit.LOCK -> "profit lock"
+            Solo.Exit.PREMIUM_STOP -> "stop-loss on the option"
             Solo.Exit.TIME -> "15:10"
         })
     }

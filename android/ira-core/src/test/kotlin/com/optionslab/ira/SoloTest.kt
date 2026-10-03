@@ -158,3 +158,12 @@ class SoloLockTest {
         assertEquals(24_075.0, Solo.lock(s, 50.0)!!, 0.01)
     }
 }
+
+class SoloStopLossTest {
+    @Test fun theOptionsStopLossIsFromTheRules() {
+        val s = Solo.Signal(true, 50, 24_050.0, 24_000.0, 24_150.0, 30, "")
+        assertEquals(70.0, Solo.premiumStop(s, 100.0, Solo.Rules(premiumStop = 0.30))!!, 1e-9)
+        assertEquals(65.0, Solo.premiumStop(s, 100.0, Solo.Rules(stopDelta = 0.7))!!, 1e-9)
+        assertNull(Solo.premiumStop(s, 100.0, Solo.Rules()))
+    }
+}
