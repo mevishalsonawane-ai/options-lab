@@ -95,6 +95,9 @@ internal object IraSolo {
 
     private val lock = Mutex()
 
+    /** The markets whose setup was offered as an idea today (one a market a day). */
+    private val offered = HashSet<String>()
+
     /** What Solo was watching at its last pass (for "how is Solo doing"), and when. */
     @Volatile private var watch: Pair<java.time.LocalDateTime, String>? = null
 
@@ -150,7 +153,10 @@ internal object IraSolo {
         val list = all()
         // An open trade is always seen through to its exit, even after Solo is switched off.
         list.lastOrNull { !it.closed }?.let { manage(it, list, today, now); return@withLock }
-        if (!on || paused != null) return@withLock
+        // Switched off: its setup can still be offered to Boss as a trade idea (he approves each), once a market a day.
+        val offering = !on && Automations.on(Automations.Auto.SOLO_IDEAS) && !IraNewsTrades.lossLimitHit()
+        if (!on && !offering) return@withLock
+        if (on && paused != null) return@withLock
         // The risk book: a professional's day.
         val mine = list.filter { it.day == today.toString() && it.closed }
         val book = mine.fold(Solo.Day()) { b, t -> b.after(t.net ?: 0.0) }
@@ -174,7 +180,16 @@ internal object IraSolo {
             watch = java.time.LocalDateTime.now(IST) to seen.joinToString("; ")
             // The last two closes only (a pass can come a minute late); an older signal is not chased.
             val sig = (day.size - 1 downTo maxOf(0, day.size - 2)).firstNotNullOfOrNull { k -> Solo.signal(day, k, big, busy, RULES) } ?: continue
-            enter(m, sig, list, today, Solo.read(day, typicalRange(held, today), m.label))
+            val read = Solo.read(day, typicalRange(held, today), m.label)
+            if (offering) {
+                val key = "$today|${m.name}"
+                if (synchronized(offered) { key in offered }) continue
+                // (Approved, it is managed like Jarvis's other trades: their stop, target and profit lock.)
+                val text = "Solo's setup on ${m.label}: ${sig.why}. $read"
+                if (IraHub.offerSoloIdea(com.optionslab.ira.NewsTrade.Idea(m, sig.call, text, kind = "solo"), text)) synchronized(offered) { offered += key }
+                return@withLock
+            }
+            enter(m, sig, list, today, read)
             return@withLock
         }
     }

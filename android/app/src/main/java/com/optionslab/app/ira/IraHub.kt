@@ -627,6 +627,17 @@ object IraHub {
         }
     }
 
+    /**
+     * Solo's setup offered to Boss as a trade idea (Solo switched off): the same gates, approval and paper-first rules as
+     * every suggestion; one waiting at a time.
+     */
+    internal suspend fun offerSoloIdea(idea: com.optionslab.ira.NewsTrade.Idea, text: String): Boolean {
+        val c = app ?: return false
+        if (synchronized(actions) { newsAsks.isNotEmpty() }) return false
+        proposeTrade(c, idea, "Trade idea: ${idea.market.label}", text, "Hey Boss, a trade idea. ${Wake.spoken(text, 1)}", "pattern: solo|${idea.market.name}")
+        return true
+    }
+
     private val coolSaid = HashSet<String>()
 
     // ---- watchers the market watch calls (JarvisAlgo; each gates itself) ---------------------------------------------
