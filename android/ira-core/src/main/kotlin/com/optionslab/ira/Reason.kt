@@ -284,3 +284,45 @@ object Lookback {
         return "${m.label} on $base: open ${n(d.first().o)}, high ${n(d.maxOf { it.h })}, low ${n(d.minOf { it.l })}, close ${n(d.last().c)}."
     }
 }
+
+/**
+ * Momentum (Jarvis self-improvement, 2026-10-03): "is Nifty overbought?", "RSI on BankNifty", "how strong is the
+ * momentum" - Wilder's 14-period RSI on the 15-minute and 1-hour charts, read plainly. Never a buy or sell call. Pure.
+ */
+object Momentum {
+    private val ASK = Regex(" (rsi|overbought|oversold|over bought|over sold|momentum|stretched|too high|too low) ")
+
+    fun asked(text: String): Boolean = ASK.containsMatchIn(norm(text))
+
+    /** Wilder's RSI of [closes] over [period], or null with too few closes. */
+    fun rsi(closes: List<Double>, period: Int = 14): Double? {
+        if (closes.size <= period) return null
+        var gain = 0.0; var loss = 0.0
+        for (i in 1..period) { val d = closes[i] - closes[i - 1]; if (d > 0) gain += d else loss -= d }
+        gain /= period; loss /= period
+        for (i in period + 1 until closes.size) {
+            val d = closes[i] - closes[i - 1]
+            gain = (gain * (period - 1) + maxOf(d, 0.0)) / period
+            loss = (loss * (period - 1) + maxOf(-d, 0.0)) / period
+        }
+        if (loss == 0.0) return 100.0
+        return 100 - 100 / (1 + gain / loss)
+    }
+
+    private fun word(r: Double) = when {
+        r >= 70 -> "overbought (above 70): rises often pause or pull back from here"
+        r <= 30 -> "oversold (below 30): falls often pause or bounce from here"
+        r >= 60 -> "strong, with buyers in charge"
+        r <= 40 -> "weak, with sellers in charge"
+        else -> "neutral"
+    }
+
+    fun say(m: Market, bars: List<Candle>, now: LocalDateTime): String? {
+        val parts = listOf(15, 60).mapNotNull { mins ->
+            val c = Candles.closed(Candles.fold(bars, mins, m), mins, now)
+            rsi(c.map { it.c })?.let { r -> "the ${if (mins == 60) "1-hour" else "15-minute"} RSI is " + "%.0f".format(Locale.ENGLISH, r) + ", " + word(r) }
+        }
+        if (parts.isEmpty()) return null
+        return "${m.label}: " + parts.joinToString("; ") + ". It shows how stretched the move is, not where it goes next."
+    }
+}

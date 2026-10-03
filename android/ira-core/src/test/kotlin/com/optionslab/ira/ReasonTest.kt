@@ -170,3 +170,19 @@ class LookbackTest {
         assertEquals("Nifty on 2026-09-30: open 100.00, high 110.00, low 90.00, close 104.00.", Lookback.prevDay(Market.NIFTY, bars, trading = true))
     }
 }
+
+class MomentumTest {
+    @Test fun rsiIsRead() {
+        val up = (0..40).map { 100.0 + it }
+        assertEquals(100.0, Momentum.rsi(up))
+        val zig = (0..40).map { if (it % 2 == 0) 100.0 else 101.0 }
+        assertEquals(50.0, Momentum.rsi(zig)!!, 5.0)
+        assertNull(Momentum.rsi(listOf(1.0, 2.0)))
+        assertTrue(Momentum.asked("is nifty overbought"))
+        assertTrue(Momentum.asked("rsi on banknifty"))
+        val d = java.time.LocalDate.of(2026, 10, 1)
+        val bars = (0 until 300).map { i -> val p = 24_000.0 + i; Candle(d.atTime(9, 15).plusMinutes(i.toLong()), p, p + 1, p - 1, p + 0.5) }
+        val s = Momentum.say(Market.NIFTY, bars, d.atTime(14, 20))!!
+        assertTrue("15-minute RSI is 100, overbought" in s, s)
+    }
+}
