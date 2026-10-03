@@ -466,7 +466,7 @@ private fun ModelAskDialog(asking: Boolean, done: () -> Unit) {
         onDismissRequest = { M.later(); done() },
         properties = androidx.compose.ui.window.DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy),
         title = { Text("Download Jarvis's AI model?") },
-        text = { Text("${M.NAME} (${mb(M.SIZE)}) from Hugging Face, over Wi-Fi only. It lets Jarvis write its answers in natural " +
+        text = { Text("${M.NAME} (${mb(M.SIZE)}) from Hugging Face, over Wi-Fi or mobile data (it uses ${mb(M.SIZE)} of data). It lets Jarvis write its answers in natural " +
             "language on this phone: nothing you ask leaves the phone, and every number it writes is checked against the market data. " +
             "The file is checked against its fingerprint before use, and you can delete it any time.") },
         confirmButton = { androidx.compose.material3.TextButton(onClick = { done(); M.download(ctx) }) { Text("Download") } },
@@ -502,10 +502,21 @@ internal fun ModelCard() {
         dismissButton = { androidx.compose.material3.TextButton(onClick = { confirmDelete = false }) { Text("Keep") } },
     )
     LedgerCard(title = "AI model") {
+        // Fast (1.5B, the default) or quality (3B): the owner's choice, never while a file is coming or being checked.
+        if (ms.status != ModelStatus.DOWNLOADING && ms.status != ModelStatus.VERIFYING) {
+            var chosen by remember { mutableStateOf(M.choice) }
+            Column(modifier = Modifier.padding(bottom = 6.dp)) {
+                for (s in M.SPECS) {
+                    androidx.compose.material3.FilterChip(selected = chosen == s,
+                        onClick = { if (chosen != s) { chosen = s; scope.launch { M.choose(ctx, s) } } },
+                        label = { Text("${s.name} · ${s.about} · ${mb(s.size)}") })
+                }
+            }
+        }
         when (ms.status) {
             ModelStatus.UNSUPPORTED -> Note(M.unsupportedWhy(ctx) + " Ira answers in its own words.")
             ModelStatus.ABSENT, ModelStatus.FAILED -> {
-                Note(ms.message ?: ("Not on the phone. ${M.NAME}, ${mb(M.SIZE)}, Wi-Fi." +
+                Note(ms.message ?: ("Not on the phone. ${M.NAME}, ${mb(M.SIZE)}, Wi-Fi or mobile data." +
                     if (ms.done > 0) " ${mb(ms.done)} already downloaded." else ""))
                 BrassButton(if (ms.done > 0) "Resume the download" else "Download the model", Modifier.fillMaxWidth().padding(top = 6.dp)) { asking = true }
             }

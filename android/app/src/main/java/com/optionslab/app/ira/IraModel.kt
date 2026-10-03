@@ -20,19 +20,66 @@ import kotlinx.coroutines.withContext
 import java.io.File
 
 /**
- * JarvisAlgo's on-device language model: Qwen2.5 3B Instruct (Q4_K_M, GGUF), one exact file from Hugging Face, pinned by
- * commit, size and SHA-256. It is downloaded only after the owner says yes (the Ira screen asks), over an unmetered
- * connection, into the app's no-backup folder; a file that does not match the fingerprint is deleted, never loaded.
+ * JarvisAlgo's on-device language model: Qwen2.5 Instruct (Q4_K_M, GGUF) - the fast 1.5B or the quality 3B, the owner's
+ * choice - one exact file from Hugging Face, pinned by commit, size and SHA-256. It is downloaded only after the owner
+ * says yes (the Ira screen asks), on Wi-Fi or mobile data, into the app's no-backup folder; a file that does not match
+ * the fingerprint is deleted, never loaded.
  * The model only rewrites Ira's own answers ([Writer]): every number is checked against the facts, and anything that
  * fails is dropped for Ira's draft. Nothing is sent anywhere; the model runs on the phone's CPU.
  */
 object IraModel {
-    const val NAME = "Qwen2.5 3B"
-    const val FILE = "qwen2.5-3b-instruct-q4_k_m.gguf"
-    const val COMMIT = "7dabda4d13d513e3e842b20f0d435c732f172cbe"
-    const val URL = "https://huggingface.co/Qwen/Qwen2.5-3B-Instruct-GGUF/resolve/$COMMIT/$FILE"
-    const val SIZE = 2_104_932_768L
-    const val SHA256 = "626b4a6678b86442240e33df819e00132d3ba7dddfe1cdc4fbb18e0a9615c62d"
+    /** One exact model file on Hugging Face, pinned by commit, size and SHA-256. */
+    data class Spec(val key: String, val name: String, val repo: String, val file: String, val commit: String,
+                    val size: Long, val sha256: String, val minRam: Long, val about: String) {
+        val url: String get() = "https://huggingface.co/$repo/resolve/$commit/$file"
+    }
+
+    /** The owner's wish (2026-10-03, "the model is too slow"): the default, about twice as fast, a little less clever. */
+    val FAST = Spec("fast", "Qwen2.5 1.5B", "Qwen/Qwen2.5-1.5B-Instruct-GGUF", "qwen2.5-1.5b-instruct-q4_k_m.gguf",
+        "91cad51170dc346986eccefdc2dd33a9da36ead9", 1_117_320_736L, "6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e",
+        3_500_000_000L, "fast")
+    /** The first model: cleverer, slower. */
+    val QUALITY = Spec("quality", "Qwen2.5 3B", "Qwen/Qwen2.5-3B-Instruct-GGUF", "qwen2.5-3b-instruct-q4_k_m.gguf",
+        "7dabda4d13d513e3e842b20f0d435c732f172cbe", 2_104_932_768L, "626b4a6678b86442240e33df819e00132d3ba7dddfe1cdc4fbb18e0a9615c62d",
+        5_500_000_000L, "best quality")
+    val SPECS = listOf(FAST, QUALITY)
+
+    /** Which model the owner chose (the fast one unless the quality one was picked). */
+    val choice: Spec
+        get() = if (runCatching { com.optionslab.app.security.SecurePrefs.getString("ira.model.choice") }.getOrNull() == QUALITY.key) QUALITY else FAST
+
+    val NAME: String get() = choice.name
+    val FILE: String get() = choice.file
+    val COMMIT: String get() = choice.commit
+    val URL: String get() = choice.url
+    val SIZE: Long get() = choice.size
+    val SHA256: String get() = choice.sha256
+
+    /** The remembered check of [s]'s file (the first model kept its old key, so its check still counts). */
+    private fun verifiedKey(s: Spec = choice) = if (s == QUALITY) "ira.model.verified" else "ira.model.verified.${s.key}"
+
+    /**
+     * The owner picks the fast or the quality model: the one in memory leaves, and the chosen one is used if it is on
+     * the phone, else downloaded when the owner says so (the other file is removed once the new one is checked).
+     */
+    suspend fun choose(c: Context, s: Spec) {
+        if (s == choice) return
+        ModelDownload.cancel(c)
+        lock.withLock {
+            unloadLocked()
+            runCatching { com.optionslab.app.security.SecurePrefs.put("ira.model.choice", s.key) }
+        }
+        deferred = false
+        init(c)
+    }
+
+    /** Once the chosen model is checked and ready: the other model's file goes (it can be 2 GB). */
+    internal fun dropOthers(c: Context) {
+        for (o in SPECS) if (o != choice) {
+            File(c.noBackupFilesDir, o.file).delete(); File(c.noBackupFilesDir, "${o.file}.part").delete()
+            runCatching { com.optionslab.app.security.SecurePrefs.put(verifiedKey(o), null) }
+        }
+    }
 
     /** The only hosts the download may touch: Hugging Face and its file CDN (rule 2's list for the model). */
     fun hostAllowed(host: String?): Boolean = host != null &&
@@ -87,25 +134,25 @@ object IraModel {
         val features = runCatching { File("/proc/cpuinfo").readLines().filter { it.startsWith("Features") }.joinToString(" ") }.getOrDefault("")
         if (!(" asimddp" in " $features" && " asimdhp" in " $features")) return false
         val mem = ActivityManager.MemoryInfo().also { c.getSystemService(ActivityManager::class.java).getMemoryInfo(it) }
-        return mem.totalMem >= 5_500_000_000L
+        return mem.totalMem >= choice.minRam
     }
 
     /** Why it cannot run here, in words. */
     fun unsupportedWhy(c: Context): String = when {
         !com.optionslab.app.BuildConfig.JARVIS -> "The model is in JarvisAlgo only."
         "arm64-v8a" !in Build.SUPPORTED_ABIS -> "The model needs a 64-bit ARM phone."
-        else -> "This phone's processor or memory is not enough for the model (it needs ARMv8.2 with dot-product instructions and about 6 GB of RAM)."
+        else -> "This phone's processor or memory is not enough for the model (it needs ARMv8.2 with dot-product instructions and about ${(choice.minRam + 500_000_000L) / 1_000_000_000} GB of RAM)."
     }
 
     /** The file is there and was checked against its fingerprint (the check is remembered by size and time). */
     private fun ready(c: Context): Boolean {
         val f = file(c)
-        return f.length() == SIZE && runCatching { com.optionslab.app.security.SecurePrefs.getString("ira.model.verified") }.getOrNull() == "$SIZE:${f.lastModified()}"
+        return f.length() == SIZE && runCatching { com.optionslab.app.security.SecurePrefs.getString(verifiedKey()) }.getOrNull() == "$SIZE:${f.lastModified()}"
     }
 
     internal fun markVerified(c: Context) {
         val f = file(c)
-        runCatching { com.optionslab.app.security.SecurePrefs.put("ira.model.verified", "$SIZE:${f.lastModified()}") }
+        runCatching { com.optionslab.app.security.SecurePrefs.put(verifiedKey(), "$SIZE:${f.lastModified()}") }
     }
 
     internal fun publish(s: State) { _state.value = s }
@@ -133,7 +180,7 @@ object IraModel {
     suspend fun delete(c: Context) = lock.withLock {
         unloadLocked()
         file(c).delete(); part(c).delete()
-        runCatching { com.optionslab.app.security.SecurePrefs.put("ira.model.verified", null) }
+        runCatching { com.optionslab.app.security.SecurePrefs.put(verifiedKey(), null) }
         _state.value = State(status = if (supported(c)) Status.ABSENT else Status.UNSUPPORTED)
     }
 
@@ -168,7 +215,7 @@ object IraModel {
                 bytes?.let { Writer.check(String(it, Charsets.UTF_8), facts, draft) }
             } finally {
                 _state.update { it.copy(writing = false) }
-                idle = scope.launch { delay(IDLE_MS); lock.withLock { unloadLocked() } }
+                idle = idleUnload()
             }
         }
     }
@@ -195,7 +242,7 @@ object IraModel {
                 bytes?.let { String(it, Charsets.UTF_8) }
             } finally {
                 _state.update { it.copy(writing = false) }
-                idle = scope.launch { delay(IDLE_MS); lock.withLock { unloadLocked() } }
+                idle = idleUnload()
             }
         }
     }
@@ -227,21 +274,46 @@ object IraModel {
         }
     }
 
+    /** Leaves memory after [IDLE_MS] unused - but stays loaded while Jarvis listens, so a spoken question never waits on loading. */
+    private fun idleUnload(): Job = scope.launch {
+        do delay(IDLE_MS) while (JarvisVoice.wanted && enabled)
+        lock.withLock { unloadLocked() }
+    }
+
+    /** Loaded ahead (Jarvis starts listening): the first question then does not wait the seconds loading takes. */
+    fun preload() {
+        val c = app ?: return
+        if (!usable()) return
+        scope.launch {
+            lock.withLock {
+                if (handle != 0L) return@withLock
+                idle?.cancel()
+                if (!LlmNative.ensure()) return@withLock
+                handle = LlmNative.load(file(c).path, threads())
+                if (handle != 0L) _state.update { it.copy(loaded = true, message = null) }
+                idle = idleUnload()
+            }
+        }
+    }
+
     private fun unloadLocked() {
         if (handle != 0L) { runCatching { LlmNative.free(handle) }; handle = 0L; _state.update { it.copy(loaded = false) } }
     }
 
-    /** Two cores at most, so the screen and the voice stay quick while the model writes. */
-    private fun threads() = 2
+    /** Half the phone's cores (its fast ones), four at most: replies come about twice as fast as on two. */
+    private fun threads() = (Runtime.getRuntime().availableProcessors() / 2).coerceIn(2, 4)
 
     /** Stops what the model is writing now (a new question came): the answer already shown stands. */
     fun stopWriting() { if (_state.value.writing) runCatching { LlmNative.cancel() } }
 
-    /** Runs [f] at background priority (the model's threads inherit it), so the screen is never starved. */
+    /**
+     * Runs [f] just below normal priority (the model's threads inherit it): the screen and the voice still come first,
+     * but the model is no longer held to the phone's slow background cores.
+     */
     private inline fun <T> gently(f: () -> T): T {
         val tid = android.os.Process.myTid()
         val was = runCatching { android.os.Process.getThreadPriority(tid) }.getOrDefault(0)
-        runCatching { android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_BACKGROUND) }
+        runCatching { android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_LESS_FAVORABLE) }
         try { return f() } finally { runCatching { android.os.Process.setThreadPriority(was) } }
     }
 

@@ -30,7 +30,7 @@ import javax.net.ssl.HttpsURLConnection
 
 /**
  * Downloads [IraModel]'s one file, started only by the owner's tap: HTTPS to Hugging Face and its CDN only (every
- * redirect is checked), an unmetered connection only, resumed where it stopped, then checked against its SHA-256 before
+ * redirect is checked), on Wi-Fi or mobile data (the owner's choice), resumed where it stopped, then checked against its SHA-256 before
  * it can be used. A foreground service (data sync) with its progress and a Cancel button. JarvisAlgo only.
  */
 class ModelDownload : Service() {
@@ -85,20 +85,21 @@ class ModelDownload : Service() {
 
     private fun fetch() {
         val c = applicationContext
-        val part = IraModel.part(c)
-        val dest = IraModel.file(c)
+        // The model chosen when the download began (choosing another cancels this download first).
+        val spec = IraModel.choice
+        val part = java.io.File(c.noBackupFilesDir, "${spec.file}.part")
+        val dest = java.io.File(c.noBackupFilesDir, spec.file)
         // Already on the phone (its check was not remembered): check it again, download nothing.
-        if (dest.length() == IraModel.SIZE && IraModel.recheck(c)) return
+        if (dest.length() == spec.size && IraModel.recheck(c)) return
         val cm = getSystemService(ConnectivityManager::class.java)
         if (cm.activeNetwork == null) throw IOException("No connection")
-        if (cm.isActiveNetworkMetered) throw IOException("Connect to Wi-Fi first: the model is ${IraModel.SIZE / 1_000_000} MB")
         // A part file larger than the model (an earlier overrun) can never complete: start again.
-        if (part.length() > IraModel.SIZE) part.delete()
+        if (part.length() > spec.size) part.delete()
         val have = part.length()
-        if (c.noBackupFilesDir.usableSpace < IraModel.SIZE - have + 200_000_000L) throw IOException("Not enough free space on the phone (about 2.3 GB needed)")
+        if (c.noBackupFilesDir.usableSpace < spec.size - have + 200_000_000L) throw IOException("Not enough free space on the phone (about ${(spec.size + 200_000_000L) / 100_000_000 / 10.0} GB needed)")
         IraModel.publish { it.copy(status = IraModel.Status.DOWNLOADING, done = have, message = null) }
 
-        var url = IraModel.URL
+        var url = spec.url
         var conn: HttpsURLConnection? = null
         for (hop in 0 until 6) {
             val u = URL(url)
@@ -110,7 +111,7 @@ class ModelDownload : Service() {
             if (have > 0) h.setRequestProperty("Range", "bytes=$have-")
             val code = h.responseCode
             if (code in 300..399) { url = URL(u, h.getHeaderField("Location") ?: throw IOException("Bad redirect")).toString(); h.disconnect(); continue }
-            if (code == 416 && have == IraModel.SIZE) { h.disconnect(); conn = null; break }
+            if (code == 416 && have == spec.size) { h.disconnect(); conn = null; break }
             if (code != 200 && code != 206) { h.disconnect(); throw IOException("The server answered $code") }
             conn = h; break
         }
@@ -125,7 +126,7 @@ class ModelDownload : Service() {
                     while (true) {
                         if (job?.isCancelled == true) throw IOException("Stopped")
                         val n = inp.read(buf); if (n < 0) break
-                        if (done + n > IraModel.SIZE) { out.close(); part.delete(); throw IOException("The file is bigger than expected; it will start again") }
+                        if (done + n > spec.size) { out.close(); part.delete(); throw IOException("The file is bigger than expected; it will start again") }
                         out.write(buf, 0, n); done += n
                         val now = System.currentTimeMillis()
                         if (now - lastNote > 1_000) {
@@ -138,16 +139,18 @@ class ModelDownload : Service() {
             }
             h.disconnect()
         }
-        if (part.length() != IraModel.SIZE) throw IOException("The download stopped at ${part.length() / 1_000_000} MB")
-        IraModel.publish { it.copy(status = IraModel.Status.VERIFYING, done = IraModel.SIZE) }
-        if (sha256(part) != IraModel.SHA256) {
+        if (part.length() != spec.size) throw IOException("The download stopped at ${part.length() / 1_000_000} MB")
+        IraModel.publish { it.copy(status = IraModel.Status.VERIFYING, done = spec.size) }
+        if (sha256(part) != spec.sha256) {
             part.delete()
             throw IOException("The file did not match its fingerprint and was deleted")
         }
         dest.delete()
         if (!part.renameTo(dest)) throw IOException("Could not keep the file")
+        if (IraModel.choice != spec) return                  // another model was chosen meanwhile: this one is kept for later
         IraModel.markVerified(c)
-        IraModel.publish { IraModel.State(status = IraModel.Status.READY, done = IraModel.SIZE) }
+        IraModel.dropOthers(c)
+        IraModel.publish { IraModel.State(status = IraModel.Status.READY, done = spec.size) }
         runCatching {
             Notifier.post(c, DONE_ID, Notifier.IRA, "Jarvis's model is ready", "Answers are now written on the phone by ${IraModel.NAME}; every number is checked.", tab = "almanac")
         }

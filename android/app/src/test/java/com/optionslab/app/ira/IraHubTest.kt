@@ -287,8 +287,10 @@ class IraHubTest : RobolectricTest() {
 
     /** The model is one pinned file from Hugging Face only, checked by SHA-256; outside JarvisAlgo nothing about it runs. */
     @Test fun theModelIsPinnedAndComesFromHuggingFaceOnly() {
-        assertTrue(IraModel.URL.startsWith("https://huggingface.co/Qwen/Qwen2.5-3B-Instruct-GGUF/resolve/${IraModel.COMMIT}/"))
-        assertEquals(64, IraModel.SHA256.length)
+        // The fast model is the default; both are pinned to an exact commit and fingerprint.
+        assertEquals(IraModel.FAST, IraModel.choice)
+        assertTrue(IraModel.URL.startsWith("https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF/resolve/${IraModel.COMMIT}/"))
+        for (s in IraModel.SPECS) { assertEquals(64, s.sha256.length); assertEquals(40, s.commit.length); assertTrue(s.url.startsWith("https://huggingface.co/Qwen/")) }
         for (ok in listOf("huggingface.co", "us.aws.cdn.hf.co", "cdn-lfs.huggingface.co")) assertTrue(ok, IraModel.hostAllowed(ok))
         for (bad in listOf("evil.com", "huggingface.co.evil.com", "nothf.co", "hf.co.evil.net", null)) assertTrue("$bad", !IraModel.hostAllowed(bad))
         val f = File(context.cacheDir, "abc.txt").also { it.writeText("abc") }

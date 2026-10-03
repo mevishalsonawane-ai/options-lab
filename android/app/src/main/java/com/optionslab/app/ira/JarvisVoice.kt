@@ -358,6 +358,8 @@ class JarvisVoice : Service() {
             main.postDelayed(watchdog, 5_000)
             // While listening, the slow answers are kept ready so none waits: prices every minute in market hours, your
             // account and the trade check every 30 seconds.
+            // The model is loaded while Jarvis listens: a spoken question never waits the seconds loading takes.
+            runCatching { IraModel.preload() }
             scope.launch(Dispatchers.Default) {
                 var n = 0
                 while (true) {

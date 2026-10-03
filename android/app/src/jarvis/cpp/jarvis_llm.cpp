@@ -1,4 +1,4 @@
-// JarvisAlgo's bridge to llama.cpp: load a model file, write a reply to one prompt, free it. No logging of prompts or
+// JarvisAlgo's bridge to llama.cpp: load a model file, write replies to prompts, free it. No logging of prompts or
 // replies (llama.cpp's own log is silenced), no network, no files written.
 #include <jni.h>
 #include <atomic>
@@ -7,7 +7,15 @@
 #include "llama.h"
 
 namespace {
-struct Handle { llama_model *model; int threads; };
+// The model, and one context kept between replies: the words a new prompt shares with the last one (the fixed
+// instructions) are already worked through, so only the new words are read - the main cost on a phone's CPU.
+struct Handle {
+    llama_model *model;
+    int threads;
+    llama_context *ctx = nullptr;
+    uint32_t n_ctx = 0;
+    std::vector<llama_token> cached;   // what the context holds now, in order
+};
 std::atomic<bool> g_cancel{false};
 
 void quiet(ggml_log_level, const char *, void *) {}
@@ -42,7 +50,10 @@ Java_com_optionslab_app_ira_LlmNative_load(JNIEnv *env, jobject, jstring path, j
     llama_model *m = llama_model_load_from_file(p, mp);
     env->ReleaseStringUTFChars(path, p);
     if (!m) return 0;
-    return reinterpret_cast<jlong>(new Handle{m, threads});
+    auto *hd = new Handle();
+    hd->model = m;
+    hd->threads = threads;
+    return reinterpret_cast<jlong>(hd);
 }
 
 // The reply as UTF-8 bytes (Kotlin decodes them), or null when it failed or was cancelled.
@@ -61,31 +72,53 @@ Java_com_optionslab_app_ira_LlmNative_generate(JNIEnv *env, jobject, jlong h, js
     std::vector<llama_token> toks(n);
     if (llama_tokenize(vocab, text.c_str(), (int32_t) text.size(), toks.data(), n, true, true) < 0) return nullptr;
 
-    llama_context_params cp = llama_context_default_params();
-    cp.n_ctx = (uint32_t) (n + maxTokens + 16);
-    cp.n_batch = (uint32_t) n;
-    cp.n_threads = hd->threads;
-    cp.n_threads_batch = hd->threads;
-    cp.no_perf = true;
-    llama_context *ctx = llama_init_from_model(hd->model, cp);   // a fresh context per reply: nothing carries over
-    if (!ctx) return nullptr;
+    // A context big enough for this prompt and reply (made again, empty, only when a longer one is needed).
+    uint32_t need = (uint32_t) (n + maxTokens + 16);
+    if (!hd->ctx || hd->n_ctx < need) {
+        if (hd->ctx) llama_free(hd->ctx);
+        uint32_t size = need < 2048 ? 2048 : need;
+        llama_context_params cp = llama_context_default_params();
+        cp.n_ctx = size;
+        cp.n_batch = size;
+        cp.n_threads = hd->threads;
+        cp.n_threads_batch = hd->threads;
+        cp.no_perf = true;
+        hd->ctx = llama_init_from_model(hd->model, cp);
+        hd->n_ctx = hd->ctx ? size : 0;
+        hd->cached.clear();
+        if (!hd->ctx) return nullptr;
+    }
+    llama_context *ctx = hd->ctx;
+    llama_memory_t mem = llama_get_memory(ctx);
+
+    // The shared beginning is kept; everything after it is dropped and read again (at least one token is always read,
+    // so the reply starts from this prompt's own last word).
+    size_t keep = 0;
+    while (keep < hd->cached.size() && keep < toks.size() && hd->cached[keep] == toks[keep]) keep++;
+    if (keep >= toks.size()) keep = toks.size() - 1;
+    if (!llama_memory_seq_rm(mem, 0, (llama_pos) keep, -1)) { llama_memory_clear(mem, true); keep = 0; }
+    hd->cached.assign(toks.begin(), toks.begin() + keep);
 
     llama_sampler *smpl = llama_sampler_chain_init(llama_sampler_chain_default_params());
     llama_sampler_chain_add(smpl, llama_sampler_init_greedy());   // the most likely word each time: steady, repeatable
 
     std::string out;
-    llama_batch batch = llama_batch_get_one(toks.data(), (int32_t) toks.size());
+    llama_batch batch = llama_batch_get_one(toks.data() + keep, (int32_t) (toks.size() - keep));
+    std::vector<llama_token> fed(toks.begin() + keep, toks.end());
     llama_token next = 0;
     bool ok = true;
     for (int i = 0; i < maxTokens && !g_cancel; i++) {
         if (llama_decode(ctx, batch) != 0) { ok = false; break; }
+        hd->cached.insert(hd->cached.end(), fed.begin(), fed.end());
         next = llama_sampler_sample(smpl, ctx, -1);
         if (llama_vocab_is_eog(vocab, next)) break;
         out += piece(vocab, next);
+        fed.assign(1, next);
         batch = llama_batch_get_one(&next, 1);
     }
     llama_sampler_free(smpl);
-    llama_free(ctx);
+    // Anything uncertain (a failed step, a cancel): the context starts empty next time.
+    if (!ok || g_cancel) { llama_memory_clear(mem, true); hd->cached.clear(); }
     if (!ok || g_cancel) return nullptr;
     out.resize(utf8_complete(out));
     jbyteArray arr = env->NewByteArray((jsize) out.size());
@@ -100,6 +133,7 @@ extern "C" JNIEXPORT void JNICALL
 Java_com_optionslab_app_ira_LlmNative_free(JNIEnv *, jobject, jlong h) {
     auto *hd = reinterpret_cast<Handle *>(h);
     if (!hd) return;
+    if (hd->ctx) llama_free(hd->ctx);
     llama_model_free(hd->model);
     delete hd;
 }
