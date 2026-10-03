@@ -326,3 +326,42 @@ object Momentum {
         return "${m.label}: " + parts.joinToString("; ") + ". It shows how stretched the move is, not where it goes next."
     }
 }
+
+/**
+ * The odds of a level by the close (Jarvis self-improvement, 2026-10-03): "what are the chances Nifty closes above
+ * 24,500?" - the VIX-implied move for the time left, as a normal spread around the price. A rough guide, not a forecast,
+ * and never advice. Pure.
+ */
+object Odds {
+    private val ASK = Regex(" (chance|chances|probability|odds|likely|likelihood) [a-z ]{0,40}?(close|closes|closing|end|ends|finish|finishes|stay|stays|be|go|goes|settle|settles) (above|over|below|under) (\\d{2,6}(?:\\.\\d+)?) ")
+
+    data class Ask(val above: Boolean, val level: Double)
+
+    fun asked(text: String): Ask? {
+        val t = norm(text.replace(",", ""))
+        val m = ASK.find(t) ?: return null
+        return Ask(m.groupValues[3] in setOf("above", "over"), m.groupValues[4].toDouble())
+    }
+
+    /** The standard normal cumulative distribution (Abramowitz-Stegun 26.2.17, to about 1e-7). */
+    fun phi(z: Double): Double {
+        val t = 1 / (1 + 0.2316419 * abs(z))
+        val d = 0.3989422804014327 * kotlin.math.exp(-z * z / 2)
+        val p = d * t * (0.319381530 + t * (-0.356563782 + t * (1.781477937 + t * (-1.821255978 + t * 1.330274429))))
+        return if (z >= 0) 1 - p else p
+    }
+
+    fun say(s: Snapshot, vix: Double, a: Ask, now: LocalDateTime): String? {
+        if (vix <= 0 || s.market == Market.GOLD || s.market == Market.VIX) return null
+        val close = s.market.close ?: return null
+        val left = if (s.trading && now.toLocalTime().isBefore(close)) java.time.Duration.between(now.toLocalTime(), close).toMinutes().toInt() else null
+        val sigma = ExpectedRange.points(s.price, vix, left)
+        if (sigma <= 0) return null
+        val pAbove = 1 - phi((a.level - s.price) / sigma)
+        val p = if (a.above) pAbove else 1 - pAbove
+        val pct = (p * 100).let { if (it < 1) "under 1" else if (it > 99) "over 99" else "%.0f".format(Locale.ENGLISH, it) }
+        val span = if (left != null) "today" else "next session"
+        return "Going by India VIX, there is about a $pct% chance ${s.market.label} closes ${if (a.above) "above" else "below"} ${n(a.level)} $span: " +
+            "it is ${n(abs(a.level - s.price))} points ${if (a.level >= s.price) "above" else "below"} the price, against an expected move of about ±${n(sigma)}. A rough guide from option prices, not a forecast."
+    }
+}

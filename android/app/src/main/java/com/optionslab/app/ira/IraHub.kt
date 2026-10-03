@@ -1141,6 +1141,10 @@ object IraHub {
         val st = _state.value
         if (com.optionslab.ira.Compare.asked(q)) return com.optionslab.ira.Compare.say(com.optionslab.ira.Compare.markets(q), st.snaps)
         val m = parsed.markets.firstOrNull { it != IraMarket.VIX } ?: IraMarket.NIFTY
+        com.optionslab.ira.Odds.asked(q)?.let { odd ->
+            val vix = st.snaps[IraMarket.VIX]?.price ?: return null
+            return com.optionslab.ira.Odds.say(st.snaps[m] ?: return null, vix, odd, LocalDateTime.now(IST))
+        }
         if (com.optionslab.ira.ExpectedRange.asked(q)) {
             val vix = st.snaps[IraMarket.VIX]?.price ?: return null
             return com.optionslab.ira.ExpectedRange.say(st.snaps[m] ?: return null, vix, LocalDateTime.now(IST))

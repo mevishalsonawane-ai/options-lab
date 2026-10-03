@@ -186,3 +186,19 @@ class MomentumTest {
         assertTrue("15-minute RSI is 100, overbought" in s, s)
     }
 }
+
+class OddsTest {
+    @Test fun theOddsAreWorkedOut() {
+        assertEquals(0.5, Odds.phi(0.0), 1e-6)
+        assertEquals(0.8413, Odds.phi(1.0), 1e-3)
+        assertEquals(0.1587, Odds.phi(-1.0), 1e-3)
+        val a = Odds.asked("what are the chances nifty closes above 24,500 today")!!
+        assertTrue(a.above); assertEquals(24_500.0, a.level)
+        assertEquals(false, Odds.asked("probability banknifty ends below 51000")?.above)
+        assertNull(Odds.asked("how is nifty"))
+        val d = java.time.LocalDate.of(2026, 10, 1)
+        val snap = Snapshot(Market.NIFTY, d.atTime(12, 0), true, 24_000.0, 23_900.0, 24_000.0, 24_000.0, 24_000.0, null, null, emptyList(), null, null, emptyList(), emptyList(), emptyList())
+        val s = Odds.say(snap, 16.0, Odds.Ask(true, 24_000.0), d.atTime(12, 0))!!
+        assertTrue(s.startsWith("Going by India VIX, there is about a 50% chance Nifty closes above 24,000.00 today"), s)
+    }
+}
