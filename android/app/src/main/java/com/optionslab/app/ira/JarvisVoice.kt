@@ -382,7 +382,7 @@ class JarvisVoice : Service() {
         if (talkNow) {
             talkAt = SystemClock.elapsedRealtime()
             // Wait for the voice to be ready (the first time), then ask.
-            main.postDelayed({ awakeUntil = SystemClock.elapsedRealtime() + AWAKE_MS + 4_000; say("Yes, Boss?") }, if (voiceReady) 0L else 800L)
+            main.postDelayed({ awakeUntil = SystemClock.elapsedRealtime() + AWAKE_MS + 4_000; called = true; say("Yes, Boss?") }, if (voiceReady) 0L else 800L)
         }
         return if (oneShot) START_NOT_STICKY else START_STICKY
     }
@@ -595,13 +595,15 @@ class JarvisVoice : Service() {
         val h = alts.asSequence().map { Wake.heard(it, awake) }.firstOrNull { it !is Wake.Heard.Ignore } ?: Wake.Heard.Ignore
         when (h) {
             Wake.Heard.Ignore -> again()
-            Wake.Heard.Awake -> { awakeUntil = SystemClock.elapsedRealtime() + AWAKE_MS; say("Yes, Boss?") }
+            Wake.Heard.Awake -> { awakeUntil = SystemClock.elapsedRealtime() + AWAKE_MS; called = true; say("Yes, Boss?") }
             Wake.Heard.Stop -> { wanted = false; say("Going to sleep, Boss. Switch me on again in IraAlgo.", STOP_AFTER) }
             is Wake.Heard.Ask -> {
                 // "Jarvis, stop talking" said over Jarvis: it has already stopped; that is not a lasting mute.
                 if (cutIn && Regex("^(stop|please stop|ok stop) (talking|speaking)$").matches(h.question.lowercase().trim())) { again(); return }
                 // A follow-up (no "Jarvis" in it) may ask, never act: trades and commands need the name, so talk nearby cannot trigger one.
-                val named = alternatives.any { Regex("\\bj[ae]rv[ia]s").containsMatchIn(it.lowercase()) }
+                // Just called ("Jarvis" alone, or the mic button, then "Yes, Boss?"): this question was asked by name.
+                val named = alternatives.any { Regex("\\bj[ae]rv[ia]s").containsMatchIn(it.lowercase()) } || (called && awake)
+                called = false
                 // Its own last words heard back without the name are not a question (the follow-up window stays open).
                 if (!named && Wake.echo(h.question, lastSpoken?.takeIf { SystemClock.elapsedRealtime() - lastSpokenEnd < 15_000 })) { again(); return }
                 awakeUntil = 0
@@ -614,7 +616,7 @@ class JarvisVoice : Service() {
                 val lockedNo = if (locked()) com.optionslab.ira.LockRule.refuse(true, acts || com.optionslab.ira.Topic.COMMAND in topics && !voiceOnly && com.optionslab.ira.Ask.parse(h.question).command?.kind != com.optionslab.ira.Command.Kind.VOICE_CHECK,
                     com.optionslab.ira.Topic.ACCOUNT in topics, com.optionslab.ira.Topic.ACCOUNT in topics && boss()) else null
                 if (lockedNo != null) say(lockedNo)
-                else if (!named && acts) { IraTools.count("nameFirst"); say("Boss, say Jarvis first for that.") }
+                else if (!named && acts) { IraTools.count("nameFirst"); say("Boss, to do that call me first: say my name, or tap the mic.") }
                 else {
                     // Trades, and commands that add risk (live mode, kill switch off, autopilot, starting arms), need
                     // Boss's own voice; without it a command is asked as a yes or no instead of done at once, and
@@ -647,6 +649,8 @@ class JarvisVoice : Service() {
 
     /** What was said last (its id, and its words for an answer or question) and when that speech ended. */
     @Volatile private var lastSpokenId: String? = null
+    /** Boss has just called Jarvis (its name alone, or the mic button): the next question in the awake window counts as named. */
+    @Volatile private var called = false
     @Volatile private var lastSpoken: String? = null
     @Volatile private var lastSpokenEnd = 0L
 
@@ -767,7 +771,7 @@ class JarvisVoice : Service() {
         lastSpokenEnd = SystemClock.elapsedRealtime()
         if (stopped) return
         if (id == STOP_AFTER) { stopSelf(); return }
-        if (id == "answer") awakeUntil = SystemClock.elapsedRealtime() + FOLLOW_MS   // a follow-up needs no "Jarvis"
+        if (id == "answer") { awakeUntil = SystemClock.elapsedRealtime() + FOLLOW_MS; called = false }   // a follow-up needs no "Jarvis" (and may not act)
         if (id == "question" && askingUntil < SystemClock.elapsedRealtime()) askingUntil = SystemClock.elapsedRealtime() + ANSWER_MS
         again(150)
     }
