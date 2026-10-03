@@ -173,14 +173,14 @@ fun DataPage(model: AppModel) {
     var device by remember { mutableStateOf<List<java.time.LocalDate>?>(null) }
     var bytes by remember { mutableStateOf<Long?>(null) }
     var manifests by remember { mutableStateOf(mapOf<String, List<Manifest.Entry>>()) }
-    LaunchedEffect(job.running, reread) {
+    LaunchedEffect(job.running, reread) { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main.immediate) {
         kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
             val d = Store.deviceExpiryDays()
             val b = Store.deviceBytes()
             val m = listOf("NIFTY", "BANKNIFTY").associateWith { Store.manifest(it) }
             Triple(d, b, m)
         }.let { (d, b, m) -> device = d; bytes = b; manifests = m }
-    }
+    } }
     Page {
         item { PageTitle("Data & Harvest", "No free source serves expired contracts: a day not collected is gone") }
         item {

@@ -149,10 +149,10 @@ internal fun SignalContent(
     var length by remember { mutableIntStateOf(100) }
     var days by remember { mutableStateOf<List<LocalDate>>(emptyList()) }
     var day by remember { mutableStateOf<LocalDate?>(null) }
-    LaunchedEffect(underlying) {
+    LaunchedEffect(underlying) { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main.immediate) {
         days = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { daysFor(underlying) }
         day = days.lastOrNull()
-    }
+    } }
     Page {
         item { PageTitle("Signal Lab", "Buy signal → ATM call; sell → ATM put; next-bar entry; costs always") }
         item {

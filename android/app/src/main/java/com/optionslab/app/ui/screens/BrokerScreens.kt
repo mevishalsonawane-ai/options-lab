@@ -278,7 +278,8 @@ fun Reauth(model: AppModel, onOk: () -> Unit, onCancel: () -> Unit, pinOnly: Boo
                 TextButton({
                     checking = true; err = null
                     val typed = pin.toCharArray()
-                    pinScope.launch {
+                    // Back on the main thread after the slow check (its result is the dialog's state).
+                    pinScope.launch(kotlinx.coroutines.Dispatchers.Main) {
                         val r = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { PinLock.verify(typed, s.wipeOnExhaustion) }
                         checking = false
                         when (r) {
@@ -499,7 +500,7 @@ internal fun StaticIpCard(
     var hostText by remember { mutableStateOf(relay.host ?: com.optionslab.app.data.StaticIp.registered.orEmpty()) }
     var testing by remember { mutableStateOf(false) }
     var relayMsg by remember { mutableStateOf<String?>(null) }
-    fun check() { checking = true; scope.launch { status = readStatus(); checking = false } }
+    fun check() { checking = true; scope.launch(kotlinx.coroutines.Dispatchers.Main) { status = readStatus(); checking = false } }
     LaunchedEffect(Unit) { check() }
     fun open(url: String) = runCatching {
         ctx.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url)).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
@@ -542,7 +543,7 @@ internal fun StaticIpCard(
         Note("IraAlgo sends your Zerodha orders through your own cloud server, so Zerodha sees the server's fixed IP. Nothing to install on the phone or the server.")
         step("1", "Create the app's key", "IraAlgo makes a key only your server will accept. Copy it for step 2.")
         if (pub == null) BrassButton("Create key", Modifier.fillMaxWidth().padding(top = 6.dp)) {
-            scope.launch { pub = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { relay.newKey() } }
+            scope.launch(kotlinx.coroutines.Dispatchers.Main) { pub = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { relay.newKey() } }
         } else {
             Row(
                 Modifier.fillMaxWidth().padding(vertical = 6.dp).background(p.chip, RoundedCornerShape(10.dp)).padding(horizontal = 12.dp, vertical = 10.dp),
@@ -603,7 +604,7 @@ internal fun StaticIpCard(
         }
         if (pub != null) Row(horizontalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.padding(top = 4.dp)) {
             Text("New key", style = Type.label.copy(color = p.inkSoft), modifier = Modifier.clickable {
-                scope.launch { pub = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { relay.newKey() }; model.say("New key made: paste it into the server again") }
+                scope.launch(kotlinx.coroutines.Dispatchers.Main) { pub = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { relay.newKey() }; model.say("New key made: paste it into the server again") }
             }.padding(4.dp))
             Text("Forget server", style = Type.label.copy(color = p.inkSoft), modifier = Modifier.clickable { relay.forgetServer(); model.say("Server identity forgotten; the next connect trusts it anew") }.padding(4.dp))
         }
