@@ -606,7 +606,9 @@ internal fun StaticIpCard(
             Text("New key", style = Type.label.copy(color = p.inkSoft), modifier = Modifier.clickable {
                 scope.launch(kotlinx.coroutines.Dispatchers.Main) { pub = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { relay.newKey() }; model.say("New key made: paste it into the server again") }
             }.padding(4.dp))
-            Text("Forget server", style = Type.label.copy(color = p.inkSoft), modifier = Modifier.clickable { relay.forgetServer(); model.say("Server identity forgotten; the next connect trusts it anew") }.padding(4.dp))
+            Text("Forget server", style = Type.label.copy(color = p.inkSoft), modifier = Modifier.clickable {
+                scope.launch(kotlinx.coroutines.Dispatchers.Main) { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { relay.forgetServer() }; model.say("Server identity forgotten; the next connect trusts it anew") }
+            }.padding(4.dp))
         }
 
         Text(if (guide) "Hide the VPN steps ▲" else "Advanced: use a WireGuard VPN instead ▼", style = Type.label.copy(color = p.ink, fontSize = 14.sp),
