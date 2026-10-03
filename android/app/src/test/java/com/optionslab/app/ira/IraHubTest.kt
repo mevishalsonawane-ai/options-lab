@@ -671,7 +671,9 @@ class IraHubTest : RobolectricTest() {
         waitFor("the note") { IraHub.state.value.messages.lastOrNull()?.text?.startsWith("Noted, Boss") == true }
         assertTrue(IraJournal.reasons().single().startsWith("Not enough noted trades"))
         assertEquals("No Thursday trades found.", IraJournal.search("how did my thursday trades do").single())
-        assertTrue(Automations.Auto.entries.all { Automations.on(it) })
+        // Each automation starts at its default: all on, except trailing the owner's own stops (it moves live orders).
+        assertTrue(Automations.Auto.entries.all { Automations.on(it) == it.byDefault })
+        assertTrue(!Automations.on(Automations.Auto.TRAIL))
         Automations.set(Automations.Auto.STALE, false); assertTrue(!Automations.on(Automations.Auto.STALE)); Automations.set(Automations.Auto.STALE, true)
         IraJournal.targetWatch(); IraJournal.staleWatch()
         Unit

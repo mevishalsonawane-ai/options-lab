@@ -24,16 +24,17 @@ object IraLater {
     /** A command is still run if its alarm came this late (the phone was off); later than that it is dropped and told. */
     private const val GRACE_MS = 30 * 60_000L
 
-    data class Item(val id: Long, val text: String, val at: Long)
+    /** [live]: the app's mode when it was set (a start is not run in another mode than the one Boss confirmed it in). */
+    data class Item(val id: Long, val text: String, val at: Long, val live: Boolean = false)
 
     @Synchronized fun all(): List<Item> = runCatching {
         val a = org.json.JSONArray(SecurePrefs.getString(KEY) ?: "[]")
-        (0 until a.length()).map { i -> a.getJSONObject(i).let { Item(it.getLong("id"), it.getString("text"), it.getLong("at")) } }
+        (0 until a.length()).map { i -> a.getJSONObject(i).let { Item(it.getLong("id"), it.getString("text"), it.getLong("at"), it.optBoolean("live", false)) } }
     }.getOrDefault(emptyList())
 
     @Synchronized private fun save(items: List<Item>) {
         val a = org.json.JSONArray()
-        items.forEach { a.put(org.json.JSONObject().put("id", it.id).put("text", it.text).put("at", it.at)) }
+        items.forEach { a.put(org.json.JSONObject().put("id", it.id).put("text", it.text).put("at", it.at).put("live", it.live)) }
         SecurePrefs.put(KEY, if (items.isEmpty()) null else a.toString())
     }
 
@@ -41,7 +42,8 @@ object IraLater {
     fun add(context: Context, text: String, at: LocalDateTime) {
         val c = Ask.parse(text).command
         require(c != null && c.kind in Later.ALLOWED) { "only starting or stopping can wait for a time" }
-        save(all() + Item(System.nanoTime(), text, at.atZone(IST).toInstant().toEpochMilli()))
+        val live = runCatching { com.optionslab.app.data.AppSettings.load().live }.getOrDefault(true)
+        save(all() + Item(System.nanoTime(), text, at.atZone(IST).toInstant().toEpochMilli(), live))
         schedule(context)
     }
 
@@ -76,6 +78,8 @@ object IraLater {
 
     /** The alarm fired: each command now due is run (or dropped when far too late), and Boss is told. */
     suspend fun fire(context: Context) {
+        // IraGoldAlgo never runs commands (Jarvis only talks there): anything found is dropped.
+        if (com.optionslab.app.BuildConfig.GOLD) { save(emptyList()); return }
         val now = System.currentTimeMillis()
         val due = all().filter { it.at <= now + 30_000 }
         if (due.isNotEmpty()) save(all().filter { it.at > now + 30_000 })
@@ -83,7 +87,12 @@ object IraLater {
             val said = if (now - item.at > GRACE_MS) "I did not \"${item.text}\": its time passed while the phone was off. Ask me again if you still want it."
             else {
                 val c = Ask.parse(item.text).command
+                val starts = c?.kind == com.optionslab.ira.Command.Kind.START_ALL || c?.kind == com.optionslab.ira.Command.Kind.START_ONE
+                val s = runCatching { com.optionslab.app.data.AppSettings.load() }.getOrNull()
                 if (c == null || c.kind !in Later.ALLOWED) "I did not \"${item.text}\": it is not something I may do on a timer."
+                // A start runs only as confirmed: the same mode, the kill switch off, the day's loss breaker not tripped.
+                else if (starts && (s == null || s.live != item.live)) "I did not \"${item.text}\": the app is in ${if (s?.live == true) "Live" else "Paper"} mode now, not the mode you set it in. Ask me again if you still want it."
+                else if (starts && (s!!.guardKill || com.optionslab.app.data.LossBreaker.trippedToday())) "I did not \"${item.text}\": the kill switch is on or the day's loss limit was hit."
                 else {
                     val (what, act) = runCatching { IraActions.prepare(c) }.getOrElse { ("I could not do that: ${it.message}") to null }
                     if (act == null) what else "As you asked: " + IraActions.run(what, act)

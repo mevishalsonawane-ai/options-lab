@@ -217,7 +217,7 @@ internal object IraSolo {
 
     /** Every market-watch pass while Solo is on: manage the open trade, or look for the next one. */
     suspend fun tick() = lock.withLock {
-        if (!com.optionslab.app.BuildConfig.JARVIS) return@withLock
+        if (!com.optionslab.app.BuildConfig.JARVIS || com.optionslab.app.BuildConfig.GOLD) return@withLock
         if (!com.optionslab.app.data.Market.isOpen()) return@withLock
         val today = com.optionslab.app.data.Market.today()
         val now = minuteNow()

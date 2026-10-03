@@ -35,7 +35,13 @@ class JarvisWidget : AppWidgetProvider() {
             val v = RemoteViews(context.packageName, R.layout.widget_jarvis)
             val st = IraHub.state.value
             val last = st.messages.lastOrNull { it.fromIra }?.text
-            v.setTextViewText(R.id.j_msg, last?.let { com.optionslab.ira.Address.boss(it).take(260) } ?: "Hello Boss. Say \"Jarvis\" or open the app to ask me anything.")
+            // The home screen is not protected from eyes or screenshots: an answer about money or the account is not shown there.
+            val secret = last != null && Regex("(?i)(rs\\.?\\s?\\d|₹|p&l|pnl|profit|loss|funds?|margin|balance|position|order|holding|account|zerodha)").containsMatchIn(last)
+            v.setTextViewText(R.id.j_msg, when {
+                last == null -> "Hello Boss. Say \"Jarvis\" or open the app to ask me anything."
+                secret -> "I answered you in the app, Boss - open it to read."
+                else -> com.optionslab.ira.Address.boss(last).take(260)
+            })
             val waiting = IraHub.waitingTrade()
             if (waiting != null) {
                 v.setViewVisibility(R.id.j_actions, View.VISIBLE)

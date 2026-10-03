@@ -9,8 +9,9 @@ import java.time.ZoneId
  * [acted] when it did something.
  */
 internal object Automations {
-    enum class Auto(val label: String, val what: String, val key: String) {
-        TRAIL("Trail my stops", "Your own bought options: stop to what you paid at +20%, then 15% under the best price.", "jarvis.autotrail"),
+    enum class Auto(val label: String, val what: String, val key: String, val byDefault: Boolean = true) {
+        // Off until Boss switches it on: it moves the stop orders of his own positions, live ones too (review, 3 Oct).
+        TRAIL("Trail my stops", "Your own bought options: stop to what you paid at +20%, then 15% under the best price.", "jarvis.autotrail", byDefault = false),
         RESCUE("Offer a stop", "A position of yours with no stop for 2 minutes: Jarvis offers one (asks first).", "jarvis.auto.rescue"),
         STALE("Trades going nowhere", "Open 45 minutes and within 5% of what you paid: Jarvis offers to close it (asks first).", "jarvis.auto.stale"),
         COOLOFF("Cool-off after losses", "Two of Jarvis's trades lose in a row: no suggestions for 30 minutes.", "jarvis.auto.cooloff"),
@@ -30,7 +31,7 @@ internal object Automations {
         QUIET("Quiet hours", "Nothing said unasked from 22:00 to 07:00.", "jarvis.quiet"),
     }
 
-    fun on(a: Auto): Boolean = runCatching { com.optionslab.app.security.SecurePrefs.getBoolean(a.key, true) }.getOrDefault(true)
+    fun on(a: Auto): Boolean = runCatching { com.optionslab.app.security.SecurePrefs.getBoolean(a.key, a.byDefault) }.getOrDefault(false)
 
     fun set(a: Auto, v: Boolean) { runCatching { com.optionslab.app.security.SecurePrefs.put(a.key, v) } }
 

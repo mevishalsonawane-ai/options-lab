@@ -353,7 +353,7 @@ class JarvisVoice : Service() {
             ServiceCompat.startForeground(this, ID, notification(),
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE else 0)
         } catch (e: Exception) {
-            _state.value = VoiceState(problem = "Android did not let Jarvis listen in the background; open IraAlgo to start it again.")
+            _state.value = VoiceState(problem = "Android did not let Jarvis listen in the background; open the app to start it again.")
             stopSelf(); return START_NOT_STICKY
         }
         instance = java.lang.ref.WeakReference(this)
@@ -596,7 +596,7 @@ class JarvisVoice : Service() {
         when (h) {
             Wake.Heard.Ignore -> again()
             Wake.Heard.Awake -> { awakeUntil = SystemClock.elapsedRealtime() + AWAKE_MS; called = true; say("Yes, Boss?") }
-            Wake.Heard.Stop -> { wanted = false; say("Going to sleep, Boss. Switch me on again in IraAlgo.", STOP_AFTER) }
+            Wake.Heard.Stop -> { wanted = false; say("Going to sleep, Boss. Switch me on again in the app.", STOP_AFTER) }
             // "Jarvis, stop" / "enough" / "quiet": it has stopped talking (the name cut in); nothing else is done.
             Wake.Heard.Hush -> { interrupt(); awakeUntil = 0; called = false; asking = null; _state.value = VoiceState(Mode.LISTENING); again() }
             is Wake.Heard.Ask -> {
@@ -610,7 +610,8 @@ class JarvisVoice : Service() {
                 if (!named && Wake.echo(h.question, lastSpoken?.takeIf { SystemClock.elapsedRealtime() - lastSpokenEnd < 15_000 })) { again(); return }
                 awakeUntil = 0
                 // A command for later ("start all arms tomorrow at 9") is judged as the command itself.
-                val parsedQ = com.optionslab.ira.Ask.parse(runCatching { com.optionslab.ira.Later.split(h.question, java.time.LocalDateTime.now(java.time.ZoneId.of("Asia/Kolkata")))?.rest }.getOrNull() ?: h.question)
+                val laterRest = runCatching { com.optionslab.ira.Later.split(h.question, java.time.LocalDateTime.now(java.time.ZoneId.of("Asia/Kolkata")))?.rest }.getOrNull()
+                val parsedQ = com.optionslab.ira.Ask.parse(laterRest ?: h.question)
                 val topics = parsedQ.topics
                 // Muting, unmuting and the reply language are not actions: a follow-up "mute" works without the name.
                 val voiceOnly = parsedQ.command?.kind in VOICE_KINDS
@@ -633,7 +634,8 @@ class JarvisVoice : Service() {
                     when {
                         com.optionslab.ira.Topic.ORDER in topics && !verified ->
                             say(VoiceGuard.blocked() ?: "Boss, that didn't sound like you, so I won't place it. Say it again, or use the Ira screen.")
-                        risky && !verified && (cmd!!.kind in HIGH_RISK || loosens) ->
+                        // A start set for later runs while Boss may be away: only his own voice sets one.
+                        risky && !verified && (cmd!!.kind in HIGH_RISK || loosens || laterRest != null) ->
                             say(VoiceGuard.blocked() ?: "Boss, that didn't sound like you, so I won't do it. Use the Ira screen.")
                         else -> answer(h.question, confirm = risky && !verified, named = named)
                     }

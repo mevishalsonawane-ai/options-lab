@@ -58,8 +58,11 @@ android {
     }
 
     // Jarvis's on-device model runner (llama.cpp, fixed release) for 64-bit ARM phones.
-    externalNativeBuild { cmake { path = file("src/jarvis/cpp/CMakeLists.txt"); version = "3.22.1" } }
-    defaultConfig { ndk { abiFilters += "arm64-v8a" } }
+    // -PnoLlm=true (the x86_64 emulator check): built without it, so the APK installs there; the app then simply has no model.
+    if (project.findProperty("noLlm") != "true") {
+        externalNativeBuild { cmake { path = file("src/jarvis/cpp/CMakeLists.txt"); version = "3.22.1" } }
+        defaultConfig { ndk { abiFilters += "arm64-v8a" } }
+    }
 
     // The microphone, the voice service and the widget: Jarvis's manifest, in both apps.
     sourceSets {

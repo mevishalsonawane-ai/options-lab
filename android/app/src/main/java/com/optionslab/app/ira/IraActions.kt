@@ -180,8 +180,8 @@ internal object IraActions {
                 if (c.kind == Command.Kind.KILL_ON) "Kill switch on: no new live positions; exits still go." else "Kill switch off."
             }
             Command.Kind.MODE_PAPER -> Commands.describe(c) to suspend { setSettings { it.copy(mode = "sandbox", allowRealOrders = false) }; "Paper mode: orders now go to the paper account." }
-            Command.Kind.MODE_LIVE -> if (!Broker.linked) "Zerodha is not set up yet: More, then Zerodha." to null
-                else Commands.describe(c) to suspend { setSettings { it.copy(mode = "live", allowRealOrders = true) }; "Live mode: orders now go to Zerodha." }
+            // Real orders are never switched on via Jarvis (Boss's rule): going live is the PAPER / LIVE badge, asked there.
+            Command.Kind.MODE_LIVE -> "Going live is yours alone, Boss: tap PAPER TRADING at the top of the app and confirm there. I never switch real orders on." to null
             Command.Kind.ALARM_ADD -> {
                 val m = c.market; val above = c.above
                 // "Falls 1% from here": the level from the price now.

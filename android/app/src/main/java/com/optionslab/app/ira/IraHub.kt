@@ -267,9 +267,10 @@ object IraHub {
                 val stored = testHistories?.invoke() ?: load()
                 // No internet: the prices saved on the phone at once (no feed waited on until it times out).
                 val net = online()
-                val (live, missing) = if (net) live() else emptyMap<IraMarket, List<Candle>>() to LIVE.keys.toList()
+                // IraGoldAlgo reads no NSE feeds (it had no NSE network before Jarvis; it only talks there).
+                val (live, missing) = if (net && !GOLD_ONLY_TALK) live() else emptyMap<IraMarket, List<Candle>>() to LIVE.keys.toList()
                 val hs = merge(stored, live)
-                val news = if (net) newsIfDue() else null
+                val news = if (net && !GOLD_ONLY_TALK) newsIfDue() else null
                 var added = 0
                 for ((m, h) in hs) for (minutes in listOf(15, 60)) {
                     if (h.bars.isEmpty()) continue
@@ -291,7 +292,7 @@ object IraHub {
                 _state.update { s -> s.copy(loading = false, problem = "Could not read the market data") }
             }
         }
-        autoLab()
+        if (!GOLD_ONLY_TALK) autoLab()
     }
 
     /**
@@ -427,6 +428,7 @@ object IraHub {
     private val approving = HashSet<Long>()
 
     suspend fun approve(id: Long): String {
+        if (GOLD_ONLY_TALK) return GOLD_TALK_ONLY
         // One approval at a time per proposal (a double tap, or the autopilot at the same moment, adds it once).
         if (!synchronized(approving) { approving.add(id) }) return "Already being added."
         try { return approveOnce(id) } finally { synchronized(approving) { approving.remove(id) } }
@@ -560,6 +562,7 @@ object IraHub {
      * Confirm on the Ira screen); unanswered in 10 minutes it lapses. [said] opens the spoken question.
      */
     private suspend fun proposeTrade(c: Context, idea: com.optionslab.ira.NewsTrade.Idea, title: String, text: String, said: String, source: String) {
+        if (GOLD_ONLY_TALK) return
         val m = idea.market
         // Two losses in a row: a cooling-off, said once.
         // (The news itself is still told: only the trade is held back.)
@@ -632,6 +635,7 @@ object IraHub {
      * every suggestion; one waiting at a time.
      */
     internal suspend fun offerSoloIdea(idea: com.optionslab.ira.NewsTrade.Idea, text: String): Boolean {
+        if (GOLD_ONLY_TALK) return true
         val c = app ?: return false
         if (synchronized(actions) { newsAsks.isNotEmpty() }) return false
         // The gates every suggestion has: two of Jarvis's trades a day at most, none late on an expiry day (the market is
@@ -898,6 +902,9 @@ object IraHub {
     private const val NOTIFY_BASE = 7300
 
     /** A question in, Ira's answer appended to the conversation. */
+    /** IraGoldAlgo: Jarvis only talks there (no orders, commands, NSE feeds, strategies or trade ideas). */
+    private val GOLD_ONLY_TALK get() = com.optionslab.app.BuildConfig.GOLD
+
     /** IraGoldAlgo's answer to an order or a command: Jarvis there only talks. */
     const val GOLD_TALK_ONLY = "In IraGoldAlgo I only talk, Boss: orders and commands are in IraAlgo. The gold arms trade on paper by their own rules."
 
@@ -1031,8 +1038,8 @@ object IraHub {
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, text)).takeLast(MAX_MESSAGES)) }
             return
         }
-        // "What is the premium of 24500 CE": the option chain read now (8 seconds at most) - never an order.
-        if (parsed.order == null && parsed.command == null && Topic.ACCOUNT !in parsed.topics && !Regex("(?i)\\b(i|me|my|mine)\\b").containsMatchIn(q))
+        // "What is the premium of 24500 CE": the option chain read now (8 seconds at most) - never an order. (Not in IraGoldAlgo.)
+        if (!GOLD_ONLY_TALK && parsed.order == null && parsed.command == null && Topic.ACCOUNT !in parsed.topics && !Regex("(?i)\\b(i|me|my|mine)\\b").containsMatchIn(q))
             runCatching { com.optionslab.ira.OptionQuote.asked(parsed.text.ifBlank { q }) }.getOrNull()?.let { oq ->
                 val named = parsed.markets.filter { it != IraMarket.VIX && it != IraMarket.GOLD }
                 val m = named.firstOrNull { it in LIVE.keys } ?: IraMarket.NIFTY
@@ -1056,7 +1063,11 @@ object IraHub {
             }
         // Boss's own market questions are counted by the hour (for "the usual"), off the main thread.
         if (!understood) scope.launch { IraTools.noteHabit(q) }
-        if (Topic.BACKTEST in parsed.topics) { backtestAsked(q, parsed); return }
+        if (Topic.BACKTEST in parsed.topics) {
+            // IraGoldAlgo: no NSE backtests or strategies (Jarvis only talks there).
+            if (GOLD_ONLY_TALK) { _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, GOLD_TALK_ONLY)).takeLast(MAX_MESSAGES)) }; return }
+            backtestAsked(q, parsed); return
+        }
         if (Topic.ACCOUNT in parsed.topics) { accountAsked(q); return }
         if (Topic.COMMAND in parsed.topics) { commandAsked(q, parsed.command!!, confirmAlways = understood); return }
         if (Topic.SUGGEST in parsed.topics) { suggestAsked(q, parsed.markets); return }
@@ -1093,8 +1104,11 @@ object IraHub {
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
             return
         }
-        // Jarvis: a complete order is placed at once (the owner's rule); IraAlgo keeps the review.
-        parsed.order?.takeIf { com.optionslab.app.BuildConfig.JARVIS && it.missing.isEmpty() && it.refusal == null }?.let { o -> tradeAsked(q, o); return }
+        // A complete order on the PAPER account is placed at once (the owner's rule). In Live mode a Jarvis order never
+        // reaches Zerodha on its own: it goes to the app's order review (the swipe and the PIN), like any order - real
+        // orders are never placed via Jarvis (Boss's rule; found in the review before the merge, 3 Oct).
+        parsed.order?.takeIf { com.optionslab.app.BuildConfig.JARVIS && it.missing.isEmpty() && it.refusal == null &&
+            runCatching { !com.optionslab.app.data.AppSettings.load().live }.getOrDefault(false) }?.let { o -> tradeAsked(q, o); return }
         // A greeting is answered with the time of day, today's session and where the indices stand.
         val today = com.optionslab.app.data.Market.today()
         val closedReason = if (runCatching { com.optionslab.app.data.Market.isTradingDay(today) }.getOrDefault(true)) null
@@ -1421,6 +1435,8 @@ object IraHub {
         }
     }
 
+    private val AT_ONCE = setOf(com.optionslab.ira.Command.Kind.ALARM_ADD, com.optionslab.ira.Command.Kind.EVENT_ADD)
+
     private fun commandAsked(q: String, c: com.optionslab.ira.Command, confirmAlways: Boolean = false) {
         _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
         // Practice on a past day: replayed into the conversation, nothing traded.
@@ -1428,7 +1444,9 @@ object IraHub {
         scope.launch {
             val (what, act) = runCatching { IraActions.prepare(c) }.getOrElse { ("I could not do that: ${it.message}") to null }
             if (act == null) { reply(what); return@launch }
-            if (c.kind.reduces || !com.optionslab.app.BuildConfig.JARVIS || confirmAlways) {
+            // Only a price alarm or an event note is done at once; anything that changes trading (starting arms, the
+            // kill switch, autopilot, Jarvis's own limits) waits for Confirm - in the real app too (review, 3 Oct).
+            if (c.kind.reduces || !com.optionslab.app.BuildConfig.JARVIS || confirmAlways || c.kind !in AT_ONCE) {
                 // The emergency exit asks for the fingerprint on the screen (or Boss's own voice, aloud).
                 pend(what, act, "Tap Confirm to ${what}.", exit = c.kind == com.optionslab.ira.Command.Kind.EXIT_ALL)
             } else reply(IraActions.run(what, act))
@@ -1445,6 +1463,8 @@ object IraHub {
     fun lastFullAnswer(): String? = _state.value.messages.lastOrNull { it.fromIra }?.text
 
     suspend fun confirm(id: Long, fingerprint: Boolean = false, ownerVoice: Boolean = false): String? {
+        // IraGoldAlgo: nothing Jarvis prepared is ever done there.
+        if (GOLD_ONLY_TALK) { synchronized(actions) { exitIds.remove(id); actions.remove(id) }; _state.update { it.copy(pending = it.pending - id) }; return GOLD_TALK_ONLY.also { reply(it) } }
         if (isExit(id) && !fingerprint && !ownerVoice && fingerprintNeeded())
             return synchronized(actions) { actions.containsKey(id) }.let { waiting -> if (!waiting) null else
                 "The emergency exit is confirmed with your fingerprint on the Jarvis screen, or by saying yes in your own voice.".also { reply(it) } }
@@ -1540,6 +1560,7 @@ object IraHub {
 
     /** Keeps the slow answers ready (called every 30 s while Jarvis listens): your account and the trade check. */
     suspend fun warm() {
+        if (GOLD_ONLY_TALK) return
         runCatching { IraAccount.warm() }
         runCatching { checked = android.os.SystemClock.elapsedRealtime() to tradeCheck() }
     }
