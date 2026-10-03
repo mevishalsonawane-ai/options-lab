@@ -85,11 +85,13 @@ fun GoldMain(model: AppModel) {
                 "pnl" -> GoldPnlCalendar()
                 "trades" -> GoldTrades()
                 "settings" -> GoldSettings(model)
+                // Jarvis, talking only: no order paths here (no broker; the gold arms trade on paper by their rules).
+                "jarvis" -> IraPage(null)
                 else -> GoldHome()
             }
         }
         Row(Modifier.fillMaxWidth().background(p.card).navigationBarsPadding()) {
-            listOf("home" to "Home", "chart" to "Chart", "pnl" to "P&L", "trades" to "Trades", "settings" to "Settings").forEach { (k, label) ->
+            listOf("home" to "Home", "jarvis" to "Jarvis", "chart" to "Chart", "pnl" to "P&L", "trades" to "Trades", "settings" to "Settings").forEach { (k, label) ->
                 Text(label, style = Type.label.copy(color = if (tab == k) p.brass else p.inkSoft, fontSize = 14.sp,
                     fontWeight = if (tab == k) FontWeight.Bold else FontWeight.Medium), textAlign = TextAlign.Center,
                     modifier = Modifier.weight(1f).heightIn(min = 52.dp).clickable { tab = k }.padding(top = 16.dp))

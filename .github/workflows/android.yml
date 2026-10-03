@@ -124,18 +124,18 @@ jobs:
           else ./gradlew --no-daemon :app:assembleIraDebug :app:assembleRelease; fi
       - name: Sandbox report (every permission the APK holds)
         run: cat app/build/reports/sandbox/*.txt
-      # The microphone is for "Jarvis" in IraAlgo alone: IraGoldAlgo must never hold it.
-      - name: Microphone only in IraAlgo
+      # The microphone is for "Jarvis": both apps hold it (on-device recognition only).
+      - name: Microphone for Jarvis
         run: |
           aapt=$(ls "$ANDROID_HOME"/build-tools/*/aapt2 | sort -V | tail -1)
           bad=0
           for a in app/build/outputs/apk/*/*/*.apk; do
             if "$aapt" dump permissions "$a" | grep -q "android.permission.RECORD_AUDIO"; then mic=yes; else mic=no; fi
-            case "$a" in */apk/ira/*) want=yes ;; *) want=no ;; esac
+            want=yes
             echo "$a: microphone $mic (expected $want)"
             [ "$mic" = "$want" ] || bad=1
           done
-          [ "$bad" = 0 ] || { echo "::error::The microphone permission is where it must not be (or missing from IraAlgo)."; exit 1; }
+          [ "$bad" = 0 ] || { echo "::error::The microphone permission is where it must not be (or missing)."; exit 1; }
       - name: Release signing certificate (public fingerprint only)
         run: |
           cat "$RUNNER_TEMP/signing.txt" 2>/dev/null || true

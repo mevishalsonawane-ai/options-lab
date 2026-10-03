@@ -86,6 +86,8 @@ object Notifier {
                     setShowBadge(false); setSound(null, null); enableVibration(false)
                 },
             ))
+            // Jarvis talks in IraGoldAlgo too: the line Android requires while it listens or downloads its model.
+            if (com.optionslab.app.BuildConfig.JARVIS) voiceChannel(nm)
             return
         }
         nm.createNotificationChannels(listOf(
@@ -125,12 +127,7 @@ object Notifier {
                 lockscreenVisibility = android.app.Notification.VISIBILITY_PRIVATE
             },
         ))
-        if (com.optionslab.app.BuildConfig.JARVIS) nm.createNotificationChannel(
-            NotificationChannel(VOICE, "Jarvis in the background", NotificationManager.IMPORTANCE_LOW).apply {
-                description = "Shown while Jarvis listens for its name or downloads its model, with a Stop or Cancel button. What it hears stays on the phone."
-                lockscreenVisibility = android.app.Notification.VISIBILITY_PRIVATE
-                setShowBadge(false); setSound(null, null); enableVibration(false)
-            })
+        if (com.optionslab.app.BuildConfig.JARVIS) voiceChannel(nm)
         if (com.optionslab.app.BuildConfig.JARVIS) nm.createNotificationChannel(
             NotificationChannel(POPUP, "Jarvis pop-ups", NotificationManager.IMPORTANCE_HIGH).apply {
                 description = "Jarvis's short messages at the top of the screen: alerts, results, the morning check. They hide after a few seconds."
@@ -138,6 +135,14 @@ object Notifier {
                 setShowBadge(false); setSound(null, null); enableVibration(false)
             })
     }
+
+    @androidx.annotation.RequiresApi(Build.VERSION_CODES.O)
+    private fun voiceChannel(nm: NotificationManager) = nm.createNotificationChannel(
+        NotificationChannel(VOICE, "Jarvis in the background", NotificationManager.IMPORTANCE_LOW).apply {
+            description = "Shown while Jarvis listens for its name or downloads its model, with a Stop or Cancel button. What it hears stays on the phone."
+            lockscreenVisibility = android.app.Notification.VISIBILITY_PRIVATE
+            setShowBadge(false); setSound(null, null); enableVibration(false)
+        })
 
     fun openApp(context: Context, tab: String? = null): PendingIntent = PendingIntent.getActivity(
         context, tab?.hashCode() ?: 0,

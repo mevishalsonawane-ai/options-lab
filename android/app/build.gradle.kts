@@ -30,13 +30,13 @@ android {
         buildConfigField("String", "EXPIRY_SHA256", "\"$digest\"")
 
         // The permission allowlist, so the running app can check itself too.
-        buildConfigField("String", "ALLOWED_PERMISSIONS", "\"${allowedPermissions().joinToString(",")}\"")
+        buildConfigField("String", "ALLOWED_PERMISSIONS", "\"${allowedPermissions(jarvis = true).joinToString(",")}\"")
 
         // The commit the build was made from (CI sets GITHUB_SHA): every build is "1.0.0", so this tells them apart.
         buildConfigField("String", "COMMIT", "\"${(System.getenv("GITHUB_SHA") ?: "local").take(7)}\"")
 
         manifestPlaceholders["appLabel"] = "@string/app_name"
-        // Jarvis, the assistant (voice, chat, on-device model): in IraAlgo; IraGoldAlgo sets its own (below).
+        // Jarvis, the assistant (voice, chat, on-device model): in IraAlgo and IraGoldAlgo (where it only talks).
         buildConfigField("boolean", "JARVIS", "true")
     }
 
@@ -48,13 +48,11 @@ android {
             dimension = "brand"
             isDefault = true
             buildConfigField("boolean", "GOLD", "false")
-            buildConfigField("String", "ALLOWED_PERMISSIONS", "\"${allowedPermissions(jarvis = true).joinToString(",")}\"")
         }
         create("gold") {
             dimension = "brand"
             applicationId = "com.iragoldalgo.app"
             buildConfigField("boolean", "GOLD", "true")
-            buildConfigField("boolean", "JARVIS", "false")
         }
     }
 
@@ -62,10 +60,10 @@ android {
     externalNativeBuild { cmake { path = file("src/jarvis/cpp/CMakeLists.txt"); version = "3.22.1" } }
     defaultConfig { ndk { abiFilters += "arm64-v8a" } }
 
-    // The microphone: Jarvis's manifest adds it; IraGoldAlgo's manifest removes it.
+    // The microphone, the voice service and the widget: Jarvis's manifest, in both apps.
     sourceSets {
         getByName("ira").manifest.srcFile("src/jarvis/AndroidManifest.xml")
-        getByName("gold").manifest.srcFile("src/noaudio/AndroidManifest.xml")
+        getByName("gold").manifest.srcFile("src/jarvis/AndroidManifest.xml")
     }
 
     signingConfigs {
@@ -278,12 +276,10 @@ androidComponents {
         val cap = variant.name.replaceFirstChar { it.uppercase() }
         val guard = tasks.register<CheckSandbox>("check${cap}Sandbox") {
             manifest.set(variant.artifacts.get(SingleArtifact.MERGED_MANIFEST))
-            allowed.set(allowedPermissions(jarvis = variant.flavorName == "ira"))
+            allowed.set(allowedPermissions(jarvis = true))
             applicationId.set(variant.applicationId)
             report.set(layout.buildDirectory.file("reports/sandbox/${variant.name}.txt"))
         }
         tasks.matching { it.name == "assemble$cap" || it.name == "bundle$cap" }.configureEach { dependsOn(guard) }
-        // The model runner is Jarvis's: not packaged into IraGoldAlgo.
-        if (variant.flavorName == "gold") variant.packaging.jniLibs.excludes.add("**/libjarvis_llm.so")
     }
 }

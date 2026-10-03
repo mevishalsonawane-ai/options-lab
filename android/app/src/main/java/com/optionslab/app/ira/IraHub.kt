@@ -898,6 +898,9 @@ object IraHub {
     private const val NOTIFY_BASE = 7300
 
     /** A question in, Ira's answer appended to the conversation. */
+    /** IraGoldAlgo's answer to an order or a command: Jarvis there only talks. */
+    const val GOLD_TALK_ONLY = "In IraGoldAlgo I only talk, Boss: orders and commands are in IraAlgo. The gold arms trade on paper by their own rules."
+
     fun ask(text: String) = ask(text, understood = false)
 
     /** A spoken request on a voice that was not recognised: any command in it waits for a yes / Confirm. */
@@ -930,6 +933,11 @@ object IraHub {
             }
         }
         val parsed = Ask.parse(q)
+        // IraGoldAlgo: Jarvis talks only - no order, no command (no broker there; its gold arms trade on paper by their rules).
+        if (com.optionslab.app.BuildConfig.GOLD && (parsed.order != null || parsed.command != null || Topic.ORDER in parsed.topics || Topic.COMMAND in parsed.topics)) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, GOLD_TALK_ONLY)).takeLast(MAX_MESSAGES)) }
+            return
+        }
         // A news question with no recent headlines on the phone: the feeds are read first (8 seconds at most), then answered.
         if (Topic.NEWS in parsed.topics && testHistories == null && System.currentTimeMillis() - newsCheckedAt > 3 * 60_000 && online() &&
             _state.value.newsAt?.isBefore(Instant.now().minusSeconds(NEWS_EVERY_MINUTES * 60)) != false) {
