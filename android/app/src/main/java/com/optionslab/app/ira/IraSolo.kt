@@ -317,7 +317,9 @@ internal object IraSolo {
     /** Solo's day for the 15:35 wrap-up (null when it was off and did nothing). */
     fun daySummary(): String? = runCatching {
         val today = com.optionslab.app.data.Market.today().toString()
-        Solo.daySay(all().filter { it.day == today && it.closed }.map { it.net to it.exit }, on, on && paused != null)
+        // With no trade, why: the last pass's watch today ("At 15:28 Solo saw: ...").
+        val why = watch?.takeIf { it.first.toLocalDate().toString() == today && it.second.isNotEmpty() }?.let { (at, w) -> "At %02d:%02d Solo saw: %s".format(at.hour, at.minute, w) }
+        Solo.daySay(all().filter { it.day == today && it.closed }.map { it.net to it.exit }, on, on && paused != null, why)
     }.getOrNull()
 
     /** "How is Solo doing": on or off, paused or not, and the record. */

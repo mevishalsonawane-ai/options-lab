@@ -198,6 +198,10 @@ class SoloDayTest {
         assertNull(Solo.daySay(emptyList(), on = false, paused = false))
         assertTrue(Solo.daySay(emptyList(), on = true, paused = false)!!.contains("found no setup"))
         assertEquals("Solo stayed paused today.", Solo.daySay(emptyList(), on = true, paused = true))
+        // Why no trade: the last thing Solo saw, said after the line.
+        assertEquals("Solo watched all day and found no setup worth taking - no trade is a decision too. At 15:28 Solo saw: Nifty: the big red candle at 11:00 broke its high at 11:20 before any pullback.",
+            Solo.daySay(emptyList(), on = true, paused = false, why = "At 15:28 Solo saw: Nifty: the big red candle at 11:00 broke its high at 11:20 before any pullback."))
+        assertEquals("Solo stayed paused today.", Solo.daySay(emptyList(), on = true, paused = true, why = "anything"))
         assertNull(Solo.daySay(emptyList(), on = false, paused = false))
         assertEquals("Solo today on paper: 1 trade - +Rs 1,250 (target reached).", Solo.daySay(listOf(1250.0 to "target reached"), on = true, paused = false))
         assertEquals("Solo today on paper: 2 trades - -Rs 900 (stop: Nifty through 24,000); +Rs 400 (15:10); net -Rs 500.",

@@ -326,10 +326,11 @@ object Solo {
      * Solo's day in the 15:35 wrap-up: each closed trade's result and why it ended, the day's net - or, switched on with
      * no trade, that it found no setup worth taking. Null when Solo was off and did nothing.
      */
-    fun daySay(trades: List<Pair<Double?, String?>>, on: Boolean, paused: Boolean): String? {
+    fun daySay(trades: List<Pair<Double?, String?>>, on: Boolean, paused: Boolean, why: String? = null): String? {
         if (trades.isEmpty()) return when {
             paused -> "Solo stayed paused today."
-            on -> "Solo watched all day and found no setup worth taking - no trade is a decision too."
+            on -> "Solo watched all day and found no setup worth taking - no trade is a decision too." +
+                (why?.trim()?.trimEnd('.')?.takeIf { it.isNotEmpty() }?.let { " $it." } ?: "")
             else -> null
         }
         val each = trades.joinToString("; ") { (net, why) ->
