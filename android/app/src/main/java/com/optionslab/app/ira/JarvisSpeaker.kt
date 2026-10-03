@@ -20,11 +20,12 @@ object JarvisSpeaker {
     private var waiting: String? = null
 
     /** How a reply is said: addressed to Boss, rupees read as rupees, the first few sentences. */
-    fun words(text: String): String = com.optionslab.ira.Address.boss(com.optionslab.ira.Wake.spoken(text, if (IraTools.brief) 1 else 6))
+    fun words(text: String, sentences: Int = if (IraTools.brief) 1 else 6): String = com.optionslab.ira.Address.boss(com.optionslab.ira.Wake.spoken(text, sentences))
 
-    fun speak(context: Context, text: String) {
+    /** [sentences]: how much to say (null: the usual, one in short-answer mode); "tell me more" says it in full. */
+    fun speak(context: Context, text: String, sentences: Int? = null) {
         if (!com.optionslab.app.BuildConfig.JARVIS || JarvisVoice.muted && !text.startsWith("Voice on")) return
-        val said = words(text)
+        val said = if (sentences != null) words(text, sentences) else words(text)
         if (JarvisVoice.announce(said, prompted = true)) return
         if (android.os.Build.FINGERPRINT == "robolectric") return
         synchronized(this) {
@@ -53,6 +54,8 @@ object JarvisSpeaker {
         } ?: return
         // A trade Jarvis asks about aloud by itself: nothing more to say.
         if (reply.action != null && IraHub.asksYesNo(reply.action)) return
-        speak(context, reply.text)
+        // "Tell me more" is said in full, short answers or not.
+        val more = runCatching { com.optionslab.ira.Commands.parse(said)?.kind == com.optionslab.ira.Command.Kind.MORE }.getOrDefault(false)
+        speak(context, reply.text, if (more) 8 else null)
     }
 }

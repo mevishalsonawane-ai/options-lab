@@ -104,7 +104,10 @@ object DailyReports {
             if (com.optionslab.ira.BackupNudge.due(last, today)) lines += "• " + com.optionslab.ira.BackupNudge.say(last)
         }
         val title = "Good morning Boss · market closed today ($why)"
-        runCatching { com.optionslab.app.ira.JarvisPopup.show(context, title, lines.take(2).joinToString(" ")) }
+        // The notification is the worker's post; the voice and the chat note are once a day (a retried run repeats nothing).
+        val onceKey = "jarvis.closedMorning.$today"
+        if (runCatching { com.optionslab.app.security.SecurePrefs.getString(onceKey) != null }.getOrDefault(false)) return title to lines
+        runCatching { com.optionslab.app.security.SecurePrefs.put(onceKey, "1") }
         runCatching { com.optionslab.app.ira.JarvisVoice.announce("Good morning, Boss. The market is closed today, $why. It opens again ${next.dayOfWeek.name.lowercase()}." +
             (if (brief.isEmpty()) "" else " From my night's study: " + brief.take(2).joinToString(" ") { com.optionslab.ira.Wake.spoken(it, 1) })) }
         com.optionslab.app.ira.IraHub.note(com.optionslab.ira.Address.boss("Good morning. " + lines.joinToString(" ") { it.removePrefix("• ").trimEnd('.') + "." }))

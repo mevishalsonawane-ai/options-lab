@@ -111,18 +111,28 @@ internal object IraTools {
      */
     suspend fun practice(text: String, say: (String) -> Unit) {
         val today = com.optionslab.app.data.Market.today()
-        val day = com.optionslab.ira.Practice.day(text, today) ?: today.minusDays(1)
         val m = com.optionslab.ira.Market.mentioned(text).firstOrNull { it in IraStudy.MARKETS } ?: com.optionslab.ira.Market.BANKNIFTY
         val u = m.name
-        val sessions = runCatching { com.optionslab.app.data.Store.barSessions(u).toList() }.getOrDefault(emptyList())
-        val session = sessions.firstOrNull { it.day == day }
-        val ix = session?.index ?: run { say("I don't have ${m.label}'s prices for $day on the phone, so I can't replay it."); return }
-        val prior = sessions.filter { it.day.isBefore(day) }.takeLast(20).flatMap { s -> s.index?.let { IraHub.candles(s.day, it) }.orEmpty() }
+        // No day named: the last session on the phone before today (a Monday's "yesterday" is no session).
+        val day = com.optionslab.ira.Practice.day(text, today)
+            ?: runCatching { com.optionslab.app.data.Store.barDays(u).lastOrNull { it.isBefore(today) } }.getOrNull() ?: today.minusDays(1)
+        // Streamed, never all held at once (years of days with their option prices): the 20 days before, then the day.
+        val earlier = ArrayDeque<List<com.optionslab.ira.Candle>>()
+        var session: com.optionslab.engine.Session? = null
+        runCatching {
+            for (s in com.optionslab.app.data.Store.barSessions(u)) {
+                if (s.day.isBefore(day)) { s.index?.let { earlier.addLast(IraHub.candles(s.day, it)); if (earlier.size > 20) earlier.removeFirst() } }
+                else if (s.day == day) { session = s; break }
+            }
+        }
+        val found = session
+        val ix = found?.index ?: run { say("I don't have ${m.label}'s prices for $day on the phone, so I can't replay it."); return }
+        val prior = earlier.flatten()
         val edges = IraStudy.state.value.edges
         if (edges.none { it.tradable }) { say("I haven't studied the patterns yet (the nightly study), so there is nothing to replay."); return }
         say("Practice on $day, ${m.label}: replaying the day as I watched it...")
         val events = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
-            com.optionslab.ira.Practice.run(m, prior, IraHub.candles(day, ix), edges, session, com.optionslab.ira.JarvisTrades.strikeStep(u))
+            com.optionslab.ira.Practice.run(m, prior, IraHub.candles(day, ix), edges, found, com.optionslab.ira.JarvisTrades.strikeStep(u))
         }
         for (e in events) { say(e.text); kotlinx.coroutines.delay(1_500) }
         say(com.optionslab.ira.Practice.summary(m, day, events))

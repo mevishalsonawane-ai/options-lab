@@ -586,6 +586,12 @@ object IraHub {
             return
         }
         val ivLine = iv?.let { " " + com.optionslab.ira.IvRank.say(it.first, it.second) } ?: ""
+        // How sure: the pattern's record, the regime, how dear options are, the trade check.
+        val conf = com.optionslab.ira.Confidence.score(idea.call, idea.hitRate, IraStudy.regimeOf(m), iv?.first, runCatching { tradeCheckFast().level }.getOrNull())
+        // What it risks, in rupees and of the capital - worked out before the suggestion exists, and never waited on for
+        // long (a slow broker would leave a suggestion registered but unseen while its price went stale).
+        val riskAsk = scope.async { runCatching { IraNewsTrades.riskLine(idea, snap?.price ?: 0.0) }.getOrNull() }
+        val risk = kotlinx.coroutines.withTimeoutOrNull(3_000) { riskAsk.await() }?.let { " $it" } ?: ""
         val what = "buy 1 lot of the ${m.label} $side at the money, nearest expiry, with a 15% stop, a +${IraNewsTrades.TARGET_POINTS.toInt()} target and the profit lock"
         val id = System.nanoTime()
         synchronized(actions) {
@@ -595,10 +601,6 @@ object IraHub {
         IraNewsTrades.suggested(id, idea, snap?.price ?: 0.0, source)
         IraActivity.add("Suggested: $what (${source.substringBefore(':')}).")
         val where = if (IraNewsTrades.paperFirst && com.optionslab.app.data.AppSettings.load().live) " (on paper: my trades stay there until proven)" else ""
-        // How sure: the pattern's record, the regime, how dear options are, the trade check.
-        val conf = com.optionslab.ira.Confidence.score(idea.call, idea.hitRate, IraStudy.regimeOf(m), iv?.first, runCatching { tradeCheckFast().level }.getOrNull())
-        // What it risks, in rupees and of the capital.
-        val risk = runCatching { IraNewsTrades.riskLine(idea, snap?.price ?: 0.0) }.getOrNull()?.let { " $it" } ?: ""
         val full = "$text$ivLine ${conf.text()}$risk Shall I $what$where? Approve or reject."
         _state.update { it.copy(pending = it.pending + id, messages = (it.messages + Msg(true, full, action = id)).takeLast(MAX_MESSAGES)) }
         JarvisApproval.show(c, id, title, full)
@@ -1029,10 +1031,6 @@ object IraHub {
      * closes waits for Confirm. In IraAlgo everything waits for Confirm.
      */
     /**
-     * Free-form words: the on-device model picks one line of [com.optionslab.ira.Intents.LINES]; only a valid line is
-     * used, said back ("I understood: ..."), and any action from it waits for Confirm. Otherwise the usual answer.
-     */
-    /**
      * The model's work, or null when it fails or takes over 15 seconds (Boss is never left waiting in silence; a slow
      * run finishes in the background and is dropped).
      */
@@ -1069,6 +1067,10 @@ object IraHub {
     /** Varies the small-talk and "I don't know" lines so the same words are not said twice running. */
     private val chatTurn = java.util.concurrent.atomic.AtomicInteger()
 
+    /**
+     * Free-form words: the on-device model picks one line of [com.optionslab.ira.Intents.LINES]; only a valid line is
+     * used, said back ("I understood: ..."), and any action from it waits for Confirm. Otherwise the usual answer.
+     */
     private fun freeFormAsked(q: String) {
         // Said at once (spoken while the model reads the words), then the real answer when it is ready - never silence.
         _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, "One moment, Boss, let me think about that.")).takeLast(MAX_MESSAGES)) }
@@ -1081,11 +1083,11 @@ object IraHub {
                 // and no claimed actions), else a varied "I don't know that".
                 val chat = modelOrNull { com.optionslab.ira.Chat.accept(IraModel.complete(com.optionslab.ira.Chat.prompt(q, LocalDateTime.now(IST)), 60)) }
                 val text = chat ?: if (personal) com.optionslab.ira.Chat.aboutMe(chatTurn.getAndIncrement()) else com.optionslab.ira.Chat.fallback(chatTurn.getAndIncrement())
-                reply(text); speakLater(text)
+                reply(text); speakLater(text, q)
                 return@launch
             }
             // The voice checked the words as said against the lock, not what the model made of them.
-            if (lockedAccount(q, line)) { val t = "Your account needs the phone unlocked, Boss."; reply(t); speakLater(t); return@launch }
+            if (lockedAccount(q, line)) { val t = "Your account needs the phone unlocked, Boss."; reply(t); speakLater(t, q); return@launch }
             reply("I understood: \"$line\".")
             val said = com.optionslab.ira.Secrets.redact(line.trim())
             ask(line, understood = true)
@@ -1093,13 +1095,15 @@ object IraHub {
             val ans = kotlinx.coroutines.withTimeoutOrNull(20_000) {
                 _state.first { st -> replyAfter(st.messages, said) != null }.let { st -> replyAfter(st.messages, said)!! }
             }
-            ans?.let { speakLater(it.text) }
+            ans?.let { speakLater(it.text, said) }
         }
     }
 
     /** Says a reply that came after the first words (the free-form answer), when Jarvis speaks replies. */
-    private fun speakLater(text: String) {
+    /** Said only while [question] is still the last thing Boss asked: a late reply never talks over a newer one. */
+    private fun speakLater(text: String, question: String) {
         val c = app ?: return
+        if (_state.value.messages.lastOrNull { !it.fromIra }?.text != question) return
         if (JarvisVoice.wanted || JarvisSpeaker.speakTyped) runCatching { JarvisSpeaker.speak(c, text) }
     }
 
