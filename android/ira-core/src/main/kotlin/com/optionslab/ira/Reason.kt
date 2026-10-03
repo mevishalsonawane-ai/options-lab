@@ -580,3 +580,34 @@ object VixSpike {
         return "Fear is spiking, Boss: India VIX is up ${pct(ch)} today at " + "%.2f".format(Locale.ENGLISH, vix.price) + ". Options are getting dear and moves can be sharp."
     }
 }
+
+/**
+ * What is at a price (Jarvis self-improvement, 2026-10-03): "what's at 24500 on Nifty", "why is 25000 important" - the
+ * known levels near it (yesterday's high, low and close, the opening range, swing highs and lows, the day's high and low),
+ * whether it is a round number, and how far it is from the price. Pure.
+ */
+object LevelInfo {
+    private val ASK = Regex(" (what s at|whats at|what is at|anything at|why is|is) (\\d{4,6}) (important|significant|a level|key|a big level|special)? ?| (level|levels) (at|near|around) (\\d{4,6}) | (what s|whats|what is) (special|important) about (\\d{4,6}) ")
+
+    /** The price asked about, or null. */
+    fun asked(text: String): Double? {
+        val t = norm(text.replace(",", ""))
+        val m = ASK.find(t) ?: return null
+        if (Regex(" (why is|is) ").containsMatchIn(m.value) && !Regex(" (important|significant|a level|key|a big level|special) ").containsMatchIn(t)) return null
+        return m.groupValues.drop(1).firstOrNull { Regex("^\\d{4,6}$").matches(it) }?.toDouble()
+    }
+
+    fun say(s: Snapshot, x: Double): String? {
+        if (abs(x - s.price) > s.price * 0.2) return null
+        val near = (s.above + s.below + listOf(Level("today's high", s.high), Level("today's low", s.low)) +
+            listOfNotNull(s.prevClose?.let { Level("yesterday's close", it) }))
+            .filter { abs(it.price - x) <= s.price * 0.0015 }.distinctBy { it.name }.sortedBy { abs(it.price - x) }
+        val round = when { x % 1000 == 0.0 -> "a round thousand (option strikes there carry heavy open interest)"; x % 500 == 0.0 -> "a round 500"; x % 100 == 0.0 -> "a round hundred"; else -> null }
+        val parts = ArrayList<String>()
+        parts += "${n(x)} is ${n(abs(x - s.price))} points ${if (x >= s.price) "above" else "below"} ${s.market.label} at ${n(s.price)}."
+        if (near.isNotEmpty()) parts += "Near it: " + near.take(3).joinToString(", ") { "${it.name} (${n(it.price)})" } + "."
+        round?.let { parts += "It is $it." }
+        if (near.isEmpty() && round == null) parts += "No level I track sits there."
+        return parts.joinToString(" ")
+    }
+}

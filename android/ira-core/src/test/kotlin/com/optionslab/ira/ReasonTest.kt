@@ -406,3 +406,18 @@ class VixSpikeTest {
         assertNull(VixSpike.alert(v.copy(price = 14.5), 2.0))
     }
 }
+
+class LevelInfoTest {
+    @Test fun whatIsAtAPrice() {
+        assertEquals(24_500.0, LevelInfo.asked("what's at 24500 on nifty"))
+        assertEquals(25_000.0, LevelInfo.asked("why is 25000 important"))
+        assertNull(LevelInfo.asked("is 25000 a call"), "no level word")
+        assertNull(LevelInfo.asked("how is nifty"))
+        val d = java.time.LocalDate.of(2026, 10, 1)
+        val snap = Snapshot(Market.NIFTY, d.atTime(12, 0), true, 24_420.0, 24_480.0, 24_450.0, 24_510.0, 24_400.0, null, null, emptyList(), null, null,
+            listOf(Level("yesterday's high", 24_505.0)), listOf(Level("yesterday's low", 24_300.0)), emptyList())
+        val t = LevelInfo.say(snap, 24_500.0)!!
+        assertTrue(t.startsWith("24,500.00 is 80.00 points above Nifty at 24,420.00."), t)
+        assertTrue("yesterday's high (24,505.00)" in t && "today's high (24,510.00)" in t && "a round 500" in t, t)
+    }
+}
