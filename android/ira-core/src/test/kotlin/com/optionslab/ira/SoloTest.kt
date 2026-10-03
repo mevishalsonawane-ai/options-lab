@@ -3,6 +3,7 @@ package com.optionslab.ira
 import java.time.LocalDate
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -94,5 +95,27 @@ class SoloWatchTest {
         val r = Solo.read(day, 200.0, "Nifty")
         assertTrue(r.startsWith("Nifty is up 95 points from the open, near the day's high."), r)
         assertTrue(r.contains("used 53% of a normal day's range"), r)
+    }
+}
+
+class SoloLearnTest {
+    @Test fun theSetupIsTradedOnlyWhileItWorks() {
+        val r = Solo.Rules(recentN = 3)
+        assertTrue(Solo.working(listOf(-1.0, -1.0), r), "too few yet")
+        assertTrue(Solo.working(listOf(-1.0, 2.0, -1.0, 2.0), r))
+        assertFalse(Solo.working(listOf(2.0, -1.0, -1.0, -1.0), r))
+        assertTrue(Solo.working(listOf(-1.0, -1.0, -1.0), Solo.Rules()), "no learning: always")
+        // The shadow record of a day: one signal that reaches its target is +2 R.
+        val d = LocalDate.of(2026, 10, 1)
+        fun bar(m: Int, o: Double, h: Double, l: Double, c: Double) = Candle(d.atTime(9, 15).plusMinutes(m.toLong()), o, h, l, c)
+        val day = (0 until 375).map { m ->
+            when {
+                m < 30 -> bar(m, 24_000.0, 24_005.0, 23_995.0, 24_000.0)
+                m < 45 -> { val o = 24_000.0 + (m - 30) * 100.0 / 15; bar(m, o, o + 100.0 / 15, o, o + 100.0 / 15) }
+                m < 60 -> { val c = 24_100.0 - (m - 44) * 45.0 / 15; bar(m, c + 2, c + 3, c - 1, c) }
+                else -> bar(m, 24_150.0, 24_300.0, 24_140.0, 24_250.0)
+            }
+        }
+        assertEquals(listOf(2.0), Solo.shadow(day, 50.0, Solo.Rules(maxPerDay = 1)))
     }
 }

@@ -61,6 +61,10 @@ class SoloHistoryTest {
                 "slow20itm1" -> Solo.Rules(slowMinutes = 20, itm = 1)
                 "slow30k15" -> Solo.Rules(slowMinutes = 30, k = 1.5)
                 "slow20one" -> Solo.Rules(slowMinutes = 20, maxPerDay = 1)
+                "learn20" -> Solo.Rules(maxPerDay = 1, recentN = 20)
+                "learn40" -> Solo.Rules(maxPerDay = 1, recentN = 40)
+                "learn60" -> Solo.Rules(maxPerDay = 1, recentN = 60)
+                "learn40b" -> Solo.Rules(maxPerDay = 1, recentN = 40, recentMinR = 0.1)
                 else -> error(v)
             }
             for ((name, file, cfg) in sets) {

@@ -31,6 +31,19 @@ Lots: NIFTY 75, BANKNIFTY 30. Variants chosen on NIFTY 2024-25, judged on the ot
 | time stop 30 + 1.5R | -25,099 | -47,843 | +1,714 |
 | time stop 20 + 1 a day | +22,834 | -43,005 | -2,040 |
 
+Learning (3 Oct): trade only while the setup's last N signals (index R before costs, judged on earlier days only)
+averaged >= 0, one trade a day:
+
+| N | NIFTY 24-25 | NIFTY 25-26 | BANKNIFTY 25-26 |
+|---|---|---|---|
+| (none) | +52,151 (217 tr) | -42,968 (219) | +6,906 (211) |
+| 20 | +53,272 (165) | -29,096 (143) | +24,151 (122) |
+| 40 | +46,436 (174) | -21,844 (151) | +16,147 (137) |
+| **60 (chosen on 24-25)** | **+65,280 (186, DD 18k)** | **-31,808 (170, DD 41k)** | **+12,711 (155, DD 16k)** |
+| 40, mean >= 0.1 R | +35,392 (138) | -21,488 (121) | +10,849 (121) |
+
+Every N improves NIFTY 25-26 and BANKNIFTY; NIFTY 25-26 still loses. The app now uses N = 60.
+
 Index edge (R before option costs) is positive in all three files (+0.02 .. +0.21 R), but small; the option's spread,
 costs and decay take about all of it. NIFTY 2025-26 loses with every variant.
 

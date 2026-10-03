@@ -40,6 +40,9 @@ object Solo {
         /** Out after this many minutes if the index has not gone [slowR] of the risk our way (null: no time stop). */
         val slowMinutes: Int? = null,
         val slowR: Double = 0.5,
+        /** Learning: trade only while the setup's last [recentN] signals (index result, before costs) averaged at least [recentMinR]; null: always. */
+        val recentN: Int? = null,
+        val recentMinR: Double = 0.0,
     )
 
     /** A trade to take at minute [entryMinute] (the next minute's price). [level]: the stop; [target]: the index target. */
@@ -149,6 +152,53 @@ object Solo {
     /** The best index move our way in [bar] since entry, carried forward. */
     fun favour(s: Signal, bar: Candle, best: Double) = maxOf(best, if (s.call) bar.h - s.index else s.index - bar.l)
 
+    /**
+     * The setup's index result in R for every signal of a finished day (no option, no costs): the record Solo learns
+     * from. Each signal is followed to its stop, its target or 15:10, one at a time.
+     */
+    fun shadow(day: List<Candle>, big: Double, r: Rules = Rules()): List<Double> {
+        val out = ArrayList<Double>()
+        var busy = -1
+        var m = 4
+        while (m < LAST_ENTRY && day.size > CUT) {
+            val s = signal(day, m, big, busy, r)
+            if (s == null) { m++; continue }
+            var x = CUT; var res: Double? = null
+            val risk = abs(s.index - s.level)
+            for (j in s.entryMinute..CUT) {
+                when (exit(s, day[j], j)) {
+                    Exit.STOP -> { res = -1.0; x = j }
+                    Exit.TARGET -> { res = r.k; x = j }
+                    else -> {}
+                }
+                if (res != null) break
+            }
+            out += res ?: ((if (s.call) 1 else -1) * (day[CUT].c - s.index) / risk)
+            busy = x; m = x + 1
+        }
+        return out
+    }
+
+    /**
+     * The shadow record over finished sessions (in date order, 1-minute bars from 09:15): each day's signals judged with
+     * the "big" threshold of the 20 days before it - the same learning the backtest does.
+     */
+    fun learn(sessions: List<List<Candle>>, r: Rules = Rules()): List<Double> {
+        val out = ArrayList<Double>()
+        for (i in sessions.indices) {
+            val big = bigBody(sessions.subList(maxOf(0, i - 20), i).flatMap { fifteen(it) }, r.bigQuantile) ?: continue
+            out += shadow(sessions[i], big, r)
+        }
+        return out
+    }
+
+    /** Whether the setup is working lately: the mean of its last [Rules.recentN] shadow results (true when too few yet). */
+    fun working(recent: List<Double>, r: Rules): Boolean {
+        val n = r.recentN ?: return true
+        if (recent.size < n) return true
+        return recent.takeLast(n).average() >= r.recentMinR
+    }
+
     /** The day's risk book: whether a new trade may be taken. */
     data class Day(val trades: Int = 0, val losses: Int = 0, val pnl: Double = 0.0) {
         fun canTrade(r: Rules, lossLimit: Double): String? = when {
@@ -200,11 +250,12 @@ object Solo {
                  lossLimit: Double = 5_000.0): Report {
         val earlier = ArrayDeque<List<Candle>>()           // the last 20 days' 15-minute candles
         val out = ArrayList<Trade>()
+        val learned = ArrayList<Double>()                   // the setup's shadow results on earlier days
         var n = 0
         for (d in days) {
             n++
             val big = bigBody(earlier.flatten(), r.bigQuantile)
-            if (big != null && d.index.size >= CUT + 1) {
+            if (big != null && d.index.size >= CUT + 1 && working(learned, r)) {
                 var book = Day()
                 var busy = -1
                 var m = 4
@@ -241,6 +292,7 @@ object Solo {
                     m = x + 1
                 }
             }
+            if (big != null && r.recentN != null && d.index.size > CUT) learned += shadow(d.index, big, r)
             earlier.addLast(fifteen(d.index))
             if (earlier.size > 20) earlier.removeFirst()
         }

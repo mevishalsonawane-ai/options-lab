@@ -29,8 +29,11 @@ internal object IraSolo {
     private val IST = ZoneId.of("Asia/Kolkata")
     private val MARKETS = listOf(IraMarket.NIFTY, IraMarket.BANKNIFTY)
 
-    /** One trade a day: chosen on 2024-25 (best there, smallest drawdown), checked on the other years; see SOLO.md. */
-    val RULES = Solo.Rules(maxPerDay = 1)
+    /**
+     * One trade a day, and only while the setup's last 60 signals (on the index, before costs) averaged above zero:
+     * chosen on 2024-25, checked on the other years; see SOLO.md.
+     */
+    val RULES = Solo.Rules(maxPerDay = 1, recentN = 60)
     /** The day's loss limit for Solo's trades, and the drawdown from its best at which it pauses itself. */
     const val DAY_LOSS = 5_000.0
     const val PAUSE_DRAWDOWN = 15_000.0
@@ -39,9 +42,10 @@ internal object IraSolo {
 
     /** The two-year test, in one line each (research data, real option prices, Rs 60 a trip), for Boss to judge. */
     val BACKTEST = listOf(
-        "NIFTY Apr 2024-Apr 2025: 217 trades, 40% winners, +Rs 52,151 (1 lot of 75), worst drawdown Rs 23,261.",
-        "NIFTY Apr 2025-Apr 2026: 219 trades, 36% winners, -Rs 42,968, worst drawdown Rs 45,221.",
-        "BANKNIFTY Feb 2025-Feb 2026: 211 trades, 40% winners, +Rs 6,906 (1 lot of 30), worst drawdown Rs 19,260.",
+        "NIFTY Apr 2024-Apr 2025: 186 trades, 40% winners, +Rs 65,280 (1 lot of 75), worst drawdown Rs 18,450.",
+        "NIFTY Apr 2025-Apr 2026: 170 trades, 35% winners, -Rs 31,808, worst drawdown Rs 41,363.",
+        "BANKNIFTY Feb 2025-Feb 2026: 155 trades, 43% winners, +Rs 12,711 (1 lot of 30), worst drawdown Rs 15,657.",
+        "(It stands aside while its last 60 signals lost on average; without that: +52k / -43k / +7k.)",
     )
 
     var on: Boolean
@@ -82,6 +86,17 @@ internal object IraSolo {
 
     /** What Solo was watching at its last pass (for "how is Solo doing"), and when. */
     @Volatile private var watch: Pair<LocalTime, String>? = null
+
+    /** Each market's learned shadow record, worked out once a day from the finished sessions the app holds. */
+    private val learned = HashMap<IraMarket, Pair<LocalDate, List<Double>>>()
+
+    private fun learnedFor(m: IraMarket, bars: List<Candle>, today: LocalDate): List<Double> = synchronized(learned) {
+        learned[m]?.takeIf { it.first == today }?.second ?: run {
+            val sessions = bars.filter { it.t.toLocalDate() != today }.groupBy { it.t.toLocalDate() }.toSortedMap().values
+                .map { d -> session(d, d.first().t.toLocalDate(), 375) }.filter { it.size > Solo.CUT }
+            Solo.learn(sessions, RULES).also { learned[m] = today to it }
+        }
+    }
 
     /** The average day's range (high - low) over the earlier days the app holds (null: none yet). */
     private fun typicalRange(bars: List<Candle>, today: LocalDate): Double? =
@@ -141,6 +156,8 @@ internal object IraSolo {
             if (day.size < 20) continue
             val held = IraHub.recentBars(m) + bars
             val big = big(held, today) ?: continue
+            // Learning: a market whose setup has not been working lately is watched, not traded.
+            if (!Solo.working(learnedFor(m, held, today), RULES)) { seen += "${m.label}: the setup has not been working lately (its last 60 signals lost on average) - standing aside"; watch = LocalTime.now(IST) to seen.joinToString("; "); continue }
             seen += Solo.watching(day, day.size - 1, big, m.label, RULES)
             watch = LocalTime.now(IST) to seen.joinToString("; ")
             // The last two closes only (a pass can come a minute late); an older signal is not chased.
