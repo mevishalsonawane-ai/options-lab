@@ -244,6 +244,37 @@ object Solo {
         return part.maxOf { it.h } - part.minOf { it.l } < k * typical
     }
 
+    /**
+     * Why a trade ended as it did, the way a trader reviews it: how long it ran, how far it got toward the target, and,
+     * when the option and the index disagree, that the option's price (time decay, falling volatility) did it.
+     */
+    fun review(s: Signal, day: List<Candle>, exitMinute: Int, how: Exit, entryPremium: Double, exitPremium: Double?, label: String): String {
+        val x = exitMinute.coerceIn(s.entryMinute, day.lastIndex)
+        var best = 0.0
+        for (j in s.entryMinute..x) best = favour(s, day[j], best)
+        val toTarget = abs(s.target - s.index)
+        val got = if (toTarget > 0) (best / toTarget * 100).coerceIn(0.0, 100.0) else 0.0
+        val mins = x - s.entryMinute
+        val moved = (if (s.call) 1 else -1) * (day[x].c - s.index)
+        val way = if (s.call) "up" else "down"
+        val bestPart = "at best it went %,.0f points our way (%.0f%%".format(Locale.ENGLISH, best, got) + " of the way to the target)"
+        val main = when (how) {
+            Exit.TARGET -> "%s reached the target in %d minutes.".format(Locale.ENGLISH, label, mins)
+            Exit.STOP -> "%s went back through the candle's %s %d minutes after entry; ".format(Locale.ENGLISH, label, if (s.call) "low" else "high", mins) +
+                bestPart + (if (got < 25) ": the pullback was not over - it turned into a reversal." else ": it had the move, then gave it all back.")
+            Exit.TIME -> "By 15:10 %s had moved %+,.0f points our way; ".format(Locale.ENGLISH, label, moved) + bestPart + ": the follow-through never came."
+            Exit.SLOW -> "No follow-through within %d minutes; ".format(Locale.ENGLISH, mins) + bestPart + "."
+            Exit.LOCK -> "The profit lock closed it %d minutes in; ".format(Locale.ENGLISH, mins) + bestPart + "."
+            Exit.PREMIUM_STOP -> "The option's stop-loss was hit %d minutes in while %s had moved %+,.0f points our way; ".format(Locale.ENGLISH, mins, label, moved) + bestPart + "."
+        }
+        // The option against the index: an index move our way with a premium that still fell is the option's price at work.
+        val optionNote = exitPremium?.let { xp ->
+            val chg = (xp - entryPremium) / entryPremium * 100
+            if (moved > 0 && chg < 0) " The index moved %s our way but the option lost %.0f%%".format(Locale.ENGLISH, way, -chg) + ": time decay and falling volatility outweighed the move." else null
+        } ?: ""
+        return main + optionNote
+    }
+
     /** The day's risk book: whether a new trade may be taken. */
     data class Day(val trades: Int = 0, val losses: Int = 0, val pnl: Double = 0.0) {
         fun canTrade(r: Rules, lossLimit: Double): String? = when {

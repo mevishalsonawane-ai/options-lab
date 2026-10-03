@@ -234,7 +234,8 @@ internal object IraSolo {
             return
         }
         runCatching { com.optionslab.app.data.Protections.removeSymbol(false, "NFO", t.symbol) }
-        finish(t, list, px, when (how) {
+        val lesson = runCatching { Solo.review(s, day, minOf(day.lastIndex, now), how, t.entry, px, m.label) }.getOrNull()
+        finish(t, list, px, lesson = lesson, why = when (how) {
             Solo.Exit.STOP -> "stop: ${m.label} through ${"%,.0f".format(t.level)}"
             Solo.Exit.TARGET -> "target reached"
             Solo.Exit.SLOW -> "no follow-through"
@@ -244,13 +245,13 @@ internal object IraSolo {
         })
     }
 
-    private fun finish(t: T, list: List<T>, px: Double?, why: String) {
+    private fun finish(t: T, list: List<T>, px: Double?, why: String, lesson: String? = null) {
         val net = px?.let { (it - t.entry) * t.qty - COSTS }
         val done = t.copy(closed = true, exitPrice = px, net = net, exit = why)
         val all = list.map { if (it === t) done else it }
         save(all)
         tell("Solo (paper): closed ${t.symbol}" + (px?.let { " at ${"%.2f".format(it)}" } ?: "") + " - $why. " +
-            (net?.let { "Result ${com.optionslab.ira.AppFacts.rs(it)}." } ?: "") + " " + record(all))
+            (net?.let { "Result ${com.optionslab.ira.AppFacts.rs(it)}." } ?: "") + (lesson?.let { " Review: $it" } ?: "") + " " + record(all))
         // Discipline: a drawdown this deep from Solo's best means the setup is not working now - it stops and says so.
         var peak = 0.0; var eq = 0.0
         val from = runCatching { com.optionslab.app.security.SecurePrefs.getInt(KEY_FROM, 0) }.getOrDefault(0).coerceIn(0, all.size)

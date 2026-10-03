@@ -167,3 +167,19 @@ class SoloStopLossTest {
         assertNull(Solo.premiumStop(s, 100.0, Solo.Rules()))
     }
 }
+
+class SoloReviewTest {
+    @Test fun aClosedTradeIsExplained() {
+        val d = LocalDate.of(2026, 10, 1)
+        fun bar(m: Int, h: Double, l: Double, c: Double) = Candle(d.atTime(9, 15).plusMinutes(m.toLong()), c, h, l, c)
+        val s = Solo.Signal(true, 50, 24_050.0, 24_000.0, 24_150.0, 30, "")
+        // Up 10 points at best, then through the low at minute 62.
+        val day = (0 until 70).map { m -> if (m in 50..55) bar(m, 24_060.0, 24_045.0, 24_055.0) else bar(m, 24_050.0, 23_990.0, 23_995.0) }
+        val r = Solo.review(s, day, 56, Solo.Exit.STOP, 100.0, 70.0, "Nifty")
+        assertTrue(r.startsWith("Nifty went back through the candle's low 6 minutes after entry; at best it went 10 points our way (10% of the way to the target): the pullback was not over"), r)
+        val up = (0 until 70).map { m -> bar(m, 24_080.0, 24_040.0, 24_070.0) }
+        val t = Solo.review(s, up, 69, Solo.Exit.TIME, 100.0, 90.0, "Nifty")
+        assertTrue(t.contains("By 15:10 Nifty had moved +20 points our way") && t.contains("the option lost 10%: time decay"), t)
+        assertTrue(Solo.review(s, up, 60, Solo.Exit.TARGET, 100.0, 150.0, "Nifty").startsWith("Nifty reached the target in 10 minutes."))
+    }
+}
