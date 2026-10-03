@@ -444,3 +444,18 @@ class SinceLastTest {
         assertEquals("Since you asked 30 minutes ago, Nifty is up 60.00 points: 24,000.00 then, 24,060.00 now (+0.25%).", SinceLast.say(Market.NIFTY, 24_000.0, d.atTime(12, 0), now))
     }
 }
+
+class TogetherTest {
+    @Test fun inStepOrNot() {
+        assertEquals(1.0, Together.corr(listOf(1.0, 2.0, 3.0, 4.0, 5.0, 6.0), listOf(2.0, 4.0, 6.0, 8.0, 10.0, 12.0))!!, 1e-9)
+        assertEquals(-1.0, Together.corr(listOf(1.0, 2.0, 3.0, 4.0, 5.0, 6.0), listOf(6.0, 5.0, 4.0, 3.0, 2.0, 1.0))!!, 1e-9)
+        assertTrue(Together.asked("is banknifty moving with nifty today"))
+        assertFalse(Together.asked("is nifty moving"))
+        val d = java.time.LocalDate.of(2026, 10, 1)
+        val r = java.util.Random(7)
+        var p = 24_000.0
+        val a = (0 until 120).map { i -> p += r.nextGaussian() * 5; Candle(d.atTime(9, 15).plusMinutes(i.toLong()), p, p, p, p) }
+        val b = a.map { it.copy(o = it.o * 2.1, h = it.h * 2.1, l = it.l * 2.1, c = it.c * 2.1) }
+        assertTrue(Together.say(Market.NIFTY, a, Market.BANKNIFTY, b)!!.contains("moving closely together"))
+    }
+}

@@ -657,3 +657,36 @@ object SinceLast {
         return "Since you asked $ago, ${m.label} $way: ${n(then)} then, ${n(now.price)} now (${pct(mv / then * 100)})."
     }
 }
+
+/**
+ * Do two markets move together today (Jarvis self-improvement, 2026-10-03): "is BankNifty moving with Nifty?" - the
+ * correlation of their 5-minute moves today, read plainly. Pure.
+ */
+object Together {
+    private val ASK = Regex(" (move with|moving with|moving together|move together|follow|following|in sync|correlat\\w*|in line with|same direction|diverg\\w*|decoupl\\w*) ")
+
+    fun asked(text: String): Boolean = ASK.containsMatchIn(norm(text)) && Market.mentioned(text).filter { it != Market.VIX }.size >= 2
+
+    /** Pearson correlation of [a] and [b], or null with fewer than 6 pairs or no variation. */
+    fun corr(a: List<Double>, b: List<Double>): Double? {
+        if (a.size != b.size || a.size < 6) return null
+        val ma = a.average(); val mb = b.average()
+        var sab = 0.0; var saa = 0.0; var sbb = 0.0
+        for (i in a.indices) { val x = a[i] - ma; val y = b[i] - mb; sab += x * y; saa += x * x; sbb += y * y }
+        if (saa == 0.0 || sbb == 0.0) return null
+        return sab / sqrt(saa * sbb)
+    }
+
+    fun say(m1: Market, b1: List<Candle>, m2: Market, b2: List<Candle>): String? {
+        val day = b1.lastOrNull()?.t?.toLocalDate() ?: return null
+        fun fiveMin(bars: List<Candle>) = bars.filter { it.t.toLocalDate() == day }.groupBy { it.t.withMinute(it.t.minute / 5 * 5).withSecond(0) }.mapValues { it.value.last().c }
+        val x = fiveMin(b1); val y = fiveMin(b2)
+        val keys = x.keys.intersect(y.keys).sorted()
+        if (keys.size < 7) return null
+        val rx = keys.zipWithNext { p, q -> (x.getValue(q) - x.getValue(p)) / x.getValue(p) }
+        val ry = keys.zipWithNext { p, q -> (y.getValue(q) - y.getValue(p)) / y.getValue(p) }
+        val c = corr(rx, ry) ?: return null
+        val word = when { c >= 0.8 -> "moving closely together"; c >= 0.5 -> "moving mostly together"; c >= 0.2 -> "only loosely linked"; c > -0.2 -> "moving on their own"; else -> "moving against each other" }
+        return "Today ${m1.label} and ${m2.label} are $word: their 5-minute moves have a correlation of %.2f (1 is in step, 0 unrelated).".format(Locale.ENGLISH, c)
+    }
+}

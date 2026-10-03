@@ -1203,6 +1203,10 @@ object IraHub {
             val ev = runCatching { IraEvents.upcoming(1).filter { it.day == today }.map { com.optionslab.ira.Events.line(it, today) } }.getOrNull().orEmpty()
             return com.optionslab.ira.Briefing.say(st.snaps, LocalDateTime.now(IST), ev)
         }
+        if (com.optionslab.ira.Together.asked(q)) {
+            val (m1, m2) = IraMarket.mentioned(q).filter { it != IraMarket.VIX }.let { it[0] to it[1] }
+            return com.optionslab.ira.Together.say(m1, histories[m1]?.bars ?: return null, m2, histories[m2]?.bars ?: return null)
+        }
         if (com.optionslab.ira.Compare.asked(q)) return com.optionslab.ira.Compare.say(com.optionslab.ira.Compare.markets(q), st.snaps)
         // A question about the owner ("how much did I lose this week") is the account's, never a market's figure.
         if (Regex("(?i)\\b(i|me|my|we|our)\\b").containsMatchIn(q)) return null
