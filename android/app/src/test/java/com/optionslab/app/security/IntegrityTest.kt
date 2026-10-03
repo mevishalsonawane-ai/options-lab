@@ -91,8 +91,10 @@ class IntegrityTest : RobolectricTest() {
         assertTrue("android.permission.INTERNET" in held)
         assertEquals(held.sorted(), held)
         assertTrue("android.permission.INTERNET" in Integrity.allowedPermissions(context))
-        for (never in listOf("READ_SMS", "READ_CONTACTS", "CAMERA", "RECORD_AUDIO", "ACCESS_FINE_LOCATION", "READ_EXTERNAL_STORAGE", "SYSTEM_ALERT_WINDOW"))
+        for (never in listOf("READ_SMS", "READ_CONTACTS", "CAMERA", "ACCESS_FINE_LOCATION", "READ_EXTERNAL_STORAGE", "SYSTEM_ALERT_WINDOW"))
             assertFalse("$never must never be requested", held.any { it.endsWith(".$never") })
+        // The microphone is held for "Jarvis" only, and on the allowlist for that.
+        if (held.any { it.endsWith(".RECORD_AUDIO") }) assertTrue("android.permission.RECORD_AUDIO" in Integrity.allowedPermissions(context))
     }
 
     @Test fun aRecentReportIsReusedAndAnOldOneRedone() {

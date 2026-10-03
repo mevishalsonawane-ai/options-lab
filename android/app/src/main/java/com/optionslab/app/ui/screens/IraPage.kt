@@ -105,6 +105,13 @@ fun IraPage(orders: IraOrderPaths? = null) {
     // The orb shows the typed exchange first, else what the voice is doing (plain listening for the name is "idle").
     val mode = if (typed != 0) typed else when (voice.mode) {
         JarvisVoice.Mode.AWAKE -> 1; JarvisVoice.Mode.THINKING -> 2; JarvisVoice.Mode.SPEAKING -> 3; else -> 0 }
+    // At rest, say plainly whether Jarvis can hear its name ("Idle" read the same with the voice off).
+    val restLabel = when {
+        voice.mode == JarvisVoice.Mode.LISTENING -> "Say Jarvis"
+        voice.problem != null || voice.mode == JarvisVoice.Mode.OFF -> "Voice off"
+        else -> "Idle"
+    }
+    fun orbLabel(m: Int) = if (m == 0) restLabel else listOf("Idle", "Listening", "Thinking", "Answering")[m]
     var focus by remember { mutableStateOf(IraMarket.NIFTY) }
     // Live prices every minute while Ira is on screen (and news every ten minutes, inside the hub).
     com.optionslab.app.ui.PollWhileStarted { while (true) { IraHub.refresh(); delay(60_000) } }
@@ -154,7 +161,7 @@ fun IraPage(orders: IraOrderPaths? = null) {
                 scope.launch { com.optionslab.app.ira.JarvisSpeaker.replyTo(ctx, q) }
                 if (showChat) chat = true
             }
-            Text(listOf("Idle", "Listening", "Thinking", "Answering")[orbMode].uppercase(),
+            Text(orbLabel(orbMode).uppercase(),
                 style = Type.label.copy(color = Color(0xFF4AA8FF), fontSize = 12.sp, letterSpacing = 3.sp),
                 modifier = Modifier.align(Alignment.TopCenter).padding(top = 18.dp))
             Column(Modifier.align(Alignment.BottomCenter).padding(bottom = 24.dp), horizontalAlignment = Alignment.CenterHorizontally,
@@ -183,7 +190,7 @@ fun IraPage(orders: IraOrderPaths? = null) {
             // Tapping the globe in the chat hides the chat again (Jarvis).
             Orb(vol = orbVol(st.snaps), trend = orbTrend(s), mode = if (mode == 0 && text.isNotEmpty()) 1 else mode,
                 onTap = if (com.optionslab.app.BuildConfig.JARVIS) ({ chat = false }) else null)
-            Text(listOf("Idle", "Listening", "Thinking", "Answering")[if (mode == 0 && text.isNotEmpty()) 1 else mode].uppercase(),
+            Text(orbLabel(if (mode == 0 && text.isNotEmpty()) 1 else mode).uppercase(),
                 style = Type.label.copy(color = Color(0xFF4AA8FF), fontSize = 11.sp, letterSpacing = 2.sp), modifier = Modifier.padding(12.dp))
             s?.let { snap ->
                 Text(headline(snap), style = Type.label.copy(color = Color(0xFFB8C0E8), fontSize = 12.sp),

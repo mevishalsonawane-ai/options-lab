@@ -164,8 +164,9 @@ jobs:
           echo "APK: https://github.com/${{ github.repository }}/releases/download/latest-apk/IraAlgo.apk"
           echo "APK: https://github.com/${{ github.repository }}/releases/download/latest-apk/IraGoldAlgo.apk"
       # The Ira branch's build on its own link, so the owner's latest-apk links above only change from the main line:
-      # https://github.com/<repo>/releases/download/preview-apk/IraAlgo.apk (and IraGoldAlgo.apk)
-      - name: Publish the branch preview to the preview-apk release
+      # https://github.com/<repo>/releases/download/jarvis-apk/IraAlgo.apk (and IraGoldAlgo.apk; the release's tag
+      # keeps its old name: the workflow token may update a release but not create one)
+      - name: Publish the branch preview to the jarvis-apk release
         if: github.event_name == 'push' && github.ref == 'refs/heads/claude/ira-assistant'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -174,12 +175,9 @@ jobs:
           cp "$(ls app/build/outputs/apk/ira/release/*.apk | head -1)" "$RUNNER_TEMP/IraAlgo.apk"
           cp "$(ls app/build/outputs/apk/gold/release/*.apk | head -1)" "$RUNNER_TEMP/IraGoldAlgo.apk"
           notes="Preview build of ${SHA::7} ($(date -u '+%Y-%m-%d %H:%M UTC')). Installs over IraAlgo / IraGoldAlgo (same signing key)."
-          if gh release view preview-apk >/dev/null 2>&1; then
-            gh release edit preview-apk --notes "$notes"
-          else
-            gh release create preview-apk --prerelease --title "IraAlgo - branch preview" --notes "$notes" --target "$SHA"
-          fi
-          gh release upload preview-apk "$RUNNER_TEMP/IraAlgo.apk" "$RUNNER_TEMP/IraGoldAlgo.apk" --clobber
+          gh release edit jarvis-apk --title "IraAlgo - branch preview" --notes "$notes"
+          gh release upload jarvis-apk "$RUNNER_TEMP/IraAlgo.apk" "$RUNNER_TEMP/IraGoldAlgo.apk" --clobber
+          gh release delete-asset jarvis-apk JarvisAlgo.apk -y 2>/dev/null || true
       - uses: actions/upload-artifact@v4
         continue-on-error: true   # a full artifact quota must not turn a good build red; the release above has the APK
         with:
@@ -241,7 +239,7 @@ jobs:
           # Each step may fail (the dumper already gone, or between children): under bash -e a failing command in
           # the trap ended a passing step with exit 1 ("BUILD SUCCESSFUL ... Terminated").
           trap 'pkill -P $dumper 2>/dev/null || true; kill $dumper 2>/dev/null || true' EXIT
-          ./gradlew --no-daemon -PtestShard=${{ matrix.shard }}/4 :app:testIraDebugUnitTest :app:createIraDebugUnitTestCoverageReport
+          ./gradlew --no-daemon -PtestShard=${{ matrix.shard }}/4 -PtestsWithoutJarvis=true :app:testIraDebugUnitTest :app:createIraDebugUnitTestCoverageReport
       - name: Coverage summary
         if: always()
         run: python3 tools/coverage_summary.py "$(find app/build/reports/coverage -name report.xml 2>/dev/null | head -1)" app/build/test-results/testIraDebugUnitTest | tee -a "$GITHUB_STEP_SUMMARY"

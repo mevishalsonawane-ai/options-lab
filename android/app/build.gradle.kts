@@ -37,7 +37,8 @@ android {
 
         manifestPlaceholders["appLabel"] = "@string/app_name"
         // Jarvis, the assistant (voice, chat, on-device model): in IraAlgo and IraGoldAlgo (where it only talks).
-        buildConfigField("boolean", "JARVIS", "true")
+        // -PtestsWithoutJarvis=true (CI's app tests): the screens and jobs as they are with Jarvis off, as those tests expect.
+        buildConfigField("boolean", "JARVIS", (project.findProperty("testsWithoutJarvis") != "true").toString())
     }
 
     // Two apps from one project: IraAlgo (NSE options, Zerodha, paper) and IraGoldAlgo (XAUUSD only, paper and alerts,
