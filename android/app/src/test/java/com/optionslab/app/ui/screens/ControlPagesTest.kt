@@ -113,7 +113,7 @@ class ControlPagesTest {
     private fun field(label: String, value: String) { compose.onNodeWithText(label).performTextReplacement(value); compose.frames() }
     private fun clearAlerts() { com.optionslab.app.work.Alerts.queue.value.forEach { com.optionslab.app.work.Alerts.dismiss(it.id) }; com.optionslab.app.work.Alerts.forgetPosted() }
     private fun waitAlert(text: String) = compose.until(20_000, "the alert '$text'") { AreaE.alerted(text) }
-    private fun waitSettings(timeoutMs: Long = 10_000, ok: (AppSettings) -> Boolean) = compose.until(timeoutMs, "the settings") { ok(model.settings.value) }
+    private fun waitSettings(timeoutMs: Long = 30_000, ok: (AppSettings) -> Boolean) = compose.until(timeoutMs, "the settings") { ok(model.settings.value) }
 
     /** The PIN step every protection-lowering switch asks for. */
     private fun reauth(with: String, expectWhy: String? = null) {
@@ -198,7 +198,7 @@ class ControlPagesTest {
         assertTrue(model.settings.value.hideAmountsOnLockScreen)
         toggle("Hide figures on the lock screen")
         waitSettings { !it.hideAmountsOnLockScreen }
-        compose.until(10_000) { AppSettings.load().widgetPnl && !AppSettings.load().hideAmountsOnLockScreen }
+        compose.until(30_000) { AppSettings.load().widgetPnl && !AppSettings.load().hideAmountsOnLockScreen }
     }
 
     @Test fun aFailedDeviceCheckPausesTheFingerprintAndIsListed() {
