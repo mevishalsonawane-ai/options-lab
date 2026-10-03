@@ -154,6 +154,17 @@ class IraHubTest : RobolectricTest() {
         assertNull(com.optionslab.ira.Chat.smallTalk("who won the match", 0))
     }
 
+    /** A follow-up's reply is the answer, not the "I took that as" note (or the "next time" note beside it). */
+    @Test fun theReplySpokenIsTheAnswerPastTheNotes() {
+        fun m(fromIra: Boolean, text: String) = IraHub.Msg(fromIra, text)
+        val ms = listOf(m(false, "and BankNifty?"), m(true, "I took that as: \"How is BankNifty?\"."),
+            m(false, "How is BankNifty?"))
+        assertNull(IraHub.replyAfter(ms, "and BankNifty?"))
+        val done = ms + m(true, "Got it, Boss: next time \"x\" means \"y\".") + m(true, "BankNifty is at 52,000.")
+        assertEquals("BankNifty is at 52,000.", IraHub.replyAfter(done, "and BankNifty?")?.text)
+        assertEquals("BankNifty is at 52,000.", IraHub.replyAfter(done, "How is BankNifty?")?.text)
+    }
+
     @Test fun liveCandlesJoinTheStoredOnesAndHeadlinesAreRead() = runBlocking {
         IraHub.testHistories = { histories }
         val liveDay = histories.getValue(IraMarket.NIFTY).days.last().plusDays(1)

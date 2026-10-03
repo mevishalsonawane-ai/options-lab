@@ -18,4 +18,16 @@ class FollowUpTest {
         assertNull(FollowUp.resolve(null, "and banknifty?"))
         assertNull(FollowUp.resolve("How is Nifty doing?", "and tomorrow?"))
     }
+
+    @Test fun whatIsSaidNowNeverActsThroughAFollowUp() {
+        assertNull(FollowUp.resolve("what are the events", "now stop banknifty arm"))
+        assertNull(FollowUp.resolve("how is nifty", "now sell 2 lots banknifty"))
+        assertNull(FollowUp.resolve("how is nifty", "now buy banknifty"))
+        assertNull(FollowUp.resolve("how is nifty", "and close banknifty"))
+    }
+
+    @Test fun marketsAsSpokenAreSwapped() {
+        assertEquals("how is Nifty", FollowUp.resolve("how is bank nifty", "and nifty?"))
+        assertEquals("how is BankNifty", FollowUp.resolve("how is nifty 50", "and banknifty?"))
+    }
 }

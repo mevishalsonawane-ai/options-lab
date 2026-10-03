@@ -79,8 +79,8 @@ object Mistakes {
     fun lines(all: List<Entry>): List<String> =
         if (all.isEmpty()) listOf("No mistakes noted yet. Say \"Jarvis, that was wrong\" right after a bad answer.")
         else listOf("${all.size} mistake${if (all.size > 1) "s" else ""} noted:") + all.takeLast(10).reversed().map {
-            "${it.at.toLocalDate()} %02d:%02d: you said \"${it.said}\", I answered \"${it.answered.take(120)}\"".format(Locale.ENGLISH, it.at.hour, it.at.minute)
-                .let { s -> s }
+            // Only the time is formatted: what was said may hold a "%".
+            "${it.at.toLocalDate()} " + "%02d:%02d".format(Locale.ENGLISH, it.at.hour, it.at.minute) + ": you said \"${it.said}\", I answered \"${it.answered.take(120)}\""
         }
 }
 

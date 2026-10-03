@@ -7,6 +7,7 @@ package com.optionslab.ira
  */
 object FollowUp {
     private val SWAP = Regex("^ (and|what about|how about|same for|and what about|also|now) (the )?(.+?) $")
+    private val VERB = Regex(" (close|exit|buy|sell|stop|start|cancel|square|kill|switch|turn|set|place|enter|short|book|trail|move|modify|pause|resume|arm|disarm) ")
     private val WHY = Regex("^ (why|why so|how come|reason|and why|why is that|why did it) $")
 
     private fun t(s: String) = " " + s.lowercase().replace(Regex("[^a-z0-9 ]"), " ").replace(Regex("\\s+"), " ").trim()
@@ -18,6 +19,15 @@ object FollowUp {
         // Only a question carries over (never a command or an order).
         val p = Ask.parse(prev)
         if (p.command != null || p.order != null || Topic.COMMAND in p.topics || Topic.ORDER in p.topics || Topic.OFF_TOPIC in p.topics) return null
+        // What is said now must not act either: "and close BankNifty" is a command of its own, never a question.
+        if (acts(now)) return null
+        return found(prev, now)?.takeIf { !acts(it) }
+    }
+
+    private fun acts(text: String): Boolean = Commands.parse(text) != null ||
+        Ask.parse(text).let { it.command != null || it.order != null || Topic.COMMAND in it.topics || Topic.ORDER in it.topics }
+
+    private fun found(prev: String, now: String): String? {
         val n = t(now)
         if (n.trim().split(" ").size > 6) return null                      // a full question stands on its own
         val prevMarkets = Market.mentioned(prev)
@@ -27,11 +37,14 @@ object FollowUp {
         }
         val sw = SWAP.find(n) ?: return null
         val rest = sw.groupValues[3]
+        // A verb that acts ("and close BankNifty") is never turned into a question about the market.
+        if (VERB.containsMatchIn(" $rest ")) return null
         val newMarkets = Market.mentioned(rest)
         if (newMarkets.isEmpty()) return null
-        val from = prevMarkets.firstOrNull() ?: return "$rest: ${prev.trim().trimEnd('?')}"
-        // The previous question with its market swapped for the new one.
-        val swapped = Regex("(?i)\\b(" + listOf(from.label, from.name, from.label.replace(" ", "")).distinct().joinToString("|") { Regex.escape(it) } + ")\\b")
+        val from = prevMarkets.firstOrNull() ?: return null
+        // The previous question with its market (as said: "bank nifty", "nifty 50", "bnf") swapped for the new one.
+        val names = (from.aliases + from.label + from.name).distinct().sortedByDescending { it.length }
+        val swapped = Regex("(?i)\\b(" + names.joinToString("|") { n -> n.split(" ").joinToString("\\s*") { Regex.escape(it) } } + ")\\b")
             .replace(prev.trim(), newMarkets.first().label)
         return if (swapped == prev.trim()) null else swapped
     }

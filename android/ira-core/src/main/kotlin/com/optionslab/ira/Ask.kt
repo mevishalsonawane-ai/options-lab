@@ -49,6 +49,7 @@ object Ask {
     private val ACCOUNT = Regex(" (my|mine|our) ([a-z]+ ){0,3}(order|orders|trade|trades|position|positions|holding|holdings|p l|pnl|profit|profits|" +
         "loss|losses|strategy|strategies|arm|arms|bot|bots|algo|algos|studies|study|scripts?|account|portfolio|fills) " +
         "|( how am i doing | how did i do | today s p l | todays p l | today s pnl | todays pnl | p l today | pnl today )")
+    private val GREET = Regex(" (hello|hi|hey|good morning|good afternoon|good evening|jarvis|ira|boss|ok|okay|please|there) ")
     /** About Ira itself: what it can do, the voice. */
     private val HELP = Regex(" (what can you do|what do you do|who are you|what are you|help|how do i use|how to use|can you (hear|listen)|" +
         "listen to me|hear me|your voice|voice|speak to me|talk to me|can you talk|can you speak) ")
@@ -88,6 +89,12 @@ object Ask {
         for ((topic, ws) in TOPIC_WORDS) if (ws.any { t.contains(" $it ") }) topics += topic
         if (topics.isEmpty() || topics == setOf(Topic.GREETING) && markets.isNotEmpty()) {
             topics.clear(); if (markets.isNotEmpty()) topics += Topic.OVERVIEW else topics += Topic.OFF_TOPIC
+        }
+        // "Jarvis, how was your day": the name (or a hello) with a sentence after it is not just a greeting.
+        if (topics == setOf(Topic.GREETING)) {
+            var rest = t
+            repeat(3) { rest = GREET.replace(rest, " ") }
+            if (rest.trim().split(" ").count { it.isNotBlank() } >= 3) { topics.clear(); topics += Topic.OFF_TOPIC }
         }
         if (Topic.BACKTEST in topics) { topics.remove(Topic.OVERVIEW); topics.remove(Topic.PATTERNS) }
         // The owner's own trading: unless a backtest is named outright, it is about the account, not the market.

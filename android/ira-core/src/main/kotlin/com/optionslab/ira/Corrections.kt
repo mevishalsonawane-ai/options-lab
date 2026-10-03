@@ -33,6 +33,8 @@ object Corrections {
         if (!understood(right)) return null
         // A misheard command or order is never learned as a question in its place (it must be said again).
         if (acts(wrong)) return null
+        // Words that were understood are learned only as a near rewording, never as an unrelated next question.
+        if (understood(wrong) && similarity(w, r) < 0.5) return null
         return Learned(w, r)
     }
 

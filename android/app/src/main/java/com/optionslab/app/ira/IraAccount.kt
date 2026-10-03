@@ -84,7 +84,7 @@ internal object IraAccount {
     }
 
     /** Sections answered from the question's own words: never from the cache. */
-    private val ASKED = setOf(Section.WHATIF, Section.CHANGES, Section.SEARCH, Section.TIMEOFDAY, Section.REASONS, Section.EXPLAIN_POS)
+    private val ASKED = setOf(Section.WHATIF, Section.CHANGES, Section.SEARCH, Section.TIMEOFDAY, Section.REASONS, Section.EXPLAIN_POS, Section.MISTAKES)
 
     suspend fun read(sections: Set<Section>, markets: List<com.optionslab.ira.Market> = emptyList(), question: String = ""): AppView? {
         testView?.let { return it(sections) }

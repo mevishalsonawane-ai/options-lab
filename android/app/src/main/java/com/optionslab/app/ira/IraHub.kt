@@ -883,16 +883,16 @@ object IraHub {
         IraModel.stopWriting()
         // What Boss's corrections taught: misunderstood words read as meant (questions only, never anything that acts).
         val learnedAs = runCatching { com.optionslab.ira.Corrections.apply(q, IraTools.learned()) }.getOrNull()
-        if (learnedAs != null && !understood) {
-            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, "I took that as: \"$learnedAs\".")).takeLast(MAX_MESSAGES)) }
+        if (learnedAs != null && !understood && !lockedAccount(q, learnedAs)) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, "$TOOK_AS\"$learnedAs\".")).takeLast(MAX_MESSAGES)) }
             ask(learnedAs, understood = true)
             return
         }
         // A short follow-up ("and BankNifty?", "why?") asks again about the last question (questions only).
         if (!understood) {
             val prev = _state.value.messages.lastOrNull { !it.fromIra }?.text
-            runCatching { com.optionslab.ira.FollowUp.resolve(prev, q) }.getOrNull()?.let { full ->
-                _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, "I took that as: \"$full\".")).takeLast(MAX_MESSAGES)) }
+            runCatching { com.optionslab.ira.FollowUp.resolve(prev, q) }.getOrNull()?.takeIf { !lockedAccount(q, it) }?.let { full ->
+                _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, "$TOOK_AS\"$full\".")).takeLast(MAX_MESSAGES)) }
                 ask(full, understood = true)
                 return
             }
@@ -928,7 +928,8 @@ object IraHub {
         if (parsed.topics == setOf(Topic.OFF_TOPIC) && com.optionslab.app.BuildConfig.JARVIS && IraModel.usable() && !understood) { freeFormAsked(q); return }
         // JarvisAlgo without the model: a varied "I don't know that" instead of the same line every time.
         if (parsed.topics == setOf(Topic.OFF_TOPIC) && com.optionslab.app.BuildConfig.JARVIS) {
-            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, com.optionslab.ira.Chat.fallback(chatTurn.getAndIncrement()))).takeLast(MAX_MESSAGES)) }
+            val said = if (com.optionslab.ira.Chat.personal(q)) com.optionslab.ira.Chat.aboutMe(chatTurn.getAndIncrement()) else com.optionslab.ira.Chat.fallback(chatTurn.getAndIncrement())
+            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
             return
         }
         // JarvisAlgo: a complete order is placed at once (the owner's rule); IraAlgo keeps the review.
@@ -1031,6 +1032,40 @@ object IraHub {
      * Free-form words: the on-device model picks one line of [com.optionslab.ira.Intents.LINES]; only a valid line is
      * used, said back ("I understood: ..."), and any action from it waits for Confirm. Otherwise the usual answer.
      */
+    /**
+     * The model's work, or null when it fails or takes over 15 seconds (Boss is never left waiting in silence; a slow
+     * run finishes in the background and is dropped).
+     */
+    private suspend fun <T> modelOrNull(work: suspend () -> T?): T? {
+        val d = scope.async { runCatching { work() }.getOrNull() }
+        return kotlinx.coroutines.withTimeoutOrNull(15_000) { d.await() }
+    }
+
+    /** [rewrite] would read the account where [original] did not, on a locked phone (the lock was checked on [original]). */
+    private fun lockedAccount(original: String, rewrite: String): Boolean {
+        if (Topic.ACCOUNT !in Ask.parse(rewrite).topics || Topic.ACCOUNT in Ask.parse(original).topics) return false
+        val c = app ?: return false
+        return runCatching { (c.getSystemService(Context.KEYGUARD_SERVICE) as android.app.KeyguardManager).isKeyguardLocked }.getOrDefault(false)
+    }
+
+    private const val TOOK_AS = "I took that as: "
+    private const val LEARNED_NOTE = "Got it, Boss: next time"
+
+    /**
+     * Jarvis's reply to [said] in [ms], or null while there is none yet: past an "I took that as" note (a follow-up or a
+     * learned wording), the reply is the answer to the question it was taken as.
+     */
+    fun replyAfter(ms: List<Msg>, said: String): Msg? {
+        val i = ms.indexOfLast { !it.fromIra && it.text == said }
+        if (i < 0) return null
+        val after = ms.drop(i + 1)
+        // "Got it, Boss: next time..." (a learned wording) is a note beside the answer, not the answer.
+        val real = after.filter { it.fromIra && !it.text.startsWith(LEARNED_NOTE) }
+        val first = real.firstOrNull() ?: return null
+        if (!first.text.startsWith(TOOK_AS)) return first
+        return real.drop(1).firstOrNull()
+    }
+
     /** Varies the small-talk and "I don't know" lines so the same words are not said twice running. */
     private val chatTurn = java.util.concurrent.atomic.AtomicInteger()
 
@@ -1038,22 +1073,25 @@ object IraHub {
         // Said at once (spoken while the model reads the words), then the real answer when it is ready - never silence.
         _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, "One moment, Boss, let me think about that.")).takeLast(MAX_MESSAGES)) }
         scope.launch {
-            val line = runCatching { IraModel.complete(com.optionslab.ira.Intents.prompt(q))?.let { com.optionslab.ira.Intents.pick(it) } }.getOrNull()
+            // Words to Jarvis himself ("how was your day") go straight to the chat: no command could be meant.
+            val personal = com.optionslab.ira.Chat.personal(q)
+            val line = if (personal) null else modelOrNull { IraModel.complete(com.optionslab.ira.Intents.prompt(q))?.let { com.optionslab.ira.Intents.pick(it) } }
             if (line == null) {
                 // Not something Jarvis can do or look up: the model just talks (a short reply with no figures, no advice
                 // and no claimed actions), else a varied "I don't know that".
-                val chat = runCatching { com.optionslab.ira.Chat.accept(IraModel.complete(com.optionslab.ira.Chat.prompt(q, LocalDateTime.now(IST)), 60)) }.getOrNull()
-                val text = chat ?: com.optionslab.ira.Chat.fallback(chatTurn.getAndIncrement())
+                val chat = modelOrNull { com.optionslab.ira.Chat.accept(IraModel.complete(com.optionslab.ira.Chat.prompt(q, LocalDateTime.now(IST)), 60)) }
+                val text = chat ?: if (personal) com.optionslab.ira.Chat.aboutMe(chatTurn.getAndIncrement()) else com.optionslab.ira.Chat.fallback(chatTurn.getAndIncrement())
                 reply(text); speakLater(text)
                 return@launch
             }
+            // The voice checked the words as said against the lock, not what the model made of them.
+            if (lockedAccount(q, line)) { val t = "Your account needs the phone unlocked, Boss."; reply(t); speakLater(t); return@launch }
             reply("I understood: \"$line\".")
             val said = com.optionslab.ira.Secrets.redact(line.trim())
             ask(line, understood = true)
             // Its answer, spoken as soon as it is there (the voice already said "one moment").
             val ans = kotlinx.coroutines.withTimeoutOrNull(20_000) {
-                _state.first { st -> st.messages.indexOfLast { !it.fromIra && it.text == said }.let { i -> i >= 0 && st.messages.drop(i + 1).any { it.fromIra } } }
-                    .messages.let { ms -> ms.drop(ms.indexOfLast { !it.fromIra && it.text == said } + 1).first { it.fromIra } }
+                _state.first { st -> replyAfter(st.messages, said) != null }.let { st -> replyAfter(st.messages, said)!! }
             }
             ans?.let { speakLater(it.text) }
         }
@@ -1073,9 +1111,8 @@ object IraHub {
             val (what, act) = runCatching { IraActions.prepare(c) }.getOrElse { ("I could not do that: ${it.message}") to null }
             if (act == null) { reply(what); return@launch }
             if (c.kind.reduces || !com.optionslab.app.BuildConfig.JARVIS || confirmAlways) {
-                val id = pend(what, act, "Tap Confirm to ${what}.")
                 // The emergency exit asks for the fingerprint on the screen (or Boss's own voice, aloud).
-                if (c.kind == com.optionslab.ira.Command.Kind.EXIT_ALL) synchronized(actions) { exitIds += id }
+                pend(what, act, "Tap Confirm to ${what}.", exit = c.kind == com.optionslab.ira.Command.Kind.EXIT_ALL)
             } else reply(IraActions.run(what, act))
         }
     }
@@ -1113,7 +1150,7 @@ object IraHub {
 
     fun cancelAction(id: Long) {
         // Only what is still waiting can be cancelled: one already confirmed (or lapsed) is not said to be undone.
-        val (was, trade) = synchronized(actions) { (actions.remove(id) != null) to (id in newsAsks) }
+        val (was, trade) = synchronized(actions) { exitIds.remove(id); (actions.remove(id) != null) to (id in newsAsks) }
         if (!was) { _state.update { it.copy(pending = it.pending - id) }; return }
         if (trade) IraNewsTrades.answered(id, "rejected")
         settled(id)
@@ -1125,13 +1162,14 @@ object IraHub {
     const val CONFIRM_LAPSE_MS = 30 * 60_000L
 
     /** A request that waits for Confirm, with its message; it lapses after [CONFIRM_LAPSE_MS]. */
-    private fun pend(what: String, act: suspend () -> String, text: String): Long {
+    private fun pend(what: String, act: suspend () -> String, text: String, exit: Boolean = false): Long {
         val id = System.nanoTime()
-        synchronized(actions) { actions[id] = what to act }
+        // An emergency exit is known as one before anyone can see it (the voice then asks it in Boss's voice only).
+        synchronized(actions) { actions[id] = what to act; if (exit) exitIds += id }
         _state.update { it.copy(pending = it.pending + id, messages = (it.messages + Msg(true, text, action = id)).takeLast(MAX_MESSAGES)) }
         scope.launch {
             kotlinx.coroutines.delay(CONFIRM_LAPSE_MS)
-            if (synchronized(actions) { actions.remove(id) } != null) {
+            if (synchronized(actions) { exitIds.remove(id); actions.remove(id) } != null) {
                 _state.update { it.copy(pending = it.pending - id) }
                 reply("Nothing was done about \"$what\": it waited 30 minutes for your Confirm.")
             }
@@ -1143,7 +1181,7 @@ object IraHub {
     private fun dropPending() {
         val ids = synchronized(actions) { actions.keys.toList() }
         ids.forEach { id ->
-            val (was, trade) = synchronized(actions) { (actions.remove(id) != null) to (id in newsAsks) }
+            val (was, trade) = synchronized(actions) { exitIds.remove(id); (actions.remove(id) != null) to (id in newsAsks) }
             if (was && trade) IraNewsTrades.answered(id, "rejected")
             if (was) settled(id)
         }

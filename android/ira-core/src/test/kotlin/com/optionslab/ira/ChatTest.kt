@@ -3,6 +3,7 @@ package com.optionslab.ira
 import java.time.LocalDateTime
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
@@ -40,7 +41,7 @@ class ChatTest {
         assertNull(Chat.accept(""))
         assertNull(Chat.accept(null))
         assertNull(Chat.accept("x".repeat(300)))
-        assertEquals("One. Two.", Chat.accept("One. Two. Three."))
+        assertEquals("Hi. Hello.", Chat.accept("Hi. Hello. Bye."))
     }
 
     @Test fun promptAndFallback() {
@@ -49,5 +50,24 @@ class ChatTest {
         assertTrue("saturday morning" in p)
         assertNotEquals(Chat.fallback(0), Chat.fallback(1))
         assertEquals(Chat.fallback(0), Chat.fallback(4))
+    }
+
+    @Test fun adviceClaimsAndFiguresInAnyFormAreRefused() {
+        for (r in listOf("I'd suggest buying calls today, Boss.", "Selling puts looks smart here.", "Book profits now, Boss.", "Hold your position, Boss.",
+                "Done, Boss. Your alert is set.", "I have gone ahead and placed it.", "Nifty is near twenty-five thousand, Boss.", "It's up two percent."))
+            assertNull(Chat.accept(r), r)
+        assertNotNull(Chat.accept("I enjoy music, Boss, especially when the markets are quiet."))
+    }
+
+    @Test fun yourDayAndPersonalWords() {
+        assertNotNull(Chat.smallTalk("Jarvis, how was your day?", 0))
+        assertNotNull(Chat.smallTalk("what was your day", 1))
+        assertNotNull(Chat.smallTalk("what's up", 0))
+        assertEquals(setOf(Topic.OFF_TOPIC), Ask.parse("Jarvis, do you like music").topics, "the name with a sentence is not just a greeting")
+        assertEquals(setOf(Topic.GREETING), Ask.parse("good morning jarvis").topics)
+        assertTrue(Chat.personal("jarvis do you like music"))
+        assertFalse(Chat.personal("can you stop the nifty arm"))
+        assertFalse(Chat.personal("what is your view on banknifty"))
+        assertNotEquals(Chat.aboutMe(0), Chat.aboutMe(1))
     }
 }

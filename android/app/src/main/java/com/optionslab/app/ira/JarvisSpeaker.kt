@@ -49,10 +49,7 @@ object JarvisSpeaker {
         if (!com.optionslab.app.BuildConfig.JARVIS || !speakTyped) return
         val said = com.optionslab.ira.Secrets.redact(question.trim())
         val reply = withTimeoutOrNull(20_000) {
-            IraHub.state.first { st ->
-                val i = st.messages.indexOfLast { !it.fromIra && it.text == said }
-                i >= 0 && st.messages.drop(i + 1).any { it.fromIra }
-            }.messages.let { ms -> ms.drop(ms.indexOfLast { !it.fromIra && it.text == said } + 1).first { it.fromIra } }
+            IraHub.state.first { st -> IraHub.replyAfter(st.messages, said) != null }.let { st -> IraHub.replyAfter(st.messages, said)!! }
         } ?: return
         // A trade Jarvis asks about aloud by itself: nothing more to say.
         if (reply.action != null && IraHub.asksYesNo(reply.action)) return

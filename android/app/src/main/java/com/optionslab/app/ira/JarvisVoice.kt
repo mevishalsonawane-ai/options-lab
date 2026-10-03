@@ -270,7 +270,8 @@ class JarvisVoice : Service() {
     private var listening = false
     /** Ends the recognizer's turn early (its results come at once). */
     private val finish = Runnable { if (listening && !speaking) runCatching { rec?.stopListening() } }
-    private val END_AFTER_MS = 600L
+    /** Words stopped changing this long: the turn ends (a short pause inside a sentence must not cut it). */
+    private val END_AFTER_MS = 900L
     /** The sentence being spoken now ("id#n"), so a replaced one is ignored. */
     @Volatile private var utterance: String? = null
     private var said = 0
@@ -487,7 +488,10 @@ class JarvisVoice : Service() {
             val first = words.firstOrNull()?.trim().orEmpty()
             if (first.isNotEmpty() && (WAKE.containsMatchIn(first) || awake() || asking != null)) {
                 main.removeCallbacks(finish)
-                main.postDelayed(finish, END_AFTER_MS)
+                // Only the name so far ("Jarvis..." and a breath before the question): never cut there, or the question
+                // is lost and only "Yes, Boss?" is said. The recognizer's own silence ends that turn.
+                val nameOnly = asking == null && com.optionslab.ira.Wake.heard(first, awake()) is com.optionslab.ira.Wake.Heard.Awake
+                if (!nameOnly) main.postDelayed(finish, END_AFTER_MS)
             }
         }
         override fun onEvent(eventType: Int, params: Bundle?) {}
@@ -540,7 +544,13 @@ class JarvisVoice : Service() {
 
     private fun heard(alternatives: List<String>) {
         // While Jarvis talks (or the turn began while it talked) it hears itself too: only its name counts then.
-        if (speaking || turnInSpeech) {
+        val cutIn = speaking || turnInSpeech
+        // Just woken ("Yes, Boss?" said, now finished): the question may have started over those two words - it is
+        // Boss's, unless it is only Jarvis's own "yes boss" heard back.
+        val afterWake = !speaking && turnInSpeech && awake() &&
+            alternatives.firstOrNull()?.lowercase()?.replace(Regex("[^a-z ]"), " ")?.trim()?.let { it.isNotEmpty() && !Regex("^(yes )?boss( yes boss)?$").matches(it.replace(Regex("\\s+"), " ")) } == true
+        if (afterWake) turnInSpeech = false
+        else if (speaking || turnInSpeech) {
             turnInSpeech = false
             if (alternatives.none { WAKE.containsMatchIn(it) }) { again(); return }
             interrupt()
@@ -574,6 +584,8 @@ class JarvisVoice : Service() {
             Wake.Heard.Awake -> { awakeUntil = SystemClock.elapsedRealtime() + AWAKE_MS; say("Yes, Boss?") }
             Wake.Heard.Stop -> { wanted = false; say("Going to sleep, Boss. Switch me on again in JarvisAlgo.", STOP_AFTER) }
             is Wake.Heard.Ask -> {
+                // "Jarvis, stop talking" said over Jarvis: it has already stopped; that is not a lasting mute.
+                if (cutIn && Regex("^(stop|please stop|ok stop) (talking|speaking)$").matches(h.question.lowercase().trim())) { again(); return }
                 awakeUntil = 0
                 // A follow-up (no "Jarvis" in it) may ask, never act: trades and commands need the name, so talk nearby cannot trigger one.
                 val named = alternatives.any { Regex("\\bj[ae]rv[ia]s").containsMatchIn(it.lowercase()) }
@@ -582,7 +594,8 @@ class JarvisVoice : Service() {
                 val voiceOnly = com.optionslab.ira.Ask.parse(h.question).command?.kind in VOICE_KINDS
                 val acts = !voiceOnly && (com.optionslab.ira.Topic.COMMAND in topics || com.optionslab.ira.Topic.ORDER in topics)
                 // Locked phone: questions only; the account needs Boss's own voice.
-                val lockedNo = if (locked()) com.optionslab.ira.LockRule.refuse(true, acts || com.optionslab.ira.Topic.COMMAND in topics,
+                // Mute, unmute and the voice check are not actions: they work on a locked phone too.
+                val lockedNo = if (locked()) com.optionslab.ira.LockRule.refuse(true, acts || com.optionslab.ira.Topic.COMMAND in topics && !voiceOnly && com.optionslab.ira.Ask.parse(h.question).command?.kind != com.optionslab.ira.Command.Kind.VOICE_CHECK,
                     com.optionslab.ira.Topic.ACCOUNT in topics, com.optionslab.ira.Topic.ACCOUNT in topics && boss()) else null
                 if (lockedNo != null) say(lockedNo)
                 else if (!named && acts) { IraTools.count("nameFirst"); say("Boss, say Jarvis first for that.") }
@@ -636,8 +649,7 @@ class JarvisVoice : Service() {
             val said = com.optionslab.ira.Secrets.redact(q.trim())
             // Some answers (your account, a backtest) arrive a moment later: wait for Ira's reply to THIS question.
             val a = kotlinx.coroutines.withTimeoutOrNull(15_000) {
-                IraHub.state.first { st -> st.messages.indexOfLast { !it.fromIra && it.text == said }.let { i -> i >= 0 && st.messages.drop(i + 1).any { it.fromIra } } }
-                    .messages.let { ms -> ms.drop(ms.indexOfLast { !it.fromIra && it.text == said } + 1).first { it.fromIra } }
+                IraHub.state.first { st -> IraHub.replyAfter(st.messages, said) != null }.let { st -> IraHub.replyAfter(st.messages, said)!! }
             }
             hold.cancel()
             val o = a?.order

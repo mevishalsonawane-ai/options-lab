@@ -65,6 +65,7 @@ class BatchKTest {
         assertTrue(WakeSense.accept(listOf("I told jarvis about it"), WakeSense.Level.STRICT).isEmpty())
         assertEquals(2, WakeSense.accept(listOf("a", "b"), WakeSense.Level.NORMAL).size)
         assertTrue(Mistakes.lines(listOf(Mistakes.Entry(LocalDateTime.of(2026, 10, 2, 10, 5), "how is nifty", "BankNifty is up"))).last().contains("you said \"how is nifty\""))
+        assertTrue(Mistakes.lines(listOf(Mistakes.Entry(LocalDateTime.of(2026, 10, 2, 10, 5), "is nifty up 1%", "Nifty is at 25,000 (+0.52%)."))).last().contains("(+0.52%)"), "a % in the words never breaks the list")
     }
 }
 
