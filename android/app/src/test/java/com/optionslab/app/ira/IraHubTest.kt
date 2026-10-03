@@ -581,7 +581,9 @@ class IraHubTest : RobolectricTest() {
         val v = IraAccount.read(setOf(com.optionslab.ira.Section.EXPLAIN_POS))
         assertTrue(v.toString(), v!!.lines[com.optionslab.ira.Section.EXPLAIN_POS]!!.isNotEmpty())
         IraHub.ask("reset my preferences")
-        waitFor("the reset") { IraHub.state.value.messages.lastOrNull()?.let { it.fromIra && it.text.contains("every kind of suggestion") } == true }
+        // Any reply after the question (another note may land after it).
+        waitFor("the reset") { IraHub.state.value.messages.let { ms -> ms.drop(ms.indexOfLast { !it.fromIra && it.text == "reset my preferences" } + 1) }
+            .any { it.fromIra && it.text.contains("every kind of suggestion") } }
         assertTrue(IraHub.state.value.pending.isEmpty())
         // Nothing to trail, overtrade or warn about on an empty book: these never throw.
         IraCoach.trailWatch(); IraCoach.overtradeWatch(); IraCoach.gapWatch()
