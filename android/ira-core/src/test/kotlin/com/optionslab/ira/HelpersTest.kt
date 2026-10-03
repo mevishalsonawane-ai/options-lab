@@ -103,8 +103,10 @@ class MuteTest {
     private fun k(s: String) = Commands.parse(s)?.kind
 
     @Test fun muteAndUnmute() {
-        for (s in listOf("mute", "Jarvis mute", "be mute", "Jarvis, be quiet", "mute yourself", "stop talking", "don't speak", "go silent", "voice off", "shut up"))
+        for (s in listOf("mute", "Jarvis mute", "be mute", "Jarvis, be quiet", "mute yourself", "stop talking", "don't speak", "go silent", "voice off"))
             assertEquals(Command.Kind.MUTE, k(s), s)
+        for (s in listOf("quiet", "silence", "shut up", "silent")) assertTrue(k(s) != Command.Kind.MUTE, "a stray word never mutes: $s")
+        assertEquals(Command.Kind.VOICE_CHECK, k("Jarvis, why can't I hear you"))
         for (s in listOf("unmute", "Jarvis unmute", "speak again", "voice on", "you can speak now", "talk again"))
             assertEquals(Command.Kind.UNMUTE, k(s), s)
         assertEquals(Command.Kind.HINDI, k("reply in Hindi"))

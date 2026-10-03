@@ -920,7 +920,13 @@ object IraHub {
         if (parsed.topics == setOf(Topic.OFF_TOPIC) && com.optionslab.app.BuildConfig.JARVIS && IraModel.usable() && !understood) { freeFormAsked(q); return }
         // JarvisAlgo: a complete order is placed at once (the owner's rule); IraAlgo keeps the review.
         parsed.order?.takeIf { com.optionslab.app.BuildConfig.JARVIS && it.missing.isEmpty() && it.refusal == null }?.let { o -> tradeAsked(q, o); return }
-        val a0 = runCatching { Ira(book).answer(q, _state.value.snaps, _state.value.news, voice = com.optionslab.app.BuildConfig.JARVIS) }.getOrElse { com.optionslab.ira.Answer("I could not work that out.", emptyList()) }
+        // A greeting is answered with the time of day, today's session and where the indices stand.
+        val today = com.optionslab.app.data.Market.today()
+        val closedReason = if (runCatching { com.optionslab.app.data.Market.isTradingDay(today) }.getOrDefault(true)) null
+            else runCatching { com.optionslab.app.data.Holidays.book().upcoming(today).firstOrNull { it.first == today }?.second }.getOrNull()
+                ?: if (today.dayOfWeek.value >= 6) "weekend" else "a market holiday"
+        val a0 = runCatching { Ira(book).answer(q, _state.value.snaps, _state.value.news, voice = com.optionslab.app.BuildConfig.JARVIS,
+            now = LocalDateTime.now(IST), closedReason = closedReason) }.getOrElse { com.optionslab.ira.Answer("I could not work that out.", emptyList()) }
         // A holiday or a weekend: said first, so the last session's prices are not taken for today's.
         val closed = closedToday()?.takeIf { parsed.topics.any { it in MARKET_TOPICS } && testHistories == null }
         val a = if (closed == null) a0 else a0.copy(text = closed.substringBefore(" Prices") + " " + a0.text, facts = listOf(closed) + a0.facts)

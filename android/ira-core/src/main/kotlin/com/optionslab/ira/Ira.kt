@@ -12,7 +12,9 @@ data class Answer(val text: String, val facts: List<String>, val order: OrderReq
 class Ira(private val book: PatternBook = PatternBook()) {
 
     /** [app]: the app and the owner's trading as the app read it (null: not read); [voice]: this app can listen (JarvisAlgo). */
-    fun answer(question: String, snaps: Map<Market, Snapshot>, news: List<Headline>, app: AppView? = null, voice: Boolean = false): Answer {
+    fun answer(question: String, snaps: Map<Market, Snapshot>, news: List<Headline>, app: AppView? = null, voice: Boolean = false,
+               /** The time now and, on a day with no session, why: a greeting is then answered properly. */
+               now: java.time.LocalDateTime? = null, closedReason: String? = null): Answer {
         val q = Ask.parse(question)
         val facts = ArrayList<String>()
         val parts = ArrayList<String>()
@@ -21,7 +23,8 @@ class Ira(private val book: PatternBook = PatternBook()) {
         if (Topic.HELP in q.topics) return AppAnswers.help(q, voice)
         if (Topic.ACCOUNT in q.topics) return AppAnswers.answer(q, app)
         if (Topic.OFF_TOPIC in q.topics) return Answer("I only know the Indian indices (Nifty, BankNifty, FinNifty, Sensex, India VIX) and gold. Ask me about one of them.", emptyList())
-        if (q.topics == setOf(Topic.GREETING)) return Answer("Hello. Ask me about Nifty, BankNifty, FinNifty, Sensex, VIX or gold.", emptyList())
+        if (q.topics == setOf(Topic.GREETING)) return if (now != null) Greeting.say(now, snaps, closedReason).let { Answer(it, listOf(it)) }
+            else Answer("Hello. Ask me about Nifty, BankNifty, FinNifty, Sensex, VIX or gold.", emptyList())
         val markets = q.markets.ifEmpty { listOf(Market.NIFTY) }
         for (m in markets) {
             val s = snaps[m]

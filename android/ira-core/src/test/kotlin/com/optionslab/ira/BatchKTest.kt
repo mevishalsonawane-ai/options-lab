@@ -67,3 +67,15 @@ class BatchKTest {
         assertTrue(Mistakes.lines(listOf(Mistakes.Entry(LocalDateTime.of(2026, 10, 2, 10, 5), "how is nifty", "BankNifty is up"))).last().contains("you said \"how is nifty\""))
     }
 }
+
+class GreetingTest {
+    @Test fun aGreetingIsAnsweredProperly() {
+        val sat = java.time.LocalDateTime.of(2026, 10, 3, 11, 14)
+        val a = Ira().answer("good morning", emptyMap(), emptyList(), now = sat, closedReason = "weekend").text
+        assertEquals("Good morning, Boss. It's Saturday and the market is closed today (weekend). Want last week's review, or to practise on a past day?", a)
+        val eve = Ira().answer("good morning", emptyMap(), emptyList(), now = java.time.LocalDateTime.of(2026, 10, 5, 19, 0)).text
+        assertTrue(eve.startsWith("Good evening, Boss. The market has closed for the day."), eve)
+        // Without the time (older callers) the short greeting stays.
+        assertTrue(Ira().answer("hello", emptyMap(), emptyList()).text.startsWith("Hello."))
+    }
+}

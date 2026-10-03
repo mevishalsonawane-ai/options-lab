@@ -160,6 +160,10 @@ fun IraPage(orders: IraOrderPaths? = null) {
             Column(Modifier.align(Alignment.BottomCenter).padding(bottom = 24.dp), horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 val waiting = st.pending.size
+                // Muted: said plainly on the globe, one tap to hear Jarvis again.
+                var mutedNow by remember { mutableStateOf(JarvisVoice.muted) }
+                LaunchedEffect(Unit) { while (true) { mutedNow = JarvisVoice.muted; kotlinx.coroutines.delay(2_000) } }
+                if (mutedNow) BrassButton("🔇  Muted · tap to unmute") { JarvisVoice.muted = false; mutedNow = false }
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
                     MicButton("🎙  Talk")
                     BrassButton(if (waiting > 0) "Open chat · $waiting waiting" else "Open chat") { chat = true }

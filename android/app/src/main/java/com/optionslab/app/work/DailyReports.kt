@@ -58,7 +58,8 @@ object DailyReports {
         val now = Market.now()
         var d = now.toLocalDate()
         if (!now.toLocalTime().isBefore(k.at)) d = d.plusDays(1)
-        while (!Market.isTradingDay(d)) d = d.plusDays(1)
+        // JarvisAlgo's morning comes every day (a closed day gets its own short morning); the rest only on trading days.
+        if (!(com.optionslab.app.BuildConfig.JARVIS && k == Kind.MORNING)) while (!Market.isTradingDay(d)) d = d.plusDays(1)
         val at = d.atTime(k.at).atZone(now.zone).toInstant().toEpochMilli()
         try {
             if (Jobs.canExact(context)) am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi)
@@ -71,7 +72,7 @@ object DailyReports {
     /** The alarm fired: re-arm, then hand the work to a worker. */
     fun fired(context: Context, k: Kind) {
         schedule(context, k)
-        if (!Market.isTradingDay()) return
+        if (!Market.isTradingDay() && !(com.optionslab.app.BuildConfig.JARVIS && k == Kind.MORNING)) return
         val req = OneTimeWorkRequestBuilder<ReportWorker>()
             .setInputData(workDataOf("kind" to k.name))
             .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
@@ -82,8 +83,39 @@ object DailyReports {
     private fun rs(x: Double) = (if (x < 0) "−₹" else "+₹") + String.format(Locale.ENGLISH, "%,.0f", abs(x))
     private val DAY = DateTimeFormatter.ofPattern("EEE d MMM", Locale.ENGLISH)
 
+    /**
+     * JarvisAlgo's morning on a day with no session (a weekend, a holiday): why it is closed and when it opens, the
+     * night's study and overnight news, the coming events, Saturday's report card - shown, noted and said.
+     */
+    suspend fun closedMorning(context: Context): Pair<String, List<String>> {
+        val today = Market.today()
+        val holiday = runCatching { Holidays.book().upcoming(today).firstOrNull { it.first == today }?.second }.getOrNull()
+        val why = holiday ?: if (today.dayOfWeek.value >= 6) "weekend" else "a market holiday"
+        var next = today.plusDays(1)
+        while (!Market.isTradingDay(next)) next = next.plusDays(1)
+        val lines = ArrayList<String>()
+        lines += "• The market is closed today ($why). It opens again ${next.format(DAY)} at 9:15."
+        val brief = runCatching { com.optionslab.app.ira.IraStudy.brief() }.getOrDefault(emptyList())
+        brief.forEach { lines += "• Study: $it" }
+        runCatching { com.optionslab.app.ira.IraEvents.upcoming(4) }.getOrDefault(emptyList()).take(3)
+            .forEach { e -> lines += "• " + com.optionslab.ira.Events.line(e, today).removeSuffix(".") }
+        if (com.optionslab.app.ira.Automations.on(com.optionslab.app.ira.Automations.Auto.BACKUP)) {
+            val last = runCatching { com.optionslab.app.security.SecurePrefs.getString("backup.last")?.let(java.time.LocalDate::parse) }.getOrNull()
+            if (com.optionslab.ira.BackupNudge.due(last, today)) lines += "• " + com.optionslab.ira.BackupNudge.say(last)
+        }
+        val title = "Good morning Boss · market closed today ($why)"
+        runCatching { com.optionslab.app.ira.JarvisPopup.show(context, title, lines.take(2).joinToString(" ")) }
+        runCatching { com.optionslab.app.ira.JarvisVoice.announce("Good morning, Boss. The market is closed today, $why. It opens again ${next.dayOfWeek.name.lowercase()}." +
+            (if (brief.isEmpty()) "" else " From my night's study: " + brief.take(2).joinToString(" ") { com.optionslab.ira.Wake.spoken(it, 1) })) }
+        com.optionslab.app.ira.IraHub.note(com.optionslab.ira.Address.boss("Good morning. " + lines.joinToString(" ") { it.removePrefix("• ").trimEnd('.') + "." }))
+        // Saturday: the week's report card comes with the morning (not left to the hourly study worker).
+        runCatching { com.optionslab.app.ira.IraStudy.reportCardIfDue() }
+        return title to lines
+    }
+
     /** 09:00: is everything in place for the day? */
     suspend fun morning(context: Context): Pair<String, List<String>> {
+        if (com.optionslab.app.BuildConfig.JARVIS && !Market.isTradingDay()) return closedMorning(context)
         val s = AppSettings.load()
         val lines = ArrayList<String>()
         var bad = 0

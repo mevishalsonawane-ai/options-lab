@@ -74,6 +74,25 @@ class JarvisVoice : Service() {
             return true
         }
 
+        /**
+         * "Why can't I hear you?": everything that stops the voice, said plainly (muted, quiet hours, typed replies not
+         * spoken, no offline voice, the phone's media volume at zero), or that all looks right.
+         */
+        fun diagnose(context: Context?): String {
+            val out = ArrayList<String>()
+            if (muted) out += "I'm muted: say \"Jarvis, unmute\" or switch Mute off in Settings, Voice and AI model."
+            if (quietNow()) out += "It's quiet hours (22:00 to 07:00): I only speak when you ask."
+            if (!JarvisSpeaker.speakTyped) out += "Speaking typed replies is off (Settings, Voice and AI model)."
+            if (instance?.get()?.voiceReady == false) out += "This phone has no offline English voice ready: add one in Settings, Accessibility, Text-to-speech."
+            context?.let { c -> runCatching {
+                val am = c.getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager
+                if (am.getStreamVolume(android.media.AudioManager.STREAM_MUSIC) == 0) out += "Your phone's media volume is at zero: turn it up."
+            } }
+            if (!wanted) out += "Listening is off, so I only speak replies to typed questions (switch on Jarvis voice to talk to me)."
+            return if (out.isEmpty()) "Boss, my voice looks fine: not muted, volume up, a voice ready. If you still hear nothing, tap Listen under a reply."
+                else "Boss, here's why you may not hear me: " + out.joinToString(" ")
+        }
+
         /** Quiet hours: nothing said unasked from 22:00 to 07:00 (on by default; "Jarvis, quiet hours off"). */
         var quietHours: Boolean
             get() = runCatching { com.optionslab.app.security.SecurePrefs.getBoolean("jarvis.quiet", true) }.getOrDefault(true)
@@ -571,7 +590,8 @@ class JarvisVoice : Service() {
         }
     }
 
-    private val VOICE_KINDS = setOf(com.optionslab.ira.Command.Kind.MUTE, com.optionslab.ira.Command.Kind.UNMUTE,
+    /** Said without the name as a follow-up: unmute and the reply language (never mute: a stray word must not silence Jarvis). */
+    private val VOICE_KINDS = setOf(com.optionslab.ira.Command.Kind.UNMUTE, com.optionslab.ira.Command.Kind.VOICE_CHECK,
         com.optionslab.ira.Command.Kind.HINDI, com.optionslab.ira.Command.Kind.ENGLISH,
         com.optionslab.ira.Command.Kind.QUIET_ON, com.optionslab.ira.Command.Kind.QUIET_OFF)
 
@@ -635,7 +655,7 @@ class JarvisVoice : Service() {
         val t = tts
         // Muted: the words go on screen as a pop-up instead (answers and questions only; "One moment" is dropped).
         if (muted && !text.startsWith("Voice on")) {
-            if (id == "answer" || id == "question") runCatching { JarvisPopup.show(this, "Jarvis", text) }
+            if (id == "answer" || id == "question") runCatching { JarvisPopup.show(this, "Jarvis (muted)", "$text\n\nSay \"Jarvis, unmute\" to hear me.") }
             afterSpeech(id); return
         }
         if (!voiceReady || t == null) { afterSpeech(id); return }
