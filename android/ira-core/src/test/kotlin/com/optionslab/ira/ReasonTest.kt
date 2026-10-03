@@ -648,6 +648,7 @@ class EchoTest {
         assertTrue(Wake.echo("nifty is up 95 points from the open", said))
         assertTrue(Wake.echo("near the day's high", said))
         assertFalse(Wake.echo("and banknifty", said))
+        assertFalse(Wake.echo("and nifty", said), "a short follow-up is never an echo")
         assertFalse(Wake.echo("what about the levels for banknifty today", said))
         assertFalse(Wake.echo("how is nifty", null))
     }

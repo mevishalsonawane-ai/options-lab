@@ -705,7 +705,7 @@ object IraHub {
             else {
                 val p = runCatching { com.optionslab.app.data.Paper.snapshot().positions.positions.firstOrNull { it.symbol == symbol && it.quantity != 0 } }.getOrNull()
                 if (p == null) "$symbol is no longer held." else com.optionslab.app.data.Paper.close(p.symbol, p.product).let { r ->
-                    r.orderId?.let { com.optionslab.app.data.Strategies.tagOwner("paper:$it", "Jarvis · close (you confirmed)") }
+                    r.orderId?.let { com.optionslab.app.data.Strategies.tagOwner("paper:$it", com.optionslab.app.data.Origins.manual("Jarvis")) }   // Boss confirmed it
                     "Paper: ${r.message}" + (com.optionslab.app.data.Origins.shortId(r.orderId)?.let { " (order $it)" } ?: "") }
             }
         }, "$text Tap Confirm to close $symbol.")

@@ -553,7 +553,9 @@ class JarvisVoice : Service() {
         val cutIn = speaking || turnInSpeech
         // Just woken ("Yes, Boss?" said, now finished): the question may have started over those two words - it is
         // Boss's, unless it is only Jarvis's own "yes boss" heard back.
-        val afterWake = !speaking && turnInSpeech && awake() &&
+        // (Only after the wake prompt: a turn that began during an ANSWER is its own words heard back - the loop that
+        // repeated one answer - and needs the name, as any cut-in does.)
+        val afterWake = !speaking && turnInSpeech && awake() && lastSpokenId == "say" &&
             alternatives.firstOrNull()?.lowercase()?.replace(Regex("[^a-z ]"), " ")?.trim()?.let { it.isNotEmpty() && !Regex("^(yes )?boss( yes boss)?$").matches(it.replace(Regex("\\s+"), " ")) } == true
         if (afterWake) turnInSpeech = false
         else if (speaking || turnInSpeech) {
@@ -592,11 +594,11 @@ class JarvisVoice : Service() {
             is Wake.Heard.Ask -> {
                 // "Jarvis, stop talking" said over Jarvis: it has already stopped; that is not a lasting mute.
                 if (cutIn && Regex("^(stop|please stop|ok stop) (talking|speaking)$").matches(h.question.lowercase().trim())) { again(); return }
-                awakeUntil = 0
                 // A follow-up (no "Jarvis" in it) may ask, never act: trades and commands need the name, so talk nearby cannot trigger one.
                 val named = alternatives.any { Regex("\\bj[ae]rv[ia]s").containsMatchIn(it.lowercase()) }
-                // Its own last answer heard back without the name is not a question (the loop that repeats one answer).
-                if (!named && Wake.echo(h.question, lastAnswer?.takeIf { SystemClock.elapsedRealtime() - lastAnswerAt < FOLLOW_MS + 15_000 }?.text)) { again(); return }
+                // Its own last words heard back without the name are not a question (the follow-up window stays open).
+                if (!named && Wake.echo(h.question, lastSpoken?.takeIf { SystemClock.elapsedRealtime() - lastSpokenEnd < 15_000 })) { again(); return }
+                awakeUntil = 0
                 val topics = com.optionslab.ira.Ask.parse(h.question).topics
                 // Muting, unmuting and the reply language are not actions: a follow-up "mute" works without the name.
                 val voiceOnly = com.optionslab.ira.Ask.parse(h.question).command?.kind in VOICE_KINDS
@@ -637,7 +639,12 @@ class JarvisVoice : Service() {
     private val HIGH_RISK = setOf(com.optionslab.ira.Command.Kind.MODE_LIVE, com.optionslab.ira.Command.Kind.KILL_OFF,
         com.optionslab.ira.Command.Kind.JTRADES_LIVE, com.optionslab.ira.Command.Kind.AUTOPILOT_ON)
 
-    /** The last answer said aloud and when (an echo of it is ignored; a follow-up's same answer is not said again). */
+    /** What was said last (its id, and its words for an answer or question) and when that speech ended. */
+    @Volatile private var lastSpokenId: String? = null
+    @Volatile private var lastSpoken: String? = null
+    @Volatile private var lastSpokenEnd = 0L
+
+    /** The last answer said aloud and when (a follow-up's same answer is not said again). */
     private data class Said(val text: String)
     @Volatile private var lastAnswer: Said? = null
     @Volatile private var lastAnswerAt = 0L
@@ -711,6 +718,8 @@ class JarvisVoice : Service() {
      */
     private fun say(text: String, id: String = "say") {
         val t = tts
+        lastSpokenId = id
+        if (id == "answer" || id == "question") lastSpoken = text
         // Muted: the words go on screen as a pop-up instead (answers and questions only; "One moment" is dropped).
         if (muted && !text.startsWith("Voice on")) {
             if (id == "answer" || id == "question") runCatching { JarvisPopup.show(this, "Jarvis (muted)", "$text\n\nSay \"Jarvis, unmute\" to hear me.") }
@@ -749,6 +758,7 @@ class JarvisVoice : Service() {
 
     private fun afterSpeech(id: String?) {
         speaking = false
+        lastSpokenEnd = SystemClock.elapsedRealtime()
         if (stopped) return
         if (id == STOP_AFTER) { stopSelf(); return }
         if (id == "answer") awakeUntil = SystemClock.elapsedRealtime() + FOLLOW_MS   // a follow-up needs no "Jarvis"

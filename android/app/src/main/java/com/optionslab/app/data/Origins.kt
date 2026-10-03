@@ -74,7 +74,7 @@ object Origins {
     fun position(owners: Map<String, String>, fills: List<Fill>, netQty: Int): String? {
         if (fills.isEmpty()) return null
         val names = LinkedHashSet<String>()
-        fun name(f: Fill) = of(owners, f.venueId, f.tag).first.removePrefix("Strategy: ").removePrefix("Auto: ").let(::base)
+        fun name(f: Fill) = of(owners, f.venueId, f.tag).first.removePrefix("Strategy: ").removePrefix("Auto: ").replaceFirst("Jarvis: ", "Jarvis ").let(::base)
         if (netQty == 0) {
             // A fill opens when it moves the running quantity away from zero (a buy from flat or long, a sell from flat or short).
             var running = 0

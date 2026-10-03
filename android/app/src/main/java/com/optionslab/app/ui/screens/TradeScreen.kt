@@ -307,7 +307,7 @@ private fun TradesCard(a: Account, owners: Map<String, String>, onTap: (Broker.T
             Row(Modifier.clickable { onTap(t) }, verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text("${t.side} ${t.symbol}", style = Type.figure.copy(color = if (t.side == "SELL") p.oxblood else p.verdigris, fontSize = 13.sp))
-                    Text("${t.exchange} · ${t.product} · ${t.at.takeLast(8)} · order …${t.orderId.takeLast(6)}", style = Type.figure.copy(color = p.inkSoft, fontSize = 11.sp))
+                    Text("${t.exchange} · ${t.product} · ${t.at.takeLast(8)}", style = Type.figure.copy(color = p.inkSoft, fontSize = 11.sp))
                     OrderSourcePill(owners, "kite:${t.orderId}", a.orders.firstOrNull { it.id == t.orderId }?.tag)
                 }
                 Column(horizontalAlignment = Alignment.End) {

@@ -71,7 +71,8 @@ object Wake {
     fun echo(heard: String, lastSaid: String?): Boolean {
         if (lastSaid.isNullOrBlank()) return false
         val h = words(heard)
-        if (h.isEmpty()) return false
+        // A short follow-up ("and nifty?", "is it up?") reuses the answer's words: only three or more count as an echo.
+        if (h.size < 3) return false
         val said = words(lastSaid).toSet()
         return h.count { it in said } >= maxOf(1.0, h.size * 0.7)
     }
