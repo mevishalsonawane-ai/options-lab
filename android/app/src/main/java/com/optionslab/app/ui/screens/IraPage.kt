@@ -513,6 +513,16 @@ internal fun ModelCard() {
                 }
             }
         }
+        // A model on the phone that is no longer the chosen one (the 3B after the switch to the fast one): deletable.
+        var others by remember(ms.status) { mutableStateOf(M.others(ctx)) }
+        for ((o, bytes) in others) {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 6.dp)) {
+                Text("${o.name} is also on the phone (${mb(bytes)}), not in use.", style = Type.label.copy(color = p.inkSoft, fontSize = 13.sp),
+                    modifier = Modifier.weight(1f))
+                Text("Delete it", style = Type.label.copy(color = p.ink, fontSize = 13.sp),
+                    modifier = Modifier.clickable { scope.launch { M.deleteOther(ctx, o); others = M.others(ctx) } }.padding(start = 8.dp))
+            }
+        }
         when (ms.status) {
             ModelStatus.UNSUPPORTED -> Note(M.unsupportedWhy(ctx) + " Ira answers in its own words.")
             ModelStatus.ABSENT, ModelStatus.FAILED -> {

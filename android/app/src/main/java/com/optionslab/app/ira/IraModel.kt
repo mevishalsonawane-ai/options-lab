@@ -73,6 +73,19 @@ object IraModel {
         init(c)
     }
 
+    /** Models on the phone other than the chosen one (a whole file or part of one), with the bytes each takes. */
+    fun others(c: Context): List<Pair<Spec, Long>> = SPECS.filter { it != choice }.mapNotNull { o ->
+        val bytes = File(c.noBackupFilesDir, o.file).length() + File(c.noBackupFilesDir, "${o.file}.part").length()
+        if (bytes > 0) o to bytes else null
+    }
+
+    /** The owner deletes a model that is not the chosen one (the chosen one is never touched here). */
+    suspend fun deleteOther(c: Context, o: Spec) = lock.withLock {
+        if (o == choice) return@withLock
+        File(c.noBackupFilesDir, o.file).delete(); File(c.noBackupFilesDir, "${o.file}.part").delete()
+        runCatching { com.optionslab.app.security.SecurePrefs.put(verifiedKey(o), null) }
+    }
+
     /** Once the chosen model is checked and ready: the other model's file goes (it can be 2 GB). */
     internal fun dropOthers(c: Context) {
         for (o in SPECS) if (o != choice) {
