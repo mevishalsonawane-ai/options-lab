@@ -28,7 +28,9 @@ object SettingsLog {
 
     /** The changes between [old] and [new] (only the limits Jarvis knows), recorded. */
     @Synchronized fun diff(old: AppSettings, new: AppSettings) {
-        val now = LocalDateTime.now(IST).withNano(0)
+        // Each save keeps its own exact time (two saves in the same second are still two saves, undone one at a time).
+        val prev = all().lastOrNull()?.at
+        val now = LocalDateTime.now(IST).let { if (prev != null && !it.isAfter(prev)) prev.plusNanos(1_000) else it }
         val changed = SettingsTalk.Key.entries.mapNotNull { k ->
             val a = com.optionslab.app.ira.IraActions.setting(k, old); val b = com.optionslab.app.ira.IraActions.setting(k, new)
             if (a == b) null else Triple(k, a, b)
