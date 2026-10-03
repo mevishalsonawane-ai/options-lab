@@ -949,6 +949,12 @@ object IraHub {
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
             return
         }
+        // Reasoning over the data on the phone: a move over a stretch of time, which market is stronger, the expected range.
+        if (parsed.order == null && parsed.command == null) runCatching { reasoned(q, parsed) }.getOrNull()?.let { text ->
+            val said = offlineNote()?.let { "$it $text" } ?: text
+            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said, listOf(text))).takeLast(MAX_MESSAGES)) }
+            return
+        }
         // JarvisAlgo: a complete order is placed at once (the owner's rule); IraAlgo keeps the review.
         parsed.order?.takeIf { com.optionslab.app.BuildConfig.JARVIS && it.missing.isEmpty() && it.refusal == null }?.let { o -> tradeAsked(q, o); return }
         // A greeting is answered with the time of day, today's session and where the indices stand.
@@ -1086,6 +1092,22 @@ object IraHub {
         val first = real.firstOrNull() ?: return null
         if (!first.text.startsWith(TOOK_AS)) return first
         return real.drop(1).firstOrNull()
+    }
+
+    /**
+     * "How much did Nifty move in the last hour", "is BankNifty stronger than Nifty", "the expected range today": worked
+     * out from the candles and snapshots on the phone, or null when the question is none of these (or the data is missing).
+     */
+    private fun reasoned(q: String, parsed: com.optionslab.ira.Question): String? {
+        val st = _state.value
+        if (com.optionslab.ira.Compare.asked(q)) return com.optionslab.ira.Compare.say(IraMarket.mentioned(q), st.snaps)
+        val m = parsed.markets.firstOrNull { it != IraMarket.VIX } ?: IraMarket.NIFTY
+        if (com.optionslab.ira.ExpectedRange.asked(q)) {
+            val vix = st.snaps[IraMarket.VIX]?.price ?: return null
+            return com.optionslab.ira.ExpectedRange.say(st.snaps[m] ?: return null, vix, LocalDateTime.now(IST))
+        }
+        com.optionslab.ira.Moves.asked(q)?.let { w -> return com.optionslab.ira.Moves.say(m, histories[m]?.bars ?: return null, w) }
+        return null
     }
 
     /** When Boss last asked something: a follow-up carries the last question over only within [FOLLOW_MS]. */

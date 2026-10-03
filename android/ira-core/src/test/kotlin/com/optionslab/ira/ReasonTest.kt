@@ -1,0 +1,53 @@
+package com.optionslab.ira
+
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.LocalTime
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
+
+class ReasonTest {
+    private val day = LocalDate.of(2026, 10, 1)
+    /** A day of 1-minute candles from 9:15, rising 1 point a minute from 24,000. */
+    private val bars = (0 until 300).map { i -> val o = 24_000.0 + i; Candle(day.atTime(9, 15).plusMinutes(i.toLong()), o, o + 2, o - 1, o + 1) }
+
+    @Test fun windowsAreRead() {
+        assertEquals(60, Moves.asked("how much did nifty move in the last hour")?.minutes)
+        assertEquals(30, Moves.asked("banknifty change in the last 30 minutes")?.minutes)
+        assertEquals(LocalTime.of(9, 15), Moves.asked("how is nifty doing since the open")?.since)
+        assertEquals(LocalTime.of(11, 0), Moves.asked("how much has nifty moved since 11")?.since)
+        assertEquals(LocalTime.of(14, 30), Moves.asked("nifty move since 2:30")?.since)
+        assertNull(Moves.asked("what are the levels on nifty"))
+    }
+
+    @Test fun theMoveIsWorkedOut() {
+        val s = Moves.say(Market.NIFTY, bars, Moves.Window(minutes = 60, label = "in the last hour"))!!
+        assertTrue(s.startsWith("Nifty rose 61.00 points in the last hour"), s)
+        assertTrue("from 24,239.00 to 24,300.00" in s, s)
+        assertNull(Moves.say(Market.NIFTY, bars, Moves.Window(since = LocalTime.of(15, 0), label = "since 15:00")), "nothing after the last candle")
+    }
+
+    @Test fun marketsAreCompared() {
+        assertTrue(Compare.asked("is banknifty stronger than nifty"))
+        assertTrue(Compare.asked("nifty vs sensex"))
+        assertFalse(Compare.asked("how is nifty"))
+        fun snap(m: Market, pc: Double, price: Double) = Snapshot(m, day.atTime(15, 29), false, price, pc, price, price, price, null, null, emptyList(), null, null, emptyList(), emptyList(), emptyList())
+        val s = Compare.say(listOf(Market.NIFTY, Market.BANKNIFTY), mapOf(Market.NIFTY to snap(Market.NIFTY, 24_000.0, 24_100.0), Market.BANKNIFTY to snap(Market.BANKNIFTY, 52_000.0, 51_900.0)))!!
+        assertTrue(s.startsWith("Nifty is the stronger today: Nifty +0.42%, BankNifty -0.19%."), s)
+    }
+
+    @Test fun theExpectedRangeComesFromVix() {
+        assertTrue(ExpectedRange.asked("what is the expected range for nifty today"))
+        assertTrue(ExpectedRange.asked("how far can banknifty move today"))
+        assertFalse(ExpectedRange.asked("how is nifty"))
+        assertEquals(24_000 * 0.16 / Math.sqrt(252.0), ExpectedRange.points(24_000.0, 16.0), 0.001)
+        assertEquals(ExpectedRange.points(24_000.0, 16.0) / 2, ExpectedRange.points(24_000.0, 16.0, 375 / 4), 0.5)
+        val snap = Snapshot(Market.NIFTY, day.atTime(12, 0), true, 24_000.0, 23_900.0, 24_000.0, 24_000.0, 24_000.0, null, null, emptyList(), null, null, emptyList(), emptyList(), emptyList())
+        val s = ExpectedRange.say(snap, 16.0, LocalDateTime.of(day, LocalTime.of(12, 0)))
+        assertNotNull(s); assertTrue("for the rest of today" in s, s)
+    }
+}
