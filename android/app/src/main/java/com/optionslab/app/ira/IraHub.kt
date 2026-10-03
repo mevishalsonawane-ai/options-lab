@@ -1000,7 +1000,6 @@ object IraHub {
             }
         // Boss's own market questions are counted by the hour (for "the usual"), off the main thread.
         if (!understood) scope.launch { IraTools.noteHabit(q) }
-        if (Topic.OFF_TOPIC in parsed.topics && !com.optionslab.ira.SinceLast.asked(q)) IraTools.count("misunderstood")
         if (Topic.BACKTEST in parsed.topics) { backtestAsked(q, parsed); return }
         if (Topic.ACCOUNT in parsed.topics) { accountAsked(q); return }
         if (Topic.COMMAND in parsed.topics) { commandAsked(q, parsed.command!!, confirmAlways = understood); return }
@@ -1023,6 +1022,8 @@ object IraHub {
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said, listOf(text))).takeLast(MAX_MESSAGES)) }
             return
         }
+        // Not understood (counted only now: a briefing or "what changed" was answered by the reasoning above).
+        if (Topic.OFF_TOPIC in parsed.topics) IraTools.count("misunderstood")
         // JarvisAlgo, words Jarvis does not know: the model maps them to one line of a fixed list (never an order).
         if (parsed.topics == setOf(Topic.OFF_TOPIC) && com.optionslab.app.BuildConfig.JARVIS && IraModel.usable() && !understood) { freeFormAsked(q); return }
         // JarvisAlgo without the model: a varied "I don't know that" instead of the same line every time.
