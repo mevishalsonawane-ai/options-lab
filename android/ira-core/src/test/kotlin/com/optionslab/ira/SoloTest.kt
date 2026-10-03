@@ -147,7 +147,7 @@ class SoloLockTest {
         val d = LocalDate.of(2026, 10, 1)
         fun bar(m: Int, h: Double, l: Double) = Candle(d.atTime(9, 15).plusMinutes(m.toLong()), l, h, l, h)
         val s = Solo.Signal(true, 50, 24_050.0, 24_000.0, 24_150.0, 30, "")      // target 100 points away
-        val r = Solo.Rules(ladder = listOf(0.75 to 0.0))
+        val r = Solo.Rules(profitLock = true, ladder = listOf(0.75 to 0.0))
         assertNull(Solo.lock(s, 70.0, r.ladder), "under three quarters: no lock")
         assertEquals(24_050.0, Solo.lock(s, 75.0, r.ladder)!!, 0.01)
         // Best so far +80: a minute that comes back to the entry is closed by the lock, not left to the stop.

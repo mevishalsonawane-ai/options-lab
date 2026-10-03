@@ -46,7 +46,7 @@ object Solo {
         /** No entry once the day's range so far is this many times a normal day's (null: no such rule). */
         val maxRangeUsed: Double? = null,
         /** The profit lock (Boss's rule, 3 Oct): the app's ladder on the index - see [lock]. */
-        val profitLock: Boolean = true,
+        val profitLock: Boolean = false,
         /** The lock's rungs: (share of the target reached, share of the target locked in). */
         val ladder: List<Pair<Double, Double>> = LADDER,
         /** A stop-loss on the option's premium as a share of the entry (0.25 = out 25% down); null: none. */

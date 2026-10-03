@@ -79,6 +79,10 @@ a resting stop filled at the stop (or the open if it gapped through) -0.5:
 | entry - 0.7 x index risk | +62,639 | -28,405 | +20,797 | +55k |
 
 The app now uses the 30% stop (a real stop-loss order) with the index stop; the profit-lock ladder is off.
+Review (3 Oct): the 30% stop fired on only 10 of 511 trades (5 / 1 / 4); its difference from "none" comes from those ~10
+trades, and 40% scores about the same - so it is insurance against a sharp fall, not an edge. The fill model is
+honest (worst-case fills at the minute's low: +67.9k / -32.9k / +14.1k). Rules.profitLock now defaults to off, so the
+harness variants reproduce the rows above without the lock.
 
 Index edge (R before option costs) is positive in all three files (+0.02 .. +0.21 R), but small; the option's spread,
 costs and decay take about all of it. NIFTY 2025-26 loses with every variant.

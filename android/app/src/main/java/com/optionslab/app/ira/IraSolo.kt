@@ -35,8 +35,9 @@ internal object IraSolo {
      */
     val RULES = Solo.Rules(maxPerDay = 1, recentN = 60, profitLock = false, premiumStop = STOP_LOSS)
     /**
-     * Always a stop-loss on the option itself (Boss's rule, 3 Oct: no ladder), sized by Solo's own study: of the stops
-     * tested on two years (15-40% of the premium, or from the trade's index risk), 30% did best on 2024-25 (see SOLO.md).
+     * Always a stop-loss on the option itself (Boss's rule, 3 Oct: no ladder), sized by Solo's own study: tighter stops
+     * (15-25%) sit inside an option's normal swings and are hit too often; at 30% it fired on only 10 of 511 tested
+     * trades - insurance for a sharp fall, not an edge (40% scored about the same). See SOLO.md.
      */
     const val STOP_LOSS = 0.30
 
@@ -51,7 +52,7 @@ internal object IraSolo {
         "NIFTY Apr 2024-Apr 2025: 186 trades, 40% winners, +Rs 69,393 (1 lot of 75), worst drawdown Rs 13,553.",
         "NIFTY Apr 2025-Apr 2026: 170 trades, 35% winners, -Rs 32,796, worst drawdown Rs 42,351.",
         "BANKNIFTY Feb 2025-Feb 2026: 155 trades, 43% winners, +Rs 14,853 (1 lot of 30), worst drawdown Rs 15,657.",
-        "(Always a 30% stop-loss on the option, and standing aside while its last 60 signals lost.)",
+        "(Always a 30% stop-loss on the option - in the test it fired on only 10 of 511 trades: insurance, not an edge - and standing aside while its last 60 signals lost.)",
     )
 
     var on: Boolean
@@ -96,13 +97,13 @@ internal object IraSolo {
     /** Each market's learned shadow record, worked out once a day from the finished sessions the app holds. */
     private val learned = HashMap<IraMarket, Pair<LocalDate, List<Double>>>()
 
-    private fun learnedFor(m: IraMarket, bars: List<Candle>, today: LocalDate): List<Double> = synchronized(learned) {
-        learned[m]?.takeIf { it.first == today }?.second ?: run {
-            val sessions = bars.filter { it.t.toLocalDate() != today }.groupBy { it.t.toLocalDate() }.toSortedMap().values
-                .map { d -> session(d, d.first().t.toLocalDate(), 375) }.filter { it.size > Solo.CUT }
-            // Kept for the day only once the full look-back is there (the app's stored days may still be loading).
-            Solo.learn(sessions, RULES).also { if (it.size >= (RULES.recentN ?: 0)) learned[m] = today to it }
-        }
+    private fun learnedFor(m: IraMarket, bars: List<Candle>, today: LocalDate): List<Double> {
+        synchronized(learned) { learned[m]?.takeIf { it.first == today }?.second }?.let { return it }
+        // Worked out outside the lock ("how is Solo doing" reads the map from the main thread).
+        val sessions = bars.filter { it.t.toLocalDate() != today }.groupBy { it.t.toLocalDate() }.toSortedMap().values
+            .map { d -> session(d, d.first().t.toLocalDate(), 375) }.filter { it.size > Solo.CUT }
+        // Kept for the day only once the full look-back is there (the app's stored days may still be loading).
+        return Solo.learn(sessions, RULES).also { if (it.size >= (RULES.recentN ?: 0)) synchronized(learned) { learned[m] = today to it } }
     }
 
     /** The average day's range (high - low) over the earlier days the app holds (null: none yet). */
@@ -190,14 +191,15 @@ internal object IraSolo {
         }
         r.orderId?.let { com.optionslab.app.data.Strategies.tagOwner("paper:$it", "Jarvis solo · entry") }
         // Always a stop-loss order on the option (30% below the fill, from Solo's study), besides its index stop.
-        val stopPx = fill.price * (1 - STOP_LOSS)
+        // On the 0.05 tick, below the fill (as the order is placed).
+        val stopPx = kotlin.math.floor(fill.price * (1 - STOP_LOSS) / 0.05) * 0.05
         val prot = com.optionslab.app.data.Protections.protectPaper(c.symbol, "MIS", fill.quantity, fill.price, stopPx, null, null)
         if (!prot.startsWith("Protected")) IraActivity.add("Solo: the stop-loss on ${c.symbol} was not set ($prot); Solo's own exit still watches it.")
         val t = T(today.toString(), u, c.symbol, sig.call, fill.quantity, fill.price, sig.entryMinute, sig.index, sig.level, sig.target, sig.why)
         save(list + t)
         val line = "Solo (paper): bought ${c.symbol} at ${"%.2f".format(fill.price)}. Why: ${sig.why}. Out if ${m.label} " +
             "${if (sig.call) "falls to" else "rises to"} ${"%,.0f".format(sig.level)}; target ${"%,.0f".format(sig.target)}; 15:10 at the latest. " +
-            "Stop-loss on the option at ${"%.2f".format(fill.price * (1 - STOP_LOSS))} (30% down)." +
+            "Stop-loss on the option at ${"%.2f".format(kotlin.math.floor(fill.price * (1 - STOP_LOSS) / 0.05) * 0.05)} (30% down)." +
             (if (read.isNotEmpty()) " My read: $read" else "")
         tell(line)
         IraHub.appContext()?.let { com.optionslab.app.work.Notifier.orderFilled(it, "BUY", fill.quantity, c.symbol, fill.price, "Paper", "Jarvis solo") }
@@ -211,7 +213,13 @@ internal object IraSolo {
             // sell is seen (settled overnight), it is counted at the safety stop - the worst it could have been.
             val sold = if (t.day == today.toString())
                 runCatching { Paper.snapshot().trades.firstOrNull { it.symbol == t.symbol && it.action == "SELL" }?.price }.getOrNull() else null
-            finish(t, list, sold ?: t.entry * (1 - STOP_LOSS), if (sold != null) "closed by its stop-loss or the square-off" else "closed while the app was away (counted at its stop-loss)")
+            // Closed by its stop-loss: reviewed like any other exit.
+            val byStop = sold != null && sold <= t.entry * (1 - STOP_LOSS) + 0.1
+            val lesson = if (!byStop) null else runCatching {
+                val day = session(IraHub.freshBars(m), today, now)
+                Solo.review(Solo.Signal(t.call, t.entryMinute, t.index, t.level, t.target, 0, t.why), day, day.lastIndex, Solo.Exit.PREMIUM_STOP, t.entry, sold, m.label)
+            }.getOrNull()
+            finish(t, list, sold ?: t.entry * (1 - STOP_LOSS), if (byStop) "stop-loss on the option" else if (sold != null) "closed by the square-off" else "closed while the app was away (counted at its stop-loss)", lesson)
             return
         }
         val day = session(IraHub.freshBars(m), today, now)
