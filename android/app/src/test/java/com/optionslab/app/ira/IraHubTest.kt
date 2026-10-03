@@ -528,7 +528,8 @@ class IraHubTest : RobolectricTest() {
         IraHub.confirm(id)
         assertEquals(5, com.optionslab.app.data.AppSettings.load().guardMaxLots)
         IraHub.ask("change my PIN to 1234")
-        waitFor("the refusal") { IraHub.state.value.messages.last().let { it.fromIra && it.text.contains("only in Settings") } }
+        // The refusal anywhere after the question (a late reply from an earlier test may land after it).
+        waitFor("the refusal") { IraHub.state.value.messages.let { ms -> ms.drop(ms.indexOfLast { !it.fromIra } + 1).any { it.fromIra && it.text.contains("only in Settings") } } }
         assertTrue(IraHub.state.value.pending.isEmpty())
         com.optionslab.app.data.AppSettings.save(com.optionslab.app.data.AppSettings.load().copy(guardMaxLots = before.guardMaxLots))
     }
