@@ -84,7 +84,10 @@ object Ask {
         // "Where is BankNifty trading?" asks the price, not where something is in the app.
         val priceAsk = Market.mentioned(text).isNotEmpty() && Regex("^ (where is|where s|wheres|where) ").containsMatchIn(t) &&
             !Regex(" (my|mine|our|order|orders|position|positions|chain|page|tab|screen|see|find|do i|can i) ").containsMatchIn(t)
-        val account = !priceAsk && (ACCOUNT.containsMatchIn(t) || AppAnswers.about(t) && placed?.lots == null)
+        // "Yesterday's high on Nifty": the market's own figures, not the owner's history.
+        val marketFigure = Market.mentioned(text).isNotEmpty() && !Regex(" (my|mine|our|i|me) ").containsMatchIn(t) &&
+            Regex(" (high|low|close|closing|open|opening|price|level|levels|range) ").containsMatchIn(t)
+        val account = !priceAsk && !marketFigure && (ACCOUNT.containsMatchIn(t) || AppAnswers.about(t) && placed?.lots == null)
         val order = if (account) null else placed
         // "Levels on all indices", "how are all the markets": the four indices.
         val markets = Market.mentioned(text).ifEmpty { if (ALL_INDICES.containsMatchIn(t)) Reasoning.INDICES else emptyList() }

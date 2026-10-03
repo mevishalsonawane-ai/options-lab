@@ -968,19 +968,19 @@ object IraHub {
             scope.launch { reply(runCatching { tradeCheckFast().say() }.getOrElse { "I could not run the trade check just now." }) }
             return
         }
+        // Reasoning over the data on the phone: a move over a stretch of time, which market is stronger, the expected range.
+        // (Not for an advice question: the usual answer says Jarvis gives no buy or sell advice.)
+        if (parsed.order == null && parsed.command == null && Topic.ADVICE !in parsed.topics) runCatching { reasoned(q, parsed) }.getOrNull()?.let { text ->
+            val said = offlineNote()?.let { "$it $text" } ?: text
+            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said, listOf(text))).takeLast(MAX_MESSAGES)) }
+            return
+        }
         // JarvisAlgo, words Jarvis does not know: the model maps them to one line of a fixed list (never an order).
         if (parsed.topics == setOf(Topic.OFF_TOPIC) && com.optionslab.app.BuildConfig.JARVIS && IraModel.usable() && !understood) { freeFormAsked(q); return }
         // JarvisAlgo without the model: a varied "I don't know that" instead of the same line every time.
         if (parsed.topics == setOf(Topic.OFF_TOPIC) && com.optionslab.app.BuildConfig.JARVIS) {
             val said = if (com.optionslab.ira.Chat.personal(q)) com.optionslab.ira.Chat.aboutMe(chatTurn.getAndIncrement()) else com.optionslab.ira.Chat.fallback(chatTurn.getAndIncrement())
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
-            return
-        }
-        // Reasoning over the data on the phone: a move over a stretch of time, which market is stronger, the expected range.
-        // (Not for an advice question: the usual answer says Jarvis gives no buy or sell advice.)
-        if (parsed.order == null && parsed.command == null && Topic.ADVICE !in parsed.topics) runCatching { reasoned(q, parsed) }.getOrNull()?.let { text ->
-            val said = offlineNote()?.let { "$it $text" } ?: text
-            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said, listOf(text))).takeLast(MAX_MESSAGES)) }
             return
         }
         // JarvisAlgo: a complete order is placed at once (the owner's rule); IraAlgo keeps the review.
