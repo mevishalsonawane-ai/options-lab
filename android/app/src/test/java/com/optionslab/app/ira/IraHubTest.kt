@@ -627,7 +627,7 @@ class IraHubTest : RobolectricTest() {
     }
 
     @Test fun coachDefaultsAndAnswers() = runBlocking {
-        assertTrue("trailing is automatic by default", IraCoach.autoTrail)
+        assertTrue("trailing stops is off until the owner switches it on (it moves live stop orders)", !IraCoach.autoTrail)
         assertEquals(0f, IraHub.caution(), 0f)
         val v = IraAccount.read(setOf(com.optionslab.ira.Section.EXPLAIN_POS))
         assertTrue(v.toString(), v!!.lines[com.optionslab.ira.Section.EXPLAIN_POS]!!.isNotEmpty())
