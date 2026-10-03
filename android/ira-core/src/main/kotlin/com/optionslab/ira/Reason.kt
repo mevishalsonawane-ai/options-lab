@@ -23,7 +23,8 @@ object Moves {
 
     fun asked(text: String, open: LocalTime = LocalTime.of(9, 15)): Window? {
         val t = norm(text)
-        if (!MOVE.containsMatchIn(t)) return null
+        // "Nifty last 30 minutes", "BankNifty since open": a market named is enough without a verb.
+        if (!MOVE.containsMatchIn(t) && Market.mentioned(text).isEmpty()) return null
         Regex(" (last|past) (\\d{1,3}) (minutes|minute|mins|min) ").find(t)?.let { val m = it.groupValues[2].toInt(); if (m in 1..375) return Window(minutes = m, label = "in the last $m minutes") }
         Regex(" (last|past) (\\d) (hours|hour|hrs|hr) ").find(t)?.let { val h = it.groupValues[2].toInt(); if (h in 1..6) return Window(minutes = h * 60, label = "in the last $h hour${if (h > 1) "s" else ""}") }
         if (Regex(" (last|past|in the last|in an|in the past) (hour|one hour|1 hour) ").containsMatchIn(t)) return Window(minutes = 60, label = "in the last hour")
@@ -92,7 +93,7 @@ object Compare {
  * About two days in three stay inside it. Pure.
  */
 object ExpectedRange {
-    private val ASK = Regex(" (expected|likely|possible|probable|implied) (range|move|movement|swing) | (how far|how much) (can|could|will|might) [a-z ]{0,20}(go|move|swing) ")
+    private val ASK = Regex(" (expected|likely|possible|probable|implied) (range|move|movement|swing) | (how far|how much) (can|could|will|might) [a-z ]{0,20}(go|move|swing|fall|drop|rise|climb) ")
 
     fun asked(text: String): Boolean = ASK.containsMatchIn(norm(text))
 
@@ -255,7 +256,9 @@ object Lookback {
     /** A time of day asked about ("at 11", "at 2:30 pm"), with a past-tense word so "alert me at 25000" is not taken. */
     fun time(text: String): LocalTime? {
         val t = norm(text)
-        if (!Regex(" (was|were|where was|what was|how was|at what price|price at|level at) ").containsMatchIn(t)) return null
+        // A past-tense word, or a market named with a clock time ("Nifty at 11:30", "BankNifty at 2 pm").
+        val clock = Regex(" at \\d{1,2}(:\\d{2}| ?(am|pm)) ").containsMatchIn(" " + text.lowercase().replace(Regex("\\s+"), " ") + " ")
+        if (!Regex(" (was|were|where was|what was|how was|at what price|price at|level at) ").containsMatchIn(t) && !(clock && Market.mentioned(text).isNotEmpty())) return null
         val m = Regex(" at (\\d{1,2})(?::|\\.| )?(\\d{2})? ?(am|pm)? ").find(t) ?: return null
         var h = m.groupValues[1].toInt(); val mi = m.groupValues[2].toIntOrNull() ?: 0
         val ap = m.groupValues[3]
@@ -343,7 +346,7 @@ object Momentum {
  * and never advice. Pure.
  */
 object Odds {
-    private val ASK = Regex(" (chance|chances|probability|odds|likely|likelihood) [a-z ]{0,40}?(close|closes|closing|end|ends|finish|finishes|stay|stays|be|go|goes|settle|settles) (above|over|below|under) (\\d{2,6}(?:\\.\\d+)?) ")
+    private val ASK = Regex(" (chance|chances|probability|odds|likely|likelihood|will|would|can|could) [a-z ]{0,40}?(close|closes|closing|end|ends|finish|finishes|stay|stays|be|settle|settles) (above|over|below|under) (\\d{2,6}(?:\\.\\d+)?) ")
 
     data class Ask(val above: Boolean, val level: Double)
 
@@ -524,5 +527,44 @@ object Payoff {
             " Bought at ${n(p)}, that is ${pts(r)} per unit (multiply by the lot size for rupees); it breaks even at ${n(be)}."
         } ?: ""
         return base + pl
+    }
+}
+
+/**
+ * An option's quote (Jarvis self-improvement, 2026-10-03): "what is the premium of 24500 CE", "BankNifty 52000 put
+ * price", "Nifty 24500 PE LTP" - from the option chain the app reads: the last price, bid and ask, open interest, and how
+ * much of the price is intrinsic value and how much time value. Pure (the chain is read by the app).
+ */
+object OptionQuote {
+    data class Ask(val strike: Double, val call: Boolean)
+
+    private val QUOTE = Regex(" (premium|price|prices|ltp|last price|quote|rate|trading at|trading|kitne ka|kitna hai|worth now|value now|bid|ask|how much is|what is|what s|whats) ")
+
+    fun asked(text: String): Ask? {
+        val t = norm(text.replace(",", ""))
+        // Not an order, not a payoff sum, not an alarm.
+        if (Regex(" (buy|sell|lot|lots|bought|sold|alert|alarm|remind|expiry|expires) ").containsMatchIn(t) || Payoff.asked(text) != null) return null
+        val m = Regex(" (\\d{4,6}) ?(ce|pe|call|put) ").find(t) ?: return null
+        val short = t.trim().split(" ").size <= 4                                  // "nifty 24500 ce" on its own
+        if (!short && !QUOTE.containsMatchIn(t)) return null
+        return Ask(m.groupValues[1].toDouble(), m.groupValues[2] == "ce" || m.groupValues[2] == "call")
+    }
+
+    fun say(chain: com.optionslab.engine.options.ChainSnapshot, a: Ask, label: String): String? {
+        val row = chain.rows.firstOrNull { abs(it.strike - a.strike) < 0.01 } ?: return null
+        val leg = (if (a.call) row.ce else row.pe) ?: return null
+        val name = "$label ${n(a.strike).removeSuffix(".00")} ${if (a.call) "CE" else "PE"} (expiry ${chain.expiry})"
+        val intrinsic = if (a.call) maxOf(0.0, chain.spot - a.strike) else maxOf(0.0, a.strike - chain.spot)
+        val time = maxOf(0.0, leg.ltp - intrinsic)
+        val ba = if (leg.bid != null && leg.ask != null) ", bid ${n(leg.bid!!)} / ask ${n(leg.ask!!)}" else ""
+        val oi = if (leg.oi > 0) ", open interest %,d".format(Locale.ENGLISH, leg.oi) else ""
+        val split = if (intrinsic > 0) " Of that, ${n(intrinsic)} is intrinsic (in the money) and ${n(time)} is time value." else " It is out of the money: all ${n(leg.ltp)} is time value."
+        return "$name: last ${n(leg.ltp)}$ba$oi, with $label at ${n(chain.spot)}.$split"
+    }
+
+    /** Strikes near [a] on the chain, when the one asked is not there. */
+    fun near(chain: com.optionslab.engine.options.ChainSnapshot, a: Ask): String {
+        val near = chain.rows.map { it.strike }.sortedBy { abs(it - a.strike) }.take(3).sorted()
+        return "I don't have the ${n(a.strike).removeSuffix(".00")} on the chain I read; the nearest strikes are ${near.joinToString(", ") { n(it).removeSuffix(".00") }}."
     }
 }

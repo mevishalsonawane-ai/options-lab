@@ -18,7 +18,7 @@ enum class Market(val label: String, val unit: String, val open: LocalTime?, val
     NIFTY("Nifty", "", LocalTime.of(9, 15), LocalTime.of(15, 30), listOf("nifty", "nifty 50", "nifty50", "nf", "nifti", "nifty fifty", "nifty fifty index", "nifty 50 index")),
     BANKNIFTY("BankNifty", "", LocalTime.of(9, 15), LocalTime.of(15, 30), listOf("banknifty", "bank nifty", "bnf", "bank", "nifty bank", "nifti bank", "bank nifti", "bang nifty", "bankniftee")),
     FINNIFTY("FinNifty", "", LocalTime.of(9, 15), LocalTime.of(15, 30), listOf("finnifty", "fin nifty", "finnity", "fin", "finn nifty", "fin nifti", "nifty fin", "nifty financial services", "fin niftee")),
-    SENSEX("Sensex", "", LocalTime.of(9, 15), LocalTime.of(15, 30), listOf("sensex", "bse", "sense x", "sensecs", "sensex 30", "sen sex")),
+    SENSEX("Sensex", "", LocalTime.of(9, 15), LocalTime.of(15, 30), listOf("sensex", "bse", "sense x", "sensecs", "senseks", "sensexx", "sensex 30", "sen sex")),
     VIX("India VIX", "", LocalTime.of(9, 15), LocalTime.of(15, 30), listOf("vix", "india vix", "volatility index", "fear")),
     GOLD("Gold", "$", null, null, listOf("gold", "xau", "xauusd", "bullion"));
 

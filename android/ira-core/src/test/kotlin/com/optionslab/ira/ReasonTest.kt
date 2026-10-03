@@ -354,3 +354,37 @@ class CommandPhrasingTest {
         assertEquals(Command.Kind.TARGET_SET, k("target 3000 today"))
     }
 }
+
+class OptionQuoteTest {
+    @Test fun aQuoteIsRead() {
+        assertEquals(OptionQuote.Ask(24_500.0, true), OptionQuote.asked("what is the premium of 24500 ce"))
+        assertEquals(OptionQuote.Ask(52_000.0, false), OptionQuote.asked("banknifty 52000 put price"))
+        assertEquals(OptionQuote.Ask(24_500.0, false), OptionQuote.asked("nifty 24500 pe"))
+        assertNull(OptionQuote.asked("buy 1 lot nifty 24500 ce"))
+        assertNull(OptionQuote.asked("what is a 24800 call worth if nifty is at 25000 at expiry"))
+        assertNull(OptionQuote.asked("alert me when 24500 ce goes above 200"))
+        val legs = listOf(24_400.0, 24_500.0, 24_600.0).map { k ->
+            com.optionslab.engine.options.ChainRow(k, com.optionslab.engine.options.OptLeg("C$k", 120.0, bid = 119.5, ask = 120.5, oi = 150_000),
+                com.optionslab.engine.options.OptLeg("P$k", 80.0)) }
+        val chain = com.optionslab.engine.options.ChainSnapshot.of("NIFTY", java.time.LocalDate.of(2026, 10, 6), 24_550.0, 75, legs,
+            java.time.ZonedDateTime.of(2026, 10, 1, 12, 0, 0, 0, java.time.ZoneId.of("Asia/Kolkata")))
+        val q = OptionQuote.say(chain, OptionQuote.Ask(24_500.0, true), "Nifty")!!
+        assertTrue(q.startsWith("Nifty 24,500 CE (expiry 2026-10-06): last 120.00, bid 119.50 / ask 120.50, open interest 150,000"), q)
+        assertTrue("50.00 is intrinsic" in q && "70.00 is time value" in q, q)
+        assertTrue(OptionQuote.say(chain, OptionQuote.Ask(24_600.0, true), "Nifty")!!.contains("out of the money"))
+        assertTrue(OptionQuote.near(chain, OptionQuote.Ask(25_000.0, true)).contains("24,600"))
+    }
+}
+
+class AuditGapsTest {
+    @Test fun shorterWaysOfAsking() {
+        assertEquals(30, Moves.asked("nifty last 30 minutes")?.minutes)
+        assertEquals(LocalTime.of(9, 15), Moves.asked("banknifty since open")?.since)
+        assertNull(Moves.asked("last 30 minutes"))
+        assertEquals(LocalTime.of(11, 30), Lookback.time("nifty at 11:30"))
+        assertNull(Lookback.time("alert me at 11:30"))
+        assertTrue(ExpectedRange.asked("how much can nifty fall today"))
+        assertEquals(true, Odds.asked("will nifty close above 25000")?.above)
+        assertEquals(listOf(Market.SENSEX), Ask.parse("senseks today").markets)
+    }
+}

@@ -58,6 +58,9 @@ object Ask {
     fun parse(said: String): Question {
         val q = parseAs(said)
         if (q.topics == setOf(Topic.OFF_TOPIC)) Spelling.fix(said).takeIf { it != said }?.let { return parseAs(it) }
+        // "Senseks today": no market heard - read again with near-miss words fixed when that finds one (questions only).
+        if (q.markets.isEmpty() && q.command == null && q.order == null)
+            Spelling.fix(said).takeIf { it != said }?.let { f -> parseAs(f).takeIf { it.markets.isNotEmpty() && it.command == null && it.order == null }?.let { return it } }
         return q
     }
 

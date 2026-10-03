@@ -974,6 +974,22 @@ object IraHub {
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, text)).takeLast(MAX_MESSAGES)) }
             return
         }
+        // "What is the premium of 24500 CE": the option chain read now (8 seconds at most) - never an order.
+        if (parsed.order == null && parsed.command == null && !Regex("(?i)\\b(my|mine)\\b").containsMatchIn(q))
+            runCatching { com.optionslab.ira.OptionQuote.asked(parsed.text.ifBlank { q }) }.getOrNull()?.let { oq ->
+                val m = parsed.markets.firstOrNull { it in LIVE.keys && it != IraMarket.VIX && it != IraMarket.GOLD } ?: IraMarket.NIFTY
+                _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+                scope.launch {
+                    val text = if (!online()) "I'm offline, Boss: option prices need the internet." else {
+                        val read = scope.async { runCatching { IraAccount.chain(LIVE.getValue(m)) }.getOrNull() }
+                        val ch = kotlinx.coroutines.withTimeoutOrNull(8_000) { read.await() }
+                        if (ch == null) "I couldn't read the ${m.label} option chain just now, Boss."
+                        else com.optionslab.ira.OptionQuote.say(ch, oq, m.label) ?: com.optionslab.ira.OptionQuote.near(ch, oq)
+                    }
+                    reply(text)
+                }
+                return
+            }
         // Boss's own market questions are counted by the hour (for "the usual"), off the main thread.
         if (!understood) scope.launch { IraTools.noteHabit(q) }
         if (Topic.OFF_TOPIC in parsed.topics) IraTools.count("misunderstood")
