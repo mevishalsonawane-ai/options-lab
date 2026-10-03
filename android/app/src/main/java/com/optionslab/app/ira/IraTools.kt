@@ -68,6 +68,24 @@ internal object IraTools {
 
     fun forgetLearned() { prefs().put(LEARNED, null); awaiting = null }
 
+    // ---- Boss's habits ----------------------------------------------------------------------------------------------
+
+    private const val HABITS = "jarvis.habits"
+
+    fun habits(): com.optionslab.ira.HabitCounts = runCatching {
+        val o = JSONObject(prefs().getString(HABITS) ?: "{}")
+        o.keys().asSequence().associateWith { k -> val a = o.getJSONArray(k); IntArray(24) { a.optInt(it) } }
+    }.getOrDefault(emptyMap())
+
+    /** A market question Boss asked, counted at this hour (nothing else is counted). */
+    @Synchronized fun noteHabit(question: String) {
+        runCatching {
+            val k = com.optionslab.ira.Habits.key(question) ?: return
+            val c = com.optionslab.ira.Habits.add(habits(), k, LocalDateTime.now(IST).hour)
+            prefs().put(HABITS, JSONObject().apply { c.forEach { (key, row) -> put(key, JSONArray(row.toList())) } }.toString())
+        }
+    }
+
     // ---- the day's usage -----------------------------------------------------------------------------------------
 
     private fun dayKey() = "jarvis.usage.${com.optionslab.app.data.Market.today()}"

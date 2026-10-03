@@ -915,6 +915,19 @@ object IraHub {
                 _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
                 return
             }
+        // "The usual": the market question Boss asks most around this hour.
+        if (!understood && com.optionslab.ira.Habits.asked(q)) {
+            val usual = runCatching { com.optionslab.ira.Habits.usual(IraTools.habits(), LocalDateTime.now(IST).hour)?.let { com.optionslab.ira.Habits.question(it) } }.getOrNull()
+            if (usual == null) {
+                _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, "I don't know your usual yet, Boss. Ask me a few times and I'll learn it.")).takeLast(MAX_MESSAGES)) }
+                return
+            }
+            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, "$TOOK_AS\"$usual\".")).takeLast(MAX_MESSAGES)) }
+            ask(usual, understood = true)
+            return
+        }
+        // Boss's own market questions are counted by the hour (for "the usual"), off the main thread.
+        if (!understood) scope.launch { IraTools.noteHabit(q) }
         // Everyday words for the commonest requests ("pause all bots", "am I up today"): read at once by fixed rules,
         // then asked as that line - an action waits for Confirm, as when the model picks it.
         // ("Halt the algos" reads as stopping one strategy named "the algos": the everyday reading wins there.)

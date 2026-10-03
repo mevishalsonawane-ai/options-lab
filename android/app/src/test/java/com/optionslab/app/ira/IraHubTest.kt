@@ -173,6 +173,14 @@ class IraHubTest : RobolectricTest() {
         IraHub.state.value.pending.forEach { IraHub.cancelAction(it) }
     }
 
+    @Test fun theUsualIsLearned() = runBlocking {
+        IraHub.ask("the usual")
+        waitFor("not known yet") { IraHub.state.value.messages.lastOrNull()?.text?.startsWith("I don't know your usual yet") == true }
+        repeat(3) { IraTools.noteHabit("what are the levels on banknifty") }
+        IraHub.ask("my usual")
+        waitFor("asked as the usual") { IraHub.state.value.messages.any { it.text == "I took that as: \"what are the levels on BankNifty\"." } }
+    }
+
     @Test fun aTradingWordIsExplained() = runBlocking {
         IraHub.ask("what is theta")
         waitFor("explained") { IraHub.state.value.messages.lastOrNull()?.let { it.fromIra && it.text.startsWith("Theta") } == true }
