@@ -44,6 +44,11 @@ averaged >= 0, one trade a day:
 
 Every N improves NIFTY 25-26 and BANKNIFTY; NIFTY 25-26 still loses. The app now uses N = 60.
 
+Room left (3 Oct, on top of N = 60): no entry once the day's range is already k x the 20-day average range.
+k 0.8: +18,754 / -29,520 / +8,343; k 1.0: +30,293 / -24,143 / +15,489; k 1.2: +25,358 / -23,936 / +13,951.
+It narrows the losing year and cuts drawdowns, but halves the 2024-25 profit (the year rules are chosen on), so it is
+NOT used (kept in the code as an off-by-default rule).
+
 Index edge (R before option costs) is positive in all three files (+0.02 .. +0.21 R), but small; the option's spread,
 costs and decay take about all of it. NIFTY 2025-26 loses with every variant.
 

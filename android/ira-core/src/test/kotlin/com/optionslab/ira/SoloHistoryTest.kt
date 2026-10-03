@@ -64,6 +64,9 @@ class SoloHistoryTest {
                 "learn20" -> Solo.Rules(maxPerDay = 1, recentN = 20)
                 "learn40" -> Solo.Rules(maxPerDay = 1, recentN = 40)
                 "learn60" -> Solo.Rules(maxPerDay = 1, recentN = 60)
+                "room08" -> Solo.Rules(maxPerDay = 1, recentN = 60, maxRangeUsed = 0.8)
+                "room10" -> Solo.Rules(maxPerDay = 1, recentN = 60, maxRangeUsed = 1.0)
+                "room12" -> Solo.Rules(maxPerDay = 1, recentN = 60, maxRangeUsed = 1.2)
                 "learn40b" -> Solo.Rules(maxPerDay = 1, recentN = 40, recentMinR = 0.1)
                 else -> error(v)
             }

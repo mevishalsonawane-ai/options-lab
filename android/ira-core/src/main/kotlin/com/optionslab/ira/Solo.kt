@@ -43,6 +43,8 @@ object Solo {
         /** Learning: trade only while the setup's last [recentN] signals (index result, before costs) averaged at least [recentMinR]; null: always. */
         val recentN: Int? = null,
         val recentMinR: Double = 0.0,
+        /** No entry once the day's range so far is this many times a normal day's (null: no such rule). */
+        val maxRangeUsed: Double? = null,
     )
 
     /** A trade to take at minute [entryMinute] (the next minute's price). [level]: the stop; [target]: the index target. */
@@ -199,6 +201,14 @@ object Solo {
         return recent.takeLast(n).average() >= r.recentMinR
     }
 
+    /** Whether the day still has room to move: its range up to minute [now] under [Rules.maxRangeUsed] x [typical]. */
+    fun roomLeft(day: List<Candle>, now: Int, typical: Double?, r: Rules): Boolean {
+        val k = r.maxRangeUsed ?: return true
+        if (typical == null || typical <= 0 || now < 0) return true
+        val part = day.subList(0, minOf(now + 1, day.size))
+        return part.maxOf { it.h } - part.minOf { it.l } < k * typical
+    }
+
     /** The day's risk book: whether a new trade may be taken. */
     data class Day(val trades: Int = 0, val losses: Int = 0, val pnl: Double = 0.0) {
         fun canTrade(r: Rules, lossLimit: Double): String? = when {
@@ -251,6 +261,7 @@ object Solo {
         val earlier = ArrayDeque<List<Candle>>()           // the last 20 days' 15-minute candles
         val out = ArrayList<Trade>()
         val learned = ArrayList<Double>()                   // the setup's shadow results on earlier days
+        val ranges = ArrayDeque<Double>()                   // earlier days' ranges (high - low)
         var n = 0
         for (d in days) {
             n++
@@ -263,6 +274,7 @@ object Solo {
                     if (book.canTrade(r, lossLimit) != null) break
                     val s = signal(d.index, m, big, busy, r)
                     if (s == null) { m++; continue }
+                    if (!roomLeft(d.index, s.entryMinute - 1, ranges.takeIf { it.isNotEmpty() }?.average(), r)) { m++; continue }
                     // The last hour of an expiry: no new option bought (it decays to nothing).
                     if (d.date == d.expiry && s.entryMinute >= 315) break
                     // The wanted strike, or (when the data does not hold it) the nearest one it holds on that side.
@@ -293,6 +305,7 @@ object Solo {
                 }
             }
             if (big != null && r.recentN != null && d.index.size > CUT) learned += shadow(d.index, big, r)
+            ranges.addLast(d.index.maxOf { it.h } - d.index.minOf { it.l }); if (ranges.size > 20) ranges.removeFirst()
             earlier.addLast(fifteen(d.index))
             if (earlier.size > 20) earlier.removeFirst()
         }
