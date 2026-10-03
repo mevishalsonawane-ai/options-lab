@@ -1043,6 +1043,10 @@ object IraHub {
         else emptyList()
         val a = if (ev.isEmpty()) a2 else a2.copy(text = a2.text + " " + ev.joinToString(" "), facts = a2.facts + ev)
         // JarvisAlgo with the model ready: the answer shows at once, then the model rewrites it in place if it passes the checks.
+        // When Boss asked about each market, and its price then (for "what changed since I last asked").
+        if (parsed.topics.any { it in MARKET_TOPICS }) (parsed.markets.ifEmpty { listOf(IraMarket.NIFTY) }).forEach { mk ->
+            _state.value.snaps[mk]?.let { sn -> synchronized(askedAt) { askedAt[mk] = sn.price to sn.at } }
+        }
         val write = IraModel.usable() && com.optionslab.ira.Writer.worthRewriting(parsed, a)
         val msg = Msg(true, a.text, a.facts, a.order, writing = write)
         _state.update { it.copy(messages = (it.messages + Msg(false, q) + msg).takeLast(MAX_MESSAGES)) }
@@ -1187,6 +1191,13 @@ object IraHub {
             val v = st.snaps[IraMarket.VIX]?.price ?: return null
             return com.optionslab.ira.VixRank.say(histories[IraMarket.VIX]?.bars ?: return null, v)
         }
+        if (com.optionslab.ira.SinceLast.asked(q)) {
+            val mk = parsed.markets.firstOrNull() ?: synchronized(askedAt) { askedAt.keys.firstOrNull() } ?: IraMarket.NIFTY
+            val (then, at) = synchronized(askedAt) { askedAt[mk] } ?: return "I haven't told you about ${mk.label} yet today, Boss - ask me how it is first."
+            val nowSnap = st.snaps[mk] ?: return null
+            synchronized(askedAt) { askedAt[mk] = nowSnap.price to nowSnap.at }
+            return com.optionslab.ira.SinceLast.say(mk, then, at, nowSnap)
+        }
         if (com.optionslab.ira.Briefing.asked(q)) {
             val today = com.optionslab.app.data.Market.today()
             val ev = runCatching { IraEvents.upcoming(1).filter { it.day == today }.map { com.optionslab.ira.Events.line(it, today) } }.getOrNull().orEmpty()
@@ -1238,6 +1249,9 @@ object IraHub {
 
     /** How [m]'s day went, from the candles on the phone (for the 15:35 wrap-up), or null. */
     fun dayStory(m: IraMarket): String? = runCatching { com.optionslab.ira.DayStory.say(m, histories[m]?.bars ?: return null) }.getOrNull()
+
+    /** Each market's price and time when Boss last asked about it. */
+    private val askedAt = LinkedHashMap<IraMarket, Pair<Double, LocalDateTime>>()
 
     /** When Boss last asked something: a follow-up carries the last question over only within [FOLLOW_MS]. */
     @Volatile private var lastAskAt = 0L

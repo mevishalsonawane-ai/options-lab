@@ -642,3 +642,18 @@ object BigPicture {
         return parts.joinToString(" ")
     }
 }
+
+/** "What changed since I last asked?" (Jarvis self-improvement, 2026-10-03). Pure: the app keeps when Boss last asked. */
+object SinceLast {
+    private val ASK = Regex("^ (what s changed|whats changed|what changed|what has changed|anything changed|any change|anything new since|what s different|whats different|since i last asked|since last time|update since last time)( since (i last asked|last time|then|my last question))?( on [a-z ]+)? $")
+
+    fun asked(text: String): Boolean = ASK.containsMatchIn(norm(text).replace(Regex("^ (jarvis|hey jarvis|ok jarvis|boss) "), " "))
+
+    fun say(m: Market, then: Double, thenAt: LocalDateTime, now: Snapshot): String {
+        val mins = java.time.Duration.between(thenAt, now.at).toMinutes()
+        val ago = when { mins < 1 -> "a moment ago"; mins < 60 -> "$mins minutes ago"; else -> "%.1f hours ago".format(Locale.ENGLISH, mins / 60.0) }
+        val mv = now.price - then
+        val way = if (abs(mv) < then * 0.0002) "is about where it was" else if (mv > 0) "is up ${n(mv)} points" else "is down ${n(-mv)} points"
+        return "Since you asked $ago, ${m.label} $way: ${n(then)} then, ${n(now.price)} now (${pct(mv / then * 100)})."
+    }
+}

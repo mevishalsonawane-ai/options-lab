@@ -433,3 +433,14 @@ class BigPictureTest {
         assertNull(BigPicture.say(Market.NIFTY, bars.take(10)))
     }
 }
+
+class SinceLastTest {
+    @Test fun theChangeSinceLastAsked() {
+        assertTrue(SinceLast.asked("what changed"))
+        assertTrue(SinceLast.asked("Jarvis, what's changed since I last asked"))
+        assertFalse(SinceLast.asked("what changed in the settings"))
+        val d = java.time.LocalDate.of(2026, 10, 1)
+        val now = Snapshot(Market.NIFTY, d.atTime(12, 30), true, 24_060.0, 24_000.0, 24_000.0, 24_100.0, 23_990.0, null, null, emptyList(), null, null, emptyList(), emptyList(), emptyList())
+        assertEquals("Since you asked 30 minutes ago, Nifty is up 60.00 points: 24,000.00 then, 24,060.00 now (+0.25%).", SinceLast.say(Market.NIFTY, 24_000.0, d.atTime(12, 0), now))
+    }
+}
