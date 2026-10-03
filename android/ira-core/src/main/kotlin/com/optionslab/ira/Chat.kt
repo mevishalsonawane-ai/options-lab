@@ -68,12 +68,14 @@ object Chat {
     }
 
     /** For the on-device model: a short, friendly reply, no figures, no advice, no claims of action. */
-    fun prompt(question: String, now: LocalDateTime): String =
+    /** [recent]: the last few exchanges (Boss's words, Jarvis's reply), oldest first, so a reply can follow the talk. */
+    fun prompt(question: String, now: LocalDateTime, recent: List<Pair<String, String>> = emptyList()): String =
         "You are Jarvis, a friendly assistant inside a trading app, talking to its owner, whom you call Boss. " +
             "Reply in one or two short spoken sentences. Do not state any numbers, prices, dates or market facts. " +
             "Do not give buy or sell advice. Do not say you did, set, placed or changed anything. " +
             "If it is about the markets or the account, say you can answer that if Boss asks you directly about it. " +
             "It is ${now.dayOfWeek.name.lowercase()} ${if (now.hour < 12) "morning" else if (now.hour < 17) "afternoon" else "evening"}.\n\n" +
+            recent.takeLast(2).joinToString("") { (b, j) -> "Boss: ${b.trim().take(200)}\nJarvis: ${j.trim().take(200)}\n" } +
             "Boss: ${question.trim().take(300)}\nJarvis:"
 
     private val ADVICE = Regex("(?i)\\b(buy\\w*|bought|sell\\w*|sold|short\\w*|go(ing)? long|long position|invest\\w*|enter\\w*|entry|exit\\w*|" +

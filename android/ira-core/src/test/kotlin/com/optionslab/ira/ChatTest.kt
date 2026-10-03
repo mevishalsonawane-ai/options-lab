@@ -70,4 +70,10 @@ class ChatTest {
         assertFalse(Chat.personal("what is your view on banknifty"))
         assertNotEquals(Chat.aboutMe(0), Chat.aboutMe(1))
     }
+
+    @Test fun theLastExchangesAreRemembered() {
+        val p = Chat.prompt("and why is that?", LocalDateTime.of(2026, 10, 3, 9, 0), listOf("old" to "x", "do you like rain" to "I like quiet markets, Boss.", "really?" to "Really, Boss."))
+        assertTrue(p.endsWith("Boss: do you like rain\nJarvis: I like quiet markets, Boss.\nBoss: really?\nJarvis: Really, Boss.\nBoss: and why is that?\nJarvis:"), p)
+        assertFalse("Boss: old" in p)
+    }
 }

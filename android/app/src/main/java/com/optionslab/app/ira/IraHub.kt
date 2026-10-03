@@ -1120,6 +1120,19 @@ object IraHub {
     @Volatile private var lastAskAt = 0L
     private const val FOLLOW_MS = 5 * 60_000L
 
+    /** The last exchanges before [q] (Boss's words and Jarvis's reply, notes left out), oldest first, for the chat. */
+    private fun recentTalk(q: String): List<Pair<String, String>> {
+        val ms = _state.value.messages
+        val upTo = ms.indexOfLast { !it.fromIra && it.text == q }.takeIf { it >= 0 } ?: ms.size
+        val out = ArrayList<Pair<String, String>>()
+        var pending: String? = null
+        for (m in ms.take(upTo)) {
+            if (!m.fromIra) pending = m.text
+            else if (pending != null && !m.text.startsWith(TOOK_AS) && !m.text.startsWith("One moment")) { out += pending to m.text; pending = null }
+        }
+        return out.takeLast(2)
+    }
+
     /** Varies the small-talk and "I don't know" lines so the same words are not said twice running. */
     private val chatTurn = java.util.concurrent.atomic.AtomicInteger()
 
@@ -1137,7 +1150,7 @@ object IraHub {
             if (line == null) {
                 // Not something Jarvis can do or look up: the model just talks (a short reply with no figures, no advice
                 // and no claimed actions), else a varied "I don't know that".
-                val chat = modelOrNull { com.optionslab.ira.Chat.accept(IraModel.complete(com.optionslab.ira.Chat.prompt(q, LocalDateTime.now(IST)), 60)) }
+                val chat = modelOrNull { com.optionslab.ira.Chat.accept(IraModel.complete(com.optionslab.ira.Chat.prompt(q, LocalDateTime.now(IST), recentTalk(q)), 60)) }
                 val text = chat ?: if (personal) com.optionslab.ira.Chat.aboutMe(chatTurn.getAndIncrement()) else com.optionslab.ira.Chat.fallback(chatTurn.getAndIncrement())
                 reply(text); speakLater(text, q)
                 return@launch
