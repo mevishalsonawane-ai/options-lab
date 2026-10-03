@@ -34,3 +34,14 @@ class UnderstandingTest {
         kotlin.test.assertEquals(setOf(Topic.ACCOUNT), Ask.parse("when is the next expiry").topics)
     }
 }
+
+class HearingTest {
+    @Test fun marketsAsTheRecognizerWritesThem() {
+        kotlin.test.assertEquals(listOf(Market.BANKNIFTY), Market.mentioned("how is bang nifty"))
+        kotlin.test.assertEquals(listOf(Market.BANKNIFTY), Market.mentioned("how is nifty bank"))
+        kotlin.test.assertEquals(listOf(Market.NIFTY), Market.mentioned("how is the nifti"))
+        kotlin.test.assertEquals(listOf(Market.SENSEX), Market.mentioned("how is sense x"))
+        kotlin.test.assertEquals(listOf(Market.FINNIFTY), Market.mentioned("how is finn nifty"))
+        kotlin.test.assertEquals(setOf(Market.NIFTY, Market.BANKNIFTY), Market.mentioned("nifty and bank nifty").toSet())
+    }
+}

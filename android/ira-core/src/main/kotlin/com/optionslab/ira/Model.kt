@@ -15,10 +15,10 @@ data class Candle(val t: LocalDateTime, val o: Double, val h: Double, val l: Dou
 
 /** The markets Ira knows. [unit] is how a price is written; [open]/[close] the cash session (null: around the clock on weekdays). */
 enum class Market(val label: String, val unit: String, val open: LocalTime?, val close: LocalTime?, val aliases: List<String>) {
-    NIFTY("Nifty", "", LocalTime.of(9, 15), LocalTime.of(15, 30), listOf("nifty", "nifty 50", "nifty50", "nf")),
-    BANKNIFTY("BankNifty", "", LocalTime.of(9, 15), LocalTime.of(15, 30), listOf("banknifty", "bank nifty", "bnf", "bank")),
-    FINNIFTY("FinNifty", "", LocalTime.of(9, 15), LocalTime.of(15, 30), listOf("finnifty", "fin nifty", "finnity", "fin")),
-    SENSEX("Sensex", "", LocalTime.of(9, 15), LocalTime.of(15, 30), listOf("sensex", "bse")),
+    NIFTY("Nifty", "", LocalTime.of(9, 15), LocalTime.of(15, 30), listOf("nifty", "nifty 50", "nifty50", "nf", "nifti", "nifty fifty", "nifty fifty index", "nifty 50 index")),
+    BANKNIFTY("BankNifty", "", LocalTime.of(9, 15), LocalTime.of(15, 30), listOf("banknifty", "bank nifty", "bnf", "bank", "nifty bank", "nifti bank", "bank nifti", "bang nifty", "bankniftee")),
+    FINNIFTY("FinNifty", "", LocalTime.of(9, 15), LocalTime.of(15, 30), listOf("finnifty", "fin nifty", "finnity", "fin", "finn nifty", "fin nifti", "nifty fin", "nifty financial services", "fin niftee")),
+    SENSEX("Sensex", "", LocalTime.of(9, 15), LocalTime.of(15, 30), listOf("sensex", "bse", "sense x", "sensecs", "sensex 30", "sen sex")),
     VIX("India VIX", "", LocalTime.of(9, 15), LocalTime.of(15, 30), listOf("vix", "india vix", "volatility index", "fear")),
     GOLD("Gold", "$", null, null, listOf("gold", "xau", "xauusd", "bullion"));
 

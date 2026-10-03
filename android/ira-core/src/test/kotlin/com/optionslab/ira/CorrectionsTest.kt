@@ -10,9 +10,11 @@ class CorrectionsTest {
         val l = Corrections.learn("how's the nifty boy doing", "how is nifty doing")!!
         assertEquals("how s the nifty boy doing", l.wrong)
         assertEquals("how is nifty doing", Corrections.apply("Jarvis, how's the nifty boy doing", listOf(l)))
-        // Nearly the same words, again not understood (another mishearing): read the same way.
-        val m = Corrections.learn("how is the nifti boi doing", "how is nifty doing")!!
-        assertEquals("how is nifty doing", Corrections.apply("how is the nifti boi doin", listOf(m)))
+        // Nearly the same words, naming no market (another mishearing): read the same way.
+        val m = Corrections.learn("how is the nifdee boi doing", "how is nifty doing")!!
+        assertEquals("how is nifty doing", Corrections.apply("how is the nifdee boi doin", listOf(m)))
+        // "nifti" is now heard as Nifty itself: understood directly, nothing to rewrite.
+        assertTrue(Corrections.understood("how is the nifti boi doing"))
         // Words already understood are left alone.
         assertNull(Corrections.apply("how is banknifty doing", listOf(l)))
     }
