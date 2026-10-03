@@ -92,7 +92,7 @@ internal object IraJournal {
         com.optionslab.app.security.SecurePrefs.put(TARGET, v?.let { "${com.optionslab.app.data.Market.today()}|$it" })
     }
 
-    private fun pnlNow(): Double? = runCatching {
+    private suspend fun pnlNow(): Double? = runCatching {
         if (AppSettings.load().live && Broker.loggedIn) null else Paper.snapshot().dayPnl
     }.getOrNull()
 
