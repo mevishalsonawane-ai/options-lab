@@ -30,4 +30,14 @@ class FollowUpTest {
         assertEquals("how is Nifty", FollowUp.resolve("how is bank nifty", "and nifty?"))
         assertEquals("how is BankNifty", FollowUp.resolve("how is nifty 50", "and banknifty?"))
     }
+
+    @Test fun aQuestionWithNoMarketIsAboutTheOneJustAsked() {
+        assertEquals("what are the levels on BankNifty", FollowUp.resolve("How is BankNifty doing?", "what are the levels?"))
+        assertEquals("any patterns on FinNifty", FollowUp.resolve("levels on fin nifty", "any patterns"))
+        assertNull(FollowUp.resolve("How is BankNifty doing?", "how is the market today"), "the whole market is not carried")
+        assertNull(FollowUp.resolve("How is BankNifty doing?", "what are the levels on nifty"), "a market named stands")
+        assertNull(FollowUp.resolve("How is BankNifty doing?", "how are my positions"), "the account is not a market question")
+        assertNull(FollowUp.resolve("show my positions", "what are the levels"), "nothing named before")
+        assertNull(FollowUp.resolve("How is BankNifty doing?", "stop all strategies"))
+    }
 }

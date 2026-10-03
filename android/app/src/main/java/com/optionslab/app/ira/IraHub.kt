@@ -892,8 +892,11 @@ object IraHub {
             ask(learnedAs, understood = true)
             return
         }
-        // A short follow-up ("and BankNifty?", "why?") asks again about the last question (questions only).
-        if (!understood) {
+        // A short follow-up ("and BankNifty?", "why?", "what are the levels?") asks again about the last question
+        // (questions only), when that was asked in the last five minutes.
+        val recent = System.currentTimeMillis() - lastAskAt < FOLLOW_MS
+        lastAskAt = System.currentTimeMillis()
+        if (!understood && recent) {
             val prev = _state.value.messages.lastOrNull { !it.fromIra }?.text
             runCatching { com.optionslab.ira.FollowUp.resolve(prev, q) }.getOrNull()?.takeIf { !lockedAccount(q, it) }?.let { full ->
                 _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, "$TOOK_AS\"$full\".")).takeLast(MAX_MESSAGES)) }
@@ -1074,6 +1077,10 @@ object IraHub {
         if (!first.text.startsWith(TOOK_AS)) return first
         return real.drop(1).firstOrNull()
     }
+
+    /** When Boss last asked something: a follow-up carries the last question over only within [FOLLOW_MS]. */
+    @Volatile private var lastAskAt = 0L
+    private const val FOLLOW_MS = 5 * 60_000L
 
     /** Varies the small-talk and "I don't know" lines so the same words are not said twice running. */
     private val chatTurn = java.util.concurrent.atomic.AtomicInteger()

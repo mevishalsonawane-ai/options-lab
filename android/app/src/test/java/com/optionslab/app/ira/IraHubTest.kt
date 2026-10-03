@@ -681,6 +681,9 @@ class IraHubTest : RobolectricTest() {
         waitFor("the answer") { IraHub.state.value.messages.lastOrNull()?.fromIra == true }
         IraHub.ask("and BankNifty?")
         waitFor("read in context") { IraHub.state.value.messages.any { it.text == "I took that as: \"How is BankNifty doing?\"." } }
+        waitFor("its answer") { IraHub.state.value.messages.lastOrNull()?.fromIra == true }
+        IraHub.ask("what are the levels?")
+        waitFor("about the market just asked about") { IraHub.state.value.messages.any { it.text == "I took that as: \"what are the levels on BankNifty\"." } }
         IraHub.ask("stop all strategies")
         waitFor("the command") { IraHub.state.value.messages.lastOrNull()?.fromIra == true }
         IraHub.state.value.pending.forEach { IraHub.cancelAction(it) }
