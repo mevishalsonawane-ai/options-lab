@@ -119,3 +119,25 @@ class SoloLearnTest {
         assertEquals(listOf(2.0), Solo.shadow(day, 50.0, Solo.Rules(maxPerDay = 1)))
     }
 }
+
+class SoloWatchReviewTest {
+    @Test fun aPassedChanceIsNotWatchedAndTheDeadlineIs1430() {
+        val d = LocalDate.of(2026, 10, 1)
+        fun bar(m: Int, o: Double, h: Double, l: Double, c: Double) = Candle(d.atTime(9, 15).plusMinutes(m.toLong()), o, h, l, c)
+        // A big green candle 09:45-10:00 (24000 -> 24100), a pullback close at 10:04 (24055), then back up.
+        val day = (0 until 80).map { m ->
+            when {
+                m < 30 -> bar(m, 24_000.0, 24_005.0, 23_995.0, 24_000.0)
+                m < 45 -> { val o = 24_000.0 + (m - 30) * 100.0 / 15; bar(m, o, o + 100.0 / 15, o, o + 100.0 / 15) }
+                m < 50 -> bar(m, 24_060.0, 24_062.0, 24_050.0, 24_055.0)
+                else -> bar(m, 24_090.0, 24_095.0, 24_085.0, 24_090.0)
+            }
+        }
+        assertTrue(Solo.watching(day, 79, 50.0, "Nifty").isEmpty(), "the pullback came at 10:04: its chance has passed")
+        // A big candle at 13:45: watched until 14:30, not 15:00.
+        val late = (0 until 300).map { m -> if (m in 270 until 285) { val o = 24_000.0 + (m - 270) * 100.0 / 15; bar(m, o, o + 100.0 / 15, o, o + 100.0 / 15) }
+            else if (m < 270) bar(m, 24_000.0, 24_005.0, 23_995.0, 24_000.0) else bar(m, 24_095.0, 24_097.0, 24_093.0, 24_095.0) }
+        val w = Solo.watching(late, 299, 50.0, "Nifty")
+        assertEquals(1, w.size, w.toString()); assertTrue(w[0].contains("at 13:45") && w[0].contains("(until 14:30)"), w[0])
+    }
+}

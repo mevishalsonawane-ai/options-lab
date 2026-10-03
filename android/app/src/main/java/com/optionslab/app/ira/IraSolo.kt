@@ -85,7 +85,7 @@ internal object IraSolo {
     private val lock = Mutex()
 
     /** What Solo was watching at its last pass (for "how is Solo doing"), and when. */
-    @Volatile private var watch: Pair<LocalTime, String>? = null
+    @Volatile private var watch: Pair<java.time.LocalDateTime, String>? = null
 
     /** Each market's learned shadow record, worked out once a day from the finished sessions the app holds. */
     private val learned = HashMap<IraMarket, Pair<LocalDate, List<Double>>>()
@@ -94,13 +94,14 @@ internal object IraSolo {
         learned[m]?.takeIf { it.first == today }?.second ?: run {
             val sessions = bars.filter { it.t.toLocalDate() != today }.groupBy { it.t.toLocalDate() }.toSortedMap().values
                 .map { d -> session(d, d.first().t.toLocalDate(), 375) }.filter { it.size > Solo.CUT }
-            Solo.learn(sessions, RULES).also { learned[m] = today to it }
+            // Kept for the day only once the full look-back is there (the app's stored days may still be loading).
+            Solo.learn(sessions, RULES).also { if (it.size >= (RULES.recentN ?: 0)) learned[m] = today to it }
         }
     }
 
     /** The average day's range (high - low) over the earlier days the app holds (null: none yet). */
     private fun typicalRange(bars: List<Candle>, today: LocalDate): Double? =
-        bars.filter { it.t.toLocalDate() != today }.groupBy { it.t.toLocalDate() }.values.toList().takeLast(20)
+        bars.filter { it.t.toLocalDate() != today }.groupBy { it.t.toLocalDate() }.toSortedMap().values.toList().takeLast(20)
             .map { d -> d.maxOf { it.h } - d.minOf { it.l } }.takeIf { it.isNotEmpty() }?.average()
 
     /** The minute of the session now (0 = 09:15). */
@@ -157,9 +158,9 @@ internal object IraSolo {
             val held = IraHub.recentBars(m) + bars
             val big = big(held, today) ?: continue
             // Learning: a market whose setup has not been working lately is watched, not traded.
-            if (!Solo.working(learnedFor(m, held, today), RULES)) { seen += "${m.label}: the setup has not been working lately (its last 60 signals lost on average) - standing aside"; watch = LocalTime.now(IST) to seen.joinToString("; "); continue }
+            if (!Solo.working(learnedFor(m, held, today), RULES)) { seen += "${m.label}: the setup has not been working lately (its last 60 signals lost on average) - standing aside"; watch = java.time.LocalDateTime.now(IST) to seen.joinToString("; "); continue }
             seen += Solo.watching(day, day.size - 1, big, m.label, RULES)
-            watch = LocalTime.now(IST) to seen.joinToString("; ")
+            watch = java.time.LocalDateTime.now(IST) to seen.joinToString("; ")
             // The last two closes only (a pass can come a minute late); an older signal is not chased.
             val sig = (day.size - 1 downTo maxOf(0, day.size - 2)).firstNotNullOfOrNull { k -> Solo.signal(day, k, big, busy, RULES) } ?: continue
             enter(m, sig, list, today, Solo.read(day, typicalRange(held, today), m.label))
@@ -259,7 +260,8 @@ internal object IraSolo {
 
     /** "How is Solo doing": on or off, paused or not, and the record. */
     fun status(): String = (if (on) "Solo is on, Boss (paper only; switch it off in Jarvis settings)." else "Solo is off, Boss: switch it on in Jarvis settings (paper only).") +
-        (paused?.let { " $it" } ?: "") + " " + record() + (watch?.takeIf { on && paused == null && com.optionslab.app.data.Market.isOpen() }?.let { (at, w) ->
+        (paused?.let { " $it" } ?: "") + " " + record() + (watch?.takeIf { on && paused == null && com.optionslab.app.data.Market.isOpen() && it.first.toLocalDate() == com.optionslab.app.data.Market.today() &&
+            all().none { t -> !t.closed } }?.let { (at, w) ->
             if (w.isEmpty()) " At %02d:%02d nothing was set up yet.".format(at.hour, at.minute) else " Watching (at %02d:%02d): ".format(at.hour, at.minute) + w + "."
         } ?: "")
 

@@ -92,7 +92,7 @@ object Solo {
             val risk = abs(ix - lvl)
             if (risk <= 0) continue
             val tgt = if (up) ix + r.k * risk else ix - r.k * risk
-            val t = c.first().t.toLocalTime()
+            val t = day[0].t.toLocalDate().atTime(9, 15).plusMinutes(s.toLong()).toLocalTime()
             return Signal(up, now + 1, ix, lvl, tgt, s,
                 "a big ${if (up) "green" else "red"} 15-minute candle at %02d:%02d (body %.0f pts) pulled back %.0f%% without breaking its %s"
                     .format(Locale.ENGLISH, t.hour, t.minute, abs(body), r.depth * 100, if (up) "low" else "high"))
@@ -117,9 +117,12 @@ object Solo {
             val up = body > 0
             val lvl = if (up) l else h
             if ((e..minOf(now, day.lastIndex)).any { m -> if (up) day[m].l <= lvl else day[m].h >= lvl }) continue
+            // Its one chance has passed (a pullback close already came, taken or not): no longer waiting.
+            if ((e..minOf(now, day.lastIndex)).any { m -> m % 5 == 4 && (if (up) cl - day[m].c else day[m].c - cl) >= r.depth * (h - l) }) continue
             val entry = if (up) cl - r.depth * (h - l) else cl + r.depth * (h - l)
-            val t = c.first().t.toLocalTime()
-            val until = c.first().t.plusMinutes((15 + r.window).toLong()).toLocalTime()
+            val open = day[0].t.toLocalDate().atTime(9, 15)
+            val t = open.plusMinutes(s.toLong()).toLocalTime()
+            val until = open.plusMinutes(minOf(e + r.window, LAST_ENTRY).toLong()).toLocalTime()
             out += "a big ${if (up) "green" else "red"} 15-minute candle at %02d:%02d: I buy a %s if %s comes back to about %,.0f without %s %,.0f (until %02d:%02d)"
                 .format(Locale.ENGLISH, t.hour, t.minute, if (up) "call" else "put", label, entry, if (up) "falling below" else "rising above", lvl, until.hour, until.minute)
         }
