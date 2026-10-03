@@ -388,3 +388,11 @@ class AuditGapsTest {
         assertEquals(listOf(Market.SENSEX), Ask.parse("senseks today").markets)
     }
 }
+
+class WhatsNewTest {
+    @Test fun whatsNewIsTheNews() {
+        assertNull(Chat.smallTalk("what's new", 0))
+        assertTrue(Topic.NEWS in Ask.parse("what's new").topics)
+        assertNotNull(Chat.smallTalk("what's up", 0))
+    }
+}

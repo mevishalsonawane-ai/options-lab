@@ -22,7 +22,7 @@ object Chat {
             "A good one, Boss. I've been watching the markets and studying the patterns. How was your day?",
             "Quiet but useful, Boss: I read the news and kept an eye on your positions. And yours?",
             "Not bad at all, Boss. Plenty of candles to study. Tell me about yours.")),
-        Talk(Regex("^ (what s up|whats up|sup|wassup|what are you doing|what are you up to|what you doing|kya kar rahe ho|what s new|whats new) $"), listOf(
+        Talk(Regex("^ (what s up|whats up|sup|wassup|what are you doing|what are you up to|what you doing|kya kar rahe ho) $"), listOf(
             "Just watching the markets for you, Boss. What's on your mind?",
             "Keeping an eye on the screens, Boss. Need anything?",
             "Studying today's candles, Boss. What can I do for you?")),

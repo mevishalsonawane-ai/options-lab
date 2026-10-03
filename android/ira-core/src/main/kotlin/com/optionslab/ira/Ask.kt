@@ -38,7 +38,7 @@ object Ask {
         Topic.TREND to listOf("trend", "direction", "bullish", "bearish", "going up", "going down", "heading"),
         Topic.LEVELS to listOf("level", "levels", "support", "resistance", "target", "range", "high", "low", "pool", "liquidity"),
         Topic.PATTERNS to listOf("pattern", "patterns", "candle", "candles", "engulfing", "hammer", "doji", "breakout", "breakdown", "double top", "double bottom"),
-        Topic.NEWS to listOf("news", "headline", "headlines", "update", "updates"),
+        Topic.NEWS to listOf("news", "headline", "headlines", "update", "updates", "what s new", "whats new", "anything new", "kya khabar", "khabar"),
         Topic.VOLATILITY to listOf("volatile", "volatility", "vix", "fear", "calm", "busy", "wild", "quiet"),
         Topic.ADVICE to listOf("should i", "shall i", "is it good to", "worth buying", "worth selling", "recommend", "suggest", "tip", "tips", "advice"),
         Topic.OVERVIEW to listOf("doing", "today", "now", "price", "status", "how is", "how's", "update me", "summary", "overview", "market"),
