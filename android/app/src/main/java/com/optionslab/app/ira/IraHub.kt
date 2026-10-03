@@ -917,13 +917,19 @@ object IraHub {
             }
         // Everyday words for the commonest requests ("pause all bots", "am I up today"): read at once by fixed rules,
         // then asked as that line - an action waits for Confirm, as when the model picks it.
-        if (!understood && parsed.command == null && parsed.order == null) {
+        // ("Halt the algos" reads as stopping one strategy named "the algos": the everyday reading wins there.)
+        if (!understood && parsed.order == null && parsed.command?.kind.let { it == null || it == com.optionslab.ira.Command.Kind.STOP_ONE }) {
             val line = runCatching { com.optionslab.ira.Intents.quick(q) }.getOrNull()
             if (line != null && !lockedAccount(q, line)) {
                 _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, "$TOOK_AS\"$line\".")).takeLast(MAX_MESSAGES)) }
                 ask(line, understood = true)
                 return
             }
+        }
+        // A trading word explained ("what is theta", "explain max pain"): at once, before anything is looked up.
+        if (parsed.order == null && parsed.command == null) runCatching { com.optionslab.ira.Glossary.explain(q) }.getOrNull()?.let { text ->
+            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, text)).takeLast(MAX_MESSAGES)) }
+            return
         }
         if (Topic.OFF_TOPIC in parsed.topics) IraTools.count("misunderstood")
         if (Topic.BACKTEST in parsed.topics) { backtestAsked(q, parsed); return }

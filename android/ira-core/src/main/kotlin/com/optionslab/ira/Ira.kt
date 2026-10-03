@@ -57,8 +57,8 @@ class Ira(private val book: PatternBook = PatternBook()) {
         s.trends.forEach { tr -> add("${tr.minutes}-minute trend ${if (tr.up) "up" else "down"}, tracker line ${m.price(tr.line)}" +
             (tr.since?.let { " since ${Brain.when_(it, m, s.at.toLocalDate())}" } ?: "")) }
         s.mood?.let { add("today is ${it.word}: range ${"%.1f".format(Locale.ENGLISH, s.rangeRatio!!)}x the usual by this time") }
-        s.above.forEach { add("level above: ${it.name} ${m.price(it.price)}") }
-        s.below.forEach { add("level below: ${it.name} ${m.price(it.price)}") }
+        s.above.forEach { add("level above: ${it.name} ${m.price(it.price)}, ${m.price(it.price - s.price)} away") }
+        s.below.forEach { add("level below: ${it.name} ${m.price(it.price)}, ${m.price(s.price - it.price)} away") }
     }
 
     private fun overview(s: Snapshot): String {
@@ -76,13 +76,21 @@ class Ira(private val book: PatternBook = PatternBook()) {
             "The ${if (tr.minutes == 60) "1-hour" else "${tr.minutes}-minute"} trend is ${if (tr.up) "up" else "down"}" +
                 (tr.since?.let { " since ${Brain.when_(it, m, s.at.toLocalDate())}" } ?: "") +
                 ", tracker line ${m.price(tr.line)}."
-        }
+        } + agreement(s)
+    }
+
+    /** Do the charts agree? Both one way gives the move weight; split charts mean a pullback or a turn starting. */
+    private fun agreement(s: Snapshot): String {
+        val a = s.trend(15) ?: return ""; val b = s.trend(60) ?: return ""
+        return if (a.up == b.up) " Both charts point ${if (a.up) "up" else "down"}, so the move has weight."
+        else " The charts disagree: the 15-minute is ${if (a.up) "up" else "down"} inside a 1-hour ${if (b.up) "up" else "down"}trend - " +
+            "a pullback, or a turn starting; it is clearer once they line up."
     }
 
     private fun levels(s: Snapshot): String {
         val m = s.market
-        val a = s.above.firstOrNull()?.let { "Nearest level above: ${it.name} at ${m.price(it.price)}." } ?: ""
-        val b = s.below.firstOrNull()?.let { "Nearest level below: ${it.name} at ${m.price(it.price)}." } ?: ""
+        val a = s.above.firstOrNull()?.let { "Nearest level above: ${it.name} at ${m.price(it.price)}, ${m.price(it.price - s.price)} away." } ?: ""
+        val b = s.below.firstOrNull()?.let { "Nearest level below: ${it.name} at ${m.price(it.price)}, ${m.price(s.price - it.price)} away." } ?: ""
         return listOf(a, b).filter { it.isNotEmpty() }.joinToString(" ")
     }
 

@@ -165,12 +165,17 @@ class IraHubTest : RobolectricTest() {
         assertEquals("BankNifty is at 52,000.", IraHub.replyAfter(done, "How is BankNifty?")?.text)
     }
 
-    /** "Pause all bots" is read at once as "stop all strategies", and it still waits for Confirm. */
+    /** "Hit the panic button" is read at once as the kill switch on, and it still waits for Confirm. */
     @Test fun everydayWordsAreReadAtOnceAndStillConfirmed() = runBlocking {
-        IraHub.ask("pause all bots")
-        waitFor("read as meant") { IraHub.state.value.messages.any { it.text == "I took that as: \"stop all strategies\"." } }
+        IraHub.ask("hit the panic button")
+        waitFor("read as meant") { IraHub.state.value.messages.any { it.text == "I took that as: \"turn the kill switch on\"." } }
         waitFor("the confirm") { IraHub.state.value.pending.isNotEmpty() }
         IraHub.state.value.pending.forEach { IraHub.cancelAction(it) }
+    }
+
+    @Test fun aTradingWordIsExplained() = runBlocking {
+        IraHub.ask("what is theta")
+        waitFor("explained") { IraHub.state.value.messages.lastOrNull()?.let { it.fromIra && it.text.startsWith("Theta") } == true }
     }
 
     @Test fun liveCandlesJoinTheStoredOnesAndHeadlinesAreRead() = runBlocking {

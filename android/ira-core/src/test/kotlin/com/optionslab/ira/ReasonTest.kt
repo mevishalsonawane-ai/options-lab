@@ -51,3 +51,17 @@ class ReasonTest {
         assertNotNull(s); assertTrue("for the rest of today" in s, s)
     }
 }
+
+class ChartsTest {
+    @Test fun chartsAgreeOrNot() {
+        val d = java.time.LocalDate.of(2026, 10, 1)
+        fun snap(up15: Boolean, up60: Boolean) = Snapshot(Market.NIFTY, d.atTime(12, 0), true, 24_000.0, 23_900.0, 23_950.0, 24_050.0, 23_940.0, null, null,
+            listOf(TrendRead(15, up15, 23_980.0, null), TrendRead(60, up60, 23_900.0, null)), null, null, listOf(Level("day high", 24_050.0)), listOf(Level("day low", 23_940.0)), emptyList())
+        val ira = Ira(PatternBook())
+        val agree = ira.answer("how is nifty", mapOf(Market.NIFTY to snap(true, true)), emptyList()).text
+        assertTrue("Both charts point up" in agree, agree)
+        assertTrue("Nearest level above: day high at 24,050.00, 50.00 away." in agree, agree)
+        val split = ira.answer("how is nifty", mapOf(Market.NIFTY to snap(false, true)), emptyList()).text
+        assertTrue("The charts disagree" in split, split)
+    }
+}
