@@ -77,7 +77,9 @@ object Ask {
         if (Regex(" (describe|read|explain|walk me through|tell me about) (the |my )?([a-z]+ )?chart ").containsMatchIn(t))
             return Question(text, Market.mentioned(text).ifEmpty { listOf(Market.NIFTY) }, setOf(Topic.OVERVIEW, Topic.TREND, Topic.LEVELS, Topic.PATTERNS), null)
         // "Should I trade now?" - Jarvis's trade check (never a direction, never a single instrument).
-        if (!Regex(" (backtest|back test|engulfing|pattern|patterns|strategy|candle|candles|why|what happened|what moved|what drove) ").containsMatchIn(t) && Regex(" (bullish|bearish|market (good|bad|mood|today)|how is the market|is (the )?market (good|bad|up|down|bullish|bearish|trending|sideways)|which way is the market) ").containsMatchIn(t) ||
+        // (An index named - "is Nifty bullish" - asks that index's trend, not the market-wide check.)
+        if (!Regex(" (backtest|back test|engulfing|pattern|patterns|strategy|candle|candles|why|what happened|what moved|what drove) ").containsMatchIn(t) &&
+            Market.mentioned(text).none { it != Market.VIX } && Regex(" (bullish|bearish|market (good|bad|mood|today)|how is the market|is (the )?market (good|bad|up|down|bullish|bearish|trending|sideways)|which way is the market) ").containsMatchIn(t) ||
             Regex(" (should|shall|can|could) i (trade|be trading|stay out|sit out|take (a |any )?trades?)| (safe|good|right|ok|okay) (time |day )?to (trade|sell options|buy options|sell|buy)| trade (now|today) or not| should i stay out | is today (a )?(good|bad) (day )?(to|for) trad").containsMatchIn(t))
             return Question(text, Market.mentioned(text), setOf(Topic.TRADE_CHECK), null)
         // An order to place names its lots ("buy 2 lots..."); anything else about orders, P&L, strategies, limits or the app
