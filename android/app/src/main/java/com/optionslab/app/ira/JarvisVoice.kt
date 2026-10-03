@@ -723,7 +723,7 @@ class JarvisVoice : Service() {
 
     /**
      * Speaks, still listening - but only for "Jarvis" while it talks, so the owner can cut in and it never answers
-     * itself (its own name is spelled out, J.A.R.V.I.S., so it does not hear it) - then listens again, or stops after
+     * itself (its own name is said as "my name", so it does not hear it) - then listens again, or stops after
      * [id] STOP_AFTER.
      */
     private fun say(text: String, id: String = "say") {
@@ -764,7 +764,14 @@ class JarvisVoice : Service() {
         if (t.speak(spokenName(text), TextToSpeech.QUEUE_FLUSH, null, utterance) != TextToSpeech.SUCCESS) { speaking = false; afterSpeech(id) }
     }
 
-    private fun spokenName(text: String) = WAKE.replace(text, "J.A.R.V.I.S.")
+    /**
+     * Its own name is never said aloud (it listens while it talks, and would hear itself and cut itself off): spoken,
+     * "say Jarvis" is "say my name". (It was spelled out, J.A.R.V.I.S., which Boss found odd - 3 Oct.)
+     */
+    private fun spokenName(text: String) = text
+        .replace(Regex("(?i)\\b(I'm|I am)\\s+(?:j[ae]rv[ia]s+|jar vis)\\b"), "$1 your assistant")
+        .replace(Regex("(?i)\\b(say|call|saying)\\s+\"?(?:j[ae]rv[ia]s+|jar vis)\\b"), "$1 my name")
+        .let { WAKE.replace(it, "my name") }
 
     private fun afterSpeech(id: String?) {
         speaking = false
