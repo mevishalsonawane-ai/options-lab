@@ -223,3 +223,17 @@ class RangeAndPeriodTest {
         assertTrue("over 4 sessions" in s, s)
     }
 }
+
+class BriefingTest {
+    @Test fun aBriefing() {
+        assertTrue(Briefing.asked("Jarvis, brief me"))
+        assertTrue(Briefing.asked("what do I need to know today"))
+        assertFalse(Briefing.asked("brief mode on"))
+        val d = java.time.LocalDate.of(2026, 10, 1)
+        fun snap(m: Market, prev: Double, price: Double) = Snapshot(m, d.atTime(12, 0), true, price, prev, prev, price, prev, null, null, emptyList(), null, null, emptyList(), emptyList(), emptyList())
+        val s = Briefing.say(mapOf(Market.NIFTY to snap(Market.NIFTY, 24_000.0, 24_120.0), Market.BANKNIFTY to snap(Market.BANKNIFTY, 52_000.0, 51_900.0),
+            Market.VIX to snap(Market.VIX, 13.0, 14.0)), d.atTime(12, 0), listOf("Event today: RBI policy."))!!
+        assertTrue(s.startsWith("Nifty 24,120.00 (+0.50%), BankNifty 51,900.00 (-0.19%). Nifty is the strongest, BankNifty the weakest."), s)
+        assertTrue("Fear is rising" in s && s.endsWith("Event today: RBI policy."), s)
+    }
+}

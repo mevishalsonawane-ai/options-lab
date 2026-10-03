@@ -420,3 +420,28 @@ object PeriodMove {
         return "${m.label} ${span.label}: ${pts(mv)} points (${pct(mv / start * 100)}), from ${n(start)} to ${n(end)}, in a range of ${n(lo)} to ${n(hi)} over ${inSpan.size} session${if (inSpan.size > 1) "s" else ""}."
     }
 }
+
+/**
+ * A briefing on demand (Jarvis self-improvement, 2026-10-03): "brief me", "what do I need to know", "catch me up" - the
+ * indices' moves, the strongest and weakest, the expected range and the day's events, in a few sentences. Pure.
+ */
+object Briefing {
+    private val ASK = Regex("^ (brief me|give me a brief(ing)?|briefing|catch me up|what do i need to know|what should i know|what s important|whats important|market briefing|quick update|bring me up to speed|update me on everything)( today| now| jarvis)? $")
+
+    fun asked(text: String): Boolean = ASK.containsMatchIn(norm(text).replace(Regex("^ (jarvis|hey jarvis|ok jarvis|boss) "), " "))
+
+    fun say(snaps: Map<Market, Snapshot>, now: LocalDateTime, events: List<String>): String? {
+        val idx = Reasoning.INDICES.mapNotNull { m -> snaps[m]?.let { s -> s.changePct?.let { m to (s to it) } } }
+        if (idx.isEmpty()) return null
+        val parts = ArrayList<String>()
+        parts += idx.joinToString(", ") { (m, sp) -> "${m.label} ${n(sp.first.price)} (${pct(sp.second)})" } + "."
+        if (idx.size >= 2) {
+            val best = idx.maxBy { it.second.second }; val worst = idx.minBy { it.second.second }
+            if (best.second.second - worst.second.second >= 0.1) parts += "${best.first.label} is the strongest, ${worst.first.label} the weakest."
+        }
+        snaps[Market.VIX]?.let { v -> snaps[Market.NIFTY]?.let { nf -> ExpectedRange.say(nf, v.price, now)?.let { parts += it } } }
+        snaps[Market.VIX]?.changePct?.let { if (it >= 5) parts += "Fear is rising (VIX ${pct(it)})." else if (it <= -5) parts += "Fear is easing (VIX ${pct(it)})." }
+        parts += events.take(2)
+        return parts.joinToString(" ")
+    }
+}
