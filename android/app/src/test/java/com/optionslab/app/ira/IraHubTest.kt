@@ -627,7 +627,8 @@ class IraHubTest : RobolectricTest() {
         waitFor("the confirm") { IraHub.state.value.pending.isNotEmpty() }
         val id = IraHub.state.value.pending.single()
         assertTrue(IraHub.isExit(id))
-        val r = IraHub.confirm(id)
+        if (IraHub.needsFingerprint(id)) assertTrue(IraHub.confirm(id)!!.contains("fingerprint"))
+        val r = IraHub.confirm(id, fingerprint = true)
         assertTrue(r.toString(), r != null)
         assertTrue("the kill switch is on after the exit", com.optionslab.app.data.AppSettings.load().guardKill)
         com.optionslab.app.data.AppSettings.save(com.optionslab.app.data.AppSettings.load().copy(guardKill = false))
