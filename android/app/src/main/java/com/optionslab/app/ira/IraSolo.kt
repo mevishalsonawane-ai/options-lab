@@ -219,10 +219,11 @@ internal object IraSolo {
         val s = Solo.Signal(t.call, t.entryMinute, t.index, t.level, t.target, 0, t.why)
         var best = 0.0
         var how: Solo.Exit? = null
+        var at = day.lastIndex
         for (j in t.entryMinute until day.size) {
             how = Solo.exit(s, day[j], j, best, RULES)
             best = Solo.favour(s, day[j], best)
-            if (how != null) break
+            if (how != null) { at = j; break }
         }
         if (how == null && now >= Solo.CUT) how = Solo.Exit.TIME
         how ?: return
@@ -234,7 +235,7 @@ internal object IraSolo {
             return
         }
         runCatching { com.optionslab.app.data.Protections.removeSymbol(false, "NFO", t.symbol) }
-        val lesson = runCatching { Solo.review(s, day, minOf(day.lastIndex, now), how, t.entry, px, m.label) }.getOrNull()
+        val lesson = runCatching { Solo.review(s, day, at, how, t.entry, px, m.label) }.getOrNull()
         finish(t, list, px, lesson = lesson, why = when (how) {
             Solo.Exit.STOP -> "stop: ${m.label} through ${"%,.0f".format(t.level)}"
             Solo.Exit.TARGET -> "target reached"
