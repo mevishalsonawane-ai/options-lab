@@ -745,3 +745,78 @@ object Realised {
         return "${m.label} is moving at about %.1f%% a year today (from its 5-minute moves) against India VIX at %.1f%%: $read. (Intraday moves only - VIX also prices overnight gaps, so this leans towards \"dear\".)".format(Locale.ENGLISH, rv, vix)
     }
 }
+
+/**
+ * "Monday prediction for BankNifty", "Nifty outlook for tomorrow", "what will BankNifty do Monday" (Boss, 3 Oct): no
+ * price is predicted - what the phone's data can honestly say for the next session of that one index: the recent
+ * trend, the range India VIX prices in, and the pivot levels. Pure.
+ */
+object Outlook {
+    private val ASK = Regex(" (predict|predicts|prediction|predictions|forecast|forecasts|outlook|view on|bias|expectations?|what will [a-z ]{0,20}do|how will [a-z ]{0,20}(do|go|move|behave|open|close|be)|where will [a-z ]{0,20}(go|be|open|close)|kal kya|kaisa rahega) ")
+
+    fun asked(text: String): Boolean = ASK.containsMatchIn(norm(text))
+
+    /** How far ahead the question looks ("next hour", "Monday", "next week"; Boss: "it could be next day, hour, week"). */
+    enum class Span { HOUR, DAY, WEEK }
+
+    fun span(text: String): Span {
+        val t = norm(text)
+        return when {
+            Regex(" (hour|hours|ghante|ghanta) ").containsMatchIn(t) -> Span.HOUR
+            Regex(" (week|weekly|hafte|hafta) ").containsMatchIn(t) -> Span.WEEK
+            else -> Span.DAY
+        }
+    }
+
+    /** The session the question is about: "Monday", "tomorrow", or the next session. */
+    fun session(text: String): String {
+        val t = norm(text)
+        when (span(text)) { Span.HOUR -> return "the next hour"; Span.WEEK -> return "the coming week"; Span.DAY -> Unit }
+        return Regex(" (monday|tuesday|wednesday|thursday|friday|tomorrow|today) ").find(t)?.groupValues?.get(1)
+            ?.let { if (it == "today" || it == "tomorrow") it else it.replaceFirstChar { c -> c.uppercase() } } ?: "the next session"
+    }
+
+    /**
+     * [bars]: the index's 1-minute candles (several days); [vix]: India VIX now (0 when unknown); [trading]: the market
+     * is open now (then the range is for the rest of today and the pivots are today's).
+     */
+    fun say(m: Market, bars: List<Candle>, vix: Double, trading: Boolean, text: String): String? {
+        if (m == Market.VIX || m == Market.GOLD) return null
+        val days = bars.groupBy { it.t.toLocalDate() }.toSortedMap()
+        if (days.size < 2) return null
+        val closes = days.values.map { it.last().c }
+        val last = closes.last()
+        val recent = closes.takeLast(6)
+        val ups = recent.zipWithNext().count { (a, b) -> b > a }
+        val moves = recent.size - 1
+        val five = if (moves > 0) (recent.last() - recent.first()) / recent.first() * 100 else 0.0
+        val trend = when {
+            moves >= 3 && ups >= moves - 1 && five > 0 -> "has been rising: up on $ups of the last $moves sessions (%+.1f%%)".format(Locale.ENGLISH, five)
+            moves >= 3 && ups <= 1 && five < 0 -> "has been falling: down on ${moves - ups} of the last $moves sessions (%+.1f%%)".format(Locale.ENGLISH, five)
+            else -> "has no clear direction lately: up on $ups of the last $moves sessions (%+.1f%%)".format(Locale.ENGLISH, five)
+        }
+        val day = session(text)
+        val span = span(text)
+        val parts = ArrayList<String>()
+        parts += "Boss, I don't predict prices - nobody can reliably. What the data says for ${m.label} for $day:"
+        parts += "${m.label} closed at ${n(last)} and $trend."
+        if (vix > 0) {
+            // One day's move scales with the square root of time: an hour is 60 of a session's 375 minutes, a week 5 days.
+            val (p, what) = when (span) {
+                Span.HOUR -> ExpectedRange.points(last, vix, 60) to "an hour"
+                Span.WEEK -> ExpectedRange.points(last, vix) * sqrt(5.0) to "a week"
+                Span.DAY -> ExpectedRange.points(last, vix) to "a day"
+            }
+            val rough = if (m == Market.NIFTY) "" else " (VIX measures Nifty, so take it as rough for ${m.label})"
+            parts += "From India VIX at %.2f the usual move in $what is about ±${n(p)} points, roughly ${n(last - p)} to ${n(last + p)}; about two times in three it stays inside$rough.".format(Locale.ENGLISH, vix)
+        }
+        if (span == Span.WEEK) {
+            // Weekly pivots: from the last five sessions' high, low and close.
+            val week = days.values.toList().takeLast(5).flatten()
+            val lv = Pivots.of(week.maxOf { it.h }, week.minOf { it.l }, week.last().c)
+            parts += "Weekly pivots from the last five sessions: R2 ${n(lv.r2)}, R1 ${n(lv.r1)}, pivot ${n(lv.p)}, S1 ${n(lv.s1)}, S2 ${n(lv.s2)}."
+        } else Pivots.say(m, bars, trading)?.let { parts += it }
+        parts += "A guide from past prices, not a forecast."
+        return parts.joinToString(" ")
+    }
+}

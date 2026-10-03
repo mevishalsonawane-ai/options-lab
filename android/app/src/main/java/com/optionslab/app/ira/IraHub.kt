@@ -951,6 +951,17 @@ object IraHub {
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
             return
         }
+        // "Monday prediction for BankNifty", "Nifty outlook next week": no price guessed - that index's trend, the range
+        // VIX prices in, and its pivots, for the hour, day or week asked about (Boss, 3 Oct).
+        if (parsed.order == null && parsed.command == null && com.optionslab.ira.Outlook.asked(q) && !Regex("(?i)\\b(my|mine|our)\\b").containsMatchIn(q)) {
+            val st = _state.value
+            val mk = parsed.markets.firstOrNull { it != IraMarket.VIX && it != IraMarket.GOLD } ?: IraMarket.NIFTY
+            val said = runCatching {
+                com.optionslab.ira.Outlook.say(mk, histories[mk]?.bars.orEmpty(), st.snaps[IraMarket.VIX]?.price ?: 0.0, st.snaps[mk]?.trading == true, q)
+            }.getOrNull() ?: "I don't have enough of ${mk.label}'s recent days on the phone yet to say, Boss. I don't predict prices anyway; ask me again once its prices have loaded."
+            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
+            return
+        }
         // A news question with no recent headlines on the phone: the feeds are read first (8 seconds at most), then answered.
         if (Topic.NEWS in parsed.topics && testHistories == null && System.currentTimeMillis() - newsCheckedAt > 3 * 60_000 && online() &&
             _state.value.newsAt?.isBefore(Instant.now().minusSeconds(NEWS_EVERY_MINUTES * 60)) != false) {

@@ -71,3 +71,30 @@ class HushTest {
         assertEquals(Wake.Heard.Ask("stop all strategies"), Wake.heard("Jarvis stop all strategies", false))
     }
 }
+
+class OutlookTest {
+    @Test fun aPredictionIsAnsweredForThatIndexWithoutGuessing() {
+        val q = "monday prediction for bank nifty"
+        assertTrue(Outlook.asked(q))
+        assertEquals(listOf(Market.BANKNIFTY), Market.mentioned(q).take(1))
+        assertEquals("Monday", Outlook.session(q))
+        assertTrue(Outlook.asked("what will nifty do tomorrow") && Outlook.asked("nifty outlook") && !Outlook.asked("how is nifty"))
+        // Six days of BankNifty rising 100 points a day.
+        val start = java.time.LocalDate.of(2026, 9, 28)
+        val bars = (0 until 6).flatMap { d ->
+            val base = 55_000.0 + d * 100
+            (0 until 3).map { i -> Candle(start.plusDays(d.toLong()).atTime(9, 15 + i), base, base + 50, base - 50, base + 10 * i) }
+        }
+        val s = Outlook.say(Market.BANKNIFTY, bars, 12.0, trading = false, text = q)!!
+        assertTrue(s.startsWith("Boss, I don't predict prices"), s)
+        assertTrue(s.contains("for Monday") && s.contains("BankNifty closed at 55,520.00") && s.contains("has been rising"), s)
+        assertTrue(s.contains("usual move in a day") && s.contains("pivots") && s.endsWith("not a forecast."), s)
+        // The next hour and the next week too.
+        assertEquals(Outlook.Span.HOUR, Outlook.span("bank nifty prediction for next hour"))
+        val h = Outlook.say(Market.BANKNIFTY, bars, 12.0, trading = true, text = "bank nifty prediction for next hour")!!
+        assertTrue(h.contains("for the next hour") && h.contains("usual move in an hour"), h)
+        val w = Outlook.say(Market.BANKNIFTY, bars, 12.0, trading = false, text = "nifty bank outlook next week")!!
+        assertTrue(w.contains("for the coming week") && w.contains("usual move in a week") && w.contains("Weekly pivots"), w)
+        assertNull(Outlook.say(Market.VIX, bars, 12.0, false, q))
+    }
+}
