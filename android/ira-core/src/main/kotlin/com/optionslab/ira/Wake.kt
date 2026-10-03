@@ -61,4 +61,18 @@ object Wake {
         if (Regex(" (yes|yeah|yep|yup|sure|approve|approved|confirm|confirmed|go ahead|do it|place it|buy it|take it|ok|okay|affirmative|positive) ").containsMatchIn(t)) return true
         return null
     }
+
+    private fun words(s: String) = s.lowercase().replace(Regex("[^a-z0-9 ]"), " ").split(Regex("\\s+")).filter { it.length > 1 }
+
+    /**
+     * Jarvis's own words heard back (the speaker's tail, the room's echo): most of what was heard is in what it just
+     * said. Such words are never a question - answering them is how one answer repeats itself.
+     */
+    fun echo(heard: String, lastSaid: String?): Boolean {
+        if (lastSaid.isNullOrBlank()) return false
+        val h = words(heard)
+        if (h.isEmpty()) return false
+        val said = words(lastSaid).toSet()
+        return h.count { it in said } >= maxOf(1.0, h.size * 0.7)
+    }
 }

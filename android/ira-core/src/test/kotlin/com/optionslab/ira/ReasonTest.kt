@@ -641,3 +641,14 @@ class OrderIdTest {
         assertTrue(l.any { it.contains("(Jarvis solo · entry), order #00001234.") }, l.toString())
     }
 }
+
+class EchoTest {
+    @Test fun jarvisDoesNotTakeItsOwnWordsAsAQuestion() {
+        val said = "Boss, Nifty is up 95 points from the open, near the day's high."
+        assertTrue(Wake.echo("nifty is up 95 points from the open", said))
+        assertTrue(Wake.echo("near the day's high", said))
+        assertFalse(Wake.echo("and banknifty", said))
+        assertFalse(Wake.echo("what about the levels for banknifty today", said))
+        assertFalse(Wake.echo("how is nifty", null))
+    }
+}

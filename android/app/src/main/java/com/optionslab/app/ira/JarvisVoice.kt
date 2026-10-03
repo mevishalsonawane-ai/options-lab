@@ -595,6 +595,8 @@ class JarvisVoice : Service() {
                 awakeUntil = 0
                 // A follow-up (no "Jarvis" in it) may ask, never act: trades and commands need the name, so talk nearby cannot trigger one.
                 val named = alternatives.any { Regex("\\bj[ae]rv[ia]s").containsMatchIn(it.lowercase()) }
+                // Its own last answer heard back without the name is not a question (the loop that repeats one answer).
+                if (!named && Wake.echo(h.question, lastAnswer?.takeIf { SystemClock.elapsedRealtime() - lastAnswerAt < FOLLOW_MS + 15_000 }?.text)) { again(); return }
                 val topics = com.optionslab.ira.Ask.parse(h.question).topics
                 // Muting, unmuting and the reply language are not actions: a follow-up "mute" works without the name.
                 val voiceOnly = com.optionslab.ira.Ask.parse(h.question).command?.kind in VOICE_KINDS
@@ -619,7 +621,7 @@ class JarvisVoice : Service() {
                             say(VoiceGuard.blocked() ?: "Boss, that didn't sound like you, so I won't place it. Say it again, or use the Ira screen.")
                         risky && !verified && (cmd!!.kind in HIGH_RISK || loosens) ->
                             say(VoiceGuard.blocked() ?: "Boss, that didn't sound like you, so I won't do it. Use the Ira screen.")
-                        else -> answer(h.question, confirm = risky && !verified)
+                        else -> answer(h.question, confirm = risky && !verified, named = named)
                     }
                 }
             }
@@ -635,7 +637,12 @@ class JarvisVoice : Service() {
     private val HIGH_RISK = setOf(com.optionslab.ira.Command.Kind.MODE_LIVE, com.optionslab.ira.Command.Kind.KILL_OFF,
         com.optionslab.ira.Command.Kind.JTRADES_LIVE, com.optionslab.ira.Command.Kind.AUTOPILOT_ON)
 
-    private fun answer(q: String, confirm: Boolean = false) {
+    /** The last answer said aloud and when (an echo of it is ignored; a follow-up's same answer is not said again). */
+    private data class Said(val text: String)
+    @Volatile private var lastAnswer: Said? = null
+    @Volatile private var lastAnswerAt = 0L
+
+    private fun answer(q: String, confirm: Boolean = false, named: Boolean = true) {
         heardAt = SystemClock.elapsedRealtime()
         _state.value = VoiceState(Mode.THINKING)
         scope.launch {
@@ -676,6 +683,15 @@ class JarvisVoice : Service() {
                     com.optionslab.ira.Ask.parse(q).command?.kind == com.optionslab.ira.Command.Kind.MORE -> 8
                     IraTools.brief -> 1
                     else -> 3 }))
+            }.let { text ->
+                // A follow-up (no "Jarvis") that brings back the very answer just given is not said again: the
+                // follow-up window closes instead, so one answer can never repeat itself in a loop.
+                val prev = lastAnswer
+                if (!named && prev != null && prev.text == text && SystemClock.elapsedRealtime() - lastAnswerAt < 120_000) {
+                    awakeUntil = 0; again(); return@launch
+                }
+                lastAnswer = Said(text); lastAnswerAt = SystemClock.elapsedRealtime()
+                text
             }, "answer")
         }
     }
