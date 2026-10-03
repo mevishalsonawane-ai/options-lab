@@ -916,6 +916,20 @@ object IraHub {
                 _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
                 return
             }
+        // "Remember that ...", "what did I tell you?", "forget what I told you": Boss's own words, kept - never acted on.
+        if (!understood) {
+            val keep = com.optionslab.ira.Memory.toKeep(q)
+            val said = when {
+                keep != null -> { runCatching { IraTools.remember(keep) }; "Noted, Boss: \"$keep\". Ask \"what did I tell you?\" any time." }
+                com.optionslab.ira.Memory.recallAsked(q) -> if (phoneLocked()) "Unlock the phone for that, Boss." else com.optionslab.ira.Memory.lines(IraTools.memory())
+                com.optionslab.ira.Memory.forgetAsked(q) -> { IraTools.forgetMemory(); "Done, Boss: I've forgotten what you asked me to remember." }
+                else -> null
+            }
+            if (said != null) {
+                _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
+                return
+            }
+        }
         // "How do you know that?": the facts the last answer was built from.
         if (com.optionslab.ira.Sources.asked(q)) {
             val last = _state.value.messages.lastOrNull { it.fromIra && !it.text.startsWith(TOOK_AS) }

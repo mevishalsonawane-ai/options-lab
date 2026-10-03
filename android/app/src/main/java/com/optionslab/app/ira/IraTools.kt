@@ -68,6 +68,23 @@ internal object IraTools {
 
     fun forgetLearned() { prefs().put(LEARNED, null); awaiting = null }
 
+    // ---- Boss's own words, kept ---------------------------------------------------------------------------------------
+
+    private const val MEMORY = "jarvis.memory"
+
+    fun memory(): List<com.optionslab.ira.Memory.Item> = runCatching {
+        val a = JSONArray(prefs().getString(MEMORY) ?: "[]")
+        (0 until a.length()).map { a.getJSONObject(it).let { o -> com.optionslab.ira.Memory.Item(java.time.LocalDate.parse(o.getString("d")), o.getString("t")) } }
+    }.getOrDefault(emptyList())
+
+    @Synchronized fun remember(text: String) {
+        val all = (memory() + com.optionslab.ira.Memory.Item(com.optionslab.app.data.Market.today(), com.optionslab.ira.Secrets.redact(text).take(300)))
+            .takeLast(com.optionslab.ira.Memory.KEEP)
+        prefs().put(MEMORY, JSONArray().apply { all.forEach { put(JSONObject().put("d", it.day.toString()).put("t", it.text)) } }.toString())
+    }
+
+    fun forgetMemory() { runCatching { prefs().put(MEMORY, null) } }
+
     // ---- Boss's habits ----------------------------------------------------------------------------------------------
 
     private const val HABITS = "jarvis.habits"
