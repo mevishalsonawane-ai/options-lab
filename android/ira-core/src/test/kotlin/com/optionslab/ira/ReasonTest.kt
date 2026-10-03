@@ -65,3 +65,12 @@ class ChartsTest {
         assertTrue("The charts disagree" in split, split)
     }
 }
+
+class FreshnessTest {
+    @Test fun stalePricesAreSaid() {
+        val d = java.time.LocalDate.of(2026, 10, 1)                                 // a Thursday
+        assertTrue(Freshness.note(Market.NIFTY, d.atTime(11, 0), d.atTime(11, 12))!!.contains("12 minutes old"))
+        assertNull(Freshness.note(Market.NIFTY, d.atTime(11, 0), d.atTime(11, 2)), "fresh")
+        assertNull(Freshness.note(Market.NIFTY, d.atTime(15, 29), d.atTime(18, 0)), "the market is closed")
+    }
+}

@@ -155,6 +155,11 @@ object DailyReports {
             runCatching { com.optionslab.app.ira.IraHub.refresh() }
             val ira = com.optionslab.app.ira.IraHub.state.value
             ok(ira.liveMissing.size < 3, if (ira.liveMissing.isEmpty()) "Live prices reaching the app" else "No live prices yet from ${ira.liveMissing.joinToString { it.label }}")
+            // The day's expected move, from India VIX.
+            runCatching {
+                val n = ira.snaps[com.optionslab.ira.Market.NIFTY]; val v = ira.snaps[com.optionslab.ira.Market.VIX]?.price
+                if (n != null && v != null) com.optionslab.ira.ExpectedRange.say(n, v, java.time.LocalDateTime.now(java.time.ZoneId.of("Asia/Kolkata")))?.let { lines += "• $it" }
+            }
             com.optionslab.app.security.SecurePrefs.getString("harvest.last")?.let { lines += "• Last data harvest: $it" }
             val pine = com.optionslab.app.data.PineScripts.items.value.count { it.auto.on }
             if (pine > 0) lines += "• Pine scripts switched on: $pine"

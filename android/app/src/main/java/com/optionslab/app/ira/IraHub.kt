@@ -986,7 +986,7 @@ object IraHub {
         // A holiday or a weekend: said first, so the last session's prices are not taken for today's.
         val closed = closedToday()?.takeIf { parsed.topics.any { it in MARKET_TOPICS } && testHistories == null }
         val a1 = if (closed == null) a0 else a0.copy(text = closed.substringBefore(" Prices") + " " + a0.text, facts = listOf(closed) + a0.facts)
-        val off = if (parsed.topics.any { it in MARKET_TOPICS }) offlineNote() else null
+        val off = if (parsed.topics.any { it in MARKET_TOPICS }) (offlineNote() ?: staleNote(parsed.markets)) else null
         val a = if (off == null) a1 else a1.copy(text = off + " " + a1.text, facts = listOf(off) + a1.facts)
         // JarvisAlgo with the model ready: the answer shows at once, then the model rewrites it in place if it passes the checks.
         val write = IraModel.usable() && com.optionslab.ira.Writer.worthRewriting(parsed, a)
@@ -1357,6 +1357,14 @@ object IraHub {
             val n = cm.activeNetwork ?: return@runCatching false
             cm.getNetworkCapabilities(n)?.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET) != false
         }.getOrDefault(true)
+    }
+
+    /** Said before a market answer when the market trades but the prices lag (a stalled feed). */
+    private fun staleNote(markets: List<IraMarket>): String? {
+        if (testHistories != null || closedToday() != null) return null       // a holiday: old prices are expected
+        val m = markets.firstOrNull { it != IraMarket.GOLD } ?: IraMarket.NIFTY
+        val at = _state.value.snaps[m]?.at ?: return null
+        return runCatching { com.optionslab.ira.Freshness.note(m, at, LocalDateTime.now(IST)) }.getOrNull()
     }
 
     /** Said before a market answer when offline: where the figures come from. */

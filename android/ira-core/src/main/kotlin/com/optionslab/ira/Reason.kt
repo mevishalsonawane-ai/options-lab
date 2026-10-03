@@ -100,3 +100,17 @@ object ExpectedRange {
             .format(Locale.ENGLISH, vix)
     }
 }
+
+/** How fresh the prices are (Jarvis self-improvement, 2026-10-03): said when the market is open and they lag. Pure. */
+object Freshness {
+    const val STALE_MINUTES = 5L
+
+    /** A warning when [at] (the last candle) is [STALE_MINUTES] or more behind [now] while [m] trades, else null. */
+    fun note(m: Market, at: LocalDateTime, now: LocalDateTime): String? {
+        if (!m.trading(now)) return null
+        val behind = java.time.Duration.between(at, now).toMinutes()
+        if (behind < STALE_MINUTES) return null
+        val age = if (behind >= 60) "over an hour" else "$behind minutes"
+        return "Careful, Boss: the last ${m.label} price I have is $age old - the live feed is behind."
+    }
+}
