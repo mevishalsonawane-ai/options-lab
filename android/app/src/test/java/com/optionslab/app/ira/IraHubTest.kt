@@ -174,6 +174,7 @@ class IraHubTest : RobolectricTest() {
     }
 
     @Test fun theUsualIsLearned() = runBlocking {
+        IraTools.forgetHabits()
         IraHub.ask("the usual")
         waitFor("not known yet") { IraHub.state.value.messages.lastOrNull()?.text?.startsWith("I don't know your usual yet") == true }
         repeat(3) { IraTools.noteHabit("what are the levels on banknifty") }

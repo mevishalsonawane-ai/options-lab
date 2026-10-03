@@ -34,7 +34,7 @@ object Intents {
         return "<|im_start|>system\n$sys<|im_end|>\n<|im_start|>user\n$user<|im_end|>\n<|im_start|>assistant\n"
     }
 
-    private val FILL = Regex(" (jarvis|please|boss|hey|ok|okay|can you|could you|would you|will you|i want you to|i want to|i need to|i d like to|just|now|right now|quickly|for me) ")
+    private val FILL = Regex(" (jarvis|please|boss|hey|ok|okay|can you|could you|i want you to|i want to|i need to|i d like to|just|now|right now|quickly|for me) ")
     private const val ALL = "(all|all the|all my|every|everything|my|the)"
 
     /**
@@ -44,9 +44,9 @@ object Intents {
      * the model's pick.
      */
     private val QUICK = listOf(
-        Regex("^(pause|halt|freeze|stop|kill|disable|shut down|shut off|switch off|turn off) $ALL? ?(bots?|algos?|strateg(y|ies)|arms?|automations?|auto trading|automatic trading)$") to "stop all strategies",
+        Regex("^(pause|halt|freeze|stop|kill|disable|shut down|shut off|switch off|turn off) $ALL? ?(bots|algos|strategies|arms|automations|auto trading|automatic trading)$") to "stop all strategies",
         Regex("^(pause|halt|freeze|stop) (all )?(trading|everything automatic)$") to "stop all strategies",
-        Regex("^(square off|squareoff|exit|close|flatten|get out of|sell off|liquidate) $ALL? ?(positions?|trades?|everything|holdings)$") to "close all positions",
+        Regex("^(square off|squareoff|exit|close|flatten|get out of|sell off|liquidate) $ALL? ?(positions|trades|everything)$") to "close all positions",
         Regex("^(square off|squareoff|flatten) everything$") to "close all positions",
         Regex("^(cancel|withdraw|pull|remove|delete|scrap) $ALL? ?(pending |open )?orders$") to "cancel all orders",
         Regex("^(activate|enable|switch on|turn on|hit|press|engage) (the )?(kill switch|panic button|emergency stop)$") to "turn the kill switch on",
@@ -62,8 +62,13 @@ object Intents {
         var t = " " + text.lowercase().replace(Regex("[^a-z0-9 ]"), " ").replace(Regex("\\s+"), " ").trim() + " "
         repeat(3) { t = FILL.replace(t, " ") }
         t = t.replace(Regex("\\s+"), " ").trim()
-        return QUICK.firstOrNull { it.first.matches(t) }?.second
+        val line = QUICK.firstOrNull { it.first.matches(t) }?.second ?: return null
+        // A question ("can you close all positions?") never becomes an action.
+        if (text.trim().endsWith("?") && line in ACTIONS) return null
+        return line
     }
+
+    private val ACTIONS = setOf("stop all strategies", "close all positions", "cancel all orders", "turn the kill switch on", "switch to paper mode")
 
     /** The model's [reply] as a line of the list (lower-case), or null when it is not exactly one. */
     fun pick(reply: String): String? {

@@ -82,7 +82,8 @@ object Ask {
         // A question ("Did I buy 2 lots of Nifty?") is never an order.
         val placed = if (said.trim().endsWith("?")) null else order(t)
         // "Where is BankNifty trading?" asks the price, not where something is in the app.
-        val priceAsk = Market.mentioned(text).isNotEmpty() && Regex("^ (where is|where s|wheres|where) ").containsMatchIn(t)
+        val priceAsk = Market.mentioned(text).isNotEmpty() && Regex("^ (where is|where s|wheres|where) ").containsMatchIn(t) &&
+            !Regex(" (my|mine|our|order|orders|position|positions|chain|page|tab|screen|see|find|do i|can i) ").containsMatchIn(t)
         val account = !priceAsk && (ACCOUNT.containsMatchIn(t) || AppAnswers.about(t) && placed?.lots == null)
         val order = if (account) null else placed
         // "Levels on all indices", "how are all the markets": the four indices.

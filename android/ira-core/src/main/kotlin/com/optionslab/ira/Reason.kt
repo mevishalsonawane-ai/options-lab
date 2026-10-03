@@ -43,7 +43,7 @@ object Moves {
     fun say(m: Market, bars: List<Candle>, w: Window): String? {
         val last = bars.lastOrNull() ?: return null
         val day = bars.filter { it.t.toLocalDate() == last.t.toLocalDate() }
-        val start: LocalDateTime = w.minutes?.let { last.t.minusMinutes(it.toLong()) } ?: last.t.toLocalDate().atTime(w.since ?: return null)
+        val start: LocalDateTime = w.minutes?.let { last.t.minusMinutes(it.toLong() - 1) } ?: last.t.toLocalDate().atTime(w.since ?: return null)
         if (!start.isBefore(last.t)) return null
         val inside = day.filter { !it.t.isBefore(start) }
         val first = inside.firstOrNull() ?: return null
@@ -92,7 +92,7 @@ object Compare {
  * About two days in three stay inside it. Pure.
  */
 object ExpectedRange {
-    private val ASK = Regex(" (expected|likely|possible|probable|implied) (range|move|movement|swing) | (how far|how much) (can|could|will|might) [a-z ]{0,20}(go|move|swing) | range (for|of) (today|the day|tomorrow) | (day s|todays|today s) range ")
+    private val ASK = Regex(" (expected|likely|possible|probable|implied) (range|move|movement|swing) | (how far|how much) (can|could|will|might) [a-z ]{0,20}(go|move|swing) ")
 
     fun asked(text: String): Boolean = ASK.containsMatchIn(norm(text))
 
@@ -150,7 +150,7 @@ object Why {
                     abs(since) >= abs(gap) -> "and has more than filled that gap since"
                     else -> "and has given back ${n(abs(since))} of it since the open"
                 }
-                parts += "${s.market.label} opened ${n(abs(gap))} points ${if (gap > 0) "above" else "below"} yesterday's close (a gap ${if (gap > 0) "up" else "down"}) $after."
+                parts += "${s.market.label} opened ${n(abs(gap))} points ${if (gap > 0) "above" else "below"} the previous close (a gap ${if (gap > 0) "up" else "down"}) $after."
             }
         }
         if (s.market in INDICES) {
@@ -171,5 +171,32 @@ object Why {
             else if (v <= -5) parts += "Fear is easing: India VIX is ${pct(v)} today."
         }
         return parts.takeIf { it.isNotEmpty() }?.joinToString(" ")
+    }
+}
+
+/**
+ * The day told as a story (Jarvis self-improvement, 2026-10-03): "how has the day gone?", "recap", "Nifty so far" - the
+ * open, when the high and the low were made (which came first), and where it is now within the day's range. Pure.
+ */
+object DayStory {
+    private val ASK = Regex(" (recap|story|so far|how has the day|how did the day|how has today|how was the day|how did today|day summary|session so far|today s session|todays session|wrap up|wrap) ")
+
+    fun asked(text: String): Boolean = ASK.containsMatchIn(norm(text))
+
+    private fun hm(t: LocalDateTime) = "%02d:%02d".format(Locale.ENGLISH, t.hour, t.minute)
+
+    fun say(m: Market, bars: List<Candle>): String? {
+        val last = bars.lastOrNull() ?: return null
+        val day = bars.filter { it.t.toLocalDate() == last.t.toLocalDate() }
+        if (day.size < 15) return null
+        val open = day.first(); val hi = day.maxBy { it.h }; val lo = day.minBy { it.l }
+        val range = hi.h - lo.l
+        val where = if (range <= 0) "flat" else ((last.c - lo.l) / range).let { f -> when {
+            f >= 0.8 -> "near the day's high"; f <= 0.2 -> "near the day's low"; else -> "in the middle of the day's range" } }
+        val path = if (hi.t.isBefore(lo.t))
+            "made its high of ${n(hi.h)} at ${hm(hi.t)}, then fell to the low of ${n(lo.l)} at ${hm(lo.t)}"
+        else "dipped to its low of ${n(lo.l)} at ${hm(lo.t)}, then climbed to the high of ${n(hi.h)} at ${hm(hi.t)}"
+        val net = last.c - open.o
+        return "${m.label} opened at ${n(open.o)}, $path. It is now ${n(last.c)} (${pts(net)} from the open), $where."
     }
 }

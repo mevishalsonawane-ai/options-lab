@@ -77,6 +77,8 @@ internal object IraTools {
         o.keys().asSequence().associateWith { k -> val a = o.getJSONArray(k); IntArray(24) { a.optInt(it) } }
     }.getOrDefault(emptyMap())
 
+    fun forgetHabits() { runCatching { prefs().put(HABITS, null) } }
+
     /** A market question Boss asked, counted at this hour (nothing else is counted). */
     @Synchronized fun noteHabit(question: String) {
         runCatching {

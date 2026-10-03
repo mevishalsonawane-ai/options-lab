@@ -26,8 +26,8 @@ class ReasonTest {
 
     @Test fun theMoveIsWorkedOut() {
         val s = Moves.say(Market.NIFTY, bars, Moves.Window(minutes = 60, label = "in the last hour"))!!
-        assertTrue(s.startsWith("Nifty rose 61.00 points in the last hour"), s)
-        assertTrue("from 24,239.00 to 24,300.00" in s, s)
+        assertTrue(s.startsWith("Nifty rose 60.00 points in the last hour"), s)
+        assertTrue("from 24,240.00 to 24,300.00" in s, s)
         assertNull(Moves.say(Market.NIFTY, bars, Moves.Window(since = LocalTime.of(15, 0), label = "since 15:00")), "nothing after the last candle")
     }
 
@@ -87,7 +87,7 @@ class WhyTest {
             Market.SENSEX to snap(Market.SENSEX, 80_000.0, 79_700.0, 79_500.0),
             Market.VIX to snap(Market.VIX, 13.0, 13.5, 14.0))
         val s = Why.story(snaps.getValue(Market.NIFTY), snaps)!!
-        assertTrue("Nifty opened 150.00 points below yesterday's close (a gap down) and has added 50.00 more since the open." in s, s)
+        assertTrue("Nifty opened 150.00 points below the previous close (a gap down) and has added 50.00 more since the open." in s, s)
         assertTrue("The move is broad" in s, s)
         assertTrue("Fear is rising" in s, s)
     }
@@ -107,5 +107,19 @@ class AllIndicesTest {
         assertEquals(Reasoning.INDICES, Compare.markets("which index is strongest today"))
         assertEquals(setOf(Market.NIFTY, Market.SENSEX), Compare.markets("nifty vs sensex").toSet())
         assertFalse(Compare.asked("what are the levels"))
+    }
+}
+
+class DayStoryTest {
+    @Test fun theDayIsTold() {
+        val d = java.time.LocalDate.of(2026, 10, 1)
+        // Up 1 a minute for an hour, then down 1 a minute for two hours.
+        val bars = (0 until 180).map { i -> val p = if (i < 60) 24_000.0 + i else 24_060.0 - (i - 60); Candle(d.atTime(9, 15).plusMinutes(i.toLong()), p, p + 0.5, p - 0.5, p) }
+        val s = DayStory.say(Market.NIFTY, bars)!!
+        assertTrue(s.startsWith("Nifty opened at 24,000.00, made its high of 24,060.50 at 10:15, then fell to the low of 23,940.50 at 12:14."), s)
+        assertTrue("near the day's low" in s, s)
+        assertTrue(DayStory.asked("how has the day gone"))
+        assertTrue(DayStory.asked("give me a recap of banknifty"))
+        assertFalse(DayStory.asked("how is nifty"))
     }
 }

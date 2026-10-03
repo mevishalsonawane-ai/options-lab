@@ -110,7 +110,7 @@ object AppAnswers {
         Section.SETTINGS to Regex(" (settings|setting|mode|paper mode|live mode|product|nrml|mis|preferences|one tap|biometric|pin) "),
         Section.STATUS to Regex(" (status|market open|is the market|open today|holiday|holidays|expiry|expiries|harvest|data|zerodha|kite|login|logged|connected|static ip|relay|app) "),
         Section.HOWTO to Regex(" (where|how do i|how can i|how to|find|which tab|which page|switch to) "),
-        Section.REVIEW to Regex(" (review|weekly review|insight|insights|mistake|mistakes|habits|patterns in my|what am i doing wrong|how did my week|my week|news trades?|win rate|winning rate|hit rate|success rate|strike rate|accuracy) "),
+        Section.REVIEW to Regex(" (review|weekly review|insight|insights|mistake|mistakes|habits|patterns in my|what am i doing wrong|how did my week|my week|news trades?|(my|our) (win rate|winning rate|hit rate|success rate|strike rate|accuracy)) "),
         Section.FLOWS to Regex(" (fii|fiis|dii|diis|fpi|fpis|institutional|institutions|flows|foreign funds|mutual funds) "),
         Section.CHAIN to Regex(" (oi|open interest|pcr|put call|put-call|max pain|option chain|chain|iv|implied volatility|skew|call writing|put writing|writers) "),
         Section.STUDY to Regex(" (what did you study|your study|you studied|you learn|you learned|history say|history says|history shows|what usually happens|usually happens|overnight|last night|night news|how will the market|how the market will|will the market|market will|how markets? works?|edge|edges) "),

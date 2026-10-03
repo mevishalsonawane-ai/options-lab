@@ -926,8 +926,6 @@ object IraHub {
             ask(usual, understood = true)
             return
         }
-        // Boss's own market questions are counted by the hour (for "the usual"), off the main thread.
-        if (!understood) scope.launch { IraTools.noteHabit(q) }
         // Everyday words for the commonest requests ("pause all bots", "am I up today"): read at once by fixed rules,
         // then asked as that line - an action waits for Confirm, as when the model picks it.
         // ("Halt the algos" reads as stopping one strategy named "the algos": the everyday reading wins there.)
@@ -940,10 +938,12 @@ object IraHub {
             }
         }
         // A trading word explained ("what is theta", "explain max pain"): at once, before anything is looked up.
-        if (parsed.order == null && parsed.command == null) runCatching { com.optionslab.ira.Glossary.explain(q) }.getOrNull()?.let { text ->
+        if (parsed.order == null && parsed.command == null && Topic.ACCOUNT !in parsed.topics && Topic.EXPLAIN !in parsed.topics) runCatching { com.optionslab.ira.Glossary.explain(q) }.getOrNull()?.let { text ->
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, text)).takeLast(MAX_MESSAGES)) }
             return
         }
+        // Boss's own market questions are counted by the hour (for "the usual"), off the main thread.
+        if (!understood) scope.launch { IraTools.noteHabit(q) }
         if (Topic.OFF_TOPIC in parsed.topics) IraTools.count("misunderstood")
         if (Topic.BACKTEST in parsed.topics) { backtestAsked(q, parsed); return }
         if (Topic.ACCOUNT in parsed.topics) { accountAsked(q); return }
@@ -969,7 +969,8 @@ object IraHub {
             return
         }
         // Reasoning over the data on the phone: a move over a stretch of time, which market is stronger, the expected range.
-        if (parsed.order == null && parsed.command == null) runCatching { reasoned(q, parsed) }.getOrNull()?.let { text ->
+        // (Not for an advice question: the usual answer says Jarvis gives no buy or sell advice.)
+        if (parsed.order == null && parsed.command == null && Topic.ADVICE !in parsed.topics) runCatching { reasoned(q, parsed) }.getOrNull()?.let { text ->
             val said = offlineNote()?.let { "$it $text" } ?: text
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said, listOf(text))).takeLast(MAX_MESSAGES)) }
             return
@@ -1118,6 +1119,8 @@ object IraHub {
      * out from the candles and snapshots on the phone, or null when the question is none of these (or the data is missing).
      */
     private fun reasoned(q: String, parsed: com.optionslab.ira.Question): String? {
+        // "Why did Nifty fall in the last hour": the why-story and the news answer it, not bare figures.
+        if (Topic.WHY in parsed.topics) return null
         val st = _state.value
         if (com.optionslab.ira.Compare.asked(q)) return com.optionslab.ira.Compare.say(com.optionslab.ira.Compare.markets(q), st.snaps)
         val m = parsed.markets.firstOrNull { it != IraMarket.VIX } ?: IraMarket.NIFTY
@@ -1126,6 +1129,7 @@ object IraHub {
             return com.optionslab.ira.ExpectedRange.say(st.snaps[m] ?: return null, vix, LocalDateTime.now(IST))
         }
         com.optionslab.ira.Moves.asked(q)?.let { w -> return com.optionslab.ira.Moves.say(m, histories[m]?.bars ?: return null, w) }
+        if (com.optionslab.ira.DayStory.asked(q)) return com.optionslab.ira.DayStory.say(m, histories[m]?.bars ?: return null)
         return null
     }
 
@@ -1141,7 +1145,11 @@ object IraHub {
         var pending: String? = null
         for (m in ms.take(upTo)) {
             if (!m.fromIra) pending = m.text
-            else if (pending != null && !m.text.startsWith(TOOK_AS) && !m.text.startsWith("One moment")) { out += pending to m.text; pending = null }
+            else if (pending != null && !m.text.startsWith(TOOK_AS) && !m.text.startsWith("One moment") && !m.text.startsWith("I understood:")) {
+                // The account is never carried into the chat (it could be spoken on a locked phone).
+                if (runCatching { Topic.ACCOUNT !in Ask.parse(pending!!).topics }.getOrDefault(false)) out += pending!! to m.text
+                pending = null
+            }
         }
         return out.takeLast(2)
     }
@@ -1362,8 +1370,13 @@ object IraHub {
     /** Said before a market answer when the market trades but the prices lag (a stalled feed). */
     private fun staleNote(markets: List<IraMarket>): String? {
         if (testHistories != null || closedToday() != null) return null       // a holiday: old prices are expected
-        val m = markets.firstOrNull { it != IraMarket.GOLD } ?: IraMarket.NIFTY
-        val at = _state.value.snaps[m]?.at ?: return null
+        val m = markets.firstOrNull() ?: IraMarket.NIFTY
+        if (m == IraMarket.GOLD) return null
+        // Only when a fetch has just been tried: a price merely not refreshed yet is not a feed behind.
+        val st = _state.value
+        val fetched = st.liveAt?.isAfter(java.time.Instant.now().minusSeconds(120)) == true || m in st.liveMissing
+        if (!fetched) return null
+        val at = st.snaps[m]?.at ?: return null
         return runCatching { com.optionslab.ira.Freshness.note(m, at, LocalDateTime.now(IST)) }.getOrNull()
     }
 
@@ -1401,6 +1414,7 @@ object IraHub {
     /** Wipes what Ira learned too; it relearns from the data on the next refresh. */
     suspend fun forgetAll() = lock.withLock {
         dropPending()
+        IraTools.forgetHabits()
         checked = null
         book = PatternBook()
         lastNews = null

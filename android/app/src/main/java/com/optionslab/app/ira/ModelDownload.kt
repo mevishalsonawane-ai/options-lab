@@ -62,8 +62,9 @@ class ModelDownload : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == ACTION_CANCEL) {
+            val running = job?.isActive == true
             job?.cancel()
-            IraModel.publish { it.copy(status = IraModel.Status.ABSENT, message = "Download stopped; it resumes from here next time.") }
+            if (running) IraModel.publish { it.copy(status = IraModel.Status.ABSENT, message = "Download stopped; it resumes from here next time.") }
             stopSelf(); return START_NOT_STICKY
         }
         if (job?.isActive == true) return START_NOT_STICKY
@@ -90,7 +91,7 @@ class ModelDownload : Service() {
         val part = java.io.File(c.noBackupFilesDir, "${spec.file}.part")
         val dest = java.io.File(c.noBackupFilesDir, spec.file)
         // Already on the phone (its check was not remembered): check it again, download nothing.
-        if (dest.length() == spec.size && IraModel.recheck(c)) return
+        if (dest.length() == spec.size && IraModel.recheck(c, spec)) return
         val cm = getSystemService(ConnectivityManager::class.java)
         if (cm.activeNetwork == null) throw IOException("No connection")
         // A part file larger than the model (an earlier overrun) can never complete: start again.
@@ -147,8 +148,8 @@ class ModelDownload : Service() {
         }
         dest.delete()
         if (!part.renameTo(dest)) throw IOException("Could not keep the file")
+        IraModel.markVerified(c, spec)                       // checked against its own fingerprint, whichever is chosen now
         if (IraModel.choice != spec) return                  // another model was chosen meanwhile: this one is kept for later
-        IraModel.markVerified(c)
         IraModel.dropOthers(c)
         IraModel.publish { IraModel.State(status = IraModel.Status.READY, done = spec.size) }
         runCatching {

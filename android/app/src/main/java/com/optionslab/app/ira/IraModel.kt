@@ -64,13 +64,15 @@ object IraModel {
      */
     suspend fun choose(c: Context, s: Spec) {
         if (s == choice) return
-        ModelDownload.cancel(c)
+        // A download under way is stopped (a cancel when none runs would overwrite the new model's state).
+        if (_state.value.status == Status.DOWNLOADING || _state.value.status == Status.VERIFYING) ModelDownload.cancel(c)
         lock.withLock {
             unloadLocked()
             runCatching { com.optionslab.app.security.SecurePrefs.put("ira.model.choice", s.key) }
+            // The new model's state is published before anything waiting on the lock can load a file.
+            deferred = false
+            init(c)
         }
-        deferred = false
-        init(c)
     }
 
     /** Models on the phone other than the chosen one (a whole file or part of one), with the bytes each takes. */
@@ -132,12 +134,13 @@ object IraModel {
      * A model file already on the phone: checked against its fingerprint again instead of downloaded again. A match is
      * remembered and used; anything else is deleted. True when it matched.
      */
-    internal fun recheck(c: Context): Boolean {
-        val f = file(c)
+    internal fun recheck(c: Context, spec: Spec = choice): Boolean {
+        val f = File(c.noBackupFilesDir, spec.file)
         _state.update { it.copy(status = Status.VERIFYING, message = null) }
-        val ok = f.length() == SIZE && runCatching { ModelDownload.sha256(f) }.getOrNull() == SHA256
-        if (ok) { markVerified(c); _state.value = State(status = Status.READY, done = SIZE) }
-        else { f.delete(); _state.value = State(status = if (supported(c)) Status.ABSENT else Status.UNSUPPORTED, done = part(c).length()) }
+        val ok = f.length() == spec.size && runCatching { ModelDownload.sha256(f) }.getOrNull() == spec.sha256
+        // The fingerprint is checked against the model whose file this is; the state is published only while it is chosen.
+        if (ok) { markVerified(c, spec); if (spec == choice) _state.value = State(status = Status.READY, done = spec.size) }
+        else { f.delete(); if (spec == choice) _state.value = State(status = if (supported(c)) Status.ABSENT else Status.UNSUPPORTED, done = part(c).length()) }
         return ok
     }
 
@@ -163,9 +166,9 @@ object IraModel {
         return f.length() == SIZE && runCatching { com.optionslab.app.security.SecurePrefs.getString(verifiedKey()) }.getOrNull() == "$SIZE:${f.lastModified()}"
     }
 
-    internal fun markVerified(c: Context) {
-        val f = file(c)
-        runCatching { com.optionslab.app.security.SecurePrefs.put(verifiedKey(), "$SIZE:${f.lastModified()}") }
+    internal fun markVerified(c: Context, spec: Spec = choice) {
+        val f = File(c.noBackupFilesDir, spec.file)
+        runCatching { com.optionslab.app.security.SecurePrefs.put(verifiedKey(spec), "${spec.size}:${f.lastModified()}") }
     }
 
     internal fun publish(s: State) { _state.value = s }
@@ -214,6 +217,8 @@ object IraModel {
         val c = app ?: return@withContext null
         if (!usable()) return@withContext null
         lock.withLock {
+            // Checked again under the lock: the model may have been switched while this waited.
+            if (!usable()) return@withLock null
             idle?.cancel()
             _state.update { it.copy(writing = true) }
             try {
@@ -241,6 +246,8 @@ object IraModel {
         val c = app ?: return@withContext null
         if (!usable()) return@withContext null
         lock.withLock {
+            // Checked again under the lock: the model may have been switched while this waited.
+            if (!usable()) return@withLock null
             idle?.cancel()
             _state.update { it.copy(writing = true) }
             try {
@@ -299,7 +306,7 @@ object IraModel {
         if (!usable()) return
         scope.launch {
             lock.withLock {
-                if (handle != 0L) return@withLock
+                if (handle != 0L || !usable()) return@withLock
                 idle?.cancel()
                 if (!LlmNative.ensure()) return@withLock
                 handle = LlmNative.load(file(c).path, threads())
@@ -313,8 +320,18 @@ object IraModel {
         if (handle != 0L) { runCatching { LlmNative.free(handle) }; handle = 0L; _state.update { it.copy(loaded = false) } }
     }
 
-    /** Half the phone's cores (its fast ones), four at most: replies come about twice as fast as on two. */
-    private fun threads() = (Runtime.getRuntime().availableProcessors() / 2).coerceIn(2, 4)
+    /**
+     * The phone's fast cores (those within 80% of the fastest clock), two to four: the model's work is split evenly, so a
+     * slow core would hold every step back. Half the cores when the clocks cannot be read.
+     */
+    private fun threads(): Int {
+        val freqs = runCatching {
+            File("/sys/devices/system/cpu").listFiles { f -> f.name.matches(Regex("cpu\\d+")) }.orEmpty()
+                .mapNotNull { File(it, "cpufreq/cpuinfo_max_freq").takeIf { f -> f.canRead() }?.readText()?.trim()?.toLongOrNull() }
+        }.getOrDefault(emptyList())
+        val fast = freqs.maxOrNull()?.let { top -> freqs.count { it >= top * 0.8 } }
+        return (fast ?: (Runtime.getRuntime().availableProcessors() / 2)).coerceIn(2, 4)
+    }
 
     /** Stops what the model is writing now (a new question came): the answer already shown stands. */
     fun stopWriting() { if (_state.value.writing) runCatching { LlmNative.cancel() } }
@@ -326,7 +343,7 @@ object IraModel {
     private inline fun <T> gently(f: () -> T): T {
         val tid = android.os.Process.myTid()
         val was = runCatching { android.os.Process.getThreadPriority(tid) }.getOrDefault(0)
-        runCatching { android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_LESS_FAVORABLE) }
+        runCatching { android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_DEFAULT + android.os.Process.THREAD_PRIORITY_LESS_FAVORABLE) }
         try { return f() } finally { runCatching { android.os.Process.setThreadPriority(was) } }
     }
 
