@@ -1046,7 +1046,7 @@ internal fun ManualOrder(model: AppModel) {
             // leave the form with no strike picked.
             suspend fun <T> twice(read: suspend () -> T): T = try { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { read() } }
                 catch (e: kotlinx.coroutines.CancellationException) { throw e }
-                catch (e: Exception) { kotlinx.coroutines.delay(1_000); kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { read() } }
+                catch (e: Exception) { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { kotlinx.coroutines.delay(1_000); read() } }   // the wait off the main thread too
             spot = try { twice { Broker.indexQuote(underlying)?.last ?: error("no index price") } }
                 catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { null }
             val list = twice {
