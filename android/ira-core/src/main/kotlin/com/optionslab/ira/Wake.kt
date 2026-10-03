@@ -12,13 +12,20 @@ object Wake {
         object Awake : Heard()
         /** "Jarvis, stop listening": the owner switches listening off. */
         object Stop : Heard()
+        /** "Jarvis, stop" / "enough" / "quiet": stop talking now and keep listening (never a command to stop anything). */
+        object Hush : Heard()
         data class Ask(val question: String) : Heard()
     }
 
     /** How the recognizer tends to write "Jarvis". */
     private val WORDS = listOf("jarvis", "jarvas", "jervis", "jarviss", "jar vis")
     private val FILLER = Regex("^(hey|hi|ok|okay|hello|so|and|please)\\b\\s*")
-    private val STOP = Regex("^(stop listening|go to sleep|stop|sleep|shut down|turn off)$")
+    private val STOP = Regex("^(stop listening|go to sleep|sleep|shut down|turn off|switch off)$")
+    /** Boss's "be quiet" (3 Oct: "Jarvis stop" means stop talking, not stop my orders). */
+    private val HUSH = Regex("^(just |please |now )?(stop|stop it|stop now|stop that|stop talking|stop speaking|enough|that s enough|thats enough|quiet|be quiet|shut up|silence|hush|chup|bas|never ?mind|forget it|cancel that)( please| now| jarvis)?$")
+
+    /** Is [text] only "stop talking" (said to Jarvis, with or without its name)? */
+    fun hush(text: String): Boolean = HUSH.matches(text.lowercase().replace(Regex("[^a-z ]"), " ").replace(Regex("\\s+"), " ").trim())
 
     /** [awake]: the wake word was said alone a moment ago, so this sentence is the question. */
     fun heard(text: String, awake: Boolean): Heard {
@@ -28,6 +35,7 @@ object Wake {
         return when {
             at == null && !awake -> Heard.Ignore
             STOP.matches(rest) -> Heard.Stop
+            HUSH.matches(rest) -> Heard.Hush
             rest.isEmpty() -> if (at != null) Heard.Awake else Heard.Ignore
             else -> Heard.Ask(rest)
         }

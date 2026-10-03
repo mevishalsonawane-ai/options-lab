@@ -58,3 +58,16 @@ class DailyStopLossTest {
         assertEquals(SettingsTalk.Key.DAILY_LOSS.name, c?.target)
     }
 }
+
+class HushTest {
+    @Test fun jarvisStopMeansStopTalking() {
+        for (q in listOf("Jarvis stop", "Jarvis, stop it", "jarvis enough", "Jarvis be quiet", "jarvis shut up", "Jarvis never mind"))
+            assertEquals(Wake.Heard.Hush, Wake.heard(q, false), q)
+        // In the follow-up window, without the name too.
+        assertEquals(Wake.Heard.Hush, Wake.heard("stop", true))
+        assertTrue(Wake.hush("Stop talking!") && !Wake.hush("stop all strategies"))
+        // Switching listening off still needs those words; stopping strategies is still a request.
+        assertEquals(Wake.Heard.Stop, Wake.heard("Jarvis, stop listening", false))
+        assertEquals(Wake.Heard.Ask("stop all strategies"), Wake.heard("Jarvis stop all strategies", false))
+    }
+}

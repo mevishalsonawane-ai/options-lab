@@ -597,6 +597,8 @@ class JarvisVoice : Service() {
             Wake.Heard.Ignore -> again()
             Wake.Heard.Awake -> { awakeUntil = SystemClock.elapsedRealtime() + AWAKE_MS; called = true; say("Yes, Boss?") }
             Wake.Heard.Stop -> { wanted = false; say("Going to sleep, Boss. Switch me on again in IraAlgo.", STOP_AFTER) }
+            // "Jarvis, stop" / "enough" / "quiet": it has stopped talking (the name cut in); nothing else is done.
+            Wake.Heard.Hush -> { interrupt(); awakeUntil = 0; called = false; asking = null; _state.value = VoiceState(Mode.LISTENING); again() }
             is Wake.Heard.Ask -> {
                 // "Jarvis, stop talking" said over Jarvis: it has already stopped; that is not a lasting mute.
                 if (cutIn && Regex("^(stop|please stop|ok stop) (talking|speaking)$").matches(h.question.lowercase().trim())) { again(); return }
