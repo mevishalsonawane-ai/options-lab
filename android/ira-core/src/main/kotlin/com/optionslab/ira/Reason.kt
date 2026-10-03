@@ -690,3 +690,36 @@ object Together {
         return "Today ${m1.label} and ${m2.label} are $word: their 5-minute moves have a correlation of %.2f (1 is in step, 0 unrelated).".format(Locale.ENGLISH, c)
     }
 }
+
+/**
+ * Realised against implied volatility (Jarvis self-improvement, 2026-10-03): "are options expensive today?", "realised
+ * volatility" - how fast Nifty is actually moving (5-minute moves today, annualised) against what India VIX prices in.
+ * Moving less than priced: option buyers pay for moves that are not coming; more: sellers are under-paid. Pure.
+ */
+object Realised {
+    private val ASK = Regex(" (realised|realized|actual volatility|actual vol|options (are )?(expensive|cheap|dear|overpriced|underpriced)|are options (expensive|cheap|dear|overpriced|underpriced)|premiums? (expensive|cheap|dear|high|low)|is vix fair|vix fair|implied vs|moving more than|moving less than) ")
+
+    fun asked(text: String): Boolean = ASK.containsMatchIn(norm(text))
+
+    /** Annualised volatility (%) of the 5-minute moves in [bars]' last session, or null with too few. */
+    fun annualised(bars: List<Candle>): Double? {
+        val day = bars.lastOrNull()?.t?.toLocalDate() ?: return null
+        val closes = bars.filter { it.t.toLocalDate() == day }.groupBy { it.t.withMinute(it.t.minute / 5 * 5).withSecond(0) }.toSortedMap().values.map { it.last().c }
+        if (closes.size < 7) return null
+        val r = closes.zipWithNext { a, b -> kotlin.math.ln(b / a) }
+        val mean = r.average()
+        val sd = sqrt(r.sumOf { (it - mean) * (it - mean) } / (r.size - 1))
+        return sd * sqrt(75.0 * 252) * 100
+    }
+
+    fun say(m: Market, bars: List<Candle>, vix: Double): String? {
+        val rv = annualised(bars) ?: return null
+        val ratio = rv / vix
+        val read = when {
+            ratio < 0.75 -> "it is moving well under what options price in: premiums look dear for buyers (sellers are being paid well)"
+            ratio > 1.25 -> "it is moving faster than options price in: premiums look cheap for buyers (sellers are under-paid)"
+            else -> "options are priced about right for how it is moving"
+        }
+        return "${m.label} is moving at about %.1f%% a year today (from its 5-minute moves) against India VIX at %.1f%%: $read.".format(Locale.ENGLISH, rv, vix)
+    }
+}

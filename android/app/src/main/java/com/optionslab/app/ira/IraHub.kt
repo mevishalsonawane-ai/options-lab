@@ -1203,6 +1203,11 @@ object IraHub {
             val ev = runCatching { IraEvents.upcoming(1).filter { it.day == today }.map { com.optionslab.ira.Events.line(it, today) } }.getOrNull().orEmpty()
             return com.optionslab.ira.Briefing.say(st.snaps, LocalDateTime.now(IST), ev)
         }
+        if (com.optionslab.ira.Realised.asked(q)) {
+            val mk = parsed.markets.firstOrNull { it != IraMarket.VIX && it != IraMarket.GOLD } ?: IraMarket.NIFTY
+            val v = st.snaps[IraMarket.VIX]?.price ?: return null
+            return com.optionslab.ira.Realised.say(mk, histories[mk]?.bars ?: return null, v)
+        }
         if (com.optionslab.ira.Together.asked(q)) {
             val (m1, m2) = IraMarket.mentioned(q).filter { it != IraMarket.VIX }.let { it[0] to it[1] }
             return com.optionslab.ira.Together.say(m1, histories[m1]?.bars ?: return null, m2, histories[m2]?.bars ?: return null)

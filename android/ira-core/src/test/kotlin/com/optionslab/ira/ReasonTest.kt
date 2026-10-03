@@ -459,3 +459,16 @@ class TogetherTest {
         assertTrue(Together.say(Market.NIFTY, a, Market.BANKNIFTY, b)!!.contains("moving closely together"))
     }
 }
+
+class RealisedTest {
+    @Test fun realisedAgainstImplied() {
+        val d = java.time.LocalDate.of(2026, 10, 1)
+        val flat = (0 until 120).map { i -> val p = 24_000.0 + (i % 2); Candle(d.atTime(9, 15).plusMinutes(i.toLong()), p, p, p, p) }
+        val rv = Realised.annualised(flat)!!
+        assertTrue(rv < 5.0, "$rv")
+        assertTrue(Realised.say(Market.NIFTY, flat, 15.0)!!.contains("premiums look dear for buyers"))
+        assertTrue(Realised.asked("are options expensive today"))
+        assertTrue(Realised.asked("what is the realised volatility"))
+        assertFalse(Realised.asked("how is nifty"))
+    }
+}
