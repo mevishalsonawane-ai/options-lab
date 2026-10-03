@@ -938,6 +938,19 @@ object IraHub {
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, GOLD_TALK_ONLY)).takeLast(MAX_MESSAGES)) }
             return
         }
+        // A command for a later time ("start all the arms tomorrow at 9am"): set only once confirmed, run by an alarm then.
+        if (com.optionslab.app.BuildConfig.JARVIS) runCatching { com.optionslab.ira.Later.split(q, java.time.LocalDateTime.now(IST)) }.getOrNull()?.let { w ->
+            val c = Ask.parse(w.rest).command
+            if (c != null && com.optionslab.app.BuildConfig.GOLD) { _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, GOLD_TALK_ONLY)).takeLast(MAX_MESSAGES)) }; return }
+            if (c != null) { laterAsked(q, c, w); return }
+        }
+        // "What have you set for later?" / "cancel everything set for later"
+        if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && Regex("(?i)\\b(set|scheduled?|planned|pending)\\b.*\\blater\\b|\\bfor later\\b").containsMatchIn(q)) {
+            val c = app
+            val said = if (c != null && Regex("(?i)\\b(cancel|clear|remove|delete|drop)\\b").containsMatchIn(q)) { IraLater.clear(c); "Done, Boss: nothing is set for later now." } else IraLater.say()
+            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
+            return
+        }
         // A news question with no recent headlines on the phone: the feeds are read first (8 seconds at most), then answered.
         if (Topic.NEWS in parsed.topics && testHistories == null && System.currentTimeMillis() - newsCheckedAt > 3 * 60_000 && online() &&
             _state.value.newsAt?.isBefore(Instant.now().minusSeconds(NEWS_EVERY_MINUTES * 60)) != false) {
@@ -1379,6 +1392,22 @@ object IraHub {
         val c = app ?: return
         if (_state.value.messages.lastOrNull { !it.fromIra }?.text != question) return
         if (JarvisVoice.wanted || JarvisSpeaker.speakTyped) runCatching { JarvisSpeaker.speak(c, text) }
+    }
+
+    /** A command for a later time: only the allowed kinds, always confirmed first; then kept and run by its alarm. */
+    private fun laterAsked(q: String, c: com.optionslab.ira.Command, w: com.optionslab.ira.Later.When) {
+        _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+        if (c.kind !in com.optionslab.ira.Later.ALLOWED) {
+            reply("Boss, I can set a time only for starting or stopping strategies and arms, the kill switch on, or paper mode - not that. Ask me for it when you want it done.")
+            return
+        }
+        val ctx = app ?: return reply("I could not set that just now.")
+        scope.launch {
+            val (what, act) = runCatching { IraActions.prepare(c) }.getOrElse { ("I could not do that: ${it.message}") to null }
+            if (act == null) { reply(what); return@launch }
+            val at = com.optionslab.ira.Later.say(w.at, java.time.LocalDateTime.now(IST))
+            pend("$what $at", { IraLater.add(ctx, w.rest, w.at); "Set, Boss: I'll $what $at, and tell you when it's done." }, "Tap Confirm to $what $at.")
+        }
     }
 
     private fun commandAsked(q: String, c: com.optionslab.ira.Command, confirmAlways: Boolean = false) {

@@ -199,6 +199,8 @@ class AlarmReceiver : BroadcastReceiver() {
 
     private fun handle(context: Context, intent: Intent) {
         if (intent.action == Heartbeat.ACTION) { Heartbeat.check(context); return }
+        // A command Boss set for this time (any day: it was confirmed when set).
+        if (intent.action == com.optionslab.app.ira.IraLater.ACTION) { kotlinx.coroutines.runBlocking { com.optionslab.app.ira.IraLater.fire(context) }; return }
         DailyReports.of(intent.action)?.let { DailyReports.fired(context, it); return }
         val k = runCatching { Jobs.Kind.valueOf(intent.getStringExtra(Jobs.EXTRA_KIND) ?: return) }.getOrNull() ?: return
         Jobs.schedule(context, k)
@@ -218,7 +220,11 @@ class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         when (intent.action) {
             Intent.ACTION_BOOT_COMPLETED, Intent.ACTION_MY_PACKAGE_REPLACED,
-            "android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED" -> Jobs.scheduleAll(context)
+            "android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED" -> {
+                Jobs.scheduleAll(context)
+                // Commands Boss set for a time (Jarvis): their alarm too.
+                if (com.optionslab.app.BuildConfig.JARVIS) runCatching { com.optionslab.app.ira.IraLater.schedule(context) }
+            }
         }
         // Rebooted or updated during market hours: pick the watch straight back up.
         if (intent.action == Intent.ACTION_BOOT_COMPLETED || intent.action == Intent.ACTION_MY_PACKAGE_REPLACED) Jobs.ensureWatch(context)

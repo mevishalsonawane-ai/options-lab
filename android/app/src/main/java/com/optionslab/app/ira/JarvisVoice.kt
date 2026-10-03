@@ -607,13 +607,15 @@ class JarvisVoice : Service() {
                 // Its own last words heard back without the name are not a question (the follow-up window stays open).
                 if (!named && Wake.echo(h.question, lastSpoken?.takeIf { SystemClock.elapsedRealtime() - lastSpokenEnd < 15_000 })) { again(); return }
                 awakeUntil = 0
-                val topics = com.optionslab.ira.Ask.parse(h.question).topics
+                // A command for later ("start all arms tomorrow at 9") is judged as the command itself.
+                val parsedQ = com.optionslab.ira.Ask.parse(runCatching { com.optionslab.ira.Later.split(h.question, java.time.LocalDateTime.now(java.time.ZoneId.of("Asia/Kolkata")))?.rest }.getOrNull() ?: h.question)
+                val topics = parsedQ.topics
                 // Muting, unmuting and the reply language are not actions: a follow-up "mute" works without the name.
-                val voiceOnly = com.optionslab.ira.Ask.parse(h.question).command?.kind in VOICE_KINDS
+                val voiceOnly = parsedQ.command?.kind in VOICE_KINDS
                 val acts = !voiceOnly && (com.optionslab.ira.Topic.COMMAND in topics || com.optionslab.ira.Topic.ORDER in topics)
                 // Locked phone: questions only; the account needs Boss's own voice.
                 // Mute, unmute and the voice check are not actions: they work on a locked phone too.
-                val lockedNo = if (locked()) com.optionslab.ira.LockRule.refuse(true, acts || com.optionslab.ira.Topic.COMMAND in topics && !voiceOnly && com.optionslab.ira.Ask.parse(h.question).command?.kind != com.optionslab.ira.Command.Kind.VOICE_CHECK,
+                val lockedNo = if (locked()) com.optionslab.ira.LockRule.refuse(true, acts || com.optionslab.ira.Topic.COMMAND in topics && !voiceOnly && parsedQ.command?.kind != com.optionslab.ira.Command.Kind.VOICE_CHECK,
                     com.optionslab.ira.Topic.ACCOUNT in topics, com.optionslab.ira.Topic.ACCOUNT in topics && boss()) else null
                 if (lockedNo != null) say(lockedNo)
                 else if (!named && acts) { IraTools.count("nameFirst"); say("Boss, to do that call me first: say my name, or tap the mic.") }
@@ -621,7 +623,7 @@ class JarvisVoice : Service() {
                     // Trades, and commands that add risk (live mode, kill switch off, autopilot, starting arms), need
                     // Boss's own voice; without it a command is asked as a yes or no instead of done at once, and
                     // the riskiest ones are refused. Stopping, closing and questions need only the name.
-                    val cmd = com.optionslab.ira.Ask.parse(h.question).command
+                    val cmd = parsedQ.command
                     // Loosening one of the app's limits (more lots, a bigger loss limit, a limit off) is Boss's alone.
                     val loosens = cmd != null && runCatching { IraActions.loosens(cmd) }.getOrDefault(true)
                     val risky = cmd != null && (!cmd.kind.reduces || loosens)
@@ -648,6 +650,9 @@ class JarvisVoice : Service() {
         com.optionslab.ira.Command.Kind.JTRADES_LIVE, com.optionslab.ira.Command.Kind.AUTOPILOT_ON)
 
     /** What was said last (its id, and its words for an answer or question) and when that speech ended. */
+    /** How long a slow answer (a backtest, the account) is still waited for after Boss was told it is coming. */
+    private val LATE_MS = 180_000L
+
     @Volatile private var lastSpokenId: String? = null
     /** Boss has just called Jarvis (its name alone, or the mic button): the next question in the awake window counts as named. */
     @Volatile private var called = false
@@ -676,18 +681,29 @@ class JarvisVoice : Service() {
                 st.liveAt?.isBefore(java.time.Instant.now().minusSeconds(120)) != false) launch(Dispatchers.Default) { runCatching { IraHub.refresh() } }
             if (confirm) IraHub.askConfirmed(q) else IraHub.ask(q)
             // A slow answer (your account, the trade check): say so at once instead of going quiet.
-            val hold = launch { kotlinx.coroutines.delay(1_000); say("One moment, Boss.", "wait") }
+            val hold = launch { kotlinx.coroutines.delay(1_000); say("Working on it, Boss.", "wait") }
             val said = com.optionslab.ira.Secrets.redact(q.trim())
             // Some answers (your account, a backtest) arrive a moment later: wait for Ira's reply to THIS question.
-            val a = kotlinx.coroutines.withTimeoutOrNull(15_000) {
+            suspend fun reply(ms: Long) = kotlinx.coroutines.withTimeoutOrNull(ms) {
                 IraHub.state.first { st -> IraHub.replyAfter(st.messages, said) != null }.let { st -> IraHub.replyAfter(st.messages, said)!! }
+            }
+            var late = false
+            val a = reply(15_000) ?: run {
+                // Longer than that: Boss is told, and free to ask something else meanwhile; the answer comes when ready.
+                hold.cancel()
+                say("Still working on it, Boss. I'll tell you as soon as it's done. What else can I do for you meanwhile?", "answer")
+                late = true
+                reply(LATE_MS)?.also {
+                    // Not over Jarvis talking, or another question being answered (half a minute at most).
+                    kotlinx.coroutines.withTimeoutOrNull(30_000) { while (speaking || _state.value.mode == Mode.THINKING) kotlinx.coroutines.delay(500) }
+                }
             }
             hold.cancel()
             val o = a?.order
             // A suggested trade is asked aloud by itself (yes or no): nothing more to say here.
             if (a?.action != null && IraHub.asksYesNo(a.action)) return@launch
             say(when {
-                a == null -> "I could not work that out."
+                a == null -> if (late) "Boss, I could not finish what you asked earlier. Please ask me again." else "I could not work that out."
                 o != null && o.missing.isEmpty() && o.refusal == null -> "I have put that order on the Ira screen. Nothing is sent until you confirm it there."
                 a.action != null -> {
                     // Asked aloud instead of a button hidden in the chat: "Shall I stop ORB? Yes or no?"
@@ -696,7 +712,7 @@ class JarvisVoice : Service() {
                     return@launch
                 }
                 // Short answers (the owner's setting): the first sentence; "tell me more" says the whole answer.
-                else -> com.optionslab.ira.Address.boss(Wake.spoken(a.text, when {
+                else -> (if (late) "About what you asked earlier: " else "") + com.optionslab.ira.Address.boss(Wake.spoken(a.text, when {
                     com.optionslab.ira.Ask.parse(q).command?.kind == com.optionslab.ira.Command.Kind.MORE -> 8
                     IraTools.brief -> 1
                     else -> 3 }))
