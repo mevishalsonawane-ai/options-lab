@@ -365,3 +365,58 @@ object Odds {
             "it is ${n(abs(a.level - s.price))} points ${if (a.level >= s.price) "above" else "below"} the price, against an expected move of about ±${n(sigma)}. A rough guide from option prices, not a forecast."
     }
 }
+
+/** Where the price stands against the first 15 minutes (Jarvis self-improvement, 2026-10-03). Pure. */
+object OpeningRange {
+    private val ASK = Regex(" (opening range|first 15 minutes|first fifteen minutes|orb|opening high|opening low|broken the open|break the open|broke the open) ")
+
+    fun asked(text: String): Boolean = ASK.containsMatchIn(norm(text))
+
+    fun say(s: Snapshot): String? {
+        val hi = s.openingHigh ?: return null; val lo = s.openingLow ?: return null
+        val where = when {
+            s.price > hi -> "above it, ${n(s.price - hi)} over the opening high: an upside break so far"
+            s.price < lo -> "below it, ${n(lo - s.price)} under the opening low: a downside break so far"
+            else -> "still inside it: no break yet"
+        }
+        return "${s.market.label}'s opening range (first 15 minutes) is ${n(lo)} to ${n(hi)}; at ${n(s.price)} it is $where." +
+            if (s.high > hi && s.low < lo) " Both sides have been broken today, which often means a choppy day." else ""
+    }
+}
+
+/** How a market did over a week or a month (Jarvis self-improvement, 2026-10-03). Pure. */
+object PeriodMove {
+    enum class Span(val label: String) { WEEK("this week"), LAST_WEEK("last week"), MONTH("this month") }
+
+    fun asked(text: String): Span? {
+        val t = norm(text)
+        if (!Regex(" (do|did|done|doing|move|moved|perform|performed|change|changed|up|down|gain|fall|how much|how was|how is|how has) ").containsMatchIn(t)) return null
+        return when {
+            Regex(" last week ").containsMatchIn(t) -> Span.LAST_WEEK
+            Regex(" (this week|the week|weekly|week so far) ").containsMatchIn(t) -> Span.WEEK
+            Regex(" (this month|the month|monthly|month so far) ").containsMatchIn(t) -> Span.MONTH
+            else -> null
+        }
+    }
+
+    fun say(m: Market, bars: List<Candle>, span: Span): String? {
+        val days = bars.groupBy { it.t.toLocalDate() }.toSortedMap()
+        if (days.isEmpty()) return null
+        val last = days.lastKey()
+        val monday = last.with(java.time.DayOfWeek.MONDAY)
+        val (from, to) = when (span) {
+            Span.WEEK -> monday to last
+            Span.LAST_WEEK -> monday.minusWeeks(1) to monday.minusDays(1)
+            Span.MONTH -> last.withDayOfMonth(1) to last
+        }
+        val inSpan = days.filterKeys { !it.isBefore(from) && !it.isAfter(to) }
+        if (inSpan.isEmpty()) return null
+        // From the close before the span began (else the span's first open) to its last close.
+        val before = days.headMap(inSpan.keys.first()).values.lastOrNull()?.last()?.c
+        val start = before ?: inSpan.values.first().first().o
+        val end = inSpan.values.last().last().c
+        val hi = inSpan.values.flatten().maxOf { it.h }; val lo = inSpan.values.flatten().minOf { it.l }
+        val mv = end - start
+        return "${m.label} ${span.label}: ${pts(mv)} points (${pct(mv / start * 100)}), from ${n(start)} to ${n(end)}, in a range of ${n(lo)} to ${n(hi)} over ${inSpan.size} session${if (inSpan.size > 1) "s" else ""}."
+    }
+}

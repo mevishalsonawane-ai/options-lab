@@ -202,3 +202,24 @@ class OddsTest {
         assertTrue(s.startsWith("Going by India VIX, there is about a 50% chance Nifty closes above 24,000.00 today"), s)
     }
 }
+
+class RangeAndPeriodTest {
+    @Test fun theOpeningRangeIsRead() {
+        val d = java.time.LocalDate.of(2026, 10, 1)
+        val snap = Snapshot(Market.NIFTY, d.atTime(12, 0), true, 24_100.0, 24_000.0, 24_000.0, 24_120.0, 23_990.0, 24_050.0, 23_990.0, emptyList(), null, null, emptyList(), emptyList(), emptyList())
+        assertTrue(OpeningRange.asked("has nifty broken the opening range"))
+        assertTrue(OpeningRange.say(snap)!!.contains("above it, 50.00 over the opening high"))
+    }
+
+    @Test fun aWeekIsTold() {
+        // Mon 28 Sep .. Thu 1 Oct 2026, with Fri 25 Sep before it.
+        val days = listOf(25, 28, 29, 30).map { java.time.LocalDate.of(2026, 9, it) } + java.time.LocalDate.of(2026, 10, 1)
+        val bars = days.mapIndexed { i, d -> Candle(d.atTime(9, 15), 100.0 + i, 102.0 + i, 99.0 + i, 101.0 + i) }
+        assertEquals(PeriodMove.Span.WEEK, PeriodMove.asked("how did nifty do this week"))
+        assertEquals(PeriodMove.Span.MONTH, PeriodMove.asked("how is banknifty doing this month"))
+        assertNull(PeriodMove.asked("what are the levels this week"))
+        val s = PeriodMove.say(Market.NIFTY, bars, PeriodMove.Span.WEEK)!!
+        assertTrue(s.startsWith("Nifty this week: +4.00 points"), s)
+        assertTrue("over 4 sessions" in s, s)
+    }
+}
