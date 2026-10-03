@@ -499,3 +499,25 @@ class ReviewOTest {
         assertEquals(24_500.0, LevelInfo.asked("what is at 24500 on nifty"))
     }
 }
+
+class RoutingAuditTest {
+    private fun k(s: String) = Commands.parse(s)?.kind
+
+    @Test fun aCloseWithLotsIsNeverANewSell() {
+        for (q in listOf("square off 1 lot nifty 24500 ce", "square off 2 lots of my nifty 24500 ce", "sell 1 lot of my nifty 24500 call", "sell my 1 lot nifty 24500 ce")) {
+            assertNull(Ask.parse(q).order, q)
+            assertEquals(Command.Kind.CLOSE_ONE, k(q), q)
+        }
+        assertEquals(Command.Kind.CLOSE_ALL, k("sell everything"))
+        assertEquals(Command.Kind.CLOSE_ALL, k("sell all"))
+        // A new sell is still a new sell.
+        assertTrue(Ask.parse("sell 1 lot nifty 24500 ce").order != null)
+    }
+
+    @Test fun questionsAndOtherWordsAreNotCommands() {
+        assertNull(k("will you go live"))
+        assertEquals(Command.Kind.CLOSE_ONE, k(Hinglish.normalize("mera nifty position band karo")))
+        for (q in listOf("start the timer", "start recording", "run the backtest")) assertTrue(k(q) != Command.Kind.START_ONE, q)
+        assertTrue(OptionQuote.asked(Hinglish.normalize("24500 ce kitne ka hai")) != null)
+    }
+}

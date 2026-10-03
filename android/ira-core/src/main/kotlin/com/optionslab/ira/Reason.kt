@@ -539,7 +539,7 @@ object Payoff {
 object OptionQuote {
     data class Ask(val strike: Double, val call: Boolean)
 
-    private val QUOTE = Regex(" (premium|price|prices|ltp|last price|quote|rate|trading at|trading|kitne ka|kitna hai|worth now|value now|bid|ask|how much is|what is|what s|whats) ")
+    private val QUOTE = Regex(" (premium|price|prices|ltp|last price|quote|rate|trading at|trading|kitne ka|kitna hai|worth now|value now|bid|ask|how much is|how much|what is|what s|whats) ")
 
     fun asked(text: String): Ask? {
         val t = norm(text.replace(",", ""))

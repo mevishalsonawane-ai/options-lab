@@ -14,7 +14,7 @@ object Spelling {
         "breakdown", "engulfing", "hammer", "shooting", "events", "levels", "support", "resistance", "trend", "bullish",
         "bearish", "market", "nifty", "banknifty", "finnifty", "sensex", "options", "option", "expiry", "volatility",
         "autopilot", "zerodha", "protections", "targets", "trailing", "losses", "weekly", "monthly",
-        "chain", "studied", "study", "suggest", "approve", "reject", "positive", "negative", "everything", "scripts",
+        "chain", "pivot", "pivots", "positional", "studied", "study", "suggest", "approve", "reject", "positive", "negative", "everything", "scripts",
     )
     private val KNOWN = WORDS.toSet() + setOf("the", "and", "any", "see", "on", "off", "my", "what", "how", "is", "are", "show", "tell", "me",
         "stock", "stocks", "start", "stars", "state", "other", "today", "about", "doing", "there", "where", "which", "should", "would",

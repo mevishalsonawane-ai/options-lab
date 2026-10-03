@@ -155,8 +155,10 @@ object Ask {
     /** "buy 2 lots banknifty 52000 ce" -> an [OrderRequest]; null when the words do not ask for an order. */
     private fun order(t: String): OrderRequest? {
         val buy = Regex(" (buy|purchase) ").containsMatchIn(t)
-        val sell = Regex(" (sell(?! off)|square off) ").containsMatchIn(t)
+        val sell = Regex(" sell(?! off) ").containsMatchIn(t)
         if (!buy && !sell) return null
+        // "Sell my 1 lot of Nifty 24500 CE", "square off 2 lots": closing what Boss holds, never a new order.
+        if (Regex(" (my|mine|existing|square off|squareoff|position|positions) ").containsMatchIn(t)) return null
         // A question about buying ("what if I buy...", "why did I buy...", "how much margin to buy...") is not an order.
         if (Regex(" (should|shall|can|could|would|is it|worth|what|why|how|when|where|which|did|does|if|need to|do i|have i|has) ").containsMatchIn(t)) return null
         val market = Market.mentioned(t).firstOrNull { it != Market.VIX }

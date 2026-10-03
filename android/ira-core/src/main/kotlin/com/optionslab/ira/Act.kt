@@ -74,7 +74,7 @@ object Commands {
         // "25,000" is one number; a full stop ends a sentence (but "52.5" keeps its point).
         val t = " " + text.lowercase().replace("%", " percent ").replace(Regex("(\\d),(?=\\d{3})"), "$1").replace(Regex("\\.(?!\\d)"), " ")
             .replace(Regex("[^a-z0-9. ]"), " ").replace(Regex("\\s+"), " ").trim() + " "
-        val s = t.replace(Regex(" (please|jarvis|hey|ok|okay|now|right now|immediately|can you|could you|will you|for me) "), " ")
+        val s = t.replace(Regex(" (please|jarvis|hey|ok|okay|now|right now|immediately|can you|could you|for me) "), " ")
             .replace(Regex("\\s+"), " ").let { " ${it.trim()} " }
         // "That was wrong": kept with what was said and answered (before the negation check: "not what I asked").
         if (Regex("^ (that was wrong|that s wrong|thats wrong|that is wrong|wrong answer|you got (that|it) wrong|that s not right|thats not right|not what i asked|you misheard( me)?|you misunderstood( me)?) $").containsMatchIn(s))
@@ -172,14 +172,16 @@ object Commands {
         if (has(" cancel (the |my )?(last |latest )?order")) {
             return Command(Command.Kind.CANCEL_ONE, number = num(" order (\\d+) "), target = if (has(" (last|latest) ")) "last" else rest(s, " order "))
         }
-        if (has(" (square off|squareoff|close|exit|sell off) (all|everything|every position|all positions|all my positions|my positions|the positions)( |$)")) return Command(Command.Kind.CLOSE_ALL)
+        if (has(" (square off|squareoff|close|exit|sell off) (all|everything|every position|all positions|all my positions|my positions|the positions)( |$)") ||
+            has("^ sell (all|everything|all positions|all my positions|my positions)( now)? $")) return Command(Command.Kind.CLOSE_ALL)
         if (has(" (square off|squareoff|close|exit) (the |my )?position")) {
             return Command(Command.Kind.CLOSE_ONE, number = num(" position (\\d+) "), target = rest(s, " position "))
         }
         // "Close the Nifty position", "exit 24500 CE", "sell my BankNifty call", "book profit in Nifty": one position, by its
         // words (a new sell is "sell" without "my"/"the" - never read as a close).
-        // (A number of lots is a new order, never a close.)
-        if (!has(" \\d+ lots? | (one|two|three|four|five|ek|do) lots? ")) Regex("^ (?:square off|squareoff|close|exit|sell my|book (?:my |the )?profits? (?:in|on)) (?:the |my )?((?:[a-z0-9]+ ){0,3}?)(position|trade|call|put|ce|pe|option)s?( |$)").find(s)?.let { m ->
+        // (A number of lots said with a close is dropped: the close names the position, and Boss confirms it.)
+        val sc = s.replace(Regex(" (\\d+|one|two|three|four|five|ek|do) lots?( of)? "), " ")
+        Regex("^ (?:square off|squareoff|close|exit|sell my|book (?:my |the )?profits? (?:in|on)) (?:the |my )?((?:[a-z0-9]+ ){0,3}?)(position|trade|call|put|ce|pe|option)s?( |$)").find(sc)?.let { m ->
             val kind = m.groupValues[2].takeIf { it !in setOf("position", "trade", "option") }
             val words = listOfNotNull(m.groupValues[1].trim().takeIf { it.isNotEmpty() }, kind).joinToString(" ")
             return Command(Command.Kind.CLOSE_ONE, target = words.ifEmpty { null })
@@ -192,7 +194,7 @@ object Commands {
             has(" (start|arm|switch on|turn on|run|enable|resume) (all|every)( the| my)? (strategies|strategy|arms|arm|bots|algos|scripts) | (start|arm|switch on|turn on|run|enable|resume) (everything|all) $| (start|arm|switch on|turn on|run|enable) (the |my )?(strategies|arms|bots|algos) $"))
             return Command(Command.Kind.START_ALL)
         // One strategy or arm: the verb comes first ("stop strategy 2"), and settings are never read as a name.
-        val notArm = Regex("kill switch|\\blive\\b|paper|\\bmode\\b|alert|alarm|autopilot|listening|^trading$|^(it|that|this|jarvis|everything)$|voice|notifications?|\\bloss\\b|talking|speaking|^(when|if|once|after|before|sending|telling|giving|the music|music|news|calling|reminding)\\b")
+        val notArm = Regex("kill switch|\\blive\\b|paper|\\bmode\\b|alert|alarm|autopilot|listening|^trading$|^(it|that|this|jarvis|everything)$|voice|notifications?|\\bloss\\b|talking|speaking|^(when|if|once|after|before|sending|telling|giving|the music|music|news|calling|reminding)\\b|timer|recording|backtest")
         Regex("^ (stop|disarm|switch off|turn off|pause|halt) $ARM_NOUN ?(.+)$").find(s)?.let { m ->
             val what = m.groupValues[2].trim()
             if (what.isNotEmpty() && !notArm.containsMatchIn(what)) return one(Command.Kind.STOP_ONE, what)
