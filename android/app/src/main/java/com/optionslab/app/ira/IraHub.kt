@@ -464,6 +464,7 @@ object IraHub {
         runCatching { watchAlerts() }
         runCatching { keepChains() }
         runCatching { IraCoach.oiWatch() }
+        runCatching { IraCoach.orbWatch() }
     }
 
     /**

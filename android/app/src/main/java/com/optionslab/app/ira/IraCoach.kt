@@ -160,6 +160,25 @@ internal object IraCoach {
         }
     }
 
+    private val orbTold = HashSet<String>()
+
+    /** Nifty or BankNifty leaving its opening range: told once per side per day (after 09:30, market hours). */
+    fun orbWatch() {
+        if (!com.optionslab.app.BuildConfig.JARVIS || !Automations.on(Automations.Auto.ORB) || !com.optionslab.app.data.Market.isOpen()) return
+        val now = java.time.LocalTime.now(IST)
+        if (now.isBefore(java.time.LocalTime.of(9, 30))) return
+        val day = com.optionslab.app.data.Market.today().toString()
+        for (m in listOf(com.optionslab.ira.Market.NIFTY, com.optionslab.ira.Market.BANKNIFTY)) {
+            val s = IraHub.state.value.snaps[m] ?: continue
+            if (s.at.toLocalDate().toString() != day) continue
+            val up = com.optionslab.ira.OpeningRange.broken(s) ?: continue
+            if (!synchronized(orbTold) { orbTold.add("$day|${m.name}|$up") }) continue
+            val line = com.optionslab.ira.OpeningRange.alert(s, up)
+            IraHub.appContext()?.let { JarvisPopup.show(it, "${m.label}: opening range", line) }
+            IraHub.note(line); JarvisVoice.announce(line); Automations.acted(Automations.Auto.ORB, line)
+        }
+    }
+
     /** "Explain my position": each open position's P&L, room to its stop and target, time left and time decay. */
     suspend fun explainPositions(): List<String> {
         val prot = runCatching { com.optionslab.app.data.Protections.active() }.getOrDefault(emptyList())

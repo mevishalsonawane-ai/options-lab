@@ -372,6 +372,17 @@ object OpeningRange {
 
     fun asked(text: String): Boolean = ASK.containsMatchIn(norm(text))
 
+    /** True: above the opening range; false: below it; null: inside it (or no range yet). */
+    fun broken(s: Snapshot): Boolean? {
+        val hi = s.openingHigh ?: return null; val lo = s.openingLow ?: return null
+        return if (s.price > hi) true else if (s.price < lo) false else null
+    }
+
+    /** The alert for a break just seen (once per side per day, the caller keeps track). */
+    fun alert(s: Snapshot, up: Boolean): String =
+        "${s.market.label} broke ${if (up) "above" else "below"} its opening range at ${n(s.price)} " +
+            "(the first 15 minutes' ${if (up) "high was ${n(s.openingHigh ?: s.price)}" else "low was ${n(s.openingLow ?: s.price)}"})."
+
     fun say(s: Snapshot): String? {
         val hi = s.openingHigh ?: return null; val lo = s.openingLow ?: return null
         val where = when {

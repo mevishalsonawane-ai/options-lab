@@ -258,3 +258,14 @@ class HinglishReasonTest {
         assertEquals(PeriodMove.Span.MONTH, PeriodMove.asked(Hinglish.normalize("is mahine nifty kitna gira")))
     }
 }
+
+class OrbAlertTest {
+    @Test fun aBreakIsSeen() {
+        val d = java.time.LocalDate.of(2026, 10, 1)
+        fun snap(px: Double) = Snapshot(Market.NIFTY, d.atTime(10, 0), true, px, 24_000.0, 24_000.0, 24_100.0, 23_950.0, 24_050.0, 23_990.0, emptyList(), null, null, emptyList(), emptyList(), emptyList())
+        assertEquals(true, OpeningRange.broken(snap(24_060.0)))
+        assertEquals(false, OpeningRange.broken(snap(23_980.0)))
+        assertNull(OpeningRange.broken(snap(24_020.0)))
+        assertEquals("Nifty broke above its opening range at 24,060.00 (the first 15 minutes' high was 24,050.00).", OpeningRange.alert(snap(24_060.0), true))
+    }
+}
