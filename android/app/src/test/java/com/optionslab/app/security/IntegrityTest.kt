@@ -75,7 +75,9 @@ class IntegrityTest : RobolectricTest() {
 
     @Test fun aListenerOnFridasPortIsHooking() {
         cleanDevice()
-        val port = runCatching { ServerSocket(27042, 1, InetAddress.getByName("127.0.0.1")) }.getOrNull()
+        // A backlog of 50: nothing accepts here, so with a backlog of 1 the first probe's connection filled the queue and a
+        // second probe could time out (read as no listener) on a busy machine.
+        val port = runCatching { ServerSocket(27042, 50, InetAddress.getByName("127.0.0.1")) }.getOrNull()
             ?: return   // something else holds the port on this machine: the probe cannot be isolated
         port.use {
             assertTrue(Integrity.hooked())
