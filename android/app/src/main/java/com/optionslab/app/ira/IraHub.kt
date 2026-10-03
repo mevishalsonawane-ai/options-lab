@@ -180,6 +180,9 @@ object IraHub {
         bookFile = f
         book = runCatching { Vault.readFileSteady(f)?.let { PatternBook.load(String(it, Charsets.UTF_8)) } }.getOrNull() ?: PatternBook()
         val sf = File(context.applicationContext.noBackupFilesDir, "ira-state.vault")
+        // Started again in the same process: what is in memory is written first (the keeper waits 300 ms before it
+        // saves), so the newest message or proposal is never lost to the reload below.
+        if (keeper != null && stateFile == sf) saveState()
         stateFile = sf
         val saved = runCatching { Vault.readFileSteady(sf)?.let { IraSaved.read(String(it, Charsets.UTF_8)) } }.getOrNull()
         synchronized(tested) { tested.clear(); saved?.tested?.let { tested += it } }

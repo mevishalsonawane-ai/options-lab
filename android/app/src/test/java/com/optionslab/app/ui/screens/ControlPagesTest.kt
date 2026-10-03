@@ -9,6 +9,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsOff
@@ -591,7 +592,8 @@ class ControlPagesTest {
         compose.waitForNoText("Delete harvested data?")
         // The closing dialog can still hold the button's words for a frame: wait for the page's one button alone.
         compose.waitUntil(5_000) { compose.onAllNodesWithText("Delete this phone's harvested data").fetchSemanticsNodes().size == 1 }
-        tap("Delete this phone's harvested data")
+        // The scrolling list can briefly compose the same item twice (a prefetched copy): either copy is the page's button.
+        compose.onAllNodesWithText("Delete this phone's harvested data").onFirst().performSemanticsAction(SemanticsActions.OnClick); compose.frames()
         compose.waitForText("Delete harvested data?")
         tap("Delete")
         compose.until(15_000) { model.message.value == "Harvested data deleted." }
