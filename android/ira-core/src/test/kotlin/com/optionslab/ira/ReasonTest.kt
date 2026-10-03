@@ -583,3 +583,20 @@ class ReviewPTest {
         assertNotNull(OptionQuote.asked(Hinglish.normalize("24500 ce kitne ka hai")))
     }
 }
+
+class AlarmByMarketTest {
+    @Test fun aMarketsAlarmsAreRemovedByName() {
+        val a = Commands.parse("remove the nifty alarm")!!
+        assertEquals(Command.Kind.ALARM_REMOVE, a.kind); assertEquals(Market.NIFTY, a.market); assertNull(a.target)
+        val b = Commands.parse("clear all banknifty alerts")!!
+        assertEquals(Command.Kind.ALARM_REMOVE, b.kind); assertEquals(Market.BANKNIFTY, b.market); assertEquals("all", b.target)
+        assertEquals(Market.SENSEX, Commands.parse(Hinglish.normalize("sensex alarm hata do"))?.market)
+        // Unchanged: no market named.
+        assertNull(Commands.parse("remove all alarms")?.market)
+        assertEquals("all", Commands.parse("remove all alarms")?.target)
+        assertEquals(2, Commands.parse("delete alarm 2")?.number)
+        // Never a removal of something else.
+        assertTrue(Commands.parse("cancel the nifty order")?.kind != Command.Kind.ALARM_REMOVE)
+        assertTrue(Commands.parse("alert me when nifty goes above 25000")?.kind == Command.Kind.ALARM_ADD)
+    }
+}

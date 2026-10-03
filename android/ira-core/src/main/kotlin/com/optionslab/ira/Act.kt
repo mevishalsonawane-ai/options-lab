@@ -148,9 +148,12 @@ object Commands {
         }
         if (has(" (remove|delete|cancel|clear) (the |my )?event")) return Command(Command.Kind.EVENT_REMOVE, number = num(" event (\\d+) "), target = rest(s, " event "))
         // Alarms: "alert me when nifty goes above 25000", "set an alarm on banknifty below 51000", "remove alarm 2".
-        if (has(" (remove|delete|cancel|clear) (the |my |all |all my |all the )?(last )?(alarm|alert)s? ")) {
+        // "Remove the Nifty alarm", "clear all BankNifty alerts": a market's alarms by its name.
+        val alarmMarket = Market.mentioned(s).firstOrNull()
+        if (has(" (remove|delete|cancel|clear) (the |my |all |all my |all the )?(last )?(alarm|alert)s? ") ||
+            alarmMarket != null && has(" (remove|delete|cancel|clear) (the |my |all |all my |all the )?(last )?[a-z ]{1,25}? (alarm|alert)s?( |$)")) {
             return Command(Command.Kind.ALARM_REMOVE, number = num(" (?:alarm|alert) (\\d+) "),
-                target = if (has(" last ")) "last" else if (has(" all ")) "all" else null)
+                target = if (has(" last ")) "last" else if (has(" all ")) "all" else null, market = alarmMarket)
         }
         // An alarm needs its level: the number after above / below / reaches ("... above 25000 in 15 minutes" is 25000).
         // ("Remind me when Nifty hits 25000", "set alarm Nifty 24500", "Nifty 24500 pe alert lagao": the level is the

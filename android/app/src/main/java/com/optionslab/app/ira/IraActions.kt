@@ -195,12 +195,7 @@ internal object IraActions {
                     com.optionslab.ira.MoveAlarm.level(px, com.optionslab.ira.MoveAlarm.Move(pct, above == true))
                 }
                 if (m == null || lvl == null || above == null) return "Tell me the index, above or below, and the level: \"alert me when Nifty goes above 25000\"." to null
-                val sym = when (m) {
-                    com.optionslab.ira.Market.NIFTY -> "NIFTY"; com.optionslab.ira.Market.BANKNIFTY -> "BANKNIFTY"; com.optionslab.ira.Market.VIX -> "INDIAVIX"
-                    com.optionslab.ira.Market.FINNIFTY -> com.optionslab.app.data.PriceAlarm.CHART + "FINNIFTY"
-                    com.optionslab.ira.Market.SENSEX -> com.optionslab.app.data.PriceAlarm.CHART + "SENSEX"
-                    com.optionslab.ira.Market.GOLD -> return "Gold alarms are in IraGoldAlgo." to null
-                }
+                val sym = alarmSymbol(m) ?: return "Gold alarms are in IraGoldAlgo." to null
                 Commands.describe(c.copy(level = lvl)) + (base?.let { " (" + c.pct + "% from " + "%,.2f".format(java.util.Locale.ENGLISH, it) + ")" } ?: "") to suspend {
                     com.optionslab.app.data.Alarms.upsert(com.optionslab.app.data.PriceAlarm(System.currentTimeMillis(), sym, above, lvl, note = "set by Jarvis"))
                     model()?.refreshAlarms()
@@ -321,6 +316,19 @@ internal object IraActions {
             Command.Kind.ALARM_REMOVE -> {
                 val a = com.optionslab.app.data.Alarms.all()
                 if (a.isEmpty()) return "There are no alarms to remove." to null
+                // "Remove the Nifty alarm": that market's alarms only (all of them when one is set, or "all" was said).
+                val mk = c.market
+                if (mk != null && c.number == null && c.target != "last") {
+                    val sym = alarmSymbol(mk) ?: return "There are no ${mk.label} alarms here." to null
+                    val mine = a.filter { it.symbol == sym }
+                    if (mine.isEmpty()) return "There are no ${mk.label} alarms to remove." to null
+                    if (mine.size > 1 && c.target != "all")
+                        return ("Which ${mk.label} alarm? " + mine.joinToString("; ") { x -> "${a.indexOf(x) + 1}. ${x.describe()}" } + ". Or say \"remove all ${mk.label} alarms\".") to null
+                    return Commands.describe(c, if (mine.size == 1) "the alarm ${mine[0].describe()}" else "all ${mine.size} ${mk.label} alarms") to suspend {
+                        mine.forEach { com.optionslab.app.data.Alarms.remove(it.id) }; model()?.refreshAlarms()
+                        if (mine.size == 1) "Alarm removed." else "${mine.size} ${mk.label} alarms removed."
+                    }
+                }
                 if (c.target == "all") return Commands.describe(c, "all ${a.size} alarms") to suspend {
                     a.forEach { com.optionslab.app.data.Alarms.remove(it.id) }; model()?.refreshAlarms(); "All alarms removed."
                 }
@@ -329,6 +337,14 @@ internal object IraActions {
                 Commands.describe(c, "the alarm ${a[i].describe()}") to suspend { com.optionslab.app.data.Alarms.remove(a[i].id); model()?.refreshAlarms(); "Alarm removed." }
             }
         }
+    }
+
+    /** The alarm symbol a market's alarms are kept under (null for gold: its alarms are in IraGoldAlgo). */
+    private fun alarmSymbol(m: com.optionslab.ira.Market): String? = when (m) {
+        com.optionslab.ira.Market.NIFTY -> "NIFTY"; com.optionslab.ira.Market.BANKNIFTY -> "BANKNIFTY"; com.optionslab.ira.Market.VIX -> "INDIAVIX"
+        com.optionslab.ira.Market.FINNIFTY -> com.optionslab.app.data.PriceAlarm.CHART + "FINNIFTY"
+        com.optionslab.ira.Market.SENSEX -> com.optionslab.app.data.PriceAlarm.CHART + "SENSEX"
+        com.optionslab.ira.Market.GOLD -> null
     }
 
     /** Runs a prepared action, logged as Jarvis's; never throws. */
