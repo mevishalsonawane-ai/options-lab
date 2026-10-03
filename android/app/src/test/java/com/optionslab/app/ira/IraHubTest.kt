@@ -649,4 +649,17 @@ class IraHubTest : RobolectricTest() {
         IraHub.ask("forget what you learned")
         waitFor("forgotten") { IraTools.learned().isEmpty() }
     }
+
+    @Test fun followUpsKeepTheContext() = runBlocking {
+        IraHub.ask("How is Nifty doing?")
+        waitFor("the answer") { IraHub.state.value.messages.lastOrNull()?.fromIra == true }
+        IraHub.ask("and BankNifty?")
+        waitFor("read in context") { IraHub.state.value.messages.any { it.text == "I took that as: \"How is BankNifty doing?\"." } }
+        IraHub.ask("stop all strategies")
+        waitFor("the command") { IraHub.state.value.messages.lastOrNull()?.fromIra == true }
+        IraHub.state.value.pending.forEach { IraHub.cancelAction(it) }
+        IraHub.ask("and banknifty?")
+        kotlinx.coroutines.delay(500)
+        assertTrue("a command is never repeated by a follow-up", IraHub.state.value.messages.none { it.text.contains("I took that as: \"stop") })
+    }
 }

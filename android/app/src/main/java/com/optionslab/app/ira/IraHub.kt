@@ -887,6 +887,15 @@ object IraHub {
             ask(learnedAs, understood = true)
             return
         }
+        // A short follow-up ("and BankNifty?", "why?") asks again about the last question (questions only).
+        if (!understood) {
+            val prev = _state.value.messages.lastOrNull { !it.fromIra }?.text
+            runCatching { com.optionslab.ira.FollowUp.resolve(prev, q) }.getOrNull()?.let { full ->
+                _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, "I took that as: \"$full\".")).takeLast(MAX_MESSAGES)) }
+                ask(full, understood = true)
+                return
+            }
+        }
         val parsed = Ask.parse(q)
         IraTools.count("heard")
         // Just after "that was wrong", a question understood is what was meant: learned.
