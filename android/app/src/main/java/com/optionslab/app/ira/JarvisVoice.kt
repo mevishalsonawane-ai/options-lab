@@ -151,6 +151,12 @@ class JarvisVoice : Service() {
                 .onFailure { _state.value = VoiceState(problem = "Android did not let Jarvis start listening; try the switch again.") }
         }
 
+        /**
+         * The app came on screen: listening switched on but not running (Android stopped it while the app stayed in
+         * memory, and a microphone service may not restart itself from the background) - started again now.
+         */
+        fun resume(context: Context) { if (wanted && instance?.get() == null) start(context) }
+
         fun stop(context: Context) { context.stopService(Intent(context, JarvisVoice::class.java)) }
 
         const val ACTION_TALK = "com.optionslab.app.ira.JarvisVoice.TALK"
