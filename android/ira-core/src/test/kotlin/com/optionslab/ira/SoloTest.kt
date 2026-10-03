@@ -198,6 +198,7 @@ class SoloDayTest {
         assertNull(Solo.daySay(emptyList(), on = false, paused = false))
         assertTrue(Solo.daySay(emptyList(), on = true, paused = false)!!.contains("found no setup"))
         assertEquals("Solo stayed paused today.", Solo.daySay(emptyList(), on = true, paused = true))
+        assertNull(Solo.daySay(emptyList(), on = false, paused = false))
         assertEquals("Solo today on paper: 1 trade - +Rs 1,250 (target reached).", Solo.daySay(listOf(1250.0 to "target reached"), on = true, paused = false))
         assertEquals("Solo today on paper: 2 trades - -Rs 900 (stop: Nifty through 24,000); +Rs 400 (15:10); net -Rs 500.",
             Solo.daySay(listOf(-900.0 to "stop: Nifty through 24,000", 400.0 to "15:10"), on = true, paused = false))

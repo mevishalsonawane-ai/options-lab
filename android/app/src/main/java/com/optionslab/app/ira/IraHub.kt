@@ -634,6 +634,10 @@ object IraHub {
     internal suspend fun offerSoloIdea(idea: com.optionslab.ira.NewsTrade.Idea, text: String): Boolean {
         val c = app ?: return false
         if (synchronized(actions) { newsAsks.isNotEmpty() }) return false
+        // The gates every suggestion has: two of Jarvis's trades a day at most, none late on an expiry day (the market is
+        // then counted as offered for the day).
+        if (IraNewsTrades.today() >= com.optionslab.ira.NewsTrade.MAX_A_DAY) return true
+        if (com.optionslab.ira.JarvisTrades.expiryBlock(expiryToday(idea.market), LocalDateTime.now(IST)) != null) return true
         proposeTrade(c, idea, "Trade idea: ${idea.market.label}", text, "Hey Boss, a trade idea. ${Wake.spoken(text, 1)}", "pattern: solo|${idea.market.name}")
         return true
     }

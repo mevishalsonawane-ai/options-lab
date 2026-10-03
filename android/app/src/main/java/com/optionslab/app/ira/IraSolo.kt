@@ -156,7 +156,8 @@ internal object IraSolo {
         // Switched off: its setup can still be offered to Boss as a trade idea (he approves each), once a market a day.
         val offering = !on && Automations.on(Automations.Auto.SOLO_IDEAS) && !IraNewsTrades.lossLimitHit()
         if (!on && !offering) return@withLock
-        if (on && paused != null) return@withLock
+        // Paused by its drawdown: neither trades nor ideas until Boss switches it on again.
+        if (paused != null) return@withLock
         // The risk book: a professional's day.
         val mine = list.filter { it.day == today.toString() && it.closed }
         val book = mine.fold(Solo.Day()) { b, t -> b.after(t.net ?: 0.0) }
@@ -315,7 +316,7 @@ internal object IraSolo {
     /** Solo's day for the 15:35 wrap-up (null when it was off and did nothing). */
     fun daySummary(): String? = runCatching {
         val today = com.optionslab.app.data.Market.today().toString()
-        Solo.daySay(all().filter { it.day == today && it.closed }.map { it.net to it.exit }, on, paused != null)
+        Solo.daySay(all().filter { it.day == today && it.closed }.map { it.net to it.exit }, on, on && paused != null)
     }.getOrNull()
 
     /** "How is Solo doing": on or off, paused or not, and the record. */
