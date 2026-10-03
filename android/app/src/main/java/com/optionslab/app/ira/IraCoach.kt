@@ -189,6 +189,25 @@ internal object IraCoach {
         }
     }
 
+    /** VIX's change on the day at the last look (a spike is told on the way up, once). */
+    private val vixLast = HashMap<String, Double?>()
+
+    /**
+     * India VIX up 10% or more on the day (market hours): told once, as it crosses - the first look of a day only records,
+     * so a spike already there when the app starts is not told as news.
+     */
+    fun vixWatch() {
+        if (!com.optionslab.app.BuildConfig.JARVIS || !Automations.on(Automations.Auto.VIX) || !com.optionslab.app.data.Market.isOpen()) return
+        val day = com.optionslab.app.data.Market.today().toString()
+        val v = IraHub.state.value.snaps[com.optionslab.ira.Market.VIX] ?: return
+        if (v.at.toLocalDate().toString() != day) return
+        val (seen, before) = synchronized(vixLast) { val s = vixLast.containsKey(day); val b = vixLast[day]; vixLast[day] = v.changePct; s to b }
+        if (!seen) return
+        val line = com.optionslab.ira.VixSpike.alert(v, before) ?: return
+        IraHub.appContext()?.let { JarvisPopup.show(it, "India VIX spiking", line) }
+        IraHub.note(line); JarvisVoice.announce(line); Automations.acted(Automations.Auto.VIX, line)
+    }
+
     /** "Explain my position": each open position's P&L, room to its stop and target, time left and time decay. */
     suspend fun explainPositions(): List<String> {
         val prot = runCatching { com.optionslab.app.data.Protections.active() }.getOrDefault(emptyList())

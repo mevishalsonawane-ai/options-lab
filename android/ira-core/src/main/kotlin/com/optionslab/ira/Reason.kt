@@ -568,3 +568,15 @@ object OptionQuote {
         return "I don't have the ${n(a.strike).removeSuffix(".00")} on the chain I read; the nearest strikes are ${near.joinToString(", ") { n(it).removeSuffix(".00") }}."
     }
 }
+
+/** A fear spike (Jarvis self-improvement, 2026-10-03): India VIX up 10% or more on the day. Pure. */
+object VixSpike {
+    const val SPIKE_PCT = 10.0
+
+    /** The alert when VIX's change on the day reaches [SPIKE_PCT] (from below [before]); null otherwise. */
+    fun alert(vix: Snapshot, before: Double?): String? {
+        val ch = vix.changePct ?: return null
+        if (ch < SPIKE_PCT || (before != null && before >= SPIKE_PCT)) return null
+        return "Fear is spiking, Boss: India VIX is up ${pct(ch)} today at " + "%.2f".format(Locale.ENGLISH, vix.price) + ". Options are getting dear and moves can be sharp."
+    }
+}

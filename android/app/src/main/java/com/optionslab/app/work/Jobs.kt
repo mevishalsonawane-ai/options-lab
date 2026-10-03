@@ -394,6 +394,7 @@ object Tasks {
         runCatching { com.optionslab.app.ira.IraHub.expiryPreview() }
         runCatching { com.optionslab.app.ira.IraHub.feedWatch() }
         runCatching { com.optionslab.app.ira.IraCoach.orbWatch() }
+        runCatching { com.optionslab.app.ira.IraCoach.vixWatch() }
         // JarvisAlgo: your own stops trailed up automatically; too many trades too fast; the opening gap plan.
         runCatching { com.optionslab.app.ira.IraCoach.trailWatch() }
         runCatching { com.optionslab.app.ira.IraCoach.overtradeWatch() }

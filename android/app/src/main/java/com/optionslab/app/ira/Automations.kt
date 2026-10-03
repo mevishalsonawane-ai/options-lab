@@ -21,6 +21,7 @@ internal object Automations {
         EXPIRY("Expiry heads-up", "14:55 on expiry day: what the 15:05 square-off will close.", "jarvis.auto.expiry"),
         GAP("Opening gap plan", "09:16: the gap and how the arms did on such days.", "jarvis.auto.gap"),
         ORB("Opening range breaks", "Nifty or BankNifty leaving its first 15 minutes' range: told once per side a day.", "jarvis.auto.orb"),
+        VIX("Fear spikes", "India VIX up 10% or more on the day: told once.", "jarvis.auto.vix"),
         OI("Open interest walls", "The biggest call / put open interest moving to a new strike.", "jarvis.auto.oi"),
         SUMMARY("15:35 wrap-up", "The day's P&L, scorecard and tomorrow's events, spoken.", "jarvis.auto.summary"),
         BACKUP("Backup reminder", "No backup in 7 days: a reminder in the morning check.", "jarvis.auto.backup"),

@@ -396,3 +396,13 @@ class WhatsNewTest {
         assertNotNull(Chat.smallTalk("what's up", 0))
     }
 }
+
+class VixSpikeTest {
+    @Test fun aSpikeIsToldOnTheWayUp() {
+        val d = java.time.LocalDate.of(2026, 10, 1)
+        val v = Snapshot(Market.VIX, d.atTime(11, 0), true, 15.4, 14.0, 14.0, 15.5, 14.0, null, null, emptyList(), null, null, emptyList(), emptyList(), emptyList())
+        assertTrue(VixSpike.alert(v, 5.0)!!.contains("up +10.00% today at 15.40"))
+        assertNull(VixSpike.alert(v, 12.0), "already above: told before")
+        assertNull(VixSpike.alert(v.copy(price = 14.5), 2.0))
+    }
+}
