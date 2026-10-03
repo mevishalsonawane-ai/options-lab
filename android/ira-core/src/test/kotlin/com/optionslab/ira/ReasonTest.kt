@@ -507,7 +507,9 @@ class RoutingAuditTest {
         for (q in listOf("square off 1 lot nifty 24500 ce", "square off 2 lots of my nifty 24500 ce", "sell 1 lot of my nifty 24500 call", "sell my 1 lot nifty 24500 ce")) {
             assertNull(Ask.parse(q).order, q)
             assertEquals(Command.Kind.CLOSE_ONE, k(q), q)
+            assertTrue(Commands.parse(q)?.lots in setOf(1, 2), "a part close is marked, and the app refuses it: $q")
         }
+        assertNull(Commands.parse("close the nifty 24500 ce position")?.lots)
         assertEquals(Command.Kind.CLOSE_ALL, k("sell everything"))
         assertEquals(Command.Kind.CLOSE_ALL, k("sell all"))
         // A new sell is still a new sell.
@@ -554,5 +556,30 @@ class TouchOddsTest {
         // Never an alarm or an order.
         assertNull(Commands.parse("will nifty cross 24200 today"))
         assertNull(Ask.parse("will nifty cross 24200 today").order)
+    }
+}
+
+class ReviewPTest {
+    @Test fun alarmsByDirectionWordsAndHinglishLevels() {
+        for (q in listOf("tell me when nifty drops below 24000", "tell me when nifty falls under 24000", "tell me when nifty goes to 25000", "tell me when nifty drops to 24000"))
+            assertEquals(Command.Kind.ALARM_ADD, Commands.parse(q)?.kind, q)
+        assertEquals(Command.Kind.ALARM_ADD, Commands.parse("tell me when banknifty falls 1 percent from here")?.kind)
+        val h = Commands.parse(Hinglish.normalize("nifty 25000 pe pahunche to batana"))!!
+        assertEquals(Command.Kind.ALARM_ADD, h.kind); assertEquals(25000.0, h.level)
+        assertNull(Commands.parse("tell me when the market opens"))
+        // "band karo" is a close only for a position or trade named just before it.
+        assertTrue(Commands.parse(Hinglish.normalize("aaj trade band karo"))?.kind != Command.Kind.CLOSE_ONE)
+        assertTrue(Commands.parse(Hinglish.normalize("position size band karo"))?.kind != Command.Kind.CLOSE_ONE)
+    }
+
+    @Test fun touchOddsKnowTheDaysRangeAndAccountWordsAreNotQuotes() {
+        val d = java.time.LocalDate.of(2026, 10, 1)
+        val snap = Snapshot(Market.NIFTY, d.atTime(12, 0), true, 24_950.0, 24_800.0, 24_850.0, 25_020.0, 24_840.0, null, null, emptyList(), null, null, emptyList(), emptyList(), emptyList())
+        assertTrue(Odds.say(snap, 16.0, Odds.asked("will nifty cross 25000 today")!!, d.atTime(12, 0))!!.contains("already traded at 25,000.00"))
+        val late = Odds.say(snap, 16.0, Odds.Ask(true, 26_000.0, touch = true), d.atTime(15, 29))!!
+        assertFalse(late.contains("about a under") || late.contains("about a over"), late)
+        for (q in listOf("how much loss on nifty 24500 ce", "how much margin for nifty 24500 ce", "how much will i make if nifty 24500 ce doubles"))
+            assertNull(OptionQuote.asked(q), q)
+        assertNotNull(OptionQuote.asked(Hinglish.normalize("24500 ce kitne ka hai")))
     }
 }

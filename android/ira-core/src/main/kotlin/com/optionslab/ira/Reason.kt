@@ -384,20 +384,23 @@ object Odds {
         val sigma = ExpectedRange.points(s.price, vix, left)
         if (sigma <= 0) return null
         val span = if (left != null) "today" else "next session"
-        fun pctOf(p: Double) = (p * 100).let { if (it < 1) "under 1" else if (it > 99) "over 99" else "%.0f".format(Locale.ENGLISH, it) }
+        // "about a 40%", "about under 1%" (never "about a under 1%").
+        fun pctOf(p: Double) = (p * 100).let { if (it < 1) "under 1" else if (it > 99) "over 99" else "a " + "%.0f".format(Locale.ENGLISH, it) }
         if (a.touch) {
             val gap = abs(a.level - s.price)
             if (gap < s.price * 0.0005) return "${s.market.label} is at ${n(a.level)} already, Boss (${n(s.price)} now)."
+            if (left != null && s.low > 0 && a.level in s.low..s.high)
+                return "${s.market.label} has already traded at ${n(a.level)} today, Boss (range ${n(s.low)} to ${n(s.high)}, ${n(s.price)} now)."
             // Reflection principle: reaching a level at some point is about twice as likely as closing beyond it.
             val p = minOf(1.0, 2 * (1 - phi(gap / sigma)))
             val way = if (a.level > s.price) "up to" else "down to"
-            return "Going by India VIX, there is about a ${pctOf(p)}% chance ${s.market.label} trades $way ${n(a.level)} at some point $span: " +
+            return "Going by India VIX, there is about ${pctOf(p)}% chance ${s.market.label} trades $way ${n(a.level)} at some point $span: " +
                 "it is ${n(gap)} points away, against an expected move of about ±${n(sigma)}. Touching a level is roughly twice as likely as closing past it. A rough guide from option prices, not a forecast."
         }
         val pAbove = 1 - phi((a.level - s.price) / sigma)
         val p = if (a.above) pAbove else 1 - pAbove
         val pct = pctOf(p)
-        return "Going by India VIX, there is about a $pct% chance ${s.market.label} closes ${if (a.above) "above" else "below"} ${n(a.level)} $span: " +
+        return "Going by India VIX, there is about $pct% chance ${s.market.label} closes ${if (a.above) "above" else "below"} ${n(a.level)} $span: " +
             "it is ${n(abs(a.level - s.price))} points ${if (a.level >= s.price) "above" else "below"} the price, against an expected move of about ±${n(sigma)}. A rough guide from option prices, not a forecast."
     }
 }
@@ -561,8 +564,8 @@ object OptionQuote {
 
     fun asked(text: String): Ask? {
         val t = norm(text.replace(",", ""))
-        // Not an order, not a payoff sum, not an alarm.
-        if (Regex(" (buy|sell|lot|lots|bought|sold|alert|alarm|remind|expiry|expires) ").containsMatchIn(t) || Payoff.asked(text) != null) return null
+        // Not an order, not a payoff sum, not an alarm, not Boss's own profit, loss or margin.
+        if (Regex(" (buy|sell|lot|lots|bought|sold|alert|alarm|remind|expiry|expires|loss|losses|profit|profits|margin|make|made|lose|lost|pnl|p l|earn|earned|i|me|my|mine) ").containsMatchIn(t) || Payoff.asked(text) != null) return null
         val m = Regex(" (\\d{4,6}) ?(ce|pe|call|put) ").find(t) ?: return null
         val short = t.trim().split(" ").size <= 4                                  // "nifty 24500 ce" on its own
         if (!short && !QUOTE.containsMatchIn(t)) return null

@@ -976,7 +976,7 @@ object IraHub {
             return
         }
         // "What is the premium of 24500 CE": the option chain read now (8 seconds at most) - never an order.
-        if (parsed.order == null && parsed.command == null && !Regex("(?i)\\b(my|mine)\\b").containsMatchIn(q))
+        if (parsed.order == null && parsed.command == null && Topic.ACCOUNT !in parsed.topics && !Regex("(?i)\\b(i|me|my|mine)\\b").containsMatchIn(q))
             runCatching { com.optionslab.ira.OptionQuote.asked(parsed.text.ifBlank { q }) }.getOrNull()?.let { oq ->
                 val named = parsed.markets.filter { it != IraMarket.VIX && it != IraMarket.GOLD }
                 val m = named.firstOrNull { it in LIVE.keys } ?: IraMarket.NIFTY

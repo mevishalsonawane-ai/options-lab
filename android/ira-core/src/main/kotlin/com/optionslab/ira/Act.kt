@@ -9,7 +9,8 @@ package com.optionslab.ira
 data class Command(val kind: Kind, val target: String? = null, val number: Int? = null,
                    val market: Market? = null, val above: Boolean? = null, val level: Double? = null,
                    /** An event's day ([Kind.EVENT_ADD]). */ val day: java.time.LocalDate? = null,
-                   /** An alarm by a move from the price now, in percent ([Kind.ALARM_ADD] without a level). */ val pct: Double? = null) {
+                   /** An alarm by a move from the price now, in percent ([Kind.ALARM_ADD] without a level). */ val pct: Double? = null,
+                   /** Lots said with a close ("close 1 lot of ..."): only a whole position is closed, so this is refused. */ val lots: Int? = null) {
     enum class Kind(val reduces: Boolean) {
         STOP_ALL(true), START_ALL(false), STOP_ONE(true), START_ONE(false),
         CANCEL_ALL(true), CANCEL_ONE(true), CLOSE_ALL(true), CLOSE_ONE(true),
@@ -42,7 +43,7 @@ data class Command(val kind: Kind, val target: String? = null, val number: Int? 
 
 object Commands {
     /** A question about doing something ("how do I stop...") is not a command. */
-    private val QUESTION = Regex("^ (how|where|what|whats|why|which|when|should|is|are|am|can i|could i|did|do you|do i|does|has|have|will|was|were|would|if|wonder|i wonder) | tell me (whether|what|why|how|where|when(?! [a-z0-9 ]{0,30}(crosses|hits|reaches|touches|goes above|goes below|is above|is below|falls below|rises above|falls to|rises to))|which) | is it [a-z0-9]* $| right $| or not $| (hua|hai|tha|hoga) kya $| kya (hua|hai) $")
+    private val QUESTION = Regex("^ (how|where|what|whats|why|which|when|should|is|are|am|can i|could i|did|do you|do i|does|has|have|will|was|were|would|if|wonder|i wonder) | tell me (whether|what|why|how|where|when(?! [a-z0-9 ]{0,30}(above|below|over|under|cross[a-z]*|hits?|reach[a-z]*|touch[a-z]*|falls?|drops?|rises?|dips?|goes (up|down|to|above|below)|percent))|which) | is it [a-z0-9]* $| right $| or not $| (hua|hai|tha|hoga) kya $| kya (hua|hai) $")
     /** "Don't switch to live", "never start...": a negation is never a command. */
     private val NEGATION = Regex(" (don t|dont|do not|never|not|doesn t|didn t|won t) ")
     /** Commands a misspelt word may never become (only what the owner typed correctly). */
@@ -157,7 +158,7 @@ object Commands {
         // ("batana" alone is "tell me" - a question; only with a level verb, or an alert word, is it an alarm. An option's
         // price, premium or strike is never an alarm level here.)
         // (Hinglish "pe" before an alert word is "at", not a put: "Nifty 24500 pe alert lagao".)
-        val optionWords = has(" (ce|call|put|premium|price|ltp) ") || (has(" pe ") && !has(" pe (alert|alarm) "))
+        val optionWords = has(" (ce|call|put|premium|price|ltp) ") || (has(" pe ") && !has(" pe (alert|alarm|pahunche|pahunch jaye|aaye|aa jaye|cross kare|hit kare|touch kare) "))
         val setAlarm = !optionWords && has(" set (an |a )?(alarm|alert) | (alarm|alert) (lagao|laga do|set karo|set kar do|set) | (pahunche|pahunch jaye|aaye|aa jaye|cross kare|hit kare|touch kare) (to )?(batana|bata dena) ")
         val lvl = Regex(" (?:above|below|over|under|crosses|crossing|cross|rises to|falls to|drops to|reaches|hits|hit|touches|touch|to) (\\d{2,6}(?:\\.\\d+)?) ").find(s)?.groupValues?.get(1)?.toDouble()
             ?: if (setAlarm) Regex(" (\\d{4,6}(?:\\.\\d+)?) ").find(s)?.groupValues?.get(1)?.toDouble() else null
@@ -178,13 +179,15 @@ object Commands {
             return Command(Command.Kind.CLOSE_ONE, number = num(" position (\\d+) "), target = rest(s, " position "))
         }
         // "Close the Nifty position", "exit 24500 CE", "sell my BankNifty call", "book profit in Nifty": one position, by its
-        // words (a new sell is "sell" without "my"/"the" - never read as a close).
-        // (A number of lots said with a close is dropped: the close names the position, and Boss confirms it.)
-        val sc = s.replace(Regex(" (\\d+|one|two|three|four|five|ek|do) lots?( of)? "), " ")
+        // words (a new sell is "sell" without "my" - never read as a close).
+        // (A number of lots said with a close is kept aside: only a whole position closes, so the app refuses a part.)
+        val lotWords = Regex(" (\\d+|one|two|three|four|five|ek|do) lots?( of)? ")
+        val saidLots = lotWords.find(s)?.groupValues?.get(1)?.let { it.toIntOrNull() ?: (listOf("one", "two", "three", "four", "five").indexOf(it) + 1).takeIf { n -> n > 0 } ?: if (it == "ek") 1 else 2 }
+        val sc = s.replace(lotWords, " ")
         Regex("^ (?:square off|squareoff|close|exit|sell my|book (?:my |the )?profits? (?:in|on)) (?:the |my )?((?:[a-z0-9]+ ){0,3}?)(position|trade|call|put|ce|pe|option)s?( |$)").find(sc)?.let { m ->
             val kind = m.groupValues[2].takeIf { it !in setOf("position", "trade", "option") }
             val words = listOfNotNull(m.groupValues[1].trim().takeIf { it.isNotEmpty() }, kind).joinToString(" ")
-            return Command(Command.Kind.CLOSE_ONE, target = words.ifEmpty { null })
+            return Command(Command.Kind.CLOSE_ONE, target = words.ifEmpty { null }, lots = saidLots)
         }
         if (Regex("^ book (?:my |the )?profits? $").containsMatchIn(s)) return Command(Command.Kind.CLOSE_ONE)
         Regex("^ book (?:my |the )?profits? (?:in|on) (?:the |my )?(.+?) $").find(s)?.let { return Command(Command.Kind.CLOSE_ONE, target = it.groupValues[1].trim()) }

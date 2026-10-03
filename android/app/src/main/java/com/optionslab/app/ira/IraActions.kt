@@ -169,6 +169,8 @@ internal object IraActions {
             Command.Kind.CLOSE_ONE -> {
                 val p = openPositions()
                 if (p.isEmpty()) return "There are no open positions to close." to null
+                // "Close 1 lot of ...": only a whole position is closed here, never more than Boss asked for.
+                if (c.lots != null) return "I can only close a whole position, Boss, not ${c.lots} lot${if (c.lots == 1) "" else "s"} of it. Say \"close\" and its name to close all of it, or trim it on the Positions screen." to null
                 val i = pick(p.map { it.name }, "position") ?: return ("Which position? " + p.mapIndexed { n, x -> "${n + 1}. ${x.name}" }.joinToString("; ") + ".") to null
                 Commands.describe(c, p[i].name) to p[i].run
             }

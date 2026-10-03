@@ -14,7 +14,7 @@ object Hinglish {
     /** Verb last -> English command first: (pattern, English verb). */
     private val VERBS = listOf(
         // "Mera Nifty position band karo": a position is closed, not stopped.
-        Regex("^(.*?\\b(?:position|positions|trade|trades)\\b.*?)\\s*(?:ko\\s+)?(?:band\\s+kar\\s+do|band\\s+kardo|band\\s+karo|band\\s+kar)$") to "close",
+        Regex("^(?!.*\\b(?:aaj|today|size|jarvis)\\b)(.*?\\b(?:position|positions|trade|trades))\\s*(?:ko\\s+)?(?:band\\s+kar\\s+do|band\\s+kardo|band\\s+karo|band\\s+kar)$") to "close",
         Regex("^(.*?)\\s*(?:ko\\s+)?(?:band\\s+kar\\s+do|band\\s+kardo|band\\s+karo|band\\s+kar|rok\\s+do|roko)$") to "stop",
         Regex("^(.*?)\\s*(?:ko\\s+)?(?:chalu\\s+kar\\s+do|chalu\\s+karo|shuru\\s+kar\\s+do|shuru\\s+karo|start\\s+karo|start\\s+kar\\s+do)$") to "start",
         Regex("^(.*?)\\s*(?:ko\\s+)?(?:cancel\\s+kar\\s+do|cancel\\s+karo|cancel\\s+kardo)$") to "cancel",
