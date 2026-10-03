@@ -187,6 +187,10 @@ internal object IraSolo {
             .map { d -> session(d, d.first().t.toLocalDate(), 375) }.filter { it.size > com.optionslab.ira.Learner.FIRST }
         if (kept == null || !b.l.load(kept)) for (d in earlier) {
             b.done = 0; b.pending.clear(); feed(b, d, d.lastIndex); b.prevClose = d.last().c
+        } else runCatching {
+            // Saved part-way through today (the app restarted): today's minutes already learned are not learned twice.
+            val (d, n) = com.optionslab.app.security.SecurePrefs.getString(brainKey(m) + ".at")!!.split("|")
+            if (d == today.toString()) { b.day = today; b.done = n.toInt() }
         }
         b.prevClose = earlier.lastOrNull()?.last()?.c
         b
@@ -200,11 +204,16 @@ internal object IraSolo {
             if (day.size < 2) continue
             runCatching {
                 synchronized(brains) {
-                    val b = brain(m, IraHub.recentBars(m) + bars, today)
-                    if (b.day != today) { b.day = today; b.done = 0; b.pending.clear(); b.lastP = null }
+                    val b = brains[m] ?: brain(m, IraHub.recentBars(m) + bars, today)
+                    if (b.day != today) {
+                        b.day = today; b.done = 0; b.pending.clear(); b.lastP = null
+                        // Yesterday's close (the app may have stayed open overnight).
+                        b.prevClose = IraHub.recentBars(m).lastOrNull { it.t.toLocalDate().isBefore(today) }?.c ?: b.prevClose
+                    }
                     if (day.lastIndex > b.done) {
                         feed(b, day, day.lastIndex)
                         com.optionslab.app.security.SecurePrefs.put(brainKey(m), b.l.save())
+                        com.optionslab.app.security.SecurePrefs.put(brainKey(m) + ".at", "$today|${b.done}")
                     }
                 }
             }
@@ -345,8 +354,9 @@ internal object IraSolo {
             return
         }
         runCatching { com.optionslab.app.data.Protections.removeSymbol(false, "NFO", t.symbol) }
-        val lesson = runCatching { Solo.review(s, day, at, how, t.entry, px, m.label) }.getOrNull()
-        finish(t, list, px, lesson = lesson, exitOrderId = r.orderId, why = when (how) {
+        val learnedTrade = t.why.startsWith(LEARNED)
+        val lesson = if (learnedTrade) null else runCatching { Solo.review(s, day, at, how, t.entry, px, m.label) }.getOrNull()
+        finish(t, list, px, lesson = lesson, exitOrderId = r.orderId, why = if (learnedTrade && how == Solo.Exit.TIME) "its 15 minutes were up" else when (how) {
             Solo.Exit.STOP -> "stop: ${m.label} through ${"%,.0f".format(t.level)}"
             Solo.Exit.TARGET -> "target reached"
             Solo.Exit.SLOW -> "no follow-through"

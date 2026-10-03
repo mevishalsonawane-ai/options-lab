@@ -25,7 +25,23 @@ object Later {
     private val DAY = Regex("(?i)\\b(tomorrow|tmrw|tomorow|kal|today|aaj)\\b(\\s+(morning|afternoon|evening|subah|shaam))?")
     // A time needs "at", am / pm, or minutes: "at 9", "9am", "9:15", "9.30 am" (a bare number is a strategy's or a level).
     private val TIME = Regex("(?i)(?:\\b(?:at|by|@)\\s*)?\\b(\\d{1,2})(?:[:.](\\d{2}))?\\s*(a\\.?m\\.?|p\\.?m\\.?)(?![a-z])|\\b(?:at|by|@)\\s*(\\d{1,2})(?:[:.](\\d{2}))?\\b|\\b(\\d{1,2})[:.](\\d{2})\\b")
-    private val FILLER = Regex("(?i)\\b(by|from|on|at|ko|baje)\\b")
+    // ("on" is not dropped: "kill switch on at 3" must keep its "on".)
+    private val FILLER = Regex("(?i)\\b(by|from|at|ko|baje)\\b")
+
+    /**
+     * Does [text] name a time at all ("tomorrow", "in 30 minutes", "at 9:15", "3 pm") - even one [split] cannot use
+     * (passed, too far, no hour)? Then a command in it is never done now.
+     */
+    fun mentionsTime(text: String): Boolean {
+        // ("Stop all strategies today" is for now; "tomorrow" never is.)
+        if (IN.containsMatchIn(text) || Regex("(?i)\\b(tomorrow|tmrw|tomorow|kal)\\b").containsMatchIn(text)) return true
+        return TIME.findAll(text).any { m ->
+            val g = m.groupValues
+            val h = (g[1].ifEmpty { g[4].ifEmpty { g[6] } }).toIntOrNull() ?: return@any false
+            val mm = (g[2].ifEmpty { g[5].ifEmpty { g[7] } }).ifEmpty { "0" }.toIntOrNull() ?: return@any false
+            h in 0..23 && mm in 0..59
+        }
+    }
 
     /** The time in [text] (and the text without it), or null when it names none, is past or too far ahead. */
     fun split(text: String, now: LocalDateTime): When? {

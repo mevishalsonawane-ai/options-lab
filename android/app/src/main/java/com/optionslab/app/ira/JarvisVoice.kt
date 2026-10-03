@@ -297,7 +297,7 @@ class JarvisVoice : Service() {
             if (listening && now - listenedAt > 25_000) { runCatching { rec?.cancel() }; listening = false; endTap(); again() }
             if (speaking && now - spokeAt > 60_000) { speaking = false; again() }
             // The mic button's one question was asked and answered (or never came): listening stops again.
-            if (oneShot && !speaking && !awake() && _state.value.mode != Mode.THINKING && now - talkAt > 14_000) { stopSelf(); return }
+            if (oneShot && !speaking && !awake() && !lateWaiting && _state.value.mode != Mode.THINKING && now - talkAt > 14_000) { stopSelf(); return }
             if (!listening && !speaking && !held && _state.value.mode != Mode.THINKING) again()
             // Self-healing: no listening turn for 3 minutes (the phone took the microphone, the recognizer died):
             // a new recognizer, noted in the activity log.
@@ -598,7 +598,7 @@ class JarvisVoice : Service() {
             Wake.Heard.Awake -> { awakeUntil = SystemClock.elapsedRealtime() + AWAKE_MS; called = true; say("Yes, Boss?") }
             Wake.Heard.Stop -> { wanted = false; say("Going to sleep, Boss. Switch me on again in the app.", STOP_AFTER) }
             // "Jarvis, stop" / "enough" / "quiet": it has stopped talking (the name cut in); nothing else is done.
-            Wake.Heard.Hush -> { interrupt(); awakeUntil = 0; called = false; asking = null; _state.value = VoiceState(Mode.LISTENING); again() }
+            Wake.Heard.Hush -> { interrupt(); answerJob?.cancel(); awakeUntil = 0; called = false; _state.value = VoiceState(Mode.LISTENING); again() }
             is Wake.Heard.Ask -> {
                 // "Jarvis, stop talking" said over Jarvis: it has already stopped; that is not a lasting mute.
                 if (cutIn && Regex("^(stop|please stop|ok stop) (talking|speaking)$").matches(h.question.lowercase().trim())) { again(); return }
@@ -668,10 +668,15 @@ class JarvisVoice : Service() {
     @Volatile private var lastAnswer: Said? = null
     @Volatile private var lastAnswerAt = 0L
 
+    /** The answer being worked out (cancelled by "Jarvis, stop"). */
+    private var answerJob: kotlinx.coroutines.Job? = null
+    /** A slow answer Boss was told is coming: the mic button's one-question listen is not ended before it. */
+    @Volatile private var lateWaiting = false
+
     private fun answer(q: String, confirm: Boolean = false, named: Boolean = true) {
         heardAt = SystemClock.elapsedRealtime()
         _state.value = VoiceState(Mode.THINKING)
-        scope.launch {
+        answerJob = scope.launch {
             // Answer at once from what Jarvis already knows (kept fresh every minute while listening in market hours);
             // only with no prices at all is the first answer held for a refresh.
             val st = IraHub.state.value
@@ -697,7 +702,8 @@ class JarvisVoice : Service() {
                 hold.cancel()
                 say("Still working on it, Boss. I'll tell you as soon as it's done. What else can I do for you meanwhile?", "answer")
                 late = true
-                reply(LATE_MS)?.also {
+                lateWaiting = true
+                (try { reply(LATE_MS) } finally { lateWaiting = false })?.also {
                     // Not over Jarvis talking, or another question being answered (half a minute at most).
                     kotlinx.coroutines.withTimeoutOrNull(30_000) { while (speaking || _state.value.mode == Mode.THINKING) kotlinx.coroutines.delay(500) }
                 }

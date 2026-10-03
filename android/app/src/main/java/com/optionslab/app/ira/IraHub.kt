@@ -946,10 +946,24 @@ object IraHub {
             return
         }
         // A command for a later time ("start all the arms tomorrow at 9am"): set only once confirmed, run by an alarm then.
-        if (com.optionslab.app.BuildConfig.JARVIS) runCatching { com.optionslab.ira.Later.split(q, java.time.LocalDateTime.now(IST)) }.getOrNull()?.let { w ->
-            val c = Ask.parse(w.rest).command
-            if (c != null && com.optionslab.app.BuildConfig.GOLD) { _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, GOLD_TALK_ONLY)).takeLast(MAX_MESSAGES)) }; return }
-            if (c != null) { laterAsked(q, c, w); return }
+        // A request that names a time is never done now: set for that time (allowed kinds, confirmed), or refused - an
+        // order is never placed for later, and a time already passed or missing is asked again (review, 3 Oct).
+        if (com.optionslab.app.BuildConfig.JARVIS) {
+            val w = runCatching { com.optionslab.ira.Later.split(q, java.time.LocalDateTime.now(IST)) }.getOrNull()
+            val rest = w?.let { Ask.parse(it.rest) }
+            val timed = w != null || runCatching { com.optionslab.ira.Later.mentionsTime(q) }.getOrDefault(false)
+            if (timed && (parsed.command != null || parsed.order != null || rest?.command != null || rest?.order != null)) {
+                val c = rest?.command
+                val said = when {
+                    com.optionslab.app.BuildConfig.GOLD -> GOLD_TALK_ONLY
+                    parsed.order != null || rest?.order != null -> "I don't place orders for later, Boss - nothing was placed. Ask me for the order when you want it."
+                    w == null || c == null -> "Boss, give me a time still ahead, like \"tomorrow at 9:20\" or \"in 30 minutes\" - nothing was done."
+                    else -> null
+                }
+                if (said != null) _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
+                else laterAsked(q, c!!, w!!)
+                return
+            }
         }
         // "What have you set for later?" / "cancel everything set for later"
         if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && Regex("(?i)\\b(set|scheduled?|planned|pending)\\b.*\\blater\\b|\\bfor later\\b").containsMatchIn(q)) {
@@ -962,7 +976,9 @@ object IraHub {
         // VIX prices in, and its pivots, for the hour, day or week asked about (Boss, 3 Oct).
         if (parsed.order == null && parsed.command == null && com.optionslab.ira.Outlook.asked(q) && !Regex("(?i)\\b(my|mine|our)\\b").containsMatchIn(q)) {
             val st = _state.value
-            val mk = parsed.markets.firstOrNull { it != IraMarket.VIX && it != IraMarket.GOLD } ?: IraMarket.NIFTY
+            val mk = parsed.markets.firstOrNull { it != IraMarket.VIX && it != IraMarket.GOLD }
+                ?: if (parsed.markets.isNotEmpty()) { _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, "I give that outlook for the indices only, Boss (Nifty, BankNifty, FinNifty, Sensex) - not for ${parsed.markets.first().label}.")).takeLast(MAX_MESSAGES)) }; return }
+                else IraMarket.NIFTY
             val said = runCatching {
                 com.optionslab.ira.Outlook.say(mk, histories[mk]?.bars.orEmpty(), st.snaps[IraMarket.VIX]?.price ?: 0.0, st.snaps[mk]?.trading == true, q)
             }.getOrNull() ?: "I don't have enough of ${mk.label}'s recent days on the phone yet to say, Boss. I don't predict prices anyway; ask me again once its prices have loaded."

@@ -143,7 +143,7 @@ object AppAnswers {
         for ((s, r) in WORDS) if (r.containsMatchIn(t)) out += s
         // "My daily stop loss", "stop loss for the day", "max loss per day": the daily loss limit (Boss's words, 3 Oct),
         // not the stops on positions nor the P&L.
-        if (DAY_STOP.containsMatchIn(t)) { out += Section.RISK; out.remove(Section.PROTECTIONS); out.remove(Section.PNL) }
+        if (DAY_STOP.containsMatchIn(t)) { out += Section.RISK; out.remove(Section.PROTECTIONS); out.remove(Section.PNL) }   // (paper's too: RISK lists both)
         if (Section.RISK in out && Regex(" (daily loss|loss limit) ").containsMatchIn(t)) out.remove(Section.PNL)
         if (Section.HISTORY in out && Regex(" (made|lost|earned|p l|pnl|profit|loss) ").containsMatchIn(t)) out.remove(Section.PNL)
         if (Section.EVENTS in out && Regex(" (event|events|fed|fomc|rbi|budget|cpi) ").containsMatchIn(t)) out.remove(Section.HISTORY)

@@ -98,3 +98,25 @@ class OutlookTest {
         assertNull(Outlook.say(Market.VIX, bars, 12.0, false, q))
     }
 }
+
+class ReviewLaterTest {
+    private val now = java.time.LocalDateTime.of(2026, 10, 5, 10, 0)
+
+    @Test fun aTimedRequestIsNeverDoneNow() {
+        // A time named, even one that cannot be used: never run at once.
+        assertTrue(Later.mentionsTime("buy 1 lot nifty 25000 ce tomorrow at 9:30"))
+        assertTrue(Later.mentionsTime("start all arms today at 9:30"))
+        assertNull(Later.split("start all arms today at 9:30", now))              // passed: asked again, not run
+        assertTrue(Later.mentionsTime("stop all strategies tomorrow"))
+        assertTrue(!Later.mentionsTime("stop all strategies today") && !Later.mentionsTime("set alarm nifty 25000"))
+        // "Kill switch on at 3" keeps its "on".
+        val w = Later.split("kill switch on at 3 pm", now)!!
+        assertEquals(Command.Kind.KILL_ON, Ask.parse(w.rest).command?.kind, w.rest)
+    }
+
+    @Test fun paperDailyStopLossIsThePaperLimit() {
+        assertEquals(SettingsTalk.Key.PAPER_DAILY_LOSS.name, Ask.parse("set paper daily stop loss to 5000").command?.target)
+        assertTrue(!Outlook.asked("what's your view on nifty option chain") && !Outlook.asked("what is the pcr bias") && !Outlook.asked("what is the news outlook"))
+        assertTrue(Wake.hush("Jarvis stop"))
+    }
+}

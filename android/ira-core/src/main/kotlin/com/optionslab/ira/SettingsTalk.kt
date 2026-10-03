@@ -34,7 +34,7 @@ object SettingsTalk {
 
     /** Words naming each setting, most specific first (so "paper daily loss" is not "daily loss"). */
     private val NAMES: List<Pair<Key, String>> = listOf(
-        Key.PAPER_DAILY_LOSS to "paper (daily )?(loss|loss limit|max loss)",
+        Key.PAPER_DAILY_LOSS to "paper (daily )?(stop ?loss|sl|loss|loss limit|max loss)( (for|per) (the |a )?day)?",
         Key.PAPER_TRADES to "paper (max )?(orders|trades)( per day| a day)?",
         Key.LOSS_ALERT to "(p l |pnl )?loss alert",
         Key.PROFIT_ALERT to "(p l |pnl )?profit alert",

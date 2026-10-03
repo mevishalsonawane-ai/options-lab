@@ -754,7 +754,10 @@ object Realised {
 object Outlook {
     private val ASK = Regex(" (predict|predicts|prediction|predictions|forecast|forecasts|outlook|view on|bias|expectations?|what will [a-z ]{0,20}do|how will [a-z ]{0,20}(do|go|move|behave|open|close|be)|where will [a-z ]{0,20}(go|be|open|close)|kal kya|kaisa rahega) ")
 
-    fun asked(text: String): Boolean = ASK.containsMatchIn(norm(text))
+    fun asked(text: String): Boolean = ASK.containsMatchIn(norm(text)) && !OTHER.containsMatchIn(norm(text))
+
+    /** A view on the chain, the PCR, open interest or the news is answered by those, not here. */
+    private val OTHER = Regex(" (option chain|chain|pcr|put call|oi|open interest|news|headlines?) ")
 
     /** How far ahead the question looks ("next hour", "Monday", "next week"; Boss: "it could be next day, hour, week"). */
     enum class Span { HOUR, DAY, WEEK }

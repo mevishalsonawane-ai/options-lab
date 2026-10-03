@@ -25,7 +25,8 @@ object Wake {
     private val HUSH = Regex("^(just |please |now )?(stop|stop it|stop now|stop that|stop talking|stop speaking|enough|that s enough|thats enough|quiet|be quiet|shut up|silence|hush|chup|bas|never ?mind|forget it|cancel that)( please| now| jarvis)?$")
 
     /** Is [text] only "stop talking" (said to Jarvis, with or without its name)? */
-    fun hush(text: String): Boolean = HUSH.matches(text.lowercase().replace(Regex("[^a-z ]"), " ").replace(Regex("\\s+"), " ").trim())
+    fun hush(text: String): Boolean = HUSH.matches(text.lowercase().replace(Regex("[^a-z ]"), " ").replace(Regex("\\b(hey |ok |okay )?(jarvis|jarvas|jervis|jarviss)\\b"), " ")
+        .replace(Regex("\\s+"), " ").trim())
 
     /** [awake]: the wake word was said alone a moment ago, so this sentence is the question. */
     fun heard(text: String, awake: Boolean): Heard {
