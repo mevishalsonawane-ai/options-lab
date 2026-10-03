@@ -901,6 +901,13 @@ object IraHub {
         IraTools.count("heard")
         // Just after "that was wrong", a question understood is what was meant: learned.
         if (parsed.command == null && Topic.OFF_TOPIC !in parsed.topics) runCatching { IraTools.maybeLearn(q) }.getOrNull()?.let { said -> scope.launch { kotlinx.coroutines.delay(300); reply(said) } }
+        // Small talk ("how are you", "thanks", "who are you"): answered at once, in different words each time. Only words
+        // that neither order nor command anything.
+        if (parsed.command == null && parsed.order == null && Topic.COMMAND !in parsed.topics && Topic.ORDER !in parsed.topics)
+            com.optionslab.ira.Chat.smallTalk(q, chatTurn.getAndIncrement())?.let { said ->
+                _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
+                return
+            }
         if (Topic.OFF_TOPIC in parsed.topics) IraTools.count("misunderstood")
         if (Topic.BACKTEST in parsed.topics) { backtestAsked(q, parsed); return }
         if (Topic.ACCOUNT in parsed.topics) { accountAsked(q); return }
@@ -919,6 +926,11 @@ object IraHub {
         }
         // JarvisAlgo, words Jarvis does not know: the model maps them to one line of a fixed list (never an order).
         if (parsed.topics == setOf(Topic.OFF_TOPIC) && com.optionslab.app.BuildConfig.JARVIS && IraModel.usable() && !understood) { freeFormAsked(q); return }
+        // JarvisAlgo without the model: a varied "I don't know that" instead of the same line every time.
+        if (parsed.topics == setOf(Topic.OFF_TOPIC) && com.optionslab.app.BuildConfig.JARVIS) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, com.optionslab.ira.Chat.fallback(chatTurn.getAndIncrement()))).takeLast(MAX_MESSAGES)) }
+            return
+        }
         // JarvisAlgo: a complete order is placed at once (the owner's rule); IraAlgo keeps the review.
         parsed.order?.takeIf { com.optionslab.app.BuildConfig.JARVIS && it.missing.isEmpty() && it.refusal == null }?.let { o -> tradeAsked(q, o); return }
         // A greeting is answered with the time of day, today's session and where the indices stand.
@@ -1019,14 +1031,19 @@ object IraHub {
      * Free-form words: the on-device model picks one line of [com.optionslab.ira.Intents.LINES]; only a valid line is
      * used, said back ("I understood: ..."), and any action from it waits for Confirm. Otherwise the usual answer.
      */
+    /** Varies the small-talk and "I don't know" lines so the same words are not said twice running. */
+    private val chatTurn = java.util.concurrent.atomic.AtomicInteger()
+
     private fun freeFormAsked(q: String) {
         // Said at once (spoken while the model reads the words), then the real answer when it is ready - never silence.
         _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, "One moment, Boss, let me think about that.")).takeLast(MAX_MESSAGES)) }
         scope.launch {
             val line = runCatching { IraModel.complete(com.optionslab.ira.Intents.prompt(q))?.let { com.optionslab.ira.Intents.pick(it) } }.getOrNull()
             if (line == null) {
-                val a = runCatching { Ira(book).answer(q, _state.value.snaps, _state.value.news, voice = com.optionslab.app.BuildConfig.JARVIS) }.getOrNull()
-                val text = a?.text ?: "I could not work that out."
+                // Not something Jarvis can do or look up: the model just talks (a short reply with no figures, no advice
+                // and no claimed actions), else a varied "I don't know that".
+                val chat = runCatching { com.optionslab.ira.Chat.accept(IraModel.complete(com.optionslab.ira.Chat.prompt(q, LocalDateTime.now(IST)), 60)) }.getOrNull()
+                val text = chat ?: com.optionslab.ira.Chat.fallback(chatTurn.getAndIncrement())
                 reply(text); speakLater(text)
                 return@launch
             }

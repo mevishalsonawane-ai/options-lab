@@ -623,10 +623,12 @@ class JarvisVoice : Service() {
             // Answer at once from what Jarvis already knows (kept fresh every minute while listening in market hours);
             // only with no prices at all is the first answer held for a refresh.
             val st = IraHub.state.value
-            if (st.snaps.isEmpty()) runCatching { withContext(Dispatchers.Default) { IraHub.refresh() } }
+            // Small talk ("how are you") needs no prices: never held for a refresh.
+            val chat = com.optionslab.ira.Chat.smallTalk(q, 0) != null
+            if (!chat && st.snaps.isEmpty()) runCatching { withContext(Dispatchers.Default) { IraHub.refresh() } }
             // Prices are re-read in the background only while the market trades (a closed day's prices do not change, and
             // a full re-read competes with the voice for the phone's processor).
-            else if (com.optionslab.ira.Market.NIFTY.trading(java.time.LocalDateTime.now(java.time.ZoneId.of("Asia/Kolkata"))) &&
+            else if (!chat && com.optionslab.ira.Market.NIFTY.trading(java.time.LocalDateTime.now(java.time.ZoneId.of("Asia/Kolkata"))) &&
                 st.liveAt?.isBefore(java.time.Instant.now().minusSeconds(120)) != false) launch(Dispatchers.Default) { runCatching { IraHub.refresh() } }
             if (confirm) IraHub.askConfirmed(q) else IraHub.ask(q)
             // A slow answer (your account, the trade check): say so at once instead of going quiet.

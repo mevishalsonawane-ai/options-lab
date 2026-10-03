@@ -142,6 +142,18 @@ class IraHubTest : RobolectricTest() {
         assertEquals(learned, IraHub.state.value.learned)
     }
 
+    /** "How are you" is answered at once and not in the same words twice running; "who won the match" is still not small talk. */
+    @Test fun smallTalkIsAnsweredInVariedWords() = runBlocking {
+        IraHub.ask("How are you, Jarvis?")
+        IraHub.ask("how are you")
+        val ms = IraHub.state.value.messages
+        assertEquals(4, ms.size)
+        assertTrue(ms[1].fromIra && ms[3].fromIra)
+        assertTrue(ms[1].text != ms[3].text)
+        assertNull(ms[1].order); assertNull(ms[3].order)
+        assertNull(com.optionslab.ira.Chat.smallTalk("who won the match", 0))
+    }
+
     @Test fun liveCandlesJoinTheStoredOnesAndHeadlinesAreRead() = runBlocking {
         IraHub.testHistories = { histories }
         val liveDay = histories.getValue(IraMarket.NIFTY).days.last().plusDays(1)
