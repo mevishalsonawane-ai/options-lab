@@ -243,3 +243,44 @@ object Pivots {
             "Above the pivot buyers have the edge; R1 and S1 are the usual first stops."
     }
 }
+
+/**
+ * Looking back (Jarvis self-improvement, 2026-10-03): "where was Nifty at 11 am", "BankNifty at 10:30", "yesterday's
+ * high", "previous close". From the 1-minute candles on the phone. Pure.
+ */
+object Lookback {
+    /** A time of day asked about ("at 11", "at 2:30 pm"), with a past-tense word so "alert me at 25000" is not taken. */
+    fun time(text: String): LocalTime? {
+        val t = norm(text)
+        if (!Regex(" (was|were|where was|what was|how was|at what price|price at|level at) ").containsMatchIn(t)) return null
+        val m = Regex(" at (\\d{1,2})(?::|\\.| )?(\\d{2})? ?(am|pm)? ").find(t) ?: return null
+        var h = m.groupValues[1].toInt(); val mi = m.groupValues[2].toIntOrNull() ?: 0
+        val ap = m.groupValues[3]
+        if (ap == "pm" && h < 12) h += 12
+        if (ap.isEmpty() && h in 1..3) h += 12
+        if (h !in 0..23 || mi !in 0..59) return null
+        return LocalTime.of(h, mi)
+    }
+
+    fun priceAt(m: Market, bars: List<Candle>, at: LocalTime, yesterday: Boolean = false): String? {
+        val days = bars.map { it.t.toLocalDate() }.distinct().sorted()
+        val day = (if (yesterday) days.dropLast(1).lastOrNull() else days.lastOrNull()) ?: return null
+        val bar = bars.filter { it.t.toLocalDate() == day && !it.t.toLocalTime().isAfter(at) }.lastOrNull() ?: return null
+        val last = bars.last()
+        val since = if (!yesterday && day == last.t.toLocalDate()) " Since then it has moved ${pts(last.c - bar.c)} to ${n(last.c)}." else ""
+        return "At ${"%02d:%02d".format(Locale.ENGLISH, bar.t.hour, bar.t.minute)} on $day ${m.label} was at ${n(bar.c)}.$since"
+    }
+
+    private val PREV = Regex(" (yesterday s|yesterdays|yesterday|previous day s|previous days|previous|last session s|last sessions|prior day s) (high|low|close|closing|open|opening|range) | (high|low|close|open|range) (of |on )?(yesterday|the previous day|the last session) ")
+
+    fun prevAsked(text: String): Boolean = PREV.containsMatchIn(norm(text))
+
+    /** The last complete session's open, high, low and close ([trading]: today is not complete). */
+    fun prevDay(m: Market, bars: List<Candle>, trading: Boolean): String? {
+        val days = bars.groupBy { it.t.toLocalDate() }.toSortedMap()
+        if (days.isEmpty()) return null
+        val base = if (trading) days.keys.toList().dropLast(1).lastOrNull() ?: return null else days.lastKey()
+        val d = days.getValue(base)
+        return "${m.label} on $base: open ${n(d.first().o)}, high ${n(d.maxOf { it.h })}, low ${n(d.minOf { it.l })}, close ${n(d.last().c)}."
+    }
+}

@@ -148,3 +148,25 @@ class PivotsTest {
         assertTrue(Pivots.say(Market.NIFTY, bars, trading = false)!!.contains("for the next session, from 2026-10-01"))
     }
 }
+
+class LookbackTest {
+    private val d1 = java.time.LocalDate.of(2026, 9, 30); private val d2 = java.time.LocalDate.of(2026, 10, 1)
+    private val bars = listOf(Candle(d1.atTime(9, 15), 100.0, 110.0, 90.0, 105.0), Candle(d1.atTime(15, 29), 105.0, 106.0, 104.0, 104.0),
+        Candle(d2.atTime(9, 15), 104.0, 108.0, 103.0, 107.0), Candle(d2.atTime(11, 0), 107.0, 112.0, 106.0, 111.0), Candle(d2.atTime(12, 0), 111.0, 113.0, 110.0, 112.0))
+
+    @Test fun aTimeIsLookedUp() {
+        assertEquals(LocalTime.of(11, 0), Lookback.time("where was nifty at 11 am"))
+        assertEquals(LocalTime.of(14, 30), Lookback.time("what was banknifty at 2:30"))
+        assertNull(Lookback.time("alert me at 25000"))
+        assertNull(Lookback.time("set an alarm at 11"))
+        val s = Lookback.priceAt(Market.NIFTY, bars, LocalTime.of(11, 30))!!
+        assertTrue(s.startsWith("At 11:00 on 2026-10-01 Nifty was at 111.00. Since then it has moved +1.00 to 112.00."), s)
+    }
+
+    @Test fun yesterdayIsTold() {
+        assertTrue(Lookback.prevAsked("what was yesterday's high on nifty"))
+        assertTrue(Lookback.prevAsked("previous close of banknifty"))
+        assertFalse(Lookback.prevAsked("how is nifty"))
+        assertEquals("Nifty on 2026-09-30: open 100.00, high 110.00, low 90.00, close 104.00.", Lookback.prevDay(Market.NIFTY, bars, trading = true))
+    }
+}
