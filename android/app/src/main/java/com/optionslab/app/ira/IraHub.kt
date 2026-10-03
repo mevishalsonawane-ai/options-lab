@@ -1234,6 +1234,9 @@ object IraHub {
         _state.update { it.copy(news = got.first.ifEmpty { it.news }, newsAt = if (got.first.isNotEmpty()) Instant.now() else it.newsAt, newsMissing = got.second) }
     }
 
+    /** How [m]'s day went, from the candles on the phone (for the 15:35 wrap-up), or null. */
+    fun dayStory(m: IraMarket): String? = runCatching { com.optionslab.ira.DayStory.say(m, histories[m]?.bars ?: return null) }.getOrNull()
+
     /** When Boss last asked something: a follow-up carries the last question over only within [FOLLOW_MS]. */
     @Volatile private var lastAskAt = 0L
     private const val FOLLOW_MS = 5 * 60_000L
