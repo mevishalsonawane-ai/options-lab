@@ -72,3 +72,27 @@ class SoloTest {
         assertTrue(Solo.say("test", rep).contains("1 trades in 7 days, 100% winners"), Solo.say("test", rep))
     }
 }
+
+class SoloWatchTest {
+    private val d = LocalDate.of(2026, 10, 1)
+    private fun bar(m: Int, o: Double, h: Double, l: Double, c: Double) = Candle(d.atTime(9, 15).plusMinutes(m.toLong()), o, h, l, c)
+
+    @Test fun solosWatchAndReadAreSaid() {
+        // A big green candle 09:45-10:00 (24000 -> 24100), then flat at 24095.
+        val day = (0 until 60).map { m ->
+            when {
+                m < 30 -> bar(m, 24_000.0, 24_005.0, 23_995.0, 24_000.0)
+                m < 45 -> { val o = 24_000.0 + (m - 30) * 100.0 / 15; bar(m, o, o + 100.0 / 15, o, o + 100.0 / 15) }
+                else -> bar(m, 24_095.0, 24_097.0, 24_093.0, 24_095.0)
+            }
+        }
+        val w = Solo.watching(day, 59, 50.0, "Nifty")
+        assertEquals(1, w.size, w.toString())
+        assertTrue(w[0].contains("a big green 15-minute candle at 09:45: I buy a call if Nifty comes back to about 24,060 without falling below 24,000 (until 11:00)"), w[0])
+        assertTrue(Solo.watching(day, 59, 150.0, "Nifty").isEmpty())
+        assertTrue(Solo.watching(day.take(44), 43, 50.0, "Nifty").isEmpty(), "the candle is not complete yet")
+        val r = Solo.read(day, 200.0, "Nifty")
+        assertTrue(r.startsWith("Nifty is up 95 points from the open, near the day's high."), r)
+        assertTrue(r.contains("used 53% of a normal day's range"), r)
+    }
+}

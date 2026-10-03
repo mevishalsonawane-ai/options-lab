@@ -95,6 +95,47 @@ object Solo {
         return null
     }
 
+    /**
+     * What Solo is watching at minute [now]: each big candle still waiting for its pullback (within its hour, level not
+     * broken), as "a big green candle at 10:15: buy if it comes back to about X without breaking Y". Empty: nothing set up.
+     */
+    fun watching(day: List<Candle>, now: Int, big: Double, label: String, r: Rules = Rules()): List<String> {
+        val out = ArrayList<String>()
+        for (s in 0..r.lastTrigger step 15) {
+            val e = s + 15
+            if (e > now + 1 || e >= day.size) break
+            if (now >= e + r.window || now + 1 > LAST_ENTRY) continue
+            val c = day.subList(s, e)
+            val o = c.first().o; val cl = c.last().c; val h = c.maxOf { it.h }; val l = c.minOf { it.l }
+            val body = cl - o
+            if (abs(body) < big || body == 0.0) continue
+            val up = body > 0
+            val lvl = if (up) l else h
+            if ((e..minOf(now, day.lastIndex)).any { m -> if (up) day[m].l <= lvl else day[m].h >= lvl }) continue
+            val entry = if (up) cl - r.depth * (h - l) else cl + r.depth * (h - l)
+            val t = c.first().t.toLocalTime()
+            val until = c.first().t.plusMinutes((15 + r.window).toLong()).toLocalTime()
+            out += "a big ${if (up) "green" else "red"} 15-minute candle at %02d:%02d: I buy a %s if %s comes back to about %,.0f without %s %,.0f (until %02d:%02d)"
+                .format(Locale.ENGLISH, t.hour, t.minute, if (up) "call" else "put", label, entry, if (up) "falling below" else "rising above", lvl, until.hour, until.minute)
+        }
+        return out
+    }
+
+    /**
+     * A short read of the day before a trade, the way a trader sizes it up: where the price is against the open and the
+     * day's range, and how much of a normal day's range is already used ([typicalRange]: the average of earlier days).
+     */
+    fun read(day: List<Candle>, typicalRange: Double?, label: String): String {
+        if (day.isEmpty()) return ""
+        val o = day.first().o; val px = day.last().c
+        val h = day.maxOf { it.h }; val l = day.minOf { it.l }
+        val move = px - o
+        val where = if (h - l <= 0) 0.5 else (px - l) / (h - l)
+        val pos = when { where >= 0.75 -> "near the day's high"; where <= 0.25 -> "near the day's low"; else -> "mid-range" }
+        val used = typicalRange?.takeIf { it > 0 }?.let { " The day has used %.0f%%".format(Locale.ENGLISH, (h - l) / it * 100) + " of a normal day's range." } ?: ""
+        return "%s is %s %,.0f points from the open, %s.".format(Locale.ENGLISH, label, if (move >= 0) "up" else "down", abs(move), pos) + used
+    }
+
     /** How an open trade ends at minute [m] (null: still open). The stop is checked first, as a careful trader assumes. */
     fun exit(s: Signal, bar: Candle, m: Int, best: Double = 0.0, r: Rules = Rules()): Exit? = when {
         if (s.call) bar.l <= s.level else bar.h >= s.level -> Exit.STOP

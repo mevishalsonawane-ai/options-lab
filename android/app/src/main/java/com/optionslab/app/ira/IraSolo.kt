@@ -80,6 +80,14 @@ internal object IraSolo {
 
     private val lock = Mutex()
 
+    /** What Solo was watching at its last pass (for "how is Solo doing"), and when. */
+    @Volatile private var watch: Pair<LocalTime, String>? = null
+
+    /** The average day's range (high - low) over the earlier days the app holds (null: none yet). */
+    private fun typicalRange(bars: List<Candle>, today: LocalDate): Double? =
+        bars.filter { it.t.toLocalDate() != today }.groupBy { it.t.toLocalDate() }.values.toList().takeLast(20)
+            .map { d -> d.maxOf { it.h } - d.minOf { it.l } }.takeIf { it.isNotEmpty() }?.average()
+
     /** The minute of the session now (0 = 09:15). */
     private fun minuteNow(): Int = LocalTime.now(IST).let { it.hour * 60 + it.minute - (9 * 60 + 15) }
 
@@ -126,19 +134,23 @@ internal object IraSolo {
         val level = runCatching { IraHub.tradeCheckFast().level }.getOrNull() ?: return@withLock
         if (level == com.optionslab.ira.TradeCheck.Level.STOP) return@withLock
         val busy = mine.maxOfOrNull { it.entryMinute } ?: -1
+        val seen = ArrayList<String>()
         for (m in MARKETS) {
             val bars = IraHub.freshBars(m)
             val day = session(bars, today, now)
             if (day.size < 20) continue
-            val big = big(IraHub.recentBars(m) + bars, today) ?: continue
+            val held = IraHub.recentBars(m) + bars
+            val big = big(held, today) ?: continue
+            seen += Solo.watching(day, day.size - 1, big, m.label, RULES)
+            watch = LocalTime.now(IST) to seen.joinToString("; ")
             // The last two closes only (a pass can come a minute late); an older signal is not chased.
             val sig = (day.size - 1 downTo maxOf(0, day.size - 2)).firstNotNullOfOrNull { k -> Solo.signal(day, k, big, busy, RULES) } ?: continue
-            enter(m, sig, list, today)
+            enter(m, sig, list, today, Solo.read(day, typicalRange(held, today), m.label))
             return@withLock
         }
     }
 
-    private suspend fun enter(m: IraMarket, sig: Solo.Signal, list: List<T>, today: LocalDate) {
+    private suspend fun enter(m: IraMarket, sig: Solo.Signal, list: List<T>, today: LocalDate, read: String) {
         val u = m.name
         val c = IraNewsTrades.contract(u, sig.index, sig.call) ?: return
         // Boss's own paper position in this contract is never mixed with Solo's (its stop and close would touch it).
@@ -159,7 +171,8 @@ internal object IraSolo {
         val t = T(today.toString(), u, c.symbol, sig.call, fill.quantity, fill.price, sig.entryMinute, sig.index, sig.level, sig.target, sig.why)
         save(list + t)
         val line = "Solo (paper): bought ${c.symbol} at ${"%.2f".format(fill.price)}. Why: ${sig.why}. Out if ${m.label} " +
-            "${if (sig.call) "falls to" else "rises to"} ${"%,.0f".format(sig.level)}; target ${"%,.0f".format(sig.target)}; 15:10 at the latest."
+            "${if (sig.call) "falls to" else "rises to"} ${"%,.0f".format(sig.level)}; target ${"%,.0f".format(sig.target)}; 15:10 at the latest." +
+            (if (read.isNotEmpty()) " My read: $read" else "")
         tell(line)
         IraHub.appContext()?.let { com.optionslab.app.work.Notifier.orderFilled(it, "BUY", fill.quantity, c.symbol, fill.price, "Paper", "Jarvis solo") }
     }
@@ -229,7 +242,9 @@ internal object IraSolo {
 
     /** "How is Solo doing": on or off, paused or not, and the record. */
     fun status(): String = (if (on) "Solo is on, Boss (paper only; switch it off in Jarvis settings)." else "Solo is off, Boss: switch it on in Jarvis settings (paper only).") +
-        (paused?.let { " $it" } ?: "") + " " + record()
+        (paused?.let { " $it" } ?: "") + " " + record() + (watch?.takeIf { on && paused == null && com.optionslab.app.data.Market.isOpen() }?.let { (at, w) ->
+            if (w.isEmpty()) " At %02d:%02d nothing was set up yet.".format(at.hour, at.minute) else " Watching (at %02d:%02d): ".format(at.hour, at.minute) + w + "."
+        } ?: "")
 
     /** Solo's paper record in one line. */
     fun record(list: List<T> = all()): String {
