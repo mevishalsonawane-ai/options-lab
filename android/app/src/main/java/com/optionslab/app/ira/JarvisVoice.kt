@@ -198,8 +198,11 @@ class JarvisVoice : Service() {
         /** How long the last spoken reply took, from Boss's last word to Jarvis's first sound (ms), or 0. */
         @Volatile var lastLatencyMs = 0L
 
-        /** Jarvis is speaking now (the model waits, so the voice is not slowed). */
+        /** Jarvis is speaking now. */
         val speakingNow: Boolean get() = instance?.get()?.speaking == true
+
+        /** When the last sound started (elapsed ms): the model starts once the voice is under way. */
+        @Volatile var speechStartedAt = 0L
 
         /** What the recognizer heard last, for the Settings check. */
         @Volatile var heardText: String? = null; private set
@@ -380,6 +383,7 @@ class JarvisVoice : Service() {
         if (!applyStyle(t)) return false
         t.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
             override fun onStart(id: String?) {
+                speechStartedAt = SystemClock.elapsedRealtime()
                 val h = heardAt
                 if (h > 0 && id?.startsWith("answer") == true) { lastLatencyMs = SystemClock.elapsedRealtime() - h; heardAt = 0L }
             }

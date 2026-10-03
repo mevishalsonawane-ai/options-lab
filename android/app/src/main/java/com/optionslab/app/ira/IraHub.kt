@@ -935,10 +935,11 @@ object IraHub {
         val msg = Msg(true, a.text, a.facts, a.order, writing = write)
         _state.update { it.copy(messages = (it.messages + Msg(false, q) + msg).takeLast(MAX_MESSAGES)) }
         if (write) scope.launch {
-            // The model waits until the answer has been spoken: it shares the phone's processor with the voice.
-            kotlinx.coroutines.delay(400)
+            // Talking and writing run side by side: the model starts as soon as the voice has started (the first sound is
+            // the only moment it would slow), or after 1.5 seconds when nothing is being said.
+            val askedAt = android.os.SystemClock.elapsedRealtime()
             var waited = 0
-            while (JarvisVoice.speakingNow && waited < 30_000) { kotlinx.coroutines.delay(250); waited += 250 }
+            while (JarvisVoice.speechStartedAt < askedAt && waited < 1_500) { kotlinx.coroutines.delay(100); waited += 100 }
             val better = runCatching { IraModel.rewrite(q, a.facts, a.text) }.getOrNull()
             _state.update { s -> s.copy(messages = s.messages.map { m ->
                 if (m !== msg) m else if (better != null && better != a.text) m.copy(text = better, draft = a.text, writing = false) else m.copy(writing = false)
