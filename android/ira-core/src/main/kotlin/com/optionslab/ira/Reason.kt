@@ -114,3 +114,49 @@ object Freshness {
         return "Careful, Boss: the last ${m.label} price I have is $age old - the live feed is behind."
     }
 }
+
+/**
+ * Why a market is moving, from the evidence on the phone (Jarvis self-improvement, 2026-10-03): the opening gap and what
+ * has happened since, whether the other indices move the same way (broad) or not (this one alone), and whether fear (VIX)
+ * is rising or easing. The news lines are added by the answer itself. Pure.
+ */
+object Why {
+    private val INDICES = listOf(Market.NIFTY, Market.BANKNIFTY, Market.FINNIFTY, Market.SENSEX)
+
+    fun story(s: Snapshot, snaps: Map<Market, Snapshot>): String? {
+        if (s.market == Market.VIX) return null
+        val parts = ArrayList<String>()
+        val prev = s.prevClose
+        if (prev != null && prev > 0) {
+            val gap = s.open - prev
+            if (abs(gap) / prev >= 0.002) {
+                val since = s.price - s.open
+                val after = when {
+                    abs(since) / prev < 0.001 -> "and has held there since"
+                    (since > 0) == (gap > 0) -> "and has added ${n(abs(since))} more since the open"
+                    abs(since) >= abs(gap) -> "and has more than filled that gap since"
+                    else -> "and has given back ${n(abs(since))} of it since the open"
+                }
+                parts += "${s.market.label} opened ${n(abs(gap))} points ${if (gap > 0) "above" else "below"} yesterday's close (a gap ${if (gap > 0) "up" else "down"}) $after."
+            }
+        }
+        if (s.market in INDICES) {
+            val mine = s.changePct
+            val others = INDICES.filter { it != s.market }.mapNotNull { m -> snaps[m]?.changePct?.let { m to it } }
+            if (mine != null && others.isNotEmpty() && abs(mine) >= 0.1) {
+                val same = others.count { (it.second > 0) == (mine > 0) && abs(it.second) >= 0.05 }
+                val way = if (mine > 0) "up" else "down"
+                parts += when {
+                    same == others.size -> "The move is broad: ${others.joinToString(", ") { "${it.first.label} ${pct(it.second)}" }} as well, so it is the whole market, not ${s.market.label} alone."
+                    same == 0 -> "${s.market.label} is moving on its own: ${others.joinToString(", ") { "${it.first.label} ${pct(it.second)}" }}, so the reason is likely in its own stocks."
+                    else -> "$same of ${others.size} other indices are $way too (${others.joinToString(", ") { "${it.first.label} ${pct(it.second)}" }})."
+                }
+            }
+        }
+        snaps[Market.VIX]?.changePct?.let { v ->
+            if (v >= 5) parts += "Fear is rising: India VIX is ${pct(v)} today, so traders are paying up for protection."
+            else if (v <= -5) parts += "Fear is easing: India VIX is ${pct(v)} today."
+        }
+        return parts.takeIf { it.isNotEmpty() }?.joinToString(" ")
+    }
+}

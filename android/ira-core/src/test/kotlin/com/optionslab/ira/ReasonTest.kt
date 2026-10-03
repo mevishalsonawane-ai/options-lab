@@ -74,3 +74,27 @@ class FreshnessTest {
         assertNull(Freshness.note(Market.NIFTY, d.atTime(15, 29), d.atTime(18, 0)), "the market is closed")
     }
 }
+
+class WhyTest {
+    private val d = java.time.LocalDate.of(2026, 10, 1)
+    private fun snap(m: Market, prev: Double, open: Double, price: Double) =
+        Snapshot(m, d.atTime(12, 0), true, price, prev, open, maxOf(open, price), minOf(open, price), null, null, emptyList(), null, null, emptyList(), emptyList(), emptyList())
+
+    @Test fun theStoryIsPutTogether() {
+        val snaps = mapOf(
+            Market.NIFTY to snap(Market.NIFTY, 24_000.0, 23_850.0, 23_800.0),
+            Market.BANKNIFTY to snap(Market.BANKNIFTY, 52_000.0, 51_800.0, 51_600.0),
+            Market.SENSEX to snap(Market.SENSEX, 80_000.0, 79_700.0, 79_500.0),
+            Market.VIX to snap(Market.VIX, 13.0, 13.5, 14.0))
+        val s = Why.story(snaps.getValue(Market.NIFTY), snaps)!!
+        assertTrue("Nifty opened 150.00 points below yesterday's close (a gap down) and has added 50.00 more since the open." in s, s)
+        assertTrue("The move is broad" in s, s)
+        assertTrue("Fear is rising" in s, s)
+    }
+
+    @Test fun aMarketAloneIsSaid() {
+        val snaps = mapOf(Market.NIFTY to snap(Market.NIFTY, 24_000.0, 24_000.0, 24_100.0), Market.BANKNIFTY to snap(Market.BANKNIFTY, 52_000.0, 52_000.0, 51_700.0))
+        val s = Why.story(snaps.getValue(Market.BANKNIFTY), snaps)!!
+        assertTrue("BankNifty is moving on its own" in s, s)
+    }
+}

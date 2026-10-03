@@ -35,6 +35,7 @@ class Ira(private val book: PatternBook = PatternBook()) {
             if (Topic.OVERVIEW in t || Topic.WHY in t) parts += overview(s)
             if (Topic.TREND in t) parts += trend(s)
             if (Topic.LEVELS in t || Topic.OVERVIEW in t) parts += levels(s)
+            if (Topic.WHY in t) Why.story(s, snaps)?.let { parts += it; facts += it }
             if (Topic.VOLATILITY in t || Topic.WHY in t) parts += volatility(s, snaps[Market.VIX])
             if (Topic.PATTERNS in t || Topic.OVERVIEW in t || Topic.WHY in t) patterns(s)?.let { parts += it; facts += it }
             if (Topic.NEWS in t || Topic.WHY in t) parts += newsLines(m, news, facts)
