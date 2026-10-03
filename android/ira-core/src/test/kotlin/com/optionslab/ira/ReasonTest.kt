@@ -533,3 +533,26 @@ class RoutingAuditTwoTest {
         assertTrue(Briefing.asked("morning briefing"))
     }
 }
+
+class TouchOddsTest {
+    @Test fun theOddsOfReachingALevelAreAboutTwiceTheClose() {
+        val a = Odds.asked("will nifty cross 24,200 today")!!
+        assertTrue(a.touch); assertEquals(24_200.0, a.level)
+        assertTrue(Odds.asked("odds of banknifty touching 51000")!!.touch)
+        assertNull(Odds.asked("will it cross 24200"), "no market named")
+        assertNull(Odds.asked("will nifty cross 25000 by expiry"))
+        assertNull(Odds.asked("will nifty cross 25000 tomorrow"))
+        assertEquals(false, Odds.asked("will nifty close above 24200")?.touch)
+        val d = java.time.LocalDate.of(2026, 10, 1)
+        val snap = Snapshot(Market.NIFTY, d.atTime(12, 0), true, 24_000.0, 23_900.0, 24_000.0, 24_000.0, 24_000.0, null, null, emptyList(), null, null, emptyList(), emptyList(), emptyList())
+        val close = Odds.say(snap, 16.0, Odds.Ask(true, 24_200.0), d.atTime(12, 0))!!
+        val touch = Odds.say(snap, 16.0, a, d.atTime(12, 0))!!
+        fun pct(s: String) = Regex("about a (\\d+)% chance").find(s)!!.groupValues[1].toInt()
+        assertTrue(touch.contains("trades up to 24,200.00 at some point today"), touch)
+        assertTrue(pct(touch) in (2 * pct(close) - 2)..(2 * pct(close) + 2), "$touch / $close")
+        assertTrue(Odds.say(snap, 16.0, Odds.Ask(true, 24_005.0, touch = true), d.atTime(12, 0))!!.contains("already"))
+        // Never an alarm or an order.
+        assertNull(Commands.parse("will nifty cross 24200 today"))
+        assertNull(Ask.parse("will nifty cross 24200 today").order)
+    }
+}

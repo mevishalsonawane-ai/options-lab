@@ -348,11 +348,19 @@ object Momentum {
 object Odds {
     private val ASK = Regex(" (?:(?:chance|chances|probability|odds|likely|likelihood) [a-z ]{0,40}?(?:close|closes|closing|end|ends|finish|finishes|stay|stays|be|go|goes|settle|settles)|(?:will|would) [a-z ]{0,40}?(?:close|closes|end|ends|finish|finishes|settle|settles)) (above|over|below|under) (\\d{2,6}(?:\\.\\d+)?) ")
 
-    data class Ask(val above: Boolean, val level: Double)
+    /** "Will Nifty cross 25000 today", "odds of Nifty touching 25000": reaching a level at any time, not closing past it. */
+    private val TOUCH = Regex(" (?:(?:chance|chances|probability|odds|likely|likelihood) [a-z ]{0,40}?|(?:will|would|can|could) [a-z ]{0,40}?)(?:touch|touches|touching|hit|hits|hitting|reach|reaches|reaching|cross|crosses|crossing|break|breaks|breaking|tag|tags|see) (\\d{2,6}(?:\\.\\d+)?)( today| this session| in the session)? $")
+
+    /** [touch]: the odds of trading at [level] at some point (its direction is from the price), else of closing past it. */
+    data class Ask(val above: Boolean, val level: Double, val touch: Boolean = false)
 
     fun asked(text: String): Ask? {
         val t = norm(text.replace(",", ""))
-        val m = ASK.find(t) ?: return null
+        val m = ASK.find(t) ?: TOUCH.find(t)?.let { tm ->
+            if (Regex(" (week|weekly|month|monthly|expiry|friday|monday|tuesday|wednesday|thursday|next|tomorrow) | at \\d{1,2}( \\d{2}| ?(am|pm)) ").containsMatchIn(t)) return null
+            if (Market.mentioned(text).isEmpty()) return null
+            return Ask(true, tm.groupValues[1].toDouble(), touch = true)
+        } ?: return null
         // The odds are for the close (the VIX move for the time left): not a week or an expiry away, not by a clock time.
         if (Regex(" (week|weekly|month|monthly|expiry|friday|monday|tuesday|wednesday|thursday|next) | at \\d{1,2}( \\d{2}| ?(am|pm)) ").containsMatchIn(t)) return null
         if (Market.mentioned(text).isEmpty() && Regex(" (i|me|my) ").containsMatchIn(t)) return null
@@ -375,10 +383,20 @@ object Odds {
         val left = if (s.trading && now.toLocalTime().isBefore(close)) java.time.Duration.between(now.toLocalTime(), close).toMinutes().toInt() else null
         val sigma = ExpectedRange.points(s.price, vix, left)
         if (sigma <= 0) return null
+        val span = if (left != null) "today" else "next session"
+        fun pctOf(p: Double) = (p * 100).let { if (it < 1) "under 1" else if (it > 99) "over 99" else "%.0f".format(Locale.ENGLISH, it) }
+        if (a.touch) {
+            val gap = abs(a.level - s.price)
+            if (gap < s.price * 0.0005) return "${s.market.label} is at ${n(a.level)} already, Boss (${n(s.price)} now)."
+            // Reflection principle: reaching a level at some point is about twice as likely as closing beyond it.
+            val p = minOf(1.0, 2 * (1 - phi(gap / sigma)))
+            val way = if (a.level > s.price) "up to" else "down to"
+            return "Going by India VIX, there is about a ${pctOf(p)}% chance ${s.market.label} trades $way ${n(a.level)} at some point $span: " +
+                "it is ${n(gap)} points away, against an expected move of about ±${n(sigma)}. Touching a level is roughly twice as likely as closing past it. A rough guide from option prices, not a forecast."
+        }
         val pAbove = 1 - phi((a.level - s.price) / sigma)
         val p = if (a.above) pAbove else 1 - pAbove
-        val pct = (p * 100).let { if (it < 1) "under 1" else if (it > 99) "over 99" else "%.0f".format(Locale.ENGLISH, it) }
-        val span = if (left != null) "today" else "next session"
+        val pct = pctOf(p)
         return "Going by India VIX, there is about a $pct% chance ${s.market.label} closes ${if (a.above) "above" else "below"} ${n(a.level)} $span: " +
             "it is ${n(abs(a.level - s.price))} points ${if (a.level >= s.price) "above" else "below"} the price, against an expected move of about ±${n(sigma)}. A rough guide from option prices, not a forecast."
     }
