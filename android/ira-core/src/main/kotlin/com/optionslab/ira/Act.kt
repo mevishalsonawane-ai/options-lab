@@ -148,10 +148,15 @@ object Commands {
         }
         if (has(" (remove|delete|cancel|clear) (the |my )?event")) return Command(Command.Kind.EVENT_REMOVE, number = num(" event (\\d+) "), target = rest(s, " event "))
         // Alarms: "alert me when nifty goes above 25000", "set an alarm on banknifty below 51000", "remove alarm 2".
-        // "Remove the Nifty alarm", "clear all BankNifty alerts": a market's alarms by its name.
-        val alarmMarket = Market.mentioned(s).firstOrNull()
-        if (has(" (remove|delete|cancel|clear) (the |my |all |all my |all the )?(last )?(alarm|alert)s? ") ||
-            alarmMarket != null && has(" (remove|delete|cancel|clear) (the |my |all |all my |all the )?(last )?[a-z ]{1,25}? (alarm|alert)s?( |$)")) {
+        // "Remove the Nifty alarm", "clear all BankNifty alerts", "remove alarms on Sensex": a market's alarms, named right
+        // in the removal (never from elsewhere in the sentence; two markets named: all of them, as before).
+        val aliases = Market.entries.flatMap { it.aliases }.sortedByDescending { it.length }.joinToString("|") { Regex.escape(it) }
+        val clause = Regex(" (?:remove|delete|cancel|clear) (?:the |my |all |all my |all the )?(?:last )?($aliases) (?:index )?(?:alarm|alert)s?(?= |$)" +
+            "| (?:remove|delete|cancel|clear) (?:the |my |all |all my |all the )?(?:alarm|alert)s? (?:on|for|of) (?:the )?($aliases)(?= |$)").find(s)
+        val alarmMarket = clause?.let { Market.mentioned(it.value).firstOrNull() }?.takeIf { Market.mentioned(s).size == 1 }
+        // A sentence that also sets an alarm or touches orders is not a removal by market.
+        val notRemoval = has(" alert me | set (an |a )?(alarm|alert) | lagao | order | orders ")
+        if (has(" (remove|delete|cancel|clear) (the |my |all |all my |all the )?(last )?(alarm|alert)s? ") || clause != null && !notRemoval) {
             return Command(Command.Kind.ALARM_REMOVE, number = num(" (?:alarm|alert) (\\d+) "),
                 target = if (has(" last ")) "last" else if (has(" all ")) "all" else null, market = alarmMarket)
         }

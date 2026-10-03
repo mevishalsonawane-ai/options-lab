@@ -318,9 +318,10 @@ internal object IraActions {
                 if (a.isEmpty()) return "There are no alarms to remove." to null
                 // "Remove the Nifty alarm": that market's alarms only (all of them when one is set, or "all" was said).
                 val mk = c.market
-                if (mk != null && c.number == null && c.target != "last") {
+                if (mk != null && c.number == null) {
                     val sym = alarmSymbol(mk) ?: return "There are no ${mk.label} alarms here." to null
-                    val mine = a.filter { it.symbol == sym }
+                    // "Remove the last Nifty alarm": the last of that market's alarms, never another market's.
+                    val mine = a.filter { it.symbol == sym }.let { l -> if (c.target == "last") l.takeLast(1) else l }
                     if (mine.isEmpty()) return "There are no ${mk.label} alarms to remove." to null
                     if (mine.size > 1 && c.target != "all")
                         return ("Which ${mk.label} alarm? " + mine.joinToString("; ") { x -> "${a.indexOf(x) + 1}. ${x.describe()}" } + ". Or say \"remove all ${mk.label} alarms\".") to null

@@ -28,9 +28,9 @@ object Hinglish {
 
     private val WORDS = listOf(
         // "Kya Nifty aaj 25000 cross karega", "Nifty 25000 pahunchega kya": the odds of reaching a level (a question, never an alarm).
-        Regex("^(?:kya\\s+)?(.+?)\\s+(\\d{2,6})\\s+ke\\s+(?:upar|uppar)\\s+band\\s+(?:hoga|hogi|honge)(?:\\s+kya)?$") to "will $1 close above $2",
-        Regex("^(?:kya\\s+)?(.+?)\\s+(\\d{2,6})\\s+ke\\s+(?:neeche|niche)\\s+band\\s+(?:hoga|hogi|honge)(?:\\s+kya)?$") to "will $1 close below $2",
-        Regex("^(?:kya\\s+)?(.+?)\\s+(\\d{2,6})\\s+(?:(?:ko|tak)\\s+)?(?:cross|touch|hit)?\\s*(?:karega|karegi|kar\\s+payega|pahunchega|pahunchegi|jayega|jaega|jayegi|jaegi)(?:\\s+kya)?$") to "will $1 cross $2",
+        Regex("^(?!.*\\b(?:alert|alarm|lagao|batana|order|lot|lots|buy|sell|ce|pe|call|put)\\b)(?:kya\\s+)?(.+?)\\s+(\\d{2,6})\\s+ke\\s+(?:upar|uppar)\\s+band\\s+(?:hoga|hogi|honge)(?:\\s+kya)?$") to "will $1 close above $2",
+        Regex("^(?!.*\\b(?:alert|alarm|lagao|batana|order|lot|lots|buy|sell|ce|pe|call|put)\\b)(?:kya\\s+)?(.+?)\\s+(\\d{2,6})\\s+ke\\s+(?:neeche|niche)\\s+band\\s+(?:hoga|hogi|honge)(?:\\s+kya)?$") to "will $1 close below $2",
+        Regex("^(?!.*\\b(?:alert|alarm|lagao|batana|order|lot|lots|buy|sell|ce|pe|call|put)\\b)(?:kya\\s+)?(.+?)\\s+(\\d{2,6})\\s+(?:(?:ko|tak)\\s+)?(?:cross|touch|hit)?\\s*(?:karega|karegi|kar\\s+payega|pahunchega|pahunchegi|jayega|jaega|jayegi|jaegi)(?:\\s+kya)?$") to "will $1 cross $2",
         Regex("\\btrade\\s+kar(?:u|un|na|ni)?\\s+(?:kya|chahiye)(?:\\s+kya)?\\b|\\bkya\\s+trade\\s+kar(?:u|un|na)\\b") to "should i trade now",
         Regex("\\b(?:market|bazaar|bazar)\\s+kaisa\\s+hai\\b") to "how is the market",
         Regex("^(.*?)\\s+kaisa\\s+(?:hai|chal\\s+raha\\s+hai)$") to "how is $1",

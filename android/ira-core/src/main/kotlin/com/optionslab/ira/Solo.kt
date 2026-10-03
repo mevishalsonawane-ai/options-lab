@@ -173,7 +173,10 @@ object Solo {
                     if (s == null) { m++; continue }
                     // The last hour of an expiry: no new option bought (it decays to nothing).
                     if (d.date == d.expiry && s.entryMinute >= 315) break
-                    val k = strike(s.index, step, s.call, r.itm)
+                    // The wanted strike, or (when the data does not hold it) the nearest one it holds on that side.
+                    val want = strike(s.index, step, s.call, r.itm)
+                    val k = if (d.options.containsKey(want to s.call)) want
+                        else d.options.keys.filter { it.second == s.call }.minByOrNull { abs(it.first - want) }?.first ?: want
                     val leg = d.options[k to s.call]
                     val inBar = leg?.get(s.entryMinute)
                     if (leg == null || inBar == null) { m++; continue }

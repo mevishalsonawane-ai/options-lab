@@ -19,10 +19,10 @@ Lots: NIFTY 75, BANKNIFTY 30. Variants chosen on NIFTY 2024-25, judged on the ot
 ## Results (net Rs, 1 lot)
 | variant | NIFTY 24-25 | NIFTY 25-26 | BANKNIFTY 25-26 |
 |---|---|---|---|
-| base (2 a day, ATM) | +34,661 (369 tr, t 0.57) | -50,925 (377, t -1.60) | -1,401 (322) |
+| base (2 a day, ATM) | +23,981 (370 tr, t 0.39) | -50,925 (377, t -1.60) | +655 (360) |
 | 1 strike ITM | +41,228 | -46,736 | -10,944 |
 | 2 strikes ITM | +49,387 | -42,731 | -20,793 |
-| **1 trade a day (chosen)** | **+52,151 (217 tr, t 0.92, DD 23k)** | **-42,968 (219, t -1.72, DD 45k)** | **+2,041 (195, DD 22k)** |
+| **1 trade a day (chosen)** | **+52,151 (217 tr, t 0.92, DD 23k)** | **-42,968 (219, t -1.72, DD 45k)** | **+6,906 (211, DD 19k)** |
 | top 20% candles | +49,545 | -59,955 | -5,598 |
 | target 1.5R | +4,718 | -39,416 | +1,767 |
 | time stop 20 min (no 0.5R) | -8,482 | -55,594 | -5,909 |
@@ -33,6 +33,12 @@ Lots: NIFTY 75, BANKNIFTY 30. Variants chosen on NIFTY 2024-25, judged on the ot
 
 Index edge (R before option costs) is positive in all three files (+0.02 .. +0.21 R), but small; the option's spread,
 costs and decay take about all of it. NIFTY 2025-26 loses with every variant.
+
+Review (3 Oct): no look-ahead (signals recomputed on days cut at each minute: identical). Rows other than base and
+"1 a day" were run before the nearest-strike fix: BANKNIFTY's file holds 6 strikes a day, and ~16% of its signals were
+skipped when the ATM strike was missing; the backtest now takes the nearest strike held (as combined.py does).
+Expiry days are priced with the next expiry's options (the data has no same-day contracts) - the app also buys the
+next expiry, so live and test agree.
 
 ## Conclusion
 No version is profitable in both NIFTY years. Solo ships ON PAPER ONLY, off by default, one trade a day, with a

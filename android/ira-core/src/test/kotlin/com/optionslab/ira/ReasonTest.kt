@@ -614,3 +614,23 @@ class HindiOddsTest {
         assertEquals(Command.Kind.ALARM_ADD, Commands.parse(Hinglish.normalize("nifty 25000 pe alert lagao"))?.kind)
     }
 }
+
+class ReviewQTest {
+    @Test fun removalByMarketIsOnlyWhereTheMarketIsInTheRemoval() {
+        fun k(s: String) = Commands.parse(s)
+        assertEquals(Command.Kind.CANCEL_ALL, k("cancel all orders and alerts on nifty")?.kind)
+        for (q in listOf("cancel my nifty order and alert me above 25000", "cancel nifty order and set alert at 25000",
+                "alert me when nifty goes above 25000 and cancel the old alert", "remove nifty stop loss and alert me when it falls below 24000"))
+            assertEquals(Command.Kind.ALARM_ADD, k(q)?.kind, q)
+        for (q in listOf("cancel the nifty order alert", "clear the nifty strategy alerts")) assertTrue(k(q)?.kind != Command.Kind.ALARM_REMOVE, q)
+        assertNull(k("remove all alarms and set one on nifty above 25000")?.market)
+        assertNull(k("remove all my alerts on banknifty and nifty")?.market)
+        assertEquals(Market.NIFTY, k("remove the nifty alarm")?.market)
+        assertEquals(Market.SENSEX, k("remove alarms on sensex")?.market)
+        assertEquals("last", k("remove the last nifty alarm")?.target)
+        assertEquals(Market.NIFTY, k("remove the last nifty alarm")?.market)
+        // Hindi: an alarm stays an alarm.
+        assertEquals(Command.Kind.ALARM_ADD, k(Hinglish.normalize("alert lagao nifty 25000 cross karega"))?.kind)
+        assertEquals(true, Odds.asked(Ask.parse("nifty 25000 pahunchega kya").text)?.touch)
+    }
+}

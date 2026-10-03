@@ -41,7 +41,7 @@ internal object IraSolo {
     val BACKTEST = listOf(
         "NIFTY Apr 2024-Apr 2025: 217 trades, 40% winners, +Rs 52,151 (1 lot of 75), worst drawdown Rs 23,261.",
         "NIFTY Apr 2025-Apr 2026: 219 trades, 36% winners, -Rs 42,968, worst drawdown Rs 45,221.",
-        "BANKNIFTY Feb 2025-Feb 2026: 195 trades, 39% winners, +Rs 2,041 (1 lot of 30), worst drawdown Rs 21,860.",
+        "BANKNIFTY Feb 2025-Feb 2026: 211 trades, 40% winners, +Rs 6,906 (1 lot of 30), worst drawdown Rs 19,260.",
     )
 
     var on: Boolean
