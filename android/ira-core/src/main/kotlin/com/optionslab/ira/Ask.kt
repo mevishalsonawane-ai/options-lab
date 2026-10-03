@@ -34,7 +34,7 @@ data class Question(val text: String, val markets: List<Market>, val topics: Set
 object Ask {
     private val TOPIC_WORDS: List<Pair<Topic, List<String>>> = listOf(
         Topic.BACKTEST to listOf("backtest", "back test", "backtested", "strategy", "test this", "test the pattern", "test it", "make it an arm"),
-        Topic.WHY to listOf("why", "reason", "what happened", "behind"),
+        Topic.WHY to listOf("why", "reason", "what happened", "behind", "what moved", "moved the market", "what drove", "fell", "rose"),
         Topic.TREND to listOf("trend", "direction", "bullish", "bearish", "going up", "going down", "heading"),
         Topic.LEVELS to listOf("level", "levels", "support", "resistance", "target", "range", "high", "low", "pool", "liquidity"),
         Topic.PATTERNS to listOf("pattern", "patterns", "candle", "candles", "engulfing", "hammer", "doji", "breakout", "breakdown", "double top", "double bottom"),
@@ -74,14 +74,16 @@ object Ask {
         if (Regex(" (describe|read|explain|walk me through|tell me about) (the |my )?([a-z]+ )?chart ").containsMatchIn(t))
             return Question(text, Market.mentioned(text).ifEmpty { listOf(Market.NIFTY) }, setOf(Topic.OVERVIEW, Topic.TREND, Topic.LEVELS, Topic.PATTERNS), null)
         // "Should I trade now?" - Jarvis's trade check (never a direction, never a single instrument).
-        if (!Regex(" (backtest|back test|engulfing|pattern|patterns|strategy|candle|candles) ").containsMatchIn(t) && Regex(" (bullish|bearish|market (good|bad|mood|today)|how is the market|is (the )?market (good|bad|up|down|bullish|bearish|trending|sideways)|which way is the market) ").containsMatchIn(t) ||
-            Regex(" (should|shall|can|could) i (trade|be trading|stay out|sit out|take (a |any )?trades?)| (safe|good|right|ok|okay) (time )?to trade| trade (now|today) or not| should i stay out | is today (a )?(good|bad) (day )?(to|for) trad").containsMatchIn(t))
+        if (!Regex(" (backtest|back test|engulfing|pattern|patterns|strategy|candle|candles|why|what happened|what moved|what drove) ").containsMatchIn(t) && Regex(" (bullish|bearish|market (good|bad|mood|today)|how is the market|is (the )?market (good|bad|up|down|bullish|bearish|trending|sideways)|which way is the market) ").containsMatchIn(t) ||
+            Regex(" (should|shall|can|could) i (trade|be trading|stay out|sit out|take (a |any )?trades?)| (safe|good|right|ok|okay) (time |day )?to (trade|sell options|buy options|sell|buy)| trade (now|today) or not| should i stay out | is today (a )?(good|bad) (day )?(to|for) trad").containsMatchIn(t))
             return Question(text, Market.mentioned(text), setOf(Topic.TRADE_CHECK), null)
         // An order to place names its lots ("buy 2 lots..."); anything else about orders, P&L, strategies, limits or the app
         // is a question about the app.
         // A question ("Did I buy 2 lots of Nifty?") is never an order.
         val placed = if (said.trim().endsWith("?")) null else order(t)
-        val account = ACCOUNT.containsMatchIn(t) || AppAnswers.about(t) && placed?.lots == null
+        // "Where is BankNifty trading?" asks the price, not where something is in the app.
+        val priceAsk = Market.mentioned(text).isNotEmpty() && Regex("^ (where is|where s|wheres|where) ").containsMatchIn(t)
+        val account = !priceAsk && (ACCOUNT.containsMatchIn(t) || AppAnswers.about(t) && placed?.lots == null)
         val order = if (account) null else placed
         val markets = Market.mentioned(text)
         val topics = LinkedHashSet<Topic>()

@@ -9,7 +9,7 @@ package com.optionslab.ira
 object Hinglish {
     /** Words that only Hindi uses (so English text, "Bollinger band" included, is left alone). */
     private val HINDI = Regex("\\b(kya|kaisa|kaise|kaisi|hai|hain|batao|bataiye|dikhao|dikhaiye|karo|kardo|karu|karun|karna|chahiye|" +
-        "roko|chalu|shuru|khareedo|kharido|lelo|mera|meri|aaj|abhi|haan|nahi|nahin|rehne|bilkul|wala|wali|sabhi|saare)\\b")
+        "roko|chalu|shuru|khareedo|kharido|lelo|mera|meri|aaj|abhi|haan|nahi|nahin|rehne|bilkul|wala|wali|sabhi|saare|kyun|kyu|kyon|gira|giri|chadha|chadhi|badha|upar|neeche|niche|jayega|jaega|jayegi)\\b")
 
     /** Verb last -> English command first: (pattern, English verb). */
     private val VERBS = listOf(
@@ -27,6 +27,12 @@ object Hinglish {
         Regex("^(.*?)\\s+kaisa\\s+(?:hai|chal\\s+raha\\s+hai)$") to "how is $1",
         Regex("^(.*?)\\s+kya\\s+(?:hai|hua)$") to "what is $1",
         Regex("\\bmera\\b|\\bmeri\\b|\\bmere\\b") to "my",
+        Regex("\\b(?:kyun|kyu|kyon)\\b") to "why",
+        Regex("\\b(?:gira|giri|gire)\\b") to "fell",
+        Regex("\\b(?:chadha|chadhi|badha|badhi)\\b") to "rose",
+        Regex("\\b(?:upar)\\b") to "going up",
+        Regex("\\b(?:neeche|niche)\\b") to "going down",
+        Regex("\\b(?:jayega|jaega|jayegi|jaegi)\\b") to "",
         Regex("\\baaj\\b") to "today",
         Regex("\\babhi\\b") to "now",
         Regex("\\bsab\\b|\\bsaare\\b|\\bsabhi\\b") to "all",

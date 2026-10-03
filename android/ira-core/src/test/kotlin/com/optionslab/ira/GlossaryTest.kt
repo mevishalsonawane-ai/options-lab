@@ -22,3 +22,15 @@ class GlossaryTest {
         assertNull(Glossary.explain("buy a straddle"))
     }
 }
+
+class UnderstandingTest {
+    @Test fun everydayQuestionsGoWhereTheyShould() {
+        assertTrue(Topic.WHY in Ask.parse("what moved the market today").topics)
+        assertTrue(Topic.WHY in Ask.parse("market kyun gira aaj").topics)
+        assertTrue(Topic.TREND in Ask.parse("bank nifty upar jayega ya neeche").topics)
+        kotlin.test.assertEquals(setOf(Topic.OVERVIEW), Ask.parse("where is banknifty trading").topics)
+        kotlin.test.assertEquals(setOf(Topic.TRADE_CHECK), Ask.parse("is it a good day to sell options").topics)
+        kotlin.test.assertEquals(setOf(Topic.ACCOUNT), Ask.parse("what's my win rate").topics)
+        kotlin.test.assertEquals(setOf(Topic.ACCOUNT), Ask.parse("when is the next expiry").topics)
+    }
+}
