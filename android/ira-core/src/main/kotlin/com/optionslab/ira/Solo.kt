@@ -160,6 +160,43 @@ object Solo {
     }
 
     /**
+     * Why nothing is set up at minute [now], for "how is Solo doing": what became of each big candle whose chance has
+     * passed (its level broke first, no pullback came within its hour, or the pullback came), or, with none, how far
+     * the day's biggest 15-minute body was from big. Null when a candle is still waiting ([watching] says that).
+     */
+    fun story(day: List<Candle>, now: Int, big: Double, label: String, r: Rules = Rules()): String? {
+        if (day.isEmpty() || big <= 0) return null
+        val last = minOf(now, day.lastIndex)
+        val open = day[0].t.toLocalDate().atTime(9, 15)
+        fun at(m: Int) = open.plusMinutes(m.toLong()).toLocalTime().let { "%02d:%02d".format(Locale.ENGLISH, it.hour, it.minute) }
+        val out = ArrayList<String>()
+        var biggest = 0.0
+        for (s in 0..r.lastTrigger step 15) {
+            val e = s + 15
+            if (e > last + 1) break
+            val c = day.subList(s, e)
+            val o = c.first().o; val cl = c.last().c; val h = c.maxOf { it.h }; val l = c.minOf { it.l }
+            val body = cl - o
+            biggest = maxOf(biggest, abs(body))
+            if (abs(body) < big || body == 0.0) continue
+            val up = body > 0
+            val lvl = if (up) l else h
+            val end = minOf(last, e + r.window - 1, LAST_ENTRY - 1)
+            val broke = (e..end).firstOrNull { m -> if (up) day[m].l <= lvl else day[m].h >= lvl }
+            val pulled = (e..end).firstOrNull { m -> m % 5 == 4 && (if (up) cl - day[m].c else day[m].c - cl) >= r.depth * (h - l) }
+            val name = "the big ${if (up) "green" else "red"} candle at ${at(s)}"
+            out += when {
+                pulled != null && (broke == null || pulled < broke) -> "$name pulled back at ${at(pulled + 1)} - that was the setup"
+                broke != null -> "$name broke its ${if (up) "low" else "high"} at ${at(broke)} before any pullback"
+                last >= minOf(e + r.window, LAST_ENTRY) - 1 -> "$name never pulled back ${(r.depth * 100).toInt()}% within its hour"
+                else -> return null
+            }
+        }
+        if (out.isEmpty()) return "$label: no 15-minute candle has been big enough yet (the biggest body was %.0f points; big is %.0f)".format(Locale.ENGLISH, biggest, big)
+        return "$label: " + out.joinToString("; ")
+    }
+
+    /**
      * A short read of the day before a trade, the way a trader sizes it up: where the price is against the open and the
      * day's range, and how much of a normal day's range is already used ([typicalRange]: the average of earlier days).
      */

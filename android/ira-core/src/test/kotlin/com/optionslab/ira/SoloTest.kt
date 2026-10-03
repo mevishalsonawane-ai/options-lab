@@ -204,3 +204,38 @@ class SoloDayTest {
             Solo.daySay(listOf(-900.0 to "stop: Nifty through 24,000", 400.0 to "15:10"), on = true, paused = false))
     }
 }
+
+class SoloStoryTest {
+    private val d = LocalDate.of(2026, 10, 1)
+    private fun bar(m: Int, o: Double, h: Double, l: Double, c: Double) = Candle(d.atTime(9, 15).plusMinutes(m.toLong()), o, h, l, c)
+
+    /** Flat, a big green candle 09:45-10:00 (24000 -> 24100), then [after] for each later minute. */
+    private fun day(n: Int, after: (Int) -> Candle) = (0 until n).map { m ->
+        when {
+            m < 30 -> bar(m, 24_000.0, 24_005.0, 23_995.0, 24_000.0)
+            m < 45 -> { val o = 24_000.0 + (m - 30) * 100.0 / 15; bar(m, o, o + 100.0 / 15, o, o + 100.0 / 15) }
+            else -> after(m)
+        }
+    }
+
+    @Test fun whyNothingIsSetUpIsSaid() {
+        // No big candle: how far the biggest was.
+        val flat = (0 until 60).map { bar(it, 24_000.0, 24_005.0, 23_995.0, 24_000.0) }
+        assertEquals("Nifty: no 15-minute candle has been big enough yet (the biggest body was 0 points; big is 50)", Solo.story(flat, 59, 50.0, "Nifty"))
+        // Still inside its hour, no pullback yet: nothing to explain (the watch says it).
+        val waiting = day(70) { bar(it, 24_095.0, 24_097.0, 24_093.0, 24_095.0) }
+        assertNull(Solo.story(waiting, 69, 50.0, "Nifty"))
+        // Its hour passed with no pullback.
+        val never = day(110) { bar(it, 24_095.0, 24_097.0, 24_093.0, 24_095.0) }
+        assertEquals("Nifty: the big green candle at 09:45 never pulled back 40% within its hour", Solo.story(never, 109, 50.0, "Nifty"))
+        // The low broke first (a sharp drop at 10:10, minute 55).
+        val broke = day(110) { m -> if (m == 55) bar(m, 24_095.0, 24_095.0, 23_990.0, 24_080.0) else bar(m, 24_095.0, 24_097.0, 24_093.0, 24_095.0) }
+        assertEquals("Nifty: the big green candle at 09:45 broke its low at 10:10 before any pullback", Solo.story(broke, 109, 50.0, "Nifty"))
+        // The pullback came on the 10:05 close (minute 49), the same minute signal() fires on.
+        val pulled = day(110) { bar(it, 24_055.0, 24_057.0, 24_053.0, 24_055.0) }
+        val sig = (0 until 110).firstNotNullOfOrNull { Solo.signal(pulled, it, 50.0) }
+        assertNotNull(sig)
+        assertEquals(50, sig.entryMinute)
+        assertEquals("Nifty: the big green candle at 09:45 pulled back at 10:05 - that was the setup", Solo.story(pulled, 109, 50.0, "Nifty"))
+    }
+}

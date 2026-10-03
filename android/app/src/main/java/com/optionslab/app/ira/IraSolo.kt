@@ -177,7 +177,8 @@ internal object IraSolo {
             val big = big(held, today) ?: continue
             // Learning: a market whose setup has not been working lately is watched, not traded.
             if (!Solo.working(learnedFor(m, held, today), RULES)) { seen += "${m.label}: the setup has not been working lately (its last 60 signals lost on average) - standing aside"; watch = java.time.LocalDateTime.now(IST) to seen.joinToString("; "); continue }
-            seen += Solo.watching(day, day.size - 1, big, m.label, RULES)
+            // Waiting candles are said as the watch; with none, why nothing is set up (what became of today's big candles).
+            seen += Solo.watching(day, day.size - 1, big, m.label, RULES).ifEmpty { listOfNotNull(Solo.story(day, day.size - 1, big, m.label, RULES)) }
             watch = java.time.LocalDateTime.now(IST) to seen.joinToString("; ")
             // The last two closes only (a pass can come a minute late); an older signal is not chased.
             val sig = (day.size - 1 downTo maxOf(0, day.size - 2)).firstNotNullOfOrNull { k -> Solo.signal(day, k, big, busy, RULES) } ?: continue
@@ -323,7 +324,7 @@ internal object IraSolo {
     fun status(): String = (if (on) "Solo is on, Boss (paper only; switch it off in Jarvis settings)." else "Solo is off, Boss: switch it on in Jarvis settings (paper only).") +
         (paused?.let { " $it" } ?: "") + " " + record() + form() + (watch?.takeIf { on && paused == null && com.optionslab.app.data.Market.isOpen() && it.first.toLocalDate() == com.optionslab.app.data.Market.today() &&
             all().none { t -> !t.closed } }?.let { (at, w) ->
-            if (w.isEmpty()) " At %02d:%02d nothing was set up yet.".format(at.hour, at.minute) else " Watching (at %02d:%02d): ".format(at.hour, at.minute) + w + "."
+            if (w.isEmpty()) " At %02d:%02d nothing was set up yet.".format(at.hour, at.minute) else " At %02d:%02d Solo saw: ".format(at.hour, at.minute) + w + "."
         } ?: "")
 
     /** Solo's paper record in one line. */
