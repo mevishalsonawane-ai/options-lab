@@ -42,7 +42,7 @@ data class Command(val kind: Kind, val target: String? = null, val number: Int? 
 
 object Commands {
     /** A question about doing something ("how do I stop...") is not a command. */
-    private val QUESTION = Regex("^ (how|where|what|whats|why|which|when|should|is|are|am|can i|could i|did|do you|do i|does|has|have|will|was|were|would|if|wonder|i wonder) | tell me (whether|what|why|how) | is it [a-z0-9]* $| right $| or not $| (hua|hai|tha|hoga) kya $| kya (hua|hai) $")
+    private val QUESTION = Regex("^ (how|where|what|whats|why|which|when|should|is|are|am|can i|could i|did|do you|do i|does|has|have|will|was|were|would|if|wonder|i wonder) | tell me (whether|what|why|how|where|when|which) | is it [a-z0-9]* $| right $| or not $| (hua|hai|tha|hoga) kya $| kya (hua|hai) $")
     /** "Don't switch to live", "never start...": a negation is never a command. */
     private val NEGATION = Regex(" (don t|dont|do not|never|not|doesn t|didn t|won t) ")
     /** Commands a misspelt word may never become (only what the owner typed correctly). */
@@ -93,7 +93,8 @@ object Commands {
         if (Regex("^ (undo|undo (that|it|the last change|my last change|last change|the change)|revert( that| it| the last change)?|put (it|that) back|change (it|that) back) $").containsMatchIn(s)) return Command(Command.Kind.UNDO)
         // The day's target: "my target today is 3000", "set my daily target to 5k", "clear my target".
         if (Regex(" (clear|remove|cancel|delete|drop) (my |the |today s )?(daily |day s |day )?target ").containsMatchIn(s)) return Command(Command.Kind.TARGET_CLEAR)
-        Regex(" target (\\d+(?:\\.\\d+)?) ?(k|thousand|lakh)? (?:today|for today|for the day) ").find(s)?.let { m ->
+        // ("Nifty target 25000 today" is a market level, not the owner's day target.)
+        if (Market.mentioned(s).isEmpty()) Regex(" target (\\d+(?:\\.\\d+)?) ?(k|thousand|lakh)? (?:today|for today|for the day) ").find(s)?.let { m ->
             val v = m.groupValues[1].toDouble() * when (m.groupValues[2]) { "k", "thousand" -> 1_000.0; "lakh" -> 100_000.0; else -> 1.0 }
             if (v >= 100) return Command(Command.Kind.TARGET_SET, level = v)
         }
@@ -153,11 +154,15 @@ object Commands {
         // An alarm needs its level: the number after above / below / reaches ("... above 25000 in 15 minutes" is 25000).
         // ("Remind me when Nifty hits 25000", "set alarm Nifty 24500", "Nifty 24500 pe alert lagao": the level is the
         // number; with no direction word the direction is asked.)
-        val setAlarm = has(" set (an |a )?(alarm|alert) | (alarm|alert) (lagao|laga do|set karo|set kar do) | batana | bata dena ")
-        val lvl = Regex(" (?:above|below|over|under|crosses|crossing|cross|rises to|falls to|drops to|reaches|hits|hit|touches|touch|at|to) (\\d{2,6}(?:\\.\\d+)?) ").find(s)?.groupValues?.get(1)?.toDouble()
+        // ("batana" alone is "tell me" - a question; only with a level verb, or an alert word, is it an alarm. An option's
+        // price, premium or strike is never an alarm level here.)
+        // (Hinglish "pe" before an alert word is "at", not a put: "Nifty 24500 pe alert lagao".)
+        val optionWords = has(" (ce|call|put|premium|price|ltp) ") || (has(" pe ") && !has(" pe (alert|alarm) "))
+        val setAlarm = !optionWords && has(" set (an |a )?(alarm|alert) | (alarm|alert) (lagao|laga do|set karo|set kar do|set) | (pahunche|pahunch jaye|aaye|aa jaye|cross kare|hit kare|touch kare) (to )?(batana|bata dena) ")
+        val lvl = Regex(" (?:above|below|over|under|crosses|crossing|cross|rises to|falls to|drops to|reaches|hits|hit|touches|touch|to) (\\d{2,6}(?:\\.\\d+)?) ").find(s)?.groupValues?.get(1)?.toDouble()
             ?: if (setAlarm) Regex(" (\\d{4,6}(?:\\.\\d+)?) ").find(s)?.groupValues?.get(1)?.toDouble() else null
         if (lvl != null && (has(" (alert|alarm|notify|tell|ping|wake|remind) ") || setAlarm) &&
-            (setAlarm || has(" (above|below|over|under|crosses|crossing|cross|rises|falls|drops|goes|reaches|hits|hit|touches|touch|at) "))) {
+            (setAlarm || has(" (above|below|over|under|crosses|crossing|cross|rises|falls|drops|goes|reaches|hits|hit|touches|touch) "))) {
             val m = Market.mentioned(s).firstOrNull()
             val above = when { has(" (below|under|falls|drops|down to) ") -> false; has(" (above|over|rises|crosses|up to|reaches) ") -> true; else -> null }
             return Command(Command.Kind.ALARM_ADD, market = m, above = above, level = lvl)
@@ -173,7 +178,8 @@ object Commands {
         }
         // "Close the Nifty position", "exit 24500 CE", "sell my BankNifty call", "book profit in Nifty": one position, by its
         // words (a new sell is "sell" without "my"/"the" - never read as a close).
-        Regex("^ (?:square off|squareoff|close|exit|sell (?:my|the)|book (?:my |the )?profits? (?:in|on)) (?:the |my )?((?:[a-z0-9]+ ){0,3}?)(position|trade|call|put|ce|pe|option)s?( |$)").find(s)?.let { m ->
+        // (A number of lots is a new order, never a close.)
+        if (!has(" \\d+ lots? | (one|two|three|four|five|ek|do) lots? ")) Regex("^ (?:square off|squareoff|close|exit|sell my|book (?:my |the )?profits? (?:in|on)) (?:the |my )?((?:[a-z0-9]+ ){0,3}?)(position|trade|call|put|ce|pe|option)s?( |$)").find(s)?.let { m ->
             val kind = m.groupValues[2].takeIf { it !in setOf("position", "trade", "option") }
             val words = listOfNotNull(m.groupValues[1].trim().takeIf { it.isNotEmpty() }, kind).joinToString(" ")
             return Command(Command.Kind.CLOSE_ONE, target = words.ifEmpty { null })
@@ -186,7 +192,7 @@ object Commands {
             has(" (start|arm|switch on|turn on|run|enable|resume) (all|every)( the| my)? (strategies|strategy|arms|arm|bots|algos|scripts) | (start|arm|switch on|turn on|run|enable|resume) (everything|all) $| (start|arm|switch on|turn on|run|enable) (the |my )?(strategies|arms|bots|algos) $"))
             return Command(Command.Kind.START_ALL)
         // One strategy or arm: the verb comes first ("stop strategy 2"), and settings are never read as a name.
-        val notArm = Regex("kill switch|\\blive\\b|paper|\\bmode\\b|alert|alarm|autopilot|listening|^trading$|^(it|that|this|jarvis|everything)$|voice|notifications?|\\bloss\\b|talking|speaking")
+        val notArm = Regex("kill switch|\\blive\\b|paper|\\bmode\\b|alert|alarm|autopilot|listening|^trading$|^(it|that|this|jarvis|everything)$|voice|notifications?|\\bloss\\b|talking|speaking|^(when|if|once|after|before|sending|telling|giving|the music|music|news|calling|reminding)\\b")
         Regex("^ (stop|disarm|switch off|turn off|pause|halt) $ARM_NOUN ?(.+)$").find(s)?.let { m ->
             val what = m.groupValues[2].trim()
             if (what.isNotEmpty() && !notArm.containsMatchIn(what)) return one(Command.Kind.STOP_ONE, what)

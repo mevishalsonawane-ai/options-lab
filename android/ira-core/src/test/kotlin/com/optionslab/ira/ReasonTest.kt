@@ -472,3 +472,30 @@ class RealisedTest {
         assertFalse(Realised.asked("how is nifty"))
     }
 }
+
+class ReviewOTest {
+    @Test fun questionsAndNewOrdersStayWhatTheyAre() {
+        fun k(s: String) = Commands.parse(Hinglish.normalize(s))?.kind
+        for (q in listOf("nifty 24500 ce ka premium batana", "nifty 25000 ke upar jayega ya nahi batana", "alert me at 10 30 if nifty goes above 25000x",
+                "remind me at 10 30 to check nifty", "tell me where nifty was at 11 30", "tell me nifty price at 11:30"))
+            assertTrue(k(q) != Command.Kind.ALARM_ADD || Commands.parse(Hinglish.normalize(q))?.level !in listOf(10.0, 11.0, 24500.0), q)
+        assertNull(k("nifty 24500 ce ka premium batana"))
+        assertEquals(25_000.0, Commands.parse("alert me at 10 30 if nifty goes above 25000")?.level)
+        assertNull(k("sell the nifty 24500 ce 2 lots"))
+        assertNull(k("sell the 24500 call"))
+        assertEquals(Command.Kind.CLOSE_ONE, k("sell my nifty position"))
+        assertNull(k("nifty target 25000 today"))
+        assertEquals(Command.Kind.TARGET_SET, k("target 3000 today"))
+        assertEquals(Command.Kind.ALARM_ADD, k("nifty 24500 pe alert set kar do"))
+        assertEquals(Command.Kind.ALARM_ADD, k("nifty 25000 cross kare to batana"))
+        for (q in listOf("stop when nifty hits 25000", "stop sending me news", "stop the music")) assertNull(k(q), q)
+    }
+
+    @Test fun oddsLookbackLevelEdges() {
+        assertNotNull(Odds.asked("what are the chances nifty goes above 25000"))
+        assertNull(Odds.asked("will nifty be above 25000 at 2 pm"))
+        assertNotNull(Odds.asked("will nifty close above 25000"))
+        assertEquals(LocalTime.of(11, 30), Lookback.time("Nifty at 11:30?"))
+        assertEquals(24_500.0, LevelInfo.asked("what is at 24500 on nifty"))
+    }
+}

@@ -257,7 +257,7 @@ object Lookback {
     fun time(text: String): LocalTime? {
         val t = norm(text)
         // A past-tense word, or a market named with a clock time ("Nifty at 11:30", "BankNifty at 2 pm").
-        val clock = Regex(" at \\d{1,2}(:\\d{2}| ?(am|pm)) ").containsMatchIn(" " + text.lowercase().replace(Regex("\\s+"), " ") + " ")
+        val clock = Regex(" at \\d{1,2}(:\\d{2}| ?(am|pm)) ").containsMatchIn(" " + text.lowercase().replace(Regex("[^a-z0-9: ]"), " ").replace(Regex("\\s+"), " ") + " ")
         if (!Regex(" (was|were|where was|what was|how was|at what price|price at|level at) ").containsMatchIn(t) && !(clock && Market.mentioned(text).isNotEmpty())) return null
         val m = Regex(" at (\\d{1,2})(?::|\\.| )?(\\d{2})? ?(am|pm)? ").find(t) ?: return null
         var h = m.groupValues[1].toInt(); val mi = m.groupValues[2].toIntOrNull() ?: 0
@@ -346,16 +346,17 @@ object Momentum {
  * and never advice. Pure.
  */
 object Odds {
-    private val ASK = Regex(" (chance|chances|probability|odds|likely|likelihood|will|would|can|could) [a-z ]{0,40}?(close|closes|closing|end|ends|finish|finishes|stay|stays|be|settle|settles) (above|over|below|under) (\\d{2,6}(?:\\.\\d+)?) ")
+    private val ASK = Regex(" (?:(?:chance|chances|probability|odds|likely|likelihood) [a-z ]{0,40}?(?:close|closes|closing|end|ends|finish|finishes|stay|stays|be|go|goes|settle|settles)|(?:will|would) [a-z ]{0,40}?(?:close|closes|end|ends|finish|finishes|settle|settles)) (above|over|below|under) (\\d{2,6}(?:\\.\\d+)?) ")
 
     data class Ask(val above: Boolean, val level: Double)
 
     fun asked(text: String): Ask? {
         val t = norm(text.replace(",", ""))
         val m = ASK.find(t) ?: return null
-        // The odds are for the day (the VIX move for the time left); a week or an expiry away is not that.
-        if (Regex(" (week|weekly|month|monthly|expiry|friday|monday|tuesday|wednesday|thursday|next) ").containsMatchIn(t)) return null
-        return Ask(m.groupValues[3] in setOf("above", "over"), m.groupValues[4].toDouble())
+        // The odds are for the close (the VIX move for the time left): not a week or an expiry away, not by a clock time.
+        if (Regex(" (week|weekly|month|monthly|expiry|friday|monday|tuesday|wednesday|thursday|next) | at \\d{1,2}( \\d{2}| ?(am|pm)) ").containsMatchIn(t)) return null
+        if (Market.mentioned(text).isEmpty() && Regex(" (i|me|my) ").containsMatchIn(t)) return null
+        return Ask(m.groupValues[1] in setOf("above", "over"), m.groupValues[2].toDouble())
     }
 
     /** The standard normal cumulative distribution (Abramowitz-Stegun 26.2.17, to about 1e-7). */
@@ -593,7 +594,7 @@ object LevelInfo {
     fun asked(text: String): Double? {
         val t = norm(text.replace(",", ""))
         val m = ASK.find(t) ?: return null
-        if (Regex(" (why is|is) ").containsMatchIn(m.value) && !Regex(" (important|significant|a level|key|a big level|special) ").containsMatchIn(t)) return null
+        if (m.groupValues[1] in setOf("why is", "is") && !Regex(" (important|significant|a level|key|a big level|special) ").containsMatchIn(t)) return null
         return m.groupValues.drop(1).firstOrNull { Regex("^\\d{4,6}$").matches(it) }?.toDouble()
     }
 
@@ -649,8 +650,8 @@ object SinceLast {
 
     fun asked(text: String): Boolean = ASK.containsMatchIn(norm(text).replace(Regex("^ (jarvis|hey jarvis|ok jarvis|boss) "), " "))
 
-    fun say(m: Market, then: Double, thenAt: LocalDateTime, now: Snapshot): String {
-        val mins = java.time.Duration.between(thenAt, now.at).toMinutes()
+    fun say(m: Market, then: Double, thenAt: LocalDateTime, now: Snapshot, nowAt: LocalDateTime = now.at): String {
+        val mins = java.time.Duration.between(thenAt, nowAt).toMinutes()
         val ago = when { mins < 1 -> "a moment ago"; mins < 60 -> "$mins minutes ago"; else -> "%.1f hours ago".format(Locale.ENGLISH, mins / 60.0) }
         val mv = now.price - then
         val way = if (abs(mv) < then * 0.0002) "is about where it was" else if (mv > 0) "is up ${n(mv)} points" else "is down ${n(-mv)} points"
@@ -720,6 +721,6 @@ object Realised {
             ratio > 1.25 -> "it is moving faster than options price in: premiums look cheap for buyers (sellers are under-paid)"
             else -> "options are priced about right for how it is moving"
         }
-        return "${m.label} is moving at about %.1f%% a year today (from its 5-minute moves) against India VIX at %.1f%%: $read.".format(Locale.ENGLISH, rv, vix)
+        return "${m.label} is moving at about %.1f%% a year today (from its 5-minute moves) against India VIX at %.1f%%: $read. (Intraday moves only - VIX also prices overnight gaps, so this leans towards \"dear\".)".format(Locale.ENGLISH, rv, vix)
     }
 }

@@ -977,22 +977,28 @@ object IraHub {
         // "What is the premium of 24500 CE": the option chain read now (8 seconds at most) - never an order.
         if (parsed.order == null && parsed.command == null && !Regex("(?i)\\b(my|mine)\\b").containsMatchIn(q))
             runCatching { com.optionslab.ira.OptionQuote.asked(parsed.text.ifBlank { q }) }.getOrNull()?.let { oq ->
-                val m = parsed.markets.firstOrNull { it in LIVE.keys && it != IraMarket.VIX && it != IraMarket.GOLD } ?: IraMarket.NIFTY
-                _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+                val named = parsed.markets.filter { it != IraMarket.VIX && it != IraMarket.GOLD }
+                val m = named.firstOrNull { it in LIVE.keys } ?: IraMarket.NIFTY
+                fun answer(text: String) = _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, text)).takeLast(MAX_MESSAGES)) }
+                if (parsed.markets.isNotEmpty() && named.isEmpty()) { answer("There are no options on that here, Boss: option prices are for Nifty, BankNifty, FinNifty, MidcapNifty and Sensex."); return }
+                if (!com.optionslab.app.data.Market.isOpen()) { answer("The market is closed, Boss: option prices are read live, from 9:15 to 3:30 on trading days."); return }
+                if (!online()) { answer("I'm offline, Boss: option prices need the internet."); return }
+                // A placeholder answer at once (so a later question is never answered with this quote), replaced when read.
+                val wait = Msg(true, "$CHAIN_NOTE${m.label}, Boss...")
+                _state.update { it.copy(messages = (it.messages + Msg(false, q) + wait).takeLast(MAX_MESSAGES)) }
                 scope.launch {
-                    val text = if (!online()) "I'm offline, Boss: option prices need the internet." else {
-                        val read = scope.async { runCatching { IraAccount.chain(LIVE.getValue(m)) }.getOrNull() }
-                        val ch = kotlinx.coroutines.withTimeoutOrNull(8_000) { read.await() }
-                        if (ch == null) "I couldn't read the ${m.label} option chain just now, Boss."
+                    val read = scope.async { runCatching { IraAccount.chain(LIVE.getValue(m)) }.getOrNull() }
+                    val ch = kotlinx.coroutines.withTimeoutOrNull(8_000) { read.await() }
+                    if (ch == null) read.cancel()
+                    val text = if (ch == null) "I couldn't read the ${m.label} option chain just now, Boss."
                         else com.optionslab.ira.OptionQuote.say(ch, oq, m.label) ?: com.optionslab.ira.OptionQuote.near(ch, oq)
-                    }
-                    reply(text)
+                    _state.update { st -> st.copy(messages = st.messages.map { if (it === wait) Msg(true, text) else it }) }
                 }
                 return
             }
         // Boss's own market questions are counted by the hour (for "the usual"), off the main thread.
         if (!understood) scope.launch { IraTools.noteHabit(q) }
-        if (Topic.OFF_TOPIC in parsed.topics) IraTools.count("misunderstood")
+        if (Topic.OFF_TOPIC in parsed.topics && !com.optionslab.ira.SinceLast.asked(q)) IraTools.count("misunderstood")
         if (Topic.BACKTEST in parsed.topics) { backtestAsked(q, parsed); return }
         if (Topic.ACCOUNT in parsed.topics) { accountAsked(q); return }
         if (Topic.COMMAND in parsed.topics) { commandAsked(q, parsed.command!!, confirmAlways = understood); return }
@@ -1045,7 +1051,7 @@ object IraHub {
         // JarvisAlgo with the model ready: the answer shows at once, then the model rewrites it in place if it passes the checks.
         // When Boss asked about each market, and its price then (for "what changed since I last asked").
         if (parsed.topics.any { it in MARKET_TOPICS }) (parsed.markets.ifEmpty { listOf(IraMarket.NIFTY) }).forEach { mk ->
-            _state.value.snaps[mk]?.let { sn -> synchronized(askedAt) { askedAt[mk] = sn.price to sn.at } }
+            _state.value.snaps[mk]?.let { sn -> synchronized(askedAt) { askedAt.remove(mk); askedAt[mk] = sn.price to LocalDateTime.now(IST) } }
         }
         val write = IraModel.usable() && com.optionslab.ira.Writer.worthRewriting(parsed, a)
         val msg = Msg(true, a.text, a.facts, a.order, writing = write)
@@ -1159,6 +1165,7 @@ object IraHub {
 
     private const val TOOK_AS = "I took that as: "
     private const val LEARNED_NOTE = "Got it, Boss: next time"
+    private const val CHAIN_NOTE = "Reading the option chain for "
 
     /**
      * Jarvis's reply to [said] in [ms], or null while there is none yet: past an "I took that as" note (a follow-up or a
@@ -1169,7 +1176,7 @@ object IraHub {
         if (i < 0) return null
         val after = ms.drop(i + 1)
         // "Got it, Boss: next time..." (a learned wording) is a note beside the answer, not the answer.
-        val real = after.filter { it.fromIra && !it.text.startsWith(LEARNED_NOTE) }
+        val real = after.filter { it.fromIra && !it.text.startsWith(LEARNED_NOTE) && !it.text.startsWith(CHAIN_NOTE) }
         val first = real.firstOrNull() ?: return null
         if (!first.text.startsWith(TOOK_AS)) return first
         return real.drop(1).firstOrNull()
@@ -1192,11 +1199,13 @@ object IraHub {
             return com.optionslab.ira.VixRank.say(histories[IraMarket.VIX]?.bars ?: return null, v)
         }
         if (com.optionslab.ira.SinceLast.asked(q)) {
-            val mk = parsed.markets.firstOrNull() ?: synchronized(askedAt) { askedAt.keys.firstOrNull() } ?: IraMarket.NIFTY
-            val (then, at) = synchronized(askedAt) { askedAt[mk] } ?: return "I haven't told you about ${mk.label} yet today, Boss - ask me how it is first."
+            val now = LocalDateTime.now(IST)
+            val mk = parsed.markets.firstOrNull() ?: synchronized(askedAt) { askedAt.keys.lastOrNull() } ?: IraMarket.NIFTY
+            val (then, at) = synchronized(askedAt) { askedAt[mk] }?.takeIf { it.second.toLocalDate() == now.toLocalDate() }
+                ?: return "You haven't asked me about ${mk.label} yet today, Boss - ask me how it is first."
             val nowSnap = st.snaps[mk] ?: return null
-            synchronized(askedAt) { askedAt[mk] = nowSnap.price to nowSnap.at }
-            return com.optionslab.ira.SinceLast.say(mk, then, at, nowSnap)
+            synchronized(askedAt) { askedAt.remove(mk); askedAt[mk] = nowSnap.price to now }
+            return com.optionslab.ira.SinceLast.say(mk, then, at, nowSnap, now)
         }
         if (com.optionslab.ira.Briefing.asked(q)) {
             val today = com.optionslab.app.data.Market.today()
@@ -1206,7 +1215,8 @@ object IraHub {
         if (com.optionslab.ira.Realised.asked(q)) {
             val mk = parsed.markets.firstOrNull { it != IraMarket.VIX && it != IraMarket.GOLD } ?: IraMarket.NIFTY
             val v = st.snaps[IraMarket.VIX]?.price ?: return null
-            return com.optionslab.ira.Realised.say(mk, histories[mk]?.bars ?: return null, v)
+            val said = com.optionslab.ira.Realised.say(mk, histories[mk]?.bars ?: return null, v) ?: return null
+            return if (mk == IraMarket.NIFTY) said else "$said (India VIX prices Nifty's options, so for ${mk.label} it is a rough guide.)"
         }
         if (com.optionslab.ira.Together.asked(q)) {
             val (m1, m2) = IraMarket.mentioned(q).filter { it != IraMarket.VIX }.let { it[0] to it[1] }
@@ -1257,7 +1267,12 @@ object IraHub {
     }
 
     /** How [m]'s day went, from the candles on the phone (for the 15:35 wrap-up), or null. */
-    fun dayStory(m: IraMarket): String? = runCatching { com.optionslab.ira.DayStory.say(m, histories[m]?.bars ?: return null) }.getOrNull()
+    fun dayStory(m: IraMarket): String? = runCatching {
+        val bars = histories[m]?.bars ?: return null
+        // Only today's session: an old day (a failed refresh, a holiday) is never told as today's.
+        if (bars.lastOrNull()?.t?.toLocalDate() != com.optionslab.app.data.Market.today()) return null
+        com.optionslab.ira.DayStory.say(m, bars)
+    }.getOrNull()
 
     /** Each market's price and time when Boss last asked about it. */
     private val askedAt = LinkedHashMap<IraMarket, Pair<Double, LocalDateTime>>()
@@ -1538,13 +1553,14 @@ object IraHub {
     }
 
     /** Wipes the conversation (the owner's button). */
-    fun forgetConversation() { dropPending(); _state.update { it.copy(messages = emptyList()) } }
+    fun forgetConversation() { dropPending(); synchronized(askedAt) { askedAt.clear() }; _state.update { it.copy(messages = emptyList()) } }
 
     /** Wipes what Ira learned too; it relearns from the data on the next refresh. */
     suspend fun forgetAll() = lock.withLock {
         dropPending()
         IraTools.forgetHabits()
         IraTools.forgetMemory()
+        synchronized(askedAt) { askedAt.clear() }
         checked = null
         book = PatternBook()
         lastNews = null

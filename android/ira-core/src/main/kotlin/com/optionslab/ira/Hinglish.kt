@@ -20,7 +20,7 @@ object Hinglish {
         Regex("^(.*?)\\s*(?:khareedo|kharido|le\\s+lo|lelo|buy\\s+karo|buy\\s+kar\\s+do)$") to "buy",
         Regex("^(.*?)\\s*(?:dikhao|dikhaiye|batao|bataiye|bata\\s+do)$") to "show",
         // "max lots 5 kar do": a setting (last, after the verbs above).
-        Regex("^(.*?)\\s*(?:kar\\s+do|kardo|kar\\s+de)$") to "set",
+        Regex("^(?!.*\\b(?:alert|alarm)\\s+set\\s+(?:kar|kardo))(.*?)\\s*(?:kar\\s+do|kardo|kar\\s+de)$") to "set",
     )
 
     private val WORDS = listOf(

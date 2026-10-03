@@ -191,6 +191,7 @@ internal object IraCoach {
 
     /** VIX's change on the day at the last look (a spike is told on the way up, once). */
     private val vixLast = HashMap<String, Double?>()
+    private val vixTold = HashSet<String>()
 
     /**
      * India VIX up 10% or more on the day (market hours): told once, as it crosses - the first look of a day only records,
@@ -204,6 +205,7 @@ internal object IraCoach {
         val (seen, before) = synchronized(vixLast) { val s = vixLast.containsKey(day); val b = vixLast[day]; vixLast[day] = v.changePct; s to b }
         if (!seen) return
         val line = com.optionslab.ira.VixSpike.alert(v, before) ?: return
+        if (!synchronized(vixTold) { vixTold.add(day) }) return
         IraHub.appContext()?.let { JarvisPopup.show(it, "India VIX spiking", line) }
         IraHub.note(line); JarvisVoice.announce(line); Automations.acted(Automations.Auto.VIX, line)
     }
