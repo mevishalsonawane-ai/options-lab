@@ -170,7 +170,7 @@ class IraTest {
         assertTrue(ira.answer("who won the match", emptyMap(), emptyList()).text.startsWith("I only know"))
         assertTrue(ira.answer("hello", emptyMap(), emptyList()).text.startsWith("Hello"))
         assertEquals("I have no prices for Gold yet.", ira.answer("how is gold", emptyMap(), emptyList()).text)
-        assertTrue(ira.answer("banknifty news", mapOf(Market.BANKNIFTY to snap), emptyList()).text.contains("No recent headlines about BankNifty."))
+        assertTrue(ira.answer("banknifty news", mapOf(Market.BANKNIFTY to snap), emptyList()).text.contains("Nothing specific on BankNifty lately."))
     }
 
     @Test fun ordersGoToReview() {

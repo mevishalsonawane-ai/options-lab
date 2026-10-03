@@ -25,10 +25,18 @@ class Ira(private val book: PatternBook = PatternBook()) {
         if (Topic.OFF_TOPIC in q.topics) return Answer("I only know the Indian indices (Nifty, BankNifty, FinNifty, Sensex, India VIX) and gold. Ask me about one of them.", emptyList())
         if (q.topics == setOf(Topic.GREETING)) return if (now != null) Greeting.say(now, snaps, closedReason).let { Answer(it, listOf(it)) }
             else Answer("Hello. Ask me about Nifty, BankNifty, FinNifty, Sensex, VIX or gold.", emptyList())
+        // "Any news?" with no market named: the latest market headlines, whatever they are about.
+        if (Topic.NEWS in q.topics && q.markets.isEmpty()) parts += latestNews(news, facts)
         val markets = q.markets.ifEmpty { listOf(Market.NIFTY) }
         for (m in markets) {
+            if (q.topics == setOf(Topic.NEWS) && q.markets.isEmpty()) break
             val s = snaps[m]
-            if (s == null) { parts += "I have no prices for ${m.label} yet."; continue }
+            if (s == null) {
+                // The news needs no prices.
+                if (Topic.NEWS in q.topics && q.markets.isNotEmpty()) parts += newsLines(m, news, facts)
+                if (q.topics.any { it != Topic.NEWS }) parts += "I have no prices for ${m.label} yet."
+                continue
+            }
             val f = facts(s)
             facts += f.map { "${m.label}: $it" }
             val t = q.topics
@@ -38,7 +46,7 @@ class Ira(private val book: PatternBook = PatternBook()) {
             if (Topic.WHY in t) Why.story(s, snaps)?.let { parts += it; facts += it }
             if (Topic.VOLATILITY in t || Topic.WHY in t) parts += volatility(s, snaps[Market.VIX])
             if (Topic.PATTERNS in t || Topic.OVERVIEW in t || Topic.WHY in t) patterns(s)?.let { parts += it; facts += it }
-            if (Topic.NEWS in t || Topic.WHY in t) parts += newsLines(m, news, facts)
+            if (Topic.NEWS in t && q.markets.isNotEmpty() || Topic.WHY in t) parts += newsLines(m, news, facts)
             if (Topic.ADVICE in t && Topic.OVERVIEW !in t) parts += overview(s)
         }
         if (Topic.ADVICE in q.topics) parts += "I don't give buy or sell advice; these are the facts for you to decide on."
@@ -113,9 +121,18 @@ class Ira(private val book: PatternBook = PatternBook()) {
         return "A ${p.kind.label} formed on the $chart chart at ${Brain.when_(p.at, m, s.at.toLocalDate())} near ${m.price(p.price)}. $past"
     }
 
+    /** The newest headlines (Indian markets first), however they are tagged. */
+    private fun latestNews(news: List<Headline>, facts: MutableList<String>, max: Int = 4): String {
+        val india = news.filter { h -> h.markets.none { it == Market.GOLD } }
+        val top = (india.ifEmpty { news }).sortedByDescending { it.at ?: java.time.Instant.EPOCH }.take(max)
+        if (top.isEmpty()) return "I have no headlines yet - the news feeds have not answered. Ask again in a minute."
+        top.forEach { facts += "headline (${it.source}, ${it.toneWord}): ${it.title}" }
+        return "The latest market headlines: " + top.joinToString("; ") { "\"${it.title}\" (${it.source}, ${it.toneWord})" } + "."
+    }
+
     private fun newsLines(m: Market, news: List<Headline>, facts: MutableList<String>): String {
-        val mine = news.filter { m in it.markets }.take(3)
-        if (mine.isEmpty()) return "No recent headlines about ${m.label}."
+        val mine = news.filter { m in it.markets }.sortedByDescending { it.at ?: java.time.Instant.EPOCH }.take(3)
+        if (mine.isEmpty()) return "Nothing specific on ${m.label} lately. " + latestNews(news, facts, 3)
         val tone = mine.groupingBy { it.toneWord }.eachCount()
         mine.forEach { facts += "headline (${it.source}, ${it.toneWord}): ${it.title}" }
         return "Recent headlines on ${m.label}: " + mine.joinToString("; ") { "\"${it.title}\" (${it.source}, ${it.toneWord})" } +

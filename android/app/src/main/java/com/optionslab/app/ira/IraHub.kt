@@ -906,6 +906,13 @@ object IraHub {
             }
         }
         val parsed = Ask.parse(q)
+        // A news question with no recent headlines on the phone: the feeds are read first (8 seconds at most), then answered.
+        if (Topic.NEWS in parsed.topics && testHistories == null && System.currentTimeMillis() - newsCheckedAt > 3 * 60_000 && online() &&
+            _state.value.newsAt?.isBefore(Instant.now().minusSeconds(NEWS_EVERY_MINUTES * 60)) != false) {
+            newsCheckedAt = System.currentTimeMillis()
+            scope.launch { kotlinx.coroutines.withTimeoutOrNull(8_000) { runCatching { freshNews() } }; ask(text, understood) }
+            return
+        }
         IraTools.count("heard")
         // Just after "that was wrong", a question understood is what was meant: learned.
         if (parsed.command == null && Topic.OFF_TOPIC !in parsed.topics) runCatching { IraTools.maybeLearn(q) }.getOrNull()?.let { said -> scope.launch { kotlinx.coroutines.delay(300); reply(said) } }
@@ -1188,6 +1195,16 @@ object IraHub {
         if (com.optionslab.ira.Pivots.asked(q)) return com.optionslab.ira.Pivots.say(m, histories[m]?.bars ?: return null, m.trading(LocalDateTime.now(IST)) && closedToday() == null)
         if (com.optionslab.ira.DayStory.asked(q)) return com.optionslab.ira.DayStory.say(m, histories[m]?.bars ?: return null)
         return null
+    }
+
+    /** When the news was last read for a question (so a question waits for the feeds at most once in 3 minutes). */
+    @Volatile private var newsCheckedAt = 0L
+
+    /** The feeds read now, whatever the usual 5-minute pace (for a news question). */
+    private suspend fun freshNews() {
+        lastNews = null
+        val got = newsIfDue() ?: return
+        _state.update { it.copy(news = got.first.ifEmpty { it.news }, newsAt = if (got.first.isNotEmpty()) Instant.now() else it.newsAt, newsMissing = got.second) }
     }
 
     /** When Boss last asked something: a follow-up carries the last question over only within [FOLLOW_MS]. */

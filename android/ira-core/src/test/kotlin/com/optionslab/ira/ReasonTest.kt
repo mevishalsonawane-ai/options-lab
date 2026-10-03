@@ -283,3 +283,20 @@ class PayoffTest {
         assertNull(Payoff.asked("buy 1 lot nifty 24800 ce"))
     }
 }
+
+class NewsAnswerTest {
+    @Test fun anyNewsGivesTheLatestHeadlines() {
+        val now = java.time.Instant.parse("2026-10-01T06:00:00Z")
+        val news = listOf(
+            Headline("Sensex jumps 500 points on bank rally", "l1", "Economic Times", now, 0.5, listOf(Market.SENSEX)),
+            Headline("Rupee steadies as oil eases", "l2", "Livemint", now.minusSeconds(600), 0.0, emptyList()),
+            Headline("Gold slips as dollar firms", "l3", "FXStreet", now.minusSeconds(60), -0.4, listOf(Market.GOLD)))
+        val ira = Ira(PatternBook())
+        val a = ira.answer("any news?", emptyMap(), news).text
+        assertTrue(a.startsWith("The latest market headlines: \"Sensex jumps 500 points on bank rally\""), a)
+        assertFalse("Gold slips" in a, "Indian markets first")
+        val b = ira.answer("any news on banknifty", emptyMap(), news).text
+        assertTrue(b.contains("Nothing specific on BankNifty lately.") && b.contains("Sensex jumps"), b)
+        assertTrue(ira.answer("what's the news", emptyMap(), emptyList()).text.startsWith("I have no headlines yet"))
+    }
+}
