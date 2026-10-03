@@ -634,4 +634,19 @@ class IraHubTest : RobolectricTest() {
         com.optionslab.app.data.AppSettings.save(com.optionslab.app.data.AppSettings.load().copy(guardKill = false))
         assertTrue(!IraTools.weeklyHit())
     }
+
+    @Test fun learnsFromACorrection() = runBlocking {
+        IraTools.forgetLearned()
+        IraHub.ask("how is the nifti boi doing")
+        waitFor("the first answer") { IraHub.state.value.messages.lastOrNull()?.fromIra == true }
+        IraHub.ask("that was wrong")
+        waitFor("the mistake") { IraHub.state.value.messages.lastOrNull()?.text?.startsWith("Sorry, Boss") == true }
+        IraHub.ask("how is nifty doing")
+        waitFor("learned") { IraTools.learned().isNotEmpty() }
+        assertEquals("how is nifty doing", IraTools.learned().last().right)
+        IraHub.ask("how is the nifti boi doing")
+        waitFor("read as meant") { IraHub.state.value.messages.any { it.text == "I took that as: \"how is nifty doing\"." } }
+        IraHub.ask("forget what you learned")
+        waitFor("forgotten") { IraTools.learned().isEmpty() }
+    }
 }

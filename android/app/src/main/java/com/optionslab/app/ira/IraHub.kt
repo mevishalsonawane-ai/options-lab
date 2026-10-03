@@ -880,8 +880,17 @@ object IraHub {
         if (q.isEmpty()) return
         // A new question: the model stops polishing the last answer (it stands as shown).
         IraModel.stopWriting()
+        // What Boss's corrections taught: misunderstood words read as meant (questions only, never anything that acts).
+        val learnedAs = runCatching { com.optionslab.ira.Corrections.apply(q, IraTools.learned()) }.getOrNull()
+        if (learnedAs != null && !understood) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, "I took that as: \"$learnedAs\".")).takeLast(MAX_MESSAGES)) }
+            ask(learnedAs, understood = true)
+            return
+        }
         val parsed = Ask.parse(q)
         IraTools.count("heard")
+        // Just after "that was wrong", a question understood is what was meant: learned.
+        if (parsed.command == null && Topic.OFF_TOPIC !in parsed.topics) runCatching { IraTools.maybeLearn(q) }.getOrNull()?.let { said -> scope.launch { kotlinx.coroutines.delay(300); reply(said) } }
         if (Topic.OFF_TOPIC in parsed.topics) IraTools.count("misunderstood")
         if (Topic.BACKTEST in parsed.topics) { backtestAsked(q, parsed); return }
         if (Topic.ACCOUNT in parsed.topics) { accountAsked(q); return }

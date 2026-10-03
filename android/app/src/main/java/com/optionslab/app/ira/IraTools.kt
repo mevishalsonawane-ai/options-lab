@@ -35,8 +35,38 @@ internal object IraTools {
         prefs().put(MISTAKES, JSONArray().apply { all.forEach { put(JSONObject().put("t", it.at.toString()).put("s", it.said).put("a", it.answered)) } }.toString())
         count("mistakes")
         IraActivity.add("Marked wrong: \"$said\".")
-        return "Sorry, Boss. I've noted it: you said \"$said\". It goes on the mistakes list to be fixed."
+        awaiting = said to System.currentTimeMillis()
+        return "Sorry, Boss. I've noted it: you said \"$said\". Say it another way and I'll learn what you meant."
     }
+
+    // ---- learning from corrections ---------------------------------------------------------------------------------
+
+    private const val LEARNED = "jarvis.learned"
+
+    fun learned(): List<com.optionslab.ira.Corrections.Learned> = runCatching {
+        val a = JSONArray(prefs().getString(LEARNED) ?: "[]")
+        (0 until a.length()).map { a.getJSONObject(it).let { o -> com.optionslab.ira.Corrections.Learned(o.getString("w"), o.getString("r")) } }
+    }.getOrDefault(emptyList())
+
+    /** The words just marked wrong, and when: the next question understood within two minutes is what was meant. */
+    @Volatile private var awaiting: Pair<String, Long>? = null
+
+    /**
+     * After a question is understood: if Boss just said "that was wrong", the misunderstood words are learned as this
+     * question (questions only). Returns what to say about it, or null.
+     */
+    @Synchronized fun maybeLearn(question: String): String? {
+        val (wrong, at) = awaiting ?: return null
+        if (System.currentTimeMillis() - at > 120_000) { awaiting = null; return null }
+        val l = com.optionslab.ira.Corrections.learn(wrong, com.optionslab.ira.Secrets.redact(question)) ?: return null
+        awaiting = null
+        val all = (learned().filter { it.wrong != l.wrong } + l).takeLast(com.optionslab.ira.Corrections.KEEP)
+        prefs().put(LEARNED, JSONArray().apply { all.forEach { put(JSONObject().put("w", it.wrong).put("r", it.right)) } }.toString())
+        IraActivity.add("Learned: \"${l.wrong}\" means \"${l.right}\".")
+        return "Got it, Boss: next time \"${l.wrong}\" means \"${l.right}\"."
+    }
+
+    fun forgetLearned() { prefs().put(LEARNED, null); awaiting = null }
 
     // ---- the day's usage -----------------------------------------------------------------------------------------
 

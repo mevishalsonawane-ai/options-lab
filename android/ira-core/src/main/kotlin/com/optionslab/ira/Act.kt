@@ -33,6 +33,8 @@ data class Command(val kind: Kind, val target: String? = null, val number: Int? 
         MISTAKE(true), EXIT_ALL(true),
         /** Short spoken answers on or off; "tell me more"; a past day replayed; Jarvis's weekly loss limit. */
         BRIEF_ON(true), BRIEF_OFF(true), MORE(true), PRACTICE(true), JTRADES_WEEKLY(false),
+        /** What was learned from the owner's corrections is forgotten. */
+        LEARN_RESET(true),
     }
 }
 
@@ -101,6 +103,7 @@ object Commands {
         // The emergency exit: everything closed, the kill switch on, the bots stopped.
         if (Regex("^ (emergency exit|exit everything|panic( exit| button)?|close everything and stop|get me out( of everything)?|exit all( now)?|square off everything and stop) $").containsMatchIn(s))
             return Command(Command.Kind.EXIT_ALL)
+        if (Regex("^ (forget|reset|clear) (what you (have )?learned|your learning|what you learnt|the corrections) $").containsMatchIn(s)) return Command(Command.Kind.LEARN_RESET)
         if (Regex("^ (brief mode( on)?|short answers( please)?|keep it short|be brief|shorter answers) $").containsMatchIn(s)) return Command(Command.Kind.BRIEF_ON)
         if (Regex("^ (brief mode off|full answers|detailed answers|long answers|answer in full) $").containsMatchIn(s)) return Command(Command.Kind.BRIEF_OFF)
         if (Regex("^ (tell me more|more|more details|go on|details|explain more|the full answer) $").containsMatchIn(s)) return Command(Command.Kind.MORE)
@@ -242,6 +245,7 @@ object Commands {
         Command.Kind.BRIEF_OFF -> "give full spoken answers"
         Command.Kind.MORE -> "say the full last answer"
         Command.Kind.PRACTICE -> "replay a past day"
+        Command.Kind.LEARN_RESET -> "forget what I learned from your corrections"
         Command.Kind.JTRADES_WEEKLY -> "set my trades' weekly loss limit to ${c.level?.let { "Rs %,.0f".format(java.util.Locale.ENGLISH, it) } ?: "?"}"
     }
 }
