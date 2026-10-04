@@ -226,7 +226,7 @@ internal object IraSolo {
 
     /** "How is Solo's learning going", per market. */
     fun learning(): String = synchronized(brains) { MARKETS.mapNotNull { m -> brains[m]?.let { b -> runCatching {
-            b.l.say(m.label) + (b.l.explain(m.label)?.let { ". $it" } ?: "") }.getOrNull() } } }
+            b.l.say(m.label) + (b.l.explain(m.label)?.let { ". $it" } ?: "") + (b.l.calibration(m.label)?.let { ". $it" } ?: "") }.getOrNull() } } }
         .ifEmpty { listOf("it starts learning at the next market session") }.joinToString("; ")
 
     /** Every market-watch pass while Solo is on: manage the open trade, or look for the next one. */

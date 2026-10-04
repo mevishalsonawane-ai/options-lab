@@ -49,6 +49,12 @@ class LearnerTest {
         val e = l.explain("Nifty")!!
         assertTrue(e.startsWith("Nifty has learned: ") && e.contains("momentum"), e)
         assertNull(Learner().explain("Nifty"), "too early to say")
+        // Its sureness against reality: said in words, kept with the model, and an old (L1) model still loads.
+        val cal = l.calibration("Nifty")
+        assertTrue(cal == null || cal.startsWith("Nifty's sureness: when 60-65% sure it was right"), "$cal")
+        val again = Learner(Learner.Cfg(minScored = 50)); assertTrue(again.load(l.save())); assertEquals(l.calibration("Nifty"), again.calibration("Nifty"))
+        val l1 = l.save().split("|").take(7).toMutableList().also { it[0] = "L1" }.joinToString("|")
+        assertTrue(Learner().load(l1), "an L1 model from before the bands still loads")
     }
 
     /** Over real history (SOLO_DATA): prints how the learner would have done. */

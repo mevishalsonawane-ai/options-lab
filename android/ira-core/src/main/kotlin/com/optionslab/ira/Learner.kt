@@ -32,6 +32,12 @@ class Learner(private val cfg: Cfg = Cfg()) {
     companion object {
         const val DIM = 12
         const val FIRST = 30          // the first minute it reads (the opening half hour is only learned from)
+        /** Bands of sureness, as |p - 0.5| from: 0.10 (60%), 0.15 (65%), 0.20 (70% and more). */
+        val BANDS = doubleArrayOf(0.10, 0.15, 0.20)
+        /** A band speaks for itself after this many guesses (faded). */
+        const val MIN_BAND = 40.0
+        /** Each new confident guess fades the older ones by this (about the last 500 count). */
+        const val FADE = 0.998
     }
 
     /** The model: weights, running feature means and spreads, the minute volatility it scales moves by. */
@@ -43,6 +49,19 @@ class Learner(private val cfg: Cfg = Cfg()) {
     var vol = 0.0005; private set
     /** Its last confident guesses: right or wrong (scored only once the answer was known). */
     private val record = ArrayDeque<Boolean>()
+
+    /**
+     * How sure it was against how often it was right (self-calibration, Boss: "make it more intelligent"): confident
+     * guesses in three bands of sureness, each band's guesses and hits fading slowly (the last few hundred count most).
+     * A band whose record is poor is not traded even when the overall record is good: it learns where to trust itself.
+     */
+    private val bandN = DoubleArray(BANDS.size)
+    private val bandHit = DoubleArray(BANDS.size)
+
+    private fun band(p: Double): Int { val d = abs(p - 0.5); return BANDS.indexOfLast { d >= it }.coerceAtLeast(0) }
+
+    /** The hit rate of the band [p] falls in (null until that band has [MIN_BAND] guesses). */
+    fun bandHitRate(p: Double): Double? = band(p).let { b -> if (bandN[b] < MIN_BAND) null else bandHit[b] / bandN[b] }
 
     val scored: Int get() = record.size
     val hitRate: Double get() = if (record.isEmpty()) 0.0 else record.count { it }.toDouble() / record.size
@@ -84,8 +103,12 @@ class Learner(private val cfg: Cfg = Cfg()) {
     /** Learns from one answer: [x] read [Cfg.horizon] minutes ago, [up] what happened; [guess] what it said then. */
     fun learn(x: DoubleArray, up: Boolean, guess: Double) {
         if (abs(guess - 0.5) >= cfg.edge) {
-            record.addLast((guess > 0.5) == up)
+            val right = (guess > 0.5) == up
+            record.addLast(right)
             while (record.size > cfg.window) record.removeFirst()
+            val b = band(guess)
+            for (i in bandN.indices) { bandN[i] *= FADE; bandHit[i] *= FADE }
+            bandN[b] += 1.0; if (right) bandHit[b] += 1.0
         }
         val zx = z(x)
         val err = (if (up) 1.0 else 0.0) - p(x)
@@ -104,18 +127,24 @@ class Learner(private val cfg: Cfg = Cfg()) {
     }
 
     /** The model as text, kept on the phone so the learning carries on from day to day. */
-    fun save(): String = listOf("L1", seen.toString(), vol.toString(), w.joinToString(","), mean.joinToString(","), m2.joinToString(","),
-        record.joinToString("") { if (it) "1" else "0" }).joinToString("|")
+    fun save(): String = listOf("L2", seen.toString(), vol.toString(), w.joinToString(","), mean.joinToString(","), m2.joinToString(","),
+        record.joinToString("") { if (it) "1" else "0" }, bandN.joinToString(","), bandHit.joinToString(",")).joinToString("|")
 
     /** Back from [save] (false, and the model untouched, when the text is not one). */
     fun load(text: String): Boolean = runCatching {
         val p = text.split("|")
-        require(p.size == 7 && p[0] == "L1")
+        // L1 (before the bands) still loads: its bands start empty.
+        require((p.size == 7 && p[0] == "L1") || (p.size == 9 && p[0] == "L2"))
         val ws = p[3].split(",").map { it.toDouble() }; val ms = p[4].split(",").map { it.toDouble() }; val vs = p[5].split(",").map { it.toDouble() }
         require(ws.size == DIM + 1 && ms.size == DIM && vs.size == DIM && ws.all { it.isFinite() })
         seen = p[1].toLong(); vol = p[2].toDouble()
         ws.forEachIndexed { i, x -> w[i] = x }; ms.forEachIndexed { i, x -> mean[i] = x }; vs.forEachIndexed { i, x -> m2[i] = x }
         record.clear(); p[6].forEach { record.addLast(it == '1') }
+        bandN.fill(0.0); bandHit.fill(0.0)
+        if (p.size == 9) {
+            val bn = p[7].split(",").map { it.toDouble() }; val bh = p[8].split(",").map { it.toDouble() }
+            if (bn.size == BANDS.size && bh.size == BANDS.size) { bn.forEachIndexed { i, x -> bandN[i] = x }; bh.forEachIndexed { i, x -> bandHit[i] = x } }
+        }
         true
     }.getOrDefault(false)
 
@@ -151,7 +180,20 @@ class Learner(private val cfg: Cfg = Cfg()) {
     }
 
     /** The trade now, if any: true = buy a call, false = a put, null = none. */
-    fun decide(p: Double): Boolean? = if (!ready || abs(p - 0.5) < cfg.edge) null else p > 0.5
+    fun decide(p: Double): Boolean? = if (!ready || abs(p - 0.5) < cfg.edge || (bandHitRate(p) ?: 1.0) < cfg.minHit) null else p > 0.5
+
+    /** How well its sureness matches reality, in words (null until a band has enough guesses). */
+    fun calibration(label: String): String? {
+        val lines = BANDS.indices.mapNotNull { b ->
+            if (bandN[b] < MIN_BAND) null else {
+                val lo = 50 + (BANDS[b] * 100).toInt()
+                val hi = if (b + 1 < BANDS.size) 50 + (BANDS[b + 1] * 100).toInt() else 100
+                "when $lo-$hi%% sure it was right %.0f%%".format(java.util.Locale.ENGLISH, bandHit[b] / bandN[b] * 100)
+            }
+        }
+        if (lines.isEmpty()) return null
+        return "$label's sureness: " + lines.joinToString("; ")
+    }
 
     // ---- the test over history: the same learner, minute by minute, with real option prices -------------------------
 

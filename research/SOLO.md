@@ -119,3 +119,11 @@ Rs 60 a trip, 0.5 slippage a fill, 30% premium stop:
 Every version loses after costs: from price alone it guesses the next 15-60 minutes about as well as a coin (its own
 record swings between 36% and 73% as the market changes, and it learns the change late). Boss chose to run it anyway,
 on paper only, learning live (the app keeps each market's model from day to day). No real money until it proves itself.
+
+### Self-calibration (4 Oct)
+
+The learner now keeps how often it was right in three bands of sureness (60-65%, 65-70%, 70%+; faded, about the
+last 500 confident guesses) and does not trade a band whose own record is below 55%, even when its overall record
+passes. Replayed the same way (edge 0.10, H 15): NIFTY 24-25 674 trades, -Rs 1,29,522 (was 987, -1,31,183);
+NIFTY 25-26 706 trades, -Rs 1,14,828 (was 963, -1,15,255); BANKNIFTY 557 trades, -Rs 67,690 (was 744, -1,00,924).
+Fewer trades and smaller losses, still no edge after costs: paper only.
