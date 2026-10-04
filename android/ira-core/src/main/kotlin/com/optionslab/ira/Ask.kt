@@ -75,6 +75,9 @@ object Ask {
         // "What is a hammer?" - the pattern explained, with its own record.
         if (Regex(" (what is|what s|whats|what are|explain|meaning of|tell me about|define) (a |an |the )?").containsMatchIn(t) && named(t) != null && !Regex(" (backtest|back test) ").containsMatchIn(t))
             return Question(text, Market.mentioned(text), setOf(Topic.EXPLAIN), null, pattern = named(t))
+        // "What's moving?" / "top gainers": the app follows the indices, so every index's move (Boss, 4 Oct).
+        if (Regex("^ (so )?((what s|whats|what is) moving( today| now)?|top (gainers|losers|movers)( today)?|(biggest|big) (movers|moves)( today)?|any big moves( today)?|which (index|indices|market) (is|are) (moving|up|down|strongest|weakest)( today)?) $").containsMatchIn(t))
+            return Question(text, listOf(Market.NIFTY, Market.BANKNIFTY, Market.FINNIFTY, Market.SENSEX), setOf(Topic.OVERVIEW), null)
         // "What's going on?" (heard 2026-10-04 and sent to the chat, which knew nothing): the Nifty overview.
         if (Regex("^ (so )?(what s|whats|what is) (going on|happening)( today| now| in the market)? $|^ (any|what s the) (update|updates)( today)? $|^ (kya chal raha hai|kya haal hai market ka) $").containsMatchIn(t))
             return Question(text, Market.mentioned(text).ifEmpty { listOf(Market.NIFTY) }, setOf(Topic.OVERVIEW), null)
@@ -133,7 +136,7 @@ object Ask {
 
     private val ALL_INDICES = Regex(" (all|every|each of) (the |my )?(indices|indexes|index|markets) | all of them | across (the )?(indices|markets) ")
 
-    private val SUGGEST = Regex(" (what should i (buy|trade)|what (to|can i|could i) (buy|trade)|suggest (an |a |me |some |any )*(order|trade|buy)|any (trade|setup|order|buy) (now|today|ideas?|for me)|any good (trade|setup)|trade ideas?|give me (a |an )?(trade|order)|which (option|order|trade) (should|to) |best (trade|setup|order) (now|today)|should i buy (anything|something|now)|anything to buy) ")
+    private val SUGGEST = Regex(" (what should i (buy|trade)|what (to|can i|could i) (buy|trade)|suggest (an |a |me |some |any )*(order|trade|buy)|any (trade|setup|order|buy) (now|today|ideas?|for me)|any good (trade|setup)|trade ideas?|give me (a |an )?(trade|order)|which (option|order|trade) (should|to) |best (trade|setup|order) (now|today)|should i buy (anything|something|now)|anything to buy|(what s|whats|what is) your (recommendation|suggestion|pick|call)|what do you (recommend|suggest)|any (recommendations?|suggestions?)( now| today)?) ")
 
     /** Any pattern named in [t], the ones that cannot be backtested too (for "what is a doji?"). */
     private fun named(t: String): PatternKind? = pattern(t) ?: when {
