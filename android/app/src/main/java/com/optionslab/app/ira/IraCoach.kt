@@ -210,6 +210,22 @@ internal object IraCoach {
         }, addsRisk = steps.any { it.on })
     }
 
+    /** At each market hour's first minutes: a strong habit's question answered unasked, once a day each. */
+    suspend fun usualWatch() {
+        if (!com.optionslab.app.BuildConfig.JARVIS || !Automations.on(Automations.Auto.USUAL) || !com.optionslab.app.data.Market.isOpen()) return
+        val now = java.time.LocalDateTime.now(java.time.ZoneId.of("Asia/Kolkata"))
+        if (now.minute > 5) return
+        val day = com.optionslab.app.data.Market.today().toString()
+        val key = "jarvis.usual.told"
+        val o = runCatching { org.json.JSONObject(com.optionslab.app.security.SecurePrefs.getString(key) ?: "{}") }.getOrDefault(org.json.JSONObject())
+        val told = if (o.optString("d") == day) o.optJSONArray("k")?.let { a -> (0 until a.length()).map { a.getString(it) }.toSet() }.orEmpty() else emptySet()
+        val due = com.optionslab.ira.Habits.due(IraTools.habits(), now.hour, told) ?: return
+        val question = com.optionslab.ira.Habits.question(due) ?: return
+        com.optionslab.app.security.SecurePrefs.put(key, org.json.JSONObject().put("d", day).put("k", org.json.JSONArray(told + due)).toString())
+        val text = IraHub.usualAnswer(question) ?: return
+        IraHub.note(text); JarvisVoice.announce(com.optionslab.ira.Wake.spoken(text, 3)); Automations.acted(Automations.Auto.USUAL, question)
+    }
+
     /** 09:05-09:14 on a trading day, once: Zerodha not logged in while Live mode or a Zerodha arm needs it. */
     suspend fun loginWatch() {
         if (!com.optionslab.app.BuildConfig.JARVIS || com.optionslab.app.BuildConfig.GOLD) return

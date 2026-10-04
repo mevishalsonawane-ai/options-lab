@@ -1772,6 +1772,20 @@ object IraHub {
     fun isExit(id: Long): Boolean = synchronized(actions) { id in exitIds }
 
     /** The last answer in full (for "tell me more"). */
+    /**
+     * Boss's usual market question, answered unasked (Jarvis's own initiative from his habits): the same answer he would
+     * get by asking, said as Jarvis's note - never the account, never an action.
+     */
+    fun usualAnswer(question: String): String? {
+        val q = Ask.parse(question)
+        if (q.command != null || q.order != null || Topic.ACCOUNT in q.topics) return null
+        val a = runCatching { Ira(book).answer(question, _state.value.snaps, _state.value.news, voice = com.optionslab.app.BuildConfig.JARVIS,
+            now = LocalDateTime.now(IST)) }.getOrNull() ?: return null
+        val off = offlineNote() ?: staleNote(q.markets)
+        if (off != null) return null                                  // old prices are not offered unasked
+        return "Boss, your usual around now (${question}): " + a.text
+    }
+
     fun lastFullAnswer(): String? = _state.value.messages.lastOrNull { it.fromIra }?.text
 
     suspend fun confirm(id: Long, fingerprint: Boolean = false, ownerVoice: Boolean = false): String? {

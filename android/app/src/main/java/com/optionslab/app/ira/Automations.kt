@@ -28,6 +28,7 @@ internal object Automations {
         ORB("Opening range breaks", "Nifty or BankNifty leaving its first 15 minutes' range: told once per side a day.", "jarvis.auto.orb"),
         VIX("Fear spikes", "India VIX up 10% or more on the day: told once.", "jarvis.auto.vix"),
         OI("Open interest walls", "The biggest call / put open interest moving to a new strike.", "jarvis.auto.oi"),
+        USUAL("Your usual, unasked", "A market question you ask at the same hour most days (4+ times): said at that hour's start, once a day.", "jarvis.auto.usual"),
         SUMMARY("15:35 wrap-up", "The day's P&L, scorecard and tomorrow's events, spoken.", "jarvis.auto.summary"),
         BACKUP("Backup reminder", "No backup in 7 days: a reminder in the morning check.", "jarvis.auto.backup"),
         SELFHEAL("Self-healing voice", "No listening for 3 minutes: the microphone is restarted.", "jarvis.auto.selfheal"),
@@ -50,8 +51,8 @@ internal object Automations {
             "jarvis.group.own", listOf(Auto.ACT_PAPER, Auto.PLAN, Auto.SOLO_IDEAS)),
         MARKET("Market alerts", "Opening gap plan, opening range breaks, fear (VIX) spikes, open interest walls moving, and news on indices you hold.",
             "jarvis.group.market", listOf(Auto.GAP, Auto.ORB, Auto.VIX, Auto.OI, Auto.POSNEWS)),
-        COACH("Coach me", "A word when you overtrade, your day's target reached, and the 15:35 wrap-up spoken.",
-            "jarvis.group.coach", listOf(Auto.OVERTRADE, Auto.TARGET, Auto.SUMMARY)),
+        COACH("Coach me", "A word when you overtrade, your day's target reached, your usual question answered at its hour, and the 15:35 wrap-up spoken.",
+            "jarvis.group.coach", listOf(Auto.OVERTRADE, Auto.TARGET, Auto.USUAL, Auto.SUMMARY)),
         QUIET("Quiet hours", "Nothing said unasked from 22:00 to 07:00.", "jarvis.group.quiet", listOf(Auto.QUIET)),
     }
 

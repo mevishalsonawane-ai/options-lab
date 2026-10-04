@@ -327,6 +327,8 @@ object IraModel {
                 if (!LlmNative.ensure()) return@withLock
                 handle = LlmNative.load(file(c).path, threads())
                 if (handle != 0L) _state.update { it.copy(loaded = true, message = null) }
+                // Listening switched on while it loaded (it takes seconds): it leaves at once (review, 4 Oct).
+                if (JarvisVoice.wanted) { unloadLocked(); return@withLock }
                 idle = idleUnload()
             }
         }
