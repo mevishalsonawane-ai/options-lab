@@ -40,6 +40,10 @@ object Reminder {
     /** Asked for a reminder with no usable time: what to say. */
     fun asked(text: String): Boolean = ASK.containsMatchIn(english(text))
 
+    /** "Cancel my reminders", "delete the reminder", "reminder hata do": reminders only (timed commands stay). */
+    fun cancelAsked(text: String): Boolean =
+        Regex("(?i)^\\s*(jarvis,?\\s+)?(please\\s+)?((cancel|clear|delete|remove|drop)( all)?( my| the)? reminders?|reminders? (hata|cancel) (do|karo|kar do))\\s*$").containsMatchIn(text)
+
     fun said(what: String) = "Boss, your reminder: $what."
 
     private val TIME = Regex("(?i)^ (what s|whats|what is) the time( now)? $|^ (what time is it|time please|current time|time now|tell me the time|what is time)( now)? $|^ (time kya (hua|hai)|kya time (hua|hai)|kitne baje (hain|hai)|kitna baja hai|samay kya hai) $")

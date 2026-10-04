@@ -74,6 +74,9 @@ object IraLater {
         return "Set for later: " + items.joinToString("; ") { (if (it.remind) "a reminder to " else "") + "\"${it.text}\" " + Later.say(LocalDateTime.ofInstant(Instant.ofEpochMilli(it.at), IST), now) } + "."
     }
 
+    /** Boss's reminders only are dropped; timed commands stay. */
+    fun clearReminders(context: Context): Int { val n = reminders().size; save(all()); schedule(context); return n }
+
     /** Everything set for later is dropped (nothing runs). */
     fun clear(context: Context) { save(emptyList()); schedule(context) }
 

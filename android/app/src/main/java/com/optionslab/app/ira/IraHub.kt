@@ -1068,6 +1068,14 @@ object IraHub {
             if (any != null) { _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, com.optionslab.ira.Plan.ONLY_LOWERING)).takeLast(MAX_MESSAGES)) }; return }
         }
         // Boss's own reminder ("remind me at 3 pm to check Nifty"): only said at its time, never run (Boss, 4 Oct).
+        // "Cancel my reminders": the reminders only (timed commands are cancelled with "cancel everything set for later").
+        if (com.optionslab.app.BuildConfig.JARVIS && runCatching { com.optionslab.ira.Reminder.cancelAsked(q) }.getOrDefault(false)) {
+            val n = app?.let { c -> runCatching { IraLater.clearReminders(c) }.getOrNull() }
+            val said = when (n) { null -> "I could not reach the reminders just now, Boss."; 0 -> "You have no reminders set, Boss."
+                else -> "Done, Boss: $n reminder${if (n > 1) "s" else ""} cancelled." }
+            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
+            return
+        }
         // ("Remind me what's set for later" is the list below, not a new reminder.)
         if (com.optionslab.app.BuildConfig.JARVIS && runCatching { com.optionslab.ira.Reminder.asked(q) }.getOrDefault(false) && !FOR_LATER.containsMatchIn(q)) {
             val now = java.time.LocalDateTime.now(IST)

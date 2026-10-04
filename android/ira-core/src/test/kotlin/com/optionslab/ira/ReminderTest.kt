@@ -72,3 +72,12 @@ class HindiTimesReviewTest {
         assertTrue(Topic.ACCOUNT in Ask.parse("how much did i make today").topics)
     }
 }
+
+class ReminderCancelTest {
+    @Test fun cancel() {
+        for (s in listOf("cancel my reminders", "Jarvis, delete the reminder", "reminder hata do", "clear all reminders"))
+            assertTrue(Reminder.cancelAsked(s), s)
+        assertTrue(!Reminder.cancelAsked("remind me at 3 pm to cancel my order"))
+        assertTrue(!Reminder.cancelAsked("cancel all orders"))
+    }
+}
