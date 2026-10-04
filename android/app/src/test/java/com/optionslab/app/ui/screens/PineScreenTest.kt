@@ -85,6 +85,13 @@ internal object PineFakes {
         PineEnv(scope, MutableStateFlow(if (live) AppSettings(mode = "live", allowRealOrders = true) else AppSettings()), reauth, bars)
 }
 
+/**
+ * Waits for state the page's coroutines change off the screen (saved scripts, logs, callbacks). Their scope is the main
+ * thread, as in the app, so the main looper is run between checks - a hop back to it is never left queued.
+ */
+internal fun ComposeTestRule.waitMain(ms: Long, condition: () -> Boolean) =
+    waitUntil(ms) { org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle(); condition() }
+
 internal fun ComposeTestRule.pineShown(text: String) = onAllNodesWithText(text, substring = true).fetchSemanticsNodes().isNotEmpty()
 internal fun ComposeTestRule.pineWaitFor(text: String, ms: Long = 20_000) = waitUntil(ms) { pineShown(text) }
 internal fun ComposeTestRule.pineTap(text: String, exact: Boolean = true) {
@@ -136,7 +143,7 @@ class PineScreenTest {
         compose.pineTap("Blank indicator")
         compose.pineWaitFor("✓ Compiles · indicator")
         compose.pineTap("Save")
-        compose.waitUntil(5_000) { PineScripts.items.value.size == 1 }
+        compose.waitMain(5_000) { PineScripts.items.value.size == 1 }
         assertEquals("Blank indicator", PineScripts.items.value.single().name)
         compose.pineWaitFor("Saved")
         compose.pineTap("‹ Scripts")
@@ -198,7 +205,7 @@ class PineScreenTest {
         assertEquals(1, PineScripts.items.value.size)
         compose.pineTap("Delete")
         compose.inDialog("Delete").areaCClick()
-        compose.waitUntil(5_000) { PineScripts.items.value.isEmpty() }
+        compose.waitMain(5_000) { PineScripts.items.value.isEmpty() }
         compose.pineWaitFor("New script")
     }
 
@@ -218,7 +225,7 @@ class PineScreenTest {
         onPage = false; compose.waitForIdle(); onPage = true; compose.waitForIdle()
         compose.pineWaitFor("NET P&L")
         compose.pineTap("Show on chart")
-        compose.waitUntil(5_000) { charts == 1 }
+        compose.waitMain(5_000) { charts == 1 }
         assertTrue(PineScripts.items.value.single().onChart)
     }
 
@@ -269,7 +276,7 @@ class PineScreenTest {
         compose.pineTap("Auto-trade")
         compose.pineWaitFor("Save the script first (Code tab)")
         compose.onAllNodes(isToggleable()).onFirst().areaCClick(); compose.waitForIdle()
-        compose.waitUntil(3_000) { (Alerts.queue.value + Alerts.posted).any { it.text.startsWith("Save the script first") } }
+        compose.waitMain(3_000) { (Alerts.queue.value + Alerts.posted).any { it.text.startsWith("Save the script first") } }
         assertFalse("not switched on", PineScripts.items.value.single().auto.on)
     }
 
@@ -300,12 +307,12 @@ class PineScreenTest {
         compose.pineTap("Auto-trade")
         compose.pineWaitFor("Follows the app switch: LIVE")
         compose.pineTap("Alerts only")
-        compose.waitUntil(5_000) { PineScripts.items.value.single().auto.mode == "alert" }
+        compose.waitMain(5_000) { PineScripts.items.value.single().auto.mode == "alert" }
         compose.pineWaitFor("Alerts only: a notification on each signal, no orders")
         compose.onAllNodes(isToggleable()).onFirst().areaCClick()
-        compose.waitUntil(5_000) { PineScripts.items.value.single().auto.on }
+        compose.waitMain(5_000) { PineScripts.items.value.single().auto.on }
         assertTrue("no PIN asked", !compose.pineShown("PIN OK"))
-        compose.waitUntil(5_000) { PineAuto.log.value.any { it.text.startsWith("Switched on (alerts only)") } }
+        compose.waitMain(5_000) { PineAuto.log.value.any { it.text.startsWith("Switched on (alerts only)") } }
     }
 
     @Test fun liveTradingIsSwitchedOnOnlyWithThePin() {
@@ -320,8 +327,8 @@ class PineScreenTest {
         assertFalse(PineScripts.items.value.single().auto.on)
         compose.onAllNodes(isToggleable()).onFirst().areaCClick(); compose.waitForIdle()
         compose.pineTap("PIN OK")
-        compose.waitUntil(5_000) { PineScripts.items.value.single().auto.on }
-        compose.waitUntil(5_000) { PineAuto.log.value.any { it.text.startsWith("Switched on (Live)") } }
+        compose.waitMain(5_000) { PineScripts.items.value.single().auto.on }
+        compose.waitMain(5_000) { PineAuto.log.value.any { it.text.startsWith("Switched on (Live)") } }
         compose.pineWaitFor("Auto-trading")
     }
 
@@ -332,11 +339,11 @@ class PineScreenTest {
         compose.pineTap("Auto-trade")
         compose.onAllNodes(hasText("Stop-loss (pts)")).onFirst().performTextReplacement("25")
         compose.mainClock.advanceTimeBy(700)                        // written 0.6 s after the last keystroke
-        compose.waitUntil(5_000) { PineScripts.items.value.single().auto.stopPts == 25.0 }
+        compose.waitMain(5_000) { PineScripts.items.value.single().auto.stopPts == 25.0 }
         compose.pineTap("Just exit")
-        compose.waitUntil(5_000) { PineScripts.items.value.single().auto.shortWith == "exit" }
+        compose.waitMain(5_000) { PineScripts.items.value.single().auto.shortWith == "exit" }
         compose.pineTap("3")
-        compose.waitUntil(5_000) { PineScripts.items.value.single().auto.lots == 3 }
+        compose.waitMain(5_000) { PineScripts.items.value.single().auto.lots == 3 }
     }
 }
 
