@@ -304,13 +304,16 @@ object IraModel {
         lock.withLock { unloadLocked() }
     }
 
-    /** Loaded ahead (Jarvis starts listening): the first question then does not wait the seconds loading takes. */
+    /**
+     * Loaded ahead (the Ira page opened, voice off): the first typed question does not wait the seconds loading takes.
+     * Never while Jarvis listens - held in memory then, it starved the speech recognizer (Boss, 4 Oct).
+     */
     fun preload() {
         val c = app ?: return
-        if (!usable()) return
+        if (!usable() || JarvisVoice.wanted) return
         scope.launch {
             lock.withLock {
-                if (handle != 0L || !usable()) return@withLock
+                if (handle != 0L || !usable() || JarvisVoice.wanted) return@withLock
                 idle?.cancel()
                 if (!LlmNative.ensure()) return@withLock
                 handle = LlmNative.load(file(c).path, threads())
