@@ -27,3 +27,19 @@ class MarketDaysTest {
         assertEquals("Boss, Next market holiday: Tue 20 Oct (Diwali).", MarketDays.say(MarketDays.Asked.Next, sun, hol::get, next))
     }
 }
+
+class MarketDaysReviewTest {
+    private val fri = LocalDate.of(2026, 10, 9)
+
+    @Test fun pastIsNotThisAnswer() {
+        assertNull(MarketDays.asked("kal market band tha kya", fri))
+        assertNull(MarketDays.asked("was the market open on friday", fri))
+        assertEquals(MarketDays.Asked.Day(fri), MarketDays.asked("is the market open on friday", fri))
+        assertEquals(MarketDays.Asked.Day(fri.plusDays(7)), MarketDays.asked("is the market open next friday", fri))
+    }
+
+    @Test fun weekendSession() {
+        val sun = LocalDate.of(2027, 1, 31)
+        assertTrue(MarketDays.say(MarketDays.Asked.Day(sun), fri, { null }, null) { it == sun }.contains("special trading session"))
+    }
+}

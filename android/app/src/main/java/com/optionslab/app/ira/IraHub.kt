@@ -1087,11 +1087,14 @@ object IraHub {
         // calendar instead of the whole account status.
         if (parsed.command == null && parsed.order == null) runCatching {
             val today = com.optionslab.app.data.Market.today()
-            com.optionslab.ira.MarketDays.asked(q, today)?.let { a ->
+            // Today on a trading day is the live status (open now, or closed for the day), answered below.
+            com.optionslab.ira.MarketDays.asked(q, today)?.takeIf { a -> !(a is com.optionslab.ira.MarketDays.Asked.Day && a.date == today &&
+                com.optionslab.app.data.Market.isTradingDay(today)) }?.let { a ->
                 val book = com.optionslab.app.data.Holidays.book()
                 val said = com.optionslab.ira.MarketDays.say(a, today,
                     { d -> if (book.holiday(d)) book.upcoming(d).firstOrNull { it.first == d }?.second ?: "a market holiday" else null },
-                    book.upcoming(today.plusDays(1)).firstOrNull { it.first.dayOfWeek.value <= 5 })
+                    book.upcoming(today.plusDays(1)).firstOrNull { it.first.dayOfWeek.value <= 5 },
+                    { d -> d.dayOfWeek.value >= 6 && com.optionslab.app.data.Market.isTradingDay(d) })
                 _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
                 return
             }
@@ -1315,6 +1318,9 @@ object IraHub {
         }
         if (Topic.ACCOUNT in parsed.topics) { accountAsked(q); return }
         if (Topic.COMMAND in parsed.topics) { commandAsked(q, parsed.command!!, confirmAlways = understood); return }
+        // IraGoldAlgo brings no trade ideas (it only talks; its gold arms trade on paper by their own rules).
+        if (Topic.SUGGEST in parsed.topics && com.optionslab.app.BuildConfig.GOLD) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, GOLD_TALK_ONLY)).takeLast(MAX_MESSAGES)) }; return }
         if (Topic.SUGGEST in parsed.topics) { suggestAsked(q, parsed.markets); return }
         val explain = parsed.pattern?.takeIf { Topic.EXPLAIN in parsed.topics }
         if (explain != null) {
