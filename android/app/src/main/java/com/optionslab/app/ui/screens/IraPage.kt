@@ -409,12 +409,6 @@ internal fun VoiceSwitch() {
             androidx.compose.material3.Switch(checked = mute, onCheckedChange = { v -> mute = v; JarvisVoice.muted = v })
         }
         Note("Or say \"Jarvis, mute\" and \"Jarvis, unmute\".")
-        var trail by remember { mutableStateOf(com.optionslab.app.ira.IraCoach.autoTrail) }
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
-            Text("Trail my stops automatically", style = Type.label.copy(color = p.ink, fontSize = 14.sp), modifier = Modifier.weight(1f))
-            androidx.compose.material3.Switch(checked = trail, onCheckedChange = { v -> trail = v; com.optionslab.app.ira.IraCoach.autoTrail = v })
-        }
-        Note("Your own bought options with a stop: once up 20% the stop moves to what you paid, then trails 15% under the best price. It only moves up; bots keep their own stops.")
         var brief by remember { mutableStateOf(com.optionslab.app.ira.IraTools.brief) }
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
             Text("Short spoken answers", style = Type.label.copy(color = p.ink, fontSize = 14.sp), modifier = Modifier.weight(1f))
@@ -899,27 +893,27 @@ private fun AutomationsCard() {
             })
         }
         Note("Each runs on its own while IraAlgo watches the market. Nothing here opens a trade without asking you, except on paper (Solo, and Jarvis's own ideas when that switch is on); the guard and the trailing stop only add or raise stops.")
-        com.optionslab.app.ira.Automations.Auto.entries.forEach { a ->
-            var on by remember { mutableStateOf(com.optionslab.app.ira.Automations.on(a)) }
-            val last = remember(on) { com.optionslab.app.ira.Automations.last(a) }
+        com.optionslab.app.ira.Automations.Group.entries.forEach { g ->
+            var on by remember { mutableStateOf(com.optionslab.app.ira.Automations.on(g)) }
+            val last = remember(on) { com.optionslab.app.ira.Automations.last(g) }
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp)) {
                 Column(Modifier.weight(1f)) {
-                    Text(a.label, style = Type.label.copy(color = p.ink, fontSize = 14.sp))
-                    Text(a.what, style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp))
+                    Text(g.label, style = Type.label.copy(color = p.ink, fontSize = 14.sp))
+                    Text(g.what, style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp))
                     Text(last?.let { (t, w) -> "Last: ${t.toLocalDate()} ${"%02d:%02d".format(t.hour, t.minute)} - $w" } ?: "Has not acted yet.",
                         style = Type.label.copy(color = p.inkSoft, fontSize = 11.sp))
                 }
-                val act = androidx.compose.ui.platform.LocalContext.current as? androidx.fragment.app.FragmentActivity
                 androidx.compose.material3.Switch(checked = on, onCheckedChange = { v ->
                     // The guard places real stop orders: switched on only with Boss's fingerprint (off needs nothing).
-                    if (v && a == com.optionslab.app.ira.Automations.Auto.GUARD) {
+                    if (v && g.fingerprint) {
                         if (act == null || !com.optionslab.app.security.BiometricGate.fingerprintOn(act))
-                            com.optionslab.app.work.Alerts.error("Guard my positions is switched on with your fingerprint: set one up on the phone first.")
-                        else com.optionslab.app.security.BiometricGate.verify(act, "Guard my positions", "Jarvis may place stop orders on your positions") { ok ->
-                            if (ok) { on = true; com.optionslab.app.ira.Automations.set(a, true) } }
-                    } else { on = v; com.optionslab.app.ira.Automations.set(a, v) }
+                            com.optionslab.app.work.Alerts.error("${g.label} is switched on with your fingerprint: set one up on the phone first.")
+                        else com.optionslab.app.security.BiometricGate.verify(act, g.label, "Jarvis may place stop orders on your positions") { ok ->
+                            if (ok) { on = true; com.optionslab.app.ira.Automations.set(g, true) } }
+                    } else { on = v; com.optionslab.app.ira.Automations.set(g, v) }
                 })
             }
         }
+        Note("Always on, with no switch: live prices stopped, the expiry-day heads-up, the cool-off after two losses, the backup reminder and the self-healing voice.")
     }
 }

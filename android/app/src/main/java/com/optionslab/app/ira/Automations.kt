@@ -35,9 +35,52 @@ internal object Automations {
         QUIET("Quiet hours", "Nothing said unasked from 22:00 to 07:00.", "jarvis.quiet"),
     }
 
-    fun on(a: Auto): Boolean = runCatching { com.optionslab.app.security.SecurePrefs.getBoolean(a.key, a.byDefault) }.getOrDefault(false)
+    /**
+     * The switches Boss sees (4 Oct: "combine the AI settings that go together; drop those that stay on anyway"): each
+     * behaviour belongs to one group with one switch; the safety helpers have none and are always on.
+     */
+    enum class Group(val label: String, val what: String, val key: String, val members: List<Auto>, val byDefault: Boolean = true,
+                     /** Switched on only with the fingerprint (it touches real stop orders). */ val fingerprint: Boolean = false) {
+        GUARD("Guard my positions", "Your own bought options: a stop set by itself when one has none for 2 minutes (15% under what you paid), then trailed up - to what you paid at +20%, then 15% under the best price. Zerodha positions too; it only adds or raises stops that close, never opens or adds.",
+            "jarvis.group.guard", listOf(Auto.GUARD, Auto.TRAIL), byDefault = false, fingerprint = true),
+        HELP("Offer help on my positions", "A position with no stop, or one going nowhere for 45 minutes: Jarvis offers a stop or a close (asks first).",
+            "jarvis.group.help", listOf(Auto.RESCUE, Auto.STALE)),
+        OWN("Act on his own, on paper", "Takes his own ideas of 3/5 or more on PAPER (raising the bar where he loses), plans the paper arms each morning, and offers Solo's setups when Solo is off.",
+            "jarvis.group.own", listOf(Auto.ACT_PAPER, Auto.PLAN, Auto.SOLO_IDEAS)),
+        MARKET("Market alerts", "Opening gap plan, opening range breaks, fear (VIX) spikes, open interest walls moving, and news on indices you hold.",
+            "jarvis.group.market", listOf(Auto.GAP, Auto.ORB, Auto.VIX, Auto.OI, Auto.POSNEWS)),
+        COACH("Coach me", "A word when you overtrade, your day's target reached, and the 15:35 wrap-up spoken.",
+            "jarvis.group.coach", listOf(Auto.OVERTRADE, Auto.TARGET, Auto.SUMMARY)),
+        QUIET("Quiet hours", "Nothing said unasked from 22:00 to 07:00.", "jarvis.group.quiet", listOf(Auto.QUIET)),
+    }
 
-    fun set(a: Auto, v: Boolean) { runCatching { com.optionslab.app.security.SecurePrefs.put(a.key, v) } }
+    /** Always on, no switch: they only warn, cool off or heal (live prices stopped, expiry heads-up, cool-off, backup, voice). */
+    val ALWAYS = setOf(Auto.FEED, Auto.EXPIRY, Auto.COOLOFF, Auto.BACKUP, Auto.SELFHEAL)
+
+    fun groupOf(a: Auto): Group? = Group.entries.firstOrNull { a in it.members }
+
+    fun on(a: Auto): Boolean {
+        if (a in ALWAYS) return true
+        val g = groupOf(a) ?: return a.byDefault
+        return on(g)
+    }
+
+    fun on(g: Group): Boolean = runCatching {
+        val p = com.optionslab.app.security.SecurePrefs
+        // Before the groups each behaviour had its own switch: a group starts as Boss left its members (the guard only
+        // from its own fingerprint switch, never from the old trail switch, which did not ask for it).
+        val was = if (g == Group.GUARD) p.getBoolean(Auto.GUARD.key, false)
+            else g.members.any { p.getBoolean(it.key, it.byDefault) }
+        p.getBoolean(g.key, was)
+    }.getOrDefault(false)
+
+    fun set(g: Group, v: Boolean) { runCatching { com.optionslab.app.security.SecurePrefs.put(g.key, v) } }
+
+    /** A behaviour's switch is its group's (an always-on one has none). */
+    fun set(a: Auto, v: Boolean) { groupOf(a)?.let { set(it, v) } }
+
+    /** When the group last acted and what it did (the latest of its members). */
+    fun last(g: Group): Pair<LocalDateTime, String>? = g.members.mapNotNull { last(it) }.maxByOrNull { it.first }
 
     /** [a] just did something: when, and what (one line). */
     fun acted(a: Auto, what: String) {

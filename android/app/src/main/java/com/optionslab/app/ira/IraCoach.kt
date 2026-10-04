@@ -17,9 +17,9 @@ internal object IraCoach {
     private val IST = ZoneId.of("Asia/Kolkata")
 
     /** The automatic trailing stop (on by default: the owner asked for it to be automatic). */
-    var autoTrail: Boolean
+    // Read-only: switched with "Guard my positions" on the Jarvis screen, with the fingerprint (it moves real stops).
+    val autoTrail: Boolean
         get() = Automations.on(Automations.Auto.TRAIL)
-        set(v) = Automations.set(Automations.Auto.TRAIL, v)
 
     /** Positions whose exits belong to a bot or to Jarvis's own trades. */
     suspend fun botSymbols(): Set<String> {

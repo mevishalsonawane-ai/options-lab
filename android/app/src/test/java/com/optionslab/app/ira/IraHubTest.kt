@@ -678,6 +678,11 @@ class IraHubTest : RobolectricTest() {
         assertTrue(Automations.Auto.entries.all { Automations.on(it) == it.byDefault })
         assertTrue(!Automations.on(Automations.Auto.TRAIL))
         Automations.set(Automations.Auto.STALE, false); assertTrue(!Automations.on(Automations.Auto.STALE)); Automations.set(Automations.Auto.STALE, true)
+        // Boss, 4 Oct: a few grouped switches; the safety helpers have none and stay on.
+        assertTrue(Automations.Group.entries.size <= 7)
+        assertTrue(Automations.Auto.entries.all { it in Automations.ALWAYS || Automations.groupOf(it) != null })
+        Automations.set(Automations.Auto.FEED, false); assertTrue(Automations.on(Automations.Auto.FEED))
+        Automations.set(Automations.Group.HELP, false); assertTrue(!Automations.on(Automations.Auto.RESCUE)); Automations.set(Automations.Group.HELP, true)
         IraJournal.targetWatch(); IraJournal.staleWatch()
         Unit
     }
