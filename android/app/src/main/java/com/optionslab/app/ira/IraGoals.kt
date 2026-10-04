@@ -50,8 +50,8 @@ internal object IraGoals {
             val state = when { s.broken -> "broken"; s.near -> "near"; s.met -> "met"; else -> null } ?: continue
             val key = "$today:${s.goal.kind}:${s.goal.period}:$state"
             if (key in told) continue
+            val c = IraHub.appContext() ?: continue          // told when it can be shown, not before
             told += key
-            val c = IraHub.appContext() ?: continue
             val text = s.text
             JarvisPopup.show(c, "Boss, your goal: ${s.goal.text()}", text)
             IraActivity.add("Goal: $text")

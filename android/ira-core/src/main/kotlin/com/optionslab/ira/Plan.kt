@@ -69,14 +69,16 @@ object Plan {
  * never a trade or anything that adds risk. Pure.
  */
 object AutoStop {
-    private val ON = Regex("(?i)\\b(do (it|that|this|them|these|stops?) (automatically|on your own|by yourself|without asking)|stop (things |them )?automatically|" +
-        "(don t|dont|do not|no need to) ask (me )?(before|to|for)( (stopping|parking|the plan|approval|permission))?|" +
-        "(stop|park)\\w* without asking|automatic(ally)? (stops?|stopping|plan)|auto ?approve)\\b")
+    private val ON = Regex("(?i)\\b(do (it|that|this|them|these) (automatically|on your own|by yourself|without asking)|stop (things |them )?automatically|" +
+        "(don t|dont|do not|no need to) ask (me )?(before|for) (stopping|parking|the plan|approval|permission)|" +
+        "(stop|park)\\w* (them |things )?without asking)\\b")
     private val OFF = Regex("(?i)\\b(ask (me )?(before|first)( (stopping|parking|you stop|doing))?|always ask( me)?|take my approval|don t do (it|that) automatically|stop doing (it|that) automatically)\\b")
 
     /** True: automatic from now; false: asked first; null: not about this. */
     fun read(text: String): Boolean? {
         val t = text.replace("'", " ")
+        // An order or setting ("set automatic stop loss", "auto approve the ORB arm") is never this choice.
+        if (Regex("(?i)\\b(stop ?loss|sl|order|arm|lots?|buy|sell|approve)\\b").containsMatchIn(t) && !Regex("(?i)\\bask me\\b").containsMatchIn(t)) return null
         // ("Don't do it automatically" / "stop doing it automatically" hold "do it automatically": asked, first.)
         if (Regex("(?i)\\b(don t|dont|do not|stop|no more) (do|doing) (it|that|this|them|stops?) automatically").containsMatchIn(t)) return false
         return when { ON.containsMatchIn(t) -> true; OFF.containsMatchIn(t) -> false; else -> null }

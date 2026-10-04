@@ -31,8 +31,8 @@ internal object IraExpert {
             if (v.state == Vetting.State.TESTING) continue
             val key = "${v.name}:${v.state}"
             if (key in told) continue
+            val c = IraHub.appContext() ?: continue          // told when it can be shown, not before
             told += key; changed = true
-            val c = IraHub.appContext() ?: continue
             IraActivity.add(v.text())
             if (v.state == Vetting.State.HELD_UP) {
                 val text = v.text() + " It may be worth trading live: arm it in Live yourself, with your PIN."
@@ -40,8 +40,11 @@ internal object IraExpert {
             } else {
                 // Switching it off is offered (Boss, 4 Oct: anything Jarvis thinks should stop is asked first).
                 val (what, act) = runCatching { IraActions.prepare(com.optionslab.ira.Command(com.optionslab.ira.Command.Kind.STOP_ONE, target = v.name)) }.getOrNull() ?: (null to null)
-                // Only when the name found is this strategy's own (never a near match switched off by mistake).
-                if (act == null || what == null || !what.contains(v.name, ignoreCase = true)) { JarvisPopup.show(c, "Boss, ${v.name} failed its paper test", v.text()); IraHub.note(v.text()) }
+                // Only when the name found is exactly this strategy's (never a near match switched off by mistake), and only
+                // in Paper: in Live, stopping a run sells what it holds - that is Boss's to do.
+                val exact = what != null && what.equals(com.optionslab.ira.Commands.describe(com.optionslab.ira.Command(com.optionslab.ira.Command.Kind.STOP_ONE, target = v.name), v.name), ignoreCase = true)
+                val paper = runCatching { !com.optionslab.app.data.AppSettings.load().live }.getOrDefault(false)
+                if (act == null || what == null || !exact || !paper) { JarvisPopup.show(c, "Boss, ${v.name} failed its paper test", v.text()); IraHub.note(v.text()) }
                 else IraHub.offer(what, "Boss, ${v.name} failed its paper test", v.text() + " Shall I $what?", act)
             }
         }

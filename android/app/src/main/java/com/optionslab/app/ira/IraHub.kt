@@ -785,10 +785,11 @@ object IraHub {
      * Something Jarvis thinks should be done or stopped, put to Boss first (4 Oct): pending with Confirm on the Ira
      * screen, a pop-up and a spoken yes or no; [act] runs only on his yes, and lapses after 30 minutes.
      */
-    fun offer(what: String, title: String, text: String, act: suspend () -> String) {
+    fun offer(what: String, title: String, text: String, act: suspend () -> String, addsRisk: Boolean = false) {
         val c = app ?: return
-        // Boss said "do it automatically" in chat: done now and told (what Jarvis offers this way only stops or parks).
-        if (autoStop) {
+        // Boss said "do it automatically" in chat: done now and told - only what stops or parks; anything that adds risk
+        // (arming again) is always asked (review, 4 Oct).
+        if (autoStop && !addsRisk) {
             scope.launch {
                 val r = IraActions.run(what, act)
                 JarvisPopup.show(c, title, r); reply(com.optionslab.ira.Address.boss("Done by myself, as you asked: $r"))
@@ -1138,7 +1139,14 @@ object IraHub {
             }
         }
         // "Do it automatically" / "ask me before stopping": what Jarvis thinks should be stopped or parked (4 Oct).
-        if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD) runCatching { com.optionslab.ira.AutoStop.read(q) }.getOrNull()?.let { on ->
+        if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && parsed.order == null && parsed.command == null)
+            runCatching { com.optionslab.ira.AutoStop.read(q) }.getOrNull()?.let { on ->
+            // Boss's own choice: typed or said by name (not a reading the model guessed), on an unlocked phone; asking
+            // again ("ask me before stopping") is always taken.
+            if (on && (understood || phoneLocked())) {
+                _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, "Unlock the phone and say it to me directly, Boss: I don't take that from a guess.")).takeLast(MAX_MESSAGES)) }
+                return
+            }
             autoStop = on
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, com.optionslab.ira.AutoStop.said(on))).takeLast(MAX_MESSAGES)) }
             IraActivity.add(if (on) "Boss chose: stops and parking done automatically." else "Boss chose: asked before stopping.")
@@ -1147,7 +1155,7 @@ object IraHub {
         // Goals over days (part 6): "goal: keep my weekly loss under 5000", "what are my goals", "clear my goals".
         // (A day's target alone stays the journal's "set my day target": a goal here names a goal, a week or a month.)
         if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD) {
-            val g = runCatching { com.optionslab.ira.Goals.read(q) }.getOrNull()?.takeIf { Regex("(?i)\\bgoal").containsMatchIn(q) || it.period != com.optionslab.ira.Goals.Period.DAY }
+            val g = runCatching { com.optionslab.ira.Goals.read(q) }.getOrNull()?.takeIf { parsed.order == null && parsed.command == null }?.takeIf { Regex("(?i)\\bgoal").containsMatchIn(q) || it.period != com.optionslab.ira.Goals.Period.DAY }
             val ask = g != null || com.optionslab.ira.Goals.asked(q) || com.optionslab.ira.Goals.clearAsked(q)
             if (ask) {
                 _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }

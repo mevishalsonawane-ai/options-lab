@@ -14,6 +14,8 @@ class AutoStopTest {
         assertEquals(false, AutoStop.read("don't do it automatically"))
         assertEquals(false, AutoStop.read("stop doing it automatically"))
         assertNull(AutoStop.read("stop all strategies"))
+        assertNull(AutoStop.read("set automatic stop loss on my positions"))
+        assertNull(AutoStop.read("turn on auto approve for the ORB arm"))
         assertNull(AutoStop.read("what is nifty"))
     }
 }

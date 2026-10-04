@@ -19,8 +19,9 @@ object Vetting {
     data class Verdict(val name: String, val state: State, val trades: Int, val net: Double, val pf: Double?, val maxDd: Double, val winRate: Double) {
         fun text(): String = when (state) {
             State.TESTING -> "$name is still on its paper test: $trades of $MIN_TRADES trades, ${AppFacts.rs(net)} so far."
-            State.HELD_UP -> "$name held up on paper: $trades trades, ${AppFacts.rs(net)}, won %.0f%%, profit factor %s, worst run -Rs %,.0f.".format(Locale.ENGLISH, winRate * 100, pf?.let { "%.2f".format(Locale.ENGLISH, it) } ?: "no losses", maxDd)
-            State.FAILED -> "$name failed its paper test: $trades trades, ${AppFacts.rs(net)}, won %.0f%%.".format(Locale.ENGLISH, winRate * 100)
+            // (The name is never part of a format string: a "%" in it must not break the sentence.)
+            State.HELD_UP -> "$name held up on paper: $trades trades, ${AppFacts.rs(net)}, " + "won %.0f%%, profit factor %s, worst run -Rs %,.0f.".format(Locale.ENGLISH, winRate * 100, pf?.let { "%.2f".format(Locale.ENGLISH, it) } ?: "no losses", maxDd)
+            State.FAILED -> "$name failed its paper test: $trades trades, ${AppFacts.rs(net)}, " + "won %.0f%%.".format(Locale.ENGLISH, winRate * 100)
         }
     }
 

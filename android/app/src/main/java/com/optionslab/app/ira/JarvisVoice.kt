@@ -352,7 +352,10 @@ class JarvisVoice : Service() {
             // A shared-capture turn that the recognizer opened and then never heard anything with (no words, no error) for
             // 12 s: this phone's recognizer cannot take our audio - back to its own microphone, for good.
             if (listening && tap != null && turnReadyAt > 0 && !turnHeardAny && now - turnReadyAt > 12_000 && !speaking) {
-                tapFailed = true; note("shared audio gave nothing: back to the phone's own microphone")
+                tapFailed = true
+                val n = silentShared + 1; silentShared = n
+                if (n >= 3) runCatching { com.optionslab.app.security.SecurePrefs.put(TAP_BROKEN, true) }
+                note("shared audio gave nothing ($n in a row): back to the phone's own microphone" + if (n >= 3) " for good" else " for now")
                 IraActivity.add("Listening switched to the phone's own microphone (the shared one heard nothing).")
                 runCatching { rec?.cancel() }; listening = false; endTap(); turnReadyAt = 0; again(300)
             }
@@ -386,10 +389,15 @@ class JarvisVoice : Service() {
      * The shared capture does not work on this phone (Boss, 4 Oct: the recognizer said "ready" and then never heard
      * anything with it - silence, no error). Remembered on the phone, so it is not tried again on every restart.
      */
+    private var tapFailedNow = false
     private var tapFailed: Boolean
-        get() = runCatching { com.optionslab.app.security.SecurePrefs.getBoolean(TAP_BROKEN, false) }.getOrDefault(false)
-        set(v) { runCatching { com.optionslab.app.security.SecurePrefs.put(TAP_BROKEN, v) } }
+        get() = tapFailedNow || runCatching { com.optionslab.app.security.SecurePrefs.getBoolean(TAP_BROKEN, false) }.getOrDefault(false)
+        set(v) { tapFailedNow = v }
     private val TAP_BROKEN = "jarvis.voice.tapbroken"
+    /** Shared turns in a row that heard nothing at all: only 3 in a row (not one quiet moment) drop it for good. */
+    private var silentShared: Int
+        get() = runCatching { com.optionslab.app.security.SecurePrefs.getString("jarvis.voice.tapsilent")?.toInt() }.getOrNull() ?: 0
+        set(v) { runCatching { com.optionslab.app.security.SecurePrefs.put("jarvis.voice.tapsilent", v.toString()) } }
     /** When the recognizer said ready this turn, and whether it heard anything (for the silent-turn check). */
     @Volatile private var turnReadyAt = 0L
     @Volatile private var turnHeardAny = false
@@ -550,7 +558,7 @@ class JarvisVoice : Service() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
         val r = rec ?: return
         runCatching {
-            r.checkRecognitionSupport(Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH), java.util.concurrent.Executors.newSingleThreadExecutor(),
+            r.checkRecognitionSupport(Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH), ContextCompat.getMainExecutor(this),
                 object : android.speech.RecognitionSupportCallback {
                     override fun onSupportResult(s: android.speech.RecognitionSupport) {
                         val have = s.installedOnDeviceLanguages.map { it.lowercase(java.util.Locale.ROOT).replace('_', '-') }
@@ -616,7 +624,10 @@ class JarvisVoice : Service() {
         override fun onBufferReceived(buffer: ByteArray?) {}
         override fun onEndOfSpeech() {}
         override fun onPartialResults(partialResults: Bundle?) {
-            partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull { it.isNotBlank() }?.let { turnHeardAny = true; turnPartial = it }
+            partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull { it.isNotBlank() }?.let {
+                turnHeardAny = true; turnPartial = it
+                if (tap != null && silentShared != 0) silentShared = 0      // the shared capture does hear
+            }
             // The owner says "Jarvis" while Jarvis is talking: stop at once and listen (the question follows).
             val words = partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION).orEmpty()
             if (speaking) { if (words.any { WAKE.containsMatchIn(it) }) interrupt(); return }
@@ -694,7 +705,6 @@ class JarvisVoice : Service() {
                     errorsInRow++; lastError = error to SystemClock.elapsedRealtime()
                     runCatching { rec?.destroy() }
                     rec = runCatching { newRecognizer().also { it.setRecognitionListener(this) } }.getOrNull()
-                    pickLanguage()
                     IraActivity.add("Reconnected listening (the phone's speech service had restarted).")
                     again(minOf(MAX_BACKOFF_MS, 1_000L shl minOf(errorsInRow - 1, 5)))
                 }

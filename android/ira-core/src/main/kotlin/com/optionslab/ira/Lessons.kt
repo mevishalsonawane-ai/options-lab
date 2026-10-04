@@ -31,7 +31,7 @@ object Lessons {
             ts.groupBy { it.openedAt.hour }.filter { it.value.size >= MIN_SLICE }.forEach { (h, l) ->
                 val net = l.sumOf { it.net }
                 if (net < 0 && l.count { it.net > 0 } * 2 < l.size)
-                    out += Lesson(owner, "$who loses when entered between %02d:00 and %02d:00: ${l.size} trades, ${AppFacts.rs(net)}.".format(Locale.ENGLISH, h, h + 1), net)
+                    out += Lesson(owner, "$who loses when entered between " + "%02d:00 and %02d:00".format(Locale.ENGLISH, h, h + 1) + ": ${l.size} trades, ${AppFacts.rs(net)}.", net)
             }
             // A weekday that keeps losing.
             ts.groupBy { it.openedAt.dayOfWeek }.filter { it.value.size >= MIN_SLICE }.forEach { (d, l) ->
@@ -45,7 +45,7 @@ object Lessons {
             if (win.size >= 3 && lose.size >= 3) {
                 val w = win.map(::mins).average(); val l = lose.map(::mins).average()
                 if (w > 0 && l >= w * 2 && l - w >= 10)
-                    out += Lesson(owner, "$who holds losers much longer than winners: %.0f minutes against %.0f - cut them sooner.".format(Locale.ENGLISH, l, w), lose.sumOf { it.net })
+                    out += Lesson(owner, "$who holds losers much longer than winners: " + "%.0f minutes against %.0f".format(Locale.ENGLISH, l, w) + " - cut them sooner.", lose.sumOf { it.net })
             }
         }
         return out.sortedBy { it.rupees }.take(max)

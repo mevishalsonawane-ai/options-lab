@@ -16,6 +16,8 @@ class GoalsTest {
         assertEquals(Goals.Goal(Goals.Kind.MAX_LOSS, Goals.Period.MONTH, 100000.0), Goals.read("target: monthly loss under 1 lakh"))
         assertNull(Goals.read("what are my goals"))
         assertNull(Goals.read("buy nifty"))
+        assertNull(Goals.read("buy banknifty weekly 52000 CE target 200"))
+        assertNull(Goals.read("sell nifty weekly 24000 pe stop loss 80"))
         assertTrue(Goals.asked("what are my goals")); assertTrue(Goals.clearAsked("clear my goals"))
     }
 

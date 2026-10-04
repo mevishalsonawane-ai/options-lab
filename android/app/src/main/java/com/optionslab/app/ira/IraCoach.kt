@@ -188,7 +188,13 @@ internal object IraCoach {
             val done = ArrayList<com.optionslab.ira.DayPlan.Step>()
             val p = prefsMap(PARKED_KEY)
             val nowViews = arms.view().arms
+            // Checked again at the yes (it can come up to 30 minutes later): nothing is armed once the kill switch, the
+            // day's loss limit or the day's stop holds.
+            val s2 = runCatching { AppSettings.load() }.getOrNull()
+            val stoppedNow = s2 == null || s2.guardKill || com.optionslab.app.data.LossBreaker.trippedToday() ||
+                runCatching { com.optionslab.app.data.Strategies.stoppedToday() }.getOrDefault(true)
             for (step in steps) {
+                if (step.on && stoppedNow) continue
                 val v = nowViews.firstOrNull { it.arm.source == step.source } ?: continue
                 if (v.armed == step.on) continue                  // already as planned (Boss changed it himself)
                 // Armed on paper only: in Live an ordinary arm asks for the PIN, which is never given here, so it is not armed.
@@ -201,7 +207,7 @@ internal object IraCoach {
             val text = com.optionslab.ira.DayPlan.say(done, now) ?: "Nothing needed changing any more."
             IraActivity.add(text); Automations.acted(Automations.Auto.PLAN, text)
             text
-        })
+        }, addsRisk = steps.any { it.on })
     }
 
     /** Just after the open (09:16 to 09:30), once a day: BankNifty's gap and how the arms did on such days. */

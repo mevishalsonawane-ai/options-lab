@@ -46,6 +46,8 @@ object Goals {
         val s = t(text)
         if (!Regex(" (goal|target|aim|keep my|limit my) ").containsMatchIn(s)) return null
         if (Regex(" (what|how|clear|remove|delete|forget|cancel) ").containsMatchIn(s)) return null
+        // An order with a target or a stop ("buy banknifty weekly 52000 ce target 200") is never a goal.
+        if (Regex(" (buy|sell|ce|pe|call|put|lot|lots|strike|stop loss|sl) ").containsMatchIn(s)) return null
         val trades = Regex(" (no more than|at most|max|maximum|only|under|below|less than) (\\d{1,2}) trades? ").find(s)
         if (trades != null) return Goal(Kind.MAX_TRADES, Period.DAY, trades.groupValues[2].toDouble()).takeIf { it.amount >= 1 }
         val p = period(s) ?: return null

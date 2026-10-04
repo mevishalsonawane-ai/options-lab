@@ -19,6 +19,7 @@ class VettingTest {
         val s = Vetting.say(listOf(Vetting.judge("ORB 5", List(10) { 600.0 } + List(6) { -300.0 }), Vetting.judge("Pine B", List(3) { 100.0 })))
         assertTrue(s.startsWith("Held up on paper, Boss: ORB 5 held up on paper: 16 trades, +Rs 4,200.00"), s)
         assertTrue(s.endsWith("Going live is your step: arm it in Live with your PIN."), s)
+        assertTrue(Vetting.judge("Pine 50% fade", List(16) { 300.0 }).text().startsWith("Pine 50% fade held up"))
         assertTrue(Vetting.asked("Jarvis, what held up?")); assertTrue(Vetting.asked("what should I trade live"))
     }
 }
