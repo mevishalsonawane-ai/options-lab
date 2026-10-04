@@ -37,8 +37,11 @@ class WriterTest {
 
     @Test fun onlyFactBasedAnswersAreRewritten() {
         val q = Ask.parse("how is banknifty")
-        assertTrue(Writer.worthRewriting(q, Answer(draft, facts)))
+        val longer = "$draft It opened at 52,400.00 and has held below it since. Volume is light."
+        assertTrue(Writer.worthRewriting(q, Answer(longer, facts)))
         assertFalse(Writer.worthRewriting(q, Answer("I only know...", emptyList())))
+        // One short line stays as it is.
+        assertFalse(Writer.worthRewriting(q, Answer(draft, facts)))
         assertFalse(Writer.worthRewriting(Ask.parse("should I buy banknifty"), Answer(draft, facts)))
         val o = Ask.parse("buy 1 lot banknifty 52000 ce")
         assertFalse(Writer.worthRewriting(o, Answer("Ready", facts, o.order)))

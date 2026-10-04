@@ -40,11 +40,16 @@ object Writer {
         return keep.ifEmpty { facts.take(max) }
     }
 
+    /** Shorter than this, and one sentence: not rewritten. */
+    const val SHORT = 90
+
     private val NUM = Regex("\\d[\\d,]*(\\.\\d+)?")
     private val WORD = Regex("[a-z]+")
 
     /** Should the model be asked at all? Only for answers built from facts - never orders, refusals or advice questions. */
     fun worthRewriting(q: Question, a: Answer): Boolean =
+        // A one-line answer is plain already; rewriting it would only hold the model while the next question waits.
+        (a.text.length >= SHORT || Regex("(?<=[.!?])\\s+\\S").findAll(a.text).count() >= 1) &&
         a.facts.isNotEmpty() && a.order == null && Topic.ADVICE !in q.topics && Topic.ORDER !in q.topics && Topic.BACKTEST !in q.topics
 
     private val ADVICE = Regex("\\b(should|shouldn't|recommend\\w*|suggest\\w*|advis\\w*|consider (buying|selling)|buy now|sell now|go long|go short|" +
