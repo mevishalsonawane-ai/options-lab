@@ -2,6 +2,7 @@ package com.optionslab.ira
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 import kotlin.test.assertNull
 
 class LatencyTest {
@@ -20,5 +21,15 @@ class SlowSuggestTest {
         assertNull(Latency.suggestFaster(listOf(6000L, 4000L, 7000L), onFastest = false))
         assertNull(Latency.suggestFaster(listOf(6000L, 6500L, 7000L), onFastest = true))
         kotlin.test.assertTrue(Latency.suggestFaster(listOf(1000L, 6000L, 6500L, 7000L), onFastest = false)!!.contains("Qwen2.5 0.5B"))
+    }
+
+    @Test fun askedAloud() {
+        assertTrue(Latency.asked("Jarvis, how fast are you?"))
+        assertTrue(Latency.asked("how long do you take to answer"))
+        assertTrue(Latency.asked("your response time"))
+        assertTrue(!Latency.asked("how fast is nifty moving"))
+        assertEquals("I haven't timed a spoken answer yet, Boss. Ask me something by voice first.", Latency.spoken(emptyList(), "FASTEST"))
+        assertEquals("Over my last 3 spoken answers, Boss, you waited about 2.0 seconds, 6.5 at the slowest. I'm on FASTEST.",
+            Latency.spoken(listOf(1_200, 6_500, 2_000), "FASTEST"))
     }
 }

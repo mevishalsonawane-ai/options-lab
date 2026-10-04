@@ -1140,6 +1140,12 @@ object IraHub {
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
             return
         }
+        // "How fast are you?": the spoken answers' waits (times only, no words), and the model in use.
+        if (com.optionslab.app.BuildConfig.JARVIS && runCatching { com.optionslab.ira.Latency.asked(q) }.getOrDefault(false)) {
+            val said = com.optionslab.ira.Latency.spoken(JarvisVoice.latencies, "${IraModel.choice.name} (${IraModel.choice.about})")
+            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
+            return
+        }
         // "How did you do today?": what Jarvis heard, misunderstood and could not do today (no account figures).
         if (com.optionslab.app.BuildConfig.JARVIS && runCatching { com.optionslab.ira.Reminder.usageAsked(q) }.getOrDefault(false)) {
             val said = com.optionslab.ira.Usage.line(IraTools.usageToday())?.let { "Today, Boss: $it" } ?: "Nothing asked of me yet today, Boss."
