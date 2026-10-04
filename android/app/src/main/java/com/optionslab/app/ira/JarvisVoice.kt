@@ -426,6 +426,10 @@ class JarvisVoice : Service() {
     @Volatile private var turnPartial: String? = null
     /** Turns with clear sound in which the recognizer found no words, in a row (the language may be wrong). */
     private var loudNoMatch = 0
+    /** The recognizer said "speech began" this turn (a loud room alone is not Boss speaking). */
+    @Volatile private var turnSpeech = false
+    /** The current language has given words since listening began: it works, so it is never switched away from. */
+    private var langWorks = false
     /** What the recognizer heard last turn (for the voice check), then dropped. */
     private var lastHeard: ShortArray? = null
     /** The action Jarvis asked a yes or no about, heard until [askingUntil]. */
@@ -660,7 +664,7 @@ class JarvisVoice : Service() {
             }
         }
         listening = true
-        turnReadyAt = 0; turnHeardAny = false; turnLoudest = -100f; turnPartial = null
+        turnReadyAt = 0; turnHeardAny = false; turnLoudest = -100f; turnPartial = null; turnSpeech = false
         hushBeep(1_500)                                   // the start beep (put back once the turn is ready, or in 1.5 s)
         runCatching { rec?.startListening(i) }.onFailure { listening = false; endTap(); again(1_000) }
         _state.value = VoiceState(if (awake()) Mode.AWAKE else Mode.LISTENING)
@@ -683,7 +687,7 @@ class JarvisVoice : Service() {
             if (mutedForBeep.isNotEmpty()) { main.removeCallbacks(unmuteBeep); main.postDelayed(unmuteBeep, 400) }
             note(if (tap != null) "ready (shared audio)" else "ready")
         }
-        override fun onBeginningOfSpeech() { note("speech began") }
+        override fun onBeginningOfSpeech() { turnSpeech = true; note("speech began") }
         override fun onRmsChanged(rmsdB: Float) { if (rmsdB > turnLoudest) turnLoudest = rmsdB }
         override fun onBufferReceived(buffer: ByteArray?) {}
         // Boss, 4 Oct: "speech began", then nothing - the recognizer never closed the turn. Once he stops speaking, the
@@ -720,6 +724,7 @@ class JarvisVoice : Service() {
             main.removeCallbacks(finish)
             listening = false
             loudNoMatch = 0
+            if (results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.any { it.isNotBlank() } == true) langWorks = true
             note("heard " + (results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()?.let { t ->
                 if (WAKE.containsMatchIn(t)) "the name" else "${t.split(Regex("\\s+")).size} words, no name" } ?: "nothing"))
             results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()?.let { heardText = com.optionslab.ira.Secrets.redact(it) }
@@ -759,7 +764,9 @@ class JarvisVoice : Service() {
             note("error $error" + (if (turnLoudest > -100f) ", loudest %.0f dB".format(java.util.Locale.ENGLISH, turnLoudest) else ", no sound level") +
                 (turnPartial?.let { ", read ${it.trim().split(Regex("\\s+")).size} word(s) mid-turn" } ?: ", read nothing"))
             // Clear speech, no words found, three turns in a row: the language pack may be the trouble - the other English.
-            if (error == SpeechRecognizer.ERROR_NO_MATCH && turnLoudest >= 6f) {
+            // Only turns where speech began, and never away from a language that has given words (Boss, 4 Oct: a quiet
+            // room at 6-8 dB switched a working en-US to the missing en-IN, and listening stopped).
+            if (error == SpeechRecognizer.ERROR_NO_MATCH && turnSpeech && turnLoudest >= 6f && !langWorks) {
                 if (++loudNoMatch >= 3) {
                     loudNoMatch = 0
                     lang = if (lang == "en-IN") "en-US" else "en-IN"
@@ -787,7 +794,7 @@ class JarvisVoice : Service() {
                     // Boss's phone (4 Oct) has English (US) and Hindi on-device, not English (India): some recognizers
                     // refuse a missing language this way rather than "language unavailable". The other English first.
                     if (!triedOtherLanguage) {
-                        triedOtherLanguage = true; lang = if (lang == "en-IN") "en-US" else "en-IN"
+                        triedOtherLanguage = true; langWorks = false; lang = if (lang == "en-IN") "en-US" else "en-IN"
                         IraActivity.add("Listening in $lang (the speech service refused the other English).")
                     }
                     if (clientErrors >= 6 && runCatching { !SpeechRecognizer.isOnDeviceRecognitionAvailable(this@JarvisVoice) }.getOrDefault(false)) {
@@ -800,7 +807,9 @@ class JarvisVoice : Service() {
                     again(if (clientErrors <= 3) 1_000L else minOf(MAX_BACKOFF_MS, 1_000L shl minOf(clientErrors - 3, 5)))
                 }
                 SpeechRecognizer.ERROR_LANGUAGE_NOT_SUPPORTED, SpeechRecognizer.ERROR_LANGUAGE_UNAVAILABLE ->
-                    if (!triedOtherLanguage) { triedOtherLanguage = true; lang = "en-US"; again() }
+                    // The other English is missing on this phone: back to English (US) at once, never deaf for it.
+                    if (lang != "en-US") { lang = "en-US"; triedOtherLanguage = true; note("$lang back: the other English is not on this phone"); again() }
+                    else if (!triedOtherLanguage) { triedOtherLanguage = true; lang = "en-IN"; again() }
                     else giveUp("No on-device English speech model: add one in the phone's Settings (System → Languages → On-device speech recognition).")
                 else -> {
                     // Silence and no-match are normal between sentences; a run of other errors backs off up to 5 s.

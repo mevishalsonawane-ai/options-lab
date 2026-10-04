@@ -242,7 +242,7 @@ object IraModel {
      * The model's raw reply to [prompt] (at most [maxTokens]), or null - for [com.optionslab.ira.Intents], whose caller
      * checks the reply against its fixed list before anything is done with it.
      */
-    suspend fun complete(prompt: String, maxTokens: Int = 40): String? = withContext(Dispatchers.Default) {
+    suspend fun complete(prompt: String, maxTokens: Int = 40, timeoutMs: Long = TIMEOUT_MS): String? = withContext(Dispatchers.Default) {
         val c = app ?: return@withContext null
         if (!usable()) return@withContext null
         lock.withLock {
@@ -257,7 +257,7 @@ object IraModel {
                     if (handle == 0L) return@withLock null
                     _state.update { it.copy(loaded = true, message = null) }
                 }
-                val watchdog = scope.launch { delay(TIMEOUT_MS) ; LlmNative.cancel() }
+                val watchdog = scope.launch { delay(timeoutMs) ; LlmNative.cancel() }
                 val bytes = try { gently { LlmNative.generate(handle, prompt, maxTokens) } } finally { watchdog.cancel() }
                 bytes?.let { String(it, Charsets.UTF_8) }
             } finally {

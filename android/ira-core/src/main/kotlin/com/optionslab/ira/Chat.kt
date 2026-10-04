@@ -95,7 +95,9 @@ object Chat {
         if (ADVICE.containsMatchIn(r) || ACTED.containsMatchIn(r)) return null
         // At most two sentences.
         val parts = Regex("(?<=[.!?])\\s+").split(r).filter { it.isNotBlank() }
-        return parts.take(2).joinToString(" ")
+        // A reply cut short by the word limit ends at its last whole sentence.
+        val whole = parts.take(2).let { ps -> if (ps.size > 1 && !Regex("[.!?]$").containsMatchIn(ps.last())) ps.dropLast(1) else ps }
+        return whole.joinToString(" ")
     }
 
     private val PERSONAL = Regex(" (you|your|yours|yourself|you re|youre) ")

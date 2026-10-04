@@ -26,6 +26,15 @@ object Intents {
         Regex("^" + Regex.escape(l.lowercase()).replace(N, "\\E(\\d{1,2})\\Q").replace(MARKET, "\\E$MARKETS\\Q").replace(LEVEL, "\\E(\\d{2,6}(?:\\.\\d+)?)\\Q") + "$")
     }
 
+    private val MAY_MEAN = Regex("(strateg|order|position|kill|paper|alarm|alert|trade|trading|stud|p ?l|pnl|profit|loss|review|news|pcr|pain|fii|dii|event|level|" +
+        "nifty|sensex|gold|vix|market|stop|start|cancel|close|exit|switch|turn|help|can you do|money|earn|lost|made|week|today|buy|sell|chart|price)")
+
+    /**
+     * Whether [request] could mean a line of [LINES] at all. Words with none of their parts ("good evening friend") skip
+     * the model's first pass - it took seconds to say NONE (Boss, 4 Oct: "it takes a lot of time thinking").
+     */
+    fun mayMean(request: String): Boolean = MAY_MEAN.containsMatchIn(request.lowercase().replace(Regex("[^a-z0-9 ]"), " "))
+
     fun prompt(request: String): String {
         val sys = "You map a trader's request to one line of a fixed list. Reply with exactly one line from the LIST, " +
             "replacing <n> with a number, <market> with one of nifty, banknifty, finnifty, sensex, gold, vix, and <level> " +

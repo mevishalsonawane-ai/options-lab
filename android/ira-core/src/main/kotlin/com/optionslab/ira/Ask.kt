@@ -73,6 +73,9 @@ object Ask {
         // "What is a hammer?" - the pattern explained, with its own record.
         if (Regex(" (what is|what s|whats|what are|explain|meaning of|tell me about|define) (a |an |the )?").containsMatchIn(t) && named(t) != null && !Regex(" (backtest|back test) ").containsMatchIn(t))
             return Question(text, Market.mentioned(text), setOf(Topic.EXPLAIN), null, pattern = named(t))
+        // "What's going on?" (heard 2026-10-04 and sent to the chat, which knew nothing): the Nifty overview.
+        if (Regex("^ (so )?(what s|whats|what is) (going on|happening)( today| now| in the market)? $|^ (any|what s the) (update|updates)( today)? $|^ (kya chal raha hai|kya haal hai market ka) $").containsMatchIn(t))
+            return Question(text, Market.mentioned(text).ifEmpty { listOf(Market.NIFTY) }, setOf(Topic.OVERVIEW), null)
         // "Describe the Nifty chart": the trend, levels, today's range and the latest candle pattern.
         if (Regex(" (describe|read|explain|walk me through|tell me about) (the |my )?([a-z]+ )?chart ").containsMatchIn(t))
             return Question(text, Market.mentioned(text).ifEmpty { listOf(Market.NIFTY) }, setOf(Topic.OVERVIEW, Topic.TREND, Topic.LEVELS, Topic.PATTERNS), null)
