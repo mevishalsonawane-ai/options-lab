@@ -63,11 +63,13 @@ object Reminder {
     fun missedAsked(text: String): Boolean =
         Regex("(?i)^\\W*(jarvis,?\\s+)?(what did i miss|what have i missed|did i miss anything|anything i missed|catch me up|kya hua jab (main|mai) nahi tha|maine kya miss kiya|kuch miss hua)\\W*$").containsMatchIn(text)
 
-    /** Jarvis's own notes since Boss last asked (his reply to that question left out), newest last, at most [max]. */
-    fun sinceLastAsked(fromJarvis: List<Pair<Boolean, String>>, max: Int = 6): List<String> {
-        val lastBoss = fromJarvis.indexOfLast { !it.first }
-        val after = fromJarvis.drop(lastBoss + 1).filter { it.first }.map { it.second }
-        return (if (lastBoss >= 0) after.drop(1) else after).takeLast(max)
+    /** A chat message for "what did I miss": Boss's words, or Jarvis's - said on his own ([unasked]) or as a reply. */
+    data class Said(val fromBoss: Boolean, val unasked: Boolean, val text: String)
+
+    /** What Jarvis said on his own since Boss last asked (replies, however late, left out), newest last, at most [max]. */
+    fun sinceLastAsked(msgs: List<Said>, max: Int = 6): List<String> {
+        val lastBoss = msgs.indexOfLast { it.fromBoss }
+        return msgs.drop(lastBoss + 1).filter { !it.fromBoss && it.unasked }.map { it.text }.takeLast(max)
     }
 
     /** "Which AI model are you using?", "kaunsa model hai": answered from the app's own choice. */

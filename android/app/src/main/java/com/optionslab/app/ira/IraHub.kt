@@ -1109,7 +1109,8 @@ object IraHub {
         // "What did I miss?": what Jarvis said on his own since Boss last asked (alerts, notes) - may name the account, so
         // the phone must be unlocked.
         if (com.optionslab.app.BuildConfig.JARVIS && runCatching { com.optionslab.ira.Reminder.missedAsked(q) }.getOrDefault(false)) {
-            val notes = com.optionslab.ira.Reminder.sinceLastAsked(_state.value.messages.map { it.fromIra to it.text })
+            val notes = com.optionslab.ira.Reminder.sinceLastAsked(_state.value.messages.map { m ->
+                com.optionslab.ira.Reminder.Said(!m.fromIra, m.id in unaskedIds, m.text) })
             val said = when {
                 phoneLocked() -> "Unlock the phone for that, Boss."
                 notes.isEmpty() -> "Nothing new since you last asked, Boss."
@@ -1212,7 +1213,10 @@ object IraHub {
             return
         }
         // "When is the next expiry?": the next expiry of each index (or the one named), from the loaded contracts.
-        if (parsed.command == null && parsed.order == null && runCatching { com.optionslab.ira.MarketDays.expiryAsked(q) }.getOrDefault(false)) {
+        // (Not when a command hides behind a time - "at 3 pm stop the ORB arm, it is expiry day" is the timed command below.)
+        if (parsed.command == null && parsed.order == null && runCatching { com.optionslab.ira.MarketDays.expiryAsked(q) }.getOrDefault(false) &&
+            runCatching { com.optionslab.ira.Later.split(q, java.time.LocalDateTime.now(IST))?.rest?.let { Ask.parse(it) } }.getOrNull()
+                .let { r -> r?.command == null && r?.order == null }) {
             val today = com.optionslab.app.data.Market.today()
             val named = parsed.markets.filter { it in listOf(IraMarket.NIFTY, IraMarket.BANKNIFTY, IraMarket.FINNIFTY) }
             val ms = named.ifEmpty { listOf(IraMarket.NIFTY, IraMarket.BANKNIFTY, IraMarket.FINNIFTY) }
@@ -2117,7 +2121,14 @@ object IraHub {
     }
 
     /** A message from Jarvis itself (the morning check). */
-    fun note(text: String) = reply(text)
+    /** Messages Jarvis posted on his own ([note]): "what did I miss" lists only these. Bounded. */
+    private val unaskedIds: MutableSet<Long> = java.util.Collections.synchronizedSet(LinkedHashSet())
+
+    fun note(text: String) {
+        val m = Msg(true, text)
+        synchronized(unaskedIds) { unaskedIds += m.id; while (unaskedIds.size > 200) unaskedIds.remove(unaskedIds.first()) }
+        _state.update { it.copy(messages = (it.messages + m).takeLast(MAX_MESSAGES)) }
+    }
 
     private fun reply(text: String) {
         _state.update { it.copy(messages = (it.messages + Msg(true, text)).takeLast(MAX_MESSAGES)) }
