@@ -87,6 +87,9 @@ class JarvisVoice : Service() {
                 "\"Speech Services by Google\" in the Play Store and download English under Settings, System, Languages, On-device speech recognition)"
             SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> "the phone's speech service is busy (another app may be using it)"
             SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> "the microphone permission is missing"
+            // 11: the speech service crashed or restarted (often just after a language pack is added or updated).
+            11 -> "the phone's speech service disconnected (it restarted - often just after a language is added); I reconnect by myself"
+            10 -> "the phone's speech service had too many requests; I slow down by myself"
             SpeechRecognizer.ERROR_NETWORK, SpeechRecognizer.ERROR_NETWORK_TIMEOUT, SpeechRecognizer.ERROR_SERVER -> "the speech service wanted the network (code $e)"
             else -> "the speech service failed (code $e)"
         }
@@ -575,6 +578,15 @@ class JarvisVoice : Service() {
                 // Boss, 4 Oct ("why can't you hear me" -> "the speech service refused the request"): the on-device
                 // recognizer is left in a bad state - it is made anew at once (not after 3 failures) and given a second
                 // before the next turn; when the phone has no on-device recognition at all, he says what to install.
+                // 11: the speech service crashed or restarted - the recognizer is dead; made anew at once (Boss, 4 Oct).
+                11 -> {
+                    errorsInRow++; lastError = error to SystemClock.elapsedRealtime()
+                    runCatching { rec?.destroy() }
+                    rec = runCatching { SpeechRecognizer.createOnDeviceSpeechRecognizer(this@JarvisVoice).also { it.setRecognitionListener(this) } }.getOrNull()
+                    pickLanguage()
+                    IraActivity.add("Reconnected listening (the phone's speech service had restarted).")
+                    again(minOf(30_000L, 1_000L shl minOf(errorsInRow - 1, 5)))
+                }
                 SpeechRecognizer.ERROR_CLIENT -> {
                     clientErrors++; errorsInRow++; lastError = error to SystemClock.elapsedRealtime()
                     // Boss's phone (4 Oct) has English (US) and Hindi on-device, not English (India): some recognizers
