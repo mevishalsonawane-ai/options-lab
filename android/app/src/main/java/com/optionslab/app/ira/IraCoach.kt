@@ -4,6 +4,7 @@ import com.optionslab.app.data.AppSettings
 import com.optionslab.app.data.Broker
 import com.optionslab.app.data.Paper
 import com.optionslab.ira.AppFacts
+import kotlinx.coroutines.async
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -237,7 +238,9 @@ internal object IraCoach {
         if (!m.isTradingDay(m.today()) || !com.optionslab.ira.MisNudge.due(m.minuteNow()) || !Broker.loggedIn) return
         val key = "jarvis.mis.told"
         if (com.optionslab.app.security.SecurePrefs.getString(key) == m.today().toString()) return
-        val open = kotlinx.coroutines.withTimeoutOrNull(15_000) { runCatching { Broker.positionBook().net }.getOrNull() } ?: return
+        // The read blocks on the network: run apart, so the 15 s limit really ends the wait (the read itself may go on).
+        val read = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).async { runCatching { Broker.positionBook().net }.getOrNull() }
+        val open = kotlinx.coroutines.withTimeoutOrNull(15_000) { read.await() } ?: return
         com.optionslab.app.security.SecurePrefs.put(key, m.today().toString())
         val mis = open.filter { it.product.equals("MIS", true) && it.qty != 0 }.map { it.symbol to it.qty }
         val text = com.optionslab.ira.MisNudge.say(mis) ?: return

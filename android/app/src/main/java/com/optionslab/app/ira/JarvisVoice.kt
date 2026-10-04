@@ -282,7 +282,9 @@ class JarvisVoice : Service() {
         val mutedUntil: Long get() = runCatching { com.optionslab.app.security.SecurePrefs.getString("jarvis.mute.until")?.toLong() }.getOrNull() ?: 0L
 
         fun muteFor(minutes: Int) {
-            runCatching { com.optionslab.app.security.SecurePrefs.put("jarvis.mute.until", (System.currentTimeMillis() + minutes.coerceIn(1, 480) * 60_000L).toString()) }
+            // A timed quiet replaces a lasting mute: he speaks again by itself when it ends, as he says.
+            runCatching { com.optionslab.app.security.SecurePrefs.put("jarvis.mute", false)
+                com.optionslab.app.security.SecurePrefs.put("jarvis.mute.until", (System.currentTimeMillis() + minutes.coerceIn(1, 480) * 60_000L).toString()) }
             instance?.get()?.hush(); JarvisSpeaker.stop()
         }
 
