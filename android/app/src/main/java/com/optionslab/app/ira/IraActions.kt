@@ -359,13 +359,16 @@ internal object IraActions {
         val need = com.optionslab.ira.Verify.needs(k)
         if (need.isEmpty() || com.optionslab.ira.Plan.failed(result)) return result
         var problem: String? = null
+        var note: String? = null
         for (wait in listOf(1_500L, 3_000L)) {
             kotlinx.coroutines.delay(wait)
-            problem = runCatching { com.optionslab.ira.Verify.problem(k, facts(need)) }.getOrNull()
-            if (problem == null) break
+            val f = runCatching { facts(need) }.getOrNull() ?: continue
+            problem = com.optionslab.ira.Verify.problem(k, f)
+            note = com.optionslab.ira.Verify.note(k, f)
+            if (problem == null && note == null) break
         }
         if (problem != null) IraActivity.add("Checked my own work: $problem.")
-        return com.optionslab.ira.Verify.say(result, problem, checked = true)
+        return com.optionslab.ira.Verify.say(result, problem, checked = true) + (note?.let { " $it" } ?: "")
     }
 
     /** The facts [need] names, read from the app now (one that cannot be read stays null: not judged). */
@@ -373,9 +376,10 @@ internal object IraActions {
         val s = runCatching { AppSettings.load() }.getOrNull()
         val live = s?.live == true
         fun <T> read(name: String, f: () -> T): T? = if (name in need) runCatching(f).getOrNull() else null
+        // Both accounts: a close and the emergency exit close paper and Zerodha positions alike.
         val positions = if ("positions" in need) runCatching {
-            if (live) com.optionslab.app.data.Broker.positionBook().net.count { it.open }
-            else com.optionslab.app.data.Paper.snapshot().positions.positions.count { it.quantity != 0 }
+            com.optionslab.app.data.Paper.snapshot().positions.positions.count { it.quantity != 0 } +
+                (if (Broker.loggedIn) Broker.positionBook().net.count { it.open } else 0)
         }.getOrNull() else null
         val orders = if ("orders" in need) runCatching {
             if (live) com.optionslab.app.data.Broker.orders().count { it.working }

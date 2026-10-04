@@ -1020,10 +1020,15 @@ object IraHub {
         }
         // A request in steps ("stop all strategies, then kill switch on and switch to paper"): one plan, one Confirm, done
         // in order through the same gates as each step alone. Never with a time (those go below) and never an order.
-        if (com.optionslab.app.BuildConfig.JARVIS && !runCatching { com.optionslab.ira.Later.mentionsTime(q) }.getOrDefault(true)) {
-            val steps = runCatching { com.optionslab.ira.Plan.steps(q) { s -> Ask.parse(s).let { it.command != null && it.order == null && it.command?.kind != com.optionslab.ira.Command.Kind.PRACTICE } ||
+        if (com.optionslab.app.BuildConfig.JARVIS && !GOLD_ONLY_TALK && !com.optionslab.app.BuildConfig.GOLD &&
+            !runCatching { com.optionslab.ira.Later.mentionsTime(q) }.getOrDefault(true)) {
+            // Only steps that lower risk (and questions): anything else is asked alone, where its own gates apply.
+            val steps = runCatching { com.optionslab.ira.Plan.steps(q) { s -> Ask.parse(s).let { it.order == null && it.command?.kind in com.optionslab.ira.Plan.ALLOWED } ||
                 com.optionslab.ira.Toolbox.isRead(s) } }.getOrNull()
             if (steps != null) { planAsked(q, steps); return }
+            // In steps, but with an action a plan may not hold: refused whole (never just its first step done).
+            val any = runCatching { com.optionslab.ira.Plan.steps(q) { s -> Ask.parse(s).let { it.order == null && it.command != null } || com.optionslab.ira.Toolbox.isRead(s) } }.getOrNull()
+            if (any != null) { _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, com.optionslab.ira.Plan.ONLY_LOWERING)).takeLast(MAX_MESSAGES)) }; return }
         }
         // A command for a later time ("start all the arms tomorrow at 9am"): set only once confirmed, run by an alarm then.
         // A request that names a time is never done now: set for that time (allowed kinds, confirmed), or refused - an

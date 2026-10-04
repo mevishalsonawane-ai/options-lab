@@ -10,8 +10,9 @@ class VerifyTest {
     @Test fun jarvisChecksTheEffect() {
         assertNull(Verify.problem(Kind.KILL_ON, Verify.Facts(killOn = true)))
         assertEquals("the kill switch still reads off", Verify.problem(Kind.KILL_ON, Verify.Facts(killOn = false)))
-        assertEquals("an arm is still armed", Verify.problem(Kind.STOP_ALL, Verify.Facts(botsStopped = true, anyArmed = true)))
-        assertEquals("2 positions are still open (an exit may still be filling)", Verify.problem(Kind.CLOSE_ALL, Verify.Facts(openPositions = 2)))
+        assertNull(Verify.problem(Kind.STOP_ALL, Verify.Facts(botsStopped = true, anyArmed = true)))   // arms stand down on the stop
+        assertNull(Verify.problem(Kind.CLOSE_ALL, Verify.Facts(openPositions = 2)))                      // not a failure...
+        assertEquals("2 positions still show open (exits may still be filling): check Positions.", Verify.note(Kind.CLOSE_ALL, Verify.Facts(openPositions = 2)))
         assertNull(Verify.problem(Kind.CLOSE_ALL, Verify.Facts()))                       // not read: not judged
         assertTrue(Verify.needs(Kind.ALARM_ADD).isEmpty())
     }

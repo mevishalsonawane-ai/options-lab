@@ -65,14 +65,9 @@ internal object IraNewsTrades {
      * after his yes with the fingerprint.
      */
     var paperFirst: Boolean
-        get() = runCatching {
-            val p = com.optionslab.app.security.SecurePrefs
-            // A choice Boss made before ("keep your trades on paper" or "let them go live") is kept; only the default changed.
-            val old = "jarvis.trades.paper"
-            val oldSet = p.getBoolean(old, true) == p.getBoolean(old, false)
-            p.getBoolean("jarvis.trades.paper.v2", if (oldSet) p.getBoolean(old, true) else true)
-        }.getOrDefault(true)
-        set(v) { runCatching { com.optionslab.app.security.SecurePrefs.put("jarvis.trades.paper.v2", v) } }
+        // A new key, paper to start (review, 4 Oct): a "live" chosen earlier by voice, without the fingerprint, is not kept.
+        get() = runCatching { com.optionslab.app.security.SecurePrefs.getBoolean("jarvis.trades.paper.v3", true) }.getOrDefault(true)
+        set(v) { runCatching { com.optionslab.app.security.SecurePrefs.put("jarvis.trades.paper.v3", v) } }
 
     const val DEFAULT_LIMIT = 3_000.0
     /** Rupees Jarvis's trades may lose in a day before it suggests no more (its own limit, apart from the app's). */

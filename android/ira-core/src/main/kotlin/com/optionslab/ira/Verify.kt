@@ -20,10 +20,11 @@ object Verify {
         Kind.KILL_ON -> setOf("kill")
         Kind.KILL_OFF -> setOf("kill")
         Kind.MODE_PAPER -> setOf("live")
-        Kind.STOP_ALL -> setOf("bots", "armed")
+        Kind.STOP_ALL -> setOf("bots")
         Kind.CLOSE_ALL -> setOf("positions")
         Kind.CANCEL_ALL -> setOf("orders")
         Kind.EXIT_ALL -> setOf("kill", "positions")
+        Kind.CLOSE_ONE, Kind.CANCEL_ONE, Kind.STOP_ONE -> emptySet()
         else -> emptySet()
     }
 
@@ -32,16 +33,17 @@ object Verify {
         Kind.KILL_ON -> if (f.killOn == false) "the kill switch still reads off" else null
         Kind.KILL_OFF -> if (f.killOn == true) "the kill switch still reads on" else null
         Kind.MODE_PAPER -> if (f.live == true) "the app is still in Live" else null
-        Kind.STOP_ALL -> when { f.botsStopped == false -> "the strategies are not marked stopped"; f.anyArmed == true -> "an arm is still armed"; else -> null }
-        Kind.CLOSE_ALL -> f.openPositions?.takeIf { it > 0 }?.let { "$it position${if (it > 1) "s are" else " is"} still open (an exit may still be filling)" }
+        // (The arms stay armed and stand down on the day's stop: only the stop is looked for.)
+        Kind.STOP_ALL -> if (f.botsStopped == false) "the strategies are not marked stopped" else null
+        Kind.CLOSE_ALL -> null                                       // exits fill in their time: told as a note ([note])
         Kind.CANCEL_ALL -> f.workingOrders?.takeIf { it > 0 }?.let { "$it order${if (it > 1) "s are" else " is"} still working" }
-        Kind.EXIT_ALL -> when {
-            f.killOn == false -> "the kill switch still reads off"
-            (f.openPositions ?: 0) > 0 -> "${f.openPositions} position${if (f.openPositions!! > 1) "s are" else " is"} still open (an exit may still be filling)"
-            else -> null
-        }
+        Kind.EXIT_ALL -> if (f.killOn == false) "the kill switch still reads off" else null
         else -> null
     }
+
+    /** Not a failure, but worth saying: positions still open after a close (exits may still be filling). */
+    fun note(k: Kind, f: Facts): String? = if (k == Kind.CLOSE_ALL || k == Kind.EXIT_ALL)
+        f.openPositions?.takeIf { it > 0 }?.let { "$it position${if (it > 1) "s" else ""} still show open (exits may still be filling): check Positions." } else null
 
     /** The result as said back: as it was, plus the check's word. */
     fun say(result: String, problem: String?, checked: Boolean): String = when {

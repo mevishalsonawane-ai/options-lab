@@ -9,6 +9,18 @@ package com.optionslab.ira
 object Plan {
     const val MAX_STEPS = 5
 
+    /**
+     * The only actions a plan may hold (review, 4 Oct): each lowers risk and is prepared without doing anything. Any
+     * other action (starting, the kill switch off, limits, settings, anything that acts as it is read) is asked for
+     * on its own, where its own gates apply (Boss's voice, the high-risk refusals).
+     */
+    val ALLOWED = setOf(Command.Kind.STOP_ALL, Command.Kind.STOP_ONE, Command.Kind.CANCEL_ALL, Command.Kind.CANCEL_ONE,
+        Command.Kind.CLOSE_ALL, Command.Kind.CLOSE_ONE, Command.Kind.KILL_ON, Command.Kind.MODE_PAPER, Command.Kind.AUTOPILOT_OFF,
+        Command.Kind.EXIT_ALL)
+
+    /** Said when a request in steps holds an action a plan may not. */
+    const val ONLY_LOWERING = "I make a plan only of steps that lower risk (stop, cancel, close, kill switch on, paper, the emergency exit) and questions, Boss. Ask for the others one at a time - nothing was done."
+
     private val STRONG = Regex("(?i)\\s*(?:,\\s*)?\\b(?:and then|then|after that|afterwards|next)\\b\\s*|\\s*;\\s*")
     private val AND = Regex("(?i)\\s*(?:,\\s*)?\\band\\b\\s*|\\s*,\\s*")
 
