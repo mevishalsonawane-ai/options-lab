@@ -21,10 +21,19 @@ import com.optionslab.app.ui.theme.Type
 fun orderSource(owners: Map<String, String>, venueId: String, tag: String? = null): Pair<String, Boolean> =
     com.optionslab.app.data.Origins.of(owners, venueId, tag)
 
-/** The label as a small pill under an order or trade. */
+/** The label as a small pill under an order or trade, with the order's id beside it ("#a1b2c3d4"). */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 fun OrderSourcePill(owners: Map<String, String>, venueId: String, tag: String? = null) {
-    SourcePill(orderSource(owners, venueId, tag))
+    // A row that wraps: the id goes under the pill when there is no room beside it (large fonts, narrow screens).
+    androidx.compose.foundation.layout.FlowRow {
+        SourcePill(orderSource(owners, venueId, tag))
+        com.optionslab.app.data.Origins.shortId(venueId.substringAfter(':'))?.let { id ->
+            val p = LocalPalette.current
+            Text(id, maxLines = 1, softWrap = false, style = Type.label.copy(color = p.inkSoft, fontSize = 10.sp),
+                modifier = Modifier.padding(start = 6.dp, top = 3.dp))
+        }
+    }
 }
 
 /** A source label ([orderSource], or a position's [com.optionslab.app.data.Origins.position]) as a small pill. */

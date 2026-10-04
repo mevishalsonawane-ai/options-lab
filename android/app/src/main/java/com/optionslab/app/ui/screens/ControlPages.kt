@@ -94,8 +94,8 @@ private val secure get() = DialogProperties(securePolicy = com.optionslab.app.se
 @Composable
 fun AlarmsPage(model: AppModel) {
     val p = LocalPalette.current
-    val alarms by model.alarms.collectAsState()
-    val quotes by model.quotes.collectAsState()
+    val alarms by model.alarms.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val quotes by model.quotes.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     var symbol by remember { mutableStateOf("NIFTY") }
     var above by remember { mutableStateOf(false) }
     var level by remember { mutableStateOf("") }
@@ -139,7 +139,7 @@ fun AlarmsPage(model: AppModel) {
             }
         }
         item {
-            val st by model.settings.collectAsState()
+            val st by model.settings.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
             LedgerCard(title = "Account P&L alerts") {
                 val losses = listOf(0.0, 2_000.0, 5_000.0, 10_000.0, 25_000.0)
                 ParamTokens("When today's loss reaches", losses.map { (if (it == 0.0) "off" else "-" + rs(it)) to (it == st.pnlLossAlert) }) { i -> model.update { it.copy(pnlLossAlert = losses[i]) } }
@@ -161,9 +161,9 @@ fun AlarmsPage(model: AppModel) {
 @Composable
 fun DataPage(model: AppModel) {
     val p = LocalPalette.current
-    val s by model.settings.collectAsState()
-    val job by model.jobState.collectAsState()
-    val prov by model.provenance.collectAsState()
+    val s by model.settings.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val job by model.jobState.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val prov by model.provenance.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     var confirmWipe by remember { mutableStateOf(false) }
     var wiping by remember { mutableStateOf(false) }
     val scope = androidx.compose.runtime.rememberCoroutineScope()
@@ -173,14 +173,14 @@ fun DataPage(model: AppModel) {
     var device by remember { mutableStateOf<List<java.time.LocalDate>?>(null) }
     var bytes by remember { mutableStateOf<Long?>(null) }
     var manifests by remember { mutableStateOf(mapOf<String, List<Manifest.Entry>>()) }
-    LaunchedEffect(job.running, reread) {
+    LaunchedEffect(job.running, reread) { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main.immediate) {
         kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
             val d = Store.deviceExpiryDays()
             val b = Store.deviceBytes()
             val m = listOf("NIFTY", "BANKNIFTY").associateWith { Store.manifest(it) }
             Triple(d, b, m)
         }.let { (d, b, m) -> device = d; bytes = b; manifests = m }
-    }
+    } }
     Page {
         item { PageTitle("Data & Harvest", "No free source serves expired contracts: a day not collected is gone") }
         item {
@@ -256,8 +256,8 @@ fun DataPage(model: AppModel) {
 fun SecurityPage(model: AppModel) {
     val p = LocalPalette.current
     val context = LocalContext.current
-    val s by model.settings.collectAsState()
-    val findings by model.integrity.collectAsState()
+    val s by model.settings.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val findings by model.integrity.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     var changing by remember { mutableStateOf(false) }
     val pinScope = androidx.compose.runtime.rememberCoroutineScope()
     var erasing by remember { mutableStateOf(false) }
@@ -452,7 +452,7 @@ fun SecurityPage(model: AppModel) {
 fun SchedulePage(model: AppModel) {
     val p = LocalPalette.current
     val context = LocalContext.current
-    val s by model.settings.collectAsState()
+    val s by model.settings.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     val fmt = DateTimeFormatter.ofPattern("EEE d MMM, HH:mm")
     Page {
         item { PageTitle("Schedules & Notices", "The strategy's day, kept by the phone") }
@@ -563,7 +563,7 @@ private fun plainPermission(p: String): String = when (p.substringAfterLast('.')
 @Composable
 private fun HolidaysCard(model: AppModel) {
     val p = LocalPalette.current
-    val h by model.holidays.collectAsState()
+    val h by model.holidays.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     var text by remember { mutableStateOf("") }
     LedgerCard(title = "Market holidays") {
         val up = h.upcoming(com.optionslab.app.data.Market.today())
@@ -627,7 +627,7 @@ fun RiskPage(model: AppModel) {
 @Composable
 private fun GuardCard(model: AppModel) {
     val p = LocalPalette.current
-    val s by model.settings.collectAsState()
+    val s by model.settings.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     var confirmKill by remember { mutableStateOf<Boolean?>(null) }
     confirmKill?.let { turnOn ->
         AlertDialog(

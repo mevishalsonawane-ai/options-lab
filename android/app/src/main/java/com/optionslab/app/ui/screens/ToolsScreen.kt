@@ -65,9 +65,9 @@ private fun f1(x: Double) = String.format(Locale.ENGLISH, "%,.1f", x)
 @Composable
 fun ToolsScreen(model: AppModel, view: String, onView: (String) -> Unit, onChart: (String, String) -> Unit) {
     val p = LocalPalette.current
-    val s by model.settings.collectAsState()
-    val snap by model.tools.collectAsState()
-    val source by model.toolsSource.collectAsState()
+    val s by model.settings.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val snap by model.tools.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val source by model.toolsSource.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     var underlying by rememberSaveable { mutableStateOf("NIFTY") }
     var picked by remember { mutableStateOf<ChainPick?>(null) }
     val views = listOf("chain" to "Chain", "oi" to "OI · Max pain", "straddle" to "Straddle", "iv" to "IV smile", "gex" to "GEX",
@@ -84,7 +84,7 @@ fun ToolsScreen(model: AppModel, view: String, onView: (String) -> Unit, onChart
     }
     LaunchedEffect(underlying, s.live) { model.loadTools(underlying) }
     // Live mode with the Zerodha stream up: the chain re-prices every 5 s from the ticks (no quote calls).
-    val streamStatus by com.optionslab.app.data.KiteStream.status.collectAsState()
+    val streamStatus by com.optionslab.app.data.KiteStream.status.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     val streaming = s.live && streamStatus == com.optionslab.app.data.KiteStream.Status.LIVE
     LaunchedEffect(underlying, streaming) {
         while (streaming) { kotlinx.coroutines.delay(5_000); model.loadTools(underlying, quiet = true) }

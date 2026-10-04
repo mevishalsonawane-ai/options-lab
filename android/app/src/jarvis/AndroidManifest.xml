@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- IraAlgo and IraGoldAlgo: the microphone for "Jarvis", heard by the phone's ON-DEVICE recognizer. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <!-- Only the text-to-speech engines, so Jarvis can answer aloud: no other app is visible. -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.TTS_SERVICE" />
+        </intent>
+    </queries>
+    <application>
+        <service
+            android:name="com.optionslab.app.ira.JarvisVoice"
+            android:exported="false"
+            android:foregroundServiceType="microphone" />
+        <!-- The model download (only after the owner taps Download): Hugging Face only, checked against its SHA-256. -->
+        <service
+            android:name="com.optionslab.app.ira.ModelDownload"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+        <!-- Approve / Reject on a news-trade pop-up: the app's own buttons only. -->
+        <receiver
+            android:name="com.optionslab.app.ira.JarvisActionReceiver"
+            android:exported="false" />
+        <!-- Jarvis's home-screen widget. Exported because the launcher binds it; its buttons reach only the app's own receiver. -->
+        <receiver
+            android:name="com.optionslab.app.widget.JarvisWidget"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_jarvis_info" />
+        </receiver>
+    </application>
+</manifest>

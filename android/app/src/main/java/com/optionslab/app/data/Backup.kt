@@ -47,7 +47,9 @@ object Backup {
     // Not carried: protections (they name this phone's live Zerodha orders) and the holiday list
     // (fetched from NSE; a crafted one could mark every day closed and stop the market watch).
     private val FILES = listOf("f" to "strategies.vault", "f" to "orb.vault", "f" to "paper.vault", "f" to "pine.vault",
-        "n" to "ledger.vault", "n" to "alarms.vault", "n" to "live_trades.vault", "n" to "journal.vault")
+        "n" to "ledger.vault", "n" to "alarms.vault", "n" to "live_trades.vault", "n" to "journal.vault",
+        // What Ira / Jarvis learned (the pattern book; proposals, review journal and conversation).
+        "n" to "ira-book.vault", "n" to "ira-state.vault")
 
     /**
      * Preferences that stay on this phone only: never written to a backup, never taken from one.
@@ -59,8 +61,13 @@ object Backup {
      * must never be able to switch on live trading, clear the kill switch, loosen a limit or
      * weaken a lock. A new setting of that kind needs its prefix added here.
      */
-    private val PRIVATE = listOf("kite.", "draft.kite", "pin.", "tls.", "ol.vault", "hb.", "sq.", "report.", "k.", "g.", "sec.", "lock.",
-        "ui.widgetPnl", "w.", "intent.", "relay.", "breaker.")
+    private val PRIVATE = listOf("jarvis.memory", "kite.", "draft.kite", "pin.", "tls.", "ol.vault", "hb.", "sq.", "report.", "k.", "g.", "sec.", "lock.",
+        "ui.widgetPnl", "w.", "intent.", "relay.", "breaker.",
+        // Jarvis: the owner's voice print never leaves the phone; its trades' safety (paper first, loss limit, risk) and
+        // the autopilot are this phone's alone, like the other limits. Its learning (the study, records) is carried.
+        "jarvis.voiceprint", "jarvis.trades.", "jarvis.autopilot",
+        // The record that earns live trading and lot sizing, and the model's verified mark, are never taken from a file.
+        "jarvis.newstrades", "ira.model.verified")
     const val DISARM = "restore.disarm"
 
     private fun file(ctx: Context, dir: String, name: String) = File(if (dir == "f") ctx.filesDir else ctx.noBackupFilesDir, name)
@@ -123,7 +130,7 @@ object Backup {
                 c.updateAAD(MAGIC)
                 MAGIC + salt + iv + c.doFinal(body)
             } finally { body.fill(0) }
-        }
+        }.also { runCatching { SecurePrefs.put("backup.last", Market.today().toString()) } }   // for the backup reminder
     }
 
     private fun snapshot(ctx: Context): ByteArray {
@@ -187,7 +194,8 @@ object Backup {
         for ((dir, name) in FILES) {
             val f = file(ctx, dir, name)
             val b64 = files.optString("$dir/$name").ifEmpty { null }
-            if (b64 == null) { f.delete(); continue }
+            // An older backup without Jarvis's learning leaves the phone's own in place.
+            if (b64 == null) { if (!name.startsWith("ira-")) f.delete(); continue }
             val bytes = disarmed(name, Base64.decode(b64, Base64.NO_WRAP))
             try {
                 if (name.endsWith(".vault")) Vault.writeFile(f, bytes) else f.writeBytes(bytes)

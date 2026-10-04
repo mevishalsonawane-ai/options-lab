@@ -46,7 +46,7 @@ jobs:
           java-version: "17"
       - uses: gradle/actions/setup-gradle@v4
       # No Android SDK on purpose: the engine must build on a bare JDK.
-      - run: env -u ANDROID_HOME -u ANDROID_SDK_ROOT ./gradlew --no-daemon :engine:test :engine:jacocoTestCoverageVerification
+      - run: env -u ANDROID_HOME -u ANDROID_SDK_ROOT ./gradlew --no-daemon :engine:test :engine:jacocoTestCoverageVerification :ira-core:test
 
   apk:
     name: Build APK
@@ -124,6 +124,18 @@ jobs:
           else ./gradlew --no-daemon :app:assembleIraDebug :app:assembleRelease; fi
       - name: Sandbox report (every permission the APK holds)
         run: cat app/build/reports/sandbox/*.txt
+      # The microphone is for "Jarvis": both apps hold it (on-device recognition only).
+      - name: Microphone for Jarvis
+        run: |
+          aapt=$(ls "$ANDROID_HOME"/build-tools/*/aapt2 | sort -V | tail -1)
+          bad=0
+          for a in app/build/outputs/apk/*/*/*.apk; do
+            if "$aapt" dump permissions "$a" | grep -q "android.permission.RECORD_AUDIO"; then mic=yes; else mic=no; fi
+            want=yes
+            echo "$a: microphone $mic (expected $want)"
+            [ "$mic" = "$want" ] || bad=1
+          done
+          [ "$bad" = 0 ] || { echo "::error::The microphone permission is where it must not be (or missing)."; exit 1; }
       - name: Release signing certificate (public fingerprint only)
         run: |
           cat "$RUNNER_TEMP/signing.txt" 2>/dev/null || true
@@ -151,6 +163,21 @@ jobs:
           gh release upload latest-apk "$RUNNER_TEMP/IraAlgo.apk" "$RUNNER_TEMP/IraGoldAlgo.apk" --clobber
           echo "APK: https://github.com/${{ github.repository }}/releases/download/latest-apk/IraAlgo.apk"
           echo "APK: https://github.com/${{ github.repository }}/releases/download/latest-apk/IraGoldAlgo.apk"
+      # The Ira branch's build on its own link, so the owner's latest-apk links above only change from the main line:
+      # https://github.com/<repo>/releases/download/jarvis-apk/IraAlgo.apk (and IraGoldAlgo.apk; the release's tag
+      # keeps its old name: the workflow token may update a release but not create one)
+      - name: Publish the branch preview to the jarvis-apk release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/claude/ira-assistant'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SHA: ${{ github.sha }}
+        run: |
+          cp "$(ls app/build/outputs/apk/ira/release/*.apk | head -1)" "$RUNNER_TEMP/IraAlgo.apk"
+          cp "$(ls app/build/outputs/apk/gold/release/*.apk | head -1)" "$RUNNER_TEMP/IraGoldAlgo.apk"
+          notes="Preview build of ${SHA::7} ($(date -u '+%Y-%m-%d %H:%M UTC')). Installs over IraAlgo / IraGoldAlgo (same signing key)."
+          gh release edit jarvis-apk --title "IraAlgo - branch preview" --notes "$notes"
+          gh release upload jarvis-apk "$RUNNER_TEMP/IraAlgo.apk" "$RUNNER_TEMP/IraGoldAlgo.apk" --clobber
+          gh release delete-asset jarvis-apk JarvisAlgo.apk -y 2>/dev/null || true
       - uses: actions/upload-artifact@v4
         continue-on-error: true   # a full artifact quota must not turn a good build red; the release above has the APK
         with:
@@ -188,8 +215,14 @@ jobs:
           SDKM=$(ls -d "$ANDROID_HOME"/cmdline-tools/*/bin/sdkmanager | sort -V | tail -1)
           yes | "$SDKM" --licenses > /dev/null || true
       - uses: gradle/actions/setup-gradle@v4
+      # Robolectric fetches its Android runtime jar from Maven Central on first use, into ~/.m2; kept between runs
+      # so four shards do not each download it (Maven Central rate-limits them: HTTP 429 failed every test once).
+      - uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository/org/robolectric
+          key: robolectric-android-all-${{ hashFiles('android/app/build.gradle.kts') }}
+          restore-keys: robolectric-android-all-
       # No secrets here: the tests use made-up values and an in-memory stand-in for the Keystore.
-      # Robolectric fetches its Android runtime jar from Maven Central on first use.
       - name: Unit and UI tests, with coverage
         run: |
           # A stuck test JVM says nothing (not even the in-process samplers print when its heap thrashes):
@@ -206,7 +239,7 @@ jobs:
           # Each step may fail (the dumper already gone, or between children): under bash -e a failing command in
           # the trap ended a passing step with exit 1 ("BUILD SUCCESSFUL ... Terminated").
           trap 'pkill -P $dumper 2>/dev/null || true; kill $dumper 2>/dev/null || true' EXIT
-          ./gradlew --no-daemon -PtestShard=${{ matrix.shard }}/4 :app:testIraDebugUnitTest :app:createIraDebugUnitTestCoverageReport
+          ./gradlew --no-daemon -PtestShard=${{ matrix.shard }}/4 -PtestsWithoutJarvis=true :app:testIraDebugUnitTest :app:createIraDebugUnitTestCoverageReport
       - name: Coverage summary
         if: always()
         run: python3 tools/coverage_summary.py "$(find app/build/reports/coverage -name report.xml 2>/dev/null | head -1)" app/build/test-results/testIraDebugUnitTest | tee -a "$GITHUB_STEP_SUMMARY"

@@ -29,7 +29,8 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
       - name: Build the IraGoldAlgo release APK
         working-directory: android
-        run: ./gradlew --no-daemon :app:assembleGoldRelease
+        # Without the arm64-only model runner (Jarvis's on-device model), so it installs on the x86_64 emulator.
+        run: ./gradlew --no-daemon -PnoLlm=true :app:assembleGoldRelease
       - name: Enable KVM
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules

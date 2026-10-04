@@ -118,8 +118,8 @@ private val TILE = 26.dp
 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 fun PnlCalendarScreen(model: AppModel) {
-    val s by model.settings.collectAsState()
-    val tick by model.pnlDays.collectAsState()
+    val s by model.settings.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val tick by model.pnlDays.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     var live by remember { mutableStateOf(s.live) }
     val thisMonth = YearMonth.from(Market.today())
     var month by remember { mutableStateOf(thisMonth) }
@@ -127,7 +127,7 @@ fun PnlCalendarScreen(model: AppModel) {
     // Which strategy's trips (All = the whole account), and month or year view.
     var owner by remember { mutableStateOf("All") }
     var yearView by remember { mutableStateOf(false) }
-    val owners by model.orderOwners.collectAsState()
+    val owners by model.orderOwners.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     LaunchedEffect(Unit) { model.refreshStrategies() }
     val trips by produceState<List<com.optionslab.engine.RoundTrips.Trip>>(emptyList(), live, tick) {
         value = withContext(Dispatchers.IO) { runCatching { com.optionslab.app.data.TradeBook.trips(live) }.getOrDefault(emptyList()) }
@@ -147,8 +147,8 @@ fun PnlCalendarScreen(model: AppModel) {
     val first = all.keys.minOrNull()?.let { YearMonth.from(it) }
     // Today is shown live from the account as it stands now, not from the last recorded reading.
     val today = Market.today()
-    val paperNow by model.paper.collectAsState()
-    val accountNow by model.account.collectAsState()
+    val paperNow by model.paper.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val accountNow by model.account.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     // After midnight (paper, until its 03:00 reset) or before 09:00 (Zerodha) the account still shows the
     // previous day, which is already on its own tile.
     val todayLive: DailyPnl.Day? = if (DailyPnl.sessionDay(live) != today) null else if (live) (accountNow as? com.optionslab.app.ui.Load.Done)?.value
@@ -701,10 +701,10 @@ internal fun goldDays(trades: List<com.optionslab.app.data.GoldPaper.Trade>): Ma
  */
 @Composable
 fun GoldPnlCalendar() {
-    val book by com.optionslab.app.data.GoldPaper.book.collectAsState()
-    val trend by com.optionslab.app.data.GoldTrendPaper.book.collectAsState()
-    val dip by com.optionslab.app.data.GoldDipPaper.book.collectAsState()
-    val tas by com.optionslab.app.data.GoldTasPaper.book.collectAsState()
+    val book by com.optionslab.app.data.GoldPaper.book.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val trend by com.optionslab.app.data.GoldTrendPaper.book.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val dip by com.optionslab.app.data.GoldDipPaper.book.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val tas by com.optionslab.app.data.GoldTasPaper.book.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     val allTrades = remember(book.trades, trend.trades, dip.trades, tas.trades) { (book.trades + trend.trades + dip.trades + tas.trades).sortedBy { it.exitTime } }
     val all = remember(allTrades) { goldDays(allTrades) }
     val thisMonth = YearMonth.from(com.optionslab.app.data.GoldPaper.now().plusMinutes(330).toLocalDate())

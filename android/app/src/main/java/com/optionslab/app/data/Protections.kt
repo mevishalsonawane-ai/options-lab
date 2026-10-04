@@ -413,6 +413,39 @@ object Protections {
         return cur.copy(best = n.best, stop = ns)
     }
 
+    /**
+     * Moves an active protection's stop to [newStop] by modifying its resting stop order in place (never cancel and
+     * re-place: if the broker refuses, the old stop stays where it was). Returns null when moved, else why not.
+     */
+    suspend fun moveStop(id: Long, newStop: Double): String? = lock.withLock {
+        val list = load()
+        val i = list.indexOfFirst { it.id == id && it.active }
+        if (i < 0) return@withLock "That protection is no longer active."
+        val p = list[i]
+        if (p.note == REMOVING) return@withLock "That protection is being removed."
+        val orderId = p.stopOrderId ?: return@withLock "It has no resting stop order to move."
+        val tick = if (p.tick > 0) p.tick else 0.05
+        val ns = Math.round(newStop / tick) * tick
+        if (p.live) {
+            if (!Broker.loggedIn) return@withLock "Not logged in to Zerodha."
+            val so = runCatching { Broker.orders().firstOrNull { it.id == orderId } }.getOrNull()
+                ?: return@withLock "The stop order was not found at Zerodha."
+            if (!so.working) return@withLock "The stop order is no longer working at Zerodha."
+            val side = if (p.qty > 0) Kite.Side.SELL else Kite.Side.BUY
+            val r = runCatching {
+                if (so.type == "SL-M") Broker.modify(so, so.qty, "SL-M", null, ns)
+                else Broker.modify(so, so.qty, "SL", stopLimit(ns, side, tick), ns)
+            }
+            if (r.isFailure) return@withLock "Zerodha did not move it: ${r.exceptionOrNull()?.message ?: "an error"}."
+        } else {
+            val r = runCatching { Paper.modify(orderId, null, null, ns) }.getOrNull()
+            if (r == null || !r.ok) return@withLock "The paper stop was not moved${r?.message?.let { ": $it" } ?: ""}."
+        }
+        list[i] = p.copy(stop = ns)
+        save(list)
+        null
+    }
+
     private fun Int.sign() = if (this > 0) 1 else if (this < 0) -1 else 0
 
     /** Reset paper: every paper stop / target / trail is dropped; Zerodha's are untouched. */

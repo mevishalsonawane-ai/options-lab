@@ -78,6 +78,7 @@ class IraAlgoApp : Application() {
         com.optionslab.app.data.GoldTrendPaper.init(this)
         com.optionslab.app.data.GoldDipPaper.init(this)
         com.optionslab.app.data.GoldTasPaper.init(this)
+        com.optionslab.app.ira.IraHub.init(this)
         Notifier.createChannels(this)      // before the disarm below, which may post a notice
         // First start after a restore: everything restored comes back disarmed and paper only.
         // Done HERE, synchronously, before onCreate returns - so before any receiver, alarm,

@@ -77,7 +77,7 @@ data class ChainPick(
 @Composable
 fun OptionOrderSheet(model: AppModel, pick: ChainPick, initialBuy: Boolean = true, initialLimit: Double? = null, area: String = "Option chart", onClose: () -> Unit) {
     val p = LocalPalette.current
-    val s by model.settings.collectAsState()
+    val s by model.settings.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     var buy by remember { mutableStateOf(initialBuy) }
     var lots by remember { mutableStateOf(1) }
     var limit by remember { mutableStateOf(initialLimit != null) }

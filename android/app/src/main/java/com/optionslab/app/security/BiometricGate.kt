@@ -42,6 +42,21 @@ object BiometricGate {
         }
     }
 
+    /** The phone has a fingerprint ready (no activity needed: for checks made in the background). */
+    fun fingerprintOn(context: android.content.Context): Boolean =
+        runCatching { BiometricManager.from(context).canAuthenticate(BIOMETRIC_STRONG) == BiometricManager.BIOMETRIC_SUCCESS }.getOrDefault(false)
+
+    /** The owner's fingerprint, asked once (no key: a yes or no for a confirmation, such as a live Jarvis trade). */
+    fun verify(activity: FragmentActivity, title: String, subtitle: String, onResult: (Boolean) -> Unit) {
+        val p = BiometricPrompt(activity, ContextCompat.getMainExecutor(activity), object : BiometricPrompt.AuthenticationCallback() {
+            override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) = onResult(true)
+            override fun onAuthenticationError(errorCode: Int, errString: CharSequence) = onResult(false)
+        })
+        val info = BiometricPrompt.PromptInfo.Builder().setTitle(title).setSubtitle(subtitle).setNegativeButtonText("Cancel")
+            .setAllowedAuthenticators(BIOMETRIC_STRONG).setConfirmationRequired(false).build()
+        p.authenticate(info)
+    }
+
     private fun keyStore() = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
 
     /** Creates the match-gated key. Called when the owner enables biometrics. */

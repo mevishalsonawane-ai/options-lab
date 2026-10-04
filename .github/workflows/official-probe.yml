@@ -1,0 +1,34 @@
+name: Official sources probe
+# Which official feeds (RBI, SEBI, NSE, BSE, PIB) answer from a server, with how many items - Jarvis's fixed list
+# of trusted sources is chosen from these. Read-only.
+on:
+  push:
+    branches: [claude/ira-assistant]
+    paths: [".github/workflows/official-probe.yml"]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Probe the feeds
+        run: |
+          for u in \
+            "https://www.rbi.org.in/pressreleases_rss.xml" \
+            "https://www.rbi.org.in/notifications_rss.xml" \
+            "https://www.rbi.org.in/speeches_rss.xml" \
+            "https://www.sebi.gov.in/sebirss.xml" \
+            "https://nsearchives.nseindia.com/content/RSS/Circulars.xml" \
+            "https://nsearchives.nseindia.com/content/RSS/Online_announcements.xml" \
+            "https://nsearchives.nseindia.com/content/RSS/Financial_Results.xml" \
+            "https://www.nseindia.com/api/fiidiiTradeReact" \
+            "https://www.nseindia.com/api/marketStatus" \
+            "https://www.bseindia.com/data/xml/notices.xml" \
+            "https://pib.gov.in/RssMain.aspx?ModId=6&Lang=1&Regid=3" ; do
+            code=$(curl -s -o f.xml -w "%{http_code} %{size_download} %{content_type}" -A "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/124 Mobile Safari/537.36" -H "Accept: application/rss+xml, application/xml, application/json, */*" --compressed --max-time 20 "$u")
+            n=$(grep -o "<item\|<entry" f.xml | wc -l)
+            first=$(grep -o "<title>[^<]*</title>\|<title><!\[CDATA\[[^]]*" f.xml | sed -n 2p | cut -c1-90)
+            echo "$code items=$n | $u | $first | $(head -c 120 f.xml | tr -d '\n')"
+          done

@@ -548,7 +548,11 @@ class BrokerScreensTest {
     }
 
     @Test fun aKeyDraftComesBack() {
+        // An earlier test's form writes its own draft as it closes (off the main thread): let that land first, so it
+        // cannot overwrite the draft this test leaves.
+        BrokerArea.settle(800)
         SecurePrefs.put("draft.kite.key", "draftkey1")
+        until("the draft kept") { SecurePrefs.getString("draft.kite.key") == "draftkey1" }
         val m = model()
         show { CredentialsForm(m) {} }
         until("the draft restored") { editable("API key").length == "draftkey1".length }

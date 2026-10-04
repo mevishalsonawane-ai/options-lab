@@ -30,10 +30,15 @@ android {
         buildConfigField("String", "EXPIRY_SHA256", "\"$digest\"")
 
         // The permission allowlist, so the running app can check itself too.
-        buildConfigField("String", "ALLOWED_PERMISSIONS", "\"${allowedPermissions().joinToString(",")}\"")
+        buildConfigField("String", "ALLOWED_PERMISSIONS", "\"${allowedPermissions(jarvis = true).joinToString(",")}\"")
 
         // The commit the build was made from (CI sets GITHUB_SHA): every build is "1.0.0", so this tells them apart.
         buildConfigField("String", "COMMIT", "\"${(System.getenv("GITHUB_SHA") ?: "local").take(7)}\"")
+
+        manifestPlaceholders["appLabel"] = "@string/app_name"
+        // Jarvis, the assistant (voice, chat, on-device model): in IraAlgo and IraGoldAlgo (where it only talks).
+        // -PtestsWithoutJarvis=true (CI's app tests): the screens and jobs as they are with Jarvis off, as those tests expect.
+        buildConfigField("boolean", "JARVIS", (project.findProperty("testsWithoutJarvis") != "true").toString())
     }
 
     // Two apps from one project: IraAlgo (NSE options, Zerodha, paper) and IraGoldAlgo (XAUUSD only, paper and alerts,
@@ -50,6 +55,19 @@ android {
             applicationId = "com.iragoldalgo.app"
             buildConfigField("boolean", "GOLD", "true")
         }
+    }
+
+    // Jarvis's on-device model runner (llama.cpp, fixed release) for 64-bit ARM phones.
+    // -PnoLlm=true (the x86_64 emulator check): built without it, so the APK installs there; the app then simply has no model.
+    if (project.findProperty("noLlm") != "true") {
+        externalNativeBuild { cmake { path = file("src/jarvis/cpp/CMakeLists.txt"); version = "3.22.1" } }
+        defaultConfig { ndk { abiFilters += "arm64-v8a" } }
+    }
+
+    // The microphone, the voice service and the widget: Jarvis's manifest, in both apps.
+    sourceSets {
+        getByName("ira").manifest.srcFile("src/jarvis/AndroidManifest.xml")
+        getByName("gold").manifest.srcFile("src/jarvis/AndroidManifest.xml")
     }
 
     signingConfigs {
@@ -141,6 +159,8 @@ android {
 }
 
 dependencies {
+    // Ira, the on-device trading assistant (plain Kotlin: the brain, patterns, learning, news, answers).
+    implementation(project(":ira-core"))
     implementation(project(":engine"))
 
     val composeBom = platform("androidx.compose:compose-bom:2024.12.01")
@@ -211,9 +231,11 @@ tasks.withType<Test>().configureEach {
 // notification-listener service (the two ways an app can read other apps' screens
 // and notifications).
 
-fun allowedPermissions(): List<String> = file("permissions-allowlist.txt").readLines()
-    .map { it.substringBefore("#").trim() }
-    .filter { it.isNotEmpty() }
+fun allowedPermissions(jarvis: Boolean = false): List<String> =
+    (listOf("permissions-allowlist.txt") + if (jarvis) listOf("permissions-allowlist-jarvis.txt") else emptyList())
+        .flatMap { file(it).readLines() }
+        .map { it.substringBefore("#").trim() }
+        .filter { it.isNotEmpty() }
 
 abstract class CheckSandbox : DefaultTask() {
     @get:InputFile
@@ -228,6 +250,11 @@ abstract class CheckSandbox : DefaultTask() {
     @get:OutputFile
     abstract val report: RegularFileProperty
 
+    /** A <queries> block that only asks for text-to-speech engines (Jarvis's voice) shows no other app: allowed. */
+    private fun queriesOnlyTts(xml: String): Boolean = Regex("<queries\\b[^>]*>(.*?)</queries>", RegexOption.DOT_MATCHES_ALL).findAll(xml).all { q ->
+        q.groupValues[1].replace(Regex("<intent>\\s*<action\\s+android:name=\"android\\.intent\\.action\\.TTS_SERVICE\"\\s*/>\\s*</intent>"), "").isBlank()
+    } && !Regex("<queries\\b[^>]*/>").containsMatchIn(xml)
+
     @TaskAction
     fun check() {
         val xml = manifest.get().asFile.readText()
@@ -236,7 +263,7 @@ abstract class CheckSandbox : DefaultTask() {
         val ok = allowed.get().map { it.replace("\${applicationId}", applicationId.get()) }.toSet()
         val problems = ArrayList<String>()
         (held - ok).forEach { problems += "permission not on the allowlist: $it" }
-        if (Regex("<queries\\b").containsMatchIn(xml)) problems += "<queries> present: the app could see other installed apps"
+        if (Regex("<queries\\b").containsMatchIn(xml) && !queriesOnlyTts(xml)) problems += "<queries> present: the app could see other installed apps"
         for (bind in listOf("BIND_ACCESSIBILITY_SERVICE", "BIND_NOTIFICATION_LISTENER_SERVICE", "BIND_DEVICE_ADMIN")) {
             if (xml.contains("android.permission.$bind")) problems += "declares a $bind component"
         }
@@ -253,7 +280,7 @@ androidComponents {
         val cap = variant.name.replaceFirstChar { it.uppercase() }
         val guard = tasks.register<CheckSandbox>("check${cap}Sandbox") {
             manifest.set(variant.artifacts.get(SingleArtifact.MERGED_MANIFEST))
-            allowed.set(allowedPermissions())
+            allowed.set(allowedPermissions(jarvis = true))
             applicationId.set(variant.applicationId)
             report.set(layout.buildDirectory.file("reports/sandbox/${variant.name}.txt"))
         }

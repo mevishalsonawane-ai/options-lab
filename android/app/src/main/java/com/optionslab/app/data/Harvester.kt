@@ -48,6 +48,8 @@ object Harvester {
     suspend fun run(
         underlyings: List<String> = listOf("NIFTY", "BANKNIFTY"),
         expiries: Int = 3, days: Long = 1, indices: Boolean = true,
+        /** More indices to keep 1-minute candles of, name -> Upstox key (Jarvis: FINNIFTY, SENSEX). */
+        extraIndices: Map<String, String> = emptyMap(),
         onProgress: (Progress) -> Unit = {},
         session: LocalDate = Market.today(),
     ): Result {
@@ -67,8 +69,9 @@ object Harvester {
         val sameDay = HashMap<String, Int>()
 
         if (indices) {
-            for ((i, e) in Upstox.INDEX_KEYS.entries.withIndex()) {
-                onProgress(Progress("Index ${e.key}", i, Upstox.INDEX_KEYS.size))
+            val all = Upstox.INDEX_KEYS + extraIndices
+            for ((i, e) in all.entries.withIndex()) {
+                onProgress(Progress("Index ${e.key}", i, all.size))
                 val bars = Net.history(e.value, start, today) + Net.intraday(e.value, tries = 6)
                 for ((day, dayBars) in bars.groupBy { it.istDate }) {
                     Store.upsertDay(e.key, day, listOf(Upstox.toSeries(null, dayBars, day)))

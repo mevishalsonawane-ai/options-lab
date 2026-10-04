@@ -62,6 +62,20 @@ class GttLiveTest : RobolectricTest() {
         }
     }
 
+    /**
+     * Places the reviewed GTT once the model has read Live mode (placeGtt refuses in Paper - a model read a moment
+     * early saw it), and waits for it at the fake Kite; a refusal fails at once with the app's own words.
+     */
+    private fun placed(m: AppModel) {
+        BrokerArea.await("Live mode read by the model") { m.settings.value.takeIf { it.live && it.allowRealOrders } }
+        m.placeGtt()
+        BrokerArea.await("the GTT", 40_000) {
+            for (refused in listOf("GTT not placed", "A GTT is a real order"))
+                if (BrokerArea.alerted(refused, substring = true)) throw AssertionError("refused: $refused (see the alerts)")
+            kite.gtts.values.singleOrNull()
+        }
+    }
+
     @Test fun pricingAGttOnlyReads() {
         val m = model()
         val p = plan(m, 75, 90.0, 130.0)
@@ -107,8 +121,7 @@ class GttLiveTest : RobolectricTest() {
         assertEquals(listOf(70.0, 130.0), g.triggers)
         assertTrue(g.orders.all { it.side == Kite.Side.BUY && it.quantity == 150 })
         assertEquals("the lower trigger's order first", 73.5, g.orders[0].price!!, 1e-9)
-        m.placeGtt()
-        BrokerArea.await("the GTT") { kite.gtts.values.singleOrNull() }
+        placed(m)
         assertTrue(kite.writes.single().form.getValue("orders").contains("\"transaction_type\":\"BUY\""))
     }
 
@@ -116,8 +129,7 @@ class GttLiveTest : RobolectricTest() {
         val m = model()
         val g = plan(m, 75, 80.0, null).gtt!!
         assertEquals("single", g.type)
-        m.placeGtt()
-        BrokerArea.await("the GTT") { kite.gtts.values.singleOrNull() }
+        placed(m)
         assertEquals("single", kite.writes.single().form["type"])
     }
 

@@ -1,0 +1,30 @@
+name: Model probe
+# The on-device model's exact file: the Hugging Face commit, size and SHA-256 Jarvis pins (iteration 7; the 1.5B for speed). Read-only.
+on:
+  push:
+    branches: [claude/ira-assistant]
+    paths: [".github/workflows/model-probe.yml"]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Repository and file metadata
+        run: |
+          curl -sS "https://huggingface.co/api/models/Qwen/Qwen2.5-1.5B-Instruct-GGUF" | python3 -c "import sys,json;d=json.load(sys.stdin);print('commit',d.get('sha'));print('license',(d.get('cardData') or {}).get('license'))"
+          sha=$(curl -sS "https://huggingface.co/api/models/Qwen/Qwen2.5-1.5B-Instruct-GGUF" | python3 -c "import sys,json;print(json.load(sys.stdin)['sha'])")
+          curl -sS "https://huggingface.co/api/models/Qwen/Qwen2.5-1.5B-Instruct-GGUF/tree/$sha" | python3 -c "
+          import sys,json
+          for f in json.load(sys.stdin):
+              if 'q4_k_m' in f['path'] or 'q4_0' in f['path']:
+                  print(f['path'], f.get('size'), (f.get('lfs') or {}).get('oid'))"
+          echo "redirect hosts:"
+          curl -sS -o /dev/null -w "%{redirect_url}\n" "https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF/resolve/$sha/qwen2.5-1.5b-instruct-q4_k_m.gguf" | cut -d/ -f1-3
+      - name: Download and hash (the real check)
+        run: |
+          sha=$(curl -sS "https://huggingface.co/api/models/Qwen/Qwen2.5-1.5B-Instruct-GGUF" | python3 -c "import sys,json;print(json.load(sys.stdin)['sha'])")
+          curl -sSL -o m.gguf "https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF/resolve/$sha/qwen2.5-1.5b-instruct-q4_k_m.gguf"
+          ls -l m.gguf; sha256sum m.gguf; head -c 4 m.gguf | xxd

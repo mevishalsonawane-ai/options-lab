@@ -90,9 +90,9 @@ fun StrategyParams(s: AppSettings, update: ((AppSettings) -> AppSettings) -> Uni
 
 @Composable
 fun TrialsScreen(model: AppModel) {
-    val s by model.settings.collectAsState()
-    val bt by model.backtest.collectAsState()
-    val arms by model.arms.collectAsState()
+    val s by model.settings.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val bt by model.backtest.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val arms by model.arms.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     val export = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri -> uri?.let(model::exportBacktest) }
     TrialsContent(s, bt, arms, onRun = { model.runBacktest(force = true) }, onUpdate = model::update,
         onExport = { export.launch("expiry_put_ledger.csv") }, onCompare = { model.runArms(it) },

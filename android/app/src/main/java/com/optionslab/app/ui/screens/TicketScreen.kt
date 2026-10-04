@@ -55,13 +55,13 @@ import java.time.LocalDate
 @Composable
 fun TicketScreen(model: AppModel) {
     val p = LocalPalette.current
-    val s by model.settings.collectAsState()
-    val draft by model.draft.collectAsState()
-    val ledger by model.ledger.collectAsState()
-    val mark by model.openMark.collectAsState()
+    val s by model.settings.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val draft by model.draft.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val ledger by model.ledger.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val mark by model.openMark.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     var settling by remember { mutableStateOf<LocalDate?>(null) }
     var deleting by remember { mutableStateOf<LocalDate?>(null) }
-    val broker by model.broker.collectAsState()
+    val broker by model.broker.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     val export = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri -> uri?.let(model::exportLedger) }
 
     Page {

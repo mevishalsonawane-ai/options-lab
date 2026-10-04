@@ -342,7 +342,7 @@ object Strategies {
             val id = r.orderId ?: return StrategyHost.Placed.Refused("paper order not recorded")
             b.owners["paper:$id"] = ownerLabel(def, order)
             val fill = r.events.filterIsInstance<com.optionslab.engine.sandbox.SandboxEvent.Fill>().firstOrNull()
-            fill?.let { Notifier.orderFilled(app, it.action, it.quantity, it.symbol, it.price, "Paper", ownerLabel(def, order)) }
+            fill?.let { Notifier.orderFilled(app, it.action, it.quantity, it.symbol, it.price, "Paper", ownerLabel(def, order), it.orderId) }
             return if (fill != null) StrategyHost.Placed.Accepted("paper:$id", "complete", fill.quantity, fill.price)
             else StrategyHost.Placed.Accepted("paper:$id", "open", 0, null)
         }
@@ -408,7 +408,7 @@ object Strategies {
                 // From here the order exists at Zerodha: never report it as refused. An unknown
                 // state is polled on the next tick.
                 val f = runCatching { Broker.awaitOrder(id, 12_000) }.getOrNull()
-                if (f != null && f.filled > 0) Notifier.orderFilled(app, side.name, f.filled, kiteSym, f.avgPrice, "Live", ownerLabel(def, order))
+                if (f != null && f.filled > 0) Notifier.orderFilled(app, side.name, f.filled, kiteSym, f.avgPrice, "Live", ownerLabel(def, order), id)
                 StrategyHost.Placed.Accepted("kite:$id", f?.status ?: "UNKNOWN", f?.filled ?: 0, f?.avgPrice?.takeIf { it > 0 }, f?.message)
             }
         }

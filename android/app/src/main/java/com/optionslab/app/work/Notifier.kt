@@ -50,7 +50,13 @@ object Notifier {
     const val BUY = "orders.buy"
     const val SELL = "orders.sell"
     const val APPROVAL = "orders.approval"
-    private val ALWAYS = setOf(BUY, SELL, APPROVAL)
+    /** A strategy Jarvis found and backtested, waiting for the owner's approval. */
+    const val IRA = "ira.strategies"
+    /** Jarvis only: the line shown while Jarvis listens for its name. */
+    const val VOICE = "ira.voice"
+    /** Jarvis only: Jarvis's short pop-ups (heads-up, gone after a few seconds). */
+    const val POPUP = "ira.popup"
+    private val ALWAYS = setOf(BUY, SELL, APPROVAL, IRA)
 
     const val ID_LIVE = 1001
     const val ID_HARVEST = 1002
@@ -80,6 +86,8 @@ object Notifier {
                     setShowBadge(false); setSound(null, null); enableVibration(false)
                 },
             ))
+            // Jarvis talks in IraGoldAlgo too: the line Android requires while it listens or downloads its model.
+            if (com.optionslab.app.BuildConfig.JARVIS) voiceChannel(nm)
             return
         }
         nm.createNotificationChannels(listOf(
@@ -114,8 +122,27 @@ object Notifier {
                 description = "When a kill condition changes state"
                 lockscreenVisibility = android.app.Notification.VISIBILITY_PRIVATE
             },
+            NotificationChannel(IRA, "Jarvis strategies", NotificationManager.IMPORTANCE_DEFAULT).apply {
+                description = "A strategy Jarvis found in a pattern and backtested, with its results, waiting for your approval"
+                lockscreenVisibility = android.app.Notification.VISIBILITY_PRIVATE
+            },
         ))
+        if (com.optionslab.app.BuildConfig.JARVIS) voiceChannel(nm)
+        if (com.optionslab.app.BuildConfig.JARVIS) nm.createNotificationChannel(
+            NotificationChannel(POPUP, "Jarvis pop-ups", NotificationManager.IMPORTANCE_HIGH).apply {
+                description = "Jarvis's short messages at the top of the screen: alerts, results, the morning check. They hide after a few seconds."
+                lockscreenVisibility = android.app.Notification.VISIBILITY_PRIVATE
+                setShowBadge(false); setSound(null, null); enableVibration(false)
+            })
     }
+
+    @androidx.annotation.RequiresApi(Build.VERSION_CODES.O)
+    private fun voiceChannel(nm: NotificationManager) = nm.createNotificationChannel(
+        NotificationChannel(VOICE, "Jarvis in the background", NotificationManager.IMPORTANCE_LOW).apply {
+            description = "Shown while Jarvis listens for its name or downloads its model, with a Stop or Cancel button. What it hears stays on the phone."
+            lockscreenVisibility = android.app.Notification.VISIBILITY_PRIVATE
+            setShowBadge(false); setSound(null, null); enableVibration(false)
+        })
 
     fun openApp(context: Context, tab: String? = null): PendingIntent = PendingIntent.getActivity(
         context, tab?.hashCode() ?: 0,
@@ -195,10 +222,12 @@ object Notifier {
      * the order's label ([com.optionslab.app.data.Origins]; null for a hand order from an unnamed screen). It lands on the
      * position's own card (PositionCards), which the market watch then keeps live with its P&L and a Close button.
      */
-    fun orderFilled(context: Context, action: String, qty: Int, symbol: String, price: Double, venue: String, source: String?) {
+    fun orderFilled(context: Context, action: String, qty: Int, symbol: String, price: Double, venue: String, source: String?, orderId: String? = null) {
         val buy = action.equals("BUY", ignoreCase = true)
         val headline = "${if (buy) "BUY" else "SELL"} filled · $venue · ${com.optionslab.app.data.Origins.display(source ?: com.optionslab.app.data.Origins.MANUAL).first}"
-        val line = "$qty $symbol @ ${String.format(java.util.Locale.ENGLISH, "%.2f", price)}"
+        // The order's id, so the fill can be found in the order book ("order #a1b2c3d4").
+        val line = "$qty $symbol @ ${String.format(java.util.Locale.ENGLISH, "%.2f", price)}" +
+            (com.optionslab.app.data.Origins.shortId(orderId)?.let { " · order $it" } ?: "")
         Alerts.post(line, Alerts.Kind.SUCCESS, headline)
         if (!canPost(context)) return
         val card = if (venue == "Paper") "Paper" else "Live"

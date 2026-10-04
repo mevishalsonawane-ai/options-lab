@@ -114,6 +114,8 @@ class TradeScreenTest {
     private fun pump(timeoutMs: Long, cond: () -> Boolean) {
         val end = System.currentTimeMillis() + timeoutMs
         while (true) {
+            // The main thread's queue too, as on the phone: work handed back to it (a PIN check's result) runs.
+            org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle()
             frames(2)
             if (runCatching(cond).getOrDefault(false)) return
             if (System.currentTimeMillis() > end) throw AssertionError("condition not met in $timeoutMs ms")

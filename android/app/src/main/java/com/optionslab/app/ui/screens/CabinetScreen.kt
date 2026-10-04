@@ -34,6 +34,14 @@ import com.optionslab.app.ui.theme.Type
 private data class Drawer(val key: String, val title: String, val blurb: String)
 
 private val GROUPS = listOf(
+    "Assistant" to listOf(
+        Drawer("ira", "Ira", "Ask about today's market: trend, levels, patterns"),
+    ),
+) + (if (com.optionslab.app.BuildConfig.JARVIS) listOf(
+    "Jarvis" to listOf(
+        Drawer("jarvis", "Voice and AI model", "Listening, voice style, your voice print, spoken replies, the on-device model"),
+    ),
+) else emptyList()) + listOf(
     "Account" to listOf(
         Drawer("broker", "Zerodha", "Login, mode, order limits, manual order"),
         Drawer("alarms", "Alerts", "Price alarms and P&L alerts"),
@@ -69,7 +77,7 @@ fun CabinetScreen(model: AppModel, page: String?, onPage: (String?) -> Unit) {
         label = "drawer",
     ) { pg ->
         if (pg != null) Column {
-            Text("‹  More", style = Type.label.copy(color = LocalPalette.current.ink, fontSize = 15.sp),
+            Text("‹  ${com.optionslab.app.ui.Tab.CABINET.label}", style = Type.label.copy(color = LocalPalette.current.ink, fontSize = 15.sp),
                 modifier = Modifier.clickable { onPage(null) }.padding(horizontal = 16.dp, vertical = 10.dp))
             Box(Modifier.weight(1f)) { DrawerPage(model, pg, onPage) }
         } else Drawers(onPage)
@@ -80,6 +88,8 @@ fun CabinetScreen(model: AppModel, page: String?, onPage: (String?) -> Unit) {
 private fun DrawerPage(model: AppModel, pg: String, onPage: (String?) -> Unit) {
     run {
         when (pg) {
+            "ira" -> IraPage(androidx.compose.runtime.remember(model) { iraOrderPathsFor(model) })
+            "jarvis" -> JarvisSettingsPage()
             "broker" -> BrokerPage(model)
             "alarms" -> AlarmsPage(model)
             "risk" -> RiskPage(model)

@@ -58,7 +58,7 @@ private fun hm(t: String): LocalTime? = runCatching { LocalTime.parse(t.trim().p
  */
 @Composable
 fun PresetsCard(model: AppModel) {
-    val result by model.preset.collectAsState()
+    val result by model.preset.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     PresetsContent(result, onReset = { model.preset.value = Load.Idle },
         onRun = { id, u, n, e, x, sl, tg -> model.runPreset(id, u, n, e, x, sl, tg) },
         onAdd = { id, u, n, e, x, sl, tg -> model.addPreset(id, u, n, e, x, sl, tg) })
@@ -168,7 +168,7 @@ private fun PresetResult(r: Presets.Result) {
  */
 @Composable
 fun ReplayLab(model: AppModel) {
-    val loaded by model.replay.collectAsState()
+    val loaded by model.replay.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     ReplayContent(loaded, daysFor = model::replayDays, onLoad = model::loadReplay)
 }
 

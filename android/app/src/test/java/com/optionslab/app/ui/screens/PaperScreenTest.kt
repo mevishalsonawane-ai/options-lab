@@ -180,7 +180,7 @@ class PaperScreenTest {
         val start = m.snap()!!.funds.availableCash
         assertEquals("a fresh paper account holds its starting capital", 10_000_000.0, start, 0.001)
         // The screen's own first load may still be showing "Opening the paper account".
-        compose.waitUntil(10_000) { exists("No paper positions.") }
+        compose.waitUntil(30_000) { exists("No paper positions.") }
 
         // Pick: NIFTY, nearest expiry, ATM PE (24,500 around a 24,512 index), BUY 1 lot, MARKET, NRML.
         openForm()

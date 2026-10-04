@@ -80,7 +80,7 @@
     <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS" tools:node="remove" />
     <!-- Sensors and surroundings -->
     <uses-permission android:name="android.permission.CAMERA" tools:node="remove" />
-    <uses-permission android:name="android.permission.RECORD_AUDIO" tools:node="remove" />
+    <!-- RECORD_AUDIO: held for "Jarvis" (src/jarvis), heard by the phone's on-device recognizer only. -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" tools:node="remove" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" tools:node="remove" />
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" tools:node="remove" />
@@ -103,7 +103,7 @@
         android:largeHeap="true"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher"
-        android:label="@string/app_name"
+        android:label="${appLabel}"
         android:supportsRtl="true"
         android:theme="@style/Theme.IraAlgo"
         tools:targetApi="35">

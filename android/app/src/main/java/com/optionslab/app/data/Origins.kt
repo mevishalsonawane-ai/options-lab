@@ -44,8 +44,15 @@ object Origins {
         return display(label)
     }
 
-    /** "Strategy: ORB · entry", "Auto: Protection · stop", "Manual · Chart", "Outside IraAlgo (Kite)". */
+    /** Jarvis's own orders ("Jarvis solo · entry", "Jarvis news · exit"); orders Boss gave Jarvis are "Manual · Jarvis". */
+    const val JARVIS = "Jarvis"
+
+    /** An order id as shown beside its label: "#" and its last 8 characters (the full id is in the row's details). */
+    fun shortId(id: String?): String? = id?.trim()?.takeIf { it.isNotEmpty() }?.let { "#" + it.takeLast(8) }
+
+    /** "Strategy: ORB · entry", "Auto: Protection · stop", "Jarvis: solo · entry", "Manual · Chart", "Outside IraAlgo (Kite)". */
     fun display(label: String): Pair<String, Boolean> = when {
+        label.startsWith("$JARVIS ") -> "Jarvis: ${label.removePrefix(JARVIS).trimStart(' ', '·').trim()}" to true
         label == MANUAL || label.startsWith("$MANUAL ·") || label == OUTSIDE -> label to false
         label == "Strategy order" -> label to true
         AUTOMATIC.any { label == it || label.startsWith("$it ·") } -> "Auto: $label" to true
@@ -67,7 +74,7 @@ object Origins {
     fun position(owners: Map<String, String>, fills: List<Fill>, netQty: Int): String? {
         if (fills.isEmpty()) return null
         val names = LinkedHashSet<String>()
-        fun name(f: Fill) = of(owners, f.venueId, f.tag).first.removePrefix("Strategy: ").removePrefix("Auto: ").let(::base)
+        fun name(f: Fill) = of(owners, f.venueId, f.tag).first.removePrefix("Strategy: ").removePrefix("Auto: ").replaceFirst("Jarvis: ", "Jarvis ").let(::base)
         if (netQty == 0) {
             // A fill opens when it moves the running quantity away from zero (a buy from flat or long, a sell from flat or short).
             var running = 0

@@ -59,11 +59,11 @@ import java.util.Locale
  */
 @Composable
 fun StrategyArmCard(model: AppModel, onManage: () -> Unit) {
-    val s by model.settings.collectAsState()
-    val all by model.strategies.collectAsState()
-    val auto by model.strategyAuto.collectAsState()
-    val pending by model.strategyPending.collectAsState()
-    val botStopped by model.botStopped.collectAsState()
+    val s by model.settings.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val all by model.strategies.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val auto by model.strategyAuto.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val pending by model.strategyPending.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val botStopped by model.botStopped.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     StrategyArmContent(
         live = s.live, killOn = s.guardKill, all = all, auto = auto, pending = pending, botStopped = botStopped,
         actions = object : StrategyArmActions {

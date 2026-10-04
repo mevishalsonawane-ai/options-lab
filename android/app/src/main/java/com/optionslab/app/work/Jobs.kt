@@ -80,7 +80,9 @@ object Jobs {
      * The market watch runs on every market day (paper bots need no Zerodha account); the other
      * jobs need a linked Zerodha account.
      */
-    fun enabled(k: Kind, s: AppSettings) = (k == Kind.LIVE || com.optionslab.app.data.Broker.linked) && when (k) {
+    // Jarvis keeps the day's data (Upstox's public candles, no login) whether or not Zerodha is linked.
+    fun enabled(k: Kind, s: AppSettings) = (k == Kind.LIVE || com.optionslab.app.data.Broker.linked ||
+        k == Kind.HARVEST && com.optionslab.app.BuildConfig.JARVIS) && when (k) {
         Kind.LIVE -> true   // the market watch always runs on market days; it has no off switch
         Kind.REMIND -> s.entryReminder
         Kind.TICKET -> s.autoTicket || (s.prepareRealOrder && com.optionslab.app.data.Broker.configured)
@@ -114,6 +116,7 @@ object Jobs {
         Kind.entries.forEach { schedule(context, it, s) }
         Heartbeat.schedule(context)
         DailyReports.scheduleAll(context)
+        com.optionslab.app.ira.StudyWorker.schedule(context)
     }
 
     fun schedule(context: Context, k: Kind, s: AppSettings = AppSettings.load()) {
@@ -196,6 +199,8 @@ class AlarmReceiver : BroadcastReceiver() {
 
     private fun handle(context: Context, intent: Intent) {
         if (intent.action == Heartbeat.ACTION) { Heartbeat.check(context); return }
+        // A command Boss set for this time (any day: it was confirmed when set).
+        if (intent.action == com.optionslab.app.ira.IraLater.ACTION) { kotlinx.coroutines.runBlocking { com.optionslab.app.ira.IraLater.fire(context) }; return }
         DailyReports.of(intent.action)?.let { DailyReports.fired(context, it); return }
         val k = runCatching { Jobs.Kind.valueOf(intent.getStringExtra(Jobs.EXTRA_KIND) ?: return) }.getOrNull() ?: return
         Jobs.schedule(context, k)
@@ -215,7 +220,11 @@ class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         when (intent.action) {
             Intent.ACTION_BOOT_COMPLETED, Intent.ACTION_MY_PACKAGE_REPLACED,
-            "android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED" -> Jobs.scheduleAll(context)
+            "android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED" -> {
+                Jobs.scheduleAll(context)
+                // Commands Boss set for a time (Jarvis): their alarm too.
+                if (com.optionslab.app.BuildConfig.JARVIS) runCatching { com.optionslab.app.ira.IraLater.schedule(context) }
+            }
         }
         // Rebooted or updated during market hours: pick the watch straight back up.
         if (intent.action == Intent.ACTION_BOOT_COMPLETED || intent.action == Intent.ACTION_MY_PACKAGE_REPLACED) Jobs.ensureWatch(context)
@@ -322,12 +331,18 @@ object Tasks {
 
     suspend fun harvest(context: Context, s: AppSettings, session: java.time.LocalDate, onProgress: (String, Float) -> Unit) {
         if (Holidays.stale(Market.today())) runCatching { Holidays.refresh() }
-        val r = Harvester.run(session = session, onProgress = { p -> onProgress(p.stage, if (p.total > 0) p.done.toFloat() / p.total else -1f) })
+        // Jarvis: FINNIFTY's chain too, and the FINNIFTY and SENSEX index candles (1-minute OHLC, volume and OI for every contract).
+        val r = if (com.optionslab.app.BuildConfig.JARVIS) Harvester.run(underlyings = listOf("NIFTY", "BANKNIFTY", "FINNIFTY"), session = session,
+            extraIndices = linkedMapOf("FINNIFTY" to "NSE_INDEX|Nifty Fin Service", "SENSEX" to "BSE_INDEX|SENSEX"),
+            onProgress = { p -> onProgress(p.stage, if (p.total > 0) p.done.toFloat() / p.total else -1f) })
+        else Harvester.run(session = session, onProgress = { p -> onProgress(p.stage, if (p.total > 0) p.done.toFloat() / p.total else -1f) })
         // No notification: the result is shown in More → Data and harvest.
         SecurePrefs.put("harvest.last", "$session: ${r.summary()}")
         if (s.healthAlerts) healthCheck(context, s)
         // The ORB evening replay (TODO A8): the day's bars, beside what the paper arms did. No orders.
         runCatching { com.optionslab.app.data.OrbArms.replayIfDue() }
+        // Jarvis: Ira reads the day's candles, learns them and reviews how its patterns did. No orders.
+        runCatching { com.optionslab.app.ira.IraHub.evening() }
     }
 
     fun healthCheck(context: Context, s: AppSettings) {
@@ -372,6 +387,29 @@ object Tasks {
         runCatching { com.optionslab.app.data.OrbArms.tick() }
         // Pine scripts set to auto-trade: decide on each completed candle, sell at 15:15.
         runCatching { com.optionslab.app.data.PineAuto.tick() }
+        // Jarvis: every 15 minutes in market hours, Jarvis looks for a pattern worth a strategy and notifies it.
+        runCatching { com.optionslab.app.ira.IraHub.backgroundCheck() }
+        // Jarvis: the news every 5 minutes, judged for your arms and positions.
+        runCatching { com.optionslab.app.ira.IraHub.newsWatch() }
+        // Jarvis: the candle-pattern expert at each 5- and 15-minute close; a qualifying pattern becomes a trade to approve.
+        runCatching { com.optionslab.app.ira.IraHub.expertWatch() }
+        // Jarvis: approved news trades - the best price seen, the profit-lock stop moved up, the result recorded.
+        if (com.optionslab.app.BuildConfig.JARVIS) runCatching { com.optionslab.app.ira.IraNewsTrades.tick() }
+        // Solo (paper only, Boss's switch): its open trade managed, or the next one looked for.
+        if (com.optionslab.app.BuildConfig.JARVIS) runCatching { com.optionslab.app.ira.IraSolo.tick() }
+        // Jarvis: a position with no stop is offered one; the 14:55 expiry heads-up; live prices that stopped.
+        runCatching { com.optionslab.app.ira.IraHub.rescueWatch() }
+        runCatching { com.optionslab.app.ira.IraHub.expiryPreview() }
+        runCatching { com.optionslab.app.ira.IraHub.feedWatch() }
+        runCatching { com.optionslab.app.ira.IraCoach.orbWatch() }
+        runCatching { com.optionslab.app.ira.IraCoach.vixWatch() }
+        // Jarvis: your own stops trailed up automatically; too many trades too fast; the opening gap plan.
+        runCatching { com.optionslab.app.ira.IraCoach.trailWatch() }
+        runCatching { com.optionslab.app.ira.IraCoach.overtradeWatch() }
+        runCatching { com.optionslab.app.ira.IraCoach.gapWatch() }
+        // Jarvis: the day's target reached; a trade of yours going nowhere is offered a close (asked first).
+        runCatching { com.optionslab.app.ira.IraJournal.targetWatch() }
+        runCatching { com.optionslab.app.ira.IraJournal.staleWatch() }
         // Stops, trailing stops and targets: one exit filled cancels the other; trails move up.
         runCatching { com.optionslab.app.data.Protections.tick() }
         // Expiry day, 15:05: close every option position expiring today (paper and live, all products).
@@ -483,7 +521,7 @@ object Tasks {
     private fun paperEvents(context: Context, events: List<com.optionslab.engine.sandbox.SandboxEvent>) {
         for (e in events) when (e) {
             is com.optionslab.engine.sandbox.SandboxEvent.Fill -> Notifier.orderFilled(context, e.action, e.quantity, e.symbol, e.price, "Paper",
-                kotlinx.coroutines.runBlocking { runCatching { com.optionslab.app.data.Strategies.owners()["paper:${e.orderId}"] }.getOrNull() })
+                kotlinx.coroutines.runBlocking { runCatching { com.optionslab.app.data.Strategies.owners()["paper:${e.orderId}"] }.getOrNull() }, e.orderId)
             is com.optionslab.engine.sandbox.SandboxEvent.ExpirySettled -> Notifier.post(context, 7000 + (e.symbol.hashCode() and 0x3ff), Notifier.LIVE,
                 "Paper contract settled", "${e.symbol} at %.2f · P&L Rs %+,.0f".format(e.price.toDouble(), e.pnl.toDouble()), "trade")
             is com.optionslab.engine.sandbox.SandboxEvent.SquareOff -> Notifier.post(context, 7000 + (e.symbol.hashCode() and 0x3ff), Notifier.LIVE,
@@ -618,7 +656,7 @@ class WatchService : Service() {
         if (Holidays.stale(Market.today())) runCatching { Holidays.refresh() }
         val b = com.optionslab.app.data.Broker
         if (b.configured && !b.loggedIn) Notifier.post(this, 2005, Notifier.SCHEDULE, "Log in to Zerodha for today",
-            "Yesterday's session ended at 06:00. Open More → Zerodha and log in before the 11:00 entry.", "broker")
+            "Yesterday's session ended at 06:00. Open ${com.optionslab.app.ui.Tab.CABINET.label} → Zerodha and log in before the 11:00 entry.", "broker")
         // Market hours, and a quarter-hour past the close while a strategy run is still open,
         // so its exit-time square-off and any retried exits are seen through.
         while (Market.isTradingDay() && (Market.minuteNow() <= Market.CLOSE ||
@@ -659,7 +697,9 @@ class WatchService : Service() {
                 val streaming = com.optionslab.app.data.KiteStream.status.value == com.optionslab.app.data.KiteStream.Status.LIVE
                 if (holding && streaming) {
                     val until = System.currentTimeMillis() + 15_000
-                    while (System.currentTimeMillis() < until) { delay(3_000); runCatching { PositionCards.tickLive(this) } }
+                    // The cards are for the eye: on a low battery (not charging) they move less often (stops are not affected).
+                    val step = Battery.gap(this, 3_000)
+                    while (System.currentTimeMillis() < until) { delay(step); runCatching { PositionCards.tickLive(this) } }
                 } else delay(if (holding) 15_000 else next - System.currentTimeMillis())
                 if (holding) {
                     runCatching {

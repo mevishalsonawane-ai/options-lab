@@ -55,7 +55,7 @@ import java.time.LocalDate
 
 @Composable
 fun IcPage(model: AppModel) {
-    val st by model.ic.collectAsState()
+    val st by model.ic.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     IcContent(st) { u, regime, complete -> model.runIc(u, regime, complete) }
 }
 
@@ -130,7 +130,7 @@ private fun IcRowCard(r: Ic.IcRow) {
 
 @Composable
 fun SignalPage(model: AppModel) {
-    val st by model.signal.collectAsState()
+    val st by model.signal.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     SignalContent(st, daysFor = { Store.barDays(it) }) { u, day, indicator, key, atr, length, lot -> model.runSignal(u, day, indicator, key, atr, length, lot) }
 }
 
@@ -149,10 +149,10 @@ internal fun SignalContent(
     var length by remember { mutableIntStateOf(100) }
     var days by remember { mutableStateOf<List<LocalDate>>(emptyList()) }
     var day by remember { mutableStateOf<LocalDate?>(null) }
-    LaunchedEffect(underlying) {
+    LaunchedEffect(underlying) { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main.immediate) {
         days = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { daysFor(underlying) }
         day = days.lastOrNull()
-    }
+    } }
     Page {
         item { PageTitle("Signal Lab", "Buy signal → ATM call; sell → ATM put; next-bar entry; costs always") }
         item {
@@ -236,7 +236,7 @@ private fun SignalChart(r: SignalResult) {
 
 @Composable
 fun SizingPage(model: AppModel) {
-    val s by model.settings.collectAsState()
+    val s by model.settings.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     SizingContent(s) { capital, survive ->
         model.update { it.copy(capital = capital, survive = survive) }
         model.say("Sizing saved for the trial.")

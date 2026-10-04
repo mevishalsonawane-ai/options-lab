@@ -29,13 +29,13 @@ class NotifierTest : RobolectricTest() {
     @Before fun up() { Background.clearAlerts(); Background.clearCards(); Background.grantNotifications(context) }
     @After fun down() = Background.reset()
 
-    @Test fun sevenChannelsAllPrivateOnTheLockScreen() {
+    @Test fun eightChannelsAllPrivateOnTheLockScreen() {
         Notifier.createChannels(context)
         val expect = mapOf(
             Notifier.BUY to NotificationManager.IMPORTANCE_HIGH, Notifier.SELL to NotificationManager.IMPORTANCE_HIGH,
             Notifier.APPROVAL to NotificationManager.IMPORTANCE_HIGH, Notifier.RISK to NotificationManager.IMPORTANCE_HIGH,
             Notifier.LIVE to NotificationManager.IMPORTANCE_NONE, Notifier.SCHEDULE to NotificationManager.IMPORTANCE_DEFAULT,
-            Notifier.HEALTH to NotificationManager.IMPORTANCE_DEFAULT,
+            Notifier.HEALTH to NotificationManager.IMPORTANCE_DEFAULT, Notifier.IRA to NotificationManager.IMPORTANCE_DEFAULT,
         )
         for ((id, importance) in expect) {
             val c = nm.getNotificationChannel(id)
@@ -44,7 +44,7 @@ class NotifierTest : RobolectricTest() {
             assertEquals(id, Notification.VISIBILITY_PRIVATE, c.lockscreenVisibility)
             assertFalse(id, c.description.isNullOrBlank())
         }
-        assertEquals(7, nm.notificationChannels.size)
+        assertEquals(8, nm.notificationChannels.size)
         assertFalse("the ongoing watch shows no badge", nm.getNotificationChannel(Notifier.LIVE).canShowBadge())
     }
 
@@ -120,6 +120,13 @@ class NotifierTest : RobolectricTest() {
         assertEquals("Approve", Alerts.queue.value.single().title)
         Notifier.orderFilled(context, "BUY", 75, "NIFTYX", 101.5, "Paper", "ORB")
         assertEquals(0, Background.notifications(context).size())
+    }
+
+    @Test fun aFillSaysItsOrderId() {
+        Notifier.orderFilled(context, "BUY", 75, "NIFTY25O2124500CE", 101.5, "Paper", "Jarvis solo · entry", "PAPER-00000042")
+        val a = Alerts.queue.value.last()
+        assertEquals("BUY filled · Paper · Jarvis: solo · entry", a.title)
+        assertEquals("75 NIFTY25O2124500CE @ 101.50 · order #00000042", a.text)
     }
 
     @Test fun aFillBecomesItsPositionsCard() {

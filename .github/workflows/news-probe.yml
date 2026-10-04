@@ -1,0 +1,37 @@
+name: News feed probe
+# Which public RSS feeds answer from a server, and with how many headlines (Ira's news reader picks from these).
+on:
+  push:
+    branches: [claude/ira-assistant]
+    paths: [".github/workflows/news-probe.yml"]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Probe the feeds
+        run: |
+          for u in \
+            "https://economictimes.indiatimes.com/markets/rssfeeds/1977021501.cms" \
+            "https://economictimes.indiatimes.com/markets/stocks/rssfeeds/2146842.cms" \
+            "https://www.moneycontrol.com/rss/marketreports.xml" \
+            "https://www.moneycontrol.com/rss/business.xml" \
+            "https://www.livemint.com/rss/markets" \
+            "https://www.business-standard.com/rss/markets-106.rss" \
+            "https://www.thehindubusinessline.com/markets/feeder/default.rss" \
+            "https://www.cnbctv18.com/commonfeeds/v1/cne/rss/market.xml" \
+            "https://www.financialexpress.com/market/feed/" \
+            "https://www.ndtvprofit.com/feeds/markets" \
+            "https://www.kitco.com/rss/KitcoNews.xml" \
+            "https://www.fxstreet.com/rss/news" \
+            "https://www.investing.com/rss/news_11.rss" \
+            "https://news.google.com/rss/search?q=nifty%20OR%20sensex%20OR%20%22bank%20nifty%22&hl=en-IN&gl=IN&ceid=IN:en" \
+            "https://news.google.com/rss/search?q=gold%20price&hl=en-IN&gl=IN&ceid=IN:en" ; do
+            code=$(curl -s -o f.xml -w "%{http_code} %{size_download} %{content_type}" -A "Mozilla/5.0" --max-time 20 "$u")
+            n=$(grep -o "<item\|<entry" f.xml | wc -l)
+            first=$(grep -o "<title>[^<]*</title>\|<title><!\[CDATA\[[^]]*" f.xml | sed -n 2p | cut -c1-90)
+            echo "$code items=$n | $u | $first"
+          done

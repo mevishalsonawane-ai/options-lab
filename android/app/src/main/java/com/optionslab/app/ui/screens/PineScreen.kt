@@ -111,7 +111,7 @@ internal class PineEnv(
 @Composable
 internal fun PineContent(env: PineEnv, onOpenChart: () -> Unit = {}) {
     // A draft from before "erase everything" is dropped with the data.
-    val wiped by com.optionslab.app.ui.wipes.collectAsState()
+    val wiped by com.optionslab.app.ui.wipes.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     val d = PineSession.open?.takeIf { it.wipe == wiped }
     if (d == null) PineList(onOpen = { PineSession.open = PineDraft(it, wiped) }, onNew = { PineSession.open = PineDraft(it, wiped) })
     else androidx.compose.runtime.key(d) { PineEditor(env, d, onOpenChart, onClose = { PineSession.open = null }) }
@@ -148,7 +148,7 @@ fun takePineChartAsk(): Pair<String, String>? = pineChartAsk.also { pineChartAsk
 @Composable
 private fun PineList(onOpen: (PineScripts.Item) -> Unit, onNew: (PineScripts.Item) -> Unit) {
     val p = LocalPalette.current
-    val items by PineScripts.items.collectAsState()
+    val items by PineScripts.items.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     var choosing by remember { mutableStateOf(false) }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 14.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -229,7 +229,7 @@ private fun PineEditor(env: PineEnv, d: PineDraft, onOpenChart: () -> Unit, onCl
     val dirty = d.code.text != d.item.code || d.name != d.item.name
     // While it trades by itself its code and inputs stay as they were armed: a change would alter
     // real orders without the PIN. Switch auto-trade off to edit.
-    val allItems by PineScripts.items.collectAsState()
+    val allItems by PineScripts.items.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     val armed = allItems.firstOrNull { it.id == d.item.id }?.auto?.on == true
 
     // Saving writes the encrypted vault: off the main thread, one save at a time, and in the app's
@@ -873,12 +873,12 @@ private fun num(x: Double) = if (x == Math.floor(x) && kotlin.math.abs(x) < 1e12
 @Composable
 private fun PineAutoPanel(env: PineEnv, start: PineScripts.Item, s: Pine.Script, dirty: Boolean, save: suspend () -> PineScripts.Item, onItem: (PineScripts.Item) -> Unit) {
     val p = LocalPalette.current
-    val items by PineScripts.items.collectAsState()
+    val items by PineScripts.items.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     val item = items.firstOrNull { it.id == start.id } ?: start
-    val settings by env.settings.collectAsState()
+    val settings by env.settings.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     val live = settings.live && settings.allowRealOrders
-    val held by com.optionslab.app.data.PineAuto.held.collectAsState()
-    val log by com.optionslab.app.data.PineAuto.log.collectAsState()
+    val held by com.optionslab.app.data.PineAuto.held.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val log by com.optionslab.app.data.PineAuto.log.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     var auth by remember { mutableStateOf(false) }
     var busy by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { withContext(Dispatchers.IO) { com.optionslab.app.data.PineAuto.load() } }

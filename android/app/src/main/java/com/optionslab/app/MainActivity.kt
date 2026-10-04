@@ -54,6 +54,12 @@ class MainActivity : FragmentActivity() {
     }
 
     /** Every touch counts as activity for the idle lock. */
+    override fun onResume() {
+        super.onResume()
+        // Jarvis's listening, switched on but stopped by Android while the app was away, starts again on screen.
+        if (BuildConfig.JARVIS) runCatching { com.optionslab.app.ira.JarvisVoice.resume(this) }
+    }
+
     override fun dispatchTouchEvent(ev: android.view.MotionEvent): Boolean {
         com.optionslab.app.security.SessionLock.touch()
         return super.dispatchTouchEvent(ev)

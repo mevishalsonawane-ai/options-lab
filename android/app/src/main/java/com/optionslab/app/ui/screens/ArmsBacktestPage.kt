@@ -25,7 +25,7 @@ import com.optionslab.engine.orb.ArmsBacktest
 
 @Composable
 fun ArmsBacktestPage(model: AppModel) {
-    val st by model.armsBacktest.collectAsState()
+    val st by model.armsBacktest.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     ArmsBacktestContent(st, model::runArmsBacktest)
 }
 

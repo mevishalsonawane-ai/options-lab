@@ -54,8 +54,8 @@ private fun px(x: Double) = String.format(Locale.ENGLISH, "%.2f", x)
  */
 @Composable
 fun OrbRows(model: AppModel) {
-    val v by model.orb.collectAsState()
-    val settings by model.settings.collectAsState()
+    val v by model.orb.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val settings by model.settings.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     // Home's own poll (only while the app is on screen) refreshes the arm states every 20 s.
     val view = v ?: return
     OrbRowsContent(view, live = settings.live && settings.allowRealOrders,
