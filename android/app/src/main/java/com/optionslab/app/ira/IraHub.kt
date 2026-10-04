@@ -1083,6 +1083,18 @@ object IraHub {
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
             return
         }
+        // "Wrap up my day" / "aaj ka summary" at any hour: the 15:35 wrap-up's words so far (the day's P&L is Boss's own,
+        // so the phone must be unlocked).
+        if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && parsed.command == null && parsed.order == null &&
+            runCatching { com.optionslab.ira.DaySummary.asked(q) }.getOrDefault(false)) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            if (phoneLocked()) { reply("Unlock the phone for that, Boss."); return }
+            scope.launch {
+                val card = runCatching { IraNewsTrades.scorecard().firstOrNull() }.getOrNull()
+                reply(runCatching { IraCoach.wrapUp(card, review = false) }.getOrElse { "I could not put the day together just now, Boss." })
+            }
+            return
+        }
         // "Is tomorrow a holiday?", "is the market open on Friday?", "next holiday": a short answer from the exchange
         // calendar instead of the whole account status.
         if (parsed.command == null && parsed.order == null) runCatching {

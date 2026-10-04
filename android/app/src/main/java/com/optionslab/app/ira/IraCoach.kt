@@ -418,8 +418,19 @@ internal object IraCoach {
     /** The 15:35 spoken wrap-up: the day's P&L, the scorecard's headline, tomorrow's events. */
     suspend fun daySummary(scorecard: String?) {
         if (!com.optionslab.app.BuildConfig.JARVIS) return
-        val live = AppSettings.load().live
         if (!Automations.on(Automations.Auto.SUMMARY)) return
+        val text = wrapUp(scorecard, review = true)
+        IraHub.note(text)
+        JarvisVoice.announce(com.optionslab.ira.Wake.spoken(text, 10))
+        Automations.acted(Automations.Auto.SUMMARY, text)
+    }
+
+    /**
+     * The wrap-up's words. [review]: Jarvis's review of himself, which also keeps the day's bar - only at 15:35, never
+     * when Boss asks for the wrap-up during the day ("wrap up my day").
+     */
+    suspend fun wrapUp(scorecard: String?, review: Boolean): String {
+        val live = AppSettings.load().live
         val zerodha = live && Broker.loggedIn
         val pnl = runCatching {
             if (zerodha) Broker.positionBook().net.sumOf { it.pnl } else Paper.snapshot().dayPnl
@@ -429,10 +440,7 @@ internal object IraCoach {
         val story = IraHub.dayStory(com.optionslab.ira.Market.NIFTY)
         // Solo's day right after the market's story (the spoken wrap-up keeps the first sentences).
         // (Jarvis's own review right after the day's figures, so it is within what is spoken.)
-        val text = listOfNotNull(story, com.optionslab.ira.DaySummary.say(pnl, scorecard, events), selfReview(), IraSolo.daySummary(),
+        return listOfNotNull(story, com.optionslab.ira.DaySummary.say(pnl, scorecard, events), if (review) selfReview() else null, IraSolo.daySummary(),
             runCatching { com.optionslab.ira.Missed.say(IraTools.missedToday()) }.getOrNull()).joinToString(" ")
-        IraHub.note(text)
-        JarvisVoice.announce(com.optionslab.ira.Wake.spoken(text, 10))
-        Automations.acted(Automations.Auto.SUMMARY, text)
     }
 }
