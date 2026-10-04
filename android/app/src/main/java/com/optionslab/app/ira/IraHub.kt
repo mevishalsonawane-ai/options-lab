@@ -27,6 +27,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -1617,7 +1618,20 @@ object IraHub {
      */
     private fun freeFormAsked(q: String) {
         // Said at once (spoken while the model reads the words), then the real answer when it is ready - never silence.
-        _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, "One moment, Boss, let me think about that.")).takeLast(MAX_MESSAGES)) }
+        // "One moment" only when the answer is not there within 0.9 s (Boss, 4 Oct: slow replies) - said first, it held
+        // a quick answer back by the two seconds it takes to say. (Before the voice's own 1 s "working on it".)
+        _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+        val held = java.util.concurrent.atomic.AtomicBoolean(false)
+        val holding = scope.launch {
+            kotlinx.coroutines.delay(900)
+            if (replyAfter(_state.value.messages, q) == null && _state.value.messages.lastOrNull { !it.fromIra }?.text == q) {
+                held.set(true)
+                _state.update { it.copy(messages = (it.messages + Msg(true, "One moment, Boss, let me think about that.")).takeLast(MAX_MESSAGES)) }
+            }
+        }
+        // The answer's first words: with "one moment" already said, the voice has taken that as the reply, so the answer
+        // is spoken here; without it, the voice (or the typed-reply speaker) says the answer itself - never twice.
+        suspend fun answerFirst(text: String) { holding.cancelAndJoin(); reply(text); if (held.get()) speakLater(text, q) }
         scope.launch {
             // Words to Jarvis himself ("how was your day") go straight to the chat: no command could be meant.
             val personal = com.optionslab.ira.Chat.personal(q)
@@ -1633,15 +1647,16 @@ object IraHub {
                 if (_state.value.messages.lastOrNull { !it.fromIra }?.text != q) return@launch
                 // Not placed: his next wording may teach these words (questions only).
                 runCatching { IraTools.missed(if (chat == null && !personal) q else "") }
-                reply(text); speakLater(text, q)
+                answerFirst(text)
                 return@launch
             }
             // The voice checked the words as said against the lock, not what the model made of them.
-            if (lockedAccount(q, line)) { val t = "Your account needs the phone unlocked, Boss."; reply(t); speakLater(t, q); return@launch }
+            if (lockedAccount(q, line)) { answerFirst("Your account needs the phone unlocked, Boss."); return@launch }
+            holding.cancelAndJoin()
             reply("I understood: \"$line\".")
             val said = com.optionslab.ira.Secrets.redact(line.trim())
             ask(line, understood = true)
-            // Its answer, spoken as soon as it is there (the voice already said "one moment").
+            // Its answer, spoken as soon as it is there (the voice already said "one moment", or "I understood").
             val ans = kotlinx.coroutines.withTimeoutOrNull(20_000) {
                 _state.first { st -> replyAfter(st.messages, said) != null }.let { st -> replyAfter(st.messages, said)!! }
             }
