@@ -22,6 +22,26 @@ object JarvisSpeaker {
     /** How a reply is said: addressed to Boss, rupees read as rupees, the first few sentences. */
     fun words(text: String, sentences: Int = if (IraTools.brief) 1 else 6): String = com.optionslab.ira.Address.boss(com.optionslab.ira.Wake.spoken(text, sentences))
 
+    /**
+     * The speech engine started ahead (the Ira page opened, typed replies spoken, listening off): the first reply is said
+     * at once instead of after the second or so the engine takes to start (Boss, 4 Oct: replies felt slow).
+     */
+    fun warm(context: Context) {
+        if (!com.optionslab.app.BuildConfig.JARVIS || !speakTyped || JarvisVoice.muted || JarvisVoice.wanted) return
+        if (android.os.Build.FINGERPRINT == "robolectric") return
+        synchronized(this) {
+            if (tts != null) return
+            tts = TextToSpeech(context.applicationContext) { status ->
+                synchronized(this) {
+                    val x = tts ?: return@synchronized
+                    ready = status == TextToSpeech.SUCCESS && JarvisVoice.applyStyle(x)
+                    if (ready) waiting?.let { x.speak(it, TextToSpeech.QUEUE_FLUSH, null, "reply") }
+                    waiting = null
+                }
+            }
+        }
+    }
+
     /** [sentences]: how much to say (null: the usual, one in short-answer mode); "tell me more" says it in full. */
     fun speak(context: Context, text: String, sentences: Int? = null) {
         if (!com.optionslab.app.BuildConfig.JARVIS || JarvisVoice.muted && !text.startsWith("Voice on")) return

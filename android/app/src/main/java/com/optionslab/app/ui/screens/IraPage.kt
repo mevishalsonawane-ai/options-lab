@@ -75,6 +75,8 @@ fun IraHome(orders: IraOrderPaths? = null, dashboard: @Composable () -> Unit) {
     LaunchedEffect(Unit) { if (com.optionslab.app.BuildConfig.JARVIS && JarvisVoice.wanted) JarvisVoice.start(ctx) }
     // Voice off: the AI model is loaded while Boss reads the page, so the first typed question is answered sooner.
     LaunchedEffect(Unit) { if (com.optionslab.app.BuildConfig.JARVIS && !JarvisVoice.wanted) com.optionslab.app.ira.IraModel.preload() }
+    // And the voice for typed replies, started ahead (the first reply is spoken at once).
+    LaunchedEffect(Unit) { runCatching { com.optionslab.app.ira.JarvisSpeaker.warm(ctx) } }
     Column(Modifier.fillMaxSize()) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 6.dp).background(p.card, RoundedCornerShape(12.dp)).padding(4.dp)) {
             listOf("Ira" to true, "Dashboard" to false).forEach { (label, ira) ->
