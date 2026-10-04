@@ -168,6 +168,19 @@ internal object IraTools {
         prefs().put(dayKey(), o.toString())
     }
 
+    /** How many of [what] today. */
+    fun countToday(what: String): Int = runCatching { JSONObject(prefs().getString(dayKey()) ?: "{}").optInt(what) }.getOrDefault(0)
+
+    /**
+     * Boss cut Jarvis short ("stop", "bas") three times today with short answers off: a suggestion, once a day, to turn
+     * short answers on (his own initiative from how Boss listens; the setting is Boss's to change).
+     */
+    fun noteHush() {
+        count("hush")
+        if (brief || countToday("hush") != 3) return
+        runCatching { IraHub.note("Boss, you've stopped me a few times today. Want shorter answers? Say \"Jarvis, short answers\" - and \"tell me more\" when you want the rest.") }
+    }
+
     fun usageToday(): com.optionslab.ira.Usage.Day = runCatching {
         val o = JSONObject(prefs().getString(dayKey()) ?: "{}")
         com.optionslab.ira.Usage.Day(o.optInt("heard"), o.optInt("misunderstood"), o.optInt("nameFirst"), o.optInt("failed"), o.optInt("mistakes"))
