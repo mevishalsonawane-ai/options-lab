@@ -373,6 +373,8 @@ class JarvisVoice : Service() {
     @Volatile private var turnHeardAny = false
     /** The loudest sound this turn (the recognizer's dB scale: about -2 silence, 6+ speech), for the trace. */
     @Volatile private var turnLoudest = -100f
+    /** The recognizer's latest partial reading this turn (its final answer can drop a lone name as "no match"). */
+    @Volatile private var turnPartial: String? = null
     /** Turns with clear sound in which the recognizer found no words, in a row (the language may be wrong). */
     private var loudNoMatch = 0
     /** What the recognizer heard last turn (for the voice check), then dropped. */
@@ -553,7 +555,7 @@ class JarvisVoice : Service() {
             }
         }
         listening = true
-        turnReadyAt = 0; turnHeardAny = false; turnLoudest = -100f
+        turnReadyAt = 0; turnHeardAny = false; turnLoudest = -100f; turnPartial = null
         runCatching { rec?.startListening(i) }.onFailure { listening = false; endTap(); again(1_000) }
         _state.value = VoiceState(if (awake()) Mode.AWAKE else Mode.LISTENING)
     }
@@ -579,7 +581,7 @@ class JarvisVoice : Service() {
         override fun onBufferReceived(buffer: ByteArray?) {}
         override fun onEndOfSpeech() {}
         override fun onPartialResults(partialResults: Bundle?) {
-            if (partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.any { it.isNotBlank() } == true) turnHeardAny = true
+            partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull { it.isNotBlank() }?.let { turnHeardAny = true; turnPartial = it }
             // The owner says "Jarvis" while Jarvis is talking: stop at once and listen (the question follows).
             val words = partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION).orEmpty()
             if (speaking) { if (words.any { WAKE.containsMatchIn(it) }) interrupt(); return }
@@ -611,6 +613,16 @@ class JarvisVoice : Service() {
         override fun onError(error: Int) {
             main.removeCallbacks(finish)
             listening = false
+            // Boss, 4 Oct: "Jarvis" alone was caught while he spoke, then the final answer said "no match" (error 7) and
+            // the name was lost - every turn. The name read mid-turn counts: as if the recognizer had said it.
+            val partial = turnPartial
+            if ((error == SpeechRecognizer.ERROR_NO_MATCH || error == SpeechRecognizer.ERROR_SPEECH_TIMEOUT) && partial != null && WAKE.containsMatchIn(partial) && !stopped) {
+                note("heard the name mid-turn (final: error $error)")
+                errorsInRow = 0; loudNoMatch = 0
+                endTap()
+                heard(listOf(partial))
+                return
+            }
             val shared = tap != null
             endTap(); lastHeard = null
             if (stopped) return
