@@ -16,10 +16,18 @@ object MarketDays {
     }
 
     private val NEXT = Regex("(?i)\\b(next|upcoming|agla|agli)\\s+(market\\s+|trading\\s+|stock market\\s+)?(holiday|holidays|chutti)\\b|\\bwhen is the next (market )?holiday\\b|\\bholiday list\\b")
-    private val DAY = Regex("(?i)\\b(holiday|chutti|trading day|market (open|closed|shut|band|khulega|khula)|open for trading|is (the )?market (open|closed)|exchange (open|closed))\\b")
+    private val DAY = Regex("(?i)\\b(holiday|chutti|trading day|market (open|closed|shut|band|khulega|khula)|market( \\w+)? (kab )?(khulega|khulta)|open for trading|is (the )?market (open|closed)|exchange (open|closed))\\b")
     /** Asked about the past ("was it open on Friday", "kal band tha"): not for this answer. */
     private val PAST = Regex("(?i)\\b(was|were|did|yesterday|tha|thi|last)\\b")
-    private val WHEN = Regex("(?i)\\b(today|aaj|tomorrow|tmrw|kal|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\\b")
+    private val WHEN = Regex("(?i)\\b(today|aaj|tomorrow|tmrw|kal|parso|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\\b")
+
+    /** Does [text] ask about a day other than today ("when does the market open tomorrow")? The calendar answers it. */
+    fun namesAnotherDay(text: String): Boolean {
+        if (NEXT.containsMatchIn(text)) return true
+        if (!DAY.containsMatchIn(text) || PAST.containsMatchIn(text)) return false
+        val w = WHEN.find(text)?.value?.lowercase() ?: return false
+        return w != "today" && w != "aaj"
+    }
 
     fun asked(text: String, today: LocalDate): Asked? {
         if (NEXT.containsMatchIn(text)) return Asked.Next
@@ -29,6 +37,7 @@ object MarketDays {
         val d = when (w) {
             "today", "aaj" -> today
             "tomorrow", "tmrw", "kal" -> today.plusDays(1)
+            "parso" -> today.plusDays(2)
             else -> {
                 val dow = DayOfWeek.valueOf(w.uppercase()); var x = today; while (x.dayOfWeek != dow) x = x.plusDays(1)
                 // "Next Friday" asked on a Friday, or "next Monday" any day: the one after the coming one only when the

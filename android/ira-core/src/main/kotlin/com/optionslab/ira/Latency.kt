@@ -31,14 +31,14 @@ object Latency {
     fun asked(text: String): Boolean =
         Regex("(?i)^\\W*(jarvis,?\\s+)?(how (fast|quick|quickly|slow) (are you|do you answer|are you answering|are your answers)|" +
             "how long do you take( to answer)?|are you (slow|fast)( today)?|your (speed|answer time|response time)|" +
-            "tum kitna time (lagate|lete) ho|jawab mein kitna time)\\W*$").containsMatchIn(text)
+            "tum kitna time (lagate|lete) ho|(jawab (mein|me) )?kitna time lagta hai)\\W*$").containsMatchIn(text)
 
     /** The spoken form of [say]: typical and slowest wait, and on which model ([model] its name). */
     fun spoken(list: List<Long>, model: String): String {
         if (list.isEmpty()) return "I haven't timed a spoken answer yet, Boss. Ask me something by voice first."
         val s = list.sorted()
         fun sec(ms: Long) = "%.1f".format(java.util.Locale.ENGLISH, ms / 1000.0)
-        return "Over my last ${list.size} spoken answers, Boss, you waited about ${sec(s[s.size / 2])} seconds, " +
+        return "Over my last ${if (list.size == 1) "spoken answer" else "${list.size} spoken answers"}, Boss, you waited about ${sec(s[s.size / 2])} seconds, " +
             "${sec(s.last())} at the slowest. I'm on $model."
     }
 }

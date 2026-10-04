@@ -310,6 +310,13 @@ class JarvisVoice : Service() {
         /** What the recognizer heard the time before (redacted): "what did you hear?" asked by voice repeats this. */
         @Volatile var heardBefore: String? = null; private set
 
+        /** Keeps [words] as the last heard (redacted); the name alone ("Jarvis" before "Yes, Boss?") does not push out the words before. */
+        private fun remember(words: String) {
+            val prev = heardText
+            if (prev != null && !Regex("(?i)^\\W*((hey|ok|okay)\\s+)?j[ae]rv[ia]s\\W*$").matches(prev)) heardBefore = prev
+            heardText = com.optionslab.ira.Secrets.redact(words)
+        }
+
         /** The phone voice chosen by name, or null for the first offline English one (an Indian English one first). */
         var voiceName: String?
             get() = runCatching { com.optionslab.app.security.SecurePrefs.getString("jarvis.voice.name2") }.getOrNull()
@@ -408,7 +415,7 @@ class JarvisVoice : Service() {
                 val lost = com.optionslab.ira.Wake.lostTurn(7, turnPartial, awake())
                 note("turn timed out" + if (turnPartial != null) " (read words mid-turn)" else " (nothing read)")
                 main.removeCallbacks(finish); runCatching { rec?.cancel() }; listening = false; endTap()
-                if (lost != null && !speaking) heard(listOf(lost), recovered = true) else again()
+                if (lost != null && !speaking) { remember(lost); heard(listOf(lost), recovered = true) } else again()
             }
             if (speaking && now - spokeAt > 60_000) { speaking = false; again() }
             // The mic button's one question was asked and answered (or never came): listening stops again.
@@ -761,7 +768,7 @@ class JarvisVoice : Service() {
             if (results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.any { it.isNotBlank() } == true) langWorks = true
             note("heard " + (results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()?.let { t ->
                 if (WAKE.containsMatchIn(t)) "the name" else "${t.split(Regex("\\s+")).size} words, no name" } ?: "nothing"))
-            results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()?.let { heardBefore = heardText; heardText = com.optionslab.ira.Secrets.redact(it) }
+            results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()?.let { remember(it) }
             errorsInRow = 0
             endTap()
             heard(results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION).orEmpty())
@@ -777,6 +784,7 @@ class JarvisVoice : Service() {
                 note("kept the words read mid-turn (final: error $error)")
                 errorsInRow = 0; loudNoMatch = 0
                 endTap()
+                remember(partial)
                 heard(listOf(partial), recovered = true)
                 return
             }
@@ -952,6 +960,7 @@ class JarvisVoice : Service() {
                 // Just called ("Jarvis" alone, or the mic button, then "Yes, Boss?"): this question was asked by name.
                 // Words recovered from a broken turn count as named only if they hold the name: they may be someone else's.
                 val named = alternatives.any { Regex("\\bj[ae]rv[ia]s").containsMatchIn(it.lowercase()) } || (!recovered && called && awake)
+                val called0 = called
                 called = false
                 // Its own last words heard back without the name are not a question (the follow-up window stays open).
                 if (!named && Wake.echo(h.question, lastSpoken?.takeIf { SystemClock.elapsedRealtime() - lastSpokenEnd < 15_000 })) { again(); return }
@@ -968,7 +977,7 @@ class JarvisVoice : Service() {
                 val lockedNo = if (locked()) com.optionslab.ira.LockRule.refuse(true, acts || com.optionslab.ira.Topic.COMMAND in topics && !voiceOnly && parsedQ.command?.kind != com.optionslab.ira.Command.Kind.VOICE_CHECK,
                     com.optionslab.ira.Topic.ACCOUNT in topics, com.optionslab.ira.Topic.ACCOUNT in topics && boss()) else null
                 if (lockedNo != null) say(lockedNo)
-                else if (!named && acts) { IraTools.count("nameFirst"); say("Boss, to do that call me first: say my name, or tap the mic.") }
+                else if (!named && acts) { IraTools.count("nameFirst"); say(if (recovered && called0) "Boss, I only caught part of that. Say it again with my name." else "Boss, to do that call me first: say my name, or tap the mic.") }
                 else {
                     // Trades, and commands that add risk (live mode, kill switch off, autopilot, starting arms), need
                     // Boss's own voice; without it a command is asked as a yes or no instead of done at once, and

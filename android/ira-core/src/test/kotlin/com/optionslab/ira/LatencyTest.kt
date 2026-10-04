@@ -27,6 +27,10 @@ class SlowSuggestTest {
         assertTrue(Latency.asked("Jarvis, how fast are you?"))
         assertTrue(Latency.asked("how long do you take to answer"))
         assertTrue(Latency.asked("your response time"))
+        assertTrue(Latency.asked("jawab mein kitna time lagta hai"))
+        assertTrue(Reminder.heardAsked("hey jarvis what did you hear"))
+        assertTrue(Reminder.heardAsked("Ok Jarvis, what did you hear?"))
+        assertEquals("Over my last spoken answer, Boss, you waited about 1.2 seconds, 1.2 at the slowest. I'm on FAST.", Latency.spoken(listOf(1_200), "FAST"))
         assertTrue(!Latency.asked("how fast is nifty moving"))
         assertEquals("I haven't timed a spoken answer yet, Boss. Ask me something by voice first.", Latency.spoken(emptyList(), "FASTEST"))
         assertEquals("Over my last 3 spoken answers, Boss, you waited about 2.0 seconds, 6.5 at the slowest. I'm on FASTEST.",
