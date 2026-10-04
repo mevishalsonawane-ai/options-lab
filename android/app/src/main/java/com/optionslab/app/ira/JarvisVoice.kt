@@ -476,6 +476,8 @@ class JarvisVoice : Service() {
         if (!talkNow) oneShot = false                    // the switch turned on: listening stays on
         // Restarted by the system after a one-question listen with the switch off: do not listen.
         if (intent == null && !wanted) { stopSelf(); return START_NOT_STICKY }
+        // Listening on: the AI model loaded ahead for typing leaves the memory to the speech recognizer.
+        if (wanted && !talkNow) runCatching { IraModel.leaveForListening() }
         if (intent?.getBooleanExtra(EXTRA_VISIBLE, false) == true) visibleStart = true
         else if (rec == null) note("started in the background: Android may give no microphone until the app is opened")
         val why = when {

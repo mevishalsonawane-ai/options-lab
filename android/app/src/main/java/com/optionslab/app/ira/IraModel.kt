@@ -332,6 +332,17 @@ object IraModel {
         }
     }
 
+    /**
+     * Listening has started: a model loaded ahead (the Ira page opened with voice off) leaves now, unless it is writing -
+     * then it leaves a minute after its reply. Held in memory while listening, it starved the speech recognizer (4 Oct).
+     */
+    fun leaveForListening() {
+        scope.launch {
+            if (_state.value.writing) return@launch          // its own idle timer (a minute while listening) follows the reply
+            lock.withLock { if (!_state.value.writing) { idle?.cancel(); unloadLocked() } }
+        }
+    }
+
     private fun unloadLocked() {
         if (handle != 0L) { runCatching { LlmNative.free(handle) }; handle = 0L; _state.update { it.copy(loaded = false) } }
     }
