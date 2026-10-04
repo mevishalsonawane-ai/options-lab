@@ -336,6 +336,26 @@ internal object IraCoach {
         return out.ifEmpty { listOf("You have no open positions.") }
     }
 
+    /** Jarvis's review of himself for the wrap-up: what his own record changed, and what he does tomorrow. */
+    private suspend fun selfReview(): String? = runCatching {
+        val bar = IraNewsTrades.actAloneBar()
+        val key = "jarvis.review.bar"
+        val before = com.optionslab.app.security.SecurePrefs.getString(key)?.toIntOrNull()
+        val minutes = IraNewsTrades.byMinute()
+        val hours = (9..15).mapNotNull { h -> com.optionslab.ira.ActAlone.badHour(minutes, h * 60)?.let { "%02d:00-%02d:00".format(java.util.Locale.ENGLISH, h, h + 1) } }
+        val kinds = IraNewsTrades.byKind()
+        val badKinds = kinds.map { it.first }.distinct().filter { com.optionslab.ira.ActAlone.badKind(kinds, it) != null }
+        val goals = runCatching { IraGoals.statuses() }.getOrDefault(emptyList()).filter { it.broken || it.near }.map { it.text }
+        val lesson = runCatching { IraAccount.lessons().first.firstOrNull()?.text }.getOrNull()
+        val verdicts = runCatching { IraExpert.verdicts() }.getOrDefault(emptyList())
+        val said = com.optionslab.ira.SelfReview.say(com.optionslab.ira.SelfReview.Facts(bar, before, hours, badKinds, goals, lesson,
+            verdicts.filter { it.state == com.optionslab.ira.Vetting.State.HELD_UP }.map { it.name },
+            verdicts.filter { it.state == com.optionslab.ira.Vetting.State.FAILED }.map { it.name }))
+        com.optionslab.app.security.SecurePrefs.put(key, bar.toString())
+        said?.let { IraActivity.add(it) }
+        said
+    }.getOrNull()
+
     /** The 15:35 spoken wrap-up: the day's P&L, the scorecard's headline, tomorrow's events. */
     suspend fun daySummary(scorecard: String?) {
         if (!com.optionslab.app.BuildConfig.JARVIS) return
@@ -349,7 +369,7 @@ internal object IraCoach {
         // How Nifty's day went comes first: the market's story, then Boss's own.
         val story = IraHub.dayStory(com.optionslab.ira.Market.NIFTY)
         // Solo's day right after the market's story (the spoken wrap-up keeps the first sentences).
-        val text = listOfNotNull(story, IraSolo.daySummary(), com.optionslab.ira.DaySummary.say(pnl, scorecard, events)).joinToString(" ")
+        val text = listOfNotNull(story, IraSolo.daySummary(), com.optionslab.ira.DaySummary.say(pnl, scorecard, events), selfReview()).joinToString(" ")
         IraHub.note(text)
         JarvisVoice.announce(com.optionslab.ira.Wake.spoken(text, 7))
         Automations.acted(Automations.Auto.SUMMARY, text)
