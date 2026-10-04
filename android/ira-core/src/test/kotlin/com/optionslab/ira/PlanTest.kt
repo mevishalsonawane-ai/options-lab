@@ -13,7 +13,23 @@ class PlanTest {
         val s = Plan.steps("Stop all strategies, then turn on the kill switch and then switch to paper", ::step)
         assertEquals(3, s?.size, s.toString())
         assertEquals(listOf(Command.Kind.STOP_ALL, Command.Kind.KILL_ON, Command.Kind.MODE_PAPER), s!!.map { Ask.parse(it).command!!.kind })
-        assertTrue(Plan.say(s).startsWith("1) Stop all strategies; 2) "))
+        assertTrue(Plan.say(s).startsWith("1) Stop all strategies (lowers risk; asks you first); 2) "), Plan.say(s))
+    }
+
+    @Test fun aPlanCanAskToo() {
+        val isStep = { s: String -> step(s) || Toolbox.isRead(s) }
+        val s = Plan.steps("stop all strategies, then tell me my positions", isStep)
+        assertEquals(2, s?.size, s.toString())
+        assertTrue(Plan.say(s!!).endsWith("2) tell me my positions (just answered)"), Plan.say(s))
+        assertNull(Plan.steps("how is nifty, then what are my positions", isStep))      // only questions: no plan
+    }
+
+    @Test fun theToolboxKnowsWhatEachNeeds() {
+        assertEquals(Toolbox.Need.NEVER, Toolbox.of(Command.Kind.MODE_LIVE).need)
+        assertEquals(Toolbox.Need.NEVER, Toolbox.of(Command.Kind.JTRADES_LIVE).need)
+        assertEquals(Toolbox.Need.FINGERPRINT, Toolbox.of(Command.Kind.EXIT_ALL).need)
+        assertTrue(Command.Kind.entries.filter { !it.reduces }.none { Toolbox.of(it).need == Toolbox.Need.LOWERS })
+        assertTrue(Toolbox.say().contains("Never by me: switch the app to live, let AI trades go live"), Toolbox.say())
     }
 
     @Test fun oneRequestStaysOne() {

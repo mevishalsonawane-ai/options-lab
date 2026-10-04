@@ -23,6 +23,8 @@ object Plan {
         val strong = parts(STRONG)
         val split = if (strong.size >= 2) strong.flatMap { splitAnd(it, isStep) } else splitAnd(t, isStep)
         if (split.size < 2 || split.size > MAX_STEPS || !split.all(isStep)) return null
+        // A plan does something: questions alone are just answered (one after the other, as asked).
+        if (split.all { Ask.parse(it).command == null }) return null
         return split
     }
 
@@ -37,7 +39,7 @@ object Plan {
         Regex("(?i)^(not |nothing was|i could not|i did not|could not|couldn't|that did not work|zerodha refused|refused|no |you have no)").containsMatchIn(result.trim())
 
     /** The plan in words, numbered. */
-    fun say(steps: List<String>): String = steps.mapIndexed { i, s -> "${i + 1}) $s" }.joinToString("; ")
+    fun say(steps: List<String>): String = steps.mapIndexed { i, s -> "${i + 1}) $s (${Toolbox.needOf(s).label})" }.joinToString("; ")
 
     /** What happened, step by step: done, failed (and the rest not tried). */
     fun report(results: List<Pair<String, String>>, total: Int): String {

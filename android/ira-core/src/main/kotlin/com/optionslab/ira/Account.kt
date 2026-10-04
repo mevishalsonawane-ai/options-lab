@@ -221,6 +221,6 @@ object AppAnswers {
             "prepare an order for you to confirm (\"buy 1 lot Nifty ATM CE\"). I can also reason over the data: \"why is Nifty down\", " +
             "\"how much did BankNifty move in the last hour\", \"which index is strongest\", \"expected range today\", \"chances Nifty closes " +
             "above 25000\", \"pivots\", \"is Nifty overbought\", \"recap the day\", \"how did Nifty do this week\", \"brief me\", " +
-            "\"what is theta\", and \"the usual\". I don't give buy or sell advice. " + voiceLine, emptyList())
+            "\"what is theta\", and \"the usual\". I don't give buy or sell advice. " + Toolbox.say() + " " + voiceLine, emptyList())
     }
 }

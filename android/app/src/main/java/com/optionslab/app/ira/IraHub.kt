@@ -1013,7 +1013,8 @@ object IraHub {
         // A request in steps ("stop all strategies, then kill switch on and switch to paper"): one plan, one Confirm, done
         // in order through the same gates as each step alone. Never with a time (those go below) and never an order.
         if (com.optionslab.app.BuildConfig.JARVIS && !runCatching { com.optionslab.ira.Later.mentionsTime(q) }.getOrDefault(true)) {
-            val steps = runCatching { com.optionslab.ira.Plan.steps(q) { s -> Ask.parse(s).let { it.command != null && it.order == null && it.command?.kind != com.optionslab.ira.Command.Kind.PRACTICE } } }.getOrNull()
+            val steps = runCatching { com.optionslab.ira.Plan.steps(q) { s -> Ask.parse(s).let { it.command != null && it.order == null && it.command?.kind != com.optionslab.ira.Command.Kind.PRACTICE } ||
+                com.optionslab.ira.Toolbox.isRead(s) } }.getOrNull()
             if (steps != null) { planAsked(q, steps); return }
         }
         // A command for a later time ("start all the arms tomorrow at 9am"): set only once confirmed, run by an alarm then.
@@ -1548,8 +1549,10 @@ object IraHub {
     private fun planAsked(q: String, steps: List<String>) {
         _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
         scope.launch {
-            val cmds = steps.map { Ask.parse(it).command!! }
+            // A question in the plan (no command) is answered at its turn, after the steps before it were done.
+            val cmds = steps.map { Ask.parse(it).command }
             for ((i, c) in cmds.withIndex()) {
+                if (c == null) continue
                 val (what, act) = runCatching { IraActions.prepare(c) }.getOrElse { ("I could not do that: ${it.message}") to null }
                 if (act == null) { reply("Step ${i + 1} (\"${steps[i]}\") cannot be done: $what Nothing in the plan was done."); return@launch }
             }
@@ -1557,6 +1560,13 @@ object IraHub {
             pend("this plan: $plan", suspend {
                 val done = ArrayList<Pair<String, String>>()
                 for ((i, c) in cmds.withIndex()) {
+                    if (c == null) {
+                        // Answered as if asked now, in order (its answer follows this plan's report).
+                        val step = steps[i]
+                        scope.launch { kotlinx.coroutines.delay(400L * (i + 1)); ask(step, understood = true) }
+                        done += step to "answered below."
+                        continue
+                    }
                     val (what, act) = runCatching { IraActions.prepare(c) }.getOrElse { ("I could not do that: ${it.message}") to null }
                     val r = if (act == null) "Not done: $what" else IraActions.run(what, act)
                     done += steps[i] to r
@@ -1564,7 +1574,7 @@ object IraHub {
                 }
                 com.optionslab.ira.Plan.report(done, steps.size)
             }, "My plan, Boss: $plan. Tap Confirm and I'll do them in order, stopping if one fails.",
-                exit = cmds.any { it.kind == com.optionslab.ira.Command.Kind.EXIT_ALL })
+                exit = cmds.any { it?.kind == com.optionslab.ira.Command.Kind.EXIT_ALL })
             IraActivity.add("Planned ${steps.size} steps: $plan")
         }
     }
