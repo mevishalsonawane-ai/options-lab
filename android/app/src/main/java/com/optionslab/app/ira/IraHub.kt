@@ -1295,6 +1295,7 @@ object IraHub {
         // Jarvis without the model: a varied "I don't know that" instead of the same line every time.
         if (parsed.topics == setOf(Topic.OFF_TOPIC) && com.optionslab.app.BuildConfig.JARVIS) {
             val said = if (com.optionslab.ira.Chat.personal(q)) com.optionslab.ira.Chat.aboutMe(chatTurn.getAndIncrement()) else com.optionslab.ira.Chat.fallback(chatTurn.getAndIncrement())
+            runCatching { IraTools.missed(q) }
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
             return
         }
@@ -1593,6 +1594,8 @@ object IraHub {
                 val text = chat ?: if (personal) com.optionslab.ira.Chat.aboutMe(chatTurn.getAndIncrement()) else com.optionslab.ira.Chat.fallback(chatTurn.getAndIncrement())
                 // Boss asked something newer meanwhile: a late chat line would land under that answer (seen 2026-10-04).
                 if (_state.value.messages.lastOrNull { !it.fromIra }?.text != q) return@launch
+                // Not placed: his next wording may teach these words (questions only).
+                runCatching { IraTools.missed(if (chat == null && !personal) q else "") }
                 reply(text); speakLater(text, q)
                 return@launch
             }

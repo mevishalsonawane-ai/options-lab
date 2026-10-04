@@ -38,6 +38,34 @@ object Corrections {
         return Learned(w, r)
     }
 
+    /** How long after a missed question its rephrasing is still taken as one (no "that was wrong" said). */
+    const val REPHRASE_MS = 45_000L
+
+    private val ABOUT = setOf(Topic.OVERVIEW, Topic.TREND, Topic.LEVELS, Topic.PATTERNS, Topic.NEWS, Topic.VOLATILITY, Topic.WHY,
+        Topic.EXPLAIN, Topic.BACKTEST, Topic.TRADE_CHECK, Topic.ACCOUNT)
+
+    /**
+     * Words Jarvis could not place (he answered "I'm not sure") that may be learned from Boss's next wording: a short
+     * question with no numbers, not small talk and not about Jarvis himself (Boss, 4 Oct: "what's going on").
+     */
+    fun missed(text: String): Boolean {
+        val t = normalize(text)
+        if (t.isEmpty() || t.split(" ").size > 8 || Regex("\\d").containsMatchIn(t)) return false
+        if (acts(text) || Chat.personal(text) || Chat.smallTalk(text, 0) != null) return false
+        return Topic.OFF_TOPIC in Ask.parse(text).topics
+    }
+
+    /**
+     * Boss rephrased a missed question (no "that was wrong"): learned only when the new words ask about the markets or
+     * the account - never small talk, help, a command or an order.
+     */
+    fun rephrase(missed: String, right: String): Learned? {
+        if (!missed(missed)) return null
+        val q = Ask.parse(right)
+        if (q.topics.none { it in ABOUT } || Topic.SUGGEST in q.topics) return null
+        return learn(missed, right)
+    }
+
     fun similarity(a: String, b: String): Double {
         if (a == b) return 1.0
         val n = a.length; val m = b.length

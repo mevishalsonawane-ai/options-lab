@@ -50,23 +50,42 @@ internal object IraTools {
 
     /** The words just marked wrong, and when: the next question understood within two minutes is what was meant. */
     @Volatile private var awaiting: Pair<String, Long>? = null
+    /** Words Jarvis just could not place (said "I'm not sure"): Boss's next wording within 45 s may teach them. */
+    @Volatile private var missedLast: Pair<String, Long>? = null
+
+    /** Jarvis could not place [said]: kept a moment, in case Boss says it another way. */
+    @Synchronized fun missed(said: String) {
+        val w = com.optionslab.ira.Secrets.redact(said)
+        missedLast = if (runCatching { com.optionslab.ira.Corrections.missed(w) }.getOrDefault(false)) w to System.currentTimeMillis() else null
+    }
 
     /**
      * After a question is understood: if Boss just said "that was wrong", the misunderstood words are learned as this
      * question (questions only). Returns what to say about it, or null.
      */
     @Synchronized fun maybeLearn(question: String): String? {
+        // Only the very next question counts as the rephrasing of a missed one.
+        val miss = missedLast; missedLast = null
+        if (awaiting == null && miss != null && System.currentTimeMillis() - miss.second <= com.optionslab.ira.Corrections.REPHRASE_MS) {
+            val l = com.optionslab.ira.Corrections.rephrase(miss.first, com.optionslab.ira.Secrets.redact(question)) ?: return null
+            keep(l)
+            return "Noted, Boss: when you say \"${l.wrong}\", I'll take it as \"${l.right}\". (Say \"that was wrong\" or \"forget what you learned\" if not.)"
+        }
         val (wrong, at) = awaiting ?: return null
         if (System.currentTimeMillis() - at > 120_000) { awaiting = null; return null }
         val l = com.optionslab.ira.Corrections.learn(wrong, com.optionslab.ira.Secrets.redact(question)) ?: return null
         awaiting = null
-        val all = (learned().filter { it.wrong != l.wrong } + l).takeLast(com.optionslab.ira.Corrections.KEEP)
-        prefs().put(LEARNED, JSONArray().apply { all.forEach { put(JSONObject().put("w", it.wrong).put("r", it.right)) } }.toString())
-        IraActivity.add("Learned: \"${l.wrong}\" means \"${l.right}\".")
+        keep(l)
         return "Got it, Boss: next time \"${l.wrong}\" means \"${l.right}\"."
     }
 
-    fun forgetLearned() { prefs().put(LEARNED, null); awaiting = null }
+    private fun keep(l: com.optionslab.ira.Corrections.Learned) {
+        val all = (learned().filter { it.wrong != l.wrong } + l).takeLast(com.optionslab.ira.Corrections.KEEP)
+        prefs().put(LEARNED, JSONArray().apply { all.forEach { put(JSONObject().put("w", it.wrong).put("r", it.right)) } }.toString())
+        IraActivity.add("Learned: \"${l.wrong}\" means \"${l.right}\".")
+    }
+
+    fun forgetLearned() { prefs().put(LEARNED, null); awaiting = null; missedLast = null }
 
     // ---- Boss's own words, kept ---------------------------------------------------------------------------------------
 
