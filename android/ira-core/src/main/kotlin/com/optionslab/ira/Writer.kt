@@ -15,11 +15,33 @@ object Writer {
             "at most four short sentences; reply with the answer only."
         val user = buildString {
             append("QUESTION: ").append(question.take(300)).append('\n')
-            append("FACTS:\n"); facts.take(40).forEach { append("- ").append(it).append('\n') }
+            append("FACTS:\n"); relevant(facts, question, draft).forEach { append("- ").append(it).append('\n') }
             append("DRAFT: ").append(draft)
         }
         return "<|im_start|>system\n$sys<|im_end|>\n<|im_start|>user\n$user<|im_end|>\n<|im_start|>assistant\n"
     }
+
+    /**
+     * The facts worth giving the model, in their own order: those sharing a number with the [draft], then those sharing
+     * a word with the question or draft, at most [max]. Every word the model reads costs time on the phone (Boss: "late
+     * response"), and the draft already holds what the answer needs; the check still uses all the facts.
+     */
+    fun relevant(facts: List<String>, question: String, draft: String, max: Int = 12): List<String> {
+        if (facts.size <= max) return facts
+        val nums = NUM.findAll(draft).map { it.value.replace(",", "") }.toSet()
+        val words = WORD.findAll((question + " " + draft).lowercase()).map { it.value }.filter { it.length > 3 }.toSet()
+        fun score(f: String): Int {
+            val n = NUM.findAll(f).count { it.value.replace(",", "") in nums }
+            val w = WORD.findAll(f.lowercase()).count { it.value in words }
+            return n * 10 + w
+        }
+        val keep = facts.withIndex().map { it to score(it.value) }.filter { it.second > 0 }
+            .sortedByDescending { it.second }.take(max).map { it.first }.sortedBy { it.index }.map { it.value }
+        return keep.ifEmpty { facts.take(max) }
+    }
+
+    private val NUM = Regex("\\d[\\d,]*(\\.\\d+)?")
+    private val WORD = Regex("[a-z]+")
 
     /** Should the model be asked at all? Only for answers built from facts - never orders, refusals or advice questions. */
     fun worthRewriting(q: Question, a: Answer): Boolean =

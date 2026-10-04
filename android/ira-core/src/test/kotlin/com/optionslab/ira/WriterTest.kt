@@ -43,4 +43,14 @@ class WriterTest {
         val o = Ask.parse("buy 1 lot banknifty 52000 ce")
         assertFalse(Writer.worthRewriting(o, Answer("Ready", facts, o.order)))
     }
+
+    @Test fun onlyRelevantFactsGoToTheModel() {
+        val facts = (1..30).map { "Filler fact number $it about something else" } + "Nifty is at 24,612.40" + "VIX is 13.2"
+        val kept = Writer.relevant(facts, "where is nifty", "Nifty is at 24,612.40, Boss.")
+        assertTrue(kept.size <= 12)
+        assertTrue("Nifty is at 24,612.40" in kept)
+        assertEquals(facts.take(5), Writer.relevant(facts.take(5), "q", "d"))
+        // The prompt carries the chosen ones only.
+        assertTrue(!Writer.prompt("where is nifty", facts, "Nifty is at 24,612.40, Boss.").contains("number 29 "))
+    }
 }
