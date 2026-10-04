@@ -382,6 +382,7 @@ class JarvisVoice : Service() {
         instance = java.lang.ref.WeakReference(this)
         if (rec == null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             rec = SpeechRecognizer.createOnDeviceSpeechRecognizer(this).also { it.setRecognitionListener(listener) }
+            pickLanguage()
             tts = TextToSpeech(this) { status -> main.post { voiceReady = status == TextToSpeech.SUCCESS && pickOfflineVoice() } }
             listen()
             main.postDelayed(watchdog, 5_000)
@@ -465,6 +466,26 @@ class JarvisVoice : Service() {
     private fun locked(): Boolean = runCatching { (getSystemService(Context.KEYGUARD_SERVICE) as android.app.KeyguardManager).isKeyguardLocked }.getOrDefault(false)
 
     private fun awake() = SystemClock.elapsedRealtime() < awakeUntil
+
+    /**
+     * The English the phone's on-device recognizer actually has (Android 13+ can say): English (India) when installed,
+     * else English (US), else any English - so Jarvis never asks for a language the phone lacks.
+     */
+    private fun pickLanguage() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
+        val r = rec ?: return
+        runCatching {
+            r.checkRecognitionSupport(Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH), java.util.concurrent.Executors.newSingleThreadExecutor(),
+                object : android.speech.RecognitionSupportCallback {
+                    override fun onSupportResult(s: android.speech.RecognitionSupport) {
+                        val have = s.installedOnDeviceLanguages.map { it.lowercase(java.util.Locale.ROOT).replace('_', '-') }
+                        val pick = listOf("en-in", "en-us").firstOrNull { it in have } ?: have.firstOrNull { it.startsWith("en") }
+                        pick?.let { p -> main.post { lang = if (p.length == 5) p.substring(0, 3) + p.substring(3).uppercase(java.util.Locale.ROOT) else p } }
+                    }
+                    override fun onError(error: Int) {}
+                })
+        }
+    }
 
     private fun listen() {
         if (stopped || held || listening) return
@@ -556,6 +577,12 @@ class JarvisVoice : Service() {
                 // before the next turn; when the phone has no on-device recognition at all, he says what to install.
                 SpeechRecognizer.ERROR_CLIENT -> {
                     clientErrors++; errorsInRow++; lastError = error to SystemClock.elapsedRealtime()
+                    // Boss's phone (4 Oct) has English (US) and Hindi on-device, not English (India): some recognizers
+                    // refuse a missing language this way rather than "language unavailable". The other English first.
+                    if (!triedOtherLanguage) {
+                        triedOtherLanguage = true; lang = if (lang == "en-IN") "en-US" else "en-IN"
+                        IraActivity.add("Listening in $lang (the speech service refused the other English).")
+                    }
                     if (clientErrors >= 6 && runCatching { !SpeechRecognizer.isOnDeviceRecognitionAvailable(this@JarvisVoice) }.getOrDefault(false)) {
                         giveUp("This phone has no on-device speech recognition ready: update \"Speech Services by Google\" in the Play Store, then add English under Settings, System, Languages, On-device speech recognition.")
                         return
