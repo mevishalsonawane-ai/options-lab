@@ -150,6 +150,10 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SHA: ${{ github.sha }}
         run: |
+          # Only the branch's newest commit publishes: an older run that finishes later must not overwrite a newer APK
+          # (4 Oct: 8b0cbf4's build finished after a2651c9's and replaced it).
+          head=$(gh api "repos/${{ github.repository }}/branches/claude/android-options-lab-kotlin-xgt1ym" --jq .commit.sha 2>/dev/null || true)
+          if [ -n "$head" ] && [ "$head" != "$SHA" ]; then echo "A newer commit ($head) is on the branch: it publishes its own APK."; exit 0; fi
           apk=$(ls app/build/outputs/apk/ira/release/*.apk | head -1)
           cp "$apk" "$RUNNER_TEMP/IraAlgo.apk"
           gold=$(ls app/build/outputs/apk/gold/release/*.apk | head -1)
