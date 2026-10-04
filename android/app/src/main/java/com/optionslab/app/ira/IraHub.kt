@@ -1083,6 +1083,14 @@ object IraHub {
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
             return
         }
+        // "How far is Nifty from 25000?": points and percent from the last price.
+        if (parsed.command == null && parsed.order == null) runCatching { com.optionslab.ira.Distance.asked(q) }.getOrNull()?.let { a ->
+            val p = _state.value.snaps[a.market]?.price
+            val said = if (p == null || p <= 0) "I have no ${a.market.label} price yet, Boss." else
+                listOfNotNull(offlineNote() ?: staleNote(listOf(a.market)), com.optionslab.ira.Distance.say(a, p)).joinToString(" ")
+            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
+            return
+        }
         // An option's price, the ATM strike, the lot size, the time left (read from the live chain; never an order).
         if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && parsed.command == null && parsed.order == null)
             runCatching { com.optionslab.ira.OptionFacts.asked(q) }.getOrNull()?.let { a ->
