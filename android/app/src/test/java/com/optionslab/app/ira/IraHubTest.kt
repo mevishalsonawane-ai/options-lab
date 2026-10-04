@@ -142,6 +142,25 @@ class IraHubTest : RobolectricTest() {
         assertEquals(learned, IraHub.state.value.learned)
     }
 
+    /** 4 Oct additions answered at once, in the app: the clock, the exchange calendar, the distance to a level, reminders. */
+    @Test fun quickAnswersOfTheFourthOfOctober() = runBlocking {
+        IraHub.testHistories = { histories }
+        IraHub.refresh()
+        fun last() = IraHub.state.value.messages.last().text
+        IraHub.ask("what time is it")
+        assertTrue(last(), last().startsWith("It's ") && last().endsWith(", Boss."))
+        IraHub.ask("when is the next holiday")
+        assertTrue(last(), last().contains("holiday", ignoreCase = true))
+        IraHub.ask("how far is nifty from 30000")
+        assertTrue(last(), last().contains("points") && last().contains("below 30,000.00"))
+        IraHub.ask("remind me to check nifty")
+        assertTrue(last(), last().startsWith("Boss, tell me when"))
+        IraHub.ask("cancel my reminders")
+        assertTrue(last(), last() == "You have no reminders set, Boss." || last().startsWith("I could not reach the reminders"))
+        // None of them placed or prepared anything.
+        assertTrue(IraHub.state.value.messages.none { it.order != null || it.action != null })
+    }
+
     /** "How are you" is answered at once and not in the same words twice running; "who won the match" is still not small talk. */
     @Test fun smallTalkIsAnsweredInVariedWords() = runBlocking {
         IraHub.ask("How are you, Jarvis?")
