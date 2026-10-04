@@ -268,7 +268,8 @@ internal object IraSolo {
         // Switched off: its setup can still be offered to Boss as a trade idea (he approves each), once a market a day.
         // In Live, once Solo's own paper record is proven, its setups are always asked (Boss, 4 Oct: real orders only
         // after his yes with the fingerprint); until then it trades on paper as before.
-        val soloLive = on && runCatching { AppSettings.load().live }.getOrDefault(false) && provenWhy() == null
+        // (Not when the day's loss limit for Jarvis's trades is hit: then Solo trades on paper only.)
+        val soloLive = on && runCatching { AppSettings.load().live }.getOrDefault(false) && provenWhy() == null && !IraNewsTrades.lossLimitHit()
         val offering = soloLive || !on && Automations.on(Automations.Auto.SOLO_IDEAS) && !IraNewsTrades.lossLimitHit()
         if (!on && !offering) return@withLock
         // Paused by its drawdown: neither trades nor ideas until Boss switches it on again.
@@ -304,7 +305,7 @@ internal object IraSolo {
                 val key = "$today|${m.name}"
                 if (synchronized(offered) { key in offered }) continue
                 val text = "Solo's read on ${m.label}: ${sig.why}. $read"
-                if (IraHub.offerSoloIdea(com.optionslab.ira.NewsTrade.Idea(m, sig.call, text, kind = "solo"), text, solo = soloLive)) synchronized(offered) { offered += key }
+                if (IraHub.offerSoloIdea(com.optionslab.ira.NewsTrade.Idea(m, sig.call, text, kind = "solo"), text, solo = true)) synchronized(offered) { offered += key }
                 return@withLock
             }
             enter(m, sig, list, today, read)
@@ -450,7 +451,10 @@ internal object IraSolo {
 
     /** Null when Solo's own paper record has earned real orders (the same bar as Jarvis's trades), else why not. */
     fun provenWhy(): String? = com.optionslab.ira.JarvisTrades.proven(all().filter { it.closed && it.net != null }
-        .map { com.optionslab.ira.JarvisTrades.Closed(LocalDate.parse(it.day), it.net!!, false) })
+        .map { com.optionslab.ira.JarvisTrades.Closed(LocalDate.parse(it.day), it.net!!, false) } +
+        // Its setups taken through Boss's approval (on Zerodha too) count against it: losing real money takes it back.
+        runCatching { IraNewsTrades.all().filter { it.closed && it.result != null && it.headline.startsWith("pattern: solo") }
+            .map { com.optionslab.ira.JarvisTrades.Closed(LocalDate.parse(it.day), it.result!!, false) } }.getOrDefault(emptyList()))
         ?.replace("My trades", "Solo's trades")?.replace("My paper trades", "Solo's paper trades")
 
     /** Solo's paper record in one line. */

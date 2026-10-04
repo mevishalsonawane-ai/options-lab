@@ -64,7 +64,13 @@ internal object IraNewsTrades {
      * trades go to Zerodha - each only after his yes with the fingerprint. (A new key: the old default was on.)
      */
     var paperFirst: Boolean
-        get() = runCatching { com.optionslab.app.security.SecurePrefs.getBoolean("jarvis.trades.paper.v2", false) }.getOrDefault(true)
+        get() = runCatching {
+            val p = com.optionslab.app.security.SecurePrefs
+            // A choice Boss made before ("keep your trades on paper" or "let them go live") is kept; only the default changed.
+            val old = "jarvis.trades.paper"
+            val oldSet = p.getBoolean(old, true) == p.getBoolean(old, false)
+            p.getBoolean("jarvis.trades.paper.v2", if (oldSet) p.getBoolean(old, true) else false)
+        }.getOrDefault(true)
         set(v) { runCatching { com.optionslab.app.security.SecurePrefs.put("jarvis.trades.paper.v2", v) } }
 
     const val DEFAULT_LIMIT = 3_000.0
@@ -386,7 +392,7 @@ internal object IraNewsTrades {
 
     /** Has the record earned real orders: Solo's own paper record for its setups, else Jarvis's (and paper-first off). */
     private fun earned(solo: Boolean): Boolean =
-        if (solo) IraSolo.provenWhy() == null else !paperFirst && JarvisTrades.proven(closedRecord()) == null
+        !paperFirst && if (solo) IraSolo.provenWhy() == null else JarvisTrades.proven(closedRecord()) == null
 
     /** Why each of Jarvis's recent losing trades lost (the last five), in words. */
     fun lossReasons(): List<String> {

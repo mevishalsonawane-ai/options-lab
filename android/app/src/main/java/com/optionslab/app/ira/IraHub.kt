@@ -615,9 +615,10 @@ object IraHub {
         val bar = runCatching { IraNewsTrades.actAloneBar() }.getOrDefault(com.optionslab.ira.ActAlone.NONE)
         // And an hour of the day that has been losing him money: he does not act alone then, and tells Boss when asking.
         val nowMin = LocalDateTime.now(IST).let { it.hour * 60 + it.minute }
-        val badHour = runCatching { com.optionslab.ira.ActAlone.badHour(IraNewsTrades.byMinute(), nowMin) }.getOrNull()
+        // (Read failing: treated as a losing hour or kind - it only stops acting alone, never asking.)
+        val badHour = runCatching { com.optionslab.ira.ActAlone.badHour(IraNewsTrades.byMinute(), nowMin) }.getOrElse { "my record could not be read" }
         // And a kind of idea (news, or this pattern) that has been losing: the same.
-        val badKind = runCatching { com.optionslab.ira.ActAlone.badKind(IraNewsTrades.byKind(), com.optionslab.ira.Preference.kind(source)) }.getOrNull()
+        val badKind = runCatching { com.optionslab.ira.ActAlone.badKind(IraNewsTrades.byKind(), com.optionslab.ira.Preference.kind(source)) }.getOrElse { "my record could not be read" }
         if (!solo && badHour == null && badKind == null && com.optionslab.ira.ActAlone.ok(Automations.on(Automations.Auto.ACT_PAPER), goesLive, conf.stars, bar) && snap != null) {
             val done = runCatching { IraNewsTrades.place(idea, _state.value.snaps[m]?.price ?: snap.price, source, paperOnly = true, stars = conf.stars) }.getOrElse { "That did not work: ${it.message ?: "an error"}." }
             val took = done.startsWith("Bought")
