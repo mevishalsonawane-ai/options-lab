@@ -83,7 +83,8 @@ class JarvisVoice : Service() {
 
         private fun errorName(e: Int): String = when (e) {
             SpeechRecognizer.ERROR_AUDIO -> "the microphone could not be read (another app may be using it)"
-            SpeechRecognizer.ERROR_CLIENT -> "the phone's speech service refused the request"
+            SpeechRecognizer.ERROR_CLIENT -> "the phone's speech service refused the request (I restart it by myself; if it keeps failing, update " +
+                "\"Speech Services by Google\" in the Play Store and download English under Settings, System, Languages, On-device speech recognition)"
             SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> "the phone's speech service is busy (another app may be using it)"
             SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> "the microphone permission is missing"
             SpeechRecognizer.ERROR_NETWORK, SpeechRecognizer.ERROR_NETWORK_TIMEOUT, SpeechRecognizer.ERROR_SERVER -> "the speech service wanted the network (code $e)"
@@ -94,6 +95,9 @@ class JarvisVoice : Service() {
             val out = ArrayList<String>()
             val v = instance?.get()
             if (wanted && v == null) out += "Listening is switched on but not running: open the Jarvis screen, or switch \"Listen for Jarvis\" off and on."
+            // No on-device recognizer on the phone: Jarvis cannot hear at all (he listens on the phone only).
+            if (v != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && runCatching { !SpeechRecognizer.isOnDeviceRecognitionAvailable(v) }.getOrDefault(false))
+                out += "This phone has no on-device speech recognition ready: update \"Speech Services by Google\" in the Play Store, then add English under Settings, System, Languages, On-device speech recognition."
             lastError?.takeIf { SystemClock.elapsedRealtime() - it.second < 10 * 60_000 }?.let { (e, at) ->
                 out += "My ears failed %d seconds ago: %s.".format(java.util.Locale.ENGLISH, (SystemClock.elapsedRealtime() - at) / 1000, errorName(e))
             }
@@ -348,6 +352,8 @@ class JarvisVoice : Service() {
     private var lang = "en-IN"
     private var triedOtherLanguage = false
     private var errorsInRow = 0
+    /** "The speech service refused the request" in a row: the recognizer is made anew at once each time. */
+    private var clientErrors = 0
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -503,7 +509,7 @@ class JarvisVoice : Service() {
     private fun boss(): Boolean = VoiceGuard.isBoss(lastHeard).also { lastHeard = null }
 
     private val listener = object : RecognitionListener {
-        override fun onReadyForSpeech(params: Bundle?) { errorsInRow = 0; readyAt = SystemClock.elapsedRealtime() }
+        override fun onReadyForSpeech(params: Bundle?) { errorsInRow = 0; clientErrors = 0; readyAt = SystemClock.elapsedRealtime() }
         override fun onBeginningOfSpeech() {}
         override fun onRmsChanged(rmsdB: Float) {}
         override fun onBufferReceived(buffer: ByteArray?) {}
@@ -545,6 +551,20 @@ class JarvisVoice : Service() {
                     (Build.VERSION.SDK_INT >= 33 && error == SpeechRecognizer.ERROR_CANNOT_CHECK_SUPPORT))) { tapFailed = true; again(500); return }
             when (error) {
                 SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> giveUp("Jarvis lost the microphone permission.")
+                // Boss, 4 Oct ("why can't you hear me" -> "the speech service refused the request"): the on-device
+                // recognizer is left in a bad state - it is made anew at once (not after 3 failures) and given a second
+                // before the next turn; when the phone has no on-device recognition at all, he says what to install.
+                SpeechRecognizer.ERROR_CLIENT -> {
+                    clientErrors++; errorsInRow++; lastError = error to SystemClock.elapsedRealtime()
+                    if (clientErrors >= 6 && runCatching { !SpeechRecognizer.isOnDeviceRecognitionAvailable(this@JarvisVoice) }.getOrDefault(false)) {
+                        giveUp("This phone has no on-device speech recognition ready: update \"Speech Services by Google\" in the Play Store, then add English under Settings, System, Languages, On-device speech recognition.")
+                        return
+                    }
+                    runCatching { rec?.destroy() }
+                    rec = runCatching { SpeechRecognizer.createOnDeviceSpeechRecognizer(this@JarvisVoice).also { it.setRecognitionListener(this) } }.getOrNull()
+                    if (clientErrors == 1) IraActivity.add("Restarted listening (the speech service refused a request).")
+                    again(if (clientErrors <= 3) 1_000L else minOf(30_000L, 1_000L shl minOf(clientErrors - 3, 5)))
+                }
                 SpeechRecognizer.ERROR_LANGUAGE_NOT_SUPPORTED, SpeechRecognizer.ERROR_LANGUAGE_UNAVAILABLE ->
                     if (!triedOtherLanguage) { triedOtherLanguage = true; lang = "en-US"; again() }
                     else giveUp("No on-device English speech model: add one in the phone's Settings (System → Languages → On-device speech recognition).")
