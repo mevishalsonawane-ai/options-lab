@@ -210,6 +210,23 @@ internal object IraCoach {
         }, addsRisk = steps.any { it.on })
     }
 
+    /** 09:05-09:14 on a trading day, once: Zerodha not logged in while Live mode or a Zerodha arm needs it. */
+    suspend fun loginWatch() {
+        if (!com.optionslab.app.BuildConfig.JARVIS || com.optionslab.app.BuildConfig.GOLD) return
+        val m = com.optionslab.app.data.Market
+        val b = com.optionslab.app.data.Broker
+        val minute = m.minuteNow()
+        if (!m.isTradingDay(m.today()) || minute !in com.optionslab.ira.LoginNudge.FROM..com.optionslab.ira.LoginNudge.TO) return
+        val key = "jarvis.login.nudged"
+        if (com.optionslab.app.security.SecurePrefs.getString(key) == m.today().toString()) return
+        val needs = runCatching { AppSettings.load().live }.getOrDefault(false) ||
+            runCatching { com.optionslab.app.data.OrbArms.view().arms.any { it.armed && it.liveOk } }.getOrDefault(false)
+        if (!com.optionslab.ira.LoginNudge.due(minute, b.configured, b.loggedIn, needs)) return
+        com.optionslab.app.security.SecurePrefs.put(key, m.today().toString())
+        val t = com.optionslab.ira.LoginNudge.say(minute)
+        IraHub.note(t); JarvisVoice.announce(t); IraActivity.add(t)
+    }
+
     private var relay = com.optionslab.ira.RelayWatch.State()
     private var relayAt = 0L
 
