@@ -26,6 +26,17 @@ object Wake {
     private val HUSH = Regex("^(just |please |now )?(stop|stop it|stop now|stop that|stop talking|stop speaking|enough|that s enough|thats enough|quiet|be quiet|shut up|silence|hush|chup|bas|never ?mind|forget it|cancel that)( please| now| jarvis)?$")
 
     /** Is [text] only "stop talking" (said to Jarvis, with or without its name)? */
+    /**
+     * A listening turn the recognizer ended with no words (7, no match) or silence (6) while its partial reading held
+     * the name (Boss, 4 Oct: "Jarvis" alone was read mid-turn, then dropped as no match - every turn). Counted as the
+     * name heard: the partial is what to act on, else null.
+     */
+    fun lostTurn(error: Int, partial: String?): String? {
+        if (error != 7 && error != 6) return null
+        val p = partial?.trim()?.takeIf { it.isNotEmpty() } ?: return null
+        return p.takeIf { heard(it, false) !is Heard.Ignore }
+    }
+
     fun hush(text: String): Boolean = HUSH.matches(text.lowercase().replace(Regex("[^a-z ]"), " ").replace(Regex("\\b(hey |ok |okay )?(jarvis|jarvas|jervis|jarviss|jarvish|jarwis|jaarvis|jarviz|jarbis)\\b"), " ")
         .replace(Regex("\\s+"), " ").trim())
 

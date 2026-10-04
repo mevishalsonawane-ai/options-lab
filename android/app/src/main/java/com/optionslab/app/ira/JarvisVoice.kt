@@ -615,8 +615,8 @@ class JarvisVoice : Service() {
             listening = false
             // Boss, 4 Oct: "Jarvis" alone was caught while he spoke, then the final answer said "no match" (error 7) and
             // the name was lost - every turn. The name read mid-turn counts: as if the recognizer had said it.
-            val partial = turnPartial
-            if ((error == SpeechRecognizer.ERROR_NO_MATCH || error == SpeechRecognizer.ERROR_SPEECH_TIMEOUT) && partial != null && WAKE.containsMatchIn(partial) && !stopped) {
+            val partial = com.optionslab.ira.Wake.lostTurn(error, turnPartial)
+            if (partial != null && !stopped) {
                 note("heard the name mid-turn (final: error $error)")
                 errorsInRow = 0; loudNoMatch = 0
                 endTap()
