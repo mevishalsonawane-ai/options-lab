@@ -1165,6 +1165,13 @@ object IraHub {
                 return
             }
         }
+        // "What held up?": every paper strategy's forward test (part 7).
+        if (com.optionslab.ira.Vetting.asked(q) && Ask.parse(q).command == null && !com.optionslab.app.BuildConfig.GOLD) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            if (phoneLocked()) { reply("Unlock the phone for that, Boss."); return }
+            scope.launch { reply(runCatching { IraExpert.say() }.getOrElse { "I could not read the paper trades just now, Boss." }) }
+            return
+        }
         // "What have you learned?": the lessons in every arm's, strategy's and Boss's closed trades (part 5).
         if (com.optionslab.ira.Lessons.asked(q) && Ask.parse(q).command == null) {
             _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
