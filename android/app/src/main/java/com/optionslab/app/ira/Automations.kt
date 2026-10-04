@@ -23,6 +23,7 @@ internal object Automations {
         FEED("Live prices stopped", "No prices for 2 minutes in market hours: told at once.", "jarvis.auto.feed"),
         EXPIRY("Expiry heads-up", "14:55 on expiry day: what the 15:05 square-off will close.", "jarvis.auto.expiry"),
         GAP("Opening gap plan", "09:16: the gap and how the arms did on such days.", "jarvis.auto.gap"),
+        PLAN("Plan my day (paper arms)", "09:00-10:00: a PAPER arm that lost on days like today is parked, and one Jarvis parked is armed again when the market suits it; told why. Never an arm on Zerodha, never one you left off.", "jarvis.auto.plan"),
         ORB("Opening range breaks", "Nifty or BankNifty leaving its first 15 minutes' range: told once per side a day.", "jarvis.auto.orb"),
         VIX("Fear spikes", "India VIX up 10% or more on the day: told once.", "jarvis.auto.vix"),
         OI("Open interest walls", "The biggest call / put open interest moving to a new strike.", "jarvis.auto.oi"),

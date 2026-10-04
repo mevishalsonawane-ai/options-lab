@@ -65,6 +65,52 @@ object Regime {
 }
 
 /**
+ * Jarvis plans the day (Boss, 4 Oct: "plan my day"): each morning the PAPER arms are fitted to the market's regime from
+ * their own record on days of that regime. An armed arm that lost on such days (over [MIN_TRADES] trades or more) is
+ * parked; an arm Jarvis parked is armed again once the regime no longer says it loses. It never arms an arm Boss did
+ * not arm, never touches an arm trading Zerodha, and leaves alone an arm Boss re-armed after it was parked (until the
+ * regime changes). Pure.
+ */
+object DayPlan {
+    const val MIN_TRADES = 5
+
+    /** Each arm's (net, trades) by regime. */
+    fun record(trades: List<ArmHealth.T>, regimes: Map<LocalDate, Regime.Kind>): Map<String, Map<Regime.Kind, Pair<Double, Int>>> =
+        trades.filter { it.day in regimes }.groupBy { it.arm }.mapValues { (_, ts) ->
+            ts.groupBy { regimes.getValue(it.day) }.mapValues { (_, l) -> l.sumOf { it.net } to l.size } }
+
+    /**
+     * [paper]: the arm would trade the paper account (only those are touched). [parked]: Jarvis switched it off.
+     * [kept]: Boss re-armed it after Jarvis parked it, in the regime named (left alone while that regime holds).
+     */
+    data class ArmNow(val source: String, val label: String, val armed: Boolean, val paper: Boolean, val parked: Boolean,
+                      val kept: Regime.Kind? = null)
+    data class Step(val source: String, val label: String, val on: Boolean, val why: String)
+
+    fun plan(arms: List<ArmNow>, record: Map<String, Map<Regime.Kind, Pair<Double, Int>>>, now: Regime.Kind): List<Step> = arms.mapNotNull { a ->
+        if (!a.paper) return@mapNotNull null
+        val r = record[a.source]?.get(now)
+        val loses = r != null && r.second >= MIN_TRADES && r.first < 0
+        fun rec() = r?.let { "${AppFacts.rs(it.first)} over ${it.second} trade${if (it.second > 1) "s" else ""}" } ?: "no record"
+        when {
+            a.armed && loses && !a.parked && a.kept != now -> Step(a.source, a.label, false, "on ${now.label} days it made ${rec()}")
+            !a.armed && a.parked && !loses -> Step(a.source, a.label, true,
+                if (r == null || r.second < MIN_TRADES) "the market is ${now.label} now, where it has too few trades to judge" else "on ${now.label} days it made ${rec()}")
+            else -> null
+        }
+    }
+
+    fun say(steps: List<Step>, now: Regime.Kind): String? {
+        if (steps.isEmpty()) return null
+        val off = steps.filter { !it.on }; val on = steps.filter { it.on }
+        val parts = ArrayList<String>()
+        if (off.isNotEmpty()) parts += "I parked " + off.joinToString("; ") { "${it.label} (${it.why})" }
+        if (on.isNotEmpty()) parts += "I armed again " + on.joinToString("; ") { "${it.label} (${it.why})" }
+        return "Today's plan: BankNifty is ${now.label}. " + parts.joinToString(". ") + ". Paper only; switch any of them back yourself whenever you like."
+    }
+}
+
+/**
  * "Am I ready to go live?" (the owner's wish, 2026-10-02): each thing that should be in place before real money, with a
  * tick or what is missing. Pure: the app gathers the facts.
  */

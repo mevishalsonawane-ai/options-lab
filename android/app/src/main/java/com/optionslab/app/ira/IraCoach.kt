@@ -120,6 +120,75 @@ internal object IraCoach {
         (0 until a.length()).map { a.getString(it) }
     }.getOrDefault(emptyList())
 
+    private const val ARM_RECORD_KEY = "jarvis.dayplan.record"
+    private const val PARKED_KEY = "jarvis.dayplan.parked"
+    private const val KEPT_KEY = "jarvis.dayplan.kept"
+
+    /** Saved by the nightly study: each arm's (net, trades) by regime (BankNifty). */
+    fun saveArmRecord(record: Map<String, Map<com.optionslab.ira.Regime.Kind, Pair<Double, Int>>>) = runCatching {
+        com.optionslab.app.security.SecurePrefs.put(ARM_RECORD_KEY, org.json.JSONObject().apply {
+            record.forEach { (arm, by) -> put(arm, org.json.JSONObject().apply { by.forEach { (k, v) -> put(k.name, org.json.JSONArray().put(v.first).put(v.second)) } }) }
+        }.toString())
+    }
+
+    private fun armRecord(): Map<String, Map<com.optionslab.ira.Regime.Kind, Pair<Double, Int>>> = runCatching {
+        val o = org.json.JSONObject(com.optionslab.app.security.SecurePrefs.getString(ARM_RECORD_KEY) ?: "{}")
+        o.keys().asSequence().associateWith { arm -> val by = o.getJSONObject(arm)
+            by.keys().asSequence().mapNotNull { k -> runCatching { com.optionslab.ira.Regime.Kind.valueOf(k) }.getOrNull()?.let { kind ->
+                kind to by.getJSONArray(k).let { a -> a.getDouble(0) to a.getInt(1) } } }.toMap() }
+    }.getOrDefault(emptyMap())
+
+    private fun prefsMap(key: String): MutableMap<String, String> = runCatching {
+        val o = org.json.JSONObject(com.optionslab.app.security.SecurePrefs.getString(key) ?: "{}")
+        o.keys().asSequence().associateWith { o.getString(it) }.toMutableMap()
+    }.getOrDefault(HashMap())
+
+    private fun savePrefsMap(key: String, m: Map<String, String>) =
+        com.optionslab.app.security.SecurePrefs.put(key, if (m.isEmpty()) null else org.json.JSONObject(m as Map<*, *>).toString())
+
+    /**
+     * Once each trading morning (09:00 to 10:00, before the arms' first decisions): the PAPER arms fitted to BankNifty's
+     * regime by [com.optionslab.ira.DayPlan] - only paper arms, never one trading Zerodha, never one Boss left off - and
+     * Boss told what changed and why.
+     */
+    suspend fun dayPlanWatch() {
+        if (!com.optionslab.app.BuildConfig.JARVIS || com.optionslab.app.BuildConfig.GOLD || !Automations.on(Automations.Auto.PLAN)) return
+        val m = com.optionslab.app.data.Market
+        val minute = m.minuteNow()
+        if (!m.isTradingDay(m.today()) || minute < 9 * 60 || minute >= 10 * 60) return
+        val key = "jarvis.dayplan.day"
+        if (com.optionslab.app.security.SecurePrefs.getString(key) == m.today().toString()) return
+        val now = IraStudy.regimeOf(com.optionslab.ira.Market.BANKNIFTY) ?: return
+        val record = armRecord().ifEmpty { return }
+        com.optionslab.app.security.SecurePrefs.put(key, m.today().toString())
+        val arms = com.optionslab.app.data.OrbArms
+        val liveNow = arms.liveNow()
+        val parked = prefsMap(PARKED_KEY); val kept = prefsMap(KEPT_KEY)
+        val views = arms.view().arms
+        // A parked arm found armed: Boss armed it again himself, so it is left alone while this regime holds.
+        views.filter { it.armed && parked.containsKey(it.arm.source) }.forEach { parked.remove(it.arm.source); kept[it.arm.source] = now.name }
+        kept.entries.removeAll { it.value != now.name }
+        val now0 = views.map { v -> com.optionslab.ira.DayPlan.ArmNow(v.arm.source, v.arm.label, v.armed,
+            paper = (v.arm.paperOnly || !liveNow) && !v.liveOk, parked = parked.containsKey(v.arm.source),
+            kept = kept[v.arm.source]?.let { k -> runCatching { com.optionslab.ira.Regime.Kind.valueOf(k) }.getOrNull() }) }
+        val s = runCatching { AppSettings.load() }.getOrNull()
+        val stopped = s == null || s.guardKill || com.optionslab.app.data.LossBreaker.trippedToday()
+        val done = ArrayList<com.optionslab.ira.DayPlan.Step>()
+        for (step in com.optionslab.ira.DayPlan.plan(now0, record, now)) {
+            if (step.on && stopped) continue                      // the kill switch or the day's loss limit: nothing armed
+            val v = views.first { it.arm.source == step.source }
+            // Armed on paper only: in Live an ordinary arm asks for the PIN, which is never given here, so it is not armed.
+            val said = runCatching { arms.setArmed(step.source, step.on, v.automatic, pinConfirmed = false) }.getOrNull() ?: continue
+            if (step.on && !said.contains("armed on paper") && !said.contains(" on paper, ")) continue
+            if (step.on) parked.remove(step.source) else parked[step.source] = now.name
+            done += step
+        }
+        savePrefsMap(PARKED_KEY, parked); savePrefsMap(KEPT_KEY, kept)
+        val text = com.optionslab.ira.DayPlan.say(done, now) ?: return
+        IraHub.note(com.optionslab.ira.Address.boss(text)); JarvisVoice.announce(com.optionslab.ira.Address.boss(text))
+        IraActivity.add(text); Automations.acted(Automations.Auto.PLAN, text)
+    }
+
     /** Just after the open (09:16 to 09:30), once a day: BankNifty's gap and how the arms did on such days. */
     suspend fun gapWatch() {
         if (!com.optionslab.app.BuildConfig.JARVIS || !Automations.on(Automations.Auto.GAP)) return

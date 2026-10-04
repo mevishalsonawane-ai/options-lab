@@ -141,6 +141,8 @@ internal object IraStudy {
             val r = com.optionslab.engine.orb.ArmsBacktest.run(com.optionslab.app.data.Store.barSessions("BANKNIFTY"))
             val trades = r.trades.map { com.optionslab.ira.ArmHealth.T(it.day, it.arm, it.net) }
             runCatching { IraCoach.saveGapRecord(com.optionslab.ira.GapPlan.arms(trades, bankGaps)) }
+            // Each arm's record by regime, for the morning plan (Jarvis parks the paper arms losing in today's regime).
+            runCatching { IraCoach.saveArmRecord(com.optionslab.ira.DayPlan.record(trades, bankRegimes)) }
             val by = com.optionslab.ira.Regime.armsBy(trades, bankRegimes)
             if (by.isNotEmpty()) out += listOf("BankNifty arms by regime:") + by
             bankNow?.let { k -> com.optionslab.ira.Regime.suits(trades, bankRegimes, k).takeIf { it.isNotEmpty() }

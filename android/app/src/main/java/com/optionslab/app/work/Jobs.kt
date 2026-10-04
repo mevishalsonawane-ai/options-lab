@@ -407,6 +407,8 @@ object Tasks {
         runCatching { com.optionslab.app.ira.IraCoach.trailWatch() }
         runCatching { com.optionslab.app.ira.IraCoach.overtradeWatch() }
         runCatching { com.optionslab.app.ira.IraCoach.gapWatch() }
+        // Jarvis: the morning plan - the paper arms fitted to the market's regime.
+        runCatching { com.optionslab.app.ira.IraCoach.dayPlanWatch() }
         // Jarvis: the day's target reached; a trade of yours going nowhere is offered a close (asked first).
         runCatching { com.optionslab.app.ira.IraJournal.targetWatch() }
         runCatching { com.optionslab.app.ira.IraJournal.staleWatch() }
