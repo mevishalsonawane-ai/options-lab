@@ -230,6 +230,36 @@ object ReportCard {
  */
 object ActAlone {
     const val MIN_STARS = 3
+    /** Trades at one confidence level before its result is trusted to move the bar. */
+    const val JUDGE = 8
+    /** Above 5 stars: Jarvis acts alone on nothing until its record says otherwise. */
+    const val NONE = 6
 
-    fun ok(switchOn: Boolean, goesLive: Boolean, stars: Int): Boolean = switchOn && !goesLive && stars >= MIN_STARS
+    fun ok(switchOn: Boolean, goesLive: Boolean, stars: Int, bar: Int = MIN_STARS): Boolean = switchOn && !goesLive && stars >= bar
+
+    /**
+     * The bar Jarvis sets itself from its own closed trades ([results]: the confidence it had, the rupees made): from
+     * [MIN_STARS] up, a level that has lost money over [JUDGE] trades or more is not good enough, so the bar moves above
+     * it. It moves back down by itself when that level's record turns (it keeps being traded when Boss approves). Pure.
+     */
+    fun bar(results: List<Pair<Int, Double>>): Int {
+        var bar = MIN_STARS
+        while (bar < NONE) {
+            val at = results.filter { it.first == bar }
+            if (at.size >= JUDGE && at.sumOf { it.second } < 0) bar++ else break
+        }
+        return bar
+    }
+
+    /** One line for "how are your trades doing": each level's record and the bar it set. */
+    fun say(results: List<Pair<Int, Double>>): String? {
+        if (results.isEmpty()) return null
+        val levels = results.groupBy { it.first }.toSortedMap().map { (s, l) -> "$s/5: ${l.size} trade${if (l.size > 1) "s" else ""} ${AppFacts.rs(l.sumOf { it.second })}" }
+        val b = bar(results)
+        return "By my confidence: ${levels.joinToString(", ")}. " + when {
+            b >= NONE -> "Every level from $MIN_STARS/5 up has lost, so I take nothing on paper by myself now; I only ask."
+            b > MIN_STARS -> "Below $b/5 my trades lost, so I now take one by myself only at $b/5 or more."
+            else -> "I take one by myself at $MIN_STARS/5 or more."
+        }
+    }
 }

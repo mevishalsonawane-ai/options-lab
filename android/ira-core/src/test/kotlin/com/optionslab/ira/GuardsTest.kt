@@ -13,6 +13,18 @@ class GuardsTest {
     private val day = LocalDate.of(2026, 10, 5)
     private fun at(h: Int, m: Int) = day.atTime(h, m)
 
+    @Test fun jarvisRaisesItsOwnBarAboveLosingConfidence() {
+        assertEquals(3, ActAlone.bar(emptyList()))
+        val lose3 = List(8) { 3 to -100.0 }
+        assertEquals(4, ActAlone.bar(lose3))
+        assertEquals(3, ActAlone.bar(List(7) { 3 to -100.0 }))                  // too few to judge
+        assertEquals(5, ActAlone.bar(lose3 + List(9) { 4 to -50.0 }))
+        assertEquals(ActAlone.NONE, ActAlone.bar(lose3 + List(9) { 4 to -50.0 } + List(8) { 5 to -10.0 }))
+        assertEquals(3, ActAlone.bar(lose3 + listOf(3 to 900.0)))                // the level turned: back down
+        assertFalse(ActAlone.ok(true, false, 3, bar = 4)); assertTrue(ActAlone.ok(true, false, 4, bar = 4))
+        assertTrue(ActAlone.say(lose3)!!.endsWith("Below 4/5 my trades lost, so I now take one by myself only at 4/5 or more."))
+    }
+
     @Test fun theGuardSetsAStopAloneOnlyOnABoughtOptionWithItsSwitchOn() {
         val long = Rescue.Open("NIFTY24000CE", true, 75, 100.0, 98.0)
         val stop = Rescue.stopFor(long)

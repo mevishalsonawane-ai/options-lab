@@ -611,8 +611,10 @@ object IraHub {
         // Independent (Boss's choice, 4 Oct): a sure enough idea that would go to the PAPER account is taken at once and
         // told - never one that would reach Zerodha (that is always asked).
         val goesLive = runCatching { IraNewsTrades.goesLive(solo) }.getOrDefault(true)
-        if (!solo && com.optionslab.ira.ActAlone.ok(Automations.on(Automations.Auto.ACT_PAPER), goesLive, conf.stars) && snap != null) {
-            val done = runCatching { IraNewsTrades.place(idea, _state.value.snaps[m]?.price ?: snap.price, source, paperOnly = true) }.getOrElse { "That did not work: ${it.message ?: "an error"}." }
+        // The bar is Jarvis's own: raised above any confidence level that has been losing him money.
+        val bar = runCatching { IraNewsTrades.actAloneBar() }.getOrDefault(com.optionslab.ira.ActAlone.NONE)
+        if (!solo && com.optionslab.ira.ActAlone.ok(Automations.on(Automations.Auto.ACT_PAPER), goesLive, conf.stars, bar) && snap != null) {
+            val done = runCatching { IraNewsTrades.place(idea, _state.value.snaps[m]?.price ?: snap.price, source, paperOnly = true, stars = conf.stars) }.getOrElse { "That did not work: ${it.message ?: "an error"}." }
             val took = done.startsWith("Bought")
             val said2 = "$text$ivLine ${conf.text()}$risk " + (if (took) "I took it myself on paper: $what. $done" else "I meant to take it myself on paper, but: $done")
             reply(said2)
@@ -629,7 +631,7 @@ object IraHub {
         val id = System.nanoTime()
         synchronized(actions) {
             actions[id] = what to suspend { IraNewsTrades.place(idea, _state.value.snaps[m]?.price ?: snap?.price ?: error("no ${m.label} price"), source,
-                solo = solo, liveApproved = synchronized(actions) { id in liveApproved }) }
+                solo = solo, liveApproved = synchronized(actions) { id in liveApproved }, stars = conf.stars) }
             newsAsks += id
             if (solo) soloAsks += id
         }
