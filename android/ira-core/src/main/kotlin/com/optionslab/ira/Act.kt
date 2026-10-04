@@ -90,7 +90,7 @@ object Commands {
         // How fast he speaks (Boss, 4 Oct: answers to follow by ear).
         if (Regex("^ ((speak|talk) (more )?(slower|slowly|slow)|(slower|slow down)( please)?|(thoda )?(dheere|dhire|aaram se) (bolo|boliye)) $").containsMatchIn(s)) return Command(Command.Kind.PACE_SLOWER)
         if (Regex("^ ((speak|talk) (a bit )?(faster|quicker|quickly|fast)|(faster|speed up)( please)?|(thoda )?(jaldi|tez) (bolo|boliye)) $").containsMatchIn(s)) return Command(Command.Kind.PACE_FASTER)
-        if (Regex("^ ((speak|talk) (at )?(normal|normally|usual) (speed|pace)?|normal (speed|pace)|(speak|talk) normally) $").containsMatchIn(s)) return Command(Command.Kind.PACE_NORMAL)
+        if (Regex("^ ((speak|talk) (at )?(normal|normally|usual)( speed| pace)?|normal (speed|pace)|(speak|talk) normally|(normal|usual) (bolo|speed mein bolo)) $").containsMatchIn(s)) return Command(Command.Kind.PACE_NORMAL)
         if (Regex("^ (reply|answer|speak|talk|respond)( to me)? in hindi $|^ hindi (mein|me) (bolo|baat karo|jawab do) $|^ hindi (replies|mode)( on)? $").containsMatchIn(s)) return Command(Command.Kind.HINDI)
         if (Regex("^ (reply|answer|speak|talk|respond)( to me)? in english( again)? $|^ english (replies|mode)( on)? $").containsMatchIn(s)) return Command(Command.Kind.ENGLISH)
         if (QUESTION.containsMatchIn(s) || NEGATION.containsMatchIn(s)) return null
