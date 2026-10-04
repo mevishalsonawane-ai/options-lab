@@ -1618,12 +1618,12 @@ object IraHub {
      */
     private fun freeFormAsked(q: String) {
         // Said at once (spoken while the model reads the words), then the real answer when it is ready - never silence.
-        // "One moment" only when the answer is not there within 0.9 s (Boss, 4 Oct: slow replies) - said first, it held
+        // "One moment" only when the answer is not there within 0.6 s (Boss, 4 Oct: slow replies) - said first, it held
         // a quick answer back by the two seconds it takes to say. (Before the voice's own 1 s "working on it".)
         _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
         val held = java.util.concurrent.atomic.AtomicBoolean(false)
         val holding = scope.launch {
-            kotlinx.coroutines.delay(900)
+            kotlinx.coroutines.delay(600)
             if (replyAfter(_state.value.messages, q) == null && _state.value.messages.lastOrNull { !it.fromIra }?.text == q) {
                 held.set(true)
                 _state.update { it.copy(messages = (it.messages + Msg(true, "One moment, Boss, let me think about that.")).takeLast(MAX_MESSAGES)) }

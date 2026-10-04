@@ -54,3 +54,21 @@ class HinglishMoreTest {
         assertEquals("should i trade now", Hinglish.normalize("kya karna chahiye"))
     }
 }
+
+class HindiTimesReviewTest {
+    private val now = LocalDateTime.of(2026, 10, 5, 10, 0)
+
+    @Test fun hindiTimesOfDay() {
+        val r = assertNotNull(Reminder.parse("mujhe shaam 9 baje nifty dekhna yaad dilana", now))
+        assertEquals(LocalDateTime.of(2026, 10, 5, 21, 0), r.at)
+        assertEquals("nifty dekhna", r.rest)
+        assertEquals(LocalDateTime.of(2026, 10, 6, 9, 0), Reminder.parse("mujhe kal subah 9 baje login yaad dilana", now)!!.at)
+        assertEquals(LocalDateTime.of(2026, 10, 5, 10, 20), Reminder.parse("mujhe 20 minute mein chai yaad dilana", now)!!.at)
+        assertTrue(!Reminder.asked("kal kya hua tha yaad dilao"))
+    }
+
+    @Test fun narrowerAccount() {
+        assertTrue(Topic.ACCOUNT in Ask.parse("how many trades did i take today").topics)
+        assertTrue(Topic.ACCOUNT in Ask.parse("how much did i make today").topics)
+    }
+}

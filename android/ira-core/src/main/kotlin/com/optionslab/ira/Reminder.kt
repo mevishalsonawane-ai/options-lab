@@ -15,9 +15,15 @@ object Reminder {
     private val HINDI = Regex("(?i)\\s*\\b(?:yaad\\s+(?:dila(?:na|o|do|dena|diyo|dijiye)|karana|karwana))\\s*$")
 
     private fun english(text: String): String {
-        if (!HINDI.containsMatchIn(text)) return text
+        // Only with a time in it ("kal kya hua tha yaad dilao" is a question about yesterday, not a reminder).
+        if (!HINDI.containsMatchIn(text) || !Regex("(?i)\\b(baje|minute|minutes|minit|ghante|ghanta)\\b").containsMatchIn(text)) return text
         val t = HINDI.replace(text, "").replace(Regex("(?i)^\\s*(?:jarvis,?\\s+)?(?:mujhe|muje)\\s+"), "")
-            .replace(Regex("(?i)\\b(\\d{1,2})(?:[:.](\\d{2}))?\\s+baje\\b")) { m -> "at " + m.groupValues[1] + (m.groupValues[2].takeIf { it.isNotEmpty() }?.let { ":$it" } ?: "") }
+            // "Shaam 9 baje" is 9 pm, "subah 9 baje" 9 am (review, 4 Oct: an evening reminder went off next morning).
+            .replace(Regex("(?i)\\b(?:(shaam|sham|raat|dopahar|subah|savere)\\s+)?(\\d{1,2})(?:[:.](\\d{2}))?\\s+baje\\b")) { m ->
+                val part = m.groupValues[1].lowercase()
+                val ap = when { part.isEmpty() -> ""; part == "subah" || part == "savere" -> " am"; part == "dopahar" && m.groupValues[2].toInt() == 12 -> " pm"; else -> " pm" }
+                "at " + m.groupValues[2] + (m.groupValues[3].takeIf { it.isNotEmpty() }?.let { ":$it" } ?: "") + ap }
+            .replace(Regex("(?i)\\b(\\d{1,3})\\s+(?:minute|minutes|minit)\\s+(?:mein|me|baad)\\b"), "in $1 minutes")
             .replace(Regex("(?i)\\bkal\\b"), "tomorrow").replace(Regex("(?i)\\s+(?:ko|ka|ki|ke)\\s*$"), "")
         return "remind me " + t.trim()
     }
