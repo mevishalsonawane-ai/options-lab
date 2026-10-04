@@ -1082,6 +1082,10 @@ object IraHub {
             val r = runCatching { com.optionslab.ira.Reminder.parse(q, now) }.getOrNull()
             val c = app
             val said = if (r == null || c == null) "Boss, tell me when, like \"remind me at 3 pm to check Nifty\" or \"in 20 minutes\"."
+                else if (runCatching { com.optionslab.ira.Reminder.daily(q) }.getOrDefault(false)) {
+                    IraLater.remind(c, r.rest, r.at, daily = true)
+                    "Done, Boss: I'll remind you every trading day at ${r.at.toLocalTime()}, starting ${com.optionslab.ira.Later.say(r.at, now)}: ${r.rest}."
+                }
                 else { IraLater.remind(c, r.rest, r.at); "Done, Boss: I'll remind you ${com.optionslab.ira.Later.say(r.at, now)}: ${r.rest}." }
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
             return

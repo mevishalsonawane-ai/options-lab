@@ -116,3 +116,17 @@ class SelfCheckAskedTest {
         assertTrue(!SelfCheck.asked("check the nifty chart"))
     }
 }
+
+class DailyReminderTest {
+    private val now = LocalDateTime.of(2026, 10, 5, 10, 0)
+
+    @Test fun daily() {
+        assertTrue(Reminder.daily("remind me every day at 9:20 to check the gap"))
+        val r = assertNotNull(Reminder.parse("remind me every day at 9:20 to check the gap", now))
+        assertEquals("check the gap", r.rest)
+        assertEquals(LocalDateTime.of(2026, 10, 6, 9, 20), r.at)          // 9:20 has passed today: tomorrow first
+        assertTrue(Reminder.daily("mujhe roz 9 baje login karna yaad dilana"))
+        assertEquals("login karna", Reminder.parse("mujhe roz 9 baje login karna yaad dilana", now)!!.rest)
+        assertTrue(!Reminder.daily("remind me at 3 pm to check nifty"))
+    }
+}

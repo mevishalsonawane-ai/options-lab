@@ -27,7 +27,8 @@ object IraLater {
 
     /** [live]: the app's mode when it was set (a start is not run in another mode than the one Boss confirmed it in). */
     /** [remind]: Boss's own reminder - only said at its time, never run. */
-    data class Item(val id: Long, val text: String, val at: Long, val live: Boolean = false, val remind: Boolean = false)
+    data class Item(val id: Long, val text: String, val at: Long, val live: Boolean = false, val remind: Boolean = false,
+                    /** A reminder said each trading day at its time. */ val daily: Boolean = false)
 
     @Synchronized fun all(): List<Item> = runCatching {
         val a = org.json.JSONArray(SecurePrefs.getString(KEY) ?: "[]")
@@ -39,7 +40,7 @@ object IraLater {
 
     @Synchronized fun reminders(): List<Item> = runCatching {
         val a = org.json.JSONArray(SecurePrefs.getString(RKEY) ?: "[]")
-        (0 until a.length()).map { i -> a.getJSONObject(i).let { Item(it.getLong("id"), it.getString("text"), it.getLong("at"), remind = true) } }
+        (0 until a.length()).map { i -> a.getJSONObject(i).let { Item(it.getLong("id"), it.getString("text"), it.getLong("at"), remind = true, daily = it.optBoolean("daily", false)) } }
     }.getOrDefault(emptyList())
 
     @Synchronized private fun save(items: List<Item>) {
@@ -48,7 +49,7 @@ object IraLater {
         cmds.forEach { a.put(org.json.JSONObject().put("id", it.id).put("text", it.text).put("at", it.at).put("live", it.live)) }
         SecurePrefs.put(KEY, if (cmds.isEmpty()) null else a.toString())
         val r = org.json.JSONArray()
-        rem.forEach { r.put(org.json.JSONObject().put("id", it.id).put("text", it.text).put("at", it.at)) }
+        rem.forEach { r.put(org.json.JSONObject().put("id", it.id).put("text", it.text).put("at", it.at).put("daily", it.daily)) }
         SecurePrefs.put(RKEY, if (rem.isEmpty()) null else r.toString())
     }
 
@@ -62,8 +63,8 @@ object IraLater {
     }
 
     /** Boss's reminder: said at [at], nothing done. */
-    fun remind(context: Context, what: String, at: LocalDateTime) {
-        save(everything() + Item(System.nanoTime(), com.optionslab.ira.Secrets.redact(what), at.atZone(IST).toInstant().toEpochMilli(), remind = true))
+    fun remind(context: Context, what: String, at: LocalDateTime, daily: Boolean = false) {
+        save(everything() + Item(System.nanoTime(), com.optionslab.ira.Secrets.redact(what), at.atZone(IST).toInstant().toEpochMilli(), remind = true, daily = daily))
         schedule(context)
     }
 
@@ -71,7 +72,7 @@ object IraLater {
     fun say(now: LocalDateTime = LocalDateTime.now(IST)): String {
         val items = everything().sortedBy { it.at }
         if (items.isEmpty()) return "Nothing is set for later, Boss."
-        return "Set for later: " + items.joinToString("; ") { (if (it.remind) "a reminder to " else "") + "\"${it.text}\" " + Later.say(LocalDateTime.ofInstant(Instant.ofEpochMilli(it.at), IST), now) } + "."
+        return "Set for later: " + items.joinToString("; ") { (if (it.remind) (if (it.daily) "a daily reminder to " else "a reminder to ") else "") + "\"${it.text}\" " + Later.say(LocalDateTime.ofInstant(Instant.ofEpochMilli(it.at), IST), now) } + "."
     }
 
     /** Boss's reminders only are dropped; timed commands stay. */
@@ -112,6 +113,13 @@ object IraLater {
             if (item.remind) {
                 val r = com.optionslab.ira.Reminder.said(item.text) + if (now - item.at > GRACE_MS) " (late: the phone was off at its time)" else ""
                 IraActivity.add("Reminder said: \"${item.text}\".")
+                // Daily: set again for the next trading day at the same time.
+                if (item.daily) runCatching {
+                    var next = LocalDateTime.ofInstant(Instant.ofEpochMilli(item.at), IST).plusDays(1)
+                    while (!com.optionslab.app.data.Market.isTradingDay(next.toLocalDate()) || next.atZone(IST).toInstant().toEpochMilli() <= now)
+                        next = next.plusDays(1)
+                    save(everything() + item.copy(id = System.nanoTime(), at = next.atZone(IST).toInstant().toEpochMilli()))
+                }
                 runCatching { JarvisPopup.show(context, "Jarvis", r) }
                 runCatching { JarvisVoice.announce(r) }
                 runCatching { IraHub.note(r) }

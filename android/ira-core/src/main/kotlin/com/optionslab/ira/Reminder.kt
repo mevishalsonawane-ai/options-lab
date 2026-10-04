@@ -28,9 +28,14 @@ object Reminder {
         return "remind me " + t.trim()
     }
 
+    private val DAILY = Regex("(?i)\\s*\\b(every ?day|daily|each day|every trading day|roz|rozana|har din)\\b\\s*")
+
+    /** "Remind me every day at 9:20 to ...", "roz 9 baje ... yaad dilana": said each trading day at that time. */
+    fun daily(said: String): Boolean = DAILY.containsMatchIn(said)
+
     /** A reminder asked for: what to say and when, or null (not a reminder, or no time still ahead). */
     fun parse(said: String, now: LocalDateTime): Later.When? {
-        val text = english(said)
+        val text = english(DAILY.replace(said, " ").trim())
         if (!ASK.containsMatchIn(text)) return null
         val w = Later.split(ASK.replace(text, ""), now) ?: return null
         val what = w.rest.replace(Regex("(?i)^\\s*(to|that|about|of)\\b"), "").replace(Regex("\\s+"), " ").trim().trimEnd('.', '?', '!').take(160)
@@ -38,7 +43,7 @@ object Reminder {
     }
 
     /** Asked for a reminder with no usable time: what to say. */
-    fun asked(text: String): Boolean = ASK.containsMatchIn(english(text))
+    fun asked(text: String): Boolean = ASK.containsMatchIn(english(DAILY.replace(text, " ").trim()))
 
     /** "Cancel my reminders", "delete the reminder", "reminder hata do": reminders only (timed commands stay). */
     fun cancelAsked(text: String): Boolean =
