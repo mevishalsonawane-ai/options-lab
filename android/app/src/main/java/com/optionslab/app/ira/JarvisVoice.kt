@@ -547,6 +547,30 @@ class JarvisVoice : Service() {
 
     private fun awake() = SystemClock.elapsedRealtime() < awakeUntil
 
+    // ---- the listening beep (Google's speech service plays one at each turn's start and end; Boss, 4 Oct) ----------
+    /** Streams muted for a beep, to put back exactly (only those not muted before). */
+    private val mutedForBeep = HashSet<Int>()
+    private val unmuteBeep = Runnable { unmuteNow() }
+
+    /** For [ms]: the system and media sounds muted - only with Google's service, never while Jarvis speaks or music plays. */
+    private fun hushBeep(ms: Long) {
+        if (!googleSpeech || speaking) return
+        val am = getSystemService(android.media.AudioManager::class.java) ?: return
+        val streams = listOfNotNull(android.media.AudioManager.STREAM_SYSTEM, android.media.AudioManager.STREAM_MUSIC.takeIf { !am.isMusicActive })
+        for (st in streams) if (st !in mutedForBeep && runCatching { !am.isStreamMute(st) }.getOrDefault(false) &&
+            runCatching { am.adjustStreamVolume(st, android.media.AudioManager.ADJUST_MUTE, 0); true }.getOrDefault(false)) mutedForBeep += st
+        main.removeCallbacks(unmuteBeep); main.postDelayed(unmuteBeep, ms)
+    }
+
+    /** Puts back only what [hushBeep] muted (before Jarvis speaks, and when listening stops). */
+    private fun unmuteNow() {
+        main.removeCallbacks(unmuteBeep)
+        if (mutedForBeep.isEmpty()) return
+        val am = getSystemService(android.media.AudioManager::class.java)
+        for (st in mutedForBeep) runCatching { am?.adjustStreamVolume(st, android.media.AudioManager.ADJUST_UNMUTE, 0) }
+        mutedForBeep.clear()
+    }
+
     /**
      * Jarvis's ears: the phone's on-device recognizer (nothing leaves the phone), or - when Boss switched on "Use
      * Google's speech service" (4 Oct: the keyboard's voice typing hears him fast; the on-device one did not) - the
@@ -605,6 +629,7 @@ class JarvisVoice : Service() {
         }
         listening = true
         turnReadyAt = 0; turnHeardAny = false; turnLoudest = -100f; turnPartial = null
+        hushBeep(1_500)                                   // the start beep (put back once the turn is ready, or in 1.5 s)
         runCatching { rec?.startListening(i) }.onFailure { listening = false; endTap(); again(1_000) }
         _state.value = VoiceState(if (awake()) Mode.AWAKE else Mode.LISTENING)
     }
@@ -623,6 +648,7 @@ class JarvisVoice : Service() {
     private val listener = object : RecognitionListener {
         override fun onReadyForSpeech(params: Bundle?) {
             errorsInRow = 0; clientErrors = 0; readyAt = SystemClock.elapsedRealtime(); turnReadyAt = readyAt; turnHeardAny = false
+            if (mutedForBeep.isNotEmpty()) { main.removeCallbacks(unmuteBeep); main.postDelayed(unmuteBeep, 400) }
             note(if (tap != null) "ready (shared audio)" else "ready")
         }
         override fun onBeginningOfSpeech() { note("speech began") }
@@ -632,6 +658,7 @@ class JarvisVoice : Service() {
         // turn is closed for it 1.5 s later (stopListening makes it give its result), not left to a 25 s reset.
         override fun onEndOfSpeech() {
             note("speech ended")
+            hushBeep(1_200)                               // the end beep
             if (!speaking) { main.removeCallbacks(finish); main.postDelayed(finish, 1_500) }
         }
         override fun onPartialResults(partialResults: Bundle?) {
@@ -969,6 +996,7 @@ class JarvisVoice : Service() {
      * [id] STOP_AFTER.
      */
     private fun say(text: String, id: String = "say") {
+        unmuteNow()                                       // Jarvis's own voice is never muted
         val t = tts
         lastSpokenId = id
         if (id == "answer" || id == "question") lastSpoken = text
@@ -1028,6 +1056,7 @@ class JarvisVoice : Service() {
     private fun giveUp(why: String) { _state.value = VoiceState(problem = why); stopSelf() }
 
     override fun onDestroy() {
+        unmuteNow()
         stopped = true
         if (instance?.get() === this) instance = null
         main.removeCallbacksAndMessages(null)
