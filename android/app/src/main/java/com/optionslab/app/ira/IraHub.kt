@@ -672,7 +672,8 @@ object IraHub {
     suspend fun rescueWatch(now: Instant = Instant.now()) {
         if (!com.optionslab.app.BuildConfig.JARVIS || !com.optionslab.app.data.Market.isOpen()) return
         val c = app ?: return
-        if (!Automations.on(Automations.Auto.RESCUE)) return
+        val guard = Automations.on(Automations.Auto.GUARD)
+        if (!Automations.on(Automations.Auto.RESCUE) && !guard) return
         // Guarded: a protection with a stop (or a trail), or a stop order the owner placed directly (ticket, Kite web).
         val guarded = runCatching { com.optionslab.app.data.Protections.active() }.getOrNull()?.filter { it.stop != null || it.trail != null }
             ?.map { (if (it.live) "L:" else "P:") + it.symbol }?.toMutableSet() ?: return
@@ -690,6 +691,8 @@ object IraHub {
         runCatching { com.optionslab.app.data.OrbArms.view().arms.mapNotNull { it.open?.symbol }.forEach { bots += it } }
         runCatching { com.optionslab.app.data.PineAuto.held.value.values.forEach { bots += it.symbol } }
         runCatching { com.optionslab.app.data.Strategies.all().mapNotNull { it.run }.forEach { r -> r.openLegs().forEach { bots += it.symbol } } }
+        // Jarvis's own trades keep their own exits too (none was ever bare long enough to matter, but never doubled).
+        runCatching { IraNewsTrades.all().filter { !it.closed }.forEach { bots += it.symbol } }
         val day = com.optionslab.app.data.Market.today().toString()
         val bare = open.filter { (p, _) -> (if (p.live) "L:" else "P:") + p.symbol !in guarded && p.symbol !in bots }
         synchronized(unguardedSince) { unguardedSince.keys.retainAll(bare.map { (p, _) -> (if (p.live) "L:" else "P:") + p.symbol }.toSet()) }
@@ -701,6 +704,18 @@ object IraHub {
             val stop = com.optionslab.ira.Rescue.stopFor(p)
             val text = com.optionslab.ira.Rescue.say(p, stop)
             if (stop == null) { JarvisPopup.show(c, "Boss, ${p.symbol} has no stop", text); reply(text); continue }
+            if (com.optionslab.ira.Rescue.setAlone(guard, p, stop)) {
+                val result = runCatching {
+                    if (p.live) com.optionslab.app.data.Protections.protectLive(p.symbol, "NFO", product, p.qty, p.ltp ?: p.avg, stop, null, null)
+                    else com.optionslab.app.data.Protections.protectPaper(p.symbol, product, p.qty, p.ltp ?: p.avg, stop, null, null)
+                }.getOrElse { "Not protected: ${it.message}" }
+                val said = com.optionslab.ira.Rescue.saySet(p, stop, result)
+                JarvisPopup.show(c, "Boss, I guarded ${p.symbol}", said)
+                reply(said); IraActivity.add(said)
+                Automations.acted(Automations.Auto.GUARD, said)
+                continue
+            }
+            if (!Automations.on(Automations.Auto.RESCUE)) continue
             val what = "set a stop on ${p.symbol} at " + "%.2f".format(java.util.Locale.ENGLISH, stop)
             // Checked again when confirmed (it can come later): the position as it is then, still bare, still above the stop.
             val id = pend(what, suspend {

@@ -44,6 +44,16 @@ object Rescue {
         return stop
     }
 
+    /**
+     * May the stop be set without asking (Boss, 4 Oct: "guard my live positions")? Only with his switch on, only on a
+     * bought option (a stop that can only close it, never open or add), and only when a stop under the price exists.
+     */
+    fun setAlone(switchOn: Boolean, p: Open, stop: Double?): Boolean = switchOn && p.qty > 0 && p.avg > 0 && stop != null
+
+    /** Told after the guard set a stop by itself ([result]: what the app said). */
+    fun saySet(p: Open, stop: Double, result: String): String =
+        "${p.symbol} (${if (p.live) "Zerodha" else "paper"}, ${p.qty}) had no stop, so I set one at %.2f, 15%% under the %.2f you paid. ".format(Locale.ENGLISH, stop, p.avg) + result
+
     fun say(p: Open, stop: Double?): String = if (stop != null)
         "${p.symbol} (${if (p.live) "Zerodha" else "paper"}, ${p.qty}) has no stop. Shall I set one at %.2f, 15%% under the %.2f you paid?".format(Locale.ENGLISH, stop, p.avg)
     else if (p.qty < 0) "${p.symbol} (${if (p.live) "Zerodha" else "paper"}) is a short with no stop: set one from the position."

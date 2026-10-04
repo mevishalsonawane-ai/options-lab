@@ -879,7 +879,7 @@ private fun SoloCard() {
 private fun AutomationsCard() {
     val p = LocalPalette.current
     LedgerCard(title = "What Jarvis does by itself") {
-        Note("Each runs on its own while IraAlgo watches the market. Nothing here places a trade without asking you (Solo, above, is the one exception, on paper only); the trailing stop only moves your stop up.")
+        Note("Each runs on its own while IraAlgo watches the market. Nothing here opens a trade without asking you, except on paper (Solo, and Jarvis's own ideas when that switch is on); the guard and the trailing stop only add or raise stops.")
         com.optionslab.app.ira.Automations.Auto.entries.forEach { a ->
             var on by remember { mutableStateOf(com.optionslab.app.ira.Automations.on(a)) }
             val last = remember(on) { com.optionslab.app.ira.Automations.last(a) }
@@ -890,7 +890,16 @@ private fun AutomationsCard() {
                     Text(last?.let { (t, w) -> "Last: ${t.toLocalDate()} ${"%02d:%02d".format(t.hour, t.minute)} - $w" } ?: "Has not acted yet.",
                         style = Type.label.copy(color = p.inkSoft, fontSize = 11.sp))
                 }
-                androidx.compose.material3.Switch(checked = on, onCheckedChange = { v -> on = v; com.optionslab.app.ira.Automations.set(a, v) })
+                val act = androidx.compose.ui.platform.LocalContext.current as? androidx.fragment.app.FragmentActivity
+                androidx.compose.material3.Switch(checked = on, onCheckedChange = { v ->
+                    // The guard places real stop orders: switched on only with Boss's fingerprint (off needs nothing).
+                    if (v && a == com.optionslab.app.ira.Automations.Auto.GUARD) {
+                        if (act == null || !com.optionslab.app.security.BiometricGate.fingerprintOn(act))
+                            com.optionslab.app.work.Alerts.error("Guard my positions is switched on with your fingerprint: set one up on the phone first.")
+                        else com.optionslab.app.security.BiometricGate.verify(act, "Guard my positions", "Jarvis may place stop orders on your positions") { ok ->
+                            if (ok) { on = true; com.optionslab.app.ira.Automations.set(a, true) } }
+                    } else { on = v; com.optionslab.app.ira.Automations.set(a, v) }
+                })
             }
         }
     }

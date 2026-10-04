@@ -13,6 +13,8 @@ internal object Automations {
         // Off until Boss switches it on: it moves the stop orders of his own positions, live ones too (review, 3 Oct).
         TRAIL("Trail my stops", "Your own bought options: stop to what you paid at +20%, then 15% under the best price.", "jarvis.autotrail", byDefault = false),
         RESCUE("Offer a stop", "A position of yours with no stop for 2 minutes: Jarvis offers one (asks first).", "jarvis.auto.rescue"),
+        // Off until Boss switches it on with his fingerprint (4 Oct): it places a real stop order on Zerodha positions.
+        GUARD("Guard my positions", "A bought option of yours with no stop for 2 minutes: Jarvis sets the stop itself, 15% under what you paid, and tells you - Zerodha ones too. It only ever adds a stop that closes; it never opens or adds.", "jarvis.auto.guard", byDefault = false),
         STALE("Trades going nowhere", "Open 45 minutes and within 5% of what you paid: Jarvis offers to close it (asks first).", "jarvis.auto.stale"),
         COOLOFF("Cool-off after losses", "Two of Jarvis's trades lose in a row: no suggestions for 30 minutes.", "jarvis.auto.cooloff"),
         OVERTRADE("Overtrading warning", "More than 3 of your buys in 30 minutes: a word to slow down.", "jarvis.auto.overtrade"),

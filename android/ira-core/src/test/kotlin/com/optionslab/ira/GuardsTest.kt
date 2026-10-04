@@ -13,6 +13,17 @@ class GuardsTest {
     private val day = LocalDate.of(2026, 10, 5)
     private fun at(h: Int, m: Int) = day.atTime(h, m)
 
+    @Test fun theGuardSetsAStopAloneOnlyOnABoughtOptionWithItsSwitchOn() {
+        val long = Rescue.Open("NIFTY24000CE", true, 75, 100.0, 98.0)
+        val stop = Rescue.stopFor(long)
+        assertTrue(Rescue.setAlone(true, long, stop))
+        assertFalse(Rescue.setAlone(false, long, stop))                  // switched off: only offered
+        val short = Rescue.Open("NIFTY24000CE", true, -75, 100.0, 98.0)
+        assertFalse(Rescue.setAlone(true, short, 115.0))                 // never on a short
+        assertFalse(Rescue.setAlone(true, long, null))                   // already under the stop: told, not set
+        assertTrue(Rescue.saySet(long, 85.0, "Protected.").startsWith("NIFTY24000CE (Zerodha, 75) had no stop, so I set one at 85.00"))
+    }
+
     @Test fun coolOffAfterTwoLosses() {
         val two = listOf(at(10, 0) to -500.0, at(10, 40) to -300.0)
         assertEquals(at(11, 10), CoolOff.until(two, at(10, 50)))
