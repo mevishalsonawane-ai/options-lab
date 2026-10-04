@@ -1142,7 +1142,7 @@ object IraHub {
         }
         // "How fast are you?": the spoken answers' waits (times only, no words), and the model in use.
         if (com.optionslab.app.BuildConfig.JARVIS && runCatching { com.optionslab.ira.Latency.asked(q) }.getOrDefault(false)) {
-            val said = com.optionslab.ira.Latency.spoken(JarvisVoice.latencies, "${IraModel.choice.name} (${IraModel.choice.about})")
+            val said = com.optionslab.ira.Latency.spoken(JarvisVoice.latencies, "${IraModel.choice.name} (${IraModel.choice.about})", IraModel.choice == IraModel.FASTEST)
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
             return
         }

@@ -34,11 +34,12 @@ object Latency {
             "tum kitna time (lagate|lete) ho|(jawab (mein|me) )?kitna time lagta hai)\\W*$").containsMatchIn(text)
 
     /** The spoken form of [say]: typical and slowest wait, and on which model ([model] its name). */
-    fun spoken(list: List<Long>, model: String): String {
+    fun spoken(list: List<Long>, model: String, onFastest: Boolean = true): String {
         if (list.isEmpty()) return "I haven't timed a spoken answer yet, Boss. Ask me something by voice first."
         val s = list.sorted()
         fun sec(ms: Long) = "%.1f".format(java.util.Locale.ENGLISH, ms / 1000.0)
         return "Over my last ${if (list.size == 1) "spoken answer" else "${list.size} spoken answers"}, Boss, you waited about ${sec(s[s.size / 2])} seconds, " +
-            "${sec(s.last())} at the slowest. I'm on $model."
+            "${sec(s.last())} at the slowest. I'm on $model." +
+            (if (!onFastest && s[s.size / 2] > SLOW_MS) " The fastest model (Qwen2.5 0.5B) would answer quicker: Settings, Voice and AI model. Your choice, Boss." else "")
     }
 }
