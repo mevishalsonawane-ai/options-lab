@@ -1083,6 +1083,39 @@ object IraHub {
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
             return
         }
+        // An option's price, the ATM strike, the lot size, the time left (read from the live chain; never an order).
+        if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && parsed.command == null && parsed.order == null)
+            runCatching { com.optionslab.ira.OptionFacts.asked(q) }.getOrNull()?.let { a ->
+                _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+                if (a is com.optionslab.ira.OptionFacts.Asked.TimeLeft) {
+                    val mk = com.optionslab.app.data.Market
+                    reply(com.optionslab.ira.OptionFacts.timeLeft(mk.minuteNow(), tradingDay = runCatching { mk.isTradingDay(mk.today()) }.getOrDefault(true))); return
+                }
+                val m = when (a) { is com.optionslab.ira.OptionFacts.Asked.Quote -> a.market; is com.optionslab.ira.OptionFacts.Asked.Atm -> a.market
+                    is com.optionslab.ira.OptionFacts.Asked.LotSize -> a.market; else -> IraMarket.NIFTY }
+                scope.launch {
+                    val said = runCatching {
+                        val c = kotlinx.coroutines.withTimeoutOrNull(20_000) { IraAccount.chain(m.name) } ?: return@runCatching "I could not read the ${m.label} option chain just now, Boss."
+                        when (a) {
+                            is com.optionslab.ira.OptionFacts.Asked.Quote -> {
+                                val row = c.rows.firstOrNull { kotlin.math.abs(it.strike - a.strike) < 0.5 }
+                                val leg = row?.let { if (a.right == "CE") it.ce else it.pe }
+                                    ?: return@runCatching "${m.label} ${a.strike} ${a.right} is not in the strikes I read (near the money, ${c.expiry}), Boss."
+                                com.optionslab.ira.OptionFacts.quote(m, a.strike, a.right, leg.ltp, leg.bid, leg.ask, leg.oi, c.lotSize) + " Expiry ${c.expiry}."
+                            }
+                            is com.optionslab.ira.OptionFacts.Asked.Atm -> {
+                                val row = c.rows.minByOrNull { kotlin.math.abs(it.strike - c.spot) } ?: return@runCatching "No strikes came back for ${m.label}, Boss."
+                                "${m.label} is at %,.2f, so the at-the-money strike is %.0f (CE %s, PE %s), expiry ${c.expiry}.".format(java.util.Locale.ENGLISH,
+                                    c.spot, row.strike, row.ce?.ltp?.let { "Rs %,.2f".format(java.util.Locale.ENGLISH, it) } ?: "-",
+                                    row.pe?.ltp?.let { "Rs %,.2f".format(java.util.Locale.ENGLISH, it) } ?: "-")
+                            }
+                            else -> "One ${m.label} lot is ${c.lotSize} units now (the exchange revises it from time to time), Boss."
+                        }
+                    }.getOrElse { "I could not read that just now, Boss." }
+                    reply(said)
+                }
+                return
+            }
         // "How many lots of Nifty can I buy with 20,000?": the at-the-money premium times the lot size - arithmetic only.
         if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && parsed.command == null && parsed.order == null)
             runCatching { com.optionslab.ira.Sizing.asked(q) }.getOrNull()?.let { a ->
