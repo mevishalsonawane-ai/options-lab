@@ -107,7 +107,8 @@ object Ask {
                 Pivots.asked(text) || OpeningRange.asked(text) || Momentum.asked(text) || DayStory.asked(text))
         // "If I bought the 24500 CE at 120, what is my profit at 24700": the payoff sum, not the account.
         val payoff = Payoff.asked(text) != null
-        val account = !priceAsk && !marketFigure && !payoff && (ACCOUNT.containsMatchIn(t) || AppAnswers.about(t) && placed?.lots == null)
+        // ("Wrap up my day" holds the day's P&L: Boss's own, like any account question - review, 4 Oct.)
+        val account = DaySummary.asked(text) || DaySummary.asked(said) || !priceAsk && !marketFigure && !payoff && (ACCOUNT.containsMatchIn(t) || AppAnswers.about(t) && placed?.lots == null)
         val order = if (account) null else placed
         // "Levels on all indices", "how are all the markets": the four indices.
         val markets = Market.mentioned(text).ifEmpty { if (ALL_INDICES.containsMatchIn(t)) Reasoning.INDICES else emptyList() }

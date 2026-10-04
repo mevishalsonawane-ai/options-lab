@@ -11,10 +11,12 @@ object Latency {
      * not on the fastest model - a suggestion only; the choice stays Boss's.
      */
     const val SLOW_MS = 5_000L
+    /** How the suggestion begins (a note beside answers, never taken for one). */
+    const val NUDGE = "Boss, my last three answers each took"
 
     fun suggestFaster(list: List<Long>, onFastest: Boolean): String? =
         if (onFastest || list.size < 3 || list.takeLast(3).any { it <= SLOW_MS }) null
-        else "Boss, my last three answers each took over ${SLOW_MS / 1000} seconds. The fastest AI model (Qwen2.5 0.5B) would answer quicker: " +
+        else "$NUDGE over ${SLOW_MS / 1000} seconds. The fastest AI model (Qwen2.5 0.5B) would answer quicker: " +
             "Settings, Voice and AI model. It's your choice; nothing changes until you pick it."
 
     fun say(list: List<Long>): String? {

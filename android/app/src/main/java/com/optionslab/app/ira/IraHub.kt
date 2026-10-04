@@ -1159,7 +1159,8 @@ object IraHub {
             _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
             if (phoneLocked()) { reply("Unlock the phone for that, Boss."); return }
             scope.launch {
-                val card = runCatching { IraNewsTrades.scorecard().firstOrNull() }.getOrNull()
+                // The scorecard saves its points and lapses waiting answers: only after the close (review, 4 Oct).
+                val card = if (com.optionslab.app.data.Market.minuteNow() >= 15 * 60 + 30) runCatching { IraNewsTrades.scorecard().firstOrNull() }.getOrNull() else null
                 reply(runCatching { IraCoach.wrapUp(card, review = false) }.getOrElse { "I could not put the day together just now, Boss." })
             }
             return
@@ -1587,7 +1588,8 @@ object IraHub {
         if (i < 0) return null
         val after = ms.drop(i + 1)
         // "Got it, Boss: next time..." (a learned wording) is a note beside the answer, not the answer.
-        val real = after.filter { it.fromIra && !it.text.startsWith(LEARNED_NOTE) && !it.text.startsWith(CHAIN_NOTE) }
+        val real = after.filter { it.fromIra && !it.text.startsWith(LEARNED_NOTE) && !it.text.startsWith(CHAIN_NOTE) &&
+            !it.text.startsWith(com.optionslab.ira.Latency.NUDGE) }
         val first = real.firstOrNull() ?: return null
         if (!first.text.startsWith(TOOK_AS)) return first
         return real.drop(1).firstOrNull()

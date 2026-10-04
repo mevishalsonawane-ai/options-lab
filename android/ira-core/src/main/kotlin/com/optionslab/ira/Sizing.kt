@@ -15,12 +15,21 @@ object Sizing {
 
     fun asked(text: String): Asked? {
         if (!ASK.containsMatchIn(text)) return null
-        // The rupee amount: the largest number named with a unit, or alone (a strike-sized number with CE/PE is not it).
-        val amounts = AMOUNT.findAll(text).mapNotNull { m ->
+        // About Boss's own holding ("how many lots do I hold"), not a budget.
+        if (Regex("(?i)\\b(do i|did i|have i|i have|i hold|i bought|my)\\b").containsMatchIn(text)) return null
+        // The rupee amount (review, 4 Oct: the strike was taken for it): a number after "with / for / mein / Rs" or with a
+        // unit wins; a number followed by CE/PE, after the index's name, or called a strike is never the amount.
+        data class Num(val v: Double, val marked: Boolean)
+        val nums = AMOUNT.findAll(text).mapNotNull { m ->
             val n = m.groupValues[1].replace(",", "").toDoubleOrNull() ?: return@mapNotNull null
-            n * when (m.groupValues[2].lowercase()) { "k", "thousand", "hazaar", "hazar" -> 1_000.0; "l", "lakh", "lakhs", "lac" -> 100_000.0; else -> 1.0 }
-        }.filter { it >= 500 }.toList()
-        val budget = amounts.maxOrNull() ?: return null
+            val after = text.substring(m.range.last + 1).trimStart().lowercase()
+            val before = text.substring(0, m.range.first).trimEnd().lowercase()
+            if (Regex("^(ce|pe|call|put|strike)\\b").containsMatchIn(after) || Regex("(nifty|banknifty|bank nifty|finnifty|strike)$").containsMatchIn(before)) return@mapNotNull null
+            val unit = m.groupValues[2].lowercase()
+            val v = n * when (unit) { "k", "thousand", "hazaar", "hazar" -> 1_000.0; "l", "lakh", "lakhs", "lac" -> 100_000.0; else -> 1.0 }
+            Num(v, unit.isNotEmpty() || Regex("(with|for|mein|me|of|rs\\.?|₹|inr)$").containsMatchIn(before) || m.value.trimStart().let { it.startsWith("rs", true) || it.startsWith("₹") })
+        }.filter { it.v >= 500 }.toList()
+        val budget = (nums.filter { it.marked }.ifEmpty { nums }).maxOfOrNull { it.v } ?: return null
         val right = when { Regex("(?i)\\b(ce|call|calls)\\b").containsMatchIn(text) -> "CE"; Regex("(?i)\\b(pe|put|puts)\\b").containsMatchIn(text) -> "PE"; else -> null }
         return Asked(budget, Market.mentioned(text).firstOrNull { it != Market.VIX && it != Market.GOLD }, right)
     }

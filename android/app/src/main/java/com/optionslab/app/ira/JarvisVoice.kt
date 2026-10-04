@@ -852,6 +852,8 @@ class JarvisVoice : Service() {
 
     /** Slow answers three times running, not on the fastest model: a suggestion in the chat, once a day. */
     private fun slowNudge() {
+        // Not while a late answer is awaited ("still working on it" is said as an answer too - review, 4 Oct).
+        if (lateWaiting) return
         val text = com.optionslab.ira.Latency.suggestFaster(latencies, IraModel.choice == IraModel.FASTEST) ?: return
         val day = java.time.LocalDate.now(java.time.ZoneId.of("Asia/Kolkata")).toString()
         if (runCatching { com.optionslab.app.security.SecurePrefs.getString("jarvis.slow.told") }.getOrNull() == day) return
