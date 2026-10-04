@@ -106,3 +106,10 @@ class MissedSinceTest {
         assertTrue(!Reminder.missedAsked("what did i miss on the nifty chart"))
     }
 }
+
+class SelfCheckAskedTest {
+    @Test fun asked() {
+        for (s in listOf("run a self check", "Jarvis, system check", "check yourself", "sab theek hai?")) assertTrue(SelfCheck.asked(s), s)
+        assertTrue(!SelfCheck.asked("check the nifty chart"))
+    }
+}

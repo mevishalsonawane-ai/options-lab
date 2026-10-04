@@ -1086,6 +1086,26 @@ object IraHub {
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
             return
         }
+        // "Run a self check": each part Jarvis needs, working or not, from what the app knows now (no account figures).
+        if (com.optionslab.app.BuildConfig.JARVIS && runCatching { com.optionslab.ira.SelfCheck.asked(q) }.getOrDefault(false)) {
+            val c = app
+            val voiceOn = JarvisVoice.wanted
+            val mic = c?.let { androidx.core.content.ContextCompat.checkSelfPermission(it, android.Manifest.permission.RECORD_AUDIO) ==
+                android.content.pm.PackageManager.PERMISSION_GRANTED }
+            val relay = com.optionslab.app.data.Relay
+            val parts = listOf(
+                "Listening" to (if (voiceOn) JarvisVoice.state.value.problem == null else null),
+                "Microphone permission" to (if (voiceOn) mic else null),
+                "Spoken replies" to (if (JarvisVoice.muted) null else true),
+                "AI model (${IraModel.choice.name})" to (if (IraModel.state.value.status == IraModel.Status.ABSENT) null else IraModel.state.value.status == IraModel.Status.READY),
+                "Live prices" to (if (com.optionslab.app.data.Market.isOpen()) _state.value.liveMissing.size < 3 else null),
+                "Relay server" to (if (relay.enabled && relay.host != null) relay.connected.takeIf { it } ?: (if (com.optionslab.app.data.Market.isOpen()) false else null) else null),
+                "Zerodha session" to (if (com.optionslab.app.data.Broker.configured) com.optionslab.app.data.Broker.loggedIn else null),
+            )
+            val said = com.optionslab.ira.SelfCheck.lines(parts).joinToString(" ")
+            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
+            return
+        }
         // "What did I miss?": what Jarvis said on his own since Boss last asked (alerts, notes) - may name the account, so
         // the phone must be unlocked.
         if (com.optionslab.app.BuildConfig.JARVIS && runCatching { com.optionslab.ira.Reminder.missedAsked(q) }.getOrDefault(false)) {
