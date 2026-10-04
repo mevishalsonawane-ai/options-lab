@@ -69,7 +69,9 @@ object Backup {
         // The record that earns live trading and lot sizing, and the model's verified mark, are never taken from a file.
         "jarvis.newstrades", "ira.model.verified",
         // What Jarvis does by himself (the guard places real stop orders; it is switched on with the fingerprint only).
-        "jarvis.group.", "jarvis.auto.", "jarvis.autotrail")
+        "jarvis.group.", "jarvis.auto.", "jarvis.autotrail",
+        // Whether Jarvis's ears may use Google's speech service (speech may leave the phone): Boss's choice on this phone.
+        "jarvis.voice.")
     const val DISARM = "restore.disarm"
 
     private fun file(ctx: Context, dir: String, name: String) = File(if (dir == "f") ctx.filesDir else ctx.noBackupFilesDir, name)

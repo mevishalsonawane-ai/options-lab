@@ -112,7 +112,7 @@ class JarvisVoice : Service() {
                 out += "My ears failed %d seconds ago: %s.".format(java.util.Locale.ENGLISH, (SystemClock.elapsedRealtime() - at) / 1000, errorName(e))
             }
             if (v != null && !v.visibleStart) out += "I was started in the background, where Android gives me no microphone (it is allowed only while using the app): open the app once and I listen again."
-            v?.let { s -> out += "Ears: listening in ${s.lang}, " + (if (s.tap != null || (VoiceGuard.enrolled && !s.tapFailed)) "my own microphone shared (for your voice check)" else "the phone's own microphone") + "." }
+            v?.let { s -> out += "Ears: " + (if (googleSpeech) "Google's speech service" else "on the phone only") + ", listening in ${s.lang}, " + (if (s.tap != null || (VoiceGuard.enrolled && !s.tapFailed)) "my own microphone shared (for your voice check)" else "the phone's own microphone") + "." }
             traceLines().takeIf { it.isNotEmpty() }?.let { out += "Last turns: " + it.joinToString("; ") + "." }
             if (muted) out += "I'm muted: say \"Jarvis, unmute\" or switch Mute off in Settings, Voice and AI model."
             if (quietNow()) out += "It's quiet hours (22:00 to 07:00): I only speak when you ask."
@@ -173,10 +173,16 @@ class JarvisVoice : Service() {
 
         /** Can this phone listen on the device alone? (Android 12+ with an on-device recognizer.) */
         fun available(context: Context): Boolean = com.optionslab.app.BuildConfig.JARVIS &&
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && runCatching { SpeechRecognizer.isOnDeviceRecognitionAvailable(context) }.getOrDefault(false)
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && runCatching {
+                SpeechRecognizer.isOnDeviceRecognitionAvailable(context) || (googleSpeech && SpeechRecognizer.isRecognitionAvailable(context)) }.getOrDefault(false)
 
         fun permitted(context: Context) =
             ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+
+        /** Boss's choice (default off): Jarvis listens through the phone's speech service (Google), which may send speech to Google. */
+        var googleSpeech: Boolean
+            get() = runCatching { com.optionslab.app.security.SecurePrefs.getBoolean("jarvis.voice.google", false) }.getOrDefault(false)
+            set(v) { runCatching { com.optionslab.app.security.SecurePrefs.put("jarvis.voice.google", v) } }
 
         /** From the app on screen only (Android lets a microphone service start only then). */
         /** Started from the app on screen (Android then lets it use the microphone "while using the app"). */
@@ -360,7 +366,7 @@ class JarvisVoice : Service() {
             if (Automations.on(Automations.Auto.SELFHEAL) && com.optionslab.ira.VoiceHealth.stuck(now, readyAt, speaking, !held && _state.value.mode != Mode.THINKING) && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 readyAt = now
                 runCatching { rec?.destroy() }
-                rec = runCatching { SpeechRecognizer.createOnDeviceSpeechRecognizer(this@JarvisVoice).also { it.setRecognitionListener(listener) } }.getOrNull()
+                rec = runCatching { newRecognizer().also { it.setRecognitionListener(listener) } }.getOrNull()
                 listening = false; endTap()
                 IraActivity.add("Restarted listening (the microphone had gone quiet).")
                 Automations.acted(Automations.Auto.SELFHEAL, "Restarted listening.")
@@ -441,7 +447,7 @@ class JarvisVoice : Service() {
         }
         instance = java.lang.ref.WeakReference(this)
         if (rec == null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            rec = SpeechRecognizer.createOnDeviceSpeechRecognizer(this).also { it.setRecognitionListener(listener) }
+            rec = newRecognizer().also { it.setRecognitionListener(listener) }
             pickLanguage()
             tts = TextToSpeech(this) { status -> main.post { voiceReady = status == TextToSpeech.SUCCESS && pickOfflineVoice() } }
             listen()
@@ -528,6 +534,15 @@ class JarvisVoice : Service() {
     private fun awake() = SystemClock.elapsedRealtime() < awakeUntil
 
     /**
+     * Jarvis's ears: the phone's on-device recognizer (nothing leaves the phone), or - when Boss switched on "Use
+     * Google's speech service" (4 Oct: the keyboard's voice typing hears him fast; the on-device one did not) - the
+     * phone's speech service, which may send his speech to Google.
+     */
+    private fun newRecognizer(): SpeechRecognizer =
+        if (googleSpeech && SpeechRecognizer.isRecognitionAvailable(this)) SpeechRecognizer.createSpeechRecognizer(this)
+        else SpeechRecognizer.createOnDeviceSpeechRecognizer(this)
+
+    /**
      * The English the phone's on-device recognizer actually has (Android 13+ can say): English (US) when installed,
      * else English (India), else any English - so Jarvis never asks for a language the phone lacks.
      */
@@ -556,7 +571,7 @@ class JarvisVoice : Service() {
         val i = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
             .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
             .putExtra(RecognizerIntent.EXTRA_LANGUAGE, lang)
-            .putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true)
+            .putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, !googleSpeech)
             .putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3)
             .putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
             // End the turn soon after Boss stops speaking (recognizers that honour it answer sooner).
@@ -653,7 +668,7 @@ class JarvisVoice : Service() {
                 tapFailed = true; note("error $error with shared audio: back to the phone's own microphone")
                 if (error == 11 || error == SpeechRecognizer.ERROR_CLIENT) {
                     runCatching { rec?.destroy() }
-                    rec = runCatching { SpeechRecognizer.createOnDeviceSpeechRecognizer(this@JarvisVoice).also { it.setRecognitionListener(this) } }.getOrNull()
+                    rec = runCatching { newRecognizer().also { it.setRecognitionListener(this) } }.getOrNull()
                 }
                 again(500); return
             }
@@ -678,7 +693,7 @@ class JarvisVoice : Service() {
                 11 -> {
                     errorsInRow++; lastError = error to SystemClock.elapsedRealtime()
                     runCatching { rec?.destroy() }
-                    rec = runCatching { SpeechRecognizer.createOnDeviceSpeechRecognizer(this@JarvisVoice).also { it.setRecognitionListener(this) } }.getOrNull()
+                    rec = runCatching { newRecognizer().also { it.setRecognitionListener(this) } }.getOrNull()
                     pickLanguage()
                     IraActivity.add("Reconnected listening (the phone's speech service had restarted).")
                     again(minOf(MAX_BACKOFF_MS, 1_000L shl minOf(errorsInRow - 1, 5)))
@@ -696,7 +711,7 @@ class JarvisVoice : Service() {
                         return
                     }
                     runCatching { rec?.destroy() }
-                    rec = runCatching { SpeechRecognizer.createOnDeviceSpeechRecognizer(this@JarvisVoice).also { it.setRecognitionListener(this) } }.getOrNull()
+                    rec = runCatching { newRecognizer().also { it.setRecognitionListener(this) } }.getOrNull()
                     if (clientErrors == 1) IraActivity.add("Restarted listening (the speech service refused a request).")
                     again(if (clientErrors <= 3) 1_000L else minOf(MAX_BACKOFF_MS, 1_000L shl minOf(clientErrors - 3, 5)))
                 }
@@ -711,7 +726,7 @@ class JarvisVoice : Service() {
                     // switch did - and further failures wait longer, up to 30 s.
                     if (errorsInRow == 3 && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                         runCatching { rec?.destroy() }
-                        rec = runCatching { SpeechRecognizer.createOnDeviceSpeechRecognizer(this@JarvisVoice).also { it.setRecognitionListener(this) } }.getOrNull()
+                        rec = runCatching { newRecognizer().also { it.setRecognitionListener(this) } }.getOrNull()
                         IraActivity.add("Restarted listening (the speech recognizer kept failing).")
                     }
                     again(if (errorsInRow == 0) 200L else minOf(MAX_BACKOFF_MS, 250L shl minOf(errorsInRow, 7)))

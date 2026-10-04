@@ -409,6 +409,18 @@ internal fun VoiceSwitch() {
             androidx.compose.material3.Switch(checked = mute, onCheckedChange = { v -> mute = v; JarvisVoice.muted = v })
         }
         Note("Or say \"Jarvis, mute\" and \"Jarvis, unmute\".")
+        // Boss, 4 Oct: the phone's on-device recognizer did not hear "Jarvis"; the keyboard's voice typing does, fast.
+        var google by remember { mutableStateOf(JarvisVoice.googleSpeech) }
+        val vctx = androidx.compose.ui.platform.LocalContext.current
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
+            Text("Use Google's speech service", style = Type.label.copy(color = p.ink, fontSize = 14.sp), modifier = Modifier.weight(1f))
+            androidx.compose.material3.Switch(checked = google, onCheckedChange = { v ->
+                google = v; JarvisVoice.googleSpeech = v
+                // Listening starts again from here (the app on screen) with the new ears.
+                if (JarvisVoice.wanted) { JarvisVoice.stop(vctx); android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({ if (JarvisVoice.wanted) JarvisVoice.start(vctx) }, 700) }
+            })
+        }
+        Note("Off: Jarvis hears you on this phone only. On: he listens through the phone's speech service (the one your keyboard's voice typing uses) - faster and better at hearing \"Jarvis\", but your speech may be sent to Google to be understood.")
         var brief by remember { mutableStateOf(com.optionslab.app.ira.IraTools.brief) }
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
             Text("Short spoken answers", style = Type.label.copy(color = p.ink, fontSize = 14.sp), modifier = Modifier.weight(1f))
