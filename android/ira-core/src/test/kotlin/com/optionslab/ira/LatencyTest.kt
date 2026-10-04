@@ -13,3 +13,12 @@ class LatencyTest {
         assertNull(Latency.say(emptyList()))
     }
 }
+
+class SlowSuggestTest {
+    @Test fun onlyAfterThreeSlowAnswersAndNotOnTheFastest() {
+        assertNull(Latency.suggestFaster(listOf(6000L, 7000L), onFastest = false))
+        assertNull(Latency.suggestFaster(listOf(6000L, 4000L, 7000L), onFastest = false))
+        assertNull(Latency.suggestFaster(listOf(6000L, 6500L, 7000L), onFastest = true))
+        kotlin.test.assertTrue(Latency.suggestFaster(listOf(1000L, 6000L, 6500L, 7000L), onFastest = false)!!.contains("Qwen2.5 0.5B"))
+    }
+}

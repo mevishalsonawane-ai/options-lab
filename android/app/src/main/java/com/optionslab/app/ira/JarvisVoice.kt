@@ -539,7 +539,8 @@ class JarvisVoice : Service() {
                 // Only a reply to what was just heard counts (an answer or a yes-or-no question within a minute): a later
                 // announcement is not a reply, and a stale time would read as minutes.
                 val took = SystemClock.elapsedRealtime() - h
-                if (h > 0 && (id?.startsWith("answer") == true || id?.startsWith("question") == true)) { if (took < 60_000) lastLatencyMs = took; latencies = com.optionslab.ira.Latency.add(latencies, took); heardAt = 0L }
+                if (h > 0 && (id?.startsWith("answer") == true || id?.startsWith("question") == true)) { if (took < 60_000) lastLatencyMs = took; latencies = com.optionslab.ira.Latency.add(latencies, took); heardAt = 0L
+                    slowNudge() }
             }
             override fun onDone(id: String?) { main.post { if (id == utterance) afterSpeech(id?.substringBefore('#')) } }
             @Deprecated("Deprecated in Java") override fun onError(id: String?) { main.post { if (id == utterance) afterSpeech(id?.substringBefore('#')) } }
@@ -847,6 +848,15 @@ class JarvisVoice : Service() {
                 }
             }
         }
+    }
+
+    /** Slow answers three times running, not on the fastest model: a suggestion in the chat, once a day. */
+    private fun slowNudge() {
+        val text = com.optionslab.ira.Latency.suggestFaster(latencies, IraModel.choice == IraModel.FASTEST) ?: return
+        val day = java.time.LocalDate.now(java.time.ZoneId.of("Asia/Kolkata")).toString()
+        if (runCatching { com.optionslab.app.security.SecurePrefs.getString("jarvis.slow.told") }.getOrNull() == day) return
+        runCatching { com.optionslab.app.security.SecurePrefs.put("jarvis.slow.told", day) }
+        runCatching { IraHub.note(text) }
     }
 
     /** Cut in on: Jarvis stops talking and waits for the owner's question. */
