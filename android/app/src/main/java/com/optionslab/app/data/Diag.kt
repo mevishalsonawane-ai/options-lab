@@ -86,8 +86,30 @@ object Diag {
             append("\n-- Jarvis's ears --\n")
             append(redact(runCatching { com.optionslab.app.ira.JarvisVoice.report(app) }.getOrElse { "could not read: ${it.javaClass.simpleName}\n" }))
             append("AI model loaded: ${runCatching { com.optionslab.app.ira.IraModel.state.value.status }.getOrNull()}\n")
+            append(redact(runCatching { com.optionslab.app.ira.IraModel.state.value.let { m -> "AI model: ${m.status}, loaded ${m.loaded}, writing ${m.writing}" + (m.message?.let { t -> " · $t" } ?: "") + "\n" } }.getOrDefault("")))
             append("\n-- Jarvis's activity (today) --\n")
-            runCatching { com.optionslab.app.ira.IraActivity.lines() }.getOrDefault(emptyList()).takeLast(40).forEach { append(redact(it)).append('\n') }
+            runCatching { com.optionslab.app.ira.IraActivity.lines() }.getOrDefault(emptyList()).takeLast(120).forEach { append(redact(it)).append('\n') }
+            // Boss, 4 Oct: "add all AI logs there for now". Every AI record the app keeps, redacted.
+            append("\n-- Jarvis's chat (latest 60, newest last) --\n")
+            runCatching { com.optionslab.app.ira.IraHub.state.value.messages.takeLast(60) }.getOrDefault(emptyList()).forEach { m ->
+                append(if (m.fromIra) "Jarvis: " else "You: ").append(redact(m.text.replace('\n', ' ').take(400))).append('\n') }
+            fun section(title: String, body: () -> Any?) {
+                append("\n-- $title --\n")
+                val v = runCatching { body() }.getOrElse { "could not read: ${it.javaClass.simpleName}" }
+                when (v) { is List<*> -> v.forEach { append(redact(it.toString())).append('\n') }; null -> append("(none)\n"); else -> append(redact(v.toString())).append('\n') }
+            }
+            section("What Jarvis does by himself") { com.optionslab.app.ira.Automations.Group.entries.map { g ->
+                "${g.label}: ${if (com.optionslab.app.ira.Automations.on(g)) "on" else "off"}" + (com.optionslab.app.ira.Automations.last(g)?.let { (t, w) -> " · last $t: $w" } ?: "") } +
+                listOf("AI trades go live: ${!com.optionslab.app.ira.IraNewsTrades.paperFirst}", "Stops done automatically: ${com.optionslab.app.ira.IraHub.autoStop}") }
+            section("Jarvis's trades") { com.optionslab.app.ira.IraNewsTrades.record() }
+            section("Today's suggestions (scorecard)") { com.optionslab.app.ira.IraNewsTrades.scorecard() }
+            section("Solo") { com.optionslab.app.ira.IraSolo.status() + " Learning: " + com.optionslab.app.ira.IraSolo.learning() }
+            val goals = runCatching { com.optionslab.app.ira.IraGoals.say() }.getOrElse { "could not read" }
+            section("Goals") { goals }
+            val lessons = runCatching { com.optionslab.app.ira.IraAccount.lessons().let { (l, n) -> com.optionslab.ira.Lessons.say(l, n) } }.getOrElse { "could not read" }
+            section("Lessons") { lessons }
+            val tests = runCatching { com.optionslab.app.ira.IraExpert.say() }.getOrElse { "could not read" }
+            section("Paper tests") { tests }
         }
         // Newest first: a long report pasted into a chat is cut at its end, and today's events are the ones that matter.
         append("\n-- Events (newest first) --\n")
