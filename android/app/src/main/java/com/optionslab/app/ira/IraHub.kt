@@ -616,7 +616,9 @@ object IraHub {
         // And an hour of the day that has been losing him money: he does not act alone then, and tells Boss when asking.
         val nowMin = LocalDateTime.now(IST).let { it.hour * 60 + it.minute }
         val badHour = runCatching { com.optionslab.ira.ActAlone.badHour(IraNewsTrades.byMinute(), nowMin) }.getOrNull()
-        if (!solo && badHour == null && com.optionslab.ira.ActAlone.ok(Automations.on(Automations.Auto.ACT_PAPER), goesLive, conf.stars, bar) && snap != null) {
+        // And a kind of idea (news, or this pattern) that has been losing: the same.
+        val badKind = runCatching { com.optionslab.ira.ActAlone.badKind(IraNewsTrades.byKind(), com.optionslab.ira.Preference.kind(source)) }.getOrNull()
+        if (!solo && badHour == null && badKind == null && com.optionslab.ira.ActAlone.ok(Automations.on(Automations.Auto.ACT_PAPER), goesLive, conf.stars, bar) && snap != null) {
             val done = runCatching { IraNewsTrades.place(idea, _state.value.snaps[m]?.price ?: snap.price, source, paperOnly = true, stars = conf.stars) }.getOrElse { "That did not work: ${it.message ?: "an error"}." }
             val took = done.startsWith("Bought")
             val said2 = "$text$ivLine ${conf.text()}$risk " + (if (took) "I took it myself on paper: $what. $done" else "I meant to take it myself on paper, but: $done")
@@ -642,7 +644,7 @@ object IraHub {
         IraActivity.add("Suggested: $what (${source.substringBefore(':')}).")
         val where = if (goesLive) " on ZERODHA with real money (approve with your fingerprint)"
             else if (com.optionslab.app.data.AppSettings.load().live) " (on paper: ${if (solo) "Solo's" else "my"} trades stay there until proven)" else ""
-        val hourLine = badHour?.let { " A caution: $it." } ?: ""
+        val hourLine = listOfNotNull(badHour, badKind).takeIf { it.isNotEmpty() }?.let { " A caution: ${it.joinToString("; ")}." } ?: ""
         val full = "$text$ivLine ${conf.text()}$risk$hourLine Shall I $what$where? Approve or reject."
         _state.update { it.copy(pending = it.pending + id, messages = (it.messages + Msg(true, full, action = id)).takeLast(MAX_MESSAGES)) }
         JarvisApproval.show(c, id, title, full)

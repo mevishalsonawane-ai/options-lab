@@ -13,6 +13,13 @@ class GuardsTest {
     private val day = LocalDate.of(2026, 10, 5)
     private fun at(h: Int, m: Int) = day.atTime(h, m)
 
+    @Test fun aKindOfIdeaThatLosesIsKnown() {
+        val r = List(8) { Preference.kind("pattern: hammer|NIFTY") to -100.0 } + List(9) { "news" to 40.0 }
+        assertEquals("my pattern hammer trades have lost: 8 trades, -Rs 800.00", ActAlone.badKind(r, "pattern hammer"))
+        assertNull(ActAlone.badKind(r, "news"))
+        assertNull(ActAlone.badKind(r.drop(1), "pattern hammer"))
+    }
+
     @Test fun anHourThatLosesIsKnown() {
         val r = List(8) { 9 * 60 + 20 + it to -100.0 } + List(8) { 13 * 60 + it to 50.0 }
         assertEquals("my trades entered between 09:00 and 10:00 have lost: 8 trades, -Rs 800.00", ActAlone.badHour(r, 9 * 60 + 45))

@@ -264,6 +264,17 @@ object ActAlone {
         return "my trades entered between %02d:00 and %02d:00 have lost: ${at.size} trades, ${AppFacts.rs(net)}".format(Locale.ENGLISH, h, h + 1)
     }
 
+    /**
+     * A kind of idea (news, or one pattern - [Preference.kind]) that has been losing Jarvis money ([results]: kind,
+     * rupees): with [JUDGE] trades or more and a net loss, its record in words, else null. Pure.
+     */
+    fun badKind(results: List<Pair<String, Double>>, kind: String): String? {
+        val at = results.filter { it.first == kind }
+        val net = at.sumOf { it.second }
+        if (at.size < JUDGE || net >= 0) return null
+        return "my $kind trades have lost: ${at.size} trades, ${AppFacts.rs(net)}"
+    }
+
     /** One line for "how are your trades doing": each level's record and the bar it set. */
     fun say(results: List<Pair<Int, Double>>): String? {
         if (results.isEmpty()) return null
