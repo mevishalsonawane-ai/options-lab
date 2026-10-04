@@ -1066,6 +1066,35 @@ object IraHub {
             val any = runCatching { com.optionslab.ira.Plan.steps(q) { s -> Ask.parse(s).let { it.order == null && it.command != null } || com.optionslab.ira.Toolbox.isRead(s) } }.getOrNull()
             if (any != null) { _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, com.optionslab.ira.Plan.ONLY_LOWERING)).takeLast(MAX_MESSAGES)) }; return }
         }
+        // Boss's own reminder ("remind me at 3 pm to check Nifty"): only said at its time, never run (Boss, 4 Oct).
+        if (com.optionslab.app.BuildConfig.JARVIS && runCatching { com.optionslab.ira.Reminder.asked(q) }.getOrDefault(false)) {
+            val now = java.time.LocalDateTime.now(IST)
+            val r = runCatching { com.optionslab.ira.Reminder.parse(q, now) }.getOrNull()
+            val c = app
+            val said = if (r == null || c == null) "Boss, tell me when, like \"remind me at 3 pm to check Nifty\" or \"in 20 minutes\"."
+                else { IraLater.remind(c, r.rest, r.at); "Done, Boss: I'll remind you ${com.optionslab.ira.Later.say(r.at, now)}: ${r.rest}." }
+            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
+            return
+        }
+        // The time and the date, from the phone's clock: at once, no model.
+        runCatching { com.optionslab.ira.Reminder.clock(q, java.time.LocalDateTime.now(IST)) }.getOrNull()?.let { said ->
+            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
+            return
+        }
+        // "What's the plan for tomorrow?": the indices' outlook and the coming days' events (words only, no command).
+        if (com.optionslab.app.BuildConfig.JARVIS && parsed.command == null && parsed.order == null && runCatching { com.optionslab.ira.Reminder.tomorrow(q) }.getOrDefault(false)) {
+            val today = com.optionslab.app.data.Market.today()
+            val ev = runCatching { IraEvents.upcoming(3).take(3).map { com.optionslab.ira.Events.line(it, today).removeSuffix(".") } }.getOrDefault(emptyList())
+            val out = morningOutlook()
+            val said = buildString {
+                append("For the next session, Boss: ")
+                append(if (out.isEmpty()) "I have no outlook yet (the price history is still loading)." else out.joinToString(" "))
+                if (ev.isNotEmpty()) append(" Coming up: " + ev.joinToString("; ") + ".")
+                append(" I'll give you the full plan in the morning check.")
+            }
+            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
+            return
+        }
         // A command for a later time ("start all the arms tomorrow at 9am"): set only once confirmed, run by an alarm then.
         // A request that names a time is never done now: set for that time (allowed kinds, confirmed), or refused - an
         // order is never placed for later, and a time already passed or missing is asked again (review, 3 Oct).

@@ -25,16 +25,17 @@ object IraLater {
     private const val GRACE_MS = 30 * 60_000L
 
     /** [live]: the app's mode when it was set (a start is not run in another mode than the one Boss confirmed it in). */
-    data class Item(val id: Long, val text: String, val at: Long, val live: Boolean = false)
+    /** [remind]: Boss's own reminder - only said at its time, never run. */
+    data class Item(val id: Long, val text: String, val at: Long, val live: Boolean = false, val remind: Boolean = false)
 
     @Synchronized fun all(): List<Item> = runCatching {
         val a = org.json.JSONArray(SecurePrefs.getString(KEY) ?: "[]")
-        (0 until a.length()).map { i -> a.getJSONObject(i).let { Item(it.getLong("id"), it.getString("text"), it.getLong("at"), it.optBoolean("live", false)) } }
+        (0 until a.length()).map { i -> a.getJSONObject(i).let { Item(it.getLong("id"), it.getString("text"), it.getLong("at"), it.optBoolean("live", false), it.optBoolean("remind", false)) } }
     }.getOrDefault(emptyList())
 
     @Synchronized private fun save(items: List<Item>) {
         val a = org.json.JSONArray()
-        items.forEach { a.put(org.json.JSONObject().put("id", it.id).put("text", it.text).put("at", it.at).put("live", it.live)) }
+        items.forEach { a.put(org.json.JSONObject().put("id", it.id).put("text", it.text).put("at", it.at).put("live", it.live).put("remind", it.remind)) }
         SecurePrefs.put(KEY, if (items.isEmpty()) null else a.toString())
     }
 
@@ -47,11 +48,17 @@ object IraLater {
         schedule(context)
     }
 
+    /** Boss's reminder: said at [at], nothing done. */
+    fun remind(context: Context, what: String, at: LocalDateTime) {
+        save(all() + Item(System.nanoTime(), com.optionslab.ira.Secrets.redact(what), at.atZone(IST).toInstant().toEpochMilli(), remind = true))
+        schedule(context)
+    }
+
     /** "Boss, what have you set for later?" */
     fun say(now: LocalDateTime = LocalDateTime.now(IST)): String {
         val items = all().sortedBy { it.at }
         if (items.isEmpty()) return "Nothing is set for later, Boss."
-        return "Set for later: " + items.joinToString("; ") { "\"${it.text}\" " + Later.say(LocalDateTime.ofInstant(Instant.ofEpochMilli(it.at), IST), now) } + "."
+        return "Set for later: " + items.joinToString("; ") { (if (it.remind) "a reminder to " else "") + "\"${it.text}\" " + Later.say(LocalDateTime.ofInstant(Instant.ofEpochMilli(it.at), IST), now) } + "."
     }
 
     /** Everything set for later is dropped (nothing runs). */
@@ -79,11 +86,21 @@ object IraLater {
     /** The alarm fired: each command now due is run (or dropped when far too late), and Boss is told. */
     suspend fun fire(context: Context) {
         // IraGoldAlgo never runs commands (Jarvis only talks there): anything found is dropped.
-        if (com.optionslab.app.BuildConfig.GOLD) { save(emptyList()); return }
+        // (Reminders only speak, so they stay.)
+        if (com.optionslab.app.BuildConfig.GOLD) save(all().filter { it.remind })
         val now = System.currentTimeMillis()
         val due = all().filter { it.at <= now + 30_000 }
         if (due.isNotEmpty()) save(all().filter { it.at > now + 30_000 })
         for (item in due) {
+            // A reminder: said (late ones say so), never run - whatever its words.
+            if (item.remind) {
+                val r = com.optionslab.ira.Reminder.said(item.text) + if (now - item.at > GRACE_MS) " (late: the phone was off at its time)" else ""
+                IraActivity.add("Reminder said: \"${item.text}\".")
+                runCatching { JarvisPopup.show(context, "Jarvis", r) }
+                runCatching { JarvisVoice.announce(r) }
+                runCatching { IraHub.note(r) }
+                continue
+            }
             val said = if (now - item.at > GRACE_MS) "I did not \"${item.text}\": its time passed while the phone was off. Ask me again if you still want it."
             else {
                 val c = Ask.parse(item.text).command
