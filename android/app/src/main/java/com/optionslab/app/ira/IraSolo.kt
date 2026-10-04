@@ -160,6 +160,8 @@ internal object IraSolo {
         var lastPrice = 0.0
     }
     private val brains = HashMap<IraMarket, Brain>()
+    /** Minutes behind the newest that the brain reads (the feed fills a late minute from the one before). */
+    private const val SETTLE = 2
     private fun brainKey(m: IraMarket) = "solo.brain.${m.name}"
 
     /** Reads minutes [Brain.done]+1..[upTo] of [day]: learns each answer as it comes due, then guesses again. */
@@ -210,8 +212,10 @@ internal object IraSolo {
                         // Yesterday's close (the app may have stayed open overnight).
                         b.prevClose = IraHub.recentBars(m).lastOrNull { it.t.toLocalDate().isBefore(today) }?.c ?: b.prevClose
                     }
-                    if (day.lastIndex > b.done) {
-                        feed(b, day, day.lastIndex)
+                    // Two minutes behind the newest: a minute that arrives late is otherwise learned as a copy of the one before.
+                    val upTo = day.lastIndex - SETTLE
+                    if (upTo > b.done) {
+                        feed(b, day, upTo)
                         com.optionslab.app.security.SecurePrefs.put(brainKey(m), b.l.save())
                         com.optionslab.app.security.SecurePrefs.put(brainKey(m) + ".at", "$today|${b.done}")
                     }
@@ -221,7 +225,8 @@ internal object IraSolo {
     }
 
     /** "How is Solo's learning going", per market. */
-    fun learning(): String = synchronized(brains) { MARKETS.mapNotNull { m -> brains[m]?.let { runCatching { it.l.say(m.label) }.getOrNull() } } }
+    fun learning(): String = synchronized(brains) { MARKETS.mapNotNull { m -> brains[m]?.let { b -> runCatching {
+            b.l.say(m.label) + (b.l.explain(m.label)?.let { ". $it" } ?: "") }.getOrNull() } } }
         .ifEmpty { listOf("it starts learning at the next market session") }.joinToString("; ")
 
     /** Every market-watch pass while Solo is on: manage the open trade, or look for the next one. */

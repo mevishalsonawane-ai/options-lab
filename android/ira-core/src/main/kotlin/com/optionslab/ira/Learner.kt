@@ -124,6 +124,32 @@ class Learner(private val cfg: Cfg = Cfg()) {
         else "$label: %.0f%% of its last %d confident guesses were right - %s".format(java.util.Locale.ENGLISH, hitRate * 100, record.size,
             if (ready) "trading on paper when it is sure" else "watching until its record is good enough")
 
+    /**
+     * What it has learned, in words (Boss: "what has Solo learned?"): the readings that weigh most in its guess, each
+     * with the way it pulls - e.g. "a rise over the last 5 minutes tends to carry on (momentum)". The weights are on
+     * the standardised readings, so they compare. Null until it has seen enough to say anything.
+     */
+    fun explain(label: String, top: Int = 3): String? {
+        if (seen < 500) return null
+        val parts = (0 until DIM).sortedByDescending { abs(w[it]) }.take(top).filter { abs(w[it]) >= 0.02 }.map { i ->
+            val up = w[i] > 0
+            when (i) {
+                0, 1, 2, 3, 4 -> {
+                    val span = listOf("minute", "5 minutes", "15 minutes", "30 minutes", "hour")[i]
+                    if (up) "a rise over the last $span tends to carry on (momentum)" else "a rise over the last $span tends to fade (it snaps back)"
+                }
+                5 -> if (up) "near the day's high it leans up" else "near the day's high it leans down (and up near the low)"
+                6 -> if (up) "a day up from the open tends to keep going" else "a day up from the open tends to give some back"
+                7 -> if (up) "a gap up from yesterday's close tends to extend" else "a gap from yesterday's close tends to fill"
+                8, 9 -> if (up) "later in the day it leans up" else "later in the day it leans down"
+                10 -> if (up) "a busy, wide last 15 minutes leans up" else "a busy, wide last 15 minutes leans down"
+                else -> if (up) "mostly green minutes lately lean up" else "mostly green minutes lately lean down"
+            }
+        }
+        if (parts.isEmpty()) return "$label: nothing stands out yet - its guesses are close to a coin toss"
+        return "$label has learned: " + parts.joinToString("; ")
+    }
+
     /** The trade now, if any: true = buy a call, false = a put, null = none. */
     fun decide(p: Double): Boolean? = if (!ready || abs(p - 0.5) < cfg.edge) null else p > 0.5
 

@@ -45,6 +45,10 @@ class LearnerTest {
         assertEquals(l.save(), back.save())
         assertTrue(back.ready && !Learner().load("junk"))
         assertTrue(l.say("Nifty").startsWith("Nifty: "), l.say("Nifty"))
+        // In words: in a market where the last minutes' direction carries on, it names momentum.
+        val e = l.explain("Nifty")!!
+        assertTrue(e.startsWith("Nifty has learned: ") && e.contains("momentum"), e)
+        assertNull(Learner().explain("Nifty"), "too early to say")
     }
 
     /** Over real history (SOLO_DATA): prints how the learner would have done. */
