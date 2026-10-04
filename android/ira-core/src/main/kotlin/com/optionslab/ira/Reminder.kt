@@ -28,7 +28,8 @@ object Reminder {
         return "remind me " + t.trim()
     }
 
-    private val DAILY = Regex("(?i)\\s*\\b(every ?day|daily|each day|every trading day|roz|rozana|har din)\\b\\s*")
+    // Only right before the time ("every day at 9:20", "roz 9 baje"): "check the daily pnl" is one reminder (review, 4 Oct).
+    private val DAILY = Regex("(?i)\\s*\\b(every ?day|daily|each day|every trading day|roz|rozana|har din)\\b\\s*(?=(at\\b|@|\\d|subah|savere|shaam|sham|raat|dopahar))")
 
     /** "Remind me every day at 9:20 to ...", "roz 9 baje ... yaad dilana": said each trading day at that time. */
     fun daily(said: String): Boolean = DAILY.containsMatchIn(said)

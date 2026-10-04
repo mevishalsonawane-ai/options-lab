@@ -137,3 +137,12 @@ class UsageAskedTest {
         assertTrue(!Reminder.usageAsked("how did nifty do today"))
     }
 }
+
+class DailyWordInTextTest {
+    @Test fun oneOffWithDailyInIt() {
+        val now = LocalDateTime.of(2026, 10, 5, 10, 0)
+        assertTrue(!Reminder.daily("remind me at 3 pm to check the daily pnl"))
+        assertEquals("check the daily pnl", Reminder.parse("remind me at 3 pm to check the daily pnl", now)!!.rest)
+        assertTrue(Reminder.daily("remind me daily at 9:15 to log in"))
+    }
+}
