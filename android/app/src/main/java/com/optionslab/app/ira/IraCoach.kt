@@ -210,6 +210,26 @@ internal object IraCoach {
         }, addsRisk = steps.any { it.on })
     }
 
+    private var relay = com.optionslab.ira.RelayWatch.State()
+    private var relayAt = 0L
+
+    /** Every 3 minutes, 08:30 to 15:30 on a trading day: is the static-IP relay server answering? */
+    suspend fun relayWatch() {
+        if (!com.optionslab.app.BuildConfig.JARVIS || !Automations.on(Automations.Auto.RELAY)) return
+        val r = com.optionslab.app.data.Relay
+        val m = com.optionslab.app.data.Market
+        if (!r.enabled || r.host == null || !m.isTradingDay(m.today()) || !com.optionslab.ira.RelayWatch.due(m.minuteNow())) return
+        val now = System.currentTimeMillis()
+        if (now - relayAt < com.optionslab.ira.RelayWatch.EVERY_MIN * 60_000L - 5_000) return
+        relayAt = now
+        val ok = kotlinx.coroutines.withTimeoutOrNull(20_000) {
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { runCatching { r.warm(); r.connected }.getOrDefault(false) }
+        } ?: false
+        val (next, say) = com.optionslab.ira.RelayWatch.next(relay, ok)
+        relay = next
+        say?.let { IraHub.note(it); JarvisVoice.announce(it); IraActivity.add(it); Automations.acted(Automations.Auto.RELAY, it) }
+    }
+
     /** Just after the open (09:16 to 09:30), once a day: BankNifty's gap and how the arms did on such days. */
     suspend fun gapWatch() {
         if (!com.optionslab.app.BuildConfig.JARVIS || !Automations.on(Automations.Auto.GAP)) return

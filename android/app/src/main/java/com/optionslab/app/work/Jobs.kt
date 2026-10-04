@@ -407,6 +407,8 @@ object Tasks {
         runCatching { com.optionslab.app.ira.IraCoach.trailWatch() }
         runCatching { com.optionslab.app.ira.IraCoach.overtradeWatch() }
         runCatching { com.optionslab.app.ira.IraCoach.gapWatch() }
+        // Jarvis: the static-IP relay server not answering is told before a login or an order fails on it.
+        runCatching { com.optionslab.app.ira.IraCoach.relayWatch() }
         // Jarvis: the morning plan - the paper arms fitted to the market's regime.
         runCatching { com.optionslab.app.ira.IraCoach.dayPlanWatch() }
         // Jarvis: Boss's goals over days - close, broken or met is told once a day.
