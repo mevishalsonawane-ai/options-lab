@@ -284,7 +284,8 @@ internal object IraActions {
             Command.Kind.MUTE -> { JarvisVoice.muted = true; IraActivity.add("Muted my voice."); "Muted, Boss. I'll reply on screen only. Say \"Jarvis, unmute\" or \"Jarvis, speak again\" to hear me." to null }
             Command.Kind.UNMUTE -> { JarvisVoice.muted = false; IraActivity.add("Voice back on."); "Voice on, Boss." to null }
             Command.Kind.HINDI -> { JarvisVoice.hindi = true
-                (if (IraModel.state.value.status == IraModel.Status.READY) "Ab main Hindi mein jawab doonga, Boss." else
+                (if (IraModel.state.value.status == IraModel.Status.READY) "Ab main Hindi mein jawab doonga, Boss." +
+                    (if (IraModel.choice == IraModel.FASTEST) " (The fastest model's Hindi is weak: some replies may stay in English. The 1.5B model is better at Hindi.)" else "") else
                     "Boss, Hindi replies need the AI model on the phone (Settings, Voice and AI model); until then I reply in English.") to null }
             Command.Kind.ENGLISH -> { JarvisVoice.hindi = false; "Back to English, Boss." to null }
             Command.Kind.PACE_SLOWER -> { JarvisVoice.pace = JarvisVoice.pace - 0.15f; "Slower now, Boss." to null }
