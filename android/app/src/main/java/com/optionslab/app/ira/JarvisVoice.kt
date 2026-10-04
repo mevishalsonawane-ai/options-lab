@@ -250,6 +250,11 @@ class JarvisVoice : Service() {
          * How Jarvis sounds. Android's voices are adult ones; a young girl's voice is the phone's voice pitched up and a
          * little quicker (the owner's choice, 2026-10-02).
          */
+        /** How fast he speaks, times the style's own rate: 0.7 to 1.45 (Boss's "speak slower" / "faster"). */
+        var pace: Float
+            get() = runCatching { com.optionslab.app.security.SecurePrefs.getString("jarvis.voice.pace")?.toFloat() }.getOrNull()?.coerceIn(0.7f, 1.45f) ?: 1f
+            set(v) { runCatching { com.optionslab.app.security.SecurePrefs.put("jarvis.voice.pace", v.coerceIn(0.7f, 1.45f).toString()) } }
+
         var style: Style
             // A normal male voice by default (the owner's wish, 2026-10-02); a new key, so an earlier choice starts from it.
             get() = runCatching { Style.valueOf(com.optionslab.app.security.SecurePrefs.getString("jarvis.voice.style2") ?: "MAN") }.getOrDefault(Style.MAN)
@@ -329,12 +334,12 @@ class JarvisVoice : Service() {
 
         /** Sets [t] to the chosen offline voice and style; false when the phone has no offline English voice. */
         fun applyStyle(t: TextToSpeech): Boolean {
-            val key = "${style.name}|${voiceName}"
+            val key = "${style.name}|${voiceName}|${pace}"
             if (synchronized(applied) { applied[t] } == key) return true
             val all = offlineVoices(t)
             val v = all.firstOrNull { it.name == voiceName } ?: (if (style == Style.MAN || style == Style.DEEP) maleVoice(all) else null) ?: all.firstOrNull() ?: return false
             t.voice = v
-            t.setPitch(style.pitch); t.setSpeechRate(style.rate)
+            t.setPitch(style.pitch); t.setSpeechRate(style.rate * pace)
             synchronized(applied) { applied[t] = key }
             return true
         }
@@ -959,7 +964,8 @@ class JarvisVoice : Service() {
     /** Said without the name as a follow-up: unmute and the reply language (never mute: a stray word must not silence Jarvis). */
     private val VOICE_KINDS = setOf(com.optionslab.ira.Command.Kind.UNMUTE, com.optionslab.ira.Command.Kind.VOICE_CHECK,
         com.optionslab.ira.Command.Kind.HINDI, com.optionslab.ira.Command.Kind.ENGLISH,
-        com.optionslab.ira.Command.Kind.QUIET_ON, com.optionslab.ira.Command.Kind.QUIET_OFF)
+        com.optionslab.ira.Command.Kind.QUIET_ON, com.optionslab.ira.Command.Kind.QUIET_OFF,
+        com.optionslab.ira.Command.Kind.PACE_SLOWER, com.optionslab.ira.Command.Kind.PACE_FASTER, com.optionslab.ira.Command.Kind.PACE_NORMAL)
 
     /** Commands that are never done on an unrecognised voice, even with a yes. */
     private val HIGH_RISK = setOf(com.optionslab.ira.Command.Kind.MODE_LIVE, com.optionslab.ira.Command.Kind.KILL_OFF,

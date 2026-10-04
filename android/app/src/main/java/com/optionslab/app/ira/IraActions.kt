@@ -287,6 +287,9 @@ internal object IraActions {
                 (if (IraModel.state.value.status == IraModel.Status.READY) "Ab main Hindi mein jawab doonga, Boss." else
                     "Boss, Hindi replies need the AI model on the phone (Settings, Voice and AI model); until then I reply in English.") to null }
             Command.Kind.ENGLISH -> { JarvisVoice.hindi = false; "Back to English, Boss." to null }
+            Command.Kind.PACE_SLOWER -> { JarvisVoice.pace = JarvisVoice.pace - 0.15f; "Slower now, Boss." to null }
+            Command.Kind.PACE_FASTER -> { JarvisVoice.pace = JarvisVoice.pace + 0.15f; "Faster now, Boss." to null }
+            Command.Kind.PACE_NORMAL -> { JarvisVoice.pace = 1f; "Back to my normal pace, Boss." to null }
             Command.Kind.JTRADES_PAPER -> Commands.describe(c) to suspend { IraNewsTrades.paperFirst = true; "My suggested trades stay on paper now, Boss." }
             Command.Kind.JTRADES_LIVE -> {
                 val why = com.optionslab.ira.JarvisTrades.proven(IraNewsTrades.closedRecord())

@@ -38,6 +38,8 @@ data class Command(val kind: Kind, val target: String? = null, val number: Int? 
         LEARN_RESET(true),
         /** "Why can't I hear you?": what stops the voice, said plainly. */
         VOICE_CHECK(true),
+        /** How fast Jarvis speaks: slower, faster, back to normal (only his voice; nothing else changes). */
+        PACE_SLOWER(true), PACE_FASTER(true), PACE_NORMAL(true),
     }
 }
 
@@ -85,6 +87,10 @@ object Commands {
         // A mute needs clear words (a stray "quiet" or "silence" nearby is not one).
         if (Regex("^ ((be |go |stay |keep )?(mute|muted)|be quiet|mute (yourself|your voice|the voice)|(be|go|stay|keep) (on )?silent|(don t|do not|stop) (speak|speaking|talk|talking)|voice off|turn (off )?(your )?voice( off)?) $").containsMatchIn(s)) return Command(Command.Kind.MUTE)
         if (Regex("^ (why can t i hear you|why can i not hear you|i can t hear you|cant hear you|no voice|voice check|check (your|the) voice|why (are you|is your voice) (silent|not speaking|quiet)|why no voice|why (can t|cant|don t|dont|do not|can not|cannot) you (hear|listen to) me|why (are you|aren t you|arent you) (not )?(listening|hearing me)|you (are not|aren t|arent|don t|dont) (listening|hearing me)|(listening|mic|microphone) (is )?not working|(why |wht |wy )?(can t|cant|can not|cannot) (you )?(hear|here) me|(am i|can you|are you) (audible|hearing me|able to hear me)( to you| too you)?|(do|can) you (hear|here) me (now|at all|properly)|i (am|m) trying to (speak|talk)( to you)?( am i audible( to you| too you)?)?) $").containsMatchIn(s)) return Command(Command.Kind.VOICE_CHECK)
+        // How fast he speaks (Boss, 4 Oct: answers to follow by ear).
+        if (Regex("^ ((speak|talk) (more )?(slower|slowly|slow)|(slower|slow down)( please)?|(thoda )?(dheere|dhire|aaram se) (bolo|boliye)) $").containsMatchIn(s)) return Command(Command.Kind.PACE_SLOWER)
+        if (Regex("^ ((speak|talk) (a bit )?(faster|quicker|quickly|fast)|(faster|speed up)( please)?|(thoda )?(jaldi|tez) (bolo|boliye)) $").containsMatchIn(s)) return Command(Command.Kind.PACE_FASTER)
+        if (Regex("^ ((speak|talk) (at )?(normal|normally|usual) (speed|pace)?|normal (speed|pace)|(speak|talk) normally) $").containsMatchIn(s)) return Command(Command.Kind.PACE_NORMAL)
         if (Regex("^ (reply|answer|speak|talk|respond)( to me)? in hindi $|^ hindi (mein|me) (bolo|baat karo|jawab do) $|^ hindi (replies|mode)( on)? $").containsMatchIn(s)) return Command(Command.Kind.HINDI)
         if (Regex("^ (reply|answer|speak|talk|respond)( to me)? in english( again)? $|^ english (replies|mode)( on)? $").containsMatchIn(s)) return Command(Command.Kind.ENGLISH)
         if (QUESTION.containsMatchIn(s) || NEGATION.containsMatchIn(s)) return null
@@ -289,6 +295,9 @@ object Commands {
         Command.Kind.PRACTICE -> "replay a past day"
         Command.Kind.LEARN_RESET -> "forget what I learned from your corrections"
         Command.Kind.VOICE_CHECK -> "check why my voice is not heard"
+        Command.Kind.PACE_SLOWER -> "speak slower"
+        Command.Kind.PACE_FASTER -> "speak faster"
+        Command.Kind.PACE_NORMAL -> "speak at the normal pace"
         Command.Kind.JTRADES_WEEKLY -> "set my trades' weekly loss limit to ${c.level?.let { "Rs %,.0f".format(java.util.Locale.ENGLISH, it) } ?: "?"}"
     }
 }
