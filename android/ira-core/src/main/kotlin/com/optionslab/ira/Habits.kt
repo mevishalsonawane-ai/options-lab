@@ -60,8 +60,12 @@ object Habits {
      * The market question Boss asks at [hour] so often ([OFFER_AT]+ times in that hour) that Jarvis says it unasked at the
      * hour's start, once a day ([told]: keys already offered today), else null. Only market questions are ever counted.
      */
-    fun due(counts: HabitCounts, hour: Int, told: Set<String>): String? =
-        counts.filter { it.key !in told && it.value[hour.coerceIn(0, 23)] >= OFFER_AT }.maxByOrNull { it.value[hour.coerceIn(0, 23)] }?.key
+    fun due(counts: HabitCounts, hour: Int, told: Set<String>, lastAsked: Map<String, java.time.LocalDate> = emptyMap(),
+            today: java.time.LocalDate? = null): String? =
+        counts.filter { it.key !in told && it.value[hour.coerceIn(0, 23)] >= OFFER_AT &&
+            // Still a habit: asked within the last week (a question Boss stopped asking is not said unasked forever).
+            (today == null || lastAsked[it.key]?.let { d -> !d.isBefore(today.minusDays(7)) } == true) }
+            .maxByOrNull { it.value[hour.coerceIn(0, 23)] }?.key
 
     fun asked(text: String): Boolean = Regex("^ ?(jarvis |hey jarvis )?(the usual|my usual|usual|same as always|the regular|you know what i want)( please| jarvis)? ?$")
         .matches(text.lowercase().replace(Regex("[^a-z ]"), " ").replace(Regex("\\s+"), " ").trim())

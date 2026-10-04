@@ -136,7 +136,15 @@ internal object IraTools {
         o.keys().asSequence().associateWith { k -> val a = o.getJSONArray(k); IntArray(24) { a.optInt(it) } }
     }.getOrDefault(emptyMap())
 
-    fun forgetHabits() { runCatching { prefs().put(HABITS, null) } }
+    fun forgetHabits() { runCatching { prefs().put(HABITS, null); prefs().put(HABITS_LAST, null) } }
+
+    /** When each habit's question was last asked (a habit not asked for a week is not offered unasked). */
+    private const val HABITS_LAST = "jarvis.habits.last"
+
+    fun habitsLast(): Map<String, java.time.LocalDate> = runCatching {
+        val o = JSONObject(prefs().getString(HABITS_LAST) ?: "{}")
+        o.keys().asSequence().mapNotNull { k -> runCatching { k to java.time.LocalDate.parse(o.getString(k)) }.getOrNull() }.toMap()
+    }.getOrDefault(emptyMap())
 
     /** A market question Boss asked, counted at this hour (nothing else is counted). */
     @Synchronized fun noteHabit(question: String) {
@@ -144,6 +152,8 @@ internal object IraTools {
             val k = com.optionslab.ira.Habits.key(question) ?: return
             val c = com.optionslab.ira.Habits.add(habits(), k, LocalDateTime.now(IST).hour)
             prefs().put(HABITS, JSONObject().apply { c.forEach { (key, row) -> put(key, JSONArray(row.toList())) } }.toString())
+            val last = (habitsLast() + (k to LocalDateTime.now(IST).toLocalDate())).filterKeys { it in c.keys }
+            prefs().put(HABITS_LAST, JSONObject().apply { last.forEach { (key, d) -> put(key, d.toString()) } }.toString())
         }
     }
 

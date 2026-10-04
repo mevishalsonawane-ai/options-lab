@@ -222,7 +222,7 @@ internal object IraCoach {
         val key = "jarvis.usual.told"
         val o = runCatching { org.json.JSONObject(com.optionslab.app.security.SecurePrefs.getString(key) ?: "{}") }.getOrDefault(org.json.JSONObject())
         val told = if (o.optString("d") == day) o.optJSONArray("k")?.let { a -> (0 until a.length()).map { a.getString(it) }.toSet() }.orEmpty() else emptySet()
-        val due = com.optionslab.ira.Habits.due(IraTools.habits(), now.hour, told) ?: return
+        val due = com.optionslab.ira.Habits.due(IraTools.habits(), now.hour, told, IraTools.habitsLast(), now.toLocalDate()) ?: return
         val question = com.optionslab.ira.Habits.question(due) ?: return
         // Kept as told only once said: an answer that could not be given (old prices) is tried again on the next pass.
         val text = IraHub.usualAnswer(question) ?: return
