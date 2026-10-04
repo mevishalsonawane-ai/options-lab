@@ -393,7 +393,8 @@ internal object IraCoach {
         val story = IraHub.dayStory(com.optionslab.ira.Market.NIFTY)
         // Solo's day right after the market's story (the spoken wrap-up keeps the first sentences).
         // (Jarvis's own review right after the day's figures, so it is within what is spoken.)
-        val text = listOfNotNull(story, com.optionslab.ira.DaySummary.say(pnl, scorecard, events), selfReview(), IraSolo.daySummary()).joinToString(" ")
+        val text = listOfNotNull(story, com.optionslab.ira.DaySummary.say(pnl, scorecard, events), selfReview(), IraSolo.daySummary(),
+            runCatching { com.optionslab.ira.Missed.say(IraTools.missedToday()) }.getOrNull()).joinToString(" ")
         IraHub.note(text)
         JarvisVoice.announce(com.optionslab.ira.Wake.spoken(text, 10))
         Automations.acted(Automations.Auto.SUMMARY, text)

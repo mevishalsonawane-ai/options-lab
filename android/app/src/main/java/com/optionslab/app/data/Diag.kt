@@ -89,6 +89,8 @@ object Diag {
             append(redact(runCatching { com.optionslab.app.ira.IraModel.state.value.let { m -> "AI model: ${m.status}, loaded ${m.loaded}, writing ${m.writing}" + (m.message?.let { t -> " · $t" } ?: "") + "\n" } }.getOrDefault("")))
             append("\n-- Jarvis's activity (today) --\n")
             runCatching { com.optionslab.app.ira.IraActivity.lines() }.getOrDefault(emptyList()).takeLast(120).forEach { append(redact(it)).append('\n') }
+            append("\n-- Words I could not place (today) --\n")
+            runCatching { com.optionslab.app.ira.IraTools.missedToday() }.getOrDefault(emptyList()).ifEmpty { listOf("none") }.forEach { append(redact(it)).append('\n') }
             // Boss, 4 Oct: "add all AI logs there for now". Every AI record the app keeps, redacted.
             append("\n-- Jarvis's chat (latest 60, newest last) --\n")
             runCatching { com.optionslab.app.ira.IraHub.state.value.messages.takeLast(60) }.getOrDefault(emptyList()).forEach { m ->
