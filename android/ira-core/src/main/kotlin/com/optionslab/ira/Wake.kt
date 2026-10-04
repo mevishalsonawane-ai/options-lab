@@ -36,9 +36,12 @@ object Wake {
      * the name (Boss, 4 Oct: "Jarvis" alone was read mid-turn, then dropped as no match - every turn). Counted as the
      * name heard: the partial is what to act on, else null.
      */
-    fun lostTurn(error: Int, partial: String?): String? {
+    fun lostTurn(error: Int, partial: String?, awake: Boolean = false): String? {
         if (error != 7 && error != 6) return null
         val p = partial?.trim()?.takeIf { it.isNotEmpty() } ?: return null
+        // Awake (after "Yes, Boss?"): the question read mid-turn counts too - at least two words, so a stray sound is not
+        // taken for one (Boss, 4 Oct: long turns ended in error 7 with words already read).
+        if (awake && p.split(Regex("\\s+")).size >= 2) return p
         return p.takeIf { heard(it, false) !is Heard.Ignore }
     }
 

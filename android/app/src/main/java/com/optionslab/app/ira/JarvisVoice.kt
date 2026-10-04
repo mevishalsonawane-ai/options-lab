@@ -402,7 +402,7 @@ class JarvisVoice : Service() {
             }
             if (listening && now - listenedAt > 25_000) {
                 // (Partial words read before the reset still count, as a lost turn does.)
-                val lost = com.optionslab.ira.Wake.lostTurn(7, turnPartial)
+                val lost = com.optionslab.ira.Wake.lostTurn(7, turnPartial, awake())
                 note("turn timed out" + if (turnPartial != null) " (read words mid-turn)" else " (nothing read)")
                 main.removeCallbacks(finish); runCatching { rec?.cancel() }; listening = false; endTap()
                 if (lost != null && !speaking) heard(listOf(lost)) else again()
@@ -769,9 +769,9 @@ class JarvisVoice : Service() {
             listening = false
             // Boss, 4 Oct: "Jarvis" alone was caught while he spoke, then the final answer said "no match" (error 7) and
             // the name was lost - every turn. The name read mid-turn counts: as if the recognizer had said it.
-            val partial = com.optionslab.ira.Wake.lostTurn(error, turnPartial)
+            val partial = com.optionslab.ira.Wake.lostTurn(error, turnPartial, awake())
             if (partial != null && !stopped) {
-                note("heard the name mid-turn (final: error $error)")
+                note("kept the words read mid-turn (final: error $error)")
                 errorsInRow = 0; loudNoMatch = 0
                 endTap()
                 heard(listOf(partial))
