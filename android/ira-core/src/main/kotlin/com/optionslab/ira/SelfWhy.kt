@@ -13,7 +13,11 @@ object SelfWhy {
     private val STOP = setOf("why", "did", "you", "have", "has", "was", "were", "is", "are", "the", "a", "an", "do", "that", "this", "it", "jarvis",
         "what", "made", "explain", "me", "my", "to", "on", "of", "for", "in", "at", "today", "just", "now", "boss", "please", "tell")
 
-    fun asked(text: String): Boolean = ASKED.containsMatchIn(text)
+    private val YOU = Regex("(?i)\\bwhy (did|have|has|were|was) (you|jarvis)\\b|\\bwhat made you\\b|\\bexplain (that|what you did)\\b")
+    private val MARKET = Regex("(?i)\\b(market|markets|nifty|banknifty|finnifty|sensex|vix|gold|exchange|nse|bse)\\b")
+
+    /** Asked about Jarvis's own doing ("why is ORB parked?"); a market question ("why is the market closed") is not. */
+    fun asked(text: String): Boolean = ASKED.containsMatchIn(text) && (YOU.containsMatchIn(text) || !MARKET.containsMatchIn(text))
 
     private fun words(s: String) = s.lowercase(Locale.ENGLISH).replace(Regex("[^a-z0-9 ]"), " ").split(Regex("\\s+")).filter { it.length > 1 && it !in STOP }.toSet()
 

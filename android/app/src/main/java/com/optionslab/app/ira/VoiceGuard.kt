@@ -87,20 +87,33 @@ object VoiceGuard {
         }
     }
 
+    /**
+     * The phone's noise suppression and gain control on one capture (Boss, 4 Oct: background noise heard, a soft voice
+     * missed). Used on the teaching recordings and the shared capture alike, so the voice print is compared like with
+     * like. Released with the capture; a phone without them keeps the plain capture.
+     */
+    private class Clean(session: Int) {
+        private val ns = runCatching { if (android.media.audiofx.NoiseSuppressor.isAvailable()) android.media.audiofx.NoiseSuppressor.create(session)?.also { it.setEnabled(true) } else null }.getOrNull()
+        private val agc = runCatching { if (android.media.audiofx.AutomaticGainControl.isAvailable()) android.media.audiofx.AutomaticGainControl.create(session)?.also { it.setEnabled(true) } else null }.getOrNull()
+        fun release() { runCatching { ns?.release() }; runCatching { agc?.release() } }
+    }
+
     @SuppressLint("MissingPermission")
     private fun record(ms: Int): ShortArray? {
         val min = AudioRecord.getMinBufferSize(VoicePrint.RATE, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT)
         if (min <= 0) return null
         val r = runCatching { AudioRecord(MediaRecorder.AudioSource.VOICE_RECOGNITION, VoicePrint.RATE, AudioFormat.CHANNEL_IN_MONO,
             AudioFormat.ENCODING_PCM_16BIT, maxOf(min, VoicePrint.RATE)) }.getOrNull() ?: return null
+        var clean: Clean? = null
         return try {
             if (r.state != AudioRecord.STATE_INITIALIZED) return null
+            clean = Clean(r.audioSessionId)
             val out = ShortArray(VoicePrint.RATE * ms / 1000)
             r.startRecording()
             var got = 0
             while (got < out.size) { val n = r.read(out, got, minOf(1_600, out.size - got)); if (n <= 0) break; got += n }
             out.copyOf(got)
-        } finally { runCatching { r.stop() }; r.release() }
+        } finally { runCatching { r.stop() }; clean?.release(); r.release() }
     }
 
     /**
@@ -111,6 +124,7 @@ object VoiceGuard {
         val read: android.os.ParcelFileDescriptor
         private val write: android.os.ParcelFileDescriptor
         private val rec: AudioRecord
+        private var clean: Clean? = null
         private val buf = ShortArray(VoicePrint.RATE * KEEP_S)
         private var filled = 0
         private var at = 0
@@ -126,14 +140,11 @@ object VoiceGuard {
                 r = AudioRecord(MediaRecorder.AudioSource.VOICE_RECOGNITION, VoicePrint.RATE, AudioFormat.CHANNEL_IN_MONO,
                     AudioFormat.ENCODING_PCM_16BIT, maxOf(min, VoicePrint.RATE))
                 check(r.state == AudioRecord.STATE_INITIALIZED) { "no microphone" }
-                // Boss, 4 Oct: background noise heard, and a soft voice missed - the phone's own noise suppression and
-                // gain control on this capture, where the phone has them (a failure leaves the plain capture).
-                runCatching { if (android.media.audiofx.NoiseSuppressor.isAvailable()) android.media.audiofx.NoiseSuppressor.create(r.audioSessionId)?.setEnabled(true) }
-                runCatching { if (android.media.audiofx.AutomaticGainControl.isAvailable()) android.media.audiofx.AutomaticGainControl.create(r.audioSessionId)?.setEnabled(true) }
+                clean = Clean(r.audioSessionId)
                 r.startRecording()
             } catch (e: Exception) {
                 // Nothing may leak when the microphone cannot be had: both ends of the pipe and the recorder go.
-                runCatching { r?.release() }; runCatching { read.close() }; runCatching { write.close() }
+                clean?.release(); runCatching { r?.release() }; runCatching { read.close() }; runCatching { write.close() }
                 throw e
             }
             rec = r!!
@@ -157,7 +168,7 @@ object VoiceGuard {
 
         fun close() {
             running = false
-            runCatching { rec.stop() }; runCatching { rec.release() }
+            runCatching { rec.stop() }; clean?.release(); runCatching { rec.release() }
             runCatching { read.close() }
         }
 

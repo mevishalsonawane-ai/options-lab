@@ -801,9 +801,12 @@ class JarvisVoice : Service() {
                     clientErrors++; errorsInRow++; lastError = error to SystemClock.elapsedRealtime()
                     // Boss's phone (4 Oct) has English (US) and Hindi on-device, not English (India): some recognizers
                     // refuse a missing language this way rather than "language unavailable". The other English first.
-                    if (!triedOtherLanguage) {
-                        triedOtherLanguage = true; langWorks = false; lang = if (lang == "en-IN") "en-US" else "en-IN"
+                    // Never away from a language that has given words; a refused en-IN goes back to English (US).
+                    if (!triedOtherLanguage && !langWorks) {
+                        triedOtherLanguage = true; lang = if (lang == "en-IN") "en-US" else "en-IN"
                         IraActivity.add("Listening in $lang (the speech service refused the other English).")
+                    } else if (lang == "en-IN" && !langWorks) {
+                        lang = "en-US"; IraActivity.add("Listening in $lang (the speech service refused English (India)).")
                     }
                     if (clientErrors >= 6 && runCatching { !SpeechRecognizer.isOnDeviceRecognitionAvailable(this@JarvisVoice) }.getOrDefault(false)) {
                         giveUp("This phone has no on-device speech recognition ready: update \"Speech Services by Google\" in the Play Store, then add English under Settings, System, Languages, On-device speech recognition.")
@@ -873,6 +876,8 @@ class JarvisVoice : Service() {
                 // A locked phone: a "no" still cancels, a "yes" never acts (trades and commands wait for the unlock).
                 if (yes && locked()) { say(com.optionslab.ira.LockRule.refuse(true, true, false, false)!!, "question"); return }
                 // Only Boss's voice approves a trade; a no from anyone is still a no.
+                // "Answer only my voice": a yes in another voice never approves anything (a no from anyone still cancels).
+                if (yes && onlyBoss && VoiceGuard.enrolled && lastHeard != null && !VoiceGuard.isBoss(lastHeard)) { note("a yes in another voice: ignored"); again(); return }
                 if (yes && askingNeedsBoss && !boss()) { say(VoiceGuard.blocked() ?: "Boss, that didn't sound like you, so I won't place it. Say yes again, or tap Approve.", "question"); return }
                 asking = null
                 _state.value = VoiceState(Mode.THINKING)
@@ -898,8 +903,9 @@ class JarvisVoice : Service() {
         }
         when (h) {
             Wake.Heard.Ignore -> again()
-            Wake.Heard.Awake -> { awakeUntil = SystemClock.elapsedRealtime() + AWAKE_MS; called = true; say("Yes, Boss?") }
-            Wake.Heard.Stop -> { wanted = false; say("Going to sleep, Boss. Switch me on again in the app.", STOP_AFTER) }
+            // A soft misreading of the name ("service") opens the window for a question, but never counts as named.
+            Wake.Heard.Awake -> { awakeUntil = SystemClock.elapsedRealtime() + AWAKE_MS; called = alternatives.any { WAKE.containsMatchIn(it) }; say("Yes, Boss?") }
+            Wake.Heard.Stop -> if (alternatives.none { WAKE.containsMatchIn(it) }) again() else { wanted = false; say("Going to sleep, Boss. Switch me on again in the app.", STOP_AFTER) }
             // "Jarvis, stop" / "enough" / "quiet": it has stopped talking (the name cut in); nothing else is done.
             Wake.Heard.Hush -> { interrupt(); answerJob?.cancel(); awakeUntil = 0; called = false; _state.value = VoiceState(Mode.LISTENING); again() }
             is Wake.Heard.Ask -> {

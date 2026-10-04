@@ -1027,6 +1027,8 @@ object IraHub {
         if (q.isEmpty()) return
         // A new question: the model stops polishing the last answer (it stands as shown).
         IraModel.stopWriting()
+        // Only the very next words after a missed question may teach it (Boss's rephrase).
+        if (!understood) runCatching { IraTools.asked(q) }
         // What Boss's corrections taught: misunderstood words read as meant (questions only, never anything that acts).
         val learnedAs = runCatching { com.optionslab.ira.Corrections.apply(q, IraTools.learned()) }.getOrNull()
         if (learnedAs != null && !understood && !lockedAccount(q, learnedAs)) {

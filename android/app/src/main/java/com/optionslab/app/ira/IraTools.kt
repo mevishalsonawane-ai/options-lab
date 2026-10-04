@@ -57,6 +57,16 @@ internal object IraTools {
     @Synchronized fun missed(said: String) {
         val w = com.optionslab.ira.Secrets.redact(said)
         missedLast = if (runCatching { com.optionslab.ira.Corrections.missed(w) }.getOrDefault(false)) w to System.currentTimeMillis() else null
+        nextAfterMiss = null
+    }
+
+    /** The first other words asked after a missed question: only they may teach it (not a command or question between). */
+    @Volatile private var nextAfterMiss: String? = null
+
+    /** Every question Boss asks, as it arrives. */
+    @Synchronized fun asked(said: String) {
+        val m = missedLast ?: return
+        if (nextAfterMiss == null && said != m.first) nextAfterMiss = said
     }
 
     /**
@@ -66,7 +76,8 @@ internal object IraTools {
     @Synchronized fun maybeLearn(question: String): String? {
         // Only the very next question counts as the rephrasing of a missed one.
         val miss = missedLast; missedLast = null
-        if (awaiting == null && miss != null && System.currentTimeMillis() - miss.second <= com.optionslab.ira.Corrections.REPHRASE_MS) {
+        val next = nextAfterMiss; nextAfterMiss = null
+        if (awaiting == null && miss != null && next == question && System.currentTimeMillis() - miss.second <= com.optionslab.ira.Corrections.REPHRASE_MS) {
             val l = com.optionslab.ira.Corrections.rephrase(miss.first, com.optionslab.ira.Secrets.redact(question)) ?: return null
             keep(l)
             return "Noted, Boss: when you say \"${l.wrong}\", I'll take it as \"${l.right}\". (Say \"that was wrong\" or \"forget what you learned\" if not.)"

@@ -28,3 +28,11 @@ class RephraseTest {
         assertNull(Corrections.apply("how s the street looking", listOf(l)))
     }
 }
+
+class SelfWhyMarketTest {
+    @Test fun marketWhyIsNotAboutJarvis() {
+        assertTrue(!SelfWhy.asked("why is the market closed today"))
+        assertTrue(SelfWhy.asked("why is ORB parked"))
+        assertTrue(SelfWhy.asked("why did you close the nifty trade"))
+    }
+}
