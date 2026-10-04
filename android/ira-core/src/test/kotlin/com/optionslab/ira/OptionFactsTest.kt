@@ -2,6 +2,7 @@ package com.optionslab.ira
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -38,6 +39,11 @@ class MarketOpenAskTest {
     @Test fun open() {
         assertEquals(OptionFacts.Asked.TimeLeft, OptionFacts.asked("when does the market open"))
         assertEquals(OptionFacts.Asked.TimeLeft, OptionFacts.asked("market kab khulega"))
+        assertEquals(OptionFacts.Asked.TimeLeft, OptionFacts.asked("when does the market open today"))
+        // A named day is the calendar's question.
+        assertNotEquals(OptionFacts.Asked.TimeLeft, OptionFacts.asked("when does the market open tomorrow"))
+        assertNotEquals(OptionFacts.Asked.TimeLeft, OptionFacts.asked("will the market open on monday"))
+        assertNotEquals(OptionFacts.Asked.TimeLeft, OptionFacts.asked("market kal kab khulega"))
         assertEquals("The market has closed for today (15:30), Boss. It opens next on Mon 6 Oct at 09:15.", OptionFacts.timeLeft(16 * 60, nextDay = "Mon 6 Oct"))
         assertEquals("The market is closed today, Boss. It opens next on Mon 6 Oct at 09:15.", OptionFacts.timeLeft(11 * 60, tradingDay = false, nextDay = "Mon 6 Oct"))
     }

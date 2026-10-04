@@ -1129,8 +1129,14 @@ object IraHub {
         }
         // "What did you hear?": the recognizer's words before this question (redacted), to check the ears.
         if (com.optionslab.app.BuildConfig.JARVIS && runCatching { com.optionslab.ira.Reminder.heardAsked(q) }.getOrDefault(false)) {
-            val prev = _state.value.messages.lastOrNull { !it.fromIra }?.text
-            val said = if (prev == null) "I haven't heard anything from you yet, Boss." else "I heard: \"$prev\", Boss."
+            // Asked by voice, the recognizer's last words are this question: the words before it are meant.
+            val last = JarvisVoice.heardText
+            val prev = if (last != null && runCatching { com.optionslab.ira.Reminder.heardAsked(last) }.getOrDefault(false)) JarvisVoice.heardBefore else last
+            val said = when {
+                phoneLocked() -> "Unlock the phone for that, Boss."
+                prev == null -> "I haven't heard anything from you yet, Boss."
+                else -> "I heard: \"$prev\", Boss."
+            }
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
             return
         }

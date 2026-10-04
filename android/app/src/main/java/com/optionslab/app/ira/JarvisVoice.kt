@@ -307,6 +307,9 @@ class JarvisVoice : Service() {
         /** What the recognizer heard last, for the Settings check. */
         @Volatile var heardText: String? = null; private set
 
+        /** What the recognizer heard the time before (redacted): "what did you hear?" asked by voice repeats this. */
+        @Volatile var heardBefore: String? = null; private set
+
         /** The phone voice chosen by name, or null for the first offline English one (an Indian English one first). */
         var voiceName: String?
             get() = runCatching { com.optionslab.app.security.SecurePrefs.getString("jarvis.voice.name2") }.getOrNull()
@@ -405,7 +408,7 @@ class JarvisVoice : Service() {
                 val lost = com.optionslab.ira.Wake.lostTurn(7, turnPartial, awake())
                 note("turn timed out" + if (turnPartial != null) " (read words mid-turn)" else " (nothing read)")
                 main.removeCallbacks(finish); runCatching { rec?.cancel() }; listening = false; endTap()
-                if (lost != null && !speaking) heard(listOf(lost)) else again()
+                if (lost != null && !speaking) heard(listOf(lost), recovered = true) else again()
             }
             if (speaking && now - spokeAt > 60_000) { speaking = false; again() }
             // The mic button's one question was asked and answered (or never came): listening stops again.
@@ -758,7 +761,7 @@ class JarvisVoice : Service() {
             if (results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.any { it.isNotBlank() } == true) langWorks = true
             note("heard " + (results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()?.let { t ->
                 if (WAKE.containsMatchIn(t)) "the name" else "${t.split(Regex("\\s+")).size} words, no name" } ?: "nothing"))
-            results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()?.let { heardText = com.optionslab.ira.Secrets.redact(it) }
+            results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()?.let { heardBefore = heardText; heardText = com.optionslab.ira.Secrets.redact(it) }
             errorsInRow = 0
             endTap()
             heard(results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION).orEmpty())
@@ -774,7 +777,7 @@ class JarvisVoice : Service() {
                 note("kept the words read mid-turn (final: error $error)")
                 errorsInRow = 0; loudNoMatch = 0
                 endTap()
-                heard(listOf(partial))
+                heard(listOf(partial), recovered = true)
                 return
             }
             val shared = tap != null
@@ -887,7 +890,7 @@ class JarvisVoice : Service() {
     /** When Boss's last words were heard (for the reply time). */
     @Volatile private var heardAt = 0L
 
-    private fun heard(alternatives: List<String>) {
+    private fun heard(alternatives: List<String>, recovered: Boolean = false) {
         // While Jarvis talks (or the turn began while it talked) it hears itself too: only its name counts then.
         val cutIn = speaking || turnInSpeech
         // Just woken ("Yes, Boss?" said, now finished): the question may have started over those two words - it is
@@ -947,7 +950,8 @@ class JarvisVoice : Service() {
                 if (cutIn && Regex("^(stop|please stop|ok stop) (talking|speaking)$").matches(h.question.lowercase().trim())) { again(); return }
                 // A follow-up (no "Jarvis" in it) may ask, never act: trades and commands need the name, so talk nearby cannot trigger one.
                 // Just called ("Jarvis" alone, or the mic button, then "Yes, Boss?"): this question was asked by name.
-                val named = alternatives.any { Regex("\\bj[ae]rv[ia]s").containsMatchIn(it.lowercase()) } || (called && awake)
+                // Words recovered from a broken turn count as named only if they hold the name: they may be someone else's.
+                val named = alternatives.any { Regex("\\bj[ae]rv[ia]s").containsMatchIn(it.lowercase()) } || (!recovered && called && awake)
                 called = false
                 // Its own last words heard back without the name are not a question (the follow-up window stays open).
                 if (!named && Wake.echo(h.question, lastSpoken?.takeIf { SystemClock.elapsedRealtime() - lastSpokenEnd < 15_000 })) { again(); return }
