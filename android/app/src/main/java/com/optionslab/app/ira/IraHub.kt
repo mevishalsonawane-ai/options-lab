@@ -1083,6 +1083,19 @@ object IraHub {
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
             return
         }
+        // "Is tomorrow a holiday?", "is the market open on Friday?", "next holiday": a short answer from the exchange
+        // calendar instead of the whole account status.
+        if (parsed.command == null && parsed.order == null) runCatching {
+            val today = com.optionslab.app.data.Market.today()
+            com.optionslab.ira.MarketDays.asked(q, today)?.let { a ->
+                val book = com.optionslab.app.data.Holidays.book()
+                val said = com.optionslab.ira.MarketDays.say(a, today,
+                    { d -> if (book.holiday(d)) book.upcoming(d).firstOrNull { it.first == d }?.second ?: "a market holiday" else null },
+                    book.upcoming(today.plusDays(1)).firstOrNull { it.first.dayOfWeek.value <= 5 })
+                _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
+                return
+            }
+        }
         // "What's the plan for tomorrow?": the indices' outlook and the coming days' events (words only, no command).
         // Not when an index is named (its own outlook answers that) or a command hides behind the time ("get ready to
         // start the arms tomorrow at 9:20" is the timed command below).
