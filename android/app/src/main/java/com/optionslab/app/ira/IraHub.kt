@@ -781,6 +781,16 @@ object IraHub {
      * Offers to close [symbol] (asked yes or no and on the Ira screen; never done alone). Checked again when confirmed:
      * still held, then sold at market (paper) or squared off through the app (Zerodha).
      */
+    /** A broken loss goal: the kill switch offered (asked yes or no and on the Ira screen; it only lowers risk). */
+    suspend fun offerKillSwitch(text: String) {
+        val c = app ?: return
+        val (what, act) = runCatching { IraActions.prepare(com.optionslab.ira.Command(com.optionslab.ira.Command.Kind.KILL_ON)) }.getOrNull() ?: return
+        if (act == null) { reply(text); return }
+        val id = pend(what, suspend { IraActions.verified(com.optionslab.ira.Command.Kind.KILL_ON, act()) }, "$text Tap Confirm to $what.")
+        JarvisPopup.show(c, "Boss, a goal is broken", text)
+        JarvisVoice.askYesNo(id, "Boss, $text Yes or no?")
+    }
+
     fun offerClose(symbol: String, live: Boolean, text: String) {
         val c = app ?: return
         val id = pend("close $symbol", suspend {
@@ -1101,6 +1111,27 @@ object IraHub {
             }
             if (said != null) {
                 _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
+                return
+            }
+        }
+        // Goals over days (part 6): "goal: keep my weekly loss under 5000", "what are my goals", "clear my goals".
+        // (A day's target alone stays the journal's "set my day target": a goal here names a goal, a week or a month.)
+        if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD) {
+            val g = runCatching { com.optionslab.ira.Goals.read(q) }.getOrNull()?.takeIf { Regex("(?i)\\bgoal").containsMatchIn(q) || it.period != com.optionslab.ira.Goals.Period.DAY }
+            val ask = g != null || com.optionslab.ira.Goals.asked(q) || com.optionslab.ira.Goals.clearAsked(q)
+            if (ask) {
+                _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+                if (phoneLocked()) { reply("Unlock the phone for that, Boss."); return }
+                scope.launch {
+                    val said = runCatching {
+                        when {
+                            g != null -> { IraGoals.add(g); "Goal kept, Boss: ${g.text()}. I'll track it every day and tell you when it is close. " + IraGoals.say() }
+                            com.optionslab.ira.Goals.clearAsked(q) -> { IraGoals.clear(); "Done, Boss: no goals now." }
+                            else -> IraGoals.say()
+                        }
+                    }.getOrElse { "I could not read your goals just now, Boss." }
+                    reply(said)
+                }
                 return
             }
         }
