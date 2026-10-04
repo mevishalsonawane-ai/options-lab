@@ -98,7 +98,9 @@ class PineScreenTest {
     @get:org.junit.Rule val watchdog = com.optionslab.app.testing.AutomationWatchdog()
     @get:Rule val compose = createComposeRule()
     @get:Rule(order = 100) val dump = com.optionslab.app.testing.DumpOnFailure(compose)
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    // As the app's own (viewModelScope, main thread): on a worker the page's state was written off the main thread and a
+    // frame started there while the test measured (CI, 4 Oct: "performMeasureAndLayout called during measure layout").
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var onPage by mutableStateOf(true)
     private var charts = 0
 
@@ -353,7 +355,9 @@ class PineScreensLayoutTest(private val config: DeviceConfig) : ScreenTest(confi
         val TOKEN_BUGS = emptyMap<String, String>()
     }
 
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    // As the app's own (viewModelScope, main thread): on a worker the page's state was written off the main thread and a
+    // frame started there while the test measured (CI, 4 Oct: "performMeasureAndLayout called during measure layout").
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
     @Before fun up() {
         AutomationSupport.freshPine(ApplicationProvider.getApplicationContext())
@@ -399,7 +403,9 @@ class PineDialogsLayoutTest(private val config: DeviceConfig) : ScreenTest(confi
         fun configs(): List<Array<Any>> = DeviceConfig.matrix().filter { (it[0] as DeviceConfig).name in SIX_SETUPS }
     }
 
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    // As the app's own (viewModelScope, main thread): on a worker the page's state was written off the main thread and a
+    // frame started there while the test measured (CI, 4 Oct: "performMeasureAndLayout called during measure layout").
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
     @Before fun up() {
         AutomationSupport.freshPine(ApplicationProvider.getApplicationContext())
