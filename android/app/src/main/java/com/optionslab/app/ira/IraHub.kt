@@ -1123,6 +1123,12 @@ object IraHub {
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
             return
         }
+        // "How did you do today?": what Jarvis heard, misunderstood and could not do today (no account figures).
+        if (com.optionslab.app.BuildConfig.JARVIS && runCatching { com.optionslab.ira.Reminder.usageAsked(q) }.getOrDefault(false)) {
+            val said = com.optionslab.ira.Usage.line(IraTools.usageToday())?.let { "Today, Boss: $it" } ?: "Nothing asked of me yet today, Boss."
+            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
+            return
+        }
         // "Which AI model are you using?": the choice and its state (Boss, 4 Oct: switching to the fastest model).
         if (com.optionslab.app.BuildConfig.JARVIS && runCatching { com.optionslab.ira.Reminder.modelAsked(q) }.getOrDefault(false)) {
             val st = IraModel.state.value

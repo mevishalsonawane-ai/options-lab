@@ -77,6 +77,10 @@ object Reminder {
         return msgs.drop(lastBoss + 1).filter { !it.fromBoss && it.unasked }.map { it.text }.takeLast(max)
     }
 
+    /** "How did you do today?", "your report card", "how many questions did I ask": Jarvis's own day in numbers. */
+    fun usageAsked(text: String): Boolean =
+        Regex("(?i)^\\W*(jarvis,?\\s+)?(how did you do( today)?|how have you done( today)?|your (report card|score|stats)( today)?|how many (questions|things) did i ask( you)?( today)?|tumne aaj kaisa kiya)\\W*$").containsMatchIn(text)
+
     /** "Which AI model are you using?", "kaunsa model hai": answered from the app's own choice. */
     fun modelAsked(text: String): Boolean =
         Regex("(?i)\\b(which|what) (ai |language )?model (are you (using|on|running)|do you use|is (this|it|running|loaded))\\b|\\b(kaunsa|konsa|kon sa|kaun sa) model\\b|^\\W*(jarvis,?\\s+)?(what is |what s |what's |whats )?your (ai )?model\\W*$").containsMatchIn(text)

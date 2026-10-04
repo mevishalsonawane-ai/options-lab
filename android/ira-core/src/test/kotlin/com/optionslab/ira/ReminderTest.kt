@@ -130,3 +130,10 @@ class DailyReminderTest {
         assertTrue(!Reminder.daily("remind me at 3 pm to check nifty"))
     }
 }
+
+class UsageAskedTest {
+    @Test fun usage() {
+        for (s in listOf("how did you do today", "Jarvis, your report card", "how many questions did I ask today")) assertTrue(Reminder.usageAsked(s), s)
+        assertTrue(!Reminder.usageAsked("how did nifty do today"))
+    }
+}
