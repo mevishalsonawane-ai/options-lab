@@ -167,7 +167,7 @@ object DailyReports {
             if (com.optionslab.app.BuildConfig.JARVIS) runCatching { com.optionslab.app.ira.IraGoals.statuses() }.getOrNull()?.forEach { lines += "• Goal: ${it.text}" }
             // The strongest lesson in the results (part 5), when one stands out.
             if (com.optionslab.app.BuildConfig.JARVIS) runCatching { com.optionslab.app.ira.IraAccount.lessons().first.firstOrNull() }.getOrNull()?.let { lines += "• Lesson: ${it.text}" }
-            lines += "• Jarvis: AI model ${if (com.optionslab.app.ira.IraModel.state.value.status == com.optionslab.app.ira.IraModel.Status.READY) "ready" else "not on the phone"}, " +
+            lines += "• Jarvis: AI model ${com.optionslab.app.ira.IraModel.choice.name} ${if (com.optionslab.app.ira.IraModel.state.value.status == com.optionslab.app.ira.IraModel.Status.READY) "ready" else "not on the phone"}, " +
                 "voice ${if (com.optionslab.app.ira.JarvisVoice.wanted) "on" else "off"}"
             runCatching { com.optionslab.app.ira.IraHub.tradeCheck() }.getOrNull()?.let { v ->
                 lines += "• Trade check: " + when (v.level) { com.optionslab.ira.TradeCheck.Level.GO -> "normal"; com.optionslab.ira.TradeCheck.Level.CAREFUL -> "careful"; else -> "don't trade yet" } +
