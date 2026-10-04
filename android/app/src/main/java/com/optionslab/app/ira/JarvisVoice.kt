@@ -111,6 +111,7 @@ class JarvisVoice : Service() {
             lastError?.takeIf { SystemClock.elapsedRealtime() - it.second < 10 * 60_000 }?.let { (e, at) ->
                 out += "My ears failed %d seconds ago: %s.".format(java.util.Locale.ENGLISH, (SystemClock.elapsedRealtime() - at) / 1000, errorName(e))
             }
+            if (v != null && !v.visibleStart) out += "I was started in the background, where Android gives me no microphone (it is allowed only while using the app): open the app once and I listen again."
             v?.let { s -> out += "Ears: listening in ${s.lang}, " + (if (s.tap != null || (VoiceGuard.enrolled && !s.tapFailed)) "my own microphone shared (for your voice check)" else "the phone's own microphone") + "." }
             traceLines().takeIf { it.isNotEmpty() }?.let { out += "Last turns: " + it.joinToString("; ") + "." }
             if (muted) out += "I'm muted: say \"Jarvis, unmute\" or switch Mute off in Settings, Voice and AI model."
@@ -178,9 +179,12 @@ class JarvisVoice : Service() {
             ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
 
         /** From the app on screen only (Android lets a microphone service start only then). */
+        /** Started from the app on screen (Android then lets it use the microphone "while using the app"). */
+        private const val EXTRA_VISIBLE = "ol.jarvis.visible"
+
         fun start(context: Context) {
             if (!available(context) || !permitted(context)) return
-            runCatching { ContextCompat.startForegroundService(context, Intent(context, JarvisVoice::class.java)) }
+            runCatching { ContextCompat.startForegroundService(context, Intent(context, JarvisVoice::class.java).putExtra(EXTRA_VISIBLE, true)) }
                 .onFailure { _state.value = VoiceState(problem = "Android did not let Jarvis start listening; try the switch again.") }
         }
 
@@ -188,7 +192,19 @@ class JarvisVoice : Service() {
          * The app came on screen: listening switched on but not running (Android stopped it while the app stayed in
          * memory, and a microphone service may not restart itself from the background) - started again now.
          */
-        fun resume(context: Context) { if (wanted && instance?.get() == null) start(context) }
+        fun resume(context: Context) {
+            if (!wanted) return
+            val v = instance?.get()
+            if (v == null) { start(context); return }
+            // Running, but started by Android in the background (after an update or a restart): with the microphone
+            // allowed "only while using the app", Android gives such a service silence - no error, no sound (Boss,
+            // 4 Oct: every turn "error 7, no sound level"). Started again now, from the app on screen.
+            if (!v.visibleStart) {
+                note("restarted from the app on screen (it had started in the background, without the microphone)")
+                stop(context)
+                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({ if (wanted) start(context) }, 700)
+            }
+        }
 
         fun stop(context: Context) { context.stopService(Intent(context, JarvisVoice::class.java)) }
 
@@ -200,7 +216,7 @@ class JarvisVoice : Service() {
          */
         fun talk(context: Context): Boolean {
             if (!available(context) || !permitted(context)) return false
-            return runCatching { ContextCompat.startForegroundService(context, Intent(context, JarvisVoice::class.java).setAction(ACTION_TALK)) }
+            return runCatching { ContextCompat.startForegroundService(context, Intent(context, JarvisVoice::class.java).setAction(ACTION_TALK).putExtra(EXTRA_VISIBLE, true)) }
                 .onFailure { _state.value = VoiceState(problem = "Android did not let Jarvis listen; try again with the app open.") }.isSuccess
         }
 
@@ -386,6 +402,8 @@ class JarvisVoice : Service() {
     private var askingUntil = 0L
     private var lang = "en-US"
     private var triedOtherLanguage = false
+    /** This listening was started from the app on screen (so Android allows the microphone). */
+    @Volatile private var visibleStart = false
     private var errorsInRow = 0
     /**
      * The longest wait between failed turns. It was 30 s (against the beep, 4 Oct) - which left Jarvis deaf most of the
@@ -405,6 +423,8 @@ class JarvisVoice : Service() {
         if (!talkNow) oneShot = false                    // the switch turned on: listening stays on
         // Restarted by the system after a one-question listen with the switch off: do not listen.
         if (intent == null && !wanted) { stopSelf(); return START_NOT_STICKY }
+        if (intent?.getBooleanExtra(EXTRA_VISIBLE, false) == true) visibleStart = true
+        else if (rec == null) note("started in the background: Android may give no microphone until the app is opened")
         val why = when {
             !com.optionslab.app.BuildConfig.JARVIS -> "Voice is in IraAlgo only."
             !permitted(this) -> "Jarvis needs the microphone permission to listen."
