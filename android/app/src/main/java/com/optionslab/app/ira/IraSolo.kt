@@ -163,8 +163,11 @@ internal object IraSolo {
         var done = 0
         var prevClose: Double? = null
         var lastPrice = 0.0
-        /** The view with the best record so far (the 15-minute one until any has been scored). */
-        val best: Mind get() = minds.maxByOrNull { if (it.l.scored > 0) it.l.hitRate else -1.0 } ?: minds.first()
+        /**
+         * The view with the best record so far: one ready to trade always before one still learning (as the trading
+         * choice, [Learner.pick], only takes ready ones); the 15-minute one until any has been scored.
+         */
+        val best: Mind get() = minds.maxByOrNull { (if (it.l.ready) 2.0 else if (it.l.scored > 0) 0.0 else -1.0) + it.l.hitRate } ?: minds.first()
     }
     private val brains = HashMap<IraMarket, Brain>()
     /** Minutes behind the newest that the brain reads (the feed fills a late minute from the one before). */

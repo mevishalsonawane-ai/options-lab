@@ -88,9 +88,12 @@ object JarvisTrades {
 
     /** One suggestion, for the evening scorecard. */
     data class Suggestion(val at: LocalDateTime, val market: Market, val call: Boolean, val spot: Double, val source: String,
-                          /** "approved", "rejected", "lapsed" or "waiting". */ val answer: String,
+                          /** "approved", "rejected", "lapsed", "waiting" or [SELF]. */ val answer: String,
                           /** What the trade made or would have made (points per unit, real option prices), once known. */ val points: Double? = null,
                           val lot: Int? = null)
+
+    /** A paper trade Jarvis took on its own idea (ACT_PAPER): not Boss's answer, so it never counts as one. */
+    const val SELF = "taken by me on paper"
 
     /** The day's scorecard: each suggestion, what was answered, and what it made or would have. */
     fun scorecard(day: LocalDate, all: List<Suggestion>): List<String> {
@@ -99,10 +102,10 @@ object JarvisTrades {
         val lines = today.map { s ->
             val what = "${"%02d:%02d".format(s.at.hour, s.at.minute)} ${s.market.label} ${if (s.call) "call" else "put"} (${s.source.substringBefore(':')})"
             val res = s.points?.let { p -> val r = s.lot?.let { " (${AppFacts.rs(p * it)} a lot)" } ?: ""
-                (if (s.answer == "approved") "made " else "would have made ") + "%+.1f".format(Locale.ENGLISH, p) + " points$r" } ?: "no option prices to judge it"
+                (if (s.answer == "approved" || s.answer == SELF) "made " else "would have made ") + "%+.1f".format(Locale.ENGLISH, p) + " points$r" } ?: "no option prices to judge it"
             "$what: ${s.answer}, $res."
         }
-        val judged = today.filter { it.points != null }
+        val judged = today.filter { it.points != null && it.answer != SELF }
         val right = judged.count { (it.points!! > 0) == (it.answer == "approved") }
         return listOf("Today I suggested ${today.size} trade${if (today.size > 1) "s" else ""}; " +
             (if (judged.isEmpty()) "none could be judged yet." else "your answer was the better choice on $right of ${judged.size}.")) + lines

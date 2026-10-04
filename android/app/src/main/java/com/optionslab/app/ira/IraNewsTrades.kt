@@ -164,10 +164,14 @@ internal object IraNewsTrades {
         return Paper.contractFor(u, expiry, strike.toDouble(), if (call) Right.CE else Right.PE)
     }
 
-    /** The owner approved [idea]: place it (Paper, or Zerodha through the app's order review), stop, target, record. */
-    suspend fun place(idea: NewsTrade.Idea, spot: Double, headline: String): String = lock.withLock { placeLocked(idea, spot, headline) }
+    /**
+     * The owner approved [idea]: place it (Paper, or Zerodha through the app's order review), stop, target, record.
+     * [paperOnly]: Jarvis took it by itself - it goes on paper or nowhere, whatever changed since it was checked.
+     */
+    suspend fun place(idea: NewsTrade.Idea, spot: Double, headline: String, paperOnly: Boolean = false): String =
+        lock.withLock { placeLocked(idea, spot, headline, paperOnly) }
 
-    private suspend fun placeLocked(idea: NewsTrade.Idea, spot: Double, headline: String): String {
+    private suspend fun placeLocked(idea: NewsTrade.Idea, spot: Double, headline: String, paperOnly: Boolean): String {
         IraAccount.invalidate()
         val u = idea.market.name
         val c = contract(u, spot, idea.call) ?: return "No ${u} option is listed for the next expiry."
@@ -198,6 +202,8 @@ internal object IraNewsTrades {
             return "Bought ${c.symbol} at ${"%.2f".format(fill.price)} on paper${if (s.live) " (my trades stay on paper until proven)" else ""}.$oid $prot" +
                 if (guarded) " Profit lock on." else ""
         }
+        // Never real money without Boss's yes: a trade Jarvis took by itself that would now reach Zerodha is dropped.
+        if (paperOnly) return "Not placed: it would now go to Zerodha, and I only act by myself on paper. Ask me if you want it."
         val t = IraOrders.Ticket(u, c.expiry, c.strike, c.right, lots, true, c.lotSize)
         val sent = IraActions.trade(t, live = true)
         if (!sent.startsWith("Sent to Zerodha")) return sent

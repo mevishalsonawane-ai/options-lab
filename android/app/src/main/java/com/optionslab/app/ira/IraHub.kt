@@ -610,11 +610,17 @@ object IraHub {
         // told - never one that would reach Zerodha (that is always asked).
         val goesLive = runCatching { IraNewsTrades.goesLive() }.getOrDefault(true)
         if (com.optionslab.ira.ActAlone.ok(Automations.on(Automations.Auto.ACT_PAPER), goesLive, conf.stars) && snap != null) {
-            val done = runCatching { IraNewsTrades.place(idea, _state.value.snaps[m]?.price ?: snap.price, source) }.getOrElse { "That did not work: ${it.message ?: "an error"}." }
-            val said2 = "$text$ivLine ${conf.text()}$risk I took it myself on paper: $what. $done"
+            val done = runCatching { IraNewsTrades.place(idea, _state.value.snaps[m]?.price ?: snap.price, source, paperOnly = true) }.getOrElse { "That did not work: ${it.message ?: "an error"}." }
+            val took = done.startsWith("Bought")
+            val said2 = "$text$ivLine ${conf.text()}$risk " + (if (took) "I took it myself on paper: $what. $done" else "I meant to take it myself on paper, but: $done")
             reply(said2)
-            IraActivity.add("Took on paper by myself: $what (${source.substringBefore(':')}).")
-            Automations.acted(Automations.Auto.ACT_PAPER, "Took a ${m.label} $side on paper (${conf.stars}/5).")
+            if (took) {
+                // Kept with the suggestions (scorecard, report card, "what if"), marked as Jarvis's own - never as Boss's answer.
+                val sid = System.nanoTime()
+                runCatching { IraNewsTrades.suggested(sid, idea, snap.price, source); IraNewsTrades.answered(sid, com.optionslab.ira.JarvisTrades.SELF) }
+                IraActivity.add("Took on paper by myself: $what (${source.substringBefore(':')}).")
+                Automations.acted(Automations.Auto.ACT_PAPER, "Took a ${m.label} $side on paper (${conf.stars}/5).")
+            } else IraActivity.add("Did not take my own ${m.label} $side idea: ${IraActivity.short(done)}")
             runCatching { JarvisPopup.show(c, title, said2) }
             return
         }
@@ -703,8 +709,17 @@ object IraHub {
             if (!synchronized(rescueAsked) { rescueAsked.add("$day|$k") }) continue
             val stop = com.optionslab.ira.Rescue.stopFor(p)
             val text = com.optionslab.ira.Rescue.say(p, stop)
-            if (stop == null) { JarvisPopup.show(c, "Boss, ${p.symbol} has no stop", text); reply(text); continue }
-            if (com.optionslab.ira.Rescue.setAlone(guard, p, stop)) {
+            // (Only told when offering is on: the guard alone never sets a stop on these, so it says nothing.)
+            if (stop == null) { if (Automations.on(Automations.Auto.RESCUE)) { JarvisPopup.show(c, "Boss, ${p.symbol} has no stop", text); reply(text) }; continue }
+            // Set alone only when nothing else could close it too: no working order on it at all and, at Zerodha, no GTT
+            // on it (a GTT or a resting exit filling alongside the stop would leave a short). Otherwise only offered.
+            val clear = guard && runCatching {
+                if (p.live) com.optionslab.app.data.Broker.orders().none { it.working && it.symbol == p.symbol } &&
+                    com.optionslab.app.data.Broker.gtts().none { it.symbol == p.symbol && it.status.lowercase() == "active" }
+                else com.optionslab.app.data.Paper.snapshot().orders.orders.none { it.symbol == p.symbol &&
+                    it.status.lowercase() !in setOf("complete", "cancelled", "rejected") }
+            }.getOrDefault(false)
+            if (com.optionslab.ira.Rescue.setAlone(clear, p, stop)) {
                 val result = runCatching {
                     if (p.live) com.optionslab.app.data.Protections.protectLive(p.symbol, "NFO", product, p.qty, p.ltp ?: p.avg, stop, null, null)
                     else com.optionslab.app.data.Protections.protectPaper(p.symbol, product, p.qty, p.ltp ?: p.avg, stop, null, null)

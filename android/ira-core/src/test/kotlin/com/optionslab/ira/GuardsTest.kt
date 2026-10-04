@@ -107,6 +107,14 @@ class GuardsTest {
         assertEquals("My suggestions: 2; you took 1, +12.0 points, skipped 1, -5.0 points.", l[1])
         assertEquals("Best arm: ORB 5 +Rs 2,000.00.", l[2]); assertEquals("Worst arm: Liquidity -Rs 500.00.", l[3])
         assertEquals("One habit to fix: Exits too early.", l[4])
+        // Jarvis's own paper trades are told apart, never counted as Boss's answers.
+        val mine = s + JarvisTrades.Suggestion(at(12, 0), Market.NIFTY, true, 24000.0, "pattern", JarvisTrades.SELF, 7.0)
+        val l2 = ReportCard.lines(null, 0, mine, emptyList(), null)
+        assertEquals("My suggestions: 2; you took 1, +12.0 points, skipped 1, -5.0 points.", l2[1])
+        assertEquals("I took 1 on paper by myself, +7.0 points.", l2[2])
+        val card = JarvisTrades.scorecard(day, mine)
+        assertTrue(card.first().endsWith("your answer was the better choice on 2 of 2."), card.first())
+        assertTrue(card.last().contains(": taken by me on paper, made +7.0 points"), card.last())
     }
 
     @Test fun undoQuietAndChart() {

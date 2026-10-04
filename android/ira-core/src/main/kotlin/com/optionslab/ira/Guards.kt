@@ -207,9 +207,12 @@ object ReportCard {
         val out = ArrayList<String>()
         out += if (pnl == null || trades == 0) "This week: no trades closed." else "This week: ${AppFacts.rs(pnl)} over $trades trade${if (trades > 1) "s" else ""}."
         if (suggestions.isNotEmpty()) {
-            val taken = suggestions.filter { it.answer == "approved" }; val skipped = suggestions.filter { it.answer != "approved" }
+            val mine = suggestions.filter { it.answer == JarvisTrades.SELF }
+            val asked = suggestions - mine.toSet()
+            val taken = asked.filter { it.answer == "approved" }; val skipped = asked.filter { it.answer != "approved" }
             fun pts(l: List<JarvisTrades.Suggestion>) = l.mapNotNull { it.points }.let { p -> if (p.isEmpty()) "" else ", %+.1f points".format(Locale.ENGLISH, p.sum()) }
-            out += "My suggestions: ${suggestions.size}; you took ${taken.size}${pts(taken)}, skipped ${skipped.size}${pts(skipped)}."
+            if (asked.isNotEmpty()) out += "My suggestions: ${asked.size}; you took ${taken.size}${pts(taken)}, skipped ${skipped.size}${pts(skipped)}."
+            if (mine.isNotEmpty()) out += "I took ${mine.size} on paper by myself${pts(mine)}."
         } else out += "I suggested no trades this week."
         val ranked = arms.filter { it.trades > 0 }.sortedByDescending { it.net }
         if (ranked.isNotEmpty()) {

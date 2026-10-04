@@ -146,6 +146,9 @@ internal object IraCoach {
     private fun savePrefsMap(key: String, m: Map<String, String>) =
         com.optionslab.app.security.SecurePrefs.put(key, if (m.isEmpty()) null else org.json.JSONObject(m as Map<*, *>).toString())
 
+    /** Every arm switched off for good (a restore, disarm all): nothing parked is armed again by the plan. */
+    fun forgetParked() = runCatching { savePrefsMap(PARKED_KEY, emptyMap()); savePrefsMap(KEPT_KEY, emptyMap()) }
+
     /**
      * Once each trading morning (09:00 to 10:00, before the arms' first decisions): the PAPER arms fitted to BankNifty's
      * regime by [com.optionslab.ira.DayPlan] - only paper arms, never one trading Zerodha, never one Boss left off - and
@@ -160,19 +163,21 @@ internal object IraCoach {
         if (com.optionslab.app.security.SecurePrefs.getString(key) == m.today().toString()) return
         val now = IraStudy.regimeOf(com.optionslab.ira.Market.BANKNIFTY) ?: return
         val record = armRecord().ifEmpty { return }
-        com.optionslab.app.security.SecurePrefs.put(key, m.today().toString())
         val arms = com.optionslab.app.data.OrbArms
+        // Read first: if the arms or the settings cannot be read, the plan is tried again on the next pass.
+        val views = arms.view().arms
+        val s = AppSettings.load()
+        com.optionslab.app.security.SecurePrefs.put(key, m.today().toString())
         val liveNow = arms.liveNow()
         val parked = prefsMap(PARKED_KEY); val kept = prefsMap(KEPT_KEY)
-        val views = arms.view().arms
         // A parked arm found armed: Boss armed it again himself, so it is left alone while this regime holds.
         views.filter { it.armed && parked.containsKey(it.arm.source) }.forEach { parked.remove(it.arm.source); kept[it.arm.source] = now.name }
         kept.entries.removeAll { it.value != now.name }
         val now0 = views.map { v -> com.optionslab.ira.DayPlan.ArmNow(v.arm.source, v.arm.label, v.armed,
             paper = (v.arm.paperOnly || !liveNow) && !v.liveOk, parked = parked.containsKey(v.arm.source),
             kept = kept[v.arm.source]?.let { k -> runCatching { com.optionslab.ira.Regime.Kind.valueOf(k) }.getOrNull() }) }
-        val s = runCatching { AppSettings.load() }.getOrNull()
-        val stopped = s == null || s.guardKill || com.optionslab.app.data.LossBreaker.trippedToday()
+        val stopped = s.guardKill || com.optionslab.app.data.LossBreaker.trippedToday() ||
+            runCatching { com.optionslab.app.data.Strategies.stoppedToday() }.getOrDefault(true)
         val done = ArrayList<com.optionslab.ira.DayPlan.Step>()
         for (step in com.optionslab.ira.DayPlan.plan(now0, record, now)) {
             if (step.on && stopped) continue                      // the kill switch or the day's loss limit: nothing armed

@@ -339,6 +339,7 @@ object OrbArms {
     /** After a restore: both arms off, nothing waiting for approval. */
     suspend fun disarmAll() = lock.withLock {
         val b = book(); b.armed.clear(); b.auto.clear(); b.liveOk.clear(); b.pending.clear(); save(b)
+        com.optionslab.app.ira.IraCoach.forgetParked()
     }
 
     /**
