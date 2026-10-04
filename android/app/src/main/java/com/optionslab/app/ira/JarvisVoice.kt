@@ -359,7 +359,13 @@ class JarvisVoice : Service() {
                 IraActivity.add("Listening switched to the phone's own microphone (the shared one heard nothing).")
                 runCatching { rec?.cancel() }; listening = false; endTap(); turnReadyAt = 0; again(300)
             }
-            if (listening && now - listenedAt > 25_000) { runCatching { rec?.cancel() }; listening = false; endTap(); again() }
+            if (listening && now - listenedAt > 25_000) {
+                // (Partial words read before the reset still count, as a lost turn does.)
+                val lost = com.optionslab.ira.Wake.lostTurn(7, turnPartial)
+                note("turn timed out" + if (turnPartial != null) " (read words mid-turn)" else " (nothing read)")
+                runCatching { rec?.cancel() }; listening = false; endTap()
+                if (lost != null && !speaking) heard(listOf(lost)) else again()
+            }
             if (speaking && now - spokeAt > 60_000) { speaking = false; again() }
             // The mic button's one question was asked and answered (or never came): listening stops again.
             if (oneShot && !speaking && !awake() && !lateWaiting && _state.value.mode != Mode.THINKING && now - talkAt > 14_000) { stopSelf(); return }
@@ -622,7 +628,12 @@ class JarvisVoice : Service() {
         override fun onBeginningOfSpeech() { note("speech began") }
         override fun onRmsChanged(rmsdB: Float) { if (rmsdB > turnLoudest) turnLoudest = rmsdB }
         override fun onBufferReceived(buffer: ByteArray?) {}
-        override fun onEndOfSpeech() {}
+        // Boss, 4 Oct: "speech began", then nothing - the recognizer never closed the turn. Once he stops speaking, the
+        // turn is closed for it 1.5 s later (stopListening makes it give its result), not left to a 25 s reset.
+        override fun onEndOfSpeech() {
+            note("speech ended")
+            if (!speaking) { main.removeCallbacks(finish); main.postDelayed(finish, 1_500) }
+        }
         override fun onPartialResults(partialResults: Bundle?) {
             partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull { it.isNotBlank() }?.let {
                 turnHeardAny = true; turnPartial = it
