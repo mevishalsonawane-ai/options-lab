@@ -371,6 +371,10 @@ class JarvisVoice : Service() {
     /** When the recognizer said ready this turn, and whether it heard anything (for the silent-turn check). */
     @Volatile private var turnReadyAt = 0L
     @Volatile private var turnHeardAny = false
+    /** The loudest sound this turn (the recognizer's dB scale: about -2 silence, 6+ speech), for the trace. */
+    @Volatile private var turnLoudest = -100f
+    /** Turns with clear sound in which the recognizer found no words, in a row (the language may be wrong). */
+    private var loudNoMatch = 0
     /** What the recognizer heard last turn (for the voice check), then dropped. */
     private var lastHeard: ShortArray? = null
     /** The action Jarvis asked a yes or no about, heard until [askingUntil]. */
@@ -378,7 +382,7 @@ class JarvisVoice : Service() {
     /** A trade needs Boss's own voice for its yes; a command (start, stop...) needs only a yes. */
     private var askingNeedsBoss = true
     private var askingUntil = 0L
-    private var lang = "en-IN"
+    private var lang = "en-US"
     private var triedOtherLanguage = false
     private var errorsInRow = 0
     /**
@@ -502,8 +506,8 @@ class JarvisVoice : Service() {
     private fun awake() = SystemClock.elapsedRealtime() < awakeUntil
 
     /**
-     * The English the phone's on-device recognizer actually has (Android 13+ can say): English (India) when installed,
-     * else English (US), else any English - so Jarvis never asks for a language the phone lacks.
+     * The English the phone's on-device recognizer actually has (Android 13+ can say): English (US) when installed,
+     * else English (India), else any English - so Jarvis never asks for a language the phone lacks.
      */
     private fun pickLanguage() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
@@ -513,7 +517,8 @@ class JarvisVoice : Service() {
                 object : android.speech.RecognitionSupportCallback {
                     override fun onSupportResult(s: android.speech.RecognitionSupport) {
                         val have = s.installedOnDeviceLanguages.map { it.lowercase(java.util.Locale.ROOT).replace('_', '-') }
-                        val pick = listOf("en-in", "en-us").firstOrNull { it in have } ?: have.firstOrNull { it.startsWith("en") }
+                        // English (US) first: it is what heard Boss when it worked (4 Oct); English (India) when it is the only one.
+                        val pick = listOf("en-us", "en-in").firstOrNull { it in have } ?: have.firstOrNull { it.startsWith("en") }
                         pick?.let { p -> main.post { lang = if (p.length == 5) p.substring(0, 3) + p.substring(3).uppercase(java.util.Locale.ROOT) else p } }
                     }
                     override fun onError(error: Int) {}
@@ -548,7 +553,7 @@ class JarvisVoice : Service() {
             }
         }
         listening = true
-        turnReadyAt = 0; turnHeardAny = false
+        turnReadyAt = 0; turnHeardAny = false; turnLoudest = -100f
         runCatching { rec?.startListening(i) }.onFailure { listening = false; endTap(); again(1_000) }
         _state.value = VoiceState(if (awake()) Mode.AWAKE else Mode.LISTENING)
     }
@@ -570,7 +575,7 @@ class JarvisVoice : Service() {
             note(if (tap != null) "ready (shared audio)" else "ready")
         }
         override fun onBeginningOfSpeech() {}
-        override fun onRmsChanged(rmsdB: Float) {}
+        override fun onRmsChanged(rmsdB: Float) { if (rmsdB > turnLoudest) turnLoudest = rmsdB }
         override fun onBufferReceived(buffer: ByteArray?) {}
         override fun onEndOfSpeech() {}
         override fun onPartialResults(partialResults: Bundle?) {
@@ -594,6 +599,7 @@ class JarvisVoice : Service() {
         override fun onResults(results: Bundle?) {
             main.removeCallbacks(finish)
             listening = false
+            loudNoMatch = 0
             note("heard " + (results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()?.let { t ->
                 if (WAKE.containsMatchIn(t)) "the name" else "${t.split(Regex("\\s+")).size} words, no name" } ?: "nothing"))
             results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()?.let { heardText = com.optionslab.ira.Secrets.redact(it) }
@@ -619,7 +625,17 @@ class JarvisVoice : Service() {
                 }
                 again(500); return
             }
-            note("error $error")
+            // The loudest sound says whether the microphone gave the recognizer anything (Boss, 4 Oct: error 7 each turn).
+            note("error $error" + if (turnLoudest > -100f) ", loudest %.0f dB".format(java.util.Locale.ENGLISH, turnLoudest) else ", no sound level")
+            // Clear speech, no words found, three turns in a row: the language pack may be the trouble - the other English.
+            if (error == SpeechRecognizer.ERROR_NO_MATCH && turnLoudest >= 6f) {
+                if (++loudNoMatch >= 3) {
+                    loudNoMatch = 0
+                    lang = if (lang == "en-IN") "en-US" else "en-IN"
+                    note("words not found in clear speech 3 times: now listening in $lang")
+                    IraActivity.add("Listening switched to $lang (no words found in clear speech).")
+                }
+            } else if (error != SpeechRecognizer.ERROR_NO_MATCH) loudNoMatch = 0
             when (error) {
                 SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> giveUp("Jarvis lost the microphone permission.")
                 // Boss, 4 Oct ("why can't you hear me" -> "the speech service refused the request"): the on-device
