@@ -1086,6 +1086,18 @@ object IraHub {
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
             return
         }
+        // "What did I miss?": what Jarvis said on his own since Boss last asked (alerts, notes) - may name the account, so
+        // the phone must be unlocked.
+        if (com.optionslab.app.BuildConfig.JARVIS && runCatching { com.optionslab.ira.Reminder.missedAsked(q) }.getOrDefault(false)) {
+            val notes = com.optionslab.ira.Reminder.sinceLastAsked(_state.value.messages.map { it.fromIra to it.text })
+            val said = when {
+                phoneLocked() -> "Unlock the phone for that, Boss."
+                notes.isEmpty() -> "Nothing new since you last asked, Boss."
+                else -> "Since you last asked, Boss: " + notes.joinToString(" | ") { com.optionslab.ira.Wake.spoken(it, 2) }
+            }
+            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
+            return
+        }
         // "Which AI model are you using?": the choice and its state (Boss, 4 Oct: switching to the fastest model).
         if (com.optionslab.app.BuildConfig.JARVIS && runCatching { com.optionslab.ira.Reminder.modelAsked(q) }.getOrDefault(false)) {
             val st = IraModel.state.value

@@ -95,3 +95,14 @@ class ModelAskedNarrowTest {
         assertTrue(!Reminder.modelAsked("what does your model say about nifty"))
     }
 }
+
+class MissedSinceTest {
+    @Test fun since() {
+        val ms = listOf(false to "how is nifty", true to "Nifty is up.", true to "Relay down.", true to "BankNifty broke its range.")
+        assertEquals(listOf("Relay down.", "BankNifty broke its range."), Reminder.sinceLastAsked(ms))
+        assertEquals(listOf("Morning check."), Reminder.sinceLastAsked(listOf(true to "Morning check.")))
+        assertTrue(Reminder.missedAsked("Jarvis, what did I miss?"))
+        assertTrue(Reminder.missedAsked("maine kya miss kiya"))
+        assertTrue(!Reminder.missedAsked("what did i miss on the nifty chart"))
+    }
+}

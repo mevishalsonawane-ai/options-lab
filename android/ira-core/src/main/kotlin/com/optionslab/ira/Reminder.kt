@@ -59,6 +59,17 @@ object Reminder {
         }
     }
 
+    /** "What did I miss?", "kya hua jab main nahi tha", "any updates for me": what Jarvis said on his own since. */
+    fun missedAsked(text: String): Boolean =
+        Regex("(?i)^\\W*(jarvis,?\\s+)?(what did i miss|what have i missed|did i miss anything|anything i missed|catch me up|kya hua jab (main|mai) nahi tha|maine kya miss kiya|kuch miss hua)\\W*$").containsMatchIn(text)
+
+    /** Jarvis's own notes since Boss last asked (his reply to that question left out), newest last, at most [max]. */
+    fun sinceLastAsked(fromJarvis: List<Pair<Boolean, String>>, max: Int = 6): List<String> {
+        val lastBoss = fromJarvis.indexOfLast { !it.first }
+        val after = fromJarvis.drop(lastBoss + 1).filter { it.first }.map { it.second }
+        return (if (lastBoss >= 0) after.drop(1) else after).takeLast(max)
+    }
+
     /** "Which AI model are you using?", "kaunsa model hai": answered from the app's own choice. */
     fun modelAsked(text: String): Boolean =
         Regex("(?i)\\b(which|what) (ai |language )?model (are you (using|on|running)|do you use|is (this|it|running|loaded))\\b|\\b(kaunsa|konsa|kon sa|kaun sa) model\\b|^\\W*(jarvis,?\\s+)?(what is |what s |what's |whats )?your (ai )?model\\W*$").containsMatchIn(text)
