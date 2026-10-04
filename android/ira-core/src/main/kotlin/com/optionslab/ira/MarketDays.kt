@@ -19,7 +19,10 @@ object MarketDays {
     private val DAY = Regex("(?i)\\b(holiday|chutti|trading day|market (open|closed|shut|band|khulega|khula)|market( \\w+)? (kab )?(khulega|khulta)|open for trading|is (the )?market (open|closed)|exchange (open|closed))\\b")
     /** Asked about the past ("was it open on Friday", "kal band tha"): not for this answer. */
     private val PAST = Regex("(?i)\\b(was|were|did|yesterday|tha|thi|last)\\b")
-    private val WHEN = Regex("(?i)\\b(today|aaj|tomorrow|tmrw|kal|parso|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\\b")
+    private val WHEN = Regex("(?i)\\b(today|aaj|tomorrow|tmrw|kal|parso|monday|tuesday|wednesday|thursday|friday|saturday|sunday|somvar|mangalvar|budhvar|guruvar|shukravar|shanivar|ravivar)\\b")
+
+    private val HINDI = mapOf("somvar" to DayOfWeek.MONDAY, "mangalvar" to DayOfWeek.TUESDAY, "budhvar" to DayOfWeek.WEDNESDAY,
+        "guruvar" to DayOfWeek.THURSDAY, "shukravar" to DayOfWeek.FRIDAY, "shanivar" to DayOfWeek.SATURDAY, "ravivar" to DayOfWeek.SUNDAY)
 
     /** Does [text] ask about a day other than today ("when does the market open tomorrow")? The calendar answers it. */
     fun namesAnotherDay(text: String): Boolean {
@@ -39,7 +42,7 @@ object MarketDays {
             "tomorrow", "tmrw", "kal" -> today.plusDays(1)
             "parso" -> today.plusDays(2)
             else -> {
-                val dow = DayOfWeek.valueOf(w.uppercase()); var x = today; while (x.dayOfWeek != dow) x = x.plusDays(1)
+                val dow = HINDI[w] ?: DayOfWeek.valueOf(w.uppercase()); var x = today; while (x.dayOfWeek != dow) x = x.plusDays(1)
                 // "Next Friday" asked on a Friday, or "next Monday" any day: the one after the coming one only when the
                 // coming one is today.
                 if (nextWeek && x == today) x.plusDays(7) else x
