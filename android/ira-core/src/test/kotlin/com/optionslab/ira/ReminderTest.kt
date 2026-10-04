@@ -81,3 +81,10 @@ class ReminderCancelTest {
         assertTrue(!Reminder.cancelAsked("cancel all orders"))
     }
 }
+
+class ModelAskedTest {
+    @Test fun model() {
+        for (s in listOf("which model are you using", "Jarvis, which AI model is loaded", "kaunsa model hai")) assertTrue(Reminder.modelAsked(s), s)
+        assertTrue(!Reminder.modelAsked("what is the black scholes model"))
+    }
+}

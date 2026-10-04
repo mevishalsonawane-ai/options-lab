@@ -1086,6 +1086,20 @@ object IraHub {
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
             return
         }
+        // "Which AI model are you using?": the choice and its state (Boss, 4 Oct: switching to the fastest model).
+        if (com.optionslab.app.BuildConfig.JARVIS && runCatching { com.optionslab.ira.Reminder.modelAsked(q) }.getOrDefault(false)) {
+            val st = IraModel.state.value
+            val said = "I'm set to ${IraModel.choice.name} (${IraModel.choice.about}), Boss: " + when (st.status) {
+                IraModel.Status.READY -> if (st.loaded) "on the phone and loaded now." else "on the phone, loaded when I need it."
+                IraModel.Status.DOWNLOADING -> "still downloading."
+                IraModel.Status.VERIFYING -> "being checked after the download."
+                IraModel.Status.ABSENT -> "not downloaded yet (Settings, Voice and AI model)."
+                IraModel.Status.FAILED -> "its download failed; try again in Settings, Voice and AI model."
+                IraModel.Status.UNSUPPORTED -> "this phone cannot run it."
+            } + " Prices, P&L and actions never come from the model - only from the app's own rules."
+            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
+            return
+        }
         // The time and the date, from the phone's clock: at once, no model.
         runCatching { com.optionslab.ira.Reminder.clock(q, java.time.LocalDateTime.now(IST)) }.getOrNull()?.let { said ->
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
