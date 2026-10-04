@@ -212,17 +212,21 @@ internal object IraCoach {
 
     /** At each market hour's first minutes: a strong habit's question answered unasked, once a day each. */
     suspend fun usualWatch() {
-        if (!com.optionslab.app.BuildConfig.JARVIS || !Automations.on(Automations.Auto.USUAL) || !com.optionslab.app.data.Market.isOpen()) return
+        if (!com.optionslab.app.BuildConfig.JARVIS || com.optionslab.app.BuildConfig.GOLD || !Automations.on(Automations.Auto.USUAL) ||
+            !com.optionslab.app.data.Market.isOpen()) return
         val now = java.time.LocalDateTime.now(java.time.ZoneId.of("Asia/Kolkata"))
-        if (now.minute > 5) return
+        // The hour's first minutes - 09:15 to 09:20 for the 9 o'clock hour, the market opening at 09:15 (review, 4 Oct).
+        val from = if (now.hour == 9) 15 else 0
+        if (now.minute !in from..from + 5) return
         val day = com.optionslab.app.data.Market.today().toString()
         val key = "jarvis.usual.told"
         val o = runCatching { org.json.JSONObject(com.optionslab.app.security.SecurePrefs.getString(key) ?: "{}") }.getOrDefault(org.json.JSONObject())
         val told = if (o.optString("d") == day) o.optJSONArray("k")?.let { a -> (0 until a.length()).map { a.getString(it) }.toSet() }.orEmpty() else emptySet()
         val due = com.optionslab.ira.Habits.due(IraTools.habits(), now.hour, told) ?: return
         val question = com.optionslab.ira.Habits.question(due) ?: return
-        com.optionslab.app.security.SecurePrefs.put(key, org.json.JSONObject().put("d", day).put("k", org.json.JSONArray(told + due)).toString())
+        // Kept as told only once said: an answer that could not be given (old prices) is tried again on the next pass.
         val text = IraHub.usualAnswer(question) ?: return
+        com.optionslab.app.security.SecurePrefs.put(key, org.json.JSONObject().put("d", day).put("k", org.json.JSONArray(told + due)).toString())
         IraHub.note(text); JarvisVoice.announce(com.optionslab.ira.Wake.spoken(text, 3)); Automations.acted(Automations.Auto.USUAL, question)
     }
 

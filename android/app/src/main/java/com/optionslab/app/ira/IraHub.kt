@@ -1083,6 +1083,26 @@ object IraHub {
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
             return
         }
+        // "How many lots of Nifty can I buy with 20,000?": the at-the-money premium times the lot size - arithmetic only.
+        if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && parsed.command == null && parsed.order == null)
+            runCatching { com.optionslab.ira.Sizing.asked(q) }.getOrNull()?.let { a ->
+                _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+                val m = a.market ?: IraMarket.NIFTY
+                if (m !in listOf(IraMarket.NIFTY, IraMarket.BANKNIFTY, IraMarket.FINNIFTY)) {
+                    reply("Boss, I can size Nifty, BankNifty and FinNifty options; ${m.label} options are not in my chain data."); return }
+                scope.launch {
+                    val said = runCatching {
+                        val c = kotlinx.coroutines.withTimeoutOrNull(20_000) { IraAccount.chain(m.name) } ?: return@runCatching "I could not read the ${m.label} option chain just now, Boss."
+                        val right = a.right ?: "CE"
+                        val row = c.rows.filter { (if (right == "CE") it.ce else it.pe) != null }.minByOrNull { kotlin.math.abs(it.strike - c.spot) }
+                            ?: return@runCatching "I could not find the ${m.label} at-the-money option just now, Boss."
+                        val leg = if (right == "CE") row.ce!! else row.pe!!
+                        com.optionslab.ira.Sizing.say(a, m, right, row.strike, leg.ltp, c.lotSize)
+                    }.getOrElse { "I could not work that out just now, Boss." }
+                    reply(said)
+                }
+                return
+            }
         // "Wrap up my day" / "aaj ka summary" at any hour: the 15:35 wrap-up's words so far (the day's P&L is Boss's own,
         // so the phone must be unlocked).
         if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && parsed.command == null && parsed.order == null &&
