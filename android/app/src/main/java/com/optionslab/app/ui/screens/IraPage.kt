@@ -420,6 +420,14 @@ internal fun VoiceSwitch() {
                 if (JarvisVoice.wanted) { JarvisVoice.stop(vctx); android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({ if (JarvisVoice.wanted) JarvisVoice.start(vctx) }, 700) }
             })
         }
+        // Boss, 4 Oct: "ignore background noise, and hear only my voice".
+        var onlyMe by remember { mutableStateOf(JarvisVoice.onlyBoss) }
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
+            Text("Answer only my voice", style = Type.label.copy(color = p.ink, fontSize = 14.sp), modifier = Modifier.weight(1f))
+            androidx.compose.material3.Switch(checked = onlyMe, onCheckedChange = { v -> onlyMe = v; JarvisVoice.onlyBoss = v })
+        }
+        Note(if (com.optionslab.app.ira.VoiceGuard.enrolled) "Words in other voices (TV, people nearby) are ignored. Your microphone is shared with noise reduction for this check."
+            else "Teach me your voice first (above); until then this does nothing.")
         // Boss, 4 Oct: one report to send - everything the app knows about Jarvis's ears (no words, keys or secrets).
         val diagScope = rememberCoroutineScope()
         androidx.compose.material3.TextButton({

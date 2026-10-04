@@ -89,7 +89,7 @@ class JarvisVoice : Service() {
         /** For the diagnostics report: Jarvis's ears in full - settings, state, the voice check and the last 60 turns (never words). */
         fun report(context: Context?): String = buildString {
             append("Listen for Jarvis: $wanted · running: ${instance?.get() != null} · started from the app on screen: ${instance?.get()?.visibleStart}\n")
-            append("Ears: ${if (googleSpeech) "Google's speech service" else "on the phone only"} · language: ${instance?.get()?.lang} · voice taught: ${VoiceGuard.enrolled} · muted: $muted\n")
+            append("Ears: ${if (googleSpeech) "Google's speech service" else "on the phone only"} · language: ${instance?.get()?.lang} · voice taught: ${VoiceGuard.enrolled} · only my voice: $onlyBoss · muted: $muted\n")
             append("On-device recognition available: ${context?.let { c -> runCatching { Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && SpeechRecognizer.isOnDeviceRecognitionAvailable(c) }.getOrNull() }} · " +
                 "any recognizer: ${context?.let { c -> runCatching { SpeechRecognizer.isRecognitionAvailable(c) }.getOrNull() }}\n")
             append("Voice check: ${runCatching { diagnose(context) }.getOrElse { "could not run" }}\n")
@@ -194,6 +194,14 @@ class JarvisVoice : Service() {
         var googleSpeech: Boolean
             get() = runCatching { com.optionslab.app.security.SecurePrefs.getBoolean("jarvis.voice.google", false) }.getOrDefault(false)
             set(v) { runCatching { com.optionslab.app.security.SecurePrefs.put("jarvis.voice.google", v) } }
+
+        /**
+         * Boss's choice (default off, Boss 4 Oct: "hear only my voice"): with his voice taught, words in any other voice -
+         * the TV, people nearby - are ignored, not only for trades.
+         */
+        var onlyBoss: Boolean
+            get() = runCatching { com.optionslab.app.security.SecurePrefs.getBoolean("jarvis.voice.onlyboss", false) }.getOrDefault(false)
+            set(v) { runCatching { com.optionslab.app.security.SecurePrefs.put("jarvis.voice.onlyboss", v) } }
 
         /** From the app on screen only (Android lets a microphone service start only then). */
         /** Started from the app on screen (Android then lets it use the microphone "while using the app"). */
@@ -691,11 +699,11 @@ class JarvisVoice : Service() {
         override fun onRmsChanged(rmsdB: Float) { if (rmsdB > turnLoudest) turnLoudest = rmsdB }
         override fun onBufferReceived(buffer: ByteArray?) {}
         // Boss, 4 Oct: "speech began", then nothing - the recognizer never closed the turn. Once he stops speaking, the
-        // turn is closed for it 1.5 s later (stopListening makes it give its result), not left to a 25 s reset.
+        // turn is closed for it 0.7 s later (was 1.5 s: Boss, 4 Oct, "late response") (stopListening makes it give its result), not left to a 25 s reset.
         override fun onEndOfSpeech() {
             note("speech ended")
             hushBeep(1_200)                               // the end beep
-            if (!speaking) { main.removeCallbacks(finish); main.postDelayed(finish, 1_500) }
+            if (!speaking) { main.removeCallbacks(finish); main.postDelayed(finish, 700) }
         }
         override fun onPartialResults(partialResults: Bundle?) {
             partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull { it.isNotBlank() }?.let {
@@ -881,6 +889,13 @@ class JarvisVoice : Service() {
         // Strict wake word (the owner's setting): only the best reading, with "Jarvis" first, wakes it.
         val alts = if (IraTools.wakeStrict && !awake) com.optionslab.ira.WakeSense.accept(alternatives, com.optionslab.ira.WakeSense.Level.STRICT) else alternatives
         val h = alts.asSequence().map { Wake.heard(it, awake) }.firstOrNull { it !is Wake.Heard.Ignore } ?: Wake.Heard.Ignore
+        // Only Boss's voice (his choice): words someone else said are let go. Checked on this turn's own audio; with
+        // no shared audio this turn (the phone would not share it) there is nothing to check, and the words count.
+        if (onlyBoss && VoiceGuard.enrolled && (h is Wake.Heard.Ask || h is Wake.Heard.Awake || h is Wake.Heard.Stop)) {
+            val pcm = lastHeard
+            if (pcm != null && !VoiceGuard.isBoss(pcm)) { note("words in another voice: ignored"); again(); return }
+            if (pcm == null) note("no shared audio this turn: voice not checked")
+        }
         when (h) {
             Wake.Heard.Ignore -> again()
             Wake.Heard.Awake -> { awakeUntil = SystemClock.elapsedRealtime() + AWAKE_MS; called = true; say("Yes, Boss?") }
@@ -997,6 +1012,8 @@ class JarvisVoice : Service() {
                 }
             }
             hold.cancel()
+            // How long Boss waited, for the diagnostics (Boss, 4 Oct: "getting late response").
+            if (a != null) note("answer ready %.1f s after the words".format(java.util.Locale.ENGLISH, (SystemClock.elapsedRealtime() - heardAt) / 1000.0))
             val o = a?.order
             // A suggested trade is asked aloud by itself (yes or no): nothing more to say here.
             if (a?.action != null && IraHub.asksYesNo(a.action)) return@launch

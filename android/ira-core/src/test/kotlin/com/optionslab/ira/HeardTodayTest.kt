@@ -33,3 +33,13 @@ class QuickerThinkingTest {
         assertEquals("Nice to hear from you, Boss.", Chat.accept("Nice to hear from you, Boss. I was just thinking about"))
     }
 }
+
+class SoftNameTest {
+    @Test fun aSoftJarvisFirstWakes() {
+        assertEquals(Wake.Heard.Ask("how are you"), Wake.heard("service how are you", false))
+        assertEquals(Wake.Heard.Awake, Wake.heard("Javis", false))
+        // Anywhere else it is just a word.
+        assertEquals(Wake.Heard.Ignore, Wake.heard("the service is slow today", false))
+        assertEquals(Wake.Heard.Ignore, Wake.heard("call customer service", false))
+    }
+}

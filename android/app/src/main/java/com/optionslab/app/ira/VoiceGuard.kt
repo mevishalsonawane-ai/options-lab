@@ -126,6 +126,10 @@ object VoiceGuard {
                 r = AudioRecord(MediaRecorder.AudioSource.VOICE_RECOGNITION, VoicePrint.RATE, AudioFormat.CHANNEL_IN_MONO,
                     AudioFormat.ENCODING_PCM_16BIT, maxOf(min, VoicePrint.RATE))
                 check(r.state == AudioRecord.STATE_INITIALIZED) { "no microphone" }
+                // Boss, 4 Oct: background noise heard, and a soft voice missed - the phone's own noise suppression and
+                // gain control on this capture, where the phone has them (a failure leaves the plain capture).
+                runCatching { if (android.media.audiofx.NoiseSuppressor.isAvailable()) android.media.audiofx.NoiseSuppressor.create(r.audioSessionId)?.setEnabled(true) }
+                runCatching { if (android.media.audiofx.AutomaticGainControl.isAvailable()) android.media.audiofx.AutomaticGainControl.create(r.audioSessionId)?.setEnabled(true) }
                 r.startRecording()
             } catch (e: Exception) {
                 // Nothing may leak when the microphone cannot be had: both ends of the pipe and the recorder go.

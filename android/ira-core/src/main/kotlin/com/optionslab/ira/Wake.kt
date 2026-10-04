@@ -20,6 +20,11 @@ object Wake {
     /** How the recognizer tends to write "Jarvis". */
     // With the ways an Indian-English recognizer often writes the name (Boss, 4 Oct: not heard by name).
     private val WORDS = listOf("jarvis", "jarvas", "jervis", "jarviss", "jar vis", "jarvish", "jarwis", "jaarvis", "jarviz", "jarbis")
+    /**
+     * Misreadings of a softly said "Jarvis" (Boss, 4 Oct: "service how are you"): counted only as the very first word,
+     * so "the service is slow" never wakes him. Never "named": actions still need the name itself.
+     */
+    private val FIRST = Regex("^ (hey |ok |okay )?(service|jarves|javis|jarvice|jervice|harvis|charvis|jarvi|jarvez|jaris) ")
     private val FILLER = Regex("^(hey|hi|ok|okay|hello|so|and|please)\\b\\s*")
     private val STOP = Regex("^(stop listening|go to sleep|sleep|shut down|turn off|switch off)$")
     /** Boss's "be quiet" (3 Oct: "Jarvis stop" means stop talking, not stop my orders). */
@@ -44,6 +49,7 @@ object Wake {
     fun heard(text: String, awake: Boolean): Heard {
         val t = " " + text.lowercase().replace(Regex("[^a-z0-9% ]"), " ").replace(Regex("\\s+"), " ").trim() + " "
         val at = WORDS.mapNotNull { w -> Regex(" $w ").find(t)?.let { it.range.last } }.minOrNull()
+            ?: FIRST.find(t)?.let { it.range.last }
         val rest = (if (at != null) t.substring(at) else t).trim().let { r -> var x = r; repeat(3) { x = x.replace(FILLER, "").trim() }; x }
         return when {
             at == null && !awake -> Heard.Ignore
