@@ -534,7 +534,7 @@ internal fun ModelCard() {
         dismissButton = { androidx.compose.material3.TextButton(onClick = { confirmDelete = false }) { Text("Keep") } },
     )
     LedgerCard(title = "AI model") {
-        // Fast (1.5B, the default) or quality (3B): the owner's choice, never while a file is coming or being checked.
+        // Fastest (0.5B), fast (1.5B, the default) or quality (3B): the owner's choice, never while a file is coming or being checked.
         if (ms.status != ModelStatus.DOWNLOADING && ms.status != ModelStatus.VERIFYING) {
             var chosen by remember { mutableStateOf(M.choice) }
             Column(modifier = Modifier.padding(bottom = 6.dp)) {

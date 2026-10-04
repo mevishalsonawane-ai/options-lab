@@ -42,11 +42,20 @@ object IraModel {
     val QUALITY = Spec("quality", "Qwen2.5 3B", "Qwen/Qwen2.5-3B-Instruct-GGUF", "qwen2.5-3b-instruct-q4_k_m.gguf",
         "7dabda4d13d513e3e842b20f0d435c732f172cbe", 2_104_932_768L, "626b4a6678b86442240e33df819e00132d3ba7dddfe1cdc4fbb18e0a9615c62d",
         5_500_000_000L, "best quality")
-    val SPECS = listOf(FAST, QUALITY)
+    /**
+     * Boss, 4 Oct ("thinking takes too long, change to a fast and efficient model"): less than half the 1.5B's size, so
+     * it loads and answers about two to three times faster. It only reads free-form words and chats - every figure and
+     * action comes from the app's own rules - so a smaller model costs little.
+     */
+    val FASTEST = Spec("fastest", "Qwen2.5 0.5B", "Qwen/Qwen2.5-0.5B-Instruct-GGUF", "qwen2.5-0.5b-instruct-q4_k_m.gguf",
+        "9217f5db79a29953eb74d5343926648285ec7e67", 491_400_032L, "74a4da8c9fdbcd15bd1f6d01d621410d31c6fc00986f5eb687824e7b93d7a9db",
+        2_500_000_000L, "fastest")
+    val SPECS = listOf(FASTEST, FAST, QUALITY)
 
-    /** Which model the owner chose (the fast one unless the quality one was picked). */
+    /** Which model the owner chose (the 1.5B unless another was picked). */
     val choice: Spec
-        get() = if (runCatching { com.optionslab.app.security.SecurePrefs.getString("ira.model.choice") }.getOrNull() == QUALITY.key) QUALITY else FAST
+        get() = runCatching { com.optionslab.app.security.SecurePrefs.getString("ira.model.choice") }.getOrNull()
+            .let { k -> SPECS.firstOrNull { it.key == k } } ?: FAST
 
     val NAME: String get() = choice.name
     val FILE: String get() = choice.file
