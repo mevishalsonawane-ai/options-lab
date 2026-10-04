@@ -23,3 +23,13 @@ class OptionFactsTest {
         assertTrue(OptionFacts.timeLeft(8 * 60).contains("opens in 75 minutes"))
     }
 }
+
+class OptionFactsHindiTest {
+    @Test fun hinglish() {
+        assertEquals(OptionFacts.Asked.Quote(Market.NIFTY, 25000, "CE"), OptionFacts.asked("nifty 25000 ce ka bhav kya hai"))
+        assertEquals(OptionFacts.Asked.Atm(Market.NIFTY), OptionFacts.asked("atm strike kya hai"))
+        assertEquals(OptionFacts.Asked.LotSize(Market.NIFTY), OptionFacts.asked("nifty ka lot size kitna hai"))
+        assertEquals(OptionFacts.Asked.TimeLeft, OptionFacts.asked("market band hone mein kitna time hai"))
+        assertNull(OptionFacts.asked("nifty 25000 ce kharido"))
+    }
+}
