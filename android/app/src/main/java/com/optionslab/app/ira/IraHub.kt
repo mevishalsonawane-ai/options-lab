@@ -1173,6 +1173,13 @@ object IraHub {
                 return
             }
         }
+        // "Why did you park ORB 5?", "why did you do that?": his own action, with the reason he wrote down then.
+        if (com.optionslab.ira.SelfWhy.asked(q) && parsed.command == null && parsed.order == null) {
+            val said = if (phoneLocked()) "Unlock the phone for that, Boss."
+                else runCatching { com.optionslab.ira.SelfWhy.answer(q, IraActivity.entries(), LocalDateTime.now(IST)) }.getOrElse { "I could not read my activity just now, Boss." }
+            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
+            return
+        }
         // "What held up?": every paper strategy's forward test (part 7).
         if (com.optionslab.ira.Vetting.asked(q) && Ask.parse(q).command == null && !com.optionslab.app.BuildConfig.GOLD) {
             _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }

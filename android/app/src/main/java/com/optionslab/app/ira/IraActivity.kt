@@ -27,6 +27,9 @@ internal object IraActivity {
         runCatching { com.optionslab.app.security.SecurePrefs.put(KEY, JSONArray().apply { all.forEach { put(JSONObject().put("t", it.at.toString()).put("w", it.what)) } }.toString()) }
     }
 
+    /** Every kept entry (for "why did you ...?"). */
+    fun entries(): List<Activity.Entry> = load()
+
     fun lines(): List<String> = Activity.lines(com.optionslab.app.data.Market.today(), load())
 
     /** The first sentence of a result, for the log. */
