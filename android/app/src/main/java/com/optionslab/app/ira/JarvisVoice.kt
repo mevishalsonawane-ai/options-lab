@@ -327,6 +327,13 @@ class JarvisVoice : Service() {
         override fun run() {
             if (stopped) return
             val now = SystemClock.elapsedRealtime()
+            // A shared-capture turn that the recognizer opened and then never heard anything with (no words, no error) for
+            // 12 s: this phone's recognizer cannot take our audio - back to its own microphone, for good.
+            if (listening && tap != null && turnReadyAt > 0 && !turnHeardAny && now - turnReadyAt > 12_000 && !speaking) {
+                tapFailed = true; note("shared audio gave nothing: back to the phone's own microphone")
+                IraActivity.add("Listening switched to the phone's own microphone (the shared one heard nothing).")
+                runCatching { rec?.cancel() }; listening = false; endTap(); turnReadyAt = 0; again(300)
+            }
             if (listening && now - listenedAt > 25_000) { runCatching { rec?.cancel() }; listening = false; endTap(); again() }
             if (speaking && now - spokeAt > 60_000) { speaking = false; again() }
             // The mic button's one question was asked and answered (or never came): listening stops again.
@@ -353,7 +360,17 @@ class JarvisVoice : Service() {
     /** This turn's own capture, shared with the recognizer (Android 13+ with a taught voice), or null. */
     private var tap: VoiceGuard.Tap? = null
     /** The phone's recognizer refused our audio: plain microphone from now on (voice cannot trade then). */
-    private var tapFailed = false
+    /**
+     * The shared capture does not work on this phone (Boss, 4 Oct: the recognizer said "ready" and then never heard
+     * anything with it - silence, no error). Remembered on the phone, so it is not tried again on every restart.
+     */
+    private var tapFailed: Boolean
+        get() = runCatching { com.optionslab.app.security.SecurePrefs.getBoolean(TAP_BROKEN, false) }.getOrDefault(false)
+        set(v) { runCatching { com.optionslab.app.security.SecurePrefs.put(TAP_BROKEN, v) } }
+    private val TAP_BROKEN = "jarvis.voice.tapbroken"
+    /** When the recognizer said ready this turn, and whether it heard anything (for the silent-turn check). */
+    @Volatile private var turnReadyAt = 0L
+    @Volatile private var turnHeardAny = false
     /** What the recognizer heard last turn (for the voice check), then dropped. */
     private var lastHeard: ShortArray? = null
     /** The action Jarvis asked a yes or no about, heard until [askingUntil]. */
@@ -531,6 +548,7 @@ class JarvisVoice : Service() {
             }
         }
         listening = true
+        turnReadyAt = 0; turnHeardAny = false
         runCatching { rec?.startListening(i) }.onFailure { listening = false; endTap(); again(1_000) }
         _state.value = VoiceState(if (awake()) Mode.AWAKE else Mode.LISTENING)
     }
@@ -547,12 +565,16 @@ class JarvisVoice : Service() {
     private fun boss(): Boolean = VoiceGuard.isBoss(lastHeard).also { lastHeard = null }
 
     private val listener = object : RecognitionListener {
-        override fun onReadyForSpeech(params: Bundle?) { errorsInRow = 0; clientErrors = 0; readyAt = SystemClock.elapsedRealtime(); note("ready") }
+        override fun onReadyForSpeech(params: Bundle?) {
+            errorsInRow = 0; clientErrors = 0; readyAt = SystemClock.elapsedRealtime(); turnReadyAt = readyAt; turnHeardAny = false
+            note(if (tap != null) "ready (shared audio)" else "ready")
+        }
         override fun onBeginningOfSpeech() {}
         override fun onRmsChanged(rmsdB: Float) {}
         override fun onBufferReceived(buffer: ByteArray?) {}
         override fun onEndOfSpeech() {}
         override fun onPartialResults(partialResults: Bundle?) {
+            if (partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.any { it.isNotBlank() } == true) turnHeardAny = true
             // The owner says "Jarvis" while Jarvis is talking: stop at once and listen (the question follows).
             val words = partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION).orEmpty()
             if (speaking) { if (words.any { WAKE.containsMatchIn(it) }) interrupt(); return }
