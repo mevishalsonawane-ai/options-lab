@@ -206,6 +206,8 @@ object DailyReports {
             // After everything is checked: what the night's study and the overnight news say about today.
             val brief = runCatching { com.optionslab.app.ira.IraStudy.brief() }.getOrDefault(emptyList())
             brief.forEach { lines += "• Study: $it" }
+            // Each index's day in one line: its trend, the range a usual day spans, the pivot.
+            com.optionslab.app.ira.IraHub.morningOutlook().forEach { lines += "• Outlook: $it" }
             val title = "Good morning Boss · " + if (bad == 0) "we are set for today's trading" else "$bad thing${if (bad > 1) "s" else ""} need you"
             runCatching { com.optionslab.app.ira.JarvisPopup.show(context, title, lines.take(3).joinToString(" · ")) }
             // Listening now: Jarvis says it too.

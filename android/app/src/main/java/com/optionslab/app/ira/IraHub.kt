@@ -902,6 +902,12 @@ object IraHub {
     private const val NOTIFY_BASE = 7300
 
     /** A question in, Ira's answer appended to the conversation. */
+    /** The morning check's line per index: trend, today's usual range, pivot (from the candles the phone holds). */
+    fun morningOutlook(): List<String> = runCatching {
+        val vix = _state.value.snaps[IraMarket.VIX]?.price ?: 0.0
+        listOf(IraMarket.NIFTY, IraMarket.BANKNIFTY).mapNotNull { m -> com.optionslab.ira.Outlook.brief(m, histories[m]?.bars.orEmpty(), vix) }
+    }.getOrDefault(emptyList())
+
     /** IraGoldAlgo: Jarvis only talks there (no orders, commands, NSE feeds, strategies or trade ideas). */
     private val GOLD_ONLY_TALK get() = com.optionslab.app.BuildConfig.GOLD
 

@@ -822,4 +822,31 @@ object Outlook {
         parts += "A guide from past prices, not a forecast."
         return parts.joinToString(" ")
     }
+
+    /**
+     * The morning's one line for [m] (in the morning check, Boss: "smarter"): the trend, today's usual range from India
+     * VIX and the pivot - "Nifty: rising (up 4 of the last 5 sessions); a usual day spans about 24,800-25,100; pivot
+     * 24,950". Null without two days of candles.
+     */
+    fun brief(m: Market, bars: List<Candle>, vix: Double): String? {
+        if (m == Market.VIX || m == Market.GOLD) return null
+        val days = bars.groupBy { it.t.toLocalDate() }.toSortedMap()
+        if (days.size < 2) return null
+        val closes = days.values.map { it.last().c }
+        val recent = closes.takeLast(6)
+        val moves = recent.size - 1
+        val ups = recent.zipWithNext().count { (a, b) -> b > a }
+        val trend = when {
+            moves >= 3 && ups >= moves - 1 -> "rising (up $ups of the last $moves sessions)"
+            moves >= 3 && ups <= 1 -> "falling (down ${moves - ups} of the last $moves sessions)"
+            else -> "no clear direction (up $ups of the last $moves sessions)"
+        }
+        val last = closes.last()
+        val d = days.getValue(days.lastKey())
+        val pv = Pivots.of(d.maxOf { it.h }, d.minOf { it.l }, d.last().c).p
+        val range = if (vix > 0) ExpectedRange.points(last, vix).let { p -> "; a usual day spans about ${n0(last - p)}-${n0(last + p)}" } else ""
+        return "${m.label}: $trend$range; pivot ${n0(pv)}"
+    }
+
+    private fun n0(x: Double) = "%,.0f".format(Locale.ENGLISH, x)
 }
