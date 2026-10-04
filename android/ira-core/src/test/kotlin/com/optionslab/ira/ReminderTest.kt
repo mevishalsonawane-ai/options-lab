@@ -146,3 +146,10 @@ class DailyWordInTextTest {
         assertTrue(Reminder.daily("remind me daily at 9:15 to log in"))
     }
 }
+
+class HeardAskedTest {
+    @Test fun heard() {
+        for (s in listOf("what did you hear", "Jarvis, what did I just say?", "tumne kya suna")) assertTrue(Reminder.heardAsked(s), s)
+        assertTrue(!Reminder.heardAsked("what did you hear about nifty"))
+    }
+}

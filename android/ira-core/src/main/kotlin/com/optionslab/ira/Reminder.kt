@@ -78,6 +78,10 @@ object Reminder {
         return msgs.drop(lastBoss + 1).filter { !it.fromBoss && it.unasked }.map { it.text }.takeLast(max)
     }
 
+    /** "What did you hear?", "what did I say", "kya suna": the recognizer's last words, for checking the ears. */
+    fun heardAsked(text: String): Boolean =
+        Regex("(?i)^\\W*(jarvis,?\\s+)?(what did you (just )?hear|what did i (just )?say|what was that you heard|repeat what i said|tumne kya suna|kya suna)\\W*$").containsMatchIn(text)
+
     /** "How did you do today?", "your report card", "how many questions did I ask": Jarvis's own day in numbers. */
     fun usageAsked(text: String): Boolean =
         Regex("(?i)^\\W*(jarvis,?\\s+)?(how did you do( today)?|how have you done( today)?|your (report card|score|stats)( today)?|how many (questions|things) did i ask( you)?( today)?|tumne aaj kaisa kiya)\\W*$").containsMatchIn(text)
