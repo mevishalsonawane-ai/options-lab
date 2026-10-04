@@ -3,12 +3,12 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
-    <!-- Only the text-to-speech engines, so Jarvis can answer aloud: no other app is visible. -->
+    <!-- Only the text-to-speech engines, so Jarvis can answer aloud, and the phone's speech service, only when Boss
+         switches on "Use Google's speech service" for Jarvis's ears: no other app is visible. -->
     <queries>
         <intent>
             <action android:name="android.intent.action.TTS_SERVICE" />
         </intent>
-        <!-- The phone's speech service, only when Boss switches on "Use Google's speech service" for Jarvis's ears. -->
         <intent>
             <action android:name="android.speech.RecognitionService" />
         </intent>

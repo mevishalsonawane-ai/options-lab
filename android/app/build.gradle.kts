@@ -255,7 +255,10 @@ abstract class CheckSandbox : DefaultTask() {
      * ears, when Boss lets him use Google's speech service) shows no other app: allowed.
      */
     private fun queriesOnlyTts(xml: String): Boolean = Regex("<queries\\b[^>]*>(.*?)</queries>", RegexOption.DOT_MATCHES_ALL).findAll(xml).all { q ->
-        q.groupValues[1].replace(Regex("<intent>\\s*<action\\s+android:name=\"(android\\.intent\\.action\\.TTS_SERVICE|android\\.speech\\.RecognitionService)\"\\s*/>\\s*</intent>"), "").isBlank()
+        // (Comments dropped; the merger may put both actions in one <intent>: each allowed action, then empty intents.)
+        q.groupValues[1].replace(Regex("<!--.*?-->", RegexOption.DOT_MATCHES_ALL), "")
+            .replace(Regex("<action\\s+android:name=\"(android\\.intent\\.action\\.TTS_SERVICE|android\\.speech\\.RecognitionService)\"\\s*/>"), "")
+            .replace(Regex("<intent>\\s*</intent>"), "").isBlank()
     } && !Regex("<queries\\b[^>]*/>").containsMatchIn(xml)
 
     @TaskAction
