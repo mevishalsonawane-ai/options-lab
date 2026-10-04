@@ -81,6 +81,14 @@ object Diag {
         append("Market open: ${Market.isOpen()} · Zerodha linked: ${Broker.linked} · logged in: ${Broker.loggedIn}\n")
         append("Static IP set: ${StaticIp.registered != null} · relay on: ${Relay.enabled} · relay connected: ${runCatching { Relay.connected }.getOrDefault(false)}\n")
         if (com.optionslab.app.BuildConfig.GOLD) append(gold())
+        // Jarvis's ears and his recent actions (Boss, 4 Oct: "is there a file of logs I can give you?").
+        if (com.optionslab.app.BuildConfig.JARVIS) {
+            append("\n-- Jarvis's ears --\n")
+            append(redact(runCatching { com.optionslab.app.ira.JarvisVoice.report(app) }.getOrElse { "could not read: ${it.javaClass.simpleName}\n" }))
+            append("AI model loaded: ${runCatching { com.optionslab.app.ira.IraModel.state.value.status }.getOrNull()}\n")
+            append("\n-- Jarvis's activity (today) --\n")
+            runCatching { com.optionslab.app.ira.IraActivity.lines() }.getOrDefault(emptyList()).takeLast(40).forEach { append(redact(it)).append('\n') }
+        }
         // Newest first: a long report pasted into a chat is cut at its end, and today's events are the ones that matter.
         append("\n-- Events (newest first) --\n")
         synchronized(this@Diag) { diary().toList() }.takeLast(400).asReversed().forEach { append(redact(it)).append('\n') }

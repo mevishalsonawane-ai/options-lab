@@ -420,6 +420,15 @@ internal fun VoiceSwitch() {
                 if (JarvisVoice.wanted) { JarvisVoice.stop(vctx); android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({ if (JarvisVoice.wanted) JarvisVoice.start(vctx) }, 700) }
             })
         }
+        // Boss, 4 Oct: one report to send - everything the app knows about Jarvis's ears (no words, keys or secrets).
+        val diagScope = rememberCoroutineScope()
+        androidx.compose.material3.TextButton({
+            diagScope.launch(kotlinx.coroutines.Dispatchers.Main) {
+                val text = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { com.optionslab.app.data.Diag.report() }
+                vctx.getSystemService(android.content.ClipboardManager::class.java)?.setPrimaryClip(android.content.ClipData.newPlainText("IraAlgo diagnostics", text))
+                com.optionslab.app.work.Alerts.success("Diagnostics copied (Jarvis's ears included): paste them in the chat. Keys, tokens, passwords and your words are never included.")
+            }
+        }, Modifier.fillMaxWidth()) { Text("Copy diagnostics (for help)") }
         Note("Off: Jarvis hears you on this phone only. On: he listens through the phone's speech service (the one your keyboard's voice typing uses) - faster and better at hearing \"Jarvis\", but your speech may be sent to Google to be understood.")
         var brief by remember { mutableStateOf(com.optionslab.app.ira.IraTools.brief) }
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {

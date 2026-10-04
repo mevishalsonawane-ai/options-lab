@@ -81,9 +81,20 @@ class JarvisVoice : Service() {
         /** The last turns of the ears, for the voice check: when, and what happened (never the words heard). */
         private val trace = java.util.ArrayDeque<String>()
         internal fun note(what: String) = synchronized(trace) {
-            trace.addLast("%tT %s".format(java.util.Locale.ENGLISH, System.currentTimeMillis(), what)); while (trace.size > 8) trace.removeFirst()
+            trace.addLast("%tT %s".format(java.util.Locale.ENGLISH, System.currentTimeMillis(), what)); while (trace.size > 60) trace.removeFirst()
         }
-        fun traceLines(): List<String> = synchronized(trace) { trace.toList() }
+        /** The last 8 turns (the voice check); [all] for the diagnostics report (the last 60). */
+        fun traceLines(all: Boolean = false): List<String> = synchronized(trace) { if (all) trace.toList() else trace.toList().takeLast(8) }
+
+        /** For the diagnostics report: Jarvis's ears in full - settings, state, the voice check and the last 60 turns (never words). */
+        fun report(context: Context?): String = buildString {
+            append("Listen for Jarvis: $wanted · running: ${instance?.get() != null} · started from the app on screen: ${instance?.get()?.visibleStart}\n")
+            append("Ears: ${if (googleSpeech) "Google's speech service" else "on the phone only"} · language: ${instance?.get()?.lang} · voice taught: ${VoiceGuard.enrolled} · muted: $muted\n")
+            append("On-device recognition available: ${context?.let { c -> runCatching { Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && SpeechRecognizer.isOnDeviceRecognitionAvailable(c) }.getOrNull() }} · " +
+                "any recognizer: ${context?.let { c -> runCatching { SpeechRecognizer.isRecognitionAvailable(c) }.getOrNull() }}\n")
+            append("Voice check: ${runCatching { diagnose(context) }.getOrElse { "could not run" }}\n")
+            append("Last turns:\n"); traceLines(all = true).forEach { append("  ").append(it).append('\n') }
+        }
 
         /** The speech recognizer's last failure (its code, when) - not silence (for the voice check). */
         @Volatile var lastError: Pair<Int, Long>? = null
