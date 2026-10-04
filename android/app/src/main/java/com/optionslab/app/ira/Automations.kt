@@ -27,6 +27,7 @@ internal object Automations {
         SUMMARY("15:35 wrap-up", "The day's P&L, scorecard and tomorrow's events, spoken.", "jarvis.auto.summary"),
         BACKUP("Backup reminder", "No backup in 7 days: a reminder in the morning check.", "jarvis.auto.backup"),
         SELFHEAL("Self-healing voice", "No listening for 3 minutes: the microphone is restarted.", "jarvis.auto.selfheal"),
+        ACT_PAPER("Act on my own ideas (paper)", "A news or pattern idea with 3/5 confidence or more: Jarvis takes it on the PAPER account by itself and tells you (never real money).", "jarvis.auto.actpaper"),
         SOLO_IDEAS("Solo's setups as ideas", "Solo switched off: when its setup appears, offered to you as a trade idea (you approve; on paper until proven).", "jarvis.auto.soloideas"),
         QUIET("Quiet hours", "Nothing said unasked from 22:00 to 07:00.", "jarvis.quiet"),
     }

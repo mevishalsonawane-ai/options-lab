@@ -142,3 +142,12 @@ class OutlookBriefTest {
         assertNull(Outlook.brief(Market.NIFTY, bars.take(3), 12.0))
     }
 }
+
+class ActAloneTest {
+    @Test fun itActsAloneOnlyOnPaperAndWhenSure() {
+        assertTrue(ActAlone.ok(switchOn = true, goesLive = false, stars = 3))
+        assertTrue(!ActAlone.ok(switchOn = true, goesLive = true, stars = 5), "never real money on its own")
+        assertTrue(!ActAlone.ok(switchOn = false, goesLive = false, stars = 5))
+        assertTrue(!ActAlone.ok(switchOn = true, goesLive = false, stars = 2))
+    }
+}

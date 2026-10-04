@@ -210,3 +210,13 @@ object ReportCard {
         return out
     }
 }
+
+/**
+ * When Jarvis may act on its own idea without asking (Boss, 4 Oct: "independent"): only with the switch on, only when
+ * the trade would go to the PAPER account (never Zerodha), and only with at least [MIN_STARS] of confidence. Pure.
+ */
+object ActAlone {
+    const val MIN_STARS = 3
+
+    fun ok(switchOn: Boolean, goesLive: Boolean, stars: Int): Boolean = switchOn && !goesLive && stars >= MIN_STARS
+}

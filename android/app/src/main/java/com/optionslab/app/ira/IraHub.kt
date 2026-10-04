@@ -606,6 +606,18 @@ object IraHub {
         val riskAsk = scope.async { runCatching { IraNewsTrades.riskLine(idea, snap?.price ?: 0.0) }.getOrNull() }
         val risk = kotlinx.coroutines.withTimeoutOrNull(3_000) { riskAsk.await() }?.let { " $it" } ?: ""
         val what = "buy 1 lot of the ${m.label} $side at the money, nearest expiry, with a 15% stop, a +${IraNewsTrades.TARGET_POINTS.toInt()} target and the profit lock"
+        // Independent (Boss's choice, 4 Oct): a sure enough idea that would go to the PAPER account is taken at once and
+        // told - never one that would reach Zerodha (that is always asked).
+        val goesLive = runCatching { IraNewsTrades.goesLive() }.getOrDefault(true)
+        if (com.optionslab.ira.ActAlone.ok(Automations.on(Automations.Auto.ACT_PAPER), goesLive, conf.stars) && snap != null) {
+            val done = runCatching { IraNewsTrades.place(idea, _state.value.snaps[m]?.price ?: snap.price, source) }.getOrElse { "That did not work: ${it.message ?: "an error"}." }
+            val said2 = "$text$ivLine ${conf.text()}$risk I took it myself on paper: $what. $done"
+            reply(said2)
+            IraActivity.add("Took on paper by myself: $what (${source.substringBefore(':')}).")
+            Automations.acted(Automations.Auto.ACT_PAPER, "Took a ${m.label} $side on paper (${conf.stars}/5).")
+            runCatching { JarvisPopup.show(c, title, said2) }
+            return
+        }
         val id = System.nanoTime()
         synchronized(actions) {
             actions[id] = what to suspend { IraNewsTrades.place(idea, _state.value.snaps[m]?.price ?: snap?.price ?: error("no ${m.label} price"), source) }
