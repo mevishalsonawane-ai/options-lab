@@ -576,7 +576,7 @@ class JarvisVoice : Service() {
             errorsInRow = 0; clientErrors = 0; readyAt = SystemClock.elapsedRealtime(); turnReadyAt = readyAt; turnHeardAny = false
             note(if (tap != null) "ready (shared audio)" else "ready")
         }
-        override fun onBeginningOfSpeech() {}
+        override fun onBeginningOfSpeech() { note("speech began") }
         override fun onRmsChanged(rmsdB: Float) { if (rmsdB > turnLoudest) turnLoudest = rmsdB }
         override fun onBufferReceived(buffer: ByteArray?) {}
         override fun onEndOfSpeech() {}
@@ -638,7 +638,8 @@ class JarvisVoice : Service() {
                 again(500); return
             }
             // The loudest sound says whether the microphone gave the recognizer anything (Boss, 4 Oct: error 7 each turn).
-            note("error $error" + if (turnLoudest > -100f) ", loudest %.0f dB".format(java.util.Locale.ENGLISH, turnLoudest) else ", no sound level")
+            note("error $error" + (if (turnLoudest > -100f) ", loudest %.0f dB".format(java.util.Locale.ENGLISH, turnLoudest) else ", no sound level") +
+                (turnPartial?.let { ", read ${it.trim().split(Regex("\\s+")).size} word(s) mid-turn" } ?: ", read nothing"))
             // Clear speech, no words found, three turns in a row: the language pack may be the trouble - the other English.
             if (error == SpeechRecognizer.ERROR_NO_MATCH && turnLoudest >= 6f) {
                 if (++loudNoMatch >= 3) {
