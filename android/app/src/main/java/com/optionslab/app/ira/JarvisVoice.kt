@@ -560,7 +560,15 @@ class JarvisVoice : Service() {
                 else -> {
                     // Silence and no-match are normal between sentences; a run of other errors backs off up to 5 s.
                     if (error != SpeechRecognizer.ERROR_NO_MATCH && error != SpeechRecognizer.ERROR_SPEECH_TIMEOUT) errorsInRow++
-                    again(minOf(1_000L, 200L shl minOf(errorsInRow, 3)))
+                    // A recognizer stuck failing (busy, client, server errors) beeped on every retry, once a second, until
+                    // listening was switched off and on (Boss, 4 Oct): after 3 failures in a row it is made anew - what the
+                    // switch did - and further failures wait longer, up to 30 s.
+                    if (errorsInRow == 3 && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                        runCatching { rec?.destroy() }
+                        rec = runCatching { SpeechRecognizer.createOnDeviceSpeechRecognizer(this@JarvisVoice).also { it.setRecognitionListener(this) } }.getOrNull()
+                        IraActivity.add("Restarted listening (the speech recognizer kept failing).")
+                    }
+                    again(if (errorsInRow == 0) 200L else minOf(30_000L, 250L shl minOf(errorsInRow, 7)))
                 }
             }
         }
