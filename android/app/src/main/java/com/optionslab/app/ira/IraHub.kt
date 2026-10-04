@@ -566,6 +566,14 @@ object IraHub {
                                      solo: Boolean = false) {
         if (GOLD_ONLY_TALK) return
         val m = idea.market
+        // Boss's own rules in what he asked me to remember ("I don't trade BankNifty", "no trades before 9:30"): the
+        // idea is neither offered nor taken (the news itself is still told).
+        runCatching { com.optionslab.ira.BossRules.blocks(IraTools.memory().map { it.text }, m, expiryToday(m),
+            LocalDateTime.now(IST).let { it.hour * 60 + it.minute }) }.getOrNull()?.let { why ->
+            if (source.startsWith("news")) reply("$text (No trade offered: $why.)")
+            IraActivity.add("Held back a ${m.label} idea: $why.")
+            return
+        }
         // Two losses in a row: a cooling-off, said once.
         // (The news itself is still told: only the trade is held back.)
         if (Automations.on(Automations.Auto.COOLOFF)) com.optionslab.ira.CoolOff.until(IraNewsTrades.closedTimes(), LocalDateTime.now(IST))?.let { until ->
@@ -1082,7 +1090,7 @@ object IraHub {
                 !asks -> null
                 // Notes are Boss's: not kept, read or cleared on a locked phone.
                 phoneLocked() -> "Unlock the phone for that, Boss."
-                keep != null -> { scope.launch(Dispatchers.IO) { runCatching { IraTools.remember(keep) } }; "Noted, Boss: \"$keep\". Ask \"what did I tell you?\" any time." }
+                keep != null -> { scope.launch(Dispatchers.IO) { runCatching { IraTools.remember(keep) } }; "Noted, Boss: \"$keep\"." + com.optionslab.ira.BossRules.saidBack(keep) + " Ask \"what did I tell you?\" any time." }
                 com.optionslab.ira.Memory.recallAsked(q) -> com.optionslab.ira.Memory.lines(IraTools.memory())
                 else -> { scope.launch(Dispatchers.IO) { IraTools.forgetMemory() }; "Done, Boss: I've forgotten what you asked me to remember." }
             }
