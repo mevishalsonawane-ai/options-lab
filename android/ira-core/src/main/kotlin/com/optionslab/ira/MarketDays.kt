@@ -41,6 +41,17 @@ object MarketDays {
 
     private val DATE = DateTimeFormatter.ofPattern("EEE d MMM", Locale.ENGLISH)
 
+    /** "When is the next expiry", "is today expiry", "expiry kab hai", "BankNifty expiry": which index (null: all three). */
+    fun expiryAsked(text: String): Boolean =
+        Regex("(?i)\\b(next|upcoming|this week'?s?|when is( the)?|is (today|tomorrow)( an?)?|today'?s?|kab hai|kab)\\b.{0,20}\\bexpiry\\b|\\bexpiry\\b.{0,12}\\b(kab|when|today|tomorrow|aaj|kal|date|day)\\b|^\\W*(nifty |banknifty |bank nifty |finnifty )?expiry\\W*$")
+            .containsMatchIn(text) && !Regex("(?i)\\b(my|positions?|square|close|buy|sell)\\b").containsMatchIn(text)
+
+    /** One line per index: its next expiry, "today" or "tomorrow" said plainly. */
+    fun expirySay(today: LocalDate, next: List<Pair<Market, LocalDate?>>): String {
+        val parts = next.mapNotNull { (m, d) -> d?.let { m.label + ": " + when (it) { today -> "today (${it.format(DATE)})"; today.plusDays(1) -> "tomorrow (${it.format(DATE)})"; else -> it.format(DATE) } } }
+        return if (parts.isEmpty()) "I have no expiry dates loaded yet, Boss (the contracts load in the morning)." else "Next expiry, Boss - " + parts.joinToString("; ") + "."
+    }
+
     /** [holiday]: the exchange holiday's name on that day, or null; [next]: the next listed holiday after [today]. */
     fun say(a: Asked, today: LocalDate, holiday: (LocalDate) -> String?, next: Pair<LocalDate, String>?,
             /** A session the exchange holds on a weekend (budget day), from the app's own calendar. */

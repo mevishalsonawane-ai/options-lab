@@ -43,3 +43,14 @@ class MarketDaysReviewTest {
         assertTrue(MarketDays.say(MarketDays.Asked.Day(sun), fri, { null }, null) { it == sun }.contains("special trading session"))
     }
 }
+
+class ExpiryAskedTest {
+    @Test fun asked() {
+        for (s in listOf("when is the next expiry", "is today expiry", "expiry kab hai", "banknifty expiry", "what is this week's expiry date"))
+            assertTrue(MarketDays.expiryAsked(s), s)
+        for (s in listOf("square off my positions before expiry", "what is expiry", "how does expiry work")) assertTrue(!MarketDays.expiryAsked(s), s)
+        val t = LocalDate.of(2026, 10, 5)
+        assertEquals("Next expiry, Boss - Nifty: tomorrow (Tue 6 Oct); BankNifty: Tue 27 Oct.",
+            MarketDays.expirySay(t, listOf(Market.NIFTY to t.plusDays(1), Market.BANKNIFTY to LocalDate.of(2026, 10, 27))))
+    }
+}

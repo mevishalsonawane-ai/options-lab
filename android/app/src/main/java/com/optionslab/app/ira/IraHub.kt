@@ -1211,6 +1211,15 @@ object IraHub {
             }
             return
         }
+        // "When is the next expiry?": the next expiry of each index (or the one named), from the loaded contracts.
+        if (parsed.command == null && parsed.order == null && runCatching { com.optionslab.ira.MarketDays.expiryAsked(q) }.getOrDefault(false)) {
+            val today = com.optionslab.app.data.Market.today()
+            val named = parsed.markets.filter { it in listOf(IraMarket.NIFTY, IraMarket.BANKNIFTY, IraMarket.FINNIFTY) }
+            val ms = named.ifEmpty { listOf(IraMarket.NIFTY, IraMarket.BANKNIFTY, IraMarket.FINNIFTY) }
+            val said = com.optionslab.ira.MarketDays.expirySay(today, ms.map { m -> m to runCatching { com.optionslab.app.data.Market.upcomingExpiries(m.name).firstOrNull() }.getOrNull() })
+            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
+            return
+        }
         // "Is tomorrow a holiday?", "is the market open on Friday?", "next holiday": a short answer from the exchange
         // calendar instead of the whole account status.
         if (parsed.command == null && parsed.order == null) runCatching {
