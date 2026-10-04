@@ -33,6 +33,9 @@ object Hinglish {
         Regex("^(?!.*\\b(?:alert|alarm|lagao|batana|order|lot|lots|buy|sell|ce|pe|call|put)\\b)(?:kya\\s+)?(.+?)\\s+(\\d{2,6})\\s+(?:(?:ko|tak)\\s+)?(?:cross|touch|hit)?\\s*(?:karega|karegi|kar\\s+payega|pahunchega|pahunchegi|jayega|jaega|jayegi|jaegi)(?:\\s+kya)?$") to "will $1 cross $2",
         Regex("\\btrade\\s+kar(?:u|un|na|ni)?\\s+(?:kya|chahiye)(?:\\s+kya)?\\b|\\bkya\\s+trade\\s+kar(?:u|un|na)\\b") to "should i trade now",
         Regex("\\b(?:market|bazaar|bazar)\\s+kaisa\\s+hai\\b") to "how is the market",
+        // "Kya karna chahiye": the trade check (never a direction); "kitne trade kiye": my trades today.
+        Regex("^(?:ab\\s+|aaj\\s+)?kya\\s+kar(?:na|u|un|e)\\s+(?:chahiye|hum)$") to "should i trade now",
+        Regex("\\b(?:trade|trades)\\s+(?:kiye|kie|liye|lie)\\b") to "trades did i take",
         Regex("^(.*?)\\s+kaisa\\s+(?:hai|chal\\s+raha\\s+hai)$") to "how is $1",
         Regex("^(.*?)\\s+kya\\s+(?:hai|hua)$") to "what is $1",
         Regex("\\bmera\\b|\\bmeri\\b|\\bmere\\b") to "my",

@@ -11,8 +11,20 @@ import java.util.Locale
 object Reminder {
     private val ASK = Regex("(?i)^\\s*(please |jarvis,? |hey jarvis,? )?(remind me|set (a|an) (reminder|alarm)|reminder)\\b")
 
+    /** "Mujhe 3 baje Nifty dekhna yaad dilana" -> "remind me at 3 Nifty dekhna" (Hindi puts it last). */
+    private val HINDI = Regex("(?i)\\s*\\b(?:yaad\\s+(?:dila(?:na|o|do|dena|diyo|dijiye)|karana|karwana))\\s*$")
+
+    private fun english(text: String): String {
+        if (!HINDI.containsMatchIn(text)) return text
+        val t = HINDI.replace(text, "").replace(Regex("(?i)^\\s*(?:jarvis,?\\s+)?(?:mujhe|muje)\\s+"), "")
+            .replace(Regex("(?i)\\b(\\d{1,2})(?:[:.](\\d{2}))?\\s+baje\\b")) { m -> "at " + m.groupValues[1] + (m.groupValues[2].takeIf { it.isNotEmpty() }?.let { ":$it" } ?: "") }
+            .replace(Regex("(?i)\\bkal\\b"), "tomorrow").replace(Regex("(?i)\\s+(?:ko|ka|ki|ke)\\s*$"), "")
+        return "remind me " + t.trim()
+    }
+
     /** A reminder asked for: what to say and when, or null (not a reminder, or no time still ahead). */
-    fun parse(text: String, now: LocalDateTime): Later.When? {
+    fun parse(said: String, now: LocalDateTime): Later.When? {
+        val text = english(said)
         if (!ASK.containsMatchIn(text)) return null
         val w = Later.split(ASK.replace(text, ""), now) ?: return null
         val what = w.rest.replace(Regex("(?i)^\\s*(to|that|about|of)\\b"), "").replace(Regex("\\s+"), " ").trim().trimEnd('.', '?', '!').take(160)
@@ -20,11 +32,11 @@ object Reminder {
     }
 
     /** Asked for a reminder with no usable time: what to say. */
-    fun asked(text: String): Boolean = ASK.containsMatchIn(text)
+    fun asked(text: String): Boolean = ASK.containsMatchIn(english(text))
 
     fun said(what: String) = "Boss, your reminder: $what."
 
-    private val TIME = Regex("(?i)^ (what s|whats|what is) the time( now)? $|^ (what time is it|time please|current time|time now|tell me the time)( now)? $")
+    private val TIME = Regex("(?i)^ (what s|whats|what is) the time( now)? $|^ (what time is it|time please|current time|time now|tell me the time|what is time)( now)? $|^ (time kya (hua|hai)|kya time (hua|hai)|kitne baje (hain|hai)|kitna baja hai|samay kya hai) $")
     private val DATE = Regex("(?i)^ (what s|whats|what is) (the |today s )?date( today)? $|^ (what day is (it|today)|which day is (it|today)|today s date|date today) $")
 
     /** "What time is it?" / "What's the date?" answered from the phone's clock (India time), or null. */
@@ -37,7 +49,7 @@ object Reminder {
         }
     }
 
-    private val TOMORROW = Regex("(?i)\\b(plan|outlook|setup|set up|ready|prepare|expect|look(s|ing)? like)\\b.*\\b(tomorrow|tmrw|kal)\\b|\\b(tomorrow|tmrw)( s|'s)? (plan|outlook|setup)\\b|^\\s*(what about|how about) tomorrow\\s*\\??$|\\b(how|what) (does|will) tomorrow look\\b")
+    private val TOMORROW = Regex("(?i)\\b(plan|outlook|setup|set up|ready|prepare|expect|look(s|ing)? like)\\b.*\\b(tomorrow|tmrw|kal)\\b|\\b(tomorrow|tmrw)( s|'s)? (plan|outlook|setup)\\b|^\\s*(what about|how about) tomorrow\\s*\\??$|\\b(how|what) (does|will) tomorrow look\\b|\\b(tomorrow|kal)\\b.{0,12}\\bplan\\b")
 
     /** "What's the plan for tomorrow?" */
     fun tomorrow(text: String): Boolean = TOMORROW.containsMatchIn(text)

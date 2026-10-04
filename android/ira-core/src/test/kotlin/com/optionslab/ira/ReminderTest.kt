@@ -31,3 +31,26 @@ class ReminderTest {
         assertTrue(!Reminder.tomorrow("stop all strategies tomorrow at 9"))
     }
 }
+
+class HinglishMoreTest {
+    private val now = LocalDateTime.of(2026, 10, 5, 10, 0)
+
+    @Test fun moneyWithoutMyIsTheAccount() {
+        for (s in listOf("how much did I lose today", "what did i lose on today", "aaj kitna kamaya", "kitne trade kiye aaj", "how many trades today"))
+            assertTrue(Topic.ACCOUNT in Ask.parse(s).topics, s)
+        // The market still is the market.
+        assertTrue(Topic.ACCOUNT !in Ask.parse("how is nifty doing today").topics)
+    }
+
+    @Test fun hindiReminderClockPlanHush() {
+        val r = assertNotNull(Reminder.parse("mujhe 3 baje nifty check karna yaad dilana", now))
+        assertEquals(LocalDateTime.of(2026, 10, 5, 15, 0), r.at)
+        assertEquals("nifty check karna", r.rest)
+        assertTrue(Reminder.asked("mujhe kal 9 baje login karna yaad dilana"))
+        assertEquals(LocalDateTime.of(2026, 10, 6, 9, 0), Reminder.parse("mujhe kal 9 baje login karna yaad dilana", now)!!.at)
+        assertNotNull(Reminder.clock("time kya hua", now))
+        assertTrue(Reminder.tomorrow("kal ka plan kya hai"))
+        assertTrue(Wake.hush("jarvis chup ho jao"))
+        assertEquals("should i trade now", Hinglish.normalize("kya karna chahiye"))
+    }
+}
