@@ -879,6 +879,25 @@ private fun SoloCard() {
 private fun AutomationsCard() {
     val p = LocalPalette.current
     LedgerCard(title = "What Jarvis does by itself") {
+        // Boss, 4 Oct: one switch for the AI's trades going to Zerodha. Off: on paper even in Live. On (fingerprint):
+        // in Live, once their record is proven, each trade still asks him first and needs the fingerprint.
+        val act = androidx.compose.ui.platform.LocalContext.current as? androidx.fragment.app.FragmentActivity
+        var aiLive by remember { mutableStateOf(!com.optionslab.app.ira.IraNewsTrades.paperFirst) }
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 8.dp)) {
+            Column(Modifier.weight(1f)) {
+                Text("AI trades go live", style = Type.label.copy(color = if (aiLive) p.oxblood else p.ink, fontSize = 14.sp))
+                Text(if (aiLive) "On: in Live, Jarvis's and Solo's trades go to Zerodha once their record is proven - each one asked first, approved with your fingerprint."
+                    else "Off: Jarvis's and Solo's trades go on PAPER, even when the app is in Live.",
+                    style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp))
+            }
+            androidx.compose.material3.Switch(checked = aiLive, onCheckedChange = { v ->
+                if (!v) { aiLive = false; com.optionslab.app.ira.IraNewsTrades.paperFirst = true }
+                else if (act == null || !com.optionslab.app.security.BiometricGate.fingerprintOn(act))
+                    com.optionslab.app.work.Alerts.error("AI trades go live is switched on with your fingerprint: set one up on the phone first.")
+                else com.optionslab.app.security.BiometricGate.verify(act, "AI trades go live", "Jarvis's and Solo's trades may go to Zerodha, each after your approval") { ok ->
+                    if (ok) { aiLive = true; com.optionslab.app.ira.IraNewsTrades.paperFirst = false } }
+            })
+        }
         Note("Each runs on its own while IraAlgo watches the market. Nothing here opens a trade without asking you, except on paper (Solo, and Jarvis's own ideas when that switch is on); the guard and the trailing stop only add or raise stops.")
         com.optionslab.app.ira.Automations.Auto.entries.forEach { a ->
             var on by remember { mutableStateOf(com.optionslab.app.ira.Automations.on(a)) }

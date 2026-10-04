@@ -59,9 +59,10 @@ internal object IraNewsTrades {
     // ---- the owner's rules for Jarvis's own trades --------------------------------------------------------------------
 
     /**
-     * Boss's "keep your trades on paper" (even in Live). Off by default (Boss, 4 Oct: "everything should also work on
-     * real, with my approval first"): in Live, once their paper record is proven ([JarvisTrades.proven]), Jarvis's
-     * trades go to Zerodha - each only after his yes with the fingerprint. (A new key: the old default was on.)
+     * The "AI trades go live" switch, inverted (Boss, 4 Oct: "keep a button to make AI trades live; even on the live
+     * market they place paper trades"): on (paper) until Boss switches live on with his fingerprint. With it off, in
+     * Live, once their record is proven ([JarvisTrades.proven]), Jarvis's and Solo's trades go to Zerodha - each only
+     * after his yes with the fingerprint.
      */
     var paperFirst: Boolean
         get() = runCatching {
@@ -69,7 +70,7 @@ internal object IraNewsTrades {
             // A choice Boss made before ("keep your trades on paper" or "let them go live") is kept; only the default changed.
             val old = "jarvis.trades.paper"
             val oldSet = p.getBoolean(old, true) == p.getBoolean(old, false)
-            p.getBoolean("jarvis.trades.paper.v2", if (oldSet) p.getBoolean(old, true) else false)
+            p.getBoolean("jarvis.trades.paper.v2", if (oldSet) p.getBoolean(old, true) else true)
         }.getOrDefault(true)
         set(v) { runCatching { com.optionslab.app.security.SecurePrefs.put("jarvis.trades.paper.v2", v) } }
 

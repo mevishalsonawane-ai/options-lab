@@ -1010,6 +1010,12 @@ object IraHub {
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, GOLD_TALK_ONLY)).takeLast(MAX_MESSAGES)) }
             return
         }
+        // A request in steps ("stop all strategies, then kill switch on and switch to paper"): one plan, one Confirm, done
+        // in order through the same gates as each step alone. Never with a time (those go below) and never an order.
+        if (com.optionslab.app.BuildConfig.JARVIS && !runCatching { com.optionslab.ira.Later.mentionsTime(q) }.getOrDefault(true)) {
+            val steps = runCatching { com.optionslab.ira.Plan.steps(q) { s -> Ask.parse(s).let { it.command != null && it.order == null && it.command?.kind != com.optionslab.ira.Command.Kind.PRACTICE } } }.getOrNull()
+            if (steps != null) { planAsked(q, steps); return }
+        }
         // A command for a later time ("start all the arms tomorrow at 9am"): set only once confirmed, run by an alarm then.
         // A request that names a time is never done now: set for that time (allowed kinds, confirmed), or refused - an
         // order is never placed for later, and a time already passed or missing is asked again (review, 3 Oct).
@@ -1531,6 +1537,35 @@ object IraHub {
                 // The emergency exit asks for the fingerprint on the screen (or Boss's own voice, aloud).
                 pend(what, act, "Tap Confirm to ${what}.", exit = c.kind == com.optionslab.ira.Command.Kind.EXIT_ALL)
             } else reply(IraActions.run(what, act))
+        }
+    }
+
+    /**
+     * A plan of steps: each prepared now (one that cannot be done stops the plan before anything runs), shown numbered,
+     * confirmed once, then done in order - each prepared again at its turn, as things change - stopping at the first
+     * that fails. An emergency exit among them makes the whole plan ask for the fingerprint.
+     */
+    private fun planAsked(q: String, steps: List<String>) {
+        _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+        scope.launch {
+            val cmds = steps.map { Ask.parse(it).command!! }
+            for ((i, c) in cmds.withIndex()) {
+                val (what, act) = runCatching { IraActions.prepare(c) }.getOrElse { ("I could not do that: ${it.message}") to null }
+                if (act == null) { reply("Step ${i + 1} (\"${steps[i]}\") cannot be done: $what Nothing in the plan was done."); return@launch }
+            }
+            val plan = com.optionslab.ira.Plan.say(steps)
+            pend("this plan: $plan", suspend {
+                val done = ArrayList<Pair<String, String>>()
+                for ((i, c) in cmds.withIndex()) {
+                    val (what, act) = runCatching { IraActions.prepare(c) }.getOrElse { ("I could not do that: ${it.message}") to null }
+                    val r = if (act == null) "Not done: $what" else IraActions.run(what, act)
+                    done += steps[i] to r
+                    if (act == null || com.optionslab.ira.Plan.failed(r)) break
+                }
+                com.optionslab.ira.Plan.report(done, steps.size)
+            }, "My plan, Boss: $plan. Tap Confirm and I'll do them in order, stopping if one fails.",
+                exit = cmds.any { it.kind == com.optionslab.ira.Command.Kind.EXIT_ALL })
+            IraActivity.add("Planned ${steps.size} steps: $plan")
         }
     }
 

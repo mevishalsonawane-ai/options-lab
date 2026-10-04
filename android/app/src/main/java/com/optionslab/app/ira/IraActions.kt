@@ -290,8 +290,9 @@ internal object IraActions {
             Command.Kind.JTRADES_PAPER -> Commands.describe(c) to suspend { IraNewsTrades.paperFirst = true; "My suggested trades stay on paper now, Boss." }
             Command.Kind.JTRADES_LIVE -> {
                 val why = com.optionslab.ira.JarvisTrades.proven(IraNewsTrades.closedRecord())
+                // Never by voice (no backdoor to real money): Boss's own switch, with his fingerprint.
                 if (why != null) "$why I'll tell you when they have earned it." to null
-                else Commands.describe(c) to suspend { IraNewsTrades.paperFirst = false; "My suggested trades now follow the app's mode: real Zerodha orders in Live, after your yes each time." }
+                else "Real money is yours to switch on, Boss: turn on \"AI trades go live\" in Jarvis settings, What Jarvis does by itself, with your fingerprint." to null
             }
             Command.Kind.JTRADES_LIMIT -> {
                 val v = c.level?.takeIf { it >= 500 } ?: return "Tell me the limit in rupees, at least 500." to null

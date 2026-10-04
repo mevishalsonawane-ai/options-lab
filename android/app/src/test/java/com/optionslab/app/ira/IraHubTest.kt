@@ -483,8 +483,8 @@ class IraHubTest : RobolectricTest() {
     }
 
     @Test fun jarvisTradesStayOnPaperUntilProvenAndKeepTheirOwnLimit() = runBlocking {
-        // Boss, 4 Oct: in Live they follow the app (asked each time) - but only once proven; with no record, never live.
-        assertTrue(!IraNewsTrades.paperFirst)
+        // Boss, 4 Oct: paper until he switches "AI trades go live" on; even then only once proven, asked each time.
+        assertTrue(IraNewsTrades.paperFirst)
         assertTrue(!IraNewsTrades.goesLive()); assertTrue(!IraNewsTrades.goesLive(solo = true))
         assertTrue(IraSolo.provenWhy()!!.startsWith("Solo's trades stay on paper until 20"))
         IraHub.ask("Jarvis, let your trades go live")
