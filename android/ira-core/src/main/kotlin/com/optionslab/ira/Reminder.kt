@@ -61,7 +61,7 @@ object Reminder {
 
     /** "Which AI model are you using?", "kaunsa model hai": answered from the app's own choice. */
     fun modelAsked(text: String): Boolean =
-        Regex("(?i)\\b(which|what) (ai |language )?model (are you (using|on|running)|do you use|is (this|it|running|loaded))\\b|\\b(kaunsa|konsa|kon sa|kaun sa) model\\b|\\byour (ai )?model\\b").containsMatchIn(text)
+        Regex("(?i)\\b(which|what) (ai |language )?model (are you (using|on|running)|do you use|is (this|it|running|loaded))\\b|\\b(kaunsa|konsa|kon sa|kaun sa) model\\b|^\\W*(jarvis,?\\s+)?(what is |what s |what's |whats )?your (ai )?model\\W*$").containsMatchIn(text)
 
     private val TOMORROW = Regex("(?i)\\b(plan|outlook|setup|set up|ready|prepare|expect|look(s|ing)? like)\\b.*\\b(tomorrow|tmrw|kal)\\b|\\b(tomorrow|tmrw)( s|'s)? (plan|outlook|setup)\\b|^\\s*(what about|how about) tomorrow\\s*\\??$|\\b(how|what) (does|will) tomorrow look\\b|\\b(tomorrow|kal)\\b.{0,12}\\bplan\\b")
 

@@ -88,3 +88,10 @@ class ModelAskedTest {
         assertTrue(!Reminder.modelAsked("what is the black scholes model"))
     }
 }
+
+class ModelAskedNarrowTest {
+    @Test fun narrow() {
+        assertTrue(Reminder.modelAsked("what's your model?"))
+        assertTrue(!Reminder.modelAsked("what does your model say about nifty"))
+    }
+}

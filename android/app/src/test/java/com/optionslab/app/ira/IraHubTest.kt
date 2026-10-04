@@ -153,10 +153,13 @@ class IraHubTest : RobolectricTest() {
         assertTrue(last(), last().contains("holiday", ignoreCase = true))
         IraHub.ask("how far is nifty from 30000")
         assertTrue(last(), last().contains("points") && last().contains("below 30,000.00"))
-        IraHub.ask("remind me to check nifty")
-        assertTrue(last(), last().startsWith("Boss, tell me when"))
-        IraHub.ask("cancel my reminders")
-        assertTrue(last(), last() == "You have no reminders set, Boss." || last().startsWith("I could not reach the reminders"))
+        // Reminders are Jarvis's own (CI runs these tests with Jarvis off as well).
+        if (com.optionslab.app.BuildConfig.JARVIS) {
+            IraHub.ask("remind me to check nifty")
+            assertTrue(last(), last().startsWith("Boss, tell me when"))
+            IraHub.ask("cancel my reminders")
+            assertTrue(last(), last() == "You have no reminders set, Boss." || last().startsWith("I could not reach the reminders"))
+        }
         // None of them placed or prepared anything.
         assertTrue(IraHub.state.value.messages.none { it.order != null || it.action != null })
     }
