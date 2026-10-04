@@ -18,14 +18,15 @@ object Wake {
     }
 
     /** How the recognizer tends to write "Jarvis". */
-    private val WORDS = listOf("jarvis", "jarvas", "jervis", "jarviss", "jar vis")
+    // With the ways an Indian-English recognizer often writes the name (Boss, 4 Oct: not heard by name).
+    private val WORDS = listOf("jarvis", "jarvas", "jervis", "jarviss", "jar vis", "jarvish", "jarwis", "jaarvis", "jarviz", "jarbis")
     private val FILLER = Regex("^(hey|hi|ok|okay|hello|so|and|please)\\b\\s*")
     private val STOP = Regex("^(stop listening|go to sleep|sleep|shut down|turn off|switch off)$")
     /** Boss's "be quiet" (3 Oct: "Jarvis stop" means stop talking, not stop my orders). */
     private val HUSH = Regex("^(just |please |now )?(stop|stop it|stop now|stop that|stop talking|stop speaking|enough|that s enough|thats enough|quiet|be quiet|shut up|silence|hush|chup|bas|never ?mind|forget it|cancel that)( please| now| jarvis)?$")
 
     /** Is [text] only "stop talking" (said to Jarvis, with or without its name)? */
-    fun hush(text: String): Boolean = HUSH.matches(text.lowercase().replace(Regex("[^a-z ]"), " ").replace(Regex("\\b(hey |ok |okay )?(jarvis|jarvas|jervis|jarviss)\\b"), " ")
+    fun hush(text: String): Boolean = HUSH.matches(text.lowercase().replace(Regex("[^a-z ]"), " ").replace(Regex("\\b(hey |ok |okay )?(jarvis|jarvas|jervis|jarviss|jarvish|jarwis|jaarvis|jarviz|jarbis)\\b"), " ")
         .replace(Regex("\\s+"), " ").trim())
 
     /** [awake]: the wake word was said alone a moment ago, so this sentence is the question. */

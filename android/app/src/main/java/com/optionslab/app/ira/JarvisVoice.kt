@@ -78,6 +78,13 @@ class JarvisVoice : Service() {
          * "Why can't I hear you?": everything that stops the voice, said plainly (muted, quiet hours, typed replies not
          * spoken, no offline voice, the phone's media volume at zero), or that all looks right.
          */
+        /** The last turns of the ears, for the voice check: when, and what happened (never the words heard). */
+        private val trace = java.util.ArrayDeque<String>()
+        internal fun note(what: String) = synchronized(trace) {
+            trace.addLast("%tT %s".format(java.util.Locale.ENGLISH, System.currentTimeMillis(), what)); while (trace.size > 8) trace.removeFirst()
+        }
+        fun traceLines(): List<String> = synchronized(trace) { trace.toList() }
+
         /** The speech recognizer's last failure (its code, when) - not silence (for the voice check). */
         @Volatile var lastError: Pair<Int, Long>? = null
 
@@ -104,6 +111,8 @@ class JarvisVoice : Service() {
             lastError?.takeIf { SystemClock.elapsedRealtime() - it.second < 10 * 60_000 }?.let { (e, at) ->
                 out += "My ears failed %d seconds ago: %s.".format(java.util.Locale.ENGLISH, (SystemClock.elapsedRealtime() - at) / 1000, errorName(e))
             }
+            v?.let { s -> out += "Ears: listening in ${s.lang}, " + (if (s.tap != null || (VoiceGuard.enrolled && !s.tapFailed)) "my own microphone shared (for your voice check)" else "the phone's own microphone") + "." }
+            traceLines().takeIf { it.isNotEmpty() }?.let { out += "Last turns: " + it.joinToString("; ") + "." }
             if (muted) out += "I'm muted: say \"Jarvis, unmute\" or switch Mute off in Settings, Voice and AI model."
             if (quietNow()) out += "It's quiet hours (22:00 to 07:00): I only speak when you ask."
             if (!JarvisSpeaker.speakTyped) out += "Speaking typed replies is off (Settings, Voice and AI model)."
@@ -337,7 +346,7 @@ class JarvisVoice : Service() {
             main.postDelayed(this, 5_000)
         }
     }
-    private val WAKE = Regex("\\bj[ae]rv[ia]s+\\b|\\bjar vis\\b", RegexOption.IGNORE_CASE)
+    private val WAKE = Regex("\\bj[ae]rv[ia]s+\\b|\\bjar vis\\b|\\b(jarvish|jarwis|jaarvis|jarviz|jarbis)\\b", RegexOption.IGNORE_CASE)
     @Volatile private var held = false
     /** When the recognizer last opened the microphone (for the self-healing check). */
     @Volatile private var readyAt = SystemClock.elapsedRealtime()
@@ -355,6 +364,11 @@ class JarvisVoice : Service() {
     private var lang = "en-IN"
     private var triedOtherLanguage = false
     private var errorsInRow = 0
+    /**
+     * The longest wait between failed turns. It was 30 s (against the beep, 4 Oct) - which left Jarvis deaf most of the
+     * time on a phone whose speech service keeps failing (Boss, 4 Oct: "yesterday morning it was working fine"): 5 s.
+     */
+    private val MAX_BACKOFF_MS = 5_000L
     /** "The speech service refused the request" in a row: the recognizer is made anew at once each time. */
     private var clientErrors = 0
 
@@ -533,7 +547,7 @@ class JarvisVoice : Service() {
     private fun boss(): Boolean = VoiceGuard.isBoss(lastHeard).also { lastHeard = null }
 
     private val listener = object : RecognitionListener {
-        override fun onReadyForSpeech(params: Bundle?) { errorsInRow = 0; clientErrors = 0; readyAt = SystemClock.elapsedRealtime() }
+        override fun onReadyForSpeech(params: Bundle?) { errorsInRow = 0; clientErrors = 0; readyAt = SystemClock.elapsedRealtime(); note("ready") }
         override fun onBeginningOfSpeech() {}
         override fun onRmsChanged(rmsdB: Float) {}
         override fun onBufferReceived(buffer: ByteArray?) {}
@@ -558,6 +572,8 @@ class JarvisVoice : Service() {
         override fun onResults(results: Bundle?) {
             main.removeCallbacks(finish)
             listening = false
+            note("heard " + (results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()?.let { t ->
+                if (WAKE.containsMatchIn(t)) "the name" else "${t.split(Regex("\\s+")).size} words, no name" } ?: "nothing"))
             results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()?.let { heardText = com.optionslab.ira.Secrets.redact(it) }
             errorsInRow = 0
             endTap()
@@ -571,8 +587,17 @@ class JarvisVoice : Service() {
             endTap(); lastHeard = null
             if (stopped) return
             // The recognizer would not take our audio: back to its own microphone (voice can ask, not trade).
-            if (shared && (error == SpeechRecognizer.ERROR_CLIENT || error == SpeechRecognizer.ERROR_AUDIO ||
-                    (Build.VERSION.SDK_INT >= 33 && error == SpeechRecognizer.ERROR_CANNOT_CHECK_SUPPORT))) { tapFailed = true; again(500); return }
+            // (11, the speech service disconnecting, too: some phones' recognizers crash on our shared audio - Boss, 4 Oct.)
+            if (shared && (error == SpeechRecognizer.ERROR_CLIENT || error == SpeechRecognizer.ERROR_AUDIO || error == 11 ||
+                    (Build.VERSION.SDK_INT >= 33 && error == SpeechRecognizer.ERROR_CANNOT_CHECK_SUPPORT))) {
+                tapFailed = true; note("error $error with shared audio: back to the phone's own microphone")
+                if (error == 11 || error == SpeechRecognizer.ERROR_CLIENT) {
+                    runCatching { rec?.destroy() }
+                    rec = runCatching { SpeechRecognizer.createOnDeviceSpeechRecognizer(this@JarvisVoice).also { it.setRecognitionListener(this) } }.getOrNull()
+                }
+                again(500); return
+            }
+            note("error $error")
             when (error) {
                 SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> giveUp("Jarvis lost the microphone permission.")
                 // Boss, 4 Oct ("why can't you hear me" -> "the speech service refused the request"): the on-device
@@ -585,7 +610,7 @@ class JarvisVoice : Service() {
                     rec = runCatching { SpeechRecognizer.createOnDeviceSpeechRecognizer(this@JarvisVoice).also { it.setRecognitionListener(this) } }.getOrNull()
                     pickLanguage()
                     IraActivity.add("Reconnected listening (the phone's speech service had restarted).")
-                    again(minOf(30_000L, 1_000L shl minOf(errorsInRow - 1, 5)))
+                    again(minOf(MAX_BACKOFF_MS, 1_000L shl minOf(errorsInRow - 1, 5)))
                 }
                 SpeechRecognizer.ERROR_CLIENT -> {
                     clientErrors++; errorsInRow++; lastError = error to SystemClock.elapsedRealtime()
@@ -602,7 +627,7 @@ class JarvisVoice : Service() {
                     runCatching { rec?.destroy() }
                     rec = runCatching { SpeechRecognizer.createOnDeviceSpeechRecognizer(this@JarvisVoice).also { it.setRecognitionListener(this) } }.getOrNull()
                     if (clientErrors == 1) IraActivity.add("Restarted listening (the speech service refused a request).")
-                    again(if (clientErrors <= 3) 1_000L else minOf(30_000L, 1_000L shl minOf(clientErrors - 3, 5)))
+                    again(if (clientErrors <= 3) 1_000L else minOf(MAX_BACKOFF_MS, 1_000L shl minOf(clientErrors - 3, 5)))
                 }
                 SpeechRecognizer.ERROR_LANGUAGE_NOT_SUPPORTED, SpeechRecognizer.ERROR_LANGUAGE_UNAVAILABLE ->
                     if (!triedOtherLanguage) { triedOtherLanguage = true; lang = "en-US"; again() }
@@ -618,7 +643,7 @@ class JarvisVoice : Service() {
                         rec = runCatching { SpeechRecognizer.createOnDeviceSpeechRecognizer(this@JarvisVoice).also { it.setRecognitionListener(this) } }.getOrNull()
                         IraActivity.add("Restarted listening (the speech recognizer kept failing).")
                     }
-                    again(if (errorsInRow == 0) 200L else minOf(30_000L, 250L shl minOf(errorsInRow, 7)))
+                    again(if (errorsInRow == 0) 200L else minOf(MAX_BACKOFF_MS, 250L shl minOf(errorsInRow, 7)))
                 }
             }
         }
