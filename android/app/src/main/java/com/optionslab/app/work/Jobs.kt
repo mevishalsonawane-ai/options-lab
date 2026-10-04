@@ -413,6 +413,8 @@ object Tasks {
         runCatching { com.optionslab.app.ira.IraCoach.loginWatch() }
         // Jarvis: Boss's usual market question at its usual hour, answered unasked (once a day each).
         runCatching { com.optionslab.app.ira.IraCoach.usualWatch() }
+        // Jarvis: open Zerodha MIS positions named at 15:10, before Zerodha's own square-off (words only).
+        runCatching { com.optionslab.app.ira.IraCoach.misWatch() }
         // Jarvis: the morning plan - the paper arms fitted to the market's regime.
         runCatching { com.optionslab.app.ira.IraCoach.dayPlanWatch() }
         // Jarvis: Boss's goals over days - close, broken or met is told once a day.

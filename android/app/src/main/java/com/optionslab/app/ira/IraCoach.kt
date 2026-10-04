@@ -230,6 +230,20 @@ internal object IraCoach {
         IraHub.note(text); JarvisVoice.announce(com.optionslab.ira.Wake.spoken(text, 3)); Automations.acted(Automations.Auto.USUAL, question)
     }
 
+    /** 15:10-15:18 on a trading day, once: open Zerodha MIS positions named before the broker's own square-off. */
+    suspend fun misWatch() {
+        if (!com.optionslab.app.BuildConfig.JARVIS || com.optionslab.app.BuildConfig.GOLD) return
+        val m = com.optionslab.app.data.Market
+        if (!m.isTradingDay(m.today()) || !com.optionslab.ira.MisNudge.due(m.minuteNow()) || !Broker.loggedIn) return
+        val key = "jarvis.mis.told"
+        if (com.optionslab.app.security.SecurePrefs.getString(key) == m.today().toString()) return
+        val open = kotlinx.coroutines.withTimeoutOrNull(15_000) { runCatching { Broker.positionBook().net }.getOrNull() } ?: return
+        com.optionslab.app.security.SecurePrefs.put(key, m.today().toString())
+        val mis = open.filter { it.product.equals("MIS", true) && it.qty != 0 }.map { it.symbol to it.qty }
+        val text = com.optionslab.ira.MisNudge.say(mis) ?: return
+        IraHub.note(text); JarvisVoice.announce(com.optionslab.ira.MisNudge.say(mis, named = false)!!); IraActivity.add(text); Automations.acted(Automations.Auto.MIS, text)
+    }
+
     /** 09:05-09:14 on a trading day, once: Zerodha not logged in while Live mode or a Zerodha arm needs it. */
     suspend fun loginWatch() {
         if (!com.optionslab.app.BuildConfig.JARVIS || com.optionslab.app.BuildConfig.GOLD) return

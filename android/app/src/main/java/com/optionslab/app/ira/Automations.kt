@@ -20,6 +20,7 @@ internal object Automations {
         OVERTRADE("Overtrading warning", "More than 3 of your buys in 30 minutes: a word to slow down.", "jarvis.auto.overtrade"),
         TARGET("Day target", "Your day's target reached: told to protect the gains.", "jarvis.auto.target"),
         POSNEWS("News on your positions", "A headline on an index you hold: good or bad for your side.", "jarvis.auto.posnews"),
+        MIS("Intraday square-off heads-up", "15:10: open intraday (MIS) Zerodha positions named before Zerodha squares them off itself (words only).", "jarvis.auto.mis"),
         RELAY("Relay server watch", "08:30-15:30: the static-IP relay server not answering twice in a row is told at once, and when it is back.", "jarvis.auto.relay"),
         FEED("Live prices stopped", "No prices for 2 minutes in market hours: told at once.", "jarvis.auto.feed"),
         EXPIRY("Expiry heads-up", "14:55 on expiry day: what the 15:05 square-off will close.", "jarvis.auto.expiry"),
@@ -58,7 +59,7 @@ internal object Automations {
     }
 
     /** Always on, no switch: they only warn, cool off or heal (live prices stopped, expiry heads-up, cool-off, backup, voice). */
-    val ALWAYS = setOf(Auto.RELAY, Auto.FEED, Auto.EXPIRY, Auto.COOLOFF, Auto.BACKUP, Auto.SELFHEAL)
+    val ALWAYS = setOf(Auto.MIS, Auto.RELAY, Auto.FEED, Auto.EXPIRY, Auto.COOLOFF, Auto.BACKUP, Auto.SELFHEAL)
 
     fun groupOf(a: Auto): Group? = Group.entries.firstOrNull { a in it.members }
 
