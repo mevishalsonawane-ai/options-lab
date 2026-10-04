@@ -32,6 +32,16 @@ class Learner(private val cfg: Cfg = Cfg()) {
     companion object {
         const val DIM = 12
         const val FIRST = 30          // the first minute it reads (the opening half hour is only learned from)
+
+        /** The views Solo learns side by side (minutes ahead); it trades with the one whose own record is best (Boss: "tune itself"). */
+        val HORIZONS = listOf(15, 30, 60)
+
+        /**
+         * Which view to follow: among those that would trade now ([options]: each view's hit rate and its decision, null
+         * for none), the one with the best record; null when none would.
+         */
+        fun pick(options: List<Pair<Double, Boolean?>>): Int? =
+            options.withIndex().filter { it.value.second != null }.maxByOrNull { it.value.first }?.index
         /** Bands of sureness, as |p - 0.5| from: 0.10 (60%), 0.15 (65%), 0.20 (70% and more). */
         val BANDS = doubleArrayOf(0.10, 0.15, 0.20)
         /** A band speaks for itself after this many guesses (faded). */

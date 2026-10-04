@@ -70,4 +70,10 @@ class LearnerTest {
                 .format(r.net, r.hitRate * 100, r.scored))
         }
     }
+
+    @Test fun itFollowsTheViewWithTheBestRecord() {
+        assertEquals(1, Learner.pick(listOf(0.56 to true, 0.61 to false, 0.70 to null)))
+        assertNull(Learner.pick(listOf(0.6 to null, 0.7 to null)))
+        assertEquals(listOf(15, 30, 60), Learner.HORIZONS)
+    }
 }

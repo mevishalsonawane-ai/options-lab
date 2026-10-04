@@ -151,13 +151,20 @@ internal object IraSolo {
     /** Why a trade came from the learning brain (its exit is the brain's: [Learner.Cfg.horizon] minutes at most). */
     private const val LEARNED = "Learned:"
 
-    private class Brain(val l: com.optionslab.ira.Learner) {
+    /** One view: a learner looking [h] minutes ahead, with its guesses waiting for their answers. */
+    private class Mind(val h: Int, val l: com.optionslab.ira.Learner) {
+        val pending = ArrayDeque<Triple<Int, DoubleArray, Double>>()
+        var lastP: Double? = null
+    }
+
+    /** A market's brain: its views side by side (Boss: "tune itself" - it follows whichever has the best record). */
+    private class Brain(val minds: List<Mind>) {
         var day: LocalDate? = null
         var done = 0
-        val pending = ArrayDeque<Triple<Int, DoubleArray, Double>>()
         var prevClose: Double? = null
-        var lastP: Double? = null
         var lastPrice = 0.0
+        /** The view with the best record so far (the 15-minute one until any has been scored). */
+        val best: Mind get() = minds.maxByOrNull { if (it.l.scored > 0) it.l.hitRate else -1.0 } ?: minds.first()
     }
     private val brains = HashMap<IraMarket, Brain>()
     /** Minutes behind the newest that the brain reads (the feed fills a late minute from the one before). */
@@ -165,31 +172,40 @@ internal object IraSolo {
     private fun brainKey(m: IraMarket) = "solo.brain.${m.name}"
 
     /** Reads minutes [Brain.done]+1..[upTo] of [day]: learns each answer as it comes due, then guesses again. */
-    private fun feed(b: Brain, day: List<Candle>, upTo: Int) {
-        val h = com.optionslab.ira.Learner.Cfg().horizon
-        for (m in maxOf(1, b.done + 1)..upTo) {
-            b.l.tick(day[m - 1], day[m])
-            while (b.pending.isNotEmpty() && b.pending.first().first + h <= m) {
-                val (m0, x, g) = b.pending.removeFirst()
-                b.l.learn(x, day[m0 + h].c > day[m0].c, g)
+    private fun feed(b: Brain, day: List<Candle>, upTo: Int, only: List<Mind> = b.minds) {
+        for (m in maxOf(1, b.done + 1)..upTo) for (mind in only) {
+            val l = mind.l
+            l.tick(day[m - 1], day[m])
+            while (mind.pending.isNotEmpty() && mind.pending.first().first + mind.h <= m) {
+                val (m0, x, g) = mind.pending.removeFirst()
+                l.learn(x, day[m0 + mind.h].c > day[m0].c, g)
             }
-            val x = b.l.features(day, m, b.prevClose) ?: continue
-            val g = b.l.p(x)
-            b.pending.addLast(Triple(m, x, g)); b.lastP = g
+            val x = l.features(day, m, b.prevClose) ?: continue
+            val g = l.p(x)
+            mind.pending.addLast(Triple(m, x, g)); mind.lastP = g
         }
         b.done = maxOf(b.done, upTo)
         b.lastPrice = day[upTo].c
     }
 
+    /** Where each view is kept (the 15-minute one under the key it always had). */
+    private fun mindKey(m: IraMarket, h: Int) = if (h == 15) brainKey(m) else brainKey(m) + ".h$h"
+
     /** The market's brain: kept on the phone; the first time, it learns from the earlier days the phone holds. */
     private fun brain(m: IraMarket, held: List<Candle>, today: LocalDate): Brain = brains.getOrPut(m) {
-        val b = Brain(com.optionslab.ira.Learner())
-        val kept = runCatching { com.optionslab.app.security.SecurePrefs.getString(brainKey(m)) }.getOrNull()
+        val b = Brain(com.optionslab.ira.Learner.HORIZONS.map { h -> Mind(h, com.optionslab.ira.Learner(com.optionslab.ira.Learner.Cfg(horizon = h))) })
+        val fresh = b.minds.filter { mind ->
+            val kept = runCatching { com.optionslab.app.security.SecurePrefs.getString(mindKey(m, mind.h)) }.getOrNull()
+            kept == null || !mind.l.load(kept)
+        }
         val earlier = held.filter { it.t.toLocalDate().isBefore(today) }.groupBy { it.t.toLocalDate() }.toSortedMap().values
             .map { d -> session(d, d.first().t.toLocalDate(), 375) }.filter { it.size > com.optionslab.ira.Learner.FIRST }
-        if (kept == null || !b.l.load(kept)) for (d in earlier) {
-            b.done = 0; b.pending.clear(); feed(b, d, d.lastIndex); b.prevClose = d.last().c
-        } else runCatching {
+        // A view with nothing kept learns first from the earlier days the phone holds (the others carry on as saved).
+        if (fresh.isNotEmpty()) for (d in earlier) {
+            b.done = 0; fresh.forEach { it.pending.clear() }; feed(b, d, d.lastIndex, fresh); b.prevClose = d.last().c
+        }
+        b.done = 0
+        if (fresh.size < b.minds.size) runCatching {
             // Saved part-way through today (the app restarted): today's minutes already learned are not learned twice.
             val (d, n) = com.optionslab.app.security.SecurePrefs.getString(brainKey(m) + ".at")!!.split("|")
             if (d == today.toString()) { b.day = today; b.done = n.toInt() }
@@ -208,7 +224,7 @@ internal object IraSolo {
                 synchronized(brains) {
                     val b = brains[m] ?: brain(m, IraHub.recentBars(m) + bars, today)
                     if (b.day != today) {
-                        b.day = today; b.done = 0; b.pending.clear(); b.lastP = null
+                        b.day = today; b.done = 0; b.minds.forEach { it.pending.clear(); it.lastP = null }
                         // Yesterday's close (the app may have stayed open overnight).
                         b.prevClose = IraHub.recentBars(m).lastOrNull { it.t.toLocalDate().isBefore(today) }?.c ?: b.prevClose
                     }
@@ -216,7 +232,7 @@ internal object IraSolo {
                     val upTo = day.lastIndex - SETTLE
                     if (upTo > b.done) {
                         feed(b, day, upTo)
-                        com.optionslab.app.security.SecurePrefs.put(brainKey(m), b.l.save())
+                        b.minds.forEach { mind -> com.optionslab.app.security.SecurePrefs.put(mindKey(m, mind.h), mind.l.save()) }
                         com.optionslab.app.security.SecurePrefs.put(brainKey(m) + ".at", "$today|${b.done}")
                     }
                 }
@@ -224,9 +240,15 @@ internal object IraSolo {
         }
     }
 
+    /** A learned trade's horizon, from its reason ("... over the next 30 minutes"); 15 when not said. */
+    private fun learnedHorizon(why: String): Int = Regex("over the next (\\d+) minutes").find(why)?.groupValues?.get(1)?.toIntOrNull() ?: 15
+
     /** "How is Solo's learning going", per market. */
     fun learning(): String = synchronized(brains) { MARKETS.mapNotNull { m -> brains[m]?.let { b -> runCatching {
-            b.l.say(m.label) + (b.l.explain(m.label)?.let { ". $it" } ?: "") + (b.l.calibration(m.label)?.let { ". $it" } ?: "") }.getOrNull() } } }
+            val best = b.best
+            val views = b.minds.joinToString(", ") { v -> "${v.h} min " + if (v.l.scored == 0) "learning" else "%.0f%%".format(java.util.Locale.ENGLISH, v.l.hitRate * 100) }
+            best.l.say(m.label) + " (following its ${best.h}-minute view; views: $views)" +
+                (best.l.explain(m.label)?.let { ". $it" } ?: "") + (best.l.calibration(m.label)?.let { ". $it" } ?: "") }.getOrNull() } } }
         .ifEmpty { listOf("it starts learning at the next market session") }.joinToString("; ")
 
     /** Every market-watch pass while Solo is on: manage the open trade, or look for the next one. */
@@ -258,16 +280,18 @@ internal object IraSolo {
         for (m in MARKETS) {
             val b = synchronized(brains) { brains[m] } ?: continue
             if (b.day != today || b.done < com.optionslab.ira.Learner.FIRST) continue
-            seen += b.l.say(m.label)
+            seen += b.best.l.say(m.label)
             watch = java.time.LocalDateTime.now(IST) to seen.joinToString("; ")
-            val p = b.lastP ?: continue
-            // No setup made in advance: the brain's own guess, only when it is sure and its record says it has learned.
-            val call = b.l.decide(p) ?: continue
+            // No setup made in advance: of its views that would trade now, the one with the best record (it tunes itself).
+            val pick = synchronized(brains) { com.optionslab.ira.Learner.pick(b.minds.map { v -> v.l.hitRate to v.lastP?.let { v.l.decide(it) } }) } ?: continue
+            val mind = b.minds[pick]
+            val p = mind.lastP ?: continue
+            val call = mind.l.decide(p) ?: continue
             if (b.done + 1 >= Solo.LAST_ENTRY) continue
             val ix = b.lastPrice
             val sig = Solo.Signal(call, b.done + 1, ix, if (call) ix * 0.95 else ix * 1.05, if (call) ix * 1.05 else ix * 0.95, 0,
                 "$LEARNED it reads a %.0f%% chance ${m.label} goes ${if (call) "up" else "down"} over the next %d minutes; %s"
-                    .format(java.util.Locale.ENGLISH, (if (call) p else 1 - p) * 100, com.optionslab.ira.Learner.Cfg().horizon, b.l.say(m.label)))
+                    .format(java.util.Locale.ENGLISH, (if (call) p else 1 - p) * 100, mind.h, mind.l.say(m.label)))
             val day = session(IraHub.freshBars(m), today, now)
             val read = Solo.read(day, typicalRange(IraHub.recentBars(m), today), m.label)
             if (offering) {
@@ -339,7 +363,7 @@ internal object IraSolo {
         var at = day.lastIndex
         for (j in t.entryMinute until day.size) {
             // The brain's trades are for its horizon: out when it has passed (the stop-loss on the option still guards it).
-            if (t.why.startsWith(LEARNED) && j >= t.entryMinute + com.optionslab.ira.Learner.Cfg().horizon) { how = Solo.Exit.TIME; at = j; break }
+            if (t.why.startsWith(LEARNED) && j >= t.entryMinute + learnedHorizon(t.why)) { how = Solo.Exit.TIME; at = j; break }
             how = Solo.exit(s, day[j], j, best, RULES)
             best = Solo.favour(s, day[j], best)
             if (how != null) { at = j; break }
@@ -361,7 +385,7 @@ internal object IraSolo {
         runCatching { com.optionslab.app.data.Protections.removeSymbol(false, "NFO", t.symbol) }
         val learnedTrade = t.why.startsWith(LEARNED)
         val lesson = if (learnedTrade) null else runCatching { Solo.review(s, day, at, how, t.entry, px, m.label) }.getOrNull()
-        finish(t, list, px, lesson = lesson, exitOrderId = r.orderId, why = if (learnedTrade && how == Solo.Exit.TIME) "its 15 minutes were up" else when (how) {
+        finish(t, list, px, lesson = lesson, exitOrderId = r.orderId, why = if (learnedTrade && how == Solo.Exit.TIME) "its ${learnedHorizon(t.why)} minutes were up" else when (how) {
             Solo.Exit.STOP -> "stop: ${m.label} through ${"%,.0f".format(t.level)}"
             Solo.Exit.TARGET -> "target reached"
             Solo.Exit.SLOW -> "no follow-through"
