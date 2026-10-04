@@ -108,7 +108,7 @@ object DailyReports {
         val onceKey = "jarvis.closedMorning.$today"
         if (runCatching { com.optionslab.app.security.SecurePrefs.getString(onceKey) != null }.getOrDefault(false)) return title to lines
         runCatching { com.optionslab.app.security.SecurePrefs.put(onceKey, "1") }
-        runCatching { com.optionslab.app.ira.JarvisVoice.announce("Good morning, Boss. The market is closed today, $why. It opens again ${next.dayOfWeek.name.lowercase()}." +
+        runCatching { com.optionslab.app.ira.JarvisSpeaker.morning(context, "Good morning, Boss. The market is closed today, $why. It opens again ${next.dayOfWeek.name.lowercase()}." +
             (if (brief.isEmpty()) "" else " From my night's study: " + brief.take(2).joinToString(" ") { com.optionslab.ira.Wake.spoken(it, 1) })) }
         com.optionslab.app.ira.IraHub.note(com.optionslab.ira.Address.boss("Good morning. " + lines.joinToString(" ") { it.removePrefix("• ").trimEnd('.') + "." }))
         // Saturday: the week's report card comes with the morning (not left to the hourly study worker).
@@ -215,7 +215,7 @@ object DailyReports {
             val title = "Good morning Boss · " + if (bad == 0) "we are set for today's trading" else "$bad thing${if (bad > 1) "s" else ""} need you"
             runCatching { com.optionslab.app.ira.JarvisPopup.show(context, title, lines.take(3).joinToString(" · ")) }
             // Listening now: Jarvis says it too.
-            runCatching { com.optionslab.app.ira.JarvisVoice.announce("Good morning, Boss. " + if (bad == 0) "We are set for today's trading." else
+            runCatching { com.optionslab.app.ira.JarvisSpeaker.morning(context, "Good morning, Boss. " + if (bad == 0) "We are set for today's trading." else
                 "$bad thing${if (bad > 1) "s" else ""} need you: " + lines.filter { it.startsWith("✗") }.joinToString(". ") { it.removePrefix("✗ ") } + "." +
                 (if (brief.isEmpty()) "" else " Now my analysis. " + brief.joinToString(" ") { com.optionslab.ira.Wake.spoken(it, 2) } +
                     " That is history, not a promise.")) }

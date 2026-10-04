@@ -23,6 +23,16 @@ object JarvisSpeaker {
     fun words(text: String, sentences: Int = if (IraTools.brief) 1 else 6): String = com.optionslab.ira.Address.boss(com.optionslab.ira.Wake.spoken(text, sentences))
 
     /**
+     * The 09:00 morning check said aloud (Boss, 4 Oct: "will Jarvis greet me by voice at 9?"): through the listening voice
+     * when it is on, else through this one when "Morning check aloud" is on - never when muted or in quiet hours.
+     */
+    fun morning(context: Context, text: String) {
+        if (JarvisVoice.announce(text)) return
+        if (!com.optionslab.app.BuildConfig.JARVIS || JarvisVoice.muted || JarvisVoice.quietNow() || !Automations.on(Automations.Auto.MORNING_VOICE)) return
+        speak(context, text, 8)
+    }
+
+    /**
      * The speech engine started ahead (the Ira page opened, typed replies spoken, listening off): the first reply is said
      * at once instead of after the second or so the engine takes to start (Boss, 4 Oct: replies felt slow).
      */
