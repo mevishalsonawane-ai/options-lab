@@ -219,8 +219,8 @@ internal object IraCoach {
         if (!m.isTradingDay(m.today()) || minute !in com.optionslab.ira.LoginNudge.FROM..com.optionslab.ira.LoginNudge.TO) return
         val key = "jarvis.login.nudged"
         if (com.optionslab.app.security.SecurePrefs.getString(key) == m.today().toString()) return
-        val needs = runCatching { AppSettings.load().live }.getOrDefault(false) ||
-            runCatching { com.optionslab.app.data.OrbArms.view().arms.any { it.armed && it.liveOk } }.getOrDefault(false)
+        // Only Live mode sends anything to Zerodha (an arm cleared for Live still trades on paper in Paper mode).
+        val needs = runCatching { AppSettings.load().live }.getOrDefault(false)
         if (!com.optionslab.ira.LoginNudge.due(minute, b.configured, b.loggedIn, needs)) return
         com.optionslab.app.security.SecurePrefs.put(key, m.today().toString())
         val t = com.optionslab.ira.LoginNudge.say(minute)
@@ -239,9 +239,12 @@ internal object IraCoach {
         val now = System.currentTimeMillis()
         if (now - relayAt < com.optionslab.ira.RelayWatch.EVERY_MIN * 60_000L - 5_000) return
         relayAt = now
-        val ok = kotlinx.coroutines.withTimeoutOrNull(20_000) {
-            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { runCatching { r.warm(); r.connected }.getOrDefault(false) }
-        } ?: false
+        // Already connected (the market watch keeps it so in market hours): answering. Otherwise a plain TCP knock on the
+        // server's SSH port, 5 s at most - it logs in to nothing and saves nothing (no user name, no server key).
+        val host = r.host ?: return
+        val ok = r.connected || kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            runCatching { java.net.Socket().use { s -> s.connect(java.net.InetSocketAddress(host, 22), 5_000); true } }.getOrDefault(false)
+        }
         val (next, say) = com.optionslab.ira.RelayWatch.next(relay, ok)
         relay = next
         say?.let { IraHub.note(it); JarvisVoice.announce(it); IraActivity.add(it); Automations.acted(Automations.Auto.RELAY, it) }

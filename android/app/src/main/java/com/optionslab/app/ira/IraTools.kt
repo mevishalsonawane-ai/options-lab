@@ -56,7 +56,8 @@ internal object IraTools {
     /** Jarvis could not place [said]: kept a moment, in case Boss says it another way. */
     @Synchronized fun missed(said: String) {
         val w = com.optionslab.ira.Secrets.redact(said)
-        if (w.isNotBlank()) runCatching { prefs().put(missedKey(), JSONArray(com.optionslab.ira.Missed.add(missedToday(), w)).toString()) }
+        if (w.isNotBlank()) runCatching { prefs().put(MISSED, JSONObject().put("d", com.optionslab.app.data.Market.today().toString())
+            .put("w", JSONArray(com.optionslab.ira.Missed.add(missedToday(), w))).toString()) }
         missedLast = if (runCatching { com.optionslab.ira.Corrections.missed(w) }.getOrDefault(false)) w to System.currentTimeMillis() else null
         nextAfterMiss = null
     }
@@ -97,11 +98,14 @@ internal object IraTools {
         IraActivity.add("Learned: \"${l.wrong}\" means \"${l.right}\".")
     }
 
-    private fun missedKey() = "jarvis.missed." + com.optionslab.app.data.Market.today()
+    /** One key, today's words only (an older day's list is replaced, never kept). */
+    private const val MISSED = "jarvis.missed"
 
     /** Today's words Jarvis could not place (redacted, each once). */
     fun missedToday(): List<String> = runCatching {
-        val a = JSONArray(prefs().getString(missedKey()) ?: "[]"); (0 until a.length()).map { a.getString(it) }
+        val o = JSONObject(prefs().getString(MISSED) ?: return emptyList())
+        if (o.optString("d") != com.optionslab.app.data.Market.today().toString()) return emptyList()
+        val a = o.getJSONArray("w"); (0 until a.length()).map { a.getString(it) }
     }.getOrDefault(emptyList())
 
     fun forgetLearned() { prefs().put(LEARNED, null); awaiting = null; missedLast = null }

@@ -1067,7 +1067,8 @@ object IraHub {
             if (any != null) { _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, com.optionslab.ira.Plan.ONLY_LOWERING)).takeLast(MAX_MESSAGES)) }; return }
         }
         // Boss's own reminder ("remind me at 3 pm to check Nifty"): only said at its time, never run (Boss, 4 Oct).
-        if (com.optionslab.app.BuildConfig.JARVIS && runCatching { com.optionslab.ira.Reminder.asked(q) }.getOrDefault(false)) {
+        // ("Remind me what's set for later" is the list below, not a new reminder.)
+        if (com.optionslab.app.BuildConfig.JARVIS && runCatching { com.optionslab.ira.Reminder.asked(q) }.getOrDefault(false) && !FOR_LATER.containsMatchIn(q)) {
             val now = java.time.LocalDateTime.now(IST)
             val r = runCatching { com.optionslab.ira.Reminder.parse(q, now) }.getOrNull()
             val c = app
@@ -1082,7 +1083,11 @@ object IraHub {
             return
         }
         // "What's the plan for tomorrow?": the indices' outlook and the coming days' events (words only, no command).
-        if (com.optionslab.app.BuildConfig.JARVIS && parsed.command == null && parsed.order == null && runCatching { com.optionslab.ira.Reminder.tomorrow(q) }.getOrDefault(false)) {
+        // Not when an index is named (its own outlook answers that) or a command hides behind the time ("get ready to
+        // start the arms tomorrow at 9:20" is the timed command below).
+        val tomorrowRest = runCatching { com.optionslab.ira.Later.split(q, java.time.LocalDateTime.now(IST))?.rest?.let { Ask.parse(it) } }.getOrNull()
+        if (com.optionslab.app.BuildConfig.JARVIS && parsed.command == null && parsed.order == null && parsed.markets.isEmpty() &&
+            tomorrowRest?.command == null && tomorrowRest?.order == null && runCatching { com.optionslab.ira.Reminder.tomorrow(q) }.getOrDefault(false)) {
             val today = com.optionslab.app.data.Market.today()
             val ev = runCatching { IraEvents.upcoming(3).take(3).map { com.optionslab.ira.Events.line(it, today).removeSuffix(".") } }.getOrDefault(emptyList())
             val out = morningOutlook()
@@ -1116,7 +1121,8 @@ object IraHub {
             }
         }
         // "What have you set for later?" / "cancel everything set for later"
-        if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && Regex("(?i)\\b(set|scheduled?|planned|pending)\\b.*\\blater\\b|\\bfor later\\b").containsMatchIn(q)) {
+        // (In IraGoldAlgo too: only reminders are kept there.)
+        if (com.optionslab.app.BuildConfig.JARVIS && FOR_LATER.containsMatchIn(q)) {
             val c = app
             val said = if (c != null && Regex("(?i)\\b(cancel|clear|remove|delete|drop)\\b").containsMatchIn(q)) { IraLater.clear(c); "Done, Boss: nothing is set for later now." } else IraLater.say()
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
@@ -1666,6 +1672,8 @@ object IraHub {
             pend("$what $at", { IraLater.add(ctx, w.rest, w.at); "Set, Boss: I'll $what $at, and tell you when it's done." }, "Tap Confirm to $what $at.")
         }
     }
+
+    private val FOR_LATER = Regex("(?i)\\b(set|scheduled?|planned|pending)\\b.*\\blater\\b|\\bfor later\\b")
 
     private val AT_ONCE = setOf(com.optionslab.ira.Command.Kind.ALARM_ADD, com.optionslab.ira.Command.Kind.EVENT_ADD)
 

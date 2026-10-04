@@ -20,6 +20,7 @@ import java.time.ZoneId
 object IraLater {
     const val ACTION = "ol.jarvis.later"
     private const val KEY = "jarvis.later"
+    private const val RKEY = "jarvis.reminders"
     private val IST: ZoneId = ZoneId.of("Asia/Kolkata")
     /** A command is still run if its alarm came this late (the phone was off); later than that it is dropped and told. */
     private const val GRACE_MS = 30 * 60_000L
@@ -30,13 +31,25 @@ object IraLater {
 
     @Synchronized fun all(): List<Item> = runCatching {
         val a = org.json.JSONArray(SecurePrefs.getString(KEY) ?: "[]")
-        (0 until a.length()).map { i -> a.getJSONObject(i).let { Item(it.getLong("id"), it.getString("text"), it.getLong("at"), it.optBoolean("live", false), it.optBoolean("remind", false)) } }
+        (0 until a.length()).map { i -> a.getJSONObject(i).let { Item(it.getLong("id"), it.getString("text"), it.getLong("at"), it.optBoolean("live", false)) } }
+    }.getOrDefault(emptyList())
+
+    /** Commands and reminders, each in its own store (a reminder can never be read as a command, even by an older build). */
+    @Synchronized fun everything(): List<Item> = all() + reminders()
+
+    @Synchronized fun reminders(): List<Item> = runCatching {
+        val a = org.json.JSONArray(SecurePrefs.getString(RKEY) ?: "[]")
+        (0 until a.length()).map { i -> a.getJSONObject(i).let { Item(it.getLong("id"), it.getString("text"), it.getLong("at"), remind = true) } }
     }.getOrDefault(emptyList())
 
     @Synchronized private fun save(items: List<Item>) {
+        val cmds = items.filter { !it.remind }; val rem = items.filter { it.remind }
         val a = org.json.JSONArray()
-        items.forEach { a.put(org.json.JSONObject().put("id", it.id).put("text", it.text).put("at", it.at).put("live", it.live).put("remind", it.remind)) }
-        SecurePrefs.put(KEY, if (items.isEmpty()) null else a.toString())
+        cmds.forEach { a.put(org.json.JSONObject().put("id", it.id).put("text", it.text).put("at", it.at).put("live", it.live)) }
+        SecurePrefs.put(KEY, if (cmds.isEmpty()) null else a.toString())
+        val r = org.json.JSONArray()
+        rem.forEach { r.put(org.json.JSONObject().put("id", it.id).put("text", it.text).put("at", it.at)) }
+        SecurePrefs.put(RKEY, if (rem.isEmpty()) null else r.toString())
     }
 
     /** Kept and its alarm set ([text] is the command without its time). */
@@ -44,19 +57,19 @@ object IraLater {
         val c = Ask.parse(text).command
         require(c != null && c.kind in Later.ALLOWED) { "only starting or stopping can wait for a time" }
         val live = runCatching { com.optionslab.app.data.AppSettings.load().live }.getOrDefault(true)
-        save(all() + Item(System.nanoTime(), text, at.atZone(IST).toInstant().toEpochMilli(), live))
+        save(everything() + Item(System.nanoTime(), text, at.atZone(IST).toInstant().toEpochMilli(), live))
         schedule(context)
     }
 
     /** Boss's reminder: said at [at], nothing done. */
     fun remind(context: Context, what: String, at: LocalDateTime) {
-        save(all() + Item(System.nanoTime(), com.optionslab.ira.Secrets.redact(what), at.atZone(IST).toInstant().toEpochMilli(), remind = true))
+        save(everything() + Item(System.nanoTime(), com.optionslab.ira.Secrets.redact(what), at.atZone(IST).toInstant().toEpochMilli(), remind = true))
         schedule(context)
     }
 
     /** "Boss, what have you set for later?" */
     fun say(now: LocalDateTime = LocalDateTime.now(IST)): String {
-        val items = all().sortedBy { it.at }
+        val items = everything().sortedBy { it.at }
         if (items.isEmpty()) return "Nothing is set for later, Boss."
         return "Set for later: " + items.joinToString("; ") { (if (it.remind) "a reminder to " else "") + "\"${it.text}\" " + Later.say(LocalDateTime.ofInstant(Instant.ofEpochMilli(it.at), IST), now) } + "."
     }
@@ -74,7 +87,7 @@ object IraLater {
         val am = context.getSystemService(AlarmManager::class.java) ?: return
         val pi = intent(context)
         am.cancel(pi)
-        val next = all().minOfOrNull { it.at } ?: return
+        val next = everything().minOfOrNull { it.at } ?: return
         try {
             if (com.optionslab.app.work.Jobs.canExact(context)) am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, next, pi)
             else am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, next, pi)
@@ -87,10 +100,10 @@ object IraLater {
     suspend fun fire(context: Context) {
         // IraGoldAlgo never runs commands (Jarvis only talks there): anything found is dropped.
         // (Reminders only speak, so they stay.)
-        if (com.optionslab.app.BuildConfig.GOLD) save(all().filter { it.remind })
+        if (com.optionslab.app.BuildConfig.GOLD) save(reminders())
         val now = System.currentTimeMillis()
-        val due = all().filter { it.at <= now + 30_000 }
-        if (due.isNotEmpty()) save(all().filter { it.at > now + 30_000 })
+        val due = everything().filter { it.at <= now + 30_000 }
+        if (due.isNotEmpty()) save(everything().filter { it.at > now + 30_000 })
         for (item in due) {
             // A reminder: said (late ones say so), never run - whatever its words.
             if (item.remind) {
