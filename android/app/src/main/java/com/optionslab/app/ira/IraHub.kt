@@ -781,14 +781,37 @@ object IraHub {
      * Offers to close [symbol] (asked yes or no and on the Ira screen; never done alone). Checked again when confirmed:
      * still held, then sold at market (paper) or squared off through the app (Zerodha).
      */
+    /**
+     * Something Jarvis thinks should be done or stopped, put to Boss first (4 Oct): pending with Confirm on the Ira
+     * screen, a pop-up and a spoken yes or no; [act] runs only on his yes, and lapses after 30 minutes.
+     */
+    fun offer(what: String, title: String, text: String, act: suspend () -> String) {
+        val c = app ?: return
+        // Boss said "do it automatically" in chat: done now and told (what Jarvis offers this way only stops or parks).
+        if (autoStop) {
+            scope.launch {
+                val r = IraActions.run(what, act)
+                JarvisPopup.show(c, title, r); reply(com.optionslab.ira.Address.boss("Done by myself, as you asked: $r"))
+            }
+            return
+        }
+        val id = pend(what, act, "$text Tap Confirm to go ahead.")
+        JarvisPopup.show(c, title, text)
+        JarvisVoice.askYesNo(id, Wake.spoken(text, 2) + " Yes or no?")
+        IraActivity.add("Asked: $text")
+    }
+
+    /** Boss's "do it automatically" / "ask me before stopping" (default: asked). Never taken from a backup. */
+    var autoStop: Boolean
+        get() = runCatching { com.optionslab.app.security.SecurePrefs.getBoolean("jarvis.auto.stop", false) }.getOrDefault(false)
+        set(v) { runCatching { com.optionslab.app.security.SecurePrefs.put("jarvis.auto.stop", v) } }
+
     /** A broken loss goal: the kill switch offered (asked yes or no and on the Ira screen; it only lowers risk). */
     suspend fun offerKillSwitch(text: String) {
         val c = app ?: return
         val (what, act) = runCatching { IraActions.prepare(com.optionslab.ira.Command(com.optionslab.ira.Command.Kind.KILL_ON)) }.getOrNull() ?: return
         if (act == null) { reply(text); return }
-        val id = pend(what, suspend { IraActions.verified(com.optionslab.ira.Command.Kind.KILL_ON, act()) }, "$text Tap Confirm to $what.")
-        JarvisPopup.show(c, "Boss, a goal is broken", text)
-        JarvisVoice.askYesNo(id, "Boss, $text Yes or no?")
+        offer(what, "Boss, a goal is broken", text, suspend { IraActions.verified(com.optionslab.ira.Command.Kind.KILL_ON, act()) })
     }
 
     fun offerClose(symbol: String, live: Boolean, text: String) {
@@ -1113,6 +1136,13 @@ object IraHub {
                 _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
                 return
             }
+        }
+        // "Do it automatically" / "ask me before stopping": what Jarvis thinks should be stopped or parked (4 Oct).
+        if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD) runCatching { com.optionslab.ira.AutoStop.read(q) }.getOrNull()?.let { on ->
+            autoStop = on
+            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, com.optionslab.ira.AutoStop.said(on))).takeLast(MAX_MESSAGES)) }
+            IraActivity.add(if (on) "Boss chose: stops and parking done automatically." else "Boss chose: asked before stopping.")
+            return
         }
         // Goals over days (part 6): "goal: keep my weekly loss under 5000", "what are my goals", "clear my goals".
         // (A day's target alone stays the journal's "set my day target": a goal here names a goal, a week or a month.)

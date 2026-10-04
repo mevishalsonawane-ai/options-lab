@@ -100,6 +100,16 @@ object DayPlan {
         }
     }
 
+    /** The plan put to Boss before anything is done (his approval first, 4 Oct). */
+    fun propose(steps: List<Step>, now: Regime.Kind): String? {
+        if (steps.isEmpty()) return null
+        val off = steps.filter { !it.on }; val on = steps.filter { it.on }
+        val parts = ArrayList<String>()
+        if (off.isNotEmpty()) parts += "park " + off.joinToString("; ") { "${it.label} (${it.why})" }
+        if (on.isNotEmpty()) parts += "arm again " + on.joinToString("; ") { "${it.label} (${it.why})" }
+        return "Today's plan: BankNifty is ${now.label}. Shall I " + parts.joinToString(", and ") + "? Paper arms only."
+    }
+
     fun say(steps: List<Step>, now: Regime.Kind): String? {
         if (steps.isEmpty()) return null
         val off = steps.filter { !it.on }; val on = steps.filter { it.on }

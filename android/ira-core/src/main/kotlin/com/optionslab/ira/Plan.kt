@@ -60,3 +60,28 @@ object Plan {
         return lines.joinToString(" ") + if (stopped) (if (total - results.size > 1) " I stopped there: the ${total - results.size} steps after it were not tried." else " I stopped there: the step after it was not tried.") else ""
     }
 }
+
+/**
+ * Boss's choice for what Jarvis thinks should be stopped (4 Oct): asked first by default ("while stopping anything the
+ * AI thinks should be stopped, take my approval"), or done automatically when Boss says so in chat ("do it
+ * automatically", "don't ask me before stopping") - and asked again on "ask me before stopping". It covers only what
+ * Jarvis proposes himself that stops or parks (the morning plan of paper arms, the kill switch on a broken loss goal),
+ * never a trade or anything that adds risk. Pure.
+ */
+object AutoStop {
+    private val ON = Regex("(?i)\\b(do (it|that|this|them|these|stops?) (automatically|on your own|by yourself|without asking)|stop (things |them )?automatically|" +
+        "(don t|dont|do not|no need to) ask (me )?(before|to|for)( (stopping|parking|the plan|approval|permission))?|" +
+        "(stop|park)\\w* without asking|automatic(ally)? (stops?|stopping|plan)|auto ?approve)\\b")
+    private val OFF = Regex("(?i)\\b(ask (me )?(before|first)( (stopping|parking|you stop|doing))?|always ask( me)?|take my approval|don t do (it|that) automatically|stop doing (it|that) automatically)\\b")
+
+    /** True: automatic from now; false: asked first; null: not about this. */
+    fun read(text: String): Boolean? {
+        val t = text.replace("'", " ")
+        // ("Don't do it automatically" / "stop doing it automatically" hold "do it automatically": asked, first.)
+        if (Regex("(?i)\\b(don t|dont|do not|stop|no more) (do|doing) (it|that|this|them|stops?) automatically").containsMatchIn(t)) return false
+        return when { ON.containsMatchIn(t) -> true; OFF.containsMatchIn(t) -> false; else -> null }
+    }
+
+    fun said(on: Boolean): String = if (on) "Done, Boss: what I think should be stopped or parked (the morning paper-arm plan, the kill switch on a broken loss goal) I'll now do by myself and tell you. Trades still always ask. Say \"ask me before stopping\" to undo."
+        else "Done, Boss: I'll ask you before stopping or parking anything."
+}

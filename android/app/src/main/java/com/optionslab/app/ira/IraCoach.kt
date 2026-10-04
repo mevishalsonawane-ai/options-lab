@@ -178,20 +178,30 @@ internal object IraCoach {
             kept = kept[v.arm.source]?.let { k -> runCatching { com.optionslab.ira.Regime.Kind.valueOf(k) }.getOrNull() }) }
         val stopped = s.guardKill || com.optionslab.app.data.LossBreaker.trippedToday() ||
             runCatching { com.optionslab.app.data.Strategies.stoppedToday() }.getOrDefault(true)
-        val done = ArrayList<com.optionslab.ira.DayPlan.Step>()
-        for (step in com.optionslab.ira.DayPlan.plan(now0, record, now)) {
-            if (step.on && stopped) continue                      // the kill switch or the day's loss limit: nothing armed
-            val v = views.first { it.arm.source == step.source }
-            // Armed on paper only: in Live an ordinary arm asks for the PIN, which is never given here, so it is not armed.
-            val said = runCatching { arms.setArmed(step.source, step.on, v.automatic, pinConfirmed = false) }.getOrNull() ?: continue
-            if (step.on && !said.contains("armed on paper") && !said.contains(" on paper, ")) continue
-            if (step.on) parked.remove(step.source) else parked[step.source] = now.name
-            done += step
-        }
         savePrefsMap(PARKED_KEY, parked); savePrefsMap(KEPT_KEY, kept)
-        val text = com.optionslab.ira.DayPlan.say(done, now) ?: return
-        IraHub.note(com.optionslab.ira.Address.boss(text)); JarvisVoice.announce(com.optionslab.ira.Address.boss(text))
-        IraActivity.add(text); Automations.acted(Automations.Auto.PLAN, text)
+        // (Nothing is armed while the kill switch, the day's loss limit or the day's stop holds.)
+        val steps = com.optionslab.ira.DayPlan.plan(now0, record, now).filter { !(it.on && stopped) }
+        val proposal = com.optionslab.ira.DayPlan.propose(steps, now) ?: return
+        // Boss, 4 Oct: "while stopping anything the AI thinks should be stopped, take my approval first" - the plan is
+        // asked (yes or no, or Confirm on the Ira screen) and done only then, as things stand at that moment.
+        IraHub.offer("today's paper arm plan", "Boss, today's plan", proposal, suspend {
+            val done = ArrayList<com.optionslab.ira.DayPlan.Step>()
+            val p = prefsMap(PARKED_KEY)
+            val nowViews = arms.view().arms
+            for (step in steps) {
+                val v = nowViews.firstOrNull { it.arm.source == step.source } ?: continue
+                if (v.armed == step.on) continue                  // already as planned (Boss changed it himself)
+                // Armed on paper only: in Live an ordinary arm asks for the PIN, which is never given here, so it is not armed.
+                val said = runCatching { arms.setArmed(step.source, step.on, v.automatic, pinConfirmed = false) }.getOrNull() ?: continue
+                if (step.on && !said.contains("armed on paper") && !said.contains(" on paper, ")) continue
+                if (step.on) p.remove(step.source) else p[step.source] = now.name
+                done += step
+            }
+            savePrefsMap(PARKED_KEY, p)
+            val text = com.optionslab.ira.DayPlan.say(done, now) ?: "Nothing needed changing any more."
+            IraActivity.add(text); Automations.acted(Automations.Auto.PLAN, text)
+            text
+        })
     }
 
     /** Just after the open (09:16 to 09:30), once a day: BankNifty's gap and how the arms did on such days. */

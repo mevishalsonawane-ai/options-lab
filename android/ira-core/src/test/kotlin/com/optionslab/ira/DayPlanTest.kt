@@ -24,6 +24,7 @@ class DayPlanTest {
         val steps = DayPlan.plan(listOf(DayPlan.ArmNow("orb5", "ORB 5", armed = true, paper = true, parked = false)), record, side)
         assertEquals(listOf(false), steps.map { it.on })
         assertTrue(DayPlan.say(steps, side)!!.contains("I parked ORB 5 (on sideways days it made"))
+        assertTrue(DayPlan.propose(steps, side)!!.startsWith("Today's plan: BankNifty is sideways. Shall I park ORB 5"))
         // Trading Zerodha: never touched.
         assertTrue(DayPlan.plan(listOf(DayPlan.ArmNow("orb5", "ORB 5", armed = true, paper = false, parked = false)), record, side).isEmpty())
         // Too few trades to judge: left as it is.
