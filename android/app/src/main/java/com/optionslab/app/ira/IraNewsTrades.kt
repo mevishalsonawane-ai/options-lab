@@ -155,6 +155,9 @@ internal object IraNewsTrades {
     /** (confidence, rupees) of each closed trade that knew its confidence. */
     fun byConfidence(): List<Pair<Int, Double>> = all().filter { it.closed && it.result != null && it.stars != null }.map { it.stars!! to it.result!! }
 
+    /** (entry minute of day, rupees) of each closed trade that knew its minute. */
+    fun byMinute(): List<Pair<Int, Double>> = all().filter { it.closed && it.result != null && it.minuteIn != null }.map { it.minuteIn!! to it.result!! }
+
     /** The confidence a trade needs before Jarvis takes it on paper by himself (raised by his own losses). */
     fun actAloneBar(): Int = com.optionslab.ira.ActAlone.bar(byConfidence())
 

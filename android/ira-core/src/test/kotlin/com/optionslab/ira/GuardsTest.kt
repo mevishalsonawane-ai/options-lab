@@ -13,6 +13,14 @@ class GuardsTest {
     private val day = LocalDate.of(2026, 10, 5)
     private fun at(h: Int, m: Int) = day.atTime(h, m)
 
+    @Test fun anHourThatLosesIsKnown() {
+        val r = List(8) { 9 * 60 + 20 + it to -100.0 } + List(8) { 13 * 60 + it to 50.0 }
+        assertEquals("my trades entered between 09:00 and 10:00 have lost: 8 trades, -Rs 800.00", ActAlone.badHour(r, 9 * 60 + 45))
+        assertNull(ActAlone.badHour(r, 13 * 60 + 30))                        // a winning hour
+        assertNull(ActAlone.badHour(r.drop(1), 9 * 60 + 45))                 // too few to judge
+        assertNull(ActAlone.badHour(r, 11 * 60))                             // no record
+    }
+
     @Test fun jarvisRaisesItsOwnBarAboveLosingConfidence() {
         assertEquals(3, ActAlone.bar(emptyList()))
         val lose3 = List(8) { 3 to -100.0 }

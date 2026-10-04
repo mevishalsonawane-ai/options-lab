@@ -251,6 +251,19 @@ object ActAlone {
         return bar
     }
 
+    /**
+     * An hour of the day that has been losing Jarvis money ([results]: entry minute of day, rupees): with [JUDGE] trades
+     * or more in the same hour and a net loss, the hour's record in words (he then does not act alone then, and says
+     * so when he asks), else null. Pure.
+     */
+    fun badHour(results: List<Pair<Int, Double>>, minute: Int): String? {
+        val h = minute / 60
+        val at = results.filter { it.first / 60 == h }
+        val net = at.sumOf { it.second }
+        if (at.size < JUDGE || net >= 0) return null
+        return "my trades entered between %02d:00 and %02d:00 have lost: ${at.size} trades, ${AppFacts.rs(net)}".format(Locale.ENGLISH, h, h + 1)
+    }
+
     /** One line for "how are your trades doing": each level's record and the bar it set. */
     fun say(results: List<Pair<Int, Double>>): String? {
         if (results.isEmpty()) return null
