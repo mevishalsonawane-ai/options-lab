@@ -470,8 +470,34 @@ class JarvisVoice : Service() {
             }
         }
         listening = true
-        runCatching { rec?.startListening(i) }.onFailure { listening = false; endTap(); again(1_000) }
+        runCatching { quietly { rec?.startListening(i) } }.onFailure { listening = false; endTap(); again(1_000) }
         _state.value = VoiceState(if (awake()) Mode.AWAKE else Mode.LISTENING)
+    }
+
+    // Android's recognizer plays a beep each time it starts, and listening restarts every second or two when nobody
+    // speaks: a beep a second, even locked (Boss, 4 Oct). The start is made with the system and media sounds muted for
+    // a moment - only streams not muted already, never while music plays, never notifications - and put back after.
+    private val audio by lazy { getSystemService(android.media.AudioManager::class.java) }
+    private val mutedForBeep = HashSet<Int>()
+    private val unmute = Runnable { unmuteNow() }
+
+    private fun quietly(start: () -> Unit) {
+        val am = audio
+        if (am != null && !speaking) {
+            val streams = listOfNotNull(android.media.AudioManager.STREAM_SYSTEM,
+                android.media.AudioManager.STREAM_MUSIC.takeIf { !am.isMusicActive })
+            for (st in streams) if (st !in mutedForBeep && runCatching { !am.isStreamMute(st) }.getOrDefault(false) &&
+                runCatching { am.adjustStreamVolume(st, android.media.AudioManager.ADJUST_MUTE, 0); true }.getOrDefault(false)) mutedForBeep += st
+        }
+        try { start() } finally { main.removeCallbacks(unmute); main.postDelayed(unmute, 600) }
+    }
+
+    /** Puts back only what [quietly] muted (before Jarvis speaks, and when listening stops). */
+    private fun unmuteNow() {
+        main.removeCallbacks(unmute)
+        val am = audio ?: return
+        for (st in mutedForBeep) runCatching { am.adjustStreamVolume(st, android.media.AudioManager.ADJUST_UNMUTE, 0) }
+        mutedForBeep.clear()
     }
 
     private fun again(delayMs: Long = 250) { if (!stopped) main.postDelayed({ listen() }, delayMs) }
@@ -753,6 +779,7 @@ class JarvisVoice : Service() {
      * [id] STOP_AFTER.
      */
     private fun say(text: String, id: String = "say") {
+        unmuteNow()
         val t = tts
         lastSpokenId = id
         if (id == "answer" || id == "question") lastSpoken = text
@@ -812,6 +839,7 @@ class JarvisVoice : Service() {
     private fun giveUp(why: String) { _state.value = VoiceState(problem = why); stopSelf() }
 
     override fun onDestroy() {
+        unmuteNow()
         stopped = true
         if (instance?.get() === this) instance = null
         main.removeCallbacksAndMessages(null)
