@@ -468,8 +468,9 @@ class JarvisVoice : Service() {
             main.postDelayed(watchdog, 5_000)
             // While listening, the slow answers are kept ready so none waits: prices every minute in market hours, your
             // account and the trade check every 30 seconds.
-            // The model is loaded while Jarvis listens: a spoken question never waits the seconds loading takes.
-            runCatching { IraModel.preload() }
+            // (The model is NOT loaded here any more - root cause, 4 Oct: kept in memory the whole time Jarvis listened,
+            // 1 GB and more on 4 cores starved the phone's on-device recognizer, which then heard nothing. It loads only
+            // when an answer needs it, and leaves memory after 10 minutes unused.)
             scope.launch(Dispatchers.Default) {
                 var n = 0
                 while (true) {
@@ -677,7 +678,9 @@ class JarvisVoice : Service() {
                 // Only the name so far ("Jarvis..." and a breath before the question): never cut there, or the question
                 // is lost and only "Yes, Boss?" is said. The recognizer's own silence ends that turn.
                 val nameOnly = asking == null && com.optionslab.ira.Wake.heard(first, awake()) is com.optionslab.ira.Wake.Heard.Awake
-                if (!nameOnly) main.postDelayed(finish, END_AFTER_MS)
+                // Only the name: still closed, a little later - a lone "Jarvis" left to the recognizer's own silence often
+                // ended as "no match" and was lost (the mic button's turns are always closed, which is why they worked).
+                main.postDelayed(finish, if (nameOnly) 1_800L else END_AFTER_MS)
             }
         }
         override fun onEvent(eventType: Int, params: Bundle?) {}

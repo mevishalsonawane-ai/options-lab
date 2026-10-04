@@ -294,9 +294,12 @@ object IraModel {
         }
     }
 
-    /** Leaves memory after [IDLE_MS] unused - but stays loaded while Jarvis listens, so a spoken question never waits on loading. */
+    /**
+     * Leaves memory after [IDLE_MS] unused - also while Jarvis listens (root cause, 4 Oct: kept loaded for as long as
+     * listening was on, it starved the phone's on-device recognizer, and Jarvis stopped hearing his name).
+     */
     private fun idleUnload(): Job = scope.launch {
-        do delay(IDLE_MS) while (JarvisVoice.wanted && enabled)
+        delay(IDLE_MS)
         lock.withLock { unloadLocked() }
     }
 
