@@ -19,6 +19,14 @@ internal object IraAccount {
         set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "test seam" }; field = v }
 
     /** The app's round trips (paper or Zerodha) with who made each, for the review. */
+    /** What the results teach (part 5): the closed trades of the app's mode, every owner, read for lessons. */
+    suspend fun lessons(): Pair<List<com.optionslab.ira.Lessons.Lesson>, Int> {
+        val live = runCatching { com.optionslab.app.data.AppSettings.load().live }.getOrDefault(false)
+        val owners = runCatching { com.optionslab.app.data.Strategies.owners() }.getOrDefault(emptyMap())
+        val all = trips(live, owners)
+        return com.optionslab.ira.Lessons.of(all) to all.size
+    }
+
     fun trips(live: Boolean, owners: Map<String, String>): List<com.optionslab.ira.Insights.Trip> =
         runCatching { com.optionslab.app.data.TradeBook.trips(live) }.getOrDefault(emptyList()).map { t ->
             com.optionslab.ira.Insights.Trip(t.symbol, t.openedAt, t.closedAt, t.net, com.optionslab.app.data.TradeBook.ownerOf(t, owners))

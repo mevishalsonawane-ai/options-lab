@@ -1104,6 +1104,16 @@ object IraHub {
                 return
             }
         }
+        // "What have you learned?": the lessons in every arm's, strategy's and Boss's closed trades (part 5).
+        if (com.optionslab.ira.Lessons.asked(q) && Ask.parse(q).command == null) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            if (phoneLocked()) { reply("Unlock the phone for that, Boss."); return }
+            scope.launch {
+                val said = runCatching { IraAccount.lessons().let { (l, n) -> com.optionslab.ira.Lessons.say(l, n) } }.getOrElse { "I could not read the trades just now, Boss." }
+                reply(said)
+            }
+            return
+        }
         // "How do you know that?": the facts the last answer was built from.
         if (com.optionslab.ira.Sources.asked(q)) {
             val last = _state.value.messages.lastOrNull { it.fromIra && !it.text.startsWith(TOOK_AS) }
