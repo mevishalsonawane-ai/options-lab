@@ -78,8 +78,25 @@ class JarvisVoice : Service() {
          * "Why can't I hear you?": everything that stops the voice, said plainly (muted, quiet hours, typed replies not
          * spoken, no offline voice, the phone's media volume at zero), or that all looks right.
          */
+        /** The speech recognizer's last failure (its code, when) - not silence (for the voice check). */
+        @Volatile var lastError: Pair<Int, Long>? = null
+
+        private fun errorName(e: Int): String = when (e) {
+            SpeechRecognizer.ERROR_AUDIO -> "the microphone could not be read (another app may be using it)"
+            SpeechRecognizer.ERROR_CLIENT -> "the phone's speech service refused the request"
+            SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> "the phone's speech service is busy (another app may be using it)"
+            SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> "the microphone permission is missing"
+            SpeechRecognizer.ERROR_NETWORK, SpeechRecognizer.ERROR_NETWORK_TIMEOUT, SpeechRecognizer.ERROR_SERVER -> "the speech service wanted the network (code $e)"
+            else -> "the speech service failed (code $e)"
+        }
+
         fun diagnose(context: Context?): String {
             val out = ArrayList<String>()
+            val v = instance?.get()
+            if (wanted && v == null) out += "Listening is switched on but not running: open the Jarvis screen, or switch \"Listen for Jarvis\" off and on."
+            lastError?.takeIf { SystemClock.elapsedRealtime() - it.second < 10 * 60_000 }?.let { (e, at) ->
+                out += "My ears failed %d seconds ago: %s.".format(java.util.Locale.ENGLISH, (SystemClock.elapsedRealtime() - at) / 1000, errorName(e))
+            }
             if (muted) out += "I'm muted: say \"Jarvis, unmute\" or switch Mute off in Settings, Voice and AI model."
             if (quietNow()) out += "It's quiet hours (22:00 to 07:00): I only speak when you ask."
             if (!JarvisSpeaker.speakTyped) out += "Speaking typed replies is off (Settings, Voice and AI model)."
@@ -470,34 +487,8 @@ class JarvisVoice : Service() {
             }
         }
         listening = true
-        runCatching { quietly { rec?.startListening(i) } }.onFailure { listening = false; endTap(); again(1_000) }
+        runCatching { rec?.startListening(i) }.onFailure { listening = false; endTap(); again(1_000) }
         _state.value = VoiceState(if (awake()) Mode.AWAKE else Mode.LISTENING)
-    }
-
-    // Android's recognizer plays a beep each time it starts, and listening restarts every second or two when nobody
-    // speaks: a beep a second, even locked (Boss, 4 Oct). The start is made with the system and media sounds muted for
-    // a moment - only streams not muted already, never while music plays, never notifications - and put back after.
-    private val audio by lazy { getSystemService(android.media.AudioManager::class.java) }
-    private val mutedForBeep = HashSet<Int>()
-    private val unmute = Runnable { unmuteNow() }
-
-    private fun quietly(start: () -> Unit) {
-        val am = audio
-        if (am != null && !speaking) {
-            val streams = listOfNotNull(android.media.AudioManager.STREAM_SYSTEM,
-                android.media.AudioManager.STREAM_MUSIC.takeIf { !am.isMusicActive })
-            for (st in streams) if (st !in mutedForBeep && runCatching { !am.isStreamMute(st) }.getOrDefault(false) &&
-                runCatching { am.adjustStreamVolume(st, android.media.AudioManager.ADJUST_MUTE, 0); true }.getOrDefault(false)) mutedForBeep += st
-        }
-        try { start() } finally { main.removeCallbacks(unmute); main.postDelayed(unmute, 600) }
-    }
-
-    /** Puts back only what [quietly] muted (before Jarvis speaks, and when listening stops). */
-    private fun unmuteNow() {
-        main.removeCallbacks(unmute)
-        val am = audio ?: return
-        for (st in mutedForBeep) runCatching { am.adjustStreamVolume(st, android.media.AudioManager.ADJUST_UNMUTE, 0) }
-        mutedForBeep.clear()
     }
 
     private fun again(delayMs: Long = 250) { if (!stopped) main.postDelayed({ listen() }, delayMs) }
@@ -559,7 +550,7 @@ class JarvisVoice : Service() {
                     else giveUp("No on-device English speech model: add one in the phone's Settings (System → Languages → On-device speech recognition).")
                 else -> {
                     // Silence and no-match are normal between sentences; a run of other errors backs off up to 5 s.
-                    if (error != SpeechRecognizer.ERROR_NO_MATCH && error != SpeechRecognizer.ERROR_SPEECH_TIMEOUT) errorsInRow++
+                    if (error != SpeechRecognizer.ERROR_NO_MATCH && error != SpeechRecognizer.ERROR_SPEECH_TIMEOUT) { errorsInRow++; lastError = error to SystemClock.elapsedRealtime() }
                     // A recognizer stuck failing (busy, client, server errors) beeped on every retry, once a second, until
                     // listening was switched off and on (Boss, 4 Oct): after 3 failures in a row it is made anew - what the
                     // switch did - and further failures wait longer, up to 30 s.
@@ -787,7 +778,6 @@ class JarvisVoice : Service() {
      * [id] STOP_AFTER.
      */
     private fun say(text: String, id: String = "say") {
-        unmuteNow()
         val t = tts
         lastSpokenId = id
         if (id == "answer" || id == "question") lastSpoken = text
@@ -847,7 +837,6 @@ class JarvisVoice : Service() {
     private fun giveUp(why: String) { _state.value = VoiceState(problem = why); stopSelf() }
 
     override fun onDestroy() {
-        unmuteNow()
         stopped = true
         if (instance?.get() === this) instance = null
         main.removeCallbacksAndMessages(null)

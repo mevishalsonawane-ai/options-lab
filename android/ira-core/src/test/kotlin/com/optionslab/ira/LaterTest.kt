@@ -120,3 +120,10 @@ class ReviewLaterTest {
         assertTrue(Wake.hush("Jarvis stop"))
     }
 }
+
+class VoiceCheckWordsTest {
+    @Test fun whyCantYouHearMeIsTheVoiceCheck() {
+        for (q in listOf("why can't you hear me", "why aren't you listening", "listening is not working", "mic not working"))
+            assertEquals(Command.Kind.VOICE_CHECK, Ask.parse(q).command?.kind, q)
+    }
+}
