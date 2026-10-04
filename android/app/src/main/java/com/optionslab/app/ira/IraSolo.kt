@@ -266,7 +266,10 @@ internal object IraSolo {
         // An open trade is always seen through to its exit, even after Solo is switched off.
         list.lastOrNull { !it.closed }?.let { manage(it, list, today, now); return@withLock }
         // Switched off: its setup can still be offered to Boss as a trade idea (he approves each), once a market a day.
-        val offering = !on && Automations.on(Automations.Auto.SOLO_IDEAS) && !IraNewsTrades.lossLimitHit()
+        // In Live, once Solo's own paper record is proven, its setups are always asked (Boss, 4 Oct: real orders only
+        // after his yes with the fingerprint); until then it trades on paper as before.
+        val soloLive = on && runCatching { AppSettings.load().live }.getOrDefault(false) && provenWhy() == null
+        val offering = soloLive || !on && Automations.on(Automations.Auto.SOLO_IDEAS) && !IraNewsTrades.lossLimitHit()
         if (!on && !offering) return@withLock
         // Paused by its drawdown: neither trades nor ideas until Boss switches it on again.
         if (paused != null) return@withLock
@@ -301,7 +304,7 @@ internal object IraSolo {
                 val key = "$today|${m.name}"
                 if (synchronized(offered) { key in offered }) continue
                 val text = "Solo's read on ${m.label}: ${sig.why}. $read"
-                if (IraHub.offerSoloIdea(com.optionslab.ira.NewsTrade.Idea(m, sig.call, text, kind = "solo"), text)) synchronized(offered) { offered += key }
+                if (IraHub.offerSoloIdea(com.optionslab.ira.NewsTrade.Idea(m, sig.call, text, kind = "solo"), text, solo = soloLive)) synchronized(offered) { offered += key }
                 return@withLock
             }
             enter(m, sig, list, today, read)
@@ -439,11 +442,16 @@ internal object IraSolo {
     }.getOrNull()
 
     /** "How is Solo doing": on or off, paused or not, and the record. */
-    fun status(): String = (if (on) "Solo is on, Boss (paper only; switch it off in Jarvis settings)." else "Solo is off, Boss: switch it on in Jarvis settings (paper only).") +
+    fun status(): String = (if (on) "Solo is on, Boss (on paper until its record is proven; then in Live it asks you each time; switch it off in Jarvis settings)." else "Solo is off, Boss: switch it on in Jarvis settings (paper until proven).") +
         (paused?.let { " $it" } ?: "") + " " + record() + " Learning: ${learning()}." + (watch?.takeIf { on && paused == null && com.optionslab.app.data.Market.isOpen() && it.first.toLocalDate() == com.optionslab.app.data.Market.today() &&
             all().none { t -> !t.closed } }?.let { (at, w) ->
             if (w.isEmpty()) " At %02d:%02d nothing was set up yet.".format(at.hour, at.minute) else " At %02d:%02d Solo saw: ".format(at.hour, at.minute) + w + "."
         } ?: "")
+
+    /** Null when Solo's own paper record has earned real orders (the same bar as Jarvis's trades), else why not. */
+    fun provenWhy(): String? = com.optionslab.ira.JarvisTrades.proven(all().filter { it.closed && it.net != null }
+        .map { com.optionslab.ira.JarvisTrades.Closed(LocalDate.parse(it.day), it.net!!, false) })
+        ?.replace("My trades", "Solo's trades")?.replace("My paper trades", "Solo's paper trades")
 
     /** Solo's paper record in one line. */
     fun record(list: List<T> = all()): String {

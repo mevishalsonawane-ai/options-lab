@@ -55,10 +55,14 @@ internal object IraNewsTrades {
 
     // ---- the owner's rules for Jarvis's own trades --------------------------------------------------------------------
 
-    /** Jarvis's trades stay on paper (even in Live mode) until their paper record earns live ([JarvisTrades.proven]). */
+    /**
+     * Boss's "keep your trades on paper" (even in Live). Off by default (Boss, 4 Oct: "everything should also work on
+     * real, with my approval first"): in Live, once their paper record is proven ([JarvisTrades.proven]), Jarvis's
+     * trades go to Zerodha - each only after his yes with the fingerprint. (A new key: the old default was on.)
+     */
     var paperFirst: Boolean
-        get() = runCatching { com.optionslab.app.security.SecurePrefs.getBoolean("jarvis.trades.paper", true) }.getOrDefault(true)
-        set(v) { runCatching { com.optionslab.app.security.SecurePrefs.put("jarvis.trades.paper", v) } }
+        get() = runCatching { com.optionslab.app.security.SecurePrefs.getBoolean("jarvis.trades.paper.v2", false) }.getOrDefault(true)
+        set(v) { runCatching { com.optionslab.app.security.SecurePrefs.put("jarvis.trades.paper.v2", v) } }
 
     const val DEFAULT_LIMIT = 3_000.0
     /** Rupees Jarvis's trades may lose in a day before it suggests no more (its own limit, apart from the app's). */
@@ -168,10 +172,16 @@ internal object IraNewsTrades {
      * The owner approved [idea]: place it (Paper, or Zerodha through the app's order review), stop, target, record.
      * [paperOnly]: Jarvis took it by itself - it goes on paper or nowhere, whatever changed since it was checked.
      */
-    suspend fun place(idea: NewsTrade.Idea, spot: Double, headline: String, paperOnly: Boolean = false): String =
-        lock.withLock { placeLocked(idea, spot, headline, paperOnly) }
+    suspend fun place(idea: NewsTrade.Idea, spot: Double, headline: String, paperOnly: Boolean = false, solo: Boolean = false,
+                      liveApproved: Boolean = false): String =
+        lock.withLock { placeLocked(idea, spot, headline, paperOnly, solo, liveApproved) }
 
-    private suspend fun placeLocked(idea: NewsTrade.Idea, spot: Double, headline: String, paperOnly: Boolean): String {
+    /**
+     * [solo]: Solo's setup (its own record decides live). [liveApproved]: Boss approved with the fingerprint (or the
+     * phone has none): without it, a trade that would now reach Zerodha is not placed at all.
+     */
+    private suspend fun placeLocked(idea: NewsTrade.Idea, spot: Double, headline: String, paperOnly: Boolean, solo: Boolean,
+                                    liveApproved: Boolean): String {
         IraAccount.invalidate()
         val u = idea.market.name
         val c = contract(u, spot, idea.call) ?: return "No ${u} option is listed for the next expiry."
@@ -185,7 +195,7 @@ internal object IraNewsTrades {
         val nowMin = java.time.LocalTime.now(java.time.ZoneId.of("Asia/Kolkata")).let { it.hour * 60 + it.minute }
         if (lots < 1) return "Your risk per trade is smaller than one lot's stop risk (about ${com.optionslab.ira.AppFacts.rs(premium * 0.15 * c.lotSize).removePrefix("+")}): not placed."
         // Paper first: until their own record is proven (checked again now), Jarvis's trades go on paper even in Live mode.
-        if (!s.live || paperFirst || JarvisTrades.proven(closedRecord()) != null) {
+        if (!s.live || !earned(solo)) {
             val r = Paper.place(c, "BUY", lots, "MARKET", "MIS", null, null, quote)
             val fill = r.events.filterIsInstance<com.optionslab.engine.sandbox.SandboxEvent.Fill>().firstOrNull()
                 ?: return "Paper: ${r.message}"
@@ -204,6 +214,7 @@ internal object IraNewsTrades {
         }
         // Never real money without Boss's yes: a trade Jarvis took by itself that would now reach Zerodha is dropped.
         if (paperOnly) return "Not placed: it would now go to Zerodha, and I only act by myself on paper. Ask me if you want it."
+        if (!liveApproved) return "Not placed: it would now go to Zerodha with real money, which needs your fingerprint. Ask me again and approve it there."
         val t = IraOrders.Ticket(u, c.expiry, c.strike, c.right, lots, true, c.lotSize)
         val sent = IraActions.trade(t, live = true)
         if (!sent.startsWith("Sent to Zerodha")) return sent
@@ -355,7 +366,11 @@ internal object IraNewsTrades {
     private fun spotOf(u: String): Double? = runCatching { IraHub.state.value.snaps[com.optionslab.ira.Market.valueOf(u)]?.price }.getOrNull()
 
     /** Will Jarvis's next trade go to Zerodha with real money (Live mode, paper-first off, the paper record proven)? */
-    fun goesLive(): Boolean = AppSettings.load().live && !paperFirst && JarvisTrades.proven(closedRecord()) == null
+    fun goesLive(solo: Boolean = false): Boolean = AppSettings.load().live && earned(solo)
+
+    /** Has the record earned real orders: Solo's own paper record for its setups, else Jarvis's (and paper-first off). */
+    private fun earned(solo: Boolean): Boolean =
+        if (solo) IraSolo.provenWhy() == null else !paperFirst && JarvisTrades.proven(closedRecord()) == null
 
     /** Why each of Jarvis's recent losing trades lost (the last five), in words. */
     fun lossReasons(): List<String> {

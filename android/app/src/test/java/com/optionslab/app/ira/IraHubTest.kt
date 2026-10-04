@@ -483,11 +483,14 @@ class IraHubTest : RobolectricTest() {
     }
 
     @Test fun jarvisTradesStayOnPaperUntilProvenAndKeepTheirOwnLimit() = runBlocking {
-        assertTrue(IraNewsTrades.paperFirst)
+        // Boss, 4 Oct: in Live they follow the app (asked each time) - but only once proven; with no record, never live.
+        assertTrue(!IraNewsTrades.paperFirst)
+        assertTrue(!IraNewsTrades.goesLive()); assertTrue(!IraNewsTrades.goesLive(solo = true))
+        assertTrue(IraSolo.provenWhy()!!.startsWith("Solo's trades stay on paper until 20"))
         IraHub.ask("Jarvis, let your trades go live")
         waitFor("the refusal") { IraHub.state.value.messages.lastOrNull()?.fromIra == true }
         assertTrue(IraHub.state.value.messages.last().text, IraHub.state.value.messages.last().text.contains("stay on paper until 20"))
-        assertTrue(IraNewsTrades.paperFirst)
+        assertTrue(!IraNewsTrades.goesLive())
         IraHub.ask("set Jarvis loss limit to 2000")
         waitFor("the limit") { IraHub.state.value.messages.lastOrNull()?.fromIra == true }
         IraHub.state.value.pending.singleOrNull()?.let { IraHub.confirm(it) }

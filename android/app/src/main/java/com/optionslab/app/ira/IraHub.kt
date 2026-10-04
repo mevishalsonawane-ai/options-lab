@@ -561,7 +561,9 @@ object IraHub {
      * arm's 15% stop, a +40 target and the profit lock - placed only on the owner's yes (aloud, Approve on the pop-up or
      * Confirm on the Ira screen); unanswered in 10 minutes it lapses. [said] opens the spoken question.
      */
-    private suspend fun proposeTrade(c: Context, idea: com.optionslab.ira.NewsTrade.Idea, title: String, text: String, said: String, source: String) {
+    /** [solo]: Solo's setup - its own paper record decides whether the approved trade goes to Zerodha. */
+    private suspend fun proposeTrade(c: Context, idea: com.optionslab.ira.NewsTrade.Idea, title: String, text: String, said: String, source: String,
+                                     solo: Boolean = false) {
         if (GOLD_ONLY_TALK) return
         val m = idea.market
         // Two losses in a row: a cooling-off, said once.
@@ -608,8 +610,8 @@ object IraHub {
         val what = "buy 1 lot of the ${m.label} $side at the money, nearest expiry, with a 15% stop, a +${IraNewsTrades.TARGET_POINTS.toInt()} target and the profit lock"
         // Independent (Boss's choice, 4 Oct): a sure enough idea that would go to the PAPER account is taken at once and
         // told - never one that would reach Zerodha (that is always asked).
-        val goesLive = runCatching { IraNewsTrades.goesLive() }.getOrDefault(true)
-        if (com.optionslab.ira.ActAlone.ok(Automations.on(Automations.Auto.ACT_PAPER), goesLive, conf.stars) && snap != null) {
+        val goesLive = runCatching { IraNewsTrades.goesLive(solo) }.getOrDefault(true)
+        if (!solo && com.optionslab.ira.ActAlone.ok(Automations.on(Automations.Auto.ACT_PAPER), goesLive, conf.stars) && snap != null) {
             val done = runCatching { IraNewsTrades.place(idea, _state.value.snaps[m]?.price ?: snap.price, source, paperOnly = true) }.getOrElse { "That did not work: ${it.message ?: "an error"}." }
             val took = done.startsWith("Bought")
             val said2 = "$text$ivLine ${conf.text()}$risk " + (if (took) "I took it myself on paper: $what. $done" else "I meant to take it myself on paper, but: $done")
@@ -626,12 +628,15 @@ object IraHub {
         }
         val id = System.nanoTime()
         synchronized(actions) {
-            actions[id] = what to suspend { IraNewsTrades.place(idea, _state.value.snaps[m]?.price ?: snap?.price ?: error("no ${m.label} price"), source) }
+            actions[id] = what to suspend { IraNewsTrades.place(idea, _state.value.snaps[m]?.price ?: snap?.price ?: error("no ${m.label} price"), source,
+                solo = solo, liveApproved = synchronized(actions) { id in liveApproved }) }
             newsAsks += id
+            if (solo) soloAsks += id
         }
         IraNewsTrades.suggested(id, idea, snap?.price ?: 0.0, source)
         IraActivity.add("Suggested: $what (${source.substringBefore(':')}).")
-        val where = if (IraNewsTrades.paperFirst && com.optionslab.app.data.AppSettings.load().live) " (on paper: my trades stay there until proven)" else ""
+        val where = if (goesLive) " on ZERODHA with real money (approve with your fingerprint)"
+            else if (com.optionslab.app.data.AppSettings.load().live) " (on paper: ${if (solo) "Solo's" else "my"} trades stay there until proven)" else ""
         val full = "$text$ivLine ${conf.text()}$risk Shall I $what$where? Approve or reject."
         _state.update { it.copy(pending = it.pending + id, messages = (it.messages + Msg(true, full, action = id)).takeLast(MAX_MESSAGES)) }
         JarvisApproval.show(c, id, title, full)
@@ -652,7 +657,7 @@ object IraHub {
      * Solo's setup offered to Boss as a trade idea (Solo switched off): the same gates, approval and paper-first rules as
      * every suggestion; one waiting at a time.
      */
-    internal suspend fun offerSoloIdea(idea: com.optionslab.ira.NewsTrade.Idea, text: String): Boolean {
+    internal suspend fun offerSoloIdea(idea: com.optionslab.ira.NewsTrade.Idea, text: String, solo: Boolean = false): Boolean {
         if (GOLD_ONLY_TALK) return true
         val c = app ?: return false
         if (synchronized(actions) { newsAsks.isNotEmpty() }) return false
@@ -660,7 +665,7 @@ object IraHub {
         // then counted as offered for the day).
         if (IraNewsTrades.today() >= com.optionslab.ira.NewsTrade.MAX_A_DAY) return true
         if (com.optionslab.ira.JarvisTrades.expiryBlock(expiryToday(idea.market), LocalDateTime.now(IST)) != null) return true
-        proposeTrade(c, idea, "Trade idea: ${idea.market.label}", text, "Hey Boss, a trade idea. ${Wake.spoken(text, 1)}", "pattern: solo|${idea.market.name}")
+        proposeTrade(c, idea, "Trade idea: ${idea.market.label}", text, "Hey Boss, a trade idea. ${Wake.spoken(text, 1)}", "pattern: solo|${idea.market.name}", solo = solo)
         return true
     }
 
@@ -893,10 +898,13 @@ object IraHub {
 
     /** News trades waiting for an answer (at most [com.optionslab.ira.NewsTrade.MAX_A_DAY] a day with those placed). */
     private val newsAsks = HashSet<Long>()
+    /** Of [newsAsks], Solo's setups (their own record decides live), and those Boss approved for real money. */
+    private val soloAsks = HashSet<Long>()
+    private val liveApproved = HashSet<Long>()
 
     /** [id] was answered or lapsed: its pop-up hides and Jarvis stops waiting for a yes or no. */
     private fun settled(id: Long) {
-        synchronized(actions) { newsAsks.remove(id) }
+        synchronized(actions) { newsAsks.remove(id); soloAsks.remove(id) }
         app?.let { JarvisApproval.hide(it, id) }
         JarvisVoice.answered(id)
     }
@@ -1534,21 +1542,27 @@ object IraHub {
                 "The emergency exit is confirmed with your fingerprint on the Jarvis screen, or by saying yes in your own voice.".also { reply(it) } }
         // A trade that goes to Zerodha with real money needs the owner's fingerprint on the Jarvis screen (a spoken yes or
         // the notification's Approve is not enough); it stays waiting until then.
-        if (asksYesNo(id) && !fingerprint && IraNewsTrades.goesLive() && fingerprintNeeded())
+        if (asksYesNo(id) && !fingerprint && IraNewsTrades.goesLive(isSolo(id)) && fingerprintNeeded())
             return synchronized(actions) { actions.containsKey(id) }.let { waiting -> if (!waiting) null else
                 "This trade goes to Zerodha with real money: approve it with your fingerprint on the Jarvis screen.".also { reply(it) } }
+        // Real money only with the fingerprint (or a phone with none, where the app lock covers it): the trade checks this
+        // again when placed, so a record that turns proven between now and then never sends one unapproved.
+        val yes = asksYesNo(id)
         val a = synchronized(actions) { exitIds.remove(id); actions.remove(id) } ?: return null
+        if (yes && (fingerprint || !fingerprintNeeded())) synchronized(actions) { liveApproved += id }
         if (asksYesNo(id)) IraNewsTrades.answered(id, "approved")
         settled(id)
         _state.update { it.copy(pending = it.pending - id) }
-        return IraActions.run(a.first, a.second).also { IraAccount.invalidate(); checked = null; reply(it) }
+        return IraActions.run(a.first, a.second).also { synchronized(actions) { liveApproved.remove(id) }; IraAccount.invalidate(); checked = null; reply(it) }
     }
 
     /** Does a live trade's approval ask for the fingerprint? (whenever the phone has one; without one the app lock covers it) */
     fun fingerprintNeeded(): Boolean = app?.let { com.optionslab.app.security.BiometricGate.fingerprintOn(it) } ?: true
 
     /** Is [id] a trade waiting that will need the fingerprint (the Jarvis screen shows the fingerprint button)? */
-    fun needsFingerprint(id: Long): Boolean = (isExit(id) || asksYesNo(id) && IraNewsTrades.goesLive()) && fingerprintNeeded()
+    fun needsFingerprint(id: Long): Boolean = (isExit(id) || asksYesNo(id) && IraNewsTrades.goesLive(isSolo(id))) && fingerprintNeeded()
+
+    private fun isSolo(id: Long): Boolean = synchronized(actions) { id in soloAsks }
 
     fun cancelAction(id: Long) {
         // Only what is still waiting can be cancelled: one already confirmed (or lapsed) is not said to be undone.
