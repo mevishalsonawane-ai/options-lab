@@ -21,7 +21,7 @@ object OptionFacts {
 
     fun asked(text: String): Asked? {
         val t = text.lowercase(Locale.ENGLISH).replace("'", " ")
-        if (Regex("\\b(how long|how much time|time left|minutes left)\\b.*\\b(close|market|session|trading)\\b|\\bwhen does (the )?market close\\b|\\bmarket band hone (mein|me) kitna (time|samay)\\b|\\bkitna (time|samay) (bacha|baaki)\\b").containsMatchIn(t))
+        if (Regex("\\b(how long|how much time|time left|minutes left)\\b.*\\b(close|market|session|trading)\\b|\\bwhen does (the )?market close\\b|\\bmarket band hone (mein|me) kitna (time|samay)\\b|\\bkitna (time|samay) (bacha|baaki)\\b|\\bwhen (does|will) (the )?market (open|start)\\b|\\bmarket kab (khulega|khulta|open hoga)\\b|\\bwhat time (does|will) (the )?market (open|close)\\b").containsMatchIn(t))
             return Asked.TimeLeft
         val m = Market.mentioned(text).firstOrNull { it in CHAIN }
         if (!Regex("\\b(buy|sell|order|place)\\b").containsMatchIn(t) &&
@@ -45,10 +45,11 @@ object OptionFacts {
         "${m.label} $strike $right is at ${rs(ltp)}" + (if (bid != null && ask != null && bid > 0 && ask > 0) " (bid ${rs(bid)}, ask ${rs(ask)})" else "") +
             ", open interest %,d; one lot of $lotSize is about ${"Rs %,.0f".format(Locale.ENGLISH, ltp * lotSize)}.".format(Locale.ENGLISH, oi)
 
-    fun timeLeft(minuteNow: Int, open: Int = 9 * 60 + 15, close: Int = 15 * 60 + 30, tradingDay: Boolean = true): String = when {
-        !tradingDay -> "The market is closed today, Boss."
+    fun timeLeft(minuteNow: Int, open: Int = 9 * 60 + 15, close: Int = 15 * 60 + 30, tradingDay: Boolean = true,
+                 /** The next trading day after today, e.g. "Mon 6 Oct" (for "opens next on ..."). */ nextDay: String? = null): String = when {
+        !tradingDay -> "The market is closed today, Boss." + (nextDay?.let { " It opens next on $it at 09:15." } ?: "")
         minuteNow < open -> "The market opens in ${open - minuteNow} minutes (09:15), Boss."
-        minuteNow >= close -> "The market has closed for today (15:30), Boss."
+        minuteNow >= close -> "The market has closed for today (15:30), Boss." + (nextDay?.let { " It opens next on $it at 09:15." } ?: "")
         else -> (close - minuteNow).let { left -> "${if (left >= 60) "${left / 60} h ${left % 60} min" else "$left minutes"} left until the 15:30 close, Boss." }
     }
 }

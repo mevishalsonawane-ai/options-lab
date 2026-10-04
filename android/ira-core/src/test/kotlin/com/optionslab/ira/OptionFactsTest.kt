@@ -33,3 +33,12 @@ class OptionFactsHindiTest {
         assertNull(OptionFacts.asked("nifty 25000 ce kharido"))
     }
 }
+
+class MarketOpenAskTest {
+    @Test fun open() {
+        assertEquals(OptionFacts.Asked.TimeLeft, OptionFacts.asked("when does the market open"))
+        assertEquals(OptionFacts.Asked.TimeLeft, OptionFacts.asked("market kab khulega"))
+        assertEquals("The market has closed for today (15:30), Boss. It opens next on Mon 6 Oct at 09:15.", OptionFacts.timeLeft(16 * 60, nextDay = "Mon 6 Oct"))
+        assertEquals("The market is closed today, Boss. It opens next on Mon 6 Oct at 09:15.", OptionFacts.timeLeft(11 * 60, tradingDay = false, nextDay = "Mon 6 Oct"))
+    }
+}

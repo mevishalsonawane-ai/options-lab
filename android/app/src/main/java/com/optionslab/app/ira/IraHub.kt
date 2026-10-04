@@ -1166,7 +1166,9 @@ object IraHub {
                 _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
                 if (a is com.optionslab.ira.OptionFacts.Asked.TimeLeft) {
                     val mk = com.optionslab.app.data.Market
-                    reply(com.optionslab.ira.OptionFacts.timeLeft(mk.minuteNow(), tradingDay = runCatching { mk.isTradingDay(mk.today()) }.getOrDefault(true))); return
+                    val next = runCatching { var d = mk.today().plusDays(1); var g = 0; while (g++ < 14 && !mk.isTradingDay(d)) d = d.plusDays(1)
+                        d.format(java.time.format.DateTimeFormatter.ofPattern("EEE d MMM", java.util.Locale.ENGLISH)) }.getOrNull()
+                    reply(com.optionslab.ira.OptionFacts.timeLeft(mk.minuteNow(), tradingDay = runCatching { mk.isTradingDay(mk.today()) }.getOrDefault(true), nextDay = next)); return
                 }
                 val m = when (a) { is com.optionslab.ira.OptionFacts.Asked.Quote -> a.market; is com.optionslab.ira.OptionFacts.Asked.Atm -> a.market
                     is com.optionslab.ira.OptionFacts.Asked.LotSize -> a.market; else -> IraMarket.NIFTY }
