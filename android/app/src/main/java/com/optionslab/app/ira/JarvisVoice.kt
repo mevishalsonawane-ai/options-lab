@@ -93,6 +93,7 @@ class JarvisVoice : Service() {
             append("On-device recognition available: ${context?.let { c -> runCatching { Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && SpeechRecognizer.isOnDeviceRecognitionAvailable(c) }.getOrNull() }} · " +
                 "any recognizer: ${context?.let { c -> runCatching { SpeechRecognizer.isRecognitionAvailable(c) }.getOrNull() }}\n")
             append("Voice check: ${runCatching { diagnose(context) }.getOrElse { "could not run" }}\n")
+            com.optionslab.ira.Latency.say(latencies)?.let { append(it).append('\n') }
             append("Last turns:\n"); traceLines(all = true).forEach { append("  ").append(it).append('\n') }
         }
 
@@ -277,6 +278,8 @@ class JarvisVoice : Service() {
 
         /** How long the last spoken reply took, from Boss's last word to Jarvis's first sound (ms), or 0. */
         @Volatile var lastLatencyMs = 0L
+        /** This run's answer waits (for the diagnostics). */
+        @Volatile var latencies: List<Long> = emptyList()
 
         /** Jarvis is speaking now. */
         val speakingNow: Boolean get() = instance?.get()?.speaking == true
@@ -529,7 +532,7 @@ class JarvisVoice : Service() {
                 // Only a reply to what was just heard counts (an answer or a yes-or-no question within a minute): a later
                 // announcement is not a reply, and a stale time would read as minutes.
                 val took = SystemClock.elapsedRealtime() - h
-                if (h > 0 && (id?.startsWith("answer") == true || id?.startsWith("question") == true)) { if (took < 60_000) lastLatencyMs = took; heardAt = 0L }
+                if (h > 0 && (id?.startsWith("answer") == true || id?.startsWith("question") == true)) { if (took < 60_000) lastLatencyMs = took; latencies = com.optionslab.ira.Latency.add(latencies, took); heardAt = 0L }
             }
             override fun onDone(id: String?) { main.post { if (id == utterance) afterSpeech(id?.substringBefore('#')) } }
             @Deprecated("Deprecated in Java") override fun onError(id: String?) { main.post { if (id == utterance) afterSpeech(id?.substringBefore('#')) } }
