@@ -1536,8 +1536,8 @@ object IraHub {
             // kill switch, autopilot, Jarvis's own limits) waits for Confirm - in the real app too (review, 3 Oct).
             if (c.kind.reduces || !com.optionslab.app.BuildConfig.JARVIS || confirmAlways || c.kind !in AT_ONCE) {
                 // The emergency exit asks for the fingerprint on the screen (or Boss's own voice, aloud).
-                pend(what, act, "Tap Confirm to ${what}.", exit = c.kind == com.optionslab.ira.Command.Kind.EXIT_ALL)
-            } else reply(IraActions.run(what, act))
+                pend(what, suspend { IraActions.verified(c.kind, act()) }, "Tap Confirm to ${what}.", exit = c.kind == com.optionslab.ira.Command.Kind.EXIT_ALL)
+            } else reply(IraActions.run(what, suspend { IraActions.verified(c.kind, act()) }))
         }
     }
 
@@ -1568,7 +1568,7 @@ object IraHub {
                         continue
                     }
                     val (what, act) = runCatching { IraActions.prepare(c) }.getOrElse { ("I could not do that: ${it.message}") to null }
-                    val r = if (act == null) "Not done: $what" else IraActions.run(what, act)
+                    val r = if (act == null) "Not done: $what" else IraActions.run(what, suspend { IraActions.verified(c.kind, act()) })
                     done += steps[i] to r
                     if (act == null || com.optionslab.ira.Plan.failed(r)) break
                 }

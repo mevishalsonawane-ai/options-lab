@@ -351,6 +351,42 @@ internal object IraActions {
     }
 
     /** Runs a prepared action, logged as Jarvis's; never throws. */
+    /**
+     * Jarvis checks his own work (part 3): after [k] said it was done, the app is read again and its effect looked for
+     * (once more 3 s later, as exits and cancels take a moment); [result] comes back with the check's word.
+     */
+    suspend fun verified(k: com.optionslab.ira.Command.Kind, result: String): String {
+        val need = com.optionslab.ira.Verify.needs(k)
+        if (need.isEmpty() || com.optionslab.ira.Plan.failed(result)) return result
+        var problem: String? = null
+        for (wait in listOf(1_500L, 3_000L)) {
+            kotlinx.coroutines.delay(wait)
+            problem = runCatching { com.optionslab.ira.Verify.problem(k, facts(need)) }.getOrNull()
+            if (problem == null) break
+        }
+        if (problem != null) IraActivity.add("Checked my own work: $problem.")
+        return com.optionslab.ira.Verify.say(result, problem, checked = true)
+    }
+
+    /** The facts [need] names, read from the app now (one that cannot be read stays null: not judged). */
+    private suspend fun facts(need: Set<String>): com.optionslab.ira.Verify.Facts {
+        val s = runCatching { AppSettings.load() }.getOrNull()
+        val live = s?.live == true
+        fun <T> read(name: String, f: () -> T): T? = if (name in need) runCatching(f).getOrNull() else null
+        val positions = if ("positions" in need) runCatching {
+            if (live) com.optionslab.app.data.Broker.positionBook().net.count { it.open }
+            else com.optionslab.app.data.Paper.snapshot().positions.positions.count { it.quantity != 0 }
+        }.getOrNull() else null
+        val orders = if ("orders" in need) runCatching {
+            if (live) com.optionslab.app.data.Broker.orders().count { it.working }
+            else com.optionslab.app.data.Paper.snapshot().orders.orders.count { it.status.lowercase() !in setOf("complete", "cancelled", "rejected") }
+        }.getOrNull() else null
+        val armed = if ("armed" in need) runCatching { com.optionslab.app.data.OrbArms.view().arms.any { it.armed } }.getOrNull() else null
+        val bots = if ("bots" in need) runCatching { com.optionslab.app.data.Strategies.stoppedToday() }.getOrNull() else null
+        return com.optionslab.ira.Verify.Facts(killOn = read("kill") { s!!.guardKill }, live = read("live") { s!!.live },
+            botsStopped = bots, anyArmed = armed, openPositions = positions, workingOrders = orders)
+    }
+
     suspend fun run(what: String, act: suspend () -> String): String {
         log(what)
         IraAccount.invalidate()
