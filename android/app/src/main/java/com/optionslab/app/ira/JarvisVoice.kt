@@ -273,8 +273,18 @@ class JarvisVoice : Service() {
          * the screen and in pop-ups - while Jarvis still listens, so "Jarvis, unmute" brings the voice back.
          */
         var muted: Boolean
-            get() = runCatching { com.optionslab.app.security.SecurePrefs.getBoolean("jarvis.mute", false) }.getOrDefault(false)
-            set(v) { runCatching { com.optionslab.app.security.SecurePrefs.put("jarvis.mute", v) }; if (v) { instance?.get()?.hush(); JarvisSpeaker.stop() } }
+            get() = runCatching { com.optionslab.app.security.SecurePrefs.getBoolean("jarvis.mute", false) }.getOrDefault(false) ||
+                System.currentTimeMillis() < mutedUntil
+            set(v) { runCatching { com.optionslab.app.security.SecurePrefs.put("jarvis.mute", v); if (!v) com.optionslab.app.security.SecurePrefs.put("jarvis.mute.until", null) }
+                if (v) { instance?.get()?.hush(); JarvisSpeaker.stop() } }
+
+        /** "Be quiet for 30 minutes": muted until this time (epoch ms), then speaking again by itself. */
+        val mutedUntil: Long get() = runCatching { com.optionslab.app.security.SecurePrefs.getString("jarvis.mute.until")?.toLong() }.getOrNull() ?: 0L
+
+        fun muteFor(minutes: Int) {
+            runCatching { com.optionslab.app.security.SecurePrefs.put("jarvis.mute.until", (System.currentTimeMillis() + minutes.coerceIn(1, 480) * 60_000L).toString()) }
+            instance?.get()?.hush(); JarvisSpeaker.stop()
+        }
 
         /** Replies in Hindi (the AI model translates; figures are checked, and English is used when it cannot). */
         var hindi: Boolean

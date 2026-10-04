@@ -45,7 +45,7 @@ object Toolbox {
         Kind.JTRADES_LIVE -> Tool("let AI trades go live", "My trades", Need.NEVER)
         Kind.JTRADES_LIMIT, Kind.JTRADES_WEEKLY, Kind.JTRADES_RISK -> Tool("my own trades' loss limits and risk", "My trades", Need.CONFIRM)
         Kind.MUTE, Kind.UNMUTE, Kind.HINDI, Kind.ENGLISH, Kind.BRIEF_ON, Kind.BRIEF_OFF, Kind.MORE, Kind.VOICE_CHECK,
-        Kind.PACE_SLOWER, Kind.PACE_FASTER, Kind.PACE_NORMAL ->
+        Kind.PACE_SLOWER, Kind.PACE_FASTER, Kind.PACE_NORMAL, Kind.MUTE_FOR ->
             Tool("my voice: mute, language, short answers, voice check", "Voice", Need.CONFIRM)
         Kind.QUIET_ON, Kind.QUIET_OFF -> Tool("quiet hours", "Voice", Need.CONFIRM)
         Kind.TARGET_SET, Kind.TARGET_CLEAR -> Tool("your day's target", "Journal", Need.CONFIRM)

@@ -40,6 +40,8 @@ data class Command(val kind: Kind, val target: String? = null, val number: Int? 
         VOICE_CHECK(true),
         /** How fast Jarvis speaks: slower, faster, back to normal (only his voice; nothing else changes). */
         PACE_SLOWER(true), PACE_FASTER(true), PACE_NORMAL(true),
+        /** "Be quiet for 30 minutes": muted for [Command.number] minutes, then speaking again by itself. */
+        MUTE_FOR(true),
     }
 }
 
@@ -84,6 +86,15 @@ object Commands {
             return Command(Command.Kind.MISTAKE)
         // Jarvis's voice (before the negation check: "don't speak" is a mute).
         if (Regex("^ (un ?mute|unmute yourself|speak again|talk again|voice on|turn (on )?(your )?voice( on)?|you can (speak|talk)( now| again)?|start (speaking|talking)) $").containsMatchIn(s)) return Command(Command.Kind.UNMUTE)
+        // A mute for a while: "be quiet for 30 minutes", "mute for an hour", "30 minute chup raho".
+        Regex("^ ((be quiet|mute|mute yourself|stay quiet|stay silent|go silent|don t speak|do not speak|stop talking|chup raho)( for)? (\\d{1,3}|an|a|one|half an) (min|mins|minute|minutes|hour|hours)|(\\d{1,3}) (minute|minutes|min|ghante|ghanta) (chup raho|mute|be quiet)) $").find(s)?.let { m ->
+            val g = m.groupValues
+            val num = g[4].ifEmpty { g[6] }
+            val n = when (num) { "an", "a", "one" -> 1; "half an" -> 0; else -> num.toIntOrNull() ?: 0 }
+            val unit = g[5].ifEmpty { g[7] }
+            val minutes = if (unit.startsWith("h") || unit.startsWith("ghant")) (if (num == "half an") 30 else n * 60) else n
+            if (minutes in 1..480) return Command(Command.Kind.MUTE_FOR, number = minutes)
+        }
         // A mute needs clear words (a stray "quiet" or "silence" nearby is not one).
         if (Regex("^ ((be |go |stay |keep )?(mute|muted)|be quiet|mute (yourself|your voice|the voice)|(be|go|stay|keep) (on )?silent|(don t|do not|stop) (speak|speaking|talk|talking)|voice off|turn (off )?(your )?voice( off)?) $").containsMatchIn(s)) return Command(Command.Kind.MUTE)
         if (Regex("^ (why can t i hear you|why can i not hear you|i can t hear you|cant hear you|no voice|voice check|check (your|the) voice|why (are you|is your voice) (silent|not speaking|quiet)|why no voice|why (can t|cant|don t|dont|do not|can not|cannot) you (hear|listen to) me|why (are you|aren t you|arent you) (not )?(listening|hearing me)|you (are not|aren t|arent|don t|dont) (listening|hearing me)|(listening|mic|microphone) (is )?not working|(why |wht |wy )?(can t|cant|can not|cannot) (you )?(hear|here) me|(am i|can you|are you) (audible|hearing me|able to hear me)( to you| too you)?|(do|can) you (hear|here) me (now|at all|properly)|i (am|m) trying to (speak|talk)( to you)?( am i audible( to you| too you)?)?) $").containsMatchIn(s)) return Command(Command.Kind.VOICE_CHECK)
@@ -298,6 +309,7 @@ object Commands {
         Command.Kind.PACE_SLOWER -> "speak slower"
         Command.Kind.PACE_FASTER -> "speak faster"
         Command.Kind.PACE_NORMAL -> "speak at the normal pace"
+        Command.Kind.MUTE_FOR -> "stay quiet for ${c.number} minutes"
         Command.Kind.JTRADES_WEEKLY -> "set my trades' weekly loss limit to ${c.level?.let { "Rs %,.0f".format(java.util.Locale.ENGLISH, it) } ?: "?"}"
     }
 }

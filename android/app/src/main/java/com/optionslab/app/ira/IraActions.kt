@@ -291,6 +291,8 @@ internal object IraActions {
             Command.Kind.PACE_SLOWER -> { JarvisVoice.pace = JarvisVoice.pace - 0.15f; "Slower now, Boss." to null }
             Command.Kind.PACE_FASTER -> { JarvisVoice.pace = JarvisVoice.pace + 0.15f; "Faster now, Boss." to null }
             Command.Kind.PACE_NORMAL -> { JarvisVoice.pace = 1f; "Back to my normal pace, Boss." to null }
+            Command.Kind.MUTE_FOR -> { val n = c.number ?: 30; JarvisVoice.muteFor(n); IraActivity.add("Quiet for $n minutes.")
+                "Quiet for $n minutes, Boss. Replies on screen meanwhile; say \"Jarvis, unmute\" to hear me sooner." to null }
             Command.Kind.JTRADES_PAPER -> Commands.describe(c) to suspend { IraNewsTrades.paperFirst = true; "My suggested trades stay on paper now, Boss." }
             Command.Kind.JTRADES_LIVE -> {
                 val why = com.optionslab.ira.JarvisTrades.proven(IraNewsTrades.closedRecord())
