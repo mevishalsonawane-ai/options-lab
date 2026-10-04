@@ -299,7 +299,8 @@ object IraModel {
      * listening was on, it starved the phone's on-device recognizer, and Jarvis stopped hearing his name).
      */
     private fun idleUnload(): Job = scope.launch {
-        delay(IDLE_MS)
+        // While Jarvis listens, it leaves after a minute (the recognizer needs the memory); otherwise after 10 minutes.
+        delay(if (JarvisVoice.wanted) 60_000L else IDLE_MS)
         lock.withLock { unloadLocked() }
     }
 

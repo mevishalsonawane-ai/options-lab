@@ -339,8 +339,11 @@ internal object IraCoach {
     /** Jarvis's review of himself for the wrap-up: what his own record changed, and what he does tomorrow. */
     private suspend fun selfReview(): String? = runCatching {
         val bar = IraNewsTrades.actAloneBar()
+        // The bar as it stood before today (kept with its day: a second wrap-up the same day still compares to yesterday).
         val key = "jarvis.review.bar"
-        val before = com.optionslab.app.security.SecurePrefs.getString(key)?.toIntOrNull()
+        val today = com.optionslab.app.data.Market.today().toString()
+        val saved = com.optionslab.app.security.SecurePrefs.getString(key)?.split('|')
+        val before = if (saved?.getOrNull(1) == today) saved.getOrNull(2)?.toIntOrNull() else saved?.getOrNull(0)?.toIntOrNull()
         val minutes = IraNewsTrades.byMinute()
         val hours = (9..15).mapNotNull { h -> com.optionslab.ira.ActAlone.badHour(minutes, h * 60)?.let { "%02d:00-%02d:00".format(java.util.Locale.ENGLISH, h, h + 1) } }
         val kinds = IraNewsTrades.byKind()
@@ -351,7 +354,7 @@ internal object IraCoach {
         val said = com.optionslab.ira.SelfReview.say(com.optionslab.ira.SelfReview.Facts(bar, before, hours, badKinds, goals, lesson,
             verdicts.filter { it.state == com.optionslab.ira.Vetting.State.HELD_UP }.map { it.name },
             verdicts.filter { it.state == com.optionslab.ira.Vetting.State.FAILED }.map { it.name }))
-        com.optionslab.app.security.SecurePrefs.put(key, bar.toString())
+        com.optionslab.app.security.SecurePrefs.put(key, "$bar|$today|${before ?: bar}")
         said?.let { IraActivity.add(it) }
         said
     }.getOrNull()
@@ -369,9 +372,10 @@ internal object IraCoach {
         // How Nifty's day went comes first: the market's story, then Boss's own.
         val story = IraHub.dayStory(com.optionslab.ira.Market.NIFTY)
         // Solo's day right after the market's story (the spoken wrap-up keeps the first sentences).
-        val text = listOfNotNull(story, IraSolo.daySummary(), com.optionslab.ira.DaySummary.say(pnl, scorecard, events), selfReview()).joinToString(" ")
+        // (Jarvis's own review right after the day's figures, so it is within what is spoken.)
+        val text = listOfNotNull(story, com.optionslab.ira.DaySummary.say(pnl, scorecard, events), selfReview(), IraSolo.daySummary()).joinToString(" ")
         IraHub.note(text)
-        JarvisVoice.announce(com.optionslab.ira.Wake.spoken(text, 7))
+        JarvisVoice.announce(com.optionslab.ira.Wake.spoken(text, 10))
         Automations.acted(Automations.Auto.SUMMARY, text)
     }
 }

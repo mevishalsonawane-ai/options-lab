@@ -330,7 +330,9 @@ class JarvisVoice : Service() {
     /** The recognizer is running a turn now (never started twice). */
     private var listening = false
     /** Ends the recognizer's turn early (its results come at once). */
-    private val finish = Runnable { if (listening && !speaking) runCatching { rec?.stopListening() } }
+    /** When [finish] last asked the recognizer to close a turn (a "client" error right after it is that, not a failure). */
+    @Volatile private var stoppedAt = 0L
+    private val finish = Runnable { if (listening && !speaking) { stoppedAt = SystemClock.elapsedRealtime(); runCatching { rec?.stopListening() } } }
     /** Words stopped changing this long: the turn ends (a short pause inside a sentence must not cut it). */
     private val END_AFTER_MS = 900L
     /** The sentence being spoken now ("id#n"), so a replaced one is ignored. */
@@ -357,13 +359,13 @@ class JarvisVoice : Service() {
                 if (n >= 3) runCatching { com.optionslab.app.security.SecurePrefs.put(TAP_BROKEN, true) }
                 note("shared audio gave nothing ($n in a row): back to the phone's own microphone" + if (n >= 3) " for good" else " for now")
                 IraActivity.add("Listening switched to the phone's own microphone (the shared one heard nothing).")
-                runCatching { rec?.cancel() }; listening = false; endTap(); turnReadyAt = 0; again(300)
+                main.removeCallbacks(finish); runCatching { rec?.cancel() }; listening = false; endTap(); turnReadyAt = 0; again(300)
             }
             if (listening && now - listenedAt > 25_000) {
                 // (Partial words read before the reset still count, as a lost turn does.)
                 val lost = com.optionslab.ira.Wake.lostTurn(7, turnPartial)
                 note("turn timed out" + if (turnPartial != null) " (read words mid-turn)" else " (nothing read)")
-                runCatching { rec?.cancel() }; listening = false; endTap()
+                main.removeCallbacks(finish); runCatching { rec?.cancel() }; listening = false; endTap()
                 if (lost != null && !speaking) heard(listOf(lost)) else again()
             }
             if (speaking && now - spokeAt > 60_000) { speaking = false; again() }
@@ -460,6 +462,7 @@ class JarvisVoice : Service() {
             stopSelf(); return START_NOT_STICKY
         }
         instance = java.lang.ref.WeakReference(this)
+        restoreMuted()
         if (rec == null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             rec = newRecognizer().also { it.setRecognitionListener(listener) }
             pickLanguage()
@@ -553,15 +556,31 @@ class JarvisVoice : Service() {
     private val mutedForBeep = HashSet<Int>()
     private val unmuteBeep = Runnable { unmuteNow() }
 
-    /** For [ms]: the system and media sounds muted - only with Google's service, never while Jarvis speaks or music plays. */
+    /**
+     * For [ms]: the media sound muted - only with Google's service, never while Jarvis speaks or music plays. Never the
+     * system stream (it is the ringer on most phones). A mute already on is never extended (turns failing fast must not
+     * keep the phone silent), and what is muted is written down, so a crash cannot leave it muted ([restoreMuted]).
+     */
     private fun hushBeep(ms: Long) {
-        if (!googleSpeech || speaking) return
+        if (!googleSpeech || speaking || mutedForBeep.isNotEmpty()) return
         val am = getSystemService(android.media.AudioManager::class.java) ?: return
-        val streams = listOfNotNull(android.media.AudioManager.STREAM_SYSTEM, android.media.AudioManager.STREAM_MUSIC.takeIf { !am.isMusicActive })
-        for (st in streams) if (st !in mutedForBeep && runCatching { !am.isStreamMute(st) }.getOrDefault(false) &&
-            runCatching { am.adjustStreamVolume(st, android.media.AudioManager.ADJUST_MUTE, 0); true }.getOrDefault(false)) mutedForBeep += st
+        val st = android.media.AudioManager.STREAM_MUSIC
+        if (am.isMusicActive || runCatching { am.isStreamMute(st) }.getOrDefault(true)) return
+        if (!runCatching { am.adjustStreamVolume(st, android.media.AudioManager.ADJUST_MUTE, 0); true }.getOrDefault(false)) return
+        if (runCatching { am.isStreamMute(st) }.getOrDefault(false)) {
+            mutedForBeep += st
+            runCatching { com.optionslab.app.security.SecurePrefs.put(MUTED_KEY, st.toString()) }
+        }
         main.removeCallbacks(unmuteBeep); main.postDelayed(unmuteBeep, ms)
     }
+
+    /** A mute this service set and could not put back (it was killed): put back when it starts again. */
+    private fun restoreMuted() {
+        val st = runCatching { com.optionslab.app.security.SecurePrefs.getString(MUTED_KEY)?.toInt() }.getOrNull() ?: return
+        runCatching { getSystemService(android.media.AudioManager::class.java)?.adjustStreamVolume(st, android.media.AudioManager.ADJUST_UNMUTE, 0) }
+        runCatching { com.optionslab.app.security.SecurePrefs.put(MUTED_KEY, null) }
+    }
+    private val MUTED_KEY = "jarvis.voice.mutedstream"
 
     /** Puts back only what [hushBeep] muted (before Jarvis speaks, and when listening stops). */
     private fun unmuteNow() {
@@ -570,6 +589,7 @@ class JarvisVoice : Service() {
         val am = getSystemService(android.media.AudioManager::class.java)
         for (st in mutedForBeep) runCatching { am?.adjustStreamVolume(st, android.media.AudioManager.ADJUST_UNMUTE, 0) }
         mutedForBeep.clear()
+        runCatching { com.optionslab.app.security.SecurePrefs.put(MUTED_KEY, null) }
     }
 
     /**
@@ -749,7 +769,9 @@ class JarvisVoice : Service() {
                     IraActivity.add("Reconnected listening (the phone's speech service had restarted).")
                     again(minOf(MAX_BACKOFF_MS, 1_000L shl minOf(errorsInRow - 1, 5)))
                 }
-                SpeechRecognizer.ERROR_CLIENT -> {
+                SpeechRecognizer.ERROR_CLIENT -> run client@{
+                    // Our own close racing the results (the turn was already over): not a failure - just listen again.
+                    if (SystemClock.elapsedRealtime() - stoppedAt < 3_000) { again(); return@client }
                     clientErrors++; errorsInRow++; lastError = error to SystemClock.elapsedRealtime()
                     // Boss's phone (4 Oct) has English (US) and Hindi on-device, not English (India): some recognizers
                     // refuse a missing language this way rather than "language unavailable". The other English first.
