@@ -164,6 +164,23 @@ class IraHubTest : RobolectricTest() {
         assertTrue(IraHub.state.value.messages.none { it.order != null || it.action != null })
     }
 
+    /** More 4 Oct quick answers, in the app: the next expiry everywhere; the self check, "what did I miss" and the model with Jarvis. */
+    @Test fun moreQuickAnswersOfTheFourthOfOctober() = runBlocking {
+        fun last() = IraHub.state.value.messages.last().text
+        IraHub.ask("when is the next expiry")
+        assertTrue(last(), last().startsWith("Next expiry, Boss") || last().startsWith("I have no expiry dates loaded yet"))
+        if (com.optionslab.app.BuildConfig.JARVIS) {
+            IraHub.ask("run a self check")
+            assertTrue(last(), last().startsWith("Self-check:"))
+            IraHub.ask("which model are you using")
+            assertTrue(last(), last().startsWith("I'm set to Qwen2.5"))
+            IraHub.note("Relay down.")
+            IraHub.ask("what did I miss")
+            assertTrue(last(), last() == "Since you last asked, Boss: Relay down." || last() == "Unlock the phone for that, Boss.")
+        }
+        assertTrue(IraHub.state.value.messages.none { it.order != null || it.action != null })
+    }
+
     /** "How are you" is answered at once and not in the same words twice running; "who won the match" is still not small talk. */
     @Test fun smallTalkIsAnsweredInVariedWords() = runBlocking {
         IraHub.ask("How are you, Jarvis?")
