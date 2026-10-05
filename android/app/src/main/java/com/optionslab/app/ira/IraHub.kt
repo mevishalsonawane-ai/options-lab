@@ -1226,7 +1226,8 @@ object IraHub {
                 com.optionslab.ira.SaidAbout.asked(q) != null ||
                 com.optionslab.ira.NeedsTrue.asked(q) ||
                 com.optionslab.ira.Clarity.asked(q) != null || com.optionslab.ira.DayClock.asked(q) != null ||
-                com.optionslab.ira.GapRecord.asked(q) != null }.getOrDefault(false)) {
+                com.optionslab.ira.GapRecord.asked(q) != null ||
+                com.optionslab.ira.WordFit.asked(q) != null }.getOrDefault(false)) {
             val prev = if (recent) _state.value.messages.lastOrNull { !it.fromIra }?.text else null
             val qs = runCatching { com.optionslab.ira.Understand.questions(prev, q) }.getOrNull()
                 ?.takeIf { it.isNotEmpty() && it != listOf(q) && it.none { p -> lockedAccount(q, p) } }
@@ -1293,6 +1294,20 @@ object IraHub {
             runCatching { com.optionslab.ira.Clarity.asked(q) }.getOrNull() else null
         if (clarityAsk != null) {
             val said = if (clarityAsk == com.optionslab.ira.Clarity.Request.RESET) IraTools.clarityReset() else IraTools.clarityHeld()
+            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
+            return
+        }
+        // "How well do your words match your numbers?" / "what do you mean by usually?" / "say your confidence words as
+        // written": his confidence words against the numbers beside them ([com.optionslab.ira.WordFit]; his own words only).
+        // Only the word Jarvis says changes, never a figure - nothing acts.
+        val fitAsk = if (com.optionslab.app.BuildConfig.JARVIS && !bundled && parsed.order == null && parsed.command == null)
+            runCatching { com.optionslab.ira.WordFit.asked(q) }.getOrNull() else null
+        if (fitAsk != null) {
+            val said = when (fitAsk) {
+                com.optionslab.ira.WordFit.Request.OFF -> IraTools.wordFitSwitch(true)
+                com.optionslab.ira.WordFit.Request.ON -> IraTools.wordFitSwitch(false)
+                com.optionslab.ira.WordFit.Request.HOW -> IraTools.wordFitSay(q)
+            }
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
             return
         }
@@ -2184,7 +2199,10 @@ object IraHub {
         val doubt = if (parsed.order == null && parsed.command == null && a.order == null) IraTools.doubt(q) else com.optionslab.ira.SelfDoubt.NONE
         // Why the caution, as it stood now (for "what made you say check me?"): his record, never Boss's words.
         if (doubt.level != com.optionslab.ira.SelfDoubt.Level.NORMAL) runCatching { IraThinking.add(com.optionslab.ira.Thinking.caution(IraThinking.now(), doubt)) }
-        val msg = Msg(true, doubt.wrap(a.text), a.facts, a.order, writing = write)
+        // A confidence word the number beside it doesn't bear out ("usually" beside "4 of the last 12") is said as the word
+        // that fits ([com.optionslab.ira.WordFit]); only words, never a figure, and never an order's words.
+        val fitted = if (a.order == null && parsed.order == null && parsed.command == null) IraTools.fitWords(a.text) else a.text
+        val msg = Msg(true, doubt.wrap(fitted), a.facts, a.order, writing = write)
         _state.update { it.copy(messages = (it.messages + Msg(false, q) + msg).takeLast(MAX_MESSAGES)) }
         // The patterns the answer told of are followed (market data only; withheld words told of nothing).
         if (dressed?.withheld != true && a.calls.isNotEmpty()) scope.launch(Dispatchers.IO) { runCatching { IraTools.patternsTold(a.calls) } }
@@ -2195,8 +2213,10 @@ object IraHub {
             var waited = 0
             while (JarvisVoice.speechStartedAt < askedAt && waited < 1_500) { kotlinx.coroutines.delay(100); waited += 100 }
             val better = runCatching { IraModel.rewrite(q, a.facts, a.text) }.getOrNull()
+            // The model's wording checked the same way (outside the update, which may run more than once).
+            val betterFit = if (better != null && better != a.text) IraTools.fitWords(better) else null
             _state.update { s -> s.copy(messages = s.messages.map { m ->
-                if (m !== msg) m else if (better != null && better != a.text) m.copy(text = doubt.wrap(better), draft = msg.text, writing = false) else m.copy(writing = false)
+                if (m !== msg) m else if (betterFit != null) m.copy(text = doubt.wrap(betterFit), draft = msg.text, writing = false) else m.copy(writing = false)
             }) }
         }
     }
@@ -2297,12 +2317,13 @@ object IraHub {
             }
             val a = runCatching { Ira(book).answer(q, emptyMap(), emptyList(), app = v) }.getOrElse { com.optionslab.ira.Answer("I could not work that out.", emptyList()) }
             val write = v != null && IraModel.usable() && a.facts.isNotEmpty()
-            val msg = Msg(true, a.text, a.facts, writing = write)
+            val msg = Msg(true, IraTools.fitWords(a.text), a.facts, writing = write)
             _state.update { it.copy(messages = (it.messages + msg).takeLast(MAX_MESSAGES)) }
             if (write) {
                 val better = runCatching { IraModel.rewrite(q, a.facts, a.text) }.getOrNull()
+                val betterFit = if (better != null && better != a.text) IraTools.fitWords(better) else null
                 _state.update { s -> s.copy(messages = s.messages.map { m ->
-                    if (m !== msg) m else if (better != null && better != a.text) m.copy(text = better, draft = a.text, writing = false) else m.copy(writing = false)
+                    if (m !== msg) m else if (betterFit != null) m.copy(text = betterFit, draft = a.text, writing = false) else m.copy(writing = false)
                 }) }
             }
         }

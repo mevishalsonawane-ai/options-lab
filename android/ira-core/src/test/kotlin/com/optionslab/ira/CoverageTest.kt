@@ -437,7 +437,7 @@ class CoverageTest {
             PatternCalls.asked(said) || Learnings.asked(said) != null || Learnings.undoAsked(said) || NewsMoves.asked(said) != null ||
             PreMarket.asked(said) ||
             ChainDrift.asked(said) != null || Headroom.asked(said) != null || NeedsTrue.asked(said) || Clarity.asked(said) != null || DayClock.asked(said) != null ||
-            SaidAbout.asked(said) != null || GapRecord.asked(said) != null
+            SaidAbout.asked(said) != null || GapRecord.asked(said) != null || WordFit.asked(said) != null
         val qs = if (asSaid || understood || cleaned) null else Understand.questions(null, said)?.takeIf { it.isNotEmpty() && it != listOf(said) }
         if (qs != null) return if (qs.size == 1) feature(qs[0], cleaned = true) else qs.joinToString(" & ") { feature(it, understood = true) }
         val q = said
@@ -452,6 +452,7 @@ class CoverageTest {
         if (alone && Hearing.asked(q)) return "Hearing"
         if (alone && PatternCalls.asked(q)) return "PatternCalls"
         if (alone && Clarity.asked(q) != null) return "Clarity"
+        if (alone && WordFit.asked(q) != null) return "WordFit"
         if (alone && NewsMoves.asked(q) != null) return "NewsMoves"
         if (alone && TaxRecords.exportAsked(q)) return "TaxExport"
         if (alone && Learnings.asked(q) != null) return "Learnings"
@@ -842,6 +843,11 @@ class CoverageTest {
         "kaun se jawab chhote karte ho" to "Clarity", "say your answers in full again" to "Clarity",
         "don't shorten your answers" to "Clarity", "no need to shorten your answers anymore" to "Clarity",
         "forget which answers i found unclear" to "Clarity",
+        // ---- WordFit (round 12): his confidence words against the numbers beside them ----
+        "how well do your words match your numbers" to "WordFit", "are your confidence words calibrated" to "WordFit",
+        "what do you mean by usually" to "WordFit", "when you say often what do you mean" to "WordFit",
+        "what does rarely mean" to "WordFit", "how calibrated are you" to "WordFit",
+        "say your confidence words as written" to "WordFit", "match your words to the numbers again" to "WordFit",
         // ---- Its neighbours: the strategies listed, Solo, the positions' health ----
         "show my strategies" to "Account:STRATEGIES", "list my strategies" to "Account:STRATEGIES",
         "what strategies are running" to "Account:STRATEGIES", "which strategies are on" to "Account:STRATEGIES",
@@ -936,6 +942,8 @@ class CoverageTest {
             // Round 11: the answers said shorter beside the alerts said less often.
             ("which answers do you keep short" to "Clarity") to ("which alerts do you hold back" to "AlertSense"),
             ("say your answers in full again" to "Clarity") to ("say everything again" to "AlertSense"),
+            // Round 12: a confidence word asked of is his own; a market word asked of stays the glossary's.
+            ("what do you mean by usually" to "WordFit") to ("what do you mean by max pain" to "Glossary"),
         )) { assertEquals(a.second, feature(a.first), a.first); assertEquals(b.second, feature(b.first), b.first) }
         // Boss's Hinglish what-if is a what-if; a forecast, advice or his own book in Hindi never is.
         for (s in listOf("kal nifty ka kya hoga", "nifty 200 points gir jayega kya", "agar nifty 1% gira to kya buy karu",

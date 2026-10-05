@@ -19,7 +19,9 @@ import java.util.Locale
  *
  * "Undo everything you learned this week" ([undoAsked], [undo]) is put to Boss first and resets learned behaviour only:
  * the wordings and routines kept in the last [DAYS] days, the alert count (every alert aloud again), the answers said
- * shorter aloud ([Clarity]: every answer as usual again) and his own goals
+ * shorter aloud ([Clarity]: every answer as usual again) and his own goals. (His confidence words set to fit the
+ * numbers beside them ([WordFit]) are listed with their own undo, but not reset here: that is a check on his own words
+ * against his own record, not a habit learned from Boss.)
  * for this week. Never a setting, the PIN, Live, the AI's live trading, a guard or the Google speech choice - and never
  * a record: the answers Boss marked wrong, the trades and the patterns' outcomes stay, as they are facts, not habits.
  * Nothing here acts. Pure: the stores live in the app.
@@ -35,6 +37,7 @@ object Learnings {
         ROUTINES("Routines kept", true),
         ALERTS("Alerts I say less often", false),
         CLARITY("Answers I keep shorter aloud", false),
+        WORD_FIT("Confidence words I set to fit my numbers", false),
         SIT_OUT("Conditions I sit out", true),
         ANSWERS("Answer kinds I flag", true),
         PATTERNS("Patterns I no longer bring up", false),
@@ -63,6 +66,7 @@ object Learnings {
         val news: List<NewsMoves.Note> = emptyList(),
         val plan: Improve.Plan? = null,
         val clarity: Clarity.Log = Clarity.Log(),
+        val wordFit: WordFit.Log = WordFit.Log(),
     )
 
     fun day(d: LocalDate): String = "${d.dayOfMonth} ${d.month.getDisplayName(TextStyle.SHORT, Locale.ENGLISH)}"
@@ -104,6 +108,11 @@ object Learnings {
         Clarity.shorter(i.clarity, i.tally, now).forEach { r ->
             out += Item(Area.CLARITY, "${r.phrase}: ${r.how()}", Clarity.newest(i.clarity, r.kind)?.toLocalDate(),
                 "${r.say()} in the last ${Clarity.WINDOW_DAYS} days; only my voice is shorter, the chat keeps it all", Clarity.UNDO)
+        }
+        // His confidence words the numbers beside them did not bear out ([WordFit]; his own words only, never Boss's).
+        WordFit.misfits(i.wordFit, now).forEach { r ->
+            out += Item(Area.WORD_FIT, WordFit.ledgerWhat(r, i.wordFit.off), r.newest.toLocalDate(), WordFit.ledgerWhy(r, i.wordFit.off),
+                if (i.wordFit.off) WordFit.REDO else WordFit.UNDO)
         }
         // The conditions his own ideas and Solo sit out: the record decides, so it lifts only as the record does.
         fun sitOut(outcomes: List<SelfCalibration.Outcome>, solo: Boolean) {

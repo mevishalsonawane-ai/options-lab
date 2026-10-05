@@ -615,6 +615,62 @@ internal object IraTools {
         return said
     }
 
+    // ---- his confidence words against the numbers beside them ([com.optionslab.ira.WordFit]) ----------------------------
+
+    /** The words checked (Jarvis's own words and numbers only, never Boss's), the last 60 days, and Boss's "as written". */
+    private const val WORD_FIT = "jarvis.wordfit"
+    @Volatile private var wordFitCache: com.optionslab.ira.WordFit.Log? = null
+
+    fun wordFitLog(): com.optionslab.ira.WordFit.Log = wordFitCache ?: runCatching {
+        val o = JSONObject(prefs().getString(WORD_FIT) ?: "{}")
+        val e = o.optJSONArray("e") ?: JSONArray()
+        com.optionslab.ira.WordFit.Log(
+            events = (0 until e.length()).map { i -> e.getJSONObject(i).let { x -> com.optionslab.ira.WordFit.Event(x.getString("s"),
+                x.optString("to").takeIf { it.isNotEmpty() }, x.getInt("k"), x.getInt("n"), LocalDateTime.parse(x.getString("t")), x.optBoolean("f", true)) } },
+            off = o.optBoolean("off", false),
+            offAt = o.optString("oa").takeIf { it.isNotEmpty() }?.let { LocalDateTime.parse(it) })
+    }.getOrDefault(com.optionslab.ira.WordFit.Log()).also { wordFitCache = it }
+
+    @Synchronized private fun wordFitUpdate(f: (com.optionslab.ira.WordFit.Log) -> com.optionslab.ira.WordFit.Log) {
+        runCatching {
+            val log = f(wordFitLog())
+            wordFitCache = log
+            val o = JSONObject().put("e", JSONArray().apply { log.events.forEach { x ->
+                put(JSONObject().put("s", x.said).put("to", x.to ?: "").put("k", x.k).put("n", x.n).put("t", x.at.toString()).put("f", x.fixed)) } })
+            o.put("off", log.off)
+            log.offAt?.let { o.put("oa", it.toString()) }
+            prefs().putAllSoon(mapOf(WORD_FIT to o.toString()))
+        }
+    }
+
+    /**
+     * [text] with each confidence word set to fit the number beside it ("usually" beside "4 of the last 12" -> "sometimes"),
+     * unless Boss asked them left as written; every word checked is noted. Only words change, never a figure; on any
+     * trouble the text is returned as it was. Nothing acts.
+     */
+    fun fitWords(text: String): String {
+        if (!com.optionslab.app.BuildConfig.JARVIS) return text
+        return runCatching {
+            val r = com.optionslab.ira.WordFit.check(text, fix = !wordFitLog().off)
+            if (r.fits.isNotEmpty()) wordFitUpdate { com.optionslab.ira.WordFit.noted(it, r.fits, minuteNow()) }
+            r.text
+        }.getOrDefault(text)
+    }
+
+    /** "How well do your words match your numbers?" / "what do you mean by usually?". */
+    fun wordFitSay(q: String): String = runCatching { com.optionslab.ira.WordFit.say(q, wordFitLog(), minuteNow()) }
+        .getOrDefault("I could not read my record of words and numbers just now, Boss.")
+
+    /** "Say your confidence words as written" ([off]) / "match your words to the numbers again". Words only. */
+    fun wordFitSwitch(off: Boolean): String {
+        val was = wordFitLog().off
+        if (was != off) {
+            wordFitUpdate { com.optionslab.ira.WordFit.switched(it, off, minuteNow()) }
+            IraActivity.add(if (off) "Leaving confidence words as written (as asked)." else "Matching confidence words to the numbers again (as asked).")
+        }
+        return com.optionslab.ira.WordFit.saySwitched(off, was)
+    }
+
     // ---- what he has learned, in one view ([com.optionslab.ira.Learnings]) ------------------------------------------
 
     /** Every learning store read with its own accessor (the goals are added by [IraImprove], which holds them). */
@@ -630,7 +686,8 @@ internal object IraTools {
         data = runCatching { freshLog() }.getOrDefault(com.optionslab.ira.DataAge.Log()),
         news = runCatching { newsMoves() }.getOrDefault(emptyList()),
         plan = plan,
-        clarity = runCatching { clarityLog() }.getOrDefault(com.optionslab.ira.Clarity.Log()))
+        clarity = runCatching { clarityLog() }.getOrDefault(com.optionslab.ira.Clarity.Log()),
+        wordFit = runCatching { wordFitLog() }.getOrDefault(com.optionslab.ira.WordFit.Log()))
 
     /**
      * "Undo everything you learned this week", on Boss's Confirm: the wordings and routines kept in the last 7 days
