@@ -78,9 +78,11 @@ internal object IraAgenda {
         // Overnight study: the words he could not place on the last day, and the answers marked wrong in the last 3 days.
         val wrong = runCatching { IraTools.mistakes() }.getOrDefault(emptyList())
             .filter { val d = it.at.toLocalDate(); d.isBefore(day) && !d.isBefore(day.minusDays(3)) }.map { it.said }
-        val missed = runCatching { IraTools.missedBefore(day) }.getOrDefault(emptyList())
+        // His own goals for the week ([IraImprove]): checked once a day; the phrasings his learning goal is set on are studied too.
+        val self = runCatching { IraImprove.forAgenda() }.getOrDefault(0 to emptyList())
+        val missed = runCatching { IraTools.missedBefore(day) }.getOrDefault(emptyList()) + self.second
         val teach = runCatching { Agenda.study(missed, wrong, IraTools.learned()) }.getOrDefault(emptyList())
-        val items = Agenda.build(Agenda.Facts(day, trading, events, open, goals, notes, bad, tests, teach, saved?.second.orEmpty()))
+        val items = Agenda.build(Agenda.Facts(day, trading, events, open, goals, notes, bad, tests, teach, saved?.second.orEmpty(), selfGoals = self.first))
         save(day.toString(), items)
         return items to true
     }
@@ -133,6 +135,7 @@ internal object IraAgenda {
             Agenda.Kind.EVENT, Agenda.Kind.WEAK_HOUR, Agenda.Kind.RULE, Agenda.Kind.ABOUT -> Agenda.line(i) ?: run { mark(i.id, Agenda.summary(i)); return }
             Agenda.Kind.GOAL -> Agenda.goalLine(i, runCatching { IraGoals.statuses() }.getOrDefault(emptyList()))
             Agenda.Kind.EXPIRY, Agenda.Kind.POSITIONS -> Agenda.positionsLine(i, openPositions())
+            Agenda.Kind.SELF -> runCatching { IraImprove.checkLine() }.getOrNull() ?: run { mark(i.id, Agenda.summary(i)); return }
             Agenda.Kind.PAPER_TEST -> Agenda.paperLine(runCatching { IraExpert.verdicts() }.getOrDefault(emptyList()).map { it.text() })
             Agenda.Kind.TEACH -> {
                 // Boss's own words: put to him only on an unlocked phone (tried again on the next pass).

@@ -619,6 +619,8 @@ class JarvisVoice : Service() {
                 // announcement is not a reply, and a stale time would read as minutes.
                 val took = SystemClock.elapsedRealtime() - h
                 if (h > 0 && (id?.startsWith("answer") == true || id?.startsWith("question") == true)) { if (took < 60_000) lastLatencyMs = took; latencies = com.optionslab.ira.Latency.add(latencies, took); heardAt = 0L
+                    // Counted for the day (times only, no words): his weekly goal of answering fast ([com.optionslab.ira.Improve]).
+                    if (took in 1L until 60_000L) { IraTools.count(com.optionslab.ira.Improve.TIMED); if (took > com.optionslab.ira.Improve.FAST_MS) IraTools.count(com.optionslab.ira.Improve.SLOW) }
                     slowNudge() }
             }
             override fun onDone(id: String?) { main.post { if (id == utterance) afterSpeech(id?.substringBefore('#')) } }

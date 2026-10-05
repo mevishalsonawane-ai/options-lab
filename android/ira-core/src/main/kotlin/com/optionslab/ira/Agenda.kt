@@ -39,6 +39,8 @@ object Agenda {
         POSITIONS(Means.SPEAK, 3, false),
         WEAK_HOUR(Means.SPEAK, 3, true),
         PAPER_TEST(Means.PAPER, 4, false),
+        /** His own goals for the week ([Improve]), checked midweek: about him only (no word or figure of Boss's), so it may be said aloud. */
+        SELF(Means.SPEAK, 4, true),
         TEACH(Means.STUDY, 5, false),
     }
 
@@ -70,6 +72,8 @@ object Agenda {
         val teach: List<Teach> = emptyList(),
         /** Yesterday's agenda (its unfinished study is carried). */
         val yesterday: List<Item> = emptyList(),
+        /** His own goals for this week ([Improve.Plan.goals]), checked once a day. */
+        val selfGoals: Int = 0,
     )
 
     private const val OPEN = 9 * 60 + 15
@@ -115,6 +119,8 @@ object Agenda {
             f.badHours.filter { it in 9..15 }.distinct().sorted().take(2).forEach { h ->
                 out += Item("weak:$h", Kind.WEAK_HOUR, maxOf(h * 60, OPEN), "leave ${hm(h * 60)}-${hm(h * 60 + 60)} alone (my own trades lost in that hour)")
             }
+            if (f.selfGoals > 0)
+                out += Item("self", Kind.SELF, 15 * 60 + 25, "check how I'm doing on my own ${plural(f.selfGoals, "goal")} for the week")
             if (f.paperTests.isNotEmpty())
                 out += Item("paper", Kind.PAPER_TEST, 15 * 60 + 20, "read how ${f.paperTests.take(3).joinToString(", ")}${if (f.paperTests.size > 3) " and the rest" else ""} are doing on paper")
         }
@@ -210,6 +216,7 @@ object Agenda {
         Kind.POSITIONS -> "looked over your positions"
         Kind.WEAK_HOUR -> "left ${hm(i.at - i.at % 60)}-${hm(i.at - i.at % 60 + 60)} alone"
         Kind.PAPER_TEST -> "read the paper tests"
+        Kind.SELF -> "checked my own goals for the week"
         Kind.TEACH -> when {
             learned -> "learned \"${i.words.firstOrNull()}\""
             i.guess != null -> "asked you about \"${i.words.firstOrNull()}\""

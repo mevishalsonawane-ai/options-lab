@@ -98,6 +98,11 @@ internal object IraTools {
         val w = com.optionslab.ira.Secrets.redact(said)
         if (w.isNotBlank()) runCatching { prefs().put(MISSED, JSONObject().put("d", com.optionslab.app.data.Market.today().toString())
             .put("w", JSONArray(com.optionslab.ira.Missed.add(missedToday(), w))).toString()) }
+        // Also kept for the week (two weeks at most): what his weekly goals of understanding are set on.
+        if (w.isNotBlank()) runCatching {
+            val all = com.optionslab.ira.Improve.addMissed(missedWeek(), com.optionslab.app.data.Market.today(), w)
+            prefs().put(MISSED_WEEK, JSONArray().apply { all.forEach { put(JSONObject().put("d", it.first.toString()).put("w", it.second)) } }.toString())
+        }
         missedLast = if (runCatching { com.optionslab.ira.Corrections.missed(w) }.getOrDefault(false)) w to System.currentTimeMillis() else null
         nextAfterMiss = null
     }
@@ -146,6 +151,14 @@ internal object IraTools {
         val o = JSONObject(prefs().getString(MISSED) ?: return emptyList())
         if (o.optString("d") != com.optionslab.app.data.Market.today().toString()) return emptyList()
         val a = o.getJSONArray("w"); (0 until a.length()).map { a.getString(it) }
+    }.getOrDefault(emptyList())
+
+    /** The phrasings missed over the last two weeks, with their day (redacted), for his weekly goals ([com.optionslab.ira.Improve]). */
+    private const val MISSED_WEEK = "jarvis.missed.week"
+
+    fun missedWeek(): List<Pair<java.time.LocalDate, String>> = runCatching {
+        val a = JSONArray(prefs().getString(MISSED_WEEK) ?: "[]")
+        (0 until a.length()).map { a.getJSONObject(it).let { o -> java.time.LocalDate.parse(o.getString("d")) to o.getString("w") } }
     }.getOrDefault(emptyList())
 
     fun forgetLearned() { prefs().put(LEARNED, null); awaiting = null; missedLast = null }
@@ -235,6 +248,8 @@ internal object IraTools {
             prefs().put(HABITS, JSONObject().apply { c.forEach { (key, row) -> put(key, JSONArray(row.toList())) } }.toString())
             val last = (habitsLast() + (k to LocalDateTime.now(IST).toLocalDate())).filterKeys { it in c.keys }
             prefs().put(HABITS_LAST, JSONObject().apply { last.forEach { (key, d) -> put(key, d.toString()) } }.toString())
+            // And counted for the day: "the question you asked most" in his weekly review.
+            count(com.optionslab.ira.Improve.ASKED_PREFIX + k)
         }
     }
 
@@ -248,6 +263,12 @@ internal object IraTools {
         o.put(what, o.optInt(what) + 1)
         prefs().put(dayKey(), o.toString())
     }
+
+    /** All of [day]'s counts (name to count), for his weekly review ([com.optionslab.ira.Improve.week]). */
+    fun usageOn(day: java.time.LocalDate): Map<String, Int> = runCatching {
+        val o = JSONObject(prefs().getString("jarvis.usage.$day") ?: "{}")
+        o.keys().asSequence().associateWith { o.optInt(it) }
+    }.getOrDefault(emptyMap())
 
     /** How many of [what] today. */
     fun countToday(what: String): Int = runCatching { JSONObject(prefs().getString(dayKey()) ?: "{}").optInt(what) }.getOrDefault(0)

@@ -373,6 +373,8 @@ object IraHub {
                 JarvisVoice.announce(s); IraActivity.add("Gave the week's review of your own trades."); Automations.acted(Automations.Auto.WEEK, s)
             }
         }
+        // Jarvis's own week: his goals graded and next week's set (about him only; words, study, questions and paper).
+        runCatching { IraImprove.weekend() }
         for (p in _state.value.proposals.filter { it.status == Proposal.APPROVED && it.pineId != null }) {
             val item = com.optionslab.app.data.PineScripts.get(p.pineId!!) ?: continue
             if (!item.auto.on) continue
@@ -665,6 +667,8 @@ object IraHub {
             runCatching { JarvisPopup.show(c, title, said2) }
             return
         }
+        // An idea of his own sat out (his record there is poor): counted for his weekly review - it is still asked and scored.
+        if (sitOut && !solo) IraTools.count(com.optionslab.ira.Improve.SIT_OUT)
         val id = System.nanoTime()
         synchronized(actions) {
             actions[id] = what to suspend { IraNewsTrades.place(idea, _state.value.snaps[m]?.price ?: snap?.price ?: error("no ${m.label} price"), source,
@@ -1093,6 +1097,15 @@ object IraHub {
             _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
             if (phoneLocked()) { reply("Unlock the phone for that, Boss."); return }
             scope.launch { reply(runCatching { IraAgenda.say() }.getOrElse { "I could not read my plan just now, Boss." }) }
+            return
+        }
+        // "How are you improving?" / "what are your goals?": his own goals for the week and how they stand ([IraImprove]). Words
+        // only: a goal of his only ever speaks, studies, asks Boss to teach him or works on paper.
+        if (com.optionslab.app.BuildConfig.JARVIS && parsed.command == null && parsed.order == null &&
+            runCatching { com.optionslab.ira.Improve.asked(q) }.getOrDefault(false)) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            if (phoneLocked()) { reply("Unlock the phone for that, Boss."); return }
+            scope.launch(Dispatchers.IO) { reply(runCatching { IraImprove.say() }.getOrElse { "I could not read my own goals just now, Boss." }) }
             return
         }
         // A request in steps ("stop all strategies, then kill switch on and switch to paper"): one plan, one Confirm, done

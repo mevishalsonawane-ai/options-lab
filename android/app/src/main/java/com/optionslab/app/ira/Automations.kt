@@ -85,7 +85,11 @@ internal object Automations {
         p.getBoolean(g.key, was)
     }.getOrDefault(false)
 
-    fun set(g: Group, v: Boolean) { runCatching { com.optionslab.app.security.SecurePrefs.put(g.key, v) } }
+    fun set(g: Group, v: Boolean) {
+        // His alerts or coaching switched off by Boss is counted for the day: his weekly review of how often he was too much.
+        if (!v && (g == Group.MARKET || g == Group.COACH) && on(g)) runCatching { IraTools.count(com.optionslab.ira.Improve.ALERT_OFF) }
+        runCatching { com.optionslab.app.security.SecurePrefs.put(g.key, v) }
+    }
 
     /** A behaviour's switch is its group's (an always-on one has none). */
     fun set(a: Auto, v: Boolean) { groupOf(a)?.let { set(it, v) } }
