@@ -818,6 +818,13 @@ object Broker {
     }
 
     /**
+     * POST /charges/orders (Kite Connect's virtual contract note): Zerodha's own charges for orders already executed,
+     * [body] being [com.optionslab.ira.ExactCharges.requestJson]. A read - it places, changes and cancels nothing - sent
+     * as JSON the way [basketMargin] is. Its data array, as text ([com.optionslab.ira.ExactCharges.total] reads it).
+     */
+    suspend fun contractNote(body: String): String = (call("POST", "/charges/orders", body, json = true) as JSONArray).toString()
+
+    /**
      * The account as the guard judges it - positions, funds, today's order count - read in parallel (one
      * round trip instead of three). Null when the positions cannot be read; funds and orders are optional,
      * exactly as the sequential reads were.

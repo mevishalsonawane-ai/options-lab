@@ -298,7 +298,9 @@ internal object IraAccount {
                     if (z == null) orders += "Zerodha did not answer just now, so its orders are not included."
                     else {
                         val (zo, zp, zf) = z.first
-                        val zCharges = z.second?.let { com.optionslab.app.data.TradeBook.liveCharges(it) }
+                        // Zerodha's exact charges when the account page has had them for exactly these orders (never asked from here).
+                        val zExact = com.optionslab.app.data.ZerodhaCharges.kept(zo)
+                        val zCharges = zExact ?: z.second?.let { com.optionslab.app.data.TradeBook.liveCharges(it) }
                         orders += AppFacts.orders("Zerodha", zo.filter { it.placedAt.startsWith(today.toString()) || it.placedAt.length < 10 }.sortedBy { it.placedAt }.map {
                             AppFacts.OrderLine(it.placedAt.drop(11).take(5).ifBlank { it.placedAt.take(5) }, it.symbol, it.side, it.qty, it.status, it.avg,
                                 // Zerodha orders are kept under "kite:<id>" (the bare id never matched: the raw tag showed).
@@ -306,7 +308,7 @@ internal object IraAccount {
                                 it.message.takeIf { m -> m.isNotBlank() }, it.id)
                         }, byWho = true)
                         pos += AppFacts.positions("Zerodha", zp.net.filter { it.open }.map { AppFacts.Held(it.symbol, it.qty, it.avg, it.last, it.pnl) })
-                        pnl += AppFacts.pnl("Zerodha", zp.net.sumOf { it.pnl }, zp.net.sumOf { it.realised }, zp.net.sumOf { it.unrealised }, zCharges, estimate = true)
+                        pnl += AppFacts.pnl("Zerodha", zp.net.sumOf { it.pnl }, zp.net.sumOf { it.realised }, zp.net.sumOf { it.unrealised }, zCharges, estimate = zExact == null)
                         zf?.let { funds += "Zerodha funds: ${AppFacts.amt(it.available)} available, ${AppFacts.amt(it.used)} used, net ${AppFacts.amt(it.net)}." }
                     }
                 } else if (Broker.linked) orders += "Zerodha: not logged in today, so only the paper account is read."

@@ -693,9 +693,11 @@ object Tasks {
                 runCatching { com.optionslab.app.data.DailyPnl.record(true, book.m2m, -1) }
                 accountPnl = book.pnl
                 // Zerodha's P&L is before charges (as Zerodha shows it); the day's charges, estimated from the trades the
-                // app kept today (a vault read: this is the watch's worker thread), follow it.
+                // app kept today (a vault read: this is the watch's worker thread), follow it - Zerodha's exact figure
+                // instead when the account page has had it for every order of those trades (never asked from here).
                 val liveCharges = com.optionslab.app.data.TradeBook.liveChargesOn(Market.today())
-                val chargesSaid = com.optionslab.ira.PnlCharges.said(liveCharges, estimate = true)?.let { " ($it)" } ?: ""
+                val exactCharges = com.optionslab.app.data.TradeBook.exactChargesOn(Market.today())
+                val chargesSaid = com.optionslab.ira.PnlCharges.said(exactCharges ?: liveCharges, estimate = exactCharges == null)?.let { " ($it)" } ?: ""
                 if (liveCharges != null) runCatching { com.optionslab.app.widget.IraWidget.charges(context, liveCharges) }
                 lines.add(0, "Positions %s".format(if (s.hideAmountsOnLockScreen) "open: ${book.net.count { it.open }}" else "Rs %+,.0f".format(book.pnl) + chargesSaid))
                 pnlAlerts(context, s, book.pnl)

@@ -43,8 +43,10 @@ class FakeKite : Closeable {
 
     val requests = CopyOnWriteArrayList<Req>()
 
-    /** Requests that would change something at the broker (orders, GTTs, session). */
-    val writes: List<Req> get() = requests.filter { it.method != "GET" && it.path != "/margins/basket" }
+    /** Requests that would change something at the broker (orders, GTTs, session); the margin and contract-note reads are POSTs too. */
+    val writes: List<Req> get() = requests.filter { it.method != "GET" && it.path != "/margins/basket" && it.path != "/charges/orders" }
+    /** The virtual contract note asks (POST /charges/orders). */
+    val contractNotes: List<Req> get() = requests.filter { it.method == "POST" && it.path == "/charges/orders" }
     val placed: List<Req> get() = requests.filter { it.method == "POST" && it.path == "/orders/regular" }
 
     // ---- state -----------------------------------------------------------------------------
@@ -77,6 +79,10 @@ class FakeKite : Closeable {
     val gtts = LinkedHashMap<Long, JSONObject>()
     var cash = 500_000.0
     var marginPerOrder = 40_000.0
+    /** What the contract note (POST /charges/orders) says each order cost, all in; [down] += "/charges/orders" fails it. */
+    @Volatile var chargesPerOrder = 31.25
+    /** GET /trades lists one trade for each order that filled (default: no trades at all, as before). */
+    @Volatile var tradesFromFills = false
     private var seq = 250_926_000_000_000L
     private var gttSeq = 1_000L
 
@@ -173,7 +179,7 @@ class FakeKite : Closeable {
             m == "GET" && path == "/user/margins" -> ok(funds())
             m == "GET" && path == "/portfolio/positions" -> ok(positionsJson())
             m == "GET" && path == "/portfolio/holdings" -> ok(JSONArray())
-            m == "GET" && path == "/trades" -> ok(JSONArray())
+            m == "GET" && path == "/trades" -> ok(tradesJson())
             m == "GET" && path == "/orders" -> ok(JSONArray().apply { orders.values.forEach { put(orderJson(it)) } })
             m == "POST" && path == "/orders/regular" -> place(parseForm(body))
             m == "GET" && path.startsWith("/orders/") && path.count { it == '/' } == 2 -> history(path.substringAfterLast('/'))
@@ -183,6 +189,7 @@ class FakeKite : Closeable {
             m == "GET" && path == "/instruments/NFO" -> MockResponse().setResponseCode(200).addHeader("Connection", "close").setBody(instrumentsCsv())
             m == "GET" && path.startsWith("/instruments/historical/") -> ok(JSONObject().put("candles", JSONArray()))
             m == "POST" && path == "/margins/basket" -> basket(body)
+            m == "POST" && path == "/charges/orders" -> contractNote(body)
             m == "GET" && path == "/gtt/triggers" -> ok(JSONArray().apply { gtts.values.forEach { put(it) } })
             m == "POST" && path == "/gtt/triggers" -> placeGtt(parseForm(body))
             m == "DELETE" && path.startsWith("/gtt/triggers/") -> {
@@ -311,6 +318,33 @@ class FakeKite : Closeable {
         val total = marginPerOrder * n
         val orders = JSONArray().apply { repeat(n) { put(JSONObject().put("total", marginPerOrder).put("charges", JSONObject().put("total", 20.0))) } }
         return ok(JSONObject().put("initial", JSONObject().put("total", total)).put("final", JSONObject().put("total", total)).put("orders", orders))
+    }
+
+    private fun tradesJson(): JSONArray = JSONArray().apply {
+        if (tradesFromFills) orders.values.filter { it.filled > 0 }.forEach { o ->
+            put(JSONObject().put("trade_id", "T${o.id}").put("order_id", o.id).put("tradingsymbol", o.symbol).put("exchange", o.exchange)
+                .put("transaction_type", o.side).put("quantity", o.filled).put("average_price", o.avg).put("product", o.product)
+                .put("fill_timestamp", o.at.format(TS)))
+        }
+    }
+
+    /** Kite's virtual contract note: each order asked about echoed back with its charges ([chargesPerOrder] in all). */
+    private fun contractNote(body: String): MockResponse {
+        val asked = runCatching { JSONArray(body) }.getOrNull() ?: return error(400, "InputException", "Invalid orders.")
+        val out = JSONArray()
+        for (i in 0 until asked.length()) {
+            val o = asked.getJSONObject(i)
+            val gst = chargesPerOrder * 0.1
+            out.put(JSONObject().put("order_id", o.optString("order_id")).put("exchange", o.optString("exchange"))
+                .put("tradingsymbol", o.optString("tradingsymbol")).put("transaction_type", o.optString("transaction_type"))
+                .put("variety", o.optString("variety")).put("product", o.optString("product")).put("order_type", o.optString("order_type"))
+                .put("quantity", o.optInt("quantity")).put("price", o.optDouble("average_price", 0.0))
+                .put("charges", JSONObject().put("transaction_tax", 0).put("transaction_tax_type", "stt")
+                    .put("exchange_turnover_charge", 0).put("sebi_turnover_charge", 0).put("brokerage", chargesPerOrder - gst)
+                    .put("stamp_duty", 0).put("gst", JSONObject().put("igst", gst).put("cgst", 0).put("sgst", 0).put("total", gst))
+                    .put("total", chargesPerOrder)))
+        }
+        return ok(out)
     }
 
     private fun placeGtt(f: Map<String, String>): MockResponse {

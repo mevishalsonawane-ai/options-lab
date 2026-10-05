@@ -133,7 +133,7 @@ private fun homeBooks(live: Boolean, loggedIn: Boolean, account: Load<com.option
     val moneyNote: String?
     if (live) {
         val a = (account as? Load.Done)?.value
-        money = Money(a?.book?.m2m, a?.funds?.available, a?.funds?.used, a?.let { com.optionslab.ira.PnlCharges.line(it.charges, estimate = true) })
+        money = Money(a?.book?.m2m, a?.funds?.available, a?.funds?.used, a?.let { com.optionslab.ira.PnlCharges.line(it.charges, estimate = it.chargesEstimate) })
         orders = a?.let { acc ->
             acc.positions.filter { it.qty != 0 }.map {
                 HomeOrder(it.symbol, "${if (it.qty < 0) "SELL" else "BUY"} ${abs(it.qty)} · avg ${PX.format(it.avg)} · LTP ${PX.format(it.last)}",

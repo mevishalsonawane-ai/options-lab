@@ -155,6 +155,22 @@ object TradeBook {
 
     private val dayCharges = com.optionslab.ira.DayKept<Double?>()
 
+    /**
+     * Zerodha's EXACT charges for [day] ([ZerodhaCharges]) when the answer kept for it covers every order the day's kept
+     * trades belong to, or null (none asked yet, a fill since, or the book could not be read): the words beside the
+     * watch's and the wrap-up's P&L say it in place of [liveChargesOn]'s estimate. Never asks Zerodha. Reads the vault
+     * (only when a fill was recorded since, as [liveChargesOn]): never on the main thread.
+     */
+    fun exactChargesOn(day: LocalDate): Double? = runCatching {
+        val gen = liveGen
+        val ids = dayOrderIds.of(day.toString(), gen) {
+            liveSnapshot().filter { kiteTime(it.at)?.toLocalDate() == day }.map { it.orderId }.toSet()
+        }
+        ZerodhaCharges.keptCovering(day, ids)
+    }.getOrNull()
+
+    private val dayOrderIds = com.optionslab.ira.DayKept<Set<String>>()
+
     /** Charges paid in [month], line by line. */
     fun charges(live: Boolean, month: YearMonth): Map<String, Double> {
         val out = LinkedHashMap<String, Double>()
@@ -170,13 +186,15 @@ object TradeBook {
 
     /**
      * Forgets the kept Zerodha trades. Lock order: [liveChargesOn] holds [dayCharges]'s lock while it reads the book (this
-     * object's lock), so [dayCharges] is never touched while this object's lock is held - that was a deadlock (wipe:
-     * TradeBook then DayKept; liveChargesOn: DayKept then TradeBook). Bumping [liveGen] under the lock is what makes the
+     * object's lock), so [dayCharges] - and [dayOrderIds], read the same way - is never touched while this object's lock
+     * is held - that was a deadlock (wipe: TradeBook then DayKept; liveChargesOn: DayKept then TradeBook). Bumping [liveGen] under the lock is what makes the
      * kept figure stale (it is keyed on the generation); forgetting it after the lock is let go only frees it sooner.
      */
     fun wipe() {
         synchronized(this) { liveCache = null; liveGen++; if (::liveFile.isInitialized) liveFile.delete() }
         dayCharges.forget()
+        dayOrderIds.forget()
+        ZerodhaCharges.forget()
     }
 }
 

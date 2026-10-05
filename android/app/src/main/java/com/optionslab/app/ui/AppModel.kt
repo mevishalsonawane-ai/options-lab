@@ -62,13 +62,18 @@ data class Account(
     val trades: List<com.optionslab.app.data.Broker.Trade>,
     val holdings: List<com.optionslab.app.data.Broker.Holding>,
     val at: java.time.ZonedDateTime = Market.now(),
+    /** Zerodha's own charges for today's orders ([com.optionslab.app.data.ZerodhaCharges]), or null: the estimate. */
+    val exactCharges: Double? = null,
 ) {
     val positions: List<com.optionslab.app.data.Broker.Position> get() = book.net
     /**
-     * Today's charges, estimated from today's filled trades: Zerodha's P&L is before charges, and the screens show this on
-     * a small "Charges ≈ ₹X (estimate)" line under it. Display only: no limit reads it.
+     * Today's charges: Zerodha's exact figure when it answered ([exactCharges]), else estimated from today's filled
+     * trades. Zerodha's P&L is before charges, and the screens show this on a small line under it - "Charges ₹X", or
+     * "Charges ≈ ₹X (estimate)" ([chargesEstimate]). Display only: no limit reads it.
      */
-    val charges: Double by lazy { com.optionslab.app.data.TradeBook.liveCharges(trades) }
+    val charges: Double by lazy { exactCharges ?: com.optionslab.app.data.TradeBook.liveCharges(trades) }
+    /** Is [charges] the estimate (Zerodha's exact figure not known for today's orders)? */
+    val chargesEstimate: Boolean get() = exactCharges == null
 }
 
 /** Orders awaiting the owner's decision, with every gate's verdict attached. */
@@ -812,10 +817,21 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                     // The calendar's bump comes from DailyPnl.changes (see pnlDays).
                     com.optionslab.app.data.DailyPnl.record(true, book.m2m, trades.size, liveCharges)
                 }
-                Load.Done(Account(fundsQ.await(), book, ordersQ.await().getOrThrow(), trades, holdingsQ.await()))
+                val dayOrders = ordersQ.await().getOrThrow()
+                // Zerodha's exact charges when already kept for these orders (no ask here: the screen is not held for it).
+                Load.Done(Account(fundsQ.await(), book, dayOrders, trades, holdingsQ.await(),
+                    exactCharges = com.optionslab.app.data.ZerodhaCharges.kept(dayOrders)))
             } catch (e: Exception) {
                 broker.value = brokerState()
                 Load.Failed(e.message ?: "could not read the account")
+            }
+            // Not kept yet (an order completed since, or none asked today): Zerodha's contract note is asked once the
+            // account is on screen (at most once a minute, only when the day's complete orders changed), and its exact
+            // figure replaces the estimate on the line if this read is still the one shown. Any failure: the estimate stays.
+            val shown = (account.value as? Load.Done)?.value
+            if (shown != null && shown.exactCharges == null) {
+                val exact = com.optionslab.app.data.ZerodhaCharges.exact(shown.orders)
+                if (exact != null && (account.value as? Load.Done)?.value === shown) account.value = Load.Done(shown.copy(exactCharges = exact))
             }
         }
     }

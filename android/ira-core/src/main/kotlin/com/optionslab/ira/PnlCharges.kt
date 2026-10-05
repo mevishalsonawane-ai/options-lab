@@ -13,7 +13,8 @@ import kotlin.math.roundToLong
  *  - Paper: the engine debits each leg's charges from the funds (the cash stays real), and the day's figure it keeps is
  *    after charges; shown, the charges are added back ([gross]) and said exactly ("Charges ₹180").
  *  - Zerodha: its P&L is already before charges; the line is an estimate from the day's filled trades with the same F&O
- *    schedule the paper account pays ([estimate], as the charges report does) - "Charges ≈ ₹180 (estimate)".
+ *    schedule the paper account pays ([estimate], as the charges report does) - "Charges ≈ ₹180 (estimate)" - or, when
+ *    Zerodha's own contract note answered for the day's orders ([ExactCharges]), its exact figure: "Charges ₹180".
  *
  * Display only. Every risk limit - the daily loss limit, the guard, Solo's and the arms' loss limits and kill
  * thresholds - keeps reading the figure AFTER charges, the safer one; nothing here feeds a limit. Pure.
