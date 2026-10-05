@@ -1873,12 +1873,14 @@ object IraHub {
         // The patterns the answer told of are followed (market data only; withheld words told of nothing).
         if (dressed?.withheld != true && a.calls.isNotEmpty()) scope.launch(Dispatchers.IO) { runCatching { IraTools.patternsTold(a.calls) } }
         if (write) scope.launch {
-            // Talking and writing run side by side: the model starts as soon as the voice has started (the first sound is
-            // the only moment it would slow), or after 1.5 seconds when nothing is being said.
-            val askedAt = android.os.SystemClock.elapsedRealtime()
-            var waited = 0
-            while (JarvisVoice.speechStartedAt < askedAt && waited < 1_500) { kotlinx.coroutines.delay(100); waited += 100 }
-            val better = runCatching { IraModel.rewrite(q, a.facts, a.text) }.getOrNull()
+            // The voice first, the model after (Boss, 5 Oct: first sound 37 s after his words, and 7-9 s of his speech read
+            // as nothing, while the model was "writing"). This rewrite is for the screen only - Jarvis always says the
+            // answer above at once - yet it used to start 1.5 s after the answer whenever the voice had not made a sound,
+            // and then held the fast cores for up to 30 s, starving the speech engine and the recognizer. It now starts
+            // only once the voice is free (the answer said, Boss not speaking) and is stopped when either starts again
+            // ([JarvisVoice.freeForModel], [IraModel.yieldToVoice]); with Jarvis off it starts at once, as before.
+            val free = runCatching { JarvisVoice.freeForModel() }.getOrDefault(true)
+            val better = if (!free) null else runCatching { IraModel.rewrite(q, a.facts, a.text) }.getOrNull()
             // The model's wording checked the same way (outside the update, which may run more than once).
             val betterFit = if (better != null && better != a.text) IraTools.fitWords(better) else null
             _state.update { s -> s.copy(messages = s.messages.map { m ->
@@ -2601,7 +2603,9 @@ object IraHub {
             val msg = Msg(true, IraTools.fitWords(a.text), a.facts, writing = write)
             _state.update { it.copy(messages = (it.messages + msg).takeLast(MAX_MESSAGES)) }
             if (write) {
-                val better = runCatching { IraModel.rewrite(q, a.facts, a.text) }.getOrNull()
+                // Asked by voice, the answer above is said at once: the model's rewrite waits for the voice to be free.
+                val free = runCatching { JarvisVoice.freeForModel() }.getOrDefault(true)
+                val better = if (!free) null else runCatching { IraModel.rewrite(q, a.facts, a.text) }.getOrNull()
                 val betterFit = if (better != null && better != a.text) IraTools.fitWords(better) else null
                 _state.update { s -> s.copy(messages = s.messages.map { m ->
                     if (m !== msg) m else if (betterFit != null) m.copy(text = betterFit, draft = a.text, writing = false) else m.copy(writing = false)

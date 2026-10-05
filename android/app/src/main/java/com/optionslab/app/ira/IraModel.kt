@@ -242,8 +242,12 @@ object IraModel {
                     if (handle == 0L) { _state.update { it.copy(message = "The model file did not open; delete it and download again.") }; return@withLock null }
                     _state.update { it.copy(loaded = true, message = null) }
                 }
+                // The voice got busy while this waited for the lock or loaded the model: it gives way now (5 Oct).
+                if (runCatching { JarvisVoice.busyForModel }.getOrDefault(false)) return@withLock null
                 val watchdog = scope.launch { delay(TIMEOUT_MS); LlmNative.cancel() }
-                val bytes = try { gently { Writer.prompt(question, facts, draft).let { p -> LlmNative.generate(handle, p, MAX_TOKENS, slots.pick(p), false) } } } finally { watchdog.cancel() }
+                rewriting = true
+                val bytes = try { gently { Writer.prompt(question, facts, draft).let { p -> LlmNative.generate(handle, p, MAX_TOKENS, slots.pick(p), false) } } }
+                    finally { rewriting = false; watchdog.cancel() }
                 bytes?.let { Writer.check(String(it, Charsets.UTF_8), facts, draft) }
             } finally {
                 _state.update { it.copy(writing = false) }
@@ -399,6 +403,17 @@ object IraModel {
     /** Stops what the model is writing now (a new question came): the answer already shown stands. */
     fun stopWriting() { if (_state.value.writing) runCatching { LlmNative.cancel() } }
 
+    /** A rewrite ([rewrite]) is generating now - the only work [yieldToVoice] stops. */
+    @Volatile private var rewriting = false
+
+    /**
+     * Jarvis is about to speak, or Boss has started speaking: a rewrite under way is stopped (the answer shown stands).
+     * Root cause, 5 Oct: a rewrite - words for the screen only - held the fast cores while the phone's voice made its
+     * first sound (37 s after Boss's words) and while the recognizer read Boss (7-9 s of speech read as nothing). Answers
+     * the voice itself waits for ([complete]: Hindi, free-form words) are never stopped here.
+     */
+    fun yieldToVoice() { if (rewriting) runCatching { LlmNative.cancel() } }
+
     /**
      * Runs [f] just below normal priority (the model's threads inherit it): the screen and the voice still come first,
      * but the model is no longer held to the phone's slow background cores.
@@ -406,10 +421,17 @@ object IraModel {
     private inline fun <T> gently(f: () -> T): T {
         val tid = android.os.Process.myTid()
         val was = runCatching { android.os.Process.getThreadPriority(tid) }.getOrDefault(0)
-        runCatching { android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_DEFAULT + android.os.Process.THREAD_PRIORITY_LESS_FAVORABLE) }
+        // While Jarvis listens, lower still (nice 5: about a third of the processor share of the phone's speech engine and
+        // recognizer when they compete, against four fifths at nice 1) - root cause, 5 Oct: at nice 1 on all the fast
+        // cores the model starved them. Not the background level (10), which Android may move to the slow cores.
+        val pri = if (runCatching { JarvisVoice.wanted }.getOrDefault(false)) LISTENING_NICE
+            else android.os.Process.THREAD_PRIORITY_DEFAULT + android.os.Process.THREAD_PRIORITY_LESS_FAVORABLE
+        runCatching { android.os.Process.setThreadPriority(pri) }
         try { return f() } finally { runCatching { android.os.Process.setThreadPriority(was) } }
     }
 
+    /** The model's thread priority while Jarvis listens ([gently]). */
+    private const val LISTENING_NICE = 5
     const val MAX_TOKENS = 160
     /** A rewrite not done by then is dropped (the answer already shown stands). */
     const val TIMEOUT_MS = 30_000L

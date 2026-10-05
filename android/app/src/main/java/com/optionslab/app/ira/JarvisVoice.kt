@@ -73,7 +73,8 @@ class JarvisVoice : Service() {
             // the chat (every caller has already put the full line there).
             val said = if (prompted) text else com.optionslab.ira.Overheard.said(text, runCatching { IraHub.locked() }.getOrDefault(true))
             if (!prompted && quietNow()) { runCatching { JarvisPopup.show(v, "Jarvis", said) }; return true }
-            v.main.post { v.say(said, "answer") }
+            // Not a reply to Boss's words (never timed as one), and not said over him while he is speaking.
+            v.main.post { v.sayWhenFree(said, "answer") }
             return true
         }
 
@@ -162,7 +163,7 @@ class JarvisVoice : Service() {
          */
         fun askYesNo(id: Long, text: String): Boolean {
             val v = instance?.get() ?: return false
-            v.main.post { v.asking = id; v.askingNeedsBoss = true; v.askingUntil = 0; v.say(text, "question") }
+            v.main.post { v.asking = id; v.askingNeedsBoss = true; v.askingUntil = 0; v.sayWhenFree(text, "question") }
             return true
         }
 
@@ -388,7 +389,33 @@ class JarvisVoice : Service() {
         /** Jarvis is speaking now. */
         val speakingNow: Boolean get() = instance?.get()?.speaking == true
 
-        /** When the last sound started (elapsed ms): the model starts once the voice is under way. */
+        /** Times each spoken reply from Boss's words to its own first sound ([com.optionslab.ira.ReplyClock]). */
+        private val replyClock = com.optionslab.ira.ReplyClock()
+
+        /**
+         * The voice needs the phone's processor now - an answer being worked out or said, or Boss speaking - so the
+         * model's rewrite (words for the screen only) does not run ([com.optionslab.ira.ModelYield]). False when Jarvis
+         * is not running.
+         */
+        val busyForModel: Boolean get() {
+            val v = instance?.get() ?: return false
+            return com.optionslab.ira.ModelYield.voiceBusy(v.speaking, _state.value.mode == Mode.THINKING, v.bossSpeaking())
+        }
+
+        /**
+         * Waits until the voice is free for the model ([busyForModel]); false when it stayed busy for
+         * [com.optionslab.ira.ModelYield.MAX_WAIT_MS] (the rewrite is then dropped: the answer shown stands).
+         */
+        suspend fun freeForModel(): Boolean {
+            var waited = 0L
+            while (busyForModel) {
+                if (waited >= com.optionslab.ira.ModelYield.MAX_WAIT_MS) return false
+                kotlinx.coroutines.delay(250); waited += 250
+            }
+            return true
+        }
+
+        /** When the last sound started (elapsed ms): cut-in listening counts from it ([cutInListen]). */
         @Volatile var speechStartedAt = 0L
 
         /** What the recognizer heard last, for the Settings check. */
@@ -522,7 +549,8 @@ class JarvisVoice : Service() {
             val now = SystemClock.elapsedRealtime()
             // A shared-capture turn that the recognizer opened and then never heard anything with (no words, no error) for
             // 12 s: this phone's recognizer cannot take our audio - back to its own microphone, for good.
-            if (listening && tap != null && turnReadyAt > 0 && !turnHeardAny && now - turnReadyAt > 12_000 && !speaking) {
+            // (Not when speech began: the recognizer then did get our audio - a slow reading is not a broken capture.)
+            if (listening && tap != null && turnReadyAt > 0 && !turnHeardAny && !turnSpeech && now - turnReadyAt > 12_000 && !speaking) {
                 tapFailed = true
                 val n = silentShared + 1; silentShared = n
                 if (n >= 3) runCatching { com.optionslab.app.security.SecurePrefs.put(TAP_BROKEN, true) }
@@ -530,7 +558,8 @@ class JarvisVoice : Service() {
                 IraActivity.add("Listening switched to the phone's own microphone (the shared one heard nothing).")
                 main.removeCallbacks(finish); runCatching { rec?.cancel() }; listening = false; endTap(); turnReadyAt = 0; again(300)
             }
-            if (listening && now - listenedAt > 25_000) {
+            // Never while Boss is speaking into the turn (a reset then lost his words), unless it is stuck (45 s).
+            if (listening && com.optionslab.ira.ModelYield.mayResetTurn(listenedAt, bossSpeaking(), now)) {
                 // (Partial words read before the reset still count, as a lost turn does.)
                 val lost = com.optionslab.ira.Wake.lostTurn(7, turnPartial, awake())
                 note("turn timed out" + if (turnPartial != null) " (read words mid-turn)" else " (nothing read)")
@@ -696,12 +725,14 @@ class JarvisVoice : Service() {
             }
             override fun onStart(id: String?) {
                 id?.let { pieceAt[it] }?.let { (b, _) -> reachedAt = b }
-                speechStartedAt = SystemClock.elapsedRealtime()
-                val h = heardAt
-                // Only a reply to what was just heard counts (an answer or a yes-or-no question within a minute): a later
-                // announcement is not a reply, and a stale time would read as minutes.
-                val took = SystemClock.elapsedRealtime() - h
-                if (h > 0 && (id?.startsWith("answer") == true || id?.startsWith("question") == true)) { if (took < 60_000) lastLatencyMs = took; latencies = com.optionslab.ira.Latency.add(latencies, took); heardAt = 0L
+                val now = SystemClock.elapsedRealtime()
+                speechStartedAt = now
+                // Only the first sound of the reply to the words just read counts ([com.optionslab.ira.ReplyClock]): an
+                // announcement, a reply never said or one from an earlier turn is not timed (Boss, 5 Oct: "37.0 s" against
+                // "answer ready 4.8 s" - a loose time taken by a later sound).
+                val took = replyClock.started(id, now)
+                if (took != null) { lastLatencyMs = took; latencies = com.optionslab.ira.Latency.add(latencies, took)
+                    note("first sound %.1f s after the words".format(java.util.Locale.ENGLISH, took / 1000.0))
                     // Counted for the day (times only, no words): his weekly goal of answering fast ([com.optionslab.ira.Improve]).
                     if (took in 1L until 60_000L) { IraTools.count(com.optionslab.ira.Improve.TIMED); if (took > com.optionslab.ira.Improve.FAST_MS) IraTools.count(com.optionslab.ira.Improve.SLOW) }
                     slowNudge() }
@@ -876,7 +907,12 @@ class JarvisVoice : Service() {
             if (mutedForBeep.isNotEmpty()) { main.removeCallbacks(unmuteBeep); main.postDelayed(unmuteBeep, 400) }
             note(if (tap != null) "ready (shared audio)" else "ready")
         }
-        override fun onBeginningOfSpeech() { turnSpeech = true; if (turnSpeechAt == 0L) turnSpeechAt = SystemClock.elapsedRealtime(); note("speech began") }
+        override fun onBeginningOfSpeech() {
+            turnSpeech = true; if (turnSpeechAt == 0L) turnSpeechAt = SystemClock.elapsedRealtime(); note("speech began")
+            // Boss is speaking: a rewrite under way stops, so the recognizer has the processor (5 Oct: 7-9 s of his speech
+            // read as nothing while the model was writing).
+            if (!speaking && !turnInSpeech) runCatching { IraModel.yieldToVoice() }
+        }
         override fun onRmsChanged(rmsdB: Float) { if (rmsdB > turnLoudest) turnLoudest = rmsdB }
         override fun onBufferReceived(buffer: ByteArray?) {}
         // Boss, 4 Oct: "speech began", then nothing - the recognizer never closed the turn. Once he stops speaking, the
@@ -1170,7 +1206,7 @@ class JarvisVoice : Service() {
         note("cut in by a stop word")
         runCatching { IraTools.noteHush() }
         interrupt()
-        answerJob?.cancel()
+        answerJob?.cancel(); replyClock.drop()
         main.removeCallbacks(finish); main.removeCallbacks(prepareAhead)
         stoppedAt = SystemClock.elapsedRealtime()
         runCatching { rec?.cancel() }; listening = false; endTap(); lastHeard = null
@@ -1263,7 +1299,7 @@ class JarvisVoice : Service() {
             } else { awakeUntil = SystemClock.elapsedRealtime() + AWAKE_MS; called = alternatives.any { WAKE.containsMatchIn(it) }; say("Yes, Boss?") }
             Wake.Heard.Stop -> if (alternatives.none { WAKE.containsMatchIn(it) }) again() else { wanted = false; say("Going to sleep, Boss. Switch me on again in the app.", STOP_AFTER) }
             // "Jarvis, stop" / "enough" / "quiet": it has stopped talking (the name cut in); nothing else is done.
-            Wake.Heard.Hush -> { if (speaking) runCatching { IraTools.noteHush() }; interrupt(); answerJob?.cancel(); awakeUntil = 0; called = false; _state.value = VoiceState(Mode.LISTENING); again() }
+            Wake.Heard.Hush -> { if (speaking) runCatching { IraTools.noteHush() }; interrupt(); answerJob?.cancel(); replyClock.drop(); awakeUntil = 0; called = false; _state.value = VoiceState(Mode.LISTENING); again() }
             is Wake.Heard.Ask -> {
                 // "Jarvis, stop talking" said over Jarvis: it has already stopped; that is not a lasting mute.
                 if (cutIn && Regex("^(stop|please stop|ok stop) (talking|speaking)$").matches(h.question.lowercase().trim())) { again(); return }
@@ -1286,7 +1322,7 @@ class JarvisVoice : Service() {
                     when (val r = com.optionslab.ira.BargeIn.rest(c, SystemClock.elapsedRealtime(), locked())) {
                         is com.optionslab.ira.BargeIn.Rest.Say -> {
                             awakeUntil = 0; cutOff = null
-                            heardAt = com.optionslab.ira.Turn.spokeEnd(turnPartialAt, turnEndAt, SystemClock.elapsedRealtime())
+                            heardAt = com.optionslab.ira.Turn.spokeEnd(turnPartialAt, turnEndAt, SystemClock.elapsedRealtime()); replyClock.heard(heardAt)
                             say(com.optionslab.ira.Aloud.say(r.text, if (IraTools.brief) com.optionslab.ira.Aloud.Length.SHORT else com.optionslab.ira.Aloud.Length.USUAL),
                                 "answer", full = r.text, account = c?.account == true)
                             return
@@ -1300,7 +1336,7 @@ class JarvisVoice : Service() {
                 // or done. An answer that may hold the account is not said again on a locked phone.
                 com.optionslab.ira.Again.read(h.question)?.let { ask ->
                     awakeUntil = 0
-                    heardAt = com.optionslab.ira.Turn.spokeEnd(turnPartialAt, turnEndAt, SystemClock.elapsedRealtime())
+                    heardAt = com.optionslab.ira.Turn.spokeEnd(turnPartialAt, turnEndAt, SystemClock.elapsedRealtime()); replyClock.heard(heardAt)
                     when (val r = com.optionslab.ira.Again.reply(ask, repeatable, SystemClock.elapsedRealtime(), locked())) {
                         is com.optionslab.ira.Again.Reply.Say -> {
                             note("said again (${ask.what.name.lowercase()})")
@@ -1408,7 +1444,7 @@ class JarvisVoice : Service() {
     /** [echo]: what Jarvis took the question as, said before the answer when he was not sure ([com.optionslab.ira.HeardBack]). */
     private fun answer(q: String, confirm: Boolean = false, named: Boolean = true, echo: String? = null) {
         // From Boss's last word (Boss, 5 Oct): the turn's closing wait and the recognizer's final reading count too.
-        heardAt = com.optionslab.ira.Turn.spokeEnd(turnPartialAt, turnEndAt, SystemClock.elapsedRealtime())
+        heardAt = com.optionslab.ira.Turn.spokeEnd(turnPartialAt, turnEndAt, SystemClock.elapsedRealtime()); replyClock.heard(heardAt)
         learnPace()
         _state.value = VoiceState(Mode.THINKING)
         answerJob = scope.launch {
@@ -1480,7 +1516,7 @@ class JarvisVoice : Service() {
                 // follow-up window closes instead, so one answer can never repeat itself in a loop.
                 val prev = lastAnswer
                 if (!named && prev != null && prev.text == text && SystemClock.elapsedRealtime() - lastAnswerAt < 120_000) {
-                    awakeUntil = 0; again(); return@launch
+                    replyClock.drop(); awakeUntil = 0; again(); return@launch
                 }
                 lastAnswer = Said(text); lastAnswerAt = SystemClock.elapsedRealtime()
                 text
@@ -1504,7 +1540,11 @@ class JarvisVoice : Service() {
      * itself (its own name is said as "my name", so it does not hear it) - then listens again, or stops after
      * [id] STOP_AFTER.
      */
-    private fun say(words: String, id: String = "say", full: String? = null, account: Boolean = false, slow: Boolean = false, keep: Boolean = true) {
+    /** [reply]: these words answer what Boss just said (timed from his words to their first sound); false for unasked ones. */
+    private fun say(words: String, id: String = "say", full: String? = null, account: Boolean = false, slow: Boolean = false, keep: Boolean = true,
+                    reply: Boolean = true) {
+        // The voice first: a model rewrite under way gives the processor back before the speech engine starts (5 Oct).
+        runCatching { IraModel.yieldToVoice() }
         // Figures as a trader says them: a lakh or more in lakh / crore, option symbols as words ([com.optionslab.ira.SayAs]).
         // Then commas where a person would pause: brackets, spaced dashes, figures side by side ([com.optionslab.ira.Pauses]).
         val text = com.optionslab.ira.Pauses.shape(com.optionslab.ira.SayAs.figures(words, com.optionslab.ira.Aloud.hindi(words)))
@@ -1530,11 +1570,10 @@ class JarvisVoice : Service() {
         // A slow repeat: slower for this answer only (the next applyStyle sets Boss's own pace back).
         if (slow) { t.setSpeechRate(style.rate * com.optionslab.ira.Again.rate(pace, true)); synchronized(applied) { applied.remove(t) } }
         val ci = cutInNow(this)
-        if (ci.on) {
-            // Keep listening (for the name or a stop word only) once the sentence is under way: sooner when his voice
-            // cannot reach the microphone loud (a headset, echo cancelling - [com.optionslab.ira.CutIn]).
-            if (id != STOP_AFTER) main.postDelayed({ if (speaking) listen() }, ci.startMs)
-        } else {
+        // Cut-in on: keep listening (for the name or a stop word only) once the sentence is under way - sooner when his
+        // voice cannot reach the microphone loud (a headset, echo cancelling - [com.optionslab.ira.CutIn]) - counted from
+        // the first SOUND ([cutInListen], started below), not from here.
+        if (!ci.on) {
             // Take turns: not listening while speaking, so Jarvis never hears itself.
             main.removeCallbacks(finish)
             runCatching { rec?.cancel() }; listening = false; endTap(); lastHeard = null
@@ -1543,6 +1582,8 @@ class JarvisVoice : Service() {
         spokeAt = SystemClock.elapsedRealtime()
         val u = "$id#${++said}"
         utterance = u
+        if (reply && (id == "answer" || id == "question")) replyClock.queued(u, spokeAt)
+        if (ci.on && id != STOP_AFTER) { val at = spokeAt; main.postDelayed({ cutInListen(u, at, ci.startMs) }, 100) }
         // Hindi replies: an answer is translated by the model (figures checked) and said in the phone's Hindi voice.
         if (hindi && id == "answer") {
             scope.launch {
@@ -1555,6 +1596,37 @@ class JarvisVoice : Service() {
             return
         }
         if (!speakPieces(t, spokenName(text), u)) { speaking = false; afterSpeech(id) }
+    }
+
+    /**
+     * Cut-in listening for utterance [u] (queued at [queuedAt]): [startMs] after its first sound. Before, it started
+     * [startMs] after the words were handed to the speech engine - with the engine slow to make the first sentence, the
+     * recognizer opened before Jarvis made a sound, and Boss's own words in that turn were taken as Jarvis talking (only
+     * the name counts then). Polled every 0.1 s until the sound comes; ends when that speech ends or is replaced.
+     */
+    private fun cutInListen(u: String, queuedAt: Long, startMs: Long) {
+        val cur = utterance
+        if (stopped || !speaking || cur == null || !(cur == u || cur.startsWith("$u."))) return
+        val wait = com.optionslab.ira.ModelYield.cutInIn(queuedAt, speechStartedAt, startMs, SystemClock.elapsedRealtime())
+        when {
+            wait == null -> main.postDelayed({ cutInListen(u, queuedAt, startMs) }, 100)
+            wait > 0 -> main.postDelayed({ cutInListen(u, queuedAt, startMs) }, wait)
+            else -> listen()
+        }
+    }
+
+    /** Boss is speaking into the listening turn now ([com.optionslab.ira.ModelYield.bossSpeaking]). */
+    private fun bossSpeaking(): Boolean = com.optionslab.ira.ModelYield.bossSpeaking(listening, turnInSpeech, turnSpeechAt, turnEndAt,
+        SystemClock.elapsedRealtime(), turnPartialAt)
+
+    /**
+     * Unasked words (an announcement, Jarvis's own yes-or-no question): not said over Boss while he is speaking into a turn
+     * - that cancelled his turn (cut-in off) or made it a cut-in turn where only the name counts. Up to 8 s, then said.
+     */
+    private fun sayWhenFree(text: String, id: String, tries: Int = 0) {
+        if (stopped) return
+        if (tries < 32 && !speaking && bossSpeaking()) { main.postDelayed({ sayWhenFree(text, id, tries + 1) }, 250); return }
+        say(text, id, reply = false)
     }
 
     /**
