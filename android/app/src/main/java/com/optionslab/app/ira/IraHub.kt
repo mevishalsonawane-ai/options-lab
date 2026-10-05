@@ -1236,6 +1236,7 @@ object IraHub {
                 com.optionslab.ira.Causes.asked(q) != null ||
                 com.optionslab.ira.AskedAgain.asked(q) || com.optionslab.ira.FigureFirst.asked(q) != null ||
                 com.optionslab.ira.WrongThing.asked(q) != null || com.optionslab.ira.WrongThing.objected(q) || com.optionslab.ira.MindChange.asked(q) ||
+                com.optionslab.ira.ArmHabits.asked(q) ||
                 com.optionslab.ira.DayCompare.asked(q) != null }.getOrDefault(false)) {
             val prev = if (recent) _state.value.messages.lastOrNull { !it.fromIra }?.text else null
             val qs = runCatching { com.optionslab.ira.Understand.questions(prev, q) }.getOrNull()
@@ -2007,6 +2008,15 @@ object IraHub {
                 "Sorry, Boss - noted that my last answer missed what you asked (what it was about and how I took it, never your words). " +
                     "Ask it again in other words, or say \"that was wrong\" and I'll ask whether to learn what you meant."
             }
+            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
+            return true
+        }
+        // "Do I usually disarm my bots after losses?" / "which bots do I keep armed?": what Boss does with his bots after
+        // losing days, as his own record ([com.optionslab.ira.ArmHabits]; switches and day signs only, never amounts). Talk
+        // only: nothing learned arms, disarms, stops or offers anything. His account, so never on a locked phone; not in GOLD.
+        if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null &&
+            runCatching { com.optionslab.ira.ArmHabits.asked(q) }.getOrDefault(false)) {
+            val said = if (phoneLocked()) com.optionslab.ira.ArmHabits.LOCKED else IraBots.armHabitsSay(q)
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
             return true
         }

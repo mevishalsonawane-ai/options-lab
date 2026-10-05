@@ -833,7 +833,8 @@ internal object IraTools {
         wordFit = runCatching { wordFitLog() }.getOrDefault(com.optionslab.ira.WordFit.Log()),
         again = runCatching { againLog() }.getOrDefault(com.optionslab.ira.AskedAgain.Log()),
         wrong = runCatching { wrongLog() }.getOrDefault(com.optionslab.ira.WrongThing.Log()),
-        figure = runCatching { figureLog() }.getOrDefault(com.optionslab.ira.FigureFirst.Log()))
+        figure = runCatching { figureLog() }.getOrDefault(com.optionslab.ira.FigureFirst.Log()),
+        arms = runCatching { IraBots.armLog() }.getOrDefault(com.optionslab.ira.ArmHabits.Log()))
 
     /**
      * "Undo everything you learned this week", on Boss's Confirm: the wordings and routines kept in the last 7 days

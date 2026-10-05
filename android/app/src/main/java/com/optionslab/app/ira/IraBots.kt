@@ -175,4 +175,59 @@ internal object IraBots {
         }
         BotHealth.spoken(said)?.let { JarvisVoice.announce(com.optionslab.ira.Overheard.said(it, IraHub.locked())) }
     }
+
+    // ---- what Boss does with his bots after losing days ([com.optionslab.ira.ArmHabits]) --------------------------
+
+    /** Each trading day's switches and day signs (bot names, armed, ended down or up - never an amount). */
+    private const val SWITCHES_KEY = "jarvis.bots.switches"
+    @Volatile private var armCache: com.optionslab.ira.ArmHabits.Log? = null
+    @Volatile private var lastNote = 0L
+
+    private fun names(x: org.json.JSONObject, k: String): Set<String> =
+        x.optJSONArray(k)?.let { arr -> (0 until arr.length()).map { arr.getString(it) }.toSet() } ?: emptySet()
+
+    fun armLog(): com.optionslab.ira.ArmHabits.Log = armCache ?: runCatching {
+        val a = org.json.JSONArray(com.optionslab.app.security.SecurePrefs.getString(SWITCHES_KEY) ?: "[]")
+        com.optionslab.ira.ArmHabits.Log((0 until a.length()).map { i -> a.getJSONObject(i).let { x ->
+            com.optionslab.ira.ArmHabits.Day(java.time.LocalDate.parse(x.getString("d")), names(x, "k"), names(x, "a"), names(x, "l"), names(x, "w"))
+        } })
+    }.getOrDefault(com.optionslab.ira.ArmHabits.Log()).also { armCache = it }
+
+    private fun armSave(log: com.optionslab.ira.ArmHabits.Log) {
+        armCache = log
+        val a = org.json.JSONArray()
+        log.days.forEach { d ->
+            a.put(org.json.JSONObject().put("d", d.date.toString()).put("k", org.json.JSONArray(d.known.toList()))
+                .put("a", org.json.JSONArray(d.armed.toList())).put("l", org.json.JSONArray(d.lost.toList())).put("w", org.json.JSONArray(d.won.toList())))
+        }
+        com.optionslab.app.security.SecurePrefs.put(SWITCHES_KEY, a.toString())
+    }
+
+    /**
+     * Market hours, every five minutes at most: each bot's switch (armed at any time today) and whether its closed trades
+     * today net down or up - names and signs only, for "do I usually disarm my bots after losses?". Notes only: nothing is
+     * armed, disarmed, stopped or offered. Solo (Jarvis's own paper trades) is left out.
+     */
+    suspend fun noteSwitches() {
+        if (!com.optionslab.app.BuildConfig.JARVIS || com.optionslab.app.BuildConfig.GOLD) return
+        val m = com.optionslab.app.data.Market
+        val today = m.today()
+        if (!m.isTradingDay(today) || !m.isOpen()) return
+        val nowMs = System.currentTimeMillis()
+        if (nowMs - lastNote < 5 * 60_000L) return
+        lastNote = nowMs
+        val byName = bots().filter { it.kind != "Solo" }.groupBy { it.name }
+        if (byName.isEmpty()) return
+        val switches = byName.mapValues { (_, bs) -> bs.any { it.on } }
+        val todays = byName.mapValues { (_, bs) -> bs.flatMap { b -> b.trades.filter { it.closedAt.toLocalDate() == today } } }
+        val lost = todays.filter { it.value.isNotEmpty() && it.value.sumOf { t -> t.net } < 0 }.keys
+        val won = todays.filter { it.value.isNotEmpty() && it.value.sumOf { t -> t.net } > 0 }.keys
+        val before = armLog()
+        val after = com.optionslab.ira.ArmHabits.note(before, today, switches, lost, won)
+        if (after !== before) armSave(after)
+    }
+
+    /** "Do I usually disarm my bots after losses?" (the phone unlocked: the hub checks). */
+    fun armHabitsSay(question: String): String = runCatching { com.optionslab.ira.ArmHabits.say(armLog(), question) }
+        .getOrDefault("I could not read your bots' record just now, Boss.")
 }

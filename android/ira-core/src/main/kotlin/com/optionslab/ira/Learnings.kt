@@ -11,7 +11,8 @@ import java.util.Locale
  * ([AlertSense]), the conditions his own ideas and Solo sit out ([SelfCalibration], [SoloCalibration]), the answer kinds
  * he flags ([SelfDoubt]), the pattern kinds he no longer brings up unasked ([PatternCalls]), his data-freshness record
  * ([DataAge]), how Nifty moved after each news theme's headlines ([NewsMoves]), the market reads Boss asked again within
- * minutes ([AskedAgain], a record only), the questions he answered with the wrong thing ([WrongThing], a record only) and his own goals for the week ([Improve]) - each with when and why it changed and, where one exists, the
+ * minutes ([AskedAgain], a record only), the questions he answered with the wrong thing ([WrongThing], a record only), what Boss
+ * does with his bots after losing days ([ArmHabits], a record only) and his own goals for the week ([Improve]) - each with when and why it changed and, where one exists, the
  * words that undo it by voice.
  *
  * "What have you learned this week?" ([Ask.WEEK]), "what changed in how you work?" ([Ask.CHANGED]) and "show me
@@ -43,6 +44,7 @@ object Learnings {
         AGAIN("Market reads you asked again within minutes", false),
         WRONG_THING("Questions I answered with the wrong thing", false),
         FIGURE_FIRST("Market reads I start with the figure aloud", false),
+        ARM_HABITS("Your bots after losing days", true),
         SIT_OUT("Conditions I sit out", true),
         ANSWERS("Answer kinds I flag", true),
         PATTERNS("Patterns I no longer bring up", false),
@@ -75,6 +77,7 @@ object Learnings {
         val again: AskedAgain.Log = AskedAgain.Log(),
         val wrong: WrongThing.Log = WrongThing.Log(),
         val figure: FigureFirst.Log = FigureFirst.Log(),
+        val arms: ArmHabits.Log = ArmHabits.Log(),
     )
 
     fun day(d: LocalDate): String = "${d.dayOfMonth} ${d.month.getDisplayName(TextStyle.SHORT, Locale.ENGLISH)}"
@@ -134,6 +137,11 @@ object Learnings {
         // The market reads whose figure he says first aloud, Boss having asked them again for it ([FigureFirst]; kinds only).
         FigureFirst.leading(i.figure, now).forEach { r ->
             out += Item(Area.FIGURE_FIRST, FigureFirst.ledgerWhat(r), FigureFirst.newest(i.figure, r.kind)?.toLocalDate(), FigureFirst.ledgerWhy(r), FigureFirst.UNDO)
+        }
+        // What Boss does with his bots after losing days ([ArmHabits]; switches and signs only): his record - it arms or
+        // disarms nothing, changes nothing Jarvis does, and so has no undo.
+        ArmHabits.shown(i.arms).forEach { h ->
+            out += Item(Area.ARM_HABITS, ArmHabits.ledgerWhat(h), h.newest, ArmHabits.ledgerWhy(h), null)
         }
         // The conditions his own ideas and Solo sit out: the record decides, so it lifts only as the record does.
         fun sitOut(outcomes: List<SelfCalibration.Outcome>, solo: Boolean) {
@@ -223,7 +231,7 @@ object Learnings {
     fun say(items: List<Item>, ask: Ask, today: LocalDate, locked: Boolean): String {
         val shown = items.filter { !locked || !it.personal }
             .filter { ask == Ask.ALL || thisWeek(it.on, today) }
-            .filter { ask != Ask.CHANGED || (it.area != Area.DATA && it.area != Area.NEWS && it.area != Area.AGAIN && it.area != Area.WRONG_THING) }
+            .filter { ask != Ask.CHANGED || (it.area != Area.DATA && it.area != Area.NEWS && it.area != Area.AGAIN && it.area != Area.WRONG_THING && it.area != Area.ARM_HABITS) }
         val hidden = locked && items.any { it.personal }
         val tail = listOfNotNull(if (hidden) UNLOCK else null, NEVER_ACTS).joinToString(" ")
         if (shown.isEmpty()) {

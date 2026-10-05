@@ -457,6 +457,9 @@ object Tasks {
         // Jarvis: a strategy of Boss's behaving unusually against its tested record - told once a day without amounts,
         // stopping it asked first (after every stop and exit above; reads the app's own books, every five minutes at most).
         runCatching { com.optionslab.app.ira.IraBots.watch() }
+        // Jarvis: each bot's switch and whether it ended the day down or up (names and signs only), for "do I usually
+        // disarm my bots after losses?" - a record; nothing is armed, disarmed or offered.
+        runCatching { com.optionslab.app.ira.IraBots.noteSwitches() }
     }
 
 
