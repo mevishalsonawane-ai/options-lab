@@ -289,7 +289,11 @@ object WhereIWin {
         "| where (do|did) i (make|lose|made|lost|earn|earned) (the )?most " +
         "| what (do|did) i (make|lose|made|lost|earn|earned) (the )?(most )?(my )?(money|profits?) (on|in|from|with) " +
         // "Which index do I make money on?", "which index am I best at?"
-        "| which (index|indices|indexes) (do|did|am|have) i (\\w+ ){0,3}$PERF ")
+        "| which (index|indices|indexes) (do|did|am|have) i (\\w+ ){0,3}$PERF " +
+        // Round 23: "where do I win?", "where do I win the most?"; Hinglish "main kahan kamata hoon", "kidhar se paisa banta hai mera"
+        "| where (do|did|have) i (win|won|been winning)( (the )?most| most often| more)? $" +
+        "| (kahan|kaha|kidhar|kis cheez) (se |par |pe |mein |me |)(main |mai |)(kamata|kamaata|kamati|kamaati|kamai karta|kamai karti|paisa kamata|paisa banata) (hoon|hu|hun|hai) " +
+        "| (kahan|kaha|kidhar) (se |)(mera |meri |)(paisa|profit|kamai|munafa) (banta|bante|aata|aati|hota) (hai )?(mera |)")
     /** Today, yesterday or right now: the account's P&L ("where did I lose money today", "where am I losing money"). */
     private val NOW = rx(" (today|todays|aaj|yesterday|yesterdays|right now|abhi|this session) | where am i (making|losing|earning) ")
     /** "How do I do on BankNifty?" - his record only with no span named; with one it is the P&L or the history (round 22 review). */
@@ -315,6 +319,15 @@ object WhereIWin {
         "| (kis|kaun se|kaunse|konse|kaun sa|kaunsa|konsa) (index|trade|trades|side) (mein|me|se|par|pe) (mera |meri |mujhe |)(paisa|profit|kamai|munafa|nuksan|nuksaan|loss) " +
         "| (mujhe|mere liye) (kaun se|kaunse|konse|kis tarah ke) (trade|trades) (suit|kaam|fayda) ")
 
+    /**
+     * The chance line asked of (round 23): "is the gap between my best and worst real?", "is the difference between my calls and
+     * puts just luck?", "is my edge on BankNifty real?", "best aur worst ka fark luck hai kya" - his record with its chance check.
+     */
+    private val CHANCE = rx(
+        " is (the|my|this|that) (gap|difference) between my (\\w+ ){1,6}(real|just luck|luck|only luck|chance|just chance|random|significant|statistically significant|meaningful|more than chance|more than luck) " +
+        "| is my (edge|record|win rate|winning|advantage|outperformance|lead) (on|in|with|at|trading) $PAIRED (real|just luck|luck|chance|just chance|random|significant|more than chance|more than luck) " +
+        "| (mere |meri |)(best aur worst|calls? aur puts?|ce aur pe|buying aur selling|selling aur buying) (ka|ki|mein|me) (fark|farak|difference|gap) (sirf |bas |)(luck|chance|kismat|tukka|asli|real|sach) ")
+
     /** The wake word and "can you tell me", said first or last: left out before [NOT] (round 22 review). */
     private val POLITE = rx("^ ((hey|ok|okay|hi) )?(jarvis|ira|boss) | (can|could|would|will) you (please )?(tell|show|let) me( know)? | please | (jarvis|ira|boss) $")
 
@@ -329,10 +342,12 @@ object WhereIWin {
             // "Jarvis, can you tell me where I make my money?" - the wake word and the asking are not Jarvis's own trades.
             var t = norm(s)
             while (true) { val u = " " + POLITE.replace(t, " ").trim() + " "; if (u == t) break; t = u }
-            if (NOT.containsMatchIn(t)) continue
+            // (The chance line asked of names "the difference between" his own groups - not a definition.)
+            val chance = CHANCE.containsMatchIn(t)
+            if (NOT.containsMatchIn(if (chance) t.replace(" difference between ", " gap between ") else t)) continue
             val loose = LOOSE.containsMatchIn(t) && !NOW.containsMatchIn(t)
             val howOn = HOW_ON.containsMatchIn(t) && !NOW.containsMatchIn(t) && MyNumbers.span(s) == MyNumbers.Span.ALL
-            if (!loose && !howOn && !ASK.containsMatchIn(t)) continue
+            if (!loose && !howOn && !chance && !ASK.containsMatchIn(t)) continue
             return when {
                 rx(" $RIGHT ").containsMatchIn(t) -> Cut.KIND
                 rx(" $SIDE ").containsMatchIn(t) -> Cut.SIDE

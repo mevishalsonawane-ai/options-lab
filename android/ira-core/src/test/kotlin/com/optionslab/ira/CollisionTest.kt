@@ -2117,6 +2117,63 @@ class CollisionTest {
         assertTrue(audit.feature("where do you make your money") != "WhereIWin")
     }
 
+    /**
+     * Round 23: the newest features as Boss says them - the home-screen widgets (the app's how-to), Overnight with the
+     * weekend's gaps and the recognizer's "over nite", TradesADay asked plainly, WhereIWin's chance line and Hinglish,
+     * VixBand's range broken and "VIX sahi hota hai kya".
+     */
+    private val ROUND23 = listOf(
+        // The widgets: how to add one and what it shows, never the P&L, orders or positions themselves
+        "what does the open widget show" to "Account:HOWTO", "what is the open widget" to "Account:HOWTO", "how to add widget" to "Account:HOWTO",
+        "widget kaise lagaye" to "Account:HOWTO", "home screen widget kaise lagaun" to "Account:HOWTO", "vidget kaise lagaye" to "Account:HOWTO",
+        "how do i show my p&l on the widget" to "Account:HOWTO", "widget pe p&l kaise dikhaye" to "Account:HOWTO",
+        "why does the widget not show my p&l" to "Account:HOWTO", "can i see my orders on the widget" to "Account:HOWTO",
+        "why is my widget blank" to "Account:HOWTO", "the open widget is empty" to "Account:HOWTO",
+        // Overnight: the weekend's gaps, the day said plainly, the recognizer's slips
+        "are monday gaps bigger" to "Overnight", "weekend gaps vs weekday gaps" to "Overnight",
+        "how big are the gaps compared to the day's move" to "Overnight", "do gaps matter more than the day" to "Overnight",
+        "over nite moves of nifty" to "Overnight", "over knight vs intraday" to "Overnight", "overnight moves of banknifty" to "Overnight",
+        // TradesADay asked plainly
+        "are my busy days worse" to "TradesADay", "are my quiet days better" to "TradesADay", "is it better for me to take fewer trades" to "TradesADay",
+        "do fewer trades work better for me" to "TradesADay", "how much did i make when i traded less" to "TradesADay",
+        "my p&l on days with few trades" to "TradesADay", "first trade of the day kaisa rehta hai mera" to "TradesADay",
+        // WhereIWin: the chance line asked of, "where do I win", Hinglish
+        "is the gap between my best and worst real" to "WhereIWin", "is the difference between my calls and puts just luck" to "WhereIWin",
+        "is my edge on banknifty real" to "WhereIWin", "is my win rate on banknifty real" to "WhereIWin", "best aur worst ka fark luck hai kya" to "WhereIWin",
+        "where do i win" to "WhereIWin", "where do i win the most" to "WhereIWin", "main kahan kamata hoon" to "WhereIWin",
+        "kidhar se paisa banta hai mera" to "WhereIWin",
+        // VixBand: the range broken, VIX judged in Hinglish
+        "how often is the vix range broken" to "VixBand", "vix wala range kitni baar toota" to "VixBand", "vix sahi hota hai kya" to "VixBand",
+    )
+
+    @Test fun roundTwentyThreeWordingsRouteAndNeverAct() {
+        assertEquals(ROUND23.size, ROUND23.map { it.first }.distinct().size)
+        val wrong = ROUND23.mapNotNull { (s, want) -> audit.feature(s).let { got -> if (got == want) null else "\"$s\": wanted $want, got $got ${hits(s)}" } }
+        assertTrue(wrong.isEmpty(), wrong.joinToString("\n"))
+        for ((s, _) in ROUND23) neverActs(s)
+        // The how-to knows the widgets, and says only that when one is named.
+        for (s in listOf("how do i add the widget", "what does the open widget show", "widget kaise lagaye", "how do i show my p&l on the widget"))
+            assertEquals(listOf(AppAnswers.WIDGETS), AppAnswers.howto(s), s)
+        assertTrue(AppAnswers.howto("where is the kill switch").none { it == AppAnswers.WIDGETS })
+        // Neighbours keep their own: the P&L, the history, Headroom, today's gap, the market's gap, a definition, VIX's level.
+        for ((s, want) in listOf("my p&l" to "Account:PNL", "how much did i make today" to "Account:PNL", "what's my p&l this week" to "Account:HISTORY",
+            "my best day this month" to "Account:HISTORY", "how much did i make this week" to "Account:HISTORY",
+            "where am i making money" to "Account:HOWTO+PNL", "where did i lose money today" to "Account:PNL+HOWTO",
+            "how many trades did i take yesterday" to "Account:HISTORY+ORDERS",
+            "how much headroom do i have left" to "Headroom", "how many more trades can i take today" to "Headroom", "how much more can i lose today" to "Headroom",
+            "is the gap bigger today" to "Gap", "where is the kill switch" to "Account:RISK+HOWTO"))
+            assertEquals(want, audit.feature(s), s)
+        for (s in listOf("is the gap between nifty and banknifty real", "what's the difference between calls and puts", "how big was the monday gap",
+            "vix aaj sahi hai kya", "how is vix", "did i trade too much today", "should i trade less"))
+            assertTrue(audit.feature(s) !in setOf("WhereIWin", "Overnight", "VixBand", "TradesADay", "Account:HOWTO"), "$s: ${audit.feature(s)}")
+        // "Where did I win today" is tied to today: never his record (the account's route, as before).
+        assertTrue(audit.feature("where did i win today") != "WhereIWin")
+        // An order or a command with a widget named reads as it did: never the how-to.
+        for (s in listOf("buy 1 lot nifty widget", "cancel all orders", "square off everything", "sell my nifty put"))
+            assertTrue(Ask.parse(s).command != null || Ask.parse(s).order != null || Bundle.acts(s), s)
+        assertTrue(!AppAnswers.about(" buy nifty widget "), "a trading word keeps the widget out of the app's answers")
+    }
+
     // ---- Again: the voice's own "say that again slowly" - heard before the question path, never a question family ----
 
     private val AGAIN = listOf("say that again slowly", "repeat it slower", "once more slowly", "dobara dheere bolo", "dheere se phir se bolo",

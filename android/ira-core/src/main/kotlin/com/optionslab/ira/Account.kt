@@ -154,7 +154,13 @@ object AppAnswers {
         rx(" (my|mine|our|i|me) ").containsMatchIn(t) && WORDS.any { it.second.containsMatchIn(t) } ||
         rx(" (how am i doing|how did i do|app status|this app|kill switch|zerodha|login|logged in|holiday|holidays|harvest|static ip|where is|where do i|how do i|how can i|when is (the )?(next )?expiry|next expiry|expiry (day|date|today)|is (the )?market open|market open today) ").containsMatchIn(t) ||
         // "Is Kite connected", "is the app working" (audit, 5 Oct): the app's own status.
-        rx(" is (kite|zerodha|the data|data|the app|app|the relay|relay|the feed|my broker) (connected|working|running|ok|okay|down|up) ").containsMatchIn(t)
+        rx(" is (kite|zerodha|the data|data|the app|app|the relay|relay|the feed|my broker) (connected|working|running|ok|okay|down|up) ").containsMatchIn(t) ||
+        // The home-screen widgets (round 23): "what does the Open widget show", "how to add widget", "widget kaise lagaye" - never
+        // with a trading word, so an order or a command reads exactly as before.
+        WIDGET.containsMatchIn(t) && !rx(" (buy|sell|bought|sold|kharido|kharid|becho|bech|exit|square|squareoff|cancel|close|place|short|long|lot|lots|stop|kill|approve|reject) ").containsMatchIn(t)
+
+    /** A home-screen widget named, with the recognizer's slips ("vidget", "widjet"). */
+    internal val WIDGET = Regex(" (widget|widgets|vidget|vidgets|widjet|widjets|wiget|wigets) ")
 
     fun sections(text: String): Set<Section> = sectioned.of(text) { sectionsFresh(text) }
 
@@ -213,6 +219,9 @@ object AppAnswers {
         if (MyStreaks.asked(text)) { out.clear(); out += Section.STREAKS }
         // "What's my average win and loss?", "my profit factor", "do I hold my losers longer?": Boss's own numbers, on their own.
         if (MyNumbers.asked(text)) { out.clear(); out += Section.NUMBERS }
+        // "What does the Open widget show", "how do I show my P&L on the widget", "widget pe P&L kaise dikhaye": the widgets'
+        // how-to (round 23), never the P&L, the orders or the positions themselves - unless something else is asked with it.
+        if (WIDGET.containsMatchIn(t) && !rx(" and | also | plus ").containsMatchIn(t)) { out.clear(); out += Section.HOWTO }
         // The new sections are asked on their own: drop the broad matches their words also hit.
         if (!rx(" and | also | plus ").containsMatchIn(t) && out.any { it == Section.ACTIVITY || it == Section.READY || it == Section.REGIME || it == Section.LOSSES || it == Section.WHATIF || it == Section.CHANGES || it == Section.EXPLAIN_POS ||
                 it == Section.SEARCH || it == Section.TIMEOFDAY || it == Section.REASONS || it == Section.MISTAKES || it == Section.MOVE || it == Section.RANK || it == Section.REPLAY || it == Section.MONTH || it == Section.CHARGES || it == Section.HEALTH || it == Section.BOTS || it == Section.TAX || it == Section.NEED || it == Section.STREAKS || it == Section.NUMBERS })
@@ -245,6 +254,8 @@ object AppAnswers {
     /** Where things are in the app. */
     fun howto(text: String): List<String> {
         val t = " " + text.lowercase().replace("p&l", "p l").replace(rx("[^a-z0-9 ]"), " ").replace(rx("\\s+"), " ") + " "
+        // The home-screen widgets on their own (round 23): adding them, what each shows, and the switch the P&L waits for.
+        if (WIDGET.containsMatchIn(t)) return listOf(WIDGETS)
         val map = listOf(
             rx(" (kill switch|daily loss|drawdown|limit|limits|bot settings|risk) ") to "Kill switch, daily loss, drawdown and order limits: More, then Bot settings.",
             rx(" (zerodha|kite|login|log in|live|real orders|api|mode|paper) ") to "Zerodha login, Paper or Live mode and order limits: More, then Zerodha. The PAPER TRADING badge at the top switches the mode.",
@@ -263,6 +274,13 @@ object AppAnswers {
         ).filter { it.first.containsMatchIn(t) }.map { it.second }
         return map.ifEmpty { listOf("The tabs: Home (Ira and the dashboard), Chart, Trade (account and strategies), P&L, Options, Research, More (Zerodha, Alerts, Security, Schedules, Bot settings, Data).") }
     }
+
+    /** The home-screen widgets: how to add one, what each shows, and the switch their P&L waits for. */
+    const val WIDGETS = "Home-screen widgets: long-press an empty spot on the home screen, tap Widgets and pick IraAlgo. There are three: " +
+        "the index widget (Nifty and BankNifty, your P&L only if you allow it), Open (today's P&L on top, then only what is open - " +
+        "your open positions and pending orders) and Jarvis (his last message, with Approve or Reject for a trade waiting for you). " +
+        "The Open widget and the P&L stay blank until you turn on \"Show my P&L on the widget\" in More, then Security - off by default, " +
+        "as anyone holding the unlocked phone sees the home screen."
 
     /** "Can you listen to me?", "what can you do?" - about Ira (Jarvis) itself. */
     fun help(q: Question, voice: Boolean): Answer {

@@ -66,8 +66,11 @@ object Overnight {
     const val NOTE = "A record of past days on this phone, Boss, not a forecast."
     const val NOT_HERE = "I keep the overnight record for Nifty, BankNifty, FinNifty and Sensex only, Boss: gold trades round the clock, so it has no night to split off, and India VIX is not traded."
 
-    private fun norm(text: String) = " " + text.lowercase(Locale.ENGLISH).replace("’", "'").replace("'", " ")
-        .replace(rx("[^a-z0-9%. ]"), " ").replace(rx("(?<!\\d)\\.|\\.(?!\\d)"), " ").replace(rx("\\s+"), " ").trim() + " "
+    // The recognizer's slips (round 23): "over nite", "overnite", "over knight", "over nait" are the night.
+    private fun norm(text: String) = (" " + text.lowercase(Locale.ENGLISH).replace("’", "'").replace("'", " ")
+        .replace(rx("[^a-z0-9%. ]"), " ").replace(rx("(?<!\\d)\\.|\\.(?!\\d)"), " ").replace(rx("\\s+"), " ").trim() + " ")
+        .replace(SLIP, " overnight ")
+    private val SLIP = Regex(" (over ?nite|over ?nites|over ?knight|over ?knights|over ?nait|over ?night s|ovarnight|overnigh) ")
     private fun s2(x: Double) = (if (x > 0) "+" else "") + "%.2f%%".format(Locale.ENGLISH, x)
     private fun p2(x: Double) = "%.2f%%".format(Locale.ENGLISH, x)
     private fun n0(x: Double) = "%,.0f".format(Locale.ENGLISH, x)
@@ -87,7 +90,9 @@ object Overnight {
     /** The hours the market is open. */
     private val SESSION = Regex(" (intraday|intra day|during the day|in the day|during the session|in the session|in session|during market hours|" +
         "in market hours|market hours|trading hours|during trading hours|open to close|from open to close|from the open to the close|" +
-        "day session|din mein|din me|din main|din bhar|din ko) ")
+        "day session|din mein|din me|din main|din bhar|din ko|" +
+        // Round 23: the day set against the gap in plain words - "the gaps compared to the day's move", "more than the day".
+        "the day s move|the day s moves|the day s range|the rest of the day|than the day|or the day|vs the day|the session|the sessions) ")
     /** A move, a return or a trend. */
     private val MOVE = Regex(" (move|moves|moved|movement|movements|return|returns|gain|gains|gained|change|changes|trend|trends|rally|rallies|" +
         "fall|falls|made|make|makes|happen|happens|come|comes|came|chalta|chalti|banta|banti|hota|hoti|aata|aati) ")
@@ -99,7 +104,12 @@ object Overnight {
     private val NAMED = Regex(" ((overnight|close to open) (vs|versus|and|or|against|compared to) (intraday|intra day|session|day|daytime|in session|open to close)|" +
         "(intraday|intra day|session|daytime|open to close) (vs|versus|and|or|against|compared to) (overnight|close to open)|" +
         "overnight (return|returns|record|records|split|stats|statistics|history|moves record|move record)|" +
+        // Round 23: "overnight moves of Nifty" (and the recognizer's "over nite moves of Nifty").
+        "overnight (moves|movements) (of|for|in|on)|" +
         "close to open (return|returns|move|moves))( |$)")
+    /** A gap named, and the weekend's set against the rest (round 23). */
+    private val GAPS = Regex(" (gap|gaps|opening gap|opening gaps) ")
+    private val SET_AGAINST = Regex(" (bigger|smaller|larger|wider|vs|versus|than|compared|compare|against|usually|normally|typically|on average|zyada|bade|bada) ")
     /** The opens after a weekend or a holiday. */
     private val WEEKEND = Regex(" (weekend|weekends|week end|monday open|monday opens|monday gap|monday gaps|after a holiday|after holidays|after the weekend|" +
         "over the weekend|holiday gap|holiday gaps|chutti) ")
@@ -133,7 +143,10 @@ object Overnight {
             // The night alone, asked of its record: "how big are Nifty's overnight moves usually".
             NIGHT.containsMatchIn(t) && MOVE.containsMatchIn(t) && HOW.containsMatchIn(t) ||
             // The opens after a weekend set against the ordinary nights: "are weekend gaps bigger than weekday overnight moves".
-            weekend && NIGHT.containsMatchIn(t) && HOW.containsMatchIn(t)
+            weekend && NIGHT.containsMatchIn(t) && HOW.containsMatchIn(t) ||
+            // Round 23: the weekend's gaps set against the others, "gap" said for the night: "are Monday gaps bigger",
+            // "weekend gaps vs weekday gaps" (a gap alone, or one day's, stays GapRecord's and Gap's).
+            weekend && GAPS.containsMatchIn(t) && SET_AGAINST.containsMatchIn(t)
         return if (ok) Q(weekend) else null
     }
 

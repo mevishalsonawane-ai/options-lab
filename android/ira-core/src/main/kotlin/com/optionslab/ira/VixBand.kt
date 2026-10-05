@@ -101,7 +101,9 @@ object VixBand {
     /** How the moves came against the band. */
     private val OUTCOME = Regex(" (within|inside|stay in|stays in|stayed in|stay inside|stays inside|beyond|outside|exceed|exceeds|exceeded|exceeding|" +
         "break|breaks|broke|breach|breaches|breached|more than|less than|bigger than|smaller than|wider than|as much as|as big as|implies|implied|imply|" +
-        "realised|realized|actual|actually|really|bahar|andar|zyada|accurate|accuracy|match|matches|right|correct) ")
+        "realised|realized|actual|actually|really|bahar|andar|zyada|accurate|accuracy|match|matches|right|correct|" +
+        // Round 23: "how often is the VIX range broken", "VIX wala range kitni baar toota".
+        "broken|toota|tuta|tooti|tuti|toot|tut) ")
     /** Said of VIX on its own: it over- or understates the moves. */
     private val STRONG = Regex(" (overstate|overstates|overstated|overstating|understate|understates|understated|understating|overestimate|" +
         "overestimates|overestimated|underestimate|underestimates|underestimated|overprice|overprices|overpriced|overpricing|underprice|underprices|" +
@@ -118,7 +120,9 @@ object VixBand {
     private val TRUE = Regex(" (is|was|has been) (india )?vix (usually |normally |generally |really |actually |even |)(accurate|reliable|right|wrong|correct|any good|trustworthy|off) |" +
         " (how often|how many times|how frequently) (is|does|has) (india )?vix (been )?(accurate|reliable|right|wrong|correct|off|get it right|gets it right|got it right|get it wrong|miss|misses) |" +
         " how (good|accurate|reliable) is (india )?vix( at (predicting|calling|forecasting|pricing|guessing) (the )?(moves?|range|ranges|swings?))? |" +
-        " (does|do|did) (india )?vix (get|gets|got) (it|the range|the move|the moves|the ranges) (right|wrong) ")
+        " (does|do|did) (india )?vix (get|gets|got) (it|the range|the move|the moves|the ranges) (right|wrong) |" +
+        // Round 23, Hinglish: "VIX sahi hota hai kya", "VIX aksar galat nikalta hai" - the habit, never today's level.
+        " (india )?vix (aksar |usually |zyada tar |)(sahi|galat|accurate|theek|thik) (hota|hoti|nikalta|nikalti|rehta|rehti|rahta|rahti) ")
     /** VIX as the yardstick: "as much as VIX says". */
     private val SAYS = Regex(" (vix|india vix) (says|said|suggests|suggested|indicates|indicated|shows|showed|signals|signalled|signaled|points to|pointed to) ")
     /** VIX's own feed or figure: DataAge's and the quote's, never this record. */

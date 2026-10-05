@@ -175,6 +175,13 @@ object TradesADay {
         // "Does trading more hurt me?", "does trading less help me?", "do more trades hurt me?"
         "| (does|did|do) (trading|taking) (more|less|fewer|a lot|too much|lots) (trades )?(hurt|help|cost|work for|pay|pay off for) me " +
         "| (do|does|did) (more|fewer|extra) trades (hurt|help|cost|make|lose) (me|my) " +
+        // Round 23: "do fewer trades work better for me?", "is it better for me to take fewer trades?", "are my busy days worse?",
+        // "how much did I make when I traded less?", "my P&L on days with few trades"
+        "| (do|does|did) (more|fewer|less|extra) trades (work|works|worked|go|went|do|did|pay|pays) (out )?(better|worse|best|well|badly) (for me|with me) " +
+        "| (is it|would it be|was it) (better|worse) (for me )?(to|if i) (take|took|do|did|make|made|place|placed|trade|traded) (\\w+ ){0,1}$FEW( trades?)? " +
+        "| (are|were|have been) my (busy|heavy|quiet|light|slow) (trading )?days (better|worse|good|bad|my best|my worst|profitable|losing|any good) " +
+        "| how much (do|did|have) i (make|made|lose|lost|earn|earned) (on days |on the days |the days |when |on days when |if )(when |that |)i (trade|traded|take|took|place|placed) (\\w+ ){0,2}$FEW( trades?)? " +
+        "| my (p l|p and l|pnl|results|profit|profits|returns|record) on (the )?days (with|when i take|when i took|i take|i took|i trade|i traded) (\\w+ ){0,1}$FEW( trades?)? " +
         // "How many trades a day work best for me?", "my best number of trades a day", "how many trades a day suit me?"
         "| how many trades (a|per|in a|each) day (work|works|worked|is|are|suit|suits|pay|pays) (best |well |)(for |)me " +
         "| (my|what s my|whats my|what is my) (best|ideal|most profitable|winning) (number of trades|trade count|number of trades a day|number of trades per day) " +
@@ -197,7 +204,7 @@ object TradesADay {
         "| my (first|1st) (trade|trades) (of the day |each day |in the day |)(vs|versus|against|compared to|compared with) (my )?(later|other|second|2nd|rest|remaining) " +
         "| my (results|trades|record) by (place|order|position|number) in the day " +
         // Hinglish: "din ka pehla trade kaisa jaata hai", "mera pehla trade kaisa rehta hai"
-        "| (din ka |mera |meri |)(pehla|pahla|doosra|dusra|teesra|tisra) (trade) (kaisa|kaise|kaisi) (jaata|jata|rehta|rahta|hota|jaate|rehte) ")
+        "| (din ka |mera |meri |)(pehla|pahla|doosra|dusra|teesra|tisra|first|1st|second|2nd) (trade) (of the day |din ka )?(kaisa|kaise|kaisi) (jaata|jata|rehta|rahta|hota|jaate|rehte) ")
 
     /** The wake word and "can you tell me", said first or last. */
     private val POLITE = rx("^ ((hey|ok|okay|hi) )?(jarvis|ira|boss) | (can|could|would|will) you (please )?(tell|show|let) me( know)? | please | (jarvis|ira|boss) $")
