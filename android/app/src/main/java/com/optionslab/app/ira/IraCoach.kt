@@ -959,6 +959,8 @@ internal object IraCoach {
         val eve = runCatching { expiryEve() }.getOrNull()
         return listOfNotNull(story, com.optionslab.ira.DaySummary.say(pnl, scorecard, events), eve, if (review) selfReview() else null, agenda, improve, IraSolo.daySummary(),
             IraHub.marketWrapLine(),
+            // The 09:00 outlook against the close, owned (only at 15:35, when the day is in and the check is kept).
+            if (review) IraHub.outlookCheckLine() else null,
             runCatching { com.optionslab.ira.Missed.say(IraTools.missedToday()) }.getOrNull()).joinToString(" ")
     }
 

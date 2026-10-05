@@ -1175,6 +1175,28 @@ object IraHub {
         listOf(IraMarket.NIFTY, IraMarket.BANKNIFTY).mapNotNull { m -> com.optionslab.ira.Outlook.brief(m, histories[m]?.bars.orEmpty(), vix) }
     }.getOrDefault(emptyList())
 
+    /**
+     * The 09:00 check made its outlook ([morningOutlook]): each index's numbers (previous close, usual-day range, direction
+     * read, pivot - [com.optionslab.ira.OutlookCheck.call]) noted for the 15:35 wrap-up. Trading days only; market data only.
+     */
+    fun outlookNoted() {
+        if (!com.optionslab.app.BuildConfig.JARVIS || com.optionslab.app.BuildConfig.GOLD) return
+        runCatching {
+            val day = com.optionslab.app.data.Market.today()
+            if (!com.optionslab.app.data.Market.isTradingDay(day)) return@runCatching
+            val vix = _state.value.snaps[IraMarket.VIX]?.price ?: 0.0
+            IraTools.outlookMade(com.optionslab.ira.OutlookCheck.MARKETS.mapNotNull { m -> com.optionslab.ira.OutlookCheck.call(m, histories[m]?.bars.orEmpty(), vix, day) })
+        }
+    }
+
+    /** For the 15:35 wrap-up: today's 09:00 outlook against the close, with the record so far - or null (none noted, or the day not in). */
+    fun outlookCheckLine(): String? {
+        if (!com.optionslab.app.BuildConfig.JARVIS || com.optionslab.app.BuildConfig.GOLD) return null
+        return runCatching {
+            IraTools.outlookCheck(com.optionslab.ira.OutlookCheck.MARKETS.associateWith { m -> histories[m]?.bars.orEmpty() }, com.optionslab.app.data.Market.today())
+        }.getOrNull()
+    }
+
     /** IraGoldAlgo: Jarvis only talks there (no orders, commands, NSE feeds, strategies or trade ideas). */
     private val GOLD_ONLY_TALK get() = com.optionslab.app.BuildConfig.GOLD
 
@@ -1328,7 +1350,7 @@ object IraHub {
                 com.optionslab.ira.WrongThing.asked(q) != null || com.optionslab.ira.WrongThing.objected(q) || com.optionslab.ira.MindChange.asked(q) ||
                 com.optionslab.ira.ArmHabits.asked(q) || com.optionslab.ira.MorningSense.asked(q) != null ||
                 com.optionslab.ira.HonestStars.asked(q) != null || com.optionslab.ira.TalkHours.asked(q) != null || com.optionslab.ira.MorningAsks.asked(q) != null || com.optionslab.ira.BatteryUse.asked(q) ||
-                com.optionslab.ira.TurnDowns.asked(q) != null || com.optionslab.ira.TopicLength.asked(q) != null ||
+                com.optionslab.ira.TurnDowns.asked(q) != null || com.optionslab.ira.TopicLength.asked(q) != null || com.optionslab.ira.OutlookCheck.asked(q) ||
                 com.optionslab.ira.DayCompare.asked(q) != null || com.optionslab.ira.LikeToday.asked(q) }.getOrDefault(false)) {
             val prev = if (recent) _state.value.messages.lastOrNull { !it.fromIra }?.text else null
             val qs = runCatching { com.optionslab.ira.Understand.questions(prev, q) }.getOrNull()
@@ -1994,7 +2016,7 @@ object IraHub {
 
     /**
      * [ask]'s question branches on how Jarvis himself speaks and hears: AlertSense, Airtime, Hearing, PatternCalls,
-     * TrendReads, Clarity, WordFit, AskedAgain, FigureFirst, WrongThing, ArmHabits, MorningSense, HonestStars, TalkHours, MorningAsks, TurnDowns, TopicLength - in [ask]'s order. True when one
+     * TrendReads, Clarity, WordFit, AskedAgain, FigureFirst, WrongThing, ArmHabits, MorningSense, HonestStars, TalkHours, MorningAsks, TurnDowns, TopicLength, OutlookCheck - in [ask]'s order. True when one
      * took [q], answered exactly as before; each branch keeps its own guard (not [bundled], no order, no command).
      */
     private fun askedOfHisWays(q: String, parsed: com.optionslab.ira.Question, bundled: Boolean, understood: Boolean): Boolean {
@@ -2174,6 +2196,17 @@ object IraHub {
         if (lengthAsk != null) {
             val said = if (lengthAsk == com.optionslab.ira.TopicLength.Request.RESET) IraTools.lengthReset() else IraTools.lengthSay()
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
+            return true
+        }
+        // "How good are your morning outlooks?", "did your outlook hold today?", "tumhara outlook kitna sahi hota hai"
+        // ([com.optionslab.ira.OutlookCheck]): each index's 09:00 outlook (range, direction read, pivot) against its close,
+        // in counts only - never a verdict or advice, nothing acts. Market data only, so on a locked phone too. (Before the
+        // index outlook itself, which answers "Nifty outlook for tomorrow". Not in IraGoldAlgo.)
+        val outlookAsk = com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null &&
+            runCatching { com.optionslab.ira.OutlookCheck.asked(q) }.getOrDefault(false)
+        if (outlookAsk) {
+            val outlookSaid = IraTools.outlookSay(com.optionslab.app.data.Market.today())
+            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, outlookSaid)).takeLast(MAX_MESSAGES)) }
             return true
         }
         return false

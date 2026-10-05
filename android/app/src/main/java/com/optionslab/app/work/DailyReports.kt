@@ -268,6 +268,8 @@ object DailyReports {
             brief.forEach { lines += "• Study: $it" }
             // Each index's day in one line: its trend, the range a usual day spans, the pivot.
             com.optionslab.app.ira.IraHub.morningOutlook().forEach { lines += "• Outlook: $it" }
+            // Its numbers noted, to be set against the close at the 15:35 wrap-up ([com.optionslab.ira.OutlookCheck]).
+            com.optionslab.app.ira.IraHub.outlookNoted()
             val title = "Good morning Boss · " + if (bad == 0) "we are set for today's trading" else "$bad thing${if (bad > 1) "s" else ""} need you"
             runCatching { com.optionslab.app.ira.JarvisPopup.show(context, title, lines.take(3).joinToString(" · ")) }
             // Listening now: Jarvis says it too. The minor items Boss usually leaves as they are (still failing from the

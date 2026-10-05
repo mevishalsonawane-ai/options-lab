@@ -1223,6 +1223,42 @@ internal object IraTools {
         return said
     }
 
+    // ---- the morning outlook checked against the close ([com.optionslab.ira.OutlookCheck]) ---------------------------
+
+    /** Each index's 09:00 outlook numbers (previous close, range, direction read, pivot) and the day's open, high, low, close. Market data only. */
+    private const val OUTLOOK_CHECK = "jarvis.outlookCheck"
+    @Volatile private var outlookCache: List<com.optionslab.ira.OutlookCheck.Entry>? = null
+
+    fun outlookLog(): List<com.optionslab.ira.OutlookCheck.Entry> = outlookCache ?: runCatching {
+        com.optionslab.ira.OutlookCheck.decode(prefs().getString(OUTLOOK_CHECK) ?: "")
+    }.getOrDefault(emptyList()).also { outlookCache = it }
+
+    @Synchronized private fun outlookUpdate(f: (List<com.optionslab.ira.OutlookCheck.Entry>) -> List<com.optionslab.ira.OutlookCheck.Entry>) {
+        runCatching {
+            val log = f(outlookLog())
+            if (log == outlookCache) return@runCatching
+            outlookCache = log
+            prefs().putAllSoon(mapOf(OUTLOOK_CHECK to com.optionslab.ira.OutlookCheck.encode(log)))
+        }
+    }
+
+    /** The 09:00 check made [entries] (its outlook's numbers): noted for the 15:35 check. */
+    fun outlookMade(entries: List<com.optionslab.ira.OutlookCheck.Entry>) {
+        if (entries.isEmpty()) return
+        outlookUpdate { com.optionslab.ira.OutlookCheck.made(it, entries) }
+    }
+
+    /** At the wrap-up: [day]'s outlooks set against its candles ([bars]), and the words for it - or null (nothing to check). */
+    fun outlookCheck(bars: Map<com.optionslab.ira.Market, List<com.optionslab.ira.Candle>>, day: java.time.LocalDate): String? {
+        var said: String? = null
+        outlookUpdate { log -> com.optionslab.ira.OutlookCheck.check(log, bars, day).let { (next, words) -> said = words; next } }
+        return said
+    }
+
+    /** "How good are your morning outlooks?": the record in counts. */
+    fun outlookSay(today: java.time.LocalDate): String = runCatching { com.optionslab.ira.OutlookCheck.say(outlookLog(), today) }
+        .getOrDefault("I could not read my morning outlooks' record just now, Boss.")
+
     // ---- what he has learned, in one view ([com.optionslab.ira.Learnings]) ------------------------------------------
 
     /** Every learning store read with its own accessor (the goals are added by [IraImprove], which holds them). */

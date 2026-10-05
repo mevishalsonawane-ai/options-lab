@@ -31,7 +31,7 @@ class CoverageTest {
             Learnings.asked(said) != null || Learnings.undoAsked(said) || NewsMoves.asked(said) != null || PreMarket.asked(said) ||
             ChainDrift.asked(said) != null || Headroom.asked(said) != null || ArmFit.asked(said) || WeakLink.asked(said) || ArmDay.asked(said) != null || NetLean.asked(said) || ExpiryEve.asked(said) || BeforeTomorrow.asked(said) || BotTrades.asked(said) != null || DayClock.asked(said) != null ||
             SaidAbout.asked(said) != null || GapRecord.asked(said) != null || Causes.asked(said) != null || WeekAhead.asked(said) != null || AskedAgain.asked(said) || FigureFirst.asked(said) != null || Weekdays.asked(said) != null || DayCompare.asked(said) != null || LikeToday.asked(said) ||
-            RangeBreaks.asked(said) != null || PriorDay.asked(said) != null || LastHour.asked(said) != null || InsideDays.asked(said) != null || FirstMove.asked(said) != null || VixNext.asked(said) != null || SplitDays.asked(said) != null || RoundCloses.asked(said) != null || MonthTurns.asked(said) != null || LunchRange.asked(said) != null || OpenHighLow.asked(said) != null || NeedsTrue.asked(said) || Clarity.asked(said) != null || ZerodhaSession.asked(said) != null || Tour.asked(said) || WrongThing.asked(said) != null || WrongThing.objected(said) || OrderWhy.asked(said) != null || ArmHabits.asked(said) || MorningSense.asked(said) != null || HonestStars.asked(said) != null || TalkHours.asked(said) != null || MorningAsks.asked(said) != null || TurnDowns.asked(said) != null || TopicLength.asked(said) != null || RelayHealth.asked(said) != null || StreamHealth.asked(said) || WatchAsk.asked(said) != null || BatteryUse.asked(said) || SwitchOff.asked(said) != null
+            RangeBreaks.asked(said) != null || PriorDay.asked(said) != null || LastHour.asked(said) != null || InsideDays.asked(said) != null || FirstMove.asked(said) != null || VixNext.asked(said) != null || SplitDays.asked(said) != null || RoundCloses.asked(said) != null || MonthTurns.asked(said) != null || LunchRange.asked(said) != null || OpenHighLow.asked(said) != null || NeedsTrue.asked(said) || Clarity.asked(said) != null || ZerodhaSession.asked(said) != null || Tour.asked(said) || WrongThing.asked(said) != null || WrongThing.objected(said) || OrderWhy.asked(said) != null || ArmHabits.asked(said) || MorningSense.asked(said) != null || HonestStars.asked(said) != null || TalkHours.asked(said) != null || MorningAsks.asked(said) != null || TurnDowns.asked(said) != null || TopicLength.asked(said) != null || OutlookCheck.asked(said) || RelayHealth.asked(said) != null || StreamHealth.asked(said) || WatchAsk.asked(said) != null || BatteryUse.asked(said) || SwitchOff.asked(said) != null
         return ((if (asSaid) null else Understand.questions(null, said)) ?: listOf(said)).map { kind(it, 0) }
     }
 
@@ -54,6 +54,7 @@ class CoverageTest {
             if (MorningAsks.asked(q) != null) return Kind.JARVIS
             if (TurnDowns.asked(q) != null) return Kind.JARVIS
             if (TopicLength.asked(q) != null) return Kind.JARVIS
+            if (OutlookCheck.asked(q)) return Kind.JARVIS
             if (NewsMoves.asked(q) != null) return Kind.MARKET
             if (TaxRecords.exportAsked(q)) return Kind.ACCOUNT
             if (Learnings.asked(q) != null || Learnings.undoAsked(q)) return Kind.JARVIS
@@ -483,7 +484,7 @@ class CoverageTest {
      * Which feature answers [said] in Jarvis (not GOLD), taking IraHub.ask's branches in its own order (app/.../IraHub.kt,
      * ask(): Boss's learned words and routine as said, fillers and follow-ups, then - for a question not said with
      * something to do (IraHub's `bundled`, [Bundle.acts]) - DayJournal, AlertSense, Airtime, Hearing, PatternCalls, TrendReads, Clarity,
-     * WordFit, AskedAgain, FigureFirst, WrongThing, ArmHabits, MorningSense, HonestStars, TalkHours, MorningAsks, TurnDowns, TopicLength, NewsMoves, TaxExport, Learnings, PreMarket, Headroom, ArmFit, WeakLink, ArmDay, NetLean, ExpiryEve, BeforeTomorrow, BotTrades, SaidAbout, WeekAhead, DataAge, Honest, Thinking,
+     * WordFit, AskedAgain, FigureFirst, WrongThing, ArmHabits, MorningSense, HonestStars, TalkHours, MorningAsks, TurnDowns, TopicLength, OutlookCheck, NewsMoves, TaxExport, Learnings, PreMarket, Headroom, ArmFit, WeakLink, ArmDay, NetLean, ExpiryEve, BeforeTomorrow, BotTrades, SaidAbout, WeekAhead, DataAge, Honest, Thinking,
      * Consistency, CoPilot, SinceMorning, ExpiryPin, ChainDrift, ChainIntel, DayClock, GapRecord, RangeBreaks, PriorDay, LastHour, InsideDays, FirstMove, VixNext, SplitDays, RoundCloses, MonthTurns, LunchRange, OpenHighLow, Weekdays, DayCompare, LikeToday, Structure, MindChange, Breadth, TradeCase,
      * Scenarios, Causes, Agenda, Improve; the reminders and Jarvis's own checks,
      * Distance... Outlook, NewsDesk, down to the account's sections (PositionHealth, BotHealth and NeedsTrue are its HEALTH,
@@ -504,7 +505,7 @@ class CoverageTest {
             PatternCalls.asked(said) || TrendReads.asked(said) || SinceMorning.asked(said) || ExpiryPin.asked(said) != null || Learnings.asked(said) != null || Learnings.undoAsked(said) || NewsMoves.asked(said) != null ||
             PreMarket.asked(said) ||
             ChainDrift.asked(said) != null || Headroom.asked(said) != null || ArmFit.asked(said) || WeakLink.asked(said) || ArmDay.asked(said) != null || NetLean.asked(said) || ExpiryEve.asked(said) || BeforeTomorrow.asked(said) || BotTrades.asked(said) != null || NeedsTrue.asked(said) || Clarity.asked(said) != null || DayClock.asked(said) != null ||
-            SaidAbout.asked(said) != null || GapRecord.asked(said) != null || WordFit.asked(said) != null || Causes.asked(said) != null || WeekAhead.asked(said) != null || AskedAgain.asked(said) || FigureFirst.asked(said) != null || MindChange.asked(said) || Weekdays.asked(said) != null || DayCompare.asked(said) != null || LikeToday.asked(said) || RangeBreaks.asked(said) != null || PriorDay.asked(said) != null || LastHour.asked(said) != null || InsideDays.asked(said) != null || FirstMove.asked(said) != null || VixNext.asked(said) != null || SplitDays.asked(said) != null || RoundCloses.asked(said) != null || MonthTurns.asked(said) != null || LunchRange.asked(said) != null || OpenHighLow.asked(said) != null || ZerodhaSession.asked(said) != null || Tour.asked(said) || WrongThing.asked(said) != null || WrongThing.objected(said) || OrderWhy.asked(said) != null || ArmHabits.asked(said) || MorningSense.asked(said) != null || HonestStars.asked(said) != null || TalkHours.asked(said) != null || MorningAsks.asked(said) != null || TurnDowns.asked(said) != null || TopicLength.asked(said) != null || RelayHealth.asked(said) != null || StreamHealth.asked(said) || WatchAsk.asked(said) != null || BatteryUse.asked(said) || SwitchOff.asked(said) != null
+            SaidAbout.asked(said) != null || GapRecord.asked(said) != null || WordFit.asked(said) != null || Causes.asked(said) != null || WeekAhead.asked(said) != null || AskedAgain.asked(said) || FigureFirst.asked(said) != null || MindChange.asked(said) || Weekdays.asked(said) != null || DayCompare.asked(said) != null || LikeToday.asked(said) || RangeBreaks.asked(said) != null || PriorDay.asked(said) != null || LastHour.asked(said) != null || InsideDays.asked(said) != null || FirstMove.asked(said) != null || VixNext.asked(said) != null || SplitDays.asked(said) != null || RoundCloses.asked(said) != null || MonthTurns.asked(said) != null || LunchRange.asked(said) != null || OpenHighLow.asked(said) != null || ZerodhaSession.asked(said) != null || Tour.asked(said) || WrongThing.asked(said) != null || WrongThing.objected(said) || OrderWhy.asked(said) != null || ArmHabits.asked(said) || MorningSense.asked(said) != null || HonestStars.asked(said) != null || TalkHours.asked(said) != null || MorningAsks.asked(said) != null || TurnDowns.asked(said) != null || TopicLength.asked(said) != null || OutlookCheck.asked(said) || RelayHealth.asked(said) != null || StreamHealth.asked(said) || WatchAsk.asked(said) != null || BatteryUse.asked(said) || SwitchOff.asked(said) != null
         val qs = if (asSaid || understood || cleaned) null else Understand.questions(null, said)?.takeIf { it.isNotEmpty() && it != listOf(said) }
         if (qs != null) return if (qs.size == 1) feature(qs[0], cleaned = true) else qs.joinToString(" & ") { feature(it, understood = true) }
         val q = said
@@ -532,6 +533,7 @@ class CoverageTest {
         if (alone && MorningAsks.asked(q) != null) return "MorningAsks"
         if (alone && TurnDowns.asked(q) != null) return "TurnDowns"
         if (alone && TopicLength.asked(q) != null) return "TopicLength"
+        if (alone && OutlookCheck.asked(q)) return "OutlookCheck"
         if (alone && NewsMoves.asked(q) != null) return "NewsMoves"
         if (alone && TaxRecords.exportAsked(q)) return "TaxExport"
         if (alone && Learnings.asked(q) != null) return "Learnings"
@@ -1170,6 +1172,10 @@ class CoverageTest {
         "how long do i like your answers" to "TopicLength", "which topics do you keep short" to "TopicLength",
         "what answer length do i like" to "TopicLength", "say every topic at the usual length" to "TopicLength",
         "stop shortening answers by topic" to "TopicLength", "kaun se topic detail mein batate ho" to "TopicLength",
+        // ---- OutlookCheck (reasoning round 21): the 09:00 outlook against the close, in counts ----
+        "how good are your morning outlooks" to "OutlookCheck", "did your outlook hold today" to "OutlookCheck",
+        "how accurate are your outlooks" to "OutlookCheck", "tumhara outlook kitna sahi hota hai" to "OutlookCheck",
+        "subah ka outlook sahi tha kya" to "OutlookCheck",
         // ---- Its neighbours: the strategies listed, Solo, the positions' health ----
         "show my strategies" to "Account:STRATEGIES", "list my strategies" to "Account:STRATEGIES",
         "what strategies are running" to "Account:STRATEGIES", "which strategies are on" to "Account:STRATEGIES",
