@@ -123,7 +123,11 @@ internal object IraAgenda {
             Automations.acted(Automations.Auto.AGENDA, "Made my plan for the day.")
         }
         for (i in Agenda.due(items, minute).take(2)) {
-            if (Agenda.late(i, minute)) { mark(i.id, Agenda.MISSED); continue }
+            if (Agenda.late(i, minute)) {
+                mark(i.id, Agenda.MISSED)
+                runCatching { IraThinking.add(com.optionslab.ira.Thinking.agenda(IraThinking.now(), i, done = false)) }
+                continue
+            }
             runCatching { work(i) }
         }
     }
@@ -145,6 +149,7 @@ internal object IraAgenda {
         }
         val what = Agenda.summary(i)
         mark(i.id, what)
+        runCatching { IraThinking.add(com.optionslab.ira.Thinking.agenda(IraThinking.now(), i, done = true)) }
         IraHub.note(said)
         IraActivity.add("My plan: $what.")
         // Said aloud only what holds nothing of Boss's account or words - or anything once the phone is unlocked.

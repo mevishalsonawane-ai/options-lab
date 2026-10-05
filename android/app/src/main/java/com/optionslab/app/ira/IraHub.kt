@@ -670,16 +670,24 @@ object IraHub {
         // And his own scored ideas, by the conditions they came in (self-calibration): where that record is clearly bad he
         // takes nothing by himself (he asks), where it is losing he takes half size. It only ever lowers his own paper risk.
         val regimeNow = runCatching { IraStudy.regimeOf(m) }.getOrNull()
-        val calib = runCatching { com.optionslab.ira.SelfCalibration.judge(IraNewsTrades.calibration(), com.optionslab.ira.SelfCalibration.Conditions(
-            LocalDateTime.now(IST), m, idea.call, com.optionslab.ira.Preference.kind(source), regimeNow, iv?.first)) }
+        val calibCond = com.optionslab.ira.SelfCalibration.Conditions(LocalDateTime.now(IST), m, idea.call, com.optionslab.ira.Preference.kind(source), regimeNow, iv?.first)
+        val calib = runCatching { com.optionslab.ira.SelfCalibration.judge(IraNewsTrades.calibration(), calibCond) }
             // (Read failing: treated as a bad record - it only stops acting alone, never asking.)
             .getOrElse { com.optionslab.ira.SelfCalibration.Judgment(com.optionslab.ira.SelfCalibration.Action.SIT_OUT, null) }
         val calibLine = calib.text()
         val sitOut = calib.action == com.optionslab.ira.SelfCalibration.Action.SIT_OUT
-        if (!solo && badHour == null && badKind == null && !sitOut && com.optionslab.ira.ActAlone.ok(Automations.on(Automations.Auto.ACT_PAPER), goesLive, conf.stars, bar) && snap != null) {
+        val actPaperOn = Automations.on(Automations.Auto.ACT_PAPER)
+        // The reason trail ([IraThinking]): every gate as it stood at this moment, written with what was decided.
+        fun thought(outcome: com.optionslab.ira.Thinking.Paper, failed: String? = null) = runCatching {
+            IraThinking.add(com.optionslab.ira.Thinking.paper(IraThinking.now(), calibCond, outcome, calib, conf.stars, bar, actPaperOn, goesLive,
+                badHour, badKind, solo = solo, noPrice = snap == null, failed = failed))
+        }
+        if (!solo && badHour == null && badKind == null && !sitOut && com.optionslab.ira.ActAlone.ok(actPaperOn, goesLive, conf.stars, bar) && snap != null) {
             val shrink = calib.action == com.optionslab.ira.SelfCalibration.Action.SHRINK
             val done = runCatching { IraNewsTrades.place(idea, _state.value.snaps[m]?.price ?: snap.price, source, paperOnly = true, stars = conf.stars, shrink = shrink) }.getOrElse { "That did not work: ${it.message ?: "an error"}." }
             val took = done.startsWith("Bought")
+            thought(if (!took) com.optionslab.ira.Thinking.Paper.NOT_PLACED else if (shrink) com.optionslab.ira.Thinking.Paper.HALF
+                else com.optionslab.ira.Thinking.Paper.TOOK, if (took) null else IraActivity.short(done))
             val careful = if (shrink && calibLine != null) " Careful: $calibLine." else ""
             val said2 = "$text$ivLine ${conf.text()}$risk " + (if (took) "I took it myself on paper: $what. $done$careful" else "I meant to take it myself on paper, but: $done")
             reply(said2)
@@ -695,6 +703,7 @@ object IraHub {
         }
         // An idea of his own sat out (his record there is poor): counted for his weekly review - it is still asked and scored.
         if (sitOut && !solo) IraTools.count(com.optionslab.ira.Improve.SIT_OUT)
+        thought(com.optionslab.ira.Thinking.Paper.ASKED)
         val id = System.nanoTime()
         synchronized(actions) {
             actions[id] = what to suspend { IraNewsTrades.place(idea, _state.value.snaps[m]?.price ?: snap?.price ?: error("no ${m.label} price"), source,
@@ -1151,6 +1160,20 @@ object IraHub {
             val markets = parsed.markets
             scope.launch { reply(freshAsked(markets)) }
             return
+        }
+        // "Why didn't you take that trade?", "why were you quiet at 11?", "what made you say check me?", "why did you skip
+        // that check?": his own decision walked through from the reason trail written when he made it (Boss's account and
+        // words left out on a locked phone). Nothing written for it: he says so - a reason is never found afterwards (a
+        // "why did you ...?" about something else he did goes on to his activity log, below). Words only.
+        val thinkAsk = if (com.optionslab.app.BuildConfig.JARVIS && parsed.order == null && parsed.command == null)
+            runCatching { com.optionslab.ira.Thinking.asked(q) }.getOrNull() else null
+        if (thinkAsk != null) {
+            val said = IraThinking.answer(thinkAsk, phoneLocked())
+            if (said != null || !com.optionslab.ira.SelfWhy.asked(q)) {
+                _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+                reply(said ?: com.optionslab.ira.Thinking.nothing(thinkAsk))
+                return
+            }
         }
         // IraGoldAlgo: Jarvis talks only - no order, no command (no broker there; its gold arms trade on paper by their rules).
         if (com.optionslab.app.BuildConfig.GOLD && (parsed.order != null || parsed.command != null || Topic.ORDER in parsed.topics || Topic.COMMAND in parsed.topics)) {
@@ -1743,6 +1766,8 @@ object IraHub {
         // A kind of answer Boss often marks wrong: "check me on this, Boss" (and, clearly weak, how the question was read)
         // around it - words only, the figures as they are, never for an order or a command.
         val doubt = if (parsed.order == null && parsed.command == null && a.order == null) IraTools.doubt(q) else com.optionslab.ira.SelfDoubt.NONE
+        // Why the caution, as it stood now (for "what made you say check me?"): his record, never Boss's words.
+        if (doubt.level != com.optionslab.ira.SelfDoubt.Level.NORMAL) runCatching { IraThinking.add(com.optionslab.ira.Thinking.caution(IraThinking.now(), doubt)) }
         val msg = Msg(true, doubt.wrap(a.text), a.facts, a.order, writing = write)
         _state.update { it.copy(messages = (it.messages + Msg(false, q) + msg).takeLast(MAX_MESSAGES)) }
         if (write) scope.launch {

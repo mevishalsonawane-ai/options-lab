@@ -36,14 +36,22 @@ object Airtime {
     /** What became of an alert: said; about a move already told; past the hour's lines; a kind Boss lets pass ([AlertSense]). */
     enum class How { SPOKEN, SAME_MOVE, OVER_LIMIT, LEARNED }
 
-    /** Today's decisions, for "why so quiet?": when, the alert's brief, and what became of it. */
-    data class Entry(val at: LocalDateTime, val brief: String, val how: How)
+    /**
+     * Today's decisions, for "why so quiet?": when, the alert's brief, and what became of it. [source] / [subject]: its
+     * kind and market; [because]: the fact that decided it, as known then ("told aloud at 11:02", "4 lines since 10:31")
+     * - kept for "why were you quiet at 11?" ([Thinking]), never worked out afterwards.
+     */
+    data class Entry(val at: LocalDateTime, val brief: String, val how: How, val source: Source? = null,
+                     val subject: Market? = null, val because: String? = null)
 
     data class State(val spoken: List<Told> = emptyList(), val shown: List<Told> = emptyList(),
                      val pending: List<Alert> = emptyList(), val log: List<Entry> = emptyList())
 
-    /** [say]: the one line to speak, or null; [sources]: the kinds of alert in it (for [AlertSense.spoken]). */
-    data class Out(val state: State, val say: String?, val sources: List<Source> = emptyList())
+    /**
+     * [say]: the one line to speak, or null; [sources]: the kinds of alert in it (for [AlertSense.spoken]); [decided]:
+     * what this pass decided about each alert, with the fact that decided it (for [Thinking]).
+     */
+    data class Out(val state: State, val say: String?, val sources: List<Source> = emptyList(), val decided: List<Entry> = emptyList())
 
     /** One move: the same index the same way within this many minutes of the last time it was told. */
     const val SAME_MOVE_MIN = 10L
@@ -93,19 +101,24 @@ object Airtime {
         val day = now.toLocalDate()
         val spoken = s.spoken.filter { !it.at.isBefore(now.minusMinutes(60)) }
         val log = ArrayList(s.log.filter { it.at.toLocalDate() == day })
+        val first = log.size
+        fun hm(t: LocalDateTime) = "%02d:%02d".format(Locale.ENGLISH, t.hour, t.minute)
+        fun entry(a: Alert, how: How, because: String? = null) = Entry(a.at, a.brief, how, a.source, a.subject, because)
         val fresh = s.pending.filter { !it.at.isBefore(now.minusMinutes(STALE_MIN)) }
         val known = fresh.filter { a -> spoken.any { sameMove(a, it) } }
-        known.forEach { log += Entry(it.at, it.brief, How.SAME_MOVE) }
+        known.forEach { a -> log += entry(a, How.SAME_MOVE, spoken.lastOrNull { sameMove(a, it) }?.let { t -> "I had told you about the same move aloud at ${hm(t.at)}" }) }
         val left0 = (fresh - known.toSet()).sortedBy { it.source.rank }
-        fun done(say: String?, told: List<Told>) = Out(State(spoken + told, s.shown, emptyList(), log.takeLast(LOG_MAX)), say, told.map { it.source }.distinct())
+        fun done(say: String?, told: List<Told>) = Out(State(spoken + told, s.shown, emptyList(), log.takeLast(LOG_MAX)), say, told.map { it.source }.distinct(),
+            log.drop(first))
         if (left0.isEmpty()) return done(null, emptyList())
         val lines = spoken.map { it.at }.distinct().size
         if (lines >= PER_HOUR) {
-            left0.forEach { log += Entry(it.at, it.brief, How.OVER_LIMIT) }
+            val since = spoken.minOfOrNull { it.at }
+            left0.forEach { log += entry(it, How.OVER_LIMIT, "I had already said $lines market lines aloud in the hour" + (since?.let { t -> " (since ${hm(t)})" } ?: "")) }
             return done(null, emptyList())
         }
         val (left, quiet) = left0.partition { a -> runCatching { aloud(a) }.getOrDefault(true) }
-        quiet.forEach { log += Entry(it.at, it.brief, How.LEARNED) }
+        quiet.forEach { log += entry(it, How.LEARNED) }
         if (left.isEmpty()) return done(null, emptyList())
         // Group by move: each alert joins the first group whose lead it shares a move with.
         val groups = ArrayList<MutableList<Alert>>()
@@ -120,7 +133,7 @@ object Airtime {
         val also = groups.drop(1).map { it.first().brief.trim().trimEnd('.') }.distinct()
         if (also.isNotEmpty()) words.append(" Also: ").append(also.joinToString("; ")).append('.')
         if (lines + 1 >= PER_HOUR) words.append(" More market alerts this hour go to the chat only.")
-        left.forEach { log += Entry(it.at, it.brief, How.SPOKEN) }
+        left.forEach { log += entry(it, How.SPOKEN, if (left.size > 1) "${left.size} alerts came in the same pass" else null) }
         // One line spoken (one of the hour's [PER_HOUR], all its alerts at [now]); every move in it counts as told.
         return done(words.toString(), left.map { told(it).copy(at = now) })
     }

@@ -384,6 +384,9 @@ internal object IraSolo {
             val ivNow = runCatching { IraNewsTrades.ivNow(com.optionslab.ira.NewsTrade.Idea(m, call, sig.why, kind = "solo"), ix)?.first }.getOrNull()
             val cond = SoloCalibration.conditions(today, sig.entryMinute, m, call, regimeNow, ivNow)
             val decision = runCatching { SoloCalibration.decide(calibration(list), cond, list.filter { it.day == today.toString() }.mapNotNull { conditionsOf(it) }) }.getOrNull()
+            // The reason, as decided now (a failed read is written as the careful side it took).
+            runCatching { IraThinking.add(com.optionslab.ira.Thinking.solo(IraThinking.now(), cond,
+                decision ?: SoloCalibration.Decision(false, SelfCalibration.Action.SIT_OUT, null))) }
             if (decision == null || !decision.take) {
                 runCatching { shadow(m, sig, cond, mind.h, decision?.text()) }
                 continue
@@ -400,7 +403,11 @@ internal object IraSolo {
         // Boss's own paper position in this contract is never mixed with Solo's (its stop and close would touch it).
         if (runCatching { Paper.snapshot().positions.positions.any { it.symbol == c.symbol && it.quantity != 0 } }.getOrDefault(true)) return
         val q = runCatching { Paper.quote(c) }.getOrNull() ?: return
-        com.optionslab.ira.StrikeLiquidity.problem(q.bid, q.ask, q.volume, c.lotSize)?.let { IraActivity.add("Solo skipped ${c.symbol}: $it"); return }
+        com.optionslab.ira.StrikeLiquidity.problem(q.bid, q.ask, q.volume, c.lotSize)?.let {
+            IraActivity.add("Solo skipped ${c.symbol}: $it")
+            runCatching { IraThinking.add(com.optionslab.ira.Thinking.soloThin(IraThinking.now(), m, sig.call, it)) }
+            return
+        }
         val r = Paper.place(c, "BUY", 1, "MARKET", "MIS", null, null, q)
         val fill = r.events.filterIsInstance<com.optionslab.engine.sandbox.SandboxEvent.Fill>().firstOrNull()
         if (fill == null) {

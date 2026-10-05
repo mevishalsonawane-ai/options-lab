@@ -138,6 +138,10 @@ internal object IraTools {
         return aloud
     }
 
+    /** The record that has a kind [a] said less often ("fear (VIX) spikes (you followed up 1 of my last 6)"), or null. */
+    fun alertRecord(a: Automations.Auto): String? =
+        runCatching { com.optionslab.ira.AlertSense.records(alertLog(), minuteNow()).firstOrNull { it.kind == a.name }?.say() }.getOrNull()
+
     /** Alerts of the kinds [kinds] were just said aloud (one merged line may hold several, [IraAirtime]). */
     fun alertSaid(kinds: Collection<Automations.Auto>) {
         val now = minuteNow()

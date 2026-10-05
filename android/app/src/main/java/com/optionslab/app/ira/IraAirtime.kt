@@ -43,13 +43,22 @@ internal object IraAirtime {
     fun flush() {
         val now = LocalDateTime.now(IST)
         var before: Airtime.State? = null
+        // A kind held back as one Boss lets pass: its record as it stood when it was held ([IraThinking]'s reason).
+        val learned = HashMap<Airtime.Source, String>()
         val out = synchronized(this) {
             if (state.pending.isEmpty()) return
             before = state
-            val o = Airtime.flush(state, now) { a -> auto(a.source)?.let { IraTools.alertAloud(it) } ?: true }
+            val o = Airtime.flush(state, now) { a ->
+                val k = auto(a.source)
+                val aloud = k?.let { IraTools.alertAloud(it) } ?: true
+                if (!aloud && k != null) IraTools.alertRecord(k)?.let { learned[a.source] = it }
+                aloud
+            }
             state = o.state
             o
         }
+        // Why each alert was said, merged or kept to the chat, as decided now (for "why were you quiet at 11?").
+        runCatching { IraThinking.add(com.optionslab.ira.Thinking.alerts(now, out.decided, learned)) }
         val line = out.say ?: return
         val said = JarvisVoice.announce(line)
         // Not heard (listening off): not counted as said - no move marked told, no hour's line used (the chat has them).
