@@ -67,20 +67,38 @@ object TradeBook {
 
     // ---- fills and trips --------------------------------------------------------------------
 
-    fun fills(live: Boolean): List<RoundTrips.Fill> = if (live) {
-        liveTrades().mapNotNull { t ->
+    fun fills(live: Boolean): List<RoundTrips.Fill> = if (live) liveFills(liveSnapshot()) else paperFills(Paper.state.trades)
+
+    /** A copy of the Zerodha trades taken under the lock ([recordLive] adds to the kept list in place). */
+    @Synchronized
+    private fun liveSnapshot(): List<Broker.Trade> = ArrayList(liveTrades())
+
+    private fun liveFills(trades: List<Broker.Trade>): List<RoundTrips.Fill> =
+        trades.mapNotNull { t ->
             val at = kiteTime(t.at) ?: return@mapNotNull null
             RoundTrips.Fill("kite:${t.id}", "kite:${t.orderId}", t.symbol, if (t.side == "BUY") 1 else -1, t.qty, t.price, at,
                 SandboxCosts.charge(t.side, BigDecimal(t.price), t.qty).toDouble())
         }
-    } else {
-        Paper.state.trades.map { t ->
+
+    private fun paperFills(trades: List<com.optionslab.engine.sandbox.Trade>): List<RoundTrips.Fill> =
+        trades.map { t ->
             RoundTrips.Fill("paper:${t.tradeId}", "paper:${t.orderId}", t.symbol, if (t.action == "BUY") 1 else -1, t.quantity, t.price.toDouble(),
                 t.timestamp, t.charges.toDouble())
         }
-    }
 
-    fun trips(live: Boolean): List<RoundTrips.Trip> = RoundTrips.of(fills(live))
+    /**
+     * The round trips, rebuilt only when the trades they are made from changed ([com.optionslab.ira.SameInput]): the
+     * goals, the paper tests, the day's target and the journal each read them in every market-watch pass, and each read
+     * re-priced every fill's charges and re-paired them all. The trades themselves are the key (compared in full), so a
+     * new fill, a reset paper account or a wiped book is a different input and rebuilt at once; nothing to remember to clear.
+     */
+    private val liveTrips = com.optionslab.ira.SameInput<List<Broker.Trade>, List<RoundTrips.Trip>>()
+    private val paperTrips = com.optionslab.ira.SameInput<List<com.optionslab.engine.sandbox.Trade>, List<RoundTrips.Trip>>()
+
+    fun trips(live: Boolean): List<RoundTrips.Trip> =
+        if (live) liveTrips.of(liveSnapshot()) { RoundTrips.of(liveFills(it)) }
+        // The paper state is immutable and replaced on each change; copied anyway so the key can never change under it.
+        else paperTrips.of(ArrayList(Paper.state.trades)) { RoundTrips.of(paperFills(it)) }
 
     /**
      * Who placed a trip: the label of the order that opened it ("ORB", "ORB Fresh", a strategy's name,

@@ -95,13 +95,16 @@ object MarketMemory {
         val vs = MarketStory.sessions(vix).map { it.day to it.close }
         val vixAt = vs.mapIndexed { i, (d, c) -> d to (c to if (i > 0) (c - vs[i - 1].second) / vs[i - 1].second * 100 else null) }.toMap()
         val out = ArrayList<Day>()
+        // The whole sessions so far, kept as they come (each session filtered every earlier one again before).
+        val wholes = ArrayList<Day>()
         for ((i, s) in ss.withIndex()) {
             val whole = !s.bars.last().t.toLocalTime().isBefore(WHOLE) && !(live && s.day == today)
-            val before = out.filter { it.whole }.takeLast(PAST)
+            val before = wholes.takeLast(PAST)
             val usual = if (before.size >= MIN_PAST) before.map { it.range }.average().takeIf { it > 0 } else null
             val v = vixAt[s.day]
             out += Day(m, s.day, s.open, s.bars.maxOf { it.h }, s.bars.minOf { it.l }, s.close, ss.getOrNull(i - 1)?.close,
                 s.bars.lastOrNull { !it.t.toLocalTime().isAfter(LAST_HOUR) }?.c, usual, whole, s.day in expiries, v?.first, v?.second)
+            if (whole) wholes += out.last()
         }
         return out
     }

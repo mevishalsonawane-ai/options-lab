@@ -14,11 +14,15 @@ internal object IraExpert {
     /** Each paper strategy's verdict now. */
     suspend fun verdicts(): List<Vetting.Verdict> {
         val owners = runCatching { com.optionslab.app.data.Strategies.owners() }.getOrDefault(emptyMap())
-        return IraAccount.trips(false, owners)
-            .filter { it.owner.isNotBlank() && it.owner != "Manual" && !it.owner.startsWith("Jarvis") }
-            .groupBy { it.owner }
-            .map { (owner, l) -> Vetting.judge(owner, l.sortedBy { it.closedAt }.map { it.net }) }
+        // Judged again only when the paper trips changed (the same list comes back while they have not): every pass read it.
+        return judged.of(IraAccount.trips(false, owners)) { trips ->
+            trips.filter { it.owner.isNotBlank() && it.owner != "Manual" && !it.owner.startsWith("Jarvis") }
+                .groupBy { it.owner }
+                .map { (owner, l) -> Vetting.judge(owner, l.sortedBy { it.closedAt }.map { it.net }) }
+        }
     }
+
+    private val judged = com.optionslab.ira.SameInput<List<com.optionslab.ira.Insights.Trip>, List<Vetting.Verdict>>()
 
     suspend fun say(): String = Vetting.say(verdicts())
 

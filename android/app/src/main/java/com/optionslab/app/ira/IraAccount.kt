@@ -27,10 +27,16 @@ internal object IraAccount {
         return com.optionslab.ira.Lessons.of(all) to all.size
     }
 
-    fun trips(live: Boolean, owners: Map<String, String>): List<com.optionslab.ira.Insights.Trip> =
-        runCatching { com.optionslab.app.data.TradeBook.trips(live) }.getOrDefault(emptyList()).map { t ->
-            com.optionslab.ira.Insights.Trip(t.symbol, t.openedAt, t.closedAt, t.net, com.optionslab.app.data.TradeBook.ownerOf(t, owners))
+    fun trips(live: Boolean, owners: Map<String, String>): List<com.optionslab.ira.Insights.Trip> {
+        val round = runCatching { com.optionslab.app.data.TradeBook.trips(live) }.getOrDefault(emptyList())
+        // Named again only when the round trips or the owners changed (the book gives the same list while its trades do).
+        return (if (live) liveNamed else paperNamed).of(round to HashMap(owners)) { (r, o) ->
+            r.map { t -> com.optionslab.ira.Insights.Trip(t.symbol, t.openedAt, t.closedAt, t.net, com.optionslab.app.data.TradeBook.ownerOf(t, o)) }
         }
+    }
+
+    private val liveNamed = com.optionslab.ira.SameInput<Pair<List<com.optionslab.engine.RoundTrips.Trip>, Map<String, String>>, List<com.optionslab.ira.Insights.Trip>>()
+    private val paperNamed = com.optionslab.ira.SameInput<Pair<List<com.optionslab.engine.RoundTrips.Trip>, Map<String, String>>, List<com.optionslab.ira.Insights.Trip>>()
 
     /** A Zerodha read waits at most this long; a slow one is left out and said so. */
     private const val ZERODHA_MS = 8_000L
