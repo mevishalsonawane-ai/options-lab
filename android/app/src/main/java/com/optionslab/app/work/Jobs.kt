@@ -939,18 +939,21 @@ class WatchService : Service() {
                     // Seen to end: not a process death. Cleared - on disk, synchronously - BEFORE the "ended" line, so
                     // whoever sees the end in the diary (the owner, the next start) also sees the day cleared; and only
                     // by the run that set it, never over a newer run's day.
-                    val current = synchronized(runDayLock) { run == watchRun }
                     endRun(run)
                     Heartbeat.diary(com.optionslab.ira.WatchHealth.ended(why.first, why.second))
-                    // A newer watch started meanwhile: its pulse and its "running" state are left alone.
-                    if (current) {
-                        Heartbeat.pulseStopped()
-                        Tasks.publishWatch(Tasks.LiveState(false))
+                    // A newer watch started meanwhile: its pulse and its "running" state are left alone. Checked and done
+                    // under the one lock (both only set fields in memory), so a new run cannot start between the two.
+                    synchronized(runDayLock) {
+                        if (run == watchRun) {
+                            Heartbeat.pulseStopped()
+                            Tasks.publishWatch(Tasks.LiveState(false))
+                        }
                     }
                 } else if (k == Jobs.Kind.HARVEST) Tasks.publish(Tasks.LiveState(false))
                 // Only this run's own entry: a new start after a stop may already have put its job here.
                 running.remove(k, coroutineContext.job)
-                if (k == Jobs.Kind.LIVE && running[k]?.isActive != true) watching = false
+                // By the run number: an old run ending after a new one started never clears the new run's "watching".
+                if (k == Jobs.Kind.LIVE) synchronized(runDayLock) { if (run == watchRun) watching = false }
                 maybeStop()
             }
         }
@@ -1003,9 +1006,12 @@ class WatchService : Service() {
         } finally {
             pulse.cancel()
             // Only the newest run's end stops the pulse (an old run ending after a new start leaves the new one's).
-            if (synchronized(runDayLock) { run == watchRun }) {
-                Heartbeat.pulseStopped()
-                stepSec = 0
+            // Checked and done under the one lock (fields in memory only), so a new run cannot start between the two.
+            synchronized(runDayLock) {
+                if (run == watchRun) {
+                    Heartbeat.pulseStopped()
+                    stepSec = 0
+                }
             }
         }
     }

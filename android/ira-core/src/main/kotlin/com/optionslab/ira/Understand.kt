@@ -189,6 +189,9 @@ object Bundle {
     /** Marks that bring in a reminder's own words straight after "reminder". */
     private const val INTRO = ":\"'\u201C\u2018"
 
+    /** Words before the colon or quote that cancel, delete or list reminders: never one being set. */
+    private val UNDO = Regex("(?i)\\b(cancel|delete|remove|clear|drop|list|show|hata\\w*)\\b")
+
     private fun actsAlone(s: String): Boolean = Corrections.acts(s) || Plan.pronounClose(s) || Ask.parse(s).let { it.order != null || it.command != null }
 
     /**
@@ -202,10 +205,13 @@ object Bundle {
             val tail = REMINDER_TAIL.find(part)
             if (tail == null) actsAlone(part)
             else tail.groupValues[1].trim().let { t ->
-                // "set a reminder: exit all at 3", 'a reminder "close nifty"': words brought in by a colon or a quote are
-                // the reminder's own, and so are its own words after one ("reminder: to exit all").
+                // "set a reminder: exit all at 3", 'a reminder "close nifty"': when a reminder is being set, words brought
+                // in by a colon or a quote are its own, and so are its own words after one ("reminder: to exit all").
+                // Cancelling or listing one never brings words in that way: "delete the reminder: exit all" still asks to
+                // exit all, and no reminder answer may take it (review, 5 Oct).
                 val bare = t.trimStart { c -> c.isWhitespace() || c in INTRO }
-                bare.isNotEmpty() && bare.length == t.length && !ITS_WORDS.containsMatchIn(bare) && actsAlone(bare)
+                val setting = Reminder.asked(part) && !UNDO.containsMatchIn(part.takeWhile { c -> c !in INTRO })
+                bare.isNotEmpty() && (!setting || bare.length == t.length) && !ITS_WORDS.containsMatchIn(bare) && actsAlone(bare)
             }
         }
     }.getOrDefault(true)

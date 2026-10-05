@@ -79,4 +79,17 @@ class BookDecayTest {
         assertTrue("One option leg's theta could not be worked out just now" in a, a)
         assertTrue("One position is not an option and has no time decay." in a, a)
     }
+
+    @Test fun aFailedZerodhaReadIsNeverNoPositions() {
+        // Review, 5 Oct: logged in but the read failed or timed out - never "nothing in your book is decaying".
+        val none = BookDecay.answer(emptyList(), friNoon, null, SinceMorning.Zerodha.FAILED)
+        assertTrue(none.startsWith("I could not read Zerodha just now, Boss"), none)
+        assertTrue("nothing in your book is decaying" !in none && "Your paper account has no open option positions." in none, none)
+        val a = BookDecay.answer(listOf(opt("Paper", "X", 75, -4.0)), LocalDate.of(2026, 10, 7).atTime(11, 0), null, SinceMorning.Zerodha.FAILED)
+        assertTrue("On Paper your options lose about Rs 300 a day to time decay." in a, a)
+        assertTrue("I could not read Zerodha just now, Boss" in a && "only the paper account is given" in a && "not logged in" !in a, a)
+        // The old flag reads as before.
+        assertEquals(BookDecay.answer(emptyList(), friNoon, null, true), BookDecay.answer(emptyList(), friNoon, null, SinceMorning.Zerodha.READ))
+        assertEquals(BookDecay.answer(emptyList(), friNoon, null, false), BookDecay.answer(emptyList(), friNoon, null, SinceMorning.Zerodha.LOGGED_OUT))
+    }
 }

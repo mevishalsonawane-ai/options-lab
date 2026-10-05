@@ -50,6 +50,21 @@ object Rescue {
      */
     fun setAlone(switchOn: Boolean, p: Open, stop: Double?): Boolean = switchOn && p.qty > 0 && p.avg > 0 && stop != null
 
+    /**
+     * Is an active Kite GTT a stop on a position (review, 5 Oct: a target-only GTT is not)? A two-leg (OCO) one always
+     * holds a stop leg; a single one only when its order closes the position ([orders] as read, "SELL 50 @ 100.0": SELL
+     * for a [long], BUY for a short) and its trigger sits under [lastPrice] (the price when it was set) for a long, over
+     * it for a short. Anything else (a target, an unknown type, no trigger or price) is not a stop.
+     */
+    fun gttIsStop(type: String, triggers: List<Double>, lastPrice: Double, orders: String, long: Boolean): Boolean {
+        if (type.trim().equals("two-leg", ignoreCase = true)) return true
+        if (!type.trim().equals("single", ignoreCase = true)) return false
+        val trigger = triggers.firstOrNull() ?: return false
+        if (lastPrice <= 0.0 || trigger <= 0.0) return false
+        val side = orders.trim().substringBefore(' ').uppercase(Locale.ENGLISH)
+        return if (long) side == "SELL" && trigger < lastPrice else side == "BUY" && trigger > lastPrice
+    }
+
     /** Told after the guard set a stop by itself ([result]: what the app said). */
     fun saySet(p: Open, stop: Double, result: String): String =
         "${p.symbol} (${if (p.live) "Zerodha" else "paper"}, ${p.qty}) had no stop, so I set one at %.2f, 15%% under the %.2f you paid. ".format(Locale.ENGLISH, stop, p.avg) + result

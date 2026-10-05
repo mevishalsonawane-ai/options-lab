@@ -47,14 +47,29 @@ object BookDecay {
      * [now]: the time now; [nextSession]: the next trading day after today (null: not known); [zerodhaLoggedIn]: whether
      * Zerodha was there to read (logged out, only paper was read - said so).
      */
-    fun answer(ps: List<PositionHealth.Pos>, now: LocalDateTime, nextSession: LocalDate?, zerodhaLoggedIn: Boolean): String {
+    fun answer(ps: List<PositionHealth.Pos>, now: LocalDateTime, nextSession: LocalDate?, zerodhaLoggedIn: Boolean): String =
+        answer(ps, now, nextSession, if (zerodhaLoggedIn) SinceMorning.Zerodha.READ else SinceMorning.Zerodha.LOGGED_OUT)
+
+    /**
+     * As above, with [zerodha] saying whether Zerodha was read, logged out, or logged in but not read (review, 5 Oct: a
+     * failed or timed-out read is never "no positions" - said so, and only paper is given).
+     */
+    fun answer(ps: List<PositionHealth.Pos>, now: LocalDateTime, nextSession: LocalDate?, zerodha: SinceMorning.Zerodha): String {
         val today = now.toLocalDate()
         val afterClose = !now.toLocalTime().isBefore(PositionHealth.CLOSE)
-        val open = ps.filter { it.qty != 0 }
+        val failed = zerodha == SinceMorning.Zerodha.FAILED
+        // Never a Zerodha leg from a read that failed (none is passed then; this only makes sure).
+        val open = ps.filter { it.qty != 0 && !(failed && it.where == "Zerodha") }
         val options = open.filter { it.option }
-        val zerodhaNote = if (zerodhaLoggedIn) "" else " Zerodha is not logged in today, so only the paper account was read."
+        val zerodhaNote = when (zerodha) {
+            SinceMorning.Zerodha.READ -> ""
+            SinceMorning.Zerodha.LOGGED_OUT -> " Zerodha is not logged in today, so only the paper account was read."
+            SinceMorning.Zerodha.FAILED -> " I could not read Zerodha just now, Boss, so only the paper account is given - ask me again in a moment."
+        }
         if (options.isEmpty()) {
             val other = open.size
+            if (failed) return "I could not read Zerodha just now, Boss, so I cannot say what your live book loses to time decay - ask me again in a moment. " +
+                (if (other == 0) "Your paper account has no open option positions." else "None of your open paper positions is an option, so they have no time decay.")
             return (if (other == 0) "You have no open option positions, Boss - nothing in your book is decaying."
                 else if (other == 1) "Your open position is not an option, Boss - it has no time decay."
                 else "None of your $other open positions is an option, Boss - they have no time decay.") + zerodhaNote

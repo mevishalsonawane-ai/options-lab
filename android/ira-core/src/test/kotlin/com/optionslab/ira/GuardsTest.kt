@@ -13,6 +13,23 @@ class GuardsTest {
     private val day = LocalDate.of(2026, 10, 5)
     private fun at(h: Int, m: Int) = day.atTime(h, m)
 
+    @Test fun onlyAStopGttGuardsAPosition() {
+        // Two-leg (OCO): always holds a stop leg.
+        assertTrue(Rescue.gttIsStop("two-leg", listOf(80.0, 140.0), 100.0, "SELL 50 @ 79.0 / SELL 50 @ 141.0", long = true))
+        // Single, long: a SELL under the price is a stop; a SELL over it is a target only.
+        assertTrue(Rescue.gttIsStop("single", listOf(85.0), 100.0, "SELL 50 @ 84.0", long = true))
+        assertFalse(Rescue.gttIsStop("single", listOf(140.0), 100.0, "SELL 50 @ 139.0", long = true))
+        // A BUY on a long adds to it, never stops it.
+        assertFalse(Rescue.gttIsStop("single", listOf(85.0), 100.0, "BUY 50 @ 84.0", long = true))
+        // Single, short: a BUY over the price is a stop; under it is a target.
+        assertTrue(Rescue.gttIsStop("single", listOf(120.0), 100.0, "BUY 50 @ 121.0", long = false))
+        assertFalse(Rescue.gttIsStop("single", listOf(80.0), 100.0, "BUY 50 @ 79.0", long = false))
+        // Nothing to judge it by: not a stop.
+        assertFalse(Rescue.gttIsStop("single", emptyList(), 100.0, "SELL 50 @ 84.0", long = true))
+        assertFalse(Rescue.gttIsStop("single", listOf(85.0), 0.0, "SELL 50 @ 84.0", long = true))
+        assertFalse(Rescue.gttIsStop("", listOf(85.0), 100.0, "SELL 50 @ 84.0", long = true))
+    }
+
     @Test fun aKindOfIdeaThatLosesIsKnown() {
         val r = List(8) { Preference.kind("pattern: hammer|NIFTY") to -100.0 } + List(9) { "news" to 40.0 }
         assertEquals("my pattern hammer trades have lost: 8 trades, -Rs 800.00", ActAlone.badKind(r, "pattern hammer"))

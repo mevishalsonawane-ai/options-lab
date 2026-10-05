@@ -25,6 +25,12 @@ class ReminderGuardTest {
             "set a reminder \"close my nifty put\"")) assertFalse(Bundle.reminderAndMore(s), s)
         // A colon's reminder with something else to do after it is still both.
         assertTrue(Bundle.reminderAndMore("set a reminder: check nifty, and close my nifty put"))
+        // Only a reminder being set takes the words after a colon or a quote as its own; cancelling one does not (review, 5 Oct).
+        for (s in listOf("delete the reminder: exit all", "remove the reminder: square off everything",
+            "cancel the 3 pm reminder: close my nifty put", "cancel the reminder \"exit all\"", "reminder hata do: exit all"))
+            assertTrue(Bundle.reminderAndMore(s), s)
+        for (s in listOf("set a reminder: exit all at 3", "delete the reminder: to exit all", "remind me at 3: close my nifty put"))
+            assertFalse(Bundle.reminderAndMore(s), s)
         assertTrue(Bundle.REMINDER_AND_MORE.startsWith("Boss,") && "Nothing was done" in Bundle.REMINDER_AND_MORE)
     }
 

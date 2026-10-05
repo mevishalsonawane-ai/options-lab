@@ -923,12 +923,16 @@ object IraHub {
             // one that has its own).
             if (liveOrders == null) { open.removeAll { it.first.live }; liveRead = false }
             else liveOrders.filter { o -> o.working && o.type in setOf("SL", "SL-M") }.forEach { guarded += "L:" + it.symbol }
-            // An active Kite GTT on the symbol (a stop-loss Boss set there) guards it too: never a second stop beside it.
-            // Not read in time: no live position is called bare this pass, as with the orders.
+            // An active Kite GTT that is a stop on the position (two-leg, or a closing one past the price - never a target
+            // alone) guards it too: never a second stop beside it. Not read in time: no live position is called bare this
+            // pass, as with the orders.
             if (open.any { it.first.live }) {
                 val liveGtts = com.optionslab.app.data.Broker.within(8_000) { com.optionslab.app.data.Broker.gtts() }
                 if (liveGtts == null) { open.removeAll { it.first.live }; liveRead = false }
-                else liveGtts.filter { g -> g.status.lowercase() == "active" }.forEach { guarded += "L:" + it.symbol }
+                else liveGtts.filter { g -> g.status.lowercase() == "active" }.forEach { g ->
+                    if (open.any { (o, _) -> o.live && o.symbol == g.symbol &&
+                            com.optionslab.ira.Rescue.gttIsStop(g.type, g.triggers, g.lastPrice, g.orders, o.qty > 0) }) guarded += "L:" + g.symbol
+                }
             }
             if (open.isEmpty()) return
         }
@@ -989,7 +993,8 @@ object IraHub {
                 val slWorking: Boolean? = runCatching {
                     if (p.live) com.optionslab.app.data.Broker.within(8_000) {
                         com.optionslab.app.data.Broker.orders().any { o -> o.working && o.symbol == p.symbol && o.type in setOf("SL", "SL-M") } ||
-                            com.optionslab.app.data.Broker.gtts().any { g -> g.symbol == p.symbol && g.status.lowercase() == "active" }
+                            com.optionslab.app.data.Broker.gtts().any { g -> g.symbol == p.symbol && g.status.lowercase() == "active" &&
+                                com.optionslab.ira.Rescue.gttIsStop(g.type, g.triggers, g.lastPrice, g.orders, qty > 0) }
                     }
                     else com.optionslab.app.data.Paper.snapshot().orders.orders.any { o -> o.symbol == p.symbol && o.priceType.uppercase() in setOf("SL", "SL-M") &&
                         o.status.lowercase() !in setOf("complete", "cancelled", "rejected") }

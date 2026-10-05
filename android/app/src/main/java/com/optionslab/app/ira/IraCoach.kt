@@ -742,7 +742,8 @@ internal object IraCoach {
      * its contract, spot, average day's range, theta, best bid and ask now, the spread first noted, and any stop or
      * target set in the app. Reads only: nothing is placed, changed or closed.
      */
-    private suspend fun healthPositions(once: IraAccount.PaperOnce? = null): List<com.optionslab.ira.PositionHealth.Pos> {
+    private suspend fun healthPositions(once: IraAccount.PaperOnce? = null):
+        Pair<List<com.optionslab.ira.PositionHealth.Pos>, com.optionslab.ira.SinceMorning.Zerodha> {
         val now = java.time.ZonedDateTime.now(IST)
         val today = now.toLocalDate()
         val prot = runCatching { com.optionslab.app.data.Protections.active() }.getOrDefault(emptyList())
@@ -775,10 +776,13 @@ internal object IraCoach {
                 theta = c?.let { runCatching { theta(it.right, it.underlying, it.strike, it.expiry, p.ltp) }.getOrNull() },
                 bid = q?.bid?.takeIf { it > 0 }, ask = q?.ask?.takeIf { it > 0 }, stop = pr?.stop, target = pr?.target)
         } }
-        if (Broker.loggedIn) runCatching {
+        // Whether Zerodha's positions were actually read (review, 5 Oct: a failed or timed-out read is never "none open").
+        var zerodha = if (Broker.loggedIn) com.optionslab.ira.SinceMorning.Zerodha.FAILED else com.optionslab.ira.SinceMorning.Zerodha.LOGGED_OUT
+        if (zerodha == com.optionslab.ira.SinceMorning.Zerodha.FAILED) runCatching {
             val ins = Broker.cachedInstruments().orEmpty().associateBy { it.tradingSymbol }
             // The broker is not waited on past 8 seconds (a hung read would hang the answer).
-            val open = Broker.within(8_000) { Broker.positionBook() }?.net.orEmpty().filter { it.open }
+            val book = Broker.within(8_000) { Broker.positionBook() }
+            val open = book?.net.orEmpty().filter { it.open }
             val quotes = Broker.within(5_000) { Broker.quotes(open.map { "${it.exchange}:${it.symbol}" }) }.orEmpty()
             open.forEach { p ->
                 val i = ins[p.symbol]
@@ -791,8 +795,11 @@ internal object IraCoach {
                     theta = i?.let { runCatching { theta(it.right, it.name, it.strike, it.expiry, p.last) }.getOrNull() },
                     bid = q?.bid?.takeIf { it > 0 }, ask = q?.ask?.takeIf { it > 0 }, stop = pr?.stop, target = pr?.target)
             }
+            if (book != null) zerodha = com.optionslab.ira.SinceMorning.Zerodha.READ
         }
-        return withFirstSpreads(out, now.toLocalDateTime())
+        // Read only in part (it failed after some legs were added): none of Zerodha's legs is passed on as the book.
+        if (zerodha == com.optionslab.ira.SinceMorning.Zerodha.FAILED) out.removeAll { it.where == "Zerodha" }
+        return withFirstSpreads(out, now.toLocalDateTime()) to zerodha
     }
 
     /**
@@ -824,7 +831,7 @@ internal object IraCoach {
     }.getOrDefault(ps)
 
     /** "Check my positions", "kya meri positions theek hain": each open position's health. Reads only. */
-    suspend fun healthLines(once: IraAccount.PaperOnce? = null): List<String> = com.optionslab.ira.PositionHealth.lines(healthPositions(once), LocalDateTime.now(IST))
+    suspend fun healthLines(once: IraAccount.PaperOnce? = null): List<String> = com.optionslab.ira.PositionHealth.lines(healthPositions(once).first, LocalDateTime.now(IST))
 
     /**
      * "What's my theta?", "how much am I losing to time decay?" ([com.optionslab.ira.BookDecay]): the whole book's time decay
@@ -832,10 +839,11 @@ internal object IraCoach {
      * comes to by the next session when that is more than a day away. Reads only: nothing is placed, changed or closed.
      */
     suspend fun bookDecay(): String {
-        val ps = healthPositions()
+        // Whether Zerodha was read, not only logged in: a failed read is said so, never "nothing is decaying" (review, 5 Oct).
+        val (ps, zerodha) = healthPositions()
         val mk = com.optionslab.app.data.Market
         val next = com.optionslab.ira.ExpiryEve.nextTradingDay(mk.today()) { mk.isTradingDay(it) }
-        return com.optionslab.ira.BookDecay.answer(ps, LocalDateTime.now(IST), next, Broker.loggedIn)
+        return com.optionslab.ira.BookDecay.answer(ps, LocalDateTime.now(IST), next, zerodha)
     }
 
     /**
@@ -845,7 +853,7 @@ internal object IraCoach {
      */
     suspend fun needLines(question: String, once: IraAccount.PaperOnce? = null): List<String> {
         if (com.optionslab.app.BuildConfig.GOLD) return listOf("What has to be true for a position is worked out in IraAlgo, Boss; IraGoldAlgo only talks.")
-        val ps = healthPositions(once)
+        val ps = healthPositions(once).first
         val bars = HashMap<String, List<com.optionslab.ira.Candle>>()
         for (u in ps.mapNotNull { it.underlying?.uppercase() }.distinct()) {
             val m = runCatching { com.optionslab.ira.Market.valueOf(u) }.getOrNull() ?: continue
@@ -868,7 +876,7 @@ internal object IraCoach {
         val key = "jarvis.health.told"
         if (com.optionslab.app.security.SecurePrefs.getString(key) == today.toString()) return
         com.optionslab.app.security.SecurePrefs.put(key, today.toString())
-        val ps = healthPositions()
+        val ps = healthPositions().first
         val spoken = com.optionslab.ira.PositionHealth.spoken(ps, today) ?: return
         val lines = com.optionslab.ira.PositionHealth.lines(ps, LocalDateTime.now(IST))
         IraHub.note(lines.joinToString("\n")); IraActivity.add(lines.first())
