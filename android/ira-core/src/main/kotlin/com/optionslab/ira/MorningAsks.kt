@@ -156,7 +156,7 @@ object MorningAsks {
         LEAD + "why (did|do) you (offer|ask)( me)? (that|a|the|my usual) (question )?(in|at the end of) $CHECK" + TAIL + "|" +
         LEAD + "why (did|does) $CHECK (offer|end with) (a|that|my usual) question" + TAIL + "|" +
         LEAD + "(main|mai) (subah|roz subah) (kya|kaunsa sawal|kaun sa sawal) (poochta|puchta|pucchta) (hoon|hu|hun)" + TAIL)
-    private val RESET = rx(LEAD + "quit offering( me)? (my |the |a |that )?$QUESTION( $MORNING| (in|at the end of) $CHECK)?" + TAIL + "|" +
+    private val RESET = rx(LEAD + "(quit|stop) offering( me)? (my |the |a |that )?$QUESTION( $MORNING| (in|at the end of) $CHECK)?" + TAIL + "|" +
         LEAD + "(dont|do not|no need to) offer( me)? (my |the |a |any |that )?$QUESTION( $MORNING| (in|at the end of) $CHECK)" + TAIL + "|" +
         LEAD + "(dont|do not|no need to) offer( me)? (my |the |a |that )?(usual )?morning (questions?|ask)" + TAIL + "|" +
         LEAD + "no more (morning )?(question )?offers( $MORNING| (in|at the end of) $CHECK)?" + TAIL + "|" +

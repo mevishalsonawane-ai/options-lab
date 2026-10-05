@@ -36,6 +36,12 @@ import kotlin.test.assertTrue
  * Round 16 (5 Oct): today's new things asked - "why did the stream drop" (StreamHealth), "is the order watch running", "why
  * did the watch get stuck", "battery setting kya hai", "kya mera phone app ko rok raha hai" (WatchAsk, read only) - and
  * more English and Hinglish of LikeToday, SplitDays, MorningAsks, ExpiryEve, StreamHealth and RelayHealth.
+ *
+ * Round 17 (5 Oct): more English and Hinglish of the newest families - ArmFit, RoundCloses, TurnDowns (now in the hunt's
+ * families, after MorningAsks as in the hub), BeforeTomorrow, BatteryUse and WatchAsk - none an order, a command or a Bundle
+ * act; and a learned speech habit's undo said with "stop" ("stop offering my morning question", "stop shortening your
+ * briefings", "stop reminding me why I turn your ideas down") reaches that undo, never a STOP of a strategy by that name,
+ * while "stop orb", "stop all strategies", "stop the order watch" and "stop listening" read as before.
  */
 class CollisionTest {
     private val audit = CoverageTest()
@@ -55,6 +61,7 @@ class CollisionTest {
         "HonestStars" to { q -> HonestStars.asked(q) != null },
         "TalkHours" to { q -> TalkHours.asked(q) != null },
         "MorningAsks" to { q -> MorningAsks.asked(q) != null },
+        "TurnDowns" to { q -> TurnDowns.asked(q) != null },
         "Headroom" to { q -> Headroom.asked(q) != null },
         "ArmFit" to { q -> ArmFit.asked(q) },
         "ArmDay" to { q -> ArmDay.asked(q) != null },
@@ -778,7 +785,72 @@ class CollisionTest {
         // Their neighbours: the watchlist, the market, a range, the kill switch, the bots' own state stay where they were.
         "how many times did nifty rise and fall today" to "Market", "what is in my watchlist" to "Market", "is the kill switch on" to "Account:RISK",
         "is orb running" to "Account:STRATEGIES",
+        // ---- Round 17. ArmFit, more of it ----
+        "which arm suits today" to "ArmFit", "which bot suits today's market" to "ArmFit", "which strategy fits today" to "ArmFit",
+        "which of my bots is best for today" to "ArmFit", "what arm works best today" to "ArmFit", "which algo is right for today" to "ArmFit",
+        "how did orb do on days like today" to "ArmFit", "how do my strategies perform on days like this" to "ArmFit",
+        "my arms' record on days like today" to "ArmFit", "which arm suits today's conditions" to "ArmFit",
+        "which of my strategies suits a day like today" to "ArmFit", "how does range fade do on days like today" to "ArmFit",
+        "how did liquidity fare on sessions like today" to "ArmFit", "aaj kaunsa arm suit karta hai" to "ArmFit",
+        "aaj ke liye kaun sa strategy fit hai" to "ArmFit", "aaj jaise din pe mere arms kaise chalte hain" to "ArmFit",
+        "aaj konsa bot theek baithega" to "ArmFit", "aaj ke market ke liye kaunsa algo suit karega" to "ArmFit",
+        "aaj jaise dino mein meri strategies kaisi rehti hain" to "ArmFit", "aaj ke din konsi strategy fit hoti hai" to "ArmFit",
+        // ---- RoundCloses, more of it ----
+        "does nifty respect round numbers" to "RoundCloses", "how often does nifty close near a round number" to "RoundCloses",
+        "do round numbers act as magnets for banknifty" to "RoundCloses", "nifty round figure pe kitni baar band hota hai" to "RoundCloses",
+        "historically does nifty close near round thousands" to "RoundCloses", "how often does banknifty settle near round 500s" to "RoundCloses",
+        "gol number pe nifty aksar band hota hai kya" to "RoundCloses", "round number stats for sensex" to "RoundCloses",
+        "do nifty closes stick to round levels" to "RoundCloses", "how often does finnifty finish near a round hundred" to "RoundCloses",
+        "is there a round number magnet on nifty closes" to "RoundCloses", "banknifty gol figure ke paas kitne din band hua" to "RoundCloses",
+        "do psychological levels attract nifty closes" to "RoundCloses", "nifty ka round number record kya hai" to "RoundCloses",
+        // ---- TurnDowns, more of it ----
+        "why do i reject your trade ideas" to "TurnDowns", "why do i keep turning down your ideas" to "TurnDowns",
+        "what reasons do i give for turning down your trades" to "TurnDowns", "don't remind me why i rejected your ideas" to "TurnDowns",
+        "stop reminding me why i turn your ideas down" to "TurnDowns", "main tumhare ideas kyun reject karta hoon" to "TurnDowns",
+        "mere reasons mat yaad dilao" to "TurnDowns", "forget why i reject your ideas" to "TurnDowns",
+        "why did you tell me why i turned it down" to "TurnDowns", "what reason do you tell me before i answer" to "TurnDowns",
+        "why do i usually say no to your suggestions" to "TurnDowns", "which reasons do i usually have for rejecting your ideas" to "TurnDowns",
+        "no need to tell me why i turned your ideas down" to "TurnDowns", "main aapke trade kyun mana kar deta hoon" to "TurnDowns",
+        "meri wajah mat batao" to "TurnDowns", "stop telling me why i reject your ideas" to "TurnDowns",
+        // ---- BeforeTomorrow, more of it ----
+        "what should i do before tomorrow" to "BeforeTomorrow", "anything left to do before tomorrow" to "BeforeTomorrow",
+        "what do i need to do for tomorrow" to "BeforeTomorrow", "what do i need to take care of before the next trading day" to "BeforeTomorrow",
+        "give me tomorrow's checklist" to "BeforeTomorrow", "kal ke liye kya kya karna hai" to "BeforeTomorrow",
+        "kal subah se pehle kya karna padega" to "BeforeTomorrow", "kuch karna hai kal ke liye" to "BeforeTomorrow",
+        "what must i get done before tomorrow" to "BeforeTomorrow", "is there anything to do before tomorrow" to "BeforeTomorrow",
+        "read me the checklist for tomorrow" to "BeforeTomorrow", "what do i have to check before tomorrow morning" to "BeforeTomorrow",
+        "kya karna hoga kal se pehle" to "BeforeTomorrow", "mujhe kal subah ke liye kya karna chahiye" to "BeforeTomorrow",
+        "what else do i need to do before tomorrow" to "BeforeTomorrow", "jarvis what should i sort out for tomorrow" to "BeforeTomorrow",
+        // ---- BatteryUse, more of it ----
+        "why is jarvis eating so much battery" to "BatteryUse", "is the app draining my battery" to "BatteryUse",
+        "how much battery does iraalgo use" to "BatteryUse", "what is draining my battery" to "BatteryUse",
+        "why does my phone battery drain so fast" to "BatteryUse", "app bahut battery kha raha hai" to "BatteryUse",
+        "jarvis kitni battery leta hai" to "BatteryUse", "battery kyun ja rahi hai" to "BatteryUse", "what's running in the background" to "BatteryUse",
+        "battery drain report" to "BatteryUse", "why is my battery dying so fast" to "BatteryUse",
+        "iraalgo itni battery kyun kha raha hai" to "BatteryUse", "kyun phone itni battery kha raha hai" to "BatteryUse",
+        "background mein kya kya chal raha hai" to "BatteryUse",
+        // ---- WatchAsk, more of it ----
+        "is the order watch working" to "WatchAsk", "is my order watch alive" to "WatchAsk", "order watch chalu hai kya" to "WatchAsk",
+        "why did the order watch freeze" to "WatchAsk", "what stalled the order watch" to "WatchAsk",
+        "is iraalgo's battery set to unrestricted" to "WatchAsk", "is my phone restricting iraalgo" to "WatchAsk",
+        "kya android watch ko rok raha hai" to "WatchAsk", "how's the order watch doing" to "WatchAsk", "order watch kyun latak gaya" to "WatchAsk",
+        "why did my order watch crash" to "WatchAsk", "watch kyun band ho gaya" to "WatchAsk", "is battery optimization on for iraalgo" to "WatchAsk",
+        "kya phone app ko sleep mein daal raha hai" to "WatchAsk",
+        // ---- A learned speech habit's undo said with "stop": the undo, never a strategy to stop ----
+        "stop offering my morning question" to "MorningAsks", "stop offering me the morning question" to "MorningAsks",
+        "stop offering my usual morning question" to "MorningAsks", "stop offering the morning question at the morning check" to "MorningAsks",
+        "stop shortening your briefings" to "TalkHours", "stop cutting your briefings short" to "TalkHours",
+        "stop saying the coin toss" to "HonestStars", "stop adding your record to your confidence" to "HonestStars",
+        "stop qualifying your confidence" to "HonestStars", "stop skipping items in the morning check" to "MorningSense",
+        "stop shortening the morning check" to "MorningSense",
     )
+
+    /** Round 17's undo wordings said with "stop" (each a learned speech habit's own undo), with the family each must get. */
+    private val STOP_UNDO = listOf("stop offering my morning question", "stop offering me the morning question", "stop offering my usual morning question",
+        "stop offering the morning question at the morning check", "stop shortening your briefings", "stop cutting your briefings short",
+        "stop saying the coin toss", "stop adding your record to your confidence", "stop qualifying your confidence",
+        "stop skipping items in the morning check", "stop shortening the morning check", "stop reminding me why i turn your ideas down",
+        "stop telling me why i reject your ideas", "stop correcting your confidence words")
 
     @Test fun eachQuestionGoesWhereItShould() {
         assertTrue(ASKED.size >= 600, "${ASKED.size}")
@@ -1302,6 +1374,62 @@ class CollisionTest {
         // Said with something to do, each is left to the multi-step plan (never answered and the action dropped).
         for (s in listOf("is the order watch running then close all positions", "why did the stream drop and stop orb"))
             assertTrue(Bundle.acts(s) || Ask.parse(s).command != null || Ask.parse(s).order != null, s)
+    }
+
+    // ---- Round 17: the newest families, and a learned habit's undo said with "stop" ----
+
+    @Test fun roundSeventeenWordingsNeitherOrderNorCommandNorBundle() {
+        val newest = setOf("ArmFit", "RoundCloses", "TurnDowns", "BeforeTomorrow", "BatteryUse", "WatchAsk")
+        val all = ASKED.filter { it.second in newest }
+        assertTrue(all.size >= 120, "${all.size}")
+        // Wrong before this round, each now where it belongs.
+        for ((s, want) in listOf("aaj konsa bot theek baithega" to "ArmFit", "does nifty respect round numbers" to "RoundCloses",
+            "stop reminding me why i turn your ideas down" to "TurnDowns", "stop telling me why i reject your ideas" to "TurnDowns",
+            "is there anything to do before tomorrow" to "BeforeTomorrow", "battery drain report" to "BatteryUse")) assertTrue(s to want in all, s)
+        for ((s, want) in all) {
+            assertEquals(want, audit.feature(s), s)
+            val p = Ask.parse(s)
+            assertEquals(null, p.order, s); assertEquals(null, p.command, s)
+            assertTrue(Topic.ORDER !in p.topics && Topic.COMMAND !in p.topics, s)
+            assertTrue(!Bundle.acts(s), s)
+            assertEquals(null, Intents.quick(s), s)
+            assertTrue(!Reminder.asked(s) && !Reminder.cancelAsked(s) && !FollowUp.acts(s), s)
+            assertEquals(null, Reminder.parse(s, today.atTime(10, 0)), s)
+            assertTrue(Understand.questions(null, s).orEmpty().none { FollowUp.acts(it) || Ask.parse(it).command != null || Ask.parse(it).order != null }, s)
+        }
+        // A switch, a forecast or advice is never one of these questions; the commands beside them still act as before.
+        for (s in listOf("should i run orb today", "start orb today", "will nifty close at 25000 today", "stop the order watch", "set battery to unrestricted"))
+            assertTrue(!ArmFit.asked(s) && RoundCloses.asked(s) == null && WatchAsk.asked(s) == null && !BatteryUse.asked(s) && !BeforeTomorrow.asked(s), s)
+        // Said with something to do, each is left to the multi-step plan (never answered and the action dropped).
+        for (s in listOf("which arm suits today then stop orb", "what do i need to do before tomorrow and close all positions",
+            "why is the app draining my battery then kill switch on"))
+            assertTrue(Bundle.acts(s) || Ask.parse(s).command != null || Ask.parse(s).order != null, s)
+    }
+
+    @Test fun aLearnedHabitsUndoSaidWithStopIsNeverAStopCommand() {
+        for (s in STOP_UNDO) {
+            val p = Ask.parse(s)
+            assertEquals(null, p.command, s); assertEquals(null, p.order, s)
+            assertTrue(Topic.ORDER !in p.topics && Topic.COMMAND !in p.topics, s)
+            assertTrue(!Bundle.acts(s) && !FollowUp.acts(s) && !Reminder.asked(s) && !Reminder.cancelAsked(s), s)
+            assertEquals(null, Intents.quick(s), s)
+            // Its own undo takes it (the hub's branch is reached: no order, no command, not bundled), never "Act".
+            val undo = MorningAsks.asked(s) == MorningAsks.Request.RESET || TurnDowns.asked(s) == TurnDowns.Request.RESET ||
+                TalkHours.asked(s) == TalkHours.Request.RESET || HonestStars.asked(s) == HonestStars.Request.RESET ||
+                WordFit.asked(s) == WordFit.Request.OFF || MorningSense.asked(s) == MorningSense.Request.RESET
+            assertTrue(undo, s)
+            assertTrue(audit.feature(s) in setOf("MorningAsks", "TurnDowns", "TalkHours", "HonestStars", "WordFit", "MorningSense"), "$s: ${audit.feature(s)}")
+            assertTrue(Wake.heard("Jarvis, $s", false) is Wake.Heard.Ask, s)
+        }
+        // The commands stay exactly as they were, each through its own confirm.
+        assertEquals(Command.Kind.STOP_ONE, Ask.parse("stop orb").command?.kind)
+        assertEquals(Command.Kind.STOP_ALL, Ask.parse("stop all strategies").command?.kind)
+        assertEquals(Command(Command.Kind.STOP_ONE, target = "order watch"), Ask.parse("stop the order watch").command)
+        assertEquals(Command.Kind.STOP_ONE, Ask.parse("stop strategy 2").command?.kind)
+        for (s in listOf("stop orb", "stop all strategies", "stop the order watch", "stop strategy 2", "stop range fade")) assertEquals("Act", audit.feature(s), s)
+        assertEquals(Wake.Heard.Stop, Wake.heard("Jarvis, stop listening", false))
+        // Only a learned habit's own undo is let through: other "stop <doing>" words are no undo, and read as before.
+        for (s in listOf("stop offering trades", "stop saying boss")) assertTrue(MorningAsks.asked(s) == null && HonestStars.asked(s) == null && TalkHours.asked(s) == null, s)
     }
 
     @Test fun theOrderWatchAnswerOnlyReads() {

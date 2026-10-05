@@ -241,7 +241,7 @@ object Commands {
             "|^(isko|usko|is|us|ise|use|isse|usse|ye|yeh|wo|woh|vo)$")
         rx("^ (stop|disarm|switch off|turn off|pause|halt) $ARM_NOUN ?(.+)$").find(s)?.let { m ->
             val what = m.groupValues[2].trim()
-            if (what.isNotEmpty() && !notArm.containsMatchIn(what)) return one(Command.Kind.STOP_ONE, what)
+            if (what.isNotEmpty() && !notArm.containsMatchIn(what) && !habitUndo(s)) return one(Command.Kind.STOP_ONE, what)
         }
         rx("^ (start|arm|switch on|turn on|resume|run|enable) $ARM_NOUN ?(.+)$").find(s)?.let { m ->
             val what = m.groupValues[2].trim()
@@ -249,6 +249,20 @@ object Commands {
         }
         return null
     }
+
+    /** "Stop offering", "stop reminding me", "stop saying", "stop shortening"...: a speech habit of Jarvis's own named after "stop". */
+    private val HABIT_VERB = rx("^ stop (offering|reminding|saying|shortening|cutting|skipping|adding|qualifying|giving|telling|leaving out) ")
+
+    /**
+     * "Stop offering my morning question", "stop shortening your briefings", "stop reminding me why I turn your ideas down":
+     * the undo of a speech habit Jarvis learned ([MorningAsks], [TurnDowns], [TalkHours], [HonestStars], [WordFit],
+     * [MorningSense]) - never a strategy called "offering my morning question" (understanding round 17). Only when that
+     * habit's own undo takes the very words: "stop orb", "stop the order watch", "stop offering trades" stay as they were.
+     */
+    private fun habitUndo(s: String): Boolean = HABIT_VERB.containsMatchIn(s) && (
+        MorningAsks.asked(s) == MorningAsks.Request.RESET || TurnDowns.asked(s) == TurnDowns.Request.RESET ||
+            TalkHours.asked(s) == TalkHours.Request.RESET || HonestStars.asked(s) == HonestStars.Request.RESET ||
+            WordFit.asked(s) == WordFit.Request.OFF || MorningSense.asked(s) == MorningSense.Request.RESET)
 
     private fun one(kind: Command.Kind, what: String): Command {
         val n = rx("^(?:number |no |#)?(\\d{1,2})$").find(what)?.groupValues?.get(1)?.toIntOrNull()

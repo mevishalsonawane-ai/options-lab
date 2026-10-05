@@ -154,8 +154,8 @@ object TurnDowns {
         LEAD + "what (reason|reasons|line) (do|did) you (say|tell me|give)( me)? (up front|before i answer|first)( on| about| with)?( $IDEAS)?" + TAIL + "|" +
         LEAD + "why (did|do) you (remind me|tell me) (why|how) i $TURN_( it| that| them| $IDEAS)?( down)?" + TAIL + "|" +
         LEAD + "(main|mai) (tumhare|aapke|tumhara|aapka) (idea|ideas|trade|trades|suggestion) (kyun|kyu) (reject|mana) (karta|kar deta) (hoon|hu|hun)" + TAIL)
-    private val RESET = rx(LEAD + "(dont|do not|no need to|quit) (remind|reminding|tell|telling) me (why|what) i $TURN_( $IDEAS)?( down)?" + TAIL + "|" +
-        LEAD + "(dont|do not|no need to|quit) (remind me of|tell me|say|mention|telling me|saying) (my|your) reasons( for $TURN $IDEAS)?" + TAIL + "|" +
+    private val RESET = rx(LEAD + "(dont|do not|no need to|quit|stop) (remind|reminding|tell|telling) me (why|what) i $TURN_( $IDEAS)?( down)?" + TAIL + "|" +
+        LEAD + "(dont|do not|no need to|quit|stop) (remind me of|tell me|say|mention|telling me|saying) (my|your) reasons( for $TURN $IDEAS)?" + TAIL + "|" +
         LEAD + "(forget|unlearn) (why|the reasons?) i $TURN_( $IDEAS)?( down)?" + TAIL + "|" +
         LEAD + "(mere|meri|meray) (reasons?|wajah|karan) (mat|na) (yaad dilao|batao|bolo)" + TAIL)
 

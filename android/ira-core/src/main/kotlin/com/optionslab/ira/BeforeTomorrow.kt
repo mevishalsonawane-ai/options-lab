@@ -144,7 +144,7 @@ object BeforeTomorrow {
         "^ $LEAD(what|anything|is there anything)( else)? (do i|i|should i|must i|have i got to|that i)? ?(need to|have to|should|must|gotta|got to|ought to)? ?" +
             "(do|sort out|sort|take care of|check|fix|handle|get done|set up|remember)( first)? (before|for|ahead of) $NEXT$TAIL|" +
         // "anything to do before tomorrow", "things to do before tomorrow"
-        "^ $LEAD(anything|things|stuff|what) (left )?to (do|sort out|take care of|check) (before|for|ahead of) $NEXT$TAIL|" +
+        "^ $LEAD(anything|is there anything|things|stuff|what) (left )?to (do|sort out|take care of|check) (before|for|ahead of) $NEXT$TAIL|" +
         // "tomorrow's checklist", "checklist for tomorrow", "my to do list for tomorrow", "to do before tomorrow"
         "^ $LEAD(give me |read me |say |go through )?(my |the |a )?(tomorrows|tmrws) (check ?list|to ?do( list)?|to dos)$TAIL|" +
         "^ $LEAD(give me |read me |say |go through )?(my |the |a )?(check ?list|to ?do( list)?|to dos) (before|for) $NEXT$TAIL|" +

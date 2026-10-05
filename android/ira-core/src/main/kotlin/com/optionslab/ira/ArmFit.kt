@@ -59,7 +59,7 @@ object ArmFit {
     /** "how do my arms do on days like today", "orb's record on days like this", "my bots on mornings like today". */
     private val ON_DAYS = rx(" $ARMS (s )?(record |records |do |did |does |done |go |goes |went |fare |fared |perform |performed |perform |trade |traded )?(on|in) (days|sessions|mornings|a day) like (today|this|todays|today s) ")
     /** "aaj ke din kaun sa bot suit karta hai", "aaj jaise din par mere arms". */
-    private val HINDI = rx(" (aaj|aaj ke din|aaj ke market) (ke liye )?(kaun sa|kaunsa|kaun si|kaunsi|konsa|konsi) (arm|bot|strategy|algo) (suit|fit|theek baith) | " +
+    private val HINDI = rx(" (aaj|aaj ke din|aaj ke market) (ke liye )?(kaun sa|kaunsa|kaun si|kaunsi|konsa|konsi) (arm|bot|strategy|algo) (suit|fit|theek baith|theek baithta|theek baithti|theek baithega|theek baithegi) | " +
         "aaj (jaise|jaisa|jaisi) (din|dino|dinon) (par|pe|mein|me) (mere |meri )?(arm|arms|bot|bots|strategy|strategies) ")
     // Advice, a switch, a forecast, another day, a loss's story (ArmDay's), the daily regime (the account's), a what-if.
     private val NOT = rx(" (should|shall|disarm|switch off|switch on|turn off|turn on|stop|start|arm it|buy|sell|will|would|going to|gonna|tomorrow|" +

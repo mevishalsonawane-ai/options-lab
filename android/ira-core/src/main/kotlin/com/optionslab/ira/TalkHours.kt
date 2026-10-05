@@ -137,7 +137,7 @@ object TalkHours {
         LEAD + "why (was|is) (the |your |that )?$BRIEF (so )?(short|brief|cut short)( today| this morning| last night)?" + TAIL + "|" +
         LEAD + "(main|mai) (tumse|aapse|tumhe|aapko) (kab|kis time) (baat karta|bolta) (hoon|hu|hun)" + TAIL)
     private val RESET = rx(LEAD + "(say|give|read|tell) (me )?(your |the |my )?$BRIEF in full (at any hour|any time|anytime|at all hours|whatever the hour|always)" + TAIL + "|" +
-        LEAD + "(dont|do not|no need to) (shorten|shortening|cut|cutting) (your |the |my )?$BRIEF( short)?( outside my hours| at odd hours| any ?more)?" + TAIL + "|" +
+        LEAD + "(dont|do not|stop|no need to) (shorten|shortening|cut|cutting) (your |the |my )?$BRIEF( short)?( outside my hours| at odd hours| any ?more)?" + TAIL + "|" +
         LEAD + "(always )?(say|read) (your |the |my )?$BRIEF in full whatever the (time|hour)" + TAIL + "|" +
         LEAD + "$BRIEF (poori|puri|poora|pura) (bolo|sunao) (hamesha|kabhi bhi)" + TAIL)
 

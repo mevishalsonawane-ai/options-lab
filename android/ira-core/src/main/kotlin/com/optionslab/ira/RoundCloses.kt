@@ -66,7 +66,7 @@ object RoundCloses {
     /** A record asked of: how often, a magnet, closes that land there. */
     private val RECORD = Regex(" (how often|how many times|how many days|how frequently|how common|how rare|what share|what percentage|usually|normally|" +
         "typically|generally|tend to|tends to|on average|record|records|stats|statistics|history|historically|magnet|magnets|magnetic|pull|pulls|" +
-        "attract|attracts|attraction|gravitate|gravitates|stick|sticks|cluster|clusters|close near|closes near|closed near|close at|closes at|" +
+        "attract|attracts|attraction|gravitate|gravitates|stick|sticks|respect|respects|cluster|clusters|close near|closes near|closed near|close at|closes at|" +
         "end near|ends near|ended near|settle near|settles near|finish near|finishes near|kitni baar|kitne din|aksar|band hota|band hoti) ")
     // A forecast or advice, Boss's own book, a single price or the day now, the expiry pin and the chain, a meaning, the last time.
     private val NOT = Regex(" (will|would|going to|gonna|tomorrow|predict|prediction|forecast|target|targets|should|shall|buy|sell|enter|exit|" +
