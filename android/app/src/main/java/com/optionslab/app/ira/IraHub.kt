@@ -1228,7 +1228,7 @@ object IraHub {
                 com.optionslab.ira.NeedsTrue.asked(q) ||
                 com.optionslab.ira.Clarity.asked(q) != null || com.optionslab.ira.DayClock.asked(q) != null ||
                 com.optionslab.ira.GapRecord.asked(q) != null || com.optionslab.ira.RangeBreaks.asked(q) != null ||
-                com.optionslab.ira.PriorDay.asked(q) != null ||
+                com.optionslab.ira.PriorDay.asked(q) != null || com.optionslab.ira.LastHour.asked(q) != null ||
                 com.optionslab.ira.Weekdays.asked(q) != null ||
                 com.optionslab.ira.WordFit.asked(q) != null ||
                 com.optionslab.ira.Causes.asked(q) != null ||
@@ -2362,6 +2362,23 @@ object IraHub {
                 else com.optionslab.ira.PriorDay.answer(priorAsk, mk, histories[mk]?.bars.orEmpty(),
                     com.optionslab.app.data.Market.today(), com.optionslab.app.data.Market.now().toLocalDateTime())
             }.getOrElse { "I could not read the prior-day high and low record just now, Boss." }
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            reply(said)
+            return true
+        }
+        // "How often does the last hour continue the day's direction?", "does Nifty usually reverse in the last hour?": the
+        // index's past last hours (14:30 to the close) against the day's move to 14:30, on the phone's own 1-minute sessions
+        // ([com.optionslab.ira.LastHour]), beside today so far. A record of past days, never a forecast or advice; market data
+        // only (fine on a locked phone); nothing acts. (How busy the last hour is stays DayClock's, by weekday Weekdays'.)
+        val lastHourAsk = if (!bundled && parsed.order == null && parsed.command == null && !com.optionslab.app.BuildConfig.GOLD)
+            runCatching { com.optionslab.ira.LastHour.asked(q) }.getOrNull() else null
+        if (lastHourAsk != null) {
+            val said = runCatching {
+                val mk = com.optionslab.ira.LastHour.market(parsed.markets)
+                if (mk == null) com.optionslab.ira.LastHour.NOT_HERE
+                else com.optionslab.ira.LastHour.answer(lastHourAsk, mk, histories[mk]?.bars.orEmpty(),
+                    com.optionslab.app.data.Market.today(), com.optionslab.app.data.Market.now().toLocalDateTime())
+            }.getOrElse { "I could not read the last-hour record just now, Boss." }
             _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
             reply(said)
             return true

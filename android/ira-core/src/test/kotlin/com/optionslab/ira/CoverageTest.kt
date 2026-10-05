@@ -31,7 +31,7 @@ class CoverageTest {
             Learnings.asked(said) != null || Learnings.undoAsked(said) || NewsMoves.asked(said) != null || PreMarket.asked(said) ||
             ChainDrift.asked(said) != null || Headroom.asked(said) != null || BotTrades.asked(said) != null || DayClock.asked(said) != null ||
             SaidAbout.asked(said) != null || GapRecord.asked(said) != null || Causes.asked(said) != null || WeekAhead.asked(said) != null || AskedAgain.asked(said) || FigureFirst.asked(said) != null || Weekdays.asked(said) != null || DayCompare.asked(said) != null ||
-            RangeBreaks.asked(said) != null || PriorDay.asked(said) != null || NeedsTrue.asked(said) || Clarity.asked(said) != null || ZerodhaSession.asked(said) != null || Tour.asked(said) || WrongThing.asked(said) != null || WrongThing.objected(said) || OrderWhy.asked(said) != null
+            RangeBreaks.asked(said) != null || PriorDay.asked(said) != null || LastHour.asked(said) != null || NeedsTrue.asked(said) || Clarity.asked(said) != null || ZerodhaSession.asked(said) != null || Tour.asked(said) || WrongThing.asked(said) != null || WrongThing.objected(said) || OrderWhy.asked(said) != null
         return ((if (asSaid) null else Understand.questions(null, said)) ?: listOf(said)).map { kind(it, 0) }
     }
 
@@ -61,7 +61,7 @@ class CoverageTest {
             if (DataAge.asked(q)) return Kind.JARVIS
             if (Honest.asked(q) != null) return Kind.HONEST
             if (Thinking.asked(q) != null || Consistency.asked(q)) return Kind.JARVIS
-            if (CoPilot.asked(q) || ChainDrift.asked(q) != null || ChainIntel.asked(q) != null || DayClock.asked(q) != null || GapRecord.asked(q) != null || RangeBreaks.asked(q) != null || PriorDay.asked(q) != null || Weekdays.asked(q) != null || DayCompare.asked(q) != null || Structure.asked(q) != null ||
+            if (CoPilot.asked(q) || ChainDrift.asked(q) != null || ChainIntel.asked(q) != null || DayClock.asked(q) != null || GapRecord.asked(q) != null || RangeBreaks.asked(q) != null || PriorDay.asked(q) != null || LastHour.asked(q) != null || Weekdays.asked(q) != null || DayCompare.asked(q) != null || Structure.asked(q) != null ||
                 MindChange.asked(q) || Breadth.asked(q) != null || TradeCase.asked(q) || Scenarios.asked(q) != null ||
                 Causes.asked(q) != null) return Kind.MARKET
         }
@@ -437,7 +437,7 @@ class CoverageTest {
      * ask(): Boss's learned words and routine as said, fillers and follow-ups, then - for a question not said with
      * something to do (IraHub's `bundled`, [Bundle.acts]) - DayJournal, AlertSense, Airtime, Hearing, PatternCalls, Clarity,
      * WordFit, AskedAgain, FigureFirst, WrongThing, NewsMoves, TaxExport, Learnings, PreMarket, Headroom, BotTrades, SaidAbout, WeekAhead, DataAge, Honest, Thinking,
-     * Consistency, CoPilot, ChainDrift, ChainIntel, DayClock, GapRecord, RangeBreaks, PriorDay, Weekdays, DayCompare, Structure, MindChange, Breadth, TradeCase,
+     * Consistency, CoPilot, ChainDrift, ChainIntel, DayClock, GapRecord, RangeBreaks, PriorDay, LastHour, Weekdays, DayCompare, Structure, MindChange, Breadth, TradeCase,
      * Scenarios, Causes, Agenda, Improve; the reminders and Jarvis's own checks,
      * Distance... Outlook, NewsDesk, down to the account's sections (PositionHealth, BotHealth and NeedsTrue are its HEALTH,
      * BOTS and NEED; HeardBack is the voice path's own read-back, never a branch of the hub), a pattern explained, Solo and IraHub.reasoned's readers over the candles, each in its
@@ -457,7 +457,7 @@ class CoverageTest {
             PatternCalls.asked(said) || Learnings.asked(said) != null || Learnings.undoAsked(said) || NewsMoves.asked(said) != null ||
             PreMarket.asked(said) ||
             ChainDrift.asked(said) != null || Headroom.asked(said) != null || BotTrades.asked(said) != null || NeedsTrue.asked(said) || Clarity.asked(said) != null || DayClock.asked(said) != null ||
-            SaidAbout.asked(said) != null || GapRecord.asked(said) != null || WordFit.asked(said) != null || Causes.asked(said) != null || WeekAhead.asked(said) != null || AskedAgain.asked(said) || FigureFirst.asked(said) != null || MindChange.asked(said) || Weekdays.asked(said) != null || DayCompare.asked(said) != null || RangeBreaks.asked(said) != null || PriorDay.asked(said) != null || ZerodhaSession.asked(said) != null || Tour.asked(said) || WrongThing.asked(said) != null || WrongThing.objected(said) || OrderWhy.asked(said) != null
+            SaidAbout.asked(said) != null || GapRecord.asked(said) != null || WordFit.asked(said) != null || Causes.asked(said) != null || WeekAhead.asked(said) != null || AskedAgain.asked(said) || FigureFirst.asked(said) != null || MindChange.asked(said) || Weekdays.asked(said) != null || DayCompare.asked(said) != null || RangeBreaks.asked(said) != null || PriorDay.asked(said) != null || LastHour.asked(said) != null || ZerodhaSession.asked(said) != null || Tour.asked(said) || WrongThing.asked(said) != null || WrongThing.objected(said) || OrderWhy.asked(said) != null
         val qs = if (asSaid || understood || cleaned) null else Understand.questions(null, said)?.takeIf { it.isNotEmpty() && it != listOf(said) }
         if (qs != null) return if (qs.size == 1) feature(qs[0], cleaned = true) else qs.joinToString(" & ") { feature(it, understood = true) }
         val q = said
@@ -500,6 +500,7 @@ class CoverageTest {
         if (alone && GapRecord.asked(q) != null) return "GapRecord"
         if (alone && RangeBreaks.asked(q) != null) return "RangeBreaks"
         if (alone && PriorDay.asked(q) != null) return "PriorDay"
+        if (alone && LastHour.asked(q) != null) return "LastHour"
         if (alone && Weekdays.asked(q) != null) return "Weekdays"
         if (alone && DayCompare.asked(q) != null) return "DayCompare"
         if (alone && Structure.asked(q) != null) return "Structure"
@@ -738,6 +739,10 @@ class CoverageTest {
         "does banknifty usually hold below yesterday's low after breaking it" to "PriorDay",
         "how often does nifty take out the prior day high or low" to "PriorDay", "prior day high low stats for sensex" to "PriorDay",
         "kal ka high todne ke baad kitni baar upar band hota hai" to "PriorDay",
+        // ---- LastHour: the last hour against the day's direction (round 18) ----
+        "how often does the last hour continue the day's direction" to "LastHour", "does nifty usually reverse in the last hour" to "LastHour",
+        "on up days does banknifty usually extend in the closing hour" to "LastHour", "last hour record for sensex" to "LastHour",
+        "how often does the final hour reverse on down days" to "LastHour", "aakhri ghante mein kitni baar palat jata hai" to "LastHour",
         // ---- Weekdays: each weekday's record, and expiry days against the rest (round 15) ----
         "are mondays more volatile" to "Weekdays", "which day of the week moves the most" to "Weekdays",
         "how does nifty usually do on fridays" to "Weekdays", "weekday record for banknifty" to "Weekdays",
@@ -1082,6 +1087,8 @@ class CoverageTest {
             ("how often do orb breakouts fail" to "RangeBreaks") to ("is the orb arm behaving" to "Account:BOTS"),
             // Market intelligence round 17: the prior-day record beside today against yesterday.
             ("how often does nifty break the previous day's high" to "PriorDay") to ("how is today different from yesterday" to "DayCompare"),
+            // Market intelligence round 18: the last-hour record beside how busy the last hour is.
+            ("does nifty usually reverse in the last hour" to "LastHour") to ("is the last hour usually volatile" to "DayClock"),
         )) { assertEquals(a.second, feature(a.first), a.first); assertEquals(b.second, feature(b.first), b.first) }
         // Boss's Hinglish what-if is a what-if; a forecast, advice or his own book in Hindi never is.
         for (s in listOf("kal nifty ka kya hoga", "nifty 200 points gir jayega kya", "agar nifty 1% gira to kya buy karu",
