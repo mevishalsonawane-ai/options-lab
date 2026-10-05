@@ -53,5 +53,33 @@ internal object IraExpert {
             }
         }
         if (changed) runCatching { com.optionslab.app.security.SecurePrefs.put(TOLD, told.joinToString("|")) }
+        runCatching { graduationWatch() }
+    }
+
+    private const val GRADUATED = "jarvis.expert.graduated"
+
+    /**
+     * The first time Jarvis's own trades (or Solo's) pass their paper test, what that means and what Boss would do to
+     * let them go live is told once ([com.optionslab.ira.Graduation]) - on an unlocked phone (the record's rupees are
+     * account data). Words only: no switch, mode or order is touched; real orders stay behind his fingerprint.
+     */
+    private fun graduationWatch() {
+        if (runCatching { IraHub.locked() }.getOrDefault(true)) return
+        val c = IraHub.appContext() ?: return
+        val done = runCatching { com.optionslab.app.security.SecurePrefs.getString(GRADUATED) }.getOrNull()?.split('|')?.filter { it.isNotBlank() }?.toMutableSet() ?: mutableSetOf()
+        val records = mapOf(
+            com.optionslab.ira.Graduation.Who.JARVIS to runCatching { IraNewsTrades.closedRecord() }.getOrDefault(emptyList()),
+            com.optionslab.ira.Graduation.Who.SOLO to runCatching { IraSolo.closedRecord() }.getOrDefault(emptyList()))
+        val due = com.optionslab.ira.Graduation.due(done, records.mapValues { (_, r) -> r.isNotEmpty() && com.optionslab.ira.JarvisTrades.proven(r) == null })
+        if (due.isEmpty()) return
+        val aiLive = !IraNewsTrades.paperFirst
+        val appLive = runCatching { com.optionslab.app.data.AppSettings.load().live }.getOrDefault(false)
+        for (who in due) {
+            val text = com.optionslab.ira.Graduation.say(who, records[who].orEmpty(), aiLive, appLive)
+            done += who.key
+            IraActivity.add("Told Boss ${who.whose} passed their paper test (once; nothing switched).")
+            JarvisPopup.show(c, "Boss, ${who.whose} passed their paper test", text); IraHub.note(text)
+        }
+        runCatching { com.optionslab.app.security.SecurePrefs.put(GRADUATED, done.joinToString("|")) }
     }
 }

@@ -544,12 +544,15 @@ internal object IraSolo {
             if (w.isEmpty()) " At %02d:%02d nothing was set up yet.".format(at.hour, at.minute) else " At %02d:%02d Solo saw: ".format(at.hour, at.minute) + w + "."
         } ?: "")
 
-    /** Null when Solo's own paper record has earned real orders (the same bar as Jarvis's trades), else why not. */
-    fun provenWhy(): String? = com.optionslab.ira.JarvisTrades.proven(all().filter { it.closed && it.net != null }
+    /** Solo's closed record as [provenWhy] judges it: its own paper trades and its setups taken through Boss's approval. */
+    fun closedRecord(): List<com.optionslab.ira.JarvisTrades.Closed> = all().filter { it.closed && it.net != null }
         .map { com.optionslab.ira.JarvisTrades.Closed(LocalDate.parse(it.day), it.net!!, false) } +
         // Its setups taken through Boss's approval (on Zerodha too) count against it: losing real money takes it back.
         runCatching { IraNewsTrades.all().filter { it.closed && it.result != null && it.headline.startsWith("pattern: solo") }
-            .map { com.optionslab.ira.JarvisTrades.Closed(LocalDate.parse(it.day), it.result!!, false) } }.getOrDefault(emptyList()))
+            .map { com.optionslab.ira.JarvisTrades.Closed(LocalDate.parse(it.day), it.result!!, false) } }.getOrDefault(emptyList())
+
+    /** Null when Solo's own paper record has earned real orders (the same bar as Jarvis's trades), else why not. */
+    fun provenWhy(): String? = com.optionslab.ira.JarvisTrades.proven(closedRecord())
         ?.replace("My trades", "Solo's trades")?.replace("My paper trades", "Solo's paper trades")
 
     /** Solo's paper record in one line. */
