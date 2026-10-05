@@ -127,6 +127,8 @@ object WordFit {
         return out
     }
 
+    private val SAFETY_RX = Regex("(?i)\\b(?:order|orders|live|real|fingerprint|pin|lock|locked|guard|guards|kill switch|stop loss|stoploss|limit)\\b")
+
     private fun num(s: String): Int? = s.replace(",", "").toIntOrNull()
 
     /** One clause: its single word and single number checked, and the clause with the word set right; null: nothing to check. */
@@ -146,6 +148,13 @@ object WordFit {
         val ratios = RATIO_RX.findAll(c).toList()
         val pcts = PCT_RX.findAll(c).toList()
         if (ratios.size + pcts.size != 1) return null
+        // The record must sit beside the word: nothing between them that starts another fact (a comma, "and", "but"), so
+        // "I never trade live, and 3 of my last 10 calls were right" is never made "sometimes" (review, 5 Oct).
+        val at = (ratios.firstOrNull() ?: pcts.first()).range
+        val between = if (at.first > w.range.last) c.substring(w.range.last + 1, at.first) else c.substring(at.last + 1, w.range.first)
+        if (Regex(";|\\b(?:and|but|while|whereas)\\b", RegexOption.IGNORE_CASE).containsMatchIn(between)) return null
+        // A rule or a safety line is never re-worded: orders, live, the fingerprint, the PIN, the lock, the guards.
+        if (SAFETY_RX.containsMatchIn(c)) return null
         val (k, n) = if (ratios.size == 1) {
             val k = num(ratios[0].groupValues[1]) ?: return null
             val n = num(ratios[0].groupValues[2]) ?: return null
@@ -160,6 +169,8 @@ object WordFit {
         val rate = k.toDouble() / n
         if (word.fits(rate)) return Fit(form, word, k, n, null) to c
         val to = forRate(rate)
+        // "Always" and "never" are absolutes - often a rule, not a tally: never written in or out, only noted as fitting.
+        if (word == Word.ALWAYS || word == Word.NEVER || to == Word.ALWAYS || to == Word.NEVER) return null
         val canon = to.canon ?: return null
         val said = if (w.value.first().isUpperCase()) canon.replaceFirstChar { it.uppercase() } else canon
         return Fit(form, word, k, n, to) to (c.substring(0, w.range.first) + said + c.substring(w.range.last + 1))

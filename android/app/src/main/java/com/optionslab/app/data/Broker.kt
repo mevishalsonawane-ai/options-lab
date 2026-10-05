@@ -235,8 +235,13 @@ object Broker {
                         // One request's TokenException is checked against the profile before the day's session is
                         // dropped: a single refused call (a glitch on one endpoint) no longer logs Boss out for the day.
                         // The reason is kept for the diagnostics (the path only, never its query; Kite's message has no key).
-                        val kept = path.substringBefore('?') != "/user/profile" && auth &&
-                            runCatching { callInner("GET", "/user/profile", null, true, false, false, false) }.isSuccess
+                        // Only the profile refused for its token ends the day: a network failure or a timeout on the
+                        // check keeps the session (the glitch case), and a cancel is passed on, never read as an end.
+                        val kept = path.substringBefore('?') != "/user/profile" && auth && try {
+                            callInner("GET", "/user/profile", null, true, false, false, false); true
+                        } catch (e: kotlinx.coroutines.CancellationException) { throw e
+                        } catch (e: KiteError) { e.type != "TokenException"
+                        } catch (_: Exception) { true }
                         Diag.record("info", "Zerodha TokenException on $method ${path.substringBefore('?')}: $msg" +
                             if (kept) " (the profile still answers: session kept)" else " (session ended)")
                         if (kept) throw KiteError(type, msg)

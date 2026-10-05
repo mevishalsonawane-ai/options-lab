@@ -27,11 +27,11 @@ class WordFitTest {
     @Test fun `each word to its range`() {
         fun fix(w: String, k: Int, n: Int) = WordFit.check("It $w went up, $k of the last $n days.").text.removePrefix("It ").substringBefore(" went")
         assertEquals("almost always", fix("rarely", 11, 12))
-        assertEquals("usually", fix("never", 8, 12))
+        assertEquals("never", fix("never", 8, 12))           // absolutes are rules as often as tallies: never re-worded
         assertEquals("often", fix("rarely", 5, 10))
         assertEquals("rarely", fix("often", 1, 12))
-        assertEquals("never", fix("sometimes", 0, 10))
-        assertEquals("always", fix("often", 10, 10))
+        assertEquals("sometimes", fix("sometimes", 0, 10))   // nor written in
+        assertEquals("often", fix("often", 10, 10))
         assertEquals("almost always", fix("almost always", 9, 10))
         assertEquals("hardly ever", fix("hardly ever", 1, 10))
     }
@@ -121,5 +121,14 @@ class WordFitTest {
         assertTrue(m.contains("1 set right"), m)
         assertTrue(WordFit.saySwitched(off = true, was = false).startsWith("Done, Boss"))
         assertTrue(WordFit.saySwitched(off = false, was = false).contains("already"))
+    }
+
+    @Test fun aRuleOrAnUnrelatedFactIsNeverReworded() {
+        for (t in listOf("I never trade live, and 3 of my last 10 calls were right.",
+                "Real orders always need your fingerprint, 2 of 9 alerts were said aloud.",
+                "Orders usually go through: 2 of 10 were refused.",
+                "It always held, but 4 of the last 12 failed."))
+            kotlin.test.assertEquals(t, WordFit.check(t).text, t)
+        kotlin.test.assertEquals("It sometimes went its way: 4 of the last 12.", WordFit.check("It usually went its way: 4 of the last 12.").text)
     }
 }
