@@ -124,7 +124,9 @@ object OpenReach {
         "overnight|night|raat|next day|day after|agle din|candle|candles|week|weekly|weeks|hafte|month|monthly|year|yearly|expiry|expiries|" +
         "call|calls|put|puts|premium|premiums|option|options|ce|pe|strike|straddle|strangle|gold|vix|fear|position|positions|portfolio|stop|stops|sl|" +
         // How much of a run from the open was given back is GiveBack's record (round 39).
-        "give back|gives back|gave back|giving back|given back|retrace|retraces|retracement|pullback|pullbacks|pull back|pulls back) ")
+        "give back|gives back|gave back|giving back|given back|retrace|retraces|retracement|pullback|pullbacks|pull back|pulls back|" +
+        // ... also as said in round 27: given up, faded, the recognizer's "gift back" / "give bag", or the gains kept.
+        "give up|gives up|fade|fades|fading|gift back|gifts back|give bag|gives bag|keep its gains|keeps its gains|hold its gains|holds its gains) ")
     /**
      * A day of the week (Weekdays'), a part of the day or a clock time ("in the morning", "afternoons", "2 pm", "after 2
      * pm": the day's own clock, not the whole day's reach), and a count of sessions ("in 3 sessions", "3 day move":

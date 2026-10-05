@@ -72,7 +72,7 @@ object Charges {
 
     // Usefulness round 34 (Boss saw about Rs 2,500 a day in charges and was surprised): "why are my charges so high",
     // "charges itne zyada kyun", "what is eating my charges", "where are my charges going".
-    private const val HIGH = "(so |this |that |too |very |such |itne |itna |itni |bahut |kaafi )?(high|much|big|large|huge|expensive|heavy|zyada|jyada|jada|zada)"
+    private const val HIGH = "(so |this |that |too |very |such |itne |itna |itni |bahut |kaafi )?(high|much|big|large|huge|expensive|heavy|zyada|jyada|jada|zada|more|higher)"
     private const val KYUN = "(kyun|kyu|kyon|kiyon|kiu|why)"
     private val WHY = Regex(" (why (are|is|were|was|have|has) (my |the |all |all the |today s |todays |aaj ke )?$CHARGE (been |gone |become )?$HIGH" +
         "|why (so much|so many|such high|such big|this much|that much|such huge) (in |on )?(my |the )?$CHARGE" +
@@ -83,13 +83,48 @@ object Charges {
         "|(my |the )$CHARGE (are|is|were|was) (too|so|very|way too) (high|much|big)" +
         "|$CHARGE ($HIGH )?$KYUN|$CHARGE ($KYUN )?(itne|itna|itni|bahut|kaafi) |$KYUN (itne|itna|itni|bahut|kaafi|zyada|jyada) (zyada |jyada )?$CHARGE" +
         "|(itne|itna|itni|bahut|kaafi) (zyada |jyada )?$CHARGE ($KYUN|lage|lag rahe|kat rahe|gaye)" +
-        "|(break ?down|breakup|break up|split) (of )?(my |today s |todays |this week s )$CHARGE|(my |today s |todays )$CHARGE (break ?down|breakup|break up|split)) ")
+        "|(break ?down|breakup|break up|split) (of )?(my |today s |todays |this week s )$CHARGE|(my |today s |todays )$CHARGE (break ?down|breakup|break up|split)" +
+        // Understanding round 27: "charges itne kyun lage", "charges itne kaise lage", "charges bahut zyada lag rahe hain", "how
+        // come charges are so high", "why charges so high", "why high charges", "reason for high charges", "why are my charges more".
+        "|$CHARGE (itne|itna|itni|bahut|kaafi) (zyada |jyada )?($KYUN|kaise|kese)" +
+        "|$CHARGE (itne|itna|itni|bahut|kaafi|zyada|jyada) (zyada |jyada )?(lag rahe|lag raha|lag rahi|lagte|lagta|kat rahe|kat raha|ja rahe|ja raha|aa rahe|aa raha|aaye|aaya)" +
+        "|how come (my |the |all |all the |today s |todays )?$CHARGE (are|is|were|was) (so |too |this |that |very |such )?(high|much|big|huge|expensive|heavy|more|higher)" +
+        "|why (my |the )?$CHARGE (are |is |were |was )?$HIGH|why (so |too |such )?(high|heavy|huge|big) $CHARGE" +
+        "|(reason|reasons|wajah|vajah) (for|of|behind|ki) (the |my |such |these )?(high|heavy|huge|big|so much|so many|more|zyada) $CHARGE) ")
 
-    /** Does [text] ask WHY the charges are so high (what drove them: orders, fills, who placed them, the kinds of charge)? */
+    /**
+     * The day's charges asked in detail (understanding round 27): what Zerodha actually charged - its contract note's figure
+     * ("what did Zerodha actually charge", "contract note ke hisaab se charges", "exact charges", "is that charge an
+     * estimate") - and the charges of one kind of trade ("charges on my futures", "delivery charges", "DP charges kitne
+     * lage"). Answered as [whyAsked]'s is: the orders, fills and charges by kind of the day (or the span said), each fill on
+     * its own schedule, with the contract note's figure for today when Zerodha gave one.
+     */
+    private const val SEG = "(dp|demat|delivery|futures|future|fut|stock|stocks|share|shares|equity|intraday|f o|fno|cnc|mis)"
+    private const val NOTE = "(contract|contact|contracts|contacts) notes?"
+    private val DETAIL = Regex(" ((what|how much) (did|has|have) (zerodha|kite|the broker|my broker) (actually |really |exactly |finally )?(charge|charged|take|took|cut|deduct|deducted|bill|billed)" +
+        "|zerodha ne (actually |asal mein |asal me |sach mein )?(kitna|kitne|kitni|kya) $CHARGE? ?(kiya|kiye|liya|liye|kaata|kaate|kata|kate|lagaya|lagaye|charge kiya|charge kiye)" +
+        "|$NOTE ((ke )?(hisaab|hisab) se |ke mutabik |ke anusar |according |wale |ka |ke |ki |says? |shows? )?$CHARGE" +
+        "|$CHARGE (as per|according to|from|in|per|on|by|as on) (the |my |today s |todays |aaj ke |aaj ka |aaj ki )?$NOTE" +
+        "|(what|kya) (does|did|do) (the |my |today s |todays |aaj ka |aaj ke |aaj ki )?$NOTE (say|show|says|shows)|$NOTE (kya|what) (kehta|kehti|bolta|bolti|batata|batati|says)" +
+        // ("The actual charge of a Nifty option" is the schedule's question, not the day's: "for today" and "on my" only.)
+        "|(exact|actual|real|final|precise|accurate|asli|sahi) (zerodha |broker )?$CHARGE(?! (of|for|on|per) (?!my |mere |today|todays|the day))" +
+        "|(is|are) (this |that |these |those |the |my |today s |todays )?$CHARGE (figure |number |amount )?(exact|accurate|real|final|an estimate|estimated|just an estimate)" +
+        "|(my|mine|today s|todays|aaj ke|aaj ka|aaj ki|total|how much|kitna|kitne|kitni) (in |on )?$SEG $CHARGE" +
+        "|$SEG (ke |ka |ki |wale |par |pe )?$CHARGE (kitne|kitna|kitni|how much|lage|laga|lagi|today|this week|this month|last week|last month|so far)" +
+        "|$CHARGE (on|for|of|in) (my|mere|the) $SEG|$CHARGE (on|for|in) $SEG( trades| trade| positions| orders)? (today|this week|this month|last week|last month|so far)) ")
+    /** "DP charges", "delivery charges today", "futures charges": the kind of trade and the charges said alone. */
+    private val DETAIL_ALONE = rx("^ $SEG $CHARGE( today| this week| this month| so far)?( please| boss| jarvis)? $|^ $CHARGE (break ?down|breakup|break up)( today| please| boss)? $")
+
+    /**
+     * Does [text] ask WHY the charges are so high (what drove them: orders, fills, who placed them, the kinds of charge), or
+     * for the day's charges in that detail - Zerodha's exact figure, or one kind of trade's ([DETAIL])?
+     */
     fun whyAsked(text: String): Boolean {
         val raw = norm(text)
         if (ONE.containsMatchIn(raw)) return false
-        return WHY.containsMatchIn(raw) || WHY.containsMatchIn(norm(Ask.reading(text)))
+        val read = norm(Ask.reading(text))
+        return WHY.containsMatchIn(raw) || WHY.containsMatchIn(read) || DETAIL.containsMatchIn(raw) || DETAIL.containsMatchIn(read) ||
+            DETAIL_ALONE.containsMatchIn(raw)
     }
 
     /** The span asked about; this month when none is said. */
@@ -298,12 +333,15 @@ object Charges {
         out += "$label charges $period: ${amt(total)}${if (estimated) " (the app's estimate)" else ""}, $driver$placed."
         out += "$label $period: ${plural(orders, "order")}, ${plural(w.size, "fill")}" +
             (if (w.size > orders) " (an order filled in pieces pays its Rs 20 brokerage once)" else "") + ", ${plural(rounds, "round trip")} closed."
-        out += "$label split: " + KINDS.joinToString(", ") { (k, said) -> "$said ${amt(parts.getValue(k))}" } + "; ${amt(total)} in all."
+        // A delivery sale's DP charge (round 27: "DP charges kitne lage") is said beside the kinds when there was one.
+        val dp = parts["DP charges"]?.takeIf { it >= 0.005 }
+        out += "$label split: " + KINDS.joinToString(", ") { (k, said) -> "$said ${amt(parts.getValue(k))}" } +
+            (if (dp != null) ", DP ${amt(dp)}" else "") + "; ${amt(total)} in all."
         if (rounds > 0) out += "$label about ${amt(total / rounds)} in charges a round trip, " +
             "${"%.1f".format(Locale.ENGLISH, orders.toDouble() / rounds)} orders a round trip (one order in and one out is Rs 40 brokerage, Rs 47 with GST)."
         out += "$label orders by who placed them: " + who.joinToString(", ") { "${it.name} ${plural(it.orders, "order")} (${amt(it.charges)})" } + "."
         if (who.size > 1) out += "$label most orders: ${top.name}, ${top.orders} of $orders (${pct(top.orders.toDouble() / orders)}), ${amt(top.charges)} of the ${amt(total)} in charges."
-        exact?.takeIf { PnlCharges.shown(it) && span == null && from == today }?.let { out += "$label: Zerodha's own contract note for ${day(from)} says ${amt(it)}." }
+        exact?.takeIf { PnlCharges.shown(it) && (span == null || span == Span.TODAY) && from == today }?.let { out += "$label: Zerodha's own contract note for ${day(from)} says ${amt(it)}." }
         return out
     }
 }

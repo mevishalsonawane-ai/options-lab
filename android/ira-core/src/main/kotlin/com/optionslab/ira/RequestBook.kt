@@ -28,7 +28,8 @@ object RequestBook {
 
     private fun norm(text: String) = " " + spacedWords(text.lowercase(Locale.ENGLISH).replace("’", "").replace("'", "")) + " "
 
-    private const val REQ = "(requests?|approvals?)"
+    // (Round 27: the recognizer's "reqests", "requsts", "aprovals".)
+    private const val REQ = "(requests?|reqests?|requsts?|approvals?|aprovals?)"
 
     /** The wake word and "can you tell me", said first or last. */
     private val POLITE = rx("^ ((hey|ok|okay|hi) )?(jarvis|ira|boss) | (can|could|would|will) you (please )?(tell|show|let) me( know)? | please | (jarvis|ira|boss) $")
@@ -62,7 +63,15 @@ object RequestBook {
         // Understanding round 26: "anything pending for me", "is anything awaiting approval", "request status".
         "| (anything|something|kuch|koi cheez) pending (for|on) (me|boss) " +
         "| (awaiting|awaits) (my |bosss |boss )?(approval|sign off|yes|nod|answer) " +
-        "| $REQ (status|ka status) | status of (my |the )?$REQ ")
+        "| $REQ (status|ka status) | status of (my |the )?$REQ " +
+        // Understanding round 27: "mere liye kuch pending hai", "request aaya kya", "new requests", "approval chahiye kya",
+        // "do you need anything from me".
+        "| (mere liye|mere lie|for me) (kuch|koi|koi cheez|anything|something) (pending|waiting) " +
+        "| (kuch|koi cheez|anything|something) (pending|waiting) (hai |he )?(mere liye|mere lie) " +
+        "| $REQ (aaya|aayi|aaye|aai|ayi|aya|aye) " +
+        "|^ (new|naye|nayi|naya|fresh) $REQ( hai| hain| kya| aaye| aayi| aaya)* $" +
+        "| (approval|sign off|manzoori|manjoori) (chahiye|chahie|chaiye)( kya| hai kya| hai)? $" +
+        "| (do|does) (you|jarvis) need (anything|something|kuch) from (me|boss) ")
     /** "What's in the Requests panel": its list asked, before [NOT] takes the panel for the app's own question (round 26). */
     private val IN_PANEL = rx(" (whats|what is|what all is) (in|inside|on) (the |my )?$REQ (panel|screen|tab|list|page) " +
         "| $REQ (panel|screen|tab|list|page) (me|mein|main) (kya|kya kya) (hai|hain) ")

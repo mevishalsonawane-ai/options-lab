@@ -97,21 +97,33 @@ object GiveBack {
     /** Giving the run back, or the pullback inside it. */
     private val GIVE = Regex(" (give back|gives back|gave back|giving back|given back|give it back|gives it back|hand back|hands back|" +
         "give up|gives up|retrace|retraces|retracing|retracement|retracements|pull back|pulls back|pullback|pullbacks|" +
-        "wapas deta|wapas deti|wapas de deta|waapas deta|vapas deta|kitna wapas|kitna waapas|kitna vapas) ")
+        "wapas deta|wapas deti|wapas de deta|waapas deta|vapas deta|kitna wapas|kitna waapas|kitna vapas|" +
+        // Understanding round 27: "fade", the recognizer's "gift back" / "give bag", "kitni wapas jaati hai".
+        "fade|fades|fading|gift back|gifts back|give bag|gives bag|kitni wapas|kitne wapas|wapas jata|wapas jaata|wapas jati|wapas jaati|" +
+        "wapas aata|wapas aati|wapas chala jata) ")
+    /** "Does Nifty keep its gains", "how much of the run does it keep": the give-back said by what is kept (round 27). */
+    private val KEEP = Regex(" (does|do) (\\w+ ){0,2}(usually |normally |typically |generally )?(keep|hold|hold on to|retain) (its|the|their) (gains|run|rally|move) " +
+        "| how much of (the |its |a )?(\\w+ )?(run|rally|move|gains) (does|do) (\\w+ ){0,2}(usually |normally |typically |generally )?(keep|hold|retain) ")
     /** The run itself said. */
     private val RUN = Regex(" (run|runs|ran|running|rally|rallies|rallied|rise|rises|rose|move|moves|moved|surge|surges|climb|climbs|" +
-        "fall|falls|fell|drop|drops|slide|slides|gain|gains|trend|chalne|chalta|chal ke|chadhne|chadhta|badhne|girne|girta) ")
+        "fall|falls|fell|drop|drops|slide|slides|gain|gains|trend|chalne|chalta|chal ke|chadhne|chadhta|badhne|girne|girta|" +
+        "rallying|rising|moving|surging|climbing|falling|dropping|gaining) ")
     /** Asked of the record. */
     private val HOW = Regex(" (how much|how far|how deep|how often|how many times|what share|what percent|what percentage|usually|normally|" +
         "typically|generally|tend to|tends to|on average|average|median|historically|kitna|kitni|kitni baar|aksar|zyada tar|mostly|often) ")
     /** Named as a record. */
     private val NAME = Regex(" (give back|giveback|pullback|pull back|retracement|run and pullback) (record|records|stats|statistics|history|data) ")
     /** "Pullback after a run", "give back after a rally": the record named by what it measures. */
-    private val AFTER_RUN = Regex(" (pullback|pullbacks|pull back|give back|retracement) after (a |the )?(run|runs|rally|rallies|move|moves|trend) ")
+    private val AFTER_RUN = Regex(" (pullback|pullbacks|pull back|give back|retracement) after (a |the )?" +
+        // "Give back after a 100 point run" (round 27): the size said before the run.
+        "(\\d{1,5}(\\.\\d+)? ?(points|point|pts|pt|%|percent|per cent) )?(run|runs|rally|rallies|move|moves|trend) ")
     /** From the open, or a first stretch of the session. */
     private val OPENISH = Regex(" (from the open|from its open|from open|from the opening|open se|first hour|first half hour|first half an hour|" +
         "first \\d+ (minutes|minute|mins|min)|first two hours|first 2 hours|pehle ghante|pehla ghanta|pehle aadhe ghante|pehle adhe ghante|" +
-        "in the morning|subah) ")
+        "in the morning|subah|" +
+        // "The opening run", "the morning rally" (round 27): the run from the open named by when it came.
+        "opening (run|move|rally|surge|climb|spike|push|drop|fall|slide)|morning (run|move|rally|surge|climb|spike|push|drop|fall|slide|gains)) ")
+    private val MORNING_RUN = Regex(" morning (run|move|rally|surge|climb|spike|push|drop|fall|slide|gains) ")
     private val SIZE = Regex(" (\\d+(?:\\.\\d+)?) ?(%|percent|per cent|pc|pct) ")
     private val POINTS = Regex(" (\\d{1,5}(?:\\.\\d+)?) ?(points|point|pts|pt) ")
     private val FIRST_MIN = Regex(" first (\\d+) (minutes|minute|mins|min) ")
@@ -146,7 +158,7 @@ object GiveBack {
             rx(" (first two hours|first 2 hours) ").containsMatchIn(t) -> 120
             rx(" (first half hour|first half an hour|pehle aadhe ghante|pehle adhe ghante) ").containsMatchIn(t) -> 30
             rx(" (first hour|pehle ghante|pehla ghanta) ").containsMatchIn(t) -> 60
-            rx(" (in the morning|subah) ").containsMatchIn(t) -> MORNING
+            rx(" (in the morning|subah) ").containsMatchIn(t) || MORNING_RUN.containsMatchIn(t) -> MORNING
             else -> null
         }
     }
@@ -159,7 +171,7 @@ object GiveBack {
         val pc = SIZE.find(t)?.groupValues?.get(1)?.toDoubleOrNull()?.takeIf { it > 0 }
         val sized = p != null || pc != null
         val named = NAME.containsMatchIn(t) || AFTER_RUN.containsMatchIn(t)
-        val ok = named || (GIVE.containsMatchIn(t) && HOW.containsMatchIn(t) && (sized || OPENISH.containsMatchIn(t)) &&
+        val ok = named || ((GIVE.containsMatchIn(t) && HOW.containsMatchIn(t) || KEEP.containsMatchIn(t)) && (sized || OPENISH.containsMatchIn(t)) &&
             (RUN.containsMatchIn(t) || OPENISH.containsMatchIn(t)))
         if (!ok) return null
         val b = by(t)

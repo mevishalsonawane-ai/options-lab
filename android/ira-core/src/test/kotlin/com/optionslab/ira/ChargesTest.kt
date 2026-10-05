@@ -214,6 +214,19 @@ class ChargesTest {
         assertFalse(Charges.whyLines("Zerodha", day, dayTrips, Charges.Span.WEEK, today, estimated = true, exact = 251.4).joinToString().contains("contract note"))
     }
 
+    /** Round 27: "what did Zerodha actually charge today" - the contract note said for today named; a delivery sale's DP charge in the split. */
+    @Test fun todayNamedKeepsTheContractNoteAndDpIsSaid() {
+        val z = Charges.whyLines("Zerodha", day, dayTrips, Charges.Span.TODAY, today, estimated = true, exact = 251.4)
+        assertEquals("Zerodha: Zerodha's own contract note for 8 Oct says Rs 251.", z.last())
+        // An option-only day says no DP charge.
+        assertFalse(z.joinToString().contains("DP "), z.joinToString())
+        // A share bought and then sold from the demat (CNC): the DP charge, Rs 13 + GST, said beside the kinds and in the total.
+        val shares = listOf(Charges.Leg(at(today, 10, 0), "s1", "Manual", "SELL", 1_000.0, 10, "INFY"))
+        val all = Charges.whyLines("Paper", shares, emptyList(), null, today).joinToString("\n")
+        assertTrue(all.contains(", DP Rs 13; Rs "), all)
+        assertEquals(Charges.split(shares).values.sum(), PnlCharges.estimate(listOf(PnlCharges.Fill("SELL", 1_000.0, 10, "s1", symbol = "INFY", day = today.toString()))), 0.01)
+    }
+
     @Test fun whyOverAWeekTheLastDayAndNone() {
         val week = Charges.whyLines("Paper", day, dayTrips, Charges.Span.WEEK, today)
         assertTrue(week[0].startsWith("Paper charges this week (5 Oct to 8 Oct): Rs "), week[0])

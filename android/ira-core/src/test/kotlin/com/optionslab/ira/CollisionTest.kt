@@ -2587,6 +2587,99 @@ class CollisionTest {
         assertEquals(-1, DayAfter.asked("after nifty tanks what happens next day")?.side)
     }
 
+    /**
+     * Round 27: the newest reads as Boss says them - GiveBack ("how much of the opening run / morning rally does Nifty give
+     * back", "give up", "fade", "does Nifty keep its gains", the recognizer's "gift back" / "give bag", "first hour ki rally
+     * kitni wapas jaati hai", "give back after a 100 point run"), MoveTime ("50 point chalne me kitna time lagta hai", "time
+     * Nifty takes to move 50 points", "kitne minute me karta hai"), why the charges are so high ("charges itne kyun lage",
+     * "charges bahut zyada lag rahe hain", "how come charges are so high", "why high charges", "reason for high charges"),
+     * Zerodha's exact charges ("what did Zerodha actually charge", "contract note ke hisaab se charges", "exact charges", "is
+     * that charge an estimate"), one kind of trade's charges ("charges on my futures", "delivery charges", "DP charges",
+     * "intraday charges") and the Requests panel ("mere liye kuch pending hai", "request aaya kya", "new requests", "approval
+     * chahiye kya", "do you need anything from me", "any thing pending", "reqests pending").
+     */
+    private val ROUND27 = listOf(
+        // GiveBack
+        "how much of the morning rally does nifty give back" to "GiveBack", "how much of the opening run does nifty usually give back" to "GiveBack",
+        "how much of its opening move does nifty usually give back" to "GiveBack", "how much does nifty usually give up after a 1% run from the open" to "GiveBack",
+        "how much does nifty gift back after a 100 point run from the open" to "GiveBack", "how much does nifty give bag after a 100 point run from the open" to "GiveBack",
+        "does nifty keep its gains after a 1% run from the open" to "GiveBack", "how much of the run does nifty keep after a 1% move from the open" to "GiveBack",
+        "how much does nifty fade after a 1% run from the open" to "GiveBack", "how much does nifty fade after rallying 100 points from the open" to "GiveBack",
+        "first hour ki rally kitni wapas jaati hai" to "GiveBack", "give back after a 100 point run" to "GiveBack",
+        // MoveTime
+        "nifty 50 point chalne me kitna time lagta hai" to "MoveTime", "time nifty takes to move 50 points" to "MoveTime",
+        "nifty 50 points kitne minute me karta hai" to "MoveTime", "nifty 50 point kitni der mein karta hai" to "MoveTime",
+        // Why the charges are so high
+        "charges itne kyun lage" to "Account:CHARGES", "charges bahut zyada lag rahe hain" to "Account:CHARGES", "how come charges are so high" to "Account:CHARGES",
+        "why charges so high" to "Account:CHARGES", "charges itna kyu aa raha hai" to "Account:CHARGES", "reason for high charges" to "Account:CHARGES",
+        "why high charges" to "Account:CHARGES", "why charges high hai" to "Account:CHARGES", "charges itne kaise lage" to "Account:CHARGES",
+        "charges breakdown" to "Account:CHARGES", "why are my charges more today" to "Account:CHARGES",
+        // Zerodha's exact charges, its contract note
+        "what did zerodha actually charge" to "Account:CHARGES", "what did zerodha actually charge me today" to "Account:CHARGES",
+        "contract note ke hisaab se charges" to "Account:CHARGES", "charges as per contract note" to "Account:CHARGES",
+        "what does the contract note say" to "Account:CHARGES", "exact charges" to "Account:CHARGES", "what are my exact charges" to "Account:CHARGES",
+        "what are the actual charges" to "Account:CHARGES", "how much did zerodha charge me today" to "Account:CHARGES", "what did kite charge me" to "Account:CHARGES",
+        "contract note charges" to "Account:CHARGES", "is this the exact charge or an estimate" to "Account:CHARGES", "are the charges exact" to "Account:CHARGES",
+        "is that charge an estimate" to "Account:CHARGES", "how much did zerodha take today" to "Account:CHARGES", "charges as per contact note" to "Account:CHARGES",
+        // One kind of trade's charges
+        "charges on my futures" to "Account:CHARGES", "what are the charges on my futures" to "Account:CHARGES", "delivery charges" to "Account:CHARGES",
+        "how much dp charges" to "Account:CHARGES", "dp charges" to "Account:CHARGES", "what are my dp charges" to "Account:CHARGES",
+        "charges on my stocks" to "Account:CHARGES", "charges on my shares" to "Account:CHARGES", "intraday charges" to "Account:CHARGES",
+        "charges on my intraday trades" to "Account:CHARGES", "equity charges" to "Account:CHARGES", "fno charges" to "Account:CHARGES",
+        "charges on futures this month" to "Account:CHARGES",
+        // The Requests panel
+        "mere liye kuch pending hai" to "RequestBook", "new requests" to "RequestBook", "request aaya kya" to "RequestBook",
+        "approval chahiye kya" to "RequestBook", "kisi cheez ka approval chahiye" to "RequestBook", "do you need anything from me" to "RequestBook",
+        "any thing pending" to "Requests", "reqests pending" to "RequestBook",
+    )
+
+    /** Round 27's day-in-detail asks: Zerodha's exact figure and one kind of trade's charges are answered as "why so high" is. */
+    private val ROUND27_DETAIL = listOf("what did zerodha actually charge", "contract note ke hisaab se charges", "contract note ke hisab se charges kitne hai",
+        "exact charges", "is that charge an estimate", "zerodha ne kitna charge kiya", "charges on my futures", "delivery charges", "dp charges kitne lage",
+        "how much delivery charges did i pay", "futures ka brokerage kitna laga", "stock charges today", "charges itne kyun lage", "how come charges are so high")
+
+    @Test fun roundTwentySevenWordingsRouteAndNeverAct() {
+        assertEquals(ROUND27.size, ROUND27.map { it.first }.distinct().size)
+        val wrong = ROUND27.mapNotNull { (s, want) -> audit.feature(s).let { got -> if (got == want) null else "\"$s\": wanted $want, got $got ${hits(s)}" } }
+        assertTrue(wrong.isEmpty(), wrong.joinToString("\n"))
+        for ((s, _) in ROUND27) neverActs(s)
+        for (s in ROUND27_DETAIL) assertTrue(Charges.whyAsked(s) && Charges.asked(s), s)
+        // The day asked for Zerodha's exact figure is today, as the contract note's.
+        assertEquals(Charges.Span.TODAY, Charges.whySpan("what did zerodha actually charge me today"))
+        assertEquals(null, Charges.whySpan("what did zerodha actually charge"))
+        assertEquals(Charges.Span.MONTH, Charges.whySpan("charges on futures this month"))
+        // The schedule's questions (one lot, a definition, an amount of shares, the contract note as a document) are not the account's.
+        for (s in listOf("what are futures charges per lot", "what is dp charge", "dp charge kya hota hai", "how much are delivery charges for 100 shares",
+            "what is a contract note", "download contract note", "show contract note", "what is the real charge of nifty options",
+            "the exact charge for one lot", "what are the stock charges for 100 shares", "dp charges for one lot", "charges on futures",
+            "what are charges on futures", "delivery charges kya hai", "what is a delivery charge", "real time charges", "what are charges",
+            "what is brokerage", "how are charges calculated"))
+            assertTrue(!Charges.asked(s) && !Charges.whyAsked(s), s)
+        // The totals asked as before stay the trades' answer, never the day's detail.
+        for (s in listOf("my charges", "how much did i pay in charges this week", "today's charges", "charges kitne lage", "how much brokerage did i pay"))
+            assertTrue(Charges.asked(s) && !Charges.whyAsked(s), s)
+        // The market's own price words stay the market's.
+        for ((s, want) in listOf("what's the exact nifty price" to "Market", "actual price of nifty" to "Market", "nifty futures price" to "Market"))
+            assertEquals(want, audit.feature(s), s)
+        // GiveBack stays the record: never a definition, advice, today, a forecast or Boss's own gains.
+        for (s in listOf("what does fade mean", "should i fade the rally", "fade the move", "should i keep my gains", "does nifty keep going up",
+            "how much does nifty give up today", "will nifty give back its gains", "how much did nifty give back from the high today", "what is retracement"))
+            assertTrue(audit.feature(s) != "GiveBack", "$s: ${audit.feature(s)}")
+        // OpenReach keeps its own reach from the open; a run's give-up or fade is GiveBack's.
+        assertEquals("OpenReach", audit.feature("how much does nifty move from the open"))
+        assertEquals(null, OpenReach.asked("how much does nifty usually give up after a 1% run from the open"))
+        // "The morning rally" is the run inside the morning; "the opening run" any time before 15:00.
+        assertEquals(165, GiveBack.asked("how much of the morning rally does nifty give back")?.by)
+        assertEquals(null, GiveBack.asked("how much of the opening run does nifty usually give back")?.by)
+        // MoveTime stays the record: never today's past move, an exit, or the open's time.
+        for (s in listOf("how long did nifty take to move 50 points today", "time to exit", "what time does nifty open"))
+            assertTrue(audit.feature(s) != "MoveTime", "$s: ${audit.feature(s)}")
+        // The Requests panel is read, never answered or made: a request made, sent or approved, or something wrong, is not it.
+        for (s in listOf("make a new request", "send a new request", "approve the new request", "approval chahiye mujhe trade ke liye",
+            "is anything wrong", "some thing is wrong", "any thing new in the market"))
+            assertTrue(RequestBook.asked(s) == null && !Requests.listAsked(s), s)
+    }
+
     // ---- Again: the voice's own "say that again slowly" - heard before the question path, never a question family ----
 
     private val AGAIN = listOf("say that again slowly", "repeat it slower", "once more slowly", "dobara dheere bolo", "dheere se phir se bolo",

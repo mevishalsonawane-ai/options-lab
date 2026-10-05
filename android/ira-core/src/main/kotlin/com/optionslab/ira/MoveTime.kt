@@ -89,18 +89,22 @@ object MoveTime {
         // Understanding round 26: "how fast / how quickly", "time taken for Nifty to move", "average time", "kitni jaldi",
         // "kitne time mein".
         "how fast|how quickly|how quick|how soon|time taken|time it takes|time needed|time required|(average|typical|usual|normal|median) time|" +
-        "time to (move|travel|cover|go|do|make|run)|time for (\\w+ ){1,2}to|kitni jaldi|kitne jaldi|kitne time|kitne samay|kitne waqt) ")
+        "time to (move|travel|cover|go|do|make|run)|time for (\\w+ ){1,2}to|kitni jaldi|kitne jaldi|kitne time|kitne samay|kitne waqt|" +
+        // Round 27: "time Nifty takes to move 50 points".
+        "time (\\w+ ){0,2}(takes|needs) (to|for)) ")
     /** Asked of the record: how often, usually. */
     private val HOW = Regex(" (how often|how many times|how frequently|what share|what percent|what percentage|usually|normally|typically|generally|" +
         "tend to|tends to|on average|average|median|historically|odds|chance|chances|kitni baar|kitni bar|aksar|zyada tar|mostly|often) ")
     /** Travelling the distance. */
     private val MOVE = Regex(" (move|moves|moved|moving|movement|go|goes|travel|travels|travelling|traveling|cover|covers|swing|swings|run|runs|" +
         "rise|rises|fall|falls|drop|drops|rally|rallies|climb|climbs|gain|gains|slide|slides|reach|reaches|chalne|chalta|chalti|hilne|hilta|" +
-        "jaane|jane|jata|jaata|girne|chadhne|badhne) " +
+        "jaane|jane|jata|jaata|girne|chadhne|badhne|karta|karti|karte) " +
         // "How long for BankNifty to do 200 points", "take for 50 points" (round 26): a verb right before the size.
         "| (do|does|make|makes|take|takes|for|clock|clocks|hit|hits) (a |an )?\\d{1,5}(\\.\\d+)? ?(points|point|pts|pt|%|percent|per cent|pc|pct) ")
     /** "Kitni der me", "30 minute me": the Hindi "me" (in) after a time, read as said before [NOT] takes it for Boss's (round 26). */
-    private val HI_ME = Regex(" (der|time|samay|waqt|vakt|minute|minutes|mins|min|ghante|ghanta) me ")
+    private val HI_ME = Regex(" (der|time|samay|waqt|vakt|minute|minutes|mins|min|ghante|ghanta|" +
+        // "50 point chalne me kitna time lagta hai" (round 27): the "me" after the moving said.
+        "chalne|jaane|jane|girne|chadhne|badhne|karne|hilne) me ")
     /** Named as a record. */
     private val NAME = Regex(" (time to move|move time|move speed|time to travel|minutes to move) (record|records|stats|statistics|history|data) ")
     private val PAST_ONE = Regex(" (did|has|have|had) ")

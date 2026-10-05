@@ -321,7 +321,8 @@ object Requests {
         "( pending| waiting| open| dikhao| batao| list| panel| tab)?( hai| hain| he)?( kya)?" + ASK_TAIL + "|" +
         ASK_LEAD + "how many (requests?|approvals?)( are| do i have| have i got)?( pending| waiting| open)?( are there| for me)?" + ASK_TAIL + "|" +
         ASK_LEAD + "(what|which) (requests?|approvals?) (are|is) (pending|waiting|open)( for me)?" + ASK_TAIL + "|" +
-        ASK_LEAD + "(whats|what s|what is|is anything|is there anything|anything|kya|kuch|koi cheez|kya kuch|kya koi cheez) " +
+        // ("Any thing", "some thing": the recognizer's split words, round 27.)
+        ASK_LEAD + "(whats|what s|what is|is anything|is there anything|anything|is any thing|is there any thing|any thing|some thing|kya|kuch|koi cheez|kya kuch|kya koi cheez) " +
         "(pending|waiting( for (me|my (approval|yes|ok|okay|confirm|confirmation|answer))| on me| on my (yes|approval))?)( hai| he| h)?( kya)?" + ASK_TAIL + "|" +
         ASK_LEAD + "((kya|kuch|koi) approve (karna|karne ko) (hai|he)( kya)?|what (do i|should i) (need to |have to )?approve|anything (to|for me to) approve|" +
         "what needs my (approval|yes|ok|okay|confirm))" + ASK_TAIL)

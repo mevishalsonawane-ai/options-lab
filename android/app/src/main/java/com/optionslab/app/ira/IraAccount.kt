@@ -487,7 +487,7 @@ internal object IraAccount {
                         com.optionslab.ira.Charges.Trip(t.openedAt, t.closedAt, t.gross, t.charges, com.optionslab.app.data.TradeBook.ownerOf(t, owners))
                     }
                     val whySpan = com.optionslab.ira.Charges.whySpan(question)
-                    val exact = if (live && whySpan == null) runCatching { com.optionslab.app.data.TradeBook.exactChargesOn(today) }.getOrNull() else null
+                    val exact = if (live && (whySpan == null || whySpan == com.optionslab.ira.Charges.Span.TODAY)) runCatching { com.optionslab.app.data.TradeBook.exactChargesOn(today) }.getOrNull() else null
                     r += com.optionslab.ira.Charges.whyLines(if (live) "Zerodha" else "Paper", legs, whyTrips, whySpan, today, estimated = live, exact = exact)
                 }
                 if (!why) for (live in listOf(false, true)) {
