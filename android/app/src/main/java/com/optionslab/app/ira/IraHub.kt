@@ -628,15 +628,26 @@ object IraHub {
         val badHour = runCatching { com.optionslab.ira.ActAlone.badHour(IraNewsTrades.byMinute(), nowMin) }.getOrElse { "my record could not be read" }
         // And a kind of idea (news, or this pattern) that has been losing: the same.
         val badKind = runCatching { com.optionslab.ira.ActAlone.badKind(IraNewsTrades.byKind(), com.optionslab.ira.Preference.kind(source)) }.getOrElse { "my record could not be read" }
-        if (!solo && badHour == null && badKind == null && com.optionslab.ira.ActAlone.ok(Automations.on(Automations.Auto.ACT_PAPER), goesLive, conf.stars, bar) && snap != null) {
-            val done = runCatching { IraNewsTrades.place(idea, _state.value.snaps[m]?.price ?: snap.price, source, paperOnly = true, stars = conf.stars) }.getOrElse { "That did not work: ${it.message ?: "an error"}." }
+        // And his own scored ideas, by the conditions they came in (self-calibration): where that record is clearly bad he
+        // takes nothing by himself (he asks), where it is losing he takes half size. It only ever lowers his own paper risk.
+        val regimeNow = runCatching { IraStudy.regimeOf(m) }.getOrNull()
+        val calib = runCatching { com.optionslab.ira.SelfCalibration.judge(IraNewsTrades.calibration(), com.optionslab.ira.SelfCalibration.Conditions(
+            LocalDateTime.now(IST), m, idea.call, com.optionslab.ira.Preference.kind(source), regimeNow, iv?.first)) }
+            // (Read failing: treated as a bad record - it only stops acting alone, never asking.)
+            .getOrElse { com.optionslab.ira.SelfCalibration.Judgment(com.optionslab.ira.SelfCalibration.Action.SIT_OUT, null) }
+        val calibLine = calib.text()
+        val sitOut = calib.action == com.optionslab.ira.SelfCalibration.Action.SIT_OUT
+        if (!solo && badHour == null && badKind == null && !sitOut && com.optionslab.ira.ActAlone.ok(Automations.on(Automations.Auto.ACT_PAPER), goesLive, conf.stars, bar) && snap != null) {
+            val shrink = calib.action == com.optionslab.ira.SelfCalibration.Action.SHRINK
+            val done = runCatching { IraNewsTrades.place(idea, _state.value.snaps[m]?.price ?: snap.price, source, paperOnly = true, stars = conf.stars, shrink = shrink) }.getOrElse { "That did not work: ${it.message ?: "an error"}." }
             val took = done.startsWith("Bought")
-            val said2 = "$text$ivLine ${conf.text()}$risk " + (if (took) "I took it myself on paper: $what. $done" else "I meant to take it myself on paper, but: $done")
+            val careful = if (shrink && calibLine != null) " Careful: $calibLine." else ""
+            val said2 = "$text$ivLine ${conf.text()}$risk " + (if (took) "I took it myself on paper: $what. $done$careful" else "I meant to take it myself on paper, but: $done")
             reply(said2)
             if (took) {
                 // Kept with the suggestions (scorecard, report card, "what if"), marked as Jarvis's own - never as Boss's answer.
                 val sid = System.nanoTime()
-                runCatching { IraNewsTrades.suggested(sid, idea, snap.price, source); IraNewsTrades.answered(sid, com.optionslab.ira.JarvisTrades.SELF) }
+                runCatching { IraNewsTrades.suggested(sid, idea, snap.price, source, regimeNow, iv?.first); IraNewsTrades.answered(sid, com.optionslab.ira.JarvisTrades.SELF) }
                 IraActivity.add("Took on paper by myself: $what (${source.substringBefore(':')}).")
                 Automations.acted(Automations.Auto.ACT_PAPER, "Took a ${m.label} $side on paper (${conf.stars}/5).")
             } else IraActivity.add("Did not take my own ${m.label} $side idea: ${IraActivity.short(done)}")
@@ -650,11 +661,11 @@ object IraHub {
             newsAsks += id
             if (solo) soloAsks += id
         }
-        IraNewsTrades.suggested(id, idea, snap?.price ?: 0.0, source)
+        IraNewsTrades.suggested(id, idea, snap?.price ?: 0.0, source, regimeNow, iv?.first)
         IraActivity.add("Suggested: $what (${source.substringBefore(':')}).")
         val where = if (goesLive) " on ZERODHA with real money (approve with your fingerprint)"
             else if (com.optionslab.app.data.AppSettings.load().live) " (on paper: ${if (solo) "Solo's" else "my"} trades stay there until proven)" else ""
-        val hourLine = listOfNotNull(badHour, badKind).takeIf { it.isNotEmpty() }?.let { " A caution: ${it.joinToString("; ")}." } ?: ""
+        val hourLine = listOfNotNull(badHour, badKind, calibLine?.takeIf { sitOut && !solo }).takeIf { it.isNotEmpty() }?.let { " A caution: ${it.joinToString("; ")}." } ?: ""
         val full = "$text$ivLine ${conf.text()}$risk$hourLine Shall I $what$where? Approve or reject."
         _state.update { it.copy(pending = it.pending + id, messages = (it.messages + Msg(true, full, action = id)).takeLast(MAX_MESSAGES)) }
         JarvisApproval.show(c, id, title, full)
@@ -1415,6 +1426,16 @@ object IraHub {
             _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
             if (phoneLocked()) { reply("Unlock the phone for that, Boss."); return }
             scope.launch { reply(runCatching { IraExpert.say() }.getOrElse { "I could not read the paper trades just now, Boss." }) }
+            return
+        }
+        // "Where are you weakest / strongest?": his own ideas scored by the conditions they came in (self-calibration).
+        if (com.optionslab.ira.SelfCalibration.asked(q) && Ask.parse(q).command == null && !com.optionslab.app.BuildConfig.GOLD) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            if (phoneLocked()) { reply("Unlock the phone for that, Boss."); return }
+            scope.launch {
+                reply(runCatching { com.optionslab.ira.SelfCalibration.say(IraNewsTrades.calibration(), com.optionslab.app.data.Market.today()) }
+                    .getOrElse { "I could not read my record just now, Boss." })
+            }
             return
         }
         // "What have you learned?": the lessons in every arm's, strategy's and Boss's closed trades (part 5).

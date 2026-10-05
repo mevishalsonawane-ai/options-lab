@@ -489,10 +489,21 @@ internal object IraCoach {
         val goals = runCatching { IraGoals.statuses() }.getOrDefault(emptyList()).filter { it.broken || it.near }.map { it.text }
         val lesson = runCatching { IraAccount.lessons().first.firstOrNull()?.text }.getOrNull()
         val verdicts = runCatching { IraExpert.verdicts() }.getOrDefault(emptyList())
+        // Self-calibration: the conditions his scored ideas say he is weak in (sat out / taken smaller), and those that
+        // earned their way back since the conditions kept before today (kept with their day, like the bar).
+        val calibKey = "jarvis.review.calib"
+        val outcomes = runCatching { IraNewsTrades.calibration() }.getOrDefault(emptyList())
+        val day = com.optionslab.app.data.Market.today()
+        val savedCalib = com.optionslab.app.security.SecurePrefs.getString(calibKey)?.split('\n')
+        fun keys(s: String?): Set<String> = s.orEmpty().split('\t').filter { it.isNotBlank() }.toSet()
+        val calibBefore = savedCalib?.let { if (it.getOrNull(1) == today) keys(it.getOrNull(2)) else keys(it.getOrNull(0)) }
+        val calibNow = runCatching { com.optionslab.ira.SelfCalibration.sitOutKeys(outcomes, day) }.getOrDefault(emptySet())
+        val calibration = runCatching { com.optionslab.ira.SelfCalibration.review(outcomes, day, calibBefore) }.getOrDefault(emptyList())
         val said = com.optionslab.ira.SelfReview.say(com.optionslab.ira.SelfReview.Facts(bar, before, hours, badKinds, goals, lesson,
             verdicts.filter { it.state == com.optionslab.ira.Vetting.State.HELD_UP }.map { it.name },
-            verdicts.filter { it.state == com.optionslab.ira.Vetting.State.FAILED }.map { it.name }))
+            verdicts.filter { it.state == com.optionslab.ira.Vetting.State.FAILED }.map { it.name }, calibration))
         com.optionslab.app.security.SecurePrefs.put(key, "$bar|$today|${before ?: bar}")
+        com.optionslab.app.security.SecurePrefs.put(calibKey, calibNow.joinToString("\t") + "\n" + today + "\n" + (calibBefore ?: calibNow).joinToString("\t"))
         said?.let { IraActivity.add(it) }
         said
     }.getOrNull()

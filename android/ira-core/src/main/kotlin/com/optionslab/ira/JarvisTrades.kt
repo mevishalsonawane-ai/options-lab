@@ -90,7 +90,9 @@ object JarvisTrades {
     data class Suggestion(val at: LocalDateTime, val market: Market, val call: Boolean, val spot: Double, val source: String,
                           /** "approved", "rejected", "lapsed", "waiting" or [SELF]. */ val answer: String,
                           /** What the trade made or would have made (points per unit, real option prices), once known. */ val points: Double? = null,
-                          val lot: Int? = null)
+                          val lot: Int? = null,
+                          /** The conditions it came in, for [SelfCalibration] (null: not known then). */
+                          val regime: Regime.Kind? = null, val ivRank: Double? = null)
 
     /** A paper trade Jarvis took on its own idea (ACT_PAPER): not Boss's answer, so it never counts as one. */
     const val SELF = "taken by me on paper"

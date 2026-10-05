@@ -2,7 +2,8 @@ package com.optionslab.ira
 
 /**
  * Jarvis reviews himself at the end of the day: what his own results changed, and what he will do differently
- * tomorrow - the bar he now needs to act alone, the hours and kinds of idea he now leaves alone, the goals at risk,
+ * tomorrow - the bar he now needs to act alone, the hours and kinds of idea he now leaves alone, the conditions his
+ * scored ideas say he is weak in ([SelfCalibration]), the goals at risk,
  * the strongest lesson and the paper tests decided. Said in a few sentences in the 15:35 wrap-up. Pure.
  */
 object SelfReview {
@@ -12,6 +13,8 @@ object SelfReview {
         val badHours: List<String>, val badKinds: List<String>,
         /** Goals broken or close, in words. */ val goalsAtRisk: List<String>,
         val lesson: String?, val heldUp: List<String>, val failed: List<String>,
+        /** What his scored ideas say about the conditions he is weak in ([SelfCalibration.review]). */
+        val calibration: List<String> = emptyList(),
     )
 
     fun say(f: Facts): String? {
@@ -21,6 +24,7 @@ object SelfReview {
                 else "my record improved, so I act alone again from ${barText(f.bar)}"
         if (f.badHours.isNotEmpty()) now += "I leave ${f.badHours.joinToString(", ")} alone - my trades lost then"
         if (f.badKinds.isNotEmpty()) now += "I take no ${f.badKinds.joinToString(", ")} ideas by myself - they lost"
+        now += f.calibration.map { it.trim().trimEnd('.') }.filter { it.isNotEmpty() }
         val tomorrow = ArrayList<String>()
         f.goalsAtRisk.firstOrNull()?.let { tomorrow += "watch your goal: ${it.trimEnd('.')}" }
         f.lesson?.let { tomorrow += it.trimEnd('.').replaceFirstChar { c -> c.lowercase() } }
