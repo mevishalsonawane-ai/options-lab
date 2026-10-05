@@ -129,6 +129,7 @@ class CollisionTest {
         "ExtremeCloses" to { q -> ExtremeCloses.asked(q) != null },
         "WeekRange" to { q -> WeekRange.asked(q) != null },
         "RelativeMove" to { q -> RelativeMove.asked(q) != null },
+        "Comebacks" to { q -> Comebacks.asked(q) != null },
         "Weekdays" to { q -> Weekdays.asked(q) != null },
         "DayCompare" to { q -> DayCompare.asked(q) != null },
         "LikeToday" to { q -> LikeToday.asked(q) },
@@ -740,6 +741,13 @@ class CollisionTest {
         "is banknifty stronger than nifty" to "Compare", "does banknifty move with nifty" to "Together",
         "how often do nifty and banknifty diverge" to "SplitDays", "jarvis what did you learn about me" to "Learnings",
         "tumne mere baare mein kya seekha" to "Learnings", "what do you know about me" to "AboutBoss",
+        // ---- Comebacks: the days an index fell (or rose) a size from the previous close, and how they ended (round 32) ----
+        "when nifty is down 1% intraday how often does it recover" to "Comebacks", "how often does banknifty bounce back after falling 1.5% in the day" to "Comebacks",
+        "nifty 1% upar jaane ke baad kitni baar wapas aata hai" to "Comebacks", "does a 1% intraday rally on sensex usually hold" to "Comebacks",
+        "intraday recovery record for nifty" to "Comebacks", "when finnifty is up 1 percent in the day how often does it give it back" to "Comebacks",
+        // Its neighbours: a gap's fill, the last hour, today's run of closes, a what-if, a reason for today's move.
+        "do gap downs on banknifty usually fill the same day" to "GapRecord", "does sensex usually reverse in the last hour" to "LastHour",
+        "how many days in a row has nifty risen" to "Streak", "what if banknifty falls 1.5%" to "Scenarios", "why did nifty recover today" to "Causes",
         // ---- MorningSense: the morning check items said briefly ----
         "which morning items do you skip" to "MorningSense", "which morning check items do you leave out" to "MorningSense",
         "morning check ka kya skip karte ho" to "MorningSense", "read me the whole morning check" to "MorningSense",
@@ -1157,7 +1165,7 @@ class CollisionTest {
     /** The question branches of IraHub.ask between the `bundled` read and the Plan block, in [CoverageTest.feature]'s order. */
     private val HUB_ORDER = listOf("DayJournal", "AlertSense", "Airtime", "Hearing", "PatternCalls", "TrendReads", "OutsideApp", "Clarity", "WordFit", "AskedAgain", "FigureFirst", "WrongThing", "ArmHabits", "MorningSense", "HonestStars", "TalkHours", "MorningAsks", "TurnDowns", "TopicLength", "OutlookCheck", "UsualIndex", "Nicknames", "NewsMoves",
         "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmFit", "WeakLink", "ArmChange", "PnlGap", "ArmDay", "BookDecay", "NetLean", "ExpiryEve", "BeforeTomorrow", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "ZerodhaSession", "OrderWhy", "RelayHealth", "StreamHealth", "BatteryUse", "WatchAsk", "Tour", "DataAge", "Honest", "Thinking",
-        "SelfWhy", "Consistency", "CoPilot", "SinceMorning", "ExpiryPin", "ChainDrift", "ChainIntel", "DayClock", "GapRecord", "RangeBreaks", "PriorDay", "LastHour", "InsideDays", "FirstMove", "VixNext", "SplitDays", "RoundCloses", "MonthTurns", "LunchRange", "OpenHighLow", "BigCandles", "ExtremeCloses", "WeekRange", "RelativeMove", "Weekdays", "DayCompare", "LikeToday", "Structure", "MindChange", "Breadth",
+        "SelfWhy", "Consistency", "CoPilot", "SinceMorning", "ExpiryPin", "ChainDrift", "ChainIntel", "DayClock", "GapRecord", "RangeBreaks", "PriorDay", "LastHour", "InsideDays", "FirstMove", "VixNext", "SplitDays", "RoundCloses", "MonthTurns", "LunchRange", "OpenHighLow", "BigCandles", "ExtremeCloses", "WeekRange", "RelativeMove", "Comebacks", "Weekdays", "DayCompare", "LikeToday", "Structure", "MindChange", "Breadth",
         "TradeCase", "Scenarios", "Causes", "Agenda", "Improve")
 
     @Test fun theAuditFollowsTheHubsOrderAndEveryBranchIsGuarded() {
