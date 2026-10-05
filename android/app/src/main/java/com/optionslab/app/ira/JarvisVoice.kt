@@ -99,6 +99,7 @@ class JarvisVoice : Service() {
             com.optionslab.ira.Latency.say(latencies)?.let { append(it).append('\n') }
             append(com.optionslab.ira.BossPace.say(paceGaps)).append('\n')
             append(runCatching { com.optionslab.ira.CutIn.say(cutInNow(context ?: instance?.get()), cutInChoice) }.getOrElse { "Cut-in: could not check" }).append('\n')
+            append(runCatching { com.optionslab.ira.Hearing.say(hearingDays, hearingDay()) }.getOrElse { "Hearing: could not read" }).append('\n')
             append("Last turns:\n"); traceLines(all = true).forEach { append("  ").append(it).append('\n') }
         }
 
@@ -346,6 +347,39 @@ class JarvisVoice : Service() {
             set(v) { paceKept = v; runCatching { com.optionslab.app.security.SecurePrefs.put(PACE_KEY, com.optionslab.ira.BossPace.save(v)) } }
         private const val PACE_KEY = "jarvis.voice.pausegaps"
 
+        /**
+         * How well the ears are hearing Boss, counts per day ([com.optionslab.ira.Hearing]): turns with and without words,
+         * failures by code and hour, restarts, lost turns, the name caught, time to the first words - numbers only, never a
+         * word heard. Kept on the phone (the last 8 days), written at most every 2 minutes and when listening stops.
+         */
+        private const val HEARING_KEY = "jarvis.voice.hearing"
+        private val hearingLock = Any()
+        private var hearingKept: List<com.optionslab.ira.Hearing.Day>? = null
+        private var hearingSavedAt = 0L
+        val hearingDays: List<com.optionslab.ira.Hearing.Day>
+            get() = synchronized(hearingLock) {
+                hearingKept ?: runCatching { com.optionslab.ira.Hearing.load(com.optionslab.app.security.SecurePrefs.getString(HEARING_KEY)) }
+                    .getOrDefault(emptyList()).also { hearingKept = it }
+            }
+        /** Today's date in India, as the hearing counts are kept. */
+        fun hearingDay(): String = java.time.LocalDate.now(java.time.ZoneId.of("Asia/Kolkata")).toString()
+
+        internal fun hearingCount(f: (List<com.optionslab.ira.Hearing.Day>, String) -> List<com.optionslab.ira.Hearing.Day>) {
+            val save = synchronized(hearingLock) {
+                val d = runCatching { f(hearingDays, hearingDay()) }.getOrNull() ?: return
+                hearingKept = d
+                val now = SystemClock.elapsedRealtime()
+                if (hearingSavedAt == 0L || now - hearingSavedAt > 120_000) { hearingSavedAt = now; d } else null
+            }
+            save?.let { d -> runCatching { com.optionslab.app.security.SecurePrefs.putAllSoon(mapOf(HEARING_KEY to com.optionslab.ira.Hearing.save(d))) } }
+        }
+
+        /** Writes the hearing counts now (listening stopping). */
+        internal fun hearingSave() {
+            val d = synchronized(hearingLock) { hearingKept } ?: return
+            runCatching { com.optionslab.app.security.SecurePrefs.putAllSoon(mapOf(HEARING_KEY to com.optionslab.ira.Hearing.save(d))) }
+        }
+
         /** How long the last spoken reply took, from Boss's last word to Jarvis's first sound (ms), or 0. */
         @Volatile var lastLatencyMs = 0L
         /** This run's answer waits (for the diagnostics). */
@@ -500,6 +534,8 @@ class JarvisVoice : Service() {
                 // (Partial words read before the reset still count, as a lost turn does.)
                 val lost = com.optionslab.ira.Wake.lostTurn(7, turnPartial, awake())
                 note("turn timed out" + if (turnPartial != null) " (read words mid-turn)" else " (nothing read)")
+                hear(if (lost != null && !speaking) com.optionslab.ira.Hearing.Kind.HEARD else com.optionslab.ira.Hearing.Kind.LOST,
+                    name = lost != null && WAKE.containsMatchIn(lost), saved = true)
                 main.removeCallbacks(finish); runCatching { rec?.cancel() }; listening = false; endTap()
                 if (lost != null && !speaking) { remember(lost); heard(listOf(lost), recovered = true) } else again()
             }
@@ -511,6 +547,7 @@ class JarvisVoice : Service() {
             // a new recognizer, noted in the activity log.
             if (Automations.on(Automations.Auto.SELFHEAL) && com.optionslab.ira.VoiceHealth.stuck(now, readyAt, speaking, !held && _state.value.mode != Mode.THINKING) && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 readyAt = now
+                hearingCount { d, day -> com.optionslab.ira.Hearing.restart(d, day) }
                 runCatching { rec?.destroy() }
                 rec = runCatching { newRecognizer().also { it.setRecognitionListener(listener) } }.getOrNull()
                 listening = false; endTap()
@@ -558,6 +595,8 @@ class JarvisVoice : Service() {
     private var loudNoMatch = 0
     /** The recognizer said "speech began" this turn (a loud room alone is not Boss speaking). */
     @Volatile private var turnSpeech = false
+    /** When it said so (0: not yet), for the time to the first words read ([com.optionslab.ira.Hearing]). */
+    @Volatile private var turnSpeechAt = 0L
     /** The current language has given words since listening began: it works, so it is never switched away from. */
     private var langWorks = false
     /** What the recognizer heard last turn (for the voice check), then dropped. */
@@ -813,7 +852,7 @@ class JarvisVoice : Service() {
             }
         }
         listening = true
-        turnReadyAt = 0; turnHeardAny = false; turnLoudest = -100f; turnPartial = null; turnPartialAt = 0L; turnEndAt = 0L; turnSpeech = false; answeredEarly = false; finishAt = 0L
+        turnReadyAt = 0; turnHeardAny = false; turnLoudest = -100f; turnPartial = null; turnPartialAt = 0L; turnEndAt = 0L; turnSpeech = false; turnSpeechAt = 0L; answeredEarly = false; finishAt = 0L
         turnGaps.clear()
         hushBeep(1_500)                                   // the start beep (put back once the turn is ready, or in 1.5 s)
         runCatching { rec?.startListening(i) }.onFailure { listening = false; endTap(); again(1_000) }
@@ -837,7 +876,7 @@ class JarvisVoice : Service() {
             if (mutedForBeep.isNotEmpty()) { main.removeCallbacks(unmuteBeep); main.postDelayed(unmuteBeep, 400) }
             note(if (tap != null) "ready (shared audio)" else "ready")
         }
-        override fun onBeginningOfSpeech() { turnSpeech = true; note("speech began") }
+        override fun onBeginningOfSpeech() { turnSpeech = true; if (turnSpeechAt == 0L) turnSpeechAt = SystemClock.elapsedRealtime(); note("speech began") }
         override fun onRmsChanged(rmsdB: Float) { if (rmsdB > turnLoudest) turnLoudest = rmsdB }
         override fun onBufferReceived(buffer: ByteArray?) {}
         // Boss, 4 Oct: "speech began", then nothing - the recognizer never closed the turn. Once he stops speaking, the
@@ -863,6 +902,11 @@ class JarvisVoice : Service() {
                     // A pause inside his speech (more words followed it); kept only if the turn proves to be his question.
                     if (turnPartialAt > 0 && !speaking && !turnInSpeech) turnGaps += now - turnPartialAt
                     turnPartialAt = now
+                }
+                // How soon the first words of Boss's speech are read (a time only, never the words).
+                if (!turnHeardAny && turnSpeechAt > 0 && !speaking && !turnInSpeech) {
+                    val ms = SystemClock.elapsedRealtime() - turnSpeechAt
+                    hearingCount { d, day -> com.optionslab.ira.Hearing.firstWords(d, day, ms) }
                 }
                 turnHeardAny = true; turnPartial = it
                 if (tap != null && silentShared != 0) silentShared = 0      // the shared capture does hear
@@ -913,6 +957,12 @@ class JarvisVoice : Service() {
             note("heard " + (readings.firstOrNull()?.let { t ->
                 if (WAKE.containsMatchIn(t)) "the name" else "${t.split(Regex("\\s+")).size} words, no name" } ?: "nothing") +
                 ", " + com.optionslab.ira.Sure.say(sure))
+            val first = readings.firstOrNull { it.isNotBlank() }
+            when {
+                first != null && !turnInSpeech -> hear(com.optionslab.ira.Hearing.Kind.HEARD, name = WAKE.containsMatchIn(first))
+                first == null && turnSpeech && !turnInSpeech -> hear(com.optionslab.ira.Hearing.Kind.NO_MATCH, loud = turnLoudest >= 6f)
+                else -> hear(com.optionslab.ira.Hearing.Kind.SILENT)
+            }
             readings.firstOrNull()?.let { remember(it) }
             errorsInRow = 0
             endTap()
@@ -928,6 +978,7 @@ class JarvisVoice : Service() {
             val partial = com.optionslab.ira.Wake.lostTurn(error, turnPartial, awake())
             if (partial != null && !stopped) {
                 note("kept the words read mid-turn (final: error $error)")
+                hear(com.optionslab.ira.Hearing.Kind.HEARD, name = WAKE.containsMatchIn(partial), saved = true)
                 errorsInRow = 0; loudNoMatch = 0
                 endTap()
                 remember(partial)
@@ -942,7 +993,9 @@ class JarvisVoice : Service() {
             if (shared && (error == SpeechRecognizer.ERROR_CLIENT || error == SpeechRecognizer.ERROR_AUDIO || error == 11 ||
                     (Build.VERSION.SDK_INT >= 33 && error == SpeechRecognizer.ERROR_CANNOT_CHECK_SUPPORT))) {
                 tapFailed = true; note("error $error with shared audio: back to the phone's own microphone")
+                hear(com.optionslab.ira.Hearing.Kind.ERROR, code = error)
                 if (error == 11 || error == SpeechRecognizer.ERROR_CLIENT) {
+                    hearingCount { d, day -> com.optionslab.ira.Hearing.restart(d, day) }
                     runCatching { rec?.destroy() }
                     rec = runCatching { newRecognizer().also { it.setRecognitionListener(this) } }.getOrNull()
                 }
@@ -962,6 +1015,14 @@ class JarvisVoice : Service() {
                     IraActivity.add("Listening switched to $lang (no words found in clear speech).")
                 }
             } else if (error != SpeechRecognizer.ERROR_NO_MATCH) loudNoMatch = 0
+            // His ears' own counts (numbers only): no words in Boss's speech, silence, or a failure of the speech service
+            // (our own close racing the results is none of them).
+            when {
+                error == SpeechRecognizer.ERROR_CLIENT && SystemClock.elapsedRealtime() - stoppedAt < 3_000 -> {}
+                error == SpeechRecognizer.ERROR_NO_MATCH && turnSpeech && !turnInSpeech -> hear(com.optionslab.ira.Hearing.Kind.NO_MATCH, loud = turnLoudest >= 6f)
+                error == SpeechRecognizer.ERROR_NO_MATCH || error == SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> hear(com.optionslab.ira.Hearing.Kind.SILENT)
+                else -> hear(com.optionslab.ira.Hearing.Kind.ERROR, code = error)
+            }
             when (error) {
                 SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> giveUp("Jarvis lost the microphone permission.")
                 // Boss, 4 Oct ("why can't you hear me" -> "the speech service refused the request"): the on-device
@@ -970,6 +1031,7 @@ class JarvisVoice : Service() {
                 // 11: the speech service crashed or restarted - the recognizer is dead; made anew at once (Boss, 4 Oct).
                 11 -> {
                     errorsInRow++; lastError = error to SystemClock.elapsedRealtime()
+                    hearingCount { d, day -> com.optionslab.ira.Hearing.restart(d, day) }
                     runCatching { rec?.destroy() }
                     rec = runCatching { newRecognizer().also { it.setRecognitionListener(this) } }.getOrNull()
                     IraActivity.add("Reconnected listening (the phone's speech service had restarted).")
@@ -992,6 +1054,7 @@ class JarvisVoice : Service() {
                         giveUp("This phone has no on-device speech recognition ready: update \"Speech Services by Google\" in the Play Store, then add English under Settings, System, Languages, On-device speech recognition.")
                         return
                     }
+                    hearingCount { d, day -> com.optionslab.ira.Hearing.restart(d, day) }
                     runCatching { rec?.destroy() }
                     rec = runCatching { newRecognizer().also { it.setRecognitionListener(this) } }.getOrNull()
                     if (clientErrors == 1) IraActivity.add("Restarted listening (the speech service refused a request).")
@@ -1009,6 +1072,7 @@ class JarvisVoice : Service() {
                     // listening was switched off and on (Boss, 4 Oct): after 3 failures in a row it is made anew - what the
                     // switch did - and further failures wait longer, up to 30 s.
                     if (errorsInRow == 3 && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                        hearingCount { d, day -> com.optionslab.ira.Hearing.restart(d, day) }
                         runCatching { rec?.destroy() }
                         rec = runCatching { newRecognizer().also { it.setRecognitionListener(this) } }.getOrNull()
                         IraActivity.add("Restarted listening (the speech recognizer kept failing).")
@@ -1032,6 +1096,7 @@ class JarvisVoice : Service() {
         loudNoMatch = 0; errorsInRow = 0; langWorks = true
         note("heard " + (if (WAKE.containsMatchIn(words)) "the name" else "${words.trim().split(Regex("\\s+")).size} words, no name") +
             " (answered from the partial words; the final reading not waited for)")
+        hear(com.optionslab.ira.Hearing.Kind.HEARD, name = WAKE.containsMatchIn(words))
         remember(words)
         endTap()
         heard(listOf(words))
@@ -1044,6 +1109,26 @@ class JarvisVoice : Service() {
         for (x in turnGaps) g = com.optionslab.ira.BossPace.add(g, x)
         turnGaps.clear()
         paceGaps = g
+    }
+
+    /**
+     * One turn of the ears counted ([com.optionslab.ira.Hearing], numbers only - never the words); after a failure, a
+     * clear problem against his usual days is put to Boss as a suggestion in the chat, once a day. It only ever SUGGESTS
+     * (move closer, a headset, the phone's speech language, Google's speech in Settings): nothing is switched here.
+     */
+    private fun hear(kind: com.optionslab.ira.Hearing.Kind, code: Int? = null, loud: Boolean = false, name: Boolean = false, saved: Boolean = false) {
+        val hour = java.time.LocalTime.now(java.time.ZoneId.of("Asia/Kolkata")).hour
+        hearingCount { d, day -> com.optionslab.ira.Hearing.turn(d, day, hour, kind, code, loud, name, saved) }
+        if (kind != com.optionslab.ira.Hearing.Kind.HEARD && kind != com.optionslab.ira.Hearing.Kind.SILENT) hearingNudge()
+    }
+
+    private fun hearingNudge() {
+        val day = hearingDay()
+        if (runCatching { com.optionslab.app.security.SecurePrefs.getString("jarvis.hearing.told") }.getOrNull() == day) return
+        val text = runCatching { com.optionslab.ira.Hearing.nudge(hearingDays, day, googleSpeech) }.getOrNull() ?: return
+        runCatching { com.optionslab.app.security.SecurePrefs.put("jarvis.hearing.told", day) }
+        hearingSave()
+        runCatching { IraHub.note(text) }
     }
 
     /** Slow answers three times running, not on the fastest model: a suggestion in the chat, once a day. */
@@ -1470,6 +1555,7 @@ class JarvisVoice : Service() {
 
     override fun onDestroy() {
         unmuteNow()
+        hearingSave()
         stopped = true
         if (instance?.get() === this) instance = null
         main.removeCallbacksAndMessages(null)

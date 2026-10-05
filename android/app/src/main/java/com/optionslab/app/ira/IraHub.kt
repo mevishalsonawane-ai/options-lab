@@ -1254,6 +1254,16 @@ object IraHub {
             reply(IraAirtime.answer())
             return
         }
+        // "How well are you hearing me?" / "are you having trouble hearing?": his ears' own counts today against the days
+        // before (numbers only, never words) and what would help - a suggestion only: nothing is switched by voice, the
+        // Google speech choice least of all ([com.optionslab.ira.Hearing]).
+        if (com.optionslab.app.BuildConfig.JARVIS && !bundled && parsed.order == null && parsed.command == null &&
+            runCatching { com.optionslab.ira.Hearing.asked(q) }.getOrDefault(false)) {
+            val said = runCatching { com.optionslab.ira.Hearing.spoken(JarvisVoice.hearingDays, JarvisVoice.hearingDay(), JarvisVoice.googleSpeech) }
+                .getOrElse { "I couldn't read my hearing counts just now, Boss." }
+            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
+            return
+        }
         // "Which patterns work on Nifty?" / "how good are your pattern calls?": how the patterns he told of played out on
         // this phone ([com.optionslab.ira.PatternCalls]; market data only, facts, never advice).
         if (!bundled && parsed.order == null && parsed.command == null && runCatching { com.optionslab.ira.PatternCalls.asked(q) }.getOrDefault(false)) {
@@ -2222,7 +2232,7 @@ object IraHub {
         // answer, not the answer.
         val real = after.filter { it.fromIra && !it.text.startsWith(LEARNED_NOTE) && !it.text.startsWith(CHAIN_NOTE) &&
             !it.text.startsWith(com.optionslab.ira.Corrections.OFFER) && !it.text.startsWith(com.optionslab.ira.Routine.OFFER) &&
-            !it.text.startsWith(com.optionslab.ira.Latency.NUDGE) }
+            !it.text.startsWith(com.optionslab.ira.Latency.NUDGE) && !it.text.startsWith(com.optionslab.ira.Hearing.NUDGE) }
         val first = real.firstOrNull() ?: return null
         if (!first.text.startsWith(TOOK_AS)) return first
         return real.drop(1).firstOrNull()
