@@ -443,15 +443,23 @@ class IraHubTest : RobolectricTest() {
         IraHub.ask("turn on the kill switch")
         waitFor("the confirm") { IraHub.state.value.pending.isNotEmpty() }
         val id = IraHub.state.value.pending.single()
-        assertEquals("Tap Confirm to turn the kill switch on (no new live positions).", IraHub.state.value.messages.last().text)
+        // The chat: one short line naming the request; its details and buttons are in the Requests panel.
+        assertEquals("New request: turn the kill switch on (no new live positions) — see Requests.", IraHub.state.value.messages.last().text)
+        val view = IraHub.requestsOf(IraHub.state.value).single()
+        assertEquals(id, view.id)
+        assertEquals("turn the kill switch on (no new live positions)", view.what)
+        assertTrue(view.lapsesAt!! > view.askedAt)
         assertTrue("nothing before Confirm", !com.optionslab.app.data.AppSettings.load().guardKill)
         IraHub.confirm(id)
         assertTrue(com.optionslab.app.data.AppSettings.load().guardKill)
         assertTrue(IraHub.state.value.messages.last().text.startsWith("Kill switch on"))
+        assertTrue("approved: gone from the panel", IraHub.requestsOf(IraHub.state.value).isEmpty())
+        assertEquals(com.optionslab.ira.Requests.Outcome.APPROVED, IraHub.recentRequests().value.first().outcome)
         IraHub.ask("alert me when nifty goes above 25000")
         waitFor("the alarm confirm") { IraHub.state.value.pending.isNotEmpty() }
         IraHub.cancelAction(IraHub.state.value.pending.single())
         assertTrue(com.optionslab.app.data.Alarms.all().isEmpty())
+        assertEquals(com.optionslab.ira.Requests.Outcome.DECLINED, IraHub.recentRequests().value.first().outcome)
         IraHub.ask("set an alarm on banknifty below 51000")
         waitFor("the alarm confirm") { IraHub.state.value.pending.isNotEmpty() }
         IraHub.confirm(IraHub.state.value.pending.single())
@@ -462,7 +470,7 @@ class IraHubTest : RobolectricTest() {
         IraHub.ask("stop strategy 3")
         waitFor("the answer") { IraHub.state.value.messages.last().let { it.fromIra && it.text != "Kill switch off." } && IraHub.state.value.messages.dropLast(1).last().text == "stop strategy 3" }
         val ans = IraHub.state.value.messages.last()
-        assertTrue(ans.text, ans.text.startsWith("Tap Confirm to stop ") || ans.text.startsWith("There are no strategies or arms") || ans.text.startsWith("Which one?"))
+        assertTrue(ans.text, ans.text.startsWith("New request: stop ") || ans.text.startsWith("There are no strategies or arms") || ans.text.startsWith("Which one?"))
         ans.action?.let { IraHub.cancelAction(it) }
         Unit
     }
@@ -682,7 +690,7 @@ class IraHubTest : RobolectricTest() {
         assertTrue(com.optionslab.app.data.SettingsLog.lines().any { it.contains("max open positions") })
         IraHub.ask("undo")
         waitFor("the undo confirm") { IraHub.state.value.pending.isNotEmpty() }
-        assertTrue(IraHub.state.value.messages.last().text, IraHub.state.value.messages.last().text.startsWith("Tap Confirm to undo: change max open positions from 4 to"))
+        assertTrue(IraHub.state.value.messages.last().text, IraHub.state.value.messages.last().text.startsWith("New request: undo: change max open positions from 4 to"))
         IraHub.confirm(IraHub.state.value.pending.single())
         assertEquals(before.guardMaxOpen, com.optionslab.app.data.AppSettings.load().guardMaxOpen)
         // A change on the Settings screen is logged too.

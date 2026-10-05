@@ -71,6 +71,9 @@ import com.optionslab.ira.Market as IraMarket
 fun IraHome(orders: IraOrderPaths? = null, dashboard: @Composable () -> Unit) {
     val p = LocalPalette.current
     var showIra by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(true) }
+    // The Requests panel from Home (Boss, 5 Oct): its badge beside the switch; Back closes it.
+    var homeRequests by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
+    androidx.activity.compose.BackHandler(enabled = homeRequests) { homeRequests = false }
     // Jarvis: listening was left on - start it again now the app is on screen (Android allows it only then).
     val ctx = androidx.compose.ui.platform.LocalContext.current
     LaunchedEffect(Unit) { if (com.optionslab.app.BuildConfig.JARVIS && JarvisVoice.wanted) JarvisVoice.start(ctx) }
@@ -85,10 +88,11 @@ fun IraHome(orders: IraOrderPaths? = null, dashboard: @Composable () -> Unit) {
                 Text(label, style = Type.label.copy(color = if (on) p.onPrimary else p.inkSoft, fontSize = 14.sp),
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                     modifier = Modifier.weight(1f).background(if (on) p.brass else Color.Transparent, RoundedCornerShape(9.dp))
-                        .clickable { showIra = ira }.padding(vertical = 8.dp))
+                        .clickable { showIra = ira; homeRequests = false }.padding(vertical = 8.dp))
             }
+            RequestsBadge(Modifier.align(Alignment.CenterVertically).padding(start = 6.dp)) { homeRequests = true }
         }
-        Box(Modifier.weight(1f)) { if (showIra) IraPage(orders) else dashboard() }
+        Box(Modifier.weight(1f)) { if (homeRequests) RequestsPanel(onClose = { homeRequests = false }) else if (showIra) IraPage(orders) else dashboard() }
     }
 }
 
@@ -163,6 +167,10 @@ fun IraPage(orders: IraOrderPaths? = null) {
 
     // Jarvis: only the globe until the owner opens the chat (the owner's wish, 2026-10-02); voice works either way.
     var chat by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(!com.optionslab.app.BuildConfig.JARVIS) }
+    // The Requests panel (Boss, 5 Oct): what waits for his yes, apart from the chat. Back closes it.
+    var requestsOpen by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
+    androidx.activity.compose.BackHandler(enabled = requestsOpen) { requestsOpen = false }
+    if (requestsOpen) { RequestsPanel(onClose = { requestsOpen = false }); return }
     // The phone's Back closes the chat (back to the globe) in Jarvis.
     androidx.activity.compose.BackHandler(enabled = chat && com.optionslab.app.BuildConfig.JARVIS) { chat = false }
     if (!chat) {
@@ -202,14 +210,20 @@ fun IraPage(orders: IraOrderPaths? = null) {
                     MicButton("🎙  Talk")
                     BrassButton(if (waiting > 0) "Open chat · $waiting waiting" else "Open chat") { chat = true }
                 }
+                RequestsBadge { requestsOpen = true }
             }
         }
         if (com.optionslab.app.BuildConfig.JARVIS) ModelAsk()
         return
     }
     Column(Modifier.fillMaxSize()) {
-        if (com.optionslab.app.BuildConfig.JARVIS) Text("‹  Back to Jarvis", style = Type.label.copy(color = Color(0xFF4AA8FF), fontSize = 14.sp),
-            modifier = Modifier.fillMaxWidth().background(Color.Black).clickable { chat = false }.padding(horizontal = 14.dp, vertical = 8.dp))
+        Row(Modifier.fillMaxWidth().background(if (com.optionslab.app.BuildConfig.JARVIS) Color.Black else Color.Transparent),
+            verticalAlignment = Alignment.CenterVertically) {
+            if (com.optionslab.app.BuildConfig.JARVIS) Text("‹  Back to Jarvis", style = Type.label.copy(color = Color(0xFF4AA8FF), fontSize = 14.sp),
+                modifier = Modifier.weight(1f).clickable { chat = false }.padding(horizontal = 14.dp, vertical = 8.dp))
+            else Spacer(Modifier.weight(1f))
+            RequestsBadge(Modifier.padding(horizontal = 10.dp, vertical = 4.dp)) { requestsOpen = true }
+        }
         // The keyboard is up: the globe steps aside so the question box and Ask keep their room.
         val imeOpen = WindowInsets.ime.getBottom(androidx.compose.ui.platform.LocalDensity.current) > 0
         if (!imeOpen) Box(Modifier.fillMaxWidth().height(280.dp).background(Color.Black)) {
@@ -308,6 +322,7 @@ private fun Bubble(m: IraHub.Msg, orders: IraOrderPaths?, asked: String? = null)
         }
         m.proposal?.let { id -> ProposalActions(id) }
         m.action?.let { id -> ActionConfirm(id) }
+        if (m.fromIra && m.action == null && m.order == null && m.proposal == null) OfferButtons(m.id)
         if (m.writing) Text("Jarvis is writing this on the phone...", style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp))
         m.draft?.let { d ->
             var showDraft by remember { mutableStateOf(false) }
@@ -714,24 +729,62 @@ private fun VoiceStyle() {
     }
 }
 
-/** Confirm / Cancel under something Jarvis will stop or close when the owner taps (one tap, no PIN: the owner's rule). */
+/**
+ * Yes / No under a request of Jarvis's - in the chat under its own message, in the Requests panel, on the pop-up's
+ * card. Tied to [id] alone: a tap answers that request only, never another waiting one, and only while it waits
+ * ([com.optionslab.ira.Requests.tapTarget]). Yes is [IraHub.confirm] with all its gates (the fingerprint for real money
+ * and the emergency exit, the live and proven-record checks inside it); No is [IraHub.cancelAction]. Answered, lapsed or
+ * gone: no buttons.
+ */
 @Composable
-internal fun ActionConfirm(id: Long) {
+internal fun ActionConfirm(id: Long, yes: String = "Yes", no: String = "No") {
     val waiting by iraSlice(id) { id in it.pending }
     val scope = rememberCoroutineScope()
     if (!waiting) return
+    fun mine(): Long? = com.optionslab.ira.Requests.tapTarget(id, IraHub.state.value.pending)
     Row(Modifier.padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         val activity = androidx.compose.ui.platform.LocalContext.current as? androidx.fragment.app.FragmentActivity
         if (IraHub.needsFingerprint(id) && activity != null) {
-            // A live Jarvis trade: real money, so the owner's fingerprint approves it.
-            BrassButton("Approve with fingerprint", tone = LocalPalette.current.oxblood) {
-                com.optionslab.app.security.BiometricGate.verify(activity, "Approve the live trade", "Jarvis places it on Zerodha") { ok ->
-                    if (ok) scope.launch { IraHub.confirm(id, fingerprint = true) }
+            // A live Jarvis trade (or the emergency exit): the owner's fingerprint approves it.
+            BrassButton("$yes · fingerprint", tone = LocalPalette.current.oxblood) {
+                com.optionslab.app.security.BiometricGate.verify(activity, "Approve the request", "Jarvis does it only after your fingerprint") { ok ->
+                    if (ok) mine()?.let { mineId -> scope.launch { IraHub.confirm(mineId, fingerprint = true) } }
                 }
             }
-        } else BrassButton("Confirm", tone = LocalPalette.current.oxblood) { scope.launch { IraHub.confirm(id) } }
-        BrassButton("Cancel", tone = LocalPalette.current.inkSoft) { IraHub.cancelAction(id) }
+        } else BrassButton(yes, tone = LocalPalette.current.oxblood) { mine()?.let { mineId -> scope.launch { IraHub.confirm(mineId) } } }
+        BrassButton(no, tone = LocalPalette.current.inkSoft) { mine()?.let { mineId -> IraHub.cancelAction(mineId) } }
     }
+}
+
+/**
+ * Yes / No under Jarvis's newest message when it ends offering a question ("BankNifty's levels next, Boss?", the morning
+ * "say yes for it"): Yes only asks that question, No ends the offer - nothing acts. Gone once superseded, ended or out of
+ * time, and never on a locked phone.
+ */
+@Composable
+internal fun OfferButtons(msgId: Long) {
+    val newestId by iraSlice { s -> s.messages.lastOrNull()?.id }
+    var tick by remember { mutableIntStateOf(0) }
+    if (newestId != msgId) return
+    // The offer's time runs out by itself: looked at again every 15 seconds while it is the newest message.
+    LaunchedEffect(msgId) { while (true) { delay(15_000); tick++ } }
+    val open = remember(newestId, tick) { newestId == msgId && runCatching { IraHub.offerOpen(msgId) }.getOrDefault(false) }
+    if (!open) return
+    Row(Modifier.padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        BrassButton("Yes") { if (IraHub.answerOffer(msgId, true)) tick++ }
+        BrassButton("No", tone = LocalPalette.current.inkSoft) { if (IraHub.answerOffer(msgId, false)) tick++ }
+    }
+}
+
+/** The Requests badge: "Requests 2" (a count only, nothing of what waits); none in IraGoldAlgo, where Jarvis only talks. */
+@Composable
+internal fun RequestsBadge(modifier: Modifier = Modifier, onOpen: () -> Unit) {
+    if (com.optionslab.app.BuildConfig.GOLD) return
+    val count by iraSlice { s -> IraHub.requestsOf(s).size }
+    val p = LocalPalette.current
+    Text(com.optionslab.ira.Requests.badge(count), style = Type.label.copy(color = if (count > 0) Color.White else p.inkSoft, fontSize = 13.sp),
+        modifier = modifier.background(if (count > 0) p.oxblood else p.card, RoundedCornerShape(12.dp)).clickable { onOpen() }
+            .padding(horizontal = 12.dp, vertical = 6.dp))
 }
 
 /**

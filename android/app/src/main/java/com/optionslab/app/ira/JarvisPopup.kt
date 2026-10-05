@@ -41,6 +41,7 @@ object JarvisPopup {
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_STATUS)
             .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
+            .apply { if (action != null) setPublicVersion(JarvisApproval.lockedVersion(context)) }
             .setTimeoutAfter(SHOW_MS)
             .setAutoCancel(true)
             .setContentIntent(Notifier.openCard(context, card, card.copy(title = shownTitle, text = shown)))

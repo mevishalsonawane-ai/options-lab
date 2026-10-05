@@ -1,0 +1,187 @@
+package com.optionslab.ira
+
+/**
+ * The Requests panel's own rules (Boss, 5 Oct): everything of Jarvis's that waits for Boss's yes - a trade idea (news,
+ * a pattern, Solo), a "shall I stop / exit / close" command, a guard offer ("set a stop at ..."), a plan, a strategy to
+ * approve - in one place, apart from the chat. Words, order and choice only: approving and declining stay the app's own
+ * paths (the hub's confirm with its fingerprint, PIN and live gates; its decline), never anything here.
+ */
+object Requests {
+    /** Where an approved request would act. [NONE]: no order at all (a setting, a strategy stopped, a reminder). */
+    enum class Venue(val label: String) {
+        PAPER("Paper"), ZERODHA("Zerodha · real money"), NONE("No order");
+    }
+
+    enum class Kind(val label: String) {
+        TRADE("Trade idea"), SOLO("Solo's trade idea"), COMMAND("Command"), EXIT("Emergency exit"), GUARD("Guard offer"),
+        CLOSE("Close offer"), PLAN("Plan"), OFFER("Jarvis asks"), STRATEGY("Strategy to approve");
+    }
+
+    /** What became of a request that is no longer waiting. */
+    enum class Outcome(val label: String) {
+        APPROVED("Approved"), DECLINED("Declined"), LAPSED("Lapsed"), FAILED("Failed");
+    }
+
+    /**
+     * One request waiting. [title]: a few words naming it ("stop ORB"); [what]: what it would do, in plain words;
+     * [why]: one line, or null; [askedAt] / [lapsesAt]: epoch milliseconds ([lapsesAt] null: it does not lapse by itself).
+     * [symbol], [qty] and [price]: as known when asked (null when not an order or not known yet).
+     */
+    data class RequestView(
+        val id: Long, val kind: Kind, val title: String, val what: String, val why: String?, val venue: Venue,
+        val askedAt: Long, val lapsesAt: Long?, val symbol: String? = null, val qty: String? = null, val price: String? = null,
+    ) {
+        /** Can a spoken yes or no answer it? (A strategy is approved on the screen only.) */
+        val voiced: Boolean get() = kind != Kind.STRATEGY
+    }
+
+    /** A request no longer waiting, with what became of it and when. */
+    data class Recent(val view: RequestView, val outcome: Outcome, val at: Long)
+
+    /** How many recent ones are kept for the panel's "Recent" list. */
+    const val RECENT_KEEP = 10
+    const val EMPTY = "No requests waiting, Boss."
+    const val GOLD = "In IraGoldAlgo I only talk, Boss: nothing here waits for your approval."
+
+    private val TAIL = Regex("\\s*(Tap Confirm\\b[^.]*\\.?|Approve or reject\\.?|Yes or no\\?)\\s*$", RegexOption.IGNORE_CASE)
+
+    /** The few words naming a request: its plain [what], cut at a comma or "with" and kept short. */
+    fun title(what: String, max: Int = 60): String {
+        val w = what.trim().trimEnd('.')
+        val cut = Regex(",| with ").find(w)?.range?.first?.takeIf { it >= 8 }?.let { w.substring(0, it) } ?: w
+        return if (cut.length <= max) cut else cut.take(max - 1).trimEnd() + "…"
+    }
+
+    /** The one line of why: the request's message without its "Tap Confirm ..." / "Approve or reject." tail; null if none. */
+    fun why(text: String?, max: Int = 160): String? {
+        var t = text?.trim() ?: return null
+        repeat(3) { t = t.replace(TAIL, "").trim() }
+        if (t.isEmpty()) return null
+        val first = Regex("(?<=[.!?])\\s").split(t).firstOrNull()?.trim().orEmpty().ifEmpty { t }
+        return if (first.length <= max) first else first.take(max - 1).trimEnd() + "…"
+    }
+
+    /** The chat's one short line when a request is made (its details and buttons are in the panel). */
+    fun chatLine(title: String): String = "New request: $title — see Requests."
+
+    /** Jarvis's spoken ask, naming the request first. [said]: what he would have said, or null for the plain ask. */
+    fun spoken(title: String, said: String? = null): String =
+        if (said.isNullOrBlank()) "Request: $title. Yes or no?" else "Request: $title. ${said.trim()}"
+
+    /** The badge: "Requests 2", or "Requests" with none. */
+    fun badge(count: Int): String = if (count > 0) "Requests $count" else "Requests"
+
+    /** On a locked phone a notification says only how many wait - never what, never a symbol or an amount. */
+    fun lockedLine(count: Int): String = when {
+        count <= 0 -> "Jarvis"
+        count == 1 -> "Jarvis: 1 request waiting"
+        else -> "Jarvis: $count requests waiting"
+    }
+
+    /** "Asked just now", "Asked 4 min ago", "Asked 2 h ago". */
+    fun askedText(askedAt: Long, now: Long): String {
+        val s = ((now - askedAt) / 1000).coerceAtLeast(0)
+        return when {
+            s < 60 -> "Asked just now"
+            s < 3600 -> "Asked ${s / 60} min ago"
+            else -> "Asked ${s / 3600} h ago"
+        }
+    }
+
+    /** The countdown: "Lapses in 9:05", "Lapses in 0:40", "Lapsed", or "Does not lapse". */
+    fun lapseText(lapsesAt: Long?, now: Long): String {
+        if (lapsesAt == null) return "Does not lapse"
+        val ms = lapsesAt - now
+        if (ms <= 0) return "Lapsed"
+        val s = (ms + 999) / 1000
+        return "Lapses in ${s / 60}:" + (s % 60).toString().padStart(2, '0')
+    }
+
+    /** Still waiting at [now]: not past its lapse time. */
+    fun open(v: RequestView, now: Long): Boolean = v.lapsesAt == null || v.lapsesAt > now
+
+    /** Soonest lapse first; those that do not lapse last; then the older ask first, then the id. */
+    fun sorted(list: List<RequestView>): List<RequestView> =
+        list.sortedWith(compareBy<RequestView>({ it.lapsesAt ?: Long.MAX_VALUE }, { it.askedAt }, { it.id }))
+
+    /** What the panel lists at [now]: the open ones, sorted - none at all in IraGoldAlgo ([gold]: only talk there). */
+    fun shown(list: List<RequestView>, now: Long, gold: Boolean): List<RequestView> =
+        if (gold) emptyList() else sorted(list.filter { open(it, now) })
+
+    /** [r] added to the recent list (newest first, at most [RECENT_KEEP]; a request is listed once). */
+    fun keep(recent: List<Recent>, r: Recent): List<Recent> =
+        (listOf(r) + recent.filter { it.view.id != r.view.id }).take(RECENT_KEEP)
+
+    /** An approved request's outcome by its result: failed when the result says it was not done. */
+    fun outcomeOf(result: String?): Outcome = if (result == null || Plan.failed(result)) Outcome.FAILED else Outcome.APPROVED
+
+    /**
+     * A Yes or No button under a chat message (or in the panel) answers ITS OWN request: the id it was drawn for, while
+     * that one still waits - else nothing (answered, lapsed or gone). Never another pending request.
+     */
+    fun tapTarget(buttonId: Long, waiting: Collection<Long>): Long? = buttonId.takeIf { it in waiting }
+
+    /**
+     * Yes / No buttons for an offer of words ("BankNifty's levels next, Boss?", the morning "say yes for it"): only under
+     * Jarvis's newest message, only when it ends with that very offer, and never on a locked phone. Superseded (a newer
+     * message, the offer ended or taken), no buttons.
+     */
+    fun offerButtons(msgText: String, newest: Boolean, offerLine: String?, locked: Boolean): Boolean =
+        newest && !locked && !offerLine.isNullOrBlank() && msgText.trimEnd().endsWith(offerLine.trim())
+
+    // ---- a spoken yes or no with more than one request waiting -------------------------------------------------------
+
+    /** What to do with a spoken yes or no while Jarvis waits on one request. */
+    sealed class Pick {
+        /** As before: the yes or no is for the request just asked about. */
+        object Pass : Pick()
+        /** More than one waits and the words did not say which: nothing is picked; [line] is said. */
+        data class Ambiguous(val count: Int, val line: String) : Pick()
+        /** Boss named one: Jarvis asks about that one (and only its next yes or no answers it). */
+        data class Reask(val id: Long, val line: String) : Pick()
+    }
+
+    private val FILLER = setOf("a", "an", "the", "on", "at", "of", "to", "in", "for", "and", "it", "its", "my", "your", "this", "that",
+        "yes", "no", "ok", "okay", "please", "boss", "jarvis", "one", "lot", "lots", "set", "stop", "start", "close", "buy", "sell",
+        "do", "go", "ahead", "approve", "reject", "cancel", "confirm", "turn", "switch", "with", "nearest", "expiry", "money")
+
+    private fun words(s: String): Set<String> = s.lowercase().replace(Regex("[^a-z0-9 ]"), " ").split(Regex("\\s+"))
+        .filter { it.length > 1 && it !in FILLER }.toSet()
+
+    /**
+     * The one waiting request [said] names by a word of its own (one no other waiting request has), or null when none or
+     * more than one is named.
+     */
+    fun named(said: String, waiting: List<RequestView>): RequestView? {
+        val heard = words(said)
+        if (heard.isEmpty()) return null
+        val own = waiting.associateWith { v -> words(v.title + " " + (v.symbol ?: "")) }
+        val hits = waiting.filter { v ->
+            val others = waiting.filter { it.id != v.id }.flatMap { own[it].orEmpty() }.toSet()
+            own[v].orEmpty().any { it in heard && it !in others }
+        }
+        return hits.singleOrNull()
+    }
+
+    /** "You have 2 requests, Boss — open Requests, or say which one." */
+    fun ambiguousLine(count: Int): String = "You have $count requests, Boss — open Requests, or say which one."
+
+    /** Asked again by name, for one plain yes or no. */
+    fun reaskLine(title: String): String = "Request: $title. Just yes or no?"
+
+    /**
+     * Boss's words [said] (read as a yes or no: [yesNo], null when neither) while Jarvis waits on [asked] - its window open.
+     * [focused]: the request Jarvis last asked again by name. With one request waiting, as before ([Pick.Pass]). With two
+     * or more: a request named is asked again by itself ([Pick.Reask]); a bare yes or no is for the one asked again by
+     * name only; otherwise nothing is picked ([Pick.Ambiguous]). A strategy (approved on the screen) is not counted.
+     */
+    fun pick(said: String, yesNo: Boolean?, asked: Long, focused: Long?, pending: List<RequestView>): Pick {
+        val voiced = pending.filter { it.voiced }
+        if (voiced.size < 2) return Pick.Pass
+        val name = named(said, voiced)
+        if (name != null) return Pick.Reask(name.id, reaskLine(name.title))
+        if (yesNo == null) return Pick.Pass
+        if (focused != null && focused == asked && voiced.any { it.id == asked }) return Pick.Pass
+        return Pick.Ambiguous(voiced.size, ambiguousLine(voiced.size))
+    }
+}

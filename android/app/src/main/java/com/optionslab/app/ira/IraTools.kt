@@ -1029,7 +1029,7 @@ internal object IraTools {
         val u = runCatching { com.optionslab.ira.MorningAsks.offer(asksLog(), today) }.getOrNull()
         asksUpdate { com.optionslab.ira.MorningAsks.checked(it, today) }
         asksOffered = u?.let { it.key to asksNow() }
-        return u?.let { runCatching { com.optionslab.ira.MorningAsks.line(it) }.getOrNull() }
+        return u?.let { runCatching { com.optionslab.ira.MorningAsks.line(it) }.getOrNull() }.also { asksLineShown = it }
     }
 
     /**
@@ -1551,6 +1551,7 @@ internal object IraTools {
         nextAskOffered = r?.let { it.next to at }
         val line = r?.let { runCatching { com.optionslab.ira.NextAsk.line(it) }.getOrNull() }
         nextAskOfferedLine = line
+        nextAskLineShown = line
         return line
     }
 
@@ -1565,6 +1566,31 @@ internal object IraTools {
         val line = nextAskOfferedLine ?: return false
         return text != null && text.contains(line)
     }
+
+    // ---- Yes / No buttons under an offer of words (Boss, 5 Oct) --------------------------------------------------------
+    /** The words of the offers last made, to find the very message that made them. */
+    @Volatile private var nextAskLineShown: String? = null
+    @Volatile private var asksLineShown: String? = null
+
+    /**
+     * The offer of words still open (the question Boss asks next, or the morning one), as its line ends Jarvis's message -
+     * or null once it ended, was taken or ran out of time. Words only: a Yes on it only asks that question.
+     */
+    fun offerLine(): String? {
+        val now = asksNow()
+        nextAskOffered?.let { (_, at) ->
+            if (!now.isBefore(at) && !now.isAfter(at.plusMinutes(com.optionslab.ira.NextAsk.YES_MINUTES))) nextAskLineShown?.let { return it }
+        }
+        asksOffered?.let { (_, at) -> if (com.optionslab.ira.MorningAsks.fresh(at, now)) asksLineShown?.let { return it } }
+        return null
+    }
+
+    /**
+     * Yes tapped under the offer's own message: the offered question (checked as a spoken yes is - safe, in time, the
+     * phone unlocked), or null. The tap names its offer, so a request waiting elsewhere does not stop it. Ends the offer.
+     */
+    fun offerTapped(locked: Boolean): String? =
+        nextAskYes("yes", false, locked) ?: if (locked) { asksOffered = null; null } else morningAsksYes("yes", false)
 
     /**
      * Boss's words [said] after a follow-up was offered: a bare "yes" in time - nothing else waiting for his yes

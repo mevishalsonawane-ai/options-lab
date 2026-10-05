@@ -872,6 +872,31 @@ class JarvisVoice : Service() {
     @Volatile private var askingUntil = 0L
     /** The words of the yes-or-no question about [asking], asked again when a yes is held ([com.optionslab.ira.AnswerWindow.hold]). */
     private var askingText: String? = null
+    /** The request Jarvis last asked about again by name, with more than one waiting ([com.optionslab.ira.Requests.pick]). */
+    private var requestFocus: Long? = null
+
+    /**
+     * Two or more requests waiting (Boss, 5 Oct): a bare yes or no picks none of them - Jarvis says how many and asks
+     * which; a request named is asked about again by itself, and only its next plain yes or no answers it (through the
+     * same confirm as ever). True when handled here; false leaves the yes or no to the usual handling.
+     */
+    private fun manyRequestsWaiting(id: Long, said: String?, yes: Boolean?): Boolean {
+        val waiting = runCatching { IraHub.pendingRequests().value }.getOrDefault(emptyList())
+        val pick = runCatching { com.optionslab.ira.Requests.pick(said.orEmpty(), yes, id, requestFocus, waiting) }
+            .getOrDefault(com.optionslab.ira.Requests.Pick.Pass)
+        when (pick) {
+            is com.optionslab.ira.Requests.Pick.Pass -> return false
+            is com.optionslab.ira.Requests.Pick.Ambiguous -> { note("a yes or no with ${pick.count} requests waiting: none picked"); say(pick.line, "question") }
+            is com.optionslab.ira.Requests.Pick.Reask -> {
+                // On a locked phone the request is not named aloud: how many wait, and the Requests panel after the unlock.
+                if (locked()) { say(com.optionslab.ira.Requests.ambiguousLine(waiting.count { it.voiced }), "question"); return true }
+                requestFocus = pick.id
+                asking = pick.id; askingText = pick.line; askingNeedsBoss = true; askingUntil = 0
+                say(pick.line, "question")
+            }
+        }
+        return true
+    }
     /**
      * What Jarvis last finished inviting an answer to ([com.optionslab.ira.AnswerWindow]): his own request's yes-or-no
      * question, or an offer of words (the morning check's "say yes for it"). A yes is only ever for the last one.
@@ -1744,6 +1769,7 @@ class JarvisVoice : Service() {
                 say(com.optionslab.ira.AnswerWindow.hold(askingText), "question")
                 return
             }
+            if (manyRequestsWaiting(id, alternatives.firstOrNull(), yes)) return
             if (yes != null) {
                 // A faint yes (the room, the TV) is not a yes: anything unclear is not a yes. The question stays open.
                 if (yes && com.optionslab.ira.Sure.faintYes(sure)) { note("a faint yes (${com.optionslab.ira.Sure.say(sure)}): not taken"); again(); return }
@@ -2044,7 +2070,7 @@ class JarvisVoice : Service() {
                 o != null && o.missing.isEmpty() && o.refusal == null -> "I have put that order on the Ira screen. Nothing is sent until you confirm it there."
                 a.action != null -> {
                     // Asked aloud instead of a button hidden in the chat: "Shall I stop ORB? Yes or no?"
-                    val shall = com.optionslab.ira.Address.boss("Shall I " + a.text.removePrefix("Tap Confirm to ").trimEnd('.') + "? Yes or no?")
+                    val shall = IraHub.requestAsk(a.action) ?: com.optionslab.ira.Address.boss("Shall I " + a.text.removePrefix("Tap Confirm to ").trimEnd('.') + "? Yes or no?")
                     asking = a.action; askingText = shall; askingNeedsBoss = IraHub.isExit(a.action); askingUntil = 0
                     say(shall, "question")
                     return@launch
