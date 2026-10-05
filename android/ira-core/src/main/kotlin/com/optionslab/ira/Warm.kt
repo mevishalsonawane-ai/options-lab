@@ -22,7 +22,7 @@ object Warm {
     private val DETECTORS: List<(String) -> Any?> = listOf<(String) -> Any?>(
         AboutBoss::forgetAsked, AboutBoss::knowAsked, Airtime::asked, AlertSense::asked, AppAnswers::sections,
         ArmChange::asked, ArmDay::asked, ArmFit::asked, ArmHabits::asked, AskedAgain::asked, AutoStop::read,
-        BatteryUse::asked, BeforeTomorrow::asked, BigCandles::asked, BookDecay::asked, WhereIWin::asked, TradesADay::asked, BigPicture::asked, BotHealth::asked, BotTrades::asked, Breadth::asked,
+        BatteryUse::asked, BeforeTomorrow::asked, BigCandles::asked, BookDecay::asked, WhereIWin::asked, TradesADay::asked, AfterLoss::asked, BigPicture::asked, BotHealth::asked, BotTrades::asked, Breadth::asked,
         Briefing::asked, Bundle::acts, Causes::asked, ChainDrift::asked, ChainIntel::asked, Charges::asked, Clarity::asked, CoPilot::asked, Comebacks::asked,
         Compare::asked, Compare::markets, Consistency::asked, Corrections::forgetWordAsked, Corrections::wordsAsked,
         DataAge::asked, DayAfter::asked, DayClock::asked, DayCompare::asked, DayJournal::asked, DayStory::asked, DaySummary::asked,
