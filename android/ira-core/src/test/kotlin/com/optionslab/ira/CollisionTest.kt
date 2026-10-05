@@ -389,7 +389,21 @@ class CollisionTest {
         val hub = java.io.File("../app/src/main/java/com/optionslab/app/ira/IraHub.kt").takeIf { it.isFile }?.readText() ?: return
         val from = hub.indexOf("val bundled = runCatching"); val to = hub.indexOf("com.optionslab.ira.Plan.steps(q)", from)
         assertTrue(from > 0 && to > from)
-        val body = hub.substring(from, to)
+        // Stretches of the branches live in IraHub's own private functions (`if (askedOfX(q, parsed, bundled, understood)) return`,
+        // kept small for the compiler): each call is read as that function's body, in place, so the order and every guard
+        // are checked across them just the same.
+        val helper = Regex("if \\((\\w+)\\(q, parsed, bundled, understood\\)\\) return")
+        val inlined = mutableListOf<String>()
+        val body = helper.replace(hub.substring(from, to)) { m ->
+            val name = m.groupValues[1]; inlined += name
+            val head = hub.indexOf("private fun $name(q: String, parsed: ")
+            assertTrue(head > 0, "no private fun $name in IraHub")
+            val open = hub.indexOf("{\n", head) + 2; val end = hub.indexOf("\n        return false\n    }\n", open)
+            assertTrue(end > open, "$name: no closing `return false`")
+            hub.substring(open, end)
+        }
+        assertTrue(inlined.size >= 6 && inlined.distinct() == inlined, "$inlined")
+        assertTrue(!helper.containsMatchIn(body))
         val calls = Regex("com\\.optionslab\\.ira\\.(\\w+)\\.(asked|exportAsked|undoAsked)\\(q\\)").findAll(body).toList()
         val order = calls.map { it.groupValues[1] + (if (it.groupValues[2] == "asked") "" else "." + it.groupValues[2]) }.distinct()
         assertEquals(HUB_ORDER, order)
