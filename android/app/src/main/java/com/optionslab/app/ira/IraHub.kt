@@ -1313,7 +1313,10 @@ object IraHub {
     /** The morning check's line per index: trend, today's usual range, pivot (from the candles the phone holds). */
     fun morningOutlook(): List<String> = runCatching {
         val vix = _state.value.snaps[IraMarket.VIX]?.price ?: 0.0
-        listOf(IraMarket.NIFTY, IraMarket.BANKNIFTY).mapNotNull { m -> com.optionslab.ira.Outlook.brief(m, histories[m]?.bars.orEmpty(), vix) }
+        // The index Boss asks about by name first ([com.optionslab.ira.LeadIndex]; only the order changes, never a figure).
+        val firstOut = if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD) runCatching { IraTools.firstIndex() }.getOrNull() else null
+        com.optionslab.ira.LeadIndex.order(listOf(IraMarket.NIFTY, IraMarket.BANKNIFTY), firstOut)
+            .mapNotNull { m -> com.optionslab.ira.Outlook.brief(m, histories[m]?.bars.orEmpty(), vix) }
     }.getOrDefault(emptyList())
 
     /**
@@ -1524,7 +1527,7 @@ object IraHub {
                 com.optionslab.ira.ArmHabits.asked(q) || com.optionslab.ira.MorningSense.asked(q) != null ||
                 com.optionslab.ira.HonestStars.asked(q) != null || com.optionslab.ira.TalkHours.asked(q) != null || com.optionslab.ira.MorningAsks.asked(q) != null || com.optionslab.ira.BatteryUse.asked(q) ||
                 com.optionslab.ira.TurnDowns.asked(q) != null || com.optionslab.ira.TopicLength.asked(q) != null || com.optionslab.ira.OutlookCheck.asked(q) ||
-                com.optionslab.ira.UsualIndex.asked(q) != null || com.optionslab.ira.Nicknames.asked(q) != null ||
+                com.optionslab.ira.UsualIndex.asked(q) != null || com.optionslab.ira.Nicknames.asked(q) != null || com.optionslab.ira.LeadIndex.asked(q) != null ||
                 com.optionslab.ira.DayCompare.asked(q) != null || com.optionslab.ira.LikeToday.asked(q) }.getOrDefault(false)) {
             val prev = if (recent) _state.value.messages.lastOrNull { !it.fromIra }?.text else null
             val qs = runCatching { com.optionslab.ira.Understand.questions(prev, q) }.getOrNull()
@@ -2201,10 +2204,13 @@ object IraHub {
         val st0 = _state.value
         val book0 = book
         val calls0 = runCatching { IraTools.patternCalls() }.getOrDefault(emptyList())
+        // A greeting names the index Boss asks about by name first ([com.optionslab.ira.LeadIndex]; only the order changes).
+        val first0 = if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && parsed.topics == setOf(Topic.GREETING))
+            runCatching { IraTools.firstIndex() }.getOrNull() else null
         // Worked out ahead while the recognizer's final reading was awaited ([prepare]): taken only for the same question
         // from the same prices, news and minute (the same words then, exactly); otherwise worked out now, as before.
         val a0 = ahead.take(Inputs(com.optionslab.ira.Turn.key(parsed), st0.snaps, st0.news, book0, now.truncatedTo(java.time.temporal.ChronoUnit.MINUTES), closedReason))
-            ?: runCatching { Ira(book0, calls0).answer(q, st0.snaps, st0.news, voice = com.optionslab.app.BuildConfig.JARVIS,
+            ?: runCatching { Ira(book0, calls0, first0).answer(q, st0.snaps, st0.news, voice = com.optionslab.app.BuildConfig.JARVIS,
                 now = now, closedReason = closedReason) }.getOrElse { com.optionslab.ira.Answer("I could not work that out.", emptyList()) }
         // A holiday or a weekend: said first, so the last session's prices are not taken for today's.
         val closed = closedToday()?.takeIf { parsed.topics.any { it in MARKET_TOPICS } && testHistories == null }
@@ -2264,7 +2270,7 @@ object IraHub {
 
     /**
      * [ask]'s question branches on how Jarvis himself speaks and hears: AlertSense, Airtime, Hearing, PatternCalls,
-     * TrendReads, Clarity, WordFit, AskedAgain, FigureFirst, WrongThing, ArmHabits, MorningSense, HonestStars, TalkHours, MorningAsks, TurnDowns, TopicLength, OutlookCheck, UsualIndex, Nicknames - in [ask]'s order. True when one
+     * TrendReads, Clarity, WordFit, AskedAgain, FigureFirst, WrongThing, ArmHabits, MorningSense, HonestStars, TalkHours, MorningAsks, TurnDowns, TopicLength, OutlookCheck, UsualIndex, Nicknames, LeadIndex - in [ask]'s order. True when one
      * took [q], answered exactly as before; each branch keeps its own guard (not [bundled], no order, no command).
      */
     private fun askedOfHisWays(q: String, parsed: com.optionslab.ira.Question, bundled: Boolean, understood: Boolean): Boolean {
@@ -2477,6 +2483,17 @@ object IraHub {
             val nickSaid = if (nickAsk == com.optionslab.ira.Nicknames.Request.RESET) IraTools.nickReset()
                 else if (phoneLocked()) com.optionslab.ira.Nicknames.LOCKED else IraTools.nickSay()
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, nickSaid)).takeLast(MAX_MESSAGES)) }
+            return true
+        }
+        // "Which index do you mention first?" / "mention Nifty first again": the index Boss asks about by name, named first
+        // where both are given ([com.optionslab.ira.LeadIndex]; from the kinds tally, counts only). His habit: named on an
+        // unlocked phone only; the undo works locked too. Only the order of words changes - nothing learned acts. Not in IraGoldAlgo.
+        val firstAsk = if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null)
+            runCatching { com.optionslab.ira.LeadIndex.asked(q) }.getOrNull() else null
+        if (firstAsk != null) {
+            val firstSaid = if (firstAsk == com.optionslab.ira.LeadIndex.Request.RESET) IraTools.firstIndexReset()
+                else if (phoneLocked()) com.optionslab.ira.LeadIndex.LOCKED else IraTools.firstIndexSay()
+            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, firstSaid)).takeLast(MAX_MESSAGES)) }
             return true
         }
         return false
@@ -3576,7 +3593,9 @@ object IraHub {
         val now = LocalDateTime.now(IST)
         val st = _state.value
         val b = book
-        val a = runCatching { Ira(b, runCatching { IraTools.patternCalls() }.getOrDefault(emptyList())).answer(q, st.snaps, st.news, voice = com.optionslab.app.BuildConfig.JARVIS, now = now, closedReason = closedReason) }.getOrNull() ?: return
+        val firstAhead = if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && parsed.topics == setOf(Topic.GREETING))
+            runCatching { IraTools.firstIndex() }.getOrNull() else null
+        val a = runCatching { Ira(b, runCatching { IraTools.patternCalls() }.getOrDefault(emptyList()), firstAhead).answer(q, st.snaps, st.news, voice = com.optionslab.app.BuildConfig.JARVIS, now = now, closedReason = closedReason) }.getOrNull() ?: return
         ahead.put(Inputs(com.optionslab.ira.Turn.key(parsed), st.snaps, st.news, b, now.truncatedTo(java.time.temporal.ChronoUnit.MINUTES), closedReason), a)
     }
 

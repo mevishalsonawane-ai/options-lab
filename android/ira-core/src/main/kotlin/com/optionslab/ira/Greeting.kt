@@ -14,8 +14,11 @@ object Greeting {
         else -> "Good evening"
     }
 
-    /** [closedReason]: why there is no session today (a weekend, a holiday), or null on a trading day. */
-    fun say(now: LocalDateTime, snaps: Map<Market, Snapshot>, closedReason: String?): String {
+    /**
+     * [closedReason]: why there is no session today (a weekend, a holiday), or null on a trading day. [lead]: the index Boss
+     * asks about by name, named first ([LeadIndex]; only the order changes), or null for Nifty first as always.
+     */
+    fun say(now: LocalDateTime, snaps: Map<Market, Snapshot>, closedReason: String?, lead: Market? = null): String {
         val m = now.hour * 60 + now.minute
         val open = closedReason == null && m in (9 * 60 + 15) until (15 * 60 + 30)
         val day = now.dayOfWeek.name.lowercase().replaceFirstChar { it.uppercase() }
@@ -29,7 +32,7 @@ object Greeting {
             val ch = s.changePct?.let { " (%+.2f%%)".format(Locale.ENGLISH, it) } ?: ""
             if (open) "${mk.label} is at ${mk.price(s.price)}$ch" else "${mk.label} last closed at ${mk.price(s.price)}$ch"
         }
-        val levels = listOfNotNull(line(Market.NIFTY), line(Market.BANKNIFTY))
+        val levels = LeadIndex.order(LeadIndex.INDICES, lead).mapNotNull { line(it) }
         val where = if (levels.isEmpty()) "" else " " + levels.joinToString("; ") + "."
         val offer = when {
             closedReason != null -> " Want last week's review, or to practise on a past day?"

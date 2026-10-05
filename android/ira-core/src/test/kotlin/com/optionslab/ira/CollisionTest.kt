@@ -94,6 +94,7 @@ class CollisionTest {
         "OutlookCheck" to { q -> OutlookCheck.asked(q) },
         "UsualIndex" to { q -> UsualIndex.asked(q) != null },
         "Nicknames" to { q -> Nicknames.asked(q) != null },
+        "LeadIndex" to { q -> LeadIndex.asked(q) != null },
         "Headroom" to { q -> Headroom.asked(q) != null },
         "ArmFit" to { q -> ArmFit.asked(q) },
         "WeakLink" to { q -> WeakLink.asked(q) },
@@ -785,6 +786,14 @@ class CollisionTest {
         "what do i call my bots" to "Nicknames", "show my nicknames" to "Nicknames", "what nicknames have you learned" to "Nicknames",
         "mere bots ke nicknames kya hain" to "Nicknames", "forget my nicknames for my arms" to "Nicknames", "forget my nicknames" to "Nicknames",
         "clear the nicknames" to "Nicknames", "forget the names i use for my positions" to "Nicknames", "mere nicknames bhool jao" to "Nicknames",
+        // ---- LeadIndex: the index Boss asks about by name, named first where both are given ----
+        "which index do you mention first" to "LeadIndex", "why do you say banknifty first" to "LeadIndex",
+        "why do you mention bank nifty first in the greeting" to "LeadIndex", "why is banknifty first" to "LeadIndex",
+        "which index do i ask about most" to "LeadIndex", "what index do i ask you about the most" to "LeadIndex",
+        "kaunsa index pehle bolte ho" to "LeadIndex", "banknifty pehle kyun bolte ho" to "LeadIndex",
+        "main kaunsa index sabse zyada puchta hoon" to "LeadIndex", "mention nifty first again" to "LeadIndex",
+        "say nifty first" to "LeadIndex", "don't say bank nifty first" to "LeadIndex",
+        "nifty pehle bolo" to "LeadIndex", "banknifty pehle mat bolo" to "LeadIndex",
         // ---- HonestStars: his confidence scores against their record ----
         "how honest are your stars" to "HonestStars", "do your 5 star ideas actually work" to "HonestStars",
         "tumhare confidence stars kitne sahi hain" to "HonestStars", "are your confidence ratings any good" to "HonestStars",
@@ -1170,7 +1179,7 @@ class CollisionTest {
     // ---- The audit's order is the hub's: read from IraHub.ask itself when the app's source is beside this module ----
 
     /** The question branches of IraHub.ask between the `bundled` read and the Plan block, in [CoverageTest.feature]'s order. */
-    private val HUB_ORDER = listOf("DayJournal", "AlertSense", "Airtime", "Hearing", "PatternCalls", "TrendReads", "OutsideApp", "Clarity", "WordFit", "AskedAgain", "FigureFirst", "WrongThing", "ArmHabits", "MorningSense", "HonestStars", "TalkHours", "MorningAsks", "TurnDowns", "TopicLength", "OutlookCheck", "UsualIndex", "Nicknames", "NewsMoves",
+    private val HUB_ORDER = listOf("DayJournal", "AlertSense", "Airtime", "Hearing", "PatternCalls", "TrendReads", "OutsideApp", "Clarity", "WordFit", "AskedAgain", "FigureFirst", "WrongThing", "ArmHabits", "MorningSense", "HonestStars", "TalkHours", "MorningAsks", "TurnDowns", "TopicLength", "OutlookCheck", "UsualIndex", "Nicknames", "LeadIndex", "NewsMoves",
         "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmFit", "WeakLink", "ArmChange", "PnlGap", "ArmDay", "BookDecay", "NetLean", "ExpiryEve", "BeforeTomorrow", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "ZerodhaSession", "OrderWhy", "RelayHealth", "StreamHealth", "BatteryUse", "WatchAsk", "Tour", "DataAge", "Honest", "Thinking",
         "SelfWhy", "Consistency", "CoPilot", "SinceMorning", "ExpiryPin", "ChainDrift", "ChainIntel", "DayClock", "GapRecord", "RangeBreaks", "PriorDay", "LastHour", "InsideDays", "FirstMove", "VixNext", "SplitDays", "RoundCloses", "MonthTurns", "LunchRange", "OpenHighLow", "BigCandles", "ExtremeCloses", "WeekRange", "RelativeMove", "Comebacks", "Weekdays", "DayCompare", "LikeToday", "Structure", "MindChange", "Breadth",
         "TradeCase", "Scenarios", "Causes", "Agenda", "Improve")

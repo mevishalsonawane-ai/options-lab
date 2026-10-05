@@ -1415,6 +1415,49 @@ internal object IraTools {
         return said
     }
 
+    // ---- the index Boss asks about by name, named first ([com.optionslab.ira.LeadIndex]) -----------------------------
+
+    /** Only the day Boss last asked for Nifty first again: the learning reads the kinds tally already kept ([askedKinds]). */
+    private const val FIRST_INDEX = "jarvis.leadIndex"
+    @Volatile private var firstIndexCache: com.optionslab.ira.LeadIndex.Log? = null
+
+    fun firstIndexLog(): com.optionslab.ira.LeadIndex.Log = firstIndexCache ?: runCatching {
+        val o = JSONObject(prefs().getString(FIRST_INDEX) ?: "{}")
+        com.optionslab.ira.LeadIndex.Log(o.optString("r").takeIf { it.isNotEmpty() }?.let { java.time.LocalDate.parse(it) })
+    }.getOrDefault(com.optionslab.ira.LeadIndex.Log()).also { firstIndexCache = it }
+
+    @Synchronized private fun firstIndexSave(log: com.optionslab.ira.LeadIndex.Log) {
+        runCatching {
+            firstIndexCache = log
+            val o = JSONObject()
+            log.resetOn?.let { o.put("r", it.toString()) }
+            prefs().putAllSoon(mapOf(FIRST_INDEX to o.toString()))
+        }
+    }
+
+    /** The learned index's record now, or null (Nifty first). Counts only; nothing here acts. */
+    private fun firstIndexRecord(): com.optionslab.ira.LeadIndex.Record? = runCatching {
+        com.optionslab.ira.LeadIndex.learned(askedKinds(), firstIndexLog(), com.optionslab.app.data.Market.today())
+    }.getOrNull()
+
+    /**
+     * The index named first where Jarvis gives both (the greeting, the morning outlook), or null: Nifty first, as always.
+     * Only the order of words changes - never which index a question is answered for, nor anything that acts.
+     */
+    fun firstIndex(): com.optionslab.ira.Market? = firstIndexRecord()?.market
+
+    /** "Which index do you mention first?". */
+    fun firstIndexSay(): String = runCatching { com.optionslab.ira.LeadIndex.say(firstIndexRecord()) }
+        .getOrDefault("I could not read my count of the index you ask about just now, Boss.")
+
+    /** "Mention Nifty first again": Nifty first, the count afresh from tomorrow. */
+    fun firstIndexReset(): String {
+        val said = runCatching { com.optionslab.ira.LeadIndex.sayReset(firstIndexRecord()) }.getOrDefault("Done, Boss: Nifty first again.")
+        firstIndexSave(com.optionslab.ira.LeadIndex.reset(com.optionslab.app.data.Market.today()))
+        IraActivity.add("Naming Nifty first again (as asked).")
+        return said
+    }
+
     // ---- the morning outlook checked against the close ([com.optionslab.ira.OutlookCheck]) ---------------------------
 
     /** Each index's 09:00 outlook numbers (previous close, range, direction read, pivot) and the day's open, high, low, close. Market data only. */
@@ -1480,7 +1523,8 @@ internal object IraTools {
         turnDowns = runCatching { turnLog() }.getOrDefault(com.optionslab.ira.TurnDowns.Log()),
         lengths = runCatching { lengthLog() }.getOrDefault(com.optionslab.ira.TopicLength.Log()),
         usualIndex = runCatching { indexLog() }.getOrDefault(com.optionslab.ira.UsualIndex.Log()),
-        nicknames = runCatching { nickLog() }.getOrDefault(com.optionslab.ira.Nicknames.Log()))
+        nicknames = runCatching { nickLog() }.getOrDefault(com.optionslab.ira.Nicknames.Log()),
+        leadIndex = runCatching { firstIndexLog() }.getOrDefault(com.optionslab.ira.LeadIndex.Log()))
 
     /**
      * "Undo everything you learned this week", on Boss's Confirm: the wordings and routines kept in the last 7 days
@@ -1504,6 +1548,7 @@ internal object IraTools {
         if (u.lengths.isNotEmpty()) { lengthUpdate { com.optionslab.ira.TopicLength.reset(it, now) }; lengthLast = null }
         if (u.usualIndex.isNotEmpty()) { indexUpdate { com.optionslab.ira.UsualIndex.reset(it, now) }; indexLast = null }
         if (u.nicknames.isNotEmpty()) { nickUpdate { com.optionslab.ira.Nicknames.forgetWeek(it, today) }; nickAsked = null }
+        if (u.leadIndex.isNotEmpty()) firstIndexSave(com.optionslab.ira.LeadIndex.reset(today))
         IraActivity.add("Undid this week's learning, as Boss confirmed: ${u.words.size} wording(s), ${u.routines.size} routine(s), " +
             "${u.alerts.size} alert kind(s) aloud again, ${u.clarity.size} answer kind(s) as usual aloud again, ${u.figure.size} market read kind(s) in the usual order again, ${u.morning.size} morning-check item(s) read out in full again, " +
             "${u.stars.size} confidence score(s) said plainly again, " + (if (u.hours.isNotEmpty()) "briefings in full at any hour again, " else "briefings unchanged, ") +
@@ -1511,7 +1556,8 @@ internal object IraTools {
             (if (u.turnDowns.isNotEmpty()) "no reason of Boss's said up front, " else "ideas asked as before, ") +
             (if (u.lengths.isNotEmpty()) "every topic at the usual length aloud, " else "topic lengths unchanged, ") +
             (if (u.usualIndex.isNotEmpty()) "Nifty again when Boss names no index, " else "the index taken unchanged, ") +
-            (if (u.nicknames.isNotEmpty()) "${u.nicknames.size} nickname(s) forgotten." else "nicknames unchanged."))
+            (if (u.nicknames.isNotEmpty()) "${u.nicknames.size} nickname(s) forgotten, " else "nicknames unchanged, ") +
+            (if (u.leadIndex.isNotEmpty()) "Nifty named first again." else "the index named first unchanged."))
         return u
     }
 

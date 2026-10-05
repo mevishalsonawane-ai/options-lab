@@ -29,7 +29,7 @@ object Warm {
         Distance::asked, ExpectedRange::asked, ExpiryDay::asked, ExpiryEve::asked, ExpiryPin::asked, ExtremeCloses::asked,
         FigureFirst::asked, FirstMove::asked, Gap::asked, GapRecord::asked, Goals::asked, Goals::clearAsked, Goals::read,
         Habits::asked, Headroom::asked, Hearing::asked, Honest::asked, HonestStars::asked, Improve::asked, InsideDays::asked,
-        Intents::mayMean, Intents::prompt, LastHour::asked, Latency::asked, Learnings::asked, Learnings::undoAsked,
+        Intents::mayMean, Intents::prompt, LastHour::asked, Latency::asked, LeadIndex::asked, Learnings::asked, Learnings::undoAsked,
         Lessons::asked, LevelInfo::asked, LikeToday::asked, Lookback::prevAsked, Lookback::time, LunchRange::asked,
         MarketMemory::asked, MarketStory::asked, Memory::forgetAsked, Memory::recallAsked, Memory::toKeep, MindChange::asked,
         Momentum::asked, MonthReview::asked, MonthTurns::asked, MorningAsks::asked, MorningSense::asked, { Moves.asked(it) }, MyNumbers::asked, MyStreaks::asked, NeedsTrue::asked,
