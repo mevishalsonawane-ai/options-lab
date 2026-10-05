@@ -1226,7 +1226,7 @@ object IraHub {
                 com.optionslab.ira.SaidAbout.asked(q) != null || com.optionslab.ira.WeekAhead.asked(q) != null ||
                 com.optionslab.ira.NeedsTrue.asked(q) ||
                 com.optionslab.ira.Clarity.asked(q) != null || com.optionslab.ira.DayClock.asked(q) != null ||
-                com.optionslab.ira.GapRecord.asked(q) != null ||
+                com.optionslab.ira.GapRecord.asked(q) != null || com.optionslab.ira.Weekdays.asked(q) != null ||
                 com.optionslab.ira.WordFit.asked(q) != null ||
                 com.optionslab.ira.Causes.asked(q) != null ||
                 com.optionslab.ira.AskedAgain.asked(q) || com.optionslab.ira.MindChange.asked(q) }.getOrDefault(false)) {
@@ -1569,6 +1569,26 @@ object IraHub {
                 else com.optionslab.ira.GapRecord.answer(gapAsk, mk, histories[mk]?.bars.orEmpty(),
                     com.optionslab.app.data.Market.today(), LocalDateTime.now(IST))
             }.getOrElse { "I could not read the gap record just now, Boss." }
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            reply(said)
+            return
+        }
+        // "Are Mondays more volatile?", "which day of the week moves the most?", "are expiry days wider than other days?": each
+        // weekday's record, and the expiry days the phone knows against the rest, from the whole past sessions of 1-minute
+        // candles ([com.optionslab.ira.Weekdays]) beside today's range. A record of past days, never a forecast or advice;
+        // market data only (fine on a locked phone). (The last expiries one by one stay MarketMemory's, today's ExpiryDay's.)
+        val weekdayAsk = if (!bundled && parsed.order == null && parsed.command == null && !com.optionslab.app.BuildConfig.GOLD)
+            runCatching { com.optionslab.ira.Weekdays.asked(q) }.getOrNull() else null
+        if (weekdayAsk != null) {
+            val said = runCatching {
+                val mk = com.optionslab.ira.Weekdays.market(parsed.markets)
+                if (mk == null) com.optionslab.ira.Weekdays.NOT_HERE
+                else {
+                    val today = com.optionslab.app.data.Market.today()
+                    val ex = expiryDays[mk].orEmpty() + (if (expiryToday(mk)) setOf(today) else emptySet())
+                    com.optionslab.ira.Weekdays.answer(weekdayAsk, mk, histories[mk]?.bars.orEmpty(), today, LocalDateTime.now(IST), ex)
+                }
+            }.getOrElse { "I could not read the weekday record just now, Boss." }
             _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
             reply(said)
             return

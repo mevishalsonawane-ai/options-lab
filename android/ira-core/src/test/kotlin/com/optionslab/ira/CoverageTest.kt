@@ -30,7 +30,7 @@ class CoverageTest {
         val asSaid = Sources.asked(said) || AboutBoss.knowAsked(said) || Memory.recallAsked(said) || Memory.forgetAsked(said) || PatternCalls.asked(said) ||
             Learnings.asked(said) != null || Learnings.undoAsked(said) || NewsMoves.asked(said) != null || PreMarket.asked(said) ||
             ChainDrift.asked(said) != null || Headroom.asked(said) != null || DayClock.asked(said) != null ||
-            SaidAbout.asked(said) != null || GapRecord.asked(said) != null || Causes.asked(said) != null || WeekAhead.asked(said) != null || AskedAgain.asked(said)
+            SaidAbout.asked(said) != null || GapRecord.asked(said) != null || Causes.asked(said) != null || WeekAhead.asked(said) != null || AskedAgain.asked(said) || Weekdays.asked(said) != null
         return ((if (asSaid) null else Understand.questions(null, said)) ?: listOf(said)).map { kind(it, 0) }
     }
 
@@ -53,7 +53,7 @@ class CoverageTest {
             if (DataAge.asked(q)) return Kind.JARVIS
             if (Honest.asked(q) != null) return Kind.HONEST
             if (Thinking.asked(q) != null || Consistency.asked(q)) return Kind.JARVIS
-            if (CoPilot.asked(q) || ChainDrift.asked(q) != null || ChainIntel.asked(q) != null || DayClock.asked(q) != null || GapRecord.asked(q) != null || Structure.asked(q) != null ||
+            if (CoPilot.asked(q) || ChainDrift.asked(q) != null || ChainIntel.asked(q) != null || DayClock.asked(q) != null || GapRecord.asked(q) != null || Weekdays.asked(q) != null || Structure.asked(q) != null ||
                 MindChange.asked(q) || Breadth.asked(q) != null || TradeCase.asked(q) || Scenarios.asked(q) != null ||
                 Causes.asked(q) != null) return Kind.MARKET
         }
@@ -424,6 +424,7 @@ class CoverageTest {
      * ask(): Boss's learned words and routine as said, fillers and follow-ups, then - for a question not said with
      * something to do (IraHub's `bundled`, [Bundle.acts]) - DayJournal, AlertSense, Airtime, PatternCalls, DataAge, Honest,
      * Thinking, Consistency, ChainDrift, ChainIntel, DayClock, GapRecord, Structure, MindChange, Breadth, TradeCase, Scenarios, Causes, Agenda, Improve; the reminders and Jarvis's own
+     * Thinking, Consistency, ChainDrift, ChainIntel, DayClock, GapRecord, Weekdays, Structure, TradeCase, Scenarios, Causes, Agenda, Improve; the reminders and Jarvis's own
      * checks, Distance... Outlook, NewsDesk, down to the account's sections (PositionHealth and BotHealth are its HEALTH and
      * BOTS), a pattern explained, Solo and IraHub.reasoned's readers over the candles, each in its
      * place). Over the pure readers only (what Boss's corrections taught depends on what is kept, and is left out); a
@@ -442,7 +443,7 @@ class CoverageTest {
             PatternCalls.asked(said) || Learnings.asked(said) != null || Learnings.undoAsked(said) || NewsMoves.asked(said) != null ||
             PreMarket.asked(said) ||
             ChainDrift.asked(said) != null || Headroom.asked(said) != null || NeedsTrue.asked(said) || Clarity.asked(said) != null || DayClock.asked(said) != null ||
-            SaidAbout.asked(said) != null || GapRecord.asked(said) != null || WordFit.asked(said) != null || Causes.asked(said) != null || WeekAhead.asked(said) != null || AskedAgain.asked(said) || MindChange.asked(said)
+            SaidAbout.asked(said) != null || GapRecord.asked(said) != null || WordFit.asked(said) != null || Causes.asked(said) != null || WeekAhead.asked(said) != null || AskedAgain.asked(said) || MindChange.asked(said) || Weekdays.asked(said) != null
         val qs = if (asSaid || understood || cleaned) null else Understand.questions(null, said)?.takeIf { it.isNotEmpty() && it != listOf(said) }
         if (qs != null) return if (qs.size == 1) feature(qs[0], cleaned = true) else qs.joinToString(" & ") { feature(it, understood = true) }
         val q = said
@@ -477,6 +478,7 @@ class CoverageTest {
         if (alone && ChainIntel.asked(q) != null) return "ChainIntel"
         if (alone && DayClock.asked(q) != null) return "DayClock"
         if (alone && GapRecord.asked(q) != null) return "GapRecord"
+        if (alone && Weekdays.asked(q) != null) return "Weekdays"
         if (alone && Structure.asked(q) != null) return "Structure"
         if (alone && MindChange.asked(q)) return "MindChange"
         if (alone && Breadth.asked(q) != null) return "Breadth"
@@ -702,6 +704,12 @@ class CoverageTest {
         "where would you be wrong" to "MindChange", "what level would invalidate your read" to "MindChange",
         "what would it take to change your mind" to "MindChange", "aapka view kab badlega" to "MindChange",
         "ye kab galat hoga" to "MindChange", "what would change your read on banknifty" to "MindChange",
+        // ---- Weekdays: each weekday's record, and expiry days against the rest (round 15) ----
+        "are mondays more volatile" to "Weekdays", "which day of the week moves the most" to "Weekdays",
+        "how does nifty usually do on fridays" to "Weekdays", "weekday record for banknifty" to "Weekdays",
+        "monday ko nifty kaisa chalta hai" to "Weekdays", "are expiry days more volatile" to "Weekdays",
+        "expiry day range vs normal days" to "Weekdays", "kis din market sabse zyada hilta hai" to "Weekdays",
+        "which weekday is the most volatile" to "Weekdays", "expiry ke din range zyada hota hai kya" to "Weekdays",
         // ---- Structure: today's intraday structure - higher highs, swing levels, trend or range so far ----
         "what's the structure today" to "Structure", "what's the structure" to "Structure", "market structure" to "Structure",
         "what is the market structure today" to "Structure", "nifty structure today" to "Structure",
@@ -979,6 +987,10 @@ class CoverageTest {
             ("why did nifty fall" to "Causes") to ("why did nifty suddenly fall" to "SharpMove"),
             ("what caused the fall today" to "Causes") to ("what news moved the market" to "NewsDesk"),
             ("why is nifty falling" to "Causes") to ("how much did nifty fall today" to "Market"),
+            // Market intelligence round 15: a weekday's record beside the calendar and a single day's story.
+            ("are mondays more volatile" to "Weekdays") to ("is monday a holiday" to "MarketDays"),
+            ("are expiry days more volatile" to "Weekdays") to ("how did the last expiry go" to "MarketMemory"),
+            ("how does nifty usually do on fridays" to "Weekdays") to ("what will nifty do on monday" to "Outlook"),
         )) { assertEquals(a.second, feature(a.first), a.first); assertEquals(b.second, feature(b.first), b.first) }
         // Boss's Hinglish what-if is a what-if; a forecast, advice or his own book in Hindi never is.
         for (s in listOf("kal nifty ka kya hoga", "nifty 200 points gir jayega kya", "agar nifty 1% gira to kya buy karu",
