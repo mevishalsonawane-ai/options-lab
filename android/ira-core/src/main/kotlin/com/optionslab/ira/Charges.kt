@@ -14,7 +14,9 @@ import java.util.Locale
  * bots trade on the same account) - what their charges came to, their share of the profit before charges, and which
  * kind of trading paid most: quick trades or long holds, small trades (moved less than twice their own charges) or
  * big ones, and who placed them. The charges are the app's own (the paper account's, the same sum the app uses to
- * estimate Zerodha's). Facts only, never what to trade; an account answer, so never on a locked phone. Pure.
+ * estimate Zerodha's). "Why are my charges so high?" ([whyAsked], [whyLines]): the orders, fills and round trips of the
+ * day (or the span said), the charges by kind, who placed the most orders. Facts only, never what to trade; an account
+ * answer, so never on a locked phone. Pure.
  */
 object Charges {
     /** A closed trade: [gross] before charges, [charges] its own (both legs); [owner] who placed it ("Manual", "ORB"...). */
@@ -62,23 +64,55 @@ object Charges {
     /** One order's charges ("charges for one lot", "charges per order"): the cost calculator's question, not the account's. */
     private val ONE = Regex(" (per order|per lot|per trade|for (a|one|1) (lot|order|trade)|on (a|one|1) (lot|order|trade)|calculator|calculate|if i (buy|sell)|what is brokerage|what are charges) ")
 
-    /** Does [text] ask what Boss's trading paid in charges? */
+    /** Does [text] ask what Boss's trading paid in charges (or why they were so high, [whyAsked])? */
     fun asked(text: String): Boolean {
         val t = norm(Ask.reading(text))
-        return ASKED.containsMatchIn(t) && !ONE.containsMatchIn(t)
+        return (ASKED.containsMatchIn(t) || WHY.containsMatchIn(t)) && !ONE.containsMatchIn(t) || whyAsked(text)
+    }
+
+    // Usefulness round 34 (Boss saw about Rs 2,500 a day in charges and was surprised): "why are my charges so high",
+    // "charges itne zyada kyun", "what is eating my charges", "where are my charges going".
+    private const val HIGH = "(so |this |that |too |very |such |itne |itna |itni |bahut |kaafi )?(high|much|big|large|huge|expensive|heavy|zyada|jyada|jada|zada)"
+    private const val KYUN = "(kyun|kyu|kyon|kiyon|kiu|why)"
+    private val WHY = Regex(" (why (are|is|were|was|have|has) (my |the |all |all the |today s |todays |aaj ke )?$CHARGE (been |gone |become )?$HIGH" +
+        "|why (so much|so many|such high|such big|this much|that much|such huge) (in |on )?(my |the )?$CHARGE" +
+        "|why (do|did|am|was|have) i (pay|paying|paid|spend|spending|spent) (so much|this much|that much|such high|such big|so many|so high) (in |on |as |for )?(the |my )?$CHARGE" +
+        "|what (is|s|are) (eating|driving|causing|pushing|making|behind|inflating) (up )?(my |the |all |all the |today s |todays )?$CHARGE" +
+        "|what (is|s) (eating|driving up|pushing up|inflating) (my |the )?(money|profit|pnl|p l) (in|on|as|with) (the )?$CHARGE" +
+        "|what makes (my |the )?$CHARGE (so )?(high|big|much)|where (are|is|do|does) (my |the |all |all my )?$CHARGE (going|go|coming from|come from)" +
+        "|(my |the )$CHARGE (are|is|were|was) (too|so|very|way too) (high|much|big)" +
+        "|$CHARGE ($HIGH )?$KYUN|$CHARGE ($KYUN )?(itne|itna|itni|bahut|kaafi) |$KYUN (itne|itna|itni|bahut|kaafi|zyada|jyada) (zyada |jyada )?$CHARGE" +
+        "|(itne|itna|itni|bahut|kaafi) (zyada |jyada )?$CHARGE ($KYUN|lage|lag rahe|kat rahe|gaye)" +
+        "|(break ?down|breakup|break up|split) (of )?(my |today s |todays |this week s )$CHARGE|(my |today s |todays )$CHARGE (break ?down|breakup|break up|split)) ")
+
+    /** Does [text] ask WHY the charges are so high (what drove them: orders, fills, who placed them, the kinds of charge)? */
+    fun whyAsked(text: String): Boolean {
+        val raw = norm(text)
+        if (ONE.containsMatchIn(raw)) return false
+        return WHY.containsMatchIn(raw) || WHY.containsMatchIn(norm(Ask.reading(text)))
     }
 
     /** The span asked about; this month when none is said. */
-    fun span(text: String): Span {
+    fun span(text: String): Span = said(text) ?: Span.MONTH
+
+    /** The span said in [text], or null when none is. */
+    private fun said(text: String): Span? {
         val t = norm(text)
         return when {
             rx(" (today|today s|todays|aaj|aaj ka|aaj ke) ").containsMatchIn(t) -> Span.TODAY
             rx(" (last|previous|past|pichle|pichla) (week|hafte|hafta) ").containsMatchIn(t) -> Span.LAST_WEEK
             rx(" (last|previous|past|pichle|pichla) (month|mahina|mahine) ").containsMatchIn(t) -> Span.LAST_MONTH
             rx(" (week|weekly|hafte|hafta) ").containsMatchIn(t) -> Span.WEEK
-            else -> Span.MONTH
+            rx(" (month|monthly|mahina|mahine) ").containsMatchIn(t) -> Span.MONTH
+            else -> null
         }
     }
+
+    /**
+     * The span of a "why so high" question: the one said, or null when none is - then the day ([whyLines] takes today, or
+     * the last day with fills when today has none).
+     */
+    fun whySpan(text: String): Span? = said(text)
 
     /** The days of [span] up to [today], first and last. */
     fun range(span: Span, today: LocalDate): Pair<LocalDate, LocalDate> {
@@ -170,6 +204,103 @@ object Charges {
         }
         if (byCharge.values.any { it >= 0.5 }) out += "$label every fill in ${month(span, today)?.month?.getDisplayName(TextStyle.FULL, Locale.ENGLISH) ?: span.label}, by kind of charge: " +
             byCharge.entries.filter { it.value >= 0.5 }.sortedByDescending { it.value }.joinToString(", ") { "${it.key} ${amt(it.value)}" } + "."
+        return out
+    }
+
+    /**
+     * One filled leg for "why are my charges so high": when, the order it belongs to, who placed that order ([owner]:
+     * "Manual", "ORB", a Pine arm, "Jarvis"...), and the leg itself. An order that filled in several pieces is several
+     * legs with one [orderId] (a blank one counts as its own order).
+     */
+    data class Leg(val at: LocalDateTime, val orderId: String, val owner: String, val side: String, val price: Double, val qty: Int)
+
+    /** The kinds of charge said, in this order, as said; SEBI's fee is put with the exchange's (it is on turnover too). */
+    val KINDS: List<Pair<String, String>> = listOf("Brokerage" to "brokerage", "STT" to "STT", "Exchange" to "exchange", "GST" to "GST", "Stamp duty" to "stamp")
+
+    /** Who placed an order, from its label in the app's owners ("ORB · entry", "Strategy: Pine X", null): "ORB", "Pine X", "Manual". */
+    fun owner(label: String?): String =
+        label?.substringBefore(" · ")?.removePrefix("Strategy: ")?.trim()?.ifEmpty { null }?.let { ArmOwners.arm(it) } ?: "Manual"
+
+    private fun fills(legs: List<Leg>) = legs.map { PnlCharges.Fill(it.side, it.price, it.qty, it.orderId) }
+
+    /** [legs]' charges by kind ([KINDS]), with Zerodha's Rs 20 brokerage once per order ([PnlCharges.perFill]). */
+    fun split(legs: List<Leg>): Map<String, Double> {
+        val out = LinkedHashMap<String, Double>()
+        KINDS.forEach { out[it.first] = 0.0 }
+        PnlCharges.perFill(fills(legs)).forEach { m ->
+            m.forEach { (k, v) -> val key = if (k == "SEBI") "Exchange" else k; out[key] = (out[key] ?: 0.0) + v }
+        }
+        return out
+    }
+
+    /** The orders among [legs]: each order id once, a blank one each its own. */
+    fun orders(legs: List<Leg>): Int = legs.count { it.orderId.isBlank() } + legs.filter { it.orderId.isNotBlank() }.map { it.orderId }.distinct().size
+
+    /** A source's orders, fills and charges ("ORB": 62 orders, 70 fills, Rs 1,500). */
+    data class Source(val name: String, val orders: Int, val fills: Int, val charges: Double)
+
+    /** Who placed [legs]' orders: each source's orders, fills and charges, the most orders first (then the most charges). */
+    fun sources(legs: List<Leg>): List<Source> {
+        val perLeg = PnlCharges.perFill(fills(legs)).map { it.values.sum() }
+        return legs.indices.groupBy { legs[it].owner }.map { (o, ix) ->
+            val mine = ix.map { legs[it] }
+            Source(o, orders(mine), mine.size, ix.sumOf { perLeg[it] })
+        }.sortedWith(compareByDescending<Source> { it.orders }.thenByDescending { it.charges })
+    }
+
+    /** The GST on brokerage and on the exchange's fees: Zerodha's Rs 20 an order comes to Rs 23.60. */
+    private const val GST_RATE = 0.18
+
+    /**
+     * Why [label]'s ("Paper", "Zerodha") charges are what they are, from the fills of [span] (null: today, or the last day
+     * with fills when today has none): the biggest driver first, in one sentence (the short answer), then the orders,
+     * fills and round trips, the split into brokerage / STT / exchange / GST / stamp, a round trip's average, who placed
+     * the orders and which source placed the most. [trips]: the round trips (those closed in the span are counted).
+     * [estimated]: the charges are the app's estimate of Zerodha's; [exact]: Zerodha's own contract-note figure for the
+     * day, when it answered. Facts only, never what to trade.
+     */
+    fun whyLines(label: String, legs: List<Leg>, trips: List<Trip>, span: Span?, today: LocalDate, estimated: Boolean = false, exact: Double? = null): List<String> {
+        val (from, to) = when {
+            span != null -> range(span, today)
+            legs.any { it.at.toLocalDate() == today } -> today to today
+            else -> (legs.map { it.at.toLocalDate() }.filter { !it.isAfter(today) }.maxOrNull() ?: today).let { it to it }
+        }
+        val period = when {
+            span != null && from == to -> "${span.label} (${day(from)})"
+            span != null -> "${span.label} (${day(from)} to ${day(to)})"
+            from == today -> "today (${day(from)})"
+            else -> "on ${day(from)}, the last day with fills"
+        }
+        val w = legs.filter { it.at.toLocalDate().let { d -> !d.isBefore(from) && !d.isAfter(to) } }
+        if (w.isEmpty()) return listOf("$label: no fills $period, so no charges.")
+        val parts = split(w)
+        val total = parts.values.sum()
+        val orders = orders(w)
+        val rounds = trips.count { t -> t.closedAt.toLocalDate().let { !it.isBefore(from) && !it.isAfter(to) } }
+        val who = sources(w)
+        val top = who.first()
+
+        // The biggest driver: brokerage with its GST (Rs 23.60 an order), STT on the sells, or the exchange's fees with theirs.
+        val brokerage = parts.getValue("Brokerage") * (1 + GST_RATE)
+        val stt = parts.getValue("STT")
+        val exchange = parts.getValue("Exchange") * (1 + GST_RATE)
+        val sells = w.filter { it.side.uppercase() != "BUY" }.sumOf { it.price * kotlin.math.abs(it.qty) }
+        val driver = when {
+            brokerage >= stt && brokerage >= exchange -> "mostly brokerage on ${plural(orders, "order")} (${amt(brokerage)} with GST)"
+            stt >= exchange -> "mostly STT on ${amt(sells)} of sells (${amt(stt)})"
+            else -> "mostly exchange fees on the turnover (${amt(exchange)} with GST)"
+        }
+        val placed = if (who.size > 1) "; ${top.name} placed ${top.orders} of the $orders orders" else "; all placed by ${top.name}"
+        val out = ArrayList<String>()
+        out += "$label charges $period: ${amt(total)}${if (estimated) " (the app's estimate)" else ""}, $driver$placed."
+        out += "$label $period: ${plural(orders, "order")}, ${plural(w.size, "fill")}" +
+            (if (w.size > orders) " (an order filled in pieces pays its Rs 20 brokerage once)" else "") + ", ${plural(rounds, "round trip")} closed."
+        out += "$label split: " + KINDS.joinToString(", ") { (k, said) -> "$said ${amt(parts.getValue(k))}" } + "; ${amt(total)} in all."
+        if (rounds > 0) out += "$label about ${amt(total / rounds)} in charges a round trip, " +
+            "${"%.1f".format(Locale.ENGLISH, orders.toDouble() / rounds)} orders a round trip (one order in and one out is Rs 40 brokerage, Rs 47 with GST)."
+        out += "$label orders by who placed them: " + who.joinToString(", ") { "${it.name} ${plural(it.orders, "order")} (${amt(it.charges)})" } + "."
+        if (who.size > 1) out += "$label most orders: ${top.name}, ${top.orders} of $orders (${pct(top.orders.toDouble() / orders)}), ${amt(top.charges)} of the ${amt(total)} in charges."
+        exact?.takeIf { PnlCharges.shown(it) && span == null && from == today }?.let { out += "$label: Zerodha's own contract note for ${day(from)} says ${amt(it)}." }
         return out
     }
 }

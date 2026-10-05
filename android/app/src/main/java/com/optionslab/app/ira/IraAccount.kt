@@ -474,7 +474,23 @@ internal object IraAccount {
                 val span = com.optionslab.ira.Charges.span(question)
                 val month = com.optionslab.ira.Charges.month(span, today)
                 val r = ArrayList<String>()
-                for (live in listOf(false, true)) {
+                // "Why are my charges so high?" (round 34): the day's (or the span's) orders, fills and round trips, the
+                // charges by kind and who placed the most orders - Zerodha first (its charges are what surprised Boss), each
+                // labelled; the GOLD build has no Zerodha.
+                val why = com.optionslab.ira.Charges.whyAsked(question)
+                if (why) for (live in if (com.optionslab.app.BuildConfig.GOLD) listOf(false) else listOf(true, false)) {
+                    val legs = runCatching { com.optionslab.app.data.TradeBook.fills(live) }.getOrDefault(emptyList()).map { f ->
+                        com.optionslab.ira.Charges.Leg(f.at, f.orderId, com.optionslab.ira.Charges.owner(owners[f.orderId]), if (f.side > 0) "BUY" else "SELL", f.price, f.qty)
+                    }
+                    if (live && legs.isEmpty()) continue
+                    val whyTrips = runCatching { com.optionslab.app.data.TradeBook.trips(live) }.getOrDefault(emptyList()).map { t ->
+                        com.optionslab.ira.Charges.Trip(t.openedAt, t.closedAt, t.gross, t.charges, com.optionslab.app.data.TradeBook.ownerOf(t, owners))
+                    }
+                    val whySpan = com.optionslab.ira.Charges.whySpan(question)
+                    val exact = if (live && whySpan == null) runCatching { com.optionslab.app.data.TradeBook.exactChargesOn(today) }.getOrNull() else null
+                    r += com.optionslab.ira.Charges.whyLines(if (live) "Zerodha" else "Paper", legs, whyTrips, whySpan, today, estimated = live, exact = exact)
+                }
+                if (!why) for (live in listOf(false, true)) {
                     val trips = runCatching { com.optionslab.app.data.TradeBook.trips(live) }.getOrDefault(emptyList()).map { t ->
                         com.optionslab.ira.Charges.Trip(t.openedAt, t.closedAt, t.gross, t.charges, com.optionslab.app.data.TradeBook.ownerOf(t, owners))
                     }

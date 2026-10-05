@@ -846,6 +846,11 @@ class CoverageTest {
         "is your data up to date" to "DataAge", "data taza hai kya" to "DataAge", "write my journal" to "DayJournal",
         "help me with my journal" to "DayJournal", "pichla mahina kaisa raha" to "Account:MONTH", "stt kitna laga" to "Account:CHARGES",
         "brokerage kitna gaya" to "Account:CHARGES", "what do you know about me jarvis" to "AboutBoss",
+        // (Round 34: why the charges are so high - the Charges answer's own, never Causes, SelfWhy or Thinking.)
+        "why are my charges so high" to "Account:CHARGES", "charges itne zyada kyun" to "Account:CHARGES",
+        "what is eating my charges" to "Account:CHARGES", "why is my brokerage so high today" to "Account:CHARGES",
+        "itne zyada charges kyun" to "Account:CHARGES", "why am i paying so much in charges" to "Account:CHARGES",
+        "where are my charges going" to "Account:CHARGES", "why were my charges so high this week" to "Account:CHARGES",
         // ---- TaxRecords: the financial year's facts, and its trades exported (on Boss's yes) ----
         "what's my f&o turnover this year" to "Account:TAX", "my fno turnover" to "Account:TAX", "my tax summary" to "Account:TAX",
         "mera turnover kitna hai" to "Account:TAX", "my p&l for last financial year" to "Account:TAX",

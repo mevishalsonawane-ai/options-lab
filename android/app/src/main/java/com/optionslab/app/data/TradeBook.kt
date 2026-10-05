@@ -123,7 +123,7 @@ object TradeBook {
     fun ownerOf(trip: RoundTrips.Trip, owners: Map<String, String>): String {
         val label = trip.openOrderIds.firstNotNullOfOrNull { owners[it] } ?: owners[trip.closeOrderId]?.takeIf { !it.startsWith("Protection") }
         // A Liquidity 15+5 book's own name ("Liquidity 5m FINNIFTY") is that one arm's (ArmOwners): one row, all its trades.
-        return label?.substringBefore(" · ")?.removePrefix("Strategy: ")?.trim()?.ifEmpty { null }?.let { com.optionslab.ira.ArmOwners.arm(it) } ?: "Manual"
+        return com.optionslab.ira.Charges.owner(label)
     }
 
     /** Realised P&L per day for one strategy (the calendar's filter): before charges, with the day's charges beside it. */
