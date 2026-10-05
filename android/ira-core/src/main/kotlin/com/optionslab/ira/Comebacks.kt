@@ -109,7 +109,8 @@ object Comebacks {
     // A forecast or advice, Boss's own book, a what-if, alerts and reminders, the app's bots, stock screens, a definition, a
     // reason, today or now (the day's own read), the open, gaps, candles, the last hour, yesterday's levels, a week's, month's
     // or year's move, expiry, options, gold or VIX.
-    private val NOT = Regex(" (will|would|going to|gonna|tomorrow|kal|next|predict|prediction|forecast|outlook|expect|should|shall|buy|sell|enter|exit|" +
+    // (Round 35: the session after a big day - "the day after", "agle din" - is DayAfter's, as "next" always was.)
+    private val NOT = Regex(" (will|would|going to|gonna|tomorrow|kal|next|day after|days after|following day|following session|agle din|agla din|dusre din|predict|prediction|forecast|outlook|expect|should|shall|buy|sell|enter|exit|" +
         "trade|trades|trading|i|me|my|mine|we|our|what if|suppose|imagine|scenario|agar|remind|reminder|alert|alarm|notify|bot|bots|algo|strategy|backtest|" +
         "stock|stocks|scan|scanner|screener|share|shares|mean|means|meaning|define|explain|why|kyun|kyon|kyu|reason|" +
         "today|todays|aaj|aj|now|right now|abhi|so far|this morning|since|open|opens|opened|opening|gap|gaps|gapped|candle|candles|" +

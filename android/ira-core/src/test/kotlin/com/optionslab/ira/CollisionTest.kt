@@ -143,6 +143,7 @@ class CollisionTest {
         "Comebacks" to { q -> Comebacks.asked(q) != null },
         "VixBand" to { q -> VixBand.asked(q) != null },
         "Overnight" to { q -> Overnight.asked(q) != null },
+        "DayAfter" to { q -> DayAfter.asked(q) != null },
         "Weekdays" to { q -> Weekdays.asked(q) != null },
         "DayCompare" to { q -> DayCompare.asked(q) != null },
         "LikeToday" to { q -> LikeToday.asked(q) },
@@ -774,6 +775,13 @@ class CollisionTest {
         "are weekend gaps bigger than weekday overnight moves" to "Overnight", "nifty ka move raat mein banta hai ya din mein" to "Overnight",
         // Its neighbours: a gap's fill, today's gap, the intraday comeback.
         "do gaps usually fill during the session" to "GapRecord", "how often does nifty recover a 1% fall during the day" to "Comebacks",
+        // ---- DayAfter: what the next session did after a big day (round 35) ----
+        "after nifty falls 1% in a day what happens the next day" to "DayAfter", "does banknifty bounce the day after a big down day" to "DayAfter",
+        "after a 2% up day does nifty follow through the next session" to "DayAfter", "big day follow through record" to "DayAfter",
+        "1% girne ke baad agle din nifty kya karta hai" to "DayAfter", "does nifty recover the day after a 1% fall" to "DayAfter",
+        // Its neighbours: the intraday comeback, the day after a close at the low, the day after a VIX jump.
+        "does nifty recover from a 1% fall" to "Comebacks", "what happens the day after nifty closes at the low" to "ExtremeCloses",
+        "after a vix spike how much does nifty move the next day" to "VixNext",
         // ---- MorningSense: the morning check items said briefly ----
         "which morning items do you skip" to "MorningSense", "which morning check items do you leave out" to "MorningSense",
         "morning check ka kya skip karte ho" to "MorningSense", "read me the whole morning check" to "MorningSense",
@@ -1219,7 +1227,7 @@ class CollisionTest {
     /** The question branches of IraHub.ask between the `bundled` read and the Plan block, in [CoverageTest.feature]'s order. */
     private val HUB_ORDER = listOf("DayJournal", "AlertSense", "Airtime", "Hearing", "PatternCalls", "TrendReads", "OutsideApp", "Clarity", "WordFit", "AskedAgain", "FigureFirst", "WrongThing", "ArmHabits", "MorningSense", "HonestStars", "TalkHours", "MorningAsks", "TurnDowns", "TopicLength", "OutlookCheck", "UsualIndex", "Nicknames", "LeadIndex", "LeadPart", "NewsMoves",
         "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmFit", "WeakLink", "ArmChange", "PnlGap", "ArmDay", "BookDecay", "WhereIWin", "TradesADay", "NetLean", "ExpiryEve", "BeforeTomorrow", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "ZerodhaSession", "OrderWhy", "RelayHealth", "StreamHealth", "BatteryUse", "WatchAsk", "Tour", "DataAge", "Honest", "Thinking",
-        "SelfWhy", "Consistency", "CoPilot", "SinceMorning", "ExpiryPin", "ChainDrift", "ChainIntel", "DayClock", "GapRecord", "RangeBreaks", "PriorDay", "LastHour", "InsideDays", "FirstMove", "VixNext", "SplitDays", "RoundCloses", "MonthTurns", "LunchRange", "OpenHighLow", "BigCandles", "ExtremeCloses", "WeekRange", "RelativeMove", "Comebacks", "VixBand", "Overnight", "Weekdays", "DayCompare", "LikeToday", "Structure", "MindChange", "Breadth",
+        "SelfWhy", "Consistency", "CoPilot", "SinceMorning", "ExpiryPin", "ChainDrift", "ChainIntel", "DayClock", "GapRecord", "RangeBreaks", "PriorDay", "LastHour", "InsideDays", "FirstMove", "VixNext", "SplitDays", "RoundCloses", "MonthTurns", "LunchRange", "OpenHighLow", "BigCandles", "ExtremeCloses", "WeekRange", "RelativeMove", "Comebacks", "VixBand", "Overnight", "DayAfter", "Weekdays", "DayCompare", "LikeToday", "Structure", "MindChange", "Breadth",
         "TradeCase", "Scenarios", "Causes", "Agenda", "Improve")
 
     @Test fun theAuditFollowsTheHubsOrderAndEveryBranchIsGuarded() {
