@@ -126,6 +126,10 @@ object DailyReports {
         val s = AppSettings.load()
         val lines = ArrayList<String>()
         var bad = 0
+        // Margin and carried positions are account figures: shown, never said aloud - the phone may lock while the
+        // morning's slower checks run, and the spoken line has no lock check of its own (review, 5 Oct).
+        fun privateLine(l: String) = l.removePrefix("✗ ").let { t ->
+            t.startsWith(com.optionslab.ira.PreMarket.Part.MARGIN.label + ":") || t.startsWith(com.optionslab.ira.PreMarket.Part.CARRIED.label + ":") }
         fun ok(yes: Boolean, text: String) { if (!yes) bad++; lines += (if (yes) "✓ " else "✗ ") + text }
         ok(Broker.loggedIn, if (Broker.loggedIn) "Zerodha logged in for today" else "Zerodha not logged in: log in before 09:15 (${com.optionslab.app.ui.Tab.CABINET.label} → Zerodha)")
         if (Holidays.stale(Market.today())) runCatching { Holidays.refresh() }
@@ -236,7 +240,7 @@ object DailyReports {
             runCatching { com.optionslab.app.ira.JarvisPopup.show(context, title, lines.take(3).joinToString(" · ")) }
             // Listening now: Jarvis says it too.
             runCatching { com.optionslab.app.ira.JarvisSpeaker.morning(context, "Good morning, Boss. " + if (bad == 0) "We are set for today's trading." else
-                "$bad thing${if (bad > 1) "s" else ""} need you: " + lines.filter { it.startsWith("✗") }.joinToString(". ") { it.removePrefix("✗ ") } + "." +
+                "$bad thing${if (bad > 1) "s" else ""} need you: " + lines.filter { it.startsWith("✗") && !privateLine(it) }.joinToString(". ") { it.removePrefix("✗ ") } + "." +
                 (if (brief.isEmpty()) "" else " Now my analysis. " + brief.joinToString(" ") { com.optionslab.ira.Wake.spoken(it, 2) } +
                     " That is history, not a promise.")) }
             com.optionslab.app.ira.IraHub.note(com.optionslab.ira.Address.boss("Good morning. " +

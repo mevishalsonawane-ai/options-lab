@@ -167,7 +167,8 @@ object Headroom {
                 rx(" (trade|trades|order|orders) ").containsMatchIn(t) -> Asked.TRADES
                 else -> Asked.ALL
             }
-            LOSS.containsMatchIn(t) -> Asked.LOSS
+            // A position's or a what-if's loss is the account's MOVE / the scenarios', not the day's limit room (review, 5 Oct).
+            LOSS.containsMatchIn(t) -> if (rx(" (if|agar|suppose|falls?|drops?|rises?|moves?) | (put|puts|call|calls|position|positions|trade|strangle|straddle|spread|condor) ").containsMatchIn(t)) null else Asked.LOSS
             TRADES.containsMatchIn(t) -> Asked.TRADES
             else -> null
         }

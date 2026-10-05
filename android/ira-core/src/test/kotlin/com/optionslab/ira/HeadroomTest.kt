@@ -94,4 +94,11 @@ class HeadroomTest {
         val s = Headroom.say(listOf(zerodha(acct().copy(dayPnl = Double.NaN, equity = Double.NaN))), Headroom.Asked.LOSS)
         assertTrue(s.startsWith("On Zerodha no daily loss or drawdown limit is set (or today's P&L could not be read)."), s)
     }
+
+    @Test fun aPositionsOrAWhatIfsLossIsNotTheDaysRoom() {
+        for (q in listOf("how much can i lose if nifty falls 200 points", "how much can i lose on my 24500 put",
+                "how much can i lose on my positions", "how much can i lose on this trade"))
+            kotlin.test.assertNull(Headroom.asked(q), q)
+        kotlin.test.assertEquals(Headroom.Asked.LOSS, Headroom.asked("how much can I still lose today?"))
+    }
 }
