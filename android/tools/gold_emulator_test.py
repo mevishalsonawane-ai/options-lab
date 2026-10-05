@@ -39,7 +39,7 @@ def adb(*a, check=True):
 
 
 def nodes():
-    for _ in range(3):
+    for _ in range(6):
         adb("shell", "uiautomator", "dump", "/sdcard/ui.xml", check=False)
         xml = adb("shell", "cat", "/sdcard/ui.xml", check=False)
         if "<hierarchy" in xml:
@@ -50,9 +50,24 @@ def nodes():
                 if m:
                     x1, y1, x2, y2 = map(int, m.groups())
                     out.append((text, (x1 + x2) // 2, (y1 + y2) // 2, n.get("package")))
-            return out
+            if not system_dialog(out):
+                return out
         time.sleep(1)
     return []
+
+
+def system_dialog(out):
+    """Another app's "isn't responding" box (a slow emulator's Pixel Launcher, once) covers the screen: answer Wait and
+    read again. True when one was answered. Our own app's box is never dismissed, so a hang of ours still fails."""
+    if not any("isn't responding" in t and PKG not in t and "IraGold" not in t for t, _, _, _ in out):
+        return False
+    for t, x, y, _ in out:
+        if t in ("Wait", "WAIT"):
+            say("(a system app was not responding: answered Wait)")
+            adb("shell", "input", "tap", str(x), str(y))
+            time.sleep(1.5)
+            return True
+    return False
 
 
 def texts():
