@@ -11,6 +11,12 @@ on:
 permissions:
   contents: write
 
+# One run at a time: two runs replacing the same release asset at once lost the upload (HTTP 404). Only the newest
+# push's run matters, so an older one still running is cancelled.
+concurrency:
+  group: gold-emulator
+  cancel-in-progress: true
+
 jobs:
   emulator:
     runs-on: ubuntu-latest
@@ -57,5 +63,6 @@ jobs:
           notes="IraGoldAlgo on an Android 14 emulator, build ${SHA::7} ($(date -u '+%Y-%m-%d %H:%M UTC'))."
           if gh release view gold-emulator >/dev/null 2>&1; then gh release edit gold-emulator --notes "$notes"
           else gh release create gold-emulator --prerelease --title "IraGoldAlgo emulator run" --notes "$notes" --target "$SHA"; fi
-          gh release upload gold-emulator gold-emulator.zip --clobber
+          up=0; for i in 1 2 3; do gh release upload gold-emulator gold-emulator.zip --clobber && { up=1; break; }; sleep $((i * 5)); done
           cat gold-emulator/report.txt
+          [ "$up" = 1 ]
