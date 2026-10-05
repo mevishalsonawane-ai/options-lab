@@ -7,7 +7,6 @@ import com.optionslab.engine.sandbox.SandboxCosts
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
-import java.math.BigDecimal
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.YearMonth
@@ -87,12 +86,15 @@ object TradeBook {
     @Synchronized
     private fun liveSnapshot(): List<Broker.Trade> = ArrayList(liveTrades())
 
-    private fun liveFills(trades: List<Broker.Trade>): List<RoundTrips.Fill> =
-        trades.mapNotNull { t ->
-            val at = kiteTime(t.at) ?: return@mapNotNull null
+    private fun liveFills(trades: List<Broker.Trade>): List<RoundTrips.Fill> {
+        // Zerodha's Rs 20 is per order, not per fill: an order that filled in pieces pays it once ([PnlCharges.perFill]).
+        val timed = trades.mapNotNull { t -> kiteTime(t.at)?.let { t to it } }.sortedBy { it.second }
+        val costs = com.optionslab.ira.PnlCharges.perFill(timed.map { (t, _) -> com.optionslab.ira.PnlCharges.Fill(t.side, t.price, t.qty, t.orderId) })
+        return timed.mapIndexed { i, (t, at) ->
             RoundTrips.Fill("kite:${t.id}", "kite:${t.orderId}", t.symbol, if (t.side == "BUY") 1 else -1, t.qty, t.price, at,
-                SandboxCosts.charge(t.side, BigDecimal(t.price), t.qty).toDouble())
+                Math.round(costs[i].values.sum() * 100) / 100.0)
         }
+    }
 
     private fun paperFills(trades: List<com.optionslab.engine.sandbox.Trade>): List<RoundTrips.Fill> =
         trades.map { t ->
@@ -135,7 +137,7 @@ object TradeBook {
      * charges report): the "Charges ≈ ₹X (estimate)" line under a Zerodha P&L. Pure: no vault read (safe on the main thread).
      */
     fun liveCharges(trades: List<Broker.Trade>): Double =
-        com.optionslab.ira.PnlCharges.estimate(trades.map { com.optionslab.ira.PnlCharges.Fill(it.side, it.price, it.qty) })
+        com.optionslab.ira.PnlCharges.estimate(trades.map { com.optionslab.ira.PnlCharges.Fill(it.side, it.price, it.qty, it.orderId) })
 
     /**
      * Zerodha's estimated charges on [day] from the trades kept here, or null when none are kept for it (or the book could
@@ -156,8 +158,10 @@ object TradeBook {
     /** Charges paid in [month], line by line. */
     fun charges(live: Boolean, month: YearMonth): Map<String, Double> {
         val out = LinkedHashMap<String, Double>()
-        if (live) liveTrades().filter { kiteTime(it.at)?.let { t -> YearMonth.from(t) == month } == true }.forEach { t ->
-            SandboxCosts.breakdown(t.side, t.price, t.qty).forEach { (k, v) -> out[k] = (out[k] ?: 0.0) + v }
+        if (live) {
+            val inMonth = liveSnapshot().filter { kiteTime(it.at)?.let { t -> YearMonth.from(t) == month } == true }
+            com.optionslab.ira.PnlCharges.perFill(inMonth.map { com.optionslab.ira.PnlCharges.Fill(it.side, it.price, it.qty, it.orderId) })
+                .forEach { m -> m.forEach { (k, v) -> out[k] = (out[k] ?: 0.0) + v } }
         } else Paper.state.trades.filter { YearMonth.from(it.timestamp) == month }.forEach { t ->
             SandboxCosts.breakdown(t.action, t.price.toDouble(), t.quantity).forEach { (k, v) -> out[k] = (out[k] ?: 0.0) + v }
         }

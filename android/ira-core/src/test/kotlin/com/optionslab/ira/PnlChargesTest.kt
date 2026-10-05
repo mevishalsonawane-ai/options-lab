@@ -51,4 +51,22 @@ class PnlChargesTest {
         assertEquals("12,34,567", PnlCharges.indian(1_234_567))
         assertEquals("-1,00,000", PnlCharges.indian(-100_000))
     }
+
+    @Test
+    fun brokerageIsPerOrderNotPerFill() {
+        // One 10-lot buy order that Zerodha filled in 5 pieces, and one sell order in 4: Rs 20 brokerage twice, not 9 times.
+        val buys = List(5) { PnlCharges.Fill("BUY", 100.0, 150, "B1") }
+        val sells = List(4) { PnlCharges.Fill("SELL", 110.0, 187, "S1") } + PnlCharges.Fill("SELL", 110.0, 2, "S1")
+        val split = PnlCharges.estimate(buys + sells)
+        val whole = PnlCharges.estimate(listOf(PnlCharges.Fill("BUY", 100.0, 750, "B1"), PnlCharges.Fill("SELL", 110.0, 750, "S1")))
+        assertEquals(whole, split, 0.02)
+        // Per fill, as before 5 Oct, it was about 7 x Rs 23.6 more.
+        val old = (buys + sells).sumOf { SandboxCosts.breakdown(it.side, it.price, it.qty).values.sum() }
+        assertTrue(old - split > 7 * 23.0)
+        // Only the first fill of an order pays the brokerage; a fill with no order id is its own order.
+        val legs = PnlCharges.perFill(buys)
+        assertEquals(20.0, legs[0].getValue("Brokerage"))
+        assertTrue(legs.drop(1).all { it.getValue("Brokerage") == 0.0 && it.getValue("GST") < 1.0 })
+        assertEquals(40.0, PnlCharges.perFill(listOf(PnlCharges.Fill("BUY", 1.0, 1), PnlCharges.Fill("BUY", 1.0, 1))).sumOf { it.getValue("Brokerage") })
+    }
 }

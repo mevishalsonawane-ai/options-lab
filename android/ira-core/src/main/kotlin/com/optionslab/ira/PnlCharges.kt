@@ -19,8 +19,12 @@ import kotlin.math.roundToLong
  * thresholds - keeps reading the figure AFTER charges, the safer one; nothing here feeds a limit. Pure.
  */
 object PnlCharges {
-    /** One filled trade leg as the broker lists it: BUY / SELL, its price and quantity. */
-    data class Fill(val side: String, val price: Double, val qty: Int)
+    /**
+     * One filled trade leg as the broker lists it: BUY / SELL, its price and quantity, and the order it belongs to. Zerodha
+     * lists every exchange fill as its own trade - one order of 10 lots often fills in several pieces - but its Rs 20
+     * brokerage is per executed ORDER, not per fill ([perFill]). A blank [orderId] counts as its own order.
+     */
+    data class Fill(val side: String, val price: Double, val qty: Int, val orderId: String = "")
 
     /** The P&L before charges from the one after them and the charges paid. */
     fun gross(net: Double, charges: Double): Double = net + charges
@@ -30,8 +34,30 @@ object PnlCharges {
 
     /** The charges of [fills] estimated with the F&O schedule (brokerage, STT, exchange, SEBI, stamp, GST), to the paisa. */
     fun estimate(fills: List<Fill>): Double {
-        val total = fills.sumOf { f -> SandboxCosts.breakdown(f.side, f.price, f.qty).values.sum() }
+        val total = perFill(fills).sumOf { it.values.sum() }
         return (total * 100).roundToLong() / 100.0
+    }
+
+    /**
+     * Each fill's charges line by line, in [fills]' order, with the Rs 20 brokerage (and the GST on it) charged once per
+     * order: on the first fill of each [Fill.orderId], never again on that order's later fills. STT, exchange, SEBI and
+     * stamp are on value, so they are the same however an order is split. (Before 5 Oct every fill paid Rs 20 + GST, so a
+     * day whose orders filled in pieces showed several times the brokerage Zerodha takes.)
+     */
+    fun perFill(fills: List<Fill>): List<Map<String, Double>> {
+        val seen = HashSet<String>()
+        return fills.map { f -> legCharges(f.side, f.price, f.qty, f.orderId.isBlank() || seen.add(f.orderId)) }
+    }
+
+    /** One fill's charges line by line; [firstOfOrder] false: no brokerage and no GST on brokerage (already paid on the order). */
+    fun legCharges(side: String, price: Double, qty: Int, firstOfOrder: Boolean): Map<String, Double> {
+        val all = SandboxCosts.breakdown(side, price, qty)
+        if (firstOfOrder || all.isEmpty()) return all
+        val brokerage = all["Brokerage"] ?: 0.0
+        return LinkedHashMap(all).apply {
+            this["Brokerage"] = 0.0
+            this["GST"] = (all["GST"] ?: 0.0) - brokerage * 0.18
+        }
     }
 
     /** Is there anything to say about [charges]? (Unknown, zero or under half a paisa: no line at all.) */
