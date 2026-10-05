@@ -12,7 +12,10 @@ object BatteryNow {
         val jarvis = com.optionslab.app.BuildConfig.JARVIS
         val (percent, charging) = context?.let { Battery.state(it) } ?: (null to false)
         val step = WatchService.stepSec
+        val cost = if (jarvis) runCatching { com.optionslab.app.ira.JarvisVoice.listenCost() }.getOrNull() else null
         return BatteryUse.Snapshot(
+            listenMinutes = cost?.first,
+            turnsLastHour = cost?.second,
             listening = jarvis && runCatching { com.optionslab.app.ira.JarvisVoice.listeningNow() }.getOrDefault(false),
             listenSaver = jarvis && runCatching { com.optionslab.app.ira.JarvisVoice.listenSaver }.getOrDefault(false),
             resting = jarvis && runCatching { com.optionslab.app.ira.JarvisVoice.restingNow() }.getOrDefault(false),

@@ -128,7 +128,8 @@ class JarvisVoice : Service() {
             else -> "the speech service failed (code $e)"
         }
 
-        fun diagnose(context: Context?): String {
+        /** [hint]: Boss asked (the voice check): the battery saver's hint may be said, once ever ([saverHintOnce]). */
+        fun diagnose(context: Context?, hint: Boolean = false): String {
             val out = ArrayList<String>()
             val v = instance?.get()
             if (wanted && v == null) out += "Listening is switched on but not running: open the Jarvis screen, or switch \"Listen for Jarvis\" off and on."
@@ -156,8 +157,10 @@ class JarvisVoice : Service() {
             } }
             if (!wanted) out += "Listening is off, so I only speak replies to typed questions (switch on Jarvis voice to talk to me)."
             if (lastLatencyMs > 0) out += "My last spoken reply took %.1f seconds.".format(java.util.Locale.ENGLISH, lastLatencyMs / 1000.0)
-            return if (out.isEmpty()) "Boss, my voice looks fine: not muted, volume up, a voice ready. If you still hear nothing, tap Listen under a reply."
-                else "Boss, here's why you may not hear me: " + out.joinToString(" ")
+            // Battery (round 4): words only, once - the switch stays Boss's.
+            val saver = if (hint) runCatching { saverHintOnce() }.getOrNull() else null
+            return if (out.isEmpty()) "Boss, my voice looks fine: not muted, volume up, a voice ready. If you still hear nothing, tap Listen under a reply." + (saver?.let { " $it" } ?: "")
+                else "Boss, here's why you may not hear me: " + (out + listOfNotNull(saver)).joinToString(" ")
         }
 
         /** Quiet hours: nothing said unasked from 22:00 to 07:00 (on by default; "Jarvis, quiet hours off"). */
@@ -216,6 +219,22 @@ class JarvisVoice : Service() {
         fun listeningNow(): Boolean = instance?.get() != null
         /** Listening is resting between turns now ([listenSaver]). */
         fun restingNow(): Boolean = instance?.get()?.resting == true
+        /** Listening's cost now (the battery answer): minutes since it started and the recognizer's turns in the last hour; null when not running. */
+        fun listenCost(): Pair<Long, Int>? {
+            val v = instance?.get() ?: return null
+            val now = SystemClock.elapsedRealtime()
+            val turns = synchronized(v.turnTimes) { v.turnTimes.count { now - it <= 3_600_000L } }
+            return (now - v.startedAt) / 60_000L to turns
+        }
+
+        /** The battery saver's hint ([com.optionslab.ira.ListenSaver.HINT]) once, ever: null when not due; said marks it told. */
+        fun saverHintOnce(): String? {
+            val told = runCatching { com.optionslab.app.security.SecurePrefs.getBoolean(SAVER_TOLD, false) }.getOrDefault(true)
+            val h = com.optionslab.ira.ListenSaver.hint(listeningNow(), listenSaver, told) ?: return null
+            runCatching { com.optionslab.app.security.SecurePrefs.put(SAVER_TOLD, true) }
+            return h
+        }
+        private const val SAVER_TOLD = "jarvis.listen.saver.told"
 
         /** Can this phone listen on the device alone? (Android 12+ with an on-device recognizer.) */
         fun available(context: Context): Boolean = com.optionslab.app.BuildConfig.JARVIS &&
@@ -689,6 +708,9 @@ class JarvisVoice : Service() {
     /** Battery saver for listening: resting between turns now, and until when (the watchdog does not cut a rest short). */
     @Volatile private var resting = false
     @Volatile private var restUntil = 0L
+    /** Battery (round 4): when listening started, and the recognizer's turns over the last hour (times only, never words). */
+    private val startedAt = SystemClock.elapsedRealtime()
+    private val turnTimes = java.util.ArrayDeque<Long>()
     /** The screen came on: a rest ends at once (registered while listening runs). */
     private var screenOn: android.content.BroadcastReceiver? = null
     /** When it said so (0: not yet), for the time to the first words read ([com.optionslab.ira.Hearing]). */
@@ -1339,6 +1361,8 @@ class JarvisVoice : Service() {
         emptyInRow = com.optionslab.ira.EmptyTurns.inRow(emptyInRow, k)
         if (emptyInRow == 0) { resting = false; restUntil = 0L }      // words for Jarvis: no battery-saver rest
         recentTurns = com.optionslab.ira.EmptyTurns.add(recentTurns, k)
+        val t = SystemClock.elapsedRealtime()
+        synchronized(turnTimes) { turnTimes.addLast(t); while (turnTimes.isNotEmpty() && t - turnTimes.first() > 3_600_000L) turnTimes.removeFirst() }
         if (emptyInRow == com.optionslab.ira.EmptyTurns.CALM_AFTER || emptyInRow == com.optionslab.ira.EmptyTurns.SLOW_AFTER)
             note("$emptyInRow turns with no words in a row: listening restarts a little slower (still for \"Jarvis\")")
     }

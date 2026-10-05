@@ -19,6 +19,28 @@ object JarvisSpeaker {
     private var ready = false
     private var waiting: String? = null
 
+    /**
+     * Battery (round 4): the engine (a bound service in the speech engine's own process) is let go after [IDLE_MS] with
+     * nothing said, and started again on the next reply - which then waits the second or so the engine takes to start,
+     * as the very first reply always did; opening the Ira page warms it again. Only this voice: listening's own voice
+     * (and every safety alert said through it) is not touched.
+     */
+    private const val IDLE_MS = 10 * 60_000L
+    private val idle by lazy { android.os.Handler(android.os.Looper.getMainLooper()) }
+    private val release = Runnable {
+        synchronized(this) {
+            val t = tts ?: return@synchronized
+            // Still talking: later. (An engine that never started after ten minutes is let go too, and started afresh.)
+            if (ready && runCatching { t.isSpeaking }.getOrDefault(true)) { idleLater(); return@synchronized }
+            runCatching { t.stop(); t.shutdown() }
+            tts = null; ready = false; waiting = null
+        }
+    }
+
+    private fun idleLater() {
+        runCatching { idle.removeCallbacks(release); idle.postDelayed(release, IDLE_MS) }
+    }
+
     /** How a reply is said ([com.optionslab.ira.Aloud]): Boss once, figures as a person says them, the first few sentences and "the rest is in the chat". */
     fun words(text: String, sentences: Int = (if (IraTools.brief) com.optionslab.ira.Aloud.Length.SHORT else com.optionslab.ira.Aloud.Length.USUAL).sentences): String =
         com.optionslab.ira.Aloud.say(text, sentences)
@@ -42,6 +64,7 @@ object JarvisSpeaker {
         if (!com.optionslab.app.BuildConfig.JARVIS || !speakTyped || JarvisVoice.muted || JarvisVoice.wanted) return
         if (android.os.Build.FINGERPRINT == "robolectric") return
         synchronized(this) {
+            idleLater()
             if (tts != null) return
             tts = TextToSpeech(context.applicationContext) { status ->
                 synchronized(this) {
@@ -61,6 +84,7 @@ object JarvisSpeaker {
         if (JarvisVoice.announce(said, prompted = true)) return
         if (android.os.Build.FINGERPRINT == "robolectric") return
         synchronized(this) {
+            idleLater()
             val t = tts
             if (t != null && ready) { JarvisVoice.applyStyle(t); sayNow(t, said); return }
             waiting = said

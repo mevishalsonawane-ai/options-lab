@@ -47,6 +47,16 @@ object ListenSaver {
         return minOf(MAX_MS, maxOf(base, if (n.batteryLow) rest * 2 else rest))
     }
 
+    /**
+     * Battery, round 4: the voice check and the morning check say this once while Jarvis listens with the saver off -
+     * words only: the switch stays Boss's, never turned on by itself.
+     */
+    const val HINT = "Battery saver for listening is off: turning it on (the Jarvis page) rests my ears at night when the screen is off " +
+        "and the room is quiet. I won't mention it again."
+
+    /** [HINT] when it is to be said: listening runs, the saver is off and it was not said before. */
+    fun hint(listening: Boolean, saverOn: Boolean, told: Boolean): String? = HINT.takeIf { listening && !saverOn && !told }
+
     /** For the switch's note and the battery answer. */
     const val WHAT = "When the screen is off, the market is shut and the room has been quiet a few minutes (not in the hours you " +
         "usually talk to me), I listen in short rests - a \"Jarvis\" said in a rest may need saying again. Off: I listen as before."
@@ -81,11 +91,24 @@ object BatteryUse {
         val charging: Boolean,
         /** Jarvis's words lane in the order watch: true at the quiet pace ([WordsPace.quiet]), false every round, null not running lately. */
         val wordsQuiet: Boolean? = null,
+        /** Listening's cost now: minutes it has run since it started, null not known. */
+        val listenMinutes: Long? = null,
+        /** ...and the speech recognizer's turns in the last hour (each one wakes the microphone and the recognizer). */
+        val turnsLastHour: Int? = null,
     )
+
+    /** Listening's cost in words ("running 7 h 20 min, 212 recognizer turns in the last hour"), null when not known. */
+    fun listenCost(s: Snapshot): String? {
+        if (!s.listening || (s.listenMinutes == null && s.turnsLastHour == null)) return null
+        val run = s.listenMinutes?.let { m -> "running " + (if (m >= 60) "${m / 60} h ${m % 60} min" else "$m min") }
+        val turns = s.turnsLastHour?.let { t -> "$t recognizer turn${if (t == 1) "" else "s"} in the last hour" + if (t >= 6) " (about one every ${3600 / t} s)" else "" }
+        return listOfNotNull(run, turns).joinToString(", ")
+    }
 
     /** The diagnostics' line: what runs in the background now. */
     fun line(s: Snapshot): String = "Battery: " + listOf(
-        "listening " + (if (!s.listening) "off" else (if (s.resting) "resting" else "on") + " (battery saver for listening ${if (s.listenSaver) "on" else "off"})"),
+        "listening " + (if (!s.listening) "off" else (if (s.resting) "resting" else "on") + " (battery saver for listening ${if (s.listenSaver) "on" else "off"}" +
+            (listenCost(s)?.let { "; $it" } ?: "") + ")"),
         "order watch " + (if (!s.watch) "not running" else s.watchStepSec?.let { "every $it s" } ?: "running") + when (s.wordsQuiet.takeIf { s.watch }) {
             null -> ""
             true -> " (Jarvis's words quiet: slow checks every ${WordsPace.QUIET_SLOW_MS / 60_000} min, news every ${WordsPace.QUIET_NEWS_MS / 60_000} min)"
@@ -102,7 +125,8 @@ object BatteryUse {
      */
     fun answer(s: Snapshot, locked: Boolean = false): String {
         val parts = ArrayList<String>()
-        if (s.listening) parts += "Listening for \"Jarvis\" - the microphone and the phone's speech recognizer, all the time; that is usually the biggest. " +
+        if (s.listening) parts += "Listening for \"Jarvis\" - the microphone and the phone's speech recognizer, all the time; that is usually the biggest" +
+            (listenCost(s)?.let { " ($it)" } ?: "") + ". " +
             if (s.listenSaver) "Battery saver for listening is on" + (if (s.resting) ", and I'm resting between turns now." else ": I rest between turns when the screen is off, the market is shut and the room is quiet.")
             else "Battery saver for listening is off: switch it on in the Jarvis page and I listen in short rests when the screen is off, the market is shut and the room is quiet."
         if (s.stream != "OFF") parts += "Zerodha's live price stream" + (if (locked) "" else " (${s.streamTokens} instrument${if (s.streamTokens == 1) "" else "s"})") +
@@ -198,4 +222,45 @@ object NightNewsPace {
 
     fun due(now: java.time.LocalDateTime, nextOpen: java.time.LocalDateTime?): Boolean =
         nextOpen == null || !now.isBefore(nextOpen.minusHours(OVERNIGHT_HOURS))
+}
+
+/**
+ * Battery, round 4: the pace of Jarvis's hourly study job (the night's news, the study after each close, Saturday's report
+ * card). Hourly as before whenever any of its work can fall due within [SLOW_HOURS]; every [SLOW_HOURS] only through the
+ * dead stretch of a weekend or a holiday (the study made twice since the last close, Saturday's report card given, the next
+ * open more than [NightNewsPace.OVERNIGHT_HOURS] + [SLOW_HOURS] away). And the study itself is not made again when no
+ * session closed since it last ran twice: the candles are the same. Weekday nights are exactly as before (a study after the
+ * close and one twelve hours later). Unknown (no session found) reads as before. Nothing here touches the order watch, a
+ * stop, a target or a safety alert. Pure.
+ */
+object StudyPace {
+    const val SLOW_HOURS = 6L
+    /** The study's second run after a close comes at least this long after it (the 12-hour gap the study keeps). */
+    const val SECOND_AFTER_HOURS = 12L
+    private val CLOSE = java.time.LocalTime.of(15, 30)
+
+    /** The latest session close (15:30) at or before [now], over at most three weeks of [tradingDay]; null when none is found. */
+    fun lastClose(now: java.time.LocalDateTime, tradingDay: (java.time.LocalDate) -> Boolean): java.time.LocalDateTime? {
+        var d = now.toLocalDate()
+        if (now.toLocalTime().isBefore(CLOSE)) d = d.minusDays(1)
+        repeat(21) {
+            if (runCatching { tradingDay(d) }.getOrDefault(true)) return d.atTime(CLOSE)
+            d = d.minusDays(1)
+        }
+        return null
+    }
+
+    /** Is the study to be made (its own hour and 12-hour gates still apply)? Not when it already ran twice since the last close. */
+    fun studyDue(lastStudy: java.time.LocalDateTime?, lastClose: java.time.LocalDateTime?): Boolean =
+        lastStudy == null || lastClose == null || lastStudy.isBefore(lastClose.plusHours(SECOND_AFTER_HOURS))
+
+    /** Hours between the study job's runs: 1 as before, or [SLOW_HOURS] while nothing of its work can fall due sooner. */
+    fun everyHours(now: java.time.LocalDateTime, nextOpen: java.time.LocalDateTime?, lastStudy: java.time.LocalDateTime?,
+                   lastClose: java.time.LocalDateTime?, reportCardDone: Boolean): Long = when {
+        nextOpen == null -> 1L
+        !now.isBefore(nextOpen.minusHours(NightNewsPace.OVERNIGHT_HOURS + SLOW_HOURS)) -> 1L
+        studyDue(lastStudy, lastClose) -> 1L
+        now.dayOfWeek == java.time.DayOfWeek.SATURDAY && !reportCardDone -> 1L
+        else -> SLOW_HOURS
+    }
 }

@@ -49,6 +49,25 @@ class BatteryUseTest {
         assertTrue(BatteryUse.line(snap.copy(wordsQuiet = false)).contains("order watch every 60 s (Jarvis's words every round) · "))
     }
 
+    @Test fun listeningCost() {
+        val c = snap.copy(listenMinutes = 440, turnsLastHour = 212)
+        assertEquals("running 7 h 20 min, 212 recognizer turns in the last hour (about one every 16 s)", BatteryUse.listenCost(c))
+        assertTrue(BatteryUse.line(c).startsWith("Battery: listening on (battery saver for listening off; running 7 h 20 min, 212 recognizer turns"), BatteryUse.line(c))
+        val a = BatteryUse.answer(c)
+        assertTrue("that is usually the biggest (running 7 h 20 min, 212 recognizer turns in the last hour (about one every 16 s)). Battery saver" in a, a)
+        assertEquals("running 5 min", BatteryUse.listenCost(snap.copy(listenMinutes = 5)))
+        assertEquals("1 recognizer turn in the last hour", BatteryUse.listenCost(snap.copy(turnsLastHour = 1)))
+        assertEquals(null, BatteryUse.listenCost(c.copy(listening = false)))
+        assertEquals(null, BatteryUse.listenCost(snap))
+    }
+
+    @Test fun saverHintOnceAndOnlyWords() {
+        assertEquals(ListenSaver.HINT, ListenSaver.hint(listening = true, saverOn = false, told = false))
+        assertEquals(null, ListenSaver.hint(listening = true, saverOn = false, told = true))
+        assertEquals(null, ListenSaver.hint(listening = true, saverOn = true, told = false))
+        assertEquals(null, ListenSaver.hint(listening = false, saverOn = false, told = false))
+    }
+
     private val ASKED = listOf("why is the app using so much battery", "why is the app eating battery", "battery kyun kha raha hai",
         "battery kyu kha raha hai", "jarvis battery kyun kha raha hai", "app itni battery kyun kha raha hai", "why is iraalgo draining my battery",
         "what is eating my battery", "is jarvis draining the battery", "how much battery does the app use", "what is running in the background",
@@ -127,5 +146,45 @@ class NightNewsPaceTest {
         assertFalse("instrument" in a, a)
         assertTrue("order watch" in a && "live price stream" in a && "Boss" in a, a)
         assertTrue("every 15 seconds" in BatteryUse.answer(lockSnap.copy(watchStepSec = 15)))
+    }
+}
+
+class StudyPaceTest {
+    private val weekday: (java.time.LocalDate) -> Boolean = { it.dayOfWeek.value <= 5 }
+    private fun at(d: Int, h: Int, m: Int = 0) = java.time.LocalDateTime.of(2026, 10, d, h, m)   // 2 Oct 2026 is a Friday
+    private fun pace(now: java.time.LocalDateTime, last: java.time.LocalDateTime?, card: Boolean = false, day: (java.time.LocalDate) -> Boolean = weekday) =
+        StudyPace.everyHours(now, NightNewsPace.nextOpen(now, day), last, StudyPace.lastClose(now, day), card)
+
+    @Test fun lastClose() {
+        assertEquals(at(1, 15, 30), StudyPace.lastClose(at(2, 15, 29), weekday))
+        assertEquals(at(2, 15, 30), StudyPace.lastClose(at(2, 15, 30), weekday))
+        assertEquals(at(2, 15, 30), StudyPace.lastClose(at(4, 20), weekday), "Sunday: Friday's")
+        assertEquals(null, StudyPace.lastClose(at(4, 20)) { false })
+    }
+
+    @Test fun weekdayStudiesAsBefore() {
+        // Monday 5 Oct: after the close, and again twelve hours later.
+        assertTrue(StudyPace.studyDue(at(5, 3, 45), StudyPace.lastClose(at(5, 15, 45), weekday)))
+        assertTrue(StudyPace.studyDue(at(5, 15, 45), StudyPace.lastClose(at(6, 3, 45), weekday)))
+        assertTrue(StudyPace.studyDue(null, at(5, 15, 30)))
+        assertTrue(StudyPace.studyDue(at(5, 1), null), "no close found: as before")
+        for (h in listOf(16, 20, 23)) assertEquals(1L, pace(at(5, h), at(5, 15, 45)), "weeknight $h")
+        assertEquals(1L, pace(at(6, 4), at(6, 3, 45)), "next open within the window")
+    }
+
+    @Test fun weekendRestsAfterTheCardAndTheSecondStudy() {
+        // Friday's close: studied 15:45 and 03:45 Saturday; nothing new until Monday.
+        assertTrue(StudyPace.studyDue(at(2, 15, 45), StudyPace.lastClose(at(3, 3, 45), weekday)))
+        assertFalse(StudyPace.studyDue(at(3, 3, 45), StudyPace.lastClose(at(3, 15, 45), weekday)), "Saturday afternoon: same candles")
+        assertFalse(StudyPace.studyDue(at(3, 3, 45), StudyPace.lastClose(at(4, 3, 45), weekday)), "Sunday night")
+        assertEquals(1L, pace(at(2, 20), at(2, 15, 45)), "Friday night: second study pending")
+        assertEquals(1L, pace(at(3, 5), at(3, 3, 45)), "Saturday before the card")
+        assertEquals(StudyPace.SLOW_HOURS, pace(at(3, 10), at(3, 3, 45), card = true))
+        assertEquals(StudyPace.SLOW_HOURS, pace(at(4, 9, 14), at(3, 3, 45), card = true))
+        assertEquals(1L, pace(at(4, 9, 15), at(3, 3, 45), card = true), "Sunday from 09:15: the night news window comes within six hours")
+    }
+
+    @Test fun unknownReadsAsBefore() {
+        assertEquals(1L, pace(at(3, 12), at(3, 3, 45), card = true) { false })
     }
 }

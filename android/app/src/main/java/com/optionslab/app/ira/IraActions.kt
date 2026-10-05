@@ -269,7 +269,7 @@ internal object IraActions {
             Command.Kind.BRIEF_OFF -> { IraTools.brief = false; runCatching { IraTools.clarityReset() }; "Full answers again." to null }
             Command.Kind.MORE -> (IraHub.lastFullAnswer() ?: "There is no answer of mine to say more about.") to null
             Command.Kind.PRACTICE -> "Replaying the day..." to null
-            Command.Kind.VOICE_CHECK -> JarvisVoice.diagnose(ctx()) to null
+            Command.Kind.VOICE_CHECK -> JarvisVoice.diagnose(ctx(), hint = true) to null
             Command.Kind.LEARN_RESET -> { IraTools.forgetLearned(); "Done, Boss: I've forgotten what I learned from your corrections." to null }
             Command.Kind.JTRADES_WEEKLY -> { val v = c.level ?: return "Tell me the limit in rupees." to null
                 if (v < 1000) "Tell me a weekly limit of at least Rs 1,000." to null
