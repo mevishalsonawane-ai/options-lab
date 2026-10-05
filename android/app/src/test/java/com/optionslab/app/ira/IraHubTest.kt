@@ -42,7 +42,8 @@ class IraHubTest : RobolectricTest() {
         IraMarket.VIX to History(IraMarket.VIX, days(25, 13.0, 0.02, 3)),
     )
 
-    @After fun down() { IraHub.testLabBars = null; IraAccount.testView = null; IraHub.testHistories = null; IraHub.testAutoLab = false; runBlocking { IraHub.forgetAll() } }
+    @After fun down() { IraHub.testLabBars = null; IraAccount.testView = null; IraHub.testHistories = null; IraHub.testAutoLab = false
+        IraHub.testLoadHold?.complete(Unit); IraHub.testLoadHold = null; runBlocking { IraHub.forgetAll() }; IraHub.resetAskSpeed() }
 
     private fun waitFor(what: String, ok: () -> Boolean) {
         val t0 = System.currentTimeMillis()
@@ -138,8 +139,47 @@ class IraHubTest : RobolectricTest() {
         IraHub.forgetConversation()
         assertTrue(IraHub.state.value.messages.isEmpty())
         // a fresh start reads the book back
-        IraHub.init(context)
+        IraHub.init(context); IraHub.awaitLoadedBlocking()
         assertEquals(learned, IraHub.state.value.learned)
+    }
+
+    /** 4 Oct additions answered at once, in the app: the clock, the exchange calendar, the distance to a level, reminders. */
+    @Test fun quickAnswersOfTheFourthOfOctober() = runBlocking {
+        IraHub.testHistories = { histories }
+        IraHub.refresh()
+        fun last() = IraHub.state.value.messages.last().text
+        IraHub.ask("what time is it")
+        assertTrue(last(), last().startsWith("It's ") && last().endsWith(", Boss."))
+        IraHub.ask("when is the next holiday")
+        assertTrue(last(), last().contains("holiday", ignoreCase = true))
+        IraHub.ask("how far is nifty from 30000")
+        assertTrue(last(), last().contains("points") && last().contains("below 30,000.00"))
+        // Reminders are Jarvis's own (CI runs these tests with Jarvis off as well).
+        if (com.optionslab.app.BuildConfig.JARVIS) {
+            IraHub.ask("remind me to check nifty")
+            assertTrue(last(), last().startsWith("Boss, tell me when"))
+            IraHub.ask("cancel my reminders")
+            assertTrue(last(), last() == "You have no reminders set, Boss." || last().startsWith("I could not reach the reminders"))
+        }
+        // None of them placed or prepared anything.
+        assertTrue(IraHub.state.value.messages.none { it.order != null || it.action != null })
+    }
+
+    /** More 4 Oct quick answers, in the app: the next expiry everywhere; the self check, "what did I miss" and the model with Jarvis. */
+    @Test fun moreQuickAnswersOfTheFourthOfOctober() = runBlocking {
+        fun last() = IraHub.state.value.messages.last().text
+        IraHub.ask("when is the next expiry")
+        assertTrue(last(), last().startsWith("Next expiry, Boss") || last().startsWith("I have no expiry dates loaded yet"))
+        if (com.optionslab.app.BuildConfig.JARVIS) {
+            IraHub.ask("run a self check")
+            assertTrue(last(), last().startsWith("Self-check:"))
+            IraHub.ask("which model are you using")
+            assertTrue(last(), last().startsWith("I'm set to Qwen2.5"))
+            IraHub.note("Relay down.")
+            IraHub.ask("what did I miss")
+            assertTrue(last(), last() == "Since you last asked, Boss: Relay down." || last() == "Unlock the phone for that, Boss.")
+        }
+        assertTrue(IraHub.state.value.messages.none { it.order != null || it.action != null })
     }
 
     /** "How are you" is answered at once and not in the same words twice running; "who won the match" is still not small talk. */
@@ -160,7 +200,8 @@ class IraHubTest : RobolectricTest() {
         val ms = listOf(m(false, "and BankNifty?"), m(true, "I took that as: \"How is BankNifty?\"."),
             m(false, "How is BankNifty?"))
         assertNull(IraHub.replyAfter(ms, "and BankNifty?"))
-        val done = ms + m(true, "Got it, Boss: next time \"x\" means \"y\".") + m(true, "BankNifty is at 52,000.")
+        val done = ms + m(true, "Got it, Boss: next time \"x\" means \"y\".") + m(true, "Shall I take \"x\" to mean \"y\" from now on, Boss?") +
+            m(true, "BankNifty is at 52,000.")
         assertEquals("BankNifty is at 52,000.", IraHub.replyAfter(done, "and BankNifty?")?.text)
         assertEquals("BankNifty is at 52,000.", IraHub.replyAfter(done, "How is BankNifty?")?.text)
     }
@@ -276,14 +317,14 @@ class IraHubTest : RobolectricTest() {
         IraHub.ask("backtest the hammer on banknifty 1 hour")
         waitFor("the backtest") { IraHub.state.value.proposals.isNotEmpty() }
         val p = IraHub.state.value.proposals.single()
-        IraHub.init(context)                                       // the app starts again
+        IraHub.init(context); IraHub.awaitLoadedBlocking()                                       // the app starts again
         var st = IraHub.state.value
         assertEquals(j, st.journal)
         assertEquals(listOf(p), st.proposals)
         assertTrue("the conversation is remembered", st.messages.any { it.proposal == p.id && it.text.contains("Backtest of") })
         assertTrue(st.messages.any { !it.fromIra && it.text == "backtest the hammer on banknifty 1 hour" })
         IraHub.dismiss(p.id)
-        IraHub.init(context)
+        IraHub.init(context); IraHub.awaitLoadedBlocking()
         st = IraHub.state.value
         assertEquals(IraHub.Proposal.DISMISSED, st.proposals.single().status)
         assertEquals("Dismissed. I won't offer that one again today.", st.messages.last().text)
@@ -432,8 +473,36 @@ class IraHubTest : RobolectricTest() {
         val said = IraHub.state.value.messages.first { !it.fromIra }.text
         assertEquals("my password is [hidden]", said)
         kotlinx.coroutines.delay(800)
-        IraHub.init(context)
+        IraHub.init(context); IraHub.awaitLoadedBlocking()
         assertTrue(IraHub.state.value.messages.none { it.text.contains("hunter2") || it.text.contains("4111") })
+    }
+
+    /**
+     * Speed, round 2: the saved conversation is read off the main thread at the start. While it is being read nothing is
+     * saved over it, and what is said meanwhile is kept after it - nothing is lost either way.
+     */
+    @Test fun theSavedConversationIsNeverWrittenOverWhileItIsRead() = runBlocking {
+        IraHub.ask("what time is it")
+        kotlinx.coroutines.delay(800)                               // the keeper saves it
+        val f = File(context.noBackupFilesDir, "ira-state.vault")
+        assertTrue(f.exists())
+        val hold = kotlinx.coroutines.CompletableDeferred<Unit>()
+        IraHub.testLoadHold = hold
+        IraHub.init(context)                                        // the app starts again; its memory is still being read
+        assertTrue(!IraHub.ready.value)
+        val savedBefore = f.readBytes()
+        IraHub.ask("Nifty levels")                                   // said while it is read
+        kotlinx.coroutines.delay(800)
+        assertTrue("nothing saved while the memory is read", savedBefore.contentEquals(f.readBytes()))
+        hold.complete(Unit)
+        IraHub.awaitLoadedBlocking()
+        assertTrue(IraHub.ready.value)
+        val said = IraHub.state.value.messages.filter { !it.fromIra }.map { it.text }
+        assertEquals(listOf("what time is it", "Nifty levels"), said)
+        IraHub.testLoadHold = null
+        kotlinx.coroutines.delay(800)
+        IraHub.init(context); IraHub.awaitLoadedBlocking()
+        assertEquals(said, IraHub.state.value.messages.filter { !it.fromIra }.map { it.text })
     }
 
     /** "Add event RBI policy on 5 Dec" is kept and comes back in "any events"; the Fed's 2026 days are built in. */
@@ -483,11 +552,14 @@ class IraHubTest : RobolectricTest() {
     }
 
     @Test fun jarvisTradesStayOnPaperUntilProvenAndKeepTheirOwnLimit() = runBlocking {
+        // Boss, 4 Oct: paper until he switches "AI trades go live" on; even then only once proven, asked each time.
         assertTrue(IraNewsTrades.paperFirst)
+        assertTrue(!IraNewsTrades.goesLive()); assertTrue(!IraNewsTrades.goesLive(solo = true))
+        assertTrue(IraSolo.provenWhy()!!.startsWith("Solo's trades stay on paper until 20"))
         IraHub.ask("Jarvis, let your trades go live")
         waitFor("the refusal") { IraHub.state.value.messages.lastOrNull()?.fromIra == true }
         assertTrue(IraHub.state.value.messages.last().text, IraHub.state.value.messages.last().text.contains("stay on paper until 20"))
-        assertTrue(IraNewsTrades.paperFirst)
+        assertTrue(!IraNewsTrades.goesLive())
         IraHub.ask("set Jarvis loss limit to 2000")
         waitFor("the limit") { IraHub.state.value.messages.lastOrNull()?.fromIra == true }
         IraHub.state.value.pending.singleOrNull()?.let { IraHub.confirm(it) }
@@ -545,7 +617,9 @@ class IraHubTest : RobolectricTest() {
     }
 
     @Test fun jarvisTakesTurnsByDefault() {
-        assertTrue("cutting in is off until Boss switches it on", !JarvisVoice.cutIn)
+        // Boss has made no choice, and with no headset or echo cancelling it stays off (CutIn decides automatically).
+        assertTrue("cutting in is Boss's choice or automatic", JarvisVoice.cutInChoice == null)
+        assertTrue("no headset, no echo cancelling: off", !JarvisVoice.cutInNow(null).on)
     }
 
     @Test fun muteAndUnmuteAtOnce() = runBlocking {
@@ -675,6 +749,11 @@ class IraHubTest : RobolectricTest() {
         assertTrue(Automations.Auto.entries.all { Automations.on(it) == it.byDefault })
         assertTrue(!Automations.on(Automations.Auto.TRAIL))
         Automations.set(Automations.Auto.STALE, false); assertTrue(!Automations.on(Automations.Auto.STALE)); Automations.set(Automations.Auto.STALE, true)
+        // Boss, 4 Oct: a few grouped switches; the safety helpers have none and stay on.
+        assertTrue(Automations.Group.entries.size <= 7)
+        assertTrue(Automations.Auto.entries.all { it in Automations.ALWAYS || Automations.groupOf(it) != null })
+        Automations.set(Automations.Auto.FEED, false); assertTrue(Automations.on(Automations.Auto.FEED))
+        Automations.set(Automations.Group.HELP, false); assertTrue(!Automations.on(Automations.Auto.RESCUE)); Automations.set(Automations.Group.HELP, true)
         IraJournal.targetWatch(); IraJournal.staleWatch()
         Unit
     }
@@ -710,10 +789,18 @@ class IraHubTest : RobolectricTest() {
         IraHub.ask("that was wrong")
         waitFor("the mistake") { IraHub.state.value.messages.lastOrNull()?.text?.startsWith("Sorry, Boss") == true }
         IraHub.ask("how is nifty doing")
+        // Proposed, never kept by itself: only Boss's yes keeps it.
+        waitFor("the proposal") { IraHub.state.value.messages.any { it.text.startsWith("Shall I take \"how is the nifdee boi doing\" to mean \"how is nifty doing\"") } }
+        assertTrue(IraTools.learned().isEmpty())
+        IraHub.confirm(IraHub.state.value.pending.last())
         waitFor("learned") { IraTools.learned().isNotEmpty() }
         assertEquals("how is nifty doing", IraTools.learned().last().right)
         IraHub.ask("how is the nifdee boi doing")
         waitFor("read as meant") { IraHub.state.value.messages.any { it.text == "I took that as: \"how is nifty doing\"." } }
+        IraHub.ask("what words have you learned?")
+        waitFor("listed") { IraHub.state.value.messages.lastOrNull()?.text?.contains("\"how is the nifdee boi doing\" means \"how is nifty doing\"") == true }
+        IraHub.ask("forget the word nifdee boi")
+        waitFor("one forgotten") { IraTools.learned().isEmpty() }
         IraHub.ask("forget what you learned")
         waitFor("forgotten") { IraTools.learned().isEmpty() }
     }

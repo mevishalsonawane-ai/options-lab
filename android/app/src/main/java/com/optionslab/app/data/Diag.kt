@@ -49,7 +49,19 @@ object Diag {
     }
 
     /** One writer thread: a banner shown from the screen's thread never waits on the disk. */
-    private val writer = java.util.concurrent.Executors.newSingleThreadExecutor { r -> Thread(r, "diag").apply { isDaemon = true } }
+    private val writer = java.util.concurrent.Executors.newSingleThreadScheduledExecutor { r -> Thread(r, "diag").apply { isDaemon = true } }
+
+    /**
+     * Speed (2026-10-05): the diary is up to [MAX] lines, and every write re-encrypts all of it with the Keystore (the
+     * phone's security chip, shared with every other vault and settings write). Written once per line, a burst of lines
+     * (a self-test, a stream reconnect) kept the chip busy for seconds. Lines are now kept in memory at once and written
+     * together [WRITE_AFTER_MS] after the first unwritten one; [flush] (the report, [lines]) writes them straight away.
+     */
+    private const val WRITE_AFTER_MS = 3_000L
+    /** Lines kept in memory and not yet written (guarded by this object's lock). */
+    private var dirty = false
+    /** A write is scheduled (guarded by this object's lock). */
+    private var scheduled = false
 
     /** Keep one event: "[area] text", time-stamped (IST) now, written in the background. Never throws. */
     fun record(area: String, text: String) {
@@ -64,12 +76,38 @@ object Diag {
             val l = diary()
             l.addLast(line)
             while (l.size > MAX) l.removeFirst()
-            Vault.writeFile(file, JSONArray(l.toList()).toString().toByteArray(Charsets.UTF_8))
+            dirty = true
+            if (!scheduled) {
+                scheduled = true
+                writer.schedule(Runnable { save() }, WRITE_AFTER_MS, java.util.concurrent.TimeUnit.MILLISECONDS)
+            }
         }
     }
 
-    /** Waits for the writes queued so far (tests, and the report, read what was just recorded). */
-    fun flush() { runCatching { writer.submit {}.get(5, java.util.concurrent.TimeUnit.SECONDS) } }
+    /** Writes the lines kept since the last write (on the writer thread, or the caller's in [flush]). */
+    @Synchronized
+    private fun save() {
+        scheduled = false
+        if (!dirty) return
+        dirty = false
+        runCatching { Vault.writeFile(file, JSONArray(diary().toList()).toString().toByteArray(Charsets.UTF_8)) }
+    }
+
+    /** Waits for the lines recorded so far and writes them (tests, and the report, read what was just recorded). */
+    fun flush() { runCatching { writer.submit(Runnable { save() }).get(5, java.util.concurrent.TimeUnit.SECONDS) } }
+
+    /** The app is crashing: the lines kept so far written now, on the crashing thread (never throws). */
+    fun saveNow() { if (::file.isInitialized) runCatching { save() } }
+
+    /**
+     * The diary's lines as kept ("MM-dd HH:mm:ss [area] text", oldest first, already redacted), after the queued writes:
+     * read on the phone only (Jarvis's "why was I logged out of Zerodha?"), never sent anywhere.
+     */
+    fun lines(): List<String> {
+        if (!::file.isInitialized) return emptyList()
+        flush()
+        return synchronized(this) { diary().toList() }
+    }
 
     /** The report the owner copies: the app's state (no identities, no keys), then the latest events and bot notes. */
     suspend fun report(): String = buildString {
@@ -80,7 +118,51 @@ object Diag {
         append("Mode: ${if (s?.live == true) "LIVE" else "Paper"} · real orders allowed: ${s?.allowRealOrders} · kill switch: ${s?.guardKill}\n")
         append("Market open: ${Market.isOpen()} · Zerodha linked: ${Broker.linked} · logged in: ${Broker.loggedIn}\n")
         append("Static IP set: ${StaticIp.registered != null} · relay on: ${Relay.enabled} · relay connected: ${runCatching { Relay.connected }.getOrDefault(false)}\n")
+        // Zerodha's live price stream: its state now and today's drops with the last one's reason (from the [stream] lines).
+        append(runCatching { KiteStream.statusLine(synchronized(this@Diag) { diary().toList() }) }.getOrElse { "Live stream: could not read" }).append('\n')
+        // The order watch: its last finished check, whether its service is alive, what it waits on, the battery setting
+        // (the "[watch]" lines below say why it stopped or stalled).
+        if (!com.optionslab.app.BuildConfig.GOLD) append(runCatching { com.optionslab.app.work.Heartbeat.statusLine(app) }.getOrElse { "Order watch: could not read" }).append('\n')
         if (com.optionslab.app.BuildConfig.GOLD) append(gold())
+        // Battery, round 1: what runs in the background now (listening, the stream, the watch's pace, the AI model, the phone's charge).
+        append(com.optionslab.app.work.BatteryNow.line(app)).append('\n')
+        // Speed (Boss, 5 Oct: "too slow"): the screen's stalls today, the longest and what was running then; the app's start.
+        append(runCatching { Speed.line() }.getOrElse { "Speed: could not read" }).append('\n')
+        // Speed, round 4 (Boss, 5 Oct: "Answer is taking a lot after question is asked"): where a question's wait goes,
+        // stage by stage (heard→routed, routed→answered, answered→spoken) and the slowest - durations only, never words.
+        append(redact(runCatching { com.optionslab.app.ira.IraHub.askSpeedLine() }.getOrElse { "Speed (asks): could not read" })).append('\n')
+        // Jarvis's ears and his recent actions (Boss, 4 Oct: "is there a file of logs I can give you?").
+        if (com.optionslab.app.BuildConfig.JARVIS) {
+            append("\n-- Jarvis's ears --\n")
+            append(redact(runCatching { com.optionslab.app.ira.JarvisVoice.report(app) }.getOrElse { "could not read: ${it.javaClass.simpleName}\n" }))
+            append("AI model loaded: ${runCatching { com.optionslab.app.ira.IraModel.state.value.status }.getOrNull()}\n")
+            append(redact(runCatching { com.optionslab.app.ira.IraModel.state.value.let { m -> "AI model: ${m.status}, loaded ${m.loaded}, writing ${m.writing}" + (m.message?.let { t -> " · $t" } ?: "") + "\n" } }.getOrDefault("")))
+            append("\n-- Jarvis's activity (today) --\n")
+            runCatching { com.optionslab.app.ira.IraActivity.lines() }.getOrDefault(emptyList()).takeLast(120).forEach { append(redact(it)).append('\n') }
+            append("\n-- Words I could not place (today) --\n")
+            runCatching { com.optionslab.app.ira.IraTools.missedToday() }.getOrDefault(emptyList()).ifEmpty { listOf("none") }.forEach { append(redact(it)).append('\n') }
+            // Boss, 4 Oct: "add all AI logs there for now". Every AI record the app keeps, redacted.
+            append("\n-- Jarvis's chat (latest 60, newest last) --\n")
+            runCatching { com.optionslab.app.ira.IraHub.state.value.messages.takeLast(60) }.getOrDefault(emptyList()).forEach { m ->
+                append(if (m.fromIra) "Jarvis: " else "You: ").append(redact(m.text.replace('\n', ' ').take(400))).append('\n') }
+            fun section(title: String, body: () -> Any?) {
+                append("\n-- $title --\n")
+                val v = runCatching { body() }.getOrElse { "could not read: ${it.javaClass.simpleName}" }
+                when (v) { is List<*> -> v.forEach { append(redact(it.toString())).append('\n') }; null -> append("(none)\n"); else -> append(redact(v.toString())).append('\n') }
+            }
+            section("What Jarvis does by himself") { com.optionslab.app.ira.Automations.Group.entries.map { g ->
+                "${g.label}: ${if (com.optionslab.app.ira.Automations.on(g)) "on" else "off"}" + (com.optionslab.app.ira.Automations.last(g)?.let { (t, w) -> " · last $t: $w" } ?: "") } +
+                listOf("AI trades go live: ${!com.optionslab.app.ira.IraNewsTrades.paperFirst}", "Stops done automatically: ${com.optionslab.app.ira.IraHub.autoStop}") }
+            section("Jarvis's trades") { com.optionslab.app.ira.IraNewsTrades.record() }
+            section("Today's suggestions (scorecard)") { com.optionslab.app.ira.IraNewsTrades.scorecard() }
+            section("Solo") { com.optionslab.app.ira.IraSolo.status() + " Learning: " + com.optionslab.app.ira.IraSolo.learning() }
+            val goals = runCatching { com.optionslab.app.ira.IraGoals.say() }.getOrElse { "could not read" }
+            section("Goals") { goals }
+            val lessons = runCatching { com.optionslab.app.ira.IraAccount.lessons().let { (l, n) -> com.optionslab.ira.Lessons.say(l, n) } }.getOrElse { "could not read" }
+            section("Lessons") { lessons }
+            val tests = runCatching { com.optionslab.app.ira.IraExpert.say() }.getOrElse { "could not read" }
+            section("Paper tests") { tests }
+        }
         // Newest first: a long report pasted into a chat is cut at its end, and today's events are the ones that matter.
         append("\n-- Events (newest first) --\n")
         synchronized(this@Diag) { diary().toList() }.takeLast(400).asReversed().forEach { append(redact(it)).append('\n') }
@@ -94,14 +176,20 @@ object Diag {
 
     /** IraGoldAlgo: every arm's state, the price feed and what the phone allows in the background. No keys exist in this app. */
     internal fun gold(): String = buildString {
+        val booksRead = GoldBooks.awaitBlocking()
         val t = GoldPaper.now()
         val liq = GoldPaper.book.value
         val tr = GoldTrendPaper.book.value
         val dp = GoldDipPaper.book.value
         val ts = GoldTasPaper.book.value
         append("\n-- Gold --\n")
+        if (!booksRead) append("The saved paper books are still being read; the empty ones show below.\n")
         append("Now ${GoldPaper.when_(t)} · gold trading: ${com.optionslab.engine.gold.GoldLiquidity.inSession(t)}\n")
         append("Price ${liq.price?.let { "%.2f".format(Locale.ENGLISH, it) } ?: "none"} at ${liq.priceAt?.let { GoldPaper.when_(it) } ?: "-"} · feed delayed: ${GoldPaper.stale(liq, t)}\n")
+        // Battery (round 8): with nothing to watch the 5-minute alarm leaves the feed unread, so an old price is expected then.
+        if (!com.optionslab.ira.GoldPass.due(booksRead, liq.armed || tr.armed || dp.armed || ts.armed,
+                liq.position != null || tr.position != null || dp.position != null || ts.position != null, tr.waitFlip))
+            append("  (no arm armed and nothing held: the background pass skips the price read; the Gold screen reads it while open)\n")
         app?.let { c ->
             append("Notifications: ${runCatching { com.optionslab.app.work.Notifier.canPost(c) }.getOrNull()} · precise alarms: " +
                 "${runCatching { com.optionslab.app.work.Jobs.canExact(c) }.getOrNull()} · left out of battery saving: " +
@@ -137,5 +225,5 @@ object Diag {
     }
 
     @Synchronized
-    fun wipe() { cache = null; if (::file.isInitialized) file.delete() }
+    fun wipe() { cache = null; dirty = false; if (::file.isInitialized) file.delete() }
 }

@@ -70,8 +70,9 @@ class GttLiveTest : RobolectricTest() {
         BrokerArea.await("Live mode read by the model") { m.settings.value.takeIf { it.live && it.allowRealOrders } }
         m.placeGtt()
         BrokerArea.await("the GTT", 40_000) {
-            for (refused in listOf("GTT not placed", "A GTT is a real order"))
-                if (BrokerArea.alerted(refused, substring = true)) throw AssertionError("refused: $refused (see the alerts)")
+            (com.optionslab.app.work.Alerts.queue.value + com.optionslab.app.work.Alerts.posted).firstOrNull { a ->
+                a.text.startsWith("GTT not placed") || a.text.startsWith("A GTT is a real order") }?.let { a ->
+                throw AssertionError("refused: ${a.text} | device check: ${m.integrity.value.joinToString { f -> f.name + "=" + f.severity }}") }
             kite.gtts.values.singleOrNull()
         }
     }

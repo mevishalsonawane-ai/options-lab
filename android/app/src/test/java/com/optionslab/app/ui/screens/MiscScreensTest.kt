@@ -321,7 +321,7 @@ class MiscScreensTest {
         tap("Export CSV")
         assertEquals("iraalgo-pnl-zerodha-${month.year}.csv", picker.launched.single())
         compose.waitUntil(10_000) { AreaE.alerted("Exported 0 days.") }
-        assertEquals("date,account,strategy,pnl,trades\n", String(picker.written(out)!!))
+        assertEquals("date,account,strategy,pnl,trades,charges\n", String(picker.written(out)!!))
     }
 
     // ---- The alert banner -------------------------------------------------------------------------

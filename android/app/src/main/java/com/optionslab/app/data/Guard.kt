@@ -40,6 +40,8 @@ object Guard {
         val today = Market.today().toString()
         return AccountGuard.Account(
             capital = capital, equity = equity, peakEquity = peak(false, equity),
+            // AFTER charges, on purpose (Boss, 5 Oct): the screens show the P&L before charges (Paper.Snapshot.dayGross), but
+            // every limit - the daily loss limit, the drawdown, the kill thresholds - keeps the net figure, the safer one.
             dayPnl = snap.dayPnl,
             holdings = snap.positions.positions.filter { it.quantity != 0 }.map { p ->
                 val c = Paper.contractOf(p.symbol)
@@ -52,6 +54,8 @@ object Guard {
 
     fun liveAccount(book: Broker.Positions, funds: Broker.Funds?, ordersToday: Int): AccountGuard.Account {
         val ins = instruments()
+        // Zerodha's own m2m, as this guard always read it (Zerodha keeps no after-charges figure); the charges estimate the
+        // screens show beside it is display only and never moves this limit.
         val dayPnl = book.m2m
         // Zerodha's opening balance is the day's capital; equity is that plus today's mark-to-market.
         val capital = funds?.openingBalance?.takeIf { it > 0 } ?: funds?.net ?: 0.0

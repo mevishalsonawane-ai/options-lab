@@ -4,8 +4,12 @@ import java.time.Instant
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 
-/** One headline: its words, where it came from, when, its tone (-1 bad .. +1 good) and the markets it concerns. */
-data class Headline(val title: String, val link: String, val source: String, val at: Instant?, val tone: Double, val markets: List<Market>) {
+/**
+ * One headline: its words, where it came from, when, its tone (-1 bad .. +1 good) and the markets it concerns. [also]:
+ * the other feeds that carried the very same words ([News.merge]), so a story's sources can be counted ([NewsDesk]).
+ */
+data class Headline(val title: String, val link: String, val source: String, val at: Instant?, val tone: Double, val markets: List<Market>,
+                    val also: List<String> = emptyList()) {
     val toneWord: String get() = when { tone >= 0.25 -> "positive"; tone <= -0.25 -> "negative"; else -> "neutral" }
 }
 
@@ -45,7 +49,7 @@ object News {
         listOf("gold", "bullion", "precious metal", "precious metals", "xau", "comex") to listOf(Market.GOLD),
     )
 
-    private fun words(s: String) = s.lowercase().replace(Regex("[^a-z0-9\\- ]"), " ").split(Regex("\\s+")).filter { it.isNotBlank() }
+    private fun words(s: String) = s.lowercase().replace(rx("[^a-z0-9\\- ]"), " ").split(rx("\\s+")).filter { it.isNotBlank() }
 
     /** Tone of [title], -1..+1; for [market] GOLD the gold-specific readings apply. */
     fun tone(title: String, market: Market? = null): Double {
@@ -80,26 +84,26 @@ object News {
 
     /** Headlines from an RSS 2.0 or Atom document. Tolerant: bad items are skipped, never thrown. */
     fun parse(xml: String, source: String): List<Headline> {
-        val items = Regex("<(item|entry)[\\s>][\\s\\S]*?</\\1>", RegexOption.IGNORE_CASE).findAll(xml).map { it.value }.toList()
+        val items = rx("<(item|entry)[\\s>][\\s\\S]*?</\\1>", RegexOption.IGNORE_CASE).findAll(xml).map { it.value }.toList()
         return items.mapNotNull { it ->
             val title = field(it, "title")?.let(::clean)?.takeIf { t -> t.isNotBlank() } ?: return@mapNotNull null
             val link = field(it, "link")?.let(::clean)?.takeIf { l -> l.startsWith("https://") || l.startsWith("http://") }
-                ?: Regex("<link[^>]*href=\"([^\"]+)\"", RegexOption.IGNORE_CASE).find(it)?.groupValues?.get(1) ?: ""
+                ?: rx("<link[^>]*href=\"([^\"]+)\"", RegexOption.IGNORE_CASE).find(it)?.groupValues?.get(1) ?: ""
             val at = (field(it, "pubDate") ?: field(it, "published") ?: field(it, "updated") ?: field(it, "dc:date"))?.let { d -> date(clean(d)) }
             Headline(title, link, source, at, tone(title), tag(title))
         }
     }
 
     private fun field(item: String, name: String): String? =
-        Regex("<$name(?:\\s[^>]*)?>([\\s\\S]*?)</$name>", RegexOption.IGNORE_CASE).find(item)?.groupValues?.get(1)
+        rx("<$name(?:\\s[^>]*)?>([\\s\\S]*?)</$name>", RegexOption.IGNORE_CASE).find(item)?.groupValues?.get(1)
 
     private fun clean(s: String): String {
         var t = s.trim()
-        Regex("^<!\\[CDATA\\[([\\s\\S]*)]]>$").find(t)?.let { t = it.groupValues[1] }
-        t = t.replace(Regex("<[^>]+>"), " ")
+        rx("^<!\\[CDATA\\[([\\s\\S]*)]]>$").find(t)?.let { t = it.groupValues[1] }
+        t = t.replace(rx("<[^>]+>"), " ")
         t = t.replace("&amp;", "&").replace("&lt;", "<").replace("&gt;", ">").replace("&quot;", "\"").replace("&#39;", "'").replace("&apos;", "'")
-            .replace(Regex("&#(\\d+);")) { m -> m.groupValues[1].toIntOrNull()?.let { c -> String(Character.toChars(c)) } ?: "" }
-        return t.replace(Regex("\\s+"), " ").trim()
+            .replace(rx("&#(\\d+);")) { m -> m.groupValues[1].toIntOrNull()?.let { c -> String(Character.toChars(c)) } ?: "" }
+        return t.replace(rx("\\s+"), " ").trim()
     }
 
     private fun date(s: String): Instant? =
@@ -107,7 +111,15 @@ object News {
             ?: runCatching { Instant.parse(s) }.getOrNull()
             ?: runCatching { java.time.OffsetDateTime.parse(s).toInstant() }.getOrNull()
 
-    /** Headlines from several feeds, the same story once (by its words), newest first. */
+    /**
+     * Headlines from several feeds, the same story once (by its words), newest first; the other feeds that carried the
+     * very same words are kept in [Headline.also].
+     */
     fun merge(lists: List<List<Headline>>): List<Headline> =
-        lists.flatten().sortedByDescending { it.at ?: Instant.EPOCH }.distinctBy { words(it.title).joinToString(" ") }
+        lists.flatten().sortedByDescending { it.at ?: Instant.EPOCH }.groupBy { words(it.title).joinToString(" ") }.values.map { same ->
+            val kept = same.first()
+            val others = (kept.also + same.drop(1).flatMap { listOf(it.source) + it.also })
+                .filter { !it.equals(kept.source, ignoreCase = true) }.distinctBy { it.lowercase() }
+            if (others == kept.also) kept else kept.copy(also = others)
+        }
 }

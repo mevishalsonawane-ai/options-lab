@@ -56,7 +56,7 @@ class AccountTest {
         assertTrue(a.text.contains("2 of 3 strategies and arms are switched on.") && a.text.contains("Best today: Jarvis: breakout (+Rs 562.50)"), a.text)
         assertTrue(a.text.endsWith("These are facts from the app, not advice.") && ira.numbersBacked(a.text, a.facts), a.text)
         val pnl = ira.answer("what's my p&l today", emptyMap(), emptyList(), app = view)
-        assertEquals("Paper P&L today +Rs 1,234.50 after charges: +Rs 900.00 booked, +Rs 334.50 open.", pnl.text)
+        assertEquals("Paper P&L today +Rs 1,234.50: +Rs 900.00 booked, +Rs 334.50 open.", pnl.text)
         val month = ira.answer("how much did I make this month", emptyMap(), emptyList(), app = view)
         assertTrue(month.text.contains("Paper this month: +Rs 1,034.50 over 2 days, 1 of them up.") && !month.text.contains("P&L today"), month.text)
         assertTrue(ira.numbersBacked(month.text, month.facts), month.text)
@@ -73,6 +73,12 @@ class AccountTest {
         assertEquals(listOf("No orders on Paper today."), AppFacts.orders("Paper", emptyList(), false))
         assertEquals(listOf("No open positions on Zerodha."), AppFacts.positions("Zerodha", emptyList()))
         assertEquals("No P&L on Paper today.", AppFacts.pnl("Paper", null, null, null))
+        // Before charges, the charges beside it and the figure after them (Boss, 5 Oct); Zerodha's charges are an estimate.
+        assertEquals("Paper P&L today +Rs 2,575.00 before charges: +Rs 1,000.00 booked, +Rs 1,575.00 open; charges Rs 180.00, so +Rs 2,395.00 after charges.",
+            AppFacts.pnl("Paper", 2575.0, 1000.0, 1575.0, 180.0))
+        assertEquals("Zerodha P&L today -Rs 1,200.00 before charges; charges about Rs 60.00 (an estimate from today's trades), so about -Rs 1,260.00 after charges.",
+            AppFacts.pnl("Zerodha", -1200.0, null, null, 60.0, estimate = true))
+        assertEquals("Paper P&L today +Rs 10.00.", AppFacts.pnl("Paper", 10.0, null, null, 0.0), "no charges: nothing said of them")
         assertEquals(listOf("No strategies or arms are set up."), AppFacts.arms(emptyList(), true))
         assertEquals(listOf("No P&L days recorded on Paper yet."), AppFacts.history("Paper", emptyMap(), today))
         val h = AppFacts.history("Paper", mapOf(LocalDate.of(2026, 9, 30) to (500.0 to 3), LocalDate.of(2026, 10, 1) to (-200.0 to 2)), today)

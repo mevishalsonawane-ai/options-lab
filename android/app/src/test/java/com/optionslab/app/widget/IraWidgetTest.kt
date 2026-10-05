@@ -76,6 +76,20 @@ class IraWidgetTest : RobolectricTest() {
         assertEquals(View.GONE, pnl().visibility)
     }
 
+    @Test fun zerodhaChargesGoUnderThePnlAsAnEstimate() {
+        val charges = { view().findViewById<TextView>(R.id.w_charges) }
+        AppSettings.save(AppSettings.load().copy(widgetPnl = true))
+        IraWidget.publish(context, 24_800.0 to 0.01, null, 2_575.0)
+        assertEquals("no trades read yet: no charges line", View.GONE, charges().visibility)
+        IraWidget.charges(context, 180.0)
+        assertEquals("the P&L stays Zerodha's, before charges", "P&L  Rs +2,575", pnl().text.toString())
+        assertEquals(View.VISIBLE, charges().visibility)
+        assertEquals("Charges ≈ ₹180 (estimate)", charges().text.toString())
+        AppSettings.save(AppSettings.load().copy(widgetPnl = false))
+        IraWidget.publish(context, 24_800.0 to 0.01, null, 2_575.0)
+        assertEquals("hidden with the P&L", View.GONE, charges().visibility)
+    }
+
     @Test fun publishingWithNoWidgetPlacedOnlyRecordsTheFigures() {
         val other = shadowOf(AppWidgetManager.getInstance(context))
         IraWidget.publish(context, 24_900.0 to 0.0, 55_100.0 to 0.0, null)

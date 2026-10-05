@@ -32,6 +32,14 @@ class MainActivity : FragmentActivity() {
             ?: java.util.UUID.randomUUID().toString()
                 .also { runCatching { com.optionslab.app.security.SecurePrefs.put("intent.nonce", it) } }
         private fun trusted(i: android.content.Intent?) = i?.getStringExtra(EXTRA_NONCE)?.let { it == nonce() } == true
+        /**
+         * A tapped notification's card ([com.optionslab.app.work.NoticeCard]): shown over the app as a banner once it is
+         * unlocked (the main screen, where the banner lives, is never composed over the lock). Only the app's own
+         * notifications (the nonce) set it.
+         */
+        val cardRequests = MutableStateFlow<com.optionslab.app.work.NoticeCard?>(null)
+        private fun cardOf(i: android.content.Intent): com.optionslab.app.work.NoticeCard? =
+            com.optionslab.app.work.NoticeCards.fromExtras { k -> i.getStringExtra(k) }?.let { com.optionslab.app.work.NoticeCards.resolve(it) }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -47,10 +55,25 @@ class MainActivity : FragmentActivity() {
         if (trusted(intent)) {
             tabRequests.value = intent?.getStringExtra(EXTRA_TAB)
             closeRequests.value = intent?.getStringExtra(EXTRA_CLOSE)
+            // Not again on a re-creation (the activity's saved state), nor when opened from Recents (the old tap's intent
+            // replayed): the banner was already shown for this tap.
+            val fromHistory = intent?.let { (it.flags and android.content.Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY) != 0 } == true
+            if (savedInstanceState == null && !fromHistory) intent?.let { cardOf(it) }?.let { cardRequests.value = it }
         }
         // A fresh open (not a rotation, which brings saved state) holds the logo for a moment first.
         val splash = savedInstanceState == null && com.optionslab.app.ui.components.Splash.enabled
         setContent { Root(this, splash) }
+    }
+
+    /** The screen's stalls are timed only while the app is on screen (the diagnostics' "Speed:" line). */
+    override fun onStart() {
+        super.onStart()
+        runCatching { com.optionslab.app.data.Speed.start() }
+    }
+
+    override fun onStop() {
+        runCatching { com.optionslab.app.data.Speed.stop() }
+        super.onStop()
     }
 
     /** Every touch counts as activity for the idle lock. */
@@ -58,6 +81,8 @@ class MainActivity : FragmentActivity() {
         super.onResume()
         // Jarvis's listening, switched on but stopped by Android while the app was away, starts again on screen.
         if (BuildConfig.JARVIS) runCatching { com.optionslab.app.ira.JarvisVoice.resume(this) }
+        // Opening the app just after one of Jarvis's unasked alerts: Boss followed it up (kinds and minutes only).
+        if (BuildConfig.JARVIS) runCatching { com.optionslab.app.ira.IraTools.alertBoss(com.optionslab.ira.AlertSense.Boss.OPENED) }
     }
 
     override fun dispatchTouchEvent(ev: android.view.MotionEvent): Boolean {
@@ -71,5 +96,6 @@ class MainActivity : FragmentActivity() {
         if (!trusted(intent)) return
         tabRequests.value = intent.getStringExtra(EXTRA_TAB)
         intent.getStringExtra(EXTRA_CLOSE)?.let { closeRequests.value = it }
+        cardOf(intent)?.let { cardRequests.value = it }
     }
 }

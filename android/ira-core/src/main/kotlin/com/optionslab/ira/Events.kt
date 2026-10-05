@@ -38,13 +38,13 @@ object Events {
     /** "5 dec", "december 5", "5/12", "2026-12-05", "tomorrow" -> the date (the next one from [today]), or null. */
     fun date(text: String, today: LocalDate): LocalDate? {
         val t = text.lowercase()
-        Regex("\\b(\\d{4})-(\\d{2})-(\\d{2})\\b").find(t)?.let { return runCatching { LocalDate.parse(it.value) }.getOrNull() }
-        if (Regex("\\btomorrow\\b").containsMatchIn(t)) return today.plusDays(1)
-        if (Regex("\\btoday\\b").containsMatchIn(t)) return today
+        rx("\\b(\\d{4})-(\\d{2})-(\\d{2})\\b").find(t)?.let { return runCatching { LocalDate.parse(it.value) }.getOrNull() }
+        if (rx("\\btomorrow\\b").containsMatchIn(t)) return today.plusDays(1)
+        if (rx("\\btoday\\b").containsMatchIn(t)) return today
         val months = Month.entries.associateBy { it.getDisplayName(TextStyle.FULL, Locale.ENGLISH).lowercase().take(3) }
-        val m1 = Regex("\\b(\\d{1,2})(?:st|nd|rd|th)?\\s+(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\\b").find(t)
-        val m2 = Regex("\\b(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\\s+(\\d{1,2})(?:st|nd|rd|th)?\\b").find(t)
-        val m3 = Regex("\\b(\\d{1,2})/(\\d{1,2})\\b").find(t)
+        val m1 = rx("\\b(\\d{1,2})(?:st|nd|rd|th)?\\s+(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\\b").find(t)
+        val m2 = rx("\\b(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\\s+(\\d{1,2})(?:st|nd|rd|th)?\\b").find(t)
+        val m3 = rx("\\b(\\d{1,2})/(\\d{1,2})\\b").find(t)
         val (d, mon) = when {
             m1 != null -> m1.groupValues[1].toInt() to months.getValue(m1.groupValues[2].take(3)).value
             m2 != null -> m2.groupValues[2].toInt() to months.getValue(m2.groupValues[1].take(3)).value

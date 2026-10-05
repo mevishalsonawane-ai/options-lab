@@ -31,6 +31,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -63,6 +64,11 @@ data class Account(
     val at: java.time.ZonedDateTime = Market.now(),
 ) {
     val positions: List<com.optionslab.app.data.Broker.Position> get() = book.net
+    /**
+     * Today's charges, estimated from today's filled trades: Zerodha's P&L is before charges, and the screens show this on
+     * a small "Charges ≈ ₹X (estimate)" line under it. Display only: no limit reads it.
+     */
+    val charges: Double by lazy { com.optionslab.app.data.TradeBook.liveCharges(trades) }
 }
 
 /** Orders awaiting the owner's decision, with every gate's verdict attached. */
@@ -129,6 +135,9 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         refreshAlarms()
         viewModelScope.launch(Dispatchers.IO) { integrity.value = Integrity.report(ctx) }
         viewModelScope.launch(Dispatchers.IO) { pnlSeries.value = com.optionslab.app.data.PnlTracker.today() }
+        // The app started: the "Open" widget filled at once from what the phone holds (on its own thread; nothing when
+        // none is placed or its switch is off), before any account is read.
+        runCatching { com.optionslab.app.widget.OpenWidget.fillSoon(ctx) }
     }
 
     /** Every message the app gives shows as a banner at the top: green for success, red for an error. */
@@ -561,6 +570,19 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /**
+     * From a paper position's notification card (the banner opened by tapping it): that position's own popup, where
+     * closing is the usual slide to confirm - the same popup as tapping the position's row.
+     */
+    fun openPaperClose(symbol: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val p = runCatching { com.optionslab.app.data.Paper.snapshot() }.getOrNull()?.positions?.positions
+                ?.firstOrNull { it.symbol == symbol && it.quantity != 0 }
+            if (p == null) { say("No open paper position in $symbol."); return@launch }
+            rowAction.value = com.optionslab.app.ui.screens.RowTarget.PaperPosition(p)
+        }
+    }
+
     fun resetAfterWipe() {
         _settings.value = AppSettings.load()
         broker.value = brokerState()
@@ -605,11 +627,13 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         // Zerodha's live price stream: the account's positions and P&L move with every tick,
         // and an order update from Zerodha refreshes the account straight away.
         viewModelScope.launch(Dispatchers.IO) { com.optionslab.app.data.KiteStream.ensure() }
-        viewModelScope.launch {
+        // Speed, round 3: re-marked off the screen's thread (every tick re-prices the whole book). The books are swapped in
+        // atomically (MutableStateFlow.update), so an account read meanwhile on the IO lane is never written over by an older one.
+        viewModelScope.launch(Dispatchers.Default) {
             com.optionslab.app.data.KiteStream.version.collect {
                 val st = com.optionslab.app.data.KiteStream
-                (account.value as? Load.Done<Account>)?.value?.let { a -> account.value = Load.Done(a.copy(book = st.live(a.book))) }
-                if (livePositions.value.isNotEmpty()) livePositions.value = livePositions.value.map { st.live(it) }
+                account.update { accountNow -> (accountNow as? Load.Done<Account>)?.value?.let { a -> Load.Done(a.copy(book = st.live(a.book))) } ?: accountNow }
+                livePositions.update { positionsNow -> if (positionsNow.isNotEmpty()) positionsNow.map { st.live(it) } else positionsNow }
                 com.optionslab.app.work.PositionCards.widgetFromStream(ctx, livePositions.value.takeIf { it.isNotEmpty() }?.sumOf { it.pnl })
             }
         }
@@ -776,10 +800,17 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                 livePositions.value = book.net
                 com.optionslab.app.data.KiteStream.want("positions", book.net.filter { it.qty != 0 }.map { it.token })
                 val trades = tradesQ.await()
+                // Zerodha's P&L is before charges: the widgets show today's charges, estimated from these trades, under it.
+                val liveCharges = com.optionslab.app.data.TradeBook.liveCharges(trades)
+                runCatching { com.optionslab.app.widget.OpenWidget.fromZerodha(ctx, book, liveCharges) }
+                runCatching { com.optionslab.app.widget.IraWidget.charges(ctx, liveCharges) }
                 runCatching { com.optionslab.app.data.TradeBook.recordLive(trades) }
                 // Today's Zerodha P&L for the calendar (Zerodha has no past days through its API).
+                // Speed, round 5: the calendar reads again only when the day's figure changed (a refresh that changes
+                // nothing no longer makes an open calendar re-read every book).
                 if (book.net.isNotEmpty() || trades.isNotEmpty()) runCatching {
-                    com.optionslab.app.data.DailyPnl.record(true, book.m2m, trades.size); pnlDays.value = pnlDays.value + 1
+                    // The calendar's bump comes from DailyPnl.changes (see pnlDays).
+                    com.optionslab.app.data.DailyPnl.record(true, book.m2m, trades.size, liveCharges)
                 }
                 Load.Done(Account(fundsQ.await(), book, ordersQ.await().getOrThrow(), trades, holdingsQ.await()))
             } catch (e: Exception) {
@@ -1469,7 +1500,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     /** The last chain per underlying, shown at once while a fresh one is priced behind it. */
     private val toolsCache = java.util.concurrent.ConcurrentHashMap<String, Pair<com.optionslab.engine.options.ChainSnapshot, String>>()
 
-    fun loadTools(underlying: String, quiet: Boolean = false) {
+    /** [reuseRecent]: a chain this process read under 5 minutes ago is shown instead of pricing it again (app start only). */
+    fun loadTools(underlying: String, quiet: Boolean = false, reuseRecent: Boolean = false) {
         val cached = toolsCache[underlying]
         if (cached != null) { tools.value = Load.Done(cached.first); toolsSource.value = cached.second + " · refreshing" }
         else if (!quiet || tools.value !is Load.Done) tools.value = Load.Busy("Pricing the $underlying chain")
@@ -1479,7 +1511,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         toolsJob = viewModelScope.launch(Dispatchers.IO) {
             tools.value = try {
                 if (_settings.value.live && !com.optionslab.app.data.Broker.loggedIn) error("LIVE mode: log in to Zerodha for today to price the chain.")
-                val lc = Market.liveChain(underlying, near = 12)
+                // Battery (round 7): at app start, a chain read in the last 5 minutes (Jarvis's pass, a question) is not priced again.
+                val lc = (if (reuseRecent) Market.recentChain(underlying, 12) else null) ?: Market.liveChain(underlying, near = 12)
                 val symbols = lc.contracts.associate { (it.strike to it.right) to it.tradingSymbol }
                 val rows = com.optionslab.app.data.OiBaseline.apply(com.optionslab.engine.options.ChainSnapshot.rowsFrom(lc.series, symbols, lc.lotSize))
                 val source = lc.source + (lc.pricedAt?.let { " · %02d:%02d".format(it / 60, it % 60) } ?: "")
@@ -1632,12 +1665,26 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     private fun recordPaperDay(snap: com.optionslab.app.data.Paper.Snapshot) = runCatching {
         val open = snap.positions.positions.any { it.quantity != 0 }
         val pnl = snap.dayPnl
-        if (snap.trades.isNotEmpty() || open || pnl != 0.0) com.optionslab.app.data.DailyPnl.record(false, pnl, snap.trades.size)
-        pnlDays.value = pnlDays.value + 1
+        // Speed, round 5: bumped only when the day's figure changed (every 2 s on the stream it re-read every book).
+        // The calendar's bump comes from DailyPnl.changes (see pnlDays).
+        // Kept as always (after charges), with the day's charges beside it: the calendar shows it before charges.
+        if (snap.trades.isNotEmpty() || open || pnl != 0.0) com.optionslab.app.data.DailyPnl.record(false, pnl, snap.trades.size, snap.dayCharges)
     }
 
-    /** Bumped whenever a day's figure is recorded, so an open P&L calendar redraws. */
+    /**
+     * Bumped whenever a day's figure is recorded, so an open P&L calendar redraws. Review (speed 5): driven by
+     * [com.optionslab.app.data.DailyPnl.changes], so a figure the market watch (or anything else) recorded redraws it too,
+     * not only the ones this model recorded itself.
+     */
     val pnlDays = MutableStateFlow(0)
+
+    init {
+        // Declared after pnlDays, so it is set before the collector (which may start at once) touches it.
+        viewModelScope.launch(Dispatchers.Default) {
+            var firstChange = true
+            com.optionslab.app.data.DailyPnl.changes.collect { if (firstChange) firstChange = false else pnlDays.update { n -> n + 1 } }
+        }
+    }
 
     private val paperLoading = java.util.concurrent.atomic.AtomicBoolean(false)
     /** A reload asked for while one was running: done right after it, so the book after an order is never missed. */
@@ -1673,6 +1720,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                 runCatching { orderOwners.value = com.optionslab.app.data.Strategies.owners() }
                 val snap = com.optionslab.app.data.Paper.snapshot()
                 recordPaperDay(snap)
+                runCatching { com.optionslab.app.widget.OpenWidget.fromPaper(ctx, snap) }
                 Load.Done(snap)
             } catch (e: Exception) { Load.Failed(e.message ?: "could not read the paper account") }
           } finally {
@@ -1717,7 +1765,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         r
     }
 
-    fun paperCancel(id: String) = paperDo(inHoursOnly = false) { com.optionslab.app.data.Paper.cancel(id) }
+    fun paperCancel(id: String) = paperDo(inHoursOnly = false) { com.optionslab.app.data.Paper.cancel(id, "you") }
     fun paperModify(id: String, qty: Int?, price: Double?, trigger: Double?) = paperDo { com.optionslab.app.data.Paper.modify(id, qty, price, trigger) }
     fun paperClose(symbol: String, product: String, area: String = "Close position") = paperDo {
         // Closing is an exit: nothing stops it, the kill switch included (it only refuses new entries).
@@ -1749,10 +1797,9 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             runCatching { com.optionslab.app.data.Strategies.resetPaper() }
             runCatching { com.optionslab.app.data.Protections.resetPaper() }
             runCatching { com.optionslab.app.data.Journal.resetPaper() }
-            com.optionslab.app.data.DailyPnl.resetPaper()
+            com.optionslab.app.data.DailyPnl.resetPaper()   // bumps pnlDays through DailyPnl.changes
             com.optionslab.app.data.Guard.resetPeak(live = false)
             runCatching { com.optionslab.app.work.PositionCards.dismissAll(ctx, "Paper") }
-            pnlDays.value = pnlDays.value + 1
             say("Paper reset to default: ${rs(default.toDouble())}, nothing held, no history.")
             loadPaper()
             runCatching { refreshStrategies() }

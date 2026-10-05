@@ -28,6 +28,8 @@ object LossBreaker {
         }
         val s = AppSettings.load()
         // Both accounts are watched whatever the badge shows: a live position is real money in Paper mode too.
+        // The paper day AFTER charges (Paper.Snapshot.dayPnl), never the before-charges figure the screens show: the limit
+        // keeps the safer, net figure (Boss, 5 Oct). Zerodha's is its own m2m, as it always was.
         val paper = runCatching { Paper.snapshot() }.getOrNull()?.dayPnl
         val live = if (Broker.loggedIn) runCatching { Broker.positionBook().m2m }.getOrNull() else null
         val hit = when {
@@ -40,6 +42,6 @@ object LossBreaker {
         val text = "Today's %s P&L Rs %,.0f reached the Rs %,.0f daily loss limit. The bot sold what it held and stopped for today. %s"
             .format(hit.first, hit.second, hit.third, msg)
         // Also the in-app banner (Notifier.post drops it in): one call, one banner.
-        Notifier.post(context, 2040, Notifier.RISK, "Daily loss limit reached", text, "strategy")
+        Notifier.post(context, 2040, Notifier.RISK, "Daily loss limit reached", text, "strategy", setting = "risk.guards")
     }
 }

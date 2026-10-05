@@ -17,6 +17,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -55,8 +56,11 @@ private data class HomeOrder(val name: String, val detail: String, val value: St
                              /** Who placed the order / opened the position ([com.optionslab.app.data.Origins]). */
                              val source: Pair<String, Boolean>? = null)
 
-/** What Home shows about the money, from the paper account or from Zerodha. */
-private data class Money(val pnlToday: Double?, val unused: Double?, val used: Double?) {
+/**
+ * What Home shows about the money, from the paper account or from Zerodha. [pnlToday] is before charges (Boss, 5 Oct: as
+ * Zerodha shows its P&L); [charges] the small line under it ("Charges ₹180", "Charges ≈ ₹180 (estimate)"; null: none).
+ */
+private data class Money(val pnlToday: Double?, val unused: Double?, val used: Double?, val charges: String? = null) {
     val capital: Double? get() = if (unused != null && used != null) unused + used else null
 }
 
@@ -68,11 +72,13 @@ private data class Money(val pnlToday: Double?, val unused: Double?, val used: D
 @Composable
 fun AlmanacScreen(model: AppModel, onGo: (String) -> Unit) {
     val s by model.settings.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
-    val quotes by model.quotes.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
-    val note by model.quoteNote.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
-    val daily by model.bankNiftyDaily.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
-    val account by model.account.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
-    val paper by model.paper.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    // Speed, round 3: the prices and the books are held as states, not read here - each is read only by the card that
+    // shows it, so a price tick no longer recomposes all of Home (the money card follows the books, the chart the prices).
+    val quotesState = model.quotes.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val noteState = model.quoteNote.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val dailyState = model.bankNiftyDaily.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val accountState = model.account.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val paperState = model.paper.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     val owners by model.orderOwners.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
 
     // Prices poll only while Home is on screen and the app is in front.
@@ -91,8 +97,9 @@ fun AlmanacScreen(model: AppModel, onGo: (String) -> Unit) {
         }
     }
     LaunchedEffect(s.live) { model.loadBankNiftyDaily() }
-    AlmanacContent(s.live, com.optionslab.app.data.Broker.loggedIn, quotes, note, daily, account, paper, onGo,
-        onRow = { model.rowAction.value = it }, owners = owners, strategies = { StrategyArmCard(model) { onGo("strategy") } })
+    AlmanacBody(s.live, com.optionslab.app.data.Broker.loggedIn, { quotesState.value }, { noteState.value }, { dailyState.value },
+        { accountState.value }, { paperState.value }, onGo, onRow = { model.rowAction.value = it }, owners = owners,
+        strategies = { StrategyArmCard(model) { onGo("strategy") } })
 }
 
 /**
@@ -114,15 +121,19 @@ internal fun AlmanacContent(
     owners: Map<String, String> = emptyMap(),
     strategies: @Composable () -> Unit,
 ) {
-    val p = LocalPalette.current
-    var range by rememberSaveable { mutableStateOf("1D") }
+    AlmanacBody(live, loggedIn, { quotes }, { note }, { daily }, { account }, { paper }, onGo, onRow, owners, strategies)
+}
 
+/** Home's money figures, its live-orders rows and the note under the money, from the books of the mode shown. */
+private fun homeBooks(live: Boolean, loggedIn: Boolean, account: Load<com.optionslab.app.ui.Account>,
+                      paper: Load<com.optionslab.app.data.Paper.Snapshot>, owners: Map<String, String>,
+                      p: com.optionslab.app.ui.theme.Palette): Triple<Money, List<HomeOrder>, String?> {
     val money: Money
     val orders: List<HomeOrder>
     val moneyNote: String?
     if (live) {
         val a = (account as? Load.Done)?.value
-        money = Money(a?.book?.m2m, a?.funds?.available, a?.funds?.used)
+        money = Money(a?.book?.m2m, a?.funds?.available, a?.funds?.used, a?.let { com.optionslab.ira.PnlCharges.line(it.charges, estimate = true) })
         orders = a?.let { acc ->
             acc.positions.filter { it.qty != 0 }.map {
                 HomeOrder(it.symbol, "${if (it.qty < 0) "SELL" else "BUY"} ${abs(it.qty)} · avg ${PX.format(it.avg)} · LTP ${PX.format(it.last)}",
@@ -141,7 +152,8 @@ internal fun AlmanacContent(
         }
     } else {
         val v = (paper as? Load.Done)?.value
-        money = Money(v?.dayPnl, v?.funds?.availableCash, v?.funds?.utilisedDebits)
+        // Before charges (display only; the loss limits read Paper.Snapshot.dayPnl, after them), the day's charges under it.
+        money = Money(v?.dayGross, v?.funds?.availableCash, v?.funds?.utilisedDebits, v?.let { com.optionslab.ira.PnlCharges.line(it.dayCharges, estimate = false) })
         orders = v?.let { snap ->
             snap.positions.positions.filter { it.quantity != 0 }.map {
                 HomeOrder(it.symbol, "${if (it.quantity < 0) "SELL" else "BUY"} ${abs(it.quantity)} · avg ${PX.format(it.averagePrice)} · LTP ${PX.format(it.ltp)}",
@@ -156,10 +168,40 @@ internal fun AlmanacContent(
         } ?: emptyList()
         moneyNote = (paper as? Load.Failed)?.why
     }
+    return Triple(money, orders, moneyNote)
+}
+
+/**
+ * [AlmanacContent] with its changing values read where they are shown (speed round 3): [quotes], [note] and [daily] by
+ * the chart card only, [account] and [paper] by the money and orders cards only (through one derived reading).
+ */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable
+private fun AlmanacBody(
+    live: Boolean,
+    loggedIn: Boolean,
+    quotes: () -> Map<String, Market.Quote>,
+    note: () -> String?,
+    daily: () -> List<Pair<java.time.LocalDate, Double>>,
+    account: () -> Load<com.optionslab.app.ui.Account>,
+    paper: () -> Load<com.optionslab.app.data.Paper.Snapshot>,
+    onGo: (String) -> Unit,
+    onRow: (RowTarget) -> Unit,
+    owners: Map<String, String>,
+    strategies: @Composable () -> Unit,
+) {
+    val p = LocalPalette.current
+    var range by rememberSaveable { mutableStateOf("1D") }
+
+    // Speed, round 2: the money and the rows are built once per change of the books (or the owners), not at every
+    // recomposition of Home. Round 3: derived, so only the cards that read them follow the books ([books]).
+    val books = remember(live, loggedIn, account, paper, owners, p) { androidx.compose.runtime.derivedStateOf {
+        homeBooks(live, loggedIn, account(), paper(), owners, p) } }
 
     Page {
         // ---- the money: capital first and largest --------------------------------------
         item {
+            val (money, _, moneyNote) = books.value
             val cap = money.capital
             val usedShare = if (cap != null && cap > 0) ((money.used ?: 0.0) / cap).toFloat().coerceIn(0f, 1f) else 0f
             LedgerCard {
@@ -174,7 +216,8 @@ internal fun AlmanacContent(
                 MoneyRow(Modifier.padding(top = 12.dp)) {
                     MoneyFigure("Unused", money.unused?.let { inr(it) }, null, Modifier)
                     MoneyFigure("Used", money.used?.let { inr(it) }, null, Modifier)
-                    MoneyFigure("P&L today", money.pnlToday?.let { inr(it, true) }, money.pnlToday?.let { if (it >= 0) p.verdigris else p.oxblood }, Modifier)
+                    MoneyFigure("P&L today", money.pnlToday?.let { inr(it, true) }, money.pnlToday?.let { if (it >= 0) p.verdigris else p.oxblood }, Modifier,
+                        sub = money.charges.takeIf { money.pnlToday != null })
                 }
                 if (moneyNote != null) Note(moneyNote, Modifier.padding(top = 8.dp))
                 else if (cap != null && cap > 0) Text("${Math.round(100 * usedShare)}% of capital in use", style = Type.bodySmall.copy(color = p.inkSoft), modifier = Modifier.padding(top = 8.dp))
@@ -186,17 +229,18 @@ internal fun AlmanacContent(
 
         // ---- BANKNIFTY ------------------------------------------------------------------
         item {
-            val q = quotes["BANKNIFTY"]
+            val q = quotes()["BANKNIFTY"]
+            val dailyNow = daily()
             val today = Market.today()
-            val past = daily.filter { it.first.isBefore(today) }
+            val past = dailyNow.filter { it.first.isBefore(today) }
             val prevClose = past.lastOrNull()?.second
-            val last = q?.last ?: daily.lastOrNull()?.second
+            val last = q?.last ?: dailyNow.lastOrNull()?.second
             val (values, ref, slots, labels) = when (range) {
                 "1D" -> ChartSpec(q?.spark.orEmpty(), prevClose ?: q?.open, 375,
                     listOf(0 to "09:15", 105 to "11:00", 225 to "13:00", 374 to "15:30"))
                 else -> {
                     val n = when (range) { "1W" -> 5; "1M" -> 22; else -> 250 }
-                    val series = (past.takeLast(n - 1) + listOfNotNull(q?.let { today to it.last } ?: daily.lastOrNull()?.takeIf { !it.first.isBefore(today) }))
+                    val series = (past.takeLast(n - 1) + listOfNotNull(q?.let { today to it.last } ?: dailyNow.lastOrNull()?.takeIf { !it.first.isBefore(today) }))
                     val fmt = DateTimeFormatter.ofPattern(if (range == "1Y") "MMM yy" else "d MMM", Locale.ENGLISH)
                     val size = series.size.coerceAtLeast(2)
                     ChartSpec(series.map { it.second }, null, size,
@@ -227,7 +271,7 @@ internal fun AlmanacContent(
                 else Note(when {
                     range == "1D" && !Market.isTradingDay() -> "Market closed today. Pick 1W, 1M or 1Y for recent days."
                     range == "1D" && Market.minuteNow() < Market.OPEN -> "The day's chart starts at 09:15."
-                    else -> note ?: "Loading prices…"
+                    else -> note() ?: "Loading prices…"
                 }, Modifier.padding(vertical = 24.dp))
                 Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     listOf("1D", "1W", "1M", "1Y").forEach { r -> Token(r, r == range) { range = r } }
@@ -237,6 +281,7 @@ internal fun AlmanacContent(
 
         // ---- live orders -----------------------------------------------------------------
         item {
+            val orders = books.value.second
             LedgerCard {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("Live orders", style = Type.title.copy(color = p.ink, fontSize = 16.sp), modifier = Modifier.weight(1f))
@@ -267,12 +312,14 @@ internal fun AlmanacContent(
 private data class ChartSpec(val values: List<Double>, val reference: Double?, val slots: Int, val labels: List<Pair<Int, String>>)
 
 @Composable
-private fun MoneyFigure(label: String, value: String?, color: Color?, modifier: Modifier) {
+private fun MoneyFigure(label: String, value: String?, color: Color?, modifier: Modifier, sub: String? = null) {
     val p = LocalPalette.current
     Column(modifier) {
         Text(label, style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp))
         Spacer(Modifier.height(2.dp))
         Text(value ?: "—", style = Type.figure.copy(color = color ?: p.ink, fontSize = 15.sp, fontWeight = FontWeight.Bold))
+        // The small line under a figure (the P&L's charges), in the app's small text.
+        if (sub != null) Text(sub, style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 11.sp, lineHeight = 14.sp))
     }
 }
 

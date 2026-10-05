@@ -44,6 +44,37 @@ object Rescue {
         return stop
     }
 
+    /**
+     * May the stop be set without asking (Boss, 4 Oct: "guard my live positions")? Only with his switch on, only on a
+     * bought option (a stop that can only close it, never open or add), and only when a stop under the price exists.
+     */
+    fun setAlone(switchOn: Boolean, p: Open, stop: Double?): Boolean = switchOn && p.qty > 0 && p.avg > 0 && stop != null
+
+    /**
+     * Is an active Kite GTT a stop on a position (review, 5 Oct: a target-only GTT is not)? A two-leg (OCO) one always
+     * holds a stop leg; a single one only when its order closes the position ([orders] as read, "SELL 50 @ 100.0": SELL
+     * for a [long], BUY for a short) and its trigger sits under [lastPrice] (the price when it was set) for a long, over
+     * it for a short. Anything else (a target, an unknown type, no trigger or price) is not a stop.
+     */
+    fun gttIsStop(type: String, triggers: List<Double>, lastPrice: Double, orders: String, long: Boolean): Boolean {
+        if (type.trim().equals("two-leg", ignoreCase = true)) return true
+        if (!type.trim().equals("single", ignoreCase = true)) return false
+        val trigger = triggers.firstOrNull() ?: return false
+        if (lastPrice <= 0.0 || trigger <= 0.0) return false
+        val side = orders.trim().substringBefore(' ').uppercase(Locale.ENGLISH)
+        return if (long) side == "SELL" && trigger < lastPrice else side == "BUY" && trigger > lastPrice
+    }
+
+    /** Told after the guard set a stop by itself ([result]: what the app said). */
+    fun saySet(p: Open, stop: Double, result: String): String =
+        if (failed(result))
+            "${p.symbol} (${if (p.live) "Zerodha" else "paper"}, ${p.qty}) has no stop. I tried to set one at %.2f, 15%% under the %.2f you paid, but it did not go through: ".format(Locale.ENGLISH, stop, p.avg) + result
+        else "${p.symbol} (${if (p.live) "Zerodha" else "paper"}, ${p.qty}) had no stop, so I set one at %.2f, 15%% under the %.2f you paid. ".format(Locale.ENGLISH, stop, p.avg) + result
+
+    /** The protect step's own words say it did not happen (never read as "I set one"). */
+    private val FAILED = Regex("not protected|failed|refused|rejected|not sent|not placed|not set|could not|insufficient|switch to live", RegexOption.IGNORE_CASE)
+    fun failed(result: String): Boolean = FAILED.containsMatchIn(result)
+
     fun say(p: Open, stop: Double?): String = if (stop != null)
         "${p.symbol} (${if (p.live) "Zerodha" else "paper"}, ${p.qty}) has no stop. Shall I set one at %.2f, 15%% under the %.2f you paid?".format(Locale.ENGLISH, stop, p.avg)
     else if (p.qty < 0) "${p.symbol} (${if (p.live) "Zerodha" else "paper"}) is a short with no stop: set one from the position."
@@ -106,7 +137,7 @@ object Confidence {
 object WhatIf {
     /** The minute of day named ("10:30", "10 30", "2 pm", "half past ten" not read), within market hours, or null. */
     fun minute(text: String): Int? {
-        val t = " " + text.lowercase().replace(Regex("[^a-z0-9: ]"), " ").replace(Regex("\\s+"), " ") + " "
+        val t = " " + text.lowercase().replace(rx("[^a-z0-9: ]"), " ").replace(rx("\\s+"), " ") + " "
         fun at(m: MatchResult): Int? {
             var h = m.groupValues[1].toInt(); val min = m.groupValues[2].ifEmpty { "0" }.toInt()
             if (m.groupValues[3] == "pm" && h < 12) h += 12
@@ -114,17 +145,17 @@ object WhatIf {
             return (h * 60 + min).takeIf { min < 60 && it in (9 * 60 + 15)..(15 * 60 + 30) }
         }
         // A written time ("10:30", "2 pm") first; else the first number that is a market-hours time.
-        Regex(" (\\d{1,2}):(\\d{2}) ?(am|pm)? | (\\d{1,2})() ?(am|pm) ").findAll(t).forEach { m ->
+        rx(" (\\d{1,2}):(\\d{2}) ?(am|pm)? | (\\d{1,2})() ?(am|pm) ").findAll(t).forEach { m ->
             val g = if (m.groupValues[1].isNotEmpty()) listOf(m.groupValues[1], m.groupValues[2], m.groupValues[3]) else listOf(m.groupValues[4], "", m.groupValues[6])
             var h = g[0].toInt(); val min = g[1].ifEmpty { "0" }.toInt()
             if (g[2] == "pm" && h < 12) h += 12
             if (g[2].isEmpty() && h in 1..3) h += 12
             (h * 60 + min).takeIf { min < 60 && it in (9 * 60 + 15)..(15 * 60 + 30) }?.let { return it }
         }
-        return Regex(" (\\d{1,2})(?: (\\d{2}))? ?(am|pm)? ").findAll(t).firstNotNullOfOrNull { at(it) }
+        return rx(" (\\d{1,2})(?: (\\d{2}))? ?(am|pm)? ").findAll(t).firstNotNullOfOrNull { at(it) }
     }
 
-    fun asked(text: String): Boolean = Regex("(?i)\\bwhat if (i|we) (had )?(taken|took|take|bought|approved)|\\bwould (i|it) have (made|lost)|\\bif i had (taken|approved|bought)").containsMatchIn(text)
+    fun asked(text: String): Boolean = rx("(?i)\\bwhat if (i|we) (had )?(taken|took|take|bought|approved)|\\bwould (i|it) have (made|lost)|\\bif i had (taken|approved|bought)").containsMatchIn(text)
 }
 
 /** Quiet hours (the owner's wish, 2026-10-02): nothing spoken unasked between [from] and [to] (minutes of day). Pure. */
@@ -147,9 +178,9 @@ object MoveAlarm {
 
     fun read(s: String): Move? {
         // Only a condition ("if / when it falls 1%"), never a question about a move that happened ("why is it down 2%").
-        if (!Regex(" (if|when|once|whenever) ").containsMatchIn(s)) return null
-        val m = Regex(" (falls|drops|goes down|rises|goes up|jumps|crashes|gains|loses|sinks) (by )?(\\d+(?:\\.\\d+)?) ?(%|percent|per cent) ").find(s)
-            ?: Regex(" (\\d+(?:\\.\\d+)?) ?(%|percent|per cent) (fall|drop|rise|jump|gain|loss) ").find(s)?.let { x ->
+        if (!rx(" (if|when|once|whenever) ").containsMatchIn(s)) return null
+        val m = rx(" (falls|drops|goes down|rises|goes up|jumps|crashes|gains|loses|sinks) (by )?(\\d+(?:\\.\\d+)?) ?(%|percent|per cent) ").find(s)
+            ?: rx(" (\\d+(?:\\.\\d+)?) ?(%|percent|per cent) (fall|drop|rise|jump|gain|loss) ").find(s)?.let { x ->
                 return x.groupValues[1].toDouble().takeIf { it > 0 && it <= 20 }?.let { Move(it, x.groupValues[3] in setOf("rise", "jump", "gain")) } }
             ?: return null
         val pct = m.groupValues[3].toDouble().takeIf { it > 0 && it <= 20 } ?: return null
@@ -197,9 +228,12 @@ object ReportCard {
         val out = ArrayList<String>()
         out += if (pnl == null || trades == 0) "This week: no trades closed." else "This week: ${AppFacts.rs(pnl)} over $trades trade${if (trades > 1) "s" else ""}."
         if (suggestions.isNotEmpty()) {
-            val taken = suggestions.filter { it.answer == "approved" }; val skipped = suggestions.filter { it.answer != "approved" }
+            val mine = suggestions.filter { it.answer == JarvisTrades.SELF }
+            val asked = suggestions - mine.toSet()
+            val taken = asked.filter { it.answer == "approved" }; val skipped = asked.filter { it.answer != "approved" }
             fun pts(l: List<JarvisTrades.Suggestion>) = l.mapNotNull { it.points }.let { p -> if (p.isEmpty()) "" else ", %+.1f points".format(Locale.ENGLISH, p.sum()) }
-            out += "My suggestions: ${suggestions.size}; you took ${taken.size}${pts(taken)}, skipped ${skipped.size}${pts(skipped)}."
+            if (asked.isNotEmpty()) out += "My suggestions: ${asked.size}; you took ${taken.size}${pts(taken)}, skipped ${skipped.size}${pts(skipped)}."
+            if (mine.isNotEmpty()) out += "I took ${mine.size} on paper by myself${pts(mine)}."
         } else out += "I suggested no trades this week."
         val ranked = arms.filter { it.trades > 0 }.sortedByDescending { it.net }
         if (ranked.isNotEmpty()) {
@@ -208,5 +242,69 @@ object ReportCard {
         }
         habit?.let { out += "One habit to fix: $it" }
         return out
+    }
+}
+
+/**
+ * When Jarvis may act on its own idea without asking (Boss, 4 Oct: "independent"): only with the switch on, only when
+ * the trade would go to the PAPER account (never Zerodha), and only with at least [MIN_STARS] of confidence. Pure.
+ */
+object ActAlone {
+    const val MIN_STARS = 3
+    /** Trades at one confidence level before its result is trusted to move the bar. */
+    const val JUDGE = 8
+    /** Above 5 stars: Jarvis acts alone on nothing until its record says otherwise. */
+    const val NONE = 6
+
+    fun ok(switchOn: Boolean, goesLive: Boolean, stars: Int, bar: Int = MIN_STARS): Boolean = switchOn && !goesLive && stars >= bar
+
+    /**
+     * The bar Jarvis sets itself from its own closed trades ([results]: the confidence it had, the rupees made): from
+     * [MIN_STARS] up, a level that has lost money over [JUDGE] trades or more is not good enough, so the bar moves above
+     * it. It moves back down by itself when that level's record turns (it keeps being traded when Boss approves). Pure.
+     */
+    fun bar(results: List<Pair<Int, Double>>): Int {
+        var bar = MIN_STARS
+        while (bar < NONE) {
+            val at = results.filter { it.first == bar }
+            if (at.size >= JUDGE && at.sumOf { it.second } < 0) bar++ else break
+        }
+        return bar
+    }
+
+    /**
+     * An hour of the day that has been losing Jarvis money ([results]: entry minute of day, rupees): with [JUDGE] trades
+     * or more in the same hour and a net loss, the hour's record in words (he then does not act alone then, and says
+     * so when he asks), else null. Pure.
+     */
+    fun badHour(results: List<Pair<Int, Double>>, minute: Int): String? {
+        val h = minute / 60
+        val at = results.filter { it.first / 60 == h }
+        val net = at.sumOf { it.second }
+        if (at.size < JUDGE || net >= 0) return null
+        return "my trades entered between %02d:00 and %02d:00 have lost: ${at.size} trades, ${AppFacts.rs(net)}".format(Locale.ENGLISH, h, h + 1)
+    }
+
+    /**
+     * A kind of idea (news, or one pattern - [Preference.kind]) that has been losing Jarvis money ([results]: kind,
+     * rupees): with [JUDGE] trades or more and a net loss, its record in words, else null. Pure.
+     */
+    fun badKind(results: List<Pair<String, Double>>, kind: String): String? {
+        val at = results.filter { it.first == kind }
+        val net = at.sumOf { it.second }
+        if (at.size < JUDGE || net >= 0) return null
+        return "my $kind trades have lost: ${at.size} trades, ${AppFacts.rs(net)}"
+    }
+
+    /** One line for "how are your trades doing": each level's record and the bar it set. */
+    fun say(results: List<Pair<Int, Double>>): String? {
+        if (results.isEmpty()) return null
+        val levels = results.groupBy { it.first }.toSortedMap().map { (s, l) -> "$s/5: ${l.size} trade${if (l.size > 1) "s" else ""} ${AppFacts.rs(l.sumOf { it.second })}" }
+        val b = bar(results)
+        return "By my confidence: ${levels.joinToString(", ")}. " + when {
+            b >= NONE -> "Every level from $MIN_STARS/5 up has lost, so I take nothing on paper by myself now; I only ask."
+            b > MIN_STARS -> "Below $b/5 my trades lost, so I now take one by myself only at $b/5 or more."
+            else -> "I take one by myself at $MIN_STARS/5 or more."
+        }
     }
 }

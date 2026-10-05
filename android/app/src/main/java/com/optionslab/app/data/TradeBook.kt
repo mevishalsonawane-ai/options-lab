@@ -32,12 +32,22 @@ object TradeBook {
 
     private var liveCache: MutableList<Broker.Trade>? = null
 
+    /**
+     * The kept Zerodha trades. No file yet: empty (and kept). A vault that cannot be read (a Keystore failure, a damaged
+     * file, or no bytes from a file that is there): throws, and nothing is kept - so [recordLive] never rewrites the vault
+     * from an empty list, and Jarvis says the trade book could not be read rather than "no trades" (round 22 review; every
+     * caller reads inside runCatching, as [Journal.all]'s do).
+     */
     @Synchronized
     private fun liveTrades(): MutableList<Broker.Trade> {
         liveCache?.let { return it }
+        if (!::liveFile.isInitialized) return ArrayList()
         val out = ArrayList<Broker.Trade>()
-        runCatching {
-            val a = JSONArray(String(Vault.readFileSteady(liveFile) ?: return@runCatching, Charsets.UTF_8))
+        val exists = liveFile.exists()
+        val bytes = Vault.readFileSteady(liveFile)
+        if (bytes == null && exists) throw java.io.IOException("live trade book could not be read")
+        if (bytes != null) {
+            val a = JSONArray(String(bytes, Charsets.UTF_8))
             for (i in 0 until a.length()) {
                 val o = a.getJSONArray(i)
                 out += Broker.Trade(o.getString(0), o.getString(1), o.getString(2), o.getString(3), o.getString(4), o.getInt(5), o.getDouble(6), o.getString(7), o.getString(8))
@@ -67,20 +77,38 @@ object TradeBook {
 
     // ---- fills and trips --------------------------------------------------------------------
 
-    fun fills(live: Boolean): List<RoundTrips.Fill> = if (live) {
-        liveTrades().mapNotNull { t ->
+    fun fills(live: Boolean): List<RoundTrips.Fill> = if (live) liveFills(liveSnapshot()) else paperFills(Paper.state.trades)
+
+    /** A copy of the Zerodha trades taken under the lock ([recordLive] adds to the kept list in place). */
+    @Synchronized
+    private fun liveSnapshot(): List<Broker.Trade> = ArrayList(liveTrades())
+
+    private fun liveFills(trades: List<Broker.Trade>): List<RoundTrips.Fill> =
+        trades.mapNotNull { t ->
             val at = kiteTime(t.at) ?: return@mapNotNull null
             RoundTrips.Fill("kite:${t.id}", "kite:${t.orderId}", t.symbol, if (t.side == "BUY") 1 else -1, t.qty, t.price, at,
                 SandboxCosts.charge(t.side, BigDecimal(t.price), t.qty).toDouble())
         }
-    } else {
-        Paper.state.trades.map { t ->
+
+    private fun paperFills(trades: List<com.optionslab.engine.sandbox.Trade>): List<RoundTrips.Fill> =
+        trades.map { t ->
             RoundTrips.Fill("paper:${t.tradeId}", "paper:${t.orderId}", t.symbol, if (t.action == "BUY") 1 else -1, t.quantity, t.price.toDouble(),
                 t.timestamp, t.charges.toDouble())
         }
-    }
 
-    fun trips(live: Boolean): List<RoundTrips.Trip> = RoundTrips.of(fills(live))
+    /**
+     * The round trips, rebuilt only when the trades they are made from changed ([com.optionslab.ira.SameInput]): the
+     * goals, the paper tests, the day's target and the journal each read them in every market-watch pass, and each read
+     * re-priced every fill's charges and re-paired them all. The trades themselves are the key (compared in full), so a
+     * new fill, a reset paper account or a wiped book is a different input and rebuilt at once; nothing to remember to clear.
+     */
+    private val liveTrips = com.optionslab.ira.SameInput<List<Broker.Trade>, List<RoundTrips.Trip>>()
+    private val paperTrips = com.optionslab.ira.SameInput<List<com.optionslab.engine.sandbox.Trade>, List<RoundTrips.Trip>>()
+
+    fun trips(live: Boolean): List<RoundTrips.Trip> =
+        if (live) liveTrips.of(liveSnapshot()) { RoundTrips.of(liveFills(it)) }
+        // The paper state is immutable and replaced on each change; copied anyway so the key can never change under it.
+        else paperTrips.of(ArrayList(Paper.state.trades)) { RoundTrips.of(paperFills(it)) }
 
     /**
      * Who placed a trip: the label of the order that opened it ("ORB", "ORB Fresh", a strategy's name,
@@ -88,14 +116,30 @@ object TradeBook {
      */
     fun ownerOf(trip: RoundTrips.Trip, owners: Map<String, String>): String {
         val label = trip.openOrderIds.firstNotNullOfOrNull { owners[it] } ?: owners[trip.closeOrderId]?.takeIf { !it.startsWith("Protection") }
-        return label?.substringBefore(" · ")?.removePrefix("Strategy: ")?.trim()?.ifEmpty { null } ?: "Manual"
+        // A Liquidity 15+5 book's own name ("Liquidity 5m FINNIFTY") is that one arm's (ArmOwners): one row, all its trades.
+        return label?.substringBefore(" · ")?.removePrefix("Strategy: ")?.trim()?.ifEmpty { null }?.let { com.optionslab.ira.ArmOwners.arm(it) } ?: "Manual"
     }
 
-    /** Realised P&L per day for one strategy (the calendar's filter). */
+    /** Realised P&L per day for one strategy (the calendar's filter): before charges, with the day's charges beside it. */
     fun days(live: Boolean, owner: String, owners: Map<String, String>): Map<LocalDate, DailyPnl.Day> =
         trips(live).filter { ownerOf(it, owners) == owner }.groupBy { it.day }.mapValues { (d, ts) ->
-            DailyPnl.Day(d, Math.round(ts.sumOf { it.net } * 100) / 100.0, ts.size)
+            DailyPnl.Day(d, Math.round(ts.sumOf { it.gross } * 100) / 100.0, ts.size, Math.round(ts.sumOf { it.charges } * 100) / 100.0)
         }
+
+    /**
+     * Zerodha's charges on [trades] (fills as Kite lists them), estimated with the same F&O schedule as [charges] (the
+     * charges report): the "Charges ≈ ₹X (estimate)" line under a Zerodha P&L. Pure: no vault read (safe on the main thread).
+     */
+    fun liveCharges(trades: List<Broker.Trade>): Double =
+        com.optionslab.ira.PnlCharges.estimate(trades.map { com.optionslab.ira.PnlCharges.Fill(it.side, it.price, it.qty) })
+
+    /**
+     * Zerodha's estimated charges on [day] from the trades kept here, or null when none are kept for it (or the book could
+     * not be read). Reads the vault: never on the main thread.
+     */
+    fun liveChargesOn(day: LocalDate): Double? = runCatching {
+        liveSnapshot().filter { kiteTime(it.at)?.toLocalDate() == day }.takeIf { it.isNotEmpty() }?.let { liveCharges(it) }
+    }.getOrNull()
 
     /** Charges paid in [month], line by line. */
     fun charges(live: Boolean, month: YearMonth): Map<String, Double> {
@@ -124,15 +168,27 @@ object Journal {
     val MOODS = listOf("Calm", "Confident", "Anxious", "Greedy", "Bored")
 
     private lateinit var file: File
-    private var cache: MutableMap<String, Entry>? = null
+    // Volatile: [cached] peeks at it from the main thread without the lock. Never changed in place once kept (each
+    // change keeps a new map), so a peeked map stays whole.
+    @Volatile private var cache: MutableMap<String, Entry>? = null
+
+    /** The journal if it has been read already, else null: never reads the vault (safe on the main thread). */
+    fun cached(): Map<String, Entry>? = cache
+
     fun init(context: Context) { file = File(context.applicationContext.noBackupFilesDir, "journal.vault") }
 
+    /**
+     * The whole journal. No file yet: empty (and kept). A vault that cannot be read (a Keystore failure, a damaged file):
+     * throws, and nothing is kept - so [put] and [resetPaper] never rewrite the vault from an empty map and lose every
+     * note; the caller shows "Journal not saved", and a read shows nothing (every caller reads inside runCatching).
+     */
     @Synchronized
     fun all(): Map<String, Entry> {
         cache?.let { return it }
         val m = LinkedHashMap<String, Entry>()
-        runCatching {
-            val o = JSONObject(String(Vault.readFileSteady(file) ?: return@runCatching, Charsets.UTF_8))
+        val bytes = Vault.readFileSteady(file)
+        if (bytes != null) {
+            val o = JSONObject(String(bytes, Charsets.UTF_8))
             o.keys().forEach { k ->
                 val e = o.getJSONObject(k)
                 val tags = e.optJSONArray("t")?.let { a -> (0 until a.length()).map { a.getString(it) }.toSet() } ?: emptySet()

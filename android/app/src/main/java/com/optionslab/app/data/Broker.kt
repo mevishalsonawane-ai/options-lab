@@ -42,6 +42,20 @@ import javax.net.ssl.HttpsURLConnection
 object Broker {
     private lateinit var app: Context
 
+    /** Where a bounded read runs ([within]): apart from its caller, so a caller that stops waiting is not held. */
+    private val readScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
+
+    /**
+     * A Zerodha read with a real deadline. [call] does blocking HttpsURLConnection I/O (20 s connect, 60 s read) that does
+     * not suspend, so a withTimeoutOrNull wrapped straight around it cannot end the wait. Here [read] runs apart on IO and
+     * the caller waits [ms] at most: null on timeout or failure. A read the caller gave up on finishes in the background
+     * and is dropped. Reads only: never used for anything that places, changes or cancels.
+     */
+    suspend fun <T> within(ms: Long, read: suspend () -> T): T? {
+        val d = readScope.async { runCatching { read() }.getOrNull() }
+        return kotlinx.coroutines.withTimeoutOrNull(ms) { d.await() }
+    }
+
     private const val K_KEY = "kite.apiKey"
     private const val K_SECRET = "kite.apiSecret"            // legacy: plain inside the vault; migrated on next login
     private const val K_SEALED = "kite.apiSecretSealed"      // sealed with the owner's PIN (SecretBox)
@@ -53,6 +67,13 @@ object Broker {
     private const val K_UID = "kite.userId"
     private const val K_SENT_DAY = "kite.sentDay"
     private const val K_SENT = "kite.sentCount"
+
+    /**
+     * The positions read shared within one market-watch pass ([passPositionBook], [com.optionslab.ira.PassShare]): the
+     * words-only checks of a pass read Zerodha's positions once, not once each. Nothing that orders uses it.
+     */
+    private const val PASS_BOOK_MS = 20_000L
+    private val passBook = com.optionslab.ira.PassShare<Positions>(PASS_BOOK_MS)
 
     fun init(context: Context) { app = context.applicationContext }
 
@@ -98,6 +119,7 @@ object Broker {
     fun dropBioSealed() { SecurePrefs.put(K_BIO_SEALED, null) }
 
     fun forget() {
+        passBook.drop()
         KiteStream.stop()
         com.optionslab.app.security.BiometricGate.forgetSecretKey()
         SecurePrefs.putAll(mapOf(K_KEY to null, K_SECRET to null, K_SEALED to null, K_BIO_SEALED to null, K_REDIRECT to null, K_TOKEN to null,
@@ -120,7 +142,7 @@ object Broker {
     /** The session token for the live price stream (never logged, never shown). */
     internal fun streamToken(): String? = if (loggedIn) SecurePrefs.getString(K_TOKEN) else null
 
-    private fun dropSession() { KiteStream.stop(); SecurePrefs.putAll(mapOf(K_TOKEN to null, K_LOGIN_AT to null)) }
+    private fun dropSession() { passBook.drop(); KiteStream.stop(); SecurePrefs.putAll(mapOf(K_TOKEN to null, K_LOGIN_AT to null)) }
 
     /** Bumped when Zerodha itself ends the session (expired or logged out elsewhere): the app asks to log in again. */
     val sessionEnded = kotlinx.coroutines.flow.MutableStateFlow(0)
@@ -160,6 +182,9 @@ object Broker {
             val k = kv.substringBefore('='); if (k in DIAG_FIELDS) "$k: ${java.net.URLDecoder.decode(kv.substringAfter('='), "UTF-8")}" else null
         }.joinToString(" ", prefix = " {", postfix = "}").takeIf { it != " {}" }.orEmpty()
         val route = if ((method != "GET" || viaRelay) && testEndpoint == null && Relay.enabled) " via relay" else ""
+        // A write (an order, a change, a cancel) changes the positions: the pass's shared read is dropped before it is
+        // sent and again once it is answered, so no words-only check is given the book from before it.
+        if (method != "GET") passBook.drop()
         return try {
             callInner(method, path, body, auth, raw, json, viaRelay).also { r ->
                 if (method != "GET") Diag.record("zerodha", "$where$asked$route -> ok ${(r as? JSONObject)?.optString("order_id")?.takeIf { it.isNotEmpty() }?.let { "order $it " } ?: ""}(${System.currentTimeMillis() - t0} ms)")
@@ -168,6 +193,13 @@ object Broker {
             if (e !is kotlinx.coroutines.CancellationException)
                 Diag.record("zerodha", "$where$asked$route -> FAILED ${e.javaClass.simpleName}: ${e.message} (${System.currentTimeMillis() - t0} ms)")
             throw e
+        } finally {
+            if (method != "GET") {
+                passBook.drop()
+                // Jarvis's kept account figures are dropped too (an order, a change, a cancel or a GTT, from any screen,
+                // a strategy or the guard): no answer is said from before it ([com.optionslab.app.ira.IraAccount.invalidate]).
+                runCatching { com.optionslab.app.ira.IraAccount.invalidate() }
+            }
         }
     }
 
@@ -218,7 +250,23 @@ object Broker {
                     // Kite's own message names the problem (margin, price band,
                     // freeze quantity); it carries no credential, so it is shown.
                     val msg = json.optString("message", "request failed").take(300)
-                    if (type == "TokenException") { dropSession(); sessionEnded.value++; throw KiteError(type, "Zerodha session ended: $msg") }
+                    if (type == "TokenException") {
+                        // One request's TokenException is checked against the profile before the day's session is
+                        // dropped: a single refused call (a glitch on one endpoint) no longer logs Boss out for the day.
+                        // The reason is kept for the diagnostics (the path only, never its query; Kite's message has no key).
+                        // Only the profile refused for its token ends the day: a network failure or a timeout on the
+                        // check keeps the session (the glitch case), and a cancel is passed on, never read as an end.
+                        val kept = path.substringBefore('?') != "/user/profile" && auth && try {
+                            callInner("GET", "/user/profile", null, true, false, false, false); true
+                        } catch (e: kotlinx.coroutines.CancellationException) { throw e
+                        } catch (e: KiteError) { e.type != "TokenException"
+                        } catch (_: Exception) { true }
+                        Diag.record("info", "Zerodha TokenException on $method ${path.substringBefore('?')}: $msg" +
+                            if (kept) " (the profile still answers: session kept)" else " (session ended)")
+                        if (kept) throw KiteError(type, msg)
+                        if (loggedIn) { dropSession(); sessionEnded.value++ }
+                        throw KiteError(type, "Zerodha session ended: $msg")
+                    }
                     // SEBI's static-IP rule: Zerodha takes orders only from an IP listed in the Kite Connect app.
                     if (msg.contains("No IPs configured", ignoreCase = true) || msg.contains("not allowed to place orders", ignoreCase = true))
                         throw KiteError(type, "Zerodha does not know your order IP yet. Add ${StaticIp.registered ?: "your static IP"} in developers.kite.trade → My apps → your app → IP whitelist, save, then try again. (Zerodha: $msg)")
@@ -374,9 +422,26 @@ object Broker {
     private fun rows(a: JSONArray?): List<JSONObject> = if (a == null) emptyList() else (0 until a.length()).map { a.getJSONObject(it) }
 
     suspend fun positionBook(): Positions {
+        // Always read fresh (stops, targets, the loss limit and the bots rely on it); within a market-watch pass the
+        // answer is also kept for the words-only checks after it ([passPositionBook]).
+        val ticket = passBook.ticket()
+        val at = passBook.now()
         val d = call("GET", "/portfolio/positions") as JSONObject
         return Positions(rows(d.optJSONArray("net")).map(::position), rows(d.optJSONArray("day")).map(::position))
+            .also { passBook.put(ticket, at, it) }
     }
+
+    /** The market watch opens and closes its pass: within it, [passPositionBook] reads Zerodha at most once. */
+    fun passBegin() = passBook.open()
+    fun passEnd() = passBook.close()
+
+    /**
+     * Positions for words only - the Jarvis heads-up, trades going nowhere, the day's target, the plan, the 15:10 MIS
+     * word and the watch notice's P&L line; never for anything that places, changes or closes an order. Within a
+     * market-watch pass this is the pass's one read (at most [PASS_BOOK_MS] old; any write to Zerodha or a session end
+     * drops it); outside a pass, and when there is none yet, Zerodha is read now. A failed read is never kept.
+     */
+    suspend fun passPositionBook(): Positions = passBook.share { positionBook() }
 
     suspend fun positions(): List<Position> = positionBook().net
 
@@ -394,7 +459,11 @@ object Broker {
 
     suspend fun orders(): List<OrderRow> {
         val arr = call("GET", "/orders") as JSONArray
-        return rows(arr).map(::orderRow).sortedByDescending { it.placedAt }
+        val list = rows(arr).map(::orderRow).sortedByDescending { it.placedAt }
+        // The "Open" widget's pending orders come from the reads already made here, handed to its own thread so this
+        // (an order path) never waits on its vault write or the launcher.
+        runCatching { com.optionslab.app.widget.OpenWidget.fromOrdersSoon(app, list) }
+        return list
     }
 
     private fun orderRow(o: JSONObject) = OrderRow(o.optString("order_id"), o.optString("tradingsymbol"), o.optString("transaction_type"),

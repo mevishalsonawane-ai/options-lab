@@ -72,12 +72,13 @@ class BotTile : TileService() {
     }
 
     /**
-     * Today's P&L, live: IraAlgo - the paper account's day P&L after charges (Home's "P&L today"), or in Live the
+     * Today's P&L, live: IraAlgo - the paper account's day P&L before charges (Home's "P&L today"), or in Live the
      * Zerodha figure the watch publishes each minute; IraGoldAlgo - today's closed trades of the four arms (by the
      * Indian day, as the P&L calendar) plus the open trades at the last price.
      */
     private suspend fun todayPnl(): String? =
         if (com.optionslab.app.BuildConfig.GOLD) {
+            com.optionslab.app.data.GoldBooks.awaitLoaded()
             val today = GoldPaper.now().plusMinutes(330).toLocalDate()
             val closed = (GoldPaper.book.value.trades + GoldTrendPaper.book.value.trades + GoldDipPaper.book.value.trades +
                 GoldTasPaper.book.value.trades)
@@ -88,17 +89,19 @@ class BotTile : TileService() {
             "Today " + GoldPaper.usd(closed + open)
         } else {
             val v = if (com.optionslab.app.data.AppSettings.load().live) PositionCards.livePnl ?: com.optionslab.app.widget.IraWidget.lastPnl()
-                else com.optionslab.app.data.Paper.snapshot().dayPnl
+                else com.optionslab.app.data.Paper.snapshot().dayGross   // before charges, as Home and Zerodha show it
             v?.let { "Today " + (if (it < 0) "-₹" else "+₹") + "%,.0f".format(java.util.Locale.ENGLISH, kotlin.math.abs(it)) }
         }
 
-    private suspend fun running(): Boolean =
-        if (com.optionslab.app.BuildConfig.GOLD) GoldPaper.book.value.armed || GoldTrendPaper.book.value.armed || GoldDipPaper.book.value.armed ||
-            GoldTasPaper.book.value.armed
-        else !Strategies.stoppedToday()
+    private suspend fun running(): Boolean {
+        if (!com.optionslab.app.BuildConfig.GOLD) return !Strategies.stoppedToday()
+        com.optionslab.app.data.GoldBooks.awaitLoaded()
+        return GoldPaper.book.value.armed || GoldTrendPaper.book.value.armed || GoldDipPaper.book.value.armed || GoldTasPaper.book.value.armed
+    }
 
     private suspend fun stop() {
         if (com.optionslab.app.BuildConfig.GOLD) {
+            com.optionslab.app.data.GoldBooks.awaitLoaded()
             val was = listOfNotNull(if (GoldPaper.book.value.armed) "liquidity" else null, if (GoldTrendPaper.book.value.armed) "trend" else null,
                 if (GoldDipPaper.book.value.armed) "dip" else null, if (GoldTasPaper.book.value.armed) "tas" else null)
             if (was.isNotEmpty()) SecurePrefs.put(GOLD_ARMED, was.joinToString(","))

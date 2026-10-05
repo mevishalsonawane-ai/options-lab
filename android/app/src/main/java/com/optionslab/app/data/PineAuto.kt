@@ -551,7 +551,7 @@ object PineAuto {
         r.events.filterIsInstance<com.optionslab.engine.sandbox.SandboxEvent.Fill>().firstOrNull()?.let { return it.quantity to it.price }
         val oid = r.orderId ?: return null
         if (!r.ok) return null
-        Paper.cancel(oid)
+        Paper.cancel(oid, "unfilled_market")
         val o = Paper.state.orders.firstOrNull { it.orderId == oid } ?: return null
         return if (o.status == "complete") o.quantity to (o.averagePrice?.toDouble() ?: return null) else null
     }

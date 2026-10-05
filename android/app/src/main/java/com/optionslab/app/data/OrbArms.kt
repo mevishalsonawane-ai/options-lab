@@ -270,6 +270,9 @@ object OrbArms {
         View(arms, b.legs?.takeIf { it.day == day }, b.range?.takeIf { b.rangeDay == day }, forward(b), lastReplay?.value, lastReplay?.key)
     }
 
+    /** Every closed paper trade the arms' book keeps (its last 2000 positions), oldest first. Reads only. */
+    suspend fun closedPaper(): List<Position> = lock.withLock { book().positions.filter { !it.open && !it.live } }
+
     /** Liquidity 15+5 as one row: armed when its books are, both books' trades, each book's state. */
     private fun liquidityView(b: Book, day: LocalDate): ArmView {
         val books = LiquidityRules.BOOKS.map { it.source }
@@ -290,6 +293,9 @@ object OrbArms {
         })
 
     suspend fun holding(): Boolean = lock.withLock { book().positions.any { it.open } }
+
+    /** Any arm (the liquidity books too) switched on - for the words lane's pace only, never a decision on an order. */
+    suspend fun anyArmed(): Boolean = lock.withLock { book().armed.values.any { it } }
 
     // ---- arming and approvals ------------------------------------------------------
 
@@ -339,6 +345,7 @@ object OrbArms {
     /** After a restore: both arms off, nothing waiting for approval. */
     suspend fun disarmAll() = lock.withLock {
         val b = book(); b.armed.clear(); b.auto.clear(); b.liveOk.clear(); b.pending.clear(); save(b)
+        com.optionslab.app.ira.IraCoach.forgetParked()
     }
 
     /**
@@ -492,7 +499,7 @@ object OrbArms {
                 "BANKNIFTY closed ${if (direction > 0) "above" else "below"} the opening range on the ${hhmm(last.start)} bar. " +
                     (if (live) "LIVE on Zerodha, 1 lot: approve it on Home in the app" +
                         (if (b.auto[arm.source] != false) " (arm it again while in Live to make it automatic)" else "") else "Paper account, 1 lot") +
-                    ". Approve by ${hhmm(last.start.plusMinutes(10))} or it lapses.", "almanac")
+                    ". Approve by ${hhmm(last.start.plusMinutes(10))} or it lapses.", "almanac", approve = "orb")
             watching()
             return "awaiting_approval"
         }
@@ -572,7 +579,7 @@ object OrbArms {
             // (or a restart after it), or the owner closed it (a notification's Close button, the Trade tab).
             // Its resting stop comes out of the book at once, so it can never fill as a short.
             if (net <= 0) {
-                cur.stopOrderId?.let { runCatching { Paper.cancel(it) } }
+                cur.stopOrderId?.let { runCatching { Paper.cancel(it, "position_closed") } }
                 val backstop = cur.day.isBefore(t.toLocalDate()) || !t.toLocalTime().isBefore(LocalTime.of(15, 15))
                 // Book the actual closing fill (slippage and charges included) when there is one.
                 val sq = Paper.state.trades.lastOrNull { it.symbol == p.symbol && it.action == "SELL" && it.strategy == "AUTO_SQUARE_OFF" && !it.timestamp.isBefore(cur.entryTime) }
@@ -601,7 +608,7 @@ object OrbArms {
     /** Take the resting stop out of the book first, then sell; if the stop filled meanwhile, that is the exit. */
     private suspend fun exit(p: Position, c: Paper.Contract, why: String): Position {
         p.stopOrderId?.let { id ->
-            Paper.cancel(id)
+            Paper.cancel(id, "exit:$why")
             val so = Paper.state.orders.firstOrNull { it.orderId == id }
             if (so?.status == "complete") return p.copy(exit = so.averagePrice?.toDouble(), exitTime = so.updateTimestamp, why = "stop",
                 charges = p.charges + chargesOf(id))
@@ -930,7 +937,7 @@ object OrbArms {
         r.events.filterIsInstance<com.optionslab.engine.sandbox.SandboxEvent.Fill>().firstOrNull()?.let { return Filled(it.quantity, it.symbol, it.price) }
         val id = r.orderId ?: return null
         if (!r.ok) return null
-        Paper.cancel(id)
+        Paper.cancel(id, "unfilled_market")
         val o = Paper.state.orders.firstOrNull { it.orderId == id } ?: return null
         return if (o.status == "complete") Filled(o.quantity, o.symbol, o.averagePrice?.toDouble() ?: return null) else null
     }
@@ -962,7 +969,7 @@ object OrbArms {
             Notifier.post(app, 6960 + ALL_ARMS.indexOf(arm), Notifier.APPROVAL, "${LiquidityRules.ARM.label}: approve BUY $und $strike $right",
                 "The $und ${tf}-minute ${hhmm(last.start)} bar took a liquidity pool ${if (s.side > 0) "above" else "below"}. " +
                     (if (live) "LIVE on Zerodha, 1 lot: approve it on Home in the app" else "Paper account, 1 lot") +
-                    ". Approve by ${hhmm(expires)} or it lapses.", "almanac")
+                    ". Approve by ${hhmm(expires)} or it lapses.", "almanac", approve = "orb")
             return "awaiting_approval"
         }
         return enterLiquidity(b, arm, s, last.start, strike, live)

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The only folder the exports FileProvider can share: the cache's exports/ (Jarvis's tax-year CSV). -->
+<paths>
+    <cache-path name="exports" path="exports/" />
+</paths>

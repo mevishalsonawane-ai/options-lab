@@ -45,6 +45,16 @@ class LearnerTest {
         assertEquals(l.save(), back.save())
         assertTrue(back.ready && !Learner().load("junk"))
         assertTrue(l.say("Nifty").startsWith("Nifty: "), l.say("Nifty"))
+        // In words: in a market where the last minutes' direction carries on, it names momentum.
+        val e = l.explain("Nifty")!!
+        assertTrue(e.startsWith("Nifty has learned: ") && e.contains("momentum"), e)
+        assertNull(Learner().explain("Nifty"), "too early to say")
+        // Its sureness against reality: said in words, kept with the model, and an old (L1) model still loads.
+        val cal = l.calibration("Nifty")
+        assertTrue(cal == null || cal.startsWith("Nifty's sureness: when 60-65% sure it was right"), "$cal")
+        val again = Learner(Learner.Cfg(minScored = 50)); assertTrue(again.load(l.save())); assertEquals(l.calibration("Nifty"), again.calibration("Nifty"))
+        val l1 = l.save().split("|").take(7).toMutableList().also { it[0] = "L1" }.joinToString("|")
+        assertTrue(Learner().load(l1), "an L1 model from before the bands still loads")
     }
 
     /** Over real history (SOLO_DATA): prints how the learner would have done. */
@@ -59,5 +69,11 @@ class LearnerTest {
             println("LEARN $name edge=$edge h=$hz: ${r.trades.size} trades over ${r.days} days, ${r.wins} won, net Rs %,.0f; its hit rate %.1f%% over its last %d guesses"
                 .format(r.net, r.hitRate * 100, r.scored))
         }
+    }
+
+    @Test fun itFollowsTheViewWithTheBestRecord() {
+        assertEquals(1, Learner.pick(listOf(0.56 to true, 0.61 to false, 0.70 to null)))
+        assertNull(Learner.pick(listOf(0.6 to null, 0.7 to null)))
+        assertEquals(listOf(15, 30, 60), Learner.HORIZONS)
     }
 }

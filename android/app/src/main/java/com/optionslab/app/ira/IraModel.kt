@@ -42,11 +42,20 @@ object IraModel {
     val QUALITY = Spec("quality", "Qwen2.5 3B", "Qwen/Qwen2.5-3B-Instruct-GGUF", "qwen2.5-3b-instruct-q4_k_m.gguf",
         "7dabda4d13d513e3e842b20f0d435c732f172cbe", 2_104_932_768L, "626b4a6678b86442240e33df819e00132d3ba7dddfe1cdc4fbb18e0a9615c62d",
         5_500_000_000L, "best quality")
-    val SPECS = listOf(FAST, QUALITY)
+    /**
+     * Boss, 4 Oct ("thinking takes too long, change to a fast and efficient model"): less than half the 1.5B's size, so
+     * it loads and answers about two to three times faster. It only reads free-form words and chats - every figure and
+     * action comes from the app's own rules - so a smaller model costs little.
+     */
+    val FASTEST = Spec("fastest", "Qwen2.5 0.5B", "Qwen/Qwen2.5-0.5B-Instruct-GGUF", "qwen2.5-0.5b-instruct-q4_k_m.gguf",
+        "9217f5db79a29953eb74d5343926648285ec7e67", 491_400_032L, "74a4da8c9fdbcd15bd1f6d01d621410d31c6fc00986f5eb687824e7b93d7a9db",
+        2_500_000_000L, "fastest")
+    val SPECS = listOf(FASTEST, FAST, QUALITY)
 
-    /** Which model the owner chose (the fast one unless the quality one was picked). */
+    /** Which model the owner chose (the 1.5B unless another was picked). */
     val choice: Spec
-        get() = if (runCatching { com.optionslab.app.security.SecurePrefs.getString("ira.model.choice") }.getOrNull() == QUALITY.key) QUALITY else FAST
+        get() = runCatching { com.optionslab.app.security.SecurePrefs.getString("ira.model.choice") }.getOrNull()
+            .let { k -> SPECS.firstOrNull { it.key == k } } ?: FAST
 
     val NAME: String get() = choice.name
     val FILE: String get() = choice.file
@@ -66,6 +75,9 @@ object IraModel {
         if (s == choice) return
         // A download under way is stopped (a cancel when none runs would overwrite the new model's state).
         if (_state.value.status == Status.DOWNLOADING || _state.value.status == Status.VERIFYING) ModelDownload.cancel(c)
+        // A reply or the test being written holds the model: it is stopped, so the switch happens now instead of after a
+        // long (or stuck) answer - Boss saw the new choice marked while the old model's name stayed (5 Oct).
+        stopWriting()
         lock.withLock {
             unloadLocked()
             runCatching { com.optionslab.app.security.SecurePrefs.put("ira.model.choice", s.key) }
@@ -110,6 +122,8 @@ object IraModel {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val lock = Mutex()
     @Volatile private var handle = 0L
+    /** Which of the model's memory slots each prompt reads into (used under [lock] only; as many as the runner has). */
+    private val slots = com.optionslab.ira.PromptSlots(LlmNative.SLOTS)
     private var idle: Job? = null
     /** "Later" this run: asked again the next time the app starts. */
     @Volatile private var deferred = false
@@ -219,6 +233,7 @@ object IraModel {
         lock.withLock {
             // Checked again under the lock: the model may have been switched while this waited.
             if (!usable()) return@withLock null
+            yieldedForVoice = false
             idle?.cancel()
             _state.update { it.copy(writing = true) }
             try {
@@ -228,8 +243,12 @@ object IraModel {
                     if (handle == 0L) { _state.update { it.copy(message = "The model file did not open; delete it and download again.") }; return@withLock null }
                     _state.update { it.copy(loaded = true, message = null) }
                 }
+                // The voice got busy while this waited for the lock or loaded the model: it gives way now (5 Oct).
+                if (runCatching { JarvisVoice.busyForModel }.getOrDefault(false)) { yieldedForVoice = true; return@withLock null }
                 val watchdog = scope.launch { delay(TIMEOUT_MS); LlmNative.cancel() }
-                val bytes = try { gently { LlmNative.generate(handle, Writer.prompt(question, facts, draft), MAX_TOKENS) } } finally { watchdog.cancel() }
+                rewriting = true
+                val bytes = try { gently { Writer.prompt(question, facts, draft).let { p -> LlmNative.generate(handle, p, MAX_TOKENS, slots.pick(p), false) } } }
+                    finally { rewriting = false; watchdog.cancel() }
                 bytes?.let { Writer.check(String(it, Charsets.UTF_8), facts, draft) }
             } finally {
                 _state.update { it.copy(writing = false) }
@@ -240,9 +259,11 @@ object IraModel {
 
     /**
      * The model's raw reply to [prompt] (at most [maxTokens]), or null - for [com.optionslab.ira.Intents], whose caller
-     * checks the reply against its fixed list before anything is done with it.
+     * checks the reply against its fixed list before anything is done with it. [oneLine]: the caller keeps only the
+     * reply's first line, so the model stops at its end instead of writing on to [maxTokens] (the chat's "Boss: ..." it
+     * would make up next, read by no one).
      */
-    suspend fun complete(prompt: String, maxTokens: Int = 40): String? = withContext(Dispatchers.Default) {
+    suspend fun complete(prompt: String, maxTokens: Int = 40, timeoutMs: Long = TIMEOUT_MS, oneLine: Boolean = false): String? = withContext(Dispatchers.Default) {
         val c = app ?: return@withContext null
         if (!usable()) return@withContext null
         lock.withLock {
@@ -257,8 +278,8 @@ object IraModel {
                     if (handle == 0L) return@withLock null
                     _state.update { it.copy(loaded = true, message = null) }
                 }
-                val watchdog = scope.launch { delay(TIMEOUT_MS) ; LlmNative.cancel() }
-                val bytes = try { gently { LlmNative.generate(handle, prompt, maxTokens) } } finally { watchdog.cancel() }
+                val watchdog = scope.launch { delay(timeoutMs) ; LlmNative.cancel() }
+                val bytes = try { gently { LlmNative.generate(handle, prompt, maxTokens, slots.pick(prompt), oneLine) } } finally { watchdog.cancel() }
                 bytes?.let { String(it, Charsets.UTF_8) }
             } finally {
                 _state.update { it.copy(writing = false) }
@@ -282,7 +303,7 @@ object IraModel {
         val wasLoaded = _state.value.loaded
         val t0 = System.nanoTime()
         val reply = runCatching { complete("<|im_start|>system\nReply with exactly the words asked for.<|im_end|>\n" +
-            "<|im_start|>user\nSay: Jarvis is ready.<|im_end|>\n<|im_start|>assistant\n", 16) }.getOrNull()
+            "<|im_start|>user\nSay: Jarvis is ready.<|im_end|>\n<|im_start|>assistant\n", 16, oneLine = true) }.getOrNull()
         val secs = (System.nanoTime() - t0) / 1e9
         val said = reply?.trim()?.lineSequence()?.firstOrNull()?.take(60)?.replace("%", "")
         when {
@@ -294,30 +315,77 @@ object IraModel {
         }
     }
 
-    /** Leaves memory after [IDLE_MS] unused - but stays loaded while Jarvis listens, so a spoken question never waits on loading. */
+    /**
+     * Leaves memory after [IDLE_MS] unused - also while Jarvis listens (root cause, 4 Oct: kept loaded for as long as
+     * listening was on, it starved the phone's on-device recognizer, and Jarvis stopped hearing his name).
+     */
     private fun idleUnload(): Job = scope.launch {
-        do delay(IDLE_MS) while (JarvisVoice.wanted && enabled)
+        // While Jarvis listens, it leaves after a minute (the recognizer needs the memory); otherwise after 10 minutes.
+        delay(if (JarvisVoice.wanted) 60_000L else IDLE_MS)
         lock.withLock { unloadLocked() }
     }
 
-    /** Loaded ahead (Jarvis starts listening): the first question then does not wait the seconds loading takes. */
+    /**
+     * Loaded ahead (the Ira page opened, voice off): the first typed question does not wait the seconds loading takes.
+     * Never while Jarvis listens - held in memory then, it starved the speech recognizer (Boss, 4 Oct).
+     */
     fun preload() {
         val c = app ?: return
-        if (!usable()) return
+        if (!usable() || JarvisVoice.wanted) return
         scope.launch {
             lock.withLock {
-                if (handle != 0L || !usable()) return@withLock
+                if (handle != 0L || !usable() || JarvisVoice.wanted) return@withLock
                 idle?.cancel()
                 if (!LlmNative.ensure()) return@withLock
                 handle = LlmNative.load(file(c).path, threads())
                 if (handle != 0L) _state.update { it.copy(loaded = true, message = null) }
+                // Listening switched on while it loaded (it takes seconds): it leaves at once (review, 4 Oct).
+                if (JarvisVoice.wanted) { unloadLocked(); return@withLock }
                 idle = idleUnload()
             }
+            warm()
+        }
+    }
+
+    /**
+     * Right after [preload]: the fixed instructions a free-form question sends ([com.optionslab.ira.PromptWarm]) are read
+     * into their slots now, while the owner is still reading the page, so the first question only reads its own words -
+     * it paid for a few hundred words of instructions before. One beginning per turn of the lock: a question asked
+     * meanwhile waits for at most the one being read (which it would mostly have read itself). Nothing is written or
+     * shown; it stops when the model leaves, is switched off or listening starts.
+     */
+    private suspend fun warm() {
+        val now = java.time.LocalDateTime.now(java.time.ZoneId.of("Asia/Kolkata"))
+        for (p in com.optionslab.ira.PromptWarm.prefixes(now)) {
+            val more = lock.withLock {
+                // Listening wanted meanwhile: the model makes way at once, as preload does (it starved the recognizer, 4 Oct).
+                if (JarvisVoice.wanted) { if (handle != 0L) unloadLocked(); return@withLock false }
+                if (handle == 0L || !usable()) return@withLock false
+                if (slots.holds(p)) return@withLock true
+                idle?.cancel()
+                val watchdog = scope.launch { delay(TIMEOUT_MS); LlmNative.cancel() }
+                // One token asked for: the beginning is read and kept; the word the model would write is not used.
+                try { gently { LlmNative.generate(handle, p, 1, slots.pick(p), true) } } finally { watchdog.cancel() }
+                idle = idleUnload()
+                true
+            }
+            if (!more) break
+        }
+    }
+
+    /**
+     * Listening has started: a model loaded ahead (the Ira page opened with voice off) leaves now, unless it is writing -
+     * then it leaves a minute after its reply. Held in memory while listening, it starved the speech recognizer (4 Oct).
+     */
+    fun leaveForListening() {
+        scope.launch {
+            if (_state.value.writing) return@launch          // its own idle timer (a minute while listening) follows the reply
+            lock.withLock { if (!_state.value.writing) { idle?.cancel(); unloadLocked() } }
         }
     }
 
     private fun unloadLocked() {
-        if (handle != 0L) { runCatching { LlmNative.free(handle) }; handle = 0L; _state.update { it.copy(loaded = false) } }
+        if (handle != 0L) { runCatching { LlmNative.free(handle) }; handle = 0L; slots.clear(); _state.update { it.copy(loaded = false) } }
     }
 
     /**
@@ -336,6 +404,33 @@ object IraModel {
     /** Stops what the model is writing now (a new question came): the answer already shown stands. */
     fun stopWriting() { if (_state.value.writing) runCatching { LlmNative.cancel() } }
 
+    /** A rewrite ([rewrite]) is generating now - the only work [yieldToVoice] stops. */
+    @Volatile private var rewriting = false
+
+    /**
+     * Jarvis is about to speak, or Boss has started speaking: a rewrite under way is stopped (the answer shown stands).
+     * Root cause, 5 Oct: a rewrite - words for the screen only - held the fast cores while the phone's voice made its
+     * first sound (37 s after Boss's words) and while the recognizer read Boss (7-9 s of speech read as nothing). Answers
+     * the voice itself waits for ([complete]: Hindi, free-form words) are never stopped here.
+     */
+    fun yieldToVoice() { if (rewriting) { yieldedForVoice = true; runCatching { LlmNative.cancel() } } }
+
+    /** The last [rewrite] gave way to the voice (it got busy before the rewrite began, or [yieldToVoice] stopped it). */
+    @Volatile var yieldedForVoice = false; private set
+
+    /**
+     * [rewrite] once the voice is free ([JarvisVoice.freeForModel]); one stopped for the voice is tried once more when the
+     * voice is free again - never more (bounded), and null when the voice stays busy (the answer shown stands).
+     */
+    suspend fun rewriteWhenFree(question: String, facts: List<String>, draft: String): String? {
+        repeat(2) {
+            if (!runCatching { JarvisVoice.freeForModel() }.getOrDefault(true)) return null
+            val r = runCatching { rewrite(question, facts, draft) }.getOrNull()
+            if (r != null || !yieldedForVoice) return r
+        }
+        return null
+    }
+
     /**
      * Runs [f] just below normal priority (the model's threads inherit it): the screen and the voice still come first,
      * but the model is no longer held to the phone's slow background cores.
@@ -343,10 +438,17 @@ object IraModel {
     private inline fun <T> gently(f: () -> T): T {
         val tid = android.os.Process.myTid()
         val was = runCatching { android.os.Process.getThreadPriority(tid) }.getOrDefault(0)
-        runCatching { android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_DEFAULT + android.os.Process.THREAD_PRIORITY_LESS_FAVORABLE) }
+        // While Jarvis listens, lower still (nice 5: about a third of the processor share of the phone's speech engine and
+        // recognizer when they compete, against four fifths at nice 1) - root cause, 5 Oct: at nice 1 on all the fast
+        // cores the model starved them. Not the background level (10), which Android may move to the slow cores.
+        val pri = if (runCatching { JarvisVoice.wanted }.getOrDefault(false)) LISTENING_NICE
+            else android.os.Process.THREAD_PRIORITY_DEFAULT + android.os.Process.THREAD_PRIORITY_LESS_FAVORABLE
+        runCatching { android.os.Process.setThreadPriority(pri) }
         try { return f() } finally { runCatching { android.os.Process.setThreadPriority(was) } }
     }
 
+    /** The model's thread priority while Jarvis listens ([gently]). */
+    private const val LISTENING_NICE = 5
     const val MAX_TOKENS = 160
     /** A rewrite not done by then is dropped (the answer already shown stands). */
     const val TIMEOUT_MS = 30_000L
@@ -361,7 +463,9 @@ internal object LlmNative {
         ok ?: runCatching { System.loadLibrary("jarvis_llm"); true }.getOrDefault(false).also { ok = it }
     }
     external fun load(path: String, threads: Int): Long
-    external fun generate(handle: Long, prompt: String, maxTokens: Int): ByteArray?
+    /** The runner's memory slots (SLOTS in jarvis_llm.cpp): [generate]'s slot is one of 0 until this. */
+    const val SLOTS = 4
+    external fun generate(handle: Long, prompt: String, maxTokens: Int, slot: Int, oneLine: Boolean): ByteArray?
     external fun cancel()
     external fun free(handle: Long)
 }

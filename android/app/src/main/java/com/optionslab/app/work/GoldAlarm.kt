@@ -50,7 +50,8 @@ class GoldReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val pending = goAsync()
         CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
-            try { GoldPaper.tick() } finally {
+            // Battery (round 8): the feed is read only with something to watch ([com.optionslab.ira.GoldPass]); any doubt reads.
+            try { if (runCatching { GoldService.passDue() }.getOrDefault(true)) GoldPaper.tick() } finally {
                 runCatching { GoldAlarm.schedule(context) }
                 // The alarm is the backup: it (re)starts the always-on service whenever it is needed and not running.
                 runCatching { GoldService.ensure(context) }
@@ -76,12 +77,34 @@ class GoldService : android.app.Service() {
 
         /** Is there anything for the service to do now? An arm armed or a trade held, while gold trades. */
         fun needed(now: LocalDateTime = GoldPaper.now()): Boolean {
+            // The saved books, not the empty ones of the first moment. Not read yet: the service starts anyway (each pass
+            // waits for them itself), so an armed arm or an open buy is never left unwatched.
+            if (!com.optionslab.app.data.GoldBooks.awaitBlocking()) return true
             val liq = GoldPaper.book.value
             val tr = com.optionslab.app.data.GoldTrendPaper.book.value
             val dp = com.optionslab.app.data.GoldDipPaper.book.value
             val ts = com.optionslab.app.data.GoldTasPaper.book.value
             return (liq.armed || liq.position != null || tr.armed || tr.position != null || dp.armed || dp.position != null ||
                 ts.armed || ts.position != null) && GoldLiquidity.inSession(now)
+        }
+
+        /**
+         * Battery (round 8): is the alarm's pass to read the feed? An arm armed, a trade held, the Trend arm's flip wait,
+         * or the books not read within 3 s ([com.optionslab.ira.GoldPass.due]: fail open).
+         */
+        suspend fun passDue(): Boolean {
+            val loaded = kotlinx.coroutines.withTimeoutOrNull(3_000L) { com.optionslab.app.data.GoldBooks.awaitLoaded() } != null
+            // A saved book there but unreadable shows empty: that is not "read and nothing armed", so the pass runs (fail open).
+            val booksRead = loaded && !GoldPaper.readFailed && !com.optionslab.app.data.GoldTrendPaper.readFailed &&
+                !com.optionslab.app.data.GoldDipPaper.readFailed && !com.optionslab.app.data.GoldTasPaper.readFailed
+            val liq = GoldPaper.book.value
+            val tr = com.optionslab.app.data.GoldTrendPaper.book.value
+            val dp = com.optionslab.app.data.GoldDipPaper.book.value
+            val ts = com.optionslab.app.data.GoldTasPaper.book.value
+            return com.optionslab.ira.GoldPass.due(booksRead,
+                anyArmed = liq.armed || tr.armed || dp.armed || ts.armed,
+                anyHeld = liq.position != null || tr.position != null || dp.position != null || ts.position != null,
+                trendWaitsFlip = tr.waitFlip)
         }
 
         /** Start it when it is needed and not running (from the screen, the alarm or a reboot). Never throws. */
@@ -97,6 +120,7 @@ class GoldService : android.app.Service() {
     override fun onBind(intent: Intent?): android.os.IBinder? = null
 
     private fun text(): Pair<String, String> {
+        com.optionslab.app.data.GoldBooks.awaitBlocking()   // at most a few seconds; what there is shows otherwise
         val b = GoldPaper.book.value
         val tr = com.optionslab.app.data.GoldTrendPaper.book.value
         val dp = com.optionslab.app.data.GoldDipPaper.book.value
@@ -110,8 +134,20 @@ class GoldService : android.app.Service() {
         return title to line
     }
 
+    /**
+     * The notice last shown: re-posted when its words change (Battery, round 2 - it was re-posted every minute), and at
+     * least every [RESHOW_MS] even unchanged - on Android 14+ a foreground notice can be swiped away, and only a re-post
+     * brings it back.
+     */
+    private var shown: Pair<String, String>? = null
+    /** When the notice was last posted (elapsed realtime). */
+    private var shownAt = 0L
+    private val RESHOW_MS = 15 * 60_000L
+
     private fun show(): Boolean {
         val (title, line) = text()
+        shown = title to line
+        shownAt = android.os.SystemClock.elapsedRealtime()
         val n = Notifier.builder(this, Notifier.GOLD_BG, title, line)
             .setOngoing(true).setOnlyAlertOnce(true).setAutoCancel(false).setSilent(true).build()
         val type = if (android.os.Build.VERSION.SDK_INT >= 34) android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
@@ -134,7 +170,7 @@ class GoldService : android.app.Service() {
                 while (true) {
                     if (!needed()) break
                     runCatching { GoldPaper.tick() }
-                    runCatching { show() }
+                    runCatching { if (text() != shown || android.os.SystemClock.elapsedRealtime() - shownAt >= RESHOW_MS) show() }
                     // 30 s past each minute, as the alarm's pass (the feed's last minute is in by then).
                     val now = LocalDateTime.now(ZoneOffset.UTC)
                     val next = now.withSecond(30).withNano(0).let { if (it.isAfter(now)) it else it.plusMinutes(1) }

@@ -115,7 +115,7 @@ object Protections {
             val list = load()
             // The old exits must be gone first, or the old and the new could both fill.
             val old = list.filter { it.active && !it.live && it.symbol == symbol }
-            if (!old.map { cancelOrders(it) }.all { it }) return@withLock "Not protected: the previous stop or target on $symbol could not be cancelled; try again."
+            if (!old.map { cancelOrders(it, "protection_replaced") }.all { it }) return@withLock "Not protected: the previous stop or target on $symbol could not be cancelled; try again."
             list.replaceAll { if (it.active && !it.live && it.symbol == symbol) it.copy(active = false, note = "replaced") else it }
             val dir = if (qty > 0) 1 else -1
             val s0 = Protection.initialStop(dir, price, stop, trail)
@@ -205,7 +205,7 @@ object Protections {
         var changed = false
         for ((i, p) in list.withIndex()) {
             if (!p.active || p.live != live || p.symbol != symbol || p.exchange != exchange) continue
-            list[i] = if (cancelOrders(p)) p.copy(active = false, note = "position closed") else p.copy(note = REMOVING).also {
+            list[i] = if (cancelOrders(p, "position_closed")) p.copy(active = false, note = "position closed") else p.copy(note = REMOVING).also {
                 Alerts.error("$symbol: its protection's stop or target could not be confirmed cancelled; it is cancelled again on every pass.", "Protection")
             }
             changed = true
@@ -215,9 +215,10 @@ object Protections {
 
     /**
      * Cancel the protection's resting exits. True only once every one is confirmed gone (cancelled, rejected
-     * or filled); an order from an earlier day ended with that day (Zerodha's DAY validity).
+     * or filled); an order from an earlier day ended with that day (Zerodha's DAY validity). [why]: why the paper exits are
+     * cancelled, noted beside each for Jarvis ([Paper.cancel]); Zerodha's are cancelled as before.
      */
-    private suspend fun cancelOrders(p: Item): Boolean {
+    private suspend fun cancelOrders(p: Item, why: String = "protection_removed"): Boolean {
         var gone = true
         val today = Market.today().atStartOfDay(com.optionslab.engine.IST).toInstant().toEpochMilli()
         for (id in listOfNotNull(p.stopOrderId, p.targetOrderId)) {
@@ -227,7 +228,7 @@ object Protections {
                 runCatching { Broker.cancel(id) }
                 if (runCatching { Broker.orderState(id)?.status }.getOrNull() !in GONE) gone = false
             } else {
-                runCatching { Paper.cancel(id) }
+                runCatching { Paper.cancel(id, why) }
                 val st = Paper.state.orders.firstOrNull { it.orderId == id }?.status
                 if (st != null && st !in setOf("cancelled", "rejected", "complete")) gone = false
             }
@@ -311,19 +312,20 @@ object Protections {
         val stopDone = p.stopOrderId?.let { orders[it]?.status == "complete" } == true
         val targetDone = p.targetOrderId?.let { orders[it]?.status == "complete" } == true
         if (stopDone || targetDone) {
-            (if (stopDone) p.targetOrderId else p.stopOrderId)?.let { runCatching { Paper.cancel(it) } }
+            (if (stopDone) p.targetOrderId else p.stopOrderId)?.let { runCatching { Paper.cancel(it, if (stopDone) "oco:stop" else "oco:target") } }
             Alerts.post("${p.symbol}: ${if (stopDone) "stop" else "target"} filled (paper); the other exit was cancelled.",
                 if (stopDone) Alerts.Kind.ERROR else Alerts.Kind.SUCCESS, "Protection")
             return p.copy(active = false, note = if (stopDone) "stop filled" else "target filled")
         }
         val net = Paper.state.positions.filter { it.symbol == p.symbol && it.product == p.product }.sumOf { it.quantity }
         if (net == 0 || net.sign() != p.qty.sign()) {
-            listOfNotNull(p.stopOrderId, p.targetOrderId).forEach { runCatching { Paper.cancel(it) } }
+            listOfNotNull(p.stopOrderId, p.targetOrderId).forEach { runCatching { Paper.cancel(it, "position_closed") } }
             return p.copy(active = false, note = "position closed")
         }
         if (p.trail == null) return p
         val c = Paper.contractOf(p.symbol) ?: return p
-        val ltp = Paper.lastPrice(c) ?: return p
+        // Battery (round 6): the price Paper.tick read for this symbol in this same pass (under 2 s ago), else a fresh read.
+        val ltp = Paper.stopPrice(c) ?: return p
         val n = Protection.next(p.spec(), ltp)
         val ns = n.stop
         val orderId = p.stopOrderId

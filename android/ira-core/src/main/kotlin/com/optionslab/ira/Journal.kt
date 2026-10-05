@@ -20,14 +20,14 @@ object TradeSearch {
 
     /** Does [text] ask to search the owner's own trades? ("my ... trades" with a filter word). */
     fun asked(text: String): Boolean {
-        val t = " " + text.lowercase().replace(Regex("[^a-z0-9 ]"), " ").replace(Regex("\\s+"), " ") + " "
-        return Regex(" (my|did i|i ) ").containsMatchIn(t) && Regex(" (trade|trades|trading) ").containsMatchIn(t) && parse(text, LocalDate.of(2026, 1, 5)).any
+        val t = " " + text.lowercase().replace(rx("[^a-z0-9 ]"), " ").replace(rx("\\s+"), " ") + " "
+        return rx(" (my|did i|i ) ").containsMatchIn(t) && rx(" (trade|trades|trading) ").containsMatchIn(t) && parse(text, LocalDate.of(2026, 1, 5)).any
     }
 
     fun parse(text: String, today: LocalDate): Filter {
-        val t = " " + text.lowercase().replace(Regex("[^a-z0-9 ]"), " ").replace(Regex("\\s+"), " ") + " "
+        val t = " " + text.lowercase().replace(rx("[^a-z0-9 ]"), " ").replace(rx("\\s+"), " ") + " "
         val day = DAYS.entries.firstOrNull { (w, _) -> t.contains(" $w ") || t.contains(" ${w}s ") }?.value
-        val expiry = Regex(" expiry ").containsMatchIn(t)
+        val expiry = rx(" expiry ").containsMatchIn(t)
         val (from, to, period) = when {
             t.contains(" this week ") -> Triple(today.with(DayOfWeek.MONDAY), today, "this week")
             t.contains(" last week ") -> today.with(DayOfWeek.MONDAY).minusWeeks(1).let { Triple(it, it.plusDays(6), "last week") }
@@ -37,9 +37,9 @@ object TradeSearch {
             else -> Triple(null, null, "")
         }
         val (s, e, part) = when {
-            Regex(" (morning|first hour|opening) ").containsMatchIn(t) -> Triple(9 * 60 + 15, 11 * 60, "in the morning")
-            Regex(" (afternoon|post lunch|after lunch) ").containsMatchIn(t) -> Triple(12 * 60 + 30, 15 * 60 + 30, "in the afternoon")
-            Regex(" (last hour|closing hour) ").containsMatchIn(t) -> Triple(14 * 60 + 30, 15 * 60 + 30, "in the last hour")
+            rx(" (morning|first hour|opening) ").containsMatchIn(t) -> Triple(9 * 60 + 15, 11 * 60, "in the morning")
+            rx(" (afternoon|post lunch|after lunch) ").containsMatchIn(t) -> Triple(12 * 60 + 30, 15 * 60 + 30, "in the afternoon")
+            rx(" (last hour|closing hour) ").containsMatchIn(t) -> Triple(14 * 60 + 30, 15 * 60 + 30, "in the last hour")
             else -> Triple(null, null, "")
         }
         val m = Market.mentioned(text).firstOrNull()

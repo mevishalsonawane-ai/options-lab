@@ -61,6 +61,7 @@ class TestApp : Application() {
         Journal.init(this)
         com.optionslab.app.data.Diag.init(this)
         com.optionslab.app.ira.IraHub.init(this)
+        com.optionslab.app.ira.IraHub.awaitLoadedBlocking()   // its memory is read off the main thread: every test starts with it in
         // Ira never reaches the network in tests: no live candles, empty news feeds (a test sets its own).
         com.optionslab.app.ira.IraHub.testLive = { emptyList() }
         com.optionslab.app.ira.IraHub.testFeed = { "" }

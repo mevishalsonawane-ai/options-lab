@@ -45,6 +45,28 @@ class DailyPnlTest : RobolectricTest() {
         assertNull(days[wed])
     }
 
+    @Test fun shownBeforeChargesWithTheChargesBeside() {
+        at(wed.atTime(10, 0))
+        DailyPnl.record(false, 400.0, 2, 180.0)     // paper keeps its figure after charges
+        DailyPnl.record(true, 900.0, 3, 75.5)       // Zerodha keeps its own m2m, before them
+        val paper = DailyPnl.all(false).getValue(wed)
+        assertEquals(580.0, paper.pnl, 0.0)
+        assertEquals(180.0, paper.charges, 0.0)
+        assertEquals(400.0, paper.net, 0.0)
+        assertEquals(900.0, DailyPnl.all(true).getValue(wed).pnl, 0.0)
+        DailyPnl.record(true, 950.0, -1)            // a reading with no trades read keeps the charges
+        assertEquals(75.5, DailyPnl.all(true).getValue(wed).charges, 0.0)
+        assertEquals(950.0, DailyPnl.all(true).getValue(wed).pnl, 0.0)
+    }
+
+    @Test fun anOlderEntryWithNoChargesShowsAsBefore() {
+        SecurePrefs.put("pnl.days.paper", """{"$tue":[589.0,2]}""")
+        at(wed.atTime(9, 42))
+        val day = DailyPnl.all(false).getValue(tue)
+        assertEquals(589.0, day.pnl, 0.0)
+        assertEquals(0.0, day.charges, 0.0)
+    }
+
     @Test fun resetPaperClearsPaperHistoryAndKeepsZerodha() {
         at(wed.atTime(10, 0))
         DailyPnl.record(false, 300.0, 2); DailyPnl.record(true, 900.0, -1)

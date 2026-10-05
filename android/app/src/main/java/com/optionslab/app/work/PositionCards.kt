@@ -85,7 +85,11 @@ object PositionCards {
             else "Realised P&L ${rs(pnl)}"
         val text = text0 + by
         val b = Notifier.builder(context, if (qty >= 0) Notifier.BUY else Notifier.SELL, title, text, "trade",
-            side = if (headline?.startsWith("SELL") == true) "SELL" else if (headline?.startsWith("BUY") == true) "BUY" else if (qty > 0) "LONG" else "SHORT")
+            side = if (headline?.startsWith("SELL") == true) "SELL" else if (headline?.startsWith("BUY") == true) "BUY" else if (qty > 0) "LONG" else "SHORT",
+            // A tap opens the app on the position with its card over it: the whole text and a Close that goes through the
+            // app's own close popup (its review, and for Zerodha the PIN / fingerprint), as the button here does.
+            card = NoticeCard(idOf(venue, symbol), if (qty >= 0) Notifier.BUY else Notifier.SELL, title, text, System.currentTimeMillis(),
+                tab = "trade", close = if (open) "$venue|$symbol" else null))
             .setOnlyAlertOnce(!alert).setSilent(!alert).setOngoing(open).setAutoCancel(!open)
         if (open) b.addAction(closeAction(context, venue, symbol))
         try { NotificationManagerCompat.from(context).notify(idOf(venue, symbol), b.build()) } catch (_: SecurityException) {}
@@ -121,6 +125,7 @@ object PositionCards {
             card(context, "Live", p.symbol, p.qty, p.avg, p.last.takeIf { it > 0 }, p.pnl)
         }
         widgetFromStream(context, moved.pnl)
+        runCatching { com.optionslab.app.widget.OpenWidget.fromStream(context, moved) }
     }
 
     @Volatile private var widgetAt = 0L
@@ -148,7 +153,8 @@ object PositionCards {
         val s = runCatching { AppSettings.load() }.getOrNull() ?: return
         val now = HashMap<String, Unit>()
         val owners = runCatching { com.optionslab.app.data.Strategies.owners() }.getOrDefault(emptyMap())
-        runCatching { Paper.snapshot() }.getOrNull()?.let { snap -> snap.positions.positions.map { it to snap.trades } }?.forEach { (p, trades) ->
+        val paperSnap = runCatching { Paper.snapshot(Paper.SHARED_QUOTE_MS) }.getOrNull()
+        paperSnap?.let { snap -> snap.positions.positions.map { it to snap.trades } }?.forEach { (p, trades) ->
             val key = "Paper|${p.symbol}"
             if (p.quantity != 0) {
                 now[key] = Unit
@@ -157,15 +163,19 @@ object PositionCards {
             }
             else if (shown.remove(key) != null) card(context, "Paper", p.symbol, 0, p.averagePrice, null, p.pnl)
         }
-        if (s.live && Broker.loggedIn) runCatching { Broker.positionBook() }.getOrNull()?.also { book ->
+        val liveLoggedIn = Broker.loggedIn
+        var liveBook: Broker.Positions? = null
+        var ordersRead = false
+        if (s.live && liveLoggedIn) runCatching { Broker.positionBook() }.getOrNull()?.also { book ->
             lastLive = book
             com.optionslab.app.data.KiteStream.want("positions", book.net.filter { it.qty != 0 }.map { it.token })
-        }?.let { com.optionslab.app.data.KiteStream.live(it) }?.net?.also { net ->
+        }?.let { com.optionslab.app.data.KiteStream.live(it) }?.also { liveBook = it }?.net?.also { net ->
             // Who opened a Zerodha position is read from the day's trades only when it is new or its size changed.
             val stale = net.filter { it.qty != 0 && sourceQty["Live|${it.symbol}"] != it.qty }
             if (stale.isNotEmpty()) runCatching {
                 val trades = Broker.trades()
                 val orders = Broker.orders()
+                ordersRead = true
                 stale.forEach { p ->
                     Origins.livePosition(owners, trades, orders, p.symbol, p.product, p.qty)?.let { sources["Live|${p.symbol}"] = it }
                     sourceQty["Live|${p.symbol}"] = p.qty
@@ -182,5 +192,12 @@ object PositionCards {
             runCatching { NotificationManagerCompat.from(context).cancel(idOf(k.substringBefore('|'), k.substringAfter('|'))) }
         }
         anyOpen = now.isNotEmpty()
+        // The "Open" widget's Zerodha orders: while it shows any still working, one order-book read a pass (none when no
+        // widget is placed, the switch is off, or none is working; screen off, about every 5 minutes), so a filled or
+        // cancelled order leaves it. The read itself hands the book to the widget (Broker.orders).
+        if (!ordersRead && s.live && liveLoggedIn && runCatching { com.optionslab.app.widget.OpenWidget.wantsOrders(context, true) }.getOrDefault(false))
+            runCatching { Broker.orders() }
+        // The "Open" widget from the books just read (no read of its own); a failed Zerodha read is shown as one.
+        runCatching { com.optionslab.app.widget.OpenWidget.fromWatch(context, s.live, liveLoggedIn, liveBook, paperSnap) }
     }
 }

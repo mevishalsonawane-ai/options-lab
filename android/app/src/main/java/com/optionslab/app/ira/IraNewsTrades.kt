@@ -28,16 +28,32 @@ internal object IraNewsTrades {
                    val headline: String, val day: String, val closed: Boolean = false, val result: Double? = null,
                    /** For "why did it lose": the index, side and minute at entry, and the index and minute at the exit. */
                    val underlying: String? = null, val call: Boolean? = null, val spotIn: Double? = null, val minuteIn: Int? = null,
-                   val spotOut: Double? = null, val minuteOut: Int? = null)
+                   val spotOut: Double? = null, val minuteOut: Int? = null,
+                   /** How sure Jarvis was (1-5) when it was suggested, for the bar it sets itself ([com.optionslab.ira.ActAlone.bar]). */
+                   val stars: Int? = null)
 
-    /** Every news / pattern trade; an entry that does not read back is skipped, never the whole record. */
+    /** The record as last read ([all]): its saved text and what it read as. */
+    @Volatile private var lastRead: Pair<String?, List<Pos>>? = null
+
+    /**
+     * Every news / pattern trade; an entry that does not read back is skipped, never the whole record. Read again only
+     * when the saved text changed: each market-watch pass asks several times (the bots' holdings, Solo's loss limit, the
+     * tick), and the record holds up to 200 trades.
+     */
     fun all(): List<Pos> = runCatching {
-        val a = JSONArray(com.optionslab.app.security.SecurePrefs.getString(KEY) ?: "[]")
+        val raw = com.optionslab.app.security.SecurePrefs.getString(KEY)
+        val kept = lastRead
+        if (kept != null && kept.first == raw) kept.second else parse(raw).also { lastRead = raw to it }
+    }.getOrDefault(emptyList())
+
+    private fun parse(raw: String?): List<Pos> = runCatching {
+        val a = JSONArray(raw ?: "[]")
         (0 until a.length()).mapNotNull { i -> runCatching { a.getJSONObject(i).let { o ->
             Pos(o.getString("s"), o.getBoolean("l"), o.getDouble("e"), o.getInt("q"), o.getDouble("p"), if (o.has("st")) o.getDouble("st") else null,
                 o.getString("h"), o.getString("d"), o.optBoolean("c"), if (o.has("r")) o.getDouble("r") else null,
                 o.optString("u").ifEmpty { null }, if (o.has("cl")) o.getBoolean("cl") else null, if (o.has("si")) o.getDouble("si") else null,
-                if (o.has("mi")) o.getInt("mi") else null, if (o.has("so")) o.getDouble("so") else null, if (o.has("mo")) o.getInt("mo") else null)
+                if (o.has("mi")) o.getInt("mi") else null, if (o.has("so")) o.getDouble("so") else null, if (o.has("mo")) o.getInt("mo") else null,
+                if (o.has("cf")) o.getInt("cf") else null)
         } }.getOrNull() }
     }.getOrDefault(emptyList())
 
@@ -48,17 +64,23 @@ internal object IraNewsTrades {
         com.optionslab.app.security.SecurePrefs.put(KEY, JSONArray().apply { list.takeLast(200).forEach { p ->
             put(JSONObject().put("s", p.symbol).put("l", p.live).put("e", p.entry).put("q", p.qty).put("p", p.peak)
                 .apply { p.stop?.let { put("st", it) }; p.result?.let { put("r", it) }; p.underlying?.let { put("u", it) }; p.call?.let { put("cl", it) }
-                    p.spotIn?.let { put("si", it) }; p.minuteIn?.let { put("mi", it) }; p.spotOut?.let { put("so", it) }; p.minuteOut?.let { put("mo", it) } }.put("h", p.headline).put("d", p.day).put("c", p.closed)) } }.toString())
+                    p.spotIn?.let { put("si", it) }; p.minuteIn?.let { put("mi", it) }; p.spotOut?.let { put("so", it) }; p.minuteOut?.let { put("mo", it) }; p.stars?.let { put("cf", it) } }.put("h", p.headline).put("d", p.day).put("c", p.closed)) } }.toString())
     }
 
     fun today(): Int { val d = com.optionslab.app.data.Market.today().toString(); return all().count { it.day == d } }
 
     // ---- the owner's rules for Jarvis's own trades --------------------------------------------------------------------
 
-    /** Jarvis's trades stay on paper (even in Live mode) until their paper record earns live ([JarvisTrades.proven]). */
+    /**
+     * The "AI trades go live" switch, inverted (Boss, 4 Oct: "keep a button to make AI trades live; even on the live
+     * market they place paper trades"): on (paper) until Boss switches live on with his fingerprint. With it off, in
+     * Live, once their record is proven ([JarvisTrades.proven]), Jarvis's and Solo's trades go to Zerodha - each only
+     * after his yes with the fingerprint.
+     */
     var paperFirst: Boolean
-        get() = runCatching { com.optionslab.app.security.SecurePrefs.getBoolean("jarvis.trades.paper", true) }.getOrDefault(true)
-        set(v) { runCatching { com.optionslab.app.security.SecurePrefs.put("jarvis.trades.paper", v) } }
+        // A new key, paper to start (review, 4 Oct): a "live" chosen earlier by voice, without the fingerprint, is not kept.
+        get() = runCatching { com.optionslab.app.security.SecurePrefs.getBoolean("jarvis.trades.paper.v3", true) }.getOrDefault(true)
+        set(v) { runCatching { com.optionslab.app.security.SecurePrefs.put("jarvis.trades.paper.v3", v) } }
 
     const val DEFAULT_LIMIT = 3_000.0
     /** Rupees Jarvis's trades may lose in a day before it suggests no more (its own limit, apart from the app's). */
@@ -110,18 +132,34 @@ internal object IraNewsTrades {
         val a = JSONArray(com.optionslab.app.security.SecurePrefs.getString(SKEY) ?: "[]")
         (0 until a.length()).map { a.getJSONObject(it) }.mapNotNull { o -> runCatching {
             o.getLong("id") to JarvisTrades.Suggestion(java.time.LocalDateTime.parse(o.getString("at")), com.optionslab.ira.Market.valueOf(o.getString("m")),
-                o.getBoolean("c"), o.getDouble("s"), o.getString("src"), o.getString("a"), if (o.has("p")) o.getDouble("p") else null, if (o.has("l")) o.getInt("l") else null)
+                o.getBoolean("c"), o.getDouble("s"), o.getString("src"), o.getString("a"), if (o.has("p")) o.getDouble("p") else null, if (o.has("l")) o.getInt("l") else null,
+                if (o.has("rg")) runCatching { com.optionslab.ira.Regime.Kind.valueOf(o.getString("rg")) }.getOrNull() else null,
+                if (o.has("iv")) o.getDouble("iv") else null,
+                if (o.has("st")) o.getInt("st") else null)
         }.getOrNull() }
     }.getOrDefault(emptyList())
 
     private fun saveSuggestions(l: List<Pair<Long, JarvisTrades.Suggestion>>) = runCatching {
         com.optionslab.app.security.SecurePrefs.put(SKEY, JSONArray().apply { l.takeLast(300).forEach { (id, x) ->
             put(JSONObject().put("id", id).put("at", x.at.toString()).put("m", x.market.name).put("c", x.call).put("s", x.spot).put("src", x.source).put("a", x.answer)
-                .apply { x.points?.let { put("p", it) }; x.lot?.let { put("l", it) } }) } }.toString())
+                .apply { x.points?.let { put("p", it) }; x.lot?.let { put("l", it) }; x.regime?.let { put("rg", it.name) }
+                    x.ivRank?.takeIf { it.isFinite() }?.let { put("iv", it) }; x.stars?.let { put("st", it) } }) } }.toString())
     }
 
-    @Synchronized fun suggested(id: Long, idea: NewsTrade.Idea, spot: Double, source: String) =
-        saveSuggestions(suggestions() + (id to JarvisTrades.Suggestion(java.time.LocalDateTime.now(java.time.ZoneId.of("Asia/Kolkata")), idea.market, idea.call, spot, source, "waiting")))
+    /**
+     * [regime], [ivRank]: the conditions it came in, kept so Jarvis can judge himself by them ([com.optionslab.ira.SelfCalibration]);
+     * [stars]: the confidence it was put with, so he can say how that score has held up ([com.optionslab.ira.HonestStars]).
+     */
+    @Synchronized fun suggested(id: Long, idea: NewsTrade.Idea, spot: Double, source: String,
+                                regime: com.optionslab.ira.Regime.Kind? = null, ivRank: Double? = null, stars: Int? = null) =
+        saveSuggestions(suggestions() + (id to JarvisTrades.Suggestion(java.time.LocalDateTime.now(java.time.ZoneId.of("Asia/Kolkata")), idea.market, idea.call, spot, source, "waiting",
+            regime = regime, ivRank = ivRank, stars = stars)))
+
+    /** Every scored idea that knew its confidence ([com.optionslab.ira.HonestStars]; counts only, never an amount). */
+    @Synchronized fun starsScored(): List<com.optionslab.ira.HonestStars.Scored> = com.optionslab.ira.HonestStars.of(suggestions().map { it.second })
+
+    /** Every idea scored on real option prices (taken, approved, rejected or lapsed), with its conditions: what Jarvis judges himself by. */
+    @Synchronized fun calibration(): List<com.optionslab.ira.SelfCalibration.Outcome> = com.optionslab.ira.SelfCalibration.of(suggestions().map { it.second })
 
     @Synchronized fun answered(id: Long, answer: String) =
         saveSuggestions(suggestions().map { (i, x) -> if (i == id && x.answer == "waiting") i to x.copy(answer = answer) else i to x })
@@ -145,6 +183,18 @@ internal object IraNewsTrades {
     }
 
     /** The record so far: trades, wins, net (for "how are news trades doing"). */
+    /** (confidence, rupees) of each closed trade that knew its confidence. */
+    fun byConfidence(): List<Pair<Int, Double>> = all().filter { it.closed && it.result != null && it.stars != null }.map { it.stars!! to it.result!! }
+
+    /** (entry minute of day, rupees) of each closed trade that knew its minute. */
+    fun byMinute(): List<Pair<Int, Double>> = all().filter { it.closed && it.result != null && it.minuteIn != null }.map { it.minuteIn!! to it.result!! }
+
+    /** (kind of idea, rupees) of each closed trade. */
+    fun byKind(): List<Pair<String, Double>> = all().filter { it.closed && it.result != null }.map { com.optionslab.ira.Preference.kind(it.headline) to it.result!! }
+
+    /** The confidence a trade needs before Jarvis takes it on paper by himself (raised by his own losses). */
+    fun actAloneBar(): Int = com.optionslab.ira.ActAlone.bar(byConfidence())
+
     fun record(): String {
         val c = all().filter { it.closed && it.result != null }
         val where = if (paperFirst) "on paper until proven" else "in the app's mode"
@@ -152,7 +202,8 @@ internal object IraNewsTrades {
         if (c.isEmpty()) return "No trades of mine closed yet (they go $where).$limit"
         fun line(name: String, l: List<Pos>) = if (l.isEmpty()) null else "$name ${l.size} closed, ${l.count { it.result!! > 0 }} won, net ${com.optionslab.ira.AppFacts.rs(l.sumOf { it.result!! })}"
         return "My trades (they go $where): " + listOfNotNull(line("news", c.filter { !it.headline.startsWith("pattern:") }), line("patterns", c.filter { it.headline.startsWith("pattern:") }))
-            .joinToString("; ") + "." + (JarvisTrades.proven(closedRecord())?.let { " $it" } ?: " The paper record has earned live trading.") + limit
+            .joinToString("; ") + "." + (JarvisTrades.proven(closedRecord())?.let { " $it" } ?: " The paper record has earned live trading.") +
+            (com.optionslab.ira.ActAlone.say(byConfidence())?.let { " $it" } ?: "") + limit
     }
 
     /** The option as Liquidity 15+5 picks it for [u] at [spot]: ATM on the strike step, next expiry after today. */
@@ -164,10 +215,21 @@ internal object IraNewsTrades {
         return Paper.contractFor(u, expiry, strike.toDouble(), if (call) Right.CE else Right.PE)
     }
 
-    /** The owner approved [idea]: place it (Paper, or Zerodha through the app's order review), stop, target, record. */
-    suspend fun place(idea: NewsTrade.Idea, spot: Double, headline: String): String = lock.withLock { placeLocked(idea, spot, headline) }
+    /**
+     * The owner approved [idea]: place it (Paper, or Zerodha through the app's order review), stop, target, record.
+     * [paperOnly]: Jarvis took it by itself - it goes on paper or nowhere, whatever changed since it was checked.
+     * [shrink]: his own record where it came is losing ([com.optionslab.ira.SelfCalibration]): half size, one lot at least.
+     */
+    suspend fun place(idea: NewsTrade.Idea, spot: Double, headline: String, paperOnly: Boolean = false, solo: Boolean = false,
+                      liveApproved: Boolean = false, stars: Int? = null, shrink: Boolean = false): String =
+        lock.withLock { placeLocked(idea, spot, headline, paperOnly, solo, liveApproved, stars, shrink) }
 
-    private suspend fun placeLocked(idea: NewsTrade.Idea, spot: Double, headline: String): String {
+    /**
+     * [solo]: Solo's setup (its own record decides live). [liveApproved]: Boss approved with the fingerprint (or the
+     * phone has none): without it, a trade that would now reach Zerodha is not placed at all.
+     */
+    private suspend fun placeLocked(idea: NewsTrade.Idea, spot: Double, headline: String, paperOnly: Boolean, solo: Boolean,
+                                    liveApproved: Boolean, stars: Int?, shrink: Boolean = false): String {
         IraAccount.invalidate()
         val u = idea.market.name
         val c = contract(u, spot, idea.call) ?: return "No ${u} option is listed for the next expiry."
@@ -177,11 +239,12 @@ internal object IraNewsTrades {
         val premium = quote?.ltp ?: 0.0
         // A thin strike (a wide gap between buyers and sellers, or hardly traded) is not bought: the fill and the exit would be poor.
         quote?.let { q -> com.optionslab.ira.StrikeLiquidity.problem(q.bid, q.ask, q.volume, c.lotSize) }?.let { return "$it Not placed." }
-        val lots = lotsFor(premium, c.lotSize)
+        // [shrink]: his own record where this idea came is losing - half size, one lot at least (it only ever lowers).
+        val lots = lotsFor(premium, c.lotSize).let { if (shrink) com.optionslab.ira.SelfCalibration.lots(it, com.optionslab.ira.SelfCalibration.Action.SHRINK) else it }
         val nowMin = java.time.LocalTime.now(java.time.ZoneId.of("Asia/Kolkata")).let { it.hour * 60 + it.minute }
         if (lots < 1) return "Your risk per trade is smaller than one lot's stop risk (about ${com.optionslab.ira.AppFacts.rs(premium * 0.15 * c.lotSize).removePrefix("+")}): not placed."
         // Paper first: until their own record is proven (checked again now), Jarvis's trades go on paper even in Live mode.
-        if (!s.live || paperFirst || JarvisTrades.proven(closedRecord()) != null) {
+        if (!s.live || !earned(solo)) {
             val r = Paper.place(c, "BUY", lots, "MARKET", "MIS", null, null, quote)
             val fill = r.events.filterIsInstance<com.optionslab.engine.sandbox.SandboxEvent.Fill>().firstOrNull()
                 ?: return "Paper: ${r.message}"
@@ -190,7 +253,7 @@ internal object IraNewsTrades {
             val prot = com.optionslab.app.data.Protections.protectPaper(c.symbol, "MIS", fill.quantity, fill.price, stop, null, fill.price + TARGET_POINTS)
             val guarded = prot.startsWith("Protected")
             save(all() + Pos(c.symbol, false, fill.price, fill.quantity, fill.price, if (guarded) stop else null, headline, day,
-                underlying = u, call = idea.call, spotIn = spot, minuteIn = nowMin))
+                underlying = u, call = idea.call, spotIn = spot, minuteIn = nowMin, stars = stars))
             val oid = com.optionslab.app.data.Origins.shortId(r.orderId)?.let { " Order $it." } ?: ""
             IraActivity.add("Bought ${c.symbol} on paper at ${"%.2f".format(fill.price)} ($headline).$oid")
             IraHub.appContext()?.let { com.optionslab.app.work.Notifier.orderFilled(it, "BUY", fill.quantity, c.symbol, fill.price, "Paper", "Jarvis news · entry", r.orderId) }
@@ -198,6 +261,9 @@ internal object IraNewsTrades {
             return "Bought ${c.symbol} at ${"%.2f".format(fill.price)} on paper${if (s.live) " (my trades stay on paper until proven)" else ""}.$oid $prot" +
                 if (guarded) " Profit lock on." else ""
         }
+        // Never real money without Boss's yes: a trade Jarvis took by itself that would now reach Zerodha is dropped.
+        if (paperOnly) return "Not placed: it would now go to Zerodha, and I only act by myself on paper. Ask me if you want it."
+        if (!liveApproved) return "Not placed: it would now go to Zerodha with real money, which needs your fingerprint. Ask me again and approve it there."
         val t = IraOrders.Ticket(u, c.expiry, c.strike, c.right, lots, true, c.lotSize)
         val sent = IraActions.trade(t, live = true)
         if (!sent.startsWith("Sent to Zerodha")) return sent
@@ -210,7 +276,7 @@ internal object IraNewsTrades {
         val prot = com.optionslab.app.data.Protections.protectLive(zs, "NFO", s.orderProduct, c.lotSize * lots, avg, stop, null, avg + TARGET_POINTS)
         val guarded = prot.startsWith("Protected")
         save(all() + Pos(zs, true, avg, c.lotSize * lots, avg, if (guarded) stop else null, headline, day,
-            underlying = u, call = idea.call, spotIn = spot, minuteIn = nowMin))
+            underlying = u, call = idea.call, spotIn = spot, minuteIn = nowMin, stars = stars))
         IraActivity.add("Bought $zs on Zerodha at ${"%.2f".format(avg)} ($headline).")
         if (!guarded) unguarded(zs, prot)
         return "$sent $prot" + if (guarded) " Profit lock on." else ""
@@ -231,9 +297,11 @@ internal object IraNewsTrades {
         val list = all()
         if (list.none { !it.closed || (it.result == null && recent(it)) }) return@withLock
         val paperNet = runCatching { Paper.state.positions }.getOrNull()
-        val liveNet = if (list.any { it.live && !it.closed }) runCatching { com.optionslab.app.data.Broker.positionBook().net }.getOrNull() else null
+        // Zerodha reads with a deadline (this runs in the risk pass): slow or failed, that trade is looked at next pass.
+        val liveNet = if (list.any { it.live && !it.closed }) com.optionslab.app.data.Broker.within(8_000) { com.optionslab.app.data.Broker.positionBook().net } else null
         if (list.any { it.live && it.closed && it.result == null && recent(it) })
-            runCatching { com.optionslab.app.data.TradeBook.recordLive(com.optionslab.app.data.Broker.trades()) }
+            com.optionslab.app.data.Broker.within(8_000) { com.optionslab.app.data.Broker.trades() }
+                ?.let { t -> runCatching { com.optionslab.app.data.TradeBook.recordLive(t) } }
         val out = list.map { p ->
             if (p.closed) {
                 // Closed before its trip reached the trade book: look again for a few days.
@@ -250,7 +318,7 @@ internal object IraNewsTrades {
                 return@map p.copy(closed = true, result = r, spotOut = p.underlying?.let { spotOf(it) },
                     minuteOut = java.time.LocalTime.now(java.time.ZoneId.of("Asia/Kolkata")).let { it.hour * 60 + it.minute })
             }
-            val ltp = runCatching { if (p.live) com.optionslab.app.data.Broker.quotes(listOf("NFO:${p.symbol}"))["NFO:${p.symbol}"]?.last
+            val ltp = runCatching { if (p.live) com.optionslab.app.data.Broker.within(5_000) { com.optionslab.app.data.Broker.quotes(listOf("NFO:${p.symbol}"))["NFO:${p.symbol}"]?.last }
                 else Paper.contractOf(p.symbol)?.let { Paper.lastPrice(it) } }.getOrNull() ?: return@map p
             val peak = maxOf(p.peak, ltp)
             val lock = ProfitLock.level(p.entry, TARGET_POINTS, peak)
@@ -349,7 +417,11 @@ internal object IraNewsTrades {
     private fun spotOf(u: String): Double? = runCatching { IraHub.state.value.snaps[com.optionslab.ira.Market.valueOf(u)]?.price }.getOrNull()
 
     /** Will Jarvis's next trade go to Zerodha with real money (Live mode, paper-first off, the paper record proven)? */
-    fun goesLive(): Boolean = AppSettings.load().live && !paperFirst && JarvisTrades.proven(closedRecord()) == null
+    fun goesLive(solo: Boolean = false): Boolean = AppSettings.load().live && earned(solo)
+
+    /** Has the record earned real orders: Solo's own paper record for its setups, else Jarvis's (and paper-first off). */
+    private fun earned(solo: Boolean): Boolean =
+        !paperFirst && if (solo) IraSolo.provenWhy() == null else JarvisTrades.proven(closedRecord()) == null
 
     /** Why each of Jarvis's recent losing trades lost (the last five), in words. */
     fun lossReasons(): List<String> {

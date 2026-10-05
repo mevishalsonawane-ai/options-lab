@@ -39,21 +39,28 @@ enum class Market(val label: String, val unit: String, val open: LocalTime?, val
 
     companion object {
         /** The markets a piece of text mentions, longest alias first so "bank nifty" is not read as "nifty". */
-        fun mentioned(text: String): List<Market> {
-            var s = " " + text.lowercase().replace(Regex("[^a-z0-9 ]"), " ") + " "
+        fun mentioned(text: String): List<Market> = named.of(text) {
+            var s = " " + text.lowercase().replace(NOT_WORD, " ") + " "
             val found = LinkedHashSet<Market>()
-            entries.flatMap { m -> m.aliases.map { it to m } }.sortedByDescending { it.first.length }.forEach { (a, m) ->
-                val key = " $a "
-                if (s.contains(key)) { found += m; s = s.replace(key, " ") }
-            }
-            return found.toList()
+            for ((key, m) in KEYS) if (s.contains(key)) { found += m; s = s.replace(key, " ") }
+            found.toList()
         }
+
+        /** The last words read (speed round 10: read some forty times for one question; [Kept], pure). */
+        private val named = Kept<List<Market>>(64)
+
+        private val NOT_WORD = Regex("[^a-z0-9 ]")
+        /** Every alias as " alias " with its market, longest first: worked out once, not at every reading. */
+        private val KEYS: List<Pair<String, Market>> by lazy { entries.flatMap { m -> m.aliases.map { it to m } }.sortedByDescending { it.first.length }.map { (a, m) -> " $a " to m } }
+        /** Every alias, longest first ([FollowUp.onlyMarkets]). */
+        internal val ALIASES_LONGEST_FIRST: List<String> by lazy { entries.flatMap { it.aliases }.sortedByDescending { it.length } }
     }
 }
 
 /** A market's candles: 1-minute bars, oldest first, possibly spanning many days. */
 class History(val market: Market, bars: List<Candle>) {
     val bars: List<Candle> = bars.sortedBy { it.t }
-    val days: List<LocalDate> get() = bars.map { it.t.toLocalDate() }.distinct()
+    /** The days in [bars], in order: worked out once (the candles never change), not at every look (speed round 9). */
+    val days: List<LocalDate> by lazy { bars.map { it.t.toLocalDate() }.distinct() }
     fun day(d: LocalDate): List<Candle> = bars.filter { it.t.toLocalDate() == d }
 }

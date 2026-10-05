@@ -29,9 +29,53 @@ class IraWidget : AppWidgetProvider() {
         private const val K_BANK = "w.bank"
         private const val K_PNL = "w.pnl"
         private const val K_AT = "w.at"
+        /** Today's Zerodha charges estimate, "yyyy-MM-dd|rupees" (another day's is never shown). */
+        private const val K_CHG = "w.chg"
 
         /** The account P&L last published (the live watch refreshes it every minute), or null. */
-        fun lastPnl(): Double? = if (SecurePrefs.getString(K_PNL) != null) SecurePrefs.getDouble(K_PNL, 0.0) else null
+        fun lastPnl(): Double? = pnlNow()
+
+        /**
+         * Battery, round 3: figures newer than the vault copy (key -> value, a null P&L meaning none). The live stream
+         * publishes every 5 s and each vault write is a Keystore encryption and two disk syncs, so the figures reach the
+         * vault at most once a minute and only when they differ from the vault's (a stamp that moved alone stays here);
+         * in between they live here and every widget redraw reads them. A process death loses at most that minute; the widget then shows the last saved
+         * figures with their own stamp.
+         */
+        private val unsaved = HashMap<String, Any?>()
+        /** The stamp (HH:mm) of the last vault write, or null before the first one in this process. */
+        private var savedAt: String? = null
+
+        /** The vault's generation [unsaved] belongs to: a re-init or wipe of the vault drops what was held. */
+        private var unsavedGen = Int.MIN_VALUE
+
+        private fun fresh() {
+            val g = SecurePrefs.generationNow()
+            if (g != unsavedGen) { unsaved.clear(); savedAt = null; unsavedGen = g }
+        }
+
+        /** What the vault holds for [k]: the P&L as a Double, the rest as text, null when absent. */
+        private fun vaultValue(k: String): Any? = when {
+            SecurePrefs.getString(k) == null -> null
+            k == K_PNL -> SecurePrefs.getDouble(K_PNL, 0.0)
+            else -> SecurePrefs.getString(k)
+        }
+
+        private fun textNow(k: String): String? = synchronized(unsaved) {
+            fresh()
+            if (unsaved.containsKey(k)) unsaved[k] as String? else SecurePrefs.getString(k)
+        }
+
+        private fun pnlNow(): Double? = synchronized(unsaved) {
+            fresh()
+            if (unsaved.containsKey(K_PNL)) unsaved[K_PNL] as Double?
+            else if (SecurePrefs.getString(K_PNL) != null) SecurePrefs.getDouble(K_PNL, 0.0) else null
+        }
+
+        /** Is at least one widget on a home screen? (Unknown counts as yes: the watch then reads its prices as before.) */
+        fun placed(context: Context): Boolean = runCatching {
+            AppWidgetManager.getInstance(context).getAppWidgetIds(ComponentName(context, IraWidget::class.java)).isNotEmpty()
+        }.getOrDefault(true)
 
         /** Record the latest figures and redraw every placed widget. */
         fun publish(context: Context, nifty: Pair<Double, Double>?, bank: Pair<Double, Double>?, pnl: Double?) {
@@ -39,12 +83,40 @@ class IraWidget : AppWidgetProvider() {
             nifty?.let { m[K_NIFTY] = "%.2f|%.4f".format(Locale.ROOT, it.first, it.second) }
             bank?.let { m[K_BANK] = "%.2f|%.4f".format(Locale.ROOT, it.first, it.second) }
             m[K_PNL] = pnl
-            m[K_AT] = Market.now().let { "%02d:%02d".format(it.hour, it.minute) }
-            SecurePrefs.putAll(m)
+            val at = Market.now().let { "%02d:%02d".format(it.hour, it.minute) }
+            m[K_AT] = at
+            val toVault: Map<String, Any?>? = synchronized(unsaved) {
+                fresh()
+                val all = HashMap<String, Any?>(unsaved).apply { putAll(m) }
+                if (at != savedAt && all.any { (k, v) -> k != K_AT && v != vaultValue(k) }) {
+                    // A new minute with figures the vault does not have: everything held so far goes in one write.
+                    savedAt = at
+                    unsaved.clear()
+                    all
+                } else { unsaved.putAll(m); null }   // held in memory (the same minute, or only the stamp moved); the redraw shows it
+            }
+            if (toVault != null) SecurePrefs.putAll(toVault)
             val mgr = AppWidgetManager.getInstance(context)
             val ids = mgr.getAppWidgetIds(ComponentName(context, IraWidget::class.java))
             if (ids.isNotEmpty()) render(context, mgr, ids)
         }
+
+        /**
+         * Today's Zerodha charges, estimated from today's trades (the app's account read has them): the widget's P&L is
+         * Zerodha's own, before charges, and these go on a small line under it. Held with the other figures (the vault
+         * gets it with the next minute's write) and redrawn.
+         */
+        fun charges(context: Context, value: Double?) {
+            val v = value?.takeIf { it.isFinite() }?.let { String.format(Locale.ROOT, "%s|%.2f", Market.today().toString(), it) }
+            synchronized(unsaved) { fresh(); unsaved[K_CHG] = v }
+            val mgr = AppWidgetManager.getInstance(context)
+            val ids = mgr.getAppWidgetIds(ComponentName(context, IraWidget::class.java))
+            if (ids.isNotEmpty()) render(context, mgr, ids)
+        }
+
+        /** Today's charges estimate kept by [charges], or null (none, or another day's). */
+        private fun chargesToday(): Double? = textNow(K_CHG)?.split("|")?.takeIf { it.size == 2 && it[0] == Market.today().toString() }
+            ?.get(1)?.toDoubleOrNull()
 
         private fun line(name: String, raw: String?): String {
             val (last, chg) = raw?.split("|")?.let { it[0].toDouble() to it[1].toDouble() } ?: return "$name  —"
@@ -53,16 +125,20 @@ class IraWidget : AppWidgetProvider() {
 
         private fun render(context: Context, manager: AppWidgetManager, ids: IntArray) {
             val v = RemoteViews(context.packageName, R.layout.widget_iraalgo)
-            v.setTextViewText(R.id.w_nifty, line("NIFTY", SecurePrefs.getString(K_NIFTY)))
-            v.setTextViewText(R.id.w_bank, line("BANKNIFTY", SecurePrefs.getString(K_BANK)))
+            v.setTextViewText(R.id.w_nifty, line("NIFTY", textNow(K_NIFTY)))
+            v.setTextViewText(R.id.w_bank, line("BANKNIFTY", textNow(K_BANK)))
             val showPnl = AppSettings.load().widgetPnl
-            val pnl = if (SecurePrefs.getString(K_PNL) != null) SecurePrefs.getDouble(K_PNL, 0.0) else null
+            val pnl = pnlNow()
             if (showPnl && pnl != null) {
                 v.setViewVisibility(R.id.w_pnl, View.VISIBLE)
                 v.setTextViewText(R.id.w_pnl, String.format(Locale.ENGLISH, "P&L  Rs %+,.0f", pnl))
                 v.setTextColor(R.id.w_pnl, context.getColor(if (pnl >= 0) R.color.widget_gain else R.color.widget_loss))
             } else v.setViewVisibility(R.id.w_pnl, View.GONE)
-            val at = SecurePrefs.getString(K_AT)
+            // Zerodha's P&L is before charges: today's estimated charges in small type under it (none known: no line).
+            val chargesLine = if (showPnl && pnl != null) com.optionslab.ira.PnlCharges.line(chargesToday(), estimate = true) else null
+            if (chargesLine == null) v.setViewVisibility(R.id.w_charges, View.GONE)
+            else { v.setViewVisibility(R.id.w_charges, View.VISIBLE); v.setTextViewText(R.id.w_charges, chargesLine) }
+            val at = textNow(K_AT)
             v.setTextViewText(R.id.w_status, (if (Market.isOpen()) "Market open" else "Market shut") + (at?.let { " · $it IST" } ?: ""))
             val open = PendingIntent.getActivity(context, 9, Intent(context, MainActivity::class.java).putExtra(MainActivity.EXTRA_TAB, "almanac").putExtra(MainActivity.EXTRA_NONCE, MainActivity.nonce()),
                 PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)

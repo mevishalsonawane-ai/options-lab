@@ -3,6 +3,7 @@ package com.optionslab.app.ira
 import com.optionslab.app.data.AppSettings
 import com.optionslab.app.data.Broker
 import com.optionslab.app.data.Paper
+import kotlinx.coroutines.async
 import org.json.JSONArray
 import org.json.JSONObject
 import java.time.LocalDateTime
@@ -46,13 +47,70 @@ internal object IraJournal {
         return listOf(com.optionslab.ira.TradeSearch.answer(trips(), f, ::isExpiry, ::marketOf))
     }
 
+    // ---- trade replay --------------------------------------------------------------------------------------------
+
+    /** [symbol]'s minute candles from the start of [day] (India time), or none when the feed has none (an expired contract). */
+    private suspend fun minutes(symbol: String, day: java.time.LocalDate): List<com.optionslab.ira.Candle> = runCatching {
+        kotlinx.coroutines.withTimeoutOrNull(20_000) {
+            com.optionslab.app.data.ChartFeed.bars(symbol, "1m", day.atStartOfDay(IST).toEpochSecond(), null)
+        }.orEmpty().map { b ->
+            com.optionslab.ira.Candle(java.time.Instant.ofEpochSecond(b.epochSecond).atZone(IST).toLocalDateTime(), b.open, b.high, b.low, b.close)
+        }
+    }.getOrDefault(emptyList())
+
+    /**
+     * Each of [trips] against its contract's own minute candles and its index's (read only: candles from the chart
+     * feed, nothing placed or changed). Each contract and index is read once, all at the same time.
+     */
+    suspend fun replays(trips: List<com.optionslab.engine.RoundTrips.Trip>, owners: Map<String, String>): List<com.optionslab.ira.TradeReplay.Replay> =
+        kotlinx.coroutines.coroutineScope {
+            val now = LocalDateTime.now(IST)
+            val wanted = LinkedHashSet<Pair<String, java.time.LocalDate>>()
+            trips.forEach { t ->
+                wanted += t.symbol to t.openedAt.toLocalDate()
+                marketOf(t.symbol)?.let { m -> IraHub.LIVE[m]?.let { s -> wanted += s to t.openedAt.toLocalDate() } }
+            }
+            val got = wanted.map { k -> async { k to minutes(k.first, k.second) } }.map { it.await() }.toMap()
+            trips.map { t ->
+                val d = t.openedAt.toLocalDate()
+                val m = marketOf(t.symbol)
+                val ix = m?.let { IraHub.LIVE[it] }?.let { got[it to d] }?.takeIf { it.isNotEmpty() }
+                com.optionslab.ira.TradeReplay.of(
+                    com.optionslab.ira.TradeReplay.Trip(t.symbol, t.direction, t.qty, t.entry, t.exit, t.openedAt, t.closedAt, t.net,
+                        com.optionslab.app.data.TradeBook.ownerOf(t, owners)),
+                    got[t.symbol to d].orEmpty(), ix, m, now)
+            }
+        }
+
+    /** "How was my last trade?", "go over my trades today": the app's mode, the last trade in full or today's a line each. */
+    suspend fun replay(question: String): List<String> {
+        val scope = com.optionslab.ira.TradeReplay.asked(question) ?: com.optionslab.ira.TradeReplay.Scope.LAST
+        val live = AppSettings.load().live
+        val owners = runCatching { com.optionslab.app.data.Strategies.owners() }.getOrDefault(emptyMap())
+        val all = runCatching { com.optionslab.app.data.TradeBook.trips(live) }.getOrDefault(emptyList())
+        val today = com.optionslab.app.data.Market.today()
+        val picked = if (scope == com.optionslab.ira.TradeReplay.Scope.LAST) listOfNotNull(all.maxByOrNull { it.closedAt })
+            else all.filter { it.day == today }.sortedBy { it.closedAt }.takeLast(MAX_REPLAYED)
+        return com.optionslab.ira.TradeReplay.answer(if (live) "Zerodha" else "Paper", scope, replays(picked, owners))
+    }
+
+    /** The journal's replay of a day's closed trades: a line each, then what the exits show. */
+    suspend fun replayLines(trips: List<com.optionslab.engine.RoundTrips.Trip>, owners: Map<String, String>): List<String> {
+        val r = replays(trips.sortedBy { it.closedAt }.takeLast(MAX_REPLAYED), owners)
+        return r.map { com.optionslab.ira.TradeReplay.short(it) } + com.optionslab.ira.TradeReplay.exits(r)
+    }
+
+    /** At most this many trades are replayed at once (each reads its contract's candles). */
+    private const val MAX_REPLAYED = 12
+
     fun timeOfDay(): List<String> = listOf(com.optionslab.ira.TimeOfDay.line(trips()) ?: "Not enough trades yet to tell your best and worst time of day (3 in each hour).")
 
     // ---- notes ---------------------------------------------------------------------------------------------------
 
     private const val NOTES = "jarvis.notes"
 
-    private fun notes(): List<Pair<LocalDateTime, String>> = runCatching {
+    /** Boss's notes on why he took a trade, with when (the month's review matches them to the trades). */
+    fun notes(): List<Pair<LocalDateTime, String>> = runCatching {
         val a = JSONArray(com.optionslab.app.security.SecurePrefs.getString(NOTES) ?: "[]")
         (0 until a.length()).map { a.getJSONObject(it).let { o -> LocalDateTime.parse(o.getString("t")) to o.getString("n") } }
     }.getOrDefault(emptyList())
@@ -93,21 +151,25 @@ internal object IraJournal {
     }
 
     private suspend fun pnlNow(): Double? = runCatching {
-        if (AppSettings.load().live && Broker.loggedIn) null else Paper.snapshot().dayPnl
+        if (AppSettings.load().live && Broker.loggedIn) null else Paper.snapshot(Paper.SHARED_QUOTE_MS).dayPnl
     }.getOrNull()
 
     /** The day's target reached: told once, with the advice to protect the gains and stop. */
     suspend fun targetWatch() {
         if (!com.optionslab.app.BuildConfig.JARVIS || !Automations.on(Automations.Auto.TARGET)) return
         val t = target() ?: return
-        val pnl = (if (AppSettings.load().live && Broker.loggedIn) runCatching { Broker.positionBook().net.sumOf { it.pnl } }.getOrNull() else pnlNow()) ?: return
-        if (!com.optionslab.ira.DayTarget.reached(pnl, t)) return
+        // Told already today (every pass after): the P&L is not read.
         val key = "jarvis.target.told"
         if (com.optionslab.app.security.SecurePrefs.getString(key) == com.optionslab.app.data.Market.today().toString()) return
+        val pnl = (if (AppSettings.load().live && Broker.loggedIn) runCatching { Broker.passPositionBook().net.sumOf { it.pnl } }.getOrNull() else pnlNow()) ?: return
+        if (!com.optionslab.ira.DayTarget.reached(pnl, t)) return
         com.optionslab.app.security.SecurePrefs.put(key, com.optionslab.app.data.Market.today().toString())
         val text = com.optionslab.ira.DayTarget.say(pnl, t)
-        IraHub.appContext()?.let { JarvisPopup.show(it, "Boss, target reached", text) }
-        IraHub.note(text); JarvisVoice.announce(text); Automations.acted(Automations.Auto.TARGET, text)
+        // A locked phone may be overheard or seen: the amount stays in the chat.
+        val locked = runCatching { IraHub.locked() }.getOrDefault(true)
+        val plain = "Boss, you've reached your day's target. The figures are in the chat."
+        IraHub.appContext()?.let { JarvisPopup.show(it, "Boss, target reached", if (locked) plain else text) }
+        IraHub.note(text); JarvisVoice.announce(if (locked) plain else text); Automations.acted(Automations.Auto.TARGET, text)
     }
 
     // ---- trades going nowhere ------------------------------------------------------------------------------------
@@ -122,12 +184,14 @@ internal object IraJournal {
     suspend fun staleWatch() {
         if (!com.optionslab.app.BuildConfig.JARVIS || !Automations.on(Automations.Auto.STALE) || !com.optionslab.app.data.Market.isOpen()) return
         val now = LocalDateTime.now(IST)
-        val bots = IraCoach.botSymbols()
         val open = ArrayList<Triple<String, Boolean, Pair<Double, Double>>>()   // symbol, live, (avg, ltp)
-        runCatching { Paper.snapshot().positions.positions.filter { it.quantity > 0 }.forEach { open += Triple(it.symbol, false, it.averagePrice to it.ltp) } }
-        if (Broker.loggedIn) runCatching { Broker.positionBook().net.filter { it.qty > 0 }.forEach { open += Triple(it.symbol, true, it.avg to it.last) } }
+        runCatching { Paper.snapshot(Paper.SHARED_QUOTE_MS).positions.positions.filter { it.quantity > 0 }.forEach { open += Triple(it.symbol, false, it.averagePrice to it.ltp) } }
+        if (Broker.loggedIn) runCatching { Broker.passPositionBook().net.filter { it.qty > 0 }.forEach { open += Triple(it.symbol, true, it.avg to it.last) } }
         val keys = open.map { (s, l, _) -> (if (l) "L:" else "P:") + s }.toSet()
         synchronized(firstSeen) { firstSeen.keys.retainAll(keys) }
+        // Nothing open (most passes): the bots' holdings are not read.
+        if (open.isEmpty()) return
+        val bots = IraCoach.botSymbols()
         val day = com.optionslab.app.data.Market.today().toString()
         for ((symbol, live, px) in open) {
             if (symbol in bots) continue
@@ -147,14 +211,14 @@ internal object IraJournal {
     /** The positions held now, by index and side (bots' too: news is about the money at risk). */
     suspend fun held(): List<com.optionslab.ira.PositionNews.Held> {
         val out = ArrayList<com.optionslab.ira.PositionNews.Held>()
-        runCatching { Paper.snapshot().positions.positions.filter { it.quantity != 0 }.forEach { p ->
+        runCatching { Paper.snapshot(Paper.SHARED_QUOTE_MS).positions.positions.filter { it.quantity != 0 }.forEach { p ->
             val c = Paper.contractOf(p.symbol) ?: return@forEach
             val m = marketOf(c.underlying) ?: return@forEach
             out += com.optionslab.ira.PositionNews.Held(p.symbol, m, c.right == com.optionslab.engine.Right.CE, p.quantity > 0)
         } }
         if (Broker.loggedIn) runCatching {
             val ins = Broker.cachedInstruments().orEmpty().associateBy { it.tradingSymbol }
-            Broker.positionBook().net.filter { it.open }.forEach { p ->
+            Broker.passPositionBook().net.filter { it.open }.forEach { p ->
                 val i = ins[p.symbol] ?: return@forEach
                 val m = marketOf(i.name) ?: return@forEach
                 out += com.optionslab.ira.PositionNews.Held(p.symbol, m, i.right == com.optionslab.engine.Right.CE, p.qty > 0)
@@ -163,12 +227,13 @@ internal object IraJournal {
         return out
     }
 
-    private val newsTold = HashSet<String>()
+    /** Headlines already told against a position, the newest 1,000 only (the app can run for days). */
+    private val newsTold = LinkedHashSet<String>()
 
     /** A headline on an index the owner holds: good or bad for the side held, told at once (once per headline). */
     suspend fun positionNews(h: com.optionslab.ira.Headline) {
         if (!com.optionslab.app.BuildConfig.JARVIS || !Automations.on(Automations.Auto.POSNEWS)) return
-        if (!synchronized(newsTold) { newsTold.add(h.title) }) return
+        if (!synchronized(newsTold) { newsTold.add(h.title).also { com.optionslab.ira.Upkeep.trimOldest(newsTold, 1_000) } }) return
         val text = com.optionslab.ira.PositionNews.say(h.title, h.tone, held(), h.markets) ?: return
         IraHub.appContext()?.let { JarvisPopup.show(it, "Boss, news on your position", text) }
         IraHub.note(text); JarvisVoice.announce(com.optionslab.ira.Wake.spoken(text, 3)); Automations.acted(Automations.Auto.POSNEWS, text)

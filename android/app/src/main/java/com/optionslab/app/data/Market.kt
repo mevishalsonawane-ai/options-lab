@@ -194,7 +194,24 @@ object Market {
      * quote both sides, and Upstox rate-limits at 429.
      */
     suspend fun liveChain(underlying: String, near: Int = 14): LiveChain {
-        return if (liveMode()) Broker.liveChain(underlying, near) else upstoxChain(underlying, near)
+        val liveNow = liveMode()
+        val lc = if (liveNow) Broker.liveChain(underlying, near) else upstoxChain(underlying, near)
+        chainReads[chainKey(underlying, near)] = Triple(System.currentTimeMillis(), liveNow, lc)
+        return lc
+    }
+
+    /** The last chain read per index and strike count: when, in which mode (true = Live), and the chain. In memory. */
+    private val chainReads = java.util.concurrent.ConcurrentHashMap<String, Triple<Long, Boolean, LiveChain>>()
+    private fun chainKey(underlying: String, near: Int) = "$underlying|$near"
+
+    /**
+     * Battery (round 7): a chain of [underlying] with [near] strikes this process read under 5 minutes ago in the mode it
+     * is in now ([com.optionslab.ira.StartChain]), else null. Only for the Options tab's background pricing at app start.
+     */
+    fun recentChain(underlying: String, near: Int): LiveChain? {
+        val (readAt, readLive, lc) = chainReads[chainKey(underlying, near)] ?: return null
+        val liveNow = runCatching { liveMode() }.getOrNull() ?: return null
+        return lc.takeIf { com.optionslab.ira.StartChain.reuse(readAt, System.currentTimeMillis(), sameMode = readLive == liveNow) }
     }
 
     private suspend fun upstoxChain(underlying: String, near: Int): LiveChain {

@@ -150,6 +150,13 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SHA: ${{ github.sha }}
         run: |
+          # Never backwards: a run whose commit is older than the build already published leaves it (4 Oct: 8b0cbf4's
+          # build finished after a2651c9's and replaced it). A newer published build is one that has commits beyond ours.
+          prev=$(gh release view latest-apk --json body -q .body 2>/dev/null | grep -o 'Build of [0-9a-f]*' | head -1 | cut -d' ' -f3 || true)
+          if [ -n "$prev" ]; then
+            st=$(gh api "repos/${{ github.repository }}/compare/$SHA...$prev" --jq .status 2>/dev/null || true)
+            if [ "$st" = "ahead" ]; then echo "The published build ($prev) is newer than ${SHA::7}: left as it is."; exit 0; fi
+          fi
           apk=$(ls app/build/outputs/apk/ira/release/*.apk | head -1)
           cp "$apk" "$RUNNER_TEMP/IraAlgo.apk"
           gold=$(ls app/build/outputs/apk/gold/release/*.apk | head -1)

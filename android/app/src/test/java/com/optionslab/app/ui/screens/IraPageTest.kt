@@ -35,9 +35,16 @@ class IraPageTest {
     @get:Rule val compose = createComposeRule()
     private val app: Application get() = ApplicationProvider.getApplicationContext()
 
-    @Before fun up() { AreaE.resetGlobals() }
+    // After the close on a fixed clock: in session hours (CI at 03:45 UTC is 09:15 IST) an empty live read is "no live
+    // price", never the last close, so the example's "BankNifty is at" only held when CI ran outside market hours.
+    @Before fun up() {
+        AreaE.resetGlobals()
+        com.optionslab.app.data.Market.testClock = java.time.Clock.fixed(
+            java.time.LocalDate.now(com.optionslab.engine.IST).atTime(16, 0).atZone(com.optionslab.engine.IST).toInstant(), com.optionslab.engine.IST)
+    }
 
     @After fun down() {
+        com.optionslab.app.data.Market.testClock = null
         runBlocking { IraHub.forgetAll() }
         AreaE.resetGlobals()
         assertEquals("no test may reach the network", emptyList<String>(), NetworkGuard.blocked.toList())

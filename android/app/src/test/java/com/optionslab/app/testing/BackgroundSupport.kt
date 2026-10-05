@@ -122,17 +122,21 @@ object Background {
      * The NSE calendar the app sees: fetched on [fetched] (so nothing refreshes it from NSE), with
      * these holidays and special sessions. Set straight into the in-memory book, as a fetch would.
      */
-    fun calendar(fetched: LocalDate?, holidays: Set<LocalDate> = emptySet(), extra: Set<LocalDate> = emptySet()) =
+    fun calendar(fetched: LocalDate?, holidays: Set<LocalDate> = emptySet(), extra: Set<LocalDate> = emptySet()) {
         holidaysCache().set(null, Holidays.Book(fetched, holidays.associateWith { "Test holiday" }, emptySet(), emptySet(), extra))
+        Holidays.forgetTrading()
+    }
 
     /** Everything these tests change that outlives one Robolectric application. */
     fun reset() {
         Market.testClock = null
         Net.testEndpoint = null
         holidaysCache().set(null, null)
+        Holidays.forgetTrading()
         clearChartCache()
         clearAlerts()
         clearCards()
+        com.optionslab.app.widget.OpenWidget.resetForTest()
     }
 
     fun clearChartCache() {

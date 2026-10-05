@@ -85,6 +85,8 @@ class FakeKite : Closeable {
     @Volatile var keepAlive = false
     @Volatile var sessionExpired = false
     val down = HashSet<String>()
+    /** Paths that answer TokenException while the session itself is still good (one endpoint's glitch). */
+    val tokenRefused = HashSet<String>()
 
     fun nextPlace(s: Scenario) = synchronized(lock) { scenarios.addLast(s) }
     fun nextPlace(reply: Reply = Reply.OK, outcome: Outcome = Outcome.FILL, partialQty: Int = 0, message: String = "") =
@@ -160,6 +162,7 @@ class FakeKite : Closeable {
         requests += Req(r.method!!, path, q, parseForm(body), body, r.getHeader("Authorization"))
         if (throttle > 0) { throttle--; return error(429, "NetworkException", "Too many requests").addHeader("Retry-After", "1") }
         if (path in down) return error(503, "NetworkException", "Gateway timed out")
+        if (path in tokenRefused) return error(403, "TokenException", "Incorrect `api_key` or `access_token`.")
         if (path != "/session/token" && sessionExpired) return error(403, "TokenException", "Incorrect `api_key` or `access_token`.")
         val m = r.method!!
         return when {

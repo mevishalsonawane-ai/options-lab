@@ -120,3 +120,34 @@ class ReviewLaterTest {
         assertTrue(Wake.hush("Jarvis stop"))
     }
 }
+
+class VoiceCheckWordsTest {
+    @Test fun whyCantYouHearMeIsTheVoiceCheck() {
+        for (q in listOf("why can't you hear me", "why aren't you listening", "listening is not working", "mic not working"))
+            assertEquals(Command.Kind.VOICE_CHECK, Ask.parse(q).command?.kind, q)
+    }
+}
+
+
+class OutlookBriefTest {
+    @Test fun theMorningLineForAnIndex() {
+        val start = java.time.LocalDate.of(2026, 9, 28)
+        val bars = (0 until 6).flatMap { d ->
+            val base = 25_000.0 + d * 50
+            (0 until 3).map { i -> Candle(start.plusDays(d.toLong()).atTime(9, 15 + i), base, base + 40, base - 40, base + 10 * i) }
+        }
+        val b = Outlook.brief(Market.NIFTY, bars, 12.0)!!
+        assertTrue(b.startsWith("Nifty: rising (up 5 of the last 5 sessions); a usual day spans about ") && b.contains("; pivot 25,"), b)
+        assertNull(Outlook.brief(Market.VIX, bars, 12.0))
+        assertNull(Outlook.brief(Market.NIFTY, bars.take(3), 12.0))
+    }
+}
+
+class ActAloneTest {
+    @Test fun itActsAloneOnlyOnPaperAndWhenSure() {
+        assertTrue(ActAlone.ok(switchOn = true, goesLive = false, stars = 3))
+        assertTrue(!ActAlone.ok(switchOn = true, goesLive = true, stars = 5), "never real money on its own")
+        assertTrue(!ActAlone.ok(switchOn = false, goesLive = false, stars = 5))
+        assertTrue(!ActAlone.ok(switchOn = true, goesLive = false, stars = 2))
+    }
+}

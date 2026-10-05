@@ -13,6 +13,64 @@ class GuardsTest {
     private val day = LocalDate.of(2026, 10, 5)
     private fun at(h: Int, m: Int) = day.atTime(h, m)
 
+    @Test fun onlyAStopGttGuardsAPosition() {
+        // Two-leg (OCO): always holds a stop leg.
+        assertTrue(Rescue.gttIsStop("two-leg", listOf(80.0, 140.0), 100.0, "SELL 50 @ 79.0 / SELL 50 @ 141.0", long = true))
+        // Single, long: a SELL under the price is a stop; a SELL over it is a target only.
+        assertTrue(Rescue.gttIsStop("single", listOf(85.0), 100.0, "SELL 50 @ 84.0", long = true))
+        assertFalse(Rescue.gttIsStop("single", listOf(140.0), 100.0, "SELL 50 @ 139.0", long = true))
+        // A BUY on a long adds to it, never stops it.
+        assertFalse(Rescue.gttIsStop("single", listOf(85.0), 100.0, "BUY 50 @ 84.0", long = true))
+        // Single, short: a BUY over the price is a stop; under it is a target.
+        assertTrue(Rescue.gttIsStop("single", listOf(120.0), 100.0, "BUY 50 @ 121.0", long = false))
+        assertFalse(Rescue.gttIsStop("single", listOf(80.0), 100.0, "BUY 50 @ 79.0", long = false))
+        // Nothing to judge it by: not a stop.
+        assertFalse(Rescue.gttIsStop("single", emptyList(), 100.0, "SELL 50 @ 84.0", long = true))
+        assertFalse(Rescue.gttIsStop("single", listOf(85.0), 0.0, "SELL 50 @ 84.0", long = true))
+        assertFalse(Rescue.gttIsStop("", listOf(85.0), 100.0, "SELL 50 @ 84.0", long = true))
+    }
+
+    @Test fun aKindOfIdeaThatLosesIsKnown() {
+        val r = List(8) { Preference.kind("pattern: hammer|NIFTY") to -100.0 } + List(9) { "news" to 40.0 }
+        assertEquals("my pattern hammer trades have lost: 8 trades, -Rs 800.00", ActAlone.badKind(r, "pattern hammer"))
+        assertNull(ActAlone.badKind(r, "news"))
+        assertNull(ActAlone.badKind(r.drop(1), "pattern hammer"))
+    }
+
+    @Test fun anHourThatLosesIsKnown() {
+        val r = List(8) { 9 * 60 + 20 + it to -100.0 } + List(8) { 13 * 60 + it to 50.0 }
+        assertEquals("my trades entered between 09:00 and 10:00 have lost: 8 trades, -Rs 800.00", ActAlone.badHour(r, 9 * 60 + 45))
+        assertNull(ActAlone.badHour(r, 13 * 60 + 30))                        // a winning hour
+        assertNull(ActAlone.badHour(r.drop(1), 9 * 60 + 45))                 // too few to judge
+        assertNull(ActAlone.badHour(r, 11 * 60))                             // no record
+    }
+
+    @Test fun jarvisRaisesItsOwnBarAboveLosingConfidence() {
+        assertEquals(3, ActAlone.bar(emptyList()))
+        val lose3 = List(8) { 3 to -100.0 }
+        assertEquals(4, ActAlone.bar(lose3))
+        assertEquals(3, ActAlone.bar(List(7) { 3 to -100.0 }))                  // too few to judge
+        assertEquals(5, ActAlone.bar(lose3 + List(9) { 4 to -50.0 }))
+        assertEquals(ActAlone.NONE, ActAlone.bar(lose3 + List(9) { 4 to -50.0 } + List(8) { 5 to -10.0 }))
+        assertEquals(3, ActAlone.bar(lose3 + listOf(3 to 900.0)))                // the level turned: back down
+        assertFalse(ActAlone.ok(true, false, 3, bar = 4)); assertTrue(ActAlone.ok(true, false, 4, bar = 4))
+        assertTrue(ActAlone.say(lose3)!!.endsWith("Below 4/5 my trades lost, so I now take one by myself only at 4/5 or more."))
+    }
+
+    @Test fun theGuardSetsAStopAloneOnlyOnABoughtOptionWithItsSwitchOn() {
+        val long = Rescue.Open("NIFTY24000CE", true, 75, 100.0, 98.0)
+        val stop = Rescue.stopFor(long)
+        assertTrue(Rescue.setAlone(true, long, stop))
+        assertFalse(Rescue.setAlone(false, long, stop))                  // switched off: only offered
+        val short = Rescue.Open("NIFTY24000CE", true, -75, 100.0, 98.0)
+        assertFalse(Rescue.setAlone(true, short, 115.0))                 // never on a short
+        assertFalse(Rescue.setAlone(true, long, null))                   // already under the stop: told, not set
+        assertTrue(Rescue.saySet(long, 85.0, "Protected.").startsWith("NIFTY24000CE (Zerodha, 75) had no stop, so I set one at 85.00"))
+        val no = Rescue.saySet(long, 85.0, "Not protected: Insufficient funds.")
+        assertTrue(no.startsWith("NIFTY24000CE (Zerodha, 75) has no stop. I tried to set one at 85.00"))
+        assertTrue("did not go through: Not protected: Insufficient funds." in no && "so I set one" !in no)
+    }
+
     @Test fun coolOffAfterTwoLosses() {
         val two = listOf(at(10, 0) to -500.0, at(10, 40) to -300.0)
         assertEquals(at(11, 10), CoolOff.until(two, at(10, 50)))
@@ -96,6 +154,14 @@ class GuardsTest {
         assertEquals("My suggestions: 2; you took 1, +12.0 points, skipped 1, -5.0 points.", l[1])
         assertEquals("Best arm: ORB 5 +Rs 2,000.00.", l[2]); assertEquals("Worst arm: Liquidity -Rs 500.00.", l[3])
         assertEquals("One habit to fix: Exits too early.", l[4])
+        // Jarvis's own paper trades are told apart, never counted as Boss's answers.
+        val mine = s + JarvisTrades.Suggestion(at(12, 0), Market.NIFTY, true, 24000.0, "pattern", JarvisTrades.SELF, 7.0)
+        val l2 = ReportCard.lines(null, 0, mine, emptyList(), null)
+        assertEquals("My suggestions: 2; you took 1, +12.0 points, skipped 1, -5.0 points.", l2[1])
+        assertEquals("I took 1 on paper by myself, +7.0 points.", l2[2])
+        val card = JarvisTrades.scorecard(day, mine)
+        assertTrue(card.first().endsWith("your answer was the better choice on 2 of 2."), card.first())
+        assertTrue(card.last().contains(": taken by me on paper, made +7.0 points"), card.last())
     }
 
     @Test fun undoQuietAndChart() {

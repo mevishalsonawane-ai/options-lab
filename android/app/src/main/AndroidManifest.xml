@@ -190,6 +190,32 @@
                 android:resource="@xml/widget_info" />
         </receiver>
 
+        <!-- The "Open" widget: today's P&L and only open positions and pending orders. Exported because the launcher
+             binds it; it only draws. Off in the gold build (no Zerodha books there). -->
+        <receiver
+            android:name=".widget.OpenWidget"
+            android:enabled="@bool/open_widget_enabled"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_open_info" />
+        </receiver>
+
+        <!-- Jarvis's tax-year CSV ("export my trades for tax"), shared through Android's share sheet: not exported; an app
+             Boss picks gets read access to that one file only, for that share. Only the cache's exports/ folder. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.exports"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/export_paths" />
+        </provider>
+
         <!-- Exported only because the system delivers these; it acts on nothing else. -->
         <receiver
             android:name=".work.BootReceiver"

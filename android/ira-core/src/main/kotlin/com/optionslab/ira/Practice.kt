@@ -58,7 +58,7 @@ object Practice {
 
     /** "Practice on last Thursday" / "practice on 24 September" / "practice yesterday": the day asked, or null. */
     fun day(text: String, today: LocalDate): LocalDate? {
-        val t = " " + text.lowercase().replace(Regex("[^a-z0-9 -]"), " ").replace(Regex("\\s+"), " ") + " "
+        val t = " " + text.lowercase().replace(rx("[^a-z0-9 -]"), " ").replace(rx("\\s+"), " ") + " "
         if (t.contains(" yesterday ")) return today.minusDays(1)
         java.time.DayOfWeek.entries.firstOrNull { t.contains(" last ${it.name.lowercase()} ") || t.contains(" on ${it.name.lowercase()} ") }?.let { w ->
             var x = today.minusDays(1); while (x.dayOfWeek != w) x = x.minusDays(1); return x
@@ -66,7 +66,7 @@ object Practice {
         return Events.date(text, today)?.let { if (it.isAfter(today)) it.minusYears(1) else it }
     }
 
-    fun asked(text: String): Boolean = Regex("(?i)\\b(practi[cs]e|replay|simulate|rehearse)\\b").containsMatchIn(text)
+    fun asked(text: String): Boolean = rx("(?i)\\b(practi[cs]e|replay|simulate|rehearse)\\b").containsMatchIn(text)
 }
 
 /**
@@ -86,13 +86,23 @@ object Mistakes {
 
 /** The evening's word on how Jarvis did today (the owner's wish, 2026-10-03). Pure. */
 object Usage {
-    data class Day(val heard: Int = 0, val misunderstood: Int = 0, val nameFirst: Int = 0, val failed: Int = 0, val mistakes: Int = 0)
+    /**
+     * [heard]: every question counted, mis-heard fragments too; [misheard]: those fragments ([MisHeard]; voice, round 26) -
+     * said "say it again" to, not questions he did not understand.
+     */
+    data class Day(val heard: Int = 0, val misunderstood: Int = 0, val nameFirst: Int = 0, val failed: Int = 0, val mistakes: Int = 0,
+                   val misheard: Int = 0) {
+        /** Real questions: the mis-heard fragments left out. */
+        val questions: Int get() = (heard - misheard.coerceAtLeast(0)).coerceAtLeast(0)
+    }
 
     fun line(d: Day): String? {
         if (d.heard == 0 && d.failed == 0) return null
+        val n = d.questions
         val parts = listOfNotNull(
-            "I heard ${d.heard} question${if (d.heard == 1) "" else "s"} today",
+            "I heard $n question${if (n == 1) "" else "s"} today",
             d.misunderstood.takeIf { it > 0 }?.let { "did not understand $it" },
+            d.misheard.takeIf { it > 0 }?.let { "mis-heard $it short bit${if (it > 1) "s" else ""} and asked you to say ${if (it > 1) "them" else "it"} again" },
             d.nameFirst.takeIf { it > 0 }?.let { "asked you to say \"Jarvis\" first $it time${if (it > 1) "s" else ""}" },
             d.failed.takeIf { it > 0 }?.let { "$it thing${if (it > 1) "s" else ""} failed" },
             d.mistakes.takeIf { it > 0 }?.let { "you marked $it answer${if (it > 1) "s" else ""} wrong" },
@@ -133,7 +143,7 @@ object WakeSense {
     fun accept(alternatives: List<String>, level: Level): List<String> = when (level) {
         Level.NORMAL -> alternatives
         Level.STRICT -> alternatives.take(1).filter { a ->
-            a.lowercase().replace(Regex("[^a-z ]"), " ").trim().split(Regex("\\s+")).take(2).any { w -> w in setOf("jarvis", "jarvas", "jervis", "jarviss") }
+            a.lowercase().replace(rx("[^a-z ]"), " ").trim().split(rx("\\s+")).take(2).any { w -> w in setOf("jarvis", "jarvas", "jervis", "jarviss") }
         }
     }
 }

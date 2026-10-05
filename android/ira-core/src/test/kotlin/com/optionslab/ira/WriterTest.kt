@@ -37,10 +37,23 @@ class WriterTest {
 
     @Test fun onlyFactBasedAnswersAreRewritten() {
         val q = Ask.parse("how is banknifty")
-        assertTrue(Writer.worthRewriting(q, Answer(draft, facts)))
+        val longer = "$draft It opened at 52,400.00 and has held below it since. Volume is light."
+        assertTrue(Writer.worthRewriting(q, Answer(longer, facts)))
         assertFalse(Writer.worthRewriting(q, Answer("I only know...", emptyList())))
+        // One short line stays as it is.
+        assertFalse(Writer.worthRewriting(q, Answer(draft, facts)))
         assertFalse(Writer.worthRewriting(Ask.parse("should I buy banknifty"), Answer(draft, facts)))
         val o = Ask.parse("buy 1 lot banknifty 52000 ce")
         assertFalse(Writer.worthRewriting(o, Answer("Ready", facts, o.order)))
+    }
+
+    @Test fun onlyRelevantFactsGoToTheModel() {
+        val facts = (1..30).map { "Filler fact number $it about something else" } + "Nifty is at 24,612.40" + "VIX is 13.2"
+        val kept = Writer.relevant(facts, "where is nifty", "Nifty is at 24,612.40, Boss.")
+        assertTrue(kept.size <= 12)
+        assertTrue("Nifty is at 24,612.40" in kept)
+        assertEquals(facts.take(5), Writer.relevant(facts.take(5), "q", "d"))
+        // The prompt carries the chosen ones only.
+        assertTrue(!Writer.prompt("where is nifty", facts, "Nifty is at 24,612.40, Boss.").contains("number 29 "))
     }
 }

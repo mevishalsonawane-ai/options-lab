@@ -47,6 +47,15 @@
         android:fontFamily="monospace"
         android:visibility="gone" />
 
+    <!-- Today's charges (an estimate) in small type under the P&L, which is before charges as Zerodha shows it. -->
+    <TextView
+        android:id="@+id/w_charges"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="@color/widget_soft"
+        android:textSize="10sp"
+        android:visibility="gone" />
+
     <TextView
         android:id="@+id/w_status"
         android:layout_width="wrap_content"

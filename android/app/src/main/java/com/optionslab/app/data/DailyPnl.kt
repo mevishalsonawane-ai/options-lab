@@ -1,6 +1,7 @@
 package com.optionslab.app.data
 
 import com.optionslab.app.security.SecurePrefs
+import kotlinx.coroutines.flow.update
 import org.json.JSONArray
 import org.json.JSONObject
 import com.optionslab.engine.sandbox.SandboxRules
@@ -15,7 +16,13 @@ import kotlin.math.sign
  * One P&L figure per trading day, per account, for the P&L calendar.
  *
  *  - Today is recorded as it goes (the market watch and the open app), and the
- *    last reading of the day stays: realised + open P&L after charges.
+ *    last reading of the day stays: realised + open P&L, with the day's charges
+ *    beside it (paper: what it paid; Zerodha: an estimate from its trades).
+ *  - Shown before charges (Boss, 5 Oct: as Zerodha shows its P&L), the charges on
+ *    a small line: [Day.pnl] is the figure before charges, [Day.charges] the
+ *    charges. What is stored is unchanged - paper keeps its figure after charges,
+ *    Zerodha its own m2m (before them) - with the charges as a third element; an
+ *    entry kept before that (no charges) shows exactly as it always did.
  *  - The paper account's earlier days are also rebuilt from its own trade
  *    book (average-cost, charges included) for days that were never recorded.
  *  - Zerodha does not give past days' P&L through its API, so the Zerodha
@@ -24,9 +31,26 @@ import kotlin.math.sign
  * Private like everything about the account: kept in the encrypted vault.
  */
 object DailyPnl {
-    data class Day(val date: LocalDate, val pnl: Double, val trades: Int)
+    /**
+     * One day: [pnl] the P&L before charges (as shown; the calendar's tile), [trades] the count, [charges] that day's
+     * charges (0 when not kept - an older entry, whose [pnl] is then the figure as it was recorded).
+     */
+    data class Day(val date: LocalDate, val pnl: Double, val trades: Int, val charges: Double = 0.0) {
+        /** After charges. */
+        val net: Double get() = pnl - charges
+    }
 
     private fun key(live: Boolean) = if (live) "pnl.days.live" else "pnl.days.paper"
+
+    /**
+     * Bumped whenever [record] or [resetPaper] changes a stored figure, whoever called it (the open app, the market
+     * watch, the evening report), so an open P&L calendar redraws (review, speed 5: a figure the watch recorded no longer
+     * goes missing). Only ever counts up; a StateFlow, so it is read and bumped safely from any thread.
+     */
+    private val _changes = kotlinx.coroutines.flow.MutableStateFlow(0)
+    val changes: kotlinx.coroutines.flow.StateFlow<Int> get() = _changes
+
+    private fun changed() { _changes.update { it + 1 } }
 
     @Synchronized
     private fun read(live: Boolean): JSONObject = runCatching { JSONObject(SecurePrefs.getString(key(live)) ?: "{}") }.getOrDefault(JSONObject())
@@ -43,23 +67,35 @@ object DailyPnl {
         else SandboxRules.lastSessionExpiry("03:00", t).toLocalDate()
     }
 
-    /** The current trading day's figure for the account; [trades] < 0 keeps the count already stored. */
+    /**
+     * The current trading day's figure for the account; [trades] < 0 keeps the count already stored. [pnl] as each
+     * account always kept it: paper after charges (Paper.Snapshot.dayPnl), Zerodha its own m2m (before charges);
+     * [charges] the day's charges (paper: paid; Zerodha: estimated), < 0 keeps the charges already stored. True when the
+     * kept figure changed (the calendar then reads again).
+     *
+     * Speed, round 5 ([com.optionslab.ira.DayFigure]): a reading equal to the kept one writes nothing, and a new one is
+     * readable at once and written to the vault in the background ([SecurePrefs.putAllSoon]): the paper and Zerodha
+     * refreshes that record it no longer wait on a Keystore encryption and two disk syncs before showing the new book.
+     */
     @Synchronized
-    fun record(live: Boolean, pnl: Double, trades: Int) {
-        if (!pnl.isFinite()) return
-        val today = (sessionDay(live) ?: return).toString()
+    fun record(live: Boolean, pnl: Double, trades: Int, charges: Double = -1.0): Boolean {
+        if (!pnl.isFinite()) return false
+        val today = (sessionDay(live) ?: return false).toString()
         val o = read(live)
-        val keepTrades = o.optJSONArray(today)?.optInt(1, 0) ?: 0
-        o.put(today, JSONArray().put(Math.round(pnl * 100) / 100.0).put(if (trades >= 0) trades else keepTrades))
+        val stored = o.optJSONArray(today)?.let { a -> runCatching { com.optionslab.ira.DayFigure.Kept(a.getDouble(0), a.optInt(1, 0), a.optDouble(2, 0.0)) }.getOrNull() }
+        val entry = com.optionslab.ira.DayFigure.next(stored, pnl, trades, charges) ?: return false
+        o.put(today, JSONArray().put(entry.pnl).put(entry.trades).put(entry.charges))
         // About three years of days is plenty; the oldest go first.
         val keys = o.keys().asSequence().toList().sorted()
         keys.dropLast(1100).forEach { o.remove(it) }
-        SecurePrefs.put(key(live), o.toString())
+        SecurePrefs.putAllSoon(mapOf(key(live) to o.toString()))
+        changed()
+        return true
     }
 
     /** The paper calendar starts empty again (Reset paper); the Zerodha days are kept. */
     @Synchronized
-    fun resetPaper() { SecurePrefs.put(key(false), "{}") }
+    fun resetPaper() { SecurePrefs.put(key(false), "{}"); changed() }
 
     /** Every day of [month] that has a figure. */
     fun month(live: Boolean, month: YearMonth): Map<LocalDate, Day> = all(live).filterKeys { YearMonth.from(it) == month }
@@ -78,7 +114,11 @@ object DailyPnl {
             if (d !in rebuilt && prev != null && a.optInt(1, 0) > 0 && prev.optInt(1, 0) == a.optInt(1, 0) &&
                 prev.getDouble(0) == a.getDouble(0)) return@forEach
             // A recorded day wins: it includes expiry settlements and open positions the trade book cannot see.
-            out[d] = Day(d, a.getDouble(0), maxOf(a.optInt(1, 0), out[d]?.trades ?: 0))
+            // Shown before charges: paper kept its figure after them (added back), Zerodha its m2m (before them already).
+            // An entry with no charges kept (an older build's) shows as it always did.
+            val charges = a.optDouble(2, 0.0).takeIf { it.isFinite() && it > 0 } ?: 0.0
+            val shown = if (live) a.getDouble(0) else com.optionslab.ira.DayFigure.paise(com.optionslab.ira.PnlCharges.gross(a.getDouble(0), charges))
+            out[d] = Day(d, shown, maxOf(a.optInt(1, 0), out[d]?.trades ?: 0), charges)
         }
         return out
     }
@@ -90,12 +130,13 @@ object DailyPnl {
         return listOfNotNull(recorded, traded).minOrNull()?.let { YearMonth.from(it) }
     }
 
-    /** Realised P&L per day from the paper trade book: average cost per contract, less each day's charges. */
+    /** Realised P&L per day from the paper trade book: average cost per contract, before charges, with each day's charges. */
     private fun rebuildPaper(): Map<LocalDate, Day> {
         data class Pos(var qty: Int = 0, var avg: Double = 0.0)
         val pos = HashMap<String, Pos>()
         val pnl = HashMap<LocalDate, Double>()
         val count = HashMap<LocalDate, Int>()
+        val paid = HashMap<LocalDate, Double>()
         for (t in Paper.state.trades.sortedBy { it.timestamp }) {
             val d = t.timestamp.toLocalDate()
             val p = pos.getOrPut("${t.symbol}|${t.product}") { Pos() }
@@ -112,9 +153,10 @@ object DailyPnl {
                 p.qty = left
                 if (p.qty == 0) p.avg = 0.0
             }
-            pnl[d] = (pnl[d] ?: 0.0) - t.charges.toDouble()
+            if (d !in pnl) pnl[d] = 0.0
+            paid[d] = (paid[d] ?: 0.0) + t.charges.toDouble()
             count[d] = (count[d] ?: 0) + 1
         }
-        return pnl.mapValues { (d, v) -> Day(d, Math.round(v * 100) / 100.0, count[d] ?: 0) }
+        return pnl.mapValues { (d, v) -> Day(d, Math.round(v * 100) / 100.0, count[d] ?: 0, Math.round((paid[d] ?: 0.0) * 100) / 100.0) }
     }
 }

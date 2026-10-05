@@ -76,14 +76,28 @@ object GoldPaper {
     /** TEST ONLY: replace the book (screens are tested on prepared accounts). Throws outside debug builds. */
     internal suspend fun replaceForTest(b: Book) {
         check(com.optionslab.app.BuildConfig.DEBUG) { "test seam" }
-        lock.withLock { save(b) }
+        GoldBooks.awaitLoaded()
+        lock.withLock { readFailed = false; save(b) }
     }
 
     fun init(context: Context) {
         app = context.applicationContext
         file = File(app.noBackupFilesDir, "gold.vault")
-        _book.value = runCatching { read() }.getOrNull() ?: Book()
     }
+
+    /** Reads the saved book (on [GoldBooks]' background thread; every change waits for it). */
+    internal fun load() {
+        val r = runCatching { read() }
+        // A saved book that is there but could not be read is never written over by the minute passes (it may read
+        // back next time); the empty book shows meanwhile. Boss's own change reads it again first; only a reset writes over it ([edit]).
+        readFailed = r.isFailure
+        if (r.isFailure) runCatching { Diag.record("gold", "${file.name} could not be read; it is not saved over") }
+        _book.value = r.getOrNull() ?: Book()
+    }
+
+    /** The saved book could not be read at the start: only a reset writes over it ([load], [edit]). */
+    @Volatile var readFailed = false
+        private set
 
     fun now(): LocalDateTime = testNow ?: LocalDateTime.now(ZoneOffset.UTC)
 
@@ -95,7 +109,7 @@ object GoldPaper {
 
     /** A fresh paper account with [balance]; the switch and the lot size are kept, an open trade and history go. */
     suspend fun reset(balance: Double) {
-        edit { it.copy(start = balance, position = null, trades = emptyList(), decided = null) }
+        edit(clear = true) { it.copy(start = balance, position = null, trades = emptyList(), decided = null) }
         GoldTrendPaper.reset()
         GoldDipPaper.reset()
         GoldTasPaper.reset()
@@ -105,6 +119,7 @@ object GoldPaper {
 
     /** One pass: read prices, sell an open buy whose exit came, else buy on a fresh signal. Never throws. */
     suspend fun tick() = runCatching {
+        GoldBooks.awaitLoaded()
         lock.withLock {
             val t = now()
             val minutes = minutes(t)
@@ -312,10 +327,27 @@ object GoldPaper {
         runCatching { Diag.record("gold", "$title - $text") }
     }
 
-    private suspend fun edit(f: (Book) -> Book) = lock.withLock { save(f(_book.value)) }
+    /**
+     * Boss's own change. A saved book that could not be read is read again first (the change then goes onto it); still
+     * unreadable, the change is kept in memory only and said - never an empty book with the change saved over it
+     * (review, 5 Oct). Only an explicit reset ([clear]) writes over an unreadable book.
+     */
+    private suspend fun edit(clear: Boolean = false, f: (Book) -> Book) {
+        GoldBooks.awaitLoaded()
+        lock.withLock {
+            if (clear) { readFailed = false }
+            else if (readFailed) {
+                val again = runCatching { read() }
+                if (again.isSuccess) { readFailed = false; again.getOrNull()?.let { _book.value = it } }
+                else runCatching { Diag.record("gold", "${file.name} could not be read; this change is kept on screen only, not saved") }
+            }
+            save(f(_book.value))
+        }
+    }
 
     private fun save(b: Book) {
         _book.value = b
+        if (readFailed) return
         if (::file.isInitialized) runCatching { Vault.writeFile(file, toJson(b).toString().toByteArray(Charsets.UTF_8)) }
     }
 

@@ -91,6 +91,10 @@ internal object IraStudy {
         if (t >= LocalTime.of(9, 0) && t < LocalTime.of(15, 45)) return
         val last = _state.value.at
         if (last != null && last.isAfter(now.toInstant().minusSeconds(12 * 3600))) return
+        // Battery (round 4): not again through a weekend or a holiday once it ran twice since the last close - the candles
+        // are the same. Weekday nights as before; a calendar that cannot be read reads as before.
+        val lastClose = runCatching { com.optionslab.ira.StudyPace.lastClose(now.toLocalDateTime()) { com.optionslab.app.data.Market.isTradingDay(it) } }.getOrNull()
+        if (!com.optionslab.ira.StudyPace.studyDue(last?.atZone(IST)?.toLocalDateTime(), lastClose)) return
         val found = ArrayList<Study.Finding>()
         val edges = ArrayList<com.optionslab.ira.PatternExpert.Edge>()
         val ivs = HashMap<String, List<Pair<LocalDate, Double>>>()
@@ -140,7 +144,11 @@ internal object IraStudy {
         if (bankRegimes.isNotEmpty()) {
             val r = com.optionslab.engine.orb.ArmsBacktest.run(com.optionslab.app.data.Store.barSessions("BANKNIFTY"))
             val trades = r.trades.map { com.optionslab.ira.ArmHealth.T(it.day, it.arm, it.net) }
+            // Each arm's tested record (trades a day, won, worst losing run), for "how are my bots doing?".
+            runCatching { IraBots.saveTested(r) }
             runCatching { IraCoach.saveGapRecord(com.optionslab.ira.GapPlan.arms(trades, bankGaps)) }
+            // Each arm's record by regime, for the morning plan (Jarvis parks the paper arms losing in today's regime).
+            runCatching { IraCoach.saveArmRecord(com.optionslab.ira.DayPlan.record(trades, bankRegimes)) }
             val by = com.optionslab.ira.Regime.armsBy(trades, bankRegimes)
             if (by.isNotEmpty()) out += listOf("BankNifty arms by regime:") + by
             bankNow?.let { k -> com.optionslab.ira.Regime.suits(trades, bankRegimes, k).takeIf { it.isNotEmpty() }
@@ -179,12 +187,27 @@ internal object IraStudy {
         val lines = com.optionslab.ira.ReportCard.lines(if (trips.isEmpty()) null else trips.sumOf { it.net }, trips.size,
             IraNewsTrades.weekSuggestions(today), arms, habit) +
             listOfNotNull(com.optionslab.ira.TimeOfDay.line(IraJournal.trips())) + com.optionslab.ira.TradeReasons.lines(IraJournal.noted())
-        IraHub.appContext()?.let { JarvisPopup.show(it, "Boss, your week's report card", lines.joinToString(" ")) }
+        // A locked phone may be overheard or seen: the card's figures stay in the chat; only that it is there is said.
+        val locked = runCatching { IraHub.locked() }.getOrDefault(true)
+        IraHub.appContext()?.let { JarvisPopup.show(it, "Boss, your week's report card", if (locked) "It's in the chat." else lines.joinToString(" ")) }
         IraHub.note(com.optionslab.ira.Address.boss("Your week's report card. " + lines.joinToString(" ")))
-        JarvisVoice.announce("Good morning, Boss. Your week's report card. " + lines.joinToString(" ") { com.optionslab.ira.Wake.spoken(it, 1) })
+        JarvisVoice.announce(if (locked) "Good morning, Boss. Your week's report card is in the chat."
+            else "Good morning, Boss. Your week's report card. " + lines.joinToString(" ") { com.optionslab.ira.Wake.spoken(it, 1) })
         IraActivity.add("Gave the weekly report card.")
         com.optionslab.app.security.SecurePrefs.put(key, week)
     }
+
+    /**
+     * Battery (round 4): hours between the study job's runs ([com.optionslab.ira.StudyPace]) - 1 as before, or 6 through
+     * the dead stretch of a weekend or a holiday. Anything unreadable reads as hourly.
+     */
+    fun paceHours(now: ZonedDateTime = ZonedDateTime.now(IST)): Long = runCatching {
+        val local = now.toLocalDateTime()
+        val trading: (LocalDate) -> Boolean = { com.optionslab.app.data.Market.isTradingDay(it) }
+        val card = com.optionslab.app.security.SecurePrefs.getString("jarvis.reportcard") == now.toLocalDate().toString()
+        com.optionslab.ira.StudyPace.everyHours(local, com.optionslab.ira.NightNewsPace.nextOpen(local, trading),
+            _state.value.at?.atZone(IST)?.toLocalDateTime(), com.optionslab.ira.StudyPace.lastClose(local, trading), card)
+    }.getOrDefault(1L)
 
     fun ivHistory(u: String): List<Pair<LocalDate, Double>> = _state.value.iv[u].orEmpty()
 
@@ -209,7 +232,7 @@ internal object IraStudy {
         val slipping = checks.filter { it.slipping }
         if (slipping.isNotEmpty()) {
             IraHub.appContext()?.let { JarvisPopup.show(it, "Boss, an arm is slipping", slipping.joinToString(" ") { s -> s.text() }) }
-            IraHub.note(com.optionslab.ira.Address.boss("My monthly re-test of the arms. " + lines.joinToString(" ")))
+            IraHub.noteAloud(com.optionslab.ira.Address.boss("My monthly re-test of the arms. " + lines.joinToString(" ")), com.optionslab.ira.SpeakChoice.Weight.MINOR)
         }
     }
 
@@ -288,16 +311,31 @@ class StudyWorker(ctx: android.content.Context, params: androidx.work.WorkerPara
         runCatching { IraHub.nightNews() }
         runCatching { IraStudy.studyIfDue() }
         runCatching { IraStudy.reportCardIfDue() }
+        // Battery (round 4): every 6 hours through the dead stretch of a weekend or a holiday, hourly again before anything
+        // of this job can fall due ([com.optionslab.ira.StudyPace]). The run in progress is never cut short (UPDATE).
+        runCatching { schedule(applicationContext, IraStudy.paceHours()) }
         return Result.success()
     }
 
     companion object {
-        fun schedule(context: android.content.Context) {
+        private const val NAME = "jarvis.study"
+        /** The pace the job was last enqueued at (hours), kept so it is re-enqueued only on a change. */
+        private const val PACE_KEY = "jarvis.study.pace"
+
+        /** From the app's start: kept as it is (KEEP) at the pace last chosen; [hours] given, re-paced only when it changed. */
+        fun schedule(context: android.content.Context, hours: Long? = null) {
             if (!com.optionslab.app.BuildConfig.JARVIS) return
-            val req = androidx.work.PeriodicWorkRequestBuilder<StudyWorker>(1, java.util.concurrent.TimeUnit.HOURS)
+            val kept = runCatching { com.optionslab.app.security.SecurePrefs.getString(PACE_KEY)?.toLongOrNull() }.getOrNull()
+            val every = (hours ?: kept ?: 1L).coerceIn(1L, com.optionslab.ira.StudyPace.SLOW_HOURS)
+            val policy = if (hours != null && hours != (kept ?: 1L)) androidx.work.ExistingPeriodicWorkPolicy.UPDATE
+                else androidx.work.ExistingPeriodicWorkPolicy.KEEP
+            val req = androidx.work.PeriodicWorkRequestBuilder<StudyWorker>(every, java.util.concurrent.TimeUnit.HOURS)
                 .setConstraints(androidx.work.Constraints.Builder().setRequiredNetworkType(androidx.work.NetworkType.CONNECTED).build())
                 .build()
-            runCatching { androidx.work.WorkManager.getInstance(context).enqueueUniquePeriodicWork("jarvis.study", androidx.work.ExistingPeriodicWorkPolicy.KEEP, req) }
+            runCatching {
+                androidx.work.WorkManager.getInstance(context).enqueueUniquePeriodicWork(NAME, policy, req)
+                if (policy == androidx.work.ExistingPeriodicWorkPolicy.UPDATE) com.optionslab.app.security.SecurePrefs.put(PACE_KEY, every.toString())
+            }
         }
     }
 }

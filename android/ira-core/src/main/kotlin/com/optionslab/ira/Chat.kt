@@ -11,7 +11,7 @@ object Chat {
     private data class Talk(val rx: Regex, val replies: List<String>)
 
     private val TALK = listOf(
-        Talk(Regex("^ (how are you|how r you|how are you doing|how are you doing today|how are you today|how s it going|how is it going|how do you do|you ok|are you ok|kaise ho|kaisa hai jarvis|how have you been) $"), listOf(
+        Talk(Regex("^ (how are you|how r you|how are you doing|how are you doing today|how are you today|how s it going|how is it going|how do you do|you ok|are you ok|kaise ho|kaisa hai jarvis|how have you been|aap kaise ho|aap kaise hain|kaise hain aap|tum kaise ho|kya haal hai|how are things|how s things|how are things with you) $"), listOf(
             "I'm doing well, Boss, thanks for asking. Ready when you are.",
             "All good here, Boss. Watching the markets for you.",
             "Sharp and listening, Boss. How are you?",
@@ -32,9 +32,9 @@ object Chat {
             "Sorry to hear that, Boss. Take it easy; the market will be there tomorrow.",
             "That's tough, Boss. A short break helps. I'll keep watch.",
             "I'm here, Boss. No trades are needed today if you'd rather rest.")),
-        Talk(Regex("^ (thanks|thank you|thank you jarvis|thanks a lot|thx|shukriya|dhanyavaad|great thanks|nice|good job|well done|awesome|perfect) $"), listOf(
+        Talk(Regex("^ (thanks|thank you|thank you jarvis|thanks a lot|thx|thank u|thanku|shukriya|dhanyavaad|dhanyavad|dhanyawad|bahut shukriya|great thanks|nice|good job|well done|awesome|perfect) $"), listOf(
             "Always, Boss.", "Happy to help, Boss.", "Anytime, Boss.", "My pleasure, Boss.")),
-        Talk(Regex("^ (who are you|what are you|what is your name|what s your name|whats your name|your name|introduce yourself) $"), listOf(
+        Talk(Regex("^ (who are you|what are you|what is your name|what s your name|whats your name|your name|introduce yourself|tum kaun ho|aap kaun ho|aap kaun hain|tu kaun hai|tumhara naam kya hai|aapka naam kya hai) $"), listOf(
             "I'm Jarvis, Boss: your trading assistant inside IraAlgo. I watch the markets, your positions and the news, and I only act when you approve.",
             "Jarvis, Boss. I read the markets and your account, suggest trades, and never act without your yes.")),
         Talk(Regex("^ (who made you|who created you|who built you) $"), listOf(
@@ -57,8 +57,8 @@ object Chat {
     )
 
     private fun norm(text: String): String {
-        var t = " " + text.lowercase().replace(Regex("[^a-z0-9 ]"), " ").replace(Regex("\\s+"), " ").trim() + " "
-        repeat(2) { t = t.replace(Regex(" (jarvis|hey|hi|hello|ok|okay|boss|please) "), " ").replace(Regex("\\s+"), " ").let { " ${it.trim()} " } }
+        var t = " " + spacedWords(text.lowercase()) + " "
+        repeat(2) { t = t.replace(rx(" (jarvis|hey|hi|hello|ok|okay|boss|please) "), " ").replace(rx("\\s+"), " ").let { " ${it.trim()} " } }
         return t
     }
 
@@ -91,11 +91,13 @@ object Chat {
     fun accept(reply: String?): String? {
         val r = reply?.trim()?.removePrefix("Jarvis:")?.trim()?.lineSequence()?.firstOrNull { it.isNotBlank() }?.trim() ?: return null
         if (r.length < 2 || r.length > 280) return null
-        if (Regex("\\d").containsMatchIn(r) || FIGURES.containsMatchIn(r)) return null
+        if (rx("\\d").containsMatchIn(r) || FIGURES.containsMatchIn(r)) return null
         if (ADVICE.containsMatchIn(r) || ACTED.containsMatchIn(r)) return null
         // At most two sentences.
-        val parts = Regex("(?<=[.!?])\\s+").split(r).filter { it.isNotBlank() }
-        return parts.take(2).joinToString(" ")
+        val parts = rx("(?<=[.!?])\\s+").split(r).filter { it.isNotBlank() }
+        // A reply cut short by the word limit ends at its last whole sentence.
+        val whole = parts.take(2).let { ps -> if (ps.size > 1 && !rx("[.!?]$").containsMatchIn(ps.last())) ps.dropLast(1) else ps }
+        return whole.joinToString(" ")
     }
 
     private val PERSONAL = Regex(" (you|your|yours|yourself|you re|youre) ")

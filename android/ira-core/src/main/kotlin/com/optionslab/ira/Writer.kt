@@ -15,14 +15,41 @@ object Writer {
             "at most four short sentences; reply with the answer only."
         val user = buildString {
             append("QUESTION: ").append(question.take(300)).append('\n')
-            append("FACTS:\n"); facts.take(40).forEach { append("- ").append(it).append('\n') }
+            append("FACTS:\n"); relevant(facts, question, draft).forEach { append("- ").append(it).append('\n') }
             append("DRAFT: ").append(draft)
         }
         return "<|im_start|>system\n$sys<|im_end|>\n<|im_start|>user\n$user<|im_end|>\n<|im_start|>assistant\n"
     }
 
+    /**
+     * The facts worth giving the model, in their own order: those sharing a number with the [draft], then those sharing
+     * a word with the question or draft, at most [max]. Every word the model reads costs time on the phone (Boss: "late
+     * response"), and the draft already holds what the answer needs; the check still uses all the facts.
+     */
+    fun relevant(facts: List<String>, question: String, draft: String, max: Int = 12): List<String> {
+        if (facts.size <= max) return facts
+        val nums = NUM.findAll(draft).map { it.value.replace(",", "") }.toSet()
+        val words = WORD.findAll((question + " " + draft).lowercase()).map { it.value }.filter { it.length > 3 }.toSet()
+        fun score(f: String): Int {
+            val n = NUM.findAll(f).count { it.value.replace(",", "") in nums }
+            val w = WORD.findAll(f.lowercase()).count { it.value in words }
+            return n * 10 + w
+        }
+        val keep = facts.withIndex().map { it to score(it.value) }.filter { it.second > 0 }
+            .sortedByDescending { it.second }.take(max).map { it.first }.sortedBy { it.index }.map { it.value }
+        return keep.ifEmpty { facts.take(max) }
+    }
+
+    /** Shorter than this, and one sentence: not rewritten. */
+    const val SHORT = 90
+
+    private val NUM = Regex("\\d[\\d,]*(\\.\\d+)?")
+    private val WORD = Regex("[a-z]+")
+
     /** Should the model be asked at all? Only for answers built from facts - never orders, refusals or advice questions. */
     fun worthRewriting(q: Question, a: Answer): Boolean =
+        // A one-line answer is plain already; rewriting it would only hold the model while the next question waits.
+        (a.text.length >= SHORT || rx("(?<=[.!?])\\s+\\S").findAll(a.text).count() >= 1) &&
         a.facts.isNotEmpty() && a.order == null && Topic.ADVICE !in q.topics && Topic.ORDER !in q.topics && Topic.BACKTEST !in q.topics
 
     private val ADVICE = Regex("\\b(should|shouldn't|recommend\\w*|suggest\\w*|advis\\w*|consider (buying|selling)|buy now|sell now|go long|go short|" +
@@ -34,10 +61,10 @@ object Writer {
      * is built from the facts), advice or forecast words the draft did not have, a link or a template token, or nothing.
      */
     fun check(output: String, facts: List<String>, draft: String): String? {
-        var t = output.substringBefore("<|im_end|>").replace(Regex("<\\|[^|]*\\|>"), " ").replace(Regex("\\s+"), " ").trim()
+        var t = output.substringBefore("<|im_end|>").replace(rx("<\\|[^|]*\\|>"), " ").replace(rx("\\s+"), " ").trim()
         if (t.isEmpty() || t.length > 900) return null
-        if (Regex("https?://|www\\.", RegexOption.IGNORE_CASE).containsMatchIn(t)) return null
-        val sentences = Regex("(?<=[.!?])\\s+").split(t).filter { it.isNotBlank() }
+        if (rx("https?://|www\\.", RegexOption.IGNORE_CASE).containsMatchIn(t)) return null
+        val sentences = rx("(?<=[.!?])\\s+").split(t).filter { it.isNotBlank() }
         if (sentences.size > 4) t = sentences.take(4).joinToString(" ")
         if (ADVICE.containsMatchIn(t) && !ADVICE.containsMatchIn(draft)) return null
         val known = facts + draft

@@ -64,26 +64,26 @@ object SettingsTalk {
         // A change is asked for with a verb first ("set max lots to 3", "turn off the loss limit"), or as the whole
         // sentence "<name> <value>" ("max lots 5", "daily loss limit off"); anything else ("the loss limit is 5000
         // right?", "tell me if max lots is 3") is a question, never a change.
-        val verb = Regex("^ (set|change|make|update|edit|put|increase|raise|decrease|reduce|lower|turn (on|off)|switch (on|off)|disable|enable|remove|keep|allow|block) ").containsMatchIn(s)
-        val (key, named) = NAMES.firstNotNullOfOrNull { (k, r) -> Regex(" ($r) ").find(s)?.let { k to it } } ?: return null
+        val verb = rx("^ (set|change|make|update|edit|put|increase|raise|decrease|reduce|lower|turn (on|off)|switch (on|off)|disable|enable|remove|keep|allow|block) ").containsMatchIn(s)
+        val (key, named) = NAMES.firstNotNullOfOrNull { (k, r) -> rx(" ($r) ").find(s)?.let { k to it } } ?: return null
         val nameRx = NAMES.first { it.first == key }.second
-        val bare = Regex("^ (the |my )?($nameRx) (is |to |at |of )?(\\S+( \\S+)?) $").containsMatchIn(s)
-        val cutoffPhrase = key == Key.CUTOFF && Regex("^ no new (entries|positions|trades) after ").containsMatchIn(s)
+        val bare = rx("^ (the |my )?($nameRx) (is |to |at |of )?(\\S+( \\S+)?) $").containsMatchIn(s)
+        val cutoffPhrase = key == Key.CUTOFF && rx("^ no new (entries|positions|trades) after ").containsMatchIn(s)
         if (!verb && !bare && !cutoffPhrase) return null
         // "By 2000" is a change by an amount, not to it: asked again rather than guessed.
-        if (Regex(" by \\d").containsMatchIn(s)) return null
+        if (rx(" by \\d").containsMatchIn(s)) return null
         val after = s.substring(named.range.last)
         val rest = s.replaceRange(named.range, " ")
         // Off only when the words say so next to the name or as the verb ("square off" elsewhere is not "off").
-        val off = Regex("^ (off|none|no limit|unlimited|disabled|removed)( |$)").containsMatchIn(after) ||
-            Regex("^ (turn|switch) off |^ (disable|remove) ").containsMatchIn(s)
-        val on = Regex("^ on( |$)").containsMatchIn(after) || Regex("^ (turn|switch) on |^ enable ").containsMatchIn(s)
+        val off = rx("^ (off|none|no limit|unlimited|disabled|removed)( |$)").containsMatchIn(after) ||
+            rx("^ (turn|switch) off |^ (disable|remove) ").containsMatchIn(s)
+        val on = rx("^ on( |$)").containsMatchIn(after) || rx("^ (turn|switch) on |^ enable ").containsMatchIn(s)
         val value: Double = when (key.unit) {
             Unit.SWITCH -> if (key == Key.NAKED_SHORTS && !named.value.contains("block")) {
                 // "Naked shorts" bare: what is said is about the shorts themselves - blocking them is the switch on.
-                when { off || Regex("^ block ").containsMatchIn(s) -> 1.0; on || Regex("^ allow ").containsMatchIn(s) -> 0.0; else -> return null }
-            } else when { off -> 0.0; on -> 1.0; key == Key.NAKED_SHORTS && Regex("^ block ").containsMatchIn(s) -> 1.0; else -> return null }
-            Unit.PRODUCT -> if (!verb) return null else when { Regex(" mis ").containsMatchIn(rest) -> 0.0; Regex(" nrml | normal | carry ?forward ").containsMatchIn(rest) -> 1.0; else -> return null }
+                when { off || rx("^ block ").containsMatchIn(s) -> 1.0; on || rx("^ allow ").containsMatchIn(s) -> 0.0; else -> return null }
+            } else when { off -> 0.0; on -> 1.0; key == Key.NAKED_SHORTS && rx("^ block ").containsMatchIn(s) -> 1.0; else -> return null }
+            Unit.PRODUCT -> if (!verb) return null else when { rx(" mis ").containsMatchIn(rest) -> 0.0; rx(" nrml | normal | carry ?forward ").containsMatchIn(rest) -> 1.0; else -> return null }
             Unit.TIME -> time(rest)?.toDouble() ?: if (off) -1.0 else return null
             else -> number(rest, key) ?: if (off && key.canOff) 0.0 else return null
         }
@@ -91,11 +91,11 @@ object SettingsTalk {
     }
 
     /** "Change my PIN": not by voice. */
-    fun forbidden(s: String): Boolean = Regex("^ (set|change|make|update|edit|turn (on|off)|switch (on|off)|disable|enable|remove) ").containsMatchIn(s) && NEVER.containsMatchIn(s)
+    fun forbidden(s: String): Boolean = rx("^ (set|change|make|update|edit|turn (on|off)|switch (on|off)|disable|enable|remove) ").containsMatchIn(s) && NEVER.containsMatchIn(s)
 
     /** The value after the setting's name: "5000", "5k", "1 lakh", "10 thousand", "2.5" (percent). */
     private fun number(s: String, key: Key): Double? {
-        val m = Regex(" (\\d+(?:\\.\\d+)?) ?(k|thousand|lakh|lakhs|lac|l|crore)?(?= )").findAll(s).lastOrNull() ?: return null
+        val m = rx(" (\\d+(?:\\.\\d+)?) ?(k|thousand|lakh|lakhs|lac|l|crore)?(?= )").findAll(s).lastOrNull() ?: return null
         val n = m.groupValues[1].toDouble() * when (m.groupValues[2]) {
             "k", "thousand" -> 1_000.0; "lakh", "lakhs", "lac", "l" -> 100_000.0; "crore" -> 10_000_000.0; else -> 1.0 }
         return when (key.unit) {
@@ -108,7 +108,7 @@ object SettingsTalk {
 
     /** "2 30 pm", "14 30", "2 pm", "half past two" is not read: a minute of the day within market hours, or null. */
     private fun time(s: String): Int? {
-        val m = Regex(" (\\d{1,2})(?: (\\d{2}))? ?(am|pm)? ").findAll(s).lastOrNull() ?: return null
+        val m = rx(" (\\d{1,2})(?: (\\d{2}))? ?(am|pm)? ").findAll(s).lastOrNull() ?: return null
         var h = m.groupValues[1].toInt(); val min = m.groupValues[2].ifEmpty { "0" }.toInt()
         if (m.groupValues[3] == "pm" && h < 12) h += 12
         if (m.groupValues[3].isEmpty() && h in 1..3) h += 12      // "2 30" in market hours is 14:30

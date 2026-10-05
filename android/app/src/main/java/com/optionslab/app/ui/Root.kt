@@ -164,7 +164,8 @@ fun Root(activity: MainActivity, splash: Boolean = false) {
             RefusedScreen(findings.filter { it.severity == Integrity.Severity.DANGER }.map { "${it.name}: ${it.detail}" }) { activity.finishAndRemoveTask() }
             return@IraAlgoTheme
         }
-        val brokerNow by model.broker.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+        val brokerNowState = model.broker.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+        val linkedNow by remember { androidx.compose.runtime.derivedStateOf { brokerNowState.value.linked } }
         // The idle lock: checked every few seconds while the session is open.
         LaunchedEffect(locked) { while (!locked) { delay(5_000); SessionLock.checkIdle() } }
         // Battery: checked on every start; the app stays closed until it is unrestricted.
@@ -184,7 +185,7 @@ fun Root(activity: MainActivity, splash: Boolean = false) {
             // IraGoldAlgo: its own three screens, no Zerodha.
             else if (com.optionslab.app.BuildConfig.GOLD) com.optionslab.app.ui.screens.GoldMain(model)
             // Until a Zerodha account is linked the app shows only the setup page.
-            else if (!brokerNow.linked && !SKIP_ZERODHA_GATE) ConnectGate(model)
+            else if (!linkedNow && !SKIP_ZERODHA_GATE) ConnectGate(model)
             else Main(model)
         }
     }
@@ -380,8 +381,9 @@ private fun Main(model: AppModel) {
     val message by model.message.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     val kiteLogin by model.showKiteLogin.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     // Trading (the Ticket and Trade tabs, live or paper) appears only once a Zerodha account is linked.
-    val broker by model.broker.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
-    val linked = broker.linked
+    // Only whether Zerodha is linked matters here: a refresh of the broker's other details does not recompose the app.
+    val brokerState = model.broker.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val linked by remember { androidx.compose.runtime.derivedStateOf { brokerState.value.linked } }
     // Paper trading needs no Zerodha account, so Trade is always there; live needs one linked.
     val tabs = Tab.entries
     LaunchedEffect(linked) {
@@ -404,15 +406,28 @@ private fun Main(model: AppModel) {
         MainActivity.closeRequests.value = null
     }
 
+    // A tapped notification's card (MainActivity): a Settings notice opens its page with the row highlighted; every
+    // card is then shown over the app as a banner (below), until dismissed. The chat keeps its line as before.
+    val card by MainActivity.cardRequests.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    LaunchedEffect(card) {
+        val c = card ?: return@LaunchedEffect
+        val r = com.optionslab.app.work.NoticeCards.route(c)
+        if (r is com.optionslab.app.work.NoticeCards.Route.Setting) {
+            go(navNow().setting(r.page))
+            com.optionslab.app.ui.SettingFocus.ask(r.key)
+        }
+    }
+
     // The market watch runs by itself on market days; opening the app restarts it if Android stopped it.
     LaunchedEffect(Unit) { model.ensureWatch() }
-    // Price the NIFTY chain in the background, so the Options tab opens with it ready.
-    LaunchedEffect(Unit) { delay(1500); if (model.tools.value is Load.Idle) model.loadTools("NIFTY", quiet = true) }
+    // Price the NIFTY chain in the background, so the Options tab opens with it ready (Battery, round 7: a chain read in the
+    // last 5 minutes is shown instead of pricing it again).
+    LaunchedEffect(Unit) { delay(1500); if (model.tools.value is Load.Idle) model.loadTools("NIFTY", quiet = true, reuseRecent = true) }
 
     val notify = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
     LaunchedEffect(Unit) {
         if (Build.VERSION.SDK_INT >= 33 && !SecurePrefs.getBoolean("asked.notify", false)) {
-            SecurePrefs.put("asked.notify", true)
+            SecurePrefs.putAllSoon(mapOf("asked.notify" to true))
             notify.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
     }
@@ -468,12 +483,30 @@ private fun Main(model: AppModel) {
             val typing = WindowInsets.ime.getBottom(androidx.compose.ui.platform.LocalDensity.current) > 0
             if (!fullChart && !typing) TabBar(tab, tabs) { go(navNow().pick(it)) }
         }
+        // A tapped notification's banner: over the pages, under the popups it may open (a close review, the PIN, the login).
+        card?.let { c ->
+            androidx.compose.runtime.key(c) {
+                com.optionslab.app.ui.screens.NoticeBanner(c, onDismiss = { MainActivity.cardRequests.value = null }, onClose = { venue, sym ->
+                    // The app's own close paths: a Zerodha position's goes the way of its notification's "Close…" button
+                    // (the close popup, its review and PIN / fingerprint); a paper one opens its row's popup (slide to close).
+                    if (venue == "Live") MainActivity.closeRequests.value = sym
+                    else { tab = Tab.TRADE; tradePage = "account"; model.openPaperClose(sym) }
+                }, entries = { kind ->
+                    // Home's own rows, read fresh: their Approve / Skip (and in Live the PIN or fingerprint) as on Home.
+                    LaunchedEffect(kind) { model.refreshStrategies() }
+                    if (kind == "orb") com.optionslab.app.ui.screens.OrbRows(model)
+                    else com.optionslab.app.ui.screens.StrategyArmCard(model, onManage = {
+                        MainActivity.cardRequests.value = null; go(navNow().home("strategy"))
+                    })
+                })
+            }
+        }
         // Order reviews open over any page, wherever the order was asked for.
         // First use only: a short guide the first time the app opens after Zerodha is linked, never again.
         var tour by remember { mutableStateOf(!SecurePrefs.getBoolean(com.optionslab.app.ui.screens.GETTING_STARTED, false)) }
         val again by com.optionslab.app.ui.screens.showGettingStarted.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
         if (tour || again) com.optionslab.app.ui.screens.GettingStarted(onGo = { dest ->
-            SecurePrefs.put(com.optionslab.app.ui.screens.GETTING_STARTED, true); tour = false
+            SecurePrefs.putAllSoon(mapOf(com.optionslab.app.ui.screens.GETTING_STARTED to true)); tour = false
             com.optionslab.app.ui.screens.showGettingStarted.value = false
             if (dest == "chart") { chartAsk = "BANKNIFTY" to "NSE"; chartNonce++ }
             go(navNow().tour(dest))
@@ -525,6 +558,9 @@ internal data class NavState(
         "broker" -> copy(tab = Tab.CABINET, cabinetPage = "broker")
         else -> this
     }
+
+    /** A Settings row asked for by a tapped notification: its Settings (More) page ([com.optionslab.app.work.NoticeCards.SETTINGS]). */
+    fun setting(page: String): NavState = copy(tab = Tab.CABINET, cabinetPage = page)
 
     /** A shortcut on Home; anything else it names is a More page. */
     fun home(dest: String): NavState = when (dest) {
@@ -619,8 +655,11 @@ internal fun Masthead(live: Boolean, calm: Boolean, linked: Boolean, onMode: (Bo
     var confirmLive by remember { mutableStateOf(false) }
     var needLink by remember { mutableStateOf(false) }
     var now by remember { mutableStateOf(Market.now()) }
-    LaunchedEffect(Unit) { while (true) { delay(15_000); now = Market.now() } }
-    val open = Market.isOpen()
+    // Battery (round 2): only while the app is in front (a stopped app's composition kept ticking); read again on return.
+    com.optionslab.app.ui.PollWhileStarted { while (true) { now = Market.now(); delay(15_000) } }
+    // Read with [now], so the state follows the clock: computed once, it stayed "Market closed" after the 09:15 open
+    // when the screen had first drawn before it (5 Oct, 09:24).
+    val open = now.let { Market.isOpen() }
     // The trading mode, on every screen. Tap to switch; going live asks first (and needs Zerodha linked).
     val modePill: @Composable () -> Unit = {
                 val tint = if (live) p.oxblood else p.verdigris
@@ -664,7 +703,11 @@ internal fun Masthead(live: Boolean, calm: Boolean, linked: Boolean, onMode: (Bo
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.align(Alignment.CenterVertically)) {
                         StatusDot(if (open) p.verdigris else p.inkFaint, pulsing = open && !calm, modifier = Modifier.size(6.dp))
                         Spacer(Modifier.width(4.dp))
+                        // Shut on a weekday in session hours: the holiday's name, so a wrong list is visible (and fixable in Schedule).
+                        val why = remember(now, open) { if (open || !Market.isWeekday() || Market.minuteNow() !in Market.OPEN until Market.CLOSE) null else
+                            runCatching { com.optionslab.app.data.Holidays.book().upcoming(Market.today()).firstOrNull { it.first == Market.today() }?.second }.getOrNull() }
                         Text(if (open) "Market open" else "Market closed", style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp))
+                        if (why != null) Text(" · $why", style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp))
                     }
                 }
             }

@@ -153,7 +153,7 @@ class ModelDownload : Service() {
         IraModel.dropOthers(c)
         IraModel.publish { IraModel.State(status = IraModel.Status.READY, done = spec.size) }
         runCatching {
-            Notifier.post(c, DONE_ID, Notifier.IRA, "Jarvis's model is ready", "Answers are now written on the phone by ${IraModel.NAME}; every number is checked.", tab = "almanac")
+            Notifier.post(c, DONE_ID, Notifier.IRA, "Jarvis's model is ready", "Answers are now written on the phone by ${IraModel.NAME}; every number is checked.", tab = "almanac", setting = "jarvis.model")
         }
     }
 

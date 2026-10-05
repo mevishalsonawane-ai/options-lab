@@ -92,6 +92,9 @@ object Holidays {
         cache = b
     }
 
+    /** Kept for the tests' calendar resets; the holiday list alone decides (no price evidence overrides it). */
+    internal fun forgetTrading() {}
+
     fun isHoliday(d: LocalDate): Boolean = book().holiday(d)
 
     @Synchronized

@@ -31,7 +31,7 @@ internal object IraSaved {
         // The conversation: what was said and the facts shown (an order card or a pending action is not brought back).
         o.put("messages", JSONArray().apply { messages.filter { !it.writing }.forEach { m ->
             put(JSONObject().put("ira", m.fromIra).put("text", m.text).put("facts", JSONArray(m.facts))
-                .apply { m.draft?.let { put("draft", it) }; m.proposal?.let { put("proposal", it) } }) } })
+                .apply { m.draft?.let { put("draft", it) }; m.proposal?.let { put("proposal", it) }; if (m.whole) put("whole", true) }) } })
         return o.toString()
     }
 
@@ -49,7 +49,8 @@ internal object IraSaved {
                 val m = a.getJSONObject(i)
                 val f = m.optJSONArray("facts") ?: JSONArray()
                 IraHub.Msg(m.getBoolean("ira"), m.getString("text"), (0 until f.length()).map { f.getString(it) },
-                    draft = m.optString("draft").takeIf { it.isNotEmpty() }, proposal = if (m.has("proposal")) m.getLong("proposal") else null)
+                    draft = m.optString("draft").takeIf { it.isNotEmpty() }, proposal = if (m.has("proposal")) m.getLong("proposal") else null,
+                    whole = m.optBoolean("whole", false))
             }.getOrNull() } },
         )
     }

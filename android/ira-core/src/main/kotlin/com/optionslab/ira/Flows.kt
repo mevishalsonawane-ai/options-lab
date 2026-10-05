@@ -12,9 +12,9 @@ object Flows {
     /** NSE's JSON list ([{"category":"DII","date":"01-Oct-2026","buyValue":"..","sellValue":"..","netValue":".."}, ...]). */
     fun parse(json: String): List<Flow> {
         val out = ArrayList<Flow>()
-        for (m in Regex("\\{[^{}]*\\}").findAll(json)) {
+        for (m in rx("\\{[^{}]*\\}").findAll(json)) {
             val o = m.value
-            fun f(k: String) = Regex("\"$k\"\\s*:\\s*\"?([^\",}]*)\"?").find(o)?.groupValues?.get(1)?.trim()
+            fun f(k: String) = rx("\"$k\"\\s*:\\s*\"?([^\",}]*)\"?").find(o)?.groupValues?.get(1)?.trim()
             val who = f("category") ?: continue
             val net = f("netValue")?.replace(",", "")?.toDoubleOrNull() ?: continue
             out += Flow(if (who.contains("FII", true) || who.contains("FPI", true)) "FII" else if (who.contains("DII", true)) "DII" else who.uppercase(), f("date") ?: "",

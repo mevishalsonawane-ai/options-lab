@@ -381,6 +381,7 @@ private fun OrderReviewBody(model: AppModel) {
         // The reason shows in the red banner; the review closes.
         is Load.Failed -> { com.optionslab.app.ui.components.AlertOn(pl.why); LaunchedEffect(pl) { model.dismissPlan() } }
         is Load.Done -> {
+            PreTradeNote(pl.value)
             PlanCard(pl.value, s.allowRealOrders && s.live, sending, onPrice = model::setLegPrice, onSend = { confirming = true }, onClose = model::dismissPlan)
             st?.takeIf { it.plan == pl.value }?.let { stk -> StuckCard(stk) { stuckAction = it } }
         }
@@ -392,6 +393,22 @@ private fun OrderReviewBody(model: AppModel) {
             when (a) { "cancel" -> model.cancelStuck(); "reprice" -> model.repriceStuck(); else -> model.continueAfterStuck() }
         }, onCancel = { stuckAction = null })
     }
+}
+
+/**
+ * Jarvis's word before an opening order (just after a loss, past Boss's usual day or his own trade goal, the first five
+ * minutes, one of his rules): shown above the order, words only - nothing in the order is blocked or changed.
+ */
+@Composable
+private fun PreTradeNote(plan: OrderPlan) {
+    val p = LocalPalette.current
+    // Keyed on what is ordered, not the plan itself: a typed limit price makes a new plan, and should not read it again.
+    val symbols = plan.legs.map { it.tradingSymbol }
+    var note by remember(symbols, plan.exit) { mutableStateOf<String?>(null) }
+    LaunchedEffect(symbols, plan.exit) {
+        note = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { com.optionslab.app.ira.IraCoach.preTrade(symbols, plan.exit) }
+    }
+    note?.let { LedgerCard(title = "Jarvis: a moment, Boss", accent = p.amber, modifier = Modifier.padding(bottom = 10.dp)) { Note(it) } }
 }
 
 /** A leg still working at Zerodha after the send stopped: the owner decides, the rest wait. (`internal` for the JVM tests only.) */
@@ -675,9 +692,9 @@ fun BrokerPage(
     LaunchedEffect(Unit) { model.refreshBroker(); if (Broker.loggedIn) model.loadAccount() }
     Page {
         item { PageTitle("Zerodha", "Your broker, as the PC trading app uses it: Kite Connect") }
-        item { StaticIpCard(model, staticIpStatus) }
+        item { com.optionslab.app.ui.SettingSpot("broker.staticip") { StaticIpCard(model, staticIpStatus) } }
         if (b.configured) item { SelfTestCard() }
-        item {
+        item { com.optionslab.app.ui.SettingSpot("broker.login") {
             LedgerCard(title = "Connection") {
                 LedgerLine("API key", b.maskedKey)
                 LedgerLine("Session", if (b.loggedIn) "${b.user ?: "logged in"} · until ${b.expires?.format(DateTimeFormatter.ofPattern("d MMM HH:mm"))}" else "not logged in today",
@@ -694,7 +711,7 @@ fun BrokerPage(
                 if (editing) CredentialsForm(model) { editing = false }
                 if (b.configured) BrassButton("Erase Zerodha keys from this phone", Modifier.fillMaxWidth().padding(top = 8.dp), tone = p.oxblood) { forgetting = true }
             }
-        }
+        } }
         item {
             LedgerCard(title = "Mode") {
                 ParamTokens("Trading mode", listOf("Live · Zerodha" to s.live, "Paper · simulated" to !s.live)) { i ->

@@ -68,7 +68,7 @@ internal object IraActions {
         val out = ArrayList<Target>()
         runCatching { com.optionslab.app.data.Paper.snapshot() }.getOrNull()?.orders?.orders
             ?.filter { com.optionslab.ira.AppFacts.isOpen(it.status) }?.forEach { o ->
-                out += Target("paper ${o.action} ${o.quantity} ${o.symbol}") { com.optionslab.app.data.Paper.cancel(o.orderId).message }
+                out += Target("paper ${o.action} ${o.quantity} ${o.symbol}") { com.optionslab.app.data.Paper.cancel(o.orderId, "jarvis").message }
             }
         if (Broker.loggedIn) runCatching { Broker.orders() }.getOrNull()?.filter { it.working }?.forEach { o ->
             out += Target("Zerodha ${o.side} ${o.qty} ${o.symbol}") { Broker.cancel(o.id, o.variety); "Cancelled at Zerodha: ${o.side} ${o.qty} ${o.symbol}." }
@@ -128,9 +128,16 @@ internal object IraActions {
 
     // ---- doing it ---------------------------------------------------------------------------------------------------
 
-    /** What [c] would do, in words, and the action itself - or why it cannot be done (the action is then null). */
-    suspend fun prepare(c: Command): Pair<String, (suspend () -> String)?> {
+    /**
+     * What [c] would do, in words, and the action itself - or why it cannot be done (the action is then null).
+     * [heard]: Boss said [c] himself, as heard, on an unlocked phone (the hub's own command path only): then, for one arm or
+     * one position, his nicknames are read when his words match none or several ([com.optionslab.ira.Nicknames]; exactly one
+     * or none, said beside the confirm), and his pick after Jarvis's "Which one?" teaches one. Never a plan, a later command,
+     * a reading of his words or Jarvis's own checks. Understanding only: what is prepared still waits for its confirm.
+     */
+    suspend fun prepare(c: Command, heard: Boolean = false): Pair<String, (suspend () -> String)?> {
         fun pick(names: List<String>, what: String): Int? = Commands.pick(c, names)
+        val nickOn = heard && com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD
         return when (c.kind) {
             Command.Kind.STOP_ALL -> Commands.describe(c) to suspend { com.optionslab.app.data.Strategies.stopForToday(true, compromised()) }
             Command.Kind.START_ALL -> Commands.describe(c) to suspend {
@@ -142,10 +149,17 @@ internal object IraActions {
             Command.Kind.STOP_ONE, Command.Kind.START_ONE -> {
                 val all = arms()
                 if (all.isEmpty()) return "There are no strategies or arms to ${if (c.kind == Command.Kind.START_ONE) "start" else "stop"}." to null
-                val i = pick(all.map { it.first }, "strategy") ?: return ("Which one? " + all.mapIndexed { n, a -> "${n + 1}. ${a.first}" }.joinToString("; ") +
-                    ". Say its number, like \"${if (c.kind == Command.Kind.START_ONE) "start" else "stop"} strategy 1\".") to null
+                val armNames = all.map { it.first }
+                val armDirect = pick(armNames, "strategy")
+                val armNick = if (armDirect == null && nickOn) runCatching { IraTools.nickResolve(c.kind, c.target, armNames) }.getOrNull() else null
+                val i = armDirect ?: armNick?.first ?: run {
+                    if (nickOn) runCatching { IraTools.nickAsking(c.kind, c.target, armNames) }
+                    return ("Which one? " + all.mapIndexed { n, a -> "${n + 1}. ${a.first}" }.joinToString("; ") +
+                        ". Say its number, like \"${if (c.kind == Command.Kind.START_ONE) "start" else "stop"} strategy 1\".") to null
+                }
+                if (nickOn && armNick == null) runCatching { IraTools.nickPicked(c.kind, i, armNames) }
                 val (name, act) = all[i]
-                Commands.describe(c, name) to (if (c.kind == Command.Kind.START_ONE) act.first else act.second)
+                Commands.describe(c, name) + (armNick?.let { " (${it.second})" } ?: "") to (if (c.kind == Command.Kind.START_ONE) act.first else act.second)
             }
             Command.Kind.CANCEL_ALL -> {
                 val o = openOrders()
@@ -172,8 +186,15 @@ internal object IraActions {
                 if (p.isEmpty()) return "There are no open positions to close." to null
                 // "Close 1 lot of ...": only a whole position is closed here, never more than Boss asked for.
                 if (c.lots != null) return "I can only close a whole position, Boss, not ${c.lots} lot${if (c.lots == 1) "" else "s"} of it. Say \"close\" and its name to close all of it, or trim it on the Positions screen." to null
-                val i = pick(p.map { it.name }, "position") ?: return ("Which position? " + p.mapIndexed { n, x -> "${n + 1}. ${x.name}" }.joinToString("; ") + ".") to null
-                Commands.describe(c, p[i].name) to p[i].run
+                val posNames = p.map { it.name }
+                val posDirect = pick(posNames, "position")
+                val posNick = if (posDirect == null && nickOn) runCatching { IraTools.nickResolve(c.kind, c.target, posNames) }.getOrNull() else null
+                val i = posDirect ?: posNick?.first ?: run {
+                    if (nickOn) runCatching { IraTools.nickAsking(c.kind, c.target, posNames) }
+                    return ("Which position? " + p.mapIndexed { n, x -> "${n + 1}. ${x.name}" }.joinToString("; ") + ".") to null
+                }
+                if (nickOn && posNick == null) runCatching { IraTools.nickPicked(c.kind, i, posNames) }
+                Commands.describe(c, p[i].name) + (posNick?.let { " (${it.second})" } ?: "") to p[i].run
             }
             Command.Kind.KILL_ON, Command.Kind.KILL_OFF -> Commands.describe(c) to suspend {
                 setSettings { it.copy(guardKill = c.kind == Command.Kind.KILL_ON) }
@@ -265,10 +286,16 @@ internal object IraActions {
                 out.joinToString(" ")
             }
             Command.Kind.BRIEF_ON -> { IraTools.brief = true; "Short answers, Boss. Say \"tell me more\" for the rest." to null }
-            Command.Kind.BRIEF_OFF -> { IraTools.brief = false; "Full answers again." to null }
-            Command.Kind.MORE -> (IraHub.lastFullAnswer() ?: "There is no answer of mine to say more about.") to null
+            // Boss's own "full answers" wins over what was learned: the answers said shorter aloud ([com.optionslab.ira.Clarity]) too.
+            Command.Kind.BRIEF_OFF -> { IraTools.brief = false; runCatching { IraTools.clarityReset() }; "Full answers again." to null }
+            // The lock re-checked (review, 5 Oct): on a locked phone never an unasked note or the account in full. The voice
+            // answers a locked "more" itself, with Boss's voice checked ([JarvisVoice]); one reaching here is refused then.
+            Command.Kind.MORE -> (when (val moreSaid = com.optionslab.ira.MoreAnswer.reply(IraHub.lastForMore(), IraHub.locked()) { false }) {
+                is com.optionslab.ira.MoreAnswer.Reply.Say -> moreSaid.text
+                is com.optionslab.ira.MoreAnswer.Reply.Refused -> moreSaid.why
+            }) to null
             Command.Kind.PRACTICE -> "Replaying the day..." to null
-            Command.Kind.VOICE_CHECK -> JarvisVoice.diagnose(ctx()) to null
+            Command.Kind.VOICE_CHECK -> JarvisVoice.diagnose(ctx(), hint = true) to null
             Command.Kind.LEARN_RESET -> { IraTools.forgetLearned(); "Done, Boss: I've forgotten what I learned from your corrections." to null }
             Command.Kind.JTRADES_WEEKLY -> { val v = c.level ?: return "Tell me the limit in rupees." to null
                 if (v < 1000) "Tell me a weekly limit of at least Rs 1,000." to null
@@ -281,17 +308,24 @@ internal object IraActions {
             Command.Kind.PREF_RESET -> { IraNewsTrades.resetPreferences(); "Done, Boss: I'll offer every kind of suggestion again." to null }
             Command.Kind.QUIET_OFF -> { JarvisVoice.quietHours = false; "Quiet hours off." to null }
             // Jarvis's voice and language: done at once (nothing to confirm, nothing at risk).
-            Command.Kind.MUTE -> { JarvisVoice.muted = true; IraActivity.add("Muted my voice."); "Muted, Boss. I'll reply on screen only. Say \"Jarvis, unmute\" or \"Jarvis, speak again\" to hear me." to null }
+            Command.Kind.MUTE -> { JarvisVoice.muteBy(com.optionslab.ira.VoiceMute.By.TYPED); runCatching { IraTools.alertBoss(com.optionslab.ira.AlertSense.Boss.MUTED) }; IraTools.count(com.optionslab.ira.Improve.MUTED); IraActivity.add("Muted my voice."); "Muted, Boss. I'll reply on screen only. Say \"Jarvis, unmute\" or \"Jarvis, speak again\" to hear me." to null }
             Command.Kind.UNMUTE -> { JarvisVoice.muted = false; IraActivity.add("Voice back on."); "Voice on, Boss." to null }
             Command.Kind.HINDI -> { JarvisVoice.hindi = true
-                (if (IraModel.state.value.status == IraModel.Status.READY) "Ab main Hindi mein jawab doonga, Boss." else
+                (if (IraModel.state.value.status == IraModel.Status.READY) "Ab main Hindi mein jawab doonga, Boss." +
+                    (if (IraModel.choice == IraModel.FASTEST) " (The fastest model's Hindi is weak: some replies may stay in English. The 1.5B model is better at Hindi.)" else "") else
                     "Boss, Hindi replies need the AI model on the phone (Settings, Voice and AI model); until then I reply in English.") to null }
             Command.Kind.ENGLISH -> { JarvisVoice.hindi = false; "Back to English, Boss." to null }
+            Command.Kind.PACE_SLOWER -> { JarvisVoice.pace = JarvisVoice.pace - 0.15f; "Slower now, Boss." to null }
+            Command.Kind.PACE_FASTER -> { JarvisVoice.pace = JarvisVoice.pace + 0.15f; "Faster now, Boss." to null }
+            Command.Kind.PACE_NORMAL -> { JarvisVoice.pace = 1f; "Back to my normal pace, Boss." to null }
+            Command.Kind.MUTE_FOR -> { val n = c.number ?: 30; JarvisVoice.muteFor(n); runCatching { IraTools.alertBoss(com.optionslab.ira.AlertSense.Boss.MUTED) }; IraActivity.add("Quiet for $n minutes."); IraTools.count(com.optionslab.ira.Improve.MUTED)
+                "Quiet for $n minutes, Boss. Replies on screen meanwhile; say \"Jarvis, unmute\" to hear me sooner." to null }
             Command.Kind.JTRADES_PAPER -> Commands.describe(c) to suspend { IraNewsTrades.paperFirst = true; "My suggested trades stay on paper now, Boss." }
             Command.Kind.JTRADES_LIVE -> {
                 val why = com.optionslab.ira.JarvisTrades.proven(IraNewsTrades.closedRecord())
+                // Never by voice (no backdoor to real money): Boss's own switch, with his fingerprint.
                 if (why != null) "$why I'll tell you when they have earned it." to null
-                else Commands.describe(c) to suspend { IraNewsTrades.paperFirst = false; "My suggested trades now follow the app's mode: real Zerodha orders in Live, after your yes each time." }
+                else "Real money is yours to switch on, Boss: turn on \"AI trades go live\" in Jarvis settings, What Jarvis does by itself, with your fingerprint." to null
             }
             Command.Kind.JTRADES_LIMIT -> {
                 val v = c.level?.takeIf { it >= 500 } ?: return "Tell me the limit in rupees, at least 500." to null
@@ -350,6 +384,50 @@ internal object IraActions {
     }
 
     /** Runs a prepared action, logged as Jarvis's; never throws. */
+    /**
+     * Jarvis checks his own work (part 3): after [k] said it was done, the app is read again and its effect looked for
+     * (once more 3 s later, as exits and cancels take a moment); [result] comes back with the check's word.
+     */
+    suspend fun verified(k: com.optionslab.ira.Command.Kind, result: String): String {
+        val need = com.optionslab.ira.Verify.needs(k)
+        if (need.isEmpty() || com.optionslab.ira.Plan.failed(result)) return result
+        var problem: String? = null
+        var note: String? = null
+        for (wait in listOf(1_500L, 3_000L)) {
+            kotlinx.coroutines.delay(wait)
+            val f = runCatching { facts(need) }.getOrNull() ?: continue
+            problem = com.optionslab.ira.Verify.problem(k, f)
+            note = com.optionslab.ira.Verify.note(k, f)
+            if (problem == null && note == null) break
+        }
+        if (problem != null) IraActivity.add("Checked my own work: $problem.")
+        return com.optionslab.ira.Verify.say(result, problem, checked = true) + (note?.let { " $it" } ?: "")
+    }
+
+    /**
+     * The facts [need] names, read from the app now (one that cannot be read stays null: not judged). Battery (round 7):
+     * counts only - the paper book is read as it is now, but a price read in the last 20 s is shared (this checks Jarvis's
+     * own work twice after an action, words only; the action itself priced fresh).
+     */
+    private suspend fun facts(need: Set<String>): com.optionslab.ira.Verify.Facts {
+        val s = runCatching { AppSettings.load() }.getOrNull()
+        val live = s?.live == true
+        fun <T> read(name: String, f: () -> T): T? = if (name in need) runCatching(f).getOrNull() else null
+        // Both accounts: a close and the emergency exit close paper and Zerodha positions alike.
+        val positions = if ("positions" in need) runCatching {
+            com.optionslab.app.data.Paper.snapshot(com.optionslab.app.data.Paper.SHARED_QUOTE_MS).positions.positions.count { it.quantity != 0 } +
+                (if (Broker.loggedIn) Broker.positionBook().net.count { it.open } else 0)
+        }.getOrNull() else null
+        val orders = if ("orders" in need) runCatching {
+            if (live) com.optionslab.app.data.Broker.orders().count { it.working }
+            else com.optionslab.app.data.Paper.snapshot(com.optionslab.app.data.Paper.SHARED_QUOTE_MS).orders.orders.count { it.status.lowercase() !in setOf("complete", "cancelled", "rejected") }
+        }.getOrNull() else null
+        val armed = if ("armed" in need) runCatching { com.optionslab.app.data.OrbArms.view().arms.any { it.armed } }.getOrNull() else null
+        val bots = if ("bots" in need) runCatching { com.optionslab.app.data.Strategies.stoppedToday() }.getOrNull() else null
+        return com.optionslab.ira.Verify.Facts(killOn = read("kill") { s!!.guardKill }, live = read("live") { s!!.live },
+            botsStopped = bots, anyArmed = armed, openPositions = positions, workingOrders = orders)
+    }
+
     suspend fun run(what: String, act: suspend () -> String): String {
         log(what)
         IraAccount.invalidate()

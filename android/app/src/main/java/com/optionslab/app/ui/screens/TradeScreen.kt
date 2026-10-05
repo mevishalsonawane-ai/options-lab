@@ -210,7 +210,9 @@ private fun PositionsCard(model: AppModel, a: Account, onProtect: (GttTarget) ->
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text("TOTAL P&L", style = Type.label.copy(color = p.inkSoft))
+                // Zerodha's own figure, before charges; today's charges (estimated from today's trades) in small type under it.
                 RollingFigure(a.book.pnl, { rs(it, true) }, Type.figureLarge.copy(color = if (a.book.pnl >= 0) p.verdigris else p.oxblood), calm = true)
+                com.optionslab.ira.PnlCharges.line(a.charges, estimate = true)?.let { Text(it, style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 11.sp)) }
             }
             Column(horizontalAlignment = Alignment.End) {
                 Text("realised ${rs(a.book.realised, true)}", style = Type.figure.copy(color = p.inkSoft, fontSize = 12.sp))
@@ -219,23 +221,23 @@ private fun PositionsCard(model: AppModel, a: Account, onProtect: (GttTarget) ->
             }
         }
         if (open.isEmpty()) Note("Nothing open.")
-        open.forEach { ps ->
+        open.forEach { ps -> androidx.compose.runtime.key(ps.symbol, ps.product) {
             Rule(Modifier.padding(vertical = 6.dp))
             PositionRow(ps, by(ps)) { model.rowAction.value = RowTarget.LivePosition(ps) }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 4.dp)) {
                 BrassButton("Square off", tone = p.oxblood) { model.planSquareOff(ps) }
                 BrassButton("Protect (GTT)", tone = p.inkSoft) { onProtect(GttTarget(ps.exchange, ps.symbol, ps.product, ps.qty)) }
             }
-        }
+        } }
         if (open.size > 1) BrassButton("Square off all ${open.size}", Modifier.fillMaxWidth().padding(top = 10.dp), tone = p.oxblood) { model.planSquareOffAll() }
         if (closed.isNotEmpty()) {
             Spacer(Modifier.height(10.dp))
             Text("CLOSED TODAY", style = Type.label.copy(color = p.inkSoft))
-            closed.forEach { ps ->
+            closed.forEach { ps -> androidx.compose.runtime.key(ps.symbol, ps.product) {
                 LedgerLine("${ps.symbol} ${ps.product}", rs(ps.pnl, true), if (ps.pnl >= 0) p.verdigris else p.oxblood,
                     Modifier.clickable { model.rowAction.value = RowTarget.LivePosition(ps) })
                 by(ps)?.let { SourcePill(com.optionslab.app.data.Origins.positionDisplay(it)) }
-            }
+            } }
         }
         if (a.book.day.isNotEmpty()) Note("Day book: bought ${a.book.day.sumOf { it.buyQty }}, sold ${a.book.day.sumOf { it.sellQty }} across ${a.book.day.size} instruments today.")
     }
@@ -264,17 +266,17 @@ private fun OrdersCard(a: Account, owners: Map<String, String>, onTap: (Broker.O
     LedgerCard(title = "Order book") {
         if (a.orders.isEmpty()) Note("No orders today.")
         if (working.isNotEmpty()) Text("WORKING", style = Type.label.copy(color = p.amber))
-        working.forEach { o ->
+        working.forEach { o -> androidx.compose.runtime.key(o.id) {
             OrderLine(o, owners, null) { onTap(o) }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 4.dp, bottom = 6.dp)) {
                 BrassButton("Modify", tone = p.inkSoft) { onModify(o) }
                 BrassButton("Cancel", tone = p.oxblood) { onCancel(o) }
             }
-        }
+        } }
         if (done.isNotEmpty()) {
             if (working.isNotEmpty()) Rule(Modifier.padding(vertical = 6.dp))
             Text("FINISHED", style = Type.label.copy(color = p.inkSoft))
-            done.forEach { o -> OrderLine(o, owners, a.positions.firstOrNull { it.symbol == o.symbol && it.product == o.product }?.last) { onTap(o) } }
+            done.forEach { o -> androidx.compose.runtime.key(o.id) { OrderLine(o, owners, a.positions.firstOrNull { it.symbol == o.symbol && it.product == o.product }?.last) { onTap(o) } } }
         }
     }
 }
@@ -302,7 +304,7 @@ private fun TradesCard(a: Account, owners: Map<String, String>, onTap: (Broker.T
     val p = LocalPalette.current
     LedgerCard(title = "Trade book") {
         if (a.trades.isEmpty()) Note("No trades today.")
-        a.trades.forEachIndexed { i, t ->
+        a.trades.forEachIndexed { i, t -> androidx.compose.runtime.key(t.id) {
             if (i > 0) Rule(Modifier.padding(vertical = 4.dp))
             Row(Modifier.clickable { onTap(t) }, verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
@@ -315,7 +317,7 @@ private fun TradesCard(a: Account, owners: Map<String, String>, onTap: (Broker.T
                     PnlFigure(fillPnl(t.side == "BUY", t.price, t.qty, a.positions.firstOrNull { it.symbol == t.symbol && it.product == t.product }?.last))
                 }
             }
-        }
+        } }
         if (a.trades.isNotEmpty()) {
             val bought = a.trades.filter { it.side == "BUY" }.sumOf { it.qty * it.price }
             val sold = a.trades.filter { it.side == "SELL" }.sumOf { it.qty * it.price }
@@ -370,6 +372,8 @@ private fun PnlCard(a: Account, series: List<PnlTracker.Point>) {
     val p = LocalPalette.current
     LedgerCard(title = "Today's P&L") {
         RollingFigure(a.book.pnl, { rs(it, true) }, Type.figureLarge.copy(color = if (a.book.pnl >= 0) p.verdigris else p.oxblood), calm = true)
+        // Before charges, as Zerodha shows it; today's charges, estimated from today's trades, in small type under it.
+        com.optionslab.ira.PnlCharges.line(a.charges, estimate = true)?.let { Text(it, style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 11.sp)) }
         if (series.size >= 2) {
             InkCurve(series.map { it.pnl }, emptyList(), null, calm = true)
             val hi = series.maxBy { it.pnl }; val lo = series.minBy { it.pnl }

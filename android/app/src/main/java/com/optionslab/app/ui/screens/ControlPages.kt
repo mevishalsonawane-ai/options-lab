@@ -70,6 +70,10 @@ import com.optionslab.app.work.Notifier
 import com.optionslab.engine.Manifest
 import java.time.format.DateTimeFormatter
 
+
+/** An alarm's "EXCHANGE:SYMBOL" (compiled once, not at every keystroke). */
+private val ALARM_SYMBOL = Regex("^[A-Z]{2,4}:[A-Z0-9&_-]{1,32}$")
+
 @Composable
 fun ToggleRow(title: String, sub: String?, checked: Boolean, onChange: (Boolean) -> Unit) {
     val p = LocalPalette.current
@@ -119,7 +123,7 @@ fun AlarmsPage(model: AppModel) {
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(note, { note = it.take(80) }, label = { Text("Note (optional)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
                 Spacer(Modifier.height(10.dp))
-                val symbolOk = symbol in listOf("NIFTY", "BANKNIFTY", "INDIAVIX") || Regex("^[A-Z]{2,4}:[A-Z0-9&_-]{1,32}$").matches(symbol)
+                val symbolOk = symbol in listOf("NIFTY", "BANKNIFTY", "INDIAVIX") || ALARM_SYMBOL.matches(symbol)
                 BrassButton("Set alarm", Modifier.fillMaxWidth(), enabled = level.toDoubleOrNull() != null && symbolOk) {
                     model.saveAlarm(PriceAlarm(System.currentTimeMillis(), symbol, above, level.toDouble(), note = note.trim()))
                     level = ""; note = ""
@@ -279,11 +283,12 @@ fun SecurityPage(model: AppModel) {
         item { PageTitle("Security", "Nothing personal leaves this phone, and nothing is logged") }
         // The Zerodha PIN and IraAlgo's backup are IraAlgo's; the gold build has neither.
         if (!com.optionslab.app.BuildConfig.GOLD) item { KitePinCard(model) }
-        if (!com.optionslab.app.BuildConfig.GOLD) item { BackupCard(model, s.wipeOnExhaustion) }
+        if (!com.optionslab.app.BuildConfig.GOLD) item { com.optionslab.app.ui.SettingSpot("security.backup") { BackupCard(model, s.wipeOnExhaustion) } }
         item {
             LedgerCard(title = "Home-screen widget") {
-                ToggleRow("Show my P&L on the widget", "Off by default: a home screen is seen by anyone holding the unlocked phone. Index levels are always shown.", s.widgetPnl) { on ->
+                ToggleRow("Show my P&L on the widget", "Off by default: a home screen is seen by anyone holding the unlocked phone. Index levels are always shown; the Open widget shows nothing else without it.", s.widgetPnl) { on ->
                     model.update { it.copy(widgetPnl = on) }
+                    runCatching { com.optionslab.app.widget.OpenWidget.refresh(context, on) }
                 }
             }
         }
@@ -327,7 +332,7 @@ fun SecurityPage(model: AppModel) {
                 ).forEach { Text("✕  $it", style = Type.bodySmall.copy(color = p.ink), modifier = Modifier.padding(vertical = 2.dp)) }
             }
         }
-        item {
+        item { com.optionslab.app.ui.SettingSpot("security.unlock") {
             LedgerCard(title = "Unlocking") {
                 ToggleRow("Fingerprint", when (kind) {
                     BiometricGate.Kind.STRONG -> "Unlocks the app, confirms orders and opens the Zerodha secret; tied to a hardware key that dies if a finger is added or removed"
@@ -380,7 +385,7 @@ fun SecurityPage(model: AppModel) {
                     BrassButton("Seal now", Modifier.weight(1f)) { SessionLock.lock() }
                 }
             }
-        }
+        } }
         item {
             LedgerCard(title = "What protects you") {
                 listOf(
@@ -456,8 +461,8 @@ fun SchedulePage(model: AppModel) {
     val fmt = DateTimeFormatter.ofPattern("EEE d MMM, HH:mm")
     Page {
         item { PageTitle("Schedules & Notices", "The strategy's day, kept by the phone") }
-        item { HolidaysCard(model) }
-        item {
+        item { com.optionslab.app.ui.SettingSpot("schedule.holidays") { HolidaysCard(model) } }
+        item { com.optionslab.app.ui.SettingSpot("schedule.notifications") {
             LedgerCard(title = "Notifications") {
                 Note("You always get three: a buy filled, a sell filled, and an order or strategy start waiting for your approval. " +
                     "While your orders and strategies are watched in market hours, Android requires one ongoing notice: it is kept at the lowest " +
@@ -466,7 +471,7 @@ fun SchedulePage(model: AppModel) {
                     model.update { it.copy(otherAlerts = on) }
                 }
             }
-        }
+        } }
         item {
             LedgerCard(title = "The Day") {
                 val rows = listOf(
@@ -511,13 +516,21 @@ fun SchedulePage(model: AppModel) {
                 Note("The expiry calendar comes from the instrument master; " + (if (expiries < 0) "reading it…" else "$expiries upcoming NIFTY expiries are known."))
             }
         }
-        item {
+        item { com.optionslab.app.ui.SettingSpot("schedule.permissions") {
             LedgerCard(title = "Permissions") {
                 val exact = Jobs.canExact(context)
                 val notif = Notifier.canPost(context)
                 LedgerLine("Notifications", if (notif) "allowed" else "blocked", if (notif) p.verdigris else p.oxblood)
                 LedgerLine("Precise alarms", if (exact) "allowed" else "not allowed", if (exact) p.verdigris else p.amber)
                 if (!exact) Note("Without precise alarms the phone may run jobs late, and cannot start the all-day market watch on its own.")
+                // The order watch's notices and the morning check point here when Android battery-optimizes the app.
+                val battery = BatteryCheck.unrestricted(context)
+                LedgerLine("Battery", if (battery) "Unrestricted" else "optimized", if (battery) p.verdigris else p.oxblood)
+                if (!battery) {
+                    Note("Android may stop the order watch - and the stops, targets and strategy exits it checks - while IraAlgo is battery-optimized. Set IraAlgo's battery to Unrestricted.")
+                    Spacer(Modifier.height(8.dp))
+                    BrassButton("Set battery to Unrestricted", Modifier.fillMaxWidth()) { BatteryCheck.ask(context) }
+                }
                 Spacer(Modifier.height(8.dp))
                 Row {
                     BrassButton("Notification settings", Modifier.weight(1f), tone = p.inkSoft) {
@@ -531,7 +544,7 @@ fun SchedulePage(model: AppModel) {
                     }
                 }
             }
-        }
+        } }
         item {
             LedgerCard(title = "Appearance") {
                 val themes = listOf("system" to "Follow the phone", "light" to "Light", "dark" to "Dark")
@@ -620,7 +633,7 @@ private fun KitePinCard(model: AppModel) {
 fun RiskPage(model: AppModel) {
     Page {
         item { PageTitle("Bot settings", "Limits on every order the bot or you place, paper and live") }
-        item { GuardCard(model) }
+        item { com.optionslab.app.ui.SettingSpot("risk.guards") { GuardCard(model) } }
     }
 }
 

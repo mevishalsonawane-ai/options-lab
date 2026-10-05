@@ -61,13 +61,15 @@ fun GoldMain(model: AppModel) {
     // While the app is open the pass runs every minute (the alarm does it every five in the background).
     // It also (re)starts the always-on background service whenever an arm needs it.
     val appContext = androidx.compose.ui.platform.LocalContext.current.applicationContext
-    LaunchedEffect(Unit) { while (true) { withContext(Dispatchers.IO) { GoldPaper.tick() }; com.optionslab.app.work.GoldService.ensure(appContext); delay(60_000) } }
+    // Battery (round 2): only while the app is in front - in the background the service (armed or holding) and the
+    // 5-minute alarm already run the pass, so this one only doubled the feed reads.
+    com.optionslab.app.ui.PollWhileStarted { while (true) { withContext(Dispatchers.IO) { GoldPaper.tick() }; com.optionslab.app.work.GoldService.ensure(appContext); delay(60_000) } }
     // Android 13+: the buy / sell notifications need the owner's permission, asked once (IraAlgo asks on its own main
     // screen, which this app never shows - without this the gold alerts were silently blocked).
     val notify = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestPermission()) { }
     LaunchedEffect(Unit) {
         if (android.os.Build.VERSION.SDK_INT >= 33 && !com.optionslab.app.security.SecurePrefs.getBoolean("asked.notify", false)) {
-            com.optionslab.app.security.SecurePrefs.put("asked.notify", true)
+            com.optionslab.app.security.SecurePrefs.putAllSoon(mapOf("asked.notify" to true))
             notify.launch(android.Manifest.permission.POST_NOTIFICATIONS)
         }
     }
@@ -98,6 +100,14 @@ fun GoldMain(model: AppModel) {
             }
         }
     }
+    // A tapped notification (its own buy / sell, or Jarvis's): the same banner as IraAlgo's, over the unlocked app.
+    // Nothing here closes a position or opens IraAlgo's settings: the banner only reads.
+    val card by com.optionslab.app.MainActivity.cardRequests.collectAsState(Dispatchers.Main.immediate)
+    card?.let { c ->
+        androidx.compose.runtime.key(c) {
+            NoticeBanner(c.copy(close = null, setting = null), onDismiss = { com.optionslab.app.MainActivity.cardRequests.value = null }, onClose = { _, _ -> })
+        }
+    }
     AlertBanner()
     }
 }
@@ -120,8 +130,16 @@ private fun GoldChartTab() {
         marketOpen = { GoldLiquidity.inSession(GoldPaper.now()) })
 }
 
+/** The saved paper books are still being read ([com.optionslab.app.data.GoldBooks]): a moment's note, no switches yet. */
+@Composable
+private fun GoldBooksLoading() {
+    Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) { Note("Opening the paper books…") }
+}
+
 @Composable
 private fun GoldHome() {
+    val ready by com.optionslab.app.data.GoldBooks.ready.collectAsState()
+    if (!ready) { GoldBooksLoading(); return }
     val p = LocalPalette.current
     val b by GoldPaper.book.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     val chart by GoldPaper.chart.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
@@ -312,6 +330,8 @@ private fun GoldTrades() {
 
 @Composable
 private fun GoldSettings(model: AppModel) {
+    val ready by com.optionslab.app.data.GoldBooks.ready.collectAsState()
+    if (!ready) { GoldBooksLoading(); return }
     val p = LocalPalette.current
     val b by GoldPaper.book.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     val s by model.settings.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
@@ -387,7 +407,7 @@ internal fun GoldBackgroundCheck(compact: Boolean) {
     val context = androidx.compose.ui.platform.LocalContext.current
     // Re-read every 2 s while shown, so coming back from Settings updates it.
     var n by remember { mutableStateOf(0) }
-    LaunchedEffect(Unit) { while (true) { delay(2_000); n++ } }
+    com.optionslab.app.ui.PollWhileStarted { while (true) { delay(2_000); n++ } }
     val notif = remember(n) { com.optionslab.app.work.Notifier.canPost(context) }
     val exact = remember(n) { com.optionslab.app.work.Jobs.canExact(context) }
     val battery = remember(n) { BatteryCheck.unrestricted(context) }

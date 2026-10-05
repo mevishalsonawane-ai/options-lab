@@ -1,0 +1,24 @@
+# Reads the pinned facts (commit, size, SHA-256) of candidate on-device models from Hugging Face, for IraModel.Spec.
+# Prints only public metadata; downloads nothing.
+name: Model info
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/android-options-lab-kotlin-xgt1ym]
+    paths: [.github/workflows/model-info.yml]
+permissions:
+  contents: read
+jobs:
+  info:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Qwen2.5 0.5B Instruct GGUF
+        run: |
+          for repo in Qwen/Qwen2.5-0.5B-Instruct-GGUF; do
+            sha=$(curl -sS "https://huggingface.co/api/models/$repo" | python3 -c "import json,sys; print(json.load(sys.stdin)['sha'])")
+            echo "REPO $repo COMMIT $sha"
+            curl -sS -X POST "https://huggingface.co/api/models/$repo/paths-info/$sha" \
+              -d 'paths=qwen2.5-0.5b-instruct-q4_k_m.gguf&paths=qwen2.5-0.5b-instruct-q8_0.gguf&expand=true' |
+              python3 -c "import json,sys
+          for f in json.load(sys.stdin): print('FILE', f['path'], 'SIZE', f['size'], 'SHA256', (f.get('lfs') or {}).get('oid'))"
+          done

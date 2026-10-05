@@ -56,6 +56,32 @@ class ActTest {
         assertTrue(Command.Kind.STOP_ONE.reduces && !Command.Kind.START_ONE.reduces && Command.Kind.CLOSE_ALL.reduces && !Command.Kind.KILL_OFF.reduces)
     }
 
+    @Test fun aPositionIsPickedByItsRightAndStrikeNeverTheOtherRight() {
+        val pe = "paper NIFTY25O2124500PE (75)"
+        val ce = "paper NIFTY25O2124600CE (75)"
+        fun close(t: String) = Command(Command.Kind.CLOSE_ONE, target = t)
+        // Both held: "put" is the PE, "call" the CE; a strike inside the symbol counts.
+        assertEquals(0, Commands.pick(close("nifty put"), listOf(pe, ce)))
+        assertEquals(1, Commands.pick(close("nifty call"), listOf(pe, ce)))
+        assertEquals(0, Commands.pick(close("24500 put"), listOf(pe, ce)))
+        assertEquals(1, Commands.pick(close("24600"), listOf(pe, ce)))
+        assertEquals(0, Commands.pick(close("24500 pe"), listOf(pe, ce)))
+        // Only a call held: "my nifty put" never picks it (Jarvis asks which).
+        assertNull(Commands.pick(close("nifty put"), listOf(ce)))
+        assertNull(Commands.pick(close("24600 put"), listOf(ce)))
+        assertNull(Commands.pick(close("nifty call"), listOf(pe)))
+        // Ambiguous: two puts, or put and call both said.
+        val pe2 = "paper NIFTY25O2124400PE (75)"
+        assertNull(Commands.pick(close("nifty put"), listOf(pe, pe2)))
+        assertEquals(1, Commands.pick(close("24400 put"), listOf(pe, pe2, ce)))
+        assertNull(Commands.pick(close("put and call"), listOf(pe, ce)))
+        assertNull(Commands.pick(close("nifty"), listOf(pe, ce)), "two match: ask, never guess")
+        // As parsed from Boss's words (and the pronoun close plan's "close my 24500 put").
+        Commands.parse("close my nifty put")?.let { assertEquals(0, Commands.pick(it, listOf(pe, ce)), it.toString()) }
+        Commands.parse("close my nifty put")?.let { assertNull(Commands.pick(it, listOf(ce)), it.toString()) }
+        Commands.parse("close my 24500 put")?.let { assertEquals(0, Commands.pick(it, listOf(ce, pe).reversed()), it.toString()) }
+    }
+
     @Test fun jarvisOwnTradesAreNotTheAppsMode() {
         assertEquals(Command.Kind.JTRADES_LIVE, Commands.parse("Jarvis, let your trades go live")?.kind)
         assertEquals(Command.Kind.JTRADES_PAPER, Commands.parse("keep your trades on paper")?.kind)

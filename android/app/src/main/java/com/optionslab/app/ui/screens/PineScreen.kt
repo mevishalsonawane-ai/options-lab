@@ -423,6 +423,10 @@ private fun PineBacktest(env: PineEnv, d: PineDraft, s: Pine.Script, onChart: ()
     val busy = d.testing
     val scroll = rememberScrollState()
     var resultTop by remember { mutableStateOf(0) }
+    // Asked to bring the result into view (counted): scrolled from an effect, after the result is composed - never from
+    // the click's coroutine while a layout pass is running (CI, 4 Oct: "performMeasureAndLayout called during measure").
+    var scrollAsk by remember { mutableStateOf(0) }
+    LaunchedEffect(scrollAsk) { if (scrollAsk > 0) scroll.animateScrollTo(resultTop) }
     val strategy = s.kind == Pine.Kind.STRATEGY
 
     Column(Modifier.fillMaxSize().verticalScroll(scroll).padding(horizontal = 14.dp, vertical = 8.dp),
@@ -528,7 +532,7 @@ private fun PineBacktest(env: PineEnv, d: PineDraft, s: Pine.Script, onChart: ()
             scope.launch {
                 job.join()
                 // The result sits below the inputs: bring it into view.
-                scroll.animateScrollTo(resultTop)
+                scrollAsk++
             }
         }
         d.stage?.let { Text(it, style = Type.bodySmall.copy(color = p.inkSoft)) }

@@ -34,7 +34,7 @@ object Later {
      */
     fun mentionsTime(text: String): Boolean {
         // ("Stop all strategies today" is for now; "tomorrow" never is.)
-        if (IN.containsMatchIn(text) || Regex("(?i)\\b(tomorrow|tmrw|tomorow|kal)\\b").containsMatchIn(text)) return true
+        if (IN.containsMatchIn(text) || rx("(?i)\\b(tomorrow|tmrw|tomorow|kal)\\b").containsMatchIn(text)) return true
         return TIME.findAll(text).any { m ->
             val g = m.groupValues
             val h = (g[1].ifEmpty { g[4].ifEmpty { g[6] } }).toIntOrNull() ?: return@any false
@@ -90,7 +90,7 @@ object Later {
         return When(clean(t), at)
     }
 
-    private fun clean(s: String) = s.replace(FILLER, " ").replace(Regex("\\s+"), " ").trim().trimEnd(',', '.', '?', '!').trim()
+    private fun clean(s: String) = s.replace(FILLER, " ").replace(rx("\\s+"), " ").trim().trimEnd(',', '.', '?', '!').trim()
 
     /** "Sat 4 Oct at 09:00" (or "today at 15:15"). */
     fun say(at: LocalDateTime, now: LocalDateTime): String {
@@ -100,5 +100,28 @@ object Later {
             now.toLocalDate().plusDays(1) -> "tomorrow (" + at.format(DateTimeFormatter.ofPattern("EEE d MMM", Locale.ENGLISH)) + ") at $hm"
             else -> at.format(DateTimeFormatter.ofPattern("EEE d MMM", Locale.ENGLISH)) + " at $hm"
         }
+    }
+
+    /**
+     * "Cancel everything set for later": what the Confirm asks for - each reminder named ([ReminderBook.confirmAll]) and
+     * each command set for a time ([commands]: its words and time) - or null when nothing is set. Asked first, like a
+     * reminder alone (review, 5 Oct: it was all dropped at once); only those named go, on Confirm.
+     */
+    fun confirmClear(reminders: List<ReminderBook.Kept>, commands: List<Pair<String, LocalDateTime>>, now: LocalDateTime): String? {
+        if (reminders.isEmpty() && commands.isEmpty()) return null
+        val toldReminders = if (reminders.isEmpty()) null else ReminderBook.confirmAll(reminders, now)
+        val toldCommands = if (commands.isEmpty()) null
+            else (if (commands.size == 1) "cancel the command set for later - " else "cancel all ${commands.size} commands set for later - ") +
+                commands.sortedBy { it.second }.joinToString("; ") { "\"" + it.first + "\" " + say(it.second, now) }
+        return listOfNotNull(toldReminders, toldCommands).joinToString(", and ")
+    }
+
+    /** Said once what was named is dropped ([reminders], [commands]: how many were still there to drop). */
+    fun clearedSaid(reminders: Int, commands: Int): String {
+        if (reminders + commands == 0) return "Those are gone already, Boss - nothing was set for later to cancel."
+        val parts = listOfNotNull(
+            if (reminders == 0) null else if (reminders == 1) "1 reminder" else "$reminders reminders",
+            if (commands == 0) null else if (commands == 1) "1 command set for later" else "$commands commands set for later")
+        return "Done, Boss: " + parts.joinToString(" and ") + " cancelled."
     }
 }

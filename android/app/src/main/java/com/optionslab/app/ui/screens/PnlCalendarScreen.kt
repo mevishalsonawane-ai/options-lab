@@ -79,6 +79,16 @@ import kotlin.math.sqrt
 /** The calendar shows IraGoldAlgo's paper account (USD, gold's 24x5 weekdays) rather than IraAlgo's (rupees, NSE days). */
 private val LocalGold = androidx.compose.runtime.staticCompositionLocalOf { false }
 
+/** The charges shown are Zerodha's, estimated from its trades (the paper account's are what it paid). */
+private val LocalEstimate = androidx.compose.runtime.staticCompositionLocalOf { false }
+
+/**
+ * The small line under a P&L shown before charges (Boss, 5 Oct): "Charges ₹180" (paper), "Charges ≈ ₹180 (estimate)"
+ * (Zerodha); null when there is none (no charges kept, or gold, whose figures are after its own costs).
+ */
+@Composable @androidx.compose.runtime.ReadOnlyComposable
+private fun chargesLine(charges: Double): String? = if (LocalGold.current) null else com.optionslab.ira.PnlCharges.line(charges, LocalEstimate.current)
+
 /** Rupees in IraAlgo; US dollars and cents in IraGoldAlgo (its paper account is in USD). */
 @Composable @androidx.compose.runtime.ReadOnlyComposable
 private fun cur() = if (LocalGold.current) "$" else "₹"
@@ -142,21 +152,27 @@ fun PnlCalendarScreen(model: AppModel) {
     // One strategy: its realised round trips by the day they closed.
     val all = if (owner == "All") accountDays else remember(trips, owners, owner) {
         trips.filter { com.optionslab.app.data.TradeBook.ownerOf(it, owners) == owner }.groupBy { it.day }
-            .mapValues { (d, ts) -> DailyPnl.Day(d, Math.round(ts.sumOf { it.net } * 100) / 100.0, ts.size) }
+            .mapValues { (d, ts) -> DailyPnl.Day(d, Math.round(ts.sumOf { it.gross } * 100) / 100.0, ts.size, Math.round(ts.sumOf { it.charges } * 100) / 100.0) }
     }
     val first = all.keys.minOrNull()?.let { YearMonth.from(it) }
     // Today is shown live from the account as it stands now, not from the last recorded reading.
     val today = Market.today()
-    val paperNow by model.paper.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
-    val accountNow by model.account.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val paperState = model.paper.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val accountState = model.account.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    // Speed, round 2: only today's figure is read from the books, so a re-priced account recomposes the calendar only
+    // when that figure (or its trade count) changes.
+    val accountToday by remember(live, today) { androidx.compose.runtime.derivedStateOf {
+        if (live) (accountState.value as? com.optionslab.app.ui.Load.Done)?.value
+            ?.takeIf { it.book.net.isNotEmpty() || it.trades.isNotEmpty() }?.let { DailyPnl.Day(today, it.book.m2m, it.trades.size, it.charges) }
+        else (paperState.value as? com.optionslab.app.ui.Load.Done)?.value?.let { sn ->
+            // Before charges, as the tiles show every day, with the day's charges for the tip and the totals.
+            val pnl = sn.dayGross
+            if (sn.trades.isNotEmpty() || pnl != 0.0 || sn.positions.positions.any { it.quantity != 0 }) DailyPnl.Day(today, pnl, sn.trades.size, sn.dayCharges) else null
+        }
+    } }
     // After midnight (paper, until its 03:00 reset) or before 09:00 (Zerodha) the account still shows the
     // previous day, which is already on its own tile.
-    val todayLive: DailyPnl.Day? = if (DailyPnl.sessionDay(live) != today) null else if (live) (accountNow as? com.optionslab.app.ui.Load.Done)?.value
-        ?.takeIf { it.book.net.isNotEmpty() || it.trades.isNotEmpty() }?.let { DailyPnl.Day(today, it.book.m2m, it.trades.size) }
-        else (paperNow as? com.optionslab.app.ui.Load.Done)?.value?.let { sn ->
-            val pnl = sn.dayPnl
-            if (sn.trades.isNotEmpty() || pnl != 0.0 || sn.positions.positions.any { it.quantity != 0 }) DailyPnl.Day(today, pnl, sn.trades.size) else null
-        }
+    val todayLive: DailyPnl.Day? = if (DailyPnl.sessionDay(live) != today) null else accountToday
     val days = all.filterKeys { YearMonth.from(it) == month }.let { m ->
         if (owner == "All" && todayLive != null && YearMonth.from(today) == month) m + (today to todayLive) else m
     }
@@ -174,8 +190,8 @@ fun PnlCalendarScreen(model: AppModel) {
         if (uri != null) {
             val rows = all.values.sortedBy { it.date }
             val text = buildString {
-                append("date,account,strategy,pnl,trades\n")
-                rows.forEach { d -> append("${d.date},${if (live) "Zerodha" else "Paper"},${owner.replace(',', ' ')},${"%.2f".format(Locale.ENGLISH, d.pnl)},${d.trades}\n") }
+                append("date,account,strategy,pnl,trades,charges\n")
+                rows.forEach { d -> append("${d.date},${if (live) "Zerodha" else "Paper"},${owner.replace(',', ' ')},${"%.2f".format(Locale.ENGLISH, d.pnl)},${d.trades},${"%.2f".format(Locale.ENGLISH, d.charges)}\n") }
             }
             val ok = runCatching { ctx.contentResolver.openOutputStream(uri)?.use { it.write(text.toByteArray(Charsets.UTF_8)) } }.isSuccess
             if (ok) com.optionslab.app.work.Alerts.success("Exported ${rows.size} days.") else com.optionslab.app.work.Alerts.error("Could not write the file.")
@@ -186,6 +202,7 @@ fun PnlCalendarScreen(model: AppModel) {
     val monthTrips = remember(trips, owners, owner, month) {
         trips.filter { YearMonth.from(it.day) == month && (owner == "All" || com.optionslab.app.data.TradeBook.ownerOf(it, owners) == owner) }.map { it.net }
     }
+    androidx.compose.runtime.CompositionLocalProvider(LocalEstimate provides live) {
     Page {
         item {
             LedgerCard {
@@ -210,7 +227,7 @@ fun PnlCalendarScreen(model: AppModel) {
                     MonthGrid(month, days, picked, animKey = "$live|$month|$owner") { d -> picked = if (picked == d) null else d }
                     Legend()
                 }
-                if (owner != "All") Note("$owner: realised round trips by the day they closed, after charges.", Modifier.padding(top = 6.dp))
+                if (owner != "All") Note("$owner: realised round trips by the day they closed, before charges (the charges under the totals).", Modifier.padding(top = 6.dp))
             }
         }
         // A past date's orders, trades and positions live here only (the Trade tab shows today's): tap a date to list its fills.
@@ -220,6 +237,7 @@ fun PnlCalendarScreen(model: AppModel) {
         item { StrategyComparison(trips, owners) }
         item { ChargesCard(live, month, tick) }
         item { JournalCard(trips) }
+    }
     }
 }
 
@@ -260,8 +278,10 @@ private fun Headline(month: YearMonth, days: Map<LocalDate, DailyPnl.Day>, prev:
     val tone = if (net >= 0) p.verdigris else p.oxblood
     Row(Modifier.fillMaxWidth().padding(top = 12.dp), verticalAlignment = Alignment.Bottom) {
         Column(Modifier.weight(1f)) {
-            Eyebrow("Net P&L · month")
+            Eyebrow("P&L · month")
             Text(rupees(net), style = Type.figure.copy(color = if (days.isEmpty()) p.inkFaint else tone, fontSize = 24.sp, fontWeight = FontWeight.SemiBold, letterSpacing = (-0.6).sp))
+            // The month's figure is before charges (each day's as its tile); the month's charges in small type under it.
+            chargesLine(days.values.sumOf { it.charges })?.let { Text(it, style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 10.5.sp)) }
             Text(if (prev.isEmpty()) "No figures for ${mon(month.minusMonths(1))}" else "${rupees(net - prev.values.sumOf { it.pnl })} vs ${mon(month.minusMonths(1))}",
                 style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 10.5.sp))
         }
@@ -409,6 +429,8 @@ private fun DayTip(d: LocalDate, day: DailyPnl.Day?, tile: androidx.compose.ui.g
             }
             Text(day?.let { rupees(it.pnl) } ?: "No trades", style = Type.figure.copy(fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
                 color = when { day == null -> p.paper; day.pnl > 0 -> Color(0xFF3DDC97); day.pnl < 0 -> Color(0xFFFF7A73); else -> p.paper }))
+            // The tile's figure is before charges; that day's charges under it, small.
+            day?.let { chargesLine(it.charges) }?.let { Text(it, style = Type.label.copy(color = p.paper.copy(alpha = 0.7f), fontSize = 9.5.sp)) }
             day?.takeIf { it.trades > 0 }?.let { Text("${it.trades} trade${if (it.trades == 1) "" else "s"}", style = Type.label.copy(color = p.paper.copy(alpha = 0.7f), fontSize = 9.5.sp)) }
         }
     }
@@ -479,7 +501,7 @@ private fun Summary(month: YearMonth, days: Map<LocalDate, DailyPnl.Day>, tradeN
             if (share < 1f) Box(Modifier.weight((1f - share).coerceAtLeast(0.001f)).height(5.dp).background(p.oxblood))
         }
         Note(if (LocalGold.current) "Each day is the trades closed that day (India time), after the spread and commission."
-            else "Each day is realised plus open P&L after charges, as it stood at the day's last reading.", Modifier.padding(top = 8.dp))
+            else "Each day is realised plus open P&L before charges, as it stood at the day's last reading; the charges are shown under the month's figure and each day's tip.", Modifier.padding(top = 8.dp))
     }
 }
 
@@ -632,8 +654,14 @@ private fun ChargesCard(live: Boolean, month: YearMonth, tick: Int) {
 @Composable
 private fun JournalCard(trips: List<com.optionslab.engine.RoundTrips.Trip>) {
     val p = LocalPalette.current
-    val stats = remember(trips) { com.optionslab.app.data.Journal.byTag(trips) }
-    val notes = remember(trips) { com.optionslab.app.data.Journal.all().values.filter { it.note.isNotBlank() }.sortedByDescending { it.at }.take(5) }
+    // The journal is a vault file: read (decrypted) off the main thread, not while composing.
+    val read by produceState<Pair<List<com.optionslab.app.data.Journal.TagStat>, List<com.optionslab.app.data.Journal.Entry>>>(emptyList<com.optionslab.app.data.Journal.TagStat>() to emptyList(), trips) {
+        value = withContext(Dispatchers.IO) { runCatching {
+            com.optionslab.app.data.Journal.byTag(trips) to com.optionslab.app.data.Journal.all().values.filter { it.note.isNotBlank() }.sortedByDescending { it.at }.take(5)
+        }.getOrNull() } ?: value
+    }
+    val stats = read.first
+    val notes = read.second
     LedgerCard {
         Eyebrow("Journal")
         if (stats.isEmpty() && notes.isEmpty()) {
@@ -663,6 +691,18 @@ private fun DayTrades(live: Boolean, day: LocalDate, trips: List<com.optionslab.
         }
     }
     val closed = trips.filter { it.day == day }
+    // Today's closed trades replayed against their own minute candles (read only; past days' contracts may have expired).
+    val replay by produceState<List<String>>(emptyList(), live, day, closed.size) {
+        value = if (closed.isEmpty() || day != Market.today()) emptyList() else withContext(Dispatchers.IO) {
+            runCatching { com.optionslab.app.ira.IraJournal.replayLines(closed, owners) }.getOrDefault(emptyList())
+        }
+    }
+    // Jarvis's journal of the day (drafted after the close or on "help me journal today"), with Boss's answers in his words.
+    val journal by produceState<List<String>>(emptyList(), live, day, tick) {
+        value = if (!com.optionslab.app.BuildConfig.JARVIS || com.optionslab.app.BuildConfig.GOLD) emptyList() else withContext(Dispatchers.IO) {
+            runCatching { com.optionslab.app.ira.IraDayJournal.entry(day, live) }.getOrDefault(emptyList())
+        }
+    }
     val title = day.format(java.time.format.DateTimeFormatter.ofPattern("EEE d MMM yyyy", Locale.ENGLISH))
     LedgerCard(title = "Trades on $title") {
         if (fills.isEmpty()) { Note(if (live) "No Zerodha trades recorded that day." else "No paper trades that day.", Modifier.padding(top = 4.dp)); return@LedgerCard }
@@ -680,12 +720,26 @@ private fun DayTrades(live: Boolean, day: LocalDate, trips: List<com.optionslab.
             }
         }
         if (closed.isNotEmpty()) {
-            val net = closed.sumOf { it.net }
+            // Before charges, as every P&L is shown; the day's charges for these trades in small type under it.
+            val gross = closed.sumOf { it.gross }
             Spacer(Modifier.height(6.dp))
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text("${closed.size} closed trade${if (closed.size == 1) "" else "s"}, after charges", style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp), modifier = Modifier.weight(1f))
-                Text(rupees(net), style = Type.figure.copy(color = if (net >= 0) p.verdigris else p.oxblood, fontSize = 15.sp, fontWeight = FontWeight.SemiBold))
+                Text("${closed.size} closed trade${if (closed.size == 1) "" else "s"}", style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp), modifier = Modifier.weight(1f))
+                Text(rupees(gross), style = Type.figure.copy(color = if (gross >= 0) p.verdigris else p.oxblood, fontSize = 15.sp, fontWeight = FontWeight.SemiBold))
             }
+            com.optionslab.ira.PnlCharges.line(closed.sumOf { it.charges }, estimate = live)?.let {
+                Text(it, style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 11.sp), modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.End)
+            }
+        }
+        if (replay.isNotEmpty()) {
+            Eyebrow("Replay · from the minute candles", Modifier.padding(top = 10.dp))
+            replay.forEach { Text("• $it", style = Type.bodySmall.copy(color = p.ink, fontSize = 12.sp), modifier = Modifier.padding(top = 3.dp)) }
+            Note("What each trade did while held and after you got out: facts, not advice.", Modifier.padding(top = 4.dp))
+        }
+        if (journal.isNotEmpty()) {
+            Eyebrow("Journal · drafted by Jarvis", Modifier.padding(top = 10.dp))
+            journal.forEach { Text("• $it", style = Type.bodySmall.copy(color = p.ink, fontSize = 12.sp), modifier = Modifier.padding(top = 3.dp)) }
+            Note("Drafted from the facts; the answers are yours, as you said them. Say \"help me journal today\" for the questions.", Modifier.padding(top = 4.dp))
         }
     }
 }

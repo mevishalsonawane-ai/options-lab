@@ -19,6 +19,8 @@ dependencies {
 tasks.test {
     useJUnitPlatform()
     maxHeapSize = "1g"
+    // `-Dira.bench=1`: the question-chain timing (AskChainBenchTest) runs longer for steadier numbers.
+    System.getProperty("ira.bench")?.let { systemProperty("ira.bench", it) }
     testLogging { events("failed"); exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL }
     finalizedBy(tasks.jacocoTestReport)
 }

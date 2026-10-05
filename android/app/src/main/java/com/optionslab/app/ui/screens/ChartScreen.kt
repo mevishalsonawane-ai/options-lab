@@ -154,7 +154,10 @@ internal fun ChartPane(
             return
         }
         val (sym, _) = current
-        scope.launch {
+        // On the main thread, not the composition's dispatcher: under the UI tests' unconfined dispatcher the code after
+        // withContext(IO) ran on the IO thread, and the hint written there recomposed and laid out the views off the main
+        // thread (CalledFromWrongThreadException in ChartScreensLayoutTest.chartIndexBuyHint). Same as 05aa5cc's screens.
+        scope.launch(Dispatchers.Main.immediate) {
             val c = withContext(Dispatchers.IO) { runCatching { source.contract(sym) }.getOrNull() }
             if (c == null) { hint = "Indices cannot be traded. Search an option in the chart (e.g. NIFTY 24800 CE) to buy or sell it."; return@launch }
             // The sheet's LTP is the last traded price, not the level under the finger.
@@ -180,18 +183,23 @@ internal fun ChartPane(
     val streamStatus by com.optionslab.app.data.KiteStream.status.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     val streaming = live && streamStatus == com.optionslab.app.data.KiteStream.Status.LIVE
     var liveToken by remember { mutableStateOf<Long?>(null) }
-    LaunchedEffect(current, streaming) {
+    LaunchedEffect(current, streaming) { withContext(Dispatchers.Main.immediate) {
         liveToken = if (!streaming) null else withContext(Dispatchers.IO) { runCatching { source.streamToken(current.first) }.getOrNull() }
         com.optionslab.app.data.KiteStream.want("chart", listOfNotNull(liveToken))
-    }
+    } }
     DisposableEffect(Unit) { onDispose { com.optionslab.app.data.KiteStream.want("chart", emptyList()) } }
-    val tickVersion by com.optionslab.app.data.KiteStream.version.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
-    LaunchedEffect(tickVersion, liveToken, visible, ready) {
-        val t = liveToken?.let { com.optionslab.app.data.KiteStream.tick(it) } ?: return@LaunchedEffect
-        // Pre-open and after-close ticks would draw candles the exchange never had.
-        if (!visible || !ready || !com.optionslab.app.data.Market.isOpen()) return@LaunchedEffect
-        val at = t.exchangeTime ?: (System.currentTimeMillis() / 1000)
-        holder[0]?.evaluateJavascript("window.__iraTick && window.__iraTick(${t.last}, $at)", null)
+    // Speed, round 2: the stream's version (every 500 ms) is followed inside the effect, not read by the screen, so a
+    // tick no longer recomposes the whole chart page (kept alive off screen too); each version moves the candle as before.
+    LaunchedEffect(liveToken, visible, ready) {
+        val token = liveToken ?: return@LaunchedEffect
+        if (!visible || !ready) return@LaunchedEffect
+        com.optionslab.app.data.KiteStream.version.collect {
+            val t = com.optionslab.app.data.KiteStream.tick(token) ?: return@collect
+            // Pre-open and after-close ticks would draw candles the exchange never had.
+            if (!com.optionslab.app.data.Market.isOpen()) return@collect
+            val at = t.exchangeTime ?: (System.currentTimeMillis() / 1000)
+            holder[0]?.evaluateJavascript("window.__iraTick && window.__iraTick(${t.last}, $at)", null)
+        }
     }
 
     // Data arrived but the page never said it drew: this phone's WebView is not drawing it.
@@ -271,8 +279,8 @@ internal fun ChartPane(
             // Basic (drawn by the app) or Advanced (indicators, drawings; needs the phone's WebView).
             Text(if (basic) "BASIC" else "ADV", textAlign = TextAlign.Center, style = Type.label.copy(color = p.ink, fontSize = 12.sp, fontWeight = FontWeight.Bold),
                 modifier = chip.clickable {
-                    if (basic) { basicChosen = false; autoBasic = null; com.optionslab.app.security.SecurePrefs.put("chart.basic", false); if (failed) { failed = false; retried = false; ready = false; gen++ } }
-                    else { basicChosen = true; com.optionslab.app.security.SecurePrefs.put("chart.basic", true) }
+                    if (basic) { basicChosen = false; autoBasic = null; com.optionslab.app.security.SecurePrefs.putAllSoon(mapOf("chart.basic" to false)); if (failed) { failed = false; retried = false; ready = false; gen++ } }
+                    else { basicChosen = true; com.optionslab.app.security.SecurePrefs.putAllSoon(mapOf("chart.basic" to true)) }
                 }.padding(horizontal = 10.dp, vertical = 8.dp))
             // A price alert on whatever is charted, at a level you choose.
             if (trading) Text("ALERT", textAlign = TextAlign.Center, style = Type.label.copy(color = p.ink, fontSize = 12.sp, fontWeight = FontWeight.Bold),
@@ -396,7 +404,7 @@ internal fun ChartPane(
     chainFor?.let { u ->
         chainDialog(u, { chainFor = null }) { pick ->
             chainFor = null
-            scope.launch {
+            scope.launch(Dispatchers.Main.immediate) {
                 val sym = withContext(Dispatchers.IO) {
                     runCatching { source.contracts().firstOrNull { c ->
                         c.underlying == pick.underlying && c.expiry == pick.expiry && c.strike == pick.strike && c.right == pick.right }?.tradingSymbol }.getOrNull()
@@ -419,11 +427,11 @@ internal fun ChartAlertDialog(symbol: String, source: ChartSource, onSave: (com.
     val p = LocalPalette.current
     var now by remember { mutableStateOf<Double?>(null) }
     var level by remember { mutableStateOf("") }
-    LaunchedEffect(symbol) {
+    LaunchedEffect(symbol) { withContext(Dispatchers.Main.immediate) {
         val t = System.currentTimeMillis() / 1000
         now = withContext(Dispatchers.IO) { runCatching { source.bars(symbol, "1m", t - 3 * 86400, t).lastOrNull()?.close }.getOrNull() }
         if (level.isEmpty()) now?.let { level = String.format(java.util.Locale.ENGLISH, "%.2f", it) }
-    }
+    } }
     val lv = level.toDoubleOrNull()
     val cur = now
     com.optionslab.app.ui.components.AlertDialog(
