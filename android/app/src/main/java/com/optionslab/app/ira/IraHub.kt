@@ -730,13 +730,16 @@ object IraHub {
         val where = if (goesLive) " on ZERODHA with real money (approve with your fingerprint)"
             else if (com.optionslab.app.data.AppSettings.load().live) " (on paper: ${if (solo) "Solo's" else "my"} trades stay there until proven)" else ""
         val hourLine = listOfNotNull(badHour, badKind, calibLine?.takeIf { sitOut && !solo }).takeIf { it.isNotEmpty() }?.let { " A caution: ${it.joinToString("; ")}." } ?: ""
-        val full = "$text$ivLine ${conf.text()}$risk$hourLine Shall I $what$where? Approve or reject."
+        // The reason Boss has turned such ideas down for, said up front when it fits this one ([com.optionslab.ira.TurnDowns]):
+        // one line of words before the question - the idea, its gates and his Approve or reject are unchanged. Unlocked only.
+        val turnLine = if (phoneLocked()) null else runCatching { IraTools.turnDownsLine(expiryToday(m)) }.getOrNull()
+        val full = "$text$ivLine ${conf.text()}$risk$hourLine" + (turnLine?.let { " $it" } ?: "") + " Shall I $what$where? Approve or reject."
         _state.update { it.copy(pending = it.pending + id, messages = (it.messages + Msg(true, full, action = id)).takeLast(MAX_MESSAGES)) }
         JarvisApproval.show(c, id, title, full)
         // A score that has not held up is said aloud with its record beside it ([com.optionslab.ira.HonestStars]); the score,
         // the chat and the approval card are as worked out. On a locked phone, or on any trouble, the plain words.
         val starsAloud = if (phoneLocked()) "Confidence ${conf.stars} out of 5." else IraTools.starsAloud(conf.stars)
-        JarvisVoice.askYesNo(id, "$said $starsAloud Shall I buy 1 lot of the ${m.label} $side? Yes or no?")
+        JarvisVoice.askYesNo(id, "$said $starsAloud" + (turnLine?.let { " $it" } ?: "") + " Shall I buy 1 lot of the ${m.label} $side? Yes or no?")
         scope.launch {
             kotlinx.coroutines.delay(NEWS_ANSWER_MS)
             if (synchronized(actions) { actions.remove(id) } != null) {
@@ -1192,6 +1195,13 @@ object IraHub {
                 return
             }
         }
+        // Boss's very next words just after he turned a trade idea down, when they give his reason ("it's too late in the
+        // day"): its kind noted ([com.optionslab.ira.TurnDowns]; never his words) and acknowledged - a statement only, never
+        // a question, an order or a command. Any other words end the wait and go on as usual. Nothing learned acts.
+        if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !understood && !cleaned) {
+            val noted = runCatching { IraTools.turnDownReason(q) }.getOrNull()
+            if (noted != null) { _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, noted)).takeLast(MAX_MESSAGES)) }; return }
+        }
         // A new question: the model stops polishing the last answer (it stands as shown).
         IraModel.stopWriting()
         // Boss asking anything just after an unasked alert: he followed it up ([com.optionslab.ira.AlertSense]; kinds and minutes only).
@@ -1275,6 +1285,7 @@ object IraHub {
                 com.optionslab.ira.WrongThing.asked(q) != null || com.optionslab.ira.WrongThing.objected(q) || com.optionslab.ira.MindChange.asked(q) ||
                 com.optionslab.ira.ArmHabits.asked(q) || com.optionslab.ira.MorningSense.asked(q) != null ||
                 com.optionslab.ira.HonestStars.asked(q) != null || com.optionslab.ira.TalkHours.asked(q) != null || com.optionslab.ira.MorningAsks.asked(q) != null || com.optionslab.ira.BatteryUse.asked(q) ||
+                com.optionslab.ira.TurnDowns.asked(q) != null ||
                 com.optionslab.ira.DayCompare.asked(q) != null || com.optionslab.ira.LikeToday.asked(q) }.getOrDefault(false)) {
             val prev = if (recent) _state.value.messages.lastOrNull { !it.fromIra }?.text else null
             val qs = runCatching { com.optionslab.ira.Understand.questions(prev, q) }.getOrNull()
@@ -1940,7 +1951,7 @@ object IraHub {
 
     /**
      * [ask]'s question branches on how Jarvis himself speaks and hears: AlertSense, Airtime, Hearing, PatternCalls,
-     * TrendReads, Clarity, WordFit, AskedAgain, FigureFirst, WrongThing, ArmHabits, MorningSense, HonestStars, TalkHours, MorningAsks - in [ask]'s order. True when one
+     * TrendReads, Clarity, WordFit, AskedAgain, FigureFirst, WrongThing, ArmHabits, MorningSense, HonestStars, TalkHours, MorningAsks, TurnDowns - in [ask]'s order. True when one
      * took [q], answered exactly as before; each branch keeps its own guard (not [bundled], no order, no command).
      */
     private fun askedOfHisWays(q: String, parsed: com.optionslab.ira.Question, bundled: Boolean, understood: Boolean): Boolean {
@@ -2099,6 +2110,17 @@ object IraHub {
             runCatching { com.optionslab.ira.MorningAsks.asked(q) }.getOrNull() else null
         if (usualAsk != null) {
             val said = if (usualAsk == com.optionslab.ira.MorningAsks.Request.RESET) IraTools.morningAsksReset() else IraTools.morningAsksSay()
+            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
+            return true
+        }
+        // "Why do I turn down your ideas?" / "don't remind me why I turn your ideas down": the reasons Boss turns Jarvis's
+        // trade ideas down for, said up front before the next idea they fit ([com.optionslab.ira.TurnDowns]; reason kinds
+        // and times only). His own habits: named on an unlocked phone only. Words only - nothing learned acts.
+        val turnAsk = if (com.optionslab.app.BuildConfig.JARVIS && !bundled && parsed.order == null && parsed.command == null)
+            runCatching { com.optionslab.ira.TurnDowns.asked(q) }.getOrNull() else null
+        if (turnAsk != null) {
+            val said = if (turnAsk == com.optionslab.ira.TurnDowns.Request.RESET) IraTools.turnDownsReset()
+                else if (phoneLocked()) com.optionslab.ira.TurnDowns.LOCKED else IraTools.turnDownsSay()
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
             return true
         }
@@ -3458,11 +3480,15 @@ object IraHub {
 
     private fun isSolo(id: Long): Boolean = synchronized(actions) { id in soloAsks }
 
-    fun cancelAction(id: Long) {
+    /** [said]: Boss's spoken words for the rejection ("no, too late in the day"), when he said it aloud. */
+    fun cancelAction(id: Long, said: String? = null) {
         // Only what is still waiting can be cancelled: one already confirmed (or lapsed) is not said to be undone.
         val (was, trade) = synchronized(actions) { exitIds.remove(id); (actions.remove(id) != null) to (id in newsAsks) }
         if (!was) { _state.update { it.copy(pending = it.pending - id) }; return }
         if (trade) IraNewsTrades.answered(id, "rejected")
+        // A trade idea turned down: the reason he gave with it, or in his very next words, is noted - its kind only
+        // ([com.optionslab.ira.TurnDowns]). It is said up front before the next idea it fits; nothing learned acts.
+        if (trade && com.optionslab.app.BuildConfig.JARVIS) runCatching { IraTools.turnedDown(said) }
         settled(id)
         IraActivity.add(if (trade) "You rejected a suggested trade; nothing was placed." else "Cancelled a request; nothing was done.")
         _state.update { it.copy(pending = it.pending - id, messages = (it.messages + Msg(true, "Cancelled; nothing was done.")).takeLast(MAX_MESSAGES)) }

@@ -1052,6 +1052,83 @@ internal object IraTools {
         return said
     }
 
+    // ---- the reasons Boss turns Jarvis's trade ideas down for ([com.optionslab.ira.TurnDowns]) ---------------------------
+
+    /** The reasons noted: each one's kind and time only - never Boss's words, the idea or his account. */
+    private const val TURN_DOWNS = "jarvis.turnDowns"
+    @Volatile private var turnCache: com.optionslab.ira.TurnDowns.Log? = null
+    /** When Boss last turned an idea down without a reason yet (in memory only; his very next words end it). */
+    @Volatile private var turnedDownAt: LocalDateTime? = null
+
+    fun turnLog(): com.optionslab.ira.TurnDowns.Log = turnCache ?: runCatching {
+        val o = JSONObject(prefs().getString(TURN_DOWNS) ?: "{}")
+        val n = o.optJSONArray("n") ?: JSONArray()
+        com.optionslab.ira.TurnDowns.Log(
+            notes = (0 until n.length()).map { i -> n.getJSONObject(i).let { x ->
+                com.optionslab.ira.TurnDowns.Note(LocalDateTime.parse(x.getString("t")), x.getString("k")) } },
+            resetAt = o.optString("r").takeIf { it.isNotEmpty() }?.let { LocalDateTime.parse(it) })
+    }.getOrDefault(com.optionslab.ira.TurnDowns.Log()).also { turnCache = it }
+
+    @Synchronized private fun turnUpdate(f: (com.optionslab.ira.TurnDowns.Log) -> com.optionslab.ira.TurnDowns.Log) {
+        runCatching {
+            val log = f(turnLog())
+            if (log == turnCache) return@runCatching
+            turnCache = log
+            val o = JSONObject().put("n", JSONArray().apply { log.notes.forEach { x -> put(JSONObject().put("t", x.at.toString()).put("k", x.reason)) } })
+            log.resetAt?.let { o.put("r", it.toString()) }
+            prefs().putAllSoon(mapOf(TURN_DOWNS to o.toString()))
+        }
+    }
+
+    private fun turnNow(): LocalDateTime = com.optionslab.app.data.Market.now().toLocalDateTime().withSecond(0).withNano(0)
+
+    /**
+     * Boss turned a suggested trade down, [said] being his words for it when spoken ("no, too late in the day"): the
+     * reason's kind noted when there is one; else his very next words may give it ([turnDownReason]). Nothing acts.
+     */
+    fun turnedDown(said: String?) {
+        val now = turnNow()
+        val r = said?.let { runCatching { com.optionslab.ira.TurnDowns.reason(it) }.getOrNull() }
+        if (r == null) { turnedDownAt = now; return }
+        turnedDownAt = null
+        turnUpdate { com.optionslab.ira.TurnDowns.heard(it, r, now) }
+        IraActivity.add("Noted why Boss turned my idea down: ${r.phrase}.")
+    }
+
+    /**
+     * Boss's words [said] just after he turned an idea down: a reason ("it's too late in the day") within the minutes
+     * allowed is noted and the words to say back returned; else null. Any words end the wait, whatever they were.
+     */
+    fun turnDownReason(said: String): String? {
+        val at = turnedDownAt ?: return null
+        turnedDownAt = null
+        val now = turnNow()
+        if (!com.optionslab.ira.TurnDowns.fresh(at, now)) return null
+        val r = com.optionslab.ira.TurnDowns.reason(said) ?: return null
+        turnUpdate { com.optionslab.ira.TurnDowns.heard(it, r, now) }
+        IraActivity.add("Noted why Boss turned my idea down: ${r.phrase}.")
+        return com.optionslab.ira.TurnDowns.noted(r)
+    }
+
+    /** The one line said before Jarvis asks about an idea ([expiry]: an expiry day for its index), or null. Words only. */
+    fun turnDownsLine(expiry: Boolean): String? =
+        runCatching { com.optionslab.ira.TurnDowns.upFront(turnLog(), turnNow(), expiry) }.getOrNull()
+
+    /** "Why do I turn down your ideas?". */
+    fun turnDownsSay(): String = runCatching { com.optionslab.ira.TurnDowns.say(turnLog(), turnNow()) }
+        .getOrDefault("I could not read my record of your reasons just now, Boss.")
+
+    /** "Don't remind me why I turn your ideas down": no reason said up front, the count afresh. */
+    fun turnDownsReset(): String {
+        val now = turnNow()
+        val said = runCatching { com.optionslab.ira.TurnDowns.sayReset(turnLog(), now) }
+            .getOrDefault("Done, Boss: no reason of yours said up front, and my count starts afresh.")
+        turnUpdate { com.optionslab.ira.TurnDowns.reset(it, now) }
+        turnedDownAt = null
+        IraActivity.add("No longer saying Boss's reasons up front before an idea (as asked).")
+        return said
+    }
+
     // ---- what he has learned, in one view ([com.optionslab.ira.Learnings]) ------------------------------------------
 
     /** Every learning store read with its own accessor (the goals are added by [IraImprove], which holds them). */
@@ -1077,7 +1154,8 @@ internal object IraTools {
         stars = runCatching { IraNewsTrades.starsScored() }.getOrDefault(emptyList()),
         starsReset = starsReset(),
         hours = runCatching { talkLog() }.getOrDefault(com.optionslab.ira.TalkHours.Log()),
-        asks = runCatching { asksLog() }.getOrDefault(com.optionslab.ira.MorningAsks.Log()))
+        asks = runCatching { asksLog() }.getOrDefault(com.optionslab.ira.MorningAsks.Log()),
+        turnDowns = runCatching { turnLog() }.getOrDefault(com.optionslab.ira.TurnDowns.Log()))
 
     /**
      * "Undo everything you learned this week", on Boss's Confirm: the wordings and routines kept in the last 7 days
@@ -1097,10 +1175,12 @@ internal object IraTools {
         if (u.stars.isNotEmpty()) starsResetAt(now)
         if (u.hours.isNotEmpty()) talkUpdate { com.optionslab.ira.TalkHours.reset(it, now) }
         if (u.asks.isNotEmpty()) { asksUpdate { com.optionslab.ira.MorningAsks.reset(it, now) }; asksOffered = null }
+        if (u.turnDowns.isNotEmpty()) { turnUpdate { com.optionslab.ira.TurnDowns.reset(it, now) }; turnedDownAt = null }
         IraActivity.add("Undid this week's learning, as Boss confirmed: ${u.words.size} wording(s), ${u.routines.size} routine(s), " +
             "${u.alerts.size} alert kind(s) aloud again, ${u.clarity.size} answer kind(s) as usual aloud again, ${u.figure.size} market read kind(s) in the usual order again, ${u.morning.size} morning-check item(s) read out in full again, " +
             "${u.stars.size} confidence score(s) said plainly again, " + (if (u.hours.isNotEmpty()) "briefings in full at any hour again, " else "briefings unchanged, ") +
-            (if (u.asks.isNotEmpty()) "no morning question offered." else "morning check unchanged."))
+            (if (u.asks.isNotEmpty()) "no morning question offered, " else "morning check unchanged, ") +
+            (if (u.turnDowns.isNotEmpty()) "no reason of Boss's said up front." else "ideas asked as before."))
         return u
     }
 

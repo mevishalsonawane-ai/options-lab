@@ -1470,7 +1470,9 @@ class JarvisVoice : Service() {
                 scope.launch {
                     // The emergency exit takes Boss's own voice in place of the fingerprint (checked just above).
                     val r = if (yes) withContext(Dispatchers.Default) { IraHub.confirm(id, ownerVoice = askingNeedsBoss && IraHub.isExit(id)) } ?: "That had already lapsed; nothing was placed."
-                        else { IraHub.cancelAction(id); "Rejected. Nothing was placed." }
+                        // (His words for the no go with it: a reason in them, "no, too late in the day", is noted - its kind
+                        // only, and only in Boss's own voice when it is enrolled; a no from anyone still cancels.)
+                        else { IraHub.cancelAction(id, said = alternatives.firstOrNull()?.takeIf { !VoiceGuard.enrolled || lastHeard == null || VoiceGuard.isBoss(lastHeard) }); "Rejected. Nothing was placed." }
                     // An order's result is read back as it is: its prices exact, never rounded for the ear.
                     say(com.optionslab.ira.Address.boss(com.optionslab.ira.Wake.spoken(r)), "answer")
                 }
