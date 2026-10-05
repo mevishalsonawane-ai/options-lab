@@ -85,7 +85,7 @@ object ExpiryEve {
     /** The next trading day named. */
     private val TOMORROW = rx(" (tomorrow|tomorrows|tmrw|kal|next trading day|next session) ")
     /** Asked of what ("what", "which", "anything", "kya", "kaun si", "do I have"). */
-    private val WHAT = rx(" (what|whats|which|anything|any|something|how many|kya|kaun|kaunsa|kaunsi|kaun si|kaun se|kuch|do i have|is there|are there) ")
+    private val WHAT = rx(" (what|whats|which|anything|any|something|how many|kya|kaun|kaunsa|kaunsi|kaun si|kaun se|kaunse|kaun sa|konse|kon se|kuch|do i have|is there|are there) ")
     /** Boss's own named ("my", "mine", "meri"). */
     private val MINE = rx(" (my|mine|i|me|mera|meri|mere|hamara|hamari|hamare) ")
     /** Not this: an order or an act, a forecast, when the expiry is (the calendar's), the market's expiry (unless his own is named), a meaning, an alert. */

@@ -64,6 +64,8 @@ object RelayHealth {
         // Hinglish: "relay kyun nahi chal raha", "relay ka kya haal hai", "relay kaam kar raha hai kya", "relay band hai kya".
         rx("\\brelay\\b.*\\b(?:kyun|kyon|kyu|kiu|chal|chalta|chalra|kaam|haal|band|theek|thik|sahi|kya hua|gadbad|dikkat|problem)\\b"),
         rx("\\b(?:kyun|kyon|kyu|kiu)\\b.*\\brelay\\b"),
+        // Round 16: "why did the relay stop" (asked why only: "stop the relay" stays a step, never answered here).
+        rx("^(?:jarvis )?(?:why|how come)\\b.*\\b$RELAY_WORD\\b.*\\b(?:stop|stops|stopped|stopping)\\b"),
     )
     private val STATIC = listOf(
         rx("\\bstatic ip\\b.*\\b(?:$STATUS|on|right|correct|registered|matching|match|matches|set|why|being used|used)\\b"),

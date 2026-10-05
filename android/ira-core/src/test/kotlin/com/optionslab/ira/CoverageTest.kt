@@ -31,7 +31,7 @@ class CoverageTest {
             Learnings.asked(said) != null || Learnings.undoAsked(said) || NewsMoves.asked(said) != null || PreMarket.asked(said) ||
             ChainDrift.asked(said) != null || Headroom.asked(said) != null || ArmDay.asked(said) != null || NetLean.asked(said) || ExpiryEve.asked(said) || BeforeTomorrow.asked(said) || BotTrades.asked(said) != null || DayClock.asked(said) != null ||
             SaidAbout.asked(said) != null || GapRecord.asked(said) != null || Causes.asked(said) != null || WeekAhead.asked(said) != null || AskedAgain.asked(said) || FigureFirst.asked(said) != null || Weekdays.asked(said) != null || DayCompare.asked(said) != null || LikeToday.asked(said) ||
-            RangeBreaks.asked(said) != null || PriorDay.asked(said) != null || LastHour.asked(said) != null || InsideDays.asked(said) != null || FirstMove.asked(said) != null || VixNext.asked(said) != null || SplitDays.asked(said) != null || RoundCloses.asked(said) != null || NeedsTrue.asked(said) || Clarity.asked(said) != null || ZerodhaSession.asked(said) != null || Tour.asked(said) || WrongThing.asked(said) != null || WrongThing.objected(said) || OrderWhy.asked(said) != null || ArmHabits.asked(said) || MorningSense.asked(said) != null || HonestStars.asked(said) != null || TalkHours.asked(said) != null || MorningAsks.asked(said) != null || TurnDowns.asked(said) != null || RelayHealth.asked(said) != null || StreamHealth.asked(said) || BatteryUse.asked(said) || SwitchOff.asked(said) != null
+            RangeBreaks.asked(said) != null || PriorDay.asked(said) != null || LastHour.asked(said) != null || InsideDays.asked(said) != null || FirstMove.asked(said) != null || VixNext.asked(said) != null || SplitDays.asked(said) != null || RoundCloses.asked(said) != null || NeedsTrue.asked(said) || Clarity.asked(said) != null || ZerodhaSession.asked(said) != null || Tour.asked(said) || WrongThing.asked(said) != null || WrongThing.objected(said) || OrderWhy.asked(said) != null || ArmHabits.asked(said) || MorningSense.asked(said) != null || HonestStars.asked(said) != null || TalkHours.asked(said) != null || MorningAsks.asked(said) != null || TurnDowns.asked(said) != null || RelayHealth.asked(said) != null || StreamHealth.asked(said) || WatchAsk.asked(said) != null || BatteryUse.asked(said) || SwitchOff.asked(said) != null
         return ((if (asSaid) null else Understand.questions(null, said)) ?: listOf(said)).map { kind(it, 0) }
     }
 
@@ -71,6 +71,7 @@ class CoverageTest {
             if (RelayHealth.asked(q) != null) return Kind.ACCOUNT
             if (StreamHealth.asked(q)) return Kind.ACCOUNT
             if (BatteryUse.asked(q)) return Kind.JARVIS
+            if (WatchAsk.asked(q) != null) return Kind.ACCOUNT
             if (Tour.asked(q)) return Kind.JARVIS
             if (DataAge.asked(q)) return Kind.JARVIS
             if (Honest.asked(q) != null) return Kind.HONEST
@@ -347,6 +348,8 @@ class CoverageTest {
         "why is the price stream dropping" to A, "stream kyun toot raha hai" to A, "is the price stream working" to A,
         // ---- Why the app uses battery (BatteryUse, battery round 1): the app's own background work - Jarvis's own ----
         "why is the app using so much battery" to J, "battery kyun kha raha hai" to J, "what is eating my battery" to J,
+        // ---- The order watch and IraAlgo's battery setting (WatchAsk, round 16): Boss's own setup, read only - the account's kind ----
+        "is the watch running" to A, "why did the watch get stuck" to A, "battery setting kya hai" to A, "kya mera phone app ko rok raha hai" to A,
         // ---- What can I ask you (Tour, voice round 15): five questions for the part of the day - Jarvis's own ----
         "what can i ask you" to J, "what should i ask you now" to J, "main kya pooch sakta hoon" to J, "suggest some questions" to J,
         // ---- Two indices on opposite sides of the day (SplitDays, market intelligence round 23): the market's ----
@@ -489,7 +492,7 @@ class CoverageTest {
             PatternCalls.asked(said) || TrendReads.asked(said) || SinceMorning.asked(said) || ExpiryPin.asked(said) != null || Learnings.asked(said) != null || Learnings.undoAsked(said) || NewsMoves.asked(said) != null ||
             PreMarket.asked(said) ||
             ChainDrift.asked(said) != null || Headroom.asked(said) != null || ArmDay.asked(said) != null || NetLean.asked(said) || ExpiryEve.asked(said) || BeforeTomorrow.asked(said) || BotTrades.asked(said) != null || NeedsTrue.asked(said) || Clarity.asked(said) != null || DayClock.asked(said) != null ||
-            SaidAbout.asked(said) != null || GapRecord.asked(said) != null || WordFit.asked(said) != null || Causes.asked(said) != null || WeekAhead.asked(said) != null || AskedAgain.asked(said) || FigureFirst.asked(said) != null || MindChange.asked(said) || Weekdays.asked(said) != null || DayCompare.asked(said) != null || LikeToday.asked(said) || RangeBreaks.asked(said) != null || PriorDay.asked(said) != null || LastHour.asked(said) != null || InsideDays.asked(said) != null || FirstMove.asked(said) != null || VixNext.asked(said) != null || SplitDays.asked(said) != null || RoundCloses.asked(said) != null || ZerodhaSession.asked(said) != null || Tour.asked(said) || WrongThing.asked(said) != null || WrongThing.objected(said) || OrderWhy.asked(said) != null || ArmHabits.asked(said) || MorningSense.asked(said) != null || HonestStars.asked(said) != null || TalkHours.asked(said) != null || MorningAsks.asked(said) != null || TurnDowns.asked(said) != null || RelayHealth.asked(said) != null || StreamHealth.asked(said) || BatteryUse.asked(said) || SwitchOff.asked(said) != null
+            SaidAbout.asked(said) != null || GapRecord.asked(said) != null || WordFit.asked(said) != null || Causes.asked(said) != null || WeekAhead.asked(said) != null || AskedAgain.asked(said) || FigureFirst.asked(said) != null || MindChange.asked(said) || Weekdays.asked(said) != null || DayCompare.asked(said) != null || LikeToday.asked(said) || RangeBreaks.asked(said) != null || PriorDay.asked(said) != null || LastHour.asked(said) != null || InsideDays.asked(said) != null || FirstMove.asked(said) != null || VixNext.asked(said) != null || SplitDays.asked(said) != null || RoundCloses.asked(said) != null || ZerodhaSession.asked(said) != null || Tour.asked(said) || WrongThing.asked(said) != null || WrongThing.objected(said) || OrderWhy.asked(said) != null || ArmHabits.asked(said) || MorningSense.asked(said) != null || HonestStars.asked(said) != null || TalkHours.asked(said) != null || MorningAsks.asked(said) != null || TurnDowns.asked(said) != null || RelayHealth.asked(said) != null || StreamHealth.asked(said) || WatchAsk.asked(said) != null || BatteryUse.asked(said) || SwitchOff.asked(said) != null
         val qs = if (asSaid || understood || cleaned) null else Understand.questions(null, said)?.takeIf { it.isNotEmpty() && it != listOf(said) }
         if (qs != null) return if (qs.size == 1) feature(qs[0], cleaned = true) else qs.joinToString(" & ") { feature(it, understood = true) }
         val q = said
@@ -535,6 +538,7 @@ class CoverageTest {
         if (alone && RelayHealth.asked(q) != null) return "RelayHealth"
         if (alone && StreamHealth.asked(q)) return "StreamHealth"
         if (alone && BatteryUse.asked(q)) return "BatteryUse"
+        if (alone && WatchAsk.asked(q) != null) return "WatchAsk"
         if (alone && Tour.asked(q)) return "Tour"
         if (alone && DataAge.asked(q)) return "DataAge"
         if (alone && Honest.asked(q) != null) return "Honest"
@@ -1050,6 +1054,9 @@ class CoverageTest {
         "why is the app using so much battery" to "BatteryUse", "battery kyun kha raha hai" to "BatteryUse",
         "why is my battery draining so fast" to "BatteryUse", "how much battery does the app use" to "BatteryUse",
         "app kitni battery khata hai" to "BatteryUse", "what is running in the background" to "BatteryUse",
+        // ---- WatchAsk (round 16): the order watch's state and IraAlgo's battery setting, read only; "stop the order watch" stays a command ----
+        "is the watch running" to "WatchAsk", "why did the watch get stuck" to "WatchAsk", "battery setting kya hai" to "WatchAsk",
+        "kya mera phone app ko rok raha hai" to "WatchAsk", "watch kyun ruk gaya" to "WatchAsk", "what is my battery setting" to "WatchAsk",
         // ---- Tour (voice round 15): "what can I ask you?" names five questions for the part of the day ----
         "what can i ask you" to "Tour", "what else can i ask jarvis" to "Tour", "what should i ask now" to "Tour",
         "what questions can i ask" to "Tour", "what kind of questions should i ask you" to "Tour", "suggest some questions" to "Tour",

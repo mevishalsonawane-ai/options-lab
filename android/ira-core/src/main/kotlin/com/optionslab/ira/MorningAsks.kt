@@ -139,7 +139,10 @@ object MorningAsks {
     private const val QUESTION = "(usual )?(morning )?(questions?|ask)"
 
     private val WHICH = rx(LEAD + "what do i (usually |normally |always |mostly )?ask( you)? (about )?$MORNING" + TAIL + "|" +
-        LEAD + "what (question|questions) do i (usually |normally |always )?ask( you)? $MORNING" + TAIL + "|" +
+        LEAD + "(what|which) (question|questions) do i (usually |normally |always )?ask( you)? $MORNING" + TAIL + "|" +
+        // Round 16: "what is my usual morning question", "which morning questions have you learned"
+        LEAD + "(what is|whats|what are|which is|which are) my (usual )?morning questions?" + TAIL + "|" +
+        LEAD + "(what|which) (usual )?morning questions? (have you|did you) (learned|learnt|noticed)( about me| of mine)?" + TAIL + "|" +
         LEAD + "(what|which) $QUESTION do you offer( me)?( $MORNING| (in|at the end of) $CHECK)?" + TAIL + "|" +
         LEAD + "what do you offer( me)? ($MORNING|(in|at the end of) $CHECK)" + TAIL + "|" +
         LEAD + "why (did|do) you (offer|ask)( me)? (that|a|the|my usual) (question )?(in|at the end of) $CHECK" + TAIL + "|" +
@@ -149,7 +152,9 @@ object MorningAsks {
         LEAD + "(dont|do not|no need to) offer( me)? (my |the |a |any |that )?$QUESTION( $MORNING| (in|at the end of) $CHECK)" + TAIL + "|" +
         LEAD + "(dont|do not|no need to) offer( me)? (my |the |a |that )?(usual )?morning (questions?|ask)" + TAIL + "|" +
         LEAD + "no more (morning )?(question )?offers( $MORNING| (in|at the end of) $CHECK)?" + TAIL + "|" +
-        LEAD + "(subah|morning) (ka|wala|vala) (sawal|question) (mat|na) (poocho|pucho|offer karo|bolo)" + TAIL)
+        LEAD + "(subah|morning) (ka|wala|vala) (sawal|question) (mat|na) (poocho|pucho|offer karo|bolo)" + TAIL + "|" +
+        // Round 16: "subah wala sawal offer mat karo"
+        LEAD + "(subah|morning) (ka|wala|vala) (sawal|question) offer (mat|na) (karo|kiya karo)" + TAIL)
 
     /** "What do you offer me in the morning?" or "don't offer my usual morning question", else null. */
     fun asked(text: String): Request? {

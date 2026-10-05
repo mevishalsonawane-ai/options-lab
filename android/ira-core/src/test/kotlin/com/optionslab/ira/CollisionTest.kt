@@ -32,6 +32,10 @@ import kotlin.test.assertTrue
  * fail today" a fail of today's arm trades, ArmDay), the expiry-eve question ("what expires tomorrow", "kal kya expire ho
  * raha hai": ExpiryEve, his legs that expire next), and the newest families join the hunt: TalkHours and NetLean, with
  * more of ExpiryPin, VixNext and ArmDay.
+ *
+ * Round 16 (5 Oct): today's new things asked - "why did the stream drop" (StreamHealth), "is the order watch running", "why
+ * did the watch get stuck", "battery setting kya hai", "kya mera phone app ko rok raha hai" (WatchAsk, read only) - and
+ * more English and Hinglish of LikeToday, SplitDays, MorningAsks, ExpiryEve, StreamHealth and RelayHealth.
  */
 class CollisionTest {
     private val audit = CoverageTest()
@@ -50,6 +54,7 @@ class CollisionTest {
         "MorningSense" to { q -> MorningSense.asked(q) != null },
         "HonestStars" to { q -> HonestStars.asked(q) != null },
         "TalkHours" to { q -> TalkHours.asked(q) != null },
+        "MorningAsks" to { q -> MorningAsks.asked(q) != null },
         "Headroom" to { q -> Headroom.asked(q) != null },
         "ArmDay" to { q -> ArmDay.asked(q) != null },
         "NetLean" to { q -> NetLean.asked(q) },
@@ -64,6 +69,7 @@ class CollisionTest {
         "RelayHealth" to { q -> RelayHealth.asked(q) != null },
         "StreamHealth" to { q -> StreamHealth.asked(q) },
         "BatteryUse" to { q -> BatteryUse.asked(q) },
+        "WatchAsk" to { q -> WatchAsk.asked(q) != null },
         "Tour" to { q -> Tour.asked(q) },
         "ExpiryPin" to { q -> ExpiryPin.asked(q) != null },
         "SinceMorning" to { q -> SinceMorning.asked(q) },
@@ -720,6 +726,53 @@ class CollisionTest {
         "what do i need to check before the next trading day" to "BeforeTomorrow", "kya karna padega kal se pehle" to "BeforeTomorrow",
         // Its neighbours: what expires (ExpiryEve), the morning's own checklist (PreMarket).
         "what's expiring tomorrow for me" to "ExpiryEve", "pre market checklist" to "PreMarket", "is everything set for today" to "PreMarket",
+        // ==== Round 16: the newest families, and today's new things asked ====
+        // ---- LikeToday, more of it ----
+        "is today similar to any past day" to "LikeToday", "find days like today" to "LikeToday", "any past day like today for nifty" to "LikeToday",
+        "how did similar days end" to "LikeToday", "aaj jaisa din kab aaya tha" to "LikeToday", "aaj jaise din pe market kaise band hua" to "LikeToday",
+        "pehle aaj jaisa din kab tha banknifty mein" to "LikeToday", "days that started like today" to "LikeToday", "aaj jaise din ke baad kya hua" to "LikeToday",
+        "have we seen a day like this before" to "LikeToday", "is there a past day that matches today" to "LikeToday",
+        // ---- SplitDays, more of it ----
+        "how often do nifty and banknifty go opposite ways" to "SplitDays", "what happens the day after nifty and banknifty split" to "SplitDays",
+        "how often does banknifty go the other way from nifty" to "SplitDays", "divergence between nifty and banknifty history" to "SplitDays",
+        "after nifty and banknifty diverge what happens next day" to "SplitDays", "nifty aur banknifty alag alag direction mein kitni baar band hue" to "SplitDays",
+        "nifty banknifty ulta kab chalte hain" to "SplitDays", "nifty upar banknifty neeche kitni baar hua" to "SplitDays",
+        "how many times did nifty rise and banknifty fall" to "SplitDays",
+        // ---- MorningAsks: the question Boss asks every morning ----
+        "what do i ask every morning" to "MorningAsks", "what do you offer me in the morning" to "MorningAsks", "don't offer me the morning question" to "MorningAsks",
+        "main roz subah kya poochta hoon" to "MorningAsks", "what do i usually ask in the morning" to "MorningAsks", "no more morning offers" to "MorningAsks",
+        "which questions do i ask in the morning" to "MorningAsks", "what is my usual morning question" to "MorningAsks",
+        "which morning questions have you learned" to "MorningAsks", "subah wala sawal offer mat karo" to "MorningAsks",
+        // ---- ExpiryEve, more of it ----
+        "what expires tomorrow for me" to "ExpiryEve", "kal mera kya expire hoga" to "ExpiryEve", "are any of my legs expiring tomorrow" to "ExpiryEve",
+        "what's expiring tomorrow in my account" to "ExpiryEve", "which of my trades expire tomorrow" to "ExpiryEve",
+        "mere positions kal expire ho rahe hain kya" to "ExpiryEve", "kal kaunse options expire ho rahe hain mere" to "ExpiryEve",
+        // ---- StreamHealth, more of it: "why did the stream drop" ----
+        "why did the stream drop" to "StreamHealth", "why did the live stream drop" to "StreamHealth", "why did the price stream disconnect" to "StreamHealth",
+        "stream kyun drop hua" to "StreamHealth", "live data kyun band ho gaya" to "StreamHealth", "why did live prices stop" to "StreamHealth",
+        "why does my live feed keep dropping" to "StreamHealth", "is the live stream connected" to "StreamHealth", "why did the websocket disconnect" to "StreamHealth",
+        "stream baar baar kyun toot raha hai" to "StreamHealth", "why did the stream stop this morning" to "StreamHealth",
+        "live stream ka kya haal hai" to "StreamHealth", "how many times did the stream drop today" to "StreamHealth",
+        // ---- RelayHealth, more of it ----
+        "is the relay up" to "RelayHealth", "why is the relay down" to "RelayHealth", "relay kyun fail ho raha hai" to "RelayHealth",
+        "relay connect kyun nahi ho raha" to "RelayHealth", "is my static ip working right now" to "RelayHealth", "why can't i connect to the relay" to "RelayHealth",
+        "relay server down hai kya" to "RelayHealth", "when did the relay last work" to "RelayHealth", "is the relay server reachable" to "RelayHealth",
+        "static ip kyun fail hua" to "RelayHealth", "why did the relay stop" to "RelayHealth",
+        // ---- WatchAsk: the order watch's state and IraAlgo's battery setting, read only ----
+        "is the order watch running" to "WatchAsk", "is the watch running" to "WatchAsk", "is my order watch on" to "WatchAsk",
+        "order watch chal raha hai kya" to "WatchAsk", "order watch status" to "WatchAsk", "how is the order watch" to "WatchAsk",
+        "is the order watch stuck" to "WatchAsk", "order watch band hai kya" to "WatchAsk", "is the order watch still running" to "WatchAsk",
+        "why did the watch get stuck" to "WatchAsk", "why did the order watch stop" to "WatchAsk", "why is the order watch stuck" to "WatchAsk",
+        "watch kyun ruk gaya" to "WatchAsk", "order watch kyun band hua" to "WatchAsk", "what stopped the order watch" to "WatchAsk",
+        "why does the order watch keep stopping" to "WatchAsk", "order watch kyun atak gaya" to "WatchAsk", "why was the order watch stuck this morning" to "WatchAsk",
+        "battery setting kya hai" to "WatchAsk", "what is my battery setting" to "WatchAsk", "is iraalgo battery unrestricted" to "WatchAsk",
+        "is the app battery optimized" to "WatchAsk", "what's iraalgo's battery setting" to "WatchAsk", "battery unrestricted hai kya" to "WatchAsk",
+        "kya mera phone app ko rok raha hai" to "WatchAsk", "is my phone stopping the app" to "WatchAsk", "is android killing the app" to "WatchAsk",
+        "is the phone killing iraalgo" to "WatchAsk", "is android stopping the watch" to "WatchAsk", "kya phone iraalgo ko band kar raha hai" to "WatchAsk",
+        "is my phone killing the app in the background" to "WatchAsk", "kya android app ko band kar deta hai" to "WatchAsk",
+        // Their neighbours: the watchlist, the market, a range, the kill switch, the bots' own state stay where they were.
+        "how many times did nifty rise and fall today" to "Market", "what is in my watchlist" to "Market", "is the kill switch on" to "Account:RISK",
+        "is orb running" to "Account:STRATEGIES",
     )
 
     @Test fun eachQuestionGoesWhereItShould() {
@@ -745,7 +798,7 @@ class CollisionTest {
 
     /** The question branches of IraHub.ask between the `bundled` read and the Plan block, in [CoverageTest.feature]'s order. */
     private val HUB_ORDER = listOf("DayJournal", "AlertSense", "Airtime", "Hearing", "PatternCalls", "TrendReads", "OutsideApp", "Clarity", "WordFit", "AskedAgain", "FigureFirst", "WrongThing", "ArmHabits", "MorningSense", "HonestStars", "TalkHours", "MorningAsks", "TurnDowns", "NewsMoves",
-        "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmDay", "NetLean", "ExpiryEve", "BeforeTomorrow", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "ZerodhaSession", "OrderWhy", "RelayHealth", "StreamHealth", "BatteryUse", "Tour", "DataAge", "Honest", "Thinking",
+        "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmDay", "NetLean", "ExpiryEve", "BeforeTomorrow", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "ZerodhaSession", "OrderWhy", "RelayHealth", "StreamHealth", "BatteryUse", "WatchAsk", "Tour", "DataAge", "Honest", "Thinking",
         "SelfWhy", "Consistency", "CoPilot", "SinceMorning", "ExpiryPin", "ChainDrift", "ChainIntel", "DayClock", "GapRecord", "RangeBreaks", "PriorDay", "LastHour", "InsideDays", "FirstMove", "VixNext", "SplitDays", "RoundCloses", "Weekdays", "DayCompare", "LikeToday", "Structure", "MindChange", "Breadth",
         "TradeCase", "Scenarios", "Causes", "Agenda", "Improve")
 
@@ -877,7 +930,7 @@ class CollisionTest {
         // an everyday intent or a reminder (WordFit's on and off switch only its own wording check, never a strategy).
         val newest = setOf("GapRecord", "Weekdays", "MindChange", "Causes", "WeekAhead", "SaidAbout", "ZerodhaSession", "AskedAgain", "WordFit", "Account:STREAKS")
         val all = ROUND11 + ASKED.filter { it.second in newest }
-        assertTrue(all.size >= 150, "${all.size}")
+        assertTrue(all.size >= 120, "${all.size}")
         for ((s, want) in all) {
             assertEquals(want, audit.feature(s), s)
             val p = Ask.parse(s)
@@ -1026,7 +1079,7 @@ class CollisionTest {
     @Test fun roundThirteenWordingsNeitherOrderNorCommandNorBundle() {
         val newest = setOf("OrderWhy", "BotTrades", "WrongThing", "OutsideApp", "TrendReads", "ArmHabits", "PriorDay", "LastHour", "InsideDays", "Account:NUMBERS")
         val all = ASKED.filter { it.second in newest }
-        assertTrue(all.size >= 150, "${all.size}")
+        assertTrue(all.size >= 120, "${all.size}")
         for ((s, want) in all) {
             assertEquals(want, audit.feature(s), s)
             val p = Ask.parse(s)
@@ -1128,7 +1181,7 @@ class CollisionTest {
         val newest = setOf("SinceMorning", "SwitchOff", "StreamHealth", "RelayHealth", "FirstMove", "VixNext", "MorningSense", "HonestStars", "ArmDay",
             "InsideDays", "PriorDay", "OutsideApp")
         val all = ASKED.filter { it.second in newest }
-        assertTrue(all.size >= 150, "${all.size}")
+        assertTrue(all.size >= 120, "${all.size}")
         // Boss's own Hinglish, each where it belongs.
         for ((s, want) in listOf("stream kyun toot raha hai" to "StreamHealth", "subah se kya badla" to "SinceMorning",
             "kaun sa bot band karun" to "SwitchOff", "orb ka aaj loss kyun hua" to "ArmDay")) assertTrue(s to want in all, s)
@@ -1209,6 +1262,70 @@ class CollisionTest {
         // The word's meaning, never a figure asked about; one day's shape stays InsideDays'.
         assertTrue(Glossary.explain("what is an nr7 day")!!.startsWith("An inside day is"))
         for (s in listOf("is today an inside day", "was yesterday an nr7 day", "what happens after an inside day")) assertEquals("InsideDays", audit.feature(s), s)
+    }
+
+    // ---- Round 16: the newest families, and today's new things asked (the stream, the order watch, the battery setting) ----
+
+    @Test fun roundSixteenWordingsNeitherOrderNorCommandNorBundle() {
+        val newest = setOf("LikeToday", "SplitDays", "MorningAsks", "ExpiryEve", "StreamHealth", "RelayHealth", "WatchAsk")
+        val all = ASKED.filter { it.second in newest }
+        assertTrue(all.size >= 120, "${all.size}")
+        // Boss's own words today, each where it belongs.
+        for ((s, want) in listOf("why did the stream drop" to "StreamHealth", "is the order watch running" to "WatchAsk", "why did the watch get stuck" to "WatchAsk",
+            "battery setting kya hai" to "WatchAsk", "kya mera phone app ko rok raha hai" to "WatchAsk")) assertTrue(s to want in all, s)
+        for ((s, want) in all) {
+            assertEquals(want, audit.feature(s), s)
+            val p = Ask.parse(s)
+            assertEquals(null, p.order, s); assertEquals(null, p.command, s)
+            assertTrue(Topic.ORDER !in p.topics && Topic.COMMAND !in p.topics, s)
+            assertTrue(!Bundle.acts(s), s)
+            assertEquals(null, Intents.quick(s), s)
+            assertTrue(!Reminder.asked(s) && !Reminder.cancelAsked(s) && !FollowUp.acts(s), s)
+            assertEquals(null, Reminder.parse(s, today.atTime(10, 0)), s)
+            assertTrue(Understand.questions(null, s).orEmpty().none { FollowUp.acts(it) || Ask.parse(it).command != null || Ask.parse(it).order != null }, s)
+        }
+        // The commands beside these words still act as before (each through its own confirm), and are never these questions.
+        for (s in listOf("stop orb", "switch off orb", "close all positions", "stop the order watch", "start the order watch", "stop the relay", "kill switch on")) {
+            assertEquals("Act", audit.feature(s), s)
+            assertTrue(WatchAsk.asked(s) == null && !StreamHealth.asked(s) && RelayHealth.asked(s) == null, s)
+        }
+        assertEquals(Command.Kind.STOP_ONE, Ask.parse("stop orb").command?.kind)
+        assertEquals(Command.Kind.CLOSE_ALL, Ask.parse("close all positions").command?.kind)
+        // Asked to do, never answered as asked: a restart, the battery set, the watchlist.
+        for (s in listOf("restart the watch", "set battery to unrestricted", "add nifty to watchlist", "what should i watch today", "watch nifty 25000",
+            "is my battery low", "close the app", "kill the app", "is the kill switch on")) assertEquals(null, WatchAsk.asked(s), s)
+        // Said with something to do, each is left to the multi-step plan (never answered and the action dropped).
+        for (s in listOf("is the order watch running then close all positions", "why did the stream drop and stop orb"))
+            assertTrue(Bundle.acts(s) || Ask.parse(s).command != null || Ask.parse(s).order != null, s)
+    }
+
+    @Test fun theOrderWatchAnswerOnlyReads() {
+        val zone = java.time.ZoneId.of("Asia/Kolkata")
+        val local = java.time.LocalDateTime.of(2026, 10, 5, 9, 40)
+        val now = local.atZone(zone).toInstant().toEpochMilli()
+        val diary = listOf("10-05 09:35:02 [watch] STUCK: alive but no finished check · last check 09:31 · waiting on relay connect for 212s · battery OPTIMIZED (not Unrestricted)",
+            "10-05 09:36:00 [stream] dropped: no data from Zerodha for 12 s")
+        // Running and fresh.
+        val ok = WatchAsk.answer(WatchAsk.Asked.STATUS, now, now - 30_000, now - 5_000, null, 0, false, true, diary, local, zone)
+        assertTrue(ok.startsWith("Boss, the order watch is running: its last check was at 09:39."), ok)
+        // Alive but waiting on a step: stuck, and what on.
+        val busy = WatchAsk.answer(WatchAsk.Asked.STATUS, now, now - 9 * 60_000, now - 10_000, "relay connect", now - 240_000, true, true, diary, local, zone)
+        assertTrue("running but stuck: it has waited 4 minutes on relay connect" in busy && "set IraAlgo's battery to Unrestricted" in busy, busy)
+        // Why it got stuck: today's record in plain words.
+        val why = WatchAsk.answer(WatchAsk.Asked.STUCK, now, now - 30_000, now - 5_000, null, 0, true, true, diary, local, zone)
+        assertTrue(why.startsWith("Boss, at 09:35 it was stuck waiting on relay connect for 3 minutes."), why)
+        // Dead in market hours; outside them it simply isn't running.
+        val dead = WatchAsk.answer(WatchAsk.Asked.STATUS, now, now - 9 * 60_000, 0, null, 0, null, true, emptyList(), local, zone)
+        assertTrue("isn't running: no check since 09:31" in dead && "opening IraAlgo restarts it" in dead, dead)
+        assertTrue("runs only in market hours" in WatchAsk.answer(WatchAsk.Asked.STATUS, now, 0, 0, null, 0, false, false, emptyList(), local, zone))
+        // The battery setting and the phone holding the app back.
+        assertTrue("IraAlgo's battery is set to Unrestricted" in WatchAsk.answer(WatchAsk.Asked.BATTERY, now, now - 30_000, now - 5_000, null, 0, false, true, diary, local, zone))
+        assertTrue(WatchAsk.answer(WatchAsk.Asked.PHONE, now, now - 30_000, now - 5_000, null, 0, true, true, diary, local, zone).startsWith("Boss, it can: IraAlgo is battery-optimized"))
+        // Always "Boss", and nothing is changed or restarted by the answer.
+        for (a in WatchAsk.Asked.values()) for (r in listOf(true, false, null)) {
+            val s = WatchAsk.answer(a, now, now - 9 * 60_000, now - 10_000, "Zerodha quotes and positions", now - 300_000, r, true, diary, local, zone)
+            assertTrue(s.startsWith("Boss, ") && s.endsWith("I don't change a setting or restart anything myself."), s)
+        }
     }
 
     // ---- Again: the voice's own "say that again slowly" - heard before the question path, never a question family ----

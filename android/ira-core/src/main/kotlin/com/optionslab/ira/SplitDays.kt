@@ -72,7 +72,13 @@ object SplitDays {
     /** A record asked of, or what followed. */
     private val RECORD = Regex(" (how often|how many times|how many days|how frequently|how common|how rare|what share|what percentage|usually|normally|typically|" +
         "generally|tend to|tends to|on average|record|records|stats|statistics|history|historically|next day|next session|day after|the day after|following day|" +
-        "what happens after|what happened after|what follows|kitni baar|kitne din|aksar|agle din|ke baad) ")
+        "what happens after|what happened after|what follows|kitni baar|kitne din|aksar|agle din|ke baad|" +
+        // Round 16: "nifty banknifty ulta kab chalte hain"
+        "kab chalte|kab chalti|kab jaate|kab jate|kab hote) ")
+    /** Round 16: one index up and the other down said with both named ("nifty rise and banknifty fall", "nifty upar banknifty neeche"). */
+    private val CROSS = Regex(" (rise|rises|rose|go up|goes up|went up|up|gain|gains|gained|green|upar|oopar) (and |aur |but |while )?(nifty|banknifty|bank nifty|finnifty|fin nifty|sensex) " +
+        "(fall|falls|fell|go down|goes down|went down|down|lose|loses|lost|red|neeche|niche|gira|girta) | (fall|falls|fell|go down|goes down|went down|down|lose|loses|lost|red|neeche|niche) " +
+        "(and |aur |but |while )?(nifty|banknifty|bank nifty|finnifty|fin nifty|sensex) (rise|rises|rose|go up|goes up|went up|up|gain|gains|gained|green|upar|oopar) ")
     /** The record named outright ("divergence record", "split days"). */
     private val NAME = Regex(" (divergence|split|splits|split day|split days|opposite day|opposite days) (record|records|stats|statistics|history|days) | (split days|split day record) ")
     /** Indices as a kind ("do the indices diverge often"). */
@@ -87,8 +93,9 @@ object SplitDays {
     /** What was asked, or null. A record of past split days only: never a forecast, advice, Boss's own book or bots. */
     fun asked(text: String): Q? {
         val t = norm(text)
-        if (!SPLIT.containsMatchIn(t) || NOT.containsMatchIn(t)) return null
         val named = Market.mentioned(text)
+        val cross = CROSS.containsMatchIn(t) && named.filter { it in INDICES }.distinct().size >= 2
+        if (!(SPLIT.containsMatchIn(t) || cross) || NOT.containsMatchIn(t)) return null
         if (Market.GOLD in named) return null
         val idx = named.filter { it in INDICES }
         if (idx.isEmpty() && !INDICES_WORD.containsMatchIn(t)) return null

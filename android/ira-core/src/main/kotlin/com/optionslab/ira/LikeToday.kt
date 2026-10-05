@@ -77,7 +77,11 @@ object LikeToday {
     private val TODAY_LIKE = rx(" $TODAY (is |was )?(like|similar to|resembles|resemble|the same as) (any|a|some|an|another|other)( past| earlier| previous| other| older| old)? $DAY ")
     /** "similar days to today", "lookalike days", "past days like this", "aaj jaisa din". */
     private val SIMILAR = rx(" (similar|lookalike|look alike|matching|comparable) (past |earlier |previous |other )?(day|days|session|sessions)( to today| as today| like today)? | " +
-        "(aaj|aaj ke) (jaisa|jaise|jaisi) (din|session|subah) | (past|earlier|previous|old|older) (day|days|session|sessions) like (this|today) ")
+        "(aaj|aaj ke) (jaisa|jaise|jaisi) (din|session|subah) | (past|earlier|previous|old|older) (day|days|session|sessions) like (this|today) | " +
+        // Round 16: "is there a past day that matches today"
+        "(past|earlier|previous|old|older) (day|days|session|sessions) (that |which )?(match|matches|matched) today ")
+    /** Round 16: "have we seen a day like this before" - the "we" is the market's past, never Boss's book (asked before [NOT]). */
+    private val SEEN = rx("^ (jarvis )?have we (ever )?(seen|had) (a|any|another) (day|session) like (this|today)( before| earlier)? $")
     // Forecasts, advice, Boss's own book or bots, a named day (DayCompare's), gaps alone (GapRecord's), what-ifs, meanings.
     private val NOT = rx(" (will|would|going to|gonna|tomorrow|predict|prediction|forecast|outlook|should|shall|buy|sell|enter|exit|trade|trades|trading|" +
         "i|my|mine|we|our|what if|suppose|imagine|scenario|agar|yesterday|kal|parso|monday|tuesday|wednesday|thursday|friday|" +
@@ -86,6 +90,7 @@ object LikeToday {
     /** Asked whether today is like any past day: never a forecast, advice, a named day or Boss's own book. */
     fun asked(text: String): Boolean {
         val t = norm(text)
+        if (SEEN.containsMatchIn(t)) return true
         if (NOT.containsMatchIn(t)) return false
         if (Market.mentioned(text).any { it == Market.GOLD }) return false
         return LIKE.containsMatchIn(t) || TODAY_LIKE.containsMatchIn(t) || SIMILAR.containsMatchIn(t)

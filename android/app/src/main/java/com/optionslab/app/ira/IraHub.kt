@@ -1270,7 +1270,7 @@ object IraHub {
                 com.optionslab.ira.SwitchOff.asked(q) != null ||
                 com.optionslab.ira.SaidAbout.asked(q) != null || com.optionslab.ira.WeekAhead.asked(q) != null ||
                 com.optionslab.ira.ZerodhaSession.asked(q) != null || com.optionslab.ira.OrderWhy.asked(q) != null || com.optionslab.ira.Tour.asked(q) ||
-                com.optionslab.ira.RelayHealth.asked(q) != null || com.optionslab.ira.StreamHealth.asked(q) ||
+                com.optionslab.ira.RelayHealth.asked(q) != null || com.optionslab.ira.StreamHealth.asked(q) || com.optionslab.ira.WatchAsk.asked(q) != null ||
                 com.optionslab.ira.NeedsTrue.asked(q) ||
                 com.optionslab.ira.Clarity.asked(q) != null || com.optionslab.ira.DayClock.asked(q) != null ||
                 com.optionslab.ira.GapRecord.asked(q) != null || com.optionslab.ira.RangeBreaks.asked(q) != null ||
@@ -2129,7 +2129,7 @@ object IraHub {
 
     /**
      * [ask]'s question branches on the records and Boss's own setup: NewsMoves, TaxRecords, Learnings (and its undo),
-     * PreMarket, Headroom, BotTrades, SwitchOff, SaidAbout, WeekAhead, ZerodhaSession, OrderWhy, RelayHealth, StreamHealth, BatteryUse - in [ask]'s order. True when one
+     * PreMarket, Headroom, BotTrades, SwitchOff, SaidAbout, WeekAhead, ZerodhaSession, OrderWhy, RelayHealth, StreamHealth, BatteryUse, WatchAsk - in [ask]'s order. True when one
      * took [q], answered exactly as before; each branch keeps its own guard (not [bundled], no order, no command).
      */
     private fun askedOfRecords(q: String, parsed: com.optionslab.ira.Question, bundled: Boolean, understood: Boolean): Boolean {
@@ -2460,6 +2460,28 @@ object IraHub {
             scope.launch(Dispatchers.IO) {
                 reply(runCatching { com.optionslab.ira.BatteryUse.answer(com.optionslab.app.work.BatteryNow.snapshot(app)) }
                     .getOrElse { "I could not read what runs in the background just now, Boss." })
+            }
+            return true
+        }
+        // "Is the order watch running?", "why did the watch get stuck?", "battery setting kya hai", "kya mera phone app ko rok
+        // raha hai" ([com.optionslab.ira.WatchAsk]): from what the diagnostics' "Order watch:" line reads (the last finished
+        // check, the service's pulse, the step it waits on, IraAlgo's battery setting) and today's [watch] diary lines. Reads
+        // only: nothing is started, restarted or stopped, and the battery setting stays Boss's own tap ("stop the order watch"
+        // stays a command). His setup, so never on a locked phone. (Not in IraGoldAlgo.)
+        val watchAsk = if (!bundled && parsed.order == null && parsed.command == null && !com.optionslab.app.BuildConfig.GOLD)
+            runCatching { com.optionslab.ira.WatchAsk.asked(q) }.getOrNull() else null
+        if (watchAsk != null) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            if (phoneLocked()) { reply("Unlock the phone for that, Boss."); return true }
+            scope.launch(Dispatchers.IO) {
+                reply(runCatching {
+                    val hb = com.optionslab.app.work.Heartbeat
+                    val now = System.currentTimeMillis()
+                    val restricted = app?.let { hb.batteryRestricted(it) }
+                    com.optionslab.ira.WatchAsk.answer(watchAsk, now, hb.last(), hb.alivePulse, hb.busy, hb.busySince, restricted,
+                        com.optionslab.app.data.Market.isOpen(), com.optionslab.app.data.Diag.lines(),
+                        com.optionslab.app.data.Market.now().toLocalDateTime(), com.optionslab.app.data.Market.now().zone)
+                }.getOrElse { "I could not read the order watch just now, Boss." })
             }
             return true
         }
