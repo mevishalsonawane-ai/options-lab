@@ -117,7 +117,7 @@ internal object IraAccount {
     }
 
     /** Sections answered from the question's own words: never from the cache. */
-    private val ASKED = setOf(Section.WHATIF, Section.CHANGES, Section.SEARCH, Section.TIMEOFDAY, Section.REASONS, Section.EXPLAIN_POS, Section.MISTAKES, Section.MOVE, Section.RANK, Section.REPLAY, Section.MONTH, Section.CHARGES, Section.HEALTH)
+    private val ASKED = setOf(Section.WHATIF, Section.CHANGES, Section.SEARCH, Section.TIMEOFDAY, Section.REASONS, Section.EXPLAIN_POS, Section.MISTAKES, Section.MOVE, Section.RANK, Section.REPLAY, Section.MONTH, Section.CHARGES, Section.HEALTH, Section.BOTS)
 
     suspend fun read(sections: Set<Section>, markets: List<com.optionslab.ira.Market> = emptyList(), question: String = ""): AppView? {
         testView?.let { return it(sections) }
@@ -273,6 +273,8 @@ internal object IraAccount {
             if (wants(Section.RANK)) out[Section.RANK] = IraCoach.rankLines()
             // "Check my positions": each open position's expiry, decay, distance from the strike, spread and stops (read only).
             if (wants(Section.HEALTH)) out[Section.HEALTH] = IraCoach.healthLines()
+            // "How are my bots doing?": each strategy today and this week against its tested record (read only).
+            if (wants(Section.BOTS)) out[Section.BOTS] = IraBots.lines(question)
             // "How was my last trade?": the trades against their own candles (read only).
             if (wants(Section.REPLAY)) out[Section.REPLAY] = IraJournal.replay(question)
             // "How was my month?": Boss's own trades (not the bots') this month (or last) against the month before.

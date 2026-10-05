@@ -454,6 +454,9 @@ object Tasks {
         // Jarvis: 14:45 on a day a position expires, the position health check in the chat and a few words (counts only;
         // last too, as it reads Zerodha and the quotes over the network).
         runCatching { com.optionslab.app.ira.IraCoach.healthWatch() }
+        // Jarvis: a strategy of Boss's behaving unusually against its tested record - told once a day without amounts,
+        // stopping it asked first (after every stop and exit above; reads the app's own books, every five minutes at most).
+        runCatching { com.optionslab.app.ira.IraBots.watch() }
     }
 
 

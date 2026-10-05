@@ -104,11 +104,11 @@ r { Compare.asked(q) }, r { Compare.markets(q) }, r { ExpectedRange.asked(q) }, 
     private fun digest(s: String): String =
         MessageDigest.getInstance("SHA-256").digest(s.toByteArray()).joinToString("") { "%02x".format(it) }.take(32)
 
-    /** [digest] of the [reading] of each of [SAID] by the code before these patterns were kept (worked out on that code, 2026-10-05). */
+    /** [digest] of the [reading] of each of [SAID] by the code before these patterns were kept (worked out on that code, 2026-10-05). "How are my strategies doing" changed on purpose since: it reads the strategies' health ([BotHealth]). */
     private val BEFORE = listOf(
         "8651a7fdf5190b4e9bffee921cc2ac38", "eceafb88903851e941b2abf6fd57f042", "59905903f9a386bb9c478cbeeaed4ea6", "b1b0f037985929ed29e8abace3463008",
         "c738c42581c4f068d4a265aebe352056", "e89206af86b2eb3906a53cec8840edc0", "5053849421afb38bb61e4f69a68f70a1", "c9a520c8302a222acfcddf68055bac00",
-        "00f55291153c2806f3be19c6567d54a5", "537ed39f7882206b500f5df968f11b34", "44736672499f6a0e86fd9eb787cd6d7c", "535056673a1645cf8cf2709558224af9",
+        "193cae563951d8a1a9285a7006b75de3", "537ed39f7882206b500f5df968f11b34", "44736672499f6a0e86fd9eb787cd6d7c", "535056673a1645cf8cf2709558224af9",
         "be5785a96140c0c6be38d92065ec15f1", "a9a7f5322b7dc22dba5e11a96a68efe2", "80361049014f7035312f9704de154e9c", "8a7870e71e1ef34e155306f0340b3e1b",
         "65692c0f7f2f125e0b70782d1c5d0f56", "9905378e8f9590816f5c5e00185275a3", "b2c0991a444ee4a194aaa6d9ca19403c", "1ae43cbab270148f0b169d2483d2296b",
         "f252fe027b00721350c50a693082e49c", "aa08968a0364cda09571377d674dc82a", "6468d40cba37e4259b345cca3f2e5611", "6e79a3751a6bf0596b73106d59861813",

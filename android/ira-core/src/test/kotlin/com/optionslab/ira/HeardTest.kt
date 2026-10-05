@@ -71,7 +71,8 @@ class HeardTest {
         assertEquals("show my positions", Ask.reading("positions dikha do"))
         for (s in listOf("strategies kaise chal rahe hain", "mere arms kaise chal rahe hain")) {
             assertEquals(setOf(Topic.ACCOUNT), ask(s).topics, s)
-            assertTrue(Section.STRATEGIES in AppAnswers.sections(s), s)
+            // How they are doing: the strategies' health (round 10).
+            assertEquals(setOf(Section.BOTS), AppAnswers.sections(s), s)
         }
     }
 
