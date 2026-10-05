@@ -93,4 +93,36 @@ class WhereIWinTest {
         val none = WhereIWin.lines("Paper", listOf(t("NIFTY26O1325000CE", 1, 100.0, day = today.minusDays(40))), MyNumbers.Span.WEEK, today, WhereIWin.Cut.ALL)
         assertEquals(listOf("Paper: no closed trades this week, so nothing to split."), none)
     }
+
+    // Reasoning round 26: best and worst said with the trades they rest on, and the gap checked against chance.
+    @Test fun theGapIsCheckedAgainstChance() {
+        val trades = listOf(
+            t("NIFTY26O1325000CE", 1, 500.0), t("NIFTY26O1325100CE", 1, 300.0), t("NIFTY26O1325200CE", 1, -100.0),
+            t("BANKNIFTY26OCT54000PE", 1, -400.0), t("BANKNIFTY26OCT54100PE", 1, -200.0), t("BANKNIFTY26OCT54200PE", 1, 100.0),
+        )
+        val kind = WhereIWin.lines("Paper", trades, MyNumbers.Span.ALL, today, WhereIWin.Cut.KIND)[1]
+        assertTrue(kind.contains("A trade made most on calls (+Rs 233, on 3 trades) and least on puts (-Rs 167, on 3 trades)."), kind)
+        // Of the 20 ways to split those six trades into three and three, 4 give a gap of Rs 400 or more a trade.
+        assertEquals(0.2, WhereIWin.chance(listOf(500.0, 300.0, -100.0), listOf(-400.0, -200.0, 100.0)), 1e-9)
+        assertTrue(kind.contains("Shuffling those 6 trades between the two at random gave a gap at least as big 20 times in 100, so it may still be chance; more trades would tell."), kind)
+    }
+
+    @Test fun chanceIsExactWhenSmallSeededWhenLargeAndPlainlySaid() {
+        // Same values both sides: every split gives a gap at least as big as none.
+        assertEquals(1.0, WhereIWin.chance(listOf(100.0, 100.0, 100.0), listOf(100.0, 100.0, 100.0)), 1e-9)
+        assertEquals(1.0, WhereIWin.chance(emptyList(), listOf(1.0)), 1e-9)
+        // Three clear wins against three clear losses: only the split seen and its mirror, 2 of 20.
+        assertEquals(0.1, WhereIWin.chance(listOf(100.0, 110.0, 120.0), listOf(-100.0, -110.0, -120.0)), 1e-9)
+        // Twelve against twelve (too many splits to count): shuffled from a fixed seed, so the same every time, and small.
+        val a = List(12) { 200.0 + it * 10 }
+        val b = List(12) { -200.0 - it * 10 }
+        val p = WhereIWin.chance(a, b)
+        assertEquals(p, WhereIWin.chance(a, b), 0.0)
+        assertTrue(p < 0.01, "$p")
+        val g1 = WhereIWin.Group("calls", 12, 12, 3000.0)
+        val g2 = WhereIWin.Group("puts", 12, 0, -3000.0)
+        val said = WhereIWin.chanceText(g1, g2, p)
+        assertTrue(said.contains("24 trades between the two at random gave a gap at least as big less than once in 100, so chance alone seldom gives a gap that big."), said)
+        assertTrue(WhereIWin.chanceText(g1, g2, 0.45).endsWith("45 times in 100, so it could well be chance."))
+    }
 }

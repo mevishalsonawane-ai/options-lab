@@ -19,6 +19,12 @@ import java.util.Locale
  * together (bought calls, bought puts, sold calls, sold puts) - each with its trades, wins and net, and what a trade made
  * on average. A group is compared only with [MIN_GROUP] trades; fewer are named as too few. The part asked comes first.
  *
+ * Reasoning round 26 (2026-10-05): the best and worst groups are each said with how many trades they rest on, and the gap
+ * between them is checked against chance plainly - the two groups' trades shuffled between them ([chance]: every split
+ * counted when there are few enough, else [SHUFFLES] fixed-seed shuffles, so the same record always gives the same
+ * answer), and how often a gap at least as big as his came up is said as "N in 100". A gap chance seldom gives is said
+ * so; one it often gives is said to be possibly chance. A description of his record, never a forecast.
+ *
  * Facts from his own record only - never a forecast and never what to trade. Nothing here places, changes or arms
  * anything. His account, so never on a locked phone. Pure.
  */
@@ -78,19 +84,90 @@ object WhereIWin {
         "${g.name} ${plural(g.trades, "trade")}, ${g.won} won, ${rs(g.net)}" +
             if (g.trades >= MIN_GROUP) " (${rs(g.perTrade)} a trade)" else " (too few to judge)"
 
-    /** One cut's line, or null when every trade falls in one group and the cut was not asked. */
-    private fun cutLine(title: String, gs: List<Group>, asked: Boolean, all: Int): String? {
+    /** Random shuffles used when there are too many splits to count them all. */
+    const val SHUFFLES = 5000
+
+    /** Every split is counted while there are at most this many. */
+    private const val EXACT_MAX = 50_000L
+
+    private fun choose(n: Int, k: Int): Long {
+        var r = 1L
+        for (i in 1..k) { r = r * (n - k + i) / i; if (r > EXACT_MAX) return r }
+        return r
+    }
+
+    /**
+     * How often chance alone gives a gap in the average per trade at least as big as the one between [a] and [b] (either
+     * way round): their nets are pooled and split again into groups of the same sizes - every split when there are at
+     * most [EXACT_MAX], else [SHUFFLES] shuffles from a fixed seed. A share from 0 to 1; 1 when either group is empty.
+     */
+    fun chance(a: List<Double>, b: List<Double>): Double {
+        if (a.isEmpty() || b.isEmpty()) return 1.0
+        val pool = (a + b).toDoubleArray()
+        val n = pool.size
+        val k = a.size
+        val total = pool.sum()
+        val observed = kotlin.math.abs(a.average() - b.average())
+        val eps = 1e-9 * (1.0 + observed)
+        fun gap(sumA: Double) = kotlin.math.abs(sumA / k - (total - sumA) / (n - k))
+        if (choose(n, k) <= EXACT_MAX) {
+            var hits = 0L
+            var all = 0L
+            fun walk(start: Int, left: Int, sum: Double) {
+                if (left == 0) { all++; if (gap(sum) >= observed - eps) hits++; return }
+                for (i in start..n - left) walk(i + 1, left - 1, sum + pool[i])
+            }
+            walk(0, k, 0.0)
+            return hits.toDouble() / all
+        }
+        val rnd = java.util.Random(31L * n + k)
+        val arr = pool.copyOf()
+        var hits = 0
+        repeat(SHUFFLES) {
+            var sum = 0.0
+            for (i in 0 until k) {
+                val j = i + rnd.nextInt(n - i)
+                val x = arr[i]; arr[i] = arr[j]; arr[j] = x
+                sum += arr[i]
+            }
+            if (gap(sum) >= observed - eps) hits++
+        }
+        return hits.toDouble() / SHUFFLES
+    }
+
+    /** The chance check said plainly: how often in 100 shuffles a gap this big came up, and what that means. */
+    fun chanceText(best: Group, worst: Group, share: Double): String {
+        val n = best.trades + worst.trades
+        val inHundred = Math.round(share * 100).toInt()
+        val how = if (inHundred < 1) "less than once in 100" else if (inHundred == 1) "1 time in 100" else "$inHundred times in 100"
+        val verdict = when {
+            share <= 0.05 -> "so chance alone seldom gives a gap that big"
+            share <= 0.20 -> "so it may still be chance; more trades would tell"
+            else -> "so it could well be chance"
+        }
+        return " Is that gap more than chance? Shuffling those $n trades between the two at random gave a gap at least as big $how, $verdict."
+    }
+
+    /** One cut's line from [trades] split by [key], or null when every trade falls in one group and the cut was not asked. */
+    private fun cutLine(title: String, trades: List<Trade>, key: (Trade) -> String, asked: Boolean): String? {
+        val gs = groups(trades, key)
         if (gs.size < 2) {
             if (!asked) return null
             val only = gs.firstOrNull() ?: return null
-            return "$title: all ${plural(all, "trade")} were ${only.name}, so there is nothing to set beside them."
+            return "$title: all ${plural(trades.size, "trade")} were ${only.name}, so there is nothing to set beside them."
         }
         val s = StringBuilder("$title: ").append(gs.joinToString("; ") { groupText(it) }).append('.')
         val enough = gs.filter { it.trades >= MIN_GROUP }
         if (enough.size >= 2) {
             val best = enough.maxBy { it.perTrade }
             val worst = enough.minBy { it.perTrade }
-            if (best !== worst) s.append(" A trade made most on ${best.name} (${rs(best.perTrade)}) and least on ${worst.name} (${rs(worst.perTrade)}).")
+            if (best !== worst) {
+                s.append(" A trade made most on ${best.name} (${rs(best.perTrade)}, on ${plural(best.trades, "trade")}) and least on " +
+                    "${worst.name} (${rs(worst.perTrade)}, on ${plural(worst.trades, "trade")}).")
+                val a = trades.filter { key(it) == best.name }.map { it.net }
+                val b = trades.filter { key(it) == worst.name }.map { it.net }
+                s.append(chanceText(best, worst, chance(a, b)))
+            }
         } else if (asked) {
             s.append(" Fewer than two of these have $MIN_GROUP trades, so they are not set against each other yet.")
         }
@@ -121,17 +198,17 @@ object WhereIWin {
         }
         for (c in order) {
             val line = when (c) {
-                Cut.INDEX -> cutLine("By index", groups(used) { index(it.symbol) }, first == c, used.size)
-                Cut.KIND -> cutLine("Calls, puts and futures", groups(used) { kind(it.symbol) }, first == c, used.size)
-                Cut.SIDE -> cutLine("Bought first against sold first", groups(used) { side(it) }, first == c, used.size)
+                Cut.INDEX -> cutLine("By index", used, { index(it.symbol) }, first == c)
+                Cut.KIND -> cutLine("Calls, puts and futures", used, { kind(it.symbol) }, first == c)
+                Cut.SIDE -> cutLine("Bought first against sold first", used, { side(it) }, first == c)
                 Cut.ALL -> null
             }
             if (line != null) out += line
         }
         // The four together, for options only, when at least two of them have enough trades to say.
         val options = used.filter { kind(it.symbol) == "calls" || kind(it.symbol) == "puts" }
-        val both = groups(options) { (if (it.direction < 0) "sold " else "bought ") + kind(it.symbol) }
-        if (both.count { it.trades >= MIN_GROUP } >= 2) out += cutLine("Options, side and kind together", both, false, options.size)!!
+        val sideKind: (Trade) -> String = { (if (it.direction < 0) "sold " else "bought ") + kind(it.symbol) }
+        if (groups(options, sideKind).count { it.trades >= MIN_GROUP } >= 2) out += cutLine("Options, side and kind together", options, sideKind, false)!!
         return out
     }
 
