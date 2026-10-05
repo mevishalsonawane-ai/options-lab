@@ -345,10 +345,26 @@ object IraHub {
     const val KEEP_JOURNAL = 120
     const val KEEP_PROPOSALS = 40
 
+    /**
+     * Battery (round 10): the keepers' refresh (the listening loop, the Ira page) - only when the last full read is old
+     * enough ([com.optionslab.ira.LiveReadPace]); [quiet]: the screen off and nothing held or armed. Timed from when the
+     * last full read began (any caller's, a failed one too), so a slow download does not push the next one a turn later
+     * and a failing feed is not retried more often than before.
+     */
+    suspend fun refreshIfDue(quiet: Boolean) {
+        val began = refreshBeganAt
+        val sinceMs = if (began == 0L) null else System.nanoTime() / 1_000_000L - began
+        if (com.optionslab.ira.LiveReadPace.due(sinceMs, quiet)) refresh()
+    }
+
+    /** When the last [refresh] began its reads (monotonic ms, [System.nanoTime]; 0: none yet). Battery, round 10. */
+    @Volatile private var refreshBeganAt = 0L
+
     /** Re-reads the candles, learns from the new ones and rebuilds the snapshots. Never throws. */
     suspend fun refresh() = withContext(Dispatchers.Default) {
         awaitLoaded()           // the pattern book read at the start is the one taught (and saved)
         lock.withLock {
+            refreshBeganAt = (System.nanoTime() / 1_000_000L).coerceAtLeast(1L)
             _state.update { it.copy(loading = true) }
             runCatching {
                 val stored = testHistories?.invoke() ?: load()

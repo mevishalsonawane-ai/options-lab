@@ -387,3 +387,24 @@ object CheckWarmPace {
     fun due(sinceLastMs: Long?, fast: Boolean): Boolean =
         fast || sinceLastMs == null || sinceLastMs < 0 || sinceLastMs >= SLOW_MS
 }
+
+/**
+ * Battery (round 10): Jarvis's prices for words (every index's and gold's 1-minute candles, six downloads, and the news
+ * when due) were read again by two keepers that did not look at each other: the listening loop every minute in market
+ * hours, screen on or off, and the Ira page every minute while open - two full reads a minute with both. A keeper now
+ * reads only when the last full read is [SHARED_MS] old or more (one read a minute, shared), and with the screen off
+ * and nothing held or armed (the words lane's quiet, [WordsPace]) only when it is [QUIET_MS] old: the order watch's
+ * feed check reads at 2 minutes anyway, an answer re-reads in the background past 2 minutes, and prices up to 3 minutes
+ * old count as fresh in the answers. These prices are words only: stops, targets, the loss limit, Solo's gate, the arms
+ * and every safety alert read their own. Any doubt (no read yet, a clock oddity) reads. Pure.
+ */
+object LiveReadPace {
+    /** A full read this recent is shared by every keeper. */
+    const val SHARED_MS = 50_000L
+    /** Screen off and nothing held or armed: how old the last read may get before a keeper reads again. */
+    const val QUIET_MS = 120_000L
+
+    /** Read again now? [sinceLastMs]: since the last full read came in (null: none yet). */
+    fun due(sinceLastMs: Long?, quiet: Boolean): Boolean =
+        sinceLastMs == null || sinceLastMs < 0 || sinceLastMs >= if (quiet) QUIET_MS else SHARED_MS
+}

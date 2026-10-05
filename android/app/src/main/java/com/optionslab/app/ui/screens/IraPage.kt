@@ -137,8 +137,9 @@ fun IraPage(orders: IraOrderPaths? = null) {
     }
     fun orbLabel(m: Int) = if (m == 0) restLabel else listOf("Idle", "Listening", "Thinking", "Answering")[m]
     var focus by remember { mutableStateOf(IraMarket.NIFTY) }
-    // Live prices every minute while Ira is on screen (and news every ten minutes, inside the hub).
-    com.optionslab.app.ui.PollWhileStarted { while (true) { IraHub.refresh(); delay(60_000) } }
+    // Live prices every minute while Ira is on screen (and news every ten minutes, inside the hub). Battery (round 10): a
+    // read begun under 50 s ago (the listening loop's, the feed check's) is shared, not made again ([com.optionslab.ira.LiveReadPace]).
+    com.optionslab.app.ui.PollWhileStarted { while (true) { IraHub.refreshIfDue(quiet = false); delay(60_000) } }
     val list = rememberLazyListState()
     // The newest message in view: after each new or rewritten one (the cards above it counted).
     LaunchedEffect(newest) {

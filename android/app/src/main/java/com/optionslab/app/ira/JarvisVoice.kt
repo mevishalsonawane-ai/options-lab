@@ -829,7 +829,8 @@ class JarvisVoice : Service() {
                 runCatching { com.optionslab.ira.SpokenReply.warm() }
                 runCatching { IraTools.figureLeadingNow(); IraTools.lengthLearnedNow(); IraTools.clarityShorterNow() }
             }
-            // While listening, the slow answers are kept ready so none waits: prices every minute in market hours, your
+            // While listening, the slow answers are kept ready so none waits: prices every minute in market hours (every 2
+            // with the screen off and nothing held or armed - battery round 10), your
             // account and the trade check every 30 seconds.
             // (The model is NOT loaded here any more - root cause, 4 Oct: kept in memory the whole time Jarvis listened,
             // 1 GB and more on 4 cores starved the phone's on-device recognizer, which then heard nothing. It loads only
@@ -841,11 +842,17 @@ class JarvisVoice : Service() {
                     // read, and a holiday weekday fetched prices every minute and the account every 30 s all session).
                     val open = runCatching { com.optionslab.app.data.Market.isOpen() }.getOrElse {
                         com.optionslab.ira.Market.NIFTY.trading(java.time.LocalDateTime.now(java.time.ZoneId.of("Asia/Kolkata"))) }
-                    if (open && n % 2 == 0) runCatching { IraHub.refresh() }
+                    val screen = runCatching { getSystemService(android.os.PowerManager::class.java)?.isInteractive }.getOrNull() ?: true
+                    // Battery (round 10): a full read under 50 s old (the Ira page's, the feed check's) is shared, and with the
+                    // screen off and the words lane quiet (nothing held or armed) one is read every 2 minutes, not every minute
+                    // ([com.optionslab.ira.LiveReadPace]). Words only: stops and safety alerts read their own prices.
+                    if (open && n % 2 == 0) runCatching {
+                        val readsQuiet = !screen && com.optionslab.app.work.Tasks.wordsQuietNow() == true
+                        IraHub.refreshIfDue(readsQuiet)
+                    }
                     // The account and the trade check need the internet: not tried while offline. Outside market hours nothing
                     // in them moves: every 5 minutes while the screen is on, every 30 with it off (battery round 1; it was every
                     // 5 minutes all night). An answer asked meanwhile reads afresh, as on a low battery.
-                    val screen = runCatching { getSystemService(android.os.PowerManager::class.java)?.isInteractive }.getOrNull() ?: true
                     if ((open || n % (if (screen) 10 else 60) == 0) && IraHub.online()) runCatching { IraHub.warm() }
                     n++
                     // Low battery and not charging: kept ready less often (answers then read afresh when asked).
