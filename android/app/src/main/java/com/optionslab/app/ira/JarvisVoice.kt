@@ -612,7 +612,13 @@ class JarvisVoice : Service() {
         val t = tts ?: return false
         if (!applyStyle(t)) return false
         t.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
+            // How far the voice has got (for "go on" after a cut): each piece's start, the word under way where the
+            // engine says it, and each piece's end.
+            override fun onRangeStart(id: String?, start: Int, end: Int, frame: Int) {
+                pieceAt[id ?: return]?.let { (b, _) -> reachedAt = b + start }
+            }
             override fun onStart(id: String?) {
+                id?.let { pieceAt[it] }?.let { (b, _) -> reachedAt = b }
                 speechStartedAt = SystemClock.elapsedRealtime()
                 val h = heardAt
                 // Only a reply to what was just heard counts (an answer or a yes-or-no question within a minute): a later
@@ -623,7 +629,10 @@ class JarvisVoice : Service() {
                     if (took in 1L until 60_000L) { IraTools.count(com.optionslab.ira.Improve.TIMED); if (took > com.optionslab.ira.Improve.FAST_MS) IraTools.count(com.optionslab.ira.Improve.SLOW) }
                     slowNudge() }
             }
-            override fun onDone(id: String?) { main.post { if (id == utterance) afterSpeech(id?.substringBefore('#')) } }
+            override fun onDone(id: String?) {
+                id?.let { pieceAt[it] }?.let { (b, n) -> reachedAt = b + n }
+                main.post { if (id == utterance) afterSpeech(id?.substringBefore('#')) }
+            }
             @Deprecated("Deprecated in Java") override fun onError(id: String?) { main.post { if (id == utterance) afterSpeech(id?.substringBefore('#')) } }
             override fun onStop(id: String?, interrupted: Boolean) {
                 main.post {
@@ -818,9 +827,21 @@ class JarvisVoice : Service() {
                 turnHeardAny = true; turnPartial = it
                 if (tap != null && silentShared != 0) silentShared = 0      // the shared capture does hear
             }
-            // The owner says "Jarvis" while Jarvis is talking: stop at once and listen (the question follows).
+            // Boss talks over Jarvis (Boss, 5 Oct): read from the partial words, so the voice stops as they are read, not
+            // at the end of his turn. "Jarvis" stops it and the question follows in this turn; a clear stop word ("stop",
+            // "bas", "ok ok", "next") without the name stops it and listens again at once. Jarvis's own words heard back
+            // never count ([com.optionslab.ira.BargeIn]): he never says his name, and a stop word he is saying is his.
             val words = partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION).orEmpty()
-            if (speaking) { if (words.any { WAKE.containsMatchIn(it) }) interrupt(); return }
+            if (speaking) {
+                val cut = if (words.any { WAKE.containsMatchIn(it) }) com.optionslab.ira.BargeIn.Cut.NAME
+                    else com.optionslab.ira.BargeIn.cut(words.firstOrNull(), sayingText)
+                when (cut) {
+                    com.optionslab.ira.BargeIn.Cut.NAME -> { note("cut in by name"); interrupt() }
+                    com.optionslab.ira.BargeIn.Cut.HUSH -> hushIfBoss()
+                    null -> {}
+                }
+                return
+            }
             // Boss is speaking to Jarvis: once the words stop changing for a moment, end the turn now instead of
             // waiting for the recognizer's own long silence.
             val first = words.firstOrNull()?.trim().orEmpty()
@@ -996,9 +1017,52 @@ class JarvisVoice : Service() {
         runCatching { IraHub.note(text) }
     }
 
+    /**
+     * A stop word over Jarvis, without the name. With "only my voice" on and this turn's audio shared, the last two
+     * seconds must be Boss's voice (checked off the main thread); with no shared audio there is nothing to check, as for
+     * any words. Only the voice stops: nothing else is done.
+     */
+    private fun hushIfBoss() {
+        val t = tap
+        if (t == null || !onlyBoss || !VoiceGuard.enrolled) { hushCut(); return }
+        if (hushChecking) return
+        hushChecking = true
+        val pcm = t.heard()
+        scope.launch {
+            val his = withContext(Dispatchers.Default) {
+                runCatching { VoiceGuard.isBoss(pcm.copyOfRange(maxOf(0, pcm.size - com.optionslab.ira.VoicePrint.RATE * 2), pcm.size)) }.getOrDefault(false)
+            }
+            hushChecking = false
+            if (!his) note("a stop word in another voice: not taken")
+            else if (speaking) hushCut()
+        }
+    }
+    @Volatile private var hushChecking = false
+
+    /** "Stop" / "bas" / "ok ok" over Jarvis: the voice stops, this turn is dropped, and listening starts again at once. */
+    private fun hushCut() {
+        if (!speaking) return
+        note("cut in by a stop word")
+        runCatching { IraTools.noteHush() }
+        interrupt()
+        answerJob?.cancel()
+        main.removeCallbacks(finish); main.removeCallbacks(prepareAhead)
+        stoppedAt = SystemClock.elapsedRealtime()
+        runCatching { rec?.cancel() }; listening = false; endTap(); lastHeard = null
+        // The follow-up window, as after an answer: "go on" or a next question without the name may only ask.
+        awakeUntil = SystemClock.elapsedRealtime() + FOLLOW_MS; called = false
+        _state.value = VoiceState(Mode.AWAKE)
+        again(50)
+    }
+
     /** Cut in on: Jarvis stops talking and waits for the owner's question. */
     private fun interrupt() {
         if (!speaking) return
+        val now = SystemClock.elapsedRealtime()
+        // An answer cut off: the rest is kept for "go on" (its words only - the chat already shows them).
+        if (lastSpokenId == "answer") cutOff = com.optionslab.ira.BargeIn.cutOff(sayingFull, sayingText, reachedAt, sayingAccount, now)
+        // Its own words heard back right after a cut are still its own (the echo check counts from here).
+        lastSpokenEnd = now
         speaking = false
         // The utterance is forgotten: its onStop is then not ours to judge, and a reply still being prepared (Hindi) is not said.
         utterance = null
@@ -1088,6 +1152,23 @@ class JarvisVoice : Service() {
                 // A follow-up without the name that the recognizer was barely sure of is the room (the TV, people nearby),
                 // not Boss: let go, the follow-up window stays open. Not after "Yes, Boss?" or the mic button.
                 if (com.optionslab.ira.Sure.faint(sure, named, called0 && awake)) { note("faint words without my name (${com.optionslab.ira.Sure.say(sure)}): let go"); again(); return }
+                // "Go on" / "continue" / "aage bolo" after Boss cut an answer off: the rest of that answer, its words only
+                // (the chat already shows them) - nothing new is worked out or done. A locked phone never says the
+                // account aloud. With nothing cut off, it is asked as before ("go on" is "tell me more").
+                if (com.optionslab.ira.BargeIn.goOn(h.question)) {
+                    val c = cutOff
+                    when (val r = com.optionslab.ira.BargeIn.rest(c, SystemClock.elapsedRealtime(), locked())) {
+                        is com.optionslab.ira.BargeIn.Rest.Say -> {
+                            awakeUntil = 0; cutOff = null
+                            heardAt = com.optionslab.ira.Turn.spokeEnd(turnPartialAt, turnEndAt, SystemClock.elapsedRealtime())
+                            say(com.optionslab.ira.Aloud.say(r.text, if (IraTools.brief) com.optionslab.ira.Aloud.Length.SHORT else com.optionslab.ira.Aloud.Length.USUAL),
+                                "answer", full = r.text, account = c?.account == true)
+                            return
+                        }
+                        is com.optionslab.ira.BargeIn.Rest.Refused -> { awakeUntil = 0; cutOff = null; say(r.why); return }
+                        null -> {}
+                    }
+                }
                 awakeUntil = 0
                 // A command for later ("start all arms tomorrow at 9") is judged as the command itself.
                 val laterRest = runCatching { com.optionslab.ira.Later.split(h.question, java.time.LocalDateTime.now(java.time.ZoneId.of("Asia/Kolkata")))?.rest }.getOrNull()
@@ -1144,6 +1225,18 @@ class JarvisVoice : Service() {
     @Volatile private var lastSpoken: String? = null
     @Volatile private var lastSpokenEnd = 0L
 
+    /** The words being handed to the voice now, as said (for telling Jarvis's own words heard back from Boss's). */
+    @Volatile private var sayingText: String? = null
+    /** The answer being said, in full as in the chat (null: not an answer), and whether it is about the account. */
+    @Volatile private var sayingFull: String? = null
+    @Volatile private var sayingAccount = false
+    /** Where in [sayingText] the voice has got to (characters; -1: not known yet). */
+    @Volatile private var reachedAt = -1
+    /** Each piece's utterance id: where it starts in [sayingText] and how long it is. */
+    private val pieceAt = java.util.concurrent.ConcurrentHashMap<String, Pair<Int, Int>>()
+    /** The last answer cut off by Boss, for "go on" ([com.optionslab.ira.BargeIn.rest]). */
+    @Volatile private var cutOff: com.optionslab.ira.BargeIn.CutOff? = null
+
     /** The last answer said aloud and when (a follow-up's same answer is not said again). */
     private data class Said(val text: String)
     @Volatile private var lastAnswer: Said? = null
@@ -1197,6 +1290,8 @@ class JarvisVoice : Service() {
             val o = a?.order
             // A suggested trade is asked aloud by itself (yes or no): nothing more to say here.
             if (a?.action != null && IraHub.asksYesNo(a.action)) return@launch
+            // The answer's full text (as in the chat), kept with what is said so "go on" can say the rest after a cut.
+            var full: String? = null
             say(when {
                 a == null -> if (late) "Boss, I could not finish what you asked earlier. Please ask me again." else "I could not work that out."
                 o != null && o.missing.isEmpty() && o.refusal == null -> "I have put that order on the Ira screen. Nothing is sent until you confirm it there."
@@ -1208,10 +1303,10 @@ class JarvisVoice : Service() {
                 }
                 // Short answers (the owner's setting, or "shorter"): the first sentence; "tell me more" says the whole
                 // answer. Said as a person says it (Boss once, figures rounded), the rest left in the chat.
-                else -> (if (late) "About what you asked earlier: " else "") + com.optionslab.ira.Aloud.say(a.text, when {
+                else -> { full = a.text; (if (late) "About what you asked earlier: " else "") + com.optionslab.ira.Aloud.say(a.text, when {
                     com.optionslab.ira.Ask.parse(q).command?.kind == com.optionslab.ira.Command.Kind.MORE -> com.optionslab.ira.Aloud.Length.FULL
                     IraTools.brief -> com.optionslab.ira.Aloud.Length.SHORT
-                    else -> com.optionslab.ira.Aloud.Length.USUAL })
+                    else -> com.optionslab.ira.Aloud.Length.USUAL }) }
             }.let { text ->
                 // A follow-up (no "Jarvis") that brings back the very answer just given is not said again: the
                 // follow-up window closes instead, so one answer can never repeat itself in a loop.
@@ -1221,7 +1316,7 @@ class JarvisVoice : Service() {
                 }
                 lastAnswer = Said(text); lastAnswerAt = SystemClock.elapsedRealtime()
                 text
-            }, "answer")
+            }, "answer", full = full, account = com.optionslab.ira.Topic.ACCOUNT in com.optionslab.ira.Ask.parse(q).topics)
         }
     }
 
@@ -1238,11 +1333,15 @@ class JarvisVoice : Service() {
      * itself (its own name is said as "my name", so it does not hear it) - then listens again, or stops after
      * [id] STOP_AFTER.
      */
-    private fun say(text: String, id: String = "say") {
+    private fun say(text: String, id: String = "say", full: String? = null, account: Boolean = false) {
         unmuteNow()                                       // Jarvis's own voice is never muted
         val t = tts
         lastSpokenId = id
         if (id == "answer" || id == "question") lastSpoken = text
+        // A new answer replaces the one cut off; what is said is kept for "go on" if Boss cuts this one off too.
+        if (id == "answer") cutOff = null
+        sayingFull = if (id == "answer") full else null; sayingAccount = account
+        sayingText = text; reachedAt = -1
         // Muted: the words go on screen as a pop-up instead (answers and questions only; "One moment" is dropped).
         if (muted && !text.startsWith("Voice on")) {
             if (id == "answer" || id == "question") runCatching { JarvisPopup.show(this, "Jarvis (muted)", "$text\n\nSay \"Jarvis, unmute\" to hear me.") }
@@ -1285,8 +1384,11 @@ class JarvisVoice : Service() {
      */
     private fun speakPieces(t: TextToSpeech, text: String, u: String): Boolean {
         val parts = com.optionslab.ira.Wake.pieces(text)
+        sayingText = parts.joinToString(" "); reachedAt = -1; pieceAt.clear()
+        var base = 0
         for ((k, p) in parts.withIndex()) {
             val uid = if (k == parts.lastIndex) u else "$u.$k"
+            pieceAt[uid] = base to p.length; base += p.length + 1
             if (t.speak(p, if (k == 0) TextToSpeech.QUEUE_FLUSH else TextToSpeech.QUEUE_ADD, null, uid) != TextToSpeech.SUCCESS) {
                 if (k == 0) return false
                 // The rest could not be queued: speech ends with the piece already queued.

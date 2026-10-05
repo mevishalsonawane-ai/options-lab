@@ -30,6 +30,15 @@ object Wake {
     /** Boss's "be quiet" (3 Oct: "Jarvis stop" means stop talking, not stop my orders). */
     private val HUSH = Regex("^(just |please |now )?(stop|stop it|stop now|stop that|stop talking|stop speaking|enough|that s enough|thats enough|quiet|be quiet|shut up|silence|hush|chup|chup ho jao|chup raho|chup karo|bas|bas karo|never ?mind|forget it|cancel that)( please| now| jarvis)?$")
 
+    /**
+     * Does [text] hold the name itself (never a soft misreading)? Jarvis never says his own name aloud, so the name is
+     * never his own voice heard back ([BargeIn]).
+     */
+    fun named(text: String): Boolean {
+        val t = " " + text.lowercase().replace(Regex("[^a-z0-9% ]"), " ").replace(Regex("\\s+"), " ").trim() + " "
+        return WORDS.any { t.contains(" $it ") }
+    }
+
     /** Is [text] only "stop talking" (said to Jarvis, with or without its name)? */
     /**
      * A listening turn the recognizer ended with no words (7, no match) or silence (6) while its partial reading held
