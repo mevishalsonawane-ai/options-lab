@@ -193,8 +193,8 @@ object PositionCards {
         }
         anyOpen = now.isNotEmpty()
         // The "Open" widget's Zerodha orders: while it shows any still working, one order-book read a pass (none when no
-        // widget is placed, the switch is off, or none is working), so a filled or cancelled order leaves it. The read
-        // itself hands the book to the widget (Broker.orders).
+        // widget is placed, the switch is off, or none is working; screen off, about every 5 minutes), so a filled or
+        // cancelled order leaves it. The read itself hands the book to the widget (Broker.orders).
         if (!ordersRead && s.live && liveLoggedIn && runCatching { com.optionslab.app.widget.OpenWidget.wantsOrders(context, true) }.getOrDefault(false))
             runCatching { Broker.orders() }
         // The "Open" widget from the books just read (no read of its own); a failed Zerodha read is shown as one.

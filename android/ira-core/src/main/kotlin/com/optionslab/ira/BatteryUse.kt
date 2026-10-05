@@ -430,3 +430,21 @@ object AccountWarmPace {
     fun due(sinceLastMs: Long?, quiet: Boolean): Boolean =
         !quiet || sinceLastMs == null || sinceLastMs < 0 || sinceLastMs >= QUIET_MS
 }
+
+/**
+ * Battery (round 12): while the "Open" home-screen widget shows Zerodha orders still working, the live watch read
+ * Zerodha's order book once a pass only to redraw it - once a minute, and every 15 s while something is held: up to
+ * 4 requests a minute (about 1,500 a session), each waking the radio, screen on or off. The widget is display only and
+ * cannot be seen with the screen off, so then the book is read for it only when its orders are [SCREEN_OFF_MS] old
+ * (the fifth 60 s pass, the twentieth 15 s one): about 75 requests a session. Screen on: every pass, as before. Any
+ * read of the order book (an order placed, the app open) counts as fresh. Never an order path: stops, targets, the
+ * guard, the order watch and every alert read their own. Any doubt (no read yet, a clock oddity) reads. Pure.
+ */
+object WidgetOrdersPace {
+    /** Screen off: how old the widget's orders may get before the watch reads the book for it (just under 5 minutes). */
+    const val SCREEN_OFF_MS = 295_000L
+
+    /** Read the order book for the widget on this pass? [sinceLastMs]: since the book was last read (null: not yet). */
+    fun due(sinceLastMs: Long?, screenOn: Boolean): Boolean =
+        screenOn || sinceLastMs == null || sinceLastMs < 0 || sinceLastMs >= SCREEN_OFF_MS
+}

@@ -34,8 +34,8 @@ import java.util.Locale
  *
  * Battery: no timer of its own. It is redrawn only when the live watch or the app already has the books in hand
  * ([fromWatch], [fromZerodha], [fromPaper], [fromOrders]); the only read made for it is the live watch's one order-book
- * read a pass while it shows Zerodha orders still working ([wantsOrders]). With no widget placed, or the switch off,
- * nothing is kept, read or drawn. Its figures reach the vault at most once a minute (as [IraWidget]'s do), and the order
+ * read a pass while it shows Zerodha orders still working ([wantsOrders]; with the screen off, about every 5 minutes).
+ * With no widget placed, or the switch off, nothing is kept, read or drawn. Its figures reach the vault at most once a minute (as [IraWidget]'s do), and the order
  * path never waits on it ([fromOrdersSoon]).
  */
 class OpenWidget : AppWidgetProvider() {
@@ -75,6 +75,8 @@ class OpenWidget : AppWidgetProvider() {
         @Volatile private var drawn: String? = null
         /** The live stream's last Zerodha update (at most every 5 s). */
         @Volatile private var streamAt = 0L
+        /** When Zerodha's order book was last read (by anyone, [fromOrders]); 0 = not yet. Paces [wantsOrders] with the screen off. */
+        @Volatile private var ordersAt = 0L
 
         /**
          * "Show my P&L on the widget" as last set ([refresh] sets it at once; the settings file is saved later), or null
@@ -100,7 +102,7 @@ class OpenWidget : AppWidgetProvider() {
             runCatching { worker.submit(Runnable {}).get(5, java.util.concurrent.TimeUnit.SECONDS) }
             synchronized(unsaved) { unsaved.clear(); savedAt = null; unsavedGen = Int.MIN_VALUE }
             synchronized(flagLock) { enabled = null }
-            drawn = null; streamAt = 0L; inlineForTest = false
+            drawn = null; streamAt = 0L; ordersAt = 0L; inlineForTest = false
         }
 
         /** Under [unsaved]'s lock: a wiped (or re-opened) vault drops what was held, the switch included (read again). */
@@ -222,9 +224,15 @@ class OpenWidget : AppWidgetProvider() {
         /**
          * Should the live watch read Zerodha's order book on this pass? Only while a placed widget, with the switch on and
          * in Zerodha mode, shows orders still working there (one read a pass, so a filled or cancelled one goes).
+         * Battery (round 12): with the screen off nobody sees it, so then only when the book is about 5 minutes old
+         * ([com.optionslab.ira.WidgetOrdersPace]); the screen's state unknown counts as on.
          */
         fun wantsOrders(context: Context, live: Boolean): Boolean {
             if (BuildConfig.GOLD || !live || !placed(context) || !allowed()) return false
+            val screenOn = runCatching { context.getSystemService(android.os.PowerManager::class.java)?.isInteractive }.getOrNull() ?: true
+            val last = ordersAt
+            val since = if (last > 0L) System.currentTimeMillis() - last else null
+            if (!com.optionslab.ira.WidgetOrdersPace.due(since, screenOn)) return false
             return OpenBook.decodeOrders(textNow(K_ZO), Market.today().toString()).any { OpenBook.pendingLabel(it.status, it.variety) != null }
         }
 
@@ -254,6 +262,7 @@ class OpenWidget : AppWidgetProvider() {
         /** Zerodha's order book, whenever something already read it: the ones still working. */
         fun fromOrders(context: Context, rows: List<Broker.OrderRow>) {
             if (BuildConfig.GOLD) return
+            ordersAt = System.currentTimeMillis()
             val working = rows.filter { it.working }.map { o ->
                 OpenBook.Ord(o.symbol, o.side, if (o.pending > 0) o.pending else o.qty, o.type, o.price, o.trigger, o.status, o.variety)
             }
