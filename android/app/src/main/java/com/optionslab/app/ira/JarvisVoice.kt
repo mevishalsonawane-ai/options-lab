@@ -381,7 +381,18 @@ class JarvisVoice : Service() {
     /** Ends the recognizer's turn early (its results come at once). */
     /** When [finish] last asked the recognizer to close a turn (a "client" error right after it is that, not a failure). */
     @Volatile private var stoppedAt = 0L
-    private val finish = Runnable { if (listening && !speaking) { stoppedAt = SystemClock.elapsedRealtime(); runCatching { rec?.stopListening() } } }
+    private val finish = Runnable {
+        if (!listening || speaking) return@Runnable
+        // A plain question whose words have stood still is answered from them now: the recognizer's final reading, which
+        // can take a second more after the turn is closed, is not waited for (Boss, 4 Oct: "late response"). Not with
+        // shared audio (its voice check needs the turn's end), a yes or no awaited, a turn begun while Jarvis talked, or
+        // the strict wake word (it weighs all of the final's readings).
+        val now = SystemClock.elapsedRealtime()
+        val early = if (tap == null && asking == null && !turnInSpeech && (awake() || !IraTools.wakeStrict))
+            com.optionslab.ira.Turn.early(turnPartial, awake(), now - turnPartialAt) else null
+        if (early != null) { answerEarly(early); return@Runnable }
+        stoppedAt = now; runCatching { rec?.stopListening() }
+    }
     /** Words stopped changing this long: the turn ends (a short pause inside a sentence must not cut it). */
     private val END_AFTER_MS = 900L
     /** The sentence being spoken now ("id#n"), so a replaced one is ignored. */
@@ -462,6 +473,10 @@ class JarvisVoice : Service() {
     @Volatile private var turnLoudest = -100f
     /** The recognizer's latest partial reading this turn (its final answer can drop a lone name as "no match"). */
     @Volatile private var turnPartial: String? = null
+    /** When this turn's partial words last changed (a repeated reading is no change). */
+    @Volatile private var turnPartialAt = 0L
+    /** This turn was answered from its partial words ([answerEarly]): a late result or error from it is not a new turn. */
+    @Volatile private var answeredEarly = false
     /** Turns with clear sound in which the recognizer found no words, in a row (the language may be wrong). */
     private var loudNoMatch = 0
     /** The recognizer said "speech began" this turn (a loud room alone is not Boss speaking). */
@@ -705,7 +720,7 @@ class JarvisVoice : Service() {
             }
         }
         listening = true
-        turnReadyAt = 0; turnHeardAny = false; turnLoudest = -100f; turnPartial = null; turnSpeech = false
+        turnReadyAt = 0; turnHeardAny = false; turnLoudest = -100f; turnPartial = null; turnPartialAt = 0L; turnSpeech = false; answeredEarly = false
         hushBeep(1_500)                                   // the start beep (put back once the turn is ready, or in 1.5 s)
         runCatching { rec?.startListening(i) }.onFailure { listening = false; endTap(); again(1_000) }
         _state.value = VoiceState(if (awake()) Mode.AWAKE else Mode.LISTENING)
@@ -739,7 +754,11 @@ class JarvisVoice : Service() {
             if (!speaking) { main.removeCallbacks(finish); main.postDelayed(finish, 700) }
         }
         override fun onPartialResults(partialResults: Bundle?) {
+            // Only words that changed restart the end-of-turn wait (a recognizer repeating the same reading pushed it back).
+            var fresh = false
             partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull { it.isNotBlank() }?.let {
+                fresh = com.optionslab.ira.Turn.changed(turnPartial, it)
+                if (fresh) turnPartialAt = SystemClock.elapsedRealtime()
                 turnHeardAny = true; turnPartial = it
                 if (tap != null && silentShared != 0) silentShared = 0      // the shared capture does hear
             }
@@ -749,7 +768,7 @@ class JarvisVoice : Service() {
             // Boss is speaking to Jarvis: once the words stop changing for a moment, end the turn now instead of
             // waiting for the recognizer's own long silence.
             val first = words.firstOrNull()?.trim().orEmpty()
-            if (first.isNotEmpty() && (WAKE.containsMatchIn(first) || awake() || asking != null)) {
+            if (first.isNotEmpty() && fresh && (WAKE.containsMatchIn(first) || awake() || asking != null)) {
                 main.removeCallbacks(finish)
                 // Only the name so far ("Jarvis..." and a breath before the question): never cut there, or the question
                 // is lost and only "Yes, Boss?" is said. The recognizer's own silence ends that turn.
@@ -763,6 +782,7 @@ class JarvisVoice : Service() {
 
         override fun onResults(results: Bundle?) {
             main.removeCallbacks(finish)
+            if (answeredEarly) { answeredEarly = false; return }      // already answered from its partial words
             listening = false
             loudNoMatch = 0
             if (results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.any { it.isNotBlank() } == true) langWorks = true
@@ -776,6 +796,7 @@ class JarvisVoice : Service() {
 
         override fun onError(error: Int) {
             main.removeCallbacks(finish)
+            if (answeredEarly) { answeredEarly = false; return }      // the cancelled turn already answered: not a failure
             listening = false
             // Boss, 4 Oct: "Jarvis" alone was caught while he spoke, then the final answer said "no match" (error 7) and
             // the name was lost - every turn. The name read mid-turn counts: as if the recognizer had said it.
@@ -871,6 +892,24 @@ class JarvisVoice : Service() {
                 }
             }
         }
+    }
+
+    /**
+     * The turn's still partial words answered now, as if they were the recognizer's final reading (a plain question
+     * only, [com.optionslab.ira.Turn.early]): the turn is cancelled, and [heard] takes the words with every usual rule.
+     */
+    private fun answerEarly(words: String) {
+        main.removeCallbacks(finish)
+        answeredEarly = true
+        stoppedAt = SystemClock.elapsedRealtime()
+        runCatching { rec?.cancel() }
+        listening = false
+        loudNoMatch = 0; errorsInRow = 0; langWorks = true
+        note("heard " + (if (WAKE.containsMatchIn(words)) "the name" else "${words.trim().split(Regex("\\s+")).size} words, no name") +
+            " (answered from the partial words; the final reading not waited for)")
+        remember(words)
+        endTap()
+        heard(listOf(words))
     }
 
     /** Slow answers three times running, not on the fastest model: a suggestion in the chat, once a day. */

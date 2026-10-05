@@ -1,0 +1,38 @@
+package com.optionslab.ira
+
+/**
+ * The end of a spoken turn, read from the recognizer's partial words (Boss, 4 Oct: "late response"). When the turn is
+ * closed, the recognizer still takes a moment (up to a second or more) to give its final reading; a plain question
+ * whose words have stood still is answered from them at once instead. Pure: the words in, what to do out.
+ */
+object Turn {
+    /** The partial reading unchanged this long is what Boss said (the final reading adds nothing to it). */
+    const val STABLE_MS = 600L
+
+    /** Did the words change? A repeated, identical partial must not push the end of the turn back. */
+    fun changed(before: String?, now: String): Boolean = norm(before.orEmpty()) != norm(now)
+
+    /**
+     * The words to answer now from a partial reading unchanged for [stableForMs], before the recognizer's final one - or
+     * null to wait for it as before. Plain questions answered from what the phone keeps (prices, levels, patterns, news,
+     * help, a greeting) only: never a command, an order, the account, a backtest, a suggested trade or words only the
+     * model can place - those wait for the best reading (and the voice check). Nothing here acts; the words then go the
+     * usual way, with every rule of a final reading.
+     */
+    fun early(partial: String?, awake: Boolean, stableForMs: Long): String? {
+        if (stableForMs < STABLE_MS) return null
+        val p = partial?.trim()?.takeIf { it.isNotEmpty() } ?: return null
+        val h = Wake.heard(p, awake) as? Wake.Heard.Ask ?: return null
+        // One word ("Jarvis... how") is a breath inside the sentence, not a question.
+        if (norm(h.question).split(' ').size < 2) return null
+        val q = Ask.parse(h.question)
+        if (q.command != null || q.order != null || q.topics.isEmpty() || !QUICK.containsAll(q.topics)) return null
+        return p
+    }
+
+    /** What a question may be about to be answered from its partial reading. */
+    private val QUICK = setOf(Topic.OVERVIEW, Topic.WHY, Topic.TREND, Topic.LEVELS, Topic.PATTERNS, Topic.NEWS,
+        Topic.VOLATILITY, Topic.HELP, Topic.GREETING, Topic.EXPLAIN)
+
+    private fun norm(s: String) = s.lowercase().replace(Regex("[^a-z0-9% ]"), " ").replace(Regex("\\s+"), " ").trim()
+}
