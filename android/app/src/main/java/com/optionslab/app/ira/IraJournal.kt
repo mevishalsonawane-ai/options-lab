@@ -3,6 +3,7 @@ package com.optionslab.app.ira
 import com.optionslab.app.data.AppSettings
 import com.optionslab.app.data.Broker
 import com.optionslab.app.data.Paper
+import kotlinx.coroutines.async
 import org.json.JSONArray
 import org.json.JSONObject
 import java.time.LocalDateTime
@@ -45,6 +46,62 @@ internal object IraJournal {
         val f = com.optionslab.ira.TradeSearch.parse(question, com.optionslab.app.data.Market.today())
         return listOf(com.optionslab.ira.TradeSearch.answer(trips(), f, ::isExpiry, ::marketOf))
     }
+
+    // ---- trade replay --------------------------------------------------------------------------------------------
+
+    /** [symbol]'s minute candles from the start of [day] (India time), or none when the feed has none (an expired contract). */
+    private suspend fun minutes(symbol: String, day: java.time.LocalDate): List<com.optionslab.ira.Candle> = runCatching {
+        kotlinx.coroutines.withTimeoutOrNull(20_000) {
+            com.optionslab.app.data.ChartFeed.bars(symbol, "1m", day.atStartOfDay(IST).toEpochSecond(), null)
+        }.orEmpty().map { b ->
+            com.optionslab.ira.Candle(java.time.Instant.ofEpochSecond(b.epochSecond).atZone(IST).toLocalDateTime(), b.open, b.high, b.low, b.close)
+        }
+    }.getOrDefault(emptyList())
+
+    /**
+     * Each of [trips] against its contract's own minute candles and its index's (read only: candles from the chart
+     * feed, nothing placed or changed). Each contract and index is read once, all at the same time.
+     */
+    suspend fun replays(trips: List<com.optionslab.engine.RoundTrips.Trip>, owners: Map<String, String>): List<com.optionslab.ira.TradeReplay.Replay> =
+        kotlinx.coroutines.coroutineScope {
+            val now = LocalDateTime.now(IST)
+            val wanted = LinkedHashSet<Pair<String, java.time.LocalDate>>()
+            trips.forEach { t ->
+                wanted += t.symbol to t.openedAt.toLocalDate()
+                marketOf(t.symbol)?.let { m -> IraHub.LIVE[m]?.let { s -> wanted += s to t.openedAt.toLocalDate() } }
+            }
+            val got = wanted.map { k -> async { k to minutes(k.first, k.second) } }.map { it.await() }.toMap()
+            trips.map { t ->
+                val d = t.openedAt.toLocalDate()
+                val m = marketOf(t.symbol)
+                val ix = m?.let { IraHub.LIVE[it] }?.let { got[it to d] }?.takeIf { it.isNotEmpty() }
+                com.optionslab.ira.TradeReplay.of(
+                    com.optionslab.ira.TradeReplay.Trip(t.symbol, t.direction, t.qty, t.entry, t.exit, t.openedAt, t.closedAt, t.net,
+                        com.optionslab.app.data.TradeBook.ownerOf(t, owners)),
+                    got[t.symbol to d].orEmpty(), ix, m, now)
+            }
+        }
+
+    /** "How was my last trade?", "go over my trades today": the app's mode, the last trade in full or today's a line each. */
+    suspend fun replay(question: String): List<String> {
+        val scope = com.optionslab.ira.TradeReplay.asked(question) ?: com.optionslab.ira.TradeReplay.Scope.LAST
+        val live = AppSettings.load().live
+        val owners = runCatching { com.optionslab.app.data.Strategies.owners() }.getOrDefault(emptyMap())
+        val all = runCatching { com.optionslab.app.data.TradeBook.trips(live) }.getOrDefault(emptyList())
+        val today = com.optionslab.app.data.Market.today()
+        val picked = if (scope == com.optionslab.ira.TradeReplay.Scope.LAST) listOfNotNull(all.maxByOrNull { it.closedAt })
+            else all.filter { it.day == today }.sortedBy { it.closedAt }.takeLast(MAX_REPLAYED)
+        return com.optionslab.ira.TradeReplay.answer(if (live) "Zerodha" else "Paper", scope, replays(picked, owners))
+    }
+
+    /** The journal's replay of a day's closed trades: a line each, then what the exits show. */
+    suspend fun replayLines(trips: List<com.optionslab.engine.RoundTrips.Trip>, owners: Map<String, String>): List<String> {
+        val r = replays(trips.sortedBy { it.closedAt }.takeLast(MAX_REPLAYED), owners)
+        return r.map { com.optionslab.ira.TradeReplay.short(it) } + com.optionslab.ira.TradeReplay.exits(r)
+    }
+
+    /** At most this many trades are replayed at once (each reads its contract's candles). */
+    private const val MAX_REPLAYED = 12
 
     fun timeOfDay(): List<String> = listOf(com.optionslab.ira.TimeOfDay.line(trips()) ?: "Not enough trades yet to tell your best and worst time of day (3 in each hour).")
 

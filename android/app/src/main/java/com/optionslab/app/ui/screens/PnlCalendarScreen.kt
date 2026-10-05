@@ -663,6 +663,12 @@ private fun DayTrades(live: Boolean, day: LocalDate, trips: List<com.optionslab.
         }
     }
     val closed = trips.filter { it.day == day }
+    // Today's closed trades replayed against their own minute candles (read only; past days' contracts may have expired).
+    val replay by produceState<List<String>>(emptyList(), live, day, closed.size) {
+        value = if (closed.isEmpty() || day != Market.today()) emptyList() else withContext(Dispatchers.IO) {
+            runCatching { com.optionslab.app.ira.IraJournal.replayLines(closed, owners) }.getOrDefault(emptyList())
+        }
+    }
     val title = day.format(java.time.format.DateTimeFormatter.ofPattern("EEE d MMM yyyy", Locale.ENGLISH))
     LedgerCard(title = "Trades on $title") {
         if (fills.isEmpty()) { Note(if (live) "No Zerodha trades recorded that day." else "No paper trades that day.", Modifier.padding(top = 4.dp)); return@LedgerCard }
@@ -686,6 +692,11 @@ private fun DayTrades(live: Boolean, day: LocalDate, trips: List<com.optionslab.
                 Text("${closed.size} closed trade${if (closed.size == 1) "" else "s"}, after charges", style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp), modifier = Modifier.weight(1f))
                 Text(rupees(net), style = Type.figure.copy(color = if (net >= 0) p.verdigris else p.oxblood, fontSize = 15.sp, fontWeight = FontWeight.SemiBold))
             }
+        }
+        if (replay.isNotEmpty()) {
+            Eyebrow("Replay · from the minute candles", Modifier.padding(top = 10.dp))
+            replay.forEach { Text("• $it", style = Type.bodySmall.copy(color = p.ink, fontSize = 12.sp), modifier = Modifier.padding(top = 3.dp)) }
+            Note("What each trade did while held and after you got out: facts, not advice.", Modifier.padding(top = 4.dp))
         }
     }
 }

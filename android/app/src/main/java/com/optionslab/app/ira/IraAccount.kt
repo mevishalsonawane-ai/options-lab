@@ -92,7 +92,7 @@ internal object IraAccount {
     }
 
     /** Sections answered from the question's own words: never from the cache. */
-    private val ASKED = setOf(Section.WHATIF, Section.CHANGES, Section.SEARCH, Section.TIMEOFDAY, Section.REASONS, Section.EXPLAIN_POS, Section.MISTAKES, Section.MOVE, Section.RANK)
+    private val ASKED = setOf(Section.WHATIF, Section.CHANGES, Section.SEARCH, Section.TIMEOFDAY, Section.REASONS, Section.EXPLAIN_POS, Section.MISTAKES, Section.MOVE, Section.RANK, Section.REPLAY)
 
     suspend fun read(sections: Set<Section>, markets: List<com.optionslab.ira.Market> = emptyList(), question: String = ""): AppView? {
         testView?.let { return it(sections) }
@@ -246,6 +246,8 @@ internal object IraAccount {
             if (wants(Section.EXPLAIN_POS)) out[Section.EXPLAIN_POS] = IraCoach.explainPositions()
             if (wants(Section.MOVE)) out[Section.MOVE] = IraCoach.moveLines(question)
             if (wants(Section.RANK)) out[Section.RANK] = IraCoach.rankLines()
+            // "How was my last trade?": the trades against their own candles (read only).
+            if (wants(Section.REPLAY)) out[Section.REPLAY] = IraJournal.replay(question)
             if (wants(Section.SEARCH)) out[Section.SEARCH] = IraJournal.search(question)
             if (wants(Section.TIMEOFDAY)) out[Section.TIMEOFDAY] = IraJournal.timeOfDay()
             if (wants(Section.REASONS)) out[Section.REASONS] = IraJournal.reasons()
