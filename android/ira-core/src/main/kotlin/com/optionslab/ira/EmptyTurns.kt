@@ -63,17 +63,23 @@ object EmptyTurns {
         else -> SLOW_MS
     }
 
+    /** Stop words and yes / no words: a turn with one in it is always Boss's ([echo]). */
+    val BOSS_ONLY = setOf("stop", "ruko", "bas", "chup", "cancel", "yes", "no", "haan", "nahi", "ha", "na")
+
     private fun words(s: String?): List<String> =
         (s ?: "").lowercase().replace(rx("[^a-z0-9 ]"), " ").split(' ').filter { it.isNotEmpty() }
 
     /**
      * Is [partial], read in a turn opened while Jarvis was saying [saying], only his own voice heard back? Every word
      * of a short reading (three words or fewer), three in four of a longer one, are words he is saying - and never his
-     * name (he never says it, so it is always Boss's).
+     * name (he never says it, so it is always Boss's), and never with a stop word ("stop", "ruko", "bas", "chup",
+     * "cancel") or a yes or no ("yes", "no", "haan", "nahi", "ha", "na") in it: Boss cutting in, or answering, is never
+     * let go as Jarvis's own voice, even when Jarvis happens to be saying the same word.
      */
     fun echo(partial: String?, saying: String?): Boolean {
         val h = words(partial)
         if (h.isEmpty() || saying.isNullOrBlank() || Wake.named(partial ?: "")) return false
+        if (h.any { it in BOSS_ONLY }) return false
         val said = words(saying).toSet()
         if (said.isEmpty()) return false
         val mine = h.count { it in said }

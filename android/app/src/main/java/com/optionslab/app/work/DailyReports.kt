@@ -158,7 +158,7 @@ object DailyReports {
         if (com.optionslab.app.BuildConfig.JARVIS) {
             // Jarvis's own checks: the Zerodha connection itself, the static IP, the live prices, the data, its model and voice.
             if (Broker.loggedIn) {
-                val f = kotlinx.coroutines.withTimeoutOrNull(10_000) { runCatching { Broker.funds() }.getOrNull() }
+                val f = Broker.within(10_000) { Broker.funds() }
                 ok(f != null, if (f != null) "Zerodha connection tested: ${rs(f.available).removePrefix("+")} available to trade" else "Zerodha did not answer the connection test")
             } else if (!Broker.configured) lines += "• Zerodha not set up: Paper only"
             com.optionslab.app.data.StaticIp.registered?.let { reg ->

@@ -8,6 +8,7 @@ import com.optionslab.app.data.Diag
 import com.optionslab.app.data.Market
 import com.optionslab.app.security.SecurePrefs
 import com.optionslab.ira.WatchHealth
+import kotlinx.coroutines.launch
 
 /**
  * The dead-man alert. The market watch stamps a heartbeat each pass; a
@@ -25,6 +26,10 @@ object Heartbeat {
     private const val KEY = "hb.last"
     private const val ALERTED = "hb.alerted"
     private const val STALLED = "hb.stalled.day"
+
+    /** Jarvis's stalled-watch note runs here, apart from the alarm receiver, and is given up after [TELL_MS]. */
+    private val tellScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
+    private const val TELL_MS = 20_000L
 
     /** The watch went silent at least once today (for the day report). */
     fun stalledToday(): Boolean = SecurePrefs.getString(STALLED) == Market.today().toString()
@@ -130,12 +135,12 @@ object Heartbeat {
             setting = "schedule.permissions")
         // Once per stall, as the notification: Jarvis says in the chat which open positions and stops are now unwatched,
         // and what keeps the phone from stopping the watch again. Only speaks (round 21). Off the main thread already
-        // (the alarm receiver's IO scope); bounded under goAsync's ~10 s window so a hung read never holds the receiver.
-        runCatching {
-            val at = if (since != null) lastAt.toLocalTime() else null
-            kotlinx.coroutines.runBlocking {
-                kotlinx.coroutines.withTimeoutOrNull(8_000) { com.optionslab.app.ira.IraWatchStopped.tell(context, at) }
-            }
+        // Not inside the alarm receiver's goAsync window (~10 s): launched apart on IO with its own bound (the Zerodha read
+        // inside waits 5 s at most, Broker.within), so the receiver finishes at once and a hung read never holds it.
+        val at = if (since != null) lastAt.toLocalTime() else null
+        val app = context.applicationContext ?: context
+        tellScope.launch {
+            runCatching { kotlinx.coroutines.withTimeoutOrNull(TELL_MS) { com.optionslab.app.ira.IraWatchStopped.tell(app, at) } }
         }
     }
 }

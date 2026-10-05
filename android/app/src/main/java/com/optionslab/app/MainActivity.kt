@@ -55,8 +55,10 @@ class MainActivity : FragmentActivity() {
         if (trusted(intent)) {
             tabRequests.value = intent?.getStringExtra(EXTRA_TAB)
             closeRequests.value = intent?.getStringExtra(EXTRA_CLOSE)
-            // Not again on a re-creation (the activity's saved state): the banner was already shown for this tap.
-            if (savedInstanceState == null) intent?.let { cardOf(it) }?.let { cardRequests.value = it }
+            // Not again on a re-creation (the activity's saved state), nor when opened from Recents (the old tap's intent
+            // replayed): the banner was already shown for this tap.
+            val fromHistory = intent?.let { (it.flags and android.content.Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY) != 0 } == true
+            if (savedInstanceState == null && !fromHistory) intent?.let { cardOf(it) }?.let { cardRequests.value = it }
         }
         // A fresh open (not a rotation, which brings saved state) holds the logo for a moment first.
         val splash = savedInstanceState == null && com.optionslab.app.ui.components.Splash.enabled

@@ -1207,11 +1207,13 @@ internal object IraTools {
         heldNotedOn == today || !com.optionslab.ira.SinceMorning.wantsRead(morningHeld(today))
 
     /** Notes [held] (with whether Zerodha's were read) as today's morning legs: the first read kept, Zerodha's filled in by a later one. */
-    @Synchronized fun noteMorningHeld(today: java.time.LocalDate, held: List<com.optionslab.ira.SinceMorning.Held>, zerodha: com.optionslab.ira.SinceMorning.Zerodha) {
+    @Synchronized fun noteMorningHeld(today: java.time.LocalDate, held: List<com.optionslab.ira.SinceMorning.Held>, zerodha: com.optionslab.ira.SinceMorning.Zerodha,
+                                      at: java.time.LocalTime) {
         runCatching {
             if (heldNotedOn == today) return@runCatching
             val kept = morningHeld(today)
-            val next = com.optionslab.ira.SinceMorning.renote(kept, held, zerodha)
+            // A read that finished outside 09:40-10:15 notes nothing (renote keeps what was kept); a Zerodha read keeps its time.
+            val next = com.optionslab.ira.SinceMorning.renote(kept, held, zerodha, at) ?: return@runCatching
             if (next != kept) prefs().putAllSoon(mapOf(MORNING_HELD to com.optionslab.ira.SinceMorning.encode(today, next)))
             if (!com.optionslab.ira.SinceMorning.wantsRead(next)) heldNotedOn = today
         }

@@ -2,6 +2,7 @@ package com.optionslab.ira
 
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.LocalTime
 import java.time.ZoneId
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -151,7 +152,7 @@ class SinceMorningTest {
         val paper = SinceMorning.Held("Paper", "NIFTY24000PE", 75)
         val zLeg = SinceMorning.Held("Zerodha", "BANKNIFTY07OCT2654200CE", 35)
         // The 09:40 read: the broker timed out, so only Paper's legs were read - the note keeps that it was not read.
-        val first = SinceMorning.renote(null, listOf(paper), SinceMorning.Zerodha.FAILED)
+        val first = SinceMorning.renote(null, listOf(paper), SinceMorning.Zerodha.FAILED, LocalTime.of(9, 40))!!
         assertEquals(SinceMorning.Zerodha.FAILED, first.zerodha)
         assertTrue(SinceMorning.wantsRead(first))
         // Kept and read back the same; a note kept before this round reads as read.
@@ -167,12 +168,12 @@ class SinceMorningTest {
         assertFalse(said.contains("You opened"), said)
         assertTrue(said.contains("This morning's Zerodha legs weren't read"), said)
         // A retry at 09:50 that reads Zerodha fills its legs in, keeping the 09:40 Paper legs; the window then stops reading.
-        val second = SinceMorning.renote(first, listOf(SinceMorning.Held("Paper", "NIFTY24100CE", 50), zLeg), SinceMorning.Zerodha.READ)
-        assertEquals(SinceMorning.Noted(listOf(paper, zLeg), SinceMorning.Zerodha.READ), second)
+        val second = SinceMorning.renote(first, listOf(SinceMorning.Held("Paper", "NIFTY24100CE", 50), zLeg), SinceMorning.Zerodha.READ, LocalTime.of(9, 50))!!
+        assertEquals(SinceMorning.Noted(listOf(paper, zLeg), SinceMorning.Zerodha.READ, LocalTime.of(9, 50)), second)
         assertFalse(SinceMorning.wantsRead(second))
         // Another failed retry changes nothing kept; a read note is never replaced.
-        assertEquals(first, SinceMorning.renote(first, emptyList(), SinceMorning.Zerodha.FAILED))
-        assertEquals(second, SinceMorning.renote(second, emptyList(), SinceMorning.Zerodha.READ))
+        assertEquals(first, SinceMorning.renote(first, emptyList(), SinceMorning.Zerodha.FAILED, LocalTime.of(9, 55)))
+        assertEquals(second, SinceMorning.renote(second, emptyList(), SinceMorning.Zerodha.READ, LocalTime.of(9, 55)))
         // Both read: Zerodha's legs compared as before.
         val both = SinceMorning.positions(SinceMorning.Positions(second.held, listOf(paper), SinceMorning.Zerodha.READ, SinceMorning.Zerodha.READ))
         assertTrue(both.changes.single().text.contains("Zerodha BANKNIFTY07OCT2654200CE (long 35) from the morning is closed"), both.changes.toString())
@@ -181,5 +182,27 @@ class SinceMorningTest {
         assertTrue(nowFailed.changes.isEmpty() && nowFailed.notes.single().startsWith("Zerodha didn't answer in time just now"), nowFailed.toString())
         // Never logged in, no Zerodha legs either side: nothing to say about Zerodha.
         assertTrue(SinceMorning.positions(SinceMorning.Positions(listOf(paper), listOf(paper), SinceMorning.Zerodha.LOGGED_OUT, SinceMorning.Zerodha.LOGGED_OUT)).notes.isEmpty())
+    }
+
+    @Test fun morningZerodhaLegsOnlyFromTheWindowAndALateReadIsSaidWithItsTime() {
+        val paper = SinceMorning.Held("Paper", "NIFTY24000PE", 75)
+        val zLeg = SinceMorning.Held("Zerodha", "BANKNIFTY07OCT2654200CE", 35)
+        val first = SinceMorning.renote(null, listOf(paper), SinceMorning.Zerodha.FAILED, LocalTime.of(9, 41))!!
+        // A read that finished after 10:15 (or before 09:40) fills nothing in, and makes no note when none is kept.
+        assertEquals(first, SinceMorning.renote(first, listOf(paper, zLeg), SinceMorning.Zerodha.READ, LocalTime.of(10, 16)))
+        assertEquals(null, SinceMorning.renote(null, listOf(paper, zLeg), SinceMorning.Zerodha.READ, LocalTime.of(10, 20)))
+        assertEquals(null, SinceMorning.renote(null, listOf(paper, zLeg), SinceMorning.Zerodha.READ, LocalTime.of(9, 30)))
+        // A read at 10:02:37 in the window fills Zerodha's legs in, with its time (to the minute), kept across a restart.
+        val late = SinceMorning.renote(first, listOf(paper, zLeg), SinceMorning.Zerodha.READ, LocalTime.of(10, 2, 37))!!
+        assertEquals(SinceMorning.Noted(listOf(paper, zLeg), SinceMorning.Zerodha.READ, LocalTime.of(10, 2)), late)
+        assertEquals(late, SinceMorning.decode(SinceMorning.encode(day, late), day))
+        // Asked later: the answer says when the morning's Zerodha legs were read.
+        val f = SinceMorning.positions(SinceMorning.Positions(late.held, listOf(paper, zLeg), late.zerodha, SinceMorning.Zerodha.READ, late.zerodhaAt))
+        assertTrue(f.notes.single().startsWith("This morning's Zerodha legs were read at 10:02"), f.notes.toString())
+        assertTrue(SinceMorning.say(f, null, false).contains("read at 10:02"))
+        // Read near the mark (by 09:50): nothing to add.
+        val near = SinceMorning.renote(null, listOf(paper, zLeg), SinceMorning.Zerodha.READ, LocalTime.of(9, 48))!!
+        assertEquals(LocalTime.of(9, 48), near.zerodhaAt)
+        assertTrue(SinceMorning.positions(SinceMorning.Positions(near.held, listOf(paper, zLeg), near.zerodha, SinceMorning.Zerodha.READ, near.zerodhaAt)).notes.isEmpty())
     }
 }

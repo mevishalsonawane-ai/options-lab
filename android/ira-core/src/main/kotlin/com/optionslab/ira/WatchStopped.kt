@@ -29,6 +29,7 @@ object WatchStopped {
     const val BATTERY_SET = "IraAlgo's battery is already Unrestricted, so something else stopped it (the phone's own cleaner, or the app closing); opening IraAlgo brings it back."
     const val BATTERY_MAYBE = "If IraAlgo's battery is not set to Unrestricted, set it (App settings, then Battery, then Unrestricted) so the phone does not stop it again."
     const val NOTE = "I have placed, moved and closed nothing, Boss; the app has already tried to restart the watch."
+    const val UNREAD_EMPTY = "I could not read your Zerodha positions just now, so I cannot say what is open there; any open there are unwatched, except stops resting at Zerodha."
 
     private fun px(x: Double) = "%.2f".format(Locale.ENGLISH, x).removeSuffix(".00")
     private fun qty(q: Int) = if (q < 0) "short ${-q}" else "$q"
@@ -49,18 +50,23 @@ object WatchStopped {
     }
 
     /**
-     * What Jarvis says, or null with no open position. [since] the last check today (null: none today); [now] the time
+     * What Jarvis says, or null with no open position and Zerodha read (with none open that could be read but Zerodha
+     * unread, it says so: what is open there is not known). [since] the last check today (null: none today); [now] the time
      * now; [unrestricted] IraAlgo's battery setting (null: unknown); [zerodhaUnread] true when Boss is logged in to Zerodha
      * but its positions could not be read just now (the relay timing out).
      */
     fun text(since: LocalTime?, now: LocalTime, legs: List<Leg>, unrestricted: Boolean?, zerodhaUnread: Boolean = false): String? {
-        if (legs.isEmpty()) return null
+        if (legs.isEmpty() && !zerodhaUnread) return null
         val ago = since?.let { Duration.between(it, now).toMinutes() }?.takeIf { it >= 0 }
         val stopped = when {
             since == null -> "the order watch has not run today"
             ago != null && ago >= 1 -> "the order watch stopped: no check since ${since.withSecond(0).withNano(0)} ($ago minute${if (ago == 1L) "" else "s"} ago)"
             else -> "the order watch stopped: no check since ${since.withSecond(0).withNano(0)}"
         }
+        // Nothing open that could be read, but Zerodha could not be read: what is open there is not known, so it is said.
+        if (legs.isEmpty()) return ("Boss, $stopped. No paper position is open, but $UNREAD_EMPTY " +
+            "Opening IraAlgo restarts the watch. " +
+            when (unrestricted) { false -> BATTERY; true -> BATTERY_SET; null -> BATTERY_MAYBE } + " " + NOTE)
         val n = legs.size
         val out = StringBuilder("Boss, $stopped, with ${if (n == 1) "1 position" else "$n positions"} open. Until it runs again:\n")
         // Paper first (nothing about it works without the watch), then Zerodha.

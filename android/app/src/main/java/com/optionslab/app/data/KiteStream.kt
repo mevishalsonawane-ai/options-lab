@@ -159,8 +159,11 @@ object KiteStream {
                 val key = Broker.apiKey ?: break
                 val c = Conn().also { it.network = networkId() }
                 val url = "wss://${KitePin.WS_HOST}/?api_key=$key&access_token=$token"
+                // conn is set before the socket is made: onOpen (on OkHttp's thread) checks `conn !== c`, and a fast open
+                // landing before the assignment would otherwise close a healthy socket.
+                conn = c
                 val ws = client.newWebSocket(Request.Builder().url(url).build(), listener(c))
-                conn = c; socket = ws
+                socket = ws
                 try {
                     watch(c, ws)
                 } finally {
@@ -202,6 +205,9 @@ object KiteStream {
     private fun listener(c: Conn) = object : WebSocketListener() {
         override fun onOpen(webSocket: WebSocket, response: Response) {
             if (conn !== c) { webSocket.close(1000, null); return }
+            // An open landing before the loop has stored its socket: this is that socket (conn is c), so it is stored
+            // here too, or [resubscribe] would find none and the stream would open with nothing subscribed.
+            socket = webSocket
             val now = System.currentTimeMillis()
             c.openedAt = now; c.lastFrame = now; c.opened.set(true)
             _status.value = Status.LIVE

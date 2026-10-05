@@ -10,7 +10,6 @@ import com.optionslab.app.security.SecurePrefs
 import com.optionslab.ira.PreMarket
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * The pre-market checklist ([PreMarket], usefulness round 12): "am I ready to trade?", "pre-market checklist" - the app's
@@ -79,8 +78,8 @@ internal object IraPreMarket {
     /** Boss's account: Zerodha's margin against his usual position size, and what is carried overnight (unlocked phone only). */
     suspend fun account(): PreMarket.Account {
         val sizes = runCatching { com.optionslab.app.data.TradeBook.trips(true).sortedBy { it.openedAt }.map { it.entry * it.qty } }.getOrDefault(emptyList())
-        val available = if (Broker.loggedIn) withTimeoutOrNull(ZERODHA_MS) { runCatching { Broker.funds().available }.getOrNull() } else null
-        val live = if (Broker.loggedIn) withTimeoutOrNull(ZERODHA_MS) { runCatching { Broker.positionBook().net.filter { it.open } }.getOrNull() }.orEmpty() else emptyList()
+        val available = if (Broker.loggedIn) Broker.within(ZERODHA_MS) { Broker.funds().available } else null
+        val live = if (Broker.loggedIn) Broker.within(ZERODHA_MS) { Broker.positionBook().net.filter { it.open } }.orEmpty() else emptyList()
         val paper = runCatching { com.optionslab.app.data.Paper.state.positions.filter { it.quantity != 0 } }.getOrDefault(emptyList())
         val carried = live.map { "${it.symbol}, ${kotlin.math.abs(it.qty)} ${if (it.qty > 0) "long" else "short"} on Zerodha" } +
             paper.map { "${it.symbol}, ${kotlin.math.abs(it.quantity)} ${if (it.quantity > 0) "long" else "short"} on paper" }

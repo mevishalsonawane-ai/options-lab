@@ -3400,7 +3400,7 @@ object IraHub {
 
     /** The day's P&L so far (Zerodha's in Live, else the paper account's), or null when it cannot be read. */
     private suspend fun dayPnlNow(live: Boolean): Double? =
-        if (live) runCatching { kotlinx.coroutines.withTimeoutOrNull(8_000) { com.optionslab.app.data.Broker.positionBook().m2m } }.getOrNull()
+        if (live) runCatching { com.optionslab.app.data.Broker.within(8_000) { com.optionslab.app.data.Broker.positionBook().m2m } }.getOrNull()
         else runCatching { com.optionslab.app.data.Paper.snapshot().dayPnl }.getOrNull()
 
     /** What Boss told about himself that bears on a trade check now ([com.optionslab.ira.AboutBoss.recall]), or null. Words only. */
@@ -3559,7 +3559,7 @@ object IraHub {
                 val pnl = HashMap<String, Double>()
                 runCatching { com.optionslab.app.data.Paper.snapshot().dayPnl }.getOrNull()?.let { pnl["Paper"] = it }
                 if (com.optionslab.app.data.Broker.loggedIn) runCatching {
-                    withTimeoutOrNull(8_000) { com.optionslab.app.data.Broker.positionBook() }?.m2m
+                    com.optionslab.app.data.Broker.within(8_000) { com.optionslab.app.data.Broker.positionBook() }?.m2m
                 }.getOrNull()?.let { pnl["Zerodha"] = it }
                 facts += com.optionslab.ira.CoPilot.limits(mapOf("Zerodha" to set.guardDailyLoss, "Paper" to set.guardPaperDailyLoss), pnl)
             }
@@ -3587,7 +3587,8 @@ object IraHub {
             val (open, zerodha) = IraCoach.openLegsRead()
             val legs = open.filter { it.qty != 0 }.map { com.optionslab.ira.SinceMorning.Held(it.where, it.symbol, it.qty) }
             val morning = IraTools.morningHeld(today)
-            com.optionslab.ira.SinceMorning.Positions(morning?.held, legs, morning?.zerodha ?: com.optionslab.ira.SinceMorning.Zerodha.READ, zerodha)
+            com.optionslab.ira.SinceMorning.Positions(morning?.held, legs, morning?.zerodha ?: com.optionslab.ira.SinceMorning.Zerodha.READ, zerodha,
+                morningZerodhaAt = morning?.zerodhaAt)
         }.getOrNull()
         return com.optionslab.ira.SinceMorning.answer(indices, bars, chains, _state.value.news, IST, positions, locked, now)
     }
@@ -3610,7 +3611,9 @@ object IraHub {
         scope.launch {
             try {
                 val (legs, zerodha) = runCatching { IraCoach.openLegsRead() }.getOrNull() ?: return@launch
-                IraTools.noteMorningHeld(now.toLocalDate(), legs.filter { it.qty != 0 }.map { com.optionslab.ira.SinceMorning.Held(it.where, it.symbol, it.qty) }, zerodha)
+                // The time the read came back: a read finishing past 10:15 notes nothing, and a late Zerodha read is said with it.
+                val readAt = com.optionslab.app.data.Market.now().toLocalTime()
+                IraTools.noteMorningHeld(now.toLocalDate(), legs.filter { it.qty != 0 }.map { com.optionslab.ira.SinceMorning.Held(it.where, it.symbol, it.qty) }, zerodha, readAt)
             } finally { morningHeldBusy.set(false) }
         }
     }
@@ -3707,7 +3710,7 @@ object IraHub {
             if (!s.next) {
                 runCatching { com.optionslab.app.data.Paper.snapshot().dayPnl }.getOrNull()?.let { pnl["Paper"] = it }
                 if (com.optionslab.app.data.Broker.loggedIn) runCatching {
-                    kotlinx.coroutines.withTimeoutOrNull(8_000) { com.optionslab.app.data.Broker.positionBook() }?.m2m
+                    com.optionslab.app.data.Broker.within(8_000) { com.optionslab.app.data.Broker.positionBook() }?.m2m
                 }.getOrNull()?.let { pnl["Zerodha"] = it }
             }
             val alarms = runCatching { com.optionslab.app.data.Alarms.all() }.getOrDefault(emptyList())

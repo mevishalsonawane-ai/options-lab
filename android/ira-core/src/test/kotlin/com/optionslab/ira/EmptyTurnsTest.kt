@@ -28,6 +28,16 @@ class EmptyTurnsTest {
         assertFalse(EmptyTurns.echo("nifty is up", "  "))
     }
 
+    @Test fun stopAndYesNoWordsAreNeverAnEcho() {
+        // Even when Jarvis is saying the very word, a stop or a yes / no heard is Boss's.
+        val asking = "Boss, shall I stop the ORB arm? Say yes or no. Haan ya nahi, ha ya na. Ruko, bas, chup, cancel."
+        for (w in listOf("stop", "Stop!", "ruko", "bas", "chup", "cancel", "yes", "no", "haan", "nahi", "ha", "na", "yes or no", "stop the ORB arm"))
+            assertFalse(EmptyTurns.echo(w, asking), w)
+        // His other words still are an echo.
+        assertTrue(EmptyTurns.echo("shall i", asking))
+        assertTrue(EmptyTurns.echo("the orb arm", asking))
+    }
+
     @Test fun kindsAndTheRunOfEmptyTurns() {
         assertEquals(EmptyTurns.Kind.WORDS, EmptyTurns.kind(words = true, echoOnly = true, speechBegan = true))
         assertEquals(EmptyTurns.Kind.ECHO, EmptyTurns.kind(false, true, true))

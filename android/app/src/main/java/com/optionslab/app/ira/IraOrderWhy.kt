@@ -2,7 +2,6 @@ package com.optionslab.app.ira
 
 import com.optionslab.app.data.Broker
 import com.optionslab.ira.OrderWhy
-import kotlinx.coroutines.withTimeoutOrNull
 import java.time.LocalTime
 
 /**
@@ -33,7 +32,7 @@ object IraOrderWhy {
                 if (ended) it.updateTimestamp.toLocalTime() else null, it.product, it.priceType)
         }
         if (runCatching { Broker.loggedIn }.getOrDefault(false)) {
-            val z = withTimeoutOrNull(ZERODHA_MS) { runCatching { Broker.orders() }.getOrNull() }
+            val z = Broker.within(ZERODHA_MS) { Broker.orders() }
             if (z == null) notes += "Zerodha did not answer just now, so its orders are not included."
             else z.filter { it.placedAt.startsWith(today.toString()) }.sortedBy { it.placedAt }.forEach {
                 orders += OrderWhy.Ord("Zerodha", hm(it.placedAt), it.symbol, it.side, it.qty, it.status, it.avg,

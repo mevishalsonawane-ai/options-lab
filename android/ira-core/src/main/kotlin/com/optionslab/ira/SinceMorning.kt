@@ -78,31 +78,52 @@ object SinceMorning {
      * was read ([morningZerodha], [nowZerodha]). Zerodha's legs are compared only when both were read: a leg the morning's
      * read missed is never called opened since, nor a leg now's read missed closed.
      */
-    data class Positions(val morning: List<Held>?, val now: List<Held>, val morningZerodha: Zerodha = Zerodha.READ, val nowZerodha: Zerodha = Zerodha.READ)
+    data class Positions(val morning: List<Held>?, val now: List<Held>, val morningZerodha: Zerodha = Zerodha.READ, val nowZerodha: Zerodha = Zerodha.READ,
+                         /** When the morning's Zerodha legs were read (null: not known); a read after [ZERODHA_LATE] is said with its time. */
+                         val morningZerodhaAt: LocalTime? = null)
 
-    /** What the app keeps for the morning: the [held] legs and whether Zerodha's were read ([zerodha]). */
-    data class Noted(val held: List<Held>, val zerodha: Zerodha)
+    /** What the app keeps for the morning: the [held] legs, whether Zerodha's were read ([zerodha]) and when ([zerodhaAt]). */
+    data class Noted(val held: List<Held>, val zerodha: Zerodha, val zerodhaAt: LocalTime? = null)
 
     const val ZERODHA = "Zerodha"
 
+    /** The morning note's reads count only in this window around the mark (09:40 to 10:15). */
+    val WINDOW_FROM: LocalTime = MARK.minusMinutes(5)
+    val WINDOW_TO: LocalTime = MARK.plusMinutes(30)
+    /** A morning Zerodha read after this (Boss could have opened legs since the mark) is said with its time. */
+    val ZERODHA_LATE: LocalTime = MARK.plusMinutes(5)
+
+    fun inWindow(at: LocalTime): Boolean = !at.isBefore(WINDOW_FROM) && !at.isAfter(WINDOW_TO)
+
     /**
-     * The morning's note after one more read near the mark: the first read kept, except that Zerodha's legs, when the
-     * kept note could not read them and this read could, are taken from this read (its Paper legs stay the first read's,
-     * nearer the mark). A read that again could not read Zerodha changes nothing kept.
+     * The morning's note after one more read near the mark, made at [at]: the first read kept, except that Zerodha's legs,
+     * when the kept note could not read them and this read could, are taken from this read (its Paper legs stay the first
+     * read's, nearer the mark), with the time it was read. A read that again could not read Zerodha changes nothing kept;
+     * a read outside [WINDOW_FROM]-[WINDOW_TO] (one that finished late) changes nothing either - no note is made from it.
      */
-    fun renote(kept: Noted?, legs: List<Held>, zerodha: Zerodha): Noted {
+    fun renote(kept: Noted?, legs: List<Held>, zerodha: Zerodha, at: LocalTime): Noted? {
+        if (!inWindow(at)) return kept
         val read = legs.filter { it.qty != 0 }
-        if (kept == null) return Noted(read, zerodha)
+        val t = at.withSecond(0).withNano(0)
+        if (kept == null) return Noted(read, zerodha, if (zerodha == Zerodha.READ) t else null)
         if (kept.zerodha == Zerodha.READ || zerodha != Zerodha.READ) return kept
-        return Noted(kept.held.filter { it.where != ZERODHA } + read.filter { it.where == ZERODHA }, Zerodha.READ)
+        return Noted(kept.held.filter { it.where != ZERODHA } + read.filter { it.where == ZERODHA }, Zerodha.READ, t)
     }
 
     /** True while the morning's note still wants a read: none kept, or Zerodha's legs not read yet. */
     fun wantsRead(kept: Noted?): Boolean = kept == null || kept.zerodha != Zerodha.READ
 
-    /** The note as kept on the phone: the day (with Zerodha's state when not read), then one leg a line. */
-    fun encode(day: LocalDate, n: Noted): String =
-        (listOf(day.toString() + (if (n.zerodha == Zerodha.READ) "" else "|" + n.zerodha.name)) + n.held.map { "${it.where}|${it.symbol}|${it.qty}" }).joinToString("\n")
+    private fun hhmm(t: LocalTime) = "%02d:%02d".format(Locale.ENGLISH, t.hour, t.minute)
+
+    /** The note as kept on the phone: the day (with Zerodha's state when not read, or when read its time), then one leg a line. */
+    fun encode(day: LocalDate, n: Noted): String {
+        val head = day.toString() + when {
+            n.zerodha != Zerodha.READ -> "|" + n.zerodha.name
+            n.zerodhaAt != null -> "|" + Zerodha.READ.name + "|" + hhmm(n.zerodhaAt)
+            else -> ""
+        }
+        return (listOf(head) + n.held.map { "${it.where}|${it.symbol}|${it.qty}" }).joinToString("\n")
+    }
 
     /** [today]'s note from what is kept, or null (none, or another day's). A note kept before Zerodha's state was is read as read. */
     fun decode(text: String, today: LocalDate): Noted? {
@@ -110,10 +131,11 @@ object SinceMorning {
         val head = lines.firstOrNull()?.split("|") ?: return null
         if (head[0] != today.toString()) return null
         val z = head.getOrNull(1)?.let { w -> Zerodha.values().firstOrNull { it.name == w } } ?: Zerodha.READ
+        val at = head.getOrNull(2)?.let { runCatching { LocalTime.parse(it) }.getOrNull() }
         return Noted(lines.drop(1).mapNotNull { l ->
             val p = l.split("|")
             if (p.size != 3) null else p[2].toIntOrNull()?.let { Held(p[0], p[1], it) }
-        }, z)
+        }, z, if (z == Zerodha.READ) at else null)
     }
 
     // ---- the question ---------------------------------------------------------------------------------------------
@@ -302,6 +324,11 @@ object SinceMorning {
                 zNow > 0 -> notes += "You weren't logged in to Zerodha when I noted this morning's legs, so I can't say which of the ${zLegs(zNow)} you hold now are new since then."
             }
         }
+        // Read well after the mark, the morning's Zerodha legs may include ones Boss opened since: said with the read's time.
+        val zAt = p.morningZerodhaAt
+        if (both && zAt != null && zAt.isAfter(ZERODHA_LATE))
+            notes += "This morning's Zerodha legs were read at ${hhmm(zAt)}, not at $markWord, " +
+                "so a Zerodha leg opened before ${hhmm(zAt)} counts here as held this morning."
         val now = if (both) allNow else allNow.filter { it.where != ZERODHA }
         val morning = if (both) allMorning else allMorning.filter { it.where != ZERODHA }
         val was = morning.associateBy { it.key }; val is_ = now.associateBy { it.key }

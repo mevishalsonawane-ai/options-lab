@@ -3,7 +3,6 @@ package com.optionslab.app.ira
 import com.optionslab.app.data.AppSettings
 import com.optionslab.app.data.Broker
 import com.optionslab.ira.Headroom
-import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * "How close am I to my limits?" ([Headroom], usefulness round 13): each account as the guard itself judges it - Zerodha
@@ -19,7 +18,7 @@ object IraHeadroom {
         val books = ArrayList<Headroom.Book>()
         val loggedIn = runCatching { Broker.loggedIn }.getOrDefault(false)
         if (loggedIn) {
-            val live = withTimeoutOrNull(ZERODHA_MS) { runCatching { Broker.accountNow() }.getOrNull() }
+            val live = Broker.within(ZERODHA_MS) { Broker.accountNow() }
             if (live != null) books += Headroom.Book("Zerodha", live, s.guardLimits(paper = false), enforced = true)
         }
         val paper = runCatching { com.optionslab.app.data.Guard.paperAccount(com.optionslab.app.data.Paper.snapshot()) }.getOrNull()

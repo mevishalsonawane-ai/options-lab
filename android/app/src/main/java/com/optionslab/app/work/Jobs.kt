@@ -623,9 +623,9 @@ object Tasks {
         if (s.live && b.loggedIn) {
             Heartbeat.stepBegin("Zerodha quotes and positions")
             val keys = Alarms.all().filter { it.enabled && ':' in it.symbol }.map { it.symbol }.distinct()
-            if (keys.isNotEmpty()) runCatching { kotlinx.coroutines.withTimeoutOrNull(20_000) { b.quotes(keys) } }.getOrNull()?.forEach { (k, v) -> prices[k] = v.last }
+            if (keys.isNotEmpty()) runCatching { b.within(20_000) { b.quotes(keys) } }.getOrNull()?.forEach { (k, v) -> prices[k] = v.last }
             // The account's P&L: recorded for the day's curve, and alerted on the owner's levels.
-            runCatching { kotlinx.coroutines.withTimeoutOrNull(20_000) { b.passPositionBook() } }.getOrNull()?.takeIf { it.net.isNotEmpty() }?.let { book ->
+            runCatching { b.within(20_000) { b.passPositionBook() } }.getOrNull()?.takeIf { it.net.isNotEmpty() }?.let { book ->
                 com.optionslab.app.data.PnlTracker.record(book.pnl)
                 runCatching { com.optionslab.app.data.DailyPnl.record(true, book.m2m, -1) }
                 accountPnl = book.pnl

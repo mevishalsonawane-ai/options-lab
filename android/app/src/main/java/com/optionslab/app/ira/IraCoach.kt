@@ -708,7 +708,7 @@ internal object IraCoach {
         if (Broker.loggedIn) runCatching {
             val ins = Broker.cachedInstruments().orEmpty().associateBy { it.tradingSymbol }
             // The broker is not waited on past 8 seconds (a hung read would hang the answer).
-            val book = kotlinx.coroutines.withTimeoutOrNull(8_000) { Broker.positionBook() }
+            val book = Broker.within(8_000) { Broker.positionBook() }
             book?.net.orEmpty().filter { it.open }.forEach { p ->
                 val i = ins[p.symbol]
                 val g = i?.let { runCatching { greeks(it.right, it.name, it.strike, it.expiry, p.last) }.getOrNull() }
@@ -768,8 +768,8 @@ internal object IraCoach {
         if (Broker.loggedIn) runCatching {
             val ins = Broker.cachedInstruments().orEmpty().associateBy { it.tradingSymbol }
             // The broker is not waited on past 8 seconds (a hung read would hang the answer).
-            val open = kotlinx.coroutines.withTimeoutOrNull(8_000) { Broker.positionBook() }?.net.orEmpty().filter { it.open }
-            val quotes = kotlinx.coroutines.withTimeoutOrNull(5_000) { runCatching { Broker.quotes(open.map { "${it.exchange}:${it.symbol}" }) }.getOrNull() }.orEmpty()
+            val open = Broker.within(8_000) { Broker.positionBook() }?.net.orEmpty().filter { it.open }
+            val quotes = Broker.within(5_000) { Broker.quotes(open.map { "${it.exchange}:${it.symbol}" }) }.orEmpty()
             open.forEach { p ->
                 val i = ins[p.symbol]
                 val q = quotes["${p.exchange}:${p.symbol}"]

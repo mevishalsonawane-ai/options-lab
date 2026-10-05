@@ -105,7 +105,7 @@ internal object IraAccount {
     private suspend fun readyLines(s: AppSettings, today: java.time.LocalDate): List<String> {
         val protectedSymbols = runCatching { com.optionslab.app.data.Protections.active() }.getOrDefault(emptyList()).map { it.symbol }.toSet()
         val paperOpen = runCatching { com.optionslab.app.data.Paper.state.positions }.getOrNull()?.filter { it.quantity != 0 }?.map { it.symbol }.orEmpty()
-        val liveOpen = if (Broker.loggedIn) withTimeoutOrNull(ZERODHA_MS) { runCatching { Broker.positionBook().net.filter { it.open }.map { it.symbol } }.getOrNull() }.orEmpty() else emptyList()
+        val liveOpen = if (Broker.loggedIn) Broker.within(ZERODHA_MS) { Broker.positionBook().net.filter { it.open }.map { it.symbol } }.orEmpty() else emptyList()
         val unguarded = (paperOpen + liveOpen).count { it !in protectedSymbols }
         val ctx = IraHub.appContext()
         return com.optionslab.ira.LiveReady.check(com.optionslab.ira.LiveReady.Facts(
@@ -144,10 +144,8 @@ internal object IraAccount {
                     funds += "Paper funds: ${AppFacts.amt(snap.funds.availableCash)} available, ${AppFacts.amt(snap.funds.utilisedDebits)} in use."
                 } else { orders += "The paper account did not open just now."; pos += orders.last(); pnl += orders.last() }
                 if (zerodha) {
-                    val z = withTimeoutOrNull(ZERODHA_MS) {
-                        runCatching {
-                            Triple(Broker.orders(), Broker.positionBook(), runCatching { Broker.funds() }.getOrNull())
-                        }.getOrNull()
+                    val z = Broker.within(ZERODHA_MS) {
+                        Triple(Broker.orders(), Broker.positionBook(), runCatching { Broker.funds() }.getOrNull())
                     }
                     if (z == null) orders += "Zerodha did not answer just now, so its orders are not included."
                     else {

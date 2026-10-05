@@ -8,7 +8,8 @@ import android.content.Context
  * unwatched, and what keeps the phone from stopping it again ([com.optionslab.ira.WatchStopped]). Only speaks: nothing is
  * placed, moved, closed or restarted here. Called once per stall (the Heartbeat's own once-a-day alert); with no open
  * position nothing is said. Reads the paper book and the arms' state from the phone; Zerodha's positions only when
- * logged in, waited on 8 seconds at most.
+ * logged in, waited on 5 seconds at most (run apart: [com.optionslab.app.data.Broker.within]). Logged in with Zerodha
+ * unreadable and nothing else open, Jarvis still says that its positions could not be read.
  */
 internal object IraWatchStopped {
     suspend fun tell(context: Context, since: java.time.LocalTime?) {
@@ -37,14 +38,19 @@ internal object IraWatchStopped {
         }
         var unread = false
         if (com.optionslab.app.data.Broker.loggedIn) {
-            val open = kotlinx.coroutines.withTimeoutOrNull(5_000) { runCatching { com.optionslab.app.data.Broker.positionBook() }.getOrNull() }
+            val open = com.optionslab.app.data.Broker.within(5_000) { com.optionslab.app.data.Broker.positionBook() }
                 ?.net?.filter { it.open }
             if (open == null) unread = true
             open.orEmpty().forEach { p ->
                 val arm = arms.firstOrNull { (_, o) -> o.live && o.symbol == p.symbol }
                 val pr = prot.firstOrNull { it.live && it.symbol == p.symbol }
-                val stop = pr?.stop ?: arm?.second?.stopTrigger
-                val atBroker = (pr?.stop != null && pr?.stopOrderId != null) || (pr == null && arm?.second?.stopOrderId != null)
+                // The stop and whether it rests at Zerodha come from the same place: the protection's own stop (its
+                // resting stop order), else the arm's stop trigger (the arm's resting stop order).
+                val prStop: Double? = pr?.stop
+                val armPos = arm?.second
+                val armStop: Double? = armPos?.stopTrigger
+                val stop: Double? = prStop ?: armStop
+                val atBroker = if (prStop != null) pr?.stopOrderId != null else armStop != null && armPos?.stopOrderId != null
                 legs += com.optionslab.ira.WatchStopped.Leg("Zerodha", p.symbol, p.qty, arm?.first, stop = stop,
                     target = pr?.target, stopAtBroker = stop != null && atBroker)
             }

@@ -42,6 +42,20 @@ import javax.net.ssl.HttpsURLConnection
 object Broker {
     private lateinit var app: Context
 
+    /** Where a bounded read runs ([within]): apart from its caller, so a caller that stops waiting is not held. */
+    private val readScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
+
+    /**
+     * A Zerodha read with a real deadline. [call] does blocking HttpsURLConnection I/O (20 s connect, 60 s read) that does
+     * not suspend, so a withTimeoutOrNull wrapped straight around it cannot end the wait. Here [read] runs apart on IO and
+     * the caller waits [ms] at most: null on timeout or failure. A read the caller gave up on finishes in the background
+     * and is dropped. Reads only: never used for anything that places, changes or cancels.
+     */
+    suspend fun <T> within(ms: Long, read: suspend () -> T): T? {
+        val d = readScope.async { runCatching { read() }.getOrNull() }
+        return kotlinx.coroutines.withTimeoutOrNull(ms) { d.await() }
+    }
+
     private const val K_KEY = "kite.apiKey"
     private const val K_SECRET = "kite.apiSecret"            // legacy: plain inside the vault; migrated on next login
     private const val K_SEALED = "kite.apiSecretSealed"      // sealed with the owner's PIN (SecretBox)
