@@ -297,19 +297,21 @@ class OpenWidget : AppWidgetProvider() {
         /**
          * The live watch's pass ([com.optionslab.app.work.PositionCards.refresh]): [live] the app is in Zerodha mode,
          * [loggedIn] with a session today, [book] its positions as read (null = the read failed), [paper] the paper books
-         * (null = not read; kept as they were).
+         * (null = not read; kept as they were), [orders] Zerodha's order book as this pass read it (null = not read).
          */
-        fun fromWatch(context: Context, live: Boolean, loggedIn: Boolean, book: Broker.Positions?, paper: Paper.Snapshot?) {
+        fun fromWatch(context: Context, live: Boolean, loggedIn: Boolean, book: Broker.Positions?, paper: Paper.Snapshot?,
+                      orders: List<Broker.OrderRow>? = null) {
             if (BuildConfig.GOLD) return
             val at = nowMinute()
             val z: OpenBook.Venue? = when {
                 !live -> null
                 !loggedIn -> OpenBook.Venue(OpenBook.ZERODHA, null, problem = "not logged in", primary = true, at = at)
                 book == null -> OpenBook.Venue(OpenBook.ZERODHA, null, problem = "could not read", primary = true, at = at)
-                // Zerodha's exact charges when the app kept them for every order of the day's kept trades, else the
-                // estimate from those trades (the watch's worker thread: these read the vault; never ask Zerodha).
+                // Zerodha's exact charges only when this pass read the order book and the figure kept is for exactly those
+                // orders (an order placed outside the app - Kite web - since the ask is seen only there); else the
+                // estimate from the day's kept trades (the watch's worker thread: these read the vault; never ask Zerodha).
                 else -> zerodhaVenue(book, at, runCatching { com.optionslab.app.data.TradeBook.liveChargesOn(Market.today()) }.getOrNull(),
-                    runCatching { com.optionslab.app.data.TradeBook.exactChargesOn(Market.today()) }.getOrNull(), checked = true)
+                    orders?.let { o -> runCatching { com.optionslab.app.data.ZerodhaCharges.kept(o, Market.today()) }.getOrNull() }, checked = true)
             }
             val m = HashMap<String, String?>()
             m[K_Z] = z?.let { OpenBook.encode(it) }

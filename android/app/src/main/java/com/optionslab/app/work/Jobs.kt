@@ -695,17 +695,15 @@ object Tasks {
                 runCatching { com.optionslab.app.data.DailyPnl.record(true, book.m2m, -1) }
                 accountPnl = book.pnl
                 // Zerodha's P&L is before charges (as Zerodha shows it); the day's charges, estimated from the trades the
-                // app kept today (a vault read: this is the watch's worker thread), follow it - Zerodha's exact figure
-                // instead when the account page has had it for every order of those trades (never asked from here).
+                // app kept today (a vault read: this is the watch's worker thread), follow it. Always the estimate here:
+                // this pass reads no order book, so an order placed outside the app (Kite web) since the contract-note
+                // ask cannot be seen, and a kept exact figure is never called exact from here (review: the app screen and
+                // the 15:45 report, which read the orders, still say the exact one).
                 val liveCharges = com.optionslab.app.data.TradeBook.liveChargesOn(Market.today())
-                val exactCharges = com.optionslab.app.data.TradeBook.exactChargesOn(Market.today())
-                val chargesSaid = com.optionslab.ira.PnlCharges.said(exactCharges ?: liveCharges, estimate = exactCharges == null)?.let { " ($it)" } ?: ""
-                // Usefulness, round 35: the widget's small line says the exact figure too when it is kept for the day.
-                (exactCharges ?: liveCharges)?.let { c -> runCatching { com.optionslab.app.widget.IraWidget.charges(context, c, exact = exactCharges != null) } }
-                // ... and the calendar's day keeps it; a kept exact figure that no longer covers the day (an order filled
-                // since) gives way to the estimate - never an old figure called exact.
-                if (exactCharges != null) runCatching { com.optionslab.app.data.DailyPnl.recordCharges(true, exactCharges, exact = true) }
-                else if (liveCharges != null) runCatching { com.optionslab.app.data.DailyPnl.recordCharges(true, liveCharges, exact = false, onlyOverExact = true) }
+                val chargesSaid = com.optionslab.ira.PnlCharges.said(liveCharges, estimate = true)?.let { " ($it)" } ?: ""
+                liveCharges?.let { c -> runCatching { com.optionslab.app.widget.IraWidget.charges(context, c, exact = false) } }
+                // ... and the calendar's day: a kept exact figure gives way to the estimate - never an unverified one called exact.
+                if (liveCharges != null) runCatching { com.optionslab.app.data.DailyPnl.recordCharges(true, liveCharges, exact = false, onlyOverExact = true) }
                 lines.add(0, "Positions %s".format(if (s.hideAmountsOnLockScreen) "open: ${book.net.count { it.open }}" else "Rs %+,.0f".format(book.pnl) + chargesSaid))
                 pnlAlerts(context, s, book.pnl)
             }

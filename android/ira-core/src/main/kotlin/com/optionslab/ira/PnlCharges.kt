@@ -31,8 +31,11 @@ object PnlCharges {
         val symbol: String = "", val exchange: String = "", val product: String = "", val day: String = "",
     )
 
-    /** Which of Zerodha's schedules a trade pays (Boss, 5 Oct: "fix it for futures and stocks too"). */
-    enum class Segment { OPTIONS, FUTURES, DELIVERY, INTRADAY }
+    /**
+     * Which of Zerodha's schedules a trade pays (Boss, 5 Oct: "fix it for futures and stocks too"). [OTHER]: a commodity
+     * (MCX) or currency (CDS / BCD) trade - APPROXIMATE ([rates]).
+     */
+    enum class Segment { OPTIONS, FUTURES, DELIVERY, INTRADAY, OTHER }
 
     /**
      * Zerodha's rates for one schedule (2026, STT from Budget 2026, from 1 Apr 2026): STT on a buy and on a sale, the
@@ -51,20 +54,42 @@ object PnlCharges {
         Segment.INTRADAY to Rates(0.0, 0.00025, 0.0000297, 0.00003, 0.0003, 20.0),
     )
 
+    /**
+     * The rates [seg] pays for a trade in [symbol] on [exchange]. [Segment.OTHER] is an APPROXIMATION (commodities and
+     * currencies, not checked against a contract note): 0.03% or Rs 20 an order like a future; on MCX the commodity
+     * transaction tax (CTT) on the sale - 0.01% for a future, 0.05% of the premium for an option (a symbol ending CE /
+     * PE) - said with the STT; no STT or CTT on CDS / BCD (or any other exchange); the exchange's fee taken as the equity
+     * futures rate; stamp 0.002% on a buy.
+     */
+    private fun rates(seg: Segment, symbol: String, exchange: String): Rates {
+        if (seg != Segment.OTHER) return RATES.getValue(seg)
+        val sym = symbol.trim().uppercase()
+        val ctt = when {
+            exchange.trim().uppercase() != "MCX" -> 0.0
+            sym.endsWith("CE") || sym.endsWith("PE") -> 0.0005
+            else -> 0.0001
+        }
+        return Rates(0.0, ctt, 0.0000173, 0.00002, 0.0003, 20.0)
+    }
+
     /** Zerodha's DP charge on a delivery sale: Rs 13 + GST, once per scrip a day. */
     const val DP_CHARGE = 13.0
     private const val GST = 0.18
     private const val SEBI = 10.0 / 1_00_00_000
     private val DERIVATIVE = Regex("""(\d(CE|PE)|FUT)$""")
+    /** The exchanges of the equity schedules (blank: not known - the app's own trades). */
+    private val EQUITY = setOf("", "NSE", "BSE", "NFO", "BFO")
 
     /**
      * The schedule a trade pays: NFO / BFO - a future when its symbol ends in FUT, else an option; NSE / BSE (or no
-     * exchange and a symbol that is not a contract) - shares, the same day's when the product is MIS, else held. Nothing
-     * known (the app's own option trades): an option's.
+     * exchange and a symbol that is not a contract) - shares, the same day's when the product is MIS, else held; any
+     * other exchange (MCX, CDS, BCD...) - [Segment.OTHER], approximate. Nothing known (the app's own option trades): an
+     * option's.
      */
     fun segment(symbol: String, exchange: String, product: String): Segment {
         val sym = symbol.trim().uppercase()
         val ex = exchange.trim().uppercase()
+        if (ex !in EQUITY) return Segment.OTHER
         val shares = ex == "NSE" || ex == "BSE" || (ex.isEmpty() && sym.isNotEmpty() && !DERIVATIVE.containsMatchIn(sym))
         if (shares) return if (product.trim().uppercase() == "MIS") Segment.INTRADAY else Segment.DELIVERY
         return if (sym.endsWith("FUT")) Segment.FUTURES else Segment.OPTIONS
@@ -88,37 +113,92 @@ object PnlCharges {
      * whole order's value up to Rs 20 for a future or a same-day share trade, nothing for shares held. A delivery sale
      * pays the DP charge once per scrip a day. STT, exchange, SEBI and stamp are on value, so they are the same however
      * an order is split. (Before 5 Oct every fill paid Rs 20 + GST, and every trade the option schedule.)
+     *
+     * Shares bought and sold on the same [Fill.day] under CNC are a same-day trade, as Zerodha treats a same-day CNC
+     * square-off: for each scrip (and exchange) and day, the quantity both bought and sold that day (the smaller of the
+     * two) pays the same-day schedule - its STT, and 0.03% or Rs 20 an order in brokerage - on the buys and the sells,
+     * taken in [fills]' order, with no DP charge. A buy beyond that day's sells is held (delivery); a sell beyond that
+     * day's buys is a delivery sale of shares held from before and pays the DP charge (once per scrip a day). A fill
+     * split across the two pays each part on its own schedule.
      */
     fun perFill(fills: List<Fill>): List<Map<String, Double>> {
-        val orderValue = HashMap<String, Double>()
-        fills.forEach { f -> if (f.orderId.isNotBlank()) orderValue[f.orderId] = (orderValue[f.orderId] ?: 0.0) + abs(f.price * f.qty) }
+        val segs = fills.map { segment(it.symbol, it.exchange, it.product) }
+        // The same-day quantity of each held-shares scrip and day: the smaller of what was bought and what was sold.
+        val bought = HashMap<String, Long>()
+        val sold = HashMap<String, Long>()
+        fills.forEachIndexed { i, f ->
+            if (segs[i] == Segment.DELIVERY) {
+                val m = if (f.side.uppercase() == "BUY") bought else sold
+                val k = squareKey(f)
+                m[k] = (m[k] ?: 0L) + abs(f.qty.toLong())
+            }
+        }
+        val buyLeft = HashMap<String, Long>()
+        val sellLeft = HashMap<String, Long>()
+        bought.forEach { (k, b) -> val n = minOf(b, sold[k] ?: 0L); buyLeft[k] = n; sellLeft[k] = n }
+        // Each fill's parts, (schedule, value): one, or two for a held-shares fill partly squared off the same day.
+        val parts = fills.mapIndexed { i, f ->
+            val value = abs(f.price * f.qty)
+            val q = abs(f.qty.toLong())
+            if (segs[i] != Segment.DELIVERY || q == 0L) listOf(segs[i] to value)
+            else {
+                val left = if (f.side.uppercase() == "BUY") buyLeft else sellLeft
+                val k = squareKey(f)
+                val same = minOf(q, left[k] ?: 0L)
+                if (same > 0) left[k] = (left[k] ?: 0L) - same
+                val sameValue = value * same / q
+                listOfNotNull((Segment.INTRADAY to sameValue).takeIf { same > 0 }, (Segment.DELIVERY to value - sameValue).takeIf { same < q })
+            }
+        }
+        // Each order's value on each schedule: the brokerage is on the whole order's.
+        val orderValue = HashMap<String, MutableMap<Segment, Double>>()
+        fills.forEachIndexed { i, f ->
+            if (f.orderId.isNotBlank()) {
+                val m = orderValue.getOrPut(f.orderId) { LinkedHashMap() }
+                parts[i].forEach { (seg, v) -> m[seg] = (m[seg] ?: 0.0) + v }
+            }
+        }
         val seen = HashSet<String>()
         val dpSeen = HashSet<String>()
-        return fills.map { f ->
-            val seg = segment(f.symbol, f.exchange, f.product)
+        return fills.mapIndexed { i, f ->
+            if (!(abs(f.price * f.qty) > 0)) return@mapIndexed emptyMap()
             val first = f.orderId.isBlank() || seen.add(f.orderId)
-            val value = abs(f.price * f.qty)
             val sale = f.side.uppercase() != "BUY"
-            val dp = seg == Segment.DELIVERY && sale && value > 0 && dpSeen.add("${f.symbol.trim().uppercase()}|${f.day}")
-            legOf(seg, sale, value, if (first) orderValue[f.orderId] ?: value else null, dp)
+            val ofOrder: Map<Segment, Double> = if (f.orderId.isBlank()) parts[i].toMap() else orderValue[f.orderId].orEmpty()
+            val out = LinkedHashMap<String, Double>()
+            parts[i].forEach { (seg, v) ->
+                val r = rates(seg, f.symbol, f.exchange)
+                val brokerage = if (first) brokerageOf(r, ofOrder[seg] ?: v) else 0.0
+                val dp = seg == Segment.DELIVERY && sale && v > 0 && dpSeen.add("${f.symbol.trim().uppercase()}|${f.day}")
+                legOf(r, sale, v, brokerage, dp).forEach { (k, x) -> out[k] = (out[k] ?: 0.0) + x }
+            }
+            // An order's brokerage on a schedule its first fill has no part of (its same-day part in a later fill) is still
+            // paid once, on that first fill.
+            if (first) ofOrder.forEach { (seg, ov) ->
+                val b = if (parts[i].none { it.first == seg }) brokerageOf(rates(seg, f.symbol, f.exchange), ov) else 0.0
+                if (b > 0) { out["Brokerage"] = (out["Brokerage"] ?: 0.0) + b; out["GST"] = (out["GST"] ?: 0.0) + b * GST }
+            }
+            out
         }
     }
+
+    /** The scrip, exchange and day a held-shares fill squares off against. */
+    private fun squareKey(f: Fill) = "${f.symbol.trim().uppercase()}|${f.exchange.trim().uppercase()}|${f.day}"
+
+    /** An order's brokerage on [r]'s schedule for [orderValue] of it: a percentage capped at the flat fee, or the flat fee. */
+    private fun brokerageOf(r: Rates, orderValue: Double): Double =
+        if (r.brokeragePct != null) minOf(r.brokerageFlat, r.brokeragePct * orderValue) else r.brokerageFlat
 
     /** One fill's charges line by line, on the option schedule; [firstOfOrder] false: no brokerage (paid on the order's first fill). */
     fun legCharges(side: String, price: Double, qty: Int, firstOfOrder: Boolean): Map<String, Double> {
         val value = abs(price * qty)
-        return legOf(Segment.OPTIONS, side.uppercase() != "BUY", value, if (firstOfOrder) value else null, false)
+        if (!(value > 0)) return emptyMap()
+        val r = RATES.getValue(Segment.OPTIONS)
+        return legOf(r, side.uppercase() != "BUY", value, if (firstOfOrder) brokerageOf(r, value) else 0.0, false)
     }
 
-    /** [orderValue] null: not the order's first fill (no brokerage). Empty for a fill of no value. */
-    private fun legOf(seg: Segment, sale: Boolean, value: Double, orderValue: Double?, dp: Boolean): Map<String, Double> {
-        if (!(value > 0)) return emptyMap()
-        val r = RATES.getValue(seg)
-        val brokerage = when {
-            orderValue == null -> 0.0
-            r.brokeragePct != null -> minOf(r.brokerageFlat, r.brokeragePct * orderValue)
-            else -> r.brokerageFlat
-        }
+    /** One part of a fill's charges: [value] on [r]'s schedule, its [brokerage] already worked out. */
+    private fun legOf(r: Rates, sale: Boolean, value: Double, brokerage: Double, dp: Boolean): Map<String, Double> {
         val stt = value * (if (sale) r.sttSell else r.sttBuy)
         val exchange = value * r.exchange
         val sebi = value * SEBI

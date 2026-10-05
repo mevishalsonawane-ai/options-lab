@@ -237,6 +237,28 @@ class ChargesTest {
         assertEquals(Charges.split(shares).values.sum(), PnlCharges.estimate(listOf(PnlCharges.Fill("SELL", 1_000.0, 10, "s1", symbol = "INFY", day = today.toString()))), 0.01)
     }
 
+    /** Review: a Zerodha MIS share trade is priced as a same-day one, as the app's own estimate prices it - not as shares held. */
+    @Test fun aSameDayShareTradeIsPricedOnItsOwnSchedule() {
+        val mis = listOf(
+            Charges.Leg(at(today, 10, 0), "b1", "Manual", "BUY", 1_000.0, 10, "INFY", exchange = "NSE", product = "MIS"),
+            Charges.Leg(at(today, 11, 0), "s1", "Manual", "SELL", 1_010.0, 10, "INFY", exchange = "NSE", product = "MIS"))
+        val parts = Charges.split(mis)
+        // Brokerage 0.03% of each order (3 + 3.03), STT 0.025% of the sale only, stamp 0.003% of the buy, no DP.
+        assertEquals(6.03, parts.getValue("Brokerage"), 1e-9)
+        assertEquals(2.525, parts.getValue("STT"), 1e-9)
+        assertEquals(0.3, parts.getValue("Stamp duty"), 1e-9)
+        assertNull(parts["DP charges"])
+        assertEquals(10.6685426, parts.values.sum(), 1e-9)
+        assertEquals(PnlCharges.estimate(listOf(
+            PnlCharges.Fill("BUY", 1_000.0, 10, "b1", "INFY", "NSE", "MIS", today.toString()),
+            PnlCharges.Fill("SELL", 1_010.0, 10, "s1", "INFY", "NSE", "MIS", today.toString()))), parts.values.sum(), 0.005)
+        val all = Charges.whyLines("Zerodha", mis, emptyList(), null, today, estimated = true).joinToString("\n")
+        assertFalse(all.contains("DP "), all)
+        // Without the product (as before the fix) and a day apart, the same legs are shares held: STT 0.1% both ways.
+        val held = listOf(mis[0].copy(at = at(today.minusDays(1), 10, 0), product = ""), mis[1].copy(product = ""))
+        assertEquals(20.1, Charges.split(held).getValue("STT"), 1e-9)
+    }
+
     @Test fun whyOverAWeekTheLastDayAndNone() {
         val week = Charges.whyLines("Paper", day, dayTrips, Charges.Span.WEEK, today)
         assertTrue(week[0].startsWith("Paper charges this week (5 Oct to 8 Oct): Rs "), week[0])

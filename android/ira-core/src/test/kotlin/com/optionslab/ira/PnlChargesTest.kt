@@ -114,4 +114,105 @@ class PnlChargesTest {
         val opt = PnlCharges.Fill("SELL", 120.0, 75, "O1", "NIFTY26OCT24500CE", "NFO", "NRML")
         assertEquals(SandboxCosts.breakdown("SELL", 120.0, 75).values.sum(), PnlCharges.perFill(listOf(opt)).single().values.sum(), 1e-9)
     }
+
+    private val d = "2026-10-05"
+
+    @Test
+    fun sharesBoughtAndSoldTheSameDayUnderCncAreASameDayTrade() {
+        // 10 INFY bought at 1,000 and sold at 1,010 the same day, both CNC: Zerodha treats it as intraday.
+        val legs = PnlCharges.perFill(listOf(
+            PnlCharges.Fill("BUY", 1_000.0, 10, "B1", "INFY", "NSE", "CNC", d),
+            PnlCharges.Fill("SELL", 1_010.0, 10, "S1", "INFY", "NSE", "CNC", d)))
+        // Buy, Rs 10,000: brokerage 0.03% = 3, exchange 0.297, SEBI 0.01, stamp 0.003% = 0.3, GST 18% of 3.307 = 0.59526.
+        assertEquals(3.0, legs[0].getValue("Brokerage"), 1e-9)
+        assertEquals(0.0, legs[0].getValue("STT"), 1e-9)
+        assertEquals(0.3, legs[0].getValue("Stamp duty"), 1e-9)
+        assertEquals(4.20226, legs[0].values.sum(), 1e-9)
+        // Sell, Rs 10,100: brokerage 3.03, STT 0.025% = 2.525, exchange 0.29997, SEBI 0.0101, GST 0.6012126; no DP charge.
+        assertEquals(3.03, legs[1].getValue("Brokerage"), 1e-9)
+        assertEquals(2.525, legs[1].getValue("STT"), 1e-9)
+        assertFalse(legs[1].containsKey("DP charges"))
+        assertEquals(6.4662826, legs[1].values.sum(), 1e-9)
+        assertEquals(10.67, PnlCharges.estimate(listOf(
+            PnlCharges.Fill("BUY", 1_000.0, 10, "B1", "INFY", "NSE", "CNC", d),
+            PnlCharges.Fill("SELL", 1_010.0, 10, "S1", "INFY", "NSE", "CNC", d))))
+        // The same as the trade under MIS, to the paisa.
+        assertEquals(10.67, PnlCharges.estimate(listOf(
+            PnlCharges.Fill("BUY", 1_000.0, 10, "B1", "INFY", "NSE", "MIS", d),
+            PnlCharges.Fill("SELL", 1_010.0, 10, "S1", "INFY", "NSE", "MIS", d))))
+        // On different days: held shares (STT 0.1% each way, DP on the sale), as before.
+        val held = PnlCharges.perFill(listOf(
+            PnlCharges.Fill("BUY", 1_000.0, 10, "B1", "INFY", "NSE", "CNC", "2026-10-01"),
+            PnlCharges.Fill("SELL", 1_010.0, 10, "S1", "INFY", "NSE", "CNC", d)))
+        assertEquals(10.0, held[0].getValue("STT"), 1e-9)
+        assertEquals(13.0, held[1].getValue("DP charges"), 1e-9)
+    }
+
+    @Test
+    fun aSaleBeyondTheDaysBuysIsADeliverySaleAndPaysDpOnce() {
+        // 5 bought at 1,000 and 8 sold at 1,000 the same day (3 held from before), CNC.
+        val legs = PnlCharges.perFill(listOf(
+            PnlCharges.Fill("BUY", 1_000.0, 5, "B1", "INFY", "NSE", "CNC", d),
+            PnlCharges.Fill("SELL", 1_000.0, 8, "S1", "INFY", "NSE", "CNC", d)))
+        // Buy, Rs 5,000 same-day: brokerage 1.5, exchange 0.1485, SEBI 0.005, stamp 0.15, GST 18% of 1.6535 = 0.29763.
+        assertEquals(1.5, legs[0].getValue("Brokerage"), 1e-9)
+        assertEquals(0.15, legs[0].getValue("Stamp duty"), 1e-9)
+        assertEquals(2.10113, legs[0].values.sum(), 1e-9)
+        // Sell: Rs 5,000 same-day (brokerage 1.5, STT 1.25) + Rs 3,000 held (STT 3, DP 13, no brokerage).
+        assertEquals(1.5, legs[1].getValue("Brokerage"), 1e-9)
+        assertEquals(4.25, legs[1].getValue("STT"), 1e-9)
+        assertEquals(0.2376, legs[1].getValue("Exchange"), 1e-9)
+        assertEquals(13.0, legs[1].getValue("DP charges"), 1e-9)
+        // GST: 18% of (1.5 + 0.1485 + 0.005) + 18% of (0.0891 + 0.003 + 13) = 0.29763 + 2.356578.
+        assertEquals(2.654208, legs[1].getValue("GST"), 1e-9)
+        assertEquals(21.649808, legs[1].values.sum(), 1e-9)
+        assertEquals(23.75, PnlCharges.estimate(listOf(
+            PnlCharges.Fill("BUY", 1_000.0, 5, "B1", "INFY", "NSE", "CNC", d),
+            PnlCharges.Fill("SELL", 1_000.0, 8, "S1", "INFY", "NSE", "CNC", d))))
+    }
+
+    @Test
+    fun aBuyBeyondTheDaysSalesIsHeld() {
+        // 10 bought at 100, 4 sold at 110 the same day: 4 bought are same-day, 6 are held.
+        val legs = PnlCharges.perFill(listOf(
+            PnlCharges.Fill("BUY", 100.0, 10, "B1", "TATASTEEL", "NSE", "CNC", d),
+            PnlCharges.Fill("SELL", 110.0, 4, "S1", "TATASTEEL", "NSE", "CNC", d)))
+        assertEquals(0.12, legs[0].getValue("Brokerage"), 1e-9)                    // 0.03% of the Rs 400 same-day part
+        assertEquals(0.6, legs[0].getValue("STT"), 1e-9)                           // 0.1% of the Rs 600 held
+        assertEquals(0.012 + 0.09, legs[0].getValue("Stamp duty"), 1e-9)            // 0.003% of 400 + 0.015% of 600
+        assertEquals(0.132, legs[1].getValue("Brokerage"), 1e-9)
+        assertEquals(0.11, legs[1].getValue("STT"), 1e-9)                          // 0.025% of 440
+        assertFalse(legs[1].containsKey("DP charges"))
+        // Another scrip's sale the same day is its own: INFY sold from the demat pays DP.
+        val other = PnlCharges.perFill(listOf(
+            PnlCharges.Fill("BUY", 100.0, 10, "B1", "TATASTEEL", "NSE", "CNC", d),
+            PnlCharges.Fill("SELL", 1_000.0, 1, "S2", "INFY", "NSE", "CNC", d)))
+        assertEquals(13.0, other[1].getValue("DP charges"), 1e-9)
+        assertEquals(1.0, other[0].getValue("STT"), 1e-9)
+    }
+
+    @Test
+    fun commoditiesAndCurrenciesAreApproximate() {
+        val seg = PnlCharges::segment
+        listOf("MCX", "CDS", "BCD", "mcx").forEach { assertEquals(PnlCharges.Segment.OTHER, seg("CRUDEOIL26OCTFUT", it, "NRML"), it) }
+        assertEquals(PnlCharges.Segment.OPTIONS, seg("NIFTY26OCT24500CE", "BFO", "NRML"))
+        // An MCX future, Rs 6 lakh each way: Rs 20 brokerage (capped), CTT 0.01% on the sale only, stamp 0.002% on the buy.
+        val fut = PnlCharges.perFill(listOf(
+            PnlCharges.Fill("BUY", 6_000.0, 100, "C1", "CRUDEOIL26OCTFUT", "MCX", "NRML", d),
+            PnlCharges.Fill("SELL", 6_000.0, 100, "C2", "CRUDEOIL26OCTFUT", "MCX", "NRML", d)))
+        assertEquals(20.0, fut[0].getValue("Brokerage"), 1e-9)
+        assertEquals(0.0, fut[0].getValue("STT"), 1e-9)
+        assertEquals(12.0, fut[0].getValue("Stamp duty"), 1e-9)
+        assertEquals(60.0, fut[1].getValue("STT"), 1e-9)
+        assertEquals(10.38, fut[1].getValue("Exchange"), 1e-9)
+        assertFalse(fut[1].containsKey("DP charges"))
+        // An MCX option sold, Rs 5,000 of premium: CTT 0.05% = 2.5, brokerage 0.03% = 1.5.
+        val opt = PnlCharges.perFill(listOf(PnlCharges.Fill("SELL", 50.0, 100, "C3", "CRUDEOIL26OCT6000CE", "MCX", "NRML", d))).single()
+        assertEquals(2.5, opt.getValue("STT"), 1e-9)
+        assertEquals(1.5, opt.getValue("Brokerage"), 1e-9)
+        // A currency future sold: no STT, Rs 20 brokerage (0.03% of 83,500 is 25.05).
+        val cds = PnlCharges.perFill(listOf(PnlCharges.Fill("SELL", 83.5, 1_000, "C4", "USDINR26OCTFUT", "CDS", "NRML", d))).single()
+        assertEquals(0.0, cds.getValue("STT"), 1e-9)
+        assertEquals(20.0, cds.getValue("Brokerage"), 1e-9)
+    }
 }

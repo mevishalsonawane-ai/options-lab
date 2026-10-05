@@ -479,8 +479,12 @@ internal object IraAccount {
                 // labelled; the GOLD build has no Zerodha.
                 val why = com.optionslab.ira.Charges.whyAsked(question)
                 if (why) for (live in if (com.optionslab.app.BuildConfig.GOLD) listOf(false) else listOf(true, false)) {
-                    val legs = runCatching { com.optionslab.app.data.TradeBook.fills(live) }.getOrDefault(emptyList()).map { f ->
-                        com.optionslab.ira.Charges.Leg(f.at, f.orderId, com.optionslab.ira.Charges.owner(owners[f.orderId]), if (f.side > 0) "BUY" else "SELL", f.price, f.qty, f.symbol)
+                    // Each fill with its exchange and product: a Zerodha share trade under MIS pays the same-day schedule, as
+                    // the app's own estimate prices it (TradeBook.liveCharges).
+                    val legs = runCatching { com.optionslab.app.data.TradeBook.legs(live) }.getOrDefault(emptyList()).map { l ->
+                        val f = l.fill
+                        com.optionslab.ira.Charges.Leg(f.at, f.orderId, com.optionslab.ira.Charges.owner(owners[f.orderId]), if (f.side > 0) "BUY" else "SELL", f.price, f.qty, f.symbol,
+                            exchange = l.exchange, product = l.product)
                     }
                     if (live && legs.isEmpty()) continue
                     val whyTrips = runCatching { com.optionslab.app.data.TradeBook.trips(live) }.getOrDefault(emptyList()).map { t ->

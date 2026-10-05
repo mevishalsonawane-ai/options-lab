@@ -82,6 +82,20 @@ object TradeBook {
 
     fun fills(live: Boolean): List<RoundTrips.Fill> = if (live) liveFills(liveSnapshot()) else paperFills(Paper.state.trades)
 
+    /** A fill with the exchange and product it was traded on ("NSE", "MIS"); blank for the paper account's (options). */
+    class Leg(val fill: RoundTrips.Fill, val exchange: String, val product: String)
+
+    /**
+     * [fills] with each one's exchange and product, as "why are my charges so high" prices them on their own schedule
+     * (a share bought under MIS is a same-day trade, as [liveCharges] prices it). Paper: blank (the option schedule).
+     */
+    fun legs(live: Boolean): List<Leg> {
+        if (!live) return paperFills(Paper.state.trades).map { Leg(it, "", "") }
+        val trades = liveSnapshot()
+        val byId = trades.associateBy { "kite:${it.id}" }
+        return liveFills(trades).map { f -> val t = byId[f.id]; Leg(f, t?.exchange.orEmpty(), t?.product.orEmpty()) }
+    }
+
     /** A copy of the Zerodha trades taken under the lock ([recordLive] adds to the kept list in place). */
     @Synchronized
     private fun liveSnapshot(): List<Broker.Trade> = ArrayList(liveTrades())
