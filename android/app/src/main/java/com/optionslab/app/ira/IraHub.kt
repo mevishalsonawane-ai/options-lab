@@ -1138,6 +1138,15 @@ object IraHub {
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, GOLD_TALK_ONLY)).takeLast(MAX_MESSAGES)) }
             return
         }
+        // "Make the case", "pros and cons of trading now", "talk me through it": the trade check reasoned out, facts both
+        // ways (Boss's own day, goals and rules only on an unlocked phone). Words only; the decision is Boss's. (Before the
+        // other answers: these whole questions are this, and the glossary or a plan must not read "explain" or "and" in them.)
+        if (parsed.order == null && parsed.command == null && !com.optionslab.app.BuildConfig.GOLD &&
+            runCatching { com.optionslab.ira.TradeCase.asked(q) }.getOrDefault(false)) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            scope.launch { reply(runCatching { tradeCase() }.getOrElse { "I could not put the case together just now, Boss." }) }
+            return
+        }
         // "What's your plan today?" / "what are you working on?": Jarvis's own plan for the day (it names Boss's goals and
         // words, so the phone must be unlocked). Words only: the plan itself only ever speaks, studies or works on paper.
         if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && parsed.command == null && parsed.order == null &&
@@ -2308,7 +2317,10 @@ object IraHub {
             expiryToday = listOf("NIFTY", "BANKNIFTY", "FINNIFTY").any { runCatching { m.isExpiryDay(it) }.getOrDefault(false) }))
     }
 
-    suspend fun tradeCheck(): com.optionslab.ira.TradeCheck.Verdict {
+    suspend fun tradeCheck(): com.optionslab.ira.TradeCheck.Verdict = com.optionslab.ira.TradeCheck.check(tradeNow())
+
+    /** Everything the trade check reads now ([com.optionslab.ira.TradeCheck.Now]); also what "make the case" starts from. */
+    private suspend fun tradeNow(): com.optionslab.ira.TradeCheck.Now {
         val s = com.optionslab.app.data.AppSettings.load()
         val m = com.optionslab.app.data.Market
         val st = _state.value
@@ -2323,7 +2335,7 @@ object IraHub {
         val events = runCatching { IraEvents.upcoming(0) }.getOrDefault(emptyList()).filter { it.day == today && !it.name.endsWith("expiry") }.map { it.name }
         val ipOk = com.optionslab.app.data.StaticIp.registered?.let { runCatching { com.optionslab.app.data.StaticIp.status(force = false).matches }.getOrNull() }
         val burst = if (bn.isNotEmpty()) com.optionslab.ira.Watch.move30(bn)?.first else null
-        return com.optionslab.ira.TradeCheck.check(com.optionslab.ira.TradeCheck.Now(
+        return com.optionslab.ira.TradeCheck.Now(
             marketOpen = m.isOpen(), tradingDay = m.isTradingDay(today), minute = m.minuteNow(),
             liveMode = s.live, zerodhaLoggedIn = com.optionslab.app.data.Broker.loggedIn, staticIpOk = ipOk,
             pricesFresh = !m.isOpen() || st.liveAt?.isAfter(Instant.now().minusSeconds(180)) == true,
@@ -2337,7 +2349,36 @@ object IraHub {
             eventsToday = events, expiryToday = listOf("NIFTY", "BANKNIFTY", "FINNIFTY").any { runCatching { m.isExpiryDay(it) }.getOrDefault(false) },
             armsOn = arms,
             reads = listOf(IraMarket.NIFTY, IraMarket.BANKNIFTY).mapNotNull { mk -> st.snaps[mk]?.let { com.optionslab.ira.TradeCheck.read(it) } },
-        ))
+        )
+    }
+
+    /**
+     * "Make the case", "pros and cons of trading now" ([com.optionslab.ira.TradeCase]): the trade check reasoned out from
+     * what Jarvis already knows - the session and guards, today's risks, what stands out against the recent sessions,
+     * the days ahead, the arms' tested records, his own record in conditions like now's - and, on an unlocked phone
+     * only, Boss's day against his limit, his goals, his rules, what he told about himself and his habits around a
+     * trade. Facts both ways, never a buy, sell or verdict: the decision is Boss's. Words only - it changes nothing.
+     */
+    private suspend fun tradeCase(): String {
+        val locked = phoneLocked()
+        val now = tradeNow()
+        val mine = if (locked) null else runCatching {
+            val live = com.optionslab.app.data.AppSettings.load().live
+            val owners = runCatching { com.optionslab.app.data.Strategies.owners() }.getOrDefault(emptyMap())
+            com.optionslab.ira.TradeCase.Mine(
+                notes = IraTools.memory().map { it.text },
+                goals = runCatching { IraGoals.statuses() }.getOrDefault(emptyList()),
+                own = IraAccount.trips(live, owners).filter { it.owner.startsWith("Manual") },
+                maxTrades = IraGoals.all().filter { it.kind == com.optionslab.ira.Goals.Kind.MAX_TRADES }.minOfOrNull { it.amount.toInt() },
+            )
+        }.getOrNull()
+        val upcoming = runCatching { IraEvents.upcoming(com.optionslab.ira.TradeCase.AHEAD_DAYS) }.getOrDefault(emptyList())
+        val calibration = runCatching { IraNewsTrades.calibration() }.getOrDefault(emptyList()) + runCatching { IraSolo.calibration() }.getOrDefault(emptyList())
+        return com.optionslab.ira.TradeCase.build(com.optionslab.ira.TradeCase.Input(
+            now = now, at = LocalDateTime.now(IST), bars = histories.mapValues { it.value.bars }, upcoming = upcoming,
+            calibration = calibration, regime = runCatching { IraStudy.regimeOf(IraMarket.NIFTY) }.getOrNull(),
+            mine = mine, locked = locked,
+        )).say()
     }
 
     /**
