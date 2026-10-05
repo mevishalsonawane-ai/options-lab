@@ -19,7 +19,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
@@ -127,14 +126,15 @@ internal fun NoticeBanner(
 /** A request of Jarvis's: the chat's own Confirm / Cancel while it waits; once answered, his reply; else why not. */
 @Composable
 private fun ActionPart(id: Long) {
-    val st by IraHub.state.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     val waitingAtOpen = remember(id) { id in IraHub.state.value.pending }
     val seen = remember(id) { IraHub.state.value.messages.size }
+    val waitingNow by iraSlice(id) { id in it.pending }
+    // Read only while it matters (after the answer): Jarvis's last reply since the card opened.
+    val reply by iraSlice(seen) { s -> s.messages.drop(seen).lastOrNull { it.fromIra }?.text }
     when {
-        id in st.pending -> ActionConfirm(id)
+        waitingNow -> ActionConfirm(id)
         waitingAtOpen -> {
             // Answered here: what Jarvis said back (the chat has it too).
-            val reply = st.messages.drop(seen).lastOrNull { it.fromIra }?.text
             Note(reply?.let { "Done. Jarvis: $it" } ?: "Answered.")
         }
         else -> Note("This is no longer waiting: it was answered, or it lapsed and nothing was done.")
@@ -144,9 +144,8 @@ private fun ActionPart(id: Long) {
 /** A strategy of Jarvis's: the chat's own Approve / Dismiss while it is new; else what became of it. */
 @Composable
 private fun ProposalPart(id: Long) {
-    val st by IraHub.state.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
-    val prop = st.proposals.firstOrNull { it.id == id }
-    if (prop == null) Note("That strategy is no longer offered.")
+    val offered by iraSlice(id) { s -> s.proposals.any { it.id == id } }
+    if (!offered) Note("That strategy is no longer offered.")
     else ProposalActions(id)
 }
 

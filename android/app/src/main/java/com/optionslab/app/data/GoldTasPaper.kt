@@ -58,14 +58,17 @@ object GoldTasPaper {
 
     internal suspend fun replaceForTest(b: Book) {
         check(com.optionslab.app.BuildConfig.DEBUG) { "test seam" }
+        GoldBooks.awaitLoaded()
         lock.withLock { save(b) }
     }
 
     fun init(context: Context) {
         app = context.applicationContext
         file = File(app.noBackupFilesDir, "gold-tas.vault")
-        _book.value = runCatching { read() }.getOrNull() ?: Book()
     }
+
+    /** Reads the saved book (on [GoldBooks]' background thread; every change waits for it). */
+    internal fun load() { _book.value = runCatching { read() }.getOrNull() ?: Book() }
 
     suspend fun setArmed(on: Boolean) = edit { it.copy(armed = on, decided = if (on) ARMED else it.decided, status = if (on) WAITING else "Not armed") }
 
@@ -82,6 +85,7 @@ object GoldTasPaper {
      * candles, [t] the clock, [lots] the paper lot size. Never throws.
      */
     suspend fun step(hourly: List<Bar>, minutes: List<Bar>, t: LocalDateTime, fed: LocalDateTime, lots: Double) = runCatching {
+        GoldBooks.awaitLoaded()
         lock.withLock {
             var b = _book.value
             val last = minutes.lastOrNull()
@@ -172,7 +176,7 @@ object GoldTasPaper {
         runCatching { Diag.record("gold", "$title - $text") }
     }
 
-    private suspend fun edit(f: (Book) -> Book) = lock.withLock { save(f(_book.value)) }
+    private suspend fun edit(f: (Book) -> Book) { GoldBooks.awaitLoaded(); lock.withLock { save(f(_book.value)) } }
 
     private fun save(b: Book) {
         _book.value = b

@@ -164,7 +164,8 @@ fun Root(activity: MainActivity, splash: Boolean = false) {
             RefusedScreen(findings.filter { it.severity == Integrity.Severity.DANGER }.map { "${it.name}: ${it.detail}" }) { activity.finishAndRemoveTask() }
             return@IraAlgoTheme
         }
-        val brokerNow by model.broker.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+        val brokerNowState = model.broker.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+        val linkedNow by remember { androidx.compose.runtime.derivedStateOf { brokerNowState.value.linked } }
         // The idle lock: checked every few seconds while the session is open.
         LaunchedEffect(locked) { while (!locked) { delay(5_000); SessionLock.checkIdle() } }
         // Battery: checked on every start; the app stays closed until it is unrestricted.
@@ -184,7 +185,7 @@ fun Root(activity: MainActivity, splash: Boolean = false) {
             // IraGoldAlgo: its own three screens, no Zerodha.
             else if (com.optionslab.app.BuildConfig.GOLD) com.optionslab.app.ui.screens.GoldMain(model)
             // Until a Zerodha account is linked the app shows only the setup page.
-            else if (!brokerNow.linked && !SKIP_ZERODHA_GATE) ConnectGate(model)
+            else if (!linkedNow && !SKIP_ZERODHA_GATE) ConnectGate(model)
             else Main(model)
         }
     }
@@ -380,8 +381,9 @@ private fun Main(model: AppModel) {
     val message by model.message.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     val kiteLogin by model.showKiteLogin.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     // Trading (the Ticket and Trade tabs, live or paper) appears only once a Zerodha account is linked.
-    val broker by model.broker.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
-    val linked = broker.linked
+    // Only whether Zerodha is linked matters here: a refresh of the broker's other details does not recompose the app.
+    val brokerState = model.broker.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val linked by remember { androidx.compose.runtime.derivedStateOf { brokerState.value.linked } }
     // Paper trading needs no Zerodha account, so Trade is always there; live needs one linked.
     val tabs = Tab.entries
     LaunchedEffect(linked) {
@@ -424,7 +426,7 @@ private fun Main(model: AppModel) {
     val notify = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
     LaunchedEffect(Unit) {
         if (Build.VERSION.SDK_INT >= 33 && !SecurePrefs.getBoolean("asked.notify", false)) {
-            SecurePrefs.put("asked.notify", true)
+            SecurePrefs.putAllSoon(mapOf("asked.notify" to true))
             notify.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
     }
@@ -503,7 +505,7 @@ private fun Main(model: AppModel) {
         var tour by remember { mutableStateOf(!SecurePrefs.getBoolean(com.optionslab.app.ui.screens.GETTING_STARTED, false)) }
         val again by com.optionslab.app.ui.screens.showGettingStarted.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
         if (tour || again) com.optionslab.app.ui.screens.GettingStarted(onGo = { dest ->
-            SecurePrefs.put(com.optionslab.app.ui.screens.GETTING_STARTED, true); tour = false
+            SecurePrefs.putAllSoon(mapOf(com.optionslab.app.ui.screens.GETTING_STARTED to true)); tour = false
             com.optionslab.app.ui.screens.showGettingStarted.value = false
             if (dest == "chart") { chartAsk = "BANKNIFTY" to "NSE"; chartNonce++ }
             go(navNow().tour(dest))
@@ -701,8 +703,8 @@ internal fun Masthead(live: Boolean, calm: Boolean, linked: Boolean, onMode: (Bo
                         StatusDot(if (open) p.verdigris else p.inkFaint, pulsing = open && !calm, modifier = Modifier.size(6.dp))
                         Spacer(Modifier.width(4.dp))
                         // Shut on a weekday in session hours: the holiday's name, so a wrong list is visible (and fixable in Schedule).
-                        val why = if (open || !Market.isWeekday() || Market.minuteNow() !in Market.OPEN until Market.CLOSE) null else
-                            runCatching { com.optionslab.app.data.Holidays.book().upcoming(Market.today()).firstOrNull { it.first == Market.today() }?.second }.getOrNull()
+                        val why = remember(now, open) { if (open || !Market.isWeekday() || Market.minuteNow() !in Market.OPEN until Market.CLOSE) null else
+                            runCatching { com.optionslab.app.data.Holidays.book().upcoming(Market.today()).firstOrNull { it.first == Market.today() }?.second }.getOrNull() }
                         Text(if (open) "Market open" else "Market closed", style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp))
                         if (why != null) Text(" · $why", style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp))
                     }

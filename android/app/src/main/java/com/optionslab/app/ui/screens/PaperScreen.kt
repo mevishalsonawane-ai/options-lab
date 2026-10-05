@@ -201,7 +201,7 @@ private fun PaperPositions(model: AppModel, v: Paper.Snapshot) {
         val charges = v.trades.sumOf { it.charges }
         if (charges > 0) LedgerLine("Charges today", rs(-charges, true))
         if (book.positions.isEmpty()) Note("No paper positions.")
-        book.positions.forEach { ps ->
+        book.positions.forEach { ps -> androidx.compose.runtime.key(ps.symbol, ps.product) {
             Rule(Modifier.padding(vertical = 6.dp))
             Row(Modifier.clickable { model.rowAction.value = RowTarget.PaperPosition(ps) }, verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
@@ -215,7 +215,7 @@ private fun PaperPositions(model: AppModel, v: Paper.Snapshot) {
                     if (ps.quantity != 0) TextButton({ model.paperClose(ps.symbol, ps.product) }) { Text("Close", style = Type.label.copy(color = p.oxblood)) }
                 }
             }
-        }
+        } }
     }
 }
 
@@ -231,7 +231,7 @@ private fun PaperOrders(model: AppModel, v: Paper.Snapshot) {
         LedgerLine("Buy / sell", "${st.totalBuyOrders} / ${st.totalSellOrders}")
         LedgerLine("Complete · open · pending · rejected", "${st.totalCompletedOrders} · ${st.totalOpenOrders} · ${st.totalTriggerPendingOrders} · ${st.totalRejectedOrders}")
         if (v.orders.orders.isEmpty()) Note("No paper orders this session.")
-        v.orders.orders.forEach { o ->
+        v.orders.orders.forEach { o -> androidx.compose.runtime.key(o.orderId) {
             Rule(Modifier.padding(vertical = 5.dp))
             val tone = when (o.status) { "complete" -> p.verdigris; "rejected", "cancelled" -> p.oxblood; else -> p.amber }
             // The whole order (its three lines) is the tap target, as on the live order book: the first line alone was 15 dp.
@@ -251,7 +251,7 @@ private fun PaperOrders(model: AppModel, v: Paper.Snapshot) {
                 TextButton({ editing = o }) { Text("Modify", style = Type.label.copy(color = p.inkSoft)) }
                 TextButton({ model.paperCancel(o.orderId) }) { Text("Cancel", style = Type.label.copy(color = p.oxblood)) }
             }
-        }
+        } }
     }
     editing?.let { o ->
         var qty by remember(o) { mutableStateOf(o.quantity.toString()) }

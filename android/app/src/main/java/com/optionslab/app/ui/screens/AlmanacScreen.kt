@@ -17,6 +17,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -117,44 +118,49 @@ internal fun AlmanacContent(
     val p = LocalPalette.current
     var range by rememberSaveable { mutableStateOf("1D") }
 
-    val money: Money
-    val orders: List<HomeOrder>
-    val moneyNote: String?
-    if (live) {
-        val a = (account as? Load.Done)?.value
-        money = Money(a?.book?.m2m, a?.funds?.available, a?.funds?.used)
-        orders = a?.let { acc ->
-            acc.positions.filter { it.qty != 0 }.map {
-                HomeOrder(it.symbol, "${if (it.qty < 0) "SELL" else "BUY"} ${abs(it.qty)} · avg ${PX.format(it.avg)} · LTP ${PX.format(it.last)}",
-                    inr(it.pnl, true), if (it.pnl >= 0) p.verdigris else p.oxblood, "OPEN", RowTarget.LivePosition(it),
-                    com.optionslab.app.data.Origins.livePosition(owners, acc.trades, acc.orders, it.symbol, it.product, it.qty)?.let(com.optionslab.app.data.Origins::positionDisplay))
-            } + acc.orders.filter { it.working }.map {
-                HomeOrder(it.symbol, "${it.side} ${it.pending.takeIf { n -> n > 0 } ?: it.qty} · ${it.type.lowercase()}${if (it.trigger > 0) " · trigger ${PX.format(it.trigger)}" else ""}",
-                    "₹" + PX.format(if (it.price > 0) it.price else it.trigger), null, if (it.status == "TRIGGER PENDING") "TRIGGER PENDING" else "PENDING",
-                    RowTarget.LiveOrder(it), orderSource(owners, "kite:${it.id}", it.tag))
+    // Speed, round 2: the money and the rows are built once per change of the books (or the owners), not at every
+    // recomposition of Home.
+    val (money, orders, moneyNote) = remember(live, loggedIn, account, paper, owners, p) {
+        val money: Money
+        val orders: List<HomeOrder>
+        val moneyNote: String?
+        if (live) {
+            val a = (account as? Load.Done)?.value
+            money = Money(a?.book?.m2m, a?.funds?.available, a?.funds?.used)
+            orders = a?.let { acc ->
+                acc.positions.filter { it.qty != 0 }.map {
+                    HomeOrder(it.symbol, "${if (it.qty < 0) "SELL" else "BUY"} ${abs(it.qty)} · avg ${PX.format(it.avg)} · LTP ${PX.format(it.last)}",
+                        inr(it.pnl, true), if (it.pnl >= 0) p.verdigris else p.oxblood, "OPEN", RowTarget.LivePosition(it),
+                        com.optionslab.app.data.Origins.livePosition(owners, acc.trades, acc.orders, it.symbol, it.product, it.qty)?.let(com.optionslab.app.data.Origins::positionDisplay))
+                } + acc.orders.filter { it.working }.map {
+                    HomeOrder(it.symbol, "${it.side} ${it.pending.takeIf { n -> n > 0 } ?: it.qty} · ${it.type.lowercase()}${if (it.trigger > 0) " · trigger ${PX.format(it.trigger)}" else ""}",
+                        "₹" + PX.format(if (it.price > 0) it.price else it.trigger), null, if (it.status == "TRIGGER PENDING") "TRIGGER PENDING" else "PENDING",
+                        RowTarget.LiveOrder(it), orderSource(owners, "kite:${it.id}", it.tag))
+                }
+            } ?: emptyList()
+            moneyNote = when {
+                !loggedIn -> "Log in to Zerodha for today to see your money and orders."
+                account is Load.Failed -> (account as Load.Failed).why
+                else -> null
             }
-        } ?: emptyList()
-        moneyNote = when {
-            !loggedIn -> "Log in to Zerodha for today to see your money and orders."
-            account is Load.Failed -> (account as Load.Failed).why
-            else -> null
+        } else {
+            val v = (paper as? Load.Done)?.value
+            money = Money(v?.dayPnl, v?.funds?.availableCash, v?.funds?.utilisedDebits)
+            orders = v?.let { snap ->
+                snap.positions.positions.filter { it.quantity != 0 }.map {
+                    HomeOrder(it.symbol, "${if (it.quantity < 0) "SELL" else "BUY"} ${abs(it.quantity)} · avg ${PX.format(it.averagePrice)} · LTP ${PX.format(it.ltp)}",
+                        inr(it.pnl, true), if (it.pnl >= 0) p.verdigris else p.oxblood, "OPEN", RowTarget.PaperPosition(it),
+                        com.optionslab.app.data.Origins.paperPosition(owners, snap.trades, it.symbol, it.product, it.quantity)?.let(com.optionslab.app.data.Origins::positionDisplay))
+                } + snap.orders.orders.filter { it.pendingQuantity > 0 && it.status.uppercase() !in setOf("COMPLETE", "CANCELLED", "REJECTED") }.map {
+                    HomeOrder(it.symbol, "${it.action} ${it.pendingQuantity} · ${it.priceType.lowercase()}${if (it.triggerPrice > 0) " · trigger ${PX.format(it.triggerPrice)}" else ""}",
+                        "₹" + PX.format(if (it.price > 0) it.price else it.triggerPrice), null,
+                        if (it.status.uppercase().contains("TRIGGER")) "TRIGGER PENDING" else "PENDING", RowTarget.PaperOrder(it),
+                        orderSource(owners, "paper:${it.orderId}"))
+                }
+            } ?: emptyList()
+            moneyNote = (paper as? Load.Failed)?.why
         }
-    } else {
-        val v = (paper as? Load.Done)?.value
-        money = Money(v?.dayPnl, v?.funds?.availableCash, v?.funds?.utilisedDebits)
-        orders = v?.let { snap ->
-            snap.positions.positions.filter { it.quantity != 0 }.map {
-                HomeOrder(it.symbol, "${if (it.quantity < 0) "SELL" else "BUY"} ${abs(it.quantity)} · avg ${PX.format(it.averagePrice)} · LTP ${PX.format(it.ltp)}",
-                    inr(it.pnl, true), if (it.pnl >= 0) p.verdigris else p.oxblood, "OPEN", RowTarget.PaperPosition(it),
-                    com.optionslab.app.data.Origins.paperPosition(owners, snap.trades, it.symbol, it.product, it.quantity)?.let(com.optionslab.app.data.Origins::positionDisplay))
-            } + snap.orders.orders.filter { it.pendingQuantity > 0 && it.status.uppercase() !in setOf("COMPLETE", "CANCELLED", "REJECTED") }.map {
-                HomeOrder(it.symbol, "${it.action} ${it.pendingQuantity} · ${it.priceType.lowercase()}${if (it.triggerPrice > 0) " · trigger ${PX.format(it.triggerPrice)}" else ""}",
-                    "₹" + PX.format(if (it.price > 0) it.price else it.triggerPrice), null,
-                    if (it.status.uppercase().contains("TRIGGER")) "TRIGGER PENDING" else "PENDING", RowTarget.PaperOrder(it),
-                    orderSource(owners, "paper:${it.orderId}"))
-            }
-        } ?: emptyList()
-        moneyNote = (paper as? Load.Failed)?.why
+        Triple(money, orders, moneyNote)
     }
 
     Page {

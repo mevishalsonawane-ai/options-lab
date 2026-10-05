@@ -1370,11 +1370,11 @@ internal object IraTools {
 
     var brief: Boolean
         get() = runCatching { prefs().getBoolean("jarvis.brief", false) }.getOrDefault(false)
-        set(v) { runCatching { prefs().put("jarvis.brief", v) } }
+        set(v) { runCatching { prefs().putAllSoon(mapOf("jarvis.brief" to v)) } }
 
     var wakeStrict: Boolean
         get() = runCatching { prefs().getBoolean("jarvis.wake.strict", false) }.getOrDefault(false)
-        set(v) { runCatching { prefs().put("jarvis.wake.strict", v) } }
+        set(v) { runCatching { prefs().putAllSoon(mapOf("jarvis.wake.strict" to v)) } }
 
     // ---- Jarvis's weekly loss cap ----------------------------------------------------------------------------------
 

@@ -166,7 +166,7 @@ class JarvisVoice : Service() {
         /** Quiet hours: nothing said unasked from 22:00 to 07:00 (on by default; "Jarvis, quiet hours off"). */
         var quietHours: Boolean
             get() = runCatching { com.optionslab.app.security.SecurePrefs.getBoolean("jarvis.quiet", true) }.getOrDefault(true)
-            set(v) { runCatching { com.optionslab.app.security.SecurePrefs.put("jarvis.quiet", v) } }
+            set(v) { runCatching { com.optionslab.app.security.SecurePrefs.putAllSoon(mapOf("jarvis.quiet" to v)) } }
 
         fun quietNow(): Boolean = quietHours && com.optionslab.ira.Quiet.now(java.time.LocalTime.now(java.time.ZoneId.of("Asia/Kolkata")))
 
@@ -204,7 +204,7 @@ class JarvisVoice : Service() {
         /** The owner's switch, kept on the phone: listening starts again when the app is opened. */
         var wanted: Boolean
             get() = runCatching { com.optionslab.app.security.SecurePrefs.getBoolean("jarvis.listen", false) }.getOrDefault(false)
-            set(v) { runCatching { com.optionslab.app.security.SecurePrefs.put("jarvis.listen", v) } }
+            set(v) { runCatching { com.optionslab.app.security.SecurePrefs.putAllSoon(mapOf("jarvis.listen" to v)) } }
 
         /**
          * Battery saver for listening (Boss's switch, OFF by default: off, listening is exactly as before). On: with the
@@ -213,7 +213,7 @@ class JarvisVoice : Service() {
          */
         var listenSaver: Boolean
             get() = runCatching { com.optionslab.app.security.SecurePrefs.getBoolean("jarvis.listen.saver", false) }.getOrDefault(false)
-            set(v) { runCatching { com.optionslab.app.security.SecurePrefs.put("jarvis.listen.saver", v) } }
+            set(v) { runCatching { com.optionslab.app.security.SecurePrefs.putAllSoon(mapOf("jarvis.listen.saver" to v)) } }
 
         /** Listening runs now (the battery line). */
         fun listeningNow(): Boolean = instance?.get() != null
@@ -247,7 +247,7 @@ class JarvisVoice : Service() {
         /** Boss's choice (default off): Jarvis listens through the phone's speech service (Google), which may send speech to Google. */
         var googleSpeech: Boolean
             get() = runCatching { com.optionslab.app.security.SecurePrefs.getBoolean("jarvis.voice.google", false) }.getOrDefault(false)
-            set(v) { runCatching { com.optionslab.app.security.SecurePrefs.put("jarvis.voice.google", v) } }
+            set(v) { runCatching { com.optionslab.app.security.SecurePrefs.putAllSoon(mapOf("jarvis.voice.google" to v)) } }
 
         /**
          * Boss's choice (default off, Boss 4 Oct: "hear only my voice"): with his voice taught, words in any other voice -
@@ -255,7 +255,7 @@ class JarvisVoice : Service() {
          */
         var onlyBoss: Boolean
             get() = runCatching { com.optionslab.app.security.SecurePrefs.getBoolean("jarvis.voice.onlyboss", false) }.getOrDefault(false)
-            set(v) { runCatching { com.optionslab.app.security.SecurePrefs.put("jarvis.voice.onlyboss", v) } }
+            set(v) { runCatching { com.optionslab.app.security.SecurePrefs.putAllSoon(mapOf("jarvis.voice.onlyboss" to v)) } }
 
         /** From the app on screen only (Android lets a microphone service start only then). */
         /** Started from the app on screen (Android then lets it use the microphone "while using the app"). */
@@ -306,12 +306,12 @@ class JarvisVoice : Service() {
         /** How fast he speaks, times the style's own rate: 0.7 to 1.45 (Boss's "speak slower" / "faster"). */
         var pace: Float
             get() = runCatching { com.optionslab.app.security.SecurePrefs.getString("jarvis.voice.pace")?.toFloat() }.getOrNull()?.coerceIn(0.7f, 1.45f) ?: 1f
-            set(v) { runCatching { com.optionslab.app.security.SecurePrefs.put("jarvis.voice.pace", v.coerceIn(0.7f, 1.45f).toString()) } }
+            set(v) { runCatching { com.optionslab.app.security.SecurePrefs.putAllSoon(mapOf("jarvis.voice.pace" to v.coerceIn(0.7f, 1.45f).toString())) } }
 
         var style: Style
             // A normal male voice by default (the owner's wish, 2026-10-02); a new key, so an earlier choice starts from it.
             get() = runCatching { Style.valueOf(com.optionslab.app.security.SecurePrefs.getString("jarvis.voice.style2") ?: "MAN") }.getOrDefault(Style.MAN)
-            set(v) { runCatching { com.optionslab.app.security.SecurePrefs.put("jarvis.voice.style2", v.name) } }
+            set(v) { runCatching { com.optionslab.app.security.SecurePrefs.putAllSoon(mapOf("jarvis.voice.style2" to v.name)) } }
 
         /**
          * Cutting in while Jarvis talks: it listens during its own speech (the name or a stop word only,
@@ -322,13 +322,13 @@ class JarvisVoice : Service() {
         var cutInChoice: Boolean?
             get() = runCatching { val sp = com.optionslab.app.security.SecurePrefs
                 com.optionslab.ira.CutIn.load(sp.getString("jarvis.cutin2")) ?: if (sp.getBoolean("jarvis.cutin", false)) true else null }.getOrNull()
-            set(v) { runCatching { com.optionslab.app.security.SecurePrefs.putAll(mapOf("jarvis.cutin2" to com.optionslab.ira.CutIn.save(v),
+            set(v) { runCatching { com.optionslab.app.security.SecurePrefs.putAllSoon(mapOf("jarvis.cutin2" to com.optionslab.ira.CutIn.save(v),
                 "jarvis.cutin" to null, "jarvis.cutin.silences" to null)) } }
 
         /** This phone was seen to stop speaking while it listened: the automatic choice stays off. */
         private var cutInSilences: Boolean
             get() = runCatching { com.optionslab.app.security.SecurePrefs.getBoolean("jarvis.cutin.silences", false) }.getOrDefault(false)
-            set(v) { runCatching { com.optionslab.app.security.SecurePrefs.put("jarvis.cutin.silences", if (v) true else null) } }
+            set(v) { runCatching { com.optionslab.app.security.SecurePrefs.putAllSoon(mapOf("jarvis.cutin.silences" to (if (v) true else null))) } }
 
         /** Outputs that put Jarvis's voice in Boss's ears, not the room (a Bluetooth headset plays as A2DP or SCO). */
         private val HEADSETS = setOf(android.media.AudioDeviceInfo.TYPE_WIRED_HEADSET, android.media.AudioDeviceInfo.TYPE_WIRED_HEADPHONES,
@@ -365,7 +365,7 @@ class JarvisVoice : Service() {
         var muted: Boolean
             get() = runCatching { com.optionslab.app.security.SecurePrefs.getBoolean("jarvis.mute", false) }.getOrDefault(false) ||
                 System.currentTimeMillis() < mutedUntil
-            set(v) { runCatching { com.optionslab.app.security.SecurePrefs.put("jarvis.mute", v); if (!v) com.optionslab.app.security.SecurePrefs.put("jarvis.mute.until", null) }
+            set(v) { runCatching { com.optionslab.app.security.SecurePrefs.putAllSoon(if (v) mapOf("jarvis.mute" to true) else mapOf("jarvis.mute" to false, "jarvis.mute.until" to null)) }
                 if (v) { instance?.get()?.hush(); JarvisSpeaker.stop() } }
 
         /** "Be quiet for 30 minutes": muted until this time (epoch ms), then speaking again by itself. */
@@ -373,15 +373,15 @@ class JarvisVoice : Service() {
 
         fun muteFor(minutes: Int) {
             // A timed quiet replaces a lasting mute: he speaks again by itself when it ends, as he says.
-            runCatching { com.optionslab.app.security.SecurePrefs.put("jarvis.mute", false)
-                com.optionslab.app.security.SecurePrefs.put("jarvis.mute.until", (System.currentTimeMillis() + minutes.coerceIn(1, 480) * 60_000L).toString()) }
+            runCatching { com.optionslab.app.security.SecurePrefs.putAllSoon(mapOf("jarvis.mute" to false,
+                "jarvis.mute.until" to (System.currentTimeMillis() + minutes.coerceIn(1, 480) * 60_000L).toString())) }
             instance?.get()?.hush(); JarvisSpeaker.stop()
         }
 
         /** Replies in Hindi (the AI model translates; figures are checked, and English is used when it cannot). */
         var hindi: Boolean
             get() = runCatching { com.optionslab.app.security.SecurePrefs.getBoolean("jarvis.hindi", false) }.getOrDefault(false)
-            set(v) { runCatching { com.optionslab.app.security.SecurePrefs.put("jarvis.hindi", v) } }
+            set(v) { runCatching { com.optionslab.app.security.SecurePrefs.putAllSoon(mapOf("jarvis.hindi" to v)) } }
 
         /**
          * Boss's own pauses inside his questions (ms, numbers only - never words), for how long his words may stand still
@@ -509,7 +509,7 @@ class JarvisVoice : Service() {
         /** The phone voice chosen by name, or null for the first offline English one (an Indian English one first). */
         var voiceName: String?
             get() = runCatching { com.optionslab.app.security.SecurePrefs.getString("jarvis.voice.name2") }.getOrNull()
-            set(v) { runCatching { com.optionslab.app.security.SecurePrefs.put("jarvis.voice.name2", v) } }
+            set(v) { runCatching { com.optionslab.app.security.SecurePrefs.putAllSoon(mapOf("jarvis.voice.name2" to v)) } }
 
         /**
          * Android does not say which voices are male, so the known male voices of Google's speech engine come first

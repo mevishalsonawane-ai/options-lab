@@ -42,7 +42,8 @@ class IraHubTest : RobolectricTest() {
         IraMarket.VIX to History(IraMarket.VIX, days(25, 13.0, 0.02, 3)),
     )
 
-    @After fun down() { IraHub.testLabBars = null; IraAccount.testView = null; IraHub.testHistories = null; IraHub.testAutoLab = false; runBlocking { IraHub.forgetAll() } }
+    @After fun down() { IraHub.testLabBars = null; IraAccount.testView = null; IraHub.testHistories = null; IraHub.testAutoLab = false
+        IraHub.testLoadHold?.complete(Unit); IraHub.testLoadHold = null; runBlocking { IraHub.forgetAll() } }
 
     private fun waitFor(what: String, ok: () -> Boolean) {
         val t0 = System.currentTimeMillis()
@@ -138,7 +139,7 @@ class IraHubTest : RobolectricTest() {
         IraHub.forgetConversation()
         assertTrue(IraHub.state.value.messages.isEmpty())
         // a fresh start reads the book back
-        IraHub.init(context)
+        IraHub.init(context); IraHub.awaitLoadedBlocking()
         assertEquals(learned, IraHub.state.value.learned)
     }
 
@@ -316,14 +317,14 @@ class IraHubTest : RobolectricTest() {
         IraHub.ask("backtest the hammer on banknifty 1 hour")
         waitFor("the backtest") { IraHub.state.value.proposals.isNotEmpty() }
         val p = IraHub.state.value.proposals.single()
-        IraHub.init(context)                                       // the app starts again
+        IraHub.init(context); IraHub.awaitLoadedBlocking()                                       // the app starts again
         var st = IraHub.state.value
         assertEquals(j, st.journal)
         assertEquals(listOf(p), st.proposals)
         assertTrue("the conversation is remembered", st.messages.any { it.proposal == p.id && it.text.contains("Backtest of") })
         assertTrue(st.messages.any { !it.fromIra && it.text == "backtest the hammer on banknifty 1 hour" })
         IraHub.dismiss(p.id)
-        IraHub.init(context)
+        IraHub.init(context); IraHub.awaitLoadedBlocking()
         st = IraHub.state.value
         assertEquals(IraHub.Proposal.DISMISSED, st.proposals.single().status)
         assertEquals("Dismissed. I won't offer that one again today.", st.messages.last().text)
@@ -472,8 +473,36 @@ class IraHubTest : RobolectricTest() {
         val said = IraHub.state.value.messages.first { !it.fromIra }.text
         assertEquals("my password is [hidden]", said)
         kotlinx.coroutines.delay(800)
-        IraHub.init(context)
+        IraHub.init(context); IraHub.awaitLoadedBlocking()
         assertTrue(IraHub.state.value.messages.none { it.text.contains("hunter2") || it.text.contains("4111") })
+    }
+
+    /**
+     * Speed, round 2: the saved conversation is read off the main thread at the start. While it is being read nothing is
+     * saved over it, and what is said meanwhile is kept after it - nothing is lost either way.
+     */
+    @Test fun theSavedConversationIsNeverWrittenOverWhileItIsRead() = runBlocking {
+        IraHub.ask("what time is it")
+        kotlinx.coroutines.delay(800)                               // the keeper saves it
+        val f = File(context.noBackupFilesDir, "ira-state.vault")
+        assertTrue(f.exists())
+        val hold = kotlinx.coroutines.CompletableDeferred<Unit>()
+        IraHub.testLoadHold = hold
+        IraHub.init(context)                                        // the app starts again; its memory is still being read
+        assertTrue(!IraHub.ready.value)
+        val savedBefore = f.readBytes()
+        IraHub.ask("Nifty levels")                                   // said while it is read
+        kotlinx.coroutines.delay(800)
+        assertTrue("nothing saved while the memory is read", savedBefore.contentEquals(f.readBytes()))
+        hold.complete(Unit)
+        IraHub.awaitLoadedBlocking()
+        assertTrue(IraHub.ready.value)
+        val said = IraHub.state.value.messages.filter { !it.fromIra }.map { it.text }
+        assertEquals(listOf("what time is it", "Nifty levels"), said)
+        IraHub.testLoadHold = null
+        kotlinx.coroutines.delay(800)
+        IraHub.init(context); IraHub.awaitLoadedBlocking()
+        assertEquals(said, IraHub.state.value.messages.filter { !it.fromIra }.map { it.text })
     }
 
     /** "Add event RBI policy on 5 Dec" is kept and comes back in "any events"; the Fed's 2026 days are built in. */

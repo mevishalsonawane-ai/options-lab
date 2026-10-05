@@ -98,10 +98,30 @@ private val EXAMPLES = listOf("What is BankNifty doing today?", "Nifty levels", 
  * Ira: the orb (the market at a glance) above the conversation. Answers come from IraAlgo's own data only; an order
  * request goes through [orders] (the app's own paths) only after the owner confirms it.
  */
+/**
+ * Speed, round 2: one slice of [IraHub.state] - the proposals, what waits, the snapshots - so a new or rewritten message
+ * recomposes only what shows it. [pick] reads the whole state; the caller recomposes only when what it picks changes
+ * ([policy]: by equality, or by identity for big values the hub rebuilds as a whole). [key]: what [pick] depends on.
+ */
+@Composable
+internal fun <T> iraSlice(key: Any? = null,
+                          policy: androidx.compose.runtime.SnapshotMutationPolicy<T> = androidx.compose.runtime.structuralEqualityPolicy(),
+                          pick: (IraHub.State) -> T): androidx.compose.runtime.State<T> {
+    val all = IraHub.state.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    return remember(all, key) { androidx.compose.runtime.derivedStateOf(policy) { pick(all.value) } }
+}
+
 @Composable
 fun IraPage(orders: IraOrderPaths? = null) {
     val p = LocalPalette.current
+    // The whole state is read only inside the conversation's list (its own scope); the page itself reads slices.
     val st by IraHub.state.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val snaps by iraSlice(policy = androidx.compose.runtime.referentialEqualityPolicy()) { it.snaps }
+    val working by iraSlice { it.busy || it.loading }
+    val waitingCount by iraSlice { it.pending.size }
+    val newest by iraSlice { s -> s.messages.lastOrNull()?.let { it.id to it.text } }
+    // The saved conversation is read off the main thread at the start: until then the chat says so (no examples).
+    val memoryReady by IraHub.ready.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     val voice by JarvisVoice.state.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     val scope = rememberCoroutineScope()
     var text by remember { mutableStateOf("") }
@@ -121,8 +141,8 @@ fun IraPage(orders: IraOrderPaths? = null) {
     com.optionslab.app.ui.PollWhileStarted { while (true) { IraHub.refresh(); delay(60_000) } }
     val list = rememberLazyListState()
     // The newest message in view: after each new or rewritten one (the cards above it counted).
-    LaunchedEffect(st.messages.lastOrNull()?.id, st.messages.lastOrNull()?.text) {
-        if (st.messages.isNotEmpty()) list.animateScrollToItem((list.layoutInfo.totalItemsCount - 1).coerceAtLeast(0))
+    LaunchedEffect(newest) {
+        if (newest != null) list.animateScrollToItem((list.layoutInfo.totalItemsCount - 1).coerceAtLeast(0))
     }
 
     val ctxSpeak = androidx.compose.ui.platform.LocalContext.current
@@ -150,12 +170,12 @@ fun IraPage(orders: IraOrderPaths? = null) {
         // Analysing in the background (reading the market, a backtest, the model writing) shows as thinking too.
         val orbMode = when {
             mode == 0 && text.isNotEmpty() -> 1
-            mode == 0 && (st.busy || st.loading || writing.writing) -> 2
+            mode == 0 && (working || writing.writing) -> 2
             else -> mode
         }
         Box(Modifier.fillMaxSize().background(Color.Black)) {
             Box(Modifier.fillMaxWidth().fillMaxHeight(0.62f).align(Alignment.Center)) {
-                Orb(vol = orbVol(st.snaps), trend = orbTrend(st.snaps[focus]), mode = orbMode,
+                Orb(vol = orbVol(snaps), trend = orbTrend(snaps[focus]), mode = orbMode,
                     onLongPress = if (com.optionslab.app.BuildConfig.JARVIS) ({ quick = true }) else null)
             }
             // Long-press the globe: the quick commands.
@@ -171,7 +191,7 @@ fun IraPage(orders: IraOrderPaths? = null) {
                 modifier = Modifier.align(Alignment.TopCenter).padding(top = 18.dp))
             Column(Modifier.align(Alignment.BottomCenter).padding(bottom = 24.dp), horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                val waiting = st.pending.size
+                val waiting = waitingCount
                 // Muted: said plainly on the globe, one tap to hear Jarvis again.
                 var mutedNow by remember { mutableStateOf(JarvisVoice.muted) }
                 com.optionslab.app.ui.PollWhileStarted { while (true) { mutedNow = JarvisVoice.muted; kotlinx.coroutines.delay(2_000) } }
@@ -191,9 +211,9 @@ fun IraPage(orders: IraOrderPaths? = null) {
         // The keyboard is up: the globe steps aside so the question box and Ask keep their room.
         val imeOpen = WindowInsets.ime.getBottom(androidx.compose.ui.platform.LocalDensity.current) > 0
         if (!imeOpen) Box(Modifier.fillMaxWidth().height(280.dp).background(Color.Black)) {
-            val s = st.snaps[focus]
+            val s = snaps[focus]
             // Tapping the globe in the chat hides the chat again (Jarvis).
-            Orb(vol = orbVol(st.snaps), trend = orbTrend(s), mode = if (mode == 0 && text.isNotEmpty()) 1 else mode,
+            Orb(vol = orbVol(snaps), trend = orbTrend(s), mode = if (mode == 0 && text.isNotEmpty()) 1 else mode,
                 onTap = if (com.optionslab.app.BuildConfig.JARVIS) ({ chat = false }) else null)
             Text(orbLabel(if (mode == 0 && text.isNotEmpty()) 1 else mode).uppercase(),
                 style = Type.label.copy(color = Color(0xFF4AA8FF), fontSize = 11.sp, letterSpacing = 2.sp), modifier = Modifier.padding(12.dp))
@@ -211,6 +231,7 @@ fun IraPage(orders: IraOrderPaths? = null) {
                         "(Paper: Confirm; Live: the order review, swipe and PIN).")
                     val day = st.lastDay?.let { " Latest data: ${it.dayOfMonth} ${it.month.getDisplayName(java.time.format.TextStyle.SHORT, Locale.ENGLISH)} ${it.year}." } ?: ""
                     Note(when {
+                        !memoryReady -> "Reading what I remember..."
                         st.loading -> "Reading the market data..."
                         st.problem != null -> st.problem!!
                         else -> "${st.days} days of candles read; ${st.learned} pattern outcomes learned.$day " + liveLine(st)
@@ -219,7 +240,7 @@ fun IraPage(orders: IraOrderPaths? = null) {
             }
             item { HowIraIsDoing(st) }
             if (com.optionslab.app.BuildConfig.JARVIS) item { JarvisStudyCard() }
-            if (st.messages.isEmpty()) item {
+            if (st.messages.isEmpty() && memoryReady) item {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         EXAMPLES.forEach { q ->
@@ -229,7 +250,7 @@ fun IraPage(orders: IraOrderPaths? = null) {
                     }
                 }
             }
-            items(st.messages, key = { it.id }) { m -> Bubble(m, orders) }
+            items(st.messages, key = { it.id }, contentType = { "message" }) { m -> Bubble(m, orders) }
             if (st.messages.isNotEmpty()) item {
                 Text("Forget this conversation", style = Type.label.copy(color = p.inkSoft, fontSize = 13.sp),
                     modifier = Modifier.clickable { IraHub.forgetConversation() }.padding(6.dp))
@@ -283,8 +304,8 @@ private fun Bubble(m: IraHub.Msg, orders: IraOrderPaths?) {
 /** Approve / Dismiss under a strategy Jarvis backtested, or what was decided. */
 @Composable
 internal fun ProposalActions(id: Long) {
-    val st by IraHub.state.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
-    val p = st.proposals.firstOrNull { it.id == id } ?: return
+    val found by iraSlice(id) { s -> s.proposals.firstOrNull { it.id == id } }
+    val p = found ?: return
     val scope = rememberCoroutineScope()
     var open by remember { mutableStateOf(false) }
     Column(Modifier.padding(top = 6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -654,9 +675,9 @@ private fun VoiceStyle() {
 /** Confirm / Cancel under something Jarvis will stop or close when the owner taps (one tap, no PIN: the owner's rule). */
 @Composable
 internal fun ActionConfirm(id: Long) {
-    val st by IraHub.state.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val waiting by iraSlice(id) { id in it.pending }
     val scope = rememberCoroutineScope()
-    if (id !in st.pending) return
+    if (!waiting) return
     Row(Modifier.padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         val activity = androidx.compose.ui.platform.LocalContext.current as? androidx.fragment.app.FragmentActivity
         if (IraHub.needsFingerprint(id) && activity != null) {

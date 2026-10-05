@@ -78,6 +78,7 @@ class BotTile : TileService() {
      */
     private suspend fun todayPnl(): String? =
         if (com.optionslab.app.BuildConfig.GOLD) {
+            com.optionslab.app.data.GoldBooks.awaitLoaded()
             val today = GoldPaper.now().plusMinutes(330).toLocalDate()
             val closed = (GoldPaper.book.value.trades + GoldTrendPaper.book.value.trades + GoldDipPaper.book.value.trades +
                 GoldTasPaper.book.value.trades)
@@ -92,13 +93,15 @@ class BotTile : TileService() {
             v?.let { "Today " + (if (it < 0) "-₹" else "+₹") + "%,.0f".format(java.util.Locale.ENGLISH, kotlin.math.abs(it)) }
         }
 
-    private suspend fun running(): Boolean =
-        if (com.optionslab.app.BuildConfig.GOLD) GoldPaper.book.value.armed || GoldTrendPaper.book.value.armed || GoldDipPaper.book.value.armed ||
-            GoldTasPaper.book.value.armed
-        else !Strategies.stoppedToday()
+    private suspend fun running(): Boolean {
+        if (!com.optionslab.app.BuildConfig.GOLD) return !Strategies.stoppedToday()
+        com.optionslab.app.data.GoldBooks.awaitLoaded()
+        return GoldPaper.book.value.armed || GoldTrendPaper.book.value.armed || GoldDipPaper.book.value.armed || GoldTasPaper.book.value.armed
+    }
 
     private suspend fun stop() {
         if (com.optionslab.app.BuildConfig.GOLD) {
+            com.optionslab.app.data.GoldBooks.awaitLoaded()
             val was = listOfNotNull(if (GoldPaper.book.value.armed) "liquidity" else null, if (GoldTrendPaper.book.value.armed) "trend" else null,
                 if (GoldDipPaper.book.value.armed) "dip" else null, if (GoldTasPaper.book.value.armed) "tas" else null)
             if (was.isNotEmpty()) SecurePrefs.put(GOLD_ARMED, was.joinToString(","))

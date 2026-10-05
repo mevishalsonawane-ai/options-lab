@@ -23,6 +23,7 @@ import com.optionslab.ira.Topic
 import com.optionslab.ira.Ask
 import com.optionslab.ira.PatternKind
 import com.optionslab.ira.Wake
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -163,6 +164,9 @@ object IraHub {
     /** TEST ONLY: run the automatic strategy hunt outside Jarvis. */
     @Volatile internal var testAutoLab = false
         set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "test seam" }; field = v }
+    /** TEST ONLY: the start's read of the saved memory waits for this (to see what happens while it is read). */
+    @Volatile internal var testLoadHold: CompletableDeferred<Unit>? = null
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "test seam" }; field = v }
     /** TEST ONLY: a feed's text instead of the network. */
     @Volatile internal var testFeed: (suspend (String) -> String)? = null
         set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "test seam" }; field = v }
@@ -182,27 +186,82 @@ object IraHub {
         // The question readers' patterns made ready off the main thread, so Boss's first question does not wait for them.
         scope.launch { runCatching { com.optionslab.ira.Warm.up() } }
         val f = File(context.applicationContext.noBackupFilesDir, "ira-book.vault")
-        bookFile = f
-        book = runCatching { Vault.readFileSteady(f)?.let { PatternBook.load(String(it, Charsets.UTF_8)) } }.getOrNull() ?: PatternBook()
         val sf = File(context.applicationContext.noBackupFilesDir, "ira-state.vault")
         // Started again in the same process: what is in memory is written first (the keeper waits 300 ms before it
         // saves), so the newest message or proposal is never lost to the reload below.
-        if (keeper != null && stateFile == sf) saveState()
+        if (keeper != null && stateFile == sf && loaded.isCompleted) saveState()
+        // Speed, round 2: the pattern book and the saved conversation are decrypted off the screen's thread. Until they
+        // are in, nothing is saved (an empty conversation is never written over the saved one) and a refresh, a typed
+        // question's lane or "forget everything" waits; the screen shows what there is (an empty page) meanwhile.
+        val gate = CompletableDeferred<Unit>()
+        val before = _state.value.let { st -> st.messages.mapTo(HashSet()) { it.id } to st.proposals.mapTo(HashSet()) { it.id } }
+        synchronized(loadLock) { loaded = gate; _ready.value = false; wipedWhileLoading = false }
+        bookFile = f
         stateFile = sf
-        val saved = runCatching { Vault.readFileSteady(sf)?.let { IraSaved.read(String(it, Charsets.UTF_8)) } }.getOrNull()
-        synchronized(tested) { tested.clear(); saved?.tested?.let { tested += it } }
-        // The process started again: what was kept comes back; a strategy still waiting is offered again in the conversation.
-        // The conversation comes back as it was (the owner's wish, 2026-10-02); a strategy still waiting is offered again.
-        // An option-chain read cut short by the process ending never finishes: its placeholder is told as not read.
-        val talk = saved?.messages.orEmpty().map { if (it.fromIra && it.text.startsWith(CHAIN_NOTE)) it.copy(text = "I couldn't read the option chain just now, Boss.") else it }
-        val waiting = saved?.proposals.orEmpty().filter { it.status == Proposal.NEW && talk.none { m -> m.proposal == it.id } }
-            .map { Msg(true, "Still waiting for your decision. " + it.result.summary(), proposal = it.id) }
-        _state.value = State(learned = book.size, best = book.best(), proposals = saved?.proposals.orEmpty(),
-            journal = saved?.journal.orEmpty(), nightlyAt = saved?.nightlyAt, messages = (talk + waiting).takeLast(MAX_MESSAGES))
+        scope.launch(Dispatchers.IO) {
+            try {
+                testLoadHold?.await()
+                val readBook = runCatching { Vault.readFileSteady(f)?.let { PatternBook.load(String(it, Charsets.UTF_8)) } }.getOrNull() ?: PatternBook()
+                val saved = runCatching { Vault.readFileSteady(sf)?.let { IraSaved.read(String(it, Charsets.UTF_8)) } }.getOrNull()
+                synchronized(loadLock) {
+                    // A later start in the same process (tests) reads again: this older read is dropped.
+                    if (loaded === gate) restore(readBook, saved, before.first, before.second)
+                }
+            } finally {
+                synchronized(loadLock) { if (loaded === gate) _ready.value = true }
+                gate.complete(Unit)
+            }
+        }
         if (keeper == null) keeper = scope.launch {
             var last: List<Msg>? = null
             _state.collect { st -> if (st.messages !== last) { last = st.messages; kotlinx.coroutines.delay(300); saveState() } }
         }
+    }
+
+    /** What was read at the start put in place (under [loadLock]); messages and proposals added meanwhile are kept after it. */
+    private fun restore(readBook: PatternBook, saved: IraSaved.Read?, oldMsgs: Set<Long>, oldProps: Set<Long>) {
+        book = readBook
+        synchronized(tested) { tested.clear(); saved?.tested?.let { tested += it } }
+        // The process started again: what was kept comes back; a strategy still waiting is offered again in the conversation.
+        // The conversation comes back as it was (the owner's wish, 2026-10-02); a strategy still waiting is offered again.
+        // An option-chain read cut short by the process ending never finishes: its placeholder is told as not read.
+        val talk = if (wipedWhileLoading) emptyList<Msg>() else saved?.messages.orEmpty()
+            .map { if (it.fromIra && it.text.startsWith(CHAIN_NOTE)) it.copy(text = "I couldn't read the option chain just now, Boss.") else it }
+        val waiting = saved?.proposals.orEmpty().filter { it.status == Proposal.NEW && talk.none { m -> m.proposal == it.id } }
+            .map { Msg(true, "Still waiting for your decision. " + it.result.summary(), proposal = it.id) }
+        _state.update { cur ->
+            // Whatever was said while the memory was read (a reply, an alert) stays, after what was kept.
+            val newMsgs = cur.messages.filter { it.id !in oldMsgs }
+            val newProps = cur.proposals.filter { it.id !in oldProps }
+            val actions = newMsgs.mapNotNullTo(HashSet()) { it.action }
+            State(learned = book.size, best = book.best(), proposals = saved?.proposals.orEmpty() + newProps,
+                journal = saved?.journal.orEmpty(), nightlyAt = saved?.nightlyAt,
+                messages = (talk + waiting + newMsgs).takeLast(MAX_MESSAGES), pending = cur.pending.filterTo(HashSet()) { it in actions })
+        }
+    }
+
+    /** Completed once the latest [init]'s pattern book and saved conversation are read (completed before any init). */
+    @Volatile private var loaded: CompletableDeferred<Unit> = CompletableDeferred<Unit>().apply { complete(Unit) }
+    private val loadLock = Any()
+    /** The conversation was wiped while the saved one was being read: it does not come back. */
+    @Volatile private var wipedWhileLoading = false
+    private val _ready = MutableStateFlow(true)
+    /** True once Jarvis's memory (pattern book, conversation, proposals) is read at the start. */
+    val ready: StateFlow<Boolean> = _ready
+
+    /** Waits until the memory of the latest [init] is read. */
+    suspend fun awaitLoaded() {
+        while (true) {
+            val g = loaded
+            g.await()
+            if (g === loaded) return
+        }
+    }
+
+    /** [awaitLoaded] for tests and code that cannot suspend; returns at once when already read. */
+    fun awaitLoadedBlocking() {
+        if (loaded.isCompleted && _ready.value) return
+        kotlinx.coroutines.runBlocking { awaitLoaded() }
     }
 
     /** Saves the conversation as it changes. */
@@ -211,6 +270,8 @@ object IraHub {
     /** Writes the proposals, the journal, the tried patterns and the conversation (one writer at a time). */
     @Synchronized private fun saveState() {
         val f = stateFile ?: return
+        // Never before the saved conversation is read: an empty one would be written over it (the keeper saves after).
+        if (!loaded.isCompleted) return
         val st = _state.value
         val tried = synchronized(tested) { tested.toList() }
         if (st.proposals.isEmpty() && st.journal.isEmpty() && st.messages.isEmpty() && tried.isEmpty()) { f.delete(); return }
@@ -268,6 +329,7 @@ object IraHub {
 
     /** Re-reads the candles, learns from the new ones and rebuilds the snapshots. Never throws. */
     suspend fun refresh() = withContext(Dispatchers.Default) {
+        awaitLoaded()           // the pattern book read at the start is the one taught (and saved)
         lock.withLock {
             _state.update { it.copy(loading = true) }
             runCatching {
@@ -1214,7 +1276,7 @@ object IraHub {
      * page never drops a question.
      */
     fun askSoon(text: String, confirmed: Boolean = false): kotlinx.coroutines.Job =
-        scope.launch(askLane) { if (confirmed) askConfirmed(text) else ask(text) }
+        scope.launch(askLane) { awaitLoaded(); if (confirmed) askConfirmed(text) else ask(text) }
 
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     private val askLane = Dispatchers.Default.limitedParallelism(1)
@@ -4203,10 +4265,12 @@ object IraHub {
     }
 
     /** Wipes the conversation (the owner's button). */
-    fun forgetConversation() { dropPending(); synchronized(askedAt) { askedAt.clear() }; _state.update { it.copy(messages = emptyList()) } }
+    fun forgetConversation() { if (!loaded.isCompleted) wipedWhileLoading = true; dropPending(); synchronized(askedAt) { askedAt.clear() }; _state.update { it.copy(messages = emptyList()) } }
 
     /** Wipes what Ira learned too; it relearns from the data on the next refresh. */
-    suspend fun forgetAll() = lock.withLock {
+    suspend fun forgetAll() { awaitLoaded(); forgetAllLoaded() }
+
+    private suspend fun forgetAllLoaded() = lock.withLock {
         dropPending()
         IraTools.forgetHabits()
         IraTools.forgetRoutine()

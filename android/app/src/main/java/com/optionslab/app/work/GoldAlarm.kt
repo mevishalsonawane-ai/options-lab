@@ -76,6 +76,7 @@ class GoldService : android.app.Service() {
 
         /** Is there anything for the service to do now? An arm armed or a trade held, while gold trades. */
         fun needed(now: LocalDateTime = GoldPaper.now()): Boolean {
+            com.optionslab.app.data.GoldBooks.awaitBlocking()   // the saved books, not the empty ones of the first moment
             val liq = GoldPaper.book.value
             val tr = com.optionslab.app.data.GoldTrendPaper.book.value
             val dp = com.optionslab.app.data.GoldDipPaper.book.value
@@ -97,6 +98,7 @@ class GoldService : android.app.Service() {
     override fun onBind(intent: Intent?): android.os.IBinder? = null
 
     private fun text(): Pair<String, String> {
+        com.optionslab.app.data.GoldBooks.awaitBlocking()
         val b = GoldPaper.book.value
         val tr = com.optionslab.app.data.GoldTrendPaper.book.value
         val dp = com.optionslab.app.data.GoldDipPaper.book.value

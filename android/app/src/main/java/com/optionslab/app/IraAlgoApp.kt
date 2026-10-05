@@ -87,12 +87,9 @@ class IraAlgoApp : Application() {
         com.optionslab.app.data.Journal.init(this)
         com.optionslab.app.data.Diag.init(this)
         com.optionslab.app.data.KiteStream.init(this)
-        timed("gold books") {
-            com.optionslab.app.data.GoldPaper.init(this)
-            com.optionslab.app.data.GoldTrendPaper.init(this)
-            com.optionslab.app.data.GoldDipPaper.init(this)
-            com.optionslab.app.data.GoldTasPaper.init(this)
-        }
+        // The gold books and Jarvis's memory are decrypted on a background thread (Speed, round 2); every change to them
+        // waits until they are read, so nothing is ever saved over them empty.
+        timed("gold books") { com.optionslab.app.data.GoldBooks.init(this) }
         timed("Jarvis's memory") { com.optionslab.app.ira.IraHub.init(this) }
         Notifier.createChannels(this)      // before the disarm below, which may post a notice
         // First start after a restore: everything restored comes back disarmed and paper only.

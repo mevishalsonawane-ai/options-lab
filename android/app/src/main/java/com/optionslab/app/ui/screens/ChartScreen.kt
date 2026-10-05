@@ -188,13 +188,18 @@ internal fun ChartPane(
         com.optionslab.app.data.KiteStream.want("chart", listOfNotNull(liveToken))
     } }
     DisposableEffect(Unit) { onDispose { com.optionslab.app.data.KiteStream.want("chart", emptyList()) } }
-    val tickVersion by com.optionslab.app.data.KiteStream.version.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
-    LaunchedEffect(tickVersion, liveToken, visible, ready) {
-        val t = liveToken?.let { com.optionslab.app.data.KiteStream.tick(it) } ?: return@LaunchedEffect
-        // Pre-open and after-close ticks would draw candles the exchange never had.
-        if (!visible || !ready || !com.optionslab.app.data.Market.isOpen()) return@LaunchedEffect
-        val at = t.exchangeTime ?: (System.currentTimeMillis() / 1000)
-        holder[0]?.evaluateJavascript("window.__iraTick && window.__iraTick(${t.last}, $at)", null)
+    // Speed, round 2: the stream's version (every 500 ms) is followed inside the effect, not read by the screen, so a
+    // tick no longer recomposes the whole chart page (kept alive off screen too); each version moves the candle as before.
+    LaunchedEffect(liveToken, visible, ready) {
+        val token = liveToken ?: return@LaunchedEffect
+        if (!visible || !ready) return@LaunchedEffect
+        com.optionslab.app.data.KiteStream.version.collect {
+            val t = com.optionslab.app.data.KiteStream.tick(token) ?: return@collect
+            // Pre-open and after-close ticks would draw candles the exchange never had.
+            if (!com.optionslab.app.data.Market.isOpen()) return@collect
+            val at = t.exchangeTime ?: (System.currentTimeMillis() / 1000)
+            holder[0]?.evaluateJavascript("window.__iraTick && window.__iraTick(${t.last}, $at)", null)
+        }
     }
 
     // Data arrived but the page never said it drew: this phone's WebView is not drawing it.
@@ -274,8 +279,8 @@ internal fun ChartPane(
             // Basic (drawn by the app) or Advanced (indicators, drawings; needs the phone's WebView).
             Text(if (basic) "BASIC" else "ADV", textAlign = TextAlign.Center, style = Type.label.copy(color = p.ink, fontSize = 12.sp, fontWeight = FontWeight.Bold),
                 modifier = chip.clickable {
-                    if (basic) { basicChosen = false; autoBasic = null; com.optionslab.app.security.SecurePrefs.put("chart.basic", false); if (failed) { failed = false; retried = false; ready = false; gen++ } }
-                    else { basicChosen = true; com.optionslab.app.security.SecurePrefs.put("chart.basic", true) }
+                    if (basic) { basicChosen = false; autoBasic = null; com.optionslab.app.security.SecurePrefs.putAllSoon(mapOf("chart.basic" to false)); if (failed) { failed = false; retried = false; ready = false; gen++ } }
+                    else { basicChosen = true; com.optionslab.app.security.SecurePrefs.putAllSoon(mapOf("chart.basic" to true)) }
                 }.padding(horizontal = 10.dp, vertical = 8.dp))
             // A price alert on whatever is charted, at a level you choose.
             if (trading) Text("ALERT", textAlign = TextAlign.Center, style = Type.label.copy(color = p.ink, fontSize = 12.sp, fontWeight = FontWeight.Bold),

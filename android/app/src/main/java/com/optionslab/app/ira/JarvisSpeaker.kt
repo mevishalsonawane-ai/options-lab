@@ -13,7 +13,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 object JarvisSpeaker {
     var speakTyped: Boolean
         get() = runCatching { com.optionslab.app.security.SecurePrefs.getBoolean("jarvis.speak.typed", true) }.getOrDefault(true)
-        set(v) { runCatching { com.optionslab.app.security.SecurePrefs.put("jarvis.speak.typed", v) } }
+        set(v) { runCatching { com.optionslab.app.security.SecurePrefs.putAllSoon(mapOf("jarvis.speak.typed" to v)) } }
 
     private var tts: TextToSpeech? = null
     private var ready = false

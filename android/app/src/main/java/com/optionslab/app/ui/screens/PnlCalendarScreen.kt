@@ -147,16 +147,21 @@ fun PnlCalendarScreen(model: AppModel) {
     val first = all.keys.minOrNull()?.let { YearMonth.from(it) }
     // Today is shown live from the account as it stands now, not from the last recorded reading.
     val today = Market.today()
-    val paperNow by model.paper.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
-    val accountNow by model.account.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
-    // After midnight (paper, until its 03:00 reset) or before 09:00 (Zerodha) the account still shows the
-    // previous day, which is already on its own tile.
-    val todayLive: DailyPnl.Day? = if (DailyPnl.sessionDay(live) != today) null else if (live) (accountNow as? com.optionslab.app.ui.Load.Done)?.value
-        ?.takeIf { it.book.net.isNotEmpty() || it.trades.isNotEmpty() }?.let { DailyPnl.Day(today, it.book.m2m, it.trades.size) }
-        else (paperNow as? com.optionslab.app.ui.Load.Done)?.value?.let { sn ->
+    val paperState = model.paper.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val accountState = model.account.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    // Speed, round 2: only today's figure is read from the books, so a re-priced account recomposes the calendar only
+    // when that figure (or its trade count) changes.
+    val accountToday by remember(live, today) { androidx.compose.runtime.derivedStateOf {
+        if (live) (accountState.value as? com.optionslab.app.ui.Load.Done)?.value
+            ?.takeIf { it.book.net.isNotEmpty() || it.trades.isNotEmpty() }?.let { DailyPnl.Day(today, it.book.m2m, it.trades.size) }
+        else (paperState.value as? com.optionslab.app.ui.Load.Done)?.value?.let { sn ->
             val pnl = sn.dayPnl
             if (sn.trades.isNotEmpty() || pnl != 0.0 || sn.positions.positions.any { it.quantity != 0 }) DailyPnl.Day(today, pnl, sn.trades.size) else null
         }
+    } }
+    // After midnight (paper, until its 03:00 reset) or before 09:00 (Zerodha) the account still shows the
+    // previous day, which is already on its own tile.
+    val todayLive: DailyPnl.Day? = if (DailyPnl.sessionDay(live) != today) null else accountToday
     val days = all.filterKeys { YearMonth.from(it) == month }.let { m ->
         if (owner == "All" && todayLive != null && YearMonth.from(today) == month) m + (today to todayLive) else m
     }

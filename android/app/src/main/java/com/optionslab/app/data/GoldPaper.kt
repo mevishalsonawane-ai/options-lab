@@ -76,14 +76,17 @@ object GoldPaper {
     /** TEST ONLY: replace the book (screens are tested on prepared accounts). Throws outside debug builds. */
     internal suspend fun replaceForTest(b: Book) {
         check(com.optionslab.app.BuildConfig.DEBUG) { "test seam" }
+        GoldBooks.awaitLoaded()
         lock.withLock { save(b) }
     }
 
     fun init(context: Context) {
         app = context.applicationContext
         file = File(app.noBackupFilesDir, "gold.vault")
-        _book.value = runCatching { read() }.getOrNull() ?: Book()
     }
+
+    /** Reads the saved book (on [GoldBooks]' background thread; every change waits for it). */
+    internal fun load() { _book.value = runCatching { read() }.getOrNull() ?: Book() }
 
     fun now(): LocalDateTime = testNow ?: LocalDateTime.now(ZoneOffset.UTC)
 
@@ -105,6 +108,7 @@ object GoldPaper {
 
     /** One pass: read prices, sell an open buy whose exit came, else buy on a fresh signal. Never throws. */
     suspend fun tick() = runCatching {
+        GoldBooks.awaitLoaded()
         lock.withLock {
             val t = now()
             val minutes = minutes(t)
@@ -312,7 +316,7 @@ object GoldPaper {
         runCatching { Diag.record("gold", "$title - $text") }
     }
 
-    private suspend fun edit(f: (Book) -> Book) = lock.withLock { save(f(_book.value)) }
+    private suspend fun edit(f: (Book) -> Book) { GoldBooks.awaitLoaded(); lock.withLock { save(f(_book.value)) } }
 
     private fun save(b: Book) {
         _book.value = b

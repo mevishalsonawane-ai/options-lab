@@ -69,7 +69,7 @@ fun GoldMain(model: AppModel) {
     val notify = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestPermission()) { }
     LaunchedEffect(Unit) {
         if (android.os.Build.VERSION.SDK_INT >= 33 && !com.optionslab.app.security.SecurePrefs.getBoolean("asked.notify", false)) {
-            com.optionslab.app.security.SecurePrefs.put("asked.notify", true)
+            com.optionslab.app.security.SecurePrefs.putAllSoon(mapOf("asked.notify" to true))
             notify.launch(android.Manifest.permission.POST_NOTIFICATIONS)
         }
     }
@@ -130,8 +130,16 @@ private fun GoldChartTab() {
         marketOpen = { GoldLiquidity.inSession(GoldPaper.now()) })
 }
 
+/** The saved paper books are still being read ([com.optionslab.app.data.GoldBooks]): a moment's note, no switches yet. */
+@Composable
+private fun GoldBooksLoading() {
+    Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) { Note("Opening the paper books…") }
+}
+
 @Composable
 private fun GoldHome() {
+    val ready by com.optionslab.app.data.GoldBooks.ready.collectAsState()
+    if (!ready) { GoldBooksLoading(); return }
     val p = LocalPalette.current
     val b by GoldPaper.book.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     val chart by GoldPaper.chart.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
@@ -322,6 +330,8 @@ private fun GoldTrades() {
 
 @Composable
 private fun GoldSettings(model: AppModel) {
+    val ready by com.optionslab.app.data.GoldBooks.ready.collectAsState()
+    if (!ready) { GoldBooksLoading(); return }
     val p = LocalPalette.current
     val b by GoldPaper.book.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     val s by model.settings.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)

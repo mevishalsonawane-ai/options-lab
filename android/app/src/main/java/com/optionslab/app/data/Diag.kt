@@ -173,6 +173,7 @@ object Diag {
 
     /** IraGoldAlgo: every arm's state, the price feed and what the phone allows in the background. No keys exist in this app. */
     internal fun gold(): String = buildString {
+        GoldBooks.awaitBlocking()
         val t = GoldPaper.now()
         val liq = GoldPaper.book.value
         val tr = GoldTrendPaper.book.value

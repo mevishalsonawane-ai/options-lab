@@ -70,6 +70,10 @@ import com.optionslab.app.work.Notifier
 import com.optionslab.engine.Manifest
 import java.time.format.DateTimeFormatter
 
+
+/** An alarm's "EXCHANGE:SYMBOL" (compiled once, not at every keystroke). */
+private val ALARM_SYMBOL = Regex("^[A-Z]{2,4}:[A-Z0-9&_-]{1,32}$")
+
 @Composable
 fun ToggleRow(title: String, sub: String?, checked: Boolean, onChange: (Boolean) -> Unit) {
     val p = LocalPalette.current
@@ -119,7 +123,7 @@ fun AlarmsPage(model: AppModel) {
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(note, { note = it.take(80) }, label = { Text("Note (optional)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
                 Spacer(Modifier.height(10.dp))
-                val symbolOk = symbol in listOf("NIFTY", "BANKNIFTY", "INDIAVIX") || Regex("^[A-Z]{2,4}:[A-Z0-9&_-]{1,32}$").matches(symbol)
+                val symbolOk = symbol in listOf("NIFTY", "BANKNIFTY", "INDIAVIX") || ALARM_SYMBOL.matches(symbol)
                 BrassButton("Set alarm", Modifier.fillMaxWidth(), enabled = level.toDoubleOrNull() != null && symbolOk) {
                     model.saveAlarm(PriceAlarm(System.currentTimeMillis(), symbol, above, level.toDouble(), note = note.trim()))
                     level = ""; note = ""
