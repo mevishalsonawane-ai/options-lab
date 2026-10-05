@@ -619,7 +619,7 @@ internal object IraCoach {
     }.getOrNull()
 
     /** Boss's open positions (paper, and Zerodha when logged in), each with its delta and gamma now when they can be worked out. */
-    private suspend fun openLegs(): List<com.optionslab.ira.Exposure.Leg> {
+    internal suspend fun openLegs(): List<com.optionslab.ira.Exposure.Leg> {
         val now = java.time.ZonedDateTime.now(IST)
         fun spot(u: String) = runCatching { IraHub.state.value.snaps[com.optionslab.ira.Market.valueOf(u)]?.price }.getOrNull()
         /** Delta and gamma per unit of [u]: the index itself 1 and 0; an option's from its price now. */

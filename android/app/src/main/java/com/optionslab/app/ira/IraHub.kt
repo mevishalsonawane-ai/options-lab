@@ -1266,6 +1266,17 @@ object IraHub {
             scope.launch { reply(runCatching { tradeCase() }.getOrElse { "I could not put the case together just now, Boss." }) }
             return
         }
+        // "What if Nifty opens 1% down tomorrow?", "what if VIX goes to 20?": the scenario worked through from facts he has -
+        // past sessions like it, which of his own alerts would go off, and Boss's positions, rules, loss limits and alarms at
+        // it (only on an unlocked phone). Never a forecast or advice; the decision is Boss's. ("What happens to my P&L if
+        // Nifty moves 100 points" stays the account's answer: Scenarios.asked leaves it to Exposure.)
+        val scenario = if (parsed.order == null && parsed.command == null && !com.optionslab.app.BuildConfig.GOLD)
+            runCatching { com.optionslab.ira.Scenarios.asked(q) }.getOrNull() else null
+        if (scenario != null) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            scope.launch { reply(runCatching { scenarioSaid(scenario) }.getOrElse { "I could not work that through just now, Boss." }) }
+            return
+        }
         // "What's your plan today?" / "what are you working on?": Jarvis's own plan for the day (it names Boss's goals and
         // words, so the phone must be unlocked). Words only: the plan itself only ever speaks, studies or works on paper.
         if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && parsed.command == null && parsed.order == null &&
@@ -2557,6 +2568,51 @@ object IraHub {
         val today = com.optionslab.app.data.Market.today()
         val note = runCatching { IraTools.chainNote(u) }.getOrNull()
         return listOfNotNull(note, com.optionslab.ira.ChainIntel.answer(a, now, IraAccount.chainBook.first(u, today), today)).joinToString(" ")
+    }
+
+    /**
+     * A what-if worked through ([com.optionslab.ira.Scenarios]): the index's sessions on the phone, the prices now, and on an
+     * unlocked phone Boss's open positions, kept rules, daily loss limits and price alarms. Reads only.
+     */
+    private suspend fun scenarioSaid(s: com.optionslab.ira.Scenarios.Scenario): String {
+        val mk = s.market
+        val nowAt = LocalDateTime.now(IST)
+        val today = com.optionslab.app.data.Market.today()
+        val live = mk.trading(nowAt) && closedToday() == null
+        val ex = expiryDays[mk].orEmpty() + (if (expiryToday(mk)) setOf(today) else emptySet())
+        val days = com.optionslab.ira.MarketMemory.days(mk, histories[mk]?.bars.orEmpty(), ex, histories[IraMarket.VIX]?.bars.orEmpty(), today, live)
+        // The session it is about: today's, or the next one (today's when it has not opened yet).
+        fun trading(d: LocalDate) = runCatching { com.optionslab.app.data.Market.isTradingDay(d) }.getOrDefault(d.dayOfWeek.value <= 5)
+        val beforeOpen = trading(today) && mk.open?.let { nowAt.toLocalTime().isBefore(it) } == true
+        var on = today
+        if (s.next && !beforeOpen) { on = today.plusDays(1); var guard = 0; while (guard++ < 14 && !trading(on)) on = on.plusDays(1) }
+        val expiry = runCatching { com.optionslab.app.data.Market.isExpiryDay(mk.name, on) }.getOrDefault(false)
+        val st = _state.value
+        val locked = phoneLocked()
+        val mine = if (locked) null else runCatching {
+            val set = com.optionslab.app.data.AppSettings.load()
+            val pnl = HashMap<String, Double>()
+            if (!s.next) {
+                runCatching { com.optionslab.app.data.Paper.snapshot().dayPnl }.getOrNull()?.let { pnl["Paper"] = it }
+                if (com.optionslab.app.data.Broker.loggedIn) runCatching {
+                    kotlinx.coroutines.withTimeoutOrNull(8_000) { com.optionslab.app.data.Broker.positionBook() }?.m2m
+                }.getOrNull()?.let { pnl["Zerodha"] = it }
+            }
+            val alarms = runCatching { com.optionslab.app.data.Alarms.all() }.getOrDefault(emptyList())
+                .filter { it.enabled && it.firedAtMillis == 0L }
+                .map { com.optionslab.ira.Scenarios.Alarm(it.symbol.removePrefix(com.optionslab.app.data.PriceAlarm.CHART), it.above, it.level) }
+            com.optionslab.ira.Scenarios.Mine(
+                legs = IraCoach.openLegs(),
+                notes = IraTools.memory().map { it.text },
+                lossLimits = mapOf("Zerodha" to set.guardDailyLoss, "Paper" to set.guardPaperDailyLoss),
+                dayPnl = pnl, alarms = alarms,
+            )
+        }.getOrNull()
+        return com.optionslab.ira.Scenarios.answer(com.optionslab.ira.Scenarios.Input(
+            s = s, days = days, today = today, spot = st.snaps[mk]?.price,
+            vix = st.snaps[IraMarket.VIX]?.price, vixPrev = st.snaps[IraMarket.VIX]?.prevClose,
+            expiry = expiry, mine = mine, locked = locked,
+        ))
     }
 
     /**
