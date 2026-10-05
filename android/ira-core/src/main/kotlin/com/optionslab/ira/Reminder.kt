@@ -37,14 +37,17 @@ object Reminder {
     /** A reminder asked for: what to say and when, or null (not a reminder, or no time still ahead). */
     fun parse(said: String, now: LocalDateTime): Later.When? {
         val text = english(DAILY.replace(said, " ").trim())
-        if (!ASK.containsMatchIn(text)) return null
+        if (!ASK.containsMatchIn(text) || recall(said)) return null
         val w = Later.split(ASK.replace(text, ""), now) ?: return null
         val what = w.rest.replace(rx("(?i)^\\s*(to|that|about|of)\\b"), "").replace(rx("\\s+"), " ").trim().trimEnd('.', '?', '!').take(160)
         return Later.When(what.ifEmpty { "you asked me to remind you now" }, w.at)
     }
 
     /** Asked for a reminder with no usable time: what to say. */
-    fun asked(text: String): Boolean = ASK.containsMatchIn(english(DAILY.replace(text, " ").trim()))
+    fun asked(text: String): Boolean = ASK.containsMatchIn(english(DAILY.replace(text, " ").trim())) && !recall(text)
+
+    /** "Remind me what I said about expiry" asks his own words back ([SaidAbout]), never a reminder to set (routing round 11). */
+    private fun recall(text: String): Boolean = !Later.mentionsTime(text) && runCatching { SaidAbout.asked(text) != null }.getOrDefault(false)
 
     /** "Cancel my reminders", "delete the reminder", "reminder hata do": reminders only (timed commands stay). */
     fun cancelAsked(text: String): Boolean =

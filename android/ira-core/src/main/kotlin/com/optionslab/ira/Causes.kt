@@ -79,6 +79,9 @@ object Causes {
     private val CAUSED = Regex("^ $LEAD(what|whats|what is|what was) (caused|causing|is causing|drove|is driving|driving|was driving|is behind|was behind|behind|led to|triggered|sparked) " +
         "(the |this |that |today s |todays |the day s )?($NOUN_DOWN|$NOUN_UP|move|swing)( in| of| on)?( $SUBJ)?$WHEN( boss| jarvis)? $")
     private val CAUSED_TO = Regex("^ $LEAD(what|whats|what is|what was) (caused|made|is making|made the|pushed|dragged|sent) $SUBJ (to )?($DOWN|$UP|$MOVE)$WHEN( boss| jarvis)? $")
+    /** "What drove the market today", "what explains today's move" (routing round 11: the plain why, or the market's update). */
+    private val DROVE = Regex("^ $LEAD(what|whats|what is|what has) (drove|is driving|has driven|driving|moved|is moving|has moved) $SUBJ$WHEN( boss| jarvis)? $|" +
+        "^ $LEAD(what|whats|what is) (explains|explaining|is explaining) (the |this |that |today s |todays |the day s )?($NOUN_DOWN|$NOUN_UP|move|swing)( in| of| on)?( $SUBJ)?$WHEN( boss| jarvis)? $")
     private val REASON = Regex("^ $LEAD(the )?(reason|reasons|wajah) (for|behind|of) (the |this |that |today s |todays )?($NOUN_DOWN|$NOUN_UP|move|swing)( in| of| on)?( $SUBJ)?$WHEN( boss| jarvis)? $")
     private const val HI_DOWN = "(gira|giri|gir raha hai|gir rahi hai|gir gaya|gir gayi|neeche hai|neeche aaya|neeche|down hai|toota|tuta|tut gaya)"
     private const val HI_UP = "(badha|badhi|chadha|chadhi|upar hai|upar gaya|upar|up hai|bhaga|uchla)"
@@ -89,7 +92,7 @@ object Causes {
     fun asked(text: String): Ask? {
         val t = norm(text)
         if (NOT.containsMatchIn(t)) return null
-        if (!(WHY.containsMatchIn(t) || CAUSED_TO.containsMatchIn(t) || HINDI.containsMatchIn(t) || CAUSED.containsMatchIn(t) || REASON.containsMatchIn(t))) return null
+        if (!(WHY.containsMatchIn(t) || CAUSED_TO.containsMatchIn(t) || HINDI.containsMatchIn(t) || CAUSED.containsMatchIn(t) || REASON.containsMatchIn(t) || DROVE.containsMatchIn(t))) return null
         val down = when {
             Regex(" ($DOWN|$NOUN_DOWN|$HI_DOWN) ").containsMatchIn(t) -> true
             Regex(" ($UP|$NOUN_UP|$HI_UP) ").containsMatchIn(t) -> false

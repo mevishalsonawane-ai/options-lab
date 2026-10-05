@@ -61,7 +61,9 @@ object NeedsTrue {
         " $HOLDING (kaam|profit) (karegi|karega|karenge|degi|dega|denge) kya | $HOLDING (kab|kaise) (profit|paisa) (dega|degi|denge|banayega|banayegi) "
     )
     /** "At what level do I break even", "what level do I need for profit": Boss's own book named by "I" (round 10). */
-    private val I_HOLD = Regex(" (do|will|would|does) i (need|break even|make money|start losing|start making money|turn profitable) | where do i (start losing|break even) ")
+    private val I_HOLD = Regex(" (do|will|would|does) i (need|break even|make money|start losing|start making money|turn profitable) | where do i (start losing|break even) |" +
+        // "Breakeven kitna door hai" (routing round 11): Hinglish asks his own breakeven's distance without "my".
+        "^ (jarvis |boss )?(mera |meri |mere )?(break ?even|breakevens?)( level| point)? ((kitna|kitni|kitne) (door|dur|duur|paas|pass|bacha|baaki|baki)|kahan|kaha)( hai| he| h)?( kya)?( boss| jarvis)? $")
     /** Not this question: a what-if, an order or a change, the P&L now, a ranking, a plain list or a word explained. */
     private val NOT = Regex(" (if|suppose|agar|close|exit|square|sell|buy|add|cancel|set|place|move it|modify|worst|best|rank|what is a|what is the meaning|meaning of|define|explain) ")
 

@@ -11,6 +11,12 @@ import kotlin.test.assertTrue
  * own read (the account's CHAIN) - in English and Hinglish, run through every one of their matchers and through the whole
  * hub ([CoverageTest.feature], IraHub.ask's order). A question two families take must go, by the hub's order, to the one
  * meant; each line names the feature it must get.
+ *
+ * Round 11 (5 Oct): the open items round 10 listed are routed and asserted here ("talk me through my put" and its kin are
+ * the position explained, "holiday kab hai" and the month's trading days the calendar, "expiry ka din kya hai" the next
+ * expiry, "make the case for buying calls" the trade check's case, "breakeven kitna door hai" what the position needs),
+ * and the newest families join the hunt: GapRecord, Weekdays, MindChange, Causes, WeekAhead, SaidAbout, ZerodhaSession,
+ * AskedAgain, WordFit, Boss's own STREAKS - and Again, the voice's own "say that again slowly", checked apart.
  */
 class CollisionTest {
     private val audit = CoverageTest()
@@ -19,15 +25,25 @@ class CollisionTest {
     /** The families in IraHub.ask's order, each named as [CoverageTest.feature] names what answers it. */
     private val FAMILIES: List<Pair<String, (String) -> Boolean>> = listOf(
         "Clarity" to { q -> Clarity.asked(q) != null },
+        "WordFit" to { q -> WordFit.asked(q) != null },
+        "AskedAgain" to { q -> AskedAgain.asked(q) },
         "Headroom" to { q -> Headroom.asked(q) != null },
+        "SaidAbout" to { q -> SaidAbout.asked(q) != null },
+        "WeekAhead" to { q -> WeekAhead.asked(q) != null },
+        "ZerodhaSession" to { q -> ZerodhaSession.asked(q) != null },
         "ChainDrift" to { q -> ChainDrift.asked(q) != null },
         "ChainIntel" to { q -> ChainIntel.asked(q) != null },
         "DayClock" to { q -> DayClock.asked(q) != null },
+        "GapRecord" to { q -> GapRecord.asked(q) != null },
+        "Weekdays" to { q -> Weekdays.asked(q) != null },
         "Structure" to { q -> Structure.asked(q) != null },
+        "MindChange" to { q -> MindChange.asked(q) },
         "TradeCase" to { q -> TradeCase.asked(q) },
         "Scenarios" to { q -> Scenarios.asked(q) != null },
+        "Causes" to { q -> Causes.asked(q) != null },
         "MarketDays" to { q -> MarketDays.expiryAsked(q) || MarketDays.asked(q, today) != null },
-        // The account's own sections, in Account.sections' precedence (NEED is set last and wins over HEALTH).
+        // The account's own sections, in Account.sections' precedence (STREAKS is set last, then NEED; each wins over HEALTH).
+        "Account:STREAKS" to { q -> MyStreaks.asked(q) },
         "Account:NEED" to { q -> NeedsTrue.asked(q) },
         "Account:HEALTH" to { q -> PositionHealth.asked(q) },
         "Account:RISK" to { q -> Topic.ACCOUNT in Ask.parse(q).topics && Section.RISK in AppAnswers.sections(q) },
@@ -219,10 +235,131 @@ class CollisionTest {
         "help me journal today" to "DayJournal", "why so quiet" to "Airtime", "what's crude doing" to "Honest",
         "what time do i lose most" to "Account:TIMEOFDAY", "how did i do this week" to "Account:HISTORY", "mera pnl kitna hai" to "Account:PNL",
         "aaj kitne trade hue" to "Account:ORDERS",
+        // ==== Round 11: round 10's open items, routed ====
+        "talk me through my put" to "Account:EXPLAIN_POS", "explain my put" to "Account:EXPLAIN_POS", "how did my put do" to "Account:EXPLAIN_POS",
+        "my put" to "Account:EXPLAIN_POS", "holiday kab hai" to "MarketDays", "how many trading days left this month" to "MarketDays",
+        "expiry ka din kya hai" to "MarketDays", "make the case for buying calls" to "TradeCase", "breakeven kitna door hai" to "Account:NEED",
+        "breakeven kahan hai" to "Account:NEED", "how many trading days are left this month" to "MarketDays",
+        "is mahine kitne trading din bache hain" to "MarketDays", "which day is expiry" to "MarketDays",
+        // ...and their neighbours stay where they were.
+        "how did my calls do this week" to "Account:HISTORY", "how many trend days this month" to "MarketMemory",
+        "my position" to "Account:POSITIONS", "is there an expiry today" to "MarketDays",
+        // ---- GapRecord: the index's gap record ----
+        "when nifty gaps up over 0.5% how often does it fill the gap by 11" to "GapRecord", "do gap downs usually fill" to "GapRecord",
+        "what usually happens after a gap up" to "GapRecord", "gap fill rate for banknifty" to "GapRecord",
+        "how often does a gap like today's fill" to "GapRecord", "nifty gap kitni baar bharta hai" to "GapRecord",
+        "does the gap usually fill" to "GapRecord", "how often do gap ups fill by 10" to "GapRecord", "gap down ke baad kya hota hai" to "GapRecord",
+        "do gaps fill on nifty" to "GapRecord", "what's the gap fill record" to "GapRecord", "how often does banknifty fill a gap down by noon" to "GapRecord",
+        "gap up fill hota hai kya" to "GapRecord", "how often does nifty close above the open after a gap up" to "GapRecord",
+        "gap fill stats" to "GapRecord", "gap record for nifty" to "GapRecord", "how often does a 1% gap fill" to "GapRecord",
+        "do big gaps fill the same day" to "GapRecord", "how often does a gap down fill by 11" to "GapRecord",
+        "do gap ups usually get filled by the close" to "GapRecord", "what happens after a gap down usually" to "GapRecord",
+        "gap down fill rate" to "GapRecord", "how often does banknifty fill its gap" to "GapRecord",
+        "how often does a 0.5% gap up fill by noon" to "GapRecord", "gap fill kitni baar hota hai" to "GapRecord",
+        "does nifty usually fill a gap down" to "GapRecord", "how often does a gap like this fill" to "GapRecord",
+        // Its neighbours: today's gap alone (never his order fills), a forecast.
+        "has the gap filled" to "Gap", "will today's gap fill" to "Market",
+        // ---- Weekdays: the index's weekday record ----
+        "are mondays more volatile" to "Weekdays", "which day of the week moves the most" to "Weekdays", "how does nifty usually do on fridays" to "Weekdays",
+        "are expiry days wider than other days" to "Weekdays", "weekday record for banknifty" to "Weekdays", "monday ko nifty kaisa chalta hai" to "Weekdays",
+        "expiry ke din range zyada hota hai kya" to "Weekdays", "which weekday is the most volatile" to "Weekdays", "is friday usually a down day" to "Weekdays",
+        "how does banknifty do on wednesdays" to "Weekdays", "are tuesdays quiet" to "Weekdays", "which day has the biggest range" to "Weekdays",
+        "how volatile is thursday usually" to "Weekdays", "konsa din sabse zyada move hota hai" to "Weekdays", "friday ko market kaisa rehta hai" to "Weekdays",
+        "are fridays volatile" to "Weekdays", "which weekday has the biggest range" to "Weekdays", "is monday usually volatile" to "Weekdays",
+        "how do mondays go for banknifty" to "Weekdays", "expiry days vs other days" to "Weekdays", "is thursday usually the busiest" to "Weekdays",
+        "which day is the most volatile" to "Weekdays", "kis din sabse zyada volatile hota hai" to "Weekdays", "are mondays calmer than fridays" to "Weekdays",
+        "weekday stats for nifty" to "Weekdays", "is today's range normal for a monday" to "Market",
+        // ---- MindChange: what would change Jarvis's read ----
+        "what would change your mind" to "MindChange", "what would make you wrong" to "MindChange", "what would invalidate that read" to "MindChange",
+        "when would that stop being true" to "MindChange", "aapka view kab badlega" to "MindChange", "what would make you change your view" to "MindChange",
+        "what would prove you wrong" to "MindChange", "when does that read stop holding" to "MindChange", "what level would change your mind" to "MindChange",
+        "is your read still valid" to "MindChange", "what would flip your view" to "MindChange", "tumhara view kab galat hoga" to "MindChange",
+        "what would make you turn bearish" to "MindChange", "what would make you bullish" to "MindChange", "what would change your view on nifty" to "MindChange",
+        "when would you be wrong" to "MindChange", "what invalidates your read" to "MindChange", "what would it take to change your mind" to "MindChange",
+        "is that read still holding" to "MindChange", "aapka read kab galat hoga" to "MindChange", "what would make that read wrong" to "MindChange",
+        // ---- Causes: why the market moved, weighed ----
+        "why did nifty fall" to "Causes", "why is the market down today" to "Causes", "what caused the rally in banknifty" to "Causes",
+        "reason for today's fall" to "Causes", "nifty kyun gira" to "Causes", "why did banknifty go up today" to "Causes",
+        "what's behind today's fall" to "Causes", "why is nifty up" to "Causes", "market kyun gir raha hai" to "Causes",
+        "what drove the market today" to "Causes", "why did the market crash" to "Causes", "banknifty kyun chadha" to "Causes",
+        "what explains today's move" to "Causes", "why did sensex drop" to "Causes", "what moved the market today" to "Causes",
+        "why did nifty go down today" to "Causes", "why is banknifty falling" to "Causes", "why did the market rally" to "Causes",
+        "what caused today's fall" to "Causes", "what's driving the market today" to "Causes", "nifty aaj kyun gira" to "Causes",
+        "why is sensex up today" to "Causes", "reason for the rally in nifty" to "Causes", "why did finnifty fall so much" to "Causes",
+        "what caused the drop in nifty" to "Causes",
+        // ---- WeekAhead: the week from the calendar ----
+        "what does this week look like" to "WeekAhead", "week ahead" to "WeekAhead", "is this an expiry week" to "WeekAhead",
+        "how many trading days this week" to "WeekAhead", "plan for next week" to "WeekAhead", "is hafte kya hai" to "WeekAhead",
+        "agle hafte kya hai" to "WeekAhead", "what's coming up next week" to "WeekAhead", "any holidays this week" to "WeekAhead",
+        "what's on this week" to "WeekAhead", "is there an expiry this week" to "WeekAhead", "how many sessions left this week" to "WeekAhead",
+        "what's next week like" to "WeekAhead", "next week mein kya hai" to "WeekAhead", "anything big this week" to "WeekAhead",
+        "what's this week like" to "WeekAhead", "how does next week look" to "WeekAhead", "any expiry next week" to "WeekAhead",
+        "is next week an expiry week" to "WeekAhead", "week ahead for nifty" to "WeekAhead", "how many trading days next week" to "WeekAhead",
+        "what's on next week" to "WeekAhead", "agle hafte expiry kab hai" to "WeekAhead", "is hafte kitne trading din hain" to "WeekAhead",
+        "what does next week look like" to "WeekAhead",
+        // ---- SaidAbout: Boss's own words read back ----
+        "what did i say about banknifty" to "SaidAbout", "remind me what i said about expiry" to "SaidAbout",
+        "did i note anything about the hammer last week" to "SaidAbout", "find my notes on fridays" to "SaidAbout",
+        "maine expiry ke baare mein kya kaha tha" to "SaidAbout", "what did i write about overtrading" to "SaidAbout",
+        "what have i said about gap ups" to "SaidAbout", "did i say anything about vix" to "SaidAbout", "show my notes about the orb" to "SaidAbout",
+        "what did i note about fridays last week" to "SaidAbout", "maine banknifty ke baare mein kya likha tha" to "SaidAbout",
+        "what did i say in my journal about revenge trading" to "SaidAbout", "what did i say about expiry" to "SaidAbout",
+        "what did i write about banknifty last week" to "SaidAbout", "what have i noted about the orb" to "SaidAbout",
+        "did i mention anything about gap ups" to "SaidAbout", "my notes on expiry" to "SaidAbout", "remind me what i said about fridays" to "SaidAbout",
+        "what did i tell you about overtrading" to "SaidAbout", "maine fridays ke baare mein kya kaha tha" to "SaidAbout",
+        "what did i say about vix this week" to "SaidAbout", "find my notes about revenge trading" to "SaidAbout",
+        // A reminder with a time stays a reminder (it only speaks).
+        "remind me at 3 pm what i said about expiry" to "Reminder", "remind me at 3 pm to check nifty" to "Reminder",
+        // ---- ZerodhaSession: why the broker logged Boss out ----
+        "why was i logged out of zerodha" to "ZerodhaSession", "why did kite log me out" to "ZerodhaSession",
+        "what happened to my zerodha session" to "ZerodhaSession", "when does my zerodha session end" to "ZerodhaSession",
+        "zerodha se logout kyun hua" to "ZerodhaSession", "why did zerodha disconnect" to "ZerodhaSession",
+        "why does kite keep logging me out" to "ZerodhaSession", "kite logout kyun hua" to "ZerodhaSession",
+        "when will my kite login expire" to "ZerodhaSession", "why did my zerodha login expire" to "ZerodhaSession",
+        "why did zerodha log me out today" to "ZerodhaSession", "why was i kicked out of kite" to "ZerodhaSession",
+        "why did my kite session end" to "ZerodhaSession", "kite se logout kyun hua" to "ZerodhaSession",
+        "when does my kite session expire" to "ZerodhaSession", "how long does my zerodha login last" to "ZerodhaSession",
+        "why am i getting logged out of zerodha" to "ZerodhaSession", "what happened with my kite login" to "ZerodhaSession",
+        // Its neighbours: whether he is logged in now is the app's status.
+        "am i still logged in to zerodha" to "Account:STATUS", "is my zerodha session still valid" to "Account:STATUS",
+        // ---- AskedAgain: the market reads Boss asks again ----
+        "which of your answers do i ask again" to "AskedAgain", "what do i keep asking twice" to "AskedAgain",
+        "which of your market reads missed" to "AskedAgain", "kaun se jawab main dobara puchta hoon" to "AskedAgain",
+        "what do i ask you again and again" to "AskedAgain", "which answers did i have to ask twice" to "AskedAgain",
+        "what questions do i repeat" to "AskedAgain", "which reads do i ask again" to "AskedAgain",
+        "which of your answers did i ask twice" to "AskedAgain", "what do i ask you twice" to "AskedAgain",
+        "which of your reads missed" to "AskedAgain", "main kya dobara puchta hoon" to "AskedAgain", "which market reads do i ask again" to "AskedAgain",
+        // ---- WordFit: his confidence words against his numbers ----
+        "how well do your words match your numbers" to "WordFit", "what do you mean by usually" to "WordFit",
+        "say your confidence words as written" to "WordFit", "match your words to the numbers again" to "WordFit",
+        "what does often mean when you say it" to "WordFit", "are your confidence words accurate" to "WordFit",
+        "do your words match the numbers" to "WordFit", "what do you mean by rarely" to "WordFit",
+        "when you say usually how often is that" to "WordFit", "how well do your confidence words match your numbers" to "WordFit",
+        "what do you mean by often" to "WordFit", "what do you mean when you say rarely" to "WordFit", "how often is usually" to "WordFit",
+        "stop correcting your confidence words" to "WordFit", "are your confidence words calibrated" to "WordFit",
+        "don't correct your confidence words" to "WordFit",
+        // ---- Account:STREAKS: Boss's own runs and weekdays ----
+        "am i on a winning streak" to "Account:STREAKS", "how many green days in a row" to "Account:STREAKS", "my losing streak" to "Account:STREAKS",
+        "what's my best weekday" to "Account:STREAKS", "which day of the week do i lose most" to "Account:STREAKS",
+        "lagatar kitne din loss hua" to "Account:STREAKS", "mera konsa din best hai" to "Account:STREAKS",
+        "what's my longest winning streak" to "Account:STREAKS", "how many losing days in a row" to "Account:STREAKS",
+        "am i on a losing streak" to "Account:STREAKS", "what's my worst day of the week" to "Account:STREAKS",
+        "how many trades have i won in a row" to "Account:STREAKS", "which weekday do i make the most money" to "Account:STREAKS",
+        "mera winning streak kitna hai" to "Account:STREAKS", "lagatar kitne din profit hua" to "Account:STREAKS", "what's my streak" to "Account:STREAKS",
+        "do i lose more on mondays" to "Account:STREAKS", "my best day of the week for trading" to "Account:STREAKS",
+        "how many green days in a row have i had" to "Account:STREAKS", "what's my winning streak" to "Account:STREAKS",
+        "how many losing trades in a row" to "Account:STREAKS", "how many red days in a row" to "Account:STREAKS",
+        "which weekday is my best" to "Account:STREAKS", "which day of the week do i make most" to "Account:STREAKS",
+        "mera losing streak kitna hai" to "Account:STREAKS", "lagatar kitne din profit" to "Account:STREAKS",
+        "how many days in a row have i been green" to "Account:STREAKS", "what's my best day of the week" to "Account:STREAKS",
+        "do i do better on fridays" to "Account:STREAKS", "am i on a green streak" to "Account:STREAKS", "how many winning days in a row" to "Account:STREAKS",
+        // An index's run stays the candles' Streak.
+        "nifty streak" to "Streak", "how many days in a row has nifty fallen" to "Streak", "banknifty losing streak" to "Streak",
+        "how many days in a row has banknifty risen" to "Streak", "how many red days in a row for nifty" to "Streak",
     )
 
     @Test fun eachQuestionGoesWhereItShould() {
-        assertTrue(ASKED.size >= 300, "${ASKED.size}")
+        assertTrue(ASKED.size >= 600, "${ASKED.size}")
         assertEquals(ASKED.size, ASKED.map { it.first }.distinct().size)
         val wrong = ASKED.mapNotNull { (s, want) -> audit.feature(s).let { got -> if (got == want) null else "\"$s\": wanted $want, got $got ${hits(s)}" } }
         assertTrue(wrong.isEmpty(), "taken by the wrong feature (${wrong.size} of ${ASKED.size}):\n" + wrong.joinToString("\n"))
@@ -329,5 +466,96 @@ class CollisionTest {
         for (s in listOf("is my put healthy then close all positions", "am i overtrading, then stop all strategies",
             "when is nifty most volatile and kill switch on"))
             assertTrue(Bundle.acts(s) || Ask.parse(s).command != null || Ask.parse(s).order != null, s)
+    }
+
+    // ---- Round 11's wordings: routed, and none acts ----
+
+    /** Round 10's open items and the newest families' wordings fixed this round, with the feature each must get. */
+    private val ROUND11 = listOf(
+        "talk me through my put" to "Account:EXPLAIN_POS", "explain my put" to "Account:EXPLAIN_POS", "how did my put do" to "Account:EXPLAIN_POS",
+        "my put" to "Account:EXPLAIN_POS", "holiday kab hai" to "MarketDays", "how many trading days left this month" to "MarketDays",
+        "expiry ka din kya hai" to "MarketDays", "make the case for buying calls" to "TradeCase", "breakeven kitna door hai" to "Account:NEED",
+        "breakeven kahan hai" to "Account:NEED", "is mahine kitne trading din bache hain" to "MarketDays",
+        "gap down ke baad kya hota hai" to "GapRecord", "do gaps fill on nifty" to "GapRecord", "gap up fill hota hai kya" to "GapRecord",
+        "do big gaps fill the same day" to "GapRecord", "how often does nifty close above the open after a gap up" to "GapRecord", "has the gap filled" to "Gap",
+        "are tuesdays quiet" to "Weekdays", "which day has the biggest range" to "Weekdays", "konsa din sabse zyada move hota hai" to "Weekdays",
+        "which day is the most volatile" to "Weekdays",
+        "what would make you change your view" to "MindChange", "what level would change your mind" to "MindChange", "is your read still valid" to "MindChange",
+        "what would make you turn bearish" to "MindChange", "what would make you bullish" to "MindChange", "what invalidates your read" to "MindChange",
+        "what drove the market today" to "Causes", "what explains today's move" to "Causes",
+        "any holidays this week" to "WeekAhead", "is there an expiry this week" to "WeekAhead", "what's next week like" to "WeekAhead",
+        "next week mein kya hai" to "WeekAhead", "anything big this week" to "WeekAhead",
+        "remind me what i said about expiry" to "SaidAbout", "what did i say in my journal about revenge trading" to "SaidAbout",
+        "why did zerodha disconnect" to "ZerodhaSession",
+        "what do i ask you again and again" to "AskedAgain", "what questions do i repeat" to "AskedAgain",
+        "what does often mean when you say it" to "WordFit", "stop correcting your confidence words" to "WordFit",
+        "how many green days in a row" to "Account:STREAKS", "how many losing days in a row" to "Account:STREAKS", "lagatar kitne din loss hua" to "Account:STREAKS",
+        "lagatar kitne din profit hua" to "Account:STREAKS", "do i lose more on mondays" to "Account:STREAKS", "which weekday is my best" to "Account:STREAKS",
+    )
+
+    @Test fun roundElevenWordingsNeitherOrderNorCommandNorBundle() {
+        assertTrue(ROUND11.size >= 40)
+        // Every wording of the newest families in the hunt, not just the ones fixed: none is an order, a command, a Bundle act,
+        // an everyday intent or a reminder (WordFit's on and off switch only its own wording check, never a strategy).
+        val newest = setOf("GapRecord", "Weekdays", "MindChange", "Causes", "WeekAhead", "SaidAbout", "ZerodhaSession", "AskedAgain", "WordFit", "Account:STREAKS")
+        val all = ROUND11 + ASKED.filter { it.second in newest }
+        assertTrue(all.size >= 150, "${all.size}")
+        for ((s, want) in all) {
+            assertEquals(want, audit.feature(s), s)
+            val p = Ask.parse(s)
+            assertEquals(null, p.order, s); assertEquals(null, p.command, s)
+            assertTrue(Topic.ORDER !in p.topics && Topic.COMMAND !in p.topics, s)
+            assertTrue(!Bundle.acts(s), s)
+            assertEquals(null, Intents.quick(s), s)
+            assertTrue(!Reminder.asked(s) && !Reminder.cancelAsked(s) && !FollowUp.acts(s), s)
+            assertEquals(null, Reminder.parse(s, today.atTime(10, 0)), s)
+            assertTrue(Understand.questions(null, s).orEmpty().none { FollowUp.acts(it) || Ask.parse(it).command != null || Ask.parse(it).order != null }, s)
+        }
+        // The orders and commands beside these words still act as before (each through its own confirm).
+        for (s in listOf("sell my put", "close my call", "square off my position", "buy 1 lot nifty 25000 ce", "stop all strategies", "stop strategy 2",
+            "stop the orb arm", "kill switch on")) assertEquals("Act", audit.feature(s), s)
+        assertEquals(Command.Kind.STOP_ONE, Ask.parse("stop strategy 2").command?.kind)
+        // Said with something to do, each is left to the multi-step plan (never answered and the action dropped).
+        for (s in listOf("explain my put then close all positions", "why did nifty fall and stop all strategies", "is this an expiry week, then kill switch on",
+            "what did i say about expiry then close all positions", "am i on a winning streak and square off my position",
+            "do gaps fill on nifty then sell my put", "why did zerodha log me out, stop all strategies"))
+            assertTrue(Bundle.acts(s) || Ask.parse(s).command != null || Ask.parse(s).order != null, s)
+        // The month's trading days come from the calendar (a weekday without a holiday, or a weekend session): Mon 5 Oct 2026
+        // with Tue 20 Oct shut has 21 in October, 19 from today on.
+        val month = MarketDays.asked("how many trading days left this month", today)
+        assertEquals(MarketDays.Asked.Month, month)
+        val said = MarketDays.say(month!!, today, { d -> if (d == LocalDate.of(2026, 10, 20)) "Dussehra" else null }, null)
+        assertEquals("Boss, October has 21 trading days on the exchange calendar, 19 of them from today on, today included. " +
+            "Market holidays left this month: Tue 20 Oct (Dussehra).", said)
+        for (s in listOf("how many trading days did i trade this month", "how many green days this month", "how many trading days were there last month"))
+            assertTrue(MarketDays.asked(s, today) != MarketDays.Asked.Month, s)
+        // Logging in or out stays Boss's own step on the Zerodha screen: never answered as a session question.
+        for (s in listOf("log me out of zerodha", "log me in to kite", "zerodha login karo")) assertEquals(null, ZerodhaSession.asked(s), s)
+    }
+
+    // ---- Again: the voice's own "say that again slowly" - heard before the question path, never a question family ----
+
+    private val AGAIN = listOf("say that again slowly", "repeat it slower", "once more slowly", "dobara dheere bolo", "dheere se phir se bolo",
+        "say the last number again", "what was that number", "which level did you say", "woh number phir se bolo", "kya number tha",
+        "kitna bola", "just the numbers", "repeat the figures", "sirf numbers batao", "what was that level again", "jarvis say that again slowly",
+        "tell me that again a bit slower", "phir se thoda dheere", "say the numbers again", "only the figures")
+    private val NOT_AGAIN = listOf("repeat that", "speak slower", "thoda dheere bolo", "what was the nifty high", "what was the high today",
+        "what was that about vix", "what is nifty at", "what's the vix", "is the market slow today", "how is nifty", "nifty kitna hai",
+        "what was nifty at 11 am", "which level is support for nifty", "what is the level of banknifty", "why so quiet", "tell me more", "go on")
+
+    @Test fun againIsTheVoicesOwnAndNeverActs() {
+        for (s in AGAIN) {
+            assertTrue(Again.read(s) != null, s)
+            // No question family takes it first in the hub's order, and it is never an order, a command or a Bundle act.
+            assertTrue(hits(s).isEmpty(), "$s: ${hits(s)}")
+            val p = Ask.parse(s)
+            assertEquals(null, p.order, s); assertEquals(null, p.command, s)
+            assertTrue(!Bundle.acts(s), s)
+            assertTrue(!Reminder.asked(s) && !FollowUp.acts(s), s)
+        }
+        for (s in NOT_AGAIN) assertEquals(null, Again.read(s), s)
+        // A plain "repeat that" stays "tell me more"; "speak slower" stays the lasting pace change.
+        assertEquals(Command.Kind.MORE, Ask.parse("repeat that").command?.kind)
+        assertEquals(Command.Kind.PACE_SLOWER, Ask.parse("speak slower").command?.kind)
     }
 }

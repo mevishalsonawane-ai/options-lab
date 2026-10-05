@@ -65,8 +65,13 @@ object GapRecord {
     private val FILL = Regex(" (fill|fills|filled|filling|cover|covers|covered|close the gap|closes the gap|closed the gap|bharta|bharti|bhar|bhara|bhari|bharte) ")
     private val HOW = Regex(" (how often|how many times|how frequently|how many days|how many of|what share|what percentage|what percent|what fraction|usually|normally|typically|generally|tends to|tend to|on average|most times|most of the time|record|rate|stats|statistics|history|historically|kitni baar|kitne din|aksar|zyada tar|mostly) ")
     private val NAME = Regex(" gap (fill|filling|fills) (rate|record|stats|statistics|history|percentage|ratio|behaviour|behavior|habits) | gap (behaviour|behavior|record|stats|statistics|history|habits) | gaps (record|stats|statistics|history) ")
-    private val AFTER = Regex(" (what|how) (usually |normally |typically |generally |mostly )?(happens|happened|goes|go|does|do|did) ([a-z ]+ )?(after|on) (a |an |the )?(big |large |small |opening )?(gap|gaps|gapup|gapdown|gapups|gapdowns)( up| down)?( open| opening| day| days)? |" +
+    private val AFTER = Regex(" (what|how) (usually |normally |typically |generally |mostly |often )?(happens|happened|goes|go|does|do|did) ([a-z ]+ )?(after|on) (a |an |the )?(big |large |small |opening )?(gap|gaps|gapup|gapdown|gapups|gapdowns)( up| down)?( open| opening| day| days)? |" +
         " how (does|do) ([a-z ]+ )?(behave|behaves|act|acts|move|moves) (after|on) (a |an |the )?(big |large |small |opening )?(gap|gaps|gapup|gapdown)( up| down)? ")
+    /** Gaps as a kind asked whether they fill ("do gaps fill on Nifty", "do big gaps fill the same day", "gap up fill hota hai kya"), or
+     *  what follows one in Hinglish ("gap down ke baad kya hota hai") - routing round 11: these went to today's gap alone. */
+    private val KIND = Regex(" (do|does) (big |large |small |opening |the |most |nifty |banknifty |bank nifty |sensex |finnifty )*(gaps|gap ups|gap downs|gapups|gapdowns) ([a-z ]+ )?(fill|get filled|close|get closed) |" +
+        " gap( up| down)? (fill|bhar|close) (hota|hote|hoti|jata|jaata|jate|jaate|jati) (hai|hain|he|h) |" +
+        " gap( up| down)? (ke baad|hone ke baad|hone par|hone pe|wale din) (kya|kaisa|kaise) (hota|hoti|rehta|chalta|chalti|karta|karti) ")
     private val AFTER_HOW = Regex(" (usually|normally|typically|generally|mostly|historically|tend to|tends to|how often|on average|aksar|record) ")
     // Forecasts, advice, Boss's own book or bots, a what-if, the last time (MarketMemory), a span of the calendar, a meaning.
     private val NOT = Regex(" (will|would|going to|gonna|tomorrow|kal|predict|prediction|forecast|should|shall|buy|sell|enter|exit|trade|trades|trading|" +
@@ -82,7 +87,7 @@ object GapRecord {
         if (!GAP.containsMatchIn(t) || NOT.containsMatchIn(t)) return null
         if (Market.mentioned(text).any { it == Market.GOLD }) return null
         val ok = NAME.containsMatchIn(t) || (FILL.containsMatchIn(t) && HOW.containsMatchIn(t)) ||
-            (AFTER.containsMatchIn(t) && AFTER_HOW.containsMatchIn(t))
+            (AFTER.containsMatchIn(t) && AFTER_HOW.containsMatchIn(t)) || KIND.containsMatchIn(t)
         if (!ok) return null
         val up = UP.containsMatchIn(t); val down = DOWN.containsMatchIn(t)
         val dir = if (up && !down) 1 else if (down && !up) -1 else null

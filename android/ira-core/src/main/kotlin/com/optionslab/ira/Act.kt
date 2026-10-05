@@ -232,7 +232,9 @@ object Commands {
             has(" (start|arm|switch on|turn on|run|enable|resume) (all|every)( the| my)? (strategies|strategy|arms|arm|bots|algos|scripts) | (start|arm|switch on|turn on|run|enable|resume) (everything|all) $| (start|arm|switch on|turn on|run|enable) (the |my )?(strategies|arms|bots|algos) $"))
             return Command(Command.Kind.START_ALL)
         // One strategy or arm: the verb comes first ("stop strategy 2"), and settings are never read as a name.
-        val notArm = rx("kill switch|\\blive\\b|paper|\\bmode\\b|alert|alarm|autopilot|listening|^trading$|^(it|that|this|jarvis|everything)$|voice|notifications?|\\bloss\\b|talking|speaking|^(when|if|once|after|before|sending|telling|giving|the music|music|news|calling|reminding)\\b|timer|recording|backtest")
+        val notArm = rx("kill switch|\\blive\\b|paper|\\bmode\\b|alert|alarm|autopilot|listening|^trading$|^(it|that|this|jarvis|everything)$|voice|notifications?|\\bloss\\b|talking|speaking|^(when|if|once|after|before|sending|telling|giving|the music|music|news|calling|reminding)\\b|timer|recording|backtest" +
+            // "Stop correcting your confidence words" is Jarvis's own wording check ([WordFit]), never a strategy (routing round 11).
+            "|^(correcting|matching|calibrating|adjusting) (your |his |the )?(confidence |frequency )?words\\b")
         rx("^ (stop|disarm|switch off|turn off|pause|halt) $ARM_NOUN ?(.+)$").find(s)?.let { m ->
             val what = m.groupValues[2].trim()
             if (what.isNotEmpty() && !notArm.containsMatchIn(what)) return one(Command.Kind.STOP_ONE, what)

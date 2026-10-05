@@ -44,7 +44,12 @@ object MindChange {
         " (what|wat|whats|which|kya) (would|could|will|might|can|is going to|does it take to) (change|alter|flip|shift) (your|ur|the|that|this) (mind|view|read|call|reading|structure read|take) |" +
             " what (would|could|will|might) (make|prove|show) (you|u|that|this|it|your read|your view|the read|that read|this read) (to be )?(wrong|untrue|false|invalid|no longer true) |" +
             " what (would|could|will|might) (invalidate|negate|break|undo) (that|this|it|your read|your view|the read|that read|this read|your call) |" +
-            " what (level|levels|price|prices) (would|could|will|might)? ?(invalidate|invalidates|negate|negates|break|breaks|change|changes) (that|this|it|your|the) (read|view|call|structure) |" +
+            " what (level|levels|price|prices) (would|could|will|might)? ?(invalidate|invalidates|negate|negates|break|breaks|change|changes) (that|this|it|your|the) (read|view|call|structure|mind) |" +
+            // Routing round 11: "what would make you change your view", "what would make you turn bearish", "is your read still valid".
+            " what (would|could|will|might) make (you|u) (change|rethink|reconsider|flip|drop|abandon) (your|ur|that|this|the) (mind|view|read|call|take) |" +
+            " what (would|could|will|might) make (you|u) (turn |go |become |get )?(bearish|bullish) |" +
+            " what (invalidates|negates|breaks|would invalidate|would break) (your|ur|that|this|the) (read|view|call|structure read) |" +
+            " (is|does|do) (your|ur|that|this|the) (read|view|call|structure read) still (valid|hold|holds|holding|true|stand|stands|standing|good|intact) |" +
             " (when|where|at what (level|price)) (would|will|does|do) (that|this|it|your read|your view|the read|that read|this read) (stop being|no longer be|cease to be|stop) (true|holding|hold) |" +
             " (where|when|how) (would|will) (you|u) (be|know you are|know youre|know ur) wrong |" +
             " what would it take (for you )?to change (your|ur) (mind|view|read) |" +

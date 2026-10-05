@@ -38,6 +38,8 @@ object ZerodhaSession {
         rx("\\bwhy\\b.*\\b$BROKER\\b.*\\b(?:log|logged|logging|sign|signed|kick|kicked)\\s*(?:me|us)?\\s*out\\b"),
         rx("\\bwhy\\b.*\\b(?:my\\s+|the\\s+)?$BROKER\\s+(?:session|login|log ?in|token|connection)\\b.*\\b(?:end|ended|ending|expire|expired|expiring|drop|dropped|stop|stopped|die|died|go|gone|break|broke|cut)\\b"),
         rx("\\bwhy\\b.*\\b(?:my\\s+)?(?:session|login|token)\\b.*\\b(?:end|ended|expire|expired|drop|dropped|die|died|gone|stop|stopped)\\b.*\\b$BROKER\\b"),
+        // "Why did Zerodha disconnect?" (routing round 11: it got the app status).
+        rx("\\bwhy\\b.*\\b$BROKER\\b.*\\b(?:disconnect|disconnected|disconnecting|disconnects|drop me|dropped me)\\b"),
         rx("\\bwhat\\s+happened\\s+(?:to|with)\\s+(?:my|the)\\s+$BROKER\\s+(?:session|login|log ?in|connection)\\b"),
         rx("\\b(?:when|what time)\\s+did\\s+(?:my|the)\\s+$BROKER\\s+(?:session|login|log ?in)\\s+(?:end|expire|drop|stop)\\b"),
         rx("\\bwhen\\s+(?:was|did)\\s+i\\s+(?:get\\s+)?(?:logged|log|signed)\\s+out\\s+of\\s+$BROKER\\b"),

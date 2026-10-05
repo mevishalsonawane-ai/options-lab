@@ -124,12 +124,14 @@ object AskedAgain {
 
     private const val LEAD = "^ (hey |ok |okay )?(jarvis )?(so )?(please )?(can you |could you |would you )?(tell me )?"
     private const val TAIL = "( please| boss| jarvis| lately| these days| this month)* $"
-    private const val AGAIN = "(again|twice|a second time|over again)"
+    private const val AGAIN = "(again and again|over and over( again)?|again|twice|a second time|over again|repeatedly)"
     private val ASKED = rx(LEAD + "(which|what) (of )?(your |my )?(answers|replies|market reads|reads) (do|did|have) i (ask|asked|keep asking|have to ask|had to ask|need to ask|needed to ask) (you )?(for )?$AGAIN" + TAIL + "|" +
         LEAD + "what do i (keep asking|ask) (you )?$AGAIN" + TAIL + "|" +
         LEAD + "what (did|have) i (asked|ask|had to ask) (you )?$AGAIN( within minutes)?" + TAIL + "|" +
         LEAD + "(which|what) (of )?(your )?(answers|replies|market reads|reads) (miss|missed|missed the mark|didnt land|did not land)" + TAIL + "|" +
         LEAD + "(which|what) (of )?(your )?(answers|replies|market reads|reads) (do|did) i (re ?ask|repeat)" + TAIL + "|" +
+        // "What questions do I repeat?" (routing round 11).
+        LEAD + "(which|what) (questions|market questions) (do|did) i (repeat|re ?ask|keep repeating|keep asking)( you)?( $AGAIN)?" + TAIL + "|" +
         LEAD + "(kaun se|kon se|kaunse) (jawab|answers) (main |mai |mein )?(dobara|phir se) (puchta|poochta|puchhta) (hoon|hu|hun)" + TAIL + "|" +
         LEAD + "(main |mai )?kya (dobara|phir se) (puchta|poochta|puchhta) (hoon|hu|hun)" + TAIL)
 

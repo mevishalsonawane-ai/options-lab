@@ -73,12 +73,16 @@ object Weekdays {
     private const val HOW = " (usually|normally|typically|generally|mostly|on average|tend to|tends to|historically|record|stats|statistics|pattern|effect|" +
         "volatile|volatility|more volatile|less volatile|most volatile|least volatile|bigger|biggest|wider|widest|narrower|narrowest|calmer|calmest|quieter|quietest|" +
         "range|ranges|move more|moves more|move the most|moves the most|move most|moves most|swing|swings|swingy|choppy|" +
-        "best day|worst day|kaisa chalta|kaisa rehta|kaisa hota|kaise chalta|aksar|zyada hilta|sabse zyada) "
+        "best day|worst day|kaisa chalta|kaisa rehta|kaisa hota|kaise chalta|aksar|zyada hilta|sabse zyada|" +
+        // ("Are Tuesdays quiet", routing round 11.)
+        "quiet|calm|busy|busier|busiest) "
     private const val WEEKDAY_NAME = " (day of the week|days of the week|day of week|weekday|weekdays|week day|week days|day wise|daywise|weekday wise|kis din|kaun se din|konse din) "
     private const val WEEKDAY_HOW = " (which|what|record|effect|pattern|stats|statistics|most|least|biggest|widest|quietest|calmest|volatile|best|worst|compare|comparison|breakdown|kaisa|sabse|zyada) "
     private const val EXPIRY = " (expiry day|expiry days|expiry session|expiry sessions|expiries|expiry ke din|expiry wale din|expiry din) "
     private const val EXPIRY_HOW = " (more volatile|less volatile|volatile|bigger|wider|narrower|calmer|quieter|range|ranges|move more|moves more|swing|swings|" +
         "versus|vs|compared|compare|than other days|than normal days|other days|normal days|usually|normally|typically|on average|record|stats|zyada|kam) "
+    private const val WHICH_DAY = " which day (has|have|had|sees|gets|gives|is) (the )?(most|biggest|widest|largest|highest|least|smallest|narrowest|lowest|calmest|quietest|busiest) (range|ranges|move|moves|movement|swing|swings|volatility|volatile)? ?| which day (moves|swings) (the )?(most|least) |" +
+        " (konsa|kaunsa|kaun sa|kon sa|konse|kaun se) din (sabse|zyada|sabse zyada) (move|hilta|chalta|volatile|range|bada|swing) "
     // Forecasts, advice, Boss's own book, a single past or coming day, the calendar's questions (open, a holiday), a meaning.
     private const val NOT = " (will|would|going to|gonna|tomorrow|kal|next|coming|upcoming|predict|prediction|forecast|outlook|should|shall|buy|sell|enter|exit|trade|trades|trading|" +
         "i|me|my|mine|we|our|what if|suppose|imagine|scenario|agar|was|were|did|happened|last|previous|pichle|pichli|this|today|aaj|yesterday|" +
@@ -98,6 +102,8 @@ object Weekdays {
             return if (rx(HOW).containsMatchIn(t) || general) Q(day, false) else null
         }
         if (rx(WEEKDAY_NAME).containsMatchIn(t) && rx(WEEKDAY_HOW).containsMatchIn(t)) return Q(null, false)
+        // "Which day has the biggest range", "which day is the most volatile", "konsa din sabse zyada move hota hai" (routing round 11).
+        if (rx(WHICH_DAY).containsMatchIn(t) && !rx(" (mera|meri|mere|maine|apna|apni|apne|expiry) ").containsMatchIn(t)) return Q(null, false)
         return null
     }
 

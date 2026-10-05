@@ -116,6 +116,8 @@ object TradeCase {
     private val ASKED = Regex(
         "^ $LEAD(make|give me|build|lay out|put) (me )?(the |a |your )?case( for and against| either way| both ways)?( (for |on |about )?$TRADING$NOW)?( boss| jarvis| please)? $|" +
         "^ $LEAD(what are )?(the )?(pros and cons|for and against|case for and against|arguments for and against|plus and minus|plusses and minuses)( of| for| on)? $TRADING$NOW( boss| jarvis| please)? $|" +
+        // "Make the case for buying calls" (routing round 11: missed): the case for and against trading now, never a side picked.
+        "^ $LEAD(make|give me|build|lay out|put|what is|whats|what s) (me )?(the |a |your )?(case|pros and cons|case for and against)( for| of| on)? (buying|selling|writing) (calls|puts|options|a call|a put)$NOW( boss| jarvis| please)? $|" +
         // "Case for and against", "pros and cons?" with nothing after it: trading now (round 10).
         "^ $LEAD(what are )?(the )?(pros and cons|case for and against|arguments for and against)( boss| jarvis| please)? $|" +
         "^ $LEAD(think|reason|walk me|talk me|take me)( it)? (through|out)( it)?( whether| if)?( i should)?( be)?( $TRADING)?$NOW( boss| jarvis| please)? $|" +

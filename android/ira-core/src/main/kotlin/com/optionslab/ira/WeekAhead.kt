@@ -46,7 +46,12 @@ object WeekAhead {
         " (expiries|expiry dates) (and holidays |and events )?(this|next|for the|for this|for next) week | (holidays|holiday) and expiries (this|next) week |" +
         " how many (trading |market )?(days|sessions) (are there |do we have |left |remaining )?(this|next|in this|in the|in next|in the coming) week |" +
         " how many (trading |market )?(days|sessions) (are )?(left|remaining) (this|in the) week |" +
-        " (is|iss|agle|agla|aane wale) hafte (mein |me |ka |ki )?(kya|kya kya|plan|calendar|kitne|expiry|chutti|chhutti|holiday) ")
+        " (is|iss|agle|agla|aane wale) hafte (mein |me |ka |ki )?(kya|kya kya|plan|calendar|kitne|expiry|chutti|chhutti|holiday) |" +
+        // Routing round 11: "any holidays this week", "is there an expiry this week", "what's next week like", "next week mein kya
+        // hai", "anything big this week" (they got Boss's history or the account status).
+        " any (holiday|holidays|expiry|expiries|chutti|chhutti) (this|next|in the|in this|in next|the coming|coming) week | (is|are) there (an |a |any )?(holiday|holidays|expiry|expiries) (this|next|in the|in this|in next|the coming|coming) week |" +
+        " (whats|what is|how is|hows) $WEEK week (like|looking like|shaping up) | (this|next|agle|is) (week|hafte) (mein|me|main) (kya|kya kya) (hai|hain|h|he) |" +
+        " anything (big|major|special|important|notable|on) (this|next|in the|the coming|coming) week ")
 
     /** "This week" or "next week", or null when [text] does not ask for the week's calendar. */
     fun asked(text: String): Which? {

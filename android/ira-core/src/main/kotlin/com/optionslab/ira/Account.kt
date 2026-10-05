@@ -124,6 +124,10 @@ object AppAnswers {
         Section.TIMEOFDAY to Regex(" (best time|worst time|time of day|which hour|what time do i (lose|make|win)|when do i (lose|make|win)) "),
         Section.REASONS to Regex(" (my (trade )?notes|which (of my )?reasons|reasons (work|worked)|why i (took|take) (my )?trades) "),
         Section.EXPLAIN_POS to Regex(" (explain|walk me through|break down|tell me about|how is) (my |the )?([a-z]+ )?(position|positions|trade|trades)(?! check)( now)? "),
+        // One leg of his named by its kind (routing round 11: "talk me through my put", "explain my put", "how did my put do",
+        // a bare "my put" were market answers): that position explained. Only whole, so "how did my calls do this week" stays his history.
+        Section.EXPLAIN_POS to Regex("^ (jarvis |boss |please )?((explain|walk me through|talk me through|break down|tell me about) (my|mine) |how (did|has) my |(my|mera|meri) )" +
+            "(\\d+ )?(nifty |banknifty |bank nifty |finnifty |sensex )?(\\d+ )?(put|call|ce|pe|straddle|strangle|iron condor|spread)( position| trade| leg)?( (do|done|go|gone|doing))?( please| boss| jarvis)? $"),
         Section.WHATIF to Regex(" (what if (i|we) (had )?(taken|took|take|bought|approved)|would (i|it) have (made|lost)|if i had (taken|approved|bought)) "),
         Section.CHANGES to Regex(" (what did i change|what have i changed|settings? (history|changes)|changes? to (my )?(settings|limits)|limit changes|who changed|changed my (limits|settings)) "),
         Section.ACTIVITY to Regex(" (what did you do|what have you done|what you did|your activity|activity log|what did jarvis do|did you do anything) "),

@@ -39,11 +39,18 @@ object MyStreaks {
     private val WEEKDAY = rx(" (best|worst|luckiest|unluckiest|strongest|weakest|most profitable|least profitable|favourite|favorite) (week ?day|weekdays|day of (the )?week|days of (the )?week|day to trade|trading day of the week)" +
         "| which (week ?day|day of (the )?week|day) (do i|did i|am i|have i|i) (make|made|lose|lost|win|won|earn|earned|do best|do worst|trade best|trade worst|do well|do badly|do the best|do the worst|make the most|lose the most|make most|lose most)" +
         "| (week ?day|weekday) (record|breakdown|wise|split|stats)| (by|per) (week ?day|day of (the )?week)" +
-        "| (kaun sa|kaunsa|konsa|kon sa) din (best|accha|acha|sabse accha|sabse acha|bura|sabse bura|worst) ")
+        "| (kaun sa|kaunsa|konsa|kon sa) din (best|accha|acha|sabse accha|sabse acha|bura|sabse bura|worst) " +
+        "| which (week ?day|day of (the )?week|day) (is|was) my (best|worst|strongest|weakest|luckiest|unluckiest|most profitable|least profitable)" +
+        "| do i (lose|make|win|earn|do) (more|most|less|money|better|worse|best|worst) on (mondays|tuesdays|wednesdays|thursdays|fridays) ")
     /** Something else is meant: a market's run, a forecast, the bots' or Jarvis's own record, or an alert. */
     private val NOT = rx(" (nifty|banknifty|bank nifty|sensex|finnifty|vix|market|index|indices|candle|candles|alert|alerts|bot|bots|strategy|strategies|arm|arms|your|you|jarvis s) ")
 
-    private fun hit(t: String) = MINE.containsMatchIn(t) && (RUN.containsMatchIn(t) || ROW.containsMatchIn(t) || HINGLISH.containsMatchIn(t) || WEEKDAY.containsMatchIn(t)) &&
+    /** His own words for a run without "my" (routing round 11): "how many green days in a row", "lagatar kitne din loss hua",
+     *  "do I lose more on Mondays" - green, red, winning and losing days are a trader's own (an index's are up and down days). */
+    private val OWN = rx(" (green|red|winning|losing|profitable|loss making|losing) (days?|sessions?|trades?) (in a row|back to back|straight|on the trot) |" +
+        " (lagatar|lagataar|lagaatar) kitne (din|trade) (se )?(loss|profit|munafa|nuksan|nuksaan|green|red)")
+
+    private fun hit(t: String) = (MINE.containsMatchIn(t) && (RUN.containsMatchIn(t) || ROW.containsMatchIn(t) || HINGLISH.containsMatchIn(t) || WEEKDAY.containsMatchIn(t)) || OWN.containsMatchIn(t)) &&
         !NOT.containsMatchIn(t)
 
     /** Does [text] ask for Boss's own streaks or his best and worst weekday? */

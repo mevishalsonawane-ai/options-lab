@@ -45,14 +45,16 @@ object SaidAbout {
     private const val ABOUT = "(about|on|regarding|re)"
     private const val PERIOD = "(?: (today|yesterday|this week|last week|this month))?"
     private const val TAIL = "(?: (before|earlier|again|ever|please))?"
+    /** Where he said it, said before the topic ("what did I say in my journal about revenge trading", routing round 11). */
+    private const val WHERE = "(to you |in (my |the )?(journal|notes|trade notes|journal answers|notes with trades) )?"
 
     private val ENGLISH = listOf(
         // "what did I say about X", "what have I said about X", "what all did I tell you about X"
-        " (what|wat|wht)( all)? (did|have|had) i (ever )?$SAID (to you )?$ABOUT (.+?)$PERIOD$TAIL $",
+        " (what|wat|wht)( all)? (did|have|had) i (ever )?$SAID $WHERE$ABOUT (.+?)$PERIOD$TAIL $",
         // "remind me what I said about X", "tell me what I noted about X", "show me what I wrote on X"
-        " (remind me|tell me|show me|read me|read out) what i (have )?$SAID (to you )?$ABOUT (.+?)$PERIOD$TAIL $",
+        " (remind me|tell me|show me|read me|read out) what i (have )?$SAID $WHERE$ABOUT (.+?)$PERIOD$TAIL $",
         // "did I say anything about X", "have I noted something about X"
-        " (did|have) i (ever )?$SAID (anything|something) (to you )?$ABOUT (.+?)$PERIOD$TAIL $",
+        " (did|have) i (ever )?$SAID (anything|something) $WHERE$ABOUT (.+?)$PERIOD$TAIL $",
         // "find / search my notes for X", "look up my notes on X", "search what I said about X"
         " (find|search|look up|look through|check|go through|pull up)( in)? (my|our) (notes|words|journal|journal answers|own words) (for|about|on|regarding|mentioning) (.+?)$PERIOD$TAIL $",
         // "my notes on X", "what are my notes about X", "any notes about X"

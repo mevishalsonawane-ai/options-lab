@@ -246,7 +246,7 @@ object WordFit {
         LEAD + "how (well )?calibrated (are you|are your words|is your language|are your $WORDS)" + TAIL + "|" +
         LEAD + "(which|what) (of your )?$WORDS (have you|did you) (corrected|changed|fixed)" + TAIL + "|" +
         LEAD + "(which|what) words (have you|did you) (correct|corrected|change|changed|fix|fixed) to (match|fit) (your |the )?(numbers|records?)" + TAIL + "|" +
-        LEAD + "(when you say|what do you mean (by|when you say)|how often is|how often do you mean by|what does) ($FORM_ALT)( mean)?( what do you mean| how often is that| exactly| to you)?" + TAIL + "|" +
+        LEAD + "(when you say|what do you mean (by|when you say)|how often is|how often do you mean by|what does) ($FORM_ALT)( mean)?( what do you mean| how often is that| exactly| to you| when you say it| when you use it| in your answers)?" + TAIL + "|" +
         LEAD + "(tum|aap) ($FORM_ALT|aksar|kabhi kabhi) (ka|se) (kya )?matlab (lete|samajhte) (ho|hain)" + TAIL)
     private val OFF = Regex(LEAD + "(say|leave|keep|use) (your )?$WORDS (as written|as they are|as you wrote them|unchanged)" + TAIL + "|" +
         LEAD + "(dont|do not|stop|no need to) (correct|change|fix|adjust|calibrate|match)(ing)? (your )?($WORDS|words)( to (the |your )?(numbers|records?))?( any ?more)?" + TAIL)
