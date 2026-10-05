@@ -1227,7 +1227,8 @@ object IraHub {
                 com.optionslab.ira.NeedsTrue.asked(q) ||
                 com.optionslab.ira.Clarity.asked(q) != null || com.optionslab.ira.DayClock.asked(q) != null ||
                 com.optionslab.ira.GapRecord.asked(q) != null ||
-                com.optionslab.ira.WordFit.asked(q) != null }.getOrDefault(false)) {
+                com.optionslab.ira.WordFit.asked(q) != null ||
+                com.optionslab.ira.Causes.asked(q) != null }.getOrDefault(false)) {
             val prev = if (recent) _state.value.messages.lastOrNull { !it.fromIra }?.text else null
             val qs = runCatching { com.optionslab.ira.Understand.questions(prev, q) }.getOrNull()
                 ?.takeIf { it.isNotEmpty() && it != listOf(q) && it.none { p -> lockedAccount(q, p) } }
@@ -1587,6 +1588,20 @@ object IraHub {
         if (scenario != null) {
             _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
             scope.launch { reply(runCatching { scenarioSaid(scenario) }.getOrElse { "I could not work that through just now, Boss." }) }
+            return
+        }
+        // "Why did Nifty fall?", "why is the market down today?", "what caused the rally in BankNifty?", "nifty kyun gira": the
+        // candidate explanations the phone holds weighed by evidence ([com.optionslab.ira.Causes]) - the gap, headlines timed
+        // against the biggest stretch, its theme's record here, the other indices and VIX (describe, don't explain), FII day
+        // totals, today's events - and which are only coincidence in time. Market data and headlines only (fine on a locked
+        // phone); facts only, never a cause claimed, a forecast or advice; nothing acts. Not in IraGoldAlgo (no news there).
+        // ("Why did Nifty suddenly fall" stays SharpMove's; the news behind a move NewsDesk's.)
+        val causeAsk = if (!bundled && parsed.order == null && parsed.command == null && !com.optionslab.app.BuildConfig.GOLD)
+            runCatching { com.optionslab.ira.Causes.asked(q) }.getOrNull() else null
+        if (causeAsk != null) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            val markets = parsed.markets
+            scope.launch { reply(runCatching { causes(causeAsk, markets) }.getOrElse { "I could not weigh that just now, Boss." }) }
             return
         }
         // "What's your plan today?" / "what are you working on?": Jarvis's own plan for the day (it names Boss's goals and
@@ -3036,6 +3051,21 @@ object IraHub {
      * A what-if worked through ([com.optionslab.ira.Scenarios]): the index's sessions on the phone, the prices now, and on an
      * unlocked phone Boss's open positions, kept rules, daily loss limits and price alarms. Reads only.
      */
+    /**
+     * "Why did Nifty fall?" ([com.optionslab.ira.Causes]): the index's day and the candidates on the phone weighed - the
+     * candles of the four indices and India VIX, the headlines, the news-and-moves record, NSE's latest FII/DII figures
+     * (read at most hourly; none is said so) and today's scheduled events. Reads only.
+     */
+    private suspend fun causes(a: com.optionslab.ira.Causes.Ask, markets: List<IraMarket>): String {
+        val mk = com.optionslab.ira.Causes.market(a, markets) ?: return com.optionslab.ira.Causes.NOT_HERE
+        val bars = (com.optionslab.ira.Causes.INDICES + IraMarket.VIX).associateWith { histories[it]?.bars.orEmpty() }
+        val today = com.optionslab.app.data.Market.today()
+        val flows = withTimeoutOrNull(15_000) { runCatching { flows() }.getOrDefault(emptyList()) } ?: emptyList()
+        val events = runCatching { IraEvents.upcoming(0) }.getOrDefault(emptyList()).filter { it.day == today && !it.name.endsWith("expiry") }.map { it.name }
+        val log = runCatching { IraTools.newsMoves() }.getOrDefault(emptyList())
+        return com.optionslab.ira.Causes.answer(a, mk, bars, _state.value.news, IST, LocalDateTime.now(IST), log, flows, events, expiryToday(mk))
+    }
+
     private suspend fun scenarioSaid(s: com.optionslab.ira.Scenarios.Scenario): String {
         val mk = s.market
         val nowAt = LocalDateTime.now(IST)

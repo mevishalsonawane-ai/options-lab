@@ -30,7 +30,7 @@ class CoverageTest {
         val asSaid = Sources.asked(said) || AboutBoss.knowAsked(said) || Memory.recallAsked(said) || Memory.forgetAsked(said) || PatternCalls.asked(said) ||
             Learnings.asked(said) != null || Learnings.undoAsked(said) || NewsMoves.asked(said) != null || PreMarket.asked(said) ||
             ChainDrift.asked(said) != null || Headroom.asked(said) != null || DayClock.asked(said) != null ||
-            SaidAbout.asked(said) != null || GapRecord.asked(said) != null
+            SaidAbout.asked(said) != null || GapRecord.asked(said) != null || Causes.asked(said) != null
         return ((if (asSaid) null else Understand.questions(null, said)) ?: listOf(said)).map { kind(it, 0) }
     }
 
@@ -52,7 +52,8 @@ class CoverageTest {
             if (Honest.asked(q) != null) return Kind.HONEST
             if (Thinking.asked(q) != null || Consistency.asked(q)) return Kind.JARVIS
             if (CoPilot.asked(q) || ChainDrift.asked(q) != null || ChainIntel.asked(q) != null || DayClock.asked(q) != null || GapRecord.asked(q) != null || Structure.asked(q) != null ||
-                Breadth.asked(q) != null || TradeCase.asked(q) || Scenarios.asked(q) != null) return Kind.MARKET
+                Breadth.asked(q) != null || TradeCase.asked(q) || Scenarios.asked(q) != null ||
+                Causes.asked(q) != null) return Kind.MARKET
         }
         if (SelfCheck.asked(q)) return Kind.JARVIS
         if (p.command != null || p.order != null || Topic.ORDER in p.topics || Topic.COMMAND in p.topics) return Kind.ACT
@@ -418,7 +419,7 @@ class CoverageTest {
      * Which feature answers [said] in Jarvis (not GOLD), taking IraHub.ask's branches in its own order (app/.../IraHub.kt,
      * ask(): Boss's learned words and routine as said, fillers and follow-ups, then - for a question not said with
      * something to do (IraHub's `bundled`, [Bundle.acts]) - DayJournal, AlertSense, Airtime, PatternCalls, DataAge, Honest,
-     * Thinking, Consistency, ChainDrift, ChainIntel, DayClock, GapRecord, Structure, TradeCase, Scenarios, Agenda, Improve; the reminders and Jarvis's own
+     * Thinking, Consistency, ChainDrift, ChainIntel, DayClock, GapRecord, Structure, TradeCase, Scenarios, Causes, Agenda, Improve; the reminders and Jarvis's own
      * checks, Distance... Outlook, NewsDesk, down to the account's sections (PositionHealth and BotHealth are its HEALTH and
      * BOTS), a pattern explained, Solo and IraHub.reasoned's readers over the candles, each in its
      * place). Over the pure readers only (what Boss's corrections taught depends on what is kept, and is left out); a
@@ -437,7 +438,7 @@ class CoverageTest {
             PatternCalls.asked(said) || Learnings.asked(said) != null || Learnings.undoAsked(said) || NewsMoves.asked(said) != null ||
             PreMarket.asked(said) ||
             ChainDrift.asked(said) != null || Headroom.asked(said) != null || NeedsTrue.asked(said) || Clarity.asked(said) != null || DayClock.asked(said) != null ||
-            SaidAbout.asked(said) != null || GapRecord.asked(said) != null || WordFit.asked(said) != null
+            SaidAbout.asked(said) != null || GapRecord.asked(said) != null || WordFit.asked(said) != null || Causes.asked(said) != null
         val qs = if (asSaid || understood || cleaned) null else Understand.questions(null, said)?.takeIf { it.isNotEmpty() && it != listOf(said) }
         if (qs != null) return if (qs.size == 1) feature(qs[0], cleaned = true) else qs.joinToString(" & ") { feature(it, understood = true) }
         val q = said
@@ -474,6 +475,7 @@ class CoverageTest {
         if (alone && Breadth.asked(q) != null) return "Breadth"
         if (alone && TradeCase.asked(q)) return "TradeCase"
         if (alone && Scenarios.asked(q) != null) return "Scenarios"
+        if (alone && Causes.asked(q) != null) return "Causes"
         if (alone && Agenda.asked(q)) return "Agenda"
         if (alone && Improve.asked(q)) return "Improve"
         if (Reminder.cancelAsked(q) || Reminder.asked(q)) return "Reminder"
@@ -786,7 +788,12 @@ class CoverageTest {
         "any news" to "Market", "what's the news" to "Market", "latest news" to "Market", "news on nifty" to "Market",
         "banknifty news" to "Market", "any news behind this sudden fall" to "SharpMove", "explain this move" to "SharpMove",
         "what coincided with this drop" to "SharpMove", "why did nifty suddenly fall" to "SharpMove",
-        "why did the market drop today" to "Why",
+        "why did the market drop today" to "Causes",
+        // ---- Causes: why the market moved, the candidates weighed by evidence (reasoning round 10) ----
+        "why did nifty fall" to "Causes", "why is the market down" to "Causes", "why has banknifty fallen so much" to "Causes",
+        "what caused the fall today" to "Causes", "what's behind the rally in banknifty" to "Causes", "reason for today's fall" to "Causes",
+        "nifty aaj kyun gira" to "Causes", "why is sensex rising today" to "Causes", "why is the market so weak today" to "Causes",
+        "what made nifty fall" to "Causes",
         // ---- Consistency: facts pulling different ways, and Boss's words against his day ----
         "any contradictions" to "Consistency", "any contradictions today" to "Consistency", "jarvis any contradictions" to "Consistency",
         "is there any contradiction" to "Consistency", "any mixed signals today" to "Consistency", "any conflicts in the data" to "Consistency",
@@ -922,7 +929,7 @@ class CoverageTest {
             ("what's the main news today" to "NewsDesk") to ("what's the news" to "Market"),
             ("any news on banks" to "NewsDesk") to ("banknifty news" to "Market"),
             ("what news moved the market" to "NewsDesk") to ("any news behind this sudden fall" to "SharpMove"),
-            ("news behind today's fall" to "NewsDesk") to ("why did the market drop today" to "Why"),
+            ("news behind today's fall" to "NewsDesk") to ("why did the market drop today" to "Causes"),
             ("how are my bots doing" to "Account:BOTS") to ("show my strategies" to "Account:STRATEGIES"),
             ("which strategy is losing" to "Account:BOTS") to ("which position is losing the most" to "Account:RANK"),
             ("is the orb arm behaving" to "Account:BOTS") to ("is orb running" to "Account:STRATEGIES"),
@@ -944,6 +951,10 @@ class CoverageTest {
             ("say your answers in full again" to "Clarity") to ("say everything again" to "AlertSense"),
             // Round 12: a confidence word asked of is his own; a market word asked of stays the glossary's.
             ("what do you mean by usually" to "WordFit") to ("what do you mean by max pain" to "Glossary"),
+            // Reasoning round 10: a fall weighed by its evidence, beside one sudden move's coincidences and the news behind it.
+            ("why did nifty fall" to "Causes") to ("why did nifty suddenly fall" to "SharpMove"),
+            ("what caused the fall today" to "Causes") to ("what news moved the market" to "NewsDesk"),
+            ("why is nifty falling" to "Causes") to ("how much did nifty fall today" to "Market"),
         )) { assertEquals(a.second, feature(a.first), a.first); assertEquals(b.second, feature(b.first), b.first) }
         // Boss's Hinglish what-if is a what-if; a forecast, advice or his own book in Hindi never is.
         for (s in listOf("kal nifty ka kya hoga", "nifty 200 points gir jayega kya", "agar nifty 1% gira to kya buy karu",
