@@ -39,6 +39,8 @@ object ChainIntel {
         val atm: Double?,
         val atmIv: Double?,
         val strikes: List<Strike>,
+        /** The chain's own max pain strike as the Options tab computes it (null: not given - [ChainDrift] works it out). */
+        val maxPain: Double? = null,
     )
 
     /** [c] as a [Read] taken at [at]: only the few numbers kept per strike (small enough to hold a day of reads). */
@@ -47,7 +49,7 @@ object ChainIntel {
         return Read(c.underlying, c.expiry, at, c.spot, c.atm, c.atmIv, c.rows.map { r ->
             Strike(r.strike, r.ce?.oi ?: 0L, r.pe?.oi ?: 0L, r.ce?.prevOi, r.pe?.prevOi,
                 r.ce?.ltp?.takeIf { it > 0 }, r.pe?.ltp?.takeIf { it > 0 }, iv[r.strike]?.ceIv, iv[r.strike]?.peIv)
-        })
+        }, c.maxPain?.maxPainStrike)
     }
 
     /**
@@ -71,6 +73,9 @@ object ChainIntel {
 
         /** The first read of [u] on [day] (null when none). */
         @Synchronized fun first(u: String, day: LocalDate): Read? = reads[u]?.firstOrNull()?.takeIf { it.at.toLocalDate() == day }
+
+        /** Every read of [u] kept for [day], oldest first (a copy). */
+        @Synchronized fun day(u: String, day: LocalDate): List<Read> = reads[u]?.filter { it.at.toLocalDate() == day }.orEmpty()
 
         @Synchronized fun count(u: String): Int = reads[u]?.size ?: 0
     }

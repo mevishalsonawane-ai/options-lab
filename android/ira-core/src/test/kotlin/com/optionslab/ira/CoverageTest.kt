@@ -27,7 +27,7 @@ class CoverageTest {
     private fun route(said: String): List<Kind> {
         if (Corrections.wordsAsked(said) || Corrections.forgetWordAsked(said) != null) return listOf(Kind.JARVIS)
         if (Routine.asked(said) || Routine.forgetAsked(said)) return listOf(Kind.ACCOUNT)
-        val asSaid = Sources.asked(said) || PatternCalls.asked(said)
+        val asSaid = Sources.asked(said) || PatternCalls.asked(said) || ChainDrift.asked(said) != null
         return ((if (asSaid) null else Understand.questions(null, said)) ?: listOf(said)).map { kind(it, 0) }
     }
 
@@ -41,7 +41,7 @@ class CoverageTest {
             if (AlertSense.asked(q) != null || Airtime.asked(q) || PatternCalls.asked(q) || DataAge.asked(q)) return Kind.JARVIS
             if (Honest.asked(q) != null) return Kind.HONEST
             if (Thinking.asked(q) != null || Consistency.asked(q)) return Kind.JARVIS
-            if (ChainIntel.asked(q) != null || Structure.asked(q) != null || TradeCase.asked(q) || Scenarios.asked(q) != null) return Kind.MARKET
+            if (ChainDrift.asked(q) != null || ChainIntel.asked(q) != null || Structure.asked(q) != null || TradeCase.asked(q) || Scenarios.asked(q) != null) return Kind.MARKET
         }
         if (SelfCheck.asked(q)) return Kind.JARVIS
         if (p.command != null || p.order != null || Topic.ORDER in p.topics || Topic.COMMAND in p.topics) return Kind.ACT
@@ -404,7 +404,7 @@ class CoverageTest {
      * Which feature answers [said] in Jarvis (not GOLD), taking IraHub.ask's branches in its own order (app/.../IraHub.kt,
      * ask(): Boss's learned words and routine as said, fillers and follow-ups, then - for a question not said with
      * something to do (IraHub's `bundled`, [Bundle.acts]) - DayJournal, AlertSense, Airtime, PatternCalls, DataAge, Honest,
-     * Thinking, Consistency, ChainIntel, Structure, TradeCase, Scenarios, Agenda, Improve; the reminders and Jarvis's own
+     * Thinking, Consistency, ChainDrift, ChainIntel, Structure, TradeCase, Scenarios, Agenda, Improve; the reminders and Jarvis's own
      * checks, Distance... Outlook, NewsDesk, down to the account's sections (PositionHealth and BotHealth are its HEALTH and
      * BOTS), a pattern explained, Solo and IraHub.reasoned's readers over the candles, each in its
      * place). Over the pure readers only (what Boss's corrections taught depends on what is kept, and is left out); a
@@ -418,7 +418,7 @@ class CoverageTest {
         if (!understood && (Routine.asked(said) || Routine.forgetAsked(said))) return "Routine"
         val asSaid = Sources.asked(said) || AboutBoss.knowAsked(said) || Memory.recallAsked(said) || Memory.forgetAsked(said) ||
             Corrections.wordsAsked(said) || Corrections.forgetWordAsked(said) != null || Routine.asked(said) || Routine.forgetAsked(said) ||
-            PatternCalls.asked(said)
+            PatternCalls.asked(said) || ChainDrift.asked(said) != null
         val qs = if (asSaid || understood || cleaned) null else Understand.questions(null, said)?.takeIf { it.isNotEmpty() && it != listOf(said) }
         if (qs != null) return if (qs.size == 1) feature(qs[0], cleaned = true) else qs.joinToString(" & ") { feature(it, understood = true) }
         val q = said
@@ -436,6 +436,7 @@ class CoverageTest {
         if (alone && Honest.asked(q) != null) return "Honest"
         if (alone && Thinking.asked(q) != null) return "Thinking"
         if (alone && Consistency.asked(q)) return "Consistency"
+        if (alone && ChainDrift.asked(q) != null) return "ChainDrift"
         if (alone && ChainIntel.asked(q) != null) return "ChainIntel"
         if (alone && Structure.asked(q) != null) return "Structure"
         if (alone && TradeCase.asked(q)) return "TradeCase"
@@ -533,6 +534,11 @@ class CoverageTest {
         "expected move for banknifty by expiry" to "ChainIntel", "expected move this week" to "ChainIntel",
         "what is the straddle pricing" to "ChainIntel", "straddle kitna hai" to "ChainIntel", "how much move is the market pricing in" to "ChainIntel",
         "analyze the option chain in detail" to "ChainIntel",
+        // ---- ChainDrift: max pain and the biggest call / put OI through the day (round 12) ----
+        "how has max pain moved today" to "ChainDrift", "has max pain shifted since morning" to "ChainDrift", "max pain drift" to "ChainDrift",
+        "banknifty max pain through the day" to "ChainDrift", "max pain kitna shift hua" to "ChainDrift", "is the call wall shifting" to "ChainDrift",
+        "where is the put wall" to "ChainDrift", "has the biggest call oi moved" to "ChainDrift", "how has the chain drifted today" to "ChainDrift",
+        "max pain and call wall since the open" to "ChainDrift",
         // ---- ExpectedRange: the day's range from VIX (not the expiry's straddle) ----
         "expected move today" to "ExpectedRange", "expected range today" to "ExpectedRange", "expected move kitna hai" to "ExpectedRange",
         "what is the expected move" to "ExpectedRange",

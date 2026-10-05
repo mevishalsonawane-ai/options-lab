@@ -1217,7 +1217,8 @@ object IraHub {
                 com.optionslab.ira.Corrections.wordsAsked(q) || com.optionslab.ira.Corrections.forgetWordAsked(q) != null ||
                 com.optionslab.ira.Routine.asked(q) || com.optionslab.ira.Routine.forgetAsked(q) || com.optionslab.ira.PatternCalls.asked(q) ||
                 com.optionslab.ira.Learnings.asked(q) != null || com.optionslab.ira.Learnings.undoAsked(q) ||
-                com.optionslab.ira.NewsMoves.asked(q) != null || com.optionslab.ira.PreMarket.asked(q) }.getOrDefault(false)) {
+                com.optionslab.ira.NewsMoves.asked(q) != null || com.optionslab.ira.PreMarket.asked(q) ||
+                com.optionslab.ira.ChainDrift.asked(q) != null }.getOrDefault(false)) {
             val prev = if (recent) _state.value.messages.lastOrNull { !it.fromIra }?.text else null
             val qs = runCatching { com.optionslab.ira.Understand.questions(prev, q) }.getOrNull()
                 ?.takeIf { it.isNotEmpty() && it != listOf(q) && it.none { p -> lockedAccount(q, p) } }
@@ -1427,6 +1428,17 @@ object IraHub {
         // expected move by expiry from the straddle?": the option chain read beyond PCR and max pain ([com.optionslab.ira.ChainIntel]),
         // every number from the chain with its time. Market data only (fine on a locked phone); words only, never advice.
         // (Before the market answers: the VIX's expected range must not take "expected move by expiry".)
+        // "How has max pain moved today?", "is the call wall shifting?", "has the biggest put OI moved since morning?": the
+        // chain's drift through the day from Jarvis's own reads kept today ([com.optionslab.ira.ChainDrift]) - max pain and the
+        // biggest call / put OI with times, spot against max pain then and now. Market data only; facts only, never advice.
+        val driftAsk = if (!bundled && parsed.order == null && parsed.command == null && !com.optionslab.app.BuildConfig.GOLD)
+            runCatching { com.optionslab.ira.ChainDrift.asked(q) }.getOrNull() else null
+        if (driftAsk != null) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            val markets = parsed.markets
+            scope.launch { reply(runCatching { chainDrift(driftAsk, markets) }.getOrElse { "I could not read the option chain just now, Boss." }) }
+            return
+        }
         val chainAsk = if (!bundled && parsed.order == null && parsed.command == null && !com.optionslab.app.BuildConfig.GOLD)
             runCatching { com.optionslab.ira.ChainIntel.asked(q) }.getOrNull() else null
         if (chainAsk != null) {
@@ -2908,6 +2920,20 @@ object IraHub {
         val today = com.optionslab.app.data.Market.today()
         val note = runCatching { IraTools.chainNote(u) }.getOrNull()
         return listOfNotNull(note, com.optionslab.ira.ChainIntel.answer(a, now, IraAccount.chainBook.first(u, today), today)).joinToString(" ")
+    }
+
+    /**
+     * "How has max pain moved today?", "is the call wall shifting?" ([com.optionslab.ira.ChainDrift]): the chain read afresh
+     * (so the newest read is kept), then the day's reads kept in memory compared. The chain's own numbers with their times.
+     */
+    private suspend fun chainDrift(a: com.optionslab.ira.ChainDrift.Ask, markets: List<IraMarket>): String {
+        val u = com.optionslab.ira.ChainIntel.underlying(markets) ?: return com.optionslab.ira.ChainIntel.NOT_HERE
+        val name = IraMarket.valueOf(u).label
+        withTimeoutOrNull(25_000) { IraAccount.chain(u) } ?: return "The $name option chain did not load just now, Boss."
+        val today = com.optionslab.app.data.Market.today()
+        val reads = IraAccount.chainBook.day(u, today)
+        val note = runCatching { IraTools.chainNote(u) }.getOrNull()
+        return listOfNotNull(note, com.optionslab.ira.ChainDrift.answer(a, reads, today)).joinToString(" ")
     }
 
     /**
