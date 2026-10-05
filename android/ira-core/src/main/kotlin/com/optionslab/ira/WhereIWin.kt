@@ -212,18 +212,28 @@ object WhereIWin {
     }
 
     /**
+     * A chance share said plainly: how often in 100 ("less than once in 100", "1 time in 100", "N times in 100") and what
+     * that means - seldom chance at 5 in 100 or under, may still be chance ([more] would tell) at 20 or under, else could
+     * well be chance. Shared with [TradesADay] (reasoning round 27).
+     */
+    fun chanceWords(share: Double, more: String = "trades"): Pair<String, String> {
+        val inHundred = Math.round(share * 100).toInt()
+        val how = if (inHundred < 1) "less than once in 100" else if (inHundred == 1) "1 time in 100" else "$inHundred times in 100"
+        val verdict = when {
+            share <= 0.05 -> "so chance alone seldom gives a gap that big"
+            share <= 0.20 -> "so it may still be chance; more $more would tell"
+            else -> "so it could well be chance"
+        }
+        return how to verdict
+    }
+
+    /**
      * The chance check said plainly: how often in 100 shuffles a gap this big came up, and what that means. [among] the
      * number of groups shuffled together and [pooled] their trades, when more than the two ([chanceAmong]).
      */
     fun chanceText(best: Group, worst: Group, share: Double, among: Int = 2, pooled: Int = best.trades + worst.trades): String {
         val n = pooled
-        val inHundred = Math.round(share * 100).toInt()
-        val how = if (inHundred < 1) "less than once in 100" else if (inHundred == 1) "1 time in 100" else "$inHundred times in 100"
-        val verdict = when {
-            share <= 0.05 -> "so chance alone seldom gives a gap that big"
-            share <= 0.20 -> "so it may still be chance; more trades would tell"
-            else -> "so it could well be chance"
-        }
+        val (how, verdict) = chanceWords(share)
         return if (among > 2)
             " Is that gap more than chance? Shuffling all $n trades of those $among groups among them at random gave a gap between the best and worst at least as big $how, $verdict."
         else " Is that gap more than chance? Shuffling those $n trades between the two at random gave a gap at least as big $how, $verdict."

@@ -62,6 +62,31 @@ class TradesADayTest {
         assertTrue(placeFirst[1].contains("most as one of your 1st trades"), placeFirst[1])
     }
 
+    // Reasoning round 27: the quiet-versus-busy gap (and the place-in-the-day gap) checked against chance, as WhereIWin does.
+    @Test fun gapCheckedAgainstChance() {
+        val d = (1..9).map { today.minusDays(it.toLong()) }
+        val trades = listOf(
+            t(d[0], 10, 300.0), t(d[1], 10, 200.0), t(d[2], 10, 100.0),
+            t(d[3], 10, 200.0), t(d[3], 11, -300.0), t(d[3], 12, -200.0), t(d[3], 13, -100.0),
+            t(d[4], 10, 100.0), t(d[4], 11, -100.0), t(d[4], 12, -200.0), t(d[4], 13, -300.0),
+            t(d[5], 10, 50.0), t(d[5], 11, -50.0), t(d[5], 12, -100.0), t(d[5], 13, -100.0),
+        )
+        val lines = TradesADay.lines("Paper", trades, MyNumbers.Span.ALL, today, TradesADay.Part.DAYS)
+        // Day nets +300 +200 +100 against -400 -500 -200: 2 of the 20 splits give a gap that big.
+        assertTrue(lines[1].contains("Is that gap more than chance? Shuffling those 6 days between the two at random gave a gap at least as big " +
+            "10 times in 100, so it may still be chance; more days would tell."), lines[1])
+        // By place: four groups, so shuffled among them all; the same record says the same thing every time.
+        assertTrue(lines[2].contains("Shuffling all 15 trades of those 4 groups among them at random gave a gap between the best and worst at least as big"), lines[2])
+        assertEquals(lines, TradesADay.lines("Paper", trades, MyNumbers.Span.ALL, today, TradesADay.Part.DAYS))
+        // A clear gap: chance seldom gives it.
+        val g = listOf(TradesADay.Group("1-trade days", 6, 6, 6000.0), TradesADay.Group("days of 6 or more", 6, 0, -6000.0))
+        val nets = mapOf("1-trade days" to List(6) { 1000.0 + it }, "days of 6 or more" to List(6) { -1000.0 - it })
+        assertTrue(TradesADay.chanceLine(g, nets, "day").contains("less than once in 100, so chance alone seldom gives a gap that big."))
+        // No chance line where nothing is set against anything.
+        val few = listOf(t(d[0], 10, 100.0), t(d[1], 10, 50.0), t(d[1], 11, -20.0))
+        assertTrue(TradesADay.lines("Paper", few, MyNumbers.Span.ALL, today, TradesADay.Part.DAYS).none { it.contains("chance") })
+    }
+
     @Test fun ownTradesFirstAndTooFewSaid() {
         val d1 = today.minusDays(1)
         val bots = listOf(t(d1, 10, 100.0, "ORB"), t(d1, 11, -50.0, "ORB"))

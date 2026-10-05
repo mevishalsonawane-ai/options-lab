@@ -26,6 +26,11 @@ import java.util.Locale
  * and a strangle's legs are a trip each. Trips are grouped into one trade before anything is counted ([grouped]): trips
  * sharing an opening order ([Trade.key]) or opened by the same owner in the same second are one trade, their nets summed.
  *
+ * Reasoning round 27 (2026-10-05): when a best and a worst group are named, the gap between them is checked against chance
+ * as [WhereIWin] does it ([WhereIWin.chance] for two groups, [WhereIWin.chanceAmong] for three or more) - the days' nets
+ * (or the trades' nets, by place) of the groups compared are pooled and dealt out again into groups of the same sizes,
+ * from a fixed seed, and how often a gap at least as big came up is said as "N in 100" with the units it rests on.
+ *
  * Facts from his own record only - never a forecast, never a number of trades to take and never a limit set; nothing here
  * places, changes or arms anything. His account, so never on a locked phone. Pure.
  */
@@ -124,7 +129,31 @@ object TradesADay {
         }
     }
 
-    private fun daysLine(gs: List<Group>, asked: Boolean): String? {
+    /**
+     * The chance check for the best and worst of [enough] (each with its own [nets]): "Is that gap more than chance?
+     * Shuffling those 6 days between the two at random ...". [unit] "day" or "trade". Deterministic.
+     */
+    fun chanceLine(enough: List<Group>, nets: Map<String, List<Double>>, unit: String): String {
+        val lists = enough.map { nets[it.name].orEmpty() }
+        val n = lists.sumOf { it.size }
+        return if (enough.size == 2) {
+            val (how, verdict) = WhereIWin.chanceWords(WhereIWin.chance(lists[0], lists[1]), unit + "s")
+            " Is that gap more than chance? Shuffling those ${plural(n, unit)} between the two at random gave a gap at least as big $how, $verdict."
+        } else {
+            val (how, verdict) = WhereIWin.chanceWords(WhereIWin.chanceAmong(lists), unit + "s")
+            " Is that gap more than chance? Shuffling all ${plural(n, unit)} of those ${enough.size} groups among them at random gave a gap between the best and worst at least as big $how, $verdict."
+        }
+    }
+
+    /** Each day group's day nets, by [bucket] name. */
+    private fun dayNets(trades: List<Trade>): Map<String, List<Double>> =
+        byDay(trades).values.groupBy({ bucket(it.size) }, { d -> d.sumOf { it.net } })
+
+    /** Each place group's trade nets, by [place] name. */
+    private fun placeNets(trades: List<Trade>): Map<String, List<Double>> =
+        byDay(trades).values.flatMap { d -> d.mapIndexed { i, t -> place(i + 1) to t.net } }.groupBy({ it.first }, { it.second })
+
+    private fun daysLine(gs: List<Group>, asked: Boolean, nets: Map<String, List<Double>>): String? {
         if (gs.size < 2) {
             if (!asked) return null
             val only = gs.firstOrNull() ?: return null
@@ -138,13 +167,16 @@ object TradesADay {
         if (enough.size >= 2) {
             val best = enough.maxBy { it.average }
             val worst = enough.minBy { it.average }
-            if (best !== worst) s.append(" A day made most on your ${best.name} (${rs(best.average)}, over ${plural(best.count, "day")}) and least on your " +
-                "${worst.name} (${rs(worst.average)}, over ${plural(worst.count, "day")}).")
+            if (best !== worst) {
+                s.append(" A day made most on your ${best.name} (${rs(best.average)}, over ${plural(best.count, "day")}) and least on your " +
+                    "${worst.name} (${rs(worst.average)}, over ${plural(worst.count, "day")}).")
+                s.append(chanceLine(enough, nets, "day"))
+            }
         } else if (asked) s.append(" Fewer than two of these have $MIN_DAYS days, so they are not set against each other yet.")
         return s.toString()
     }
 
-    private fun placeLine(gs: List<Group>, asked: Boolean): String? {
+    private fun placeLine(gs: List<Group>, asked: Boolean, nets: Map<String, List<Double>>): String? {
         if (gs.size < 2) {
             if (!asked) return null
             return "By place in the day: you never took more than one trade in a day, so every trade was a day's first."
@@ -157,8 +189,11 @@ object TradesADay {
         if (enough.size >= 2) {
             val best = enough.maxBy { it.average }
             val worst = enough.minBy { it.average }
-            if (best !== worst) s.append(" A trade made most as one of your ${best.name} (${rs(best.average)}, on ${plural(best.count, "trade")}) and least as one of your " +
-                "${worst.name} (${rs(worst.average)}, on ${plural(worst.count, "trade")}).")
+            if (best !== worst) {
+                s.append(" A trade made most as one of your ${best.name} (${rs(best.average)}, on ${plural(best.count, "trade")}) and least as one of your " +
+                    "${worst.name} (${rs(worst.average)}, on ${plural(worst.count, "trade")}).")
+                s.append(chanceLine(enough, nets, "trade"))
+            }
         } else if (asked) s.append(" Fewer than two of these have $MIN_TRADES trades, so they are not set against each other yet.")
         return s.toString()
     }
@@ -186,7 +221,7 @@ object TradesADay {
             "${plural(middle, "trade")} on the middle day and ${sizes.last()} at most, net ${rs(used.sumOf { it.net })}."
         val order = if (first == Part.PLACE) listOf(Part.PLACE, Part.DAYS) else listOf(Part.DAYS, Part.PLACE)
         for (p in order) {
-            val line = if (p == Part.DAYS) daysLine(dayGroups(used), first == p) else placeLine(placeGroups(used), first == p)
+            val line = if (p == Part.DAYS) daysLine(dayGroups(used), first == p, dayNets(used)) else placeLine(placeGroups(used), first == p, placeNets(used))
             if (line != null) out += line
         }
         return out
