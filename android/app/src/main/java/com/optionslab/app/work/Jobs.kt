@@ -412,6 +412,8 @@ object Tasks {
         runCatching { com.optionslab.app.ira.IraCoach.trailWatch() }
         runCatching { com.optionslab.app.ira.IraCoach.overtradeWatch() }
         runCatching { com.optionslab.app.ira.IraCoach.gapWatch() }
+        // Jarvis: the market alerts found in this pass (and the watch's) said as one line - one per move, a few an hour.
+        runCatching { com.optionslab.app.ira.IraAirtime.flush() }
         // Jarvis: the static-IP relay server not answering is told before a login or an order fails on it.
         runCatching { com.optionslab.app.ira.IraCoach.relayWatch() }
         // Jarvis: not logged in to Zerodha a few minutes before the open while something needs it - said once.

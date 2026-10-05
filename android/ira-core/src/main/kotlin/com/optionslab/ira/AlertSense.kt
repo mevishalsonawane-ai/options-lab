@@ -42,7 +42,7 @@ object AlertSense {
      */
     val LEARNED: Map<String, String> = linkedMapOf(
         "GAP" to "the opening gap plan", "ORB" to "opening range breaks", "MOMENTS" to "market moments (gap fills, yesterday's high or low)",
-        "VIX" to "fear (VIX) spikes", "OI" to "open interest walls moving", "EXPIRYDAY" to "the expiry-day companion",
+        "VIX" to "fear (VIX) spikes", "SHARPMOVE" to "sharp moves and what coincided", "OI" to "open interest walls moving", "EXPIRYDAY" to "the expiry-day companion",
         "USUAL" to "your usual question at its hour")
 
     /** Named when Boss asks what is held back: never held, whatever he does. */

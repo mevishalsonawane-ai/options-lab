@@ -123,13 +123,25 @@ internal object IraTools {
      * safety warning among them, is said as always. True when it was said.
      */
     fun sayAlert(a: Automations.Auto, text: String): Boolean {
-        val now = minuteNow()
-        val aloud = runCatching { com.optionslab.ira.AlertSense.aloud(alertLog(), a.name, now) }.getOrDefault(true)
-        if (!aloud) { alertUpdate { com.optionslab.ira.AlertSense.heldBack(it, a.name, now) }; return false }
+        if (!alertAloud(a)) return false
         val said = JarvisVoice.announce(text)
         // Only alerts Boss could hear are judged by what he did next.
-        if (said) alertUpdate { com.optionslab.ira.AlertSense.spoken(it, a.name, now) }
+        if (said) alertSaid(listOf(a))
         return said
+    }
+
+    /** Whether an alert of kind [a] is said aloud now (the learned say); one held back is recorded as such. */
+    fun alertAloud(a: Automations.Auto): Boolean {
+        val now = minuteNow()
+        val aloud = runCatching { com.optionslab.ira.AlertSense.aloud(alertLog(), a.name, now) }.getOrDefault(true)
+        if (!aloud) alertUpdate { com.optionslab.ira.AlertSense.heldBack(it, a.name, now) }
+        return aloud
+    }
+
+    /** Alerts of the kinds [kinds] were just said aloud (one merged line may hold several, [IraAirtime]). */
+    fun alertSaid(kinds: Collection<Automations.Auto>) {
+        val now = minuteNow()
+        kinds.distinct().forEach { k -> alertUpdate { com.optionslab.ira.AlertSense.spoken(it, k.name, now) } }
     }
 
     /** Boss asked something, opened the app or muted Jarvis: the alert said just before it is marked (no write otherwise). */

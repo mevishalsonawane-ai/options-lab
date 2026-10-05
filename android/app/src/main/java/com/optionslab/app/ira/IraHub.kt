@@ -1047,7 +1047,11 @@ object IraHub {
         val alerts = com.optionslab.ira.Watch.check(_state.value.snaps, histories.mapValues { it.value.bars.takeLast(KEEP_DAYS * 375) }, arms, limit)
         for (a in alerts) {
             if (!synchronized(alerted) { alerted.add("${a.key}|$day") }) continue
-            JarvisPopup.show(c, a.title, a.text)
+            // A market alert pops up unless one about the same move just did ([IraAirtime]; never spoken); an arm's
+            // loss is a safety warning and always pops up.
+            val w = com.optionslab.ira.Airtime.ofWatch(a, LocalDateTime.now(IST))
+            if (w == null) JarvisPopup.show(c, a.title, a.text)
+            else IraAirtime.offer(w.source, w.subject, w.up, a.title, a.text, w.spoken, w.brief, voice = false)
             reply(a.text)
         }
     }
@@ -1119,7 +1123,14 @@ object IraHub {
         val alertAsk = if (com.optionslab.app.BuildConfig.JARVIS && parsed.order == null) runCatching { com.optionslab.ira.AlertSense.asked(q) }.getOrNull() else null
         if (alertAsk != null) {
             _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
-            scope.launch { reply(if (alertAsk == com.optionslab.ira.AlertSense.Request.ALL) IraTools.alertsAll() else IraTools.alertsHeld()) }
+            scope.launch { reply(if (alertAsk == com.optionslab.ira.AlertSense.Request.ALL) IraTools.alertsAll()
+                else IraTools.alertsHeld() + (if (IraAirtime.heldToday() > 0) " " + IraAirtime.answer() else "")) }
+            return
+        }
+        // "Why so quiet?", "did you hold back any alerts?": today's market alerts - said aloud, or kept to the chat and why.
+        if (com.optionslab.app.BuildConfig.JARVIS && parsed.order == null && runCatching { com.optionslab.ira.Airtime.asked(q) }.getOrDefault(false)) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            reply(IraAirtime.answer())
             return
         }
         // IraGoldAlgo: Jarvis talks only - no order, no command (no broker there; its gold arms trade on paper by their rules).

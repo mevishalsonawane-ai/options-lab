@@ -337,7 +337,10 @@ internal object IraCoach {
         com.optionslab.app.security.SecurePrefs.put(key, m.today().toString())
         val gap = (snap.open - prev) / prev * 100
         val text = com.optionslab.ira.GapPlan.say(com.optionslab.ira.Market.BANKNIFTY, gap, gapRecord(com.optionslab.ira.GapPlan.of(gap)))
-        IraHub.note(com.optionslab.ira.Address.boss(text)); IraTools.sayAlert(Automations.Auto.GAP, com.optionslab.ira.Address.boss(text))
+        IraHub.note(com.optionslab.ira.Address.boss(text))
+        // Said through the airtime ([IraAirtime]): one line per move, a few an hour; no pop-up, as before.
+        IraAirtime.offer(com.optionslab.ira.Airtime.Source.GAP, com.optionslab.ira.Market.BANKNIFTY, gap > 0, null, text,
+            com.optionslab.ira.Address.boss(text), "BankNifty opened ${"%+.2f%%".format(java.util.Locale.ENGLISH, gap)} from the previous close")
         Automations.acted(Automations.Auto.GAP, text)
     }
 
@@ -356,8 +359,8 @@ internal object IraCoach {
             val before = synchronized(walls) { walls.put(u, now) } ?: return@runCatching
             com.optionslab.ira.OiShift.say(u, before, now).forEach { line ->
                 if (synchronized(wallTold) { wallTold.add("$day|$line") }) {
-                    IraHub.appContext()?.let { JarvisPopup.show(it, "$u: open interest moved", line) }
-                    IraHub.note(line); IraTools.sayAlert(Automations.Auto.OI, line); Automations.acted(Automations.Auto.OI, line)
+                    IraHub.note(line); Automations.acted(Automations.Auto.OI, line)
+                    IraAirtime.offer(com.optionslab.ira.Airtime.Source.OI, null, null, "$u: open interest moved", line, line, line.substringBefore(" - "))
                 }
             }
         }
@@ -387,8 +390,9 @@ internal object IraCoach {
             if (!seen || before == up) continue
             if (!synchronized(orbTold) { orbTold.add("$day|${m.name}|$up") }) continue
             val line = com.optionslab.ira.OpeningRange.alert(s, up)
-            IraHub.appContext()?.let { JarvisPopup.show(it, "${m.label}: opening range", line) }
-            IraHub.note(line); IraTools.sayAlert(Automations.Auto.ORB, line); Automations.acted(Automations.Auto.ORB, line)
+            IraHub.note(line); Automations.acted(Automations.Auto.ORB, line)
+            IraAirtime.offer(com.optionslab.ira.Airtime.Source.ORB, m, up, "${m.label}: opening range", line, line,
+                "${m.label} broke ${if (up) "above" else "below"} its opening range")
         }
     }
 
@@ -411,8 +415,10 @@ internal object IraCoach {
             val before = synchronized(momentLast) { momentLast.put("$day|${m.name}", now) } ?: continue
             for (a in com.optionslab.ira.Moments.alerts(s, bars, before, now)) {
                 if (!synchronized(momentTold) { momentTold.add("$day|${a.key}") }) continue
-                IraHub.appContext()?.let { JarvisPopup.show(it, a.title, a.text) }
-                IraHub.note(a.text); IraTools.sayAlert(Automations.Auto.MOMENTS, a.text); Automations.acted(Automations.Auto.MOMENTS, a.text)
+                IraHub.note(a.text); Automations.acted(Automations.Auto.MOMENTS, a.text)
+                // The way the price went: past the high up, past the low down, a gap filled back towards the close.
+                val up = when (a.key.substringBefore('|')) { "prevhigh" -> true; "prevlow" -> false; else -> s.prevClose?.let { s.open < it } }
+                IraAirtime.offer(com.optionslab.ira.Airtime.Source.MOMENTS, m, up, a.title, a.text, a.text, a.title)
             }
         }
     }
@@ -444,8 +450,8 @@ internal object IraCoach {
                 rs.add(read); rs.first()
             }
             val text = com.optionslab.ira.ExpiryDay.say(m, slot, first, read, IraHub.recentBars(m))
-            IraHub.appContext()?.let { JarvisPopup.show(it, "${m.label}: expiry day", text) }
-            IraHub.note(text); IraTools.sayAlert(Automations.Auto.EXPIRYDAY, text); Automations.acted(Automations.Auto.EXPIRYDAY, text)
+            IraHub.note(text); Automations.acted(Automations.Auto.EXPIRYDAY, text)
+            IraAirtime.offer(com.optionslab.ira.Airtime.Source.EXPIRYDAY, null, null, "${m.label}: expiry day", text, text, "${m.label}'s expiry-day read is in the chat")
         }
     }
 
@@ -476,8 +482,9 @@ internal object IraCoach {
         if (!seen) return
         val line = com.optionslab.ira.VixSpike.alert(v, before) ?: return
         if (!synchronized(vixTold) { vixTold.add(day) }) return
-        IraHub.appContext()?.let { JarvisPopup.show(it, "India VIX spiking", line) }
-        IraHub.note(line); IraTools.sayAlert(Automations.Auto.VIX, line); Automations.acted(Automations.Auto.VIX, line)
+        IraHub.note(line); Automations.acted(Automations.Auto.VIX, line)
+        IraAirtime.offer(com.optionslab.ira.Airtime.Source.VIX, com.optionslab.ira.Market.VIX, true, "India VIX spiking", line, line,
+            "India VIX up ${"%.1f%%".format(java.util.Locale.ENGLISH, v.changePct ?: 0.0)} on the day")
     }
 
     /** The end of the last sharp move told for each index (day|market): one move is told once. */
@@ -506,8 +513,10 @@ internal object IraCoach {
             val expiry = runCatching { com.optionslab.app.data.Market.isExpiryDay(m.name) }.getOrDefault(false)
             val c = com.optionslab.ira.SharpMove.context(mv, bars, IraHub.state.value.news, IST)
             val text = com.optionslab.ira.SharpMove.say(mv, c, expiry = expiry)
-            IraHub.appContext()?.let { JarvisPopup.show(it, "${m.label} ${"%+.2f%%".format(java.util.Locale.ENGLISH, mv.pct)} in ${mv.minutes} minutes", text) }
-            IraHub.note(text); JarvisVoice.announce(com.optionslab.ira.SharpMove.spoken(mv, c)); Automations.acted(Automations.Auto.SHARPMOVE, text)
+            IraHub.note(text); Automations.acted(Automations.Auto.SHARPMOVE, text)
+            val pct = "%.2f%%".format(java.util.Locale.ENGLISH, kotlin.math.abs(mv.pct))
+            IraAirtime.offer(com.optionslab.ira.Airtime.Source.SHARPMOVE, m, mv.up, "${m.label} ${"%+.2f%%".format(java.util.Locale.ENGLISH, mv.pct)} in ${mv.minutes} minutes",
+                text, com.optionslab.ira.SharpMove.spoken(mv, c), "${m.label} ${if (mv.up) "rose" else "fell"} $pct in ${mv.minutes} minutes")
         }
     }
 
