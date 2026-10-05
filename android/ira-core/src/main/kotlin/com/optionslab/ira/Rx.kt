@@ -9,7 +9,7 @@ import java.util.concurrent.ConcurrentHashMap
  * exactly as before. Only for patterns fixed in the code (never built from what Boss says): at most [KEPT] are kept.
  */
 internal object Rx {
-    const val KEPT = 1024
+    const val KEPT = 4096   // 1024 filled up as the readers grew (5 Oct): a pattern past it was compiled afresh every time
     private val kept = ConcurrentHashMap<String, Regex>()
 
     private val keptIgnoringCase = ConcurrentHashMap<String, Regex>()
