@@ -452,6 +452,17 @@ object Tasks {
      * cushion to breakeven, and every price alarm. Risk alerts fire once each.
      */
     suspend fun watchTick(context: Context, s: AppSettings, fired: MutableSet<String>): Tick {
+        // One pass: the words-only checks and the notice's P&L line share one Zerodha positions read (dropped on any
+        // order, change or cancel); everything that orders still reads fresh.
+        com.optionslab.app.data.Broker.passBegin()
+        try {
+            return watchTickOnce(context, s, fired)
+        } finally {
+            com.optionslab.app.data.Broker.passEnd()
+        }
+    }
+
+    private suspend fun watchTickOnce(context: Context, s: AppSettings, fired: MutableSet<String>): Tick {
         riskSteps(context, s)
         // The three index quotes at once, each given at most 20 s: a hung feed cannot stall the watch. The
         // Upstox read uses short timeouts and is cancellable mid-read, so the deadline really ends it.
@@ -492,7 +503,7 @@ object Tasks {
             val keys = Alarms.all().filter { it.enabled && ':' in it.symbol }.map { it.symbol }.distinct()
             if (keys.isNotEmpty()) runCatching { kotlinx.coroutines.withTimeoutOrNull(20_000) { b.quotes(keys) } }.getOrNull()?.forEach { (k, v) -> prices[k] = v.last }
             // The account's P&L: recorded for the day's curve, and alerted on the owner's levels.
-            runCatching { kotlinx.coroutines.withTimeoutOrNull(20_000) { b.positionBook() } }.getOrNull()?.takeIf { it.net.isNotEmpty() }?.let { book ->
+            runCatching { kotlinx.coroutines.withTimeoutOrNull(20_000) { b.passPositionBook() } }.getOrNull()?.takeIf { it.net.isNotEmpty() }?.let { book ->
                 com.optionslab.app.data.PnlTracker.record(book.pnl)
                 runCatching { com.optionslab.app.data.DailyPnl.record(true, book.m2m, -1) }
                 accountPnl = book.pnl

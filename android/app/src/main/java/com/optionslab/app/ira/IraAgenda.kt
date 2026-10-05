@@ -54,7 +54,7 @@ internal object IraAgenda {
         val b = com.optionslab.app.data.Broker
         if (live && b.loggedIn) {
             // The read blocks on the network: run apart, so the 15 s limit really ends the wait.
-            val read = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).async { runCatching { b.positionBook().net.count { it.open } }.getOrNull() }
+            val read = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).async { runCatching { b.passPositionBook().net.count { it.open } }.getOrNull() }
             return kotlinx.coroutines.withTimeoutOrNull(15_000) { read.await() }
         }
         return runCatching { com.optionslab.app.data.Paper.snapshot().positions.positions.count { it.quantity != 0 } }.getOrNull()

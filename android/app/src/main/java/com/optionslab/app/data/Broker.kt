@@ -54,6 +54,13 @@ object Broker {
     private const val K_SENT_DAY = "kite.sentDay"
     private const val K_SENT = "kite.sentCount"
 
+    /**
+     * The positions read shared within one market-watch pass ([passPositionBook], [com.optionslab.ira.PassShare]): the
+     * words-only checks of a pass read Zerodha's positions once, not once each. Nothing that orders uses it.
+     */
+    private const val PASS_BOOK_MS = 20_000L
+    private val passBook = com.optionslab.ira.PassShare<Positions>(PASS_BOOK_MS)
+
     fun init(context: Context) { app = context.applicationContext }
 
     class NotLoggedIn : IOException("Log in to Zerodha for today first")
@@ -98,6 +105,7 @@ object Broker {
     fun dropBioSealed() { SecurePrefs.put(K_BIO_SEALED, null) }
 
     fun forget() {
+        passBook.drop()
         KiteStream.stop()
         com.optionslab.app.security.BiometricGate.forgetSecretKey()
         SecurePrefs.putAll(mapOf(K_KEY to null, K_SECRET to null, K_SEALED to null, K_BIO_SEALED to null, K_REDIRECT to null, K_TOKEN to null,
@@ -120,7 +128,7 @@ object Broker {
     /** The session token for the live price stream (never logged, never shown). */
     internal fun streamToken(): String? = if (loggedIn) SecurePrefs.getString(K_TOKEN) else null
 
-    private fun dropSession() { KiteStream.stop(); SecurePrefs.putAll(mapOf(K_TOKEN to null, K_LOGIN_AT to null)) }
+    private fun dropSession() { passBook.drop(); KiteStream.stop(); SecurePrefs.putAll(mapOf(K_TOKEN to null, K_LOGIN_AT to null)) }
 
     /** Bumped when Zerodha itself ends the session (expired or logged out elsewhere): the app asks to log in again. */
     val sessionEnded = kotlinx.coroutines.flow.MutableStateFlow(0)
@@ -160,6 +168,9 @@ object Broker {
             val k = kv.substringBefore('='); if (k in DIAG_FIELDS) "$k: ${java.net.URLDecoder.decode(kv.substringAfter('='), "UTF-8")}" else null
         }.joinToString(" ", prefix = " {", postfix = "}").takeIf { it != " {}" }.orEmpty()
         val route = if ((method != "GET" || viaRelay) && testEndpoint == null && Relay.enabled) " via relay" else ""
+        // A write (an order, a change, a cancel) changes the positions: the pass's shared read is dropped before it is
+        // sent and again once it is answered, so no words-only check is given the book from before it.
+        if (method != "GET") passBook.drop()
         return try {
             callInner(method, path, body, auth, raw, json, viaRelay).also { r ->
                 if (method != "GET") Diag.record("zerodha", "$where$asked$route -> ok ${(r as? JSONObject)?.optString("order_id")?.takeIf { it.isNotEmpty() }?.let { "order $it " } ?: ""}(${System.currentTimeMillis() - t0} ms)")
@@ -168,6 +179,8 @@ object Broker {
             if (e !is kotlinx.coroutines.CancellationException)
                 Diag.record("zerodha", "$where$asked$route -> FAILED ${e.javaClass.simpleName}: ${e.message} (${System.currentTimeMillis() - t0} ms)")
             throw e
+        } finally {
+            if (method != "GET") passBook.drop()
         }
     }
 
@@ -374,9 +387,26 @@ object Broker {
     private fun rows(a: JSONArray?): List<JSONObject> = if (a == null) emptyList() else (0 until a.length()).map { a.getJSONObject(it) }
 
     suspend fun positionBook(): Positions {
+        // Always read fresh (stops, targets, the loss limit and the bots rely on it); within a market-watch pass the
+        // answer is also kept for the words-only checks after it ([passPositionBook]).
+        val ticket = passBook.ticket()
+        val at = passBook.now()
         val d = call("GET", "/portfolio/positions") as JSONObject
         return Positions(rows(d.optJSONArray("net")).map(::position), rows(d.optJSONArray("day")).map(::position))
+            .also { passBook.put(ticket, at, it) }
     }
+
+    /** The market watch opens and closes its pass: within it, [passPositionBook] reads Zerodha at most once. */
+    fun passBegin() = passBook.open()
+    fun passEnd() = passBook.close()
+
+    /**
+     * Positions for words only - the Jarvis heads-up, trades going nowhere, the day's target, the plan, the 15:10 MIS
+     * word and the watch notice's P&L line; never for anything that places, changes or closes an order. Within a
+     * market-watch pass this is the pass's one read (at most [PASS_BOOK_MS] old; any write to Zerodha or a session end
+     * drops it); outside a pass, and when there is none yet, Zerodha is read now. A failed read is never kept.
+     */
+    suspend fun passPositionBook(): Positions = passBook.share { positionBook() }
 
     suspend fun positions(): List<Position> = positionBook().net
 

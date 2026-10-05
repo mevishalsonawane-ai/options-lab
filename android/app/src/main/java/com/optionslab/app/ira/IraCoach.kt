@@ -247,7 +247,7 @@ internal object IraCoach {
             open += com.optionslab.ira.HeadsUp.Pos("P:${it.symbol}", it.symbol, false, it.quantity, it.averagePrice, it.ltp) } }
         if (Broker.loggedIn) {
             // The read blocks on the network: run apart, so the 15 s limit really ends the wait (the read itself may go on).
-            val read = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).async { runCatching { Broker.positionBook().net }.getOrNull() }
+            val read = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).async { runCatching { Broker.passPositionBook().net }.getOrNull() }
             kotlinx.coroutines.withTimeoutOrNull(15_000) { read.await() }?.filter { it.qty != 0 }?.forEach {
                 open += com.optionslab.ira.HeadsUp.Pos("L:${it.symbol}", it.symbol, true, it.qty, it.avg, it.last) }
         }
@@ -275,7 +275,7 @@ internal object IraCoach {
         val key = "jarvis.mis.told"
         if (com.optionslab.app.security.SecurePrefs.getString(key) == m.today().toString()) return
         // The read blocks on the network: run apart, so the 15 s limit really ends the wait (the read itself may go on).
-        val read = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).async { runCatching { Broker.positionBook().net }.getOrNull() }
+        val read = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).async { runCatching { Broker.passPositionBook().net }.getOrNull() }
         val open = kotlinx.coroutines.withTimeoutOrNull(15_000) { read.await() } ?: return
         com.optionslab.app.security.SecurePrefs.put(key, m.today().toString())
         val mis = open.filter { it.product.equals("MIS", true) && it.qty != 0 }.map { it.symbol to it.qty }

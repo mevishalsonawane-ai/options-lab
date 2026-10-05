@@ -100,7 +100,7 @@ internal object IraJournal {
     suspend fun targetWatch() {
         if (!com.optionslab.app.BuildConfig.JARVIS || !Automations.on(Automations.Auto.TARGET)) return
         val t = target() ?: return
-        val pnl = (if (AppSettings.load().live && Broker.loggedIn) runCatching { Broker.positionBook().net.sumOf { it.pnl } }.getOrNull() else pnlNow()) ?: return
+        val pnl = (if (AppSettings.load().live && Broker.loggedIn) runCatching { Broker.passPositionBook().net.sumOf { it.pnl } }.getOrNull() else pnlNow()) ?: return
         if (!com.optionslab.ira.DayTarget.reached(pnl, t)) return
         val key = "jarvis.target.told"
         if (com.optionslab.app.security.SecurePrefs.getString(key) == com.optionslab.app.data.Market.today().toString()) return
@@ -128,7 +128,7 @@ internal object IraJournal {
         val bots = IraCoach.botSymbols()
         val open = ArrayList<Triple<String, Boolean, Pair<Double, Double>>>()   // symbol, live, (avg, ltp)
         runCatching { Paper.snapshot().positions.positions.filter { it.quantity > 0 }.forEach { open += Triple(it.symbol, false, it.averagePrice to it.ltp) } }
-        if (Broker.loggedIn) runCatching { Broker.positionBook().net.filter { it.qty > 0 }.forEach { open += Triple(it.symbol, true, it.avg to it.last) } }
+        if (Broker.loggedIn) runCatching { Broker.passPositionBook().net.filter { it.qty > 0 }.forEach { open += Triple(it.symbol, true, it.avg to it.last) } }
         val keys = open.map { (s, l, _) -> (if (l) "L:" else "P:") + s }.toSet()
         synchronized(firstSeen) { firstSeen.keys.retainAll(keys) }
         val day = com.optionslab.app.data.Market.today().toString()
@@ -157,7 +157,7 @@ internal object IraJournal {
         } }
         if (Broker.loggedIn) runCatching {
             val ins = Broker.cachedInstruments().orEmpty().associateBy { it.tradingSymbol }
-            Broker.positionBook().net.filter { it.open }.forEach { p ->
+            Broker.passPositionBook().net.filter { it.open }.forEach { p ->
                 val i = ins[p.symbol] ?: return@forEach
                 val m = marketOf(i.name) ?: return@forEach
                 out += com.optionslab.ira.PositionNews.Held(p.symbol, m, i.right == com.optionslab.engine.Right.CE, p.qty > 0)
