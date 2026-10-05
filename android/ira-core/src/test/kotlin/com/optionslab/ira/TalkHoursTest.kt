@@ -82,6 +82,16 @@ class TalkHoursTest {
         assertTrue(Learnings.undo(Learnings.Inputs(hours = TalkHours.reset(log, now)), now).empty)
     }
 
+    @Test fun morningCheckRemindersRepliesAndWarningsAreNeverShortened() {
+        // Only an unasked, non-urgent announcement not said in full may be shortened.
+        assertTrue(TalkHours.mayShorten(prompted = false, urgent = false, full = false))
+        // The 09:00 morning check and Boss's own reminders (full), safety warnings (urgent) and replies (prompted): never.
+        assertFalse(TalkHours.mayShorten(prompted = false, urgent = false, full = true))
+        assertFalse(TalkHours.mayShorten(prompted = false, urgent = true, full = false))
+        assertFalse(TalkHours.mayShorten(prompted = true, urgent = false, full = false))
+        assertFalse(TalkHours.mayShorten(prompted = true, urgent = true, full = true))
+    }
+
     @Test fun askedWordings() {
         for (s in listOf("when do I usually talk to you", "what time of day do I talk to you?", "which hours do you keep briefings short",
             "why was the briefing so short", "Jarvis, why do you keep your updates short", "main tumse kab baat karta hoon"))

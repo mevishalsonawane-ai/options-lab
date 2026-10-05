@@ -2,6 +2,8 @@ package com.optionslab.ira
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 class SayAsTest {
     @Test fun amountsOfALakhOrMoreAreSaidInLakhAndCrore() {
@@ -75,10 +77,21 @@ class SayAsTest {
         assertEquals(Regex("[.!?](\\s|$)").findAll(line).count(), Regex("[.!?](\\s|$)").findAll(said).count())
         assertEquals(said, SayAs.figures(said))
         assertEquals("It reads bad for Nifty. Next.", SayAs.figures("It reads bad for Nifty (word tone -1.5). Next."))
-        assertEquals("Liquidity 15 plus 5 and 2 plus 3", SayAs.figures("Liquidity 15 + 5 and 2+3"))
+        assertEquals("Liquidity 15 plus 5 and 2 plus 3", SayAs.figures("Liquidity 15+5 and 2+ 3"))
         assertEquals("लिक्विडिटी 15 प्लस 5", SayAs.figures("लिक्विडिटी 15+5", hindi = true))
         // A sign before a lone figure, a phone number and other brackets stay as written.
         listOf("Nifty +0.4 percent", "Call +91 98765", "Nifty (tone +0.5) up").forEach { assertEquals(it, SayAs.figures(it)) }
         assertEquals("up plus 1.5 lakh rupees", SayAs.figures("up Rs +1,50,000"))
+    }
+
+    @Test fun aLevelAndItsChangeAreNeverASum() {
+        // A space before the plus, a comma or a long figure on its left: a level and its change, never "plus" between them.
+        for (s in listOf("Nifty 24,512 +85 today", "Nifty 24512 +85", "Nifty 24512+85", "24,512+85", "Bank Nifty 51,200 + 120",
+            "15 + 5", "1.5+2"))
+            assertFalse(SayAs.figures(s).contains(" plus "), s)
+        assertTrue(SayAs.figures("Nifty 24,512 +85 today").contains("+85"))
+        // A short whole number joined to the next figure is still a sum.
+        assertEquals("ORB, Liquidity 15 plus 5", SayAs.figures("ORB, Liquidity 15+5"))
+        assertEquals("(2 plus 3)", SayAs.figures("(2+3)"))
     }
 }

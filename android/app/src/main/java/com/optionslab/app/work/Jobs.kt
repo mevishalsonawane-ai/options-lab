@@ -369,19 +369,25 @@ object Tasks {
     /**
      * One named step of the watch: what it is doing is shown to [Heartbeat] (so a stuck watch can say what it waits on),
      * and a failure is kept, never thrown (one bad step must not end a pass). Names are the app's own words, never data.
+     * A cancellation is passed on only when the pass itself was cancelled; one from inside the step (a timeout that
+     * escaped it) is kept like any failure, so the steps after it still run.
      */
-    private inline fun step(name: String, block: () -> Unit) {
+    private suspend inline fun step(name: String, block: () -> Unit) {
         Heartbeat.stepBegin(name)
         try {
             block()
         } catch (e: kotlinx.coroutines.CancellationException) {
-            throw e
+            if (!passActive()) throw e
+            stepFailed(name, e)
         } catch (e: Throwable) {
             stepFailed(name, e)
         } finally {
             Heartbeat.stepEnd()
         }
     }
+
+    /** Is the coroutine running this pass still active (false: it was cancelled, and a cancellation must go up)? */
+    private suspend fun passActive(): Boolean = kotlinx.coroutines.currentCoroutineContext()[Job]?.isActive ?: true
 
     /** When each step last failed: the diary gets one line a minute per step at most. */
     private val failedAt = java.util.concurrent.ConcurrentHashMap<String, Long>()
@@ -455,27 +461,45 @@ object Tasks {
         }
     }
 
-    private inline fun word(name: String, block: () -> Unit) {
+    private suspend inline fun word(name: String, block: () -> Unit) {
         wordsStep = name
         try {
             block()
         } catch (e: kotlinx.coroutines.CancellationException) {
-            throw e
+            // Passed on only when the lane itself was cancelled; one from inside the check is kept, the round goes on.
+            if (!passActive()) throw e
+            stepFailed("Jarvis $name", e)
         } catch (e: Throwable) {
             stepFailed("Jarvis $name", e)
         }
     }
 
     private suspend fun wordsSteps() {
+        // The safety words first in each round (a position eating the loss limit, MIS before 15:10, the 14:45 health
+        // check, the expiry heads-up, the feed or the relay stopped, overtrading, a bot misbehaving): never behind a slow
+        // pattern, news or candle read.
+        // Jarvis: one position losing a big share of Boss's daily loss limit, or a sold option mostly decayed (words only).
+        word("heads-up") { com.optionslab.app.ira.IraCoach.headsUpWatch() }
+        // Jarvis: open Zerodha MIS positions named at 15:10, before Zerodha's own square-off (words only).
+        word("MIS word") { com.optionslab.app.ira.IraCoach.misWatch() }
+        // Jarvis: 14:45 on a day a position expires, the position health check in the chat and a few words (counts only).
+        word("position health") { com.optionslab.app.ira.IraCoach.healthWatch() }
+        // Jarvis: the 14:55 expiry heads-up; live prices that stopped.
+        word("expiry preview") { com.optionslab.app.ira.IraHub.expiryPreview() }
+        word("feed watch") { com.optionslab.app.ira.IraHub.feedWatch() }
+        // Jarvis: the static-IP relay server not answering is told before a login or an order fails on it.
+        word("relay watch") { com.optionslab.app.ira.IraCoach.relayWatch() }
+        // Jarvis: too many trades too fast.
+        word("overtrading") { com.optionslab.app.ira.IraCoach.overtradeWatch() }
+        // Jarvis: a strategy of Boss's behaving unusually against its tested record - told once a day without amounts,
+        // stopping it asked first (reads the app's own books, every five minutes at most).
+        word("bot review") { com.optionslab.app.ira.IraBots.watch() }
         // Jarvis: every 15 minutes in market hours, Jarvis looks for a pattern worth a strategy and notifies it.
         word("pattern check") { com.optionslab.app.ira.IraHub.backgroundCheck() }
         // Jarvis: the news every 5 minutes, judged for your arms and positions.
         word("news") { com.optionslab.app.ira.IraHub.newsWatch() }
         // Jarvis: the candle-pattern expert at each 5- and 15-minute close; a qualifying pattern becomes a trade to approve.
         word("candle expert") { com.optionslab.app.ira.IraHub.expertWatch() }
-        // Jarvis: the 14:55 expiry heads-up; live prices that stopped.
-        word("expiry preview") { com.optionslab.app.ira.IraHub.expiryPreview() }
-        word("feed watch") { com.optionslab.app.ira.IraHub.feedWatch() }
         word("ORB coach") { com.optionslab.app.ira.IraCoach.orbWatch() }
         word("moments") { com.optionslab.app.ira.IraCoach.momentsWatch() }
         // Jarvis: on an index's expiry day, the straddle's decay, spot against max pain and the last hour, at set times.
@@ -483,11 +507,8 @@ object Tasks {
         word("VIX") { com.optionslab.app.ira.IraCoach.vixWatch() }
         // Jarvis: a sharp move within minutes - what coincided with it (headlines, VIX, the other indices), timing only.
         word("sharp move") { com.optionslab.app.ira.IraCoach.sharpMoveWatch() }
-        // Jarvis: too many trades too fast; the opening gap plan.
-        word("overtrading") { com.optionslab.app.ira.IraCoach.overtradeWatch() }
+        // Jarvis: the opening gap plan.
         word("gap") { com.optionslab.app.ira.IraCoach.gapWatch() }
-        // Jarvis: the static-IP relay server not answering is told before a login or an order fails on it.
-        word("relay watch") { com.optionslab.app.ira.IraCoach.relayWatch() }
         // Jarvis: not logged in to Zerodha a few minutes before the open while something needs it - said once.
         word("login watch") { com.optionslab.app.ira.IraCoach.loginWatch() }
         // Jarvis: Boss's usual market question at its usual hour, answered unasked (once a day each).
@@ -506,15 +527,6 @@ object Tasks {
         // Jarvis: the day's target reached; a trade of yours going nowhere is offered a close (asked first).
         word("day target") { com.optionslab.app.ira.IraJournal.targetWatch() }
         word("stale trades") { com.optionslab.app.ira.IraJournal.staleWatch() }
-        // Jarvis: one position losing a big share of Boss's daily loss limit, or a sold option mostly decayed (words only).
-        word("heads-up") { com.optionslab.app.ira.IraCoach.headsUpWatch() }
-        // Jarvis: open Zerodha MIS positions named at 15:10, before Zerodha's own square-off (words only).
-        word("MIS word") { com.optionslab.app.ira.IraCoach.misWatch() }
-        // Jarvis: 14:45 on a day a position expires, the position health check in the chat and a few words (counts only).
-        word("position health") { com.optionslab.app.ira.IraCoach.healthWatch() }
-        // Jarvis: a strategy of Boss's behaving unusually against its tested record - told once a day without amounts,
-        // stopping it asked first (reads the app's own books, every five minutes at most).
-        word("bot review") { com.optionslab.app.ira.IraBots.watch() }
         // Jarvis: each bot's switch and whether it ended the day down or up (names and signs only) - a record only.
         word("bot switches") { com.optionslab.app.ira.IraBots.noteSwitches() }
         // Jarvis: the market alerts found in this round said as one line - one per move, a few an hour (last, so it
@@ -540,14 +552,6 @@ object Tasks {
         step("ORB arms") { com.optionslab.app.data.OrbArms.tick() }
         // Pine scripts set to auto-trade: decide on each completed candle, sell at 15:15.
         step("Pine scripts") { com.optionslab.app.data.PineAuto.tick() }
-        // Jarvis: approved news trades - the best price seen, the profit-lock stop moved up, the result recorded.
-        if (com.optionslab.app.BuildConfig.JARVIS) step("Jarvis's trades") { com.optionslab.app.ira.IraNewsTrades.tick() }
-        // Solo (paper only, Boss's switch): its open trade managed, or the next one looked for.
-        if (com.optionslab.app.BuildConfig.JARVIS) step("Solo") { com.optionslab.app.ira.IraSolo.tick() }
-        // Jarvis: a position with no stop is offered one (or given one, when Boss switched that on).
-        step("stop rescue") { com.optionslab.app.ira.IraHub.rescueWatch() }
-        // Jarvis: your own stops trailed up automatically (Boss's switch).
-        step("trailing stops") { com.optionslab.app.ira.IraCoach.trailWatch() }
         // Stops, trailing stops and targets: one exit filled cancels the other; trails move up.
         step("stops and targets") { com.optionslab.app.data.Protections.tick() }
         // Expiry day, 15:05: close every option position expiring today (paper and live, all products).
@@ -557,6 +561,16 @@ object Tasks {
             val bad = com.optionslab.app.security.Integrity.compromised(com.optionslab.app.security.Integrity.reportWithin(context, 60_000))
             com.optionslab.app.data.Strategies.tickAll(bad)
         }
+        // Jarvis's own trade management after the stops, the square-off and the strategies (their Zerodha reads are
+        // bounded, but they never go first).
+        // Jarvis: approved news trades - the best price seen, the profit-lock stop moved up, the result recorded.
+        if (com.optionslab.app.BuildConfig.JARVIS) step("Jarvis's trades") { com.optionslab.app.ira.IraNewsTrades.tick() }
+        // Solo (paper only, Boss's switch): its open trade managed, or the next one looked for.
+        if (com.optionslab.app.BuildConfig.JARVIS) step("Solo") { com.optionslab.app.ira.IraSolo.tick() }
+        // Jarvis: a position with no stop is offered one (or given one, when Boss switched that on).
+        step("stop rescue") { com.optionslab.app.ira.IraHub.rescueWatch() }
+        // Jarvis: your own stops trailed up automatically (Boss's switch).
+        step("trailing stops") { com.optionslab.app.ira.IraCoach.trailWatch() }
         // Every open position's notification, with its live P&L and a Close button.
         step("position cards") { PositionCards.refresh(context) }
         // The money steps are done: that is a check, whatever the quotes and Jarvis's words below wait on.
@@ -948,14 +962,29 @@ class WatchService : Service() {
                 } else delay(if (holding) 15_000 else next - System.currentTimeMillis())
                 if (holding) {
                     Heartbeat.stepBegin("15-second stop check")
+                    // Each in its own try: a paper or ORB failure never skips the stops and targets.
                     try {
-                        com.optionslab.app.data.Paper.tick().let { Tasks.paperEventsPublic(this, it) }
-                        com.optionslab.app.data.OrbArms.priceCheckOnly()
-                        com.optionslab.app.data.Protections.tick()
-                    } catch (e: kotlinx.coroutines.CancellationException) {
-                        throw e
-                    } catch (e: Throwable) {
-                        Tasks.stepFailed("15-second stop check", e)
+                        try {
+                            com.optionslab.app.data.Paper.tick().let { Tasks.paperEventsPublic(this, it) }
+                        } catch (e: kotlinx.coroutines.CancellationException) {
+                            throw e
+                        } catch (e: Throwable) {
+                            Tasks.stepFailed("15-second stop check: paper orders", e)
+                        }
+                        try {
+                            com.optionslab.app.data.OrbArms.priceCheckOnly()
+                        } catch (e: kotlinx.coroutines.CancellationException) {
+                            throw e
+                        } catch (e: Throwable) {
+                            Tasks.stepFailed("15-second stop check: ORB arms", e)
+                        }
+                        try {
+                            com.optionslab.app.data.Protections.tick()
+                        } catch (e: kotlinx.coroutines.CancellationException) {
+                            throw e
+                        } catch (e: Throwable) {
+                            Tasks.stepFailed("15-second stop check: stops and targets", e)
+                        }
                     } finally { Heartbeat.stepEnd() }
                     runCatching { PositionCards.refresh(this) }
                 }

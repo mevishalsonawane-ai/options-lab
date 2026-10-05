@@ -28,7 +28,8 @@ object JarvisSpeaker {
      * when it is on, else through this one when "Morning check aloud" is on - never when muted or in quiet hours.
      */
     fun morning(context: Context, text: String) {
-        if (JarvisVoice.announce(text)) return
+        // In full at any hour: a kill switch on or Zerodha not logged in is never cut to "the rest is in the chat".
+        if (JarvisVoice.announce(text, full = true)) return
         if (!com.optionslab.app.BuildConfig.JARVIS || JarvisVoice.muted || JarvisVoice.quietNow() || !Automations.on(Automations.Auto.MORNING_VOICE)) return
         speak(context, text, 8)
     }

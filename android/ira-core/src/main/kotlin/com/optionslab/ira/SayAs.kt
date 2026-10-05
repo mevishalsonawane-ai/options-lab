@@ -42,8 +42,12 @@ object SayAs {
     private val PREFIXED = Regex("(?:\\bRs\\.?|₹|\\bINR)\\s?([+-]?)$NUM(?![\\w,]|\\.\\d)( crore\\b)?")
     private val BARE = Regex("(?<![\\w.,])$NUM(?![\\w,]|\\.\\d)( rupees crore\\b| crore\\b)?")
     private val RUPEES_CRORE = Regex("(\\d) rupees crore\\b")
-    /** A plus between two figures, unspaced or spaced ("15+5", "15 + 5"). */
-    private val PLUS = Regex("(?<=\\d) ?\\+ ?(?=\\d)")
+    /**
+     * A plus joining a short whole number to a figure ("15+5", "2+3"): nothing between the number and the plus, and that
+     * number at most three digits with no comma or decimal - so a level and its change ("24,512 +85", "24512 +85") is
+     * never read as a sum.
+     */
+    private val PLUS = Regex("(?<![\\w,.])(\\d{1,3})\\+ ?(?=\\d)")
     /** The news line's word-list score ([NewsAnalyst.take]): " (word tone +0.0)". */
     private val WORD_TONE = Regex(" ?\\(word tone [+-]?\\d+(?:\\.\\d+)?\\)")
 
@@ -54,7 +58,7 @@ object SayAs {
         if (text.isEmpty() || !hasDigit(text)) return text
         var s = text
         if (s.contains("(word tone ")) s = WORD_TONE.replace(s, "")
-        if (s.indexOf('+') >= 0) s = PLUS.replace(s, if (hindi) " प्लस " else " plus ")
+        if (s.indexOf('+') >= 0) s = PLUS.replace(s, if (hindi) "\$1 प्लस " else "\$1 plus ")
         if (sided(s)) {
             s = OPTION.replace(s) { m -> option(m, hindi) ?: m.value }
             s = PLAIN_OPTION.replace(s) { m -> "${INDEX[m.groupValues[1]]} ${group(m.groupValues[2])} ${side(m.groupValues[3], hindi)}" }

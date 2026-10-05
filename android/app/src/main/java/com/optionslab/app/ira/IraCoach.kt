@@ -48,7 +48,8 @@ internal object IraCoach {
         if (mine.isEmpty()) return
         val bots = botSymbols()
         val paper = runCatching { Paper.snapshot().positions.positions.filter { it.quantity > 0 }.associateBy { it.symbol } }.getOrDefault(emptyMap())
-        val live = if (mine.any { it.live } && Broker.loggedIn) runCatching { Broker.positionBook().net.filter { it.qty > 0 }.associateBy { it.symbol } }.getOrDefault(emptyMap()) else emptyMap()
+        // A Zerodha read with a deadline (it runs in the risk pass): slow or failed, the live stops are not trailed this pass.
+        val live = if (mine.any { it.live } && Broker.loggedIn) Broker.within(8_000) { Broker.positionBook().net.filter { it.qty > 0 }.associateBy { it.symbol } }.orEmpty() else emptyMap()
         val now = LocalDateTime.now(IST)
         for (it in mine) {
             if (it.symbol in bots) continue
@@ -987,8 +988,9 @@ internal object IraCoach {
         } }
         if (Broker.loggedIn) runCatching {
             val ins = Broker.cachedInstruments().orEmpty().associateBy { it.tradingSymbol }
-            // The broker is not waited on past 8 seconds (a hung read would hang the wrap-up).
-            val open = kotlinx.coroutines.withTimeoutOrNull(8_000) { Broker.positionBook() }?.net.orEmpty().filter { it.open }
+            // The broker is not waited on past 8 seconds (a hung read would hang the wrap-up): run apart, so the deadline
+            // holds even while the blocking read does not suspend.
+            val open = Broker.within(8_000) { Broker.positionBook() }?.net.orEmpty().filter { it.open }
             open.forEach { p ->
                 val i = ins[p.symbol] ?: return@forEach
                 if (i.expiry != expiry) return@forEach

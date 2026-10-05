@@ -297,9 +297,11 @@ internal object IraNewsTrades {
         val list = all()
         if (list.none { !it.closed || (it.result == null && recent(it)) }) return@withLock
         val paperNet = runCatching { Paper.state.positions }.getOrNull()
-        val liveNet = if (list.any { it.live && !it.closed }) runCatching { com.optionslab.app.data.Broker.positionBook().net }.getOrNull() else null
+        // Zerodha reads with a deadline (this runs in the risk pass): slow or failed, that trade is looked at next pass.
+        val liveNet = if (list.any { it.live && !it.closed }) com.optionslab.app.data.Broker.within(8_000) { com.optionslab.app.data.Broker.positionBook().net } else null
         if (list.any { it.live && it.closed && it.result == null && recent(it) })
-            runCatching { com.optionslab.app.data.TradeBook.recordLive(com.optionslab.app.data.Broker.trades()) }
+            com.optionslab.app.data.Broker.within(8_000) { com.optionslab.app.data.Broker.trades() }
+                ?.let { t -> runCatching { com.optionslab.app.data.TradeBook.recordLive(t) } }
         val out = list.map { p ->
             if (p.closed) {
                 // Closed before its trip reached the trade book: look again for a few days.
@@ -316,7 +318,7 @@ internal object IraNewsTrades {
                 return@map p.copy(closed = true, result = r, spotOut = p.underlying?.let { spotOf(it) },
                     minuteOut = java.time.LocalTime.now(java.time.ZoneId.of("Asia/Kolkata")).let { it.hour * 60 + it.minute })
             }
-            val ltp = runCatching { if (p.live) com.optionslab.app.data.Broker.quotes(listOf("NFO:${p.symbol}"))["NFO:${p.symbol}"]?.last
+            val ltp = runCatching { if (p.live) com.optionslab.app.data.Broker.within(5_000) { com.optionslab.app.data.Broker.quotes(listOf("NFO:${p.symbol}"))["NFO:${p.symbol}"]?.last }
                 else Paper.contractOf(p.symbol)?.let { Paper.lastPrice(it) } }.getOrNull() ?: return@map p
             val peak = maxOf(p.peak, ltp)
             val lock = ProfitLock.level(p.entry, TARGET_POINTS, peak)

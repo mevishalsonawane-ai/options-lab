@@ -98,6 +98,13 @@ object TalkHours {
         return Address.boss(parts[0].trim() + " The rest is in the chat.")
     }
 
+    /**
+     * May an announcement go through [aloud] at all? Never a reply to Boss ([prompted]), never a safety warning
+     * ([urgent]), and never one said [full]: the 09:00 morning check (a kill switch on, Zerodha not logged in, a battery
+     * warning - it shortens its own minor items) and Boss's own reminders (his words).
+     */
+    fun mayShorten(prompted: Boolean, urgent: Boolean, full: Boolean): Boolean = !prompted && !urgent && !full
+
     /** "09:00 to 11:00 and 14:00 to 15:00": [hours] as spans. */
     fun spans(hours: List<Int>): String {
         val out = ArrayList<String>()

@@ -787,14 +787,22 @@ object IraHub {
         val open = ArrayList<Pair<com.optionslab.ira.Rescue.Open, String>>()
         runCatching { com.optionslab.app.data.Paper.snapshot().positions.positions.filter { it.quantity != 0 }
             .forEach { open += com.optionslab.ira.Rescue.Open(it.symbol, false, it.quantity, it.averagePrice, it.ltp) to it.product } }
-        if (com.optionslab.app.data.Broker.loggedIn) runCatching { com.optionslab.app.data.Broker.positionBook().net.filter { it.open && it.exchange == "NFO" }
-            .forEach { open += com.optionslab.ira.Rescue.Open(it.symbol, true, it.qty, it.avg, it.last) to it.product } }
+        // Zerodha reads with a deadline (this runs in the risk pass): slow or failed, the live positions wait for the next pass.
+        if (com.optionslab.app.data.Broker.loggedIn) com.optionslab.app.data.Broker.within(8_000) { com.optionslab.app.data.Broker.positionBook() }
+            ?.net?.filter { it.open && it.exchange == "NFO" }
+            ?.forEach { open += com.optionslab.ira.Rescue.Open(it.symbol, true, it.qty, it.avg, it.last) to it.product }
         // Nothing open (most passes): nothing can be bare, so the stop orders are not read (a Zerodha read each pass).
         if (open.isEmpty()) { synchronized(unguardedSince) { unguardedSince.clear() }; return }
         runCatching { com.optionslab.app.data.Paper.snapshot().orders.orders.filter { o -> o.priceType.uppercase() in setOf("SL", "SL-M") &&
             o.status.lowercase() !in setOf("complete", "cancelled", "rejected") }.forEach { guarded += "P:" + it.symbol } }
-        if (com.optionslab.app.data.Broker.loggedIn) runCatching { com.optionslab.app.data.Broker.orders().filter { o -> o.working && o.type in setOf("SL", "SL-M") }
-            .forEach { guarded += "L:" + it.symbol } }
+        if (com.optionslab.app.data.Broker.loggedIn) {
+            val liveOrders = com.optionslab.app.data.Broker.within(8_000) { com.optionslab.app.data.Broker.orders() }
+            // Zerodha's stop orders not read in time: no live position is called bare this pass (never a stop offered on
+            // one that has its own).
+            if (liveOrders == null) open.removeAll { it.first.live }
+            else liveOrders.filter { o -> o.working && o.type in setOf("SL", "SL-M") }.forEach { guarded += "L:" + it.symbol }
+            if (open.isEmpty()) return
+        }
         // The bots (ORB arms, Pine scripts, strategy runs) manage their own exits: only positions they do not hold.
         val bots = HashSet<String>()
         runCatching { com.optionslab.app.data.OrbArms.view().arms.mapNotNull { it.open?.symbol }.forEach { bots += it } }
@@ -817,8 +825,11 @@ object IraHub {
             // Set alone only when nothing else could close it too: no working order on it at all and, at Zerodha, no GTT
             // on it (a GTT or a resting exit filling alongside the stop would leave a short). Otherwise only offered.
             val clear = guard && runCatching {
-                if (p.live) com.optionslab.app.data.Broker.orders().none { it.working && it.symbol == p.symbol } &&
-                    com.optionslab.app.data.Broker.gtts().none { it.symbol == p.symbol && it.status.lowercase() == "active" }
+                // Read with a deadline: not read in time is not clear (only offered, never set alone).
+                if (p.live) com.optionslab.app.data.Broker.within(8_000) {
+                    com.optionslab.app.data.Broker.orders().none { it.working && it.symbol == p.symbol } &&
+                        com.optionslab.app.data.Broker.gtts().none { it.symbol == p.symbol && it.status.lowercase() == "active" }
+                } ?: false
                 else com.optionslab.app.data.Paper.snapshot().orders.orders.none { it.symbol == p.symbol &&
                     it.status.lowercase() !in setOf("complete", "cancelled", "rejected") }
             }.getOrDefault(false)

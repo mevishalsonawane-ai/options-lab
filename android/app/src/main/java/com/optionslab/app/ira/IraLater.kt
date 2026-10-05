@@ -121,7 +121,7 @@ object IraLater {
                     save(everything() + item.copy(id = System.nanoTime(), at = next.atZone(IST).toInstant().toEpochMilli()))
                 }
                 runCatching { JarvisPopup.show(context, "Jarvis", r) }
-                runCatching { JarvisVoice.announce(r) }
+                runCatching { JarvisVoice.announce(r, full = true) }
                 runCatching { IraHub.note(r) }
                 continue
             }
