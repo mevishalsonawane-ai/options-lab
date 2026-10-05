@@ -265,7 +265,10 @@ object KiteStream {
 
     /** The order watch (the foreground service that keeps the app running in the background) beat in the last 3 minutes. */
     private fun watchRunning(): Boolean? = runCatching {
-        System.currentTimeMillis() - com.optionslab.app.work.Heartbeat.last() < 180_000
+        // Its service's own pulse (alive even while a check waits on the network), or a check finished in the last 3 minutes.
+        val now = System.currentTimeMillis()
+        now - com.optionslab.app.work.Heartbeat.alivePulse < com.optionslab.ira.WatchHealth.ALIVE_MS ||
+            now - com.optionslab.app.work.Heartbeat.last() < 180_000
     }.getOrNull()
 
     /** Which network carries the phone's traffic now (an id only: Wi-Fi to mobile data changes it). */

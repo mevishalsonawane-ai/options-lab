@@ -83,4 +83,22 @@ class PassShareTest {
         assertEquals("book1", share.share { read() })
         assertEquals(1, reads)
     }
+
+    @Test fun overlappingPassesNeverKeepPastTheirEnd() {
+        // The watch's money pass and its words-only lane (2026-10-05) may overlap: one ending does not close the other.
+        share.open()                     // the money pass
+        share.open()                     // the words-only lane
+        share.close()                    // the lane ends: what was kept goes, the money pass still shares
+        assertEquals("book1", share.share { read() })
+        assertEquals("book1", share.share { read() })
+        share.close()
+        assertNull(share.get())
+        assertEquals("book2", share.share { read() })
+        assertEquals("book3", share.share { read() })
+        // An extra close is harmless; the next pass works as before.
+        share.close()
+        share.open()
+        assertEquals("book4", share.share { read() })
+        assertEquals("book4", share.share { read() })
+    }
 }

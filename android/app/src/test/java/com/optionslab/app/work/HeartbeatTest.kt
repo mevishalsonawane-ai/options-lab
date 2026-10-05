@@ -35,12 +35,16 @@ class HeartbeatTest : RobolectricTest() {
     private fun stalled() = Background.notifications(context).getNotification(2014)
 
     @Before fun up() {
+        Heartbeat.pulseStopped()      // no watch service alive in this process (another test's may have pulsed)
         Background.clearAlerts()
         Background.calendar(WED)
         Background.grantNotifications(context)
     }
 
-    @After fun down() = Background.reset()
+    @After fun down() { Heartbeat.pulseStopped(); Background.reset() }
+
+    private fun battery(unrestricted: Boolean) =
+        shadowOf(context.getSystemService(android.os.PowerManager::class.java)).setIgnoringBatteryOptimizations(context.packageName, unrestricted)
 
     @Test fun armedWithoutAZerodhaAccount() {
         Background.at(WED, 16, 0)
@@ -122,5 +126,36 @@ class HeartbeatTest : RobolectricTest() {
         assertFalse("Saturday", Heartbeat.stale())
         Heartbeat.check(context)
         assertNull(stalled())
+    }
+
+    @Test fun aWatchAliveButWaitingIsToldAsStuckWithWhatItWaitsOn() {
+        battery(true)
+        Background.at(WED, 11, 0)
+        SecurePrefs.put("hb.last", 1L)
+        ShadowSystemClock.advanceBy(Duration.ofMinutes(10))
+        // The service's own pulse is fresh (no network in it), but no check has finished: stuck on a step, not dead.
+        Heartbeat.pulse()
+        Heartbeat.stepBegin("stops and targets")
+        Heartbeat.check(context)
+        val n = stalled()
+        assertNotNull(n)
+        assertEquals("Order watch is stuck", Background.title(n))
+        assertTrue(Background.text(n), Background.text(n)!!.contains("on stops and targets"))
+        assertFalse("not battery-optimized: no battery words", Background.text(n)!!.contains("Unrestricted"))
+        assertTrue(com.optionslab.app.data.Diag.lines().any { it.contains("[watch] STUCK") && it.contains("stops and targets") })
+    }
+
+    @Test fun aBatteryOptimizedAppIsToldToSetUnrestricted() {
+        battery(false)
+        Background.at(WED, 11, 0)
+        SecurePrefs.put("hb.last", 1L)
+        ShadowSystemClock.advanceBy(Duration.ofMinutes(10))
+        Heartbeat.check(context)
+        val n = stalled()
+        assertEquals("Order watch stopped", Background.title(n))
+        assertTrue(Background.text(n), Background.text(n)!!.contains("set IraAlgo's battery to Unrestricted"))
+        assertTrue(com.optionslab.app.data.Diag.lines().any { it.contains("[watch] STOPPED") && it.contains("OPTIMIZED") })
+        // Only told: the setting itself is Boss's to change.
+        assertEquals(Heartbeat.batteryRestricted(context), true)
     }
 }

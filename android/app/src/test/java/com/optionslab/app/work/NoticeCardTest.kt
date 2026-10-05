@@ -89,5 +89,9 @@ class NoticeCardTest {
         assertEquals("jarvis.voice", NoticeCards.morningSetting(listOf("• Voice: not working."), needsLogin = false))
         assertEquals("security.backup", NoticeCards.morningSetting(listOf("• You have never made a backup: your trades live only on this phone."), needsLogin = false))
         assertNull(NoticeCards.morningSetting(listOf("✓ Funds", "• Outlook: NIFTY up"), needsLogin = false))
+        // Battery-optimized: the order watch can be stopped by Android - the tap opens the Battery row (after the login).
+        assertEquals("schedule.permissions", NoticeCards.morningSetting(listOf("✗ " + com.optionslab.ira.WatchHealth.BATTERY_FIX, "• Voice: not working."), needsLogin = false))
+        assertEquals("broker.login", NoticeCards.morningSetting(listOf("✗ " + com.optionslab.ira.WatchHealth.BATTERY_FIX), needsLogin = true))
+        assertNull(NoticeCards.morningSetting(listOf("✓ " + com.optionslab.ira.WatchHealth.BATTERY_OK), needsLogin = false))
     }
 }

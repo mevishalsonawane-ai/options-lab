@@ -11,13 +11,16 @@ package com.optionslab.ira
  * [put]). Outside a pass nothing is kept: every read is fresh. Thread-safe. Pure: the clock is passed in.
  */
 class PassShare<T : Any>(private val maxAgeMs: Long, private val clock: () -> Long = System::currentTimeMillis) {
-    private var passOpen = false
+    /** Open passes: the market watch's money pass and its words-only lane may overlap; kept only while one is open. */
+    private var depth = 0
+    private val passOpen get() = depth > 0
     private var gen = 0L
     private var kept: Pair<Long, T>? = null
 
-    @Synchronized fun open() { passOpen = true; gen++; kept = null }
+    @Synchronized fun open() { depth++; gen++; kept = null }
 
-    @Synchronized fun close() { passOpen = false; gen++; kept = null }
+    /** Ends one pass (an extra close is harmless); anything kept is dropped, so a read never outlives a pass's end. */
+    @Synchronized fun close() { if (depth > 0) depth--; gen++; kept = null }
 
     @Synchronized fun drop() { gen++; kept = null }
 

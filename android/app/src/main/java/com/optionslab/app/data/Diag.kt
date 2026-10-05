@@ -92,6 +92,9 @@ object Diag {
         append("Static IP set: ${StaticIp.registered != null} · relay on: ${Relay.enabled} · relay connected: ${runCatching { Relay.connected }.getOrDefault(false)}\n")
         // Zerodha's live price stream: its state now and today's drops with the last one's reason (from the [stream] lines).
         append(runCatching { KiteStream.statusLine(synchronized(this@Diag) { diary().toList() }) }.getOrElse { "Live stream: could not read" }).append('\n')
+        // The order watch: its last finished check, whether its service is alive, what it waits on, the battery setting
+        // (the "[watch]" lines below say why it stopped or stalled).
+        if (!com.optionslab.app.BuildConfig.GOLD) append(runCatching { com.optionslab.app.work.Heartbeat.statusLine(app) }.getOrElse { "Order watch: could not read" }).append('\n')
         if (com.optionslab.app.BuildConfig.GOLD) append(gold())
         // Jarvis's ears and his recent actions (Boss, 4 Oct: "is there a file of logs I can give you?").
         if (com.optionslab.app.BuildConfig.JARVIS) {

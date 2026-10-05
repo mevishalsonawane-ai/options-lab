@@ -138,10 +138,12 @@ object NoticeCards {
 
     /**
      * The Settings row a morning check points at, if any ([com.optionslab.app.work.DailyReports]): the Zerodha login
-     * first (nothing trades without it), then the microphone, the AI model, then the backup reminder.
+     * first (nothing trades without it), then the battery (a battery-optimized app's order watch can be stopped by
+     * Android: Settings → Schedule → Permissions has its Battery row), the microphone, the AI model, then the backup reminder.
      */
     fun morningSetting(lines: List<String>, needsLogin: Boolean): String? = when {
         needsLogin -> "broker.login"
+        lines.any { com.optionslab.ira.WatchHealth.isBatteryFix(it) } -> "schedule.permissions"
         lines.any { (it.contains("Microphone permission") || it.contains("Voice:")) && it.contains("not working") } -> "jarvis.voice"
         lines.any { it.contains("AI model") && it.contains("not working") } -> "jarvis.model"
         lines.any { it.contains("back up", ignoreCase = true) || it.contains("backup", ignoreCase = true) } -> "security.backup"

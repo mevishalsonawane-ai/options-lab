@@ -304,11 +304,40 @@ class JobsTest : RobolectricTest() {
         assertFalse(Tasks.watchState.value.running)
     }
 
+    @Test fun theWatchIsStickyAndEveryEndIsInTheDiary() {
+        Background.at(WED, 9, 5)
+        val svc = startService(Jobs.Kind.LIVE)
+        // Already running: a second start (the dead-man's restart, Android's own) keeps it, and it stays sticky.
+        assertEquals(Service.START_STICKY, svc.onStartCommand(Intent(context, WatchService::class.java).putExtra(Jobs.EXTRA_KIND, "LIVE"), 0, 2))
+        assertEquals(Service.START_STICKY, svc.onStartCommand(null, 0, 3))
+        Background.await("the start in the diary") { com.optionslab.app.data.Diag.lines().any { it.contains("[watch] started") } }
+        svc.onStartCommand(Intent(context, WatchService::class.java).setAction(WatchService.STOP), 0, 4)
+        Background.await("why it ended") { com.optionslab.app.data.Diag.lines().any { it.contains("[watch] ended: stopped from the notification or the app") } }
+        assertNull("seen to end: the next start is not a process death", SecurePrefs.getString("watch.run.day"))
+    }
+
+    @Test fun aWatchWhoseProcessDiedIsToldAtTheNextStart() {
+        Background.at(WED, 10, 0)
+        SecurePrefs.put("watch.run.day", WED.toString())     // a watch was running today and never ended: the process died
+        startService(Jobs.Kind.LIVE)
+        Background.await("the restart in the diary") { com.optionslab.app.data.Diag.lines().any { it.contains("[watch] restarted: the app's process had ended") } }
+    }
+
+    @Test fun androidsRestartAfterHoursEndsQuietly() {
+        Background.at(WED, 16, 30)
+        val c = Robolectric.buildService(WatchService::class.java).create()
+        services += c
+        assertEquals(Service.START_NOT_STICKY, c.get().onStartCommand(null, 0, 1))
+        assertTrue(shadowOf(c.get()).isStoppedBySelf)
+        assertNull("no foreground tried, no notice", Background.notifications(context).getNotification(2011))
+    }
+
     @Test fun androidsTimeLimitStopsTheWatchAndSaysSo() {
         Background.at(WED, 9, 5)
         val svc = startService(Jobs.Kind.LIVE)
         svc.onTimeout(1, 0)
         assertTrue(shadowOf(svc).isStoppedBySelf)
+        Background.await("the time limit in the diary") { com.optionslab.app.data.Diag.lines().any { it.contains("[watch] ended: Android's time limit") } }
         val n = Background.notifications(context).getNotification(2012)
         assertEquals("Background watch stopped by Android", Background.title(n))
         assertEquals(Notifier.APPROVAL, n.channelId)
@@ -501,7 +530,11 @@ class JobsTest : RobolectricTest() {
 
     // ---- daily reports -----------------------------------------------------------------------------
 
+    private fun battery(unrestricted: Boolean) =
+        shadowOf(context.getSystemService(android.os.PowerManager::class.java)).setIgnoringBatteryOptimizations(context.packageName, unrestricted)
+
     @Test fun theMorningCheckListsWhatNeedsFixing() = com.optionslab.app.testing.bounded("theMorningCheckListsWhatNeedsFixing") { runBlocking {
+        battery(true)
         Background.linkZerodha()
         Background.contracts(context, WED, listOf(Upstox.Contract("NIFTY", WED.plusDays(6), 24_500.0, Right.PE, 75, "NSE_FO|1", "N")))
         val (title, lines) = DailyReports.morning(context)
@@ -513,6 +546,15 @@ class JobsTest : RobolectricTest() {
         assertTrue(lines.contains("• Mode: Paper"))
         DailyReports.post(context, DailyReports.Kind.MORNING, title, lines)
         assertEquals(title, Background.title(Background.notifications(context).getNotification(DailyReports.Kind.MORNING.id)))
+    } }
+
+    @Test fun aBatteryOptimizedAppIsAMorningItemThatOpensTheBatteryRow() = com.optionslab.app.testing.bounded("aBatteryOptimizedAppIsAMorningItemThatOpensTheBatteryRow") { runBlocking {
+        battery(false)
+        val lines = DailyReports.morning(context).second
+        assertTrue(lines.toString(), lines.contains("✗ " + com.optionslab.ira.WatchHealth.BATTERY_FIX))
+        assertEquals("schedule.permissions", NoticeCards.morningSetting(lines, needsLogin = false))
+        battery(true)
+        assertTrue(DailyReports.morning(context).second.contains("✓ " + com.optionslab.ira.WatchHealth.BATTERY_OK))
     } }
 
     @Test fun aQuietDayReportsNoTrades() = com.optionslab.app.testing.bounded("aQuietDayReportsNoTrades") { runBlocking {

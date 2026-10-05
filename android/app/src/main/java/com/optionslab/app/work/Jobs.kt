@@ -367,99 +367,202 @@ object Tasks {
     const val WATCH_IDLE = "Watching your orders and strategies"
 
     /**
-     * The steps that protect money: fills, the daily loss limit, bot exits, stops and targets,
-     * the expiry square-off and strategy risk. Run first in every pass, so a slow quote or
-     * chart fetch never holds them up.
+     * One named step of the watch: what it is doing is shown to [Heartbeat] (so a stuck watch can say what it waits on),
+     * and a failure is kept, never thrown (one bad step must not end a pass). Names are the app's own words, never data.
      */
-    private suspend fun riskSteps(context: Context, s: AppSettings) {
-        // Zerodha's live price stream (Live mode, logged in, market hours).
-        runCatching { com.optionslab.app.data.KiteStream.ensure() }
-        // The static-IP relay: connected ahead of the first order, kept alive during market hours.
-        if (com.optionslab.app.data.Market.isOpen()) runCatching { com.optionslab.app.data.Relay.warm() }
-        // A bot's entry or exit then finds a pooled connection through the relay and a fresh static-IP reading, not handshakes.
-        if (s.live && com.optionslab.app.data.Market.isOpen() && com.optionslab.app.data.Broker.loggedIn)
-            runCatching { com.optionslab.app.data.Broker.warmOrderRoute() }
-        // Paper account (also used by paper strategy runs in LIVE mode): resting orders fill, MIS squares off, expiries settle.
-        runCatching { com.optionslab.app.data.Paper.tick() }.getOrNull()?.let { paperEvents(context, it) }
-        // One daily loss limit over every bot: past it, all of them sell and stop for the day.
-        runCatching { com.optionslab.app.data.LossBreaker.check(context) }
-        // The ORB paper arms: manage open positions, then decide on the last completed 5-minute bar.
-        runCatching { com.optionslab.app.data.OrbArms.tick() }
-        // Pine scripts set to auto-trade: decide on each completed candle, sell at 15:15.
-        runCatching { com.optionslab.app.data.PineAuto.tick() }
+    private inline fun step(name: String, block: () -> Unit) {
+        Heartbeat.stepBegin(name)
+        try {
+            block()
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Throwable) {
+            stepFailed(name, e)
+        } finally {
+            Heartbeat.stepEnd()
+        }
+    }
+
+    /** When each step last failed: the diary gets one line a minute per step at most. */
+    private val failedAt = java.util.concurrent.ConcurrentHashMap<String, Long>()
+
+    /** A step that threw: the diary gets where and the exception's class only, never its message (it can carry a URL or a token). */
+    fun stepFailed(name: String?, e: Throwable) {
+        val now = System.currentTimeMillis()
+        val key = name ?: "pass"
+        val prev = failedAt[key]
+        if (prev != null && now - prev < 60_000) return
+        failedAt[key] = now
+        Heartbeat.diary(com.optionslab.ira.WatchHealth.failure(name, e.javaClass.name))
+    }
+
+    // ---- network warm-ups, off the watch's path ----------------------------------------------------------------------
+
+    /**
+     * The relay's SSH connect (15 s when the server does not answer, as on 5 Oct: every connect timing out at port 22)
+     * and the order route's warm-up ran INSIDE every pass, before the stops, in Paper mode too: with the relay down each
+     * pass waited on them. They run here instead, one at a time, never awaited by the watch, and a relay that fails is
+     * tried again after 2, 4, 8, then every 10 minutes (not every minute). An order still connects the relay itself.
+     */
+    private val warmScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    @Volatile private var warmJob: Job? = null
+    @Volatile private var relayFails = 0
+    @Volatile private var relayTriedAt = 0L
+
+    private fun warmRoutes(s: AppSettings) {
+        if (warmJob?.isActive == true) return
+        warmJob = warmScope.launch {
+            val m = com.optionslab.app.data.Market
+            if (m.isOpen() && com.optionslab.app.data.Relay.enabled) {
+                val now = System.currentTimeMillis()
+                if (now - relayTriedAt >= com.optionslab.ira.WatchHealth.warmGapMs(relayFails)) {
+                    relayTriedAt = now
+                    val ok = runCatching { com.optionslab.app.data.Relay.warm() }.getOrDefault(false)
+                    relayFails = if (ok) 0 else relayFails + 1
+                }
+            }
+            // A bot's entry or exit then finds a pooled connection through the relay and a fresh static-IP reading, not handshakes.
+            if (s.live && m.isOpen() && com.optionslab.app.data.Broker.loggedIn) runCatching { com.optionslab.app.data.Broker.warmOrderRoute() }
+        }
+    }
+
+    // ---- the words-only lane -----------------------------------------------------------------------------------------
+
+    /**
+     * Jarvis's words-only checks (news, patterns, coaching, reviews: they say things or ask first; none places, changes
+     * or closes an order by itself) read the news, candles and Zerodha over the network. They ran inside the pass, in
+     * front of the stops; now they run in a lane of their own, one round at a time, never awaited by the watch: a slow
+     * feed delays a remark, never a stop or the dead-man's beat.
+     */
+    @Volatile private var wordsJob: Job? = null
+    @Volatile private var wordsSince = 0L
+    @Volatile private var wordsStuckTold = 0L
+    @Volatile private var wordsStep: String? = null
+
+    private fun wordsLane(scope: CoroutineScope) {
+        if (wordsJob?.isActive == true) {
+            // One round stuck for 5 minutes is worth a line in the diary (once per round), not a stop.
+            if (System.currentTimeMillis() - wordsSince > 5 * 60_000 && wordsStuckTold != wordsSince) {
+                wordsStuckTold = wordsSince
+                Heartbeat.diary("Jarvis's words-only checks have waited over 5 min on ${wordsStep ?: "a network call"} (stops are not affected)")
+            }
+            return
+        }
+        wordsSince = System.currentTimeMillis()
+        wordsJob = scope.launch(Dispatchers.IO) {
+            com.optionslab.app.data.Broker.passBegin()
+            try { wordsSteps() } finally { com.optionslab.app.data.Broker.passEnd(); wordsStep = null }
+        }
+    }
+
+    private inline fun word(name: String, block: () -> Unit) {
+        wordsStep = name
+        try {
+            block()
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Throwable) {
+            stepFailed("Jarvis $name", e)
+        }
+    }
+
+    private suspend fun wordsSteps() {
         // Jarvis: every 15 minutes in market hours, Jarvis looks for a pattern worth a strategy and notifies it.
-        runCatching { com.optionslab.app.ira.IraHub.backgroundCheck() }
+        word("pattern check") { com.optionslab.app.ira.IraHub.backgroundCheck() }
         // Jarvis: the news every 5 minutes, judged for your arms and positions.
-        runCatching { com.optionslab.app.ira.IraHub.newsWatch() }
+        word("news") { com.optionslab.app.ira.IraHub.newsWatch() }
         // Jarvis: the candle-pattern expert at each 5- and 15-minute close; a qualifying pattern becomes a trade to approve.
-        runCatching { com.optionslab.app.ira.IraHub.expertWatch() }
-        // Jarvis: approved news trades - the best price seen, the profit-lock stop moved up, the result recorded.
-        if (com.optionslab.app.BuildConfig.JARVIS) runCatching { com.optionslab.app.ira.IraNewsTrades.tick() }
-        // Solo (paper only, Boss's switch): its open trade managed, or the next one looked for.
-        if (com.optionslab.app.BuildConfig.JARVIS) runCatching { com.optionslab.app.ira.IraSolo.tick() }
-        // Jarvis: a position with no stop is offered one; the 14:55 expiry heads-up; live prices that stopped.
-        runCatching { com.optionslab.app.ira.IraHub.rescueWatch() }
-        runCatching { com.optionslab.app.ira.IraHub.expiryPreview() }
-        runCatching { com.optionslab.app.ira.IraHub.feedWatch() }
-        runCatching { com.optionslab.app.ira.IraCoach.orbWatch() }
-        runCatching { com.optionslab.app.ira.IraCoach.momentsWatch() }
+        word("candle expert") { com.optionslab.app.ira.IraHub.expertWatch() }
+        // Jarvis: the 14:55 expiry heads-up; live prices that stopped.
+        word("expiry preview") { com.optionslab.app.ira.IraHub.expiryPreview() }
+        word("feed watch") { com.optionslab.app.ira.IraHub.feedWatch() }
+        word("ORB coach") { com.optionslab.app.ira.IraCoach.orbWatch() }
+        word("moments") { com.optionslab.app.ira.IraCoach.momentsWatch() }
         // Jarvis: on an index's expiry day, the straddle's decay, spot against max pain and the last hour, at set times.
-        runCatching { com.optionslab.app.ira.IraCoach.expiryWatch() }
-        runCatching { com.optionslab.app.ira.IraCoach.vixWatch() }
+        word("expiry watch") { com.optionslab.app.ira.IraCoach.expiryWatch() }
+        word("VIX") { com.optionslab.app.ira.IraCoach.vixWatch() }
         // Jarvis: a sharp move within minutes - what coincided with it (headlines, VIX, the other indices), timing only.
-        runCatching { com.optionslab.app.ira.IraCoach.sharpMoveWatch() }
-        // Jarvis: your own stops trailed up automatically; too many trades too fast; the opening gap plan.
-        runCatching { com.optionslab.app.ira.IraCoach.trailWatch() }
-        runCatching { com.optionslab.app.ira.IraCoach.overtradeWatch() }
-        runCatching { com.optionslab.app.ira.IraCoach.gapWatch() }
-        // Jarvis: the market alerts found in this pass (and the watch's) said as one line - one per move, a few an hour.
-        runCatching { com.optionslab.app.ira.IraAirtime.flush() }
+        word("sharp move") { com.optionslab.app.ira.IraCoach.sharpMoveWatch() }
+        // Jarvis: too many trades too fast; the opening gap plan.
+        word("overtrading") { com.optionslab.app.ira.IraCoach.overtradeWatch() }
+        word("gap") { com.optionslab.app.ira.IraCoach.gapWatch() }
         // Jarvis: the static-IP relay server not answering is told before a login or an order fails on it.
-        runCatching { com.optionslab.app.ira.IraCoach.relayWatch() }
+        word("relay watch") { com.optionslab.app.ira.IraCoach.relayWatch() }
         // Jarvis: not logged in to Zerodha a few minutes before the open while something needs it - said once.
-        runCatching { com.optionslab.app.ira.IraCoach.loginWatch() }
+        word("login watch") { com.optionslab.app.ira.IraCoach.loginWatch() }
         // Jarvis: Boss's usual market question at its usual hour, answered unasked (once a day each).
-        runCatching { com.optionslab.app.ira.IraCoach.usualWatch() }
+        word("usual question") { com.optionslab.app.ira.IraCoach.usualWatch() }
         // Jarvis: the morning plan - the paper arms fitted to the market's regime.
-        runCatching { com.optionslab.app.ira.IraCoach.dayPlanWatch() }
+        word("day plan") { com.optionslab.app.ira.IraCoach.dayPlanWatch() }
         // Jarvis: his own plan for the day - made each morning, worked through at each item's time (words, study, paper only).
-        runCatching { com.optionslab.app.ira.IraAgenda.watch() }
+        word("agenda") { com.optionslab.app.ira.IraAgenda.watch() }
         // Jarvis: Boss's goals over days - close, broken or met is told once a day.
-        runCatching { com.optionslab.app.ira.IraGoals.watch() }
+        word("goals") { com.optionslab.app.ira.IraGoals.watch() }
         // Jarvis: Boss's own words (a rule he asked me to remember, his trade goal) against today's trades - pointed out
         // once each, gently, on an unlocked phone only (words only).
-        runCatching { com.optionslab.app.ira.IraCoach.wordsWatch() }
+        word("Boss's rules") { com.optionslab.app.ira.IraCoach.wordsWatch() }
         // Jarvis: the paper tests - what held up is brought to Boss, what failed is offered off (asked first).
-        runCatching { com.optionslab.app.ira.IraExpert.watch() }
+        word("paper tests") { com.optionslab.app.ira.IraExpert.watch() }
         // Jarvis: the day's target reached; a trade of yours going nowhere is offered a close (asked first).
-        runCatching { com.optionslab.app.ira.IraJournal.targetWatch() }
-        runCatching { com.optionslab.app.ira.IraJournal.staleWatch() }
+        word("day target") { com.optionslab.app.ira.IraJournal.targetWatch() }
+        word("stale trades") { com.optionslab.app.ira.IraJournal.staleWatch() }
+        // Jarvis: one position losing a big share of Boss's daily loss limit, or a sold option mostly decayed (words only).
+        word("heads-up") { com.optionslab.app.ira.IraCoach.headsUpWatch() }
+        // Jarvis: open Zerodha MIS positions named at 15:10, before Zerodha's own square-off (words only).
+        word("MIS word") { com.optionslab.app.ira.IraCoach.misWatch() }
+        // Jarvis: 14:45 on a day a position expires, the position health check in the chat and a few words (counts only).
+        word("position health") { com.optionslab.app.ira.IraCoach.healthWatch() }
+        // Jarvis: a strategy of Boss's behaving unusually against its tested record - told once a day without amounts,
+        // stopping it asked first (reads the app's own books, every five minutes at most).
+        word("bot review") { com.optionslab.app.ira.IraBots.watch() }
+        // Jarvis: each bot's switch and whether it ended the day down or up (names and signs only) - a record only.
+        word("bot switches") { com.optionslab.app.ira.IraBots.noteSwitches() }
+        // Jarvis: the market alerts found in this round said as one line - one per move, a few an hour (last, so it
+        // carries this round's alerts).
+        word("airtime") { com.optionslab.app.ira.IraAirtime.flush() }
+    }
+
+    /**
+     * The steps that protect money: fills, the daily loss limit, bot exits, stops and targets,
+     * the expiry square-off and strategy risk. Run first in every pass, so a slow quote or
+     * chart fetch never holds them up - and since 5 Oct nothing here waits on the relay or on Jarvis's words.
+     */
+    private suspend fun riskSteps(context: Context, s: AppSettings, lanes: CoroutineScope?) {
+        // Zerodha's live price stream (Live mode, logged in, market hours): starts its own loop, never waits on it.
+        step("live price stream") { com.optionslab.app.data.KiteStream.ensure() }
+        // The static-IP relay and the order route: connected ahead of the first order, in the background ([warmRoutes]).
+        warmRoutes(s)
+        // Paper account (also used by paper strategy runs in LIVE mode): resting orders fill, MIS squares off, expiries settle.
+        step("paper orders") { paperEvents(context, com.optionslab.app.data.Paper.tick()) }
+        // One daily loss limit over every bot: past it, all of them sell and stop for the day.
+        step("daily loss limit") { com.optionslab.app.data.LossBreaker.check(context) }
+        // The ORB paper arms: manage open positions, then decide on the last completed 5-minute bar.
+        step("ORB arms") { com.optionslab.app.data.OrbArms.tick() }
+        // Pine scripts set to auto-trade: decide on each completed candle, sell at 15:15.
+        step("Pine scripts") { com.optionslab.app.data.PineAuto.tick() }
+        // Jarvis: approved news trades - the best price seen, the profit-lock stop moved up, the result recorded.
+        if (com.optionslab.app.BuildConfig.JARVIS) step("Jarvis's trades") { com.optionslab.app.ira.IraNewsTrades.tick() }
+        // Solo (paper only, Boss's switch): its open trade managed, or the next one looked for.
+        if (com.optionslab.app.BuildConfig.JARVIS) step("Solo") { com.optionslab.app.ira.IraSolo.tick() }
+        // Jarvis: a position with no stop is offered one (or given one, when Boss switched that on).
+        step("stop rescue") { com.optionslab.app.ira.IraHub.rescueWatch() }
+        // Jarvis: your own stops trailed up automatically (Boss's switch).
+        step("trailing stops") { com.optionslab.app.ira.IraCoach.trailWatch() }
         // Stops, trailing stops and targets: one exit filled cancels the other; trails move up.
-        runCatching { com.optionslab.app.data.Protections.tick() }
-        // Jarvis: one position losing a big share of Boss's daily loss limit, or a sold option mostly decayed (words only;
-        // after the stops, so its broker read never delays them).
-        runCatching { com.optionslab.app.ira.IraCoach.headsUpWatch() }
+        step("stops and targets") { com.optionslab.app.data.Protections.tick() }
         // Expiry day, 15:05: close every option position expiring today (paper and live, all products).
-        runCatching { com.optionslab.app.data.ExpirySquareOff.maybeRun(context, s) }
+        step("expiry square-off") { com.optionslab.app.data.ExpirySquareOff.maybeRun(context, s) }
         // Strategy Module: schedules, prices, per-leg and basket risk, exits.
-        runCatching {
+        step("strategies") {
             val bad = com.optionslab.app.security.Integrity.compromised(com.optionslab.app.security.Integrity.reportWithin(context, 60_000))
             com.optionslab.app.data.Strategies.tickAll(bad)
         }
         // Every open position's notification, with its live P&L and a Close button.
-        runCatching { PositionCards.refresh(context) }
-        // Jarvis: open Zerodha MIS positions named at 15:10, before Zerodha's own square-off (words only) - last, after every
-        // stop, target and exit above, as it reads Zerodha over the network (review, 4 Oct).
-        runCatching { com.optionslab.app.ira.IraCoach.misWatch() }
-        // Jarvis: 14:45 on a day a position expires, the position health check in the chat and a few words (counts only;
-        // last too, as it reads Zerodha and the quotes over the network).
-        runCatching { com.optionslab.app.ira.IraCoach.healthWatch() }
-        // Jarvis: a strategy of Boss's behaving unusually against its tested record - told once a day without amounts,
-        // stopping it asked first (after every stop and exit above; reads the app's own books, every five minutes at most).
-        runCatching { com.optionslab.app.ira.IraBots.watch() }
-        // Jarvis: each bot's switch and whether it ended the day down or up (names and signs only), for "do I usually
-        // disarm my bots after losses?" - a record; nothing is armed, disarmed or offered.
-        runCatching { com.optionslab.app.ira.IraBots.noteSwitches() }
+        step("position cards") { PositionCards.refresh(context) }
+        // The money steps are done: that is a check, whatever the quotes and Jarvis's words below wait on.
+        runCatching { Heartbeat.beat(context) }
+        // Jarvis's words-only checks in their own lane (outside the service - tests - they run here, in order).
+        if (lanes != null) wordsLane(lanes) else wordsSteps()
     }
 
 
@@ -467,19 +570,21 @@ object Tasks {
      * One pass of the live watch: index levels, the open ticket's live mark and
      * cushion to breakeven, and every price alarm. Risk alerts fire once each.
      */
-    suspend fun watchTick(context: Context, s: AppSettings, fired: MutableSet<String>): Tick {
+    suspend fun watchTick(context: Context, s: AppSettings, fired: MutableSet<String>, lanes: CoroutineScope? = null): Tick {
         // One pass: the words-only checks and the notice's P&L line share one Zerodha positions read (dropped on any
         // order, change or cancel); everything that orders still reads fresh.
         com.optionslab.app.data.Broker.passBegin()
         try {
-            return watchTickOnce(context, s, fired)
+            return watchTickOnce(context, s, fired, lanes)
         } finally {
             com.optionslab.app.data.Broker.passEnd()
+            Heartbeat.stepEnd()
         }
     }
 
-    private suspend fun watchTickOnce(context: Context, s: AppSettings, fired: MutableSet<String>): Tick {
-        riskSteps(context, s)
+    private suspend fun watchTickOnce(context: Context, s: AppSettings, fired: MutableSet<String>, lanes: CoroutineScope?): Tick {
+        riskSteps(context, s, lanes)
+        Heartbeat.stepBegin("index quotes")
         // The three index quotes at once, each given at most 20 s: a hung feed cannot stall the watch. The
         // Upstox read uses short timeouts and is cancellable mid-read, so the deadline really ends it.
         val q = kotlinx.coroutines.coroutineScope {
@@ -516,6 +621,7 @@ object Tasks {
         val b = com.optionslab.app.data.Broker
         var accountPnl: Double? = null
         if (s.live && b.loggedIn) {
+            Heartbeat.stepBegin("Zerodha quotes and positions")
             val keys = Alarms.all().filter { it.enabled && ':' in it.symbol }.map { it.symbol }.distinct()
             if (keys.isNotEmpty()) runCatching { kotlinx.coroutines.withTimeoutOrNull(20_000) { b.quotes(keys) } }.getOrNull()?.forEach { (k, v) -> prices[k] = v.last }
             // The account's P&L: recorded for the day's curve, and alerted on the owner's levels.
@@ -540,6 +646,7 @@ object Tasks {
         }
         // Alarms set from the chart, priced from the chart's own feed (the last 1-minute close): all at once,
         // each given at most 20 s, on the watch's own quick path (never queued behind a chart or backtest load).
+        Heartbeat.stepBegin("chart alarms")
         val chartKeys = Alarms.all().filter { it.enabled && it.symbol.startsWith(com.optionslab.app.data.PriceAlarm.CHART) }.map { it.symbol }.distinct()
         kotlinx.coroutines.coroutineScope {
             chartKeys.map { key ->
@@ -610,13 +717,25 @@ object Tasks {
  * The foreground service behind the live watch and the long jobs. It shows one
  * ongoing notification that rewrites itself each minute - the live update -
  * and stops itself when nothing is left to do.
+ *
+ * While the watch runs (2026-10-05): it is START_STICKY, so if Android ends the app's process Android starts the
+ * service again and the watch picks up (in market hours) without waiting for the five-minute dead-man check; its own
+ * pulse ([Heartbeat.pulse]) tells a watch that is alive but waiting from one that is gone; and every end - the close,
+ * Boss's stop, Android's time limit, a refused foreground, a destroyed service, a throw, a process that died under
+ * it - goes to the diagnostics diary (class names and the app's own words only).
  */
 class WatchService : Service() {
-    companion object { const val STOP = "com.optionslab.app.WATCH_STOP" }
+    companion object {
+        const val STOP = "com.optionslab.app.WATCH_STOP"
+        /** The day a watch was last started and has not been seen to end: still set at the next start = the process died. */
+        private const val RUN_DAY = "watch.run.day"
+    }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val running = java.util.concurrent.ConcurrentHashMap<Jobs.Kind, Job>()
     @Volatile private var watching = false
+    /** Why the watch is being ended from outside its loop (Boss's stop, Android's time limit, a refused foreground). */
+    @Volatile private var endWhy: Pair<com.optionslab.ira.WatchHealth.End, String?>? = null
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -636,10 +755,18 @@ class WatchService : Service() {
         try {
             ServiceCompat.startForeground(this, Notifier.ID_LIVE, n, type)
             return true
-        } catch (_: Exception) {
-            // Not allowed now (e.g. the dataSync budget is spent): say so and stop cleanly - a service
-            // started in the foreground that never calls startForeground is killed by the system.
-            Notifier.post(this, 2011, Notifier.APPROVAL, "IraAlgo could not run in the background", "Open the app to continue: $title", "almanac", setting = "schedule.permissions")
+        } catch (e: Exception) {
+            // Not allowed now (e.g. the dataSync budget is spent, or a start from the background while Android
+            // battery-optimizes the app): say so and stop cleanly - a service started in the foreground that never
+            // calls startForeground is killed by the system.
+            val battery = Heartbeat.batteryRestricted(this) == true
+            Notifier.post(this, 2011, Notifier.APPROVAL, "IraAlgo could not run in the background",
+                "Open the app to continue: $title" + if (battery) ". " + com.optionslab.ira.WatchHealth.BATTERY_ASK else "", "almanac", setting = "schedule.permissions")
+            if (watching) {
+                endWhy = com.optionslab.ira.WatchHealth.End.FOREGROUND_REFUSED to null
+                Heartbeat.diary("Android refused the foreground (${com.optionslab.ira.WatchHealth.cleanClass(e.javaClass.name)})" +
+                    if (battery) " · battery OPTIMIZED" else "")
+            }
             running.values.forEach { it.cancel() }
             running.clear()
             watching = false
@@ -650,29 +777,54 @@ class WatchService : Service() {
 
     /** Android 15: a time-limited foreground service must stop when told, or the app is killed. */
     override fun onTimeout(startId: Int, fgsType: Int) {
+        val type = when (fgsType) {
+            ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC -> "dataSync"
+            ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE -> "specialUse"
+            else -> "type $fgsType"
+        }
+        Heartbeat.diary("Android's time limit reached for the $type foreground service")
+        if (endWhy == null) endWhy = com.optionslab.ira.WatchHealth.End.ANDROID_TIME_LIMIT to type
         Notifier.post(this, 2012, Notifier.APPROVAL, "Background watch stopped by Android",
             "The system's time limit for background work was reached. Open IraAlgo to keep strategies and alerts checked.", "almanac",
             setting = "schedule.permissions")
         stopEverything()
     }
 
+    /** Sticky while the watch runs: Android brings the service back if it ends the app's process. */
+    private fun stickiness(): Int = if (watching) START_STICKY else START_NOT_STICKY
+
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         // Foreground first, always: the system requires it within seconds.
-        val k = runCatching { Jobs.Kind.valueOf(intent?.getStringExtra(Jobs.EXTRA_KIND) ?: "") }.getOrNull()
+        // No intent: Android restarted this sticky service after ending the app's process. In market hours that is the
+        // watch coming back; otherwise there is nothing to resume (one-shot jobs are not sticky).
+        val byAndroid = intent == null
+        val k = if (byAndroid && !com.optionslab.app.BuildConfig.GOLD && Jobs.watchDue()) Jobs.Kind.LIVE
+            else runCatching { Jobs.Kind.valueOf(intent?.getStringExtra(Jobs.EXTRA_KIND) ?: "") }.getOrNull()
+        if (byAndroid && k == null && running.isEmpty()) {
+            // Past the watch's hours: nothing to resume. Not a foreground start (it would be refused from the background
+            // and post a needless notice): simply end.
+            Heartbeat.diary("Android restarted the watch service after the market hours: nothing to resume")
+            stopSelf(); return START_NOT_STICKY
+        }
         if (k == Jobs.Kind.LIVE) watching = true   // show() then declares the specialUse type
         // Refused: show() stopped the service, so no job is launched to run on after stopSelf.
         if (!show("IraAlgo", "Starting…")) return START_NOT_STICKY
-        if (intent?.action == STOP) { stopEverything(); return START_NOT_STICKY }
+        if (intent?.action == STOP) {
+            if (endWhy == null) endWhy = com.optionslab.ira.WatchHealth.End.STOPPED_BY_BOSS to null
+            stopEverything(); return START_NOT_STICKY
+        }
         // Paper trading needs no Zerodha account: only the Zerodha-only jobs stop when none is linked.
         if (!com.optionslab.app.data.Broker.linked && k != null && k != Jobs.Kind.LIVE) { stopEverything(); return START_NOT_STICKY }
-        if (k == null) { maybeStop(); return START_NOT_STICKY }
-        if (running[k]?.isActive == true) return START_NOT_STICKY
+        if (k == null) { maybeStop(); return stickiness() }
+        if (running[k]?.isActive == true) return stickiness()
         val session = intent?.getStringExtra(Jobs.EXTRA_SESSION)?.let { runCatching { java.time.LocalDate.parse(it) }.getOrNull() } ?: Market.today()
+        if (k == Jobs.Kind.LIVE) noteStart(byAndroid)
         running[k] = scope.launch {
             val s = AppSettings.load()
+            var end: Pair<com.optionslab.ira.WatchHealth.End, String?>? = null
             try {
                 when (k) {
-                    Jobs.Kind.LIVE -> watch(s)
+                    Jobs.Kind.LIVE -> { watch(s); end = com.optionslab.ira.WatchHealth.End.MARKET_CLOSED to null }
                     Jobs.Kind.TICKET -> Tasks.ticket(this@WatchService, s)
                     Jobs.Kind.SETTLE -> Tasks.settle(this@WatchService, s)
                     Jobs.Kind.HARVEST -> Tasks.harvest(this@WatchService, s, session) { stage, p ->
@@ -683,26 +835,64 @@ class WatchService : Service() {
                 }
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
+                // Throwable, not only Exception: an Error left here would reach the app's crash handler, which ends the
+                // whole process - and the watch with it - with no word of why.
+                if (k == Jobs.Kind.LIVE) end = com.optionslab.ira.WatchHealth.End.CRASHED to e.javaClass.name
                 if (k == Jobs.Kind.HARVEST) {
                     // No notice, as before: the harvest line says so, and WorkManager retries it (it resumes
                     // where this stopped) until the session's retry budget is spent.
                     SecurePrefs.put("harvest.last", "$session: did not complete (${Tasks.reason(e)})")
                     if (Tasks.harvestFailed(session) < Tasks.HARVEST_TRIES) runCatching { Jobs.enqueueHarvest(this@WatchService, session, manual = false) }
-                } else Notifier.post(this@WatchService, 2900 + k.ordinal, Notifier.SCHEDULE,
-                    "${k.name.lowercase().replaceFirstChar { it.uppercase() }} did not complete",
-                    "It stopped with ${Tasks.reason(e)}. Open IraAlgo to check.", "almanac")
+                } else runCatching {
+                    Notifier.post(this@WatchService, 2900 + k.ordinal, Notifier.SCHEDULE,
+                        "${k.name.lowercase().replaceFirstChar { it.uppercase() }} did not complete",
+                        "It stopped with ${Tasks.reason(e)}. Open IraAlgo to check.", "almanac")
+                }
             } finally {
-                if (k == Jobs.Kind.LIVE) Tasks.publishWatch(Tasks.LiveState(false)) else if (k == Jobs.Kind.HARVEST) Tasks.publish(Tasks.LiveState(false))
+                if (k == Jobs.Kind.LIVE) {
+                    // Cancelled with no reason given: Android destroyed the service under the watch.
+                    val why = end ?: endWhy ?: (com.optionslab.ira.WatchHealth.End.SERVICE_DESTROYED to null)
+                    Heartbeat.diary(com.optionslab.ira.WatchHealth.ended(why.first, why.second))
+                    runCatching { SecurePrefs.put(RUN_DAY, null) }      // seen to end: not a process death
+                    Heartbeat.pulseStopped()
+                    Tasks.publishWatch(Tasks.LiveState(false))
+                } else if (k == Jobs.Kind.HARVEST) Tasks.publish(Tasks.LiveState(false))
                 running.remove(k)
                 if (k == Jobs.Kind.LIVE) watching = false
                 maybeStop()
             }
         }
-        return START_NOT_STICKY
+        return stickiness()
     }
 
-    private suspend fun watch(s: AppSettings) {
+    /** The watch starts: a start after a watch that was never seen to end means the app's process ended under it. */
+    private fun noteStart(byAndroid: Boolean) {
+        endWhy = null
+        runCatching {
+            val today = Market.today().toString()
+            val crash = java.io.File(filesDir, com.optionslab.app.IraAlgoApp.CRASH_FILE).exists()
+            com.optionslab.ira.WatchHealth.restart(SecurePrefs.getString(RUN_DAY), today, crash, byAndroid)?.let { Heartbeat.diary(it) }
+            SecurePrefs.put(RUN_DAY, today)
+            val battery = Heartbeat.batteryRestricted(this) == true
+            Heartbeat.diary("started" + if (battery) " · battery OPTIMIZED: Android may stop the watch (set IraAlgo's battery to Unrestricted)" else "")
+        }
+    }
+
+    private suspend fun watch(s: AppSettings) = kotlinx.coroutines.coroutineScope {
+        // The service's own pulse: no network, no lock, every 30 s - "alive", whatever a check is waiting on.
+        val pulse = launch {
+            while (true) { Heartbeat.pulse(); delay(com.optionslab.ira.WatchHealth.PULSE_MS) }
+        }
+        try {
+            watchLoop(s)
+        } finally {
+            pulse.cancel()
+            Heartbeat.pulseStopped()
+        }
+    }
+
+    private suspend fun watchLoop(s: AppSettings) {
         val fired = HashSet<String>()
         if (Holidays.stale(Market.today())) runCatching { Holidays.refresh() }
         val b = com.optionslab.app.data.Broker
@@ -717,10 +907,12 @@ class WatchService : Service() {
                 watchPass(fired)
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
-            } catch (e: Exception) {
-                // One bad pass (a Keystore or disk hiccup) must not end the watch: note it and go on.
+            } catch (e: Throwable) {
+                // One bad pass (a Keystore or disk hiccup, even an Error) must not end the watch: note it and go on.
                 // Its own id: 2014 is Heartbeat's "Market watch stopped", which every beat cancels.
-                Notifier.post(this, 2018, Notifier.SCHEDULE, "Order watch hiccup", "One pass failed (${e.javaClass.simpleName}); the watch goes on.")
+                Tasks.stepFailed(Heartbeat.busy, e)
+                Heartbeat.stepEnd()
+                runCatching { Notifier.post(this, 2018, Notifier.SCHEDULE, "Order watch hiccup", "One pass failed (${e.javaClass.simpleName}); the watch goes on.") }
                 delay(15_000)
             }
         }
@@ -738,7 +930,8 @@ class WatchService : Service() {
                 return
             }
             // Settings read fresh every pass: the kill switch, Paper / Live and limits changed mid-session take effect at once.
-            val t = Tasks.watchTick(this, AppSettings.load(), fired)
+            // Jarvis's words-only checks run beside it in the service's scope, never awaited ([Tasks.watchTick]).
+            val t = Tasks.watchTick(this, AppSettings.load(), fired, scope)
             Tasks.publishWatch(Tasks.LiveState(true, t.title, t.progress / 100f, System.currentTimeMillis()))
             show(t.title, t.lines.joinToString("\n").ifEmpty { Tasks.WATCH_IDLE }, t.progress, t.dest)
             // While an ORB position is open its stop, target and 15:10 exit are checked every 15 s, not once a minute.
@@ -754,11 +947,16 @@ class WatchService : Service() {
                     while (System.currentTimeMillis() < until) { delay(step); runCatching { PositionCards.tickLive(this) } }
                 } else delay(if (holding) 15_000 else next - System.currentTimeMillis())
                 if (holding) {
-                    runCatching {
+                    Heartbeat.stepBegin("15-second stop check")
+                    try {
                         com.optionslab.app.data.Paper.tick().let { Tasks.paperEventsPublic(this, it) }
                         com.optionslab.app.data.OrbArms.priceCheckOnly()
                         com.optionslab.app.data.Protections.tick()
-                    }
+                    } catch (e: kotlinx.coroutines.CancellationException) {
+                        throw e
+                    } catch (e: Throwable) {
+                        Tasks.stepFailed("15-second stop check", e)
+                    } finally { Heartbeat.stepEnd() }
                     runCatching { PositionCards.refresh(this) }
                 }
                 Heartbeat.beat(this)
@@ -779,6 +977,7 @@ class WatchService : Service() {
         val harvesting = running.containsKey(Jobs.Kind.HARVEST)
         running.values.forEach { it.cancel() }
         running.clear()
+        watching = false
         if (harvesting) Tasks.publish(Tasks.LiveState(false))   // a WorkManager harvest may still be running: its card stays
         Tasks.publishWatch(Tasks.LiveState(false))
         ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
@@ -790,6 +989,8 @@ class WatchService : Service() {
     }
 
     override fun onDestroy() {
+        // The watch's job is cancelled below; its own finally writes the diary line (SERVICE_DESTROYED unless a reason was set).
+        if (running[Jobs.Kind.LIVE]?.isActive == true && endWhy == null) endWhy = com.optionslab.ira.WatchHealth.End.SERVICE_DESTROYED to null
         scope.cancel()
         super.onDestroy()
     }

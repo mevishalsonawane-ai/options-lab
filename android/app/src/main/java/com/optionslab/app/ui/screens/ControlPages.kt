@@ -518,6 +518,14 @@ fun SchedulePage(model: AppModel) {
                 LedgerLine("Notifications", if (notif) "allowed" else "blocked", if (notif) p.verdigris else p.oxblood)
                 LedgerLine("Precise alarms", if (exact) "allowed" else "not allowed", if (exact) p.verdigris else p.amber)
                 if (!exact) Note("Without precise alarms the phone may run jobs late, and cannot start the all-day market watch on its own.")
+                // The order watch's notices and the morning check point here when Android battery-optimizes the app.
+                val battery = BatteryCheck.unrestricted(context)
+                LedgerLine("Battery", if (battery) "Unrestricted" else "optimized", if (battery) p.verdigris else p.oxblood)
+                if (!battery) {
+                    Note("Android may stop the order watch - and the stops, targets and strategy exits it checks - while IraAlgo is battery-optimized. Set IraAlgo's battery to Unrestricted.")
+                    Spacer(Modifier.height(8.dp))
+                    BrassButton("Set battery to Unrestricted", Modifier.fillMaxWidth()) { BatteryCheck.ask(context) }
+                }
                 Spacer(Modifier.height(8.dp))
                 Row {
                     BrassButton("Notification settings", Modifier.weight(1f), tone = p.inkSoft) {

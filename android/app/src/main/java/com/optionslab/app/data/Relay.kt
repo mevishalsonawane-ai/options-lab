@@ -185,7 +185,7 @@ object Relay {
     }
 
     /** Connect ahead of time (market hours), so the first order does not wait for the handshake. */
-    fun warm() { if (enabled) runCatching { connect() } }
+    fun warm(): Boolean = !enabled || runCatching { connect() }.isSuccess
 
     @Synchronized fun close() {
         runCatching { socks?.close() }; socks = null
