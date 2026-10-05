@@ -14,8 +14,10 @@ import com.optionslab.app.MainActivity
 import com.optionslab.app.R
 import com.optionslab.app.data.AppSettings
 import com.optionslab.app.data.Broker
+import com.optionslab.app.data.DailyPnl
 import com.optionslab.app.data.Market
 import com.optionslab.app.data.Paper
+import com.optionslab.app.data.PnlTracker
 import com.optionslab.app.security.SecurePrefs
 import com.optionslab.ira.OpenBook
 import java.time.LocalDateTime
@@ -33,13 +35,30 @@ import java.util.Locale
  * Home screen only (never the lock screen), and not in the gold build (its receiver is disabled there).
  *
  * Battery: no timer of its own. It is redrawn only when the live watch or the app already has the books in hand
- * ([fromWatch], [fromZerodha], [fromPaper], [fromOrders]); the only read made for it is the live watch's one order-book
+ * ([fromWatch], [fromZerodha], [fromPaper], [fromOrders]), and filled once from what the phone already holds - no
+ * network - when it is placed or updated, the switch is turned on, the app starts or the phone restarts ([fillLocal]:
+ * the paper books as last saved, Zerodha's P&L as the app recorded it today); the only read made for it is the live watch's one order-book
  * read a pass while it shows Zerodha orders still working ([wantsOrders]; with the screen off, about every 5 minutes).
  * With no widget placed, or the switch off, nothing is kept, read or drawn. Its figures reach the vault at most once a minute (as [IraWidget]'s do), and the order
  * path never waits on it ([fromOrdersSoon]).
  */
 class OpenWidget : AppWidgetProvider() {
-    override fun onUpdate(context: Context, manager: AppWidgetManager, ids: IntArray) = draw(context, manager, ids, true)
+    /**
+     * Placed, or the launcher asks again: drawn at once from what it kept, then filled from what the phone already holds
+     * ([fillLocal], off the main thread; no network), so a widget placed in the evening shows the day's P&L straight away
+     * instead of waiting for the app or a market-hours watch pass.
+     */
+    override fun onUpdate(context: Context, manager: AppWidgetManager, ids: IntArray) {
+        runCatching { draw(context, manager, ids, true) }
+        val pending = runCatching { goAsync() }.getOrNull()
+        fillSoon(context) { runCatching { pending?.finish() } }
+    }
+
+    /** The first one was placed: filled from the phone at once (as [onUpdate]). */
+    override fun onEnabled(context: Context) {
+        val pending = runCatching { goAsync() }.getOrNull()
+        fillSoon(context) { runCatching { pending?.finish() } }
+    }
 
     /** Resized: as many rows as fit, so the "+N more" line is never cut off. */
     override fun onAppWidgetOptionsChanged(context: Context, appWidgetManager: AppWidgetManager, appWidgetId: Int, newOptions: Bundle?) {
@@ -94,9 +113,11 @@ class OpenWidget : AppWidgetProvider() {
         /** Tests: run that work on the caller's thread instead. */
         @Volatile internal var inlineForTest = false
 
-        private fun later(work: () -> Unit) {
-            if (inlineForTest) { runCatching { work() }; return }
-            runCatching { worker.execute { runCatching { work() } } }
+        /** [work] on the widget's thread; [done] always runs after it (or at once when it could not be handed over). */
+        private fun later(done: (() -> Unit)? = null, work: () -> Unit) {
+            if (inlineForTest) { runCatching { work() }; done?.invoke(); return }
+            val queued = runCatching { worker.execute { try { runCatching { work() } } finally { done?.invoke() } } }.isSuccess
+            if (!queued) done?.invoke()
         }
 
         /** Tests share this process: back to a fresh start. */
@@ -161,8 +182,55 @@ class OpenWidget : AppWidgetProvider() {
             val app = context.applicationContext ?: context
             later {
                 if (!on) forget()
-                if (placed(app)) draw(app, AppWidgetManager.getInstance(app), ids(app), true, on)
+                // On: filled at once from what the phone holds (no waiting for the next pass); off: the note alone.
+                if (placed(app)) { if (on) fillLocal(app) else draw(app, AppWidgetManager.getInstance(app), ids(app), true, false) }
             }
+        }
+
+        /**
+         * [fillLocal] off the caller's thread (the widget placed or updated, the app started, the phone restarted); [done]
+         * runs when it is over (a receiver's goAsync finish).
+         */
+        fun fillSoon(context: Context, done: (() -> Unit)? = null) {
+            if (BuildConfig.GOLD) { done?.invoke(); return }
+            val app = context.applicationContext ?: context
+            later(done) { fillLocal(app) }
+        }
+
+        /**
+         * Fill the widget from what this phone already holds, with no network read: the paper books as last saved
+         * ([Paper.localSnapshot], as of when they were last marked while anything is open), and Zerodha's P&L as the app
+         * recorded it today ([DailyPnl], timed by [PnlTracker]'s last sample; after the close the day's final figure).
+         * A reading kept already wins when it is newer ([OpenBook.takeLocal]). Nothing is read, kept or drawn with figures
+         * when no widget is placed or the switch is off; a fresh install with nothing recorded says to open the app once.
+         */
+        internal fun fillLocal(context: Context) {
+            if (BuildConfig.GOLD) return
+            val placedIds = ids(context)
+            if (placedIds.isEmpty()) return
+            val manager = AppWidgetManager.getInstance(context)
+            if (!allowed()) { off(context, manager, placedIds); return }
+            val now = nowMinute()
+            val live = runCatching { AppSettings.load().live }.getOrDefault(false)
+            val fill = HashMap<String, String?>()
+            runCatching { Paper.localSnapshot() }.getOrNull()?.let { (snap, savedMs) ->
+                val open = snap.positions.positions.any { it.quantity != 0 }
+                val saved = java.time.Instant.ofEpochMilli(savedMs).atZone(Market.now().zone).toLocalDateTime()
+                val local = paperVenue(snap, !live, OpenBook.localAt(open, saved, now))
+                if (OpenBook.takeLocal(OpenBook.decode(textNow(K_P)), local)) fill[K_P] = OpenBook.encode(local)
+            }
+            if (runCatching { Broker.linked }.getOrDefault(false)) runCatching { recordedZerodha(now, live) }.getOrNull()?.let { local ->
+                if (OpenBook.takeLocal(OpenBook.decode(textNow(K_Z)), local)) fill[K_Z] = OpenBook.encode(local)
+            }
+            if (fill.isEmpty()) draw(context, manager, placedIds, true) else store(context, fill)
+        }
+
+        /** Zerodha's P&L as the app recorded it today (no read of its books, so no positions), or null for none. */
+        private fun recordedZerodha(now: LocalDateTime, live: Boolean): OpenBook.Venue? {
+            val day = DailyPnl.sessionDay(true)
+            val figure = day?.let { d -> DailyPnl.all(true)[d]?.pnl }
+            val sample = PnlTracker.today().lastOrNull()?.let { it.minute to it.pnl }
+            return OpenBook.recorded(OpenBook.ZERODHA, figure, sample, now, !Market.isOpen(), live)
         }
 
         private fun off(context: Context, manager: AppWidgetManager, ids: IntArray) {

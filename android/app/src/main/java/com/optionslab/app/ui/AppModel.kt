@@ -130,6 +130,9 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         refreshAlarms()
         viewModelScope.launch(Dispatchers.IO) { integrity.value = Integrity.report(ctx) }
         viewModelScope.launch(Dispatchers.IO) { pnlSeries.value = com.optionslab.app.data.PnlTracker.today() }
+        // The app started: the "Open" widget filled at once from what the phone holds (on its own thread; nothing when
+        // none is placed or its switch is off), before any account is read.
+        runCatching { com.optionslab.app.widget.OpenWidget.fillSoon(ctx) }
     }
 
     /** Every message the app gives shows as a banner at the top: green for success, red for an error. */

@@ -18,7 +18,14 @@ object OpenBook {
     const val ZERODHA = "Zerodha"
     const val PAPER = "Paper"
     const val NOTHING_OPEN = "No open positions or orders"
-    const val WAITING = "Waiting for the app or the live watch to update"
+    /**
+     * Nothing at all is known yet (a fresh install, before the app ever read an account). Every other case is filled from
+     * what the phone already holds the moment the widget is placed, the switch turned on, the app started or the phone
+     * restarted - it never waits on a market-hours watch pass.
+     */
+    const val WAITING = "Open IraAlgo once to fill this"
+    /** Said when the only reading is a P&L figure the app recorded, not a read of the positions. */
+    const val SEE_POSITIONS = "Open IraAlgo to see the open positions"
     /** Said for the account the app is in when its last reading is from an earlier day. */
     const val NOT_TODAY = "not updated today"
 
@@ -32,10 +39,11 @@ object OpenBook {
     /**
      * One account's books. [pnl] today's P&L as Home shows it; [problem] set ("could not read", "not logged in") when its
      * books are unknown; [primary] the account the app is in (shown even when it holds nothing; its P&L is the
-     * headline); [at] when it was read (null: unknown, never taken for today's).
+     * headline); [at] when it was read (null: unknown, never taken for today's). [held]: its positions and orders are
+     * known (false for a P&L figure alone, [recorded]: nothing of it is then shown as "nothing open").
      */
     data class Venue(val name: String, val pnl: Double?, val positions: List<Pos> = emptyList(), val orders: List<Ord> = emptyList(),
-                     val problem: String? = null, val primary: Boolean = false, val at: LocalDateTime? = null)
+                     val problem: String? = null, val primary: Boolean = false, val at: LocalDateTime? = null, val held: Boolean = true)
 
     enum class Tone { GAIN, LOSS, PLAIN }
 
@@ -106,16 +114,19 @@ object OpenBook {
         val splitLines = split.map { v -> v.problem?.let { "${v.name}: $it" } ?: "${v.name}  ${v.pnl?.let(::rs) ?: "—"}" }
         val read = shown.filter { it.problem == null }
         val tag = read.size > 1
-        val all = read.flatMap { v -> v.positions.filter { it.qty != 0 }.map { positionRow(it, if (tag) v.name else null) } } +
-            read.flatMap { v -> v.orders.mapNotNull { o -> pendingLabel(o.status, o.variety)?.let { orderRow(o, it, if (tag) v.name else null) } } }
+        // A figure alone (no read of its books) adds no rows, and is never taken for "nothing open".
+        val known = read.filter { it.held }
+        val all = known.flatMap { v -> v.positions.filter { it.qty != 0 }.map { positionRow(it, if (tag) v.name else null) } } +
+            known.flatMap { v -> v.orders.mapNotNull { o -> pendingLabel(o.status, o.variety)?.let { orderRow(o, it, if (tag) v.name else null) } } }
         val cap = maxRows.coerceAtLeast(1)
         val rows = all.take(cap)
         val more = (all.size - rows.size).takeIf { it > 0 }?.let { "+$it more" }
         val note = when {
             all.isNotEmpty() -> null
             read.isEmpty() -> null                                  // nothing could be read: the split line says why
-            read.size == shown.size -> NOTHING_OPEN
-            else -> "No open ${read.joinToString(" or ") { it.name }} positions or orders"
+            known.size == shown.size -> NOTHING_OPEN
+            known.isEmpty() -> SEE_POSITIONS
+            else -> "No open ${known.joinToString(" or ") { it.name }} positions or orders"
         }
         return Screen(caption, headPnl?.let(::rs) ?: "—", headPnl?.let(::tone) ?: Tone.PLAIN, splitLines, rows, more, note)
     }
@@ -143,6 +154,49 @@ object OpenBook {
         return screen(c, maxRows) to stamp(c, now)
     }
 
+    // ---- filled from the phone alone (no network): the widget placed, the switch on, the app started, the phone restarted --
+
+    /**
+     * When a book read from the phone was last marked: [savedAt] (when it was last priced and saved) while it holds an
+     * open position, whose figures are only as fresh as that; with nothing open its P&L is all booked, so it is current
+     * as of [now]. Never later than [now].
+     */
+    fun localAt(open: Boolean, savedAt: LocalDateTime?, now: LocalDateTime): LocalDateTime {
+        val n = minute(now)
+        if (!open || savedAt == null) return n
+        val s = minute(savedAt)
+        return if (s.isAfter(n)) n else s
+    }
+
+    /**
+     * An account's P&L as the app recorded it today, with no read of its books ([Venue.held] false): [dayFigure] the
+     * day's figure (the P&L calendar's), else the last [sample] (minute of the day, P&L) of the day's P&L series. Its
+     * time is that sample's; with no sample, [now] only when the market is [closed] (the day's figure is then final).
+     * Null when nothing was recorded today, or its time is unknown.
+     */
+    fun recorded(name: String, dayFigure: Double?, sample: Pair<Int, Double>?, now: LocalDateTime, closed: Boolean, primary: Boolean): Venue? {
+        val pnl = (dayFigure ?: sample?.second)?.takeIf { it.isFinite() } ?: return null
+        val n = minute(now)
+        val at = sample?.first?.takeIf { it in 0 until 24 * 60 }?.let { n.toLocalDate().atStartOfDay().plusMinutes(it.toLong()) }
+            ?.let { if (it.isAfter(n)) n else it }
+            ?: (if (closed) n else return null)
+        return Venue(name, pnl, primary = primary, at = at, held = false)
+    }
+
+    /**
+     * Is [local] (read from the phone) worth keeping over [kept] (the last reading the widget holds)? Always when nothing
+     * is kept, or it has no time; a later day's always, an earlier day's never. On the same day a full book does when it
+     * is no older, and a figure alone ([Venue.held] false) never replaces a reading already made today.
+     */
+    fun takeLocal(kept: Venue?, local: Venue?): Boolean {
+        val l = local ?: return false
+        val la = l.at ?: return false
+        val k = kept ?: return true
+        val ka = k.at ?: return true
+        if (la.toLocalDate() != ka.toLocalDate()) return la.toLocalDate().isAfter(ka.toLocalDate())
+        return l.held && !la.isBefore(ka)
+    }
+
     /** "as of 14:05" today, "as of 3 Oct 15:29" for another day. */
     fun asOf(at: LocalDateTime, now: LocalDateTime): String =
         if (at.toLocalDate() == now.toLocalDate()) String.format(Locale.ENGLISH, "as of %02d:%02d", at.hour, at.minute)
@@ -164,7 +218,7 @@ object OpenBook {
     private fun minute(t: LocalDateTime) = t.withSecond(0).withNano(0)
 
     fun encode(v: Venue): String = (listOf(listOf("V", clean(v.name), v.pnl?.let(::num) ?: "", clean(v.problem ?: ""), if (v.primary) "1" else "0",
-        v.at?.let { minute(it).toString() } ?: "").joinToString("\t")) +
+        v.at?.let { minute(it).toString() } ?: "", if (v.held) "1" else "0").joinToString("\t")) +
         v.positions.map { listOf("P", clean(it.symbol), it.qty.toString(), it.ltp?.let(::num) ?: "", num(it.pnl)).joinToString("\t") } +
         v.orders.map(::ordLine)).joinToString("\n")
 
@@ -178,7 +232,8 @@ object OpenBook {
             Venue(h[1], h[2].takeIf { it.isNotEmpty() }?.toDouble(),
                 lines.drop(1).filter { it.size >= 5 && it[0] == "P" }.map { Pos(it[1], it[2].toInt(), it[3].takeIf { x -> x.isNotEmpty() }?.toDouble(), it[4].toDouble()) },
                 lines.drop(1).mapNotNull(::ord), h[3].takeIf { it.isNotEmpty() }, h[4] == "1",
-                h.getOrNull(5)?.takeIf { it.isNotEmpty() }?.let { runCatching { LocalDateTime.parse(it) }.getOrNull() })
+                h.getOrNull(5)?.takeIf { it.isNotEmpty() }?.let { runCatching { LocalDateTime.parse(it) }.getOrNull() },
+                h.getOrNull(6) != "0")
         }.getOrNull()
     }
 

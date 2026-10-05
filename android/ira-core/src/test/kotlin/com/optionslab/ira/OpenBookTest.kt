@@ -152,4 +152,58 @@ class OpenBookTest {
         assertEquals(emptyList(), OpenBook.decodeOrders(text, "2026-10-06"), "yesterday's orders are not today's")
         assertEquals(emptyList(), OpenBook.decodeOrders(null, "2026-10-05"))
     }
+
+    @Test fun nothingKnownAsksForTheAppOnceNotToWait() {
+        assertEquals("Open IraAlgo once to fill this", OpenBook.screen(emptyList()).note)
+        assertTrue(!OpenBook.WAITING.contains("Waiting"))
+    }
+
+    @Test fun aBookReadFromThePhoneIsAsOfItsLastMarkWhileAnythingIsOpen() {
+        val now = LocalDateTime.of(2026, 10, 5, 19, 4, 33)
+        val saved = LocalDateTime.of(2026, 10, 5, 15, 29, 12)
+        assertEquals(LocalDateTime.of(2026, 10, 5, 15, 29), OpenBook.localAt(true, saved, now))
+        assertEquals(LocalDateTime.of(2026, 10, 5, 19, 4), OpenBook.localAt(false, saved, now), "all booked: current now")
+        assertEquals(LocalDateTime.of(2026, 10, 5, 19, 4), OpenBook.localAt(true, null, now))
+        assertEquals(LocalDateTime.of(2026, 10, 5, 19, 4), OpenBook.localAt(true, now.plusHours(1), now), "never later than now")
+    }
+
+    @Test fun aRecordedFigureAloneHasItsOwnTimeAndShowsNoRows() {
+        val now = LocalDateTime.of(2026, 10, 5, 19, 4)
+        val r = OpenBook.recorded(OpenBook.ZERODHA, 2_150.0, 15 * 60 + 29 to 2_100.0, now, closed = true, primary = true)!!
+        assertEquals(2_150.0, r.pnl, "the day's figure first")
+        assertEquals(LocalDateTime.of(2026, 10, 5, 15, 29), r.at)
+        assertEquals(false, r.held)
+        assertEquals(LocalDateTime.of(2026, 10, 5, 19, 4), OpenBook.recorded(OpenBook.ZERODHA, 10.0, null, now, closed = true, primary = true)!!.at,
+            "after the close the day's figure is final")
+        assertNull(OpenBook.recorded(OpenBook.ZERODHA, 10.0, null, now, closed = false, primary = true), "in market hours with no time: unknown")
+        assertNull(OpenBook.recorded(OpenBook.ZERODHA, null, null, now, closed = true, primary = true))
+        assertEquals(-40.0, OpenBook.recorded(OpenBook.ZERODHA, null, 600 to -40.0, now, closed = false, primary = true)!!.pnl)
+
+        val (s, stamp) = OpenBook.view(listOf(r), now)
+        assertEquals("+₹2,150", s.headline)
+        assertEquals(emptyList(), s.rows)
+        assertEquals(OpenBook.SEE_POSITIONS, s.note, "never 'nothing open' without a read of the books")
+        assertEquals("as of 15:29", stamp)
+        // Beside a read paper book: that book's rows, and "nothing open" said of paper only.
+        val p = Venue(OpenBook.PAPER, 5.0, at = now.minusMinutes(1))
+        assertEquals("No open Paper positions or orders", OpenBook.view(listOf(r, p), now).first.note)
+        assertEquals(r, OpenBook.decode(OpenBook.encode(r)))
+    }
+
+    @Test fun aLocalReadingReplacesOnlyWhatIsOlder() {
+        val at = LocalDateTime.of(2026, 10, 5, 15, 29)
+        val book = Venue(OpenBook.PAPER, 100.0, at = at)
+        assertTrue(OpenBook.takeLocal(null, book), "nothing kept")
+        assertTrue(OpenBook.takeLocal(book.copy(at = null), book), "kept with no time")
+        assertTrue(OpenBook.takeLocal(book.copy(at = at.minusDays(1)), book), "kept from an earlier day")
+        assertTrue(!OpenBook.takeLocal(book.copy(at = at.plusDays(1)), book), "never over a later day")
+        assertTrue(OpenBook.takeLocal(book.copy(at = at.minusMinutes(5)), book))
+        assertTrue(OpenBook.takeLocal(book, book), "the same minute: the phone's own book")
+        assertTrue(!OpenBook.takeLocal(book.copy(at = at.plusMinutes(5)), book), "never over a newer reading")
+        val figure = book.copy(held = false, at = at.plusHours(3))
+        assertTrue(!OpenBook.takeLocal(book, figure), "a figure alone never replaces today's read of the books")
+        assertTrue(OpenBook.takeLocal(book.copy(at = at.minusDays(1)), figure))
+        assertTrue(!OpenBook.takeLocal(null, book.copy(at = null)), "a local reading with no time is not kept")
+        assertTrue(!OpenBook.takeLocal(book, null))
+    }
 }

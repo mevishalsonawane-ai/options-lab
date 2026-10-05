@@ -391,6 +391,26 @@ object Paper {
         }
     }
 
+    /**
+     * The books as this phone holds them, marked at the prices they were last marked to: no price read (no network) and
+     * nothing saved. With when the account was last saved (epoch ms), so a figure from it carries its own "as of". Null
+     * when the paper account was never used on this phone (nothing to show). For the "Open" home-screen widget.
+     */
+    fun localSnapshot(): Pair<Snapshot, Long>? {
+        val savedAt = runCatching { file.lastModified() }.getOrDefault(0L)
+        if (savedAt <= 0L) return null
+        synchronized(this) {
+            val b = book()
+            val e = engine(b.capital, b.contracts)
+            val now = Market.now()
+            val funds = e.funds(b.state, now)
+            val pos = e.positionBook(funds.state, now)
+            val hold = e.holdings(pos.state, now)
+            val after = e.funds(hold.state, now)
+            return Snapshot(after.result, pos.result, e.orderBook(after.state, now), e.tradeBook(after.state, now), hold.result, false) to savedAt
+        }
+    }
+
     data class Snapshot(
         val funds: com.optionslab.engine.sandbox.FundsView,
         val positions: com.optionslab.engine.sandbox.PositionBook,

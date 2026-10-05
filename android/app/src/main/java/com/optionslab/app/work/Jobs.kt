@@ -228,7 +228,13 @@ class BootReceiver : BroadcastReceiver() {
             }
         }
         // Rebooted or updated during market hours: pick the watch straight back up.
-        if (intent.action == Intent.ACTION_BOOT_COMPLETED || intent.action == Intent.ACTION_MY_PACKAGE_REPLACED) Jobs.ensureWatch(context)
+        if (intent.action == Intent.ACTION_BOOT_COMPLETED || intent.action == Intent.ACTION_MY_PACKAGE_REPLACED) {
+            Jobs.ensureWatch(context)
+            // The "Open" widget filled from what the phone holds (no network), off this thread.
+            val pending = runCatching { goAsync() }.getOrNull()
+            runCatching { com.optionslab.app.widget.OpenWidget.fillSoon(context) { runCatching { pending?.finish() } } }
+                .onFailure { runCatching { pending?.finish() } }
+        }
     }
 }
 
