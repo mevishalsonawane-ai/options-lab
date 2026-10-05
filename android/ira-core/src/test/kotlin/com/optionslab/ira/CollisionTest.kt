@@ -99,6 +99,7 @@ class CollisionTest {
         "LeadPart" to { q -> LeadPart.asked(q) != null },
         "NextAsk" to { q -> NextAsk.asked(q) != null },
         "MoreAfter" to { q -> MoreAfter.asked(q) != null },
+        "SmallTrades" to { q -> SmallTrades.asked(q) != null },
         "Headroom" to { q -> Headroom.asked(q) != null },
         "ArmFit" to { q -> ArmFit.asked(q) },
         "WeakLink" to { q -> WeakLink.asked(q) },
@@ -899,6 +900,19 @@ class CollisionTest {
         "stop giving me the whole answer straight away" to "MoreAfter", "don't give me the full answer first" to "MoreAfter",
         "forget which answers i ask more about" to "MoreAfter", "reset where i ask for more" to "MoreAfter",
         "poora jawab seedha mat do" to "MoreAfter",
+        // ---- SmallTrades: where Boss's trades that moved less than twice their charges come from (a fact, said once) ----
+        "what have you learned about my charges" to "SmallTrades", "what did you notice about my charges" to "SmallTrades",
+        "what have you learnt about my small trades" to "SmallTrades", "which trades move less than twice their charges" to "SmallTrades",
+        "which of my trades moved less than twice their own charges" to "SmallTrades", "which strategies make the most small trades" to "SmallTrades",
+        "what time of day makes the most small trades" to "SmallTrades", "who makes the most small trades" to "SmallTrades",
+        "where do my small trades come from" to "SmallTrades", "what's my small trades record" to "SmallTrades",
+        "charges ke baare mein kya seekha" to "SmallTrades", "chhote trades kaun karta hai" to "SmallTrades",
+        "stop mentioning my small trades" to "SmallTrades", "stop telling me about my small trades" to "SmallTrades",
+        "don't mention my small trades" to "SmallTrades", "forget what you learned about my charges" to "SmallTrades",
+        "reset my small trades count" to "SmallTrades", "chhote trades mat batao" to "SmallTrades",
+        // ...and its neighbours keep theirs: the charges themselves, why they are high, everything learned.
+        "how much did i pay in charges this week" to "Account:CHARGES", "why are my charges so high" to "Account:CHARGES",
+        "what have you learned about me" to "AboutBoss",
         // ...and a market question that merely puts Nifty first is never its undo: it keeps its market route.
         "nifty pehle batao" to "Market", "nifty ko pehle lo" to "Market", "give nifty first" to "Market", "say nifty first" to "Market",
         // ---- HonestStars: his confidence scores against their record ----
@@ -1304,7 +1318,7 @@ class CollisionTest {
     // ---- The audit's order is the hub's: read from IraHub.ask itself when the app's source is beside this module ----
 
     /** The question branches of IraHub.ask between the `bundled` read and the Plan block, in [CoverageTest.feature]'s order. */
-    private val HUB_ORDER = listOf("DayJournal", "AlertSense", "Airtime", "Hearing", "PatternCalls", "TrendReads", "OutsideApp", "Clarity", "WordFit", "AskedAgain", "FigureFirst", "WrongThing", "ArmHabits", "MorningSense", "HonestStars", "TalkHours", "MorningAsks", "TurnDowns", "TopicLength", "OutlookCheck", "UsualIndex", "Nicknames", "LeadIndex", "LeadPart", "NextAsk", "MoreAfter", "NewsMoves",
+    private val HUB_ORDER = listOf("DayJournal", "AlertSense", "Airtime", "Hearing", "PatternCalls", "TrendReads", "OutsideApp", "Clarity", "WordFit", "AskedAgain", "FigureFirst", "WrongThing", "ArmHabits", "MorningSense", "HonestStars", "TalkHours", "MorningAsks", "TurnDowns", "TopicLength", "OutlookCheck", "UsualIndex", "Nicknames", "LeadIndex", "LeadPart", "NextAsk", "MoreAfter", "SmallTrades", "NewsMoves",
         "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmFit", "WeakLink", "ArmChange", "PnlGap", "ArmDay", "BookDecay", "WhereIWin", "TradesADay", "AfterLoss", "RequestBook", "NetLean", "ExpiryEve", "BeforeTomorrow", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "ZerodhaSession", "OrderWhy", "RelayHealth", "StreamHealth", "BatteryUse", "WatchAsk", "Tour", "DataAge", "Honest", "Thinking",
         "SelfWhy", "Consistency", "CoPilot", "SinceMorning", "ExpiryPin", "StraddleDecay", "ChainDrift", "ChainIntel", "DayClock", "GapRecord", "RangeBreaks", "PriorDay", "LastHour", "InsideDays", "FirstMove", "VixNext", "SplitDays", "RoundCloses", "MonthTurns", "LunchRange", "OpenHighLow", "BigCandles", "ExtremeCloses", "WeekRange", "RelativeMove", "Comebacks", "VixBand", "Overnight", "DayAfter", "OpenReach", "MultiDay", "MoveTime", "GiveBack", "Weekdays", "DayCompare", "LikeToday", "Structure", "MindChange", "Breadth",
         "TradeCase", "Scenarios", "Causes", "Agenda", "Improve")

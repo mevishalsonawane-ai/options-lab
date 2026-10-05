@@ -1619,6 +1619,7 @@ object IraHub {
                 com.optionslab.ira.TurnDowns.asked(q) != null || com.optionslab.ira.TopicLength.asked(q) != null || com.optionslab.ira.OutlookCheck.asked(q) ||
                 com.optionslab.ira.UsualIndex.asked(q) != null || com.optionslab.ira.Nicknames.asked(q) != null || com.optionslab.ira.LeadIndex.asked(q) != null ||
                 com.optionslab.ira.LeadPart.asked(q) != null || com.optionslab.ira.NextAsk.asked(q) != null || com.optionslab.ira.MoreAfter.asked(q) != null ||
+                com.optionslab.ira.SmallTrades.asked(q) != null ||
                 com.optionslab.ira.DayCompare.asked(q) != null || com.optionslab.ira.LikeToday.asked(q) }.getOrDefault(false)) {
             val prev = if (recent) _state.value.messages.lastOrNull { !it.fromIra }?.text else null
             val qs = runCatching { com.optionslab.ira.Understand.questions(prev, q) }.getOrNull()
@@ -2415,7 +2416,7 @@ object IraHub {
 
     /**
      * [ask]'s question branches on how Jarvis himself speaks and hears: AlertSense, Airtime, Hearing, PatternCalls,
-     * TrendReads, Clarity, WordFit, AskedAgain, FigureFirst, WrongThing, ArmHabits, MorningSense, HonestStars, TalkHours, MorningAsks, TurnDowns, TopicLength, OutlookCheck, UsualIndex, Nicknames, LeadIndex, LeadPart, NextAsk, MoreAfter - in [ask]'s order. True when one
+     * TrendReads, Clarity, WordFit, AskedAgain, FigureFirst, WrongThing, ArmHabits, MorningSense, HonestStars, TalkHours, MorningAsks, TurnDowns, TopicLength, OutlookCheck, UsualIndex, Nicknames, LeadIndex, LeadPart, NextAsk, MoreAfter, SmallTrades - in [ask]'s order. True when one
      * took [q], answered exactly as before; each branch keeps its own guard (not [bundled], no order, no command).
      */
     private fun askedOfHisWays(q: String, parsed: com.optionslab.ira.Question, bundled: Boolean, understood: Boolean): Boolean {
@@ -2680,6 +2681,23 @@ object IraHub {
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, moreAfterSaid)).takeLast(MAX_MESSAGES)) }
             return true
         }
+        // "What have you learned about my charges?" / "stop mentioning my small trades": where Boss's trades that moved less
+        // than twice their own charges come from, by source and time of day ([com.optionslab.ira.SmallTrades]; his closed
+        // trades, read only). His record: named on an unlocked phone only; the undo works locked too, in neutral words. A
+        // fact only - nothing learned acts. Not in IraGoldAlgo.
+        val smallReq = if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null)
+            runCatching { com.optionslab.ira.SmallTrades.asked(q) }.getOrNull() else null
+        if (smallReq != null) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            val smallLocked = phoneLocked()
+            if (smallReq != com.optionslab.ira.SmallTrades.Request.RESET && smallLocked) { reply(com.optionslab.ira.SmallTrades.LOCKED); return true }
+            scope.launch(Dispatchers.IO) {
+                reply(runCatching {
+                    if (smallReq == com.optionslab.ira.SmallTrades.Request.RESET) IraTools.smallTradesReset(smallLocked) else IraTools.smallTradesSay()
+                }.getOrElse { "I couldn't read your trades' record just now, Boss." })
+            }
+            return true
+        }
         return false
     }
 
@@ -2739,8 +2757,10 @@ object IraHub {
             scope.launch(Dispatchers.IO) {
                 reply(runCatching {
                     val plan = if (locked) null else runCatching { IraImprove.current() }.getOrNull()
+                    // Boss's closed trades for where his small trades come from (his record: none read on a locked phone).
+                    val smallBooks: List<com.optionslab.ira.SmallTrades.Book> = if (locked) emptyList() else runCatching { IraTools.smallBooks() }.getOrDefault(emptyList())
                     val now = LocalDateTime.now(IST).withSecond(0).withNano(0)
-                    com.optionslab.ira.Learnings.say(com.optionslab.ira.Learnings.items(IraTools.learnings(plan), now), learnAsk, now.toLocalDate(), locked)
+                    com.optionslab.ira.Learnings.say(com.optionslab.ira.Learnings.items(IraTools.learnings(plan, smallBooks), now), learnAsk, now.toLocalDate(), locked)
                 }.getOrElse { "I couldn't read what I've learned just now, Boss." })
             }
             return true

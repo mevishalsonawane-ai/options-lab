@@ -1059,7 +1059,12 @@ internal object IraCoach {
         // so it never pushes them out of what is spoken).
         // The expiry-eve checklist right after Boss's own figures (so it is within what is spoken). Facts only.
         val eve = runCatching { expiryEve() }.getOrNull()
-        return listOfNotNull(story, com.optionslab.ira.DaySummary.say(pnl, scorecard, events), eve, if (review) selfReview() else null, agenda, improve, IraSolo.daySummary(),
+        // Where Boss's small trades come from (moved less than twice their own charges; [com.optionslab.ira.SmallTrades]):
+        // one fact from his own record, said once - only at 15:35, never on a locked phone (his record), never in
+        // IraGoldAlgo. A fact only: nothing is stopped, changed or traded.
+        val small = if (review && com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD)
+            runCatching { IraTools.smallTradesWrapLine(runCatching { IraHub.locked() }.getOrDefault(true)) }.getOrNull() else null
+        return listOfNotNull(story, com.optionslab.ira.DaySummary.say(pnl, scorecard, events), eve, if (review) selfReview() else null, small, agenda, improve, IraSolo.daySummary(),
             IraHub.marketWrapLine(),
             // The 09:00 outlook against the close, owned (only at 15:35, when the day is in and the check is kept).
             if (review) IraHub.outlookCheckLine() else null,

@@ -1701,6 +1701,80 @@ internal object IraTools {
         return said
     }
 
+    // ---- where Boss's small trades come from ([com.optionslab.ira.SmallTrades]) -----------------------------------------
+
+    /** When Boss last asked to forget his small trades, and the facts already said once in a wrap-up (keys only, no amounts). */
+    private const val SMALL_TRADES = "jarvis.smallTrades"
+
+    /** Read from the kept preferences each time (they are held in memory there): no state of its own here. */
+    fun smallTradesLog(): com.optionslab.ira.SmallTrades.Log = runCatching {
+        val o = JSONObject(prefs().getString(SMALL_TRADES) ?: "{}")
+        val t = o.optJSONArray("t") ?: JSONArray()
+        com.optionslab.ira.SmallTrades.Log(
+            resetAt = o.optString("r").takeIf { it.isNotEmpty() }?.let { LocalDateTime.parse(it) },
+            told = (0 until t.length()).map { i -> t.getString(i) }.toSet())
+    }.getOrDefault(com.optionslab.ira.SmallTrades.Log())
+
+    @Synchronized private fun smallTradesSave(log: com.optionslab.ira.SmallTrades.Log) {
+        runCatching {
+            val o = JSONObject().put("t", JSONArray().apply { log.told.sorted().forEach { k -> put(k) } })
+            log.resetAt?.let { o.put("r", it.toString()) }
+            prefs().putAllSoon(mapOf(SMALL_TRADES to o.toString()))
+        }
+    }
+
+    /**
+     * Boss's closed trades, Paper and (when it has any) Zerodha, each with who placed it - read only. Never in IraGoldAlgo
+     * (none passed: it learns nothing there).
+     */
+    suspend fun smallBooks(): List<com.optionslab.ira.SmallTrades.Book> {
+        if (!com.optionslab.app.BuildConfig.JARVIS || com.optionslab.app.BuildConfig.GOLD) return emptyList()
+        val owners = runCatching { com.optionslab.app.data.Strategies.owners() }.getOrDefault(emptyMap())
+        return listOf(false, true).mapNotNull { live ->
+            val trips = runCatching { com.optionslab.app.data.TradeBook.trips(live) }.getOrDefault(emptyList()).map { t ->
+                com.optionslab.ira.Charges.Trip(t.openedAt, t.closedAt, t.gross, t.charges, com.optionslab.app.data.TradeBook.ownerOf(t, owners))
+            }
+            if (trips.isEmpty()) null else com.optionslab.ira.SmallTrades.Book(if (live) "Zerodha" else "Paper", trips)
+        }
+    }
+
+    /** The facts learned now from Boss's closed trades (since his last "stop mentioning my small trades"). Nothing acts. */
+    suspend fun smallTradesNow(): List<com.optionslab.ira.SmallTrades.Record> {
+        val books = runCatching { smallBooks() }.getOrDefault(emptyList())
+        return runCatching { com.optionslab.ira.SmallTrades.learned(books, smallTradesLog(), minuteNow()) }.getOrDefault(emptyList())
+    }
+
+    /**
+     * The 15:35 wrap-up's one fact about his small trades, said once ([com.optionslab.ira.SmallTrades.next]) and kept as
+     * told - or null. Never on a [locked] phone (nothing kept as told then, so it waits for a wrap-up heard unlocked), never
+     * in IraGoldAlgo. A fact only: nothing is stopped, changed or traded.
+     */
+    suspend fun smallTradesWrapLine(locked: Boolean): String? {
+        if (locked || !com.optionslab.app.BuildConfig.JARVIS || com.optionslab.app.BuildConfig.GOLD) return null
+        val log = smallTradesLog()
+        val r = com.optionslab.ira.SmallTrades.next(smallTradesNow(), log) ?: return null
+        smallTradesSave(com.optionslab.ira.SmallTrades.told(log, r))
+        IraActivity.add(com.optionslab.ira.SmallTrades.toldNote(r))
+        return com.optionslab.ira.SmallTrades.wrapLine(r)
+    }
+
+    /** "What have you learned about my charges?". */
+    suspend fun smallTradesSay(): String {
+        val rs = smallTradesNow()
+        return runCatching { com.optionslab.ira.SmallTrades.say(rs) }.getOrDefault("I could not read your trades' record just now, Boss.")
+    }
+
+    /**
+     * "Stop mentioning my small trades": nothing before now counts, nothing kept as told. On a [locked] phone, one neutral
+     * reply that never names what was learned (nor whether).
+     */
+    suspend fun smallTradesReset(locked: Boolean = false): String {
+        val said = if (locked) com.optionslab.ira.SmallTrades.RESET_LOCKED else com.optionslab.ira.SmallTrades.sayReset(smallTradesNow())
+        smallTradesSave(com.optionslab.ira.SmallTrades.reset(minuteNow()))
+        IraActivity.add("Forgot what I noted about Boss's small trades (as asked).")
+        return said
+    }
+
     // ---- the morning outlook checked against the close ([com.optionslab.ira.OutlookCheck]) ---------------------------
 
     /** Each index's 09:00 outlook numbers (previous close, range, direction read, pivot) and the day's open, high, low, close. Market data only. */
@@ -1740,7 +1814,7 @@ internal object IraTools {
     // ---- what he has learned, in one view ([com.optionslab.ira.Learnings]) ------------------------------------------
 
     /** Every learning store read with its own accessor (the goals are added by [IraImprove], which holds them). */
-    fun learnings(plan: com.optionslab.ira.Improve.Plan?): com.optionslab.ira.Learnings.Inputs = com.optionslab.ira.Learnings.Inputs(
+    fun learnings(plan: com.optionslab.ira.Improve.Plan?, smallBooks: List<com.optionslab.ira.SmallTrades.Book> = emptyList()): com.optionslab.ira.Learnings.Inputs = com.optionslab.ira.Learnings.Inputs(
         words = runCatching { learned() }.getOrDefault(emptyList()),
         routines = runCatching { routineKept() }.getOrDefault(emptyList()),
         alerts = runCatching { alertLog() }.getOrDefault(com.optionslab.ira.AlertSense.Log()),
@@ -1771,7 +1845,9 @@ internal object IraTools {
         leadPart = runCatching { leadPartLog() }.getOrDefault(com.optionslab.ira.LeadPart.Log()),
         routineLog = runCatching { routineLog() }.getOrDefault(emptyList()),
         nextAsk = runCatching { nextAskLog() }.getOrDefault(com.optionslab.ira.NextAsk.Log()),
-        moreAfter = runCatching { moreAfterLog() }.getOrDefault(com.optionslab.ira.MoreAfter.Log()))
+        moreAfter = runCatching { moreAfterLog() }.getOrDefault(com.optionslab.ira.MoreAfter.Log()),
+        smallBooks = smallBooks,
+        smallTrades = runCatching { smallTradesLog() }.getOrDefault(com.optionslab.ira.SmallTrades.Log()))
 
     /**
      * "Undo everything you learned this week", on Boss's Confirm: the wordings and routines kept in the last 7 days

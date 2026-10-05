@@ -21,8 +21,9 @@ import java.util.Locale
  * ([Nicknames]), the index he asks about by name, named first where both are given ([LeadIndex]), the part of a market read he
  * asks for on its own, said right after the price in an overview ([LeadPart]), the question he usually asks next, offered in
  * one short question at the end of an answer ([NextAsk]), the kinds of answer said in full straight away aloud as he
- * usually asks for more after their short line ([MoreAfter]) and his own goals for the week ([Improve]) - each with when and why it changed and, where one exists, the
- * words that undo it by voice.
+ * usually asks for more after their short line ([MoreAfter]), where his trades that moved less than twice their own charges
+ * come from, said once in the 15:35 wrap-up ([SmallTrades], a fact of his record) and his own goals for the week ([Improve]) -
+ * each with when and why it changed and, where one exists, the words that undo it by voice.
  *
  * "What have you learned this week?" ([Ask.WEEK]), "what changed in how you work?" ([Ask.CHANGED]) and "show me
  * everything you've learned about me" / "what did you learn about me?" / "tumne mere baare mein kya seekha" ([Ask.ALL]). Boss's own words, routines and records ([Item.personal]) are said
@@ -39,7 +40,8 @@ import java.util.Locale
  * first again), the part said first in an overview ([LeadPart]: the usual order again), the question offered next ([NextAsk]:
  * no longer offered), the answers said in full straight away ([MoreAfter]: the short line first again) and his own goals.
  * (His confidence words set to fit the
- * numbers beside them ([WordFit]) are listed with their own undo, but not reset here: that is a check on his own words
+ * numbers beside them ([WordFit]) and where his small trades come from ([SmallTrades], a fact of his record) are listed with
+ * their own undo, but not reset here: that is a check on his own words
  * against his own record, not a habit learned from Boss.)
  * for this week. Never a setting, the PIN, Live, the AI's live trading, a guard or the Google speech choice - and never
  * a record: the answers Boss marked wrong, the trades and the patterns' outcomes stay, as they are facts, not habits.
@@ -72,6 +74,7 @@ object Learnings {
         LEAD_PART("What I say first in an overview", true),
         NEXT_ASK("The question I offer next, after an answer", true),
         MORE_AFTER("Answers I say in full straight away, as you usually ask for more", true),
+        SMALL_TRADES("Your trades that moved less than twice their own charges, said once in the wrap-up", true),
         ARM_HABITS("Your bots after losing days", true),
         SIT_OUT("Conditions I sit out", true),
         ANSWERS("Answer kinds I flag", true),
@@ -126,6 +129,9 @@ object Learnings {
         val nextAsk: NextAsk.Log = NextAsk.Log(),
         /** Boss's "more" after a short answer, kinds and minutes only ([MoreAfter]; read with [tally]). */
         val moreAfter: MoreAfter.Log = MoreAfter.Log(),
+        /** Boss's closed trades by book, and when he last asked to forget his small trades ([SmallTrades]). */
+        val smallBooks: List<SmallTrades.Book> = emptyList(),
+        val smallTrades: SmallTrades.Log = SmallTrades.Log(),
     )
 
     fun day(d: LocalDate): String = "${d.dayOfMonth} ${d.month.getDisplayName(TextStyle.SHORT, Locale.ENGLISH)}"
@@ -240,6 +246,11 @@ object Learnings {
         // ([MoreAfter]; kinds and minutes only, against the kinds tally). Only the voice's length changes - nothing that acts.
         MoreAfter.learned(i.moreAfter, i.tally, now).forEach { r ->
             out += Item(Area.MORE_AFTER, MoreAfter.ledgerWhat(r), r.newest.toLocalDate(), MoreAfter.ledgerWhy(r), MoreAfter.UNDO)
+        }
+        // Where Boss's trades that moved less than twice their own charges come from ([SmallTrades]; by source and time of
+        // day, from his closed trades): a fact said once in the 15:35 wrap-up - never advice, nothing that acts.
+        SmallTrades.learned(i.smallBooks, i.smallTrades, now).forEach { r ->
+            out += Item(Area.SMALL_TRADES, SmallTrades.ledgerWhat(r), r.newest, SmallTrades.ledgerWhy(r), SmallTrades.UNDO)
         }
         // What Boss does with his bots after losing days ([ArmHabits]; switches and signs only): his record - it arms or
         // disarms nothing, changes nothing Jarvis does, and so has no undo.
