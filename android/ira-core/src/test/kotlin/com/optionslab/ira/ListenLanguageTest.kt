@@ -97,4 +97,70 @@ class ListenLanguageTest {
         // Yesterday's switch is not today's.
         assertFalse(L.spoken(d.state, "en-IN", "2026-10-06").contains("08:53"))
     }
+
+    // --- Round 20: what is said is what is used (Boss, 5 Oct: activity "en-IN", diagnostics "language: en-US"). ---
+
+    @Test fun boss5OctTodaysSwitchIsKeptAcrossARestart() {
+        val d = L.clearNoWords(State(), "en-US", day, "08:53", 4)
+        assertEquals("en-IN", d.to)
+        // Listening restarts (the service, the app): it goes on in English (India), not afresh in English (US).
+        val restored = L.load(L.save(d.state))
+        assertEquals("en-IN", L.start(restored, day))
+        // The phone has it: the start-up pick keeps it (it used to put English (US) back without a word).
+        assertEquals("en-IN", L.pick(listOf("en-US", "en-IN"), restored, day, google = false))
+        // The next day the switch is yesterday's: afresh.
+        assertEquals("en-US", L.start(restored, "2026-10-06"))
+    }
+
+    @Test fun aRestartInAMissingEnglishIsMovedAndThatMoveIsRecorded() {
+        val d = L.clearNoWords(State(), "en-US", day, "08:53", 4)
+        val pick = L.pick(listOf("en-US", "hi-IN"), d.state, day, google = false)
+        assertEquals("en-US", pick)
+        val s = L.forced(d.state, L.start(d.state, day), pick!!, day, "09:10", Why.MISSING)
+        assertEquals("en-US", L.start(s, day))
+        assertEquals("Listening switched to English (US): English (India) isn't on this phone for on-device listening.", L.line(s.last!!))
+        assertTrue(L.say(s, "en-US", day, listOf("en-US", "hi-IN")).contains("last 2026-10-05 09:10 en-IN>en-US MISSING"))
+    }
+
+    @Test fun neverSwitchesByItselfToAnEnglishThePhoneLacks() {
+        // A Pixel with English (US) and Hindi on-device: four clear turns with no words keep English (US), said plainly.
+        val d = L.clearNoWords(State(), "en-US", day, "08:53", 4, installed = listOf("en-US", "hi-IN"))
+        assertNull(d.to)
+        assertTrue(d.held)
+        assertTrue(d.missing)
+        assertEquals(0, d.state.soft)
+        assertEquals(1, d.state.held)
+        assertNull(d.state.last)
+        assertEquals("Kept listening in English (US): English (India) isn't on this phone for on-device listening, so switching to it " +
+            "would not change what I hear.", L.heldLine("en-US"))
+        val said = L.spoken(d.state, "en-US", day, listOf("en-US", "hi-IN"), google = false)
+        assertTrue(said.contains("English (India) isn't on this phone for on-device listening, so I stay in English (US)"), said)
+        assertFalse(said.contains("Google"), said)
+        // The phone cannot say (older Android, or an empty list): as before.
+        assertEquals("en-IN", L.clearNoWords(State(), "en-US", day, "08:53", 4, installed = null).to)
+        assertEquals("en-IN", L.clearNoWords(State(), "en-US", day, "08:53", 4, installed = emptyList()).to)
+        // The phone has it: switched.
+        assertEquals("en-IN", L.clearNoWords(State(), "en-US", day, "08:53", 4, installed = listOf("en_us", "en_in")).to)
+        // With Google's speech service already on (Boss's own choice in Settings), both are there.
+        assertEquals("en-IN", L.clearNoWords(State(), "en-US", day, "08:53", 4, installed = listOf("en-US"), google = true).to)
+    }
+
+    @Test fun canTryAndMissing() {
+        assertTrue(L.canTry("en-IN", null, google = false))
+        assertTrue(L.canTry("en-IN", listOf("en-in"), google = false))
+        assertFalse(L.canTry("en-IN", listOf("en-US"), google = false))
+        assertTrue(L.canTry("en-IN", listOf("en-US"), google = true))
+        assertNull(L.missing("en-US", listOf("en-US", "en-IN"), google = false))
+        assertNull(L.missing("en-US", null, google = false))
+        assertNull(L.missing("en-US", listOf("en-US"), google = true))
+        assertNull(L.missing(null, listOf("en-US"), google = false))
+        assertTrue(L.missing("en-IN", listOf("en-IN"), google = false)!!.startsWith("English (US) isn't on this phone"))
+        assertTrue(L.say(State(), "en-US", day, listOf("en_US", "hi_IN")).contains("on-device has en-US,hi-IN"))
+        assertTrue(L.say(State(), "en-US", day).contains("on-device has -"))
+    }
+
+    @Test fun refusedAndMissingLinesNameWhatHappened() {
+        val r = L.forced(State(), "en-IN", "en-US", day, "08:54", Why.REFUSED)
+        assertEquals("Listening switched to English (US): the phone's speech service refused English (India).", L.line(r.last!!))
+    }
 }

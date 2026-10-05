@@ -13,6 +13,15 @@ package com.optionslab.ira
  *    Jarvis would be deaf) - noted, and that English is not tried again by the clear-speech rule that day.
  * So the most it can do is one switch and one forced way back in a day. The Google speech choice is never touched here,
  * and nothing acts: this only names a language code for the recognizer. Pure: state in, state and words out.
+ *
+ * Round 20 (Boss, 5 Oct: the activity said "switched to en-IN" while the diagnostics said "language: en-US"): what is
+ * said must be what is used.
+ *  - Today's switch is kept across a restart of listening ([start], [pick]); a restart used to go back to English (US)
+ *    without a word.
+ *  - The phone's own list of on-device languages ([clearNoWords], [canTry]): an English it lacks is never switched to
+ *    by the clear-speech rule (a Pixel without English (India) for on-device listening may take the code and listen in
+ *    another English, or refuse it) - held, and said plainly ([missing]).
+ *  - A move made because the phone lacks an English is recorded like any other, never silent.
  */
 object ListenLanguage {
     const val US = "en-US"
@@ -67,8 +76,21 @@ object ListenLanguage {
     /** The counts for [date] (a new day starts them afresh; what worked is kept). */
     fun on(s: State, date: String): State = if (s.day == date) s else s.copy(day = date, soft = 0, forced = 0, held = 0, refused = null)
 
-    /** The English to start listening in. */
-    fun start(s: State, date: String, fallback: String = US): String = works(s, date) ?: norm(fallback) ?: US
+    /** Today's switch (by the rules or forced), kept so a restart of listening goes on in it. */
+    fun today(s: State, date: String): String? = s.last?.takeIf { it.date == date }?.let { norm(it.to) }
+
+    /** The English to start listening in: the one that works, else today's switch, else [fallback]. */
+    fun start(s: State, date: String, fallback: String = US): String = works(s, date) ?: today(s, date) ?: norm(fallback) ?: US
+
+    /** The phone's on-device languages, normalised; null when it cannot say (an empty list says nothing). */
+    fun known(installed: List<String>?): List<String>? = installed?.mapNotNull { norm(it) }?.takeIf { it.isNotEmpty() }
+
+    /** Whether [lang] may be asked of the recognizer: always with Google's speech service, or when the phone cannot say. */
+    fun canTry(lang: String, installed: List<String>?, google: Boolean): Boolean {
+        if (google) return true
+        val have = known(installed) ?: return true
+        return norm(lang) in have
+    }
 
     /**
      * From the languages the phone's on-device recognizer has ([installed]; empty when it cannot say): the one that
@@ -77,7 +99,7 @@ object ListenLanguage {
      */
     fun pick(installed: List<String>, s: State, date: String, google: Boolean): String? {
         val have = installed.mapNotNull { norm(it) }
-        works(s, date)?.let { w -> if (google || w in have) return w }
+        (works(s, date) ?: today(s, date))?.let { w -> if (google || w in have) return w }
         if (google) return null
         return listOf(US, IN).firstOrNull { it in have } ?: have.firstOrNull { it.startsWith("en-") || it == "en" }
     }
@@ -88,19 +110,23 @@ object ListenLanguage {
         return if (norm(s.worked) == l && s.workedOn == date) s else s.copy(worked = l, workedOn = date)
     }
 
-    data class Decision(val to: String?, val state: State, val held: Boolean)
+    /** [missing]: the switch was held because the phone has no on-device model for the other English. */
+    data class Decision(val to: String?, val state: State, val held: Boolean, val missing: Boolean = false)
 
     /**
      * [inRow] turns of clear sound with no words, listening in [current]: the English to switch to, or null to stay
-     * (with the reason counted as held when a switch was due).
+     * (with the reason counted as held when a switch was due). [installed]: the phone's on-device languages (null or
+     * empty when it cannot say); with [google] off, an English not among them is never switched to.
      */
-    fun clearNoWords(s0: State, current: String, date: String, hhmm: String, inRow: Int): Decision {
+    fun clearNoWords(s0: State, current: String, date: String, hhmm: String, inRow: Int,
+                     installed: List<String>? = null, google: Boolean = false): Decision {
         val s = on(s0, date)
         if (inRow < CLEAR_IN_ROW) return Decision(null, s0, false)
         val cur = norm(current) ?: US
         val to = other(cur)
         val keep = works(s, date) == cur || s.soft >= SOFT_A_DAY || s.refused == to
         if (keep) return Decision(null, s.copy(held = s.held + 1), true)
+        if (!canTry(to, installed, google)) return Decision(null, s.copy(held = s.held + 1), true, missing = true)
         return Decision(to, s.copy(soft = s.soft + 1, last = Switch(date, hhmm, cur, to, Why.CLEAR_NO_WORDS)), false)
     }
 
@@ -122,11 +148,32 @@ object ListenLanguage {
     }
 
     /** The activity line for a switch just made. */
-    fun line(sw: Switch): String = "Listening switched to ${name(sw.to)}: ${because(sw.why)} in ${name(sw.from)}." +
-        if (sw.why == Why.CLEAR_NO_WORDS) " I switch by myself at most once a day, and never away from an English that has given words." else ""
+    fun line(sw: Switch): String = when (sw.why) {
+        Why.CLEAR_NO_WORDS -> "Listening switched to ${name(sw.to)}: ${because(sw.why)} in ${name(sw.from)}. " +
+            "I switch by myself at most once a day, and never away from an English that has given words."
+        Why.REFUSED -> "Listening switched to ${name(sw.to)}: the phone's speech service refused ${name(sw.from)}."
+        Why.MISSING -> "Listening switched to ${name(sw.to)}: ${name(sw.from)} isn't on this phone for on-device listening."
+    }
+
+    /** The activity line when the clear-speech rule would have switched but the phone lacks the other English. */
+    fun heldLine(current: String): String = "Kept listening in ${name(current)}: ${name(other(current))} isn't on this phone " +
+        "for on-device listening, so switching to it would not change what I hear."
+
+    /**
+     * Said plainly when the phone's on-device recognizer lacks the other English (Google's speech service off), else
+     * null: switching to it would change nothing, so the working one is kept. Never a suggestion to switch Google on.
+     */
+    fun missing(current: String?, installed: List<String>?, google: Boolean): String? {
+        val cur = norm(current) ?: return null
+        if (cur != US && cur != IN) return null
+        val o = other(cur)
+        if (canTry(o, installed, google)) return null
+        return "${name(o)} isn't on this phone for on-device listening, so I stay in ${name(cur)}; to have it, add " +
+            "${name(o)} under Settings, System, Languages, On-device speech recognition."
+    }
 
     /** Said after the hearing answer: which English, why, and today's switches (codes and counts only). */
-    fun spoken(s0: State, current: String?, date: String): String {
+    fun spoken(s0: State, current: String?, date: String, installed: List<String>? = null, google: Boolean = false): String {
         val s = on(s0, date)
         val cur = norm(current)
         val w = works(s, date)
@@ -141,13 +188,14 @@ object ListenLanguage {
         }
         if (s.soft >= SOFT_A_DAY) parts += "I won't switch by myself again today."
         if (s.held > 0) parts += "I held off switching ${s.held} ${if (s.held == 1) "time" else "times"} today to keep a steady English."
+        missing(cur, installed, google)?.let { parts += it }
         return parts.joinToString(" ")
     }
 
     /** For the diagnostics report: codes and counts only. */
-    fun say(s0: State, current: String?, date: String): String {
+    fun say(s0: State, current: String?, date: String, installed: List<String>? = null): String {
         val s = on(s0, date)
-        return "Language: now ${norm(current) ?: "-"} · works ${works(s, date) ?: "-"} (${s.workedOn ?: "-"}) · today switches ${s.soft} by clear speech, " +
+        return "Language: now ${norm(current) ?: "-"} · on-device has ${known(installed)?.joinToString(",") ?: "-"} · works ${works(s, date) ?: "-"} (${s.workedOn ?: "-"}) · today switches ${s.soft} by clear speech, " +
             "${s.forced} forced, ${s.held} held · refused ${s.refused ?: "-"}" +
             (s.last?.let { " · last ${it.date} ${it.hhmm} ${it.from}>${it.to} ${it.why}" } ?: "")
     }
