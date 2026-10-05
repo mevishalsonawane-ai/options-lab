@@ -1882,13 +1882,13 @@ object IraHub {
             val personal = com.optionslab.ira.Chat.personal(q)
             // Words that cannot mean any command skip the first pass too: one model run, not two (Boss, 4 Oct: too slow).
             val line = if (personal || !com.optionslab.ira.Intents.mayMean(q)) null
-                else modelOrNull { IraModel.complete(com.optionslab.ira.Intents.prompt(q), 24, 8_000)?.let { com.optionslab.ira.Intents.pick(it) } }
+                else modelOrNull { IraModel.complete(com.optionslab.ira.Intents.prompt(q), 24, 8_000, oneLine = true)?.let { com.optionslab.ira.Intents.pick(it) } }
             if (line == null) {
                 // Not something Jarvis can do or look up: the model just talks (a short reply with no figures, no advice
                 // and no claimed actions), else a varied "I don't know that".
                 // Close to something Jarvis knows: "Did you mean ...?" at once (a suggestion; nothing is done), no model wait.
                 val near = if (personal) null else runCatching { com.optionslab.ira.Suggest.line(q) }.getOrNull()
-                val chat = if (near != null) null else modelOrNull { com.optionslab.ira.Chat.accept(IraModel.complete(com.optionslab.ira.Chat.prompt(q, LocalDateTime.now(IST), recentTalk(q)), 40, 8_000)) }
+                val chat = if (near != null) null else modelOrNull { com.optionslab.ira.Chat.accept(IraModel.complete(com.optionslab.ira.Chat.prompt(q, LocalDateTime.now(IST), recentTalk(q)), 40, 8_000, oneLine = true)) }
                 val text = near ?: chat ?: if (personal) com.optionslab.ira.Chat.aboutMe(chatTurn.getAndIncrement()) else com.optionslab.ira.Chat.fallback(chatTurn.getAndIncrement())
                 // Boss asked something newer meanwhile: a late chat line would land under that answer (seen 2026-10-04).
                 if (_state.value.messages.lastOrNull { !it.fromIra }?.text != q) return@launch

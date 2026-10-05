@@ -7,14 +7,19 @@
 #include "llama.h"
 
 namespace {
-// The model, and one context kept between replies: the words a new prompt shares with the last one (the fixed
+// The model, and one context kept between replies: the words a new prompt shares with an earlier one (the fixed
 // instructions) are already worked through, so only the new words are read - the main cost on a phone's CPU.
+// The context holds SLOTS separate sequences in one shared memory (the app picks a slot per kind of prompt, see
+// PromptSlots), so asking which command was meant and then chatting no longer throw each other's instructions away.
+constexpr int SLOTS = 4;
 struct Handle {
     llama_model *model;
     int threads;
     llama_context *ctx = nullptr;
     uint32_t n_ctx = 0;
-    std::vector<llama_token> cached;   // what the context holds now, in order
+    std::vector<llama_token> cached[SLOTS];   // what each slot holds now, in order
+    uint64_t used[SLOTS] = {};                // when each slot was last used (for making room)
+    uint64_t clock = 0;
 };
 std::atomic<bool> g_cancel{false};
 
@@ -56,12 +61,16 @@ Java_com_optionslab_app_ira_LlmNative_load(JNIEnv *env, jobject, jstring path, j
     return reinterpret_cast<jlong>(hd);
 }
 
-// The reply as UTF-8 bytes (Kotlin decodes them), or null when it failed or was cancelled.
+// The reply as UTF-8 bytes (Kotlin decodes them), or null when it failed or was cancelled. [slot]: which of the
+// context's sequences this prompt reads into; [oneLine]: stop at the end of the first line that has words (the caller
+// keeps only that line, so whatever the model would write after it is time spent for nothing).
 extern "C" JNIEXPORT jbyteArray JNICALL
-Java_com_optionslab_app_ira_LlmNative_generate(JNIEnv *env, jobject, jlong h, jstring prompt, jint maxTokens) {
+Java_com_optionslab_app_ira_LlmNative_generate(JNIEnv *env, jobject, jlong h, jstring prompt, jint maxTokens, jint slot,
+                                               jboolean oneLine) {
     auto *hd = reinterpret_cast<Handle *>(h);
     if (!hd) return nullptr;
     g_cancel = false;
+    const int s = (slot >= 0 && slot < SLOTS) ? (int) slot : 0;
     const llama_vocab *vocab = llama_model_get_vocab(hd->model);
     const char *pc = env->GetStringUTFChars(prompt, nullptr);
     std::string text(pc);
@@ -80,45 +89,82 @@ Java_com_optionslab_app_ira_LlmNative_generate(JNIEnv *env, jobject, jlong h, js
         llama_context_params cp = llama_context_default_params();
         cp.n_ctx = size;
         cp.n_batch = size;
+        cp.n_seq_max = SLOTS;
+        cp.kv_unified = true;     // one memory of n_ctx shared by the slots (not n_ctx / SLOTS each)
         cp.n_threads = hd->threads;
         cp.n_threads_batch = hd->threads;
         cp.no_perf = true;
         hd->ctx = llama_init_from_model(hd->model, cp);
         hd->n_ctx = hd->ctx ? size : 0;
-        hd->cached.clear();
+        for (auto &c : hd->cached) c.clear();
         if (!hd->ctx) return nullptr;
     }
     llama_context *ctx = hd->ctx;
     llama_memory_t mem = llama_get_memory(ctx);
+    std::vector<llama_token> &cached = hd->cached[s];
+    hd->used[s] = ++hd->clock;
 
-    // The shared beginning is kept; everything after it is dropped and read again (at least one token is always read,
-    // so the reply starts from this prompt's own last word).
+    // The slot's shared beginning is kept; everything after it is dropped and read again (at least one token is always
+    // read, so the reply starts from this prompt's own last word).
     size_t keep = 0;
-    while (keep < hd->cached.size() && keep < toks.size() && hd->cached[keep] == toks[keep]) keep++;
+    while (keep < cached.size() && keep < toks.size() && cached[keep] == toks[keep]) keep++;
     if (keep >= toks.size()) keep = toks.size() - 1;
-    if (!llama_memory_seq_rm(mem, 0, (llama_pos) keep, -1)) { llama_memory_clear(mem, true); keep = 0; }
-    hd->cached.assign(toks.begin(), toks.begin() + keep);
+    if (!llama_memory_seq_rm(mem, s, (llama_pos) keep, -1)) { llama_memory_seq_rm(mem, s, -1, -1); keep = 0; }
+    cached.resize(keep);
+
+    // Room for the new words and the reply: the other slots unused longest leave first.
+    for (;;) {
+        size_t held = 0;
+        for (int i = 0; i < SLOTS; i++) held += hd->cached[i].size();
+        if (held + (toks.size() - keep) + (size_t) maxTokens + 16 <= hd->n_ctx) break;
+        int old = -1;
+        for (int i = 0; i < SLOTS; i++)
+            if (i != s && !hd->cached[i].empty() && (old < 0 || hd->used[i] < hd->used[old])) old = i;
+        if (old < 0) break;
+        llama_memory_seq_rm(mem, old, -1, -1);
+        hd->cached[old].clear();
+    }
 
     llama_sampler *smpl = llama_sampler_chain_init(llama_sampler_chain_default_params());
     llama_sampler_chain_add(smpl, llama_sampler_init_greedy());   // the most likely word each time: steady, repeatable
 
+    // One batch, refilled for each step: the slot's tokens at their positions, logits only for the last one.
+    const int32_t fresh = (int32_t) (toks.size() - keep);
+    llama_batch batch = llama_batch_init(fresh, 0, 1);
+    auto fill = [&](const llama_token *t, int32_t count) {
+        batch.n_tokens = count;
+        for (int32_t j = 0; j < count; j++) {
+            batch.token[j] = t[j];
+            batch.pos[j] = (llama_pos) (cached.size() + j);
+            batch.n_seq_id[j] = 1;
+            batch.seq_id[j][0] = s;
+            batch.logits[j] = j == count - 1;
+        }
+    };
+
     std::string out;
-    llama_batch batch = llama_batch_get_one(toks.data() + keep, (int32_t) (toks.size() - keep));
+    fill(toks.data() + keep, fresh);
     std::vector<llama_token> fed(toks.begin() + keep, toks.end());
     llama_token next = 0;
     bool ok = true;
     for (int i = 0; i < maxTokens && !g_cancel; i++) {
         if (llama_decode(ctx, batch) != 0) { ok = false; break; }
-        hd->cached.insert(hd->cached.end(), fed.begin(), fed.end());
+        cached.insert(cached.end(), fed.begin(), fed.end());
         next = llama_sampler_sample(smpl, ctx, -1);
         if (llama_vocab_is_eog(vocab, next)) break;
         out += piece(vocab, next);
+        if (oneLine) {
+            size_t words = out.find_first_not_of(" \t\r\n");
+            size_t nl = words == std::string::npos ? std::string::npos : out.find('\n', words);
+            if (nl != std::string::npos) { out.resize(nl); break; }
+        }
         fed.assign(1, next);
-        batch = llama_batch_get_one(&next, 1);
+        fill(&next, 1);
     }
+    llama_batch_free(batch);
     llama_sampler_free(smpl);
     // Anything uncertain (a failed step, a cancel): the context starts empty next time.
-    if (!ok || g_cancel) { llama_memory_clear(mem, true); hd->cached.clear(); }
+    if (!ok || g_cancel) { llama_memory_clear(mem, true); for (auto &c : hd->cached) c.clear(); }
     if (!ok || g_cancel) return nullptr;
     out.resize(utf8_complete(out));
     jbyteArray arr = env->NewByteArray((jsize) out.size());

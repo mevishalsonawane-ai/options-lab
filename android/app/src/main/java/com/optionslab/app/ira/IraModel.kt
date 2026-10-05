@@ -119,6 +119,8 @@ object IraModel {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val lock = Mutex()
     @Volatile private var handle = 0L
+    /** Which of the model's memory slots each prompt reads into (used under [lock] only; as many as the runner has). */
+    private val slots = com.optionslab.ira.PromptSlots(LlmNative.SLOTS)
     private var idle: Job? = null
     /** "Later" this run: asked again the next time the app starts. */
     @Volatile private var deferred = false
@@ -238,7 +240,7 @@ object IraModel {
                     _state.update { it.copy(loaded = true, message = null) }
                 }
                 val watchdog = scope.launch { delay(TIMEOUT_MS); LlmNative.cancel() }
-                val bytes = try { gently { LlmNative.generate(handle, Writer.prompt(question, facts, draft), MAX_TOKENS) } } finally { watchdog.cancel() }
+                val bytes = try { gently { Writer.prompt(question, facts, draft).let { p -> LlmNative.generate(handle, p, MAX_TOKENS, slots.pick(p), false) } } } finally { watchdog.cancel() }
                 bytes?.let { Writer.check(String(it, Charsets.UTF_8), facts, draft) }
             } finally {
                 _state.update { it.copy(writing = false) }
@@ -249,9 +251,11 @@ object IraModel {
 
     /**
      * The model's raw reply to [prompt] (at most [maxTokens]), or null - for [com.optionslab.ira.Intents], whose caller
-     * checks the reply against its fixed list before anything is done with it.
+     * checks the reply against its fixed list before anything is done with it. [oneLine]: the caller keeps only the
+     * reply's first line, so the model stops at its end instead of writing on to [maxTokens] (the chat's "Boss: ..." it
+     * would make up next, read by no one).
      */
-    suspend fun complete(prompt: String, maxTokens: Int = 40, timeoutMs: Long = TIMEOUT_MS): String? = withContext(Dispatchers.Default) {
+    suspend fun complete(prompt: String, maxTokens: Int = 40, timeoutMs: Long = TIMEOUT_MS, oneLine: Boolean = false): String? = withContext(Dispatchers.Default) {
         val c = app ?: return@withContext null
         if (!usable()) return@withContext null
         lock.withLock {
@@ -267,7 +271,7 @@ object IraModel {
                     _state.update { it.copy(loaded = true, message = null) }
                 }
                 val watchdog = scope.launch { delay(timeoutMs) ; LlmNative.cancel() }
-                val bytes = try { gently { LlmNative.generate(handle, prompt, maxTokens) } } finally { watchdog.cancel() }
+                val bytes = try { gently { LlmNative.generate(handle, prompt, maxTokens, slots.pick(prompt), oneLine) } } finally { watchdog.cancel() }
                 bytes?.let { String(it, Charsets.UTF_8) }
             } finally {
                 _state.update { it.copy(writing = false) }
@@ -291,7 +295,7 @@ object IraModel {
         val wasLoaded = _state.value.loaded
         val t0 = System.nanoTime()
         val reply = runCatching { complete("<|im_start|>system\nReply with exactly the words asked for.<|im_end|>\n" +
-            "<|im_start|>user\nSay: Jarvis is ready.<|im_end|>\n<|im_start|>assistant\n", 16) }.getOrNull()
+            "<|im_start|>user\nSay: Jarvis is ready.<|im_end|>\n<|im_start|>assistant\n", 16, oneLine = true) }.getOrNull()
         val secs = (System.nanoTime() - t0) / 1e9
         val said = reply?.trim()?.lineSequence()?.firstOrNull()?.take(60)?.replace("%", "")
         when {
@@ -346,7 +350,7 @@ object IraModel {
     }
 
     private fun unloadLocked() {
-        if (handle != 0L) { runCatching { LlmNative.free(handle) }; handle = 0L; _state.update { it.copy(loaded = false) } }
+        if (handle != 0L) { runCatching { LlmNative.free(handle) }; handle = 0L; slots.clear(); _state.update { it.copy(loaded = false) } }
     }
 
     /**
@@ -390,7 +394,9 @@ internal object LlmNative {
         ok ?: runCatching { System.loadLibrary("jarvis_llm"); true }.getOrDefault(false).also { ok = it }
     }
     external fun load(path: String, threads: Int): Long
-    external fun generate(handle: Long, prompt: String, maxTokens: Int): ByteArray?
+    /** The runner's memory slots (SLOTS in jarvis_llm.cpp): [generate]'s slot is one of 0 until this. */
+    const val SLOTS = 4
+    external fun generate(handle: Long, prompt: String, maxTokens: Int, slot: Int, oneLine: Boolean): ByteArray?
     external fun cancel()
     external fun free(handle: Long)
 }
