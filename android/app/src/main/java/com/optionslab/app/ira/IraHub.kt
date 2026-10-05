@@ -1328,6 +1328,19 @@ object IraHub {
             val sized = runCatching { IraTools.lengthWish(q, lastSaid, phoneLocked()) }.getOrNull()
             if (sized != null) { _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, sized)).takeLast(MAX_MESSAGES)) }; return }
         }
+        // "No, BankNifty" / "I meant BankNifty" just after a market question that named no index: that question asked again
+        // for the index Boss meant, and only that index noted ([com.optionslab.ira.UsualIndex]; never his words) - an index he
+        // keeps meaning is then taken when he names none, and said so. A question only: never an order or a command, and
+        // never while something waits for his yes or Confirm. Understanding only - nothing learned acts.
+        if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !understood && !cleaned) {
+            val indexWaiting = synchronized(actions) { actions.isNotEmpty() }
+            val meant = runCatching { IraTools.indexCorrection(q, indexWaiting) }.getOrNull()
+            if (meant != null) {
+                _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, "$TOOK_AS\"${meant.second}\" - ${meant.first}")).takeLast(MAX_MESSAGES)) }
+                ask(meant.second, understood = true)
+                return
+            }
+        }
         // A new question: the model stops polishing the last answer (it stands as shown).
         IraModel.stopWriting()
         // Boss asking anything just after an unasked alert: he followed it up ([com.optionslab.ira.AlertSense]; kinds and minutes only).
@@ -1346,6 +1359,17 @@ object IraHub {
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, "$TOOK_AS\"$learnedAs\".")).takeLast(MAX_MESSAGES)) }
             ask(learnedAs, understood = true)
             return
+        }
+        // A market question naming no index, once Boss has corrected Jarvis to one index often enough
+        // ([com.optionslab.ira.UsualIndex]): read for that index and said so ("BankNifty, as you usually mean, Boss") - a
+        // question only, a named index always wins, never on a locked phone. Understanding only: nothing learned acts.
+        if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !understood && !cleaned) {
+            val usualRead = runCatching { IraTools.indexReading(q, phoneLocked()) }.getOrNull()
+            if (usualRead != null) {
+                _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, "$TOOK_AS\"${usualRead.second}\" - ${usualRead.first}")).takeLast(MAX_MESSAGES)) }
+                ask(usualRead.second, understood = true)
+                return
+            }
         }
         // "What words have you learned?" / "forget the word X": his learned wordings, listed or dropped - Boss's own words,
         // so only on an unlocked phone, and only as said by him (never from a guess or a learned reading).
@@ -1414,6 +1438,7 @@ object IraHub {
                 com.optionslab.ira.ArmHabits.asked(q) || com.optionslab.ira.MorningSense.asked(q) != null ||
                 com.optionslab.ira.HonestStars.asked(q) != null || com.optionslab.ira.TalkHours.asked(q) != null || com.optionslab.ira.MorningAsks.asked(q) != null || com.optionslab.ira.BatteryUse.asked(q) ||
                 com.optionslab.ira.TurnDowns.asked(q) != null || com.optionslab.ira.TopicLength.asked(q) != null || com.optionslab.ira.OutlookCheck.asked(q) ||
+                com.optionslab.ira.UsualIndex.asked(q) != null ||
                 com.optionslab.ira.DayCompare.asked(q) != null || com.optionslab.ira.LikeToday.asked(q) }.getOrDefault(false)) {
             val prev = if (recent) _state.value.messages.lastOrNull { !it.fromIra }?.text else null
             val qs = runCatching { com.optionslab.ira.Understand.questions(prev, q) }.getOrNull()
@@ -2079,7 +2104,7 @@ object IraHub {
 
     /**
      * [ask]'s question branches on how Jarvis himself speaks and hears: AlertSense, Airtime, Hearing, PatternCalls,
-     * TrendReads, Clarity, WordFit, AskedAgain, FigureFirst, WrongThing, ArmHabits, MorningSense, HonestStars, TalkHours, MorningAsks, TurnDowns, TopicLength, OutlookCheck - in [ask]'s order. True when one
+     * TrendReads, Clarity, WordFit, AskedAgain, FigureFirst, WrongThing, ArmHabits, MorningSense, HonestStars, TalkHours, MorningAsks, TurnDowns, TopicLength, OutlookCheck, UsualIndex - in [ask]'s order. True when one
      * took [q], answered exactly as before; each branch keeps its own guard (not [bundled], no order, no command).
      */
     private fun askedOfHisWays(q: String, parsed: com.optionslab.ira.Question, bundled: Boolean, understood: Boolean): Boolean {
@@ -2270,6 +2295,17 @@ object IraHub {
         if (outlookAsk) {
             val outlookSaid = IraTools.outlookSay(com.optionslab.app.data.Market.today())
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, outlookSaid)).takeLast(MAX_MESSAGES)) }
+            return true
+        }
+        // "Which index do I usually mean?" / "use Nifty when I don't name an index": the index taken when Boss names none, learned from his
+        // corrections ([com.optionslab.ira.UsualIndex]; indices and times only). His habit: named on an unlocked phone only;
+        // the undo works locked too. Understanding only - nothing learned acts.
+        val indexAsk = if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null)
+            runCatching { com.optionslab.ira.UsualIndex.asked(q) }.getOrNull() else null
+        if (indexAsk != null) {
+            val indexSaid = if (indexAsk == com.optionslab.ira.UsualIndex.Request.RESET) IraTools.indexReset()
+                else if (phoneLocked()) com.optionslab.ira.UsualIndex.LOCKED else IraTools.indexSay()
+            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, indexSaid)).takeLast(MAX_MESSAGES)) }
             return true
         }
         return false

@@ -1230,6 +1230,87 @@ internal object IraTools {
         return said
     }
 
+    // ---- the index Boss means when he names none ([com.optionslab.ira.UsualIndex]) ----------------------------------
+
+    /** Boss's corrections: each index he said he meant and when - never his words or the question. */
+    private const val USUAL_INDEX = "jarvis.usualIndex"
+    @Volatile private var indexCache: com.optionslab.ira.UsualIndex.Log? = null
+    /** The market question that named no index, last asked, and when (in memory only): "no, BankNifty" soon after is about it. */
+    @Volatile private var indexLast: Pair<String, LocalDateTime>? = null
+
+    fun indexLog(): com.optionslab.ira.UsualIndex.Log = indexCache ?: runCatching {
+        val o = JSONObject(prefs().getString(USUAL_INDEX) ?: "{}")
+        val n = o.optJSONArray("n") ?: JSONArray()
+        com.optionslab.ira.UsualIndex.Log(
+            notes = (0 until n.length()).map { i -> n.getJSONObject(i).let { x ->
+                com.optionslab.ira.UsualIndex.Note(LocalDateTime.parse(x.getString("t")), x.getString("m")) } },
+            resetAt = o.optString("r").takeIf { it.isNotEmpty() }?.let { LocalDateTime.parse(it) })
+    }.getOrDefault(com.optionslab.ira.UsualIndex.Log()).also { indexCache = it }
+
+    @Synchronized private fun indexUpdate(f: (com.optionslab.ira.UsualIndex.Log) -> com.optionslab.ira.UsualIndex.Log) {
+        runCatching {
+            val log = f(indexLog())
+            if (log == indexCache) return@runCatching
+            indexCache = log
+            val o = JSONObject().put("n", JSONArray().apply { log.notes.forEach { x -> put(JSONObject().put("t", x.at.toString()).put("m", x.market)) } })
+            log.resetAt?.let { o.put("r", it.toString()) }
+            prefs().putAllSoon(mapOf(USUAL_INDEX to o.toString()))
+        }
+    }
+
+    private fun indexNow(): LocalDateTime = com.optionslab.app.data.Market.now().toLocalDateTime().withSecond(0).withNano(0)
+
+    /**
+     * Boss's words [said]: a correction ("no, BankNifty") of the market question that named no index, asked within the
+     * minutes allowed, is noted (the index only) and returned as (what is said, the question read for that index); else
+     * null - and any other words end the wait. Never while something waits for his yes or Confirm ([waiting]). Words only.
+     */
+    fun indexCorrection(said: String, waiting: Boolean): Pair<String, String>? {
+        val last = indexLast
+        indexLast = null
+        if (last == null || waiting) return null
+        val m = com.optionslab.ira.UsualIndex.correction(said) ?: return null
+        val now = indexNow()
+        if (!com.optionslab.ira.UsualIndex.fresh(last.second, now)) return null
+        val again = com.optionslab.ira.UsualIndex.reading(last.first, m) ?: return null
+        val before = com.optionslab.ira.UsualIndex.learned(indexLog(), now)
+        indexUpdate { com.optionslab.ira.UsualIndex.heard(it, m, now) }
+        val after = com.optionslab.ira.UsualIndex.learned(indexLog(), now)
+        val learnedNow = after?.takeIf { before == null || before.market != it.market }
+        if (learnedNow != null) IraActivity.add("Learned the index Boss means when he names none: ${learnedNow.phrase}.")
+        return com.optionslab.ira.UsualIndex.corrected(m, learnedNow) to again
+    }
+
+    /**
+     * Boss's question [said]: when it names no index it is kept (in memory) for a correction just after, and - once an
+     * index is learned and the phone is not [locked] - returned as (what is said, the question read for that index). Else
+     * null: answered as usual. Understanding only.
+     */
+    fun indexReading(said: String, locked: Boolean): Pair<String, String>? {
+        if (!com.optionslab.ira.UsualIndex.unnamed(said)) return null
+        val now = indexNow()
+        indexLast = said to now
+        if (locked) return null
+        val r = com.optionslab.ira.UsualIndex.learned(indexLog(), now) ?: return null
+        val read = com.optionslab.ira.UsualIndex.reading(said, r.market) ?: return null
+        return com.optionslab.ira.UsualIndex.took(r) to read
+    }
+
+    /** "Which index do I usually mean?". */
+    fun indexSay(): String = runCatching { com.optionslab.ira.UsualIndex.say(indexLog(), indexNow()) }
+        .getOrDefault("I could not read my record of which index you mean just now, Boss.")
+
+    /** "Use Nifty when I don't name an index": Nifty again when he names none, the count afresh. */
+    fun indexReset(): String {
+        val now = indexNow()
+        val said = runCatching { com.optionslab.ira.UsualIndex.sayReset(indexLog(), now) }
+            .getOrDefault("Done, Boss: Nifty again when you name no index.")
+        indexUpdate { com.optionslab.ira.UsualIndex.reset(it, now) }
+        indexLast = null
+        IraActivity.add("Taking Nifty again when Boss names no index (as asked).")
+        return said
+    }
+
     // ---- the morning outlook checked against the close ([com.optionslab.ira.OutlookCheck]) ---------------------------
 
     /** Each index's 09:00 outlook numbers (previous close, range, direction read, pivot) and the day's open, high, low, close. Market data only. */
@@ -1293,7 +1374,8 @@ internal object IraTools {
         hours = runCatching { talkLog() }.getOrDefault(com.optionslab.ira.TalkHours.Log()),
         asks = runCatching { asksLog() }.getOrDefault(com.optionslab.ira.MorningAsks.Log()),
         turnDowns = runCatching { turnLog() }.getOrDefault(com.optionslab.ira.TurnDowns.Log()),
-        lengths = runCatching { lengthLog() }.getOrDefault(com.optionslab.ira.TopicLength.Log()))
+        lengths = runCatching { lengthLog() }.getOrDefault(com.optionslab.ira.TopicLength.Log()),
+        usualIndex = runCatching { indexLog() }.getOrDefault(com.optionslab.ira.UsualIndex.Log()))
 
     /**
      * "Undo everything you learned this week", on Boss's Confirm: the wordings and routines kept in the last 7 days
@@ -1315,12 +1397,14 @@ internal object IraTools {
         if (u.asks.isNotEmpty()) { asksUpdate { com.optionslab.ira.MorningAsks.reset(it, now) }; asksOffered = null }
         if (u.turnDowns.isNotEmpty()) { turnUpdate { com.optionslab.ira.TurnDowns.reset(it, now) }; turnedDownAt = null }
         if (u.lengths.isNotEmpty()) { lengthUpdate { com.optionslab.ira.TopicLength.reset(it, now) }; lengthLast = null }
+        if (u.usualIndex.isNotEmpty()) { indexUpdate { com.optionslab.ira.UsualIndex.reset(it, now) }; indexLast = null }
         IraActivity.add("Undid this week's learning, as Boss confirmed: ${u.words.size} wording(s), ${u.routines.size} routine(s), " +
             "${u.alerts.size} alert kind(s) aloud again, ${u.clarity.size} answer kind(s) as usual aloud again, ${u.figure.size} market read kind(s) in the usual order again, ${u.morning.size} morning-check item(s) read out in full again, " +
             "${u.stars.size} confidence score(s) said plainly again, " + (if (u.hours.isNotEmpty()) "briefings in full at any hour again, " else "briefings unchanged, ") +
             (if (u.asks.isNotEmpty()) "no morning question offered, " else "morning check unchanged, ") +
             (if (u.turnDowns.isNotEmpty()) "no reason of Boss's said up front, " else "ideas asked as before, ") +
-            (if (u.lengths.isNotEmpty()) "every topic at the usual length aloud." else "topic lengths unchanged."))
+            (if (u.lengths.isNotEmpty()) "every topic at the usual length aloud, " else "topic lengths unchanged, ") +
+            (if (u.usualIndex.isNotEmpty()) "Nifty again when Boss names no index." else "the index taken unchanged."))
         return u
     }
 

@@ -71,6 +71,7 @@ class CollisionTest {
         "TurnDowns" to { q -> TurnDowns.asked(q) != null },
         "TopicLength" to { q -> TopicLength.asked(q) != null },
         "OutlookCheck" to { q -> OutlookCheck.asked(q) },
+        "UsualIndex" to { q -> UsualIndex.asked(q) != null },
         "Headroom" to { q -> Headroom.asked(q) != null },
         "ArmFit" to { q -> ArmFit.asked(q) },
         "WeakLink" to { q -> WeakLink.asked(q) },
@@ -717,6 +718,12 @@ class CollisionTest {
         "what's your outlook record" to "OutlookCheck", "how often are your outlooks right" to "OutlookCheck",
         "how did your outlook do today" to "OutlookCheck", "aapka subah ka outlook kitna sahi hota hai" to "OutlookCheck",
         "jarvis how good are your morning calls" to "OutlookCheck",
+        // ---- UsualIndex: the index taken when Boss names none, learned from his corrections ----
+        "which index do i usually mean" to "UsualIndex", "what index do you assume" to "UsualIndex",
+        "which index do you take when i dont name one" to "UsualIndex", "what's my usual index" to "UsualIndex",
+        "do you know which index i usually mean" to "UsualIndex", "mera usual index kaunsa hai" to "UsualIndex",
+        "use nifty when i dont name an index" to "UsualIndex", "reset my default index" to "UsualIndex", "don't assume my index" to "UsualIndex",
+        "use nifty when i don't name one" to "UsualIndex", "mera usual index bhool jao" to "UsualIndex",
         // ---- HonestStars: his confidence scores against their record ----
         "how honest are your stars" to "HonestStars", "do your 5 star ideas actually work" to "HonestStars",
         "tumhare confidence stars kitne sahi hain" to "HonestStars", "are your confidence ratings any good" to "HonestStars",
@@ -994,7 +1001,7 @@ class CollisionTest {
     // ---- The audit's order is the hub's: read from IraHub.ask itself when the app's source is beside this module ----
 
     /** The question branches of IraHub.ask between the `bundled` read and the Plan block, in [CoverageTest.feature]'s order. */
-    private val HUB_ORDER = listOf("DayJournal", "AlertSense", "Airtime", "Hearing", "PatternCalls", "TrendReads", "OutsideApp", "Clarity", "WordFit", "AskedAgain", "FigureFirst", "WrongThing", "ArmHabits", "MorningSense", "HonestStars", "TalkHours", "MorningAsks", "TurnDowns", "TopicLength", "OutlookCheck", "NewsMoves",
+    private val HUB_ORDER = listOf("DayJournal", "AlertSense", "Airtime", "Hearing", "PatternCalls", "TrendReads", "OutsideApp", "Clarity", "WordFit", "AskedAgain", "FigureFirst", "WrongThing", "ArmHabits", "MorningSense", "HonestStars", "TalkHours", "MorningAsks", "TurnDowns", "TopicLength", "OutlookCheck", "UsualIndex", "NewsMoves",
         "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmFit", "WeakLink", "ArmDay", "NetLean", "ExpiryEve", "BeforeTomorrow", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "ZerodhaSession", "OrderWhy", "RelayHealth", "StreamHealth", "BatteryUse", "WatchAsk", "Tour", "DataAge", "Honest", "Thinking",
         "SelfWhy", "Consistency", "CoPilot", "SinceMorning", "ExpiryPin", "ChainDrift", "ChainIntel", "DayClock", "GapRecord", "RangeBreaks", "PriorDay", "LastHour", "InsideDays", "FirstMove", "VixNext", "SplitDays", "RoundCloses", "MonthTurns", "LunchRange", "OpenHighLow", "BigCandles", "Weekdays", "DayCompare", "LikeToday", "Structure", "MindChange", "Breadth",
         "TradeCase", "Scenarios", "Causes", "Agenda", "Improve")
