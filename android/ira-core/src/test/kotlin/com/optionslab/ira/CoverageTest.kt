@@ -27,7 +27,7 @@ class CoverageTest {
     private fun route(said: String): List<Kind> {
         if (Corrections.wordsAsked(said) || Corrections.forgetWordAsked(said) != null) return listOf(Kind.JARVIS)
         if (Routine.asked(said) || Routine.forgetAsked(said)) return listOf(Kind.ACCOUNT)
-        val asSaid = Sources.asked(said) || AboutBoss.knowAsked(said) || Memory.recallAsked(said) || Memory.forgetAsked(said) || PatternCalls.asked(said) || TrendReads.asked(said) || SinceMorning.asked(said) ||
+        val asSaid = Sources.asked(said) || AboutBoss.knowAsked(said) || Memory.recallAsked(said) || Memory.forgetAsked(said) || PatternCalls.asked(said) || TrendReads.asked(said) || SinceMorning.asked(said) || ExpiryPin.asked(said) != null ||
             Learnings.asked(said) != null || Learnings.undoAsked(said) || NewsMoves.asked(said) != null || PreMarket.asked(said) ||
             ChainDrift.asked(said) != null || Headroom.asked(said) != null || ArmDay.asked(said) != null || BotTrades.asked(said) != null || DayClock.asked(said) != null ||
             SaidAbout.asked(said) != null || GapRecord.asked(said) != null || Causes.asked(said) != null || WeekAhead.asked(said) != null || AskedAgain.asked(said) || FigureFirst.asked(said) != null || Weekdays.asked(said) != null || DayCompare.asked(said) != null ||
@@ -68,7 +68,7 @@ class CoverageTest {
             if (DataAge.asked(q)) return Kind.JARVIS
             if (Honest.asked(q) != null) return Kind.HONEST
             if (Thinking.asked(q) != null || Consistency.asked(q)) return Kind.JARVIS
-            if (CoPilot.asked(q) || SinceMorning.asked(q) || ChainDrift.asked(q) != null || ChainIntel.asked(q) != null || DayClock.asked(q) != null || GapRecord.asked(q) != null || RangeBreaks.asked(q) != null || PriorDay.asked(q) != null || LastHour.asked(q) != null || InsideDays.asked(q) != null || FirstMove.asked(q) != null || VixNext.asked(q) != null || Weekdays.asked(q) != null || DayCompare.asked(q) != null || Structure.asked(q) != null ||
+            if (CoPilot.asked(q) || SinceMorning.asked(q) || ExpiryPin.asked(q) != null || ChainDrift.asked(q) != null || ChainIntel.asked(q) != null || DayClock.asked(q) != null || GapRecord.asked(q) != null || RangeBreaks.asked(q) != null || PriorDay.asked(q) != null || LastHour.asked(q) != null || InsideDays.asked(q) != null || FirstMove.asked(q) != null || VixNext.asked(q) != null || Weekdays.asked(q) != null || DayCompare.asked(q) != null || Structure.asked(q) != null ||
                 MindChange.asked(q) || Breadth.asked(q) != null || TradeCase.asked(q) || Scenarios.asked(q) != null ||
                 Causes.asked(q) != null) return Kind.MARKET
         }
@@ -451,7 +451,7 @@ class CoverageTest {
      * ask(): Boss's learned words and routine as said, fillers and follow-ups, then - for a question not said with
      * something to do (IraHub's `bundled`, [Bundle.acts]) - DayJournal, AlertSense, Airtime, Hearing, PatternCalls, TrendReads, Clarity,
      * WordFit, AskedAgain, FigureFirst, WrongThing, ArmHabits, MorningSense, HonestStars, NewsMoves, TaxExport, Learnings, PreMarket, Headroom, ArmDay, BotTrades, SaidAbout, WeekAhead, DataAge, Honest, Thinking,
-     * Consistency, CoPilot, SinceMorning, ChainDrift, ChainIntel, DayClock, GapRecord, RangeBreaks, PriorDay, LastHour, InsideDays, FirstMove, VixNext, Weekdays, DayCompare, Structure, MindChange, Breadth, TradeCase,
+     * Consistency, CoPilot, SinceMorning, ExpiryPin, ChainDrift, ChainIntel, DayClock, GapRecord, RangeBreaks, PriorDay, LastHour, InsideDays, FirstMove, VixNext, Weekdays, DayCompare, Structure, MindChange, Breadth, TradeCase,
      * Scenarios, Causes, Agenda, Improve; the reminders and Jarvis's own checks,
      * Distance... Outlook, NewsDesk, down to the account's sections (PositionHealth, BotHealth and NeedsTrue are its HEALTH,
      * BOTS and NEED; HeardBack is the voice path's own read-back, never a branch of the hub), a pattern explained, Solo and IraHub.reasoned's readers over the candles, each in its
@@ -468,7 +468,7 @@ class CoverageTest {
         if (!understood && (Routine.asked(said) || Routine.forgetAsked(said))) return "Routine"
         val asSaid = Sources.asked(said) || AboutBoss.knowAsked(said) || Memory.recallAsked(said) || Memory.forgetAsked(said) ||
             Corrections.wordsAsked(said) || Corrections.forgetWordAsked(said) != null || Routine.asked(said) || Routine.forgetAsked(said) ||
-            PatternCalls.asked(said) || TrendReads.asked(said) || SinceMorning.asked(said) || Learnings.asked(said) != null || Learnings.undoAsked(said) || NewsMoves.asked(said) != null ||
+            PatternCalls.asked(said) || TrendReads.asked(said) || SinceMorning.asked(said) || ExpiryPin.asked(said) != null || Learnings.asked(said) != null || Learnings.undoAsked(said) || NewsMoves.asked(said) != null ||
             PreMarket.asked(said) ||
             ChainDrift.asked(said) != null || Headroom.asked(said) != null || ArmDay.asked(said) != null || BotTrades.asked(said) != null || NeedsTrue.asked(said) || Clarity.asked(said) != null || DayClock.asked(said) != null ||
             SaidAbout.asked(said) != null || GapRecord.asked(said) != null || WordFit.asked(said) != null || Causes.asked(said) != null || WeekAhead.asked(said) != null || AskedAgain.asked(said) || FigureFirst.asked(said) != null || MindChange.asked(said) || Weekdays.asked(said) != null || DayCompare.asked(said) != null || RangeBreaks.asked(said) != null || PriorDay.asked(said) != null || LastHour.asked(said) != null || InsideDays.asked(said) != null || FirstMove.asked(said) != null || VixNext.asked(said) != null || ZerodhaSession.asked(said) != null || Tour.asked(said) || WrongThing.asked(said) != null || WrongThing.objected(said) || OrderWhy.asked(said) != null || ArmHabits.asked(said) || MorningSense.asked(said) != null || HonestStars.asked(said) != null || RelayHealth.asked(said) != null || StreamHealth.asked(said) || SwitchOff.asked(said) != null
@@ -518,6 +518,7 @@ class CoverageTest {
         if (alone && Consistency.asked(q)) return "Consistency"
         if (alone && CoPilot.asked(q)) return "CoPilot"
         if (alone && SinceMorning.asked(q)) return "SinceMorning"
+        if (alone && ExpiryPin.asked(q) != null) return "ExpiryPin"
         if (alone && ChainDrift.asked(q) != null) return "ChainDrift"
         if (alone && ChainIntel.asked(q) != null) return "ChainIntel"
         if (alone && DayClock.asked(q) != null) return "DayClock"
@@ -631,6 +632,10 @@ class CoverageTest {
         "expected move for banknifty by expiry" to "ChainIntel", "expected move this week" to "ChainIntel",
         "what is the straddle pricing" to "ChainIntel", "straddle kitna hai" to "ChainIntel", "how much move is the market pricing in" to "ChainIntel",
         "analyze the option chain in detail" to "ChainIntel",
+        // ---- ExpiryPin: past Nifty expiries' settle against max pain and the biggest OI strike (round 22) ----
+        "how often does nifty close near max pain on expiry" to "ExpiryPin", "does nifty pin to max pain on expiry day" to "ExpiryPin",
+        "expiry pin record" to "ExpiryPin", "how often does nifty settle at the biggest oi strike on expiry" to "ExpiryPin",
+        "does max pain work on expiry days" to "ExpiryPin", "expiry pe nifty max pain ke paas band hota hai kya" to "ExpiryPin",
         // ---- ChainDrift: max pain and the biggest call / put OI through the day (round 12) ----
         "how has max pain moved today" to "ChainDrift", "has max pain shifted since morning" to "ChainDrift", "max pain drift" to "ChainDrift",
         "banknifty max pain through the day" to "ChainDrift", "max pain kitna shift hua" to "ChainDrift", "is the call wall shifting" to "ChainDrift",
@@ -1194,6 +1199,8 @@ class CoverageTest {
             ("anything new since 9:45" to "SinceMorning") to ("how has the oi shifted since morning" to "ChainIntel"),
             ("now versus this morning" to "SinceMorning") to ("how is today different from yesterday" to "DayCompare"),
             ("subah se kya badla" to "SinceMorning") to ("what changed in how you work" to "Learnings"),
+            // Market intelligence round 22: the expiry pin record beside max pain through today.
+            ("how often does nifty close near max pain on expiry" to "ExpiryPin") to ("how has max pain moved today" to "ChainDrift"),
             // Reasoning round 16: a strategy's losing day beside the index, next to its trades explained, its health and Boss's own trade.
             ("why did my strategy lose today" to "ArmDay") to ("explain my bots trades today" to "BotTrades"),
             ("why did orb lose today" to "ArmDay") to ("why did orb take that trade" to "BotTrades"),

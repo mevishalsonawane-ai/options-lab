@@ -1230,6 +1230,7 @@ object IraHub {
                 com.optionslab.ira.Learnings.asked(q) != null || com.optionslab.ira.Learnings.undoAsked(q) ||
                 com.optionslab.ira.NewsMoves.asked(q) != null || com.optionslab.ira.PreMarket.asked(q) ||
                 com.optionslab.ira.ChainDrift.asked(q) != null || com.optionslab.ira.SinceMorning.asked(q) ||
+                com.optionslab.ira.ExpiryPin.asked(q) != null ||
                 com.optionslab.ira.Headroom.asked(q) != null || com.optionslab.ira.ArmDay.asked(q) != null || com.optionslab.ira.BotTrades.asked(q) != null ||
                 com.optionslab.ira.SwitchOff.asked(q) != null ||
                 com.optionslab.ira.SaidAbout.asked(q) != null || com.optionslab.ira.WeekAhead.asked(q) != null ||
@@ -2389,7 +2390,7 @@ object IraHub {
 
     /**
      * [ask]'s question branches on contradictions, the co-pilot brief, now against the morning and the option chain:
-     * Consistency, CoPilot, SinceMorning, ChainDrift, ChainIntel - in [ask]'s order. True when one
+     * Consistency, CoPilot, SinceMorning, ExpiryPin, ChainDrift, ChainIntel - in [ask]'s order. True when one
      * took [q], answered exactly as before; each branch keeps its own guard (not [bundled], no order, no command).
      */
     private fun askedOfChain(q: String, parsed: com.optionslab.ira.Question, bundled: Boolean, understood: Boolean): Boolean {
@@ -2421,6 +2422,19 @@ object IraHub {
             _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
             val markets = parsed.markets
             scope.launch { reply(runCatching { sinceMorning(markets) }.getOrElse { "I could not set now against this morning just now, Boss." }) }
+            return true
+        }
+        // "How often does Nifty close near max pain on expiry?", "does Nifty pin to max pain on expiry day?", "expiry pin record":
+        // the past Nifty expiry-day chains on the phone ([com.optionslab.ira.ExpiryPin]) - max pain and the biggest OI strike at
+        // 09:30 (and 14:30) against where Nifty settled, beside where it already stood that morning, and today's newest chain
+        // read as it stands. A record of past expiries, never a forecast or advice; market data only (fine on a locked phone);
+        // nothing acts. (Before the chain's drift and its OI read: "max pain" with past expiries is this record.)
+        val pinAsk = if (!bundled && parsed.order == null && parsed.command == null && !com.optionslab.app.BuildConfig.GOLD)
+            runCatching { com.optionslab.ira.ExpiryPin.asked(q) }.getOrNull() else null
+        if (pinAsk != null) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            val markets = parsed.markets
+            scope.launch(Dispatchers.IO) { reply(runCatching { expiryPin(pinAsk, markets) }.getOrElse { "I could not read the past expiry chains just now, Boss." }) }
             return true
         }
         // "Where is the most call writing?", "how has OI shifted since morning?", "are puts dearer than calls?", "what's the
@@ -3593,6 +3607,26 @@ object IraHub {
         val today = com.optionslab.app.data.Market.today()
         val note = runCatching { IraTools.chainNote(u) }.getOrNull()
         return listOfNotNull(note, com.optionslab.ira.ChainIntel.answer(a, now, IraAccount.chainBook.first(u, today), today)).joinToString(" ")
+    }
+
+    /** The past expiries read for [expiryPin], kept until the phone's own captures or the day change. */
+    @Volatile private var pinDays: Pair<String, List<com.optionslab.ira.ExpiryPin.Day>>? = null
+
+    /**
+     * "How often does Nifty close near max pain on expiry?" ([com.optionslab.ira.ExpiryPin]): the Nifty expiry-day chains on
+     * the phone (bundled and captured), each streamed once and read down to a few numbers, then today's newest chain read
+     * kept in memory. Reads only.
+     */
+    private fun expiryPin(a: com.optionslab.ira.ExpiryPin.Q, markets: List<IraMarket>): String {
+        if (com.optionslab.ira.ExpiryPin.market(markets) == null) return com.optionslab.ira.ExpiryPin.NOT_HERE
+        val now = com.optionslab.app.data.Market.now().toLocalDateTime()
+        val today = com.optionslab.app.data.Market.today()
+        val device = Store.deviceExpiryDays()
+        val key = "$today|${!now.toLocalTime().isBefore(java.time.LocalTime.of(15, 30))}|${device.size}|${device.lastOrNull()}"
+        val days = pinDays?.takeIf { it.first == key }?.second
+            ?: com.optionslab.ira.ExpiryPin.days(Store.expirySessions(true), today, now).also { pinDays = key to it }
+        val latest = IraAccount.chainBook.latest("NIFTY")?.takeIf { it.at.toLocalDate() == today }
+        return com.optionslab.ira.ExpiryPin.answer(a, days, latest, today)
     }
 
     /**
