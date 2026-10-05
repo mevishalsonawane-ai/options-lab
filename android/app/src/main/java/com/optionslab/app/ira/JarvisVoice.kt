@@ -1295,6 +1295,22 @@ class JarvisVoice : Service() {
                         null -> {}
                     }
                 }
+                // "Say that again slowly" / "what was that number?" / "dobara dheere bolo" ([com.optionslab.ira.Again]): the
+                // last answer's own words again, slower for that one answer, or only its figures - nothing is worked out
+                // or done. An answer that may hold the account is not said again on a locked phone.
+                com.optionslab.ira.Again.read(h.question)?.let { ask ->
+                    awakeUntil = 0
+                    heardAt = com.optionslab.ira.Turn.spokeEnd(turnPartialAt, turnEndAt, SystemClock.elapsedRealtime())
+                    when (val r = com.optionslab.ira.Again.reply(ask, repeatable, SystemClock.elapsedRealtime(), locked())) {
+                        is com.optionslab.ira.Again.Reply.Say -> {
+                            note("said again (${ask.what.name.lowercase()})")
+                            say(r.text, "answer", full = r.text, account = r.account, slow = r.slow, keep = false)
+                        }
+                        is com.optionslab.ira.Again.Reply.Refused -> say(r.why)
+                        is com.optionslab.ira.Again.Reply.None -> say(r.why)
+                    }
+                    return
+                }
                 awakeUntil = 0
                 // A command for later ("start all arms tomorrow at 9") is judged as the command itself.
                 val laterRest = runCatching { com.optionslab.ira.Later.split(h.question, java.time.LocalDateTime.now(java.time.ZoneId.of("Asia/Kolkata")))?.rest }.getOrNull()
@@ -1376,6 +1392,8 @@ class JarvisVoice : Service() {
     private val pieceAt = java.util.concurrent.ConcurrentHashMap<String, Pair<Int, Int>>()
     /** The last answer cut off by Boss, for "go on" ([com.optionslab.ira.BargeIn.rest]). */
     @Volatile private var cutOff: com.optionslab.ira.BargeIn.CutOff? = null
+    /** The last answer said aloud, for "say that again slowly" / "what was that number?" ([com.optionslab.ira.Again]). */
+    @Volatile private var repeatable: com.optionslab.ira.Again.Last? = null
 
     /** The last answer said aloud and when (a follow-up's same answer is not said again). */
     private data class Said(val text: String)
@@ -1483,7 +1501,7 @@ class JarvisVoice : Service() {
      * itself (its own name is said as "my name", so it does not hear it) - then listens again, or stops after
      * [id] STOP_AFTER.
      */
-    private fun say(words: String, id: String = "say", full: String? = null, account: Boolean = false) {
+    private fun say(words: String, id: String = "say", full: String? = null, account: Boolean = false, slow: Boolean = false, keep: Boolean = true) {
         // Figures as a trader says them: a lakh or more in lakh / crore, option symbols as words ([com.optionslab.ira.SayAs]).
         // Then commas where a person would pause: brackets, spaced dashes, figures side by side ([com.optionslab.ira.Pauses]).
         val text = com.optionslab.ira.Pauses.shape(com.optionslab.ira.SayAs.figures(words, com.optionslab.ira.Aloud.hindi(words)))
@@ -1493,6 +1511,9 @@ class JarvisVoice : Service() {
         if (id == "answer" || id == "question") lastSpoken = text
         // A new answer replaces the one cut off; what is said is kept for "go on" if Boss cuts this one off too.
         if (id == "answer") cutOff = null
+        // Kept for "say that again" (a repeat itself is not kept over the answer it repeats). Said on an unlocked phone,
+        // any answer may hold Boss's side: its repeat re-checks the lock ([com.optionslab.ira.Again.reply]).
+        if (id == "answer" && keep) repeatable = com.optionslab.ira.Again.Last(words, account || !locked(), SystemClock.elapsedRealtime())
         sayingFull = if (id == "answer") full else null; sayingAccount = account
         sayingText = text; reachedAt = -1
         // Muted: the words go on screen as a pop-up instead (answers and questions only; "One moment" is dropped).
@@ -1503,6 +1524,8 @@ class JarvisVoice : Service() {
         if (!voiceReady || t == null) { afterSpeech(id); return }
         _state.value = VoiceState(Mode.SPEAKING)
         applyStyle(t)                                   // a style or voice changed on the Ira screen takes effect now
+        // A slow repeat: slower for this answer only (the next applyStyle sets Boss's own pace back).
+        if (slow) { t.setSpeechRate(style.rate * com.optionslab.ira.Again.rate(pace, true)); synchronized(applied) { applied.remove(t) } }
         val ci = cutInNow(this)
         if (ci.on) {
             // Keep listening (for the name or a stop word only) once the sentence is under way: sooner when his voice
