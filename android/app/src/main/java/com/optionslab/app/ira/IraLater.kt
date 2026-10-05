@@ -78,6 +78,24 @@ object IraLater {
     /** Boss's reminders only are dropped; timed commands stay. */
     fun clearReminders(context: Context): Int { val n = reminders().size; save(all()); schedule(context); return n }
 
+    /** Boss's reminders as [com.optionslab.ira.ReminderBook] reads them (India time). */
+    fun kept(): List<com.optionslab.ira.ReminderBook.Kept> = reminders().map { r ->
+        com.optionslab.ira.ReminderBook.Kept(r.id, r.text, LocalDateTime.ofInstant(Instant.ofEpochMilli(r.at), IST), r.daily) }
+
+    /**
+     * One reminder dropped (after Boss's Confirm): by its id, or - a daily one said and set again meanwhile - by its words
+     * and time of day. False when it is gone already (said, or cancelled).
+     */
+    @Synchronized fun dropReminder(context: Context, one: com.optionslab.ira.ReminderBook.Kept): Boolean {
+        val items = everything()
+        fun same(x: Item) = x.remind && (x.id == one.id || one.daily && x.daily && x.text == one.text &&
+            LocalDateTime.ofInstant(Instant.ofEpochMilli(x.at), IST).toLocalTime() == one.at.toLocalTime())
+        if (items.none { same(it) }) return false
+        save(items.filter { !same(it) })
+        schedule(context)
+        return true
+    }
+
     /** Everything set for later is dropped (nothing runs). */
     fun clear(context: Context) { save(emptyList()); schedule(context) }
 

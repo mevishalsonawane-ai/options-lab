@@ -1418,6 +1418,7 @@ object IraHub {
                 com.optionslab.ira.Headroom.asked(q) != null || com.optionslab.ira.ArmFit.asked(q) || com.optionslab.ira.WeakLink.asked(q) || com.optionslab.ira.ArmDay.asked(q) != null || com.optionslab.ira.NetLean.asked(q) || com.optionslab.ira.BotTrades.asked(q) != null ||
                 com.optionslab.ira.ExpiryEve.asked(q) || com.optionslab.ira.BeforeTomorrow.asked(q) ||
                 com.optionslab.ira.SwitchOff.asked(q) != null ||
+                com.optionslab.ira.ReminderBook.listAsked(q) || com.optionslab.ira.ReminderBook.cancelOne(q) != null ||
                 com.optionslab.ira.SaidAbout.asked(q) != null || com.optionslab.ira.WeekAhead.asked(q) != null ||
                 com.optionslab.ira.ZerodhaSession.asked(q) != null || com.optionslab.ira.OrderWhy.asked(q) != null || com.optionslab.ira.Tour.asked(q) ||
                 com.optionslab.ira.RelayHealth.asked(q) != null || com.optionslab.ira.StreamHealth.asked(q) || com.optionslab.ira.WatchAsk.asked(q) != null ||
@@ -1496,6 +1497,36 @@ object IraHub {
         if (bundled && parsed.order == null && parsed.command == null && runCatching { com.optionslab.ira.Plan.pronounUnclear(q) || com.optionslab.ira.Plan.pronounAfter(q) }.getOrDefault(false)) {
             val said = if (com.optionslab.app.BuildConfig.GOLD || GOLD_ONLY_TALK) GOLD_TALK_ONLY else com.optionslab.ira.Plan.WHICH_POSITION
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
+            return
+        }
+        // Boss's reminders one at a time (usefulness round 27): "what reminders do I have" lists each with its time;
+        // "cancel the 14:30 reminder" / "delete the reminder about Nifty" finds that one and asks first - only it is
+        // dropped, on Confirm (several alike, or none: named, nothing dropped). A reminder only speaks: nothing here trades.
+        if (com.optionslab.app.BuildConfig.JARVIS && runCatching { com.optionslab.ira.ReminderBook.listAsked(q) }.getOrDefault(false)) {
+            val rbList = runCatching { com.optionslab.ira.ReminderBook.list(IraLater.kept(), com.optionslab.app.data.Market.now().toLocalDateTime()) }
+                .getOrDefault("I could not reach the reminders just now, Boss.")
+            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, rbList)).takeLast(MAX_MESSAGES)) }
+            return
+        }
+        val rbPick = if (com.optionslab.app.BuildConfig.JARVIS) runCatching { com.optionslab.ira.ReminderBook.cancelOne(q) }.getOrNull() else null
+        if (rbPick != null) {
+            val rbApp = app
+            val rbNow = com.optionslab.app.data.Market.now().toLocalDateTime()
+            val rbAll = runCatching { IraLater.kept() }.getOrNull()
+            val rbFound = rbAll?.let { all -> com.optionslab.ira.ReminderBook.matches(all, rbPick) }
+            if (rbApp == null || rbAll == null || rbFound == null || rbFound.size != 1) {
+                val rbSaid = if (rbAll == null || rbFound == null || rbApp == null) "I could not reach the reminders just now, Boss."
+                    else com.optionslab.ira.ReminderBook.notOne(rbFound, rbAll, rbNow)
+                _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, rbSaid)).takeLast(MAX_MESSAGES)) }
+                return
+            }
+            val rbOne = rbFound[0]
+            val rbWhat = com.optionslab.ira.ReminderBook.confirm(rbOne, rbNow)
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            pend(rbWhat, suspend {
+                if (IraLater.dropReminder(rbApp, rbOne)) com.optionslab.ira.ReminderBook.cancelled(rbOne, com.optionslab.app.data.Market.now().toLocalDateTime())
+                else "That reminder is gone already, Boss - nothing to cancel."
+            }, "Tap Confirm to $rbWhat.")
             return
         }
         // Boss's own reminder ("remind me at 3 pm to check Nifty"): only said at its time, never run (Boss, 4 Oct).
