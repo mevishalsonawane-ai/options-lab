@@ -42,14 +42,18 @@ internal object IraAirtime {
     /** The end of a market pass: the waiting alerts said as one line (or nothing). */
     fun flush() {
         val now = LocalDateTime.now(IST)
+        var before: Airtime.State? = null
         val out = synchronized(this) {
             if (state.pending.isEmpty()) return
+            before = state
             val o = Airtime.flush(state, now) { a -> auto(a.source)?.let { IraTools.alertAloud(it) } ?: true }
             state = o.state
             o
         }
         val line = out.say ?: return
         val said = JarvisVoice.announce(line)
+        // Not heard (listening off): not counted as said - no move marked told, no hour's line used (the chat has them).
+        if (!said) synchronized(this) { before?.let { b -> if (state === out.state) state = b.copy(pending = emptyList()) } }
         // Only a line Boss could hear is judged by what he did next.
         if (said) IraTools.alertSaid(out.sources.mapNotNull { auto(it) })
     }

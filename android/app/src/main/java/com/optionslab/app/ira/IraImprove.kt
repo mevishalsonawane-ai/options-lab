@@ -66,7 +66,9 @@ internal object IraImprove {
     /** This week's plan, made late (from last week's record) when the weekend review did not run. */
     private suspend fun plan(today: LocalDate): Improve.Plan? = lock.withLock {
         val w = Improve.weekOf(today)
-        if (read()?.week != w) runCatching { cycleLocked(w) }
+        // Late only when the kept plan is older: next week's goals set at the weekend review are never overwritten.
+        val kept = read()
+        if (kept == null || kept.week.isBefore(w)) runCatching { cycleLocked(w) }
         read()
     }
 

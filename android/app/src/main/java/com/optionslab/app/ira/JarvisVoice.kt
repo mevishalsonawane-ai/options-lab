@@ -1152,7 +1152,8 @@ class JarvisVoice : Service() {
                     // The emergency exit takes Boss's own voice in place of the fingerprint (checked just above).
                     val r = if (yes) withContext(Dispatchers.Default) { IraHub.confirm(id, ownerVoice = askingNeedsBoss && IraHub.isExit(id)) } ?: "That had already lapsed; nothing was placed."
                         else { IraHub.cancelAction(id); "Rejected. Nothing was placed." }
-                    say(com.optionslab.ira.Aloud.say(r), "answer")
+                    // An order's result is read back as it is: its prices exact, never rounded for the ear.
+                    say(com.optionslab.ira.Address.boss(com.optionslab.ira.Wake.spoken(r)), "answer")
                 }
                 return
             }
@@ -1249,7 +1250,9 @@ class JarvisVoice : Service() {
     private val VOICE_KINDS = setOf(com.optionslab.ira.Command.Kind.UNMUTE, com.optionslab.ira.Command.Kind.VOICE_CHECK,
         com.optionslab.ira.Command.Kind.HINDI, com.optionslab.ira.Command.Kind.ENGLISH,
         com.optionslab.ira.Command.Kind.QUIET_ON, com.optionslab.ira.Command.Kind.QUIET_OFF,
-        com.optionslab.ira.Command.Kind.PACE_SLOWER, com.optionslab.ira.Command.Kind.PACE_FASTER, com.optionslab.ira.Command.Kind.PACE_NORMAL)
+        com.optionslab.ira.Command.Kind.PACE_SLOWER, com.optionslab.ira.Command.Kind.PACE_FASTER, com.optionslab.ira.Command.Kind.PACE_NORMAL,
+        // How much he says aloud, or saying more of it: preferences of his voice, not actions.
+        com.optionslab.ira.Command.Kind.BRIEF_ON, com.optionslab.ira.Command.Kind.BRIEF_OFF, com.optionslab.ira.Command.Kind.MORE)
 
     /** Commands that are never done on an unrecognised voice, even with a yes. */
     private val HIGH_RISK = setOf(com.optionslab.ira.Command.Kind.MODE_LIVE, com.optionslab.ira.Command.Kind.KILL_OFF,

@@ -281,7 +281,8 @@ object Improve {
             "how are your (own )?goals( going| coming along)?|what are you (trying|working) to (improve|get better at)|what are you improving( on)?|" +
             "how is your self[- ]?improvement( going)?|tum kaise (improve|behtar) ho rahe ho|tumhare goals( kya hai)?)\\s*(jarvis|boss)?\\W*$").containsMatchIn(text)
 
-    private fun planIsFor(plan: Plan?, today: LocalDate) = plan != null && plan.week == weekOf(today)
+    /** This week's plan, or next week's once the weekend review has set it (the same goals, told until then). */
+    private fun planIsFor(plan: Plan?, today: LocalDate) = plan != null && !plan.week.isBefore(weekOf(today))
 
     /** The answer: this week's goals with where each stands on [w] (the week so far), and how the last weeks went. */
     fun say(plan: Plan?, w: Week, learned: List<Corrections.Learned>, today: LocalDate): String {
