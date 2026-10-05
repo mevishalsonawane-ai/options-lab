@@ -60,6 +60,7 @@ internal object IraTools {
             clarityAsked(said)
             againAsked(said)
             wrongAsked(said)
+            talkHeard()
             val t = com.optionslab.ira.SelfDoubt.count(askedKinds(), com.optionslab.app.data.Market.today(), said)
             val o = JSONObject().apply { t.forEach { (d, m) -> put(d.toString(), JSONObject().apply { m.forEach { (k, n) -> put(k, n) } }) } }
             prefs().putAllSoon(mapOf(ASKED_KINDS to o.toString()))
@@ -907,6 +908,69 @@ internal object IraTools {
 
     private fun starsResetAt(now: LocalDateTime) = runCatching { prefs().putAllSoon(mapOf(STARS_RESET to now.toString())) }
 
+    // ---- the hours Boss talks to him ([com.optionslab.ira.TalkHours]) ------------------------------------------------
+
+    /** The days Boss asked something and the hours he did (days and hours only - never a word or what it was about). */
+    private const val TALK_HOURS = "jarvis.talkHours"
+    @Volatile private var talkCache: com.optionslab.ira.TalkHours.Log? = null
+    /** His hours, worked out at most every 10 minutes (not on every briefing): when, and the hours. */
+    @Volatile private var talkHoursCache: Pair<Long, List<Int>>? = null
+
+    private fun talkNow(): LocalDateTime = com.optionslab.app.data.Market.now().toLocalDateTime().withSecond(0).withNano(0)
+
+    fun talkLog(): com.optionslab.ira.TalkHours.Log = talkCache ?: runCatching {
+        val o = JSONObject(prefs().getString(TALK_HOURS) ?: "{}")
+        val d = o.optJSONArray("d") ?: JSONArray()
+        com.optionslab.ira.TalkHours.Log(
+            days = (0 until d.length()).map { i -> d.getJSONObject(i).let { x ->
+                val h = x.optJSONArray("h") ?: JSONArray()
+                com.optionslab.ira.TalkHours.Day(java.time.LocalDate.parse(x.getString("d")), (0 until h.length()).map { h.getInt(it) }.toSet()) } },
+            resetAt = o.optString("r").takeIf { it.isNotEmpty() }?.let { LocalDateTime.parse(it) })
+    }.getOrDefault(com.optionslab.ira.TalkHours.Log()).also { talkCache = it }
+
+    @Synchronized private fun talkUpdate(f: (com.optionslab.ira.TalkHours.Log) -> com.optionslab.ira.TalkHours.Log) {
+        runCatching {
+            val log = f(talkLog())
+            if (log == talkCache) return@runCatching
+            talkCache = log
+            talkHoursCache = null
+            val o = JSONObject().put("d", JSONArray().apply { log.days.forEach { x ->
+                put(JSONObject().put("d", x.day.toString()).put("h", JSONArray().apply { x.hours.sorted().forEach { put(it) } })) } })
+            log.resetAt?.let { o.put("r", it.toString()) }
+            prefs().putAllSoon(mapOf(TALK_HOURS to o.toString()))
+        }
+    }
+
+    /** Boss asked something now: the day and hour noted (a learning that only ever shortens a long unasked briefing aloud). */
+    private fun talkHeard() = talkUpdate { com.optionslab.ira.TalkHours.heard(it, talkNow()) }
+
+    private fun talkHours(): List<Int> {
+        val t = System.currentTimeMillis()
+        talkHoursCache?.takeIf { t - it.first < 10 * 60_000L }?.let { return it.second }
+        val hs = runCatching { com.optionslab.ira.TalkHours.record(talkLog(), talkNow()).hours }.getOrDefault(emptyList())
+        talkHoursCache = t to hs
+        return hs
+    }
+
+    /**
+     * An unasked, non-urgent briefing as said aloud: outside the hours Boss talks to him, a long one in its first sentence
+     * and "the rest is in the chat" ([com.optionslab.ira.TalkHours]). The voice only; on any trouble, [text] as it is.
+     */
+    fun talkAloud(text: String): String = runCatching { com.optionslab.ira.TalkHours.aloud(text, talkNow(), talkHours()) }.getOrDefault(text)
+
+    /** "When do I usually talk to you?". */
+    fun talkSay(): String = runCatching { com.optionslab.ira.TalkHours.say(talkLog(), talkNow()) }
+        .getOrDefault("I could not read my record of your hours just now, Boss.")
+
+    /** "Say your briefings in full at any hour": every briefing in full again, the count afresh. */
+    fun talkReset(): String {
+        val now = talkNow()
+        val said = runCatching { com.optionslab.ira.TalkHours.sayReset(talkLog(), now) }.getOrDefault("Done, Boss: every briefing in full at any hour again.")
+        talkUpdate { com.optionslab.ira.TalkHours.reset(it, now) }
+        IraActivity.add("Saying every briefing in full at any hour again (as asked).")
+        return said
+    }
+
     // ---- what he has learned, in one view ([com.optionslab.ira.Learnings]) ------------------------------------------
 
     /** Every learning store read with its own accessor (the goals are added by [IraImprove], which holds them). */
@@ -930,7 +994,8 @@ internal object IraTools {
         arms = runCatching { IraBots.armLog() }.getOrDefault(com.optionslab.ira.ArmHabits.Log()),
         morning = runCatching { morningLog() }.getOrDefault(com.optionslab.ira.MorningSense.Log()),
         stars = runCatching { IraNewsTrades.starsScored() }.getOrDefault(emptyList()),
-        starsReset = starsReset())
+        starsReset = starsReset(),
+        hours = runCatching { talkLog() }.getOrDefault(com.optionslab.ira.TalkHours.Log()))
 
     /**
      * "Undo everything you learned this week", on Boss's Confirm: the wordings and routines kept in the last 7 days
@@ -948,9 +1013,10 @@ internal object IraTools {
         if (u.figure.isNotEmpty()) figureUpdate { com.optionslab.ira.FigureFirst.reset(it, now) }
         if (u.morning.isNotEmpty()) morningUpdate { com.optionslab.ira.MorningSense.reset(it, now) }
         if (u.stars.isNotEmpty()) starsResetAt(now)
+        if (u.hours.isNotEmpty()) talkUpdate { com.optionslab.ira.TalkHours.reset(it, now) }
         IraActivity.add("Undid this week's learning, as Boss confirmed: ${u.words.size} wording(s), ${u.routines.size} routine(s), " +
             "${u.alerts.size} alert kind(s) aloud again, ${u.clarity.size} answer kind(s) as usual aloud again, ${u.figure.size} market read kind(s) in the usual order again, ${u.morning.size} morning-check item(s) read out in full again, " +
-            "${u.stars.size} confidence score(s) said plainly again.")
+            "${u.stars.size} confidence score(s) said plainly again, " + (if (u.hours.isNotEmpty()) "briefings in full at any hour again." else "briefings unchanged."))
         return u
     }
 

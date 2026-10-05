@@ -13,7 +13,8 @@ import java.util.Locale
  * ([DataAge]), how Nifty moved after each news theme's headlines ([NewsMoves]), the market reads Boss asked again within
  * minutes ([AskedAgain], a record only), the questions he answered with the wrong thing ([WrongThing], a record only), what Boss
  * does with his bots after losing days ([ArmHabits], a record only), the morning-check items said in a few words aloud
- * ([MorningSense]), the confidence scores said aloud with their record ([HonestStars]) and his own goals for the week ([Improve]) - each with when and why it changed and, where one exists, the
+ * ([MorningSense]), the confidence scores said aloud with their record ([HonestStars]), the long unasked briefings said in a
+ * sentence aloud outside the hours Boss talks to him ([TalkHours]) and his own goals for the week ([Improve]) - each with when and why it changed and, where one exists, the
  * words that undo it by voice.
  *
  * "What have you learned this week?" ([Ask.WEEK]), "what changed in how you work?" ([Ask.CHANGED]) and "show me
@@ -24,7 +25,8 @@ import java.util.Locale
  * the wordings and routines kept in the last [DAYS] days, the alert count (every alert aloud again), the answers said
  * shorter aloud ([Clarity]: every answer as usual again), the market reads said figure first ([FigureFirst]: the usual
  * order again), the morning-check items named in a few words ([MorningSense]: read out in full again), the confidence scores
- * said with their record ([HonestStars]: said plainly again) and his own goals. (His confidence words set to fit the
+ * said with their record ([HonestStars]: said plainly again), the briefings said shorter outside his hours ([TalkHours]:
+ * in full at any hour again) and his own goals. (His confidence words set to fit the
  * numbers beside them ([WordFit]) are listed with their own undo, but not reset here: that is a check on his own words
  * against his own record, not a habit learned from Boss.)
  * for this week. Never a setting, the PIN, Live, the AI's live trading, a guard or the Google speech choice - and never
@@ -48,6 +50,7 @@ object Learnings {
         FIGURE_FIRST("Market reads I start with the figure aloud", false),
         MORNING("Morning-check items I name in a few words aloud", false),
         STARS("Confidence scores I say with their record aloud", true),
+        HOURS("Briefings I keep short aloud outside your usual hours", false),
         ARM_HABITS("Your bots after losing days", true),
         SIT_OUT("Conditions I sit out", true),
         ANSWERS("Answer kinds I flag", true),
@@ -86,6 +89,7 @@ object Learnings {
         /** Jarvis's scored ideas with the confidence they were put with, and when Boss last asked for it plainly. */
         val stars: List<HonestStars.Scored> = emptyList(),
         val starsReset: LocalDateTime? = null,
+        val hours: TalkHours.Log = TalkHours.Log(),
     )
 
     fun day(d: LocalDate): String = "${d.dayOfMonth} ${d.month.getDisplayName(TextStyle.SHORT, Locale.ENGLISH)}"
@@ -153,6 +157,10 @@ object Learnings {
         // The confidence scores said aloud with their record ([HonestStars]; counts only): the score itself is unchanged.
         HonestStars.honest(i.stars, now, i.starsReset).forEach { r ->
             out += Item(Area.STARS, HonestStars.ledgerWhat(r), r.newest.toLocalDate(), HonestStars.ledgerWhy(r), HonestStars.UNDO)
+        }
+        // The long unasked briefings said in a sentence aloud outside the hours Boss talks to him ([TalkHours]; days and hours only).
+        TalkHours.record(i.hours, now).takeIf { it.learned }?.let { r ->
+            out += Item(Area.HOURS, TalkHours.ledgerWhat(r), r.newest, TalkHours.ledgerWhy(r), TalkHours.UNDO)
         }
         // What Boss does with his bots after losing days ([ArmHabits]; switches and signs only): his record - it arms or
         // disarms nothing, changes nothing Jarvis does, and so has no undo.
@@ -285,9 +293,10 @@ object Learnings {
     /** What undoing the week resets: wordings and routines kept in the last [DAYS] days, the alert count, this week's own goals. */
     data class Undo(val words: List<Corrections.Learned>, val routines: List<Routine.Kept>, val alerts: List<AlertSense.Record>, val goals: Int,
                     val clarity: List<Clarity.Record> = emptyList(), val figure: List<FigureFirst.Record> = emptyList(),
-                    val morning: List<MorningSense.Record> = emptyList(), val stars: List<HonestStars.Record> = emptyList()) {
+                    val morning: List<MorningSense.Record> = emptyList(), val stars: List<HonestStars.Record> = emptyList(),
+                    val hours: List<Int> = emptyList()) {
         val empty: Boolean get() = words.isEmpty() && routines.isEmpty() && alerts.isEmpty() && goals == 0 && clarity.isEmpty() && figure.isEmpty() && morning.isEmpty() &&
-            stars.isEmpty()
+            stars.isEmpty() && hours.isEmpty()
     }
 
     fun undo(i: Inputs, now: LocalDateTime): Undo {
@@ -300,7 +309,8 @@ object Learnings {
             Clarity.shorter(i.clarity, i.tally, now),
             FigureFirst.leading(i.figure, now),
             MorningSense.usuallyLeft(i.morning, today),
-            HonestStars.honest(i.stars, now, i.starsReset))
+            HonestStars.honest(i.stars, now, i.starsReset),
+            TalkHours.record(i.hours, now).hours)
     }
 
     /** [words] without those kept in the last [DAYS] days (the rest, and undated ones, stay). */
@@ -323,6 +333,7 @@ object Learnings {
         if (u.figure.isEmpty()) null else "the market reads I start with the figure aloud (" + u.figure.joinToString(", ") { it.phrase } + ") - in the usual order again",
         if (u.morning.isEmpty()) null else "the morning-check items I name in a few words aloud (" + u.morning.joinToString(", ") { it.phrase } + ") - read out in full again",
         if (u.stars.isEmpty()) null else "the confidence scores I say with their record aloud (" + u.stars.joinToString(", ") { it.phrase } + ") - said plainly again",
+        if (u.hours.isEmpty()) null else "the briefings I say shorter aloud outside your usual hours (" + TalkHours.spans(u.hours) + ") - in full at any hour again",
         if (u.goals == 0) null else "my ${plural(u.goals, "goal")} for this week")
 
     const val ONLY = "Only learned behaviour: never a setting, your PIN, Live, AI trading, a guard or the Google speech choice. " +

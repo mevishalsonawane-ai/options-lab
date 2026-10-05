@@ -73,8 +73,11 @@ class JarvisVoice : Service() {
             val v = instance?.get() ?: return false
             // Unasked on a locked phone (it may be overheard): never an amount, a P&L or a symbol - only that it is in
             // the chat (every caller has already put the full line there).
-            val said = if (prompted) text else com.optionslab.ira.Overheard.said(text, runCatching { IraHub.locked() }.getOrDefault(true))
-            if (!prompted && quietNow()) { runCatching { JarvisPopup.show(v, "Jarvis", said) }; return true }
+            val overheard = if (prompted) text else com.optionslab.ira.Overheard.said(text, runCatching { IraHub.locked() }.getOrDefault(true))
+            if (!prompted && quietNow()) { runCatching { JarvisPopup.show(v, "Jarvis", overheard) }; return true }
+            // A long unasked briefing outside the hours Boss talks to him: its first sentence aloud, the rest in the chat
+            // ([com.optionslab.ira.TalkHours]). Never a safety warning (urgent) or a reply; the voice only, nothing acts.
+            val said = if (prompted || urgent) overheard else IraTools.talkAloud(overheard)
             // Not a reply to Boss's words (never timed as one); unless urgent, not said over him while he is speaking.
             v.main.post { if (urgent) { if (!v.stopped) v.say(said, "answer", reply = false) } else v.sayWhenFree(said, "answer") }
             return true

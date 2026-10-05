@@ -1248,7 +1248,7 @@ object IraHub {
                 com.optionslab.ira.AskedAgain.asked(q) || com.optionslab.ira.FigureFirst.asked(q) != null ||
                 com.optionslab.ira.WrongThing.asked(q) != null || com.optionslab.ira.WrongThing.objected(q) || com.optionslab.ira.MindChange.asked(q) ||
                 com.optionslab.ira.ArmHabits.asked(q) || com.optionslab.ira.MorningSense.asked(q) != null ||
-                com.optionslab.ira.HonestStars.asked(q) != null ||
+                com.optionslab.ira.HonestStars.asked(q) != null || com.optionslab.ira.TalkHours.asked(q) != null ||
                 com.optionslab.ira.DayCompare.asked(q) != null }.getOrDefault(false)) {
             val prev = if (recent) _state.value.messages.lastOrNull { !it.fromIra }?.text else null
             val qs = runCatching { com.optionslab.ira.Understand.questions(prev, q) }.getOrNull()
@@ -1914,7 +1914,7 @@ object IraHub {
 
     /**
      * [ask]'s question branches on how Jarvis himself speaks and hears: AlertSense, Airtime, Hearing, PatternCalls,
-     * TrendReads, Clarity, WordFit, AskedAgain, FigureFirst, WrongThing, ArmHabits, MorningSense, HonestStars - in [ask]'s order. True when one
+     * TrendReads, Clarity, WordFit, AskedAgain, FigureFirst, WrongThing, ArmHabits, MorningSense, HonestStars, TalkHours - in [ask]'s order. True when one
      * took [q], answered exactly as before; each branch keeps its own guard (not [bundled], no order, no command).
      */
     private fun askedOfHisWays(q: String, parsed: com.optionslab.ira.Question, bundled: Boolean, understood: Boolean): Boolean {
@@ -2053,6 +2053,16 @@ object IraHub {
         if (starsAsk != null) {
             val said = if (phoneLocked()) com.optionslab.ira.HonestStars.LOCKED
                 else if (starsAsk == com.optionslab.ira.HonestStars.Request.RESET) IraTools.starsPlain() else IraTools.starsSay()
+            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
+            return true
+        }
+        // "When do I usually talk to you?" / "say your briefings in full at any hour": the hours Boss talks to Jarvis, outside
+        // which a long unasked briefing is said in one sentence aloud ([com.optionslab.ira.TalkHours]; days and hours only).
+        // Only the voice is shorter - never a safety warning, never the chat - and nothing learned acts.
+        val talkAsk = if (com.optionslab.app.BuildConfig.JARVIS && !bundled && parsed.order == null && parsed.command == null)
+            runCatching { com.optionslab.ira.TalkHours.asked(q) }.getOrNull() else null
+        if (talkAsk != null) {
+            val said = if (talkAsk == com.optionslab.ira.TalkHours.Request.RESET) IraTools.talkReset() else IraTools.talkSay()
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
             return true
         }
