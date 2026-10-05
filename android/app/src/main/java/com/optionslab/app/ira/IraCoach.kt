@@ -356,6 +356,31 @@ internal object IraCoach {
         }
     }
 
+    /** Each index's [com.optionslab.ira.Moments.Look] at the last look (day|market). */
+    private val momentLast = HashMap<String, com.optionslab.ira.Moments.Look>()
+    private val momentTold = HashSet<String>()
+
+    /**
+     * Nifty or BankNifty filling its opening gap, or going past the previous session's high or low (market hours): each
+     * told once a day, on the move - the first look of a day only records, so a state already there is not news.
+     */
+    fun momentsWatch() {
+        if (!com.optionslab.app.BuildConfig.JARVIS || !Automations.on(Automations.Auto.MOMENTS) || !com.optionslab.app.data.Market.isOpen()) return
+        val day = com.optionslab.app.data.Market.today().toString()
+        for (m in listOf(com.optionslab.ira.Market.NIFTY, com.optionslab.ira.Market.BANKNIFTY)) {
+            val s = IraHub.state.value.snaps[m] ?: continue
+            if (s.at.toLocalDate().toString() != day) continue
+            val bars = IraHub.recentBars(m)
+            val now = com.optionslab.ira.Moments.look(s, bars) ?: continue
+            val before = synchronized(momentLast) { momentLast.put("$day|${m.name}", now) } ?: continue
+            for (a in com.optionslab.ira.Moments.alerts(s, bars, before, now)) {
+                if (!synchronized(momentTold) { momentTold.add("$day|${a.key}") }) continue
+                IraHub.appContext()?.let { JarvisPopup.show(it, a.title, a.text) }
+                IraHub.note(a.text); JarvisVoice.announce(a.text); Automations.acted(Automations.Auto.MOMENTS, a.text)
+            }
+        }
+    }
+
     /** VIX's change on the day at the last look (a spike is told on the way up, once). */
     private val vixLast = HashMap<String, Double?>()
     private val vixTold = HashSet<String>()
