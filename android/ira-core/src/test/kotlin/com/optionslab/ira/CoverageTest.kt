@@ -31,7 +31,7 @@ class CoverageTest {
             Learnings.asked(said) != null || Learnings.undoAsked(said) || NewsMoves.asked(said) != null || PreMarket.asked(said) ||
             ChainDrift.asked(said) != null || Headroom.asked(said) != null || BotTrades.asked(said) != null || DayClock.asked(said) != null ||
             SaidAbout.asked(said) != null || GapRecord.asked(said) != null || Causes.asked(said) != null || WeekAhead.asked(said) != null || AskedAgain.asked(said) || FigureFirst.asked(said) != null || Weekdays.asked(said) != null || DayCompare.asked(said) != null ||
-            RangeBreaks.asked(said) != null || PriorDay.asked(said) != null || LastHour.asked(said) != null || InsideDays.asked(said) != null || NeedsTrue.asked(said) || Clarity.asked(said) != null || ZerodhaSession.asked(said) != null || Tour.asked(said) || WrongThing.asked(said) != null || WrongThing.objected(said) || OrderWhy.asked(said) != null || ArmHabits.asked(said)
+            RangeBreaks.asked(said) != null || PriorDay.asked(said) != null || LastHour.asked(said) != null || InsideDays.asked(said) != null || NeedsTrue.asked(said) || Clarity.asked(said) != null || ZerodhaSession.asked(said) != null || Tour.asked(said) || WrongThing.asked(said) != null || WrongThing.objected(said) || OrderWhy.asked(said) != null || ArmHabits.asked(said) || RelayHealth.asked(said) != null
         return ((if (asSaid) null else Understand.questions(null, said)) ?: listOf(said)).map { kind(it, 0) }
     }
 
@@ -58,6 +58,7 @@ class CoverageTest {
             if (WeekAhead.asked(q) != null) return Kind.INFO
             if (ZerodhaSession.asked(q) != null) return Kind.ACCOUNT
             if (OrderWhy.asked(q) != null) return Kind.ACCOUNT
+            if (RelayHealth.asked(q) != null) return Kind.ACCOUNT
             if (Tour.asked(q)) return Kind.JARVIS
             if (DataAge.asked(q)) return Kind.JARVIS
             if (Honest.asked(q) != null) return Kind.HONEST
@@ -325,6 +326,8 @@ class CoverageTest {
         // ---- Why Zerodha logged Boss out (ZerodhaSession, voice round 14): his broker session, so the account's kind ----
         "why was i logged out of zerodha" to A, "why did kite log me out" to A, "what happened to my zerodha session" to A,
         "zerodha se logout kyun hua" to A, "when does my zerodha session end" to A,
+        // ---- The relay's health (RelayHealth, round 19): Boss's own setup, from the diagnostics - the account's kind ----
+        "why is my relay failing" to A, "is my static ip working" to A, "relay kyun nahi chal raha" to A, "is the relay down" to A,
         // ---- What can I ask you (Tour, voice round 15): five questions for the part of the day - Jarvis's own ----
         "what can i ask you" to J, "what should i ask you now" to J, "main kya pooch sakta hoon" to J, "suggest some questions" to J,
     )
@@ -458,7 +461,7 @@ class CoverageTest {
             PatternCalls.asked(said) || TrendReads.asked(said) || Learnings.asked(said) != null || Learnings.undoAsked(said) || NewsMoves.asked(said) != null ||
             PreMarket.asked(said) ||
             ChainDrift.asked(said) != null || Headroom.asked(said) != null || BotTrades.asked(said) != null || NeedsTrue.asked(said) || Clarity.asked(said) != null || DayClock.asked(said) != null ||
-            SaidAbout.asked(said) != null || GapRecord.asked(said) != null || WordFit.asked(said) != null || Causes.asked(said) != null || WeekAhead.asked(said) != null || AskedAgain.asked(said) || FigureFirst.asked(said) != null || MindChange.asked(said) || Weekdays.asked(said) != null || DayCompare.asked(said) != null || RangeBreaks.asked(said) != null || PriorDay.asked(said) != null || LastHour.asked(said) != null || InsideDays.asked(said) != null || ZerodhaSession.asked(said) != null || Tour.asked(said) || WrongThing.asked(said) != null || WrongThing.objected(said) || OrderWhy.asked(said) != null || ArmHabits.asked(said)
+            SaidAbout.asked(said) != null || GapRecord.asked(said) != null || WordFit.asked(said) != null || Causes.asked(said) != null || WeekAhead.asked(said) != null || AskedAgain.asked(said) || FigureFirst.asked(said) != null || MindChange.asked(said) || Weekdays.asked(said) != null || DayCompare.asked(said) != null || RangeBreaks.asked(said) != null || PriorDay.asked(said) != null || LastHour.asked(said) != null || InsideDays.asked(said) != null || ZerodhaSession.asked(said) != null || Tour.asked(said) || WrongThing.asked(said) != null || WrongThing.objected(said) || OrderWhy.asked(said) != null || ArmHabits.asked(said) || RelayHealth.asked(said) != null
         val qs = if (asSaid || understood || cleaned) null else Understand.questions(null, said)?.takeIf { it.isNotEmpty() && it != listOf(said) }
         if (qs != null) return if (qs.size == 1) feature(qs[0], cleaned = true) else qs.joinToString(" & ") { feature(it, understood = true) }
         val q = said
@@ -491,6 +494,7 @@ class CoverageTest {
         if (alone && WeekAhead.asked(q) != null) return "WeekAhead"
         if (alone && ZerodhaSession.asked(q) != null) return "ZerodhaSession"
         if (alone && OrderWhy.asked(q) != null) return "OrderWhy"
+        if (alone && RelayHealth.asked(q) != null) return "RelayHealth"
         if (alone && Tour.asked(q)) return "Tour"
         if (alone && DataAge.asked(q)) return "DataAge"
         if (alone && Honest.asked(q) != null) return "Honest"
@@ -950,6 +954,14 @@ class CoverageTest {
         "why did my kite session expire" to "ZerodhaSession", "what happened to my zerodha login" to "ZerodhaSession",
         "why do i keep getting logged out of kite" to "ZerodhaSession", "zerodha se logout kyun hua" to "ZerodhaSession",
         "when does my zerodha session end" to "ZerodhaSession",
+        // ---- RelayHealth (round 19): the relay and the static IP from the diagnostics; testing it stays Boss's own tap ----
+        "why is my relay failing" to "RelayHealth", "is my static ip working" to "RelayHealth", "relay kyun nahi chal raha" to "RelayHealth",
+        "is the relay working" to "RelayHealth", "why can't the relay connect" to "RelayHealth", "is my relay server up" to "RelayHealth",
+        "what's wrong with the relay" to "RelayHealth", "relay health" to "RelayHealth", "am i on my static ip" to "RelayHealth",
+        "why is zerodha login failing through the relay" to "RelayHealth", "is my static ip ok" to "RelayHealth",
+        "relay ka kya haal hai" to "RelayHealth", "static ip kaam kar raha hai kya" to "RelayHealth",
+        "why does the relay keep timing out" to "RelayHealth", "when did the relay last connect" to "RelayHealth",
+        "relay status" to "RelayHealth", "is the relay down" to "RelayHealth",
         // ---- Tour (voice round 15): "what can I ask you?" names five questions for the part of the day ----
         "what can i ask you" to "Tour", "what else can i ask jarvis" to "Tour", "what should i ask now" to "Tour",
         "what questions can i ask" to "Tour", "what kind of questions should i ask you" to "Tour", "suggest some questions" to "Tour",

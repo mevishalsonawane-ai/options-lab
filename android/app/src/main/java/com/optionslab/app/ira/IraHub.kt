@@ -1227,6 +1227,7 @@ object IraHub {
                 com.optionslab.ira.Headroom.asked(q) != null || com.optionslab.ira.BotTrades.asked(q) != null ||
                 com.optionslab.ira.SaidAbout.asked(q) != null || com.optionslab.ira.WeekAhead.asked(q) != null ||
                 com.optionslab.ira.ZerodhaSession.asked(q) != null || com.optionslab.ira.OrderWhy.asked(q) != null || com.optionslab.ira.Tour.asked(q) ||
+                com.optionslab.ira.RelayHealth.asked(q) != null ||
                 com.optionslab.ira.NeedsTrue.asked(q) ||
                 com.optionslab.ira.Clarity.asked(q) != null || com.optionslab.ira.DayClock.asked(q) != null ||
                 com.optionslab.ira.GapRecord.asked(q) != null || com.optionslab.ira.RangeBreaks.asked(q) != null ||
@@ -2027,7 +2028,7 @@ object IraHub {
 
     /**
      * [ask]'s question branches on the records and Boss's own setup: NewsMoves, TaxRecords, Learnings (and its undo),
-     * PreMarket, Headroom, SaidAbout, WeekAhead, ZerodhaSession - in [ask]'s order. True when one
+     * PreMarket, Headroom, SaidAbout, WeekAhead, ZerodhaSession, OrderWhy, RelayHealth - in [ask]'s order. True when one
      * took [q], answered exactly as before; each branch keeps its own guard (not [bundled], no order, no command).
      */
     private fun askedOfRecords(q: String, parsed: com.optionslab.ira.Question, bundled: Boolean, understood: Boolean): Boolean {
@@ -2218,6 +2219,32 @@ object IraHub {
             _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
             if (phoneLocked()) { reply("Unlock the phone for that, Boss."); return true }
             scope.launch(Dispatchers.IO) { reply(runCatching { IraOrderWhy.answer(whyOrder) }.getOrElse { "I could not read your orders just now, Boss." }) }
+            return true
+        }
+        // "Why is my relay failing?", "is my static IP working?", "relay kyun nahi chal raha", "can I trade live right now?"
+        // ([com.optionslab.ira.RelayHealth]): from the diagnostics diary (the relay's connects and failed connects, the Zerodha
+        // calls that failed through it, the static-IP checks) and the app's state as it stands - when it last connected, how
+        // long and how often it has failed, the failure in plain words and the steps Boss takes himself; live as facts only.
+        // His setup and broker, so never on a locked phone. Reads only: nothing is switched, tested or connected here (the
+        // relay's own retries stay as they are; Connect & test stays his tap); no host, user or key is said, only the
+        // registered IP the app shows. (Not in IraGoldAlgo: no broker or relay there.)
+        val relayAsk = if (!bundled && parsed.order == null && parsed.command == null && !com.optionslab.app.BuildConfig.GOLD)
+            runCatching { com.optionslab.ira.RelayHealth.asked(q) }.getOrNull() else null
+        if (relayAsk != null) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            if (phoneLocked()) { reply("Unlock the phone for that, Boss."); return true }
+            scope.launch(Dispatchers.IO) {
+                reply(runCatching {
+                    val r = com.optionslab.app.data.Relay
+                    val b = com.optionslab.app.data.Broker
+                    val st = com.optionslab.app.data.AppSettings.load()
+                    val setup = com.optionslab.ira.RelayHealth.Setup(
+                        relayOn = r.enabled, relaySet = r.host != null, connected = runCatching { r.connected }.getOrDefault(false),
+                        registeredIp = com.optionslab.app.data.StaticIp.registered, live = st.live, realOrders = st.allowRealOrders,
+                        linked = b.linked, loggedIn = b.loggedIn, kill = st.guardKill)
+                    com.optionslab.ira.RelayHealth.answer(relayAsk, com.optionslab.app.data.Diag.lines(), LocalDateTime.now(IST), setup)
+                }.getOrElse { "I could not read the relay record just now, Boss." })
+            }
             return true
         }
         return false

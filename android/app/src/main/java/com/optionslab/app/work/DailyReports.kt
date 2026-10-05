@@ -158,7 +158,10 @@ object DailyReports {
             } else if (!Broker.configured) lines += "• Zerodha not set up: Paper only"
             com.optionslab.app.data.StaticIp.registered?.let { reg ->
                 val st = runCatching { com.optionslab.app.data.StaticIp.status(force = true) }.getOrNull()
-                ok(st?.matches == true, if (st?.matches == true) "On your registered static IP $reg" else "Not on your registered static IP $reg: new live positions will be refused")
+                val said = if (st?.matches == true) "On your registered static IP $reg" else "Not on your registered static IP $reg: new live positions will be refused"
+                ok(st?.matches == true, said)
+                // Kept in the diary too, so Jarvis can answer "is my static IP working?" from it (RelayHealth); the IP is the one shown.
+                com.optionslab.app.data.Diag.record("static-ip", "Morning check: $said")
             }
             runCatching { com.optionslab.app.ira.IraHub.refresh() }
             val ira = com.optionslab.app.ira.IraHub.state.value
