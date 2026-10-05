@@ -875,6 +875,12 @@ class CoverageTest {
         "my winning and losing streaks" to "Account:STREAKS", "lagatar kitne din loss hua mera" to "Account:STREAKS",
         "mera konsa din best hai" to "Account:STREAKS", "my longest winning streak" to "Account:STREAKS",
         "how many days in a row has nifty risen" to "Streak", "banknifty losing streak" to "Streak",
+        // ---- MyNumbers (round 17): Boss's own averages, ratios, per-trade result and hold times ----
+        "what's my average win and average loss" to "Account:NUMBERS", "my profit factor" to "Account:NUMBERS",
+        "what's my expectancy" to "Account:NUMBERS", "how much do i make per trade" to "Account:NUMBERS",
+        "do i hold my losers longer than my winners" to "Account:NUMBERS", "do i cut my winners short" to "Account:NUMBERS",
+        "my trading stats" to "Account:NUMBERS", "what is my risk reward on my trades" to "Account:NUMBERS",
+        "mera average loss kitna hai" to "Account:NUMBERS", "my average loss this month" to "Account:NUMBERS",
         // ---- Headroom (round 13): how close Boss is to his limits; the limits themselves stay the account's RISK ----
         "how close am i to my limits" to "Headroom", "how much can i still lose today" to "Headroom", "how many trades do i have left" to "Headroom",
         "am i near my loss limit" to "Headroom", "limit se kitna door hoon" to "Headroom", "kitna aur loss le sakta hoon" to "Headroom",

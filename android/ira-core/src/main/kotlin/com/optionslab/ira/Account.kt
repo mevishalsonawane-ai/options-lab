@@ -18,7 +18,7 @@ enum class Section(val title: String) {
     MOVE("If the market moves"), RANK("Your positions ranked"), REPLAY("Your trades replayed"),
     MONTH("Your month reviewed"), CHARGES("Your charges"), HEALTH("Your positions' health"),
     BOTS("Your strategies' health"), TAX("Your tax-year records"), NEED("What has to be true for your position"),
-    STREAKS("Your streaks"),
+    STREAKS("Your streaks"), NUMBERS("Your trading numbers"),
 }
 
 /** Fact lines per section, each a finished sentence; [mode] "Paper" or "Live". */
@@ -187,9 +187,11 @@ object AppAnswers {
         if (NeedsTrue.asked(text)) { out.clear(); out += Section.NEED }
         // "Am I on a winning streak?", "what's my best weekday?": Boss's own runs of days and trades, on their own.
         if (MyStreaks.asked(text)) { out.clear(); out += Section.STREAKS }
+        // "What's my average win and loss?", "my profit factor", "do I hold my losers longer?": Boss's own numbers, on their own.
+        if (MyNumbers.asked(text)) { out.clear(); out += Section.NUMBERS }
         // The new sections are asked on their own: drop the broad matches their words also hit.
         if (!rx(" and | also | plus ").containsMatchIn(t) && out.any { it == Section.ACTIVITY || it == Section.READY || it == Section.REGIME || it == Section.LOSSES || it == Section.WHATIF || it == Section.CHANGES || it == Section.EXPLAIN_POS ||
-                it == Section.SEARCH || it == Section.TIMEOFDAY || it == Section.REASONS || it == Section.MISTAKES || it == Section.MOVE || it == Section.RANK || it == Section.REPLAY || it == Section.MONTH || it == Section.CHARGES || it == Section.HEALTH || it == Section.BOTS || it == Section.TAX || it == Section.NEED || it == Section.STREAKS })
+                it == Section.SEARCH || it == Section.TIMEOFDAY || it == Section.REASONS || it == Section.MISTAKES || it == Section.MOVE || it == Section.RANK || it == Section.REPLAY || it == Section.MONTH || it == Section.CHARGES || it == Section.HEALTH || it == Section.BOTS || it == Section.TAX || it == Section.NEED || it == Section.STREAKS || it == Section.NUMBERS })
             out.removeAll(setOf(Section.EVENTS, Section.POSITIONS, Section.STATUS, Section.STRATEGIES, Section.ORDERS, Section.PNL, Section.SETTINGS, Section.HISTORY, Section.HOWTO, Section.STUDY, Section.REVIEW))
         if (Section.REVIEW in out) { out.remove(Section.HISTORY); out.remove(Section.ORDERS); out.remove(Section.PNL) }
         if (out.isEmpty() || out == setOf(Section.STATUS) && rx(" (how am i doing|how did i do|my account|account) ").containsMatchIn(t))

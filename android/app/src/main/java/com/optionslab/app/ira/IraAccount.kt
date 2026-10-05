@@ -117,7 +117,7 @@ internal object IraAccount {
     }
 
     /** Sections answered from the question's own words: never from the cache. */
-    private val ASKED = setOf(Section.WHATIF, Section.CHANGES, Section.SEARCH, Section.TIMEOFDAY, Section.REASONS, Section.EXPLAIN_POS, Section.MISTAKES, Section.MOVE, Section.RANK, Section.REPLAY, Section.MONTH, Section.CHARGES, Section.HEALTH, Section.BOTS, Section.TAX, Section.NEED, Section.STREAKS)
+    private val ASKED = setOf(Section.WHATIF, Section.CHANGES, Section.SEARCH, Section.TIMEOFDAY, Section.REASONS, Section.EXPLAIN_POS, Section.MISTAKES, Section.MOVE, Section.RANK, Section.REPLAY, Section.MONTH, Section.CHARGES, Section.HEALTH, Section.BOTS, Section.TAX, Section.NEED, Section.STREAKS, Section.NUMBERS)
 
     suspend fun read(sections: Set<Section>, markets: List<com.optionslab.ira.Market> = emptyList(), question: String = ""): AppView? {
         testView?.let { return it(sections) }
@@ -288,6 +288,19 @@ internal object IraAccount {
                 }
                 r += com.optionslab.ira.MyStreaks.CLOSING
                 out[Section.STREAKS] = r
+            }
+            // "What's my average win and loss?", "my profit factor", "do I hold my losers longer?": Boss's own numbers (read only).
+            if (wants(Section.NUMBERS)) {
+                val owners = runCatching { com.optionslab.app.data.Strategies.owners() }.getOrDefault(emptyMap())
+                val span = com.optionslab.ira.MyNumbers.span(question)
+                val r = ArrayList<String>()
+                for (live in listOf(true, false)) {
+                    val all = trips(live, owners)
+                    if (live && all.isEmpty()) continue
+                    r += com.optionslab.ira.MyNumbers.lines(if (live) "Zerodha" else "Paper", all, span, today)
+                }
+                r += com.optionslab.ira.MyNumbers.CLOSING
+                out[Section.NUMBERS] = r
             }
             // "How are my bots doing?": each strategy today and this week against its tested record (read only).
             if (wants(Section.BOTS)) out[Section.BOTS] = IraBots.lines(question)
