@@ -83,7 +83,8 @@ object PnlGap {
         if (d.legs.isEmpty() && d.tradeLegs == 0 && d.fills.isEmpty())
             return "Boss, there are no paper positions or trades today, so today's paper P&L is Rs 0 - nothing to take apart."
         val out = StringBuilder()
-        out.append("Boss, today's paper P&L is ${rs(net)} after charges: ")
+        // Said before charges, as every P&L is shown (Boss, 5 Oct), and after them too: the charges are one of the parts.
+        out.append("Boss, today's paper P&L is ${rs(realised + open)} before charges, ${rs(net)} after charges: ")
         out.append("booked (realised) ${rs(realised)}, still open (unrealised) ${rs(open)} - that part moves with the price until it is closed - ")
         out.append("and charges of ${rs(-charges)} on ${plural(d.tradeLegs, "trade leg")}.")
         // Slippage against the intended levels, where there was one.

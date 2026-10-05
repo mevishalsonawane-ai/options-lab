@@ -282,16 +282,23 @@ internal object IraAccount {
                     }, byWho = true)
                     pos += AppFacts.positions("Paper", snap.positions.positions.filter { it.quantity != 0 }.map {
                         AppFacts.Held(it.symbol, it.quantity, it.averagePrice, it.ltp, it.pnl) })
-                    pnl += AppFacts.pnl("Paper", snap.dayPnl, snap.positions.totalTodayRealizedPnl, snap.positions.totalUnrealizedPnl)
+                    // Said before charges, as every P&L is shown (Boss, 5 Oct), with the day's charges and the figure after them.
+                    pnl += AppFacts.pnl("Paper", snap.dayGross, snap.positions.totalTodayRealizedPnl, snap.positions.totalUnrealizedPnl, snap.dayCharges)
                     funds += "Paper funds: ${AppFacts.amt(snap.funds.availableCash)} available, ${AppFacts.amt(snap.funds.utilisedDebits)} in use."
                 } else { orders += "The paper account did not open just now."; pos += orders.last(); pnl += orders.last() }
                 if (zerodha) {
+                    // Today's trades too (when they can be read), for the charges estimate said beside Zerodha's P&L.
+                    // Read beside the books (at once, as the account page reads them), so the answer waits no longer.
                     val z = Broker.within(ZERODHA_MS) {
-                        Triple(Broker.orders(), Broker.positionBook(), runCatching { Broker.funds() }.getOrNull())
+                        kotlinx.coroutines.coroutineScope {
+                            val tradesQ = async { runCatching { Broker.trades() }.getOrNull() }
+                            Triple(Broker.orders(), Broker.positionBook(), runCatching { Broker.funds() }.getOrNull()) to tradesQ.await()
+                        }
                     }
                     if (z == null) orders += "Zerodha did not answer just now, so its orders are not included."
                     else {
-                        val (zo, zp, zf) = z
+                        val (zo, zp, zf) = z.first
+                        val zCharges = z.second?.let { com.optionslab.app.data.TradeBook.liveCharges(it) }
                         orders += AppFacts.orders("Zerodha", zo.filter { it.placedAt.startsWith(today.toString()) || it.placedAt.length < 10 }.sortedBy { it.placedAt }.map {
                             AppFacts.OrderLine(it.placedAt.drop(11).take(5).ifBlank { it.placedAt.take(5) }, it.symbol, it.side, it.qty, it.status, it.avg,
                                 // Zerodha orders are kept under "kite:<id>" (the bare id never matched: the raw tag showed).
@@ -299,7 +306,7 @@ internal object IraAccount {
                                 it.message.takeIf { m -> m.isNotBlank() }, it.id)
                         }, byWho = true)
                         pos += AppFacts.positions("Zerodha", zp.net.filter { it.open }.map { AppFacts.Held(it.symbol, it.qty, it.avg, it.last, it.pnl) })
-                        pnl += AppFacts.pnl("Zerodha", zp.net.sumOf { it.pnl }, zp.net.sumOf { it.realised }, zp.net.sumOf { it.unrealised })
+                        pnl += AppFacts.pnl("Zerodha", zp.net.sumOf { it.pnl }, zp.net.sumOf { it.realised }, zp.net.sumOf { it.unrealised }, zCharges, estimate = true)
                         zf?.let { funds += "Zerodha funds: ${AppFacts.amt(it.available)} available, ${AppFacts.amt(it.used)} used, net ${AppFacts.amt(it.net)}." }
                     }
                 } else if (Broker.linked) orders += "Zerodha: not logged in today, so only the paper account is read."

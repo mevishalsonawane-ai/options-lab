@@ -234,6 +234,10 @@ class PaperScreenTest {
         compose.waitUntil(10_000) { exists("NRML · CLOSED 0") }
         assertTrue(exists(rs(s.positions.totalTodayRealizedPnl, true)))
         assertEquals("one day figure everywhere: the positions less today's charges = the funds' today", s.funds.todayRealizedPnl, s.dayPnl, 0.01)
+        // Shown before charges (Boss, 5 Oct), the charges on a small line under it; the limits keep dayPnl (after them).
+        assertEquals(gross, s.dayGross, 0.01)
+        assertEquals(buyCharge + sellCharge, s.dayCharges, 0.01)
+        assertTrue(exists("Charges ${com.optionslab.ira.PnlCharges.inr(buyCharge + sellCharge)}"))
 
         // Orders: two complete, nothing open.
         tap("Orders")

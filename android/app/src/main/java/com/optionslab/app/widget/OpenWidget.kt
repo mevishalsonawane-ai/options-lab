@@ -228,9 +228,12 @@ class OpenWidget : AppWidgetProvider() {
         /** Zerodha's P&L as the app recorded it today (no read of its books, so no positions), or null for none. */
         private fun recordedZerodha(now: LocalDateTime, live: Boolean): OpenBook.Venue? {
             val day = DailyPnl.sessionDay(true)
-            val figure = day?.let { d -> DailyPnl.all(true)[d]?.pnl }
+            val kept = day?.let { d -> DailyPnl.all(true)[d] }
+            val figure = kept?.pnl
             val sample = PnlTracker.today().lastOrNull()?.let { it.minute to it.pnl }
-            return OpenBook.recorded(OpenBook.ZERODHA, figure, sample, now, !Market.isOpen(), live)
+            // Zerodha's P&L is before charges; the charges the app estimated from the day's trades go on the small line.
+            return OpenBook.recorded(OpenBook.ZERODHA, figure, sample, now, !Market.isOpen(), live,
+                charges = kept?.charges?.takeIf { it > 0 }, estimate = true)
         }
 
         private fun off(context: Context, manager: AppWidgetManager, ids: IntArray) {
@@ -263,13 +266,24 @@ class OpenWidget : AppWidgetProvider() {
 
         private fun nowMinute(): LocalDateTime = Market.now().toLocalDateTime().withSecond(0).withNano(0)
 
-        fun zerodhaVenue(book: Broker.Positions, at: LocalDateTime?): OpenBook.Venue = OpenBook.Venue(OpenBook.ZERODHA, book.m2m,
-            book.net.filter { it.qty != 0 }.map { OpenBook.Pos(it.symbol, it.qty, it.last.takeIf { l -> l > 0 }, it.pnl) }, primary = true, at = at)
+        /**
+         * Zerodha's books as the widget keeps them: its P&L (before charges, as Zerodha shows it) and [charges] estimated
+         * from today's trades; null [charges] keeps the estimate already kept for today ([keptZerodhaCharges]).
+         */
+        fun zerodhaVenue(book: Broker.Positions, at: LocalDateTime?, charges: Double? = null): OpenBook.Venue = OpenBook.Venue(OpenBook.ZERODHA, book.m2m,
+            book.net.filter { it.qty != 0 }.map { OpenBook.Pos(it.symbol, it.qty, it.last.takeIf { l -> l > 0 }, it.pnl) }, primary = true, at = at,
+            charges = charges ?: keptZerodhaCharges(at), estimate = true)
 
-        fun paperVenue(snap: Paper.Snapshot, primary: Boolean, at: LocalDateTime?): OpenBook.Venue = OpenBook.Venue(OpenBook.PAPER, snap.dayPnl,
+        /** The Zerodha charges estimate the widget kept from earlier today (a read of its trades), or null. */
+        private fun keptZerodhaCharges(at: LocalDateTime?): Double? = runCatching {
+            OpenBook.decode(textNow(K_Z))?.takeIf { k -> at != null && k.at?.toLocalDate() == at.toLocalDate() }?.charges
+        }.getOrNull()
+
+        /** The paper books: the day's P&L before charges (display only), the day's charges paid on the small line. */
+        fun paperVenue(snap: Paper.Snapshot, primary: Boolean, at: LocalDateTime?): OpenBook.Venue = OpenBook.Venue(OpenBook.PAPER, snap.dayGross,
             snap.positions.positions.filter { it.quantity != 0 }.map { OpenBook.Pos(it.symbol, it.quantity, it.ltp.takeIf { l -> l > 0 }, it.pnl) },
             snap.orders.orders.filter { it.pendingQuantity > 0 }.map { OpenBook.Ord(it.symbol, it.action, it.pendingQuantity, it.priceType, it.price, it.triggerPrice, it.status) },
-            primary = primary, at = at)
+            primary = primary, at = at, charges = snap.dayCharges, estimate = false)
 
         /**
          * The live watch's pass ([com.optionslab.app.work.PositionCards.refresh]): [live] the app is in Zerodha mode,
@@ -310,10 +324,13 @@ class OpenWidget : AppWidgetProvider() {
             return OpenBook.decodeOrders(textNow(K_ZO), Market.today().toString()).any { OpenBook.pendingLabel(it.status, it.variety) != null }
         }
 
-        /** Zerodha's positions read by the app ([com.optionslab.app.ui.AppModel.loadAccount]). */
-        fun fromZerodha(context: Context, book: Broker.Positions) {
+        /**
+         * Zerodha's positions read by the app ([com.optionslab.app.ui.AppModel.loadAccount]), with [charges] estimated from
+         * today's trades when they were read too (null: the estimate kept from earlier today stays).
+         */
+        fun fromZerodha(context: Context, book: Broker.Positions, charges: Double? = null) {
             if (BuildConfig.GOLD) return
-            store(context, mapOf(K_Z to OpenBook.encode(zerodhaVenue(book, nowMinute()))))
+            store(context, mapOf(K_Z to OpenBook.encode(zerodhaVenue(book, nowMinute(), charges))))
         }
 
         /** Zerodha's positions moved by the live price stream: at most every 5 s, and only in Zerodha mode. */
@@ -388,6 +405,7 @@ class OpenWidget : AppWidgetProvider() {
                 val figures = listOf(R.id.ow_caption, R.id.ow_pnl, R.id.ow_split, R.id.ow_stamp, R.id.ow_rule)
                 if (!showNow) {
                     figures.forEach { v.setViewVisibility(it, View.GONE) }
+                    v.setViewVisibility(R.id.ow_charges, View.GONE)
                     ROW.forEach { v.setViewVisibility(it, View.GONE) }
                     v.setViewVisibility(R.id.ow_more, View.GONE)
                     v.setViewVisibility(R.id.ow_note, View.VISIBLE)
@@ -399,6 +417,10 @@ class OpenWidget : AppWidgetProvider() {
                     v.setTextViewText(R.id.ow_caption, s.caption)
                     v.setTextViewText(R.id.ow_pnl, s.headline)
                     v.setTextColor(R.id.ow_pnl, colour(context, s.tone))
+                    // The headline is before charges; the day's charges in small type under it (none: no line).
+                    val chargesLine = s.charges
+                    if (chargesLine == null) v.setViewVisibility(R.id.ow_charges, View.GONE)
+                    else { v.setViewVisibility(R.id.ow_charges, View.VISIBLE); v.setTextViewText(R.id.ow_charges, chargesLine) }
                     if (s.split.isEmpty()) v.setViewVisibility(R.id.ow_split, View.GONE)
                     else v.setTextViewText(R.id.ow_split, s.split.joinToString("\n"))
                     if (stamp == null) v.setViewVisibility(R.id.ow_stamp, View.GONE) else v.setTextViewText(R.id.ow_stamp, stamp)

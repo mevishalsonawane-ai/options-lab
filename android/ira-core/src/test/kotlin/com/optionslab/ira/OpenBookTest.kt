@@ -132,6 +132,27 @@ class OpenBookTest {
         assertNull(uStamp)
     }
 
+    @Test fun theChargesGoUnderTheHeadlineInSmallType() {
+        // Zerodha: its P&L before charges, the charges an estimate from its trades.
+        val s = OpenBook.screen(listOf(z.copy(charges = 180.4, estimate = true)))
+        assertEquals("+₹1,234", s.headline, "the headline is not reduced by the charges")
+        assertEquals("Charges ≈ ₹180 (estimate)", s.charges)
+        // Paper: what it paid; the other account's charges on its split line.
+        val p = Venue(OpenBook.PAPER, 2_575.0, primary = true, charges = 1_234.0)
+        val both = OpenBook.screen(listOf(z.copy(primary = false, charges = 60.0, estimate = true), p))
+        assertEquals("+₹2,575", both.headline)
+        assertEquals("Charges ₹1,234", both.charges)
+        assertEquals(listOf("Zerodha  +₹1,234 · charges ≈ ₹60 (estimate)"), both.split)
+        // None known, none paid, or a figure that could not be read: no line.
+        assertNull(OpenBook.screen(listOf(z)).charges)
+        assertNull(OpenBook.screen(listOf(p.copy(charges = 0.0))).charges)
+        assertNull(OpenBook.screen(listOf(Venue(OpenBook.ZERODHA, null, problem = "could not read", primary = true, charges = 50.0))).charges)
+        // Kept through the codec; an older record has none.
+        val kept = z.copy(charges = 180.4, estimate = true)
+        assertEquals(kept, OpenBook.decode(OpenBook.encode(kept)))
+        assertNull(OpenBook.decode("V\tZerodha\t1234.4\t\t1\t2026-10-05T14:07\t1")!!.charges)
+    }
+
     @Test fun theCodecRoundTrips() {
         val tricky = z.copy(positions = z.positions + Pos("A\tB\nC", 1, null, 0.0), problem = null)
         val back = OpenBook.decode(OpenBook.encode(tricky))!!

@@ -66,9 +66,20 @@ object AppFacts {
         else listOf("$account: ${p.size} open position${if (p.size > 1) "s" else ""}.") +
             p.mapIndexed { i, it -> "${from + i}. $account position ${it.symbol}: ${it.qty} at ${px(it.avg)}, now ${px(it.ltp)}, ${rs(it.pnl)}." }
 
-    fun pnl(account: String, day: Double?, realized: Double?, unrealized: Double?): String =
-        if (day == null) "No P&L on $account today."
-        else "$account P&L today ${rs(day)} after charges" + (if (realized != null && unrealized != null) ": ${rs(realized)} booked, ${rs(unrealized)} open." else ".")
+    /**
+     * Today's P&L line. [day] is BEFORE charges (Boss, 5 Oct: as Zerodha shows its P&L), [realized] + [unrealized] its
+     * parts; [charges] the day's charges (null or 0: none said), [estimate] when they are estimated from the trades
+     * (Zerodha) rather than paid (paper). With charges the line says both: before and after them.
+     */
+    fun pnl(account: String, day: Double?, realized: Double?, unrealized: Double?, charges: Double? = null, estimate: Boolean = false): String {
+        if (day == null) return "No P&L on $account today."
+        val parts = if (realized != null && unrealized != null) "${rs(realized)} booked, ${rs(unrealized)} open" else null
+        if (!PnlCharges.shown(charges)) return "$account P&L today ${rs(day)}" + (parts?.let { ": $it." } ?: ".")
+        val c = charges!!
+        val about = if (estimate) "about " else ""
+        return "$account P&L today ${rs(day)} before charges" + (parts?.let { ": $it" } ?: "") +
+            "; charges $about${amt(c)}${if (estimate) " (an estimate from today's trades)" else ""}, so $about${rs(PnlCharges.net(day, c))} after charges."
+    }
 
     fun arms(a: List<ArmLine>, rank: Boolean): List<String> {
         if (a.isEmpty()) return listOf("No strategies or arms are set up.")

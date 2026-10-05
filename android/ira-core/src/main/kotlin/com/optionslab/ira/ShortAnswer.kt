@@ -194,6 +194,8 @@ object ShortAnswer {
 
     private val PNL_LINE = Regex("^(Paper|Zerodha|Live|Gold[A-Za-z ]*?) P&L today ([+-])Rs ([\\d,]+(?:\\.\\d+)?)")
     private val PNL_NONE = Regex("^No P&L on (\\w+) today")
+    /** The day's charges in a P&L line ([AppFacts.pnl]): the P&L is said before charges, the charges beside it. */
+    private val PNL_CHARGES = Regex("; charges (about )?Rs ([\\d,]+(?:\\.\\d+)?)")
     private val POS_LINE = Regex("^(\\w+): (\\d+) open positions?\\.")
     private val POS_NONE = Regex("^No open positions on (\\w+)\\.")
     private val ORD_LINE = Regex("^(\\w+): (\\d+) orders? today, (\\d+) filled, (\\d+) open, (\\d+) rejected or cancelled\\.")
@@ -216,13 +218,15 @@ object ShortAnswer {
                 PNL_LINE.find(s)?.let { m -> Triple(i, acct(m.groupValues[1]), m.groupValues[2] to m.groupValues[3]) }
                     ?: PNL_NONE.find(s)?.let { m -> Triple(i, acct(m.groupValues[1]), null) }
             }.distinctBy { it.second }
+            // The P&L is before charges (Boss, 5 Oct); the day's charges ride along: " (charges Rs 180)" / " (charges about Rs 180)".
+            fun charges(i: Int): String = PNL_CHARGES.find(parts[i])?.let { m -> " (charges ${m.groupValues[1]}Rs ${rupees(m.groupValues[2])})" } ?: ""
             when {
                 found.isEmpty() -> null
                 found.size == 1 -> {
                     val (i, a, v) = found[0]
-                    (if (v == null) "No P&L on $a today." else "Your $a P&L today is ${signed(v.first, v.second)}.") to setOf(i)
+                    (if (v == null) "No P&L on $a today." else "Your $a P&L today is ${signed(v.first, v.second)}${charges(i)}.") to setOf(i)
                 }
-                else -> (found.joinToString(", ") { (_, a, v) -> "$a " + (v?.let { "${it.first}Rs ${rupees(it.second)}" } ?: "nil") }
+                else -> (found.joinToString(", ") { (i, a, v) -> "$a " + (v?.let { "${it.first}Rs ${rupees(it.second)}${charges(i)}" } ?: "nil") }
                     .replaceFirstChar { it.uppercase() } + " today.") to found.map { it.first }.toSet()
             }
         }

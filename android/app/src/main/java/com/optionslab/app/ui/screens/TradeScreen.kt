@@ -210,7 +210,9 @@ private fun PositionsCard(model: AppModel, a: Account, onProtect: (GttTarget) ->
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text("TOTAL P&L", style = Type.label.copy(color = p.inkSoft))
+                // Zerodha's own figure, before charges; today's charges (estimated from today's trades) in small type under it.
                 RollingFigure(a.book.pnl, { rs(it, true) }, Type.figureLarge.copy(color = if (a.book.pnl >= 0) p.verdigris else p.oxblood), calm = true)
+                com.optionslab.ira.PnlCharges.line(a.charges, estimate = true)?.let { Text(it, style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 11.sp)) }
             }
             Column(horizontalAlignment = Alignment.End) {
                 Text("realised ${rs(a.book.realised, true)}", style = Type.figure.copy(color = p.inkSoft, fontSize = 12.sp))
@@ -370,6 +372,8 @@ private fun PnlCard(a: Account, series: List<PnlTracker.Point>) {
     val p = LocalPalette.current
     LedgerCard(title = "Today's P&L") {
         RollingFigure(a.book.pnl, { rs(it, true) }, Type.figureLarge.copy(color = if (a.book.pnl >= 0) p.verdigris else p.oxblood), calm = true)
+        // Before charges, as Zerodha shows it; today's charges, estimated from today's trades, in small type under it.
+        com.optionslab.ira.PnlCharges.line(a.charges, estimate = true)?.let { Text(it, style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 11.sp)) }
         if (series.size >= 2) {
             InkCurve(series.map { it.pnl }, emptyList(), null, calm = true)
             val hi = series.maxBy { it.pnl }; val lo = series.minBy { it.pnl }

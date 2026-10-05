@@ -1038,8 +1038,12 @@ internal object IraCoach {
         val zerodha = live && Broker.loggedIn
         val pnl = runCatching {
             // Words only (the wrap-up said and noted): a paper price read in the last 20 s is shared (Battery, round 9).
-            if (zerodha) Broker.positionBook().net.sumOf { it.pnl } else Paper.snapshot(Paper.SHARED_QUOTE_MS).dayPnl
-        }.getOrNull()?.let { "${if (zerodha) "Zerodha" else "Paper"} today: ${AppFacts.rs(it)}." }
+            // Said before charges, as every P&L is shown (Boss, 5 Oct), with the day's charges beside it (Zerodha's
+            // estimated from the trades the app kept today).
+            if (zerodha) Broker.positionBook().net.sumOf { it.pnl } to
+                com.optionslab.ira.PnlCharges.said(com.optionslab.app.data.TradeBook.liveChargesOn(com.optionslab.app.data.Market.today()), estimate = true)
+            else Paper.snapshot(Paper.SHARED_QUOTE_MS).let { sn -> sn.dayGross to com.optionslab.ira.PnlCharges.said(sn.dayCharges, estimate = false) }
+        }.getOrNull()?.let { (v, c) -> "${if (zerodha) "Zerodha" else "Paper"} today: ${AppFacts.rs(v)}${c?.let { " ($it)" } ?: ""}." }
         val events = runCatching { IraEvents.upcoming(2).map { com.optionslab.ira.Events.line(it, com.optionslab.app.data.Market.today()) } }.getOrDefault(emptyList())
         // How Nifty's day went comes first: the market's story, then Boss's own.
         val story = IraHub.dayStory(com.optionslab.ira.Market.NIFTY)

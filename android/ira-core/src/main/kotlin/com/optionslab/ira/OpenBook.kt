@@ -40,10 +40,13 @@ object OpenBook {
      * One account's books. [pnl] today's P&L as Home shows it; [problem] set ("could not read", "not logged in") when its
      * books are unknown; [primary] the account the app is in (shown even when it holds nothing; its P&L is the
      * headline); [at] when it was read (null: unknown, never taken for today's). [held]: its positions and orders are
-     * known (false for a P&L figure alone, [recorded]: nothing of it is then shown as "nothing open").
+     * known (false for a P&L figure alone, [recorded]: nothing of it is then shown as "nothing open"). [pnl] is BEFORE
+     * charges (Boss, 5 Oct: as Zerodha shows it); [charges] the day's charges, said on a small line under it (null:
+     * unknown, no line), [estimate] when they are estimated from the trades (Zerodha) rather than paid (paper).
      */
     data class Venue(val name: String, val pnl: Double?, val positions: List<Pos> = emptyList(), val orders: List<Ord> = emptyList(),
-                     val problem: String? = null, val primary: Boolean = false, val at: LocalDateTime? = null, val held: Boolean = true)
+                     val problem: String? = null, val primary: Boolean = false, val at: LocalDateTime? = null, val held: Boolean = true,
+                     val charges: Double? = null, val estimate: Boolean = false)
 
     enum class Tone { GAIN, LOSS, PLAIN }
 
@@ -52,10 +55,11 @@ object OpenBook {
     /**
      * The widget's content: [headline] the P&L in large type with its [tone], the account the app is in only; [caption]
      * whose it is; [split] one line for each other account in play (and for the main one when it could not be read); [rows] at most the cap; [more] the "+N more" line; [note] the
-     * line shown instead of rows (nothing open, or nothing read yet).
+     * line shown instead of rows (nothing open, or nothing read yet); [charges] the small line under the headline
+     * ("Charges ₹180", "Charges ≈ ₹180 (estimate)"; null: none).
      */
     data class Screen(val caption: String, val headline: String, val tone: Tone, val split: List<String>, val rows: List<Row>,
-                      val more: String?, val note: String?)
+                      val more: String?, val note: String?, val charges: String? = null)
 
     private val CLOSED = setOf("COMPLETE", "COMPLETED", "FILLED", "CANCELLED", "CANCELED", "REJECTED", "CANCELLED AMO", "EXPIRED", "LAPSED")
     private val OPEN = setOf("OPEN", "OPEN PENDING", "VALIDATION PENDING", "PUT ORDER REQ RECEIVED", "MODIFY PENDING",
@@ -111,7 +115,8 @@ object OpenBook {
         val caption = "Today's P&L · ${head.name}"
         val others = shown.filter { it !== head }
         val split = (if (head.problem != null) listOf(head) else emptyList()) + others
-        val splitLines = split.map { v -> v.problem?.let { "${v.name}: $it" } ?: "${v.name}  ${v.pnl?.let(::rs) ?: "—"}" }
+        val splitLines = split.map { v -> v.problem?.let { "${v.name}: $it" } ?: ("${v.name}  ${v.pnl?.let(::rs) ?: "—"}" +
+            (v.pnl?.let { PnlCharges.line(v.charges, v.estimate) }?.let { " · " + it.replaceFirstChar { c -> c.lowercaseChar() } } ?: "")) }
         val read = shown.filter { it.problem == null }
         val tag = read.size > 1
         // A figure alone (no read of its books) adds no rows, and is never taken for "nothing open".
@@ -128,7 +133,8 @@ object OpenBook {
             known.isEmpty() -> SEE_POSITIONS
             else -> "No open ${known.joinToString(" or ") { it.name }} positions or orders"
         }
-        return Screen(caption, headPnl?.let(::rs) ?: "—", headPnl?.let(::tone) ?: Tone.PLAIN, splitLines, rows, more, note)
+        val chargesLine = headPnl?.let { PnlCharges.line(head.charges, head.estimate) }
+        return Screen(caption, headPnl?.let(::rs) ?: "—", headPnl?.let(::tone) ?: Tone.PLAIN, splitLines, rows, more, note, chargesLine)
     }
 
     /**
@@ -174,13 +180,14 @@ object OpenBook {
      * time is that sample's; with no sample, [now] only when the market is [closed] (the day's figure is then final).
      * Null when nothing was recorded today, or its time is unknown.
      */
-    fun recorded(name: String, dayFigure: Double?, sample: Pair<Int, Double>?, now: LocalDateTime, closed: Boolean, primary: Boolean): Venue? {
+    fun recorded(name: String, dayFigure: Double?, sample: Pair<Int, Double>?, now: LocalDateTime, closed: Boolean, primary: Boolean,
+                 charges: Double? = null, estimate: Boolean = false): Venue? {
         val pnl = (dayFigure ?: sample?.second)?.takeIf { it.isFinite() } ?: return null
         val n = minute(now)
         val at = sample?.first?.takeIf { it in 0 until 24 * 60 }?.let { n.toLocalDate().atStartOfDay().plusMinutes(it.toLong()) }
             ?.let { if (it.isAfter(n)) n else it }
             ?: (if (closed) n else return null)
-        return Venue(name, pnl, primary = primary, at = at, held = false)
+        return Venue(name, pnl, primary = primary, at = at, held = false, charges = charges, estimate = estimate)
     }
 
     /**
@@ -218,7 +225,7 @@ object OpenBook {
     private fun minute(t: LocalDateTime) = t.withSecond(0).withNano(0)
 
     fun encode(v: Venue): String = (listOf(listOf("V", clean(v.name), v.pnl?.let(::num) ?: "", clean(v.problem ?: ""), if (v.primary) "1" else "0",
-        v.at?.let { minute(it).toString() } ?: "", if (v.held) "1" else "0").joinToString("\t")) +
+        v.at?.let { minute(it).toString() } ?: "", if (v.held) "1" else "0", v.charges?.let(::num) ?: "", if (v.estimate) "1" else "0").joinToString("\t")) +
         v.positions.map { listOf("P", clean(it.symbol), it.qty.toString(), it.ltp?.let(::num) ?: "", num(it.pnl)).joinToString("\t") } +
         v.orders.map(::ordLine)).joinToString("\n")
 
@@ -233,7 +240,7 @@ object OpenBook {
                 lines.drop(1).filter { it.size >= 5 && it[0] == "P" }.map { Pos(it[1], it[2].toInt(), it[3].takeIf { x -> x.isNotEmpty() }?.toDouble(), it[4].toDouble()) },
                 lines.drop(1).mapNotNull(::ord), h[3].takeIf { it.isNotEmpty() }, h[4] == "1",
                 h.getOrNull(5)?.takeIf { it.isNotEmpty() }?.let { runCatching { LocalDateTime.parse(it) }.getOrNull() },
-                h.getOrNull(6) != "0")
+                h.getOrNull(6) != "0", h.getOrNull(7)?.takeIf { it.isNotEmpty() }?.toDouble(), h.getOrNull(8) == "1")
         }.getOrNull()
     }
 

@@ -387,7 +387,8 @@ object Paper {
             // The funds read again after re-pricing (and any expiry settlement), so they agree with the positions shown.
             val after = e.funds(hold.state, now)
             if (after.state != b.state) save(b.copy(state = after.state))
-            return Snapshot(after.result, pos.result, e.orderBook(after.state, now), e.tradeBook(after.state, now), hold.result, q.isNotEmpty() || watched(after.state).isEmpty())
+            return Snapshot(after.result, pos.result, e.orderBook(after.state, now), e.tradeBook(after.state, now), hold.result, q.isNotEmpty() || watched(after.state).isEmpty(),
+                chargesSinceReset(after.state))
         }
     }
 
@@ -407,9 +408,13 @@ object Paper {
             val pos = e.positionBook(funds.state, now)
             val hold = e.holdings(pos.state, now)
             val after = e.funds(hold.state, now)
-            return Snapshot(after.result, pos.result, e.orderBook(after.state, now), e.tradeBook(after.state, now), hold.result, false) to savedAt
+            return Snapshot(after.result, pos.result, e.orderBook(after.state, now), e.tradeBook(after.state, now), hold.result, false, chargesSinceReset(after.state)) to savedAt
         }
     }
+
+    /** Every charge the account paid since its last reset (the funds' Total P&L is after them). */
+    private fun chargesSinceReset(st: SandboxState): Double =
+        st.trades.filter { !it.timestamp.isBefore(st.funds.lastResetDate) }.sumOf { it.charges.toDouble() }
 
     data class Snapshot(
         val funds: com.optionslab.engine.sandbox.FundsView,
@@ -418,13 +423,26 @@ object Paper {
         val trades: List<com.optionslab.engine.sandbox.TradeRow>,
         val holdings: com.optionslab.engine.sandbox.HoldingsBook,
         val priced: Boolean,
+        /** Every charge paid since the last reset: the header's Total P&L is shown before them ([totalGross]). */
+        val chargesSinceReset: Double = 0.0,
     ) {
         /**
-         * The day's P&L after charges, as every screen shows it: the positions' (realised today + unrealised) less the
-         * charges of today's trades. Read from the positions, not the funds' running tally, so Home, the positions card,
-         * the calendar and the loss limits can never disagree (a build before the funds fix left the tally short).
+         * The day's P&L AFTER charges: the positions' (realised today + unrealised) less the charges of today's trades.
+         * Read from the positions, not the funds' running tally, so the calendar's kept figure and the loss limits can
+         * never disagree (a build before the funds fix left the tally short). RISK LIMITS READ THIS ONE (the daily loss
+         * limit, the guard, the loss breaker, Jarvis's checks): after charges is the safer figure. Screens show
+         * [dayGross] with [dayCharges] under it (Boss, 5 Oct), never this as the headline.
          */
-        val dayPnl: Double get() = positions.totalPnlToday - trades.sumOf { it.charges }
+        val dayPnl: Double get() = positions.totalPnlToday - dayCharges
+
+        /** Today's charges (the trade book holds today's trades only). */
+        val dayCharges: Double get() = trades.sumOf { it.charges }
+
+        /** The day's P&L BEFORE charges, as every screen shows it (as Zerodha shows its own): display only, never a limit. */
+        val dayGross: Double get() = com.optionslab.ira.PnlCharges.gross(dayPnl, dayCharges)
+
+        /** The funds' Total P&L (since the last reset) before charges, for display: the funds themselves stay as they are. */
+        val totalGross: Double get() = com.optionslab.ira.PnlCharges.gross(funds.totalPnl, chargesSinceReset)
     }
 
     /** Back to a fresh account with [capital]; the contracts seen are kept. */

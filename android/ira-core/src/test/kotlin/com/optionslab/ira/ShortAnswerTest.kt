@@ -16,6 +16,17 @@ class ShortAnswerTest {
         assertEquals("Your Zerodha P&L today is a loss of Rs 1,200.", line("what is my pnl", AppFacts.pnl("Zerodha", -1200.0, -1200.0, 0.0) + " More text here."))
     }
 
+    @Test fun pnlSaysTheChargesBesideTheFigureBeforeThem() {
+        val a = AppFacts.pnl("Paper", 2575.4, 1000.0, 1575.4, 180.0) + " Paper: 2 open positions."
+        assertEquals("Your paper P&L today is +Rs 2,575 (charges Rs 180).", line("what's the P&L today", a))
+        val z = AppFacts.pnl("Zerodha", -1200.0, -1200.0, 0.0, 64.6, estimate = true) + " More text here."
+        assertEquals("Your Zerodha P&L today is a loss of Rs 1,200 (charges about Rs 65).", line("what is my pnl", z))
+        val both = AppFacts.pnl("Zerodha", 1234.0, 1234.0, 0.0, 50.0, estimate = true) + " " + AppFacts.pnl("Paper", -500.0, -500.0, 0.0, 40.0)
+        assertEquals("Zerodha +Rs 1,234 (charges about Rs 50), paper -Rs 500 (charges Rs 40) today.", line("p&l today?", both))
+        // The details keep both figures.
+        assertTrue(ShortAnswer.of("what's the P&L today", a).details!!.contains("+Rs 2,395.40 after charges"))
+    }
+
     @Test fun pnlBothAccountsInOneSentence() {
         val a = AppFacts.pnl("Zerodha", 1234.0, 1234.0, 0.0) + " " + AppFacts.pnl("Paper", -500.0, -500.0, 0.0)
         assertEquals("Zerodha +Rs 1,234, paper -Rs 500 today.", line("p&l today?", a))

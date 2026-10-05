@@ -29,6 +29,8 @@ class IraWidget : AppWidgetProvider() {
         private const val K_BANK = "w.bank"
         private const val K_PNL = "w.pnl"
         private const val K_AT = "w.at"
+        /** Today's Zerodha charges estimate, "yyyy-MM-dd|rupees" (another day's is never shown). */
+        private const val K_CHG = "w.chg"
 
         /** The account P&L last published (the live watch refreshes it every minute), or null. */
         fun lastPnl(): Double? = pnlNow()
@@ -99,6 +101,23 @@ class IraWidget : AppWidgetProvider() {
             if (ids.isNotEmpty()) render(context, mgr, ids)
         }
 
+        /**
+         * Today's Zerodha charges, estimated from today's trades (the app's account read has them): the widget's P&L is
+         * Zerodha's own, before charges, and these go on a small line under it. Held with the other figures (the vault
+         * gets it with the next minute's write) and redrawn.
+         */
+        fun charges(context: Context, value: Double?) {
+            val v = value?.takeIf { it.isFinite() }?.let { String.format(Locale.ROOT, "%s|%.2f", Market.today().toString(), it) }
+            synchronized(unsaved) { fresh(); unsaved[K_CHG] = v }
+            val mgr = AppWidgetManager.getInstance(context)
+            val ids = mgr.getAppWidgetIds(ComponentName(context, IraWidget::class.java))
+            if (ids.isNotEmpty()) render(context, mgr, ids)
+        }
+
+        /** Today's charges estimate kept by [charges], or null (none, or another day's). */
+        private fun chargesToday(): Double? = textNow(K_CHG)?.split("|")?.takeIf { it.size == 2 && it[0] == Market.today().toString() }
+            ?.get(1)?.toDoubleOrNull()
+
         private fun line(name: String, raw: String?): String {
             val (last, chg) = raw?.split("|")?.let { it[0].toDouble() to it[1].toDouble() } ?: return "$name  —"
             return String.format(Locale.ENGLISH, "%-9s %,10.2f  %+.2f%%", name, last, 100 * chg)
@@ -115,6 +134,10 @@ class IraWidget : AppWidgetProvider() {
                 v.setTextViewText(R.id.w_pnl, String.format(Locale.ENGLISH, "P&L  Rs %+,.0f", pnl))
                 v.setTextColor(R.id.w_pnl, context.getColor(if (pnl >= 0) R.color.widget_gain else R.color.widget_loss))
             } else v.setViewVisibility(R.id.w_pnl, View.GONE)
+            // Zerodha's P&L is before charges: today's estimated charges in small type under it (none known: no line).
+            val chargesLine = if (showPnl && pnl != null) com.optionslab.ira.PnlCharges.line(chargesToday(), estimate = true) else null
+            if (chargesLine == null) v.setViewVisibility(R.id.w_charges, View.GONE)
+            else { v.setViewVisibility(R.id.w_charges, View.VISIBLE); v.setTextViewText(R.id.w_charges, chargesLine) }
             val at = textNow(K_AT)
             v.setTextViewText(R.id.w_status, (if (Market.isOpen()) "Market open" else "Market shut") + (at?.let { " · $it IST" } ?: ""))
             val open = PendingIntent.getActivity(context, 9, Intent(context, MainActivity::class.java).putExtra(MainActivity.EXTRA_TAB, "almanac").putExtra(MainActivity.EXTRA_NONCE, MainActivity.nonce()),

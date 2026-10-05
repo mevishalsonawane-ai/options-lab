@@ -72,7 +72,7 @@ class BotTile : TileService() {
     }
 
     /**
-     * Today's P&L, live: IraAlgo - the paper account's day P&L after charges (Home's "P&L today"), or in Live the
+     * Today's P&L, live: IraAlgo - the paper account's day P&L before charges (Home's "P&L today"), or in Live the
      * Zerodha figure the watch publishes each minute; IraGoldAlgo - today's closed trades of the four arms (by the
      * Indian day, as the P&L calendar) plus the open trades at the last price.
      */
@@ -89,7 +89,7 @@ class BotTile : TileService() {
             "Today " + GoldPaper.usd(closed + open)
         } else {
             val v = if (com.optionslab.app.data.AppSettings.load().live) PositionCards.livePnl ?: com.optionslab.app.widget.IraWidget.lastPnl()
-                else com.optionslab.app.data.Paper.snapshot().dayPnl
+                else com.optionslab.app.data.Paper.snapshot().dayGross   // before charges, as Home and Zerodha show it
             v?.let { "Today " + (if (it < 0) "-₹" else "+₹") + "%,.0f".format(java.util.Locale.ENGLISH, kotlin.math.abs(it)) }
         }
 

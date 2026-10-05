@@ -5,6 +5,16 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
 class DayFigureTest {
+    @Test fun theDaysChargesAreKeptBesideTheFigure() {
+        assertEquals(DayFigure.Kept(400.0, 2, 180.0), DayFigure.next(null, 400.0, 2, 180.004))
+        assertNull(DayFigure.next(DayFigure.Kept(400.0, 2, 180.0), 400.0, 2, 180.0))
+        // Charges < 0 keep what was kept (a reading with no trades read); an older entry had none (0).
+        assertNull(DayFigure.next(DayFigure.Kept(400.0, 2, 180.0), 400.0, -1, -1.0))
+        assertEquals(DayFigure.Kept(380.0, 2, 180.0), DayFigure.next(DayFigure.Kept(400.0, 2, 180.0), 380.0, -1, -1.0))
+        assertEquals(DayFigure.Kept(400.0, 2, 0.0), DayFigure.next(null, 400.0, 2, -1.0))
+        assertEquals(DayFigure.Kept(400.0, 2, 200.0), DayFigure.next(DayFigure.Kept(400.0, 2), 400.0, 2, 200.0))
+    }
+
     @Test fun firstReadingOfTheDayIsKept() {
         assertEquals(589.0 to 2, DayFigure.next(null, 589.0, 2))
         assertEquals(-150.0 to 0, DayFigure.next(null, -150.0, -1))

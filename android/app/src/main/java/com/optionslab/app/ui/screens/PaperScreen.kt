@@ -193,13 +193,13 @@ private fun PaperPositions(model: AppModel, v: Paper.Snapshot) {
     val book = v.positions
     val owners by model.orderOwners.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     LedgerCard(title = "Paper positions") {
-        Text("TODAY AFTER CHARGES", style = Type.label.copy(color = p.inkSoft))
-        // The same figure as Home's "P&L today", the calendar and the loss limits (Paper.Snapshot.dayPnl).
-        RollingFigure(v.dayPnl, { rs(it, true) }, Type.figureLarge.copy(color = if (v.dayPnl >= 0) p.verdigris else p.oxblood), calm = true)
+        Text("P&L TODAY", style = Type.label.copy(color = p.inkSoft))
+        // Before charges, as Zerodha shows its own and the same figure as Home's "P&L today" (Paper.Snapshot.dayGross);
+        // the day's charges in small type under it. The loss limits read the figure after charges (Paper.Snapshot.dayPnl).
+        RollingFigure(v.dayGross, { rs(it, true) }, Type.figureLarge.copy(color = if (v.dayGross >= 0) p.verdigris else p.oxblood), calm = true)
+        com.optionslab.ira.PnlCharges.line(v.dayCharges, estimate = false)?.let { Text(it, style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 11.sp)) }
         LedgerLine("Unrealised", rs(book.totalUnrealizedPnl, true))
         LedgerLine("Realised today", rs(book.totalTodayRealizedPnl, true))
-        val charges = v.trades.sumOf { it.charges }
-        if (charges > 0) LedgerLine("Charges today", rs(-charges, true))
         if (book.positions.isEmpty()) Note("No paper positions.")
         book.positions.forEach { ps -> androidx.compose.runtime.key(ps.symbol, ps.product) {
             Rule(Modifier.padding(vertical = 6.dp))
@@ -339,7 +339,11 @@ private fun PaperBalance(v: Paper.Snapshot, onChange: () -> Unit) {
         Text("available to trade", style = Type.bodySmall.copy(color = p.inkSoft))
         Spacer(Modifier.height(8.dp))
         LedgerLine("Used margin", rs(f.utilisedDebits))
-        LedgerLine("Total P&L", rs(f.totalPnl, true), if (f.totalPnl >= 0) p.verdigris else p.oxblood)
+        // Before charges (display only: the balance above has paid them), the charges since the reset in small type under it.
+        LedgerLine("Total P&L", rs(v.totalGross, true), if (v.totalGross >= 0) p.verdigris else p.oxblood)
+        com.optionslab.ira.PnlCharges.line(v.chargesSinceReset, estimate = false)?.let {
+            Text(it, style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 11.sp), modifier = Modifier.fillMaxWidth(), textAlign = androidx.compose.ui.text.style.TextAlign.End)
+        }
         Spacer(Modifier.height(8.dp))
         BrassButton("Set paper amount", Modifier.fillMaxWidth(), tone = p.ink, onClick = onChange)
     }

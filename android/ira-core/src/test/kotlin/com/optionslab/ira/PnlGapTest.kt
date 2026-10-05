@@ -32,7 +32,7 @@ class PnlGapTest {
             charges = 180.0, tradeLegs = 3,
             fills = listOf(PnlGap.Fill("NIFTY24500PE", false, "SL-M", 100.0, 98.0, 75), PnlGap.Fill("NIFTY24600CE", true, "MARKET", null, 120.0, 75)))
         val a = PnlGap.answer(d)
-        assertTrue(a.startsWith("Boss, today's paper P&L is -Rs 1,980 after charges"), a)
+        assertTrue(a.startsWith("Boss, today's paper P&L is -Rs 1,800 before charges, -Rs 1,980 after charges"), a)
         assertTrue(a.contains("realised) Rs 1,200"), a)
         assertTrue(a.contains("unrealised) -Rs 3,000"), a)
         assertTrue(a.contains("-Rs 180 on 3 trade legs"), a)

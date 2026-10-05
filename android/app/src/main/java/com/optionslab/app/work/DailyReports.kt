@@ -306,9 +306,11 @@ object DailyReports {
         runCatching { Paper.snapshot() }.getOrNull()?.let { sn ->
             val pnl = sn.dayPnl
             if (sn.trades.isNotEmpty() || pnl != 0.0) {
-                total += pnl
-                lines += "Paper: ${rs(pnl)} · ${sn.trades.size} trade${if (sn.trades.size == 1) "" else "s"}"
-                runCatching { com.optionslab.app.data.DailyPnl.record(false, pnl, sn.trades.size) }
+                // Shown before charges, as Zerodha shows its own (Boss, 5 Oct), the day's charges beside it; kept after them.
+                total += sn.dayGross
+                lines += "Paper: ${rs(sn.dayGross)} · ${sn.trades.size} trade${if (sn.trades.size == 1) "" else "s"}" +
+                    (com.optionslab.ira.PnlCharges.line(sn.dayCharges, estimate = false)?.let { " · ${it.lowercase()}" } ?: "")
+                runCatching { com.optionslab.app.data.DailyPnl.record(false, pnl, sn.trades.size, sn.dayCharges) }
             }
             val open = sn.positions.positions.count { it.quantity != 0 }
             if (open > 0) lines += "⚠ Paper positions still open: $open"
@@ -320,8 +322,10 @@ object DailyReports {
             val trades = all.size
             if (book.net.isNotEmpty() || trades > 0) {
                 total += book.m2m
-                lines += "Zerodha: ${rs(book.m2m)} · $trades trade${if (trades == 1) "" else "s"}"
-                runCatching { com.optionslab.app.data.DailyPnl.record(true, book.m2m, trades) }
+                val zCharges = com.optionslab.app.data.TradeBook.liveCharges(all)
+                lines += "Zerodha: ${rs(book.m2m)} · $trades trade${if (trades == 1) "" else "s"}" +
+                    (com.optionslab.ira.PnlCharges.line(zCharges, estimate = true)?.let { " · ${it.lowercase()}" } ?: "")
+                runCatching { com.optionslab.app.data.DailyPnl.record(true, book.m2m, trades, zCharges) }
             }
             val open = book.net.count { it.qty != 0 }
             if (open > 0) lines += "⚠ Zerodha positions carried: $open (NRML)"

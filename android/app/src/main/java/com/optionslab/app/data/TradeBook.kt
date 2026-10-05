@@ -120,11 +120,26 @@ object TradeBook {
         return label?.substringBefore(" · ")?.removePrefix("Strategy: ")?.trim()?.ifEmpty { null }?.let { com.optionslab.ira.ArmOwners.arm(it) } ?: "Manual"
     }
 
-    /** Realised P&L per day for one strategy (the calendar's filter). */
+    /** Realised P&L per day for one strategy (the calendar's filter): before charges, with the day's charges beside it. */
     fun days(live: Boolean, owner: String, owners: Map<String, String>): Map<LocalDate, DailyPnl.Day> =
         trips(live).filter { ownerOf(it, owners) == owner }.groupBy { it.day }.mapValues { (d, ts) ->
-            DailyPnl.Day(d, Math.round(ts.sumOf { it.net } * 100) / 100.0, ts.size)
+            DailyPnl.Day(d, Math.round(ts.sumOf { it.gross } * 100) / 100.0, ts.size, Math.round(ts.sumOf { it.charges } * 100) / 100.0)
         }
+
+    /**
+     * Zerodha's charges on [trades] (fills as Kite lists them), estimated with the same F&O schedule as [charges] (the
+     * charges report): the "Charges ≈ ₹X (estimate)" line under a Zerodha P&L. Pure: no vault read (safe on the main thread).
+     */
+    fun liveCharges(trades: List<Broker.Trade>): Double =
+        com.optionslab.ira.PnlCharges.estimate(trades.map { com.optionslab.ira.PnlCharges.Fill(it.side, it.price, it.qty) })
+
+    /**
+     * Zerodha's estimated charges on [day] from the trades kept here, or null when none are kept for it (or the book could
+     * not be read). Reads the vault: never on the main thread.
+     */
+    fun liveChargesOn(day: LocalDate): Double? = runCatching {
+        liveSnapshot().filter { kiteTime(it.at)?.toLocalDate() == day }.takeIf { it.isNotEmpty() }?.let { liveCharges(it) }
+    }.getOrNull()
 
     /** Charges paid in [month], line by line. */
     fun charges(live: Boolean, month: YearMonth): Map<String, Double> {

@@ -64,6 +64,11 @@ data class Account(
     val at: java.time.ZonedDateTime = Market.now(),
 ) {
     val positions: List<com.optionslab.app.data.Broker.Position> get() = book.net
+    /**
+     * Today's charges, estimated from today's filled trades: Zerodha's P&L is before charges, and the screens show this on
+     * a small "Charges ≈ ₹X (estimate)" line under it. Display only: no limit reads it.
+     */
+    val charges: Double by lazy { com.optionslab.app.data.TradeBook.liveCharges(trades) }
 }
 
 /** Orders awaiting the owner's decision, with every gate's verdict attached. */
@@ -793,16 +798,19 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                 runCatching { orderOwners.value = com.optionslab.app.data.Strategies.owners() }
                 trackPnl(book)
                 livePositions.value = book.net
-                runCatching { com.optionslab.app.widget.OpenWidget.fromZerodha(ctx, book) }
                 com.optionslab.app.data.KiteStream.want("positions", book.net.filter { it.qty != 0 }.map { it.token })
                 val trades = tradesQ.await()
+                // Zerodha's P&L is before charges: the widgets show today's charges, estimated from these trades, under it.
+                val liveCharges = com.optionslab.app.data.TradeBook.liveCharges(trades)
+                runCatching { com.optionslab.app.widget.OpenWidget.fromZerodha(ctx, book, liveCharges) }
+                runCatching { com.optionslab.app.widget.IraWidget.charges(ctx, liveCharges) }
                 runCatching { com.optionslab.app.data.TradeBook.recordLive(trades) }
                 // Today's Zerodha P&L for the calendar (Zerodha has no past days through its API).
                 // Speed, round 5: the calendar reads again only when the day's figure changed (a refresh that changes
                 // nothing no longer makes an open calendar re-read every book).
                 if (book.net.isNotEmpty() || trades.isNotEmpty()) runCatching {
                     // The calendar's bump comes from DailyPnl.changes (see pnlDays).
-                    com.optionslab.app.data.DailyPnl.record(true, book.m2m, trades.size)
+                    com.optionslab.app.data.DailyPnl.record(true, book.m2m, trades.size, liveCharges)
                 }
                 Load.Done(Account(fundsQ.await(), book, ordersQ.await().getOrThrow(), trades, holdingsQ.await()))
             } catch (e: Exception) {
@@ -1659,7 +1667,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         val pnl = snap.dayPnl
         // Speed, round 5: bumped only when the day's figure changed (every 2 s on the stream it re-read every book).
         // The calendar's bump comes from DailyPnl.changes (see pnlDays).
-        if (snap.trades.isNotEmpty() || open || pnl != 0.0) com.optionslab.app.data.DailyPnl.record(false, pnl, snap.trades.size)
+        // Kept as always (after charges), with the day's charges beside it: the calendar shows it before charges.
+        if (snap.trades.isNotEmpty() || open || pnl != 0.0) com.optionslab.app.data.DailyPnl.record(false, pnl, snap.trades.size, snap.dayCharges)
     }
 
     /**

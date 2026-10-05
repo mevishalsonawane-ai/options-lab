@@ -692,19 +692,27 @@ object Tasks {
                 com.optionslab.app.data.PnlTracker.record(book.pnl)
                 runCatching { com.optionslab.app.data.DailyPnl.record(true, book.m2m, -1) }
                 accountPnl = book.pnl
-                lines.add(0, "Positions %s".format(if (s.hideAmountsOnLockScreen) "open: ${book.net.count { it.open }}" else "Rs %+,.0f".format(book.pnl)))
+                // Zerodha's P&L is before charges (as Zerodha shows it); the day's charges, estimated from the trades the
+                // app kept today (a vault read: this is the watch's worker thread), follow it.
+                val liveCharges = com.optionslab.app.data.TradeBook.liveChargesOn(Market.today())
+                val chargesSaid = com.optionslab.ira.PnlCharges.said(liveCharges, estimate = true)?.let { " ($it)" } ?: ""
+                if (liveCharges != null) runCatching { com.optionslab.app.widget.IraWidget.charges(context, liveCharges) }
+                lines.add(0, "Positions %s".format(if (s.hideAmountsOnLockScreen) "open: ${book.net.count { it.open }}" else "Rs %+,.0f".format(book.pnl) + chargesSaid))
                 pnlAlerts(context, s, book.pnl)
             }
         }
         runCatching { com.optionslab.app.data.Paper.state.positions.count { it.quantity != 0 } }.getOrDefault(0).takeIf { it > 0 }?.let { n ->
             runCatching { com.optionslab.app.data.Paper.snapshot() }.getOrNull()?.let { snap ->
                 val pnl = snap.dayPnl
-                runCatching { com.optionslab.app.data.DailyPnl.record(false, pnl, snap.trades.size) }
+                runCatching { com.optionslab.app.data.DailyPnl.record(false, pnl, snap.trades.size, snap.dayCharges) }
                 // Orders on the same contract net into one position (two arms buying it = one position of 2 lots),
                 // so the line says positions and the quantity they hold, not orders.
                 val qty = snap.positions.positions.sumOf { kotlin.math.abs(it.quantity) }
                 val held = "$n position${if (n == 1) "" else "s"} · qty $qty"
-                lines.add(0, "Paper %s".format(if (s.hideAmountsOnLockScreen) "open: $held" else "P&L Rs %+,.0f · $held".format(pnl)))
+                // Shown before charges (as Zerodha shows its P&L), the day's charges beside it; the kept figure and the
+                // loss limits stay after charges.
+                val paperCharges = com.optionslab.ira.PnlCharges.said(snap.dayCharges, estimate = false)?.let { " ($it)" } ?: ""
+                lines.add(0, "Paper %s".format(if (s.hideAmountsOnLockScreen) "open: $held" else "P&L Rs %+,.0f".format(snap.dayGross) + "$paperCharges · $held"))
             }
         }
         // Alarms set from the chart, priced from the chart's own feed (the last 1-minute close): all at once,

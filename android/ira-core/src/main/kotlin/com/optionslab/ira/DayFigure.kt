@@ -23,6 +23,24 @@ object DayFigure {
     }
 
     /**
+     * A day's kept entry with its charges (Boss, 5 Oct: the P&L is shown before charges, the charges on a small line):
+     * [pnl] the figure as the account always kept it (paper: after charges; Zerodha: its own m2m, before them), [trades]
+     * the count, [charges] that day's charges (0 when not known: an entry kept before charges were, which then shows as it
+     * always did - nothing is migrated).
+     */
+    data class Kept(val pnl: Double, val trades: Int, val charges: Double = 0.0)
+
+    /**
+     * [next] with the day's charges: [charges] < 0 keeps the charges already [stored] (0 when none). Null when the entry
+     * is exactly what is [stored] (nothing to write).
+     */
+    fun next(stored: Kept?, pnl: Double, trades: Int, charges: Double): Kept? {
+        val c = if (charges >= 0 && charges.isFinite()) paise(charges) else stored?.charges ?: 0.0
+        val entry = Kept(paise(pnl), if (trades >= 0) trades else stored?.trades ?: 0, c)
+        return if (entry == stored) null else entry
+    }
+
+    /**
      * The day's curve ((minute, P&L) samples, oldest first, at most [max]) after a reading of [pnl] at [minute]: the
      * latest reading in a minute wins. Null when [points] already hold that minute at that figure (nothing to write).
      */

@@ -4501,6 +4501,8 @@ object IraHub {
      * as [com.optionslab.app.data.Paper.snapshot] takes it: 0 (fresh) for the trade check, which gates Solo's entries and
      * the trade ideas; [com.optionslab.app.data.Paper.SHARED_QUOTE_MS] for words only (Battery, round 8).
      */
+    // The paper figure is AFTER charges (Paper.Snapshot.dayPnl) on purpose: the trade check's daily loss limit keeps the
+    // net, safer figure; only the screens and Jarvis's P&L answers say it before charges (Boss, 5 Oct).
     private suspend fun dayPnlNow(live: Boolean, paperReuseMs: Long = 0L): Double? =
         if (live) runCatching { com.optionslab.app.data.Broker.within(8_000) { com.optionslab.app.data.Broker.positionBook().m2m } }.getOrNull()
         else runCatching { com.optionslab.app.data.Paper.snapshot(paperReuseMs).dayPnl }.getOrNull()
@@ -4670,7 +4672,8 @@ object IraHub {
             runCatching {
                 val set = com.optionslab.app.data.AppSettings.load()
                 val pnl = HashMap<String, Double>()
-                // Words only: shares the prices [IraCoach.openLegs] read just above (Battery, round 8).
+                // Words only: shares the prices [IraCoach.openLegs] read just above (Battery, round 8). Measured against the
+                // daily loss limits, so the paper day AFTER charges (dayPnl), never the before-charges figure the screens show.
                 runCatching { com.optionslab.app.data.Paper.snapshot(com.optionslab.app.data.Paper.SHARED_QUOTE_MS).dayPnl }.getOrNull()?.let { pnl["Paper"] = it }
                 if (com.optionslab.app.data.Broker.loggedIn) runCatching {
                     com.optionslab.app.data.Broker.within(8_000) { com.optionslab.app.data.Broker.positionBook() }?.m2m
@@ -4825,7 +4828,8 @@ object IraHub {
             val set = com.optionslab.app.data.AppSettings.load()
             val pnl = HashMap<String, Double>()
             if (!s.next) {
-                // Words only (a scenario said aloud): a price read in the last 20 s is shared (Battery, round 8).
+                // Words only (a scenario said aloud): a price read in the last 20 s is shared (Battery, round 8). Set against
+                // the loss limits, so the paper day AFTER charges (dayPnl), the safer figure.
                 runCatching { com.optionslab.app.data.Paper.snapshot(com.optionslab.app.data.Paper.SHARED_QUOTE_MS).dayPnl }.getOrNull()?.let { pnl["Paper"] = it }
                 if (com.optionslab.app.data.Broker.loggedIn) runCatching {
                     com.optionslab.app.data.Broker.within(8_000) { com.optionslab.app.data.Broker.positionBook() }?.m2m

@@ -184,10 +184,14 @@ class OpenWidgetTest : RobolectricTest() {
 
         updated()
 
-        val pnl = Paper.localSnapshot()!!.first.dayPnl
+        val pnl = Paper.localSnapshot()!!.first.dayGross   // shown before charges
         assertTrue("a day with a profit booked", pnl > 0.0)
         assertEquals("Today's P&L · Paper", text(R.id.ow_caption))
         assertEquals(OpenBook.rs(pnl), text(R.id.ow_pnl))
+        // The headline is before charges; the three legs' charges in small type under it.
+        val paid = Paper.localSnapshot()!!.first.dayCharges
+        assertTrue("charges were paid", paid > 0.0)
+        assertEquals(com.optionslab.ira.PnlCharges.line(paid, estimate = false), text(R.id.ow_charges))
         assertEquals(context.getColor(R.color.widget_gain), tv(R.id.ow_pnl).currentTextColor)
         assertEquals("as of when the open position was last marked", "as of 11:00", text(R.id.ow_stamp))
         assertEquals(held.symbol, text(R.id.ow_t0))
@@ -203,7 +207,7 @@ class OpenWidgetTest : RobolectricTest() {
         }
         Background.at(WED, 18, 30)
         allow()
-        val pnl = Paper.localSnapshot()!!.first.dayPnl
+        val pnl = Paper.localSnapshot()!!.first.dayGross   // shown before charges
         assertEquals(OpenBook.rs(pnl), text(R.id.ow_pnl))
         assertEquals(context.getColor(R.color.widget_loss), tv(R.id.ow_pnl).currentTextColor)
         assertEquals("nothing open: all booked, current now", "as of 18:30", text(R.id.ow_stamp))

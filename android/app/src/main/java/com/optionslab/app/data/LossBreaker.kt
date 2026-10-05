@@ -28,6 +28,8 @@ object LossBreaker {
         }
         val s = AppSettings.load()
         // Both accounts are watched whatever the badge shows: a live position is real money in Paper mode too.
+        // The paper day AFTER charges (Paper.Snapshot.dayPnl), never the before-charges figure the screens show: the limit
+        // keeps the safer, net figure (Boss, 5 Oct). Zerodha's is its own m2m, as it always was.
         val paper = runCatching { Paper.snapshot() }.getOrNull()?.dayPnl
         val live = if (Broker.loggedIn) runCatching { Broker.positionBook().m2m }.getOrNull() else null
         val hit = when {

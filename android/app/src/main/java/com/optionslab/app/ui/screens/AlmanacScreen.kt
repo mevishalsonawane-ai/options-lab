@@ -56,8 +56,11 @@ private data class HomeOrder(val name: String, val detail: String, val value: St
                              /** Who placed the order / opened the position ([com.optionslab.app.data.Origins]). */
                              val source: Pair<String, Boolean>? = null)
 
-/** What Home shows about the money, from the paper account or from Zerodha. */
-private data class Money(val pnlToday: Double?, val unused: Double?, val used: Double?) {
+/**
+ * What Home shows about the money, from the paper account or from Zerodha. [pnlToday] is before charges (Boss, 5 Oct: as
+ * Zerodha shows its P&L); [charges] the small line under it ("Charges ₹180", "Charges ≈ ₹180 (estimate)"; null: none).
+ */
+private data class Money(val pnlToday: Double?, val unused: Double?, val used: Double?, val charges: String? = null) {
     val capital: Double? get() = if (unused != null && used != null) unused + used else null
 }
 
@@ -130,7 +133,7 @@ private fun homeBooks(live: Boolean, loggedIn: Boolean, account: Load<com.option
     val moneyNote: String?
     if (live) {
         val a = (account as? Load.Done)?.value
-        money = Money(a?.book?.m2m, a?.funds?.available, a?.funds?.used)
+        money = Money(a?.book?.m2m, a?.funds?.available, a?.funds?.used, a?.let { com.optionslab.ira.PnlCharges.line(it.charges, estimate = true) })
         orders = a?.let { acc ->
             acc.positions.filter { it.qty != 0 }.map {
                 HomeOrder(it.symbol, "${if (it.qty < 0) "SELL" else "BUY"} ${abs(it.qty)} · avg ${PX.format(it.avg)} · LTP ${PX.format(it.last)}",
@@ -149,7 +152,8 @@ private fun homeBooks(live: Boolean, loggedIn: Boolean, account: Load<com.option
         }
     } else {
         val v = (paper as? Load.Done)?.value
-        money = Money(v?.dayPnl, v?.funds?.availableCash, v?.funds?.utilisedDebits)
+        // Before charges (display only; the loss limits read Paper.Snapshot.dayPnl, after them), the day's charges under it.
+        money = Money(v?.dayGross, v?.funds?.availableCash, v?.funds?.utilisedDebits, v?.let { com.optionslab.ira.PnlCharges.line(it.dayCharges, estimate = false) })
         orders = v?.let { snap ->
             snap.positions.positions.filter { it.quantity != 0 }.map {
                 HomeOrder(it.symbol, "${if (it.quantity < 0) "SELL" else "BUY"} ${abs(it.quantity)} · avg ${PX.format(it.averagePrice)} · LTP ${PX.format(it.ltp)}",
@@ -212,7 +216,8 @@ private fun AlmanacBody(
                 MoneyRow(Modifier.padding(top = 12.dp)) {
                     MoneyFigure("Unused", money.unused?.let { inr(it) }, null, Modifier)
                     MoneyFigure("Used", money.used?.let { inr(it) }, null, Modifier)
-                    MoneyFigure("P&L today", money.pnlToday?.let { inr(it, true) }, money.pnlToday?.let { if (it >= 0) p.verdigris else p.oxblood }, Modifier)
+                    MoneyFigure("P&L today", money.pnlToday?.let { inr(it, true) }, money.pnlToday?.let { if (it >= 0) p.verdigris else p.oxblood }, Modifier,
+                        sub = money.charges.takeIf { money.pnlToday != null })
                 }
                 if (moneyNote != null) Note(moneyNote, Modifier.padding(top = 8.dp))
                 else if (cap != null && cap > 0) Text("${Math.round(100 * usedShare)}% of capital in use", style = Type.bodySmall.copy(color = p.inkSoft), modifier = Modifier.padding(top = 8.dp))
@@ -307,12 +312,14 @@ private fun AlmanacBody(
 private data class ChartSpec(val values: List<Double>, val reference: Double?, val slots: Int, val labels: List<Pair<Int, String>>)
 
 @Composable
-private fun MoneyFigure(label: String, value: String?, color: Color?, modifier: Modifier) {
+private fun MoneyFigure(label: String, value: String?, color: Color?, modifier: Modifier, sub: String? = null) {
     val p = LocalPalette.current
     Column(modifier) {
         Text(label, style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp))
         Spacer(Modifier.height(2.dp))
         Text(value ?: "—", style = Type.figure.copy(color = color ?: p.ink, fontSize = 15.sp, fontWeight = FontWeight.Bold))
+        // The small line under a figure (the P&L's charges), in the app's small text.
+        if (sub != null) Text(sub, style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 11.sp, lineHeight = 14.sp))
     }
 }
 
