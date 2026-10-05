@@ -140,4 +140,24 @@ class SayAsTest {
         assertEquals(said, Pauses.shape(SayAs.figures(said)))
         assertEquals(BargeIn.sentences(text).size, BargeIn.sentences(said).size)
     }
+
+    @Test fun aBandsPlusMinusAndAMultiplesXAreSaidAsWords() {
+        assertEquals("a median plus or minus 1.00% of the price", SayAs.figures("a median ±1.00% of the price"))
+        assertEquals("is plus or minus 185 points around 24,650.00", SayAs.figures("is ±185 points around 24,650.00"))
+        assertEquals("about plus or minus 210 points (plus or minus 0.85%)", SayAs.figures("about ±210 points (±0.85%)"))
+        assertEquals("its range is 1.3 times the usual by this time of day.", SayAs.figures("its range is 1.3x the usual by this time of day."))
+        assertEquals("the risk 2 times, and 1.5 times.", SayAs.figures("the risk 2x, and 1.5×."))
+        assertEquals("प्लस-माइनस 185 पॉइंट, 1.3 गुना", SayAs.figures("±185 पॉइंट, 1.3x", hindi = true))
+        // Not a multiple or a band: a dimension, hex, a leading x, words, a long figure, a lone sign.
+        listOf("a 2x3 grid", "code 0x1F", "x2 speed", "max 5 lots", "the box", "order 1234567x", "VIX ± spread", "1.5xl")
+            .forEach { assertEquals(it, SayAs.figures(it)) }
+        // Through Aloud, as the VIX band record and the day's mood are said; twice is once, the sentences stay the same.
+        val text = "Boss, against one day's VIX move, a median ±1.00% of the price. Today is wild for Nifty: its range is 1.3x the usual by this time of day."
+        val said = Aloud.say(text)
+        assertEquals("Boss, against one day's VIX move, a median plus or minus 1 percent of the price. " +
+            "Today is wild for Nifty: its range is 1.3 times the usual by this time of day.", said)
+        assertEquals(said, Pauses.shape(SayAs.figures(said)))
+        assertEquals(said, Aloud.say(said))
+        assertEquals(BargeIn.sentences(text).size, BargeIn.sentences(said).size)
+    }
 }

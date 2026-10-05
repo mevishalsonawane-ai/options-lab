@@ -26,7 +26,13 @@ import java.util.Locale
  *    number; now "24,300 to 24,700", "9:15 to 10:00", "0.5 to 1 percent" (Hindi "से"). Only two figures (or two clock
  *    times) joined by one unspaced hyphen or en dash with nothing else glued on either side - so a date ("2026-10-05",
  *    "05-10-2026"), a phone number ("98765-43210": a side of more than 6 digits, or of more than 4 ungrouped, is no figure
- *    Jarvis writes), a year span ("FY2025-26"), a symbol and a spaced minus ("24,512 - 85") stay as written.
+ *    Jarvis writes), a year span ("FY2025-26"), a symbol and a spaced minus ("24,512 - 85") stay as written;
+ *  - a band's "±" and a multiple's "x" said as words (Voice, round 25): the VIX band record's "a median ±1.00% of the
+ *    price", "±185 points around 24,650.00", the straddle's and the expected move's "about ±210 points" lost the sign
+ *    or were read "plus-minus sign"; "its range is 1.3x the usual" was read "one point three ex". Now "plus or minus 1
+ *    percent", "about plus or minus 210 points", "1.3 times the usual" (Hindi "प्लस-माइनस", "गुना"). Only a "±" right
+ *    before a figure, and only an "x" (or "×") glued to a short figure with no letter or digit after it - so "2x3",
+ *    "0x1F", "x2" and words with an x stay as written.
  *
  * The chat keeps the exact figures; this only shapes the words said, adds nothing new and never changes a sentence's end,
  * so "go on" after a cut-in finds the same sentences ([BargeIn]). Applying it twice changes nothing. Pure.
@@ -76,6 +82,11 @@ object SayAs {
     private val CLOCK_AFTER = Regex("\\s?[aApP]\\.?[mM]\\b")
     private val RANGE = Regex("(?<![\\w.,:\\-\\u2013+])($SIDE)[\\-\\u2013]($SIDE)(?![\\w:\\-\\u2013]|[.,]\\d)")
 
+    /** "±" before a figure (a space between allowed): "±1.00%", "± 185 points". */
+    private val PLUS_MINUS = Regex("±\\s?(?=\\d)")
+    /** A multiple: a short figure with "x" or "×" glued on and no letter or digit after ("1.3x the usual", "2x."). */
+    private val TIMES = Regex("(?<![\\w.,])(\\d{1,3}(?:\\.\\d{1,2})?)[x×](?![\\w×])")
+
     /** At most this many digits before the point on either side of a range (commas not counted: "1,00,000" is six). */
     private const val RANGE_DIGITS = 6
     /** An ungrouped side longer than this is no figure Jarvis writes (he groups 10,000 and up): a phone number's half, an id. */
@@ -96,6 +107,8 @@ object SayAs {
         if (text.isEmpty() || !hasDigit(text)) return text
         var s = text
         if (s.contains("(word tone ")) s = WORD_TONE.replace(s, "")
+        if (s.indexOf('±') >= 0) s = PLUS_MINUS.replace(s, if (hindi) "प्लस-माइनस " else "plus or minus ")
+        if (s.indexOf('x') >= 0 || s.indexOf('×') >= 0) s = TIMES.replace(s, if (hindi) "\$1 गुना" else "\$1 times")
         if (s.indexOf('-') >= 0 || s.indexOf('\u2013') >= 0) {
             val src = s
             s = RANGE.replace(src) { m ->
