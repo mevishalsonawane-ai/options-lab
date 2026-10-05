@@ -288,7 +288,12 @@ internal object IraActions {
             Command.Kind.BRIEF_ON -> { IraTools.brief = true; "Short answers, Boss. Say \"tell me more\" for the rest." to null }
             // Boss's own "full answers" wins over what was learned: the answers said shorter aloud ([com.optionslab.ira.Clarity]) too.
             Command.Kind.BRIEF_OFF -> { IraTools.brief = false; runCatching { IraTools.clarityReset() }; "Full answers again." to null }
-            Command.Kind.MORE -> (IraHub.lastFullAnswer() ?: "There is no answer of mine to say more about.") to null
+            // The lock re-checked (review, 5 Oct): on a locked phone never an unasked note or the account in full. The voice
+            // answers a locked "more" itself, with Boss's voice checked ([JarvisVoice]); one reaching here is refused then.
+            Command.Kind.MORE -> (when (val moreSaid = com.optionslab.ira.MoreAnswer.reply(IraHub.lastForMore(), IraHub.locked()) { false }) {
+                is com.optionslab.ira.MoreAnswer.Reply.Say -> moreSaid.text
+                is com.optionslab.ira.MoreAnswer.Reply.Refused -> moreSaid.why
+            }) to null
             Command.Kind.PRACTICE -> "Replaying the day..." to null
             Command.Kind.VOICE_CHECK -> JarvisVoice.diagnose(ctx(), hint = true) to null
             Command.Kind.LEARN_RESET -> { IraTools.forgetLearned(); "Done, Boss: I've forgotten what I learned from your corrections." to null }

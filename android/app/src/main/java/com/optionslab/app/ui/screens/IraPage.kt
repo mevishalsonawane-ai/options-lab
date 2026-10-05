@@ -281,7 +281,7 @@ private fun Bubble(m: IraHub.Msg, orders: IraOrderPaths?, asked: String? = null)
     // Short answers (Boss, 5 Oct; his choice, the default): one precise line, the full answer behind "Details". Never an
     // order, a trade proposal, a confirm or a message still being written ([com.optionslab.ira.ShortAnswer] keeps
     // questions, confirms, warnings, staleness and "could not read" notes).
-    val keepWhole = !m.fromIra || m.order != null || m.proposal != null || m.action != null || m.writing
+    val keepWhole = !m.fromIra || m.whole || m.order != null || m.proposal != null || m.action != null || m.writing
     val shortOn = remember { runCatching { com.optionslab.app.ira.IraTools.shortAnswers }.getOrDefault(true) }
     val brief = remember(m.text, asked, shortOn, keepWhole) {
         if (keepWhole) com.optionslab.ira.ShortAnswer.Short(m.text, null)

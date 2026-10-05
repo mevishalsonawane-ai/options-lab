@@ -12,8 +12,12 @@ import java.util.Locale
  * cut to about [MAX_WORDS] words at a clause boundary.
  *
  * Never dropped: a safety warning ([Aloud.warning]), a staleness note ("as of 14:05", "the market is closed", "last
- * session"), a "could not read Zerodha" / "not logged in" note, a lock-screen refusal, a question to Boss, and a GOLD or
- * paper-only label - those sentences are kept after the line (a long "Zerodha did not answer..." is said shorter).
+ * session"), a "could not read Zerodha" / "not logged in" note, a failure ("Not protected", "failed", "refused",
+ * "rejected", "not placed", "insufficient"...), a lock-screen refusal, a question to Boss, and a GOLD or paper-only
+ * label - those sentences are kept after the line (a long "Zerodha did not answer..." is said shorter). The kept
+ * figures' lead ("As of 14:05, Boss (...):", [KeptFigures.note]) is put back in front of the short line.
+ * The app never passes an action's, a confirm's or a command's result here, nor the guard's own report: those are said
+ * and shown whole (review, 5 Oct); the failure words above are the backstop.
  * Kept whole, never shortened: a question Jarvis asks (yes/no, confirm, "which one?"), an order or trade preview or
  * confirmation (Confirm, PIN, fingerprint, swipe, approve), a Hindi answer, the "more"/details reply itself.
  * Words only: no figure is changed except paise dropped from rupees and decimals dropped from levels of 1,000 or more
@@ -37,6 +41,8 @@ object ShortAnswer {
     const val MORE_HINT = "Say \"more\" for details."
 
     private val SENTENCE = Regex("(?<=[.!?\\u0964])\\s+|\\s*\\n+\\s*")
+    /** "1." alone after a split: a list item's number, joined back to its item. */
+    private val BARE_NUMBER = Regex("^\\d{1,3}\\.$")
     private val DEVANAGARI = Regex("[\\u0900-\\u097F]")
     /** "2. ORB 15 (ORB, stop 40): on." - a list's item is data, not a warning (its words "stop", "margin" are names). */
     private val LIST_ITEM = Regex("^\\d+\\. ")
@@ -46,7 +52,12 @@ object ShortAnswer {
     private val UNREAD = Regex("could ?n[o']?t (read|be read|reach)|could not open|did not answer|didn't answer|not logged in|did not open|" +
         "no answer from|is offline|are offline|not connected|not included", RegexOption.IGNORE_CASE)
     private val LOCK = Regex("\\bunlock\\b", RegexOption.IGNORE_CASE)
-    private val LABEL = Regex("\\bGOLD\\b|\\bpaper (only|mode)\\b|not real money")
+    /** "Paper only", "paper mode", "not real money" in any case; "GOLD" (IraGoldAlgo's label) as written, never the metal's name. */
+    private val LABEL = Regex("(?-i:\\bGOLD\\b)|\\bpaper (only|mode)\\b|not real money", RegexOption.IGNORE_CASE)
+    /** A failure or refusal: never dropped (review, 5 Oct: "Not protected: Insufficient funds." was cut). */
+    private val FAIL = Regex("\\b(not protected|failed|refused|rejected|not sent|not placed|not set|could not|insufficient)\\b", RegexOption.IGNORE_CASE)
+    /** The kept figures' lead ([KeptFigures.note]): taken off before reading, put back in front of the line. */
+    private val AS_OF_LEAD = Regex("^(As of \\d{1,2}:\\d{2}, Boss \\([^)]*\\)[:.])\\s+(?=\\S)")
     /** An answer that asks Boss or carries an order's confirm: never shortened. */
     private val ASKS = Regex("\\b(tap confirm|confirm it|confirmed with|your confirm|fingerprint|\\bPIN\\b|swipe|approve|yes or no|say yes|" +
         "which one|order review|nothing is sent until|shall i)\\b", RegexOption.IGNORE_CASE)
@@ -88,11 +99,20 @@ object ShortAnswer {
         }
     }
 
-    fun sentences(text: String): List<String> = SENTENCE.split(text.trim()).map { it.trim() }.filter { it.isNotEmpty() }
+    /** [text]'s sentences; a list item's bare number ("1.") stays with its item ("1. ORB 15 (ORB, stop 40): on."). */
+    fun sentences(text: String): List<String> {
+        val raw = SENTENCE.split(text.trim()).map { it.trim() }.filter { it.isNotEmpty() }
+        val out = ArrayList<String>(raw.size)
+        var i = 0
+        while (i < raw.size) {
+            if (BARE_NUMBER.matches(raw[i]) && i + 1 < raw.size) { out += raw[i] + " " + raw[i + 1]; i += 2 } else { out += raw[i]; i++ }
+        }
+        return out
+    }
 
-    /** A sentence that must stay in the short line (warning, staleness, could not read, lock, a question, a label). */
+    /** A sentence that must stay in the short line (warning, staleness, could not read, a failure, lock, a question, a label). */
     fun safety(s: String): Boolean = !LIST_ITEM.containsMatchIn(s) && Aloud.warning(s) || STALE.containsMatchIn(s) || UNREAD.containsMatchIn(s) ||
-        LOCK.containsMatchIn(s) || s.trimEnd().endsWith("?") || LABEL.containsMatchIn(s)
+        FAIL.containsMatchIn(s) || LOCK.containsMatchIn(s) || s.trimEnd().endsWith("?") || LABEL.containsMatchIn(s)
 
     /** Kept whole: Jarvis asks Boss, or the answer carries an order's confirm; a Hindi answer. */
     fun exempt(answer: String): Boolean = ASKS.containsMatchIn(answer) || DEVANAGARI.containsMatchIn(answer)
@@ -104,6 +124,11 @@ object ShortAnswer {
     fun of(question: String?, answer: String, short: Boolean = true): Short {
         val whole = Short(answer, null)
         if (!short || answer.isBlank() || exempt(answer)) return whole
+        // "As of 14:05, Boss (...):" before kept figures: the answer read without it, and it put back in front.
+        AS_OF_LEAD.find(answer)?.let { m ->
+            val inner = of(question, answer.substring(m.range.last + 1), short)
+            return if (inner.details == null) whole else Short(m.groupValues[1] + " " + inner.line, answer, inner.rest)
+        }
         val kind = kind(question)
         if (kind == Kind.WHOLE) return whole
         val parts = sentences(answer)
@@ -171,7 +196,9 @@ object ShortAnswer {
     private val POS_NONE = Regex("^No open positions on (\\w+)\\.")
     private val ORD_LINE = Regex("^(\\w+): (\\d+) orders? today, (\\d+) filled, (\\d+) open, (\\d+) rejected or cancelled\\.")
     private val ORD_NONE = Regex("^No orders on (\\w+) today\\.")
-    private val FUNDS_LINE = Regex("^(\\w+) funds: (Rs [\\d,]+(?:\\.\\d+)?) available")
+    private val FUNDS_LINE = Regex("^(\\w+) funds: (Rs -?[\\d,]+(?:\\.\\d+)?) available")
+    /** Any account's funds sentence: one that [FUNDS_LINE] cannot read sends the whole answer to the fallback. */
+    private val FUNDS_ANY = Regex("^(\\w+) funds:")
     private val MARKET_LINE = Regex("^(?:Boss, )?([A-Z][A-Za-z ]{1,20}?) (is at|last closed at) [\\d,]+")
     private val THETA_LINE = Regex("theta|time decay|decay", RegexOption.IGNORE_CASE)
     private val LEFT_LINE = Regex("trades? (left|remaining)|more trades?", RegexOption.IGNORE_CASE)
@@ -204,8 +231,9 @@ object ShortAnswer {
             ORD_LINE.find(s)?.let { m -> "${acct(m.groupValues[1])} ${m.groupValues[2]} today (${m.groupValues[3]} filled, ${m.groupValues[4]} open, ${m.groupValues[5]} rejected or cancelled)" }
                 ?: ORD_NONE.find(s)?.let { m -> "${acct(m.groupValues[1])} none today" }
         }?.let { (l, u) -> "Orders: $l." to u }
-        Kind.FUNDS -> collect(parts) { s -> FUNDS_LINE.find(s)?.let { m -> "${acct(m.groupValues[1])} ${rupeesText(m.groupValues[2])}" } }
-            ?.let { (l, u) -> "Available: $l." to u }
+        Kind.FUNDS -> if (parts.any { FUNDS_ANY.containsMatchIn(it) && !FUNDS_LINE.containsMatchIn(it) }) null
+            else collect(parts) { s -> FUNDS_LINE.find(s)?.let { m -> "${acct(m.groupValues[1])} ${rupeesText(m.groupValues[2])}" } }
+                ?.let { (l, u) -> "Available: $l." to u }
         Kind.MARKET, Kind.VIX -> {
             val hits = parts.withIndex().filter { (_, s) -> MARKET_LINE.containsMatchIn(s) &&
                 (kind == Kind.MARKET || s.contains("VIX", ignoreCase = true)) }.take(3)
@@ -233,7 +261,7 @@ object ShortAnswer {
     /** "2,575.40" -> "2,575" (whole rupees, rounded; the grouping kept). */
     fun rupees(amount: String): String = whole(amount)
 
-    private fun rupeesText(s: String) = s.replace(Regex("Rs ([\\d,]+(?:\\.\\d+)?)")) { m -> "Rs " + rupees(m.groupValues[1]) }
+    private fun rupeesText(s: String) = s.replace(Regex("Rs (-?)([\\d,]+(?:\\.\\d+)?)")) { m -> "Rs " + m.groupValues[1] + rupees(m.groupValues[2]) }
 
     /** [n] ("24,612.40", "1,23,456.7") rounded to a whole number, written with the same grouping. */
     fun whole(n: String): String {

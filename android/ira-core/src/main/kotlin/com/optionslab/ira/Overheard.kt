@@ -58,6 +58,13 @@ object Overheard {
     /** What an unasked line says: [text] itself, or [plain] when the phone is [locked] and [text] holds Boss's account. */
     fun said(text: String, locked: Boolean, plain: String = SAID): String = if (locked && holdsAccount(text)) plain else text
 
+    /**
+     * An unasked line at the moment it is finally said (it may have waited up to 30 s for Boss's own answer, and the
+     * phone may have locked meanwhile - review, 5 Oct): null in quiet hours ([quiet]; not said), else [said] for the
+     * phone as it is now.
+     */
+    fun atSay(text: String, locked: Boolean, quiet: Boolean, plain: String = SAID): String? = if (quiet) null else said(text, locked, plain)
+
     /** An unasked pop-up's title, the same way. */
     fun title(title: String, locked: Boolean): String = if (locked && holdsAccount(title)) TITLE else title
 }

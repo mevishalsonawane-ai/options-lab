@@ -62,6 +62,11 @@ object IraHub {
                    /** Ira's own words when [text] was rewritten by the on-device model (numbers checked); [writing] while it works. */
                    val draft: String? = null, val writing: Boolean = false,
                    /** An action waiting for the owner's one tap (its id in [State.pending]). */ val action: Long? = null,
+                   /**
+                    * An action's, a confirm's or a command's result, or the guard's own report: shown and said whole, never
+                    * as a short line ([com.optionslab.ira.ShortAnswer]) - a failure in it must never be cut (review, 5 Oct).
+                    */
+                   val whole: Boolean = false,
                    /** Stable for the message's life (kept through rewrites), so the screen keeps each message's own state. */
                    val id: Long = msgSeq.incrementAndGet())
 
@@ -957,8 +962,8 @@ object IraHub {
             val stop = com.optionslab.ira.Rescue.stopFor(p)
             val text = com.optionslab.ira.Rescue.say(p, stop)
             // (Only told when offering is on: the guard alone never sets a stop on these, so it says nothing.)
-            if (stop == null) { if (Automations.on(Automations.Auto.RESCUE)) { JarvisPopup.show(c, "Boss, ${p.symbol} has no stop", text); reply(text)
-                runCatching { JarvisVoice.offerNote(text, com.optionslab.ira.SpeakChoice.Weight.IMPORTANT) } }; continue }
+            if (stop == null) { if (Automations.on(Automations.Auto.RESCUE)) { JarvisPopup.show(c, "Boss, ${p.symbol} has no stop", text); note(text, whole = true)
+                runCatching { JarvisVoice.offerNote(text, com.optionslab.ira.SpeakChoice.Weight.IMPORTANT, whole = true) } }; continue }
             // Set alone only when nothing else could close it too: no working order on it at all and, at Zerodha, no GTT
             // on it (a GTT or a resting exit filling alongside the stop would leave a short). Otherwise only offered.
             val clear = guard && runCatching {
@@ -977,8 +982,9 @@ object IraHub {
                 }.getOrElse { "Not protected: ${it.message}" }
                 val said = com.optionslab.ira.Rescue.saySet(p, stop, result)
                 JarvisPopup.show(c, "Boss, I guarded ${p.symbol}", said)
-                reply(said); IraActivity.add(said)
-                runCatching { JarvisVoice.offerNote(said, com.optionslab.ira.SpeakChoice.Weight.IMPORTANT) }
+                // Said and shown whole: a "Not protected: ..." in it is never cut to the line "I set one" (review, 5 Oct).
+                note(said, whole = true); IraActivity.add(said)
+                runCatching { JarvisVoice.offerNote(said, com.optionslab.ira.SpeakChoice.Weight.IMPORTANT, whole = true) }
                 Automations.acted(Automations.Auto.GUARD, said)
                 continue
             }
@@ -1036,7 +1042,7 @@ object IraHub {
         if (autoStop && !addsRisk && !alwaysAsk) {
             scope.launch {
                 val r = IraActions.run(what, act)
-                JarvisPopup.show(c, title, r); reply(com.optionslab.ira.Address.boss("Done by myself, as you asked: $r"))
+                JarvisPopup.show(c, title, r); reply(com.optionslab.ira.Address.boss("Done by myself, as you asked: $r"), whole = true)
             }
             return
         }
@@ -1404,7 +1410,8 @@ object IraHub {
 
     /** [understood]: [text] is the model's reading of the owner's words (its actions always wait for Confirm). */
     /** [cleaned]: the words already read past their fillers or as a follow-up (a question): not read so again. */
-    private fun ask(text: String, understood: Boolean, cleaned: Boolean = false) {
+    /** [rescued]: [text] is a mis-heard question read as what was meant ([com.optionslab.ira.MisHeard.rescue]) - already counted as heard. */
+    private fun ask(text: String, understood: Boolean, cleaned: Boolean = false, rescued: Boolean = false) {
         // Secrets never go further than this line: not into the conversation, the saved history or the model.
         val q = com.optionslab.ira.Secrets.redact(text.trim())
         if (q.isEmpty()) return
@@ -1997,7 +2004,8 @@ object IraHub {
             reply(said)
             return
         }
-        IraTools.count("heard")
+        // A rescued question was counted when it was first heard (review, 5 Oct: it counted twice).
+        if (!rescued) IraTools.count("heard")
         // Just after a missed question or "that was wrong" (a minute at most), a question understood may be what was
         // meant: put to Boss ("Shall I take ... to mean ...?"), kept only on his yes - on an unlocked phone, never in
         // IraGoldAlgo, and never anything that acts (checked when proposed, again on the yes, and again when used).
@@ -2220,6 +2228,14 @@ object IraHub {
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said, listOf(text))).takeLast(MAX_MESSAGES)) }
             return
         }
+        // "Exit", "close it", "square off", "flatten", "get out" - no command by itself (review, 5 Oct: they were taken as
+        // mis-heard fragments): how to ask for it, at once. Words only - nothing is closed from here; "close all" / "exit
+        // all" are commands with their own confirm.
+        if (com.optionslab.app.BuildConfig.JARVIS && parsed.order == null && parsed.command == null)
+            runCatching { com.optionslab.ira.MisHeard.exitHint(q) }.getOrNull()?.let { hint ->
+                _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, hint, whole = true)).takeLast(MAX_MESSAGES)) }
+                return
+            }
         // Voice, round 26 (Boss's diagnostics, 5 Oct: "bus", "office schedule", "what s the piano" went to the slow model).
         // Heard words close to a known question (a word said twice, a known slip, a near-miss index name) are asked as that
         // question - a question only, never a command or an order. Then short words that match nothing are most likely a
@@ -2231,7 +2247,7 @@ object IraHub {
             val meant = if (byVoice && Topic.OFF_TOPIC in parsed.topics) runCatching { com.optionslab.ira.MisHeard.rescue(q) }.getOrNull() else null
             if (meant != null && !lockedAccount(q, meant)) {
                 _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, "$TOOK_AS\"$meant\".")).takeLast(MAX_MESSAGES)) }
-                ask(meant, understood = true)
+                ask(meant, understood = true, rescued = true)
                 return
             }
             if (runCatching { com.optionslab.ira.MisHeard.fragment(q, voice = byVoice) }.getOrDefault(false)) {
@@ -4092,6 +4108,8 @@ object IraHub {
         // Speed, round 4: with the model still to load (it leaves memory after a minute while Jarvis listens), "One
         // moment" at once - no answer can come before the load anyway ([com.optionslab.ira.ModelWait.holdAfter]).
         val modelLoaded = runCatching { IraModel.state.value.loaded }.getOrDefault(true)
+        // Heard or typed, read here in the lane (the flag changes with the next question).
+        val freeHeard = heardByVoice
         val holding = scope.launch {
             kotlinx.coroutines.delay(com.optionslab.ira.ModelWait.holdAfter(modelLoaded))
             if (replyAfter(_state.value.messages, q) == null && _state.value.messages.lastOrNull { !it.fromIra }?.text == q) {
@@ -4107,7 +4125,9 @@ object IraHub {
             // model not loaded): the model's load and passes take the fast cores, and the speech engine making "One moment"
             // into sound waited behind them. While Jarvis listens, the model starts once that line has begun to sound
             // (2.5 s at most) - and both passes now share one budget ([com.optionslab.ira.ModelWait]; they were 15 s each).
-            if (JarvisVoice.wanted && !JarvisVoice.muted) {
+            // Only for a heard question with the model still to load (review, 5 Oct: a typed question, or one with the
+            // model loaded, waited up to 2.5 s here for a line that is not said or not needed - [com.optionslab.ira.ModelWait.waitForHold]).
+            if (com.optionslab.ira.ModelWait.waitForHold(freeHeard, modelLoaded, JarvisVoice.wanted && !JarvisVoice.muted)) {
                 val since = android.os.SystemClock.elapsedRealtime()
                 kotlinx.coroutines.withTimeoutOrNull(com.optionslab.ira.ModelWait.HOLD_FIRST_MS) {
                     while (JarvisVoice.speechStartedAt < since) kotlinx.coroutines.delay(100)
@@ -4167,7 +4187,7 @@ object IraHub {
         val ctx = app ?: return reply("I could not set that just now.")
         scope.launch {
             val (what, act) = runCatching { IraActions.prepare(c) }.getOrElse { ("I could not do that: ${it.message}") to null }
-            if (act == null) { reply(what); return@launch }
+            if (act == null) { reply(what, whole = true); return@launch }
             val at = com.optionslab.ira.Later.say(w.at, java.time.LocalDateTime.now(IST))
             pend("$what $at", { IraLater.add(ctx, w.rest, w.at); "Set, Boss: I'll $what $at, and tell you when it's done." }, "Tap Confirm to $what $at.")
         }
@@ -4191,13 +4211,14 @@ object IraHub {
             val (what, act) = runCatching { IraActions.prepare(c, heard = nickHeard) }.getOrElse { ("I could not do that: ${it.message}") to null }
             // A nickname just learned from Boss's pick after "Which one?": said once, before the confirm it changes nothing about.
             if (nickHeard) runCatching { IraTools.nickTakeLearned() }.getOrNull()?.let { reply(it) }
-            if (act == null) { reply(what); return@launch }
+            // A command's answer or result is shown and said whole: a refusal or a failure in it is never cut (review, 5 Oct).
+            if (act == null) { reply(what, whole = true); return@launch }
             // Only a price alarm or an event note is done at once; anything that changes trading (starting arms, the
             // kill switch, autopilot, Jarvis's own limits) waits for Confirm - in the real app too (review, 3 Oct).
             if (c.kind.reduces || !com.optionslab.app.BuildConfig.JARVIS || confirmAlways || c.kind !in AT_ONCE) {
                 // The emergency exit asks for the fingerprint on the screen (or Boss's own voice, aloud).
                 pend(what, suspend { IraActions.verified(c.kind, act()) }, "Tap Confirm to ${what}.", exit = c.kind == com.optionslab.ira.Command.Kind.EXIT_ALL)
-            } else reply(IraActions.run(what, suspend { IraActions.verified(c.kind, act()) }))
+            } else reply(IraActions.run(what, suspend { IraActions.verified(c.kind, act()) }), whole = true)
         }
     }
 
@@ -4214,7 +4235,7 @@ object IraHub {
             for ((i, c) in cmds.withIndex()) {
                 if (c == null) continue
                 val (what, act) = runCatching { IraActions.prepare(c) }.getOrElse { ("I could not do that: ${it.message}") to null }
-                if (act == null) { reply("Step ${i + 1} (\"${steps[i]}\") cannot be done: $what Nothing in the plan was done."); return@launch }
+                if (act == null) { reply("Step ${i + 1} (\"${steps[i]}\") cannot be done: $what Nothing in the plan was done.", whole = true); return@launch }
             }
             val plan = com.optionslab.ira.Plan.say(steps)
             pend("this plan: $plan", suspend {
@@ -4280,17 +4301,30 @@ object IraHub {
 
     fun lastFullAnswer(): String? = _state.value.messages.lastOrNull { it.fromIra }?.text
 
+    /**
+     * The last message of Jarvis's for "more" ([com.optionslab.ira.MoreAnswer]): its text, the question before it, and
+     * whether it was a note nobody asked for - so a locked phone re-checks it as "go on" and "say that again" do.
+     */
+    fun lastForMore(): com.optionslab.ira.MoreAnswer.Last? {
+        val ms = _state.value.messages
+        val i = ms.indexOfLast { it.fromIra }
+        if (i < 0) return null
+        val m = ms[i]
+        val before = ms.subList(0, i).lastOrNull { !it.fromIra }?.text
+        return com.optionslab.ira.MoreAnswer.Last(m.text, before, unasked = synchronized(unaskedIds) { m.id in unaskedIds })
+    }
+
     suspend fun confirm(id: Long, fingerprint: Boolean = false, ownerVoice: Boolean = false): String? {
         // IraGoldAlgo: nothing Jarvis prepared is ever done there.
         if (GOLD_ONLY_TALK) { synchronized(actions) { exitIds.remove(id); actions.remove(id) }; _state.update { it.copy(pending = it.pending - id) }; return GOLD_TALK_ONLY.also { reply(it) } }
         if (isExit(id) && !fingerprint && !ownerVoice && fingerprintNeeded())
             return synchronized(actions) { actions.containsKey(id) }.let { waiting -> if (!waiting) null else
-                "The emergency exit is confirmed with your fingerprint on the Jarvis screen, or by saying yes in your own voice.".also { reply(it) } }
+                "The emergency exit is confirmed with your fingerprint on the Jarvis screen, or by saying yes in your own voice.".also { reply(it, whole = true) } }
         // A trade that goes to Zerodha with real money needs the owner's fingerprint on the Jarvis screen (a spoken yes or
         // the notification's Approve is not enough); it stays waiting until then.
         if (asksYesNo(id) && !fingerprint && IraNewsTrades.goesLive(isSolo(id)) && fingerprintNeeded())
             return synchronized(actions) { actions.containsKey(id) }.let { waiting -> if (!waiting) null else
-                "This trade goes to Zerodha with real money: approve it with your fingerprint on the Jarvis screen.".also { reply(it) } }
+                "This trade goes to Zerodha with real money: approve it with your fingerprint on the Jarvis screen.".also { reply(it, whole = true) } }
         // Real money only with the fingerprint (or a phone with none, where the app lock covers it): the trade checks this
         // again when placed, so a record that turns proven between now and then never sends one unapproved.
         val yes = asksYesNo(id)
@@ -4299,7 +4333,7 @@ object IraHub {
         if (asksYesNo(id)) IraNewsTrades.answered(id, "approved")
         settled(id)
         _state.update { it.copy(pending = it.pending - id) }
-        return IraActions.run(a.first, a.second).also { synchronized(actions) { liveApproved.remove(id) }; IraAccount.invalidate(); checked = null; reply(it) }
+        return IraActions.run(a.first, a.second).also { synchronized(actions) { liveApproved.remove(id) }; IraAccount.invalidate(); checked = null; reply(it, whole = true) }
     }
 
     /** Does a live trade's approval ask for the fingerprint? (whenever the phone has one; without one the app lock covers it) */
@@ -4337,7 +4371,7 @@ object IraHub {
             kotlinx.coroutines.delay(CONFIRM_LAPSE_MS)
             if (synchronized(actions) { exitIds.remove(id); actions.remove(id) } != null) {
                 _state.update { it.copy(pending = it.pending - id) }
-                reply("Nothing was done about \"$what\": it waited 30 minutes for your Confirm.")
+                reply("Nothing was done about \"$what\": it waited 30 minutes for your Confirm.", whole = true)
             }
         }
         return id
@@ -4362,7 +4396,7 @@ object IraHub {
             val spot = o.market?.let { m -> _state.value.snaps[m] }?.price
             val r = runCatching { IraOrders.prepare(o, s.live, s.guardMaxLots, spot) }.getOrElse { Result.failure(it) }
             reply(r.fold({ t -> runCatching { IraActions.trade(t, s.live) }.getOrElse { e -> "That order failed: ${e.message}" } },
-                { e -> e.message ?: "I could not prepare that order." }))
+                { e -> e.message ?: "I could not prepare that order." }), whole = true)
         }
     }
 
@@ -4858,8 +4892,9 @@ object IraHub {
     /** Messages Jarvis posted on his own ([note]): "what did I miss" lists only these. Bounded. */
     private val unaskedIds: MutableSet<Long> = java.util.Collections.synchronizedSet(LinkedHashSet())
 
-    fun note(text: String) {
-        val m = Msg(true, text)
+    /** [whole]: shown and said whole, never as a short line (the guard's report; [Msg.whole]). */
+    fun note(text: String, whole: Boolean = false) {
+        val m = Msg(true, text, whole = whole)
         synchronized(unaskedIds) { unaskedIds += m.id; while (unaskedIds.size > 200) unaskedIds.remove(unaskedIds.first()) }
         _state.update { it.copy(messages = (it.messages + m).takeLast(MAX_MESSAGES)) }
     }
@@ -4873,8 +4908,9 @@ object IraHub {
         runCatching { JarvisVoice.offerNote(text, weight) }
     }
 
-    private fun reply(text: String) {
-        _state.update { it.copy(messages = (it.messages + Msg(true, text)).takeLast(MAX_MESSAGES)) }
+    /** [whole]: an action's, confirm's or command's result (or the guard's report) - never shortened ([Msg.whole]). */
+    private fun reply(text: String, whole: Boolean = false) {
+        _state.update { it.copy(messages = (it.messages + Msg(true, text, whole = whole)).takeLast(MAX_MESSAGES)) }
     }
 
     /** Wipes the conversation (the owner's button). */

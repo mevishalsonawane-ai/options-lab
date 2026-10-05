@@ -68,10 +68,11 @@ class JarvisVoice : Service() {
          * it is shown as a pop-up instead. [urgent]: a safety warning (a loss near the guard, the feed stopped, the
          * square-off, overtrading...) is said at once, never held while Boss is speaking; market colour and briefings
          * wait for him to finish (up to 8 s). [full]: never shortened outside Boss's hours (the morning check, his own
-         * reminders); otherwise still unasked (quiet hours, a locked phone).
+         * reminders); otherwise still unasked (quiet hours, a locked phone). [whole]: never cut to its one line (an
+         * action's result or the guard's report: a failure in it is never dropped - review, 5 Oct); still unasked.
          */
         fun announce(text: String, prompted: Boolean = false, urgent: Boolean = false, full: Boolean = false,
-                     weight: com.optionslab.ira.SpeakChoice.Weight? = null): Boolean {
+                     weight: com.optionslab.ira.SpeakChoice.Weight? = null, whole: Boolean = false): Boolean {
             val v = instance?.get() ?: return false
             // Boss's "Jarvis speaks" choice (a display preference only): a reply, a safety warning, his own reminder or the
             // morning check is always said; an important note unless he chose "only answers"; a minor one only with "everything".
@@ -84,7 +85,7 @@ class JarvisVoice : Service() {
             com.optionslab.ira.SpeakChoice.why(choice, w)?.let { why -> lastHeld = System.currentTimeMillis() to why; return false }
             // Short answers (the default): an unasked note is said as its one line too - never a safety warning, never a
             // reply (already short), never his reminder or the morning check ([com.optionslab.ira.ShortAnswer]).
-            val shortText = if (!prompted && !urgent && !full && runCatching { IraTools.shortAnswers }.getOrDefault(true))
+            val shortText = if (!prompted && !urgent && !full && !whole && runCatching { IraTools.shortAnswers }.getOrDefault(true))
                 runCatching { com.optionslab.ira.ShortAnswer.of(null, text).line }.getOrDefault(text) else text
             // Unasked on a locked phone (it may be overheard): never an amount, a P&L or a symbol - only that it is in
             // the chat (every caller has already put the full line there).
@@ -93,9 +94,17 @@ class JarvisVoice : Service() {
             // A long unasked briefing outside the hours Boss talks to him: its first sentence aloud, the rest in the chat
             // ([com.optionslab.ira.TalkHours]). Never a safety warning (urgent), a reply, the morning check or a
             // reminder (full); the voice only, nothing acts.
-            val said = if (com.optionslab.ira.TalkHours.mayShorten(prompted, urgent, full)) IraTools.talkAloud(overheard) else overheard
+            val mayShorten = com.optionslab.ira.TalkHours.mayShorten(prompted, urgent, full) && !whole
+            val said = if (mayShorten) IraTools.talkAloud(overheard) else overheard
+            // An unasked note may wait (up to 30 s) for Boss's own answer: when it is finally said, the lock and quiet hours
+            // are checked again on the line as it was before either (review, 5 Oct: one was said after the phone locked).
+            val recheck: (() -> String?)? = if (prompted) null else ({
+                val now = com.optionslab.ira.Overheard.atSay(shortText, runCatching { IraHub.locked() }.getOrDefault(true), quietNow())
+                if (now == null) { note("an unasked note reached quiet hours while it waited: not said"); null }
+                else if (mayShorten) IraTools.talkAloud(now) else now
+            })
             // Not a reply to Boss's words (never timed as one); unless urgent, not said over him while he is speaking.
-            v.main.post { if (urgent) { if (!v.stopped) v.say(said, "answer", reply = false) } else v.sayWhenFree(said, "answer") }
+            v.main.post { if (urgent) { if (!v.stopped) v.say(said, "answer", reply = false) } else v.sayWhenFree(said, "answer", recheck = recheck) }
             return true
         }
 
@@ -469,8 +478,8 @@ class JarvisVoice : Service() {
          * note of [weight] (important: his positions' alerts, a stop he must check, the order watch stopped; minor: records,
          * paper tests, goals, the plan). False: kept on screen (the reason is kept for the voice check). Words only.
          */
-        fun offerNote(text: String, weight: com.optionslab.ira.SpeakChoice.Weight): Boolean =
-            runCatching { announce(text, weight = weight) }.getOrDefault(false)
+        fun offerNote(text: String, weight: com.optionslab.ira.SpeakChoice.Weight, whole: Boolean = false): Boolean =
+            runCatching { announce(text, weight = weight, whole = whole) }.getOrDefault(false)
 
         /** Robolectric shares static state between tests: the voice's own memory reset. */
         internal fun resetForTest() { lastHeld = null }
@@ -1765,6 +1774,18 @@ class JarvisVoice : Service() {
                 val laterRest = runCatching { com.optionslab.ira.Later.split(h.question, java.time.LocalDateTime.now(java.time.ZoneId.of("Asia/Kolkata")))?.rest }.getOrNull()
                 val parsedQ = com.optionslab.ira.Ask.parse(laterRest ?: h.question)
                 val topics = parsedQ.topics
+                // "More" on a locked phone (review, 5 Oct): the last answer in full only as "go on" and "say that again" allow -
+                // never a note nobody asked for, and an answer that may hold the account only in Boss's own voice (the check
+                // an account question passes on a locked phone). Words only; nothing is worked out again or done.
+                if (parsedQ.command?.kind == com.optionslab.ira.Command.Kind.MORE && locked()) {
+                    heardAt = com.optionslab.ira.Turn.spokeEnd(turnPartialAt, turnEndAt, SystemClock.elapsedRealtime()); replyClock.heard(heardAt)
+                    when (val r = com.optionslab.ira.MoreAnswer.reply(IraHub.lastForMore(), true) { boss() }) {
+                        is com.optionslab.ira.MoreAnswer.Reply.Say -> say(com.optionslab.ira.Aloud.say(r.text, com.optionslab.ira.Aloud.Length.FULL),
+                            "answer", full = r.text, account = r.account)
+                        is com.optionslab.ira.MoreAnswer.Reply.Refused -> say(r.why)
+                    }
+                    return
+                }
                 // Muting, unmuting and the reply language are not actions: a follow-up "mute" works without the name.
                 val voiceOnly = parsedQ.command?.kind in VOICE_KINDS
                 val acts = !voiceOnly && (com.optionslab.ira.Topic.COMMAND in topics || com.optionslab.ira.Topic.ORDER in topics)
@@ -1971,7 +1992,8 @@ class JarvisVoice : Service() {
                         leading = { IraTools.figureLeadingNow() }, learned = { IraTools.lengthLearnedNow() }, shorter = { IraTools.clarityShorterNow() },
                         echo = echo, late = late,
                         // Short answers (Boss's choice, the default): one precise line; "go on" / "more" gives the rest.
-                        short = runCatching { IraTools.shortAnswers }.getOrDefault(true))
+                        // Never an action's, confirm's or command's result ([IraHub.Msg.whole]; review, 5 Oct).
+                        short = !a.whole && runCatching { IraTools.shortAnswers }.getOrDefault(true))
                     // A question that named no index, read for the one Boss usually means ([com.optionslab.ira.UsualIndex]):
                     // "BankNifty, as usual:" before the answer, so he hears which index it is for (the chat's note says it
                     // in full). Speech wording only: never on a locked phone, never before a warning, never on a late answer.
@@ -2103,18 +2125,21 @@ class JarvisVoice : Service() {
     /**
      * Unasked words (an announcement, Jarvis's own yes-or-no question): not said over Boss while he is speaking into a turn
      * - that cancelled his turn (cut-in off) or made it a cut-in turn where only the name counts. Up to 8 s, then said.
+     * [recheck]: an unasked note's words worked out again when finally said (null: not said) - the lock and quiet hours
+     * as they are then (review, 5 Oct).
      */
-    private fun sayWhenFree(text: String, id: String, tries: Int = 0) {
+    private fun sayWhenFree(text: String, id: String, tries: Int = 0, recheck: (() -> String?)? = null) {
         if (stopped) return
-        if (tries < 32 && !speaking && bossSpeaking()) { main.postDelayed({ sayWhenFree(text, id, tries + 1) }, 250); return }
+        if (tries < 32 && !speaking && bossSpeaking()) { main.postDelayed({ sayWhenFree(text, id, tries + 1, recheck) }, 250); return }
         // Speed, round 4: Boss's own answer first. A note nobody asked for just now (a coach line, a market note - never a
         // trade's own yes-or-no question) waits while his question is being answered or its reply is being said (30 s at
         // most): said over it, it flushed the reply waiting for its first sound. Urgent warnings never come here.
         if (id != "question" && tries < REPLY_FIRST_TRIES &&
             ((_state.value.mode == Mode.THINKING && answerJob?.isActive == true) || (speaking && sayingReply))) {
-            main.postDelayed({ sayWhenFree(text, id, tries + 1) }, 250); return
+            main.postDelayed({ sayWhenFree(text, id, tries + 1, recheck) }, 250); return
         }
-        say(text, id, reply = false)
+        val words = if (recheck == null) text else (runCatching { recheck() }.getOrDefault(com.optionslab.ira.Overheard.SAID) ?: return)
+        say(words, id, reply = false)
     }
 
     /** The words being said now answer Boss ([say]'s reply, an "answer" or "question"); unasked notes wait for them. */

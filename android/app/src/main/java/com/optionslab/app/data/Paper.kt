@@ -94,7 +94,11 @@ object Paper {
         val why = JSONObject(); b.why.forEach { (k, v) -> why.put(k, v) }
         Vault.writeFile(file, JSONObject().put("state", SandboxJson.encode(b.state)).put("capital", b.capital.toPlainString())
             .put("contracts", cs).put("cancelWhy", why).toString().toByteArray(Charsets.UTF_8))
+        // An order placed, changed, cancelled or filled (any caller, or the book's own tick): Jarvis's kept account
+        // figures are read afresh. Marking positions to the price alone does not count (the kept copy says its time).
+        val ordersMoved = cache.let { was -> was == null || was.state.orders != b.state.orders || was.state.trades != b.state.trades }
         cache = b
+        if (ordersMoved) runCatching { com.optionslab.app.ira.IraAccount.invalidate() }
     }
 
     private fun engine(capital: BigDecimal, contracts: Map<String, Contract>) = Sandbox(

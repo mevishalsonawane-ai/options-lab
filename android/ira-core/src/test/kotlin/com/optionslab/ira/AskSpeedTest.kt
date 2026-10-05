@@ -76,7 +76,10 @@ class AskSpeedTest {
 
     @Test fun keptFiguresNote() {
         val now = LocalTime.of(10, 45, 30)
-        assertNull(KeptFigures.note(59_000, now))
+        // Review, 5 Oct: anything kept past FRESH_MS (30 s) says its time (it used to wait for a minute).
+        assertNull(KeptFigures.note(29_999, now))
+        assertEquals("As of 10:45, Boss (I'm reading your account again now):", KeptFigures.note(30_000, now))
+        assertEquals("As of 10:44, Boss (I'm reading your account again now):", KeptFigures.note(59_000, now))
         assertEquals("As of 10:43, Boss (I'm reading your account again now):", KeptFigures.note(2 * 60_000L, now))
         assertEquals("As of 10:45, Boss (your account is slow to answer just now):", KeptFigures.note(10_000, now, slow = true))
         assertEquals("a b", KeptFigures.dress("b", "a"))
@@ -93,6 +96,11 @@ class AskSpeedTest {
         assertEquals(0L, ModelWait.left(20_000))
         assertTrue(ModelWait.another(3_000)); assertFalse(ModelWait.another(2_999))
         assertEquals(0L, ModelWait.holdAfter(loaded = false)); assertEquals(600L, ModelWait.holdAfter(loaded = true))
+        // Review, 5 Oct: the wait for "One moment" to sound only for a heard question with the model still to load.
+        assertTrue(ModelWait.waitForHold(heard = true, loaded = false, listening = true))
+        assertFalse(ModelWait.waitForHold(heard = false, loaded = false, listening = true))
+        assertFalse(ModelWait.waitForHold(heard = true, loaded = true, listening = true))
+        assertFalse(ModelWait.waitForHold(heard = true, loaded = false, listening = false))
     }
 
     @Test fun clearDropsAll() {

@@ -18,7 +18,8 @@ import java.time.LocalTime
  */
 object KeptFigures {
     const val FRESH_MS = 30_000L
-    const val NOTE_AFTER_MS = 60_000L
+    /** Figures kept this long say their time ("As of 14:05") - anything older than [FRESH_MS] (review, 5 Oct). */
+    const val NOTE_AFTER_MS = FRESH_MS
     const val SERVE_MS = 5 * 60_000L
     const val WAIT_MS = 3_000L
     const val STAND_IN_MS = 30 * 60_000L
@@ -89,4 +90,11 @@ object ModelWait {
 
     /** When to say "One moment, Boss" for free-form words: at once when the model must load first, else after 0.6 s. */
     fun holdAfter(loaded: Boolean): Long = if (loaded) 600L else 0L
+
+    /**
+     * Does the model wait (up to [HOLD_FIRST_MS]) for "One moment" to start sounding? Only for a [heard] question (a typed
+     * one has no line to wait for) with the model still to load ([loaded]: no load competes with the voice, and "One
+     * moment" is not said before 0.6 s anyway), while Jarvis is [listening] and not muted (review, 5 Oct).
+     */
+    fun waitForHold(heard: Boolean, loaded: Boolean, listening: Boolean): Boolean = heard && !loaded && listening
 }

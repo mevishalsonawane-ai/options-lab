@@ -194,7 +194,12 @@ object Broker {
                 Diag.record("zerodha", "$where$asked$route -> FAILED ${e.javaClass.simpleName}: ${e.message} (${System.currentTimeMillis() - t0} ms)")
             throw e
         } finally {
-            if (method != "GET") passBook.drop()
+            if (method != "GET") {
+                passBook.drop()
+                // Jarvis's kept account figures are dropped too (an order, a change, a cancel or a GTT, from any screen,
+                // a strategy or the guard): no answer is said from before it ([com.optionslab.app.ira.IraAccount.invalidate]).
+                runCatching { com.optionslab.app.ira.IraAccount.invalidate() }
+            }
         }
     }
 

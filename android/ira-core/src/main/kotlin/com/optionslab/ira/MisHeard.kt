@@ -58,6 +58,9 @@ object MisHeard {
         if (Hinglish.hasHindi(text)) return false
         // Any digit: a level or a strike said short ("24500?") is a real question.
         if (w.any { x -> x.any { it.isDigit() } }) return false
+        // A word that may act ("exit", "close it", "square off", "flatten", "pause"...) is never a mis-hear (review, 5 Oct):
+        // it goes on to be read as before ([exitHint] for the exits), never acted on from here.
+        if (ACTS.containsMatchIn(t) || runCatching { Intents.mayMean(text) }.getOrDefault(true)) return false
         val q = Ask.parse(text)
         if (q.command != null || q.order != null || q.markets.isNotEmpty()) return false
         // Only words read as nothing - or "why you": a "why" at Jarvis with nothing to ask about.
@@ -113,9 +116,27 @@ object MisHeard {
         return null
     }
 
-    /** Words that may act: a rescued reading never holds one. */
+    /** Words that may act: a rescued reading never holds one, and they are never a fragment. */
     private val ACTS = rx(" (stop|start|cancel|close|exit|kill|square|buy|sell|place|pause|resume|switch|turn|mute|unmute|approve|reject|confirm|" +
-        "enable|disable|set|remind|alarm|book|modify|trail|hedge|roll|run|arm|arms|live|paper|autopilot) ")
+        "enable|disable|set|remind|alarm|book|modify|trail|hedge|roll|run|arm|arms|live|paper|autopilot|flatten|halt|get out|shut) ")
+
+    /** Said for an exit-like word that is no command by itself ("exit", "close it", "square off"): how to ask for it. */
+    const val EXIT_HINT = "Say 'close all' or 'exit all', Boss, and I'll ask you to confirm."
+
+    private val EXIT_LIKE = rx("^((ok |okay |please |jarvis )*)(exit|exit it|exit now|exit trade|exit everything|close|close it|close now|close everything|" +
+        "square off|square it off|square up|square off now|flatten|flatten it|flatten everything|get out|get me out|get out now|get us out)( please| now| boss| jarvis)*$")
+
+    /**
+     * [text] is an exit-like word ("exit", "close it", "square off", "square up", "flatten", "get out") that is no command
+     * by itself: the hint ([EXIT_HINT]) to say instead, else null. Words only - nothing is ever closed from here; "close
+     * all" / "exit all" are commands with their own confirm.
+     */
+    fun exitHint(text: String): String? = runCatching {
+        val t = words(text).joinToString(" ")
+        if (!EXIT_LIKE.matches(t)) return@runCatching null
+        val q = Ask.parse(text)
+        if (q.command != null || q.order != null) null else EXIT_HINT
+    }.getOrNull()
 
     /** "face the face the laws" -> "face the laws": a run of one to three words said twice in a row, once. */
     fun withoutRepeats(text: String): String {

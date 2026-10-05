@@ -88,6 +88,73 @@ class ShortAnswerTest {
         assertEquals("The 15-minute trend is up. Support is 22,400.", s.rest)
     }
 
+    // ---- review, 5 Oct ------------------------------------------------------------------------------------------
+
+    /** The reviewer's three examples: a failure is never cut from the line. */
+    @Test fun failuresAreNeverDropped() {
+        val set = "NIFTY24500PE (Zerodha, 75) had no stop, so I set one at 102.00, 15% under the 120.00 you paid. "
+        // 1. The guard's report with a failed protection.
+        val g = line(null, set + "Not protected: Insufficient funds. Required margin is 1200.")
+        assertTrue(g.contains("Not protected: Insufficient funds."), g)
+        // 2. An order's result, asked or not.
+        for (q in listOf("close all", null)) {
+            val r = line(q, "Sent to Zerodha: BUY 1 lot NIFTY 24500 PE. REJECTED 0 at 0.00 (order 12345678)")
+            assertTrue(r.contains("REJECTED"), r)
+            val c = line(q, "Done: closed NIFTY24500PE. Zerodha refused the exit for BANKNIFTY52000CE: market closed.")
+            assertTrue(c.contains("Zerodha refused the exit for BANKNIFTY52000CE"), c)
+            val p = line(q, "Closed 2 of 3 positions. BANKNIFTY52000CE failed: Zerodha rejected the order.")
+            assertTrue(p.contains("BANKNIFTY52000CE failed"), p)
+        }
+        // 3. A confirmed exit with a failed leg.
+        for (r in listOf("Kill switch on. Stopped 2 strategies for today. Paper: SELL 75 NIFTY24500PE filled at 90.00. Failed: no live price for BANKNIFTY52000CE, try again.",
+                "Paper: SELL 75 NIFTY24500PE filled at 90.00 (order 1234). Zerodha refused: RMS rule, order blocked for BANKNIFTY52000CE.")) {
+            val l = line("yes", r)
+            assertTrue(l.contains("Failed: no live price") || l.contains("Zerodha refused"), l)
+        }
+        for (s in listOf("Not protected: x.", "It failed.", "Zerodha refused it.", "The order was rejected.", "Not sent.", "Not placed.",
+                "Kill switch not set: x.", "I could not cancel it.", "Insufficient funds."))
+            assertTrue(ShortAnswer.safety(s), s)
+        assertFalse(ShortAnswer.safety("Nifty is at 24,612."))
+    }
+
+    @Test fun negativeFundsAreRead() {
+        val f = "Paper funds: Rs 4,00,000.00 available, Rs 0.00 in use. Zerodha funds: Rs -12,000.50 available, Rs 50,000.00 used, net Rs 38,000.00."
+        assertEquals("Available: paper Rs 4,00,000, Zerodha Rs -12,001.", line("what are my funds", f))
+        // A funds sentence the line cannot read: the fallback for the whole answer, never one account silently left out.
+        val odd = "Paper funds: Rs 4,00,000.00 available, Rs 0.00 in use. Zerodha funds: not read just now."
+        val l = line("what are my funds", odd)
+        assertFalse(l.startsWith("Available: paper"), l)
+        assertTrue(l.contains("Paper funds"), l)
+    }
+
+    @Test fun keptFiguresLeadStaysInFront() {
+        val note = KeptFigures.note(120_000L, java.time.LocalTime.of(14, 7))!!
+        val both = note + " " + AppFacts.pnl("Paper", 2575.4, 1000.0, 1575.4) + " " + AppFacts.pnl("Zerodha", -8200.0, -8000.0, -200.0)
+        assertEquals("$note Paper +Rs 2,575, Zerodha -Rs 8,200 today.", line("what's my pnl", both))
+        val pos = note + " Paper: 2 open positions. 1. Paper position NIFTY24500PE: 75 at 120.00, now 90.00, -Rs 2,250.00. Zerodha: 1 open position."
+        assertEquals("$note Positions: paper 2 open, Zerodha 1 open.", line("my positions", pos))
+        val slow = KeptFigures.note(10_000L, java.time.LocalTime.of(14, 7), slow = true)!!
+        val funds = "$slow Paper funds: Rs 4,00,000.00 available, Rs 0.00 in use. Zerodha funds: Rs 50,000.00 available, Rs 0.00 used, net Rs 50,000.00."
+        assertEquals("$slow Available: paper Rs 4,00,000, Zerodha Rs 50,000.", line("my funds", funds))
+        assertEquals(both, ShortAnswer.of("what's my pnl", both).details)
+    }
+
+    @Test fun paperLabelInAnyCase() {
+        val l = line(null, "Your stop on NIFTY24500PE is now 102.00, trailed up from 95.00 as the price rose to 140.00. Paper only - nothing at Zerodha changes.")
+        assertTrue(l.contains("Paper only"), l)
+        assertTrue(ShortAnswer.safety("PAPER MODE: nothing is sent."))
+        // The metal's name is no label.
+        assertFalse(ShortAnswer.safety("Gold is at 71,250."))
+    }
+
+    @Test fun listNumberStaysWithItsItem() {
+        val a = "2 of 3 strategies and arms are switched on. 1. ORB 15 (ORB, stop 40): on today -Rs 1,200.00, 2 trades today. 2. Gap fade (Pine, x): on today +Rs 300.00."
+        assertEquals(listOf("2 of 3 strategies and arms are switched on.", "1. ORB 15 (ORB, stop 40): on today -Rs 1,200.00, 2 trades today.",
+            "2. Gap fade (Pine, x): on today +Rs 300.00."), ShortAnswer.sentences(a))
+        // A list item is data: its "stop" is no warning, so it is not pulled into the line without its number.
+        assertEquals("2 of 3 strategies and arms are switched on.", line("my strategies", a))
+    }
+
     @Test fun kinds() {
         assertEquals(ShortAnswer.Kind.PNL, ShortAnswer.kind("what's the P&L today"))
         assertEquals(ShortAnswer.Kind.OTHER, ShortAnswer.kind("my p&l this week"))

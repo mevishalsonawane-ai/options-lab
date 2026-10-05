@@ -11,7 +11,7 @@ import kotlin.test.assertTrue
 /** Voice, round 26: Boss's diagnostics, 5 Oct (Pixel 9, en-US recognizer). */
 class MisHeardTest {
     @Test fun bossesFragmentsAreMisHeard() {
-        for (s in listOf("bus", "pause", "calculation", "peppermine", "office schedule", "what s the piano", "what's the piano", "why you", "Bus.", "piano"))
+        for (s in listOf("bus", "calculation", "peppermine", "office schedule", "what s the piano", "what's the piano", "why you", "Bus.", "piano"))
             assertTrue(MisHeard.fragment(s, voice = true), s)
     }
 
@@ -34,6 +34,30 @@ class MisHeardTest {
         assertFalse(MisHeard.fragment("tell me about the office schedule", voice = true))
         assertFalse(MisHeard.fragment("", voice = true))
         assertFalse(MisHeard.fragment("   ", voice = true))
+    }
+
+    /** Review, 5 Oct: words that may act are never "say it again" - they are read on, and nothing here acts. */
+    @Test fun actionWordsAreNeverFragments() {
+        for (s in listOf("exit", "close it", "square off", "square up", "flatten", "get out", "pause", "resume", "halt", "Exit.", "close"))
+            assertFalse(MisHeard.fragment(s, voice = true), s)
+        // Still fragments: words that cannot act.
+        for (s in listOf("bus", "piano", "calculation")) assertTrue(MisHeard.fragment(s, voice = true), s)
+    }
+
+    @Test fun exitLikeWordsGetTheHintNeverAnAction() {
+        for (s in listOf("exit", "close it", "square off", "square up", "flatten", "get out", "Exit.", "jarvis exit", "square off please"))
+            assertEquals(MisHeard.EXIT_HINT, MisHeard.exitHint(s), s)
+        assertEquals("Say 'close all' or 'exit all', Boss, and I'll ask you to confirm.", MisHeard.EXIT_HINT)
+        // A command ("close all", "exit position") is read as that command, with its own confirm: no hint.
+        for (s in listOf("close all", "exit all", "exit position", "close trade", "pause", "resume", "bus", "how is nifty", ""))
+            assertNull(MisHeard.exitHint(s), s)
+        // The hint is words only: the parser never reads it as a command or an order.
+        val q = Ask.parse(MisHeard.EXIT_HINT)
+        assertNull(q.order)
+        // The exit-like words themselves are no command (they get the hint; nothing is closed from them).
+        for (s in listOf("exit", "close it", "square off", "flatten", "get out")) assertNull(Ask.parse(s).command, s)
+        // A rescue never turns them into a question either.
+        for (s in listOf("exit", "close it", "square off", "flatten", "get out", "pause", "resume")) assertNull(MisHeard.rescue(s), s)
     }
 
     @Test fun typedKeepsTodaysBehaviourButASingleNonWord() {

@@ -379,7 +379,8 @@ object KiteStream {
     private fun onText(text: String) {
         val o = runCatching { org.json.JSONObject(text) }.getOrNull() ?: return
         when (o.optString("type")) {
-            "order" -> _orderEvents.value = System.currentTimeMillis()
+            // (An order changed at Zerodha - from Kite web too: Jarvis's kept account figures are read afresh.)
+            "order" -> { _orderEvents.value = System.currentTimeMillis(); runCatching { com.optionslab.app.ira.IraAccount.invalidate() } }
             // e.g. a token Kite no longer accepts: kept in the diary (scrubbed), once a minute per message.
             "error" -> {
                 val said = StreamHealth.scrub(o.optString("data"), listOf(Broker.streamToken(), Broker.apiKey))
