@@ -1223,7 +1223,7 @@ object IraHub {
                 com.optionslab.ira.NewsMoves.asked(q) != null || com.optionslab.ira.PreMarket.asked(q) ||
                 com.optionslab.ira.ChainDrift.asked(q) != null ||
                 com.optionslab.ira.Headroom.asked(q) != null ||
-                com.optionslab.ira.SaidAbout.asked(q) != null ||
+                com.optionslab.ira.SaidAbout.asked(q) != null || com.optionslab.ira.WeekAhead.asked(q) != null ||
                 com.optionslab.ira.NeedsTrue.asked(q) ||
                 com.optionslab.ira.Clarity.asked(q) != null || com.optionslab.ira.DayClock.asked(q) != null ||
                 com.optionslab.ira.GapRecord.asked(q) != null ||
@@ -1426,6 +1426,32 @@ object IraHub {
             _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
             if (phoneLocked()) { reply("Unlock the phone for that, Boss."); return }
             scope.launch(Dispatchers.IO) { reply(runCatching { IraSaidAbout.answer(saidAsk) }.getOrElse { "I could not read your notes just now, Boss." }) }
+            return
+        }
+        // "What does this week look like?", "is this an expiry week?", "plan for next week", "is hafte kya hai"
+        // ([com.optionslab.ira.WeekAhead]): the week's sessions, expiries (weekly, monthly, moved by a holiday), holidays, long
+        // breaks and events from the exchange calendar and the loaded contracts. Calendar facts only, nothing acts; the events
+        // Boss added are said only on an unlocked phone (else their count). (Before "when is the next expiry" and the holiday
+        // answers, which keep their one-line questions.)
+        val weekAsk = if (!bundled && parsed.order == null && parsed.command == null && !com.optionslab.app.BuildConfig.GOLD)
+            runCatching { com.optionslab.ira.WeekAhead.asked(q) }.getOrNull() else null
+        if (weekAsk != null) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            val unlocked = !phoneLocked()
+            scope.launch(Dispatchers.IO) {
+                val said = runCatching {
+                    val today = com.optionslab.app.data.Market.today()
+                    val book = com.optionslab.app.data.Holidays.book()
+                    val exp = com.optionslab.ira.WeekAhead.INDICES.associateWith { m ->
+                        runCatching { com.optionslab.app.data.Market.upcomingExpiries(m.name) }.getOrDefault(emptyList()) }
+                    com.optionslab.ira.WeekAhead.answer(weekAsk, today, com.optionslab.app.data.Market.minuteNow() >= 15 * 60 + 30,
+                        { d -> com.optionslab.app.data.Market.isTradingDay(d) },
+                        { d -> if (book.holiday(d)) book.upcoming(d).firstOrNull { it.first == d }?.second ?: "a market holiday" else null },
+                        exp, com.optionslab.ira.Events.builtIn(today, today.plusDays(21)),
+                        runCatching { IraEvents.owner() }.getOrDefault(emptyList()), unlocked)
+                }.getOrElse { "I could not read the calendar just now, Boss." }
+                reply(said)
+            }
             return
         }
         // "Is your data fresh?" / "how old are your prices?": how old his prices, candles, news and chain are, and today's
