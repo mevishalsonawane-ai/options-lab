@@ -1257,6 +1257,23 @@ object IraHub {
             scope.launch { reply(runCatching { chainIntel(chainAsk, markets) }.getOrElse { "I could not read the option chain just now, Boss." }) }
             return
         }
+        // "What's the structure today?", "is Nifty making higher highs?", "where are the swing levels?", "trend or range so
+        // far?": today's intraday structure from the 1-minute candles on the phone ([com.optionslab.ira.Structure]), numbers with
+        // times. Market data only (fine on a locked phone); facts only, never advice or a forecast. (Before the market answers:
+        // the day's story must not take "so far", nor the account "trend or range so far".)
+        val structureAsk = if (parsed.order == null && parsed.command == null && !com.optionslab.app.BuildConfig.GOLD)
+            runCatching { com.optionslab.ira.Structure.asked(q) }.getOrNull() else null
+        if (structureAsk != null) {
+            val said = runCatching {
+                val mk = com.optionslab.ira.Structure.market(parsed.markets)
+                if (mk == null) com.optionslab.ira.Structure.NOT_HERE
+                else com.optionslab.ira.Structure.answer(structureAsk, mk, histories[mk]?.bars.orEmpty(),
+                    com.optionslab.app.data.Market.today(), LocalDateTime.now(IST))
+            }.getOrElse { "I could not read today's structure just now, Boss." }
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            reply(said)
+            return
+        }
         // "Make the case", "pros and cons of trading now", "talk me through it": the trade check reasoned out, facts both
         // ways (Boss's own day, goals and rules only on an unlocked phone). Words only; the decision is Boss's. (Before the
         // other answers: these whole questions are this, and the glossary or a plan must not read "explain" or "and" in them.)

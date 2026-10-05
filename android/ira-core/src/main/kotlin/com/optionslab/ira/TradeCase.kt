@@ -79,6 +79,8 @@ object TradeCase {
         val watch: List<String>,
         val locked: Boolean,
         val chain: List<String> = emptyList(),
+        /** Nifty's intraday structure so far in one line ([Structure.caseLine]), a fact; null without enough of today's candles. */
+        val structure: String? = null,
     ) {
         fun say(): String {
             val parts = ArrayList<String>()
@@ -87,6 +89,7 @@ object TradeCase {
             if (careful.isNotEmpty()) parts += "On the careful side: " + careful.joinToString(" ")
             if (steady.isNotEmpty()) parts += "On the steady side: " + steady.joinToString(" ")
             if (standout.isNotEmpty()) parts += "What stands out about today: " + standout.joinToString(" ")
+            structure?.let { parts += it }
             if (chain.isNotEmpty()) parts += "From the option chain: " + chain.joinToString(" ")
             if (watch.isNotEmpty()) parts += "What I'd watch: " + watch.joinToString("; ") { it.trimEnd('.') } + "."
             if (locked) parts += LOCKED_NOTE
@@ -232,7 +235,9 @@ object TradeCase {
             .forEach { watch += "coming up: " + Events.line(it, today).removePrefix("Event ").trimEnd('.') }
 
         return Case(n.reads, (steady + basics).distinct().take(MAX_STEADY), careful.distinct().take(MAX_CAREFUL),
-            standout.take(MAX_STANDOUT), watch.distinct().take(MAX_WATCH), i.locked, i.chain.distinct().take(MAX_CHAIN))
+            standout.take(MAX_STANDOUT), watch.distinct().take(MAX_WATCH), i.locked, i.chain.distinct().take(MAX_CHAIN),
+            // Nifty's structure so far from today's candles (market data, so said on a locked phone too): a fact, not a call.
+            if (n.tradingDay) i.bars[Market.NIFTY]?.let { runCatching { Structure.caseLine(Market.NIFTY, it, today) }.getOrNull() } else null)
     }
 
     /** Boss's own side: his goals, his rules, what he told about himself and his habits around a trade. */
