@@ -1636,7 +1636,7 @@ object IraHub {
         // ([com.optionslab.ira.NewsDesk]) - the same event from different outlets as one story with its source count, tagged
         // by what it touches; "moved" only as timing against today's sharp moves, never a cause. Headlines and market data
         // only (fine on a locked phone); facts and sources, never advice or a forecast. Not in the GOLD build (no news read there).
-        val deskAsk = if (parsed.order == null && parsed.command == null && !com.optionslab.app.BuildConfig.GOLD)
+        val deskAsk = if (!bundled && parsed.order == null && parsed.command == null && !com.optionslab.app.BuildConfig.GOLD)
             runCatching { com.optionslab.ira.NewsDesk.asked(q) }.getOrNull() else null
         // A news question with no recent headlines on the phone: the feeds are read first (8 seconds at most), then answered.
         if ((Topic.NEWS in parsed.topics || deskAsk != null) && testHistories == null && System.currentTimeMillis() - newsCheckedAt > 3 * 60_000 && online() &&
