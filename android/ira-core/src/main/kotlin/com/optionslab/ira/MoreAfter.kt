@@ -46,8 +46,13 @@ object MoreAfter {
     /** One "more" after a short line: the answer's kind ([Clarity.kind]'s key) and when. Never words. */
     data class Note(val at: LocalDateTime, val kind: String)
 
-    /** The "more"s noted, and when Boss last asked to keep his short answers short (nothing before it counts). */
-    data class Log(val notes: List<Note> = emptyList(), val resetAt: LocalDateTime? = null)
+    /**
+     * The "more"s noted, when Boss last asked to keep his short answers short (nothing before it counts), and each kind
+     * learned with the counts it was learned on ([settle]). Once a kind is said in full Boss has no short line to say "more"
+     * after, so its later asks would only shrink the share and un-learn it, then learn it again: the count is frozen at
+     * learning and the kind stays learned until the undo ([reset]) clears it.
+     */
+    data class Log(val notes: List<Note> = emptyList(), val resetAt: LocalDateTime? = null, val learnedAt: Map<String, Record> = emptyMap())
 
     private fun norm(text: String) = " " + spacedWords(text.lowercase().replace("'", "").replace("’", "")) + " "
 
@@ -77,14 +82,24 @@ object MoreAfter {
         return Clarity.kind(question)
     }
 
-    /** [log] with Boss's "more" after a short answer of [kind] at [at] noted; older than the window (and past [KEEP]) dropped. */
-    fun heard(log: Log, kind: String, at: LocalDateTime): Log {
+    /**
+     * [log] with Boss's "more" after a short answer of [kind] at [at] noted; older than the window (and past [KEEP]) dropped.
+     * With the kinds [tally], a kind learned by it is frozen there and then ([settle]).
+     */
+    fun heard(log: Log, kind: String, at: LocalDateTime, tally: DoubtTally? = null): Log {
         val from = at.minusDays(WINDOW_DAYS)
-        return log.copy(notes = (log.notes.filter { it.at.isAfter(from) } + Note(at, kind)).sortedBy { it.at }.takeLast(KEEP))
+        val noted = log.copy(notes = (log.notes.filter { it.at.isAfter(from) } + Note(at, kind)).sortedBy { it.at }.takeLast(KEEP))
+        return if (tally != null) settle(noted, tally, at) else noted
     }
 
-    /** "Keep my short answers short": nothing before [now] counts any more. */
-    fun reset(now: LocalDateTime): Log = Log(emptyList(), now)
+    /** [log] with each kind learned at [now] and not yet frozen kept with the counts it was learned on ([Log.learnedAt]). */
+    fun settle(log: Log, tally: DoubtTally, now: LocalDateTime): Log {
+        val fresh = counted(log, tally, now).filter { it.kind !in log.learnedAt }
+        return if (fresh.isEmpty()) log else log.copy(learnedAt = log.learnedAt + fresh.associateBy { it.kind })
+    }
+
+    /** "Keep my short answers short": nothing before [now] counts any more, and nothing learned stays learned. */
+    fun reset(now: LocalDateTime): Log = Log(emptyList(), now, emptyMap())
 
     /** A learned kind: "more" asked after it [more] times of the [asked] times Boss asked it, on [days] days, the newest at [newest]. */
     data class Record(val kind: String, val more: Int, val asked: Int, val days: Int, val newest: LocalDateTime) {
@@ -92,8 +107,20 @@ object MoreAfter {
         fun say(): String = "you asked for more after $more of my $asked $phrase, on $days days"
     }
 
-    /** The kinds learned at [now] from [log] against [tally] (how often each kind was asked), the clearest first. */
+    /**
+     * The kinds learned at [now] from [log] against [tally] (how often each kind was asked), the clearest first: those frozen
+     * when learned ([settle]) as they were learned - the asks after it, answered in full, never un-learn them - and the rest
+     * counted afresh.
+     */
     fun learned(log: Log, tally: DoubtTally, now: LocalDateTime): List<Record> {
+        val kept = log.learnedAt.values.filter { r -> !r.newest.isAfter(now) && log.resetAt.let { it == null || r.newest.isAfter(it) } }
+        val keptKinds = kept.map { it.kind }.toSet()
+        return (kept + counted(log, tally, now).filter { it.kind !in keptKinds })
+            .sortedWith(compareByDescending<Record> { it.more.toDouble() / it.asked }.thenByDescending { it.more }.thenBy { it.kind })
+    }
+
+    /** The kinds that meet the bar at [now], counted over the window from the notes and the [tally] alone. */
+    private fun counted(log: Log, tally: DoubtTally, now: LocalDateTime): List<Record> {
         val from = listOfNotNull(now.minusDays(WINDOW_DAYS), log.resetAt).max()
         val notes = log.notes.filter { it.at.isAfter(from) && !it.at.isAfter(now) }
         if (notes.isEmpty()) return emptyList()
@@ -107,7 +134,7 @@ object MoreAfter {
             val days = xs.map { it.at.toLocalDate() }.distinct().size
             if (more < MIN_MORE || days < MIN_DAYS || more < SHARE * of) null
             else Record(k, more, of, days, xs.maxOf { it.at })
-        }.sortedWith(compareByDescending<Record> { it.more.toDouble() / it.asked }.thenByDescending { it.more }.thenBy { it.kind })
+        }
     }
 
     /** Is a question of kind [kind] ([Clarity.kind], read once by the caller; null: none) one to say in full straight away? */

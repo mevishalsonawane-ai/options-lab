@@ -1632,7 +1632,10 @@ internal object IraTools {
         com.optionslab.ira.MoreAfter.Log(
             notes = (0 until n.length()).map { i -> n.getJSONObject(i).let { x ->
                 com.optionslab.ira.MoreAfter.Note(LocalDateTime.parse(x.getString("t")), x.getString("k")) } },
-            resetAt = o.optString("r").takeIf { it.isNotEmpty() }?.let { LocalDateTime.parse(it) })
+            resetAt = o.optString("r").takeIf { it.isNotEmpty() }?.let { LocalDateTime.parse(it) },
+            learnedAt = (o.optJSONArray("l") ?: JSONArray()).let { l -> (0 until l.length()).mapNotNull { i -> runCatching { l.getJSONObject(i).let { x ->
+                com.optionslab.ira.MoreAfter.Record(x.getString("k"), x.getInt("m"), x.getInt("a"), x.getInt("d"), LocalDateTime.parse(x.getString("t"))) } }.getOrNull() }
+                .associateBy { it.kind } })
     }.getOrDefault(com.optionslab.ira.MoreAfter.Log()).also { moreAfterCache = it }
 
     @Synchronized private fun moreAfterUpdate(f: (com.optionslab.ira.MoreAfter.Log) -> com.optionslab.ira.MoreAfter.Log) {
@@ -1642,6 +1645,8 @@ internal object IraTools {
             moreAfterCache = log
             val o = JSONObject().put("n", JSONArray().apply { log.notes.forEach { x -> put(JSONObject().put("t", x.at.toString()).put("k", x.kind)) } })
             log.resetAt?.let { o.put("r", it.toString()) }
+            if (log.learnedAt.isNotEmpty()) o.put("l", JSONArray().apply { log.learnedAt.values.forEach { r ->
+                put(JSONObject().put("k", r.kind).put("m", r.more).put("a", r.asked).put("d", r.days).put("t", r.newest.toString())) } })
             prefs().putAllSoon(mapOf(MORE_AFTER to o.toString()))
         }
     }
@@ -1662,7 +1667,8 @@ internal object IraTools {
         val kind = com.optionslab.ira.MoreAfter.kindAfter(last.question, last.text) ?: return
         val now = minuteNow()
         val before = moreAfterLearnedNow().any { it.kind == kind }
-        moreAfterUpdate { com.optionslab.ira.MoreAfter.heard(it, kind, now) }
+        val tally = askedKinds()
+        moreAfterUpdate { com.optionslab.ira.MoreAfter.heard(it, kind, now, tally) }
         if (!before) moreAfterLearnedNow().firstOrNull { it.kind == kind }?.let { r ->
             IraActivity.add(com.optionslab.ira.MoreAfter.learnedNote(r))
         }

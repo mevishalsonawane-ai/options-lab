@@ -2486,6 +2486,17 @@ class CollisionTest {
         "aage batao", "aage bolo", "poori baat batao", "full answer", "give me the full answer", "say the whole thing", "the whole thing",
         "the full answer please")
 
+    /** Review, round 26: a move's time asked on a weekday is Weekdays' record, never MoveTime's; MoveTime's own hours route as before. */
+    @Test fun aWeekdayMoveIsWeekdays() {
+        for (s in listOf("how often does nifty move 0.5% in 15 minutes on mondays", "how often does nifty move 50 points in 30 minutes on fridays")) {
+            assertEquals(null, MoveTime.asked(s), s)
+            assertEquals("Weekdays", audit.feature(s), "$s: ${hits(s)}")
+            neverActs(s)
+        }
+        for (s in listOf("how often does nifty move 50 points in 3 hours", "how often does nifty move 50 points in an hour and a half"))
+            assertEquals("MoveTime", audit.feature(s), "$s: ${hits(s)}")
+    }
+
     @Test fun roundTwentySixWordingsRouteAndNeverAct() {
         assertEquals(ROUND26.size, ROUND26.map { it.first }.distinct().size)
         val wrong = ROUND26.mapNotNull { (s, want) -> audit.feature(s).let { got -> if (got == want) null else "\"$s\": wanted $want, got $got ${hits(s)}" } }

@@ -62,6 +62,34 @@ class MoveTimeTest {
             assertNull(MoveTime.asked(q), q)
     }
 
+    @Test fun theWindowAsSaid() {
+        // Hours, an hour and a half, and Hindi hours (review, round 26): never the 30-minute default instead.
+        assertEquals(MoveTime.Q(pts = 50.0, window = 180), MoveTime.asked("how often does nifty move 50 points in 3 hours"))
+        assertEquals(MoveTime.Q(pts = 50.0, window = 90), MoveTime.asked("how often does nifty move 50 points in an hour and a half"))
+        assertEquals(MoveTime.Q(pts = 50.0, window = 90), MoveTime.asked("how often does nifty move 50 points in 1.5 hours"))
+        assertEquals(MoveTime.Q(pts = 50.0, window = 90), MoveTime.asked("how often does nifty move 50 points in one and a half hours"))
+        assertEquals(MoveTime.Q(pts = 50.0, window = 150), MoveTime.asked("how often does nifty move 50 points in two and a half hours"))
+        assertEquals(MoveTime.Q(pts = 50.0, window = 120), MoveTime.asked("how often does nifty move 50 points in 2 hours"))
+        assertEquals(MoveTime.Q(pts = 50.0, window = 120), MoveTime.asked("how often does nifty move 50 points in two hours"))
+        assertEquals(MoveTime.Q(pts = 50.0, window = 60), MoveTime.asked("how often does nifty move 50 points in 1 hour"))
+        assertEquals(MoveTime.Q(pts = 50.0, window = 60), MoveTime.asked("how often does nifty move 50 points in an hour"))
+        assertEquals(MoveTime.Q(pts = 50.0, window = 30), MoveTime.asked("how often does nifty move 50 points in half an hour"))
+        assertEquals(MoveTime.Q(pts = 50.0, window = 120), MoveTime.asked("nifty 50 points 2 ghante mein kitni baar chalta hai"))
+        assertEquals(MoveTime.Q(pts = 50.0, window = 90), MoveTime.asked("nifty 50 points dedh ghante mein kitni baar chalta hai"))
+        // Asked how many minutes: no window said, the default.
+        assertEquals(MoveTime.Q(pts = 200.0), MoveTime.asked("how many minutes does banknifty take to move 200 points"))
+        // Out of range or not readable: left alone, never answered for 30 minutes.
+        for (q in listOf("how often does nifty move 50 points within 1000 minutes", "how often does nifty move 50 points in 4 hours",
+                "how often does nifty move 50 points in 10 hours", "how often does nifty move 50 points in a few hours",
+                "how often does nifty move 50 points in 2 minutes", "how often does nifty move 50 points in 1.5 minutes",
+                "how often does nifty move 50 points in several hours"))
+            assertNull(MoveTime.asked(q), q)
+        // A weekday is Weekdays' record.
+        for (q in listOf("how often does nifty move 0.5% in 15 minutes on mondays", "how often does nifty move 50 points in 30 minutes on fridays",
+                "somvar ko nifty 50 points kitne time mein chalta hai"))
+            assertNull(MoveTime.asked(q), q)
+    }
+
     @Test fun theRecord() {
         val xs = MoveTime.past(steady(20), today, 0.0, 50.0)
         // 23 quarter-hour starts from 09:30 to 15:00 in each of 20 whole sessions.

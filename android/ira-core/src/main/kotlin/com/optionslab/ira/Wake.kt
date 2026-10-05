@@ -121,16 +121,23 @@ object Wake {
     }
 
     private fun english(text: String): Boolean? {
+        // "No, problem" / "No. Problem.": a "no" said on its own and then something else - not the idiom. The marks are
+        // gone once the words are read, so it is caught here and read as the no it starts with (the safe side).
+        val split = SPLIT_IDIOM.containsMatchIn(text.lowercase())
         val t = " " + text.lowercase().replace(rx("[^a-z ]"), " ").replace(rx("\\s+"), " ").trim() + " "
         if (t.isBlank()) return null
         // "Why not", "no problem": a yes said with a no word in it (voice round 25) - it used to cancel the request. Read
         // as a yes only when nothing else is said, or what else is said is itself a clear yes; with any other words
         // ("why not the other one") it is unclear, and with a no ("no problem, leave it") a no. Unclear is never a yes.
-        if (YES_IDIOM.containsMatchIn(t)) {
+        if (!split && YES_IDIOM.containsMatchIn(t)) {
             val rest = t.replace(YES_IDIOM, " ").replace(ANSWER_EXTRA, " ").replace(rx("\\s+"), " ").trim()
             if (rest.isEmpty()) return true
             val e = english(rest); val h = Hinglish.yesNo(rest)
-            return if (e == false || h == false) false else if (e == true || h == true) true else null
+            if (e == false || h == false) return false
+            // Boss doing it himself ("no problem, I will do it myself", "no worries, I'll take it from here") is not a yes
+            // to Jarvis doing it: only bare yes words may follow the idiom; anything else is unclear, never a yes.
+            if (SELF.containsMatchIn(" $rest ")) return null
+            return if (" $rest ".replace(BARE_YES, " ").isBlank()) true else null
         }
         if (rx(" (no+|nope|nah|not|not now|don t|dont|do not|reject|rejected|cancel|skip|leave it|stop|wait|never|negative|abort|hold off|hold on|decline|declined|deny|denied|later) ").containsMatchIn(t)) return false
         if (rx(" (yes|yeah|yep|yup|sure|approve|approved|confirm|confirmed|go ahead|go for it|do it|please do|place it|buy it|take it|ok|okay|alright|all right|affirmative|positive|absolutely|definitely|certainly|of course|correct) ").containsMatchIn(t)) return true
@@ -139,6 +146,12 @@ object Wake {
 
     /** A yes said with a no word in it ([english]). */
     private val YES_IDIOM = rx("(?<= )(why not|no problem|not a problem|no worries|no issues?)(?= )")
+    /** The idiom broken by a mark ("no, problem", "No. Problem."): a no and then other words ([english]). */
+    private val SPLIT_IDIOM = rx("\\b(why|no|not a)\\s*[^a-z0-9\\s']+\\s*(not|problem|worries|issues?)\\b")
+    /** Boss as the one who acts ("I will", "myself", "main khud"): after a yes idiom, never read as a yes ([english]). */
+    private val SELF = rx(" (i|i ll|ill|i will|i m|im|i am|myself|me|mine|my|manually|main|mai|mein|khud|apne aap) ")
+    /** The only words that may follow a yes idiom and keep it a yes ([english]). */
+    private val BARE_YES = rx("(?<= )(yes|yeah|yep|yup|sure|ok|okay|alright|all right|go ahead|go for it|please do|do it|haan|haa|han|ji haan|bilkul|zaroor|zarur|theek hai|thik hai|kar do|kardo|kar dijiye|kar dijie|kar dena|chalo|chalega|ho jaye)(?= )")
     /** Words that only address or soften ("Jarvis", "Boss", "please"): nothing to read in a yes or a no. */
     private val ANSWER_EXTRA = rx("(?<= )(jarvis|boss|sir|please|yaar|bhai|ji|then|so|well|oh|ah|um|uh|hmm)(?= )")
 

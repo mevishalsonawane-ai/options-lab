@@ -33,6 +33,22 @@ class YesNoWordsTest {
             assertEquals(null, Wake.yesNo(s), s)
     }
 
+    @Test fun bossDoingItHimselfIsNotAYes() {
+        // The idiom then Boss as the one who acts: unclear at most, never a yes (review, round 26).
+        for (s in listOf("no problem, I will do it myself", "no worries, I will take it from here",
+                "no problem, I will place it myself", "no worries boss, I will buy it myself",
+                "no problem, I will do it manually", "no problem I'll handle it", "no problem, main khud kar lunga",
+                "why not, I'll buy it later myself"))
+            assertEquals(true, Wake.yesNo(s) != true, s)
+        // A "no" broken off by a mark is a no, not the idiom.
+        for (s in listOf("no, problem", "No. Problem.", "No! Worries", "why. not"))
+            assertEquals(true, Wake.yesNo(s) != true, s)
+        // Bare yes words after the idiom still say yes.
+        for (s in listOf("no problem", "no problem, go ahead", "why not", "no problem, ok go ahead", "no worries, haan kar do",
+                "no problem Jarvis, do it"))
+            assertEquals(true, Wake.yesNo(s), s)
+    }
+
     @Test fun earlierAnswersReadAsBefore() {
         assertEquals(true, Wake.yesNo("ji haan, kar do")); assertEquals(false, Wake.yesNo("mat karo"))
         assertEquals(false, Wake.yesNo("haan... nhi")); assertEquals(false, Wake.yesNo("not now"))

@@ -107,10 +107,19 @@ object MoveTime {
     private val COUNTING = Regex(" (how often|how many times|kitni baar|kitni bar) ")
     private val SIZE = Regex(" (\\d+(?:\\.\\d+)?) ?(%|percent|per cent|pc|pct) ")
     private val POINTS = Regex(" (\\d{1,5}(?:\\.\\d+)?) ?(points|point|pts|pt) ")
-    private val MINUTES = Regex(" (\\d{1,3}) ?(minutes|minute|mins|min|minat|mint) ")
+    private val MINUTES = Regex(" (\\d+) ?(minutes|minute|mins|min|minat|mint) ")
     private val HALF_HOUR = Regex(" (half an hour|half hour|aadhe ghante|adhe ghante|aadha ghanta|adha ghanta) ")
-    private val ONE_HOUR = Regex(" (an hour|one hour|1 hour|ek ghante|ek ghanta|1 ghante|1 ghanta) ")
-    private val TWO_HOURS = Regex(" (two hours|2 hours|do ghante|2 ghante) ")
+    /** "An hour and a half", "one and a half hours", "dedh ghanta": 90 minutes; "two and a half hours", "dhai ghante": 150 (review, round 26). */
+    private val HOUR_HALF = Regex(" ((an|one|1) (hour|hr) and (a )?half|(one|1) and a half (hours|hour|hrs)|dedh (ghante|ghanta|hour|hours)) ")
+    private val TWO_HALF = Regex(" ((two|2) (hours|hrs) and (a )?half|(two|2) and a half (hours|hrs)|dhai (ghante|ghanta|hours)) ")
+    /** "3 hours", "1.5 hours", "teen ghante", "an hour": the hours said, read to minutes. */
+    private val HOURS = Regex(" (\\d+(?:\\.\\d+)?|an|a|one|two|three|four|five|six|ek|do|teen|char|chaar|paanch|panch|chhe) ?(hours|hour|hrs|hr|ghante|ghanta|ghanton) ")
+    private val HOUR_WORDS = mapOf("an" to 1.0, "a" to 1.0, "one" to 1.0, "two" to 2.0, "three" to 3.0, "four" to 4.0, "five" to 5.0, "six" to 6.0,
+        "ek" to 1.0, "do" to 2.0, "teen" to 3.0, "char" to 4.0, "chaar" to 4.0, "paanch" to 5.0, "panch" to 5.0, "chhe" to 6.0)
+    /** A length of time said that none of the above reads ("a few hours", "several minutes", "kuch ghante"): never read as the default. */
+    private val SOME_TIME = Regex(" (few|several|couple of|couple|some|kuch|kai|\\d+(?:\\.\\d+)?) (hours|hour|hrs|hr|ghante|ghanta|ghanton|minutes|minute|mins|min) ")
+    /** A window said but not read ([window]): the question is left alone rather than answered for 30 minutes. */
+    private const val UNREAD = -1
     // A forecast or advice, Boss's own book, a what-if, alerts and reminders, the app's bots, stock screens, a definition, a
     // reason, today, now, one past move, days or sessions (MultiDay's), the open, the first or last hour or the close, the
     // gap, a comeback, candles, a week, a month, expiry, options, gold or VIX, and Jarvis's or the app's own speed.
@@ -122,7 +131,10 @@ object MoveTime {
         "overnight|night|gap|gaps|recover|recovers|recovery|comeback|bounce|fill|fills|candle|candles|bar|bars|" +
         "week|weekly|weeks|hafte|month|monthly|months|year|years|expiry|expiries|" +
         "call|calls|put|puts|premium|premiums|option|options|ce|pe|strike|strikes|straddle|strangle|theta|gold|vix|fear|" +
-        "position|positions|portfolio|stop|stops|sl|target|news|order|orders|reply|answer|respond|load|loads|login|connect|you|jarvis|app) ")
+        "position|positions|portfolio|stop|stops|sl|target|news|order|orders|reply|answer|respond|load|loads|login|connect|you|jarvis|app|" +
+        // A weekday is Weekdays' record ("how often does Nifty move 0.5% in 15 minutes on Mondays"; review, round 26).
+        "monday|mondays|tuesday|tuesdays|wednesday|wednesdays|thursday|thursdays|friday|fridays|weekday|weekdays|" +
+        "somvar|somwar|mangalvar|mangalwar|budhvar|budhwar|guruvar|guruwar|shukravar|shukrawar) ")
 
     /** What was asked, or null: the record of how long the index took to travel a distance, never a forecast or advice. */
     fun asked(text: String): Q? = askedKept.of(text) { askedFresh(text) }
@@ -130,14 +142,18 @@ object MoveTime {
     /** The last words read (the hub reads them as said, then again in its order; [Kept], pure). */
     private val askedKept = Kept<Q?>(64)
 
+    /** The window said in minutes, null when none is, or [UNREAD] when one is said that cannot be read. */
     private fun window(t: String): Int? {
-        MINUTES.find(t)?.groupValues?.get(1)?.toIntOrNull()?.let { return it }
-        return when {
-            HALF_HOUR.containsMatchIn(t) -> 30
-            TWO_HOURS.containsMatchIn(t) -> 120
-            ONE_HOUR.containsMatchIn(t) -> 60
-            else -> null
+        MINUTES.find(t)?.let { m -> return m.groupValues[1].toIntOrNull() ?: UNREAD }
+        if (HOUR_HALF.containsMatchIn(t)) return 90
+        if (TWO_HALF.containsMatchIn(t)) return 150
+        if (HALF_HOUR.containsMatchIn(t)) return 30
+        HOURS.find(t)?.let { m ->
+            val h = m.groupValues[1].let { HOUR_WORDS[it] ?: it.toDoubleOrNull() } ?: return UNREAD
+            val mins = h * 60
+            return if (mins == Math.rint(mins) && mins < 100_000) mins.toInt() else UNREAD
         }
+        return if (SOME_TIME.containsMatchIn(t)) UNREAD else null
     }
 
     private fun askedFresh(text: String): Q? {

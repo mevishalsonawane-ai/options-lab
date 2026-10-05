@@ -60,6 +60,31 @@ class MoreAfterTest {
         assertEquals(3, MoreAfter.learned(three, emptyMap(), now).single().asked)
     }
 
+    @Test fun staysLearnedWhileItsAnswersAreSaidInFull() {
+        // Learned on three "more"s of four asks (review, round 26)...
+        val t = tally(today.minusDays(2) to 2, today.minusDays(1) to 2)
+        val l = listOf(now.minusDays(2), now.minusDays(1).minusHours(2), now.minusDays(1))
+            .fold(MoreAfter.Log()) { acc, at -> MoreAfter.heard(acc, kind, at, t) }
+        assertEquals(setOf(kind), l.learnedAt.keys)
+        // ...then twenty more asks said in full, with no "more" after them (there is no short line to say it after): still learned,
+        // on the counts it was learned on - the share of the later asks never un-learns it.
+        val later = tally(today.minusDays(2) to 2, today.minusDays(1) to 2, today to 20)
+        assertTrue(MoreAfter.learned(l.copy(learnedAt = emptyMap()), later, now).isEmpty())
+        val r = MoreAfter.learned(l, later, now).single()
+        assertEquals(kind, r.kind); assertEquals(3, r.more); assertEquals(4, r.asked)
+        assertEquals(r, MoreAfter.learned(l, tally(today.plusDays(40) to 50), now.plusDays(45)).single())
+        assertTrue(MoreAfter.detailed(levels, MoreAfter.learned(l, later, now)))
+        // A kind not yet learned is not frozen; settling twice changes nothing.
+        assertEquals(l, MoreAfter.settle(l, later, now))
+        assertTrue(MoreAfter.heard(MoreAfter.Log(), kind, now, t).learnedAt.isEmpty())
+        // The undo clears it, and the count starts afresh.
+        val undone = MoreAfter.reset(now.plusMinutes(1))
+        assertTrue(undone.learnedAt.isEmpty())
+        assertTrue(MoreAfter.learned(undone, later, now.plusMinutes(2)).isEmpty())
+        // A frozen kind from before an undo never counts.
+        assertTrue(MoreAfter.learned(l.copy(resetAt = now), later, now.plusMinutes(2)).isEmpty())
+    }
+
     @Test fun saidInFullOnlyForThatKind() {
         val rs = listOf(MoreAfter.Record(kind, 3, 4, 2, now))
         assertTrue(MoreAfter.detailed(levels, rs))
