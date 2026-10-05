@@ -1265,7 +1265,7 @@ object IraHub {
                 com.optionslab.ira.NewsMoves.asked(q) != null || com.optionslab.ira.PreMarket.asked(q) ||
                 com.optionslab.ira.ChainDrift.asked(q) != null || com.optionslab.ira.SinceMorning.asked(q) ||
                 com.optionslab.ira.ExpiryPin.asked(q) != null ||
-                com.optionslab.ira.Headroom.asked(q) != null || com.optionslab.ira.ArmDay.asked(q) != null || com.optionslab.ira.NetLean.asked(q) || com.optionslab.ira.BotTrades.asked(q) != null ||
+                com.optionslab.ira.Headroom.asked(q) != null || com.optionslab.ira.ArmFit.asked(q) || com.optionslab.ira.ArmDay.asked(q) != null || com.optionslab.ira.NetLean.asked(q) || com.optionslab.ira.BotTrades.asked(q) != null ||
                 com.optionslab.ira.ExpiryEve.asked(q) || com.optionslab.ira.BeforeTomorrow.asked(q) ||
                 com.optionslab.ira.SwitchOff.asked(q) != null ||
                 com.optionslab.ira.SaidAbout.asked(q) != null || com.optionslab.ira.WeekAhead.asked(q) != null ||
@@ -2129,7 +2129,7 @@ object IraHub {
 
     /**
      * [ask]'s question branches on the records and Boss's own setup: NewsMoves, TaxRecords, Learnings (and its undo),
-     * PreMarket, Headroom, BotTrades, SwitchOff, SaidAbout, WeekAhead, ZerodhaSession, OrderWhy, RelayHealth, StreamHealth, BatteryUse, WatchAsk - in [ask]'s order. True when one
+     * PreMarket, Headroom, ArmFit, BotTrades, SwitchOff, SaidAbout, WeekAhead, ZerodhaSession, OrderWhy, RelayHealth, StreamHealth, BatteryUse, WatchAsk - in [ask]'s order. True when one
      * took [q], answered exactly as before; each branch keeps its own guard (not [bundled], no order, no command).
      */
     private fun askedOfRecords(q: String, parsed: com.optionslab.ira.Question, bundled: Boolean, understood: Boolean): Boolean {
@@ -2235,6 +2235,22 @@ object IraHub {
             _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
             if (phoneLocked()) { reply("Unlock the phone for that, Boss."); return true }
             scope.launch(Dispatchers.IO) { reply(runCatching { IraHeadroom.answer(roomAsk) }.getOrElse { "I could not read your limits just now, Boss." }) }
+            return true
+        }
+        // "Which of my arms suits today?", "how do my arms do on days like today?", "aaj ke din kaun sa bot suit karta hai"
+        // ([com.optionslab.ira.ArmFit]): today's BankNifty start banded (the gap's size, the first hour's range among the past
+        // sessions' thirds, India VIX) and each armed arm's backtest and paper days split on each band - today's band against
+        // the rest, in rupees a day and days up. Boss's account, so never on a locked phone; facts beside facts, never a
+        // verdict, a forecast or advice - nothing is armed, stopped, placed or closed. (Before ArmDay; the daily regime, "which
+        // arms suit this market", stays the account's. Not in IraGoldAlgo.)
+        val armFitAsk = com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null &&
+            runCatching { com.optionslab.ira.ArmFit.asked(q) }.getOrDefault(false)
+        if (armFitAsk) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            if (phoneLocked()) { reply(com.optionslab.ira.ArmFit.LOCKED); return true }
+            val bankNifty = histories[IraMarket.BANKNIFTY]?.bars.orEmpty()
+            val vix = histories[IraMarket.VIX]?.bars.orEmpty()
+            scope.launch(Dispatchers.IO) { reply(runCatching { IraBots.armFit(bankNifty, vix) }.getOrElse { "I could not set your arms' records beside today just now, Boss." }) }
             return true
         }
         // "Why did my strategy lose today?", "why did ORB lose?", "what went wrong with Range Fade today?", "ORB ka aaj loss kyun

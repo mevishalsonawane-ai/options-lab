@@ -13,6 +13,7 @@ import java.time.LocalDateTime
  */
 internal object IraBots {
     private const val TESTED_KEY = "jarvis.bots.tested"
+    private const val TESTED_DAYS_KEY = "jarvis.bots.testedDays"
     private const val TOLD_KEY = "jarvis.bots.told"
     private const val SOLO = "Solo"
 
@@ -27,7 +28,25 @@ internal object IraBots {
                 .put("winRate", t.winRate ?: 0.0).put("worst", t.worstStreak ?: 0).put("dd", t.maxDrawdown ?: 0.0))
         }
         com.optionslab.app.security.SecurePrefs.put(TESTED_KEY, o.toString())
+        // And each arm's rupees by the day (one lot; dates and rupees only), for "which of my arms suits today?".
+        val byDay = org.json.JSONObject()
+        r.trades.groupBy { it.arm }.forEach { (src, ts) ->
+            val label = labels[src] ?: return@forEach
+            val d = org.json.JSONObject()
+            com.optionslab.ira.ArmFit.daily(ts.map { it.day to it.net }).forEach { (day, net) -> d.put(day.toString(), net) }
+            byDay.put(label, d)
+        }
+        com.optionslab.app.security.SecurePrefs.put(TESTED_DAYS_KEY, byDay.toString())
     }
+
+    /** Each arm's backtest rupees by the day, by its label (empty until the nightly study has kept them). */
+    private fun armTestedDays(): Map<String, Map<java.time.LocalDate, Double>> = runCatching {
+        val o = org.json.JSONObject(com.optionslab.app.security.SecurePrefs.getString(TESTED_DAYS_KEY) ?: "{}")
+        o.keys().asSequence().associateWith { k ->
+            val d = o.getJSONObject(k)
+            d.keys().asSequence().mapNotNull { day -> runCatching { java.time.LocalDate.parse(day) to d.getDouble(day) }.getOrNull() }.toMap()
+        }
+    }.getOrDefault(emptyMap())
 
     private fun armTested(): Map<String, BotHealth.Tested> = runCatching {
         val o = org.json.JSONObject(com.optionslab.app.security.SecurePrefs.getString(TESTED_KEY) ?: "{}")
@@ -163,6 +182,21 @@ internal object IraBots {
                 p.charges, p.live, p.level, p.target, p.ladder, p.peak)
         }
         return com.optionslab.ira.ArmDay.answer(q, trades, bars, v.range, com.optionslab.app.data.Market.now().toLocalDateTime())
+    }
+
+    /**
+     * "Which of my arms suits today?" ([com.optionslab.ira.ArmFit]): each arm's switch, its backtest by the day and its closed
+     * paper trades by the day, set beside today's BankNifty start ([bankNifty], India VIX's [vix]). Reads only; nothing is
+     * armed, stopped, placed or closed.
+     */
+    suspend fun armFit(bankNifty: List<com.optionslab.ira.Candle>, vix: List<com.optionslab.ira.Candle>): String {
+        val armed = com.optionslab.app.data.OrbArms.view().arms.associate { it.arm.label to it.armed }
+        val paper = bots().filter { it.where == "Paper" && it.name in armed }
+            .associate { b -> b.name to com.optionslab.ira.ArmFit.daily(b.trades.map { it.openedAt.toLocalDate() to it.net }) }
+        val tested = armTestedDays()
+        val arms = armed.map { (name, on) -> com.optionslab.ira.ArmFit.Arm(name, on, tested[name].orEmpty(), paper[name].orEmpty()) }
+        val mk = com.optionslab.app.data.Market
+        return com.optionslab.ira.ArmFit.answer(arms, bankNifty, vix, mk.today(), mk.now().toLocalDateTime())
     }
 
     /**
