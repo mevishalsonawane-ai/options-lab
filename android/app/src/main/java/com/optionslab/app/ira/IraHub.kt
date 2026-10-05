@@ -1224,7 +1224,7 @@ object IraHub {
                 com.optionslab.ira.ChainDrift.asked(q) != null ||
                 com.optionslab.ira.Headroom.asked(q) != null ||
                 com.optionslab.ira.NeedsTrue.asked(q) ||
-                com.optionslab.ira.Clarity.asked(q) != null }.getOrDefault(false)) {
+                com.optionslab.ira.Clarity.asked(q) != null || com.optionslab.ira.DayClock.asked(q) != null }.getOrDefault(false)) {
             val prev = if (recent) _state.value.messages.lastOrNull { !it.fromIra }?.text else null
             val qs = runCatching { com.optionslab.ira.Understand.questions(prev, q) }.getOrNull()
                 ?.takeIf { it.isNotEmpty() && it != listOf(q) && it.none { p -> lockedAccount(q, p) } }
@@ -1471,6 +1471,23 @@ object IraHub {
             _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
             val markets = parsed.markets
             scope.launch { reply(runCatching { chainIntel(chainAsk, markets) }.getOrElse { "I could not read the option chain just now, Boss." }) }
+            return
+        }
+        // "When does Nifty usually make its high?", "is the low of the day usually in by now?", "which half hour moves the
+        // most?": the index's day clock from the whole past sessions of 1-minute candles on the phone ([com.optionslab.ira.DayClock])
+        // beside today's own times. A record of past days, never a forecast or advice; market data only (fine on a locked phone).
+        // (Before the structure: "where was today's high" stays its; this is the usual time of day.)
+        val clockAsk = if (!bundled && parsed.order == null && parsed.command == null && !com.optionslab.app.BuildConfig.GOLD)
+            runCatching { com.optionslab.ira.DayClock.asked(q) }.getOrNull() else null
+        if (clockAsk != null) {
+            val said = runCatching {
+                val mk = com.optionslab.ira.DayClock.market(parsed.markets)
+                if (mk == null) com.optionslab.ira.DayClock.NOT_HERE
+                else com.optionslab.ira.DayClock.answer(clockAsk, mk, histories[mk]?.bars.orEmpty(),
+                    com.optionslab.app.data.Market.today(), LocalDateTime.now(IST))
+            }.getOrElse { "I could not read the day clock just now, Boss." }
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            reply(said)
             return
         }
         // "What's the structure today?", "is Nifty making higher highs?", "where are the swing levels?", "trend or range so

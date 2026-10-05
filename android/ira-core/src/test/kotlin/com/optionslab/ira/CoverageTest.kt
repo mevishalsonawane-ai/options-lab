@@ -27,7 +27,7 @@ class CoverageTest {
     private fun route(said: String): List<Kind> {
         if (Corrections.wordsAsked(said) || Corrections.forgetWordAsked(said) != null) return listOf(Kind.JARVIS)
         if (Routine.asked(said) || Routine.forgetAsked(said)) return listOf(Kind.ACCOUNT)
-        val asSaid = Sources.asked(said) || PatternCalls.asked(said) || ChainDrift.asked(said) != null || Headroom.asked(said) != null
+        val asSaid = Sources.asked(said) || PatternCalls.asked(said) || ChainDrift.asked(said) != null || Headroom.asked(said) != null || DayClock.asked(said) != null
         return ((if (asSaid) null else Understand.questions(null, said)) ?: listOf(said)).map { kind(it, 0) }
     }
 
@@ -42,7 +42,7 @@ class CoverageTest {
             if (AlertSense.asked(q) != null || Airtime.asked(q) || PatternCalls.asked(q) || DataAge.asked(q)) return Kind.JARVIS
             if (Honest.asked(q) != null) return Kind.HONEST
             if (Thinking.asked(q) != null || Consistency.asked(q)) return Kind.JARVIS
-            if (ChainDrift.asked(q) != null || ChainIntel.asked(q) != null || Structure.asked(q) != null || TradeCase.asked(q) || Scenarios.asked(q) != null) return Kind.MARKET
+            if (ChainDrift.asked(q) != null || ChainIntel.asked(q) != null || DayClock.asked(q) != null || Structure.asked(q) != null || TradeCase.asked(q) || Scenarios.asked(q) != null) return Kind.MARKET
         }
         if (SelfCheck.asked(q)) return Kind.JARVIS
         if (p.command != null || p.order != null || Topic.ORDER in p.topics || Topic.COMMAND in p.topics) return Kind.ACT
@@ -405,7 +405,7 @@ class CoverageTest {
      * Which feature answers [said] in Jarvis (not GOLD), taking IraHub.ask's branches in its own order (app/.../IraHub.kt,
      * ask(): Boss's learned words and routine as said, fillers and follow-ups, then - for a question not said with
      * something to do (IraHub's `bundled`, [Bundle.acts]) - DayJournal, AlertSense, Airtime, PatternCalls, DataAge, Honest,
-     * Thinking, Consistency, ChainDrift, ChainIntel, Structure, TradeCase, Scenarios, Agenda, Improve; the reminders and Jarvis's own
+     * Thinking, Consistency, ChainDrift, ChainIntel, DayClock, Structure, TradeCase, Scenarios, Agenda, Improve; the reminders and Jarvis's own
      * checks, Distance... Outlook, NewsDesk, down to the account's sections (PositionHealth and BotHealth are its HEALTH and
      * BOTS), a pattern explained, Solo and IraHub.reasoned's readers over the candles, each in its
      * place). Over the pure readers only (what Boss's corrections taught depends on what is kept, and is left out); a
@@ -419,7 +419,7 @@ class CoverageTest {
         if (!understood && (Routine.asked(said) || Routine.forgetAsked(said))) return "Routine"
         val asSaid = Sources.asked(said) || AboutBoss.knowAsked(said) || Memory.recallAsked(said) || Memory.forgetAsked(said) ||
             Corrections.wordsAsked(said) || Corrections.forgetWordAsked(said) != null || Routine.asked(said) || Routine.forgetAsked(said) ||
-            PatternCalls.asked(said) || ChainDrift.asked(said) != null || Headroom.asked(said) != null || NeedsTrue.asked(said) || Clarity.asked(said) != null
+            PatternCalls.asked(said) || ChainDrift.asked(said) != null || Headroom.asked(said) != null || NeedsTrue.asked(said) || Clarity.asked(said) != null || DayClock.asked(said) != null
         val qs = if (asSaid || understood || cleaned) null else Understand.questions(null, said)?.takeIf { it.isNotEmpty() && it != listOf(said) }
         if (qs != null) return if (qs.size == 1) feature(qs[0], cleaned = true) else qs.joinToString(" & ") { feature(it, understood = true) }
         val q = said
@@ -441,6 +441,7 @@ class CoverageTest {
         if (alone && Consistency.asked(q)) return "Consistency"
         if (alone && ChainDrift.asked(q) != null) return "ChainDrift"
         if (alone && ChainIntel.asked(q) != null) return "ChainIntel"
+        if (alone && DayClock.asked(q) != null) return "DayClock"
         if (alone && Structure.asked(q) != null) return "Structure"
         if (alone && TradeCase.asked(q)) return "TradeCase"
         if (alone && Scenarios.asked(q) != null) return "Scenarios"
@@ -645,6 +646,12 @@ class CoverageTest {
         "how much do i lose if nifty falls 1%" to "Account:MOVE", "if nifty drops 200 points what happens to my p&l" to "Account:MOVE",
         "what's my exposure if banknifty moves 500 points" to "Account:MOVE",
         "what if i had taken that trade" to "Account:WHATIF",
+        // ---- DayClock: when the high and low usually come, by now, and the busiest half hour (round 13) ----
+        "when does nifty usually make its high" to "DayClock", "what time does banknifty normally make its low" to "DayClock",
+        "when is the day's high usually made" to "DayClock", "nifty ka high kab banta hai" to "DayClock",
+        "is the low of the day usually in by now" to "DayClock", "how often is the high already made by this time" to "DayClock",
+        "which half hour moves the most" to "DayClock", "is the lunch hour usually quiet" to "DayClock",
+        "busiest time of the day for banknifty" to "DayClock", "nifty day clock" to "DayClock",
         // ---- Structure: today's intraday structure - higher highs, swing levels, trend or range so far ----
         "what's the structure today" to "Structure", "what's the structure" to "Structure", "market structure" to "Structure",
         "what is the market structure today" to "Structure", "nifty structure today" to "Structure",
