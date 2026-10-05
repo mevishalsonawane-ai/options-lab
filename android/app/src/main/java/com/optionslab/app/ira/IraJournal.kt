@@ -151,7 +151,7 @@ internal object IraJournal {
     }
 
     private suspend fun pnlNow(): Double? = runCatching {
-        if (AppSettings.load().live && Broker.loggedIn) null else Paper.snapshot().dayPnl
+        if (AppSettings.load().live && Broker.loggedIn) null else Paper.snapshot(Paper.SHARED_QUOTE_MS).dayPnl
     }.getOrNull()
 
     /** The day's target reached: told once, with the advice to protect the gains and stop. */
@@ -185,7 +185,7 @@ internal object IraJournal {
         if (!com.optionslab.app.BuildConfig.JARVIS || !Automations.on(Automations.Auto.STALE) || !com.optionslab.app.data.Market.isOpen()) return
         val now = LocalDateTime.now(IST)
         val open = ArrayList<Triple<String, Boolean, Pair<Double, Double>>>()   // symbol, live, (avg, ltp)
-        runCatching { Paper.snapshot().positions.positions.filter { it.quantity > 0 }.forEach { open += Triple(it.symbol, false, it.averagePrice to it.ltp) } }
+        runCatching { Paper.snapshot(Paper.SHARED_QUOTE_MS).positions.positions.filter { it.quantity > 0 }.forEach { open += Triple(it.symbol, false, it.averagePrice to it.ltp) } }
         if (Broker.loggedIn) runCatching { Broker.passPositionBook().net.filter { it.qty > 0 }.forEach { open += Triple(it.symbol, true, it.avg to it.last) } }
         val keys = open.map { (s, l, _) -> (if (l) "L:" else "P:") + s }.toSet()
         synchronized(firstSeen) { firstSeen.keys.retainAll(keys) }
@@ -211,7 +211,7 @@ internal object IraJournal {
     /** The positions held now, by index and side (bots' too: news is about the money at risk). */
     suspend fun held(): List<com.optionslab.ira.PositionNews.Held> {
         val out = ArrayList<com.optionslab.ira.PositionNews.Held>()
-        runCatching { Paper.snapshot().positions.positions.filter { it.quantity != 0 }.forEach { p ->
+        runCatching { Paper.snapshot(Paper.SHARED_QUOTE_MS).positions.positions.filter { it.quantity != 0 }.forEach { p ->
             val c = Paper.contractOf(p.symbol) ?: return@forEach
             val m = marketOf(c.underlying) ?: return@forEach
             out += com.optionslab.ira.PositionNews.Held(p.symbol, m, c.right == com.optionslab.engine.Right.CE, p.quantity > 0)

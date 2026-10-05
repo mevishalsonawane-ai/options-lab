@@ -152,7 +152,7 @@ object PositionCards {
         val s = runCatching { AppSettings.load() }.getOrNull() ?: return
         val now = HashMap<String, Unit>()
         val owners = runCatching { com.optionslab.app.data.Strategies.owners() }.getOrDefault(emptyMap())
-        runCatching { Paper.snapshot() }.getOrNull()?.let { snap -> snap.positions.positions.map { it to snap.trades } }?.forEach { (p, trades) ->
+        runCatching { Paper.snapshot(Paper.SHARED_QUOTE_MS) }.getOrNull()?.let { snap -> snap.positions.positions.map { it to snap.trades } }?.forEach { (p, trades) ->
             val key = "Paper|${p.symbol}"
             if (p.quantity != 0) {
                 now[key] = Unit

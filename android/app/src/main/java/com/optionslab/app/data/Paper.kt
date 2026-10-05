@@ -171,13 +171,31 @@ object Paper {
     /** The contract's latest price from the paper feed, or null when there is none today. */
     suspend fun lastPrice(c: Contract): Double? = runCatching { quote(c) }.getOrNull()?.ltp
 
-    /** Every symbol's quote, fetched in parallel (one round trip for the whole book, not one per position). */
-    private suspend fun quotes(symbols: Collection<String>): Map<String, Quote> = kotlinx.coroutines.coroutineScope {
+    /**
+     * Every symbol's quote, fetched in parallel (one round trip for the whole book, not one per position). [reuseMs] > 0
+     * (words and cards only, [snapshot]): a price this process read at most that long ago is used instead of a new read.
+     */
+    private suspend fun quotes(symbols: Collection<String>, reuseMs: Long = 0L): Map<String, Quote> = kotlinx.coroutines.coroutineScope {
         val b = book()
         symbols.distinct().mapNotNull { s -> b.contracts[s]?.let { c -> s to c } }
-            .map { (s, c) -> async { runCatching { quote(c) }.getOrNull()?.let { Sandbox.key(s, "NFO") to it } } }
+            .map { (s, c) -> async { runCatching { if (reuseMs > 0L) recentQuote(c, reuseMs) else quote(c) }.getOrNull()?.let { Sandbox.key(s, "NFO") to it } } }
             .mapNotNull { it.await() }.toMap()
     }
+
+    /**
+     * Battery (round 5): the stream's tick (no network), else a price read in the last [maxAgeMs], else a fresh read.
+     * Without a Zerodha session every paper price is a download of the contract's whole day of 1-minute candles, and a
+     * watch pass read it once for the stops ([tick]) and again, seconds later, for the position cards and for each
+     * words-only check ([snapshot] with [SHARED_QUOTE_MS]). The feed moves once a minute; the stops always read fresh.
+     */
+    private suspend fun recentQuote(c: Contract, maxAgeMs: Long): Quote? {
+        streamQuote(c)?.let { return it.also { remember(c.symbol, it) } }
+        lastQuotes[c.symbol]?.let { (at, q) -> if (System.currentTimeMillis() - at in 0..maxAgeMs) return q }
+        return quote(c)
+    }
+
+    /** How old a price the words-only checks and the position cards may share ([snapshot]); never the stops or limits. */
+    const val SHARED_QUOTE_MS = 20_000L
 
     /** Symbols the engine needs prices for: open orders and open positions. */
     private fun watched(s: SandboxState): Set<String> =
@@ -312,9 +330,13 @@ object Paper {
         }
     }
 
-    /** Views, priced with fresh quotes where the engine uses them. */
-    suspend fun snapshot(): Snapshot {
-        val q = quotes(watched(book().state) + book().state.holdings.map { it.symbol })
+    /**
+     * Views, priced with fresh quotes where the engine uses them. [reuseQuotesMs] > 0 only for words and cards (never the
+     * loss limit, the square-off, stops or anything that orders): a price read that recently is used again; the book
+     * itself is always read as it is now.
+     */
+    suspend fun snapshot(reuseQuotesMs: Long = 0L): Snapshot {
+        val q = quotes(watched(book().state) + book().state.holdings.map { it.symbol }, reuseQuotesMs)
         synchronized(this) {
             val b = book()
             val e = engine(b.capital, b.contracts)

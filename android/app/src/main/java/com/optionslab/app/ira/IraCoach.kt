@@ -282,7 +282,7 @@ internal object IraCoach {
             !com.optionslab.app.data.Market.isOpen()) return
         val s = runCatching { AppSettings.load() }.getOrNull() ?: return
         val open = ArrayList<com.optionslab.ira.HeadsUp.Pos>()
-        runCatching { Paper.snapshot().takeIf { it.priced }?.positions?.positions.orEmpty().filter { it.quantity != 0 }.forEach {
+        runCatching { Paper.snapshot(Paper.SHARED_QUOTE_MS).takeIf { it.priced }?.positions?.positions.orEmpty().filter { it.quantity != 0 }.forEach {
             open += com.optionslab.ira.HeadsUp.Pos("P:${it.symbol}", it.symbol, false, it.quantity, it.averagePrice, it.ltp) } }
         if (Broker.loggedIn) {
             // The read blocks on the network: run apart, so the 15 s limit really ends the wait (the read itself may go on).
@@ -700,7 +700,7 @@ internal object IraCoach {
             return g.delta to g.gamma
         }
         val out = ArrayList<com.optionslab.ira.Exposure.Leg>()
-        runCatching { Paper.snapshot().positions.positions.filter { it.quantity != 0 }.forEach { p ->
+        runCatching { Paper.snapshot(Paper.SHARED_QUOTE_MS).positions.positions.filter { it.quantity != 0 }.forEach { p ->
             val c = Paper.contractOf(p.symbol)
             val g = c?.let { runCatching { greeks(it.right, it.underlying, it.strike, it.expiry, p.ltp) }.getOrNull() }
             out += com.optionslab.ira.Exposure.Leg("Paper", p.symbol, p.quantity, p.averagePrice, p.ltp, c?.underlying, g?.first, g?.second)
@@ -755,7 +755,7 @@ internal object IraCoach {
                 else com.optionslab.engine.options.OptionType.PE, s, strike, t, price)?.greeks?.theta
         }
         val out = ArrayList<com.optionslab.ira.PositionHealth.Pos>()
-        runCatching { Paper.snapshot().positions.positions.filter { it.quantity != 0 }.forEach { p ->
+        runCatching { Paper.snapshot(Paper.SHARED_QUOTE_MS).positions.positions.filter { it.quantity != 0 }.forEach { p ->
             val c = Paper.contractOf(p.symbol)
             val q = if (c == null) null else kotlinx.coroutines.withTimeoutOrNull(5_000) { runCatching { Paper.quote(c) }.getOrNull() }
             val pr = prot.firstOrNull { !it.live && it.symbol == p.symbol }
@@ -995,7 +995,7 @@ internal object IraCoach {
         fun spot(u: String?): Double? = u?.let { runCatching { com.optionslab.ira.Market.valueOf(it) }.getOrNull() }
             ?.let { m -> runCatching { IraHub.state.value.snaps[m]?.price }.getOrNull() }
         val legs = ArrayList<com.optionslab.ira.ExpiryEve.Leg>()
-        runCatching { Paper.snapshot().positions.positions.filter { it.quantity != 0 }.forEach { p ->
+        runCatching { Paper.snapshot(Paper.SHARED_QUOTE_MS).positions.positions.filter { it.quantity != 0 }.forEach { p ->
             val c = Paper.contractOf(p.symbol) ?: return@forEach
             if (c.expiry != expiry) return@forEach
             val right = c.right.name.takeIf { it == "CE" || it == "PE" }
