@@ -32,7 +32,7 @@ object Warm {
         Intents::mayMean, Intents::prompt, LastHour::asked, Latency::asked, LeadIndex::asked, LeadPart::asked, Learnings::asked, Learnings::undoAsked,
         Lessons::asked, LevelInfo::asked, LikeToday::asked, Lookback::prevAsked, Lookback::time, LunchRange::asked,
         MarketMemory::asked, MarketStory::asked, Memory::forgetAsked, Memory::recallAsked, Memory::toKeep, MindChange::asked,
-        Momentum::asked, MonthReview::asked, MonthTurns::asked, MorningAsks::asked, MorningSense::asked, { Moves.asked(it) }, MyNumbers::asked, NextAsk::asked, MyStreaks::asked, NeedsTrue::asked,
+        Momentum::asked, MonthReview::asked, MonthTurns::asked, MorningAsks::asked, MorningSense::asked, { Moves.asked(it) }, MultiDay::asked, MyNumbers::asked, NextAsk::asked, MyStreaks::asked, NeedsTrue::asked,
         NetLean::asked, NetLean::market, NewsDesk::asked, NewsMoves::asked, Nicknames::asked, Odds::asked,
         OpenHighLow::asked, OpenReach::asked, OpeningRange::asked, OptionFacts::asked, OptionQuote::asked, OrderWhy::asked, Outlook::asked, OutlookCheck::asked, Overnight::asked,
         OutsideApp::asked, OutsideApp::say, PatternCalls::asked, Payoff::asked, PeriodMove::asked, Pivots::asked,

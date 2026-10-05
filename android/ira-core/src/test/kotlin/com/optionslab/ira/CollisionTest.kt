@@ -147,6 +147,7 @@ class CollisionTest {
         "Overnight" to { q -> Overnight.asked(q) != null },
         "DayAfter" to { q -> DayAfter.asked(q) != null },
         "OpenReach" to { q -> OpenReach.asked(q) != null },
+        "MultiDay" to { q -> MultiDay.asked(q) != null },
         "Weekdays" to { q -> Weekdays.asked(q) != null },
         "DayCompare" to { q -> DayCompare.asked(q) != null },
         "LikeToday" to { q -> LikeToday.asked(q) },
@@ -792,6 +793,13 @@ class CollisionTest {
         // Its neighbours: the open as the day's low, the opening range's breaks, a fall from the previous close.
         "how often does finnifty open at its low" to "OpenHighLow", "do opening range breakouts usually hold" to "RangeBreaks",
         "how often does banknifty recover a 1% fall during the day" to "Comebacks",
+        // ---- MultiDay: how far a few sessions went from the close they started from (round 37) ----
+        "how far does nifty usually move in 3 sessions" to "MultiDay", "how often does nifty move 2% in 3 days" to "MultiDay",
+        "how often does banknifty stay within 1.5% over 4 sessions" to "MultiDay", "3 day move record for sensex" to "MultiDay",
+        "teen din mein nifty kitna chalta hai" to "MultiDay", "how often does finnifty move 300 points in 5 sessions" to "MultiDay",
+        // Its neighbours: a calendar week's range, the day after a big day, the reach from the open.
+        "how big is a normal week for finnifty" to "WeekRange", "does nifty bounce the day after a big down day" to "DayAfter",
+        "how often does sensex go 1% from the open" to "OpenReach",
         // ---- MorningSense: the morning check items said briefly ----
         "which morning items do you skip" to "MorningSense", "which morning check items do you leave out" to "MorningSense",
         "morning check ka kya skip karte ho" to "MorningSense", "read me the whole morning check" to "MorningSense",
@@ -1250,7 +1258,7 @@ class CollisionTest {
     /** The question branches of IraHub.ask between the `bundled` read and the Plan block, in [CoverageTest.feature]'s order. */
     private val HUB_ORDER = listOf("DayJournal", "AlertSense", "Airtime", "Hearing", "PatternCalls", "TrendReads", "OutsideApp", "Clarity", "WordFit", "AskedAgain", "FigureFirst", "WrongThing", "ArmHabits", "MorningSense", "HonestStars", "TalkHours", "MorningAsks", "TurnDowns", "TopicLength", "OutlookCheck", "UsualIndex", "Nicknames", "LeadIndex", "LeadPart", "NextAsk", "NewsMoves",
         "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmFit", "WeakLink", "ArmChange", "PnlGap", "ArmDay", "BookDecay", "WhereIWin", "TradesADay", "AfterLoss", "NetLean", "ExpiryEve", "BeforeTomorrow", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "ZerodhaSession", "OrderWhy", "RelayHealth", "StreamHealth", "BatteryUse", "WatchAsk", "Tour", "DataAge", "Honest", "Thinking",
-        "SelfWhy", "Consistency", "CoPilot", "SinceMorning", "ExpiryPin", "ChainDrift", "ChainIntel", "DayClock", "GapRecord", "RangeBreaks", "PriorDay", "LastHour", "InsideDays", "FirstMove", "VixNext", "SplitDays", "RoundCloses", "MonthTurns", "LunchRange", "OpenHighLow", "BigCandles", "ExtremeCloses", "WeekRange", "RelativeMove", "Comebacks", "VixBand", "Overnight", "DayAfter", "OpenReach", "Weekdays", "DayCompare", "LikeToday", "Structure", "MindChange", "Breadth",
+        "SelfWhy", "Consistency", "CoPilot", "SinceMorning", "ExpiryPin", "ChainDrift", "ChainIntel", "DayClock", "GapRecord", "RangeBreaks", "PriorDay", "LastHour", "InsideDays", "FirstMove", "VixNext", "SplitDays", "RoundCloses", "MonthTurns", "LunchRange", "OpenHighLow", "BigCandles", "ExtremeCloses", "WeekRange", "RelativeMove", "Comebacks", "VixBand", "Overnight", "DayAfter", "OpenReach", "MultiDay", "Weekdays", "DayCompare", "LikeToday", "Structure", "MindChange", "Breadth",
         "TradeCase", "Scenarios", "Causes", "Agenda", "Improve")
 
     @Test fun theAuditFollowsTheHubsOrderAndEveryBranchIsGuarded() {
