@@ -807,6 +807,8 @@ class WatchService : Service() {
          * [RUN_DAY]: a start meanwhile does not take that day for a process that died.
          */
         @Volatile private var endSeenRun = 0L
+        /** Tests run many services in one process: the run count starts again as a new process would. */
+        internal fun resetRunsForTest() { synchronized(runDayLock) { watchRun = 0L; endSeenRun = 0L } }
         /** The watch's check pace now in seconds (30 before the open, 15 with a position open, 60 otherwise; 0 = not running), for the battery line. */
         @Volatile var stepSec: Int = 0
     }

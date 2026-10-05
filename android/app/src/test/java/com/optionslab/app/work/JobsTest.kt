@@ -82,6 +82,7 @@ class JobsTest : RobolectricTest() {
         Background.clearAlerts(); Background.clearCards()
         Background.calendar(WED)
         Background.at(WED, 10, 0)
+        WatchService.resetRunsForTest()
         Background.grantNotifications(context)
         Background.workManager(context)
     }
