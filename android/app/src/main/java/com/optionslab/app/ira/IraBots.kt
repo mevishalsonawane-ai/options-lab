@@ -126,6 +126,31 @@ internal object IraBots {
         return com.optionslab.ira.BotTrades.answer(q, trades, switches, v.range, bankNifty, com.optionslab.app.data.Market.now().toLocalDateTime())
     }
 
+    /**
+     * "What should I switch off?" ([com.optionslab.ira.SwitchOff]): each arm's switch and two-year test beside its closed paper
+     * trades. Reads only. With the answer, the first armed arm that lost in both records (null: none), for [offerSwitchOff].
+     */
+    suspend fun switchOff(q: com.optionslab.ira.SwitchOff.Q): Pair<com.optionslab.ira.SwitchOff.Answer, com.optionslab.ira.SwitchOff.Arm?> {
+        val armed = com.optionslab.app.data.OrbArms.view().arms.associate { it.arm.label to it.armed }
+        val paper = bots().filter { it.where == "Paper" && it.name in armed }.associate { b -> b.name to b.trades.sortedBy { it.closedAt }.map { it.net } }
+        val arms = armed.map { (name, on) -> com.optionslab.ira.SwitchOff.arm(name, on, paper[name].orEmpty()) }
+        val a = com.optionslab.ira.SwitchOff.answer(q, arms)
+        return a to a.offer.firstOrNull()?.let { n -> arms.firstOrNull { it.name == n } }
+    }
+
+    /**
+     * One armed arm that lost in both records, put to Boss as a yes or no - always asked, even with automatic stops on; only
+     * when the arm found is exactly this one (an ORB arm's stop sells nothing on Zerodha: its open position is managed to its exit).
+     */
+    suspend fun offerSwitchOff(arm: com.optionslab.ira.SwitchOff.Arm) {
+        if (!arm.armed) return
+        val cmd = com.optionslab.ira.Command(com.optionslab.ira.Command.Kind.STOP_ONE, target = arm.name)
+        val (what, act) = runCatching { IraActions.prepare(cmd) }.getOrNull() ?: (null to null)
+        val exact = what != null && what.equals(com.optionslab.ira.Commands.describe(cmd, arm.name), ignoreCase = true)
+        if (what != null && act != null && exact)
+            IraHub.offer(what, "Boss, switch off ${arm.name}?", com.optionslab.ira.SwitchOff.ask(arm), act, alwaysAsk = true)
+    }
+
     @Volatile private var lastPass = 0L
 
     /**

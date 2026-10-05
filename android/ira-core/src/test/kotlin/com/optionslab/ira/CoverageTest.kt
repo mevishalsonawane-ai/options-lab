@@ -31,7 +31,7 @@ class CoverageTest {
             Learnings.asked(said) != null || Learnings.undoAsked(said) || NewsMoves.asked(said) != null || PreMarket.asked(said) ||
             ChainDrift.asked(said) != null || Headroom.asked(said) != null || BotTrades.asked(said) != null || DayClock.asked(said) != null ||
             SaidAbout.asked(said) != null || GapRecord.asked(said) != null || Causes.asked(said) != null || WeekAhead.asked(said) != null || AskedAgain.asked(said) || FigureFirst.asked(said) != null || Weekdays.asked(said) != null || DayCompare.asked(said) != null ||
-            RangeBreaks.asked(said) != null || PriorDay.asked(said) != null || LastHour.asked(said) != null || InsideDays.asked(said) != null || FirstMove.asked(said) != null || NeedsTrue.asked(said) || Clarity.asked(said) != null || ZerodhaSession.asked(said) != null || Tour.asked(said) || WrongThing.asked(said) != null || WrongThing.objected(said) || OrderWhy.asked(said) != null || ArmHabits.asked(said) || MorningSense.asked(said) != null || RelayHealth.asked(said) != null
+            RangeBreaks.asked(said) != null || PriorDay.asked(said) != null || LastHour.asked(said) != null || InsideDays.asked(said) != null || FirstMove.asked(said) != null || NeedsTrue.asked(said) || Clarity.asked(said) != null || ZerodhaSession.asked(said) != null || Tour.asked(said) || WrongThing.asked(said) != null || WrongThing.objected(said) || OrderWhy.asked(said) != null || ArmHabits.asked(said) || MorningSense.asked(said) != null || RelayHealth.asked(said) != null || SwitchOff.asked(said) != null
         return ((if (asSaid) null else Understand.questions(null, said)) ?: listOf(said)).map { kind(it, 0) }
     }
 
@@ -55,6 +55,7 @@ class CoverageTest {
             if (PreMarket.asked(q)) return Kind.ACCOUNT
             if (Headroom.asked(q) != null) return Kind.ACCOUNT
             if (BotTrades.asked(q) != null) return Kind.ACCOUNT
+            if (SwitchOff.asked(q) != null) return Kind.ACCOUNT
             if (SaidAbout.asked(q) != null) return Kind.ACCOUNT
             if (WeekAhead.asked(q) != null) return Kind.INFO
             if (ZerodhaSession.asked(q) != null) return Kind.ACCOUNT
@@ -329,6 +330,9 @@ class CoverageTest {
         "zerodha se logout kyun hua" to A, "when does my zerodha session end" to A,
         // ---- The relay's health (RelayHealth, round 19): Boss's own setup, from the diagnostics - the account's kind ----
         "why is my relay failing" to A, "is my static ip working" to A, "relay kyun nahi chal raha" to A, "is the relay down" to A,
+        // ---- What should I switch off (SwitchOff, round 20): the arms' tested and paper records - Boss's account ----
+        "which arms lost in both the test and on paper" to A, "is any arm worth disarming" to A, "which arms are worth keeping" to A,
+        "which bot should i disarm first" to A,
         // ---- What can I ask you (Tour, voice round 15): five questions for the part of the day - Jarvis's own ----
         "what can i ask you" to J, "what should i ask you now" to J, "main kya pooch sakta hoon" to J, "suggest some questions" to J,
     )
@@ -462,7 +466,7 @@ class CoverageTest {
             PatternCalls.asked(said) || TrendReads.asked(said) || SinceMorning.asked(said) || Learnings.asked(said) != null || Learnings.undoAsked(said) || NewsMoves.asked(said) != null ||
             PreMarket.asked(said) ||
             ChainDrift.asked(said) != null || Headroom.asked(said) != null || BotTrades.asked(said) != null || NeedsTrue.asked(said) || Clarity.asked(said) != null || DayClock.asked(said) != null ||
-            SaidAbout.asked(said) != null || GapRecord.asked(said) != null || WordFit.asked(said) != null || Causes.asked(said) != null || WeekAhead.asked(said) != null || AskedAgain.asked(said) || FigureFirst.asked(said) != null || MindChange.asked(said) || Weekdays.asked(said) != null || DayCompare.asked(said) != null || RangeBreaks.asked(said) != null || PriorDay.asked(said) != null || LastHour.asked(said) != null || InsideDays.asked(said) != null || FirstMove.asked(said) != null || ZerodhaSession.asked(said) != null || Tour.asked(said) || WrongThing.asked(said) != null || WrongThing.objected(said) || OrderWhy.asked(said) != null || ArmHabits.asked(said) || MorningSense.asked(said) != null || RelayHealth.asked(said) != null
+            SaidAbout.asked(said) != null || GapRecord.asked(said) != null || WordFit.asked(said) != null || Causes.asked(said) != null || WeekAhead.asked(said) != null || AskedAgain.asked(said) || FigureFirst.asked(said) != null || MindChange.asked(said) || Weekdays.asked(said) != null || DayCompare.asked(said) != null || RangeBreaks.asked(said) != null || PriorDay.asked(said) != null || LastHour.asked(said) != null || InsideDays.asked(said) != null || FirstMove.asked(said) != null || ZerodhaSession.asked(said) != null || Tour.asked(said) || WrongThing.asked(said) != null || WrongThing.objected(said) || OrderWhy.asked(said) != null || ArmHabits.asked(said) || MorningSense.asked(said) != null || RelayHealth.asked(said) != null || SwitchOff.asked(said) != null
         val qs = if (asSaid || understood || cleaned) null else Understand.questions(null, said)?.takeIf { it.isNotEmpty() && it != listOf(said) }
         if (qs != null) return if (qs.size == 1) feature(qs[0], cleaned = true) else qs.joinToString(" & ") { feature(it, understood = true) }
         val q = said
@@ -492,6 +496,7 @@ class CoverageTest {
         if (alone && PreMarket.asked(q)) return "PreMarket"
         if (alone && Headroom.asked(q) != null) return "Headroom"
         if (alone && BotTrades.asked(q) != null) return "BotTrades"
+        if (alone && SwitchOff.asked(q) != null) return "SwitchOff"
         if (alone && SaidAbout.asked(q) != null) return "SaidAbout"
         if (alone && WeekAhead.asked(q) != null) return "WeekAhead"
         if (alone && ZerodhaSession.asked(q) != null) return "ZerodhaSession"
@@ -970,6 +975,11 @@ class CoverageTest {
         "relay ka kya haal hai" to "RelayHealth", "static ip kaam kar raha hai kya" to "RelayHealth",
         "why does the relay keep timing out" to "RelayHealth", "when did the relay last connect" to "RelayHealth",
         "relay status" to "RelayHealth", "is the relay down" to "RelayHealth",
+        // ---- SwitchOff (round 20): each arm's two-year test beside its paper record; switching stays Boss's (asked first) ----
+        "what should i switch off" to "SwitchOff", "which arms should i turn off" to "SwitchOff", "which strategies should i stop" to "SwitchOff",
+        "which arms lost in both the test and on paper" to "SwitchOff", "is any arm worth switching off" to "SwitchOff",
+        "should i switch off orb" to "SwitchOff", "should i disarm orb fresh" to "SwitchOff", "kaun sa bot band karun" to "SwitchOff",
+        "kya band karna chahiye" to "SwitchOff", "what to switch off" to "SwitchOff", "which arms are worth keeping" to "SwitchOff",
         // ---- Tour (voice round 15): "what can I ask you?" names five questions for the part of the day ----
         "what can i ask you" to "Tour", "what else can i ask jarvis" to "Tour", "what should i ask now" to "Tour",
         "what questions can i ask" to "Tour", "what kind of questions should i ask you" to "Tour", "suggest some questions" to "Tour",

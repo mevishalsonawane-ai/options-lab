@@ -1228,6 +1228,7 @@ object IraHub {
                 com.optionslab.ira.NewsMoves.asked(q) != null || com.optionslab.ira.PreMarket.asked(q) ||
                 com.optionslab.ira.ChainDrift.asked(q) != null || com.optionslab.ira.SinceMorning.asked(q) ||
                 com.optionslab.ira.Headroom.asked(q) != null || com.optionslab.ira.BotTrades.asked(q) != null ||
+                com.optionslab.ira.SwitchOff.asked(q) != null ||
                 com.optionslab.ira.SaidAbout.asked(q) != null || com.optionslab.ira.WeekAhead.asked(q) != null ||
                 com.optionslab.ira.ZerodhaSession.asked(q) != null || com.optionslab.ira.OrderWhy.asked(q) != null || com.optionslab.ira.Tour.asked(q) ||
                 com.optionslab.ira.RelayHealth.asked(q) != null ||
@@ -2041,7 +2042,7 @@ object IraHub {
 
     /**
      * [ask]'s question branches on the records and Boss's own setup: NewsMoves, TaxRecords, Learnings (and its undo),
-     * PreMarket, Headroom, SaidAbout, WeekAhead, ZerodhaSession, OrderWhy, RelayHealth - in [ask]'s order. True when one
+     * PreMarket, Headroom, BotTrades, SwitchOff, SaidAbout, WeekAhead, ZerodhaSession, OrderWhy, RelayHealth - in [ask]'s order. True when one
      * took [q], answered exactly as before; each branch keeps its own guard (not [bundled], no order, no command).
      */
     private fun askedOfRecords(q: String, parsed: com.optionslab.ira.Question, bundled: Boolean, understood: Boolean): Boolean {
@@ -2162,6 +2163,24 @@ object IraHub {
             if (phoneLocked()) { reply(com.optionslab.ira.BotTrades.LOCKED); return true }
             val bankNifty = histories[IraMarket.BANKNIFTY]?.bars.orEmpty()
             scope.launch(Dispatchers.IO) { reply(runCatching { IraBots.tradesToday(botTradesAsk, bankNifty) }.getOrElse { "I could not read your bots' trades just now, Boss." }) }
+            return true
+        }
+        // "What should I switch off?", "which arms lost in both the test and on paper?", "should I disarm ORB Fresh?", "kaun sa
+        // bot band karun" ([com.optionslab.ira.SwitchOff]): each arm's two-year BankNifty test beside its own paper record - the
+        // arms that lost in both (armed first), those that lost in one, and where the switch is (Trade, then Strategies). Facts,
+        // never advice. Nothing is switched here: one armed arm that lost in both may be put to Boss as a yes or no (always
+        // asked, even with automatic stops), and "stop <arm>" stays the command that asks him to confirm. Boss's account, so
+        // never on a locked phone. (Not in IraGoldAlgo.)
+        val switchOffAsk = if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null)
+            runCatching { com.optionslab.ira.SwitchOff.asked(q) }.getOrNull() else null
+        if (switchOffAsk != null) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            if (phoneLocked()) { reply(com.optionslab.ira.SwitchOff.LOCKED); return true }
+            scope.launch(Dispatchers.IO) {
+                val a = runCatching { IraBots.switchOff(switchOffAsk) }.getOrNull()
+                reply(a?.first?.text ?: "I could not read your arms' records just now, Boss.")
+                a?.second?.let { first -> runCatching { IraBots.offerSwitchOff(first) } }
+            }
             return true
         }
         // "What did I say about expiry?", "did I note anything about the hammer last week?", "maine expiry ke baare mein kya
