@@ -31,8 +31,8 @@ object Structure {
     const val NOTE = "Facts from today's candles, Boss, not a forecast."
     const val NOT_HERE = "I read the day's structure for Nifty, BankNifty, FinNifty and Sensex only, Boss: gold trades round the clock and India VIX is not traded."
 
-    private fun norm(text: String) = " " + text.lowercase(Locale.ENGLISH).replace("’", "'").replace(Regex("[^a-z0-9 ]"), " ")
-        .replace(Regex("\\s+"), " ").trim() + " "
+    private fun norm(text: String) = " " + text.lowercase(Locale.ENGLISH).replace("’", "'").replace(rx("[^a-z0-9 ]"), " ")
+        .replace(rx("\\s+"), " ").trim() + " "
     private fun n(x: Double) = "%,.2f".format(Locale.ENGLISH, x)
     private fun pts(x: Double) = "%+,.2f".format(Locale.ENGLISH, x)
     private fun hm(t: LocalDateTime) = "%02d:%02d".format(Locale.ENGLISH, t.hour, t.minute)
@@ -56,7 +56,7 @@ object Structure {
     fun asked(text: String): Ask? {
         // "Are we making higher highs?": the market's "we" (routing audit, round 8), not Boss's book ("are we in profit"
         // has no structure word and stays out).
-        val t = norm(text).replace(Regex(" (are|r|were) we (making|seeing|printing|forming|getting|trending|ranging) "), " is the market $2 ")
+        val t = norm(text).replace(rx(" (are|r|were) we (making|seeing|printing|forming|getting|trending|ranging) "), " is the market $2 ")
         if (NOT.containsMatchIn(t)) return null
         if (Market.mentioned(text).any { it == Market.GOLD }) return null
         return when {

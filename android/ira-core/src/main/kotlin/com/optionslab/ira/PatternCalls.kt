@@ -169,7 +169,7 @@ object PatternCalls {
         "|\\b(which|what) (candle |chart )?patterns? (are|have been|were) (reliable|trustworthy|dependable|accurate)\\b" +
         "|\\b(kaun se|kaunse|kon se|konse) (candle |chart )?patterns? (pe|par|pr) (bharosa|bharosaa|bharose|yakeen|vishwas|bharosa kar)\\b")
 
-    fun asked(text: String): Boolean = ASKED.containsMatchIn(text.replace(Regex("\\s+"), " "))
+    fun asked(text: String): Boolean = ASKED.containsMatchIn(text.replace(rx("\\s+"), " "))
 
     // ---- saved as plain text: one call a line (market, chart, kind, candle, close, then each horizon's result) ----
 

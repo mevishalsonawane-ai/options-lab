@@ -70,8 +70,11 @@ object FollowUp {
     }
 
     /** Does [text] ask for anything to be done (a command or an order), as heard? */
-    internal fun acts(text: String): Boolean = Commands.parse(text) != null ||
-        Ask.parse(text).let { it.command != null || it.order != null || Topic.COMMAND in it.topics || Topic.ORDER in it.topics }
+    internal fun acts(text: String): Boolean = acted.of(text) { Commands.parse(text) != null ||
+        Ask.parse(text).let { it.command != null || it.order != null || Topic.COMMAND in it.topics || Topic.ORDER in it.topics } }
+
+    /** The last words read ([Kept]; pure). */
+    private val acted = Kept<Boolean>(64)
 
     private fun found(prev: String, now: String): String? {
         val n = t(now)

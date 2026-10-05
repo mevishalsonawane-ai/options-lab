@@ -60,7 +60,12 @@ object Commands {
      * [said] as typed; with a misspelt word ("start all statergies") read again with it fixed ([Spelling]) when that
      * finds a command and the words as typed found none, or only a name to look for.
      */
-    fun parse(said: String): Command? {
+    fun parse(said: String): Command? = read.of(said, keep = { it?.kind != Command.Kind.EVENT_ADD }) { parseFresh(said) }
+
+    /** The last words read ([Kept]): an event's day is today's, so an event is never kept. */
+    private val read = Kept<Command?>(64)
+
+    private fun parseFresh(said: String): Command? {
         val raw = parseAs(said)
         val fixed = Spelling.fix(said)
         if (fixed != said) {

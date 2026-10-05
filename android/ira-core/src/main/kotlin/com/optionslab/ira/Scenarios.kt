@@ -53,7 +53,7 @@ object Scenarios {
     // ---- the question ---------------------------------------------------------------------------------------------
 
     private fun norm(text: String) = " " + text.lowercase().replace("%", " percent ").replace(",", "").replace("'", " ")
-        .replace(Regex("[^a-z0-9. ]"), " ").replace(Regex("(?<![0-9])\\.|\\.(?![0-9])"), " ").replace(Regex("\\s+"), " ").trim() + " "
+        .replace(rx("[^a-z0-9. ]"), " ").replace(rx("(?<![0-9])\\.|\\.(?![0-9])"), " ").replace(rx("\\s+"), " ").trim() + " "
 
     /**
      * Boss's Hinglish and the recognizer's slips in English: "agar Nifty 1% gir jaye to kya hoga", "Nifty kal 1% neeche
@@ -91,7 +91,7 @@ object Scenarios {
     fun asked(text: String): Scenario? {
         // "What happens to my P&L if Nifty moves 100 points" is the positions' own answer ([Exposure]).
         if (Exposure.moveAsked(text) != null) return null
-        val t = SAID.fold(norm(text)) { a, (r, w) -> r.replace(a, w) }.replace(Regex("\\s+"), " ")
+        val t = SAID.fold(norm(text)) { a, (r, w) -> r.replace(a, w) }.replace(rx("\\s+"), " ")
             .replace(" what will happen if ", " what happens if ").replace(" what will happen when ", " what happens when ")
         val framed = IF.findAll(t).any { m -> when (m.groupValues[1]) {
             "if" -> THEN.containsMatchIn(t) || t.startsWith(" what ")
@@ -129,7 +129,7 @@ object Scenarios {
         if (n != null) {
             if (pct && n > 20 || !pct && n > 5000) return null
             if (OPEN.containsMatchIn(own)) return Scenario(Kind.OPEN, mk, pct = if (pct) n else null, points = if (pct) null else n, sign = sign,
-                next = next || !Regex(" (today|now) ").containsMatchIn(t))
+                next = next || !rx(" (today|now) ").containsMatchIn(t))
             if (sign == 0 && !MOVE.containsMatchIn(own)) return null
             return Scenario(Kind.MOVE, mk, pct = if (pct) n else null, points = if (pct) null else n, sign = sign, next = next)
         }
@@ -302,7 +302,7 @@ object Scenarios {
     /** The open positions on [market] whose move can be worked out (a delta known). */
     private fun counted(legs: List<Exposure.Leg>, market: Market) = legs.filter { it.underlying.equals(market.name, true) && it.delta != null }
 
-    private fun optionLeg(l: Exposure.Leg) = Regex("(CE|PE)$").containsMatchIn(l.symbol.uppercase(Locale.ENGLISH))
+    private fun optionLeg(l: Exposure.Leg) = rx("(CE|PE)$").containsMatchIn(l.symbol.uppercase(Locale.ENGLISH))
 
     private fun alarmOn(a: Alarm, m: Market): Boolean {
         val sym = a.symbol.uppercase(Locale.ENGLISH).substringAfter(":")

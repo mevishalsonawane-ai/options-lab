@@ -48,7 +48,7 @@ object TaxRecords {
     fun segment(symbol: String): Segment {
         val s = symbol.uppercase().trim()
         return when {
-            Regex("\\d(CE|PE)$").containsMatchIn(s) -> Segment.OPTION
+            rx("\\d(CE|PE)$").containsMatchIn(s) -> Segment.OPTION
             s.endsWith("FUT") -> Segment.FUTURE
             else -> Segment.OTHER
         }
@@ -61,7 +61,7 @@ object TaxRecords {
     fun turnover(trades: List<Trade>): Double = trades.filter { segment(it.symbol) != Segment.OTHER }.sumOf { kotlin.math.abs(it.gross) }
 
     private fun norm(text: String) = " " + text.lowercase().replace("p&l", "p l").replace("f&o", " fno ").replace("f & o", " fno ")
-        .replace(Regex("[^a-z0-9 ]"), " ").replace(Regex("\\s+"), " ").trim() + " "
+        .replace(rx("[^a-z0-9 ]"), " ").replace(rx("\\s+"), " ").trim() + " "
 
     private val TURNOVER = Regex(" (turnover|turn over|turnovers) ")
     private val MINE = Regex(" (my|mine|i|me|our|mera|meri|mere|mujhe) ")
@@ -99,15 +99,15 @@ object TaxRecords {
     fun fy(text: String, today: LocalDate): Fy {
         val t = norm(text)
         val now = fyOf(today)
-        Regex(" (?:fy )?(20\\d\\d) (\\d\\d|20\\d\\d) ").find(t.replace(Regex("(20\\d\\d) ?- ?"), "$1 "))?.let { m ->
+        rx(" (?:fy )?(20\\d\\d) (\\d\\d|20\\d\\d) ").find(t.replace(rx("(20\\d\\d) ?- ?"), "$1 "))?.let { m ->
             val a = m.groupValues[1].toInt(); val b = m.groupValues[2].toInt() % 100
             if ((a + 1) % 100 == b && a <= now.start) return Fy(a)
         }
-        Regex(" fy ?(\\d\\d) ?(\\d\\d) ").find(t)?.let { m ->
+        rx(" fy ?(\\d\\d) ?(\\d\\d) ").find(t)?.let { m ->
             val a = 2000 + m.groupValues[1].toInt(); val b = m.groupValues[2].toInt()
             if ((a + 1) % 100 == b && a <= now.start) return Fy(a)
         }
-        return if (Regex(" (last|previous|past|pichle|pichla|prior) (year|years|fy|financial year|fiscal year|saal) ").containsMatchIn(t)) Fy(now.start - 1) else now
+        return if (rx(" (last|previous|past|pichle|pichla|prior) (year|years|fy|financial year|fiscal year|saal) ").containsMatchIn(t)) Fy(now.start - 1) else now
     }
 
     private fun amt(x: Double) = "Rs " + "%,.0f".format(Locale.ENGLISH, kotlin.math.abs(x))

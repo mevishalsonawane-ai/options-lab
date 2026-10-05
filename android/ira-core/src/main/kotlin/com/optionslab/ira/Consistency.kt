@@ -154,8 +154,8 @@ object Consistency {
     private val DAYS = mapOf("monday" to DayOfWeek.MONDAY, "tuesday" to DayOfWeek.TUESDAY, "wednesday" to DayOfWeek.WEDNESDAY,
         "thursday" to DayOfWeek.THURSDAY, "friday" to DayOfWeek.FRIDAY)
 
-    private fun words(s: String) = " " + s.lowercase(Locale.ENGLISH).replace("'", " ").replace("’", " ").replace(Regex("[^a-z0-9: ]"), " ")
-        .replace(Regex("\\s+"), " ").trim() + " "
+    private fun words(s: String) = " " + s.lowercase(Locale.ENGLISH).replace("'", " ").replace("’", " ").replace(rx("[^a-z0-9: ]"), " ")
+        .replace(rx("\\s+"), " ").trim() + " "
 
     private val AVOID = Regex(" (don t|dont|do not|never|no|avoid|skip|not|stay out) ")
     private val TRADE = Regex(" (trade|trades|trading|trade on|positions?|entries|entry) ")
@@ -164,7 +164,7 @@ object Consistency {
     /** The weekday rule in [note], or null ("no trading on Mondays", "I never trade Fridays", "fridays off"). */
     fun dayRule(note: String): DayRule? {
         val t = words(note)
-        val day = DAYS.entries.firstOrNull { (w, _) -> Regex(" ${w}s? ").containsMatchIn(t) }?.value ?: return null
+        val day = DAYS.entries.firstOrNull { (w, _) -> rx(" ${w}s? ").containsMatchIn(t) }?.value ?: return null
         val rule = (AVOID.containsMatchIn(t) && (TRADE.containsMatchIn(t) || t.contains(" skip "))) || OFF.containsMatchIn(t)
         if (!rule) return null
         // "Don't trade BankNifty on Fridays": that index on that day.

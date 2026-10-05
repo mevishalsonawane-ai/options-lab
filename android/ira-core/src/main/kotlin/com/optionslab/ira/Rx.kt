@@ -27,3 +27,34 @@ internal fun rx(pattern: String): Regex = Rx.of(pattern)
 /** [pattern] compiled once ([Rx]), as Regex(pattern, [option]); only [RegexOption.IGNORE_CASE] is kept. */
 internal fun rx(pattern: String, option: RegexOption): Regex =
     if (option == RegexOption.IGNORE_CASE) Rx.ignoringCase(pattern) else Regex(pattern, option)
+
+/**
+ * The last [max] readings of a pure reader, by the words read (2026-10-05, speed round 8): one spoken question goes
+ * through about ninety readers in the hub, and many of them read the same words again through the same helpers
+ * (whether it acts, its Hinglish, its spelling, a command in it) - [Commands.parse] alone ran a dozen times for one
+ * question. Only for readers whose answer depends on nothing but the words (no clock, no stored state), so a kept
+ * reading is exactly what reading again would give. A reader that throws keeps nothing (it throws again next time).
+ */
+internal class Kept<V>(private val max: Int) {
+    private object None
+
+    private val kept = object : LinkedHashMap<String, Any>(max * 2, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Any>?) = size > max
+    }
+
+    /** [read] of [words], kept; when [keep] says no, given but not kept (a reading that is not the words' alone). */
+    @Suppress("UNCHECKED_CAST")
+    fun of(words: String, keep: (V) -> Boolean = { true }, read: () -> V): V {
+        val k = synchronized(kept) { kept[words] }
+        if (k != null) return (if (k === None) null else k) as V
+        val v = read()
+        if (keep(v)) synchronized(kept) { kept[words] = v ?: None }
+        return v
+    }
+
+    /** How many readings are kept. */
+    val size: Int get() = synchronized(kept) { kept.size }
+}
+
+/** [read] of [words] kept in [kept], given back as [words] itself when it reads as the same words (a reader that returns its input). */
+internal fun Kept<String>.same(words: String, read: () -> String): String = of(words, read = read).let { if (it == words) words else it }

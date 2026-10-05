@@ -59,7 +59,13 @@ object Hinglish {
 
     fun hasHindi(text: String): Boolean = HINDI.containsMatchIn(text.lowercase())
 
-    fun normalize(text: String): String {
+    fun normalize(text: String): String = normalized.same(text) { normalizeFresh(text) }
+
+    /** The last words read ([Kept]; pure). */
+    private val normalized = Kept<String>(64)
+    private val questioned = Kept<String>(64)
+
+    private fun normalizeFresh(text: String): String {
         var t = text.lowercase().replace(rx("[^a-z0-9.,&% ]"), " ").replace(rx("\\s+"), " ").trim()
         if (!hasHindi(t)) return text
         for ((r, to) in WORDS) t = r.replace(t, to).replace(rx("\\s+"), " ").trim()
@@ -135,7 +141,9 @@ object Hinglish {
      * [text] with a common Hinglish question ([QUESTIONS]) read as its English, then [normalize]d; [text] itself when
      * no such question is in it. For reading QUESTIONS only - commands and orders are read from [normalize].
      */
-    fun question(text: String): String {
+    fun question(text: String): String = questioned.same(text) { questionFresh(text) }
+
+    private fun questionFresh(text: String): String {
         val t = text.lowercase().replace(rx("[^a-z0-9.,&% ]"), " ").replace(rx("[.,]+(?=\\s|$)"), " ").replace(rx("\\s+"), " ").trim()
             .replace(rx("\\s+(?:na|yaar|zara|jarvis|boss|please|ji)$"), "").replace(rx("^(?:(?:jarvis|boss|hey|ok|okay|zara|yaar)\\s+)+"), "")
         for ((r, to) in QUESTIONS) {

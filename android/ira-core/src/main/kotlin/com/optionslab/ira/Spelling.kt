@@ -22,19 +22,32 @@ object Spelling {
         "stops", "start", "started", "stopped", "events", "event", "today's", "week", "month", "money", "lots", "lot", "call", "calls",
         "five", "like", "line", "life", "give", "love", "shop", "smart", "older", "order", "minute", "minutes", "chart", "charts", "store")
 
-    fun fix(text: String): String {
+    fun fix(text: String): String = fixed.same(text) { fixFresh(text) }
+
+    /** The last words read ([Kept]; pure). */
+    private val fixed = Kept<String>(64)
+
+    private fun fixFresh(text: String): String {
         var changed = false
         val out = rx("[A-Za-z]+").replace(text) { m ->
             val w = m.value.lowercase()
             if (w.length < 4 || w in KNOWN) return@replace m.value
-            val best = WORDS.filter { near(w, it) }
-            if (best.size == 1 || best.map { it.trimEnd('s') }.distinct().size == 1 && best.isNotEmpty()) {
-                val pick = best.minByOrNull { kotlin.math.abs(it.length - w.length) }!!
-                changed = true; pick
-            } else m.value
+            val pick = meant.of(w) { closest(w) }
+            if (pick != null) { changed = true; pick } else m.value
         }
         return if (changed) out else text
     }
+
+    /** The one word of Jarvis's [w] (lower case) is a near miss of, or null (none, or more than one meant). */
+    private fun closest(w: String): String? {
+        val best = WORDS.filter { near(w, it) }
+        return if (best.size == 1 || best.map { it.trimEnd('s') }.distinct().size == 1 && best.isNotEmpty())
+            best.minByOrNull { kotlin.math.abs(it.length - w.length) }!!
+        else null
+    }
+
+    /** Words already looked up ([Kept]; each one's answer is its letters' alone): the same words come back in every question. */
+    private val meant = Kept<String?>(1024)
 
     /** One letter off (two in long words), or the same letters jumbled in a long word with the same first letter. */
     private fun near(w: String, v: String): Boolean {

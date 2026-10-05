@@ -41,7 +41,7 @@ object Charges {
         val share: Double? get() = if (gross > 0) charges / gross else null
     }
 
-    private fun norm(text: String) = " " + text.lowercase().replace("p&l", "p l").replace(Regex("[^a-z0-9 ]"), " ").replace(Regex("\\s+"), " ").trim() + " "
+    private fun norm(text: String) = " " + text.lowercase().replace("p&l", "p l").replace(rx("[^a-z0-9 ]"), " ").replace(rx("\\s+"), " ").trim() + " "
 
     private const val CHARGE = "(charges|charge|brokerage|brokerages|fees|transaction costs?|trading costs?|stt|gst|stamp duty|taxes on (my )?trades|tax on (my )?trades)"
     private val ASKED = Regex(" (how much (did|have|do) i (pay|paid|spend|spent|give|given|lose|lost)( in| on| for| as| to)? (my |the |all |all the )?$CHARGE" +
@@ -63,10 +63,10 @@ object Charges {
     fun span(text: String): Span {
         val t = norm(text)
         return when {
-            Regex(" (today|today s|todays|aaj|aaj ka|aaj ke) ").containsMatchIn(t) -> Span.TODAY
-            Regex(" (last|previous|past|pichle|pichla) (week|hafte|hafta) ").containsMatchIn(t) -> Span.LAST_WEEK
-            Regex(" (last|previous|past|pichle|pichla) (month|mahina|mahine) ").containsMatchIn(t) -> Span.LAST_MONTH
-            Regex(" (week|weekly|hafte|hafta) ").containsMatchIn(t) -> Span.WEEK
+            rx(" (today|today s|todays|aaj|aaj ka|aaj ke) ").containsMatchIn(t) -> Span.TODAY
+            rx(" (last|previous|past|pichle|pichla) (week|hafte|hafta) ").containsMatchIn(t) -> Span.LAST_WEEK
+            rx(" (last|previous|past|pichle|pichla) (month|mahina|mahine) ").containsMatchIn(t) -> Span.LAST_MONTH
+            rx(" (week|weekly|hafte|hafta) ").containsMatchIn(t) -> Span.WEEK
             else -> Span.MONTH
         }
     }

@@ -257,8 +257,8 @@ object NewsMoves {
 
     // ---- what was asked --------------------------------------------------------------------------------------------
 
-    private fun norm(text: String) = " " + text.lowercase(Locale.ENGLISH).replace("’", "'").replace(Regex("[^a-z0-9 ]"), " ")
-        .replace(Regex("\\s+"), " ").trim() + " "
+    private fun norm(text: String) = " " + text.lowercase(Locale.ENGLISH).replace("’", "'").replace(rx("[^a-z0-9 ]"), " ")
+        .replace(rx("\\s+"), " ").trim() + " "
 
     private val ASK_TAGS: List<Pair<NewsDesk.Tag, Regex>> = listOf(
         NewsDesk.Tag.RBI to Regex(" (rbi|reserve bank|repo rate|rate decision|rate decisions|monetary policy|mpc|rbi policy) "),

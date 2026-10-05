@@ -229,7 +229,7 @@ object Agenda {
     private val STOP = setOf("the", "and", "you", "your", "what", "how", "does", "did", "can", "please", "jarvis", "boss", "this", "that",
         "are", "for", "with", "tell", "show", "give", "kya", "hai", "batao")
 
-    private fun content(s: String): Set<String> = Regex("[a-z]+").findAll(s.lowercase()).map { it.value }.filter { it.length > 2 && it !in STOP }.toSet()
+    private fun content(s: String): Set<String> = rx("[a-z]+").findAll(s.lowercase()).map { it.value }.filter { it.length > 2 && it !in STOP }.toSet()
 
     private val SECRETISH = Regex("(?i)\\b(m?pin|tpin|pass(word|code|wd|phrase|key)?|pwd|otp|totp|2fa|api[ _-]?key|secret|token|cvv|cvc|card number|account number|hidden)\\b")
 
@@ -247,7 +247,7 @@ object Agenda {
         val known = learned.map { it.wrong }.toSet()
         // Anything that held or names a secret is dropped whole (never studied, never put to Boss aloud).
         val words = (wrong + missed).asSequence().filter { !Secrets.hasSecret(it) && !SECRETISH.containsMatchIn(it) }
-            .map { it.replace(Regex("\\s+"), " ").trim().take(120) }
+            .map { it.replace(rx("\\s+"), " ").trim().take(120) }
             .filter { it.isNotEmpty() && it.split(" ").size <= 12 }
             .filter { w -> Corrections.normalize(w).let { it.isNotEmpty() && it !in known } }
             .filter { runCatching { !acts(it) }.getOrDefault(false) }
@@ -271,7 +271,7 @@ object Agenda {
         "aaj (tumhara|aapka|tera|apka) plan( kya hai)?|what do you plan to do today)\\s*(jarvis|boss)?\\s*\\??\\s*$")
 
     /** "What's your plan today?", "what are you working on?" (not tomorrow's plan, not the market's). */
-    fun asked(text: String): Boolean = ASKED.containsMatchIn(text) && !Regex("(?i)\\b(tomorrow|tmrw|kal)\\b").containsMatchIn(text)
+    fun asked(text: String): Boolean = ASKED.containsMatchIn(text) && !rx("(?i)\\b(tomorrow|tmrw|kal)\\b").containsMatchIn(text)
 
     private const val ONLY = "All of it only speaks, studies or works on paper - nothing real is placed, changed or closed by it."
 

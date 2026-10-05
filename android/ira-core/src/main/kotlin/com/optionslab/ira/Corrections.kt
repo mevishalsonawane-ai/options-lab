@@ -149,7 +149,10 @@ object Corrections {
      * forget), a goal, a setting, the automatic-stop choice, forgetting a learned word - as said or read from Hinglish.
      * Anything unreadable counts as acting.
      */
-    fun acts(text: String): Boolean = runCatching { actsAsSaid(text) || Hinglish.normalize(text).let { it != text && actsAsSaid(it) } }.getOrDefault(true)
+    fun acts(text: String): Boolean = runCatching { acted.of(text) { actsAsSaid(text) || Hinglish.normalize(text).let { it != text && actsAsSaid(it) } } }.getOrDefault(true)
+
+    /** The last words read ([Kept]: every reader here reads only the words; one that fails keeps nothing). */
+    private val acted = Kept<Boolean>(64)
 
     private fun actsAsSaid(text: String): Boolean = Commands.parse(text) != null ||
         Ask.parse(text).let { it.order != null || it.command != null || Topic.ORDER in it.topics || Topic.COMMAND in it.topics } ||
@@ -171,7 +174,7 @@ object Corrections {
     fun touch(learned: List<Learned>, l: Learned, today: LocalDate): List<Learned> =
         learned.map { if (it.wrong == l.wrong) it.copy(used = today) else it }
 
-    private fun norm(text: String) = " " + text.lowercase().replace(Regex("[^a-z0-9 ]"), " ").replace(Regex("\\s+"), " ").trim() + " "
+    private fun norm(text: String) = " " + text.lowercase().replace(rx("[^a-z0-9 ]"), " ").replace(rx("\\s+"), " ").trim() + " "
 
     private val WORDS_ASKED = Regex("^ (jarvis )?((what|which) (words|wordings|phrases)( of mine)? (have|did|do) you (learned|learnt|learn|know)( from me)?|" +
         "(show|list|tell)( me)? (the |your )?(words|wordings|phrases) you (have )?(learned|learnt)|(your )?learned (words|wordings)|" +

@@ -41,8 +41,8 @@ object MarketMemory {
     private fun pct(x: Double) = "%+.2f%%".format(Locale.ENGLISH, x)
     private fun pctAbs(x: Double) = "%.2f%%".format(Locale.ENGLISH, abs(x))
     private fun times(x: Double) = "%.1f".format(Locale.ENGLISH, x)
-    private fun norm(text: String) = " " + text.lowercase().replace("%", " percent ").replace(Regex("[^a-z0-9. ]"), " ")
-        .replace(Regex("(?<![0-9])\\.|\\.(?![0-9])"), " ").replace(Regex("\\s+"), " ").trim() + " "
+    private fun norm(text: String) = " " + text.lowercase().replace("%", " percent ").replace(rx("[^a-z0-9. ]"), " ")
+        .replace(rx("(?<![0-9])\\.|\\.(?![0-9])"), " ").replace(rx("\\s+"), " ").trim() + " "
 
     /** "Friday 2026-09-12". */
     fun date(d: LocalDate) = d.dayOfWeek.getDisplayName(TextStyle.FULL, Locale.ENGLISH) + " " + d
@@ -165,29 +165,29 @@ object MarketMemory {
         "a couple of" to 2, "couple of" to 2, "few" to 3, "a few" to 3)
 
     private fun sort(t: String): Sort? = when {
-        Regex(" (gap|gaps|gapped) (up|higher) | gapup | gap ups | (opened|open|opens) (higher|up) ").containsMatchIn(t) -> Sort.GAP_UP
-        Regex(" (gap|gaps|gapped) (down|lower) | gapdown | gap downs | (opened|open|opens) (lower|down) ").containsMatchIn(t) -> Sort.GAP_DOWN
-        Regex(" (gap|gaps|gapped|big gap|big gaps|gap days|gap day) ").containsMatchIn(t) -> Sort.GAP
-        Regex(" (vix|india vix|fear|fear gauge) [a-z ]{0,12}?(jump|jumped|jumps|jumping|spike|spiked|spikes|spiking|surge|surged|shot up|rose|rise|rises|soared|popped)| (vix|fear) spikes? ").containsMatchIn(t) -> Sort.VIX_SPIKE
-        Regex(" (trend day|trend days|trending day|trending days|trendy day|one way day|one way days|one sided day|one sided days) ").containsMatchIn(t) -> Sort.TREND
-        Regex(" (wide range|wide ranging|wide days|wide day|big range|big ranges|range expansion|range day|range days|volatile day|volatile days|wild day|wild days) ").containsMatchIn(t) -> Sort.WIDE
-        Regex(" (expiry|expiries|expiry day|expiry days|expiry session|expiry sessions) ").containsMatchIn(t) -> Sort.EXPIRY
-        Regex(" (fell|fall|falls|fallen|dropped|drop|drops|crashed|crash|tanked|lost|slumped|big down day|big red day|down day|red day|down days|red days) ").containsMatchIn(t) -> Sort.BIG_DOWN
-        Regex(" (rose|rise|rises|risen|rallied|rally|surged|jumped|gained|soared|big up day|big green day|up day|green day|up days|green days) ").containsMatchIn(t) -> Sort.BIG_UP
-        Regex(" (big move|big moves|big day|big days|moved) ").containsMatchIn(t) -> Sort.BIG_MOVE
+        rx(" (gap|gaps|gapped) (up|higher) | gapup | gap ups | (opened|open|opens) (higher|up) ").containsMatchIn(t) -> Sort.GAP_UP
+        rx(" (gap|gaps|gapped) (down|lower) | gapdown | gap downs | (opened|open|opens) (lower|down) ").containsMatchIn(t) -> Sort.GAP_DOWN
+        rx(" (gap|gaps|gapped|big gap|big gaps|gap days|gap day) ").containsMatchIn(t) -> Sort.GAP
+        rx(" (vix|india vix|fear|fear gauge) [a-z ]{0,12}?(jump|jumped|jumps|jumping|spike|spiked|spikes|spiking|surge|surged|shot up|rose|rise|rises|soared|popped)| (vix|fear) spikes? ").containsMatchIn(t) -> Sort.VIX_SPIKE
+        rx(" (trend day|trend days|trending day|trending days|trendy day|one way day|one way days|one sided day|one sided days) ").containsMatchIn(t) -> Sort.TREND
+        rx(" (wide range|wide ranging|wide days|wide day|big range|big ranges|range expansion|range day|range days|volatile day|volatile days|wild day|wild days) ").containsMatchIn(t) -> Sort.WIDE
+        rx(" (expiry|expiries|expiry day|expiry days|expiry session|expiry sessions) ").containsMatchIn(t) -> Sort.EXPIRY
+        rx(" (fell|fall|falls|fallen|dropped|drop|drops|crashed|crash|tanked|lost|slumped|big down day|big red day|down day|red day|down days|red days) ").containsMatchIn(t) -> Sort.BIG_DOWN
+        rx(" (rose|rise|rises|risen|rallied|rally|surged|jumped|gained|soared|big up day|big green day|up day|green day|up days|green days) ").containsMatchIn(t) -> Sort.BIG_UP
+        rx(" (big move|big moves|big day|big days|moved) ").containsMatchIn(t) -> Sort.BIG_MOVE
         else -> null
     }
 
     private fun span(t: String): Pair<Span?, Int?> {
-        Regex(" (last|past|previous) (\\d{1,3}|[a-z]+) (sessions|trading days|days|trading sessions) ").find(t)?.let { m ->
+        rx(" (last|past|previous) (\\d{1,3}|[a-z]+) (sessions|trading days|days|trading sessions) ").find(t)?.let { m ->
             val k = m.groupValues[2].toIntOrNull() ?: WORDS[m.groupValues[2]]
             if (k != null && k in 1..250) return Span.SESSIONS to k
         }
         return when {
-            Regex(" last week ").containsMatchIn(t) -> Span.LAST_WEEK to null
-            Regex(" (this week|the week|week so far) ").containsMatchIn(t) -> Span.WEEK to null
-            Regex(" last month ").containsMatchIn(t) -> Span.LAST_MONTH to null
-            Regex(" (this month|the month|month so far) ").containsMatchIn(t) -> Span.MONTH to null
+            rx(" last week ").containsMatchIn(t) -> Span.LAST_WEEK to null
+            rx(" (this week|the week|week so far) ").containsMatchIn(t) -> Span.WEEK to null
+            rx(" last month ").containsMatchIn(t) -> Span.LAST_MONTH to null
+            rx(" (this month|the month|month so far) ").containsMatchIn(t) -> Span.MONTH to null
             else -> null to null
         }
     }
@@ -195,30 +195,30 @@ object MarketMemory {
     /** The question read, or null when it is not a market-memory question (or is a forecast, advice, or Boss's own). */
     fun asked(text: String): Ask? {
         val t = norm(text)
-        if (NOTABLE.containsMatchIn(t.replace(Regex(" (on |for )?(nifty|banknifty|bank nifty|finnifty|fin nifty|sensex) "), " "))) return Ask(Kind.NOTABLE)
+        if (NOTABLE.containsMatchIn(t.replace(rx(" (on |for )?(nifty|banknifty|bank nifty|finnifty|fin nifty|sensex) "), " "))) return Ask(Kind.NOTABLE)
         if (NOT.containsMatchIn(t)) return null
         // Only an index's sessions (gold trades round the clock: no session to remember this way).
         if (Market.mentioned(text).contains(Market.GOLD)) return null
         val so = sort(t) ?: return null
         // "What happened the last 3 expiries", "how did the last expiry go", "previous expiry days".
         if (so == Sort.EXPIRY) {
-            if (Regex(" (today|today s|todays|this expiry|current expiry|now) ").containsMatchIn(t)) return null
-            val m = Regex(" (last|past|previous|recent|pichle|pichhle|pichli) (\\d{1,2}|[a-z]+(?: of)?)? ?(expiry|expiries|expiry days|expiry sessions) ").find(t)
-                ?: Regex(" (last|past|previous|recent) (a few|a couple of|couple of) (expiry|expiries|expiry days|expiry sessions) ").find(t)
-                ?: Regex(" (recent|previous) (expiry|expiries) ").find(t)
+            if (rx(" (today|today s|todays|this expiry|current expiry|now) ").containsMatchIn(t)) return null
+            val m = rx(" (last|past|previous|recent|pichle|pichhle|pichli) (\\d{1,2}|[a-z]+(?: of)?)? ?(expiry|expiries|expiry days|expiry sessions) ").find(t)
+                ?: rx(" (last|past|previous|recent) (a few|a couple of|couple of) (expiry|expiries|expiry days|expiry sessions) ").find(t)
+                ?: rx(" (recent|previous) (expiry|expiries) ").find(t)
             if (m == null) {
                 if (COUNTING.containsMatchIn(t) || !WHEN_LAST.containsMatchIn(t)) return null
                 return Ask(Kind.EXPIRIES, Sort.EXPIRY, count = 1)
             }
             val w = m.groupValues.getOrNull(2).orEmpty().trim()
-            val k = w.toIntOrNull() ?: WORDS[w] ?: if (Regex(" (expiries|expiry days|expiry sessions) ").containsMatchIn(t)) 3 else 1
+            val k = w.toIntOrNull() ?: WORDS[w] ?: if (rx(" (expiries|expiry days|expiry sessions) ").containsMatchIn(t)) 3 else 1
             return Ask(Kind.EXPIRIES, Sort.EXPIRY, count = k.coerceIn(1, 8))
         }
-        val size = Regex(" (\\d{1,2}(?:\\.\\d{1,2})?) (percent|per cent|pc) ").find(t)?.groupValues?.get(1)?.toDoubleOrNull()
-        val points = if (size == null) Regex(" (\\d{2,4}) (points|point|pts|pt) ").find(t)?.groupValues?.get(1)?.toDoubleOrNull() else null
-        if (COUNTING.containsMatchIn(t) && !Regex(" in a row | consecutive | straight ").containsMatchIn(t)) {
+        val size = rx(" (\\d{1,2}(?:\\.\\d{1,2})?) (percent|per cent|pc) ").find(t)?.groupValues?.get(1)?.toDoubleOrNull()
+        val points = if (size == null) rx(" (\\d{2,4}) (points|point|pts|pt) ").find(t)?.groupValues?.get(1)?.toDoubleOrNull() else null
+        if (COUNTING.containsMatchIn(t) && !rx(" in a row | consecutive | straight ").containsMatchIn(t)) {
             // "How many days up this month" without a size is a run of closes or the month's move, not a remembered kind.
-            if ((so == Sort.BIG_UP || so == Sort.BIG_DOWN || so == Sort.BIG_MOVE) && size == null && points == null && !Regex(" big ").containsMatchIn(t)) return null
+            if ((so == Sort.BIG_UP || so == Sort.BIG_DOWN || so == Sort.BIG_MOVE) && size == null && points == null && !rx(" big ").containsMatchIn(t)) return null
             val (sp, k) = span(t)
             return Ask(Kind.COUNT, so, pct = size, points = points, count = k, span = sp)
         }
@@ -226,7 +226,7 @@ object MarketMemory {
         // "When did Nifty last fall" alone is too loose (the last red close): a size, "this much" or "in a day" is needed.
         val like = LIKE.containsMatchIn(t)
         if ((so == Sort.BIG_UP || so == Sort.BIG_DOWN || so == Sort.BIG_MOVE) && size == null && points == null && !like &&
-            !Regex(" (in a day|in one day|in a session|in one session|in a single day|single day|big|sharply|hard) ").containsMatchIn(t)) return null
+            !rx(" (in a day|in one day|in a session|in one session|in a single day|single day|big|sharply|hard) ").containsMatchIn(t)) return null
         return Ask(Kind.LAST, so, like = like, pct = size, points = points)
     }
 

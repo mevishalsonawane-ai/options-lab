@@ -42,7 +42,7 @@ object DayJournal {
     const val MAX_ANSWER = 400
 
     private fun norm(text: String) = " " + text.lowercase(Locale.ENGLISH).replace("'", "").replace("’", "")
-        .replace(Regex("[^a-z0-9 ]"), " ").replace(Regex("\\s+"), " ").trim() + " "
+        .replace(rx("[^a-z0-9 ]"), " ").replace(rx("\\s+"), " ").trim() + " "
 
     private val ASKED = Regex(
         " help (me )?(with |to )?(write |do |fill (in )?)?(my |the |todays |today s )?(trading )?journal" +
@@ -58,8 +58,8 @@ object DayJournal {
 
     /** Does [text] ask for help with today's journal ("help me journal today", "draft my journal")? Never a note ("journal: I bought because..."). */
     fun asked(text: String): Boolean {
-        val t = norm(text).replace(Regex("^ (hey |ok |okay )?jarvis "), " ").replace(Regex("^ (please |can you |could you |will you )+"), " ")
-        return ASKED.containsMatchIn(t) && !Regex(" because | bought | sold | as | since ").containsMatchIn(t)
+        val t = norm(text).replace(rx("^ (hey |ok |okay )?jarvis "), " ").replace(rx("^ (please |can you |could you |will you )+"), " ")
+        return ASKED.containsMatchIn(t) && !rx(" because | bought | sold | as | since ").containsMatchIn(t)
     }
 
     /** What Boss said while a question is open: his answer, "skip" (pass this one), or "stop" (no more questions). */
@@ -69,7 +69,7 @@ object DayJournal {
     private val STOP = Regex("^ (stop|stop it|enough|thats all|that is all|thats it|done|im done|i am done|later|not now|no more|no more questions|finish|end|cancel|leave it) $")
 
     fun heard(text: String): Heard {
-        val t = norm(text).replace(Regex("^ (jarvis |boss )"), " ").replace(Regex(" (please|jarvis|thanks|thank you) $"), " ")
+        val t = norm(text).replace(rx("^ (jarvis |boss )"), " ").replace(rx(" (please|jarvis|thanks|thank you) $"), " ")
         return when {
             STOP.containsMatchIn(t) -> Heard.STOP
             SKIP.containsMatchIn(t) -> Heard.SKIP
@@ -78,7 +78,7 @@ object DayJournal {
     }
 
     /** Boss's answer as kept: his own words, secrets hidden, trimmed. */
-    fun kept(answer: String): String = Secrets.redact(answer).replace(Regex("\\s+"), " ").trim().take(MAX_ANSWER)
+    fun kept(answer: String): String = Secrets.redact(answer).replace(rx("\\s+"), " ").trim().take(MAX_ANSWER)
 
     private fun hm(t: LocalDateTime) = "%02d:%02d".format(Locale.ENGLISH, t.hour, t.minute)
     private fun minuteOf(t: LocalDateTime) = t.hour * 60 + t.minute

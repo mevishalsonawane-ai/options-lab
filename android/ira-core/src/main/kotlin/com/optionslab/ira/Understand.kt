@@ -164,8 +164,13 @@ object Bundle {
     private val SPLIT = Regex("(?i)\\s*(?:,|;|\\band then\\b|\\bthen\\b|\\band\\b|\\bphir\\b|\\baur\\b|\\buske baad\\b)\\s*")
 
     fun acts(text: String): Boolean = runCatching {
-        Corrections.acts(text) || SPLIT.split(text).map { it.trim() }.filter { it.isNotEmpty() }.let { parts ->
-            parts.size > 1 && parts.any { Corrections.acts(it) }
+        acted.of(text) {
+            Corrections.acts(text) || SPLIT.split(text).map { it.trim() }.filter { it.isNotEmpty() }.let { parts ->
+                parts.size > 1 && parts.any { Corrections.acts(it) }
+            }
         }
     }.getOrDefault(true)
+
+    /** The last words read ([Kept]; pure, and a reading that fails keeps nothing). */
+    private val acted = Kept<Boolean>(64)
 }

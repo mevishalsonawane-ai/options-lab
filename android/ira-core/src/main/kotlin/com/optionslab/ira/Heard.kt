@@ -24,5 +24,8 @@ object Heard {
     )
 
     /** [text] with misheard words read as meant, or [text] itself when nothing needed fixing. */
-    fun fix(text: String): String = FIXES.fold(text) { t, (r, to) -> r.replace(t, to) }
+    fun fix(text: String): String = fixed.same(text) { FIXES.fold(text) { t, (r, to) -> r.replace(t, to) } }
+
+    /** The last words read ([Kept]; pure). */
+    private val fixed = Kept<String>(64)
 }

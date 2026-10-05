@@ -55,8 +55,8 @@ object MarketDays {
 
     /** "When is the next expiry", "is today expiry", "expiry kab hai", "BankNifty expiry": which index (null: all three). */
     fun expiryAsked(text: String): Boolean =
-        Regex("(?i)\\b(next|upcoming|this week'?s?|when is( the)?|is (today|tomorrow|monday|tuesday|wednesday|thursday|friday)( an?)?|today'?s?|kab hai|kab|aaj|kal)\\b.{0,20}\\bexpiry\\b|\\b(what|which) day is( the)?( next| this week'?s?)? expiry\\b|\\b(time|days?) (left|remaining) (for|to|till|until|in) (the )?(next )?expiry\\b|\\bhow (long|much time|many days) (to|till|until|for|is left for) (the )?(next )?expiry\\b|\\bexpiry\\b.{0,12}\\b(kab|when|today|tomorrow|aaj|kal|date|day|kis din|kis date|kaun se din|konse din)\\b|^\\W*(nifty |banknifty |bank nifty |finnifty )?expiry\\W*$")
-            .containsMatchIn(text) && !Regex("(?i)\\b(my|positions?|square|close|buy|sell)\\b").containsMatchIn(text)
+        rx("(?i)\\b(next|upcoming|this week'?s?|when is( the)?|is (today|tomorrow|monday|tuesday|wednesday|thursday|friday)( an?)?|today'?s?|kab hai|kab|aaj|kal)\\b.{0,20}\\bexpiry\\b|\\b(what|which) day is( the)?( next| this week'?s?)? expiry\\b|\\b(time|days?) (left|remaining) (for|to|till|until|in) (the )?(next )?expiry\\b|\\bhow (long|much time|many days) (to|till|until|for|is left for) (the )?(next )?expiry\\b|\\bexpiry\\b.{0,12}\\b(kab|when|today|tomorrow|aaj|kal|date|day|kis din|kis date|kaun se din|konse din)\\b|^\\W*(nifty |banknifty |bank nifty |finnifty )?expiry\\W*$")
+            .containsMatchIn(text) && !rx("(?i)\\b(my|positions?|square|close|buy|sell)\\b").containsMatchIn(text)
 
     /** One line per index: its next expiry, "today" or "tomorrow" said plainly. */
     fun expirySay(today: LocalDate, next: List<Pair<Market, LocalDate?>>): String {

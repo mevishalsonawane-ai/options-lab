@@ -87,8 +87,8 @@ object Thinking {
 
     /** A fact as kept: no rupee amount (cut), no secret, one line, short. */
     fun clean(text: String): String {
-        var t = Secrets.redact(text).replace(Regex("\\s+"), " ").trim()
-        t = MONEY.replace(t, "").replace(Regex("\\s+([,;:.)])"), "$1").replace(Regex("[,;:]\\s*([).]|$)"), "$1").trim()
+        var t = Secrets.redact(text).replace(rx("\\s+"), " ").trim()
+        t = MONEY.replace(t, "").replace(rx("\\s+([,;:.)])"), "$1").replace(rx("[,;:]\\s*([).]|$)"), "$1").trim()
         return t.trimEnd('.', ' ').take(FACT_LEN)
     }
 
@@ -253,7 +253,7 @@ object Thinking {
     private val AT = Regex(" (at|around|near|about|by) (\\d{1,2})(?:[ :.](\\d{2}))?( ?(am|pm|baje))? ")
 
     private fun norm(text: String) = " " + Spoken.digits(text).lowercase(Locale.ENGLISH).replace("’", "'").replace("'", " ")
-        .replace(Regex("[^a-z0-9: ]"), " ").replace(Regex("\\s+"), " ").trim() + " "
+        .replace(rx("[^a-z0-9: ]"), " ").replace(rx("\\s+"), " ").trim() + " "
 
     /** What [text] asks of his thinking, or null when it is not such a question. */
     fun asked(text: String): Query? {
@@ -261,11 +261,11 @@ object Thinking {
         val area: Area?; val did: Boolean?
         var latest = false
         when {
-            DAY.containsMatchIn(s) -> return Query(null, null, yesterday = Regex(" (yesterday|kal) ").containsMatchIn(s), day = true)
+            DAY.containsMatchIn(s) -> return Query(null, null, yesterday = rx(" (yesterday|kal) ").containsMatchIn(s), day = true)
             CAUTION.containsMatchIn(s) || CAUTION2.containsMatchIn(s) -> { area = Area.CAUTION; did = null }
             // "Why so quiet today?" is the day's airtime ([Airtime.say]); a time or a move named is a decision of its own.
-            ALERT.containsMatchIn(s) && !runCatching { Airtime.asked(text) }.getOrDefault(false) -> { area = Area.ALERT; did = if (Regex(" (merge|merged|combine|combined) ").containsMatchIn(s)) true else false }
-            AGENDA.containsMatchIn(s) -> { area = Area.AGENDA; did = if (Regex(" (skip|skipped|miss|missed|drop|dropped) | $NOT ").containsMatchIn(s)) false else null }
+            ALERT.containsMatchIn(s) && !runCatching { Airtime.asked(text) }.getOrDefault(false) -> { area = Area.ALERT; did = if (rx(" (merge|merged|combine|combined) ").containsMatchIn(s)) true else false }
+            AGENDA.containsMatchIn(s) -> { area = Area.AGENDA; did = if (rx(" (skip|skipped|miss|missed|drop|dropped) | $NOT ").containsMatchIn(s)) false else null }
             TRADE_NOT.containsMatchIn(s) -> { area = if (s.contains(" solo ")) Area.SOLO else null; did = false }
             TRADE_DID.containsMatchIn(s) -> { area = if (s.contains(" solo ")) Area.SOLO else null; did = true }
             GENERIC.containsMatchIn(s) -> { area = null; did = null; latest = true }
@@ -279,7 +279,7 @@ object Thinking {
             if (h in 0..23 && (mm == null || mm in 0..59)) { if (mm != null) minute = h * 60 + mm else hour = h }
         }
         val market = Market.mentioned(text).firstOrNull()
-        return Query(area, did, minute, hour, Regex(" (yesterday|kal) ").containsMatchIn(s), market, latest && minute == null && hour == null)
+        return Query(area, did, minute, hour, rx(" (yesterday|kal) ").containsMatchIn(s), market, latest && minute == null && hour == null)
     }
 
     private fun areaOk(q: Query, k: Kind) = when (q.area) {

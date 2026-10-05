@@ -125,8 +125,8 @@ object ChainIntel {
     /** Advice, forecasts and Boss's own book are not these questions. */
     private val NOT = Regex(" (should i|should we|shall i|do i|can i|will (it|nifty|the market|bank nifty|banknifty)|tomorrow|next week|buy|sell|short|go long|my|mine|our|predict|prediction|forecast|target) ")
 
-    private fun norm(text: String) = " " + text.lowercase(Locale.ENGLISH).replace("’", "'").replace("'", " ").replace(Regex("[^a-z0-9 ]"), " ")
-        .replace(Regex("\\s+"), " ").trim() + " "
+    private fun norm(text: String) = " " + text.lowercase(Locale.ENGLISH).replace("’", "'").replace("'", " ").replace(rx("[^a-z0-9 ]"), " ")
+        .replace(rx("\\s+"), " ").trim() + " "
 
     /** The word itself asked ("what is a straddle", "explain straddle", "skew ka matlab"): the glossary's (routing audit, round 8). */
     private val WORD = Regex(" (what is a|what s a|whats a|what is an|define|definition of|meaning of) | (meaning|kya hota|kya hoti|ka matlab|matlab) |" +

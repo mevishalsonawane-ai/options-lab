@@ -51,7 +51,7 @@ object Honest {
         if (Sizing.needsBudget(text)) return Asked.LotsNoBudget
         if (NOT_HERE.containsMatchIn(text)) return null
         if (VWAP.containsMatchIn(text)) return if (VWAP_WORD.containsMatchIn(text)) null else Asked.Vwap(index(text))
-        if (RESULTS.containsMatchIn(text) && !Regex("(?i)\\b(trade|trades|strategy|strategies|test)\\b").containsMatchIn(text)) return Asked.Results
+        if (RESULTS.containsMatchIn(text) && !rx("(?i)\\b(trade|trades|strategy|strategies|test)\\b").containsMatchIn(text)) return Asked.Results
         // "Why is Nifty falling, is it crude?" is Nifty's why (its reasons are read from what the phone has); gold's own
         // dollar is gold's ("gold in dollars").
         val indexWhy = WHY.containsMatchIn(text) && index(text.replace(GIFT, " ")) != null

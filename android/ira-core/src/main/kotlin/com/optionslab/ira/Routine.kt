@@ -60,7 +60,7 @@ object Routine {
     private val PNL = Regex(" (p ?& ?l|p and l|pnl|mtm|m2m|am i up|am i down|how am i doing|my profit|my loss) ")
     private val EVENTS = Regex(" (events?|calendar) ")
 
-    private fun norm(text: String) = " " + text.lowercase().replace("&", " & ").replace(Regex("[^a-z0-9&]+"), " ").replace(Regex("\\s+"), " ").trim() + " "
+    private fun norm(text: String) = " " + text.lowercase().replace("&", " & ").replace(rx("[^a-z0-9&]+"), " ").replace(rx("\\s+"), " ").trim() + " "
 
     /**
      * The key of a question Boss may have a routine for: a market question ([Habits.key]), his P&L ("ACCOUNT|pnl") or the
@@ -303,14 +303,14 @@ object Routine {
         "(mera|meri) (routine|usual routine) (kya|kia) (hai|he|h)|(main|mai|me) (usually|aksar|zyada tar|zyadatar|mostly|roz|rozana) (tumse |aapse |tumhe |aapko )?(kya|kia) (poochta|puchta|pucchta|poochti|puchti|pucchti) (hoon|hu|hun|hoo))( jarvis)?$")
     private val FORGET_ASKED = Regex("^(jarvis )?(forget|drop|clear|stop) (my|the) (routines?|habits)( with you)?( please)?$")
 
-    private fun plain(text: String) = text.lowercase().replace(Regex("[^a-z ]"), " ").replace(Regex("\\s+"), " ").trim()
+    private fun plain(text: String) = text.lowercase().replace(rx("[^a-z ]"), " ").replace(rx("\\s+"), " ").trim()
 
     /**
      * "What do I usually ask?" / "what are my habits with you?" (not his trading habits, which the reviews tell). "What is
      * my trading routine" is this routine (routing audit, round 8: it fell to a market answer).
      */
     fun asked(text: String): Boolean = HABITS_ASKED.matches(plain(text)) &&
-        !Regex("\\b(trade|trades|losing|money)\\b|\\btrading\\b(?! routine\\b)").containsMatchIn(plain(text))
+        !rx("\\b(trade|trades|losing|money)\\b|\\btrading\\b(?! routine\\b)").containsMatchIn(plain(text))
 
     /** "Forget my routine": every routine learned and kept is dropped. */
     fun forgetAsked(text: String): Boolean = FORGET_ASKED.matches(plain(text))

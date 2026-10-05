@@ -158,7 +158,7 @@ object Learnings {
     enum class Ask { WEEK, CHANGED, ALL }
 
     private fun norm(text: String) = " " + text.lowercase().replace("'", "").replace("’", "")
-        .replace(Regex("[^a-z0-9 ]"), " ").replace(Regex("\\s+"), " ").trim() + " "
+        .replace(rx("[^a-z0-9 ]"), " ").replace(rx("\\s+"), " ").trim() + " "
 
     private const val LEAD = "^ (hey |ok |okay )?(jarvis )?(so )?(please )?(can you |could you |would you )?"
     private const val TAIL = "( please| boss| jarvis)* $"

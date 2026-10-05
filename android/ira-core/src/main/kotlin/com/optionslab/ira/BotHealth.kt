@@ -197,7 +197,7 @@ object BotHealth {
 
     private fun words(k: Int) = listOf("no", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten").getOrElse(k) { "$k" }
 
-    private fun norm(text: String) = " " + text.lowercase().replace(Regex("[^a-z0-9 ]"), " ").replace(Regex("\\s+"), " ").trim() + " "
+    private fun norm(text: String) = " " + text.lowercase().replace(rx("[^a-z0-9 ]"), " ").replace(rx("\\s+"), " ").trim() + " "
 
     // (An ORB arm by its name too - "is ORB 5 behaving?": routing audit, round 8.)
     private val BOTS = "(bots?|algos?|strateg(y|ies)|arms?|scripts?|pine scripts?|auto ?trades?|orb \\d+)"

@@ -80,8 +80,8 @@ object NewsDesk {
 
     const val TIMING = "That is timing only, Boss: a headline published near a move does not say it caused the move, and I can't tell which news moved the market."
 
-    private fun norm(text: String) = " " + text.lowercase(Locale.ENGLISH).replace("’", "'").replace(Regex("[^a-z0-9 ]"), " ")
-        .replace(Regex("\\s+"), " ").trim() + " "
+    private fun norm(text: String) = " " + text.lowercase(Locale.ENGLISH).replace("’", "'").replace(rx("[^a-z0-9 ]"), " ")
+        .replace(rx("\\s+"), " ").trim() + " "
     private fun pctAbs(x: Double) = "%.2f%%".format(Locale.ENGLISH, abs(x))
     private fun hm(t: LocalDateTime) = "%02d:%02d".format(Locale.ENGLISH, t.hour, t.minute)
     private fun stamp(t: Instant?, zone: ZoneId, today: LocalDate): String {
@@ -111,7 +111,7 @@ object NewsDesk {
     /** "Title - Outlet" (an aggregator's form): the outlet's name is not the story's words. */
     private fun bare(title: String): String {
         val i = title.lastIndexOf(" - ")
-        return if (i > 0 && title.substring(i + 3).trim().split(Regex("\\s+")).size <= 4) title.substring(0, i) else title
+        return if (i > 0 && title.substring(i + 3).trim().split(rx("\\s+")).size <= 4) title.substring(0, i) else title
     }
 
     /** A headline's telling words: no small words, plurals folded ("banks" and "bank" are one word). */
@@ -177,14 +177,14 @@ object NewsDesk {
     /** Which of the three was asked, or null. Facts only: a forecast, advice, Boss's own or the news settings are not these. */
     fun asked(text: String): Ask? {
         val t = norm(text)
-        if (!Regex(" (news|headline|headlines|story|stories|khabar|khabren|khabrein) ").containsMatchIn(t)) return null
+        if (!rx(" (news|headline|headlines|story|stories|khabar|khabren|khabrein) ").containsMatchIn(t)) return null
         if (NOT.containsMatchIn(t)) return null
         if (MOVED.containsMatchIn(t)) return Ask.Moved
         if (MAIN.containsMatchIn(t)) return Ask.Main
         // A sector or theme named with the news: "any news on banks?", "RBI news", "headlines about IT". ("IT" said in
         // capitals is the sector; "it" otherwise is a word: "any news on it?")
         ASKED_TAGS.firstOrNull { it.second.containsMatchIn(t) }?.let { return Ask.On(it.first) }
-        if (Regex("\\bIT\\b").containsMatchIn(text)) return Ask.On(Tag.IT)
+        if (rx("\\bIT\\b").containsMatchIn(text)) return Ask.On(Tag.IT)
         return null
     }
 

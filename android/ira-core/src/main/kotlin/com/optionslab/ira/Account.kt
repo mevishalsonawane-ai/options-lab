@@ -137,10 +137,10 @@ object AppAnswers {
 
     /** Does [t] (lower-case, spaced) ask about the app or the owner's trading? */
     fun about(t: String): Boolean = WORDS.any { (s, r) -> s != Section.HOWTO && s != Section.STATUS && r.containsMatchIn(t) } ||
-        Regex(" (my|mine|our|i|me) ").containsMatchIn(t) && WORDS.any { it.second.containsMatchIn(t) } ||
-        Regex(" (how am i doing|how did i do|app status|this app|kill switch|zerodha|login|logged in|holiday|holidays|harvest|static ip|where is|where do i|how do i|how can i|when is (the )?(next )?expiry|next expiry|expiry (day|date|today)|is (the )?market open|market open today) ").containsMatchIn(t) ||
+        rx(" (my|mine|our|i|me) ").containsMatchIn(t) && WORDS.any { it.second.containsMatchIn(t) } ||
+        rx(" (how am i doing|how did i do|app status|this app|kill switch|zerodha|login|logged in|holiday|holidays|harvest|static ip|where is|where do i|how do i|how can i|when is (the )?(next )?expiry|next expiry|expiry (day|date|today)|is (the )?market open|market open today) ").containsMatchIn(t) ||
         // "Is Kite connected", "is the app working" (audit, 5 Oct): the app's own status.
-        Regex(" is (kite|zerodha|the data|data|the app|app|the relay|relay|the feed|my broker) (connected|working|running|ok|okay|down|up) ").containsMatchIn(t)
+        rx(" is (kite|zerodha|the data|data|the app|app|the relay|relay|the feed|my broker) (connected|working|running|ok|okay|down|up) ").containsMatchIn(t)
 
     fun sections(text: String): Set<Section> {
         // (Read as a question: "aaj kitna kamaya" and a misheard "p and l" ask the P&L too - only what to read, never an action.)
@@ -181,7 +181,7 @@ object AppAnswers {
         // "For my 24500 put to work, what needs to happen?", "where is my breakeven?": worked from the facts, on its own.
         if (NeedsTrue.asked(text)) { out.clear(); out += Section.NEED }
         // The new sections are asked on their own: drop the broad matches their words also hit.
-        if (!Regex(" and | also | plus ").containsMatchIn(t) && out.any { it == Section.ACTIVITY || it == Section.READY || it == Section.REGIME || it == Section.LOSSES || it == Section.WHATIF || it == Section.CHANGES || it == Section.EXPLAIN_POS ||
+        if (!rx(" and | also | plus ").containsMatchIn(t) && out.any { it == Section.ACTIVITY || it == Section.READY || it == Section.REGIME || it == Section.LOSSES || it == Section.WHATIF || it == Section.CHANGES || it == Section.EXPLAIN_POS ||
                 it == Section.SEARCH || it == Section.TIMEOFDAY || it == Section.REASONS || it == Section.MISTAKES || it == Section.MOVE || it == Section.RANK || it == Section.REPLAY || it == Section.MONTH || it == Section.CHARGES || it == Section.HEALTH || it == Section.BOTS || it == Section.TAX || it == Section.NEED })
             out.removeAll(setOf(Section.EVENTS, Section.POSITIONS, Section.STATUS, Section.STRATEGIES, Section.ORDERS, Section.PNL, Section.SETTINGS, Section.HISTORY, Section.HOWTO, Section.STUDY, Section.REVIEW))
         if (Section.REVIEW in out) { out.remove(Section.HISTORY); out.remove(Section.ORDERS); out.remove(Section.PNL) }

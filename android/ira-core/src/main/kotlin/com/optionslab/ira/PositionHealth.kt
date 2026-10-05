@@ -54,10 +54,10 @@ object PositionHealth {
     /** Index options, cash-settled; every other underlying's options (stocks) are settled by delivery. */
     val INDICES = setOf("NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY", "NIFTYNXT50", "SENSEX", "BANKEX", "SENSEX50")
 
-    private fun norm(text: String) = (" " + text.lowercase().replace(Regex("[^a-z0-9 ]"), " ").replace(Regex("\\s+"), " ").trim() + " ")
+    private fun norm(text: String) = (" " + text.lowercase().replace(rx("[^a-z0-9 ]"), " ").replace(rx("\\s+"), " ").trim() + " ")
         // The recognizer's and the keyboard's slips (routing audit, round 7): "chek my postions" is this check.
-        .replace(Regex(" (postions?|positons?|possitions?|posistions?|positiions?|pozitions?|pisitions?)(?= )")) { " position" + if (it.value.endsWith("s")) "s" else "" }
-        .replace(Regex(" (chek|chk|chck|chec|cheak|chekc)(?= )"), " check")
+        .replace(rx(" (postions?|positons?|possitions?|posistions?|positiions?|pozitions?|pisitions?)(?= )")) { " position" + if (it.value.endsWith("s")) "s" else "" }
+        .replace(rx(" (chek|chk|chck|chec|cheak|chekc)(?= )"), " check")
 
     private val OWNER = Regex(" (my|mine|our|meri|mere|mera|hamari|hamare|apni|apne) ")
     private val ASK = Regex(" (positions? (health|health check|healthcheck|check up|checkup)|health (check )?(of|on|for) (all )?(my|our) (open )?positions?|" +
@@ -71,7 +71,7 @@ object PositionHealth {
     /** "Check my positions", "position health", "are my positions okay", "kya meri positions theek hain". */
     fun asked(text: String): Boolean = listOf(text, Ask.reading(text)).any { s ->
         val t = norm(s.replace("p&l", "p l", ignoreCase = true))
-        ASK.containsMatchIn(t) && (OWNER.containsMatchIn(t) || Regex(" positions? (health|health check|healthcheck|check up|checkup) ").containsMatchIn(t)) &&
+        ASK.containsMatchIn(t) && (OWNER.containsMatchIn(t) || rx(" positions? (health|health check|healthcheck|check up|checkup) ").containsMatchIn(t)) &&
             !NOT.containsMatchIn(t)
     }
 
