@@ -125,6 +125,7 @@ class CollisionTest {
         "WatchAsk" to { q -> WatchAsk.asked(q) != null },
         "Tour" to { q -> Tour.asked(q) },
         "ExpiryPin" to { q -> ExpiryPin.asked(q) != null },
+        "StraddleDecay" to { q -> StraddleDecay.asked(q) != null },
         "SinceMorning" to { q -> SinceMorning.asked(q) },
         "ChainDrift" to { q -> ChainDrift.asked(q) != null },
         "ChainIntel" to { q -> ChainIntel.asked(q) != null },
@@ -821,6 +822,13 @@ class CollisionTest {
         // Its neighbours: a comeback from the previous close, the reach from the open, the first move's direction, the last hour.
         "does a 1.5% intraday rally usually hold for banknifty" to "Comebacks", "how far does finnifty usually move from its open" to "OpenReach",
         "when sensex is up in the first half hour how often does it end up" to "FirstMove", "does finnifty usually reverse in the last hour" to "LastHour",
+        // ---- StraddleDecay: what 9:30 to 14:30 did to the at-the-money straddle, quiet against moving sessions (round 40) ----
+        "how much does the atm straddle usually lose between 9:30 and 2:30" to "StraddleDecay",
+        "how much does nifty's straddle decay on a quiet day vs a trending day" to "StraddleDecay", "straddle decay record for banknifty" to "StraddleDecay",
+        "how often does the atm straddle gain by 2:30" to "StraddleDecay", "on expiry day how much does the straddle usually lose" to "StraddleDecay",
+        "nifty ka straddle din mein kitna girta hai" to "StraddleDecay", "how much do at the money option premiums usually decay intraday" to "StraddleDecay",
+        // Its neighbours: the straddle's implied move now, Boss's own book's decay, today's expiry companion.
+        "what does the banknifty straddle imply for expiry" to "ChainIntel", "how much is my book losing to theta" to "BookDecay",
         // ---- MorningSense: the morning check items said briefly ----
         "which morning items do you skip" to "MorningSense", "which morning check items do you leave out" to "MorningSense",
         "morning check ka kya skip karte ho" to "MorningSense", "read me the whole morning check" to "MorningSense",
@@ -1298,7 +1306,7 @@ class CollisionTest {
     /** The question branches of IraHub.ask between the `bundled` read and the Plan block, in [CoverageTest.feature]'s order. */
     private val HUB_ORDER = listOf("DayJournal", "AlertSense", "Airtime", "Hearing", "PatternCalls", "TrendReads", "OutsideApp", "Clarity", "WordFit", "AskedAgain", "FigureFirst", "WrongThing", "ArmHabits", "MorningSense", "HonestStars", "TalkHours", "MorningAsks", "TurnDowns", "TopicLength", "OutlookCheck", "UsualIndex", "Nicknames", "LeadIndex", "LeadPart", "NextAsk", "MoreAfter", "NewsMoves",
         "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmFit", "WeakLink", "ArmChange", "PnlGap", "ArmDay", "BookDecay", "WhereIWin", "TradesADay", "AfterLoss", "RequestBook", "NetLean", "ExpiryEve", "BeforeTomorrow", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "ZerodhaSession", "OrderWhy", "RelayHealth", "StreamHealth", "BatteryUse", "WatchAsk", "Tour", "DataAge", "Honest", "Thinking",
-        "SelfWhy", "Consistency", "CoPilot", "SinceMorning", "ExpiryPin", "ChainDrift", "ChainIntel", "DayClock", "GapRecord", "RangeBreaks", "PriorDay", "LastHour", "InsideDays", "FirstMove", "VixNext", "SplitDays", "RoundCloses", "MonthTurns", "LunchRange", "OpenHighLow", "BigCandles", "ExtremeCloses", "WeekRange", "RelativeMove", "Comebacks", "VixBand", "Overnight", "DayAfter", "OpenReach", "MultiDay", "MoveTime", "GiveBack", "Weekdays", "DayCompare", "LikeToday", "Structure", "MindChange", "Breadth",
+        "SelfWhy", "Consistency", "CoPilot", "SinceMorning", "ExpiryPin", "StraddleDecay", "ChainDrift", "ChainIntel", "DayClock", "GapRecord", "RangeBreaks", "PriorDay", "LastHour", "InsideDays", "FirstMove", "VixNext", "SplitDays", "RoundCloses", "MonthTurns", "LunchRange", "OpenHighLow", "BigCandles", "ExtremeCloses", "WeekRange", "RelativeMove", "Comebacks", "VixBand", "Overnight", "DayAfter", "OpenReach", "MultiDay", "MoveTime", "GiveBack", "Weekdays", "DayCompare", "LikeToday", "Structure", "MindChange", "Breadth",
         "TradeCase", "Scenarios", "Causes", "Agenda", "Improve")
 
     @Test fun theAuditFollowsTheHubsOrderAndEveryBranchIsGuarded() {
@@ -2555,6 +2563,13 @@ class CollisionTest {
             "what is a fibonacci retracement", "how much does nifty give back after running 100 points in 30 minutes", "how fast do you answer",
             "how much does gold give back after a 1% run", "should i trail my stop after a 100 point run", "nifty pullback kab aayega"))
             assertTrue(audit.feature(s) != "GiveBack", "$s: ${audit.feature(s)}")
+        // StraddleDecay stays the record: never today's or one past day's straddle, a forecast, advice, Boss's own book, the
+        // expected move or IV, a definition, other spreads, gold, VIX or Jarvis's own speed.
+        for (s in listOf("how much will the straddle lose today", "should i buy the straddle", "how much is my straddle losing",
+            "how much has the straddle lost today", "how much did the straddle lose yesterday", "what does the straddle imply",
+            "what is a straddle", "how much does a strangle usually lose in a day", "how much does gold's straddle usually lose",
+            "how fast do you answer", "what's my theta", "atm straddle price"))
+            assertTrue(audit.feature(s) != "StraddleDecay", "$s: ${audit.feature(s)}")
         // MultiDay and OpenReach stay records: never one past stretch, today's own read or now.
         for (s in listOf("what was the 3 day move in nifty", "nifty 3 din se upar hai", "is nifty up in 3 days"))
             assertTrue(audit.feature(s) != "MultiDay", "$s: ${audit.feature(s)}")
