@@ -588,7 +588,9 @@ class IraHubTest : RobolectricTest() {
     }
 
     @Test fun jarvisTakesTurnsByDefault() {
-        assertTrue("cutting in is off until Boss switches it on", !JarvisVoice.cutIn)
+        // Boss has made no choice, and with no headset or echo cancelling it stays off (CutIn decides automatically).
+        assertTrue("cutting in is Boss's choice or automatic", JarvisVoice.cutInChoice == null)
+        assertTrue("no headset, no echo cancelling: off", !JarvisVoice.cutInNow(null).on)
     }
 
     @Test fun muteAndUnmuteAtOnce() = runBlocking {
