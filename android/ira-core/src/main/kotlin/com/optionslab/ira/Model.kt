@@ -57,6 +57,7 @@ enum class Market(val label: String, val unit: String, val open: LocalTime?, val
 /** A market's candles: 1-minute bars, oldest first, possibly spanning many days. */
 class History(val market: Market, bars: List<Candle>) {
     val bars: List<Candle> = bars.sortedBy { it.t }
-    val days: List<LocalDate> get() = bars.map { it.t.toLocalDate() }.distinct()
+    /** The days in [bars], in order: worked out once (the candles never change), not at every look (speed round 9). */
+    val days: List<LocalDate> by lazy { bars.map { it.t.toLocalDate() }.distinct() }
     fun day(d: LocalDate): List<Candle> = bars.filter { it.t.toLocalDate() == d }
 }

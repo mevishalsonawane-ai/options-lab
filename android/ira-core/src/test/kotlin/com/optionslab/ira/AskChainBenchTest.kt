@@ -30,6 +30,12 @@ class AskChainBenchTest {
         "Learnings.undoAsked" to { q -> Learnings.undoAsked(q) },
         "NewsMoves.asked" to { q -> NewsMoves.asked(q) },
         "PreMarket.asked" to { q -> PreMarket.asked(q) },
+        "ChainDrift.asked" to { q -> ChainDrift.asked(q) },
+        "Headroom.asked" to { q -> Headroom.asked(q) },
+        "SaidAbout.asked" to { q -> SaidAbout.asked(q) },
+        "NeedsTrue.asked" to { q -> NeedsTrue.asked(q) },
+        "Clarity.asked" to { q -> Clarity.asked(q) },
+        "DayClock.asked" to { q -> DayClock.asked(q) },
         "Understand.questions" to { q -> Understand.questions(null, q) },
         "Bundle.acts" to { q -> Bundle.acts(q) },
         "DayJournal.asked" to { q -> DayJournal.asked(q) },
@@ -38,17 +44,22 @@ class AskChainBenchTest {
         "Airtime.asked" to { q -> Airtime.asked(q) },
         "Hearing.asked" to { q -> Hearing.asked(q) },
         "PatternCalls.asked#2" to { q -> PatternCalls.asked(q) },
+        "Clarity.asked#2" to { q -> Clarity.asked(q) },
         "NewsMoves.asked#2" to { q -> NewsMoves.asked(q) },
         "TaxRecords.exportAsked" to { q -> TaxRecords.exportAsked(q) },
         "Learnings.asked#2" to { q -> Learnings.asked(q) },
         "PreMarket.asked#2" to { q -> PreMarket.asked(q) },
+        "Headroom.asked#2" to { q -> Headroom.asked(q) },
+        "SaidAbout.asked#2" to { q -> SaidAbout.asked(q) },
         "DataAge.asked" to { q -> DataAge.asked(q) },
         "Honest.asked" to { q -> Honest.asked(q) },
         "Thinking.asked" to { q -> Thinking.asked(q) },
         "SelfWhy.asked" to { q -> SelfWhy.asked(q) },
         "Consistency.asked" to { q -> Consistency.asked(q) },
         "CoPilot.asked" to { q -> CoPilot.asked(q) },
+        "ChainDrift.asked#2" to { q -> ChainDrift.asked(q) },
         "ChainIntel.asked" to { q -> ChainIntel.asked(q) },
+        "DayClock.asked#2" to { q -> DayClock.asked(q) },
         "Structure.asked" to { q -> Structure.asked(q) },
         "Breadth.asked" to { q -> Breadth.asked(q) },
         "TradeCase.asked" to { q -> TradeCase.asked(q) },
@@ -122,6 +133,8 @@ class AskChainBenchTest {
             "what's on today", "explain theta to me", "what is iv crush", "stop all strategies", "buy 2 lots nifty atm ce",
             "exit all", "kill switch on", "how much did i make today", "show my positions", "why did you say that",
             "how sure are you", "are you consistent", "what do you know about me", "help me journal today",
+            "how has the option chain drifted", "where is max pain now", "how much room do i have left", "what did i say about expiry",
+            "for my 24500 put to work what needs to happen", "where is my breakeven", "keep your answers short", "when does nifty usually make its high",
         )).distinct()
         List(200) { all[it % all.size] }
     }
@@ -146,6 +159,10 @@ class AskChainBenchTest {
         val sorted = passes.sorted()
         println("AskChainBench: %.1f us per question over the chain, best pass %.1f, median pass %.1f (%d readers, %d questions, %d runs)".format(
             perQ, sorted.first() / 1000.0 / corpus.size, sorted[sorted.size / 2] / 1000.0 / corpus.size, chain.size, corpus.size, runs))
+        val newer = listOf("ChainDrift", "Headroom", "SaidAbout", "NeedsTrue", "Clarity", "DayClock")
+        val inNewer = chain.indices.filter { i -> newer.any { chain[i].first.startsWith("$it.") } }
+        println("  the newer readers (%s, %d calls): %.1f us per question".format(newer.joinToString(), inNewer.size,
+            inNewer.sumOf { total[it] } / 1000.0 / runs / corpus.size))
         chain.indices.sortedByDescending { total[it] }.take(20).forEach { i ->
             println("  %-28s %.2f us".format(chain[i].first, total[i] / 1000.0 / runs / corpus.size))
         }

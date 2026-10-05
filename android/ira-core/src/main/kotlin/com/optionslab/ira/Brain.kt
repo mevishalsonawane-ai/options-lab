@@ -41,7 +41,14 @@ object Brain {
     const val MIN_CANDLES = 30
     const val MOOD_DAYS = 20
 
-    fun read(h: History): Snapshot? {
+    fun read(h: History): Snapshot? = if (h.bars.size > KEEP_UP_TO) readNow(h) else
+        // Read again on every background pass, the same unchanged history while the market is shut ([BarsKept]).
+        kept.of(h.bars, h.market) { readNow(h) }
+
+    private const val KEEP_UP_TO = 30_000
+    private val kept = BarsKept<Snapshot?>(8)
+
+    internal fun readNow(h: History): Snapshot? {
         val bars = h.bars
         if (bars.isEmpty()) return null
         val last = bars.last()
@@ -52,8 +59,11 @@ object Brain {
         val prevBars = prevDay?.let { d -> bars.filter { it.t.toLocalDate() == d } }.orEmpty()
         val fed = last.t.plusMinutes(1)
 
+        // Each chart's closed candles, folded once for the trends and the patterns alike.
+        val closedBy = HashMap<Int, List<Candle>>()
+        fun closed(m: Int) = closedBy.getOrPut(m) { Candles.closed(Candles.fold(bars, m, h.market), m, fed) }
         val trends = CHARTS.mapNotNull { m ->
-            val c = Candles.closed(Candles.fold(bars, m, h.market), m, fed)
+            val c = closed(m)
             if (c.size < MIN_CANDLES) null else {
                 val (dir, line) = Candles.tracker(c)
                 val i = c.size - 1
@@ -64,7 +74,7 @@ object Brain {
         }
 
         val opening = if (h.market.open != null) todayBars.take(OPENING_MINUTES) else emptyList()
-        val (mood, ratio) = mood(h, today, todayBars)
+        val (mood, ratio) = mood(h, days, today, todayBars)
 
         // Levels: yesterday's high, low and close; today's opening range; swing points of the last five days on 15m.
         val price = last.c
@@ -88,7 +98,7 @@ object Brain {
 
         // Today's patterns on the 15 and 60-minute charts, newest first.
         val patterns = listOf(15, 60).flatMap { m ->
-            val c = Candles.closed(Candles.fold(bars, m, h.market), m, fed)
+            val c = closed(m)
             val first = c.indexOfFirst { it.t.toLocalDate() == today }
             if (first < 0) emptyList() else Patterns.scan(c, m, first)
         }.sortedByDescending { it.at }
@@ -102,10 +112,15 @@ object Brain {
     }
 
     /** Today's range so far against the median range of the last [MOOD_DAYS] days over the same number of minutes. */
-    private fun mood(h: History, today: LocalDate, todayBars: List<Candle>): Pair<Mood?, Double?> {
+    private fun mood(h: History, days: List<LocalDate>, today: LocalDate, todayBars: List<Candle>): Pair<Mood?, Double?> {
         val n = todayBars.size
         if (n < 5) return null to null
-        val past = h.days.filter { it < today }.takeLast(MOOD_DAYS).map { d -> h.day(d).take(n) }.filter { it.size == n }
+        // The past days' candles gathered in one look through the history (each day's in their order, as [History.day]).
+        val want = days.filter { it < today }.takeLast(MOOD_DAYS)
+        val byDay = HashMap<LocalDate, ArrayList<Candle>>(want.size * 2)
+        want.forEach { byDay[it] = ArrayList() }
+        for (b in h.bars) byDay[b.t.toLocalDate()]?.add(b)
+        val past = want.map { d -> byDay.getValue(d).take(n) }.filter { it.size == n }
         if (past.size < 5) return null to null
         val usual = past.map { b -> b.maxOf { it.h } - b.minOf { it.l } }.sorted()[past.size / 2]
         if (usual <= 0) return null to null

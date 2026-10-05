@@ -158,6 +158,15 @@ object Structure {
     /** [m]'s structure today from its 1-minute [bars] (any days; today's read, the session before for the prior close), or null. */
     fun read(m: Market, bars: List<Candle>, today: LocalDate): Read? {
         if (m.open == null) return null
+        // Read for a question, the co-pilot and the contradiction check alike, often from the same candles ([BarsKept]).
+        if (bars.size > KEEP_UP_TO) return readNow(m, bars, today)
+        return kept.of(bars, m to today) { readNow(m, bars, today) }
+    }
+
+    private const val KEEP_UP_TO = 30_000
+    private val kept = BarsKept<Read?>(8)
+
+    internal fun readNow(m: Market, bars: List<Candle>, today: LocalDate): Read? {
         val day = bars.filter { it.t.toLocalDate() == today }.sortedBy { it.t }
         if (day.size < MIN_BARS) return null
         val last = day.last()

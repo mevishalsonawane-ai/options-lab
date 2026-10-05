@@ -44,10 +44,12 @@ object Aloud {
 
     /** "Boss" (or "बॉस") kept at its first mention only: "Yes, Boss. It is up, Boss." -> "Yes, Boss. It is up." */
     fun onceBoss(text: String): String {
+        if (!named(text)) return text
         val name = rx("\\b${Address.NAME}\\b|$BOSS_HI")
         val first = name.find(text) ?: return text
         val head = text.substring(0, first.range.last + 1)
         var rest = text.substring(first.range.last + 1)
+        if (!named(rest)) return text
         // ", Boss" before a pause or the end; "Boss, " starting a sentence (the next word then starts it); " Boss" mid-sentence.
         rest = rest.replace(rx(",\\s*(?:${Address.NAME}\\b|$BOSS_HI)(?=[\\s.,!?\\u0964]|$)"), "")
         rest = rest.replace(rx("(^|[.!?\\u0964]\\s+)(?:${Address.NAME}|$BOSS_HI)[,!.]?\\s+(\\S)")) { m ->
@@ -57,22 +59,31 @@ object Aloud {
         return head + rest
     }
 
+    /** Does [text] hold "Boss" or "बॉस" at all (every pattern in [onceBoss] needs one)? */
+    private fun named(text: String) = text.contains(Address.NAME) || text.contains(BOSS_HI)
+
     /**
      * Figures as said: a decimal on 100 or more said whole ("24,612.40" -> "24,612"), a smaller one to two places at
      * most ("1.2345" -> "1.23", "0.50" -> "0.5"); % as percent; "pts" as points; a clock time to the minute without a
      * leading zero. Dates ("05.10.2026"), versions and words with digits in them are left as written.
      */
     fun numbers(text: String, hindi: Boolean = false): String {
-        var s = rx("(?<![\\d:])(\\d{1,2}):(\\d{2})(?::(\\d{2}))?(?![\\d:])").replace(text) { m ->
+        // Times, decimals and points need a digit, percent its sign: a line with neither is said as written (speed round 9).
+        val digits = hasDigit(text)
+        if (!digits && text.indexOf('%') < 0) return text
+        var s = text
+        if (digits && s.indexOf(':') >= 0) s = rx("(?<![\\d:])(\\d{1,2}):(\\d{2})(?::(\\d{2}))?(?![\\d:])").replace(s) { m ->
             var h = m.groupValues[1].toInt(); var min = m.groupValues[2].toInt()
             val sec = m.groupValues[3].toIntOrNull() ?: 0
             if (h > 23 || min > 59 || sec > 59) return@replace m.value
             if (sec >= 30) { min++; if (min == 60) { min = 0; h = (h + 1) % 24 } }
             "$h:" + min.toString().padStart(2, '0')
         }
-        s = rx("(?<![\\w.,])(\\d{1,3}(?:,\\d{2,3})*|\\d+)\\.(\\d+)(?!\\w|[.,]\\d)").replace(s) { m -> round(m.groupValues[1], m.groupValues[2]) }
-        s = rx("\\s?%").replace(s, if (hindi) " प्रतिशत" else " percent")
-        s = rx("(?<=\\d)\\s?(pts?)\\b", RegexOption.IGNORE_CASE).replace(s) { m -> if (m.groupValues[1].length == 3) " points" else " point" }
+        if (digits && s.indexOf('.') >= 0)
+            s = rx("(?<![\\w.,])(\\d{1,3}(?:,\\d{2,3})*|\\d+)\\.(\\d+)(?!\\w|[.,]\\d)").replace(s) { m -> round(m.groupValues[1], m.groupValues[2]) }
+        if (s.indexOf('%') >= 0) s = rx("\\s?%").replace(s, if (hindi) " प्रतिशत" else " percent")
+        if (digits && (s.indexOf('p') >= 0 || s.indexOf('P') >= 0))
+            s = rx("(?<=\\d)\\s?(pts?)\\b", RegexOption.IGNORE_CASE).replace(s) { m -> if (m.groupValues[1].length == 3) " points" else " point" }
         return s
     }
 

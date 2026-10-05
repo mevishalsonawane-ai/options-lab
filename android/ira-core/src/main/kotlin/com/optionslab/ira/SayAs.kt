@@ -41,26 +41,48 @@ object SayAs {
 
     /** [text] with its figures as said aloud; [hindi]: the units in Hindi (लाख, करोड़, कॉल, पुट). */
     fun figures(text: String, hindi: Boolean = false): String {
-        if (text.isEmpty()) return text
-        var s = OPTION.replace(text) { m -> option(m, hindi) ?: m.value }
-        s = PLAIN_OPTION.replace(s) { m -> "${INDEX[m.groupValues[1]]} ${group(m.groupValues[2])} ${side(m.groupValues[3], hindi)}" }
-        s = FUTURE.replace(s) { m ->
+        // Every pattern below needs a digit (and each its own letters), so a line without them is said as written - most
+        // spoken lines skip most of the patterns (speed round 9); a pattern is only skipped when it could not match.
+        if (text.isEmpty() || !hasDigit(text)) return text
+        var s = text
+        if (sided(s)) {
+            s = OPTION.replace(s) { m -> option(m, hindi) ?: m.value }
+            s = PLAIN_OPTION.replace(s) { m -> "${INDEX[m.groupValues[1]]} ${group(m.groupValues[2])} ${side(m.groupValues[3], hindi)}" }
+        }
+        if (s.contains("FUT")) s = FUTURE.replace(s) { m ->
             val mo = MONTHS.indexOf(m.groupValues[3])
             if (mo < 0) m.value else "${name(m.groupValues[1])} ${MONTH_NAMES[mo]} " + (if (hindi) "फ्यूचर" else "future")
         }
-        s = STRIKE_SIDE.replace(s) { m -> m.groupValues[1] + m.groupValues[2] + " " + side(m.groupValues[3], hindi) }
-        s = PREFIXED.replace(s) { m ->
-            val crore = m.groupValues[4].isNotEmpty()
-            val said = big(m.groupValues[2] + m.groupValues[3], crore, hindi) ?: return@replace m.value
-            m.groupValues[1].let { if (it == "+") "plus " else if (it == "-") "minus " else "" } + said + " " + (if (hindi) "रुपये" else "rupees")
+        if (sided(s)) s = STRIKE_SIDE.replace(s) { m -> m.groupValues[1] + m.groupValues[2] + " " + side(m.groupValues[3], hindi) }
+        // A lakh or more is written with a comma between digits or as six digits in a row ([NUM]).
+        if (mayBeBig(s)) {
+            if (s.contains("Rs") || s.contains('₹') || s.contains("INR")) s = PREFIXED.replace(s) { m ->
+                val crore = m.groupValues[4].isNotEmpty()
+                val said = big(m.groupValues[2] + m.groupValues[3], crore, hindi) ?: return@replace m.value
+                m.groupValues[1].let { if (it == "+") "plus " else if (it == "-") "minus " else "" } + said + " " + (if (hindi) "रुपये" else "rupees")
+            }
+            s = BARE.replace(s) { m ->
+                val tail = m.groupValues[3]
+                val crore = tail.isNotEmpty()
+                val said = big(m.groupValues[1] + m.groupValues[2], crore, hindi) ?: return@replace m.value
+                said + if (tail == " rupees crore") " " + (if (hindi) "रुपये" else "rupees") else ""
+            }
         }
-        s = BARE.replace(s) { m ->
-            val tail = m.groupValues[3]
-            val crore = tail.isNotEmpty()
-            val said = big(m.groupValues[1] + m.groupValues[2], crore, hindi) ?: return@replace m.value
-            said + if (tail == " rupees crore") " " + (if (hindi) "रुपये" else "rupees") else ""
+        return if (s.contains(" rupees crore")) RUPEES_CRORE.replace(s) { m -> m.groupValues[1] + " crore rupees" } else s
+    }
+
+    /** Could [s] hold "CE" or "PE" (every option and strike pattern ends in one)? */
+    private fun sided(s: String) = s.contains("CE") || s.contains("PE")
+
+    /** Could [s] hold a [NUM]: a digit, a comma and a digit, or six digits in a row? */
+    private fun mayBeBig(s: String): Boolean {
+        var run = 0
+        for (i in s.indices) {
+            val c = s[i]
+            if (c in '0'..'9') { if (++run >= 6) return true }
+            else { if (c == ',' && run > 0 && i + 1 < s.length && s[i + 1] in '0'..'9') return true; run = 0 }
         }
-        return RUPEES_CRORE.replace(s) { m -> m.groupValues[1] + " crore rupees" }
+        return false
     }
 
     private fun side(cepe: String, hindi: Boolean) = if (cepe == "CE") (if (hindi) "कॉल" else "call") else (if (hindi) "पुट" else "put")

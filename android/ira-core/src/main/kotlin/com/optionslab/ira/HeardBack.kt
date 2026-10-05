@@ -37,9 +37,9 @@ object HeardBack {
 
     /** The words in [text] that change an answer: indices, numbers, sides, directions and days, said one way. */
     fun keys(text: String): Set<String> {
-        var s = text.lowercase().replace(Regex("(?<=\\d),(?=\\d)"), "")
+        var s = text.lowercase().replace(rx("(?<=\\d),(?=\\d)"), "")
         for ((r, w) in JOINED) s = r.replace(s, w)
-        return s.replace(Regex("[^a-z0-9.\\s]"), " ").split(SPACES).map { it.trim('.') }.filter { it.isNotEmpty() }
+        return s.replace(rx("[^a-z0-9.\\s]"), " ").split(SPACES).map { it.trim('.') }.filter { it.isNotEmpty() }
             .map { SAME[it] ?: it }.filter { it in KEY || it.any(Char::isDigit) }.toSet()
     }
 
@@ -61,7 +61,7 @@ object HeardBack {
 
     /** The one sentence said before the answer: Boss's words as heard, secrets hidden, no sentence end inside. */
     fun line(question: String, hindi: Boolean = false): String {
-        val q = Secrets.redact(question).replace(Regex("[.!?\\u0964\"“”]+"), " ").replace(SPACES, " ").trim().trimEnd(',', ';', ':')
+        val q = Secrets.redact(question).replace(rx("[.!?\\u0964\"“”]+"), " ").replace(SPACES, " ").trim().trimEnd(',', ';', ':')
         return if (hindi) "बॉस, मैंने सुना: \"$q\"।" else "${Address.NAME}, I took that as \"$q\"."
     }
 

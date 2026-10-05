@@ -134,7 +134,7 @@ object Headroom {
     // ---- asked -------------------------------------------------------------------------------------------------
 
     private fun words(s: String) = " " + s.lowercase(Locale.ENGLISH).replace("'", "").replace("’", "").replace("-", " ")
-        .replace(Regex("[^a-z0-9 ]"), " ").replace(Regex("\\s+"), " ").trim() + " "
+        .replace(rx("[^a-z0-9 ]"), " ").replace(rx("\\s+"), " ").trim() + " "
 
     /** Words of changing a limit, an order or a stop: never this question. */
     private val ACTS = rx(" (set|change|raise|increase|lower|reduce|decrease|turn|switch|remove|clear|disable|enable|reset|cancel|buy|sell|square|kar do|karo|badha|ghata|badhao|ghatao) ")

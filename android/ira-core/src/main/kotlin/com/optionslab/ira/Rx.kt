@@ -58,3 +58,9 @@ internal class Kept<V>(private val max: Int) {
 
 /** [read] of [words] kept in [kept], given back as [words] itself when it reads as the same words (a reader that returns its input). */
 internal fun Kept<String>.same(words: String, read: () -> String): String = of(words, read = read).let { if (it == words) words else it }
+
+/** Does [s] hold a digit 0-9 (what `\\d` matches in a pattern)? A pattern that needs one cannot match without. */
+internal fun hasDigit(s: CharSequence): Boolean {
+    for (i in 0 until s.length) if (s[i] in '0'..'9') return true
+    return false
+}

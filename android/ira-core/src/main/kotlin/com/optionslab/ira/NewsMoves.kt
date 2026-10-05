@@ -149,6 +149,15 @@ object NewsMoves {
      */
     fun usual(m: Market, bars: List<Candle>, horizon: Int = QUOTE): Double? {
         if (bars.isEmpty()) return null
+        // Asked again with the same candles (the market shut, or two questions a minute): kept by them ([BarsKept]).
+        if (bars.size > KEEP_UP_TO) return usualNow(m, bars, horizon)
+        return usualKept.of(bars, m to horizon) { usualNow(m, bars, horizon) }
+    }
+
+    private const val KEEP_UP_TO = 30_000
+    private val usualKept = BarsKept<Double?>(8)
+
+    internal fun usualNow(m: Market, bars: List<Candle>, horizon: Int): Double? {
         val close = m.close ?: return null
         val days = bars.map { it.t.toLocalDate() }.distinct().takeLast(USUAL_DAYS).toSet()
         var windows = 0; var big = 0

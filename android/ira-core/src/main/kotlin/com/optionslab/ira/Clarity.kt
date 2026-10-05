@@ -47,7 +47,7 @@ object Clarity {
     fun kind(text: String): String? = runCatching { SelfDoubt.tags(text).firstOrNull { it.dim == SelfDoubt.Dim.TOPIC }?.key }.getOrNull()
 
     private fun norm(text: String) = " " + text.lowercase().replace("'", "").replace("’", "")
-        .replace(Regex("[^a-z0-9 ]"), " ").replace(Regex("\\s+"), " ").trim() + " "
+        .replace(rx("[^a-z0-9 ]"), " ").replace(rx("\\s+"), " ").trim() + " "
 
     private const val LEAD = "^ (sorry |umm |um |uh |hmm |jarvis |boss )*"
     private const val TAIL = "( jarvis| boss| please| sorry| again| bhai| yaar)* $"

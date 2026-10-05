@@ -38,31 +38,52 @@ object Pauses {
     /** [text] with commas where a person would pause; the words exactly as they were. */
     fun shape(text: String): String {
         if (text.isBlank()) return text
-        val lines = LEAD_BULLET.replace(text, "")
-        var s = LINE.replace(lines) { m ->
+        // Each step runs only when its pattern could match (its bracket, dash, separator, line break, digit or comma is
+        // there), so a plain sentence costs a scan, not a dozen patterns (speed round 9); what it gives is the same.
+        val lines = if (has(text, BULLETS)) LEAD_BULLET.replace(text, "") else text
+        var s = if (lines.indexOf('\n') < 0) lines else LINE.replace(lines) { m ->
             val before = lines.substring(0, m.range.first).trimEnd()
             if (before.isEmpty() || before.last() in ".!?:;,।") " " else ", "
         }
-        s = ASIDE.replace(s) { m ->
+        if (s.indexOf('(') >= 0) s = ASIDE.replace(s) { m ->
             val inner = m.groupValues[1].trim()
             if (inner.isEmpty() || SENTENCE_END.containsMatchIn(inner)) return@replace m.value
             val after = m.groupValues[2]
             ", " + inner + (if (after.isEmpty() || after[0] in ",.;:!?।") "" else ",")
         }
-        s = DASH.replace(s, ", ")
-        s = SEPARATOR.replace(s, ", ")
-        s = SIDE_BY_SIDE.replace(s) { m -> m.groupValues[1] + ", " }
-        s = FIG_NAME.replace(s) { m -> m.groupValues[1] + ", " }
+        if (has(s, DASHES)) s = DASH.replace(s, ", ")
+        if (has(s, SEPARATORS)) s = SEPARATOR.replace(s, ", ")
+        if (hasDigit(s)) {
+            s = SIDE_BY_SIDE.replace(s) { m -> m.groupValues[1] + ", " }
+            s = FIG_NAME.replace(s) { m -> m.groupValues[1] + ", " }
+        }
         return tidy(s)
     }
 
-    /** No pause doubled, none before a stop, a colon or another pause, none at either end. */
+    private const val BULLETS = "-\u2022*"
+    private const val DASHES = "-\u2013\u2014"
+    private const val SEPARATORS = "\u00B7|\u2022"
+
+    private fun has(s: String, any: String): Boolean {
+        for (c in any) if (s.indexOf(c) >= 0) return true
+        return false
+    }
+
+    private val DOUBLED = Regex(",(?:\\s*,)+")
+    private val AFTER_STOP = Regex("([.!?:;\\u0964]),(?=\\s|$)")
+    private val BEFORE_STOP = Regex(",\\s*(?=[.!?:;\\u0964](?:\\s|$))")
+    private val SPACED = Regex("(?<=\\S)\\s+,(?=\\s|$)")
+    private val AT_START = Regex("^\\s*,\\s*")
+    private val AT_END = Regex("\\s*,\\s*$")
+
+    /** No pause doubled, none before a stop, a colon or another pause, none at either end (each needs a comma). */
     private fun tidy(text: String): String {
-        var s = text.replace(Regex(",(?:\\s*,)+"), ",")
-        s = s.replace(Regex("([.!?:;\\u0964]),(?=\\s|$)"), "$1")
-        s = s.replace(Regex(",\\s*(?=[.!?:;\\u0964](?:\\s|$))"), "")
-        s = s.replace(Regex("(?<=\\S)\\s+,(?=\\s|$)"), ",")
-        s = s.replace(Regex("^\\s*,\\s*"), "").replace(Regex("\\s*,\\s*$"), "")
+        if (text.indexOf(',') < 0) return text
+        var s = text.replace(DOUBLED, ",")
+        s = s.replace(AFTER_STOP, "$1")
+        s = s.replace(BEFORE_STOP, "")
+        s = s.replace(SPACED, ",")
+        s = s.replace(AT_START, "").replace(AT_END, "")
         return s
     }
 }

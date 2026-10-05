@@ -44,8 +44,8 @@ object DayClock {
     const val NOTE = "A record of past days on this phone, Boss, not a forecast."
     const val NOT_HERE = "I keep the day clock for Nifty, BankNifty, FinNifty and Sensex only, Boss: gold trades round the clock and India VIX is not traded."
 
-    private fun norm(text: String) = " " + text.lowercase(Locale.ENGLISH).replace("’", "'").replace(Regex("[^a-z0-9 ]"), " ")
-        .replace(Regex("\\s+"), " ").trim() + " "
+    private fun norm(text: String) = " " + text.lowercase(Locale.ENGLISH).replace("’", "'").replace(rx("[^a-z0-9 ]"), " ")
+        .replace(rx("\\s+"), " ").trim() + " "
     private fun n(x: Double) = "%,.2f".format(Locale.ENGLISH, x)
     private fun p2(x: Double) = "%.2f%%".format(Locale.ENGLISH, x)
     private fun share(k: Int, of: Int) = "%d%%".format(Locale.ENGLISH, Math.round(k * 100.0 / of))
@@ -147,7 +147,14 @@ object DayClock {
     }
 
     /** The whole past sessions in [bars] before [today], newest [MAX_SESSIONS], oldest first. */
-    fun past(bars: List<Candle>, today: LocalDate): List<Day> = MarketStory.sessions(bars)
+    fun past(bars: List<Candle>, today: LocalDate): List<Day> =
+        // The whole history is read into sessions for each question: kept by its candles and the day ([BarsKept]).
+        if (bars.size > KEEP_UP_TO) pastNow(bars, today) else pastKept.of(bars, today) { pastNow(bars, today) }
+
+    private const val KEEP_UP_TO = 30_000
+    private val pastKept = BarsKept<List<Day>>(8)
+
+    internal fun pastNow(bars: List<Candle>, today: LocalDate): List<Day> = MarketStory.sessions(bars)
         .filter { it.day.isBefore(today) && it.bars.size >= MIN_BARS && !it.bars.first().t.toLocalTime().isAfter(FIRST_BY) &&
             !it.bars.last().t.toLocalTime().isBefore(LAST_FROM) }
         .takeLast(MAX_SESSIONS).map { clock(it) }

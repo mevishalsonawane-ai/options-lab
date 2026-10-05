@@ -64,8 +64,18 @@ object SharpMove {
      * within each session; null with fewer than [MIN_SAMPLES] samples.
      */
     fun usual(bars: List<Candle>, day: java.time.LocalDate): Double? {
+        // Only the sessions before [day] count, and they do not change while the day goes on: the watch looks at every
+        // pass, so the reading is kept by those candles ([BarsKept]) and read again only when they differ.
+        val before = bars.filter { it.t.toLocalDate() < day }
+        return if (before.size > KEEP_UP_TO) usualOf(before) else usualKept.of(before, null) { usualOf(before) }
+    }
+
+    private const val KEEP_UP_TO = 30_000
+    private val usualKept = BarsKept<Double?>(8)
+
+    internal fun usualOf(before: List<Candle>): Double? {
         val moves = ArrayList<Double>()
-        bars.filter { it.t.toLocalDate() < day }.groupBy { it.t.toLocalDate() }.values.forEach { d ->
+        before.groupBy { it.t.toLocalDate() }.values.forEach { d ->
             val b = d.sortedBy { it.t }
             var i = WINDOW
             while (i < b.size) { if (b[i - WINDOW].c > 0) moves += abs((b[i].c - b[i - WINDOW].c) / b[i - WINDOW].c * 100); i += WINDOW }

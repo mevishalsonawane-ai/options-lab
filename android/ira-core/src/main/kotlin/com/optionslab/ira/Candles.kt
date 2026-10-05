@@ -13,7 +13,52 @@ object Candles {
      */
     fun fold(bars: List<Candle>, minutes: Int, market: Market): List<Candle> {
         if (minutes <= 1) return bars
+        // The same history is folded several times a pass (the book, then [Brain.read]): kept by its candles ([BarsKept]).
+        if (bars.size in KEEP_FROM..KEEP_UP_TO) return folded.of(bars, FoldKey(minutes, market)) { foldNow(bars, minutes, market) }
+        return foldNow(bars, minutes, market)
+    }
+
+    private data class FoldKey(val minutes: Int, val market: Market)
+
+    /** Histories of this many candles are kept folded (a day or more, up to about 80 days of 1-minute bars). */
+    private const val KEEP_FROM = 300
+    private const val KEEP_UP_TO = 30_000
+    private val folded = BarsKept<List<Candle>>(16)
+
+    /**
+     * [fold] read afresh. Bars in time order (as every history is kept) are folded in one walk: a candle's minutes are
+     * then side by side, so each candle is the run of bars with the same start (counted as minutes since 1970, which
+     * is equal exactly when the start is). Bars out of order are grouped as they always were ([foldGrouped]); both
+     * give the same candles.
+     */
+    internal fun foldNow(bars: List<Candle>, minutes: Int, market: Market): List<Candle> {
         val anchorMin = market.open?.let { it.hour * 60 + it.minute } ?: 0
+        val b = if (bars is RandomAccess) bars else ArrayList(bars)
+        val n = b.size
+        val slots = IntArray(n)
+        val keys = LongArray(n)
+        for (i in 0 until n) {
+            val t = b[i].t
+            val slot = Math.floorDiv(t.hour * 60 + t.minute - anchorMin, minutes) * minutes + anchorMin
+            slots[i] = slot
+            keys[i] = t.toLocalDate().toEpochDay() * 1440 + slot
+            if (i > 0 && keys[i] < keys[i - 1]) return foldGrouped(bars, minutes, anchorMin)
+        }
+        val out = ArrayList<Candle>()
+        var i = 0
+        while (i < n) {
+            var j = i
+            var hi = b[i].h
+            var lo = b[i].l
+            while (j + 1 < n && keys[j + 1] == keys[i]) { j++; hi = maxOf(hi, b[j].h); lo = minOf(lo, b[j].l) }
+            out += Candle(b[i].t.truncatedTo(ChronoUnit.DAYS).plusMinutes(slots[i].toLong()), b[i].o, hi, lo, b[j].c)
+            i = j + 1
+        }
+        return out
+    }
+
+    /** [fold] by grouping, for bars in any order. */
+    internal fun foldGrouped(bars: List<Candle>, minutes: Int, anchorMin: Int): List<Candle> {
         return bars.groupBy { b ->
             val m = b.t.hour * 60 + b.t.minute - anchorMin
             val slot = Math.floorDiv(m, minutes) * minutes + anchorMin
