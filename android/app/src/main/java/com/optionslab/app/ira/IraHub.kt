@@ -1632,11 +1632,27 @@ object IraHub {
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
             return
         }
+        // "What's the main news today?", "any news on banks?", "what news moved the market today?": the news desk
+        // ([com.optionslab.ira.NewsDesk]) - the same event from different outlets as one story with its source count, tagged
+        // by what it touches; "moved" only as timing against today's sharp moves, never a cause. Headlines and market data
+        // only (fine on a locked phone); facts and sources, never advice or a forecast. Not in the GOLD build (no news read there).
+        val deskAsk = if (parsed.order == null && parsed.command == null && !com.optionslab.app.BuildConfig.GOLD)
+            runCatching { com.optionslab.ira.NewsDesk.asked(q) }.getOrNull() else null
         // A news question with no recent headlines on the phone: the feeds are read first (8 seconds at most), then answered.
-        if (Topic.NEWS in parsed.topics && testHistories == null && System.currentTimeMillis() - newsCheckedAt > 3 * 60_000 && online() &&
+        if ((Topic.NEWS in parsed.topics || deskAsk != null) && testHistories == null && System.currentTimeMillis() - newsCheckedAt > 3 * 60_000 && online() &&
             _state.value.newsAt?.isBefore(Instant.now().minusSeconds(NEWS_EVERY_MINUTES * 60)) != false) {
             newsCheckedAt = System.currentTimeMillis()
             scope.launch { kotlinx.coroutines.withTimeoutOrNull(8_000) { runCatching { freshNews() } }; ask(text, understood) }
+            return
+        }
+        if (deskAsk != null) {
+            val said = runCatching {
+                val mk = com.optionslab.ira.NewsDesk.market(parsed.markets)
+                val bars = com.optionslab.ira.SharpMove.INDICES.associateWith { histories[it]?.bars.orEmpty() }
+                com.optionslab.ira.NewsDesk.answer(deskAsk, _state.value.news, Instant.now(), IST, mk, bars)
+            }.getOrElse { "I could not read the headlines just now, Boss." }
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            reply(said)
             return
         }
         IraTools.count("heard")

@@ -4,8 +4,12 @@ import java.time.Instant
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 
-/** One headline: its words, where it came from, when, its tone (-1 bad .. +1 good) and the markets it concerns. */
-data class Headline(val title: String, val link: String, val source: String, val at: Instant?, val tone: Double, val markets: List<Market>) {
+/**
+ * One headline: its words, where it came from, when, its tone (-1 bad .. +1 good) and the markets it concerns. [also]:
+ * the other feeds that carried the very same words ([News.merge]), so a story's sources can be counted ([NewsDesk]).
+ */
+data class Headline(val title: String, val link: String, val source: String, val at: Instant?, val tone: Double, val markets: List<Market>,
+                    val also: List<String> = emptyList()) {
     val toneWord: String get() = when { tone >= 0.25 -> "positive"; tone <= -0.25 -> "negative"; else -> "neutral" }
 }
 
@@ -107,7 +111,15 @@ object News {
             ?: runCatching { Instant.parse(s) }.getOrNull()
             ?: runCatching { java.time.OffsetDateTime.parse(s).toInstant() }.getOrNull()
 
-    /** Headlines from several feeds, the same story once (by its words), newest first. */
+    /**
+     * Headlines from several feeds, the same story once (by its words), newest first; the other feeds that carried the
+     * very same words are kept in [Headline.also].
+     */
     fun merge(lists: List<List<Headline>>): List<Headline> =
-        lists.flatten().sortedByDescending { it.at ?: Instant.EPOCH }.distinctBy { words(it.title).joinToString(" ") }
+        lists.flatten().sortedByDescending { it.at ?: Instant.EPOCH }.groupBy { words(it.title).joinToString(" ") }.values.map { same ->
+            val kept = same.first()
+            val others = (kept.also + same.drop(1).flatMap { listOf(it.source) + it.also })
+                .filter { !it.equals(kept.source, ignoreCase = true) }.distinctBy { it.lowercase() }
+            if (others == kept.also) kept else kept.copy(also = others)
+        }
 }
