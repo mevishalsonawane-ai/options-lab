@@ -97,6 +97,7 @@ class JarvisVoice : Service() {
                 "any recognizer: ${context?.let { c -> runCatching { SpeechRecognizer.isRecognitionAvailable(c) }.getOrNull() }}\n")
             append("Voice check: ${runCatching { diagnose(context) }.getOrElse { "could not run" }}\n")
             com.optionslab.ira.Latency.say(latencies)?.let { append(it).append('\n') }
+            append(com.optionslab.ira.BossPace.say(paceGaps)).append('\n')
             append("Last turns:\n"); traceLines(all = true).forEach { append("  ").append(it).append('\n') }
         }
 
@@ -296,6 +297,17 @@ class JarvisVoice : Service() {
             get() = runCatching { com.optionslab.app.security.SecurePrefs.getBoolean("jarvis.hindi", false) }.getOrDefault(false)
             set(v) { runCatching { com.optionslab.app.security.SecurePrefs.put("jarvis.hindi", v) } }
 
+        /**
+         * Boss's own pauses inside his questions (ms, numbers only - never words), for how long his words may stand still
+         * before his turn is closed ([com.optionslab.ira.BossPace]). Kept on the phone across restarts.
+         */
+        @Volatile private var paceKept: List<Long>? = null
+        var paceGaps: List<Long>
+            get() = paceKept ?: runCatching { com.optionslab.ira.BossPace.load(com.optionslab.app.security.SecurePrefs.getString(PACE_KEY)) }
+                .getOrDefault(emptyList()).also { paceKept = it }
+            set(v) { paceKept = v; runCatching { com.optionslab.app.security.SecurePrefs.put(PACE_KEY, com.optionslab.ira.BossPace.save(v)) } }
+        private const val PACE_KEY = "jarvis.voice.pausegaps"
+
         /** How long the last spoken reply took, from Boss's last word to Jarvis's first sound (ms), or 0. */
         @Volatile var lastLatencyMs = 0L
         /** This run's answer waits (for the diagnostics). */
@@ -396,8 +408,12 @@ class JarvisVoice : Service() {
         if (early != null) { answerEarly(early); return@Runnable }
         stoppedAt = now; runCatching { rec?.stopListening() }
     }
-    /** Words stopped changing this long: the turn ends (a short pause inside a sentence must not cut it). */
-    private val END_AFTER_MS = 900L
+    /**
+     * Boss's pauses inside this turn (ms between his words changing), learned from once the turn turns out to be his
+     * question ([learnPace]): words stopped changing for his own usual pause and a margin, the turn ends (a breath inside
+     * his sentence must not cut it, and a quick question is not kept waiting) - [com.optionslab.ira.BossPace].
+     */
+    private val turnGaps = ArrayList<Long>()
     /** When the pending [finish] is due (elapsed ms; 0: none this turn), so "speech ended" never puts it off. */
     private var finishAt = 0L
     /** Words unchanged this long: a plain question's answer is worked out ahead ([prepareAhead]). */
@@ -747,6 +763,7 @@ class JarvisVoice : Service() {
         }
         listening = true
         turnReadyAt = 0; turnHeardAny = false; turnLoudest = -100f; turnPartial = null; turnPartialAt = 0L; turnEndAt = 0L; turnSpeech = false; answeredEarly = false; finishAt = 0L
+        turnGaps.clear()
         hushBeep(1_500)                                   // the start beep (put back once the turn is ready, or in 1.5 s)
         runCatching { rec?.startListening(i) }.onFailure { listening = false; endTap(); again(1_000) }
         _state.value = VoiceState(if (awake()) Mode.AWAKE else Mode.LISTENING)
@@ -790,7 +807,12 @@ class JarvisVoice : Service() {
             var fresh = false
             partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull { it.isNotBlank() }?.let {
                 fresh = com.optionslab.ira.Turn.changed(turnPartial, it)
-                if (fresh) turnPartialAt = SystemClock.elapsedRealtime()
+                if (fresh) {
+                    val now = SystemClock.elapsedRealtime()
+                    // A pause inside his speech (more words followed it); kept only if the turn proves to be his question.
+                    if (turnPartialAt > 0 && !speaking && !turnInSpeech) turnGaps += now - turnPartialAt
+                    turnPartialAt = now
+                }
                 turnHeardAny = true; turnPartial = it
                 if (tap != null && silentShared != 0) silentShared = 0      // the shared capture does hear
             }
@@ -807,7 +829,7 @@ class JarvisVoice : Service() {
                 val nameOnly = asking == null && com.optionslab.ira.Wake.heard(first, awake()) is com.optionslab.ira.Wake.Heard.Awake
                 // Only the name: still closed, a little later - a lone "Jarvis" left to the recognizer's own silence often
                 // ended as "no match" and was lost (the mic button's turns are always closed, which is why they worked).
-                val wait = if (nameOnly) 1_800L else END_AFTER_MS
+                val wait = if (nameOnly) 1_800L else com.optionslab.ira.BossPace.endAfter(paceGaps)
                 finishAt = SystemClock.elapsedRealtime() + wait
                 main.postDelayed(finish, wait)
                 main.removeCallbacks(prepareAhead)
@@ -822,12 +844,16 @@ class JarvisVoice : Service() {
             listening = false
             loudNoMatch = 0
             if (results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.any { it.isNotBlank() } == true) langWorks = true
-            note("heard " + (results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()?.let { t ->
-                if (WAKE.containsMatchIn(t)) "the name" else "${t.split(Regex("\\s+")).size} words, no name" } ?: "nothing"))
-            results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()?.let { remember(it) }
+            val readings = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION).orEmpty()
+            // How sure the recognizer was of its best reading (many on-device ones give no score: then null, as before).
+            val sure = com.optionslab.ira.Sure.best(results?.getFloatArray(SpeechRecognizer.CONFIDENCE_SCORES), readings.size)
+            note("heard " + (readings.firstOrNull()?.let { t ->
+                if (WAKE.containsMatchIn(t)) "the name" else "${t.split(Regex("\\s+")).size} words, no name" } ?: "nothing") +
+                ", " + com.optionslab.ira.Sure.say(sure))
+            readings.firstOrNull()?.let { remember(it) }
             errorsInRow = 0
             endTap()
-            heard(results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION).orEmpty())
+            heard(readings, sure = sure)
         }
 
         override fun onError(error: Int) {
@@ -948,6 +974,15 @@ class JarvisVoice : Service() {
         heard(listOf(words))
     }
 
+    /** This turn was Boss's question: its pauses tell how long his words may stand still ([com.optionslab.ira.BossPace]). */
+    private fun learnPace() {
+        if (turnGaps.isEmpty()) return
+        var g = paceGaps
+        for (x in turnGaps) g = com.optionslab.ira.BossPace.add(g, x)
+        turnGaps.clear()
+        paceGaps = g
+    }
+
     /** Slow answers three times running, not on the fastest model: a suggestion in the chat, once a day. */
     private fun slowNudge() {
         // Not while a late answer is awaited ("still working on it" is said as an answer too - review, 4 Oct).
@@ -973,7 +1008,11 @@ class JarvisVoice : Service() {
     /** When Boss's last words were heard (for the reply time). */
     @Volatile private var heardAt = 0L
 
-    private fun heard(alternatives: List<String>, recovered: Boolean = false) {
+    /**
+     * [sure]: the recognizer's score for its best reading ([com.optionslab.ira.Sure]; null: none, or words read mid-turn).
+     * A faint one only ever lets words go (a follow-up without the name, a soft misreading of the name, a yes).
+     */
+    private fun heard(alternatives: List<String>, recovered: Boolean = false, sure: Float? = null) {
         // While Jarvis talks (or the turn began while it talked) it hears itself too: only its name counts then.
         val cutIn = speaking || turnInSpeech
         // Just woken ("Yes, Boss?" said, now finished): the question may have started over those two words - it is
@@ -993,6 +1032,8 @@ class JarvisVoice : Service() {
         if (id != null && SystemClock.elapsedRealtime() < askingUntil) {
             val yes = alternatives.firstOrNull()?.let { Wake.yesNo(it) }
             if (yes != null) {
+                // A faint yes (the room, the TV) is not a yes: anything unclear is not a yes. The question stays open.
+                if (yes && com.optionslab.ira.Sure.faintYes(sure)) { note("a faint yes (${com.optionslab.ira.Sure.say(sure)}): not taken"); again(); return }
                 // A locked phone: a "no" still cancels, a "yes" never acts (trades and commands wait for the unlock).
                 if (yes && locked()) { say(com.optionslab.ira.LockRule.refuse(true, true, false, false)!!, "question"); return }
                 // Only Boss's voice approves a trade; a no from anyone is still a no.
@@ -1024,7 +1065,10 @@ class JarvisVoice : Service() {
         when (h) {
             Wake.Heard.Ignore -> again()
             // A soft misreading of the name ("service") opens the window for a question, but never counts as named.
-            Wake.Heard.Awake -> { awakeUntil = SystemClock.elapsedRealtime() + AWAKE_MS; called = alternatives.any { WAKE.containsMatchIn(it) }; say("Yes, Boss?") }
+            // A faint soft misreading of the name ("service" from the TV, no name in any reading) does not wake him.
+            Wake.Heard.Awake -> if (com.optionslab.ira.Sure.faint(sure, named = alternatives.any { WAKE.containsMatchIn(it) }, called = false)) {
+                note("a faint word like my name (${com.optionslab.ira.Sure.say(sure)}): let go"); again()
+            } else { awakeUntil = SystemClock.elapsedRealtime() + AWAKE_MS; called = alternatives.any { WAKE.containsMatchIn(it) }; say("Yes, Boss?") }
             Wake.Heard.Stop -> if (alternatives.none { WAKE.containsMatchIn(it) }) again() else { wanted = false; say("Going to sleep, Boss. Switch me on again in the app.", STOP_AFTER) }
             // "Jarvis, stop" / "enough" / "quiet": it has stopped talking (the name cut in); nothing else is done.
             Wake.Heard.Hush -> { if (speaking) runCatching { IraTools.noteHush() }; interrupt(); answerJob?.cancel(); awakeUntil = 0; called = false; _state.value = VoiceState(Mode.LISTENING); again() }
@@ -1039,6 +1083,9 @@ class JarvisVoice : Service() {
                 called = false
                 // Its own last words heard back without the name are not a question (the follow-up window stays open).
                 if (!named && Wake.echo(h.question, lastSpoken?.takeIf { SystemClock.elapsedRealtime() - lastSpokenEnd < 15_000 })) { again(); return }
+                // A follow-up without the name that the recognizer was barely sure of is the room (the TV, people nearby),
+                // not Boss: let go, the follow-up window stays open. Not after "Yes, Boss?" or the mic button.
+                if (com.optionslab.ira.Sure.faint(sure, named, called0 && awake)) { note("faint words without my name (${com.optionslab.ira.Sure.say(sure)}): let go"); again(); return }
                 awakeUntil = 0
                 // A command for later ("start all arms tomorrow at 9") is judged as the command itself.
                 val laterRest = runCatching { com.optionslab.ira.Later.split(h.question, java.time.LocalDateTime.now(java.time.ZoneId.of("Asia/Kolkata")))?.rest }.getOrNull()
@@ -1108,6 +1155,7 @@ class JarvisVoice : Service() {
     private fun answer(q: String, confirm: Boolean = false, named: Boolean = true) {
         // From Boss's last word (Boss, 5 Oct): the turn's closing wait and the recognizer's final reading count too.
         heardAt = com.optionslab.ira.Turn.spokeEnd(turnPartialAt, turnEndAt, SystemClock.elapsedRealtime())
+        learnPace()
         _state.value = VoiceState(Mode.THINKING)
         answerJob = scope.launch {
             // Answer at once from what Jarvis already knows (kept fresh every minute while listening in market hours);
