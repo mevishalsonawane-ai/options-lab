@@ -32,12 +32,22 @@ object TradeBook {
 
     private var liveCache: MutableList<Broker.Trade>? = null
 
+    /**
+     * The kept Zerodha trades. No file yet: empty (and kept). A vault that cannot be read (a Keystore failure, a damaged
+     * file, or no bytes from a file that is there): throws, and nothing is kept - so [recordLive] never rewrites the vault
+     * from an empty list, and Jarvis says the trade book could not be read rather than "no trades" (round 22 review; every
+     * caller reads inside runCatching, as [Journal.all]'s do).
+     */
     @Synchronized
     private fun liveTrades(): MutableList<Broker.Trade> {
         liveCache?.let { return it }
+        if (!::liveFile.isInitialized) return ArrayList()
         val out = ArrayList<Broker.Trade>()
-        runCatching {
-            val a = JSONArray(String(Vault.readFileSteady(liveFile) ?: return@runCatching, Charsets.UTF_8))
+        val exists = liveFile.exists()
+        val bytes = Vault.readFileSteady(liveFile)
+        if (bytes == null && exists) throw java.io.IOException("live trade book could not be read")
+        if (bytes != null) {
+            val a = JSONArray(String(bytes, Charsets.UTF_8))
             for (i in 0 until a.length()) {
                 val o = a.getJSONArray(i)
                 out += Broker.Trade(o.getString(0), o.getString(1), o.getString(2), o.getString(3), o.getString(4), o.getInt(5), o.getDouble(6), o.getString(7), o.getString(8))

@@ -127,6 +127,11 @@ class NeedsTrueTodayTest {
         val stale = bars.filter { it.t.toLocalDate() == today || it.t.toLocalDate().isBefore(today.minusDays(4)) }
         assertTrue(stale.any { it.t.toLocalDate().isBefore(today) })
         assertTrue(NeedsTrue.todayBeside("NIFTY", stale, now, listOf(put(pc))).isEmpty())
+        // Yesterday missing on the phone (Monday's close two days back): never bridged (round 22 review)...
+        val gap = bars.filter { it.t.toLocalDate() != before }
+        assertTrue(NeedsTrue.todayBeside("NIFTY", gap, now, listOf(put(pc))).isEmpty())
+        // ...unless the exchange calendar says yesterday did not trade.
+        assertTrue(NeedsTrue.todayBeside("NIFTY", gap, now, listOf(put(pc))) { it.dayOfWeek.value <= 5 && it != before }.isNotEmpty())
         // Gold (and anything but the four indices): nothing said, however whole the sessions.
         assertTrue(NeedsTrue.todayBeside("GOLD", bars, now, listOf(put(pc))).isEmpty())
         assertTrue(NeedsTrue.todayBeside("INDIAVIX", bars, now, listOf(put(pc))).isEmpty())

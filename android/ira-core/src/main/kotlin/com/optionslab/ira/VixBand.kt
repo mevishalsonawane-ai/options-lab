@@ -117,7 +117,7 @@ object VixBand {
     /** VIX itself judged right or wrong. */
     private val TRUE = Regex(" (is|was|has been) (india )?vix (usually |normally |generally |really |actually |even |)(accurate|reliable|right|wrong|correct|any good|trustworthy|off) |" +
         " (how often|how many times|how frequently) (is|does|has) (india )?vix (been )?(accurate|reliable|right|wrong|correct|off|get it right|gets it right|got it right|get it wrong|miss|misses) |" +
-        " how (good|accurate|reliable) is (india )?vix (at (predicting|calling|forecasting|pricing|guessing) (the )?(moves?|range|ranges|swings?)|) |" +
+        " how (good|accurate|reliable) is (india )?vix( at (predicting|calling|forecasting|pricing|guessing) (the )?(moves?|range|ranges|swings?))? |" +
         " (does|do|did) (india )?vix (get|gets|got) (it|the range|the move|the moves|the ranges) (right|wrong) ")
     /** VIX as the yardstick: "as much as VIX says". */
     private val SAYS = Regex(" (vix|india vix) (says|said|suggests|suggested|indicates|indicated|shows|showed|signals|signalled|signaled|points to|pointed to) ")
@@ -177,15 +177,17 @@ object VixBand {
 
     /**
      * The whole sessions before [today] in [bars] whose session before on the phone was whole, at most [MAX_DAYS_APART]
-     * days earlier, and has a whole India VIX session in [vix] the same day; newest [MAX_SESSIONS], oldest first.
+     * days earlier and the trading day just before it by [isTradingDay] (a missing session is never bridged), and has a
+     * whole India VIX session in [vix] the same day; newest [MAX_SESSIONS], oldest first.
      */
-    fun past(bars: List<Candle>, vix: List<Candle>, today: LocalDate): List<Day> {
+    fun past(bars: List<Candle>, vix: List<Candle>, today: LocalDate, isTradingDay: (LocalDate) -> Boolean = Comebacks.WEEKDAYS): List<Day> {
         val vixAt = MarketStory.sessions(vix).filter { it.day.isBefore(today) && whole(it) && it.close > 0 }.associate { it.day to it.close }
         val ss = MarketStory.sessions(bars).filter { it.day.isBefore(today) && it.bars.isNotEmpty() }
         val out = ArrayList<Day>()
         for (i in 1 until ss.size) {
             val before = ss[i - 1]; val s = ss[i]
             if (!whole(before) || !whole(s) || ChronoUnit.DAYS.between(before.day, s.day) > MAX_DAYS_APART || before.close <= 0) continue
+            if (!Comebacks.follows(before.day, s.day, isTradingDay)) continue
             val v = vixAt[before.day] ?: continue
             out += Day(s.day, before.close, v, s.bars.maxOf { it.h }, s.bars.minOf { it.l }, s.close)
         }
@@ -219,8 +221,9 @@ object VixBand {
     }
 
     /** [m]'s record from its 1-minute candles over many days and India VIX's ([vix]), for [q], at [now] on [today]. */
-    fun answer(q: Q, m: Market, bars: List<Candle>, vix: List<Candle>, today: LocalDate, now: LocalDateTime): String {
-        val days = past(bars, vix, today)
+    fun answer(q: Q, m: Market, bars: List<Candle>, vix: List<Candle>, today: LocalDate, now: LocalDateTime,
+               isTradingDay: (LocalDate) -> Boolean = Comebacks.WEEKDAYS): String {
+        val days = past(bars, vix, today, isTradingDay)
         if (days.size < MIN_SESSIONS)
             return "I have only ${days.size} whole session${if (days.size == 1) "" else "s"} of ${m.label} with the one before and India VIX's close that evening on the phone, Boss - " +
                 "too few to say how its moves compared with what VIX priced (I need $MIN_SESSIONS)."
@@ -245,16 +248,16 @@ object VixBand {
         lines += "The biggest miss was ${date(b.day)}: ${s2(b.movePct)}, ${x2(b.closeMoves)} of that day's VIX move (VIX ${n2(b.vix)} the evening before)."
         if (m != Market.NIFTY) lines += "India VIX is worked out from Nifty's options, so for ${m.label} it is a rough yardstick."
         if (r.sessions < FEW_SESSIONS) lines += "That is only ${r.sessions} sessions, so a few days move these figures a lot."
-        todayLine(q, m, bars, vix, today, now)?.let { lines += it }
+        todayLine(q, m, bars, vix, today, now, isTradingDay)?.let { lines += it }
         lines += NOTE
         return lines.joinToString(" ")
     }
 
     /** Today against its band from VIX's last close, when the phone has today's session and a whole one with VIX before it. */
-    private fun todayLine(q: Q, m: Market, bars: List<Candle>, vix: List<Candle>, today: LocalDate, now: LocalDateTime): String? {
+    private fun todayLine(q: Q, m: Market, bars: List<Candle>, vix: List<Candle>, today: LocalDate, now: LocalDateTime, isTradingDay: (LocalDate) -> Boolean): String? {
         val ss = MarketStory.sessions(bars)
         val t = ss.lastOrNull { it.day == today }?.takeIf { it.bars.isNotEmpty() } ?: return null
-        val before = ss.lastOrNull { it.day.isBefore(today) }?.takeIf { whole(it) && it.close > 0 } ?: return null
+        val before = ss.lastOrNull { it.day.isBefore(today) }?.takeIf { whole(it) && it.close > 0 && Comebacks.follows(it.day, today, isTradingDay) } ?: return null
         val v = MarketStory.sessions(vix).lastOrNull { it.day == before.day }?.takeIf { whole(it) && it.close > 0 }?.close ?: return null
         val pc = before.close
         val pts = pc * v / 100 / sqrt(252.0) * q.k

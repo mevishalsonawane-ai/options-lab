@@ -2020,7 +2020,8 @@ class CollisionTest {
         "is vix accurate" to "VixBand", "how often is vix wrong" to "VixBand", "how often does vix get it right" to "VixBand",
         "how good is vix at predicting moves" to "VixBand", "does the market move as much as vix says" to "VixBand",
         // Where he wins, asked in his own words
-        "where am i making money" to "WhereIWin", "where am i losing money" to "WhereIWin", "where do i lose the most" to "WhereIWin",
+        // ("Where am I making / losing money" is asked of now: the account's P&L, as before round 22 - round 22 review.)
+        "where am i making money" to "Account:HOWTO+PNL", "where am i losing money" to "Account:HOWTO+PNL", "where do i lose the most" to "WhereIWin",
         "what do i make money on" to "WhereIWin", "what do i lose money on" to "WhereIWin", "which index works best for me" to "WhereIWin",
         "is selling working for me" to "WhereIWin", "how do i do on banknifty" to "WhereIWin",
         // What has to happen for his position, with the index named first
@@ -2064,6 +2065,43 @@ class CollisionTest {
         for ((prev, now) in listOf("buy nifty 24000 put" to "what about calls?", "close my put" to "and the call?", "sell my calls" to "what about puts?",
             "do i make more on calls or puts" to "what about puts?", "how is nifty" to "what about puts?")) assertEquals(null, FollowUp.resolve(prev, now), "$prev / $now")
         for (s in listOf("sell my nifty put", "book my profit")) assertTrue(Ask.parse(s).command != null || Ask.parse(s).order != null, s)
+    }
+
+    /**
+     * Round 22 review: the P&L asked over today, right now or one month keeps its old route (WhereIWin is his record split,
+     * never the day's P&L); a holding-less "what do I need to do for my ..." is not NEED; VIX judged without "at ..." is
+     * VixBand; the wake word and "can you tell me" no longer hide WhereIWin.
+     */
+    private val ROUND22_REVIEW = listOf(
+        "how did I do on nifty today" to "Account:PNL+POSITIONS+ORDERS+STRATEGIES", "how did i do on options today" to "Account:PNL+POSITIONS+ORDERS+STRATEGIES",
+        "where did I lose money today" to "Account:PNL+HOWTO", "where am i losing money" to "Account:HOWTO+PNL",
+        "what did I make money on today" to "Account:PNL", "which index did i lose money on today" to "Account:PNL",
+        "how did I do on banknifty this month" to "Account:HISTORY",
+        // His record, still WhereIWin
+        "where do I make my money" to "WhereIWin", "am I better at calls or puts" to "WhereIWin", "which index works best for me" to "WhereIWin",
+        "how do i do on banknifty" to "WhereIWin", "where do i make my money this month" to "WhereIWin", "which index do i make money on" to "WhereIWin",
+        "can you tell me where i make my money" to "WhereIWin", "jarvis where do i make my money" to "WhereIWin",
+        "jarvis can you tell me where i make my money" to "WhereIWin",
+        // Not his holding: the old routes
+        "what do I need to do for my strategy to go live" to "Account:STRATEGIES",
+        "what do I need to do for my account to go live" to "Account:PNL+POSITIONS+ORDERS+STRATEGIES",
+        "where do I need to be for my meeting" to "Account:HOWTO",
+        // VIX judged, said short
+        "how accurate is vix" to "VixBand", "how good is vix" to "VixBand", "how reliable is india vix" to "VixBand",
+    )
+
+    @Test fun roundTwentyTwoReviewKeepsTheOldRoutes() {
+        assertEquals(ROUND22_REVIEW.size, ROUND22_REVIEW.map { it.first }.distinct().size)
+        val wrong = ROUND22_REVIEW.mapNotNull { (s, want) -> audit.feature(s).let { got -> if (got == want) null else "\"$s\": wanted $want, got $got ${hits(s)}" } }
+        assertTrue(wrong.isEmpty(), wrong.joinToString("\n"))
+        for ((s, _) in ROUND22_REVIEW) neverActs(s)
+        // NEED still takes the index named first when a holding is named.
+        for (s in listOf("what does nifty need to do for my put", "where does nifty need to be for my put", "what do i need to do for my 24500 put"))
+            assertEquals("Account:NEED", audit.feature(s), s)
+        for (s in listOf("what do I need to do for my strategy to go live", "what do I need to do for my account to go live", "where do I need to be for my meeting"))
+            assertTrue(!NeedsTrue.asked(s), s)
+        // Jarvis's own money stays out of WhereIWin.
+        assertTrue(audit.feature("where do you make your money") != "WhereIWin")
     }
 
     // ---- Again: the voice's own "say that again slowly" - heard before the question path, never a question family ----

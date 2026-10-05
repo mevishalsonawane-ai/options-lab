@@ -49,7 +49,7 @@ object WhereIWin {
     // ---- the groups ----------------------------------------------------------------------------------------------
 
     private val INDICES = listOf("BANKNIFTY" to "BankNifty", "FINNIFTY" to "FinNifty", "MIDCPNIFTY" to "Midcap Nifty",
-        "BANKEX" to "Bankex", "SENSEX" to "Sensex", "NIFTY" to "Nifty")
+        "BANKEX" to "Bankex", "SENSEX" to "Sensex", "NIFTY" to "Nifty", "GOLD" to "Gold")
 
     /** The index [symbol] is on ("others" for anything else). */
     fun index(symbol: String): String {
@@ -113,7 +113,7 @@ object WhereIWin {
         val lastDay = used.maxOf { it.closedAt }.toLocalDate()
         val period = if (span == MyNumbers.Span.ALL) " on record (${if (firstDay == lastDay) date(firstDay) else "${date(firstDay)} to ${date(lastDay)}"})" else " ${span.label}"
         val out = ArrayList<String>()
-        out += "$label, $whose$period: ${plural(used.size, "trade")}, ${used.count { it.net > 0.5 }} won, net ${rs(used.sumOf { it.net })}."
+        out += "$label, $whose$period: ${plural(used.size, "closed trade")}, ${used.count { it.net > 0.5 }} won, net ${rs(used.sumOf { it.net })}."
         val order = when (first) {
             Cut.ALL, Cut.INDEX -> listOf(Cut.INDEX, Cut.KIND, Cut.SIDE)
             Cut.KIND -> listOf(Cut.KIND, Cut.SIDE, Cut.INDEX)
@@ -145,24 +145,33 @@ object WhereIWin {
     private const val PAIRED = "($IDX|$RIGHT|$SIDE)"
     private const val PERF = "(make|makes|made|making|earn|earned|lose|lost|losing|win|won|winning|do better|did better|doing better|do worse|did worse|perform|performs|performed|work|works|worked|better|best|worse|worst|money|profit|profits|profitable|record|results|paisa|paise|kamata|kamaata|kamati|kamaati|kamai|nuksan|nuksaan|banta|bante|munafa)"
 
-    private val ASK = rx(
-        // "Where do I make my money?", "where did I lose most of my money this month?"
-        " where (do|did|have) i (make|lose|made|lost|earn|earned|been making|been losing) (most of |the most of |all of )?(my |the |)(most |)(money|profits?|losses|loss) " +
-        // Round 22: "where am I making money?", "where am I losing money?", "where do I lose the most?", "what do I make money on?",
-        // "which index works best for me?", "is selling working for me?", "how do I do on BankNifty?"
-        "| where (am i|have i been) (making|losing|earning) (most of |the most of |)(my |the |)(money|profits?|losses) " +
+    /**
+     * Asked loosely - "where did I lose money", "what did I make money on", "which index did I lose money on": his record,
+     * unless it is tied to today or yesterday (or "where am I losing money" right now), which is the account's P&L.
+     */
+    private val LOOSE = rx(
+        // "Where do I make my money?", "where did I lose most of my money this month?", "(tell me) where I make my money"
+        " where ((do|did|have) )?i (make|lose|made|lost|earn|earned|been making|been losing) (most of |the most of |all of )?(my |the |)(most |)(money|profits?|losses|loss) " +
+        // Round 22: "where have I been making money?", "where do I lose the most?", "what do I make money on?"
+        "| where have i been (making|losing|earning) (most of |the most of |)(my |the |)(money|profits?|losses) " +
         "| where (do|did) i (make|lose|made|lost|earn|earned) (the )?most " +
         "| what (do|did) i (make|lose|made|lost|earn|earned) (the )?(most )?(my )?(money|profits?) (on|in|from|with) " +
-        "| which (index|indices|indexes|side|instrument|instruments) (works?|pays?|suits?) (best |)(for |)me " +
+        // "Which index do I make money on?", "which index am I best at?"
+        "| which (index|indices|indexes) (do|did|am|have) i (\\w+ ){0,3}$PERF ")
+    /** Today, yesterday or right now: the account's P&L ("where did I lose money today", "where am I losing money"). */
+    private val NOW = rx(" (today|todays|aaj|yesterday|yesterdays|right now|abhi|this session) | where am i (making|losing|earning) ")
+    /** "How do I do on BankNifty?" - his record only with no span named; with one it is the P&L or the history (round 22 review). */
+    private val HOW_ON = rx(" how (do|did|have) i (do|done|perform|performed|fare|fared) (on|in|with|at|trading) $PAIRED ")
+
+    private val ASK = rx(
+        // Round 22: "which index works best for me?", "is selling working for me?"
+        " which (index|indices|indexes|side|instrument|instruments) (works?|pays?|suits?) (best |)(for |)me " +
         "| (is|are) $PAIRED (working|paying|paying off) (out )?(for|with) me " +
-        "| how (do|did|have) i (do|done|perform|performed|fare|fared) (on|in|with|at|trading) $PAIRED " +
         // "What kind of trades work for me?", "which trades make me money?", "what type of trades suit me?"
         "| (what|which) (kind|kinds|sort|sorts|type|types) of (trades?|trading|options?|positions?) (work|works|worked|work best|works best|make|makes|made|pay|pays|suit|suits|win|wins) (for |)(me|mine) " +
         "| which (of my )?(trades|side|instruments?) (work|works|make|makes|pay|pays|suit|suits) (best |)(for |)me " +
         // "Am I better at calls or puts?", "am I any good at selling?", "am I better at BankNifty?"
         "| (am i|i m|im|i am) (better|best|worse|worst|good|any good|bad) (at|with|in|on|trading) (trading |)$PAIRED " +
-        // "Which index do I make money on?", "which index am I best at?"
-        "| which (index|indices|indexes) (do|did|am|have) i (\\w+ ){0,3}$PERF " +
         // "My best index", "my worst side", "my most profitable instrument"
         "| (my|mera|meri) (best|worst|most profitable|least profitable|strongest|weakest|winning|losing) (index|indices|side|instrument|kind of trade|type of trade) " +
         // "My calls vs my puts", "my buying against my selling"
@@ -174,6 +183,9 @@ object WhereIWin {
         "| (kis|kaun se|kaunse|konse|kaun sa|kaunsa|konsa) (index|trade|trades|side) (mein|me|se|par|pe) (mera |meri |mujhe |)(paisa|profit|kamai|munafa|nuksan|nuksaan|loss) " +
         "| (mujhe|mere liye) (kaun se|kaunse|konse|kis tarah ke) (trade|trades) (suit|kaam|fayda) ")
 
+    /** The wake word and "can you tell me", said first or last: left out before [NOT] (round 22 review). */
+    private val POLITE = rx("^ ((hey|ok|okay|hi) )?(jarvis|ira|boss) | (can|could|would|will) you (please )?(tell|show|let) me( know)? | please | (jarvis|ira|boss) $")
+
     /** Something else is meant: the bots', Jarvis's, an order, advice, the open book, a strategy's test, the market. */
     private val NOT = rx(" (bot|bots|arm|arms|strategy|strategies|backtest|backtested|jarvis|your|you|should|shall|recommend|suggest|advise|advice|" +
         "kharidu|khareedu|loon|lun|lu|buy now|sell now|place|cancel|open positions?|positions?|holding|holdings|theta|delta|chain|option chain|oi|" +
@@ -182,8 +194,13 @@ object WhereIWin {
     /** Does [text] ask where his own trading makes its money? The part asked first, or null when not asked. */
     fun asked(text: String): Cut? {
         for (s in listOf(text, Ask.reading(text))) {
-            val t = norm(s)
-            if (NOT.containsMatchIn(t) || !ASK.containsMatchIn(t)) continue
+            // "Jarvis, can you tell me where I make my money?" - the wake word and the asking are not Jarvis's own trades.
+            var t = norm(s)
+            while (true) { val u = " " + POLITE.replace(t, " ").trim() + " "; if (u == t) break; t = u }
+            if (NOT.containsMatchIn(t)) continue
+            val loose = LOOSE.containsMatchIn(t) && !NOW.containsMatchIn(t)
+            val howOn = HOW_ON.containsMatchIn(t) && !NOW.containsMatchIn(t) && MyNumbers.span(s) == MyNumbers.Span.ALL
+            if (!loose && !howOn && !ASK.containsMatchIn(t)) continue
             return when {
                 rx(" $RIGHT ").containsMatchIn(t) -> Cut.KIND
                 rx(" $SIDE ").containsMatchIn(t) -> Cut.SIDE

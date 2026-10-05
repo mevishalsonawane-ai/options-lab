@@ -93,6 +93,10 @@ class VixBandTest {
         assertEquals(VixBand.Q(2.0), VixBand.asked("how often does nifty break twice the vix move"))
         assertEquals(VixBand.Q(2.0), VixBand.asked("how often does sensex close beyond 2 sigma of the vix implied move"))
         assertEquals(VixBand.Q(1.0), VixBand.asked("does vix overprice nifty's moves"))
+        // VIX judged, said short (round 22 review: no "at predicting ..." after it).
+        assertEquals(VixBand.Q(1.0), VixBand.asked("how accurate is vix"))
+        assertEquals(VixBand.Q(1.0), VixBand.asked("how good is vix"))
+        assertEquals(VixBand.Q(1.0), VixBand.asked("how good is vix at predicting moves"))
         // The expected move itself, by expiry or today, VIX's level, its jumps, a forecast, advice, a meaning, gold are others'.
         for (q in listOf("what's the expected move", "expected move today", "expected move by expiry", "is vix high", "how high is vix",
                 "when vix jumps how big is the next day", "will nifty stay within the expected move today", "vix percentile",
@@ -162,6 +166,25 @@ class VixBandTest {
         val quiet = past + session(today, pc, 0.3, -0.4, 0.1, LocalTime.of(14, 0))
         val calm = VixBand.answer(VixBand.Q(), Market.NIFTY, quiet, vix(40), today, today.atTime(14, 0))
         assertTrue(calm.contains("inside it, and its high and low have stayed within it so far."), calm)
+    }
+
+    @Test fun aMissingSessionIsNeverBridged() {
+        // A Wednesday missing on the phone: Thursday is never set against Tuesday's close and VIX (round 22 review).
+        val ds = weekdays(41)
+        val gap = (5 until 35).first { ds[it].dayOfWeek == DayOfWeek.WEDNESDAY }
+        val bars = nifty(40).filter { it.t.toLocalDate() != ds[gap] }
+        val days = VixBand.past(bars, vix(40), today)
+        assertEquals(38, days.size)
+        assertTrue(days.none { it.day == ds[gap + 1] })
+        // A holiday on the exchange calendar is no missing session: Thursday follows Tuesday.
+        val held = VixBand.past(bars, vix(40), today) { it.dayOfWeek.value <= 5 && it != ds[gap] }
+        assertEquals(39, held.size)
+        assertTrue(held.any { it.day == ds[gap + 1] })
+        // Yesterday missing: no band for today from Monday's close.
+        val past = nifty(40).filter { it.t.toLocalDate() != today.minusDays(1) }
+        val pc = past.last().c
+        val said = VixBand.answer(VixBand.Q(), Market.NIFTY, past + session(today, pc, 0.4, -1.3, -0.5, LocalTime.of(14, 0)), vix(40), today, today.atTime(14, 0))
+        assertFalse(said.contains("Today's band"), said)
     }
 
     @Test fun tooFewSessionsAndHalfDays() {

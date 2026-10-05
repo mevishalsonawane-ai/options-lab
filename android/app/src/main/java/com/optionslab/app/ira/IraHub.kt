@@ -3392,7 +3392,8 @@ object IraHub {
                 val mk = com.optionslab.ira.Comebacks.market(parsed.markets)
                 if (mk == null) com.optionslab.ira.Comebacks.NOT_HERE
                 else com.optionslab.ira.Comebacks.answer(comebackAsk, mk, histories[mk]?.bars.orEmpty(),
-                    com.optionslab.app.data.Market.today(), com.optionslab.app.data.Market.now().toLocalDateTime())
+                    com.optionslab.app.data.Market.today(), com.optionslab.app.data.Market.now().toLocalDateTime(),
+                    isTradingDay = { d -> runCatching { com.optionslab.app.data.Market.isTradingDay(d) }.getOrDefault(d.dayOfWeek.value <= 5) })
             }.getOrElse { "I could not read the comeback record just now, Boss." }
             _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
             reply(said)
@@ -3409,7 +3410,8 @@ object IraHub {
                 val mk = com.optionslab.ira.VixBand.market(parsed.markets)
                 if (mk == null) com.optionslab.ira.VixBand.NOT_HERE
                 else com.optionslab.ira.VixBand.answer(vixBandAsk, mk, histories[mk]?.bars.orEmpty(), histories[IraMarket.VIX]?.bars.orEmpty(),
-                    com.optionslab.app.data.Market.today(), com.optionslab.app.data.Market.now().toLocalDateTime())
+                    com.optionslab.app.data.Market.today(), com.optionslab.app.data.Market.now().toLocalDateTime(),
+                    isTradingDay = { d -> runCatching { com.optionslab.app.data.Market.isTradingDay(d) }.getOrDefault(d.dayOfWeek.value <= 5) })
             }.getOrElse { "I could not read the VIX band record just now, Boss." }
             _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
             reply(said)

@@ -141,6 +141,25 @@ class ComebacksTest {
         assertTrue(calm.contains("Today Nifty has not moved 1% either way from the previous close so far"), calm)
     }
 
+    @Test fun aMissingSessionIsNeverBridged() {
+        // A Wednesday missing on the phone: Thursday is never set against Tuesday's close (round 22 review).
+        val ds = weekdays(41)
+        val gap = (5 until 35).first { ds[it].dayOfWeek == DayOfWeek.WEDNESDAY }
+        val bars = nifty(40).filter { it.t.toLocalDate() != ds[gap] }
+        val days = Comebacks.past(bars, today, 1.0)
+        assertEquals(38, days.size)
+        assertTrue(days.none { it.day == ds[gap + 1] })
+        // A holiday on the exchange calendar is no missing session: Thursday follows Tuesday.
+        val held = Comebacks.past(bars, today, 1.0) { it.dayOfWeek.value <= 5 && it != ds[gap] }
+        assertEquals(39, held.size)
+        assertTrue(held.any { it.day == ds[gap + 1] })
+        // Yesterday missing: today's line is not set against Monday's close.
+        val past = nifty(40).filter { it.t.toLocalDate() != today.minusDays(1) }
+        val pc = past.last().c
+        val bars2 = past + session(today, pc, pc * 0.989, LocalTime.of(10, 0), pc * 0.98, LocalTime.of(11, 0))
+        assertFalse(Comebacks.answer(Comebacks.Q(-1, null), Market.NIFTY, bars2, today, today.atTime(11, 0)).contains("Today"))
+    }
+
     @Test fun tooFewSessionsAndHalfDays() {
         val said = Comebacks.answer(Comebacks.Q(-1, null), Market.NIFTY, nifty(10), today, today.atTime(10, 0))
         assertTrue(said.startsWith("I have only 10 whole sessions"), said)

@@ -31,12 +31,23 @@ class WhereIWinTest {
             "which of my positions is making money", "call kharidu ya put", "which strategy makes the most money",
             "how did my thursday expiry trades do this month", "am i long or short theta"))
             assertNull(WhereIWin.asked(s), s)
+        // Round 22 review: the wake word and "can you tell me" are not Jarvis's own trades.
+        assertEquals(WhereIWin.Cut.ALL, WhereIWin.asked("can you tell me where i make my money"))
+        assertEquals(WhereIWin.Cut.ALL, WhereIWin.asked("jarvis where do i make my money"))
+        assertEquals(WhereIWin.Cut.ALL, WhereIWin.asked("where do i make my money jarvis"))
+        assertEquals(WhereIWin.Cut.INDEX, WhereIWin.asked("how do i do on banknifty"))
+        assertNull(WhereIWin.asked("where do you make your money"))
+        // ... and the P&L for today, right now or one month on one index is the account's, never this split.
+        for (s in listOf("how did I do on nifty today", "how did i do on options today", "where did I lose money today", "where am i losing money",
+            "what did I make money on today", "which index did i lose money on today", "how did I do on banknifty this month"))
+            assertNull(WhereIWin.asked(s), s)
     }
 
     @Test fun groupsByIndexKindAndSide() {
         assertEquals("BankNifty", WhereIWin.index("BANKNIFTY26OCT54000CE"))
         assertEquals("Nifty", WhereIWin.index("NIFTY26O1325000PE"))
         assertEquals("Sensex", WhereIWin.index("SENSEX26OCT82000CE"))
+        assertEquals("Gold", WhereIWin.index("MCX:GOLDM26NOVFUT"))
         assertEquals("others", WhereIWin.index("RELIANCE"))
         assertEquals("calls", WhereIWin.kind("NIFTY26O1325000CE"))
         assertEquals("puts", WhereIWin.kind("NIFTY26O1325000PE"))
@@ -52,7 +63,7 @@ class WhereIWinTest {
         )
         val ls = WhereIWin.lines("Paper", trades, MyNumbers.Span.ALL, today, WhereIWin.Cut.KIND)
         assertTrue(ls[0].startsWith("Paper, your own trades on record"), ls[0])
-        assertTrue(ls[0].contains("6 trades, 3 won, net +Rs 200"), ls[0])
+        assertTrue(ls[0].contains("6 closed trades, 3 won, net +Rs 200"), ls[0])
         assertTrue(ls[1].startsWith("Calls, puts and futures: calls 3 trades, 2 won, +Rs 700 (+Rs 233 a trade); puts 3 trades, 1 won, -Rs 500"), ls[1])
         assertTrue(ls[1].contains("A trade made most on calls"), ls[1])
         assertTrue(ls[2].startsWith("Bought first against sold first: "), ls[2])

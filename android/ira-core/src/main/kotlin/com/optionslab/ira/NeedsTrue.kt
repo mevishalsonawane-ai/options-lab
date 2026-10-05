@@ -64,13 +64,18 @@ object NeedsTrue {
         " (what|which) ([a-z]+ )?(level|price) do (i|we) need (for|to) (profit|make money|break even|be in profit) |" +
         " (make the case|the case|pros and cons|arguments?) (for|of|on) (holding|keeping|staying in) |" +
         " $HOLDING (kaam|profit) (karegi|karega|karenge|degi|dega|denge) kya | $HOLDING (kab|kaise) (profit|paisa) (dega|degi|denge|banayega|banayegi) |" +
-        // Round 22: "what does Nifty need to do for my put", "where does Nifty need to be for my put", "when does my put start
-        // making money", "at what Nifty level am I in profit", "how much does Nifty have to move for me to break even".
-        " (what|where) (does|do|would|will) [a-z0-9 ]{0,20}(need|have) to (do|be|go|reach|get to|close|close at|hit) (for|so) (my|our) |" +
+        // Round 22: "when does my put start making money", "at what Nifty level am I in profit", "how much does Nifty have
+        // to move for me to break even" (and [NEED_FOR]).
         " when (does|do|will|would) (my|our) ([a-z0-9 ]{0,30})?$HOLDING (start making money|start losing|make money|turn profitable|break even|pay off|work|come good) |" +
         " (at )?(what|which) ([a-z]+ )?(level|price) (am i|are we|will i be|would i be|do i get) (in profit|profitable|in the green|at breakeven|at break even|making money) |" +
         " for (me|us) to (break even|get to breakeven|be at breakeven) "
     )
+    /**
+     * Round 22: "what does Nifty need to do for my put", "where does Nifty need to be for my put" - only with a real holding
+     * named (a holding, a strike or the breakeven): "what do I need to do for my strategy to go live" and "where do I need to
+     * be for my meeting" are not this (round 22 review).
+     */
+    private val NEED_FOR = Regex(" (what|where) (does|do|would|will) [a-z0-9 ]{0,20}(need|have) to (do|be|go|reach|get to|close|close at|hit) (for|so) (my|our) ")
     /** "At what level do I break even", "what level do I need for profit": Boss's own book named by "I" (round 10). */
     private val I_HOLD = Regex(" (do|will|would|does) i (need|break even|make money|start losing|start making money|turn profitable) | where do i (start losing|break even) |" +
         // Round 22: "at what Nifty level am I in profit", "for me to break even".
@@ -90,9 +95,11 @@ object NeedsTrue {
         listOf(text, Ask.reading(text)).any { s ->
             val t = norm(s)
             // (The owner first: the cheap check before the long one - the same answer, speed round 10.)
-            (OWNER.containsMatchIn(t) || I_HOLD.containsMatchIn(t)) && ASK.containsMatchIn(t) && !NOT.containsMatchIn(t) &&
-                // The breakeven or a holding must be named: "what needs to happen for my day" is not this.
-                (HOLDING_RX.containsMatchIn(t) || rx(" (break ?even|breakevens?) ").containsMatchIn(t) || rx(" \\d{3,6} ").containsMatchIn(t) || I_HOLD.containsMatchIn(t))
+            if (!(OWNER.containsMatchIn(t) || I_HOLD.containsMatchIn(t)) || NOT.containsMatchIn(t)) return@any false
+            // The breakeven or a holding must be named: "what needs to happen for my day" is not this.
+            val held = HOLDING_RX.containsMatchIn(t) || rx(" (break ?even|breakevens?) ").containsMatchIn(t) || rx(" \\d{3,6} ").containsMatchIn(t)
+            // "I" alone stands for his book only with the asks made for it; "what do I need to do for my ..." needs the holding itself.
+            ASK.containsMatchIn(t) && (held || I_HOLD.containsMatchIn(t)) || NEED_FOR.containsMatchIn(t) && held
         }
     }.getOrDefault(false)
 
@@ -246,9 +253,11 @@ object NeedsTrue {
      * average day's range - then said for each of Boss's options on it ([held]): whether today's move is the way it needs
      * or against it, and how often such a move held or came back on the record. Past days, never odds, a forecast or
      * advice; nothing acts. Empty for an underlying other than Nifty, BankNifty, FinNifty or Sensex, or when the phone has no
-     * session of today with a whole one before it at most [Comebacks.MAX_DAYS_APART] days earlier. Pure.
+     * session of today with a whole one before it at most [Comebacks.MAX_DAYS_APART] days earlier and the trading day just
+     * before today by [isTradingDay] (a missing session is never bridged). Pure.
      */
-    fun todayBeside(u: String, bars: List<Candle>, now: LocalDateTime, held: List<PositionHealth.Pos>): List<String> {
+    fun todayBeside(u: String, bars: List<Candle>, now: LocalDateTime, held: List<PositionHealth.Pos>,
+                    isTradingDay: (LocalDate) -> Boolean = Comebacks.WEEKDAYS): List<String> {
         // Only the indices the comeback record is kept for (never gold, which has no previous close to count from).
         if (Comebacks.INDICES.none { it.name == u }) return emptyList()
         val today = now.toLocalDate()
@@ -256,7 +265,8 @@ object NeedsTrue {
         val t = ss.lastOrNull { it.day == today }?.takeIf { it.bars.isNotEmpty() } ?: return emptyList()
         // The previous close counts as Comebacks counts it: a whole session, at most MAX_DAYS_APART days before today.
         val before = ss.lastOrNull { it.day.isBefore(today) }?.takeIf {
-            Comebacks.whole(it) && it.close > 0 && ChronoUnit.DAYS.between(it.day, today) <= Comebacks.MAX_DAYS_APART
+            Comebacks.whole(it) && it.close > 0 && ChronoUnit.DAYS.between(it.day, today) <= Comebacks.MAX_DAYS_APART &&
+                Comebacks.follows(it.day, today, isTradingDay)
         } ?: return emptyList()
         val name = label(u)
         val pc = before.close
@@ -277,7 +287,7 @@ object NeedsTrue {
             return out
         }
         val fall = nowPct < 0
-        val days = Comebacks.past(bars, today, size)
+        val days = Comebacks.past(bars, today, size, isTradingDay)
         if (days.size < Comebacks.MIN_SESSIONS) {
             out += "Too few whole sessions of $name on the phone (${days.size}) to set today's move beside its comeback record (I need ${Comebacks.MIN_SESSIONS})."
             return out
@@ -337,7 +347,7 @@ object NeedsTrue {
             .forEach { out += one(it, bars[it.underlying?.uppercase()].orEmpty(), now, isTradingDay) }
         // Reasoning, round 25: today's move in each underlying beside its own comeback record and its usual day's range.
         chosen.filter { it.option && it.underlying != null }.groupBy { it.underlying!!.uppercase() }.toSortedMap()
-            .forEach { (u, held) -> out += todayBeside(u, bars[u].orEmpty(), now, held) }
+            .forEach { (u, held) -> out += todayBeside(u, bars[u].orEmpty(), now, held, isTradingDay) }
         if (chosen.any { it.option }) out += "That is at expiry, from your average price, charges left out; before expiry an option's price also moves " +
             "with time and volatility, so it can be in profit or loss sooner. The stretches are past ones on the phone, not odds."
         out += "Facts and arithmetic, not a forecast or advice - your call, Boss."

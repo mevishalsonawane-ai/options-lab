@@ -49,6 +49,20 @@ object Comebacks {
     const val MAX_DAYS_APART = 4L
     private val FIRST_BY = LocalTime.of(9, 20)
     private val LAST_FROM = LocalTime.of(15, 25)
+    /** The exchange calendar when the app gives none: every weekday trades. */
+    val WEEKDAYS: (LocalDate) -> Boolean = { it.dayOfWeek.value <= 5 }
+
+    /**
+     * Does the session on [day] follow straight on from the one on [before] - no trading day by [isTradingDay] between them
+     * ([ExpiryEve.nextTradingDay])? A missing session on the phone is never bridged (round 22 review). Shared with
+     * [VixBand] and [NeedsTrue.todayBeside].
+     */
+    internal fun follows(before: LocalDate, day: LocalDate, isTradingDay: (LocalDate) -> Boolean): Boolean {
+        if (!before.isBefore(day) || ChronoUnit.DAYS.between(before, day) > 14) return false
+        val next = ExpiryEve.nextTradingDay(before, isTradingDay) ?: return false
+        return !next.isBefore(day)
+    }
+
     /** The indices the record is kept for (gold trades round the clock, India VIX is not traded). */
     internal val INDICES = listOf(Market.NIFTY, Market.BANKNIFTY, Market.FINNIFTY, Market.SENSEX)
 
@@ -146,15 +160,17 @@ object Comebacks {
         s.bars.isNotEmpty() && !s.bars.first().t.toLocalTime().isAfter(FIRST_BY) && !s.bars.last().t.toLocalTime().isBefore(LAST_FROM)
 
     /**
-     * The whole sessions before [today] in [bars] whose session before on the phone was whole and at most [MAX_DAYS_APART]
-     * days earlier, each with when it first touched [pct] below and above that close; newest [MAX_SESSIONS], oldest first.
+     * The whole sessions before [today] in [bars] whose session before on the phone was whole, at most [MAX_DAYS_APART]
+     * days earlier and the trading day just before it by [isTradingDay] (a missing session is never bridged), each with
+     * when it first touched [pct] below and above that close; newest [MAX_SESSIONS], oldest first.
      */
-    fun past(bars: List<Candle>, today: LocalDate, pct: Double): List<Day> {
+    fun past(bars: List<Candle>, today: LocalDate, pct: Double, isTradingDay: (LocalDate) -> Boolean = WEEKDAYS): List<Day> {
         val ss = MarketStory.sessions(bars).filter { it.day.isBefore(today) && it.bars.isNotEmpty() }
         val out = ArrayList<Day>()
         for (i in 1 until ss.size) {
             val before = ss[i - 1]; val s = ss[i]
             if (!whole(before) || !whole(s) || ChronoUnit.DAYS.between(before.day, s.day) > MAX_DAYS_APART || before.close <= 0) continue
+            if (!follows(before.day, s.day, isTradingDay)) continue
             val pc = before.close
             val downLine = pc * (1 - pct / 100); val upLine = pc * (1 + pct / 100)
             out += Day(s.day, pc, s.bars.minOf { it.l }, s.bars.maxOf { it.h }, s.close,
@@ -182,17 +198,17 @@ object Comebacks {
             am.size, am.count(::back), pm.size, pm.count(::back))
     }
 
-    /** [m]'s record from its 1-minute candles over many days, for [q], at [now] on [today]. */
-    fun answer(q: Q, m: Market, bars: List<Candle>, today: LocalDate, now: LocalDateTime): String {
+    /** [m]'s record from its 1-minute candles over many days, for [q], at [now] on [today]; [isTradingDay] the app's calendar. */
+    fun answer(q: Q, m: Market, bars: List<Candle>, today: LocalDate, now: LocalDateTime, isTradingDay: (LocalDate) -> Boolean = WEEKDAYS): String {
         val pct = q.pct ?: DEFAULT_PCT
-        val days = past(bars, today, pct)
+        val days = past(bars, today, pct, isTradingDay)
         if (days.size < MIN_SESSIONS)
             return "I have only ${days.size} whole session${if (days.size == 1) "" else "s"} of ${m.label} with the one before on the phone, Boss - " +
                 "too few to say how its intraday moves usually end (I need $MIN_SESSIONS)."
         val lines = ArrayList<String>()
         lines += "Over the last ${days.size} whole sessions of ${m.label} on this phone (${date(days.first().day)} to ${date(days.last().day)}), counted from each previous close:"
         for (dir in (q.dir?.let { listOf(it) } ?: listOf(-1, 1))) lines += sideLine(m, side(days, dir, pct), pct)
-        todayLine(m, bars, today, now, pct)?.let { lines += it }
+        todayLine(m, bars, today, now, pct, isTradingDay)?.let { lines += it }
         lines += NOTE
         return lines.joinToString(" ")
     }
@@ -219,10 +235,10 @@ object Comebacks {
     }
 
     /** Today so far, when the phone has today's session and a whole one before it: where it stands against the size asked. */
-    private fun todayLine(m: Market, bars: List<Candle>, today: LocalDate, now: LocalDateTime, pct: Double): String? {
+    private fun todayLine(m: Market, bars: List<Candle>, today: LocalDate, now: LocalDateTime, pct: Double, isTradingDay: (LocalDate) -> Boolean): String? {
         val ss = MarketStory.sessions(bars)
         val t = ss.lastOrNull { it.day == today }?.takeIf { it.bars.isNotEmpty() } ?: return null
-        val before = ss.lastOrNull { it.day.isBefore(today) }?.takeIf { whole(it) && it.close > 0 } ?: return null
+        val before = ss.lastOrNull { it.day.isBefore(today) }?.takeIf { whole(it) && it.close > 0 && follows(it.day, today, isTradingDay) } ?: return null
         val pc = before.close
         val live = now.toLocalDate() == today && now.toLocalTime().isBefore(LocalTime.of(15, 30))
         val downAt = t.bars.firstOrNull { it.l <= pc * (1 - pct / 100) }?.t?.toLocalTime()
