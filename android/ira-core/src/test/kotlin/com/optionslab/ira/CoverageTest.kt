@@ -31,7 +31,7 @@ class CoverageTest {
             Learnings.asked(said) != null || Learnings.undoAsked(said) || NewsMoves.asked(said) != null || PreMarket.asked(said) ||
             ChainDrift.asked(said) != null || Headroom.asked(said) != null || DayClock.asked(said) != null ||
             SaidAbout.asked(said) != null || GapRecord.asked(said) != null || Causes.asked(said) != null || WeekAhead.asked(said) != null || AskedAgain.asked(said) || Weekdays.asked(said) != null || DayCompare.asked(said) != null ||
-            RangeBreaks.asked(said) != null || NeedsTrue.asked(said) || Clarity.asked(said) != null || ZerodhaSession.asked(said) != null
+            RangeBreaks.asked(said) != null || NeedsTrue.asked(said) || Clarity.asked(said) != null || ZerodhaSession.asked(said) != null || Tour.asked(said)
         return ((if (asSaid) null else Understand.questions(null, said)) ?: listOf(said)).map { kind(it, 0) }
     }
 
@@ -53,6 +53,7 @@ class CoverageTest {
             if (SaidAbout.asked(q) != null) return Kind.ACCOUNT
             if (WeekAhead.asked(q) != null) return Kind.INFO
             if (ZerodhaSession.asked(q) != null) return Kind.ACCOUNT
+            if (Tour.asked(q)) return Kind.JARVIS
             if (DataAge.asked(q)) return Kind.JARVIS
             if (Honest.asked(q) != null) return Kind.HONEST
             if (Thinking.asked(q) != null || Consistency.asked(q)) return Kind.JARVIS
@@ -319,6 +320,8 @@ class CoverageTest {
         // ---- Why Zerodha logged Boss out (ZerodhaSession, voice round 14): his broker session, so the account's kind ----
         "why was i logged out of zerodha" to A, "why did kite log me out" to A, "what happened to my zerodha session" to A,
         "zerodha se logout kyun hua" to A, "when does my zerodha session end" to A,
+        // ---- What can I ask you (Tour, voice round 15): five questions for the part of the day - Jarvis's own ----
+        "what can i ask you" to J, "what should i ask you now" to J, "main kya pooch sakta hoon" to J, "suggest some questions" to J,
     )
 
     /**
@@ -450,7 +453,7 @@ class CoverageTest {
             PatternCalls.asked(said) || Learnings.asked(said) != null || Learnings.undoAsked(said) || NewsMoves.asked(said) != null ||
             PreMarket.asked(said) ||
             ChainDrift.asked(said) != null || Headroom.asked(said) != null || NeedsTrue.asked(said) || Clarity.asked(said) != null || DayClock.asked(said) != null ||
-            SaidAbout.asked(said) != null || GapRecord.asked(said) != null || WordFit.asked(said) != null || Causes.asked(said) != null || WeekAhead.asked(said) != null || AskedAgain.asked(said) || MindChange.asked(said) || Weekdays.asked(said) != null || DayCompare.asked(said) != null || RangeBreaks.asked(said) != null || ZerodhaSession.asked(said) != null
+            SaidAbout.asked(said) != null || GapRecord.asked(said) != null || WordFit.asked(said) != null || Causes.asked(said) != null || WeekAhead.asked(said) != null || AskedAgain.asked(said) || MindChange.asked(said) || Weekdays.asked(said) != null || DayCompare.asked(said) != null || RangeBreaks.asked(said) != null || ZerodhaSession.asked(said) != null || Tour.asked(said)
         val qs = if (asSaid || understood || cleaned) null else Understand.questions(null, said)?.takeIf { it.isNotEmpty() && it != listOf(said) }
         if (qs != null) return if (qs.size == 1) feature(qs[0], cleaned = true) else qs.joinToString(" & ") { feature(it, understood = true) }
         val q = said
@@ -476,6 +479,7 @@ class CoverageTest {
         if (alone && SaidAbout.asked(q) != null) return "SaidAbout"
         if (alone && WeekAhead.asked(q) != null) return "WeekAhead"
         if (alone && ZerodhaSession.asked(q) != null) return "ZerodhaSession"
+        if (alone && Tour.asked(q)) return "Tour"
         if (alone && DataAge.asked(q)) return "DataAge"
         if (alone && Honest.asked(q) != null) return "Honest"
         // (The hub's Thinking falls through to SelfWhy when no reason was written and SelfWhy takes the words.)
@@ -910,6 +914,11 @@ class CoverageTest {
         "why did my kite session expire" to "ZerodhaSession", "what happened to my zerodha login" to "ZerodhaSession",
         "why do i keep getting logged out of kite" to "ZerodhaSession", "zerodha se logout kyun hua" to "ZerodhaSession",
         "when does my zerodha session end" to "ZerodhaSession",
+        // ---- Tour (voice round 15): "what can I ask you?" names five questions for the part of the day ----
+        "what can i ask you" to "Tour", "what else can i ask jarvis" to "Tour", "what should i ask now" to "Tour",
+        "what questions can i ask" to "Tour", "what kind of questions should i ask you" to "Tour", "suggest some questions" to "Tour",
+        "give me some ideas of what to ask" to "Tour", "what's worth asking right now" to "Tour", "give me a tour" to "Tour",
+        "main kya pooch sakta hoon" to "Tour", "tumse kya puchu" to "Tour", "kya poochna chahiye" to "Tour", "kuch sawal batao" to "Tour",
         "hammer ke baare mein maine kya bola tha" to "SaidAbout",
         // ---- Clarity (round 11): the answers said shorter aloud, and back to usual ----
         "which answers do you keep short" to "Clarity", "which of your answers do you keep shorter" to "Clarity",

@@ -1224,7 +1224,7 @@ object IraHub {
                 com.optionslab.ira.ChainDrift.asked(q) != null ||
                 com.optionslab.ira.Headroom.asked(q) != null ||
                 com.optionslab.ira.SaidAbout.asked(q) != null || com.optionslab.ira.WeekAhead.asked(q) != null ||
-                com.optionslab.ira.ZerodhaSession.asked(q) != null ||
+                com.optionslab.ira.ZerodhaSession.asked(q) != null || com.optionslab.ira.Tour.asked(q) ||
                 com.optionslab.ira.NeedsTrue.asked(q) ||
                 com.optionslab.ira.Clarity.asked(q) != null || com.optionslab.ira.DayClock.asked(q) != null ||
                 com.optionslab.ira.GapRecord.asked(q) != null || com.optionslab.ira.RangeBreaks.asked(q) != null ||
@@ -1483,6 +1483,21 @@ object IraHub {
                         b.linked, b.loggedIn, b.expiresAt()?.withZoneSameInstant(IST)?.toLocalDateTime())
                 }.getOrElse { "I could not read the Zerodha record just now, Boss." })
             }
+            return
+        }
+        // "What can I ask you?", "what should I ask now?", "main kya pooch sakta hoon" ([com.optionslab.ira.Tour]): five questions
+        // worth asking for the part of the day (before the open, market hours, after the close, a day with no session) - two
+        // fixed, three turning with the date. It only names questions (each one Jarvis answers as said), holds nothing of the
+        // account and acts on nothing, so it is the same on a locked phone. "What can you do" keeps its full list.
+        // (Not in IraGoldAlgo: the questions named are the indices' and the account's.)
+        if (!com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null &&
+            runCatching { com.optionslab.ira.Tour.asked(q) }.getOrDefault(false)) {
+            val said = runCatching {
+                val today = com.optionslab.app.data.Market.today()
+                com.optionslab.ira.Tour.answer(com.optionslab.ira.Tour.part(com.optionslab.app.data.Market.minuteNow(),
+                    com.optionslab.app.data.Market.isTradingDay(today)), today)
+            }.getOrDefault("Ask me how the market is doing, what matters right now, or \"what can you do\" for everything, Boss.")
+            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
             return
         }
         // "Is your data fresh?" / "how old are your prices?": how old his prices, candles, news and chain are, and today's
