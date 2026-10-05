@@ -1477,7 +1477,7 @@ class JarvisVoice : Service() {
         sayingText = text; reachedAt = -1
         // Muted: the words go on screen as a pop-up instead (answers and questions only; "One moment" is dropped).
         if (muted && !text.startsWith("Voice on")) {
-            if (id == "answer" || id == "question") runCatching { JarvisPopup.show(this, "Jarvis (muted)", "$text\n\nSay \"Jarvis, unmute\" to hear me.") }
+            if (id == "answer" || id == "question") runCatching { JarvisPopup.show(this, "Jarvis (muted)", "$words\n\nSay \"Jarvis, unmute\" to hear me.") }
             afterSpeech(id); return
         }
         if (!voiceReady || t == null) { afterSpeech(id); return }
