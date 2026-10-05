@@ -60,7 +60,7 @@ internal object IraWatchStopped {
         }.getOrNull()
         val now = com.optionslab.app.data.Market.now().toLocalTime()
         val text = com.optionslab.ira.WatchStopped.text(since, now, legs, unrestricted, unread) ?: return
-        runCatching { IraHub.note(text) }
+        runCatching { IraHub.noteAloud(text, com.optionslab.ira.SpeakChoice.Weight.IMPORTANT) }
         runCatching { IraActivity.add("Told Boss the order watch stopped with ${legs.size} position${if (legs.size == 1) "" else "s"} open.") }
     }
 }

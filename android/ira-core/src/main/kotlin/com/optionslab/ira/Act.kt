@@ -52,6 +52,13 @@ object Commands {
     private val NEGATION = Regex(" (don t|dont|do not|never|not|doesn t|didn t|won t) ")
     /** Commands a misspelt word may never become (only what the owner typed correctly). */
     private val NEVER_FROM_TYPO = setOf(Command.Kind.MODE_LIVE, Command.Kind.KILL_OFF, Command.Kind.JTRADES_LIVE, Command.Kind.AUTOPILOT_ON)
+    /** Boss asking why Jarvis writes instead of speaking (Boss, 5 Oct: "why is it sending most things in chat?"). */
+    private val VOICE_WHY = Regex("^ (jarvis )?(why (are|aren t|arent) you (not )?(speaking|talking)( to me)?( aloud| out loud)?|" +
+        "why (are you|aren t you|arent you|do you|is it|is everything|everything|are things|are you sending( everything| things| most things)?|you are sending( everything| things)?) (only |just )?(in|to) (the )?chat|" +
+        "why (only|just) (in )?(the )?chat|why (don t|dont|do not|won t|wont) you (speak|talk)( to me)?( aloud| out loud)?|" +
+        "why (are you )?(not|no longer) (speaking|talking)|why are you silent|why (is|are) (your|you r) (voice|replies) (off|only on screen)|" +
+        "why (aren t|arent|don t|dont) (i|we) hear(ing)? you|you (are|re) not speaking|you aren t speaking|you don t speak( any more| anymore)?|" +
+        "aap bol kyun nahi rahe|bol kyun nahi rahe( ho)?|aawaz kyun nahi aa rahi)( jarvis| boss| any more| anymore)? $")
     private val ARM_NOUN = "(?:the )?(?:strategy|strategies|arm|arms|bot|bots|algo|script)?"
     /** Every market's names, longest first, as one alternation (for a removal by market). */
     private val ALIASES = Market.entries.flatMap { it.aliases }.sortedByDescending { it.length }.joinToString("|") { Regex.escape(it) }
@@ -81,6 +88,8 @@ object Commands {
         if (!DayJournal.asked(said)) rx("(?i)^\\s*(?:(?:hey |ok |okay )?jarvis[,.!]?\\s+)?(?:note|journal)(?: that| down)?\\s*[:,-]?\\s+(.{3,300})$").find(said.trim())?.let { m ->
             return Command(Command.Kind.NOTE, target = m.groupValues[1].trim())
         }
+        // "Why aren't you speaking?" / "why only in chat?": the voice check (it only explains; nothing changes), asked or typed with "?".
+        if (VOICE_WHY.containsMatchIn(" " + spacedWords(said.lowercase().replace("'", " ")) + " ")) return Command(Command.Kind.VOICE_CHECK)
         // A question ("is live mode on?") is never a command.
         if (said.trim().endsWith("?")) return null
         val text = Hinglish.normalize(said)
@@ -143,7 +152,7 @@ object Commands {
         // How much Jarvis says aloud (Boss, 5 Oct): a preference for his voice only - nothing else changes.
         if (rx("^ (shorter|shorter please|say less|talk less|less detail|less detail please|too long|that was too long|keep it shorter) $").containsMatchIn(s)) return Command(Command.Kind.BRIEF_ON)
         if (rx("^ (brief mode off|full answers|detailed answers|long answers|answer in full|longer|longer answers|in more detail|more detail always|always more detail) $").containsMatchIn(s)) return Command(Command.Kind.BRIEF_OFF)
-        if (rx("^ (tell me more|more|more details|go on|details|explain more|the full answer|repeat|repeat that|repeat it|say that again|say it again|say again|come again|pardon|sorry what|what did you say|once more|one more time) $").containsMatchIn(s)) return Command(Command.Kind.MORE)
+        if (rx("^ (tell me more|more|more details|go on|details|explain more|the full answer|repeat|repeat that|repeat it|say that again|say it again|say again|come again|pardon|sorry what|what did you say|once more|one more time|aur (batao|bolo|bataiye)|show aur|give me (the )?details|show (me )?(the )?details) $").containsMatchIn(s)) return Command(Command.Kind.MORE)
         if (Practice.asked(s) && TradeReplay.asked(s) == null && rx("^ (practi[cs]e|replay|simulate|rehearse) ").containsMatchIn(s)) return Command(Command.Kind.PRACTICE, target = text)
         rx(" (?:your|jarvis s|jarvis) (?:own )?(?:trades? )?weekly loss limit (?:to |at |of )?(?:rs |rupees )?(\\d{3,7}) ").find(t)?.let { m ->
             return Command(Command.Kind.JTRADES_WEEKLY, level = m.groupValues[1].toDouble())

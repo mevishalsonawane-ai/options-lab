@@ -123,7 +123,10 @@ object JarvisSpeaker {
         // only; never on a locked phone, never before a warning - [com.optionslab.ira.UsualIndex.aloud]).
         val usualIdx = runCatching { IraTools.indexReadFor(said) }.getOrNull()
         val usualLocked = usualIdx != null && runCatching { IraHub.locked() }.getOrDefault(true)
-        val spokenText = runCatching { com.optionslab.ira.UsualIndex.aloud(usualIdx, reply.text, usualLocked) }.getOrDefault(reply.text)
-        speak(context, spokenText, if (more) 8 else null)
+        // Short answers (Boss's choice, the default): the one line the chat shows is what is said, whole (its safety notes kept).
+        val shortOn = !more && runCatching { IraTools.shortAnswers }.getOrDefault(true)
+        val answerText = if (shortOn) runCatching { com.optionslab.ira.ShortAnswer.of(said, reply.text).line }.getOrDefault(reply.text) else reply.text
+        val spokenText = runCatching { com.optionslab.ira.UsualIndex.aloud(usualIdx, answerText, usualLocked) }.getOrDefault(answerText)
+        speak(context, spokenText, if (more || shortOn) 8 else null)
     }
 }

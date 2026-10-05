@@ -328,6 +328,8 @@ object IraHub {
         if (lines.isNotEmpty() && lines.first() != "No trades suggested today.") {
             app?.let { JarvisPopup.show(it, "Boss, my scorecard", lines.first()) }
             reply(com.optionslab.ira.Address.boss("My scorecard today. " + lines.joinToString(" ")))
+            // A record, not a warning: aloud only when Boss chose "Jarvis speaks: everything".
+            runCatching { JarvisVoice.offerNote(com.optionslab.ira.Address.boss("My scorecard today. " + lines.first()), com.optionslab.ira.SpeakChoice.Weight.MINOR) }
         }
         // Losses outgrowing wins this week: said with the numbers.
         IraCoach.lossSizeLine()?.let { w -> app?.let { JarvisPopup.show(it, "Boss, a pattern in your trades", w) }; reply(com.optionslab.ira.Address.boss(w)) }
@@ -955,7 +957,8 @@ object IraHub {
             val stop = com.optionslab.ira.Rescue.stopFor(p)
             val text = com.optionslab.ira.Rescue.say(p, stop)
             // (Only told when offering is on: the guard alone never sets a stop on these, so it says nothing.)
-            if (stop == null) { if (Automations.on(Automations.Auto.RESCUE)) { JarvisPopup.show(c, "Boss, ${p.symbol} has no stop", text); reply(text) }; continue }
+            if (stop == null) { if (Automations.on(Automations.Auto.RESCUE)) { JarvisPopup.show(c, "Boss, ${p.symbol} has no stop", text); reply(text)
+                runCatching { JarvisVoice.offerNote(text, com.optionslab.ira.SpeakChoice.Weight.IMPORTANT) } }; continue }
             // Set alone only when nothing else could close it too: no working order on it at all and, at Zerodha, no GTT
             // on it (a GTT or a resting exit filling alongside the stop would leave a short). Otherwise only offered.
             val clear = guard && runCatching {
@@ -975,6 +978,7 @@ object IraHub {
                 val said = com.optionslab.ira.Rescue.saySet(p, stop, result)
                 JarvisPopup.show(c, "Boss, I guarded ${p.symbol}", said)
                 reply(said); IraActivity.add(said)
+                runCatching { JarvisVoice.offerNote(said, com.optionslab.ira.SpeakChoice.Weight.IMPORTANT) }
                 Automations.acted(Automations.Auto.GUARD, said)
                 continue
             }
@@ -4858,6 +4862,15 @@ object IraHub {
         val m = Msg(true, text)
         synchronized(unaskedIds) { unaskedIds += m.id; while (unaskedIds.size > 200) unaskedIds.remove(unaskedIds.first()) }
         _state.update { it.copy(messages = (it.messages + m).takeLast(MAX_MESSAGES)) }
+    }
+
+    /**
+     * A note in the chat that is also said aloud, as its one line, when Boss's "Jarvis speaks" choice takes a note of
+     * [weight] ([JarvisVoice.offerNote]; muted, quiet hours and a locked phone as always). Words only.
+     */
+    fun noteAloud(text: String, weight: com.optionslab.ira.SpeakChoice.Weight) {
+        note(text)
+        runCatching { JarvisVoice.offerNote(text, weight) }
     }
 
     private fun reply(text: String) {

@@ -35,7 +35,19 @@ object SpokenReply {
      */
     fun said(question: String, text: String, more: Boolean, wishedLong: Boolean, brief: Boolean,
              leading: () -> List<FigureFirst.Record>, learned: () -> List<TopicLength.Record>, shorter: () -> List<Clarity.Record>,
-             echo: String? = null, late: Boolean = false): Said {
+             echo: String? = null, late: Boolean = false, short: Boolean = false): Said {
+        // Short answers (Boss, 5 Oct - the default): the answer's one line ([ShortAnswer]), said whole - its safety
+        // notes kept - and the rest kept for "go on". "Tell me more" and "in detail" are said as before. The learned
+        // lengths below (topic, clarity, figure first) shape only the "detailed" choice: never the short line.
+        if (short && !more && !wishedLong) {
+            val sa = ShortAnswer.of(question, text)
+            if (sa.details != null) {
+                val spoken = Aloud.say(sa.line, Aloud.Length.FULL.sentences)
+                val full = sa.line + (sa.rest?.let { " $it" } ?: "")
+                return if (late) Said("About what you asked earlier: $spoken", full, shaped = false)
+                    else Said(HeardBack.lead(echo, spoken), HeardBack.full(echo, full), shaped = echo == null && settled(spoken))
+            }
+        }
         // The question's kind, read once for all three (each used to read it in full by itself).
         val tags by lazy { runCatching { SelfDoubt.tags(question) }.getOrNull() }
         val kind by lazy { tags?.firstOrNull { it.dim == SelfDoubt.Dim.TOPIC }?.key }

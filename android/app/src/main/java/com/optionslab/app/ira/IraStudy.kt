@@ -232,7 +232,7 @@ internal object IraStudy {
         val slipping = checks.filter { it.slipping }
         if (slipping.isNotEmpty()) {
             IraHub.appContext()?.let { JarvisPopup.show(it, "Boss, an arm is slipping", slipping.joinToString(" ") { s -> s.text() }) }
-            IraHub.note(com.optionslab.ira.Address.boss("My monthly re-test of the arms. " + lines.joinToString(" ")))
+            IraHub.noteAloud(com.optionslab.ira.Address.boss("My monthly re-test of the arms. " + lines.joinToString(" ")), com.optionslab.ira.SpeakChoice.Weight.MINOR)
         }
     }
 

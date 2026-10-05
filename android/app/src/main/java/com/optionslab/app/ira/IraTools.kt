@@ -1676,6 +1676,19 @@ internal object IraTools {
         get() = runCatching { prefs().getBoolean("jarvis.brief", false) }.getOrDefault(false)
         set(v) { runCatching { prefs().putAllSoon(mapOf("jarvis.brief" to v)) } }
 
+    /**
+     * "Answers: short (default) / detailed" (Boss, 5 Oct): short, every answer is one precise line, spoken and in the
+     * chat ([com.optionslab.ira.ShortAnswer]); "more" gives the rest. Detailed: as before. Words only.
+     */
+    var shortAnswers: Boolean
+        get() = runCatching { prefs().getBoolean("jarvis.answers.short", true) }.getOrDefault(true)
+        set(v) { runCatching { prefs().putAllSoon(mapOf("jarvis.answers.short" to v)) } }
+
+    /** "Jarvis speaks: everything / answers and important notes (default) / only answers" - what is said aloud, nothing else. */
+    var speakChoice: com.optionslab.ira.SpeakChoice.Choice
+        get() = com.optionslab.ira.SpeakChoice.Choice.of(runCatching { prefs().getString("jarvis.speaks") }.getOrNull())
+        set(v) { runCatching { prefs().putAllSoon(mapOf("jarvis.speaks" to v.key)) } }
+
     var wakeStrict: Boolean
         get() = runCatching { prefs().getBoolean("jarvis.wake.strict", false) }.getOrDefault(false)
         set(v) { runCatching { prefs().putAllSoon(mapOf("jarvis.wake.strict" to v)) } }

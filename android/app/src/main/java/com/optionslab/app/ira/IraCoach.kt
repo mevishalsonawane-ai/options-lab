@@ -65,12 +65,12 @@ internal object IraCoach {
             if (why == null) {
                 synchronized(failedTrail) { failedTrail.remove(it.id) }
                 val said = com.optionslab.ira.AutoTrail.say(it.symbol, stop, avg)
-                IraHub.note(said); IraActivity.add(said); Automations.acted(Automations.Auto.TRAIL, said)
+                IraHub.noteAloud(said, com.optionslab.ira.SpeakChoice.Weight.IMPORTANT); IraActivity.add(said); Automations.acted(Automations.Auto.TRAIL, said)
             } else {
                 synchronized(failedTrail) { failedTrail[it.id] = stop to now }
                 fun px(x: Double?) = x?.let { v -> "%.2f".format(java.util.Locale.ENGLISH, v) } ?: "?"
                 val said = "Could not trail the stop on ${it.symbol} up to ${px(stop)}: $why Your stop stays at ${px(it.stop)}."
-                IraHub.note(said); IraActivity.add(said)
+                IraHub.noteAloud(said, com.optionslab.ira.SpeakChoice.Weight.IMPORTANT); IraActivity.add(said)
                 IraHub.appContext()?.let { c -> JarvisPopup.show(c, "Boss, check the stop on ${it.symbol}", said) }
             }
         }

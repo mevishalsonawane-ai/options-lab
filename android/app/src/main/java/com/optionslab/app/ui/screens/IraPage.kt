@@ -22,6 +22,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.OutlinedTextField
@@ -252,7 +253,11 @@ fun IraPage(orders: IraOrderPaths? = null) {
                     }
                 }
             }
-            items(st.messages, key = { it.id }, contentType = { "message" }) { m -> Bubble(m, orders) }
+            // Each reply with the question just before it (null: a note Jarvis posted by himself), for its short line.
+            val convo = st.messages
+            itemsIndexed(convo, key = { _, msg -> msg.id }, contentType = { _, _ -> "message" }) { idx, m ->
+                Bubble(m, orders, if (m.fromIra) convo.getOrNull(idx - 1)?.takeIf { prev -> !prev.fromIra }?.text else null)
+            }
             if (st.messages.isNotEmpty()) item {
                 Text("Forget this conversation", style = Type.label.copy(color = p.inkSoft, fontSize = 13.sp),
                     modifier = Modifier.clickable { IraHub.forgetConversation() }.padding(6.dp))
@@ -270,17 +275,30 @@ fun IraPage(orders: IraOrderPaths? = null) {
 }
 
 @Composable
-private fun Bubble(m: IraHub.Msg, orders: IraOrderPaths?) {
+private fun Bubble(m: IraHub.Msg, orders: IraOrderPaths?, asked: String? = null) {
     val p = LocalPalette.current
     var open by remember { mutableStateOf(false) }
+    // Short answers (Boss, 5 Oct; his choice, the default): one precise line, the full answer behind "Details". Never an
+    // order, a trade proposal, a confirm or a message still being written ([com.optionslab.ira.ShortAnswer] keeps
+    // questions, confirms, warnings, staleness and "could not read" notes).
+    val keepWhole = !m.fromIra || m.order != null || m.proposal != null || m.action != null || m.writing
+    val shortOn = remember { runCatching { com.optionslab.app.ira.IraTools.shortAnswers }.getOrDefault(true) }
+    val brief = remember(m.text, asked, shortOn, keepWhole) {
+        if (keepWhole) com.optionslab.ira.ShortAnswer.Short(m.text, null)
+        else runCatching { com.optionslab.ira.ShortAnswer.of(asked, m.text, shortOn) }.getOrDefault(com.optionslab.ira.ShortAnswer.Short(m.text, null))
+    }
+    var showDetails by remember { mutableStateOf(false) }
+    val shownText = if (showDetails || brief.details == null) m.text else brief.line
     Column(Modifier.fillMaxWidth(), horizontalAlignment = if (m.fromIra) Alignment.Start else Alignment.End) {
         Text(if (m.fromIra) "IRA" else "YOU", style = Type.label.copy(color = if (m.fromIra) Color(0xFF4AA8FF) else p.inkSoft, fontSize = 10.sp, letterSpacing = 2.sp))
-        Text(if (m.fromIra && com.optionslab.app.BuildConfig.JARVIS) com.optionslab.ira.Address.boss(m.text) else m.text, style = Type.label.copy(color = p.ink, fontSize = 15.sp),
+        Text(if (m.fromIra && com.optionslab.app.BuildConfig.JARVIS) com.optionslab.ira.Address.boss(shownText) else shownText, style = Type.label.copy(color = p.ink, fontSize = 15.sp),
             modifier = Modifier.background(p.card, RoundedCornerShape(14.dp)).padding(horizontal = 14.dp, vertical = 10.dp))
+        if (brief.details != null) Text(if (showDetails) "Hide details" else "Details · or say \"more\"", style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp),
+            modifier = Modifier.clickable { showDetails = !showDetails }.padding(top = 4.dp))
         if (m.fromIra && com.optionslab.app.BuildConfig.JARVIS && !m.writing) {
             val ctx = androidx.compose.ui.platform.LocalContext.current
             Text("▶ Listen", style = Type.label.copy(color = Color(0xFF4AA8FF), fontSize = 13.sp),
-                modifier = Modifier.clickable { com.optionslab.app.ira.JarvisSpeaker.speak(ctx, m.text) }.padding(top = 4.dp, bottom = 2.dp))
+                modifier = Modifier.clickable { com.optionslab.app.ira.JarvisSpeaker.speak(ctx, shownText) }.padding(top = 4.dp, bottom = 2.dp))
         }
         m.order?.let { o ->
             if (o.missing.isNotEmpty() || o.refusal != null) Note("Nothing was sent.")
@@ -439,9 +457,30 @@ internal fun VoiceSwitch() {
         var mute by remember { mutableStateOf(JarvisVoice.muted) }
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
             Text("Mute Jarvis (replies on screen only)", style = Type.label.copy(color = p.ink, fontSize = 14.sp), modifier = Modifier.weight(1f))
-            androidx.compose.material3.Switch(checked = mute, onCheckedChange = { v -> mute = v; JarvisVoice.muted = v })
+            androidx.compose.material3.Switch(checked = mute, onCheckedChange = { v -> mute = v; if (v) { JarvisVoice.muteBy(com.optionslab.ira.VoiceMute.By.SETTINGS) } else { JarvisVoice.muted = false } })
         }
-        Note("Or say \"Jarvis, mute\" and \"Jarvis, unmute\".")
+        Note("Or say \"Jarvis, mute\" and \"Jarvis, unmute\". A mute said by voice lasts until the end of the day.")
+        // Boss, 5 Oct: answers short and precise, spoken and in the chat; detailed is the old way. Words only.
+        var shortOn by remember { mutableStateOf(com.optionslab.app.ira.IraTools.shortAnswers) }
+        Text("Answers", style = Type.label.copy(color = p.ink, fontSize = 14.sp), modifier = Modifier.padding(top = 8.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            androidx.compose.material3.FilterChip(selected = shortOn, onClick = { shortOn = true; com.optionslab.app.ira.IraTools.shortAnswers = true },
+                label = { Text("Short") })
+            androidx.compose.material3.FilterChip(selected = !shortOn, onClick = { shortOn = false; com.optionslab.app.ira.IraTools.shortAnswers = false },
+                label = { Text("Detailed") })
+        }
+        Note(if (shortOn) "One precise line, spoken and in the chat. Say \"more\" or tap Details for the rest." else "The full answer in the chat; the first few sentences spoken.")
+        // What Jarvis says aloud by himself (a display choice only: answers and safety warnings are always spoken).
+        var speaksSel by remember { mutableStateOf(com.optionslab.app.ira.IraTools.speakChoice) }
+        Text("Jarvis speaks", style = Type.label.copy(color = p.ink, fontSize = 14.sp), modifier = Modifier.padding(top = 8.dp))
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            for (choiceItem in com.optionslab.ira.SpeakChoice.Choice.entries) {
+                androidx.compose.material3.FilterChip(selected = speaksSel == choiceItem,
+                    onClick = { speaksSel = choiceItem; com.optionslab.app.ira.IraTools.speakChoice = choiceItem },
+                    label = { Text(choiceItem.label) })
+            }
+        }
+        Note("Answers to you and safety warnings are always spoken (unless muted or in quiet hours).")
         // Boss, 4 Oct: the phone's on-device recognizer did not hear "Jarvis"; the keyboard's voice typing does, fast.
         var google by remember { mutableStateOf(JarvisVoice.googleSpeech) }
         val vctx = androidx.compose.ui.platform.LocalContext.current

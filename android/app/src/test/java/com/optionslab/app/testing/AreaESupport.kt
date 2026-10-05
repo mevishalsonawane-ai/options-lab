@@ -48,6 +48,8 @@ object AreaE {
         MainActivity.closeRequests.value = null
         MainActivity.cardRequests.value = null
         com.optionslab.app.ui.SettingFocus.reset()
+        // The voice's "kept on screen" memory (the voice check names it) starts empty in each test.
+        com.optionslab.app.ira.JarvisVoice.resetForTest()
         SessionLock.lock()
     }
 

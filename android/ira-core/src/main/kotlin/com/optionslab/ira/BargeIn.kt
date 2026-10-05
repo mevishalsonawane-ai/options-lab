@@ -84,6 +84,19 @@ object BargeIn {
     }
 
     /**
+     * An answer said to its end (not cut): what is left of [full] after [spoken] for "go on" - the sentences [spoken]
+     * did not say, its own closing line ("The rest is in the chat.") not counted as one of the answer's. Null: nothing left.
+     */
+    fun finished(full: String?, spoken: String?, account: Boolean, now: Long): CutOff? {
+        if (full.isNullOrBlank() || spoken.isNullOrBlank()) return null
+        val said = sentences(spoken).count { s -> TAILS.none { s.trim().endsWith(it) } }
+        return if (said >= sentences(full).size) null else CutOff(full, said, account, now)
+    }
+
+    /** A spoken answer's own closing lines, never one of the answer's sentences. */
+    private val TAILS = listOf("The rest is in the chat.", "बाकी चैट में है।", ShortAnswer.MORE_HINT)
+
+    /**
      * The words "go on" says: the cut-off answer from its first unheard sentence, or null (none, too old, or nothing
      * left). A locked phone never says an account answer aloud: [Refused] then.
      */

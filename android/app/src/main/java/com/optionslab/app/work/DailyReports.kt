@@ -232,6 +232,9 @@ object DailyReports {
             runCatching { kotlinx.coroutines.withTimeoutOrNull(15_000) { com.optionslab.app.ira.IraHub.flows() } }.getOrNull()
                 ?.takeIf { it.isNotEmpty() }?.let { lines += "• " + com.optionslab.ira.Flows.lines(it).first() }
             com.optionslab.app.ira.IraEvents.upcoming(1).forEach { e -> lines += "• " + com.optionslab.ira.Events.line(e, Market.today()).removeSuffix(".") }
+            // A mute said by voice lasts that day only (Boss, 5 Oct): yesterday's ends here, and the check says so.
+            val voiceBack = runCatching { com.optionslab.app.ira.JarvisVoice.morningUnmute() }.getOrNull()
+            voiceBack?.let { lines += "• $it" }
             // Jarvis's own self-check: each part it needs, working or not (a part switched off is not counted).
             run {
                 val vs = com.optionslab.app.ira.JarvisVoice.state.value
@@ -282,7 +285,7 @@ object DailyReports {
             val usual = runCatching { com.optionslab.app.ira.IraTools.morningAsksLine() }.getOrNull()
             // Battery (round 4): listening on with its battery saver off - said once, ever, in words; never switched here.
             val saver = runCatching { com.optionslab.app.ira.JarvisVoice.saverHintOnce() }.getOrNull()
-            runCatching { com.optionslab.app.ira.JarvisSpeaker.morning(context, "Good morning, Boss. " + (if (bad == 0) "We are set for today's trading." else
+            runCatching { com.optionslab.app.ira.JarvisSpeaker.morning(context, "Good morning, Boss. " + (voiceBack?.let { "$it " } ?: "") + (if (bad == 0) "We are set for today's trading." else
                 needYou +
                 (if (brief.isEmpty()) "" else " Now my analysis. " + brief.joinToString(" ") { com.optionslab.ira.Wake.spoken(it, 2) } +
                     " That is history, not a promise.")) + (saver?.let { " $it" } ?: "") + (usual?.let { " $it" } ?: "")) }

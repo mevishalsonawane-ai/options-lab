@@ -119,7 +119,7 @@ internal object IraAgenda {
         IraHub.appContext() ?: return                    // made and told when it can be shown, not before
         val (items, made) = lock.withLock { todayLocked() }
         if (made) {
-            Agenda.morning(items)?.let { IraHub.note(it) }
+            Agenda.morning(items)?.let { IraHub.noteAloud(it, com.optionslab.ira.SpeakChoice.Weight.MINOR) }
             IraActivity.add("Made my plan for the day: ${items.size} thing${if (items.size == 1) "" else "s"}.")
             Automations.acted(Automations.Auto.AGENDA, "Made my plan for the day.")
         }

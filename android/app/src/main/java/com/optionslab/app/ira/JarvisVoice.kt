@@ -70,11 +70,25 @@ class JarvisVoice : Service() {
          * wait for him to finish (up to 8 s). [full]: never shortened outside Boss's hours (the morning check, his own
          * reminders); otherwise still unasked (quiet hours, a locked phone).
          */
-        fun announce(text: String, prompted: Boolean = false, urgent: Boolean = false, full: Boolean = false): Boolean {
+        fun announce(text: String, prompted: Boolean = false, urgent: Boolean = false, full: Boolean = false,
+                     weight: com.optionslab.ira.SpeakChoice.Weight? = null): Boolean {
             val v = instance?.get() ?: return false
+            // Boss's "Jarvis speaks" choice (a display preference only): a reply, a safety warning, his own reminder or the
+            // morning check is always said; an important note unless he chose "only answers"; a minor one only with "everything".
+            val w = when {
+                prompted || full -> com.optionslab.ira.SpeakChoice.Weight.ANSWER
+                urgent -> com.optionslab.ira.SpeakChoice.Weight.WARNING
+                else -> weight ?: com.optionslab.ira.SpeakChoice.Weight.IMPORTANT
+            }
+            val choice = runCatching { IraTools.speakChoice }.getOrDefault(com.optionslab.ira.SpeakChoice.Choice.IMPORTANT)
+            com.optionslab.ira.SpeakChoice.why(choice, w)?.let { why -> lastHeld = System.currentTimeMillis() to why; return false }
+            // Short answers (the default): an unasked note is said as its one line too - never a safety warning, never a
+            // reply (already short), never his reminder or the morning check ([com.optionslab.ira.ShortAnswer]).
+            val shortText = if (!prompted && !urgent && !full && runCatching { IraTools.shortAnswers }.getOrDefault(true))
+                runCatching { com.optionslab.ira.ShortAnswer.of(null, text).line }.getOrDefault(text) else text
             // Unasked on a locked phone (it may be overheard): never an amount, a P&L or a symbol - only that it is in
             // the chat (every caller has already put the full line there).
-            val overheard = if (prompted) text else com.optionslab.ira.Overheard.said(text, runCatching { IraHub.locked() }.getOrDefault(true))
+            val overheard = if (prompted) shortText else com.optionslab.ira.Overheard.said(shortText, runCatching { IraHub.locked() }.getOrDefault(true))
             if (!prompted && quietNow()) { runCatching { JarvisPopup.show(v, "Jarvis", overheard) }; return true }
             // A long unasked briefing outside the hours Boss talks to him: its first sentence aloud, the rest in the chat
             // ([com.optionslab.ira.TalkHours]). Never a safety warning (urgent), a reply, the morning check or a
@@ -103,6 +117,7 @@ class JarvisVoice : Service() {
             append("Ears: ${if (googleSpeech) "Google's speech service" else "on the phone only"} · language: ${instance?.get()?.lang} · voice taught: ${VoiceGuard.enrolled} · only my voice: $onlyBoss · muted: $muted\n")
             append("On-device recognition available: ${context?.let { c -> runCatching { Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && SpeechRecognizer.isOnDeviceRecognitionAvailable(c) }.getOrNull() }} · " +
                 "any recognizer: ${context?.let { c -> runCatching { SpeechRecognizer.isRecognitionAvailable(c) }.getOrNull() }}\n")
+            append(mutedByLine()).append('\n')
             append("Voice check: ${runCatching { diagnose(context) }.getOrElse { "could not run" }}\n")
             com.optionslab.ira.Latency.say(latencies, voiceLatencies)?.let { append(it).append('\n') }
             append(com.optionslab.ira.BossPace.say(paceGaps)).append('\n')
@@ -147,8 +162,23 @@ class JarvisVoice : Service() {
             v?.let { s -> runCatching { com.optionslab.ira.EmptyTurns.say(s.recentTurns, s.emptyInRow, cutInNow(s).on) }.getOrNull()?.let { out += it } }
             traceLines().takeIf { it.isNotEmpty() }?.let { out += "Last turns: " + it.joinToString("; ") + "." }
             if (restingNow()) out += "Battery saver for listening has my ears resting a few seconds between quiet turns (screen off, market shut): say \"Jarvis\" again if I miss it, or switch the saver off in the Jarvis page."
-            if (muted) out += "I'm muted: say \"Jarvis, unmute\" or switch Mute off in Settings, Voice and AI model."
-            if (quietNow()) out += "It's quiet hours (22:00 to 07:00): I only speak when you ask."
+            // The actual reason, first when it is the mute (Boss, 5 Oct: "why is it sending most things in chat?").
+            val mutedNow = muted
+            if (mutedNow) {
+                val quietTill = mutedUntil
+                val muteWhy = if (System.currentTimeMillis() < quietTill) "I'm quiet until %tR (you asked for a quiet while)".format(java.util.Locale.ENGLISH, quietTill)
+                    else runCatching { com.optionslab.ira.VoiceMute.why(muteMark, IST_ZONE) }.getOrDefault("I'm muted")
+                out.add(0, "$muteWhy: say \"Jarvis, unmute\" or switch Mute off in Settings, Voice and AI model.")
+            }
+            if (quietNow()) out.add(if (mutedNow) 1 else 0, "It's quiet hours (22:00 to 07:00): I only speak when you ask.")
+            // Boss's "Jarvis speaks" choice, named when it kept a note on screen in the last 6 hours (or keeps every note there).
+            val speaksNow = runCatching { IraTools.speakChoice }.getOrDefault(com.optionslab.ira.SpeakChoice.Choice.IMPORTANT)
+            val heldRecently = lastHeld?.takeIf { System.currentTimeMillis() - it.first < 6 * 3600_000L }
+            if (heldRecently != null || speaksNow == com.optionslab.ira.SpeakChoice.Choice.ANSWERS)
+                out += "\"Jarvis speaks\" is set to ${speaksNow.label.lowercase()} (Settings, Voice): " +
+                    (if (speaksNow == com.optionslab.ira.SpeakChoice.Choice.ANSWERS) "notes I post by myself stay on screen; " else "minor notes (news, records, paper tests, goals) stay on screen; ") +
+                    "answers and safety warnings are always spoken."
+            heldRecently?.let { held -> out += "The last note I kept on screen, at %tR: %s.".format(java.util.Locale.ENGLISH, held.first, held.second) }
             if (!JarvisSpeaker.speakTyped) out += "Speaking typed replies is off (Settings, Voice and AI model)."
             if (instance?.get()?.voiceReady == false) out += "This phone has no offline English voice ready: add one in Settings, Accessibility, Text-to-speech."
             context?.let { c -> runCatching {
@@ -159,8 +189,11 @@ class JarvisVoice : Service() {
             if (lastLatencyMs > 0) out += "My last spoken reply took %.1f seconds.".format(java.util.Locale.ENGLISH, lastLatencyMs / 1000.0)
             // Battery (round 4): words only, once - the switch stays Boss's.
             val saver = if (hint) runCatching { saverHintOnce() }.getOrNull() else null
-            return if (out.isEmpty()) "Boss, my voice looks fine: not muted, volume up, a voice ready. If you still hear nothing, tap Listen under a reply." + (saver?.let { " $it" } ?: "")
-                else "Boss, here's why you may not hear me: " + (out + listOfNotNull(saver)).joinToString(" ")
+            // Short answers are a choice, not a fault: named last, so a long answer said as one line is never a mystery.
+            val shortNote = if (runCatching { IraTools.shortAnswers }.getOrDefault(true))
+                " Answers are short by your choice: I say one line; say \"more\" for the rest, or choose Detailed answers in Settings, Voice." else ""
+            return if (out.isEmpty()) "Boss, my voice looks fine: not muted, volume up, a voice ready. If you still hear nothing, tap Listen under a reply." + (saver?.let { " $it" } ?: "") + shortNote
+                else "Boss, here's why you may not hear me: " + (out + listOfNotNull(saver)).joinToString(" ") + shortNote
         }
 
         /** Quiet hours: nothing said unasked from 22:00 to 07:00 (on by default; "Jarvis, quiet hours off"). */
@@ -390,10 +423,57 @@ class JarvisVoice : Service() {
          * the screen and in pop-ups - while Jarvis still listens, so "Jarvis, unmute" brings the voice back.
          */
         var muted: Boolean
-            get() = runCatching { com.optionslab.app.security.SecurePrefs.getBoolean("jarvis.mute", false) }.getOrDefault(false) ||
+            get() = (runCatching { com.optionslab.app.security.SecurePrefs.getBoolean("jarvis.mute", false) }.getOrDefault(false) && muteHolds()) ||
                 System.currentTimeMillis() < mutedUntil
-            set(v) { keep(if (v) mapOf("jarvis.mute" to true) else mapOf("jarvis.mute" to false, "jarvis.mute.until" to null), tightening = v)
+            set(v) { keep(if (v) mapOf("jarvis.mute" to true, MUTE_BY to null) else mapOf("jarvis.mute" to false, "jarvis.mute.until" to null, MUTE_BY to null), tightening = v)
                 if (v) { instance?.get()?.hush(); JarvisSpeaker.stop() } }
+
+        /** Who muted Jarvis and when ([com.optionslab.ira.VoiceMute]): a voice mute lasts that day only. */
+        private const val MUTE_BY = "jarvis.mute.by"
+        private val IST_ZONE: java.time.ZoneId = java.time.ZoneId.of("Asia/Kolkata")
+
+        val muteMark: com.optionslab.ira.VoiceMute.Mark?
+            get() = runCatching { com.optionslab.ira.VoiceMute.decode(com.optionslab.app.security.SecurePrefs.getString(MUTE_BY)) }.getOrNull()
+
+        private fun muteHolds(): Boolean = runCatching {
+            com.optionslab.ira.VoiceMute.holds(muteMark, java.time.LocalDate.now(IST_ZONE), IST_ZONE)
+        }.getOrDefault(true)
+
+        /** Muted by [by] ([heardAs]: a voice mute's own command words), kept with its source and time. */
+        fun muteBy(by: com.optionslab.ira.VoiceMute.By, heardAs: String? = null, stopNow: Boolean = true) {
+            val mark = com.optionslab.ira.VoiceMute.Mark(by, System.currentTimeMillis(), heardAs)
+            keep(mapOf("jarvis.mute" to true, MUTE_BY to com.optionslab.ira.VoiceMute.encode(mark)), tightening = true)
+            // ([stopNow] false: the voice mute's own "Muting, Boss..." line, already queued, is let finish.)
+            if (stopNow) { instance?.get()?.hush(); JarvisSpeaker.stop() }
+        }
+
+        /** "Muted by: voice at 15:01 (heard as 'mute')" for the diagnostics. */
+        fun mutedByLine(): String = runCatching { com.optionslab.ira.VoiceMute.diagLine(muted, muteMark, IST_ZONE) }.getOrDefault("Muted by: could not read")
+
+        /**
+         * The morning check: yesterday's voice mute ended (it lasts the day only) - cleared, and the line saying so, or
+         * null. A typed or Settings mute is left as Boss set it.
+         */
+        fun morningUnmute(): String? {
+            val line = runCatching { com.optionslab.ira.VoiceMute.morningLine(muteMark, java.time.LocalDate.now(IST_ZONE), IST_ZONE) }.getOrNull() ?: return null
+            val wasOn = runCatching { com.optionslab.app.security.SecurePrefs.getBoolean("jarvis.mute", false) }.getOrDefault(false)
+            keep(mapOf("jarvis.mute" to false, MUTE_BY to null), tightening = false)
+            return if (wasOn) line else null
+        }
+
+        /** The last line kept on screen instead of said, and why (for "why aren't you speaking?"; never its words). */
+        @Volatile private var lastHeld: Pair<Long, String>? = null
+
+        /**
+         * A note Jarvis put in the chat by himself, said aloud as its one line when Boss's "Jarvis speaks" choice takes a
+         * note of [weight] (important: his positions' alerts, a stop he must check, the order watch stopped; minor: records,
+         * paper tests, goals, the plan). False: kept on screen (the reason is kept for the voice check). Words only.
+         */
+        fun offerNote(text: String, weight: com.optionslab.ira.SpeakChoice.Weight): Boolean =
+            runCatching { announce(text, weight = weight) }.getOrDefault(false)
+
+        /** Robolectric shares static state between tests: the voice's own memory reset. */
+        internal fun resetForTest() { lastHeld = null }
 
         /** "Be quiet for 30 minutes": muted until this time (epoch ms), then speaking again by itself. */
         val mutedUntil: Long get() = runCatching { com.optionslab.app.security.SecurePrefs.getString("jarvis.mute.until")?.toLong() }.getOrNull() ?: 0L
@@ -1709,6 +1789,9 @@ class JarvisVoice : Service() {
                         // A start set for later runs while Boss may be away: only his own voice sets one.
                         risky && !verified && (cmd!!.kind in HIGH_RISK || loosens || laterRest != null) ->
                             say(VoiceGuard.blocked() ?: "Boss, that didn't sound like you, so I won't do it. Use the Ira screen.")
+                        // A heard mute must be clear (Boss, 5 Oct: one mis-heard "mute" kept him silent all day): the name in the
+                        // same words or a clear phrase, said aloud first, and for today only. A typed mute is as before.
+                        cmd?.kind == com.optionslab.ira.Command.Kind.MUTE -> heardMute(h.question, alternatives.firstOrNull().orEmpty())
                         else -> {
                             // Not sure it heard this question right (a low score, or its best readings differ in an index, a
                             // number, a side or a day): what it took it as is said first, then the answer - questions only,
@@ -1729,6 +1812,27 @@ class JarvisVoice : Service() {
                 }
             }
         }
+    }
+
+    /**
+     * A mute heard as [question] (best reading [best]): only a clear one mutes ([com.optionslab.ira.VoiceMute.heardClear]) -
+     * "Muting, Boss..." is said first, then the mute is kept as a voice mute (that day only). A bare "mute" is answered
+     * with how to mute, and nothing changes. Only the mute's own command words are kept (the diagnostics' "heard as").
+     */
+    private fun heardMute(question: String, best: String) {
+        if (!com.optionslab.ira.VoiceMute.heardClear(question, com.optionslab.ira.Wake.named(best))) {
+            note("a bare mute heard: not taken")
+            say(com.optionslab.ira.VoiceMute.UNCLEAR)
+            return
+        }
+        val heardAs = com.optionslab.ira.VoiceMute.heardAs(question)
+        say(com.optionslab.ira.VoiceMute.MUTING)
+        // Kept now, after the line was handed to the voice (it finishes; nothing after it is said).
+        muteBy(com.optionslab.ira.VoiceMute.By.VOICE, heardAs, stopNow = false)
+        runCatching { IraTools.alertBoss(com.optionslab.ira.AlertSense.Boss.MUTED) }
+        runCatching { IraTools.count(com.optionslab.ira.Improve.MUTED) }
+        runCatching { IraActivity.add("Muted my voice (heard).") }
+        runCatching { IraHub.note("Muted by voice (heard as '$heardAs'), for today only. Say \"Jarvis, unmute\" or tap Unmute to hear me.") }
     }
 
     /** Said without the name as a follow-up: unmute and the reply language (never mute: a stray word must not silence Jarvis). */
@@ -1865,7 +1969,9 @@ class JarvisVoice : Service() {
                         brief = IraTools.brief,
                         // A topic Boss keeps asking "in short" or "in detail" after: said that way aloud (never over his own setting above).
                         leading = { IraTools.figureLeadingNow() }, learned = { IraTools.lengthLearnedNow() }, shorter = { IraTools.clarityShorterNow() },
-                        echo = echo, late = late)
+                        echo = echo, late = late,
+                        // Short answers (Boss's choice, the default): one precise line; "go on" / "more" gives the rest.
+                        short = runCatching { IraTools.shortAnswers }.getOrDefault(true))
                     // A question that named no index, read for the one Boss usually means ([com.optionslab.ira.UsualIndex]):
                     // "BankNifty, as usual:" before the answer, so he hears which index it is for (the chat's note says it
                     // in full). Speech wording only: never on a locked phone, never before a warning, never on a late answer.
@@ -2071,6 +2177,8 @@ class JarvisVoice : Service() {
         if (stopped) return
         if (id == STOP_AFTER) { stopSelf(); return }
         if (id == "answer") { awakeUntil = SystemClock.elapsedRealtime() + FOLLOW_MS; called = false }   // a follow-up needs no "Jarvis" (and may not act)
+        // An answer said to its end with more of it unsaid (a short line, or the usual first sentences): "go on" says the rest.
+        if (id == "answer" && cutOff == null) cutOff = runCatching { com.optionslab.ira.BargeIn.finished(sayingFull, sayingText, sayingAccount, lastSpokenEnd) }.getOrNull()
         if (id == "question" && askingUntil < SystemClock.elapsedRealtime()) askingUntil = SystemClock.elapsedRealtime() + ANSWER_MS
         // Jarvis's own words that end inviting an answer ("... say yes for it.", "Before you answer, Boss: ..."): Boss's
         // answer is heard without "Jarvis" for at least 20 s, as a follow-up (it may only ask, never act - a request's yes
