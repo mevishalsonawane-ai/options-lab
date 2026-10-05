@@ -300,6 +300,9 @@ object IraHub {
                 // How the index moved after each news theme's headlines, timed on the phone's own candles - timing facts
                 // only, never a cause; it only ever adds words ([com.optionslab.ira.NewsMoves]). No news read in IraGoldAlgo.
                 if (!GOLD_ONLY_TALK) runCatching { IraTools.newsMovesUpdate(_state.value.news, hs.mapValues { it.value.bars }) }
+                // Boss's open legs noted once near the morning mark, for "what changed since this morning?" ([com.optionslab.ira.SinceMorning];
+                // where, symbol and quantity only, kept on the phone and never said on a locked phone). Nothing acts.
+                if (!GOLD_ONLY_TALK && com.optionslab.app.BuildConfig.JARVIS) runCatching { morningHeldIfDue() }
                 if (news != null && com.optionslab.app.BuildConfig.JARVIS) runCatching { judgeNews(news.first) }
                 nightlyIfDue()
             }.onFailure {
@@ -1223,7 +1226,7 @@ object IraHub {
                 com.optionslab.ira.Routine.asked(q) || com.optionslab.ira.Routine.forgetAsked(q) || com.optionslab.ira.PatternCalls.asked(q) || com.optionslab.ira.TrendReads.asked(q) ||
                 com.optionslab.ira.Learnings.asked(q) != null || com.optionslab.ira.Learnings.undoAsked(q) ||
                 com.optionslab.ira.NewsMoves.asked(q) != null || com.optionslab.ira.PreMarket.asked(q) ||
-                com.optionslab.ira.ChainDrift.asked(q) != null ||
+                com.optionslab.ira.ChainDrift.asked(q) != null || com.optionslab.ira.SinceMorning.asked(q) ||
                 com.optionslab.ira.Headroom.asked(q) != null || com.optionslab.ira.BotTrades.asked(q) != null ||
                 com.optionslab.ira.SaidAbout.asked(q) != null || com.optionslab.ira.WeekAhead.asked(q) != null ||
                 com.optionslab.ira.ZerodhaSession.asked(q) != null || com.optionslab.ira.OrderWhy.asked(q) != null || com.optionslab.ira.Tour.asked(q) ||
@@ -2315,8 +2318,8 @@ object IraHub {
     }
 
     /**
-     * [ask]'s question branches on contradictions, the co-pilot brief and the option chain: Consistency, CoPilot,
-     * ChainDrift, ChainIntel - in [ask]'s order. True when one
+     * [ask]'s question branches on contradictions, the co-pilot brief, now against the morning and the option chain:
+     * Consistency, CoPilot, SinceMorning, ChainDrift, ChainIntel - in [ask]'s order. True when one
      * took [q], answered exactly as before; each branch keeps its own guard (not [bundled], no order, no command).
      */
     private fun askedOfChain(q: String, parsed: com.optionslab.ira.Question, bundled: Boolean, understood: Boolean): Boolean {
@@ -2337,6 +2340,17 @@ object IraHub {
             runCatching { com.optionslab.ira.CoPilot.asked(q) }.getOrDefault(false)) {
             _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
             scope.launch { reply(runCatching { coPilot() }.getOrElse { "I could not put the brief together just now, Boss." }) }
+            return true
+        }
+        // "What changed since this morning?", "what's different since the open?", "subah se kya badla" ([com.optionslab.ira.SinceMorning]):
+        // the morning's facts at 09:45 - each index's price, gap, structure and range, India VIX, the first chain read of the day,
+        // the news themes, and on an unlocked phone Boss's legs noted that morning - set against now, ranked by size. Facts
+        // only, never a cause, forecast or advice; nothing acts.
+        if (!bundled && parsed.order == null && parsed.command == null && !com.optionslab.app.BuildConfig.GOLD &&
+            runCatching { com.optionslab.ira.SinceMorning.asked(q) }.getOrDefault(false)) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            val markets = parsed.markets
+            scope.launch { reply(runCatching { sinceMorning(markets) }.getOrElse { "I could not set now against this morning just now, Boss." }) }
             return true
         }
         // "Where is the most call writing?", "how has OI shifted since morning?", "are puts dearer than calls?", "what's the
@@ -3428,6 +3442,40 @@ object IraHub {
         }
         val head = runCatching { com.optionslab.ira.Briefing.say(st.snaps, nowAt, emptyList()) }.getOrNull()
         return com.optionslab.ira.CoPilot.brief(head, facts, held, nowAt, locked)
+    }
+
+    /**
+     * "What changed since this morning?" ([com.optionslab.ira.SinceMorning]): the first asked index's chain read afresh (so
+     * the newest read is kept), then the candles, the day's chain reads, the news and - on an unlocked phone only - Boss's
+     * open legs against those noted near 09:45. Reads only.
+     */
+    private suspend fun sinceMorning(markets: List<IraMarket>): String {
+        val locked = phoneLocked()
+        val now = com.optionslab.app.data.Market.now().toLocalDateTime()
+        val today = now.toLocalDate()
+        val indices = com.optionslab.ira.SinceMorning.indices(markets)
+        runCatching { withTimeoutOrNull(CASE_CHAIN_MS) { IraAccount.chain(indices.first().name) } }
+        val chains = indices.associate { m -> m.name to runCatching { IraAccount.chainBook.day(m.name, today) }.getOrDefault(emptyList()) }
+        val bars = (indices + IraMarket.VIX).associateWith { histories[it]?.bars.orEmpty() }
+        // Boss's account: never read for this on a locked phone.
+        val positions = if (locked) null else runCatching {
+            val legs = IraCoach.openLegs().filter { it.qty != 0 }.map { com.optionslab.ira.SinceMorning.Held(it.where, it.symbol, it.qty) }
+            com.optionslab.ira.SinceMorning.Positions(IraTools.morningHeld(today), legs)
+        }.getOrNull()
+        return com.optionslab.ira.SinceMorning.answer(indices, bars, chains, _state.value.news, IST, positions, locked, now)
+    }
+
+    /** Boss's open legs noted once a day near the morning mark (09:40 to 10:15, in session), in the background. */
+    private fun morningHeldIfDue() {
+        val now = com.optionslab.app.data.Market.now().toLocalDateTime()
+        val mark = com.optionslab.ira.SinceMorning.MARK
+        val t = now.toLocalTime()
+        if (t.isBefore(mark.minusMinutes(5)) || !t.isBefore(mark.plusMinutes(30)) || !IraMarket.NIFTY.trading(now)) return
+        if (IraTools.morningHeldNoted(now.toLocalDate())) return
+        scope.launch {
+            val legs = runCatching { IraCoach.openLegs() }.getOrNull() ?: return@launch
+            IraTools.noteMorningHeld(now.toLocalDate(), legs.filter { it.qty != 0 }.map { com.optionslab.ira.SinceMorning.Held(it.where, it.symbol, it.qty) })
+        }
     }
 
     /** "Make the case" waits at most this long for a fresh option chain. */

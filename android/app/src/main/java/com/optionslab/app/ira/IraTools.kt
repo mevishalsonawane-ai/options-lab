@@ -1080,6 +1080,35 @@ internal object IraTools {
         trendUpdate { log -> bars.entries.fold(log) { l, e -> com.optionslab.ira.TrendReads.settle(l, e.key, e.value, now) } }
     }
 
+    // ---- Boss's open legs as they stood this morning ([com.optionslab.ira.SinceMorning]) --------------------------------
+
+    /** The day and Boss's open legs (where, symbol, quantity - no prices or amounts) noted once near the morning mark. */
+    private const val MORNING_HELD = "jarvis.morningHeld"
+
+    /** Today's morning legs, or null when none were noted today. */
+    fun morningHeld(today: java.time.LocalDate): List<com.optionslab.ira.SinceMorning.Held>? = runCatching {
+        val lines = (prefs().getString(MORNING_HELD) ?: "").lines().filter { it.isNotBlank() }
+        if (lines.firstOrNull() != today.toString()) null
+        else lines.drop(1).mapNotNull { l ->
+            val p = l.split("|")
+            if (p.size != 3) null else p[2].toIntOrNull()?.let { com.optionslab.ira.SinceMorning.Held(p[0], p[1], it) }
+        }
+    }.getOrNull()
+
+    /** Notes [held] as today's morning legs, once a day. */
+    @Volatile private var heldNotedOn: java.time.LocalDate? = null
+
+    /** True once today's morning legs are noted (or being noted). */
+    fun morningHeldNoted(today: java.time.LocalDate): Boolean = heldNotedOn == today || morningHeld(today) != null
+
+    @Synchronized fun noteMorningHeld(today: java.time.LocalDate, held: List<com.optionslab.ira.SinceMorning.Held>) {
+        runCatching {
+            if (heldNotedOn == today || morningHeld(today) != null) return@runCatching
+            heldNotedOn = today
+            prefs().putAllSoon(mapOf(MORNING_HELD to (listOf(today.toString()) + held.map { "${it.where}|${it.symbol}|${it.qty}" }).joinToString("\n")))
+        }
+    }
+
     // ---- how the index moved after each news theme's headlines ([com.optionslab.ira.NewsMoves]) --------------------
 
     /** The timed stories (theme, index, minute, price and the biggest move after it - market data only, no headline text). */

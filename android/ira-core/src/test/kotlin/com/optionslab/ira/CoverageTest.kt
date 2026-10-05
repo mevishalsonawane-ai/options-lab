@@ -27,7 +27,7 @@ class CoverageTest {
     private fun route(said: String): List<Kind> {
         if (Corrections.wordsAsked(said) || Corrections.forgetWordAsked(said) != null) return listOf(Kind.JARVIS)
         if (Routine.asked(said) || Routine.forgetAsked(said)) return listOf(Kind.ACCOUNT)
-        val asSaid = Sources.asked(said) || AboutBoss.knowAsked(said) || Memory.recallAsked(said) || Memory.forgetAsked(said) || PatternCalls.asked(said) || TrendReads.asked(said) ||
+        val asSaid = Sources.asked(said) || AboutBoss.knowAsked(said) || Memory.recallAsked(said) || Memory.forgetAsked(said) || PatternCalls.asked(said) || TrendReads.asked(said) || SinceMorning.asked(said) ||
             Learnings.asked(said) != null || Learnings.undoAsked(said) || NewsMoves.asked(said) != null || PreMarket.asked(said) ||
             ChainDrift.asked(said) != null || Headroom.asked(said) != null || BotTrades.asked(said) != null || DayClock.asked(said) != null ||
             SaidAbout.asked(said) != null || GapRecord.asked(said) != null || Causes.asked(said) != null || WeekAhead.asked(said) != null || AskedAgain.asked(said) || FigureFirst.asked(said) != null || Weekdays.asked(said) != null || DayCompare.asked(said) != null ||
@@ -64,7 +64,7 @@ class CoverageTest {
             if (DataAge.asked(q)) return Kind.JARVIS
             if (Honest.asked(q) != null) return Kind.HONEST
             if (Thinking.asked(q) != null || Consistency.asked(q)) return Kind.JARVIS
-            if (CoPilot.asked(q) || ChainDrift.asked(q) != null || ChainIntel.asked(q) != null || DayClock.asked(q) != null || GapRecord.asked(q) != null || RangeBreaks.asked(q) != null || PriorDay.asked(q) != null || LastHour.asked(q) != null || InsideDays.asked(q) != null || FirstMove.asked(q) != null || Weekdays.asked(q) != null || DayCompare.asked(q) != null || Structure.asked(q) != null ||
+            if (CoPilot.asked(q) || SinceMorning.asked(q) || ChainDrift.asked(q) != null || ChainIntel.asked(q) != null || DayClock.asked(q) != null || GapRecord.asked(q) != null || RangeBreaks.asked(q) != null || PriorDay.asked(q) != null || LastHour.asked(q) != null || InsideDays.asked(q) != null || FirstMove.asked(q) != null || Weekdays.asked(q) != null || DayCompare.asked(q) != null || Structure.asked(q) != null ||
                 MindChange.asked(q) || Breadth.asked(q) != null || TradeCase.asked(q) || Scenarios.asked(q) != null ||
                 Causes.asked(q) != null) return Kind.MARKET
         }
@@ -442,7 +442,7 @@ class CoverageTest {
      * ask(): Boss's learned words and routine as said, fillers and follow-ups, then - for a question not said with
      * something to do (IraHub's `bundled`, [Bundle.acts]) - DayJournal, AlertSense, Airtime, Hearing, PatternCalls, TrendReads, Clarity,
      * WordFit, AskedAgain, FigureFirst, WrongThing, ArmHabits, MorningSense, NewsMoves, TaxExport, Learnings, PreMarket, Headroom, BotTrades, SaidAbout, WeekAhead, DataAge, Honest, Thinking,
-     * Consistency, CoPilot, ChainDrift, ChainIntel, DayClock, GapRecord, RangeBreaks, PriorDay, LastHour, InsideDays, FirstMove, Weekdays, DayCompare, Structure, MindChange, Breadth, TradeCase,
+     * Consistency, CoPilot, SinceMorning, ChainDrift, ChainIntel, DayClock, GapRecord, RangeBreaks, PriorDay, LastHour, InsideDays, FirstMove, Weekdays, DayCompare, Structure, MindChange, Breadth, TradeCase,
      * Scenarios, Causes, Agenda, Improve; the reminders and Jarvis's own checks,
      * Distance... Outlook, NewsDesk, down to the account's sections (PositionHealth, BotHealth and NeedsTrue are its HEALTH,
      * BOTS and NEED; HeardBack is the voice path's own read-back, never a branch of the hub), a pattern explained, Solo and IraHub.reasoned's readers over the candles, each in its
@@ -459,7 +459,7 @@ class CoverageTest {
         if (!understood && (Routine.asked(said) || Routine.forgetAsked(said))) return "Routine"
         val asSaid = Sources.asked(said) || AboutBoss.knowAsked(said) || Memory.recallAsked(said) || Memory.forgetAsked(said) ||
             Corrections.wordsAsked(said) || Corrections.forgetWordAsked(said) != null || Routine.asked(said) || Routine.forgetAsked(said) ||
-            PatternCalls.asked(said) || TrendReads.asked(said) || Learnings.asked(said) != null || Learnings.undoAsked(said) || NewsMoves.asked(said) != null ||
+            PatternCalls.asked(said) || TrendReads.asked(said) || SinceMorning.asked(said) || Learnings.asked(said) != null || Learnings.undoAsked(said) || NewsMoves.asked(said) != null ||
             PreMarket.asked(said) ||
             ChainDrift.asked(said) != null || Headroom.asked(said) != null || BotTrades.asked(said) != null || NeedsTrue.asked(said) || Clarity.asked(said) != null || DayClock.asked(said) != null ||
             SaidAbout.asked(said) != null || GapRecord.asked(said) != null || WordFit.asked(said) != null || Causes.asked(said) != null || WeekAhead.asked(said) != null || AskedAgain.asked(said) || FigureFirst.asked(said) != null || MindChange.asked(said) || Weekdays.asked(said) != null || DayCompare.asked(said) != null || RangeBreaks.asked(said) != null || PriorDay.asked(said) != null || LastHour.asked(said) != null || InsideDays.asked(said) != null || FirstMove.asked(said) != null || ZerodhaSession.asked(said) != null || Tour.asked(said) || WrongThing.asked(said) != null || WrongThing.objected(said) || OrderWhy.asked(said) != null || ArmHabits.asked(said) || MorningSense.asked(said) != null || RelayHealth.asked(said) != null
@@ -504,6 +504,7 @@ class CoverageTest {
         if (alone && Thinking.asked(q) != null) return "Thinking"
         if (alone && Consistency.asked(q)) return "Consistency"
         if (alone && CoPilot.asked(q)) return "CoPilot"
+        if (alone && SinceMorning.asked(q)) return "SinceMorning"
         if (alone && ChainDrift.asked(q) != null) return "ChainDrift"
         if (alone && ChainIntel.asked(q) != null) return "ChainIntel"
         if (alone && DayClock.asked(q) != null) return "DayClock"
@@ -1148,6 +1149,12 @@ class CoverageTest {
             ("how often does nifty's range expand after an inside day" to "InsideDays") to ("how often does nifty stay inside the opening range all day" to "RangeBreaks"),
             // Market intelligence round 20: the first move's record beside the first half hour's range and how busy it is.
             ("how often does the first half hour direction match the close" to "FirstMove") to ("how often does nifty break its first 30 minute range" to "RangeBreaks"),
+            // Reasoning round 15: now against this morning, beside the co-pilot, the chain's drift, the OI shift, today against yesterday and the news.
+            ("what changed since this morning" to "SinceMorning") to ("what matters right now" to "CoPilot"),
+            ("what's different since the open" to "SinceMorning") to ("has the biggest put oi moved since morning" to "ChainDrift"),
+            ("anything new since 9:45" to "SinceMorning") to ("how has the oi shifted since morning" to "ChainIntel"),
+            ("now versus this morning" to "SinceMorning") to ("how is today different from yesterday" to "DayCompare"),
+            ("subah se kya badla" to "SinceMorning") to ("what changed in how you work" to "Learnings"),
         )) { assertEquals(a.second, feature(a.first), a.first); assertEquals(b.second, feature(b.first), b.first) }
         // Boss's Hinglish what-if is a what-if; a forecast, advice or his own book in Hindi never is.
         for (s in listOf("kal nifty ka kya hoga", "nifty 200 points gir jayega kya", "agar nifty 1% gira to kya buy karu",
