@@ -92,6 +92,9 @@ class HeartbeatTest : RobolectricTest() {
         val stored = SecurePrefs.getLong("hb.last", 0L)
         assertTrue(stored > 0)
         ShadowSystemClock.advanceBy(Duration.ofSeconds(15))
+        // The beat's value is the real wall clock (ShadowSystemClock moves only elapsedRealtime): two beats in the same
+        // millisecond read the same time, and the newer one was not newer (it failed CI once).
+        Thread.sleep(5)
         Heartbeat.beat(context)
         assertEquals("not written again within the minute", stored, SecurePrefs.getLong("hb.last", 0L))
         assertTrue("but this process reads the newest beat", Heartbeat.last() > stored)
