@@ -1546,11 +1546,20 @@ object IraHub {
         }
         // Boss's own reminder ("remind me at 3 pm to check Nifty"): only said at its time, never run (Boss, 4 Oct).
         // "Cancel my reminders": the reminders only (timed commands are cancelled with "cancel everything set for later").
+        // Asked first, like one (usefulness round 28): each is named, and only those named are dropped on Confirm.
         if (com.optionslab.app.BuildConfig.JARVIS && runCatching { com.optionslab.ira.Reminder.cancelAsked(q) }.getOrDefault(false)) {
-            val n = app?.let { c -> runCatching { IraLater.clearReminders(c) }.getOrNull() }
-            val said = when (n) { null -> "I could not reach the reminders just now, Boss."; 0 -> "You have no reminders set, Boss."
-                else -> "Done, Boss: $n reminder${if (n > 1) "s" else ""} cancelled." }
-            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
+            val raApp = app
+            val raAll = runCatching { IraLater.kept() }.getOrNull()
+            if (raApp == null || raAll == null || raAll.isEmpty()) {
+                val raSaid = if (raApp == null || raAll == null) "I could not reach the reminders just now, Boss." else "You have no reminders set, Boss."
+                _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, raSaid)).takeLast(MAX_MESSAGES)) }
+                return
+            }
+            val raWhat = com.optionslab.ira.ReminderBook.confirmAll(raAll, com.optionslab.app.data.Market.now().toLocalDateTime())
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            pend(raWhat, suspend {
+                com.optionslab.ira.ReminderBook.cancelledAll(IraLater.dropReminders(raApp, raAll))
+            }, "Tap Confirm to $raWhat.")
             return
         }
         // ("Remind me what's set for later" is the list below, not a new reminder; "remind me I get greedy after a win",

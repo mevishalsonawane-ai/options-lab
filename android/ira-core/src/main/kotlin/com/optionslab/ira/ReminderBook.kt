@@ -7,8 +7,9 @@ import java.util.Locale
 /**
  * Boss's reminders, one at a time (usefulness round 27): "what reminders do I have" lists them, each with its time;
  * "cancel the 14:30 reminder" / "delete the reminder about Nifty" finds the one meant and asks first - only that one
- * is dropped, on Confirm ("cancel my reminders" drops them all, as before). A reminder only ever speaks, so nothing here
- * trades or stops anything. Pure: unit-tested on the JVM.
+ * is dropped, on Confirm. "Cancel my reminders" names them all and asks first too (usefulness round 28): only the ones
+ * named are dropped, on Confirm - one set while it waits stays. A reminder only ever speaks, so nothing here trades or
+ * stops anything. Pure: unit-tested on the JVM.
  */
 object ReminderBook {
     /** A reminder as kept on the phone. */
@@ -93,6 +94,20 @@ object ReminderBook {
 
     /** Said once it is dropped. */
     fun cancelled(k: Kept, now: LocalDateTime): String = "Done, Boss: your reminder " + one(k, now) + " is cancelled."
+
+    /** What the Confirm asks for when Boss cancels all of them ("cancel my reminders"): each named, so he knows what goes. */
+    fun confirmAll(kept: List<Kept>, now: LocalDateTime): String {
+        val s = kept.sortedBy { it.at }
+        return if (s.size == 1) confirm(s[0], now)
+        else "cancel all ${s.size} of your reminders - " + s.joinToString("; ") { one(it, now) }
+    }
+
+    /** Said once the reminders named are dropped ([n]: how many were still there to drop). */
+    fun cancelledAll(n: Int): String = when (n) {
+        0 -> "Those reminders are gone already, Boss - nothing to cancel."
+        1 -> "Done, Boss: 1 reminder cancelled."
+        else -> "Done, Boss: $n reminders cancelled."
+    }
 
     /** No single reminder found: none, or several (named, nothing dropped). */
     fun notOne(found: List<Kept>, all: List<Kept>, now: LocalDateTime): String = when {

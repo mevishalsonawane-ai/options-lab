@@ -75,9 +75,6 @@ object IraLater {
         return "Set for later: " + items.joinToString("; ") { (if (it.remind) (if (it.daily) "a daily reminder to " else "a reminder to ") else "") + "\"${it.text}\" " + Later.say(LocalDateTime.ofInstant(Instant.ofEpochMilli(it.at), IST), now) } + "."
     }
 
-    /** Boss's reminders only are dropped; timed commands stay. */
-    fun clearReminders(context: Context): Int { val n = reminders().size; save(all()); schedule(context); return n }
-
     /** Boss's reminders as [com.optionslab.ira.ReminderBook] reads them (India time). */
     fun kept(): List<com.optionslab.ira.ReminderBook.Kept> = reminders().map { r ->
         com.optionslab.ira.ReminderBook.Kept(r.id, r.text, LocalDateTime.ofInstant(Instant.ofEpochMilli(r.at), IST), r.daily) }
@@ -94,6 +91,21 @@ object IraLater {
         save(items.filter { !same(it) })
         schedule(context)
         return true
+    }
+
+    /**
+     * The reminders named in "cancel my reminders" dropped (after Boss's Confirm) - only those, as [dropReminder] finds
+     * each: one set while the Confirm waited stays. How many were still there to drop.
+     */
+    @Synchronized fun dropReminders(context: Context, named: List<com.optionslab.ira.ReminderBook.Kept>): Int {
+        val items = everything()
+        fun isNamed(x: Item) = x.remind && named.any { one -> x.id == one.id || one.daily && x.daily && x.text == one.text &&
+            LocalDateTime.ofInstant(Instant.ofEpochMilli(x.at), IST).toLocalTime() == one.at.toLocalTime() }
+        val n = items.count { isNamed(it) }
+        if (n == 0) return 0
+        save(items.filter { !isNamed(it) })
+        schedule(context)
+        return n
     }
 
     /** Everything set for later is dropped (nothing runs). */

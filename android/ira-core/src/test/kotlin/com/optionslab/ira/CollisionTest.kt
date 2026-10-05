@@ -317,7 +317,7 @@ class CollisionTest {
         "how are you improving" to "Improve", "what have you learned this week" to "Learnings", "how well are you hearing me" to "Hearing",
         "can you hear me" to "Chat", "am i ready to trade" to "PreMarket", "which patterns work on nifty" to "PatternCalls",
         "what's the main news" to "NewsDesk", "how does the market react to rbi news" to "NewsMoves", "is your data fresh" to "DataAge",
-        "what if vix goes to 20" to "Scenarios", "recap the day" to "DayStory", "how was my day" to "DaySummary",
+        "what if vix goes to 20" to "Scenarios", "recap the day" to "DayStory", "how was my day" to "DaySummary", "summarise the day" to "DaySummary",
         "help me journal today" to "DayJournal", "why so quiet" to "Airtime", "what's crude doing" to "Honest",
         "what time do i lose most" to "Account:TIMEOFDAY", "how did i do this week" to "Account:HISTORY", "mera pnl kitna hai" to "Account:PNL",
         "aaj kitne trade hue" to "Account:ORDERS",

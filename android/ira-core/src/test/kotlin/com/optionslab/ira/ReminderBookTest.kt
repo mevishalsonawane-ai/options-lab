@@ -54,6 +54,18 @@ class ReminderBookTest {
         assertEquals("Done, Boss: your reminder today at 14:30: check Nifty is cancelled.", ReminderBook.cancelled(kept[0], now))
     }
 
+    /** Usefulness round 28: "cancel my reminders" asks first too, each named; the words after the Confirm say how many went. */
+    @Test fun cancellingAllAsksFirstNamingEach() {
+        assertEquals("cancel all 4 of your reminders - today at 11:00: check BankNifty; today at 14:30: check Nifty; today at 15:00: call the broker; " +
+            "every trading day at 09:05: log in to Zerodha", ReminderBook.confirmAll(kept, now))
+        assertEquals("cancel your reminder today at 15:00: call the broker", ReminderBook.confirmAll(listOf(kept[1]), now))
+        assertEquals("Done, Boss: 4 reminders cancelled.", ReminderBook.cancelledAll(4))
+        assertEquals("Done, Boss: 1 reminder cancelled.", ReminderBook.cancelledAll(1))
+        assertEquals("Those reminders are gone already, Boss - nothing to cancel.", ReminderBook.cancelledAll(0))
+        // Still the same words that ask it (the action reads as before): all of them, never one.
+        for (s in listOf("cancel my reminders", "clear all reminders", "reminder hata do")) { assertTrue(Reminder.cancelAsked(s), s); assertNull(ReminderBook.cancelOne(s), s) }
+    }
+
     @Test fun theListSaysEachWithItsTime() {
         assertEquals("You have no reminders set, Boss.", ReminderBook.list(emptyList(), now))
         assertEquals("One reminder, Boss: today at 15:00: call the broker.", ReminderBook.list(listOf(kept[1]), now))

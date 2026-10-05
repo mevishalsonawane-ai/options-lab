@@ -169,7 +169,7 @@ class CoverageTest {
         "how much did nifty move in the last hour" to M, "how much has banknifty moved since the open" to M,
         "nifty in the last 30 minutes" to M, "how did nifty do this week" to M, "banknifty this month" to M,
         "nifty weekly performance" to M, "how many days has nifty been up" to M, "nifty streak" to M,
-        "recap the day" to M, "what happened in the market today" to M, "what changed since i last asked" to M,
+        "recap the day" to M, "summarise the day" to A, "summary of today" to A, "end of day report" to A, "what happened in the market today" to M, "what changed since i last asked" to M,
         "expected range for nifty today" to M, "chances nifty closes above 25000" to M, "will nifty cross 25000 today" to M,
         "how far is nifty from 25000" to M, "opening range of nifty" to M, "did nifty break the opening range" to M,
         "explain this move" to M, "what happened at 11:20" to M, "nifty gap today" to M,
