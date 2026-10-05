@@ -96,6 +96,8 @@ object Diag {
         // (the "[watch]" lines below say why it stopped or stalled).
         if (!com.optionslab.app.BuildConfig.GOLD) append(runCatching { com.optionslab.app.work.Heartbeat.statusLine(app) }.getOrElse { "Order watch: could not read" }).append('\n')
         if (com.optionslab.app.BuildConfig.GOLD) append(gold())
+        // Battery, round 1: what runs in the background now (listening, the stream, the watch's pace, the AI model, the phone's charge).
+        append(com.optionslab.app.work.BatteryNow.line(app)).append('\n')
         // Jarvis's ears and his recent actions (Boss, 4 Oct: "is there a file of logs I can give you?").
         if (com.optionslab.app.BuildConfig.JARVIS) {
             append("\n-- Jarvis's ears --\n")

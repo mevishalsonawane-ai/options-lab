@@ -99,7 +99,7 @@ class JarvisVoice : Service() {
 
         /** For the diagnostics report: Jarvis's ears in full - settings, state, the voice check and the last 60 turns (never words). */
         fun report(context: Context?): String = buildString {
-            append("Listen for Jarvis: $wanted · running: ${instance?.get() != null} · started from the app on screen: ${instance?.get()?.visibleStart}\n")
+            append("Listen for Jarvis: $wanted · running: ${instance?.get() != null} · started from the app on screen: ${instance?.get()?.visibleStart} · battery saver for listening: $listenSaver (resting now: ${restingNow()})\n")
             append("Ears: ${if (googleSpeech) "Google's speech service" else "on the phone only"} · language: ${instance?.get()?.lang} · voice taught: ${VoiceGuard.enrolled} · only my voice: $onlyBoss · muted: $muted\n")
             append("On-device recognition available: ${context?.let { c -> runCatching { Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && SpeechRecognizer.isOnDeviceRecognitionAvailable(c) }.getOrNull() }} · " +
                 "any recognizer: ${context?.let { c -> runCatching { SpeechRecognizer.isRecognitionAvailable(c) }.getOrNull() }}\n")
@@ -145,6 +145,7 @@ class JarvisVoice : Service() {
             // The pattern of the last turns in plain words (Boss, 5 Oct: sound, no words, turn after turn).
             v?.let { s -> runCatching { com.optionslab.ira.EmptyTurns.say(s.recentTurns, s.emptyInRow, cutInNow(s).on) }.getOrNull()?.let { out += it } }
             traceLines().takeIf { it.isNotEmpty() }?.let { out += "Last turns: " + it.joinToString("; ") + "." }
+            if (restingNow()) out += "Battery saver for listening has my ears resting a few seconds between quiet turns (screen off, market shut): say \"Jarvis\" again if I miss it, or switch the saver off in the Jarvis page."
             if (muted) out += "I'm muted: say \"Jarvis, unmute\" or switch Mute off in Settings, Voice and AI model."
             if (quietNow()) out += "It's quiet hours (22:00 to 07:00): I only speak when you ask."
             if (!JarvisSpeaker.speakTyped) out += "Speaking typed replies is off (Settings, Voice and AI model)."
@@ -201,6 +202,20 @@ class JarvisVoice : Service() {
         var wanted: Boolean
             get() = runCatching { com.optionslab.app.security.SecurePrefs.getBoolean("jarvis.listen", false) }.getOrDefault(false)
             set(v) { runCatching { com.optionslab.app.security.SecurePrefs.put("jarvis.listen", v) } }
+
+        /**
+         * Battery saver for listening (Boss's switch, OFF by default: off, listening is exactly as before). On: with the
+         * screen off, the market shut, outside his usual hours and a quiet room, the ears rest a few seconds between turns
+         * ([com.optionslab.ira.ListenSaver]). Never changed by itself; no safety alert waits on listening.
+         */
+        var listenSaver: Boolean
+            get() = runCatching { com.optionslab.app.security.SecurePrefs.getBoolean("jarvis.listen.saver", false) }.getOrDefault(false)
+            set(v) { runCatching { com.optionslab.app.security.SecurePrefs.put("jarvis.listen.saver", v) } }
+
+        /** Listening runs now (the battery line). */
+        fun listeningNow(): Boolean = instance?.get() != null
+        /** Listening is resting between turns now ([listenSaver]). */
+        fun restingNow(): Boolean = instance?.get()?.resting == true
 
         /** Can this phone listen on the device alone? (Android 12+ with an on-device recognizer.) */
         fun available(context: Context): Boolean = com.optionslab.app.BuildConfig.JARVIS &&
@@ -611,7 +626,8 @@ class JarvisVoice : Service() {
             if (speaking && now - spokeAt > 60_000) { speaking = false; again() }
             // The mic button's one question was asked and answered (or never came): listening stops again.
             if (oneShot && !speaking && !awake() && !lateWaiting && _state.value.mode != Mode.THINKING && now - talkAt > 14_000) { stopSelf(); return }
-            if (!listening && !speaking && !held && _state.value.mode != Mode.THINKING) again()
+            // (Not inside a battery-saver rest: its own restart is already queued.)
+            if (!listening && !speaking && !held && _state.value.mode != Mode.THINKING && now >= restUntil) again()
             // Self-healing: no listening turn for 3 minutes (the phone took the microphone, the recognizer died):
             // a new recognizer, noted in the activity log.
             if (Automations.on(Automations.Auto.SELFHEAL) && com.optionslab.ira.VoiceHealth.stuck(now, readyAt, speaking, !held && _state.value.mode != Mode.THINKING) && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -669,6 +685,11 @@ class JarvisVoice : Service() {
     /** Turns in a row with no words for Jarvis, and the kinds of the last few (for the restart pace and the voice check). */
     @Volatile private var emptyInRow = 0
     @Volatile private var recentTurns: List<com.optionslab.ira.EmptyTurns.Kind> = emptyList()
+    /** Battery saver for listening: resting between turns now, and until when (the watchdog does not cut a rest short). */
+    @Volatile private var resting = false
+    @Volatile private var restUntil = 0L
+    /** The screen came on: a rest ends at once (registered while listening runs). */
+    private var screenOn: android.content.BroadcastReceiver? = null
     /** When it said so (0: not yet), for the time to the first words read ([com.optionslab.ira.Hearing]). */
     @Volatile private var turnSpeechAt = 0L
     /** The current language has given words since listening began: it works, so it is never switched away from. */
@@ -734,6 +755,12 @@ class JarvisVoice : Service() {
             tts = TextToSpeech(this) { status -> main.post { voiceReady = status == TextToSpeech.SUCCESS && pickOfflineVoice() } }
             listen()
             main.postDelayed(watchdog, 5_000)
+            // Battery saver for listening: the screen coming on ends a rest at once (a system broadcast; nothing else read).
+            if (screenOn == null) screenOn = object : android.content.BroadcastReceiver() {
+                override fun onReceive(c: Context?, i: Intent?) { main.post { endRest() } }
+            }.also { r ->
+                runCatching { ContextCompat.registerReceiver(this, r, android.content.IntentFilter(Intent.ACTION_SCREEN_ON), ContextCompat.RECEIVER_NOT_EXPORTED) }
+            }
             // The question reader's first use builds all its patterns (the slowest reading of the day): done now, off the
             // main thread, not inside Boss's first question. A reading only: nothing is asked.
             scope.launch(Dispatchers.Default) { runCatching { com.optionslab.ira.Ask.parse("how is nifty today") } }
@@ -745,10 +772,16 @@ class JarvisVoice : Service() {
             scope.launch(Dispatchers.Default) {
                 var n = 0
                 while (true) {
-                    val open = com.optionslab.ira.Market.NIFTY.trading(java.time.LocalDateTime.now(java.time.ZoneId.of("Asia/Kolkata")))
+                    // Market hours on a trading day (battery round 1: an NSE holiday is not one - before, the clock alone was
+                    // read, and a holiday weekday fetched prices every minute and the account every 30 s all session).
+                    val open = runCatching { com.optionslab.app.data.Market.isOpen() }.getOrElse {
+                        com.optionslab.ira.Market.NIFTY.trading(java.time.LocalDateTime.now(java.time.ZoneId.of("Asia/Kolkata"))) }
                     if (open && n % 2 == 0) runCatching { IraHub.refresh() }
-                    // The account and the trade check need the internet: not tried while offline.
-                    if ((open || n % 10 == 0) && IraHub.online()) runCatching { IraHub.warm() }
+                    // The account and the trade check need the internet: not tried while offline. Outside market hours nothing
+                    // in them moves: every 5 minutes while the screen is on, every 30 with it off (battery round 1; it was every
+                    // 5 minutes all night). An answer asked meanwhile reads afresh, as on a low battery.
+                    val screen = runCatching { getSystemService(android.os.PowerManager::class.java)?.isInteractive }.getOrNull() ?: true
+                    if ((open || n % (if (screen) 10 else 60) == 0) && IraHub.online()) runCatching { IraHub.warm() }
                     n++
                     // Low battery and not charging: kept ready less often (answers then read afresh when asked).
                     kotlinx.coroutines.delay(com.optionslab.app.work.Battery.gap(this@JarvisVoice, 30_000))
@@ -953,6 +986,43 @@ class JarvisVoice : Service() {
     }
 
     private fun again(delayMs: Long = 250) { if (!stopped) main.postDelayed({ listen() }, delayMs) }
+
+    /**
+     * Battery saver for listening ([listenSaver], off by default): [base] as before, or a rest of a few seconds between quiet
+     * turns while the screen is off, the market is shut, it is not one of Boss's usual hours and the room has been quiet a
+     * while ([com.optionslab.ira.ListenSaver]). Never while Boss is [expected] to speak. Kinds only in the trace, never words.
+     */
+    private fun restGap(base: Long, expected: Boolean): Long {
+        val gap = if (!listenSaver || expected || emptyInRow < com.optionslab.ira.EmptyTurns.SLOW_AFTER) base
+            else runCatching { com.optionslab.ira.ListenSaver.gap(base, saverNow(expected)) }.getOrDefault(base)
+        val rest = gap > base
+        if (rest != resting) note(if (rest) "battery saver: resting ${gap / 1000} s between quiet turns (screen off, market shut)" else "battery saver: listening as usual again")
+        resting = rest
+        restUntil = if (rest) SystemClock.elapsedRealtime() + gap else 0L
+        return gap
+    }
+
+    private fun saverNow(expected: Boolean): com.optionslab.ira.ListenSaver.Now {
+        val now = java.time.LocalDateTime.now(java.time.ZoneId.of("Asia/Kolkata"))
+        // Unknown counts as "not resting": the screen as on, the market as open, the hour as one of Boss's.
+        val screen = runCatching { getSystemService(android.os.PowerManager::class.java)?.isInteractive }.getOrNull() ?: true
+        val open = runCatching { com.optionslab.app.data.Market.isOpen() }.getOrDefault(true)
+        val talk = runCatching {
+            val r = com.optionslab.ira.TalkHours.record(IraTools.talkLog(), now)
+            r.learned && com.optionslab.ira.TalkHours.inHours(r.hours, now)
+        }.getOrDefault(true)
+        return com.optionslab.ira.ListenSaver.Now(on = true, screenOn = screen, marketOpen = open, talkHour = talk,
+            night = com.optionslab.ira.Quiet.now(now.toLocalTime()), emptyInRow = emptyInRow, expected = expected,
+            batteryLow = com.optionslab.app.work.Battery.saving(this))
+    }
+
+    /** The screen came on: a battery-saver rest ends at once, so Boss never waits on it when he picks the phone up. */
+    private fun endRest() {
+        if (restUntil == 0L) return
+        val wasResting = SystemClock.elapsedRealtime() < restUntil
+        restUntil = 0L; resting = false
+        if (wasResting) { note("screen on: battery-saver rest ended"); if (!listening && !speaking && !held) again(0) }
+    }
 
     /** Ends this turn's capture, keeping what it heard for the voice check. */
     private fun endTap() {
@@ -1224,7 +1294,8 @@ class JarvisVoice : Service() {
                     }
                     // A long run of empty turns (a quiet room, the TV): the next turn starts a little later - fewer restarts
                     // and start beeps - never while Boss is expected to speak; still listening for "Jarvis".
-                    again(if (errorsInRow == 0) com.optionslab.ira.EmptyTurns.restartIn(emptyInRow, awake() || asking != null || speaking)
+                    val expected = awake() || asking != null || speaking
+                    again(if (errorsInRow == 0) restGap(com.optionslab.ira.EmptyTurns.restartIn(emptyInRow, expected), expected)
                         else minOf(MAX_BACKOFF_MS, 250L shl minOf(errorsInRow, 7)))
                 }
             }
@@ -1259,6 +1330,7 @@ class JarvisVoice : Service() {
     private fun countTurn(words: Boolean) {
         val k = com.optionslab.ira.EmptyTurns.kind(words, turnEcho && turnPartial == null, turnSpeech)
         emptyInRow = com.optionslab.ira.EmptyTurns.inRow(emptyInRow, k)
+        if (emptyInRow == 0) { resting = false; restUntil = 0L }      // words for Jarvis: no battery-saver rest
         recentTurns = com.optionslab.ira.EmptyTurns.add(recentTurns, k)
         if (emptyInRow == com.optionslab.ira.EmptyTurns.CALM_AFTER || emptyInRow == com.optionslab.ira.EmptyTurns.SLOW_AFTER)
             note("$emptyInRow turns with no words in a row: listening restarts a little slower (still for \"Jarvis\")")
@@ -1805,6 +1877,7 @@ class JarvisVoice : Service() {
         stopped = true
         if (instance?.get() === this) instance = null
         main.removeCallbacksAndMessages(null)
+        screenOn?.let { r -> runCatching { unregisterReceiver(r) } }; screenOn = null
         endTap(); lastHeard = null
         runCatching { rec?.destroy() }; rec = null
         runCatching { tts?.stop(); tts?.shutdown() }; tts = null

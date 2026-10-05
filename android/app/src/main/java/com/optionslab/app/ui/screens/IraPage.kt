@@ -465,6 +465,13 @@ internal fun VoiceSwitch() {
             androidx.compose.material3.Switch(checked = quiet, onCheckedChange = { v -> quiet = v; JarvisVoice.quietHours = v })
         }
         Note("Nothing is said unasked at night (pop-ups instead); Jarvis still answers when you ask.")
+        // Battery, round 1: Boss's own switch, off by default (off = listening exactly as before).
+        var saver by remember { mutableStateOf(JarvisVoice.listenSaver) }
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
+            Text("Battery saver for listening", style = Type.label.copy(color = p.ink, fontSize = 14.sp), modifier = Modifier.weight(1f))
+            androidx.compose.material3.Switch(checked = saver, onCheckedChange = { v -> saver = v; JarvisVoice.listenSaver = v })
+        }
+        Note(com.optionslab.ira.ListenSaver.WHAT + " Alerts and stops never wait on listening.")
         var hin by remember { mutableStateOf(JarvisVoice.hindi) }
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
             Text("Spoken replies in Hindi", style = Type.label.copy(color = p.ink, fontSize = 14.sp), modifier = Modifier.weight(1f))

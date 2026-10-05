@@ -86,6 +86,7 @@ object KiteStream {
         if (wants[owner] == set) return
         if (set.isEmpty()) wants.remove(owner) else wants[owner] = set
         resubscribe()
+        if (set.isNotEmpty() && owner != "index") wake()
     }
 
     private val touched = ConcurrentHashMap<Long, Long>()
@@ -95,7 +96,7 @@ object KiteStream {
         val now = System.currentTimeMillis()
         var added = false
         tokens.filter { it > 0 }.forEach { if (touched.put(it, now) == null) added = true }
-        if (added) resubscribe()
+        if (added) { resubscribe(); wake() }
     }
 
     private fun wanted(): Set<Long> {
@@ -140,9 +141,45 @@ object KiteStream {
         val loggedIn = Broker.loggedIn
         val hasKey = Broker.apiKey != null
         val inHours = Market.isTradingDay() && Market.minuteNow() in (9 * 60)..(15 * 60 + 45)
-        if (loggedIn && hasKey && inHours) start()
-        else stop(when { !loggedIn -> "no Zerodha login"; !hasKey -> "no API key"; else -> "outside market hours" })
+        if (loggedIn && hasKey && inHours) {
+            // Battery, round 1: a stream nobody reads (the app off screen, no position or chart following instruments, no
+            // quote asked for 3 minutes) kept the phone's radio busy all session for the indices' ticks alone. Unneeded for
+            // [IDLE_STOP_MS], it is closed; the next quote, position or screen that needs live prices starts it again ([wake]).
+            // Every price read falls back to Zerodha's quote call meanwhile - as it always does for an instrument not yet
+            // streaming - so a stop, target or exit is checked at the same pace either way.
+            if (needed()) { idleSince = 0L; idleStopped = false; start(); return }
+            if (idleStopped) return
+            val now = System.currentTimeMillis()
+            if (idleSince == 0L) idleSince = now
+            if (now - idleSince < IDLE_STOP_MS) { start(); return }
+            idleStopped = true
+            stop("nothing needed live prices for ${IDLE_STOP_MS / 60_000} min (the app in the background, no open position, no quote asked); it starts again when something does")
+        } else stop(when { !loggedIn -> "no Zerodha login"; !hasKey -> "no API key"; else -> "outside market hours" })
     }
+
+    /** Battery, round 1: when the stream was first found unneeded (0: needed), and whether it was closed for that. */
+    @Volatile private var idleSince = 0L
+    @Volatile private var idleStopped = false
+    /** Unneeded this long: closed until something needs live prices again. */
+    private const val IDLE_STOP_MS = 5 * 60_000L
+
+    /** Something reads live prices: the app on screen (or unknown), a part following instruments, a quote asked in the last 3 min. */
+    private fun needed(): Boolean {
+        if (foreground() != false) return true
+        if (wants.keys.any { it != "index" }) return true
+        wanted()                                          // drops touches older than 3 minutes
+        return touched.isNotEmpty()
+    }
+
+    /** Closed for being unneeded, and now something needs it: started again at once (off the caller's thread). */
+    private fun wake() {
+        if (!idleStopped) return
+        idleStopped = false; idleSince = 0L
+        scope.launch { runCatching { ensure() } }
+    }
+
+    /** Instruments the stream follows now (the diagnostics' battery line). */
+    fun following(): Int = synchronized(subscribed) { subscribed.size }
 
     @Synchronized
     private fun start() {

@@ -62,6 +62,7 @@ class CollisionTest {
         "OrderWhy" to { q -> OrderWhy.asked(q) != null },
         "RelayHealth" to { q -> RelayHealth.asked(q) != null },
         "StreamHealth" to { q -> StreamHealth.asked(q) },
+        "BatteryUse" to { q -> BatteryUse.asked(q) },
         "Tour" to { q -> Tour.asked(q) },
         "ExpiryPin" to { q -> ExpiryPin.asked(q) != null },
         "SinceMorning" to { q -> SinceMorning.asked(q) },
@@ -609,6 +610,11 @@ class CollisionTest {
         "live data kyun toot raha hai" to "StreamHealth", "why is the price stream disconnecting" to "StreamHealth",
         "is the live price stream ok" to "StreamHealth", "why do prices keep freezing" to "StreamHealth",
         "stream baar baar kyun band hota hai" to "StreamHealth", "why do live prices keep freezing" to "StreamHealth",
+        // ---- BatteryUse (battery round 1): what of the app runs in the background now ----
+        "battery kyun kha raha hai" to "BatteryUse", "why is the app using so much battery" to "BatteryUse",
+        "why is iraalgo draining my battery" to "BatteryUse", "what is running in the background" to "BatteryUse",
+        "app itni battery kyun kha raha hai" to "BatteryUse", "is jarvis draining the battery" to "BatteryUse",
+        "background mein kya chal raha hai" to "BatteryUse", "battery usage" to "BatteryUse",
         // ---- RelayHealth: the relay and the static IP ----
         "why is the relay timing out" to "RelayHealth", "is the relay connected" to "RelayHealth", "relay chal raha hai kya" to "RelayHealth",
         "static ip sahi hai kya" to "RelayHealth", "is my static ip registered" to "RelayHealth", "why is zerodha failing through the relay" to "RelayHealth",
@@ -717,7 +723,7 @@ class CollisionTest {
 
     /** The question branches of IraHub.ask between the `bundled` read and the Plan block, in [CoverageTest.feature]'s order. */
     private val HUB_ORDER = listOf("DayJournal", "AlertSense", "Airtime", "Hearing", "PatternCalls", "TrendReads", "OutsideApp", "Clarity", "WordFit", "AskedAgain", "FigureFirst", "WrongThing", "ArmHabits", "MorningSense", "HonestStars", "TalkHours", "MorningAsks", "NewsMoves",
-        "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmDay", "NetLean", "ExpiryEve", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "ZerodhaSession", "OrderWhy", "RelayHealth", "StreamHealth", "Tour", "DataAge", "Honest", "Thinking",
+        "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmDay", "NetLean", "ExpiryEve", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "ZerodhaSession", "OrderWhy", "RelayHealth", "StreamHealth", "BatteryUse", "Tour", "DataAge", "Honest", "Thinking",
         "SelfWhy", "Consistency", "CoPilot", "SinceMorning", "ExpiryPin", "ChainDrift", "ChainIntel", "DayClock", "GapRecord", "RangeBreaks", "PriorDay", "LastHour", "InsideDays", "FirstMove", "VixNext", "SplitDays", "Weekdays", "DayCompare", "LikeToday", "Structure", "MindChange", "Breadth",
         "TradeCase", "Scenarios", "Causes", "Agenda", "Improve")
 

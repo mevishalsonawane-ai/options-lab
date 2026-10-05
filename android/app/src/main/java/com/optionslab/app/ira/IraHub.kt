@@ -1273,7 +1273,7 @@ object IraHub {
                 com.optionslab.ira.AskedAgain.asked(q) || com.optionslab.ira.FigureFirst.asked(q) != null ||
                 com.optionslab.ira.WrongThing.asked(q) != null || com.optionslab.ira.WrongThing.objected(q) || com.optionslab.ira.MindChange.asked(q) ||
                 com.optionslab.ira.ArmHabits.asked(q) || com.optionslab.ira.MorningSense.asked(q) != null ||
-                com.optionslab.ira.HonestStars.asked(q) != null || com.optionslab.ira.TalkHours.asked(q) != null || com.optionslab.ira.MorningAsks.asked(q) != null ||
+                com.optionslab.ira.HonestStars.asked(q) != null || com.optionslab.ira.TalkHours.asked(q) != null || com.optionslab.ira.MorningAsks.asked(q) != null || com.optionslab.ira.BatteryUse.asked(q) ||
                 com.optionslab.ira.DayCompare.asked(q) != null || com.optionslab.ira.LikeToday.asked(q) }.getOrDefault(false)) {
             val prev = if (recent) _state.value.messages.lastOrNull { !it.fromIra }?.text else null
             val qs = runCatching { com.optionslab.ira.Understand.questions(prev, q) }.getOrNull()
@@ -2106,7 +2106,7 @@ object IraHub {
 
     /**
      * [ask]'s question branches on the records and Boss's own setup: NewsMoves, TaxRecords, Learnings (and its undo),
-     * PreMarket, Headroom, BotTrades, SwitchOff, SaidAbout, WeekAhead, ZerodhaSession, OrderWhy, RelayHealth, StreamHealth - in [ask]'s order. True when one
+     * PreMarket, Headroom, BotTrades, SwitchOff, SaidAbout, WeekAhead, ZerodhaSession, OrderWhy, RelayHealth, StreamHealth, BatteryUse - in [ask]'s order. True when one
      * took [q], answered exactly as before; each branch keeps its own guard (not [bundled], no order, no command).
      */
     private fun askedOfRecords(q: String, parsed: com.optionslab.ira.Question, bundled: Boolean, understood: Boolean): Boolean {
@@ -2407,6 +2407,19 @@ object IraHub {
                     com.optionslab.ira.StreamHealth.answer(com.optionslab.app.data.Diag.lines(), com.optionslab.app.data.Market.now().toLocalDateTime(),
                         com.optionslab.app.data.KiteStream.status.value.name, watch)
                 }.getOrElse { "I could not read the stream record just now, Boss." })
+            }
+            return true
+        }
+        // "Why is the app using battery?", "battery kyun kha raha hai" ([com.optionslab.ira.BatteryUse]; battery round 1): what of
+        // the app runs in the background now, the biggest cost first - listening, the live stream, the order watch (named, never
+        // offered slower: it guards stops, targets and exits), the AI model - and the battery saver for listening's switch. The
+        // app's own state only (no amount, no position, no symbol), so the same on a locked phone. Reads only: nothing is switched.
+        if (!bundled && parsed.order == null && parsed.command == null &&
+            runCatching { com.optionslab.ira.BatteryUse.asked(q) }.getOrDefault(false)) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            scope.launch(Dispatchers.IO) {
+                reply(runCatching { com.optionslab.ira.BatteryUse.answer(com.optionslab.app.work.BatteryNow.snapshot(app)) }
+                    .getOrElse { "I could not read what runs in the background just now, Boss." })
             }
             return true
         }

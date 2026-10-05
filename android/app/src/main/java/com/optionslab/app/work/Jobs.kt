@@ -743,6 +743,8 @@ class WatchService : Service() {
         const val STOP = "com.optionslab.app.WATCH_STOP"
         /** The day a watch was last started and has not been seen to end: still set at the next start = the process died. */
         private const val RUN_DAY = "watch.run.day"
+        /** The watch's check pace now in seconds (30 before the open, 15 with a position open, 60 otherwise; 0 = not running), for the battery line. */
+        @Volatile var stepSec: Int = 0
     }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -903,6 +905,7 @@ class WatchService : Service() {
         } finally {
             pulse.cancel()
             Heartbeat.pulseStopped()
+            stepSec = 0
         }
     }
 
@@ -939,6 +942,7 @@ class WatchService : Service() {
         run {
             Heartbeat.beat(this)
             if (Market.minuteNow() < Market.OPEN) {
+                stepSec = 30
                 show(Tasks.WATCH_TITLE, Tasks.WATCH_IDLE)
                 delay(30_000)
                 return
@@ -952,6 +956,7 @@ class WatchService : Service() {
             val next = System.currentTimeMillis() + 60_000
             while (System.currentTimeMillis() < next) {
                 val holding = PositionCards.anyOpen || runCatching { com.optionslab.app.data.OrbArms.holding() }.getOrDefault(false)
+                stepSec = if (holding) 15 else 60
                 // With the live stream up, Zerodha cards move every 3 s from ticks alone (no network).
                 val streaming = com.optionslab.app.data.KiteStream.status.value == com.optionslab.app.data.KiteStream.Status.LIVE
                 if (holding && streaming) {
