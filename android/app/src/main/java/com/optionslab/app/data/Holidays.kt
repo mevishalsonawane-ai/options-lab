@@ -67,6 +67,7 @@ object Holidays {
     @Synchronized
     fun book(): Book {
         cache?.let { return it }
+        tradingSeen = null                                   // a fresh read of the list starts without evidence
         val b = runCatching {
             val o = JSONObject(file.readText())
             fun set(k: String) = o.optJSONArray(k)?.let { a -> (0 until a.length()).map { LocalDate.parse(a.getString(it)) }.toSet() } ?: emptySet()
@@ -90,6 +91,7 @@ object Holidays {
         if (!tmp.renameTo(file)) { file.delete(); tmp.renameTo(file) }
         com.optionslab.app.security.Vault.syncDir(file.parentFile)
         cache = b
+        tradingSeen = null                                   // the list changed: the next prices decide again
     }
 
     /**
@@ -105,6 +107,9 @@ object Holidays {
         tradingSeen = d
         if (listed) runCatching { Diag.record("info", "The holiday list has $d as shut, but the exchange is trading it: treated as a trading day") }
     }
+
+    /** Forgets the day's trading evidence (a changed list; tests that set a calendar directly). */
+    internal fun forgetTrading() { tradingSeen = null }
 
     fun isHoliday(d: LocalDate): Boolean = book().holiday(d) && tradingSeen != d
 
