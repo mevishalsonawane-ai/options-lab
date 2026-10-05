@@ -49,6 +49,13 @@ import kotlin.test.assertTrue
  * trades" / "stop saying boss" still read as STOP_ONE of a strategy by that name: Act.parse reads words only and cannot
  * know Boss's strategy, Pine script and arm names (they live in the app), so the app's own pick finds no such arm and
  * asks "Which one?" - nothing is stopped without his pick and Confirm.
+ *
+ * Round 19 (5 Oct): more English and Hinglish of OpenHighLow ("open at its high", "open hi high", "open high open low ka
+ * record"), BigCandles ("a 0.5% candle in the first hour" is no longer the first move's), OutlookCheck and Headroom's LOSS
+ * at his stops (AtStops: "saare stop lag gaye to kitna nuksan"); Graduation has no question (it is said once, unasked).
+ * And 60-odd everyday questions ("nifty kaha hai", "aaj ka plan", "mera p&l", "kya karu", "orb ka kya haal", "market band
+ * hai kya", "kal expiry hai kya") still go where they should after all the additions - none acts - while "kill switch on
+ * karo", "close all" and the rest stay commands.
  */
 class CollisionTest {
     private val audit = CoverageTest()
@@ -976,7 +983,97 @@ class CollisionTest {
         "is the positions watch alive" to "WatchAsk", "position watch chal raha hai kya" to "WatchAsk", "why did the position watch stop" to "WatchAsk",
         "is my position watch working" to "WatchAsk", "the position watch status" to "WatchAsk", "how is the position watch doing" to "WatchAsk",
         "is the position watcher running" to "WatchAsk", "why did my position watch stop" to "WatchAsk",
+        // ---- Round 19. OpenHighLow, more of it ----
+        "how often does nifty open at its high" to "OpenHighLow", "how often does banknifty open at its low" to "OpenHighLow",
+        "how often does sensex open at its high" to "OpenHighLow", "how often is the open the low of the day for banknifty" to "OpenHighLow",
+        "open high days record for nifty" to "OpenHighLow", "what happens on open low days" to "OpenHighLow", "how do open low days close" to "OpenHighLow",
+        "open equals high days for sensex" to "OpenHighLow", "does nifty fall on open high days" to "OpenHighLow",
+        "how many days was the open the high" to "OpenHighLow", "is today an open high day" to "OpenHighLow",
+        "was today's open the low of the day" to "OpenHighLow", "o=h days for banknifty" to "OpenHighLow",
+        "how often did the open equal the high last month" to "OpenHighLow",
+        "open high wale din kitne hote hain" to "OpenHighLow", "open low wale din banknifty kaise band hota hai" to "OpenHighLow",
+        "open high wale din nifty kaise band hota hai" to "OpenHighLow", "kitni baar open hi high hota hai" to "OpenHighLow",
+        "kitni baar open hi low hota hai" to "OpenHighLow", "open high open low ka record batao" to "OpenHighLow",
+        "open high ya open low ka record batao" to "OpenHighLow", "open high day hai kya aaj" to "OpenHighLow",
+        // ---- BigCandles, more of it ----
+        "what follows a big candle in the first hour" to "BigCandles", "does a big red candle in the morning continue" to "BigCandles",
+        "how often does a big 5 minute candle reverse" to "BigCandles", "big candle stats for nifty" to "BigCandles",
+        "after a large opening candle does banknifty hold the move" to "BigCandles", "what happens after a huge green candle at the open" to "BigCandles",
+        "do big first hour candles follow through on sensex" to "BigCandles", "how often does a 0.5% candle in the first hour continue" to "BigCandles",
+        "how often does a 0.4% candle in the first hour hold" to "BigCandles",
+        "subah ki badi candle ke baad banknifty kya karta hai" to "BigCandles", "pehle ghante mein bada candle aaye to nifty kaisa chalta hai" to "BigCandles",
+        "badi red candle ke baad nifty wapas aata hai kya" to "BigCandles", "lambi candle ke baad nifty kya karta hai" to "BigCandles",
+        "big candle ke baad follow through hota hai kya" to "BigCandles",
+        // ---- OutlookCheck, more of it ----
+        "did your outlook hold today" to "OutlookCheck", "is your outlook accurate" to "OutlookCheck", "how accurate are your outlooks" to "OutlookCheck",
+        "what's your outlook hit rate" to "OutlookCheck", "how often is your morning outlook right" to "OutlookCheck",
+        "check your outlooks against the close" to "OutlookCheck", "how did your morning call do" to "OutlookCheck",
+        "were your outlooks right this week" to "OutlookCheck", "tumhara outlook kitna sahi hai" to "OutlookCheck",
+        "aapka outlook kitna sahi hota hai" to "OutlookCheck", "aaj ka subah ka outlook sahi tha" to "OutlookCheck",
+        "tera outlook kitna sahi nikalta hai" to "OutlookCheck", "subah ka outlook sahi nikla" to "OutlookCheck",
+        // Its neighbour: the outlook itself (a read, never its record).
+        "what's the outlook for today" to "Outlook",
+        // ---- Headroom's LOSS at his stops (AtStops), more of it ----
+        "what is my worst case today" to "Headroom", "what's the worst case for today" to "Headroom", "tell me my max possible loss" to "Headroom",
+        "what if every stop gets hit" to "Headroom", "how much would i lose if all my stops are hit" to "Headroom",
+        "if all my stops get hit how much do i lose" to "Headroom", "worst case right now" to "Headroom",
+        "what is my maximum possible loss today" to "Headroom", "aaj zyada se zyada kitna loss ho sakta hai" to "Headroom",
+        "aaj max kitna nuksan ho sakta hai" to "Headroom", "saare stop lag gaye to kitna nuksan" to "Headroom",
+        "saare stop lag gaye to kitna loss hoga" to "Headroom", "sab stops hit ho jaye to kitna loss hoga" to "Headroom",
+        "agar sab stop hit ho gaye to kitna" to "Headroom",
     )
+
+    /** The new wordings at Boss's stops (round 19): each Headroom's LOSS, read by [AtStops.ASKED]. */
+    private val AT_STOPS_19 = listOf("what is my worst case today", "what's the worst case for today", "tell me my max possible loss",
+        "what if every stop gets hit", "how much would i lose if all my stops are hit", "if all my stops get hit how much do i lose", "worst case right now",
+        "what is my maximum possible loss today", "aaj zyada se zyada kitna loss ho sakta hai", "aaj max kitna nuksan ho sakta hai",
+        "saare stop lag gaye to kitna nuksan", "saare stop lag gaye to kitna loss hoga", "sab stops hit ho jaye to kitna loss hoga", "agar sab stop hit ho gaye to kitna")
+
+    /**
+     * Round 19: 60-odd everyday things Boss asks (English and Hinglish), each with where it must go - none an order, a
+     * command or a Bundle act - after the many families added since the first rounds.
+     */
+    private val EVERYDAY: List<Pair<String, String>> = listOf(
+        // Where the index is.
+        "nifty kaha hai" to "Market", "nifty kahan hai" to "Market", "where is nifty" to "Market", "nifty kitna hai" to "Market",
+        "nifty kitne pe hai" to "Market", "banknifty kya chal raha hai" to "Market", "what's nifty at" to "Market", "how's the market" to "Market",
+        "how is banknifty doing" to "Market", "vix kitna hai" to "Market", "any news" to "Market", "aaj ki news kya hai" to "Market",
+        "what should i do" to "Market",
+        // Jarvis's plan for the day.
+        "aaj ka plan" to "Agenda", "aaj ka plan kya hai" to "Agenda", "what's the plan for today" to "Agenda",
+        // His P&L, positions, money and orders.
+        "mera p&l" to "Account:PNL", "mera pnl kitna hai" to "Account:PNL", "what's my p&l today" to "Account:PNL", "how much did i make today" to "Account:PNL",
+        "am i in profit" to "Account:PNL", "kitna kamaya aaj" to "Account:PNL",
+        "show my positions" to "Account:POSITIONS", "mere positions dikhao" to "Account:POSITIONS", "meri positions kaisi hain" to "Account:POSITIONS",
+        "what's my margin" to "Account:FUNDS", "kitna margin bacha hai" to "Account:FUNDS",
+        "what are my open orders" to "Account:ORDERS", "koi order pending hai kya" to "Account:ORDERS", "what's my risk" to "Account:RISK",
+        "how much can i lose today" to "Headroom",
+        // What to do now: the trade check (never an order).
+        "kya karu" to "TradeCheck", "ab kya karu" to "TradeCheck", "kya karun" to "TradeCheck", "kya karna chahiye" to "TradeCheck",
+        "should i trade today" to "TradeCheck", "aaj trade karu ya nahi" to "TradeCheck",
+        // His bots.
+        "orb ka kya haal" to "Account:STRATEGIES", "orb ka kya haal hai" to "Account:STRATEGIES", "how is orb doing" to "Account:STRATEGIES",
+        "did any bot trade today" to "Account:STRATEGIES", "how are my bots doing" to "Account:BOTS",
+        // The market's hours and days, the expiry.
+        "market kab khulega" to "OptionFacts", "when does the market open" to "OptionFacts", "nifty ka lot size" to "OptionFacts",
+        "is the market open" to "Account:STATUS", "market khula hai kya" to "Account:STATUS", "market band hai kya" to "Account:STATUS",
+        "kya market band hai" to "Account:STATUS", "am i logged in" to "Account:STATUS",
+        "aaj market band hai kya" to "MarketDays", "kal market khulega kya" to "MarketDays", "kal expiry hai kya" to "MarketDays",
+        "when is the next expiry" to "MarketDays", "is tomorrow expiry" to "MarketDays", "aaj expiry hai kya" to "MarketDays", "expiry kab hai" to "MarketDays",
+        // The chain, why it moved, the day, the app.
+        "what's the pcr" to "Account:CHAIN", "max pain kya hai" to "Account:CHAIN",
+        "why is nifty falling" to "Causes", "nifty kyun gir raha hai" to "Causes",
+        "how was my day" to "DaySummary", "aaj ka din kaisa raha" to "DaySummary",
+        "paper mode hai ya live" to "Account:SETTINGS", "what's the outlook for today" to "Outlook", "what is theta" to "Glossary", "what can you do" to "Help",
+    )
+
+    /** The commands Boss says every day beside them: each stays a command (through its own confirm). */
+    private val EVERYDAY_ACTS: List<Pair<String, Command.Kind>> = listOf(
+        "kill switch on karo" to Command.Kind.KILL_ON, "kill switch on" to Command.Kind.KILL_ON, "kill switch off" to Command.Kind.KILL_OFF,
+        "close all" to Command.Kind.CLOSE_ALL, "close all positions" to Command.Kind.CLOSE_ALL, "square off everything" to Command.Kind.CLOSE_ALL,
+        "exit all positions" to Command.Kind.CLOSE_ALL, "sab positions band karo" to Command.Kind.CLOSE_ALL, "sab band karo" to Command.Kind.STOP_ALL,
+        "stop all strategies" to Command.Kind.STOP_ALL, "stop orb" to Command.Kind.STOP_ONE, "start orb" to Command.Kind.START_ONE,
+        "switch to paper" to Command.Kind.MODE_PAPER, "cancel my order" to Command.Kind.CANCEL_ONE, "sell my put" to Command.Kind.CLOSE_ONE)
 
     /** Round 17's undo wordings said with "stop" (each a learned speech habit's own undo), with the family each must get. */
     private val STOP_UNDO = listOf("stop offering my morning question", "stop offering me the morning question", "stop offering my usual morning question",
@@ -1657,6 +1754,59 @@ class CollisionTest {
             val s = WatchAsk.answer(a, now, now - 9 * 60_000, now - 10_000, "Zerodha quotes and positions", now - 300_000, r, true, diary, local, zone)
             assertTrue(s.startsWith("Boss, ") && s.endsWith("I don't change a setting or restart anything myself."), s)
         }
+    }
+
+    // ---- Round 19: the newest families, and the everyday questions after all the additions ----
+
+    private fun neverActs(s: String) {
+        val p = Ask.parse(s)
+        assertEquals(null, p.order, s); assertEquals(null, p.command, s)
+        assertTrue(Topic.ORDER !in p.topics && Topic.COMMAND !in p.topics, s)
+        assertTrue(!Bundle.acts(s), s)
+        Intents.quick(s)?.let { r -> assertTrue(Ask.parse(r).order == null && Ask.parse(r).command == null && !Bundle.acts(r), "$s -> $r") }
+        assertTrue(!Reminder.asked(s) && !Reminder.cancelAsked(s) && !FollowUp.acts(s), s)
+        assertEquals(null, Reminder.parse(s, today.atTime(10, 0)), s)
+        assertTrue(Understand.questions(null, s).orEmpty().none { FollowUp.acts(it) || Ask.parse(it).command != null || Ask.parse(it).order != null }, s)
+    }
+
+    @Test fun roundNineteenWordingsNeitherOrderNorCommandNorBundle() {
+        val newest = setOf("OpenHighLow", "BigCandles", "OutlookCheck")
+        val all = ASKED.filter { it.second in newest } + ASKED.filter { it.first in AT_STOPS_19 }
+        assertTrue(all.size >= 80, "${all.size}")
+        // Wrong before this round, each now where it belongs.
+        for ((s, want) in listOf("how often does nifty open at its high" to "OpenHighLow", "kitni baar open hi high hota hai" to "OpenHighLow",
+            "open high open low ka record batao" to "OpenHighLow", "how often does a 0.5% candle in the first hour continue" to "BigCandles",
+            "saare stop lag gaye to kitna nuksan" to "Headroom")) assertTrue(s to want in all, s)
+        for ((s, want) in all) { assertEquals(want, audit.feature(s), s); neverActs(s) }
+        // At his stops, each is the day's LOSS room with the legs at their stops - never a what-if dropped for its "if".
+        for (s in AT_STOPS_19) { assertEquals(Headroom.Asked.LOSS, Headroom.asked(s), s); assertTrue(AtStops.ASKED.containsMatchIn(" " + spacedWords(s.lowercase().replace("'", "")) + " "), s) }
+        // A forecast, advice, an alert, his own book or a candle pattern is never one of these records.
+        for (s in listOf("will nifty open at its high tomorrow", "should i buy on open low days", "alert me if the open is the high",
+            "my open high trades")) assertEquals(null, OpenHighLow.asked(s), s)
+        for (s in listOf("will the big candle continue", "should i buy after a big candle in the first hour", "what is a marubozu candle",
+            "alert me on a big candle in the morning")) assertEquals(null, BigCandles.asked(s), s)
+        for (s in listOf("what's the outlook for today", "what is your outlook for nifty", "give me the morning outlook")) assertTrue(!OutlookCheck.asked(s), s)
+        // The first move's record keeps its own words.
+        assertTrue(FirstMove.asked("how often does the first half hour decide the day") != null)
+        // Graduation has no question: it is said once, when the paper record passes - nothing asks it, nothing switches.
+        // Said with something to do, each is left to the multi-step plan (never answered and the action dropped).
+        for (s in listOf("how often is the open the high of the day then stop orb", "what's my worst case today and close all positions",
+            "did your outlook hold today then kill switch on"))
+            assertTrue(Bundle.acts(s) || Ask.parse(s).command != null || Ask.parse(s).order != null, s)
+    }
+
+    @Test fun everydayQuestionsStillGoWhereTheyShould() {
+        assertTrue(EVERYDAY.size >= 60, "${EVERYDAY.size}")
+        assertEquals(EVERYDAY.size, EVERYDAY.map { it.first }.distinct().size)
+        val wrong = EVERYDAY.mapNotNull { (s, want) -> audit.feature(s).let { got -> if (got == want) null else "\"$s\": wanted $want, got $got ${hits(s)}" } }
+        assertTrue(wrong.isEmpty(), "taken by the wrong feature (${wrong.size} of ${EVERYDAY.size}):\n" + wrong.joinToString("\n"))
+        for ((s, _) in EVERYDAY) neverActs(s)
+        // The commands stay commands, each through its own confirm; an order stays an order.
+        for ((s, k) in EVERYDAY_ACTS) { assertEquals(k, Ask.parse(s).command?.kind, s); assertEquals("Act", audit.feature(s), s) }
+        assertTrue(Ask.parse("buy 1 lot nifty 24500 ce").order != null)
+        assertEquals("Act", audit.feature("buy 1 lot nifty 24500 ce"))
+        // "Market band karo" is no market-hours question: it stays a stop of an arm by that name (the app asks which one).
+        assertEquals(Command.Kind.STOP_ONE, Ask.parse("market band karo").command?.kind)
     }
 
     // ---- Again: the voice's own "say that again slowly" - heard before the question path, never a question family ----

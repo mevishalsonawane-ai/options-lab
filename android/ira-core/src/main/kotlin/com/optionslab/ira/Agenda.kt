@@ -268,7 +268,7 @@ object Agenda {
     private val ASKED = Regex("(?i)^\\s*(hey\\s+|ok\\s+)?(jarvis[,!.]?\\s+)?(so\\s+)?(what('s|s| is) (your|the) (plan|agenda)( for)?( (today|the day))?|" +
         "what('s|s| is) your plan|what are you working on( (today|now|right now))?|what('s|s| is) on your (agenda|list|plate)( (for )?today)?|" +
         "what are you (doing|up to|working on) today|(show|tell) me your (plan|agenda)( for (today|the day))?|(your|jarvis'?s?) (plan|agenda) (today|for today)|" +
-        "aaj (tumhara|aapka|tera|apka) plan( kya hai)?|what do you plan to do today)\\s*(jarvis|boss)?\\s*\\??\\s*$")
+        "aaj (tumhara|aapka|tera|apka) plan( kya hai)?|aaj ka plan( kya hai)?|what do you plan to do today)\\s*(jarvis|boss)?\\s*\\??\\s*$")
 
     /** "What's your plan today?", "what are you working on?" (not tomorrow's plan, not the market's). */
     fun asked(text: String): Boolean = ASKED.containsMatchIn(text) && !rx("(?i)\\b(tomorrow|tmrw|kal)\\b").containsMatchIn(text)

@@ -116,5 +116,5 @@ object AtStops {
         " (whats|what is|what s|tell me|show me) (my |the )?(worst case|worst possible loss|max possible loss|maximum possible loss)( today| for today| for the day| right now| now)? $" +
         "| (my )?worst case (today|for today|for the day|right now) $| how much (do|would|will) i lose if (all|every|each) (of )?(my )?stops? (is |are |get |gets |were )?(hit|triggered) " +
         "| what if (all|every|each) (of )?(my )?stops? (is |are |get |gets )?(hit|triggered) | (if )?(all|every) (of )?my stops? (get |gets |are |is )?(hit|triggered) (how much|kitna) " +
-        "| aaj (max |maximum |zyada se zyada |jyada se jyada )?kitna (loss|nuksan|nuksaan) ho sakta (hai|he) | (sab|saare|sare) (stop|stops) (hit|lag) (ho|ho gaye|ho jaye|hue) (to|toh) kitna ")
+        "| aaj (max |maximum |zyada se zyada |jyada se jyada )?kitna (loss|nuksan|nuksaan) ho sakta (hai|he) | (sab|saare|sare) (stop|stops) (hit|lag) (ho|ho gaye|ho jaye|hue|gaye|gaya|jaye|jayen|jaayen) (to|toh) kitna ")
 }

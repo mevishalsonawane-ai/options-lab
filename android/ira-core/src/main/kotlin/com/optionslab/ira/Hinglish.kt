@@ -35,6 +35,8 @@ object Hinglish {
         Regex("\\b(?:market|bazaar|bazar)\\s+kaisa\\s+hai\\b") to "how is the market",
         // "Kya karna chahiye": the trade check (never a direction); "kitne trade kiye": my trades today.
         Regex("^(?:ab\\s+|aaj\\s+)?kya\\s+kar(?:na|u|un|e)\\s+(?:chahiye|hum)$") to "should i trade now",
+        // "Kya karu", "ab kya karun" (round 19): the same trade check (never a direction, nothing done).
+        Regex("^(?:ab\\s+|aaj\\s+|abhi\\s+)?(?:main\\s+|mai\\s+)?kya\\s+(?:karu|karun|karoon|karoo)$") to "should i trade now",
         Regex("\\b(?:trade|trades)\\s+(?:kiye|kie|liye|lie)\\b") to "trades did i take",
         Regex("^(.*?)\\s+kaisa\\s+(?:hai|chal\\s+raha\\s+hai)$") to "how is $1",
         Regex("^(.*?)\\s+kya\\s+(?:hai|hua)$") to "what is $1",
@@ -97,6 +99,8 @@ object Hinglish {
         Regex("^(?:(aaj|abhi)\\s+)?(?:share\\s+)?(?:market|bazaar|bazar)\\s+(?:ka|ki)\\s+(?:$KYA\\s+haal|haal\\s+$KYA|haal\\s+kaisa)\\s+$HAI$") to "$1 how is the market",
         // "Market khula hai kya": whether it is open today.
         Regex("^(?:(?:aaj|kya)\\s+)?(?:market|bazaar|bazar)\\s+(?:aaj\\s+)?(?:khula|khuli|open)\\s+(?:$HAI|hoga|rahega)(?:\\s+$KYA)?(?:\\s+aaj)?$") to "is the market open today",
+        // "Market band hai kya" (round 19): the same day asked the other way round.
+        Regex("^(?:(?:aaj|kya)\\s+)?(?:market|bazaar|bazar)\\s+(?:aaj\\s+)?band\\s+(?:$HAI|rahega)\\s+$KYA(?:\\s+aaj)?$|^kya\\s+(?:aaj\\s+)?(?:market|bazaar|bazar)\\s+(?:aaj\\s+)?band\\s+$HAI(?:\\s+aaj)?$") to "is the market open today",
         // The owner's own money: "aaj kitna kamaya", "kitna loss hua", "aaj ki kamai kitni hai", "main profit mein hoon kya".
         Regex("^(?:(?:aaj|maine|humne|abhi\\s+tak|ab\\s+tak)\\s+)*(?:kitna|kitne|kitni|kitana)\\s+(?:paisa\\s+|paise\\s+|profit\\s+|munafa\\s+)?(?:kamaya|kamaye|kamai|kamaai|banaya|banaye|bana|bane|bani)(?:\\s+(?:maine|humne|aaj|$HAI|$KYA))*$") to "what is my p&l today",
         Regex("^(?:(?:aaj|maine|humne)\\s+)*(?:kitna|kitne|kitni|kitana)\\s+(?:profit|munafa|fayda|faida|loss|nuksan|nuksaan|nuqsan|ghata)\\s+(?:hua|hui|huwa|ho\\s+gaya|$HAI|kiya|banaya)(?:\\s+(?:aaj|$HAI|$KYA))*$") to "what is my p&l today",

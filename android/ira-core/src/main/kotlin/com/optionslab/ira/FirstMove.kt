@@ -107,6 +107,8 @@ object FirstMove {
     private fun askedFresh(text: String): Q? {
         val t = norm(text)
         if (rx(NOT).containsMatchIn(t)) return null
+        // A big 5-minute candle in the first hour and what followed it is the big-candle record's (round 19).
+        if (BigCandles.asked(text) != null) return null
         if (Market.mentioned(text).any { it == Market.GOLD }) return null
         if (!rx(FIRST).containsMatchIn(t)) return null
         val named = rx(NAMED).containsMatchIn(t)

@@ -64,11 +64,13 @@ object OpenHighLow {
 
     private val END = "(high|low|top|bottom)"
     /** The open named as the day's high or low: "open = high", "open equals low", "opened at the day's high", "o=h", "open high days". */
-    private val OPEN_END = Regex(" open (price )?(equals|equal to|equal|same as|is the|was the|as the|at the|at|the) (the )?(day s |days |day )?$END |" +
-        " (opened|opens|opening) (at|on|as) (the )?(day s |days |day )?$END |" +
+    private val OPEN_END = Regex(" open (price )?(equals|equal to|equal|same as|is the|was the|as the|at the|at|the) (the |its )?(day s |days |day )?$END |" +
+        " (opened|opens|opening) (at|on|as) (the |its )?(day s |days |day )?$END |" +
         " $END (of the day )?(equals|equal to|was the|is the|was|is|at the|at) (the )?(day s |days )?(open|opening) |" +
         " o equals [hl] | o [hl] (o [hl] )?(days|day|record|setup|kitni|kitne|wale|waale) |" +
-        " open (high|low) (or |and |aur |ya |open )*(open (high|low) )?(days|day|record|setup|setups|count|kitni|kitne|kitna|wale|waale|vale|din|pattern) |" +
+        " open (high|low) (or |and |aur |ya |open )*(open (high|low) )?(ka |ke |ki )?(days|day|record|setup|setups|count|kitni|kitne|kitna|wale|waale|vale|din|pattern) |" +
+        // Round 19: "kitni baar open hi high hota hai" (the open itself the high), "open high open low ka record".
+        " open (hi|hee) (high|low) |" +
         " open (high|low) (or |and |aur |ya )(open )?(high|low) (days|day|record|setup|count|kitni|kitne|wale|waale|din) ")
     private val HIGH = Regex(" (high|top) ")
     private val LOW = Regex(" (low|bottom) ")
