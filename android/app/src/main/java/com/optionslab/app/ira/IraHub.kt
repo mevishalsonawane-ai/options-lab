@@ -1241,7 +1241,7 @@ object IraHub {
                 com.optionslab.ira.GapRecord.asked(q) != null || com.optionslab.ira.RangeBreaks.asked(q) != null ||
                 com.optionslab.ira.PriorDay.asked(q) != null || com.optionslab.ira.LastHour.asked(q) != null ||
                 com.optionslab.ira.InsideDays.asked(q) != null || com.optionslab.ira.FirstMove.asked(q) != null ||
-                com.optionslab.ira.VixNext.asked(q) != null ||
+                com.optionslab.ira.VixNext.asked(q) != null || com.optionslab.ira.SplitDays.asked(q) != null ||
                 com.optionslab.ira.Weekdays.asked(q) != null ||
                 com.optionslab.ira.WordFit.asked(q) != null ||
                 com.optionslab.ira.Causes.asked(q) != null ||
@@ -2489,7 +2489,7 @@ object IraHub {
 
     /**
      * [ask]'s question branches on the index's record of past sessions and today's structure: DayClock, GapRecord,
-     * RangeBreaks, PriorDay, LastHour, InsideDays, FirstMove, VixNext, Weekdays, DayCompare, LikeToday, Structure, MindChange, Breadth - in [ask]'s order. True when one
+     * RangeBreaks, PriorDay, LastHour, InsideDays, FirstMove, VixNext, SplitDays, Weekdays, DayCompare, LikeToday, Structure, MindChange, Breadth - in [ask]'s order. True when one
      * took [q], answered exactly as before; each branch keeps its own guard (not [bundled], no order, no command).
      */
     private fun askedOfPastDays(q: String, parsed: com.optionslab.ira.Question, bundled: Boolean, understood: Boolean): Boolean {
@@ -2627,6 +2627,24 @@ object IraHub {
                 else com.optionslab.ira.VixNext.answer(vixNextAsk, mk, histories[mk]?.bars.orEmpty(), histories[IraMarket.VIX]?.bars.orEmpty(),
                     com.optionslab.app.data.Market.today(), com.optionslab.app.data.Market.now().toLocalDateTime())
             }.getOrElse { "I could not read the VIX next-day record just now, Boss." }
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            reply(said)
+            return true
+        }
+        // "How often do Nifty and BankNifty close opposite ways?", "Nifty BankNifty divergence record", "what happens the day
+        // after they split?": the days two indices ended on opposite sides of their previous closes, which way round, how far
+        // apart, and what the next day did against every day, on the phone's own 1-minute sessions ([com.optionslab.ira.SplitDays]),
+        // beside today so far. A record of past days, never a forecast or advice; market data only (fine on a locked phone);
+        // nothing acts. (Whether they move together today stays Together's, the leader over a stretch Breadth's.)
+        val splitAsk = if (!bundled && parsed.order == null && parsed.command == null && !com.optionslab.app.BuildConfig.GOLD)
+            runCatching { com.optionslab.ira.SplitDays.asked(q) }.getOrNull() else null
+        if (splitAsk != null) {
+            val said = runCatching {
+                val two = com.optionslab.ira.SplitDays.market(parsed.markets, splitAsk)
+                if (two == null) com.optionslab.ira.SplitDays.NOT_HERE
+                else com.optionslab.ira.SplitDays.answer(two.first, two.second, histories[two.first]?.bars.orEmpty(), histories[two.second]?.bars.orEmpty(),
+                    com.optionslab.app.data.Market.today(), com.optionslab.app.data.Market.now().toLocalDateTime())
+            }.getOrElse { "I could not read the split-day record just now, Boss." }
             _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
             reply(said)
             return true

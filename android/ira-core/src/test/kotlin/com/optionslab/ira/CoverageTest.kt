@@ -30,8 +30,8 @@ class CoverageTest {
         val asSaid = Sources.asked(said) || AboutBoss.knowAsked(said) || Memory.recallAsked(said) || Memory.forgetAsked(said) || PatternCalls.asked(said) || TrendReads.asked(said) || SinceMorning.asked(said) || ExpiryPin.asked(said) != null ||
             Learnings.asked(said) != null || Learnings.undoAsked(said) || NewsMoves.asked(said) != null || PreMarket.asked(said) ||
             ChainDrift.asked(said) != null || Headroom.asked(said) != null || ArmDay.asked(said) != null || NetLean.asked(said) || BotTrades.asked(said) != null || DayClock.asked(said) != null ||
-            SaidAbout.asked(said) != null || GapRecord.asked(said) != null || Causes.asked(said) != null || WeekAhead.asked(said) != null || AskedAgain.asked(said) || FigureFirst.asked(said) != null || Weekdays.asked(said) != null || DayCompare.asked(said) != null || LikeToday.asked(said) ||
-            RangeBreaks.asked(said) != null || PriorDay.asked(said) != null || LastHour.asked(said) != null || InsideDays.asked(said) != null || FirstMove.asked(said) != null || VixNext.asked(said) != null || NeedsTrue.asked(said) || Clarity.asked(said) != null || ZerodhaSession.asked(said) != null || Tour.asked(said) || WrongThing.asked(said) != null || WrongThing.objected(said) || OrderWhy.asked(said) != null || ArmHabits.asked(said) || MorningSense.asked(said) != null || HonestStars.asked(said) != null || TalkHours.asked(said) != null || RelayHealth.asked(said) != null || StreamHealth.asked(said) || SwitchOff.asked(said) != null
+            SaidAbout.asked(said) != null || GapRecord.asked(said) != null || Causes.asked(said) != null || WeekAhead.asked(said) != null || AskedAgain.asked(said) || FigureFirst.asked(said) != null || Weekdays.asked(said) != null || DayCompare.asked(said) != null || || DayCompare.asked(said) != null || LikeToday.asked(said) ||
+            RangeBreaks.asked(said) != null || PriorDay.asked(said) != null || LastHour.asked(said) != null || InsideDays.asked(said) != null || FirstMove.asked(said) != null || VixNext.asked(said) != null || SplitDays.asked(said) != null || NeedsTrue.asked(said) || Clarity.asked(said) != null || ZerodhaSession.asked(said) != null || Tour.asked(said) || WrongThing.asked(said) != null || WrongThing.objected(said) || OrderWhy.asked(said) != null || ArmHabits.asked(said) || MorningSense.asked(said) != null || HonestStars.asked(said) != null || TalkHours.asked(said) != null || RelayHealth.asked(said) != null || StreamHealth.asked(said) || SwitchOff.asked(said) != null
         return ((if (asSaid) null else Understand.questions(null, said)) ?: listOf(said)).map { kind(it, 0) }
     }
 
@@ -70,7 +70,7 @@ class CoverageTest {
             if (DataAge.asked(q)) return Kind.JARVIS
             if (Honest.asked(q) != null) return Kind.HONEST
             if (Thinking.asked(q) != null || Consistency.asked(q)) return Kind.JARVIS
-            if (CoPilot.asked(q) || SinceMorning.asked(q) || ExpiryPin.asked(q) != null || ChainDrift.asked(q) != null || ChainIntel.asked(q) != null || DayClock.asked(q) != null || GapRecord.asked(q) != null || RangeBreaks.asked(q) != null || PriorDay.asked(q) != null || LastHour.asked(q) != null || InsideDays.asked(q) != null || FirstMove.asked(q) != null || VixNext.asked(q) != null || Weekdays.asked(q) != null || DayCompare.asked(q) != null || LikeToday.asked(q) || Structure.asked(q) != null ||
+            if (CoPilot.asked(q) || SinceMorning.asked(q) || ExpiryPin.asked(q) != null || ChainDrift.asked(q) != null || ChainIntel.asked(q) != null || DayClock.asked(q) != null || GapRecord.asked(q) != null || RangeBreaks.asked(q) != null || PriorDay.asked(q) != null || LastHour.asked(q) != null || InsideDays.asked(q) != null || FirstMove.asked(q) != null || VixNext.asked(q) != null || SplitDays.asked(q) != null || Weekdays.asked(q) != null || DayCompare.asked(q) != null || LikeToday.asked(q) || Structure.asked(q) != null ||
                 MindChange.asked(q) || Breadth.asked(q) != null || TradeCase.asked(q) || Scenarios.asked(q) != null ||
                 Causes.asked(q) != null) return Kind.MARKET
         }
@@ -342,6 +342,9 @@ class CoverageTest {
         "why is the price stream dropping" to A, "stream kyun toot raha hai" to A, "is the price stream working" to A,
         // ---- What can I ask you (Tour, voice round 15): five questions for the part of the day - Jarvis's own ----
         "what can i ask you" to J, "what should i ask you now" to J, "main kya pooch sakta hoon" to J, "suggest some questions" to J,
+        // ---- Two indices on opposite sides of the day (SplitDays, market intelligence round 23): the market's ----
+        "how often do nifty and banknifty go opposite ways" to M, "nifty banknifty divergence record" to M,
+        "nifty aur banknifty kitni baar ulte chalte hain" to M,
     )
 
     /**
@@ -453,7 +456,7 @@ class CoverageTest {
      * ask(): Boss's learned words and routine as said, fillers and follow-ups, then - for a question not said with
      * something to do (IraHub's `bundled`, [Bundle.acts]) - DayJournal, AlertSense, Airtime, Hearing, PatternCalls, TrendReads, Clarity,
      * WordFit, AskedAgain, FigureFirst, WrongThing, ArmHabits, MorningSense, HonestStars, TalkHours, NewsMoves, TaxExport, Learnings, PreMarket, Headroom, ArmDay, NetLean, BotTrades, SaidAbout, WeekAhead, DataAge, Honest, Thinking,
-     * Consistency, CoPilot, SinceMorning, ExpiryPin, ChainDrift, ChainIntel, DayClock, GapRecord, RangeBreaks, PriorDay, LastHour, InsideDays, FirstMove, VixNext, Weekdays, DayCompare, LikeToday, Structure, MindChange, Breadth, TradeCase,
+     * Consistency, CoPilot, SinceMorning, ExpiryPin, ChainDrift, ChainIntel, DayClock, GapRecord, RangeBreaks, PriorDay, LastHour, InsideDays, FirstMove, VixNext, SplitDays, Weekdays, DayCompare, LikeToday, Structure, MindChange, Breadth, TradeCase,
      * Scenarios, Causes, Agenda, Improve; the reminders and Jarvis's own checks,
      * Distance... Outlook, NewsDesk, down to the account's sections (PositionHealth, BotHealth and NeedsTrue are its HEALTH,
      * BOTS and NEED; HeardBack is the voice path's own read-back, never a branch of the hub), a pattern explained, Solo and IraHub.reasoned's readers over the candles, each in its
@@ -473,7 +476,7 @@ class CoverageTest {
             PatternCalls.asked(said) || TrendReads.asked(said) || SinceMorning.asked(said) || ExpiryPin.asked(said) != null || Learnings.asked(said) != null || Learnings.undoAsked(said) || NewsMoves.asked(said) != null ||
             PreMarket.asked(said) ||
             ChainDrift.asked(said) != null || Headroom.asked(said) != null || ArmDay.asked(said) != null || NetLean.asked(said) || BotTrades.asked(said) != null || NeedsTrue.asked(said) || Clarity.asked(said) != null || DayClock.asked(said) != null ||
-            SaidAbout.asked(said) != null || GapRecord.asked(said) != null || WordFit.asked(said) != null || Causes.asked(said) != null || WeekAhead.asked(said) != null || AskedAgain.asked(said) || FigureFirst.asked(said) != null || MindChange.asked(said) || Weekdays.asked(said) != null || DayCompare.asked(said) != null || LikeToday.asked(said) || RangeBreaks.asked(said) != null || PriorDay.asked(said) != null || LastHour.asked(said) != null || InsideDays.asked(said) != null || FirstMove.asked(said) != null || VixNext.asked(said) != null || ZerodhaSession.asked(said) != null || Tour.asked(said) || WrongThing.asked(said) != null || WrongThing.objected(said) || OrderWhy.asked(said) != null || ArmHabits.asked(said) || MorningSense.asked(said) != null || HonestStars.asked(said) != null || TalkHours.asked(said) != null || RelayHealth.asked(said) != null || StreamHealth.asked(said) || SwitchOff.asked(said) != null
+            SaidAbout.asked(said) != null || GapRecord.asked(said) != null || WordFit.asked(said) != null || Causes.asked(said) != null || WeekAhead.asked(said) != null || AskedAgain.asked(said) || FigureFirst.asked(said) != null || MindChange.asked(said) || Weekdays.asked(said) != null || DayCompare.asked(said) != null || LikeToday.asked(said) || RangeBreaks.asked(said) != null || PriorDay.asked(said) != null || LastHour.asked(said) != null || InsideDays.asked(said) != null || FirstMove.asked(said) != null || VixNext.asked(said) != null || SplitDays.asked(said) != null || ZerodhaSession.asked(said) != null || Tour.asked(said) || WrongThing.asked(said) != null || WrongThing.objected(said) || OrderWhy.asked(said) != null || ArmHabits.asked(said) || MorningSense.asked(said) != null || HonestStars.asked(said) != null || TalkHours.asked(said) != null || RelayHealth.asked(said) != null || StreamHealth.asked(said) || SwitchOff.asked(said) != null
         val qs = if (asSaid || understood || cleaned) null else Understand.questions(null, said)?.takeIf { it.isNotEmpty() && it != listOf(said) }
         if (qs != null) return if (qs.size == 1) feature(qs[0], cleaned = true) else qs.joinToString(" & ") { feature(it, understood = true) }
         val q = said
@@ -533,6 +536,7 @@ class CoverageTest {
         if (alone && InsideDays.asked(q) != null) return "InsideDays"
         if (alone && FirstMove.asked(q) != null) return "FirstMove"
         if (alone && VixNext.asked(q) != null) return "VixNext"
+        if (alone && SplitDays.asked(q) != null) return "SplitDays"
         if (alone && Weekdays.asked(q) != null) return "Weekdays"
         if (alone && DayCompare.asked(q) != null) return "DayCompare"
         if (alone && LikeToday.asked(q)) return "LikeToday"
@@ -793,6 +797,11 @@ class CoverageTest {
         "when vix jumps 5% how big is the next day" to "VixNext", "after a vix spike how much does nifty move the next day" to "VixNext",
         "when india vix falls 5% is the next session quieter" to "VixNext", "vix spike record for banknifty" to "VixNext",
         "when vix rises 8 percent how wide is sensex's range the next day" to "VixNext", "jab vix 5% uchalta hai to agle din nifty kitna chalta hai" to "VixNext",
+        // ---- SplitDays: two indices on opposite sides of their previous closes, and the day after (round 23) ----
+        "how often do nifty and banknifty end opposite ways" to "SplitDays", "nifty banknifty divergence stats" to "SplitDays",
+        "what happens the day after nifty and banknifty diverge" to "SplitDays", "how often does banknifty go the other way from nifty" to "SplitDays",
+        "how often do sensex and finnifty move in opposite directions" to "SplitDays", "nifty aur banknifty kitni baar alag disha mein jaate hain" to "SplitDays",
+        "how often do the indices diverge" to "SplitDays", "split day record for nifty and banknifty" to "SplitDays",
         // ---- Weekdays: each weekday's record, and expiry days against the rest (round 15) ----
         "are mondays more volatile" to "Weekdays", "which day of the week moves the most" to "Weekdays",
         "how does nifty usually do on fridays" to "Weekdays", "weekday record for banknifty" to "Weekdays",
@@ -1210,6 +1219,9 @@ class CoverageTest {
             ("how often does the first half hour direction match the close" to "FirstMove") to ("how often does nifty break its first 30 minute range" to "RangeBreaks"),
             // Market intelligence round 21: the VIX next-day record beside the last VIX spike one by one.
             ("when vix jumps 5% how big is the next day" to "VixNext") to ("when did vix last jump like this" to "MarketMemory"),
+            // Market intelligence round 23: the split-day record beside today's moving together and the leader over a week.
+            ("how often do nifty and banknifty diverge" to "SplitDays") to ("is banknifty moving with nifty" to "Together"),
+            ("nifty banknifty divergence record" to "SplitDays") to ("relative strength banknifty vs nifty this week" to "Breadth"),
             // Reasoning round 15: now against this morning, beside the co-pilot, the chain's drift, the OI shift, today against yesterday and the news.
             ("what changed since this morning" to "SinceMorning") to ("what matters right now" to "CoPilot"),
             ("what's different since the open" to "SinceMorning") to ("has the biggest put oi moved since morning" to "ChainDrift"),

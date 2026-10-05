@@ -67,6 +67,7 @@ class CollisionTest {
         "InsideDays" to { q -> InsideDays.asked(q) != null },
         "FirstMove" to { q -> FirstMove.asked(q) != null },
         "VixNext" to { q -> VixNext.asked(q) != null },
+        "SplitDays" to { q -> SplitDays.asked(q) != null },
         "Weekdays" to { q -> Weekdays.asked(q) != null },
         "DayCompare" to { q -> DayCompare.asked(q) != null },
         "LikeToday" to { q -> LikeToday.asked(q) },
@@ -613,6 +614,14 @@ class CollisionTest {
         "when vix jumps how big is the next day" to "VixNext", "vix badhne ke baad agle din kitna move hota hai" to "VixNext",
         "after vix falls is the next day quieter" to "VixNext", "how much does banknifty move the day after a vix spike" to "VixNext",
         "vix next day record" to "VixNext", "jab vix 5% uchalta hai to agle din nifty kitna chalta hai" to "VixNext",
+        // ---- SplitDays: two indices on opposite sides of their previous closes (round 23) ----
+        "how often do nifty and banknifty close opposite ways" to "SplitDays", "how often does banknifty diverge from nifty" to "SplitDays",
+        "what usually happens after nifty and banknifty split" to "SplitDays", "nifty banknifty divergence history" to "SplitDays",
+        "how many days did nifty and finnifty end in opposite directions" to "SplitDays", "nifty aur banknifty kitni baar ulta chalte hain" to "SplitDays",
+        "banknifty nifty se kitni baar ulta jaata hai" to "SplitDays", "do the indices usually diverge" to "SplitDays",
+        "how often is one up and the other down for nifty and banknifty" to "SplitDays", "nifty sensex divergence record" to "SplitDays",
+        // Their neighbours: today alone, the leader over a week, the record of one index's own day.
+        "are nifty and banknifty moving together" to "Together", "is banknifty diverging from nifty" to "Together",
         // ---- MorningSense: the morning check items said briefly ----
         "which morning items do you skip" to "MorningSense", "which morning check items do you leave out" to "MorningSense",
         "morning check ka kya skip karte ho" to "MorningSense", "read me the whole morning check" to "MorningSense",
@@ -655,7 +664,7 @@ class CollisionTest {
     /** The question branches of IraHub.ask between the `bundled` read and the Plan block, in [CoverageTest.feature]'s order. */
     private val HUB_ORDER = listOf("DayJournal", "AlertSense", "Airtime", "Hearing", "PatternCalls", "TrendReads", "OutsideApp", "Clarity", "WordFit", "AskedAgain", "FigureFirst", "WrongThing", "ArmHabits", "MorningSense", "HonestStars", "TalkHours", "NewsMoves",
         "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmDay", "NetLean", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "ZerodhaSession", "OrderWhy", "RelayHealth", "StreamHealth", "Tour", "DataAge", "Honest", "Thinking",
-        "SelfWhy", "Consistency", "CoPilot", "SinceMorning", "ExpiryPin", "ChainDrift", "ChainIntel", "DayClock", "GapRecord", "RangeBreaks", "PriorDay", "LastHour", "InsideDays", "FirstMove", "VixNext", "Weekdays", "DayCompare", "LikeToday", "Structure", "MindChange", "Breadth",
+        "SelfWhy", "Consistency", "CoPilot", "SinceMorning", "ExpiryPin", "ChainDrift", "ChainIntel", "DayClock", "GapRecord", "RangeBreaks", "PriorDay", "LastHour", "InsideDays", "FirstMove", "VixNext", "SplitDays", "Weekdays", "DayCompare", "LikeToday", "Structure", "MindChange", "Breadth",
         "TradeCase", "Scenarios", "Causes", "Agenda", "Improve")
 
     @Test fun theAuditFollowsTheHubsOrderAndEveryBranchIsGuarded() {
