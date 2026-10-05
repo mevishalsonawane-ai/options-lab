@@ -108,6 +108,7 @@ class CollisionTest {
         "LunchRange" to { q -> LunchRange.asked(q) != null },
         "OpenHighLow" to { q -> OpenHighLow.asked(q) != null },
         "BigCandles" to { q -> BigCandles.asked(q) != null },
+        "ExtremeCloses" to { q -> ExtremeCloses.asked(q) != null },
         "Weekdays" to { q -> Weekdays.asked(q) != null },
         "DayCompare" to { q -> DayCompare.asked(q) != null },
         "LikeToday" to { q -> LikeToday.asked(q) },
@@ -699,6 +700,12 @@ class CollisionTest {
         "what happens after a 0.4% 5-minute candle" to "BigCandles", "large first hour candles record for finnifty" to "BigCandles",
         // Its neighbours: the first move of the day, a sharp move explained, which candle patterns work.
         "does the first half hour decide the day for sensex" to "FirstMove", "which candle patterns work on nifty" to "PatternCalls", "how often do opening range breaks hold for sensex" to "RangeBreaks",
+        // ---- ExtremeCloses: closes at the ends of the day's range and what the next day did (round 29) ----
+        "how often does nifty close near its high" to "ExtremeCloses", "what happens the day after banknifty closes at the low" to "ExtremeCloses",
+        "strong close record for sensex" to "ExtremeCloses", "high pe close hone ke baad agle din kya hota hai" to "ExtremeCloses",
+        "after a weak close what does finnifty do next day" to "ExtremeCloses", "how often are there extreme closes" to "ExtremeCloses",
+        // Its neighbours: the last hour's record, the trend days remembered, the big-candle record.
+        "last hour record for nifty" to "LastHour", "how many trend days did banknifty have this month" to "MarketMemory", "big candle record for sensex" to "BigCandles",
         // ---- MorningSense: the morning check items said briefly ----
         "which morning items do you skip" to "MorningSense", "which morning check items do you leave out" to "MorningSense",
         "morning check ka kya skip karte ho" to "MorningSense", "read me the whole morning check" to "MorningSense",
@@ -1003,7 +1010,7 @@ class CollisionTest {
     /** The question branches of IraHub.ask between the `bundled` read and the Plan block, in [CoverageTest.feature]'s order. */
     private val HUB_ORDER = listOf("DayJournal", "AlertSense", "Airtime", "Hearing", "PatternCalls", "TrendReads", "OutsideApp", "Clarity", "WordFit", "AskedAgain", "FigureFirst", "WrongThing", "ArmHabits", "MorningSense", "HonestStars", "TalkHours", "MorningAsks", "TurnDowns", "TopicLength", "OutlookCheck", "UsualIndex", "NewsMoves",
         "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmFit", "WeakLink", "ArmDay", "NetLean", "ExpiryEve", "BeforeTomorrow", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "ZerodhaSession", "OrderWhy", "RelayHealth", "StreamHealth", "BatteryUse", "WatchAsk", "Tour", "DataAge", "Honest", "Thinking",
-        "SelfWhy", "Consistency", "CoPilot", "SinceMorning", "ExpiryPin", "ChainDrift", "ChainIntel", "DayClock", "GapRecord", "RangeBreaks", "PriorDay", "LastHour", "InsideDays", "FirstMove", "VixNext", "SplitDays", "RoundCloses", "MonthTurns", "LunchRange", "OpenHighLow", "BigCandles", "Weekdays", "DayCompare", "LikeToday", "Structure", "MindChange", "Breadth",
+        "SelfWhy", "Consistency", "CoPilot", "SinceMorning", "ExpiryPin", "ChainDrift", "ChainIntel", "DayClock", "GapRecord", "RangeBreaks", "PriorDay", "LastHour", "InsideDays", "FirstMove", "VixNext", "SplitDays", "RoundCloses", "MonthTurns", "LunchRange", "OpenHighLow", "BigCandles", "ExtremeCloses", "Weekdays", "DayCompare", "LikeToday", "Structure", "MindChange", "Breadth",
         "TradeCase", "Scenarios", "Causes", "Agenda", "Improve")
 
     @Test fun theAuditFollowsTheHubsOrderAndEveryBranchIsGuarded() {
