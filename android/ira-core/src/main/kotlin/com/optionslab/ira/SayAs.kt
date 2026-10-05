@@ -12,9 +12,13 @@ import java.util.Locale
  *  - "N rupees crore" (a "Rs N crore" read as rupees) -> "N crore rupees";
  *  - an option's trading symbol is read as words: "NIFTY25O0724500CE" -> "Nifty 7 October 24,500 call",
  *    "BANKNIFTY26OCT52000PE" -> "Bank Nifty October 52,000 put", "NIFTY26OCTFUT" -> "Nifty October future";
- *  - "24500 CE" / "24,500PE" -> "24500 call" / "24,500 put" (only right after a number, so "PE ratio" stays).
+ *  - "24500 CE" / "24,500PE" -> "24500 call" / "24,500 put" (only right after a number, so "PE ratio" stays);
+ *  - a plus between two figures is said as one (Voice, round 19): "Liquidity 15+5" -> "Liquidity 15 plus 5" (the voice
+ *    read it "fifteen five"); a sign before a lone figure ("+0.4") is left as written;
+ *  - a news line's "(word tone +0.0)" is not said (Voice, round 19): the sentence already says how it reads ("It reads
+ *    good for Nifty"), and a bare word-list score said aloud tells Boss nothing. Only that aside, only aloud.
  *
- * The chat keeps the exact figures; this only shapes the words said, adds nothing and never changes a sentence's end,
+ * The chat keeps the exact figures; this only shapes the words said, adds nothing new and never changes a sentence's end,
  * so "go on" after a cut-in finds the same sentences ([BargeIn]). Applying it twice changes nothing. Pure.
  */
 object SayAs {
@@ -38,6 +42,10 @@ object SayAs {
     private val PREFIXED = Regex("(?:\\bRs\\.?|₹|\\bINR)\\s?([+-]?)$NUM(?![\\w,]|\\.\\d)( crore\\b)?")
     private val BARE = Regex("(?<![\\w.,])$NUM(?![\\w,]|\\.\\d)( rupees crore\\b| crore\\b)?")
     private val RUPEES_CRORE = Regex("(\\d) rupees crore\\b")
+    /** A plus between two figures, unspaced or spaced ("15+5", "15 + 5"). */
+    private val PLUS = Regex("(?<=\\d) ?\\+ ?(?=\\d)")
+    /** The news line's word-list score ([NewsAnalyst.take]): " (word tone +0.0)". */
+    private val WORD_TONE = Regex(" ?\\(word tone [+-]?\\d+(?:\\.\\d+)?\\)")
 
     /** [text] with its figures as said aloud; [hindi]: the units in Hindi (लाख, करोड़, कॉल, पुट). */
     fun figures(text: String, hindi: Boolean = false): String {
@@ -45,6 +53,8 @@ object SayAs {
         // spoken lines skip most of the patterns (speed round 9); a pattern is only skipped when it could not match.
         if (text.isEmpty() || !hasDigit(text)) return text
         var s = text
+        if (s.contains("(word tone ")) s = WORD_TONE.replace(s, "")
+        if (s.indexOf('+') >= 0) s = PLUS.replace(s, if (hindi) " प्लस " else " plus ")
         if (sided(s)) {
             s = OPTION.replace(s) { m -> option(m, hindi) ?: m.value }
             s = PLAIN_OPTION.replace(s) { m -> "${INDEX[m.groupValues[1]]} ${group(m.groupValues[2])} ${side(m.groupValues[3], hindi)}" }

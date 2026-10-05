@@ -64,4 +64,21 @@ class SayAsTest {
     @Test fun aloudSaysAmountsInLakh() {
         assertEquals("Boss, your margin is 1.23 lakh rupees.", Aloud.say("Boss, your margin is Rs 1,23,456.40."))
     }
+
+    @Test fun aPlusBetweenFiguresIsSaidAndTheNewsWordToneIsNot() {
+        val line = "BusinessLine: \"RBI holds rate\". It reads market-wide policy news (word tone +0.0). Policy news moves the whole " +
+            "market: expect bigger swings for 15 to 30 minutes, so wait before new entries. ORB, Liquidity 15+5 trade BankNifty: run the trade check."
+        val said = SayAs.figures(line)
+        assertEquals("BusinessLine: \"RBI holds rate\". It reads market-wide policy news. Policy news moves the whole " +
+            "market: expect bigger swings for 15 to 30 minutes, so wait before new entries. ORB, Liquidity 15 plus 5 trade BankNifty: run the trade check.", said)
+        // Same sentence ends (a cut-in's "go on" finds them), and twice is once.
+        assertEquals(Regex("[.!?](\\s|$)").findAll(line).count(), Regex("[.!?](\\s|$)").findAll(said).count())
+        assertEquals(said, SayAs.figures(said))
+        assertEquals("It reads bad for Nifty. Next.", SayAs.figures("It reads bad for Nifty (word tone -1.5). Next."))
+        assertEquals("Liquidity 15 plus 5 and 2 plus 3", SayAs.figures("Liquidity 15 + 5 and 2+3"))
+        assertEquals("लिक्विडिटी 15 प्लस 5", SayAs.figures("लिक्विडिटी 15+5", hindi = true))
+        // A sign before a lone figure, a phone number and other brackets stay as written.
+        listOf("Nifty +0.4 percent", "Call +91 98765", "Nifty (tone +0.5) up").forEach { assertEquals(it, SayAs.figures(it)) }
+        assertEquals("up plus 1.5 lakh rupees", SayAs.figures("up Rs +1,50,000"))
+    }
 }
