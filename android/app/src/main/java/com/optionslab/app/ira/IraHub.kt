@@ -1741,6 +1741,16 @@ object IraHub {
     private fun reasoned(raw: String, parsed: com.optionslab.ira.Question): String? {
         // The words as understood (Hinglish turned into English: "pichle ghante kitna gira" -> "in the last hour how much fell").
         val q = parsed.text.ifBlank { raw }
+        // "What happened in the market today?", "what's different about today?": the indices' day against their own
+        // recent sessions (whole questions with no index named - before the why-answer, which "what happened" reaches).
+        // No session today on the phone (a holiday, a failed refresh): null, and the usual answer says so.
+        com.optionslab.ira.MarketStory.asked(q)?.let { kind ->
+            val bars = histories.mapValues { it.value.bars }
+            val now = LocalDateTime.now(IST)
+            val today = com.optionslab.app.data.Market.today()
+            return if (kind == com.optionslab.ira.MarketStory.Kind.STORY) com.optionslab.ira.MarketStory.story(bars, _state.value.news, now, today, IST)
+                else com.optionslab.ira.MarketStory.different(bars, now, today)
+        }
         // "Why did Nifty fall in the last hour": the why-story and the news answer it, not bare figures ("how much did it
         // fall" is a figure).
         if (Topic.WHY in parsed.topics && !Regex("(?i)\\bhow much\\b").containsMatchIn(q)) return null
@@ -1828,6 +1838,14 @@ object IraHub {
         // Only today's session: an old day (a failed refresh, a holiday) is never told as today's.
         if (bars.lastOrNull()?.t?.toLocalDate() != com.optionslab.app.data.Market.today()) return null
         com.optionslab.ira.DayStory.say(m, bars)
+    }.getOrNull()
+
+    /**
+     * For the 15:35 wrap-up: what stood out most in the market today against the last sessions on the phone, and how to
+     * hear the whole story - or null without today's session (only today's candles are read, never an old day's).
+     */
+    fun marketWrapLine(): String? = runCatching {
+        com.optionslab.ira.MarketStory.wrapLine(histories.mapValues { it.value.bars }, LocalDateTime.now(IST), com.optionslab.app.data.Market.today())
     }.getOrNull()
 
     /** Each market's price and time when Boss last asked about it. */

@@ -575,7 +575,10 @@ internal object IraCoach {
         // (Jarvis's own review right after the day's figures, so it is within what is spoken.)
         // Jarvis's own plan: what he did and what he carries to tomorrow.
         val agenda = runCatching { IraAgenda.wrapLine() }.getOrNull()
+        // What stood out in the market today against its usual, and the offer of the whole story (after Boss's own figures,
+        // so it never pushes them out of what is spoken).
         return listOfNotNull(story, com.optionslab.ira.DaySummary.say(pnl, scorecard, events), if (review) selfReview() else null, agenda, IraSolo.daySummary(),
+            IraHub.marketWrapLine(),
             runCatching { com.optionslab.ira.Missed.say(IraTools.missedToday()) }.getOrNull()).joinToString(" ")
     }
 }
