@@ -114,6 +114,26 @@ class NeedsTrueTodayTest {
         assertTrue(NeedsTrue.todayBeside("NIFTY", emptyList(), now, listOf(put(pc))).isEmpty())
     }
 
+    @Test fun thePreviousSessionMustBeWholeAndRecentAndTheUnderlyingAnIndex() {
+        val (bars, pc) = nifty(24, -1.2)
+        val before = today.minusDays(1)
+        // A partial previous day (its last bar at 13:00): no previous close to set today against.
+        val partial = bars.filter { it.t.toLocalDate() != before || !it.t.toLocalTime().isAfter(LocalTime.of(13, 0)) }
+        assertTrue(NeedsTrue.todayBeside("NIFTY", partial, now, listOf(put(pc))).isEmpty())
+        // Started late (first bar at 10:00): not whole either.
+        val late = bars.filter { it.t.toLocalDate() != before || !it.t.toLocalTime().isBefore(LocalTime.of(10, 0)) }
+        assertTrue(NeedsTrue.todayBeside("NIFTY", late, now, listOf(put(pc))).isEmpty())
+        // A stale previous day: the phone's last session before today is 5 days back (more than 4).
+        val stale = bars.filter { it.t.toLocalDate() == today || it.t.toLocalDate().isBefore(today.minusDays(4)) }
+        assertTrue(stale.any { it.t.toLocalDate().isBefore(today) })
+        assertTrue(NeedsTrue.todayBeside("NIFTY", stale, now, listOf(put(pc))).isEmpty())
+        // Gold (and anything but the four indices): nothing said, however whole the sessions.
+        assertTrue(NeedsTrue.todayBeside("GOLD", bars, now, listOf(put(pc))).isEmpty())
+        assertTrue(NeedsTrue.todayBeside("INDIAVIX", bars, now, listOf(put(pc))).isEmpty())
+        // The whole recent one still counts.
+        assertTrue(NeedsTrue.todayBeside("NIFTY", bars, now, listOf(put(pc))).isNotEmpty())
+    }
+
     @Test fun aRallyAfterTheClose() {
         val (bars, pc) = nifty(24, 1.4)
         val l = NeedsTrue.todayBeside("NIFTY", bars, today.atTime(16, 0), listOf(put(pc * 1.014)))

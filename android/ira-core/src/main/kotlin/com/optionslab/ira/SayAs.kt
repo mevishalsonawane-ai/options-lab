@@ -25,7 +25,8 @@ import java.util.Locale
  *    "the opening range 9:15-10:00", "gapped 0.5-1 percent" were read "24,300 minus 24,700" or run together as one
  *    number; now "24,300 to 24,700", "9:15 to 10:00", "0.5 to 1 percent" (Hindi "से"). Only two figures (or two clock
  *    times) joined by one unspaced hyphen or en dash with nothing else glued on either side - so a date ("2026-10-05",
- *    "05-10-2026"), a phone number, a year span ("FY2025-26"), a symbol and a spaced minus ("24,512 - 85") stay as written.
+ *    "05-10-2026"), a phone number ("98765-43210": a side of more than 6 digits, or of more than 4 ungrouped, is no figure
+ *    Jarvis writes), a year span ("FY2025-26"), a symbol and a spaced minus ("24,512 - 85") stay as written.
  *
  * The chat keeps the exact figures; this only shapes the words said, adds nothing new and never changes a sentence's end,
  * so "go on" after a cut-in finds the same sentences ([BargeIn]). Applying it twice changes nothing. Pure.
@@ -75,6 +76,19 @@ object SayAs {
     private val CLOCK_AFTER = Regex("\\s?[aApP]\\.?[mM]\\b")
     private val RANGE = Regex("(?<![\\w.,:\\-\\u2013+])($SIDE)[\\-\\u2013]($SIDE)(?![\\w:\\-\\u2013]|[.,]\\d)")
 
+    /** At most this many digits before the point on either side of a range (commas not counted: "1,00,000" is six). */
+    private const val RANGE_DIGITS = 6
+    /** An ungrouped side longer than this is no figure Jarvis writes (he groups 10,000 and up): a phone number's half, an id. */
+    private const val RANGE_PLAIN_DIGITS = 4
+
+    /** [side] may be one side of a range: short enough, and grouped when 10,000 or more - so "98765-43210" stays as written. */
+    private fun rangeSide(side: String): Boolean {
+        if (side.contains(':')) return true
+        val whole = side.substringBefore('.')
+        val digits = whole.count { it.isDigit() }
+        return digits <= RANGE_DIGITS && (whole.contains(',') || digits <= RANGE_PLAIN_DIGITS)
+    }
+
     /** [text] with its figures as said aloud; [hindi]: the units in Hindi (लाख, करोड़, कॉल, पुट). */
     fun figures(text: String, hindi: Boolean = false): String {
         // Every pattern below needs a digit (and each its own letters), so a line without them is said as written - most
@@ -87,6 +101,8 @@ object SayAs {
             s = RANGE.replace(src) { m ->
                 // "3-30 pm" is a clock time heard with a dash, not a range: as written.
                 if (m.groupValues[2].length == 2 && CLOCK_AFTER.matchesAt(src, m.range.last + 1)) m.value
+                // A phone number ("call 98765-43210") or any side too long for a figure: as written.
+                else if (!rangeSide(m.groupValues[1]) || !rangeSide(m.groupValues[2])) m.value
                 else m.groupValues[1] + (if (hindi) " से " else " to ") + m.groupValues[2]
             }
         }

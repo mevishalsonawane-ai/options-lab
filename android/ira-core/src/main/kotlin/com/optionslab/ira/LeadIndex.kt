@@ -7,7 +7,7 @@ import java.time.LocalDate
  * the daily tally of question kinds ([SelfDoubt.count], kind keys and counts only - "market:BANKNIFTY" - never a word).
  * Nothing new is recorded; only the day Boss last asked to undo it is kept ([Log]).
  *
- * Of the questions that named Nifty or BankNifty in the last [WINDOW_DAYS] days (after the reset day), an index other
+ * Of the mentions of Nifty or BankNifty (a question naming both counts once for each) in the last [WINDOW_DAYS] days (after the reset day), an index other
  * than Nifty named at least [MIN_TIMES] times, on at least [MIN_DAYS] days, and in at least [SHARE] of them is learned
  * ([learned]). Where Jarvis names both indices anyway, he then names that one first ([order]): the greeting ("Good
  * morning, Boss. ... BankNifty is at ...; Nifty is at ...") and the outlook lines of the 09:00 check and of "what's the plan
@@ -22,7 +22,7 @@ import java.time.LocalDate
 object LeadIndex {
     /** Only the last this many days count (the tally keeps no more). */
     const val WINDOW_DAYS = 30L
-    /** The index is named in at least this many questions... */
+    /** The index is named at least this many times (mentions, not questions)... */
     const val MIN_TIMES = 10
     /** ...on at least this many days... */
     const val MIN_DAYS = 3
@@ -41,7 +41,8 @@ object LeadIndex {
     /** The index learned: named [times] times on [days] days, Nifty [others] times, the newest on [newest]. */
     data class Record(val market: Market, val times: Int, val others: Int, val days: Int, val newest: LocalDate) {
         val phrase: String get() = market.label
-        fun say(): String = "you named ${market.label} in $times of your ${times + others} questions naming Nifty or BankNifty, on $days days"
+        /** Counted by mention (a question naming both indices counts for each), so "mentions", never "questions". */
+        fun say(): String = "${market.label} was $times of your ${times + others} mentions of Nifty or BankNifty, on $days days"
     }
 
     private fun key(m: Market) = "market:${m.name}"
@@ -86,11 +87,17 @@ object LeadIndex {
         LEAD + "(kaunsa|kaun sa|konsa|kon sa) index pehle (bolte|batate|lete) ho" + TAIL + "|" +
         LEAD + "$INDEX pehle (kyun|kyu|kyon) (bolte|batate|lete) ho" + TAIL + "|" +
         LEAD + "(main|mai) (kaunsa|kaun sa|konsa|kon sa) index sabse (zyada|jyada) (poochta|puchta|puchhta) (hoon|hu|hun)" + TAIL)
-    private val RESET = rx(LEAD + "(mention|say|name|give|list) nifty first" + TAIL + "|" +
-        LEAD + "(dont|do not) (mention|say|name|list|give) (bank ?nifty|nifty bank|my index) first" + TAIL + "|" +
-        LEAD + "(go back to|start with) nifty first" + TAIL + "|" +
-        LEAD + "nifty (ko )?pehle (bolo|batao|bolna|lo)" + TAIL + "|" +
-        LEAD + "(bank ?nifty|banknifty) pehle (mat|na) (bolo|batao|bolna)" + TAIL)
+    /**
+     * Only a clear undo: "mention / say / name Nifty first again", "don't (or stop) saying BankNifty first", "go back to
+     * naming Nifty first", "nifty pehle bolo phir se", "banknifty pehle mat bolo". Never a market question that merely
+     * puts Nifty first - "nifty pehle batao", "nifty ko pehle lo", "give nifty first", "say nifty first" keep their route.
+     */
+    private val RESET = rx(LEAD + "(mention|say|name) nifty first (again|once again)" + TAIL + "|" +
+        LEAD + "(dont|do not) (mention|say|name|list) (bank ?nifty|nifty bank|my index) first" + TAIL + "|" +
+        LEAD + "stop (mentioning|saying|naming|listing) (bank ?nifty|nifty bank|my index) first" + TAIL + "|" +
+        LEAD + "go back to (mentioning |saying |naming )?nifty first" + TAIL + "|" +
+        LEAD + "nifty (ko )?pehle (bolo|bolna) (phir se|fir se|dobara)" + TAIL + "|" +
+        LEAD + "(bank ?nifty|banknifty) pehle (mat|na) (bolo|bolna)" + TAIL)
 
     /** "Which index do you mention first?" or "mention Nifty first again", else null. */
     fun asked(text: String): Request? = askedKept.of(text) { askedFresh(text) }
@@ -111,7 +118,7 @@ object LeadIndex {
     /** "Which index do you mention first?". */
     fun say(r: Record?): String =
         if (r == null) "I name Nifty first, Boss, as always. If you keep asking about BankNifty by name - $MIN_TIMES times or more, on " +
-            "$MIN_DAYS days, two in three of your questions naming either - I'll name it first in the greeting and the morning outlook."
+            "$MIN_DAYS days, two in three of your mentions of either - I'll name it first in the greeting and the morning outlook."
         else "Boss, ${r.say()} in the last $WINDOW_DAYS days - so I name ${r.phrase} first where I give both: the greeting and the " +
             "morning outlook. $ONLY_ORDER Say \"$UNDO\" to undo it."
 
@@ -119,6 +126,9 @@ object LeadIndex {
     fun sayReset(r: Record?): String =
         if (r == null) "I already name Nifty first, Boss. I'll start my count afresh from tomorrow."
         else "Done, Boss: Nifty first again, and my count of the index you ask about starts afresh from tomorrow."
+
+    /** "Mention Nifty first again" on a locked phone: done all the same, in words that never name what was learned (or whether). */
+    const val RESET_LOCKED = "Done, Boss: Nifty first where I name both, and my count starts afresh from tomorrow."
 
     /** The ledger's lines for [r]. */
     fun ledgerWhat(r: Record): String = "${r.phrase} named first where I give both indices (the greeting, the morning outlook)"

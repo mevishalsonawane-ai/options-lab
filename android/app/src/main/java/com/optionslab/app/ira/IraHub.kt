@@ -2487,11 +2487,11 @@ object IraHub {
         }
         // "Which index do you mention first?" / "mention Nifty first again": the index Boss asks about by name, named first
         // where both are given ([com.optionslab.ira.LeadIndex]; from the kinds tally, counts only). His habit: named on an
-        // unlocked phone only; the undo works locked too. Only the order of words changes - nothing learned acts. Not in IraGoldAlgo.
+        // unlocked phone only; the undo works locked too, in neutral words. Only the order of words changes - nothing learned acts. Not in IraGoldAlgo.
         val firstAsk = if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null)
             runCatching { com.optionslab.ira.LeadIndex.asked(q) }.getOrNull() else null
         if (firstAsk != null) {
-            val firstSaid = if (firstAsk == com.optionslab.ira.LeadIndex.Request.RESET) IraTools.firstIndexReset()
+            val firstSaid = if (firstAsk == com.optionslab.ira.LeadIndex.Request.RESET) IraTools.firstIndexReset(phoneLocked())
                 else if (phoneLocked()) com.optionslab.ira.LeadIndex.LOCKED else IraTools.firstIndexSay()
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, firstSaid)).takeLast(MAX_MESSAGES)) }
             return true

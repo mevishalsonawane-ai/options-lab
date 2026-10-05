@@ -49,7 +49,8 @@ object Comebacks {
     const val MAX_DAYS_APART = 4L
     private val FIRST_BY = LocalTime.of(9, 20)
     private val LAST_FROM = LocalTime.of(15, 25)
-    private val INDICES = listOf(Market.NIFTY, Market.BANKNIFTY, Market.FINNIFTY, Market.SENSEX)
+    /** The indices the record is kept for (gold trades round the clock, India VIX is not traded). */
+    internal val INDICES = listOf(Market.NIFTY, Market.BANKNIFTY, Market.FINNIFTY, Market.SENSEX)
 
     const val NOTE = "A record of past days on this phone, Boss, not a forecast."
     const val NOT_HERE = "I keep the comeback record for Nifty, BankNifty, FinNifty and Sensex only, Boss: gold trades round the clock, so it has no previous close to count from, and India VIX is not traded."
@@ -135,7 +136,8 @@ object Comebacks {
 
     // ---- the record -----------------------------------------------------------------------------------------------
 
-    private fun whole(s: MarketStory.Session) =
+    /** A whole session: its first bar no later than 09:20, its last no earlier than 15:25 (shared with [NeedsTrue.todayBeside]). */
+    internal fun whole(s: MarketStory.Session) =
         s.bars.isNotEmpty() && !s.bars.first().t.toLocalTime().isAfter(FIRST_BY) && !s.bars.last().t.toLocalTime().isBefore(LAST_FROM)
 
     /**

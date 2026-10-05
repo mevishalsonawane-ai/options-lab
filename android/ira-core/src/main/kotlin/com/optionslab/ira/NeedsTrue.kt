@@ -4,6 +4,7 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
 import java.util.Locale
 import kotlin.math.abs
 
@@ -236,13 +237,19 @@ object NeedsTrue {
      * move now rounded down to the half per cent, [MIN_TODAY_PCT] to [MAX_TODAY_PCT]) and today's range against its
      * average day's range - then said for each of Boss's options on it ([held]): whether today's move is the way it needs
      * or against it, and how often such a move held or came back on the record. Past days, never odds, a forecast or
-     * advice; nothing acts. Empty when the phone has no session of today with one before it. Pure.
+     * advice; nothing acts. Empty for an underlying other than Nifty, BankNifty, FinNifty or Sensex, or when the phone has no
+     * session of today with a whole one before it at most [Comebacks.MAX_DAYS_APART] days earlier. Pure.
      */
     fun todayBeside(u: String, bars: List<Candle>, now: LocalDateTime, held: List<PositionHealth.Pos>): List<String> {
+        // Only the indices the comeback record is kept for (never gold, which has no previous close to count from).
+        if (Comebacks.INDICES.none { it.name == u }) return emptyList()
         val today = now.toLocalDate()
         val ss = MarketStory.sessions(bars)
         val t = ss.lastOrNull { it.day == today }?.takeIf { it.bars.isNotEmpty() } ?: return emptyList()
-        val before = ss.lastOrNull { it.day.isBefore(today) && it.bars.isNotEmpty() }?.takeIf { it.close > 0 } ?: return emptyList()
+        // The previous close counts as Comebacks counts it: a whole session, at most MAX_DAYS_APART days before today.
+        val before = ss.lastOrNull { it.day.isBefore(today) }?.takeIf {
+            Comebacks.whole(it) && it.close > 0 && ChronoUnit.DAYS.between(it.day, today) <= Comebacks.MAX_DAYS_APART
+        } ?: return emptyList()
         val name = label(u)
         val pc = before.close
         val live = now.toLocalTime().isBefore(CLOSE)

@@ -152,12 +152,18 @@ object Journal {
 
     fun init(context: Context) { file = File(context.applicationContext.noBackupFilesDir, "journal.vault") }
 
+    /**
+     * The whole journal. No file yet: empty (and kept). A vault that cannot be read (a Keystore failure, a damaged file):
+     * throws, and nothing is kept - so [put] and [resetPaper] never rewrite the vault from an empty map and lose every
+     * note; the caller shows "Journal not saved", and a read shows nothing (every caller reads inside runCatching).
+     */
     @Synchronized
     fun all(): Map<String, Entry> {
         cache?.let { return it }
         val m = LinkedHashMap<String, Entry>()
-        runCatching {
-            val o = JSONObject(String(Vault.readFileSteady(file) ?: return@runCatching, Charsets.UTF_8))
+        val bytes = Vault.readFileSteady(file)
+        if (bytes != null) {
+            val o = JSONObject(String(bytes, Charsets.UTF_8))
             o.keys().forEach { k ->
                 val e = o.getJSONObject(k)
                 val tags = e.optJSONArray("t")?.let { a -> (0 until a.length()).map { a.getString(it) }.toSet() } ?: emptySet()

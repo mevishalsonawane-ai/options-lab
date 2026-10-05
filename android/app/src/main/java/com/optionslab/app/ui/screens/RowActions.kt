@@ -374,7 +374,9 @@ private fun JournalEditor(key: String, label: String, start: com.optionslab.app.
     var tags by remember(key) { mutableStateOf(start?.tags.orEmpty()) }
     var saving by remember(key) { mutableStateOf(false) }
     AlertDialog(
-        onDismissRequest = onClose,
+        // While saving, nothing closes it (back, a tap outside, Cancel): the save's scope lives with this dialog, so the
+        // "Journal saved" toast and onSaved always run.
+        onDismissRequest = { if (!saving) onClose() },
         properties = DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy),
         title = { Text("Journal · $label", style = Type.title) },
         text = {
@@ -409,6 +411,6 @@ private fun JournalEditor(key: String, label: String, start: com.optionslab.app.
                 }
             }) { Text(if (saving) "Saving..." else "Save") }
         },
-        dismissButton = { TextButton(onClose) { Text("Cancel") } },
+        dismissButton = { TextButton(onClick = { if (!saving) onClose() }, enabled = !saving) { Text("Cancel") } },
     )
 }

@@ -1258,7 +1258,7 @@ class CoverageTest {
         // ---- LeadIndex (learning round 25): the index Boss asks about by name, named first where both are given ----
         "which index do you mention first" to "LeadIndex", "why do you say banknifty first" to "LeadIndex",
         "which index do i ask about most" to "LeadIndex", "mention nifty first again" to "LeadIndex",
-        "nifty pehle bolo" to "LeadIndex", "kaunsa index pehle bolte ho" to "LeadIndex",
+        "nifty pehle bolo phir se" to "LeadIndex", "kaunsa index pehle bolte ho" to "LeadIndex",
         // ---- Its neighbours: the strategies listed, Solo, the positions' health ----
         "show my strategies" to "Account:STRATEGIES", "list my strategies" to "Account:STRATEGIES",
         "what strategies are running" to "Account:STRATEGIES", "which strategies are on" to "Account:STRATEGIES",

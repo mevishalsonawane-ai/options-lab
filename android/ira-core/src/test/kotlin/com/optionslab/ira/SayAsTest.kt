@@ -123,10 +123,15 @@ class SayAsTest {
         assertEquals("24,300 से 24,700", SayAs.figures("24,300-24,700", hindi = true))
         // A lakh-sized range is still said in lakh.
         assertEquals("1 lakh rupees to 2 lakh", SayAs.figures("Rs 1,00,000-2,00,000"))
+        // Up to six digits a side, commas not counted; short plain figures still a range.
+        assertEquals("strikes 24,500 to 24,600", SayAs.figures("strikes 24,500-24,600"))
+        assertEquals("lots 1200 to 1500", SayAs.figures("lots 1200-1500"))
+        // Seven digits a side is no range (each figure is still said in lakh on its own).
+        assertFalse(SayAs.figures("ref 12,34,567-12,34,999").contains(" to "))
         // Dates, phone numbers, year spans, symbols, a spaced minus, a sign and a hyphenated word stay as written.
         listOf("On 2026-10-05.", "On 05-10-2026.", "Call 1800-123-4567", "FY2025-26 taxes", "trades-FY2025-26-all.csv",
             "Nifty 24,512 - 85", "down -0.4 percent", "a 5-minute chart", "M&M-EQ", "10-15-minute window", "-5-10",
-            "it's 3-30 pm", "at 9-15 am")
+            "it's 3-30 pm", "at 9-15 am", "call 98765-43210", "Call 98765\u201343210 now", "order 2410050000123-2")
             .forEach { assertEquals(it, SayAs.figures(it)) }
         // Through Aloud: the times rounded, then the range said; twice is once and the sentences stay the same.
         val text = "Boss, a usual day spans about 24,300-24,700. The opening range was 09:15-10:00."

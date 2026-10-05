@@ -792,8 +792,10 @@ class CollisionTest {
         "which index do i ask about most" to "LeadIndex", "what index do i ask you about the most" to "LeadIndex",
         "kaunsa index pehle bolte ho" to "LeadIndex", "banknifty pehle kyun bolte ho" to "LeadIndex",
         "main kaunsa index sabse zyada puchta hoon" to "LeadIndex", "mention nifty first again" to "LeadIndex",
-        "say nifty first" to "LeadIndex", "don't say bank nifty first" to "LeadIndex",
-        "nifty pehle bolo" to "LeadIndex", "banknifty pehle mat bolo" to "LeadIndex",
+        "say nifty first again" to "LeadIndex", "don't say bank nifty first" to "LeadIndex", "stop saying banknifty first" to "LeadIndex",
+        "nifty pehle bolo phir se" to "LeadIndex", "banknifty pehle mat bolo" to "LeadIndex",
+        // ...and a market question that merely puts Nifty first is never its undo: it keeps its market route.
+        "nifty pehle batao" to "Market", "nifty ko pehle lo" to "Market", "give nifty first" to "Market", "say nifty first" to "Market",
         // ---- HonestStars: his confidence scores against their record ----
         "how honest are your stars" to "HonestStars", "do your 5 star ideas actually work" to "HonestStars",
         "tumhare confidence stars kitne sahi hain" to "HonestStars", "are your confidence ratings any good" to "HonestStars",

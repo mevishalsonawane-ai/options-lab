@@ -30,7 +30,9 @@ class LeadIndexTest {
         val r = assertNotNull(LeadIndex.learned(tally(4, 3, 1), LeadIndex.Log(), today))
         assertEquals(Market.BANKNIFTY, r.market); assertEquals(12, r.times); assertEquals(4, r.others); assertEquals(4, r.days)
         assertEquals(today.minusDays(1), r.newest)
-        assertTrue(r.say().contains("12 of your 16"), r.say())
+        assertTrue(r.say().contains("12 of your 16 mentions"), r.say())
+        // Counted by mention (a question naming both counts for each): never called "questions".
+        assertFalse(r.say().contains("questions"), r.say()); assertFalse(LeadIndex.say(r).contains("questions"), LeadIndex.say(r))
         // Built the way the app builds it: one question at a time, counted on its day.
         var t: DoubtTally = emptyMap()
         for (d in 1..4) repeat(3) { t = SelfDoubt.count(t, today.minusDays(d.toLong()), "what are the levels on banknifty") }
@@ -92,19 +94,30 @@ class LeadIndexTest {
             Ira(lead = Market.BANKNIFTY).answer("what are the levels", snaps, emptyList(), now = now).text)
     }
 
+    /** Market questions that put Nifty first in their words - each was a Nifty answer, and must stay one. */
+    private val NOT_UNDO = listOf("nifty pehle batao", "nifty ko pehle lo", "give nifty first", "say nifty first")
+
     @Test fun bossCanAskAndUndo() {
         for (q in listOf("which index do you mention first", "Jarvis, why do you say BankNifty first?", "why is bank nifty first",
                 "which index do I ask about most", "what index do i ask you about the most", "kaunsa index pehle bolte ho",
                 "banknifty pehle kyun bolte ho", "main kaunsa index sabse zyada puchta hoon"))
             assertEquals(LeadIndex.Request.WHICH, LeadIndex.asked(q), q)
-        for (q in listOf(LeadIndex.UNDO, "mention nifty first", "say Nifty first again please",
-                "don't say bank nifty first", "nifty pehle bolo", "banknifty pehle mat bolo"))
+        for (q in listOf(LeadIndex.UNDO, "say Nifty first again please", "name nifty first again", "go back to naming nifty first",
+                "don't say bank nifty first", "stop saying banknifty first", "nifty pehle bolo phir se", "banknifty pehle mat bolo"))
             assertEquals(LeadIndex.Request.RESET, LeadIndex.asked(q), q)
+        // "Stop saying BankNifty first" is that undo, never a stop of an arm by that name.
+        assertNull(Ask.parse("stop saying banknifty first").command); assertNull(Ask.parse("stop saying banknifty first").order)
+        // A market question that merely puts Nifty first is never the undo: it keeps its market route.
+        for (q in NOT_UNDO) {
+            assertNull(LeadIndex.asked(q), q)
+            assertEquals("Market", CoverageTest().feature(q), q)
+        }
         // Not his market questions, not UsualIndex's, never an order or a command.
         for (q in listOf("how is banknifty", "what are the levels on nifty", "which index do i usually mean", "buy banknifty first",
                 "first target on nifty", "use nifty when i dont name an index", "say that again"))
             assertNull(LeadIndex.asked(q), q)
-        for (q in listOf("which index do you mention first", LeadIndex.UNDO, "nifty pehle bolo", "say nifty first")) {
+        for (q in listOf("which index do you mention first", LeadIndex.UNDO, "nifty pehle bolo phir se", "say nifty first again",
+                "stop saying banknifty first") + NOT_UNDO) {
             val p = Ask.parse(q); assertNull(p.order, q); assertNull(p.command, q); assertFalse(Bundle.acts(q), q)
             assertNull(UsualIndex.asked(q), q)
         }
@@ -116,6 +129,8 @@ class LeadIndexTest {
         assertTrue(said.contains("BankNifty first") && said.contains(LeadIndex.UNDO) && said.contains(LeadIndex.ONLY_ORDER), said)
         assertTrue(LeadIndex.say(null).startsWith("I name Nifty first"))
         assertTrue(LeadIndex.sayReset(r).startsWith("Done, Boss: Nifty first again"))
+        // Locked: one neutral reply, the index learned (or whether one was) never named.
+        assertFalse(LeadIndex.RESET_LOCKED.contains("BankNifty") || LeadIndex.RESET_LOCKED.contains("already"), LeadIndex.RESET_LOCKED)
         assertTrue(LeadIndex.ledgerWhat(r).startsWith("BankNifty named first"))
         // In the ledger, with its undo; reset by "undo everything you learned this week"; never on a locked phone.
         val inputs = Learnings.Inputs(tally = tally(4, 3, 1))

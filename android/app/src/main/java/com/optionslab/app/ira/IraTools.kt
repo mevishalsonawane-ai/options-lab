@@ -1450,9 +1450,13 @@ internal object IraTools {
     fun firstIndexSay(): String = runCatching { com.optionslab.ira.LeadIndex.say(firstIndexRecord()) }
         .getOrDefault("I could not read my count of the index you ask about just now, Boss.")
 
-    /** "Mention Nifty first again": Nifty first, the count afresh from tomorrow. */
-    fun firstIndexReset(): String {
-        val said = runCatching { com.optionslab.ira.LeadIndex.sayReset(firstIndexRecord()) }.getOrDefault("Done, Boss: Nifty first again.")
+    /**
+     * "Mention Nifty first again": Nifty first, the count afresh from tomorrow. On a [locked] phone, one neutral reply
+     * that never names the index learned (nor whether one was).
+     */
+    fun firstIndexReset(locked: Boolean = false): String {
+        val said = if (locked) com.optionslab.ira.LeadIndex.RESET_LOCKED
+            else runCatching { com.optionslab.ira.LeadIndex.sayReset(firstIndexRecord()) }.getOrDefault("Done, Boss: Nifty first again.")
         firstIndexSave(com.optionslab.ira.LeadIndex.reset(com.optionslab.app.data.Market.today()))
         IraActivity.add("Naming Nifty first again (as asked).")
         return said
