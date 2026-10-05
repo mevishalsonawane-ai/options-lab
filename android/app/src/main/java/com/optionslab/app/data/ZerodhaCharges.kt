@@ -16,7 +16,7 @@ import java.time.LocalDate
  * Display only: no risk limit reads it.
  */
 object ZerodhaCharges {
-    private class Kept(val day: String, val key: String, val ids: Set<String>, val total: Double)
+    private class Kept(val day: String, val key: String, val ids: Set<String>, val total: Double, val sent: Int)
 
     @Volatile private var keptAnswer: Kept? = null
     /** "day|key" last asked about (answered or not), and when (wall clock ms; 0: never). */
@@ -53,7 +53,9 @@ object ZerodhaCharges {
     fun keptCovering(day: LocalDate, orderIds: Collection<String>): Double? {
         if (com.optionslab.app.BuildConfig.GOLD) return null
         val k = keptAnswer ?: return null
-        return k.total.takeIf { k.day == day.toString() && ExactCharges.covers(k.ids, orderIds) }
+        // An order the app sent since the ask (a strategy's, in the background) is not in the kept answer even when the
+        // kept trades have not caught up with it yet: the estimate is said then, never an old figure called exact.
+        return k.total.takeIf { k.day == day.toString() && k.sent == Broker.sentToday() && ExactCharges.covers(k.ids, orderIds) }
     }
 
     /**
@@ -76,10 +78,11 @@ object ZerodhaCharges {
             askedKey = dayKey
             askedAt = now
             val ids = bill.map { it.orderId }
+            val sent = Broker.sentToday()
             // A read with a real deadline ([Broker.within]): null on a failure or a timeout.
             val answer = Broker.within(15_000) { Broker.contractNote(ExactCharges.requestJson(bill)) } ?: return null
             val total = ExactCharges.total(answer, ids) ?: return null
-            keptAnswer = Kept(day.toString(), key, ids.toSet(), total)
+            keptAnswer = Kept(day.toString(), key, ids.toSet(), total, sent)
             return total
         } finally {
             asking.unlock()

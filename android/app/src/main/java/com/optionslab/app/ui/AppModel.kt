@@ -831,7 +831,11 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             val shown = (account.value as? Load.Done)?.value
             if (shown != null && shown.exactCharges == null) {
                 val exact = com.optionslab.app.data.ZerodhaCharges.exact(shown.orders)
-                if (exact != null && (account.value as? Load.Done)?.value === shown) account.value = Load.Done(shown.copy(exactCharges = exact))
+                if (exact != null) {
+                    // Only over the very read it was asked for: a newer read that landed meanwhile is never replaced by it.
+                    val current = account.value
+                    if ((current as? Load.Done)?.value === shown) account.compareAndSet(current, Load.Done(shown.copy(exactCharges = exact)))
+                }
             }
         }
     }

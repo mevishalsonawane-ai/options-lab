@@ -175,26 +175,29 @@ object Broker {
      * through the static-IP relay. No header, token or key is ever read here.
      */
     private suspend fun call(method: String, path: String, body: String? = null, auth: Boolean = true, raw: Boolean = false,
-                             json: Boolean = false, viaRelay: Boolean = false): Any {
+                             json: Boolean = false, viaRelay: Boolean = false, readOnly: Boolean = false): Any {
         val t0 = System.currentTimeMillis()
+        // [readOnly]: a POST that only reads (Zerodha's contract note): sent direct like a GET, and it changes nothing,
+        // so no kept read is dropped and no diary line is written for it unless it fails.
+        val write = method != "GET" && !readOnly
         val where = "$method ${path.substringBefore('?')}"
         val asked = if (body == null || json) "" else body.split('&').mapNotNull { kv ->
             val k = kv.substringBefore('='); if (k in DIAG_FIELDS) "$k: ${java.net.URLDecoder.decode(kv.substringAfter('='), "UTF-8")}" else null
         }.joinToString(" ", prefix = " {", postfix = "}").takeIf { it != " {}" }.orEmpty()
-        val route = if ((method != "GET" || viaRelay) && testEndpoint == null && Relay.enabled) " via relay" else ""
+        val route = if ((write || viaRelay) && testEndpoint == null && Relay.enabled) " via relay" else ""
         // A write (an order, a change, a cancel) changes the positions: the pass's shared read is dropped before it is
         // sent and again once it is answered, so no words-only check is given the book from before it.
-        if (method != "GET") passBook.drop()
+        if (write) passBook.drop()
         return try {
-            callInner(method, path, body, auth, raw, json, viaRelay).also { r ->
-                if (method != "GET") Diag.record("zerodha", "$where$asked$route -> ok ${(r as? JSONObject)?.optString("order_id")?.takeIf { it.isNotEmpty() }?.let { "order $it " } ?: ""}(${System.currentTimeMillis() - t0} ms)")
+            callInner(method, path, body, auth, raw, json, viaRelay, readOnly).also { r ->
+                if (write) Diag.record("zerodha", "$where$asked$route -> ok ${(r as? JSONObject)?.optString("order_id")?.takeIf { it.isNotEmpty() }?.let { "order $it " } ?: ""}(${System.currentTimeMillis() - t0} ms)")
             }
         } catch (e: Exception) {
             if (e !is kotlinx.coroutines.CancellationException)
                 Diag.record("zerodha", "$where$asked$route -> FAILED ${e.javaClass.simpleName}: ${e.message} (${System.currentTimeMillis() - t0} ms)")
             throw e
         } finally {
-            if (method != "GET") {
+            if (write) {
                 passBook.drop()
                 // Jarvis's kept account figures are dropped too (an order, a change, a cancel or a GTT, from any screen,
                 // a strategy or the guard): no answer is said from before it ([com.optionslab.app.ira.IraAccount.invalidate]).
@@ -204,14 +207,14 @@ object Broker {
     }
 
     private suspend fun callInner(method: String, path: String, body: String?, auth: Boolean, raw: Boolean,
-                                  json: Boolean, viaRelay: Boolean): Any {
+                                  json: Boolean, viaRelay: Boolean, readOnly: Boolean = false): Any {
         var attempt = 0
         while (true) {
             // Orders and every other write go through the static-IP relay when it is on (it throws if it
             // cannot connect, so nothing leaves from another IP); reads go direct ([viaRelay]: a read that
             // warms the order route).
             val test = testEndpoint
-            val relay = if ((method != "GET" || viaRelay) && test == null) Relay.proxy() else null
+            val relay = if (((method != "GET" && !readOnly) || viaRelay) && test == null) Relay.proxy() else null
             val url = URL((test?.base ?: Kite.API) + path)
             val c = (if (relay != null) url.openConnection(relay) else url.openConnection()) as HttpsURLConnection
             c.sslSocketFactory = test?.ssl ?: com.optionslab.app.security.KitePin.socketFactory
@@ -822,7 +825,7 @@ object Broker {
      * [body] being [com.optionslab.ira.ExactCharges.requestJson]. A read - it places, changes and cancels nothing - sent
      * as JSON the way [basketMargin] is. Its data array, as text ([com.optionslab.ira.ExactCharges.total] reads it).
      */
-    suspend fun contractNote(body: String): String = (call("POST", "/charges/orders", body, json = true) as JSONArray).toString()
+    suspend fun contractNote(body: String): String = (call("POST", "/charges/orders", body, json = true, readOnly = true) as JSONArray).toString()
 
     /**
      * The account as the guard judges it - positions, funds, today's order count - read in parallel (one
