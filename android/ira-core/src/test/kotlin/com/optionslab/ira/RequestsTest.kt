@@ -187,4 +187,24 @@ class RequestsTest {
         assertEquals(2L, Requests.named("the 30 one", two)?.id)
         assertIs<Requests.Pick.Ambiguous>(Requests.pick("yes orb", true, 1, null, two))
     }
+
+    @Test fun thePanelClockTicksOnlyWhenSomethingShownCanChange() {
+        // None waiting, or gold: no clock at all.
+        assertNull(Requests.tickIn(emptyList(), 0, false))
+        assertNull(Requests.tickIn(listOf(v(1, "a", lapses = 60_000)), 0, true))
+        // Only lapsed ones left: nothing shown, nothing to tick.
+        assertNull(Requests.tickIn(listOf(v(1, "a", lapses = 1_000)), 1_000, false))
+        // A countdown: each second.
+        assertEquals(1_000L, Requests.tickIn(listOf(v(1, "a"), v(2, "b", lapses = 600_000)), 0, false))
+        // None lapsing: at the next change of "Asked ...", checked against askedText itself.
+        val asks = listOf(v(1, "a", asked = 0))
+        for ((now, want) in listOf(10_000L to 50_000L, 125_000L to 55_000L, 3_700_000L to 3_500_000L)) {
+            val d = Requests.tickIn(asks, now, false)!!
+            assertEquals(want, d)
+            assertEquals(Requests.askedText(0, now), Requests.askedText(0, now + d - 1))
+            assertTrue(Requests.askedText(0, now) != Requests.askedText(0, now + d))
+        }
+        // The soonest of several asks.
+        assertEquals(5_000L, Requests.tickIn(listOf(v(1, "a", asked = 0), v(2, "b", asked = 5_000)), 115_000, false))
+    }
 }

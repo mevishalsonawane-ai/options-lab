@@ -186,6 +186,27 @@ object Requests {
         return "Lapses in ${s / 60}:" + (s % 60).toString().padStart(2, '0')
     }
 
+    /**
+     * The panel's clock (Battery, round 15): how long until anything the panel shows at [now] can change - null when
+     * nothing can (none waiting, or IraGoldAlgo). A countdown ("Lapses in 9:05") changes each second; with none lapsing
+     * only "Asked ..." moves: at 1 min, then each minute, then each hour. So no once-a-second redraw of an empty panel or
+     * of asks that do not lapse. A new or answered request recomposes the panel on its own (the hub's state).
+     */
+    fun tickIn(list: List<RequestView>, now: Long, gold: Boolean): Long? {
+        if (gold) return null
+        val open = list.filter { open(it, now) }
+        if (open.isEmpty()) return null
+        if (open.any { it.lapsesAt != null }) return 1_000L
+        return open.minOf { v ->
+            val e = now - v.askedAt
+            when {
+                e < 60_000L -> 60_000L - e
+                e < 3_600_000L -> 60_000L - e % 60_000L
+                else -> 3_600_000L - e % 3_600_000L
+            }
+        }
+    }
+
     /** Still waiting at [now]: not past its lapse time. */
     fun open(v: RequestView, now: Long): Boolean = v.lapsesAt == null || v.lapsesAt > now
 

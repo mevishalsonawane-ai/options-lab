@@ -46,9 +46,16 @@ fun RequestsPanel(onClose: () -> Unit) {
     val waiting by iraSlice { s -> IraHub.requestsOf(s) }
     val recent by IraHub.recentRequests().collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
-    // The countdowns tick each second while the panel is on screen.
-    com.optionslab.app.ui.PollWhileStarted { while (true) { now = System.currentTimeMillis(); delay(1_000) } }
     val gold = com.optionslab.app.BuildConfig.GOLD
+    // The clock runs only while the panel is on screen (started), and only as often as what it shows can change
+    // (Requests.tickIn): each second under a countdown, at the next "Asked ..." step otherwise, not at all with nothing
+    // waiting. A new or answered request restarts it (keyed on the list).
+    com.optionslab.app.ui.PollWhileStarted(waiting) {
+        while (true) {
+            now = System.currentTimeMillis()
+            delay(Requests.tickIn(waiting, now, gold) ?: break)
+        }
+    }
     val shown = Requests.shown(waiting, now, gold)
     LazyColumn(Modifier.fillMaxSize().background(p.paper), contentPadding = PaddingValues(14.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)) {
