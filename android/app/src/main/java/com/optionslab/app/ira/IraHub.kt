@@ -1064,11 +1064,15 @@ object IraHub {
         // (questions only), when that was asked in the last five minutes.
         val recent = System.currentTimeMillis() - lastAskAt < FOLLOW_MS
         lastAskAt = System.currentTimeMillis()
-        if (!understood && recent && !com.optionslab.ira.Sources.asked(q)) {
-            val prev = _state.value.messages.lastOrNull { !it.fromIra }?.text
-            runCatching { com.optionslab.ira.FollowUp.resolve(prev, q) }.getOrNull()?.takeIf { !lockedAccount(q, it) }?.let { full ->
-                _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, "$TOOK_AS\"$full\".")).takeLast(MAX_MESSAGES)) }
-                ask(full, understood = true)
+        // The same for fillers ("umm"), false starts ("I mean") and two questions in one breath (questions only: words that
+        // could act are never split or cleaned, and go on as said). Any part about the account on a locked phone: as said.
+        if (!understood && !com.optionslab.ira.Sources.asked(q)) {
+            val prev = if (recent) _state.value.messages.lastOrNull { !it.fromIra }?.text else null
+            val qs = runCatching { com.optionslab.ira.Understand.questions(prev, q) }.getOrNull()
+                ?.takeIf { it.isNotEmpty() && it != listOf(q) && it.none { p -> lockedAccount(q, p) } }
+            if (qs != null) {
+                _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, "$TOOK_AS\"${qs.joinToString("\" and \"")}\".")).takeLast(MAX_MESSAGES)) }
+                qs.forEach { ask(it, understood = true) }
                 return
             }
         }
