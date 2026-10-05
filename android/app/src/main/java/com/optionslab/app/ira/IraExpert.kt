@@ -74,12 +74,15 @@ internal object IraExpert {
         if (due.isEmpty()) return
         val aiLive = !IraNewsTrades.paperFirst
         val appLive = runCatching { com.optionslab.app.data.AppSettings.load().live }.getOrDefault(false)
-        for (who in due) {
-            val text = com.optionslab.ira.Graduation.say(who, records[who].orEmpty(), aiLive, appLive)
-            done += who.key
-            IraActivity.add("Told Boss ${who.whose} passed their paper test (once; nothing switched).")
-            JarvisPopup.show(c, "Boss, ${who.whose} passed their paper test", text); IraHub.note(text)
+        val tell = due.map { who -> who to com.optionslab.ira.Graduation.say(who, records[who].orEmpty(), aiLive, appLive) }
+        // Marked told BEFORE it is shown: a pop-up or note that throws must never bring the same note back every pass.
+        // Not saved (a vault fault): told on a later pass instead, never twice.
+        for ((who, _) in tell) done += who.key
+        if (runCatching { com.optionslab.app.security.SecurePrefs.put(GRADUATED, done.joinToString("|")) }.isFailure) return
+        for ((who, text) in tell) {
+            runCatching { IraActivity.add("Told Boss ${who.whose} passed their paper test (once; nothing switched).") }
+            runCatching { JarvisPopup.show(c, "Boss, ${who.whose} passed their paper test", text) }
+            runCatching { IraHub.note(text) }
         }
-        runCatching { com.optionslab.app.security.SecurePrefs.put(GRADUATED, done.joinToString("|")) }
     }
 }

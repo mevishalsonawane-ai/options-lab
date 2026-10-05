@@ -195,17 +195,28 @@ object IraHub {
         // question's lane or "forget everything" waits; the screen shows what there is (an empty page) meanwhile.
         val gate = CompletableDeferred<Unit>()
         val before = _state.value.let { st -> st.messages.mapTo(HashSet()) { it.id } to st.proposals.mapTo(HashSet()) { it.id } }
-        synchronized(loadLock) { loaded = gate; _ready.value = false; wipedWhileLoading = false }
+        synchronized(loadLock) { loaded = gate; _ready.value = false; wipedWhileLoading = false; stateReadFailed = false; bookReadFailed = false }
         bookFile = f
         stateFile = sf
         scope.launch(Dispatchers.IO) {
             try {
                 testLoadHold?.await()
-                val readBook = runCatching { Vault.readFileSteady(f)?.let { PatternBook.load(String(it, Charsets.UTF_8)) } }.getOrNull() ?: PatternBook()
-                val saved = runCatching { Vault.readFileSteady(sf)?.let { IraSaved.read(String(it, Charsets.UTF_8)) } }.getOrNull()
+                val bookRead = runCatching { Vault.readFileSteady(f)?.let { PatternBook.load(String(it, Charsets.UTF_8)) } }
+                val savedRead = runCatching { Vault.readFileSteady(sf)?.let { IraSaved.read(String(it, Charsets.UTF_8)) } }
+                val readBook = bookRead.getOrNull() ?: PatternBook()
+                val saved = savedRead.getOrNull()
                 synchronized(loadLock) {
                     // A later start in the same process (tests) reads again: this older read is dropped.
-                    if (loaded === gate) restore(readBook, saved, before.first, before.second)
+                    if (loaded === gate) {
+                        // A file that is there but could not be read is never written over (it may come back readable).
+                        if (bookRead.isFailure) { bookReadFailed = true; runCatching { com.optionslab.app.data.Diag.record("jarvis", "the pattern book could not be read; it is not saved over") } }
+                        if (savedRead.isFailure) { stateReadFailed = true; runCatching { com.optionslab.app.data.Diag.record("jarvis", "the saved conversation could not be read; it is not saved over") } }
+                        try { restore(readBook, saved, before.first, before.second) }
+                        catch (_: Exception) {
+                            stateReadFailed = true; bookReadFailed = true
+                            runCatching { com.optionslab.app.data.Diag.record("jarvis", "the saved conversation could not be put back; it is not saved over") }
+                        }
+                    }
                 }
             } finally {
                 synchronized(loadLock) { if (loaded === gate) _ready.value = true }
@@ -243,6 +254,12 @@ object IraHub {
     /** Completed once the latest [init]'s pattern book and saved conversation are read (completed before any init). */
     @Volatile private var loaded: CompletableDeferred<Unit> = CompletableDeferred<Unit>().apply { complete(Unit) }
     private val loadLock = Any()
+    /**
+     * The saved conversation/proposals/journal file (or the pattern book) is there but could not be read or put back:
+     * nothing is written over it until "forget everything" or the next start reads it (an empty memory never replaces it).
+     */
+    @Volatile private var stateReadFailed = false
+    @Volatile private var bookReadFailed = false
     /** The conversation was wiped while the saved one was being read: it does not come back. */
     @Volatile private var wipedWhileLoading = false
     private val _ready = MutableStateFlow(true)
@@ -272,6 +289,7 @@ object IraHub {
         val f = stateFile ?: return
         // Never before the saved conversation is read: an empty one would be written over it (the keeper saves after).
         if (!loaded.isCompleted) return
+        if (stateReadFailed) return
         val st = _state.value
         val tried = synchronized(tested) { tested.toList() }
         if (st.proposals.isEmpty() && st.journal.isEmpty() && st.messages.isEmpty() && tried.isEmpty()) { f.delete(); return }
@@ -1347,7 +1365,8 @@ object IraHub {
         // for the index Boss meant, and only that index noted ([com.optionslab.ira.UsualIndex]; never his words) - an index he
         // keeps meaning is then taken when he names none, and said so. A question only: never an order or a command, and
         // never while something waits for his yes or Confirm. Understanding only - nothing learned acts.
-        if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !understood && !cleaned) {
+        if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !understood && !cleaned &&
+            runCatching { !com.optionslab.ira.Bundle.acts(q) }.getOrDefault(false)) {
             val indexWaiting = synchronized(actions) { actions.isNotEmpty() }
             val meant = runCatching { IraTools.indexCorrection(q, indexWaiting) }.getOrNull()
             if (meant != null) {
@@ -1378,7 +1397,8 @@ object IraHub {
         // A market question naming no index, once Boss has corrected Jarvis to one index often enough
         // ([com.optionslab.ira.UsualIndex]): read for that index and said so ("BankNifty, as you usually mean, Boss") - a
         // question only, a named index always wins, never on a locked phone. Understanding only: nothing learned acts.
-        if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !understood && !cleaned) {
+        if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !understood && !cleaned &&
+            runCatching { !com.optionslab.ira.Bundle.acts(q) }.getOrDefault(false)) {
             val usualRead = runCatching { IraTools.indexReading(q, phoneLocked()) }.getOrNull()
             if (usualRead != null) {
                 _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, "$TOOK_AS\"${usualRead.second}\" - ${usualRead.first}")).takeLast(MAX_MESSAGES)) }
@@ -2477,7 +2497,11 @@ object IraHub {
         if (roomAsk != null) {
             _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
             if (phoneLocked()) { reply("Unlock the phone for that, Boss."); return true }
-            scope.launch(Dispatchers.IO) { reply(runCatching { IraHeadroom.answer(roomAsk) }.getOrElse { "I could not read your limits just now, Boss." }) }
+            scope.launch(Dispatchers.IO) {
+                val roomSaid = runCatching { IraHeadroom.answer(roomAsk) }.getOrElse { "I could not read your limits just now, Boss." }
+                // The Zerodha reads take seconds: locked by now, his account is not said (it may be overheard).
+                reply(if (phoneLocked()) "Unlock the phone for that, Boss." else roomSaid)
+            }
             return true
         }
         // "Which of my arms suits today?", "how do my arms do on days like today?", "aaj ke din kaun sa bot suit karta hai"
@@ -4419,6 +4443,8 @@ object IraHub {
         synchronized(tested) { tested.clear() }
         bookFile?.delete()
         stateFile?.delete()
+        // Boss chose to forget everything: the unreadable files are gone, so saving starts again.
+        stateReadFailed = false; bookReadFailed = false
         _state.update { State() }
     }
 
@@ -4428,6 +4454,7 @@ object IraHub {
 
     @Synchronized private fun save() {
         val f = bookFile ?: return
+        if (bookReadFailed) return
         runCatching { Vault.writeFile(f, book.save().toByteArray(Charsets.UTF_8)) }
     }
 

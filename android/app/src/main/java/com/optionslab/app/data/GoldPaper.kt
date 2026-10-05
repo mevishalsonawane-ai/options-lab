@@ -77,7 +77,7 @@ object GoldPaper {
     internal suspend fun replaceForTest(b: Book) {
         check(com.optionslab.app.BuildConfig.DEBUG) { "test seam" }
         GoldBooks.awaitLoaded()
-        lock.withLock { save(b) }
+        lock.withLock { readFailed = false; save(b) }
     }
 
     fun init(context: Context) {
@@ -86,7 +86,17 @@ object GoldPaper {
     }
 
     /** Reads the saved book (on [GoldBooks]' background thread; every change waits for it). */
-    internal fun load() { _book.value = runCatching { read() }.getOrNull() ?: Book() }
+    internal fun load() {
+        val r = runCatching { read() }
+        // A saved book that is there but could not be read is never written over by the minute passes (it may read
+        // back next time); the empty book shows meanwhile. Boss's own change (a switch, the lots, a reset) writes again.
+        readFailed = r.isFailure
+        if (r.isFailure) runCatching { Diag.record("gold", "${file.name} could not be read; it is not saved over") }
+        _book.value = r.getOrNull() ?: Book()
+    }
+
+    /** The saved book could not be read at the start: only Boss's own change writes over it ([load]). */
+    @Volatile private var readFailed = false
 
     fun now(): LocalDateTime = testNow ?: LocalDateTime.now(ZoneOffset.UTC)
 
@@ -316,10 +326,11 @@ object GoldPaper {
         runCatching { Diag.record("gold", "$title - $text") }
     }
 
-    private suspend fun edit(f: (Book) -> Book) { GoldBooks.awaitLoaded(); lock.withLock { save(f(_book.value)) } }
+    private suspend fun edit(f: (Book) -> Book) { GoldBooks.awaitLoaded(); lock.withLock { readFailed = false; save(f(_book.value)) } }
 
     private fun save(b: Book) {
         _book.value = b
+        if (readFailed) return
         if (::file.isInitialized) runCatching { Vault.writeFile(file, toJson(b).toString().toByteArray(Charsets.UTF_8)) }
     }
 

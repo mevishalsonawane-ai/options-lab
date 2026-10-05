@@ -173,13 +173,14 @@ object Diag {
 
     /** IraGoldAlgo: every arm's state, the price feed and what the phone allows in the background. No keys exist in this app. */
     internal fun gold(): String = buildString {
-        GoldBooks.awaitBlocking()
+        val booksRead = GoldBooks.awaitBlocking()
         val t = GoldPaper.now()
         val liq = GoldPaper.book.value
         val tr = GoldTrendPaper.book.value
         val dp = GoldDipPaper.book.value
         val ts = GoldTasPaper.book.value
         append("\n-- Gold --\n")
+        if (!booksRead) append("The saved paper books are still being read; the empty ones show below.\n")
         append("Now ${GoldPaper.when_(t)} · gold trading: ${com.optionslab.engine.gold.GoldLiquidity.inSession(t)}\n")
         append("Price ${liq.price?.let { "%.2f".format(Locale.ENGLISH, it) } ?: "none"} at ${liq.priceAt?.let { GoldPaper.when_(it) } ?: "-"} · feed delayed: ${GoldPaper.stale(liq, t)}\n")
         app?.let { c ->

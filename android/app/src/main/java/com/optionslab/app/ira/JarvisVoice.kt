@@ -201,10 +201,37 @@ class JarvisVoice : Service() {
         private val _state = MutableStateFlow(VoiceState())
         val state: StateFlow<VoiceState> = _state
 
+        /** Writes the durable settings to disk off the main thread. */
+        private val keeper = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+        /**
+         * A setting saved: readable at once, written to disk in the background. A [tightening] change (Google speech
+         * off, only-Boss on, listening off, mute on) must survive the app being killed a moment later - the older,
+         * looser value must never come back - so it is flushed to disk at once on a background thread, and written
+         * again once if that write failed. A loosening change may wait for the next background write.
+         */
+        private fun keep(values: Map<String, Any?>, tightening: Boolean) {
+            runCatching { com.optionslab.app.security.SecurePrefs.putAllSoon(values) }
+            if (!tightening) return
+            runCatching {
+                keeper.launch {
+                    val firstOk = runCatching { com.optionslab.app.security.SecurePrefs.flush() }.getOrDefault(false)
+                    if (!firstOk) {
+                        // Queue the whole current map again (it carries this value and any newer one) and wait for it.
+                        val secondOk = runCatching {
+                            com.optionslab.app.security.SecurePrefs.putAllSoon(emptyMap())
+                            com.optionslab.app.security.SecurePrefs.flush()
+                        }.getOrDefault(false)
+                        if (!secondOk) runCatching { com.optionslab.app.data.Diag.record("jarvis", "a safety setting could not be written to disk; it holds until the app closes") }
+                    }
+                }
+            }
+        }
+
         /** The owner's switch, kept on the phone: listening starts again when the app is opened. */
         var wanted: Boolean
             get() = runCatching { com.optionslab.app.security.SecurePrefs.getBoolean("jarvis.listen", false) }.getOrDefault(false)
-            set(v) { runCatching { com.optionslab.app.security.SecurePrefs.putAllSoon(mapOf("jarvis.listen" to v)) } }
+            set(v) { keep(mapOf("jarvis.listen" to v), tightening = !v) }
 
         /**
          * Battery saver for listening (Boss's switch, OFF by default: off, listening is exactly as before). On: with the
@@ -247,7 +274,7 @@ class JarvisVoice : Service() {
         /** Boss's choice (default off): Jarvis listens through the phone's speech service (Google), which may send speech to Google. */
         var googleSpeech: Boolean
             get() = runCatching { com.optionslab.app.security.SecurePrefs.getBoolean("jarvis.voice.google", false) }.getOrDefault(false)
-            set(v) { runCatching { com.optionslab.app.security.SecurePrefs.putAllSoon(mapOf("jarvis.voice.google" to v)) } }
+            set(v) { keep(mapOf("jarvis.voice.google" to v), tightening = !v) }
 
         /**
          * Boss's choice (default off, Boss 4 Oct: "hear only my voice"): with his voice taught, words in any other voice -
@@ -255,7 +282,7 @@ class JarvisVoice : Service() {
          */
         var onlyBoss: Boolean
             get() = runCatching { com.optionslab.app.security.SecurePrefs.getBoolean("jarvis.voice.onlyboss", false) }.getOrDefault(false)
-            set(v) { runCatching { com.optionslab.app.security.SecurePrefs.putAllSoon(mapOf("jarvis.voice.onlyboss" to v)) } }
+            set(v) { keep(mapOf("jarvis.voice.onlyboss" to v), tightening = v) }
 
         /** From the app on screen only (Android lets a microphone service start only then). */
         /** Started from the app on screen (Android then lets it use the microphone "while using the app"). */
@@ -365,7 +392,7 @@ class JarvisVoice : Service() {
         var muted: Boolean
             get() = runCatching { com.optionslab.app.security.SecurePrefs.getBoolean("jarvis.mute", false) }.getOrDefault(false) ||
                 System.currentTimeMillis() < mutedUntil
-            set(v) { runCatching { com.optionslab.app.security.SecurePrefs.putAllSoon(if (v) mapOf("jarvis.mute" to true) else mapOf("jarvis.mute" to false, "jarvis.mute.until" to null)) }
+            set(v) { keep(if (v) mapOf("jarvis.mute" to true) else mapOf("jarvis.mute" to false, "jarvis.mute.until" to null), tightening = v)
                 if (v) { instance?.get()?.hush(); JarvisSpeaker.stop() } }
 
         /** "Be quiet for 30 minutes": muted until this time (epoch ms), then speaking again by itself. */
@@ -373,8 +400,8 @@ class JarvisVoice : Service() {
 
         fun muteFor(minutes: Int) {
             // A timed quiet replaces a lasting mute: he speaks again by itself when it ends, as he says.
-            runCatching { com.optionslab.app.security.SecurePrefs.putAllSoon(mapOf("jarvis.mute" to false,
-                "jarvis.mute.until" to (System.currentTimeMillis() + minutes.coerceIn(1, 480) * 60_000L).toString())) }
+            keep(mapOf("jarvis.mute" to false,
+                "jarvis.mute.until" to (System.currentTimeMillis() + minutes.coerceIn(1, 480) * 60_000L).toString()), tightening = true)
             instance?.get()?.hush(); JarvisSpeaker.stop()
         }
 

@@ -48,9 +48,15 @@ object GoldBooks {
         }
     }
 
-    /** [awaitLoaded] for code that is not suspending; returns at once once read (the usual case). */
-    fun awaitBlocking() {
-        if (gate.isCompleted && _ready.value) return
-        kotlinx.coroutines.runBlocking { awaitLoaded() }
+    /**
+     * [awaitLoaded] for code that is not suspending; returns at once once read (the usual case). It may run on the main
+     * thread (the gold service's notification, diagnostics), so it waits at most [BLOCK_MS]: false when the books are
+     * not read by then (the caller goes on with what there is).
+     */
+    fun awaitBlocking(): Boolean {
+        if (gate.isCompleted && _ready.value) return true
+        return kotlinx.coroutines.runBlocking { kotlinx.coroutines.withTimeoutOrNull(BLOCK_MS) { awaitLoaded() } } != null
     }
+
+    private const val BLOCK_MS = 3_000L
 }
