@@ -50,7 +50,9 @@ object TradeCase {
      * Everything the case is built from: [now] what the trade check reads ([TradeCheck.Now]), [at] the time now,
      * [bars] the indices' and India VIX's 1-minute candles on the phone, [upcoming] the calendar ahead, [calibration]
      * Jarvis's own scored ideas, [regime] the market's regime now and [ivRank] how dear options are (null: not known),
-     * [mine] Boss's own side (null on a locked phone), [locked] the phone is locked (Boss's day is then never said).
+     * [mine] Boss's own side (null on a locked phone), [locked] the phone is locked (Boss's day is then never said),
+     * [chain] the option chain's facts ([ChainIntel.caseFacts]: the straddle's implied move, the biggest OI, the skew,
+     * with the chain's time; market data, so said on a locked phone too).
      */
     data class Input(
         val now: TradeCheck.Now,
@@ -62,9 +64,13 @@ object TradeCase {
         val ivRank: Double? = null,
         val mine: Mine? = null,
         val locked: Boolean = false,
+        val chain: List<String> = emptyList(),
     )
 
-    /** The case: how the market is moving ([reads]), facts each way, what stands out, what to watch. */
+    /** At most this many option-chain facts. */
+    const val MAX_CHAIN = 3
+
+    /** The case: how the market is moving ([reads]), facts each way, what stands out, the option chain's facts, what to watch. */
     data class Case(
         val reads: List<String>,
         val steady: List<String>,
@@ -72,6 +78,7 @@ object TradeCase {
         val standout: List<String>,
         val watch: List<String>,
         val locked: Boolean,
+        val chain: List<String> = emptyList(),
     ) {
         fun say(): String {
             val parts = ArrayList<String>()
@@ -80,6 +87,7 @@ object TradeCase {
             if (careful.isNotEmpty()) parts += "On the careful side: " + careful.joinToString(" ")
             if (steady.isNotEmpty()) parts += "On the steady side: " + steady.joinToString(" ")
             if (standout.isNotEmpty()) parts += "What stands out about today: " + standout.joinToString(" ")
+            if (chain.isNotEmpty()) parts += "From the option chain: " + chain.joinToString(" ")
             if (watch.isNotEmpty()) parts += "What I'd watch: " + watch.joinToString("; ") { it.trimEnd('.') } + "."
             if (locked) parts += LOCKED_NOTE
             parts += YOURS
@@ -224,7 +232,7 @@ object TradeCase {
             .forEach { watch += "coming up: " + Events.line(it, today).removePrefix("Event ").trimEnd('.') }
 
         return Case(n.reads, (steady + basics).distinct().take(MAX_STEADY), careful.distinct().take(MAX_CAREFUL),
-            standout.take(MAX_STANDOUT), watch.distinct().take(MAX_WATCH), i.locked)
+            standout.take(MAX_STANDOUT), watch.distinct().take(MAX_WATCH), i.locked, i.chain.distinct().take(MAX_CHAIN))
     }
 
     /** Boss's own side: his goals, his rules, what he told about himself and his habits around a trade. */

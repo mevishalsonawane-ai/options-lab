@@ -1188,6 +1188,18 @@ object IraHub {
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, GOLD_TALK_ONLY)).takeLast(MAX_MESSAGES)) }
             return
         }
+        // "Where is the most call writing?", "how has OI shifted since morning?", "are puts dearer than calls?", "what's the
+        // expected move by expiry from the straddle?": the option chain read beyond PCR and max pain ([com.optionslab.ira.ChainIntel]),
+        // every number from the chain with its time. Market data only (fine on a locked phone); words only, never advice.
+        // (Before the market answers: the VIX's expected range must not take "expected move by expiry".)
+        val chainAsk = if (parsed.order == null && parsed.command == null && !com.optionslab.app.BuildConfig.GOLD)
+            runCatching { com.optionslab.ira.ChainIntel.asked(q) }.getOrNull() else null
+        if (chainAsk != null) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            val markets = parsed.markets
+            scope.launch { reply(runCatching { chainIntel(chainAsk, markets) }.getOrElse { "I could not read the option chain just now, Boss." }) }
+            return
+        }
         // "Make the case", "pros and cons of trading now", "talk me through it": the trade check reasoned out, facts both
         // ways (Boss's own day, goals and rules only on an unlocked phone). Words only; the decision is Boss's. (Before the
         // other answers: these whole questions are this, and the glossary or a plan must not read "explain" or "and" in them.)
@@ -2452,11 +2464,37 @@ object IraHub {
         }.getOrNull()
         val upcoming = runCatching { IraEvents.upcoming(com.optionslab.ira.TradeCase.AHEAD_DAYS) }.getOrDefault(emptyList())
         val calibration = runCatching { IraNewsTrades.calibration() }.getOrDefault(emptyList()) + runCatching { IraSolo.calibration() }.getOrDefault(emptyList())
+        // The Nifty option chain's facts (the straddle's implied move, the biggest OI, the skew), with the chain's time:
+        // read afresh when it comes quickly, else the last read kept today. Market data, so said on a locked phone too.
+        val chainFacts = runCatching {
+            withTimeoutOrNull(CASE_CHAIN_MS) { IraAccount.chain("NIFTY") }
+            val today = com.optionslab.app.data.Market.today()
+            IraAccount.chainBook.latest("NIFTY")?.takeIf { it.at.toLocalDate() == today }
+                ?.let { com.optionslab.ira.ChainIntel.caseFacts(it, today) }
+        }.getOrNull().orEmpty()
         return com.optionslab.ira.TradeCase.build(com.optionslab.ira.TradeCase.Input(
             now = now, at = LocalDateTime.now(IST), bars = histories.mapValues { it.value.bars }, upcoming = upcoming,
             calibration = calibration, regime = runCatching { IraStudy.regimeOf(IraMarket.NIFTY) }.getOrNull(),
-            mine = mine, locked = locked,
+            mine = mine, locked = locked, chain = chainFacts,
         )).say()
+    }
+
+    /** "Make the case" waits at most this long for a fresh option chain. */
+    private const val CASE_CHAIN_MS = 8_000L
+
+    /**
+     * "Where is the most call writing?", "how has OI shifted since morning?", "what's the IV skew?", "the expected move
+     * by expiry from the straddle?" ([com.optionslab.ira.ChainIntel]): the chain read afresh, compared with the day's
+     * first read kept in memory. The chain's own numbers with its time (and its age when old); never advice.
+     */
+    private suspend fun chainIntel(a: com.optionslab.ira.ChainIntel.Ask, markets: List<IraMarket>): String {
+        val u = com.optionslab.ira.ChainIntel.underlying(markets) ?: return com.optionslab.ira.ChainIntel.NOT_HERE
+        val name = IraMarket.valueOf(u).label
+        withTimeoutOrNull(25_000) { IraAccount.chain(u) } ?: return "The $name option chain did not load just now, Boss."
+        val now = IraAccount.chainBook.latest(u) ?: return "The $name option chain did not load just now, Boss."
+        val today = com.optionslab.app.data.Market.today()
+        val note = runCatching { IraTools.chainNote(u) }.getOrNull()
+        return listOfNotNull(note, com.optionslab.ira.ChainIntel.answer(a, now, IraAccount.chainBook.first(u, today), today)).joinToString(" ")
     }
 
     /**

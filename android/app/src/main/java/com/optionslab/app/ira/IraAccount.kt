@@ -35,17 +35,31 @@ internal object IraAccount {
     /** A Zerodha read waits at most this long; a slow one is left out and said so. */
     private const val ZERODHA_MS = 8_000L
 
+    /**
+     * Today's reads of each option chain, in memory only (never saved): "how has OI shifted since morning?" compares
+     * the newest with the day's first ([com.optionslab.ira.ChainIntel]). Market data only.
+     */
+    val chainBook = com.optionslab.ira.ChainIntel.Book()
+
     /** The option chain of [u] (nearest expiry, the strikes near the money) as the Options tab prices it, or null. */
     suspend fun chain(u: String): com.optionslab.engine.options.ChainSnapshot? = runCatching {
         val lc = com.optionslab.app.data.Market.liveChain(u, near = 12)
         // The minute its data is from (a quote snapshot's minute, else the end of the newest 1-minute bar), for its age.
-        runCatching {
+        val seen: java.time.LocalDateTime? = runCatching {
             val minute = lc.pricedAt ?: lc.series.mapNotNull { it.minutes.lastOrNull() }.maxOrNull()?.plus(1)
-            IraTools.chainSeen(u, minute?.let { com.optionslab.app.data.Market.today().atStartOfDay().plusMinutes(it.toLong()) })
-        }
+            val at = minute?.let { com.optionslab.app.data.Market.today().atStartOfDay().plusMinutes(it.toLong()) }
+            IraTools.chainSeen(u, at)
+            at
+        }.getOrNull()
         val symbols = lc.contracts.associate { (it.strike to it.right) to it.tradingSymbol }
         val rows = com.optionslab.app.data.OiBaseline.apply(com.optionslab.engine.options.ChainSnapshot.rowsFrom(lc.series, symbols, lc.lotSize))
-        com.optionslab.engine.options.ChainSnapshot.of(u, lc.expiry, lc.spot, lc.lotSize, rows, com.optionslab.app.data.Market.now())
+        val snap = com.optionslab.engine.options.ChainSnapshot.of(u, lc.expiry, lc.spot, lc.lotSize, rows, com.optionslab.app.data.Market.now())
+        // Kept to compare with later in the day, with the time its data is from (else the minute it was read).
+        runCatching {
+            val at = seen ?: com.optionslab.app.data.Market.now().toLocalDateTime().withSecond(0).withNano(0)
+            chainBook.keep(com.optionslab.ira.ChainIntel.read(snap, at))
+        }
+        snap
     }.getOrNull()
 
     /** [markets]: the indices the question names (the chain of Nifty and BankNifty when none). */
