@@ -22,6 +22,7 @@ object BatteryNow {
             watch = step > 0 || Heartbeat.alivePulse > 0,
             watchStepSec = step.takeIf { it > 0 },
             wordsQuiet = runCatching { Tasks.wordsQuietNow() }.getOrNull(),
+            newsAskedToday = jarvis && runCatching { com.optionslab.app.ira.IraHub.newsAskedToday() }.getOrDefault(false),
             stream = runCatching { com.optionslab.app.data.KiteStream.status.value.name }.getOrDefault("OFF"),
             streamTokens = runCatching { com.optionslab.app.data.KiteStream.following() }.getOrDefault(0),
             modelLoaded = jarvis && runCatching { com.optionslab.app.ira.IraModel.state.value.loaded }.getOrDefault(false),

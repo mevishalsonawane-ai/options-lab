@@ -138,7 +138,7 @@ object Paper {
     @Volatile private var tickCandles: Map<String, Pair<Long, Quote>> = emptyMap()
 
     /** How old a price [tick] read may be when [stopPrice] hands it on (the same pass's next step, never a later pass). */
-    const val TICK_PRICE_MS = 2_000L
+    const val TICK_PRICE_MS = com.optionslab.ira.StopPrice.TICK_PRICE_MS
 
     /**
      * Battery (round 6): the price for a trailing stop in the same watch pass, right after [tick]. Exactly what
@@ -149,9 +149,14 @@ object Paper {
      * fresh read, as before.
      */
     suspend fun stopPrice(c: Contract): Double? {
-        runCatching { streamQuote(c) }.getOrNull()?.let { live -> remember(c.symbol, live); return live.ltp }
-        tickCandles[c.symbol]?.let { (readAt, read) -> if (System.currentTimeMillis() - readAt in 0L until TICK_PRICE_MS) return read.ltp }
-        return lastPrice(c)
+        // Round 7: the choice is [com.optionslab.ira.StopPrice.source] (pure, tested: never a read 2 s old or from a past pass).
+        val live = runCatching { streamQuote(c) }.getOrNull()
+        val tickRead = tickCandles[c.symbol]
+        return when (com.optionslab.ira.StopPrice.source(live != null, tickRead?.first, System.currentTimeMillis())) {
+            com.optionslab.ira.StopPrice.Source.STREAM -> live?.let { q -> remember(c.symbol, q); q.ltp } ?: lastPrice(c)
+            com.optionslab.ira.StopPrice.Source.TICK_READ -> tickRead?.second?.ltp ?: lastPrice(c)
+            com.optionslab.ira.StopPrice.Source.FRESH -> lastPrice(c)
+        }
     }
 
     /** The last price read for each symbol and when (the screen re-prices every few seconds). */
@@ -324,7 +329,7 @@ object Paper {
         // The candle prices this pass read itself, kept for [stopPrice] (the stream's ticks are read afresh there).
         tickCandles = syms.mapNotNull { sym ->
             val got = q[Sandbox.key(sym, "NFO")] ?: return@mapNotNull null
-            candleQuotes[sym]?.takeIf { it.second === got }?.let { sym to it }
+            candleQuotes[sym]?.takeIf { com.optionslab.ira.StopPrice.handedOn(got, it.second) }?.let { sym to it }
         }.toMap()
         synchronized(this) {
             val b = book()

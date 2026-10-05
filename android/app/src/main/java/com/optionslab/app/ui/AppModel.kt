@@ -1482,7 +1482,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     /** The last chain per underlying, shown at once while a fresh one is priced behind it. */
     private val toolsCache = java.util.concurrent.ConcurrentHashMap<String, Pair<com.optionslab.engine.options.ChainSnapshot, String>>()
 
-    fun loadTools(underlying: String, quiet: Boolean = false) {
+    /** [reuseRecent]: a chain this process read under 5 minutes ago is shown instead of pricing it again (app start only). */
+    fun loadTools(underlying: String, quiet: Boolean = false, reuseRecent: Boolean = false) {
         val cached = toolsCache[underlying]
         if (cached != null) { tools.value = Load.Done(cached.first); toolsSource.value = cached.second + " · refreshing" }
         else if (!quiet || tools.value !is Load.Done) tools.value = Load.Busy("Pricing the $underlying chain")
@@ -1492,7 +1493,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         toolsJob = viewModelScope.launch(Dispatchers.IO) {
             tools.value = try {
                 if (_settings.value.live && !com.optionslab.app.data.Broker.loggedIn) error("LIVE mode: log in to Zerodha for today to price the chain.")
-                val lc = Market.liveChain(underlying, near = 12)
+                // Battery (round 7): at app start, a chain read in the last 5 minutes (Jarvis's pass, a question) is not priced again.
+                val lc = (if (reuseRecent) Market.recentChain(underlying, 12) else null) ?: Market.liveChain(underlying, near = 12)
                 val symbols = lc.contracts.associate { (it.strike to it.right) to it.tradingSymbol }
                 val rows = com.optionslab.app.data.OiBaseline.apply(com.optionslab.engine.options.ChainSnapshot.rowsFrom(lc.series, symbols, lc.lotSize))
                 val source = lc.source + (lc.pricedAt?.let { " · %02d:%02d".format(it / 60, it % 60) } ?: "")

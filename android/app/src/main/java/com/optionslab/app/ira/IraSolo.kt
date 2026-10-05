@@ -441,12 +441,15 @@ internal object IraSolo {
 
     private suspend fun manage(t: T, list: List<T>, today: LocalDate, now: Int) {
         val m = IraMarket.valueOf(t.market)
-        val held = runCatching { Paper.snapshot().positions.positions.any { it.symbol == t.symbol && it.quantity != 0 } }.getOrDefault(true)
+        // Read fresh, as before (it decides Solo's exit); Battery (round 7): the same read gives the trade book below, which
+        // read the whole account again moments later (each read downloads every held contract's day of candles).
+        val soloBook = runCatching { Paper.snapshot() }.getOrNull()
+        val held = soloBook?.positions?.positions?.any { it.symbol == t.symbol && it.quantity != 0 } ?: true
         if (!held) {
             // Closed outside Solo (its safety stop or the 15:15 square-off): the newest sell today is the exit. When no
             // sell is seen (settled overnight), it is counted at the safety stop - the worst it could have been.
             val sold = if (t.day == today.toString())
-                runCatching { Paper.snapshot().trades.firstOrNull { it.symbol == t.symbol && it.action == "SELL" }?.price }.getOrNull() else null
+                soloBook?.trades?.firstOrNull { it.symbol == t.symbol && it.action == "SELL" }?.price else null
             // Closed by its stop-loss: reviewed like any other exit.
             val byStop = sold != null && sold <= t.entry * (1 - STOP_LOSS) + 0.1
             val lesson = if (!byStop) null else runCatching {

@@ -875,8 +875,12 @@ object IraHub {
         val guarded = runCatching { com.optionslab.app.data.Protections.active() }.getOrNull()?.filter { it.stop != null || it.trail != null }
             ?.map { (if (it.live) "L:" else "P:") + it.symbol }?.toMutableSet() ?: return
         val open = ArrayList<Pair<com.optionslab.ira.Rescue.Open, String>>()
-        runCatching { com.optionslab.app.data.Paper.snapshot().positions.positions.filter { it.quantity != 0 }
-            .forEach { open += com.optionslab.ira.Rescue.Open(it.symbol, false, it.quantity, it.averagePrice, it.ltp) to it.product } }
+        // Battery (round 7): the paper account read once, fresh, for both its positions here and its stop orders below (they
+        // read it twice, moments apart: each read downloads every held contract's day of candles without a Zerodha session).
+        // The stop priced from it and the "set alone" check further down read as before.
+        val paperBook = runCatching { com.optionslab.app.data.Paper.snapshot() }.getOrNull()
+        runCatching { paperBook?.positions?.positions?.filter { it.quantity != 0 }
+            ?.forEach { open += com.optionslab.ira.Rescue.Open(it.symbol, false, it.quantity, it.averagePrice, it.ltp) to it.product } }
         // Zerodha reads with a deadline (this runs in the risk pass): slow or failed, the live positions wait for the next pass.
         // [liveRead]: Zerodha's positions and stop orders were both read this pass. When not, the live positions' "L:" first-
         // seen times are kept (a flaky read never restarts their two-minute grace, so the guard still gets to them).
@@ -894,8 +898,8 @@ object IraHub {
             synchronized(unguardedSince) { if (liveRead) unguardedSince.clear() else unguardedSince.keys.removeAll { !it.startsWith("L:") } }
             return
         }
-        runCatching { com.optionslab.app.data.Paper.snapshot().orders.orders.filter { o -> o.priceType.uppercase() in setOf("SL", "SL-M") &&
-            o.status.lowercase() !in setOf("complete", "cancelled", "rejected") }.forEach { guarded += "P:" + it.symbol } }
+        runCatching { paperBook?.orders?.orders?.filter { o -> o.priceType.uppercase() in setOf("SL", "SL-M") &&
+            o.status.lowercase() !in setOf("complete", "cancelled", "rejected") }?.forEach { guarded += "P:" + it.symbol } }
         if (com.optionslab.app.data.Broker.loggedIn) {
             val liveOrders = com.optionslab.app.data.Broker.within(8_000) { com.optionslab.app.data.Broker.orders() }
             // Zerodha's stop orders not read in time: no live position is called bare this pass (never a stop offered on
@@ -1074,7 +1078,8 @@ object IraHub {
         val key = "jarvis.expiry.preview"
         if (com.optionslab.app.security.SecurePrefs.getString(key) == today.toString()) return
         val names = ArrayList<String>()
-        runCatching { com.optionslab.app.data.Paper.snapshot().positions.positions.filter { it.quantity != 0 }.forEach { p ->
+        // Words only (names and quantities, never a price): a price read in the last 20 s is shared (Battery, round 7).
+        runCatching { com.optionslab.app.data.Paper.snapshot(com.optionslab.app.data.Paper.SHARED_QUOTE_MS).positions.positions.filter { it.quantity != 0 }.forEach { p ->
             if (com.optionslab.app.data.Paper.contractOf(p.symbol)?.expiry == today) names += "paper ${p.symbol} (${p.quantity})" } }
         if (com.optionslab.app.data.Broker.loggedIn) runCatching {
             val ins = com.optionslab.app.data.Broker.cachedInstruments().orEmpty().associateBy { it.tradingSymbol }
@@ -1850,7 +1855,7 @@ object IraHub {
             runCatching { com.optionslab.ira.NewsDesk.asked(q) }.getOrNull() else null
         // Battery (round 6): a news question today keeps the background news at its quiet pace (else slower, screen off and
         // nothing held: [com.optionslab.ira.WordsPace.newsDueUnasked]).
-        if (Topic.NEWS in parsed.topics || deskAsk != null) newsAskedOn = LocalDate.now(IST)
+        if (Topic.NEWS in parsed.topics || deskAsk != null) noteNewsAsked()
         // A news question with no recent headlines on the phone: the feeds are read first (8 seconds at most), then answered.
         if ((Topic.NEWS in parsed.topics || deskAsk != null) && testHistories == null && System.currentTimeMillis() - newsCheckedAt > 3 * 60_000 && online() &&
             _state.value.newsAt?.isBefore(Instant.now().minusSeconds(NEWS_EVERY_MINUTES * 60)) != false) {
@@ -3644,10 +3649,33 @@ object IraHub {
 
     /** When the news was last read for a question (so a question waits for the feeds at most once in 3 minutes). */
     @Volatile private var newsCheckedAt = 0L
-    /** The day Boss last asked about the news (in memory: after a restart the background news is read at the slower quiet pace until he asks). */
+    /**
+     * The day Boss last asked about the news. Battery (round 7): kept in the vault as the day alone (no words, no time),
+     * written at most once a day in the background ([com.optionslab.app.security.SecurePrefs.putAllSoon]) and read back
+     * lazily on the first check after a restart - so a restart no longer drops the quiet pace to the slower unasked one.
+     */
     @Volatile private var newsAskedOn: LocalDate? = null
+    @Volatile private var newsAskedRead = false
+    private const val NEWS_ASKED_KEY = "jarvis.news.asked.day"
+
     /** Has Boss asked about the news today? */
-    fun newsAskedToday(): Boolean = newsAskedOn == LocalDate.now(IST)
+    fun newsAskedToday(): Boolean {
+        if (!newsAskedRead) {
+            newsAskedRead = true
+            val kept = runCatching { com.optionslab.app.security.SecurePrefs.getString(NEWS_ASKED_KEY)?.let { d -> LocalDate.parse(d) } }.getOrNull()
+            val seen = newsAskedOn
+            if (kept != null && (seen == null || kept.isAfter(seen))) newsAskedOn = kept
+        }
+        return newsAskedOn == LocalDate.now(IST)
+    }
+
+    /** A news question now: the day noted (written only when it changes, so once a day). */
+    private fun noteNewsAsked() {
+        val today = LocalDate.now(IST)
+        if (newsAskedOn == today) return
+        newsAskedOn = today
+        runCatching { com.optionslab.app.security.SecurePrefs.putAllSoon(mapOf(NEWS_ASKED_KEY to today.toString())) }
+    }
 
     /** The feeds read now, whatever the usual 5-minute pace (for a news question). */
     private suspend fun freshNews() {

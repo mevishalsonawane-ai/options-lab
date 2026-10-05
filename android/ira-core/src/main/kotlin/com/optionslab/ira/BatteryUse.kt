@@ -95,7 +95,14 @@ object BatteryUse {
         val listenMinutes: Long? = null,
         /** ...and the speech recognizer's turns in the last hour (each one wakes the microphone and the recognizer). */
         val turnsLastHour: Int? = null,
+        /** Boss asked about the news today: the quiet pace reads it every [WordsPace.QUIET_NEWS_MS], else [WordsPace.UNASKED_NEWS_MS]. */
+        val newsAskedToday: Boolean = false,
     )
+
+    /** The quiet pace's news read in words: what [WordsPace.newsDueUnasked] does now ("news every 20 min until you ask about it today"). */
+    fun quietNews(s: Snapshot): String =
+        if (s.newsAskedToday) "news every ${WordsPace.QUIET_NEWS_MS / 60_000} min"
+        else "news every ${WordsPace.UNASKED_NEWS_MS / 60_000} min until you ask about it today"
 
     /** Listening's cost in words ("running 7 h 20 min, 212 recognizer turns in the last hour"), null when not known. */
     fun listenCost(s: Snapshot): String? {
@@ -111,7 +118,7 @@ object BatteryUse {
             (listenCost(s)?.let { "; $it" } ?: "") + ")"),
         "order watch " + (if (!s.watch) "not running" else s.watchStepSec?.let { "every $it s" } ?: "running") + when (s.wordsQuiet.takeIf { s.watch }) {
             null -> ""
-            true -> " (Jarvis's words quiet: slow checks every ${WordsPace.QUIET_SLOW_MS / 60_000} min, news every ${WordsPace.QUIET_NEWS_MS / 60_000} min)"
+            true -> " (Jarvis's words quiet: slow checks every ${WordsPace.QUIET_SLOW_MS / 60_000} min, ${quietNews(s)})"
             false -> " (Jarvis's words every round)"
         },
         "live stream ${s.stream}" + if (s.stream != "OFF") " (${s.streamTokens} instruments)" else "",
@@ -178,7 +185,7 @@ object BatteryUse {
  * nothing is held or armed (no position, no open ticket, no strategy run, no ORB arm) - [quiet] - the slow group (the
  * goals, Boss's own rules, the paper tests, the day target, stale trades, the bots' switches: bookkeeping and remarks,
  * none bound to the minute) runs every [QUIET_SLOW_MS] instead of every round, and the news is read every
- * [QUIET_NEWS_MS] instead of every 5 minutes. The safety words (a position eating the loss limit, MIS at 15:10, the
+ * [QUIET_NEWS_MS] instead of every 5 minutes ([UNASKED_NEWS_MS] until Boss asks about the news that day, round 6). The safety words (a position eating the loss limit, MIS at 15:10, the
  * position health check, the expiry heads-up, the feed or relay stopped, overtrading, a bot misbehaving, the login nudge)
  * and everything time-bound (the candle expert's closes, the agenda's items, the gap, the day plan, Boss's usual
  * question, a sharp move) run every round as before; nothing here touches a stop, a target, an exit or an order. Pure.
@@ -212,6 +219,50 @@ object WordsPace {
     fun newsDueUnasked(quiet: Boolean, askedToday: Boolean, nowMs: Long, lastNewsMs: Long?): Boolean =
         if (!quiet || askedToday) newsDue(quiet, nowMs, lastNewsMs)
         else lastNewsMs == null || nowMs < lastNewsMs || nowMs - lastNewsMs >= UNASKED_NEWS_MS
+}
+
+/**
+ * Battery (round 7): the price a trailing paper stop is moved on ([Protection.next] only ever tightens it). The stream's
+ * tick when there is one (read now, no network); else the candle price the watch pass's own paper tick read for that very
+ * symbol under [TICK_PRICE_MS] ago - the price the stop orders were just checked against; anything else (older, read by
+ * someone other than the tick, a clock that went back, or a stream tick at the tick's read) a fresh read, as before
+ * round 6. Never a price from an earlier pass: each pass replaces the tick's reads whole, and passes are 15 s apart. Pure.
+ */
+object StopPrice {
+    enum class Source { STREAM, TICK_READ, FRESH }
+
+    /** How old the tick's own candle read may be (the same pass's next step; the candle feed moves once a minute). */
+    const val TICK_PRICE_MS = 2_000L
+
+    /**
+     * Which price the stop takes. [hasStream]: a stream tick for the symbol now. [tickReadAtMs]: when the tick read this
+     * symbol's candles itself (null: it did not, or it was handed the stream's tick then).
+     */
+    fun source(hasStream: Boolean, tickReadAtMs: Long?, nowMs: Long): Source = when {
+        hasStream -> Source.STREAM
+        tickReadAtMs != null && nowMs - tickReadAtMs in 0L until TICK_PRICE_MS -> Source.TICK_READ
+        else -> Source.FRESH
+    }
+
+    /**
+     * Does the tick hand on its read of a symbol? Only when the quote the tick priced with ([tickQuote]) is the very candle
+     * read the feed last kept for it ([lastCandleRead], the same object): a stream tick, or a candle read made by another
+     * caller in between, is never handed on.
+     */
+    fun handedOn(tickQuote: Any?, lastCandleRead: Any?): Boolean = tickQuote != null && tickQuote === lastCandleRead
+}
+
+/**
+ * Battery (round 7): the Options tab's chain priced in the background at app start reuses a chain this process read in
+ * the last [MAX_AGE_MS] (the 15-minute Jarvis pass, a question, the tab itself) instead of pricing it again - about 50
+ * downloads of a contract's whole day of candles without a Zerodha session. Only the same index, the same strike count and
+ * the same mode (paper or Live); the tab still prices afresh when it is opened. Pure.
+ */
+object StartChain {
+    const val MAX_AGE_MS = 5 * 60_000L
+
+    fun reuse(readAtMs: Long?, nowMs: Long, sameMode: Boolean): Boolean =
+        sameMode && readAtMs != null && nowMs - readAtMs in 0L until MAX_AGE_MS
 }
 
 /**

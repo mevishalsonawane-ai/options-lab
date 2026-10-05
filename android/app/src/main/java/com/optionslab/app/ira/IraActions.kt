@@ -378,19 +378,23 @@ internal object IraActions {
         return com.optionslab.ira.Verify.say(result, problem, checked = true) + (note?.let { " $it" } ?: "")
     }
 
-    /** The facts [need] names, read from the app now (one that cannot be read stays null: not judged). */
+    /**
+     * The facts [need] names, read from the app now (one that cannot be read stays null: not judged). Battery (round 7):
+     * counts only - the paper book is read as it is now, but a price read in the last 20 s is shared (this checks Jarvis's
+     * own work twice after an action, words only; the action itself priced fresh).
+     */
     private suspend fun facts(need: Set<String>): com.optionslab.ira.Verify.Facts {
         val s = runCatching { AppSettings.load() }.getOrNull()
         val live = s?.live == true
         fun <T> read(name: String, f: () -> T): T? = if (name in need) runCatching(f).getOrNull() else null
         // Both accounts: a close and the emergency exit close paper and Zerodha positions alike.
         val positions = if ("positions" in need) runCatching {
-            com.optionslab.app.data.Paper.snapshot().positions.positions.count { it.quantity != 0 } +
+            com.optionslab.app.data.Paper.snapshot(com.optionslab.app.data.Paper.SHARED_QUOTE_MS).positions.positions.count { it.quantity != 0 } +
                 (if (Broker.loggedIn) Broker.positionBook().net.count { it.open } else 0)
         }.getOrNull() else null
         val orders = if ("orders" in need) runCatching {
             if (live) com.optionslab.app.data.Broker.orders().count { it.working }
-            else com.optionslab.app.data.Paper.snapshot().orders.orders.count { it.status.lowercase() !in setOf("complete", "cancelled", "rejected") }
+            else com.optionslab.app.data.Paper.snapshot(com.optionslab.app.data.Paper.SHARED_QUOTE_MS).orders.orders.count { it.status.lowercase() !in setOf("complete", "cancelled", "rejected") }
         }.getOrNull() else null
         val armed = if ("armed" in need) runCatching { com.optionslab.app.data.OrbArms.view().arms.any { it.armed } }.getOrNull() else null
         val bots = if ("bots" in need) runCatching { com.optionslab.app.data.Strategies.stoppedToday() }.getOrNull() else null

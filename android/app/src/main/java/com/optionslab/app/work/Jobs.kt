@@ -521,7 +521,7 @@ object Tasks {
         // Jarvis: too many trades too fast.
         word("overtrading") { com.optionslab.app.ira.IraCoach.overtradeWatch() }
         // Battery (round 2): with the screen off and nothing held or armed, the slow group below runs every 3 minutes and
-        // the news every 10; the safety words above and the time-bound checks run every round as before.
+        // the news every 10 (every 20 until Boss asks about the news that day, round 6); the safety words above and the time-bound checks run every round as before.
         val quiet = wordsQuiet()
         val nowMs = System.currentTimeMillis()
         wordsQuietLast = quiet; wordsPaceAt = nowMs

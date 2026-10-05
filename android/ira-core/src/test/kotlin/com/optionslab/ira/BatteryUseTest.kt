@@ -45,7 +45,9 @@ class BatteryUseTest {
         val one = BatteryUse.answer(snap.copy(listening = false, stream = "OFF"))
         assertTrue(one.startsWith("One thing of mine runs in the background now, Boss: The order watch, every 60 seconds"), one)
         assertTrue(BatteryUse.line(snap.copy(listening = false, stream = "OFF", watch = false, charging = true)).contains("listening off · order watch not running · live stream OFF · "))
-        assertTrue(BatteryUse.line(snap.copy(wordsQuiet = true)).contains("order watch every 60 s (Jarvis's words quiet: slow checks every 3 min, news every 10 min) · "))
+        // Round 6 slowed the quiet news to 20 minutes until Boss asks about it that day: the line says the pace that runs.
+        assertTrue(BatteryUse.line(snap.copy(wordsQuiet = true)).contains("order watch every 60 s (Jarvis's words quiet: slow checks every 3 min, news every 20 min until you ask about it today) · "))
+        assertTrue(BatteryUse.line(snap.copy(wordsQuiet = true, newsAskedToday = true)).contains("order watch every 60 s (Jarvis's words quiet: slow checks every 3 min, news every 10 min) · "))
         assertTrue(BatteryUse.line(snap.copy(wordsQuiet = false)).contains("order watch every 60 s (Jarvis's words every round) · "))
     }
 

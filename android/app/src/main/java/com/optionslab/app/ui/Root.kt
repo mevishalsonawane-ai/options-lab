@@ -420,8 +420,9 @@ private fun Main(model: AppModel) {
 
     // The market watch runs by itself on market days; opening the app restarts it if Android stopped it.
     LaunchedEffect(Unit) { model.ensureWatch() }
-    // Price the NIFTY chain in the background, so the Options tab opens with it ready.
-    LaunchedEffect(Unit) { delay(1500); if (model.tools.value is Load.Idle) model.loadTools("NIFTY", quiet = true) }
+    // Price the NIFTY chain in the background, so the Options tab opens with it ready (Battery, round 7: a chain read in the
+    // last 5 minutes is shown instead of pricing it again).
+    LaunchedEffect(Unit) { delay(1500); if (model.tools.value is Load.Idle) model.loadTools("NIFTY", quiet = true, reuseRecent = true) }
 
     val notify = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
     LaunchedEffect(Unit) {
