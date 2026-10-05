@@ -158,6 +158,11 @@ android {
     }
 }
 
+// Speed, round 3: immutable library types (dates, read-only collections) treated as stable by Compose (see the file).
+composeCompiler {
+    stabilityConfigurationFile.set(layout.projectDirectory.file("compose-stability.conf"))
+}
+
 dependencies {
     // Ira, the on-device trading assistant (plain Kotlin: the brain, patterns, learning, news, answers).
     implementation(project(":ira-core"))

@@ -31,6 +31,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -618,11 +619,13 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         // Zerodha's live price stream: the account's positions and P&L move with every tick,
         // and an order update from Zerodha refreshes the account straight away.
         viewModelScope.launch(Dispatchers.IO) { com.optionslab.app.data.KiteStream.ensure() }
-        viewModelScope.launch {
+        // Speed, round 3: re-marked off the screen's thread (every tick re-prices the whole book). The books are swapped in
+        // atomically (MutableStateFlow.update), so an account read meanwhile on the IO lane is never written over by an older one.
+        viewModelScope.launch(Dispatchers.Default) {
             com.optionslab.app.data.KiteStream.version.collect {
                 val st = com.optionslab.app.data.KiteStream
-                (account.value as? Load.Done<Account>)?.value?.let { a -> account.value = Load.Done(a.copy(book = st.live(a.book))) }
-                if (livePositions.value.isNotEmpty()) livePositions.value = livePositions.value.map { st.live(it) }
+                account.update { accountNow -> (accountNow as? Load.Done<Account>)?.value?.let { a -> Load.Done(a.copy(book = st.live(a.book))) } ?: accountNow }
+                livePositions.update { positionsNow -> if (positionsNow.isNotEmpty()) positionsNow.map { st.live(it) } else positionsNow }
                 com.optionslab.app.work.PositionCards.widgetFromStream(ctx, livePositions.value.takeIf { it.isNotEmpty() }?.sumOf { it.pnl })
             }
         }

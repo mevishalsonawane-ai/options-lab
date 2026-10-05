@@ -14,6 +14,40 @@ object Warm {
 
     @Volatile private var done = false
 
+    /**
+     * The hub's question detectors, each asked of the made-up words once (speed round 3, 2026-10-05): the readers above left
+     * them cold, and the first real question still paid about half a second on a desktop compiling their patterns and
+     * filling their [Kept] readings. Words-only readers: their answers are dropped (a kept reading is what reading again gives).
+     */
+    private val DETECTORS: List<(String) -> Any?> = listOf<(String) -> Any?>(
+        AboutBoss::forgetAsked, AboutBoss::knowAsked, Airtime::asked, AlertSense::asked, AppAnswers::sections,
+        ArmChange::asked, ArmDay::asked, ArmFit::asked, ArmHabits::asked, AskedAgain::asked, AutoStop::read,
+        BatteryUse::asked, BeforeTomorrow::asked, BigCandles::asked, BigPicture::asked, BotTrades::asked, Breadth::asked,
+        Briefing::asked, Bundle::acts, Causes::asked, ChainDrift::asked, ChainIntel::asked, Clarity::asked, CoPilot::asked,
+        Compare::asked, Compare::markets, Consistency::asked, Corrections::forgetWordAsked, Corrections::wordsAsked,
+        DataAge::asked, DayClock::asked, DayCompare::asked, DayJournal::asked, DayStory::asked, DaySummary::asked,
+        Distance::asked, ExpectedRange::asked, ExpiryDay::asked, ExpiryEve::asked, ExpiryPin::asked, ExtremeCloses::asked,
+        FigureFirst::asked, FirstMove::asked, Gap::asked, GapRecord::asked, Goals::asked, Goals::clearAsked, Goals::read,
+        Habits::asked, Headroom::asked, Hearing::asked, Honest::asked, HonestStars::asked, Improve::asked, InsideDays::asked,
+        Intents::mayMean, Intents::prompt, LastHour::asked, Latency::asked, Learnings::asked, Learnings::undoAsked,
+        Lessons::asked, LevelInfo::asked, LikeToday::asked, Lookback::prevAsked, Lookback::time, LunchRange::asked,
+        MarketMemory::asked, MarketStory::asked, Memory::forgetAsked, Memory::recallAsked, Memory::toKeep, MindChange::asked,
+        Momentum::asked, MonthTurns::asked, MorningAsks::asked, MorningSense::asked, { Moves.asked(it) }, NeedsTrue::asked,
+        NetLean::asked, NetLean::market, NewsDesk::asked, NewsMoves::asked, Nicknames::asked, Odds::asked,
+        OpenHighLow::asked, OpeningRange::asked, OptionFacts::asked, OrderWhy::asked, Outlook::asked, OutlookCheck::asked,
+        OutsideApp::asked, OutsideApp::say, PatternCalls::asked, Payoff::asked, PeriodMove::asked, Pivots::asked,
+        Plan::pronounAfter, Plan::pronounUnclear, PnlGap::asked, PreMarket::asked, PriorDay::asked, RangeBreaks::asked,
+        Realised::asked, RelayHealth::asked, Reminder::daily, Reminder::heardAsked, Reminder::missedAsked,
+        Reminder::modelAsked, Reminder::tomorrow, Reminder::usageAsked, ReminderBook::cancelOne, ReminderBook::listAsked,
+        RoundCloses::asked, Routine::asked, Routine::forgetAsked, SaidAbout::asked, Scenarios::asked, SelfCalibration::asked,
+        SelfCheck::asked, SelfWhy::asked, SharpMove::asked, SinceLast::asked, SinceMorning::asked, Sizing::asked,
+        SplitDays::asked, Streak::asked, StreamHealth::asked, Structure::asked, SwitchOff::asked, TalkHours::asked,
+        TaxRecords::exportAsked, Thinking::asked, Together::asked, TopicLength::asked, Tour::asked, TradeCase::asked,
+        TrendReads::asked, TrendReads::span, TurnDowns::asked, UsualIndex::asked, Vetting::asked, VixNext::asked,
+        VixRank::asked, WatchAsk::asked, WeakLink::asked, WeekAhead::asked, WeekRange::asked, Weekdays::asked,
+        WordFit::asked, WrongThing::asked, WrongThing::objected, ZerodhaSession::asked
+    )
+
     /** Every reader made ready once; later calls return at once. Safe on any thread. */
     fun up() {
         if (done) return
@@ -36,6 +70,7 @@ object Warm {
             runCatching { MarketDays.expiryAsked(q) }
             runCatching { Suggest.line(q) }
             runCatching { Ira().answer(q, emptyMap(), emptyList()) }
+            for (d in DETECTORS) runCatching { d(q) }
             prev = q
         }
         done = true

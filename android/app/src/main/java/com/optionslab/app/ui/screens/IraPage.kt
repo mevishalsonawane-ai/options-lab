@@ -238,7 +238,8 @@ fun IraPage(orders: IraOrderPaths? = null) {
                     })
                 }
             }
-            item { HowIraIsDoing(st) }
+            // Its own slice (speed round 3): a new message or a busy flag no longer recomposes this card.
+            item { val record by iraSlice { IraRecord.of(it) }; HowIraIsDoing(record) }
             if (com.optionslab.app.BuildConfig.JARVIS) item { JarvisStudyCard() }
             if (st.messages.isEmpty() && memoryReady) item {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -696,8 +697,19 @@ internal fun ActionConfirm(id: Long) {
  * Ira's own record, facts only: what it has learned, how the patterns it saw went in each reviewed session (the
  * evening review), the patterns that went their way most often so far, and what became of the strategies it offered.
  */
+/** What [HowIraIsDoing] shows, picked from [IraHub.State] (speed round 3): the card recomposes only when one of these changes. */
+@androidx.compose.runtime.Immutable
+internal data class IraRecord(
+    val journal: List<IraHub.DayScore>, val learned: Int, val days: Int, val nightlyAt: java.time.Instant?,
+    val best: List<com.optionslab.ira.PatternBook.Entry>, val proposals: List<IraHub.Proposal>,
+) {
+    companion object {
+        fun of(s: IraHub.State) = IraRecord(s.journal, s.learned, s.days, s.nightlyAt, s.best, s.proposals)
+    }
+}
+
 @Composable
-internal fun HowIraIsDoing(st: IraHub.State) {
+internal fun HowIraIsDoing(st: IraRecord) {
     val p = LocalPalette.current
     var open by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
     val j = st.journal

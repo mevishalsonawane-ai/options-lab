@@ -69,11 +69,13 @@ private data class Money(val pnlToday: Double?, val unused: Double?, val used: D
 @Composable
 fun AlmanacScreen(model: AppModel, onGo: (String) -> Unit) {
     val s by model.settings.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
-    val quotes by model.quotes.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
-    val note by model.quoteNote.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
-    val daily by model.bankNiftyDaily.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
-    val account by model.account.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
-    val paper by model.paper.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    // Speed, round 3: the prices and the books are held as states, not read here - each is read only by the card that
+    // shows it, so a price tick no longer recomposes all of Home (the money card follows the books, the chart the prices).
+    val quotesState = model.quotes.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val noteState = model.quoteNote.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val dailyState = model.bankNiftyDaily.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val accountState = model.account.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val paperState = model.paper.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     val owners by model.orderOwners.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
 
     // Prices poll only while Home is on screen and the app is in front.
@@ -92,8 +94,9 @@ fun AlmanacScreen(model: AppModel, onGo: (String) -> Unit) {
         }
     }
     LaunchedEffect(s.live) { model.loadBankNiftyDaily() }
-    AlmanacContent(s.live, com.optionslab.app.data.Broker.loggedIn, quotes, note, daily, account, paper, onGo,
-        onRow = { model.rowAction.value = it }, owners = owners, strategies = { StrategyArmCard(model) { onGo("strategy") } })
+    AlmanacBody(s.live, com.optionslab.app.data.Broker.loggedIn, { quotesState.value }, { noteState.value }, { dailyState.value },
+        { accountState.value }, { paperState.value }, onGo, onRow = { model.rowAction.value = it }, owners = owners,
+        strategies = { StrategyArmCard(model) { onGo("strategy") } })
 }
 
 /**
@@ -115,57 +118,86 @@ internal fun AlmanacContent(
     owners: Map<String, String> = emptyMap(),
     strategies: @Composable () -> Unit,
 ) {
+    AlmanacBody(live, loggedIn, { quotes }, { note }, { daily }, { account }, { paper }, onGo, onRow, owners, strategies)
+}
+
+/** Home's money figures, its live-orders rows and the note under the money, from the books of the mode shown. */
+private fun homeBooks(live: Boolean, loggedIn: Boolean, account: Load<com.optionslab.app.ui.Account>,
+                      paper: Load<com.optionslab.app.data.Paper.Snapshot>, owners: Map<String, String>,
+                      p: com.optionslab.app.ui.theme.Palette): Triple<Money, List<HomeOrder>, String?> {
+    val money: Money
+    val orders: List<HomeOrder>
+    val moneyNote: String?
+    if (live) {
+        val a = (account as? Load.Done)?.value
+        money = Money(a?.book?.m2m, a?.funds?.available, a?.funds?.used)
+        orders = a?.let { acc ->
+            acc.positions.filter { it.qty != 0 }.map {
+                HomeOrder(it.symbol, "${if (it.qty < 0) "SELL" else "BUY"} ${abs(it.qty)} · avg ${PX.format(it.avg)} · LTP ${PX.format(it.last)}",
+                    inr(it.pnl, true), if (it.pnl >= 0) p.verdigris else p.oxblood, "OPEN", RowTarget.LivePosition(it),
+                    com.optionslab.app.data.Origins.livePosition(owners, acc.trades, acc.orders, it.symbol, it.product, it.qty)?.let(com.optionslab.app.data.Origins::positionDisplay))
+            } + acc.orders.filter { it.working }.map {
+                HomeOrder(it.symbol, "${it.side} ${it.pending.takeIf { n -> n > 0 } ?: it.qty} · ${it.type.lowercase()}${if (it.trigger > 0) " · trigger ${PX.format(it.trigger)}" else ""}",
+                    "₹" + PX.format(if (it.price > 0) it.price else it.trigger), null, if (it.status == "TRIGGER PENDING") "TRIGGER PENDING" else "PENDING",
+                    RowTarget.LiveOrder(it), orderSource(owners, "kite:${it.id}", it.tag))
+            }
+        } ?: emptyList()
+        moneyNote = when {
+            !loggedIn -> "Log in to Zerodha for today to see your money and orders."
+            account is Load.Failed -> (account as Load.Failed).why
+            else -> null
+        }
+    } else {
+        val v = (paper as? Load.Done)?.value
+        money = Money(v?.dayPnl, v?.funds?.availableCash, v?.funds?.utilisedDebits)
+        orders = v?.let { snap ->
+            snap.positions.positions.filter { it.quantity != 0 }.map {
+                HomeOrder(it.symbol, "${if (it.quantity < 0) "SELL" else "BUY"} ${abs(it.quantity)} · avg ${PX.format(it.averagePrice)} · LTP ${PX.format(it.ltp)}",
+                    inr(it.pnl, true), if (it.pnl >= 0) p.verdigris else p.oxblood, "OPEN", RowTarget.PaperPosition(it),
+                    com.optionslab.app.data.Origins.paperPosition(owners, snap.trades, it.symbol, it.product, it.quantity)?.let(com.optionslab.app.data.Origins::positionDisplay))
+            } + snap.orders.orders.filter { it.pendingQuantity > 0 && it.status.uppercase() !in setOf("COMPLETE", "CANCELLED", "REJECTED") }.map {
+                HomeOrder(it.symbol, "${it.action} ${it.pendingQuantity} · ${it.priceType.lowercase()}${if (it.triggerPrice > 0) " · trigger ${PX.format(it.triggerPrice)}" else ""}",
+                    "₹" + PX.format(if (it.price > 0) it.price else it.triggerPrice), null,
+                    if (it.status.uppercase().contains("TRIGGER")) "TRIGGER PENDING" else "PENDING", RowTarget.PaperOrder(it),
+                    orderSource(owners, "paper:${it.orderId}"))
+            }
+        } ?: emptyList()
+        moneyNote = (paper as? Load.Failed)?.why
+    }
+    return Triple(money, orders, moneyNote)
+}
+
+/**
+ * [AlmanacContent] with its changing values read where they are shown (speed round 3): [quotes], [note] and [daily] by
+ * the chart card only, [account] and [paper] by the money and orders cards only (through one derived reading).
+ */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable
+private fun AlmanacBody(
+    live: Boolean,
+    loggedIn: Boolean,
+    quotes: () -> Map<String, Market.Quote>,
+    note: () -> String?,
+    daily: () -> List<Pair<java.time.LocalDate, Double>>,
+    account: () -> Load<com.optionslab.app.ui.Account>,
+    paper: () -> Load<com.optionslab.app.data.Paper.Snapshot>,
+    onGo: (String) -> Unit,
+    onRow: (RowTarget) -> Unit,
+    owners: Map<String, String>,
+    strategies: @Composable () -> Unit,
+) {
     val p = LocalPalette.current
     var range by rememberSaveable { mutableStateOf("1D") }
 
     // Speed, round 2: the money and the rows are built once per change of the books (or the owners), not at every
-    // recomposition of Home.
-    val (money, orders, moneyNote) = remember(live, loggedIn, account, paper, owners, p) {
-        val money: Money
-        val orders: List<HomeOrder>
-        val moneyNote: String?
-        if (live) {
-            val a = (account as? Load.Done)?.value
-            money = Money(a?.book?.m2m, a?.funds?.available, a?.funds?.used)
-            orders = a?.let { acc ->
-                acc.positions.filter { it.qty != 0 }.map {
-                    HomeOrder(it.symbol, "${if (it.qty < 0) "SELL" else "BUY"} ${abs(it.qty)} · avg ${PX.format(it.avg)} · LTP ${PX.format(it.last)}",
-                        inr(it.pnl, true), if (it.pnl >= 0) p.verdigris else p.oxblood, "OPEN", RowTarget.LivePosition(it),
-                        com.optionslab.app.data.Origins.livePosition(owners, acc.trades, acc.orders, it.symbol, it.product, it.qty)?.let(com.optionslab.app.data.Origins::positionDisplay))
-                } + acc.orders.filter { it.working }.map {
-                    HomeOrder(it.symbol, "${it.side} ${it.pending.takeIf { n -> n > 0 } ?: it.qty} · ${it.type.lowercase()}${if (it.trigger > 0) " · trigger ${PX.format(it.trigger)}" else ""}",
-                        "₹" + PX.format(if (it.price > 0) it.price else it.trigger), null, if (it.status == "TRIGGER PENDING") "TRIGGER PENDING" else "PENDING",
-                        RowTarget.LiveOrder(it), orderSource(owners, "kite:${it.id}", it.tag))
-                }
-            } ?: emptyList()
-            moneyNote = when {
-                !loggedIn -> "Log in to Zerodha for today to see your money and orders."
-                account is Load.Failed -> (account as Load.Failed).why
-                else -> null
-            }
-        } else {
-            val v = (paper as? Load.Done)?.value
-            money = Money(v?.dayPnl, v?.funds?.availableCash, v?.funds?.utilisedDebits)
-            orders = v?.let { snap ->
-                snap.positions.positions.filter { it.quantity != 0 }.map {
-                    HomeOrder(it.symbol, "${if (it.quantity < 0) "SELL" else "BUY"} ${abs(it.quantity)} · avg ${PX.format(it.averagePrice)} · LTP ${PX.format(it.ltp)}",
-                        inr(it.pnl, true), if (it.pnl >= 0) p.verdigris else p.oxblood, "OPEN", RowTarget.PaperPosition(it),
-                        com.optionslab.app.data.Origins.paperPosition(owners, snap.trades, it.symbol, it.product, it.quantity)?.let(com.optionslab.app.data.Origins::positionDisplay))
-                } + snap.orders.orders.filter { it.pendingQuantity > 0 && it.status.uppercase() !in setOf("COMPLETE", "CANCELLED", "REJECTED") }.map {
-                    HomeOrder(it.symbol, "${it.action} ${it.pendingQuantity} · ${it.priceType.lowercase()}${if (it.triggerPrice > 0) " · trigger ${PX.format(it.triggerPrice)}" else ""}",
-                        "₹" + PX.format(if (it.price > 0) it.price else it.triggerPrice), null,
-                        if (it.status.uppercase().contains("TRIGGER")) "TRIGGER PENDING" else "PENDING", RowTarget.PaperOrder(it),
-                        orderSource(owners, "paper:${it.orderId}"))
-                }
-            } ?: emptyList()
-            moneyNote = (paper as? Load.Failed)?.why
-        }
-        Triple(money, orders, moneyNote)
-    }
+    // recomposition of Home. Round 3: derived, so only the cards that read them follow the books ([books]).
+    val books = remember(live, loggedIn, account, paper, owners, p) { androidx.compose.runtime.derivedStateOf {
+        homeBooks(live, loggedIn, account(), paper(), owners, p) } }
 
     Page {
         // ---- the money: capital first and largest --------------------------------------
         item {
+            val (money, _, moneyNote) = books.value
             val cap = money.capital
             val usedShare = if (cap != null && cap > 0) ((money.used ?: 0.0) / cap).toFloat().coerceIn(0f, 1f) else 0f
             LedgerCard {
@@ -192,17 +224,18 @@ internal fun AlmanacContent(
 
         // ---- BANKNIFTY ------------------------------------------------------------------
         item {
-            val q = quotes["BANKNIFTY"]
+            val q = quotes()["BANKNIFTY"]
+            val dailyNow = daily()
             val today = Market.today()
-            val past = daily.filter { it.first.isBefore(today) }
+            val past = dailyNow.filter { it.first.isBefore(today) }
             val prevClose = past.lastOrNull()?.second
-            val last = q?.last ?: daily.lastOrNull()?.second
+            val last = q?.last ?: dailyNow.lastOrNull()?.second
             val (values, ref, slots, labels) = when (range) {
                 "1D" -> ChartSpec(q?.spark.orEmpty(), prevClose ?: q?.open, 375,
                     listOf(0 to "09:15", 105 to "11:00", 225 to "13:00", 374 to "15:30"))
                 else -> {
                     val n = when (range) { "1W" -> 5; "1M" -> 22; else -> 250 }
-                    val series = (past.takeLast(n - 1) + listOfNotNull(q?.let { today to it.last } ?: daily.lastOrNull()?.takeIf { !it.first.isBefore(today) }))
+                    val series = (past.takeLast(n - 1) + listOfNotNull(q?.let { today to it.last } ?: dailyNow.lastOrNull()?.takeIf { !it.first.isBefore(today) }))
                     val fmt = DateTimeFormatter.ofPattern(if (range == "1Y") "MMM yy" else "d MMM", Locale.ENGLISH)
                     val size = series.size.coerceAtLeast(2)
                     ChartSpec(series.map { it.second }, null, size,
@@ -233,7 +266,7 @@ internal fun AlmanacContent(
                 else Note(when {
                     range == "1D" && !Market.isTradingDay() -> "Market closed today. Pick 1W, 1M or 1Y for recent days."
                     range == "1D" && Market.minuteNow() < Market.OPEN -> "The day's chart starts at 09:15."
-                    else -> note ?: "Loading prices…"
+                    else -> note() ?: "Loading prices…"
                 }, Modifier.padding(vertical = 24.dp))
                 Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     listOf("1D", "1W", "1M", "1Y").forEach { r -> Token(r, r == range) { range = r } }
@@ -243,6 +276,7 @@ internal fun AlmanacContent(
 
         // ---- live orders -----------------------------------------------------------------
         item {
+            val orders = books.value.second
             LedgerCard {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("Live orders", style = Type.title.copy(color = p.ink, fontSize = 16.sp), modifier = Modifier.weight(1f))
