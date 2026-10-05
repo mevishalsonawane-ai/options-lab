@@ -65,11 +65,16 @@ object Hinglish {
     private val normalized = Kept<String>(64)
     private val questioned = Kept<String>(64)
 
+    /** A step word between two parts (never a leading "phir" nor "phir se", "again"). */
+    private val STEPPED = Regex("\\S\\s+(?:phir|fir|then|uske\\s+baad|iske\\s+baad|aur\\s+phir|and\\s+then)\\s+(?!se\\b)\\S")
+
     private fun normalizeFresh(text: String): String {
         var t = text.lowercase().replace(rx("[^a-z0-9.,&% ]"), " ").replace(rx("\\s+"), " ").trim()
         if (!hasHindi(t)) return text
         for ((r, to) in WORDS) t = r.replace(t, to).replace(rx("\\s+"), " ").trim()
-        for ((r, verb) in VERBS) r.find(t)?.let { m -> t = "$verb ${m.groupValues[1].trim()}".trim() }
+        // Said in steps ("meri put explain karo phir isko band karo"; routing round 13): the last verb is its own step's, so the
+        // whole is never turned round into one command - the multi-step plan reads each step (and confirms before acting).
+        if (!STEPPED.containsMatchIn(t)) for ((r, verb) in VERBS) r.find(t)?.let { m -> t = "$verb ${m.groupValues[1].trim()}".trim() }
         return t
     }
 

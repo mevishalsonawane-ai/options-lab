@@ -78,11 +78,14 @@ object LastHour {
     private const val WAY = " (continue|continues|continued|continuing|continuation|extend|extends|extended|follow through|follows through|" +
         "reverse|reverses|reversed|reversal|reversals|turn|turns|turned|turn around|turns around|flip|flips|fade|fades|faded|undo|undoes|" +
         "give back|gives back|same direction|same way|other way|direction|trend|trends|against the day|with the day|" +
+        "keep falling|keeps falling|keep rising|keeps rising|keep going|keeps going|keep climbing|keeps climbing|keep dropping|keeps dropping|" +
         "palat|palatta|palta|palti|ulta|ulat|wahi direction|usi direction) "
     /** A record asked of. */
     private const val HOW = " (how often|how many times|how frequently|how many days|how many sessions|what share|what percentage|what percent|what fraction|" +
         "usually|normally|typically|generally|tend to|tends to|on average|most times|most of the time|historically|history|record|rate|" +
-        "stats|statistics|odds|chances|probability|percentage|kitni baar|kitne din|aksar|zyada tar|mostly) "
+        "stats|statistics|odds|chances|probability|percentage|kitni baar|kitne din|aksar|zyada tar|mostly|" +
+        // "On up days does BankNifty extend in the closing hour?" - the days named make it a record (routing round 13).
+        "on (up|down|green|red|rally|rising|falling|bullish|bearish) days) "
     /** "Last hour record", "closing hour behaviour" - the record named outright. */
     private const val NAMED = " (last hour|final hour|closing hour|power hour) (record|stats|statistics|behaviour|behavior|pattern|patterns|tendency|habit|habits) "
     // Forecasts, advice, Boss's own book, alerts, a single day, how busy (DayClock's), weekdays and expiry (Weekdays'), news.

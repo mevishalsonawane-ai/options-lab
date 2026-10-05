@@ -19,7 +19,8 @@ import kotlin.math.abs
  * story stays [MarketStory]'s, today against the usual day too; today alone stays [Structure]'s. Pure.
  */
 object DayCompare {
-    enum class Focus { ALL, TREND_RANGE }
+    /** [DAY]: the earlier session alone ("how was yesterday for Nifty?"), set beside today only when today has candles. */
+    enum class Focus { ALL, TREND_RANGE, DAY }
 
     /** The other day: [back] sessions before today (1 the last one), or the last [weekday] before today. */
     data class Ref(val back: Int = 1, val weekday: DayOfWeek? = null)
@@ -88,13 +89,27 @@ object DayCompare {
         "^ $TODAY $REF se (kaise|kitna|kya|kaisa) (alag|different|farak|fark)",
     )
 
+    /**
+     * The earlier session alone, as a whole question (routing round 13: "how was yesterday for Nifty" got Boss's own
+     * history): "how was Nifty yesterday", "how did BankNifty do on Friday", "how was the market yesterday", "kal Nifty
+     * kaisa tha". Only with an index or the market named - a bare "how was yesterday" may be Boss's own day.
+     */
+    private val ONE_DAY = listOf(
+        "^ how (was|did|has) (day |session )?(go |do |move |end |look |close |finish )?$REF( day| session)?( go| do| move| end| look| looked| like| close| finish| turn out| shape up)?( for| on| in)? $",
+        "^ $REF (day |session |din )?(kaisa|kaisi|kaise) (tha|thi|the|raha|rahi|rahe|gaya|gayi|hua|gaya tha|raha tha)( din)? $",
+    )
+    private val MARKET_NAMED = Regex("(?i)\\b(market|markets|bazaar|bazar|index|indices)\\b")
+
     /** What was asked, or null: today against one earlier session, as a whole question. Never a forecast or another span. */
     fun asked(text: String): Q? {
         if (Market.mentioned(text).any { it == Market.GOLD }) return null
         val t = norm(text)
         if (rx(NOT).containsMatchIn(t)) return null
-        if (ASK.none { rx(it).containsMatchIn(t) }) return null
-        val focus = if (rx(" $KIND ").containsMatchIn(t)) Focus.TREND_RANGE else Focus.ALL
+        // (A weekday said in the plural - "how did Nifty do on Fridays" - is the weekday record's, never one day.)
+        val one = ONE_DAY.any { rx(it).containsMatchIn(t) } && (Market.mentioned(text).isNotEmpty() || MARKET_NAMED.containsMatchIn(text)) &&
+            !rx(" (mondays|tuesdays|wednesdays|thursdays|fridays) ").containsMatchIn(t)
+        if (!one && ASK.none { rx(it).containsMatchIn(t) }) return null
+        val focus = if (one) Focus.DAY else if (rx(" $KIND ").containsMatchIn(t)) Focus.TREND_RANGE else Focus.ALL
         val wd = rx(" (monday|tuesday|wednesday|thursday|friday)s? ").find(t)?.groupValues?.get(1)?.let { WEEKDAYS[it] }
         val ref = when {
             wd != null -> Ref(weekday = wd)
@@ -200,6 +215,7 @@ object DayCompare {
             else -> "the session before last (${date(other)})"
         }
         if (other !in days) return "There are no ${m.label} candles for $otherName on the phone, Boss - a market holiday, or before what the phone keeps - so I can't set today against it."
+        if (q.focus == Focus.DAY) return oneDay(m, bars, today, other, otherName)
         val todays = bars.filter { it.t.toLocalDate() == today }.sortedBy { it.t }
         if (todays.size < Structure.MIN_BARS) return if (todays.isEmpty()) "There are no ${m.label} candles for today on the phone yet, Boss, so there is nothing to compare."
             else "It's early for ${m.label}, Boss: only ${todays.size} minute${if (todays.size == 1) "" else "s"} of candles today, too few to compare (I need ${Structure.MIN_BARS})."
@@ -221,6 +237,29 @@ object DayCompare {
         if (cut != null) readAt(m, bars, other, null)?.let { f ->
             lines += "By its close, $shortName ended ${kindWord(f)}: net ${pts(f.net)} from the open, " +
                 "${share(f.share)} of a ${n(f.range)}-point range; today's is not finished."
+        }
+        lines += "I call a day trend-like when the net move from the open is ${(Structure.TREND_SHARE * 100).toInt()}% or more of its range with the price in the outer quarter, " +
+            "range-like at ${(Structure.RANGE_SHARE * 100).toInt()}% or less."
+        lines += NOTE
+        return lines.joinToString(" ")
+    }
+
+    /** The earlier session alone, whole; then, when today has enough candles, which of the two is the more trend-like so far. */
+    private fun oneDay(m: Market, bars: List<Candle>, today: LocalDate, other: LocalDate, otherName: String): String {
+        val b = readAt(m, bars, other, null)
+            ?: return "There are too few ${m.label} candles for $otherName on the phone to read it, Boss."
+        val shortName = otherName.substringBefore(" (")
+        val lines = ArrayList<String>()
+        lines += "${m.label}'s ${otherName.removePrefix("the ")}, the whole session, Boss."
+        lines += dayLine(shortName, b, true)
+        val todays = bars.filter { it.t.toLocalDate() == today }.sortedBy { it.t }
+        if (todays.size >= Structure.MIN_BARS) {
+            val lastMinute = todays.last().t.toLocalTime()
+            val cut = if (lastMinute.isBefore(m.close!!.minusMinutes(1))) lastMinute.plusMinutes(1) else null
+            val a = readAt(m, bars, today, null)
+            val bc = if (cut != null) readAt(m, bars, other, cut) else b
+            if (a != null && bc != null) lines += (if (cut != null) "Up to ${hm(cut)} on both days: " else "Against today's whole session: ") +
+                verdict("today", a, shortName, bc).replaceFirstChar { it.lowercase() }
         }
         lines += "I call a day trend-like when the net move from the open is ${(Structure.TREND_SHARE * 100).toInt()}% or more of its range with the price in the outer quarter, " +
             "range-like at ${(Structure.RANGE_SHARE * 100).toInt()}% or less."

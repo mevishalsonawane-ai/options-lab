@@ -68,6 +68,8 @@ object MyNumbers {
         "| (hold|keep|holding|keeping|sit on|sitting on) (on to |onto )?(my )?$LOSSES (longer|too long|for longer)" +
         "| (cut|cutting|book|booking|take|taking|close|closing) (my )?$WINS (short|early|too early|too soon|too fast|quickly|too quickly)" +
         "| (hold|holding|keep|keeping) (my )?$WINS (long enough|too short|short)" +
+        // "How long do I hold my winners?" (routing round 13: a market answer)
+        "| how long do i (usually |normally )?(hold|keep) (on to |onto )?(my )?($WINS|$LOSSES) " +
         "| (my|mere|meri) (trading )?(stats|statistics|metrics|numbers|trade stats|trade statistics|kpis|ratios) " +
         "| trading (stats|statistics|metrics|numbers|ratios) " +
         "| (average|avg) ($WINS|$LOSSES|trade) (kitna|kitni|kitne|kya) | kitna (average|avg) ")

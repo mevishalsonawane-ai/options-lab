@@ -17,6 +17,11 @@ import kotlin.test.assertTrue
  * expiry, "make the case for buying calls" the trade check's case, "breakeven kitna door hai" what the position needs),
  * and the newest families join the hunt: GapRecord, Weekdays, MindChange, Causes, WeekAhead, SaidAbout, ZerodhaSession,
  * AskedAgain, WordFit, Boss's own STREAKS - and Again, the voice's own "say that again slowly", checked apart.
+ *
+ * Round 13 (5 Oct): round 12's open items ("what all can you do" is the help answer, "how was yesterday for Nifty" the
+ * index's last session, "the average price of my put" his position, "meri put explain karo phir isko band karo" the plan),
+ * and the newest families join the hunt: OrderWhy, BotTrades, WrongThing, OutsideApp, TrendReads, ArmHabits, PriorDay,
+ * LastHour, InsideDays and Boss's own NUMBERS - none an order or a command; said with an action, the multi-step plan.
  */
 class CollisionTest {
     private val audit = CoverageTest()
@@ -24,21 +29,29 @@ class CollisionTest {
 
     /** The families in IraHub.ask's order, each named as [CoverageTest.feature] names what answers it. */
     private val FAMILIES: List<Pair<String, (String) -> Boolean>> = listOf(
+        "TrendReads" to { q -> TrendReads.asked(q) },
         "OutsideApp" to { q -> OutsideApp.asked(q) },
         "Clarity" to { q -> Clarity.asked(q) != null },
         "WordFit" to { q -> WordFit.asked(q) != null },
         "AskedAgain" to { q -> AskedAgain.asked(q) },
         "FigureFirst" to { q -> FigureFirst.asked(q) != null },
+        "WrongThing" to { q -> WrongThing.asked(q) != null || WrongThing.objected(q) },
+        "ArmHabits" to { q -> ArmHabits.asked(q) },
         "Headroom" to { q -> Headroom.asked(q) != null },
+        "BotTrades" to { q -> BotTrades.asked(q) != null },
         "SaidAbout" to { q -> SaidAbout.asked(q) != null },
         "WeekAhead" to { q -> WeekAhead.asked(q) != null },
         "ZerodhaSession" to { q -> ZerodhaSession.asked(q) != null },
+        "OrderWhy" to { q -> OrderWhy.asked(q) != null },
         "Tour" to { q -> Tour.asked(q) },
         "ChainDrift" to { q -> ChainDrift.asked(q) != null },
         "ChainIntel" to { q -> ChainIntel.asked(q) != null },
         "DayClock" to { q -> DayClock.asked(q) != null },
         "GapRecord" to { q -> GapRecord.asked(q) != null },
         "RangeBreaks" to { q -> RangeBreaks.asked(q) != null },
+        "PriorDay" to { q -> PriorDay.asked(q) != null },
+        "LastHour" to { q -> LastHour.asked(q) != null },
+        "InsideDays" to { q -> InsideDays.asked(q) != null },
         "Weekdays" to { q -> Weekdays.asked(q) != null },
         "DayCompare" to { q -> DayCompare.asked(q) != null },
         "Structure" to { q -> Structure.asked(q) != null },
@@ -418,6 +431,119 @@ class CollisionTest {
         "open the chain" to "Account:CHAIN", "open settings" to "Account:SETTINGS", "open my positions" to "Account:POSITIONS",
         "call oi kahan hai" to "Account:CHAIN", "call writing kahan hai" to "ChainIntel", "put call ratio" to "Account:CHAIN",
         "open zerodha" to "Account:STATUS", "start orb" to "Act", "play the alert sound" to "Account:ALARMS", "open orders" to "Account:ORDERS",
+        // ==== Round 13: round 12's open items, routed ====
+        "what all can you do" to "Help", "what else can you do" to "Help", "what can you do" to "Help",
+        "how was yesterday for nifty" to "DayCompare", "how was nifty yesterday" to "DayCompare", "how did banknifty do yesterday" to "DayCompare",
+        "how was the market yesterday" to "DayCompare", "kal nifty kaisa tha" to "DayCompare", "how did sensex close yesterday" to "DayCompare",
+        "what is the average price of my put" to "Account:POSITIONS", "what's my average price on the 24500 put" to "Account:POSITIONS",
+        "meri put ka average price kya hai" to "Account:POSITIONS", "what is the entry price of my call" to "Account:POSITIONS",
+        "meri put explain karo" to "Account:EXPLAIN_POS",
+        // ...and their neighbours: his own yesterday, the index's prior-day figures.
+        "how was yesterday" to "Account:HISTORY", "how was my day yesterday" to "Account:HISTORY", "what was yesterday's high" to "Lookback",
+        "did nifty break yesterday's high" to "Lookback", "how far is nifty from yesterday's high" to "Lookback",
+        // ---- Round 13. OrderWhy: what became of his order ----
+        "why was my banknifty order rejected" to "OrderWhy", "why did my stop loss order get cancelled" to "OrderWhy",
+        "why was my sell order cancelled" to "OrderWhy", "why did my paper order get rejected" to "OrderWhy",
+        "what happened to my banknifty order" to "OrderWhy", "what happened to my 10:15 order" to "OrderWhy", "order reject kyon hua" to "OrderWhy",
+        "mera stop loss cancel kyun hua" to "OrderWhy", "reason for the rejection of my order" to "OrderWhy", "what was the rejection reason" to "OrderWhy",
+        "why did my zerodha order fail" to "OrderWhy", "why was my order not placed" to "OrderWhy", "why didn't my order go through" to "OrderWhy",
+        "mere order ka kya hua" to "OrderWhy", "why was the target order cancelled" to "OrderWhy", "why did my order get cancelled today" to "OrderWhy",
+        "why was my nifty buy order rejected" to "OrderWhy", "why did my orb order get cancelled" to "OrderWhy", "why was my exit order rejected" to "OrderWhy",
+        "what happened to my last paper order" to "OrderWhy", "why did kite reject my order" to "OrderWhy",
+        "why did my 24500 put order get rejected" to "OrderWhy",
+        // Its neighbours: the day's orders, and the cancel itself (a command, through its own confirm).
+        "how many orders did i place today" to "Account:ORDERS", "show my orders" to "Account:ORDERS", "cancel my last order" to "Act",
+        // ---- BotTrades: his bots' trades today, explained ----
+        "explain my bots' trades today" to "BotTrades", "why did orb take that trade" to "BotTrades", "what did my bots do today" to "BotTrades",
+        "did my bots follow their rules" to "BotTrades", "why did range fade exit" to "BotTrades", "walk me through orb's trades" to "BotTrades",
+        "what trades did orb take" to "BotTrades", "are my bots fighting each other" to "BotTrades", "did my bots take opposite sides" to "BotTrades",
+        "mere bots ne aaj kya kiya" to "BotTrades", "orb ne trade kyun liya" to "BotTrades", "today's bot trades" to "BotTrades",
+        "why did the liquidity bot exit" to "BotTrades", "did orb stick to its rules today" to "BotTrades",
+        "any contradictions between my bots" to "BotTrades", "why did my bots lose today" to "BotTrades",
+        "explain the trades my bots took today" to "BotTrades", "why did orb go long today" to "BotTrades",
+        "were my bots' trades within their rules" to "BotTrades", "what did range fade do today" to "BotTrades", "break down the orb trades" to "BotTrades",
+        "bots ke trades samjhao" to "BotTrades", "what did the liquidity bot do today" to "BotTrades", "why did my bots trade today" to "BotTrades",
+        // Its neighbours: how they are doing, which are armed, another day, a backtest, a stop.
+        "how are my bots doing" to "Account:BOTS", "which bots are armed" to "Account:STRATEGIES", "what did my bots do yesterday" to "Account:HISTORY+STRATEGIES",
+        "backtest orb" to "Backtest", "stop orb" to "Act", "disarm range fade" to "Act",
+        // ---- WrongThing: the questions Jarvis answered with the wrong thing ----
+        "what did you get wrong today" to "WrongThing", "which questions did you answer wrong" to "WrongThing",
+        "what did you misunderstand today" to "WrongThing", "that's not what i asked" to "WrongThing", "galat jawab" to "WrongThing",
+        "ye nahi poocha maine" to "WrongThing", "you answered the wrong thing" to "WrongThing", "which of my questions did you get wrong" to "WrongThing",
+        "what did you answer wrongly today" to "WrongThing", "which questions did you take the wrong way" to "WrongThing",
+        "what did you get wrong this week" to "WrongThing", "aaj tumne kya galat samjha" to "WrongThing", "what mistakes did you make today" to "WrongThing",
+        "what have you got wrong this week" to "WrongThing", "which questions did you misunderstand today" to "WrongThing",
+        "where did you misunderstand me" to "WrongThing", "that was the wrong answer" to "WrongThing", "not what i meant" to "WrongThing",
+        "aaj kya galat jawab diya" to "WrongThing",
+        // Its neighbours: Jarvis's mistakes list, and marking the last answer wrong (a note, the existing command).
+        "what did you get wrong" to "Account:MISTAKES", "you got it wrong" to "Act",
+        // ---- OutsideApp, more of it ----
+        "call my brother" to "OutsideApp", "play music on spotify" to "OutsideApp", "open gmail" to "OutsideApp", "open the calculator" to "OutsideApp",
+        "book a cab" to "OutsideApp", "instagram kholo" to "OutsideApp", "open chrome" to "OutsideApp", "open netflix" to "OutsideApp",
+        "whatsapp khol do" to "OutsideApp", "play a song" to "OutsideApp", "take a selfie" to "OutsideApp", "turn on the flashlight" to "OutsideApp",
+        "order a pizza" to "OutsideApp", "call priya" to "OutsideApp", "send an email to priya" to "OutsideApp",
+        // ---- TrendReads: Jarvis's own trend and range reads, scored ----
+        "how often were your trend reads right this month" to "TrendReads", "how accurate are your structure reads" to "TrendReads",
+        "did your trend calls hold" to "TrendReads", "your trend read record" to "TrendReads", "tumhare trend reads kitne sahi the" to "TrendReads",
+        "how many of your trend reads held this week" to "TrendReads", "were your range reads right today" to "TrendReads",
+        "how good are your trend calls" to "TrendReads", "your structure read record for last month" to "TrendReads",
+        "how often are your trend reads wrong" to "TrendReads", "did your range calls hold today" to "TrendReads",
+        "how accurate were your trend reads" to "TrendReads", "are your trend reads accurate" to "TrendReads",
+        "how reliable are your trend calls" to "TrendReads", "score your trend reads" to "TrendReads", "trend call accuracy" to "TrendReads",
+        "how many of your range reads were right" to "TrendReads", "did your structure reads hold up this month" to "TrendReads",
+        "trend calls kaise rahe" to "TrendReads",
+        // ---- ArmHabits: what Boss does with his bots after losing days ----
+        "do i usually disarm my bots after losses" to "ArmHabits", "do i keep orb armed after losses" to "ArmHabits",
+        "when do i usually disarm range fade" to "ArmHabits", "which bots do i keep armed" to "ArmHabits", "my arming habits" to "ArmHabits",
+        "do i give up on my bots too fast" to "ArmHabits", "loss ke baad main bot band karta hoon kya" to "ArmHabits",
+        "do i switch off orb after losing days" to "ArmHabits", "what do i do with my bots after a loss" to "ArmHabits",
+        "do i turn off my bots after two losing days" to "ArmHabits", "how quickly do i disarm a losing bot" to "ArmHabits",
+        "do i usually switch off orb after a loss" to "ArmHabits", "what do i usually do after losing days" to "ArmHabits",
+        "my disarming habits" to "ArmHabits", "do i keep range fade on after losses" to "ArmHabits",
+        "after how many losing days do i disarm orb" to "ArmHabits", "which strategies do i usually switch off after losses" to "ArmHabits",
+        "how do i handle my bots after a losing day" to "ArmHabits",
+        // ---- PriorDay: the prior day's high and low record ----
+        "when nifty takes out yesterday's high in the first hour how often does it close above it" to "PriorDay",
+        "how often does nifty break the previous day's high" to "PriorDay", "does banknifty usually hold below yesterday's low after breaking it" to "PriorDay",
+        "pdh pdl record" to "PriorDay", "kal ka high todne ke baad kitni baar upar band hota hai" to "PriorDay",
+        "how often does nifty close above the prior day high" to "PriorDay", "how often does yesterday's low get taken out" to "PriorDay",
+        "prior day high record for banknifty" to "PriorDay", "does a break of yesterday's high usually hold" to "PriorDay",
+        "how often does nifty reverse after breaking the previous day's low" to "PriorDay", "how often does nifty take out yesterday's high" to "PriorDay",
+        "does nifty usually close above yesterday's high after breaking it" to "PriorDay",
+        "how often does banknifty break yesterday's low in the first hour" to "PriorDay", "previous day high low record" to "PriorDay",
+        "how often does a break of the prior day low reverse" to "PriorDay",
+        // ---- LastHour: the last hour's record ----
+        "how often does the last hour continue the day's direction" to "LastHour", "does nifty usually reverse in the last hour" to "LastHour",
+        "on up days does banknifty extend in the closing hour" to "LastHour", "last hour record for sensex" to "LastHour",
+        "aakhri ghante mein kitni baar palat-ta hai" to "LastHour", "how often does nifty reverse in the last hour" to "LastHour",
+        "does the last hour usually follow the trend" to "LastHour", "on down days does nifty keep falling in the last hour" to "LastHour",
+        "closing hour record for nifty" to "LastHour", "how often does the last hour undo the whole day" to "LastHour",
+        "how often does the last hour reverse on down days" to "LastHour", "does banknifty usually continue in the last hour" to "LastHour",
+        "power hour record" to "LastHour", "how often does the closing hour fade the day" to "LastHour",
+        "does the final hour usually give back the day's move" to "LastHour", "how often is the last hour the same direction as the day" to "LastHour",
+        // Its neighbours: today's last hour, and how busy it usually is.
+        "how did nifty do in the last hour today" to "Moves",
+        // ---- InsideDays: the inside-day and narrow-range record ----
+        "after an inside day how often does nifty's range expand the next day" to "InsideDays", "how often does an nr7 day lead to a bigger day" to "InsideDays",
+        "inside day record for banknifty" to "InsideDays", "do narrow range days usually break out the next day" to "InsideDays",
+        "inside day ke baad kitni baar bada move aata hai" to "InsideDays", "what happens after an inside day" to "InsideDays",
+        "nr7 record for nifty" to "InsideDays", "after a narrow range day does nifty usually expand" to "InsideDays",
+        "how often does banknifty break out after an inside day" to "InsideDays", "how often do inside days lead to a trend day" to "InsideDays",
+        "nr7 stats for banknifty" to "InsideDays", "do inside days usually expand the next day" to "InsideDays",
+        "how often does a narrow day lead to a breakout" to "InsideDays", "what usually happens after an nr7 day" to "InsideDays",
+        "do tight range days usually lead to a big move" to "InsideDays",
+        // Its neighbours: one day's own shape, the candle pattern.
+        "is today an inside day" to "Market", "what is an inside bar" to "PatternExpert",
+        // ---- Account:NUMBERS, more of it ----
+        "what's my average win and average loss" to "Account:NUMBERS", "what's my risk reward on my trades" to "Account:NUMBERS",
+        "my profit factor" to "Account:NUMBERS", "my expectancy" to "Account:NUMBERS", "how much do i make per trade" to "Account:NUMBERS",
+        "do i hold my losers longer than my winners" to "Account:NUMBERS", "do i cut my winners short" to "Account:NUMBERS",
+        "my trading stats" to "Account:NUMBERS", "mera average loss kitna hai" to "Account:NUMBERS", "what's my average win last month" to "Account:NUMBERS",
+        "what's my profit factor this week" to "Account:NUMBERS", "how long do i hold my winners" to "Account:NUMBERS",
+        "what's my average loss" to "Account:NUMBERS", "what's my reward to risk" to "Account:NUMBERS", "do i hold my losers too long" to "Account:NUMBERS",
+        "do i book my winners too early" to "Account:NUMBERS", "my win loss size" to "Account:NUMBERS", "what's my expectancy this month" to "Account:NUMBERS",
+        "how much do i make on average per trade" to "Account:NUMBERS", "mera average profit kya hai" to "Account:NUMBERS",
+        "how long do i hold my losers" to "Account:NUMBERS",
     )
 
     @Test fun eachQuestionGoesWhereItShould() {
@@ -674,6 +800,95 @@ class CollisionTest {
         for (s in listOf("do orb breakouts fail often then close all positions", "compare today with yesterday and stop all strategies",
             "what's my profit factor, then kill switch on", "what can i ask you then square off my position", "open youtube then close all positions"))
             assertTrue(Bundle.acts(s) || Ask.parse(s).command != null || Ask.parse(s).order != null, s)
+    }
+
+    // ---- Round 13: round 12's open items, and the newest families ----
+
+    @Test fun roundTwelvesOpenItemsAreRouted() {
+        // "What all can you do": what Jarvis can do (Ira.answer's help, the areas from the Toolbox), never "not understood".
+        for (s in listOf("what all can you do", "what else can you do", "what can you do", "what all do you do")) {
+            assertEquals(setOf(Topic.HELP), Ask.parse(s).topics, s)
+            assertEquals("Help", audit.feature(s), s)
+        }
+        // "How was yesterday for Nifty": the index's last session ([DayCompare], the day alone), not Boss's own history -
+        // only with an index or the market named; his own yesterday stays his.
+        for (s in listOf("how was yesterday for nifty", "how was nifty yesterday", "how was the market yesterday", "kal nifty kaisa tha")) {
+            assertEquals(DayCompare.Focus.DAY, DayCompare.asked(s)?.focus, s)
+            assertTrue(Topic.ACCOUNT !in Ask.parse(s).topics, s)
+        }
+        for (s in listOf("how was yesterday", "how was my day yesterday", "how did i do yesterday")) assertEquals(setOf(Topic.ACCOUNT), Ask.parse(s).topics, s)
+        // "What is the average price of my put": his position's line (quantity and average price), not the market's answer;
+        // the index's own average stays the market's, and his average win stays his numbers.
+        for (s in listOf("what is the average price of my put", "what's my average price on the 24500 put", "meri put ka average price kya hai"))
+            assertTrue(Section.POSITIONS in AppAnswers.sections(s) && Ask.parse(s).topics == setOf(Topic.ACCOUNT), s)
+        assertEquals("Market", audit.feature("what's the average range of nifty"))
+        assertEquals("Account:NUMBERS", audit.feature("what's my average win and average loss"))
+        // "Meri put explain karo phir isko band karo": never one STOP_ONE of the whole any more - the multi-step plan: the put
+        // explained, then that position's close, shown and confirmed once before anything is done.
+        val said = "meri put explain karo phir isko band karo"
+        assertEquals(null, Ask.parse(said).command); assertEquals(null, Ask.parse(said).order)
+        assertTrue(Bundle.acts(said))
+        assertEquals(listOf("meri put explain karo", "close my put"), Plan.steps(said, ::hubStep))
+        assertEquals(Command.Kind.CLOSE_ONE, Ask.parse("close my put").command?.kind)
+        assertTrue(Command.Kind.CLOSE_ONE in Plan.ALLOWED)
+        assertEquals("Account:EXPLAIN_POS", audit.feature("meri put explain karo"))
+        assertEquals(listOf("meri 24500 put explain karo", "close my 24500 put"), Plan.steps("meri 24500 put explain karo phir isko band kar do", ::hubStep))
+        assertEquals(listOf("meri call explain karo", "close my call"), Plan.steps("meri call explain karo uske baad isko band karo", ::hubStep))
+        // No position named before the pronoun: asked which, never a plan, never a command (and "isko" is never a strategy).
+        for (s in listOf("nifty kaisa hai phir isko band karo", "isko band karo")) {
+            assertEquals(null, Ask.parse(s).command, s)
+            assertEquals(null, Plan.steps(s, ::hubStep), s)
+        }
+        assertTrue(Plan.pronounUnclear("nifty kaisa hai phir isko band karo"))
+        // The Hinglish commands are read as before ("phir se" is "again", never a step).
+        assertEquals(Command.Kind.STOP_ONE, Ask.parse("strategy 1 band karo").command?.kind)
+        assertEquals(Command.Kind.STOP_ALL, Ask.parse("sab strategies band karo").command?.kind)
+        assertEquals(Command.Kind.CLOSE_ONE, Ask.parse("position band karo").command?.kind)
+        assertEquals(null, Plan.steps("nifty phir se 25000 cross karega", ::hubStep))
+    }
+
+    @Test fun roundThirteenWordingsNeitherOrderNorCommandNorBundle() {
+        val newest = setOf("OrderWhy", "BotTrades", "WrongThing", "OutsideApp", "TrendReads", "ArmHabits", "PriorDay", "LastHour", "InsideDays", "Account:NUMBERS")
+        val all = ASKED.filter { it.second in newest }
+        assertTrue(all.size >= 150, "${all.size}")
+        for ((s, want) in all) {
+            assertEquals(want, audit.feature(s), s)
+            val p = Ask.parse(s)
+            assertEquals(null, p.order, s); assertEquals(null, p.command, s)
+            assertTrue(Topic.ORDER !in p.topics && Topic.COMMAND !in p.topics, s)
+            assertTrue(!Bundle.acts(s), s)
+            assertEquals(null, Intents.quick(s), s)
+            assertTrue(!Reminder.asked(s) && !Reminder.cancelAsked(s) && !FollowUp.acts(s), s)
+            assertEquals(null, Reminder.parse(s, today.atTime(10, 0)), s)
+            assertTrue(Understand.questions(null, s).orEmpty().none { FollowUp.acts(it) || Ask.parse(it).command != null || Ask.parse(it).order != null }, s)
+            // Each (but another app, and "galat jawab" said of the last answer) is a question a plan can hold, answered at its turn.
+            if (want != "OutsideApp" && !WrongThing.objected(s)) assertTrue(Toolbox.isRead(s), s)
+        }
+        // Said with something to do, each goes to the multi-step plan: the question answered at its turn, the action only
+        // after the plan's one confirm (never answered and the action dropped, never done as one command of the whole).
+        val plans = mapOf(
+            "pdh pdl record then square off my position" to listOf("pdh pdl record", "square off my position"),
+            "inside day record for banknifty then close all positions" to listOf("inside day record for banknifty", "close all positions"),
+            "how often does nifty reverse in the last hour and stop all strategies" to listOf("how often does nifty reverse in the last hour", "stop all strategies"),
+            "what did my bots do today then stop all strategies" to listOf("what did my bots do today", "stop all strategies"),
+            "why was my order rejected then cancel all orders" to listOf("why was my order rejected", "cancel all orders"),
+            "what did you get wrong today and close all positions" to listOf("what did you get wrong today", "close all positions"),
+            "how often were your trend reads right then kill switch on" to listOf("how often were your trend reads right", "kill switch on"),
+            "do i usually disarm my bots after losses, then stop all strategies" to listOf("do i usually disarm my bots after losses", "stop all strategies"),
+            "what's my profit factor then switch to paper mode" to listOf("what's my profit factor", "switch to paper mode"),
+            "why did orb take that trade then stop orb" to listOf("why did orb take that trade", "stop orb"),
+        )
+        for ((s, steps) in plans) {
+            assertTrue(Bundle.acts(s) || Ask.parse(s).command != null, s)
+            assertEquals(steps, Plan.steps(s, ::hubStep), s)
+            assertTrue(Plan.steps(s, ::hubStep)!!.mapNotNull { Ask.parse(it).command?.kind }.all { it in Plan.ALLOWED }, s)
+        }
+        // Outside the app is never a step: said with an action it stays left to the action's own confirm (round 12).
+        assertEquals(null, Plan.steps("open youtube then close all positions", ::hubStep))
+        // The phone's own switches are outside the app, never a strategy started or stopped.
+        for (s in listOf("turn on the flashlight", "turn off the flashlight", "switch on the torch", "turn on wifi")) assertEquals(null, Ask.parse(s).command, s)
+        assertEquals(Command.Kind.START_ONE, Ask.parse("start orb").command?.kind)
+        assertEquals(Command.Kind.STOP_ONE, Ask.parse("turn off orb").command?.kind)
     }
 
     /** The hub's own test of a plan's step: an action a plan may hold, or a question it can answer. */

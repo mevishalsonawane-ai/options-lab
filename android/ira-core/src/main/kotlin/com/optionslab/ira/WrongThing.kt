@@ -162,9 +162,9 @@ object WrongThing {
 
     private val OBJECTED = rx("^ (hey |ok |okay )?(jarvis )?(no |nahi |nahin )?(" +
         "galat (jawab|jawaab|answer|reply)( (diya|de diya|hai|tha|mila))?|(ye|yeh|ya|wo|woh) galat (jawab|jawaab|answer) (hai|tha)|" +
-        "(maine |main |mai )?(ye|yeh|ya|wo|woh) (nahi|nahin|nai) (poocha|pucha|puchha|poochha)( tha)?|" +
-        "(that s|thats|that is|this is) not what i (meant|asked for|wanted)|not what i (meant|asked for|wanted)|" +
-        "you answered the wrong (thing|question)|(that s|thats|that is) the wrong (answer|thing)|wrong thing|you (got|took) (it|that|me) wrong|" +
+        "(maine |main |mai )?(ye|yeh|ya|wo|woh) (nahi|nahin|nai) (poocha|pucha|puchha|poochha)( tha)?( maine)?|" +
+        "(that s|thats|that is|this is) not what i (meant|asked|asked for|wanted)|not what i (meant|asked for|wanted)|" +
+        "you answered the wrong (thing|question)|(that s|thats|that is|that was) the wrong (answer|thing)|wrong thing|you (got|took) (it|that|me) wrong|" +
         "you answered something else|(that s|thats|that is) not my question|i asked something else" +
         ")( jarvis| boss| please)* $")
 
@@ -252,7 +252,12 @@ object WrongThing {
     private const val TAIL = "( please| boss| jarvis)* $"
     private const val WHEN = "( today| so far today| this week| lately| recently| this month)"
     private val ASKED = rx(LEAD + "what (did|have) you (get|got|gotten|answer|answered) wrong$WHEN" + TAIL + "|" +
-        LEAD + "(which|what) (questions|things) (did|have) you (get|got|gotten|answer|answered|take|took|taken) wrong$WHEN?" + TAIL + "|" +
+        LEAD + "(which|what) (of my )?(questions|things) (did|have) you (get|got|gotten|answer|answered|take|took|taken) (wrong|wrongly|the wrong way)$WHEN?" + TAIL + "|" +
+        // (Routing round 13: "what did you answer wrongly today", "what did you misunderstand today", "what mistakes did you make today".)
+        LEAD + "what (did|have) you (answer|answered) wrongly$WHEN?" + TAIL + "|" +
+        LEAD + "what (did|have) you (misunderstand|misunderstood)$WHEN?" + TAIL + "|" +
+        LEAD + "what mistakes (did|have) you (make|made)$WHEN?" + TAIL + "|" +
+        LEAD + "(aaj )?(aapne |apne |tumne |tum ne |aap ne )?(aaj )?(kya|kaun se|kon se|kaunse) (sawal |sawaal |question |questions )?galat (samjha|samjhe|samjhi|suna)( aaj)?" + TAIL + "|" +
         LEAD + "(which|what) (questions|things) (did|have) you answer(ed)? with the wrong (thing|answer)$WHEN?" + TAIL + "|" +
         LEAD + "(which|what) questions (did|have) you (misunderstand|misunderstood|misread|mishear|misheard|misroute|misrouted)$WHEN?" + TAIL + "|" +
         LEAD + "(where|when) (did|have) you (misunderstand|misunderstood|misread|mishear|misheard) me$WHEN?" + TAIL + "|" +

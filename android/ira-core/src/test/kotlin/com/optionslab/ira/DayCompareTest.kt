@@ -57,7 +57,7 @@ class DayCompareTest {
         ).forEach { (s, ref) -> assertEquals(ref, DayCompare.asked(s)?.other, s) }
         assertEquals(DayCompare.Focus.TREND_RANGE, DayCompare.asked("is today more like a trend day than yesterday")?.focus)
         assertEquals(DayCompare.Focus.ALL, DayCompare.asked("how is today different from yesterday")?.focus)
-        listOf("what happened yesterday", "how did nifty do yesterday", "what's the structure today", "is today a trend day",
+        listOf("what happened yesterday", "how was yesterday", "how was my day yesterday", "how did i do yesterday", "how was gold yesterday", "what's the structure today", "is today a trend day",
             "how is today different from a usual day", "what's different about today", "how is my pnl today vs yesterday",
             "compare my trades today with yesterday", "aaj aur kal mein kya fark hoga", "will today be like yesterday",
             "how is today's news different from yesterday", "how did nifty do on fridays", "relative strength banknifty vs nifty",
@@ -113,6 +113,31 @@ class DayCompareTest {
         assertEquals(DayCompare.NOT_HERE, DayCompare.answer(DayCompare.Q(DayCompare.Ref(1), DayCompare.Focus.ALL), Market.VIX, bars, today))
         assertNotNull(DayCompare.market(emptyList()))
         assertNull(DayCompare.market(listOf(Market.VIX)))
+    }
+
+    @Test fun theEarlierDayAloneWithAnIndexOrTheMarketNamed() {
+        // Routing round 13: "how was yesterday for Nifty" got Boss's own history. With an index or the market named it is
+        // the index's last session, read whole; a bare "how was yesterday" may be his own day and stays his.
+        for (s in listOf("how was yesterday for nifty", "how was nifty yesterday", "how did nifty do yesterday", "how was the market yesterday",
+            "how did banknifty do yesterday", "how was banknifty on friday", "kal nifty kaisa tha", "kal market kaisa raha",
+            "how did sensex close yesterday", "how was nifty's day yesterday")) {
+            assertEquals(DayCompare.Focus.DAY, DayCompare.asked(s)?.focus, s)
+            val p = Ask.parse(s)
+            assertTrue(Topic.ACCOUNT !in p.topics, s); assertNull(p.order, s); assertNull(p.command, s); assertTrue(!Bundle.acts(s), s)
+        }
+        assertEquals(DayCompare.Ref(weekday = DayOfWeek.FRIDAY), DayCompare.asked("how was banknifty on friday")?.other)
+        for (s in listOf("how was yesterday", "how did i do yesterday", "how was my day yesterday")) assertNull(DayCompare.asked(s), s)
+        assertEquals(setOf(Topic.ACCOUNT), Ask.parse("how was yesterday").topics)
+        // Read whole, then set beside today's morning when today has candles; before today's open, the day alone.
+        val morning = DayCompare.answer(DayCompare.asked("how was yesterday for nifty")!!, Market.NIFTY, range(friday, 375) + trendUp(today, 120), today)
+        assertTrue(morning.startsWith("Nifty's last session (Fri 2 Oct), the whole session, Boss. The last session: range-like"), morning)
+        assertTrue("Up to 11:15 on both days: today was the more trend-like" in morning, morning)
+        assertTrue(morning.endsWith(DayCompare.NOTE) && !ADVICE.containsMatchIn(morning), morning)
+        val alone = DayCompare.answer(DayCompare.asked("how was nifty yesterday")!!, Market.NIFTY, range(friday, 375), today)
+        assertTrue(alone.startsWith("Nifty's last session (Fri 2 Oct), the whole session, Boss.") && "today" !in alone.substringBefore("I call"), alone)
+        val tue = LocalDate.of(2026, 10, 6)
+        val y = DayCompare.answer(DayCompare.asked("how was nifty yesterday")!!, Market.NIFTY, range(today, 375), tue)
+        assertTrue(y.startsWith("Nifty's yesterday (Mon 5 Oct), the whole session, Boss. Yesterday: range-like"), y)
     }
 
     @Test fun nothingActs() {

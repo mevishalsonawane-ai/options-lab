@@ -61,7 +61,7 @@ object Ask {
         "how much (more )?can i (still )?lose | am i (on|in) (paper|live)( or (paper|live))? | my buying power | how much can i trade with )")
     private val GREET = Regex(" (hello|hi|hey|good morning|good afternoon|good evening|jarvis|ira|boss|ok|okay|please|there) ")
     /** About Ira itself: what it can do, the voice. */
-    private val HELP = Regex(" (what can you do|what do you do|who are you|what are you|help|how do i use|how to use|can you (hear|listen)|" +
+    private val HELP = Regex(" (what can you do|what all can you do|what else can you do|what all do you do|what all can you help (me )?with|what are all the things you can do|what do you do|who are you|what are you|help|how do i use|how to use|can you (hear|listen)|" +
         "listen to me|hear me|your voice|voice|speak to me|talk to me|can you talk|can you speak) ")
 
     /**
@@ -157,8 +157,13 @@ object Ask {
         // "Has the gap filled?" (routing round 11: read as his order fills): the index's gap today, not the account.
         val gapFill = rx(" (gap|gaps|gapped|gapup|gapdown) ").containsMatchIn(t) && rx(" (fill|fills|filled|filling) ").containsMatchIn(t) &&
             !rx(" (my|mine|our|i|me|we|order|orders|trade|trades|position|positions) ").containsMatchIn(t)
+        // "How was yesterday for Nifty", "how was the market yesterday": the index's last session set beside today
+        // ([DayCompare]), not Boss's history (routing round 13) - only with an index or the market named, never a "my".
+        val marketDay = DayCompare.asked(text) != null ||
+            // "What was yesterday's high?" with no index named (round 13: read as Boss's history): the index's prior session.
+            Lookback.prevAsked(text) && !rx(" (my|mine|our|i|me|we) ").containsMatchIn(t)
         // ("Wrap up my day" holds the day's P&L: Boss's own, like any account question - review, 4 Oct.)
-        val account = DaySummary.asked(text) || DaySummary.asked(said) || TradeReplay.asked(text) != null || MonthReview.asked(text) || Charges.asked(text) || TaxRecords.asked(text) || Exposure.moveAsked(text) != null || Exposure.rankAsked(text) || PositionHealth.asked(said) || BotHealth.asked(said) || Headroom.asked(said) != null || SaidAbout.asked(said) != null || NeedsTrue.asked(said) || MyStreaks.asked(said) || MyNumbers.asked(said) || !priceAsk && !marketFigure && !payoff && !memory && !marketSpan && !gapFill && (ACCOUNT.containsMatchIn(t) || AppAnswers.about(t) && placed?.lots == null)
+        val account = DaySummary.asked(text) || DaySummary.asked(said) || TradeReplay.asked(text) != null || MonthReview.asked(text) || Charges.asked(text) || TaxRecords.asked(text) || Exposure.moveAsked(text) != null || Exposure.rankAsked(text) || PositionHealth.asked(said) || BotHealth.asked(said) || Headroom.asked(said) != null || SaidAbout.asked(said) != null || NeedsTrue.asked(said) || MyStreaks.asked(said) || MyNumbers.asked(said) || !priceAsk && !marketFigure && !payoff && !memory && !marketDay && !marketSpan && !gapFill && (ACCOUNT.containsMatchIn(t) || AppAnswers.about(t) && placed?.lots == null)
         val order = if (account) null else placed
         // "Levels on all indices", "how are all the markets": the four indices.
         // (An order's markets are the words as heard: a misheard name never fills one in.)

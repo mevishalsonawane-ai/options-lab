@@ -101,6 +101,8 @@ object TrendReads {
         // "how often were your trend reads right", "how accurate are your structure reads", "how good have your trend calls been"
         " how (often|accurate|good|right|reliable|well) (are|is|were|was|have|has) $WHO $WHAT $CALLS( been)?( right| correct| accurate| on the mark| working)? |" +
         " how (often|many times) (are|were|have been|is|was) $WHO $WHAT $CALLS (right|correct|wrong|accurate) |" +
+        // "How many of your trend reads held this week?" (routing round 13: read as Boss's own history)
+        " how many of $WHO $WHAT $CALLS (held|hold|were right|came right|turned out right|were correct|were wrong|turned|worked) |" +
         " how often (do|did) $WHO $WHAT $CALLS (hold|come right|turn out right|go right|work|play out) |" +
         // "were your trend reads right this month", "did your trend calls hold", "did your structure reads hold up"
         " (were|are|did|do|have) $WHO $WHAT $CALLS (right|correct|accurate|hold|holds|held|hold up|come true|work out|play out|turn out right) |" +

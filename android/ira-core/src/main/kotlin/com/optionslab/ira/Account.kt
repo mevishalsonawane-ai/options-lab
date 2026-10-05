@@ -112,6 +112,11 @@ object AppAnswers {
         Section.PNL to Regex(" (p l|pnl|profit|profits|made|lost|earned|returns?|loss|losses|mtm|m2m|(did|have) i (make|earn|lose)) "),
         Section.ORDERS to Regex(" (order|orders|trades|fills|filled|rejected|rejection|rejections) "),
         Section.POSITIONS to Regex(" (position|positions|holding|holdings|open trades|exposure) "),
+        // His leg's own price (routing round 13: "what is the average price of my put" got the market): the position's line
+        // holds its quantity and average price - "my average on the 24500 put", "meri call ka avg price".
+        Section.POSITIONS to Regex(" (average|avg|entry|buy|buying|purchase|cost) (price|cost|rate|level) (of |on |for )?(my|mine|meri|mera|mere) |" +
+            " (my|meri|mera|mere) ((\\d+|nifty|banknifty|bank nifty|finnifty|sensex) ){0,2}(put|call|ce|pe|puts|calls|straddle|strangle)( ka| ki| ke| s)? (average|avg|entry) (price|cost|rate)? ?|" +
+            " (my|meri|mera|mere) (average|avg|entry|buy) (price|cost) (of|on|for) (the |my )?((\\d+|nifty|banknifty|bank nifty|finnifty|sensex) ){0,2}(put|call|ce|pe|straddle|strangle) "),
         Section.STRATEGIES to Regex(" (strategy|strategies|arm|arms|bot|bots|algo|algos|pine|orb|script|scripts|studies|study|running) "),
         Section.SETTINGS to Regex(" (settings|setting|mode|paper mode|live mode|paper or live|live or paper|product|nrml|mis|preferences|one tap|biometric|pin) "),
         Section.STATUS to Regex(" (status|market open|is the market|open today|holiday|holidays|expiry|expiries|harvest|data|zerodha|kite|login|logged|connected|static ip|relay|app) "),
@@ -128,6 +133,9 @@ object AppAnswers {
         // a bare "my put" were market answers): that position explained. Only whole, so "how did my calls do this week" stays his history.
         Section.EXPLAIN_POS to Regex("^ (jarvis |boss |please )?((explain|walk me through|talk me through|break down|tell me about) (my|mine) |how (did|has) my |(my|mera|meri) )" +
             "(\\d+ )?(nifty |banknifty |bank nifty |finnifty |sensex )?(\\d+ )?(put|call|ce|pe|straddle|strangle|iron condor|spread)( position| trade| leg)?( (do|done|go|gone|doing))?( please| boss| jarvis)? $"),
+        // ...and in Hinglish, the verb last (routing round 13: "meri put explain karo", the first step of "... phir isko band karo").
+        Section.EXPLAIN_POS to Regex("^ (jarvis |boss )?(my|mera|meri|mere) (\\d+ )?(nifty |banknifty |bank nifty |finnifty |sensex )?(\\d+ )?" +
+            "(put|call|ce|pe|straddle|strangle|iron condor|spread)( position| trade)?( ko| ke baare mein)? (explain|samjhao|samjha do|explain karo|explain kar do|explain kardo|batao)( please| boss| jarvis)? $"),
         Section.WHATIF to Regex(" (what if (i|we) (had )?(taken|took|take|bought|approved)|would (i|it) have (made|lost)|if i had (taken|approved|bought)) "),
         Section.CHANGES to Regex(" (what did i change|what have i changed|settings? (history|changes)|changes? to (my )?(settings|limits)|limit changes|who changed|changed my (limits|settings)) "),
         Section.ACTIVITY to Regex(" (what did you do|what have you done|what you did|your activity|activity log|what did jarvis do|did you do anything) "),

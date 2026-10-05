@@ -82,7 +82,9 @@ object InsideDays {
     /** A record asked of. */
     private const val HOW = " (how often|how many times|how frequently|how many days|how many sessions|what share|what percentage|what percent|what fraction|" +
         "usually|normally|typically|generally|tend to|tends to|on average|most times|most of the time|historically|history|record|rate|" +
-        "stats|statistics|odds|chances|probability|percentage|kitni baar|kitne din|aksar|zyada tar|mostly) "
+        "stats|statistics|odds|chances|probability|percentage|kitni baar|kitne din|aksar|zyada tar|mostly|" +
+        // "What happens after an inside day?" (routing round 13: not understood)
+        "what happens|what usually happens|what typically happens) "
     /** "Inside day record", "NR7 stats" - the record named outright. */
     private const val NAMED = " (inside day|inside days|nr7|nr 7|narrow range day|narrow range days) (record|stats|statistics|behaviour|behavior|tendency|follow through) "
     // Forecasts, advice, Boss's own book, alerts, a single day, weekdays and expiry (Weekdays'), meanings, the candle pattern.

@@ -69,7 +69,15 @@ object Toolbox {
     fun isRead(text: String): Boolean {
         val q = Ask.parse(text)
         if (q.command != null || q.order != null) return false
-        return q.topics.any { it in setOf(Topic.OVERVIEW, Topic.TREND, Topic.LEVELS, Topic.PATTERNS, Topic.NEWS, Topic.VOLATILITY, Topic.ACCOUNT, Topic.TRADE_CHECK) }
+        if (q.topics.any { it in setOf(Topic.OVERVIEW, Topic.TREND, Topic.LEVELS, Topic.PATTERNS, Topic.NEWS, Topic.VOLATILITY, Topic.ACCOUNT, Topic.TRADE_CHECK) }) return true
+        // The records and Jarvis's own ways the hub answers by name (routing round 13: "pdh pdl record then square off my
+        // position" was one close, done without the plan) - a question step of a plan too, answered at its turn.
+        return runCatching {
+            PriorDay.asked(text) != null || LastHour.asked(text) != null || InsideDays.asked(text) != null || RangeBreaks.asked(text) != null ||
+                GapRecord.asked(text) != null || DayClock.asked(text) != null || Weekdays.asked(text) != null || TrendReads.asked(text) ||
+                PatternCalls.asked(text) || WrongThing.asked(text) != null || ArmHabits.asked(text) || BotTrades.asked(text) != null ||
+                OrderWhy.asked(text) != null || MyNumbers.asked(text)
+        }.getOrDefault(false)
     }
 
     /** What a step needs, in words (a command's, or "just answered" for a question). */

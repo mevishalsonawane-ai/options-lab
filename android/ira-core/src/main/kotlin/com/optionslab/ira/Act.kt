@@ -234,7 +234,11 @@ object Commands {
         // One strategy or arm: the verb comes first ("stop strategy 2"), and settings are never read as a name.
         val notArm = rx("kill switch|\\blive\\b|paper|\\bmode\\b|alert|alarm|autopilot|listening|^trading$|^(it|that|this|jarvis|everything)$|voice|notifications?|\\bloss\\b|talking|speaking|^(when|if|once|after|before|sending|telling|giving|the music|music|news|calling|reminding)\\b|timer|recording|backtest" +
             // "Stop correcting your confidence words" is Jarvis's own wording check ([WordFit]), never a strategy (routing round 11).
-            "|^(correcting|matching|calibrating|adjusting) (your |his |the )?(confidence |frequency )?words\\b")
+            "|^(correcting|matching|calibrating|adjusting) (your |his |the )?(confidence |frequency )?words\\b" +
+            // "Turn on the flashlight" is the phone's, outside the app ([OutsideApp]), never a strategy (routing round 13).
+            "|^(the |my )?(flashlight|torch|wifi|wi fi|bluetooth|hotspot)$" +
+            // "Isko band karo" names nothing (a close by a pronoun, [Plan.pronounClose]): never a strategy called "isko".
+            "|^(isko|usko|is|us|ise|use|isse|usse|ye|yeh|wo|woh|vo)$")
         rx("^ (stop|disarm|switch off|turn off|pause|halt) $ARM_NOUN ?(.+)$").find(s)?.let { m ->
             val what = m.groupValues[2].trim()
             if (what.isNotEmpty() && !notArm.containsMatchIn(what)) return one(Command.Kind.STOP_ONE, what)

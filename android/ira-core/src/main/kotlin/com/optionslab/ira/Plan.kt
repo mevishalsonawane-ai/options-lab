@@ -21,7 +21,8 @@ object Plan {
     /** Said when a request in steps holds an action a plan may not. */
     const val ONLY_LOWERING = "I make a plan only of steps that lower risk (stop, cancel, close, kill switch on, paper, the emergency exit) and questions, Boss. Ask for the others one at a time - nothing was done."
 
-    private val STRONG = Regex("(?i)\\s*(?:,\\s*)?\\b(?:and then|then|after that|afterwards|next)\\b\\s*|\\s*;\\s*")
+    // (Hinglish steps too - "meri put explain karo phir isko band karo", routing round 13 - never "phir se", "again".)
+    private val STRONG = Regex("(?i)\\s*(?:,\\s*)?\\b(?:and then|then|after that|afterwards|next|aur phir|phir(?!\\s+se\\b)|uske baad|iske baad)\\b\\s*|\\s*;\\s*")
     private val AND = Regex("(?i)\\s*(?:,\\s*)?\\band\\b\\s*|\\s*,\\s*")
 
     /**
@@ -35,6 +36,9 @@ object Plan {
         val strong = parts(STRONG)
         val split = named(if (strong.size >= 2) strong.flatMap { splitAnd(it, isStep) } else splitAnd(t, isStep))
         if (split.size < 2 || split.size > MAX_STEPS || !split.all(isStep)) return null
+        // A close by a pronoun left with no position named before it is never a step ("nifty kaisa hai phir isko band karo":
+        // asked which position, [pronounUnclear]; routing round 13).
+        if (split.drop(1).any { pronounClose(it) }) return null
         // A plan does something: questions alone are just answered (one after the other, as asked).
         if (split.all { Ask.parse(it).command == null }) return null
         return split

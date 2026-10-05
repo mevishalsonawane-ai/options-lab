@@ -601,7 +601,8 @@ class CoverageTest {
         if (DayStory.asked(t)) return "DayStory"
         if (Gap.asked(t)) return "Gap"
         if (Streak.asked(t)) return "Streak"
-        return if (Topic.OFF_TOPIC in p.topics) "Missed" else "Market"
+        // (Ira.answer's own: what Jarvis can do, the voice - AppAnswers.help; round 13.)
+        return if (Topic.OFF_TOPIC in p.topics) "Missed" else if (Topic.HELP in p.topics) "Help" else "Market"
     }
 
     private val ACCOUNT_REVIEW = "Account:REVIEW"

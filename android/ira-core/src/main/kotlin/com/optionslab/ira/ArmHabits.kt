@@ -146,6 +146,8 @@ object ArmHabits {
         LEAD + "(what are |show me |whats )?(my )?(arming|disarming|bot|bots) (habits?|record|pattern|patterns)( after (losses|losing days))?" + TAIL + "|" +
         LEAD + "how do i (usually )?(treat|handle) (my )?(bots|strategies|arms|algos|[a-z0-9 ]{1,24}) (after|when they lose|through) ?$LOSS?" + TAIL + "|" +
         LEAD + "do i (give up on|switch off|disarm|drop) (my )?(bots|strategies|arms|algos) too (fast|soon|early|quickly)" + TAIL + "|" +
+        // "How quickly do I disarm a losing bot?" (routing round 13: read as his strategies' list)
+        LEAD + "how (quickly|fast|soon) do i (usually |normally )?$OFF (a |my |the )?(losing )?(bot|bots|strategy|strategies|arm|arms|algo|algos)( after $LOSS)?" + TAIL + "|" +
         "^ (jarvis )?(kya )?(main |mai |mein )?(loss|losses|loss wale din) ke baad (main |mai |mein )?([a-z0-9 ]{1,24} )?(bot|bots|strategy) (band|off) karta (hoon|hu|hun)( kya)?" + TAIL + "|" +
         "^ (jarvis )?(loss|losses) ke baad (main |mai |mein )?(bots|bot|strategies) ke saath kya karta (hoon|hu|hun)" + TAIL)
 
