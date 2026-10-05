@@ -350,7 +350,9 @@ object IraModel {
         val now = java.time.LocalDateTime.now(java.time.ZoneId.of("Asia/Kolkata"))
         for (p in com.optionslab.ira.PromptWarm.prefixes(now)) {
             val more = lock.withLock {
-                if (handle == 0L || !usable() || JarvisVoice.wanted) return@withLock false
+                // Listening wanted meanwhile: the model makes way at once, as preload does (it starved the recognizer, 4 Oct).
+                if (JarvisVoice.wanted) { if (handle != 0L) unloadLocked(); return@withLock false }
+                if (handle == 0L || !usable()) return@withLock false
                 if (slots.holds(p)) return@withLock true
                 idle?.cancel()
                 val watchdog = scope.launch { delay(TIMEOUT_MS); LlmNative.cancel() }

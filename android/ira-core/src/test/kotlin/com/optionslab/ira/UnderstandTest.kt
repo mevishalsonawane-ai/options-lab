@@ -191,3 +191,12 @@ class UnderstandTest {
             assertNull(Understand.questions(null, s), s)
     }
 }
+
+class YouKnowTest {
+    @kotlin.test.Test fun youKnowIsFillerOnlyWhenSetApart() {
+        kotlin.test.assertEquals("what do you know about me", Filler.clean("what do you know about me"))
+        kotlin.test.assertEquals("how well do you know me", Filler.clean("how well do you know me"))
+        kotlin.test.assertEquals("do you know the nifty levels", Filler.clean("do you know the nifty levels"))
+        kotlin.test.assertTrue(!Filler.clean("nifty, you know, is it up").contains("you know"))
+    }
+}

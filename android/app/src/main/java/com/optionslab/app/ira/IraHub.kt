@@ -1051,7 +1051,8 @@ object IraHub {
     fun askConfirmed(text: String) = ask(text, understood = true)
 
     /** [understood]: [text] is the model's reading of the owner's words (its actions always wait for Confirm). */
-    private fun ask(text: String, understood: Boolean) {
+    /** [cleaned]: the words already read past their fillers or as a follow-up (a question): not read so again. */
+    private fun ask(text: String, understood: Boolean, cleaned: Boolean = false) {
         // Secrets never go further than this line: not into the conversation, the saved history or the model.
         val q = com.optionslab.ira.Secrets.redact(text.trim())
         if (q.isEmpty()) return
@@ -1074,13 +1075,17 @@ object IraHub {
         lastAskAt = System.currentTimeMillis()
         // The same for fillers ("umm"), false starts ("I mean") and two questions in one breath (questions only: words that
         // could act are never split or cleaned, and go on as said). Any part about the account on a locked phone: as said.
-        if (!understood && !com.optionslab.ira.Sources.asked(q)) {
+        if (!understood && !cleaned && !com.optionslab.ira.Sources.asked(q) &&
+            // Asked of his memory as said ("what do you know about me", "what did I tell you"): never read as anything else.
+            !runCatching { com.optionslab.ira.AboutBoss.knowAsked(q) || com.optionslab.ira.Memory.recallAsked(q) || com.optionslab.ira.Memory.forgetAsked(q) }.getOrDefault(false)) {
             val prev = if (recent) _state.value.messages.lastOrNull { !it.fromIra }?.text else null
             val qs = runCatching { com.optionslab.ira.Understand.questions(prev, q) }.getOrNull()
                 ?.takeIf { it.isNotEmpty() && it != listOf(q) && it.none { p -> lockedAccount(q, p) } }
             if (qs != null) {
                 _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, "$TOOK_AS\"${qs.joinToString("\" and \"")}\".")).takeLast(MAX_MESSAGES)) }
-                qs.forEach { ask(it, understood = true) }
+                // One question (fillers gone, or a follow-up read in full) goes on as Boss's own words, so remembering,
+                // "the usual" and his everyday wordings still work; parts of a split stay questions only.
+                if (qs.size == 1) ask(qs[0], understood = false, cleaned = true) else qs.forEach { ask(it, understood = true) }
                 return
             }
         }

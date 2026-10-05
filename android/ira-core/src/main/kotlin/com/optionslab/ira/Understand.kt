@@ -8,7 +8,9 @@ package com.optionslab.ira
  */
 object Filler {
     /** Sounds and stock phrases that say nothing, anywhere in the words. */
-    private val NOISE = Regex("(?i)[\\s,]*(?<![a-z0-9&])(?:u+m+|u+h+m*|e+r+m+|h+m+|a+h+|er|you know|basically|like i said|kind of like)(?![a-z0-9&])[\\s,]*")
+    private val NOISE = Regex("(?i)[\\s,]*(?<![a-z0-9&])(?:u+m+|u+h+m*|e+r+m+|h+m+|a+h+|er|basically|like i said|kind of like)(?![a-z0-9&])[\\s,]*")
+    /** "You know" set apart by a pause ("nifty, you know, is it up"): never inside "what do you know about me". */
+    private val YOU_KNOW = Regex("(?i)(^|,)\\s*you know\\s*(?=,|$)")
     /** Said first and meaning nothing: "so", "well", "okay so", "acha", "arre". */
     private val LEAD = Regex("(?i)^(?:so|well|okay so|ok so|alright so|acha|achha|accha|arre|arey|haan to|to)(?:[\\s,.]+)")
     /** A false start: what comes after replaces what came before ("Nifty - I mean BankNifty"). */
@@ -20,7 +22,7 @@ object Filler {
 
     /** [text] with fillers, repeats and false starts left out; [text] itself (exactly) when there are none. */
     fun clean(text: String): String {
-        var s = NOISE.replace(text, " ")
+        var s = NOISE.replace(YOU_KNOW.replace(text, "$1 "), " ")
         s = tidy(s)
         repeat(2) { s = tidy(LEAD.replace(s, "")) }
         s = restart(s)
