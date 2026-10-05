@@ -231,7 +231,18 @@ object Broker {
                     // Kite's own message names the problem (margin, price band,
                     // freeze quantity); it carries no credential, so it is shown.
                     val msg = json.optString("message", "request failed").take(300)
-                    if (type == "TokenException") { dropSession(); sessionEnded.value++; throw KiteError(type, "Zerodha session ended: $msg") }
+                    if (type == "TokenException") {
+                        // One request's TokenException is checked against the profile before the day's session is
+                        // dropped: a single refused call (a glitch on one endpoint) no longer logs Boss out for the day.
+                        // The reason is kept for the diagnostics (the path only, never its query; Kite's message has no key).
+                        val kept = path.substringBefore('?') != "/user/profile" && auth &&
+                            runCatching { callInner("GET", "/user/profile", null, true, false, false, false) }.isSuccess
+                        Diag.record("info", "Zerodha TokenException on $method ${path.substringBefore('?')}: $msg" +
+                            if (kept) " (the profile still answers: session kept)" else " (session ended)")
+                        if (kept) throw KiteError(type, msg)
+                        if (loggedIn) { dropSession(); sessionEnded.value++ }
+                        throw KiteError(type, "Zerodha session ended: $msg")
+                    }
                     // SEBI's static-IP rule: Zerodha takes orders only from an IP listed in the Kite Connect app.
                     if (msg.contains("No IPs configured", ignoreCase = true) || msg.contains("not allowed to place orders", ignoreCase = true))
                         throw KiteError(type, "Zerodha does not know your order IP yet. Add ${StaticIp.registered ?: "your static IP"} in developers.kite.trade → My apps → your app → IP whitelist, save, then try again. (Zerodha: $msg)")

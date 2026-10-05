@@ -108,6 +108,12 @@ class BrokerLiveTest : RobolectricTest() {
         assertTrue("nothing was placed after the session ended", kite.placed.isEmpty())
     }
 
+    @Test fun oneRefusedCallDoesNotEndTheDaysLogin() = runBlocking {
+        kite.tokenRefused += "/portfolio/positions"
+        try { Broker.positions(); fail() } catch (e: Broker.KiteError) { assertEquals("TokenException", e.type) }
+        assertTrue("the profile still answers, so the session is kept", Broker.loggedIn)
+    }
+
     @Test fun partialAndLateFills() = runBlocking {
         kite.nextPlace(outcome = Outcome.PARTIAL, partialQty = 75)
         val partial = Broker.awaitOrder(Broker.placeOrder(order(qty = 150)), 1_500)
