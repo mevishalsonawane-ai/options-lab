@@ -7,9 +7,31 @@ package com.optionslab.ira
  * paths (the hub's confirm with its fingerprint, PIN and live gates; its decline), never anything here.
  */
 object Requests {
-    /** Where an approved request would act. [NONE]: no order at all (a setting, a strategy stopped, a reminder). */
-    enum class Venue(val label: String) {
-        PAPER("Paper"), ZERODHA("Zerodha · real money"), NONE("No order");
+    /**
+     * Where an approved request would act. [NONE]: no order at all (a setting, a strategy stopped, a reminder).
+     * [PAPER_ZERODHA]: both the paper account and Zerodha (an exit or a close-all with both open). [real]: it can send
+     * Zerodha orders - never labelled Paper or No order.
+     */
+    enum class Venue(val label: String, val real: Boolean) {
+        PAPER("Paper", false), ZERODHA("Zerodha · real money", true), PAPER_ZERODHA("Paper + Zerodha", true), NONE("No order", false);
+    }
+
+    /**
+     * Where an exit, a close or a cancel would act, from what is open now: [zerodha] when Zerodha is logged in with live
+     * positions or working orders (or could not be read while logged in), [paper] when the paper account has some.
+     * Both: Paper + Zerodha; Zerodha only: Zerodha; otherwise Paper (nothing real to send).
+     */
+    fun venueFor(paper: Boolean, zerodha: Boolean): Venue = when {
+        zerodha && paper -> Venue.PAPER_ZERODHA
+        zerodha -> Venue.ZERODHA
+        else -> Venue.PAPER
+    }
+
+    /** A plan's venue from its steps' (null or [Venue.NONE]: no order): any real step makes it real; none at all, No order. */
+    fun venueOf(steps: List<Venue?>): Venue {
+        val zerodha = steps.any { it?.real == true }
+        val paper = steps.any { it == Venue.PAPER || it == Venue.PAPER_ZERODHA }
+        return if (!zerodha && !paper) Venue.NONE else venueFor(paper, zerodha)
     }
 
     enum class Kind(val label: String) {
@@ -25,11 +47,13 @@ object Requests {
     /**
      * One request waiting. [title]: a few words naming it ("stop ORB"); [what]: what it would do, in plain words;
      * [why]: one line, or null; [askedAt] / [lapsesAt]: epoch milliseconds ([lapsesAt] null: it does not lapse by itself).
-     * [symbol], [qty] and [price]: as known when asked (null when not an order or not known yet).
+     * [symbol], [qty] and [price]: as known when asked (null when not an order or not known yet). [details]: the whole of
+     * what Jarvis said with it (a news trade's risk, IV line, cautions, turn-downs and confidence), or null.
      */
     data class RequestView(
         val id: Long, val kind: Kind, val title: String, val what: String, val why: String?, val venue: Venue,
         val askedAt: Long, val lapsesAt: Long?, val symbol: String? = null, val qty: String? = null, val price: String? = null,
+        val details: String? = null,
     ) {
         /** Can a spoken yes or no answer it? (A strategy is approved on the screen only.) */
         val voiced: Boolean get() = kind != Kind.STRATEGY
@@ -61,8 +85,34 @@ object Requests {
         return if (first.length <= max) first else first.take(max - 1).trimEnd() + "…"
     }
 
-    /** The chat's one short line when a request is made (its details and buttons are in the panel). */
-    fun chatLine(title: String): String = "New request: $title — see Requests."
+    private fun plain(s: String) = s.trim().trimEnd('.').trim()
+
+    /** [title] adds nothing to [what] (the same words): the heading is left out rather than said twice. */
+    private fun same(title: String, what: String) = plain(title).equals(plain(what), ignoreCase = true)
+
+    /**
+     * The chat's line when a request is made: its short heading ([title]), then the full [what] - never shortened, so an
+     * exit or a plan is shown whole. The buttons and the rest are under it and in the panel.
+     */
+    fun chatLine(title: String, what: String): String =
+        if (same(title, what)) "New request: ${plain(what)} — see Requests." else "New request: ${plain(title)} — ${plain(what)}. See Requests."
+
+    /** The plain spoken ask: "Request: <title>. Shall I <full what>? Yes or no?" - the what never shortened. */
+    fun ask(title: String, what: String): String =
+        if (same(title, what)) "Request: Shall I ${plain(what)}? Yes or no?" else "Request: ${plain(title)}. Shall I ${plain(what)}? Yes or no?"
+
+    /** Details longer than this are folded in the panel (a tap shows them whole). */
+    const val DETAILS_FOLD = 160
+
+    /** A second yes (a tap, or the voice) on a request already answered elsewhere. */
+    const val ANSWERED = "That was already answered, Boss."
+
+    /**
+     * The words for a confirm that found nothing waiting: [ANSWERED] when it was answered - being done right now
+     * ([inFlight]) or Recent shows an outcome other than lapsed; else [lapsed], the caller's own words.
+     */
+    fun alreadyLine(outcome: Outcome?, inFlight: Boolean, lapsed: String): String =
+        if (inFlight || (outcome != null && outcome != Outcome.LAPSED)) ANSWERED else lapsed
 
     /** Jarvis's spoken ask, naming the request first. [said]: what he would have said, or null for the plain ask. */
     fun spoken(title: String, said: String? = null): String =
@@ -166,20 +216,32 @@ object Requests {
     /** "You have 2 requests, Boss — open Requests, or say which one." */
     fun ambiguousLine(count: Int): String = "You have $count requests, Boss — open Requests, or say which one."
 
-    /** Asked again by name, for one plain yes or no. */
-    fun reaskLine(title: String): String = "Request: $title. Just yes or no?"
+    /** Asked again by name, for one plain yes or no: the full [what], never shortened. */
+    fun reaskLine(title: String, what: String): String =
+        if (same(title, what)) "Request: Shall I ${plain(what)}? Just yes or no?" else "Request: ${plain(title)}. Shall I ${plain(what)}? Just yes or no?"
+
+    /**
+     * [said] is little more than [v]'s name: at most one word beyond the request's own words ("the nifty one", "orb"),
+     * so "what is nifty doing" is a question of its own, never a pick of the Nifty trade.
+     */
+    fun mostlyName(said: String, v: RequestView): Boolean {
+        val own = words(v.title + " " + v.what + " " + (v.symbol ?: ""))
+        return words(said).count { it !in own } <= 1
+    }
 
     /**
      * Boss's words [said] (read as a yes or no: [yesNo], null when neither) while Jarvis waits on [asked] - its window open.
      * [focused]: the request Jarvis last asked again by name. With one request waiting, as before ([Pick.Pass]). With two
-     * or more: a request named is asked again by itself ([Pick.Reask]); a bare yes or no is for the one asked again by
-     * name only; otherwise nothing is picked ([Pick.Ambiguous]). A strategy (approved on the screen) is not counted.
+     * or more: a request named is asked again by itself ([Pick.Reask]) - only when a yes or no was heard with the name, or
+     * the words are little more than the name ([mostlyName]); a question that merely names one ("what is nifty doing")
+     * is left as before. A bare yes or no is for the one asked again by name only; otherwise nothing is picked
+     * ([Pick.Ambiguous]). A strategy (approved on the screen) is not counted.
      */
     fun pick(said: String, yesNo: Boolean?, asked: Long, focused: Long?, pending: List<RequestView>): Pick {
         val voiced = pending.filter { it.voiced }
         if (voiced.size < 2) return Pick.Pass
         val name = named(said, voiced)
-        if (name != null) return Pick.Reask(name.id, reaskLine(name.title))
+        if (name != null && (yesNo != null || mostlyName(said, name))) return Pick.Reask(name.id, reaskLine(name.title, name.what))
         if (yesNo == null) return Pick.Pass
         if (focused != null && focused == asked && voiced.any { it.id == asked }) return Pick.Pass
         return Pick.Ambiguous(voiced.size, ambiguousLine(voiced.size))

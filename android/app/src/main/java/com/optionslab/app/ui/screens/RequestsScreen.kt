@@ -17,6 +17,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -60,7 +61,7 @@ fun RequestsPanel(onClose: () -> Unit) {
         }
         if (gold) item { LedgerCard { Note(Requests.GOLD) } }
         else if (shown.isEmpty()) item { LedgerCard { Text(Requests.EMPTY, style = Type.body.copy(color = p.ink)) } }
-        else item { Note("Yes goes through the same checks as ever: real money still needs your fingerprint or PIN. A request lapses by itself, and nothing is done.") }
+        else item { Note("Yes goes through the same checks as ever. Closing and protecting are one tap by design; a new trade with real money, and the emergency exit, need your fingerprint (on a phone without one, the app's lock covers them). A request lapses by itself, and nothing is done.") }
         items(shown, key = { "w${it.kind.name}${it.id}" }) { v -> RequestCard(v, now) }
         if (!gold && recent.isNotEmpty()) {
             item { Flourish("Recent", Modifier.padding(top = 8.dp)) }
@@ -72,7 +73,7 @@ fun RequestsPanel(onClose: () -> Unit) {
 @Composable
 private fun RequestCard(v: Requests.RequestView, now: Long) {
     val p = LocalPalette.current
-    val live = v.venue == Requests.Venue.ZERODHA
+    val live = v.venue.real
     LedgerCard(accent = if (live) p.oxblood else null) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(v.kind.label, style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp))
@@ -80,10 +81,22 @@ private fun RequestCard(v: Requests.RequestView, now: Long) {
             Text(v.venue.label, style = Type.label.copy(color = if (live) p.oxblood else if (v.venue == Requests.Venue.PAPER) p.verdigris else p.inkSoft,
                 fontSize = 12.sp, fontWeight = FontWeight.SemiBold))
         }
-        Text(v.what.replaceFirstChar { it.uppercase() }, style = Type.title.copy(color = p.ink, fontSize = 15.sp), modifier = Modifier.padding(top = 4.dp))
+        // The short title is the heading only; the full what is under it, never cut (an exit or a plan is shown whole).
+        Text(v.title.replaceFirstChar { it.uppercase() }, style = Type.title.copy(color = p.ink, fontSize = 15.sp), modifier = Modifier.padding(top = 4.dp))
+        if (!v.what.trim().trimEnd('.').equals(v.title.trim().trimEnd('.'), ignoreCase = true))
+            Text(v.what.replaceFirstChar { it.uppercase() }, style = Type.body.copy(color = p.ink, fontSize = 14.sp), modifier = Modifier.padding(top = 2.dp))
         val figures = listOfNotNull(v.symbol?.let { "Symbol: $it" }, v.qty?.let { "Qty: $it" }, v.price?.let { "Price: $it" })
         if (figures.isNotEmpty()) Note(figures.joinToString(" · "))
         v.why?.let { Note("Why: $it") }
+        // The whole of what Jarvis said with it (a news trade's risk, IV, cautions, turn-downs, confidence): folded when long.
+        v.details?.let { d ->
+            var open by remember(v.id) { mutableStateOf(false) }
+            val folds = d.length > Requests.DETAILS_FOLD
+            Text(if (!folds || open) d else d.take(Requests.DETAILS_FOLD - 1).trimEnd() + "…",
+                style = Type.label.copy(color = p.ink, fontSize = 13.sp), modifier = Modifier.padding(top = 4.dp))
+            if (folds) Text(if (open) "Show less" else "Show all details", style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp),
+                modifier = Modifier.clickable { open = !open }.padding(vertical = 4.dp))
+        }
         Note(Requests.askedText(v.askedAt, now) + " · " + Requests.lapseText(v.lapsesAt, now))
         // The very buttons the chat shows under the request: the hub's confirm and decline, never a path of their own.
         if (v.kind == Requests.Kind.STRATEGY) ProposalActions(v.id) else ActionConfirm(v.id, yes = "Yes, approve", no = "No, reject")

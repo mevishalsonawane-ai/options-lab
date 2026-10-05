@@ -102,11 +102,24 @@ object OpenReach {
     // expiry, options, gold or VIX.
     private val NOT = Regex(" (will|would|going to be|gonna|tomorrow|tomorrows|kal|predict|prediction|forecast|outlook|expect|should|shall|buy|sell|" +
         "enter|exit|i|me|my|mine|we|our|if|what if|suppose|imagine|scenario|agar|remind|reminder|alert|alarm|notify|bot|bots|algo|strategy|" +
-        "backtest|stock|stocks|scan|scanner|screener|share|shares|mean|means|meaning|define|explain|why|kyun|kyon|kyu|reason|" +
+        // ("share" the stock only: "what share of days" is HOW's own question, so it is not refused here.)
+        "backtest|stock|stocks|scan|scanner|screener|(?<!what )share|shares|mean|means|meaning|define|explain|why|kyun|kyon|kyu|reason|" +
         "today|todays|aaj|aj|now|right now|abhi|so far|this morning|since|yesterday|yesterdays|last time|when did|" +
         "gap|gaps|gapped|opening|open high|open low|open is|open was|open the high|open the low|open equals|first|last hour|closing hour|" +
         "overnight|night|raat|next day|day after|agle din|candle|candles|week|weekly|weeks|hafte|month|monthly|year|yearly|expiry|expiries|" +
         "call|calls|put|puts|premium|premiums|option|options|ce|pe|strike|straddle|strangle|gold|vix|fear|position|positions|portfolio|stop|stops|sl) ")
+    /**
+     * A day of the week (Weekdays'), a part of the day or a clock time ("in the morning", "afternoons", "2 pm", "after 2
+     * pm": the day's own clock, not the whole day's reach), and a count of sessions ("in 3 sessions", "3 day move":
+     * MultiDay's): others'. A clock time is never a size ("after 1 percent" is not one).
+     */
+    private val NOT_WHEN = Regex(" (mondays?|tuesdays?|wednesdays?|thursdays?|fridays?|saturdays?|sundays?|somvar|mangalvar|budhvar|guruvar|" +
+        "shukravar|shanivar|ravivar|morning|mornings|afternoon|afternoons|evening|evenings|noon|midday|lunch|subah|dopahar|shaam|" +
+        "am|pm|a m|p m|\\d{1,2}( \\d{2})? ?(am|pm|a m|p m|baje|o clock|oclock)|" +
+        "(\\d{1,2}|two|three|four|five|six|seven|eight|nine|ten) (trading |market )?(sessions|session)|" +
+        "(in|over|within|across|during|inside) (the )?(next |coming |following )?(any )?(\\d{1,2}|two|three|four|five|six|seven|eight|nine|ten) (trading |market )?(days|day)|" +
+        "(\\d{1,2}|two|three|four|five|six|seven|eight|nine|ten) (trading )?(day|days) (move|moves|range|ranges|reach|swing|swings|window|windows|stretch|stretches)) " +
+        "| (after|before|till|until|from|by) \\d{1,2}( \\d{2})? (?!(%|percent|per cent|pc|pct|points|point|pts|pt) )")
 
     /** What was asked, or null: the record of how far days got from their own open only, never a forecast or advice. */
     fun asked(text: String): Q? = askedKept.of(text) { askedFresh(text) }
@@ -116,7 +129,7 @@ object OpenReach {
 
     private fun askedFresh(text: String): Q? {
         val t = norm(text)
-        if (NOT.containsMatchIn(t)) return null
+        if (NOT.containsMatchIn(t) || NOT_WHEN.containsMatchIn(t)) return null
         if (Market.mentioned(text).any { it == Market.GOLD || it == Market.VIX }) return null
         if (!NAME.containsMatchIn(t)) {
             if (!FROM_OPEN.containsMatchIn(t) || !HOW.containsMatchIn(t)) return null

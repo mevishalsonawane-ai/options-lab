@@ -124,7 +124,9 @@ object MultiDay {
         "gap|gaps|gapped|open|opening|first hour|last hour|closing hour|overnight|night|raat|intraday|candle|candles|" +
         "week|weekly|weeks|hafte|hafta|month|monthly|months|mahine|year|yearly|years|expiry|expiries|" +
         "call|calls|put|puts|premium|premiums|option|options|ce|pe|strike|strikes|straddle|strangle|theta|gold|vix|fear|" +
-        "position|positions|portfolio|stop|stops|sl|news) ")
+        "position|positions|portfolio|stop|stops|sl|news|" +
+        // A day of the week ("in 3 sessions from monday", "fridays"): Weekdays' or a calendar question, not a stretch's record.
+        "mondays?|tuesdays?|wednesdays?|thursdays?|fridays?|saturdays?|sundays?|somvar|mangalvar|budhvar|guruvar|shukravar|shanivar|ravivar) ")
 
     /** What was asked, or null: the record of stretches of a few whole sessions only, never a forecast or advice. */
     fun asked(text: String): Q? = askedKept.of(text) { askedFresh(text) }
@@ -250,11 +252,24 @@ object MultiDay {
         return lines.joinToString(" ")
     }
 
+    /**
+     * Where the newest stretch [s] sits among the record's [xs]: the share that reached less far, by
+     * [DayAfter.percentile]'s rule (rounded down, 100 only when every one did - never "farther than 100%"). The newest
+     * stretch itself, when it is in the record, is not compared with itself.
+     */
+    internal fun rankText(xs: List<Stretch>, s: Stretch): String {
+        val others = xs.filter { !(it.from == s.from && it.end == s.end) }
+        if (others.isEmpty()) return "the first stretch of its kind in this record"
+        val pct = DayAfter.rank(others.count { it.farPct < s.farPct }, others.size)
+        return if (pct >= 100) "a farther reach than every other stretch in this record"
+            else "a farther reach than $pct% of the other stretches in this record"
+    }
+
     /** The newest stretch, and the share of the record's stretches that reached less far. */
     private fun newestLine(m: Market, xs: List<Stretch>, nw: Newest, n: Int): String {
         val s = nw.s
         val reach = "reaching ${p2(s.upPct)} above it and ${p2(s.downPct)} below"
-        val rank = "a farther reach than ${Math.round(xs.count { it.farPct < s.farPct } * 100.0 / xs.size)}% of the stretches in this record"
+        val rank = rankText(xs, s)
         // "Ended" only for a whole session; today while it trades is "so far"; candles that stop early say when they stop.
         return when {
             nw.live -> "Counting today, the newest $n sessions have taken ${m.label} ${s2(s.endPct)} from ${date(s.from)}'s close so far, $reach - $rank; the stretch is not over."

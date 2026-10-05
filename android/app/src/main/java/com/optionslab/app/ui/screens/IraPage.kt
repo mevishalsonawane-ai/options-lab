@@ -310,6 +310,13 @@ private fun Bubble(m: IraHub.Msg, orders: IraOrderPaths?, asked: String? = null)
             modifier = Modifier.background(p.card, RoundedCornerShape(14.dp)).padding(horizontal = 14.dp, vertical = 10.dp))
         if (brief.details != null) Text(if (showDetails) "Hide details" else "Details · or say \"more\"", style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp),
             modifier = Modifier.clickable { showDetails = !showDetails }.padding(top = 4.dp))
+        // A request's whole words behind its chat line (a news trade's risk, IV, cautions, turn-downs, confidence).
+        m.details?.let { reqDetails ->
+            var showReqDetails by remember(m.id) { mutableStateOf(false) }
+            Text(if (showReqDetails) "Hide details" else "Details", style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp),
+                modifier = Modifier.clickable { showReqDetails = !showReqDetails }.padding(top = 4.dp))
+            if (showReqDetails) Text(reqDetails, style = Type.label.copy(color = p.ink, fontSize = 13.sp), modifier = Modifier.padding(top = 2.dp))
+        }
         if (m.fromIra && com.optionslab.app.BuildConfig.JARVIS && !m.writing) {
             val ctx = androidx.compose.ui.platform.LocalContext.current
             Text("▶ Listen", style = Type.label.copy(color = Color(0xFF4AA8FF), fontSize = 13.sp),
@@ -734,12 +741,12 @@ private fun VoiceStyle() {
  * card. Tied to [id] alone: a tap answers that request only, never another waiting one, and only while it waits
  * ([com.optionslab.ira.Requests.tapTarget]). Yes is [IraHub.confirm] with all its gates (the fingerprint for real money
  * and the emergency exit, the live and proven-record checks inside it); No is [IraHub.cancelAction]. Answered, lapsed or
- * gone: no buttons.
+ * gone: no buttons. Yes runs in the hub's own scope ([IraHub.confirmAsync]), never this card's: confirming takes the
+ * request off the list at once, the card leaves the screen, and a scope of its own would cancel the confirm mid-way.
  */
 @Composable
 internal fun ActionConfirm(id: Long, yes: String = "Yes", no: String = "No") {
     val waiting by iraSlice(id) { id in it.pending }
-    val scope = rememberCoroutineScope()
     if (!waiting) return
     fun mine(): Long? = com.optionslab.ira.Requests.tapTarget(id, IraHub.state.value.pending)
     Row(Modifier.padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -748,10 +755,10 @@ internal fun ActionConfirm(id: Long, yes: String = "Yes", no: String = "No") {
             // A live Jarvis trade (or the emergency exit): the owner's fingerprint approves it.
             BrassButton("$yes · fingerprint", tone = LocalPalette.current.oxblood) {
                 com.optionslab.app.security.BiometricGate.verify(activity, "Approve the request", "Jarvis does it only after your fingerprint") { ok ->
-                    if (ok) mine()?.let { mineId -> scope.launch { IraHub.confirm(mineId, fingerprint = true) } }
+                    if (ok) mine()?.let { mineId -> IraHub.confirmAsync(mineId, fingerprint = true) }
                 }
             }
-        } else BrassButton(yes, tone = LocalPalette.current.oxblood) { mine()?.let { mineId -> scope.launch { IraHub.confirm(mineId) } } }
+        } else BrassButton(yes, tone = LocalPalette.current.oxblood) { mine()?.let { mineId -> IraHub.confirmAsync(mineId) } }
         BrassButton(no, tone = LocalPalette.current.inkSoft) { mine()?.let { mineId -> IraHub.cancelAction(mineId) } }
     }
 }

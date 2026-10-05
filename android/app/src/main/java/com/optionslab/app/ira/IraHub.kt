@@ -71,7 +71,9 @@ object IraHub {
                     */
                    val whole: Boolean = false,
                    /** Stable for the message's life (kept through rewrites), so the screen keeps each message's own state. */
-                   val id: Long = msgSeq.incrementAndGet())
+                   val id: Long = msgSeq.incrementAndGet(),
+                   /** A request's whole words behind its chat line (a news trade's risk, cautions, confidence): under "Details". */
+                   val details: String? = null)
 
     /** A strategy Jarvis wrote from a pattern and backtested: new until the owner approves (armed on paper) or dismisses it. */
     data class Proposal(val id: Long, val result: StrategyLab.Result, val status: String = NEW, val pineId: Long? = null) {
@@ -858,9 +860,14 @@ object IraHub {
         // The reason Boss has turned such ideas down for, said up front when it fits this one ([com.optionslab.ira.TurnDowns]):
         // one line of words before the question - the idea, its gates and his Approve or reject are unchanged. Unlocked only.
         val turnLine = if (phoneLocked()) null else runCatching { IraTools.turnDownsLine(expiryToday(m)) }.getOrNull()
-        val full = "$text$ivLine ${conf.text()}$risk$hourLine" + (turnLine?.let { " $it" } ?: "") + " Shall I $what$where? Approve or reject."
-        // The chat: one short line naming it; the whole idea and its buttons are in the Requests panel (and the pop-up).
-        _state.update { it.copy(pending = it.pending + id, messages = (it.messages + Msg(true, com.optionslab.ira.Requests.chatLine(reqView.title), action = id)).takeLast(MAX_MESSAGES)) }
+        val newsDetails = "$text$ivLine ${conf.text()}$risk$hourLine" + (turnLine?.let { " $it" } ?: "")
+        val full = "$newsDetails Shall I $what$where? Approve or reject."
+        // The whole idea - its risk, the IV line, any hour or kind caution, the turn-downs, the confidence - kept as the
+        // request's details: in the panel's card and under the chat line (never lost to the short line).
+        synchronized(actions) { requestMeta[id]?.let { rv -> requestMeta[id] = rv.copy(details = newsDetails.trim()) } }
+        // The chat: one line naming it with its full what; the details under it, the buttons in the Requests panel too.
+        _state.update { it.copy(pending = it.pending + id, messages = (it.messages + Msg(true, com.optionslab.ira.Requests.chatLine(reqView.title, reqView.what + where),
+            action = id, details = newsDetails.trim())).takeLast(MAX_MESSAGES)) }
         JarvisApproval.show(c, id, title, full)
         // A score that has not held up is said aloud with its record beside it ([com.optionslab.ira.HonestStars]); the score,
         // the chat and the approval card are as worked out. On a locked phone, or on any trouble, the plain words.
@@ -3998,13 +4005,43 @@ object IraHub {
     /** The title of the action [id] still waiting, or null. */
     fun requestTitle(id: Long): String? = synchronized(actions) { requestMeta[id]?.takeIf { actions.containsKey(id) }?.title }
 
-    /** Jarvis's spoken ask for the waiting action [id], naming it ("Request: stop ORB. Yes or no?"), or null. */
-    fun requestAsk(id: Long): String? = requestTitle(id)?.let { com.optionslab.ira.Requests.spoken(it) }
+    /**
+     * Jarvis's spoken ask for the waiting action [id]: its short heading, then the full what - never shortened, so an exit
+     * or a plan is heard whole ("Request: <title>. Shall I <what>? Yes or no?") - or null.
+     */
+    fun requestAsk(id: Long): String? = synchronized(actions) { requestMeta[id]?.takeIf { actions.containsKey(id) } }
+        ?.let { v -> com.optionslab.ira.Requests.ask(v.title, v.what) }
 
     /** [id] is no longer waiting: listed under Recent with [outcome] (once). */
     private fun requestDone(id: Long, outcome: com.optionslab.ira.Requests.Outcome) {
         val v = synchronized(actions) { requestMeta.remove(id) } ?: return
         _recent.update { com.optionslab.ira.Requests.keep(it, com.optionslab.ira.Requests.Recent(v, outcome, System.currentTimeMillis())) }
+    }
+
+    /** Confirmed and taken out of [actions], its result not yet in Recent (under the [actions] lock): a second yes meanwhile is "already answered". */
+    private val confirming = HashSet<Long>()
+
+    /**
+     * The words for a yes (a tap, the voice, the notification) that found [id] no longer waiting: "That was already
+     * answered, Boss." when it was answered - being done now, or Recent shows its outcome - else [lapsed].
+     */
+    fun alreadyLine(id: Long, lapsed: String): String {
+        val inFlight = synchronized(actions) { id in confirming }
+        val outcome = _recent.value.firstOrNull { it.view.id == id && it.view.kind != com.optionslab.ira.Requests.Kind.STRATEGY }?.outcome
+        return com.optionslab.ira.Requests.alreadyLine(outcome, inFlight, lapsed)
+    }
+
+    /**
+     * Yes on [id] from a button (the Requests panel's, the chat's): [confirm] itself - every gate exactly as there (the
+     * fingerprint for real money and the emergency exit, the PIN, the live and proven-record checks) - launched in the
+     * hub's own long-lived [scope], never the button's. A button's scope ends when its card leaves the screen, and confirm
+     * takes [id] out of the pending list at once, so a confirm run there was cancelled mid-way (an emergency exit could be
+     * reported failed after its orders had gone out). Its result is said through the usual path ([reply], [requestDone]);
+     * nothing waiting any more: [alreadyLine].
+     */
+    fun confirmAsync(id: Long, fingerprint: Boolean = false): kotlinx.coroutines.Job = scope.launch {
+        val r = confirm(id, fingerprint = fingerprint)
+        if (r == null) reply(alreadyLine(id, "That had already lapsed; nothing was done."))
     }
 
     /** A strategy approved or dismissed: listed under Recent. */
@@ -4042,14 +4079,17 @@ object IraHub {
 
     /** Forgetting everything (and the tests' reset): no request views, no recent list. */
     internal fun clearRequests() {
-        synchronized(actions) { requestMeta.clear() }
+        synchronized(actions) { requestMeta.clear(); confirming.clear() }
         synchronized(strategySeen) { strategySeen.clear() }
         _recent.value = emptyList()
     }
 
-    /** The app's mode as a request's venue (an exit acts there): Zerodha when Live, else paper. */
+    /**
+     * An exit's venue when what is open was not worked out ([IraActions.venueOf] is the usual way): an exit acts on the
+     * paper account and on Zerodha alike, so with Zerodha logged in it is "Paper + Zerodha" - never "Paper" on a guess.
+     */
     private fun modeVenue(): com.optionslab.ira.Requests.Venue =
-        if (runCatching { com.optionslab.app.data.AppSettings.load().live }.getOrDefault(true)) com.optionslab.ira.Requests.Venue.ZERODHA
+        if (runCatching { com.optionslab.app.data.Broker.loggedIn }.getOrDefault(true)) com.optionslab.ira.Requests.Venue.PAPER_ZERODHA
         else com.optionslab.ira.Requests.Venue.PAPER
 
     /**
@@ -4415,8 +4455,11 @@ object IraHub {
             // Only a price alarm or an event note is done at once; anything that changes trading (starting arms, the
             // kill switch, autopilot, Jarvis's own limits) waits for Confirm - in the real app too (review, 3 Oct).
             if (c.kind.reduces || !com.optionslab.app.BuildConfig.JARVIS || confirmAlways || c.kind !in AT_ONCE) {
-                // The emergency exit asks for the fingerprint on the screen (or Boss's own voice, aloud).
-                pend(what, suspend { IraActions.verified(c.kind, act()) }, "Tap Confirm to ${what}.", exit = c.kind == com.optionslab.ira.Command.Kind.EXIT_ALL)
+                // The emergency exit asks for the fingerprint on the screen (or Boss's own voice, aloud). An exit, a close
+                // or a cancel is labelled by what is open now (Paper, Zerodha, or both); anything else sends no order.
+                val cmdVenue = IraActions.venueOf(c, what)
+                pend(what, suspend { IraActions.verified(c.kind, act()) }, "Tap Confirm to ${what}.", exit = c.kind == com.optionslab.ira.Command.Kind.EXIT_ALL,
+                    venue = cmdVenue)
             } else reply(IraActions.run(what, suspend { IraActions.verified(c.kind, act()) }), whole = true)
         }
     }
@@ -4431,10 +4474,13 @@ object IraHub {
         scope.launch {
             // A question in the plan (no command) is answered at its turn, after the steps before it were done.
             val cmds = steps.map { Ask.parse(it).command }
+            // Where the plan's steps would send orders (the Requests panel's label): any exit, close or cancel by what is open.
+            val planVenues = ArrayList<com.optionslab.ira.Requests.Venue?>()
             for ((i, c) in cmds.withIndex()) {
                 if (c == null) continue
                 val (what, act) = runCatching { IraActions.prepare(c) }.getOrElse { ("I could not do that: ${it.message}") to null }
                 if (act == null) { reply("Step ${i + 1} (\"${steps[i]}\") cannot be done: $what Nothing in the plan was done.", whole = true); return@launch }
+                planVenues += IraActions.venueOf(c, what)
             }
             val plan = com.optionslab.ira.Plan.say(steps)
             pend("this plan: $plan", suspend {
@@ -4454,7 +4500,8 @@ object IraHub {
                 }
                 com.optionslab.ira.Plan.report(done, steps.size)
             }, "My plan, Boss: $plan. Tap Confirm and I'll do them in order, stopping if one fails.",
-                exit = cmds.any { it?.kind == com.optionslab.ira.Command.Kind.EXIT_ALL }, kind = com.optionslab.ira.Requests.Kind.PLAN)
+                exit = cmds.any { it?.kind == com.optionslab.ira.Command.Kind.EXIT_ALL }, kind = com.optionslab.ira.Requests.Kind.PLAN,
+                venue = com.optionslab.ira.Requests.venueOf(planVenues))
             IraActivity.add("Planned ${steps.size} steps: $plan")
         }
     }
@@ -4527,13 +4574,17 @@ object IraHub {
         // Real money only with the fingerprint (or a phone with none, where the app lock covers it): the trade checks this
         // again when placed, so a record that turns proven between now and then never sends one unapproved.
         val yes = asksYesNo(id)
-        val a = synchronized(actions) { exitIds.remove(id); actions.remove(id) } ?: return null
-        if (yes && (fingerprint || !fingerprintNeeded())) synchronized(actions) { liveApproved += id }
-        if (asksYesNo(id)) IraNewsTrades.answered(id, "approved")
-        settled(id)
-        _state.update { it.copy(pending = it.pending - id) }
-        return IraActions.run(a.first, a.second).also { synchronized(actions) { liveApproved.remove(id) }; IraAccount.invalidate(); checked = null; reply(it, whole = true)
-            requestDone(id, com.optionslab.ira.Requests.outcomeOf(it)) }
+        val a = synchronized(actions) { exitIds.remove(id); actions.remove(id)?.also { confirming += id } } ?: return null
+        return try {
+            if (yes && (fingerprint || !fingerprintNeeded())) synchronized(actions) { liveApproved += id }
+            if (asksYesNo(id)) IraNewsTrades.answered(id, "approved")
+            settled(id)
+            _state.update { it.copy(pending = it.pending - id) }
+            IraActions.run(a.first, a.second).also { synchronized(actions) { liveApproved.remove(id) }; IraAccount.invalidate(); checked = null; reply(it, whole = true)
+                requestDone(id, com.optionslab.ira.Requests.outcomeOf(it)) }
+        } finally {
+            synchronized(actions) { confirming.remove(id) }
+        }
     }
 
     /** Does a live trade's approval ask for the fingerprint? (whenever the phone has one; without one the app lock covers it) */
@@ -4579,7 +4630,7 @@ object IraHub {
             venue ?: if (exit) modeVenue() else com.optionslab.ira.Requests.Venue.NONE, askedAt, askedAt + CONFIRM_LAPSE_MS, symbol, qty, price)
         // An emergency exit is known as one before anyone can see it (the voice then asks it in Boss's voice only).
         synchronized(actions) { actions[id] = what to act; if (exit) exitIds += id; requestMeta[id] = view }
-        _state.update { it.copy(pending = it.pending + id, messages = (it.messages + Msg(true, listOfNotNull(lead, com.optionslab.ira.Requests.chatLine(view.title)).joinToString(" "), action = id)).takeLast(MAX_MESSAGES)) }
+        _state.update { it.copy(pending = it.pending + id, messages = (it.messages + Msg(true, listOfNotNull(lead, com.optionslab.ira.Requests.chatLine(view.title, view.what)).joinToString(" "), action = id)).takeLast(MAX_MESSAGES)) }
         scope.launch {
             kotlinx.coroutines.delay(CONFIRM_LAPSE_MS)
             if (synchronized(actions) { exitIds.remove(id); actions.remove(id) } != null) {
@@ -4591,14 +4642,20 @@ object IraHub {
         return id
     }
 
-    /** Every request still waiting is dropped (the conversation was cleared). */
+    /**
+     * Every request still waiting is dropped (the conversation was cleared, or everything forgotten): forgotten, not
+     * lapsed - none is added to the Requests panel's Recent list, and that list is cleared too (Boss asked to forget).
+     */
     private fun dropPending() {
         val ids = synchronized(actions) { actions.keys.toList() }
         ids.forEach { id ->
             val (was, trade) = synchronized(actions) { exitIds.remove(id); (actions.remove(id) != null) to (id in newsAsks) }
             if (was && trade) IraNewsTrades.answered(id, "rejected")
-            if (was) { settled(id); requestDone(id, com.optionslab.ira.Requests.Outcome.LAPSED) }
+            if (was) settled(id)
         }
+        // Every view goes (a confirm still running when forgotten is not listed afterwards either).
+        synchronized(actions) { requestMeta.clear() }
+        _recent.value = emptyList()
         _state.update { it.copy(pending = emptySet()) }
     }
 
@@ -5140,6 +5197,8 @@ object IraHub {
     private suspend fun forgetAllLoaded() = lock.withLock {
         dropPending()
         clearRequests()
+        // The short lines read from past answers go too (they were read from the conversation just forgotten).
+        com.optionslab.ira.ShortAnswer.clearCache()
         IraTools.forgetHabits()
         IraTools.forgetRoutine()
         IraTools.forgetMemory()

@@ -1785,7 +1785,7 @@ class JarvisVoice : Service() {
                 _state.value = VoiceState(Mode.THINKING)
                 scope.launch {
                     // The emergency exit takes Boss's own voice in place of the fingerprint (checked just above).
-                    val r = if (yes) withContext(Dispatchers.Default) { IraHub.confirm(id, ownerVoice = askingNeedsBoss && IraHub.isExit(id)) } ?: "That had already lapsed; nothing was placed."
+                    val r = if (yes) withContext(Dispatchers.Default) { IraHub.confirm(id, ownerVoice = askingNeedsBoss && IraHub.isExit(id)) } ?: IraHub.alreadyLine(id, "That had already lapsed; nothing was placed.")
                         // (His words for the no go with it: a reason in them, "no, too late in the day", is noted - its kind
                         // only, and only in Boss's own voice when it is enrolled - a no with no voice heard is not his reason; a
                         // no from anyone still cancels.)
@@ -2309,6 +2309,10 @@ class JarvisVoice : Service() {
      */
     private fun supersedeAsk() {
         val id = asking ?: return
+        // Only a question still being asked (its window not yet begun: 0) or with its answer window still open is asked
+        // again; one whose window closed long ago is stale - an offer said now does not bring it back.
+        val windowEnd = askingUntil
+        if (windowEnd != 0L && windowEnd < SystemClock.elapsedRealtime()) return
         askingUntil = 0L
         val text = askingText
         if (text != null && runCatching { IraHub.waitsFor(id) }.getOrDefault(false)) {

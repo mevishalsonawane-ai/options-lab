@@ -164,8 +164,16 @@ object TradeBook {
         return out
     }
 
-    @Synchronized
-    fun wipe() { liveCache = null; liveGen++; dayCharges.forget(); if (::liveFile.isInitialized) liveFile.delete() }
+    /**
+     * Forgets the kept Zerodha trades. Lock order: [liveChargesOn] holds [dayCharges]'s lock while it reads the book (this
+     * object's lock), so [dayCharges] is never touched while this object's lock is held - that was a deadlock (wipe:
+     * TradeBook then DayKept; liveChargesOn: DayKept then TradeBook). Bumping [liveGen] under the lock is what makes the
+     * kept figure stale (it is keyed on the generation); forgetting it after the lock is let go only frees it sooner.
+     */
+    fun wipe() {
+        synchronized(this) { liveCache = null; liveGen++; if (::liveFile.isInitialized) liveFile.delete() }
+        dayCharges.forget()
+    }
 }
 
 /**

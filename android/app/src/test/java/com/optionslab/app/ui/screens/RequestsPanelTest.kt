@@ -55,7 +55,12 @@ class RequestsPanelTest {
         assertTrue(IraHub.state.value.messages.last().text, IraHub.state.value.messages.last().text.startsWith("New request: "))
         compose.waitForText("Requests 1")
         compose.waitForText("Lapses in", substring = true)
-        compose.waitForText("No order", substring = true)
+        // The emergency exit can send orders: labelled by what is open (nothing on Zerodha here: Paper), never "No order".
+        compose.waitForText("Paper")
+        val view = IraHub.requestsOf(IraHub.state.value).single()
+        assertEquals(com.optionslab.ira.Requests.Venue.PAPER, view.venue)
+        // The chat line carries the full what, never only the short title.
+        assertTrue(IraHub.state.value.messages.last().text, IraHub.state.value.messages.last().text.contains(view.what.trim().trimEnd('.')))
         compose.waitForText("Yes, approve")
         assertFalse("nothing before Yes", com.optionslab.app.data.AppSettings.load().guardKill)
         tap("No, reject")

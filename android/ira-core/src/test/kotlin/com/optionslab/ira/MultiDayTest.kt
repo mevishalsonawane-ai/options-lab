@@ -85,6 +85,10 @@ class MultiDayTest {
                 "nifty moved 2% in 3 days", "what if nifty falls 2% in 3 sessions", "after a 1% fall how does nifty do over the next 3 sessions",
                 "how far is nifty from its open today", "how much did nifty fall this week"))
             assertNull(MultiDay.asked(q), q)
+        // A day of the week: Weekdays' or a calendar question, never the stretch record.
+        for (q in listOf("how far does nifty usually move in 3 sessions from monday", "how often does nifty move 2% in 3 days starting friday",
+                "how far does banknifty usually move over 2 sessions after thursdays", "somvar se teen din mein nifty kitna chalta hai"))
+            assertNull(MultiDay.asked(q), q)
     }
 
     @Test fun theRecord() {
@@ -146,5 +150,24 @@ class MultiDayTest {
         assertNull(MultiDay.market(listOf(Market.GOLD)))
         assertEquals(Market.NIFTY, MultiDay.market(emptyList()))
         assertTrue("Boss" in MultiDay.NOT_HERE)
+    }
+
+    @Test fun theNewestIsRankedAgainstTheOthersOnlyAndNeverPast100() {
+        val d0 = LocalDate.of(2026, 9, 1)
+        fun st(i: Int, far: Double) = MultiDay.Stretch(d0.plusDays(i.toLong()), d0.plusDays(i + 2L), 100.0, 100.0 + far, 100.0, 100.0)
+        // 199 others reached less far, one as far: rounded down to 99, never 100 (nor "farther than 100%").
+        val others = (0 until 199).map { st(it, 1.0) } + st(199, 5.0)
+        val newest = st(300, 5.0)
+        assertEquals("a farther reach than 99% of the other stretches in this record", MultiDay.rankText(others + newest, newest))
+        // Every other one reached less far: said as every other stretch, and the newest is not compared with itself.
+        val all = (0 until 20).map { st(it, 1.0) }
+        val top = st(300, 4.0)
+        assertEquals("a farther reach than every other stretch in this record", MultiDay.rankText(all + top, top))
+        assertEquals("a farther reach than every other stretch in this record", MultiDay.rankText(all, top))
+        // Itself alone: no share at all.
+        assertEquals("the first stretch of its kind in this record", MultiDay.rankText(listOf(top), top))
+        // Half the others reached less far.
+        val half = (0 until 10).map { st(it, 1.0) } + (10 until 20).map { st(it, 9.0) }
+        assertEquals("a farther reach than 50% of the other stretches in this record", MultiDay.rankText(half + top, top))
     }
 }

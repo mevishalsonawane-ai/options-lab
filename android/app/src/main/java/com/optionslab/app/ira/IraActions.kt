@@ -63,6 +63,38 @@ internal object IraActions {
         return out
     }
 
+    /**
+     * Where the prepared command [c] would send orders, for the Requests panel's label, worked out from what is open now:
+     * the emergency exit, closing and cancelling act on the paper account and on Zerodha alike. [what]: its prepared words
+     * (one position or order named "paper ..." or "Zerodha ..."). Zerodha counts when it is logged in with live positions
+     * or working orders - or when that could not be read while logged in (never labelled Paper on a guess). Null: the
+     * command sends no order. Reads only; never throws.
+     */
+    suspend fun venueOf(c: Command, what: String): com.optionslab.ira.Requests.Venue? {
+        val k = c.kind
+        if (k != Command.Kind.EXIT_ALL && k != Command.Kind.CLOSE_ALL && k != Command.Kind.CLOSE_ONE &&
+            k != Command.Kind.CANCEL_ALL && k != Command.Kind.CANCEL_ONE) return null
+        return runCatching {
+            val one = k == Command.Kind.CLOSE_ONE || k == Command.Kind.CANCEL_ONE
+            // One named position or order: its own account, as its name says.
+            if (one && Regex("\\bzerodha\\b", RegexOption.IGNORE_CASE).containsMatchIn(what)) return@runCatching com.optionslab.ira.Requests.Venue.ZERODHA
+            if (one && Regex("\\bpaper\\b", RegexOption.IGNORE_CASE).containsMatchIn(what)) return@runCatching com.optionslab.ira.Requests.Venue.PAPER
+            val ordersToo = k != Command.Kind.CLOSE_ALL && k != Command.Kind.CLOSE_ONE
+            val positionsToo = k != Command.Kind.CANCEL_ALL && k != Command.Kind.CANCEL_ONE
+            // The paper book's open orders and positions, read without pricing them (no quotes fetched just for a label).
+            val paper = runCatching { com.optionslab.app.data.Paper.watching() }.getOrDefault(false)
+            val zerodha = Broker.loggedIn && run {
+                // Short reads (a label only): an emergency exit's request is never held up for long; not read in time
+                // counts as open below.
+                val livePos = if (positionsToo) Broker.within(2_000) { Broker.positionBook().net.any { it.open } } else false
+                val liveOrd = if (ordersToo) Broker.within(2_000) { Broker.orders().any { it.working } } else false
+                // Not read (null) while logged in: counted as open - a guess is never "Paper".
+                livePos != false || liveOrd != false
+            }
+            com.optionslab.ira.Requests.venueFor(paper, zerodha)
+        }.getOrElse { if (runCatching { Broker.loggedIn }.getOrDefault(true)) com.optionslab.ira.Requests.Venue.PAPER_ZERODHA else com.optionslab.ira.Requests.Venue.PAPER }
+    }
+
     /** Open orders: the paper account's, then Zerodha's (when logged in). */
     private suspend fun openOrders(): List<Target> {
         val out = ArrayList<Target>()

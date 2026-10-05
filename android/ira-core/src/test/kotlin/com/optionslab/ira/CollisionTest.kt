@@ -790,6 +790,7 @@ class CollisionTest {
         "how far does nifty usually move from its open" to "OpenReach", "how often does nifty go 1% from the open" to "OpenReach",
         "how often does banknifty trade 0.5% on both sides of the open" to "OpenReach", "open reach record" to "OpenReach",
         "how often does nifty close within 0.3% of its open" to "OpenReach", "open se 1% kitni baar jata hai banknifty" to "OpenReach",
+        "what share of days does nifty go 1% from the open" to "OpenReach",
         // Its neighbours: the open as the day's low, the opening range's breaks, a fall from the previous close.
         "how often does finnifty open at its low" to "OpenHighLow", "do opening range breakouts usually hold" to "RangeBreaks",
         "how often does banknifty recover a 1% fall during the day" to "Comebacks",

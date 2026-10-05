@@ -81,7 +81,7 @@ class JarvisActionReceiver : BroadcastReceiver() {
             try {
                 when (intent.action) {
                     JarvisApproval.ACTION_APPROVE -> {
-                        val r = IraHub.confirm(id) ?: "That news trade had already lapsed; nothing was placed."
+                        val r = IraHub.confirm(id) ?: IraHub.alreadyLine(id, "That news trade had already lapsed; nothing was placed.")
                         JarvisPopup.show(context, "News trade", r)
                     }
                     JarvisApproval.ACTION_REJECT -> IraHub.cancelAction(id)

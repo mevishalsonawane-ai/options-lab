@@ -82,6 +82,19 @@ class OpenReachTest {
                 "how far does vix usually move from its open", "how often does nifty close above its open",
                 "how often does nifty recover a 1% fall during the day", "nifty ka high kab banta hai"))
             assertNull(OpenReach.asked(q), q)
+        // A day of the week, a part of the day or a clock time, and a count of sessions are others' (Weekdays', the day's
+        // clock, MultiDay's) - never the whole day's reach from its open.
+        for (q in listOf("how far does nifty usually move from its open on mondays", "how often does nifty go 1% from the open on a friday",
+                "how far does nifty usually move from its open in the morning", "how far does nifty usually move from the open in the afternoon",
+                "how often does nifty go 0.5% from the open after 2 pm", "how often does nifty go 0.5% from the open by 11am",
+                "how far does nifty usually move from its open before 10 30", "how far does banknifty usually move from its open in 3 sessions",
+                "how often does nifty go 1% from the open over the next 3 days", "3 session move from the open record for nifty"))
+            assertNull(OpenReach.asked(q), q)
+        // "What share" is the record's own question (the stock sense of "share" is still refused).
+        assertEquals(OpenReach.Q(1.0), OpenReach.asked("what share of days does nifty go 1% from the open"))
+        assertNull(OpenReach.asked("how far does this share usually move from its open"))
+        // A size beside "after" or "by" is a size, not a clock.
+        assertEquals(OpenReach.Q(0.5), OpenReach.asked("how often does nifty move by 0.5 percent from its open"))
     }
 
     @Test fun theRecord() {

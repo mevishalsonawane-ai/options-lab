@@ -23,7 +23,15 @@ class RequestsTest {
     }
 
     @Test fun theChatAndTheVoiceNameTheRequest() {
-        assertEquals("New request: stop ORB — see Requests.", Requests.chatLine("stop ORB"))
+        assertEquals("New request: stop ORB — see Requests.", Requests.chatLine("stop ORB", "stop ORB"))
+        // The heading is short; the full what is never cut - an exit or a plan is shown and said whole.
+        val plan = "this plan: 1) close all positions, 2) turn the kill switch on, 3) stop every strategy for today"
+        val title = Requests.title(plan)
+        assertEquals("this plan: 1) close all positions", title)
+        assertEquals("New request: $title — $plan. See Requests.", Requests.chatLine(title, plan))
+        assertEquals("Request: $title. Shall I $plan? Yes or no?", Requests.ask(title, plan))
+        assertEquals("Request: Shall I stop ORB? Yes or no?", Requests.ask("stop ORB", "stop ORB."))
+        assertEquals("Request: $title. Shall I $plan? Just yes or no?", Requests.reaskLine(title, plan))
         assertEquals("Request: stop ORB. Yes or no?", Requests.spoken("stop ORB"))
         assertEquals("Request: stop ORB. Boss, ORB is losing. Yes or no?", Requests.spoken("stop ORB", " Boss, ORB is losing. Yes or no?"))
         assertEquals("Requests 2", Requests.badge(2))
@@ -102,12 +110,51 @@ class RequestsTest {
         val r = Requests.pick("yes orb", true, 2, null, two)
         assertIs<Requests.Pick.Reask>(r)
         assertEquals(1L, r.id)
-        assertEquals("Request: stop ORB. Just yes or no?", r.line)
+        assertEquals("Request: Shall I stop ORB? Just yes or no?", r.line)
         assertEquals(Requests.Pick.Pass, Requests.pick("yes", true, 1, 1, two))
         // Focused on one, but Jarvis since asked about another: not taken.
         assertIs<Requests.Pick.Ambiguous>(Requests.pick("yes", true, 2, 1, two))
         // A focus on one that is gone: not taken.
         assertIs<Requests.Pick.Ambiguous>(Requests.pick("yes", true, 9, 9, two))
+    }
+
+    @Test fun aQuestionThatOnlyNamesARequestIsNotAPick() {
+        val two = listOf(v(1, "buy 1 lot of the NIFTY call", kind = Requests.Kind.TRADE, symbol = "NIFTY call (at the money)"), v(2, "stop ORB"))
+        // A question of its own that happens to name the Nifty trade: left as before, never a re-ask.
+        assertEquals(Requests.Pick.Pass, Requests.pick("what is nifty doing", null, 2, null, two))
+        assertEquals(Requests.Pick.Pass, Requests.pick("how far is nifty from its high today", null, 2, null, two))
+        // Little more than the name: asked again by itself.
+        assertIs<Requests.Pick.Reask>(Requests.pick("the nifty one", null, 2, null, two))
+        assertIs<Requests.Pick.Reask>(Requests.pick("orb", null, 1, null, two))
+        // A yes or no heard with the name: asked again by itself.
+        val r = Requests.pick("yes the nifty call please", true, 2, null, two)
+        assertIs<Requests.Pick.Reask>(r)
+        assertEquals(1L, r.id)
+        assertEquals("Request: Shall I buy 1 lot of the NIFTY call? Just yes or no?", r.line)
+    }
+
+    @Test fun anExitIsLabelledByWhatIsOpen() {
+        assertEquals(Requests.Venue.PAPER, Requests.venueFor(paper = true, zerodha = false))
+        assertEquals(Requests.Venue.PAPER, Requests.venueFor(paper = false, zerodha = false))
+        assertEquals(Requests.Venue.ZERODHA, Requests.venueFor(paper = false, zerodha = true))
+        assertEquals(Requests.Venue.PAPER_ZERODHA, Requests.venueFor(paper = true, zerodha = true))
+        assertEquals("Paper + Zerodha", Requests.Venue.PAPER_ZERODHA.label)
+        for (v in Requests.Venue.values()) if (v.real) assertTrue(v.label.contains("Zerodha"), v.name)
+        // A plan: any real step makes it real; no order in any step, No order.
+        assertEquals(Requests.Venue.NONE, Requests.venueOf(listOf(null, Requests.Venue.NONE)))
+        assertEquals(Requests.Venue.PAPER, Requests.venueOf(listOf(null, Requests.Venue.PAPER)))
+        assertEquals(Requests.Venue.PAPER_ZERODHA, Requests.venueOf(listOf(Requests.Venue.PAPER, Requests.Venue.ZERODHA)))
+        assertEquals(Requests.Venue.ZERODHA, Requests.venueOf(listOf(Requests.Venue.NONE, Requests.Venue.ZERODHA)))
+    }
+
+    @Test fun aSecondYesOnAnAnsweredRequest() {
+        val lapsed = "That had already lapsed; nothing was placed."
+        assertEquals(Requests.ANSWERED, Requests.alreadyLine(Requests.Outcome.APPROVED, false, lapsed))
+        assertEquals(Requests.ANSWERED, Requests.alreadyLine(Requests.Outcome.DECLINED, false, lapsed))
+        assertEquals(Requests.ANSWERED, Requests.alreadyLine(Requests.Outcome.FAILED, false, lapsed))
+        assertEquals(Requests.ANSWERED, Requests.alreadyLine(null, true, lapsed), "being done right now")
+        assertEquals(lapsed, Requests.alreadyLine(Requests.Outcome.LAPSED, false, lapsed))
+        assertEquals(lapsed, Requests.alreadyLine(null, false, lapsed))
     }
 
     @Test fun aNameSharedByTwoPicksNone() {

@@ -260,10 +260,15 @@ object DayAfter {
      * The share (0-100, rounded down) of [days] whose move, either way, was smaller than [move]'s: where today sits in the
      * record. Never 100 unless every day was smaller (199 of 200 is 99, not "bigger than 100%").
      */
-    fun percentile(days: List<Day>, move: Double): Int {
-        if (days.isEmpty()) return 0
-        val n = days.count { abs(it.movePct) < abs(move) }
-        return if (n == days.size) 100 else minOf(99, n * 100 / days.size)
+    fun percentile(days: List<Day>, move: Double): Int = rank(days.count { abs(it.movePct) < abs(move) }, days.size)
+
+    /**
+     * [smaller] of [of] as a share (0-100) by [percentile]'s rule: rounded down, and 100 only when every one was smaller -
+     * never "more than 100%", never 99.5 rounded up to 100. None: 0.
+     */
+    fun rank(smaller: Int, of: Int): Int {
+        if (of <= 0) return 0
+        return if (smaller >= of) 100 else minOf(99, smaller * 100 / of)
     }
 
     /** True when [td] is a big day by [pct] the way asked ([side] null: either way). */
