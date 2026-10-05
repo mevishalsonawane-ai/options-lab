@@ -57,10 +57,12 @@ internal object IraAirtime {
             state = o.state
             o
         }
-        // Why each alert was said, merged or kept to the chat, as decided now (for "why were you quiet at 11?").
-        runCatching { IraThinking.add(com.optionslab.ira.Thinking.alerts(now, out.decided, learned)) }
-        val line = out.say ?: return
+        // Why each alert was said, merged or kept to the chat, as decided now (for "why were you quiet at 11?") - written
+        // once the line was heard, so the trail never says aloud what nobody heard (review, 5 Oct).
+        fun think() = runCatching { IraThinking.add(com.optionslab.ira.Thinking.alerts(now, out.decided, learned)) }
+        val line = out.say ?: run { think(); return }
         val said = JarvisVoice.announce(line)
+        if (said) think()
         // Not heard (listening off): not counted as said - no move marked told, no hour's line used (the chat has them).
         if (!said) synchronized(this) { before?.let { b -> if (state === out.state) state = b.copy(pending = emptyList()) } }
         // Only a line Boss could hear is judged by what he did next.

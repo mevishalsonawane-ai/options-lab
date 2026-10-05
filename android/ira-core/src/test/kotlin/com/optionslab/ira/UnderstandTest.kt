@@ -200,3 +200,15 @@ class YouKnowTest {
         kotlin.test.assertTrue(!Filler.clean("nifty, you know, is it up").contains("you know"))
     }
 }
+
+class BundleTest {
+    @kotlin.test.Test fun aQuestionWithAnActionIsBundled() {
+        for (s in listOf("where is the most call writing, then exit all", "how has OI shifted since morning then square off everything",
+                "what is the vwap of nifty then exit all", "why were you quiet at 11 and then kill switch on",
+                "help me journal today then exit all", "help me journal today and then stop all arms"))
+            kotlin.test.assertTrue(Bundle.acts(s), s)
+        for (s in listOf("where is the most call writing", "what is the vwap of nifty", "why were you quiet at 11",
+                "help me journal today", "how are nifty and banknifty", "what's the structure today"))
+            kotlin.test.assertTrue(!Bundle.acts(s), s)
+    }
+}

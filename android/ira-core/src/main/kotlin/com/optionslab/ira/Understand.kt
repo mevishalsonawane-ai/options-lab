@@ -154,3 +154,18 @@ object Understand {
         a.command == null && a.order == null && a.topics.isNotEmpty() && a.topics.all { it in ANSWERS || it == Topic.GREETING } && a.topics.any { it in ANSWERS }
     }
 }
+
+/**
+ * Words that bundle a question with something to do ("where is the call writing, then exit all"): the question handlers
+ * that answer before the multi-step plan must not take them, or the action is silently dropped (review, 5 Oct). True when
+ * the whole or any part split on then / and / commas / phir / aur would act. Pure.
+ */
+object Bundle {
+    private val SPLIT = Regex("(?i)\\s*(?:,|;|\\band then\\b|\\bthen\\b|\\band\\b|\\bphir\\b|\\baur\\b|\\buske baad\\b)\\s*")
+
+    fun acts(text: String): Boolean = runCatching {
+        Corrections.acts(text) || SPLIT.split(text).map { it.trim() }.filter { it.isNotEmpty() }.let { parts ->
+            parts.size > 1 && parts.any { Corrections.acts(it) }
+        }
+    }.getOrDefault(true)
+}

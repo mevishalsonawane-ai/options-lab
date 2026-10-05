@@ -139,6 +139,14 @@ internal object IraDayJournal {
         if (heard == DayJournal.Heard.ANSWER) {
             val p = runCatching { com.optionslab.ira.Ask.parse(q) }.getOrNull()
             if (p == null || p.order != null || p.command != null) { asking = null; return null }
+            // A question of his (voice gives no "?"), a reminder or a note to remember is not an answer: it is answered as
+            // usual and the journal pauses (review, 5 Oct). His own reflections ("I thought...", "main...") stay answers.
+            val t = q.trim().lowercase()
+            val mine = Regex("^(i|i'm|im|i was|i thought|i felt|i wanted|i should|my|main|mujhe|mera|maine|because|kyunki|bas)\\b").containsMatchIn(t)
+            val asks = Regex("^(jarvis,? )?(what|how|why|where|when|which|who|is|are|can|could|will|should|do|does|did|tell me|show me|kya|kitna|kitne|kaise|kab|kahan|kyun)\\b").containsMatchIn(t) ||
+                !mine && p.topics.any { it != com.optionslab.ira.Topic.OFF_TOPIC && it != com.optionslab.ira.Topic.GREETING }
+            val other = runCatching { com.optionslab.ira.Reminder.asked(q) || com.optionslab.ira.Memory.toKeep(q) != null }.getOrDefault(false)
+            if (asks || other) { asking = null; return null }
         }
         val cur = a.current ?: return null
         if (heard == DayJournal.Heard.ANSWER) {

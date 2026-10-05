@@ -1220,9 +1220,12 @@ object IraHub {
                 return
             }
         }
+        // A question said with something to do ("..., then exit all"): the question handlers below leave it to the multi-step
+        // plan, so the action is never silently dropped ([com.optionslab.ira.Bundle]; review, 5 Oct).
+        val bundled = runCatching { com.optionslab.ira.Bundle.acts(q) }.getOrDefault(true)
         // "Help me journal today": today's journal drafted from the facts, then a few questions by voice. It holds the
         // account, so the phone must be unlocked. Words only; the answers are kept, never acted on.
-        if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && runCatching { com.optionslab.ira.DayJournal.asked(q) }.getOrDefault(false)) {
+        if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !bundled && runCatching { com.optionslab.ira.DayJournal.asked(q) }.getOrDefault(false)) {
             _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
             if (phoneLocked()) { reply("Unlock the phone for that, Boss."); return }
             scope.launch(Dispatchers.IO) { reply(runCatching { IraDayJournal.help() }.getOrElse { "I could not draft your journal just now, Boss." }) }
@@ -1233,7 +1236,7 @@ object IraHub {
         scope.launch { runCatching { IraTools.countAsked(q) } }
         // "Which alerts do you hold back?" / "say everything again": the unasked alerts he says aloud less often (kinds only,
         // nothing about the account; it only ever changes how often his own voice speaks, never anything that acts).
-        val alertAsk = if (com.optionslab.app.BuildConfig.JARVIS && parsed.order == null) runCatching { com.optionslab.ira.AlertSense.asked(q) }.getOrNull() else null
+        val alertAsk = if (com.optionslab.app.BuildConfig.JARVIS && parsed.order == null && !bundled) runCatching { com.optionslab.ira.AlertSense.asked(q) }.getOrNull() else null
         if (alertAsk != null) {
             _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
             scope.launch { reply(if (alertAsk == com.optionslab.ira.AlertSense.Request.ALL) IraTools.alertsAll()
@@ -1241,14 +1244,14 @@ object IraHub {
             return
         }
         // "Why so quiet?", "did you hold back any alerts?": today's market alerts - said aloud, or kept to the chat and why.
-        if (com.optionslab.app.BuildConfig.JARVIS && parsed.order == null && runCatching { com.optionslab.ira.Airtime.asked(q) }.getOrDefault(false)) {
+        if (com.optionslab.app.BuildConfig.JARVIS && parsed.order == null && !bundled && runCatching { com.optionslab.ira.Airtime.asked(q) }.getOrDefault(false)) {
             _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
             reply(IraAirtime.answer())
             return
         }
         // "Is your data fresh?" / "how old are your prices?": how old his prices, candles, news and chain are, and today's
         // record ([com.optionslab.ira.DataAge]; ages only, nothing about the account).
-        if (!GOLD_ONLY_TALK && parsed.order == null && parsed.command == null && runCatching { com.optionslab.ira.DataAge.asked(q) }.getOrDefault(false)) {
+        if (!GOLD_ONLY_TALK && parsed.order == null && parsed.command == null && !bundled && runCatching { com.optionslab.ira.DataAge.asked(q) }.getOrDefault(false)) {
             _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
             val markets = parsed.markets
             scope.launch { reply(freshAsked(markets)) }
@@ -1256,7 +1259,7 @@ object IraHub {
         }
         // Markets and figures the phone has no data for (crude, US markets, the rupee, results, VWAP), targets, or lots with
         // no budget: said honestly, never answered with Nifty's figures ([com.optionslab.ira.Honest]; nothing of the account).
-        if (parsed.order == null && parsed.command == null)
+        if (parsed.order == null && parsed.command == null && !bundled)
             runCatching { com.optionslab.ira.Honest.asked(q) }.getOrNull()?.let { a ->
                 val follows = if (com.optionslab.app.BuildConfig.GOLD) listOf(com.optionslab.ira.Market.GOLD) else com.optionslab.ira.Market.entries
                 _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, com.optionslab.ira.Honest.say(a, follows))).takeLast(MAX_MESSAGES)) }
@@ -1266,7 +1269,7 @@ object IraHub {
         // that check?": his own decision walked through from the reason trail written when he made it (Boss's account and
         // words left out on a locked phone). Nothing written for it: he says so - a reason is never found afterwards (a
         // "why did you ...?" about something else he did goes on to his activity log, below). Words only.
-        val thinkAsk = if (com.optionslab.app.BuildConfig.JARVIS && parsed.order == null && parsed.command == null)
+        val thinkAsk = if (com.optionslab.app.BuildConfig.JARVIS && !bundled && parsed.order == null && parsed.command == null)
             runCatching { com.optionslab.ira.Thinking.asked(q) }.getOrNull() else null
         if (thinkAsk != null) {
             val said = IraThinking.answer(thinkAsk, phoneLocked())
@@ -1285,7 +1288,7 @@ object IraHub {
         // expected move by expiry from the straddle?": the option chain read beyond PCR and max pain ([com.optionslab.ira.ChainIntel]),
         // every number from the chain with its time. Market data only (fine on a locked phone); words only, never advice.
         // (Before the market answers: the VIX's expected range must not take "expected move by expiry".)
-        val chainAsk = if (parsed.order == null && parsed.command == null && !com.optionslab.app.BuildConfig.GOLD)
+        val chainAsk = if (!bundled && parsed.order == null && parsed.command == null && !com.optionslab.app.BuildConfig.GOLD)
             runCatching { com.optionslab.ira.ChainIntel.asked(q) }.getOrNull() else null
         if (chainAsk != null) {
             _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
@@ -1297,7 +1300,7 @@ object IraHub {
         // far?": today's intraday structure from the 1-minute candles on the phone ([com.optionslab.ira.Structure]), numbers with
         // times. Market data only (fine on a locked phone); facts only, never advice or a forecast. (Before the market answers:
         // the day's story must not take "so far", nor the account "trend or range so far".)
-        val structureAsk = if (parsed.order == null && parsed.command == null && !com.optionslab.app.BuildConfig.GOLD)
+        val structureAsk = if (!bundled && parsed.order == null && parsed.command == null && !com.optionslab.app.BuildConfig.GOLD)
             runCatching { com.optionslab.ira.Structure.asked(q) }.getOrNull() else null
         if (structureAsk != null) {
             val said = runCatching {
@@ -1313,7 +1316,7 @@ object IraHub {
         // "Make the case", "pros and cons of trading now", "talk me through it": the trade check reasoned out, facts both
         // ways (Boss's own day, goals and rules only on an unlocked phone). Words only; the decision is Boss's. (Before the
         // other answers: these whole questions are this, and the glossary or a plan must not read "explain" or "and" in them.)
-        if (parsed.order == null && parsed.command == null && !com.optionslab.app.BuildConfig.GOLD &&
+        if (!bundled && parsed.order == null && parsed.command == null && !com.optionslab.app.BuildConfig.GOLD &&
             runCatching { com.optionslab.ira.TradeCase.asked(q) }.getOrDefault(false)) {
             _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
             scope.launch { reply(runCatching { tradeCase() }.getOrElse { "I could not put the case together just now, Boss." }) }
@@ -1323,7 +1326,7 @@ object IraHub {
         // past sessions like it, which of his own alerts would go off, and Boss's positions, rules, loss limits and alarms at
         // it (only on an unlocked phone). Never a forecast or advice; the decision is Boss's. ("What happens to my P&L if
         // Nifty moves 100 points" stays the account's answer: Scenarios.asked leaves it to Exposure.)
-        val scenario = if (parsed.order == null && parsed.command == null && !com.optionslab.app.BuildConfig.GOLD)
+        val scenario = if (!bundled && parsed.order == null && parsed.command == null && !com.optionslab.app.BuildConfig.GOLD)
             runCatching { com.optionslab.ira.Scenarios.asked(q) }.getOrNull() else null
         if (scenario != null) {
             _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
@@ -1332,7 +1335,7 @@ object IraHub {
         }
         // "What's your plan today?" / "what are you working on?": Jarvis's own plan for the day (it names Boss's goals and
         // words, so the phone must be unlocked). Words only: the plan itself only ever speaks, studies or works on paper.
-        if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && parsed.command == null && parsed.order == null &&
+        if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.command == null && parsed.order == null &&
             runCatching { com.optionslab.ira.Agenda.asked(q) }.getOrDefault(false)) {
             _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
             if (phoneLocked()) { reply("Unlock the phone for that, Boss."); return }
@@ -1341,7 +1344,7 @@ object IraHub {
         }
         // "How are you improving?" / "what are your goals?": his own goals for the week and how they stand ([IraImprove]). Words
         // only: a goal of his only ever speaks, studies, asks Boss to teach him or works on paper.
-        if (com.optionslab.app.BuildConfig.JARVIS && parsed.command == null && parsed.order == null &&
+        if (com.optionslab.app.BuildConfig.JARVIS && !bundled && parsed.command == null && parsed.order == null &&
             runCatching { com.optionslab.ira.Improve.asked(q) }.getOrDefault(false)) {
             _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
             if (phoneLocked()) { reply("Unlock the phone for that, Boss."); return }

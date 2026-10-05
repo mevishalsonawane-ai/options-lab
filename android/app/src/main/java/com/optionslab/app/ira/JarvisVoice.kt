@@ -1359,7 +1359,10 @@ class JarvisVoice : Service() {
                 }
                 lastAnswer = Said(text); lastAnswerAt = SystemClock.elapsedRealtime()
                 text
-            }, "answer", full = full, account = com.optionslab.ira.Topic.ACCOUNT in com.optionslab.ira.Ask.parse(q).topics)
+            }, "answer", full = full,
+                // Said on an unlocked phone, any answer may hold Boss's side (make the case, his reasons): "go on" says its
+                // rest only while the phone is still unlocked (review, 5 Oct).
+                account = !locked() || com.optionslab.ira.Topic.ACCOUNT in com.optionslab.ira.Ask.parse(q).topics)
         }
     }
 
