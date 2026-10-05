@@ -1232,7 +1232,7 @@ object IraHub {
                 com.optionslab.ira.Clarity.asked(q) != null || com.optionslab.ira.DayClock.asked(q) != null ||
                 com.optionslab.ira.GapRecord.asked(q) != null || com.optionslab.ira.RangeBreaks.asked(q) != null ||
                 com.optionslab.ira.PriorDay.asked(q) != null || com.optionslab.ira.LastHour.asked(q) != null ||
-                com.optionslab.ira.InsideDays.asked(q) != null ||
+                com.optionslab.ira.InsideDays.asked(q) != null || com.optionslab.ira.FirstMove.asked(q) != null ||
                 com.optionslab.ira.Weekdays.asked(q) != null ||
                 com.optionslab.ira.WordFit.asked(q) != null ||
                 com.optionslab.ira.Causes.asked(q) != null ||
@@ -2460,6 +2460,23 @@ object IraHub {
                 else com.optionslab.ira.InsideDays.answer(insideAsk, mk, histories[mk]?.bars.orEmpty(),
                     com.optionslab.app.data.Market.today(), com.optionslab.app.data.Market.now().toLocalDateTime())
             }.getOrElse { "I could not read the inside-day record just now, Boss." }
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            reply(said)
+            return true
+        }
+        // "How often does the first 30 minutes' direction match the day's close?", "does the opening move usually decide the
+        // day?": the index's past first moves (the price at 09:45 against the open) against each day's close, set against what
+        // chance alone would give, on the phone's own 1-minute sessions ([com.optionslab.ira.FirstMove]), beside today's first
+        // move. A record of past days, never a forecast or advice; market data only (fine on a locked phone); nothing acts.
+        val firstMoveAsk = if (!bundled && parsed.order == null && parsed.command == null && !com.optionslab.app.BuildConfig.GOLD)
+            runCatching { com.optionslab.ira.FirstMove.asked(q) }.getOrNull() else null
+        if (firstMoveAsk != null) {
+            val said = runCatching {
+                val mk = com.optionslab.ira.FirstMove.market(parsed.markets)
+                if (mk == null) com.optionslab.ira.FirstMove.NOT_HERE
+                else com.optionslab.ira.FirstMove.answer(firstMoveAsk, mk, histories[mk]?.bars.orEmpty(),
+                    com.optionslab.app.data.Market.today(), com.optionslab.app.data.Market.now().toLocalDateTime())
+            }.getOrElse { "I could not read the first-move record just now, Boss." }
             _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
             reply(said)
             return true
