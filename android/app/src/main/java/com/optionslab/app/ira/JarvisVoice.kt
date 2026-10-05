@@ -701,6 +701,11 @@ class JarvisVoice : Service() {
     /** A trade needs Boss's own voice for its yes; a command (start, stop...) needs only a yes. */
     private var askingNeedsBoss = true
     private var askingUntil = 0L
+    /**
+     * What Jarvis last finished inviting an answer to ([com.optionslab.ira.AnswerWindow]): his own request's yes-or-no
+     * question, or an offer of words (the morning check's "say yes for it"). A yes is only ever for the last one.
+     */
+    private var lastInvite: com.optionslab.ira.AnswerWindow.Invite? = null
     /** The English given to the recognizer each turn (EXTRA_LANGUAGE) - the one the diagnostics and the voice check name. */
     @Volatile private var lang = "en-US"
     private var triedOtherLanguage = false
@@ -1456,6 +1461,14 @@ class JarvisVoice : Service() {
         val id = asking
         if (id != null && SystemClock.elapsedRealtime() < askingUntil) {
             val yes = alternatives.firstOrNull()?.let { Wake.yesNo(it) }
+            // An offer said after the question ("... say yes for it"): this yes or no may be for the offer, so it is not
+            // taken for the request - never approved by a yes meant for something else ([com.optionslab.ira.AnswerWindow]).
+            // Said so as a yes-or-no question again: the next yes or no is the request's.
+            if (yes != null && com.optionslab.ira.AnswerWindow.yesFor(true, lastInvite) == com.optionslab.ira.AnswerWindow.For.HOLD) {
+                note("a yes or no after another offer: not taken for the waiting request")
+                say(com.optionslab.ira.AnswerWindow.HOLD, "question")
+                return
+            }
             if (yes != null) {
                 // A faint yes (the room, the TV) is not a yes: anything unclear is not a yes. The question stays open.
                 if (yes && com.optionslab.ira.Sure.faintYes(sure)) { note("a faint yes (${com.optionslab.ira.Sure.say(sure)}): not taken"); again(); return }
@@ -1619,6 +1632,8 @@ class JarvisVoice : Service() {
 
     /** The words being handed to the voice now, as said (for telling Jarvis's own words heard back from Boss's). */
     @Volatile private var sayingText: String? = null
+    /** The words being said end inviting an answer ([com.optionslab.ira.AnswerWindow.invites]; read before any Hindi). */
+    @Volatile private var sayingInvites = false
     /** The answer being said, in full as in the chat (null: not an answer), and whether it is about the account. */
     @Volatile private var sayingFull: String? = null
     @Volatile private var sayingAccount = false
@@ -1759,6 +1774,7 @@ class JarvisVoice : Service() {
         if (id == "answer" && keep) repeatable = com.optionslab.ira.Again.Last(words, account || !locked(), SystemClock.elapsedRealtime())
         sayingFull = if (id == "answer") full else null; sayingAccount = account
         sayingText = text; reachedAt = -1
+        sayingInvites = com.optionslab.ira.AnswerWindow.invites(words)
         // Muted: the words go on screen as a pop-up instead (answers and questions only; "One moment" is dropped).
         if (muted && !text.startsWith("Voice on")) {
             if (id == "answer" || id == "question") runCatching { JarvisPopup.show(this, "Jarvis (muted)", "${full ?: words}\n\nSay \"Jarvis, unmute\" to hear me.") }
@@ -1868,6 +1884,14 @@ class JarvisVoice : Service() {
         if (id == STOP_AFTER) { stopSelf(); return }
         if (id == "answer") { awakeUntil = SystemClock.elapsedRealtime() + FOLLOW_MS; called = false }   // a follow-up needs no "Jarvis" (and may not act)
         if (id == "question" && askingUntil < SystemClock.elapsedRealtime()) askingUntil = SystemClock.elapsedRealtime() + ANSWER_MS
+        // Jarvis's own words that end inviting an answer ("... say yes for it.", "Before you answer, Boss: ..."): Boss's
+        // answer is heard without "Jarvis" for at least 20 s, as a follow-up (it may only ask, never act - a request's yes
+        // is only its own question's). His yes-or-no question is the invitation to that request; any other is an offer.
+        if (id == "question") lastInvite = com.optionslab.ira.AnswerWindow.Invite.QUESTION
+        else if (id != null && id != STOP_AFTER && sayingInvites) {
+            lastInvite = com.optionslab.ira.AnswerWindow.Invite.OFFER
+            awakeUntil = maxOf(awakeUntil, SystemClock.elapsedRealtime() + com.optionslab.ira.AnswerWindow.WINDOW_MS); called = false
+        }
         again(150)
     }
 

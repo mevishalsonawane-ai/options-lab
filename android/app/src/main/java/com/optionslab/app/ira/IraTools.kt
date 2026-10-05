@@ -1033,8 +1033,7 @@ internal object IraTools {
     fun morningAsksYes(said: String, waiting: Boolean): String? {
         val (key, at) = asksOffered ?: return null
         asksOffered = null
-        if (waiting || !com.optionslab.ira.MorningAsks.yes(said) || !com.optionslab.ira.MorningAsks.fresh(at, asksNow())) return null
-        return com.optionslab.ira.MorningAsks.question(key)
+        return com.optionslab.ira.MorningAsks.taken(key, at, said, waiting, asksNow())
     }
 
     /** "What do you offer me in the morning?". */

@@ -121,6 +121,14 @@ object MorningAsks {
     /** A bare "yes" ("yes please", "haan batao") - nothing else, and never with a "no" in it. */
     fun yes(text: String): Boolean = YES.matches(text.lowercase().replace(rx("[^a-z ]"), " ").replace(rx("\\s+"), " ").trim())
 
+    /**
+     * Boss's words [said] at [now] after [key] was offered at [offeredAt]: the question to ask, or null. Only a bare
+     * [yes], within [YES_MINUTES], and never while anything else waits for his yes or Confirm ([waiting]: a pending
+     * action or order) - that yes is never taken as the offer, nor the offer's yes as that.
+     */
+    fun taken(key: String, offeredAt: LocalDateTime, said: String, waiting: Boolean, now: LocalDateTime): String? =
+        if (waiting || !yes(said) || !fresh(offeredAt, now)) null else question(key)
+
     /** Is a yes at [now] still for an offer made at [offeredAt]? */
     fun fresh(offeredAt: LocalDateTime, now: LocalDateTime): Boolean =
         !now.isBefore(offeredAt) && !now.isAfter(offeredAt.plusMinutes(YES_MINUTES))
