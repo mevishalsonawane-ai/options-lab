@@ -455,3 +455,27 @@ object WidgetOrdersPace {
      */
     fun woke(wasOn: Boolean?, screenOn: Boolean): Boolean = wasOn == false && screenOn
 }
+
+/**
+ * Battery (round 13): the echo canceller on Jarvis's own microphone capture only while he talks. With a taught voice,
+ * every listening turn - all day and all night, screen off, market shut - hears through our own capture
+ * ([CutIn.ownCapture]), and the phone's echo canceller was switched on for the whole of each turn, working through
+ * every 10 ms of audio with nothing playing to cancel. Now it is made with the capture but switched on only while
+ * Jarvis speaks ([on]) and off again when he stops; a turn opened in silence starts with it off. And a cut-in turn
+ * opened on the call microphone (no taught voice: the phone's full call processing, echo cancelling included) was
+ * kept open after he stopped talking until the recognizer ended it (up to 25 s, 45 s when stuck); it now gives way at
+ * once to a plain turn on the recognizer's own microphone ([plainAfter]) - only when nothing was heard in it, so Boss
+ * speaking into it is never cut. "Jarvis" is listened for throughout: only the processing changes. Pure.
+ */
+object CaptureEcho {
+    /** The echo canceller on our own capture: on only while Jarvis is [speaking]. */
+    fun on(speaking: Boolean): Boolean = speaking
+
+    /**
+     * Jarvis just stopped talking: end the open turn and start a plain one? Only a [listening] turn opened while he
+     * talked ([inSpeech]) on the call microphone ([callSource]), in which no speech began ([speechBegan]) and no words
+     * were read ([partial]) - so nothing Boss may be saying is lost.
+     */
+    fun plainAfter(listening: Boolean, inSpeech: Boolean, callSource: Boolean, speechBegan: Boolean, partial: Boolean): Boolean =
+        listening && inSpeech && callSource && !speechBegan && !partial
+}

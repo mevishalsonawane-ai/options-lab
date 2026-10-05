@@ -92,14 +92,19 @@ object VoiceGuard {
      * missed). Used on the teaching recordings and the shared capture alike, so the voice print is compared like with
      * like. Released with the capture; a phone without them keeps the plain capture. [echo]: also the phone's echo
      * canceller (the shared capture only, so Jarvis's own voice is taken out while he talks and Boss cuts in -
-     * [com.optionslab.ira.CutIn]); with nothing playing it leaves the voice as it is.
+     * [com.optionslab.ira.CutIn]), switched on only while he talks (battery round 13).
      */
-    private class Clean(session: Int, echo: Boolean = false) {
+    private class Clean(session: Int, echo: Boolean = false, echoNow: Boolean = echo) {
         private val ns = runCatching { if (android.media.audiofx.NoiseSuppressor.isAvailable()) android.media.audiofx.NoiseSuppressor.create(session)?.also { it.setEnabled(true) } else null }.getOrNull()
         private val agc = runCatching { if (android.media.audiofx.AutomaticGainControl.isAvailable()) android.media.audiofx.AutomaticGainControl.create(session)?.also { it.setEnabled(true) } else null }.getOrNull()
-        private val aec = if (!echo) null else runCatching { if (android.media.audiofx.AcousticEchoCanceler.isAvailable()) android.media.audiofx.AcousticEchoCanceler.create(session)?.also { it.setEnabled(true) } else null }.getOrNull()
-        /** The echo canceller is on for this capture. */
-        val echoOn: Boolean get() = runCatching { aec?.enabled == true }.getOrDefault(false)
+        private val aec = if (!echo) null else runCatching { if (android.media.audiofx.AcousticEchoCanceler.isAvailable()) android.media.audiofx.AcousticEchoCanceler.create(session)?.also { it.setEnabled(echoNow) } else null }.getOrNull()
+        /**
+         * The echo canceller works on this capture (made, and switched on or off as asked) - on only while Jarvis talks
+         * ([echo]; battery round 13, [com.optionslab.ira.CaptureEcho]).
+         */
+        val echoOn: Boolean get() = aec != null
+        /** The echo canceller switched on (Jarvis talking) or off (nothing playing to cancel). */
+        fun echo(on: Boolean) { runCatching { aec?.setEnabled(on) } }
         fun release() { runCatching { ns?.release() }; runCatching { agc?.release() }; runCatching { aec?.release() } }
     }
 
@@ -127,7 +132,7 @@ object VoiceGuard {
      * [source]: the microphone source - the recognition one for a voice check, the call one (echo cancelled on every
      * phone) for a cut-in turn without a taught voice ([com.optionslab.ira.CutIn.ownCapture]).
      */
-    class Tap @SuppressLint("MissingPermission") constructor(source: Int = MediaRecorder.AudioSource.VOICE_RECOGNITION) {
+    class Tap @SuppressLint("MissingPermission") constructor(source: Int = MediaRecorder.AudioSource.VOICE_RECOGNITION, echoNow: Boolean = true) {
         val read: android.os.ParcelFileDescriptor
         private val write: android.os.ParcelFileDescriptor
         private val rec: AudioRecord
@@ -147,7 +152,7 @@ object VoiceGuard {
                 r = AudioRecord(source, VoicePrint.RATE, AudioFormat.CHANNEL_IN_MONO,
                     AudioFormat.ENCODING_PCM_16BIT, maxOf(min, VoicePrint.RATE))
                 check(r.state == AudioRecord.STATE_INITIALIZED) { "no microphone" }
-                clean = Clean(r.audioSessionId, echo = true)
+                clean = Clean(r.audioSessionId, echo = true, echoNow = echoNow)
                 r.startRecording()
             } catch (e: Exception) {
                 // Nothing may leak when the microphone cannot be had: both ends of the pipe and the recorder go.
@@ -173,8 +178,11 @@ object VoiceGuard {
         /** What was heard this turn (up to [KEEP_S] seconds), oldest first. */
         fun heard(): ShortArray = synchronized(buf) { ShortArray(filled) { buf[(at - filled + it + buf.size) % buf.size] } }
 
-        /** The phone's echo canceller is on for this capture (Jarvis's own voice taken out while he talks). */
+        /** The phone's echo canceller works on this capture (Jarvis's own voice taken out while he talks). */
         val echoCancelled: Boolean get() = clean?.echoOn == true
+
+        /** Its echo canceller on while Jarvis talks, off when he stops ([com.optionslab.ira.CaptureEcho.on]). */
+        fun echo(on: Boolean) { clean?.echo(on) }
 
         fun close() {
             running = false

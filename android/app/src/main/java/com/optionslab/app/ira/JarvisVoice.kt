@@ -802,6 +802,8 @@ class JarvisVoice : Service() {
     @Volatile private var readyAt = SystemClock.elapsedRealtime()
     /** This turn's own capture, shared with the recognizer (Android 13+ with a taught voice), or null. */
     private var tap: VoiceGuard.Tap? = null
+    /** [tap] is the call microphone (a cut-in turn without a taught voice), the phone's full call processing on it. */
+    private var tapCall = false
     /** The phone's recognizer refused our audio: plain microphone from now on (voice cannot trade then). */
     /**
      * The shared capture does not work on this phone (Boss, 4 Oct: the recognizer said "ready" and then never heard
@@ -1189,7 +1191,10 @@ class JarvisVoice : Service() {
         if (com.optionslab.ira.CutIn.ownCapture(turnInSpeech, Build.VERSION.SDK_INT, echoOk, enrolledNow, tapFailed) && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             // Without a taught voice no voice print is read from it: the call source, whose echo cancelling every phone applies.
             val src = if (enrolledNow) android.media.MediaRecorder.AudioSource.VOICE_RECOGNITION else android.media.MediaRecorder.AudioSource.VOICE_COMMUNICATION
-            tap = runCatching { VoiceGuard.Tap(src) }.getOrNull()
+            // Battery (round 13): its echo canceller on only while Jarvis talks ([com.optionslab.ira.CaptureEcho]) - a
+            // taught voice's turns all night no longer run it with nothing playing.
+            tap = runCatching { VoiceGuard.Tap(src, com.optionslab.ira.CaptureEcho.on(turnInSpeech)) }.getOrNull()
+            tapCall = tap != null && !enrolledNow
             if (tap == null) tapFailed = true                // the microphone could not be shared: do not retry each turn
             tap?.let { t ->
                 i.putExtra(RecognizerIntent.EXTRA_AUDIO_SOURCE, t.read)
@@ -1248,7 +1253,7 @@ class JarvisVoice : Service() {
     /** Ends this turn's capture, keeping what it heard for the voice check. */
     private fun endTap() {
         tap?.let { t -> lastHeard = t.heard(); t.close() }
-        tap = null
+        tap = null; tapCall = false
     }
 
     /** Was the last thing heard said by the owner? (False without a taught voice or a shared capture.) */
@@ -2136,6 +2141,7 @@ class JarvisVoice : Service() {
             runCatching { rec?.cancel() }; listening = false; endTap(); lastHeard = null
         }
         speaking = true
+        tap?.echo(com.optionslab.ira.CaptureEcho.on(true))   // a turn kept open over his speech: its echo canceller on now
         spokeAt = SystemClock.elapsedRealtime()
         val u = "$id#${++said}"
         utterance = u
@@ -2268,6 +2274,15 @@ class JarvisVoice : Service() {
         else if (id != null && id != STOP_AFTER && invited) {
             offerEnded()
             awakeUntil = maxOf(awakeUntil, SystemClock.elapsedRealtime() + com.optionslab.ira.AnswerWindow.WINDOW_MS); called = false
+        }
+        // Battery (round 13, [com.optionslab.ira.CaptureEcho]): nothing playing now, so no echo to cancel. A taught voice's
+        // capture goes on with its canceller off; a cut-in turn on the call microphone in which nothing was heard gives way
+        // to a plain turn on the recognizer's own microphone (before, it ran on until the recognizer ended it, up to 25 s).
+        tap?.echo(com.optionslab.ira.CaptureEcho.on(false))
+        if (com.optionslab.ira.CaptureEcho.plainAfter(listening, turnInSpeech, tapCall, turnSpeech, turnPartial != null)) {
+            main.removeCallbacks(finish); stoppedAt = SystemClock.elapsedRealtime()
+            runCatching { rec?.cancel() }; listening = false; endTap(); lastHeard = null
+            note("cut-in turn ended with my speech (nothing heard): listening on the phone's own microphone")
         }
         again(150)
     }
