@@ -443,17 +443,87 @@ internal object IraTools {
         o.keys().asSequence().mapNotNull { k -> runCatching { k to java.time.LocalDate.parse(o.getString(k)) }.getOrNull() }.toMap()
     }.getOrDefault(emptyMap())
 
-    /** A market question Boss asked, counted at this hour (nothing else is counted). */
-    @Synchronized fun noteHabit(question: String) {
+    /**
+     * A market question Boss asked, counted at this hour (nothing else is counted); and his routine noted (the question's
+     * key only: a market question, his P&L or the week's events - [com.optionslab.ira.Routine.key]). Returns a habit of
+     * his to put to him now, or null; nothing is kept from it without his yes ([keepRoutine]).
+     */
+    @Synchronized fun noteHabit(question: String, afterLoss: Boolean = false): com.optionslab.ira.Routine.Pattern? {
+        val now = LocalDateTime.now(IST)
         runCatching {
-            val k = com.optionslab.ira.Habits.key(question) ?: return
-            val c = com.optionslab.ira.Habits.add(habits(), k, LocalDateTime.now(IST).hour)
-            prefs().put(HABITS, JSONObject().apply { c.forEach { (key, row) -> put(key, JSONArray(row.toList())) } }.toString())
-            val last = (habitsLast() + (k to LocalDateTime.now(IST).toLocalDate())).filterKeys { it in c.keys }
-            prefs().put(HABITS_LAST, JSONObject().apply { last.forEach { (key, d) -> put(key, d.toString()) } }.toString())
-            // And counted for the day: "the question you asked most" in his weekly review.
-            count(com.optionslab.ira.Improve.ASKED_PREFIX + k)
+            val k = com.optionslab.ira.Habits.key(question)
+            if (k != null) {
+                val c = com.optionslab.ira.Habits.add(habits(), k, now.hour)
+                prefs().put(HABITS, JSONObject().apply { c.forEach { (key, row) -> put(key, JSONArray(row.toList())) } }.toString())
+                val last = (habitsLast() + (k to now.toLocalDate())).filterKeys { it in c.keys }
+                prefs().put(HABITS_LAST, JSONObject().apply { last.forEach { (key, d) -> put(key, d.toString()) } }.toString())
+                // And counted for the day: "the question you asked most" in his weekly review.
+                count(com.optionslab.ira.Improve.ASKED_PREFIX + k)
+            }
         }
+        return runCatching { noteRoutine(question, now, afterLoss) }.getOrNull()
+    }
+
+    // ---- Boss's routine ([com.optionslab.ira.Routine]) --------------------------------------------------------------
+
+    private const val ROUTINE_LOG = "jarvis.routine.log"
+    private const val ROUTINE_KEPT = "jarvis.routine.kept"
+    private const val ROUTINE_OFFERED = "jarvis.routine.offered"
+
+    /** What Boss asked and when (keys only, never his words), the last eight weeks. */
+    fun routineLog(): List<com.optionslab.ira.Routine.Seen> = runCatching {
+        val a = JSONArray(prefs().getString(ROUTINE_LOG) ?: "[]")
+        (0 until a.length()).mapNotNull { com.optionslab.ira.Routine.decode(a.optString(it)) }
+    }.getOrDefault(emptyList())
+
+    /** The routines Boss said yes to (said at their time, words only). */
+    fun routineKept(): List<com.optionslab.ira.Routine.Kept> = runCatching {
+        val a = JSONArray(prefs().getString(ROUTINE_KEPT) ?: "[]")
+        (0 until a.length()).mapNotNull { com.optionslab.ira.Routine.decodeKept(a.optString(it)) }
+    }.getOrDefault(emptyList())
+
+    /** Boss's routines found now, strongest first. */
+    fun routines(): List<com.optionslab.ira.Routine.Pattern> = com.optionslab.ira.Routine.patterns(routineLog(), com.optionslab.app.data.Market.today())
+
+    private fun routineOfferedAt(): Map<String, java.time.LocalDate> = runCatching {
+        val o = JSONObject(prefs().getString(ROUTINE_OFFERED) ?: "{}")
+        o.keys().asSequence().mapNotNull { k -> runCatching { k to java.time.LocalDate.parse(o.getString(k)) }.getOrNull() }.toMap()
+    }.getOrDefault(emptyMap())
+
+    private fun saveKept(all: List<com.optionslab.ira.Routine.Kept>) {
+        prefs().put(ROUTINE_KEPT, JSONArray(all.map { com.optionslab.ira.Routine.encode(it) }).toString())
+    }
+
+    private fun noteRoutine(question: String, now: LocalDateTime, afterLoss: Boolean): com.optionslab.ira.Routine.Pattern? {
+        val k = com.optionslab.ira.Routine.key(question) ?: return null
+        val log = com.optionslab.ira.Routine.add(routineLog(), com.optionslab.ira.Routine.Seen(k, now, afterLoss))
+        prefs().put(ROUTINE_LOG, JSONArray(log.map { com.optionslab.ira.Routine.encode(it) }).toString())
+        // Asked by himself: a routine of it he said yes to lasts on.
+        val kept = routineKept()
+        if (kept.any { it.key == k }) saveKept(com.optionslab.ira.Routine.renew(kept, k, now.toLocalDate()))
+        return com.optionslab.ira.Routine.toOffer(com.optionslab.ira.Routine.patterns(log, now.toLocalDate()), k, routineKept(), routineOfferedAt(), now.toLocalDate())
+    }
+
+    /** [p] was just put to Boss: not put again for a month, whatever he answers. */
+    @Synchronized fun routineOffered(p: com.optionslab.ira.Routine.Pattern) {
+        runCatching {
+            val all = routineOfferedAt() + (p.slot to com.optionslab.app.data.Market.today())
+            prefs().put(ROUTINE_OFFERED, JSONObject().apply { all.entries.sortedBy { it.value }.takeLast(40).forEach { (k, d) -> put(k, d.toString()) } }.toString())
+        }
+    }
+
+    /** Boss said yes to [p]: kept (checked again: only a question's answer, words only). What to say, or null. */
+    @Synchronized fun keepRoutine(p: com.optionslab.ira.Routine.Pattern): String? {
+        val k = com.optionslab.ira.Routine.keep(p, com.optionslab.app.data.Market.today()) ?: return null
+        saveKept(com.optionslab.ira.Routine.put(routineKept(), k))
+        IraActivity.add("Routine kept, as Boss said yes: ${com.optionslab.ira.Routine.about(k.key)}.")
+        return com.optionslab.ira.Routine.kept(k)
+    }
+
+    /** "Forget my routine": what was noted and kept, all dropped. */
+    @Synchronized fun forgetRoutine() {
+        runCatching { prefs().put(ROUTINE_LOG, null); prefs().put(ROUTINE_KEPT, null); prefs().put(ROUTINE_OFFERED, null) }
+        IraActivity.add("Forgot Boss's routine, as he asked.")
     }
 
     // ---- the day's usage -----------------------------------------------------------------------------------------

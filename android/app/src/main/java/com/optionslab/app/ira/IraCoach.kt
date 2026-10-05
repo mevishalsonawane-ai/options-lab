@@ -211,18 +211,26 @@ internal object IraCoach {
         }, addsRisk = steps.any { it.on })
     }
 
-    /** At each market hour's first minutes: a strong habit's question answered unasked, once a day each. */
+    /**
+     * At each market hour's first minutes: a strong habit's question answered unasked, once a day each. And Boss's
+     * routines he said yes to ([com.optionslab.ira.Routine]): at their time (on their weekday), or just after a trade of
+     * his closed at a loss - the answer to that question only, said in words, never anything that acts. His P&L is never
+     * read out on a locked phone: only that it is ready.
+     */
     suspend fun usualWatch() {
         if (!com.optionslab.app.BuildConfig.JARVIS || com.optionslab.app.BuildConfig.GOLD || !Automations.on(Automations.Auto.USUAL) ||
-            !com.optionslab.app.data.Market.isOpen()) return
+            !com.optionslab.app.data.Market.isTradingDay()) return
         val now = java.time.LocalDateTime.now(java.time.ZoneId.of("Asia/Kolkata"))
-        // The hour's first minutes - 09:15 to 09:20 for the 9 o'clock hour, the market opening at 09:15 (review, 4 Oct).
-        val from = if (now.hour == 9) 15 else 0
-        if (now.minute !in from..from + 5) return
         val day = com.optionslab.app.data.Market.today().toString()
         val key = "jarvis.usual.told"
         val o = runCatching { org.json.JSONObject(com.optionslab.app.security.SecurePrefs.getString(key) ?: "{}") }.getOrDefault(org.json.JSONObject())
         val told = if (o.optString("d") == day) o.optJSONArray("k")?.let { a -> (0 until a.length()).map { a.getString(it) }.toSet() }.orEmpty() else emptySet()
+        // Kept as told only once said, like the hour's habit below.
+        if (routineDue(now, told) { t -> com.optionslab.app.security.SecurePrefs.put(key, org.json.JSONObject().put("d", day).put("k", org.json.JSONArray(told + t)).toString()) }) return
+        if (!com.optionslab.app.data.Market.isOpen()) return
+        // The hour's first minutes - 09:15 to 09:20 for the 9 o'clock hour, the market opening at 09:15 (review, 4 Oct).
+        val from = if (now.hour == 9) 15 else 0
+        if (now.minute !in from..from + 5) return
         val due = com.optionslab.ira.Habits.due(IraTools.habits(), now.hour, told, IraTools.habitsLast(), now.toLocalDate()) ?: return
         val question = com.optionslab.ira.Habits.question(due) ?: return
         // Kept as told only once said: an answer that could not be given (old prices) is tried again on the next pass.
@@ -230,6 +238,37 @@ internal object IraCoach {
         com.optionslab.app.security.SecurePrefs.put(key, org.json.JSONObject().put("d", day).put("k", org.json.JSONArray(told + due)).toString())
         IraHub.note(text); IraTools.sayAlert(Automations.Auto.USUAL, com.optionslab.ira.Wake.spoken(text, 3)); Automations.acted(Automations.Auto.USUAL, question)
     }
+
+    /** A kept routine due [now] said ([usualWatch]); its token (and its key, so the hour's habit does not say it again) handed to [keep] once said. True when one was said. */
+    private suspend fun routineDue(now: LocalDateTime, told: Set<String>, keep: (Set<String>) -> Unit): Boolean {
+        // A question already said today (as the hour's habit) is not said again.
+        val kept = IraTools.routineKept().filter { it.kind == com.optionslab.ira.Routine.Kind.AFTER_LOSS || it.key !in told }
+        if (kept.isEmpty()) return false
+        val lossAt = if (kept.any { it.kind == com.optionslab.ira.Routine.Kind.AFTER_LOSS }) recentLoss() else null
+        val k = com.optionslab.ira.Routine.due(kept, now, told, lossAt, IraTools.routineLog()) ?: return false
+        val question = com.optionslab.ira.Routine.question(k.key)?.takeIf { com.optionslab.ira.Routine.safe(k.key) } ?: return false
+        val about = com.optionslab.ira.Routine.about(k.key) ?: return false
+        val locked = runCatching { IraHub.locked() }.getOrDefault(true)
+        val text = when {
+            // His account on a locked phone: not read at all, only that it is ready.
+            com.optionslab.ira.Routine.account(k.key) && locked -> "Boss, $about is ready, as you asked: unlock the phone and ask me for it."
+            k.key.startsWith("ACCOUNT|") -> IraHub.accountAnswer(question)?.let { com.optionslab.ira.Routine.lead(k) + it }
+            else -> IraHub.marketAnswer(question)?.let { com.optionslab.ira.Routine.lead(k) + it }
+        } ?: return false            // not answerable now (old prices, offline): tried again on the next pass
+        keep(if (k.kind == com.optionslab.ira.Routine.Kind.AFTER_LOSS) setOf(com.optionslab.ira.Routine.token(k, lossAt)) else setOf(com.optionslab.ira.Routine.token(k, lossAt), k.key))
+        IraHub.note(text)
+        // A locked phone may be overheard: anything of the account stays in the chat.
+        IraTools.sayAlert(Automations.Auto.USUAL, com.optionslab.ira.Overheard.said(com.optionslab.ira.Wake.spoken(text, 3), locked, "Boss, $about is in the chat, as you asked."))
+        Automations.acted(Automations.Auto.USUAL, question)
+        return true
+    }
+
+    /** When Boss's own last trade today closed at a loss, in the last half hour ([com.optionslab.ira.Routine.lossAt]). */
+    suspend fun recentLoss(): LocalDateTime? = runCatching {
+        val live = runCatching { AppSettings.load().live }.getOrDefault(false)
+        val owners = runCatching { com.optionslab.app.data.Strategies.owners() }.getOrDefault(emptyMap())
+        com.optionslab.ira.Routine.lossAt(IraAccount.trips(live, owners).filter { it.owner.startsWith("Manual") }, LocalDateTime.now(IST))
+    }.getOrNull()
 
     /**
      * Every market-watch pass in market hours: one of Boss's own positions (not a bot's) losing half, then three quarters,

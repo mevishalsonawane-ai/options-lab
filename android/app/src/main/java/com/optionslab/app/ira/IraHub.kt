@@ -888,6 +888,27 @@ object IraHub {
         }
     }
 
+    /**
+     * A routine of Boss's ([com.optionslab.ira.Routine]): put to him once, kept only on his yes (on an unlocked phone,
+     * with "Your usual, unasked" on, never in IraGoldAlgo) - its answer then said at its time, in words only.
+     */
+    private fun offerRoutine(p: com.optionslab.ira.Routine.Pattern) {
+        if (!com.optionslab.app.BuildConfig.JARVIS || com.optionslab.app.BuildConfig.GOLD || !Automations.on(Automations.Auto.USUAL) || phoneLocked()) return
+        if (!com.optionslab.ira.Routine.safe(p.key)) return
+        IraTools.routineOffered(p)
+        scope.launch {
+            kotlinx.coroutines.delay(300)
+            // A plain label (Boss's words stay out of the diagnostics log).
+            offer("keep an answer ready at its usual time", "Boss, your routine?", com.optionslab.ira.Routine.offer(p), suspend {
+                when {
+                    phoneLocked() -> "Unlock the phone for that, Boss: nothing was kept."
+                    !Automations.on(Automations.Auto.USUAL) -> "\"Your usual, unasked\" is off in Automations, Boss: nothing was kept."
+                    else -> IraTools.keepRoutine(p) ?: "Nothing was kept, Boss: that would not be a question."
+                }
+            }, alwaysAsk = true)
+        }
+    }
+
     /** Boss's "do it automatically" / "ask me before stopping" (default: asked). Never taken from a backup. */
     var autoStop: Boolean
         get() = runCatching { com.optionslab.app.security.SecurePrefs.getBoolean("jarvis.auto.stop", false) }.getOrDefault(false)
@@ -1162,6 +1183,20 @@ object IraHub {
                 _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
                 return
             }
+            // "What do I usually ask?" / "forget my routine": Boss's routine with Jarvis ([com.optionslab.ira.Routine]) -
+            // his own habits, so only on an unlocked phone, and only as said by him.
+            val routineAsked = runCatching { com.optionslab.ira.Routine.asked(q) }.getOrDefault(false)
+            val forgetRoutine = runCatching { com.optionslab.ira.Routine.forgetAsked(q) }.getOrDefault(false)
+            if (routineAsked || forgetRoutine) {
+                val said = when {
+                    phoneLocked() -> "Unlock the phone for that, Boss."
+                    forgetRoutine -> { IraTools.forgetRoutine(); com.optionslab.ira.Routine.FORGOT }
+                    else -> runCatching { com.optionslab.ira.Routine.describe(IraTools.routines(), IraTools.routineKept(), com.optionslab.app.data.Market.today()) }
+                        .getOrDefault("I couldn't read your routine just now, Boss.")
+                }
+                _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
+                return
+            }
         }
         // A short follow-up ("and BankNifty?", "why?", "what are the levels?") asks again about the last question
         // (questions only), when that was asked in the last five minutes.
@@ -1172,7 +1207,8 @@ object IraHub {
         if (!understood && !cleaned && !com.optionslab.ira.Sources.asked(q) &&
             // Asked of his memory as said ("what do you know about me", "what did I tell you"): never read as anything else.
             !runCatching { com.optionslab.ira.AboutBoss.knowAsked(q) || com.optionslab.ira.Memory.recallAsked(q) || com.optionslab.ira.Memory.forgetAsked(q) ||
-                com.optionslab.ira.Corrections.wordsAsked(q) || com.optionslab.ira.Corrections.forgetWordAsked(q) != null }.getOrDefault(false)) {
+                com.optionslab.ira.Corrections.wordsAsked(q) || com.optionslab.ira.Corrections.forgetWordAsked(q) != null ||
+                com.optionslab.ira.Routine.asked(q) || com.optionslab.ira.Routine.forgetAsked(q) }.getOrDefault(false)) {
             val prev = if (recent) _state.value.messages.lastOrNull { !it.fromIra }?.text else null
             val qs = runCatching { com.optionslab.ira.Understand.questions(prev, q) }.getOrNull()
                 ?.takeIf { it.isNotEmpty() && it != listOf(q) && it.none { p -> lockedAccount(q, p) } }
@@ -1775,8 +1811,13 @@ object IraHub {
                 }
                 return
             }
-        // Boss's own market questions are counted by the hour (for "the usual"), off the main thread.
-        if (!understood) scope.launch { IraTools.noteHabit(q) }
+        // Boss's own market questions are counted by the hour (for "the usual"), off the main thread - and kept in his
+        // routine (the question's key and when, and whether a trade of his had just closed at a loss): a habit found is put
+        // to him once, kept only on his yes.
+        if (!understood) scope.launch {
+            val loss = runCatching { IraCoach.recentLoss() }.getOrNull() != null
+            runCatching { IraTools.noteHabit(q, loss) }.getOrNull()?.let { p -> offerRoutine(p) }
+        }
         if (Topic.BACKTEST in parsed.topics) {
             // IraGoldAlgo: no NSE backtests or strategies (Jarvis only talks there).
             if (GOLD_ONLY_TALK) { _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, GOLD_TALK_ONLY)).takeLast(MAX_MESSAGES)) }; return }
@@ -2042,7 +2083,7 @@ object IraHub {
         // "Got it, Boss: next time..." and "Shall I take ... to mean ...?" (a wording to learn) are notes beside the
         // answer, not the answer.
         val real = after.filter { it.fromIra && !it.text.startsWith(LEARNED_NOTE) && !it.text.startsWith(CHAIN_NOTE) &&
-            !it.text.startsWith(com.optionslab.ira.Corrections.OFFER) &&
+            !it.text.startsWith(com.optionslab.ira.Corrections.OFFER) && !it.text.startsWith(com.optionslab.ira.Routine.OFFER) &&
             !it.text.startsWith(com.optionslab.ira.Latency.NUDGE) }
         val first = real.firstOrNull() ?: return null
         if (!first.text.startsWith(TOOK_AS)) return first
@@ -2359,7 +2400,10 @@ object IraHub {
      * Boss's usual market question, answered unasked (Jarvis's own initiative from his habits): the same answer he would
      * get by asking, said as Jarvis's note - never the account, never an action.
      */
-    fun usualAnswer(question: String): String? {
+    fun usualAnswer(question: String): String? = marketAnswer(question)?.let { "Boss, your usual around now (${question}): $it" }
+
+    /** A market question's answer said unasked (never the account, never an action), or null on old data or offline. */
+    fun marketAnswer(question: String): String? {
         val q = Ask.parse(question)
         if (q.command != null || q.order != null || Topic.ACCOUNT in q.topics) return null
         val a = runCatching { Ira(book).answer(question, _state.value.snaps, _state.value.news, voice = com.optionslab.app.BuildConfig.JARVIS,
@@ -2367,7 +2411,20 @@ object IraHub {
         // Stale data (prices, candles or news it rests on) is not offered unasked.
         val stale = runCatching { ageChecks(q.markets, q.topics).any { it.level == com.optionslab.ira.DataAge.Level.STALE } }.getOrDefault(false)
         if (offlineNote() != null || stale) return null
-        return "Boss, your usual around now (${question}): " + a.text
+        return a.text
+    }
+
+    /**
+     * A routine's account question answered at its time ([com.optionslab.ira.Routine]: his P&L, the week's events), read
+     * as when he asks (8 seconds at most), or null. Reads only; the caller keeps his P&L off a locked phone.
+     */
+    suspend fun accountAnswer(question: String): String? {
+        val q = Ask.parse(question)
+        if (q.command != null || q.order != null || !online()) return null
+        val read = scope.async { runCatching { IraAccount.readFast(com.optionslab.ira.AppAnswers.sections(question), IraMarket.mentioned(question), question = question) }.getOrNull() }
+        val v = withTimeoutOrNull(8_000) { read.await() }
+        if (v == null) { read.cancel(); return null }
+        return runCatching { Ira(book).answer(question, emptyMap(), emptyList(), app = v).text }.getOrNull()
     }
 
     fun lastFullAnswer(): String? = _state.value.messages.lastOrNull { it.fromIra }?.text
@@ -2739,6 +2796,7 @@ object IraHub {
     suspend fun forgetAll() = lock.withLock {
         dropPending()
         IraTools.forgetHabits()
+        IraTools.forgetRoutine()
         IraTools.forgetMemory()
         synchronized(askedAt) { askedAt.clear() }
         checked = null
