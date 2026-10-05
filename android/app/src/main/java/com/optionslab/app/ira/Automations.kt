@@ -31,6 +31,7 @@ internal object Automations {
         MOMENTS("Market moments", "Nifty or BankNifty filling its opening gap, or going past the previous session's high or low: told once each a day.", "jarvis.auto.moments"),
         OI("Open interest walls", "The biggest call / put open interest moving to a new strike.", "jarvis.auto.oi"),
         MORNING_VOICE("Morning check aloud", "09:00: the morning check is spoken even with listening off (never when muted or in quiet hours).", "jarvis.auto.morningvoice"),
+        HEADSUP("Position heads-ups", "One position of yours losing half, then three quarters, of your daily loss limit by itself, or an option you sold 80% decayed: told once each a day (words only; nothing is closed).", "jarvis.auto.headsup"),
         USUAL("Your usual, unasked", "A market question you ask at the same hour most days (4+ times): said at that hour's start, once a day.", "jarvis.auto.usual"),
         SUMMARY("15:35 wrap-up", "The day's P&L, scorecard and tomorrow's events, spoken.", "jarvis.auto.summary"),
         BACKUP("Backup reminder", "No backup in 7 days: a reminder in the morning check.", "jarvis.auto.backup"),
@@ -54,8 +55,8 @@ internal object Automations {
             "jarvis.group.own", listOf(Auto.ACT_PAPER, Auto.PLAN, Auto.SOLO_IDEAS)),
         MARKET("Market alerts", "Opening gap plan, opening range breaks, gaps filling, the previous day's high or low passed, fear (VIX) spikes, open interest walls moving, and news on indices you hold.",
             "jarvis.group.market", listOf(Auto.GAP, Auto.ORB, Auto.MOMENTS, Auto.VIX, Auto.OI, Auto.POSNEWS)),
-        COACH("Coach me", "A word when you overtrade, your day's target reached, your usual question answered at its hour, the 09:00 check and the 15:35 wrap-up spoken.",
-            "jarvis.group.coach", listOf(Auto.OVERTRADE, Auto.TARGET, Auto.USUAL, Auto.MORNING_VOICE, Auto.SUMMARY)),
+        COACH("Coach me", "A word when you overtrade, your day's target reached, a position losing a big share of your daily loss limit or a sold option mostly decayed, your usual question answered at its hour, the 09:00 check and the 15:35 wrap-up spoken.",
+            "jarvis.group.coach", listOf(Auto.OVERTRADE, Auto.TARGET, Auto.HEADSUP, Auto.USUAL, Auto.MORNING_VOICE, Auto.SUMMARY)),
         QUIET("Quiet hours", "Nothing said unasked from 22:00 to 07:00.", "jarvis.group.quiet", listOf(Auto.QUIET)),
     }
 

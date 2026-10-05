@@ -231,6 +231,42 @@ internal object IraCoach {
         IraHub.note(text); JarvisVoice.announce(com.optionslab.ira.Wake.spoken(text, 3)); Automations.acted(Automations.Auto.USUAL, question)
     }
 
+    /**
+     * Every market-watch pass in market hours: one of Boss's own positions (not a bot's) losing half, then three quarters,
+     * of his daily loss limit for its account, or an option he sold 80% decayed - told once each a day by
+     * [com.optionslab.ira.HeadsUp]. Words only: nothing is placed, changed or closed. Aloud only the plain words (no
+     * symbol, no amount: a locked phone may be heard); the details are in the chat.
+     */
+    suspend fun headsUpWatch() {
+        if (!com.optionslab.app.BuildConfig.JARVIS || com.optionslab.app.BuildConfig.GOLD || !Automations.on(Automations.Auto.HEADSUP) ||
+            !com.optionslab.app.data.Market.isOpen()) return
+        val s = runCatching { AppSettings.load() }.getOrNull() ?: return
+        val bots = botSymbols()
+        val open = ArrayList<com.optionslab.ira.HeadsUp.Pos>()
+        runCatching { Paper.snapshot().positions.positions.filter { it.quantity != 0 }.forEach {
+            open += com.optionslab.ira.HeadsUp.Pos("P:${it.symbol}", it.symbol, false, it.quantity, it.averagePrice, it.ltp) } }
+        if (Broker.loggedIn) {
+            // The read blocks on the network: run apart, so the 15 s limit really ends the wait (the read itself may go on).
+            val read = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).async { runCatching { Broker.positionBook().net }.getOrNull() }
+            kotlinx.coroutines.withTimeoutOrNull(15_000) { read.await() }?.filter { it.qty != 0 }?.forEach {
+                open += com.optionslab.ira.HeadsUp.Pos("L:${it.symbol}", it.symbol, true, it.qty, it.avg, it.last) }
+        }
+        val mine = open.filter { it.symbol !in bots }
+        if (mine.isEmpty()) return
+        val day = com.optionslab.app.data.Market.today().toString()
+        val key = "jarvis.headsup.told"
+        val o = runCatching { org.json.JSONObject(com.optionslab.app.security.SecurePrefs.getString(key) ?: "{}") }.getOrDefault(org.json.JSONObject())
+        val told = if (o.optString("d") == day) o.optJSONArray("k")?.let { a -> (0 until a.length()).map { a.getString(it) }.toSet() }.orEmpty() else emptySet()
+        val alerts = com.optionslab.ira.HeadsUp.check(mine, s.guardDailyLoss, s.guardPaperDailyLoss, told)
+        if (alerts.isEmpty()) return
+        // Kept as told before it is said: a heads-up is never repeated today, even if the app restarts mid-way.
+        com.optionslab.app.security.SecurePrefs.put(key, org.json.JSONObject().put("d", day)
+            .put("k", org.json.JSONArray(told + alerts.flatMap { it.marks })).toString())
+        alerts.forEach { IraHub.note(it.text); IraActivity.add(it.text); Automations.acted(Automations.Auto.HEADSUP, it.text) }
+        // One spoken line a pass, however many were noted (the worst first).
+        JarvisVoice.announce(alerts.first().spoken)
+    }
+
     /** 15:10-15:18 on a trading day, once: open Zerodha MIS positions named before the broker's own square-off. */
     suspend fun misWatch() {
         if (!com.optionslab.app.BuildConfig.JARVIS || com.optionslab.app.BuildConfig.GOLD) return

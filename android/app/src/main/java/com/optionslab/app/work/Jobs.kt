@@ -423,6 +423,8 @@ object Tasks {
         // Jarvis: the day's target reached; a trade of yours going nowhere is offered a close (asked first).
         runCatching { com.optionslab.app.ira.IraJournal.targetWatch() }
         runCatching { com.optionslab.app.ira.IraJournal.staleWatch() }
+        // Jarvis: one position losing a big share of Boss's daily loss limit, or a sold option mostly decayed (words only).
+        runCatching { com.optionslab.app.ira.IraCoach.headsUpWatch() }
         // Stops, trailing stops and targets: one exit filled cancels the other; trails move up.
         runCatching { com.optionslab.app.data.Protections.tick() }
         // Expiry day, 15:05: close every option position expiring today (paper and live, all products).
