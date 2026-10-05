@@ -828,6 +828,49 @@ internal object IraCoach {
         }.getOrNull()
     }
 
+    /**
+     * Boss's own words against today ([com.optionslab.ira.Consistency.clashes]): the rules he asked me to remember and his
+     * "no more than N trades a day" goal, against his own trades opened today (closed round trips, as his goals count
+     * them). His account: empty on a locked phone. Words only.
+     */
+    fun wordClashes(): List<com.optionslab.ira.Consistency.Clash> {
+        if (runCatching { IraHub.locked() }.getOrDefault(true)) return emptyList()
+        return runCatching {
+            val today = com.optionslab.app.data.Market.today()
+            val live = runCatching { AppSettings.load().live }.getOrDefault(false)
+            val owners = runCatching { com.optionslab.app.data.Strategies.owners() }.getOrDefault(emptyMap())
+            val deeds = IraAccount.trips(live, owners).filter { it.owner.startsWith("Manual") && it.openedAt.toLocalDate() == today }
+                .map { com.optionslab.ira.Consistency.Deed(it.openedAt, com.optionslab.ira.PreTrade.marketOf(it.symbol)) }
+            val expiry = listOf(com.optionslab.ira.Market.NIFTY, com.optionslab.ira.Market.BANKNIFTY, com.optionslab.ira.Market.FINNIFTY, com.optionslab.ira.Market.SENSEX)
+                .filter { m -> runCatching { com.optionslab.app.data.Market.isExpiryDay(m.name) }.getOrDefault(false) }.toSet()
+            val goal = IraGoals.all().filter { it.kind == com.optionslab.ira.Goals.Kind.MAX_TRADES }.minOfOrNull { it.amount.toInt() }
+            if (deeds.isEmpty()) emptyList()
+            else com.optionslab.ira.Consistency.clashes(IraTools.memory().map { it.text }, deeds, today, goal, expiry)
+        }.getOrDefault(emptyList())
+    }
+
+    /**
+     * Every market-watch pass in market hours, on an unlocked phone only: one of Boss's own words against today's trades
+     * (a rule he asked me to remember, his trade goal) pointed out gently, each once a day, one at a time. Words only:
+     * nothing is blocked, placed or changed. Never in IraGoldAlgo.
+     */
+    suspend fun wordsWatch() {
+        if (!com.optionslab.app.BuildConfig.JARVIS || com.optionslab.app.BuildConfig.GOLD || !Automations.on(Automations.Auto.WORDS) ||
+            !com.optionslab.app.data.Market.isOpen()) return
+        // His account and his words: never on a locked phone (tried again on a later pass, once it is unlocked).
+        if (runCatching { IraHub.locked() }.getOrDefault(true)) return
+        val day = com.optionslab.app.data.Market.today().toString()
+        val key = "jarvis.words.told"
+        val o = runCatching { org.json.JSONObject(com.optionslab.app.security.SecurePrefs.getString(key) ?: "{}") }.getOrDefault(org.json.JSONObject())
+        val told = if (o.optString("d") == day) o.optJSONArray("k")?.let { a -> (0 until a.length()).map { a.getString(it) }.toSet() }.orEmpty() else emptySet()
+        val clash = com.optionslab.ira.Consistency.next(wordClashes(), told) ?: return
+        // Kept as told before it is said: never repeated today, even if the app restarts mid-way.
+        com.optionslab.app.security.SecurePrefs.put(key, org.json.JSONObject().put("d", day).put("k", org.json.JSONArray(told + clash.key)).toString())
+        IraHub.note(clash.text); IraActivity.add("Pointed out: your words against today.")
+        IraTools.sayAlert(Automations.Auto.WORDS, clash.text)
+        Automations.acted(Automations.Auto.WORDS, "Pointed out one of your rules or goals against today's trades.")
+    }
+
     /** The 15:35 spoken wrap-up: the day's P&L, the scorecard's headline, tomorrow's events. */
     suspend fun daySummary(scorecard: String?) {
         if (!com.optionslab.app.BuildConfig.JARVIS) return

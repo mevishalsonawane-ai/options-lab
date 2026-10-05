@@ -1284,6 +1284,15 @@ object IraHub {
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, GOLD_TALK_ONLY)).takeLast(MAX_MESSAGES)) }
             return
         }
+        // "Any contradictions?", "do the facts agree?", "what's pulling different ways?", "am I going against my own rules?"
+        // ([com.optionslab.ira.Consistency]): market facts pointing different ways, his own numbers disagreeing (and which he
+        // goes by), and - on an unlocked phone only - Boss's words against today's trades. Words only, never advice.
+        if (parsed.order == null && parsed.command == null && !com.optionslab.app.BuildConfig.GOLD &&
+            runCatching { com.optionslab.ira.Consistency.asked(q) }.getOrDefault(false)) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            scope.launch { reply(runCatching { consistency() }.getOrElse { "I could not check myself for contradictions just now, Boss." }) }
+            return
+        }
         // "Where is the most call writing?", "how has OI shifted since morning?", "are puts dearer than calls?", "what's the
         // expected move by expiry from the straddle?": the option chain read beyond PCR and max pain ([com.optionslab.ira.ChainIntel]),
         // every number from the chain with its time. Market data only (fine on a locked phone); words only, never advice.
@@ -2632,17 +2641,42 @@ object IraHub {
         val calibration = runCatching { IraNewsTrades.calibration() }.getOrDefault(emptyList()) + runCatching { IraSolo.calibration() }.getOrDefault(emptyList())
         // The Nifty option chain's facts (the straddle's implied move, the biggest OI, the skew), with the chain's time:
         // read afresh when it comes quickly, else the last read kept today. Market data, so said on a locked phone too.
-        val chainFacts = runCatching {
+        val chainRead = runCatching {
             withTimeoutOrNull(CASE_CHAIN_MS) { IraAccount.chain("NIFTY") }
             val today = com.optionslab.app.data.Market.today()
             IraAccount.chainBook.latest("NIFTY")?.takeIf { it.at.toLocalDate() == today }
-                ?.let { com.optionslab.ira.ChainIntel.caseFacts(it, today) }
-        }.getOrNull().orEmpty()
+        }.getOrNull()
+        val chainFacts = chainRead?.let { r -> runCatching { com.optionslab.ira.ChainIntel.caseFacts(r, com.optionslab.app.data.Market.today()) }.getOrNull() }.orEmpty()
+        // The chain read also goes in whole: its call and put writing set against the day's structure, and its spot
+        // against the candle of the same minute ([com.optionslab.ira.Consistency]) - facts pulling apart said plainly.
         return com.optionslab.ira.TradeCase.build(com.optionslab.ira.TradeCase.Input(
             now = now, at = LocalDateTime.now(IST), bars = histories.mapValues { it.value.bars }, upcoming = upcoming,
             calibration = calibration, regime = runCatching { IraStudy.regimeOf(IraMarket.NIFTY) }.getOrNull(),
-            mine = mine, locked = locked, chain = chainFacts,
+            mine = mine, locked = locked, chain = chainFacts, chainRead = chainRead,
         )).say()
+    }
+
+    /**
+     * "Any contradictions?" ([com.optionslab.ira.Consistency]): Nifty's structure, the prior close, the chain's call and
+     * put writing and India VIX's move set side by side for facts pointing different ways; the chain's spot against the
+     * candle of the same minute; and, on an unlocked phone only, Boss's rules and trade goal against his trades today.
+     * Market data is fine on a locked phone; his words and trades are not. Words only.
+     */
+    private suspend fun consistency(): String {
+        val locked = phoneLocked()
+        val today = com.optionslab.app.data.Market.today()
+        val bars = histories[IraMarket.NIFTY]?.bars.orEmpty()
+        val chainRead = runCatching {
+            withTimeoutOrNull(CASE_CHAIN_MS) { IraAccount.chain("NIFTY") }
+            IraAccount.chainBook.latest("NIFTY")?.takeIf { it.at.toLocalDate() == today }
+        }.getOrNull()
+        val structure = runCatching { com.optionslab.ira.Structure.read(IraMarket.NIFTY, bars, today) }.getOrNull()
+        val vixChange = _state.value.snaps[IraMarket.VIX]?.changePct
+        val tensions = runCatching { com.optionslab.ira.Consistency.tensions(com.optionslab.ira.Consistency.leans(structure, chainRead, vixChange)) }
+            .getOrDefault(emptyList())
+        val mismatch = chainRead?.let { r -> runCatching { com.optionslab.ira.Consistency.priceCheck(IraMarket.NIFTY, bars, com.optionslab.ira.Consistency.chainQuote(r)) }.getOrNull() }
+        val clashes = if (locked) null else IraCoach.wordClashes()
+        return com.optionslab.ira.Consistency.say(tensions, mismatch, clashes, locked)
     }
 
     /** "Make the case" waits at most this long for a fresh option chain. */

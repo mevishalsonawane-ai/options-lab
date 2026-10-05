@@ -13,7 +13,8 @@ import kotlin.math.abs
  * ([SelfCalibration]) - and, on an unlocked phone only, Boss's own side: his day against his loss limit and his goals
  * ([Goals]), the rules he asked Jarvis to keep ([BossRules]), what he told Jarvis about himself ([AboutBoss]) and his
  * own habits around trades ([PreTrade]). They are laid out as facts on the steady side, facts on the careful side,
- * what stands out and what Jarvis would watch - never a buy or sell, never a direction, never a verdict on whether to
+ * what stands out and what Jarvis would watch, with the facts that pull apart said plainly and his own numbers checked
+ * against each other ([Consistency]) - never a buy or sell, never a direction, never a verdict on whether to
  * trade: it always ends that the decision is Boss's. Words only: building the case changes nothing. Pure.
  */
 object TradeCase {
@@ -65,6 +66,11 @@ object TradeCase {
         val mine: Mine? = null,
         val locked: Boolean = false,
         val chain: List<String> = emptyList(),
+        /**
+         * The Nifty chain read the [chain] facts came from (null: none today): its call and put writing are set against
+         * the day's structure ([Consistency.tensions]) and its spot against the candle of the same minute ([Consistency.priceCheck]).
+         */
+        val chainRead: ChainIntel.Read? = null,
     )
 
     /** At most this many option-chain facts. */
@@ -81,6 +87,10 @@ object TradeCase {
         val chain: List<String> = emptyList(),
         /** Nifty's intraday structure so far in one line ([Structure.caseLine]), a fact; null without enough of today's candles. */
         val structure: String? = null,
+        /** Facts above that point different ways, said plainly ([Consistency.tensions]). */
+        val tensions: List<String> = emptyList(),
+        /** Jarvis's own numbers disagreeing (the chain's spot against the candles), with the source he goes by; null when they agree. */
+        val mismatch: String? = null,
     ) {
         fun say(): String {
             val parts = ArrayList<String>()
@@ -91,6 +101,8 @@ object TradeCase {
             if (standout.isNotEmpty()) parts += "What stands out about today: " + standout.joinToString(" ")
             structure?.let { parts += it }
             if (chain.isNotEmpty()) parts += "From the option chain: " + chain.joinToString(" ")
+            if (tensions.isNotEmpty()) parts += "Where the facts pull apart: " + tensions.joinToString(" ")
+            mismatch?.let { parts += it }
             if (watch.isNotEmpty()) parts += "What I'd watch: " + watch.joinToString("; ") { it.trimEnd('.') } + "."
             if (locked) parts += LOCKED_NOTE
             parts += YOURS
@@ -235,10 +247,19 @@ object TradeCase {
         i.upcoming.filter { it.day.isAfter(today) && !it.day.isAfter(today.plusDays(AHEAD_DAYS)) }.take(2)
             .forEach { watch += "coming up: " + Events.line(it, today).removePrefix("Event ").trimEnd('.') }
 
+        // Facts pulling different ways, and my own numbers disagreeing: said plainly, not smoothed over (market data only).
+        val niftyBars = if (n.tradingDay) i.bars[Market.NIFTY] else null
+        val chainToday = i.chainRead?.takeIf { it.at.toLocalDate() == today && it.underlying.equals(Market.NIFTY.name, true) }
+        val structureRead = niftyBars?.let { runCatching { Structure.read(Market.NIFTY, it, today) }.getOrNull() }
+        val tensions = runCatching { Consistency.tensions(Consistency.leans(structureRead, chainToday, n.vixChangePct)) }.getOrDefault(emptyList())
+        val mismatch = if (niftyBars != null && chainToday != null)
+            runCatching { Consistency.priceCheck(Market.NIFTY, niftyBars, Consistency.chainQuote(chainToday))?.text }.getOrNull() else null
+
         return Case(n.reads, (steady + basics).distinct().take(MAX_STEADY), careful.distinct().take(MAX_CAREFUL),
             standout.take(MAX_STANDOUT), watch.distinct().take(MAX_WATCH), i.locked, i.chain.distinct().take(MAX_CHAIN),
             // Nifty's structure so far from today's candles (market data, so said on a locked phone too): a fact, not a call.
-            if (n.tradingDay) i.bars[Market.NIFTY]?.let { runCatching { Structure.caseLine(Market.NIFTY, it, today) }.getOrNull() } else null)
+            niftyBars?.let { runCatching { Structure.caseLine(Market.NIFTY, it, today) }.getOrNull() },
+            tensions, mismatch)
     }
 
     /** Boss's own side: his goals, his rules, what he told about himself and his habits around a trade. */
