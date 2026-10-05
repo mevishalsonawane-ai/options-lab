@@ -827,6 +827,18 @@ internal object IraCoach {
     suspend fun healthLines(once: IraAccount.PaperOnce? = null): List<String> = com.optionslab.ira.PositionHealth.lines(healthPositions(once), LocalDateTime.now(IST))
 
     /**
+     * "What's my theta?", "how much am I losing to time decay?" ([com.optionslab.ira.BookDecay]): the whole book's time decay
+     * from each open option's theta now (the health check's own read of the positions), each account apart, and what it
+     * comes to by the next session when that is more than a day away. Reads only: nothing is placed, changed or closed.
+     */
+    suspend fun bookDecay(): String {
+        val ps = healthPositions()
+        val mk = com.optionslab.app.data.Market
+        val next = com.optionslab.ira.ExpiryEve.nextTradingDay(mk.today()) { mk.isTradingDay(it) }
+        return com.optionslab.ira.BookDecay.answer(ps, LocalDateTime.now(IST), next, Broker.loggedIn)
+    }
+
+    /**
      * "For my 24500 put to work, what needs to happen?", "where is my breakeven?" ([com.optionslab.ira.NeedsTrue]): each
      * open position (or the one named) worked through - breakeven, distance, sessions left, the typical move and how often
      * one like it happened on the phone's own candles, time decay. Reads only: nothing is placed, changed or closed.

@@ -29,7 +29,7 @@ class CoverageTest {
         if (Routine.asked(said) || Routine.forgetAsked(said)) return listOf(Kind.ACCOUNT)
         val asSaid = Sources.asked(said) || AboutBoss.knowAsked(said) || Memory.recallAsked(said) || Memory.forgetAsked(said) || PatternCalls.asked(said) || TrendReads.asked(said) || SinceMorning.asked(said) || ExpiryPin.asked(said) != null ||
             Learnings.asked(said) != null || Learnings.undoAsked(said) || NewsMoves.asked(said) != null || PreMarket.asked(said) ||
-            ChainDrift.asked(said) != null || Headroom.asked(said) != null || ArmFit.asked(said) || WeakLink.asked(said) || ArmChange.asked(said) || PnlGap.asked(said) || ArmDay.asked(said) != null || NetLean.asked(said) || ExpiryEve.asked(said) || BeforeTomorrow.asked(said) || BotTrades.asked(said) != null || DayClock.asked(said) != null ||
+            ChainDrift.asked(said) != null || Headroom.asked(said) != null || ArmFit.asked(said) || WeakLink.asked(said) || ArmChange.asked(said) || PnlGap.asked(said) || ArmDay.asked(said) != null || BookDecay.asked(said) || NetLean.asked(said) || ExpiryEve.asked(said) || BeforeTomorrow.asked(said) || BotTrades.asked(said) != null || DayClock.asked(said) != null ||
             SaidAbout.asked(said) != null || GapRecord.asked(said) != null || Causes.asked(said) != null || WeekAhead.asked(said) != null || AskedAgain.asked(said) || FigureFirst.asked(said) != null || Weekdays.asked(said) != null || DayCompare.asked(said) != null || LikeToday.asked(said) ||
             RangeBreaks.asked(said) != null || PriorDay.asked(said) != null || LastHour.asked(said) != null || InsideDays.asked(said) != null || FirstMove.asked(said) != null || VixNext.asked(said) != null || SplitDays.asked(said) != null || RoundCloses.asked(said) != null || MonthTurns.asked(said) != null || LunchRange.asked(said) != null || OpenHighLow.asked(said) != null || BigCandles.asked(said) != null || ExtremeCloses.asked(said) != null || WeekRange.asked(said) != null || RelativeMove.asked(said) != null || NeedsTrue.asked(said) || Clarity.asked(said) != null || ZerodhaSession.asked(said) != null || Tour.asked(said) || WrongThing.asked(said) != null || WrongThing.objected(said) || OrderWhy.asked(said) != null || ArmHabits.asked(said) || MorningSense.asked(said) != null || HonestStars.asked(said) != null || TalkHours.asked(said) != null || MorningAsks.asked(said) != null || TurnDowns.asked(said) != null || TopicLength.asked(said) != null || OutlookCheck.asked(said) || UsualIndex.asked(said) != null || Nicknames.asked(said) != null || RelayHealth.asked(said) != null || StreamHealth.asked(said) || WatchAsk.asked(said) != null || BatteryUse.asked(said) || SwitchOff.asked(said) != null ||
             ReminderBook.listAsked(said) || ReminderBook.cancelOne(said) != null
@@ -68,6 +68,7 @@ class CoverageTest {
             if (ArmChange.asked(q)) return Kind.ACCOUNT
             if (PnlGap.asked(q)) return Kind.ACCOUNT
             if (ArmDay.asked(q) != null) return Kind.ACCOUNT
+            if (BookDecay.asked(q)) return Kind.ACCOUNT
             if (NetLean.asked(q)) return Kind.ACCOUNT
             if (ExpiryEve.asked(q)) return Kind.ACCOUNT
             if (BeforeTomorrow.asked(q)) return Kind.ACCOUNT
@@ -503,7 +504,7 @@ class CoverageTest {
      * Which feature answers [said] in Jarvis (not GOLD), taking IraHub.ask's branches in its own order (app/.../IraHub.kt,
      * ask(): Boss's learned words and routine as said, fillers and follow-ups, then - for a question not said with
      * something to do (IraHub's `bundled`, [Bundle.acts]) - DayJournal, AlertSense, Airtime, Hearing, PatternCalls, TrendReads, Clarity,
-     * WordFit, AskedAgain, FigureFirst, WrongThing, ArmHabits, MorningSense, HonestStars, TalkHours, MorningAsks, TurnDowns, TopicLength, OutlookCheck, UsualIndex, Nicknames, NewsMoves, TaxExport, Learnings, PreMarket, Headroom, ArmFit, WeakLink, ArmChange, PnlGap, ArmDay, NetLean, ExpiryEve, BeforeTomorrow, BotTrades, SaidAbout, WeekAhead, DataAge, Honest, Thinking,
+     * WordFit, AskedAgain, FigureFirst, WrongThing, ArmHabits, MorningSense, HonestStars, TalkHours, MorningAsks, TurnDowns, TopicLength, OutlookCheck, UsualIndex, Nicknames, NewsMoves, TaxExport, Learnings, PreMarket, Headroom, ArmFit, WeakLink, ArmChange, PnlGap, ArmDay, BookDecay, NetLean, ExpiryEve, BeforeTomorrow, BotTrades, SaidAbout, WeekAhead, DataAge, Honest, Thinking,
      * Consistency, CoPilot, SinceMorning, ExpiryPin, ChainDrift, ChainIntel, DayClock, GapRecord, RangeBreaks, PriorDay, LastHour, InsideDays, FirstMove, VixNext, SplitDays, RoundCloses, MonthTurns, LunchRange, OpenHighLow, BigCandles, ExtremeCloses, WeekRange, RelativeMove, Weekdays, DayCompare, LikeToday, Structure, MindChange, Breadth, TradeCase,
      * Scenarios, Causes, Agenda, Improve; the reminders and Jarvis's own checks,
      * Distance... Outlook, NewsDesk, down to the account's sections (PositionHealth, BotHealth and NeedsTrue are its HEALTH,
@@ -523,7 +524,7 @@ class CoverageTest {
             Corrections.wordsAsked(said) || Corrections.forgetWordAsked(said) != null || Routine.asked(said) || Routine.forgetAsked(said) ||
             PatternCalls.asked(said) || TrendReads.asked(said) || SinceMorning.asked(said) || ExpiryPin.asked(said) != null || Learnings.asked(said) != null || Learnings.undoAsked(said) || NewsMoves.asked(said) != null ||
             PreMarket.asked(said) ||
-            ChainDrift.asked(said) != null || Headroom.asked(said) != null || ArmFit.asked(said) || WeakLink.asked(said) || ArmChange.asked(said) || PnlGap.asked(said) || ArmDay.asked(said) != null || NetLean.asked(said) || ExpiryEve.asked(said) || BeforeTomorrow.asked(said) || BotTrades.asked(said) != null || NeedsTrue.asked(said) || Clarity.asked(said) != null || DayClock.asked(said) != null ||
+            ChainDrift.asked(said) != null || Headroom.asked(said) != null || ArmFit.asked(said) || WeakLink.asked(said) || ArmChange.asked(said) || PnlGap.asked(said) || ArmDay.asked(said) != null || BookDecay.asked(said) || NetLean.asked(said) || ExpiryEve.asked(said) || BeforeTomorrow.asked(said) || BotTrades.asked(said) != null || NeedsTrue.asked(said) || Clarity.asked(said) != null || DayClock.asked(said) != null ||
             SaidAbout.asked(said) != null || GapRecord.asked(said) != null || WordFit.asked(said) != null || Causes.asked(said) != null || WeekAhead.asked(said) != null || AskedAgain.asked(said) || FigureFirst.asked(said) != null || MindChange.asked(said) || Weekdays.asked(said) != null || DayCompare.asked(said) != null || LikeToday.asked(said) || RangeBreaks.asked(said) != null || PriorDay.asked(said) != null || LastHour.asked(said) != null || InsideDays.asked(said) != null || FirstMove.asked(said) != null || VixNext.asked(said) != null || SplitDays.asked(said) != null || RoundCloses.asked(said) != null || MonthTurns.asked(said) != null || LunchRange.asked(said) != null || OpenHighLow.asked(said) != null || BigCandles.asked(said) != null || ExtremeCloses.asked(said) != null || WeekRange.asked(said) != null || RelativeMove.asked(said) != null || ZerodhaSession.asked(said) != null || Tour.asked(said) || WrongThing.asked(said) != null || WrongThing.objected(said) || OrderWhy.asked(said) != null || ArmHabits.asked(said) || MorningSense.asked(said) != null || HonestStars.asked(said) != null || TalkHours.asked(said) != null || MorningAsks.asked(said) != null || TurnDowns.asked(said) != null || TopicLength.asked(said) != null || OutlookCheck.asked(said) || UsualIndex.asked(said) != null || Nicknames.asked(said) != null || RelayHealth.asked(said) != null || StreamHealth.asked(said) || WatchAsk.asked(said) != null || BatteryUse.asked(said) || SwitchOff.asked(said) != null ||
             ReminderBook.listAsked(said) || ReminderBook.cancelOne(said) != null
         val qs = if (asSaid || understood || cleaned) null else Understand.questions(null, said)?.takeIf { it.isNotEmpty() && it != listOf(said) }
@@ -567,6 +568,7 @@ class CoverageTest {
         if (alone && ArmChange.asked(q)) return "ArmChange"
         if (alone && PnlGap.asked(q)) return "PnlGap"
         if (alone && ArmDay.asked(q) != null) return "ArmDay"
+        if (alone && BookDecay.asked(q)) return "BookDecay"
         if (alone && NetLean.asked(q)) return "NetLean"
         if (alone && ExpiryEve.asked(q)) return "ExpiryEve"
         if (alone && BeforeTomorrow.asked(q)) return "BeforeTomorrow"
@@ -925,6 +927,9 @@ class CoverageTest {
         "did my bots follow their rules" to "BotTrades", "did orb stick to its rules today" to "BotTrades", "any contradictions in my bots" to "BotTrades",
         "did my bots take opposite sides" to "BotTrades", "my bots' trades today" to "BotTrades", "mere bots ne aaj kya kiya" to "BotTrades",
         "orb ne trade kyun liya" to "BotTrades", "bots ke trades samjhao" to "BotTrades", "break down the range fade trade" to "BotTrades",
+        // ---- BookDecay: what time decay does to his whole book (usefulness round 29) ----
+        "what's my theta" to "BookDecay", "how much am i losing to time decay" to "BookDecay", "is theta working for me or against me" to "BookDecay",
+        "mera theta kitna hai" to "BookDecay",
         // ---- ArmChange: the arms' paper results this week against last week (reasoning round 23) ----
         "what's changed in my arms' results this week vs last" to "ArmChange", "how are my bots doing this week compared to last week" to "ArmChange",
         "my strategies week on week" to "ArmChange", "mere bots ka is hafte vs pichle hafte" to "ArmChange",
@@ -1426,6 +1431,10 @@ class CoverageTest {
             ("which of my arms suits today" to "ArmFit") to ("which arms suit this market" to "Account:REGIME"),
             // Reasoning round 20: what most often went wrong in the arms' last paper trades, next to one day's loss.
             ("what keeps going wrong with my bots" to "WeakLink") to ("what went wrong with my bots today" to "ArmDay"),
+            // Usefulness round 29: the whole book's time decay, next to the word's meaning, the health check and the book's lean.
+            ("what's my theta" to "BookDecay") to ("what is theta" to "Glossary"),
+            ("how much am i losing to time decay" to "BookDecay") to ("check my positions" to "Account:HEALTH"),
+            ("am i long or short theta" to "BookDecay") to ("am i net long or short" to "NetLean"),
             // Reasoning round 23: the arms' week against last week, next to the bots' health now.
             ("how are my bots doing this week compared to last week" to "ArmChange") to ("how are my bots doing" to "Account:BOTS"),
             ("how do my arms do on days like today" to "ArmFit") to ("is today like any past day" to "LikeToday"),

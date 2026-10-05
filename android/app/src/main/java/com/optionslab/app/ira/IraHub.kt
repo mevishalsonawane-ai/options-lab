@@ -1477,7 +1477,7 @@ object IraHub {
                 com.optionslab.ira.NewsMoves.asked(q) != null || com.optionslab.ira.PreMarket.asked(q) ||
                 com.optionslab.ira.ChainDrift.asked(q) != null || com.optionslab.ira.SinceMorning.asked(q) ||
                 com.optionslab.ira.ExpiryPin.asked(q) != null ||
-                com.optionslab.ira.Headroom.asked(q) != null || com.optionslab.ira.ArmFit.asked(q) || com.optionslab.ira.WeakLink.asked(q) || com.optionslab.ira.ArmChange.asked(q) || com.optionslab.ira.PnlGap.asked(q) || com.optionslab.ira.ArmDay.asked(q) != null || com.optionslab.ira.NetLean.asked(q) || com.optionslab.ira.BotTrades.asked(q) != null ||
+                com.optionslab.ira.Headroom.asked(q) != null || com.optionslab.ira.ArmFit.asked(q) || com.optionslab.ira.WeakLink.asked(q) || com.optionslab.ira.ArmChange.asked(q) || com.optionslab.ira.PnlGap.asked(q) || com.optionslab.ira.ArmDay.asked(q) != null || com.optionslab.ira.BookDecay.asked(q) || com.optionslab.ira.NetLean.asked(q) || com.optionslab.ira.BotTrades.asked(q) != null ||
                 com.optionslab.ira.ExpiryEve.asked(q) || com.optionslab.ira.BeforeTomorrow.asked(q) ||
                 com.optionslab.ira.SwitchOff.asked(q) != null ||
                 com.optionslab.ira.ReminderBook.listAsked(q) || com.optionslab.ira.ReminderBook.cancelOne(q) != null ||
@@ -2462,7 +2462,7 @@ object IraHub {
 
     /**
      * [ask]'s question branches on the records and Boss's own setup: NewsMoves, TaxRecords, Learnings (and its undo),
-     * PreMarket, Headroom, ArmFit, WeakLink, ArmChange, PnlGap, BotTrades, SwitchOff, SaidAbout, WeekAhead, ZerodhaSession, OrderWhy, RelayHealth, StreamHealth, BatteryUse, WatchAsk - in [ask]'s order. True when one
+     * PreMarket, Headroom, ArmFit, WeakLink, ArmChange, PnlGap, BookDecay, BotTrades, SwitchOff, SaidAbout, WeekAhead, ZerodhaSession, OrderWhy, RelayHealth, StreamHealth, BatteryUse, WatchAsk - in [ask]'s order. True when one
      * took [q], answered exactly as before; each branch keeps its own guard (not [bundled], no order, no command).
      */
     private fun askedOfRecords(q: String, parsed: com.optionslab.ira.Question, bundled: Boolean, understood: Boolean): Boolean {
@@ -2643,6 +2643,20 @@ object IraHub {
             if (phoneLocked()) { reply(com.optionslab.ira.ArmDay.LOCKED); return true }
             val bars = listOf(IraMarket.BANKNIFTY, IraMarket.FINNIFTY).associate { m -> m.name to histories[m]?.bars.orEmpty() }
             scope.launch(Dispatchers.IO) { reply(runCatching { IraBots.armDay(armDayAsk, bars) }.getOrElse { "I could not set your bots' day beside the index just now, Boss." }) }
+            return true
+        }
+        // "What's my theta?", "how much am I losing to time decay?", "is theta working for me?", "mera theta kitna hai"
+        // ([com.optionslab.ira.BookDecay]): the whole book's time decay from each open option's theta now - rupees a day for each
+        // account apart, what the bought legs pay and the sold legs collect, the legs that weigh most, what it comes to by the
+        // next session over a weekend or a holiday, and the time value left in a leg that expires today. Boss's account, so
+        // never on a locked phone; a rough figure, never a forecast or advice - nothing is placed, changed or closed. (Before
+        // NetLean, whose "am I long or short" would take "am I long or short theta". Not in IraGoldAlgo.)
+        val bookDecayAsk = com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null &&
+            runCatching { com.optionslab.ira.BookDecay.asked(q) }.getOrDefault(false)
+        if (bookDecayAsk) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            if (phoneLocked()) { reply(com.optionslab.ira.BookDecay.LOCKED); return true }
+            scope.launch(Dispatchers.IO) { reply(runCatching { IraCoach.bookDecay() }.getOrElse { "I could not read your positions' time decay just now, Boss." }) }
             return true
         }
         // "Am I net long or short?", "which way am I leaning?", "what's my net delta?", "do my bots contradict each other right

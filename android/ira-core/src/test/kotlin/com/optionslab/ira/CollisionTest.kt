@@ -93,6 +93,7 @@ class CollisionTest {
         "ArmChange" to { q -> ArmChange.asked(q) },
         "PnlGap" to { q -> PnlGap.asked(q) },
         "ArmDay" to { q -> ArmDay.asked(q) != null },
+        "BookDecay" to { q -> BookDecay.asked(q) },
         "NetLean" to { q -> NetLean.asked(q) },
         "ExpiryEve" to { q -> ExpiryEve.asked(q) },
         "BeforeTomorrow" to { q -> BeforeTomorrow.asked(q) },
@@ -774,6 +775,12 @@ class CollisionTest {
         "tumhare confidence stars kitne sahi hain" to "HonestStars", "are your confidence ratings any good" to "HonestStars",
         "say confidence without the record" to "HonestStars", "how reliable is your confidence" to "HonestStars",
         "tumhara confidence kitna sahi hai" to "HonestStars", "confidence seedha bolo" to "HonestStars",
+        // ---- BookDecay: what time decay does to his whole book (usefulness round 29) ----
+        "what's my theta" to "BookDecay", "how much am i losing to time decay" to "BookDecay", "theta on my positions" to "BookDecay",
+        "is theta working for me or against me" to "BookDecay", "am i long or short theta" to "BookDecay", "my net theta" to "BookDecay",
+        "how much decay over the weekend on my positions" to "BookDecay", "how much theta am i collecting" to "BookDecay",
+        "mera theta kitna hai" to "BookDecay", "meri positions ka theta kitna hai" to "BookDecay", "time decay se kitna nuksan ho raha hai" to "BookDecay",
+        "decay kitna kha raha hai" to "BookDecay",
         // ---- ArmChange: the arms' paper results this week against last week ----
         "what's changed in my arms' results this week vs last" to "ArmChange", "how are my bots doing this week compared to last week" to "ArmChange",
         "my arms this week vs last week" to "ArmChange", "my strategies week on week" to "ArmChange", "what changed in my bots this week" to "ArmChange",
@@ -1149,7 +1156,7 @@ class CollisionTest {
 
     /** The question branches of IraHub.ask between the `bundled` read and the Plan block, in [CoverageTest.feature]'s order. */
     private val HUB_ORDER = listOf("DayJournal", "AlertSense", "Airtime", "Hearing", "PatternCalls", "TrendReads", "OutsideApp", "Clarity", "WordFit", "AskedAgain", "FigureFirst", "WrongThing", "ArmHabits", "MorningSense", "HonestStars", "TalkHours", "MorningAsks", "TurnDowns", "TopicLength", "OutlookCheck", "UsualIndex", "Nicknames", "NewsMoves",
-        "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmFit", "WeakLink", "ArmChange", "PnlGap", "ArmDay", "NetLean", "ExpiryEve", "BeforeTomorrow", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "ZerodhaSession", "OrderWhy", "RelayHealth", "StreamHealth", "BatteryUse", "WatchAsk", "Tour", "DataAge", "Honest", "Thinking",
+        "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmFit", "WeakLink", "ArmChange", "PnlGap", "ArmDay", "BookDecay", "NetLean", "ExpiryEve", "BeforeTomorrow", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "ZerodhaSession", "OrderWhy", "RelayHealth", "StreamHealth", "BatteryUse", "WatchAsk", "Tour", "DataAge", "Honest", "Thinking",
         "SelfWhy", "Consistency", "CoPilot", "SinceMorning", "ExpiryPin", "ChainDrift", "ChainIntel", "DayClock", "GapRecord", "RangeBreaks", "PriorDay", "LastHour", "InsideDays", "FirstMove", "VixNext", "SplitDays", "RoundCloses", "MonthTurns", "LunchRange", "OpenHighLow", "BigCandles", "ExtremeCloses", "WeekRange", "RelativeMove", "Weekdays", "DayCompare", "LikeToday", "Structure", "MindChange", "Breadth",
         "TradeCase", "Scenarios", "Causes", "Agenda", "Improve")
 
