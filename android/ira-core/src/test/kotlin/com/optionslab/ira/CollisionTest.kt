@@ -63,6 +63,13 @@ import kotlin.test.assertTrue
  * "saare reminders cancel karo" were Missed: now the cancel-all, which names them and waits for his Confirm -
  * coverage-actions.txt is unchanged, as none of its lines reads differently); UsualIndex's corrections ("no banknifty",
  * "mera matlab sensex se tha") read as the index meant and never act; the everyday questions still go where they should.
+ *
+ * Round 21 (5 Oct): how Boss actually says his everyday questions. His book as "we" ("how much are we down", "how much did
+ * we make today", "did we make money today" were the market, nothing or his funds), "where do I stand today" (where things
+ * are in the app), "am I bleeding"; "is Nifty holding up" (read as his holdings); "how was my day today" (the market);
+ * "what's my PL" and the recognizer's "what's my pin L" (nothing, or his PIN setting); "paisa bana kya aaj", "aaj ka hisaab",
+ * "account kaisa hai", "koi trade chal raha hai kya" (the market or nothing); "how's my book"; "sab thik hai kya" and "is
+ * everything okay" (nothing). Each now routes to its own answer, none acts, and coverage-actions.txt is unchanged.
  */
 class CollisionTest {
     private val audit = CoverageTest()
@@ -1939,6 +1946,41 @@ class CollisionTest {
             neverActs(s)
         }
         for (s in listOf("no", "no thanks", "how is banknifty", "buy banknifty", "no banknifty is falling")) assertEquals(null, UsualIndex.correction(s), s)
+    }
+
+    // ---- Round 21: Boss's everyday questions as he says them ----
+
+    /** Round 21's phrasings, each with the feature it must get (every one went wrong before this round) - none acts. */
+    private val ROUND21 = listOf(
+        // His book as "we", and in traders' words
+        "how much are we down" to "Account:PNL", "how much did we make today" to "Account:PNL", "did we make money today" to "Account:PNL",
+        "are we in the green" to "Account:PNL", "where do i stand today" to "Account:PNL", "am i bleeding" to "Account:PNL",
+        // An index holding a level is the market's, never his holdings
+        "is nifty holding up" to "Market", "how's nifty holding up" to "Market", "is the market holding up" to "Market",
+        // The wrap-up with "today" said after it
+        "how was my day today" to "DaySummary",
+        // P&L clipped or misheard by the recognizer
+        "what's my pl" to "Account:PNL", "what's my pin l" to "Account:PNL",
+        // Hinglish
+        "paisa bana kya aaj" to "Account:PNL", "aaj ka hisaab" to "Account:PNL", "hisaab batao" to "Account:PNL",
+        "account kaisa hai" to "Account:PNL+POSITIONS+ORDERS+STRATEGIES", "koi trade chal raha hai kya" to "Account:POSITIONS",
+        "how's my book" to "Account:PNL+POSITIONS+ORDERS+STRATEGIES",
+        // Jarvis's own check, asked with "kya" or in English
+        "sab thik hai kya" to "SelfCheck", "kya sab theek hai" to "SelfCheck", "is everything okay" to "SelfCheck",
+    )
+
+    @Test fun roundTwentyOneWordingsRouteAndNeverAct() {
+        assertEquals(ROUND21.size, ROUND21.map { it.first }.distinct().size)
+        val wrong = ROUND21.mapNotNull { (s, want) -> audit.feature(s).let { got -> if (got == want) null else "\"$s\": wanted $want, got $got ${hits(s)}" } }
+        assertTrue(wrong.isEmpty(), wrong.joinToString("\n"))
+        for ((s, _) in ROUND21) neverActs(s)
+        // Neighbours keep their own: the market asked as "we", his holdings and PIN, and closing what he holds stays a command.
+        assertEquals("Market", audit.feature("are we up or down today"))
+        for (s in listOf("what am i holding", "am i holding anything", "show my holdings")) assertEquals("Account:POSITIONS", audit.feature(s), s)
+        assertEquals("Account:SETTINGS", audit.feature("what is my pin"))
+        assertEquals("Headroom", audit.feature("where do i stand against my limits"))
+        for (s in listOf("book my profit", "sell my nifty put")) assertEquals(Command.Kind.CLOSE_ONE, Ask.parse(s).command?.kind, s)
+        assertEquals(null, Heard.fix("pl show nifty").takeIf { it != "pl show nifty" }, "a bare pl is never P&L")
     }
 
     // ---- Again: the voice's own "say that again slowly" - heard before the question path, never a question family ----

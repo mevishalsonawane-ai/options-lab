@@ -111,7 +111,8 @@ object AppAnswers {
         Section.HISTORY to Regex(" (yesterday|week|weekly|month|monthly|history|calendar|journal|last \\d+ days|best day|worst day|so far|this year|all time) "),
         Section.PNL to Regex(" (p l|pnl|profit|profits|made|lost|earned|returns?|loss|losses|mtm|m2m|(did|have) i (make|earn|lose)) "),
         Section.ORDERS to Regex(" (order|orders|trades|fills|filled|rejected|rejection|rejections) "),
-        Section.POSITIONS to Regex(" (position|positions|holding|holdings|open trades|exposure) "),
+        // ("Is Nifty holding up", "how's the market holding above 25000": the index holding a level, never Boss's holdings - round 21.)
+        Section.POSITIONS to Regex(" (position|positions|holding(?! (up|on|above|below|its|at|steady|firm|strong) )|holdings|open trades|exposure) "),
         // His leg's own price (routing round 13: "what is the average price of my put" got the market): the position's line
         // holds its quantity and average price - "my average on the 24500 put", "meri call ka avg price".
         Section.POSITIONS to Regex(" (average|avg|entry|buy|buying|purchase|cost) (price|cost|rate|level) (of |on |for )?(my|mine|meri|mera|mere) |" +
@@ -169,6 +170,12 @@ object AppAnswers {
         // not the stops on positions nor the P&L.
         if (DAY_STOP.containsMatchIn(t)) { out += Section.RISK; out.remove(Section.PROTECTIONS); out.remove(Section.PNL) }   // (paper's too: RISK lists both)
         if (Section.RISK in out && rx(" (daily loss|loss limit) ").containsMatchIn(t)) out.remove(Section.PNL)
+        // Boss's book said as "we" or in traders' words (round 21): "did we make money today" is his P&L, not his funds; "where do I
+        // stand today", "how much are we down", "am I bleeding" too - not where things are in the app.
+        if (rx(" (did|have|are|am|were) (i|we) (make|made|making|earn|earned|earning|lose|lost|losing) (any )?money ").containsMatchIn(t) &&
+            !rx(" (funds|fund|margin|margins|balance|cash|capital|buying power) ").containsMatchIn(t)) { out.remove(Section.FUNDS); out += Section.PNL }
+        if (rx(" where do (i|we) stand | how much (are|were) we (up|down) | (did|have) we (make|made|earn|earned|lose|lost) | how did we do | (am i|are we) bleeding | are we in the (green|red) ").containsMatchIn(t) &&
+            out.none { it != Section.HOWTO && it != Section.PNL }) { out.remove(Section.HOWTO); out += Section.PNL }
         if (Section.HISTORY in out && rx(" (made|lost|earned|p l|pnl|profit|loss|make|earn|lose) ").containsMatchIn(t)) out.remove(Section.PNL)
         if (Section.EVENTS in out && rx(" (event|events|fed|fomc|rbi|budget|cpi) ").containsMatchIn(t)) out.remove(Section.HISTORY)
         // "How did I do this week": his own week, not the calendar's events (routing audit, 5 Oct).

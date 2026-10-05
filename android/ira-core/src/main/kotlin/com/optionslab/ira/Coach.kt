@@ -151,7 +151,7 @@ object DaySummary {
      * "summary of today", "end of day report" too (usefulness round 28): the wrap-up opens with the market's story of the
      * day, then Boss's own - so it answers both.
      */
-    private val ASKED = Regex("(?i)^\\s*(jarvis,?\\s+)?(please\\s+)?((give me |do )?(my |the )?(full )?(wrap ?up|day summary|daily summary)( of| for)?( my day| today| so far)?|wrap up my day|how did my day go|how was my (trading )?day|((can|could) you )?summari[sz]e (my day|the day|today)( for me)?|(give me )?(a |the )?summary of (my day|the day|today)|(the )?(end of (the )?day|eod) (summary|report)|(aaj ka|mera) (summary|din kaisa raha)|aaj ka din kaisa raha)\\s*\\??\\s*$")
+    private val ASKED = Regex("(?i)^\\s*(jarvis,?\\s+)?(please\\s+)?((give me |do )?(my |the )?(full )?(wrap ?up|day summary|daily summary)( of| for)?( my day| today| so far)?|wrap up my day|how did my day go( today)?|how was my (trading )?day( today)?|((can|could) you )?summari[sz]e (my day|the day|today)( for me)?|(give me )?(a |the )?summary of (my day|the day|today)|(the )?(end of (the )?day|eod) (summary|report)|(aaj ka|mera) (summary|din kaisa raha)|aaj ka din kaisa raha)\\s*\\??\\s*$")
 
     fun asked(text: String): Boolean = ASKED.containsMatchIn(text)
 

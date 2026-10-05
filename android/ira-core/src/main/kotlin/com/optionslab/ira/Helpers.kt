@@ -215,7 +215,7 @@ object Activity {
 /** The morning self-check (the owner's wish, 2026-10-02): each part Jarvis needs, working or not. Pure. */
 object SelfCheck {
     /** "Run a self check", "system check", "check yourself", "sab theek hai?": the check asked for at any hour. */
-    fun asked(text: String): Boolean = rx("(?i)^\\W*(jarvis,?\\s+)?(please\\s+)?(run (a |your )?(self[- ]?check|system check|health check|diagnostics?)|(self[- ]?check|system check|health check)|check yourself|are all your parts working|is everything working|sab (theek|thik) hai( na)?|sab kuch (theek|thik) hai( na)?)\\W*$").containsMatchIn(text)
+    fun asked(text: String): Boolean = rx("(?i)^\\W*(jarvis,?\\s+)?(please\\s+)?(run (a |your )?(self[- ]?check|system check|health check|diagnostics?)|(self[- ]?check|system check|health check)|check yourself|are all your parts working|is everything working|(kya )?sab( kuch)? (theek|thik|theek thaak|thik thak) (hai|chal raha hai)( na| kya| na jarvis)?|is everything (ok|okay|fine|alright|all right)( with you)?)\\W*$").containsMatchIn(text)
 
     /** [parts]: name to true (working), false (not) or null (not used). */
     fun lines(parts: List<Pair<String, Boolean?>>): List<String> {

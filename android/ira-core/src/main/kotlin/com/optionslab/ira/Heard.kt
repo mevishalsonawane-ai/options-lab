@@ -13,6 +13,9 @@ object Heard {
         Regex("(?i)\\b(?:p|pee|pea|pi)\\s+(?:and|n|en|an)\\s+(?:l|el|ell|al)\\b") to "p&l",
         Regex("(?i)\\bpandl\\b|\\bpnl\\b|\\bpn\\s+l\\b") to "p&l",
         Regex("(?i)\\bprofit\\s+(?:and|&|n)\\s+loss\\b") to "p&l",
+        // "What's my PL", "what's my pin L", "my peon L" (round 21): P&L clipped or misheard - only after "my" / "the", so a PIN
+        // or "pl" said alone is never read as one.
+        Regex("(?i)\\b(my|the|our)\\s+(?:pl|p/l|pin\\s+l|peon\\s+l|pee\\s+l|pianl|pinal)\\b") to "$1 p&l",
         // MTM, said in words or letters.
         Regex("(?i)\\bmark\\s+to\\s+market\\b|\\bm\\s+t\\s+m\\b|\\bem\\s+tee\\s+em\\b") to "mtm",
         // The indices as the recognizer writes them (questions only: an alarm or an order never takes these).

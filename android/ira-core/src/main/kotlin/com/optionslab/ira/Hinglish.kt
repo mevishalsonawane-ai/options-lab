@@ -108,6 +108,13 @@ object Hinglish {
         Regex("^(?:aaj\\s+)?(?:(?:ka|ki)\\s+)?$MINE(?:aaj\\s+)?(?:(?:ka|ki)\\s+)?(?:p&l|p\\s+l|pnl|mtm|kamai|kamaai|profit\\s+loss)\\s+(?:kitna|kitni|kitne|$KYA)\\s+$HAI$") to "what is my p&l today",
         Regex("^(?:$KYA\\s+)?(?:main|mai|mein|hum)\\s+(?:aaj\\s+)?(?:profit|fayde|faayde|munafe)\\s+(?:mein|me|main)\\s+(?:hoon|hu|hun|hain|$HAI)(?:\\s+$KYA)?$") to "am i in profit today",
         Regex("^(?:$KYA\\s+)?(?:main|mai|mein|hum)\\s+(?:aaj\\s+)?(?:loss|nuksan|nuksaan|ghate)\\s+(?:mein|me|main)\\s+(?:hoon|hu|hun|hain|$HAI)(?:\\s+$KYA)?$") to "am i in loss today",
+        // Round 21: "paisa bana kya aaj", "aaj paise bane kya", "aaj ka hisaab" / "hisaab batao" (the day's reckoning) - his P&L.
+        Regex("^(?:(?:aaj|kuch|koi|abhi\\s+tak|ab\\s+tak)\\s+)*(?:paisa|paise)\\s+(?:bana|bane|banaya|banaye|bani)(?:\\s+(?:aaj|$KYA|ya\\s+nahi|$HAI))*$") to "what is my p&l today",
+        Regex("^(?:(?:aaj|mera|apna)\\s+)*(?:(?:ka|ki)\\s+)?(?:hisaab|hisab|hisaab\\s+kitaab|hisab\\s+kitab)(?:\\s+(?:$KYA\\s+$HAI|batao|bataiye|bata\\s+do|$KYA\\s+raha|kaisa\\s+$HAI|kaisa\\s+raha))?$") to "what is my p&l today",
+        // "Account kaisa hai", "account ka kya haal hai", "trading account kaisa chal raha hai": his account as a whole.
+        Regex("^$MINE(?:trading\\s+)?(?:account|khata)\\s+(?:kaisa\\s+(?:chal\\s+$RAHA\\s+)?$HAI|(?:ka|ki)\\s+(?:$KYA\\s+haal|haal\\s+$KYA|haal\\s+kaisa)\\s+$HAI)(?:\\s+$KYA)?$") to "how is my account doing",
+        // "Koi trade chal raha hai kya", "abhi koi position open hai": whether anything of his is open.
+        Regex("^(?:abhi\\s+)?koi\\s+(?:trade|position)\\s+(?:abhi\\s+)?(?:chal\\s+$RAHA\\s+$HAI|open\\s+$HAI|khula\\s+$HAI)(?:\\s+$KYA)?$") to "show my positions",
         // Positions and orders: "positions dikha do", "mere orders kya hain", "koi order pending hai kya".
         Regex("^$MINE(?:(?:sabhi|saare|sab|open|khuli|khule)\\s+)?(positions?|orders?|trades?|holdings?)\\s+$SHOW$") to "show my $1",
         Regex("^(?:koi|kitne|kitni|kaun\\s+si|kaunsi|kaun\\s+se|kaunse)\\s+(?:open\\s+)?(positions?|orders?|trades?)\\s+(?:(?:khuli|khule|open|pending|baaki|bachi|bache|lagi|lage)\\s+)?(?:$HAI|hui\\s+$HAI)(?:\\s+$KYA)?$") to "show my $1",

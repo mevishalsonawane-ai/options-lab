@@ -50,7 +50,7 @@ object Ask {
 
     /** The owner's own trading: "my orders", "how are my strategies doing", "today's p&l". */
     private val ACCOUNT = Regex(" (my|mine|our) ([a-z]+ ){0,3}(order|orders|trade|trades|position|positions|holding|holdings|p l|pnl|profit|profits|" +
-        "loss|losses|strategy|strategies|arm|arms|bot|bots|algo|algos|studies|study|scripts?|account|portfolio|fills|mtm|m2m) " +
+        "loss|losses|strategy|strategies|arm|arms|bot|bots|algo|algos|studies|study|scripts?|account|portfolio|book|fills|mtm|m2m) " +
         "|( how am i doing | how did i do | today s p l | todays p l | today s pnl | todays pnl | p l today | pnl today )" +
         // Boss's own money and trades without "my" (4 Oct: "how much did I lose today" got the Nifty update).
         "|( (did|have) i (make|made|lose|lost|earn|earned|gain|gained) (?!a |an |the |it |that |this )| trades? did i | how many trades (did|have|today|i ))" +
@@ -58,7 +58,11 @@ object Ask {
         "|( how much (money )?(did|have) i (make|made|earn|earned|lose|lost) | am i (up|down|in profit|in loss|making money|losing money) )" +
         // (Audit, 5 Oct: "am I green today" got the market, "how's my day looking" and "am I on paper or live" nothing.)
         "|( am i (green|red|in the green|in the red) | how (s|is) my day (going|looking)| (what s|whats|what is) my day looking like | " +
-        "how much (more )?can i (still )?lose | am i (on|in) (paper|live)( or (paper|live))? | my buying power | how much can i trade with )")
+        "how much (more )?can i (still )?lose | am i (on|in) (paper|live)( or (paper|live))? | my buying power | how much can i trade with )" +
+        // (Understanding round 21: Boss speaks of his book as "we" - "how much are we down", "how much did we make today", "are we
+        // in the green", "where do I stand today", "am I bleeding" got the market or nothing. Questions only: a "we" never places anything.)
+        "|( how much (are|were) we (up|down) | how much (money )?(did|have) we (make|made|earn|earned|lose|lost) | how did we do( today| so far)? $|" +
+        "^ (so )?are we (in the green|in the red|making money|losing money)( today| now| so far)? $| (am i|are we) bleeding | where do (i|we) stand )")
     private val GREET = Regex(" (hello|hi|hey|good morning|good afternoon|good evening|jarvis|ira|boss|ok|okay|please|there) ")
     /** About Ira itself: what it can do, the voice. */
     private val HELP = Regex(" (what can you do|what all can you do|what else can you do|what all do you do|what all can you help (me )?with|what are all the things you can do|what do you do|who are you|what are you|help|how do i use|how to use|can you (hear|listen)|" +

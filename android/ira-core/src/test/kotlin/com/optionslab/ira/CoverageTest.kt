@@ -239,7 +239,11 @@ class CoverageTest {
         "how is niftee" to M, "how is the census today" to M, "how is bank fifty" to M, "what is my pnl" to A,
         "um how is nifty" to M, "how how is banknifty" to M, "how is nifty i mean banknifty" to M,
         "how is nifty and what's my p&l" to M, "nifty kaisa hai aur mera p&l kitna hai" to M,
-        "how far is nifty from twenty five thousand" to M, "what is my m t m" to A,
+        "how far is nifty from twenty five thousand" to M, "what is my m t m" to A, "what's my pin l" to A, "what's my pl" to A,
+        // ---- Round 21: Boss's book as "we", traders' words and Hinglish ----
+        "how much are we down" to A, "how much did we make today" to A, "where do i stand today" to A, "am i bleeding" to A,
+        "is nifty holding up" to M, "how was my day today" to A, "paisa bana kya aaj" to A, "aaj ka hisaab" to A, "account kaisa hai" to A,
+        "koi trade chal raha hai kya" to A, "how's my book" to A, "sab thik hai kya" to J, "is everything okay" to J,
         // ---- Through the day as Boss says it (the audit's second sweep: Hinglish first, then the trader's English) ----
         "nifty kya kar raha hai" to M, "nifty abhi kahan hai" to M, "nifty kitna upar hai" to M, "nifty kitna neeche hai" to M,
         "aaj nifty kitna gira" to M, "aaj market kitna gira" to M, "banknifty kitna chadha aaj" to M, "sensex kitne points upar hai" to M,
