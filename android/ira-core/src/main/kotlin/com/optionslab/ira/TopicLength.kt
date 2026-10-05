@@ -125,9 +125,12 @@ object TopicLength {
      * How many sentences to say aloud answering [text], from the topics learned ([learned]); null: as usual. Never for a
      * command or an order (they have no kind).
      */
-    fun sentences(text: String, learned: List<Record>): Int? {
+    fun sentences(text: String, learned: List<Record>): Int? = if (learned.isEmpty()) null else sentencesOf(Clarity.kind(text), learned)
+
+    /** [sentences] for a question of kind [kind] ([Clarity.kind], read once by the caller; null: none). */
+    fun sentencesOf(kind: String?, learned: List<Record>): Int? {
         if (learned.isEmpty()) return null
-        val k = Clarity.kind(text) ?: return null
+        val k = kind ?: return null
         return learned.firstOrNull { it.kind == k }?.dir?.sentences
     }
 

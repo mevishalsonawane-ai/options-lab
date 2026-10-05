@@ -27,6 +27,31 @@ object Latency {
         return "Spoken answers: ${list.size}, typical wait ${sec(median)}, slowest ${sec(s.last())}, last ${sec(list.last())}."
     }
 
+    /** The first word is due this soon after Boss's last word (Voice, round 22), for an answer the phone works out itself. */
+    const val FIRST_WORD_MS = 1_500L
+
+    /**
+     * [say], and where the wait went (Voice, round 22): [voice] holds, for the last spoken answers (the newest of [list],
+     * in step), the part from the reply handed to the voice to its first sound (the speech engine) - the rest is the
+     * answer worked out and its words shaped. Also how many of those first words came within [FIRST_WORD_MS]. [voice]
+     * empty or longer than [list]: [say] alone.
+     */
+    fun say(list: List<Long>, voice: List<Long>): String? {
+        val base = say(list) ?: return null
+        if (voice.isEmpty() || voice.size > list.size) return base
+        val recent = list.takeLast(voice.size)
+        val sv = voice.sorted()
+        val answer = recent.zip(voice) { t, v -> (t - v).coerceAtLeast(0L) }.sorted()
+        fun sec(ms: Long) = "%.1f s".format(java.util.Locale.ENGLISH, ms / 1000.0)
+        val fast = recent.count { it <= FIRST_WORD_MS }
+        return "$base Typically ${sec(answer[answer.size / 2])} to the answer and ${sec(sv[sv.size / 2])} for the voice to start; " +
+            "first word within ${sec(FIRST_WORD_MS)}: $fast of ${recent.size}."
+    }
+
+    /** [add] for the voice's part ([say]): kept in step with the waits ([ms] the voice's part of the wait [took]). */
+    fun addVoice(voice: List<Long>, waits: List<Long>, took: Long, ms: Long): List<Long> =
+        if (took <= 0 || took >= 60_000) voice else (voice + ms.coerceIn(0L, took)).takeLast(KEEP).takeLast(waits.size)
+
     /** "How fast are you?", "how long do you take to answer", "kitna time lagta hai": his own answer times, aloud. */
     fun asked(text: String): Boolean =
         rx("(?i)^\\W*(jarvis,?\\s+)?(how (fast|quick|quickly|slow) (are you|do you answer|are you answering|are your answers)|" +

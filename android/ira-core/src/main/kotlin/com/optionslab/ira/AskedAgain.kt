@@ -53,8 +53,10 @@ object AskedAgain {
     }
 
     /** How [text] reads here ([Read.None] for a command, an order or words not understood). */
-    fun read(text: String): Read {
-        val tags = runCatching { SelfDoubt.tags(text) }.getOrDefault(emptyList())
+    fun read(text: String): Read = read(runCatching { SelfDoubt.tags(text) }.getOrDefault(emptyList()))
+
+    /** How a question with kinds [tags] ([SelfDoubt.tags], read once by the caller) reads here. */
+    fun read(tags: List<SelfDoubt.Tag>): Read {
         val topic = tags.firstOrNull { it.dim == SelfDoubt.Dim.TOPIC } ?: return Read.None
         val t = runCatching { Topic.valueOf(topic.key.substringAfter(':')) }.getOrNull() ?: return Read.Other
         if (t !in READS) return Read.Other

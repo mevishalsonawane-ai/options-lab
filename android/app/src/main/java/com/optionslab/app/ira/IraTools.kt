@@ -612,8 +612,11 @@ internal object IraTools {
         return list
     }
 
-    /** How many sentences to say aloud answering [said] (a kind Boss often asks "what?" after), or null: as usual. Voice only. */
-    fun claritySentences(said: String): Int? = runCatching { com.optionslab.ira.Clarity.sentences(said, clarityShorter()) }.getOrNull()
+    /**
+     * The kinds said shorter aloud now (a kind Boss often asks "what?" after; voice only - [com.optionslab.ira.SpokenReply],
+     * which reads the question once). None when unreadable (as usual).
+     */
+    fun clarityShorterNow(): List<com.optionslab.ira.Clarity.Record> = runCatching { clarityShorter() }.getOrDefault(emptyList())
 
     /** "Which answers do you keep short?". */
     fun clarityHeld(): String = runCatching { com.optionslab.ira.Clarity.say(clarityLog(), askedKinds(), minuteNow()) }
@@ -806,9 +809,11 @@ internal object IraTools {
         return list
     }
 
-    /** The answer [text] to [said] as said aloud: its figure first for a read Boss keeps asking again for it, else as it is. Voice only. */
-    fun figureLead(said: String, text: String): String =
-        runCatching { com.optionslab.ira.FigureFirst.lead(said, text, figureLeading()) }.getOrDefault(text)
+    /**
+     * The reads said figure first now: an answer to one of them is said aloud with its figure first, else as it is (voice
+     * only; [com.optionslab.ira.SpokenReply], which reads the question once). None when unreadable (the answer as it is).
+     */
+    fun figureLeadingNow(): List<com.optionslab.ira.FigureFirst.Record> = runCatching { figureLeading() }.getOrDefault(emptyList())
 
     /** "Which reads do you start with the number?". */
     fun figureHeld(): String = runCatching { com.optionslab.ira.FigureFirst.say(figureLog(), minuteNow()) }
@@ -1203,10 +1208,12 @@ internal object IraTools {
         System.currentTimeMillis() - lengthLongAt < 60_000L &&
             runCatching { com.optionslab.ira.TopicLength.wish(said) == com.optionslab.ira.TopicLength.Dir.LONG }.getOrDefault(false)
 
-    /** How many sentences to say aloud answering [said] (a topic Boss keeps asking one way), or null: as usual. Voice only. */
-    fun lengthSentences(said: String): Int? = runCatching {
-        com.optionslab.ira.TopicLength.sentences(said, com.optionslab.ira.TopicLength.learned(lengthLog(), lengthNow()))
-    }.getOrNull()
+    /**
+     * The topics learned short or whole now (a topic Boss keeps asking one way; voice only - [com.optionslab.ira.SpokenReply],
+     * which reads the question once). None when unreadable (as usual).
+     */
+    fun lengthLearnedNow(): List<com.optionslab.ira.TopicLength.Record> =
+        runCatching { com.optionslab.ira.TopicLength.learned(lengthLog(), lengthNow()) }.getOrDefault(emptyList())
 
     /** "How long do I like your answers?". */
     fun lengthSay(): String = runCatching { com.optionslab.ira.TopicLength.say(lengthLog(), lengthNow()) }

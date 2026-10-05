@@ -104,9 +104,12 @@ object Clarity {
      * How many sentences to say aloud answering [text], from the kinds said shorter ([shorter]); null: as usual. Never for
      * a command or an order (they have no kind).
      */
-    fun sentences(text: String, shorter: List<Record>): Int? {
+    fun sentences(text: String, shorter: List<Record>): Int? = if (shorter.isEmpty()) null else sentencesOf(kind(text), shorter)
+
+    /** [sentences] for a question of kind [kind] ([kind], read once by the caller; null: none). */
+    fun sentencesOf(kind: String?, shorter: List<Record>): Int? {
         if (shorter.isEmpty()) return null
-        val k = kind(text) ?: return null
+        val k = kind ?: return null
         return shorter.firstOrNull { it.kind == k }?.level?.sentences
     }
 

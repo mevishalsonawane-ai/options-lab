@@ -104,7 +104,7 @@ class JarvisVoice : Service() {
             append("On-device recognition available: ${context?.let { c -> runCatching { Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && SpeechRecognizer.isOnDeviceRecognitionAvailable(c) }.getOrNull() }} · " +
                 "any recognizer: ${context?.let { c -> runCatching { SpeechRecognizer.isRecognitionAvailable(c) }.getOrNull() }}\n")
             append("Voice check: ${runCatching { diagnose(context) }.getOrElse { "could not run" }}\n")
-            com.optionslab.ira.Latency.say(latencies)?.let { append(it).append('\n') }
+            com.optionslab.ira.Latency.say(latencies, voiceLatencies)?.let { append(it).append('\n') }
             append(com.optionslab.ira.BossPace.say(paceGaps)).append('\n')
             append(runCatching { com.optionslab.ira.CutIn.say(cutInNow(context ?: instance?.get()), cutInChoice) }.getOrElse { "Cut-in: could not check" }).append('\n')
             append(runCatching { com.optionslab.ira.Hearing.say(hearingDays, hearingDay()) }.getOrElse { "Hearing: could not read" }).append('\n')
@@ -460,6 +460,8 @@ class JarvisVoice : Service() {
         @Volatile var lastLatencyMs = 0L
         /** This run's answer waits (for the diagnostics). */
         @Volatile var latencies: List<Long> = emptyList()
+        /** For the newest of [latencies], in step: the part from the reply handed to the voice to its first sound (ms). */
+        @Volatile var voiceLatencies: List<Long> = emptyList()
 
         /** Jarvis is speaking now. */
         val speakingNow: Boolean get() = instance?.get()?.speaking == true
@@ -791,7 +793,13 @@ class JarvisVoice : Service() {
             }
             // The question reader's first use builds all its patterns (the slowest reading of the day): done now, off the
             // main thread, not inside Boss's first question. A reading only: nothing is asked.
-            scope.launch(Dispatchers.Default) { runCatching { com.optionslab.ira.Ask.parse("how is nifty today") } }
+            // The same for the patterns the spoken words go through ([com.optionslab.ira.SpokenReply.warm]; words only, dropped),
+            // and the voice's own records read once into memory (read only: nothing is noted, changed or acted on).
+            scope.launch(Dispatchers.Default) {
+                runCatching { com.optionslab.ira.Ask.parse("how is nifty today") }
+                runCatching { com.optionslab.ira.SpokenReply.warm() }
+                runCatching { IraTools.figureLeadingNow(); IraTools.lengthLearnedNow(); IraTools.clarityShorterNow() }
+            }
             // While listening, the slow answers are kept ready so none waits: prices every minute in market hours, your
             // account and the trade check every 30 seconds.
             // (The model is NOT loaded here any more - root cause, 4 Oct: kept in memory the whole time Jarvis listened,
@@ -841,9 +849,12 @@ class JarvisVoice : Service() {
                 // Only the first sound of the reply to the words just read counts ([com.optionslab.ira.ReplyClock]): an
                 // announcement, a reply never said or one from an earlier turn is not timed (Boss, 5 Oct: "37.0 s" against
                 // "answer ready 4.8 s" - a loose time taken by a later sound).
-                val took = replyClock.started(id, now)
-                if (took != null) { lastLatencyMs = took; latencies = com.optionslab.ira.Latency.add(latencies, took)
-                    note("first sound %.1f s after the words".format(java.util.Locale.ENGLISH, took / 1000.0))
+                val split = replyClock.startedSplit(id, now)
+                val took = split?.total
+                if (split != null && took != null) { lastLatencyMs = took; latencies = com.optionslab.ira.Latency.add(latencies, took)
+                    // Where the wait went (Voice, round 22): the voice's own part - the reply handed to it, to its first sound.
+                    voiceLatencies = com.optionslab.ira.Latency.addVoice(voiceLatencies, latencies, took, split.voice)
+                    note("first sound %.1f s after the words (voice %.1f s)".format(java.util.Locale.ENGLISH, took / 1000.0, split.voice / 1000.0))
                     // Counted for the day (times only, no words): his weekly goal of answering fast ([com.optionslab.ira.Improve]).
                     if (took in 1L until 60_000L) { IraTools.count(com.optionslab.ira.Improve.TIMED); if (took > com.optionslab.ira.Improve.FAST_MS) IraTools.count(com.optionslab.ira.Improve.SLOW) }
                     slowNudge() }
@@ -1735,6 +1746,10 @@ class JarvisVoice : Service() {
             if (a?.action != null && IraHub.asksYesNo(a.action)) return@launch
             // The answer's full text (as in the chat), kept with what is said so "go on" can say the rest after a cut.
             var full: String? = null
+            // The words already shaped for the speech engine ([com.optionslab.ira.SpokenReply.Said.shaped]): not shaped again.
+            var shaped = false
+            // The question read once here, for "tell me more" and the account below (it used to be read for each).
+            val asked by lazy { com.optionslab.ira.Ask.parse(q) }
             say(when {
                 a == null -> if (late) "Boss, I could not finish what you asked earlier. Please ask me again." else "I could not work that out."
                 o != null && o.missing.isEmpty() && o.refusal == null -> "I have put that order on the Ira screen. Nothing is sent until you confirm it there."
@@ -1751,17 +1766,19 @@ class JarvisVoice : Service() {
                 // Boss keeps asking "in short" or "in detail" after, in one sentence or whole ([com.optionslab.ira.TopicLength]).
                 // A market read Boss keeps asking again for its figure: that figure's sentence first aloud, the same words
                 // ([com.optionslab.ira.FigureFirst]); kept as the full answer too, so "go on" finds the same sentences.
+                // Worked out in one pass (Voice, round 22: [com.optionslab.ira.SpokenReply]): the question's kind read once for
+                // all three, the same words as before; already shaped for the speech engine, so [say] does not shape it again.
                 else -> {
-                    val ordered = IraTools.figureLead(q, a.text)
-                    val spoken = com.optionslab.ira.Aloud.say(ordered, when {
-                        com.optionslab.ira.Ask.parse(q).command?.kind == com.optionslab.ira.Command.Kind.MORE -> com.optionslab.ira.Aloud.Length.FULL.sentences
+                    val r = com.optionslab.ira.SpokenReply.said(q, a.text,
+                        more = asked.command?.kind == com.optionslab.ira.Command.Kind.MORE,
                         // "Detail mein batao" said just now: his wish, said whole ([com.optionslab.ira.TopicLength]).
-                        IraTools.lengthWished(q) -> com.optionslab.ira.Aloud.Length.FULL.sentences
-                        IraTools.brief -> com.optionslab.ira.Aloud.Length.SHORT.sentences
+                        wishedLong = IraTools.lengthWished(q),
+                        brief = IraTools.brief,
                         // A topic Boss keeps asking "in short" or "in detail" after: said that way aloud (never over his own setting above).
-                        else -> IraTools.lengthSentences(q) ?: IraTools.claritySentences(q) ?: com.optionslab.ira.Aloud.Length.USUAL.sentences })
-                    if (late) { full = ordered; "About what you asked earlier: $spoken" }
-                    else { full = com.optionslab.ira.HeardBack.full(echo, ordered); com.optionslab.ira.HeardBack.lead(echo, spoken) }
+                        leading = { IraTools.figureLeadingNow() }, learned = { IraTools.lengthLearnedNow() }, shorter = { IraTools.clarityShorterNow() },
+                        echo = echo, late = late)
+                    full = r.full; shaped = r.shaped
+                    r.spoken
                 }
             }.let { text ->
                 // A follow-up (no "Jarvis") that brings back the very answer just given is not said again: the
@@ -1775,7 +1792,7 @@ class JarvisVoice : Service() {
             }, "answer", full = full,
                 // Said on an unlocked phone, any answer may hold Boss's side (make the case, his reasons): "go on" says its
                 // rest only while the phone is still unlocked (review, 5 Oct).
-                account = !locked() || com.optionslab.ira.Topic.ACCOUNT in com.optionslab.ira.Ask.parse(q).topics)
+                account = !locked() || com.optionslab.ira.Topic.ACCOUNT in asked.topics, shaped = shaped)
         }
     }
 
@@ -1794,12 +1811,14 @@ class JarvisVoice : Service() {
      */
     /** [reply]: these words answer what Boss just said (timed from his words to their first sound); false for unasked ones. */
     private fun say(words: String, id: String = "say", full: String? = null, account: Boolean = false, slow: Boolean = false, keep: Boolean = true,
-                    reply: Boolean = true) {
+                    reply: Boolean = true, shaped: Boolean = false) {
         // The voice first: a model rewrite under way gives the processor back before the speech engine starts (5 Oct).
         runCatching { IraModel.yieldToVoice() }
         // Figures as a trader says them: a lakh or more in lakh / crore, option symbols as words ([com.optionslab.ira.SayAs]).
         // Then commas where a person would pause: brackets, spaced dashes, figures side by side ([com.optionslab.ira.Pauses]).
-        val text = com.optionslab.ira.Pauses.shape(com.optionslab.ira.SayAs.figures(words, com.optionslab.ira.Aloud.hindi(words)))
+        // [shaped]: the words came straight from [com.optionslab.ira.Aloud.say], which ends with exactly these two - doing them
+        // again would change nothing ([com.optionslab.ira.SpokenReply.Said.shaped]), so they are not done twice (Voice, round 22).
+        val text = if (shaped) words else com.optionslab.ira.Pauses.shape(com.optionslab.ira.SayAs.figures(words, com.optionslab.ira.Aloud.hindi(words)))
         unmuteNow()                                      // Jarvis's own voice is never muted
         val t = tts
         lastSpokenId = id

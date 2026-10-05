@@ -14,6 +14,8 @@ class ReplyClock {
     private var pendingAt = 0L
     private var boundTo: String? = null
     private var boundAt = 0L
+    /** When the bound reply was handed to the voice (elapsed ms). */
+    private var queuedAt = 0L
 
     /** Boss's words were read at [at] (elapsed ms): the next reply is timed from here; an older one no longer is. */
     @Synchronized fun heard(at: Long) { pendingAt = at; boundTo = null; boundAt = 0L }
@@ -28,7 +30,7 @@ class ReplyClock {
     @Synchronized fun queued(id: String, now: Long) {
         val at = pendingAt
         pendingAt = 0L
-        if (at > 0 && now >= at && now - at < MAX_MS) { boundTo = id; boundAt = at }
+        if (at > 0 && now >= at && now - at < MAX_MS) { boundTo = id; boundAt = at; queuedAt = now }
     }
 
     /** The turn ended with nothing said for it (muted, dropped, cancelled): nothing is timed from it. */
@@ -38,12 +40,22 @@ class ReplyClock {
      * Utterance (or piece) [id] made its first sound at [now]: the wait in ms when it is the bound reply's first sound,
      * else null (an announcement, "Yes, Boss?", a later piece, a reply already timed).
      */
-    @Synchronized fun started(id: String?, now: Long): Long? {
+    @Synchronized fun started(id: String?, now: Long): Long? = startedSplit(id, now)?.total
+
+    /**
+     * The wait split in two (Voice, round 22: where it goes): [total] from Boss's words to the first sound; [voice] of it
+     * from the reply handed to the voice to that sound (the speech engine making the first sentence into sound); the
+     * rest is the answer being worked out and the words shaped for speech.
+     */
+    data class Split(val total: Long, val voice: Long)
+
+    /** [started], with the voice's part of the wait ([Split]). */
+    @Synchronized fun startedSplit(id: String?, now: Long): Split? {
         val b = boundTo ?: return null
         if (id == null || !(id == b || id.startsWith("$b."))) return null
         boundTo = null
         val took = now - boundAt
-        return if (took in 0 until MAX_MS) took else null
+        return if (took in 0 until MAX_MS) Split(took, (now - queuedAt).coerceIn(0L, took)) else null
     }
 
     companion object {
