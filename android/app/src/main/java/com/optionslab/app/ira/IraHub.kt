@@ -1297,6 +1297,7 @@ object IraHub {
                 com.optionslab.ira.InsideDays.asked(q) != null || com.optionslab.ira.FirstMove.asked(q) != null ||
                 com.optionslab.ira.VixNext.asked(q) != null || com.optionslab.ira.SplitDays.asked(q) != null ||
                 com.optionslab.ira.RoundCloses.asked(q) != null || com.optionslab.ira.MonthTurns.asked(q) != null ||
+                com.optionslab.ira.LunchRange.asked(q) != null ||
                 com.optionslab.ira.Weekdays.asked(q) != null ||
                 com.optionslab.ira.WordFit.asked(q) != null ||
                 com.optionslab.ira.Causes.asked(q) != null ||
@@ -2654,7 +2655,7 @@ object IraHub {
 
     /**
      * [ask]'s question branches on the index's record of past sessions and today's structure: DayClock, GapRecord,
-     * RangeBreaks, PriorDay, LastHour, InsideDays, FirstMove, VixNext, SplitDays, RoundCloses, MonthTurns, Weekdays, DayCompare, LikeToday, Structure, MindChange, Breadth - in [ask]'s order. True when one
+     * RangeBreaks, PriorDay, LastHour, InsideDays, FirstMove, VixNext, SplitDays, RoundCloses, MonthTurns, LunchRange, Weekdays, DayCompare, LikeToday, Structure, MindChange, Breadth - in [ask]'s order. True when one
      * took [q], answered exactly as before; each branch keeps its own guard (not [bundled], no order, no command).
      */
     private fun askedOfPastDays(q: String, parsed: com.optionslab.ira.Question, bundled: Boolean, understood: Boolean): Boolean {
@@ -2846,6 +2847,24 @@ object IraHub {
                 else com.optionslab.ira.MonthTurns.answer(monthEdgeAsk, mk, histories[mk]?.bars.orEmpty(),
                     com.optionslab.app.data.Market.today(), com.optionslab.app.data.Market.now().toLocalDateTime())
             }.getOrElse { "I could not read the month-start and month-end record just now, Boss." }
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            reply(said)
+            return true
+        }
+        // "Does Nifty break the lunch range?", "lunch range breakout record", "is the lunch lull real?": the 12:00-13:30 window's
+        // range against the morning and the afternoon, how often the day's high or low was made in it, and which side the
+        // afternoon first closed beyond it and how the close ended, on the phone's own 1-minute sessions
+        // ([com.optionslab.ira.LunchRange]), beside today's lunch range. A record of past days, never a forecast or advice;
+        // market data only (fine on a locked phone); nothing acts. (How busy each half hour is stays DayClock's.)
+        val lunchBoxAsk = if (!bundled && parsed.order == null && parsed.command == null && !com.optionslab.app.BuildConfig.GOLD)
+            runCatching { com.optionslab.ira.LunchRange.asked(q) }.getOrNull() else null
+        if (lunchBoxAsk != null) {
+            val said = runCatching {
+                val mk = com.optionslab.ira.LunchRange.market(parsed.markets)
+                if (mk == null) com.optionslab.ira.LunchRange.NOT_HERE
+                else com.optionslab.ira.LunchRange.answer(lunchBoxAsk, mk, histories[mk]?.bars.orEmpty(),
+                    com.optionslab.app.data.Market.today(), com.optionslab.app.data.Market.now().toLocalDateTime())
+            }.getOrElse { "I could not read the lunch-range record just now, Boss." }
             _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
             reply(said)
             return true

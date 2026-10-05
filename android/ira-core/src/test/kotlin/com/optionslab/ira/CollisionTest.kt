@@ -94,6 +94,7 @@ class CollisionTest {
         "SplitDays" to { q -> SplitDays.asked(q) != null },
         "RoundCloses" to { q -> RoundCloses.asked(q) != null },
         "MonthTurns" to { q -> MonthTurns.asked(q) != null },
+        "LunchRange" to { q -> LunchRange.asked(q) != null },
         "Weekdays" to { q -> Weekdays.asked(q) != null },
         "DayCompare" to { q -> DayCompare.asked(q) != null },
         "LikeToday" to { q -> LikeToday.asked(q) },
@@ -665,6 +666,12 @@ class CollisionTest {
         "mahine ke aakhri din nifty kaisa rehta hai" to "MonthTurns", "how volatile are the first few days of the month" to "MonthTurns",
         // Its neighbours: the month's own move, Boss's month, a weekday's record.
         "how was nifty this month" to "PeriodMove", "how was my month" to "Account:MONTH", "is friday usually the widest day" to "Weekdays",
+        // ---- LunchRange: the 12:00-13:30 window against the morning and afternoon, and the afternoon's break of it (round 26) ----
+        "does nifty break the lunch range" to "LunchRange", "lunch range breakout record" to "LunchRange",
+        "is the lunch lull real" to "LunchRange", "how wide is the banknifty lunch range compared to the morning" to "LunchRange",
+        "lunch ki range todne ke baad nifty kya karta hai" to "LunchRange", "how often does sensex close above the lunch range" to "LunchRange",
+        // Its neighbours: how quiet lunch usually is, the opening range's breaks, the last hour's turn.
+        "is nifty usually quiet at lunch" to "DayClock", "how often do opening range breaks hold for banknifty" to "RangeBreaks", "how often does the last hour reverse the day" to "LastHour",
         // ---- MorningSense: the morning check items said briefly ----
         "which morning items do you skip" to "MorningSense", "which morning check items do you leave out" to "MorningSense",
         "morning check ka kya skip karte ho" to "MorningSense", "read me the whole morning check" to "MorningSense",
@@ -883,7 +890,7 @@ class CollisionTest {
     /** The question branches of IraHub.ask between the `bundled` read and the Plan block, in [CoverageTest.feature]'s order. */
     private val HUB_ORDER = listOf("DayJournal", "AlertSense", "Airtime", "Hearing", "PatternCalls", "TrendReads", "OutsideApp", "Clarity", "WordFit", "AskedAgain", "FigureFirst", "WrongThing", "ArmHabits", "MorningSense", "HonestStars", "TalkHours", "MorningAsks", "TurnDowns", "NewsMoves",
         "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmFit", "ArmDay", "NetLean", "ExpiryEve", "BeforeTomorrow", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "ZerodhaSession", "OrderWhy", "RelayHealth", "StreamHealth", "BatteryUse", "WatchAsk", "Tour", "DataAge", "Honest", "Thinking",
-        "SelfWhy", "Consistency", "CoPilot", "SinceMorning", "ExpiryPin", "ChainDrift", "ChainIntel", "DayClock", "GapRecord", "RangeBreaks", "PriorDay", "LastHour", "InsideDays", "FirstMove", "VixNext", "SplitDays", "RoundCloses", "MonthTurns", "Weekdays", "DayCompare", "LikeToday", "Structure", "MindChange", "Breadth",
+        "SelfWhy", "Consistency", "CoPilot", "SinceMorning", "ExpiryPin", "ChainDrift", "ChainIntel", "DayClock", "GapRecord", "RangeBreaks", "PriorDay", "LastHour", "InsideDays", "FirstMove", "VixNext", "SplitDays", "RoundCloses", "MonthTurns", "LunchRange", "Weekdays", "DayCompare", "LikeToday", "Structure", "MindChange", "Breadth",
         "TradeCase", "Scenarios", "Causes", "Agenda", "Improve")
 
     @Test fun theAuditFollowsTheHubsOrderAndEveryBranchIsGuarded() {
