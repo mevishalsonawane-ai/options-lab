@@ -460,13 +460,13 @@ object IraHub {
     private fun notifyProposal(p: Proposal) {
         val c = app ?: return
         val r = p.result
-        runCatching { JarvisPopup.show(c, "Boss, a new strategy: ${r.kind.label} on ${r.market.label}", "${r.trades} trades, ${Math.round(r.winRate)}% won over ${r.days} days. Open Jarvis to approve or dismiss.") }
+        runCatching { JarvisPopup.show(c, "Boss, a new strategy: ${r.kind.label} on ${r.market.label}", "${r.trades} trades, ${Math.round(r.winRate)}% won over ${r.days} days. Open Jarvis to approve or dismiss.", proposal = p.id) }
         val money = r.rupees?.let { " Options: ${"%+,.0f".format(java.util.Locale.ENGLISH, it).replace("+", "+Rs ").replace("-", "-Rs ")} a lot." } ?: ""
         runCatching {
             com.optionslab.app.work.Notifier.post(c, NOTIFY_BASE + p.id.toInt(), com.optionslab.app.work.Notifier.IRA,
                 "Jarvis found a strategy: ${r.kind.label} on ${r.market.label} ${chartWord(r.minutes)}",
                 "${r.trades} trades, ${Math.round(r.winRate)}% won, ${"%+,.1f".format(java.util.Locale.ENGLISH, r.netPoints)} points over ${r.days} days; " +
-                    "both halves positive.$money Open Jarvis to approve or dismiss.", tab = "almanac")
+                    "both halves positive.$money Open Jarvis to approve or dismiss.", tab = "almanac", proposal = p.id)
         }
     }
 
@@ -845,7 +845,7 @@ object IraHub {
                     else -> com.optionslab.app.data.Protections.protectPaper(p.symbol, product, qty, ltp, stop, null, null)
                 }
             }, "$text Tap Confirm to $what.")
-            JarvisPopup.show(c, "Boss, ${p.symbol} has no stop", text)
+            JarvisPopup.show(c, "Boss, ${p.symbol} has no stop", text, action = id)
             JarvisVoice.askYesNo(id, "Boss, $text Yes or no?")
             IraActivity.add("Offered a stop on ${p.symbol} (it had none).")
             Automations.acted(Automations.Auto.RESCUE, "Offered a stop on ${p.symbol}.")
@@ -873,7 +873,7 @@ object IraHub {
             return
         }
         val id = pend(what, act, "$text Tap Confirm to go ahead.")
-        JarvisPopup.show(c, title, text)
+        JarvisPopup.show(c, title, text, action = id)
         JarvisVoice.askYesNo(id, Wake.spoken(text, 2) + " Yes or no?")
         IraActivity.add("Asked: $text")
     }
@@ -942,7 +942,7 @@ object IraHub {
                     "Paper: ${r.message}" + (com.optionslab.app.data.Origins.shortId(r.orderId)?.let { " (order $it)" } ?: "") }
             }
         }, "$text Tap Confirm to close $symbol.")
-        JarvisPopup.show(c, "Boss, $symbol is going nowhere", text)
+        JarvisPopup.show(c, "Boss, $symbol is going nowhere", text, action = id)
         JarvisVoice.askYesNo(id, "Boss, $text Yes or no?")
     }
 

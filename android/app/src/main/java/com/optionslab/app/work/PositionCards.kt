@@ -85,7 +85,11 @@ object PositionCards {
             else "Realised P&L ${rs(pnl)}"
         val text = text0 + by
         val b = Notifier.builder(context, if (qty >= 0) Notifier.BUY else Notifier.SELL, title, text, "trade",
-            side = if (headline?.startsWith("SELL") == true) "SELL" else if (headline?.startsWith("BUY") == true) "BUY" else if (qty > 0) "LONG" else "SHORT")
+            side = if (headline?.startsWith("SELL") == true) "SELL" else if (headline?.startsWith("BUY") == true) "BUY" else if (qty > 0) "LONG" else "SHORT",
+            // A tap opens the app on the position with its card over it: the whole text and a Close that goes through the
+            // app's own close popup (its review, and for Zerodha the PIN / fingerprint), as the button here does.
+            card = NoticeCard(idOf(venue, symbol), if (qty >= 0) Notifier.BUY else Notifier.SELL, title, text, System.currentTimeMillis(),
+                tab = "trade", close = if (open) "$venue|$symbol" else null))
             .setOnlyAlertOnce(!alert).setSilent(!alert).setOngoing(open).setAutoCancel(!open)
         if (open) b.addAction(closeAction(context, venue, symbol))
         try { NotificationManagerCompat.from(context).notify(idOf(venue, symbol), b.build()) } catch (_: SecurityException) {}

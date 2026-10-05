@@ -32,6 +32,14 @@ class MainActivity : FragmentActivity() {
             ?: java.util.UUID.randomUUID().toString()
                 .also { runCatching { com.optionslab.app.security.SecurePrefs.put("intent.nonce", it) } }
         private fun trusted(i: android.content.Intent?) = i?.getStringExtra(EXTRA_NONCE)?.let { it == nonce() } == true
+        /**
+         * A tapped notification's card ([com.optionslab.app.work.NoticeCard]): shown over the app as a banner once it is
+         * unlocked (the main screen, where the banner lives, is never composed over the lock). Only the app's own
+         * notifications (the nonce) set it.
+         */
+        val cardRequests = MutableStateFlow<com.optionslab.app.work.NoticeCard?>(null)
+        private fun cardOf(i: android.content.Intent): com.optionslab.app.work.NoticeCard? =
+            com.optionslab.app.work.NoticeCards.fromExtras { k -> i.getStringExtra(k) }?.let { com.optionslab.app.work.NoticeCards.resolve(it) }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -47,6 +55,8 @@ class MainActivity : FragmentActivity() {
         if (trusted(intent)) {
             tabRequests.value = intent?.getStringExtra(EXTRA_TAB)
             closeRequests.value = intent?.getStringExtra(EXTRA_CLOSE)
+            // Not again on a re-creation (the activity's saved state): the banner was already shown for this tap.
+            if (savedInstanceState == null) intent?.let { cardOf(it) }?.let { cardRequests.value = it }
         }
         // A fresh open (not a rotation, which brings saved state) holds the logo for a moment first.
         val splash = savedInstanceState == null && com.optionslab.app.ui.components.Splash.enabled
@@ -73,5 +83,6 @@ class MainActivity : FragmentActivity() {
         if (!trusted(intent)) return
         tabRequests.value = intent.getStringExtra(EXTRA_TAB)
         intent.getStringExtra(EXTRA_CLOSE)?.let { closeRequests.value = it }
+        cardOf(intent)?.let { cardRequests.value = it }
     }
 }

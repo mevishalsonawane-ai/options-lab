@@ -151,6 +151,23 @@ object Notifier {
         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
     )
 
+    /**
+     * A notification's tap: the app opens on [card]'s page with the card shown over it as a banner (its whole text, and
+     * for one that asks something its own buttons - see [NoticeCard]). The intent carries [shown] (what the
+     * notification itself shows) and the app's nonce; the whole [card] is kept in memory only ([NoticeCards.keep]).
+     * Its own request code per notification, so two notifications' cards never collapse into one.
+     */
+    fun openCard(context: Context, card: NoticeCard, shown: NoticeCard = card): PendingIntent {
+        NoticeCards.keep(card)
+        val i = Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+        // A Settings row is opened by the card itself (its page, the row highlighted); the plain page link would race it.
+        if (NoticeCards.route(card) is NoticeCards.Route.Page) card.tab?.let { i.putExtra(MainActivity.EXTRA_TAB, it) }
+        i.putExtra(MainActivity.EXTRA_NONCE, MainActivity.nonce())
+        NoticeCards.toExtras(shown).forEach { (k, v) -> i.putExtra(k, v) }
+        return PendingIntent.getActivity(context, NoticeCards.requestCode(card), i,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+    }
+
     private fun publicVersion(context: Context, channel: String) =
         NotificationCompat.Builder(context, channel)
             .setSmallIcon(R.drawable.ic_notification_art)
@@ -162,7 +179,8 @@ object Notifier {
      * [side] ("BUY" / "SELL" / "LONG" / "SHORT") makes it a trade notification: a green or red tile with the word, drawn
      * as an image (the same size on every phone, whatever its font setting), 40% of the width, the details beside it.
      */
-    fun builder(context: Context, channel: String, title: String, text: String, tab: String? = null, side: String? = null): NotificationCompat.Builder {
+    fun builder(context: Context, channel: String, title: String, text: String, tab: String? = null, side: String? = null,
+                /** What a tap opens over the app ([openCard]); without one the tap only opens [tab], as before. */ card: NoticeCard? = null): NotificationCompat.Builder {
         val hide = AppSettings.load().hideAmountsOnLockScreen
         return NotificationCompat.Builder(context, channel)
             .setSmallIcon(R.drawable.ic_notification_art)
@@ -170,7 +188,7 @@ object Notifier {
             .setContentTitle(title)
             .setContentText(text)
             .setStyle(NotificationCompat.BigTextStyle().bigText(text))
-            .setContentIntent(openApp(context, tab))
+            .setContentIntent(if (card != null) openCard(context, card) else openApp(context, tab))
             .setAutoCancel(true)
             .setVisibility(if (hide) NotificationCompat.VISIBILITY_PRIVATE else NotificationCompat.VISIBILITY_PUBLIC)
             .setPublicVersion(publicVersion(context, channel))
@@ -248,7 +266,10 @@ object Notifier {
         Build.VERSION.SDK_INT < 33 ||
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
 
-    fun post(context: Context, id: Int, channel: String, title: String, text: String, tab: String? = null) {
+    fun post(context: Context, id: Int, channel: String, title: String, text: String, tab: String? = null,
+             /** A Settings row this notice is about ([NoticeCards.SETTINGS]): the tap opens it, highlighted. */ setting: String? = null,
+             /** A strategy of Jarvis's waiting for Approve: the tap's banner shows the chat's own buttons for it. */ proposal: Long? = null,
+             /** An entry waiting on Home ("orb" / "strategy"): the tap's banner shows Home's own rows for it. */ approve: String? = null) {
         // IraGoldAlgo notifies buys and sells only (the owner's choice, 2026-10-02); anything else is never posted there.
         if (com.optionslab.app.BuildConfig.GOLD && channel != BUY && channel != SELL) return
         // Everything notified also drops in at the top of the app when it is open (green / red).
@@ -263,7 +284,8 @@ object Notifier {
         if (channel !in ALWAYS && !runCatching { AppSettings.load().otherAlerts }.getOrDefault(false)) return
         try {
             NotificationManagerCompat.from(context).notify(id, builder(context, channel, title, text, tab,
-                side = when (channel) { BUY -> "BUY"; SELL -> "SELL"; else -> null }).build())
+                side = when (channel) { BUY -> "BUY"; SELL -> "SELL"; else -> null },
+                card = NoticeCard(id, channel, title, text, System.currentTimeMillis(), tab = tab, setting = setting, proposal = proposal, approve = approve)).build())
         } catch (_: SecurityException) {
             // Permission revoked between the check and the post; nothing to do.
         }

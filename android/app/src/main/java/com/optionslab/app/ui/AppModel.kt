@@ -561,6 +561,19 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /**
+     * From a paper position's notification card (the banner opened by tapping it): that position's own popup, where
+     * closing is the usual slide to confirm - the same popup as tapping the position's row.
+     */
+    fun openPaperClose(symbol: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val p = runCatching { com.optionslab.app.data.Paper.snapshot() }.getOrNull()?.positions?.positions
+                ?.firstOrNull { it.symbol == symbol && it.quantity != 0 }
+            if (p == null) { say("No open paper position in $symbol."); return@launch }
+            rowAction.value = com.optionslab.app.ui.screens.RowTarget.PaperPosition(p)
+        }
+    }
+
     fun resetAfterWipe() {
         _settings.value = AppSettings.load()
         broker.value = brokerState()

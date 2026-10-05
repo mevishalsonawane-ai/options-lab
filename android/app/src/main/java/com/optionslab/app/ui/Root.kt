@@ -404,6 +404,18 @@ private fun Main(model: AppModel) {
         MainActivity.closeRequests.value = null
     }
 
+    // A tapped notification's card (MainActivity): a Settings notice opens its page with the row highlighted; every
+    // card is then shown over the app as a banner (below), until dismissed. The chat keeps its line as before.
+    val card by MainActivity.cardRequests.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    LaunchedEffect(card) {
+        val c = card ?: return@LaunchedEffect
+        val r = com.optionslab.app.work.NoticeCards.route(c)
+        if (r is com.optionslab.app.work.NoticeCards.Route.Setting) {
+            go(navNow().setting(r.page))
+            com.optionslab.app.ui.SettingFocus.ask(r.key)
+        }
+    }
+
     // The market watch runs by itself on market days; opening the app restarts it if Android stopped it.
     LaunchedEffect(Unit) { model.ensureWatch() }
     // Price the NIFTY chain in the background, so the Options tab opens with it ready.
@@ -468,6 +480,24 @@ private fun Main(model: AppModel) {
             val typing = WindowInsets.ime.getBottom(androidx.compose.ui.platform.LocalDensity.current) > 0
             if (!fullChart && !typing) TabBar(tab, tabs) { go(navNow().pick(it)) }
         }
+        // A tapped notification's banner: over the pages, under the popups it may open (a close review, the PIN, the login).
+        card?.let { c ->
+            androidx.compose.runtime.key(c) {
+                com.optionslab.app.ui.screens.NoticeBanner(c, onDismiss = { MainActivity.cardRequests.value = null }, onClose = { venue, sym ->
+                    // The app's own close paths: a Zerodha position's goes the way of its notification's "Close…" button
+                    // (the close popup, its review and PIN / fingerprint); a paper one opens its row's popup (slide to close).
+                    if (venue == "Live") MainActivity.closeRequests.value = sym
+                    else { tab = Tab.TRADE; tradePage = "account"; model.openPaperClose(sym) }
+                }, entries = { kind ->
+                    // Home's own rows, read fresh: their Approve / Skip (and in Live the PIN or fingerprint) as on Home.
+                    LaunchedEffect(kind) { model.refreshStrategies() }
+                    if (kind == "orb") com.optionslab.app.ui.screens.OrbRows(model)
+                    else com.optionslab.app.ui.screens.StrategyArmCard(model, onManage = {
+                        MainActivity.cardRequests.value = null; go(navNow().home("strategy"))
+                    })
+                })
+            }
+        }
         // Order reviews open over any page, wherever the order was asked for.
         // First use only: a short guide the first time the app opens after Zerodha is linked, never again.
         var tour by remember { mutableStateOf(!SecurePrefs.getBoolean(com.optionslab.app.ui.screens.GETTING_STARTED, false)) }
@@ -525,6 +555,9 @@ internal data class NavState(
         "broker" -> copy(tab = Tab.CABINET, cabinetPage = "broker")
         else -> this
     }
+
+    /** A Settings row asked for by a tapped notification: its Settings (More) page ([com.optionslab.app.work.NoticeCards.SETTINGS]). */
+    fun setting(page: String): NavState = copy(tab = Tab.CABINET, cabinetPage = page)
 
     /** A shortcut on Home; anything else it names is a More page. */
     fun home(dest: String): NavState = when (dest) {

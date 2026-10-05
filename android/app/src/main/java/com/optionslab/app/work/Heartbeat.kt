@@ -87,6 +87,7 @@ object Heartbeat {
         val since = if (lastAt.toLocalDate() == Market.today()) lastAt.toLocalTime().withSecond(0).withNano(0).toString() else null
         Notifier.post(context, NOTE_ID, Notifier.APPROVAL, "Order watch stopped",
             (if (since != null) "No check since $since. " else "The watch has not run today. ") +
-                "Stops, targets and strategy exits are not being watched. Tap to open IraAlgo and restart it.", "almanac")
+                "Stops, targets and strategy exits are not being watched. Tap to open IraAlgo and restart it.", "almanac",
+            setting = "schedule.permissions")
     }
 }

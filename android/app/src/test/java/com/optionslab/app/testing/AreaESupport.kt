@@ -46,6 +46,8 @@ object AreaE {
         com.optionslab.app.data.Paper.wipe()
         MainActivity.tabRequests.value = null
         MainActivity.closeRequests.value = null
+        MainActivity.cardRequests.value = null
+        com.optionslab.app.ui.SettingFocus.reset()
         SessionLock.lock()
     }
 

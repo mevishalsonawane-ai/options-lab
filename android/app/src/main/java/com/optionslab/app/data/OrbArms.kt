@@ -493,7 +493,7 @@ object OrbArms {
                 "BANKNIFTY closed ${if (direction > 0) "above" else "below"} the opening range on the ${hhmm(last.start)} bar. " +
                     (if (live) "LIVE on Zerodha, 1 lot: approve it on Home in the app" +
                         (if (b.auto[arm.source] != false) " (arm it again while in Live to make it automatic)" else "") else "Paper account, 1 lot") +
-                    ". Approve by ${hhmm(last.start.plusMinutes(10))} or it lapses.", "almanac")
+                    ". Approve by ${hhmm(last.start.plusMinutes(10))} or it lapses.", "almanac", approve = "orb")
             watching()
             return "awaiting_approval"
         }
@@ -963,7 +963,7 @@ object OrbArms {
             Notifier.post(app, 6960 + ALL_ARMS.indexOf(arm), Notifier.APPROVAL, "${LiquidityRules.ARM.label}: approve BUY $und $strike $right",
                 "The $und ${tf}-minute ${hhmm(last.start)} bar took a liquidity pool ${if (s.side > 0) "above" else "below"}. " +
                     (if (live) "LIVE on Zerodha, 1 lot: approve it on Home in the app" else "Paper account, 1 lot") +
-                    ". Approve by ${hhmm(expires)} or it lapses.", "almanac")
+                    ". Approve by ${hhmm(expires)} or it lapses.", "almanac", approve = "orb")
             return "awaiting_approval"
         }
         return enterLiquidity(b, arm, s, last.start, strike, live)

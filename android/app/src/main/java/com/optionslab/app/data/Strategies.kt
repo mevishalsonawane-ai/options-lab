@@ -603,7 +603,7 @@ object Strategies {
                             // Manual approval: the entry waits for the owner.
                             b.pending[def.id] = "${d.mode.wire}|${now.toLocalDate()}"
                             Notifier.post(app, 6600 + (def.id.toInt() and 0xff), Notifier.APPROVAL, "${def.name}: approve the start",
-                                "It is ${def.name}'s start time (${if (d.mode == RunMode.LIVE) "live" else "paper"}). Open IraAlgo to approve or skip; nothing is sent until you do.", "almanac")
+                                "It is ${def.name}'s start time (${if (d.mode == RunMode.LIVE) "live" else "paper"}). Open IraAlgo to approve or skip; nothing is sent until you do.", "almanac", approve = "strategy")
                             notes += "${def.name}: waiting for approval"
                         }
                         is Scheduler.StartDecision.Refuse -> record(b, def.name, Event(d.eventKind, d.message, "warn"), false)

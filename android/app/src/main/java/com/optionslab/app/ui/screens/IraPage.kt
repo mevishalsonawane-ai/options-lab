@@ -281,7 +281,7 @@ private fun Bubble(m: IraHub.Msg, orders: IraOrderPaths?) {
 
 /** Approve / Dismiss under a strategy Jarvis backtested, or what was decided. */
 @Composable
-private fun ProposalActions(id: Long) {
+internal fun ProposalActions(id: Long) {
     val st by IraHub.state.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     val p = st.proposals.firstOrNull { it.id == id } ?: return
     val scope = rememberCoroutineScope()
@@ -645,7 +645,7 @@ private fun VoiceStyle() {
 
 /** Confirm / Cancel under something Jarvis will stop or close when the owner taps (one tap, no PIN: the owner's rule). */
 @Composable
-private fun ActionConfirm(id: Long) {
+internal fun ActionConfirm(id: Long) {
     val st by IraHub.state.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     val scope = rememberCoroutineScope()
     if (id !in st.pending) return
@@ -873,10 +873,10 @@ private fun MicButton(label: String) {
 fun JarvisSettingsPage() {
     com.optionslab.app.ui.Page {
         item { PageTitle("Jarvis settings", "Voice and the on-device AI model. Nothing you say or type leaves the phone.") }
-        item { VoiceSwitch() }
+        item { com.optionslab.app.ui.SettingSpot("jarvis.voice") { VoiceSwitch() } }
         item { SoloCard() }
-        item { AutomationsCard() }
-        item { ModelCard() }
+        item { com.optionslab.app.ui.SettingSpot("jarvis.automations") { AutomationsCard() } }
+        item { com.optionslab.app.ui.SettingSpot("jarvis.model") { ModelCard() } }
     }
 }
 

@@ -306,7 +306,9 @@ object DailyReports {
     fun post(context: Context, k: Kind, title: String, lines: List<String>) =
         Notifier.post(context, k.id, Notifier.APPROVAL, title, lines.joinToString("\n"),
             // Not logged in: the notification opens the Zerodha page, one login and done.
-            if (k == Kind.EVENING) "pnl" else if (!Broker.loggedIn && Broker.configured) "broker" else "almanac")
+            if (k == Kind.EVENING) "pnl" else if (!Broker.loggedIn && Broker.configured) "broker" else "almanac",
+            // A morning that needs something set (the login, the microphone, the model, a backup): the tap opens that row.
+            setting = if (k == Kind.EVENING) null else NoticeCards.morningSetting(lines, !Broker.loggedIn && Broker.configured))
 }
 
 class ReportWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx, params) {

@@ -157,7 +157,7 @@ object Jobs {
             // Not permitted from here (Android 12+ background start). Hand
             // the one-shot jobs to WorkManager; the watch cannot run that way.
             if (k == Kind.LIVE) {
-                Notifier.post(context, 2010, Notifier.APPROVAL, "Order watch is off", "Tap to start watching your orders and strategies.", "almanac")
+                Notifier.post(context, 2010, Notifier.APPROVAL, "Order watch is off", "Tap to start watching your orders and strategies.", "almanac", setting = "schedule.permissions")
             } else if (k == Kind.HARVEST) {
                 enqueueHarvest(context, session, manual)
             } else {
@@ -639,7 +639,7 @@ class WatchService : Service() {
         } catch (_: Exception) {
             // Not allowed now (e.g. the dataSync budget is spent): say so and stop cleanly - a service
             // started in the foreground that never calls startForeground is killed by the system.
-            Notifier.post(this, 2011, Notifier.APPROVAL, "IraAlgo could not run in the background", "Open the app to continue: $title", "almanac")
+            Notifier.post(this, 2011, Notifier.APPROVAL, "IraAlgo could not run in the background", "Open the app to continue: $title", "almanac", setting = "schedule.permissions")
             running.values.forEach { it.cancel() }
             running.clear()
             watching = false
@@ -651,7 +651,8 @@ class WatchService : Service() {
     /** Android 15: a time-limited foreground service must stop when told, or the app is killed. */
     override fun onTimeout(startId: Int, fgsType: Int) {
         Notifier.post(this, 2012, Notifier.APPROVAL, "Background watch stopped by Android",
-            "The system's time limit for background work was reached. Open IraAlgo to keep strategies and alerts checked.", "almanac")
+            "The system's time limit for background work was reached. Open IraAlgo to keep strategies and alerts checked.", "almanac",
+            setting = "schedule.permissions")
         stopEverything()
     }
 
@@ -706,7 +707,8 @@ class WatchService : Service() {
         if (Holidays.stale(Market.today())) runCatching { Holidays.refresh() }
         val b = com.optionslab.app.data.Broker
         if (b.configured && !b.loggedIn) Notifier.post(this, 2005, Notifier.SCHEDULE, "Log in to Zerodha for today",
-            "Yesterday's session ended at 06:00. Open ${com.optionslab.app.ui.Tab.CABINET.label} → Zerodha and log in before the 11:00 entry.", "broker")
+            "Yesterday's session ended at 06:00. Open ${com.optionslab.app.ui.Tab.CABINET.label} → Zerodha and log in before the 11:00 entry.", "broker",
+            setting = "broker.login")
         // Market hours, and a quarter-hour past the close while a strategy run is still open,
         // so its exit-time square-off and any retried exits are seen through.
         while (Market.isTradingDay() && (Market.minuteNow() <= Market.CLOSE ||

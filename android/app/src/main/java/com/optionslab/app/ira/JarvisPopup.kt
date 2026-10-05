@@ -16,12 +16,23 @@ object JarvisPopup {
     const val SHOW_MS = 3_500L
     private var next = 0
 
-    fun show(context: Context, title: String, text: String, tab: String = "almanac") {
+    /**
+     * [action]: a request of Jarvis's waiting for Boss's Confirm ([IraHub] pending id) that this pop-up asks about;
+     * [proposal]: a strategy waiting for Approve; [setting]: a Settings row it is about. Tapped, the app opens with the
+     * pop-up's whole text over it and - while still waiting - the chat's own buttons for it
+     * ([com.optionslab.app.work.NoticeCard]).
+     */
+    fun show(context: Context, title: String, text: String, tab: String = "almanac",
+             action: Long? = null, proposal: Long? = null, setting: String? = null) {
         if (!com.optionslab.app.BuildConfig.JARVIS) return
         // A locked phone's pop-up may be seen by anyone near it: no amount, P&L or symbol - only that it is in the chat.
         val locked = runCatching { IraHub.locked() }.getOrDefault(true)
         val shownTitle = com.optionslab.ira.Overheard.title(title, locked)
         val shown = com.optionslab.ira.Overheard.said(text, locked)
+        val id = 7400 + synchronized(this) { next = (next + 1) % 50; next }
+        // The whole card is kept in memory for the unlocked app; the intent carries only what the pop-up shows.
+        val card = com.optionslab.app.work.NoticeCard(id, "jarvis", title, text, System.currentTimeMillis(), tab = tab,
+            setting = setting, action = action, proposal = proposal)
         val n = NotificationCompat.Builder(context, Notifier.POPUP)
             .setSmallIcon(R.drawable.ic_notification_art)
             .setContentTitle(shownTitle)
@@ -32,9 +43,8 @@ object JarvisPopup {
             .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
             .setTimeoutAfter(SHOW_MS)
             .setAutoCancel(true)
-            .setContentIntent(Notifier.openApp(context, tab))
+            .setContentIntent(Notifier.openCard(context, card, card.copy(title = shownTitle, text = shown)))
             .build()
-        val id = 7400 + synchronized(this) { next = (next + 1) % 50; next }
         runCatching { NotificationManagerCompat.from(context).notify(id, n) }
     }
 }

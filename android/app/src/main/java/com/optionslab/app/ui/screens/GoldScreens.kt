@@ -98,6 +98,14 @@ fun GoldMain(model: AppModel) {
             }
         }
     }
+    // A tapped notification (its own buy / sell, or Jarvis's): the same banner as IraAlgo's, over the unlocked app.
+    // Nothing here closes a position or opens IraAlgo's settings: the banner only reads.
+    val card by com.optionslab.app.MainActivity.cardRequests.collectAsState(Dispatchers.Main.immediate)
+    card?.let { c ->
+        androidx.compose.runtime.key(c) {
+            NoticeBanner(c.copy(close = null, setting = null), onDismiss = { com.optionslab.app.MainActivity.cardRequests.value = null }, onClose = { _, _ -> })
+        }
+    }
     AlertBanner()
     }
 }

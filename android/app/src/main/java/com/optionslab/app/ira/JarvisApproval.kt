@@ -44,7 +44,10 @@ object JarvisApproval {
             .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
             .setTimeoutAfter(IraHub.NEWS_ANSWER_MS)
             .setOngoing(true)
-            .setContentIntent(Notifier.openApp(context, "almanac"))
+            // Tapped (not a button): the app opens with the trade's whole text over it and the chat's own Approve / Reject
+            // (the fingerprint for a live one), or - once answered or lapsed - only that it is no longer waiting.
+            .setContentIntent(Notifier.openCard(context, com.optionslab.app.work.NoticeCard(notificationId(id), "approval", title, text,
+                System.currentTimeMillis(), tab = "almanac", action = id)))
             .addAction(button(ACTION_APPROVE, "Approve"))
             .addAction(button(ACTION_REJECT, "Reject"))
             .build()

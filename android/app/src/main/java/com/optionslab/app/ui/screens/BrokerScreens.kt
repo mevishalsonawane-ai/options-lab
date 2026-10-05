@@ -692,9 +692,9 @@ fun BrokerPage(
     LaunchedEffect(Unit) { model.refreshBroker(); if (Broker.loggedIn) model.loadAccount() }
     Page {
         item { PageTitle("Zerodha", "Your broker, as the PC trading app uses it: Kite Connect") }
-        item { StaticIpCard(model, staticIpStatus) }
+        item { com.optionslab.app.ui.SettingSpot("broker.staticip") { StaticIpCard(model, staticIpStatus) } }
         if (b.configured) item { SelfTestCard() }
-        item {
+        item { com.optionslab.app.ui.SettingSpot("broker.login") {
             LedgerCard(title = "Connection") {
                 LedgerLine("API key", b.maskedKey)
                 LedgerLine("Session", if (b.loggedIn) "${b.user ?: "logged in"} · until ${b.expires?.format(DateTimeFormatter.ofPattern("d MMM HH:mm"))}" else "not logged in today",
@@ -711,7 +711,7 @@ fun BrokerPage(
                 if (editing) CredentialsForm(model) { editing = false }
                 if (b.configured) BrassButton("Erase Zerodha keys from this phone", Modifier.fillMaxWidth().padding(top = 8.dp), tone = p.oxblood) { forgetting = true }
             }
-        }
+        } }
         item {
             LedgerCard(title = "Mode") {
                 ParamTokens("Trading mode", listOf("Live · Zerodha" to s.live, "Paper · simulated" to !s.live)) { i ->
