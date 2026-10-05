@@ -28,9 +28,12 @@ import kotlin.math.abs
  *  7. (reasoning, round 25) today's move in the underlying beside its own intraday comeback record and its average
  *     day's range, said for each option on it - the way it needs or against it, and how often such a move held or came back;
  *  8. (reasoning, round 30) for a bought option in a live session, the index move that just covers the rest of today's
- *     decay at its delta now, and how often and how soon the index went that far from this time of day on the phone.
+ *     decay at its delta now, and how often and how soon the index went that far from this time of day on the phone;
+ *  9. (reasoning, round 31) for a bought option, the round trip's charges on Zerodha's F&O schedule ([PnlCharges.perFill]):
+ *     the price it has to be sold at just to cover them, the premium points and (at its delta now) the index points that
+ *     is, where it is against that now, and the at-expiry breakeven with them added.
  *
- * At-expiry arithmetic only, charges left out, said so. Facts, never advice: it ends "your call, Boss". Nothing here
+ * At-expiry arithmetic, charges left out of it and said so, apart from the charges line (an estimate). Facts, never advice: it ends "your call, Boss". Nothing here
  * places, changes or closes anything; it reads the account, so the app answers it on an unlocked phone only, like every
  * account section ([Section.NEED]). Pure.
  */
@@ -200,6 +203,7 @@ object NeedsTrue {
         val spot = p.spot
         if (spot == null || spot <= 0) {
             out += "$name's price is not known just now, so not how far that is."
+            chargesCover(p, now)?.let { out += it }
             return out
         }
         val gap = be - spot                       // + : the breakeven is above spot
@@ -246,7 +250,61 @@ object NeedsTrue {
         // Reasoning, round 30: for a bought option in a live session, the move that covers the rest of today's decay, and how
         // often and how soon the index went that far from this time of day on the phone.
         thetaCover(p, bars, now, isTradingDay)?.let { out += it }
+        // Reasoning, round 31: the premium (and index) move that just covers the round trip's charges.
+        chargesCover(p, now)?.let { out += it }
         return out
+    }
+
+    /** The charges of buying [qty] units of option [symbol] at [buy] and selling them at [sell], one order each way. */
+    fun roundTrip(symbol: String, exchange: String, qty: Int, buy: Double, sell: Double): Double =
+        PnlCharges.perFill(listOf(PnlCharges.Fill("BUY", buy, qty, "buy", symbol, exchange), PnlCharges.Fill("SELL", sell, qty, "sell", symbol, exchange)))
+            .sumOf { it.values.sum() }
+
+    /**
+     * The price [qty] units bought at [avg] have to be sold at for the sale to just cover the round trip's charges
+     * ([roundTrip]: the sale's own charges grow with its price, so it is worked to a fixed point), and those charges; null for
+     * no quantity or price. Pure.
+     */
+    fun exitToCover(symbol: String, exchange: String, qty: Int, avg: Double): Pair<Double, Double>? {
+        if (qty <= 0 || !(avg > 0)) return null
+        var sell = avg
+        var c = 0.0
+        repeat(12) { c = roundTrip(symbol, exchange, qty, avg, sell); sell = avg + c / qty }
+        return (sell to c).takeIf { sell.isFinite() && c.isFinite() }
+    }
+
+    /**
+     * Reasoning, round 31 (2026-10-05): for a bought option [p], the round trip's charges (Zerodha's F&O schedule, the one the
+     * paper account pays too; one buy order and one sell order of the whole quantity - an estimate) and the price it has to be
+     * sold at just to cover them ([exitToCover]): the premium points above his average, at the option's delta now
+     * ([deltaNow], held still) the index points that is, where its price is against it now, and the at-expiry breakeven with
+     * the charges added (the exercise's own charges aside). Arithmetic on his own record, never a forecast or advice; nothing
+     * acts. Null when it does not apply (sold, not an option, no quantity or price). Pure.
+     */
+    fun chargesCover(p: PositionHealth.Pos, now: LocalDateTime): String? {
+        if (!p.option || p.qty <= 0) return null
+        val u = p.underlying?.uppercase()
+        val exchange = if (u == "SENSEX" || u == "BANKEX") "BFO" else "NFO"
+        val (sell, c) = exitToCover(p.symbol, exchange, p.qty, p.avg) ?: return null
+        if (!(c >= 0.005)) return null
+        val points = sell - p.avg
+        val name = label(p.underlying)
+        val call = p.right == "CE"
+        val index = deltaNow(p, now)?.takeIf { abs(it) >= MIN_DELTA }?.let { d ->
+            "; at its delta of ${"%.2f".format(Locale.ENGLISH, abs(d))} now, that is about ${p2(points / abs(d))} $name points ${if (call) "up" else "down"}"
+        } ?: ""
+        val gap = p.ltp - sell
+        val against = if (p.ltp > 0) " It is at ${p2(p.ltp)} now, " + when {
+            abs(gap) < 0.005 -> "right on that."
+            gap > 0 -> "${p2(gap)} above that."
+            else -> "${p2(-gap)} below that."
+        } else ""
+        val k = p.strike!!
+        val be = if (call) k + p.avg else k - p.avg
+        val beC = if (call) k + sell else k - sell
+        return "Charges: a round trip of ${p.qty} at your ${p2(p.avg)} comes to about ${rs0(c)} on Zerodha's F&O schedule (one order each way, " +
+            "an estimate), so it has to sell at about ${p2(sell)} just to cover them - ${p2(points)} above your average$index.$against " +
+            "Held to expiry, the breakeven with them is about ${p2(beC)} rather than ${p2(be)} (the exercise's own charges aside)."
     }
 
     /** The session's open; its length in minutes (09:15 to 15:30). */
@@ -467,7 +525,7 @@ object NeedsTrue {
         // Reasoning, round 25: today's move in each underlying beside its own comeback record and its usual day's range.
         chosen.filter { it.option && it.underlying != null }.groupBy { it.underlying!!.uppercase() }.toSortedMap()
             .forEach { (u, held) -> out += todayBeside(u, bars[u].orEmpty(), now, held, isTradingDay) }
-        if (chosen.any { it.option }) out += "That is at expiry, from your average price, charges left out; before expiry an option's price also moves " +
+        if (chosen.any { it.option }) out += "That is at expiry, from your average price, charges left out${if (chosen.any { it.option && it.qty > 0 }) " but for the charges line" else ""}; before expiry an option's price also moves " +
             "with time and volatility, so it can be in profit or loss sooner. The stretches are past ones on the phone, not odds."
         out += "Facts and arithmetic, not a forecast or advice - your call, Boss."
         return out

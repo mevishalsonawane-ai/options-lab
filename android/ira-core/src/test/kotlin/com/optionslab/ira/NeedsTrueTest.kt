@@ -99,7 +99,9 @@ class NeedsTrueTest {
             "(one day's theta spread over the session, 2 h 15 min left). At its delta of "), l[6])
         assertTrue(l[6].contains("On the record from 13:15, it went that far down before the close on 0 of the last 20 whole sessions on the phone (0%), " +
             "and was still that far down at the close on 0 (0%)."), l[6])
-        assertTrue(l[7].startsWith("That is at expiry, from your average price, charges left out"))
+        // Round 31: the round trip's charges.
+        assertTrue(l[7].startsWith("Charges: a round trip of 75 at your 80.00 comes to about Rs "), l[7])
+        assertTrue(l[8].startsWith("That is at expiry, from your average price, charges left out"))
         assertEquals("Facts and arithmetic, not a forecast or advice - your call, Boss.", l.last())
         assertFalse(l.any { Regex("(?i)\\b(should|recommend|suggest|will (rise|fall)|likely)\\b").containsMatchIn(it) })
     }
