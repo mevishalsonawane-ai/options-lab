@@ -1966,7 +1966,7 @@ object IraHub {
         // "Open YouTube", "play music", "call mom": something outside IraAlgo. Jarvis works only inside the app, so he says so
         // politely (it landed in "Words I could not place", 5 Oct). Words only: nothing is opened, played, called or sent.
         if (!bundled && parsed.order == null && parsed.command == null && runCatching { com.optionslab.ira.OutsideApp.asked(q) }.getOrDefault(false)) {
-            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, com.optionslab.ira.OutsideApp.SAY)).takeLast(MAX_MESSAGES)) }
+            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, runCatching { com.optionslab.ira.OutsideApp.say(q) }.getOrDefault(com.optionslab.ira.OutsideApp.SAY))).takeLast(MAX_MESSAGES)) }
             return true
         }
         // "Which answers do you keep short?" / "say your answers in full again": the answer kinds said shorter aloud, Boss having
@@ -2547,8 +2547,8 @@ object IraHub {
         // "When Nifty takes out yesterday's high in the first hour, how often does it close above it?", "how often does Nifty break
         // the previous day's low?", "PDH PDL record": how the index's past take-outs of the prior day's high and low closed, on
         // the phone's own 1-minute sessions ([com.optionslab.ira.PriorDay]), beside today against yesterday's high and low. A
-        // record of past days, never a forecast or advice; market data only (fine on a locked phone); nothing acts. (Where
-        // yesterday's high is and how far the price is from it stay the level readers'.)
+        // record of past days, never a forecast or advice; market data only (fine on a locked phone); nothing acts. ("Did Nifty break
+        // yesterday's high?" and "how far is Nifty from it?" are answered here directly, round 14; where it is stays the level readers'.)
         val priorAsk = if (!bundled && parsed.order == null && parsed.command == null && !com.optionslab.app.BuildConfig.GOLD)
             runCatching { com.optionslab.ira.PriorDay.asked(q) }.getOrNull() else null
         if (priorAsk != null) {

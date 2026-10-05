@@ -22,6 +22,11 @@ import kotlin.test.assertTrue
  * index's last session, "the average price of my put" his position, "meri put explain karo phir isko band karo" the plan),
  * and the newest families join the hunt: OrderWhy, BotTrades, WrongThing, OutsideApp, TrendReads, ArmHabits, PriorDay,
  * LastHour, InsideDays and Boss's own NUMBERS - none an order or a command; said with an action, the multi-step plan.
+ *
+ * Round 14 (5 Oct): round 13's open items ("was yesterday an NR7 day" is that one session's shape, InsideDays; "did Nifty
+ * break yesterday's high" / "how far is Nifty from yesterday's high" today's place against it, PriorDay; "search google
+ * for nifty news" the polite no with what the app has instead, OutsideApp), and the newest families join the hunt:
+ * SinceMorning, SwitchOff, StreamHealth, RelayHealth, FirstMove, VixNext, MorningSense, HonestStars and ArmDay.
  */
 class CollisionTest {
     private val audit = CoverageTest()
@@ -37,14 +42,21 @@ class CollisionTest {
         "FigureFirst" to { q -> FigureFirst.asked(q) != null },
         "WrongThing" to { q -> WrongThing.asked(q) != null || WrongThing.objected(q) },
         "ArmHabits" to { q -> ArmHabits.asked(q) },
+        "MorningSense" to { q -> MorningSense.asked(q) != null },
+        "HonestStars" to { q -> HonestStars.asked(q) != null },
         "Headroom" to { q -> Headroom.asked(q) != null },
+        "ArmDay" to { q -> ArmDay.asked(q) != null },
         "BotTrades" to { q -> BotTrades.asked(q) != null },
+        "SwitchOff" to { q -> SwitchOff.asked(q) != null },
         "SaidAbout" to { q -> SaidAbout.asked(q) != null },
         "WeekAhead" to { q -> WeekAhead.asked(q) != null },
         "ZerodhaSession" to { q -> ZerodhaSession.asked(q) != null },
         "OrderWhy" to { q -> OrderWhy.asked(q) != null },
+        "RelayHealth" to { q -> RelayHealth.asked(q) != null },
+        "StreamHealth" to { q -> StreamHealth.asked(q) },
         "Tour" to { q -> Tour.asked(q) },
         "ExpiryPin" to { q -> ExpiryPin.asked(q) != null },
+        "SinceMorning" to { q -> SinceMorning.asked(q) },
         "ChainDrift" to { q -> ChainDrift.asked(q) != null },
         "ChainIntel" to { q -> ChainIntel.asked(q) != null },
         "DayClock" to { q -> DayClock.asked(q) != null },
@@ -53,6 +65,8 @@ class CollisionTest {
         "PriorDay" to { q -> PriorDay.asked(q) != null },
         "LastHour" to { q -> LastHour.asked(q) != null },
         "InsideDays" to { q -> InsideDays.asked(q) != null },
+        "FirstMove" to { q -> FirstMove.asked(q) != null },
+        "VixNext" to { q -> VixNext.asked(q) != null },
         "Weekdays" to { q -> Weekdays.asked(q) != null },
         "DayCompare" to { q -> DayCompare.asked(q) != null },
         "Structure" to { q -> Structure.asked(q) != null },
@@ -441,7 +455,7 @@ class CollisionTest {
         "meri put explain karo" to "Account:EXPLAIN_POS",
         // ...and their neighbours: his own yesterday, the index's prior-day figures.
         "how was yesterday" to "Account:HISTORY", "how was my day yesterday" to "Account:HISTORY", "what was yesterday's high" to "Lookback",
-        "did nifty break yesterday's high" to "Lookback", "how far is nifty from yesterday's high" to "Lookback",
+        "did nifty break yesterday's high" to "PriorDay", "how far is nifty from yesterday's high" to "PriorDay",
         // ---- Round 13. OrderWhy: what became of his order ----
         "why was my banknifty order rejected" to "OrderWhy", "why did my stop loss order get cancelled" to "OrderWhy",
         "why was my sell order cancelled" to "OrderWhy", "why did my paper order get rejected" to "OrderWhy",
@@ -537,7 +551,7 @@ class CollisionTest {
         "how often does a narrow day lead to a breakout" to "InsideDays", "what usually happens after an nr7 day" to "InsideDays",
         "do tight range days usually lead to a big move" to "InsideDays",
         // Its neighbours: one day's own shape, the candle pattern.
-        "is today an inside day" to "Market", "what is an inside bar" to "PatternExpert",
+        "is today an inside day" to "InsideDays", "what is an inside bar" to "PatternExpert",
         // ---- Account:NUMBERS, more of it ----
         "what's my average win and average loss" to "Account:NUMBERS", "what's my risk reward on my trades" to "Account:NUMBERS",
         "my profit factor" to "Account:NUMBERS", "my expectancy" to "Account:NUMBERS", "how much do i make per trade" to "Account:NUMBERS",
@@ -548,6 +562,68 @@ class CollisionTest {
         "do i book my winners too early" to "Account:NUMBERS", "my win loss size" to "Account:NUMBERS", "what's my expectancy this month" to "Account:NUMBERS",
         "how much do i make on average per trade" to "Account:NUMBERS", "mera average profit kya hai" to "Account:NUMBERS",
         "how long do i hold my losers" to "Account:NUMBERS",
+        // ==== Round 14: round 13's open items, routed ====
+        // One named day's shape: InsideDays answers it directly (never Boss's own history).
+        "was yesterday an nr7 day" to "InsideDays", "was yesterday an inside day" to "InsideDays", "was friday an nr7 day" to "InsideDays",
+        "kal inside day tha kya" to "InsideDays", "kya kal nr7 tha" to "InsideDays", "was the last session an inside day" to "InsideDays",
+        "was yesterday an inside day for banknifty" to "InsideDays", "is banknifty an inside day today" to "InsideDays",
+        // Today against the prior day's high or low: PriorDay answers it directly (never Lookback's list of figures).
+        "has banknifty taken out yesterday's low" to "PriorDay", "is nifty above yesterday's high" to "PriorDay",
+        "kya nifty ne kal ka high toda" to "PriorDay", "nifty kal ke high se kitna door hai" to "PriorDay",
+        "how far is banknifty from the previous day low" to "PriorDay", "did nifty cross the prior day high today" to "PriorDay",
+        "is nifty below yesterday's low" to "PriorDay", "has nifty broken pdh" to "PriorDay", "how far is nifty from pdl" to "PriorDay",
+        // A web search: outside the app, said with what the app has instead.
+        "search google for nifty news" to "OutsideApp", "search google for banknifty" to "OutsideApp", "google nifty news" to "OutsideApp",
+        "look up nifty on google" to "OutsideApp", "search the internet for nifty news" to "OutsideApp", "google pe nifty news search karo" to "OutsideApp",
+        "search youtube for options trading" to "OutsideApp",
+        // ...and their neighbours: the figures, a forecast, the record, the app's own search, a level, the meaning.
+        "where is yesterday's low" to "Lookback", "how often does nifty break yesterday's high" to "PriorDay",
+        "search my orders" to "Account:ORDERS", "was yesterday a good day" to "Account:HISTORY",
+        "did i break even yesterday" to "Account:HISTORY",
+        // ---- Round 14. SinceMorning: what changed since this morning ----
+        "what changed since this morning" to "SinceMorning", "what's different since the open" to "SinceMorning", "subah se kya badla" to "SinceMorning",
+        "subah se kya change hua" to "SinceMorning", "what has changed since morning on banknifty" to "SinceMorning",
+        "how is now different from this morning" to "SinceMorning", "kya badla subah se" to "SinceMorning", "anything new since 9:45" to "SinceMorning",
+        "now versus this morning" to "SinceMorning", "subah aur ab mein kya fark hai" to "SinceMorning", "what's new since the open" to "SinceMorning",
+        // ---- SwitchOff: which arms lost in both records ----
+        "what should i switch off" to "SwitchOff", "which bot should i switch off" to "SwitchOff", "kaun sa bot band karun" to "SwitchOff",
+        "kaunsa bot band karna chahiye" to "SwitchOff", "kaun si strategy band karun" to "SwitchOff", "which arm should i disarm" to "SwitchOff",
+        "should i turn off orb fresh" to "SwitchOff", "which arms lost both in the backtest and on paper" to "SwitchOff",
+        "is any bot worth turning off" to "SwitchOff", "which strategies are losing in both test and paper" to "SwitchOff",
+        // ---- StreamHealth: the live price stream's drops ----
+        "stream kyun toot raha hai" to "StreamHealth", "why does the live feed keep dropping" to "StreamHealth",
+        "live data kyun toot raha hai" to "StreamHealth", "why is the price stream disconnecting" to "StreamHealth",
+        "is the live price stream ok" to "StreamHealth", "why do prices keep freezing" to "StreamHealth",
+        "stream baar baar kyun band hota hai" to "StreamHealth", "why do live prices keep freezing" to "StreamHealth",
+        // ---- RelayHealth: the relay and the static IP ----
+        "why is the relay timing out" to "RelayHealth", "is the relay connected" to "RelayHealth", "relay chal raha hai kya" to "RelayHealth",
+        "static ip sahi hai kya" to "RelayHealth", "is my static ip registered" to "RelayHealth", "why is zerodha failing through the relay" to "RelayHealth",
+        "relay kyun nahi chal raha" to "RelayHealth", "can i trade live right now" to "RelayHealth",
+        // ---- FirstMove: the first move against the day's close ----
+        "does the first half hour decide the day" to "FirstMove", "how often does the first 30 minutes direction match the close" to "FirstMove",
+        "first half hour ki direction se din kaisa jaata hai" to "FirstMove", "does the opening move usually hold till the close" to "FirstMove",
+        "if nifty is down in the first 30 minutes does it close down" to "FirstMove", "first move stats for banknifty" to "FirstMove",
+        "pehle aadhe ghante ki direction se din ka close kitni baar milta hai" to "FirstMove",
+        // ---- VixNext: India VIX's change against the next day ----
+        "when vix jumps how big is the next day" to "VixNext", "vix badhne ke baad agle din kitna move hota hai" to "VixNext",
+        "after vix falls is the next day quieter" to "VixNext", "how much does banknifty move the day after a vix spike" to "VixNext",
+        "vix next day record" to "VixNext", "jab vix 5% uchalta hai to agle din nifty kitna chalta hai" to "VixNext",
+        // ---- MorningSense: the morning check items said briefly ----
+        "which morning items do you skip" to "MorningSense", "which morning check items do you leave out" to "MorningSense",
+        "morning check ka kya skip karte ho" to "MorningSense", "read me the whole morning check" to "MorningSense",
+        "subah ka poora check sunao" to "MorningSense", "why did you skip items in the morning check" to "MorningSense",
+        "morning check mein kya chhodte ho" to "MorningSense", "say the whole morning check again" to "MorningSense",
+        // ---- HonestStars: his confidence scores against their record ----
+        "how honest are your stars" to "HonestStars", "do your 5 star ideas actually work" to "HonestStars",
+        "tumhare confidence stars kitne sahi hain" to "HonestStars", "are your confidence ratings any good" to "HonestStars",
+        "say confidence without the record" to "HonestStars", "how reliable is your confidence" to "HonestStars",
+        "tumhara confidence kitna sahi hai" to "HonestStars", "confidence seedha bolo" to "HonestStars",
+        // ---- ArmDay: a strategy's losing day beside the index ----
+        "why did my strategy lose today" to "ArmDay", "orb ka aaj loss kyun hua" to "ArmDay", "why did orb fresh lose money today" to "ArmDay",
+        "mera bot aaj kyun haara" to "ArmDay", "what went wrong with my bots today" to "ArmDay", "why did liquidity 15+5 lose today" to "ArmDay",
+        "range fade aaj kyun loss mein gaya" to "ArmDay", "meri strategy ne aaj loss kyun kiya" to "ArmDay",
+        // Their neighbours: the commands beside them stay commands (each through its own confirm), the market's fall its own.
+        "why do prices keep dropping" to "Why", "why did you skip the trade" to "Thinking",
     )
 
     @Test fun eachQuestionGoesWhereItShould() {
@@ -948,6 +1024,49 @@ class CollisionTest {
         // The named closes and the plans of round 11 are unchanged.
         assertEquals(listOf("explain my put", "close all positions"), Plan.steps("explain my put then close all positions", ::hubStep))
         assertEquals(Command.Kind.CLOSE_ONE, Ask.parse("close that position").command?.kind)
+    }
+
+    // ---- Round 14: round 13's open items, and the newest families ----
+
+    @Test fun roundFourteenWordingsNeitherOrderNorCommandNorBundle() {
+        val newest = setOf("SinceMorning", "SwitchOff", "StreamHealth", "RelayHealth", "FirstMove", "VixNext", "MorningSense", "HonestStars", "ArmDay",
+            "InsideDays", "PriorDay", "OutsideApp")
+        val all = ASKED.filter { it.second in newest }
+        assertTrue(all.size >= 150, "${all.size}")
+        // Boss's own Hinglish, each where it belongs.
+        for ((s, want) in listOf("stream kyun toot raha hai" to "StreamHealth", "subah se kya badla" to "SinceMorning",
+            "kaun sa bot band karun" to "SwitchOff", "orb ka aaj loss kyun hua" to "ArmDay")) assertTrue(s to want in all, s)
+        for ((s, want) in all) {
+            assertEquals(want, audit.feature(s), s)
+            val p = Ask.parse(s)
+            assertEquals(null, p.order, s); assertEquals(null, p.command, s)
+            assertTrue(Topic.ORDER !in p.topics && Topic.COMMAND !in p.topics, s)
+            assertTrue(!Bundle.acts(s), s)
+            assertEquals(null, Intents.quick(s), s)
+            assertTrue(!Reminder.asked(s) && !Reminder.cancelAsked(s) && !FollowUp.acts(s), s)
+            assertEquals(null, Reminder.parse(s, today.atTime(10, 0)), s)
+            assertTrue(Understand.questions(null, s).orEmpty().none { FollowUp.acts(it) || Ask.parse(it).command != null || Ask.parse(it).order != null }, s)
+        }
+        // The commands beside these words still act as before (each through its own confirm).
+        for (s in listOf("stop orb", "switch off orb", "stop all strategies")) assertEquals("Act", audit.feature(s), s)
+        assertEquals(Command.Kind.STOP_ONE, Ask.parse("switch off orb").command?.kind)
+        // Said with something to do, each is left to the multi-step plan (never answered and the action dropped).
+        for (s in listOf("was yesterday an nr7 day then close all positions", "did nifty break yesterday's high and stop all strategies",
+            "subah se kya badla phir sab strategies band karo", "why did orb lose today then kill switch on"))
+            assertTrue(Bundle.acts(s) || Ask.parse(s).command != null || Ask.parse(s).order != null, s)
+        // A web search is said politely with what the app has instead; nothing is searched. Any other outside ask keeps its words.
+        for (s in listOf("search google for nifty news", "google nifty news", "look up nifty on google")) {
+            assertTrue(OutsideApp.asked(s), s)
+            assertEquals(OutsideApp.SAY_SEARCH, OutsideApp.say(s), s)
+        }
+        assertTrue(OutsideApp.SAY_SEARCH.startsWith("I can't search Google or the web, Boss") && "news desk" in OutsideApp.SAY_SEARCH)
+        for (s in listOf("open youtube", "open google", "google maps kholo", "play music")) assertEquals(OutsideApp.SAY, OutsideApp.say(s), s)
+        // The record questions stay the record; a forecast or an alert is never one session's place.
+        assertEquals(false, PriorDay.asked("how often does nifty break yesterday's high")?.now)
+        for (s in listOf("will nifty break yesterday's high", "alert me when nifty breaks yesterday's high", "should i buy above yesterday's high"))
+            assertTrue(PriorDay.asked(s)?.now != true, s)
+        assertEquals(null, InsideDays.asked("what happens after an inside day")?.one)
+        for (s in listOf("will today be an inside day", "was yesterday an inside bar", "my inside day trades")) assertEquals(null, InsideDays.asked(s), s)
     }
 
     // ---- Again: the voice's own "say that again slowly" - heard before the question path, never a question family ----

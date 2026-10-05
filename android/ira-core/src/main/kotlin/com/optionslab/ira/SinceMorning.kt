@@ -128,7 +128,9 @@ object SinceMorning {
         " $WHAT (has |have |s |is )?(really |actually )?(changed|different|new|happened)( in| for| with| on| about)?( [a-z]+){0,2} $SINCE |" +
         " (changes|what changed|what s changed|whats changed|what s new|whats new|what s different|whats different) $SINCE |" +
         " $SINCE (what|anything) (has |s |is )?(changed|different|new) |" +
-        " (what s|whats|what is|how is) (today |the market |the day |it )?(different|changed) (from|than|since|vs|versus) (this |the )?morning |" +
+        " (what s|whats|what is|how is) (today |the market |the day |it |now |nifty |banknifty )?(different|changed) (from|than|since|vs|versus) (this |the )?morning |" +
+        // Round 14: "kya badla subah se", "kya change hua subah se".
+        " (kya|kya kya) (badla|badal gaya|change hua|change hui|naya hai|alag hai) subah se |" +
         " (diff|difference|changes|update) (since|from|vs|versus|against|with) (this |the )?(morning|morning brief|9 am brief|brief) |" +
         " now (vs|versus|against|compared to|compared with) (this |the )?morning |" +
         " (this |the )?morning (vs|versus) now |" +

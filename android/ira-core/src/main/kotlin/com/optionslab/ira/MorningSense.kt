@@ -174,11 +174,17 @@ object MorningSense {
         LEAD + "(which|what) (of the |of my )?$CHECK $ITEMS do i (usually |actually )?(fix|ignore|leave|leave as (it is|they are)|not fix)" + TAIL + "|" +
         LEAD + "(why|how come) (is|was) $CHECK (so )?(short|shorter|brief|briefer|quicker)" + TAIL + "|" +
         LEAD + "(what|which) (do i|have i) (usually )?(fix|ignore|leave) (in|from) $CHECK" + TAIL + "|" +
-        LEAD + "morning (check|report) (mein|me) (kya|kaun se|kaunse|kon se) (chhod|chod|chhot|skip kar)(te|ti) ho" + TAIL)
-    private val RESET = rx(LEAD + "(say|read|give me|tell me|speak) (the |my |your )?(whole|full|entire|complete) (morning|9 ?am|9 00|09 00|nine oclock) (check|checklist|check up|checkup|report|briefing)" + TAIL + "|" +
+        LEAD + "morning (check|report) (mein|me) (kya|kaun se|kaunse|kon se) (chhod|chod|chhot|skip kar)(te|ti) ho" + TAIL + "|" +
+        // Round 14: "which morning items do you skip", "why did you skip items in the morning check", "morning check ka kya skip karte ho".
+        LEAD + "(which|what) (morning|9 ?am) $ITEMS (do you|are you|did you) $SKIP" + TAIL + "|" +
+        LEAD + "(why|how come) (did|do|are) you $SKIP (some |any |the |those |these )?$ITEMS? ?(in|from|of|out of) $CHECK" + TAIL + "|" +
+        LEAD + "(subah ke |subah ka )?morning (check|report) (ka|ke|mein|me|se) (kya|kaun se|kaunse|kon se|kaun sa) ($ITEMS )?(skip|chhod|chod)(te|ti)? ?(kar ?te|karte|karti)? ho" + TAIL)
+    private val RESET = rx(LEAD + "(say|read|give me|tell me|speak)( me| out| us)? (the |my |your )?(whole|full|entire|complete) (morning|9 ?am|9 00|09 00|nine oclock) (check|checklist|check up|checkup|report|briefing)" + TAIL + "|" +
         LEAD + "(say|read|speak) (every|each|all the|all) (morning )?(check )?$ITEMS (in|of|at) $CHECK( out)?" + TAIL + "|" +
         LEAD + "(dont|do not|stop|no need to) $SKIP (any |anything |any items |items |things )?(in |from |of )?$CHECK( any ?more)?" + TAIL + "|" +
-        LEAD + "(poora|pura) morning (check|report) (bolo|sunao|batao)" + TAIL)
+        LEAD + "(poora|pura) morning (check|report) (bolo|sunao|batao)" + TAIL + "|" +
+        // Round 14: "subah ka poora check sunao".
+        LEAD + "(subah|morning) (ka|ki|wala|vala) (poora|pura|saara|sara) (check|report|checklist)( phir se| dobara)? (bolo|sunao|batao)" + TAIL)
 
     /** "Which morning items do you skip?" or "say the whole morning check again", else null. */
     fun asked(text: String): Request? {

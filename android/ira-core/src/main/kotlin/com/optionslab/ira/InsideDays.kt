@@ -24,8 +24,14 @@ object InsideDays {
     /** The setup asked of: an inside day or a narrow-range (NR7) day. */
     enum class Kind { INSIDE, NARROW }
 
-    /** What was asked: one setup, or both (null). */
-    data class Q(val kind: Kind?)
+    /** One named session asked of (routing round 14): the last whole one, today, or the newest on a weekday. */
+    enum class One { LAST, TODAY, WEEKDAY }
+
+    /**
+     * What was asked: one setup, or both (null); with [one], whether one named session was such a day ("was yesterday an
+     * NR7 day?") rather than the record - [weekday] the day named for [One.WEEKDAY].
+     */
+    data class Q(val kind: Kind?, val one: One? = null, val weekday: java.time.DayOfWeek? = null)
 
     /** One whole session: its [open], [high], [low] and [close]. */
     data class Day(val day: LocalDate, val open: Double, val high: Double, val low: Double, val close: Double) {
@@ -95,11 +101,43 @@ object InsideDays {
         "inside bar|inside bars|inside candle|candle|candles|candlestick|" +
         "mean|means|meaning|define|explain|what is|what s|what are) "
 
-    /** What was asked, or null. A record of past setups only: never a forecast, advice, an alert or today's own day. */
+    // One named session asked of (routing round 14): "was yesterday an NR7 day?", "is today an inside day?", "kal inside day tha kya".
+    private const val WEEKDAY = "(monday|tuesday|wednesday|thursday|friday)"
+    private const val WHICH_DAY = "(yesterday|yesterday s session|today|today s session|the last session|last session|the previous session|the prior session|" +
+        "the last trading day|last trading day|(last )?$WEEKDAY|kal|aaj|pichla session|pichle session|pichla din)"
+    private val ONE_EN = rx(" (was|is|were|has) (it |nifty |banknifty |finnifty |sensex |the market )?$WHICH_DAY( been)? (an? |the )?(${INSIDE.trim()}|${NARROW.trim()})( so far)? ")
+    private val ONE_EN2 = rx(" (was|is|were) (nifty s |banknifty s |finnifty s |sensex s )?$WHICH_DAY( for [a-z]+)? (an? |the )?(${INSIDE.trim()}|${NARROW.trim()})|" +
+        "^ (jarvis )?(was|is) (nifty|banknifty|finnifty|sensex|the market|it) (an? |on an? )?(${INSIDE.trim()}|${NARROW.trim()}) (today|yesterday|so far|kal|aaj) ")
+    private val ONE_HI = rx(" (kya )?([a-z]+ (ka|ke|ki) )?$WHICH_DAY( ka din| ka session)? (an? )?(${INSIDE.trim()}|${NARROW.trim()}|nr7 day|nr7 din|inside din) (tha|hai|thi|hua|raha|rha)( kya)? ")
+    // A forecast, advice, Boss's own book, an alert, the candle pattern, a meaning, gold.
+    private const val ONE_NOT = " (will|would|going to|gonna|tomorrow|predict|prediction|forecast|outlook|should|shall|buy|sell|enter|exit|trade|trades|trading|" +
+        "i|me|my|mine|we|our|what if|suppose|imagine|alert|alerts|notify|remind|reminder|warn|ping|watch|arm|arms|bot|bots|algo|algos|strategy|strategies|" +
+        "backtest|pine|news|inside bar|inside bars|inside candle|candle|candles|candlestick|mean|means|meaning|define|explain|how often|usually|record|after|next day|ke baad|agle din) "
+
+    private fun one(t: String): Q? {
+        if (rx(ONE_NOT).containsMatchIn(t)) return null
+        if (!ONE_EN.containsMatchIn(t) && !ONE_EN2.containsMatchIn(t) && !ONE_HI.containsMatchIn(t)) return null
+        val inside = rx(INSIDE).containsMatchIn(t) || " inside din " in t
+        val narrow = rx(NARROW).containsMatchIn(t) || rx(" nr7 (day|din) ").containsMatchIn(t)
+        val kind = if (inside && !narrow) Kind.INSIDE else if (narrow && !inside) Kind.NARROW else null
+        val wd = rx(" $WEEKDAY ").find(t)?.groupValues?.get(1)?.let { java.time.DayOfWeek.valueOf(it.uppercase(Locale.ENGLISH)) }
+        val which = when {
+            wd != null -> One.WEEKDAY
+            rx(" (today|today s session|aaj) ").containsMatchIn(t) -> One.TODAY
+            else -> One.LAST
+        }
+        return Q(kind, which, wd)
+    }
+
+    /**
+     * What was asked, or null. The record of past setups, or (routing round 14) whether one named session was such a day
+     * ([Q.one]); never a forecast, advice, an alert or the candle pattern.
+     */
     fun asked(text: String): Q? {
         val t = norm(text)
-        if (rx(NOT).containsMatchIn(t)) return null
         if (Market.mentioned(text).any { it == Market.GOLD }) return null
+        one(t)?.let { return it }
+        if (rx(NOT).containsMatchIn(t)) return null
         val inside = rx(INSIDE).containsMatchIn(t)
         val narrow = rx(NARROW).containsMatchIn(t)
         if (!inside && !narrow) return null
@@ -166,6 +204,7 @@ object InsideDays {
 
     /** [q] answered for [m] from [bars] (1-minute candles over several days) at [now] on [today]. */
     fun answer(q: Q, m: Market, bars: List<Candle>, today: LocalDate, now: LocalDateTime): String {
+        if (q.one != null) return oneDay(q, m, bars, today, now)
         val days = past(bars, today)
         val whole = days.count { it != null }
         if (whole < MIN_SESSIONS)
@@ -187,6 +226,55 @@ object InsideDays {
         todayLine(m, bars, days, today, now)?.let { lines += it }
         lines += NOTE
         return lines.joinToString(" ")
+    }
+
+    /**
+     * "Was yesterday an NR7 day?", "is today an inside day?" (routing round 14): the one session named - the last whole one
+     * (said with its date, so a Monday's "yesterday" is Friday), today so far, or the newest on the weekday named - set
+     * against the session before it (inside or not) and the six before it (the narrowest of seven or not), each said with
+     * its figures. Today's is "so far" while the session is on. Facts from the phone's own candles; never a forecast.
+     */
+    fun oneDay(q: Q, m: Market, bars: List<Candle>, today: LocalDate, now: LocalDateTime): String {
+        val days = past(bars, today).toMutableList()
+        val live = now.toLocalDate() == today && now.toLocalTime().isBefore(CLOSE)
+        val todays = MarketStory.sessions(bars).lastOrNull { it.day == today }?.let { day(it) }
+        val i: Int = when (q.one) {
+            One.TODAY -> {
+                if (todays == null) return "${m.label} hasn't traded today yet, Boss, so today is neither an inside day nor a narrow one so far."
+                days += todays; days.size - 1
+            }
+            One.WEEKDAY -> days.indexOfLast { it != null && it.day.dayOfWeek == q.weekday }.takeIf { it >= 0 }
+                ?: return "I have no whole ${m.label} session on a ${q.weekday?.getDisplayName(TextStyle.FULL, Locale.ENGLISH) ?: "day"} on the phone, Boss."
+            else -> days.indexOfLast { it != null }.takeIf { it >= 0 }
+                ?: return "I have no whole ${m.label} session on the phone yet, Boss."
+        }
+        val d = days[i]!!
+        val soFar = q.one == One.TODAY && live
+        val who = when (q.one) {
+            One.TODAY -> "${m.label} today (${date(d.day)})${if (soFar) " so far" else ""}"
+            One.WEEKDAY -> "the newest whole ${m.label} session on that weekday was ${date(d.day)}"
+            else -> "the last whole ${m.label} session was ${date(d.day)}"
+        }
+        val prev = days.getOrNull(i - 1)
+        val insideLine = when {
+            prev == null -> "I can't say if it was an inside day: the session before it is not whole on the phone."
+            inside(days, i) -> "It ${if (soFar) "is" else "was"} an inside day: its high ${n(d.high)} and low ${n(d.low)} ${if (soFar) "are" else "were"} both within ${date(prev.day)}'s high ${n(prev.high)} and low ${n(prev.low)}."
+            else -> "It ${if (soFar) "is not" else "was not"} an inside day: " + listOfNotNull(
+                if (d.high > prev.high) "its high ${n(d.high)} went above ${date(prev.day)}'s ${n(prev.high)}" else null,
+                if (d.low < prev.low) "its low ${n(d.low)} went below ${date(prev.day)}'s ${n(prev.low)}" else null).joinToString(" and ") + "."
+        }
+        val before = if (i >= NR - 1) (i - NR + 1 until i).map { days[it] } else emptyList()
+        val narrowLine = when {
+            before.size < NR - 1 || before.any { it == null } -> "I can't say if it was the narrowest of $NR (NR7): the phone does not hold the six whole sessions before it."
+            narrow(days, i) -> "It ${if (soFar) "is" else "was"} an NR7 day${if (soFar) " so far" else ""}: its range of ${n(d.range)} points ${if (soFar) "is" else "was"} the narrowest of its own and the six before it " +
+                "(the narrowest of those six was ${n(before.minOf { it!!.range })})."
+            else -> { val low = before.filterNotNull().minByOrNull { it.range }!!
+                "It ${if (soFar) "is not" else "was not"} an NR7 day${if (soFar) " so far" else ""}: its range of ${n(d.range)} points ${if (soFar) "is" else "was"} wider than ${date(low.day)}'s ${n(low.range)}, the narrowest of the six before it." }
+        }
+        val lines = if (q.kind == Kind.NARROW) listOf(narrowLine, insideLine) else listOf(insideLine, narrowLine)
+        val tail = if (soFar) " The session is still on, so its high, low and range can still change." else ""
+        return "Boss, $who. " + lines.joinToString(" ") + tail +
+            " Ask what usually follows an ${if (q.kind == Kind.NARROW) "NR7" else "inside"} day for the record."
     }
 
     private fun partLine(k: Kind, xs: List<After>): String {

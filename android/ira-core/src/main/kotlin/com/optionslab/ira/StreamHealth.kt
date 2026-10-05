@@ -249,6 +249,8 @@ object StreamHealth {
         // Hinglish: "stream kyun band ho raha", "live data baar baar band ho raha hai", "stream ka kya haal hai"
         rx("\\b$FEED\\b.*\\b(?:kyun|kyon|kyu|kiu)\\b.*\\b(?:band|toot|tut|ruk|kat|drop|disconnect)"),
         rx("\\b$FEED\\b.*\\b(?:baar baar|bar bar)\\b.*\\b(?:band|toot|tut|ruk|kat|drop|disconnect)"),
+        // Round 14: "why do prices keep freezing" - the prices on screen stuck (never the market falling: no drop words here).
+        rx("^(?:jarvis )?(?:why|how come|kyun)\\b.*\\b(?:prices|quotes|ticks|ltp)\\b.*\\b(?:keeps? |keep on )?(?:freez\\w*|frozen|stall\\w*|not updating|not refreshing|stuck on screen)"),
         // "is the live stream working", "how is the live stream", "live stream status"
         rx("^(?:jarvis )?(?:is|how is|how's|hows) (?:the |my )?(?:live (?:price )?stream|price stream|kite stream|zerodha stream|websocket)\\b.*\\b(?:working|ok|okay|fine|up|connected|healthy|doing)?$"),
         rx("^(?:the |my )?(?:live (?:price )?stream|price stream|kite stream|websocket) (?:status|health)$"),

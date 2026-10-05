@@ -5,6 +5,7 @@ import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.format.TextStyle
 import java.util.Locale
+import kotlin.math.abs
 
 /**
  * The index's prior-day high and low record (market intelligence, round 17): "when Nifty takes out yesterday's high in
@@ -15,12 +16,17 @@ import java.util.Locale
  * taken out, how often the close held beyond it, how often the close ended beyond the other edge (a full reversal), how many
  * opened beyond it, the median time of the take-out and how far it ran beyond; the take-outs in the first hour set beside
  * the later ones - and today against yesterday's high and low. A record of past days on this phone, said with its counts;
- * never a forecast or advice, nothing acts. Where yesterday's high stands and how far the price is from it stay the level
- * readers' ([Reason], [Distance]); today against yesterday measure by measure [DayCompare]'s. Pure.
+ * never a forecast or advice, nothing acts. "Did Nifty break yesterday's high?" and "how far is Nifty from yesterday's
+ * high?" are one session's own place against it ([Q.now], [place]; routing round 14); where yesterday's high stands stays
+ * the level readers' ([Reason], [Lookback]); today against yesterday measure by measure [DayCompare]'s. Pure.
  */
 object PriorDay {
-    /** What was asked: the side (+1 the prior high, -1 the prior low, null both) and whether the first hour was named. */
-    data class Q(val dir: Int?, val firstHour: Boolean)
+    /**
+     * What was asked: the side (+1 the prior high, -1 the prior low, null both) and whether the first hour was named; [now]
+     * when it is one session's own place against the day before's high or low ("did Nifty break yesterday's high?", "how
+     * far is Nifty from yesterday's high?") rather than the record.
+     */
+    data class Q(val dir: Int?, val firstHour: Boolean, val now: Boolean = false)
 
     /** One side of one session against the prior day's level [level]: when it was first traded beyond ([at], null never). */
     data class Take(val at: LocalTime?, val gapped: Boolean, val held: Boolean, val reversed: Boolean, val runPct: Double)
@@ -74,11 +80,36 @@ object PriorDay {
         "alert|alerts|notify|remind|reminder|warn|ping|watch|arm|arms|bot|bots|algo|algos|strategy|strategies|backtest|pine|news|" +
         "gap|gaps|gapped|mean|means|meaning|define|explain|what is pdh|what is a pdh|what s pdh|what is pdl|what s pdl|where is|where s|how far) "
 
-    /** What was asked, or null. A record of past take-outs only: never a forecast, advice, an alert or today's own place. */
+    // One session's own place against the prior day's level (routing round 14): a take-out, or the distance, asked of now.
+    private const val BROKE = " (break|breaks|broke|broken|breaking|take out|takes out|took out|taken out|taking out|cross|crosses|crossed|crossing|" +
+        "breach|breached|clear|cleared|get past|got past|gone past|went past|above|below|over|under|beyond|toda|tod diya|tod di|todi|toot gaya|tooti|" +
+        "paar kiya|paar kar|cross kiya|upar|neeche) "
+    private const val FAR = " (how far|how much away|how many points|distance|kitna door|kitni door|kitna dur|kitni dur|kitne door|kitne points|kitna paas|kitne paas) "
+    /** Asked as a question of now: "did...", "has...", "is...", "how far...", "kya ...", "... kitna door hai". */
+    private const val ASKS = "^ (jarvis )?(did|has|have|is|was|are|kya|how far|how many|how much|what s the distance|what is the distance|distance) "
+    private const val ASKS_END = " (kya|hai|hua|tha|hai kya|tha kya|hua kya) $"
+    // A forecast, advice, Boss's own book, an alert, the record (the questions above), a meaning, a week or month.
+    private const val NOW_NOT = " (will|would|going to|gonna|tomorrow|predict|prediction|forecast|outlook|should|shall|buy|sell|enter|exit|trade|trades|trading|" +
+        "i|me|my|mine|we|our|what if|suppose|imagine|scenario|agar|alert|alerts|notify|remind|reminder|warn|ping|watch|arm|arms|bot|bots|algo|algos|" +
+        "strategy|strategies|backtest|pine|news|how often|how many times|how many days|usually|normally|typically|generally|record|stats|odds|chances|" +
+        "probability|kitni baar|aksar|last time|mean|means|meaning|define|explain|what is pdh|what is a pdh|what s pdh|what is pdl|what s pdl|" +
+        "week s|weekly|month s|monthly) "
+
+    private fun nowAsked(t: String): Boolean {
+        if (rx(NOW_NOT).containsMatchIn(t) || !rx(LEVEL).containsMatchIn(t)) return false
+        if (!rx(ASKS).containsMatchIn(t) && !rx(ASKS_END).containsMatchIn(t)) return false
+        return rx(BROKE).containsMatchIn(t) || rx(FAR).containsMatchIn(t)
+    }
+
+    /**
+     * What was asked, or null. The record of past take-outs, or (routing round 14) one session's own place against the
+     * prior day's high or low ([Q.now]); never a forecast, advice or an alert.
+     */
     fun asked(text: String): Q? {
         val t = norm(text)
-        if (rx(NOT).containsMatchIn(t)) return null
         if (Market.mentioned(text).any { it == Market.GOLD }) return null
+        if (nowAsked(t)) return Q(dir(t), false, now = true)
+        if (rx(NOT).containsMatchIn(t)) return null
         if (!rx(LEVEL).containsMatchIn(t)) return null
         val hinglish = rx(" (todne|toda|tootne|toot|tootta|todta|paar|cross) ").containsMatchIn(t) &&
             rx(" (tikta|tikti|tike|band|close|kitni baar|aksar) ").containsMatchIn(t)
@@ -137,6 +168,7 @@ object PriorDay {
 
     /** [q] answered for [m] from [bars] (1-minute candles over several days) at [now] on [today]. */
     fun answer(q: Q, m: Market, bars: List<Candle>, today: LocalDate, now: LocalDateTime): String {
+        if (q.now) return place(q, m, bars, today, now)
         val days = past(bars, today)
         if (days.size < MIN_SESSIONS)
             return "I have only ${days.size} whole ${m.label} ${plural(days.size, "session")} with a whole one before ${if (days.size == 1) "it" else "them"} on the phone, Boss - " +
@@ -176,6 +208,39 @@ object PriorDay {
             }
         }
         return s
+    }
+
+    /**
+     * "Did Nifty break yesterday's high?", "how far is Nifty from yesterday's high?": today's session (before the open, the
+     * last one, said with its date) against the session before it - whether and when it traded beyond the high or low asked,
+     * and where the price is from it in points and percent. Facts from the phone's own 1-minute candles; never a forecast.
+     */
+    fun place(q: Q, m: Market, bars: List<Candle>, today: LocalDate, now: LocalDateTime): String {
+        val ss = MarketStory.sessions(bars).filter { it.bars.isNotEmpty() && !it.day.isAfter(today) }
+        val s = ss.lastOrNull() ?: return "I have no ${m.label} candles on the phone yet, Boss, so I can't set it against the prior day's high and low."
+        val prev = ss.dropLast(1).lastOrNull()
+            ?: return "I have only one ${m.label} session on the phone, Boss (${date(s.day)}) - none before it to take a high and low from."
+        val d = read(s, prev) ?: return "I could not read ${m.label}'s prior-day high and low just now, Boss."
+        val live = s.day == today && now.toLocalDate() == today && now.toLocalTime().isBefore(CLOSE)
+        val px = s.close
+        val head = if (s.day == today) "Boss, today ${m.label}" else "Boss, ${m.label} hasn't traded today yet; on ${date(s.day)}, the last session, it"
+        val sides = when (q.dir) { 1 -> listOf(1); -1 -> listOf(-1); else -> listOf(1, -1) }
+        val parts = sides.map { side ->
+            val level = if (side == 1) d.prevHigh else d.prevLow
+            val take = d.side(side)
+            val word = if (side == 1) "high" else "low"
+            val name = "${date(prev.day)}'s $word of ${n(level)}"
+            val diff = px - level
+            val where = "${if (live) "is" else "closed"} ${n(abs(diff))} points (${p2(abs(diff) / level * 100)}) ${if (diff >= 0) "above" else "below"} it at ${n(px)}"
+            val at = take.at
+            if (at != null) "took out $name at ${hm(at)}" + (if (take.gapped) " (it opened beyond it)" else "") + " and $where"
+            else {
+                val extreme = if (side == 1) s.bars.maxOf { it.h } else s.bars.minOf { it.l }
+                "has not traded ${if (side == 1) "above" else "below"} $name (its $word ${if (live) "so far" else "was"} ${n(extreme)}) and $where"
+            }
+        }
+        return "$head ${parts.joinToString("; it ")}" + (if (live) " - the session is still on." else ".") +
+            " Ask how often a take-out of the prior day's high or low holds for the record."
     }
 
     /** Today against yesterday's high and low so far (or the whole day after the close), or null with no candles today. */

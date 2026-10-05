@@ -94,7 +94,7 @@ object HonestStars {
 
     private const val LEAD = "^ (hey |ok |okay )?(jarvis )?(so )?(please )?(can you |could you |would you )?(tell me )?"
     private const val TAIL = "( please| boss| jarvis| now| again| from now on| really| honestly)* $"
-    private const val SCORE = "(confidence|confidence (scores?|stars|ratings?|levels?|numbers?)|(star|stars) ratings?|sureness)"
+    private const val SCORE = "(confidence|confidence (scores?|stars|ratings?|levels?|numbers?)|(star|stars) ratings?|sureness|stars)"
     private const val N = "(1|2|3|4|5|one|two|three|four|five)"
 
     private val WHICH = rx(LEAD + "how (honest|reliable|accurate|trustworthy|good|right|calibrated|well calibrated) (is|are) (your |jarviss )$SCORE" + TAIL + "|" +
@@ -104,7 +104,10 @@ object HonestStars {
         LEAD + "how often (does|do) (your )?$N out of (5|five)( ideas| trades| calls)? (work|come good|come true|pay off|hold up)" + TAIL + "|" +
         LEAD + "(which|what) $SCORE (do you|have you) (qualify|qualified|add (your )?records? to|say with (your |its )?records?|not trust)" + TAIL + "|" +
         LEAD + "(why|how come) (do|did) you (say|add) (it was |its |that it was )?(a coin toss|your record|the record)( (with|to|after) (the |your )?$SCORE)?" + TAIL + "|" +
-        LEAD + "(tumhara|aapka|tera) confidence (kitna )?(sahi|sach|bharosemand|theek) (hai|hota hai|nikalta hai)( kya)?" + TAIL)
+        LEAD + "(tumhara|aapka|tera) confidence (kitna )?(sahi|sach|bharosemand|theek) (hai|hota hai|nikalta hai)( kya)?" + TAIL + "|" +
+        // Round 14: "do your 5 star ideas actually work", "tumhare confidence stars kitne sahi hain".
+        LEAD + "(do|does) (your )?$N (star|stars|out of (5|five))( ideas?| trades?| calls?| picks?)? (actually |really )?(work|come good|pay off|hold up)" + TAIL + "|" +
+        LEAD + "(tumhare|aapke|tere|tumhara|aapka|tera) $SCORE (kitne|kitna) (sahi|sach|theek|bharosemand) (hain|hai|hote hain|hota hai|nikalte hain)( kya)?" + TAIL)
     private val RESET = rx(LEAD + "(say|give|tell me) (your |the )?$SCORE (plainly|plain|as it is|without (the |your )?records?|only)" + TAIL + "|" +
         LEAD + "just (say|give) (me )?(your |the )?$SCORE" + TAIL + "|" +
         LEAD + "(dont|do not|stop|no need to) (add|adding|say|saying|give|giving|qualify|qualifying) (your |the )?(records?|coin toss)( (with|to|after|on) (your |the )?$SCORE)?( any ?more)?" + TAIL + "|" +

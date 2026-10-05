@@ -17,6 +17,13 @@ object OutsideApp {
     const val SAY = "I only work inside IraAlgo, Boss - I can't open other apps, play music or videos, or call or message anyone. " +
         "Ask me about the market, your account or the app."
 
+    /**
+     * Asked to search the web for something of the market ("search google for nifty news", round 14): the same no, and what
+     * the app itself has instead - its own news desk and the market read. Words only; nothing is searched or opened.
+     */
+    const val SAY_SEARCH = "I can't search Google or the web, Boss - I only work inside IraAlgo. What I do have: the news desk's own headlines " +
+        "(ask \"any news on Nifty\") and the market itself (ask \"how is Nifty\" or \"why did Nifty move\")."
+
     /** Apps and services that are not IraAlgo. (Zerodha and Kite are left out: the app has its own Zerodha screen.) */
     private const val APPS = "(youtube|you tube|yt|whatsapp|whats app|watsapp|spotify|gaana|jiosaavn|saavn|wynk|netflix|hotstar|jiohotstar|prime video|amazon prime|" +
         "instagram|insta|facebook|fb|twitter|x app|telegram|snapchat|linkedin|chrome|google chrome|google|gmail|google maps|maps|calculator|camera|gallery|" +
@@ -47,6 +54,15 @@ object OutsideApp {
         "$LEAD(take|click) (a |my )?(photo|picture|pic|selfie|screenshot)$TAIL",
     ).map { rx(it) }
 
+    /** A web search asked ("search google for nifty news", "google nifty news", "look up banknifty on google"): taken even with an index named. */
+    private val SEARCH = listOf(
+        "$LEAD(search|look up|look for|find) (on |in )?(google|youtube|the web|the internet)( for| about)? .{1,60}$TAIL",
+        "$LEAD(search|look up|look for|find|check) .{1,60} (on|in) (google|youtube|the web|the internet)$TAIL",
+        "$LEAD(search|look up) (online|the web|the internet) (for|about) .{1,60}$TAIL",
+        "$LEAD(google|youtube) (for |about )?.{1,60}$TAIL",
+        "$LEAD(google|youtube|internet|net) (par|pe|mein|me) .{1,60} (search|dhundo|dekho|check) (karo|kar do|kardo)$TAIL",
+    ).map { rx(it) }
+
     /** A call or a message to a person ("call mom", "message Rahul", "send a WhatsApp to Priya", "mummy ko call karo"): the one capture is the person. */
     private val TO_PERSON = listOf(
         "$LEAD(?:call|phone|dial|ring|video call|message|text|sms|whatsapp|whats app|email|mail|ping) ([a-z]+(?: [a-z]+)?)$TAIL",
@@ -68,11 +84,19 @@ object OutsideApp {
     /** Does [text] ask Jarvis to do something outside IraAlgo (open another app, play music, call or message someone)? */
     fun asked(text: String): Boolean {
         val t = words(text)
-        if (t.isBlank() || rx("\\d").containsMatchIn(t)) return false
+        if (t.isBlank()) return false
+        if (searched(t)) return true
+        if (rx("\\d").containsMatchIn(t)) return false
         if (Market.mentioned(text).isNotEmpty()) return false
         if (ASKED.any { it.containsMatchIn(t) }) return true
         // The person named is never a word of the app or the market ("call oi", "call side", "message me later").
         val who = TO_PERSON.firstNotNullOfOrNull { it.find(t) }?.groupValues?.get(1) ?: return false
         return !APP_WORDS.containsMatchIn(" $who ")
     }
+
+    private fun searched(t: String) = SEARCH.any { it.containsMatchIn(t) } && !rx(" (google pay|gpay|google maps|youtube music) ").containsMatchIn(t) &&
+        !rx(" (kholo|khol do|kholdo|khol de|open karo|open kar do|chalao|chala do|chalu karo|start karo|lagao) $").containsMatchIn(t)
+
+    /** What Jarvis says to [text] (taken by [asked]): a web search gets what the app has instead; anything else, [SAY]. */
+    fun say(text: String): String = if (searched(words(text))) SAY_SEARCH else SAY
 }

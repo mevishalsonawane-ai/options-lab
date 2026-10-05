@@ -106,7 +106,12 @@ object FirstMove {
         if (Market.mentioned(text).any { it == Market.GOLD }) return null
         if (!rx(FIRST).containsMatchIn(t)) return null
         val named = rx(NAMED).containsMatchIn(t)
-        if (!named && !(rx(DAY).containsMatchIn(t) && rx(HOW).containsMatchIn(t))) return null
+        // Round 14: a record asked without a record word - "does the first half hour decide the day", "if Nifty is down in the
+        // first 30 minutes does it close down", "first half hour ki direction se din kaisa jaata hai".
+        val general = rx("^ (jarvis )?(does|do) (the )?[a-z ]*(decide|decides|set the tone|sets the tone|set the direction|sets the direction) ").containsMatchIn(t) ||
+            rx("^ (jarvis )?(if|when|jab) .* (does|do) (it|nifty|banknifty|finnifty|sensex|the index|the market|the day) (close|end|finish) ").containsMatchIn(t) ||
+            rx(" se din (kaisa|kaise|kis taraf|kidhar) (jaata|jata|chalta|band hota) ").containsMatchIn(t)
+        if (!named && !(rx(DAY).containsMatchIn(t) && rx(HOW).containsMatchIn(t)) && !general) return null
         return Q(minutes(t), dir(t))
     }
 

@@ -70,12 +70,41 @@ class InsideDaysTest {
     }
 
     @Test fun aSingleDayAForecastAdviceThePatternOrAnotherReaderIsNotTheRecord() {
-        for (s in listOf("is today an inside day", "was yesterday an nr7 day", "will tomorrow expand after the inside day",
+        for (s in listOf("will tomorrow expand after the inside day", "will today be an inside day", "was yesterday an inside bar",
             "should I buy after an inside day", "how often does an inside bar break out", "what is an inside day",
             "alert me after an inside day", "how often does gold expand after an inside day", "inside day",
             "how often do inside days on fridays expand", "narrow range day?", "is the range narrow today?",
             "how often does nifty expand", "my inside day trades"))
             assertNull(InsideDays.asked(s), s)
+    }
+
+    @Test fun oneNamedDayIsAskedOfApartFromTheRecord() {
+        // Routing round 14: "was yesterday an NR7 day?" - one session, answered directly (never Boss's own history).
+        val one = InsideDays.One.LAST
+        assertEquals(InsideDays.Q(InsideDays.Kind.NARROW, one), InsideDays.asked("was yesterday an nr7 day"))
+        assertEquals(InsideDays.Q(InsideDays.Kind.INSIDE, one), InsideDays.asked("was yesterday an inside day"))
+        assertEquals(InsideDays.Q(InsideDays.Kind.INSIDE, one), InsideDays.asked("kal inside day tha kya"))
+        assertEquals(InsideDays.Q(InsideDays.Kind.NARROW, one), InsideDays.asked("kya kal nr7 tha"))
+        assertEquals(InsideDays.Q(InsideDays.Kind.INSIDE, one), InsideDays.asked("was the last session an inside day"))
+        assertEquals(InsideDays.Q(InsideDays.Kind.INSIDE, InsideDays.One.TODAY), InsideDays.asked("is today an inside day"))
+        assertEquals(InsideDays.Q(InsideDays.Kind.NARROW, InsideDays.One.WEEKDAY, DayOfWeek.FRIDAY), InsideDays.asked("was friday an nr7 day"))
+        assertEquals(InsideDays.Q(InsideDays.Kind.INSIDE, one), InsideDays.asked("was yesterday an inside day for banknifty"))
+
+        val shapes = nr.dropLast(1)   // ... S1 S2 S1 S2 S1 S2 N, N on Fri 2 Oct
+        val a = InsideDays.answer(InsideDays.asked("was yesterday an nr7 day")!!, Market.NIFTY, build(shapes), today, after)
+        assertEquals("Boss, the last whole Nifty session was Fri 2 Oct. It was an NR7 day: its range of 100.00 points was the narrowest of its own and the six before it " +
+            "(the narrowest of those six was 400.00). It was an inside day: its high 24,100.00 and low 24,000.00 were both within Thu 1 Oct's high 24,300.00 and low 23,900.00. " +
+            "Ask what usually follows an NR7 day for the record.", a)
+        val thu = InsideDays.answer(InsideDays.asked("was thursday an inside day")!!, Market.NIFTY, build(shapes), today, after)
+        assertTrue(thu.startsWith("Boss, the newest whole Nifty session on that weekday was Thu 1 Oct. It was not an inside day: its high 24,300.00 went above Wed 30 Sep's 24,200.00."), thu)
+        assertTrue(thu.contains("It was not an NR7 day: its range of 400.00 points was wider than") && thu.contains("100.00, the narrowest of the six before it."), thu)
+        val live = build(shapes) + session(today, Shape(24_080.0, 24_010.0, 24_050.0), minutes = 120)
+        val t = InsideDays.answer(InsideDays.asked("is today an inside day")!!, Market.NIFTY, live, today, LocalDateTime.of(today, LocalTime.of(11, 15)))
+        assertEquals("Boss, Nifty today (Mon 5 Oct) so far. It is an inside day: its high 24,080.00 and low 24,010.00 are both within Fri 2 Oct's high 24,100.00 and low 24,000.00. " +
+            "It is an NR7 day so far: its range of 70.00 points is the narrowest of its own and the six before it (the narrowest of those six was 100.00). " +
+            "The session is still on, so its high, low and range can still change. Ask what usually follows an inside day for the record.", t)
+        val none = InsideDays.answer(InsideDays.asked("is today an inside day")!!, Market.NIFTY, build(shapes), today, LocalDateTime.of(today, LocalTime.of(8, 30)))
+        assertTrue(none.startsWith("Nifty hasn't traded today yet, Boss"), none)
     }
 
     @Test fun theIndexAskedAbout() {

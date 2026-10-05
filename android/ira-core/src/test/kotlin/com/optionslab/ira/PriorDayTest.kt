@@ -76,12 +76,33 @@ class PriorDayTest {
     }
 
     @Test fun aSingleDayAForecastAdviceOrAnAlertIsNotTheRecord() {
-        for (s in listOf("what was yesterday's high", "did nifty break yesterday's high", "is nifty above yesterday's high today",
-            "will nifty take out yesterday's high", "should I buy above yesterday's high", "how far is nifty from yesterday's high",
+        for (s in listOf("what was yesterday's high",
+            "will nifty take out yesterday's high", "should I buy above yesterday's high",
             "alert me when nifty breaks yesterday's high", "where is yesterday's low", "how often does nifty gap above yesterday's high",
             "how is today different from yesterday", "do opening range breakouts usually hold", "what is pdh",
             "how often does gold take out yesterday's high", "buy nifty if it breaks yesterday's high usually"))
             assertNull(PriorDay.asked(s), s)
+        // Routing round 14: one session's own place against the prior day's level is answered directly, never as the record.
+        for ((s, dir) in listOf("did nifty break yesterday's high" to 1, "is nifty above yesterday's high today" to 1,
+            "how far is nifty from yesterday's high" to 1, "has banknifty taken out yesterday's low" to -1, "kya nifty ne kal ka high toda" to 1,
+            "nifty kal ke high se kitna door hai" to 1, "how far is nifty from yesterday's high and low" to null))
+            assertEquals(PriorDay.Q(dir, false, now = true), PriorDay.asked(s), s)
+    }
+
+    @Test fun oneSessionsPlaceIsSaidDirectly() {
+        // Routing round 14: "did Nifty break yesterday's high?" / "how far is Nifty from yesterday's high?" - today against the
+        // last session (LOW_HOLD, 23,950-24,010), never the record.
+        val live = LocalDateTime.of(today, LocalTime.of(11, 15))
+        val bars = build(mix) + session(today, Kind.EARLY_HOLD, minutes = 120)
+        val hi = PriorDay.answer(PriorDay.Q(1, false, now = true), Market.NIFTY, bars, today, live)
+        assertEquals("Boss, today Nifty took out 2 Oct's high of 24,010.00 at 09:45 and is 30.00 points (0.12%) above it at 24,040.00 - the session is still on. " +
+            "Ask how often a take-out of the prior day's high or low holds for the record.", hi)
+        val both = PriorDay.answer(PriorDay.Q(null, false, now = true), Market.NIFTY, bars, today, live)
+        assertTrue(both.contains("; it has not traded below 2 Oct's low of 23,950.00 (its low so far 23,990.00) and is 90.00 points (0.38%) above it at 24,040.00"), both)
+        assertFalse(both.contains(PriorDay.NOTE), both)
+        // Before the open: the last session against the one before it, said with its date.
+        val pre = PriorDay.answer(PriorDay.Q(-1, false, now = true), Market.NIFTY, build(mix), today, LocalDateTime.of(today, LocalTime.of(8, 30)))
+        assertTrue(pre.startsWith("Boss, Nifty hasn't traded today yet; on 2 Oct, the last session, it took out 1 Oct's low of 23,990.00 at 11:00 and closed"), pre)
     }
 
     @Test fun theIndexAskedAbout() {
