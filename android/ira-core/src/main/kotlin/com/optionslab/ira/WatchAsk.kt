@@ -24,7 +24,7 @@ object WatchAsk {
     private fun norm(q: String) = q.lowercase(Locale.ENGLISH).replace('’', '\'').replace(rx("[?!.,]"), " ").replace(rx("\\s+"), " ").trim()
 
     /** The order watch named: "the order watch", "my watch", "order watcher", "the watch service"; Hinglish "watch kyun ...". */
-    private const val W = "(?:(?:the|my|order|orders|position|positions|iraalgo's|iraalgo|stop|stops) (?:order )?watch(?:er)?(?: service)?|^watch(?:er)?)"
+    private const val W = "(?:(?:the|my|order|orders|position|positions|iraalgo's|iraalgo|stop|stops) (?:order )?watch(?:er)?(?: service)?|(?:the|my) positions? watch(?:er)?|^watch(?:er)?)"
     private const val STATE = "(?:running|on|working|alive|active|up|ok|okay|fine|checking|stuck|stopped|dead|down|off|hung|frozen|live)"
     private const val TROUBLE = "(?:stuck|stop|stops|stopped|stopping|stall|stalls|stalled|hang|hangs|hung|freez\\w*|frozen|die|dies|died|dead|" +
         "go down|went down|crash\\w*|fail|fails|failed|quit|ruk|ruka|ruki|band|atak|atka|atki|latak)"

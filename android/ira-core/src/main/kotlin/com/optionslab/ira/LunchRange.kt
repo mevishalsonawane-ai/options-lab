@@ -80,7 +80,10 @@ object LunchRange {
     /** The lunch window's own range, box or lull named: "the lunch range", "lunch hour box", "lunch ki range", "lunch lull". */
     private val RANGE = Regex(" $LUNCH (s )?(ki |ke |ka )?(range|ranges|box|band|lull|consolidation|zone|high low|high and low) |" +
         " (range|box|lull|consolidation) (of|during|at|over|in) (the )?$LUNCH |" +
-        " (12|12 00|noon) (to|till|until|and) (1 30|13 30|one thirty) (range|box|window|stretch|lull) ")
+        " (12|12 00|noon) (to|till|until|and) (1 30|13 30|one thirty) (range|box|window|stretch|lull) |" +
+        // Round 18: "lunch ke baad nifty range todta hai kya", "dopahar mein nifty ki range kaisi rehti hai"
+        " $LUNCH ke (baad|bad) (\\w+ )?(range|box) (todta|todti|todega|tootta|tootti|tootega|tod|toot|break|breaks) |" +
+        " $LUNCH (mein|me|main) (\\w+ )?(ki|ka|ke) (range|box) ")
     private val UP = Regex(" (above|upside|up|higher|upar|upwards|upward) ")
     private val DOWN = Regex(" (below|downside|down|lower|neeche|niche|downwards|downward) ")
     // A forecast or advice, Boss's own book, a what-if, alerts and reminders, the app's bots, other spans, gold or VIX.

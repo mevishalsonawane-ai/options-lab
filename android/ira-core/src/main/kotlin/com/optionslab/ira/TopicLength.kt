@@ -162,7 +162,8 @@ object TopicLength {
     private const val ANSWERS = "(my |your |the )?(answers|replies)"
     private const val SIZE = "(short|shorter|brief|in short|long|longer|in detail|in full|detailed)"
 
-    private val WHICH = rx(LEAD + "how (long|short|detailed) do i (like|want|prefer) $ANSWERS( on each topic| by topic| per topic)?" + TAIL + "|" +
+    private val WHICH = rx(LEAD + "how (long|short|detailed) do (i|you think i) (like|want|prefer) $ANSWERS( on each topic| by topic| per topic)?" + TAIL + "|" +
+        LEAD + "do you (shorten|lengthen|cut short|keep short|say short) (some|any|certain) topics" + TAIL + "|" +
         LEAD + "do you know how (long|short|detailed) i (like|want|prefer) $ANSWERS" + TAIL + "|" +
         LEAD + "(which|what) topics do you (keep|say|make|give|cut) $SIZE( for me)?" + TAIL + "|" +
         LEAD + "(which|what) topics do i (like|want|prefer) $SIZE" + TAIL + "|" +
@@ -171,6 +172,7 @@ object TopicLength {
     private val RESET = rx(LEAD + "say (every|each|all) topics? at (the |your )?usual length" + TAIL + "|" +
         LEAD + "(forget|reset|clear|unlearn) how (long|short|detailed) i (like|want|prefer) $ANSWERS" + TAIL + "|" +
         LEAD + "(dont|do not|stop|quit) (shortening|lengthening|cutting|changing|sizing) $ANSWERS by topic" + TAIL + "|" +
+        LEAD + "(dont|do not) (shorten|lengthen|cut|change|size) $ANSWERS by topic" + TAIL + "|" +
         LEAD + "stop (saying|giving) topics $SIZE" + TAIL + "|" +
         LEAD + "(har|sab) topic (normal|usual) (length|lambai) (mein|me) (bolo|batao)" + TAIL)
 

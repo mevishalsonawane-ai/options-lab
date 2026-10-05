@@ -74,6 +74,10 @@ object WeakLink {
         // Hinglish: "mere trades mein sabse kamzor kadi kya hai", "mere bots mein aksar kya galat hota hai"
         " (sabse )?(kamzor|kamjor) (kadi|kaddi) ",
         " $MY(trades|trade|bots|bot|arms|setup|strategy|strategies) (mein|me|main) (aksar|zyada tar|zyadatar|sabse zyada|baar baar) (kya|kahan|kaha) (galat|gadbad) ",
+        // Round 18: "which part of my setup is weakest", "mera sabse kamzor point kya hai", "mere trade kahan galat jaate hain"
+        " (which|what) (part|parts|area|areas|side|bit) of $MY$WHAT (is|are) (the )?(weakest|weak) ",
+        " $MY(sabse )?(kamzor|kamjor) (point|points|hissa|cheez|pehlu|jagah) ",
+        " $MY(trades|trade|bots|bot|arms|strategy|strategies) (aksar |zyada tar |baar baar )?(kahan|kaha|kidhar) (galat|gadbad) (jaate|jate|jata|jaata|hote|hota|hoti|ho jaate|ho jate|ho jaati|ho jati) ",
     ).map { rx(it) }
     // Another day or a single trade (ArmDay, BotTrades, TradeCase), Jarvis's own record, advice, a switch, a what-if.
     private val NOT = rx(" (today|todays|aaj|yesterday|kal|this trade|that trade|last trade|should|shall|will|would|" +

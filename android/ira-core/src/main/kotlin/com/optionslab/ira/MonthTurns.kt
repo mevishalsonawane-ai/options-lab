@@ -77,16 +77,21 @@ object MonthTurns {
     /** A record asked of: how it goes, usually, an effect or a lean, against the rest. */
     private val RECORD = Regex(" (how|usually|normally|typically|generally|tend to|tends to|on average|record|records|stats|statistics|history|" +
         "historically|pattern|patterns|effect|seasonality|seasonal|bias|edge|kaisa|kaisi|kaise|aksar|rally|rallies|rise|rises|fall|falls|up|down|" +
-        "strong|stronger|weak|weaker|volatile|better|worse|compare|compared|versus|vs|than|rest of the month|perform|performs|do|does|go|goes|chalta|rehta|hota) ")
+        "strong|stronger|weak|weaker|volatile|better|worse|compare|compared|versus|vs|than|rest of the month|perform|performs|do|does|go|goes|chalta|rehta|hota|" +
+        // Round 18: "is month end bullish", "what happens to nifty at month end", "upar jata hai kya", "girta hai"
+        "bullish|bearish|happen|happens|upar|neeche|niche|girta|girti|chadhta|badhta|jata|jaata|karta) ")
     // A forecast or advice, Boss's own book or month, one month's move, today, the expiry, the calendar, a meaning.
     private val NOT = Regex(" (will|would|going to|gonna|tomorrow|kal|predict|prediction|forecast|outlook|should|shall|buy|sell|enter|exit|trade|trades|" +
         "i|me|my|mine|we|our|what if|suppose|agar|today|todays|aaj|now|abhi|right now|this month|last month|next month|previous month|coming month|" +
         "is mahine|iss mahine|pichle mahine|agle mahine|review|report|recap|summary|pnl|salary|sip|expiry|expiries|holiday|holidays|open|" +
         "mean|means|meaning|define|bot|bots|algo|strategy|backtest|news|gold|vix) ")
 
+    private val INDEX_TRADES = Regex(" (nifty|banknifty|finnifty|sensex|market|index) (usually |normally |typically |generally )?trade ")
+
     /** What was asked, or null: the record of past month edges only, never a forecast, advice or one month's move. */
     fun asked(text: String): Q? {
-        val t = norm(text)
+        // "How does Nifty usually trade at month end": the index trading, never Boss's own trade (round 18).
+        val t = INDEX_TRADES.replace(norm(text), " $1 $2go ")
         if (NOT.containsMatchIn(t) || !RECORD.containsMatchIn(t)) return null
         val turn = TURN.containsMatchIn(t)
         val s = START.containsMatchIn(t); val e = END.containsMatchIn(t)

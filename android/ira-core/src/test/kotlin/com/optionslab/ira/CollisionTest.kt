@@ -42,6 +42,13 @@ import kotlin.test.assertTrue
  * act; and a learned speech habit's undo said with "stop" ("stop offering my morning question", "stop shortening your
  * briefings", "stop reminding me why I turn your ideas down") reaches that undo, never a STOP of a strategy by that name,
  * while "stop orb", "stop all strategies", "stop the order watch" and "stop listening" read as before.
+ *
+ * Round 18 (5 Oct): more English and Hinglish of MonthTurns, LunchRange, WeakLink and TopicLength (ArmWeek is said on
+ * Sunday evening and has no question of its own) - none an order, a command or a Bundle act. "Is the position watch on"
+ * is the order watch asked (WatchAsk), never the positions list; "stop the position watch" stays a command. "Stop offering
+ * trades" / "stop saying boss" still read as STOP_ONE of a strategy by that name: Act.parse reads words only and cannot
+ * know Boss's strategy, Pine script and arm names (they live in the app), so the app's own pick finds no such arm and
+ * asks "Which one?" - nothing is stopped without his pick and Confirm.
  */
 class CollisionTest {
     private val audit = CoverageTest()
@@ -881,6 +888,71 @@ class CollisionTest {
         "stop saying the coin toss" to "HonestStars", "stop adding your record to your confidence" to "HonestStars",
         "stop qualifying your confidence" to "HonestStars", "stop skipping items in the morning check" to "MorningSense",
         "stop shortening the morning check" to "MorningSense",
+        // ---- Round 18. MonthTurns, more of it ----
+        "how does nifty usually do in the first few days of the month" to "MonthTurns", "does banknifty rally at the start of the month" to "MonthTurns",
+        "is there a month end effect on nifty" to "MonthTurns", "how does nifty behave at month end" to "MonthTurns",
+        "what is the turn of the month record for banknifty" to "MonthTurns", "month start stats for nifty" to "MonthTurns",
+        "does nifty tend to rise in the last 3 days of the month" to "MonthTurns", "how volatile is banknifty at the end of the month" to "MonthTurns",
+        "is the start of the month stronger than the rest for nifty" to "MonthTurns", "month end vs rest of the month for sensex" to "MonthTurns",
+        "turn of the month effect on finnifty" to "MonthTurns", "does nifty fall at the end of the month usually" to "MonthTurns",
+        "historically how does nifty perform at the start of a new month" to "MonthTurns", "is month end bullish for nifty" to "MonthTurns",
+        "how does nifty usually trade at the end of each month" to "MonthTurns", "what happens to nifty at month end" to "MonthTurns",
+        "how bearish is nifty at month end" to "MonthTurns", "what happens to banknifty at the turn of the month" to "MonthTurns",
+        "does sensex usually trade higher at the start of the month" to "MonthTurns",
+        "mahine ke shuru mein nifty kaisa rehta hai" to "MonthTurns", "mahine ke end mein banknifty kaisa chalta hai" to "MonthTurns",
+        "month ke last days mein nifty aksar girta hai kya" to "MonthTurns", "mahine ki shuruaat mein banknifty upar jata hai kya" to "MonthTurns",
+        "month ki shuruat mein nifty kaisa hota hai" to "MonthTurns", "mahine ke aakhir mein nifty kaisa chalta hai" to "MonthTurns",
+        "month start pe nifty ka record kya hai" to "MonthTurns", "month turn pe banknifty kaisa chalta hai" to "MonthTurns",
+        "mahine ke end mein nifty girta hai kya" to "MonthTurns", "mahine ki shuruaat mein nifty chadhta hai kya" to "MonthTurns",
+        "month ke shuru mein banknifty kya karta hai" to "MonthTurns",
+        // ---- LunchRange, more of it ----
+        "how wide is the lunch range on nifty" to "LunchRange", "does the lunch range break up or down usually" to "LunchRange",
+        "how often does banknifty break above the lunch range" to "LunchRange", "is the midday range narrower than the morning" to "LunchRange",
+        "what happens after the lunch range breaks" to "LunchRange", "does nifty hold the lunch range breakout" to "LunchRange",
+        "lunch hour range stats for banknifty" to "LunchRange", "does the afternoon break the lunch box" to "LunchRange",
+        "how often does nifty break below the lunch range" to "LunchRange", "noon range breakout stats for nifty" to "LunchRange",
+        "what is today's lunch range" to "LunchRange", "how is the lunch hour range today" to "LunchRange",
+        "lunch range ka breakout kab hota hai" to "LunchRange", "lunch ke baad nifty range todta hai kya" to "LunchRange",
+        "dopahar ki range kitni hoti hai nifty mein" to "LunchRange", "lunch time ki range upar tootti hai ya neeche" to "LunchRange",
+        "lunch ki range kitni choti hoti hai" to "LunchRange", "lunch range todne ke baad banknifty wapas aata hai kya" to "LunchRange",
+        "dopahar mein nifty ki range kaisi rehti hai" to "LunchRange", "lunch ka box kab tootta hai" to "LunchRange",
+        "lunch ke baad banknifty box todta hai kya" to "LunchRange", "lunch mein nifty ka range kitna hota hai" to "LunchRange",
+        // Their neighbours: when the day's high comes and how quiet lunch is stay the day's clock's; one month's move PeriodMove's.
+        "how often is the day's high made in the lunch hour" to "DayClock", "is lunchtime the quietest part of the day on nifty" to "DayClock",
+        "how did nifty do this month" to "PeriodMove", "what will nifty do at month end" to "Outlook",
+        // ---- WeakLink, more of it ----
+        "where do my trades usually go wrong" to "WeakLink", "what is the weakest link in my trading" to "WeakLink",
+        "what are the weak spots in my bots" to "WeakLink", "what goes wrong most often with my strategies" to "WeakLink",
+        "what usually goes wrong in my bots" to "WeakLink", "where do my arms usually go wrong" to "WeakLink",
+        "what is my weakest point" to "WeakLink", "my weakest links" to "WeakLink",
+        "which part of my setup is weakest" to "WeakLink", "what keeps going wrong in my paper trades" to "WeakLink",
+        "where does my system go wrong" to "WeakLink", "what is the weak spot in my system" to "WeakLink",
+        "what goes wrong in my trades the most" to "WeakLink", "which area of my trading is weakest" to "WeakLink", "what part of my bots is weak" to "WeakLink",
+        "mere bots mein aksar kya galat hota hai" to "WeakLink",
+        "mere setup mein kamzor kadi kaunsi hai" to "WeakLink", "meri strategies mein baar baar kya galat hota hai" to "WeakLink",
+        "mera sabse kamzor point kya hai" to "WeakLink", "mere arms mein aksar kahan gadbad hoti hai" to "WeakLink",
+        "mere trade kahan galat jaate hain" to "WeakLink", "sabse kamzor kadi batao" to "WeakLink", "mere bots kahan galat hote hain" to "WeakLink",
+        "meri strategy kahan gadbad hoti hai" to "WeakLink", "mera kamzor hissa kya hai" to "WeakLink",
+        // Its neighbour: one day's arm trades stay ArmDay's.
+        "why did orb lose today" to "ArmDay",
+        // ---- TopicLength, more of it ----
+        "which topics do you say in detail" to "TopicLength",
+        "how short do i like your answers" to "TopicLength", "what answer length do i prefer by topic" to "TopicLength",
+        "do you know how long i like my answers" to "TopicLength", "which topics do i like short" to "TopicLength",
+        "reset how short i like your answers" to "TopicLength",
+        "reset how detailed i like your answers" to "TopicLength", "stop shortening answers by topic" to "TopicLength",
+        "dont shorten answers by topic" to "TopicLength", "do not shorten answers by topic" to "TopicLength", "dont lengthen answers by topic" to "TopicLength",
+        "stop giving topics short" to "TopicLength", "how long do you think i like your answers" to "TopicLength",
+        "how detailed do you think i like your answers" to "TopicLength", "which topics do you cut short" to "TopicLength",
+        "which topics do i prefer in detail" to "TopicLength", "do you shorten some topics" to "TopicLength", "do you cut short any topics" to "TopicLength",
+        "which topics do you keep brief" to "TopicLength",
+        "kaunse topic detail mein bolte ho" to "TopicLength",
+        "sab topic usual length mein batao" to "TopicLength",
+        // ---- WatchAsk: "the position watch" is the order watch (it watches the positions' stops and targets), read only ----
+        "is the position watch on" to "WatchAsk", "is the position watch running" to "WatchAsk", "is my positions watch working" to "WatchAsk",
+        "is the positions watch alive" to "WatchAsk", "position watch chal raha hai kya" to "WatchAsk", "why did the position watch stop" to "WatchAsk",
+        "is my position watch working" to "WatchAsk", "the position watch status" to "WatchAsk", "how is the position watch doing" to "WatchAsk",
+        "is the position watcher running" to "WatchAsk", "why did my position watch stop" to "WatchAsk",
     )
 
     /** Round 17's undo wordings said with "stop" (each a learned speech habit's own undo), with the family each must get. */
@@ -1470,6 +1542,69 @@ class CollisionTest {
         assertEquals(Wake.Heard.Stop, Wake.heard("Jarvis, stop listening", false))
         // Only a learned habit's own undo is let through: other "stop <doing>" words are no undo, and read as before.
         for (s in listOf("stop offering trades", "stop saying boss")) assertTrue(MorningAsks.asked(s) == null && HonestStars.asked(s) == null && TalkHours.asked(s) == null, s)
+    }
+
+    // ---- Round 18: the newest families, the position watch, and "stop <doing>" with no arm of that name ----
+
+    @Test fun roundEighteenWordingsNeitherOrderNorCommandNorBundle() {
+        val newest = setOf("MonthTurns", "LunchRange", "WeakLink", "TopicLength", "WatchAsk")
+        val all = ASKED.filter { it.second in newest }
+        assertTrue(all.size >= 150, "${all.size}")
+        // Wrong before this round, each now where it belongs.
+        for ((s, want) in listOf("is month end bullish for nifty" to "MonthTurns", "how does nifty usually trade at the end of each month" to "MonthTurns",
+            "what happens to nifty at month end" to "MonthTurns", "mahine ki shuruaat mein banknifty upar jata hai kya" to "MonthTurns",
+            "lunch ke baad nifty range todta hai kya" to "LunchRange", "dopahar mein nifty ki range kaisi rehti hai" to "LunchRange",
+            "which part of my setup is weakest" to "WeakLink", "mera sabse kamzor point kya hai" to "WeakLink", "mere trade kahan galat jaate hain" to "WeakLink",
+            "dont shorten answers by topic" to "TopicLength", "how long do you think i like your answers" to "TopicLength", "do you shorten some topics" to "TopicLength",
+            "is the position watch on" to "WatchAsk")) assertTrue(s to want in all, s)
+        for ((s, want) in all) {
+            assertEquals(want, audit.feature(s), s)
+            val p = Ask.parse(s)
+            assertEquals(null, p.order, s); assertEquals(null, p.command, s)
+            assertTrue(Topic.ORDER !in p.topics && Topic.COMMAND !in p.topics, s)
+            assertTrue(!Bundle.acts(s), s)
+            assertEquals(null, Intents.quick(s), s)
+            assertTrue(!Reminder.asked(s) && !Reminder.cancelAsked(s) && !FollowUp.acts(s), s)
+            assertEquals(null, Reminder.parse(s, today.atTime(10, 0)), s)
+            assertTrue(Understand.questions(null, s).orEmpty().none { FollowUp.acts(it) || Ask.parse(it).command != null || Ask.parse(it).order != null }, s)
+        }
+        // A forecast, advice, Boss's own book, an alert or one day's trades is never one of these records.
+        for (s in listOf("should i trade at month end", "will nifty rise at the start of next month", "what will nifty do at month end",
+            "should i buy at the start of the month", "how did my trades do at month end", "what happens to my put at month end",
+            "how did nifty do this month", "what happens at month end expiry")) assertEquals(null, MonthTurns.asked(s), s)
+        for (s in listOf("should i trade the lunch range breakout", "will nifty break the lunch range today", "alert me when nifty breaks the lunch range",
+            "remind me at lunch")) assertEquals(null, LunchRange.asked(s), s)
+        for (s in listOf("why did orb lose today", "what went wrong in yesterday's trade", "what should i fix in my setup")) assertTrue(!WeakLink.asked(s), s)
+        // The length commands stay commands, and a bare wish is never the learned topics asked.
+        for ((s, k) in listOf("shorter" to Command.Kind.BRIEF_ON, "short answers please" to Command.Kind.BRIEF_ON, "tell me more" to Command.Kind.MORE,
+            "full answers" to Command.Kind.BRIEF_OFF)) { assertEquals(k, Ask.parse(s).command?.kind, s); assertEquals(null, TopicLength.asked(s), s) }
+        for (s in listOf("in short", "detail mein batao")) assertEquals(null, TopicLength.asked(s), s)
+        // The commands beside them still act as before (each through its own confirm).
+        for (s in listOf("buy nifty at month end", "stop orb", "stop the order watch", "stop the position watch", "stop all strategies", "close all positions", "kill switch on"))
+            assertEquals("Act", audit.feature(s), s)
+        assertEquals(Command(Command.Kind.STOP_ONE, target = "position watch"), Ask.parse("stop the position watch").command)
+        for (s in listOf("stop the position watch", "start the position watch", "watch my positions")) assertEquals(null, WatchAsk.asked(s), s)
+        // Said with something to do, each is left to the multi-step plan (never answered and the action dropped).
+        for (s in listOf("what's the weakest link in my setup then stop orb", "is the position watch on and close all positions",
+            "how does nifty do at month end then kill switch on"))
+            assertTrue(Bundle.acts(s) || Ask.parse(s).command != null || Ask.parse(s).order != null, s)
+    }
+
+    @Test fun aStopOfNoArmByThatNameIsNeverPickedWithoutAsking() {
+        // "Stop offering trades" / "stop saying boss" are no learned habit's undo, so they read as before: a STOP_ONE of a
+        // strategy by that name. Ask.parse reads words only (and is kept by them), so it cannot know Boss's own strategy,
+        // Pine script and arm names - those live in the app. The app's pick then finds no arm of that name and asks
+        // "Which one?" with the list: nothing is stopped unless Boss names one and confirms.
+        val arms = TradeCheck.RECORD.keys.toList() + listOf("Strategy 1", "My Pine script")
+        for ((s, target) in listOf("stop offering trades" to "offering trades", "stop saying boss" to "saying boss")) {
+            val c = Ask.parse(s).command
+            assertEquals(Command(Command.Kind.STOP_ONE, target = target), c, s)
+            assertEquals(null, Commands.pick(c!!, arms), s)
+            assertEquals(null, Ask.parse(s).order, s)
+        }
+        // A real arm named is still picked, exactly as before.
+        assertEquals(arms.indexOf("ORB Sweep"), Commands.pick(Ask.parse("stop orb sweep").command!!, arms))
+        assertEquals(arms.indexOf("Range Fade"), Commands.pick(Ask.parse("stop range fade").command!!, arms))
     }
 
     @Test fun theOrderWatchAnswerOnlyReads() {
