@@ -56,6 +56,7 @@ internal object IraTools {
     @Synchronized fun countAsked(said: String) {
         runCatching {
             clarityAsked(said)
+            againAsked(said)
             val t = com.optionslab.ira.SelfDoubt.count(askedKinds(), com.optionslab.app.data.Market.today(), said)
             val o = JSONObject().apply { t.forEach { (d, m) -> put(d.toString(), JSONObject().apply { m.forEach { (k, n) -> put(k, n) } }) } }
             prefs().putAllSoon(mapOf(ASKED_KINDS to o.toString()))
@@ -671,6 +672,41 @@ internal object IraTools {
         return com.optionslab.ira.WordFit.saySwitched(off, was)
     }
 
+    // ---- the market reads Boss asks again within minutes ([com.optionslab.ira.AskedAgain]) ----------------------------
+
+    /** The re-asks noted (kind keys, indices named, times and gaps only - never the words), the last 30 days. */
+    private const val AGAIN = "jarvis.askedAgain"
+    @Volatile private var againCache: com.optionslab.ira.AskedAgain.Log? = null
+    /** The market read asked last (its kind and when; in memory only, never the words). */
+    @Volatile private var againOpen: com.optionslab.ira.AskedAgain.Seen? = null
+
+    fun againLog(): com.optionslab.ira.AskedAgain.Log = againCache ?: runCatching {
+        val e = JSONArray(prefs().getString(AGAIN) ?: "[]")
+        com.optionslab.ira.AskedAgain.Log((0 until e.length()).map { i -> e.getJSONObject(i).let { x ->
+            val m = x.optJSONArray("m") ?: JSONArray()
+            com.optionslab.ira.AskedAgain.Event(x.getString("k"), (0 until m.length()).map { j -> m.getString(j) },
+                LocalDateTime.parse(x.getString("t")), x.optInt("g"))
+        } })
+    }.getOrDefault(com.optionslab.ira.AskedAgain.Log()).also { againCache = it }
+
+    /** A question asked: a market read asked again within minutes is noted (a record only - it changes nothing he does). */
+    @Synchronized fun againAsked(said: String) {
+        runCatching {
+            val step = com.optionslab.ira.AskedAgain.heard(againLog(), againOpen, said, LocalDateTime.now(IST).withNano(0))
+            againOpen = step.open
+            if (step.again == null) return@runCatching
+            againCache = step.log
+            val a = JSONArray().apply { step.log.events.forEach { x ->
+                put(JSONObject().put("k", x.kind).put("m", JSONArray().apply { x.markets.forEach { put(it) } }).put("t", x.at.toString()).put("g", x.gapS))
+            } }
+            prefs().putAllSoon(mapOf(AGAIN to a.toString()))
+        }
+    }
+
+    /** "Which of your answers do I ask again?". */
+    fun againSay(): String = runCatching { com.optionslab.ira.AskedAgain.say(againLog(), askedKinds(), LocalDateTime.now(IST).withNano(0)) }
+        .getOrDefault("I could not read my record of answers you asked again just now, Boss.")
+
     // ---- what he has learned, in one view ([com.optionslab.ira.Learnings]) ------------------------------------------
 
     /** Every learning store read with its own accessor (the goals are added by [IraImprove], which holds them). */
@@ -687,7 +723,8 @@ internal object IraTools {
         news = runCatching { newsMoves() }.getOrDefault(emptyList()),
         plan = plan,
         clarity = runCatching { clarityLog() }.getOrDefault(com.optionslab.ira.Clarity.Log()),
-        wordFit = runCatching { wordFitLog() }.getOrDefault(com.optionslab.ira.WordFit.Log()))
+        wordFit = runCatching { wordFitLog() }.getOrDefault(com.optionslab.ira.WordFit.Log()),
+        again = runCatching { againLog() }.getOrDefault(com.optionslab.ira.AskedAgain.Log()))
 
     /**
      * "Undo everything you learned this week", on Boss's Confirm: the wordings and routines kept in the last 7 days

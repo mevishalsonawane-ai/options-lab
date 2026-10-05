@@ -10,7 +10,8 @@ import java.util.Locale
  * the wordings Boss taught him ([Corrections]), the routines kept on his yes ([Routine]), the alerts said less often
  * ([AlertSense]), the conditions his own ideas and Solo sit out ([SelfCalibration], [SoloCalibration]), the answer kinds
  * he flags ([SelfDoubt]), the pattern kinds he no longer brings up unasked ([PatternCalls]), his data-freshness record
- * ([DataAge]), how Nifty moved after each news theme's headlines ([NewsMoves]) and his own goals for the week ([Improve]) - each with when and why it changed and, where one exists, the
+ * ([DataAge]), how Nifty moved after each news theme's headlines ([NewsMoves]), the market reads Boss asked again within
+ * minutes ([AskedAgain], a record only) and his own goals for the week ([Improve]) - each with when and why it changed and, where one exists, the
  * words that undo it by voice.
  *
  * "What have you learned this week?" ([Ask.WEEK]), "what changed in how you work?" ([Ask.CHANGED]) and "show me
@@ -38,6 +39,7 @@ object Learnings {
         ALERTS("Alerts I say less often", false),
         CLARITY("Answers I keep shorter aloud", false),
         WORD_FIT("Confidence words I set to fit my numbers", false),
+        AGAIN("Market reads you asked again within minutes", false),
         SIT_OUT("Conditions I sit out", true),
         ANSWERS("Answer kinds I flag", true),
         PATTERNS("Patterns I no longer bring up", false),
@@ -67,6 +69,7 @@ object Learnings {
         val plan: Improve.Plan? = null,
         val clarity: Clarity.Log = Clarity.Log(),
         val wordFit: WordFit.Log = WordFit.Log(),
+        val again: AskedAgain.Log = AskedAgain.Log(),
     )
 
     fun day(d: LocalDate): String = "${d.dayOfMonth} ${d.month.getDisplayName(TextStyle.SHORT, Locale.ENGLISH)}"
@@ -113,6 +116,10 @@ object Learnings {
         WordFit.misfits(i.wordFit, now).forEach { r ->
             out += Item(Area.WORD_FIT, WordFit.ledgerWhat(r, i.wordFit.off), r.newest.toLocalDate(), WordFit.ledgerWhy(r, i.wordFit.off),
                 if (i.wordFit.off) WordFit.REDO else WordFit.UNDO)
+        }
+        // The market reads Boss asked again within minutes ([AskedAgain]; kinds only): a record, it changes nothing he does.
+        AskedAgain.shown(i.again, i.tally, now).forEach { r ->
+            out += Item(Area.AGAIN, AskedAgain.ledgerWhat(r), r.newest.toLocalDate(), AskedAgain.ledgerWhy(r), null)
         }
         // The conditions his own ideas and Solo sit out: the record decides, so it lifts only as the record does.
         fun sitOut(outcomes: List<SelfCalibration.Outcome>, solo: Boolean) {
@@ -202,7 +209,7 @@ object Learnings {
     fun say(items: List<Item>, ask: Ask, today: LocalDate, locked: Boolean): String {
         val shown = items.filter { !locked || !it.personal }
             .filter { ask == Ask.ALL || thisWeek(it.on, today) }
-            .filter { ask != Ask.CHANGED || (it.area != Area.DATA && it.area != Area.NEWS) }
+            .filter { ask != Ask.CHANGED || (it.area != Area.DATA && it.area != Area.NEWS && it.area != Area.AGAIN) }
         val hidden = locked && items.any { it.personal }
         val tail = listOfNotNull(if (hidden) UNLOCK else null, NEVER_ACTS).joinToString(" ")
         if (shown.isEmpty()) {

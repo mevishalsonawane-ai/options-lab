@@ -30,7 +30,7 @@ class CoverageTest {
         val asSaid = Sources.asked(said) || AboutBoss.knowAsked(said) || Memory.recallAsked(said) || Memory.forgetAsked(said) || PatternCalls.asked(said) ||
             Learnings.asked(said) != null || Learnings.undoAsked(said) || NewsMoves.asked(said) != null || PreMarket.asked(said) ||
             ChainDrift.asked(said) != null || Headroom.asked(said) != null || DayClock.asked(said) != null ||
-            SaidAbout.asked(said) != null || GapRecord.asked(said) != null || Causes.asked(said) != null || WeekAhead.asked(said) != null
+            SaidAbout.asked(said) != null || GapRecord.asked(said) != null || Causes.asked(said) != null || WeekAhead.asked(said) != null || AskedAgain.asked(said)
         return ((if (asSaid) null else Understand.questions(null, said)) ?: listOf(said)).map { kind(it, 0) }
     }
 
@@ -42,6 +42,7 @@ class CoverageTest {
         if (p.order == null && p.command == null && !Bundle.acts(q)) {
             if (DayJournal.asked(q)) return Kind.ACCOUNT
             if (AlertSense.asked(q) != null || Airtime.asked(q) || Hearing.asked(q) || PatternCalls.asked(q)) return Kind.JARVIS
+            if (AskedAgain.asked(q)) return Kind.JARVIS
             if (NewsMoves.asked(q) != null) return Kind.MARKET
             if (TaxRecords.exportAsked(q)) return Kind.ACCOUNT
             if (Learnings.asked(q) != null || Learnings.undoAsked(q)) return Kind.JARVIS
@@ -441,7 +442,7 @@ class CoverageTest {
             PatternCalls.asked(said) || Learnings.asked(said) != null || Learnings.undoAsked(said) || NewsMoves.asked(said) != null ||
             PreMarket.asked(said) ||
             ChainDrift.asked(said) != null || Headroom.asked(said) != null || NeedsTrue.asked(said) || Clarity.asked(said) != null || DayClock.asked(said) != null ||
-            SaidAbout.asked(said) != null || GapRecord.asked(said) != null || WordFit.asked(said) != null || Causes.asked(said) != null || WeekAhead.asked(said) != null
+            SaidAbout.asked(said) != null || GapRecord.asked(said) != null || WordFit.asked(said) != null || Causes.asked(said) != null || WeekAhead.asked(said) != null || AskedAgain.asked(said)
         val qs = if (asSaid || understood || cleaned) null else Understand.questions(null, said)?.takeIf { it.isNotEmpty() && it != listOf(said) }
         if (qs != null) return if (qs.size == 1) feature(qs[0], cleaned = true) else qs.joinToString(" & ") { feature(it, understood = true) }
         val q = said
@@ -457,6 +458,7 @@ class CoverageTest {
         if (alone && PatternCalls.asked(q)) return "PatternCalls"
         if (alone && Clarity.asked(q) != null) return "Clarity"
         if (alone && WordFit.asked(q) != null) return "WordFit"
+        if (alone && AskedAgain.asked(q)) return "AskedAgain"
         if (alone && NewsMoves.asked(q) != null) return "NewsMoves"
         if (alone && TaxRecords.exportAsked(q)) return "TaxExport"
         if (alone && Learnings.asked(q) != null) return "Learnings"
@@ -864,6 +866,10 @@ class CoverageTest {
         "what do you mean by usually" to "WordFit", "when you say often what do you mean" to "WordFit",
         "what does rarely mean" to "WordFit", "how calibrated are you" to "WordFit",
         "say your confidence words as written" to "WordFit", "match your words to the numbers again" to "WordFit",
+        // ---- AskedAgain (round 13): the market reads Boss asked again within minutes ----
+        "which of your answers do i ask again" to "AskedAgain", "which answers did i have to ask twice" to "AskedAgain",
+        "what do i keep asking again" to "AskedAgain", "which of your market reads missed" to "AskedAgain",
+        "which answers didn't land" to "AskedAgain", "kaun se jawab main dobara puchta hoon" to "AskedAgain",
         // ---- Its neighbours: the strategies listed, Solo, the positions' health ----
         "show my strategies" to "Account:STRATEGIES", "list my strategies" to "Account:STRATEGIES",
         "what strategies are running" to "Account:STRATEGIES", "which strategies are on" to "Account:STRATEGIES",
@@ -960,6 +966,8 @@ class CoverageTest {
             ("say your answers in full again" to "Clarity") to ("say everything again" to "AlertSense"),
             // Round 12: a confidence word asked of is his own; a market word asked of stays the glossary's.
             ("what do you mean by usually" to "WordFit") to ("what do you mean by max pain" to "Glossary"),
+            // Round 13: what Boss asks again is a record of Jarvis's answers; his usual questions stay his routine.
+            ("what do i keep asking again" to "AskedAgain") to ("what do i usually ask" to "Routine"),
             // Reasoning round 10: a fall weighed by its evidence, beside one sudden move's coincidences and the news behind it.
             ("why did nifty fall" to "Causes") to ("why did nifty suddenly fall" to "SharpMove"),
             ("what caused the fall today" to "Causes") to ("what news moved the market" to "NewsDesk"),

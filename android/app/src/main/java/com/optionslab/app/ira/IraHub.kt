@@ -1228,7 +1228,8 @@ object IraHub {
                 com.optionslab.ira.Clarity.asked(q) != null || com.optionslab.ira.DayClock.asked(q) != null ||
                 com.optionslab.ira.GapRecord.asked(q) != null ||
                 com.optionslab.ira.WordFit.asked(q) != null ||
-                com.optionslab.ira.Causes.asked(q) != null }.getOrDefault(false)) {
+                com.optionslab.ira.Causes.asked(q) != null ||
+                com.optionslab.ira.AskedAgain.asked(q) }.getOrDefault(false)) {
             val prev = if (recent) _state.value.messages.lastOrNull { !it.fromIra }?.text else null
             val qs = runCatching { com.optionslab.ira.Understand.questions(prev, q) }.getOrNull()
                 ?.takeIf { it.isNotEmpty() && it != listOf(q) && it.none { p -> lockedAccount(q, p) } }
@@ -1309,6 +1310,14 @@ object IraHub {
                 com.optionslab.ira.WordFit.Request.ON -> IraTools.wordFitSwitch(false)
                 com.optionslab.ira.WordFit.Request.HOW -> IraTools.wordFitSay(q)
             }
+            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
+            return
+        }
+        // "Which of your answers do I ask again?": the market reads Boss asked again within minutes - a sign the first answer
+        // missed ([com.optionslab.ira.AskedAgain]; kinds and times only, never words). A record only: nothing learned acts.
+        if (com.optionslab.app.BuildConfig.JARVIS && !bundled && parsed.order == null && parsed.command == null &&
+            runCatching { com.optionslab.ira.AskedAgain.asked(q) }.getOrDefault(false)) {
+            val said = IraTools.againSay()
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
             return
         }
