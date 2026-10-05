@@ -408,3 +408,25 @@ object LiveReadPace {
     fun due(sinceLastMs: Long?, quiet: Boolean): Boolean =
         sinceLastMs == null || sinceLastMs < 0 || sinceLastMs >= if (quiet) QUIET_MS else SHARED_MS
 }
+
+/**
+ * Battery (round 11): while Jarvis listens in market hours, the account answers asked most (status, P&L, positions,
+ * orders, funds, risk, protections, strategies, alarms) were read afresh every 30 s to keep them ready - with a Zerodha
+ * session that is three Zerodha requests (orders, the position book, funds) besides a fresh paper snapshot, about 750
+ * reads a session. With the screen off and nothing held or armed (the words lane's quiet, [WordsPace]) they are now
+ * kept ready about every 2 minutes ([QUIET_MS], the fourth 30 s pass): about 188 reads. Words only - an answer past its
+ * 30 s freshness is read afresh when asked, as on a low battery; something changing (an order, a command) clears the
+ * kept answers and the next pass reads at once. Stops, targets, the loss limit, the guard and every alert read their
+ * own. Any doubt (nothing kept since a change, a clock oddity) reads. Pure.
+ */
+object AccountWarmPace {
+    /**
+     * Screen off and quiet: how old the kept answers may get before a pass reads them again. Just under 2 minutes, so
+     * the fourth pass of a 30 s loop reads even when its timer runs a little early.
+     */
+    const val QUIET_MS = 115_000L
+
+    /** Read the account ahead on this pass? [sinceLastMs]: since it was last read ahead (null: not since a change). */
+    fun due(sinceLastMs: Long?, quiet: Boolean): Boolean =
+        !quiet || sinceLastMs == null || sinceLastMs < 0 || sinceLastMs >= QUIET_MS
+}

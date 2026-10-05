@@ -95,7 +95,13 @@ internal object IraAccount {
         Section.PROTECTIONS, Section.STRATEGIES, Section.ALARMS)
 
     /** Something changed (an order, a command): the next question reads afresh. */
-    fun invalidate() = synchronized(cache) { cache.clear() }
+    fun invalidate() { synchronized(cache) { cache.clear(); warmedAt = 0L } }
+
+    /**
+     * When [warm] last read ahead (SystemClock.elapsedRealtime; 0 = not since a change). [invalidate] clears it, so the
+     * next pass after an order or a command reads at once; it is also the reset hook between tests.
+     */
+    @Volatile private var warmedAt = 0L
 
     /**
      * [read], but from what was read in the last [FRESH_MS] when every section asked is there (questions naming a
@@ -115,8 +121,19 @@ internal object IraAccount {
         return v
     }
 
-    /** Reads [WARM] ahead (the listening keeper calls it), so those answers need no wait. */
-    suspend fun warm() { invalidate(); readFast(WARM) }
+    /**
+     * Reads [WARM] ahead (the listening keeper calls it), so those answers need no wait. [quiet]: the screen off and
+     * nothing held or armed - then read about every 2 minutes, not on every 30 s pass (Battery, round 11,
+     * [com.optionslab.ira.AccountWarmPace]). Words only; a question past [FRESH_MS] reads afresh itself.
+     */
+    suspend fun warm(quiet: Boolean = false) {
+        val at = android.os.SystemClock.elapsedRealtime()
+        val last = warmedAt
+        if (!com.optionslab.ira.AccountWarmPace.due(if (last == 0L) null else at - last, quiet)) return
+        invalidate()
+        warmedAt = at.coerceAtLeast(1L)
+        readFast(WARM)
+    }
 
     /** "Am I ready to go live?": each thing that should be in place first. */
     private suspend fun readyLines(s: AppSettings, today: java.time.LocalDate): List<String> {

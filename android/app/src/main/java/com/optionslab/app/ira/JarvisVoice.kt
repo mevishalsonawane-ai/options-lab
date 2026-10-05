@@ -831,7 +831,7 @@ class JarvisVoice : Service() {
             }
             // While listening, the slow answers are kept ready so none waits: prices every minute in market hours (every 2
             // with the screen off and nothing held or armed - battery round 10), your
-            // account and the trade check every 30 seconds.
+            // account and the trade check every 30 seconds (each every 2 minutes when nothing can use it - rounds 9 and 11).
             // (The model is NOT loaded here any more - root cause, 4 Oct: kept in memory the whole time Jarvis listened,
             // 1 GB and more on 4 cores starved the phone's on-device recognizer, which then heard nothing. It loads only
             // when an answer needs it, and leaves memory after 10 minutes unused.)
@@ -853,7 +853,12 @@ class JarvisVoice : Service() {
                     // The account and the trade check need the internet: not tried while offline. Outside market hours nothing
                     // in them moves: every 5 minutes while the screen is on, every 30 with it off (battery round 1; it was every
                     // 5 minutes all night). An answer asked meanwhile reads afresh, as on a low battery.
-                    if ((open || n % (if (screen) 10 else 60) == 0) && IraHub.online()) runCatching { IraHub.warm() }
+                    // Battery (round 11): with the screen off and the words lane quiet (nothing held or armed), the account is
+                    // read ahead about every 2 minutes, not every 30 s ([com.optionslab.ira.AccountWarmPace]). Words only.
+                    if ((open || n % (if (screen) 10 else 60) == 0) && IraHub.online()) runCatching {
+                        val accountQuiet = !screen && com.optionslab.app.work.Tasks.wordsQuietNow() == true
+                        IraHub.warm(accountQuiet)
+                    }
                     n++
                     // Low battery and not charging: kept ready less often (answers then read afresh when asked).
                     kotlinx.coroutines.delay(com.optionslab.app.work.Battery.gap(this@JarvisVoice, 30_000))

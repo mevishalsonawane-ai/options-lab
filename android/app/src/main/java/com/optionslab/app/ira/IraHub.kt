@@ -4237,10 +4237,12 @@ object IraHub {
      * Keeps the slow answers ready (called every 30 s while Jarvis listens): your account, and the trade check - every
      * 30 s while something can use it within the minute ([checkKeptFast]), else every 2 minutes
      * ([com.optionslab.ira.CheckWarmPace]; Battery, round 9). [tradeCheckFast] never uses one a minute old or more.
+     * [accountQuiet]: the screen off and nothing held or armed - the account is then read ahead about every 2 minutes
+     * ([com.optionslab.ira.AccountWarmPace]; Battery, round 11).
      */
-    suspend fun warm() {
+    suspend fun warm(accountQuiet: Boolean = false) {
         if (GOLD_ONLY_TALK) return
-        runCatching { IraAccount.warm() }
+        runCatching { IraAccount.warm(accountQuiet) }
         val warmAt = android.os.SystemClock.elapsedRealtime()
         val checkAt = checked?.first
         if (com.optionslab.ira.CheckWarmPace.due(checkAt?.let { warmAt - it }, checkKeptFast()))
