@@ -423,8 +423,9 @@ private fun StraddleCard(model: AppModel, c: ChainSnapshot, streaming: Boolean) 
     var peK by remember(c.underlying, c.expiry) { mutableStateOf(c.atm ?: strikes.getOrNull(atmIndex) ?: 0.0) }
     var view by remember { mutableStateOf<AppModel.StraddleView?>(null) }
     var err by remember { mutableStateOf<String?>(null) }
-    LaunchedEffect(c.underlying, c.expiry, ceK, peK, streaming) {
-        view = null
+    LaunchedEffect(c.underlying, c.expiry, ceK, peK) { view = null }
+    // Battery (round 2): polled only while the app is in front - the pair was read every 3 s from a phone in a pocket.
+    com.optionslab.app.ui.PollWhileStarted(c.underlying, c.expiry, ceK, peK, streaming) {
         while (true) {
             runCatching { model.straddle(c.underlying, c.expiry, ceK, peK) }
                 .onSuccess { view = it; err = null }.onFailure { err = it.message ?: "could not load the pair" }

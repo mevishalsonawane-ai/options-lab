@@ -291,6 +291,9 @@ object OrbArms {
 
     suspend fun holding(): Boolean = lock.withLock { book().positions.any { it.open } }
 
+    /** Any arm (the liquidity books too) switched on - for the words lane's pace only, never a decision on an order. */
+    suspend fun anyArmed(): Boolean = lock.withLock { book().armed.values.any { it } }
+
     // ---- arming and approvals ------------------------------------------------------
 
     /** [pinConfirmed]: the UI took the PIN or fingerprint (required to arm while the app is in Live). */

@@ -86,6 +86,21 @@ class HeartbeatTest : RobolectricTest() {
         assertFalse(Heartbeat.stalledToday())
     }
 
+    @Test fun theBeatIsStoredAtMostOnceAMinuteButReadFreshInProcess() {
+        Background.at(WED, 11, 0)
+        Heartbeat.beat(context)
+        val stored = SecurePrefs.getLong("hb.last", 0L)
+        assertTrue(stored > 0)
+        ShadowSystemClock.advanceBy(Duration.ofSeconds(15))
+        Heartbeat.beat(context)
+        assertEquals("not written again within the minute", stored, SecurePrefs.getLong("hb.last", 0L))
+        assertTrue("but this process reads the newest beat", Heartbeat.last() > stored)
+        ShadowSystemClock.advanceBy(Duration.ofSeconds(50))
+        Heartbeat.beat(context)
+        assertTrue("written again after a minute", SecurePrefs.getLong("hb.last", 0L) > stored)
+        assertFalse(Heartbeat.stale())
+    }
+
     @Test fun aSilentWatchIsRestartedAndReportedOncePerStall() {
         Background.at(WED, 11, 0)
         SecurePrefs.put("hb.last", 1L)

@@ -138,3 +138,29 @@ object BatteryUse {
 
     fun asked(text: String): Boolean = ASKED.containsMatchIn(norm(text))
 }
+
+/**
+ * Battery, round 2: the pace of Jarvis's words-only checks in the order watch's own lane. While the screen is off and
+ * nothing is held or armed (no position, no open ticket, no strategy run, no ORB arm) - [quiet] - the slow group (the
+ * goals, Boss's own rules, the paper tests, the day target, stale trades, the bots' switches: bookkeeping and remarks,
+ * none bound to the minute) runs every [QUIET_SLOW_MS] instead of every round, and the news is read every
+ * [QUIET_NEWS_MS] instead of every 5 minutes. The safety words (a position eating the loss limit, MIS at 15:10, the
+ * position health check, the expiry heads-up, the feed or relay stopped, overtrading, a bot misbehaving, the login nudge)
+ * and everything time-bound (the candle expert's closes, the agenda's items, the gap, the day plan, Boss's usual
+ * question, a sharp move) run every round as before; nothing here touches a stop, a target, an exit or an order. Pure.
+ */
+object WordsPace {
+    const val QUIET_SLOW_MS = 3 * 60_000L
+    const val QUIET_NEWS_MS = 10 * 60_000L
+
+    /** Quiet: screen off, nothing held, and nothing known to be armed (unknown counts as armed: the pace stays). */
+    fun quiet(screenOn: Boolean, held: Boolean, armed: Boolean?): Boolean = !screenOn && !held && armed == false
+
+    /** Does the slow group run this round? Always when not [quiet]; never run yet, or a clock that went back, runs it too. */
+    fun slowDue(quiet: Boolean, nowMs: Long, lastMs: Long): Boolean =
+        !quiet || lastMs <= 0L || nowMs < lastMs || nowMs - lastMs >= QUIET_SLOW_MS
+
+    /** Is the news looked at this round ([lastNewsMs] = the last read, null = never)? Its own 5-minute gate still applies. */
+    fun newsDue(quiet: Boolean, nowMs: Long, lastNewsMs: Long?): Boolean =
+        !quiet || lastNewsMs == null || nowMs < lastNewsMs || nowMs - lastNewsMs >= QUIET_NEWS_MS
+}

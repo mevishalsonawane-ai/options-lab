@@ -173,7 +173,7 @@ fun IraPage(orders: IraOrderPaths? = null) {
                 val waiting = st.pending.size
                 // Muted: said plainly on the globe, one tap to hear Jarvis again.
                 var mutedNow by remember { mutableStateOf(JarvisVoice.muted) }
-                LaunchedEffect(Unit) { while (true) { mutedNow = JarvisVoice.muted; kotlinx.coroutines.delay(2_000) } }
+                com.optionslab.app.ui.PollWhileStarted { while (true) { mutedNow = JarvisVoice.muted; kotlinx.coroutines.delay(2_000) } }
                 if (mutedNow) BrassButton("🔇  Muted · tap to unmute") { JarvisVoice.muted = false; mutedNow = false }
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
                     MicButton("🎙  Talk")
@@ -840,7 +840,7 @@ private fun Orb(vol: Float, trend: Float, mode: Int, onTap: (() -> Unit)? = null
         v.caution = IraHub.caution()
     }
     // The trade check's last word tints the globe amber (careful) or deeper amber (don't trade): read every few seconds.
-    LaunchedEffect(view) { while (true) { view?.caution = IraHub.caution(); kotlinx.coroutines.delay(3_000) } }
+    com.optionslab.app.ui.PollWhileStarted(view) { while (true) { view?.caution = IraHub.caution(); kotlinx.coroutines.delay(3_000) } }
     DisposableEffect(owner, view) {
         val v = view
         val obs = LifecycleEventObserver { _, e ->

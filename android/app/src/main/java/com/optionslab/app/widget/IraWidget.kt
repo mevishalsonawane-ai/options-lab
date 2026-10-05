@@ -33,6 +33,11 @@ class IraWidget : AppWidgetProvider() {
         /** The account P&L last published (the live watch refreshes it every minute), or null. */
         fun lastPnl(): Double? = if (SecurePrefs.getString(K_PNL) != null) SecurePrefs.getDouble(K_PNL, 0.0) else null
 
+        /** Is at least one widget on a home screen? (Unknown counts as yes: the watch then reads its prices as before.) */
+        fun placed(context: Context): Boolean = runCatching {
+            AppWidgetManager.getInstance(context).getAppWidgetIds(ComponentName(context, IraWidget::class.java)).isNotEmpty()
+        }.getOrDefault(true)
+
         /** Record the latest figures and redraw every placed widget. */
         fun publish(context: Context, nifty: Pair<Double, Double>?, bank: Pair<Double, Double>?, pnl: Double?) {
             val m = HashMap<String, Any?>()

@@ -37,16 +37,35 @@ object Heartbeat {
     private const val EVERY_MS = 5 * 60_000L
     private const val NOTE_ID = 2014
 
+    /**
+     * Battery (round 2): the beat is kept in memory on every pass, but written to the vault (a Keystore encrypt and a
+     * file write of the whole vault) at most once a minute. A process that dies leaves a stored beat at most
+     * [PERSIST_MS] old, well inside [STALE_MS], so the alarm's stale check after a process death is as before.
+     */
+    private const val PERSIST_MS = 60_000L
+    @Volatile private var memBeat = 0L
+    /** The value this process last wrote; a stored value different from it was written by someone else and wins. */
+    @Volatile private var persisted = 0L
+
     /** Called by the watch on every pass, including while it waits for the open. */
     fun beat(context: Context) {
-        SecurePrefs.put(KEY, System.currentTimeMillis())
+        val now = System.currentTimeMillis()
+        memBeat = now
+        if (now - persisted >= PERSIST_MS || now < persisted || SecurePrefs.getLong(KEY, 0L) != persisted) {
+            SecurePrefs.put(KEY, now)
+            persisted = now
+        }
         if (SecurePrefs.getString(ALERTED) != null) {
             SecurePrefs.put(ALERTED, null)
             runCatching { androidx.core.app.NotificationManagerCompat.from(context).cancel(NOTE_ID) }
         }
     }
 
-    fun last(): Long = SecurePrefs.getLong(KEY, 0L)
+    /** The newest finished check: this process's own beat, or the stored one (another process's, or one written over it). */
+    fun last(): Long {
+        val stored = SecurePrefs.getLong(KEY, 0L)
+        return if (stored == persisted) maxOf(stored, memBeat) else stored
+    }
 
     /** The service's own pulse (this process only: a new process starts at 0, which reads as "not running"). */
     @Volatile var alivePulse: Long = 0L

@@ -420,6 +420,7 @@ class JobsTest : RobolectricTest() {
         upstox.reply = { p ->
             if (p in quotePaths) { cardAtFirstQuote += nm.getNotification(id) != null; status(500) } else status(404)
         }
+        indexAlarms()
         val t = Tasks.watchTick(context, AppSettings.load(), HashSet())
         assertFalse("the position pass (a risk step) had already run when the first quote was asked for", cardAtFirstQuote.first())
         for (k in Upstox.INDEX_KEYS.values) assertEquals(k, 2, upstox.count { it == "${UpstoxStub.BASE}/intraday/$k/minutes/1" })
@@ -430,6 +431,7 @@ class JobsTest : RobolectricTest() {
 
     @Test fun theWatchNoticeCarriesNoMarketData() = com.optionslab.app.testing.bounded("theWatchNoticeCarriesNoMarketData") { runBlocking {
         upstox.reply = { p -> if (isIntraday(p)) UpstoxStub.candles(UpstoxStub.minutes(WED, LocalTime.of(9, 15), 30, 24_800.0)) else status(404) }
+        indexAlarms()
         val t = Tasks.watchTick(context, AppSettings.load(), HashSet())
         // The index quotes were read (for alarms and the widget) but none reaches the notice: only orders and positions do.
         assertTrue(upstox.count(::isIntraday) > 0)
@@ -439,11 +441,32 @@ class JobsTest : RobolectricTest() {
 
     @Test fun aHungFeedCannotStallTheWatch() = com.optionslab.app.testing.bounded("aHungFeedCannotStallTheWatch") { runBlocking {
         upstox.reply = { p -> if (isIntraday(p)) MockResponse().setSocketPolicy(SocketPolicy.NO_RESPONSE) else status(404) }
+        indexAlarms()
         val t0 = System.nanoTime()
         val t = Tasks.watchTick(context, AppSettings.load(), HashSet())
         val secs = (System.nanoTime() - t0) / 1e9
         assertTrue("took $secs s", secs < 35)
         assertTrue(t.lines.isEmpty())
+    } }
+
+    /** An enabled alarm on each index, so the pass has a reader for all three quotes. */
+    private fun indexAlarms() {
+        Alarms.upsert(PriceAlarm(901, "NIFTY", above = true, level = 99_000.0))
+        Alarms.upsert(PriceAlarm(902, "BANKNIFTY", above = true, level = 999_000.0))
+        Alarms.upsert(PriceAlarm(903, "INDIAVIX", above = true, level = 900.0))
+    }
+
+    @Test fun indexQuotesAreReadOnlyWhenSomethingUsesThem() = com.optionslab.app.testing.bounded("indexQuotesAreReadOnlyWhenSomethingUsesThem") { runBlocking {
+        upstox.reply = { p -> if (isIntraday(p)) UpstoxStub.candles(UpstoxStub.minutes(WED, LocalTime.of(9, 15), 30, 24_800.0)) else status(404) }
+        // No open ticket, no index alarm, no widget: no index read at all.
+        assertEquals(emptyList<String>(), Tasks.indexQuotesWanted(context, null))
+        Tasks.watchTick(context, AppSettings.load(), HashSet())
+        assertEquals(0, upstox.count(::isIntraday))
+        // A ticket on BANKNIFTY reads that one; a VIX alarm adds VIX; a disabled alarm reads nothing.
+        assertEquals(listOf("BANKNIFTY"), Tasks.indexQuotesWanted(context, "BANKNIFTY"))
+        Alarms.upsert(PriceAlarm(904, "INDIAVIX", above = true, level = 30.0))
+        Alarms.upsert(PriceAlarm(905, "NIFTY", above = true, level = 30_000.0, enabled = false))
+        assertEquals(listOf("BANKNIFTY", "INDIAVIX"), Tasks.indexQuotesWanted(context, "BANKNIFTY"))
     } }
 
     @Test fun priceAlarmsFireOnceAndNotAgainWithinHalfAnHour() {

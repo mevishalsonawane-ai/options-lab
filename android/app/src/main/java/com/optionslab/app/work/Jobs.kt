@@ -444,6 +444,28 @@ object Tasks {
     @Volatile private var wordsSince = 0L
     @Volatile private var wordsStuckTold = 0L
     @Volatile private var wordsStep: String? = null
+    /** When the slow group of words last ran ([com.optionslab.ira.WordsPace]). */
+    @Volatile private var wordsSlowAt = 0L
+
+    /**
+     * Battery (round 2): the screen off and nothing held or armed - the words lane's slow group and the news go slower
+     * ([com.optionslab.ira.WordsPace]). Anything unknown counts as not quiet: the pace stays as before.
+     */
+    private suspend fun wordsQuiet(): Boolean {
+        val ctx = com.optionslab.app.ira.IraHub.appContext() ?: return false
+        val screen = runCatching { ctx.getSystemService(android.os.PowerManager::class.java)?.isInteractive }.getOrNull() ?: true
+        if (screen) return false
+        val held = PositionCards.anyOpen || com.optionslab.app.data.OrbArms.holdingHint || com.optionslab.app.data.Strategies.runningHint ||
+            runCatching { Ledger.openTicket() != null }.getOrDefault(true) ||
+            runCatching { com.optionslab.app.data.Paper.state.positions.any { it.quantity != 0 } }.getOrDefault(true)
+        if (held) return false
+        val pine = runCatching { com.optionslab.app.data.PineScripts.items.value.any { it.auto.on } }.getOrDefault(true)
+        // The arms' lock may be held by their tick across a network read: a short wait, else "unknown" (not quiet).
+        val orb = if (pine) true else kotlinx.coroutines.withTimeoutOrNull(2_000) {
+            runCatching { com.optionslab.app.data.OrbArms.anyArmed() }.getOrNull()
+        }
+        return com.optionslab.ira.WordsPace.quiet(screenOn = false, held = false, armed = orb)
+    }
 
     private fun wordsLane(scope: CoroutineScope) {
         if (wordsJob?.isActive == true) {
@@ -491,13 +513,20 @@ object Tasks {
         word("relay watch") { com.optionslab.app.ira.IraCoach.relayWatch() }
         // Jarvis: too many trades too fast.
         word("overtrading") { com.optionslab.app.ira.IraCoach.overtradeWatch() }
+        // Battery (round 2): with the screen off and nothing held or armed, the slow group below runs every 3 minutes and
+        // the news every 10; the safety words above and the time-bound checks run every round as before.
+        val quiet = wordsQuiet()
+        val nowMs = System.currentTimeMillis()
+        val slow = com.optionslab.ira.WordsPace.slowDue(quiet, nowMs, wordsSlowAt)
+        if (slow) wordsSlowAt = nowMs
+        val newsDue = com.optionslab.ira.WordsPace.newsDue(quiet, nowMs, com.optionslab.app.ira.IraHub.state.value.newsAt?.toEpochMilli())
         // Jarvis: a strategy of Boss's behaving unusually against its tested record - told once a day without amounts,
         // stopping it asked first (reads the app's own books, every five minutes at most).
         word("bot review") { com.optionslab.app.ira.IraBots.watch() }
         // Jarvis: every 15 minutes in market hours, Jarvis looks for a pattern worth a strategy and notifies it.
         word("pattern check") { com.optionslab.app.ira.IraHub.backgroundCheck() }
         // Jarvis: the news every 5 minutes, judged for your arms and positions.
-        word("news") { com.optionslab.app.ira.IraHub.newsWatch() }
+        if (newsDue) word("news") { com.optionslab.app.ira.IraHub.newsWatch() }
         // Jarvis: the candle-pattern expert at each 5- and 15-minute close; a qualifying pattern becomes a trade to approve.
         word("candle expert") { com.optionslab.app.ira.IraHub.expertWatch() }
         word("ORB coach") { com.optionslab.app.ira.IraCoach.orbWatch() }
@@ -518,17 +547,17 @@ object Tasks {
         // Jarvis: his own plan for the day - made each morning, worked through at each item's time (words, study, paper only).
         word("agenda") { com.optionslab.app.ira.IraAgenda.watch() }
         // Jarvis: Boss's goals over days - close, broken or met is told once a day.
-        word("goals") { com.optionslab.app.ira.IraGoals.watch() }
+        if (slow) word("goals") { com.optionslab.app.ira.IraGoals.watch() }
         // Jarvis: Boss's own words (a rule he asked me to remember, his trade goal) against today's trades - pointed out
         // once each, gently, on an unlocked phone only (words only).
-        word("Boss's rules") { com.optionslab.app.ira.IraCoach.wordsWatch() }
+        if (slow) word("Boss's rules") { com.optionslab.app.ira.IraCoach.wordsWatch() }
         // Jarvis: the paper tests - what held up is brought to Boss, what failed is offered off (asked first).
-        word("paper tests") { com.optionslab.app.ira.IraExpert.watch() }
+        if (slow) word("paper tests") { com.optionslab.app.ira.IraExpert.watch() }
         // Jarvis: the day's target reached; a trade of yours going nowhere is offered a close (asked first).
-        word("day target") { com.optionslab.app.ira.IraJournal.targetWatch() }
-        word("stale trades") { com.optionslab.app.ira.IraJournal.staleWatch() }
+        if (slow) word("day target") { com.optionslab.app.ira.IraJournal.targetWatch() }
+        if (slow) word("stale trades") { com.optionslab.app.ira.IraJournal.staleWatch() }
         // Jarvis: each bot's switch and whether it ended the day down or up (names and signs only) - a record only.
-        word("bot switches") { com.optionslab.app.ira.IraBots.noteSwitches() }
+        if (slow) word("bot switches") { com.optionslab.app.ira.IraBots.noteSwitches() }
         // Jarvis: the market alerts found in this round said as one line - one per move, a few an hour (last, so it
         // carries this round's alerts).
         word("airtime") { com.optionslab.app.ira.IraAirtime.flush() }
@@ -599,10 +628,14 @@ object Tasks {
     private suspend fun watchTickOnce(context: Context, s: AppSettings, fired: MutableSet<String>, lanes: CoroutineScope?): Tick {
         riskSteps(context, s, lanes)
         Heartbeat.stepBegin("index quotes")
+        val open = Ledger.openTicket()
         // The three index quotes at once, each given at most 20 s: a hung feed cannot stall the watch. The
         // Upstox read uses short timeouts and is cancellable mid-read, so the deadline really ends it.
+        // Battery (round 2): only the ones something reads this pass - the open ticket's underlying, an enabled alarm
+        // on the index, a widget on the home screen. None of them: no read at all (stops and targets never used these).
+        val wanted = indexQuotesWanted(context, open?.row?.ticket?.underlying)
         val q = kotlinx.coroutines.coroutineScope {
-            listOf("NIFTY", "BANKNIFTY", "INDIAVIX").map { sym ->
+            wanted.map { sym ->
                 async(kotlinx.coroutines.Dispatchers.IO) { runCatching { kotlinx.coroutines.withTimeoutOrNull(20_000) { Market.quote(sym, quick = true) } }.getOrNull() }
             }.mapNotNull { it.await() }.associateBy { it.symbol }
         }
@@ -611,7 +644,6 @@ object Tasks {
         val lines = ArrayList<String>()
         var title = WATCH_TITLE
         var progress = -1
-        val open = Ledger.openTicket()
         if (open != null) {
             val tk = open.row.ticket
             val spot = q[tk.underlying]?.last
@@ -685,6 +717,14 @@ object Tasks {
             else -> "almanac"
         }
         return Tick(title, lines, progress, dest)
+    }
+
+    /** The index quotes this watch pass has a reader for (an empty list = none fetched). */
+    internal fun indexQuotesWanted(context: Context, ticketUnderlying: String?): List<String> {
+        val all = listOf("NIFTY", "BANKNIFTY", "INDIAVIX")
+        val alarmed = runCatching { Alarms.all().filter { it.enabled }.map { it.symbol }.toSet() }.getOrDefault(all.toSet())
+        val widget = runCatching { com.optionslab.app.widget.IraWidget.placed(context) }.getOrDefault(true)
+        return all.filter { sym -> sym == ticketUnderlying || sym in alarmed || (widget && sym != "INDIAVIX") }
     }
 
     fun paperEventsPublic(context: Context, events: List<com.optionslab.engine.sandbox.SandboxEvent>) = paperEvents(context, events)

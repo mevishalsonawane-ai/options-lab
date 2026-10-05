@@ -60,3 +60,30 @@ class BatteryUseTest {
         for (s in NOT) assertFalse(BatteryUse.asked(s), s)
     }
 }
+
+class WordsPaceTest {
+    @Test fun onlyQuietWhenScreenOffNothingHeldNothingArmed() {
+        assertTrue(WordsPace.quiet(screenOn = false, held = false, armed = false))
+        assertFalse(WordsPace.quiet(screenOn = true, held = false, armed = false))
+        assertFalse(WordsPace.quiet(screenOn = false, held = true, armed = false))
+        assertFalse(WordsPace.quiet(screenOn = false, held = false, armed = true))
+        assertFalse(WordsPace.quiet(screenOn = false, held = false, armed = null), "unknown counts as armed")
+    }
+
+    @Test fun notQuietIsEveryRoundAsBefore() {
+        val now = 10_000_000L
+        assertTrue(WordsPace.slowDue(false, now, now - 1_000))
+        assertTrue(WordsPace.newsDue(false, now, now - 1_000))
+    }
+
+    @Test fun quietSlowsOnlyTheSlowGroupAndTheNews() {
+        val now = 10_000_000L
+        assertFalse(WordsPace.slowDue(true, now, now - 60_000))
+        assertTrue(WordsPace.slowDue(true, now, now - WordsPace.QUIET_SLOW_MS))
+        assertTrue(WordsPace.slowDue(true, now, 0L), "never run yet")
+        assertTrue(WordsPace.slowDue(true, now, now + 5_000), "clock went back")
+        assertFalse(WordsPace.newsDue(true, now, now - 5 * 60_000))
+        assertTrue(WordsPace.newsDue(true, now, now - WordsPace.QUIET_NEWS_MS))
+        assertTrue(WordsPace.newsDue(true, now, null))
+    }
+}

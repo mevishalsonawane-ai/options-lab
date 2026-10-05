@@ -652,7 +652,8 @@ internal fun Masthead(live: Boolean, calm: Boolean, linked: Boolean, onMode: (Bo
     var confirmLive by remember { mutableStateOf(false) }
     var needLink by remember { mutableStateOf(false) }
     var now by remember { mutableStateOf(Market.now()) }
-    LaunchedEffect(Unit) { while (true) { delay(15_000); now = Market.now() } }
+    // Battery (round 2): only while the app is in front (a stopped app's composition kept ticking); read again on return.
+    com.optionslab.app.ui.PollWhileStarted { while (true) { now = Market.now(); delay(15_000) } }
     // Read with [now], so the state follows the clock: computed once, it stayed "Market closed" after the 09:15 open
     // when the screen had first drawn before it (5 Oct, 09:24).
     val open = now.let { Market.isOpen() }
