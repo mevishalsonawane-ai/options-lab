@@ -270,6 +270,9 @@ object OrbArms {
         View(arms, b.legs?.takeIf { it.day == day }, b.range?.takeIf { b.rangeDay == day }, forward(b), lastReplay?.value, lastReplay?.key)
     }
 
+    /** Every closed paper trade the arms' book keeps (its last 2000 positions), oldest first. Reads only. */
+    suspend fun closedPaper(): List<Position> = lock.withLock { book().positions.filter { !it.open && !it.live } }
+
     /** Liquidity 15+5 as one row: armed when its books are, both books' trades, each book's state. */
     private fun liquidityView(b: Book, day: LocalDate): ArmView {
         val books = LiquidityRules.BOOKS.map { it.source }

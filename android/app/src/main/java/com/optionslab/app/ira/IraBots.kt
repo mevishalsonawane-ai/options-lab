@@ -211,6 +211,20 @@ internal object IraBots {
     }
 
     /**
+     * "What's the weakest link in my setup?" ([com.optionslab.ira.WeakLink]): the arms' closed paper trades from their own book
+     * (the exit reason as booked, entry and exit times, rupees after charges), beside BankNifty's 1-minute candles
+     * ([bankNifty]) for each day's opening gap. Reads only; nothing is armed, stopped, placed or closed.
+     */
+    suspend fun weakLink(bankNifty: List<com.optionslab.ira.Candle>): String {
+        val closed = com.optionslab.app.data.OrbArms.closedPaper().mapNotNull { p ->
+            val out = p.exitTime ?: return@mapNotNull null
+            val gross = p.grossPnl ?: return@mapNotNull null
+            com.optionslab.ira.WeakLink.Trade(com.optionslab.ira.BotTrades.label(p.arm), p.entryTime, out, p.why, gross - p.charges)
+        }
+        return com.optionslab.ira.WeakLink.answer(closed, bankNifty)
+    }
+
+    /**
      * "Am I net long or short?" ([com.optionslab.ira.NetLean]): Boss's open legs (Paper, and Zerodha when read) with each leg's
      * delta now, split by owner - the arms' open trades from their own book, other automations' symbols, the rest his own -
      * and each index's price now. Reads only; nothing is placed, changed or closed.

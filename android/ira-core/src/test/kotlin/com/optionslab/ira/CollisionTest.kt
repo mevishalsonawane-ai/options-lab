@@ -64,6 +64,7 @@ class CollisionTest {
         "TurnDowns" to { q -> TurnDowns.asked(q) != null },
         "Headroom" to { q -> Headroom.asked(q) != null },
         "ArmFit" to { q -> ArmFit.asked(q) },
+        "WeakLink" to { q -> WeakLink.asked(q) },
         "ArmDay" to { q -> ArmDay.asked(q) != null },
         "NetLean" to { q -> NetLean.asked(q) },
         "ExpiryEve" to { q -> ExpiryEve.asked(q) },
@@ -686,6 +687,10 @@ class CollisionTest {
         "tumhare confidence stars kitne sahi hain" to "HonestStars", "are your confidence ratings any good" to "HonestStars",
         "say confidence without the record" to "HonestStars", "how reliable is your confidence" to "HonestStars",
         "tumhara confidence kitna sahi hai" to "HonestStars", "confidence seedha bolo" to "HonestStars",
+        // ---- WeakLink: what most often went wrong in the arms' last paper trades ----
+        "what's the weakest link in my setup" to "WeakLink", "what usually goes wrong in my paper trades" to "WeakLink",
+        "where do my bots go wrong" to "WeakLink", "what do my losing trades have in common" to "WeakLink",
+        "mere trades mein sabse kamzor kadi kya hai" to "WeakLink", "what keeps going wrong with my bots" to "WeakLink",
         // ---- ArmFit: each arm's record on days in today's bands ----
         "which of my arms suits today" to "ArmFit", "which bot fits today's conditions" to "ArmFit", "how do my arms do on days like today" to "ArmFit",
         "orb's record on days like this" to "ArmFit", "aaj ke din kaun sa bot suit karta hai" to "ArmFit", "which strategy suits today" to "ArmFit",
@@ -889,7 +894,7 @@ class CollisionTest {
 
     /** The question branches of IraHub.ask between the `bundled` read and the Plan block, in [CoverageTest.feature]'s order. */
     private val HUB_ORDER = listOf("DayJournal", "AlertSense", "Airtime", "Hearing", "PatternCalls", "TrendReads", "OutsideApp", "Clarity", "WordFit", "AskedAgain", "FigureFirst", "WrongThing", "ArmHabits", "MorningSense", "HonestStars", "TalkHours", "MorningAsks", "TurnDowns", "NewsMoves",
-        "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmFit", "ArmDay", "NetLean", "ExpiryEve", "BeforeTomorrow", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "ZerodhaSession", "OrderWhy", "RelayHealth", "StreamHealth", "BatteryUse", "WatchAsk", "Tour", "DataAge", "Honest", "Thinking",
+        "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmFit", "WeakLink", "ArmDay", "NetLean", "ExpiryEve", "BeforeTomorrow", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "ZerodhaSession", "OrderWhy", "RelayHealth", "StreamHealth", "BatteryUse", "WatchAsk", "Tour", "DataAge", "Honest", "Thinking",
         "SelfWhy", "Consistency", "CoPilot", "SinceMorning", "ExpiryPin", "ChainDrift", "ChainIntel", "DayClock", "GapRecord", "RangeBreaks", "PriorDay", "LastHour", "InsideDays", "FirstMove", "VixNext", "SplitDays", "RoundCloses", "MonthTurns", "LunchRange", "Weekdays", "DayCompare", "LikeToday", "Structure", "MindChange", "Breadth",
         "TradeCase", "Scenarios", "Causes", "Agenda", "Improve")
 
