@@ -56,16 +56,18 @@ object AfterLoss {
 
     /**
      * [trades] (already grouped) each with the trade that closed last at or before it opened, the same day, and the one
-     * before that; trades still open at its opening never count as "before".
+     * before that; trades still open at its opening never count as "before". The "before" trades are ALL trades closed
+     * that day, a trade carried overnight and closed that morning included (not only those opened that day).
      */
-    fun placed(trades: List<TradesADay.Trade>): List<Placed> =
-        trades.groupBy { it.openedAt.toLocalDate() }.values.flatMap { day ->
-            day.sortedBy { it.openedAt }.map { t ->
-                val closed = day.filter { it !== t && !it.closedAt.isAfter(t.openedAt) && it.closedAt.toLocalDate() == t.openedAt.toLocalDate() }
-                    .sortedBy { it.closedAt }
-                Placed(t, closed.lastOrNull(), closed.getOrNull(closed.size - 2))
-            }
-        }.sortedBy { it.trade.openedAt }
+    fun placed(trades: List<TradesADay.Trade>): List<Placed> {
+        val byClose = trades.groupBy { it.closedAt.toLocalDate() }
+        return trades.sortedBy { it.openedAt }.map { t ->
+            val closed = byClose[t.openedAt.toLocalDate()].orEmpty()
+                .filter { it !== t && !it.closedAt.isAfter(t.openedAt) }
+                .sortedBy { it.closedAt }
+            Placed(t, closed.lastOrNull(), closed.getOrNull(closed.size - 2))
+        }
+    }
 
     fun group(ps: List<Placed>): Group = Group(ps.size, ps.count { it.trade.net > 0.5 }, ps.sumOf { it.trade.net })
 

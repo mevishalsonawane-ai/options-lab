@@ -1540,14 +1540,30 @@ internal object IraTools {
 
     /**
      * The one short question ending Boss's answer to [question] ("BankNifty's levels next, Boss?"), or null - never on a
-     * [locked] phone. The offer is remembered for his very next words only; nothing is answered unasked.
+     * [locked] phone, never while anything else waits for Boss's yes or Confirm ([waiting]: a pending action, or Jarvis's
+     * yes-or-no window open - a "yes" meant for the offer must never approve an older request). The offer is remembered
+     * for his very next words only; nothing is answered unasked.
      */
-    fun nextAskOffer(question: String, locked: Boolean): String? {
-        if (locked) { nextAskOffered = null; return null }
+    fun nextAskOffer(question: String, locked: Boolean, waiting: Boolean): String? {
+        if (!com.optionslab.ira.NextAsk.mayOffer(locked, waiting)) { nextAskOffered = null; nextAskOfferedLine = null; return null }
         val at = asksNow()
-        val r = runCatching { com.optionslab.ira.NextAsk.offer(nextAskRecords(), question, routineLog(), at, false) }.getOrNull()
+        val r = runCatching { com.optionslab.ira.NextAsk.offer(nextAskRecords(), question, routineLog(), at, false, waiting) }.getOrNull()
         nextAskOffered = r?.let { it.next to at }
-        return r?.let { runCatching { com.optionslab.ira.NextAsk.line(it) }.getOrNull() }
+        val line = r?.let { runCatching { com.optionslab.ira.NextAsk.line(it) }.getOrNull() }
+        nextAskOfferedLine = line
+        return line
+    }
+
+    /** The words of the last offer made ([nextAskOffer]; null: the last answer offered nothing). In memory only. */
+    @Volatile private var nextAskOfferedLine: String? = null
+
+    /**
+     * Does [text] (an answer about to be said) carry the offer just made? Jarvis then counts it as an invitation (an
+     * OFFER, [com.optionslab.ira.AnswerWindow]), so a yes after it is never taken for an older request waiting for one.
+     */
+    fun nextAskOfferIn(text: String?): Boolean {
+        val line = nextAskOfferedLine ?: return false
+        return text != null && text.contains(line)
     }
 
     /**

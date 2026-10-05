@@ -1186,6 +1186,9 @@ object IraHub {
     /** Is [id] a suggested trade Jarvis asks a yes or no about (so the voice does not also say "tap Confirm")? */
     fun asksYesNo(id: Long): Boolean = synchronized(actions) { id in newsAsks }
 
+    /** Read-only: does action [id] still wait for Boss's yes or Confirm (not yet answered, cancelled or lapsed)? */
+    fun waitsFor(id: Long): Boolean = synchronized(actions) { actions.containsKey(id) }
+
     @Volatile private var lastExpertSlot: LocalDateTime? = null
     private val suggested = HashSet<String>()
 
@@ -1446,7 +1449,7 @@ object IraHub {
         // locked phone. Any other words end the offer, and a yes while something waits for his yes or Confirm is never taken
         // as it. Understanding only: nothing learned acts. Not in IraGoldAlgo.
         if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !understood && !cleaned) {
-            val nextAskWaiting = synchronized(actions) { actions.isNotEmpty() }
+            val nextAskWaiting = synchronized(actions) { actions.isNotEmpty() } || runCatching { JarvisVoice.askingOpen() }.getOrDefault(true)
             val nextAskQ = runCatching { IraTools.nextAskYes(q, nextAskWaiting, phoneLocked()) }.getOrNull()
             if (nextAskQ != null) {
                 _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, "$TOOK_AS\"$nextAskQ\".")).takeLast(MAX_MESSAGES)) }
@@ -2341,10 +2344,13 @@ object IraHub {
         // The question Boss usually asks after this kind, offered in one short question at the end
         // ([com.optionslab.ira.NextAsk]; from his routine log, keys only): his own words only, an unlocked phone, a plain
         // answer (no order, no command, no caution, no old or withheld data). Words only - never answered unasked.
+        // Never while anything waits for Boss's yes or Confirm (a stop, an exit, a news trade pending, or Jarvis's own
+        // yes-or-no window open): a "yes" meant for the offer must never approve the older request.
+        val nextAskBusy = synchronized(actions) { actions.isNotEmpty() } || runCatching { JarvisVoice.askingOpen() }.getOrDefault(true)
         val nextAskLine: String? = if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !understood && !bundled &&
             parsed.order == null && parsed.command == null && a.order == null && doubt.level == com.optionslab.ira.SelfDoubt.Level.NORMAL &&
-            off == null && ageNote == null && dressed?.withheld != true)
-            runCatching { IraTools.nextAskOffer(q, phoneLocked()) }.getOrNull() else null
+            off == null && ageNote == null && dressed?.withheld != true && !nextAskBusy)
+            runCatching { IraTools.nextAskOffer(q, phoneLocked(), nextAskBusy) }.getOrNull() else null
         val nextAskTail = if (nextAskLine == null) "" else " $nextAskLine"
         val msg = Msg(true, doubt.wrap(fitted) + nextAskTail, a.facts, a.order, writing = write)
         _state.update { it.copy(messages = (it.messages + Msg(false, q) + msg).takeLast(MAX_MESSAGES)) }

@@ -58,6 +58,21 @@ class AfterLossTest {
         assertTrue(winFirst[0].contains("after a winning trade you won 6 of 6 (100%), +Rs 100 a trade; after a losing one"), winFirst[0])
     }
 
+    @Test fun aTradeCarriedOvernightCountsAsBefore() {
+        val d1 = today.minusDays(2); val d2 = today.minusDays(1)
+        // Opened the day before at 15:00, carried overnight, closed at 09:30 for a loss; the 10:00 trade comes after it.
+        val carried = TradesADay.Trade(d1.atTime(15, 0), d2.atTime(9, 30), -300.0, "Manual")
+        val next = t(d2, 10, 0, 10, 50.0)
+        val ps = AfterLoss.placed(listOf(carried, next))
+        val p = ps.single { it.trade === next }
+        assertEquals(carried, p.before)
+        // The carried trade itself: nothing closed on its opening day before it.
+        assertNull(ps.single { it.trade === carried }.before)
+        // Closed after the next trade opened: never "before".
+        val late = TradesADay.Trade(d1.atTime(15, 0), d2.atTime(10, 5), -300.0, "Manual")
+        assertNull(AfterLoss.placed(listOf(late, next)).single { it.trade === next }.before)
+    }
+
     @Test fun botsAndTooFewAndNothingSaid() {
         val d1 = today.minusDays(1)
         val bots = listOf(t(d1, 10, 0, 10, -100.0, "ORB"), t(d1, 10, 30, 10, 50.0, "ORB"))

@@ -232,6 +232,17 @@ class JarvisVoice : Service() {
             v.main.post { v.held = on; v.readyAt = SystemClock.elapsedRealtime(); if (on) { runCatching { v.rec?.cancel() }; v.listening = false; v.endTap() } else v.again(300) }
         }
 
+        /**
+         * Read-only: Jarvis has a yes-or-no question of his own waiting for Boss's answer (asked or about to be asked, its
+         * answer window not yet over). Nothing else may then invite a bare "yes" ([com.optionslab.ira.NextAsk]).
+         */
+        fun askingOpen(): Boolean {
+            val v = instance?.get() ?: return false
+            if (v.asking == null) return false
+            val until = v.askingUntil
+            return until == 0L || SystemClock.elapsedRealtime() < until
+        }
+
         /** [id] was answered elsewhere (a button, the Ira screen) or lapsed: stop waiting for it. */
         fun answered(id: Long) {
             val v = instance?.get() ?: return
@@ -855,10 +866,10 @@ class JarvisVoice : Service() {
     /** What the recognizer heard last turn (for the voice check), then dropped. */
     private var lastHeard: ShortArray? = null
     /** The action Jarvis asked a yes or no about, heard until [askingUntil]. */
-    private var asking: Long? = null
+    @Volatile private var asking: Long? = null
     /** A trade needs Boss's own voice for its yes; a command (start, stop...) needs only a yes. */
     private var askingNeedsBoss = true
-    private var askingUntil = 0L
+    @Volatile private var askingUntil = 0L
     /** The words of the yes-or-no question about [asking], asked again when a yes is held ([com.optionslab.ira.AnswerWindow.hold]). */
     private var askingText: String? = null
     /**
@@ -2024,6 +2035,10 @@ class JarvisVoice : Service() {
             var shaped = false
             // The question read once here, for "tell me more" and the account below (it used to be read for each).
             val asked by lazy { com.optionslab.ira.Ask.parse(q) }
+            // The answer ends offering the question Boss usually asks next ([com.optionslab.ira.NextAsk]): an invitation (an
+            // OFFER) whatever its words, even when the short line leaves the offer in the chat - so a yes after it is never
+            // taken for an older request still waiting for his yes or no ([com.optionslab.ira.AnswerWindow]).
+            val offered = a != null && runCatching { IraTools.nextAskOfferIn(a.text) }.getOrDefault(false)
             say(when {
                 a == null -> if (late) "Boss, I could not finish what you asked earlier. Please ask me again." else "I could not work that out."
                 o != null && o.missing.isEmpty() && o.refusal == null -> "I have put that order on the Ira screen. Nothing is sent until you confirm it there."
@@ -2080,7 +2095,7 @@ class JarvisVoice : Service() {
             }, "answer", full = full,
                 // Said on an unlocked phone, any answer may hold Boss's side (make the case, his reasons): "go on" says its
                 // rest only while the phone is still unlocked (review, 5 Oct).
-                account = !locked() || com.optionslab.ira.Topic.ACCOUNT in asked.topics, shaped = shaped)
+                account = !locked() || com.optionslab.ira.Topic.ACCOUNT in asked.topics, shaped = shaped, offer = offered)
         }
     }
 
@@ -2100,7 +2115,7 @@ class JarvisVoice : Service() {
      */
     /** [reply]: these words answer what Boss just said (timed from his words to their first sound); false for unasked ones. */
     private fun say(words: String, id: String = "say", full: String? = null, account: Boolean = false, slow: Boolean = false, keep: Boolean = true,
-                    reply: Boolean = true, shaped: Boolean = false) {
+                    reply: Boolean = true, shaped: Boolean = false, offer: Boolean = false) {
         // The voice first: a model rewrite under way gives the processor back before the speech engine starts (5 Oct).
         runCatching { IraModel.yieldToVoice() }
         // Figures as a trader says them: a lakh or more in lakh / crore, option symbols as words ([com.optionslab.ira.SayAs]).
@@ -2120,7 +2135,9 @@ class JarvisVoice : Service() {
         sayingFull = if (id == "answer") full else null; sayingAccount = account
         sayingReply = reply && (id == "answer" || id == "question")
         sayingText = text; reachedAt = -1
-        val invited = com.optionslab.ira.AnswerWindow.invites(words)
+        // [offer]: the caller knows these words end with an offer (the next question, [com.optionslab.ira.NextAsk]) - an
+        // invitation whatever the words say; else read from the words themselves.
+        val invited = offer || com.optionslab.ira.AnswerWindow.invites(words)
         // Muted: the words go on screen as a pop-up instead (answers and questions only; "One moment" is dropped).
         if (muted && !text.startsWith("Voice on")) {
             if (id == "answer" || id == "question") runCatching { JarvisPopup.show(this, "Jarvis (muted)", "${full ?: words}\n\nSay \"Jarvis, unmute\" to hear me.") }
@@ -2257,6 +2274,24 @@ class JarvisVoice : Service() {
         lastInvite = com.optionslab.ira.AnswerWindow.ended(false, true, lastInvite)
     }
 
+    /**
+     * A newer answer invited Boss's yes (an offer) while Jarvis's own yes-or-no question about [asking] was open: that
+     * question's answer window ends now - no yes is taken for the request until it is asked again - and, while the
+     * request still waits, its own question is asked again after the answer, so the next yes or no is that very
+     * question's (the last thing invited). Lapsed or answered elsewhere: nothing waits, and it is dropped. Never approves
+     * anything itself; every confirm and fingerprint step stays as it was.
+     */
+    private fun supersedeAsk() {
+        val id = asking ?: return
+        askingUntil = 0L
+        val text = askingText
+        if (text != null && runCatching { IraHub.waitsFor(id) }.getOrDefault(false)) {
+            note("an offer said over a waiting question: its window closed, the question asked again")
+            // After this utterance's own end is done (posted), never from inside it; only while it is still the same ask.
+            main.post { if (asking == id && askingUntil == 0L) sayWhenFree(text, "question") }
+        } else asking = null
+    }
+
     /** [invited]: the utterance that ended ([id] its kind) itself ended inviting an answer ([invitesOf]). */
     private fun afterSpeech(id: String?, invited: Boolean = false) {
         speaking = false
@@ -2273,6 +2308,9 @@ class JarvisVoice : Service() {
         if (id == "question") lastInvite = com.optionslab.ira.AnswerWindow.ended(true, invited, lastInvite)
         else if (id != null && id != STOP_AFTER && invited) {
             offerEnded()
+            // An answer to Boss that ended with an offer, said while Jarvis's own yes-or-no question was still open: that
+            // earlier ask's window ends (a yes heard now may be for the offer), and it is asked again after while it waits.
+            if (id == "answer") supersedeAsk()
             awakeUntil = maxOf(awakeUntil, SystemClock.elapsedRealtime() + com.optionslab.ira.AnswerWindow.WINDOW_MS); called = false
         }
         // Battery (round 13, [com.optionslab.ira.CaptureEcho]): nothing playing now, so no echo to cancel. A taught voice's

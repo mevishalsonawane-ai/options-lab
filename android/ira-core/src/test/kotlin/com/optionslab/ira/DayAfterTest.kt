@@ -91,6 +91,20 @@ class DayAfterTest {
         assertNull(DayAfter.market(listOf(Market.VIX)))
     }
 
+    @Test fun thePercentileNeverSaysBiggerThanAllUnlessItIs() {
+        val d0 = LocalDate.of(2026, 1, 1)
+        fun day(pct: Double) = DayAfter.Day(d0, 100.0, 101.0, 99.0, 100.0 + pct, d0.plusDays(1), 100.0, 101.0, 99.0, 100.0)
+        val days = List(199) { day(0.2) } + day(3.0)
+        // 199 of 200 smaller: 99.5% rounded down to 99, never "bigger than 100%".
+        assertEquals(99, DayAfter.percentile(days, 2.0))
+        // Every one smaller: 100.
+        assertEquals(100, DayAfter.percentile(days, 4.0))
+        // None smaller: 0; 1 of 3 smaller: 33.
+        assertEquals(0, DayAfter.percentile(days, 0.1))
+        assertEquals(33, DayAfter.percentile(listOf(day(0.2), day(1.0), day(2.0)), 0.5))
+        assertEquals(0, DayAfter.percentile(emptyList(), 1.0))
+    }
+
     @Test fun theRecord() {
         val days = DayAfter.past(nifty(40), today)
         assertEquals(39, days.size)
@@ -154,10 +168,10 @@ class DayAfterTest {
         val bars = past + session(today, pc, pc * 0.96, LocalTime.of(11, 0))   // about -1.12% at 11:00
         val td = DayAfter.todayMove(bars, today, today.atTime(11, 0))!!
         assertTrue(td.live); assertEquals(-1.12, td.move, 0.01)
-        assertEquals(49, DayAfter.percentile(DayAfter.past(bars, today), td.move))   // 19 of 39 days moved less (the 0.3% and 0.5% ones)
+        assertEquals(48, DayAfter.percentile(DayAfter.past(bars, today), td.move))   // 19 of 39 days moved less, rounded down (the 0.3% and 0.5% ones)
         val said = DayAfter.answer(DayAfter.Q(null), Market.NIFTY, bars, today, today.atTime(11, 0))
         assertTrue(Regex("^Today Nifty is -1\\.1\\d% so far, a big down day \\(1%\\+\\); after the 10 on this phone, the next session closed down again on 0%, " +
-            "against 51% after any session\\. Today Nifty is -1\\.1\\d% on \\d+ \\w+'s close so far, a move of the size asked - bigger, either way, than 49% " +
+            "against 51% after any session\\. Today Nifty is -1\\.1\\d% on \\d+ \\w+'s close so far, a move of the size asked - bigger, either way, than 48% " +
             "of the 39 sessions in this record\\. The session is not over, so today's move can still change\\. Over the last 39").containsMatchIn(said), said)
         // Said once only, and the short answer's lead keeps the key figure whole.
         assertEquals(2, Regex("Today Nifty").findAll(said).count(), said)

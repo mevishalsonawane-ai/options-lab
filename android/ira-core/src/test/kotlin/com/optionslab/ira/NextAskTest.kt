@@ -79,6 +79,24 @@ class NextAskTest {
         assertNull(NextAsk.offer(learned, "stop all strategies", emptyList(), now, locked = false))
     }
 
+    @Test fun neverOfferedWhileSomethingWaitsForHisYes() {
+        // A pending action (a stop, an exit, a news trade) or Jarvis's own yes-or-no window open: no offer, so a bare
+        // "yes" meant for the offer can never approve the older request.
+        assertNull(NextAsk.offer(learned, "what are the levels on nifty", emptyList(), now, locked = false, waiting = true))
+        assertNotNull(NextAsk.offer(learned, "what are the levels on nifty", emptyList(), now, locked = false, waiting = false))
+        assertFalse(NextAsk.mayOffer(locked = false, waiting = true))
+        assertFalse(NextAsk.mayOffer(locked = true, waiting = false))
+        assertTrue(NextAsk.mayOffer(locked = false, waiting = false))
+    }
+
+    @Test fun stopAskingWhatsNextIsTheUndoNotAStop() {
+        for (q in listOf("stop asking what's next", "stop asking what’s next", "Jarvis, stop asking what's next")) {
+            assertNull(Ask.parse(q).command, q)
+            assertNull(Commands.parse(q), q)
+            assertEquals(NextAsk.Request.RESET, NextAsk.asked(q), q)
+        }
+    }
+
     @Test fun theOfferIsKeptInTheShortAnswer() {
         val answer = "Nifty's nearest level above is 24,700, 100 points away. The level below is 24,500, 100 points away. " +
             "The day's range is 24,450 to 24,720 so far. " + NextAsk.line(learned.single())

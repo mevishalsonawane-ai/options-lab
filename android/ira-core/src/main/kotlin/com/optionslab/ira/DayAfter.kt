@@ -256,9 +256,15 @@ object DayAfter {
         return Today((t.close - before.close) / before.close * 100, before.day, live, !live && Comebacks.whole(t), t.bars.last().t.toLocalTime())
     }
 
-    /** The share (0-100, rounded) of [days] whose move, either way, was smaller than [move]'s: where today sits in the record. */
-    fun percentile(days: List<Day>, move: Double): Int =
-        if (days.isEmpty()) 0 else Math.round(days.count { abs(it.movePct) < abs(move) } * 100.0 / days.size).toInt()
+    /**
+     * The share (0-100, rounded down) of [days] whose move, either way, was smaller than [move]'s: where today sits in the
+     * record. Never 100 unless every day was smaller (199 of 200 is 99, not "bigger than 100%").
+     */
+    fun percentile(days: List<Day>, move: Double): Int {
+        if (days.isEmpty()) return 0
+        val n = days.count { abs(it.movePct) < abs(move) }
+        return if (n == days.size) 100 else minOf(99, n * 100 / days.size)
+    }
 
     /** True when [td] is a big day by [pct] the way asked ([side] null: either way). */
     private fun isBig(td: Today, pct: Double, side: Int?) = abs(td.move) >= pct && (side == null || td.move * side > 0)

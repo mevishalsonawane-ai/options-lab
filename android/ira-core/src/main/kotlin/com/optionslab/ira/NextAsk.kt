@@ -110,10 +110,13 @@ object NextAsk {
     /**
      * The follow-up to offer at the end of Boss's answer to [question] at [now], or null. Never on a [locked] phone, never
      * for an order, a command or anything but a market question, nor when that answer already gives it or [log] shows he
-     * asked it in the last [RECENT_MINUTES] minutes.
+     * asked it in the last [RECENT_MINUTES] minutes. Never while anything else waits for Boss's yes or Confirm ([waiting]:
+     * a pending action - a stop, an exit, a news trade - or Jarvis's own yes-or-no question still open): a bare "yes" can
+     * only ever be for ONE thing, and an offer said then could have his yes meant for it approve the older request.
      */
-    fun offer(records: List<Record>, question: String, log: List<Routine.Seen>, now: LocalDateTime, locked: Boolean): Record? {
-        if (locked || records.isEmpty()) return null
+    fun offer(records: List<Record>, question: String, log: List<Routine.Seen>, now: LocalDateTime, locked: Boolean,
+              waiting: Boolean = false): Record? {
+        if (!mayOffer(locked, waiting) || records.isEmpty()) return null
         val q = runCatching { Ask.parse(question) }.getOrNull() ?: return null
         if (q.command != null || q.order != null || Topic.ORDER in q.topics || Topic.COMMAND in q.topics) return null
         val key = runCatching { Routine.key(question) }.getOrNull()?.takeIf { market(it) } ?: return null
@@ -129,6 +132,12 @@ object NextAsk {
         if (log.any { it.key == r.next && !it.at.isAfter(now) && Duration.between(it.at, now).toMinutes() < RECENT_MINUTES }) return null
         return r
     }
+
+    /**
+     * May an answer end with an offer at all: never on a [locked] phone, never while anything waits for Boss's yes or
+     * Confirm ([waiting]: actions pending, or Jarvis's yes-or-no window open).
+     */
+    fun mayOffer(locked: Boolean, waiting: Boolean): Boolean = !locked && !waiting
 
     private val KIND = mapOf(Topic.LEVELS to "levels", Topic.TREND to "trend", Topic.PATTERNS to "patterns", Topic.NEWS to "news",
         Topic.VOLATILITY to "volatility", Topic.WHY to "why", Topic.OVERVIEW to "overview")
@@ -160,7 +169,7 @@ object NextAsk {
     private const val LEAD = "^ (hey |ok |okay )?(jarvis )?(so )?(please )?(can you |could you |would you )?(tell me )?"
     private const val TAIL = "( please| boss| jarvis| now| any ?more| from now on| again| for me)* $"
     /** What is offered: the next question, a follow-up, what Boss asks next. */
-    private const val WHAT = "((the |my |a |that |your )?(usual )?(next questions?|follow ?ups?|follow ?up questions?)|what (i|to) ask( you)? next|whats next|what is next|what comes next)"
+    private const val WHAT = "((the |my |a |that |your )?(usual )?(next questions?|follow ?ups?|follow ?up questions?)|what (i|to) ask( you)? next|whats next|what s next|what is next|what comes next)"
     private const val PARTS = "(the levels|levels|the trend|trend|patterns|the patterns|the news|news|volatility|the overview|an overview|my p ?l|the p ?l|my pnl|pnl|an answer|your answer|your answers|each answer)"
 
     private val WHICH = rx(LEAD + "what do i (usually |normally |always |mostly )?ask( you)? next" + TAIL + "|" +
