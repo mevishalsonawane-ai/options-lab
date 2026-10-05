@@ -1,0 +1,67 @@
+package com.optionslab.ira
+
+import kotlin.test.Test
+import kotlin.test.assertEquals
+
+class SayAsTest {
+    @Test fun amountsOfALakhOrMoreAreSaidInLakhAndCrore() {
+        assertEquals("Margin is 1.23 lakh rupees.", SayAs.figures("Margin is 1,23,456 rupees."))
+        assertEquals("Margin is 1.23 lakh rupees.", SayAs.figures("Margin is Rs 1,23,456."))
+        assertEquals("Margin is 1.23 lakh rupees.", SayAs.figures("Margin is ₹1,23,456.40."))
+        assertEquals("up plus 1.5 lakh rupees", SayAs.figures("up Rs +1,50,000"))
+        assertEquals("1 lakh and 12.5 lakh and 2.5 crore", SayAs.figures("1,00,000 and 12,50,000 and 2,50,00,000"))
+        // Western grouping and plain digits said as rupees too.
+        assertEquals("1.23 lakh rupees and 12.35 lakh", SayAs.figures("123456 rupees and 1,234,567"))
+        // 99,99,999 rounds to 100 lakh: said as 1 crore.
+        assertEquals("1 crore", SayAs.figures("99,99,999"))
+        assertEquals("123 crore and 1,235 crore", SayAs.figures("1,23,00,00,000 and 12,34,56,78,901"))
+    }
+
+    @Test fun figuresUnderALakhAndOtherNumbersStayAsWritten() {
+        val same = listOf("Nifty is at 24,612.", "Sensex at 81,523 and 99,999 rupees.", "At 9:15 on 05.10.2026.",
+            "Order 250930000123456 placed.", "The PE ratio is 22.", "1.23 lakh rupees", "v1.2.3", "minus 45,000 rupees")
+        same.forEach { assertEquals(it, SayAs.figures(it)) }
+    }
+
+    @Test fun croreFiguresAreSaidInTheirOrder() {
+        // "Rs 12,345 crore" read as rupees by Wake.spoken comes out "12,345 rupees crore".
+        assertEquals("FIIs sold 12,345 crore rupees.", SayAs.figures(Wake.spoken("FIIs sold Rs 12,345 crore.")))
+        assertEquals("1.23 lakh crore", SayAs.figures("1,23,456 crore"))
+        assertEquals("1.23 lakh crore rupees", SayAs.figures("Rs 1,23,456 crore"))
+    }
+
+    @Test fun optionSymbolsAreReadAsWords() {
+        assertEquals("Bought Nifty 7 October 24,500 call at 120.", SayAs.figures("Bought NIFTY25O0724500CE at 120."))
+        assertEquals("Bank Nifty October 52,000 put", SayAs.figures("BANKNIFTY26OCT52000PE"))
+        assertEquals("Nifty 14 October 25,000 put and Fin Nifty October 24,000 call", SayAs.figures("NIFTY25O1425000PE and FINNIFTY25OCT24000CE"))
+        assertEquals("Midcap Nifty October 13,000 call", SayAs.figures("MIDCPNIFTY25OCT13000CE"))
+        assertEquals("Nifty 25,000 call", SayAs.figures("NIFTY25000CE"))
+        assertEquals("Reliance October 2,800 call", SayAs.figures("RELIANCE25OCT2800CE"))
+        assertEquals("Nifty October future", SayAs.figures("NIFTY26OCTFUT"))
+        assertEquals("Nifty 1 December 26,000 call", SayAs.figures("NIFTY25D0126000CE"))
+        // Not a real month or day: left as written.
+        assertEquals("NIFTY26XYZ24500CE", SayAs.figures("NIFTY26XYZ24500CE"))
+        assertEquals("NIFTY25O4024500CE", SayAs.figures("NIFTY25O4024500CE"))
+    }
+
+    @Test fun ceAndPeAfterAStrikeAreCallAndPut() {
+        assertEquals("the 24500 call and 24,600 put", SayAs.figures("the 24500 CE and 24,600PE"))
+        assertEquals("CE writers at the top", SayAs.figures("CE writers at the top"))
+    }
+
+    @Test fun hindiUnits() {
+        assertEquals("1.23 लाख रुपये", SayAs.figures("Rs 1,23,456", hindi = true))
+        assertEquals("2.5 करोड़ और 24,500 कॉल", SayAs.figures("2,50,00,000 और 24,500 CE", hindi = true))
+    }
+
+    @Test fun twiceChangesNothingAndSentencesStayTheSame() {
+        val text = "Boss, your margin is Rs 1,23,456. You hold NIFTY25O0724500CE. FIIs sold Rs 12,345 crore."
+        val once = SayAs.figures(Wake.spoken(text, 5))
+        assertEquals(once, SayAs.figures(once))
+        assertEquals(BargeIn.sentences(text).size, BargeIn.sentences(once).size)
+    }
+
+    @Test fun aloudSaysAmountsInLakh() {
+        assertEquals("Boss, your margin is 1.23 lakh rupees.", Aloud.say("Boss, your margin is Rs 1,23,456.40."))
+    }
+}

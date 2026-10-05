@@ -7,7 +7,7 @@ import java.math.RoundingMode
  * A reply as Jarvis says it (Boss, 5 Oct: say it shorter and like a person): built on [Wake.spoken] (the first
  * sentences, rupees read as rupees), then made easy on the ear - "Boss" once, not in every sentence; long decimals
  * rounded ("24,612.40" said "24,612", "0.214%" said "0.21 percent"); "pts" said "points"; clock times to the minute
- * ("09:15:42" said "9:16"); and, when the reply goes on longer than is said, "the rest is in the chat". A Hindi reply
+ * ("09:15:42" said "9:16"); a lakh or more in lakh or crore and option symbols as words ([SayAs]); and, when the reply goes on longer than is said, "the rest is in the chat". A Hindi reply
  * stays Hindi (its own words for percent, rupees, plus and minus, and the chat line). The chat keeps the full text;
  * this only shapes the words aloud and adds nothing of the account to them. Pure.
  */
@@ -34,6 +34,7 @@ object Aloud {
         var s = Wake.spoken(parts.take(n).joinToString(" "), n)
         if (hindi) s = s.replace(" rupees", " रुपये").replace("plus ", "प्लस ").replace("minus ", "माइनस ")
         s = numbers(s, hindi)
+        s = SayAs.figures(s, hindi)
         s = onceBoss(s)
         if (cut) s = s.trimEnd() + (if (hindi) " बाकी चैट में है।" else " The rest is in the chat.")
         // Never without "Boss" (the owner's wish): a Hindi reply already naming him in Hindi keeps that.

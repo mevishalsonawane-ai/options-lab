@@ -1464,8 +1464,10 @@ class JarvisVoice : Service() {
      * itself (its own name is said as "my name", so it does not hear it) - then listens again, or stops after
      * [id] STOP_AFTER.
      */
-    private fun say(text: String, id: String = "say", full: String? = null, account: Boolean = false) {
-        unmuteNow()                                       // Jarvis's own voice is never muted
+    private fun say(words: String, id: String = "say", full: String? = null, account: Boolean = false) {
+        // Figures as a trader says them: a lakh or more in lakh / crore, option symbols as words ([com.optionslab.ira.SayAs]).
+        val text = com.optionslab.ira.SayAs.figures(words, com.optionslab.ira.Aloud.hindi(words))
+        unmuteNow()                                      // Jarvis's own voice is never muted
         val t = tts
         lastSpokenId = id
         if (id == "answer" || id == "question") lastSpoken = text
