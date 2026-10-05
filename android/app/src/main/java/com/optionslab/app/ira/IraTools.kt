@@ -814,6 +814,60 @@ internal object IraTools {
         return said
     }
 
+    // ---- the morning-check items Boss leaves as they are ([com.optionslab.ira.MorningSense]) -----------------------
+
+    /** The trading mornings' failing minor items (keys and days only - never a word, an amount or an account figure). */
+    private const val MORNING = "jarvis.morningSense"
+    @Volatile private var morningCache: com.optionslab.ira.MorningSense.Log? = null
+
+    fun morningLog(): com.optionslab.ira.MorningSense.Log = morningCache ?: runCatching {
+        val o = JSONObject(prefs().getString(MORNING) ?: "{}")
+        val m = o.optJSONArray("m") ?: JSONArray()
+        com.optionslab.ira.MorningSense.Log(
+            mornings = (0 until m.length()).map { i -> m.getJSONObject(i).let { x ->
+                val f = x.optJSONArray("f") ?: JSONArray()
+                com.optionslab.ira.MorningSense.Morning(java.time.LocalDate.parse(x.getString("d")), (0 until f.length()).map { f.getString(it) }.toSet()) } },
+            resetAt = o.optString("r").takeIf { it.isNotEmpty() }?.let { LocalDateTime.parse(it) })
+    }.getOrDefault(com.optionslab.ira.MorningSense.Log()).also { morningCache = it }
+
+    @Synchronized private fun morningUpdate(f: (com.optionslab.ira.MorningSense.Log) -> com.optionslab.ira.MorningSense.Log) {
+        runCatching {
+            val log = f(morningLog())
+            morningCache = log
+            val o = JSONObject().put("m", JSONArray().apply { log.mornings.forEach { x ->
+                put(JSONObject().put("d", x.day.toString()).put("f", JSONArray().apply { x.failed.forEach { put(it) } })) } })
+            log.resetAt?.let { o.put("r", it.toString()) }
+            prefs().putAllSoon(mapOf(MORNING to o.toString()))
+        }
+    }
+
+    /**
+     * The spoken "N things need you" of the 09:00 check: [failing] (the failing lines to be said aloud, mark taken off)
+     * with the minor items Boss usually leaves as they are named in a few words; then today's failing items noted (keys
+     * only). The voice only - the chat, pop-up and notification keep every item. On any trouble, the check's own words.
+     */
+    fun morningAloud(bad: Int, failing: List<String>, allFailing: List<String>): String {
+        val today = com.optionslab.app.data.Market.today()
+        val brief = runCatching { com.optionslab.ira.MorningSense.briefToday(morningLog(), today) }.getOrDefault(emptySet())
+        runCatching { morningUpdate { com.optionslab.ira.MorningSense.noted(it, today, allFailing) } }
+        return runCatching { com.optionslab.ira.MorningSense.aloud(bad, failing, brief) }
+            .getOrDefault("$bad thing${if (bad > 1) "s" else ""} need you: " + failing.joinToString(". ") + ".")
+    }
+
+    /** "Which morning items do you skip?". */
+    fun morningSay(): String = runCatching { com.optionslab.ira.MorningSense.say(morningLog(), com.optionslab.app.data.Market.today()) }
+        .getOrDefault("I could not read my record of the morning check just now, Boss.")
+
+    /** "Say the whole morning check again": every failing item read out in full again, the count afresh. */
+    fun morningReset(): String {
+        val now = minuteNow()
+        val said = runCatching { com.optionslab.ira.MorningSense.sayReset(morningLog(), now.toLocalDate()) }
+            .getOrDefault("Done, Boss: I'll read out every failing item of the morning check again.")
+        morningUpdate { com.optionslab.ira.MorningSense.reset(it, now) }
+        IraActivity.add("Reading out every failing item of the morning check again (as asked).")
+        return said
+    }
+
     // ---- what he has learned, in one view ([com.optionslab.ira.Learnings]) ------------------------------------------
 
     /** Every learning store read with its own accessor (the goals are added by [IraImprove], which holds them). */
@@ -834,7 +888,8 @@ internal object IraTools {
         again = runCatching { againLog() }.getOrDefault(com.optionslab.ira.AskedAgain.Log()),
         wrong = runCatching { wrongLog() }.getOrDefault(com.optionslab.ira.WrongThing.Log()),
         figure = runCatching { figureLog() }.getOrDefault(com.optionslab.ira.FigureFirst.Log()),
-        arms = runCatching { IraBots.armLog() }.getOrDefault(com.optionslab.ira.ArmHabits.Log()))
+        arms = runCatching { IraBots.armLog() }.getOrDefault(com.optionslab.ira.ArmHabits.Log()),
+        morning = runCatching { morningLog() }.getOrDefault(com.optionslab.ira.MorningSense.Log()))
 
     /**
      * "Undo everything you learned this week", on Boss's Confirm: the wordings and routines kept in the last 7 days
@@ -850,8 +905,9 @@ internal object IraTools {
         if (u.alerts.isNotEmpty()) alertUpdate { com.optionslab.ira.AlertSense.reset(it, now) }
         if (u.clarity.isNotEmpty()) clarityUpdate { com.optionslab.ira.Clarity.reset(it, now) }
         if (u.figure.isNotEmpty()) figureUpdate { com.optionslab.ira.FigureFirst.reset(it, now) }
+        if (u.morning.isNotEmpty()) morningUpdate { com.optionslab.ira.MorningSense.reset(it, now) }
         IraActivity.add("Undid this week's learning, as Boss confirmed: ${u.words.size} wording(s), ${u.routines.size} routine(s), " +
-            "${u.alerts.size} alert kind(s) aloud again, ${u.clarity.size} answer kind(s) as usual aloud again, ${u.figure.size} market read kind(s) in the usual order again.")
+            "${u.alerts.size} alert kind(s) aloud again, ${u.clarity.size} answer kind(s) as usual aloud again, ${u.figure.size} market read kind(s) in the usual order again, ${u.morning.size} morning-check item(s) read out in full again.")
         return u
     }
 

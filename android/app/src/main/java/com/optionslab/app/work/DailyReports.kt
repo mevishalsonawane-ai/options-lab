@@ -241,9 +241,13 @@ object DailyReports {
             com.optionslab.app.ira.IraHub.morningOutlook().forEach { lines += "• Outlook: $it" }
             val title = "Good morning Boss · " + if (bad == 0) "we are set for today's trading" else "$bad thing${if (bad > 1) "s" else ""} need you"
             runCatching { com.optionslab.app.ira.JarvisPopup.show(context, title, lines.take(3).joinToString(" · ")) }
-            // Listening now: Jarvis says it too.
+            // Listening now: Jarvis says it too. The minor items Boss usually leaves as they are (still failing from the
+            // morning before) are named in a few words aloud ([com.optionslab.ira.MorningSense]); a safety item is always
+            // read out, and the chat note below keeps every item. Today's failing items are noted (keys only).
+            val failing = lines.filter { it.startsWith("✗") }
+            val needYou = com.optionslab.app.ira.IraTools.morningAloud(bad, failing.filter { !privateLine(it) }.map { it.removePrefix("✗ ") }, failing)
             runCatching { com.optionslab.app.ira.JarvisSpeaker.morning(context, "Good morning, Boss. " + if (bad == 0) "We are set for today's trading." else
-                "$bad thing${if (bad > 1) "s" else ""} need you: " + lines.filter { it.startsWith("✗") && !privateLine(it) }.joinToString(". ") { it.removePrefix("✗ ") } + "." +
+                needYou +
                 (if (brief.isEmpty()) "" else " Now my analysis. " + brief.joinToString(" ") { com.optionslab.ira.Wake.spoken(it, 2) } +
                     " That is history, not a promise.")) }
             com.optionslab.app.ira.IraHub.note(com.optionslab.ira.Address.boss("Good morning. " +

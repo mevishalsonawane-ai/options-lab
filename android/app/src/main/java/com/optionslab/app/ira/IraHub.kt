@@ -1238,7 +1238,7 @@ object IraHub {
                 com.optionslab.ira.Causes.asked(q) != null ||
                 com.optionslab.ira.AskedAgain.asked(q) || com.optionslab.ira.FigureFirst.asked(q) != null ||
                 com.optionslab.ira.WrongThing.asked(q) != null || com.optionslab.ira.WrongThing.objected(q) || com.optionslab.ira.MindChange.asked(q) ||
-                com.optionslab.ira.ArmHabits.asked(q) ||
+                com.optionslab.ira.ArmHabits.asked(q) || com.optionslab.ira.MorningSense.asked(q) != null ||
                 com.optionslab.ira.DayCompare.asked(q) != null }.getOrDefault(false)) {
             val prev = if (recent) _state.value.messages.lastOrNull { !it.fromIra }?.text else null
             val qs = runCatching { com.optionslab.ira.Understand.questions(prev, q) }.getOrNull()
@@ -2020,6 +2020,16 @@ object IraHub {
         if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null &&
             runCatching { com.optionslab.ira.ArmHabits.asked(q) }.getOrDefault(false)) {
             val said = if (phoneLocked()) com.optionslab.ira.ArmHabits.LOCKED else IraBots.armHabitsSay(q)
+            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
+            return true
+        }
+        // "Which morning items do you skip?" / "say the whole morning check again": the minor 09:00 items Boss usually leaves
+        // as they are, named in a few words aloud ([com.optionslab.ira.MorningSense]; item keys only). Only the spoken check
+        // is shorter - never a safety item, never the chat - and nothing learned fixes or changes anything.
+        val morningAsk = if (com.optionslab.app.BuildConfig.JARVIS && !bundled && parsed.order == null && parsed.command == null)
+            runCatching { com.optionslab.ira.MorningSense.asked(q) }.getOrNull() else null
+        if (morningAsk != null) {
+            val said = if (morningAsk == com.optionslab.ira.MorningSense.Request.RESET) IraTools.morningReset() else IraTools.morningSay()
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
             return true
         }

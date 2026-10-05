@@ -31,7 +31,7 @@ class CoverageTest {
             Learnings.asked(said) != null || Learnings.undoAsked(said) || NewsMoves.asked(said) != null || PreMarket.asked(said) ||
             ChainDrift.asked(said) != null || Headroom.asked(said) != null || BotTrades.asked(said) != null || DayClock.asked(said) != null ||
             SaidAbout.asked(said) != null || GapRecord.asked(said) != null || Causes.asked(said) != null || WeekAhead.asked(said) != null || AskedAgain.asked(said) || FigureFirst.asked(said) != null || Weekdays.asked(said) != null || DayCompare.asked(said) != null ||
-            RangeBreaks.asked(said) != null || PriorDay.asked(said) != null || LastHour.asked(said) != null || InsideDays.asked(said) != null || FirstMove.asked(said) != null || NeedsTrue.asked(said) || Clarity.asked(said) != null || ZerodhaSession.asked(said) != null || Tour.asked(said) || WrongThing.asked(said) != null || WrongThing.objected(said) || OrderWhy.asked(said) != null || ArmHabits.asked(said) || RelayHealth.asked(said) != null
+            RangeBreaks.asked(said) != null || PriorDay.asked(said) != null || LastHour.asked(said) != null || InsideDays.asked(said) != null || FirstMove.asked(said) != null || NeedsTrue.asked(said) || Clarity.asked(said) != null || ZerodhaSession.asked(said) != null || Tour.asked(said) || WrongThing.asked(said) != null || WrongThing.objected(said) || OrderWhy.asked(said) != null || ArmHabits.asked(said) || MorningSense.asked(said) != null || RelayHealth.asked(said) != null
         return ((if (asSaid) null else Understand.questions(null, said)) ?: listOf(said)).map { kind(it, 0) }
     }
 
@@ -48,6 +48,7 @@ class CoverageTest {
             if (FigureFirst.asked(q) != null) return Kind.JARVIS
             if (WrongThing.asked(q) != null || WrongThing.objected(q)) return Kind.JARVIS
             if (ArmHabits.asked(q)) return Kind.ACCOUNT
+            if (MorningSense.asked(q) != null) return Kind.JARVIS
             if (NewsMoves.asked(q) != null) return Kind.MARKET
             if (TaxRecords.exportAsked(q)) return Kind.ACCOUNT
             if (Learnings.asked(q) != null || Learnings.undoAsked(q)) return Kind.JARVIS
@@ -440,7 +441,7 @@ class CoverageTest {
      * Which feature answers [said] in Jarvis (not GOLD), taking IraHub.ask's branches in its own order (app/.../IraHub.kt,
      * ask(): Boss's learned words and routine as said, fillers and follow-ups, then - for a question not said with
      * something to do (IraHub's `bundled`, [Bundle.acts]) - DayJournal, AlertSense, Airtime, Hearing, PatternCalls, TrendReads, Clarity,
-     * WordFit, AskedAgain, FigureFirst, WrongThing, ArmHabits, NewsMoves, TaxExport, Learnings, PreMarket, Headroom, BotTrades, SaidAbout, WeekAhead, DataAge, Honest, Thinking,
+     * WordFit, AskedAgain, FigureFirst, WrongThing, ArmHabits, MorningSense, NewsMoves, TaxExport, Learnings, PreMarket, Headroom, BotTrades, SaidAbout, WeekAhead, DataAge, Honest, Thinking,
      * Consistency, CoPilot, ChainDrift, ChainIntel, DayClock, GapRecord, RangeBreaks, PriorDay, LastHour, InsideDays, FirstMove, Weekdays, DayCompare, Structure, MindChange, Breadth, TradeCase,
      * Scenarios, Causes, Agenda, Improve; the reminders and Jarvis's own checks,
      * Distance... Outlook, NewsDesk, down to the account's sections (PositionHealth, BotHealth and NeedsTrue are its HEALTH,
@@ -461,7 +462,7 @@ class CoverageTest {
             PatternCalls.asked(said) || TrendReads.asked(said) || Learnings.asked(said) != null || Learnings.undoAsked(said) || NewsMoves.asked(said) != null ||
             PreMarket.asked(said) ||
             ChainDrift.asked(said) != null || Headroom.asked(said) != null || BotTrades.asked(said) != null || NeedsTrue.asked(said) || Clarity.asked(said) != null || DayClock.asked(said) != null ||
-            SaidAbout.asked(said) != null || GapRecord.asked(said) != null || WordFit.asked(said) != null || Causes.asked(said) != null || WeekAhead.asked(said) != null || AskedAgain.asked(said) || FigureFirst.asked(said) != null || MindChange.asked(said) || Weekdays.asked(said) != null || DayCompare.asked(said) != null || RangeBreaks.asked(said) != null || PriorDay.asked(said) != null || LastHour.asked(said) != null || InsideDays.asked(said) != null || FirstMove.asked(said) != null || ZerodhaSession.asked(said) != null || Tour.asked(said) || WrongThing.asked(said) != null || WrongThing.objected(said) || OrderWhy.asked(said) != null || ArmHabits.asked(said) || RelayHealth.asked(said) != null
+            SaidAbout.asked(said) != null || GapRecord.asked(said) != null || WordFit.asked(said) != null || Causes.asked(said) != null || WeekAhead.asked(said) != null || AskedAgain.asked(said) || FigureFirst.asked(said) != null || MindChange.asked(said) || Weekdays.asked(said) != null || DayCompare.asked(said) != null || RangeBreaks.asked(said) != null || PriorDay.asked(said) != null || LastHour.asked(said) != null || InsideDays.asked(said) != null || FirstMove.asked(said) != null || ZerodhaSession.asked(said) != null || Tour.asked(said) || WrongThing.asked(said) != null || WrongThing.objected(said) || OrderWhy.asked(said) != null || ArmHabits.asked(said) || MorningSense.asked(said) != null || RelayHealth.asked(said) != null
         val qs = if (asSaid || understood || cleaned) null else Understand.questions(null, said)?.takeIf { it.isNotEmpty() && it != listOf(said) }
         if (qs != null) return if (qs.size == 1) feature(qs[0], cleaned = true) else qs.joinToString(" & ") { feature(it, understood = true) }
         val q = said
@@ -483,6 +484,7 @@ class CoverageTest {
         if (alone && FigureFirst.asked(q) != null) return "FigureFirst"
         if (alone && (WrongThing.asked(q) != null || WrongThing.objected(q))) return "WrongThing"
         if (alone && ArmHabits.asked(q)) return "ArmHabits"
+        if (alone && MorningSense.asked(q) != null) return "MorningSense"
         if (alone && NewsMoves.asked(q) != null) return "NewsMoves"
         if (alone && TaxRecords.exportAsked(q)) return "TaxExport"
         if (alone && Learnings.asked(q) != null) return "Learnings"
@@ -1010,6 +1012,11 @@ class CoverageTest {
         "what do i do with my bots after a losing day" to "ArmHabits", "which bots do i keep armed" to "ArmHabits",
         "my arming habits" to "ArmHabits", "do i give up on my bots too fast" to "ArmHabits",
         "loss ke baad main bot band karta hoon kya" to "ArmHabits",
+        // ---- MorningSense (learning round 17): the morning-check items Boss leaves, named in a few words aloud ----
+        "which morning check items do you skip" to "MorningSense", "what do you leave out of the morning check" to "MorningSense",
+        "why was the morning check so short today" to "MorningSense", "what do i usually ignore in the morning check" to "MorningSense",
+        "say the whole morning check again" to "MorningSense", "read the full morning check" to "MorningSense",
+        "don't skip anything in the morning check" to "MorningSense", "poora morning check sunao" to "MorningSense",
         // ---- Its neighbours: the strategies listed, Solo, the positions' health ----
         "show my strategies" to "Account:STRATEGIES", "list my strategies" to "Account:STRATEGIES",
         "what strategies are running" to "Account:STRATEGIES", "which strategies are on" to "Account:STRATEGIES",
@@ -1114,6 +1121,8 @@ class CoverageTest {
             ("what did you get wrong today" to "WrongThing") to ("what did you get wrong" to "Account:MISTAKES"),
             // Round 16: what Boss does with his bots after losses is his record; how they are doing stays the bots' health.
             ("do i usually disarm my bots after losses" to "ArmHabits") to ("how are my bots doing" to "Account:BOTS"),
+            // Round 17: the spoken morning check's length is his own; the checklist itself stays PreMarket's.
+            ("which morning check items do you skip" to "MorningSense") to ("go through my morning checklist" to "PreMarket"),
             // Reasoning round 10: a fall weighed by its evidence, beside one sudden move's coincidences and the news behind it.
             ("why did nifty fall" to "Causes") to ("why did nifty suddenly fall" to "SharpMove"),
             ("what caused the fall today" to "Causes") to ("what news moved the market" to "NewsDesk"),
