@@ -239,7 +239,9 @@ class VoiceBenchTest {
 
     /**
      * [digest] of [LINES] on the code before this round (2026-10-05), changed once on purpose since: a line said shorter
-     * now keeps every safety warning past the cut ([Aloud.keep] - "kill switch" lines said one sentence long keep it).
+     * now keeps every safety warning past the cut ([Aloud.keep] - "kill switch" lines said one sentence long keep it);
+     * and (Voice, round 26) "Rs 1,400, 70 percent" / "Down Rs 900, on Zerodha" are said "1,400 rupees, 70 percent" /
+     * "900 rupees, on Zerodha" - before, the comma after the figure was taken into it ("1,400, rupees 70 percent").
      */
-    private val BEFORE = "9499f158a6e8954767db1bfc8127bf5333d02f36a5c2c06e667e1105051a2b61"
+    private val BEFORE = "10fd4dc92e2875070cd55abc1d689de3483784075410f729060695813cc5c63b"
 }

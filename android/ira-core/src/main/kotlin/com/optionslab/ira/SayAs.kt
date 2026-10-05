@@ -32,7 +32,9 @@ import java.util.Locale
  *    or were read "plus-minus sign"; "its range is 1.3x the usual" was read "one point three ex". Now "plus or minus 1
  *    percent", "about plus or minus 210 points", "1.3 times the usual" (Hindi "प्लस-माइनस", "गुना"). Only a "±" right
  *    before a figure, and only an "x" (or "×") glued to a short figure with no letter or digit after it - so "2x3",
- *    "0x1F", "x2" and words with an x stay as written.
+ *    "0x1F", "x2" and words with an x stay as written;
+ *  - an amount under 100 rupees with paise said in rupees and paise (Voice, round 26): "12.4 rupees" -> "12 rupees 40
+ *    paise", "0.4 rupees" -> "40 paise" (Hindi "पैसे"); a bigger one is already said whole ([Aloud.numbers]).
  *
  * The chat keeps the exact figures; this only shapes the words said, adds nothing new and never changes a sentence's end,
  * so "go on" after a cut-in finds the same sentences ([BargeIn]). Applying it twice changes nothing. Pure.
@@ -144,7 +146,27 @@ object SayAs {
                 said + if (tail == " rupees crore") " " + (if (hindi) "रुपये" else "rupees") else ""
             }
         }
-        return if (s.contains(" rupees crore")) RUPEES_CRORE.replace(s) { m -> m.groupValues[1] + " crore rupees" } else s
+        if (s.contains(" rupees crore")) s = RUPEES_CRORE.replace(s) { m -> m.groupValues[1] + " crore rupees" }
+        if (s.indexOf('.') >= 0 && (s.contains(" rupees") || s.contains(" रुपये"))) s = PAISE.replace(s) { m -> paise(m, hindi) }
+        return s
+    }
+
+    /**
+     * A small amount with paise said as a person says it (Voice, round 26): "12.4 rupees" was read "twelve point four
+     * rupees", "0.4 rupees" "zero point four rupees"; now "12 rupees 40 paise", "40 paise" (Hindi "12 रुपये 40 पैसे",
+     * "40 पैसे"). Only under 100 rupees with one or two places - a bigger amount is already said whole, paise dropped
+     * ([Aloud.numbers]) - and only a figure right before "rupees"/"रुपये".
+     */
+    private val PAISE = Regex("(?<![\\w.,])(\\d{1,2})\\.(\\d{1,2})(?![\\d.,]) (rupees|रुपये)(?![\\p{L}\\p{M}])")
+
+    private fun paise(m: MatchResult, hindi: Boolean): String {
+        val r = m.groupValues[1].toInt()
+        val p = m.groupValues[2].padEnd(2, '0').toInt()
+        val rupee = if (hindi) (if (r == 1) "रुपया" else "रुपये") else (if (r == 1) "rupee" else "rupees")
+        val whole = "$r $rupee"
+        if (p == 0) return whole
+        val ps = "$p " + (if (hindi) "पैसे" else "paise")
+        return if (r == 0) ps else "$whole $ps"
     }
 
     /** Could [s] hold "CE" or "PE" (every option and strike pattern ends in one)? */

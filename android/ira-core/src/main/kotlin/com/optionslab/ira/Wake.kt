@@ -80,11 +80,16 @@ object Wake {
      * An answer as it is spoken: the first [sentences] sentences (never a safety verdict or warning cut - [Aloud.keep]), the rupee sign and "Rs" read as rupees. The full answer
      * stays on screen with the facts it was built from.
      */
+    /** "Rs" or "₹" before a figure: a sign, then digits with their grouping commas, never a comma after the last digit. */
+    private val RUPEE_FIGURE = rx("(?:Rs|₹)\\s?([+-]?\\d(?:[\\d,]*\\d)?(?:\\.\\d+)?)")
+
     fun spoken(text: String, sentences: Int = 3): String {
         val parts = rx("(?<=[.!?])\\s+").split(text.trim()).filter { it.isNotBlank() }
         // Never a safety verdict or warning cut ([Aloud.keep]).
         return Aloud.keep(parts, sentences).joinToString(" ")
-            .replace(rx("(?:Rs|₹)\\s?([+-]?[\\d,]+(?:\\.\\d+)?)"), "$1 rupees")
+            // The figure ends on a digit (Voice, round 26): "Rs 1,234, mostly brokerage" was said "1,234, rupees mostly" and
+            // "STT Rs 1,02,345, exchange" kept its comma glued on, so it was never said in lakh.
+            .replace(RUPEE_FIGURE, "$1 rupees")
             .replace("+", "plus ").replace(rx("(^|\\s)-(?=\\d)"), "$1minus ")
     }
 

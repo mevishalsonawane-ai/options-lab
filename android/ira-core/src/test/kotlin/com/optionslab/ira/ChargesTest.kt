@@ -204,6 +204,16 @@ class ChargesTest {
         lines.filter { it.contains("Rs ") }.forEach { assertTrue(Overheard.holdsAccount(it), it) }
     }
 
+    @Test fun theChargesAnswerSaidAloudWithRupeesInTheirPlace() {
+        // Voice, round 26: "Rs 270 (the app's estimate), mostly" and "brokerage Rs 140, STT Rs 64," kept the comma inside
+        // the figure, so the voice said "140, rupees STT".
+        val lines = Charges.whyLines("Zerodha", day, dayTrips, null, today, estimated = true)
+        val said = Aloud.say(lines.joinToString(" "), Aloud.Length.FULL)
+        assertTrue(said.contains("brokerage 140 rupees, STT 64 rupees, exchange 33 rupees, GST 31 rupees, stamp 2 rupees; 270 rupees in all."), said)
+        assertFalse(said.contains(", rupees"), said)
+        assertFalse(said.contains("Rs"), said)
+    }
+
     @Test fun zerodhasContractNoteAndPaperKeptApart() {
         val z = Charges.whyLines("Zerodha", day, dayTrips, null, today, estimated = true, exact = 251.4)
         assertTrue(z.last() == "Zerodha: Zerodha's own contract note for 8 Oct says Rs 251.", z.last())
