@@ -1713,7 +1713,10 @@ class JarvisVoice : Service() {
                             // Not sure it heard this question right (a low score, or its best readings differ in an index, a
                             // number, a side or a day): what it took it as is said first, then the answer - questions only,
                             // never an order or command (each has its own confirm); the trace keeps why, never the words.
-                            val echo = com.optionslab.ira.HeardBack.why(h.question, alternatives, sure,
+                            // A mis-heard fragment ("bus") is not read back first: its "say it again" comes at once
+                            // ([com.optionslab.ira.MisHeard]; voice, round 26).
+                            val fragment = runCatching { com.optionslab.ira.MisHeard.fragment(h.question, voice = true) }.getOrDefault(false)
+                            val echo = if (fragment) null else com.optionslab.ira.HeardBack.why(h.question, alternatives, sure,
                                 isQuestion = parsedQ.order == null && parsedQ.command == null && laterRest == null &&
                                     com.optionslab.ira.Topic.ORDER !in topics && com.optionslab.ira.Topic.COMMAND !in topics,
                                 lockedAccount = locked() && com.optionslab.ira.Topic.ACCOUNT in topics)?.let { why ->

@@ -86,13 +86,23 @@ object Mistakes {
 
 /** The evening's word on how Jarvis did today (the owner's wish, 2026-10-03). Pure. */
 object Usage {
-    data class Day(val heard: Int = 0, val misunderstood: Int = 0, val nameFirst: Int = 0, val failed: Int = 0, val mistakes: Int = 0)
+    /**
+     * [heard]: every question counted, mis-heard fragments too; [misheard]: those fragments ([MisHeard]; voice, round 26) -
+     * said "say it again" to, not questions he did not understand.
+     */
+    data class Day(val heard: Int = 0, val misunderstood: Int = 0, val nameFirst: Int = 0, val failed: Int = 0, val mistakes: Int = 0,
+                   val misheard: Int = 0) {
+        /** Real questions: the mis-heard fragments left out. */
+        val questions: Int get() = (heard - misheard.coerceAtLeast(0)).coerceAtLeast(0)
+    }
 
     fun line(d: Day): String? {
         if (d.heard == 0 && d.failed == 0) return null
+        val n = d.questions
         val parts = listOfNotNull(
-            "I heard ${d.heard} question${if (d.heard == 1) "" else "s"} today",
+            "I heard $n question${if (n == 1) "" else "s"} today",
             d.misunderstood.takeIf { it > 0 }?.let { "did not understand $it" },
+            d.misheard.takeIf { it > 0 }?.let { "mis-heard $it short bit${if (it > 1) "s" else ""} and asked you to say ${if (it > 1) "them" else "it"} again" },
             d.nameFirst.takeIf { it > 0 }?.let { "asked you to say \"Jarvis\" first $it time${if (it > 1) "s" else ""}" },
             d.failed.takeIf { it > 0 }?.let { "$it thing${if (it > 1) "s" else ""} failed" },
             d.mistakes.takeIf { it > 0 }?.let { "you marked $it answer${if (it > 1) "s" else ""} wrong" },

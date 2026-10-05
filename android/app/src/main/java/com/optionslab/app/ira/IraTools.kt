@@ -1666,7 +1666,8 @@ internal object IraTools {
 
     fun usageToday(): com.optionslab.ira.Usage.Day = runCatching {
         val o = JSONObject(prefs().getString(dayKey()) ?: "{}")
-        com.optionslab.ira.Usage.Day(o.optInt("heard"), o.optInt("misunderstood"), o.optInt("nameFirst"), o.optInt("failed"), o.optInt("mistakes"))
+        com.optionslab.ira.Usage.Day(o.optInt("heard"), o.optInt("misunderstood"), o.optInt("nameFirst"), o.optInt("failed"), o.optInt("mistakes"),
+            misheard = o.optInt(com.optionslab.ira.MisHeard.COUNT))
     }.getOrDefault(com.optionslab.ira.Usage.Day())
 
     // ---- voice: short answers, wake sensitivity --------------------------------------------------------------------

@@ -63,7 +63,7 @@ object Spelling {
     }
 
     /** Edit distance with swapped neighbours counted as one. */
-    private fun distance(a: String, b: String): Int {
+    internal fun distance(a: String, b: String): Int {
         val d = Array(a.length + 1) { IntArray(b.length + 1) }
         for (i in 0..a.length) d[i][0] = i
         for (j in 0..b.length) d[0][j] = j

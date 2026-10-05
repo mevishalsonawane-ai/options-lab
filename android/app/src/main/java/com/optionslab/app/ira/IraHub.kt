@@ -1364,6 +1364,8 @@ object IraHub {
         val id = if (typed) askStages.begin(android.os.SystemClock.elapsedRealtime(), voice = false) else timed
         return scope.launch(askLane) {
             askStages.mark(id, com.optionslab.ira.AskStages.Stage.STARTED, android.os.SystemClock.elapsedRealtime())
+            // Heard or typed, for the mis-heard fragment check ([com.optionslab.ira.MisHeard]); set in this lane, one question at a time.
+            heardByVoice = !typed
             try { awaitLoaded(); if (confirmed) askConfirmed(text) else ask(text) }
             finally { askStages.mark(id, com.optionslab.ira.AskStages.Stage.ROUTED, android.os.SystemClock.elapsedRealtime()) }
             // A typed question: answered when its reply is in the chat (spoken or not - the screen shows it then).
@@ -1378,6 +1380,9 @@ object IraHub {
 
     /** Each question's stages, for the diagnostics' "Speed (asks):" line (durations only, never words). Speed, round 4. */
     val askStages = com.optionslab.ira.AskStages()
+
+    /** The question in the lane now was heard by the voice (else typed): voice, round 26 ([com.optionslab.ira.MisHeard]). */
+    @Volatile private var heardByVoice = false
 
     /** The reset hook between tests (Robolectric shares this object): the ask timings and the account's kept figures. */
     internal fun resetAskSpeed() { askStages.clear(); IraAccount.resetSpeed() }
@@ -2210,6 +2215,26 @@ object IraHub {
             val said = offlineNote()?.let { "$it $text" } ?: aged(text, parsed.markets, parsed.topics + Topic.OVERVIEW, withhold = false).text
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said, listOf(text))).takeLast(MAX_MESSAGES)) }
             return
+        }
+        // Voice, round 26 (Boss's diagnostics, 5 Oct: "bus", "office schedule", "what s the piano" went to the slow model).
+        // Heard words close to a known question (a word said twice, a known slip, a near-miss index name) are asked as that
+        // question - a question only, never a command or an order. Then short words that match nothing are most likely a
+        // mis-hear: "say it again" at once, without the model or "One moment", counted as mis-heard (not as a question not
+        // understood). Typed words only when a single non-word. Nothing here acts.
+        if (com.optionslab.app.BuildConfig.JARVIS && !understood && parsed.order == null && parsed.command == null &&
+            (Topic.OFF_TOPIC in parsed.topics || parsed.topics == setOf(Topic.WHY))) {
+            val byVoice = heardByVoice
+            val meant = if (byVoice && Topic.OFF_TOPIC in parsed.topics) runCatching { com.optionslab.ira.MisHeard.rescue(q) }.getOrNull() else null
+            if (meant != null && !lockedAccount(q, meant)) {
+                _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, "$TOOK_AS\"$meant\".")).takeLast(MAX_MESSAGES)) }
+                ask(meant, understood = true)
+                return
+            }
+            if (runCatching { com.optionslab.ira.MisHeard.fragment(q, voice = byVoice) }.getOrDefault(false)) {
+                IraTools.count(com.optionslab.ira.MisHeard.COUNT)
+                _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, com.optionslab.ira.MisHeard.SAY)).takeLast(MAX_MESSAGES)) }
+                return
+            }
         }
         // Not understood (counted only now: a briefing or "what changed" was answered by the reasoning above).
         if (Topic.OFF_TOPIC in parsed.topics) IraTools.count("misunderstood")

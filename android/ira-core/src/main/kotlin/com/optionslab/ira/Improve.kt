@@ -35,6 +35,8 @@ object Improve {
 
     const val HEARD = "heard"
     const val MISUNDERSTOOD = "misunderstood"
+    /** Short mis-heard fragments ([MisHeard]): counted in "heard" by the app, left out of the questions here. */
+    const val MISHEARD = MisHeard.COUNT
     const val MISTAKES = "mistakes"
     const val HUSH = "hush"
     const val TIMED = "timed"
@@ -77,7 +79,9 @@ object Improve {
     /** One week of his own record, Monday [start] on. [asked]: market question key ([Habits.key]) to times asked. */
     data class Week(val start: LocalDate, val heard: Int = 0, val misunderstood: Int = 0, val mistakes: Int = 0,
                     val timed: Int = 0, val slow: Int = 0, val hushed: Int = 0, val muted: Int = 0, val alertsOff: Int = 0,
-                    val sitOuts: Int = 0, val missed: List<String> = emptyList(), val asked: Map<String, Int> = emptyMap()) {
+                    val sitOuts: Int = 0, val missed: List<String> = emptyList(), val asked: Map<String, Int> = emptyMap(),
+                    /** Mis-heard fragments ([MisHeard]): already left out of [heard], so the understood share is of real questions. */
+                    val misheard: Int = 0) {
         val fastShare: Int? get() = if (timed < MIN_TIMED) null else ((timed - slow).coerceAtLeast(0) * 100) / timed
         val understoodShare: Int? get() = if (heard < MIN_HEARD) null else ((heard - misunderstood).coerceAtLeast(0) * 100) / heard
         val cutShort: Int get() = hushed + muted + alertsOff
@@ -113,8 +117,10 @@ object Improve {
         fun sum(k: String) = counts.sumOf { (it[k] ?: 0).coerceAtLeast(0) }
         val asked = HashMap<String, Int>()
         counts.forEach { c -> c.forEach { (k, v) -> if (k.startsWith(ASKED_PREFIX) && v > 0) asked.merge(k.removePrefix(ASKED_PREFIX), v, Int::plus) } }
-        return Week(start, sum(HEARD), sum(MISUNDERSTOOD), sum(MISTAKES), sum(TIMED), sum(SLOW), sum(HUSH), sum(MUTED), sum(ALERT_OFF), sum(SIT_OUT),
-            missed.distinctBy { Corrections.normalize(it) }, asked)
+        // Mis-heard fragments are counted in "heard" by the app: left out here (voice, round 26).
+        val misheard = sum(MISHEARD)
+        return Week(start, (sum(HEARD) - misheard).coerceAtLeast(0), sum(MISUNDERSTOOD), sum(MISTAKES), sum(TIMED), sum(SLOW), sum(HUSH), sum(MUTED), sum(ALERT_OFF), sum(SIT_OUT),
+            missed.distinctBy { Corrections.normalize(it) }, asked, misheard)
     }
 
     /** The phrasings missed over the days, kept: [list] with [w] added on [day], the last 14 days and 60 at most, each once a day. */

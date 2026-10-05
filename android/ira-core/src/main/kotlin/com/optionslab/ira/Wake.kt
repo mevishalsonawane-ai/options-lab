@@ -59,9 +59,10 @@ object Wake {
 
     /** [awake]: the wake word was said alone a moment ago, so this sentence is the question. */
     fun heard(text: String, awake: Boolean): Heard {
-        val t = " " + spacedWords(text.lowercase(), "%") + " "
+        // "jarvis's" is the name ([com.optionslab.ira.Heard.nameForms]); "darius good evening" a slip of it ([com.optionslab.ira.Heard.nameSlip]; voice, round 26).
+        val t = com.optionslab.ira.Heard.nameForms(" " + spacedWords(text.lowercase(), "%") + " ")
         val at = WORDS.mapNotNull { w -> rx(" $w ").find(t)?.let { it.range.last } }.minOrNull()
-            ?: FIRST.find(t)?.let { it.range.last }
+            ?: FIRST.find(t)?.let { it.range.last } ?: com.optionslab.ira.Heard.nameSlip(t)
         val rest = (if (at != null) t.substring(at) else t).trim().let { r -> var x = r; repeat(3) { x = x.replace(FILLER, "").trim() }; x }
         return when {
             at == null && !awake -> Heard.Ignore
