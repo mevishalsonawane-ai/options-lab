@@ -22,7 +22,7 @@ object BargeIn {
     private const val MAX_STOP_WORDS = 4
 
     private val STOP = Regex("^(ok |okay |please |just |arre |arey |haan |ha )?(stop|stop it|stop now|stop that|stop talking|stop speaking|enough|that s enough|thats enough|" +
-        "quiet|be quiet|shut up|silence|hush|chup|chup ho jao|chup raho|chup karo|bas|bas bas|bas karo|bas ho gaya|rehne do|rukk?o|ruk jao|" +
+        "quiet|be quiet|shut up|silence|hush|chup|chup ho jao|chup raho|chup karo|bas|bas bas|bas karo|bas ho gaya|rehne do|rukk?o|ruko ruko|rukiye|ruk jao|" +
         "wait|wait wait|hold on|one second|one sec|ok ok|okay okay|ok ok ok|ok got it|okay got it|got it|fine fine|theek hai theek hai|thik hai thik hai|" +
         "next|next one|skip|skip it|never ?mind|forget it|leave it|cancel that)( please| now| boss)?$")
 
@@ -33,20 +33,96 @@ object BargeIn {
     private fun norm(s: String?) = spacedWords((s ?: "").lowercase())
 
     /**
-     * What a partial reading [partial] heard while Jarvis was saying [saying] means: [Cut.NAME], [Cut.HUSH], or null
-     * (his own words heard back, the room, or a sentence that is not a stop - it is left to the turn's end).
+     * Stop words firm enough to count wherever Boss says them among the newest words, not only as the whole of what is
+     * left after his echo: one recognizer word each, or two side by side.
+     */
+    private val FIRM = setOf("stop", "bas", "ruko", "rukko", "rukiye", "chup", "enough", "quiet", "hush", "silence", "wait")
+    private val FIRM_PAIRS = setOf("shut up", "ruk jao", "bas karo", "chup karo", "be quiet")
+
+    /** After a firm stop word, at most this many words, all his own (the speaker's tail read after Boss's stop). */
+    private const val ECHO_AFTER = 2
+
+    /**
+     * What a partial (or final) reading [partial] heard while Jarvis was saying [saying] means: [Cut.NAME], [Cut.HUSH],
+     * or null (his own words heard back, the room, or a sentence that is not a stop - it is left to the turn's end).
+     *
+     * Boss's diagnostics (5 Oct): his "stop" over Jarvis was lost whenever the recognizer misread one of Jarvis's own
+     * words before it ("nifty is at 24612 stop": "24612" is not one of his words as said, so the stop was not the whole of
+     * what was left and nothing counted). Now the newest words are read: a stop phrase ending the reading, or a firm stop
+     * word followed only by a word or two of his own, counts - unless that very word is his own, heard in the same place
+     * ([own]). The name and the stop words are never taken for his echo just because his other words surround them.
      */
     fun cut(partial: String?, saying: String?): Cut? {
         val t = norm(partial)
         if (t.isEmpty()) return null
         if (Wake.named(t)) return Cut.NAME
-        val said = norm(saying).split(' ').filter { it.isNotEmpty() }.toSet()
-        // His own words first (the speaker's tail heard before Boss spoke), then Boss's.
-        val tail = t.split(' ').dropWhile { it in said }
-        if (tail.isEmpty() || tail.size > MAX_STOP_WORDS) return null
-        // Any of those words in what he is saying could be the echo itself ("Shall I stop ORB?"): not a stop.
-        if (tail.any { it in said }) return null
-        return if (STOP.matches(tail.joinToString(" "))) Cut.HUSH else null
+        val h = t.split(' ').filter { it.isNotEmpty() }
+        val s = norm(saying).split(' ').filter { it.isNotEmpty() }
+        val said = s.toSet()
+        // A stop phrase ending the reading ("stop", "banks led stop", "ok ok", "bas karo").
+        for (k in 1..minOf(MAX_STOP_WORDS, h.size)) {
+            val from = h.size - k
+            if (!STOP.matches(h.subList(from, h.size).joinToString(" "))) continue
+            // A soft one ("ok ok", "next") only after nothing but his own words: inside a sentence of Boss's it is no stop.
+            if (!firm(h, from, k) && !h.subList(0, from).all { it in said }) continue
+            if (ownPhrase(h, from, k, s, said)) continue
+            return Cut.HUSH
+        }
+        // A firm stop word with only a word or two of his own read after it ("stop the": the speaker's tail).
+        for (i in h.indices.reversed()) {
+            val len = when {
+                i + 1 < h.size && "${h[i]} ${h[i + 1]}" in FIRM_PAIRS -> 2
+                h[i] in FIRM -> 1
+                else -> continue
+            }
+            val after = h.subList(minOf(h.size, i + len), h.size)
+            // Nothing after it: judged above (a stop phrase ending the reading). More, or Boss's own words: his sentence.
+            if (after.isEmpty() || after.size > ECHO_AFTER || !after.all { it in said }) continue
+            if ((i until i + len).any { h[it] in said && own(h, it, s) }) continue
+            return Cut.HUSH
+        }
+        return null
+    }
+
+    /** Is [h] from [from] ([k] words) a firm stop ([FIRM], [FIRM_PAIRS])? */
+    private fun firm(h: List<String>, from: Int, k: Int): Boolean {
+        val w = h.subList(from, from + k)
+        return w.any { it in FIRM } || (0 until w.size - 1).any { "${w[it]} ${w[it + 1]}" in FIRM_PAIRS }
+    }
+
+    /**
+     * Could the stop phrase [h] from [from] ([k] words) be his own words heard back? A firm stop word: only when it is
+     * his, heard in the same place ([own]). Any other word ("ok ok", "next", "got it"): whenever it is one of his.
+     */
+    private fun ownPhrase(h: List<String>, from: Int, k: Int, s: List<String>, said: Set<String>): Boolean {
+        for (i in from until from + k) {
+            val w = h[i]
+            if (w !in said) continue
+            if (w !in FIRM || own(h, i, s)) return true
+        }
+        return false
+    }
+
+    /**
+     * Is the word [h]`[i]`, one of the words he is saying ([s]), his own heard back? Yes when a word heard next to it is
+     * its neighbour in what he is saying too, or when there is nothing around it to compare (a lone "stop" while he says
+     * "stop"); no when its neighbours differ ("stop stop" while he says "a stop loss" is Boss).
+     */
+    internal fun own(h: List<String>, i: Int, s: List<String>): Boolean {
+        for (j in s.indices) {
+            if (s[j] != h[i]) continue
+            val prev = i > 0 && j > 0
+            val next = i < h.lastIndex && j < s.lastIndex
+            if (!prev && !next) return true
+            if ((prev && s[j - 1] == h[i - 1]) || (next && s[j + 1] == h[i + 1])) return true
+        }
+        return false
+    }
+
+    /** [cut] over all of the recognizer's readings: the name in any of them, else the first stop. */
+    fun cutAny(readings: List<String>, saying: String?): Cut? {
+        if (readings.any { Wake.named(norm(it)) }) return Cut.NAME
+        return readings.asSequence().mapNotNull { cut(it, saying) }.firstOrNull()
     }
 
     /** Is [text] (the name already taken off) Boss asking for the rest of what was cut off? */

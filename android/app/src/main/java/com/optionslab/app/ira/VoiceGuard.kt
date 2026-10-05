@@ -124,8 +124,10 @@ object VoiceGuard {
     /**
      * The microphone shared with the on-device recognizer (Android 13+): our capture feeds the recognizer through a
      * pipe and keeps the last [KEEP_S] seconds, so the words understood are the words checked. One per listening turn.
+     * [source]: the microphone source - the recognition one for a voice check, the call one (echo cancelled on every
+     * phone) for a cut-in turn without a taught voice ([com.optionslab.ira.CutIn.ownCapture]).
      */
-    class Tap @SuppressLint("MissingPermission") constructor() {
+    class Tap @SuppressLint("MissingPermission") constructor(source: Int = MediaRecorder.AudioSource.VOICE_RECOGNITION) {
         val read: android.os.ParcelFileDescriptor
         private val write: android.os.ParcelFileDescriptor
         private val rec: AudioRecord
@@ -142,7 +144,7 @@ object VoiceGuard {
             val min = AudioRecord.getMinBufferSize(VoicePrint.RATE, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT)
             var r: AudioRecord? = null
             try {
-                r = AudioRecord(MediaRecorder.AudioSource.VOICE_RECOGNITION, VoicePrint.RATE, AudioFormat.CHANNEL_IN_MONO,
+                r = AudioRecord(source, VoicePrint.RATE, AudioFormat.CHANNEL_IN_MONO,
                     AudioFormat.ENCODING_PCM_16BIT, maxOf(min, VoicePrint.RATE))
                 check(r.state == AudioRecord.STATE_INITIALIZED) { "no microphone" }
                 clean = Clean(r.audioSessionId, echo = true)

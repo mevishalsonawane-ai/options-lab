@@ -130,7 +130,8 @@ class JarvisVoice : Service() {
             append("Voice check: ${runCatching { diagnose(context) }.getOrElse { "could not run" }}\n")
             com.optionslab.ira.Latency.say(latencies, voiceLatencies)?.let { append(it).append('\n') }
             append(com.optionslab.ira.BossPace.say(paceGaps)).append('\n')
-            append(runCatching { com.optionslab.ira.CutIn.say(cutInNow(context ?: instance?.get()), cutInChoice) }.getOrElse { "Cut-in: could not check" }).append('\n')
+            append(runCatching { com.optionslab.ira.CutIn.say(cutInNow(context ?: instance?.get()), cutInChoice) }.getOrElse { "Cut-in: could not check" })
+                .append(" · ").append(com.optionslab.ira.CutStops.say(cutStopTally)).append('\n')
             append(runCatching { com.optionslab.ira.Hearing.say(hearingDays, hearingDay()) }.getOrElse { "Hearing: could not read" }).append('\n')
             append(runCatching { com.optionslab.ira.ListenLanguage.say(langState, instance?.get()?.lang, hearingDay(), onDeviceLangs) }.getOrElse { "Language: could not read" }).append('\n')
             append("Last turns:\n"); traceLines(all = true).forEach { append("  ").append(it).append('\n') }
@@ -482,7 +483,10 @@ class JarvisVoice : Service() {
             runCatching { announce(text, weight = weight, whole = whole) }.getOrDefault(false)
 
         /** Robolectric shares static state between tests: the voice's own memory reset. */
-        internal fun resetForTest() { lastHeld = null }
+        internal fun resetForTest() { lastHeld = null; cutStopTally = com.optionslab.ira.CutStops.Tally() }
+
+        /** Boss's cuts over Jarvis: how many, and how soon the voice went silent (durations only - [com.optionslab.ira.CutStops]). */
+        @Volatile internal var cutStopTally = com.optionslab.ira.CutStops.Tally()
 
         /** "Be quiet for 30 minutes": muted until this time (epoch ms), then speaking again by itself. */
         val mutedUntil: Long get() = runCatching { com.optionslab.app.security.SecurePrefs.getString("jarvis.mute.until")?.toLong() }.getOrNull() ?: 0L
@@ -1008,6 +1012,8 @@ class JarvisVoice : Service() {
             @Deprecated("Deprecated in Java") override fun onError(id: String?) { main.post { if (id == utterance) afterSpeech(id?.substringBefore('#'), endedInviting(id)) } }
             override fun onStop(id: String?, interrupted: Boolean) {
                 main.post {
+                    // Boss's cut: the voice is silent now (the time from his stop read, for the diagnostics).
+                    cutSilent()
                     // An offer cut short or replaced was still (in part) said: a yes after it may be meant for it.
                     val cutInvited = endedInviting(id)
                     if (id != utterance) { if (cutInvited) offerEnded(); return@post }   // replaced by a newer sentence
@@ -1171,9 +1177,15 @@ class JarvisVoice : Service() {
             .putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 700L)
             .putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 500L)
         // With a taught voice (Android 13+): our own capture feeds the recognizer, so the words are also voice-checked.
+        // A turn opened while Jarvis speaks (cut-in) also hears through our own capture, with the phone's echo canceller
+        // on it (Boss, 5 Oct: the recognizer's own microphone heard his voice over Boss's "stop" and read nothing).
         endTap()
-        if (VoiceGuard.supported && VoiceGuard.enrolled && !tapFailed && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            tap = runCatching { VoiceGuard.Tap() }.getOrNull()
+        val echoOk = runCatching { android.media.audiofx.AcousticEchoCanceler.isAvailable() }.getOrDefault(false)
+        val enrolledNow = VoiceGuard.enrolled
+        if (com.optionslab.ira.CutIn.ownCapture(turnInSpeech, Build.VERSION.SDK_INT, echoOk, enrolledNow, tapFailed) && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            // Without a taught voice no voice print is read from it: the call source, whose echo cancelling every phone applies.
+            val src = if (enrolledNow) android.media.MediaRecorder.AudioSource.VOICE_RECOGNITION else android.media.MediaRecorder.AudioSource.VOICE_COMMUNICATION
+            tap = runCatching { VoiceGuard.Tap(src) }.getOrNull()
             if (tap == null) tapFailed = true                // the microphone could not be shared: do not retry each turn
             tap?.let { t ->
                 i.putExtra(RecognizerIntent.EXTRA_AUDIO_SOURCE, t.read)
@@ -1301,12 +1313,15 @@ class JarvisVoice : Service() {
             // "bas", "ok ok", "next") without the name stops it and listens again at once. Jarvis's own words heard back
             // never count ([com.optionslab.ira.BargeIn]): he never says his name, and a stop word he is saying is his.
             val words = partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION).orEmpty()
+            // Every reading counts (not only the first), and a stop is read from the newest words, so a misread word of
+            // his own before it no longer hides it (Boss, 5 Oct: "Jarvis stop" did not stop him).
             if (speaking) {
+                val readNow = SystemClock.elapsedRealtime()
                 val cut = if (words.any { WAKE.containsMatchIn(it) }) com.optionslab.ira.BargeIn.Cut.NAME
-                    else com.optionslab.ira.BargeIn.cut(words.firstOrNull(), sayingText)
+                    else com.optionslab.ira.BargeIn.cutAny(words, sayingText)
                 when (cut) {
-                    com.optionslab.ira.BargeIn.Cut.NAME -> { note("cut in by name"); interrupt() }
-                    com.optionslab.ira.BargeIn.Cut.HUSH -> hushIfBoss()
+                    com.optionslab.ira.BargeIn.Cut.NAME -> { note("cut in by name"); cutHeard(readNow); interrupt() }
+                    com.optionslab.ira.BargeIn.Cut.HUSH -> hushIfBoss(readNow)
                     null -> {}
                 }
                 return
@@ -1588,9 +1603,9 @@ class JarvisVoice : Service() {
      * seconds must be Boss's voice (checked off the main thread); with no shared audio there is nothing to check, as for
      * any words. Only the voice stops: nothing else is done.
      */
-    private fun hushIfBoss() {
+    private fun hushIfBoss(readAt: Long = SystemClock.elapsedRealtime()) {
         val t = tap
-        if (t == null || !onlyBoss || !VoiceGuard.enrolled) { hushCut(); return }
+        if (t == null || !onlyBoss || !VoiceGuard.enrolled) { hushCut(readAt); return }
         if (hushChecking) return
         hushChecking = true
         val pcm = t.heard()
@@ -1600,15 +1615,19 @@ class JarvisVoice : Service() {
             }
             hushChecking = false
             if (!his) note("a stop word in another voice: not taken")
-            else if (speaking) hushCut()
+            else if (speaking) hushCut(readAt)
         }
     }
     @Volatile private var hushChecking = false
 
-    /** "Stop" / "bas" / "ok ok" over Jarvis: the voice stops, this turn is dropped, and listening starts again at once. */
-    private fun hushCut() {
+    /**
+     * "Stop" / "bas" / "ok ok" over Jarvis (read at [readAt]): the voice stops, this turn is dropped, and listening starts
+     * again at once. Only the voice: never an order, a strategy or anything else.
+     */
+    private fun hushCut(readAt: Long) {
         if (!speaking) return
         note("cut in by a stop word")
+        cutHeard(readAt)
         runCatching { IraTools.noteHush() }
         interrupt()
         answerJob?.cancel(); replyClock.drop()
@@ -1632,9 +1651,33 @@ class JarvisVoice : Service() {
         speaking = false
         // The utterance is forgotten: its onStop is then not ours to judge, and a reply still being prepared (Hindi) is not said.
         utterance = null
+        // Every piece still queued goes with it (stop() flushes the speech engine's queue, not only the piece under way).
         runCatching { tts?.stop() }
+        // A cut heard: if the engine never reports the stop ([cutSilent] from onStop), the time stop() took is kept instead.
+        val readAt = cutReadAt
+        if (readAt > 0L) {
+            val returned = SystemClock.elapsedRealtime() - readAt
+            main.postDelayed({ if (cutReadAt == readAt) { cutReadAt = 0L; cutStopTally = com.optionslab.ira.CutStops.silent(cutStopTally, returned) } }, 1_500)
+        }
         awakeUntil = SystemClock.elapsedRealtime() + AWAKE_MS
         _state.value = VoiceState(Mode.AWAKE)
+    }
+
+    /** When Boss's cut being acted on was read (elapsed ms; 0: none waiting for the voice to fall silent). */
+    @Volatile private var cutReadAt = 0L
+
+    /** Boss's cut over Jarvis (the name or a stop word), read at [readAt]: counted, and timed until the voice is silent. */
+    private fun cutHeard(readAt: Long) {
+        cutStopTally = com.optionslab.ira.CutStops.heard(cutStopTally)
+        cutReadAt = readAt
+    }
+
+    /** The voice fell silent after a cut ([cutHeard]): the time from the cut read, durations only. */
+    private fun cutSilent() {
+        val at = cutReadAt
+        if (at <= 0L) return
+        cutReadAt = 0L
+        cutStopTally = com.optionslab.ira.CutStops.silent(cutStopTally, SystemClock.elapsedRealtime() - at)
     }
 
     /** When Boss's last words were heard (for the reply time). */
@@ -1656,7 +1699,13 @@ class JarvisVoice : Service() {
         if (afterWake) turnInSpeech = false
         else if (speaking || turnInSpeech) {
             turnInSpeech = false
-            if (alternatives.none { WAKE.containsMatchIn(it) }) { again(); return }
+            if (alternatives.none { WAKE.containsMatchIn(it) }) {
+                // A stop word over him read only in the final reading (the partials missed it): the voice stops all the
+                // same - and only the voice ([com.optionslab.ira.BargeIn]); anything else without the name is let go.
+                if (speaking && com.optionslab.ira.BargeIn.cutAny(alternatives, sayingText) == com.optionslab.ira.BargeIn.Cut.HUSH) { hushIfBoss(); return }
+                again(); return
+            }
+            if (speaking) cutHeard(SystemClock.elapsedRealtime())
             interrupt()
         }
         // The answer to Jarvis's yes-or-no question: only the recognizer's best reading, and anything unclear is not a yes.
@@ -1721,7 +1770,10 @@ class JarvisVoice : Service() {
             } else { awakeUntil = SystemClock.elapsedRealtime() + AWAKE_MS; called = alternatives.any { WAKE.containsMatchIn(it) }; say("Yes, Boss?") }
             Wake.Heard.Stop -> if (alternatives.none { WAKE.containsMatchIn(it) }) again() else { wanted = false; say("Going to sleep, Boss. Switch me on again in the app.", STOP_AFTER) }
             // "Jarvis, stop" / "enough" / "quiet": it has stopped talking (the name cut in); nothing else is done.
-            Wake.Heard.Hush -> { if (speaking) runCatching { IraTools.noteHush() }; interrupt(); answerJob?.cancel(); replyClock.drop(); awakeUntil = 0; called = false; _state.value = VoiceState(Mode.LISTENING); again() }
+            // Said over him (cut-in): the follow-up window stays open, so a bare "go on" says the rest, as after "stop" alone.
+            Wake.Heard.Hush -> { if (speaking) runCatching { IraTools.noteHush() }; interrupt(); answerJob?.cancel(); replyClock.drop()
+                awakeUntil = if (cutIn) SystemClock.elapsedRealtime() + FOLLOW_MS else 0L; called = false
+                _state.value = VoiceState(if (cutIn) Mode.AWAKE else Mode.LISTENING); again() }
             is Wake.Heard.Ask -> {
                 // "Jarvis, stop talking" said over Jarvis: it has already stopped; that is not a lasting mute.
                 if (cutIn && Regex("^(stop|please stop|ok stop) (talking|speaking)$").matches(h.question.lowercase().trim())) { again(); return }

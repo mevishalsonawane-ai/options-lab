@@ -28,7 +28,7 @@ object Wake {
     private val FILLER = Regex("^(hey|hi|ok|okay|hello|so|and|please)\\b\\s*")
     private val STOP = Regex("^(stop listening|go to sleep|sleep|shut down|turn off|switch off)$")
     /** Boss's "be quiet" (3 Oct: "Jarvis stop" means stop talking, not stop my orders). */
-    private val HUSH = Regex("^(just |please |now )?(stop|stop it|stop now|stop that|stop talking|stop speaking|enough|that s enough|thats enough|quiet|be quiet|shut up|silence|hush|chup|chup ho jao|chup raho|chup karo|bas|bas karo|never ?mind|forget it|cancel that)( please| now| jarvis)?$")
+    private val HUSH = Regex("^(just |please |now )?(stop|stop stop|stop it|stop now|stop that|stop talking|stop speaking|enough|that s enough|thats enough|quiet|be quiet|shut up|silence|hush|chup|chup ho jao|chup raho|chup karo|bas|bas bas|bas karo|ruko|rukko|ruko ruko|rukiye|ruk jao|wait|wait wait|never ?mind|forget it|cancel that)( please| now| jarvis)?$")
 
     /**
      * Does [text] hold the name itself (never a soft misreading)? Jarvis never says his own name aloud, so the name is

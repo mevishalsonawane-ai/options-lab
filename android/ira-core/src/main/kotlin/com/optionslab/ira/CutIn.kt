@@ -59,6 +59,15 @@ object CutIn {
         }
     }
 
+    /**
+     * Does this listening turn hear through our own capture, with the phone's echo canceller on it (Android 13+ can hand
+     * it to the recognizer)? With a taught voice, every turn (the voice check needs the audio). Otherwise a turn opened
+     * while he speaks ([inSpeech]), when the phone has an echo canceller (Boss, 5 Oct: the recognizer's own microphone
+     * heard his voice from the speaker over Boss's "stop", and read nothing). Never once the capture proved [broken].
+     */
+    fun ownCapture(inSpeech: Boolean, sdk: Int, echo: Boolean, enrolled: Boolean, broken: Boolean): Boolean =
+        !broken && sdk >= 33 && (enrolled || (inSpeech && echo))
+
     /** Boss's choice as kept on the phone ("on" / "off"; anything else: automatic). */
     fun load(s: String?): Boolean? = when (s) { "on" -> true; "off" -> false; else -> null }
     fun save(choice: Boolean?): String? = when (choice) { true -> "on"; false -> "off"; null -> null }

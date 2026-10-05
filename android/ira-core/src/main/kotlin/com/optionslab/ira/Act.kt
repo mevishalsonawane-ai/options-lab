@@ -247,7 +247,9 @@ object Commands {
             // "Turn on the flashlight" is the phone's, outside the app ([OutsideApp]), never a strategy (routing round 13).
             "|^(the |my )?(flashlight|torch|wifi|wi fi|bluetooth|hotspot)$" +
             // "Isko band karo" names nothing (a close by a pronoun, [Plan.pronounClose]): never a strategy called "isko".
-            "|^(isko|usko|is|us|ise|use|isse|usse|ye|yeh|wo|woh|vo)$")
+            "|^(isko|usko|is|us|ise|use|isse|usse|ye|yeh|wo|woh|vo)$" +
+            // "Stop stop" / "stop, wait" is Boss hushing Jarvis's voice ([BargeIn]), never a strategy called "stop" (5 Oct).
+            "|^(stop|bas|ruko|rukko|chup|wait|enough|quiet|please)( (stop|bas|ruko|rukko|chup|wait|enough|quiet|please|now|it))*$")
         rx("^ (stop|disarm|switch off|turn off|pause|halt) $ARM_NOUN ?(.+)$").find(s)?.let { m ->
             val what = m.groupValues[2].trim()
             if (what.isNotEmpty() && !notArm.containsMatchIn(what) && !habitUndo(s)) return one(Command.Kind.STOP_ONE, what)
