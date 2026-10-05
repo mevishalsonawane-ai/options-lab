@@ -159,4 +159,27 @@ class WhereIWinTest {
         assertTrue(flagged <= runs / 10, "flagged $flagged of $runs")
         assertTrue(naive > flagged, "best against worst alone: $naive, among all: $flagged")
     }
+
+    @Test fun partialExitsAreOneTrade() {
+        val opened = today.atTime(9, 30, 5)
+        // Bought 2 lots in one order, sold 1 and 1: two trips, one trade.
+        val trips = listOf(
+            WhereIWin.Trade("NIFTY24O1024500CE", 1, today.atTime(10, 0), 300.0, "Manual", opened, "O1"),
+            WhereIWin.Trade("NIFTY24O1024500CE", 1, today.atTime(10, 30), 100.0, "Manual", opened, "O1"),
+            // Another order on the same symbol later: its own trade.
+            WhereIWin.Trade("NIFTY24O1024500CE", 1, today.atTime(12, 0), -50.0, "Manual", today.atTime(11, 0), "O2"),
+        )
+        val g = WhereIWin.grouped(trips)
+        assertEquals(2, g.size)
+        assertEquals(400.0, g.first { it.key == "O1" }.net, 1e-9)
+        assertEquals(today.atTime(10, 30), g.first { it.key == "O1" }.closedAt)
+        val l = WhereIWin.lines("Paper", trips, MyNumbers.Span.ALL, today, WhereIWin.Cut.ALL)
+        assertTrue(l[0].contains("2 closed trades, 1 won, net +Rs 350"), l[0])
+        // A strangle's legs (different symbols) stay apart: every cut here is by symbol or side.
+        val strangle = listOf(
+            WhereIWin.Trade("NIFTY24O1024500CE", -1, today.atTime(10, 0), 100.0, "Manual", opened),
+            WhereIWin.Trade("NIFTY24O1024000PE", -1, today.atTime(10, 0), 80.0, "Manual", opened),
+        )
+        assertEquals(2, WhereIWin.grouped(strangle).size)
+    }
 }

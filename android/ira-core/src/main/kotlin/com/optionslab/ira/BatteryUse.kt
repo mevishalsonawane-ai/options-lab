@@ -447,4 +447,11 @@ object WidgetOrdersPace {
     /** Read the order book for the widget on this pass? [sinceLastMs]: since the book was last read (null: not yet). */
     fun due(sinceLastMs: Long?, screenOn: Boolean): Boolean =
         screenOn || sinceLastMs == null || sinceLastMs < 0 || sinceLastMs >= SCREEN_OFF_MS
+
+    /**
+     * Review (battery 12): the screen just came on ([wasOn] false on the last pass, [screenOn] now; [wasOn] null when
+     * no pass has looked yet). The first pass after it reads the order book for the widget whatever the widget still
+     * shows, so orders that filled, were cancelled or were placed while the screen was off are not left stale.
+     */
+    fun woke(wasOn: Boolean?, screenOn: Boolean): Boolean = wasOn == false && screenOn
 }

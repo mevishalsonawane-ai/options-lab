@@ -77,4 +77,41 @@ class TradesADayTest {
             TradesADay.lines("Zerodha", emptyList(), MyNumbers.Span.WEEK, today, TradesADay.Part.DAYS))
         assertTrue(TradesADay.CLOSING.contains("not a forecast"))
     }
+
+    @Test fun tripsOfOneTradeCountOnce() {
+        val d = today.minusDays(1)
+        val opened = d.atTime(9, 30, 5)
+        // "Buy 2 lots, then sell 1 and 1": two round trips sharing the opening order - one trade.
+        val partial = listOf(
+            TradesADay.Trade(opened, d.atTime(10, 0), 300.0, "Manual", "O1"),
+            TradesADay.Trade(opened, d.atTime(10, 30), 100.0, "Manual", "O1"),
+        )
+        val g = TradesADay.grouped(partial)
+        assertEquals(1, g.size)
+        assertEquals(400.0, g[0].net, 1e-9)
+        assertEquals(d.atTime(10, 30), g[0].closedAt)
+        // A two-leg entry in the same second (a strangle, two orders): one trade.
+        val strangle = listOf(
+            TradesADay.Trade(d.atTime(11, 0, 1).plusNanos(200_000_000), d.atTime(12, 0), -50.0, "Manual", "O2"),
+            TradesADay.Trade(d.atTime(11, 0, 1).plusNanos(700_000_000), d.atTime(12, 5), 80.0, "Manual", "O3"),
+        )
+        assertEquals(1, TradesADay.grouped(strangle).size)
+        assertEquals(30.0, TradesADay.grouped(strangle)[0].net, 1e-9)
+        // Another owner's trip in the same second stays apart.
+        assertEquals(2, TradesADay.grouped(listOf(strangle[0], strangle[1].copy(owner = "ORB", key = ""))).size)
+        val l = TradesADay.lines("Paper", partial + strangle, MyNumbers.Span.ALL, today, TradesADay.Part.PLACE)
+        assertTrue(l[0].contains("2 closed trades over 1 trading day"), l[0])
+        assertTrue(l[0].contains("net +Rs 430"), l[0])
+        // In the order first opened: the partial exit was the day's first trade.
+        assertTrue(l[1].contains("1st trades 1, 1 won, +Rs 400"), l[1])
+    }
+
+    @Test fun aSpanBetweenAndLotsRefused() {
+        assertEquals(TradesADay.Part.DAYS, TradesADay.asked("how much did i make last week when i traded less"))
+        assertEquals(MyNumbers.Span.LAST_WEEK, TradesADay.span("how much did i make last week when i traded less"))
+        assertEquals(TradesADay.Part.DAYS, TradesADay.asked("how much did I make this month when I took fewer trades"))
+        for (s in listOf("how much did i make when i took more lots", "how much did i make when i traded more qty",
+            "do i do better when i trade less size", "how much did i lose when i traded bigger size", "do i make more when i trade fewer lots"))
+            assertNull(TradesADay.asked(s), s)
+    }
 }

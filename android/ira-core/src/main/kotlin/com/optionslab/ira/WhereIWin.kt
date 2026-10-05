@@ -43,8 +43,40 @@ object WhereIWin {
     /** The part of the split asked about first ([ALL]: none in particular). */
     enum class Cut { ALL, INDEX, KIND, SIDE }
 
-    /** One closed trade: [direction] +1 bought first, -1 sold first; [owner] "Manual" for Boss's own. */
-    data class Trade(val symbol: String, val direction: Int, val closedAt: LocalDateTime, val net: Double, val owner: String)
+    /**
+     * One closed trade (or one round trip of it): [direction] +1 bought first, -1 sold first; [owner] "Manual" for Boss's
+     * own; [openedAt] and [key] (the opening order's id, blank when not known) group a trade's partial exits ([grouped]).
+     */
+    data class Trade(
+        val symbol: String, val direction: Int, val closedAt: LocalDateTime, val net: Double, val owner: String,
+        val openedAt: LocalDateTime? = null, val key: String = "",
+    )
+
+    /**
+     * [trades] (round trips, one per closing fill) grouped into trades, so a partial exit is not counted twice in a
+     * group's trades and per-trade average (review, 2026-10-05): trips on the same symbol and side that share a non-blank
+     * [Trade.key], or have the same owner and were opened in the same second, are one trade - closed at the last close,
+     * the nets summed. Legs on different symbols stay apart, since every cut here is by symbol or side.
+     */
+    fun grouped(trades: List<Trade>): List<Trade> {
+        if (trades.size < 2) return trades
+        val parent = IntArray(trades.size) { it }
+        fun root(i: Int): Int { var x = i; while (parent[x] != x) { parent[x] = parent[parent[x]]; x = parent[x] }; return x }
+        fun join(a: Int, b: Int) { val ra = root(a); val rb = root(b); if (ra != rb) parent[maxOf(ra, rb)] = minOf(ra, rb) }
+        val seen = HashMap<List<Any>, Int>()
+        trades.forEachIndexed { i, t ->
+            val keys = ArrayList<List<Any>>()
+            if (t.key.isNotBlank()) keys += listOf("k", t.symbol, t.direction, t.key)
+            t.openedAt?.let { keys += listOf("s", t.symbol, t.direction, t.owner, it.truncatedTo(java.time.temporal.ChronoUnit.SECONDS)) }
+            for (k in keys) { val j = seen[k]; if (j == null) seen[k] = i else join(j, i) }
+        }
+        return trades.indices.groupBy { root(it) }.values.map { ix ->
+            val ts = ix.map { trades[it] }
+            val first = ts[0]
+            Trade(first.symbol, first.direction, ts.maxOf { it.closedAt }, ts.sumOf { it.net }, first.owner,
+                ts.mapNotNull { it.openedAt }.minOrNull(), first.key)
+        }
+    }
 
     data class Group(val name: String, val trades: Int, val won: Int, val net: Double) {
         val perTrade: Double get() = if (trades > 0) net / trades else 0.0
@@ -235,7 +267,7 @@ object WhereIWin {
      */
     fun lines(label: String, trades: List<Trade>, span: MyNumbers.Span, today: LocalDate, first: Cut): List<String> {
         val (from, to) = MyNumbers.range(span, today)
-        val inSpan = trades.filter { val d = it.closedAt.toLocalDate(); !d.isAfter(to) && (from == null || !d.isBefore(from)) }
+        val inSpan = grouped(trades).filter { val d = it.closedAt.toLocalDate(); !d.isAfter(to) && (from == null || !d.isBefore(from)) }
         val own = inSpan.filter { it.owner.startsWith("Manual") }
         val mine = own.isNotEmpty()
         val used = if (mine) own else inSpan

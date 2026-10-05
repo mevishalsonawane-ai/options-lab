@@ -19,6 +19,14 @@ class WidgetOrdersPaceTest {
         assertTrue(WidgetOrdersPace.due(3_600_000L, screenOn = false))
     }
 
+    @Test fun theScreenComingOnReadsOnce() {
+        assertTrue(WidgetOrdersPace.woke(wasOn = false, screenOn = true))
+        assertFalse(WidgetOrdersPace.woke(wasOn = true, screenOn = true))
+        assertFalse(WidgetOrdersPace.woke(wasOn = null, screenOn = true))
+        assertFalse(WidgetOrdersPace.woke(wasOn = false, screenOn = false))
+        assertFalse(WidgetOrdersPace.woke(wasOn = true, screenOn = false))
+    }
+
     @Test fun noReadYetOrAClockOddityReads() {
         assertTrue(WidgetOrdersPace.due(null, screenOn = false))
         assertTrue(WidgetOrdersPace.due(-1L, screenOn = false))

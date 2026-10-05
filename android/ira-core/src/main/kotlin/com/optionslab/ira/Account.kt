@@ -156,8 +156,9 @@ object AppAnswers {
         // "Is Kite connected", "is the app working" (audit, 5 Oct): the app's own status.
         rx(" is (kite|zerodha|the data|data|the app|app|the relay|relay|the feed|my broker) (connected|working|running|ok|okay|down|up) ").containsMatchIn(t) ||
         // The home-screen widgets (round 23): "what does the Open widget show", "how to add widget", "widget kaise lagaye" - never
-        // with a trading word, so an order or a command reads exactly as before.
-        WIDGET.containsMatchIn(t) && !rx(" (buy|sell|bought|sold|kharido|kharid|becho|bech|exit|square|squareoff|cancel|close|place|short|long|lot|lots|stop|kill|approve|reject) ").containsMatchIn(t)
+        // with a trading word, so an order or a command reads exactly as before. (Review: "purchase", "khareedo", "lelo" and
+        // "le lo" too. Ask's own parse is not used here: it reads this clause, so it would read itself.)
+        WIDGET.containsMatchIn(t) && !rx(" (buy|sell|bought|sold|purchase|purchased|kharido|khareedo|kharid|khareed|lelo|le lo|becho|bech|bechna|exit|square|squareoff|cancel|close|place|short|long|lot|lots|stop|kill|approve|reject) ").containsMatchIn(t)
 
     /** A home-screen widget named, with the recognizer's slips ("vidget", "widjet"). */
     internal val WIDGET = Regex(" (widget|widgets|vidget|vidgets|widjet|widjets|wiget|wigets) ")

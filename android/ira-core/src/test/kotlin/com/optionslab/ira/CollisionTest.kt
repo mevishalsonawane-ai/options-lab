@@ -2174,6 +2174,23 @@ class CollisionTest {
         assertTrue(!AppAnswers.about(" buy nifty widget "), "a trading word keeps the widget out of the app's answers")
     }
 
+    /** Round 23's review: a span inside TradesADay's ask, lots kept out, "purchase" with a widget, one weekend gap. */
+    @Test fun roundTwentyThreeReviewWordings() {
+        assertEquals("TradesADay", audit.feature("how much did i make last week when i traded less"))
+        assertEquals(MyNumbers.Span.LAST_WEEK, TradesADay.span("how much did i make last week when i traded less"))
+        neverActs("how much did i make last week when i traded less")
+        assertTrue(audit.feature("how much did i make when i took more lots") != "TradesADay", audit.feature("how much did i make when i took more lots"))
+        // An order with a widget named is still an order, never the widgets' how-to.
+        for (s in listOf("purchase nifty 24500 ce widget", "nifty 24500 ce khareedo widget", "nifty 24500 ce le lo widget", "nifty 24500 ce lelo widget"))
+            assertTrue(!AppAnswers.about(" " + s + " "), s)
+        val p = Ask.parse("purchase nifty 24500 ce widget")
+        assertTrue(p.order != null || p.command != null || Bundle.acts("purchase nifty 24500 ce widget"), "purchase nifty 24500 ce widget")
+        // One gap named is today's gap, Gap's - never Overnight's record.
+        assertEquals("Gap", audit.feature("is the weekend gap bigger than usual"))
+        assertTrue(Overnight.asked("is the weekend gap bigger than usual") == null)
+        assertEquals("Overnight", audit.feature("are weekend gaps bigger than usual"))
+    }
+
     // ---- Again: the voice's own "say that again slowly" - heard before the question path, never a question family ----
 
     private val AGAIN = listOf("say that again slowly", "repeat it slower", "once more slowly", "dobara dheere bolo", "dheere se phir se bolo",

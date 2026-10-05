@@ -861,7 +861,7 @@ internal object IraCoach {
             val book = runCatching { com.optionslab.app.data.TradeBook.trips(live) }.getOrNull()
             if (book == null) { out += "$label: I could not read your $label trade book just now, so it is left out - not taken as no trades."; continue }
             if (live && book.isEmpty()) continue
-            val trades = book.map { com.optionslab.ira.WhereIWin.Trade(it.symbol, it.direction, it.closedAt, it.net, com.optionslab.app.data.TradeBook.ownerOf(it, owners)) }
+            val trades = book.map { com.optionslab.ira.WhereIWin.Trade(it.symbol, it.direction, it.closedAt, it.net, com.optionslab.app.data.TradeBook.ownerOf(it, owners), it.openedAt, it.openOrderIds.firstOrNull() ?: "") }
             out += com.optionslab.ira.WhereIWin.lines(label, trades, span, today, first)
         }
         out += com.optionslab.ira.WhereIWin.CLOSING
@@ -883,7 +883,7 @@ internal object IraCoach {
             val book = runCatching { com.optionslab.app.data.TradeBook.trips(live) }.getOrNull()
             if (book == null) { out += "$label: I could not read your $label trade book just now, so it is left out - not taken as no trades."; continue }
             if (live && book.isEmpty()) continue
-            val trades = book.map { com.optionslab.ira.TradesADay.Trade(it.openedAt, it.closedAt, it.net, com.optionslab.app.data.TradeBook.ownerOf(it, owners)) }
+            val trades = book.map { com.optionslab.ira.TradesADay.Trade(it.openedAt, it.closedAt, it.net, com.optionslab.app.data.TradeBook.ownerOf(it, owners), it.openOrderIds.firstOrNull() ?: "") }
             out += com.optionslab.ira.TradesADay.lines(label, trades, span, today, first)
         }
         out += com.optionslab.ira.TradesADay.CLOSING

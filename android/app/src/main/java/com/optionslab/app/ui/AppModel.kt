@@ -798,7 +798,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                 // Speed, round 5: the calendar reads again only when the day's figure changed (a refresh that changes
                 // nothing no longer makes an open calendar re-read every book).
                 if (book.net.isNotEmpty() || trades.isNotEmpty()) runCatching {
-                    if (com.optionslab.app.data.DailyPnl.record(true, book.m2m, trades.size)) pnlDays.value = pnlDays.value + 1
+                    // The calendar's bump comes from DailyPnl.changes (see pnlDays).
+                    com.optionslab.app.data.DailyPnl.record(true, book.m2m, trades.size)
                 }
                 Load.Done(Account(fundsQ.await(), book, ordersQ.await().getOrThrow(), trades, holdingsQ.await()))
             } catch (e: Exception) {
@@ -1654,12 +1655,24 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         val open = snap.positions.positions.any { it.quantity != 0 }
         val pnl = snap.dayPnl
         // Speed, round 5: bumped only when the day's figure changed (every 2 s on the stream it re-read every book).
-        if ((snap.trades.isNotEmpty() || open || pnl != 0.0) && com.optionslab.app.data.DailyPnl.record(false, pnl, snap.trades.size))
-            pnlDays.value = pnlDays.value + 1
+        // The calendar's bump comes from DailyPnl.changes (see pnlDays).
+        if (snap.trades.isNotEmpty() || open || pnl != 0.0) com.optionslab.app.data.DailyPnl.record(false, pnl, snap.trades.size)
     }
 
-    /** Bumped whenever a day's figure is recorded, so an open P&L calendar redraws. */
+    /**
+     * Bumped whenever a day's figure is recorded, so an open P&L calendar redraws. Review (speed 5): driven by
+     * [com.optionslab.app.data.DailyPnl.changes], so a figure the market watch (or anything else) recorded redraws it too,
+     * not only the ones this model recorded itself.
+     */
     val pnlDays = MutableStateFlow(0)
+
+    init {
+        // Declared after pnlDays, so it is set before the collector (which may start at once) touches it.
+        viewModelScope.launch(Dispatchers.Default) {
+            var firstChange = true
+            com.optionslab.app.data.DailyPnl.changes.collect { if (firstChange) firstChange = false else pnlDays.update { n -> n + 1 } }
+        }
+    }
 
     private val paperLoading = java.util.concurrent.atomic.AtomicBoolean(false)
     /** A reload asked for while one was running: done right after it, so the book after an order is never missed. */
@@ -1772,10 +1785,9 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             runCatching { com.optionslab.app.data.Strategies.resetPaper() }
             runCatching { com.optionslab.app.data.Protections.resetPaper() }
             runCatching { com.optionslab.app.data.Journal.resetPaper() }
-            com.optionslab.app.data.DailyPnl.resetPaper()
+            com.optionslab.app.data.DailyPnl.resetPaper()   // bumps pnlDays through DailyPnl.changes
             com.optionslab.app.data.Guard.resetPeak(live = false)
             runCatching { com.optionslab.app.work.PositionCards.dismissAll(ctx, "Paper") }
-            pnlDays.value = pnlDays.value + 1
             say("Paper reset to default: ${rs(default.toDouble())}, nothing held, no history.")
             loadPaper()
             runCatching { refreshStrategies() }

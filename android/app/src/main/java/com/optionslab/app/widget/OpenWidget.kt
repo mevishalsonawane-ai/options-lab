@@ -77,6 +77,8 @@ class OpenWidget : AppWidgetProvider() {
         @Volatile private var streamAt = 0L
         /** When Zerodha's order book was last read (by anyone, [fromOrders]); 0 = not yet. Paces [wantsOrders] with the screen off. */
         @Volatile private var ordersAt = 0L
+        /** The screen's state on [wantsOrders]' last look (null = not looked yet): screen-on after off reads the book. */
+        @Volatile private var screenWasOn: Boolean? = null
 
         /**
          * "Show my P&L on the widget" as last set ([refresh] sets it at once; the settings file is saved later), or null
@@ -102,7 +104,7 @@ class OpenWidget : AppWidgetProvider() {
             runCatching { worker.submit(Runnable {}).get(5, java.util.concurrent.TimeUnit.SECONDS) }
             synchronized(unsaved) { unsaved.clear(); savedAt = null; unsavedGen = Int.MIN_VALUE }
             synchronized(flagLock) { enabled = null }
-            drawn = null; streamAt = 0L; ordersAt = 0L; inlineForTest = false
+            drawn = null; streamAt = 0L; ordersAt = 0L; screenWasOn = null; inlineForTest = false
         }
 
         /** Under [unsaved]'s lock: a wiped (or re-opened) vault drops what was held, the switch included (read again). */
@@ -230,6 +232,10 @@ class OpenWidget : AppWidgetProvider() {
         fun wantsOrders(context: Context, live: Boolean): Boolean {
             if (BuildConfig.GOLD || !live || !placed(context) || !allowed()) return false
             val screenOn = runCatching { context.getSystemService(android.os.PowerManager::class.java)?.isInteractive }.getOrNull() ?: true
+            // Review (battery 12): the first pass after the screen comes on reads the book, whatever the widget shows.
+            val wasOn = screenWasOn
+            screenWasOn = screenOn
+            if (com.optionslab.ira.WidgetOrdersPace.woke(wasOn, screenOn)) return true
             val last = ordersAt
             val since = if (last > 0L) System.currentTimeMillis() - last else null
             if (!com.optionslab.ira.WidgetOrdersPace.due(since, screenOn)) return false

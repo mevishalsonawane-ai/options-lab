@@ -22,6 +22,10 @@ import java.util.Locale
  *    what a trade made on average - compared only with [MIN_TRADES] trades.
  * The part asked comes first. A trade is counted on the day it was opened.
  *
+ * Review (2026-10-05): the trade book makes one round trip per closing fill, so "buy 2 lots, sell 1 and 1" is two trips
+ * and a strangle's legs are a trip each. Trips are grouped into one trade before anything is counted ([grouped]): trips
+ * sharing an opening order ([Trade.key]) or opened by the same owner in the same second are one trade, their nets summed.
+ *
  * Facts from his own record only - never a forecast, never a number of trades to take and never a limit set; nothing here
  * places, changes or arms anything. His account, so never on a locked phone. Pure.
  */
@@ -40,8 +44,35 @@ object TradesADay {
     /** The part asked first: [DAYS] quiet days against busy ones, [PLACE] the 1st trade of a day against later ones. */
     enum class Part { DAYS, PLACE }
 
-    /** One closed trade; [owner] "Manual" for Boss's own. */
-    data class Trade(val openedAt: LocalDateTime, val closedAt: LocalDateTime, val net: Double, val owner: String)
+    /**
+     * One closed trade (or one round trip of it); [owner] "Manual" for Boss's own; [key] the opening order's id when known
+     * (blank otherwise) - trips with the same key, or opened by the same owner in the same second, are one trade ([grouped]).
+     */
+    data class Trade(val openedAt: LocalDateTime, val closedAt: LocalDateTime, val net: Double, val owner: String, val key: String = "")
+
+    /**
+     * [trades] (round trips) grouped into trades: trips sharing a non-blank [Trade.key], or with the same owner and opened in
+     * the same second, are one trade - opened at the first opening, closed at the last close, the nets summed. In the order
+     * first opened. A partial exit and a two-leg entry are each one trade.
+     */
+    fun grouped(trades: List<Trade>): List<Trade> {
+        if (trades.size < 2) return trades
+        val parent = IntArray(trades.size) { it }
+        fun find(i: Int): Int { var x = i; while (parent[x] != x) { parent[x] = parent[parent[x]]; x = parent[x] }; return x }
+        fun join(a: Int, b: Int) { val ra = find(a); val rb = find(b); if (ra != rb) parent[maxOf(ra, rb)] = minOf(ra, rb) }
+        val byKey = HashMap<String, Int>()
+        val bySecond = HashMap<Pair<String, LocalDateTime>, Int>()
+        trades.forEachIndexed { i, t ->
+            if (t.key.isNotBlank()) byKey[t.key]?.let { join(it, i) } ?: run { byKey[t.key] = i }
+            val sec = t.owner to t.openedAt.truncatedTo(java.time.temporal.ChronoUnit.SECONDS)
+            bySecond[sec]?.let { join(it, i) } ?: run { bySecond[sec] = i }
+        }
+        return trades.indices.groupBy { find(it) }.values.map { ix ->
+            val ts = ix.map { trades[it] }
+            val first = ts.minBy { it.openedAt }
+            Trade(first.openedAt, ts.maxOf { it.closedAt }, ts.sumOf { it.net }, first.owner, first.key)
+        }.sortedBy { it.openedAt }
+    }
 
     data class Group(val name: String, val count: Int, val green: Int, val net: Double) {
         val average: Double get() = if (count > 0) net / count else 0.0
@@ -138,7 +169,7 @@ object TradesADay {
      */
     fun lines(label: String, trades: List<Trade>, span: MyNumbers.Span, today: LocalDate, first: Part): List<String> {
         val (from, to) = MyNumbers.range(span, today)
-        val inSpan = trades.filter { val d = it.openedAt.toLocalDate(); !d.isAfter(to) && (from == null || !d.isBefore(from)) }
+        val inSpan = grouped(trades).filter { val d = it.openedAt.toLocalDate(); !d.isAfter(to) && (from == null || !d.isBefore(from)) }
         val own = inSpan.filter { it.owner.startsWith("Manual") }
         val mine = own.isNotEmpty()
         val used = if (mine) own else inSpan
@@ -180,7 +211,8 @@ object TradesADay {
         "| (do|does|did) (more|fewer|less|extra) trades (work|works|worked|go|went|do|did|pay|pays) (out )?(better|worse|best|well|badly) (for me|with me) " +
         "| (is it|would it be|was it) (better|worse) (for me )?(to|if i) (take|took|do|did|make|made|place|placed|trade|traded) (\\w+ ){0,1}$FEW( trades?)? " +
         "| (are|were|have been) my (busy|heavy|quiet|light|slow) (trading )?days (better|worse|good|bad|my best|my worst|profitable|losing|any good) " +
-        "| how much (do|did|have) i (make|made|lose|lost|earn|earned) (on days |on the days |the days |when |on days when |if )(when |that |)i (trade|traded|take|took|place|placed) (\\w+ ){0,2}$FEW( trades?)? " +
+        // Review: up to three words between ("how much did i make last week when i traded less") - the span is read apart.
+        "| how much (do|did|have) i (make|made|lose|lost|earn|earned) (\\w+ ){0,3}(on days |on the days |the days |when |on days when |if )(when |that |)i (trade|traded|take|took|place|placed) (\\w+ ){0,2}$FEW( trades?)? " +
         "| my (p l|p and l|pnl|results|profit|profits|returns|record) on (the )?days (with|when i take|when i took|i take|i took|i trade|i traded) (\\w+ ){0,1}$FEW( trades?)? " +
         // "How many trades a day work best for me?", "my best number of trades a day", "how many trades a day suit me?"
         "| how many trades (a|per|in a|each) day (work|works|worked|is|are|suit|suits|pay|pays) (best |well |)(for |)me " +
@@ -214,12 +246,19 @@ object TradesADay {
         "limit|limits|left|allowed|guard|max|maximum|overtrading|over trading|today|todays|aaj|yesterday|right now|abhi|nifty|banknifty|sensex|market|" +
         "charges|brokerage|tax|what is|meaning|explain) ")
 
+    /**
+     * The size of a trade, not the number of trades ("when i took more lots", "on days i trade bigger size"): never asked
+     * here (review, 2026-10-05).
+     */
+    private val SIZE = rx(" (more|less|fewer|bigger|smaller|extra|many|few|lots of|a lot of|a few|too many|too much|heavily|higher|lower|lots|a lot) " +
+        "(\\w+ ){0,1}(lots|lot|qty|quantity|quantities|size|sizes|sized|sizing) ")
+
     /** Does [text] ask how his days went by how many trades he took? The part asked first, or null when not asked. */
     fun asked(text: String): Part? {
         for (s in listOf(text, Ask.reading(text))) {
             var t = norm(s)
             while (true) { val u = " " + POLITE.replace(t, " ").trim() + " "; if (u == t) break; t = u }
-            if (NOT.containsMatchIn(t)) continue
+            if (NOT.containsMatchIn(t) || SIZE.containsMatchIn(t)) continue
             val place = PLACE.containsMatchIn(t)
             val days = DAYS.containsMatchIn(t)
             if (!place && !days) continue

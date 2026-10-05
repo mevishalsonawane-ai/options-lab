@@ -1,6 +1,7 @@
 package com.optionslab.app.data
 
 import com.optionslab.app.security.SecurePrefs
+import kotlinx.coroutines.flow.update
 import org.json.JSONArray
 import org.json.JSONObject
 import com.optionslab.engine.sandbox.SandboxRules
@@ -27,6 +28,16 @@ object DailyPnl {
     data class Day(val date: LocalDate, val pnl: Double, val trades: Int)
 
     private fun key(live: Boolean) = if (live) "pnl.days.live" else "pnl.days.paper"
+
+    /**
+     * Bumped whenever [record] or [resetPaper] changes a stored figure, whoever called it (the open app, the market
+     * watch, the evening report), so an open P&L calendar redraws (review, speed 5: a figure the watch recorded no longer
+     * goes missing). Only ever counts up; a StateFlow, so it is read and bumped safely from any thread.
+     */
+    private val _changes = kotlinx.coroutines.flow.MutableStateFlow(0)
+    val changes: kotlinx.coroutines.flow.StateFlow<Int> get() = _changes
+
+    private fun changed() { _changes.update { it + 1 } }
 
     @Synchronized
     private fun read(live: Boolean): JSONObject = runCatching { JSONObject(SecurePrefs.getString(key(live)) ?: "{}") }.getOrDefault(JSONObject())
@@ -63,12 +74,13 @@ object DailyPnl {
         val keys = o.keys().asSequence().toList().sorted()
         keys.dropLast(1100).forEach { o.remove(it) }
         SecurePrefs.putAllSoon(mapOf(key(live) to o.toString()))
+        changed()
         return true
     }
 
     /** The paper calendar starts empty again (Reset paper); the Zerodha days are kept. */
     @Synchronized
-    fun resetPaper() { SecurePrefs.put(key(false), "{}") }
+    fun resetPaper() { SecurePrefs.put(key(false), "{}"); changed() }
 
     /** Every day of [month] that has a figure. */
     fun month(live: Boolean, month: YearMonth): Map<LocalDate, Day> = all(live).filterKeys { YearMonth.from(it) == month }

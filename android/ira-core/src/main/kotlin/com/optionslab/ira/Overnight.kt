@@ -109,6 +109,8 @@ object Overnight {
         "close to open (return|returns|move|moves))( |$)")
     /** A gap named, and the weekend's set against the rest (round 23). */
     private val GAPS = Regex(" (gap|gaps|opening gap|opening gaps) ")
+    /** One gap named, today's or a day's: "the weekend gap", "this monday gap", "today's gap". */
+    private val ONE_GAP = Regex(" (the|this|that|today s|todays|today|this week s|last|yesterday s|monday s|mondays) (weekend |week end |monday |holiday |opening |morning |)gap ")
     private val SET_AGAINST = Regex(" (bigger|smaller|larger|wider|vs|versus|than|compared|compare|against|usually|normally|typically|on average|zyada|bade|bada) ")
     /** The opens after a weekend or a holiday. */
     private val WEEKEND = Regex(" (weekend|weekends|week end|monday open|monday opens|monday gap|monday gaps|after a holiday|after holidays|after the weekend|" +
@@ -146,7 +148,8 @@ object Overnight {
             weekend && NIGHT.containsMatchIn(t) && HOW.containsMatchIn(t) ||
             // Round 23: the weekend's gaps set against the others, "gap" said for the night: "are Monday gaps bigger",
             // "weekend gaps vs weekday gaps" (a gap alone, or one day's, stays GapRecord's and Gap's).
-            weekend && GAPS.containsMatchIn(t) && SET_AGAINST.containsMatchIn(t)
+            // Review: one gap named ("is the weekend gap bigger than usual") is that day's gap, Gap's - never this record.
+            weekend && GAPS.containsMatchIn(t) && SET_AGAINST.containsMatchIn(t) && !ONE_GAP.containsMatchIn(t)
         return if (ok) Q(weekend) else null
     }
 
