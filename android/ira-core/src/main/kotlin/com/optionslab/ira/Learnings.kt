@@ -22,7 +22,7 @@ import java.util.Locale
  * words that undo it by voice.
  *
  * "What have you learned this week?" ([Ask.WEEK]), "what changed in how you work?" ([Ask.CHANGED]) and "show me
- * everything you've learned about me" ([Ask.ALL]). Boss's own words, routines and records ([Item.personal]) are said
+ * everything you've learned about me" / "what did you learn about me?" / "tumne mere baare mein kya seekha" ([Ask.ALL]). Boss's own words, routines and records ([Item.personal]) are said
  * on an unlocked phone only.
  *
  * "Undo everything you learned this week" ([undoAsked], [undo]) is put to Boss first and resets learned behaviour only:
@@ -267,7 +267,11 @@ object Learnings {
     private val ALL = Regex(LEAD + "((show|tell|give|list|read)( me)? )?(everything|all|all the things|what all) (that )?$YOU_LEARNED( about me| from me| so far)*" + TAIL + "|" +
         LEAD + "what all (have you|did you) (learned|learnt|learn)( about me| from me)?" + TAIL + "|" +
         LEAD + "(show me |read me )?(your |the )?(learning|learnings|what ive learned) (ledger|log|list)" + TAIL + "|" +
-        LEAD + "(tumne|aapne) (mere baare (mein|me) )?(kya kya|sab kuch) (seekha|sikha)( hai)?" + TAIL)
+        LEAD + "(tumne|aapne) (mere baare (mein|me) )?(kya kya|sab kuch) (seekha|sikha)( hai)?" + TAIL + "|" +
+        // "What did you learn about me?" (the overview; "what have you learned about me" stays [AboutBoss]'s, what Boss told him).
+        LEAD + "(tell me )?what (did you|you) (learned|learnt|learn) (about me|from me)( so far| till now| until now)?" + TAIL + "|" +
+        LEAD + "(tumne|aapne|tune|apne) (mere baare (mein|me|main|men) |mujhse |mujhe dekh kar )(kya|kya kya) (seekha|sikha|seekhe|sikhe|jaana|jana)( hai| hain)?" + TAIL + "|" +
+        LEAD + "(mere baare (mein|me|main|men) )(tumne|aapne|tune|apne) (kya|kya kya) (seekha|sikha|seekhe|sikhe)( hai| hain)?" + TAIL)
     private val WEEK = Regex(LEAD + "(tell me )?what (have you|did you|you have|youve) (learned|learnt|learn) (this week|lately|recently|in the last (7|seven) days|over the (last )?week|since monday)" + TAIL + "|" +
         LEAD + "what (is|s) new in what $YOU_LEARNED" + TAIL + "|" +
         LEAD + "(is|iss) (week|hafte) (tumne |aapne )?kya (seekha|sikha)( hai)?" + TAIL)

@@ -45,6 +45,82 @@ class LearningsTest {
         assertTrue(AboutBoss.knowAsked("what have you learned about me"))
     }
 
+    @Test fun whatDidYouLearnAboutMeIsTheOverview() {
+        for (q in listOf("Jarvis, what did you learn about me?", "what did you learn about me so far", "what did you learn from me, boss",
+                "tell me what you learned about me", "tumne mere baare mein kya seekha", "tumne mere baare mein kya seekha hai",
+                "aapne mere baare me kya kya sikha", "mere baare mein tumne kya seekha", "jarvis tumne mujhse kya seekha")) {
+            assertEquals(Learnings.Ask.ALL, Learnings.asked(q), q)
+            // Not Boss's own facts, words or routine, never an order or a command, and no bundle.
+            assertFalse(AboutBoss.knowAsked(q), q); assertFalse(Corrections.wordsAsked(q), q); assertNull(Corrections.forgetWordAsked(q), q)
+            assertFalse(Routine.asked(q), q); assertFalse(Learnings.undoAsked(q), q)
+            val p = Ask.parse(q); assertNull(p.order, q); assertNull(p.command, q)
+            assertFalse(Bundle.acts(q), q)
+        }
+        // This week's stays the week's; what Boss told him stays his facts.
+        assertEquals(Learnings.Ask.WEEK, Learnings.asked("is hafte tumne kya seekha"))
+        assertNull(Learnings.asked("what did you learn from the market today"))
+        assertNull(Learnings.asked("what did i tell you about me"))
+    }
+
+    /** One item in every area, each with an undo where the area has one by voice. */
+    private val UNDOS: Map<Learnings.Area, String?> = mapOf(
+        Learnings.Area.WORDS to "forget the word nifty kaisa", Learnings.Area.ROUTINES to "forget my routine", Learnings.Area.ALERTS to "say everything again",
+        Learnings.Area.CLARITY to Clarity.UNDO, Learnings.Area.WORD_FIT to WordFit.UNDO, Learnings.Area.FIGURE_FIRST to FigureFirst.UNDO,
+        Learnings.Area.MORNING to MorningSense.UNDO, Learnings.Area.STARS to HonestStars.UNDO, Learnings.Area.HOURS to TalkHours.UNDO,
+        Learnings.Area.MORNING_ASKS to MorningAsks.UNDO, Learnings.Area.TURN_DOWNS to TurnDowns.UNDO, Learnings.Area.LENGTHS to TopicLength.UNDO,
+        Learnings.Area.USUAL_INDEX to UsualIndex.UNDO, Learnings.Area.NICKNAMES to Nicknames.UNDO)
+
+    private fun everyArea(): List<Learnings.Item> = Learnings.Area.entries.map { a ->
+        Learnings.Item(a, "learned-${a.name.lowercase()}", today.minusDays(1), "why-${a.name.lowercase()}", UNDOS[a])
+    }
+
+    @Test fun theOverviewListsEveryAreaWithItsUndo() {
+        val said = Learnings.say(everyArea(), Learnings.Ask.ALL, today, locked = false)
+        for (a in Learnings.Area.entries) {
+            assertTrue(said.contains(a.title), a.name)
+            assertTrue(said.contains("learned-${a.name.lowercase()}"), a.name)
+        }
+        for ((a, undo) in UNDOS) assertTrue(said.contains("Undo: \"$undo\""), a.name)
+        assertTrue(said.startsWith("Everything I've learned, Boss:"))
+        assertTrue(said.contains(Learnings.NEVER_ACTS)); assertTrue(said.contains("undo everything you learned this week"))
+    }
+
+    @Test fun theNewAreasAreAllThere() {
+        val names = Learnings.Area.entries.map { it.name }.toSet()
+        for (n in listOf("LENGTHS", "TURN_DOWNS", "MORNING_ASKS", "HOURS", "STARS", "MORNING", "USUAL_INDEX", "NICKNAMES", "FIGURE_FIRST", "CLARITY",
+                "WORD_FIT", "AGAIN", "WRONG_THING", "ARM_HABITS")) assertTrue(n in names, n)
+        // Boss's own habits and records are personal: never said on a locked phone.
+        for (a in listOf(Learnings.Area.WORDS, Learnings.Area.ROUTINES, Learnings.Area.STARS, Learnings.Area.TURN_DOWNS, Learnings.Area.USUAL_INDEX,
+                Learnings.Area.NICKNAMES, Learnings.Area.ARM_HABITS, Learnings.Area.GOALS)) assertTrue(a.personal, a.name)
+    }
+
+    @Test fun eachUndoIsHeardAsItsOwnReset() {
+        assertEquals(TopicLength.Request.RESET, TopicLength.asked(TopicLength.UNDO))
+        assertEquals(TurnDowns.Request.RESET, TurnDowns.asked(TurnDowns.UNDO))
+        assertEquals(MorningAsks.Request.RESET, MorningAsks.asked(MorningAsks.UNDO))
+        assertEquals(TalkHours.Request.RESET, TalkHours.asked(TalkHours.UNDO))
+        assertEquals(HonestStars.Request.RESET, HonestStars.asked(HonestStars.UNDO))
+        assertEquals(MorningSense.Request.RESET, MorningSense.asked(MorningSense.UNDO))
+        assertEquals(UsualIndex.Request.RESET, UsualIndex.asked(UsualIndex.UNDO))
+        assertEquals(Nicknames.Request.RESET, Nicknames.asked(Nicknames.UNDO))
+        assertEquals(Clarity.Request.RESET, Clarity.asked(Clarity.UNDO))
+        assertEquals(FigureFirst.Request.RESET, FigureFirst.asked(FigureFirst.UNDO))
+        assertTrue(Corrections.forgetWordAsked("forget the word nifty kaisa") != null)
+        assertTrue(Routine.forgetAsked("forget my routine"))
+    }
+
+    @Test fun aLockedPhoneHearsNoneOfBosssOwn() {
+        val said = Learnings.say(everyArea(), Learnings.Ask.ALL, today, locked = true)
+        for (a in Learnings.Area.entries) {
+            val item = "learned-${a.name.lowercase()}"
+            if (a.personal) { assertFalse(said.contains(item), a.name); assertFalse(said.contains(a.title), a.name) }
+            else assertTrue(said.contains(item), a.name)
+        }
+        for ((a, undo) in UNDOS) if (a.personal && undo != null) assertFalse(said.contains(undo), a.name)
+        assertTrue(said.contains(Learnings.UNLOCK)); assertFalse(said.contains("undo everything"))
+        assertTrue(said.contains("Boss"))
+    }
+
     @Test fun recognisesTheUndo() {
         assertTrue(Learnings.undoAsked("Undo everything you learned this week"))
         assertTrue(Learnings.undoAsked("jarvis, forget everything you've learned this week please"))
