@@ -146,7 +146,24 @@ internal object IraTools {
     @Synchronized fun remember(text: String) {
         val all = (memory() + com.optionslab.ira.Memory.Item(com.optionslab.app.data.Market.today(), com.optionslab.ira.Secrets.redact(text).take(300)))
             .takeLast(com.optionslab.ira.Memory.KEEP)
+        saveMemory(all)
+    }
+
+    private fun saveMemory(all: List<com.optionslab.ira.Memory.Item>) {
         prefs().put(MEMORY, JSONArray().apply { all.forEach { put(JSONObject().put("d", it.day.toString()).put("t", it.text)) } }.toString())
+    }
+
+    /**
+     * "Forget that" / "forget that I don't trade on Fridays": the one note [f] names dropped ([com.optionslab.ira.AboutBoss.pick]),
+     * returned (null: none matched, nothing changed).
+     */
+    @Synchronized fun forgetOne(f: com.optionslab.ira.AboutBoss.Forget): com.optionslab.ira.Memory.Item? {
+        val all = memory()
+        val item = com.optionslab.ira.AboutBoss.pick(all, f) ?: return null
+        val at = all.lastIndexOf(item)
+        if (at < 0) return null
+        saveMemory(all.filterIndexed { n, _ -> n != at })
+        return item
     }
 
     fun forgetMemory() { runCatching { prefs().put(MEMORY, null) } }

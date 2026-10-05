@@ -130,7 +130,7 @@ internal object IraAgenda {
     private suspend fun work(i: Agenda.Item) {
         val locked = IraHub.locked()
         val said: String = when (i.kind) {
-            Agenda.Kind.EVENT, Agenda.Kind.WEAK_HOUR, Agenda.Kind.RULE -> Agenda.line(i) ?: run { mark(i.id, Agenda.summary(i)); return }
+            Agenda.Kind.EVENT, Agenda.Kind.WEAK_HOUR, Agenda.Kind.RULE, Agenda.Kind.ABOUT -> Agenda.line(i) ?: run { mark(i.id, Agenda.summary(i)); return }
             Agenda.Kind.GOAL -> Agenda.goalLine(i, runCatching { IraGoals.statuses() }.getOrDefault(emptyList()))
             Agenda.Kind.EXPIRY, Agenda.Kind.POSITIONS -> Agenda.positionsLine(i, openPositions())
             Agenda.Kind.PAPER_TEST -> Agenda.paperLine(runCatching { IraExpert.verdicts() }.getOrDefault(emptyList()).map { it.text() })

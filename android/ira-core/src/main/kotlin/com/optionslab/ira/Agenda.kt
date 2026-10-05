@@ -32,6 +32,8 @@ object Agenda {
     enum class Kind(val means: Means, val rank: Int, val open: Boolean) {
         GOAL(Means.SPEAK, 1, false),
         RULE(Means.SPEAK, 1, false),
+        /** What Boss told about himself that bears on today ([AboutBoss]): his own words, so not on a locked phone. */
+        ABOUT(Means.SPEAK, 1, false),
         EXPIRY(Means.SPEAK, 2, false),
         EVENT(Means.SPEAK, 2, true),
         POSITIONS(Means.SPEAK, 3, false),
@@ -97,6 +99,11 @@ object Agenda {
                     BossRules.Kind.AVOID_MARKET -> {}
                 }
             }
+            // What Boss told about himself that bears on today ("I don't trade on Fridays", his target, what to watch in him) - his
+            // rules aside (each is its own item above).
+            runCatching { AboutBoss.recall(f.notes.filter { BossRules.of(it) == null }, AboutBoss.Moment(f.today, AboutBoss.At.MORNING, expiryToday = expiring.isNotEmpty())) }.getOrNull()?.let { said ->
+                out += Item("about", Kind.ABOUT, 9 * 60 + 5, "remind you of what you told me about yourself that matters today", words = listOf(said))
+            }
             val risky = f.goals.filter { it.broken || it.near }
             if (risky.isNotEmpty()) {
                 val why = if (risky.any { it.broken }) "one is broken" else "one is close"
@@ -136,7 +143,7 @@ object Agenda {
     const val MISSED = "missed its time"
 
     /** [i] is a word for its moment (an event, a rule, an hour, the morning look) and that moment passed over [LATE_MIN] ago. */
-    fun late(i: Item, minute: Int): Boolean = i.done == null && i.kind in setOf(Kind.EVENT, Kind.RULE, Kind.WEAK_HOUR, Kind.POSITIONS) && minute - i.at > LATE_MIN
+    fun late(i: Item, minute: Int): Boolean = i.done == null && i.kind in setOf(Kind.EVENT, Kind.RULE, Kind.ABOUT, Kind.WEAK_HOUR, Kind.POSITIONS) && minute - i.at > LATE_MIN
 
     /** [id] done, with what came of it (a few words, no figures). */
     fun done(items: List<Item>, id: String, what: String): List<Item> = items.map { if (it.id == id) it.copy(done = what) else it }
@@ -146,6 +153,7 @@ object Agenda {
     /** The words of an item that needs nothing read (an event, a rule, an hour left alone), else null. */
     fun line(i: Item): String? = when (i.kind) {
         Kind.EVENT -> "Boss, today: ${i.words.firstOrNull() ?: "an event"}. I keep my ideas small around it and say what it does to the market."
+        Kind.ABOUT -> i.words.firstOrNull()
         Kind.WEAK_HOUR -> i.id.removePrefix("weak:").toIntOrNull()?.let { h ->
             "From now to ${hm(h * 60 + 60)} I take no ideas by myself, Boss: my own trades lost in this hour before. I only watch." }
         Kind.RULE -> when (i.id) {
@@ -196,6 +204,7 @@ object Agenda {
     fun summary(i: Item, learned: Boolean = false): String = when (i.kind) {
         Kind.EVENT -> "reminded you of ${i.words.firstOrNull() ?: "today's event"}"
         Kind.RULE -> "kept your rule at ${hm(i.at)}"
+        Kind.ABOUT -> "reminded you of what you told me about yourself"
         Kind.GOAL -> "checked your goals at ${hm(i.at)}"
         Kind.EXPIRY -> "counted what you hold before expiry"
         Kind.POSITIONS -> "looked over your positions"

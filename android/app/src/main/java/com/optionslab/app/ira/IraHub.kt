@@ -1112,8 +1112,10 @@ object IraHub {
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
             return
         }
-        // ("Remind me what's set for later" is the list below, not a new reminder.)
-        if (com.optionslab.app.BuildConfig.JARVIS && runCatching { com.optionslab.ira.Reminder.asked(q) }.getOrDefault(false) && !FOR_LATER.containsMatchIn(q)) {
+        // ("Remind me what's set for later" is the list below, not a new reminder; "remind me I get greedy after a win",
+        // with no time, is something Boss tells about himself - kept below, not a reminder.)
+        if (com.optionslab.app.BuildConfig.JARVIS && runCatching { com.optionslab.ira.Reminder.asked(q) }.getOrDefault(false) && !FOR_LATER.containsMatchIn(q) &&
+            (understood || runCatching { com.optionslab.ira.AboutBoss.fact(q) == null }.getOrDefault(true))) {
             val now = java.time.LocalDateTime.now(IST)
             val r = runCatching { com.optionslab.ira.Reminder.parse(q, now) }.getOrNull()
             val c = app
@@ -1388,14 +1390,26 @@ object IraHub {
                 return
             }
         // "Remember that ...", "what did I tell you?", "forget what I told you": Boss's own words, kept - never acted on.
+        // And what Boss tells about himself ("I don't trade on Fridays", "remind me I get greedy after a win"), "what do you
+        // know about me?" and "forget that (...)": kept with his notes, brought up when they matter - words only.
         if (!understood) {
             val keep = com.optionslab.ira.Memory.toKeep(q)?.let { com.optionslab.ira.Secrets.redact(it) }
-            val asks = keep != null || com.optionslab.ira.Memory.recallAsked(q) || com.optionslab.ira.Memory.forgetAsked(q)
+            val fact = if (keep != null || parsed.order != null || parsed.command != null) null
+                else runCatching { com.optionslab.ira.AboutBoss.fact(q) }.getOrNull()?.let { com.optionslab.ira.Secrets.redact(it) }
+            val know = runCatching { com.optionslab.ira.AboutBoss.knowAsked(q) }.getOrDefault(false)
+            val forgetOne = if (parsed.order != null || parsed.command != null) null else runCatching { com.optionslab.ira.AboutBoss.forgetAsked(q) }.getOrNull()
+            val asks = keep != null || fact != null || know || forgetOne != null || com.optionslab.ira.Memory.recallAsked(q) || com.optionslab.ira.Memory.forgetAsked(q)
             val said = when {
                 !asks -> null
                 // Notes are Boss's: not kept, read or cleared on a locked phone.
                 phoneLocked() -> "Unlock the phone for that, Boss."
                 keep != null -> { scope.launch(Dispatchers.IO) { runCatching { IraTools.remember(keep) } }; "Noted, Boss: \"$keep\"." + com.optionslab.ira.BossRules.saidBack(keep) + " Ask \"what did I tell you?\" any time." }
+                fact != null -> { scope.launch(Dispatchers.IO) { runCatching { IraTools.remember(fact) } }; com.optionslab.ira.AboutBoss.noted(fact) }
+                know -> com.optionslab.ira.AboutBoss.lines(IraTools.memory())
+                // A bare "forget that" only right after a "Noted" (else it is not plain which note is meant).
+                forgetOne != null && forgetOne.last && _state.value.messages.lastOrNull { it.fromIra }?.text?.startsWith("Noted") != true ->
+                    "Forget what, Boss? Name it, like \"forget that I don't trade on Fridays\", or ask \"what do you know about me?\"."
+                forgetOne != null -> com.optionslab.ira.AboutBoss.forgot(runCatching { IraTools.forgetOne(forgetOne) }.getOrNull(), forgetOne)
                 com.optionslab.ira.Memory.recallAsked(q) -> com.optionslab.ira.Memory.lines(IraTools.memory())
                 else -> { scope.launch(Dispatchers.IO) { IraTools.forgetMemory() }; "Done, Boss: I've forgotten what you asked me to remember." }
             }
@@ -1555,7 +1569,13 @@ object IraHub {
         }
         if (Topic.TRADE_CHECK in parsed.topics) {
             _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
-            scope.launch { reply(runCatching { tradeCheckFast().say() }.getOrElse { "I could not run the trade check just now." }) }
+            scope.launch {
+                val said = runCatching { tradeCheckFast().say() }.getOrElse { "I could not run the trade check just now." }
+                // What Boss told me about himself that bears on now ("I get greedy after a win" when he is up): his words and
+                // his day, so only on an unlocked phone. Words only - it changes nothing.
+                val about = if (phoneLocked()) null else runCatching { aboutBossNow() }.getOrNull()
+                reply(if (about == null) said else "$said $about")
+            }
             return
         }
         // "How is Solo doing": its switch and its paper record (switched only on the Jarvis settings page, never by voice).
@@ -2150,14 +2170,29 @@ object IraHub {
         runCatching { checked = android.os.SystemClock.elapsedRealtime() to tradeCheck() }
     }
 
+    /** The day's P&L so far (Zerodha's in Live, else the paper account's), or null when it cannot be read. */
+    private suspend fun dayPnlNow(live: Boolean): Double? =
+        if (live) runCatching { kotlinx.coroutines.withTimeoutOrNull(8_000) { com.optionslab.app.data.Broker.positionBook().m2m } }.getOrNull()
+        else runCatching { com.optionslab.app.data.Paper.snapshot().dayPnl }.getOrNull()
+
+    /** What Boss told about himself that bears on a trade check now ([com.optionslab.ira.AboutBoss.recall]), or null. Words only. */
+    private suspend fun aboutBossNow(): String? {
+        val notes = IraTools.memory().map { it.text }
+        if (notes.isEmpty()) return null
+        val m = com.optionslab.app.data.Market
+        val live = com.optionslab.app.data.AppSettings.load().live
+        return com.optionslab.ira.AboutBoss.recall(notes, com.optionslab.ira.AboutBoss.Moment(m.today(), com.optionslab.ira.AboutBoss.At.CHECK,
+            dayPnl = dayPnlNow(live),
+            expiryToday = listOf("NIFTY", "BANKNIFTY", "FINNIFTY").any { runCatching { m.isExpiryDay(it) }.getOrDefault(false) }))
+    }
+
     suspend fun tradeCheck(): com.optionslab.ira.TradeCheck.Verdict {
         val s = com.optionslab.app.data.AppSettings.load()
         val m = com.optionslab.app.data.Market
         val st = _state.value
         val bn = histories[IraMarket.BANKNIFTY]?.bars.orEmpty()
         val bnSnap = st.snaps[IraMarket.BANKNIFTY]
-        val dayPnl = if (s.live) runCatching { kotlinx.coroutines.withTimeoutOrNull(8_000) { com.optionslab.app.data.Broker.positionBook().m2m } }.getOrNull()
-            else runCatching { com.optionslab.app.data.Paper.snapshot().dayPnl }.getOrNull()
+        val dayPnl = dayPnlNow(s.live)
         val arms = ArrayList<String>()
         runCatching { com.optionslab.app.data.OrbArms.view().arms }.getOrDefault(emptyList()).filter { it.armed }.forEach { arms += it.arm.label }
         com.optionslab.app.data.PineScripts.items.value.filter { it.auto.on }.forEach { arms += it.name }
