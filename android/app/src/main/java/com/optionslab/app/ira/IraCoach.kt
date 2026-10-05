@@ -243,7 +243,7 @@ internal object IraCoach {
         val s = runCatching { AppSettings.load() }.getOrNull() ?: return
         val bots = botSymbols()
         val open = ArrayList<com.optionslab.ira.HeadsUp.Pos>()
-        runCatching { Paper.snapshot().positions.positions.filter { it.quantity != 0 }.forEach {
+        runCatching { Paper.snapshot().takeIf { it.priced }?.positions?.positions.orEmpty().filter { it.quantity != 0 }.forEach {
             open += com.optionslab.ira.HeadsUp.Pos("P:${it.symbol}", it.symbol, false, it.quantity, it.averagePrice, it.ltp) } }
         if (Broker.loggedIn) {
             // The read blocks on the network: run apart, so the 15 s limit really ends the wait (the read itself may go on).
@@ -537,7 +537,8 @@ internal object IraCoach {
         } }
         if (Broker.loggedIn) runCatching {
             val ins = Broker.cachedInstruments().orEmpty().associateBy { it.tradingSymbol }
-            Broker.positionBook().net.filter { it.open }.forEach { p ->
+            // The broker is not waited on past 8 seconds (a hung read would hang the answer).
+            kotlinx.coroutines.withTimeoutOrNull(8_000) { Broker.positionBook() }?.net.orEmpty().filter { it.open }.forEach { p ->
                 val i = ins[p.symbol]
                 val g = i?.let { runCatching { greeks(it.right, it.name, it.strike, it.expiry, p.last) }.getOrNull() }
                 out += com.optionslab.ira.Exposure.Leg("Zerodha", p.symbol, p.qty, p.avg, p.last, i?.name, g?.first, g?.second)

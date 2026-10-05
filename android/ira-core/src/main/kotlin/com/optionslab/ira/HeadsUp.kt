@@ -47,7 +47,7 @@ object HeadsUp {
     fun check(positions: List<Pos>, liveLimit: Double?, paperLimit: Double?, told: Set<String>): List<Alert> {
         val out = ArrayList<Pair<Double, Alert>>()
         for (p in positions) {
-            if (p.qty == 0 || p.avg <= 0 || p.ltp < 0) continue
+            if (p.qty == 0 || p.avg <= 0 || p.ltp <= 0) continue  // (no price yet: not a loss, not decayed)
             loss(p, if (p.live) liveLimit else paperLimit, told)?.let { out += -p.pnl to it }
             decay(p, told)?.let { out += 0.0 to it }
         }
