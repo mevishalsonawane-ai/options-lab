@@ -54,7 +54,7 @@ class CoverageTest {
             if (Honest.asked(q) != null) return Kind.HONEST
             if (Thinking.asked(q) != null || Consistency.asked(q)) return Kind.JARVIS
             if (CoPilot.asked(q) || ChainDrift.asked(q) != null || ChainIntel.asked(q) != null || DayClock.asked(q) != null || GapRecord.asked(q) != null || Structure.asked(q) != null ||
-                Breadth.asked(q) != null || TradeCase.asked(q) || Scenarios.asked(q) != null ||
+                MindChange.asked(q) || Breadth.asked(q) != null || TradeCase.asked(q) || Scenarios.asked(q) != null ||
                 Causes.asked(q) != null) return Kind.MARKET
         }
         if (SelfCheck.asked(q)) return Kind.JARVIS
@@ -423,7 +423,7 @@ class CoverageTest {
      * Which feature answers [said] in Jarvis (not GOLD), taking IraHub.ask's branches in its own order (app/.../IraHub.kt,
      * ask(): Boss's learned words and routine as said, fillers and follow-ups, then - for a question not said with
      * something to do (IraHub's `bundled`, [Bundle.acts]) - DayJournal, AlertSense, Airtime, PatternCalls, DataAge, Honest,
-     * Thinking, Consistency, ChainDrift, ChainIntel, DayClock, GapRecord, Structure, TradeCase, Scenarios, Causes, Agenda, Improve; the reminders and Jarvis's own
+     * Thinking, Consistency, ChainDrift, ChainIntel, DayClock, GapRecord, Structure, MindChange, Breadth, TradeCase, Scenarios, Causes, Agenda, Improve; the reminders and Jarvis's own
      * checks, Distance... Outlook, NewsDesk, down to the account's sections (PositionHealth and BotHealth are its HEALTH and
      * BOTS), a pattern explained, Solo and IraHub.reasoned's readers over the candles, each in its
      * place). Over the pure readers only (what Boss's corrections taught depends on what is kept, and is left out); a
@@ -442,7 +442,7 @@ class CoverageTest {
             PatternCalls.asked(said) || Learnings.asked(said) != null || Learnings.undoAsked(said) || NewsMoves.asked(said) != null ||
             PreMarket.asked(said) ||
             ChainDrift.asked(said) != null || Headroom.asked(said) != null || NeedsTrue.asked(said) || Clarity.asked(said) != null || DayClock.asked(said) != null ||
-            SaidAbout.asked(said) != null || GapRecord.asked(said) != null || WordFit.asked(said) != null || Causes.asked(said) != null || WeekAhead.asked(said) != null || AskedAgain.asked(said)
+            SaidAbout.asked(said) != null || GapRecord.asked(said) != null || WordFit.asked(said) != null || Causes.asked(said) != null || WeekAhead.asked(said) != null || AskedAgain.asked(said) || MindChange.asked(said)
         val qs = if (asSaid || understood || cleaned) null else Understand.questions(null, said)?.takeIf { it.isNotEmpty() && it != listOf(said) }
         if (qs != null) return if (qs.size == 1) feature(qs[0], cleaned = true) else qs.joinToString(" & ") { feature(it, understood = true) }
         val q = said
@@ -478,6 +478,7 @@ class CoverageTest {
         if (alone && DayClock.asked(q) != null) return "DayClock"
         if (alone && GapRecord.asked(q) != null) return "GapRecord"
         if (alone && Structure.asked(q) != null) return "Structure"
+        if (alone && MindChange.asked(q)) return "MindChange"
         if (alone && Breadth.asked(q) != null) return "Breadth"
         if (alone && TradeCase.asked(q)) return "TradeCase"
         if (alone && Scenarios.asked(q) != null) return "Scenarios"
@@ -695,6 +696,12 @@ class CoverageTest {
         "what usually happens after a gap up" to "GapRecord", "gap fill rate for banknifty" to "GapRecord",
         "how often does a gap like today's fill" to "GapRecord", "nifty gap kitni baar bharta hai" to "GapRecord",
         "how often does sensex fill its gap by noon" to "GapRecord", "nifty gap fill record" to "GapRecord",
+        // ---- MindChange: what would make Jarvis's last structure read no longer true, and whether it has since (round 11) ----
+        "what would change your mind" to "MindChange", "what would make you wrong" to "MindChange",
+        "what would invalidate that read" to "MindChange", "when would that stop being true" to "MindChange",
+        "where would you be wrong" to "MindChange", "what level would invalidate your read" to "MindChange",
+        "what would it take to change your mind" to "MindChange", "aapka view kab badlega" to "MindChange",
+        "ye kab galat hoga" to "MindChange", "what would change your read on banknifty" to "MindChange",
         // ---- Structure: today's intraday structure - higher highs, swing levels, trend or range so far ----
         "what's the structure today" to "Structure", "what's the structure" to "Structure", "market structure" to "Structure",
         "what is the market structure today" to "Structure", "nifty structure today" to "Structure",

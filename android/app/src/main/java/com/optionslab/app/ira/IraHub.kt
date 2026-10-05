@@ -1229,7 +1229,7 @@ object IraHub {
                 com.optionslab.ira.GapRecord.asked(q) != null ||
                 com.optionslab.ira.WordFit.asked(q) != null ||
                 com.optionslab.ira.Causes.asked(q) != null ||
-                com.optionslab.ira.AskedAgain.asked(q) }.getOrDefault(false)) {
+                com.optionslab.ira.AskedAgain.asked(q) || com.optionslab.ira.MindChange.asked(q) }.getOrDefault(false)) {
             val prev = if (recent) _state.value.messages.lastOrNull { !it.fromIra }?.text else null
             val qs = runCatching { com.optionslab.ira.Understand.questions(prev, q) }.getOrNull()
                 ?.takeIf { it.isNotEmpty() && it != listOf(q) && it.none { p -> lockedAccount(q, p) } }
@@ -1584,8 +1584,27 @@ object IraHub {
                 val mk = com.optionslab.ira.Structure.market(parsed.markets)
                 if (mk == null) com.optionslab.ira.Structure.NOT_HERE
                 else com.optionslab.ira.Structure.answer(structureAsk, mk, histories[mk]?.bars.orEmpty(),
-                    com.optionslab.app.data.Market.today(), LocalDateTime.now(IST))
+                    com.optionslab.app.data.Market.today(), LocalDateTime.now(IST)).also {
+                    // Kept so "what would change your mind?" tests this read (market data only; memory only, never stored).
+                    lastStructureRead = runCatching { com.optionslab.ira.MindChange.said(mk, histories[mk]?.bars.orEmpty(), com.optionslab.app.data.Market.today()) }.getOrNull()
+                }
             }.getOrElse { "I could not read today's structure just now, Boss." }
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            reply(said)
+            return
+        }
+        // "What would change your mind?", "what would make you wrong?", "what would invalidate that read?", "aapka view kab
+        // badlega": for the structure read Jarvis last gave ([lastStructureRead]; today's as it stands when there is none, and
+        // he says so), the levels on the phone's candles that would make each part no longer true, and which have been
+        // crossed since, at what minute ([com.optionslab.ira.MindChange]). Market data only (fine on a locked phone); facts
+        // only, never a forecast or advice; nothing acts.
+        if (!bundled && parsed.order == null && parsed.command == null && !com.optionslab.app.BuildConfig.GOLD &&
+            runCatching { com.optionslab.ira.MindChange.asked(q) }.getOrDefault(false)) {
+            val said = runCatching {
+                val named = if (parsed.markets.isEmpty()) null else com.optionslab.ira.Structure.market(parsed.markets)
+                com.optionslab.ira.MindChange.answer(named, lastStructureRead, histories.mapValues { it.value.bars },
+                    com.optionslab.app.data.Market.today())
+            }.getOrElse { "I could not test my read just now, Boss." }
             _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
             reply(said)
             return
@@ -2571,6 +2590,8 @@ object IraHub {
 
     /** When Boss last asked something: a follow-up carries the last question over only within [FOLLOW_MS]. */
     @Volatile private var lastAskAt = 0L
+    /** The structure read Jarvis last gave (index and newest candle), for "what would change your mind?"; memory only. */
+    @Volatile private var lastStructureRead: com.optionslab.ira.MindChange.Said? = null
     private const val FOLLOW_MS = 5 * 60_000L
 
     /** The last exchanges before [q] (Boss's words and Jarvis's reply, notes left out), oldest first, for the chat. */
