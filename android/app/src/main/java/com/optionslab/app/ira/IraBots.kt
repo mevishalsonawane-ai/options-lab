@@ -225,6 +225,19 @@ internal object IraBots {
     }
 
     /**
+     * "What's changed in my arms' results this week vs last?" ([com.optionslab.ira.ArmChange]): each arm's switch and its closed
+     * paper trades (the day each closed, rupees after charges), this week so far against last week. Reads only; nothing is
+     * armed, stopped, placed or closed.
+     */
+    suspend fun armChange(): String {
+        val armed = com.optionslab.app.data.OrbArms.view().arms.associate { it.arm.label to it.armed }
+        val paper = bots().filter { it.where == "Paper" && it.name in armed }
+            .associate { b -> b.name to b.trades.map { com.optionslab.ira.ArmChange.Trade(it.closedAt.toLocalDate(), it.net) } }
+        val arms = armed.map { (name, on) -> com.optionslab.ira.ArmChange.Arm(name, on, paper[name].orEmpty()) }
+        return com.optionslab.ira.ArmChange.answer(arms, com.optionslab.app.data.Market.today())
+    }
+
+    /**
      * "Am I net long or short?" ([com.optionslab.ira.NetLean]): Boss's open legs (Paper, and Zerodha when read) with each leg's
      * delta now, split by owner - the arms' open trades from their own book, other automations' symbols, the rest his own -
      * and each index's price now. Reads only; nothing is placed, changed or closed.

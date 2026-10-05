@@ -1450,7 +1450,7 @@ object IraHub {
                 com.optionslab.ira.NewsMoves.asked(q) != null || com.optionslab.ira.PreMarket.asked(q) ||
                 com.optionslab.ira.ChainDrift.asked(q) != null || com.optionslab.ira.SinceMorning.asked(q) ||
                 com.optionslab.ira.ExpiryPin.asked(q) != null ||
-                com.optionslab.ira.Headroom.asked(q) != null || com.optionslab.ira.ArmFit.asked(q) || com.optionslab.ira.WeakLink.asked(q) || com.optionslab.ira.ArmDay.asked(q) != null || com.optionslab.ira.NetLean.asked(q) || com.optionslab.ira.BotTrades.asked(q) != null ||
+                com.optionslab.ira.Headroom.asked(q) != null || com.optionslab.ira.ArmFit.asked(q) || com.optionslab.ira.WeakLink.asked(q) || com.optionslab.ira.ArmChange.asked(q) || com.optionslab.ira.ArmDay.asked(q) != null || com.optionslab.ira.NetLean.asked(q) || com.optionslab.ira.BotTrades.asked(q) != null ||
                 com.optionslab.ira.ExpiryEve.asked(q) || com.optionslab.ira.BeforeTomorrow.asked(q) ||
                 com.optionslab.ira.SwitchOff.asked(q) != null ||
                 com.optionslab.ira.ReminderBook.listAsked(q) || com.optionslab.ira.ReminderBook.cancelOne(q) != null ||
@@ -2392,7 +2392,7 @@ object IraHub {
 
     /**
      * [ask]'s question branches on the records and Boss's own setup: NewsMoves, TaxRecords, Learnings (and its undo),
-     * PreMarket, Headroom, ArmFit, WeakLink, BotTrades, SwitchOff, SaidAbout, WeekAhead, ZerodhaSession, OrderWhy, RelayHealth, StreamHealth, BatteryUse, WatchAsk - in [ask]'s order. True when one
+     * PreMarket, Headroom, ArmFit, WeakLink, ArmChange, BotTrades, SwitchOff, SaidAbout, WeekAhead, ZerodhaSession, OrderWhy, RelayHealth, StreamHealth, BatteryUse, WatchAsk - in [ask]'s order. True when one
      * took [q], answered exactly as before; each branch keeps its own guard (not [bundled], no order, no command).
      */
     private fun askedOfRecords(q: String, parsed: com.optionslab.ira.Question, bundled: Boolean, understood: Boolean): Boolean {
@@ -2533,6 +2533,19 @@ object IraHub {
             if (phoneLocked()) { reply(com.optionslab.ira.WeakLink.LOCKED); return true }
             val weakBankNifty = histories[IraMarket.BANKNIFTY]?.bars.orEmpty()
             scope.launch(Dispatchers.IO) { reply(runCatching { IraBots.weakLink(weakBankNifty) }.getOrElse { "I could not read your arms' paper trades just now, Boss." }) }
+            return true
+        }
+        // "What's changed in my arms' results this week vs last?", "how are my bots doing this week compared to last week?", "mere
+        // bots ka is hafte vs pichle hafte" ([com.optionslab.ira.ArmChange]): each arm's closed paper trades this week so far
+        // against last week - trades, win rate, net after charges, the average loss - all arms together, and the arm whose net
+        // changed most named. Boss's account, so never on a locked phone; facts and arithmetic, never a verdict or advice -
+        // nothing is armed, stopped, placed or closed. (Before ArmDay, which keeps one day's loss. Not in IraGoldAlgo.)
+        val armChangeAsk = com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null &&
+            runCatching { com.optionslab.ira.ArmChange.asked(q) }.getOrDefault(false)
+        if (armChangeAsk) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            if (phoneLocked()) { reply(com.optionslab.ira.ArmChange.LOCKED); return true }
+            scope.launch(Dispatchers.IO) { reply(runCatching { IraBots.armChange() }.getOrElse { "I could not read your arms' paper weeks just now, Boss." }) }
             return true
         }
         // "Why did my strategy lose today?", "why did ORB lose?", "what went wrong with Range Fade today?", "ORB ka aaj loss kyun
