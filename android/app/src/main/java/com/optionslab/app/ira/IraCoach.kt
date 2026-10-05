@@ -436,6 +436,46 @@ internal object IraCoach {
         said
     }.getOrNull()
 
+    /** Boss's open positions (paper, and Zerodha when logged in), each with its delta and gamma now when they can be worked out. */
+    private suspend fun openLegs(): List<com.optionslab.ira.Exposure.Leg> {
+        val now = java.time.ZonedDateTime.now(IST)
+        fun spot(u: String) = runCatching { IraHub.state.value.snaps[com.optionslab.ira.Market.valueOf(u)]?.price }.getOrNull()
+        /** Delta and gamma per unit of [u]: the index itself 1 and 0; an option's from its price now. */
+        fun greeks(right: com.optionslab.engine.Right, u: String, strike: Double, expiry: LocalDate, price: Double): Pair<Double, Double>? {
+            if (right == com.optionslab.engine.Right.IX) return 1.0 to 0.0
+            val s = spot(u) ?: return null
+            val t = com.optionslab.engine.options.OptionMath.timeToExpiryYears(now, expiry)
+            val g = com.optionslab.engine.options.OptionMath.legGreeks(if (right == com.optionslab.engine.Right.CE) com.optionslab.engine.options.OptionType.CE
+                else com.optionslab.engine.options.OptionType.PE, s, strike, t, price)?.greeks ?: return null
+            return g.delta to g.gamma
+        }
+        val out = ArrayList<com.optionslab.ira.Exposure.Leg>()
+        runCatching { Paper.snapshot().positions.positions.filter { it.quantity != 0 }.forEach { p ->
+            val c = Paper.contractOf(p.symbol)
+            val g = c?.let { runCatching { greeks(it.right, it.underlying, it.strike, it.expiry, p.ltp) }.getOrNull() }
+            out += com.optionslab.ira.Exposure.Leg("Paper", p.symbol, p.quantity, p.averagePrice, p.ltp, c?.underlying, g?.first, g?.second)
+        } }
+        if (Broker.loggedIn) runCatching {
+            val ins = Broker.cachedInstruments().orEmpty().associateBy { it.tradingSymbol }
+            Broker.positionBook().net.filter { it.open }.forEach { p ->
+                val i = ins[p.symbol]
+                val g = i?.let { runCatching { greeks(it.right, it.name, it.strike, it.expiry, p.last) }.getOrNull() }
+                out += com.optionslab.ira.Exposure.Leg("Zerodha", p.symbol, p.qty, p.avg, p.last, i?.name, g?.first, g?.second)
+            }
+        }
+        return out
+    }
+
+    /** "What happens to my P&L if Nifty moves 100 points": a rough figure from the open positions' deltas. Reads only. */
+    suspend fun moveLines(question: String): List<String> {
+        val s = com.optionslab.ira.Exposure.moveAsked(question) ?: return listOf("Ask it with a size, Boss: \"what happens to my P&L if Nifty moves 100 points\".")
+        val spot = runCatching { IraHub.state.value.snaps[s.market]?.price }.getOrNull()
+        return com.optionslab.ira.Exposure.move(s, openLegs(), spot)
+    }
+
+    /** "Which of my positions is losing most": the open positions, worst first. Reads only. */
+    suspend fun rankLines(): List<String> = com.optionslab.ira.Exposure.rank(openLegs())
+
     /** The 15:35 spoken wrap-up: the day's P&L, the scorecard's headline, tomorrow's events. */
     suspend fun daySummary(scorecard: String?) {
         if (!com.optionslab.app.BuildConfig.JARVIS) return
