@@ -72,7 +72,8 @@ object Commands {
 
     private fun parseAs(said: String): Command? {
         // "Jarvis, note: I bought because of the hammer at support" - kept as said (before the question and negation checks).
-        rx("(?i)^\\s*(?:(?:hey |ok |okay )?jarvis[,.!]?\\s+)?(?:note|journal)(?: that| down)?\\s*[:,-]?\\s+(.{3,300})$").find(said.trim())?.let { m ->
+        // ("Journal my day", "journal for today": the end-of-day journal assistant, [DayJournal] - not a note.)
+        if (!DayJournal.asked(said)) rx("(?i)^\\s*(?:(?:hey |ok |okay )?jarvis[,.!]?\\s+)?(?:note|journal)(?: that| down)?\\s*[:,-]?\\s+(.{3,300})$").find(said.trim())?.let { m ->
             return Command(Command.Kind.NOTE, target = m.groupValues[1].trim())
         }
         // A question ("is live mode on?") is never a command.

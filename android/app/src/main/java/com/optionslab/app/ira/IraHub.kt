@@ -254,6 +254,8 @@ object IraHub {
         IraCoach.lossSizeLine()?.let { w -> app?.let { JarvisPopup.show(it, "Boss, a pattern in your trades", w) }; reply(com.optionslab.ira.Address.boss(w)) }
         // The spoken wrap-up of the day.
         runCatching { IraCoach.daySummary(lines.firstOrNull()) }
+        // Then Boss's journal for the day, drafted from the facts, with a few questions (unlocked phone only; words only).
+        runCatching { IraDayJournal.evening() }
         // How Jarvis did today (questions heard, misunderstood, failed): in the conversation, for fixing what annoys.
         com.optionslab.ira.Usage.line(IraTools.usageToday())?.let { reply("How I did today: $it") }
     }
@@ -1102,6 +1104,13 @@ object IraHub {
         // Secrets never go further than this line: not into the conversation, the saved history or the model.
         val q = com.optionslab.ira.Secrets.redact(text.trim())
         if (q.isEmpty()) return
+        // An answer to Jarvis's journal question, while one is open ([IraDayJournal]): kept in the journal as Boss said it
+        // and never acted on - not cleaned, rewritten or read as anything else first. An order or a command is not an
+        // answer: it pauses the questions and goes on as usual.
+        if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD) {
+            val said = runCatching { IraDayJournal.heard(q) }.getOrNull()
+            if (said != null) { _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }; return }
+        }
         // A new question: the model stops polishing the last answer (it stands as shown).
         IraModel.stopWriting()
         // Boss asking anything just after an unasked alert: he followed it up ([com.optionslab.ira.AlertSense]; kinds and minutes only).
@@ -1134,6 +1143,14 @@ object IraHub {
                 if (qs.size == 1) ask(qs[0], understood = false, cleaned = true) else qs.forEach { ask(it, understood = true) }
                 return
             }
+        }
+        // "Help me journal today": today's journal drafted from the facts, then a few questions by voice. It holds the
+        // account, so the phone must be unlocked. Words only; the answers are kept, never acted on.
+        if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && runCatching { com.optionslab.ira.DayJournal.asked(q) }.getOrDefault(false)) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            if (phoneLocked()) { reply("Unlock the phone for that, Boss."); return }
+            scope.launch(Dispatchers.IO) { reply(runCatching { IraDayJournal.help() }.getOrElse { "I could not draft your journal just now, Boss." }) }
+            return
         }
         val parsed = Ask.parse(q)
         // The kinds of question Boss asks (kind keys only, no words): set against those he marks wrong ([SelfDoubt]).

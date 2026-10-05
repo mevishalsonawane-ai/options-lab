@@ -673,7 +673,11 @@ internal object IraCoach {
             val expiry = market?.let { m -> runCatching { com.optionslab.app.data.Market.isExpiryDay(m.name) }.getOrDefault(false) } ?: false
             val goal = IraGoals.all().filter { it.kind == com.optionslab.ira.Goals.Kind.MAX_TRADES }.minOfOrNull { it.amount.toInt() }
             val r = com.optionslab.ira.PreTrade.reminders(own, LocalDateTime.now(IST), IraTools.memory().map { it.text }, market, expiry, goal)
-            com.optionslab.ira.PreTrade.say(r)?.also { IraActivity.add("A word before an order: ${r.size} reminder${if (r.size == 1) "" else "s"}.") }
+            com.optionslab.ira.PreTrade.say(r)?.also {
+                IraActivity.add("A word before an order: ${r.size} reminder${if (r.size == 1) "" else "s"}.")
+                // Kept for the day's journal: what was said and when, to set beside what followed ([IraDayJournal]).
+                IraDayJournal.shown(r)
+            }
         }.getOrNull()
     }
 

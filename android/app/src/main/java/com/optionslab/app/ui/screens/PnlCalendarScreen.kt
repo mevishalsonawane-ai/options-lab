@@ -669,6 +669,12 @@ private fun DayTrades(live: Boolean, day: LocalDate, trips: List<com.optionslab.
             runCatching { com.optionslab.app.ira.IraJournal.replayLines(closed, owners) }.getOrDefault(emptyList())
         }
     }
+    // Jarvis's journal of the day (drafted after the close or on "help me journal today"), with Boss's answers in his words.
+    val journal by produceState<List<String>>(emptyList(), live, day, tick) {
+        value = if (!com.optionslab.app.BuildConfig.JARVIS || com.optionslab.app.BuildConfig.GOLD) emptyList() else withContext(Dispatchers.IO) {
+            runCatching { com.optionslab.app.ira.IraDayJournal.entry(day, live) }.getOrDefault(emptyList())
+        }
+    }
     val title = day.format(java.time.format.DateTimeFormatter.ofPattern("EEE d MMM yyyy", Locale.ENGLISH))
     LedgerCard(title = "Trades on $title") {
         if (fills.isEmpty()) { Note(if (live) "No Zerodha trades recorded that day." else "No paper trades that day.", Modifier.padding(top = 4.dp)); return@LedgerCard }
@@ -697,6 +703,11 @@ private fun DayTrades(live: Boolean, day: LocalDate, trips: List<com.optionslab.
             Eyebrow("Replay · from the minute candles", Modifier.padding(top = 10.dp))
             replay.forEach { Text("• $it", style = Type.bodySmall.copy(color = p.ink, fontSize = 12.sp), modifier = Modifier.padding(top = 3.dp)) }
             Note("What each trade did while held and after you got out: facts, not advice.", Modifier.padding(top = 4.dp))
+        }
+        if (journal.isNotEmpty()) {
+            Eyebrow("Journal · drafted by Jarvis", Modifier.padding(top = 10.dp))
+            journal.forEach { Text("• $it", style = Type.bodySmall.copy(color = p.ink, fontSize = 12.sp), modifier = Modifier.padding(top = 3.dp)) }
+            Note("Drafted from the facts; the answers are yours, as you said them. Say \"help me journal today\" for the questions.", Modifier.padding(top = 4.dp))
         }
     }
 }
