@@ -174,11 +174,6 @@ object KiteStream {
         val got = runCatching { KiteTicks.parse(message) }.getOrDefault(emptyList())
         if (got.isEmpty()) return
         got.forEach { ticks[it.token] = Seen(it, now) }
-        // An index tick the exchange stamped today, in session hours: the market is trading today ([Holidays.sawTrading]).
-        got.firstOrNull { it.token in INDEX_TOKENS && it.exchangeTime != null }?.exchangeTime?.let { t ->
-            val at = java.time.Instant.ofEpochSecond(t).atZone(com.optionslab.engine.IST)
-            if (at.toLocalDate() == Market.today() && (at.hour * 60 + at.minute) in Market.OPEN until Market.CLOSE) Holidays.sawTrading(at.toLocalDate())
-        }
         if (now - lastBump >= 500) { lastBump = now; _version.value = now }
     }
 

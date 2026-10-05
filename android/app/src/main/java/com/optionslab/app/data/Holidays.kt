@@ -67,7 +67,6 @@ object Holidays {
     @Synchronized
     fun book(): Book {
         cache?.let { return it }
-        tradingSeen = null                                   // a fresh read of the list starts without evidence
         val b = runCatching {
             val o = JSONObject(file.readText())
             fun set(k: String) = o.optJSONArray(k)?.let { a -> (0 until a.length()).map { LocalDate.parse(a.getString(it)) }.toSet() } ?: emptySet()
@@ -91,27 +90,12 @@ object Holidays {
         if (!tmp.renameTo(file)) { file.delete(); tmp.renameTo(file) }
         com.optionslab.app.security.Vault.syncDir(file.parentFile)
         cache = b
-        tradingSeen = null                                   // the list changed: the next prices decide again
     }
 
-    /**
-     * The exchange seen trading on [d] (index candles or ticks stamped that day, in session hours). A day the list
-     * wrongly has as shut then counts as a trading day: on 5 Oct 2026 the app said "Market closed" at 09:24 while the
-     * market traded. Only evidence from the exchange's own prices sets it; it lasts the day, in memory.
-     */
-    @Volatile private var tradingSeen: LocalDate? = null
+    /** Kept for the tests' calendar resets; the holiday list alone decides (no price evidence overrides it). */
+    internal fun forgetTrading() {}
 
-    fun sawTrading(d: LocalDate) {
-        if (tradingSeen == d) return
-        val listed = runCatching { book().holiday(d) }.getOrDefault(false)
-        tradingSeen = d
-        if (listed) runCatching { Diag.record("info", "The holiday list has $d as shut, but the exchange is trading it: treated as a trading day") }
-    }
-
-    /** Forgets the day's trading evidence (a changed list; tests that set a calendar directly). */
-    internal fun forgetTrading() { tradingSeen = null }
-
-    fun isHoliday(d: LocalDate): Boolean = book().holiday(d) && tradingSeen != d
+    fun isHoliday(d: LocalDate): Boolean = book().holiday(d)
 
     @Synchronized
     fun add(d: LocalDate) = book().let { save(it.copy(added = it.added + d, removed = it.removed - d)) }
