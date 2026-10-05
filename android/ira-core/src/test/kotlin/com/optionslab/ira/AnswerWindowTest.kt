@@ -52,4 +52,25 @@ class AnswerWindowTest {
         // needs the name); the hold line holds no lone yes word either.
         assertFalse(Regex("\\byes\\b(?! or no)").containsMatchIn(AnswerWindow.HOLD.lowercase()))
     }
+
+    @Test fun theHoldAsksTheWaitingRequestsOwnQuestionAgain() {
+        val q = "Boss, Nifty broke out. Shall I buy 1 lot of the Nifty call? Yes or no?"
+        val said = AnswerWindow.hold(q)
+        assertTrue(said.startsWith(AnswerWindow.HOLD_LEAD) && said.endsWith(q), said)
+        assertTrue(AnswerWindow.invites(said))
+        assertTrue(AnswerWindow.hold("Shall I stop ORB?").endsWith("Shall I stop ORB? Yes or no?"))
+        assertEquals(AnswerWindow.HOLD, AnswerWindow.hold(null))
+        assertEquals(AnswerWindow.HOLD, AnswerWindow.hold("  "))
+        assertFalse(Regex("\\byes\\b(?! or no)").containsMatchIn(AnswerWindow.HOLD_LEAD.lowercase()))
+    }
+
+    @Test fun eachUtteranceRecordsItsOwnInvitation() {
+        // The question asked: its yes is the request's; an offer said (even cut short): the next yes is held.
+        assertEquals(AnswerWindow.Invite.QUESTION, AnswerWindow.ended(true, true, AnswerWindow.Invite.OFFER))
+        assertEquals(AnswerWindow.Invite.OFFER, AnswerWindow.ended(false, true, AnswerWindow.Invite.QUESTION))
+        // A plain answer ending leaves the last invitation as it was.
+        assertEquals(AnswerWindow.Invite.QUESTION, AnswerWindow.ended(false, false, AnswerWindow.Invite.QUESTION))
+        assertNull(AnswerWindow.ended(false, false, null))
+        assertEquals(AnswerWindow.For.HOLD, AnswerWindow.yesFor(true, AnswerWindow.ended(false, true, AnswerWindow.Invite.QUESTION)))
+    }
 }

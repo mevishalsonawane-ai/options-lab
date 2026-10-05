@@ -35,6 +35,31 @@ object TopicLength {
 
     const val UNDO = "say every topic at the usual length"
 
+    /**
+     * Topics never said short, learned or wished: the trade check, his account and what to do - their verdicts and
+     * warnings are never cut ([Aloud.keep] keeps them in every other answer too).
+     */
+    private val NEVER_SHORT = setOf(Topic.TRADE_CHECK, Topic.ACCOUNT, Topic.ADVICE)
+    private val NEVER_SHORT_KINDS = NEVER_SHORT.map { "topic:${it.name}" }.toSet()
+
+    /** Is [kind] ([Clarity.kind]'s key) a topic never said short? */
+    fun neverShort(kind: String?): Boolean = kind != null && kind in NEVER_SHORT_KINDS
+
+    /** Does [text] ask about a topic never said short (in any of its topics, not only its main one)? */
+    fun asksNeverShort(text: String): Boolean =
+        runCatching { Ask.parse(text).topics.any { it in NEVER_SHORT } }.getOrDefault(false) || neverShort(Clarity.kind(text))
+
+    /**
+     * The kind a wish after the answer to [text] is noted under: the trade check, his account or what to do when it asks
+     * one of them at all (so "in short" after it is never learned or said short), else its main topic ([Clarity.kind]).
+     */
+    fun kindOf(text: String): String? {
+        val main = Clarity.kind(text)
+        if (neverShort(main)) return main
+        val t = runCatching { Ask.parse(text).topics }.getOrNull() ?: return main
+        return NEVER_SHORT.firstOrNull { it in t }?.let { "topic:${it.name}" } ?: main
+    }
+
     /** Which way Boss wished an answer: [sentences] aloud for a topic learned that way. */
     enum class Dir(val key: String, val sentences: Int, val how: String) {
         SHORT("short", Aloud.Length.SHORT.sentences, "in one sentence aloud"),
@@ -88,6 +113,8 @@ object TopicLength {
 
     /** [log] with Boss's wish [dir] after an answer of [kind] at [at] noted; older than the window (and past [KEEP]) dropped. */
     fun heard(log: Log, kind: String, dir: Dir, at: LocalDateTime): Log {
+        // "In short" after the trade check, his account or what to do is never learned ([NEVER_SHORT]).
+        if (dir == Dir.SHORT && neverShort(kind)) return log
         val from = at.minusDays(WINDOW_DAYS)
         return log.copy(notes = (log.notes.filter { it.at.isAfter(from) } + Note(at, kind, dir.key)).sortedBy { it.at }.takeLast(KEEP))
     }
@@ -113,6 +140,7 @@ object TopicLength {
                 val l = xs.count { it.dir == Dir.LONG.key }
                 val newest = xs.maxOf { it.at }
                 when {
+                    s - l >= MIN_TIMES && neverShort(k) -> null
                     s - l >= MIN_TIMES -> Record(k, Dir.SHORT, s, l, newest)
                     l - s >= MIN_TIMES -> Record(k, Dir.LONG, l, s, newest)
                     else -> null
@@ -125,7 +153,14 @@ object TopicLength {
      * How many sentences to say aloud answering [text], from the topics learned ([learned]); null: as usual. Never for a
      * command or an order (they have no kind).
      */
-    fun sentences(text: String, learned: List<Record>): Int? = if (learned.isEmpty()) null else sentencesOf(Clarity.kind(text), learned)
+    fun sentences(text: String, learned: List<Record>): Int? =
+        if (learned.isEmpty()) null else sentencesOf(Clarity.kind(text), learned)?.let { shortGuarded(text, it) }
+
+    /**
+     * [n] sentences learned for [text]'s kind, or null when that is one sentence and [text] also asks the trade check, his
+     * account or what to do ([asksNeverShort]): never one sentence for those. Read only when the learned length is short.
+     */
+    fun shortGuarded(text: String, n: Int): Int? = if (n <= Dir.SHORT.sentences && asksNeverShort(text)) null else n
 
     /** [sentences] for a question of kind [kind] ([Clarity.kind], read once by the caller; null: none). */
     fun sentencesOf(kind: String?, learned: List<Record>): Int? {
@@ -138,13 +173,18 @@ object TopicLength {
 
     /**
      * The answer to Boss's wish [dir] for the [last] answer (its full text as in the chat; null: none at hand), with
-     * [learnedNow] when this wish just made its topic learned. Words only.
+     * [learnedNow] when this wish just made its topic learned, and [kind] the answer's kind ([Clarity.kind]; null: not
+     * known). "In short" never shortens the trade check, his account or what to do ([NEVER_SHORT]): the answer is said
+     * whole; and no other answer in short drops a verdict or warning ([Aloud.keep]). Words only.
      */
-    fun reply(dir: Dir, last: String?, learnedNow: Record?): String {
+    fun reply(dir: Dir, last: String?, learnedNow: Record?, kind: String? = null): String {
         val body = last?.trim()?.takeIf { it.isNotEmpty() }
+        val guarded = if (dir == Dir.SHORT && kind != null && neverShort(kind)) SelfDoubt.phraseOf(kind) else null
         val head = when {
+            guarded != null && body == null -> "Boss, I keep $guarded whole aloud, so no warning is ever cut."
+            guarded != null -> "Boss, I keep $guarded whole, so no warning is ever cut: $body"
             body == null -> if (dir == Dir.SHORT) "Noted, Boss: shorter." else "Noted, Boss: in more detail - ask me again and I'll say it whole."
-            dir == Dir.SHORT -> "In short, Boss: " + SENTENCE.split(body).first { it.isNotBlank() }.trim()
+            dir == Dir.SHORT -> "In short, Boss: " + Aloud.keep(SENTENCE.split(body).filter { it.isNotBlank() }.map { it.trim() }, 1).joinToString(" ")
             else -> "In full, Boss: $body"
         }
         val tail = learnedNow?.let { r ->

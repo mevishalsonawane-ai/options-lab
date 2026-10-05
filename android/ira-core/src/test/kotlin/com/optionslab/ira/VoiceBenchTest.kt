@@ -237,6 +237,9 @@ class VoiceBenchTest {
             us(0), us(1), us(2), LINES.size, runs))
     }
 
-    /** [digest] of [LINES] on the code before this round (2026-10-05). */
-    private val BEFORE = "ccd9cd642449d71a4ddb7918cee45a6ef57e4292f1e9f85121f37bdb5fe49707"
+    /**
+     * [digest] of [LINES] on the code before this round (2026-10-05), changed once on purpose since: a line said shorter
+     * now keeps every safety warning past the cut ([Aloud.keep] - "kill switch" lines said one sentence long keep it).
+     */
+    private val BEFORE = "9499f158a6e8954767db1bfc8127bf5333d02f36a5c2c06e667e1105051a2b61"
 }

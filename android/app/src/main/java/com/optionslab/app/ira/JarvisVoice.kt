@@ -179,7 +179,7 @@ class JarvisVoice : Service() {
          */
         fun askYesNo(id: Long, text: String): Boolean {
             val v = instance?.get() ?: return false
-            v.main.post { v.asking = id; v.askingNeedsBoss = true; v.askingUntil = 0; v.sayWhenFree(text, "question") }
+            v.main.post { v.asking = id; v.askingText = text; v.askingNeedsBoss = true; v.askingUntil = 0; v.sayWhenFree(text, "question") }
             return true
         }
 
@@ -726,6 +726,8 @@ class JarvisVoice : Service() {
     /** A trade needs Boss's own voice for its yes; a command (start, stop...) needs only a yes. */
     private var askingNeedsBoss = true
     private var askingUntil = 0L
+    /** The words of the yes-or-no question about [asking], asked again when a yes is held ([com.optionslab.ira.AnswerWindow.hold]). */
+    private var askingText: String? = null
     /**
      * What Jarvis last finished inviting an answer to ([com.optionslab.ira.AnswerWindow]): his own request's yes-or-no
      * question, or an offer of words (the morning check's "say yes for it"). A yes is only ever for the last one.
@@ -861,13 +863,15 @@ class JarvisVoice : Service() {
             }
             override fun onDone(id: String?) {
                 id?.let { pieceAt[it] }?.let { (b, n) -> reachedAt = b + n }
-                main.post { if (id == utterance) afterSpeech(id?.substringBefore('#')) }
+                main.post { if (id == utterance) afterSpeech(id?.substringBefore('#'), endedInviting(id)) }
             }
-            @Deprecated("Deprecated in Java") override fun onError(id: String?) { main.post { if (id == utterance) afterSpeech(id?.substringBefore('#')) } }
+            @Deprecated("Deprecated in Java") override fun onError(id: String?) { main.post { if (id == utterance) afterSpeech(id?.substringBefore('#'), endedInviting(id)) } }
             override fun onStop(id: String?, interrupted: Boolean) {
                 main.post {
-                    if (id != utterance) return@post                     // replaced by a newer sentence: nothing to do
-                    if (stoppedByUs) { stoppedByUs = false; return@post }  // Boss cut in
+                    // An offer cut short or replaced was still (in part) said: a yes after it may be meant for it.
+                    val cutInvited = endedInviting(id)
+                    if (id != utterance) { if (cutInvited) offerEnded(); return@post }   // replaced by a newer sentence
+                    if (stoppedByUs) { stoppedByUs = false; if (cutInvited) offerEnded(); return@post }  // Boss cut in
                     // The speech was cut off by something else - listening at the same time, on this phone.
                     if (turnInSpeech) {
                         // Off from now on: Boss's "on" goes back to automatic, which stays off on this phone.
@@ -875,7 +879,7 @@ class JarvisVoice : Service() {
                         cutInSilences = true; note("cut-in off: speech stopped while listening")
                         _state.value = VoiceState(Mode.LISTENING, problem = "Cutting in is off: this phone stops speaking while it listens.")
                     }
-                    afterSpeech(id?.substringBefore('#'))
+                    afterSpeech(id?.substringBefore('#'), cutInvited)
                 }
             }
         })
@@ -925,8 +929,9 @@ class JarvisVoice : Service() {
         if (!runCatching { am.adjustStreamVolume(st, android.media.AudioManager.ADJUST_MUTE, 0); true }.getOrDefault(false)) return
         if (runCatching { am.isStreamMute(st) }.getOrDefault(false)) {
             mutedForBeep += st
-            // Written behind: this runs on the main thread at every listening turn (a vault write each time froze the screen).
-            runCatching { com.optionslab.app.security.SecurePrefs.putAllSoon(mapOf(MUTED_KEY to st.toString())) }
+            // Written to disk at once, but on its own thread: this runs on the main thread at every listening turn (a vault
+            // write there froze the screen), and a write left behind could be lost if the process died while muted.
+            markMuted(st)
         }
         main.removeCallbacks(unmuteBeep); main.postDelayed(unmuteBeep, ms)
     }
@@ -946,8 +951,28 @@ class JarvisVoice : Service() {
         val am = getSystemService(android.media.AudioManager::class.java)
         for (st in mutedForBeep) runCatching { am?.adjustStreamVolume(st, android.media.AudioManager.ADJUST_UNMUTE, 0) }
         mutedForBeep.clear()
-        runCatching { com.optionslab.app.security.SecurePrefs.putAllSoon(mapOf(MUTED_KEY to null)) }
+        markMuted(null)
     }
+
+    /**
+     * The muted stream's marker ([MUTED_KEY], read by [restoreMuted] when the service starts again) put on disk
+     * synchronously - a full vault write, not a write left behind - on [muteWriter], one at a time in the order set, so
+     * a process killed right after the mute still finds it and puts the sound back. Only the newest wish is written.
+     */
+    private fun markMuted(st: Int?) {
+        muteWanted = st?.toString()
+        runCatching { muteWriter.execute {
+            val want = muteWanted
+            if (!muteWrittenKnown || want != muteWritten) {
+                if (runCatching { com.optionslab.app.security.SecurePrefs.put(MUTED_KEY, want) }.isSuccess) { muteWritten = want; muteWrittenKnown = true }
+            }
+        } }
+    }
+    /** The marker as last wished ([markMuted]); what [muteWriter] last put on disk (touched on that thread only). */
+    @Volatile private var muteWanted: String? = null
+    private var muteWritten: String? = null
+    private var muteWrittenKnown = false
+    private val muteWriter = java.util.concurrent.Executors.newSingleThreadExecutor { r -> Thread(r, "jarvis-mute-marker").apply { isDaemon = true } }
 
     /**
      * Jarvis's ears: the phone's on-device recognizer (nothing leaves the phone), or - when Boss switched on "Use
@@ -1503,10 +1528,11 @@ class JarvisVoice : Service() {
             if (yes != null) runCatching { IraTools.endWaits() }
             // An offer said after the question ("... say yes for it"): this yes or no may be for the offer, so it is not
             // taken for the request - never approved by a yes meant for something else ([com.optionslab.ira.AnswerWindow]).
-            // Said so as a yes-or-no question again: the next yes or no is the request's.
+            // Said so, with the request's own question asked again: the next yes or no is the request's.
             if (yes != null && com.optionslab.ira.AnswerWindow.yesFor(true, lastInvite) == com.optionslab.ira.AnswerWindow.For.HOLD) {
                 note("a yes or no after another offer: not taken for the waiting request")
-                say(com.optionslab.ira.AnswerWindow.HOLD, "question")
+                // Its own question asked again, so the next yes or no answers that very question.
+                say(com.optionslab.ira.AnswerWindow.hold(askingText), "question")
                 return
             }
             if (yes != null) {
@@ -1675,8 +1701,11 @@ class JarvisVoice : Service() {
 
     /** The words being handed to the voice now, as said (for telling Jarvis's own words heard back from Boss's). */
     @Volatile private var sayingText: String? = null
-    /** The words being said end inviting an answer ([com.optionslab.ira.AnswerWindow.invites]; read before any Hindi). */
-    @Volatile private var sayingInvites = false
+    /**
+     * Each utterance's own words end inviting an answer ([com.optionslab.ira.AnswerWindow.invites]; read before any Hindi),
+     * by its id ("answer#12") - read when THAT utterance ends, said, cut short or replaced, never a later one's.
+     */
+    private val invitesOf = java.util.concurrent.ConcurrentHashMap<String, Boolean>()
     /** The answer being said, in full as in the chat (null: not an answer), and whether it is about the account. */
     @Volatile private var sayingFull: String? = null
     @Volatile private var sayingAccount = false
@@ -1755,8 +1784,9 @@ class JarvisVoice : Service() {
                 o != null && o.missing.isEmpty() && o.refusal == null -> "I have put that order on the Ira screen. Nothing is sent until you confirm it there."
                 a.action != null -> {
                     // Asked aloud instead of a button hidden in the chat: "Shall I stop ORB? Yes or no?"
-                    asking = a.action; askingNeedsBoss = IraHub.isExit(a.action); askingUntil = 0
-                    say(com.optionslab.ira.Address.boss("Shall I " + a.text.removePrefix("Tap Confirm to ").trimEnd('.') + "? Yes or no?"), "question")
+                    val shall = com.optionslab.ira.Address.boss("Shall I " + a.text.removePrefix("Tap Confirm to ").trimEnd('.') + "? Yes or no?")
+                    asking = a.action; askingText = shall; askingNeedsBoss = IraHub.isExit(a.action); askingUntil = 0
+                    say(shall, "question")
                     return@launch
                 }
                 // Short answers (the owner's setting, or "shorter"): the first sentence; "tell me more" says the whole
@@ -1798,10 +1828,11 @@ class JarvisVoice : Service() {
 
     /** Stops any speech now (muted). */
     fun hush() { main.post {
-        val id = utterance?.substringBefore('#')
+        val hushed = utterance
+        val id = hushed?.substringBefore('#')
         utterance = null                                 // nothing still being prepared is said, and its onStop is ignored
         runCatching { tts?.stop() }
-        if (speaking) afterSpeech(id)
+        if (speaking) afterSpeech(id, endedInviting(hushed))
     } }
 
     /**
@@ -1830,13 +1861,13 @@ class JarvisVoice : Service() {
         if (id == "answer" && keep) repeatable = com.optionslab.ira.Again.Last(words, account || !locked(), SystemClock.elapsedRealtime())
         sayingFull = if (id == "answer") full else null; sayingAccount = account
         sayingText = text; reachedAt = -1
-        sayingInvites = com.optionslab.ira.AnswerWindow.invites(words)
+        val invited = com.optionslab.ira.AnswerWindow.invites(words)
         // Muted: the words go on screen as a pop-up instead (answers and questions only; "One moment" is dropped).
         if (muted && !text.startsWith("Voice on")) {
             if (id == "answer" || id == "question") runCatching { JarvisPopup.show(this, "Jarvis (muted)", "${full ?: words}\n\nSay \"Jarvis, unmute\" to hear me.") }
-            afterSpeech(id); return
+            afterSpeech(id, invited); return
         }
-        if (!voiceReady || t == null) { afterSpeech(id); return }
+        if (!voiceReady || t == null) { afterSpeech(id, invited); return }
         _state.value = VoiceState(Mode.SPEAKING)
         applyStyle(t)                                   // a style or voice changed on the Ira screen takes effect now
         // A slow repeat: slower for this answer only (the next applyStyle sets Boss's own pace back).
@@ -1854,6 +1885,8 @@ class JarvisVoice : Service() {
         spokeAt = SystemClock.elapsedRealtime()
         val u = "$id#${++said}"
         utterance = u
+        if (invitesOf.size > 64) invitesOf.clear()
+        invitesOf[u] = invited
         if (reply && (id == "answer" || id == "question")) replyClock.queued(u, spokeAt)
         if (ci.on && id != STOP_AFTER) { val at = spokeAt; main.postDelayed({ cutInListen(u, at, ci.startMs) }, 100) }
         // Hindi replies: an answer is translated by the model (figures checked) and said in the phone's Hindi voice.
@@ -1863,11 +1896,11 @@ class JarvisVoice : Service() {
                 val hv = if (h != null) hindiVoice(t) else null
                 if (utterance != u || !speaking || muted) return@launch
                 if (h != null && hv != null) { t.voice = hv; synchronized(applied) { applied.remove(t) } }
-                if (!speakPieces(t, spokenName(if (h != null && hv != null) h else text), u)) { speaking = false; afterSpeech(id) }
+                if (!speakPieces(t, spokenName(if (h != null && hv != null) h else text), u)) { speaking = false; invitesOf.remove(u); afterSpeech(id, invited) }
             }
             return
         }
-        if (!speakPieces(t, spokenName(text), u)) { speaking = false; afterSpeech(id) }
+        if (!speakPieces(t, spokenName(text), u)) { speaking = false; invitesOf.remove(u); afterSpeech(id, invited) }
     }
 
     /**
@@ -1933,7 +1966,24 @@ class JarvisVoice : Service() {
         .replace(Regex("(?i)\\b(say|call|saying)\\s+\"?(?:j[ae]rv[ia]s+|jar vis)\\b"), "$1 my name")
         .let { WAKE.replace(it, "my name") }
 
-    private fun afterSpeech(id: String?) {
+    /**
+     * Did utterance [uid] (or one of its pieces, "answer#12.0") end inviting an answer as an OFFER? Read once: its entry is
+     * dropped. A request's own yes-or-no question ("question#n") is never an offer.
+     */
+    private fun endedInviting(uid: String?): Boolean {
+        if (uid == null) return false
+        val inv = invitesOf.remove(uid.substringBefore('.')) == true
+        val kind = uid.substringBefore('#')
+        return inv && kind != "question" && kind != STOP_AFTER
+    }
+
+    /** An offer ended (said, cut short or replaced): a yes heard now may be for it, so it is never a waiting request's. */
+    private fun offerEnded() {
+        lastInvite = com.optionslab.ira.AnswerWindow.ended(false, true, lastInvite)
+    }
+
+    /** [invited]: the utterance that ended ([id] its kind) itself ended inviting an answer ([invitesOf]). */
+    private fun afterSpeech(id: String?, invited: Boolean = false) {
         speaking = false
         lastSpokenEnd = SystemClock.elapsedRealtime()
         if (stopped) return
@@ -1943,9 +1993,9 @@ class JarvisVoice : Service() {
         // Jarvis's own words that end inviting an answer ("... say yes for it.", "Before you answer, Boss: ..."): Boss's
         // answer is heard without "Jarvis" for at least 20 s, as a follow-up (it may only ask, never act - a request's yes
         // is only its own question's). His yes-or-no question is the invitation to that request; any other is an offer.
-        if (id == "question") lastInvite = com.optionslab.ira.AnswerWindow.Invite.QUESTION
-        else if (id != null && id != STOP_AFTER && sayingInvites) {
-            lastInvite = com.optionslab.ira.AnswerWindow.Invite.OFFER
+        if (id == "question") lastInvite = com.optionslab.ira.AnswerWindow.ended(true, invited, lastInvite)
+        else if (id != null && id != STOP_AFTER && invited) {
+            offerEnded()
             awakeUntil = maxOf(awakeUntil, SystemClock.elapsedRealtime() + com.optionslab.ira.AnswerWindow.WINDOW_MS); called = false
         }
         again(150)
@@ -1955,6 +2005,7 @@ class JarvisVoice : Service() {
 
     override fun onDestroy() {
         unmuteNow()
+        runCatching { muteWriter.shutdown() }           // the marker's last write (above) still runs
         hearingSave()
         stopped = true
         if (instance?.get() === this) instance = null

@@ -73,12 +73,13 @@ object Wake {
     }
 
     /**
-     * An answer as it is spoken: the first [sentences] sentences, the rupee sign and "Rs" read as rupees. The full answer
+     * An answer as it is spoken: the first [sentences] sentences (never a safety verdict or warning cut - [Aloud.keep]), the rupee sign and "Rs" read as rupees. The full answer
      * stays on screen with the facts it was built from.
      */
     fun spoken(text: String, sentences: Int = 3): String {
         val parts = rx("(?<=[.!?])\\s+").split(text.trim()).filter { it.isNotBlank() }
-        return parts.take(sentences).joinToString(" ")
+        // Never a safety verdict or warning cut ([Aloud.keep]).
+        return Aloud.keep(parts, sentences).joinToString(" ")
             .replace(rx("(?:Rs|₹)\\s?([+-]?[\\d,]+(?:\\.\\d+)?)"), "$1 rupees")
             .replace("+", "plus ").replace(rx("(^|\\s)-(?=\\d)"), "$1minus ")
     }

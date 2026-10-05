@@ -51,7 +51,9 @@ object SpokenReply {
             more -> Aloud.Length.FULL.sentences
             wishedLong -> Aloud.Length.FULL.sentences
             brief -> Aloud.Length.SHORT.sentences
-            else -> runCatching { TopicLength.sentencesOf(kind, learned()) }.getOrNull()
+            // A topic learned short is never one sentence for a question that also asks the trade check, the account or
+            // what to do ([TopicLength.shortGuarded]); and no length drops a verdict or warning ([Aloud.keep]).
+            else -> runCatching { TopicLength.sentencesOf(kind, learned())?.let { TopicLength.shortGuarded(question, it) } }.getOrNull()
                 ?: runCatching { Clarity.sentencesOf(kind, shorter()) }.getOrNull()
                 ?: Aloud.Length.USUAL.sentences
         }

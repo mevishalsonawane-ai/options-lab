@@ -29,9 +29,10 @@ object Aloud {
     fun say(text: String, sentences: Int, hindi: Boolean = hindi(text)): String {
         val parts = SENTENCE.split(text.trim()).filter { it.isNotBlank() }
         if (parts.isEmpty()) return ""
-        val n = sentences.coerceAtLeast(1)
-        val cut = parts.size > n
-        var s = Wake.spoken(parts.take(n).joinToString(" "), n)
+        // Shorter never drops a safety verdict or warning: the trade check's verdict first, every warning kept ([keep]).
+        val kept = keep(parts, sentences)
+        val cut = kept.size < parts.size
+        var s = Wake.spoken(kept.joinToString(" "), kept.size)
         if (hindi) s = s.replace(" rupees", " रुपये").replace("plus ", "प्लस ").replace("minus ", "माइनस ")
         s = numbers(s, hindi)
         s = SayAs.figures(s, hindi)
@@ -40,6 +41,40 @@ object Aloud {
         // Never without "Boss" (the owner's wish): a Hindi reply already naming him in Hindi keeps that.
         // Commas where a person would pause - brackets, dashes, separators, figures side by side ([Pauses]); words unchanged.
         return Pauses.shape(if (hindi && s.contains(BOSS_HI)) s else Address.boss(s))
+    }
+
+    /** The trade check's verdict heads ([TradeCheck.Verdict.say]); the first two warn. */
+    private val WARN_HEADS = setOf("Don't trade now.", "Careful today.")
+    private const val GO_HEAD = "Conditions are normal: fine to trade."
+    /** The trade check's closing line after the market reads: not part of its verdict. */
+    private const val READS_END = "That is how the market is moving now"
+    /** A sentence that is a safety verdict or warning: never left out when an answer is said shorter. */
+    private val WARNING = rx("\\b(don'?t trade|do not trade|never trade|careful|stop|kill switch|loss limit|daily limit|warning|not now)\\b",
+        RegexOption.IGNORE_CASE)
+
+    /** Is [sentence] a safety verdict or warning ("Don't trade now.", "The kill switch is on.", "careful", "loss limit")? */
+    fun warning(sentence: String): Boolean = WARNING.containsMatchIn(sentence.replace('’', '\''))
+
+    /**
+     * The sentences said when [parts] (one answer's sentences, in order) is said in at most [sentences]: never a safety
+     * verdict or warning cut. A trade check's verdict comes first - its head with all its reasons when it says "Don't
+     * trade now." or "Careful today.", before the market reads - and every warning sentence past the cut is still said,
+     * in its order. Nothing is cut when it fits. Pure; words unchanged, only which are said.
+     */
+    fun keep(parts: List<String>, sentences: Int): List<String> {
+        val n = sentences.coerceAtLeast(1)
+        if (parts.size <= n) return parts
+        val h = parts.indexOfFirst { it.trim() in WARN_HEADS || it.trim() == GO_HEAD }
+        var order = parts
+        var must = 0
+        if (h >= 0) {
+            val end = (h + 1 until parts.size).firstOrNull { parts[it].trim().startsWith(READS_END) } ?: parts.size
+            val block = parts.subList(h, end)
+            order = block + parts.subList(0, h) + parts.subList(end, parts.size)
+            must = if (parts[h].trim() == GO_HEAD) 1 else block.size
+        }
+        val take = maxOf(n, must)
+        return order.take(take) + order.drop(take).filter { warning(it) }
     }
 
     /** "Boss" (or "बॉस") kept at its first mention only: "Yes, Boss. It is up, Boss." -> "Yes, Boss. It is up." */

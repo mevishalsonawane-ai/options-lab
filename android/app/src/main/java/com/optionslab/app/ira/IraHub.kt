@@ -1808,7 +1808,8 @@ object IraHub {
         if ((Topic.NEWS in parsed.topics || deskAsk != null) && testHistories == null && System.currentTimeMillis() - newsCheckedAt > 3 * 60_000 && online() &&
             _state.value.newsAt?.isBefore(Instant.now().minusSeconds(NEWS_EVERY_MINUTES * 60)) != false) {
             newsCheckedAt = System.currentTimeMillis()
-            scope.launch { kotlinx.coroutines.withTimeoutOrNull(8_000) { runCatching { freshNews() } }; ask(text, understood) }
+            // Asked again on the questions' lane ([askLane]), in turn with the others; the feeds read off it (IO), not holding it.
+            scope.launch(askLane) { withContext(Dispatchers.IO) { kotlinx.coroutines.withTimeoutOrNull(8_000) { runCatching { freshNews() } } }; ask(text, understood) }
             return
         }
         if (deskAsk != null) {

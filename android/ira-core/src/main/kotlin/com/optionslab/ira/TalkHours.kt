@@ -95,7 +95,10 @@ object TalkHours {
         if (inHours(hours, at) || Aloud.hindi(text) || FigureFirst.hasNote(text)) return text
         val parts = SENTENCE.split(text.trim()).filter { it.isNotBlank() }
         if (parts.size < LONG) return text
-        return Address.boss(parts[0].trim() + " The rest is in the chat.")
+        // Never a safety verdict or warning cut ([Aloud.keep]).
+        val kept = Aloud.keep(parts, 1)
+        if (kept.size >= parts.size) return text
+        return Address.boss(kept.joinToString(" ") { it.trim() } + " The rest is in the chat.")
     }
 
     /**

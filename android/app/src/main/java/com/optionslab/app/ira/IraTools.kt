@@ -1177,7 +1177,7 @@ internal object IraTools {
 
     /** A question with a kind of answer was asked ([said]'s kind only is kept, in memory). */
     private fun lengthAsked(said: String) {
-        val k = runCatching { com.optionslab.ira.Clarity.kind(said) }.getOrNull() ?: return
+        val k = runCatching { com.optionslab.ira.TopicLength.kindOf(said) }.getOrNull() ?: return
         lengthLast = k to lengthNow()
     }
 
@@ -1200,7 +1200,7 @@ internal object IraTools {
         if (dir == com.optionslab.ira.TopicLength.Dir.LONG && locked) return com.optionslab.ira.TopicLength.LOCKED_LONG
         if (dir == com.optionslab.ira.TopicLength.Dir.LONG) lengthLongAt = System.currentTimeMillis()
         // On a locked phone the answer is never said again (it may be his account's): the wish is noted only.
-        return com.optionslab.ira.TopicLength.reply(dir, if (locked) null else last, learnedNow)
+        return com.optionslab.ira.TopicLength.reply(dir, if (locked) null else last, learnedNow, kind)
     }
 
     /** Was [said] Boss's "in detail" answered just now (so it is said whole aloud)? */

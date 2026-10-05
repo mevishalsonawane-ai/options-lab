@@ -122,4 +122,48 @@ class TopicLengthTest {
         assertFalse(u.empty)
         assertTrue(Learnings.offer(u).contains("at the usual length again"))
     }
+
+    // ---- never short: the trade check, the account, what to do (review, 5 Oct) -----------------------------------------
+
+    private val tradeNow = "should I trade now"
+
+    @Test fun theTradeCheckIsNeverLearnedOrSaidShort() {
+        val k = TopicLength.kindOf(tradeNow)
+        assertEquals("topic:TRADE_CHECK", k)
+        assertTrue(TopicLength.neverShort(k))
+        var log = TopicLength.Log()
+        for (i in 1..4) log = TopicLength.heard(log, k!!, TopicLength.Dir.SHORT, now.minusMinutes(i * 10L))
+        assertTrue(TopicLength.learned(log, now).isEmpty(), "\"in short\" after the trade check is never learned")
+        // Even a short learned under another kind never cuts a question that also asks the trade check.
+        val lv = Clarity.kind(levels)!!
+        var log2 = TopicLength.Log()
+        for (i in 1..3) log2 = TopicLength.heard(log2, lv, TopicLength.Dir.SHORT, now.minusMinutes(i * 10L))
+        val learned = TopicLength.learned(log2, now)
+        assertEquals(1, TopicLength.sentences(levels, learned))
+        assertTrue(TopicLength.asksNeverShort(tradeNow))
+        assertFalse(TopicLength.asksNeverShort(levels))
+        // Never one sentence for a question that asks the trade check, whatever was learned ([TopicLength.shortGuarded]).
+        assertNull(TopicLength.shortGuarded(tradeNow, 1))
+        assertEquals(Aloud.Length.FULL.sentences, TopicLength.shortGuarded(tradeNow, Aloud.Length.FULL.sentences))
+        assertEquals(1, TopicLength.shortGuarded(levels, 1))
+        // The same on the voice's one-pass path ([SpokenReply]), even with a short record for the trade check at hand.
+        val forced = listOf(TopicLength.Record("topic:TRADE_CHECK", TopicLength.Dir.SHORT, 3, 0, now))
+        val answer = "Nifty is bullish. Bank Nifty is flat. Don't trade now. Zerodha is not logged in today. Volume is light."
+        val r = SpokenReply.said(tradeNow, answer, false, false, false, { emptyList() }, { forced }, { emptyList() })
+        assertEquals(Aloud.say(answer, Aloud.Length.USUAL), r.spoken)
+        assertTrue(r.spoken.contains("trade now") && r.spoken.contains("Zerodha is not logged in today."), r.spoken)
+        assertEquals(Aloud.say("Support is 24,000. Resistance is 24,500. Volume is light.", 1),
+            SpokenReply.said(levels, "Support is 24,000. Resistance is 24,500. Volume is light.", false, false, false, { emptyList() }, { learned }, { emptyList() }).spoken)
+    }
+
+    @Test fun inShortAfterTheTradeCheckSaysItWhole() {
+        val answer = "Nifty is bullish. Don't trade now. Zerodha is not logged in today. That is how the market is moving now, not a forecast."
+        val r = TopicLength.reply(TopicLength.Dir.SHORT, answer, null, "topic:TRADE_CHECK")
+        assertTrue(r.contains("Don't trade now.") && r.contains("Zerodha is not logged in today."), r)
+        assertTrue(r.contains("Boss"))
+        // Any other answer in short keeps its warning too.
+        val r2 = TopicLength.reply(TopicLength.Dir.SHORT, answer, null, Clarity.kind(levels))
+        assertTrue(r2.startsWith("In short, Boss: Don't trade now."), r2)
+        assertTrue(r2.contains("Zerodha is not logged in today."), r2)
+    }
 }

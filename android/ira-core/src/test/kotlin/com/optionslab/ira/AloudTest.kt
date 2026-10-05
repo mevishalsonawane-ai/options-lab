@@ -52,4 +52,45 @@ class AloudTest {
         assertEquals(null, k("is that shorter?"))
         assertEquals(null, k("don't be shorter"))
     }
+
+    // ---- safety verdicts and warnings are never cut (review, 5 Oct) ----------------------------------------------------
+
+    private fun stopCheck() = TradeCheck.Verdict(TradeCheck.Level.STOP,
+        listOf(TradeCheck.Reason(TradeCheck.Level.STOP, "Zerodha is not logged in today."),
+            TradeCheck.Reason(TradeCheck.Level.CAREFUL, "Expiry today: option prices decay and jump fast.")),
+        listOf("Nifty is bullish on the 15-minute chart.", "Bank Nifty has no clear trend.")).say()
+
+    @Test fun aTradeCheckSaidShortSaysItsVerdictFirstWithItsReasons() {
+        val said = Aloud.say(stopCheck(), Aloud.Length.SHORT)
+        assertTrue(said.startsWith("Boss, don't trade now."), said)
+        assertTrue(said.contains("Zerodha is not logged in today."), said)
+        assertTrue(said.contains("Expiry today"), said)
+        assertTrue(said.contains("Boss"), said)
+        // The market reads are what is left for the chat.
+        assertFalse(said.contains("bullish"), said)
+        assertTrue(said.endsWith("The rest is in the chat."), said)
+    }
+
+    @Test fun keepPutsTheVerdictFirstAndKeepsEveryWarning() {
+        val parts = listOf("Nifty is up 0.4 percent.", "It broke 24,500.", "Careful: the kill switch is on.", "Volume is light.",
+            "Do not trade past the loss limit.")
+        assertEquals(listOf("Nifty is up 0.4 percent.", "Careful: the kill switch is on.", "Do not trade past the loss limit."), Aloud.keep(parts, 1))
+        assertEquals(parts, Aloud.keep(parts, 8), "nothing cut when it fits")
+        val careful = listOf("Nifty is bullish.", "Careful today.", "Event today: RBI policy.", "That is how the market is moving now, not a forecast.")
+        assertEquals(listOf("Careful today.", "Event today: RBI policy."), Aloud.keep(careful, 1))
+        val go = listOf("Nifty is bullish.", "Conditions are normal: fine to trade.", "Nothing unusual.", "That is how the market is moving now, not a forecast.")
+        assertEquals(listOf("Conditions are normal: fine to trade."), Aloud.keep(go, 1))
+        for (w in listOf("Don't trade now.", "do not trade today", "Careful today.", "Stop for today.", "The kill switch is on.",
+                "You are near the daily loss limit.", "Warning: prices are stale.", "Not now, Boss."))
+            assertTrue(Aloud.warning(w), w)
+        assertFalse(Aloud.warning("Nifty is at 24,100."))
+    }
+
+    @Test fun everyShorteningKeepsTheWarning() {
+        val text = "Nifty is at 24,100. It is up today. The trend is up. Careful: India VIX is jumping. Volume is normal."
+        // Wake.spoken (every short line), brief mode / Clarity (Aloud.say), the quiet hours (TalkHours.aloud).
+        assertTrue(Wake.spoken(text, 1).contains("Careful: India VIX is jumping."))
+        assertTrue(Aloud.say(text, 1).contains("India VIX is jumping"))
+        assertTrue(TalkHours.aloud(text, java.time.LocalDateTime.of(2026, 10, 5, 22, 0), listOf(9, 10)).contains("Careful: India VIX is jumping."))
+    }
 }

@@ -11,7 +11,8 @@ package com.optionslab.ira
  * One bare "yes" can only ever be for ONE thing ([yesFor]). While a request of Jarvis's own waits for Boss's yes or no
  * (a trade idea, "Shall I stop ORB?"), a yes approves it only when that question was the last thing Jarvis invited an
  * answer to: when an offer was said after it (the 09:00 offer said over a waiting trade question), the yes (or no) is
- * not taken for either - the request is never approved by a yes meant for the offer - and Jarvis says so ([HOLD]). Pure.
+ * not taken for either - the request is never approved by a yes meant for the offer - and Jarvis says so, asking the
+ * request's own question again ([hold]). Pure.
  */
 object AnswerWindow {
     /** How long an invitation's answer is heard without the name (at least). */
@@ -52,4 +53,30 @@ object AnswerWindow {
     /** Said when a yes or no is not taken for the waiting request ([For.HOLD]): nothing was done. */
     const val HOLD = "Boss, I didn't take that answer: a request is still waiting for your approval, and I had just offered " +
         "you something else, so nothing was done. For the waiting request, say yes or no now, or use the Ira screen."
+
+    /** The first words of the hold line when the waiting request's own question is asked again ([hold]). */
+    const val HOLD_LEAD = "Boss, I didn't take that answer: a request is still waiting for your approval, and I had just offered " +
+        "you something else, so nothing was done. Again:"
+
+    /**
+     * Said for [For.HOLD]: [HOLD_LEAD] and the waiting request's own [question] asked again (ending "Yes or no?"), so the
+     * next yes or no answers that very question - never a bare "say yes" with nothing asked. [HOLD] when the question is
+     * not known.
+     */
+    fun hold(question: String?): String {
+        val q = question?.trim().orEmpty()
+        if (q.isEmpty()) return HOLD
+        return "$HOLD_LEAD $q" + if (invites(q)) "" else " Yes or no?"
+    }
+
+    /**
+     * What Jarvis last invited an answer to once one of his utterances ends (said, cut short or replaced): his request's
+     * own yes-or-no [question]; else an offer when that utterance's own words [invited] an answer (worked out from its
+     * words when it was queued, kept with its id - never another utterance's); else as it was ([last]).
+     */
+    fun ended(question: Boolean, invited: Boolean, last: Invite?): Invite? = when {
+        question -> Invite.QUESTION
+        invited -> Invite.OFFER
+        else -> last
+    }
 }
