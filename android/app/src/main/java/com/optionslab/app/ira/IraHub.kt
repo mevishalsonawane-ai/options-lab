@@ -1240,6 +1240,7 @@ object IraHub {
                 com.optionslab.ira.GapRecord.asked(q) != null || com.optionslab.ira.RangeBreaks.asked(q) != null ||
                 com.optionslab.ira.PriorDay.asked(q) != null || com.optionslab.ira.LastHour.asked(q) != null ||
                 com.optionslab.ira.InsideDays.asked(q) != null || com.optionslab.ira.FirstMove.asked(q) != null ||
+                com.optionslab.ira.VixNext.asked(q) != null ||
                 com.optionslab.ira.Weekdays.asked(q) != null ||
                 com.optionslab.ira.WordFit.asked(q) != null ||
                 com.optionslab.ira.Causes.asked(q) != null ||
@@ -2433,7 +2434,7 @@ object IraHub {
 
     /**
      * [ask]'s question branches on the index's record of past sessions and today's structure: DayClock, GapRecord,
-     * RangeBreaks, Weekdays, DayCompare, Structure, MindChange, Breadth - in [ask]'s order. True when one
+     * RangeBreaks, PriorDay, LastHour, InsideDays, FirstMove, VixNext, Weekdays, DayCompare, Structure, MindChange, Breadth - in [ask]'s order. True when one
      * took [q], answered exactly as before; each branch keeps its own guard (not [bundled], no order, no command).
      */
     private fun askedOfPastDays(q: String, parsed: com.optionslab.ira.Question, bundled: Boolean, understood: Boolean): Boolean {
@@ -2553,6 +2554,24 @@ object IraHub {
                 else com.optionslab.ira.FirstMove.answer(firstMoveAsk, mk, histories[mk]?.bars.orEmpty(),
                     com.optionslab.app.data.Market.today(), com.optionslab.app.data.Market.now().toLocalDateTime())
             }.getOrElse { "I could not read the first-move record just now, Boss." }
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            reply(said)
+            return true
+        }
+        // "When VIX jumps 5% how big is the next day?", "after a VIX spike how much does Nifty move the next day?": each India
+        // VIX session's close-to-close change paired with the index's next whole session (its range and its move), the days
+        // VIX rose or fell by the size asked set against every pair, on the phone's own 1-minute sessions
+        // ([com.optionslab.ira.VixNext]), beside VIX's latest change. A record of past days, never a forecast or advice; market
+        // data only (fine on a locked phone); nothing acts. (The last VIX spike one by one stays MarketMemory's.)
+        val vixNextAsk = if (!bundled && parsed.order == null && parsed.command == null && !com.optionslab.app.BuildConfig.GOLD)
+            runCatching { com.optionslab.ira.VixNext.asked(q) }.getOrNull() else null
+        if (vixNextAsk != null) {
+            val said = runCatching {
+                val mk = com.optionslab.ira.VixNext.market(parsed.markets)
+                if (mk == null) com.optionslab.ira.VixNext.NOT_HERE
+                else com.optionslab.ira.VixNext.answer(vixNextAsk, mk, histories[mk]?.bars.orEmpty(), histories[IraMarket.VIX]?.bars.orEmpty(),
+                    com.optionslab.app.data.Market.today(), com.optionslab.app.data.Market.now().toLocalDateTime())
+            }.getOrElse { "I could not read the VIX next-day record just now, Boss." }
             _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
             reply(said)
             return true
