@@ -49,10 +49,27 @@ class RequestBookTest {
         val s = RequestBook.waiting(list, now).lines()
         assertEquals("2 requests waiting, Boss: stop ORB and buy Nifty 25000 CE.", s[0])
         assertTrue(s[1].startsWith("1. Command - stop the ORB strategy. No order. Asked 4 min ago. Lapses in 5:00."), s[1])
-        assertTrue(s[2].contains("Zerodha · real money") && s[2].endsWith("needs your fingerprint."), s[2])
+        // Real money alone is not the fingerprint: only what the hub's own gate says (needsFingerprint) is said as one.
+        assertTrue(s[2].contains("Zerodha · real money") && !s[2].contains("needs your fingerprint"), s[2])
+        assertTrue(s[2].endsWith("one tap approves it."), s[2])
         assertTrue(s.last().contains("approves nothing"))
         assertTrue(s.none { "old one" in it })
         assertTrue(RequestBook.waiting(emptyList(), now).startsWith("No requests waiting, Boss."))
+    }
+
+    @Test fun theFingerprintIsSaidOnlyWhenTheGateAsksForIt() {
+        val trade = view(2, Requests.Kind.TRADE, "buy Nifty 25000 CE", "buy 1 lot of Nifty 25000 CE at market", Requests.Venue.ZERODHA, ago(2), now + 9 * 60_000)
+            .copy(fingerprint = true)
+        val close = view(4, Requests.Kind.CLOSE, "close NIFTY CE", "close NIFTY CE at market", Requests.Venue.ZERODHA, ago(1), now + 8 * 60_000)
+        val exit = view(5, Requests.Kind.EXIT, "exit everything", "exit everything: close all positions", Requests.Venue.PAPER_ZERODHA, ago(1), now + 7 * 60_000)
+            .copy(fingerprint = true)
+        val paper = view(6, Requests.Kind.GUARD, "set a stop", "set a stop at 120", Requests.Venue.PAPER, ago(1), now + 6 * 60_000)
+        val s = RequestBook.waiting(listOf(trade, close, exit, paper), now).lines()
+        val of = { t: String -> s.drop(1).first { it.contains(t) } }
+        assertTrue(of("buy 1 lot").endsWith("A yes on it needs your fingerprint."), of("buy 1 lot"))
+        assertTrue(of("exit everything").endsWith("A yes on it needs your fingerprint."), of("exit everything"))
+        assertTrue(of("close NIFTY CE at market").endsWith("one tap closes real positions - no fingerprint asked."), of("close NIFTY CE at market"))
+        assertTrue(!of("set a stop at 120").contains("fingerprint") && !of("set a stop at 120").contains("one tap"), of("set a stop at 120"))
     }
 
     @Test fun doneByOutcomeAndToday() {

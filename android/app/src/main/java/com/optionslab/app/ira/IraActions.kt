@@ -8,6 +8,8 @@ import com.optionslab.ira.SettingsTalk
 import com.optionslab.ira.Commands
 import com.optionslab.engine.strategy.RunMode
 import java.lang.ref.WeakReference
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.first
 
 /**
@@ -71,28 +73,53 @@ internal object IraActions {
      * command sends no order. Reads only; never throws.
      */
     suspend fun venueOf(c: Command, what: String): com.optionslab.ira.Requests.Venue? {
+        if (!sendsOrders(c)) return null
         val k = c.kind
-        if (k != Command.Kind.EXIT_ALL && k != Command.Kind.CLOSE_ALL && k != Command.Kind.CLOSE_ONE &&
-            k != Command.Kind.CANCEL_ALL && k != Command.Kind.CANCEL_ONE) return null
         return runCatching {
-            val one = k == Command.Kind.CLOSE_ONE || k == Command.Kind.CANCEL_ONE
-            // One named position or order: its own account, as its name says.
-            if (one && Regex("\\bzerodha\\b", RegexOption.IGNORE_CASE).containsMatchIn(what)) return@runCatching com.optionslab.ira.Requests.Venue.ZERODHA
-            if (one && Regex("\\bpaper\\b", RegexOption.IGNORE_CASE).containsMatchIn(what)) return@runCatching com.optionslab.ira.Requests.Venue.PAPER
+            namedVenue(c, what)?.let { return@runCatching it }
             val ordersToo = k != Command.Kind.CLOSE_ALL && k != Command.Kind.CLOSE_ONE
             val positionsToo = k != Command.Kind.CANCEL_ALL && k != Command.Kind.CANCEL_ONE
             // The paper book's open orders and positions, read without pricing them (no quotes fetched just for a label).
             val paper = runCatching { com.optionslab.app.data.Paper.watching() }.getOrDefault(false)
-            val zerodha = Broker.loggedIn && run {
-                // Short reads (a label only): an emergency exit's request is never held up for long; not read in time
-                // counts as open below.
-                val livePos = if (positionsToo) Broker.within(2_000) { Broker.positionBook().net.any { it.open } } else false
-                val liveOrd = if (ordersToo) Broker.within(2_000) { Broker.orders().any { it.working } } else false
+            val zerodha = Broker.loggedIn && kotlinx.coroutines.coroutineScope {
+                // Short reads (a label only), side by side; the request itself never waits on them (see [venueAtOnce]).
+                // Not read in time counts as open below.
+                val pos = async { if (positionsToo) Broker.within(2_000) { Broker.positionBook().net.any { it.open } } else false }
+                val ord = async { if (ordersToo) Broker.within(2_000) { Broker.orders().any { it.working } } else false }
+                val read: List<Boolean?> = awaitAll(pos, ord)
                 // Not read (null) while logged in: counted as open - a guess is never "Paper".
-                livePos != false || liveOrd != false
+                read[0] != false || read[1] != false
             }
             com.optionslab.ira.Requests.venueFor(paper, zerodha)
         }.getOrElse { if (runCatching { Broker.loggedIn }.getOrDefault(true)) com.optionslab.ira.Requests.Venue.PAPER_ZERODHA else com.optionslab.ira.Requests.Venue.PAPER }
+    }
+
+    /** Does [c] send orders at all (an exit, a close or a cancel)? Only those are labelled by what is open. */
+    fun sendsOrders(c: Command): Boolean {
+        val k = c.kind
+        return k == Command.Kind.EXIT_ALL || k == Command.Kind.CLOSE_ALL || k == Command.Kind.CLOSE_ONE ||
+            k == Command.Kind.CANCEL_ALL || k == Command.Kind.CANCEL_ONE
+    }
+
+    /** One named position or order ("paper ...", "Zerodha ..."): its own account, as its name says; else null. */
+    private fun namedVenue(c: Command, what: String): com.optionslab.ira.Requests.Venue? {
+        val one = c.kind == Command.Kind.CLOSE_ONE || c.kind == Command.Kind.CANCEL_ONE
+        if (!one) return null
+        if (Regex("\\bzerodha\\b", RegexOption.IGNORE_CASE).containsMatchIn(what)) return com.optionslab.ira.Requests.Venue.ZERODHA
+        if (Regex("\\bpaper\\b", RegexOption.IGNORE_CASE).containsMatchIn(what)) return com.optionslab.ira.Requests.Venue.PAPER
+        return null
+    }
+
+    /**
+     * [c]'s label at once, before anything is read (the request is never held up by a read): no order, null; one named
+     * position or order, its own account; otherwise as the app stands - Paper + Zerodha while Zerodha is logged in
+     * (never "Paper" on a guess), Paper when it is not. [venueOf] then corrects it from what is open.
+     */
+    fun venueAtOnce(c: Command, what: String): com.optionslab.ira.Requests.Venue? {
+        if (!sendsOrders(c)) return null
+        return namedVenue(c, what)
+            ?: if (runCatching { Broker.loggedIn }.getOrDefault(true)) com.optionslab.ira.Requests.Venue.PAPER_ZERODHA
+            else com.optionslab.ira.Requests.Venue.PAPER
     }
 
     /** Open orders: the paper account's, then Zerodha's (when logged in). */

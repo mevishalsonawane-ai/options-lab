@@ -47,6 +47,12 @@ class ChargesTest {
         assertNull(Ask.parse("how much did I pay in brokerage this month").order)
         assertEquals(setOf(Section.CHARGES), AppAnswers.sections("how much did I pay in charges this week"))
         assertEquals(setOf(Section.CHARGES), AppAnswers.sections("which trades cost me most in charges"))
+        // "aaj ke charges" is read as "today charges" (Ask.reading) - still the charges route.
+        for (q in listOf("aaj ke charges", "aaj ka brokerage", "aaj ki fees", "today's charges")) {
+            assertTrue(Charges.asked(q), q)
+            assertEquals(setOf(Section.CHARGES), AppAnswers.sections(q), q)
+        }
+        assertEquals(Charges.Span.TODAY, Charges.span("aaj ke charges"))
         // An account answer: not read out on a locked phone to anyone but Boss's voice.
         assertEquals("Unlock the phone to hear your account.", LockRule.refuse(locked = true, acts = false, account = true, boss = false))
     }

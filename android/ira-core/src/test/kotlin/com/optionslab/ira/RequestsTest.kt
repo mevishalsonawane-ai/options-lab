@@ -12,6 +12,30 @@ class RequestsTest {
                   symbol: String? = null) =
         Requests.RequestView(id, kind, title, title, null, Requests.Venue.NONE, asked, lapses, symbol)
 
+    @Test fun theFingerprintAndOneTapAreSaidAsTheyAre() {
+        val z = { kind: Requests.Kind, what: String, fp: Boolean, venue: Requests.Venue ->
+            Requests.RequestView(9, kind, what, what, null, venue, 0, null, fingerprint = fp) }
+        val exitFp = z(Requests.Kind.EXIT, "exit everything", true, Requests.Venue.PAPER_ZERODHA)
+        val exitNoFp = z(Requests.Kind.EXIT, "exit everything", false, Requests.Venue.PAPER_ZERODHA)
+        val close = z(Requests.Kind.CLOSE, "close NIFTY CE", false, Requests.Venue.ZERODHA)
+        val cancel = z(Requests.Kind.COMMAND, "cancel all orders", false, Requests.Venue.PAPER_ZERODHA)
+        val guard = z(Requests.Kind.GUARD, "set a stop at 120", false, Requests.Venue.ZERODHA)
+        val paper = z(Requests.Kind.CLOSE, "close NIFTY CE", false, Requests.Venue.PAPER)
+        assertEquals("A yes on it needs your fingerprint.", Requests.yesLine(exitFp))
+        assertEquals("Real money: one tap closes real positions - no fingerprint asked.", Requests.yesLine(exitNoFp))
+        assertEquals("Real money: one tap closes real positions - no fingerprint asked.", Requests.yesLine(close))
+        assertEquals("Real money: one tap cancels real orders - no fingerprint asked.", Requests.yesLine(cancel))
+        assertTrue(Requests.yesLine(guard)!!.startsWith("Real money: one tap"))
+        assertNull(Requests.yesLine(paper))
+        // The panel's note names the fingerprint only when a card asks for it, and says one tap closes real positions plainly.
+        val closeOnly = Requests.panelNote(listOf(close))
+        assertFalse(closeOnly.contains("fingerprint on a yes"), closeOnly)
+        assertTrue(closeOnly.contains("one tap closes real positions"), closeOnly)
+        assertTrue(Requests.panelNote(listOf(exitFp)).contains("\"Fingerprint needed\""))
+        val paperOnly = Requests.panelNote(listOf(paper))
+        assertFalse(paperOnly.contains("fingerprint") || paperOnly.contains("one tap"), paperOnly)
+    }
+
     @Test fun titlesAreShortAndWhyDropsTheConfirmTail() {
         assertEquals("stop ORB", Requests.title("stop ORB"))
         assertEquals("buy 1 lot of the NIFTY call at the money", Requests.title("buy 1 lot of the NIFTY call at the money, nearest expiry, with a 15% stop"))

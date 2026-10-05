@@ -99,6 +99,7 @@ object IraHub {
         val nightlyAt: Instant? = null,                // the last evening review
         val best: List<PatternBook.Entry> = emptyList(), // the patterns that went their way most often so far
         val pending: Set<Long> = emptySet(),            // actions waiting for Confirm
+        val requestsRev: Long = 0,                      // bumped when a waiting request's view changes (its venue worked out)
     )
 
     /** One session's review: the patterns Ira saw on the index charts (15 and 60 minutes) and how many went their way. */
@@ -4011,6 +4012,8 @@ object IraHub {
     fun requestsOf(s: State): List<com.optionslab.ira.Requests.RequestView> {
         if (GOLD_ONLY_TALK) return emptyList()
         val acts = synchronized(actions) { s.pending.mapNotNull { id -> requestMeta[id]?.takeIf { actions.containsKey(id) } } }
+            // A yes that asks for the fingerprint: the hub's own gate ([needsFingerprint]), never guessed from the venue.
+            .map { rv -> rv.copy(fingerprint = runCatching { needsFingerprint(rv.id) }.getOrDefault(rv.venue.real)) }
         val now = System.currentTimeMillis()
         val strategies = s.proposals.filter { it.status == Proposal.NEW }.map { p ->
             val seen = synchronized(strategySeen) { strategySeen.getOrPut(p.id) { now } }
@@ -4120,6 +4123,22 @@ object IraHub {
     private fun modeVenue(): com.optionslab.ira.Requests.Venue =
         if (runCatching { com.optionslab.app.data.Broker.loggedIn }.getOrDefault(true)) com.optionslab.ira.Requests.Venue.PAPER_ZERODHA
         else com.optionslab.ira.Requests.Venue.PAPER
+
+    /**
+     * The waiting request [id]'s venue, worked out in the background from what is open ([work]: [IraActions.venueOf]'s
+     * reads) after it was made with its at-once label - the request never waits on the reads. Set only while [id] still
+     * waits, and only from a read (null, nothing worked out: the label stays as it is - never "Paper" on a guess).
+     */
+    private fun venueLater(id: Long, work: suspend () -> com.optionslab.ira.Requests.Venue?) {
+        scope.launch {
+            val v = runCatching { work() }.getOrNull() ?: return@launch
+            val changed = synchronized(actions) {
+                val rv = requestMeta[id]
+                if (rv != null && actions.containsKey(id) && rv.venue != v) { requestMeta[id] = rv.copy(venue = v); true } else false
+            }
+            if (changed) _state.update { it.copy(requestsRev = it.requestsRev + 1) }
+        }
+    }
 
     /**
      * "Stop strategy 1", "cancel all orders", "switch to live"... In Jarvis what adds risk runs at once; what stops or
@@ -4485,10 +4504,12 @@ object IraHub {
             // kill switch, autopilot, Jarvis's own limits) waits for Confirm - in the real app too (review, 3 Oct).
             if (c.kind.reduces || !com.optionslab.app.BuildConfig.JARVIS || confirmAlways || c.kind !in AT_ONCE) {
                 // The emergency exit asks for the fingerprint on the screen (or Boss's own voice, aloud). An exit, a close
-                // or a cancel is labelled by what is open now (Paper, Zerodha, or both); anything else sends no order.
-                val cmdVenue = IraActions.venueOf(c, what)
-                pend(what, suspend { IraActions.verified(c.kind, act()) }, "Tap Confirm to ${what}.", exit = c.kind == com.optionslab.ira.Command.Kind.EXIT_ALL,
-                    venue = cmdVenue)
+                // or a cancel is labelled by what is open now (Paper, Zerodha, or both); anything else sends no order. The
+                // request is made at once with the app's standing label (never waiting on a read - least of all the
+                // emergency exit); what is open is read in the background and corrects the label while it still waits.
+                val cmdId = pend(what, suspend { IraActions.verified(c.kind, act()) }, "Tap Confirm to ${what}.", exit = c.kind == com.optionslab.ira.Command.Kind.EXIT_ALL,
+                    venue = IraActions.venueAtOnce(c, what))
+                venueLater(cmdId) { IraActions.venueOf(c, what) }
             } else reply(IraActions.run(what, suspend { IraActions.verified(c.kind, act()) }), whole = true)
         }
     }
@@ -4503,16 +4524,17 @@ object IraHub {
         scope.launch {
             // A question in the plan (no command) is answered at its turn, after the steps before it were done.
             val cmds = steps.map { Ask.parse(it).command }
-            // Where the plan's steps would send orders (the Requests panel's label): any exit, close or cancel by what is open.
-            val planVenues = ArrayList<com.optionslab.ira.Requests.Venue?>()
+            // Where the plan's steps would send orders (the Requests panel's label): any exit, close or cancel by what is open
+            // - labelled at once as the app stands, then read in the background, the steps side by side.
+            val planSteps = ArrayList<Pair<com.optionslab.ira.Command, String>>()
             for ((i, c) in cmds.withIndex()) {
                 if (c == null) continue
                 val (what, act) = runCatching { IraActions.prepare(c) }.getOrElse { ("I could not do that: ${it.message}") to null }
                 if (act == null) { reply("Step ${i + 1} (\"${steps[i]}\") cannot be done: $what Nothing in the plan was done.", whole = true); return@launch }
-                planVenues += IraActions.venueOf(c, what)
+                planSteps += c to what
             }
             val plan = com.optionslab.ira.Plan.say(steps)
-            pend("this plan: $plan", suspend {
+            val planId = pend("this plan: $plan", suspend {
                 val done = ArrayList<Pair<String, String>>()
                 for ((i, c) in cmds.withIndex()) {
                     if (c == null) {
@@ -4530,7 +4552,13 @@ object IraHub {
                 com.optionslab.ira.Plan.report(done, steps.size)
             }, "My plan, Boss: $plan. Tap Confirm and I'll do them in order, stopping if one fails.",
                 exit = cmds.any { it?.kind == com.optionslab.ira.Command.Kind.EXIT_ALL }, kind = com.optionslab.ira.Requests.Kind.PLAN,
-                venue = com.optionslab.ira.Requests.venueOf(planVenues))
+                venue = com.optionslab.ira.Requests.venueOf(planSteps.map { (c, what) -> IraActions.venueAtOnce(c, what) }))
+            if (planSteps.any { (c, _) -> IraActions.sendsOrders(c) }) venueLater(planId) {
+                coroutineScope {
+                    val read = planSteps.map { (c, what) -> async { IraActions.venueOf(c, what) } }.awaitAll()
+                    com.optionslab.ira.Requests.venueOf(read)
+                }
+            }
             IraActivity.add("Planned ${steps.size} steps: $plan")
         }
     }

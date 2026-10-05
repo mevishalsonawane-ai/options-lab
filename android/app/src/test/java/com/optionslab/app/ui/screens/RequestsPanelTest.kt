@@ -59,6 +59,9 @@ class RequestsPanelTest {
         // (Exits, closes and cancels are labelled by what is open: RequestsTest and IraActions.venueOf.)
         val view = IraHub.requestsOf(IraHub.state.value).single()
         assertEquals(com.optionslab.ira.Requests.Venue.NONE, view.venue)
+        // No fingerprint is asked for it, so the card never says so.
+        assertFalse(view.fingerprint)
+        assertFalse(compose.has(com.optionslab.ira.Requests.FINGERPRINT_MARK))
         compose.waitForText("No order")
         // The chat line carries the full what, never only the short title.
         assertTrue(IraHub.state.value.messages.last().text, IraHub.state.value.messages.last().text.contains(view.what.trim().trimEnd('.')))

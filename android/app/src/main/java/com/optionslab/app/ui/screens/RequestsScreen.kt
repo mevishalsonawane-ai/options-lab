@@ -61,7 +61,8 @@ fun RequestsPanel(onClose: () -> Unit) {
         }
         if (gold) item { LedgerCard { Note(Requests.GOLD) } }
         else if (shown.isEmpty()) item { LedgerCard { Text(Requests.EMPTY, style = Type.body.copy(color = p.ink)) } }
-        else item { Note("Yes goes through the same checks as ever. Closing and protecting are one tap by design; a new trade with real money, and the emergency exit, need your fingerprint (on a phone without one, the app's lock covers them). A request lapses by itself, and nothing is done.") }
+        // The fingerprint is named only where the hub's own gate asks for it (RequestView.fingerprint), never from the venue.
+        else item { Note(Requests.panelNote(shown)) }
         items(shown, key = { "w${it.kind.name}${it.id}" }) { v -> RequestCard(v, now) }
         if (!gold && recent.isNotEmpty()) {
             item { Flourish("Recent", Modifier.padding(top = 8.dp)) }
@@ -80,6 +81,10 @@ private fun RequestCard(v: Requests.RequestView, now: Long) {
             Spacer(Modifier.width(8.dp))
             Text(v.venue.label, style = Type.label.copy(color = if (live) p.oxblood else if (v.venue == Requests.Venue.PAPER) p.verdigris else p.inkSoft,
                 fontSize = 12.sp, fontWeight = FontWeight.SemiBold))
+            if (v.fingerprint) {
+                Spacer(Modifier.width(8.dp))
+                Text(Requests.FINGERPRINT_MARK, style = Type.label.copy(color = p.oxblood, fontSize = 12.sp, fontWeight = FontWeight.SemiBold))
+            }
         }
         // The short title is the heading only; the full what is under it, never cut (an exit or a plan is shown whole).
         Text(v.title.replaceFirstChar { it.uppercase() }, style = Type.title.copy(color = p.ink, fontSize = 15.sp), modifier = Modifier.padding(top = 4.dp))
@@ -97,6 +102,8 @@ private fun RequestCard(v: Requests.RequestView, now: Long) {
             if (folds) Text(if (open) "Show less" else "Show all details", style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp),
                 modifier = Modifier.clickable { open = !open }.padding(vertical = 4.dp))
         }
+        // Real money without the fingerprint is said plainly: one tap ("one tap closes real positions").
+        if (!v.fingerprint) Requests.yesLine(v)?.let { Note(it) }
         Note(Requests.askedText(v.askedAt, now) + " · " + Requests.lapseText(v.lapsesAt, now))
         // The very buttons the chat shows under the request: the hub's confirm and decline, never a path of their own.
         if (v.kind == Requests.Kind.STRATEGY) ProposalActions(v.id) else ActionConfirm(v.id, yes = "Yes, approve", no = "No, reject")

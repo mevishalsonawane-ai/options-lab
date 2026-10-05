@@ -49,11 +49,13 @@ object Requests {
      * [why]: one line, or null; [askedAt] / [lapsesAt]: epoch milliseconds ([lapsesAt] null: it does not lapse by itself).
      * [symbol], [qty] and [price]: as known when asked (null when not an order or not known yet). [details]: the whole of
      * what Jarvis said with it (a news trade's risk, IV line, cautions, turn-downs and confidence), or null.
+     * [fingerprint]: a yes on it asks for Boss's fingerprint - the hub's own gate (the emergency exit, or a news trade
+     * going live, on a phone with a fingerprint). Words only here: the gate itself stays the hub's.
      */
     data class RequestView(
         val id: Long, val kind: Kind, val title: String, val what: String, val why: String?, val venue: Venue,
         val askedAt: Long, val lapsesAt: Long?, val symbol: String? = null, val qty: String? = null, val price: String? = null,
-        val details: String? = null,
+        val details: String? = null, val fingerprint: Boolean = false,
     ) {
         /** Can a spoken yes or no answer it? (A strategy is approved on the screen only.) */
         val voiced: Boolean get() = kind != Kind.STRATEGY
@@ -100,6 +102,43 @@ object Requests {
     /** The plain spoken ask: "Request: <title>. Shall I <full what>? Yes or no?" - the what never shortened. */
     fun ask(title: String, what: String): String =
         if (same(title, what)) "Request: Shall I ${plain(what)}? Yes or no?" else "Request: ${plain(title)}. Shall I ${plain(what)}? Yes or no?"
+
+    /** The card's mark for a request whose yes asks for the fingerprint. */
+    const val FINGERPRINT_MARK = "Fingerprint needed"
+
+    private val CANCELS = Regex("\\bcancel", RegexOption.IGNORE_CASE)
+    private val CLOSES = Regex("\\b(close|closes|closing|exit|exits|square)", RegexOption.IGNORE_CASE)
+
+    private fun trade(v: RequestView) = v.kind == Kind.TRADE || v.kind == Kind.SOLO
+
+    /**
+     * What a yes on [v] needs, said plainly: the fingerprint when the hub asks for it ([RequestView.fingerprint]); real
+     * money without it is one tap, said as such ("one tap closes real positions"); nothing real, null.
+     */
+    fun yesLine(v: RequestView): String? = when {
+        v.fingerprint -> "A yes on it needs your fingerprint."
+        !v.venue.real -> null
+        trade(v) -> "Real money: no fingerprint is asked for it on this phone, so one tap approves it."
+        v.kind == Kind.GUARD -> "Real money: one tap places the stop at Zerodha - no fingerprint asked."
+        CANCELS.containsMatchIn(v.what) && !CLOSES.containsMatchIn(v.what) -> "Real money: one tap cancels real orders - no fingerprint asked."
+        else -> "Real money: one tap closes real positions - no fingerprint asked."
+    }
+
+    /**
+     * The panel's note over the waiting requests [shown]: every yes goes through the same checks; the fingerprint is named
+     * only when one of them asks for it, and a real-money close or protect without it is said plainly to be one tap.
+     */
+    fun panelNote(shown: List<RequestView>): String {
+        val out = ArrayList<String>()
+        out += "Yes goes through the same checks as ever."
+        if (shown.any { it.fingerprint }) out += "A card marked \"$FINGERPRINT_MARK\" asks for your fingerprint on a yes."
+        if (shown.any { !it.fingerprint && it.venue.real && !trade(it) })
+            out += "Closing and protecting are one tap by design: on Zerodha, one tap closes real positions."
+        if (shown.any { !it.fingerprint && it.venue.real && trade(it) })
+            out += "No fingerprint is asked on this phone for a real-money trade; the app's lock covers it."
+        out += "A request lapses by itself, and nothing is done."
+        return out.joinToString(" ")
+    }
 
     /** Details longer than this are folded in the panel (a tap shows them whole). */
     const val DETAILS_FOLD = 160

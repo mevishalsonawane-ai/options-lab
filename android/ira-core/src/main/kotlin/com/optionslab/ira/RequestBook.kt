@@ -111,7 +111,7 @@ object RequestBook {
             parts += Requests.askedText(v.askedAt, now)
             parts += Requests.lapseText(v.lapsesAt, now)
             var line = parts.joinToString(". ") + "."
-            if (v.venue.real) line += " A yes on it needs your fingerprint."
+            Requests.yesLine(v)?.let { line += " $it" }
             if (!v.voiced) line += " Approved on the Requests screen only."
             out += line
         }
