@@ -480,6 +480,37 @@ internal object IraCoach {
         IraHub.note(line); JarvisVoice.announce(line); Automations.acted(Automations.Auto.VIX, line)
     }
 
+    /** The end of the last sharp move told for each index (day|market): one move is told once. */
+    private val sharpTold = HashMap<String, LocalDateTime>()
+
+    /**
+     * Nifty or BankNifty moving sharply within minutes (market hours): what coincided - the headlines published around
+     * then, India VIX and the other indices over the same minutes - told once per move, in full in the chat and briefly
+     * aloud. Timing only, never a cause; words only.
+     */
+    fun sharpMoveWatch() {
+        if (!com.optionslab.app.BuildConfig.JARVIS || com.optionslab.app.BuildConfig.GOLD || !Automations.on(Automations.Auto.SHARPMOVE) ||
+            !com.optionslab.app.data.Market.isOpen()) return
+        val day = com.optionslab.app.data.Market.today()
+        val now = LocalDateTime.now(IST)
+        val bars = (com.optionslab.ira.SharpMove.INDICES + com.optionslab.ira.Market.VIX).associateWith { IraHub.recentBars(it) }
+        for (m in listOf(com.optionslab.ira.Market.NIFTY, com.optionslab.ira.Market.BANKNIFTY)) {
+            val b = bars[m].orEmpty()
+            if (b.lastOrNull()?.t?.toLocalDate() != day) continue
+            val mv = com.optionslab.ira.SharpMove.latest(m, b) ?: continue
+            val key = "$day|${m.name}"
+            val told = synchronized(sharpTold) {
+                if (!com.optionslab.ira.SharpMove.worthTelling(mv, now, sharpTold[key])) false else { sharpTold[key] = mv.to; true }
+            }
+            if (!told) continue
+            val expiry = runCatching { com.optionslab.app.data.Market.isExpiryDay(m.name) }.getOrDefault(false)
+            val c = com.optionslab.ira.SharpMove.context(mv, bars, IraHub.state.value.news, IST)
+            val text = com.optionslab.ira.SharpMove.say(mv, c, expiry = expiry)
+            IraHub.appContext()?.let { JarvisPopup.show(it, "${m.label} ${"%+.2f%%".format(java.util.Locale.ENGLISH, mv.pct)} in ${mv.minutes} minutes", text) }
+            IraHub.note(text); JarvisVoice.announce(com.optionslab.ira.SharpMove.spoken(mv, c)); Automations.acted(Automations.Auto.SHARPMOVE, text)
+        }
+    }
+
     /** "Explain my position": each open position's P&L, room to its stop and target, time left and time decay. */
     suspend fun explainPositions(): List<String> {
         val prot = runCatching { com.optionslab.app.data.Protections.active() }.getOrDefault(emptyList())

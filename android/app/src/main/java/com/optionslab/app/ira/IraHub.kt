@@ -1830,6 +1830,13 @@ object IraHub {
             return if (kind == com.optionslab.ira.MarketStory.Kind.STORY) com.optionslab.ira.MarketStory.story(bars, _state.value.news, now, today, IST)
                 else com.optionslab.ira.MarketStory.different(bars, now, today)
         }
+        // "Explain this move", "what coincided with that fall", "what happened at 11:20": the move and what coincided with it
+        // (headlines, VIX, the other indices in the same minutes) - before the why-answer, which some of these words reach.
+        com.optionslab.ira.SharpMove.asked(q)?.let { a ->
+            val mk = parsed.markets.firstOrNull { it in com.optionslab.ira.SharpMove.INDICES } ?: IraMarket.NIFTY
+            val bars = (com.optionslab.ira.SharpMove.INDICES + IraMarket.VIX).associateWith { histories[it]?.bars.orEmpty() }
+            return com.optionslab.ira.SharpMove.answer(a, mk, bars, _state.value.news, IST, expiry = expiryToday(mk))
+        }
         // "How is expiry going?": the expiry-day companion's reads today (none yet: the usual answer).
         if (com.optionslab.ira.ExpiryDay.asked(q)) IraCoach.expirySoFar()?.let { return it }
         // "Why did Nifty fall in the last hour": the why-story and the news answer it, not bare figures ("how much did it
