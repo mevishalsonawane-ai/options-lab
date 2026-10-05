@@ -53,7 +53,8 @@ object CutIn {
             silences -> Decision(false, Why.SILENCES, ms)
             headset -> Decision(true, Why.HEADSET, ms)
             echo == Echo.APPLIED -> Decision(true, Why.ECHO_APPLIED, ms)
-            echo == Echo.AVAILABLE -> Decision(true, Why.ECHO_AVAILABLE, ms)
+            // The phone has echo cancelling but not on the recognizer's microphone: not enough on its own (his voice could leak in).
+            echo == Echo.AVAILABLE -> Decision(false, Why.ECHO_AVAILABLE, ms)
             else -> Decision(false, Why.NO_SHIELD, ms)
         }
     }

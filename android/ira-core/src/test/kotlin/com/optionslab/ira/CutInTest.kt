@@ -10,7 +10,7 @@ class CutInTest {
     @Test fun onByItselfOnlyWithAHeadsetOrEchoCancelling() {
         assertEquals(CutIn.Why.HEADSET, CutIn.decide(null, false, true, CutIn.Echo.NONE).also { assertTrue(it.on) }.why)
         assertEquals(CutIn.Why.ECHO_APPLIED, CutIn.decide(null, false, false, CutIn.Echo.APPLIED).also { assertTrue(it.on) }.why)
-        assertEquals(CutIn.Why.ECHO_AVAILABLE, CutIn.decide(null, false, false, CutIn.Echo.AVAILABLE).also { assertTrue(it.on) }.why)
+        assertEquals(CutIn.Why.ECHO_AVAILABLE, CutIn.decide(null, false, false, CutIn.Echo.AVAILABLE).also { assertFalse(it.on) }.why)  // not on the recognizer's mic: off
         // Nothing between his voice and the microphone: off, as before.
         val plain = CutIn.decide(null, false, false, CutIn.Echo.NONE)
         assertFalse(plain.on); assertEquals(CutIn.Why.NO_SHIELD, plain.why)
