@@ -165,6 +165,25 @@ internal object IraBots {
         return com.optionslab.ira.ArmDay.answer(q, trades, bars, v.range, com.optionslab.app.data.Market.now().toLocalDateTime())
     }
 
+    /**
+     * "Am I net long or short?" ([com.optionslab.ira.NetLean]): Boss's open legs (Paper, and Zerodha when read) with each leg's
+     * delta now, split by owner - the arms' open trades from their own book, other automations' symbols, the rest his own -
+     * and each index's price now. Reads only; nothing is placed, changed or closed.
+     */
+    suspend fun netLean(market: com.optionslab.ira.Market?): String {
+        val (legs, zerodha) = IraCoach.openLegsRead()
+        val arms = runCatching {
+            com.optionslab.app.data.OrbArms.view().arms.flatMap { it.today }.filter { it.open }
+                .map { com.optionslab.ira.NetLean.ArmLeg(it.arm, it.symbol, it.qty, it.live) }
+        }.getOrDefault(emptyList())
+        val armSymbols = arms.map { it.symbol }.toSet()
+        val others = runCatching { IraCoach.botSymbols() }.getOrDefault(emptySet()) - armSymbols
+        val spots = com.optionslab.ira.Market.values().mapNotNull { m ->
+            runCatching { IraHub.state.value.snaps[m]?.price }.getOrNull()?.let { m.name to it }
+        }.toMap()
+        return com.optionslab.ira.NetLean.answer(com.optionslab.ira.NetLean.Input(legs, arms, others, spots, zerodha, market))
+    }
+
     @Volatile private var lastPass = 0L
 
     /**

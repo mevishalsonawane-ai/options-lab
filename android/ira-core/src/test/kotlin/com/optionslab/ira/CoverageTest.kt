@@ -29,7 +29,7 @@ class CoverageTest {
         if (Routine.asked(said) || Routine.forgetAsked(said)) return listOf(Kind.ACCOUNT)
         val asSaid = Sources.asked(said) || AboutBoss.knowAsked(said) || Memory.recallAsked(said) || Memory.forgetAsked(said) || PatternCalls.asked(said) || TrendReads.asked(said) || SinceMorning.asked(said) || ExpiryPin.asked(said) != null ||
             Learnings.asked(said) != null || Learnings.undoAsked(said) || NewsMoves.asked(said) != null || PreMarket.asked(said) ||
-            ChainDrift.asked(said) != null || Headroom.asked(said) != null || ArmDay.asked(said) != null || BotTrades.asked(said) != null || DayClock.asked(said) != null ||
+            ChainDrift.asked(said) != null || Headroom.asked(said) != null || ArmDay.asked(said) != null || NetLean.asked(said) || BotTrades.asked(said) != null || DayClock.asked(said) != null ||
             SaidAbout.asked(said) != null || GapRecord.asked(said) != null || Causes.asked(said) != null || WeekAhead.asked(said) != null || AskedAgain.asked(said) || FigureFirst.asked(said) != null || Weekdays.asked(said) != null || DayCompare.asked(said) != null ||
             RangeBreaks.asked(said) != null || PriorDay.asked(said) != null || LastHour.asked(said) != null || InsideDays.asked(said) != null || FirstMove.asked(said) != null || VixNext.asked(said) != null || NeedsTrue.asked(said) || Clarity.asked(said) != null || ZerodhaSession.asked(said) != null || Tour.asked(said) || WrongThing.asked(said) != null || WrongThing.objected(said) || OrderWhy.asked(said) != null || ArmHabits.asked(said) || MorningSense.asked(said) != null || HonestStars.asked(said) != null || RelayHealth.asked(said) != null || StreamHealth.asked(said) || SwitchOff.asked(said) != null
         return ((if (asSaid) null else Understand.questions(null, said)) ?: listOf(said)).map { kind(it, 0) }
@@ -56,6 +56,7 @@ class CoverageTest {
             if (PreMarket.asked(q)) return Kind.ACCOUNT
             if (Headroom.asked(q) != null) return Kind.ACCOUNT
             if (ArmDay.asked(q) != null) return Kind.ACCOUNT
+            if (NetLean.asked(q)) return Kind.ACCOUNT
             if (BotTrades.asked(q) != null) return Kind.ACCOUNT
             if (SwitchOff.asked(q) != null) return Kind.ACCOUNT
             if (SaidAbout.asked(q) != null) return Kind.ACCOUNT
@@ -450,7 +451,7 @@ class CoverageTest {
      * Which feature answers [said] in Jarvis (not GOLD), taking IraHub.ask's branches in its own order (app/.../IraHub.kt,
      * ask(): Boss's learned words and routine as said, fillers and follow-ups, then - for a question not said with
      * something to do (IraHub's `bundled`, [Bundle.acts]) - DayJournal, AlertSense, Airtime, Hearing, PatternCalls, TrendReads, Clarity,
-     * WordFit, AskedAgain, FigureFirst, WrongThing, ArmHabits, MorningSense, HonestStars, NewsMoves, TaxExport, Learnings, PreMarket, Headroom, ArmDay, BotTrades, SaidAbout, WeekAhead, DataAge, Honest, Thinking,
+     * WordFit, AskedAgain, FigureFirst, WrongThing, ArmHabits, MorningSense, HonestStars, NewsMoves, TaxExport, Learnings, PreMarket, Headroom, ArmDay, NetLean, BotTrades, SaidAbout, WeekAhead, DataAge, Honest, Thinking,
      * Consistency, CoPilot, SinceMorning, ExpiryPin, ChainDrift, ChainIntel, DayClock, GapRecord, RangeBreaks, PriorDay, LastHour, InsideDays, FirstMove, VixNext, Weekdays, DayCompare, Structure, MindChange, Breadth, TradeCase,
      * Scenarios, Causes, Agenda, Improve; the reminders and Jarvis's own checks,
      * Distance... Outlook, NewsDesk, down to the account's sections (PositionHealth, BotHealth and NeedsTrue are its HEALTH,
@@ -470,7 +471,7 @@ class CoverageTest {
             Corrections.wordsAsked(said) || Corrections.forgetWordAsked(said) != null || Routine.asked(said) || Routine.forgetAsked(said) ||
             PatternCalls.asked(said) || TrendReads.asked(said) || SinceMorning.asked(said) || ExpiryPin.asked(said) != null || Learnings.asked(said) != null || Learnings.undoAsked(said) || NewsMoves.asked(said) != null ||
             PreMarket.asked(said) ||
-            ChainDrift.asked(said) != null || Headroom.asked(said) != null || ArmDay.asked(said) != null || BotTrades.asked(said) != null || NeedsTrue.asked(said) || Clarity.asked(said) != null || DayClock.asked(said) != null ||
+            ChainDrift.asked(said) != null || Headroom.asked(said) != null || ArmDay.asked(said) != null || NetLean.asked(said) || BotTrades.asked(said) != null || NeedsTrue.asked(said) || Clarity.asked(said) != null || DayClock.asked(said) != null ||
             SaidAbout.asked(said) != null || GapRecord.asked(said) != null || WordFit.asked(said) != null || Causes.asked(said) != null || WeekAhead.asked(said) != null || AskedAgain.asked(said) || FigureFirst.asked(said) != null || MindChange.asked(said) || Weekdays.asked(said) != null || DayCompare.asked(said) != null || RangeBreaks.asked(said) != null || PriorDay.asked(said) != null || LastHour.asked(said) != null || InsideDays.asked(said) != null || FirstMove.asked(said) != null || VixNext.asked(said) != null || ZerodhaSession.asked(said) != null || Tour.asked(said) || WrongThing.asked(said) != null || WrongThing.objected(said) || OrderWhy.asked(said) != null || ArmHabits.asked(said) || MorningSense.asked(said) != null || HonestStars.asked(said) != null || RelayHealth.asked(said) != null || StreamHealth.asked(said) || SwitchOff.asked(said) != null
         val qs = if (asSaid || understood || cleaned) null else Understand.questions(null, said)?.takeIf { it.isNotEmpty() && it != listOf(said) }
         if (qs != null) return if (qs.size == 1) feature(qs[0], cleaned = true) else qs.joinToString(" & ") { feature(it, understood = true) }
@@ -502,6 +503,7 @@ class CoverageTest {
         if (alone && PreMarket.asked(q)) return "PreMarket"
         if (alone && Headroom.asked(q) != null) return "Headroom"
         if (alone && ArmDay.asked(q) != null) return "ArmDay"
+        if (alone && NetLean.asked(q)) return "NetLean"
         if (alone && BotTrades.asked(q) != null) return "BotTrades"
         if (alone && SwitchOff.asked(q) != null) return "SwitchOff"
         if (alone && SaidAbout.asked(q) != null) return "SaidAbout"
@@ -1207,6 +1209,12 @@ class CoverageTest {
             ("what went wrong with range fade today" to "ArmDay") to ("did my bots follow their rules" to "BotTrades"),
             ("orb ka aaj loss kyun hua" to "ArmDay") to ("mere bots ne aaj kya kiya" to "BotTrades"),
             ("why was today a bad day for my bots" to "ArmDay") to ("why did my last trade lose" to "Account:LOSSES"),
+            // Reasoning round 17: which way the open book leans now, next to the what-if on it and the bots' trades today.
+            ("am i net long or short" to "NetLean") to ("are my bots fighting each other" to "BotTrades"),
+            ("do my bots contradict each other right now" to "NetLean") to ("any contradictions between my bots" to "BotTrades"),
+            ("which way am i leaning" to "NetLean") to ("did my bots take opposite sides" to "BotTrades"),
+            ("whats my net delta on banknifty" to "NetLean") to ("why did orb lose today" to "ArmDay"),
+            ("main long hoon ya short" to "NetLean") to ("mere bots ne aaj kya kiya" to "BotTrades"),
         )) { assertEquals(a.second, feature(a.first), a.first); assertEquals(b.second, feature(b.first), b.first) }
         // Boss's Hinglish what-if is a what-if; a forecast, advice or his own book in Hindi never is.
         for (s in listOf("kal nifty ka kya hoga", "nifty 200 points gir jayega kya", "agar nifty 1% gira to kya buy karu",

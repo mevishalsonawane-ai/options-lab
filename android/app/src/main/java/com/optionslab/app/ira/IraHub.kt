@@ -1231,7 +1231,7 @@ object IraHub {
                 com.optionslab.ira.NewsMoves.asked(q) != null || com.optionslab.ira.PreMarket.asked(q) ||
                 com.optionslab.ira.ChainDrift.asked(q) != null || com.optionslab.ira.SinceMorning.asked(q) ||
                 com.optionslab.ira.ExpiryPin.asked(q) != null ||
-                com.optionslab.ira.Headroom.asked(q) != null || com.optionslab.ira.ArmDay.asked(q) != null || com.optionslab.ira.BotTrades.asked(q) != null ||
+                com.optionslab.ira.Headroom.asked(q) != null || com.optionslab.ira.ArmDay.asked(q) != null || com.optionslab.ira.NetLean.asked(q) || com.optionslab.ira.BotTrades.asked(q) != null ||
                 com.optionslab.ira.SwitchOff.asked(q) != null ||
                 com.optionslab.ira.SaidAbout.asked(q) != null || com.optionslab.ira.WeekAhead.asked(q) != null ||
                 com.optionslab.ira.ZerodhaSession.asked(q) != null || com.optionslab.ira.OrderWhy.asked(q) != null || com.optionslab.ira.Tour.asked(q) ||
@@ -2182,6 +2182,20 @@ object IraHub {
             if (phoneLocked()) { reply(com.optionslab.ira.ArmDay.LOCKED); return true }
             val bars = listOf(IraMarket.BANKNIFTY, IraMarket.FINNIFTY).associate { m -> m.name to histories[m]?.bars.orEmpty() }
             scope.launch(Dispatchers.IO) { reply(runCatching { IraBots.armDay(armDayAsk, bars) }.getOrElse { "I could not set your bots' day beside the index just now, Boss." }) }
+            return true
+        }
+        // "Am I net long or short?", "which way am I leaning?", "what's my net delta?", "do my bots contradict each other right
+        // now?", "main long hoon ya short" ([com.optionslab.ira.NetLean]): the open book by index from each leg's delta now -
+        // the net rupees a point and which way it leans, who holds which side (each arm, other automations, his own Paper and
+        // Zerodha trades) and how much offsets, and a 1% move each way as a labelled conditional. Boss's account, so never on
+        // a locked phone; facts, never a forecast or advice - nothing is placed, changed or closed. (Not in IraGoldAlgo.)
+        val netLeanAsk = com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null &&
+            runCatching { com.optionslab.ira.NetLean.asked(q) }.getOrDefault(false)
+        if (netLeanAsk) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            if (phoneLocked()) { reply(com.optionslab.ira.NetLean.LOCKED); return true }
+            val market = runCatching { com.optionslab.ira.NetLean.market(q) }.getOrNull()
+            scope.launch(Dispatchers.IO) { reply(runCatching { IraBots.netLean(market) }.getOrElse { "I could not read which way your book leans just now, Boss." }) }
             return true
         }
         // "Explain my bots' trades today", "why did ORB take that trade?", "did my bots follow their rules?", "mere bots ne aaj kya
