@@ -79,10 +79,12 @@ class CollisionTest {
         "TopicLength" to { q -> TopicLength.asked(q) != null },
         "OutlookCheck" to { q -> OutlookCheck.asked(q) },
         "UsualIndex" to { q -> UsualIndex.asked(q) != null },
+        "Nicknames" to { q -> Nicknames.asked(q) != null },
         "Headroom" to { q -> Headroom.asked(q) != null },
         "ArmFit" to { q -> ArmFit.asked(q) },
         "WeakLink" to { q -> WeakLink.asked(q) },
         "ArmChange" to { q -> ArmChange.asked(q) },
+        "PnlGap" to { q -> PnlGap.asked(q) },
         "ArmDay" to { q -> ArmDay.asked(q) != null },
         "NetLean" to { q -> NetLean.asked(q) },
         "ExpiryEve" to { q -> ExpiryEve.asked(q) },
@@ -746,6 +748,11 @@ class CollisionTest {
         "do you know which index i usually mean" to "UsualIndex", "mera usual index kaunsa hai" to "UsualIndex",
         "use nifty when i dont name an index" to "UsualIndex", "reset my default index" to "UsualIndex", "don't assume my index" to "UsualIndex",
         "use nifty when i don't name one" to "UsualIndex", "mera usual index bhool jao" to "UsualIndex",
+        // ---- Nicknames: the words Boss uses for one arm or position, learned on his pick ----
+        "what nicknames do i use" to "Nicknames", "which nicknames do you know for my arms" to "Nicknames",
+        "what do i call my bots" to "Nicknames", "show my nicknames" to "Nicknames", "what nicknames have you learned" to "Nicknames",
+        "mere bots ke nicknames kya hain" to "Nicknames", "forget my nicknames for my arms" to "Nicknames", "forget my nicknames" to "Nicknames",
+        "clear the nicknames" to "Nicknames", "forget the names i use for my positions" to "Nicknames", "mere nicknames bhool jao" to "Nicknames",
         // ---- HonestStars: his confidence scores against their record ----
         "how honest are your stars" to "HonestStars", "do your 5 star ideas actually work" to "HonestStars",
         "tumhare confidence stars kitne sahi hain" to "HonestStars", "are your confidence ratings any good" to "HonestStars",
@@ -757,6 +764,12 @@ class CollisionTest {
         "how did my arms do this week versus last week" to "ArmChange", "compare my bots this week with last week" to "ArmChange",
         "week on week for my arms" to "ArmChange", "mere bots ka is hafte vs pichle hafte" to "ArmChange", "mere arms mein is hafte kya badla" to "ArmChange",
         "pichle hafte se mere bots mein kya badla" to "ArmChange", "my bots' results this week against last week" to "ArmChange",
+        // ---- PnlGap: today's paper P&L taken apart against what Boss expected ----
+        "why is my p&l different from what i expected" to "PnlGap", "why is my pnl lower than i expected" to "PnlGap",
+        "why is my p&l not what i expected" to "PnlGap", "my p&l doesn't add up" to "PnlGap", "break down my p&l" to "PnlGap",
+        "today's p&l breakdown" to "PnlGap", "how much of my p&l is realised" to "PnlGap", "realised vs unrealised" to "PnlGap",
+        "where did my p&l come from" to "PnlGap", "mera p&l expected se alag kyun hai" to "PnlGap", "aaj ka pnl itna kam kyun hai" to "PnlGap",
+        "mera p&l ka breakdown do" to "PnlGap",
         // ---- WeakLink: what most often went wrong in the arms' last paper trades ----
         "what's the weakest link in my setup" to "WeakLink", "what usually goes wrong in my paper trades" to "WeakLink",
         "where do my bots go wrong" to "WeakLink", "what do my losing trades have in common" to "WeakLink",
@@ -1119,8 +1132,8 @@ class CollisionTest {
     // ---- The audit's order is the hub's: read from IraHub.ask itself when the app's source is beside this module ----
 
     /** The question branches of IraHub.ask between the `bundled` read and the Plan block, in [CoverageTest.feature]'s order. */
-    private val HUB_ORDER = listOf("DayJournal", "AlertSense", "Airtime", "Hearing", "PatternCalls", "TrendReads", "OutsideApp", "Clarity", "WordFit", "AskedAgain", "FigureFirst", "WrongThing", "ArmHabits", "MorningSense", "HonestStars", "TalkHours", "MorningAsks", "TurnDowns", "TopicLength", "OutlookCheck", "UsualIndex", "NewsMoves",
-        "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmFit", "WeakLink", "ArmChange", "ArmDay", "NetLean", "ExpiryEve", "BeforeTomorrow", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "ZerodhaSession", "OrderWhy", "RelayHealth", "StreamHealth", "BatteryUse", "WatchAsk", "Tour", "DataAge", "Honest", "Thinking",
+    private val HUB_ORDER = listOf("DayJournal", "AlertSense", "Airtime", "Hearing", "PatternCalls", "TrendReads", "OutsideApp", "Clarity", "WordFit", "AskedAgain", "FigureFirst", "WrongThing", "ArmHabits", "MorningSense", "HonestStars", "TalkHours", "MorningAsks", "TurnDowns", "TopicLength", "OutlookCheck", "UsualIndex", "Nicknames", "NewsMoves",
+        "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmFit", "WeakLink", "ArmChange", "PnlGap", "ArmDay", "NetLean", "ExpiryEve", "BeforeTomorrow", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "ZerodhaSession", "OrderWhy", "RelayHealth", "StreamHealth", "BatteryUse", "WatchAsk", "Tour", "DataAge", "Honest", "Thinking",
         "SelfWhy", "Consistency", "CoPilot", "SinceMorning", "ExpiryPin", "ChainDrift", "ChainIntel", "DayClock", "GapRecord", "RangeBreaks", "PriorDay", "LastHour", "InsideDays", "FirstMove", "VixNext", "SplitDays", "RoundCloses", "MonthTurns", "LunchRange", "OpenHighLow", "BigCandles", "ExtremeCloses", "WeekRange", "Weekdays", "DayCompare", "LikeToday", "Structure", "MindChange", "Breadth",
         "TradeCase", "Scenarios", "Causes", "Agenda", "Improve")
 

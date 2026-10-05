@@ -225,6 +225,23 @@ internal object IraBots {
     }
 
     /**
+     * "Why is my P&L different from what I expected?" ([com.optionslab.ira.PnlGap]): today's paper P&L taken apart - each leg's
+     * booked and open part (as the positions screen shows them), the charges of today's trade legs, and each filled order's
+     * intended level (a limit's price, a stop's trigger; none for a market order) against its fill. Reads only; nothing is
+     * placed, changed or closed.
+     */
+    suspend fun pnlGap(): String {
+        val snap = com.optionslab.app.data.Paper.snapshot(com.optionslab.app.data.Paper.SHARED_QUOTE_MS)
+        val legs = snap.positions.positions.map { r -> com.optionslab.ira.PnlGap.Leg(r.symbol, r.todayRealizedPnl, r.totalPnlToday - r.todayRealizedPnl) }
+        val fills = snap.orders.orders.filter { it.status.lowercase() == "complete" && it.filledQuantity > 0 }.map { o ->
+            val type = o.priceType.uppercase()
+            val intended = when (type) { "LIMIT" -> o.price; "SL", "SL-M" -> o.triggerPrice; else -> 0.0 }
+            com.optionslab.ira.PnlGap.Fill(o.symbol, o.action.uppercase() == "BUY", type, intended.takeIf { it > 0 }, o.averagePrice, o.filledQuantity)
+        }
+        return com.optionslab.ira.PnlGap.answer(com.optionslab.ira.PnlGap.Day(legs, snap.trades.sumOf { it.charges }, snap.trades.size, fills))
+    }
+
+    /**
      * "What's changed in my arms' results this week vs last?" ([com.optionslab.ira.ArmChange]): each arm's switch and its closed
      * paper trades (the day each closed, rupees after charges), this week so far against last week. Reads only; nothing is
      * armed, stopped, placed or closed.

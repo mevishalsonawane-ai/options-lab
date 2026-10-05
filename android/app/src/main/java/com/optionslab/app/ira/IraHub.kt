@@ -1338,6 +1338,9 @@ object IraHub {
         // Words read as understood (a voice not recognised, the chat's confirm path, or a reading of his words): they are his
         // next words too, so the morning offer and the wait for a turn-down reason end here (never taken by them).
         if (com.optionslab.app.BuildConfig.JARVIS && understood) runCatching { IraTools.endWaits() }
+        // Boss's own words: anything but a command naming one arm or position ends the wait for his pick after "Which one?"
+        // ([com.optionslab.ira.Nicknames]). Words only; nothing is learned here.
+        if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !understood && !cleaned) runCatching { IraTools.nickHeard(q) }
         // Boss's bare "yes" as his very next words after the morning check offered his usual morning question
         // ([com.optionslab.ira.MorningAsks]): asked as that question - a market question only, checked again here, never an
         // order or a command. Any other words end the offer, and a yes while something waits for his yes or Confirm is never
@@ -1455,7 +1458,7 @@ object IraHub {
                 com.optionslab.ira.NewsMoves.asked(q) != null || com.optionslab.ira.PreMarket.asked(q) ||
                 com.optionslab.ira.ChainDrift.asked(q) != null || com.optionslab.ira.SinceMorning.asked(q) ||
                 com.optionslab.ira.ExpiryPin.asked(q) != null ||
-                com.optionslab.ira.Headroom.asked(q) != null || com.optionslab.ira.ArmFit.asked(q) || com.optionslab.ira.WeakLink.asked(q) || com.optionslab.ira.ArmChange.asked(q) || com.optionslab.ira.ArmDay.asked(q) != null || com.optionslab.ira.NetLean.asked(q) || com.optionslab.ira.BotTrades.asked(q) != null ||
+                com.optionslab.ira.Headroom.asked(q) != null || com.optionslab.ira.ArmFit.asked(q) || com.optionslab.ira.WeakLink.asked(q) || com.optionslab.ira.ArmChange.asked(q) || com.optionslab.ira.PnlGap.asked(q) || com.optionslab.ira.ArmDay.asked(q) != null || com.optionslab.ira.NetLean.asked(q) || com.optionslab.ira.BotTrades.asked(q) != null ||
                 com.optionslab.ira.ExpiryEve.asked(q) || com.optionslab.ira.BeforeTomorrow.asked(q) ||
                 com.optionslab.ira.SwitchOff.asked(q) != null ||
                 com.optionslab.ira.ReminderBook.listAsked(q) || com.optionslab.ira.ReminderBook.cancelOne(q) != null ||
@@ -1479,7 +1482,7 @@ object IraHub {
                 com.optionslab.ira.ArmHabits.asked(q) || com.optionslab.ira.MorningSense.asked(q) != null ||
                 com.optionslab.ira.HonestStars.asked(q) != null || com.optionslab.ira.TalkHours.asked(q) != null || com.optionslab.ira.MorningAsks.asked(q) != null || com.optionslab.ira.BatteryUse.asked(q) ||
                 com.optionslab.ira.TurnDowns.asked(q) != null || com.optionslab.ira.TopicLength.asked(q) != null || com.optionslab.ira.OutlookCheck.asked(q) ||
-                com.optionslab.ira.UsualIndex.asked(q) != null ||
+                com.optionslab.ira.UsualIndex.asked(q) != null || com.optionslab.ira.Nicknames.asked(q) != null ||
                 com.optionslab.ira.DayCompare.asked(q) != null || com.optionslab.ira.LikeToday.asked(q) }.getOrDefault(false)) {
             val prev = if (recent) _state.value.messages.lastOrNull { !it.fromIra }?.text else null
             val qs = runCatching { com.optionslab.ira.Understand.questions(prev, q) }.getOrNull()
@@ -2068,7 +2071,7 @@ object IraHub {
             backtestAsked(q, parsed); return
         }
         if (Topic.ACCOUNT in parsed.topics) { accountAsked(q); return }
-        if (Topic.COMMAND in parsed.topics) { commandAsked(q, parsed.command!!, confirmAlways = understood); return }
+        if (Topic.COMMAND in parsed.topics) { commandAsked(q, parsed.command!!, confirmAlways = understood, heard = !understood); return }
         // IraGoldAlgo brings no trade ideas (it only talks; its gold arms trade on paper by their own rules).
         if (Topic.SUGGEST in parsed.topics && com.optionslab.app.BuildConfig.GOLD) {
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, GOLD_TALK_ONLY)).takeLast(MAX_MESSAGES)) }; return }
@@ -2188,7 +2191,7 @@ object IraHub {
 
     /**
      * [ask]'s question branches on how Jarvis himself speaks and hears: AlertSense, Airtime, Hearing, PatternCalls,
-     * TrendReads, Clarity, WordFit, AskedAgain, FigureFirst, WrongThing, ArmHabits, MorningSense, HonestStars, TalkHours, MorningAsks, TurnDowns, TopicLength, OutlookCheck, UsualIndex - in [ask]'s order. True when one
+     * TrendReads, Clarity, WordFit, AskedAgain, FigureFirst, WrongThing, ArmHabits, MorningSense, HonestStars, TalkHours, MorningAsks, TurnDowns, TopicLength, OutlookCheck, UsualIndex, Nicknames - in [ask]'s order. True when one
      * took [q], answered exactly as before; each branch keeps its own guard (not [bundled], no order, no command).
      */
     private fun askedOfHisWays(q: String, parsed: com.optionslab.ira.Question, bundled: Boolean, understood: Boolean): Boolean {
@@ -2392,12 +2395,23 @@ object IraHub {
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, indexSaid)).takeLast(MAX_MESSAGES)) }
             return true
         }
+        // "What nicknames do I use?" / "forget my nicknames for my arms": the words Boss uses for one arm or position, each kept
+        // on his own pick after Jarvis asked which one ([com.optionslab.ira.Nicknames]). They name his arms, so named on an
+        // unlocked phone only; the undo works locked too. Understanding only - nothing learned acts. Not in IraGoldAlgo.
+        val nickAsk = if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null)
+            runCatching { com.optionslab.ira.Nicknames.asked(q) }.getOrNull() else null
+        if (nickAsk != null) {
+            val nickSaid = if (nickAsk == com.optionslab.ira.Nicknames.Request.RESET) IraTools.nickReset()
+                else if (phoneLocked()) com.optionslab.ira.Nicknames.LOCKED else IraTools.nickSay()
+            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, nickSaid)).takeLast(MAX_MESSAGES)) }
+            return true
+        }
         return false
     }
 
     /**
      * [ask]'s question branches on the records and Boss's own setup: NewsMoves, TaxRecords, Learnings (and its undo),
-     * PreMarket, Headroom, ArmFit, WeakLink, ArmChange, BotTrades, SwitchOff, SaidAbout, WeekAhead, ZerodhaSession, OrderWhy, RelayHealth, StreamHealth, BatteryUse, WatchAsk - in [ask]'s order. True when one
+     * PreMarket, Headroom, ArmFit, WeakLink, ArmChange, PnlGap, BotTrades, SwitchOff, SaidAbout, WeekAhead, ZerodhaSession, OrderWhy, RelayHealth, StreamHealth, BatteryUse, WatchAsk - in [ask]'s order. True when one
      * took [q], answered exactly as before; each branch keeps its own guard (not [bundled], no order, no command).
      */
     private fun askedOfRecords(q: String, parsed: com.optionslab.ira.Question, bundled: Boolean, understood: Boolean): Boolean {
@@ -2551,6 +2565,18 @@ object IraHub {
             _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
             if (phoneLocked()) { reply(com.optionslab.ira.ArmChange.LOCKED); return true }
             scope.launch(Dispatchers.IO) { reply(runCatching { IraBots.armChange() }.getOrElse { "I could not read your arms' paper weeks just now, Boss." }) }
+            return true
+        }
+        // "Why is my P&L different from what I expected?", "break down my P&L", "realised vs unrealised", "mera p&l expected se alag
+        // kyun hai" ([com.optionslab.ira.PnlGap]): today's paper P&L split into booked and open, the charges, and the slippage of
+        // orders that had an intended level (never guessed for a market order), the biggest contributor named. Boss's account,
+        // so never on a locked phone; facts only - nothing is placed, changed or closed. (Before ArmDay. Not in IraGoldAlgo.)
+        val pnlGapAsk = com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null &&
+            runCatching { com.optionslab.ira.PnlGap.asked(q) }.getOrDefault(false)
+        if (pnlGapAsk) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            if (phoneLocked()) { reply(com.optionslab.ira.PnlGap.LOCKED); return true }
+            scope.launch(Dispatchers.IO) { reply(runCatching { IraBots.pnlGap() }.getOrElse { "I could not read today's paper book just now, Boss." }) }
             return true
         }
         // "Why did my strategy lose today?", "why did ORB lose?", "what went wrong with Range Fade today?", "ORB ka aaj loss kyun
@@ -3828,12 +3854,20 @@ object IraHub {
 
     private val AT_ONCE = setOf(com.optionslab.ira.Command.Kind.ALARM_ADD, com.optionslab.ira.Command.Kind.EVENT_ADD)
 
-    private fun commandAsked(q: String, c: com.optionslab.ira.Command, confirmAlways: Boolean = false) {
+    /**
+     * [heard]: Boss said [c] himself, as heard (never a reading of his words): his nicknames for one arm or position may be
+     * read, and his pick after "Which one?" may teach one ([com.optionslab.ira.Nicknames]) - on an unlocked phone only.
+     * Understanding only: whatever is prepared waits for its confirm exactly as before.
+     */
+    private fun commandAsked(q: String, c: com.optionslab.ira.Command, confirmAlways: Boolean = false, heard: Boolean = false) {
         _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
         // Practice on a past day: replayed into the conversation, nothing traded.
         if (c.kind == com.optionslab.ira.Command.Kind.PRACTICE) { scope.launch { runCatching { IraTools.practice(c.target ?: q) { reply(it) } } }; return }
+        val nickHeard = heard && !phoneLocked()
         scope.launch {
-            val (what, act) = runCatching { IraActions.prepare(c) }.getOrElse { ("I could not do that: ${it.message}") to null }
+            val (what, act) = runCatching { IraActions.prepare(c, heard = nickHeard) }.getOrElse { ("I could not do that: ${it.message}") to null }
+            // A nickname just learned from Boss's pick after "Which one?": said once, before the confirm it changes nothing about.
+            if (nickHeard) runCatching { IraTools.nickTakeLearned() }.getOrNull()?.let { reply(it) }
             if (act == null) { reply(what); return@launch }
             // Only a price alarm or an event note is done at once; anything that changes trading (starting arms, the
             // kill switch, autopilot, Jarvis's own limits) waits for Confirm - in the real app too (review, 3 Oct).

@@ -188,8 +188,8 @@ object AboutBoss {
     /** "What do you know about me?" */
     fun knowAsked(text: String): Boolean = KNOW.containsMatchIn(norm(text))
 
-    /** Not one of Boss's facts: his goals, all his notes ([Memory.forgetAsked]), what was learned, the conversation, settings. */
-    private val NOT_A_FACT = Regex(" (goals?|notes|everything|preferences|what you learn(ed|t)|learn(ed|t)|lessons?|wordings?|conversation|chat|reminders?|alarms?|events?|what i rejected?) ")
+    /** Not one of Boss's facts: his goals, all his notes ([Memory.forgetAsked]), what was learned (his nicknames: [Nicknames]), the conversation, settings. */
+    private val NOT_A_FACT = Regex(" (goals?|notes|everything|preferences|nick ?names?|pet names|what you learn(ed|t)|learn(ed|t)|lessons?|wordings?|conversation|chat|reminders?|alarms?|events?|what i rejected?) ")
 
     /** "Forget that", "forget that I don't trade on Fridays", "forget my target" (one fact), or null. */
     fun forgetAsked(text: String): Forget? {

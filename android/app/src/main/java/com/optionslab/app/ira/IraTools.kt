@@ -1049,6 +1049,7 @@ internal object IraTools {
     fun endWaits() {
         asksOffered = null
         turnedDownAt = null
+        nickAsked = null
     }
 
     /** "What do you offer me in the morning?". */
@@ -1328,6 +1329,92 @@ internal object IraTools {
         return said
     }
 
+    // ---- the nicknames Boss uses for his arms and positions ([com.optionslab.ira.Nicknames]) -------------------------
+
+    /** Boss's nicknames: his words and the one arm or position he picked for them - nothing else. */
+    private const val NICKNAMES = "jarvis.nicknames"
+    @Volatile private var nickCache: com.optionslab.ira.Nicknames.Log? = null
+    /** Jarvis's last "Which one?" for a command Boss said himself (in memory only): his next pick of that list teaches it. */
+    @Volatile private var nickAsked: com.optionslab.ira.Nicknames.Asked? = null
+    /** What was just learned from his pick, said once beside the confirm ([nickTakeLearned]). */
+    @Volatile private var nickLearned: String? = null
+
+    fun nickLog(): com.optionslab.ira.Nicknames.Log = nickCache ?: runCatching {
+        val a = JSONArray(prefs().getString(NICKNAMES) ?: "[]")
+        com.optionslab.ira.Nicknames.Log((0 until a.length()).mapNotNull { i -> a.getJSONObject(i).let { x ->
+            val fam = runCatching { com.optionslab.ira.Nicknames.Family.valueOf(x.getString("f")) }.getOrNull()
+            fam?.let { f -> com.optionslab.ira.Nicknames.Note(LocalDateTime.parse(x.getString("t")), f, x.getString("w"), x.getString("n")) } } })
+    }.getOrDefault(com.optionslab.ira.Nicknames.Log()).also { nickCache = it }
+
+    @Synchronized private fun nickUpdate(f: (com.optionslab.ira.Nicknames.Log) -> com.optionslab.ira.Nicknames.Log) {
+        runCatching {
+            val log = f(nickLog())
+            if (log == nickCache) return@runCatching
+            nickCache = log
+            val a = JSONArray().apply { log.notes.forEach { x ->
+                put(JSONObject().put("t", x.at.toString()).put("f", x.family.name).put("w", x.words).put("n", x.name)) } }
+            prefs().putAllSoon(mapOf(NICKNAMES to a.toString()))
+        }
+    }
+
+    private fun nickNow(): LocalDateTime = com.optionslab.app.data.Market.now().toLocalDateTime().withSecond(0).withNano(0)
+
+    /** Boss's words [said] (his own, as heard): anything but a command naming one arm or position ends the wait for his pick. */
+    fun nickHeard(said: String) {
+        if (nickAsked == null) return
+        val kind = runCatching { com.optionslab.ira.Ask.parse(said).command?.kind }.getOrNull()
+        if (kind == null || com.optionslab.ira.Nicknames.family(kind) == null) nickAsked = null
+    }
+
+    /** Jarvis asks "Which one?" of [names] for Boss's [words] in a command of [kind]: kept (in memory) for his pick. */
+    fun nickAsking(kind: com.optionslab.ira.Command.Kind, words: String?, names: List<String>) {
+        val fam = com.optionslab.ira.Nicknames.family(kind) ?: return
+        nickAsked = com.optionslab.ira.Nicknames.asking(fam, words, names, nickNow())
+    }
+
+    /**
+     * Boss's command of [kind] picked [index] of [names]: when it answers Jarvis's "Which one?" just before, the words he
+     * first used are kept for that one name (said once beside the confirm). The wait ends either way. Understanding only.
+     */
+    fun nickPicked(kind: com.optionslab.ira.Command.Kind, index: Int, names: List<String>) {
+        val asked = nickAsked
+        nickAsked = null
+        val n = com.optionslab.ira.Nicknames.picked(asked, kind, index, names, nickNow()) ?: return
+        nickUpdate { com.optionslab.ira.Nicknames.heard(it, n) }
+        nickLearned = com.optionslab.ira.Nicknames.learned(n)
+        IraActivity.add("Learned a nickname of Boss's for one ${n.family.noun} (on his pick).")
+    }
+
+    /** What was just learned from his pick, once (null: nothing). */
+    fun nickTakeLearned(): String? = nickLearned.also { nickLearned = null }
+
+    /**
+     * Boss's [words] in a command of [kind] that matched none or several of [names]: the one his nickname stands for, as
+     * (its index, what is said beside the confirm) - only when exactly one of [names] has it; else null (Jarvis asks).
+     */
+    fun nickResolve(kind: com.optionslab.ira.Command.Kind, words: String?, names: List<String>): Pair<Int, String>? {
+        val fam = com.optionslab.ira.Nicknames.family(kind) ?: return null
+        val log = nickLog()
+        val i = com.optionslab.ira.Nicknames.resolve(log, fam, words, names) ?: return null
+        val n = com.optionslab.ira.Nicknames.note(log, fam, words) ?: return null
+        nickAsked = null
+        return i to com.optionslab.ira.Nicknames.took(n)
+    }
+
+    /** "What nicknames do I use?". */
+    fun nickSay(): String = runCatching { com.optionslab.ira.Nicknames.say(nickLog()) }
+        .getOrDefault("I could not read the nicknames I've learned just now, Boss.")
+
+    /** "Forget my nicknames for my arms". */
+    fun nickReset(): String {
+        val said = runCatching { com.optionslab.ira.Nicknames.sayReset(nickLog()) }
+            .getOrDefault("Done, Boss: I've forgotten your nicknames.")
+        nickUpdate { com.optionslab.ira.Nicknames.forget() }
+        nickAsked = null
+        IraActivity.add("Forgot Boss's nicknames for his arms and positions (as asked).")
+        return said
+    }
+
     // ---- the morning outlook checked against the close ([com.optionslab.ira.OutlookCheck]) ---------------------------
 
     /** Each index's 09:00 outlook numbers (previous close, range, direction read, pivot) and the day's open, high, low, close. Market data only. */
@@ -1392,7 +1479,8 @@ internal object IraTools {
         asks = runCatching { asksLog() }.getOrDefault(com.optionslab.ira.MorningAsks.Log()),
         turnDowns = runCatching { turnLog() }.getOrDefault(com.optionslab.ira.TurnDowns.Log()),
         lengths = runCatching { lengthLog() }.getOrDefault(com.optionslab.ira.TopicLength.Log()),
-        usualIndex = runCatching { indexLog() }.getOrDefault(com.optionslab.ira.UsualIndex.Log()))
+        usualIndex = runCatching { indexLog() }.getOrDefault(com.optionslab.ira.UsualIndex.Log()),
+        nicknames = runCatching { nickLog() }.getOrDefault(com.optionslab.ira.Nicknames.Log()))
 
     /**
      * "Undo everything you learned this week", on Boss's Confirm: the wordings and routines kept in the last 7 days
@@ -1415,13 +1503,15 @@ internal object IraTools {
         if (u.turnDowns.isNotEmpty()) { turnUpdate { com.optionslab.ira.TurnDowns.reset(it, now) }; turnedDownAt = null }
         if (u.lengths.isNotEmpty()) { lengthUpdate { com.optionslab.ira.TopicLength.reset(it, now) }; lengthLast = null }
         if (u.usualIndex.isNotEmpty()) { indexUpdate { com.optionslab.ira.UsualIndex.reset(it, now) }; indexLast = null }
+        if (u.nicknames.isNotEmpty()) { nickUpdate { com.optionslab.ira.Nicknames.forgetWeek(it, today) }; nickAsked = null }
         IraActivity.add("Undid this week's learning, as Boss confirmed: ${u.words.size} wording(s), ${u.routines.size} routine(s), " +
             "${u.alerts.size} alert kind(s) aloud again, ${u.clarity.size} answer kind(s) as usual aloud again, ${u.figure.size} market read kind(s) in the usual order again, ${u.morning.size} morning-check item(s) read out in full again, " +
             "${u.stars.size} confidence score(s) said plainly again, " + (if (u.hours.isNotEmpty()) "briefings in full at any hour again, " else "briefings unchanged, ") +
             (if (u.asks.isNotEmpty()) "no morning question offered, " else "morning check unchanged, ") +
             (if (u.turnDowns.isNotEmpty()) "no reason of Boss's said up front, " else "ideas asked as before, ") +
             (if (u.lengths.isNotEmpty()) "every topic at the usual length aloud, " else "topic lengths unchanged, ") +
-            (if (u.usualIndex.isNotEmpty()) "Nifty again when Boss names no index." else "the index taken unchanged."))
+            (if (u.usualIndex.isNotEmpty()) "Nifty again when Boss names no index, " else "the index taken unchanged, ") +
+            (if (u.nicknames.isNotEmpty()) "${u.nicknames.size} nickname(s) forgotten." else "nicknames unchanged."))
         return u
     }
 

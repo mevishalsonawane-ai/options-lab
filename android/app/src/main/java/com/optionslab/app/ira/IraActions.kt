@@ -128,9 +128,16 @@ internal object IraActions {
 
     // ---- doing it ---------------------------------------------------------------------------------------------------
 
-    /** What [c] would do, in words, and the action itself - or why it cannot be done (the action is then null). */
-    suspend fun prepare(c: Command): Pair<String, (suspend () -> String)?> {
+    /**
+     * What [c] would do, in words, and the action itself - or why it cannot be done (the action is then null).
+     * [heard]: Boss said [c] himself, as heard, on an unlocked phone (the hub's own command path only): then, for one arm or
+     * one position, his nicknames are read when his words match none or several ([com.optionslab.ira.Nicknames]; exactly one
+     * or none, said beside the confirm), and his pick after Jarvis's "Which one?" teaches one. Never a plan, a later command,
+     * a reading of his words or Jarvis's own checks. Understanding only: what is prepared still waits for its confirm.
+     */
+    suspend fun prepare(c: Command, heard: Boolean = false): Pair<String, (suspend () -> String)?> {
         fun pick(names: List<String>, what: String): Int? = Commands.pick(c, names)
+        val nickOn = heard && com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD
         return when (c.kind) {
             Command.Kind.STOP_ALL -> Commands.describe(c) to suspend { com.optionslab.app.data.Strategies.stopForToday(true, compromised()) }
             Command.Kind.START_ALL -> Commands.describe(c) to suspend {
@@ -142,10 +149,17 @@ internal object IraActions {
             Command.Kind.STOP_ONE, Command.Kind.START_ONE -> {
                 val all = arms()
                 if (all.isEmpty()) return "There are no strategies or arms to ${if (c.kind == Command.Kind.START_ONE) "start" else "stop"}." to null
-                val i = pick(all.map { it.first }, "strategy") ?: return ("Which one? " + all.mapIndexed { n, a -> "${n + 1}. ${a.first}" }.joinToString("; ") +
-                    ". Say its number, like \"${if (c.kind == Command.Kind.START_ONE) "start" else "stop"} strategy 1\".") to null
+                val armNames = all.map { it.first }
+                val armDirect = pick(armNames, "strategy")
+                val armNick = if (armDirect == null && nickOn) runCatching { IraTools.nickResolve(c.kind, c.target, armNames) }.getOrNull() else null
+                val i = armDirect ?: armNick?.first ?: run {
+                    if (nickOn) runCatching { IraTools.nickAsking(c.kind, c.target, armNames) }
+                    return ("Which one? " + all.mapIndexed { n, a -> "${n + 1}. ${a.first}" }.joinToString("; ") +
+                        ". Say its number, like \"${if (c.kind == Command.Kind.START_ONE) "start" else "stop"} strategy 1\".") to null
+                }
+                if (nickOn && armNick == null) runCatching { IraTools.nickPicked(c.kind, i, armNames) }
                 val (name, act) = all[i]
-                Commands.describe(c, name) to (if (c.kind == Command.Kind.START_ONE) act.first else act.second)
+                Commands.describe(c, name) + (armNick?.let { " (${it.second})" } ?: "") to (if (c.kind == Command.Kind.START_ONE) act.first else act.second)
             }
             Command.Kind.CANCEL_ALL -> {
                 val o = openOrders()
@@ -172,8 +186,15 @@ internal object IraActions {
                 if (p.isEmpty()) return "There are no open positions to close." to null
                 // "Close 1 lot of ...": only a whole position is closed here, never more than Boss asked for.
                 if (c.lots != null) return "I can only close a whole position, Boss, not ${c.lots} lot${if (c.lots == 1) "" else "s"} of it. Say \"close\" and its name to close all of it, or trim it on the Positions screen." to null
-                val i = pick(p.map { it.name }, "position") ?: return ("Which position? " + p.mapIndexed { n, x -> "${n + 1}. ${x.name}" }.joinToString("; ") + ".") to null
-                Commands.describe(c, p[i].name) to p[i].run
+                val posNames = p.map { it.name }
+                val posDirect = pick(posNames, "position")
+                val posNick = if (posDirect == null && nickOn) runCatching { IraTools.nickResolve(c.kind, c.target, posNames) }.getOrNull() else null
+                val i = posDirect ?: posNick?.first ?: run {
+                    if (nickOn) runCatching { IraTools.nickAsking(c.kind, c.target, posNames) }
+                    return ("Which position? " + p.mapIndexed { n, x -> "${n + 1}. ${x.name}" }.joinToString("; ") + ".") to null
+                }
+                if (nickOn && posNick == null) runCatching { IraTools.nickPicked(c.kind, i, posNames) }
+                Commands.describe(c, p[i].name) + (posNick?.let { " (${it.second})" } ?: "") to p[i].run
             }
             Command.Kind.KILL_ON, Command.Kind.KILL_OFF -> Commands.describe(c) to suspend {
                 setSettings { it.copy(guardKill = c.kind == Command.Kind.KILL_ON) }
