@@ -117,7 +117,7 @@ internal object IraAccount {
     }
 
     /** Sections answered from the question's own words: never from the cache. */
-    private val ASKED = setOf(Section.WHATIF, Section.CHANGES, Section.SEARCH, Section.TIMEOFDAY, Section.REASONS, Section.EXPLAIN_POS, Section.MISTAKES, Section.MOVE, Section.RANK, Section.REPLAY, Section.MONTH, Section.CHARGES, Section.HEALTH, Section.BOTS)
+    private val ASKED = setOf(Section.WHATIF, Section.CHANGES, Section.SEARCH, Section.TIMEOFDAY, Section.REASONS, Section.EXPLAIN_POS, Section.MISTAKES, Section.MOVE, Section.RANK, Section.REPLAY, Section.MONTH, Section.CHARGES, Section.HEALTH, Section.BOTS, Section.TAX)
 
     suspend fun read(sections: Set<Section>, markets: List<com.optionslab.ira.Market> = emptyList(), question: String = ""): AppView? {
         testView?.let { return it(sections) }
@@ -306,6 +306,8 @@ internal object IraAccount {
                 }
                 out[Section.CHARGES] = r
             }
+            // "What's my F&O turnover this year?": the financial year's facts from the trade books (not tax advice).
+            if (wants(Section.TAX)) out[Section.TAX] = IraTax.lines(question, today)
             if (wants(Section.SEARCH)) out[Section.SEARCH] = IraJournal.search(question)
             if (wants(Section.TIMEOFDAY)) out[Section.TIMEOFDAY] = IraJournal.timeOfDay()
             if (wants(Section.REASONS)) out[Section.REASONS] = IraJournal.reasons()

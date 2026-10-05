@@ -405,6 +405,7 @@ class CoverageTest {
         val plain = p.order == null && p.command == null
         if (p.order == null && AlertSense.asked(q) != null) return "AlertSense"
         if (p.order == null && Airtime.asked(q)) return "Airtime"
+        if (plain && TaxRecords.exportAsked(q)) return "TaxExport"
         if (plain && DataAge.asked(q)) return "DataAge"
         if (plain && Honest.asked(q) != null) return "Honest"
         if (plain && Thinking.asked(q) != null) return "Thinking"
@@ -571,6 +572,10 @@ class CoverageTest {
         "is your data up to date" to "DataAge", "data taza hai kya" to "DataAge", "write my journal" to "DayJournal",
         "help me with my journal" to "DayJournal", "pichla mahina kaisa raha" to "Account:MONTH", "stt kitna laga" to "Account:CHARGES",
         "brokerage kitna gaya" to "Account:CHARGES", "what do you know about me jarvis" to "AboutBoss",
+        // ---- TaxRecords: the financial year's facts, and its trades exported (on Boss's yes) ----
+        "what's my f&o turnover this year" to "Account:TAX", "my fno turnover" to "Account:TAX", "my tax summary" to "Account:TAX",
+        "mera turnover kitna hai" to "Account:TAX", "my p&l for last financial year" to "Account:TAX",
+        "export my trades for tax" to "TaxExport", "download my trades as csv for my ca" to "TaxExport", "tax ke liye trades export karo" to "TaxExport",
         // ---- The market's own week (never Boss's history) ----
         "how was the market this week" to "PeriodMove", "how was nifty this week" to "PeriodMove",
 
@@ -700,6 +705,8 @@ class CoverageTest {
             ("forget my routine" to "Routine") to ("forget what i told you" to "AboutBoss"),
             ("what words have you learned" to "Corrections") to ("what have you learned this week" to "Lessons"),
             ("forget the word teeta" to "Corrections") to ("forget that i trade on fridays" to "AboutBoss"),
+            ("what's my f&o turnover this year" to "Account:TAX") to ("export my trades for tax" to "TaxExport"),
+            ("my tax summary" to "Account:TAX") to ("how much tax on my trades" to "Account:CHARGES"),
         )) { assertEquals(a.second, feature(a.first), a.first); assertEquals(b.second, feature(b.first), b.first) }
         // Boss's Hinglish what-if is a what-if; a forecast, advice or his own book in Hindi never is.
         for (s in listOf("kal nifty ka kya hoga", "nifty 200 points gir jayega kya", "agar nifty 1% gira to kya buy karu",

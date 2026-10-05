@@ -1262,6 +1262,31 @@ object IraHub {
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
             return
         }
+        // "Export my trades for tax": the financial year's trades in a CSV for Boss to share ([com.optionslab.ira.TaxRecords]).
+        // His account, so only on an unlocked phone, and only on his yes (checked unlocked again then); never in IraGoldAlgo
+        // (Jarvis only talks there). Facts only, not tax advice; nothing placed, changed or closed; no IDs or keys in the file.
+        if (!bundled && parsed.order == null && parsed.command == null && runCatching { com.optionslab.ira.TaxRecords.exportAsked(q) }.getOrDefault(false)) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            if (GOLD_ONLY_TALK) { reply(GOLD_TALK_ONLY); return }
+            if (phoneLocked()) { reply("Unlock the phone for that, Boss."); return }
+            scope.launch(Dispatchers.IO) {
+                val today = com.optionslab.app.data.Market.today()
+                val fy = com.optionslab.ira.TaxRecords.fy(q, today)
+                val picked: Pair<String, List<com.optionslab.ira.TaxRecords.Trade>> = runCatching { IraTax.pick(fy, today) }.getOrElse { "Paper" to emptyList() }
+                val ask = com.optionslab.ira.TaxRecords.offer(picked.first, picked.second.size, fy)
+                if (ask == null) { reply(com.optionslab.ira.TaxRecords.nothing(fy)); return@launch }
+                // (A plain label: the diagnostics log never holds the trades.)
+                offer("export the year's trades to a CSV", "Boss, export your trades?", ask, suspend {
+                    val c = app
+                    when {
+                        c == null -> "The app is not ready: nothing was exported."
+                        phoneLocked() -> "Unlock the phone for that, Boss: nothing was exported."
+                        else -> IraTax.export(c, fy, com.optionslab.app.data.Market.today())
+                    }
+                }, alwaysAsk = true)
+            }
+            return
+        }
         // "What have you learned this week?" / "what changed in how you work?" / "show me everything you've learned about me":
         // every learning store in one view, with when, why and each undo by voice ([com.optionslab.ira.Learnings]). Boss's own
         // words, routines and records only on an unlocked phone; nothing in it acts.
