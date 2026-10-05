@@ -1225,7 +1225,8 @@ object IraHub {
                 com.optionslab.ira.Headroom.asked(q) != null ||
                 com.optionslab.ira.SaidAbout.asked(q) != null ||
                 com.optionslab.ira.NeedsTrue.asked(q) ||
-                com.optionslab.ira.Clarity.asked(q) != null || com.optionslab.ira.DayClock.asked(q) != null }.getOrDefault(false)) {
+                com.optionslab.ira.Clarity.asked(q) != null || com.optionslab.ira.DayClock.asked(q) != null ||
+                com.optionslab.ira.GapRecord.asked(q) != null }.getOrDefault(false)) {
             val prev = if (recent) _state.value.messages.lastOrNull { !it.fromIra }?.text else null
             val qs = runCatching { com.optionslab.ira.Understand.questions(prev, q) }.getOrNull()
                 ?.takeIf { it.isNotEmpty() && it != listOf(q) && it.none { p -> lockedAccount(q, p) } }
@@ -1501,6 +1502,22 @@ object IraHub {
                 else com.optionslab.ira.DayClock.answer(clockAsk, mk, histories[mk]?.bars.orEmpty(),
                     com.optionslab.app.data.Market.today(), LocalDateTime.now(IST))
             }.getOrElse { "I could not read the day clock just now, Boss." }
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            reply(said)
+            return
+        }
+        // "When Nifty gaps up over 0.5%, how often does it fill the gap by 11?", "do gap downs usually fill?": how the index's
+        // past gaps played out on the phone's own 1-minute sessions ([com.optionslab.ira.GapRecord]) beside today's gap. A record
+        // of past days, never a forecast or advice; market data only (fine on a locked phone). (Today's gap alone stays Gap's.)
+        val gapAsk = if (!bundled && parsed.order == null && parsed.command == null && !com.optionslab.app.BuildConfig.GOLD)
+            runCatching { com.optionslab.ira.GapRecord.asked(q) }.getOrNull() else null
+        if (gapAsk != null) {
+            val said = runCatching {
+                val mk = com.optionslab.ira.GapRecord.market(parsed.markets)
+                if (mk == null) com.optionslab.ira.GapRecord.NOT_HERE
+                else com.optionslab.ira.GapRecord.answer(gapAsk, mk, histories[mk]?.bars.orEmpty(),
+                    com.optionslab.app.data.Market.today(), LocalDateTime.now(IST))
+            }.getOrElse { "I could not read the gap record just now, Boss." }
             _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
             reply(said)
             return
