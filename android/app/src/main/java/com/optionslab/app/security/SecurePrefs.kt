@@ -97,6 +97,16 @@ object SecurePrefs {
         return loaded
     }
 
+    /**
+     * Speed, round 6: the settings read (one Keystore decryption) done now, on the caller's thread. The app's start
+     * calls it before any background thread starts its own vault reads: the Keystore (StrongBox on a Pixel) takes one
+     * operation at a time, so a settings read made later on the screen's thread queued behind the pine scripts' and the
+     * four gold books' decryptions - Boss's "app start 1308 ms, slowest: Jarvis's memory 1294 ms" was that wait
+     * (Jarvis's model status is the start's first settings read). The settings are needed on that thread before the
+     * start ends anyway (the restore disarm, the lock); read first, they cost only their own decryption.
+     */
+    @Synchronized fun warm() { map() }
+
     /** Drop the cache and read the file again (the "try again" on the unreadable-vault screen). */
     fun reload(): Boolean {
         flush()

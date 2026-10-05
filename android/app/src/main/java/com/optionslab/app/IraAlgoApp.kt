@@ -69,6 +69,9 @@ class IraAlgoApp : Application() {
         }
         runCatching { java.io.File(filesDir, OLD_CRASH_FILE).delete() }
         SecurePrefs.init(this)
+        // Speed, round 6: the settings decrypted first, before the pine scripts' and gold books' background reads queue
+        // in the Keystore ahead of them (see SecurePrefs.warm). An unreadable vault is marked exactly as on a later read.
+        timed("settings") { runCatching { SecurePrefs.warm() } }
         Ledger.init(this)
         Alarms.init(this)
         Store.init(this)
