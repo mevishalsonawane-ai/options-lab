@@ -18,7 +18,8 @@ import java.util.Locale
  * at the end of the morning check ([MorningAsks]), the reasons he turns Jarvis's trade ideas down for said up front
  * before the next idea they fit ([TurnDowns]), the topics said in a sentence or in full aloud as Boss asks for them
  * ([TopicLength]), the index he means when he names none ([UsualIndex]), the nicknames he uses for his arms and positions
- * ([Nicknames]), the index he asks about by name, named first where both are given ([LeadIndex]) and his own goals for the week ([Improve]) - each with when and why it changed and, where one exists, the
+ * ([Nicknames]), the index he asks about by name, named first where both are given ([LeadIndex]), the part of a market read he
+ * asks for on its own, said right after the price in an overview ([LeadPart]) and his own goals for the week ([Improve]) - each with when and why it changed and, where one exists, the
  * words that undo it by voice.
  *
  * "What have you learned this week?" ([Ask.WEEK]), "what changed in how you work?" ([Ask.CHANGED]) and "show me
@@ -33,7 +34,7 @@ import java.util.Locale
  * in full at any hour again), the morning question offered ([MorningAsks]: no longer offered), his reasons said up front ([TurnDowns]: no longer
  * said), the topics said shorter or in full ([TopicLength]: the usual length again), the index taken when he names none
  * ([UsualIndex]: Nifty again), the nicknames learned this week ([Nicknames]: forgotten), the index named first ([LeadIndex]: Nifty
- * first again) and his own goals. (His confidence words set to fit the
+ * first again), the part said first in an overview ([LeadPart]: the usual order again) and his own goals. (His confidence words set to fit the
  * numbers beside them ([WordFit]) are listed with their own undo, but not reset here: that is a check on his own words
  * against his own record, not a habit learned from Boss.)
  * for this week. Never a setting, the PIN, Live, the AI's live trading, a guard or the Google speech choice - and never
@@ -64,6 +65,7 @@ object Learnings {
         USUAL_INDEX("The index I take when you name none", true),
         NICKNAMES("Nicknames you use for your arms and positions", true),
         LEAD_INDEX("The index I name first", true),
+        LEAD_PART("What I say first in an overview", true),
         ARM_HABITS("Your bots after losing days", true),
         SIT_OUT("Conditions I sit out", true),
         ANSWERS("Answer kinds I flag", true),
@@ -110,6 +112,8 @@ object Learnings {
         val nicknames: Nicknames.Log = Nicknames.Log(),
         /** The day Boss last asked for Nifty first again ([LeadIndex]; read with [tally]). */
         val leadIndex: LeadIndex.Log = LeadIndex.Log(),
+        /** The day Boss last asked for his overviews in the usual order ([LeadPart]; read with [tally]). */
+        val leadPart: LeadPart.Log = LeadPart.Log(),
     )
 
     fun day(d: LocalDate): String = "${d.dayOfMonth} ${d.month.getDisplayName(TextStyle.SHORT, Locale.ENGLISH)}"
@@ -209,6 +213,11 @@ object Learnings {
         // only). Only the order changes: never a figure, which index is answered, or anything that acts.
         LeadIndex.learned(i.tally, i.leadIndex, today)?.let { r ->
             out += Item(Area.LEAD_INDEX, LeadIndex.ledgerWhat(r), r.newest, LeadIndex.ledgerWhy(r), LeadIndex.UNDO)
+        }
+        // The part of a market read Boss asks for on its own, said right after the price in an overview ([LeadPart]; from
+        // the kinds tally, counts only). Only the order of the sentences changes: never a figure, or anything that acts.
+        LeadPart.learned(i.tally, i.leadPart, today)?.let { r ->
+            out += Item(Area.LEAD_PART, LeadPart.ledgerWhat(r), r.newest, LeadPart.ledgerWhy(r), LeadPart.UNDO)
         }
         // What Boss does with his bots after losing days ([ArmHabits]; switches and signs only): his record - it arms or
         // disarms nothing, changes nothing Jarvis does, and so has no undo.
@@ -353,10 +362,10 @@ object Learnings {
                     val hours: List<Int> = emptyList(), val asks: List<MorningAsks.Usual> = emptyList(),
                     val turnDowns: List<TurnDowns.Record> = emptyList(), val lengths: List<TopicLength.Record> = emptyList(),
                     val usualIndex: List<UsualIndex.Record> = emptyList(), val nicknames: List<Nicknames.Note> = emptyList(),
-                    val leadIndex: List<LeadIndex.Record> = emptyList()) {
+                    val leadIndex: List<LeadIndex.Record> = emptyList(), val leadPart: List<LeadPart.Record> = emptyList()) {
         val empty: Boolean get() = words.isEmpty() && routines.isEmpty() && alerts.isEmpty() && goals == 0 && clarity.isEmpty() && figure.isEmpty() && morning.isEmpty() &&
             stars.isEmpty() && hours.isEmpty() && asks.isEmpty() && turnDowns.isEmpty() && lengths.isEmpty() && usualIndex.isEmpty() && nicknames.isEmpty() &&
-            leadIndex.isEmpty()
+            leadIndex.isEmpty() && leadPart.isEmpty()
     }
 
     fun undo(i: Inputs, now: LocalDateTime): Undo {
@@ -376,7 +385,8 @@ object Learnings {
             TopicLength.learned(i.lengths, now),
             listOfNotNull(UsualIndex.learned(i.usualIndex, now)),
             Nicknames.week(i.nicknames, today),
-            listOfNotNull(LeadIndex.learned(i.tally, i.leadIndex, today)))
+            listOfNotNull(LeadIndex.learned(i.tally, i.leadIndex, today)),
+            listOfNotNull(LeadPart.learned(i.tally, i.leadPart, today)))
     }
 
     /** [words] without those kept in the last [DAYS] days (the rest, and undated ones, stay). */
@@ -407,6 +417,7 @@ object Learnings {
         if (u.nicknames.isEmpty()) null else "the nicknames you use for your arms and positions (" + u.nicknames.take(SHOW).joinToString(", ") { "\"${it.words}\"" } +
             (if (u.nicknames.size > SHOW) ", ..." else "") + ") - forgotten",
         if (u.leadIndex.isEmpty()) null else "the index I name first (" + u.leadIndex.joinToString(", ") { it.phrase } + ") - Nifty first again",
+        if (u.leadPart.isEmpty()) null else "what I say first in an overview (" + u.leadPart.joinToString(", ") { it.phrase } + ") - the usual order again",
         if (u.goals == 0) null else "my ${plural(u.goals, "goal")} for this week")
 
     const val ONLY = "Only learned behaviour: never a setting, your PIN, Live, AI trading, a guard or the Google speech choice. " +

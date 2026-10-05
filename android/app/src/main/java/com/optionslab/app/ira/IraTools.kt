@@ -1462,6 +1462,53 @@ internal object IraTools {
         return said
     }
 
+    // ---- the part Boss asks for on its own, said right after the price in an overview ([com.optionslab.ira.LeadPart]) ----
+
+    /** Only the day Boss last asked for his overviews in the usual order: the learning reads the kinds tally already kept ([askedKinds]). */
+    private const val LEAD_PART = "jarvis.leadPart"
+    @Volatile private var leadPartCache: com.optionslab.ira.LeadPart.Log? = null
+
+    fun leadPartLog(): com.optionslab.ira.LeadPart.Log = leadPartCache ?: runCatching {
+        val o = JSONObject(prefs().getString(LEAD_PART) ?: "{}")
+        com.optionslab.ira.LeadPart.Log(o.optString("r").takeIf { it.isNotEmpty() }?.let { java.time.LocalDate.parse(it) })
+    }.getOrDefault(com.optionslab.ira.LeadPart.Log()).also { leadPartCache = it }
+
+    @Synchronized private fun leadPartSave(log: com.optionslab.ira.LeadPart.Log) {
+        runCatching {
+            leadPartCache = log
+            val o = JSONObject()
+            log.resetOn?.let { o.put("r", it.toString()) }
+            prefs().putAllSoon(mapOf(LEAD_PART to o.toString()))
+        }
+    }
+
+    /** The learned part's record now, or null (the usual order). Counts only; nothing here acts. */
+    private fun leadPartRecord(): com.optionslab.ira.LeadPart.Record? = runCatching {
+        com.optionslab.ira.LeadPart.learned(askedKinds(), leadPartLog(), com.optionslab.app.data.Market.today())
+    }.getOrNull()
+
+    /**
+     * The part said right after the price in a plain overview (the levels or patterns), or null: the usual order.
+     * Only the order of the sentences changes - never what is said, nor anything that acts.
+     */
+    fun leadPart(): com.optionslab.ira.Topic? = leadPartRecord()?.part
+
+    /** "What do you say first in an overview?". */
+    fun leadPartSay(): String = runCatching { com.optionslab.ira.LeadPart.say(leadPartRecord()) }
+        .getOrDefault("I could not read my count of what you ask about just now, Boss.")
+
+    /**
+     * "Say your overviews in the usual order": the trend right after the price again, the count afresh from tomorrow. On a
+     * [locked] phone, one neutral reply that never names the part learned (nor whether one was).
+     */
+    fun leadPartReset(locked: Boolean = false): String {
+        val said = if (locked) com.optionslab.ira.LeadPart.RESET_LOCKED
+            else runCatching { com.optionslab.ira.LeadPart.sayReset(leadPartRecord()) }.getOrDefault("Done, Boss: my overviews in the usual order.")
+        leadPartSave(com.optionslab.ira.LeadPart.reset(com.optionslab.app.data.Market.today()))
+        IraActivity.add("Overviews in the usual order again (as asked).")
+        return said
+    }
+
     // ---- the morning outlook checked against the close ([com.optionslab.ira.OutlookCheck]) ---------------------------
 
     /** Each index's 09:00 outlook numbers (previous close, range, direction read, pivot) and the day's open, high, low, close. Market data only. */
@@ -1528,7 +1575,8 @@ internal object IraTools {
         lengths = runCatching { lengthLog() }.getOrDefault(com.optionslab.ira.TopicLength.Log()),
         usualIndex = runCatching { indexLog() }.getOrDefault(com.optionslab.ira.UsualIndex.Log()),
         nicknames = runCatching { nickLog() }.getOrDefault(com.optionslab.ira.Nicknames.Log()),
-        leadIndex = runCatching { firstIndexLog() }.getOrDefault(com.optionslab.ira.LeadIndex.Log()))
+        leadIndex = runCatching { firstIndexLog() }.getOrDefault(com.optionslab.ira.LeadIndex.Log()),
+        leadPart = runCatching { leadPartLog() }.getOrDefault(com.optionslab.ira.LeadPart.Log()))
 
     /**
      * "Undo everything you learned this week", on Boss's Confirm: the wordings and routines kept in the last 7 days
@@ -1553,6 +1601,7 @@ internal object IraTools {
         if (u.usualIndex.isNotEmpty()) { indexUpdate { com.optionslab.ira.UsualIndex.reset(it, now) }; indexLast = null }
         if (u.nicknames.isNotEmpty()) { nickUpdate { com.optionslab.ira.Nicknames.forgetWeek(it, today) }; nickAsked = null }
         if (u.leadIndex.isNotEmpty()) firstIndexSave(com.optionslab.ira.LeadIndex.reset(today))
+        if (u.leadPart.isNotEmpty()) leadPartSave(com.optionslab.ira.LeadPart.reset(today))
         IraActivity.add("Undid this week's learning, as Boss confirmed: ${u.words.size} wording(s), ${u.routines.size} routine(s), " +
             "${u.alerts.size} alert kind(s) aloud again, ${u.clarity.size} answer kind(s) as usual aloud again, ${u.figure.size} market read kind(s) in the usual order again, ${u.morning.size} morning-check item(s) read out in full again, " +
             "${u.stars.size} confidence score(s) said plainly again, " + (if (u.hours.isNotEmpty()) "briefings in full at any hour again, " else "briefings unchanged, ") +
@@ -1561,7 +1610,8 @@ internal object IraTools {
             (if (u.lengths.isNotEmpty()) "every topic at the usual length aloud, " else "topic lengths unchanged, ") +
             (if (u.usualIndex.isNotEmpty()) "Nifty again when Boss names no index, " else "the index taken unchanged, ") +
             (if (u.nicknames.isNotEmpty()) "${u.nicknames.size} nickname(s) forgotten, " else "nicknames unchanged, ") +
-            (if (u.leadIndex.isNotEmpty()) "Nifty named first again." else "the index named first unchanged."))
+            (if (u.leadIndex.isNotEmpty()) "Nifty named first again, " else "the index named first unchanged, ") +
+            (if (u.leadPart.isNotEmpty()) "overviews in the usual order again." else "overviews unchanged."))
         return u
     }
 

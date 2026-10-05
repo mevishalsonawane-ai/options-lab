@@ -1529,6 +1529,7 @@ object IraHub {
                 com.optionslab.ira.HonestStars.asked(q) != null || com.optionslab.ira.TalkHours.asked(q) != null || com.optionslab.ira.MorningAsks.asked(q) != null || com.optionslab.ira.BatteryUse.asked(q) ||
                 com.optionslab.ira.TurnDowns.asked(q) != null || com.optionslab.ira.TopicLength.asked(q) != null || com.optionslab.ira.OutlookCheck.asked(q) ||
                 com.optionslab.ira.UsualIndex.asked(q) != null || com.optionslab.ira.Nicknames.asked(q) != null || com.optionslab.ira.LeadIndex.asked(q) != null ||
+                com.optionslab.ira.LeadPart.asked(q) != null ||
                 com.optionslab.ira.DayCompare.asked(q) != null || com.optionslab.ira.LikeToday.asked(q) }.getOrDefault(false)) {
             val prev = if (recent) _state.value.messages.lastOrNull { !it.fromIra }?.text else null
             val qs = runCatching { com.optionslab.ira.Understand.questions(prev, q) }.getOrNull()
@@ -2208,10 +2209,14 @@ object IraHub {
         // A greeting names the index Boss asks about by name first ([com.optionslab.ira.LeadIndex]; only the order changes).
         val first0 = if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && parsed.topics == setOf(Topic.GREETING))
             runCatching { IraTools.firstIndex() }.getOrNull() else null
+        // A plain overview says the part Boss asks for on its own right after the price ([com.optionslab.ira.LeadPart];
+        // only the order of sentences changes).
+        val part0 = if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && com.optionslab.ira.LeadPart.reorders(parsed.topics))
+            runCatching { IraTools.leadPart() }.getOrNull() else null
         // Worked out ahead while the recognizer's final reading was awaited ([prepare]): taken only for the same question
         // from the same prices, news and minute (the same words then, exactly); otherwise worked out now, as before.
         val a0 = ahead.take(Inputs(com.optionslab.ira.Turn.key(parsed), st0.snaps, st0.news, book0, now.truncatedTo(java.time.temporal.ChronoUnit.MINUTES), closedReason))
-            ?: runCatching { Ira(book0, calls0, first0).answer(q, st0.snaps, st0.news, voice = com.optionslab.app.BuildConfig.JARVIS,
+            ?: runCatching { Ira(book0, calls0, first0, part0).answer(q, st0.snaps, st0.news, voice = com.optionslab.app.BuildConfig.JARVIS,
                 now = now, closedReason = closedReason) }.getOrElse { com.optionslab.ira.Answer("I could not work that out.", emptyList()) }
         // A holiday or a weekend: said first, so the last session's prices are not taken for today's.
         val closed = closedToday()?.takeIf { parsed.topics.any { it in MARKET_TOPICS } && testHistories == null }
@@ -2271,7 +2276,7 @@ object IraHub {
 
     /**
      * [ask]'s question branches on how Jarvis himself speaks and hears: AlertSense, Airtime, Hearing, PatternCalls,
-     * TrendReads, Clarity, WordFit, AskedAgain, FigureFirst, WrongThing, ArmHabits, MorningSense, HonestStars, TalkHours, MorningAsks, TurnDowns, TopicLength, OutlookCheck, UsualIndex, Nicknames, LeadIndex - in [ask]'s order. True when one
+     * TrendReads, Clarity, WordFit, AskedAgain, FigureFirst, WrongThing, ArmHabits, MorningSense, HonestStars, TalkHours, MorningAsks, TurnDowns, TopicLength, OutlookCheck, UsualIndex, Nicknames, LeadIndex, LeadPart - in [ask]'s order. True when one
      * took [q], answered exactly as before; each branch keeps its own guard (not [bundled], no order, no command).
      */
     private fun askedOfHisWays(q: String, parsed: com.optionslab.ira.Question, bundled: Boolean, understood: Boolean): Boolean {
@@ -2495,6 +2500,18 @@ object IraHub {
             val firstSaid = if (firstAsk == com.optionslab.ira.LeadIndex.Request.RESET) IraTools.firstIndexReset(phoneLocked())
                 else if (phoneLocked()) com.optionslab.ira.LeadIndex.LOCKED else IraTools.firstIndexSay()
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, firstSaid)).takeLast(MAX_MESSAGES)) }
+            return true
+        }
+        // "What do you say first in an overview?" / "say your overviews in the usual order": the part Boss asks for on its
+        // own, said right after the price in a plain overview ([com.optionslab.ira.LeadPart]; from the kinds tally, counts
+        // only). His habit: named on an unlocked phone only; the undo works locked too, in neutral words. Only the order of
+        // sentences changes - nothing learned acts. Not in IraGoldAlgo.
+        val partAsk = if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null)
+            runCatching { com.optionslab.ira.LeadPart.asked(q) }.getOrNull() else null
+        if (partAsk != null) {
+            val partSaid = if (partAsk == com.optionslab.ira.LeadPart.Request.RESET) IraTools.leadPartReset(phoneLocked())
+                else if (phoneLocked()) com.optionslab.ira.LeadPart.LOCKED else IraTools.leadPartSay()
+            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, partSaid)).takeLast(MAX_MESSAGES)) }
             return true
         }
         return false
@@ -3659,7 +3676,9 @@ object IraHub {
         val b = book
         val firstAhead = if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && parsed.topics == setOf(Topic.GREETING))
             runCatching { IraTools.firstIndex() }.getOrNull() else null
-        val a = runCatching { Ira(b, runCatching { IraTools.patternCalls() }.getOrDefault(emptyList()), firstAhead).answer(q, st.snaps, st.news, voice = com.optionslab.app.BuildConfig.JARVIS, now = now, closedReason = closedReason) }.getOrNull() ?: return
+        val partAhead = if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && com.optionslab.ira.LeadPart.reorders(parsed.topics))
+            runCatching { IraTools.leadPart() }.getOrNull() else null
+        val a = runCatching { Ira(b, runCatching { IraTools.patternCalls() }.getOrDefault(emptyList()), firstAhead, partAhead).answer(q, st.snaps, st.news, voice = com.optionslab.app.BuildConfig.JARVIS, now = now, closedReason = closedReason) }.getOrNull() ?: return
         ahead.put(Inputs(com.optionslab.ira.Turn.key(parsed), st.snaps, st.news, b, now.truncatedTo(java.time.temporal.ChronoUnit.MINUTES), closedReason), a)
     }
 

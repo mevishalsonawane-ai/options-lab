@@ -15,7 +15,9 @@ class Ira(private val book: PatternBook = PatternBook(),
           /** How the patterns Jarvis told of before played out on this phone ([PatternCalls]). */
           private val calls: List<PatternCalls.Call> = emptyList(),
           /** The index Boss asks about by name, named first in a greeting ([LeadIndex]); null: Nifty first, as always. */
-          private val lead: Market? = null) {
+          private val lead: Market? = null,
+          /** The part Boss asks for on its own, said right after the price in a plain overview ([LeadPart]); null: as always. */
+          private val leadPart: Topic? = null) {
 
     /** [app]: the app and the owner's trading as the app read it (null: not read); [voice]: this app can listen (Jarvis). */
     fun answer(question: String, snaps: Map<Market, Snapshot>, news: List<Headline>, app: AppView? = null, voice: Boolean = false,
@@ -47,6 +49,15 @@ class Ira(private val book: PatternBook = PatternBook(),
             val f = facts(s)
             facts += f.map { "${m.label}: $it" }
             val t = q.topics
+            // A plain overview with a part Boss asks for on its own learned ([LeadPart]): the same sentences, that part
+            // right after the price line. Only the order changes.
+            if (leadPart != null && LeadPart.reorders(t) && leadPart in LeadPart.PARTS) {
+                val pat = patterns(s, false)
+                pat?.let { (said, p) -> facts += said; PatternCalls.call(m, p)?.let { told += it } }
+                parts += head(s)
+                parts += LeadPart.order(listOf(Topic.TREND to trend(s), Topic.LEVELS to levels(s), Topic.PATTERNS to (pat?.first ?: "")), leadPart)
+                continue
+            }
             if (Topic.OVERVIEW in t || Topic.WHY in t) parts += overview(s)
             if (Topic.TREND in t) parts += trend(s)
             if (Topic.LEVELS in t || Topic.OVERVIEW in t) parts += levels(s)
@@ -79,12 +90,15 @@ class Ira(private val book: PatternBook = PatternBook(),
         s.below.forEach { add("level below: ${it.name} ${m.price(it.price)}, ${m.price(s.price - it.price)} away") }
     }
 
-    private fun overview(s: Snapshot): String {
+    private fun overview(s: Snapshot): String = head(s) + " " + trend(s)
+
+    /** An overview's price line: where it is, today's range, and whether the market is closed. */
+    private fun head(s: Snapshot): String {
         val m = s.market
         val ch = s.changePct?.let { " (${pct(it)} on the day)" } ?: ""
         val state = if (s.trading) "" else " The market is closed; these are the last prices."
         return "${m.label} is at ${m.price(s.price)}$ch as of ${Brain.when_(s.at, m, s.at.toLocalDate())}, " +
-            "in a range of ${m.price(s.low)} to ${m.price(s.high)} today.$state " + trend(s)
+            "in a range of ${m.price(s.low)} to ${m.price(s.high)} today.$state"
     }
 
     private fun trend(s: Snapshot): String {
