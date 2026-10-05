@@ -154,7 +154,10 @@ internal fun ChartPane(
             return
         }
         val (sym, _) = current
-        scope.launch {
+        // On the main thread, not the composition's dispatcher: under the UI tests' unconfined dispatcher the code after
+        // withContext(IO) ran on the IO thread, and the hint written there recomposed and laid out the views off the main
+        // thread (CalledFromWrongThreadException in ChartScreensLayoutTest.chartIndexBuyHint). Same as 05aa5cc's screens.
+        scope.launch(Dispatchers.Main.immediate) {
             val c = withContext(Dispatchers.IO) { runCatching { source.contract(sym) }.getOrNull() }
             if (c == null) { hint = "Indices cannot be traded. Search an option in the chart (e.g. NIFTY 24800 CE) to buy or sell it."; return@launch }
             // The sheet's LTP is the last traded price, not the level under the finger.
@@ -180,10 +183,10 @@ internal fun ChartPane(
     val streamStatus by com.optionslab.app.data.KiteStream.status.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     val streaming = live && streamStatus == com.optionslab.app.data.KiteStream.Status.LIVE
     var liveToken by remember { mutableStateOf<Long?>(null) }
-    LaunchedEffect(current, streaming) {
+    LaunchedEffect(current, streaming) { withContext(Dispatchers.Main.immediate) {
         liveToken = if (!streaming) null else withContext(Dispatchers.IO) { runCatching { source.streamToken(current.first) }.getOrNull() }
         com.optionslab.app.data.KiteStream.want("chart", listOfNotNull(liveToken))
-    }
+    } }
     DisposableEffect(Unit) { onDispose { com.optionslab.app.data.KiteStream.want("chart", emptyList()) } }
     val tickVersion by com.optionslab.app.data.KiteStream.version.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     LaunchedEffect(tickVersion, liveToken, visible, ready) {
@@ -396,7 +399,7 @@ internal fun ChartPane(
     chainFor?.let { u ->
         chainDialog(u, { chainFor = null }) { pick ->
             chainFor = null
-            scope.launch {
+            scope.launch(Dispatchers.Main.immediate) {
                 val sym = withContext(Dispatchers.IO) {
                     runCatching { source.contracts().firstOrNull { c ->
                         c.underlying == pick.underlying && c.expiry == pick.expiry && c.strike == pick.strike && c.right == pick.right }?.tradingSymbol }.getOrNull()
@@ -419,11 +422,11 @@ internal fun ChartAlertDialog(symbol: String, source: ChartSource, onSave: (com.
     val p = LocalPalette.current
     var now by remember { mutableStateOf<Double?>(null) }
     var level by remember { mutableStateOf("") }
-    LaunchedEffect(symbol) {
+    LaunchedEffect(symbol) { withContext(Dispatchers.Main.immediate) {
         val t = System.currentTimeMillis() / 1000
         now = withContext(Dispatchers.IO) { runCatching { source.bars(symbol, "1m", t - 3 * 86400, t).lastOrNull()?.close }.getOrNull() }
         if (level.isEmpty()) now?.let { level = String.format(java.util.Locale.ENGLISH, "%.2f", it) }
-    }
+    } }
     val lv = level.toDoubleOrNull()
     val cur = now
     com.optionslab.app.ui.components.AlertDialog(
