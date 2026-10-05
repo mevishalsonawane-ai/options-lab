@@ -18,6 +18,7 @@ object BatteryNow {
             resting = jarvis && runCatching { com.optionslab.app.ira.JarvisVoice.restingNow() }.getOrDefault(false),
             watch = step > 0 || Heartbeat.alivePulse > 0,
             watchStepSec = step.takeIf { it > 0 },
+            wordsQuiet = runCatching { Tasks.wordsQuietNow() }.getOrNull(),
             stream = runCatching { com.optionslab.app.data.KiteStream.status.value.name }.getOrDefault("OFF"),
             streamTokens = runCatching { com.optionslab.app.data.KiteStream.following() }.getOrDefault(0),
             modelLoaded = jarvis && runCatching { com.optionslab.app.ira.IraModel.state.value.loaded }.getOrDefault(false),

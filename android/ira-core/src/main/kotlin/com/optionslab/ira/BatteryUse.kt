@@ -79,12 +79,18 @@ object BatteryUse {
         val marketOpen: Boolean,
         val batteryPercent: Int?,
         val charging: Boolean,
+        /** Jarvis's words lane in the order watch: true at the quiet pace ([WordsPace.quiet]), false every round, null not running lately. */
+        val wordsQuiet: Boolean? = null,
     )
 
     /** The diagnostics' line: what runs in the background now. */
     fun line(s: Snapshot): String = "Battery: " + listOf(
         "listening " + (if (!s.listening) "off" else (if (s.resting) "resting" else "on") + " (battery saver for listening ${if (s.listenSaver) "on" else "off"})"),
-        "order watch " + (if (!s.watch) "not running" else s.watchStepSec?.let { "every $it s" } ?: "running"),
+        "order watch " + (if (!s.watch) "not running" else s.watchStepSec?.let { "every $it s" } ?: "running") + when (s.wordsQuiet.takeIf { s.watch }) {
+            null -> ""
+            true -> " (Jarvis's words quiet: slow checks every ${WordsPace.QUIET_SLOW_MS / 60_000} min, news every ${WordsPace.QUIET_NEWS_MS / 60_000} min)"
+            false -> " (Jarvis's words every round)"
+        },
         "live stream ${s.stream}" + if (s.stream != "OFF") " (${s.streamTokens} instruments)" else "",
         "AI model " + if (s.modelLoaded) "loaded" else "not loaded",
         "phone " + (s.batteryPercent?.let { "$it%" } ?: "battery unknown") + if (s.charging) ", charging" else ", not charging",
@@ -163,4 +169,29 @@ object WordsPace {
     /** Is the news looked at this round ([lastNewsMs] = the last read, null = never)? Its own 5-minute gate still applies. */
     fun newsDue(quiet: Boolean, nowMs: Long, lastNewsMs: Long?): Boolean =
         !quiet || lastNewsMs == null || nowMs < lastNewsMs || nowMs - lastNewsMs >= QUIET_NEWS_MS
+}
+
+/**
+ * Battery, round 3: the hourly night read of the news ([OVERNIGHT_HOURS] of headlines feed the 9 AM brief) is made only
+ * when the next session opens within those hours - a weekday night as before, but not the whole weekend or a holiday,
+ * when a Friday-evening read is cut from Monday's brief anyway. No next session found counts as due (the read as before).
+ * Nothing here touches the market-hours news, a stop or an order. Pure.
+ */
+object NightNewsPace {
+    const val OVERNIGHT_HOURS = 18L
+
+    /** The next session's open (09:15) at or after [now], over at most three weeks of [tradingDay]; null when none is found. */
+    fun nextOpen(now: java.time.LocalDateTime, tradingDay: (java.time.LocalDate) -> Boolean): java.time.LocalDateTime? {
+        val open = java.time.LocalTime.of(9, 15)
+        var d = now.toLocalDate()
+        if (!now.toLocalTime().isBefore(open)) d = d.plusDays(1)
+        repeat(21) {
+            if (runCatching { tradingDay(d) }.getOrDefault(true)) return d.atTime(open)
+            d = d.plusDays(1)
+        }
+        return null
+    }
+
+    fun due(now: java.time.LocalDateTime, nextOpen: java.time.LocalDateTime?): Boolean =
+        nextOpen == null || !now.isBefore(nextOpen.minusHours(OVERNIGHT_HOURS))
 }

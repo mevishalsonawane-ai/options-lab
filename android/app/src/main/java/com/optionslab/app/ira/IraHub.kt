@@ -550,6 +550,11 @@ object IraHub {
     suspend fun nightNews(now: Instant = Instant.now()) {
         if (!com.optionslab.app.BuildConfig.JARVIS) return
         if (IraMarket.NIFTY.trading(now.atZone(IST).toLocalDateTime())) return
+        // Battery (round 3): only within the 18 hours before the next open - the brief keeps no older headline - so not
+        // hourly through a weekend or a holiday. A calendar that cannot be read reads as before.
+        val local = now.atZone(IST).toLocalDateTime()
+        val nextOpen = runCatching { com.optionslab.ira.NightNewsPace.nextOpen(local) { com.optionslab.app.data.Market.isTradingDay(it) } }.getOrNull()
+        if (!com.optionslab.ira.NightNewsPace.due(local, nextOpen)) return
         val got = newsIfDue() ?: return
         _state.update { it.copy(news = got.first, newsAt = Instant.now(), newsMissing = got.second) }
         val fresh = synchronized(newsSeen) { got.first.filter { newsSeen.add(it.link.ifBlank { it.title }) }.also { com.optionslab.ira.Upkeep.trimOldest(newsSeen, NEWS_SEEN_MAX) } }

@@ -115,6 +115,9 @@ object SecurePrefs {
     /** The keys starting with [prefix] (to prune per-day keys); names only. */
     @Synchronized fun keys(prefix: String): List<String> = map().keys().asSequence().filter { it.startsWith(prefix) }.toList()
 
+    /** Bumped by every [init] and [wipe]: a caller holding vault values in memory drops them when it changes. */
+    @Synchronized fun generationNow(): Int = generation
+
     @Synchronized fun wipe() {
         generation++; pending = false
         cache = JSONObject()

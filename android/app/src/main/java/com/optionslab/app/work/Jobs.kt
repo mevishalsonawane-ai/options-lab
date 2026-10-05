@@ -446,6 +446,13 @@ object Tasks {
     @Volatile private var wordsStep: String? = null
     /** When the slow group of words last ran ([com.optionslab.ira.WordsPace]). */
     @Volatile private var wordsSlowAt = 0L
+    /** The words lane's pace at its last round (true = quiet) and when that was - for the diagnostics' "Battery:" line. */
+    @Volatile private var wordsQuietLast = false
+    @Volatile private var wordsPaceAt = 0L
+
+    /** The words lane's pace now: true quiet, false every round, null when it has not run in the last 5 minutes. */
+    fun wordsQuietNow(): Boolean? =
+        if (wordsPaceAt > 0L && System.currentTimeMillis() - wordsPaceAt in 0L..5 * 60_000L) wordsQuietLast else null
 
     /**
      * Battery (round 2): the screen off and nothing held or armed - the words lane's slow group and the news go slower
@@ -517,6 +524,7 @@ object Tasks {
         // the news every 10; the safety words above and the time-bound checks run every round as before.
         val quiet = wordsQuiet()
         val nowMs = System.currentTimeMillis()
+        wordsQuietLast = quiet; wordsPaceAt = nowMs
         val slow = com.optionslab.ira.WordsPace.slowDue(quiet, nowMs, wordsSlowAt)
         if (slow) wordsSlowAt = nowMs
         val newsDue = com.optionslab.ira.WordsPace.newsDue(quiet, nowMs, com.optionslab.app.ira.IraHub.state.value.newsAt?.toEpochMilli())

@@ -45,6 +45,8 @@ class BatteryUseTest {
         val one = BatteryUse.answer(snap.copy(listening = false, stream = "OFF"))
         assertTrue(one.startsWith("One thing of mine runs in the background now, Boss: The order watch, every 60 seconds"), one)
         assertTrue(BatteryUse.line(snap.copy(listening = false, stream = "OFF", watch = false, charging = true)).contains("listening off · order watch not running · live stream OFF · "))
+        assertTrue(BatteryUse.line(snap.copy(wordsQuiet = true)).contains("order watch every 60 s (Jarvis's words quiet: slow checks every 3 min, news every 10 min) · "))
+        assertTrue(BatteryUse.line(snap.copy(wordsQuiet = false)).contains("order watch every 60 s (Jarvis's words every round) · "))
     }
 
     private val ASKED = listOf("why is the app using so much battery", "why is the app eating battery", "battery kyun kha raha hai",
@@ -85,5 +87,34 @@ class WordsPaceTest {
         assertFalse(WordsPace.newsDue(true, now, now - 5 * 60_000))
         assertTrue(WordsPace.newsDue(true, now, now - WordsPace.QUIET_NEWS_MS))
         assertTrue(WordsPace.newsDue(true, now, null))
+    }
+}
+
+class NightNewsPaceTest {
+    private val weekday: (java.time.LocalDate) -> Boolean = { it.dayOfWeek.value <= 5 }
+    private fun at(d: Int, h: Int, m: Int = 0) = java.time.LocalDateTime.of(2026, 10, d, h, m)   // 2 Oct 2026 is a Friday
+
+    @Test fun weekdayNightsAsBefore() {
+        // Tuesday 6 Oct after the close: Wednesday's open is under 18 hours away.
+        assertEquals(at(7, 9, 15), NightNewsPace.nextOpen(at(6, 16), weekday))
+        assertTrue(NightNewsPace.due(at(6, 16), NightNewsPace.nextOpen(at(6, 16), weekday)))
+        assertTrue(NightNewsPace.due(at(7, 3), NightNewsPace.nextOpen(at(7, 3), weekday)))
+        assertEquals(at(7, 9, 15), NightNewsPace.nextOpen(at(7, 3), weekday), "before the open: today's")
+    }
+
+    @Test fun notAllWeekend() {
+        val sat = at(3, 12)
+        assertEquals(at(5, 9, 15), NightNewsPace.nextOpen(sat, weekday))
+        assertFalse(NightNewsPace.due(sat, NightNewsPace.nextOpen(sat, weekday)))
+        assertFalse(NightNewsPace.due(at(2, 20), NightNewsPace.nextOpen(at(2, 20), weekday)), "Friday night")
+        assertTrue(NightNewsPace.due(at(4, 15, 15), NightNewsPace.nextOpen(at(4, 15, 15), weekday)), "Sunday from 15:15")
+        assertFalse(NightNewsPace.due(at(4, 15, 14), NightNewsPace.nextOpen(at(4, 15, 14), weekday)))
+        val holiday: (java.time.LocalDate) -> Boolean = { weekday(it) && it != java.time.LocalDate.of(2026, 10, 5) }
+        assertFalse(NightNewsPace.due(at(4, 20), NightNewsPace.nextOpen(at(4, 20), holiday)), "Monday a holiday")
+    }
+
+    @Test fun noSessionFoundReadsAsBefore() {
+        assertEquals(null, NightNewsPace.nextOpen(at(3, 12)) { false })
+        assertTrue(NightNewsPace.due(at(3, 12), null))
     }
 }
