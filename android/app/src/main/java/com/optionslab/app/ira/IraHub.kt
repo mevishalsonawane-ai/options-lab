@@ -1253,7 +1253,7 @@ object IraHub {
         }
         // "Which patterns work on Nifty?" / "how good are your pattern calls?": how the patterns he told of played out on
         // this phone ([com.optionslab.ira.PatternCalls]; market data only, facts, never advice).
-        if (parsed.order == null && parsed.command == null && runCatching { com.optionslab.ira.PatternCalls.asked(q) }.getOrDefault(false)) {
+        if (!bundled && parsed.order == null && parsed.command == null && runCatching { com.optionslab.ira.PatternCalls.asked(q) }.getOrDefault(false)) {
             val said = runCatching { com.optionslab.ira.PatternCalls.say(IraTools.patternCalls(), parsed.markets, com.optionslab.app.data.Market.today()) }
                 .getOrDefault("I couldn't read my pattern record just now, Boss.")
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
@@ -1297,7 +1297,7 @@ object IraHub {
         // "Any contradictions?", "do the facts agree?", "what's pulling different ways?", "am I going against my own rules?"
         // ([com.optionslab.ira.Consistency]): market facts pointing different ways, his own numbers disagreeing (and which he
         // goes by), and - on an unlocked phone only - Boss's words against today's trades. Words only, never advice.
-        if (parsed.order == null && parsed.command == null && !com.optionslab.app.BuildConfig.GOLD &&
+        if (!bundled && parsed.order == null && parsed.command == null && !com.optionslab.app.BuildConfig.GOLD &&
             runCatching { com.optionslab.ira.Consistency.asked(q) }.getOrDefault(false)) {
             _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
             scope.launch { reply(runCatching { consistency() }.getOrElse { "I could not check myself for contradictions just now, Boss." }) }
