@@ -3,7 +3,9 @@ package com.optionslab.ira
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotSame
 import kotlin.test.assertNull
+import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
 class TurnTest {
@@ -81,5 +83,65 @@ class TurnTest {
         // One long sentence: one piece.
         val one = "Boss, Nifty is at 24,512 and holding above the opening range high with volume picking up"
         assertEquals(listOf(one), Wake.pieces(one))
+    }
+
+    @Test fun aPlainQuestionIsWorkedOutAheadBeforeItsWordsStandStill() {
+        // The question only (the name taken off), at once - no stillness needed: only the answer's words are made.
+        assertEquals("how is nifty", Turn.ahead("Jarvis how is nifty", awake = false))
+        assertEquals("what are the levels on banknifty", Turn.ahead("Jarvis what are the levels on banknifty", false))
+        assertEquals("how is sensex", Turn.ahead("how is sensex", awake = true))
+        // Never for anything that acts, the account, the model's words, a breath, or words not said to Jarvis.
+        assertNull(Turn.ahead("Jarvis stop all strategies", false))
+        assertNull(Turn.ahead("Jarvis buy 2 lots nifty 24500 ce", false))
+        assertNull(Turn.ahead("Jarvis what is my pnl today", false))
+        assertNull(Turn.ahead("Jarvis backtest the hammer on nifty", false))
+        assertNull(Turn.ahead("Jarvis what should I buy", false))
+        assertNull(Turn.ahead("Jarvis tell me a joke please", false))
+        assertNull(Turn.ahead("Jarvis how", false))
+        assertNull(Turn.ahead("Jarvis", false))
+        assertNull(Turn.ahead("how is nifty", awake = false))
+        assertNull(Turn.ahead(null, true))
+        // The same rule as answering early: what is worked out ahead is what may be answered from a still partial.
+        for (w in listOf("Jarvis how is nifty", "Jarvis mute", "Jarvis any news", "Jarvis what is my pnl today"))
+            assertEquals(Turn.early(w, false, 5_000) != null, Turn.ahead(w, false) != null, w)
+    }
+
+    @Test fun theAnswerMadeAheadIsTakenOnlyForTheSameQuestionAndOnlyOnce() {
+        val ahead = Ahead<Question, String>()
+        // The final words read as the same question (case, a question mark): the answer made ahead is used, once.
+        fun k(s: String) = Turn.key(Ask.parse(s))
+        ahead.put(k("how is nifty"), "Boss, Nifty is at 24,512.")
+        assertEquals("Boss, Nifty is at 24,512.", ahead.take(k("How is Nifty?")))
+        assertNull(ahead.take(k("how is nifty")))
+        // The words changed before the final reading: dropped, never answered from (and not kept for later).
+        ahead.put(k("how is nifty"), "Boss, Nifty is at 24,512.")
+        assertNull(ahead.take(k("how is banknifty")))
+        assertNull(ahead.take(k("how is nifty")))
+        ahead.put(k("how is nifty"), "Boss, Nifty is at 24,512.")
+        assertNull(ahead.take(k("how is nifty trending")))
+        // A plain question that became a command: never the plain answer.
+        ahead.put(k("how is nifty"), "Boss, Nifty is at 24,512.")
+        assertNull(ahead.take(k("stop all strategies")))
+    }
+
+    @Test fun aQuestionIsReadOnceAndAnOrderOrCommandAfreshEachTime() {
+        val q = Ask.parse("what are the levels on finnifty")
+        assertSame(q, Ask.parse("what are the levels on finnifty"))
+        assertEquals(q, Ask.parse(String(StringBuilder("what are the levels on finnifty"))))
+        assertNotSame(Ask.parse("stop all strategies"), Ask.parse("stop all strategies"))
+        assertEquals(Ask.parse("stop all strategies"), Ask.parse("stop all strategies"))
+        // Many questions later the oldest are read again, the same.
+        repeat(Ask.READ_KEPT + 5) { Ask.parse("how is nifty $it") }
+        assertEquals(q, Ask.parse("what are the levels on finnifty"))
+    }
+
+    @Test fun theSameKeyGivesTheSameAnswer() {
+        val now = java.time.LocalDateTime.of(2026, 10, 5, 10, 30)
+        fun said(s: String) = Ira(PatternBook()).answer(s, emptyMap(), emptyList(), voice = true, now = now).text
+        for ((partial, final) in listOf("how is nifty" to "How is Nifty?", "can you hear me" to "Can you hear me?", "any news" to "Any news.",
+                "good morning" to "Good morning!", "what are the levels on banknifty" to "What are the levels on BankNifty?")) {
+            assertEquals(Turn.key(Ask.parse(partial)), Turn.key(Ask.parse(final)), partial)
+            assertEquals(said(partial), said(final), partial)
+        }
     }
 }

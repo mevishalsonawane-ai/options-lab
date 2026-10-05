@@ -58,8 +58,26 @@ object Ask {
     private val HELP = Regex(" (what can you do|what do you do|who are you|what are you|help|how do i use|how to use|can you (hear|listen)|" +
         "listen to me|hear me|your voice|voice|speak to me|talk to me|can you talk|can you speak) ")
 
-    /** [said] as typed; when nothing in it is understood, read again with its near-miss words fixed ([Spelling]). */
+    /**
+     * [said] as typed; when nothing in it is understood, read again with its near-miss words fixed ([Spelling]).
+     * One spoken question is read several times (the voice's checks, the hub's branches, the answer) at a few ms each on
+     * a phone, and its first reading builds every pattern: a question's reading is kept and reused ([READ_KEPT] at most).
+     * Questions only - a command or an order is read afresh each time (an event's day is today's).
+     */
     fun parse(said: String): Question {
+        synchronized(read) { read[said] }?.let { return it }
+        return parseFresh(said).also { q -> if (q.command == null && q.order == null) synchronized(read) { read[said] = q } }
+    }
+
+    /** How many questions' readings [parse] keeps. */
+    const val READ_KEPT = 32
+
+    /** The last questions read, the least recently used dropped first. */
+    private val read = object : LinkedHashMap<String, Question>(READ_KEPT * 2, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Question>?) = size > READ_KEPT
+    }
+
+    private fun parseFresh(said: String): Question {
         val q = parseAs(said)
         if (q.topics == setOf(Topic.OFF_TOPIC)) Spelling.fix(said).takeIf { it != said }?.let { return parseAs(it) }
         // "Senseks today": no market heard - read again with near-miss words fixed when that finds one (questions only).

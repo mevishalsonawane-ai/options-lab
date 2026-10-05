@@ -400,6 +400,22 @@ class JarvisVoice : Service() {
     private val END_AFTER_MS = 900L
     /** When the pending [finish] is due (elapsed ms; 0: none this turn), so "speech ended" never puts it off. */
     private var finishAt = 0L
+    /** Words unchanged this long: a plain question's answer is worked out ahead ([prepareAhead]). */
+    private val AHEAD_AFTER_MS = 300L
+    private var aheadJob: kotlinx.coroutines.Job? = null
+    /**
+     * The turn's partial words, a plain question ([com.optionslab.ira.Turn.ahead]): its answer's words worked out now, off
+     * the main thread, while the turn closes and the recognizer's final reading is awaited ([IraHub.prepare]). Nothing is
+     * said, shown or done from them: the final words go the usual way (the name, lock and voice checks), and the answer
+     * worked out ahead is used only when they read as the same question.
+     */
+    private val prepareAhead = Runnable {
+        if (!listening || speaking || turnInSpeech || asking != null) return@Runnable
+        val words = turnPartial ?: return@Runnable
+        val awake = awake()
+        aheadJob?.cancel()
+        aheadJob = scope.launch(Dispatchers.Default) { runCatching { com.optionslab.ira.Turn.ahead(words, awake)?.let { IraHub.prepare(it) } } }
+    }
     /** The sentence being spoken now ("id#n"), so a replaced one is ignored. */
     @Volatile private var utterance: String? = null
     private var said = 0
@@ -546,6 +562,9 @@ class JarvisVoice : Service() {
             tts = TextToSpeech(this) { status -> main.post { voiceReady = status == TextToSpeech.SUCCESS && pickOfflineVoice() } }
             listen()
             main.postDelayed(watchdog, 5_000)
+            // The question reader's first use builds all its patterns (the slowest reading of the day): done now, off the
+            // main thread, not inside Boss's first question. A reading only: nothing is asked.
+            scope.launch(Dispatchers.Default) { runCatching { com.optionslab.ira.Ask.parse("how is nifty today") } }
             // While listening, the slow answers are kept ready so none waits: prices every minute in market hours, your
             // account and the trade check every 30 seconds.
             // (The model is NOT loaded here any more - root cause, 4 Oct: kept in memory the whole time Jarvis listened,
@@ -791,6 +810,8 @@ class JarvisVoice : Service() {
                 val wait = if (nameOnly) 1_800L else END_AFTER_MS
                 finishAt = SystemClock.elapsedRealtime() + wait
                 main.postDelayed(finish, wait)
+                main.removeCallbacks(prepareAhead)
+                if (!nameOnly && asking == null) main.postDelayed(prepareAhead, AHEAD_AFTER_MS)
             }
         }
         override fun onEvent(eventType: Int, params: Bundle?) {}

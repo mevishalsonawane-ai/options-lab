@@ -1609,12 +1609,15 @@ object IraHub {
         parsed.order?.takeIf { com.optionslab.app.BuildConfig.JARVIS && it.missing.isEmpty() && it.refusal == null &&
             runCatching { !com.optionslab.app.data.AppSettings.load().live }.getOrDefault(false) }?.let { o -> tradeAsked(q, o); return }
         // A greeting is answered with the time of day, today's session and where the indices stand.
-        val today = com.optionslab.app.data.Market.today()
-        val closedReason = if (runCatching { com.optionslab.app.data.Market.isTradingDay(today) }.getOrDefault(true)) null
-            else runCatching { com.optionslab.app.data.Holidays.book().upcoming(today).firstOrNull { it.first == today }?.second }.getOrNull()
-                ?: if (today.dayOfWeek.value >= 6) "weekend" else "a market holiday"
-        val a0 = runCatching { Ira(book).answer(q, _state.value.snaps, _state.value.news, voice = com.optionslab.app.BuildConfig.JARVIS,
-            now = LocalDateTime.now(IST), closedReason = closedReason) }.getOrElse { com.optionslab.ira.Answer("I could not work that out.", emptyList()) }
+        val closedReason = noSessionWhy()
+        val now = LocalDateTime.now(IST)
+        val st0 = _state.value
+        val book0 = book
+        // Worked out ahead while the recognizer's final reading was awaited ([prepare]): taken only for the same question
+        // from the same prices, news and minute (the same words then, exactly); otherwise worked out now, as before.
+        val a0 = ahead.take(Inputs(com.optionslab.ira.Turn.key(parsed), st0.snaps, st0.news, book0, now.truncatedTo(java.time.temporal.ChronoUnit.MINUTES), closedReason))
+            ?: runCatching { Ira(book0).answer(q, st0.snaps, st0.news, voice = com.optionslab.app.BuildConfig.JARVIS,
+                now = now, closedReason = closedReason) }.getOrElse { com.optionslab.ira.Answer("I could not work that out.", emptyList()) }
         // A holiday or a weekend: said first, so the last session's prices are not taken for today's.
         val closed = closedToday()?.takeIf { parsed.topics.any { it in MARKET_TOPICS } && testHistories == null }
         val a1 = if (closed == null) a0 else a0.copy(text = closed.substringBefore(" Prices") + " " + a0.text, facts = listOf(closed) + a0.facts)
@@ -1644,6 +1647,45 @@ object IraHub {
                 if (m !== msg) m else if (better != null && better != a.text) m.copy(text = better, draft = a.text, writing = false) else m.copy(writing = false)
             }) }
         }
+    }
+
+    /** On a day with no session, why (a holiday's name, "weekend"), for a greeting; null on a trading day. */
+    private fun noSessionWhy(today: LocalDate = com.optionslab.app.data.Market.today()): String? =
+        if (runCatching { com.optionslab.app.data.Market.isTradingDay(today) }.getOrDefault(true)) null
+        else runCatching { com.optionslab.app.data.Holidays.book().upcoming(today).firstOrNull { it.first == today }?.second }.getOrNull()
+            ?: if (today.dayOfWeek.value >= 6) "weekend" else "a market holiday"
+
+    /**
+     * What a plain answer is worked out from: the question as read, the prices, news and pattern book (the very ones,
+     * by identity: any refresh makes new ones, and the book is taught only in a refresh), the minute and why there is no
+     * session. The same inputs give the same words ([com.optionslab.ira.Turn.key]).
+     */
+    private class Inputs(val q: com.optionslab.ira.Question, val snaps: Any, val news: Any, val book: Any, val minute: LocalDateTime, val closedReason: String?) {
+        override fun equals(other: Any?): Boolean = other is Inputs && q == other.q && snaps === other.snaps && news === other.news &&
+            book === other.book && minute == other.minute && closedReason == other.closedReason
+        override fun hashCode(): Int = q.hashCode()
+    }
+
+    /** The one plain answer worked out ahead ([prepare]), until [ask] takes or drops it. */
+    private val ahead = com.optionslab.ira.Ahead<Inputs, com.optionslab.ira.Answer>()
+
+    /**
+     * A plain market question's answer worked out now, from the turn's partial words, while the recognizer's final reading
+     * is awaited ([com.optionslab.ira.Turn.ahead]; Boss, 5 Oct: speed). The words only: nothing is posted, counted,
+     * learned, said or done, and nothing else the hub keeps changes. [ask] uses it, with all its usual effects, only when
+     * the final words read as the same question from the same prices; anything else drops it. Off the main thread.
+     */
+    fun prepare(question: String) {
+        val q = com.optionslab.ira.Secrets.redact(question.trim())
+        if (q.isEmpty()) return
+        val parsed = Ask.parse(q)
+        if (!com.optionslab.ira.Turn.quick(parsed)) return
+        val closedReason = noSessionWhy()
+        val now = LocalDateTime.now(IST)
+        val st = _state.value
+        val b = book
+        val a = runCatching { Ira(b).answer(q, st.snaps, st.news, voice = com.optionslab.app.BuildConfig.JARVIS, now = now, closedReason = closedReason) }.getOrNull() ?: return
+        ahead.put(Inputs(com.optionslab.ira.Turn.key(parsed), st.snaps, st.news, b, now.truncatedTo(java.time.temporal.ChronoUnit.MINUTES), closedReason), a)
     }
 
     /**
