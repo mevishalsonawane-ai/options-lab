@@ -3264,7 +3264,7 @@ object IraHub {
         if (!all && markets.firstOrNull() == IraMarket.GOLD) return emptyList()
         val m = markets.firstOrNull { it != IraMarket.GOLD } ?: IraMarket.NIFTY
         val st = _state.value
-        val now = LocalDateTime.now(IST)
+        val now = com.optionslab.app.data.Market.now().toLocalDateTime()
         val live = m.trading(now) && closedToday() == null
         val src = if (all) com.optionslab.ira.DataAge.Source.entries.toSet() else com.optionslab.ira.DataAge.sources(topics)
         // A fetch just tried: data still old after it means the feed itself is behind.
@@ -3289,7 +3289,7 @@ object IraHub {
     private fun aged(text: String, markets: List<IraMarket>, topics: Set<Topic>, withhold: Boolean = true): com.optionslab.ira.DataAge.Dressed {
         val checks = runCatching { ageChecks(markets, topics) }.getOrDefault(emptyList())
         if (checks.isEmpty()) return com.optionslab.ira.DataAge.Dressed(text, null, false)
-        val d = runCatching { com.optionslab.ira.DataAge.dress(text, checks, LocalDateTime.now(IST), withhold) }.getOrNull()
+        val d = runCatching { com.optionslab.ira.DataAge.dress(text, checks, com.optionslab.app.data.Market.now().toLocalDateTime(), withhold) }.getOrNull()
             ?: return com.optionslab.ira.DataAge.Dressed(text, null, false)
         if (checks.any { it.source == com.optionslab.ira.DataAge.Source.PRICES && it.level == com.optionslab.ira.DataAge.Level.STALE && !it.tried } && online())
             scope.launch { runCatching { refresh() } }
