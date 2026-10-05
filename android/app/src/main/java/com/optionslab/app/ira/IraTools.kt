@@ -55,6 +55,7 @@ internal object IraTools {
     /** One more question of [said]'s kinds asked today (a command or an order adds nothing). */
     @Synchronized fun countAsked(said: String) {
         runCatching {
+            clarityAsked(said)
             val t = com.optionslab.ira.SelfDoubt.count(askedKinds(), com.optionslab.app.data.Market.today(), said)
             val o = JSONObject().apply { t.forEach { (d, m) -> put(d.toString(), JSONObject().apply { m.forEach { (k, n) -> put(k, n) } }) } }
             prefs().putAllSoon(mapOf(ASKED_KINDS to o.toString()))
@@ -544,6 +545,76 @@ internal object IraTools {
         IraActivity.add("Forgot Boss's routine, as he asked.")
     }
 
+    // ---- which answers Boss finds unclear ([com.optionslab.ira.Clarity]) ------------------------------------------------
+
+    /** The unclear answers noted (kind keys and minutes only, never the words), the last 30 days. */
+    private const val CLARITY = "jarvis.clarity"
+    @Volatile private var clarityCache: com.optionslab.ira.Clarity.Log? = null
+    /** The kind of the question last asked and when (ms): a "what?" soon after is about its answer. Never the words. */
+    @Volatile private var lastKind: Pair<String, Long>? = null
+    /** The kinds said shorter now, worked out at most every 10 minutes or when the log changes. */
+    @Volatile private var shortCache: Triple<String, Long, List<com.optionslab.ira.Clarity.Record>>? = null
+
+    fun clarityLog(): com.optionslab.ira.Clarity.Log = clarityCache ?: runCatching {
+        val o = JSONObject(prefs().getString(CLARITY) ?: "{}")
+        val e = o.optJSONArray("e") ?: JSONArray()
+        com.optionslab.ira.Clarity.Log(
+            events = (0 until e.length()).map { i -> e.getJSONObject(i).let { x -> com.optionslab.ira.Clarity.Event(x.getString("k"), LocalDateTime.parse(x.getString("t"))) } },
+            resetAt = o.optString("r").takeIf { it.isNotEmpty() }?.let { LocalDateTime.parse(it) })
+    }.getOrDefault(com.optionslab.ira.Clarity.Log()).also { clarityCache = it }
+
+    @Synchronized private fun clarityUpdate(f: (com.optionslab.ira.Clarity.Log) -> com.optionslab.ira.Clarity.Log) {
+        runCatching {
+            val log = f(clarityLog())
+            clarityCache = log
+            shortCache = null
+            val o = JSONObject().put("e", JSONArray().apply { log.events.forEach { x -> put(JSONObject().put("k", x.kind).put("t", x.at.toString())) } })
+            log.resetAt?.let { o.put("r", it.toString()) }
+            prefs().putAllSoon(mapOf(CLARITY to o.toString()))
+        }
+    }
+
+    /** A question with a kind of answer was asked ([said]'s kind only is kept, in memory). */
+    fun clarityAsked(said: String) {
+        val k = runCatching { com.optionslab.ira.Clarity.kind(said) }.getOrNull() ?: return
+        lastKind = k to System.currentTimeMillis()
+    }
+
+    /** Boss said [said]: "what?" / "come again" soon after a question notes that answer's kind as unclear (once an answer). */
+    fun clarityHeard(said: String) {
+        if (!runCatching { com.optionslab.ira.Clarity.unclear(said) }.getOrDefault(false)) return
+        val last = lastKind ?: return
+        if (System.currentTimeMillis() - last.second > com.optionslab.ira.Clarity.REACT_MS) return
+        lastKind = null
+        clarityUpdate { com.optionslab.ira.Clarity.heard(it, last.first, minuteNow()) }
+    }
+
+    private fun clarityShorter(): List<com.optionslab.ira.Clarity.Record> {
+        val log = clarityLog()
+        val now = minuteNow()
+        val key = "${log.events.size}|${log.events.lastOrNull()?.at}|${log.resetAt}|${now.toLocalDate()}"
+        shortCache?.takeIf { it.first == key && System.currentTimeMillis() - it.second < 10 * 60_000L }?.let { return it.third }
+        val list = com.optionslab.ira.Clarity.shorter(log, askedKinds(), now)
+        shortCache = Triple(key, System.currentTimeMillis(), list)
+        return list
+    }
+
+    /** How many sentences to say aloud answering [said] (a kind Boss often asks "what?" after), or null: as usual. Voice only. */
+    fun claritySentences(said: String): Int? = runCatching { com.optionslab.ira.Clarity.sentences(said, clarityShorter()) }.getOrNull()
+
+    /** "Which answers do you keep short?". */
+    fun clarityHeld(): String = runCatching { com.optionslab.ira.Clarity.say(clarityLog(), askedKinds(), minuteNow()) }
+        .getOrDefault("I could not read my record of unclear answers just now, Boss.")
+
+    /** "Say your answers in full again" (or Boss's own "full answers"): every answer as usual aloud, the count afresh. */
+    fun clarityReset(): String {
+        val now = minuteNow()
+        val said = runCatching { com.optionslab.ira.Clarity.sayReset(clarityLog(), askedKinds(), now) }.getOrDefault("Done, Boss: every answer as usual aloud again.")
+        clarityUpdate { com.optionslab.ira.Clarity.reset(it, now) }
+        IraActivity.add("Saying every answer as usual aloud again (as asked).")
+        return said
+    }
+
     // ---- what he has learned, in one view ([com.optionslab.ira.Learnings]) ------------------------------------------
 
     /** Every learning store read with its own accessor (the goals are added by [IraImprove], which holds them). */
@@ -558,7 +629,8 @@ internal object IraTools {
         patterns = runCatching { patternCalls() }.getOrDefault(emptyList()),
         data = runCatching { freshLog() }.getOrDefault(com.optionslab.ira.DataAge.Log()),
         news = runCatching { newsMoves() }.getOrDefault(emptyList()),
-        plan = plan)
+        plan = plan,
+        clarity = runCatching { clarityLog() }.getOrDefault(com.optionslab.ira.Clarity.Log()))
 
     /**
      * "Undo everything you learned this week", on Boss's Confirm: the wordings and routines kept in the last 7 days
@@ -572,8 +644,9 @@ internal object IraTools {
         if (u.words.isNotEmpty()) runCatching { saveLearned(com.optionslab.ira.Learnings.keepWords(learned(), today)) }
         if (u.routines.isNotEmpty()) runCatching { saveKept(com.optionslab.ira.Learnings.keepRoutines(routineKept(), today)) }
         if (u.alerts.isNotEmpty()) alertUpdate { com.optionslab.ira.AlertSense.reset(it, now) }
+        if (u.clarity.isNotEmpty()) clarityUpdate { com.optionslab.ira.Clarity.reset(it, now) }
         IraActivity.add("Undid this week's learning, as Boss confirmed: ${u.words.size} wording(s), ${u.routines.size} routine(s), " +
-            "${u.alerts.size} alert kind(s) aloud again.")
+            "${u.alerts.size} alert kind(s) aloud again, ${u.clarity.size} answer kind(s) as usual aloud again.")
         return u
     }
 

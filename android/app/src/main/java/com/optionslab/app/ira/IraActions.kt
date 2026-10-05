@@ -265,7 +265,8 @@ internal object IraActions {
                 out.joinToString(" ")
             }
             Command.Kind.BRIEF_ON -> { IraTools.brief = true; "Short answers, Boss. Say \"tell me more\" for the rest." to null }
-            Command.Kind.BRIEF_OFF -> { IraTools.brief = false; "Full answers again." to null }
+            // Boss's own "full answers" wins over what was learned: the answers said shorter aloud ([com.optionslab.ira.Clarity]) too.
+            Command.Kind.BRIEF_OFF -> { IraTools.brief = false; runCatching { IraTools.clarityReset() }; "Full answers again." to null }
             Command.Kind.MORE -> (IraHub.lastFullAnswer() ?: "There is no answer of mine to say more about.") to null
             Command.Kind.PRACTICE -> "Replaying the day..." to null
             Command.Kind.VOICE_CHECK -> JarvisVoice.diagnose(ctx()) to null

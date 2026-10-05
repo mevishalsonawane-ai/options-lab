@@ -18,7 +18,8 @@ import java.util.Locale
  * on an unlocked phone only.
  *
  * "Undo everything you learned this week" ([undoAsked], [undo]) is put to Boss first and resets learned behaviour only:
- * the wordings and routines kept in the last [DAYS] days, the alert count (every alert aloud again) and his own goals
+ * the wordings and routines kept in the last [DAYS] days, the alert count (every alert aloud again), the answers said
+ * shorter aloud ([Clarity]: every answer as usual again) and his own goals
  * for this week. Never a setting, the PIN, Live, the AI's live trading, a guard or the Google speech choice - and never
  * a record: the answers Boss marked wrong, the trades and the patterns' outcomes stay, as they are facts, not habits.
  * Nothing here acts. Pure: the stores live in the app.
@@ -33,6 +34,7 @@ object Learnings {
         WORDS("Wordings you taught me", true),
         ROUTINES("Routines kept", true),
         ALERTS("Alerts I say less often", false),
+        CLARITY("Answers I keep shorter aloud", false),
         SIT_OUT("Conditions I sit out", true),
         ANSWERS("Answer kinds I flag", true),
         PATTERNS("Patterns I no longer bring up", false),
@@ -60,6 +62,7 @@ object Learnings {
         val data: DataAge.Log = DataAge.Log(),
         val news: List<NewsMoves.Note> = emptyList(),
         val plan: Improve.Plan? = null,
+        val clarity: Clarity.Log = Clarity.Log(),
     )
 
     fun day(d: LocalDate): String = "${d.dayOfMonth} ${d.month.getDisplayName(TextStyle.SHORT, Locale.ENGLISH)}"
@@ -96,6 +99,11 @@ object Learnings {
             Item(Area.ALERTS, "${r.phrase}: $how", held.minOfOrNull { it.second }?.toLocalDate(),
                 "you followed up ${r.followed} of my last ${r.said}" + (if (r.muted > 0) " and muted me after ${r.muted}" else "") +
                     (if (week > 0) "; $week kept to the chat this week" else "") + " - safety warnings never", "say everything again")
+        }
+        // The answer kinds said shorter aloud: Boss kept asking "what?" after them ([Clarity]; kinds only, never words).
+        Clarity.shorter(i.clarity, i.tally, now).forEach { r ->
+            out += Item(Area.CLARITY, "${r.phrase}: ${r.how()}", Clarity.newest(i.clarity, r.kind)?.toLocalDate(),
+                "${r.say()} in the last ${Clarity.WINDOW_DAYS} days; only my voice is shorter, the chat keeps it all", Clarity.UNDO)
         }
         // The conditions his own ideas and Solo sit out: the record decides, so it lifts only as the record does.
         fun sitOut(outcomes: List<SelfCalibration.Outcome>, solo: Boolean) {
@@ -221,8 +229,9 @@ object Learnings {
     fun undoAsked(text: String): Boolean = UNDO.containsMatchIn(norm(text))
 
     /** What undoing the week resets: wordings and routines kept in the last [DAYS] days, the alert count, this week's own goals. */
-    data class Undo(val words: List<Corrections.Learned>, val routines: List<Routine.Kept>, val alerts: List<AlertSense.Record>, val goals: Int) {
-        val empty: Boolean get() = words.isEmpty() && routines.isEmpty() && alerts.isEmpty() && goals == 0
+    data class Undo(val words: List<Corrections.Learned>, val routines: List<Routine.Kept>, val alerts: List<AlertSense.Record>, val goals: Int,
+                    val clarity: List<Clarity.Record> = emptyList()) {
+        val empty: Boolean get() = words.isEmpty() && routines.isEmpty() && alerts.isEmpty() && goals == 0 && clarity.isEmpty()
     }
 
     fun undo(i: Inputs, now: LocalDateTime): Undo {
@@ -231,7 +240,8 @@ object Learnings {
             Corrections.fresh(i.words, today).filter { thisWeek(it.since, today) },
             Routine.live(i.routines, today).filter { thisWeek(it.since, today) },
             AlertSense.quieter(i.alerts, now),
-            i.plan?.takeIf { it.week == Improve.weekOf(today) }?.goals?.size ?: 0)
+            i.plan?.takeIf { it.week == Improve.weekOf(today) }?.goals?.size ?: 0,
+            Clarity.shorter(i.clarity, i.tally, now))
     }
 
     /** [words] without those kept in the last [DAYS] days (the rest, and undated ones, stay). */
@@ -250,12 +260,13 @@ object Learnings {
         if (u.words.isEmpty()) null else plural(u.words.size, "wording") + " (" + u.words.take(SHOW).joinToString(", ") { "\"${it.wrong}\"" } + (if (u.words.size > SHOW) ", ..." else "") + ")",
         if (u.routines.isEmpty()) null else plural(u.routines.size, "routine") + " kept on your yes",
         if (u.alerts.isEmpty()) null else "the alerts I say less often (" + u.alerts.joinToString(", ") { it.phrase } + ") - aloud every time again",
+        if (u.clarity.isEmpty()) null else "the answers I say shorter aloud (" + u.clarity.joinToString(", ") { it.phrase } + ") - said as usual again",
         if (u.goals == 0) null else "my ${plural(u.goals, "goal")} for this week")
 
     const val ONLY = "Only learned behaviour: never a setting, your PIN, Live, AI trading, a guard or the Google speech choice. " +
         "The answers you marked wrong, the trades and the patterns' outcomes stay - they're records, not habits."
 
-    const val NOTHING = "There's nothing I learned in the last $DAYS days to undo, Boss: no wording or routine kept, no alert held back and no goals of mine this week."
+    const val NOTHING = "There's nothing I learned in the last $DAYS days to undo, Boss: no wording or routine kept, no alert held back, no answer said shorter and no goals of mine this week."
 
     /** Put to Boss before anything is reset. */
     fun offer(u: Undo): String = "Boss, shall I undo what I learned in the last $DAYS days? That resets " + parts(u).joinToString("; ") + ". $ONLY"

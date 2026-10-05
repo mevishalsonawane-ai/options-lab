@@ -176,7 +176,7 @@ object SelfDoubt {
     }
 
     /** A key's words when its kind no longer has a mistake in the window. */
-    private fun phraseOf(key: String): String {
+    internal fun phraseOf(key: String): String {
         val (dim, name) = key.substringBefore(':') to key.substringAfter(':')
         return when (dim) {
             "topic" -> runCatching { "answers on " + TOPIC_PHRASE[Topic.valueOf(name)] }.getOrNull()

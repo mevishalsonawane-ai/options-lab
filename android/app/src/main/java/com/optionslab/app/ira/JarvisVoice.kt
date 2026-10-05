@@ -1431,10 +1431,11 @@ class JarvisVoice : Service() {
                 }
                 // Short answers (the owner's setting, or "shorter"): the first sentence; "tell me more" says the whole
                 // answer. Said as a person says it (Boss once, figures rounded), the rest left in the chat.
+                // A kind of answer Boss often asks "what?" after is said shorter (two sentences or one; [com.optionslab.ira.Clarity]).
                 else -> { full = a.text; (if (late) "About what you asked earlier: " else "") + com.optionslab.ira.Aloud.say(a.text, when {
-                    com.optionslab.ira.Ask.parse(q).command?.kind == com.optionslab.ira.Command.Kind.MORE -> com.optionslab.ira.Aloud.Length.FULL
-                    IraTools.brief -> com.optionslab.ira.Aloud.Length.SHORT
-                    else -> com.optionslab.ira.Aloud.Length.USUAL }) }
+                    com.optionslab.ira.Ask.parse(q).command?.kind == com.optionslab.ira.Command.Kind.MORE -> com.optionslab.ira.Aloud.Length.FULL.sentences
+                    IraTools.brief -> com.optionslab.ira.Aloud.Length.SHORT.sentences
+                    else -> IraTools.claritySentences(q) ?: com.optionslab.ira.Aloud.Length.USUAL.sentences }) }
             }.let { text ->
                 // A follow-up (no "Jarvis") that brings back the very answer just given is not said again: the
                 // follow-up window closes instead, so one answer can never repeat itself in a loop.

@@ -1164,6 +1164,9 @@ object IraHub {
         IraModel.stopWriting()
         // Boss asking anything just after an unasked alert: he followed it up ([com.optionslab.ira.AlertSense]; kinds and minutes only).
         if (com.optionslab.app.BuildConfig.JARVIS) scope.launch { runCatching { IraTools.alertBoss(com.optionslab.ira.AlertSense.Boss.ASKED) } }
+        // "What?" / "come again" just after an answer: that answer's kind was unclear to Boss ([com.optionslab.ira.Clarity];
+        // kinds only, never words). It only ever makes Jarvis's voice shorter there - never anything that acts.
+        if (com.optionslab.app.BuildConfig.JARVIS && !understood && !cleaned) runCatching { IraTools.clarityHeard(q) }
         // Only the very next words after a missed question may teach it (Boss's rephrase).
         if (!understood) runCatching { IraTools.asked(q) }
         // What Boss's corrections taught: misunderstood words read as meant (questions only, never anything that acts).
@@ -1220,7 +1223,8 @@ object IraHub {
                 com.optionslab.ira.NewsMoves.asked(q) != null || com.optionslab.ira.PreMarket.asked(q) ||
                 com.optionslab.ira.ChainDrift.asked(q) != null ||
                 com.optionslab.ira.Headroom.asked(q) != null ||
-                com.optionslab.ira.NeedsTrue.asked(q) }.getOrDefault(false)) {
+                com.optionslab.ira.NeedsTrue.asked(q) ||
+                com.optionslab.ira.Clarity.asked(q) != null }.getOrDefault(false)) {
             val prev = if (recent) _state.value.messages.lastOrNull { !it.fromIra }?.text else null
             val qs = runCatching { com.optionslab.ira.Understand.questions(prev, q) }.getOrNull()
                 ?.takeIf { it.isNotEmpty() && it != listOf(q) && it.none { p -> lockedAccount(q, p) } }
@@ -1276,6 +1280,15 @@ object IraHub {
         if (!bundled && parsed.order == null && parsed.command == null && runCatching { com.optionslab.ira.PatternCalls.asked(q) }.getOrDefault(false)) {
             val said = runCatching { com.optionslab.ira.PatternCalls.say(IraTools.patternCalls(), parsed.markets, com.optionslab.app.data.Market.today()) }
                 .getOrDefault("I couldn't read my pattern record just now, Boss.")
+            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
+            return
+        }
+        // "Which answers do you keep short?" / "say your answers in full again": the answer kinds said shorter aloud, Boss having
+        // asked "what?" after them ([com.optionslab.ira.Clarity]; kinds only). Only Jarvis's voice changes - nothing acts.
+        val clarityAsk = if (com.optionslab.app.BuildConfig.JARVIS && !bundled && parsed.order == null && parsed.command == null)
+            runCatching { com.optionslab.ira.Clarity.asked(q) }.getOrNull() else null
+        if (clarityAsk != null) {
+            val said = if (clarityAsk == com.optionslab.ira.Clarity.Request.RESET) IraTools.clarityReset() else IraTools.clarityHeld()
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
             return
         }

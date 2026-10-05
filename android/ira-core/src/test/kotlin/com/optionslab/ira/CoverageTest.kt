@@ -419,7 +419,7 @@ class CoverageTest {
         if (!understood && (Routine.asked(said) || Routine.forgetAsked(said))) return "Routine"
         val asSaid = Sources.asked(said) || AboutBoss.knowAsked(said) || Memory.recallAsked(said) || Memory.forgetAsked(said) ||
             Corrections.wordsAsked(said) || Corrections.forgetWordAsked(said) != null || Routine.asked(said) || Routine.forgetAsked(said) ||
-            PatternCalls.asked(said) || ChainDrift.asked(said) != null || Headroom.asked(said) != null || NeedsTrue.asked(said)
+            PatternCalls.asked(said) || ChainDrift.asked(said) != null || Headroom.asked(said) != null || NeedsTrue.asked(said) || Clarity.asked(said) != null
         val qs = if (asSaid || understood || cleaned) null else Understand.questions(null, said)?.takeIf { it.isNotEmpty() && it != listOf(said) }
         if (qs != null) return if (qs.size == 1) feature(qs[0], cleaned = true) else qs.joinToString(" & ") { feature(it, understood = true) }
         val q = said
@@ -432,6 +432,7 @@ class CoverageTest {
         if (free && p.order == null && AlertSense.asked(q) != null) return "AlertSense"
         if (free && p.order == null && Airtime.asked(q)) return "Airtime"
         if (alone && PatternCalls.asked(q)) return "PatternCalls"
+        if (alone && Clarity.asked(q) != null) return "Clarity"
         if (alone && TaxRecords.exportAsked(q)) return "TaxExport"
         if (alone && Headroom.asked(q) != null) return "Headroom"
         if (alone && DataAge.asked(q)) return "DataAge"
@@ -787,6 +788,13 @@ class CoverageTest {
         "how close am i to my limits" to "Headroom", "how much can i still lose today" to "Headroom", "how many trades do i have left" to "Headroom",
         "am i near my loss limit" to "Headroom", "limit se kitna door hoon" to "Headroom", "kitna aur loss le sakta hoon" to "Headroom",
         "what are my risk limits" to "Account:RISK",
+        // ---- Clarity (round 11): the answers said shorter aloud, and back to usual ----
+        "which answers do you keep short" to "Clarity", "which of your answers do you keep shorter" to "Clarity",
+        "which answers have you shortened" to "Clarity", "which answers were unclear" to "Clarity",
+        "which of your answers do i find confusing" to "Clarity", "why are your answers so short now" to "Clarity",
+        "kaun se jawab chhote karte ho" to "Clarity", "say your answers in full again" to "Clarity",
+        "don't shorten your answers" to "Clarity", "no need to shorten your answers anymore" to "Clarity",
+        "forget which answers i found unclear" to "Clarity",
         // ---- Its neighbours: the strategies listed, Solo, the positions' health ----
         "show my strategies" to "Account:STRATEGIES", "list my strategies" to "Account:STRATEGIES",
         "what strategies are running" to "Account:STRATEGIES", "which strategies are on" to "Account:STRATEGIES",
@@ -858,6 +866,9 @@ class CoverageTest {
             ("what is my trading routine" to "Routine") to ("what are my trading habits" to ACCOUNT_REVIEW),
             ("worst position" to "Account:RANK") to ("what's the best position to take" to "Account:POSITIONS"),
             ("what is a straddle" to "Glossary") to ("what is the atm straddle" to "ChainIntel"),
+            // Round 11: the answers said shorter beside the alerts said less often.
+            ("which answers do you keep short" to "Clarity") to ("which alerts do you hold back" to "AlertSense"),
+            ("say your answers in full again" to "Clarity") to ("say everything again" to "AlertSense"),
         )) { assertEquals(a.second, feature(a.first), a.first); assertEquals(b.second, feature(b.first), b.first) }
         // Boss's Hinglish what-if is a what-if; a forecast, advice or his own book in Hindi never is.
         for (s in listOf("kal nifty ka kya hoga", "nifty 200 points gir jayega kya", "agar nifty 1% gira to kya buy karu",
