@@ -75,6 +75,9 @@ object IraModel {
         if (s == choice) return
         // A download under way is stopped (a cancel when none runs would overwrite the new model's state).
         if (_state.value.status == Status.DOWNLOADING || _state.value.status == Status.VERIFYING) ModelDownload.cancel(c)
+        // A reply or the test being written holds the model: it is stopped, so the switch happens now instead of after a
+        // long (or stuck) answer - Boss saw the new choice marked while the old model's name stayed (5 Oct).
+        stopWriting()
         lock.withLock {
             unloadLocked()
             runCatching { com.optionslab.app.security.SecurePrefs.put("ira.model.choice", s.key) }
