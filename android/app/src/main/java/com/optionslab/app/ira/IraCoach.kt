@@ -557,13 +557,35 @@ internal object IraCoach {
     /** "Which of my positions is losing most": the open positions, worst first. Reads only. */
     suspend fun rankLines(): List<String> = com.optionslab.ira.Exposure.rank(openLegs())
 
+    /**
+     * The word before Boss sends an order he opened to review ([com.optionslab.ira.PreTrade]): just after a loss, past
+     * his usual day or his own trade goal, in the first five minutes, or against a rule he asked me to remember. Shown on
+     * the order review only (never spoken, no amounts); it never blocks, delays or changes the order. Opening orders only:
+     * a closing order is never questioned. Null when there is nothing to say (or the switch is off, or IraGoldAlgo).
+     */
+    suspend fun preTrade(symbols: List<String>, exit: Boolean): String? {
+        if (!com.optionslab.app.BuildConfig.JARVIS || com.optionslab.app.BuildConfig.GOLD || exit || !Automations.on(Automations.Auto.PRETRADE)) return null
+        return runCatching {
+            val live = runCatching { AppSettings.load().live }.getOrDefault(false)
+            val owners = runCatching { com.optionslab.app.data.Strategies.owners() }.getOrDefault(emptyMap())
+            val own = IraAccount.trips(live, owners).filter { it.owner.startsWith("Manual") }
+            val market = symbols.firstNotNullOfOrNull { com.optionslab.ira.PreTrade.marketOf(it) }
+            val expiry = market?.let { m -> runCatching { com.optionslab.app.data.Market.isExpiryDay(m.name) }.getOrDefault(false) } ?: false
+            val goal = IraGoals.all().filter { it.kind == com.optionslab.ira.Goals.Kind.MAX_TRADES }.minOfOrNull { it.amount.toInt() }
+            val r = com.optionslab.ira.PreTrade.reminders(own, LocalDateTime.now(IST), IraTools.memory().map { it.text }, market, expiry, goal)
+            com.optionslab.ira.PreTrade.say(r)?.also { IraActivity.add("A word before an order: ${r.size} reminder${if (r.size == 1) "" else "s"}.") }
+        }.getOrNull()
+    }
+
     /** The 15:35 spoken wrap-up: the day's P&L, the scorecard's headline, tomorrow's events. */
     suspend fun daySummary(scorecard: String?) {
         if (!com.optionslab.app.BuildConfig.JARVIS) return
         if (!Automations.on(Automations.Auto.SUMMARY)) return
         val text = wrapUp(scorecard, review = true)
         IraHub.note(text)
-        JarvisVoice.announce(com.optionslab.ira.Wake.spoken(text, 10))
+        // A locked phone may be overheard: the day's figures stay in the chat.
+        JarvisVoice.announce(com.optionslab.ira.Overheard.said(com.optionslab.ira.Wake.spoken(text, 10), runCatching { IraHub.locked() }.getOrDefault(true),
+            "Boss, the day's wrap-up is in the chat."))
         Automations.acted(Automations.Auto.SUMMARY, text)
     }
 

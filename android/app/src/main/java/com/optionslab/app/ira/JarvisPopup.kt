@@ -9,7 +9,8 @@ import com.optionslab.app.work.Notifier
 /**
  * Jarvis's pop-up: a short message that drops in at the top of the screen over any app, stays about 3 seconds and
  * hides by itself (the owner's wish, 2026-10-02). A heads-up notification - no "draw over other apps" permission;
- * private on the lock screen. Jarvis only.
+ * private on the lock screen, and while the phone is locked a line holding Boss's account ([com.optionslab.ira.Overheard])
+ * only says that it is in the chat. Jarvis only.
  */
 object JarvisPopup {
     const val SHOW_MS = 3_500L
@@ -17,11 +18,15 @@ object JarvisPopup {
 
     fun show(context: Context, title: String, text: String, tab: String = "almanac") {
         if (!com.optionslab.app.BuildConfig.JARVIS) return
+        // A locked phone's pop-up may be seen by anyone near it: no amount, P&L or symbol - only that it is in the chat.
+        val locked = runCatching { IraHub.locked() }.getOrDefault(true)
+        val shownTitle = com.optionslab.ira.Overheard.title(title, locked)
+        val shown = com.optionslab.ira.Overheard.said(text, locked)
         val n = NotificationCompat.Builder(context, Notifier.POPUP)
             .setSmallIcon(R.drawable.ic_notification_art)
-            .setContentTitle(title)
-            .setContentText(text)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(text))
+            .setContentTitle(shownTitle)
+            .setContentText(shown)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(shown))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_STATUS)
             .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)

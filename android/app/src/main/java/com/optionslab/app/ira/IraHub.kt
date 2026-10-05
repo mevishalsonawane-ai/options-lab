@@ -873,9 +873,11 @@ object IraHub {
         com.optionslab.app.security.SecurePrefs.put(key, today.toString())
         if (lines.isEmpty()) return
         Automations.acted(Automations.Auto.EXPIRY, lines.first())
-        app?.let { JarvisPopup.show(it, "Expiry day: 15:05 square-off", lines.first()) }
+        // A locked phone may be overheard or seen: the positions are named in the chat only.
+        val plain = com.optionslab.ira.Overheard.said(lines.first(), phoneLocked(), "Boss, positions of yours expire today: they're named in the chat.")
+        app?.let { JarvisPopup.show(it, "Expiry day: 15:05 square-off", plain) }
         reply(lines.first())
-        JarvisVoice.announce(com.optionslab.ira.Address.boss(lines.first()))
+        JarvisVoice.announce(com.optionslab.ira.Address.boss(plain))
     }
 
     @Volatile private var feedWarned = false

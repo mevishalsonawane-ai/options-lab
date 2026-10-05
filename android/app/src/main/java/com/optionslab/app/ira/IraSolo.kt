@@ -505,7 +505,8 @@ internal object IraSolo {
     private fun tell(line: String) {
         IraActivity.add(line)
         IraHub.note(line)
-        runCatching { JarvisVoice.announce(line) }
+        // A locked phone may be overheard: Solo's symbol and result stay in the chat.
+        runCatching { JarvisVoice.announce(com.optionslab.ira.Overheard.said(line, IraHub.locked(), "Boss, Solo has news on its paper trade: it's in the chat.")) }
     }
 
     /** How the setup has been doing lately in each market (as learned by today's passes; empty before the first). */

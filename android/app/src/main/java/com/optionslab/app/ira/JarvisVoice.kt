@@ -69,8 +69,11 @@ class JarvisVoice : Service() {
          */
         fun announce(text: String, prompted: Boolean = false): Boolean {
             val v = instance?.get() ?: return false
-            if (!prompted && quietNow()) { runCatching { JarvisPopup.show(v, "Jarvis", text) }; return true }
-            v.main.post { v.say(text, "answer") }
+            // Unasked on a locked phone (it may be overheard): never an amount, a P&L or a symbol - only that it is in
+            // the chat (every caller has already put the full line there).
+            val said = if (prompted) text else com.optionslab.ira.Overheard.said(text, runCatching { IraHub.locked() }.getOrDefault(true))
+            if (!prompted && quietNow()) { runCatching { JarvisPopup.show(v, "Jarvis", said) }; return true }
+            v.main.post { v.say(said, "answer") }
             return true
         }
 
