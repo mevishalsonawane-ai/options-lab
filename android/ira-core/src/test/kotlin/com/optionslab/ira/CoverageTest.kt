@@ -27,7 +27,7 @@ class CoverageTest {
     private fun route(said: String): List<Kind> {
         if (Corrections.wordsAsked(said) || Corrections.forgetWordAsked(said) != null) return listOf(Kind.JARVIS)
         if (Routine.asked(said) || Routine.forgetAsked(said)) return listOf(Kind.ACCOUNT)
-        val asSaid = Sources.asked(said) || PatternCalls.asked(said) || ChainDrift.asked(said) != null
+        val asSaid = Sources.asked(said) || PatternCalls.asked(said) || ChainDrift.asked(said) != null || Headroom.asked(said) != null
         return ((if (asSaid) null else Understand.questions(null, said)) ?: listOf(said)).map { kind(it, 0) }
     }
 
@@ -38,6 +38,7 @@ class CoverageTest {
         // are the market's.
         if (p.order == null && p.command == null && !Bundle.acts(q)) {
             if (DayJournal.asked(q)) return Kind.ACCOUNT
+            if (Headroom.asked(q) != null) return Kind.ACCOUNT
             if (AlertSense.asked(q) != null || Airtime.asked(q) || PatternCalls.asked(q) || DataAge.asked(q)) return Kind.JARVIS
             if (Honest.asked(q) != null) return Kind.HONEST
             if (Thinking.asked(q) != null || Consistency.asked(q)) return Kind.JARVIS
@@ -418,7 +419,7 @@ class CoverageTest {
         if (!understood && (Routine.asked(said) || Routine.forgetAsked(said))) return "Routine"
         val asSaid = Sources.asked(said) || AboutBoss.knowAsked(said) || Memory.recallAsked(said) || Memory.forgetAsked(said) ||
             Corrections.wordsAsked(said) || Corrections.forgetWordAsked(said) != null || Routine.asked(said) || Routine.forgetAsked(said) ||
-            PatternCalls.asked(said) || ChainDrift.asked(said) != null
+            PatternCalls.asked(said) || ChainDrift.asked(said) != null || Headroom.asked(said) != null
         val qs = if (asSaid || understood || cleaned) null else Understand.questions(null, said)?.takeIf { it.isNotEmpty() && it != listOf(said) }
         if (qs != null) return if (qs.size == 1) feature(qs[0], cleaned = true) else qs.joinToString(" & ") { feature(it, understood = true) }
         val q = said
@@ -432,6 +433,7 @@ class CoverageTest {
         if (free && p.order == null && Airtime.asked(q)) return "Airtime"
         if (alone && PatternCalls.asked(q)) return "PatternCalls"
         if (alone && TaxRecords.exportAsked(q)) return "TaxExport"
+        if (alone && Headroom.asked(q) != null) return "Headroom"
         if (alone && DataAge.asked(q)) return "DataAge"
         if (alone && Honest.asked(q) != null) return "Honest"
         if (alone && Thinking.asked(q) != null) return "Thinking"
@@ -775,6 +777,10 @@ class CoverageTest {
         "mere bots kaise chal rahe hain" to "Account:BOTS", "mere algos kaise chal rahe hain" to "Account:BOTS",
         "meri strategies theek chal rahi hain" to "Account:BOTS", "mere bots ka haal" to "Account:BOTS",
         "kaun si strategy loss mein hai" to "Account:BOTS",
+        // ---- Headroom (round 13): how close Boss is to his limits; the limits themselves stay the account's RISK ----
+        "how close am i to my limits" to "Headroom", "how much can i still lose today" to "Headroom", "how many trades do i have left" to "Headroom",
+        "am i near my loss limit" to "Headroom", "limit se kitna door hoon" to "Headroom", "kitna aur loss le sakta hoon" to "Headroom",
+        "what are my risk limits" to "Account:RISK",
         // ---- Its neighbours: the strategies listed, Solo, the positions' health ----
         "show my strategies" to "Account:STRATEGIES", "list my strategies" to "Account:STRATEGIES",
         "what strategies are running" to "Account:STRATEGIES", "which strategies are on" to "Account:STRATEGIES",
