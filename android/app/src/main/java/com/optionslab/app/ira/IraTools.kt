@@ -1293,7 +1293,23 @@ internal object IraTools {
         if (locked) return null
         val r = com.optionslab.ira.UsualIndex.learned(indexLog(), now) ?: return null
         val read = com.optionslab.ira.UsualIndex.reading(said, r.market) ?: return null
+        indexReadLast = Triple(said, r.market, com.optionslab.app.data.Market.now().toLocalDateTime())
         return com.optionslab.ira.UsualIndex.took(r) to read
+    }
+
+    /** The question last read for the learned index, that index, and when (in memory only): its spoken answer is led by it. */
+    @Volatile private var indexReadLast: Triple<String, com.optionslab.ira.Market, LocalDateTime>? = null
+
+    /**
+     * The learned index Boss's words [said] were just read for ([indexReading]), or null: the voice then says
+     * "BankNifty, as usual:" before the answer ([com.optionslab.ira.UsualIndex.aloud]). Speech wording only.
+     */
+    fun indexReadFor(said: String): com.optionslab.ira.Market? {
+        val last = indexReadLast ?: return null
+        if (last.first != said) return null
+        val fresh = runCatching { com.optionslab.ira.UsualIndex.leadFresh(last.third, com.optionslab.app.data.Market.now().toLocalDateTime()) }
+            .getOrDefault(false)
+        return if (fresh) last.second else null
     }
 
     /** "Which index do I usually mean?". */
@@ -1307,6 +1323,7 @@ internal object IraTools {
             .getOrDefault("Done, Boss: Nifty again when you name no index.")
         indexUpdate { com.optionslab.ira.UsualIndex.reset(it, now) }
         indexLast = null
+        indexReadLast = null
         IraActivity.add("Taking Nifty again when Boss names no index (as asked).")
         return said
     }

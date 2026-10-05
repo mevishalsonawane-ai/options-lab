@@ -94,4 +94,22 @@ class SayAsTest {
         assertEquals("ORB, Liquidity 15 plus 5", SayAs.figures("ORB, Liquidity 15+5"))
         assertEquals("(2 plus 3)", SayAs.figures("(2+3)"))
     }
+
+    @Test fun thePaperAccountsDayMonthYearSymbolsAreSaidAsWords() {
+        assertEquals("Bank Nifty 27 October 55,100 call", SayAs.figures("BANKNIFTY27OCT2655100CE"))
+        assertEquals("You hold Nifty 29 September 24,500 put at 120.", SayAs.figures("You hold NIFTY29SEP2624500PE at 120."))
+        assertEquals("Sensex 3 November 82,000 call", SayAs.figures("SENSEX3NOV2682000CE"))
+        assertEquals("Fin Nifty 28 October 23,450.5 put", SayAs.figures("FINNIFTY28OCT2623450.5PE"))
+        assertTrue(SayAs.figures("BANKNIFTY27OCT2655100CE", hindi = true).endsWith("55,100 कॉल"))
+        // Zerodha's own symbols are read as before (year, month, strike).
+        assertEquals("Bank Nifty October 52,000 put", SayAs.figures("BANKNIFTY26OCT52000PE"))
+        assertEquals("Reliance October 2,900 call", SayAs.figures("RELIANCE26OCT2900CE"))
+        assertEquals("Bought Nifty 7 October 24,500 call at 120.", SayAs.figures("Bought NIFTY25O0724500CE at 120."))
+        // Not a day or not a month: as written.
+        assertEquals("NIFTY45OCT2624500CE", SayAs.figures("NIFTY45OCT2624500CE"))
+        assertEquals("NIFTY29XYZ2624500CE", SayAs.figures("NIFTY29XYZ2624500CE"))
+        // Applying it twice changes nothing.
+        val once = SayAs.figures("Exit BANKNIFTY27OCT2655100CE now.")
+        assertEquals(once, SayAs.figures(once))
+    }
 }

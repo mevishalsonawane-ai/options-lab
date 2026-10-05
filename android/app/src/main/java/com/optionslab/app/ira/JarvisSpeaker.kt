@@ -119,6 +119,11 @@ object JarvisSpeaker {
         if (reply.action != null && IraHub.asksYesNo(reply.action)) return
         // "Tell me more" is said in full, short answers or not.
         val more = runCatching { com.optionslab.ira.Commands.parse(said)?.kind == com.optionslab.ira.Command.Kind.MORE }.getOrDefault(false)
-        speak(context, reply.text, if (more) 8 else null)
+        // A question that named no index, read for the one Boss usually means: "BankNifty, as usual:" first (speech wording
+        // only; never on a locked phone, never before a warning - [com.optionslab.ira.UsualIndex.aloud]).
+        val usualIdx = runCatching { IraTools.indexReadFor(said) }.getOrNull()
+        val usualLocked = usualIdx != null && runCatching { IraHub.locked() }.getOrDefault(true)
+        val spokenText = runCatching { com.optionslab.ira.UsualIndex.aloud(usualIdx, reply.text, usualLocked) }.getOrDefault(reply.text)
+        speak(context, spokenText, if (more) 8 else null)
     }
 }

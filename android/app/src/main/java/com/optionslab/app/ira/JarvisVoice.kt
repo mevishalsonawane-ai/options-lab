@@ -1807,8 +1807,18 @@ class JarvisVoice : Service() {
                         // A topic Boss keeps asking "in short" or "in detail" after: said that way aloud (never over his own setting above).
                         leading = { IraTools.figureLeadingNow() }, learned = { IraTools.lengthLearnedNow() }, shorter = { IraTools.clarityShorterNow() },
                         echo = echo, late = late)
-                    full = r.full; shaped = r.shaped
-                    r.spoken
+                    // A question that named no index, read for the one Boss usually means ([com.optionslab.ira.UsualIndex]):
+                    // "BankNifty, as usual:" before the answer, so he hears which index it is for (the chat's note says it
+                    // in full). Speech wording only: never on a locked phone, never before a warning, never on a late answer.
+                    val usualIdx = if (late) null else runCatching { IraTools.indexReadFor(said) }.getOrNull()
+                    val usualLocked = usualIdx != null && locked()
+                    // Led only when neither what is said nor the whole answer holds a warning (each is checked).
+                    val usualSpoken = runCatching { com.optionslab.ira.UsualIndex.aloud(usualIdx, r.spoken, usualLocked) }.getOrDefault(r.spoken)
+                    val usualFull = runCatching { com.optionslab.ira.UsualIndex.aloud(usualIdx, r.full, usualLocked) }.getOrDefault(r.full)
+                    val usualLed = usualSpoken != r.spoken && usualFull != r.full
+                    full = if (usualLed) usualFull else r.full
+                    shaped = r.shaped && !usualLed
+                    if (usualLed) usualSpoken else r.spoken
                 }
             }.let { text ->
                 // A follow-up (no "Jarvis") that brings back the very answer just given is not said again: the

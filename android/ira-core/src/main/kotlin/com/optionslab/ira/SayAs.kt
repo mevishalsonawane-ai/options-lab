@@ -12,6 +12,10 @@ import java.util.Locale
  *  - "N rupees crore" (a "Rs N crore" read as rupees) -> "N crore rupees";
  *  - an option's trading symbol is read as words: "NIFTY25O0724500CE" -> "Nifty 7 October 24,500 call",
  *    "BANKNIFTY26OCT52000PE" -> "Bank Nifty October 52,000 put", "NIFTY26OCTFUT" -> "Nifty October future";
+ *  - the paper account's day-month-year symbol too (Voice, round 23; it was spelt out letter by letter):
+ *    "NIFTY29SEP2624500PE" -> "Nifty 29 September 24,500 put", "BANKNIFTY27OCT2655100CE" -> "Bank Nifty 27 October
+ *    55,100 call" - only with seven or eight digits after the month (two of year, a strike of five or six), so a Zerodha
+ *    symbol (year, month, strike of at most six digits) is never read so;
  *  - "24500 CE" / "24,500PE" -> "24500 call" / "24,500 put" (only right after a number, so "PE ratio" stays);
  *  - a plus between two figures is said as one (Voice, round 19): "Liquidity 15+5" -> "Liquidity 15 plus 5" (the voice
  *    read it "fifteen five"); a sign before a lone figure ("+0.4") is left as written;
@@ -34,6 +38,12 @@ object SayAs {
     private val OPTION = Regex("\\b([A-Z]{2,12})(\\d{2})(?:([A-Z]{3})|([1-9OND])(\\d{2}))(\\d{3,6}(?:\\.\\d{1,2})?)(CE|PE)\\b")
     /** An index option with no expiry in its name (the paper account's): "NIFTY25000CE". */
     private val PLAIN_OPTION = Regex("\\b(NIFTY|BANKNIFTY|FINNIFTY|MIDCPNIFTY|SENSEX|BANKEX)(\\d{3,6})(CE|PE)\\b")
+    /**
+     * The paper account's NAME + DD + MMM + YY + strike + CE/PE ("NIFTY29SEP2624500PE"): a strike of five or six digits
+     * after the two of the year, so seven or eight digits in all after the month - never a Zerodha symbol's (a year
+     * before the month, a strike of at most six digits after it).
+     */
+    private val DAY_OPTION = Regex("\\b([A-Z]{2,12})(\\d{1,2})([A-Z]{3})(\\d{2})(\\d{5,6}(?:\\.\\d{1,2})?)(CE|PE)\\b")
     private val FUTURE = Regex("\\b([A-Z]{2,12})(\\d{2})([A-Z]{3})FUT\\b")
     private val STRIKE_SIDE = Regex("(?<![\\w.,])(\\d{1,3}(?:,\\d{3})+|\\d{2,6})(\\.\\d{1,2})? ?(CE|PE)\\b")
 
@@ -60,6 +70,7 @@ object SayAs {
         if (s.contains("(word tone ")) s = WORD_TONE.replace(s, "")
         if (s.indexOf('+') >= 0) s = PLUS.replace(s, if (hindi) "\$1 प्लस " else "\$1 plus ")
         if (sided(s)) {
+            s = DAY_OPTION.replace(s) { m -> dayOption(m, hindi) ?: m.value }
             s = OPTION.replace(s) { m -> option(m, hindi) ?: m.value }
             s = PLAIN_OPTION.replace(s) { m -> "${INDEX[m.groupValues[1]]} ${group(m.groupValues[2])} ${side(m.groupValues[3], hindi)}" }
         }
@@ -116,7 +127,16 @@ object SayAs {
         return "${name(u)} $expiry ${group(strike)} ${side(cepe, hindi)}"
     }
 
-    /** "24500" -> "24,500"; "24600.5" -> "24,600.5". */
+    /** "NIFTY29SEP2624500PE" -> "Nifty 29 September 24,500 put"; null when the day or the month is not one. */
+    private fun dayOption(m: MatchResult, hindi: Boolean): String? {
+        val (u, dd, mmm, _, strike, cepe) = m.destructured
+        val mo = MONTHS.indexOf(mmm)
+        val day = dd.toInt()
+        if (mo < 0 || day !in 1..31) return null
+        return "${name(u)} $day ${MONTH_NAMES[mo]} ${group(strike)} ${side(cepe, hindi)}"
+    }
+
+    /** "24500" -> "24,500";"24600.5" -> "24,600.5". */
     private fun group(n: String): String {
         val int = n.substringBefore('.'); val dec = n.substringAfter('.', "")
         val g = int.reversed().chunked(3).joinToString(",").reversed()

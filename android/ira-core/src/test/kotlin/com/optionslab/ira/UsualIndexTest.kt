@@ -12,6 +12,36 @@ class UsualIndexTest {
     private val today = LocalDate.of(2026, 10, 5)
     private val now = today.atTime(11, 0)
 
+    @Test fun theSpokenAnswerIsLedByTheIndexItWasReadFor() {
+        val a = "BankNifty is at 55,120, up 0.4% today. It is trending up."
+        assertEquals("BankNifty, as usual: $a", UsualIndex.aloud(Market.BANKNIFTY, a, locked = false))
+        assertEquals("Sensex, as usual: $a", UsualIndex.aloud(Market.SENSEX, a, locked = false))
+        // Applying it twice changes nothing.
+        val once = UsualIndex.aloud(Market.BANKNIFTY, a, locked = false)
+        assertEquals(once, UsualIndex.aloud(Market.BANKNIFTY, once, locked = false))
+        // Not read so, a locked phone, Nifty, an index it is never read for, an empty answer: as it was.
+        assertEquals(a, UsualIndex.aloud(null, a, locked = false))
+        assertEquals(a, UsualIndex.aloud(Market.BANKNIFTY, a, locked = true))
+        assertEquals(a, UsualIndex.aloud(Market.NIFTY, a, locked = false))
+        assertEquals(a, UsualIndex.aloud(Market.GOLD, a, locked = false))
+        assertEquals(a, UsualIndex.aloud(Market.VIX, a, locked = false))
+        assertEquals("", UsualIndex.aloud(Market.BANKNIFTY, "", locked = false))
+        // A warning is said at once and whole: never led.
+        for (w in listOf("Careful, Boss: the kill switch is on.", "Warning: Zerodha is not logged in.", "Boss, stop loss hit on ORB.",
+            "BankNifty is falling fast and your kill switch is on.", "Heads up: margin call risk."))
+            assertEquals(w, UsualIndex.aloud(Market.BANKNIFTY, w, locked = false), w)
+        // Short, and it names Boss nowhere new (the answer names him).
+        assertEquals("BankNifty, as usual:", UsualIndex.lead(Market.BANKNIFTY))
+        assertFalse(UsualIndex.lead(Market.BANKNIFTY).contains("Boss"))
+    }
+
+    @Test fun theLeadIsOnlyForTheAnswerJustAsked() {
+        assertTrue(UsualIndex.leadFresh(now, now))
+        assertTrue(UsualIndex.leadFresh(now, now.plusSeconds(UsualIndex.LEAD_SECONDS)))
+        assertFalse(UsualIndex.leadFresh(now, now.plusSeconds(UsualIndex.LEAD_SECONDS + 1)))
+        assertFalse(UsualIndex.leadFresh(now, now.minusSeconds(1)))
+    }
+
     private val UNNAMED = listOf("what's the trend", "what are the levels today", "what are the support and resistance levels",
         "is it going up", "how is it looking", "what is the support", "why is it falling", "trend kya hai", "levels batao", "any patterns on the 15 minute chart")
     private val NOT_UNNAMED = listOf("what's the trend on nifty", "banknifty levels", "how is the market", "how are all the indices",

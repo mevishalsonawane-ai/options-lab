@@ -11,7 +11,8 @@ import java.time.LocalDateTime
  *
  * An index he corrected Jarvis to at least [MIN_TIMES] times in the last [WINDOW_DAYS] days (since the last reset), more
  * than all the other corrections together, is learned ([learned]): an unnamed market question ([unnamed]) is then read
- * for it ([reading]) and said so explicitly - "BankNifty, as you usually mean, Boss" ([took]). Understanding only: a
+ * for it ([reading]) and said so explicitly - "BankNifty, as you usually mean, Boss" ([took]) in the chat, and aloud as a
+ * short lead before the answer, "BankNifty, as usual: ..." ([aloud]; never before a warning). Understanding only: a
  * named index always wins; an order, a command, a trade check, an idea, the volatility, the news, the market-wide check
  * and anything about Boss's own account are never read so (they name their index or are not about one); nothing learned
  * arms, trades, switches or confirms anything. On a locked phone it is not used (his habit is not said there).
@@ -157,6 +158,33 @@ object UsualIndex {
 
     /** Beside an unnamed question read for the learned index (after "I took that as ..."). */
     fun took(r: Record): String = "${r.phrase}, as you usually mean, Boss - say \"no, Nifty\" if not."
+
+    /** How long after the question was read for the learned index its answer may still be said with [aloud]'s lead. */
+    const val LEAD_SECONDS = 90L
+
+    /** Lines that are warnings, never led by anything ([aloud]): said at once and whole. */
+    private val URGENT = Regex("(?i)^\\s*(?:boss[,:]?\\s+)?(?:careful|warning|alert|danger|urgent|stop|heads up|kill switch|exit now|watch out)\\b|" +
+        "\\b(?:kill switch|stop ?loss (?:hit|triggered)|margin call|not logged in|logged out)\\b")
+
+    /**
+     * The spoken answer [spoken] to a question read for the learned index [read] (null: it was not), with a short lead -
+     * "BankNifty, as usual: ..." - so Boss hears which index he is being answered for (the chat's note says it in full).
+     * Speech wording only. Unchanged when nothing was read so, on a [locked] phone, for Nifty or an index not in
+     * [INDICES], for an empty answer, for a warning (said at once and whole) or when the lead is already there.
+     */
+    fun aloud(read: Market?, spoken: String, locked: Boolean): String {
+        if (read == null || locked || read == Market.NIFTY || read !in INDICES) return spoken
+        if (spoken.isBlank() || URGENT.containsMatchIn(spoken)) return spoken
+        val lead = lead(read)
+        return if (spoken.startsWith(lead)) spoken else "$lead $spoken"
+    }
+
+    /** "BankNifty, as usual:". */
+    fun lead(m: Market): String = "${m.label}, as usual:"
+
+    /** Is an answer at [now] still the one to the question read for the learned index at [readAt]? */
+    fun leadFresh(readAt: LocalDateTime, now: LocalDateTime): Boolean =
+        !now.isBefore(readAt) && !now.isAfter(readAt.plusSeconds(LEAD_SECONDS))
 
     /** Beside the question asked again for Boss's correction to [m] ([learnedNow]: this correction just made it learned). */
     fun corrected(m: Market, learnedNow: Record?): String =
