@@ -32,6 +32,9 @@ object TradeBook {
 
     private var liveCache: MutableList<Broker.Trade>? = null
 
+    /** Moves on every change to the kept Zerodha trades (a fill recorded, a wipe): what [liveChargesOn]'s kept figure is keyed on. */
+    @Volatile private var liveGen = 0L
+
     /**
      * The kept Zerodha trades. No file yet: empty (and kept). A vault that cannot be read (a Keystore failure, a damaged
      * file, or no bytes from a file that is there): throws, and nothing is kept - so [recordLive] never rewrites the vault
@@ -71,6 +74,7 @@ object TradeBook {
         keep.forEach { t -> a.put(JSONArray().put(t.id).put(t.orderId).put(t.symbol).put(t.exchange).put(t.side).put(t.qty).put(t.price).put(t.product).put(t.at)) }
         Vault.writeFile(liveFile, a.toString().toByteArray(Charsets.UTF_8))
         liveCache = keep.toMutableList()
+        liveGen++
     }
 
     private fun kiteTime(s: String): LocalDateTime? = runCatching { LocalDateTime.parse(s.trim().replace(' ', 'T').take(19)) }.getOrNull()
@@ -138,8 +142,16 @@ object TradeBook {
      * not be read). Reads the vault: never on the main thread.
      */
     fun liveChargesOn(day: LocalDate): Double? = runCatching {
-        liveSnapshot().filter { kiteTime(it.at)?.toLocalDate() == day }.takeIf { it.isNotEmpty() }?.let { liveCharges(it) }
+        // Battery, round 14: the order watch asks every pass (once a minute in market hours); the book is copied and
+        // every kept fill's time parsed only when a fill was recorded since, or the day turned ([com.optionslab.ira.DayKept]).
+        // The generation is read before the snapshot, so a fill recorded meanwhile is made again on the next ask.
+        val gen = liveGen
+        dayCharges.of(day.toString(), gen) {
+            liveSnapshot().filter { kiteTime(it.at)?.toLocalDate() == day }.takeIf { it.isNotEmpty() }?.let { liveCharges(it) }
+        }
     }.getOrNull()
+
+    private val dayCharges = com.optionslab.ira.DayKept<Double?>()
 
     /** Charges paid in [month], line by line. */
     fun charges(live: Boolean, month: YearMonth): Map<String, Double> {
@@ -152,7 +164,8 @@ object TradeBook {
         return out
     }
 
-    fun wipe() { liveCache = null; if (::liveFile.isInitialized) liveFile.delete() }
+    @Synchronized
+    fun wipe() { liveCache = null; liveGen++; dayCharges.forget(); if (::liveFile.isInitialized) liveFile.delete() }
 }
 
 /**

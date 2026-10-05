@@ -108,7 +108,15 @@ class IraWidget : AppWidgetProvider() {
          */
         fun charges(context: Context, value: Double?) {
             val v = value?.takeIf { it.isFinite() }?.let { String.format(Locale.ROOT, "%s|%.2f", Market.today().toString(), it) }
-            synchronized(unsaved) { fresh(); unsaved[K_CHG] = v }
+            // Battery, round 14: the order watch hands the same figure every pass (once a minute) and redraws the widget
+            // itself moments later ([publish]); redrawn here only when the figure changed (a new fill, a new day).
+            val changed = synchronized(unsaved) {
+                fresh()
+                val was = if (unsaved.containsKey(K_CHG)) unsaved[K_CHG] as String? else SecurePrefs.getString(K_CHG)
+                unsaved[K_CHG] = v
+                was != v
+            }
+            if (!changed) return
             val mgr = AppWidgetManager.getInstance(context)
             val ids = mgr.getAppWidgetIds(ComponentName(context, IraWidget::class.java))
             if (ids.isNotEmpty()) render(context, mgr, ids)
