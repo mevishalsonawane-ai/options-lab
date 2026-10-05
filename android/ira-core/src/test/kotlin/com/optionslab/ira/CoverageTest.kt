@@ -27,7 +27,7 @@ class CoverageTest {
     private fun route(said: String): List<Kind> {
         if (Corrections.wordsAsked(said) || Corrections.forgetWordAsked(said) != null) return listOf(Kind.JARVIS)
         if (Routine.asked(said) || Routine.forgetAsked(said)) return listOf(Kind.ACCOUNT)
-        val asSaid = Sources.asked(said) || AboutBoss.knowAsked(said) || Memory.recallAsked(said) || Memory.forgetAsked(said) || PatternCalls.asked(said) ||
+        val asSaid = Sources.asked(said) || AboutBoss.knowAsked(said) || Memory.recallAsked(said) || Memory.forgetAsked(said) || PatternCalls.asked(said) || TrendReads.asked(said) ||
             Learnings.asked(said) != null || Learnings.undoAsked(said) || NewsMoves.asked(said) != null || PreMarket.asked(said) ||
             ChainDrift.asked(said) != null || Headroom.asked(said) != null || BotTrades.asked(said) != null || DayClock.asked(said) != null ||
             SaidAbout.asked(said) != null || GapRecord.asked(said) != null || Causes.asked(said) != null || WeekAhead.asked(said) != null || AskedAgain.asked(said) || FigureFirst.asked(said) != null || Weekdays.asked(said) != null || DayCompare.asked(said) != null ||
@@ -43,7 +43,7 @@ class CoverageTest {
         if (p.order == null && p.command == null && !Bundle.acts(q)) {
             if (DayJournal.asked(q)) return Kind.ACCOUNT
             // (Clarity: the answers said shorter aloud - Jarvis's own voice; HeardBack is the voice path's alone, not a branch here.)
-            if (AlertSense.asked(q) != null || Airtime.asked(q) || Hearing.asked(q) || PatternCalls.asked(q) || Clarity.asked(q) != null) return Kind.JARVIS
+            if (AlertSense.asked(q) != null || Airtime.asked(q) || Hearing.asked(q) || PatternCalls.asked(q) || TrendReads.asked(q) || Clarity.asked(q) != null) return Kind.JARVIS
             if (AskedAgain.asked(q)) return Kind.JARVIS
             if (FigureFirst.asked(q) != null) return Kind.JARVIS
             if (WrongThing.asked(q) != null || WrongThing.objected(q)) return Kind.JARVIS
@@ -435,7 +435,7 @@ class CoverageTest {
     /**
      * Which feature answers [said] in Jarvis (not GOLD), taking IraHub.ask's branches in its own order (app/.../IraHub.kt,
      * ask(): Boss's learned words and routine as said, fillers and follow-ups, then - for a question not said with
-     * something to do (IraHub's `bundled`, [Bundle.acts]) - DayJournal, AlertSense, Airtime, Hearing, PatternCalls, Clarity,
+     * something to do (IraHub's `bundled`, [Bundle.acts]) - DayJournal, AlertSense, Airtime, Hearing, PatternCalls, TrendReads, Clarity,
      * WordFit, AskedAgain, FigureFirst, WrongThing, NewsMoves, TaxExport, Learnings, PreMarket, Headroom, BotTrades, SaidAbout, WeekAhead, DataAge, Honest, Thinking,
      * Consistency, CoPilot, ChainDrift, ChainIntel, DayClock, GapRecord, RangeBreaks, PriorDay, LastHour, Weekdays, DayCompare, Structure, MindChange, Breadth, TradeCase,
      * Scenarios, Causes, Agenda, Improve; the reminders and Jarvis's own checks,
@@ -454,7 +454,7 @@ class CoverageTest {
         if (!understood && (Routine.asked(said) || Routine.forgetAsked(said))) return "Routine"
         val asSaid = Sources.asked(said) || AboutBoss.knowAsked(said) || Memory.recallAsked(said) || Memory.forgetAsked(said) ||
             Corrections.wordsAsked(said) || Corrections.forgetWordAsked(said) != null || Routine.asked(said) || Routine.forgetAsked(said) ||
-            PatternCalls.asked(said) || Learnings.asked(said) != null || Learnings.undoAsked(said) || NewsMoves.asked(said) != null ||
+            PatternCalls.asked(said) || TrendReads.asked(said) || Learnings.asked(said) != null || Learnings.undoAsked(said) || NewsMoves.asked(said) != null ||
             PreMarket.asked(said) ||
             ChainDrift.asked(said) != null || Headroom.asked(said) != null || BotTrades.asked(said) != null || NeedsTrue.asked(said) || Clarity.asked(said) != null || DayClock.asked(said) != null ||
             SaidAbout.asked(said) != null || GapRecord.asked(said) != null || WordFit.asked(said) != null || Causes.asked(said) != null || WeekAhead.asked(said) != null || AskedAgain.asked(said) || FigureFirst.asked(said) != null || MindChange.asked(said) || Weekdays.asked(said) != null || DayCompare.asked(said) != null || RangeBreaks.asked(said) != null || PriorDay.asked(said) != null || LastHour.asked(said) != null || ZerodhaSession.asked(said) != null || Tour.asked(said) || WrongThing.asked(said) != null || WrongThing.objected(said) || OrderWhy.asked(said) != null
@@ -471,6 +471,7 @@ class CoverageTest {
         if (alone && Airtime.asked(q)) return "Airtime"
         if (alone && Hearing.asked(q)) return "Hearing"
         if (alone && PatternCalls.asked(q)) return "PatternCalls"
+        if (alone && TrendReads.asked(q)) return "TrendReads"
         if (alone && OutsideApp.asked(q)) return "OutsideApp"
         if (alone && Clarity.asked(q) != null) return "Clarity"
         if (alone && WordFit.asked(q) != null) return "WordFit"
@@ -1096,6 +1097,12 @@ class CoverageTest {
             ("how often does nifty break the previous day's high" to "PriorDay") to ("how is today different from yesterday" to "DayCompare"),
             // Market intelligence round 18: the last-hour record beside how busy the last hour is.
             ("does nifty usually reverse in the last hour" to "LastHour") to ("is the last hour usually volatile" to "DayClock"),
+            // Reasoning round 14: his own trend reads scored, beside today's structure, his pattern record and the market's trend days.
+            ("how often were your trend reads right this month" to "TrendReads") to ("trend or range so far" to "Structure"),
+            ("how accurate are your structure reads" to "TrendReads") to ("what's the structure today" to "Structure"),
+            ("your trend read record" to "TrendReads") to ("your pattern record" to "PatternCalls"),
+            ("did your trend calls hold" to "TrendReads") to ("how many trend days this month" to "MarketMemory"),
+            ("tumhare trend reads kitne sahi the" to "TrendReads") to ("what would change your mind" to "MindChange"),
         )) { assertEquals(a.second, feature(a.first), a.first); assertEquals(b.second, feature(b.first), b.first) }
         // Boss's Hinglish what-if is a what-if; a forecast, advice or his own book in Hindi never is.
         for (s in listOf("kal nifty ka kya hoga", "nifty 200 points gir jayega kya", "agar nifty 1% gira to kya buy karu",

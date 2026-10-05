@@ -289,6 +289,8 @@ object IraHub {
                 histories = hs
                 // The patterns Jarvis told of: how each went, from the phone's own candles ([com.optionslab.ira.PatternCalls]).
                 runCatching { IraTools.patternsSettle(hs.mapValues { it.value.bars }) }
+                // His trend and range reads: scored after each close by the same measure ([com.optionslab.ira.TrendReads]).
+                runCatching { IraTools.trendReadsSettle(hs.mapValues { it.value.bars }) }
                 val days = hs.values.maxOfOrNull { it.days.size } ?: 0
                 _state.update { it.copy(loading = false, snaps = snaps, lastDay = snaps.values.maxOfOrNull { s -> s.at.toLocalDate() },
                     days = days, learned = book.size, problem = if (snaps.isEmpty()) "No market data on this phone yet" else null,
@@ -1218,7 +1220,7 @@ object IraHub {
             // Asked of his memory as said ("what do you know about me", "what did I tell you"): never read as anything else.
             !runCatching { com.optionslab.ira.AboutBoss.knowAsked(q) || com.optionslab.ira.Memory.recallAsked(q) || com.optionslab.ira.Memory.forgetAsked(q) ||
                 com.optionslab.ira.Corrections.wordsAsked(q) || com.optionslab.ira.Corrections.forgetWordAsked(q) != null ||
-                com.optionslab.ira.Routine.asked(q) || com.optionslab.ira.Routine.forgetAsked(q) || com.optionslab.ira.PatternCalls.asked(q) ||
+                com.optionslab.ira.Routine.asked(q) || com.optionslab.ira.Routine.forgetAsked(q) || com.optionslab.ira.PatternCalls.asked(q) || com.optionslab.ira.TrendReads.asked(q) ||
                 com.optionslab.ira.Learnings.asked(q) != null || com.optionslab.ira.Learnings.undoAsked(q) ||
                 com.optionslab.ira.NewsMoves.asked(q) != null || com.optionslab.ira.PreMarket.asked(q) ||
                 com.optionslab.ira.ChainDrift.asked(q) != null ||
@@ -1897,7 +1899,7 @@ object IraHub {
 
     /**
      * [ask]'s question branches on how Jarvis himself speaks and hears: AlertSense, Airtime, Hearing, PatternCalls,
-     * Clarity, WordFit, AskedAgain, FigureFirst - in [ask]'s order. True when one
+     * TrendReads, Clarity, WordFit, AskedAgain, FigureFirst - in [ask]'s order. True when one
      * took [q], answered exactly as before; each branch keeps its own guard (not [bundled], no order, no command).
      */
     private fun askedOfHisWays(q: String, parsed: com.optionslab.ira.Question, bundled: Boolean, understood: Boolean): Boolean {
@@ -1931,6 +1933,17 @@ object IraHub {
         if (!bundled && parsed.order == null && parsed.command == null && runCatching { com.optionslab.ira.PatternCalls.asked(q) }.getOrDefault(false)) {
             val said = runCatching { com.optionslab.ira.PatternCalls.say(IraTools.patternCalls(), parsed.markets, com.optionslab.app.data.Market.today()) }
                 .getOrDefault("I couldn't read my pattern record just now, Boss.")
+            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
+            return true
+        }
+        // "How often were your trend reads right this month?" / "how accurate are your structure reads?": the trend and range
+        // reads he gave in session, scored after each close by the same measure ([com.optionslab.ira.TrendReads]; his calls -
+        // the index, the minute, the kind and how the day ended - never Boss's words). Market data only; facts, never advice.
+        if (!bundled && parsed.order == null && parsed.command == null && !com.optionslab.app.BuildConfig.GOLD &&
+            runCatching { com.optionslab.ira.TrendReads.asked(q) }.getOrDefault(false)) {
+            val said = runCatching { com.optionslab.ira.TrendReads.say(IraTools.trendReads(), parsed.markets,
+                com.optionslab.ira.TrendReads.span(q), com.optionslab.app.data.Market.today()) }
+                .getOrDefault("I couldn't read my trend-read record just now, Boss.")
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
             return true
         }
@@ -2445,6 +2458,11 @@ object IraHub {
                     com.optionslab.app.data.Market.today(), LocalDateTime.now(IST)).also {
                     // Kept so "what would change your mind?" tests this read (market data only; memory only, never stored).
                     lastStructureRead = runCatching { com.optionslab.ira.MindChange.said(mk, histories[mk]?.bars.orEmpty(), com.optionslab.app.data.Market.today()) }.getOrNull()
+                    // A trend or range read said in session is noted, to be scored after the close ([com.optionslab.ira.TrendReads];
+                    // the index, the minute, the kind and the price - never Boss's words).
+                    if (structureAsk == com.optionslab.ira.Structure.Ask.TREND_RANGE || structureAsk == com.optionslab.ira.Structure.Ask.ALL)
+                        runCatching { IraTools.trendReadSaid(com.optionslab.ira.TrendReads.call(mk, histories[mk]?.bars.orEmpty(),
+                            com.optionslab.app.data.Market.now().toLocalDateTime())) }
                 }
             }.getOrElse { "I could not read today's structure just now, Boss." }
             _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }

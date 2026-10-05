@@ -990,6 +990,39 @@ internal object IraTools {
         callsUpdate { log -> bars.entries.fold(log) { l, e -> com.optionslab.ira.PatternCalls.settle(l, e.key, e.value) } }
     }
 
+    // ---- Jarvis's own trend and range reads, scored after each close ([com.optionslab.ira.TrendReads]) ----------------
+
+    /** The reads he gave (index, minute, kind, price and how the day ended - market data only, never Boss's words). */
+    private const val TREND_READS = "jarvis.trendReads"
+    @Volatile private var trendCache: List<com.optionslab.ira.TrendReads.Call>? = null
+
+    fun trendReads(): List<com.optionslab.ira.TrendReads.Call> = trendCache ?: runCatching {
+        com.optionslab.ira.TrendReads.load(prefs().getString(TREND_READS) ?: "")
+    }.getOrDefault(emptyList()).also { trendCache = it }
+
+    @Synchronized private fun trendUpdate(f: (List<com.optionslab.ira.TrendReads.Call>) -> List<com.optionslab.ira.TrendReads.Call>) {
+        runCatching {
+            val was = trendReads()
+            val log = f(was)
+            if (log == was) return@runCatching
+            trendCache = log
+            prefs().putAllSoon(mapOf(TREND_READS to com.optionslab.ira.TrendReads.save(log)))
+        }
+    }
+
+    /** A trend or range read just given in session (null: it was no call). */
+    fun trendReadSaid(call: com.optionslab.ira.TrendReads.Call?) {
+        if (call == null) return
+        trendUpdate { com.optionslab.ira.TrendReads.add(it, call, com.optionslab.app.data.Market.today()) }
+    }
+
+    /** The reads whose session has closed, scored on the phone's 1-minute candles. */
+    fun trendReadsSettle(bars: Map<com.optionslab.ira.Market, List<com.optionslab.ira.Candle>>) {
+        if (trendReads().all { it.settled }) return
+        val now = com.optionslab.app.data.Market.now().toLocalDateTime()
+        trendUpdate { log -> bars.entries.fold(log) { l, e -> com.optionslab.ira.TrendReads.settle(l, e.key, e.value, now) } }
+    }
+
     // ---- how the index moved after each news theme's headlines ([com.optionslab.ira.NewsMoves]) --------------------
 
     /** The timed stories (theme, index, minute, price and the biggest move after it - market data only, no headline text). */
