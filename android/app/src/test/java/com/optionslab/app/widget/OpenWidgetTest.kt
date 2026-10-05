@@ -38,6 +38,8 @@ class OpenWidgetTest : RobolectricTest() {
     @Before fun up() {
         Background.calendar(WED)
         Background.at(WED, 11, 0)
+        // The switch's vault work runs on the widget's own thread in the app; here on the test's, so it is done on return.
+        OpenWidget.inlineForTest = true
         id = widgets.createWidget(OpenWidget::class.java, R.layout.widget_open)
     }
 
@@ -100,5 +102,31 @@ class OpenWidgetTest : RobolectricTest() {
         assertEquals(false, shown(R.id.ow_row0))
         assertNull(SecurePrefs.getString("ow.zerodha"))
         assertNull(SecurePrefs.getString("ow.at"))
+    }
+
+    @Test fun theSwitchTurnedOffWinsBeforeTheSettingsAreSaved() {
+        allow()
+        OpenWidget.fromWatch(context, true, true, Broker.Positions(listOf(open), emptyList()), null)
+        // Off, while the settings file still says on (the app saves it a moment later): a pass in flight keeps nothing.
+        OpenWidget.refresh(context, false)
+        OpenWidget.fromWatch(context, true, true, Broker.Positions(listOf(open), emptyList()), null)
+        OpenWidget.fromOrders(context, listOf(order("NIFTY26OCT25100CE", "OPEN")))
+        assertEquals(OpenWidget.OFF, text(R.id.ow_note))
+        assertEquals(false, shown(R.id.ow_pnl))
+        assertNull(SecurePrefs.getString("ow.zerodha"))
+        assertNull(SecurePrefs.getString("ow.zorders"))
+    }
+
+    @Test fun theWatchReadsOrdersOnlyWhileWorkingOnesAreShown() {
+        assertEquals("switch off: no read", false, OpenWidget.wantsOrders(context, true))
+        allow()
+        OpenWidget.fromWatch(context, true, true, Broker.Positions(listOf(open), emptyList()), null)
+        assertEquals("no working order shown", false, OpenWidget.wantsOrders(context, true))
+        OpenWidget.fromOrders(context, listOf(order("NIFTY26OCT25100CE", "OPEN")))
+        assertEquals(true, OpenWidget.wantsOrders(context, true))
+        assertEquals("paper mode", false, OpenWidget.wantsOrders(context, false))
+        OpenWidget.fromOrders(context, listOf(order("NIFTY26OCT25100CE", "COMPLETE")))
+        assertEquals(false, OpenWidget.wantsOrders(context, true))
+        assertEquals(false, shown(R.id.ow_row1))
     }
 }

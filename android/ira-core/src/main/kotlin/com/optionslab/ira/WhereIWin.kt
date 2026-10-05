@@ -23,7 +23,10 @@ import java.util.Locale
  * between them is checked against chance plainly - the two groups' trades shuffled between them ([chance]: every split
  * counted when there are few enough, else [SHUFFLES] fixed-seed shuffles, so the same record always gives the same
  * answer), and how often a gap at least as big as his came up is said as "N in 100". A gap chance seldom gives is said
- * so; one it often gives is said to be possibly chance. A description of his record, never a forecast.
+ * so; one it often gives is said to be possibly chance. A description of his record, never a forecast. With three or more
+ * groups of [MIN_GROUP] trades, picking the best and worst first would make a gap look rarer than it is, so the trades of
+ * every such group are shuffled among them all and the gap between the best and worst average is what is counted
+ * ([chanceAmong]).
  *
  * Facts from his own record only - never a forecast and never what to trade. Nothing here places, changes or arms
  * anything. His account, so never on a locked phone. Pure.
@@ -135,9 +138,53 @@ object WhereIWin {
         return hits.toDouble() / SHUFFLES
     }
 
-    /** The chance check said plainly: how often in 100 shuffles a gap this big came up, and what that means. */
-    fun chanceText(best: Group, worst: Group, share: Double): String {
-        val n = best.trades + worst.trades
+    /**
+     * How often chance alone gives a gap between the best and the worst average per trade at least as big as among
+     * [groups] (three or more): every trade pooled and dealt out again into groups of the same sizes, [SHUFFLES] times
+     * from a fixed seed (the same record always gives the same answer), the gap taken between whichever came out best and
+     * worst each time. A share from 0 to 1; 1 with fewer than two non-empty groups.
+     */
+    fun chanceAmong(groups: List<List<Double>>): Double {
+        val gs = groups.filter { it.isNotEmpty() }
+        if (gs.size < 2) return 1.0
+        val sizes = gs.map { it.size }.toIntArray()
+        val pool = gs.flatten().toDoubleArray()
+        val n = pool.size
+        fun spread(xs: DoubleArray): Double {
+            var lo = Double.POSITIVE_INFINITY
+            var hi = Double.NEGATIVE_INFINITY
+            var start = 0
+            for (size in sizes) {
+                var sum = 0.0
+                for (i in start until start + size) sum += xs[i]
+                val avg = sum / size
+                if (avg < lo) lo = avg
+                if (avg > hi) hi = avg
+                start += size
+            }
+            return hi - lo
+        }
+        val observed = spread(pool)
+        val eps = 1e-9 * (1.0 + observed)
+        val rnd = java.util.Random(31L * n + sizes.fold(17L) { h, k -> h * 31 + k })
+        val arr = pool.copyOf()
+        var hits = 0
+        repeat(SHUFFLES) {
+            for (i in n - 1 downTo 1) {
+                val j = rnd.nextInt(i + 1)
+                val x = arr[i]; arr[i] = arr[j]; arr[j] = x
+            }
+            if (spread(arr) >= observed - eps) hits++
+        }
+        return hits.toDouble() / SHUFFLES
+    }
+
+    /**
+     * The chance check said plainly: how often in 100 shuffles a gap this big came up, and what that means. [among] the
+     * number of groups shuffled together and [pooled] their trades, when more than the two ([chanceAmong]).
+     */
+    fun chanceText(best: Group, worst: Group, share: Double, among: Int = 2, pooled: Int = best.trades + worst.trades): String {
+        val n = pooled
         val inHundred = Math.round(share * 100).toInt()
         val how = if (inHundred < 1) "less than once in 100" else if (inHundred == 1) "1 time in 100" else "$inHundred times in 100"
         val verdict = when {
@@ -145,7 +192,9 @@ object WhereIWin {
             share <= 0.20 -> "so it may still be chance; more trades would tell"
             else -> "so it could well be chance"
         }
-        return " Is that gap more than chance? Shuffling those $n trades between the two at random gave a gap at least as big $how, $verdict."
+        return if (among > 2)
+            " Is that gap more than chance? Shuffling all $n trades of those $among groups among them at random gave a gap between the best and worst at least as big $how, $verdict."
+        else " Is that gap more than chance? Shuffling those $n trades between the two at random gave a gap at least as big $how, $verdict."
     }
 
     /** One cut's line from [trades] split by [key], or null when every trade falls in one group and the cut was not asked. */
@@ -164,9 +213,15 @@ object WhereIWin {
             if (best !== worst) {
                 s.append(" A trade made most on ${best.name} (${rs(best.perTrade)}, on ${plural(best.trades, "trade")}) and least on " +
                     "${worst.name} (${rs(worst.perTrade)}, on ${plural(worst.trades, "trade")}).")
-                val a = trades.filter { key(it) == best.name }.map { it.net }
-                val b = trades.filter { key(it) == worst.name }.map { it.net }
-                s.append(chanceText(best, worst, chance(a, b)))
+                if (enough.size == 2) {
+                    val a = trades.filter { key(it) == best.name }.map { it.net }
+                    val b = trades.filter { key(it) == worst.name }.map { it.net }
+                    s.append(chanceText(best, worst, chance(a, b)))
+                } else {
+                    // Three or more: shuffled among every group with enough trades, so picking the extremes is allowed for.
+                    val nets = enough.map { g -> trades.filter { key(it) == g.name }.map { it.net } }
+                    s.append(chanceText(best, worst, chanceAmong(nets), enough.size, enough.sumOf { it.trades }))
+                }
             }
         } else if (asked) {
             s.append(" Fewer than two of these have $MIN_GROUP trades, so they are not set against each other yet.")

@@ -165,6 +165,7 @@ object PositionCards {
         }
         val liveLoggedIn = Broker.loggedIn
         var liveBook: Broker.Positions? = null
+        var ordersRead = false
         if (s.live && liveLoggedIn) runCatching { Broker.positionBook() }.getOrNull()?.also { book ->
             lastLive = book
             com.optionslab.app.data.KiteStream.want("positions", book.net.filter { it.qty != 0 }.map { it.token })
@@ -174,6 +175,7 @@ object PositionCards {
             if (stale.isNotEmpty()) runCatching {
                 val trades = Broker.trades()
                 val orders = Broker.orders()
+                ordersRead = true
                 stale.forEach { p ->
                     Origins.livePosition(owners, trades, orders, p.symbol, p.product, p.qty)?.let { sources["Live|${p.symbol}"] = it }
                     sourceQty["Live|${p.symbol}"] = p.qty
@@ -190,6 +192,11 @@ object PositionCards {
             runCatching { NotificationManagerCompat.from(context).cancel(idOf(k.substringBefore('|'), k.substringAfter('|'))) }
         }
         anyOpen = now.isNotEmpty()
+        // The "Open" widget's Zerodha orders: while it shows any still working, one order-book read a pass (none when no
+        // widget is placed, the switch is off, or none is working), so a filled or cancelled order leaves it. The read
+        // itself hands the book to the widget (Broker.orders).
+        if (!ordersRead && s.live && liveLoggedIn && runCatching { com.optionslab.app.widget.OpenWidget.wantsOrders(context, true) }.getOrDefault(false))
+            runCatching { Broker.orders() }
         // The "Open" widget from the books just read (no read of its own); a failed Zerodha read is shown as one.
         runCatching { com.optionslab.app.widget.OpenWidget.fromWatch(context, s.live, liveLoggedIn, liveBook, paperSnap) }
     }

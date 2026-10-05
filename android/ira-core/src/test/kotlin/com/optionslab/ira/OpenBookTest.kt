@@ -43,14 +43,20 @@ class OpenBookTest {
         assertNull(s.more); assertNull(s.note)
     }
 
-    @Test fun bothAccountsEachOnItsOwnLineAndTagged() {
+    @Test fun theHeadlineIsTheMainAccountOnlyNeverRealPlusPaper() {
         val p = Venue(OpenBook.PAPER, -2_000.0, listOf(Pos("BANKNIFTY26OCT56000CE", 30, null, -2_000.0)),
             listOf(Ord("BANKNIFTY26OCT56500CE", "SELL", 30, "SL-M", 0.0, 410.0, "trigger pending")))
         val s = OpenBook.screen(listOf(z, p))
-        assertEquals("Today's P&L · Zerodha + Paper", s.caption)
-        assertEquals("−₹766", s.headline)
-        assertEquals(Tone.LOSS, s.tone)
-        assertEquals(listOf("Zerodha  +₹1,234", "Paper  −₹2,000"), s.split)
+        assertEquals("Today's P&L · Zerodha", s.caption)
+        assertEquals("+₹1,234", s.headline, "live mode: Zerodha's alone, paper not added in")
+        assertEquals(Tone.GAIN, s.tone)
+        assertEquals(listOf("Paper  −₹2,000"), s.split)
+        // Paper mode: Paper on top, Zerodha below it.
+        val paperMode = OpenBook.screen(listOf(z.copy(primary = false), p.copy(primary = true)))
+        assertEquals("Today's P&L · Paper", paperMode.caption)
+        assertEquals("−₹2,000", paperMode.headline)
+        assertEquals(Tone.LOSS, paperMode.tone)
+        assertEquals(listOf("Zerodha  +₹1,234"), paperMode.split)
         assertEquals("+30 · LTP — · Paper", s.rows[1].detail)
         assertEquals("-75 · LTP 112.50 · Zerodha", s.rows[0].detail)
         assertEquals(OpenBook.Row("BANKNIFTY26OCT56500CE", "SELL 30 · SL-M · TRIGGER PENDING · Paper", "trg 410.00", Tone.PLAIN), s.rows.last())
@@ -70,8 +76,8 @@ class OpenBookTest {
         assertNull(s.note, "not 'No open positions'")
 
         val both = OpenBook.screen(listOf(Venue(OpenBook.ZERODHA, null, problem = "could not read", primary = true), Venue(OpenBook.PAPER, 500.0)))
-        assertEquals("Today's P&L · Paper", both.caption)
-        assertEquals("+₹500", both.headline)
+        assertEquals("Today's P&L · Zerodha", both.caption)
+        assertEquals("—", both.headline, "the main account unread: no paper figure in its place")
         assertEquals(listOf("Zerodha: could not read", "Paper  +₹500"), both.split)
         assertEquals("No open Paper positions or orders", both.note)
     }
@@ -101,6 +107,31 @@ class OpenBookTest {
         assertEquals("as of 3 Oct 15:29", OpenBook.asOf(LocalDateTime.of(2026, 10, 3, 15, 29), now))
     }
 
+    @Test fun eachAccountHasItsOwnTimeAndAnEarlierDayIsNotShown() {
+        val now = LocalDateTime.of(2026, 10, 5, 14, 7)
+        val zt = z.copy(at = LocalDateTime.of(2026, 10, 5, 11, 30))
+        val pt = Venue(OpenBook.PAPER, 500.0, at = LocalDateTime.of(2026, 10, 5, 13, 59))
+        val (s, stamp) = OpenBook.view(listOf(zt, pt), now)
+        assertEquals("+₹1,234", s.headline)
+        assertEquals("as of 11:30", stamp, "the oldest account shown")
+
+        // Zerodha last read yesterday: not yesterday's figures, said plainly; the stamp is paper's.
+        val old = zt.copy(at = LocalDateTime.of(2026, 10, 4, 15, 29))
+        val (y, yStamp) = OpenBook.view(listOf(old, pt), now)
+        assertEquals("—", y.headline)
+        assertEquals(listOf("Zerodha: not updated today", "Paper  +₹500"), y.split)
+        assertTrue(y.rows.none { it.title.startsWith("NIFTY") }, "no stale Zerodha rows")
+        assertEquals("as of 13:59", yStamp)
+
+        // A side account from an earlier day is left out; one with no time is never taken for today's.
+        val (q, qStamp) = OpenBook.view(listOf(zt, pt.copy(at = LocalDateTime.of(2026, 10, 2, 15, 0))), now)
+        assertEquals(emptyList(), q.split)
+        assertEquals("as of 11:30", qStamp)
+        val (u, uStamp) = OpenBook.view(listOf(z), now)
+        assertEquals(listOf("Zerodha: not updated today"), u.split)
+        assertNull(uStamp)
+    }
+
     @Test fun theCodecRoundTrips() {
         val tricky = z.copy(positions = z.positions + Pos("A\tB\nC", 1, null, 0.0), problem = null)
         val back = OpenBook.decode(OpenBook.encode(tricky))!!
@@ -109,6 +140,12 @@ class OpenBookTest {
         assertEquals(failed, OpenBook.decode(OpenBook.encode(failed)))
         assertNull(OpenBook.decode(null)); assertNull(OpenBook.decode("")); assertNull(OpenBook.decode("garbage"))
         assertNull(OpenBook.decode("V\tZerodha\tnotanumber\t\t1"))
+        val stamped = z.copy(at = LocalDateTime.of(2026, 10, 5, 14, 7, 41))
+        assertEquals(stamped.copy(at = LocalDateTime.of(2026, 10, 5, 14, 7)), OpenBook.decode(OpenBook.encode(stamped)))
+        assertEquals(z, OpenBook.decode("V\tZerodha\t1234.4\t\t1\n" + OpenBook.encode(z).substringAfter('\n')), "an older record, without a time")
+        assertTrue(OpenBook.sameFigures(OpenBook.encode(stamped), OpenBook.encode(stamped.copy(at = LocalDateTime.of(2026, 10, 5, 15, 0)))))
+        assertTrue(!OpenBook.sameFigures(OpenBook.encode(stamped), OpenBook.encode(stamped.copy(at = LocalDateTime.of(2026, 10, 6, 9, 15)))))
+        assertTrue(!OpenBook.sameFigures(OpenBook.encode(stamped), OpenBook.encode(stamped.copy(pnl = 1.0))))
 
         val text = OpenBook.encodeOrders("2026-10-05", z.orders)
         assertEquals(z.orders, OpenBook.decodeOrders(text, "2026-10-05"))

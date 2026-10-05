@@ -62,7 +62,8 @@ class OvernightTest {
         for (q in listOf("does nifty make its moves overnight or during the day", "overnight vs intraday returns for banknifty",
                 "how big are nifty's overnight moves usually", "is the trend made in the gaps or in market hours",
                 "nifty ka move raat mein banta hai ya din mein", "overnight returns record for sensex", "how much of nifty's move comes overnight",
-                "close to open vs open to close for nifty"))
+                "close to open vs open to close for nifty", "overnight vs during trading hours",
+                "what's the overnight vs intraday split for banknifty"))
             assertEquals(Overnight.Q(false), Overnight.asked(q), q)
         assertEquals(Overnight.Q(true), Overnight.asked("are weekend gaps bigger than weekday overnight moves"))
         assertEquals(Overnight.Q(true), Overnight.asked("how big is nifty's move over the weekend compared to an ordinary overnight"))
@@ -118,6 +119,17 @@ class OvernightTest {
         val said = Overnight.answer(Overnight.Q(), Market.NIFTY, bars, today, today.atTime(11, 0))
         assertEquals(40, Overnight.past(bars, today).size)
         assertTrue(Regex("Today Nifty opened \\+0\\.50% on \\d+ \\w+'s close and is \\+0\\.\\d\\d% on its open so far\\.").containsMatchIn(said), said)
+    }
+
+    @Test fun todayEndedOnlyForAWholeSession() {
+        val past = nifty(40)
+        val pc = past.last().c
+        // After the close: a whole session ended; candles stopping at 11:00 say so instead.
+        val whole = Overnight.answer(Overnight.Q(), Market.NIFTY, past + session(today, pc * 1.005, pc * 1.008), today, today.atTime(16, 0))
+        assertTrue(Regex("and ended \\+0\\.\\d\\d% on its open\\.").containsMatchIn(whole), whole)
+        val cut = Overnight.answer(Overnight.Q(), Market.NIFTY, past + session(today, pc * 1.005, pc * 1.008, LocalTime.of(11, 0)), today, today.atTime(16, 0))
+        assertTrue(Regex("and was \\+0\\.\\d\\d% on its open at 11:00\\.").containsMatchIn(cut), cut)
+        assertFalse(cut.contains("ended"), cut)
     }
 
     @Test fun aMissingSessionIsNeverBridged() {

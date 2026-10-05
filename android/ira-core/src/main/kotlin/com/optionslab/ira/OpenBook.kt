@@ -6,16 +6,21 @@ import kotlin.math.abs
 
 /**
  * What the "Open" home-screen widget shows (the owner's wish, 2026-10-05: "only open order and on top P&L"), pure:
- * today's P&L on top (Zerodha and Paper each on their own line when both are in play, never silently added up), then
+ * today's P&L on top - the account the app is in only (Zerodha in live mode, Paper in paper mode; the other on its own
+ * line below, never added in, so real and paper money are never summed), then
  * only what is open - the open positions, then the orders still pending at the broker or in paper (OPEN, TRIGGER
  * PENDING, AMO). Closed positions and completed, cancelled or rejected orders are left out. A venue that could not be
- * read says so instead of looking empty. Also the small text codec the widget keeps its figures in between redraws.
+ * read says so instead of looking empty. Each account carries its own time of reading: one read on an earlier day is never
+ * shown as today's ("Zerodha: not updated today"), and the "as of" stamp is the oldest of the accounts shown. Also the
+ * small text codec the widget keeps its figures in between redraws.
  */
 object OpenBook {
     const val ZERODHA = "Zerodha"
     const val PAPER = "Paper"
     const val NOTHING_OPEN = "No open positions or orders"
     const val WAITING = "Waiting for the app or the live watch to update"
+    /** Said for the account the app is in when its last reading is from an earlier day. */
+    const val NOT_TODAY = "not updated today"
 
     /** An open position: [qty] signed (negative = short), [ltp] null when unknown. */
     data class Pos(val symbol: String, val qty: Int, val ltp: Double?, val pnl: Double)
@@ -26,18 +31,19 @@ object OpenBook {
 
     /**
      * One account's books. [pnl] today's P&L as Home shows it; [problem] set ("could not read", "not logged in") when its
-     * books are unknown; [primary] the account the app is in (shown even when it holds nothing).
+     * books are unknown; [primary] the account the app is in (shown even when it holds nothing; its P&L is the
+     * headline); [at] when it was read (null: unknown, never taken for today's).
      */
     data class Venue(val name: String, val pnl: Double?, val positions: List<Pos> = emptyList(), val orders: List<Ord> = emptyList(),
-                     val problem: String? = null, val primary: Boolean = false)
+                     val problem: String? = null, val primary: Boolean = false, val at: LocalDateTime? = null)
 
     enum class Tone { GAIN, LOSS, PLAIN }
 
     data class Row(val title: String, val detail: String, val figure: String, val tone: Tone)
 
     /**
-     * The widget's content: [headline] the P&L in large type with its [tone]; [caption] what it adds up; [split] one
-     * line per account when more than one is in play; [rows] at most the cap; [more] the "+N more" line; [note] the
+     * The widget's content: [headline] the P&L in large type with its [tone], the account the app is in only; [caption]
+     * whose it is; [split] one line for each other account in play (and for the main one when it could not be read); [rows] at most the cap; [more] the "+N more" line; [note] the
      * line shown instead of rows (nothing open, or nothing read yet).
      */
     data class Screen(val caption: String, val headline: String, val tone: Tone, val split: List<String>, val rows: List<Row>,
@@ -84,15 +90,20 @@ object OpenBook {
         return Row(o.symbol, detail, figure, Tone.PLAIN)
     }
 
-    /** The widget's content from the accounts read (Zerodha before Paper, as given), at most [maxRows] rows. */
+    /**
+     * The widget's content from the accounts read (Zerodha before Paper, as given), at most [maxRows] rows. The headline is
+     * the [Venue.primary] account's P&L alone (the first shown when none is marked); every other account in play is on a
+     * split line of its own, never added in.
+     */
     fun screen(venues: List<Venue>, maxRows: Int = 8): Screen {
         val shown = venues.filter(::inPlay)
         if (shown.isEmpty()) return Screen("Today's P&L", "—", Tone.PLAIN, emptyList(), emptyList(), null, WAITING)
-        val known = shown.filter { it.problem == null && it.pnl != null }
-        val total = known.sumOf { it.pnl!! }
-        val caption = "Today's P&L" + if (known.isEmpty()) "" else " · " + known.joinToString(" + ") { it.name }
-        val split = if (shown.size < 2 && shown.all { it.problem == null }) emptyList()
-            else shown.map { v -> v.problem?.let { "${v.name}: $it" } ?: "${v.name}  ${v.pnl?.let(::rs) ?: "—"}" }
+        val head = shown.firstOrNull { it.primary } ?: shown.first()
+        val headPnl = if (head.problem == null) head.pnl else null
+        val caption = "Today's P&L · ${head.name}"
+        val others = shown.filter { it !== head }
+        val split = (if (head.problem != null) listOf(head) else emptyList()) + others
+        val splitLines = split.map { v -> v.problem?.let { "${v.name}: $it" } ?: "${v.name}  ${v.pnl?.let(::rs) ?: "—"}" }
         val read = shown.filter { it.problem == null }
         val tag = read.size > 1
         val all = read.flatMap { v -> v.positions.filter { it.qty != 0 }.map { positionRow(it, if (tag) v.name else null) } } +
@@ -106,8 +117,30 @@ object OpenBook {
             read.size == shown.size -> NOTHING_OPEN
             else -> "No open ${read.joinToString(" or ") { it.name }} positions or orders"
         }
-        return Screen(caption, if (known.isEmpty()) "—" else rs(total), if (known.isEmpty()) Tone.PLAIN else tone(total),
-            split, rows, more, note)
+        return Screen(caption, headPnl?.let(::rs) ?: "—", headPnl?.let(::tone) ?: Tone.PLAIN, splitLines, rows, more, note)
+    }
+
+    /**
+     * Only today's readings: an account read on an earlier day (or at an unknown time) is never shown with its old
+     * figures - the account the app is in says [NOT_TODAY]; another one is left out.
+     */
+    fun current(venues: List<Venue>, now: LocalDateTime): List<Venue> = venues.mapNotNull { v ->
+        val at = v.at
+        when {
+            at != null && at.toLocalDate() == now.toLocalDate() -> v
+            v.primary -> Venue(v.name, null, problem = NOT_TODAY, primary = true, at = at)
+            else -> null
+        }
+    }
+
+    /** The "as of" stamp: the oldest reading among the accounts shown (an account [NOT_TODAY] says so instead); null for none. */
+    fun stamp(venues: List<Venue>, now: LocalDateTime): String? =
+        venues.filter { inPlay(it) && it.problem != NOT_TODAY }.mapNotNull { it.at }.minOrNull()?.let { asOf(it, now) }
+
+    /** The widget's content and its stamp from what it kept, at [now]: [current] first, then [screen] and [stamp]. */
+    fun view(venues: List<Venue>, now: LocalDateTime, maxRows: Int = 8): Pair<Screen, String?> {
+        val c = current(venues, now)
+        return screen(c, maxRows) to stamp(c, now)
     }
 
     /** "as of 14:05" today, "as of 3 Oct 15:29" for another day. */
@@ -128,7 +161,10 @@ object OpenBook {
         Ord(f[1], f[2], f[3].toInt(), f[4], f[5].toDouble(), f[6].toDouble(), f[7], f[8])
     }.getOrNull()
 
-    fun encode(v: Venue): String = (listOf(listOf("V", clean(v.name), v.pnl?.let(::num) ?: "", clean(v.problem ?: ""), if (v.primary) "1" else "0").joinToString("\t")) +
+    private fun minute(t: LocalDateTime) = t.withSecond(0).withNano(0)
+
+    fun encode(v: Venue): String = (listOf(listOf("V", clean(v.name), v.pnl?.let(::num) ?: "", clean(v.problem ?: ""), if (v.primary) "1" else "0",
+        v.at?.let { minute(it).toString() } ?: "").joinToString("\t")) +
         v.positions.map { listOf("P", clean(it.symbol), it.qty.toString(), it.ltp?.let(::num) ?: "", num(it.pnl)).joinToString("\t") } +
         v.orders.map(::ordLine)).joinToString("\n")
 
@@ -141,8 +177,21 @@ object OpenBook {
         return runCatching {
             Venue(h[1], h[2].takeIf { it.isNotEmpty() }?.toDouble(),
                 lines.drop(1).filter { it.size >= 5 && it[0] == "P" }.map { Pos(it[1], it[2].toInt(), it[3].takeIf { x -> x.isNotEmpty() }?.toDouble(), it[4].toDouble()) },
-                lines.drop(1).mapNotNull(::ord), h[3].takeIf { it.isNotEmpty() }, h[4] == "1")
+                lines.drop(1).mapNotNull(::ord), h[3].takeIf { it.isNotEmpty() }, h[4] == "1",
+                h.getOrNull(5)?.takeIf { it.isNotEmpty() }?.let { runCatching { LocalDateTime.parse(it) }.getOrNull() })
         }.getOrNull()
+    }
+
+    /**
+     * Do two kept records ([encode]'s or [encodeOrders]') hold the same figures on the same day? Only the minute of the
+     * reading may differ: the vault copy is rewritten when the figures or the day change, not every minute.
+     */
+    fun sameFigures(a: String?, b: String?): Boolean {
+        if (a == b) return true
+        val va = decode(a); val vb = decode(b)
+        if (va == null || vb == null) return false
+        fun day(v: Venue) = v.copy(at = v.at?.toLocalDate()?.atStartOfDay())
+        return day(va) == day(vb)
     }
 
     /** A day's order list (read separately from the positions), stamped with [day] (yyyy-MM-dd). */

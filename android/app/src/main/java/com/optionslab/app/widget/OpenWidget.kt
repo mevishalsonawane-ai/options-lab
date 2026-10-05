@@ -6,6 +6,7 @@ import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.os.Bundle
 import android.view.View
 import android.widget.RemoteViews
 import com.optionslab.app.BuildConfig
@@ -17,6 +18,7 @@ import com.optionslab.app.data.Market
 import com.optionslab.app.data.Paper
 import com.optionslab.app.security.SecurePrefs
 import com.optionslab.ira.OpenBook
+import java.time.LocalDateTime
 import java.util.Locale
 
 /**
@@ -25,26 +27,39 @@ import java.util.Locale
  * anything; a tap opens the app on its positions, which still asks for the PIN or fingerprint.
  *
  * Account figures appear only when the owner turned on "Show my P&L on the widget" (More → Security), the same switch
- * as [IraWidget]'s; when it is off the widget says so and holds nothing (what it kept is dropped from the vault).
+ * as [IraWidget]'s; when it is off the widget says so and holds nothing (what it kept is dropped from the vault). The
+ * switch is held in memory ([enabled]) the moment it moves, before the settings file is saved, and every vault write is
+ * checked against it under the same lock as [forget]: once it is off, no figure can land in the vault or be drawn.
  * Home screen only (never the lock screen), and not in the gold build (its receiver is disabled there).
  *
  * Battery: no timer of its own. It is redrawn only when the live watch or the app already has the books in hand
- * ([fromWatch], [fromZerodha], [fromPaper], [fromOrders]); nothing here reads the network. With no widget placed, or the
- * switch off, nothing is kept or drawn. Its figures reach the vault at most once a minute (as [IraWidget]'s do).
+ * ([fromWatch], [fromZerodha], [fromPaper], [fromOrders]); the only read made for it is the live watch's one order-book
+ * read a pass while it shows Zerodha orders still working ([wantsOrders]). With no widget placed, or the switch off,
+ * nothing is kept, read or drawn. Its figures reach the vault at most once a minute (as [IraWidget]'s do), and the order
+ * path never waits on it ([fromOrdersSoon]).
  */
 class OpenWidget : AppWidgetProvider() {
     override fun onUpdate(context: Context, manager: AppWidgetManager, ids: IntArray) = draw(context, manager, ids, true)
 
-    /** The last one was removed from the home screen: what it kept leaves the vault. */
-    override fun onDisabled(context: Context) { runCatching { forget() } }
+    /** Resized: as many rows as fit, so the "+N more" line is never cut off. */
+    override fun onAppWidgetOptionsChanged(context: Context, appWidgetManager: AppWidgetManager, appWidgetId: Int, newOptions: Bundle?) {
+        runCatching { draw(context, appWidgetManager, ids(context), true) }
+    }
+
+    /** The last one was removed from the home screen: what it kept leaves the vault (off the main thread). */
+    override fun onDisabled(context: Context) { later { forget() } }
 
     companion object {
         private const val K_Z = "ow.zerodha"
         private const val K_ZO = "ow.zorders"
         private const val K_P = "ow.paper"
+        /** The shared stamp of earlier versions: no longer written (each account carries its own), still cleared. */
         private const val K_AT = "ow.at"
         private val KEYS = listOf(K_Z, K_ZO, K_P, K_AT)
         private const val MAX_ROWS = 8
+        /** Conservative heights (dp) for fitting rows: everything above and below the rows, and one row. */
+        private const val HEAD_DP = 160
+        private const val ROW_DP = 36
         const val OFF = "Turn on 'Show my P&L on the widget' in More → Security"
 
         private val ROW = intArrayOf(R.id.ow_row0, R.id.ow_row1, R.id.ow_row2, R.id.ow_row3, R.id.ow_row4, R.id.ow_row5, R.id.ow_row6, R.id.ow_row7)
@@ -52,7 +67,7 @@ class OpenWidget : AppWidgetProvider() {
         private val DETAIL = intArrayOf(R.id.ow_d0, R.id.ow_d1, R.id.ow_d2, R.id.ow_d3, R.id.ow_d4, R.id.ow_d5, R.id.ow_d6, R.id.ow_d7)
         private val FIGURE = intArrayOf(R.id.ow_f0, R.id.ow_f1, R.id.ow_f2, R.id.ow_f3, R.id.ow_f4, R.id.ow_f5, R.id.ow_f6, R.id.ow_f7)
 
-        /** Figures newer than the vault copy (as [IraWidget]'s): written at most once a minute, and only when they differ. */
+        /** Figures newer than the vault copy (as [IraWidget]'s): written at most once a minute, and only when they differ. Also the lock every vault write and [forget] run under. */
         private val unsaved = HashMap<String, String?>()
         private var savedAt: String? = null
         private var unsavedGen = Int.MIN_VALUE
@@ -61,15 +76,41 @@ class OpenWidget : AppWidgetProvider() {
         /** The live stream's last Zerodha update (at most every 5 s). */
         @Volatile private var streamAt = 0L
 
-        /** Tests share this process: back to a fresh start. */
-        internal fun resetForTest() {
-            synchronized(unsaved) { unsaved.clear(); savedAt = null; unsavedGen = Int.MIN_VALUE }
-            drawn = null; streamAt = 0L
+        /**
+         * "Show my P&L on the widget" as last set ([refresh] sets it at once; the settings file is saved later), or null
+         * until first read from the settings. Changed only under [flagLock], which is never held across any I/O.
+         */
+        @Volatile private var enabled: Boolean? = null
+        private val flagLock = Any()
+        /** One redraw at a time, so a redraw with figures can never land after the switch's redraw without them. */
+        private val drawLock = Any()
+
+        /** The switch's vault work and redraw, and Zerodha's order book, off the caller's thread, one at a time and in order. */
+        private val worker = java.util.concurrent.Executors.newSingleThreadExecutor { r -> Thread(r, "open-widget").apply { isDaemon = true } }
+        /** Tests: run that work on the caller's thread instead. */
+        @Volatile internal var inlineForTest = false
+
+        private fun later(work: () -> Unit) {
+            if (inlineForTest) { runCatching { work() }; return }
+            runCatching { worker.execute { runCatching { work() } } }
         }
 
+        /** Tests share this process: back to a fresh start. */
+        internal fun resetForTest() {
+            runCatching { worker.submit(Runnable {}).get(5, java.util.concurrent.TimeUnit.SECONDS) }
+            synchronized(unsaved) { unsaved.clear(); savedAt = null; unsavedGen = Int.MIN_VALUE }
+            synchronized(flagLock) { enabled = null }
+            drawn = null; streamAt = 0L; inlineForTest = false
+        }
+
+        /** Under [unsaved]'s lock: a wiped (or re-opened) vault drops what was held, the switch included (read again). */
         private fun fresh() {
             val g = SecurePrefs.generationNow()
-            if (g != unsavedGen) { unsaved.clear(); savedAt = null; unsavedGen = g }
+            if (g != unsavedGen) {
+                unsaved.clear(); savedAt = null
+                if (unsavedGen != Int.MIN_VALUE) synchronized(flagLock) { enabled = null }
+                unsavedGen = g
+            }
         }
 
         private fun textNow(k: String): String? = synchronized(unsaved) {
@@ -83,51 +124,80 @@ class OpenWidget : AppWidgetProvider() {
         /** Is at least one on a home screen? (Unknown counts as no: nothing could be drawn anyway.) */
         fun placed(context: Context): Boolean = !BuildConfig.GOLD && ids(context).isNotEmpty()
 
-        private fun allowed(): Boolean = runCatching { AppSettings.load().widgetPnl }.getOrDefault(false)
-
-        /** Drop what it kept (the switch turned off, or the last widget removed). */
-        private fun forget() {
-            synchronized(unsaved) { fresh(); unsaved.clear(); savedAt = null }
-            if (KEYS.any { SecurePrefs.getString(it) != null }) SecurePrefs.putAll(KEYS.associateWith { null })
-            drawn = null
+        /** The switch: as last set, else as saved (read once; a switch moved meanwhile wins). */
+        private fun allowed(): Boolean {
+            enabled?.let { return it }
+            val saved = runCatching { AppSettings.load().widgetPnl }.getOrDefault(false)
+            synchronized(flagLock) {
+                if (enabled == null) enabled = saved
+                return enabled == true
+            }
         }
 
-        /** The switch in More → Security changed to [on]: redraw now (and when off, keep nothing). */
+        /** Drop what it kept (the switch turned off, or the last widget removed); under the lock every vault write takes. */
+        private fun forget() {
+            val held = synchronized(unsaved) {
+                fresh()
+                val inMemory = unsaved.isNotEmpty()
+                unsaved.clear(); savedAt = null
+                val inVault = KEYS.any { SecurePrefs.getString(it) != null }
+                if (inVault) SecurePrefs.putAll(KEYS.associateWith { null })
+                inMemory || inVault
+            }
+            // Something was dropped: the next redraw is sent even if it looks the same.
+            if (held) drawn = null
+        }
+
+        /**
+         * The switch in More → Security changed to [on]: held at once, then (off the main thread, in order) what was kept
+         * is dropped when off, and the widget redrawn.
+         */
         fun refresh(context: Context, on: Boolean) {
-            if (!placed(context)) { if (!on) runCatching { forget() }; return }
-            if (!on) forget()
-            draw(context, AppWidgetManager.getInstance(context), ids(context), true, on)
+            synchronized(flagLock) { enabled = on }
+            val app = context.applicationContext ?: context
+            later {
+                if (!on) forget()
+                if (placed(app)) draw(app, AppWidgetManager.getInstance(app), ids(app), true, on)
+            }
+        }
+
+        private fun off(context: Context, manager: AppWidgetManager, ids: IntArray) {
+            if (drawn != "off") draw(context, manager, ids, false, false)
         }
 
         private fun store(context: Context, values: Map<String, String?>) {
             val placedIds = if (BuildConfig.GOLD) IntArray(0) else ids(context)
             if (placedIds.isEmpty()) return
-            if (!allowed()) { if (drawn != "off") draw(context, AppWidgetManager.getInstance(context), placedIds, false, false); return }
+            val manager = AppWidgetManager.getInstance(context)
+            if (!allowed()) { forget(); off(context, manager, placedIds); return }
             val now = Market.now()
             val at = String.format(Locale.ROOT, "%04d-%02d-%02dT%02d:%02d", now.year, now.monthValue, now.dayOfMonth, now.hour, now.minute)
-            val m = HashMap<String, String?>(values)
-            m[K_AT] = at
-            val toVault: Map<String, String?>? = synchronized(unsaved) {
+            val kept = synchronized(unsaved) {
                 fresh()
+                // Checked here, right before the write and under forget()'s lock: once the switch is off nothing lands.
+                if (enabled != true) return@synchronized false
                 val all = HashMap<String, String?>(unsaved)
-                all.putAll(m)
-                if (at != savedAt && all.any { (k, v) -> k != K_AT && v != SecurePrefs.getString(k) }) {
+                all.putAll(values)
+                if (at != savedAt && all.any { (k, v) -> !OpenBook.sameFigures(v, SecurePrefs.getString(k)) }) {
                     savedAt = at
                     unsaved.clear()
-                    all
-                } else { unsaved.putAll(m); null }
+                    SecurePrefs.putAllSoon(all)
+                } else unsaved.putAll(values)
+                true
             }
-            if (toVault != null) SecurePrefs.putAll(toVault)
-            draw(context, AppWidgetManager.getInstance(context), placedIds, false, true)
+            if (!kept) { forget(); off(context, manager, placedIds); return }
+            draw(context, manager, placedIds, false)
         }
 
-        fun zerodhaVenue(book: Broker.Positions): OpenBook.Venue = OpenBook.Venue(OpenBook.ZERODHA, book.m2m,
-            book.net.filter { it.qty != 0 }.map { OpenBook.Pos(it.symbol, it.qty, it.last.takeIf { l -> l > 0 }, it.pnl) }, primary = true)
+        private fun nowMinute(): LocalDateTime = Market.now().toLocalDateTime().withSecond(0).withNano(0)
 
-        fun paperVenue(snap: Paper.Snapshot, primary: Boolean): OpenBook.Venue = OpenBook.Venue(OpenBook.PAPER, snap.dayPnl,
+        fun zerodhaVenue(book: Broker.Positions, at: LocalDateTime?): OpenBook.Venue = OpenBook.Venue(OpenBook.ZERODHA, book.m2m,
+            book.net.filter { it.qty != 0 }.map { OpenBook.Pos(it.symbol, it.qty, it.last.takeIf { l -> l > 0 }, it.pnl) }, primary = true, at = at)
+
+        fun paperVenue(snap: Paper.Snapshot, primary: Boolean, at: LocalDateTime?): OpenBook.Venue = OpenBook.Venue(OpenBook.PAPER, snap.dayPnl,
             snap.positions.positions.filter { it.quantity != 0 }.map { OpenBook.Pos(it.symbol, it.quantity, it.ltp.takeIf { l -> l > 0 }, it.pnl) },
             snap.orders.orders.filter { it.pendingQuantity > 0 }.map { OpenBook.Ord(it.symbol, it.action, it.pendingQuantity, it.priceType, it.price, it.triggerPrice, it.status) },
-            primary = primary)
+            primary = primary, at = at)
 
         /**
          * The live watch's pass ([com.optionslab.app.work.PositionCards.refresh]): [live] the app is in Zerodha mode,
@@ -136,22 +206,32 @@ class OpenWidget : AppWidgetProvider() {
          */
         fun fromWatch(context: Context, live: Boolean, loggedIn: Boolean, book: Broker.Positions?, paper: Paper.Snapshot?) {
             if (BuildConfig.GOLD) return
+            val at = nowMinute()
             val z: OpenBook.Venue? = when {
                 !live -> null
-                !loggedIn -> OpenBook.Venue(OpenBook.ZERODHA, null, problem = "not logged in", primary = true)
-                book == null -> OpenBook.Venue(OpenBook.ZERODHA, null, problem = "could not read", primary = true)
-                else -> zerodhaVenue(book)
+                !loggedIn -> OpenBook.Venue(OpenBook.ZERODHA, null, problem = "not logged in", primary = true, at = at)
+                book == null -> OpenBook.Venue(OpenBook.ZERODHA, null, problem = "could not read", primary = true, at = at)
+                else -> zerodhaVenue(book, at)
             }
             val m = HashMap<String, String?>()
             m[K_Z] = z?.let { OpenBook.encode(it) }
-            if (paper != null) m[K_P] = OpenBook.encode(paperVenue(paper, !live))
+            if (paper != null) m[K_P] = OpenBook.encode(paperVenue(paper, !live, at))
             store(context, m)
+        }
+
+        /**
+         * Should the live watch read Zerodha's order book on this pass? Only while a placed widget, with the switch on and
+         * in Zerodha mode, shows orders still working there (one read a pass, so a filled or cancelled one goes).
+         */
+        fun wantsOrders(context: Context, live: Boolean): Boolean {
+            if (BuildConfig.GOLD || !live || !placed(context) || !allowed()) return false
+            return OpenBook.decodeOrders(textNow(K_ZO), Market.today().toString()).any { OpenBook.pendingLabel(it.status, it.variety) != null }
         }
 
         /** Zerodha's positions read by the app ([com.optionslab.app.ui.AppModel.loadAccount]). */
         fun fromZerodha(context: Context, book: Broker.Positions) {
             if (BuildConfig.GOLD) return
-            store(context, mapOf(K_Z to OpenBook.encode(zerodhaVenue(book))))
+            store(context, mapOf(K_Z to OpenBook.encode(zerodhaVenue(book, nowMinute()))))
         }
 
         /** Zerodha's positions moved by the live price stream: at most every 5 s, and only in Zerodha mode. */
@@ -161,17 +241,17 @@ class OpenWidget : AppWidgetProvider() {
             if (now - streamAt < 5_000) return
             streamAt = now
             if (!runCatching { AppSettings.load().live }.getOrDefault(false)) return
-            store(context, mapOf(K_Z to OpenBook.encode(zerodhaVenue(book))))
+            store(context, mapOf(K_Z to OpenBook.encode(zerodhaVenue(book, nowMinute()))))
         }
 
         /** The paper books read by the app ([com.optionslab.app.ui.AppModel.loadPaper]). */
         fun fromPaper(context: Context, snap: Paper.Snapshot) {
             if (BuildConfig.GOLD) return
             val live = runCatching { AppSettings.load().live }.getOrDefault(false)
-            store(context, mapOf(K_P to OpenBook.encode(paperVenue(snap, !live))))
+            store(context, mapOf(K_P to OpenBook.encode(paperVenue(snap, !live, nowMinute()))))
         }
 
-        /** Zerodha's order book, whenever something already read it ([Broker.orders]): the ones still working. */
+        /** Zerodha's order book, whenever something already read it: the ones still working. */
         fun fromOrders(context: Context, rows: List<Broker.OrderRow>) {
             if (BuildConfig.GOLD) return
             val working = rows.filter { it.working }.map { o ->
@@ -180,16 +260,33 @@ class OpenWidget : AppWidgetProvider() {
             store(context, mapOf(K_ZO to OpenBook.encodeOrders(Market.today().toString(), working)))
         }
 
-        /** What the widget shows now, from what it kept. */
-        internal fun screen(): Pair<OpenBook.Screen, String?> {
-            val today = Market.today().toString()
-            val z = OpenBook.decode(textNow(K_Z))
-            val zOrders = OpenBook.decodeOrders(textNow(K_ZO), today)
-            val p = OpenBook.decode(textNow(K_P))
+        /** [fromOrders] from [Broker.orders]: handed to the widget's own thread, so the order path never waits on it. */
+        fun fromOrdersSoon(context: Context, rows: List<Broker.OrderRow>) {
+            if (BuildConfig.GOLD) return
+            val app = context.applicationContext ?: context
+            later { fromOrders(app, rows) }
+        }
+
+        /** What the widget shows now, from what it kept, in at most [maxRows] rows. */
+        internal fun screen(maxRows: Int = MAX_ROWS): Pair<OpenBook.Screen, String?> {
+            val now = Market.now().toLocalDateTime()
+            // The headline is the account the app is in: Zerodha in live mode, Paper in paper mode.
+            val live = runCatching { AppSettings.load().live }.getOrDefault(false)
+            val zOrders = OpenBook.decodeOrders(textNow(K_ZO), now.toLocalDate().toString())
             // Zerodha's orders only beside a read of its positions: an unreadable account shows no stale orders.
-            val venues = listOfNotNull(z?.let { if (it.problem == null) it.copy(orders = zOrders) else it }, p)
-            val at = textNow(K_AT)?.let { runCatching { java.time.LocalDateTime.parse(it) }.getOrNull() }
-            return OpenBook.screen(venues, MAX_ROWS) to at?.let { OpenBook.asOf(it, Market.now().toLocalDateTime()) }
+            val z = OpenBook.decode(textNow(K_Z))?.let { if (it.problem == null) it.copy(orders = zOrders) else it }?.copy(primary = live)
+            val p = OpenBook.decode(textNow(K_P))?.copy(primary = !live)
+            return OpenBook.view(listOfNotNull(z, p), now, maxRows)
+        }
+
+        /** How many rows fit the smallest placed widget's height (all of them when the launcher does not say). */
+        private fun visibleRows(manager: AppWidgetManager, ids: IntArray): Int {
+            var rows = MAX_ROWS
+            for (id in ids) {
+                val h = runCatching { manager.getAppWidgetOptions(id)?.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 0) ?: 0 }.getOrDefault(0)
+                if (h > 0) rows = minOf(rows, ((h - HEAD_DP) / ROW_DP).coerceAtLeast(1))
+            }
+            return rows
         }
 
         private fun colour(context: Context, t: OpenBook.Tone): Int = context.getColor(when (t) {
@@ -200,47 +297,51 @@ class OpenWidget : AppWidgetProvider() {
 
         private fun draw(context: Context, manager: AppWidgetManager, ids: IntArray, force: Boolean, show: Boolean = allowed()) {
             if (ids.isEmpty()) return
-            val v = RemoteViews(context.packageName, R.layout.widget_open)
-            val sig: String
-            val figures = listOf(R.id.ow_caption, R.id.ow_pnl, R.id.ow_split, R.id.ow_stamp, R.id.ow_rule)
-            if (!show) {
-                figures.forEach { v.setViewVisibility(it, View.GONE) }
-                ROW.forEach { v.setViewVisibility(it, View.GONE) }
-                v.setViewVisibility(R.id.ow_more, View.GONE)
-                v.setViewVisibility(R.id.ow_note, View.VISIBLE)
-                v.setTextViewText(R.id.ow_note, OFF)
-                sig = "off"
-            } else {
-                val (s, stamp) = screen()
-                figures.forEach { v.setViewVisibility(it, View.VISIBLE) }
-                v.setTextViewText(R.id.ow_caption, s.caption)
-                v.setTextViewText(R.id.ow_pnl, s.headline)
-                v.setTextColor(R.id.ow_pnl, colour(context, s.tone))
-                if (s.split.isEmpty()) v.setViewVisibility(R.id.ow_split, View.GONE)
-                else v.setTextViewText(R.id.ow_split, s.split.joinToString("\n"))
-                if (stamp == null) v.setViewVisibility(R.id.ow_stamp, View.GONE) else v.setTextViewText(R.id.ow_stamp, stamp)
-                for (i in ROW.indices) {
-                    val r = s.rows.getOrNull(i)
-                    if (r == null) { v.setViewVisibility(ROW[i], View.GONE); continue }
-                    v.setViewVisibility(ROW[i], View.VISIBLE)
-                    v.setTextViewText(TITLE[i], r.title)
-                    v.setTextViewText(DETAIL[i], r.detail)
-                    v.setTextViewText(FIGURE[i], r.figure)
-                    v.setTextColor(FIGURE[i], colour(context, r.tone))
+            synchronized(drawLock) {
+                // The switch as it is now, not as it was when this redraw was asked for.
+                val showNow = show && enabled == true
+                val v = RemoteViews(context.packageName, R.layout.widget_open)
+                val sig: String
+                val figures = listOf(R.id.ow_caption, R.id.ow_pnl, R.id.ow_split, R.id.ow_stamp, R.id.ow_rule)
+                if (!showNow) {
+                    figures.forEach { v.setViewVisibility(it, View.GONE) }
+                    ROW.forEach { v.setViewVisibility(it, View.GONE) }
+                    v.setViewVisibility(R.id.ow_more, View.GONE)
+                    v.setViewVisibility(R.id.ow_note, View.VISIBLE)
+                    v.setTextViewText(R.id.ow_note, OFF)
+                    sig = "off"
+                } else {
+                    val (s, stamp) = screen(visibleRows(manager, ids))
+                    figures.forEach { v.setViewVisibility(it, View.VISIBLE) }
+                    v.setTextViewText(R.id.ow_caption, s.caption)
+                    v.setTextViewText(R.id.ow_pnl, s.headline)
+                    v.setTextColor(R.id.ow_pnl, colour(context, s.tone))
+                    if (s.split.isEmpty()) v.setViewVisibility(R.id.ow_split, View.GONE)
+                    else v.setTextViewText(R.id.ow_split, s.split.joinToString("\n"))
+                    if (stamp == null) v.setViewVisibility(R.id.ow_stamp, View.GONE) else v.setTextViewText(R.id.ow_stamp, stamp)
+                    for (i in ROW.indices) {
+                        val r = s.rows.getOrNull(i)
+                        if (r == null) { v.setViewVisibility(ROW[i], View.GONE); continue }
+                        v.setViewVisibility(ROW[i], View.VISIBLE)
+                        v.setTextViewText(TITLE[i], r.title)
+                        v.setTextViewText(DETAIL[i], r.detail)
+                        v.setTextViewText(FIGURE[i], r.figure)
+                        v.setTextColor(FIGURE[i], colour(context, r.tone))
+                    }
+                    val more = s.more
+                    if (more == null) v.setViewVisibility(R.id.ow_more, View.GONE)
+                    else { v.setViewVisibility(R.id.ow_more, View.VISIBLE); v.setTextViewText(R.id.ow_more, "$more · tap to see all") }
+                    val note = s.note
+                    if (note == null) v.setViewVisibility(R.id.ow_note, View.GONE)
+                    else { v.setViewVisibility(R.id.ow_note, View.VISIBLE); v.setTextViewText(R.id.ow_note, note) }
+                    sig = s.toString() + "|" + stamp
                 }
-                val more = s.more
-                if (more == null) v.setViewVisibility(R.id.ow_more, View.GONE)
-                else { v.setViewVisibility(R.id.ow_more, View.VISIBLE); v.setTextViewText(R.id.ow_more, "$more · tap to see all") }
-                val note = s.note
-                if (note == null) v.setViewVisibility(R.id.ow_note, View.GONE)
-                else { v.setViewVisibility(R.id.ow_note, View.VISIBLE); v.setTextViewText(R.id.ow_note, note) }
-                sig = s.toString() + "|" + stamp
+                if (!force && sig == drawn) return
+                val open = PendingIntent.getActivity(context, 29, Intent(context, MainActivity::class.java).putExtra(MainActivity.EXTRA_TAB, "trade")
+                    .putExtra(MainActivity.EXTRA_NONCE, MainActivity.nonce()), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+                v.setOnClickPendingIntent(R.id.ow_root, open)
+                if (runCatching { manager.updateAppWidget(ids, v) }.isSuccess) drawn = sig
             }
-            if (!force && sig == drawn) return
-            val open = PendingIntent.getActivity(context, 29, Intent(context, MainActivity::class.java).putExtra(MainActivity.EXTRA_TAB, "trade")
-                .putExtra(MainActivity.EXTRA_NONCE, MainActivity.nonce()), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
-            v.setOnClickPendingIntent(R.id.ow_root, open)
-            if (runCatching { manager.updateAppWidget(ids, v) }.isSuccess) drawn = sig
         }
     }
 }

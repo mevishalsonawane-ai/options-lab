@@ -105,12 +105,15 @@ object Overnight {
         "over the weekend|holiday gap|holiday gaps|chutti) ")
     // A forecast or advice, Boss's own book, a what-if, alerts and reminders, the app's bots, stock screens, a definition, a
     // reason, today or now (today's gap is Gap's), a fill (GapRecord's), a week's or month's move, expiry, options, gold or VIX.
+    // ("Trading hours" is the session, so "trading" alone is not Boss's own trading; "trade" and "trades" still are.)
     private val NOT = Regex(" (will|would|going to|gonna|tomorrow|tonight|kal|next|predict|prediction|forecast|outlook|expect|should|shall|buy|sell|" +
-        "enter|exit|trade|trades|trading|hold|holding|carry|carrying|i|me|my|mine|we|our|what if|suppose|imagine|scenario|agar|remind|reminder|alert|" +
-        "alarm|notify|bot|bots|algo|strategy|backtest|stock|stocks|scan|scanner|screener|shares|mean|means|meaning|define|explain|what is|what s|" +
+        "enter|exit|trade|trades|hold|holding|carry|carrying|i|me|my|mine|we|our|what if|suppose|imagine|scenario|agar|remind|reminder|alert|" +
+        "alarm|notify|bot|bots|algo|strategy|backtest|stock|stocks|scan|scanner|screener|shares|mean|means|meaning|define|explain|" +
         "why|kyun|kyon|kyu|reason|today|todays|aaj|aj|now|right now|abhi|so far|this morning|yesterday|fill|fills|filled|filling|bharta|bharti|" +
         "this week|this month|last week|last month|expiry|expiries|call|calls|put|puts|premium|premiums|option|options|ce|pe|strike|gold|vix|fear|" +
         "position|positions|portfolio|stop|stops|sl|news) ")
+    /** "What is ..." asks for a definition - unless the record is named outright ("what's the overnight vs intraday split"). */
+    private val WHAT_IS = Regex(" (what is|what s) ")
 
     /** What was asked, or null: the record of overnight moves against the session's only, never a forecast or advice. */
     fun asked(text: String): Q? = askedKept.of(text) { askedFresh(text) }
@@ -121,6 +124,7 @@ object Overnight {
     private fun askedFresh(text: String): Q? {
         val t = norm(text)
         if (NOT.containsMatchIn(t)) return null
+        if (WHAT_IS.containsMatchIn(t) && !NAMED.containsMatchIn(t)) return null
         if (Market.mentioned(text).any { it == Market.GOLD || it == Market.VIX }) return null
         val weekend = WEEKEND.containsMatchIn(t)
         val ok = NAMED.containsMatchIn(t) ||
@@ -219,7 +223,13 @@ object Overnight {
         val live = now.toLocalDate() == today && now.toLocalTime().isBefore(CLOSE)
         val night = (t.open - before.close) / before.close * 100
         val session = (t.close - t.open) / t.open * 100
-        return "Today ${m.label} opened ${s2(night)} on ${date(before.day)}'s close and ${if (live) "is" else "ended"} ${s2(session)} on its open" +
-            "${if (live) " so far" else ""}."
+        // "Ended" only for a whole session; candles that stop early say when they stop.
+        val last = t.bars.last().t.toLocalTime()
+        val where = when {
+            live -> "is ${s2(session)} on its open so far"
+            Comebacks.whole(t) -> "ended ${s2(session)} on its open"
+            else -> "was ${s2(session)} on its open at ${"%02d:%02d".format(Locale.ENGLISH, last.hour, last.minute)}"
+        }
+        return "Today ${m.label} opened ${s2(night)} on ${date(before.day)}'s close and $where."
     }
 }

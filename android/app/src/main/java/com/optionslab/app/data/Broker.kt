@@ -455,8 +455,9 @@ object Broker {
     suspend fun orders(): List<OrderRow> {
         val arr = call("GET", "/orders") as JSONArray
         val list = rows(arr).map(::orderRow).sortedByDescending { it.placedAt }
-        // The "Open" widget's pending orders come from the reads already made here; it never reads Zerodha itself.
-        runCatching { com.optionslab.app.widget.OpenWidget.fromOrders(app, list) }
+        // The "Open" widget's pending orders come from the reads already made here, handed to its own thread so this
+        // (an order path) never waits on its vault write or the launcher.
+        runCatching { com.optionslab.app.widget.OpenWidget.fromOrdersSoon(app, list) }
         return list
     }
 

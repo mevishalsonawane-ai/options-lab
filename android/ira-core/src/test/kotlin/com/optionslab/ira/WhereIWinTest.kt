@@ -125,4 +125,38 @@ class WhereIWinTest {
         assertTrue(said.contains("24 trades between the two at random gave a gap at least as big less than once in 100, so chance alone seldom gives a gap that big."), said)
         assertTrue(WhereIWin.chanceText(g1, g2, 0.45).endsWith("45 times in 100, so it could well be chance."))
     }
+
+    @Test fun threeOrMoreGroupsAreShuffledAmongThemAll() {
+        val trades = listOf(
+            t("NIFTY26O1325000CE", 1, 500.0), t("NIFTY26O1325100CE", 1, 300.0), t("NIFTY26O1325200CE", 1, -100.0),
+            t("BANKNIFTY26OCT54000PE", 1, -400.0), t("BANKNIFTY26OCT54100PE", 1, -200.0), t("BANKNIFTY26OCT54200PE", 1, 100.0),
+            t("SENSEX26OCT82000CE", 1, 50.0), t("SENSEX26OCT82100CE", 1, 0.0), t("SENSEX26OCT82200CE", 1, -20.0),
+        )
+        val line = WhereIWin.lines("Paper", trades, MyNumbers.Span.ALL, today, WhereIWin.Cut.INDEX)[1]
+        assertTrue(line.contains("Shuffling all 9 trades of those 3 groups among them at random gave a gap between the best and worst at least as big"), line)
+        // Best net first, as the groups are listed: Nifty, Sensex, BankNifty.
+        val nets = listOf(listOf(500.0, 300.0, -100.0), listOf(50.0, 0.0, -20.0), listOf(-400.0, -200.0, 100.0))
+        val p = WhereIWin.chanceAmong(nets)
+        assertEquals(p, WhereIWin.chanceAmong(nets), 0.0)
+        assertTrue(p > 0.0 && p < 1.0, "$p")
+        assertTrue(line.contains(WhereIWin.chanceText(WhereIWin.Group("Nifty", 3, 2, 700.0), WhereIWin.Group("BankNifty", 3, 1, -500.0), p, 3, 9)), line)
+        assertEquals(1.0, WhereIWin.chanceAmong(listOf(listOf(1.0), emptyList())), 0.0)
+    }
+
+    @Test fun equalGroupsAreSeldomFlagged() {
+        // Four groups of five trades with the same mean, again and again: a gap "chance seldom gives" (5 in 100 or less)
+        // should come up about 5 times in 100, not more - the best and worst being picked out is allowed for.
+        val rnd = java.util.Random(2026)
+        val runs = 200
+        var flagged = 0
+        var naive = 0
+        repeat(runs) {
+            val groups = List(4) { List(5) { rnd.nextGaussian() * 300.0 } }
+            if (WhereIWin.chanceAmong(groups) <= 0.05) flagged++
+            val byAvg = groups.sortedBy { it.average() }
+            if (WhereIWin.chance(byAvg.last(), byAvg.first()) <= 0.05) naive++
+        }
+        assertTrue(flagged <= runs / 10, "flagged $flagged of $runs")
+        assertTrue(naive > flagged, "best against worst alone: $naive, among all: $flagged")
+    }
 }
