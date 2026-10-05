@@ -101,4 +101,27 @@ object Later {
             else -> at.format(DateTimeFormatter.ofPattern("EEE d MMM", Locale.ENGLISH)) + " at $hm"
         }
     }
+
+    /**
+     * "Cancel everything set for later": what the Confirm asks for - each reminder named ([ReminderBook.confirmAll]) and
+     * each command set for a time ([commands]: its words and time) - or null when nothing is set. Asked first, like a
+     * reminder alone (review, 5 Oct: it was all dropped at once); only those named go, on Confirm.
+     */
+    fun confirmClear(reminders: List<ReminderBook.Kept>, commands: List<Pair<String, LocalDateTime>>, now: LocalDateTime): String? {
+        if (reminders.isEmpty() && commands.isEmpty()) return null
+        val toldReminders = if (reminders.isEmpty()) null else ReminderBook.confirmAll(reminders, now)
+        val toldCommands = if (commands.isEmpty()) null
+            else (if (commands.size == 1) "cancel the command set for later - " else "cancel all ${commands.size} commands set for later - ") +
+                commands.sortedBy { it.second }.joinToString("; ") { "\"" + it.first + "\" " + say(it.second, now) }
+        return listOfNotNull(toldReminders, toldCommands).joinToString(", and ")
+    }
+
+    /** Said once what was named is dropped ([reminders], [commands]: how many were still there to drop). */
+    fun clearedSaid(reminders: Int, commands: Int): String {
+        if (reminders + commands == 0) return "Those are gone already, Boss - nothing was set for later to cancel."
+        val parts = listOfNotNull(
+            if (reminders == 0) null else if (reminders == 1) "1 reminder" else "$reminders reminders",
+            if (commands == 0) null else if (commands == 1) "1 command set for later" else "$commands commands set for later")
+        return "Done, Boss: " + parts.joinToString(" and ") + " cancelled."
+    }
 }

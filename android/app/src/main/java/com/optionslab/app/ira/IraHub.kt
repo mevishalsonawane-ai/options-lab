@@ -960,9 +960,20 @@ object IraHub {
                         .let { l -> l.sumOf { it.quantity } to l.firstOrNull()?.ltp } }.getOrNull()
                 val qty = nowPos?.first ?: 0; val ltp = nowPos?.second
                 val has = runCatching { com.optionslab.app.data.Protections.forSymbol(p.live, p.symbol) }.getOrNull()?.let { it.stop != null || it.trail != null } == true
+                // A stop order Boss placed directly meanwhile (ticket, Kite web) is a stop too: never a second one (review,
+                // 5 Oct). Not read (in time): none placed either. True: one is working; null: the orders could not be read.
+                val slWorking: Boolean? = runCatching {
+                    if (p.live) com.optionslab.app.data.Broker.within(8_000) {
+                        com.optionslab.app.data.Broker.orders().any { o -> o.working && o.symbol == p.symbol && o.type in setOf("SL", "SL-M") }
+                    }
+                    else com.optionslab.app.data.Paper.snapshot().orders.orders.any { o -> o.symbol == p.symbol && o.priceType.uppercase() in setOf("SL", "SL-M") &&
+                        o.status.lowercase() !in setOf("complete", "cancelled", "rejected") }
+                }.getOrNull()
                 when {
                     qty <= 0 -> "${p.symbol} is no longer held, so no stop was set."
                     has -> "${p.symbol} has a stop now, so I left it."
+                    slWorking == true -> "${p.symbol} has a stop order working now, so I did not place a second one."
+                    slWorking == null -> "I could not read ${p.symbol}'s orders just now, so no stop was placed - ask me again in a moment."
                     ltp == null || ltp <= stop -> "${p.symbol} is already at or under " + "%.2f".format(java.util.Locale.ENGLISH, stop) + ": close it or set a stop from the position."
                     p.live -> com.optionslab.app.data.Protections.protectLive(p.symbol, "NFO", product, qty, ltp, stop, null, null)
                     else -> com.optionslab.app.data.Protections.protectPaper(p.symbol, product, qty, ltp, stop, null, null)
@@ -1545,6 +1556,15 @@ object IraHub {
         // Boss's reminders one at a time (usefulness round 27): "what reminders do I have" lists each with its time;
         // "cancel the 14:30 reminder" / "delete the reminder about Nifty" finds that one and asks first - only it is
         // dropped, on Confirm (several alike, or none: named, nothing dropped). A reminder only speaks: nothing here trades.
+        // Said with something else to do ("cancel the 3 pm reminder and close my nifty put"): none of the reminder answers
+        // below takes it (the close would be silently dropped) - said so, nothing done, no reminder cancelled (review, 5 Oct).
+        // (The whole sentence's order or command is not the test: "delete the reminder to buy nifty" reads as an order from
+        // the reminder's own words. [Bundle.reminderAndMore] reads each part, the reminder's clause left out.)
+        val rbMore = com.optionslab.app.BuildConfig.JARVIS && runCatching { com.optionslab.ira.Bundle.reminderAndMore(q) }.getOrDefault(false)
+        if (rbMore) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, com.optionslab.ira.Bundle.REMINDER_AND_MORE)).takeLast(MAX_MESSAGES)) }
+            return
+        }
         if (com.optionslab.app.BuildConfig.JARVIS && runCatching { com.optionslab.ira.ReminderBook.listAsked(q) }.getOrDefault(false)) {
             val rbList = runCatching { com.optionslab.ira.ReminderBook.list(IraLater.kept(), com.optionslab.app.data.Market.now().toLocalDateTime()) }
                 .getOrDefault("I could not reach the reminders just now, Boss.")
@@ -1832,8 +1852,30 @@ object IraHub {
         // "What have you set for later?" / "cancel everything set for later"
         // (In IraGoldAlgo too: only reminders are kept there.)
         if (com.optionslab.app.BuildConfig.JARVIS && FOR_LATER.containsMatchIn(q)) {
-            val c = app
-            val said = if (c != null && Regex("(?i)\\b(cancel|clear|remove|delete|drop)\\b").containsMatchIn(q)) { IraLater.clear(c); "Done, Boss: nothing is set for later now." } else IraLater.say()
+            // Cancelling asks first (review, 5 Oct: it was all dropped at once): each reminder and timed command named,
+            // and only those named are dropped on Confirm.
+            if (Regex("(?i)\\b(cancel|clear|remove|delete|drop)\\b").containsMatchIn(q)) {
+                val flApp = app
+                val flNow = com.optionslab.app.data.Market.now().toLocalDateTime()
+                val flRems = runCatching { IraLater.kept() }.getOrNull()
+                val flCmds = runCatching { IraLater.all() }.getOrNull()
+                val flWhat = if (flRems == null || flCmds == null) null
+                    else com.optionslab.ira.Later.confirmClear(flRems, flCmds.map { it.text to java.time.LocalDateTime.ofInstant(java.time.Instant.ofEpochMilli(it.at), IST) }, flNow)
+                if (flApp == null || flRems == null || flCmds == null || flWhat == null) {
+                    val flSaid = if (flApp == null || flRems == null || flCmds == null) "I could not reach what is set for later just now, Boss - nothing was cancelled."
+                        else "Nothing is set for later, Boss."
+                    _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, flSaid)).takeLast(MAX_MESSAGES)) }
+                    return
+                }
+                val flIds = flCmds.map { it.id }.toSet()
+                _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+                pend(flWhat, suspend {
+                    val flGone = IraLater.dropLater(flApp, flRems, flIds)
+                    com.optionslab.ira.Later.clearedSaid(flGone.first, flGone.second)
+                }, "Tap Confirm to $flWhat.")
+                return
+            }
+            val said = IraLater.say()
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
             return
         }

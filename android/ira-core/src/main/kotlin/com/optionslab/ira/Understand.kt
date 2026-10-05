@@ -175,4 +175,30 @@ object Bundle {
 
     /** The last words read ([Kept]; pure, and a reading that fails keeps nothing). */
     private val acted = Kept<Boolean>(64)
+
+    // ---- Boss's reminders said with something else to do (review, 5 Oct) ----------------------------------------------
+
+    /** Said when Boss's reminders are asked of in the same breath as something to do: nothing done, nothing cancelled. */
+    const val REMINDER_AND_MORE = "Boss, ask me about the reminders on their own, then the rest - one at a time. Nothing was done and no reminder was cancelled."
+
+    private val REMINDER_WORD = Regex("(?i)\\breminders?\\b")
+    private val REMINDER_TAIL = Regex("(?i)\\breminders?\\b\\s*(.*)$")
+    /** Words after "reminder" that are its own words ("the reminder to exit all trades" names a reminder, does nothing). */
+    private val ITS_WORDS = Regex("(?i)^(about|to|for|of|that|saying|regarding|on|at|wala|waala|vala)\\b")
+
+    private fun actsAlone(s: String): Boolean = Corrections.acts(s) || Plan.pronounClose(s) || Ask.parse(s).let { it.order != null || it.command != null }
+
+    /**
+     * "Cancel the 3 pm reminder and close my nifty put": Boss's reminders named with something else to do - which the
+     * reminder answers (list, cancel one, cancel all) must never take, or the close is silently dropped. The reminder's
+     * own clause (and the words it is about) is never the action: only another part, or words straight after "reminder"
+     * that are not its own ("cancel the 3 pm reminder close my put"). Pure; a reading that fails says yes (asked alone).
+     */
+    fun reminderAndMore(text: String): Boolean = REMINDER_WORD.containsMatchIn(text) && runCatching {
+        SPLIT.split(text).map { it.trim() }.filter { it.isNotEmpty() }.any { part ->
+            val tail = REMINDER_TAIL.find(part)
+            if (tail == null) actsAlone(part)
+            else tail.groupValues[1].trim().let { t -> t.isNotEmpty() && !ITS_WORDS.containsMatchIn(t) && actsAlone(t) }
+        }
+    }.getOrDefault(true)
 }

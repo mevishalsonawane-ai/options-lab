@@ -49,7 +49,10 @@ object Aloud {
     /** The trade check's closing line after the market reads: not part of its verdict. */
     private const val READS_END = "That is how the market is moving now"
     /** A sentence that is a safety verdict or warning: never left out when an answer is said shorter. */
-    private val WARNING = rx("\\b(don'?t trade|do not trade|never trade|careful|stop|kill switch|loss limit|daily limit|warning|not now)\\b",
+    // (Widened, review 5 Oct: "You are near the max loss.", "Exit now.", "Margin is short.", "Expiry today: close MIS by
+    // 15:10." were cut, and "Trailing stop moved." was kept only by its "stop".)
+    private val WARNING = rx("\\b(don'?t trade|do not trade|never trade|careful|stop|stop loss (hit|triggered)|trailing stop|kill switch|" +
+        "loss limit|daily limit|max(imum)? loss|limit hit|margin|exit now|square[ -]?off|squareoff|expir(y|es) today|mis|guards?|warning|not now)\\b",
         RegexOption.IGNORE_CASE)
 
     /** Is [sentence] a safety verdict or warning ("Don't trade now.", "The kill switch is on.", "careful", "loss limit")? */

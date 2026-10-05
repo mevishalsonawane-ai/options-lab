@@ -86,6 +86,19 @@ class AloudTest {
         assertFalse(Aloud.warning("Nifty is at 24,100."))
     }
 
+    /** Review, 5 Oct: these were cut when said shorter ("Trailing stop moved." kept only by its "stop"). */
+    @Test fun theWiderWarningsAreKept() {
+        for (w in listOf("You are near the max loss.", "Maximum loss is close, Boss.", "Exit now.", "Margin is short.",
+                "Expiry today: close MIS by 15:10.", "Expires today at 15:30.", "Trailing stop moved.", "Your stop loss was hit.",
+                "Stop loss triggered on Nifty.", "Square off by 15:20.", "The square-off is at 15:15.", "Loss limit hit.",
+                "The guard is on.", "Kill switch on.", "Do not trade the open.", "Careful with size."))
+            assertTrue(Aloud.warning(w), w)
+        for (w in listOf("Nifty is at 24,100.", "The trend is up.", "Volume is normal.", "Bank Nifty has no clear trend."))
+            assertFalse(Aloud.warning(w), w)
+        val parts = listOf("Nifty is up 0.4 percent.", "It broke 24,500.", "Volume is light.", "Expiry today: close MIS by 15:10.", "Margin is short.")
+        assertEquals(listOf("Nifty is up 0.4 percent.", "Expiry today: close MIS by 15:10.", "Margin is short."), Aloud.keep(parts, 1))
+    }
+
     @Test fun everyShorteningKeepsTheWarning() {
         val text = "Nifty is at 24,100. It is up today. The trend is up. Careful: India VIX is jumping. Volume is normal."
         // Wake.spoken (every short line), brief mode / Clarity (Aloud.say), the quiet hours (TalkHours.aloud).

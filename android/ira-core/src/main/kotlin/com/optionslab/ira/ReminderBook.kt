@@ -30,7 +30,7 @@ object ReminderBook {
 
     private val VERB = Regex("^(please )?(cancel|delete|remove|drop|clear|scrap)\\b")
     private val HINDI_END = Regex("\\b(hata|hatao|cancel|band)( (do|karo|kar do|dijiye))?$")
-    private val TIME = Regex("\\b(\\d{1,2})[:.](\\d{2})\\s*(am|pm|a\\.m\\.|p\\.m\\.)?(?![\\d])|\\b(\\d{1,2})\\s*(am|pm|a\\.m\\.|p\\.m\\.|o ?clock|baje)(?![a-z])|\\bat (\\d{1,2})\\b(?![:.]\\d|\\s*(am|pm|a\\.m|p\\.m|o ?clock|baje))")
+    private val TIME = Regex("\\b(\\d{1,2})[:.](\\d{2})\\s*(am|pm|a\\.m\\.|p\\.m\\.)?(?![\\d])|\\b(\\d{1,2})\\s*(am|pm|a\\.m\\.|p\\.m\\.|o ?clock|baje)(?![a-z])|\\b(?:at|for) (\\d{1,2})\\b(?![:.]\\d|\\s*(am|pm|a\\.m|p\\.m|o ?clock|baje))")
     private val FILLER = Regex("\\b(please|my|the|that|this|one|reminder|set|for|at|about|to|of|on|wala|waala|vala|ka|ki|ke|today|tomorrow)\\b")
 
     /**

@@ -55,7 +55,7 @@ object Reminder {
      * still names them and waits for Boss's Confirm, as "cancel my reminders" does.
      */
     fun cancelAsked(text: String): Boolean =
-        rx("(?i)^\\s*(jarvis,?\\s+)?(please\\s+)?((cancel|clear|delete|remove|drop)( all)?( my| the)? reminders?|reminders? (hata|cancel) (do|karo|kar do)|" +
+        rx("(?i)^\\s*(jarvis,?\\s+)?(please\\s+)?((cancel|clear|delete|remove|drop)( all| every)?( my| the)? reminders?|reminders? (hata|cancel) (do|karo|kar do)|" +
             "((sab|saare|sare|saari|sari|all)( ke| ki)?( mere| my)? |(mere|my) (sab|saare|sare|saari|sari|all) )reminders? (hata|hatao|cancel|delete|clear|remove)( (do|karo|kar do|dijiye))?)\\s*$").containsMatchIn(text)
 
     fun said(what: String) = "Boss, your reminder: $what."

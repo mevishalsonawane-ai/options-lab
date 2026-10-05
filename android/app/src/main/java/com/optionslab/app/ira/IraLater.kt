@@ -108,6 +108,22 @@ object IraLater {
         return n
     }
 
+    /**
+     * "Cancel everything set for later", after Boss's Confirm: only the reminders ([named], found as [dropReminders] finds
+     * them) and the commands ([commandIds]) the Confirm named are dropped - one set while it waited stays. How many of
+     * each were still there to drop (reminders to commands).
+     */
+    @Synchronized fun dropLater(context: Context, named: List<com.optionslab.ira.ReminderBook.Kept>, commandIds: Set<Long>): Pair<Int, Int> {
+        val items = everything()
+        fun isListed(x: Item) = if (x.remind) named.any { one -> x.id == one.id || one.daily && x.daily && x.text == one.text &&
+            LocalDateTime.ofInstant(Instant.ofEpochMilli(x.at), IST).toLocalTime() == one.at.toLocalTime() } else x.id in commandIds
+        val gone = items.filter { isListed(it) }
+        if (gone.isEmpty()) return 0 to 0
+        save(items.filter { !isListed(it) })
+        schedule(context)
+        return gone.count { it.remind } to gone.count { !it.remind }
+    }
+
     /** Everything set for later is dropped (nothing runs). */
     fun clear(context: Context) { save(emptyList()); schedule(context) }
 

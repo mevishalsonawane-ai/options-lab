@@ -89,13 +89,13 @@ object GoldPaper {
     internal fun load() {
         val r = runCatching { read() }
         // A saved book that is there but could not be read is never written over by the minute passes (it may read
-        // back next time); the empty book shows meanwhile. Boss's own change (a switch, the lots, a reset) writes again.
+        // back next time); the empty book shows meanwhile. Boss's own change reads it again first; only a reset writes over it ([edit]).
         readFailed = r.isFailure
         if (r.isFailure) runCatching { Diag.record("gold", "${file.name} could not be read; it is not saved over") }
         _book.value = r.getOrNull() ?: Book()
     }
 
-    /** The saved book could not be read at the start: only Boss's own change writes over it ([load]). */
+    /** The saved book could not be read at the start: only a reset writes over it ([load], [edit]). */
     @Volatile private var readFailed = false
 
     fun now(): LocalDateTime = testNow ?: LocalDateTime.now(ZoneOffset.UTC)
@@ -108,7 +108,7 @@ object GoldPaper {
 
     /** A fresh paper account with [balance]; the switch and the lot size are kept, an open trade and history go. */
     suspend fun reset(balance: Double) {
-        edit { it.copy(start = balance, position = null, trades = emptyList(), decided = null) }
+        edit(clear = true) { it.copy(start = balance, position = null, trades = emptyList(), decided = null) }
         GoldTrendPaper.reset()
         GoldDipPaper.reset()
         GoldTasPaper.reset()
@@ -326,7 +326,23 @@ object GoldPaper {
         runCatching { Diag.record("gold", "$title - $text") }
     }
 
-    private suspend fun edit(f: (Book) -> Book) { GoldBooks.awaitLoaded(); lock.withLock { readFailed = false; save(f(_book.value)) } }
+    /**
+     * Boss's own change. A saved book that could not be read is read again first (the change then goes onto it); still
+     * unreadable, the change is kept in memory only and said - never an empty book with the change saved over it
+     * (review, 5 Oct). Only an explicit reset ([clear]) writes over an unreadable book.
+     */
+    private suspend fun edit(clear: Boolean = false, f: (Book) -> Book) {
+        GoldBooks.awaitLoaded()
+        lock.withLock {
+            if (clear) { readFailed = false }
+            else if (readFailed) {
+                val again = runCatching { read() }
+                if (again.isSuccess) { readFailed = false; again.getOrNull()?.let { _book.value = it } }
+                else runCatching { Diag.record("gold", "${file.name} could not be read; this change is kept on screen only, not saved") }
+            }
+            save(f(_book.value))
+        }
+    }
 
     private fun save(b: Book) {
         _book.value = b

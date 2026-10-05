@@ -78,7 +78,14 @@ internal object IraExpert {
         // Marked told BEFORE it is shown: a pop-up or note that throws must never bring the same note back every pass.
         // Not saved (a vault fault): told on a later pass instead, never twice.
         for ((who, _) in tell) done += who.key
-        if (runCatching { com.optionslab.app.security.SecurePrefs.put(GRADUATED, done.joinToString("|")) }.isFailure) return
+        // (A vault that could not be read takes the put without writing it, and without throwing: checked, and read back -
+        // not saved, not shown; review, 5 Oct.)
+        val markedTold = runCatching {
+            com.optionslab.app.security.SecurePrefs.put(GRADUATED, done.joinToString("|"))
+            !com.optionslab.app.security.SecurePrefs.unreadable &&
+                com.optionslab.app.security.SecurePrefs.getString(GRADUATED)?.split('|')?.containsAll(tell.map { it.first.key }) == true
+        }.getOrDefault(false)
+        if (!markedTold) return
         for ((who, text) in tell) {
             runCatching { IraActivity.add("Told Boss ${who.whose} passed their paper test (once; nothing switched).") }
             runCatching { JarvisPopup.show(c, "Boss, ${who.whose} passed their paper test", text) }
