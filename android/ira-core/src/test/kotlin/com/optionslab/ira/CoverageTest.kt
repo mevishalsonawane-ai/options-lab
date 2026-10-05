@@ -15,7 +15,7 @@ import kotlin.test.assertTrue
  */
 class CoverageTest {
     /** The kind of answer a line gets. */
-    enum class Kind { MARKET, ACCOUNT, JARVIS, INFO, CHAT, ACT, SUGGESTED, MISSED }
+    enum class Kind { MARKET, ACCOUNT, JARVIS, INFO, CHAT, ACT, SUGGESTED, MISSED, HONEST }
 
     private val today: LocalDate = LocalDate.of(2026, 10, 5)
 
@@ -27,6 +27,8 @@ class CoverageTest {
         val p = Ask.parse(q)
         if (SelfCheck.asked(q)) return Kind.JARVIS
         if (p.command != null || p.order != null || Topic.ORDER in p.topics || Topic.COMMAND in p.topics) return Kind.ACT
+        // What the phone has no data for, VWAP, targets, lots with no budget: said so (IraHub, just after "is your data fresh").
+        if (Honest.asked(q) != null) return Kind.HONEST
         if (Chat.smallTalk(q, 0) != null) return Kind.CHAT
         if (Agenda.asked(q) || Improve.asked(q) || Latency.asked(q)) return Kind.JARVIS
         if (Reminder.cancelAsked(q) || Reminder.asked(q)) return Kind.ACT
@@ -66,6 +68,7 @@ class CoverageTest {
     }
 
     private val M = Kind.MARKET; private val A = Kind.ACCOUNT; private val J = Kind.JARVIS; private val I = Kind.INFO; private val C = Kind.CHAT
+    private val H = Kind.HONEST
 
     /** What Boss asks through a trading day, with the kind of answer each must get. */
     private val ASKED: List<Pair<String, Kind>> = listOf(
@@ -213,7 +216,7 @@ class CoverageTest {
         "what's the premium of the atm call" to I, "nifty 25000 ce price" to I, "banknifty 52000 pe ltp" to I, "how much is the 25000 call" to M,
         "what's the iv today" to A, "what's the pcr today" to A, "nifty pcr" to A, "banknifty max pain" to A, "where is the max oi" to A,
         "call writing kahan hai" to A, "what are fiis doing" to A, "fii dii data" to A, "did fiis buy or sell" to A, "how is gold today" to M,
-        "gold rate" to M, "what's sgx nifty" to M, "gift nifty" to M, "how is gift nifty" to M, "what are global cues" to M, "any events today" to A,
+        "gold rate" to M, "what's sgx nifty" to H, "gift nifty" to H, "how is gift nifty" to H, "what are global cues" to M, "any events today" to A,
         "is there rbi policy today" to A, "when is the fed meeting" to A, "what is the budget date" to A, "explain the market today" to M,
         "summarize the market" to M, "give me a summary" to M, "market summary please" to M, "what's happening with banknifty" to M,
         "bank nifty update please" to M, "quick update" to M, "status update" to M, "how is everything" to M, "anything i should know" to M,
@@ -221,17 +224,64 @@ class CoverageTest {
         "what do you think about nifty" to M, "is nifty going to fall" to M, "will nifty go up today" to M, "will banknifty fall more" to M,
         "is this a reversal" to M, "is the fall over" to M, "is this a bull trap" to M, "is it a fake breakout" to M, "is nifty forming a top" to M,
         "what are the chances of a bounce" to M, "how strong is the trend" to M, "is the trend weak" to M, "is momentum fading" to M,
-        "is nifty oversold" to M, "is banknifty overbought" to M, "what's the rsi" to M, "what's the macd on nifty" to M, "vwap of nifty" to M,
-        "nifty above vwap" to M, "supertrend on nifty" to M, "moving average of nifty" to M, "200 dma of nifty" to M,
+        "is nifty oversold" to M, "is banknifty overbought" to M, "what's the rsi" to M, "what's the macd on nifty" to M, "vwap of nifty" to H,
+        "nifty above vwap" to H, "supertrend on nifty" to M, "moving average of nifty" to M, "200 dma of nifty" to M,
+        // ---- The third sweep (round 5): what the phone has no data for (said so, never Nifty's answer), VWAP, targets,
+        // lots with no budget; more Hinglish and the other languages in Latin script; the recognizer's spellings ----
+        "kitne lot le sakta hoon" to H, "what's the dollar rupee" to H, "where is the bottom" to H,
+        "what's the target for nifty today" to H, "where is vwap" to H, "what's crude doing" to H, "how is the dow" to H,
+        "how did us markets close" to H, "how is asia" to H, "any results today" to H, "crude oil kaisa hai" to H,
+        "crude kitne pe hai" to H, "brent price" to H, "how is nasdaq" to H, "dow jones kaisa hai" to H, "how did wall street do" to H,
+        "us market kaisa raha" to H, "nikkei today" to H, "hang seng kaisa hai" to H, "how are asian markets" to H,
+        "dollar kitne ka hai" to H, "usd inr rate" to H, "rupee kaisa hai aaj" to H, "is the rupee falling" to H, "how is silver" to H,
+        "bitcoin price" to H, "us bond yields" to H, "kiske results aaj hain" to H, "earnings today" to H,
+        "banknifty ka target kya hai" to H, "nifty target today" to H, "nifty ka target batao" to H,
+        "where is the bottom for banknifty" to H, "nifty kitna aur girega" to H, "banknifty vwap" to H, "is nifty above vwap" to H,
+        "vwap kahan hai" to H, "how many lots can i take" to H, "kitne lots le sakta hu" to H, "how many lots can i buy" to H,
+        "gift nifty kya bol raha hai" to H, "natural gas price" to H, "how is europe" to H, "dax today" to H, "what's the s&p doing" to H,
+        "how is the dow jones today" to H, "how much can banknifty fall" to M, "what is vwap" to I, "vwap kya hota hai" to I,
+        "what does vwap mean" to I, "nifty ka haal batao" to M, "bazaar kaisa chal raha hai" to M, "market ka mood kaisa hai" to M,
+        "aaj market mein tezi hai kya" to M, "aaj mandi hai kya" to M, "nifty mein tezi hai kya" to M, "banknifty mein mandi hai kya" to M,
+        "sensex kitna chadha" to M, "sensex kitna gira aaj" to M, "finnifty kaisa hai" to M, "vix kitna hai abhi" to M,
+        "nifty da ki haal hai" to M, "nifty kasa aahe" to M, "market kasa aahe" to M, "nifty ela undi" to M, "nifty kem che" to M,
+        "bazar kemon" to M, "how is nifti" to M, "how is bang nifty" to M, "nifty prise" to M, "what is the nifty rate" to M,
+        "bank nifty kitne pe hai" to M, "how is fin nifty" to M, "how is sensecs" to M, "nifty supprt" to M, "nifty resistence" to M,
+        "banknifty treand" to M, "how is the vix today" to M, "how is india vicks" to M, "nifty fifty kitne pe hai" to M,
+        "nifti kaisa hai" to M, "nifty kaisa he" to M, "nifty kesa hai" to M, "market kesa hai" to M, "nifty kitne par chal raha hai" to M,
+        "banknifty kitne pe chal raha hai" to M, "aaj ka nifty" to M, "nifty ka bhav kya hai" to M, "sensex ka bhav" to M,
+        "market upar hai ya neeche" to M, "nifty hara hai ya laal" to M, "market laal hai kya" to M, "market hara hai kya" to M,
+        "aaj gap up khula kya" to M, "nifty gap down khula" to M, "nifty kitne pe khula" to M, "kal nifty kahan band hua" to M,
+        "pichle hafte nifty kaisa raha" to M, "is mahine banknifty kaisa raha" to M, "nifty ka 15 minute trend" to M,
+        "banknifty ka 5 minute chart kaisa hai" to M, "nifty ke levels batao" to M, "banknifty ke pivot batao" to M,
+        "koi candle pattern bana kya" to M, "nifty breakout de raha hai kya" to M, "banknifty mein breakdown hua kya" to M,
+        "vix kyun badha" to M, "market itna volatile kyun hai" to M, "nifty rsi kitna hai" to M, "aaj ka summary do" to M,
+        "market ka summary batao" to M, "din kaisa raha market ka" to M, "aaj kya hua market mein" to M, "nifty ne aaj kya kiya" to M,
+        "how's nifty looking right now" to M, "nifty update do" to M, "banknifty ka update" to M, "sab indices kaise hain" to M,
+        "nifty aur banknifty kaise hain" to M, "kaun sa index sabse strong hai" to M, "mera mtm kitna hai" to A,
+        "aaj kitna profit hua" to A, "kitna paisa bana aaj" to A, "meri position dikhao" to A, "mere trades dikhao" to A,
+        "kitne lots khule hain" to A, "margin kitna bacha hai" to A, "kitna margin hai" to A, "zerodha connected hai kya" to A,
+        "kite login hai kya" to A, "mera aaj ka pnl" to A, "pnl batao" to A, "p and l batao" to A, "what's my profit and loss" to A,
+        "my p n l" to A, "mtm kitna hai" to A, "show my possitions" to A, "my pee and ell" to A, "what's my pnl looking like" to A,
+        "aaj kitne trade hue" to A, "kal kitna kamaya tha" to A, "pichle hafte ka pnl" to A, "is hafte ka profit" to A,
+        "meri sabse badi loss wali position" to A, "kaun si position loss mein hai" to A, "what is my net pnl after charges" to A,
+        "how much did i pay in brokerage" to A, "expiry kis din hai" to I, "agla expiry kab hai" to I, "kal holiday hai kya" to I,
+        "aaj market band hai kya" to I, "market kitne baje khulta hai" to I, "nifty ka lot size" to I,
+        "banknifty ka lot size kitna hai" to I, "atm kya hai nifty ka" to I, "how many lots can i buy with 50000" to I,
+        "50000 mein kitne lot" to I, "1 lakh mein kitne lot aayenge" to I, "nifty atm call ka premium" to I, "delta kya hota hai" to I,
+        "gamma kya hai" to I, "what is a covered call" to I, "iron condor kya hai" to I, "what does otm mean" to I,
+        "what is an itm option" to I, "kya main trade karu" to M, "aaj trade karna safe hai kya" to M, "market mein entry lu kya" to M,
+        "call kharidu ya put" to M, "kuch idea do" to M, "jarvis tum kya kar sakte ho" to J, "tum kaun ho" to C, "kaise ho" to C,
+        "shukriya" to C, "dhanyavad" to C, "thanks jarvis" to C, "help karo" to J, "how are things" to C, "tum kaise ho" to C,
+        "aap kaun ho" to C, "kya haal hai" to C, "dollar ka rate kya hai" to H, "crude ka bhav kya hai" to H, "what is the vee wap" to H,
+        "what is the target" to H, "how did asia close" to H, "nasdaq futures" to H, "how is the rupee today" to H,
+        "nifty kitna aur jayega" to H, "how low can nifty go" to H, "what is my day target" to A,
     )
 
     /**
-     * Still not answered as meant (5 Oct): no data for them on the phone (crude, the Dow, the rupee), a lots question with
-     * no amount, small talk the model answers. Kept so the next sweep sees them; they must never act.
+     * Still not answered as meant: none since round 5 (crude, the Dow, the rupee, results, VWAP, a target and lots with no
+     * amount are now said so; "how are things" is small talk). Kept for the next sweep; whatever lands here must never act.
      */
-    private val KNOWN_GAPS = listOf("kitne lot le sakta hoon", "how are things", "what's the dollar rupee", "where is the bottom",
-        "what's the target for nifty today", "where is vwap", "what's crude doing", "how is the dow", "how did us markets close", "how is asia",
-        "any results today")
+    private val KNOWN_GAPS = listOf<String>()
 
     /** Things Boss asks to be DONE - and the questions that sound like them. Each must read exactly as before the audit. */
     private val ACTIONS: List<String> = listOf(
@@ -293,7 +343,7 @@ class CoverageTest {
     }
 
     @Test fun theAuditListIsLargeAndEachLineOnce() {
-        assertTrue(ASKED.size >= 300, "${ASKED.size}")
+        assertTrue(ASKED.size >= 650, "${ASKED.size}")
         assertEquals(ASKED.size, ASKED.map { it.first }.distinct().size)
     }
 
@@ -331,5 +381,9 @@ class CoverageTest {
 
     @Test fun whatIsStillNotUnderstoodNeverActs() {
         for (s in KNOWN_GAPS) assertTrue(Kind.ACT !in route(s), s)
+        // Round 5's gaps: said honestly now - and none of them acts.
+        for (s in listOf("kitne lot le sakta hoon", "what's the dollar rupee", "where is the bottom", "what's the target for nifty today",
+            "where is vwap", "what's crude doing", "how is the dow", "how did us markets close", "how is asia", "any results today"))
+            assertEquals(listOf(Kind.HONEST), route(s), s)
     }
 }

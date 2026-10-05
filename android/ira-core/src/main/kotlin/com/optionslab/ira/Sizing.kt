@@ -34,6 +34,13 @@ object Sizing {
         return Asked(budget, Market.mentioned(text).firstOrNull { it != Market.VIX && it != Market.GOLD }, right)
     }
 
+    /**
+     * "Kitne lot le sakta hoon", "how many lots can I take": the lots asked with no budget in it (Boss's own holding,
+     * "how many lots am I holding", is his account's) - asked for the budget, never guessed.
+     */
+    fun needsBudget(text: String): Boolean = ASK.containsMatchIn(text) && asked(text) == null &&
+        !Regex("(?i)\\b(do i|did i|have i|i have|i hold|i bought|my|am i|i am|i'm|holding|hold|held|open|mere|mera|meri|order|orders|khule|khula|liye|liya|kiye|pade|chal)\\b").containsMatchIn(text)
+
     private fun rs(v: Double) = "Rs %,.0f".format(Locale.ENGLISH, v)
 
     fun say(a: Asked, market: Market, right: String, strike: Double, premium: Double, lotSize: Int): String {

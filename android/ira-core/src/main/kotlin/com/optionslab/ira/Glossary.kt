@@ -22,6 +22,7 @@ object Glossary {
         Term(listOf("itm", "in the money", "otm", "out of the money"), false, "In the money is a call with a strike below the price, or a put above it: it has real value now. Out of the money is the opposite: cheaper, but all time value, needing a bigger move."),
         Term(listOf("straddle"), false, "A straddle is a call and a put at the same strike. Bought, it gains from a big move either way; sold, it gains if the market stays still, with risk on both sides."),
         Term(listOf("strangle"), false, "A strangle is an out-of-the-money call and put. Cheaper than a straddle to buy, needs a bigger move; sold, it has a wider range to stay inside."),
+        Term(listOf("covered call", "covered calls"), false, "A covered call sells a call against shares or a future already held: the premium is earned, and the gain above the strike is given up."),
         Term(listOf("iron condor"), false, "An iron condor sells a strangle and buys a further strangle as protection: a limited gain if the market stays in a range, and a limited loss if it breaks out."),
         Term(listOf("bull call spread"), false, "A bull call spread buys a call and sells a higher one: cheaper than the call alone, with gain and loss both capped. A bear put spread is the mirror for a fall."),
         Term(listOf("short covering"), false, "Short covering is sellers buying back to close their positions, often pushing the price up quickly, with open interest falling."),

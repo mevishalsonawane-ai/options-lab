@@ -133,3 +133,16 @@ when does the market close today	null | null | [] | null | false | false | false
 how much time till close	null | null | [] | null | false | false | false | null | null
 how long till the market closes	null | null | [] | null | false | false | false | null | null
 did fiis buy or sell	null | null | [] | null | false | false | false | null | null
+what's the target for nifty today	null | null | [] | null | false | false | false | null | null
+how did us markets close	null | null | [] | null | false | false | false | null | null
+banknifty ka target kya hai	null | null | [] | null | false | false | false | null | null
+nifty target today	null | null | [] | null | false | false | false | null | null
+nifty ka target batao	null | null | [] | null | false | false | false | null | null
+how many lots can i buy	null | null | [] | null | false | false | false | null | null
+kal nifty kahan band hua	null | null | [] | null | false | false | false | null | null
+aaj market band hai kya	null | null | [] | null | false | false | false | null | null
+how many lots can i buy with 50000	null | null | [] | null | false | false | false | null | null
+call kharidu ya put	null | null | [] | null | false | false | false | null | null
+what is the target	null | null | [] | null | false | false | false | null | null
+how did asia close	null | null | [] | null | false | false | false | null | null
+what is my day target	null | null | [] | null | false | false | false | null | null

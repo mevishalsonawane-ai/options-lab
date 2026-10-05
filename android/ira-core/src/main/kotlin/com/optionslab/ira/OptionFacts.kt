@@ -24,7 +24,7 @@ object OptionFacts {
         // "When does the market open tomorrow / on Monday?" is the calendar's answer (MarketDays), not today's clock.
         val dayNamed = MarketDays.namesAnotherDay(text) ||
             Regex("\\b(tomorrow|tmrw|kal|parso|monday|tuesday|wednesday|thursday|friday|saturday|sunday|somvar|mangalvar|budhvar|guruvar|shukravar|shanivar|ravivar)\\b").containsMatchIn(t)
-        if (!dayNamed && Regex("\\b(how long|how much time|time left|minutes left)\\b.*\\b(close|market|session|trading)\\b|\\bwhen does (the )?market close\\b|\\bmarket band hone (mein|me) kitna (time|samay)\\b|\\bkitna (time|samay) (bacha|baaki)\\b|\\bwhen (does|will) (the )?market (open|start)\\b|\\bmarket kab (khulega|khulta|open hoga)\\b|\\bwhat time (does|will) (the )?market (open|close)\\b|\\bmarket (kitne baje|kab) band (hoga|hota|hogi)\\b").containsMatchIn(t))
+        if (!dayNamed && Regex("\\b(how long|how much time|time left|minutes left)\\b.*\\b(close|market|session|trading)\\b|\\bwhen does (the )?market close\\b|\\bmarket band hone (mein|me) kitna (time|samay)\\b|\\bkitna (time|samay) (bacha|baaki)\\b|\\bwhen (does|will) (the )?market (open|start)\\b|\\bmarket kab (khulega|khulta|open hoga)\\b|\\bmarket kitne baje (khulega|khulta|khulti|open hota|open hoga|shuru hota)\\b|\\bwhat time (does|will) (the )?market (open|close)\\b|\\bmarket (kitne baje|kab) band (hoga|hota|hogi)\\b").containsMatchIn(t))
             return Asked.TimeLeft
         val m = Market.mentioned(text).firstOrNull { it in CHAIN }
         if (!Regex("\\b(buy|sell|order|place)\\b").containsMatchIn(t) &&
@@ -42,7 +42,8 @@ object OptionFacts {
             Regex("\\b(atm|at the money)\\b.{0,20}\\b(premium|price|ltp|rate)\\b|\\b(premium|price|ltp|rate)\\b.{0,20}\\b(atm|at the money)\\b|" +
                 "^\\W*(nifty |banknifty |bank nifty |finnifty |fin nifty )?atm( now| right now| abhi)?\\W*$|\\b(what s|whats|what is|where is) (the )?atm( strike)? (now|right now|abhi)\\b").containsMatchIn(t))
             return Asked.Atm(m ?: Market.NIFTY)
-        if (Regex("\\batm strike (kya|kaunsa|konsa)\\b|\\b(atm|at the money)\\b.*\\bstrike\\b|\\bstrike\\b.*\\b(atm|at the money)\\b|\\bwhich strike is atm\\b").containsMatchIn(t))
+        if (Regex("\\batm strike (kya|kaunsa|konsa)\\b|\\b(atm|at the money)\\b.*\\bstrike\\b|\\bstrike\\b.*\\b(atm|at the money)\\b|\\bwhich strike is atm\\b").containsMatchIn(t) ||
+            m != null && Regex("\\batm (kya|kaunsa|konsa|kaun sa) (hai|he|h)\\b").containsMatchIn(t))
             return Asked.Atm(m ?: Market.NIFTY)
         return null
     }

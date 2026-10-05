@@ -87,7 +87,7 @@ object Hinglish {
         // "Market khula hai kya": whether it is open today.
         Regex("^(?:(?:aaj|kya)\\s+)?(?:market|bazaar|bazar)\\s+(?:aaj\\s+)?(?:khula|khuli|open)\\s+(?:$HAI|hoga|rahega)(?:\\s+$KYA)?(?:\\s+aaj)?$") to "is the market open today",
         // The owner's own money: "aaj kitna kamaya", "kitna loss hua", "aaj ki kamai kitni hai", "main profit mein hoon kya".
-        Regex("^(?:(?:aaj|maine|humne|abhi\\s+tak|ab\\s+tak)\\s+)*(?:kitna|kitne|kitni|kitana)\\s+(?:paisa\\s+|paise\\s+|profit\\s+|munafa\\s+)?(?:kamaya|kamaye|kamai|kamaai|banaya|banaye)(?:\\s+(?:maine|humne|aaj|$HAI|$KYA))*$") to "what is my p&l today",
+        Regex("^(?:(?:aaj|maine|humne|abhi\\s+tak|ab\\s+tak)\\s+)*(?:kitna|kitne|kitni|kitana)\\s+(?:paisa\\s+|paise\\s+|profit\\s+|munafa\\s+)?(?:kamaya|kamaye|kamai|kamaai|banaya|banaye|bana|bane|bani)(?:\\s+(?:maine|humne|aaj|$HAI|$KYA))*$") to "what is my p&l today",
         Regex("^(?:(?:aaj|maine|humne)\\s+)*(?:kitna|kitne|kitni|kitana)\\s+(?:profit|munafa|fayda|faida|loss|nuksan|nuksaan|nuqsan|ghata)\\s+(?:hua|hui|huwa|ho\\s+gaya|$HAI|kiya|banaya)(?:\\s+(?:aaj|$HAI|$KYA))*$") to "what is my p&l today",
         Regex("^(?:(?:aaj|maine|humne)\\s+)*(?:kitna|kitne|kitni)\\s+(?:paisa\\s+|paise\\s+)?(?:gawaya|gavaya|ganwaya|gavaaya|gawaye|haara|haare)(?:\\s+(?:maine|aaj|$HAI|$KYA))*$") to "what is my p&l today",
         Regex("^(?:aaj\\s+)?(?:(?:ka|ki)\\s+)?$MINE(?:aaj\\s+)?(?:(?:ka|ki)\\s+)?(?:p&l|p\\s+l|pnl|mtm|kamai|kamaai|profit\\s+loss)\\s+(?:kitna|kitni|kitne|$KYA)\\s+$HAI$") to "what is my p&l today",
@@ -106,6 +106,17 @@ object Hinglish {
         Regex("^(?:(?:aaj|abhi|ab)\\s+)?$KYA\\s+(?:kharidu|kharidun|khareedu|khareedun|lu|loon|lun)(?:\\s+(?:aaj|abhi))?$") to "what should i buy",
         // The owner's bots: "strategies kaise chal rahe hain".
         Regex("^$MINE(strateg(?:y|ies)|arms?|bots?|algos?)\\s+(?:kaise|kaisi|kaisa)\\s+(?:chal\\s+$RAHA\\s+$HAI|$HAI)$") to "how are my $1 doing",
+        // Round 5 (5 Oct): how many trades today, the trade check and an idea asked another way, what Jarvis can do.
+        Regex("^(?:aaj\\s+)?(?:kitne|kitni)\\s+trades?\\s+(?:hue|hui|huye|huwe|ho\\s+gaye)(?:\\s+aaj)?(?:\\s+$KYA)?$") to "how many trades did i take today",
+        Regex("^$KYA\\s+(?:main|mai|mein|hum)\\s+(?:(?:aaj|abhi)\\s+)?trade\\s+(?:karu|karun|karoon|lu|loon|lun|kar\\s+sakta\\s+(?:hoon|hu)|kar\\s+sakti\\s+(?:hoon|hu))$") to "should i trade now",
+        Regex("^(?:(?:aaj|abhi)\\s+)?(?:call|calls|ce)\\s+(?:kharidu|khareedu|lu|loon|lun)\\s+ya\\s+(?:put|puts|pe)$|^(?:(?:aaj|abhi)\\s+)?(?:put|puts|pe)\\s+(?:kharidu|khareedu|lu|loon|lun)\\s+ya\\s+(?:call|calls|ce)$") to "what should i buy",
+        Regex("^(?:koi|kuch)\\s+(?:trade\\s+)?(?:idea|ideas|tip|tips|suggestion)\\s+(?:do|dijiye|de\\s+do|batao|bataiye|$HAI(?:\\s+$KYA)?)$") to "any trade ideas",
+        Regex("^(?:tum|aap|tu)\\s+$KYA\\s+(?:kya\\s+)?kar\\s+(?:sakte|sakti|sakta)\\s+(?:ho|hai|hain|hoon)$") to "what can you do",
+        // "Kaun sa index sabse strong hai".
+        Regex("^(?:aaj\\s+)?(?:kaun\\s+sa|kaunsa|konsa|kon\\s+sa)\\s+index\\s+(?:sabse\\s+)?(?:strong|mazboot|majboot|tez|upar)\\s+$HAI$") to "which index is strongest",
+        // The other ways India asks how the market is (Marathi, Gujarati, Bengali, Telugu, Tamil, Punjabi in Latin script).
+        Regex("^(?:(aaj|abhi)\\s+)?(?:share\\s+)?(?:market|bazaar|bazar)\\s+(?:kemon(?:\\s+ache|\\s+achhe)?|kasa\\s+(?:aahe|ahe|hai)|kem\\s+che|ela\\s+undi|eppadi\\s+irukku|da\\s+ki\\s+haal\\s+(?:hai|aa|ae))$") to "$1 how is the market",
+        Regex("^(?:(aaj|abhi)\\s+)?(.+?)\\s+(?:kemon(?:\\s+ache|\\s+achhe)?|kasa\\s+(?:aahe|ahe)|kem\\s+che|ela\\s+undi|eppadi\\s+irukku|da\\s+ki\\s+haal\\s+(?:hai|aa|ae))$") to "$1 how is $2",
         // One market: "Nifty kya chal raha hai", "BankNifty ka kya haal hai", "Sensex mein kya ho raha hai".
         Regex("^(?:(aaj|abhi)\\s+)?(.+?)\\s+(?:(?:mein|me|main)\\s+)?(?:$KYA\\s+chal\\s+$RAHA|$KYA\\s+ho\\s+$RAHA|kaisa\\s+chal\\s+$RAHA|kaisi\\s+chal\\s+$RAHA)\\s+$HAI$") to "$1 how is $2",
         Regex("^(?:(aaj|abhi)\\s+)?(.+?)\\s+(?:ka|ki)\\s+(?:$KYA\\s+haal|haal\\s+$KYA|haal\\s+kaisa)\\s+$HAI$") to "$1 how is $2",
