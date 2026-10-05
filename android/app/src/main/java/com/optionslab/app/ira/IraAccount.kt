@@ -117,7 +117,7 @@ internal object IraAccount {
     }
 
     /** Sections answered from the question's own words: never from the cache. */
-    private val ASKED = setOf(Section.WHATIF, Section.CHANGES, Section.SEARCH, Section.TIMEOFDAY, Section.REASONS, Section.EXPLAIN_POS, Section.MISTAKES, Section.MOVE, Section.RANK, Section.REPLAY, Section.MONTH, Section.CHARGES, Section.HEALTH, Section.BOTS, Section.TAX, Section.NEED)
+    private val ASKED = setOf(Section.WHATIF, Section.CHANGES, Section.SEARCH, Section.TIMEOFDAY, Section.REASONS, Section.EXPLAIN_POS, Section.MISTAKES, Section.MOVE, Section.RANK, Section.REPLAY, Section.MONTH, Section.CHARGES, Section.HEALTH, Section.BOTS, Section.TAX, Section.NEED, Section.STREAKS)
 
     suspend fun read(sections: Set<Section>, markets: List<com.optionslab.ira.Market> = emptyList(), question: String = ""): AppView? {
         testView?.let { return it(sections) }
@@ -275,6 +275,20 @@ internal object IraAccount {
             if (wants(Section.HEALTH)) out[Section.HEALTH] = IraCoach.healthLines()
             // "For my 24500 put to work, what needs to happen?": breakeven, distance, time, typical move, decay (read only).
             if (wants(Section.NEED)) out[Section.NEED] = IraCoach.needLines(question)
+            // "Am I on a winning streak?", "what's my best weekday?": Boss's own runs of days and trades (read only).
+            if (wants(Section.STREAKS)) {
+                val owners = runCatching { com.optionslab.app.data.Strategies.owners() }.getOrDefault(emptyMap())
+                val open = runCatching { com.optionslab.app.data.Market.isOpen() }.getOrDefault(false)
+                val first = com.optionslab.ira.MyStreaks.weekdayAsked(question)
+                val r = ArrayList<String>()
+                for (live in listOf(true, false)) {
+                    val all = trips(live, owners)
+                    if (live && all.isEmpty()) continue
+                    r += com.optionslab.ira.MyStreaks.lines(if (live) "Zerodha" else "Paper", all, today, open, first)
+                }
+                r += com.optionslab.ira.MyStreaks.CLOSING
+                out[Section.STREAKS] = r
+            }
             // "How are my bots doing?": each strategy today and this week against its tested record (read only).
             if (wants(Section.BOTS)) out[Section.BOTS] = IraBots.lines(question)
             // "How was my last trade?": the trades against their own candles (read only).

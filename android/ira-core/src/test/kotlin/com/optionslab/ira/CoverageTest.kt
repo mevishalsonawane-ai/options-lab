@@ -857,6 +857,13 @@ class CoverageTest {
         "mere bots kaise chal rahe hain" to "Account:BOTS", "mere algos kaise chal rahe hain" to "Account:BOTS",
         "meri strategies theek chal rahi hain" to "Account:BOTS", "mere bots ka haal" to "Account:BOTS",
         "kaun si strategy loss mein hai" to "Account:BOTS",
+        // ---- MyStreaks (round 16): Boss's own runs of days and trades, his best and worst weekday; a market's run stays Streak ----
+        "am i on a winning streak" to "Account:STREAKS", "how many green days in a row have i had" to "Account:STREAKS",
+        "my losing streak" to "Account:STREAKS", "what's my best weekday" to "Account:STREAKS", "which day of the week do i lose most" to "Account:STREAKS",
+        "have i lost three days in a row" to "Account:STREAKS", "how many trades in a row did i lose" to "Account:STREAKS",
+        "my winning and losing streaks" to "Account:STREAKS", "lagatar kitne din loss hua mera" to "Account:STREAKS",
+        "mera konsa din best hai" to "Account:STREAKS", "my longest winning streak" to "Account:STREAKS",
+        "how many days in a row has nifty risen" to "Streak", "banknifty losing streak" to "Streak",
         // ---- Headroom (round 13): how close Boss is to his limits; the limits themselves stay the account's RISK ----
         "how close am i to my limits" to "Headroom", "how much can i still lose today" to "Headroom", "how many trades do i have left" to "Headroom",
         "am i near my loss limit" to "Headroom", "limit se kitna door hoon" to "Headroom", "kitna aur loss le sakta hoon" to "Headroom",
