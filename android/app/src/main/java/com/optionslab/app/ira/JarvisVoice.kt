@@ -1485,7 +1485,8 @@ class JarvisVoice : Service() {
      */
     private fun say(words: String, id: String = "say", full: String? = null, account: Boolean = false) {
         // Figures as a trader says them: a lakh or more in lakh / crore, option symbols as words ([com.optionslab.ira.SayAs]).
-        val text = com.optionslab.ira.SayAs.figures(words, com.optionslab.ira.Aloud.hindi(words))
+        // Then commas where a person would pause: brackets, spaced dashes, figures side by side ([com.optionslab.ira.Pauses]).
+        val text = com.optionslab.ira.Pauses.shape(com.optionslab.ira.SayAs.figures(words, com.optionslab.ira.Aloud.hindi(words)))
         unmuteNow()                                      // Jarvis's own voice is never muted
         val t = tts
         lastSpokenId = id
