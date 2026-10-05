@@ -2094,10 +2094,10 @@ object IraHub {
         // "What do you offer me in the morning?" / "don't offer my usual morning question": the question Boss asks every
         // morning, offered in one line at the end of the morning check ([com.optionslab.ira.MorningAsks]; kinds and days only).
         // Words only - never answered unasked, and nothing learned acts.
-        val morningAsk = if (com.optionslab.app.BuildConfig.JARVIS && !bundled && parsed.order == null && parsed.command == null)
+        val usualAsk = if (com.optionslab.app.BuildConfig.JARVIS && !bundled && parsed.order == null && parsed.command == null)
             runCatching { com.optionslab.ira.MorningAsks.asked(q) }.getOrNull() else null
-        if (morningAsk != null) {
-            val said = if (morningAsk == com.optionslab.ira.MorningAsks.Request.RESET) IraTools.morningAsksReset() else IraTools.morningAsksSay()
+        if (usualAsk != null) {
+            val said = if (usualAsk == com.optionslab.ira.MorningAsks.Request.RESET) IraTools.morningAsksReset() else IraTools.morningAsksSay()
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
             return true
         }
