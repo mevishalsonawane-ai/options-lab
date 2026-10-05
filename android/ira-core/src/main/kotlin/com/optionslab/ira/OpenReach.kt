@@ -85,7 +85,7 @@ object OpenReach {
         "on either side of) (the |its |the day s |day s |nifty s |banknifty s |sensex s |finnifty s )?(daily )?open | open (se|ke upar|ke neeche|ke niche) ")
     /** Getting away from it: moving, going, reaching. */
     private val MOVE = Regex(" (move|moves|moved|moving|go|goes|went|going|get|gets|got|travel|travels|travelled|traveled|trade|trades|traded|" +
-        "swing|swings|swung|run|runs|stretch|stretches|reach|reaches|reached|extend|extends|wander|wanders|drift|drifts|far|door|dur|" +
+        "swing|swings|swung|run|runs|stretch|stretches|reach|reaches|reached|extend|extends|wander|wanders|drift|drifts|far|door|dur|distance|" +
         "jata|jaati|jati|jaata|chalta|chalti|nikalta|nikalti) ")
     /** Ending near it: "close within 0.3% of its open", "end near the open". */
     private val NEAR = Regex(" (close|closes|closed|end|ends|ended|finish|finishes|settle|settles|band) (near|within|close to|around|at|back at|back near|" +
@@ -96,7 +96,16 @@ object OpenReach {
     /** Asked of the record: how often, how far usually. */
     private val HOW = Regex(" (how often|how many times|how many days|how frequently|what share|what percent|what percentage|usually|normally|" +
         "typically|generally|tend to|tends to|on average|average|median|historically|record|history|stats|statistics|odds|chance|chances|" +
-        "kitni baar|kitne din|aksar|zyada tar|mostly|often|jata hai|jaata hai|jati hai|jaati hai) ")
+        "kitni baar|kitne din|aksar|zyada tar|mostly|often|jata hai|jaata hai|jati hai|jaati hai|" +
+        // Understanding round 25: "how far does Nifty go from the open", "on a normal day", "open se kitna move karta hai".
+        "how far (does|do)|how far from (the |its )?open (does|do)|on a (normal|typical|usual|regular|average) day|on (normal|typical|usual) days|" +
+        "karta hai|karti hai) ")
+    /** Ending near the open itself: "how often does Nifty close near its open" (round 25). */
+    private val NEAR_OPEN = Regex(" (close|closes|closed|end|ends|ended|finish|finishes|settle|settles) (near|close to|around|at|back at|back near) " +
+        "(the |its |the day s |day s )?open ")
+    /** The recognizer's "opan", "open say" for "open se", and "opening price" for the open itself (round 25). */
+    private val SLIPS = listOf(" opan " to " open ", " open say " to " open se ", " open see " to " open se ", " opening price " to " open price ",
+        " opening level " to " open level ")
     private val SIZE = Regex(" (\\d+(?:\\.\\d+)?) ?(%|percent|per cent|pc|pct) ")
     private val POINTS = Regex(" (\\d{1,4}(?:\\.\\d+)?) ?(points|point|pts|pt) ")
     // A forecast or advice, Boss's own book, a what-if, alerts and reminders, the app's bots, stock screens, a definition, a
@@ -131,10 +140,10 @@ object OpenReach {
     private val askedKept = Kept<Q?>(64)
 
     private fun askedFresh(text: String): Q? {
-        val t = norm(text)
+        val t = SLIPS.fold(norm(text)) { x, (from, to) -> x.replace(from, to) }
         if (NOT.containsMatchIn(t) || NOT_WHEN.containsMatchIn(t)) return null
         if (Market.mentioned(text).any { it == Market.GOLD || it == Market.VIX }) return null
-        if (!NAME.containsMatchIn(t)) {
+        if (!NAME.containsMatchIn(t) && !(NEAR_OPEN.containsMatchIn(t) && HOW.containsMatchIn(t))) {
             if (!FROM_OPEN.containsMatchIn(t) || !HOW.containsMatchIn(t)) return null
             if (!MOVE.containsMatchIn(t) && !NEAR.containsMatchIn(t)) return null
         }

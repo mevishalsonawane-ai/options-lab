@@ -1592,7 +1592,7 @@ object IraHub {
                 com.optionslab.ira.Headroom.asked(q) != null || com.optionslab.ira.ArmFit.asked(q) || com.optionslab.ira.WeakLink.asked(q) || com.optionslab.ira.ArmChange.asked(q) || com.optionslab.ira.PnlGap.asked(q) || com.optionslab.ira.ArmDay.asked(q) != null || com.optionslab.ira.BookDecay.asked(q) || com.optionslab.ira.WhereIWin.asked(q) != null || com.optionslab.ira.TradesADay.asked(q) != null || com.optionslab.ira.AfterLoss.asked(q) != null || com.optionslab.ira.RequestBook.asked(q) != null || com.optionslab.ira.NetLean.asked(q) || com.optionslab.ira.BotTrades.asked(q) != null ||
                 com.optionslab.ira.ExpiryEve.asked(q) || com.optionslab.ira.BeforeTomorrow.asked(q) ||
                 com.optionslab.ira.SwitchOff.asked(q) != null ||
-                com.optionslab.ira.ReminderBook.listAsked(q) || com.optionslab.ira.ReminderBook.cancelOne(q) != null ||
+                com.optionslab.ira.ReminderBook.listAsked(q) || com.optionslab.ira.ReminderBook.cancelOne(q) != null || com.optionslab.ira.Requests.listAsked(q) ||
                 com.optionslab.ira.SaidAbout.asked(q) != null || com.optionslab.ira.WeekAhead.asked(q) != null ||
                 com.optionslab.ira.ZerodhaSession.asked(q) != null || com.optionslab.ira.OrderWhy.asked(q) != null || com.optionslab.ira.Tour.asked(q) ||
                 com.optionslab.ira.RelayHealth.asked(q) != null || com.optionslab.ira.StreamHealth.asked(q) || com.optionslab.ira.WatchAsk.asked(q) != null ||
@@ -1645,6 +1645,16 @@ object IraHub {
         }
         // The kinds of question Boss asks (kind keys only, no words): set against those he marks wrong ([SelfDoubt]).
         scope.launch { runCatching { IraTools.countAsked(q) } }
+        // "Open requests", "kya pending hai", "what's waiting for my approval" (understanding round 25): what waits for Boss's
+        // yes, read from the Requests panel's own list ([com.optionslab.ira.Requests.listSay]) - how many only on a locked
+        // phone, none in IraGoldAlgo. It reads only: approving and declining stay [confirm] and [cancelAction].
+        if (com.optionslab.app.BuildConfig.JARVIS && !bundled && parsed.order == null && parsed.command == null &&
+            runCatching { com.optionslab.ira.Requests.listAsked(q) }.getOrDefault(false)) {
+            val reqSaid = runCatching { com.optionslab.ira.Requests.listSay(requestsOf(_state.value), System.currentTimeMillis(), phoneLocked(),
+                GOLD_ONLY_TALK || com.optionslab.app.BuildConfig.GOLD) }.getOrDefault("I could not read the requests just now, Boss.")
+            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, reqSaid)).takeLast(MAX_MESSAGES)) }
+            return
+        }
         if (askedOfHisWays(q, parsed, bundled, understood)) return
         if (askedOfRecords(q, parsed, bundled, understood)) return
         if (askedOfJarvis(q, parsed, bundled, understood)) return

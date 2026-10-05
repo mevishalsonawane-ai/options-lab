@@ -32,7 +32,7 @@ class CoverageTest {
             ChainDrift.asked(said) != null || Headroom.asked(said) != null || ArmFit.asked(said) || WeakLink.asked(said) || ArmChange.asked(said) || PnlGap.asked(said) || ArmDay.asked(said) != null || BookDecay.asked(said) || WhereIWin.asked(said) != null || TradesADay.asked(said) != null || AfterLoss.asked(said) != null || RequestBook.asked(said) != null || NetLean.asked(said) || ExpiryEve.asked(said) || BeforeTomorrow.asked(said) || BotTrades.asked(said) != null || DayClock.asked(said) != null ||
             SaidAbout.asked(said) != null || GapRecord.asked(said) != null || Causes.asked(said) != null || WeekAhead.asked(said) != null || AskedAgain.asked(said) || FigureFirst.asked(said) != null || Weekdays.asked(said) != null || DayCompare.asked(said) != null || LikeToday.asked(said) ||
             RangeBreaks.asked(said) != null || PriorDay.asked(said) != null || LastHour.asked(said) != null || InsideDays.asked(said) != null || FirstMove.asked(said) != null || VixNext.asked(said) != null || SplitDays.asked(said) != null || RoundCloses.asked(said) != null || MonthTurns.asked(said) != null || LunchRange.asked(said) != null || OpenHighLow.asked(said) != null || BigCandles.asked(said) != null || ExtremeCloses.asked(said) != null || WeekRange.asked(said) != null || RelativeMove.asked(said) != null || Comebacks.asked(said) != null || VixBand.asked(said) != null || Overnight.asked(said) != null || DayAfter.asked(said) != null || OpenReach.asked(said) != null || MultiDay.asked(said) != null || NeedsTrue.asked(said) || Clarity.asked(said) != null || ZerodhaSession.asked(said) != null || Tour.asked(said) || WrongThing.asked(said) != null || WrongThing.objected(said) || OrderWhy.asked(said) != null || ArmHabits.asked(said) || MorningSense.asked(said) != null || HonestStars.asked(said) != null || TalkHours.asked(said) != null || MorningAsks.asked(said) != null || TurnDowns.asked(said) != null || TopicLength.asked(said) != null || OutlookCheck.asked(said) || UsualIndex.asked(said) != null || Nicknames.asked(said) != null || LeadIndex.asked(said) != null || LeadPart.asked(said) != null || NextAsk.asked(said) != null || RelayHealth.asked(said) != null || StreamHealth.asked(said) || WatchAsk.asked(said) != null || BatteryUse.asked(said) || SwitchOff.asked(said) != null ||
-            ReminderBook.listAsked(said) || ReminderBook.cancelOne(said) != null
+            ReminderBook.listAsked(said) || ReminderBook.cancelOne(said) != null || Requests.listAsked(said)
         return ((if (asSaid) null else Understand.questions(null, said)) ?: listOf(said)).map { kind(it, 0) }
     }
 
@@ -42,6 +42,8 @@ class CoverageTest {
         // reasons, pattern record and self-check are his own; the chain, the structure, a what-if, the case and the news desk
         // are the market's.
         if (p.order == null && p.command == null && !Bundle.acts(q)) {
+            // (What waits for Boss's yes - the Requests panel's list, read only; round 25.)
+            if (Requests.listAsked(q)) return Kind.ACCOUNT
             if (DayJournal.asked(q)) return Kind.ACCOUNT
             // (Clarity: the answers said shorter aloud - Jarvis's own voice; HeardBack is the voice path's alone, not a branch here.)
             if (AlertSense.asked(q) != null || Airtime.asked(q) || Hearing.asked(q) || PatternCalls.asked(q) || TrendReads.asked(q) || Clarity.asked(q) != null) return Kind.JARVIS
@@ -555,7 +557,7 @@ class CoverageTest {
             PreMarket.asked(said) ||
             ChainDrift.asked(said) != null || Headroom.asked(said) != null || ArmFit.asked(said) || WeakLink.asked(said) || ArmChange.asked(said) || PnlGap.asked(said) || ArmDay.asked(said) != null || BookDecay.asked(said) || WhereIWin.asked(said) != null || TradesADay.asked(said) != null || AfterLoss.asked(said) != null || RequestBook.asked(said) != null || NetLean.asked(said) || ExpiryEve.asked(said) || BeforeTomorrow.asked(said) || BotTrades.asked(said) != null || NeedsTrue.asked(said) || Clarity.asked(said) != null || DayClock.asked(said) != null ||
             SaidAbout.asked(said) != null || GapRecord.asked(said) != null || WordFit.asked(said) != null || Causes.asked(said) != null || WeekAhead.asked(said) != null || AskedAgain.asked(said) || FigureFirst.asked(said) != null || MindChange.asked(said) || Weekdays.asked(said) != null || DayCompare.asked(said) != null || LikeToday.asked(said) || RangeBreaks.asked(said) != null || PriorDay.asked(said) != null || LastHour.asked(said) != null || InsideDays.asked(said) != null || FirstMove.asked(said) != null || VixNext.asked(said) != null || SplitDays.asked(said) != null || RoundCloses.asked(said) != null || MonthTurns.asked(said) != null || LunchRange.asked(said) != null || OpenHighLow.asked(said) != null || BigCandles.asked(said) != null || ExtremeCloses.asked(said) != null || WeekRange.asked(said) != null || RelativeMove.asked(said) != null || Comebacks.asked(said) != null || VixBand.asked(said) != null || Overnight.asked(said) != null || DayAfter.asked(said) != null || OpenReach.asked(said) != null || MultiDay.asked(said) != null || ZerodhaSession.asked(said) != null || Tour.asked(said) || WrongThing.asked(said) != null || WrongThing.objected(said) || OrderWhy.asked(said) != null || ArmHabits.asked(said) || MorningSense.asked(said) != null || HonestStars.asked(said) != null || TalkHours.asked(said) != null || MorningAsks.asked(said) != null || TurnDowns.asked(said) != null || TopicLength.asked(said) != null || OutlookCheck.asked(said) || UsualIndex.asked(said) != null || Nicknames.asked(said) != null || LeadIndex.asked(said) != null || LeadPart.asked(said) != null || NextAsk.asked(said) != null || RelayHealth.asked(said) != null || StreamHealth.asked(said) || WatchAsk.asked(said) != null || BatteryUse.asked(said) || SwitchOff.asked(said) != null ||
-            ReminderBook.listAsked(said) || ReminderBook.cancelOne(said) != null
+            ReminderBook.listAsked(said) || ReminderBook.cancelOne(said) != null || Requests.listAsked(said)
         val qs = if (asSaid || understood || cleaned) null else Understand.questions(null, said)?.takeIf { it.isNotEmpty() && it != listOf(said) }
         if (qs != null) return if (qs.size == 1) feature(qs[0], cleaned = true) else qs.joinToString(" & ") { feature(it, understood = true) }
         val q = said
@@ -564,6 +566,7 @@ class CoverageTest {
         val p = Ask.parse(q)
         val plain = p.order == null && p.command == null
         val alone = plain && free
+        if (alone && Requests.listAsked(q)) return "Requests"
         if (alone && DayJournal.asked(q)) return "DayJournal"
         if (alone && AlertSense.asked(q) != null) return "AlertSense"
         if (alone && Airtime.asked(q)) return "Airtime"

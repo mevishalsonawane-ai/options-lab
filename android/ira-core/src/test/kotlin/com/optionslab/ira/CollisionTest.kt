@@ -77,6 +77,7 @@ class CollisionTest {
 
     /** The families in IraHub.ask's order, each named as [CoverageTest.feature] names what answers it. */
     private val FAMILIES: List<Pair<String, (String) -> Boolean>> = listOf(
+        "Requests" to { q -> Requests.listAsked(q) },
         "TrendReads" to { q -> TrendReads.asked(q) },
         "OutsideApp" to { q -> OutsideApp.asked(q) },
         "Clarity" to { q -> Clarity.asked(q) != null },
@@ -2323,6 +2324,91 @@ class CollisionTest {
             "what happens after a big gap down", "after a big fall in the day does nifty recover", "what did nifty do after the crash last week",
             "how does nifty close after a crash in the morning", "day after a big day"))
             assertTrue(audit.feature(s) != "DayAfter", "$s: ${audit.feature(s)}")
+    }
+
+    /**
+     * Round 25: the newest features as Boss says them - OpenReach ("how far from open does BankNifty go", "opening price",
+     * "close near its open", the recognizer's "opan" and "open say"), MultiDay ("3 din me", "3 din ka move", "a 3 day
+     * period", "typical 5 day range"), AfterLoss (revenge trading named any way, "do I overtrade after a loss", "after
+     * losing"), NextAsk's undo ("stop the follow up questions", "follow up band karo" and "turn off follow up questions"
+     * were STOP_ONE of a strategy called "follow up questions"), the charges ("how much went in charges", "today's charges",
+     * "charges ne kitna khaya") and the Requests panel asked ("open requests", "kya pending hai" were Missed).
+     */
+    private val ROUND25 = listOf(
+        // OpenReach
+        "how far from open does banknifty go" to "OpenReach", "how far does nifty go from its opening price" to "OpenReach",
+        "how often does nifty close near its open" to "OpenReach", "average distance from the open for nifty" to "OpenReach",
+        "how far does nifty go from the opan usually" to "OpenReach", "open say kitna door jata hai nifty" to "OpenReach",
+        "how far does nifty move from open on a normal day" to "OpenReach", "nifty open se kitna move karta hai" to "OpenReach",
+        // MultiDay
+        "3 din me nifty kitna jata hai" to "MultiDay", "typical 5 day range of banknifty" to "MultiDay", "nifty ka 3 din ka move kitna hota hai" to "MultiDay",
+        "nifty 3 days mein kitna move karta hai" to "MultiDay", "how much does nifty move in a 3 day period" to "MultiDay", "teen din ka move kitna hota hai" to "MultiDay",
+        // AfterLoss
+        "revenge trade karta hoon kya" to "AfterLoss", "revenge trading check" to "AfterLoss", "am i doing revenge trades" to "AfterLoss",
+        "is there revenge trading in my trades" to "AfterLoss", "do i revenge tread" to "AfterLoss", "do i overtrade after a loss" to "AfterLoss",
+        "do i take bigger trades after a loss" to "AfterLoss", "do i trade more after a loss" to "AfterLoss", "how do i trade after losing" to "AfterLoss",
+        // NextAsk's undo
+        "stop asking what next" to "NextAsk", "stop the follow up questions" to "NextAsk", "follow up band karo" to "NextAsk",
+        "turn off follow up questions" to "NextAsk", "no more follow ups" to "NextAsk", "no follow ups please" to "NextAsk",
+        "next question mat poocho" to "NextAsk", "mujhe agla sawal offer mat karo" to "NextAsk", "don't end with a question" to "NextAsk",
+        "dont ask what next" to "NextAsk", "undo the next question thing" to "NextAsk",
+        // The charges
+        "how much went in charges" to "Account:CHARGES", "today's charges" to "Account:CHARGES", "charges ne kitna khaya" to "Account:CHARGES",
+        // The Requests panel asked
+        "open requests" to "Requests", "kya pending hai" to "Requests", "what's pending" to "Requests", "any pending requests" to "Requests",
+        "show requests" to "Requests", "what is waiting for my approval" to "Requests", "kuch pending hai kya" to "Requests",
+        "pending approvals" to "Requests", "how many requests" to "Requests", "anything waiting for me" to "Requests",
+        "kya approve karna hai" to "Requests", "requests dikhao" to "Requests", "open the requests panel" to "Requests",
+        "what requests are pending" to "Requests",
+    )
+
+    @Test fun roundTwentyFiveWordingsRouteAndNeverAct() {
+        assertEquals(ROUND25.size, ROUND25.map { it.first }.distinct().size)
+        val wrong = ROUND25.mapNotNull { (s, want) -> audit.feature(s).let { got -> if (got == want) null else "\"$s\": wanted $want, got $got ${hits(s)}" } }
+        assertTrue(wrong.isEmpty(), wrong.joinToString("\n"))
+        for ((s, _) in ROUND25) neverActs(s)
+        // NextAsk's undo is the undo (never a market question), and never a strategy stopped or started.
+        for ((s, want) in ROUND25) if (want == "NextAsk") assertEquals(NextAsk.Request.RESET, NextAsk.asked(s), s)
+        for (s in listOf("stop the follow up questions", "turn off follow up questions", "stop follow up", "stop follow ups", "turn on follow up questions"))
+            assertTrue(Ask.parse(s).command?.kind !in setOf(Command.Kind.STOP_ONE, Command.Kind.START_ONE), s)
+        // A strategy is still stopped by name, and "stop asking" / "what next" alone are not NextAsk's undo.
+        for (s in listOf("stop orb", "turn off orb", "stop strategy follow", "stop following nifty", "stop the next strategy"))
+            assertEquals(Command.Kind.STOP_ONE, Ask.parse(s).command?.kind, s)
+        for (s in listOf("what's next for nifty", "what next", "stop asking")) assertTrue(NextAsk.asked(s) == null, s)
+        // The Requests list reads only: approving, declining and cancelling stay as they were (never the list).
+        for (s in listOf("approve it", "yes approve", "approve the request", "reject all requests", "cancel the request", "yes", "haan"))
+            assertTrue(!Requests.listAsked(s), s)
+        // Boss's orders, positions and strategies "pending" or "open" stay his own; a cancel stays a cancel.
+        for ((s, want) in listOf("my pending orders" to "Account:ORDERS", "koi order pending hai" to "Account:ORDERS", "any orders pending" to "Account:ORDERS",
+            "pending orders dikhao" to "Account:ORDERS", "show my pending orders" to "Account:ORDERS", "what's pending in my orders" to "Account:ORDERS"))
+            assertEquals(want, audit.feature(s), s)
+        for (s in listOf("cancel pending orders", "cancel all pending orders")) assertEquals(Command.Kind.CANCEL_ALL, Ask.parse(s).command?.kind, s)
+        // The list said: how many only when locked, nothing in IraGoldAlgo, each heading with where it would act otherwise.
+        val v = Requests.RequestView(1, Requests.Kind.COMMAND, "stop ORB", "stop the ORB arm", null, Requests.Venue.NONE, 0, 600_000)
+        assertEquals(Requests.EMPTY, Requests.listSay(emptyList(), 1_000, locked = false, gold = false))
+        assertEquals(Requests.GOLD, Requests.listSay(listOf(v), 1_000, locked = false, gold = true))
+        assertEquals("1 request waiting, Boss. Unlock the phone to see what in Requests.", Requests.listSay(listOf(v), 1_000, locked = true, gold = false))
+        assertTrue(Requests.listSay(listOf(v), 1_000, locked = false, gold = false).let { it.startsWith("1 request waiting, Boss: stop ORB (No order, lapses in") && it.contains("your yes") })
+        assertEquals(Requests.EMPTY, Requests.listSay(listOf(v), 700_000, locked = false, gold = false))
+        // Neighbours keep their own: the P&L (charges said beside it), the history, Headroom, today's gap, the open's distance now.
+        for ((s, want) in listOf("my p&l" to "Account:PNL", "my p&l after charges" to "Account:PNL", "pnl before charges" to "Account:PNL",
+            "how much did i make today" to "Account:PNL", "aaj kitna kamaya" to "Account:PNL", "what's my p&l this week" to "Account:HISTORY",
+            "my best day this month" to "Account:HISTORY", "how much headroom do i have left" to "Headroom", "how many more trades can i take today" to "Headroom",
+            "is the gap bigger today" to "Gap", "my charges" to "Account:CHARGES", "how much brokerage did i pay" to "Account:CHARGES"))
+            assertEquals(want, audit.feature(s), s)
+        // The one-lot calculator is not the account's charges; OpenReach and MultiDay stay records, never now, today, a forecast or advice.
+        for (s in listOf("what are charges for one lot", "brokerage for one lot")) assertTrue(!Charges.asked(s), s)
+        for (s in listOf("how far is nifty from the open", "how far is nifty from its open now", "how far did nifty go from the open today",
+            "nifty open se kitna upar hai", "how far does nifty go from the open in the first hour", "how often does nifty close near its open today",
+            "does nifty close near the open on expiry"))
+            assertTrue(audit.feature(s) != "OpenReach", "$s: ${audit.feature(s)}")
+        for (s in listOf("how much did nifty move in 3 days", "how much did nifty move in the last 3 days", "what will nifty do in 3 days",
+            "nifty 3 din mein kitna jayega", "3 din ke baad nifty kitna jata hai", "should i hold for 3 din me"))
+            assertTrue(audit.feature(s) != "MultiDay", "$s: ${audit.feature(s)}")
+        // AfterLoss is Boss's own record: never advice, a definition, a rule to set, or a losing day.
+        for (s in listOf("should i revenge trade", "what is revenge trading", "block revenge trading", "stop me from revenge trading",
+            "remind me if i revenge trade", "how do i do after a losing day"))
+            assertTrue(AfterLoss.asked(s) == null, s)
     }
 
     // ---- Again: the voice's own "say that again slowly" - heard before the question path, never a question family ----

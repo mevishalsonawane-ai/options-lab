@@ -93,14 +93,19 @@ object MultiDay {
     /** "In 3 sessions", "over the next three trading days", "within 4 days". */
     private val SPAN = Regex(" (in|over|within|across|during|inside) (the )?(next |coming |following )?(any )?$N (trading |market )?(days|sessions|day|session) ")
     /** "3 day move", "3-session range record". */
-    private val SPAN_NAMED = Regex(" $N (trading )?(day|days|session|sessions) (move|moves|range|ranges|reach|swing|swings|window|windows|stretch|stretches|holding period) ")
+    private val SPAN_NAMED = Regex(" $N (trading )?(day|days|session|sessions) (move|moves|range|ranges|reach|swing|swings|window|windows|stretch|stretches|holding period|period|periods|span|spans) ")
     /** "Teen din mein", "3 session me". */
-    private val SPAN_HI = Regex(" $N_HI (din|dino|dinon|session|sessions) (mein|me|main|mai|ke andar) ")
+    private val SPAN_HI = Regex(" $N_HI (din|dino|dinon|session|sessions|days|day) (mein|me|main|mai|ke andar|ka|ke) ")
+    /**
+     * "3 din me": the Hindi "me" (in) read as said, before [NOT] takes it for Boss's "me" (round 25) - only right after a
+     * count of days or sessions.
+     */
+    private val HI_ME = Regex(" $N_HI (din|dino|dinon|session|sessions|days|day) me ")
     /** Named as a record. */
     private val NAME = Regex(" (record|records|stats|statistics|history|data) ")
     /** Asked of the record: how often, how far usually. */
     private val HOW = Regex(" (how often|how many times|how frequently|what share|what percent|what percentage|usually|normally|typically|generally|" +
-        "tend to|tends to|on average|average|median|historically|odds|chance|chances|how far does|how far do|how far can|how much does|" +
+        "tend to|tends to|on average|average|median|historically|odds|chance|chances|how far does|how far do|how far can|how much does|typical|" +
         "how much do|how much can|how big is|how big are|kitna|kitni|kitne|aksar|zyada tar|mostly|often) ")
     /** Getting away from the close: moving, going, rising, falling, staying within. */
     private val MOVE = Regex(" (move|moves|moved|moving|movement|go|goes|went|gone|going|get|gets|got|travel|travels|swing|swings|swung|run|runs|" +
@@ -135,7 +140,7 @@ object MultiDay {
     private val askedKept = Kept<Q?>(64)
 
     private fun askedFresh(text: String): Q? {
-        val t = norm(text)
+        val t = norm(text).let { x -> HI_ME.replace(x) { m -> m.value.removeSuffix("me ") + "mein " } }
         if (NOT.containsMatchIn(t)) return null
         if (Market.mentioned(text).any { it == Market.GOLD || it == Market.VIX }) return null
         if (PAST_ONE.containsMatchIn(t) && !COUNTING.containsMatchIn(t)) return null

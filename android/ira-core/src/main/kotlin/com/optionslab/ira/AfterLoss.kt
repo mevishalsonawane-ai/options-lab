@@ -138,7 +138,7 @@ object AfterLoss {
 
     private fun norm(text: String) = " " + spacedWords(text.lowercase(Locale.ENGLISH).replace("’", "").replace("'", "")) + " "
 
-    private const val LOSS = "(a loss|a losing trade|a losing one|a loser|losing trades|losses|a stop out|a stop loss hit|my stop is hit|my stop gets hit|i lose|i lost|i take a loss|i book a loss|my losses|my losing trades|a bad trade)"
+    private const val LOSS = "(a loss|a losing trade|a losing one|a loser|losing trades|losses|losing|losing a trade|a stop out|a stop loss hit|my stop is hit|my stop gets hit|i lose|i lost|i take a loss|i book a loss|my losses|my losing trades|a bad trade)"
     private const val WIN = "(a win|a winning trade|a winning one|a winner|winning trades|wins|i win|i won|a good trade|a profit|i book a profit|my wins|my winning trades)"
 
     private val ASK_LOSS = rx(
@@ -155,7 +155,13 @@ object AfterLoss {
         "| after $LOSS (do|did) i " +
         // Hinglish: "loss ke baad mera agla trade kaisa jaata hai", "kya main revenge trade karta hoon"
         "| (loss|nuksan|nuksaan|ghata) (hone )?ke baad (mera |meri |main |mai )?(agla |next |)(trade|trades)? ?(kaisa|kaise|kaisi|kya) " +
-        "| (main|mai|kya main|kya mai) (revenge trade|revenge trading) (karta|karti|karte) ")
+        "| (main|mai|kya main|kya mai) (revenge trade|revenge trading) (karta|karti|karte) " +
+        // Understanding round 25: revenge trading named any way Boss asks of his own ("revenge trading check", "am I doing revenge
+        // trades", "revenge trade karta hoon kya", the recognizer's "revenge tread"), and trading more or bigger after a loss.
+        "| revenge (trade|trading|tread|treading) (karta|karti|karte|check|record|stats|report) " +
+        "| (am i|do i|did i|have i been) (doing|making|taking) revenge (trades|trading) | (is there|was there|any) revenge (trading|trades) in my (trades|trading|record) " +
+        "| (do|did) i revenge (tread|treads|treading|traded) " +
+        "| (do|did) i (overtrade|over trade|trade more|trade bigger|trade larger|take more trades|take bigger trades|take larger trades|size up|increase (my )?size|go bigger) (right |just |soon |straight )?after $LOSS ")
 
     private val ASK_WIN = rx(
         " (do|did) i (get|become|go) (careless|sloppy|overconfident|greedy|cocky) (\\w+ ){0,1}after $WIN " +

@@ -246,4 +246,44 @@ object Requests {
         if (focused != null && focused == asked && voiced.any { it.id == asked }) return Pick.Pass
         return Pick.Ambiguous(voiced.size, ambiguousLine(voiced.size))
     }
+
+    // ---- asked: what waits (understanding round 25) -------------------------------------------------------------------
+
+    private const val ASK_LEAD = "^ (hey |ok |okay )?(jarvis |boss )?(please )?"
+    private const val ASK_TAIL = "( please| boss| jarvis| now| abhi| right now)* $"
+
+    /**
+     * "Open requests", "kya pending hai", "what's waiting for my approval", "how many requests": what waits for Boss's yes,
+     * read out ([listSay]). Whole phrases only, never with an order, a position, a strategy or a reminder named ("pending
+     * orders" stays his orders); it reads only - approving and declining stay the app's own paths.
+     */
+    private val LIST = rx(ASK_LEAD + "(any |show |show me |list |list my |my |the |all |all the |open |pending |waiting )*(requests?|approvals?|pending approvals?)" +
+        "( pending| waiting| open| dikhao| batao| list| panel| tab)?( hai| hain| he)?( kya)?" + ASK_TAIL + "|" +
+        ASK_LEAD + "how many (requests?|approvals?)( are| do i have| have i got)?( pending| waiting| open)?( are there| for me)?" + ASK_TAIL + "|" +
+        ASK_LEAD + "(what|which) (requests?|approvals?) (are|is) (pending|waiting|open)( for me)?" + ASK_TAIL + "|" +
+        ASK_LEAD + "(whats|what s|what is|is anything|is there anything|anything|kya|kuch|koi cheez|kya kuch|kya koi cheez) " +
+        "(pending|waiting( for (me|my (approval|yes|ok|okay|confirm|confirmation|answer))| on me| on my (yes|approval))?)( hai| he| h)?( kya)?" + ASK_TAIL + "|" +
+        ASK_LEAD + "((kya|kuch|koi) approve (karna|karne ko) (hai|he)( kya)?|what (do i|should i) (need to |have to )?approve|anything (to|for me to) approve|" +
+        "what needs my (approval|yes|ok|okay|confirm))" + ASK_TAIL)
+
+    /** Does [text] ask what waits for Boss's yes? */
+    fun listAsked(text: String): Boolean =
+        LIST.containsMatchIn(" " + spacedWords(text.lowercase().replace("'", "").replace("’", "")) + " ")
+
+    /**
+     * What waits, said: each request's heading, where it would act and its countdown, at [now] ([shown]). On a locked phone
+     * ([locked]) only how many - never what, as [lockedLine]; none at all in IraGoldAlgo ([gold]). Words only.
+     */
+    fun listSay(list: List<RequestView>, now: Long, locked: Boolean, gold: Boolean): String {
+        if (gold) return GOLD
+        val open = shown(list, now, false)
+        if (open.isEmpty()) return EMPTY
+        val n = open.size
+        val count = if (n == 1) "1 request waiting" else "$n requests waiting"
+        if (locked) return "$count, Boss. Unlock the phone to see what in Requests."
+        val each = open.joinToString("; ") { v ->
+            "${plain(v.title)} (${v.venue.label}, ${lapseText(v.lapsesAt, now).replaceFirstChar { it.lowercase() }})"
+        }
+        return "$count, Boss: $each. Each waits for your yes in Requests - nothing goes ahead without it."
+    }
 }

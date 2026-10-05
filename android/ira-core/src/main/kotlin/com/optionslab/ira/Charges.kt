@@ -49,7 +49,10 @@ object Charges {
         "|(total|overall) $CHARGE|$CHARGE (this|last|previous|the) (week|month)|$CHARGE (today|so far)|(weekly|monthly) $CHARGE" +
         "|(what|how much) (did|have|do) (the |my )?$CHARGE (cost|take|eat|taken|eaten|come to|came to|add up)" +
         "|(which|what) (kind of |type of )?(trades?|trading) (cost|costs) (me )?(the )?most in $CHARGE|$CHARGE (ate|eat|eats|took|take|takes) (my|into my|of my)" +
-        "|(how much|kitna|kitni|kitne) (in |on )?$CHARGE|$CHARGE (how much|kitna|kitni|kitne)) ")
+        "|(how much|kitna|kitni|kitne) (in |on )?$CHARGE|$CHARGE (how much|kitna|kitni|kitne)" +
+        // Understanding round 25: "how much went in charges", "today's charges", "charges ne kitna khaya".
+        "|how much (went|has gone|was gone|is gone|goes|got eaten) (in|on|to|into|as) (the |my )?$CHARGE|(today s|todays|aaj ke|aaj ka|aaj ki) $CHARGE" +
+        "|$CHARGE (ne )?(kitna|kitne|kitni|how much) (khaya|kha liya|kha gaye|kha gayi|liya|le liya|kata|kaata|kat gaya|gaya|gaye)) ")
     /** One order's charges ("charges for one lot", "charges per order"): the cost calculator's question, not the account's. */
     private val ONE = Regex(" (per order|per lot|per trade|for (a|one|1) (lot|order|trade)|on (a|one|1) (lot|order|trade)|calculator|calculate|if i (buy|sell)|what is brokerage|what are charges) ")
 
