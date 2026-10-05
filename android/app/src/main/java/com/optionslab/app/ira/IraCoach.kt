@@ -405,12 +405,12 @@ internal object IraCoach {
     private val wallTold = HashSet<String>()
 
     /** Every 15 minutes in market hours: the biggest call and put open interest strikes; a move is told once a day. */
-    suspend fun oiWatch() {
+    suspend fun oiWatch(pass: IraAccount.ChainPass? = null) {
         if (!com.optionslab.app.BuildConfig.JARVIS || !Automations.on(Automations.Auto.OI) || !com.optionslab.app.data.Market.isOpen()) return
         val day = com.optionslab.app.data.Market.today().toString()
         trimDays(com.optionslab.app.data.Market.today())
         for (u in listOf("NIFTY", "BANKNIFTY")) runCatching {
-            val c = kotlinx.coroutines.withTimeoutOrNull(25_000) { IraAccount.chain(u) } ?: return@runCatching
+            val c = kotlinx.coroutines.withTimeoutOrNull(25_000) { IraAccount.chain(u, pass) } ?: return@runCatching
             val call = c.rows.filter { (it.ce?.oi ?: 0) > 0 }.maxByOrNull { it.ce!!.oi }?.strike
             val put = c.rows.filter { (it.pe?.oi ?: 0) > 0 }.maxByOrNull { it.pe!!.oi }?.strike
             val now = com.optionslab.ira.OiShift.Walls(call, put)
@@ -584,8 +584,15 @@ internal object IraCoach {
         }
     }
 
+    /**
+     * Battery (round 6): the question's one paper snapshot ([IraAccount.PaperOnce]) when the answer is read for a
+     * question, else a read of its own as before ([reuseMs]: how old a price it may reuse, 0 = fresh).
+     */
+    private suspend fun paperView(once: IraAccount.PaperOnce?, reuseMs: Long): Paper.Snapshot? =
+        if (once != null) once.get() else runCatching { Paper.snapshot(reuseMs) }.getOrNull()
+
     /** "Explain my position": each open position's P&L, room to its stop and target, time left and time decay. */
-    suspend fun explainPositions(): List<String> {
+    suspend fun explainPositions(once: IraAccount.PaperOnce? = null): List<String> {
         val prot = runCatching { com.optionslab.app.data.Protections.active() }.getOrDefault(emptyList())
         val out = ArrayList<String>()
         val now = java.time.ZonedDateTime.now(IST)
@@ -602,7 +609,7 @@ internal object IraCoach {
             expiry != null -> (java.time.temporal.ChronoUnit.MINUTES.between(now.toLocalDateTime(), expiry.atTime(15, 30))).toInt().takeIf { it > 0 }
             else -> null
         }
-        runCatching { Paper.snapshot().positions.positions.filter { it.quantity != 0 }.forEach { p ->
+        runCatching { paperView(once, 0L)?.positions?.positions.orEmpty().filter { it.quantity != 0 }.forEach { p ->
             val c = Paper.contractOf(p.symbol)
             val pr = prot.lastOrNull { !it.live && it.symbol == p.symbol }
             out += com.optionslab.ira.PositionTalk.lines(com.optionslab.ira.PositionTalk.Pos(p.symbol, "Paper", p.quantity, p.averagePrice, p.ltp, pr?.stop, pr?.target,
@@ -681,13 +688,13 @@ internal object IraCoach {
     }.getOrNull()
 
     /** Boss's open positions (paper, and Zerodha when logged in), each with its delta and gamma now when they can be worked out. */
-    internal suspend fun openLegs(): List<com.optionslab.ira.Exposure.Leg> = openLegsRead().first
+    internal suspend fun openLegs(once: IraAccount.PaperOnce? = null): List<com.optionslab.ira.Exposure.Leg> = openLegsRead(once).first
 
     /**
      * The open legs and whether Zerodha's part was read ([com.optionslab.ira.SinceMorning.Zerodha]): not logged in, or the
      * broker not answering within 8 seconds (or failing), leaves Zerodha's legs out - said so, never taken as none held.
      */
-    internal suspend fun openLegsRead(): Pair<List<com.optionslab.ira.Exposure.Leg>, com.optionslab.ira.SinceMorning.Zerodha> {
+    internal suspend fun openLegsRead(once: IraAccount.PaperOnce? = null): Pair<List<com.optionslab.ira.Exposure.Leg>, com.optionslab.ira.SinceMorning.Zerodha> {
         val now = java.time.ZonedDateTime.now(IST)
         fun spot(u: String) = runCatching { IraHub.state.value.snaps[com.optionslab.ira.Market.valueOf(u)]?.price }.getOrNull()
         /** Delta and gamma per unit of [u]: the index itself 1 and 0; an option's from its price now. */
@@ -700,7 +707,7 @@ internal object IraCoach {
             return g.delta to g.gamma
         }
         val out = ArrayList<com.optionslab.ira.Exposure.Leg>()
-        runCatching { Paper.snapshot(Paper.SHARED_QUOTE_MS).positions.positions.filter { it.quantity != 0 }.forEach { p ->
+        runCatching { paperView(once, Paper.SHARED_QUOTE_MS)?.positions?.positions.orEmpty().filter { it.quantity != 0 }.forEach { p ->
             val c = Paper.contractOf(p.symbol)
             val g = c?.let { runCatching { greeks(it.right, it.underlying, it.strike, it.expiry, p.ltp) }.getOrNull() }
             out += com.optionslab.ira.Exposure.Leg("Paper", p.symbol, p.quantity, p.averagePrice, p.ltp, c?.underlying, g?.first, g?.second)
@@ -721,21 +728,21 @@ internal object IraCoach {
     }
 
     /** "What happens to my P&L if Nifty moves 100 points": a rough figure from the open positions' deltas. Reads only. */
-    suspend fun moveLines(question: String): List<String> {
+    suspend fun moveLines(question: String, once: IraAccount.PaperOnce? = null): List<String> {
         val s = com.optionslab.ira.Exposure.moveAsked(question) ?: return listOf("Ask it with a size, Boss: \"what happens to my P&L if Nifty moves 100 points\".")
         val spot = runCatching { IraHub.state.value.snaps[s.market]?.price }.getOrNull()
-        return com.optionslab.ira.Exposure.move(s, openLegs(), spot)
+        return com.optionslab.ira.Exposure.move(s, openLegs(once), spot)
     }
 
     /** "Which of my positions is losing most": the open positions, worst first. Reads only. */
-    suspend fun rankLines(): List<String> = com.optionslab.ira.Exposure.rank(openLegs())
+    suspend fun rankLines(once: IraAccount.PaperOnce? = null): List<String> = com.optionslab.ira.Exposure.rank(openLegs(once))
 
     /**
      * Each open position (paper, and Zerodha when logged in) for the health check ([com.optionslab.ira.PositionHealth]):
      * its contract, spot, average day's range, theta, best bid and ask now, the spread first noted, and any stop or
      * target set in the app. Reads only: nothing is placed, changed or closed.
      */
-    private suspend fun healthPositions(): List<com.optionslab.ira.PositionHealth.Pos> {
+    private suspend fun healthPositions(once: IraAccount.PaperOnce? = null): List<com.optionslab.ira.PositionHealth.Pos> {
         val now = java.time.ZonedDateTime.now(IST)
         val today = now.toLocalDate()
         val prot = runCatching { com.optionslab.app.data.Protections.active() }.getOrDefault(emptyList())
@@ -755,9 +762,11 @@ internal object IraCoach {
                 else com.optionslab.engine.options.OptionType.PE, s, strike, t, price)?.greeks?.theta
         }
         val out = ArrayList<com.optionslab.ira.PositionHealth.Pos>()
-        runCatching { Paper.snapshot(Paper.SHARED_QUOTE_MS).positions.positions.filter { it.quantity != 0 }.forEach { p ->
+        runCatching { paperView(once, Paper.SHARED_QUOTE_MS)?.positions?.positions.orEmpty().filter { it.quantity != 0 }.forEach { p ->
             val c = Paper.contractOf(p.symbol)
-            val q = if (c == null) null else kotlinx.coroutines.withTimeoutOrNull(5_000) { runCatching { Paper.quote(c) }.getOrNull() }
+            // Battery (round 6): only the stream's bid and ask are used (the day's candles have none), so a price read in
+            // the last 20 s serves; the stream's tick is always read afresh (no network).
+            val q = if (c == null) null else kotlinx.coroutines.withTimeoutOrNull(5_000) { runCatching { Paper.recentQuote(c, Paper.SHARED_QUOTE_MS) }.getOrNull() }
             val pr = prot.firstOrNull { !it.live && it.symbol == p.symbol }
             val r = range(c?.underlying)
             out += com.optionslab.ira.PositionHealth.Pos("Paper", p.symbol, p.quantity, p.averagePrice, p.ltp,
@@ -815,16 +824,16 @@ internal object IraCoach {
     }.getOrDefault(ps)
 
     /** "Check my positions", "kya meri positions theek hain": each open position's health. Reads only. */
-    suspend fun healthLines(): List<String> = com.optionslab.ira.PositionHealth.lines(healthPositions(), LocalDateTime.now(IST))
+    suspend fun healthLines(once: IraAccount.PaperOnce? = null): List<String> = com.optionslab.ira.PositionHealth.lines(healthPositions(once), LocalDateTime.now(IST))
 
     /**
      * "For my 24500 put to work, what needs to happen?", "where is my breakeven?" ([com.optionslab.ira.NeedsTrue]): each
      * open position (or the one named) worked through - breakeven, distance, sessions left, the typical move and how often
      * one like it happened on the phone's own candles, time decay. Reads only: nothing is placed, changed or closed.
      */
-    suspend fun needLines(question: String): List<String> {
+    suspend fun needLines(question: String, once: IraAccount.PaperOnce? = null): List<String> {
         if (com.optionslab.app.BuildConfig.GOLD) return listOf("What has to be true for a position is worked out in IraAlgo, Boss; IraGoldAlgo only talks.")
-        val ps = healthPositions()
+        val ps = healthPositions(once)
         val bars = HashMap<String, List<com.optionslab.ira.Candle>>()
         for (u in ps.mapNotNull { it.underlying?.uppercase() }.distinct()) {
             val m = runCatching { com.optionslab.ira.Market.valueOf(u) }.getOrNull() ?: continue

@@ -324,7 +324,8 @@ object Protections {
         }
         if (p.trail == null) return p
         val c = Paper.contractOf(p.symbol) ?: return p
-        val ltp = Paper.lastPrice(c) ?: return p
+        // Battery (round 6): the price Paper.tick read for this symbol in this same pass (under 2 s ago), else a fresh read.
+        val ltp = Paper.stopPrice(c) ?: return p
         val n = Protection.next(p.spec(), ltp)
         val ns = n.stop
         val orderId = p.stopOrderId

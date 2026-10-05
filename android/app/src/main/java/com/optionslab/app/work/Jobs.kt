@@ -527,7 +527,9 @@ object Tasks {
         wordsQuietLast = quiet; wordsPaceAt = nowMs
         val slow = com.optionslab.ira.WordsPace.slowDue(quiet, nowMs, wordsSlowAt)
         if (slow) wordsSlowAt = nowMs
-        val newsDue = com.optionslab.ira.WordsPace.newsDue(quiet, nowMs, com.optionslab.app.ira.IraHub.state.value.newsAt?.toEpochMilli())
+        // Battery (round 6): quiet and no news question today, every 20 minutes (anything held: every round, as before).
+        val newsDue = com.optionslab.ira.WordsPace.newsDueUnasked(quiet, com.optionslab.app.ira.IraHub.newsAskedToday(), nowMs,
+            com.optionslab.app.ira.IraHub.state.value.newsAt?.toEpochMilli())
         // Jarvis: a strategy of Boss's behaving unusually against its tested record - told once a day without amounts,
         // stopping it asked first (reads the app's own books, every five minutes at most).
         word("bot review") { com.optionslab.app.ira.IraBots.watch() }

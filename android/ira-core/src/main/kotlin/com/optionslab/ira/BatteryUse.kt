@@ -197,6 +197,42 @@ object WordsPace {
     /** Is the news looked at this round ([lastNewsMs] = the last read, null = never)? Its own 5-minute gate still applies. */
     fun newsDue(quiet: Boolean, nowMs: Long, lastNewsMs: Long?): Boolean =
         !quiet || lastNewsMs == null || nowMs < lastNewsMs || nowMs - lastNewsMs >= QUIET_NEWS_MS
+
+    /**
+     * Battery (round 6): while [quiet] (the screen off, nothing held, nothing armed) and Boss has not asked about the
+     * news today, the feeds are read every [UNASKED_NEWS_MS]. A news question reads them afresh itself when they are
+     * over 5 minutes old, so his answer is never older for this.
+     */
+    const val UNASKED_NEWS_MS = 20 * 60_000L
+
+    /**
+     * [newsDue], slower while [quiet] and the news not asked about today ([askedToday]). Anything held keeps the 5-minute
+     * read (the news on a held index and the policy news it may bring are told at once): not quiet, so as before.
+     */
+    fun newsDueUnasked(quiet: Boolean, askedToday: Boolean, nowMs: Long, lastNewsMs: Long?): Boolean =
+        if (!quiet || askedToday) newsDue(quiet, nowMs, lastNewsMs)
+        else lastNewsMs == null || nowMs < lastNewsMs || nowMs - lastNewsMs >= UNASKED_NEWS_MS
+}
+
+/**
+ * Battery (round 6): the pace of the day's chain record in Jarvis's 15-minute background pass (each read of an index's
+ * chain without a Zerodha session is about 50 downloads of a contract's whole day of candles). With the nightly harvest
+ * off, every pass as before. With it on - it stores the whole day's chain after the close - hourly, plus one read from
+ * [LAST_READ] so the record holds the afternoon even if the harvest cannot run. A chain the pass read anyway (the OI
+ * watch) is kept every pass at no cost. Market data only; nothing here touches the OI watch, a question, a stop or an
+ * order. Pure.
+ */
+object ChainKeepPace {
+    /** With the harvest on: at least this long between reads (a few minutes short of an hour: the passes drift). */
+    const val HARVEST_ON_MINUTES = 55L
+    val LAST_READ: java.time.LocalTime = java.time.LocalTime.of(15, 15)
+
+    fun due(last: java.time.LocalDateTime?, now: java.time.LocalDateTime, harvestOn: Boolean): Boolean = when {
+        !harvestOn || last == null -> true
+        last.toLocalDate() != now.toLocalDate() || now.isBefore(last) -> true
+        !now.toLocalTime().isBefore(LAST_READ) && last.toLocalTime().isBefore(LAST_READ) -> true
+        else -> java.time.Duration.between(last, now).toMinutes() >= HARVEST_ON_MINUTES
+    }
 }
 
 /**

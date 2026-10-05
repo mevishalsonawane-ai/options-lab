@@ -128,7 +128,30 @@ object Paper {
         val bars = Net.intraday(c.feedKey).filter { it.istDate == Market.today() }
         if (bars.isEmpty()) return null
         return Quote(bars.last().close, high = bars.maxOf { it.high }, low = bars.minOf { it.low }, open = bars.first().open,
-            volume = bars.sumOf { it.volume }).also { remember(c.symbol, it) }
+            volume = bars.sumOf { it.volume }).also { remember(c.symbol, it); candleQuotes[c.symbol] = System.currentTimeMillis() to it }
+    }
+
+    /** The last price per symbol read from the day's candles (not the stream), and when: what [tick] may hand on. */
+    private val candleQuotes = java.util.concurrent.ConcurrentHashMap<String, Pair<Long, Quote>>()
+
+    /** The candle prices [tick]'s last pass read itself (symbol -> when read, quote); replaced whole by each pass. */
+    @Volatile private var tickCandles: Map<String, Pair<Long, Quote>> = emptyMap()
+
+    /** How old a price [tick] read may be when [stopPrice] hands it on (the same pass's next step, never a later pass). */
+    const val TICK_PRICE_MS = 2_000L
+
+    /**
+     * Battery (round 6): the price for a trailing stop in the same watch pass, right after [tick]. Exactly what
+     * [lastPrice] gives - the stream's tick when there is one (no network), else the day's candles - except that
+     * without a stream the candle price [tick] itself read for this symbol under [TICK_PRICE_MS] ago is handed on
+     * instead of downloading the same candles again. The feed moves once a minute, so a read 2 s later is the same
+     * close; it is also the very price the stop orders were just checked against. Older, or not read by [tick]: a
+     * fresh read, as before.
+     */
+    suspend fun stopPrice(c: Contract): Double? {
+        runCatching { streamQuote(c) }.getOrNull()?.let { live -> remember(c.symbol, live); return live.ltp }
+        tickCandles[c.symbol]?.let { (readAt, read) -> if (System.currentTimeMillis() - readAt in 0L until TICK_PRICE_MS) return read.ltp }
+        return lastPrice(c)
     }
 
     /** The last price read for each symbol and when (the screen re-prices every few seconds). */
@@ -188,7 +211,7 @@ object Paper {
      * watch pass read it once for the stops ([tick]) and again, seconds later, for the position cards and for each
      * words-only check ([snapshot] with [SHARED_QUOTE_MS]). The feed moves once a minute; the stops always read fresh.
      */
-    private suspend fun recentQuote(c: Contract, maxAgeMs: Long): Quote? {
+    internal suspend fun recentQuote(c: Contract, maxAgeMs: Long): Quote? {
         streamQuote(c)?.let { return it.also { remember(c.symbol, it) } }
         lastQuotes[c.symbol]?.let { (at, q) -> if (System.currentTimeMillis() - at in 0..maxAgeMs) return q }
         return quote(c)
@@ -296,7 +319,13 @@ object Paper {
     }
 
     private suspend fun tickLocked(): List<SandboxEvent> {
-        val q = quotes(watched(book().state))
+        val syms = watched(book().state)
+        val q = quotes(syms)
+        // The candle prices this pass read itself, kept for [stopPrice] (the stream's ticks are read afresh there).
+        tickCandles = syms.mapNotNull { sym ->
+            val got = q[Sandbox.key(sym, "NFO")] ?: return@mapNotNull null
+            candleQuotes[sym]?.takeIf { it.second === got }?.let { sym to it }
+        }.toMap()
         synchronized(this) {
             val b = book()
             val e = engine(b.capital, b.contracts)
@@ -372,5 +401,5 @@ object Paper {
     fun reset(capital: BigDecimal) { save(fresh(capital, book().contracts)) }
 
     @Synchronized
-    fun wipe() { cache = null; file.delete(); lastQuotes.clear() }
+    fun wipe() { cache = null; file.delete(); lastQuotes.clear(); candleQuotes.clear(); tickCandles = emptyMap() }
 }

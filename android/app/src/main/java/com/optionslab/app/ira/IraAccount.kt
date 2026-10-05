@@ -5,6 +5,7 @@ import com.optionslab.app.data.Broker
 import com.optionslab.ira.AppFacts
 import com.optionslab.ira.AppView
 import com.optionslab.ira.Section
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
 
 /**
@@ -47,9 +48,25 @@ internal object IraAccount {
      */
     val chainBook = com.optionslab.ira.ChainIntel.Book()
 
-    /** The option chain of [u] (nearest expiry, the strikes near the money) as the Options tab prices it, or null. */
-    suspend fun chain(u: String): com.optionslab.engine.options.ChainSnapshot? = runCatching {
-        val lc = com.optionslab.app.data.Market.liveChain(u, near = 12)
+    /**
+     * Battery (round 6): each index's chain read at most once in one background pass of Jarvis's (the OI watch and the
+     * day's chain record read the same Nifty and BankNifty chains moments apart: without a Zerodha session each is about
+     * 50 downloads of a contract's day of candles). A failed read is not kept: the next asker reads again, as before.
+     * Market data only; never kept past the pass.
+     */
+    internal class ChainPass {
+        private val got = java.util.concurrent.ConcurrentHashMap<String, com.optionslab.app.data.Market.LiveChain>()
+        fun has(u: String): Boolean = got.containsKey(u)
+        suspend fun live(u: String): com.optionslab.app.data.Market.LiveChain =
+            got[u] ?: com.optionslab.app.data.Market.liveChain(u, near = 12).also { got[u] = it }
+    }
+
+    /**
+     * The option chain of [u] (nearest expiry, the strikes near the money) as the Options tab prices it, or null. [pass]:
+     * the background pass's own reads, shared ([ChainPass]); a question always reads afresh.
+     */
+    suspend fun chain(u: String, pass: ChainPass? = null): com.optionslab.engine.options.ChainSnapshot? = runCatching {
+        val lc = pass?.live(u) ?: com.optionslab.app.data.Market.liveChain(u, near = 12)
         // The minute its data is from (a quote snapshot's minute, else the end of the newest 1-minute bar), for its age.
         val seen: java.time.LocalDateTime? = runCatching {
             val minute = lc.pricedAt ?: lc.series.mapNotNull { it.minutes.lastOrNull() }.maxOrNull()?.plus(1)
@@ -116,6 +133,27 @@ internal object IraAccount {
             marketOpenToday = com.optionslab.app.data.Market.isTradingDay(today), unguardedPositions = unguarded))
     }
 
+    /**
+     * Battery (round 6): one question's paper account, read once when a section first needs it and shared by the rest
+     * (the orders, positions, P&L and funds, "explain my position", the health check, what needs to happen, the move and
+     * the ranking each read it before, and each read downloads every held contract's day of candles without a Zerodha
+     * session). [reuseMs] as [com.optionslab.app.data.Paper.snapshot] takes it: 0 = fresh prices. Reads only; a failed
+     * read is null (each section then says what it said before when the account did not open). Never kept past the question.
+     */
+    internal class PaperOnce(private val reuseMs: Long) {
+        private val lock = kotlinx.coroutines.sync.Mutex()
+        private var done = false
+        private var view: com.optionslab.app.data.Paper.Snapshot? = null
+
+        suspend fun get(): com.optionslab.app.data.Paper.Snapshot? = lock.withLock {
+            if (!done) { view = runCatching { com.optionslab.app.data.Paper.snapshot(reuseMs) }.getOrNull(); done = true }
+            view
+        }
+    }
+
+    /** Sections whose answer prices the paper account fresh (the rest may share a price read in the last 20 s). */
+    private val PRICED_FRESH = setOf(Section.ORDERS, Section.POSITIONS, Section.PNL, Section.FUNDS, Section.EXPLAIN_POS)
+
     /** Sections answered from the question's own words: never from the cache. */
     private val ASKED = setOf(Section.WHATIF, Section.CHANGES, Section.SEARCH, Section.TIMEOFDAY, Section.REASONS, Section.EXPLAIN_POS, Section.MISTAKES, Section.MOVE, Section.RANK, Section.REPLAY, Section.MONTH, Section.CHARGES, Section.HEALTH, Section.BOTS, Section.TAX, Section.NEED, Section.STREAKS, Section.NUMBERS)
 
@@ -128,9 +166,11 @@ internal object IraAccount {
             val today = com.optionslab.app.data.Market.today()
             val wants = { x: Section -> x in sections }
             val zerodha = Broker.loggedIn && sections.any { it in setOf(Section.ORDERS, Section.POSITIONS, Section.PNL, Section.FUNDS) }
+            // One paper snapshot for the whole question (fresh when a section prices the account as it is now).
+            val paperOnce = PaperOnce(if (sections.any { it in PRICED_FRESH }) 0L else com.optionslab.app.data.Paper.SHARED_QUOTE_MS)
 
             if (sections.any { it in setOf(Section.ORDERS, Section.POSITIONS, Section.PNL, Section.FUNDS) }) {
-                val snap = runCatching { com.optionslab.app.data.Paper.snapshot() }.getOrNull()
+                val snap = paperOnce.get()
                 val owners = runCatching { com.optionslab.app.data.Strategies.owners() }.getOrDefault(emptyMap())
                 val orders = ArrayList<String>(); val pos = ArrayList<String>(); val pnl = ArrayList<String>(); val funds = ArrayList<String>()
                 if (snap != null) {
@@ -266,13 +306,13 @@ internal object IraAccount {
             if (wants(Section.WHATIF)) out[Section.WHATIF] = if (com.optionslab.app.BuildConfig.JARVIS) IraNewsTrades.whatIf(question)
                 else listOf("Replays of Jarvis's suggestions are in IraAlgo.")
             if (wants(Section.CHANGES)) out[Section.CHANGES] = com.optionslab.app.data.SettingsLog.lines()
-            if (wants(Section.EXPLAIN_POS)) out[Section.EXPLAIN_POS] = IraCoach.explainPositions()
-            if (wants(Section.MOVE)) out[Section.MOVE] = IraCoach.moveLines(question)
-            if (wants(Section.RANK)) out[Section.RANK] = IraCoach.rankLines()
+            if (wants(Section.EXPLAIN_POS)) out[Section.EXPLAIN_POS] = IraCoach.explainPositions(paperOnce)
+            if (wants(Section.MOVE)) out[Section.MOVE] = IraCoach.moveLines(question, paperOnce)
+            if (wants(Section.RANK)) out[Section.RANK] = IraCoach.rankLines(paperOnce)
             // "Check my positions": each open position's expiry, decay, distance from the strike, spread and stops (read only).
-            if (wants(Section.HEALTH)) out[Section.HEALTH] = IraCoach.healthLines()
+            if (wants(Section.HEALTH)) out[Section.HEALTH] = IraCoach.healthLines(paperOnce)
             // "For my 24500 put to work, what needs to happen?": breakeven, distance, time, typical move, decay (read only).
-            if (wants(Section.NEED)) out[Section.NEED] = IraCoach.needLines(question)
+            if (wants(Section.NEED)) out[Section.NEED] = IraCoach.needLines(question, paperOnce)
             // "Am I on a winning streak?", "what's my best weekday?": Boss's own runs of days and trades (read only).
             if (wants(Section.STREAKS)) {
                 val owners = runCatching { com.optionslab.app.data.Strategies.owners() }.getOrDefault(emptyMap())

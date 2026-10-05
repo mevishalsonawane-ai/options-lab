@@ -86,7 +86,9 @@ fun ToolsScreen(model: AppModel, view: String, onView: (String) -> Unit, onChart
     // Live mode with the Zerodha stream up: the chain re-prices every 5 s from the ticks (no quote calls).
     val streamStatus by com.optionslab.app.data.KiteStream.status.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     val streaming = s.live && streamStatus == com.optionslab.app.data.KiteStream.Status.LIVE
-    LaunchedEffect(underlying, streaming) {
+    // Battery (round 6): only while the app is in front - a plain LaunchedEffect kept pricing the chain (two Zerodha
+    // calls every 5 s) with the screen off and the Options tab last open; it resumes on return.
+    com.optionslab.app.ui.PollWhileStarted(underlying, streaming) {
         while (streaming) { kotlinx.coroutines.delay(5_000); model.loadTools(underlying, quiet = true) }
     }
     Page {

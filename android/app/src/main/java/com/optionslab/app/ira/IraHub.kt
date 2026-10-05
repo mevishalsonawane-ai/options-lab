@@ -582,8 +582,10 @@ object IraHub {
         lastBackground = now
         refresh()
         runCatching { watchAlerts() }
-        runCatching { keepChains() }
-        runCatching { IraCoach.oiWatch() }
+        // Battery (round 6): one read of each chain for both (the OI watch first, its reads then kept for the record).
+        val chains = IraAccount.ChainPass()
+        runCatching { IraCoach.oiWatch(chains) }
+        runCatching { keepChains(chains) }
     }
 
     /**
@@ -1188,14 +1190,27 @@ object IraHub {
      * Jarvis, every 15 minutes in market hours: the near-the-money option chains (Nifty, BankNifty, FinNifty) as
      * they trade - each contract's 1-minute OHLC, volume and OI - kept into the app's record, like the evening harvest.
      */
-    private suspend fun keepChains() {
+    private suspend fun keepChains(pass: IraAccount.ChainPass) {
+        // Battery (round 6): Live mode prices the chain from Zerodha's quotes - a snapshot this record never keeps (below) -
+        // so it is not read for it at all.
+        if (runCatching { com.optionslab.app.data.Market.liveMode() }.getOrDefault(false)) return
         val today = LocalDate.now(IST)
+        // With the nightly harvest on (it stores the whole day's chain after the close) a chain not already read in this pass
+        // is read hourly and once from 15:15 ([com.optionslab.ira.ChainKeepPace]); harvest off: every pass, as before.
+        val at = LocalDateTime.now(IST)
+        val harvestOn = runCatching { com.optionslab.app.data.AppSettings.load().nightlyHarvest }.getOrDefault(false)
+        val due = com.optionslab.ira.ChainKeepPace.due(chainsKeptAt, at, harvestOn)
+        if (due) chainsKeptAt = at
         for (u in listOf("NIFTY", "BANKNIFTY", "FINNIFTY")) runCatching {
-            val lc = withTimeoutOrNull(40_000) { com.optionslab.app.data.Market.liveChain(u, near = 12) } ?: return@runCatching
+            if (!due && !pass.has(u)) return@runCatching
+            val lc = withTimeoutOrNull(40_000) { pass.live(u) } ?: return@runCatching
             if (lc.pricedAt != null) return@runCatching          // a quote snapshot, not minute candles: nothing to keep
             Store.upsertDay(u, today, lc.series.filter { it.expiry != null })
         }
     }
+
+    /** When [keepChains] last read the chains it was not handed (the record's own pace). */
+    @Volatile private var chainsKeptAt: LocalDateTime? = null
 
     /** Alerts already given ("type|...|day"), so each is given once. */
     private val alerted = HashSet<String>()
@@ -1804,6 +1819,9 @@ object IraHub {
         // only (fine on a locked phone); facts and sources, never advice or a forecast. Not in the GOLD build (no news read there).
         val deskAsk = if (!bundled && parsed.order == null && parsed.command == null && !com.optionslab.app.BuildConfig.GOLD)
             runCatching { com.optionslab.ira.NewsDesk.asked(q) }.getOrNull() else null
+        // Battery (round 6): a news question today keeps the background news at its quiet pace (else slower, screen off and
+        // nothing held: [com.optionslab.ira.WordsPace.newsDueUnasked]).
+        if (Topic.NEWS in parsed.topics || deskAsk != null) newsAskedOn = LocalDate.now(IST)
         // A news question with no recent headlines on the phone: the feeds are read first (8 seconds at most), then answered.
         if ((Topic.NEWS in parsed.topics || deskAsk != null) && testHistories == null && System.currentTimeMillis() - newsCheckedAt > 3 * 60_000 && online() &&
             _state.value.newsAt?.isBefore(Instant.now().minusSeconds(NEWS_EVERY_MINUTES * 60)) != false) {
@@ -3580,6 +3598,10 @@ object IraHub {
 
     /** When the news was last read for a question (so a question waits for the feeds at most once in 3 minutes). */
     @Volatile private var newsCheckedAt = 0L
+    /** The day Boss last asked about the news (in memory: after a restart the background news is read at the slower quiet pace until he asks). */
+    @Volatile private var newsAskedOn: LocalDate? = null
+    /** Has Boss asked about the news today? */
+    fun newsAskedToday(): Boolean = newsAskedOn == LocalDate.now(IST)
 
     /** The feeds read now, whatever the usual 5-minute pace (for a news question). */
     private suspend fun freshNews() {
