@@ -45,6 +45,8 @@ object Glossary {
         Term(listOf("hedge", "hedging"), false, "A hedge is a second position that gains when the first loses, such as a bought put against bought shares. It costs some profit for limited loss."),
         Term(listOf("scalping", "scalp"), false, "Scalping is many quick trades for small moves. Charges and slippage take a large share of each gain, so it needs tight discipline."),
         Term(listOf("fii", "fiis", "dii", "diis"), true, "FIIs are foreign institutional investors and DIIs domestic ones, such as mutual funds. Their daily net buying or selling is a guide to the big money's mood."),
+        // (Understanding round 15: "what is an inside day" found nothing; whether one day was one is InsideDays'.)
+        Term(listOf("inside day", "inside days", "nr7", "nr7 day", "nr 7", "narrow range day", "narrow range 7"), false, "An inside day is a session whose high is below the day before's high and whose low is above its low: the whole day stayed inside the previous one's range. An NR7 day is the narrowest range (high to low) of the last seven sessions. Both mark the market coiling; traders watch the break of that range, which can come either way and does not always lead to a bigger day. Ask me \"was yesterday an inside day\" or \"what happens after an inside day\" for the record on this phone."),
         Term(listOf("m2m", "mtm", "mark to market"), false, "Mark to market is a position's profit or loss at today's price, before it is closed."),
     )
 
@@ -77,7 +79,8 @@ object Glossary {
         if (hit.figure && !meaning) return null
         if (named && !meaning) return null
         // "What is the iv today", "what is the premium on 25000 ce": a figure wanted now, not the word.
-        if (!strict && (rx(" (today|now|current|currently|next|this|on|for|data|doing|available|at|of) ").containsMatchIn(t) || rx("\\d").containsMatchIn(t))) return null
+        // ("NR7" is the word's own figure, never a number asked about.)
+        if (!strict && (rx(" (today|now|current|currently|next|this|on|for|data|doing|available|at|of) ").containsMatchIn(t) || rx("\\d").containsMatchIn(t.replace(" nr7 ", " nr ")))) return null
         // "What is my margin / my stop loss": about the owner's own account, not the word.
         if (!meaning && rx(" (my|our) ").containsMatchIn(t)) return null
         return hit.text

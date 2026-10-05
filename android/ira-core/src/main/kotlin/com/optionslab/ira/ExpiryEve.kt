@@ -74,6 +74,49 @@ object ExpiryEve {
         return sb.toString()
     }
 
+    // ---- the question (understanding round 15): "what expires tomorrow?", "kal kya expire ho raha hai" ------------
+
+    private fun norm(text: String) = " " + text.lowercase(Locale.ENGLISH).replace("’", "").replace("'", "")
+        .replace(rx("[^a-z0-9 ]"), " ").replace(rx("\\s+"), " ").trim() + " "
+
+    /** Expiring named as a verb, in the future ("expires", "expiring", "expire ho raha hai", "expire hoga"). */
+    private val EXPIRE = rx(" (expire|expires|expiring|expire ho raha|expire ho rahi|expire ho rahe|expire hoga|expire hogi|expire honge|" +
+        "expire hone wala|expire hone wali|expire hone wale|expiry ho raha|expiry ho rahi|expiry hoga|expiry hogi) ")
+    /** The next trading day named. */
+    private val TOMORROW = rx(" (tomorrow|tomorrows|tmrw|kal|next trading day|next session) ")
+    /** Asked of what ("what", "which", "anything", "kya", "kaun si", "do I have"). */
+    private val WHAT = rx(" (what|whats|which|anything|any|something|how many|kya|kaun|kaunsa|kaunsi|kaun si|kaun se|kuch|do i have|is there|are there) ")
+    /** Boss's own named ("my", "mine", "meri"). */
+    private val MINE = rx(" (my|mine|i|me|mera|meri|mere|hamara|hamari|hamare) ")
+    /** Not this: an order or an act, a forecast, when the expiry is (the calendar's), the market's expiry (unless his own is named), a meaning, an alert. */
+    private val NOT = rx(" (will nifty|will banknifty|should|shall|buy|sell|close|exit|square|roll|hedge|when|kab|which day|what day|kis din|" +
+        "max pain|pin|record|history|alert|alerts|remind|notify|mean|meaning|define|explain|if|agar|expired|yesterday) ")
+    private val MARKET = rx(" (nifty|bank nifty|banknifty|finnifty|fin nifty|midcap|midcpnifty|sensex|bankex|index|indices|weekly|monthly|contract|contracts|series) ")
+
+    /** "What expires tomorrow?", "which of my positions expire tomorrow?", "kal kya expire ho raha hai": Boss's legs that expire next. */
+    fun asked(text: String): Boolean {
+        val t = norm(text)
+        if (NOT.containsMatchIn(t)) return false
+        if (!EXPIRE.containsMatchIn(t) || !TOMORROW.containsMatchIn(t) || !WHAT.containsMatchIn(t)) return false
+        // "Does Nifty expire tomorrow?", "which index expires tomorrow?": the calendar's, unless his own is named.
+        if (MARKET.containsMatchIn(t) && !MINE.containsMatchIn(t)) return false
+        return true
+    }
+
+    const val LOCKED = "Your positions stay out of it on a locked phone, Boss - unlock it for that."
+
+    /**
+     * The answer to [asked]: [line] (the checklist, when something he holds expires on [expiry], the next trading day), else
+     * that nothing does - saying whether Zerodha's positions were read ([zerodhaRead]). Facts only; nothing acts.
+     */
+    fun answer(line: String?, expiry: LocalDate?, zerodhaRead: Boolean): String {
+        if (line != null) return line
+        if (expiry == null) return "I couldn't tell the next trading day just now, Boss, so I can't say what expires."
+        return "Nothing you hold expires on the next trading day (${expiry.format(DAY)}), Boss" +
+            (if (zerodhaRead) " - your Paper and Zerodha positions both read." else " - I read your Paper positions; Zerodha isn't logged in, so its positions weren't read.") +
+            " Facts only, nothing is done."
+    }
+
     /** The next trading day after [today] by [isTradingDay] (within two weeks), or null. */
     fun nextTradingDay(today: LocalDate, isTradingDay: (LocalDate) -> Boolean): LocalDate? =
         (1L..14L).map { today.plusDays(it) }.firstOrNull(isTradingDay)

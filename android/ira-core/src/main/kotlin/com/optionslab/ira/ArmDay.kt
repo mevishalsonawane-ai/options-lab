@@ -237,7 +237,7 @@ object ArmDay {
 
     private const val BOT = "(strateg(y|ies)|paper bots?|bots?|algos?|arms?|orb fresh|orb sweep|orb|range fade|liquidity( 15 5| 15| 5| 30| bot| arm)?)"
     private const val MY = "(my |our |the |mere |meri |mera |hamare |todays |today s )?"
-    private const val LOSE = "(lose|lost|lose money|lost money|go wrong|went wrong|do badly|do so badly|did badly|underperform|bleed|get stopped out|get stopped|end in the red|end red|make a loss|take a loss)"
+    private const val LOSE = "(lose|lost|lose money|lost money|go wrong|went wrong|do badly|do so badly|did badly|underperform|bleed|get stopped out|get stopped|end in the red|end red|make a loss|take a loss|fail|failed|go bad|went bad)"
     private val ASK = listOf(
         // "Why did my strategy lose today?", "why did ORB lose money?", "why did my bots do badly today?"
         " why (did|has|have) $MY(paper )?$BOT (s )?(trades? )?$LOSE ",
@@ -254,7 +254,7 @@ object ArmDay {
         " $MY$BOT (ka|ki|ko|ne) (aaj )?(loss|nuksan|nuksaan|nuksan) (kyun|kyu|kyon|kaise) ",
         " $MY$BOT (ne )?(aaj )?(loss|nuksan|nuksaan) (kyun|kyu|kyon) (kiya|kara|hua|hui|aaya|diya) ",
         " aaj $MY$BOT (ka|ki|ko) (loss|nuksan|nuksaan) (kyun|kyu|kyon) ",
-        " $MY$BOT (aaj )?(kyun|kyu|kyon) (haara|hara|haari|hari|loss mein gaya|loss mein gayi|loss me gaya|loss me gayi) ",
+        " $MY$BOT (aaj )?(kyun|kyu|kyon) (haara|hara|haari|hari|loss mein gaya|loss mein gayi|loss me gaya|loss me gayi|fail hua|fail hui|fail ho gaya|fail ho gayi) ",
     ).map { rx(it) }
     /** Not this: a command, another day, a forecast or advice, a backtest, or Boss's own last trade. */
     private val NOT = rx(" (stop|start|disarm|arm it|switch|turn on|turn off|pause|backtest|back test|create|build|write|should|shall|will|would|tomorrow|" +

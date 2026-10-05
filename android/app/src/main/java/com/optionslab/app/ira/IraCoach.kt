@@ -964,9 +964,10 @@ internal object IraCoach {
     /**
      * The expiry-eve checklist ([com.optionslab.ira.ExpiryEve]): Boss's open legs, paper and Zerodha, that expire on the
      * next trading day, with their moneyness at the price now, product, and tomorrow's 15:05 square-off. Reads only:
-     * nothing is placed, changed or closed. Null when nothing he holds expires on the next trading day.
+     * nothing is placed, changed or closed. Null when nothing he holds expires on the next trading day. (Also what
+     * answers "what expires tomorrow?" in IraHub.)
      */
-    private suspend fun expiryEve(): String? {
+    internal suspend fun expiryEve(): String? {
         val mk = com.optionslab.app.data.Market
         val today = mk.today()
         val expiry = com.optionslab.ira.ExpiryEve.nextTradingDay(today) { mk.isTradingDay(it) } ?: return null

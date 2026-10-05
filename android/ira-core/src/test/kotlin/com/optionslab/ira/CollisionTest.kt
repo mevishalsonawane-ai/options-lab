@@ -27,6 +27,11 @@ import kotlin.test.assertTrue
  * break yesterday's high" / "how far is Nifty from yesterday's high" today's place against it, PriorDay; "search google
  * for nifty news" the polite no with what the app has instead, OutsideApp), and the newest families join the hunt:
  * SinceMorning, SwitchOff, StreamHealth, RelayHealth, FirstMove, VixNext, MorningSense, HonestStars and ArmDay.
+ *
+ * Round 15 (5 Oct): round 14's open items ("what is an inside day" is the word's meaning, Glossary; "why did the orb trade
+ * fail today" a fail of today's arm trades, ArmDay), the expiry-eve question ("what expires tomorrow", "kal kya expire ho
+ * raha hai": ExpiryEve, his legs that expire next), and the newest families join the hunt: TalkHours and NetLean, with
+ * more of ExpiryPin, VixNext and ArmDay.
  */
 class CollisionTest {
     private val audit = CoverageTest()
@@ -44,8 +49,11 @@ class CollisionTest {
         "ArmHabits" to { q -> ArmHabits.asked(q) },
         "MorningSense" to { q -> MorningSense.asked(q) != null },
         "HonestStars" to { q -> HonestStars.asked(q) != null },
+        "TalkHours" to { q -> TalkHours.asked(q) != null },
         "Headroom" to { q -> Headroom.asked(q) != null },
         "ArmDay" to { q -> ArmDay.asked(q) != null },
+        "NetLean" to { q -> NetLean.asked(q) },
+        "ExpiryEve" to { q -> ExpiryEve.asked(q) },
         "BotTrades" to { q -> BotTrades.asked(q) != null },
         "SwitchOff" to { q -> SwitchOff.asked(q) != null },
         "SaidAbout" to { q -> SaidAbout.asked(q) != null },
@@ -638,6 +646,52 @@ class CollisionTest {
         "range fade aaj kyun loss mein gaya" to "ArmDay", "meri strategy ne aaj loss kyun kiya" to "ArmDay",
         // Their neighbours: the commands beside them stay commands (each through its own confirm), the market's fall its own.
         "why do prices keep dropping" to "Why", "why did you skip the trade" to "Thinking",
+        // ==== Round 15: round 14's open items, routed ====
+        // A word's meaning: the glossary (whether one day was one stays InsideDays').
+        "what is an inside day" to "Glossary", "what is an nr7 day" to "Glossary", "inside day kya hota hai" to "Glossary",
+        "what does nr7 mean" to "Glossary", "what does inside day mean" to "Glossary", "nr7 ka matlab kya hai" to "Glossary",
+        // A loss or a fail of today's arm trades: ArmDay, beside the index (what each trade was, against its rule, BotTrades').
+        "why did the orb trade fail today" to "ArmDay", "why did my orb trades fail today" to "ArmDay", "why did orb fail today" to "ArmDay",
+        "orb aaj kyun fail hua" to "ArmDay", "why did my bot's trade fail today" to "ArmDay", "why did the range fade trade fail" to "ArmDay",
+        "why did orb sweep get stopped out" to "ArmDay", "range fade aaj kyun fail ho gaya" to "ArmDay",
+        // ---- Round 15. ExpiryEve: what of his expires on the next trading day ----
+        "what expires tomorrow" to "ExpiryEve", "kal kya expire ho raha hai" to "ExpiryEve", "which of my positions expire tomorrow" to "ExpiryEve",
+        "what's expiring tomorrow" to "ExpiryEve", "kal kaun si position expire hogi" to "ExpiryEve", "do i have anything expiring tomorrow" to "ExpiryEve",
+        "kal kya expire hoga" to "ExpiryEve", "which legs expire tomorrow" to "ExpiryEve", "is anything of mine expiring tomorrow" to "ExpiryEve",
+        "which of my nifty options expire tomorrow" to "ExpiryEve", "mere kaun se trades kal expire honge" to "ExpiryEve",
+        "what expires on the next trading day" to "ExpiryEve", "any of my positions expiring tomorrow" to "ExpiryEve",
+        // Its neighbours: when the expiry is (the calendar's), the pin record, the meaning.
+        "what expires on the next expiry" to "MarketDays", "expiry kab hai" to "MarketDays",
+        "how did the last expiry go" to "MarketMemory",
+        // ---- ExpiryPin, more of it ----
+        "how often does nifty settle near max pain on expiry" to "ExpiryPin", "does max pain work on expiry" to "ExpiryPin",
+        "expiry pin record" to "ExpiryPin", "expiry pe nifty max pain ke paas band hota hai kya" to "ExpiryPin", "does nifty get pinned on expiry" to "ExpiryPin",
+        "max pain hit rate" to "ExpiryPin", "how close does nifty settle to the biggest oi strike on expiry" to "ExpiryPin",
+        "expiry pe max pain sahi hota hai kya" to "ExpiryPin", "max pain on past expiries" to "ExpiryPin", "does the pin effect work on expiry days" to "ExpiryPin",
+        "how often does nifty settle within 100 points of max pain on expiry" to "ExpiryPin", "is max pain reliable on expiry day" to "ExpiryPin",
+        // ---- NetLean, more of it ----
+        "which way am i leaning" to "NetLean", "what's my net delta on banknifty" to "NetLean", "do my bots contradict each other right now" to "NetLean",
+        "main long hoon ya short" to "NetLean", "meri position kis taraf hai" to "NetLean", "mere bots ek dusre ke against hain kya" to "NetLean",
+        "am i net short on nifty" to "NetLean", "what is my net exposure" to "NetLean", "how am i positioned overall" to "NetLean",
+        "which side is my book on" to "NetLean", "am i long or short on banknifty" to "NetLean", "main net short hoon kya" to "NetLean",
+        "what is my net delta" to "NetLean",
+        // ---- TalkHours: the hours Boss talks to Jarvis ----
+        "when do i usually talk to you" to "TalkHours", "which hours am i active" to "TalkHours", "why was the briefing so short" to "TalkHours",
+        "say your briefings in full at any hour" to "TalkHours", "don't shorten your briefings" to "TalkHours", "main tumse kab baat karta hoon" to "TalkHours",
+        "briefings poori bolo hamesha" to "TalkHours", "what time do i usually talk to you" to "TalkHours",
+        "which hours do you keep your briefings short" to "TalkHours", "why do you keep your briefings short" to "TalkHours",
+        "what hours do i talk to you" to "TalkHours", "when do you cut your updates short" to "TalkHours",
+        "dont cut your briefings short any more" to "TalkHours", "main aapse kis time baat karta hu" to "TalkHours",
+        // ---- VixNext, more of it ----
+        "how big is the next day after vix spikes 7%" to "VixNext", "vix spike follow through stats" to "VixNext",
+        "when india vix falls 5% is the next session quieter" to "VixNext", "after a vix jump does nifty fall the next day" to "VixNext",
+        "vix girta hai to agle din market kitna chalta hai" to "VixNext", "when vix drops how does nifty do the next day" to "VixNext",
+        "vix next session record for banknifty" to "VixNext", "how does banknifty move the day after vix rises 10%" to "VixNext",
+        // ---- ArmDay, more of it ----
+        "why did range fade lose" to "ArmDay", "what went wrong with orb today" to "ArmDay", "why was today a bad day for my bots" to "ArmDay",
+        "how did the market beat my strategy today" to "ArmDay", "aaj bot ko nuksan kyun hua" to "ArmDay", "why are my bots in the red today" to "ArmDay",
+        // Their neighbours: what the bots did today (BotTrades), and the meaning of a candle.
+        "what did orb trade today" to "BotTrades", "did orb follow its rule today" to "BotTrades",
     )
 
     @Test fun eachQuestionGoesWhereItShould() {
@@ -663,7 +717,7 @@ class CollisionTest {
 
     /** The question branches of IraHub.ask between the `bundled` read and the Plan block, in [CoverageTest.feature]'s order. */
     private val HUB_ORDER = listOf("DayJournal", "AlertSense", "Airtime", "Hearing", "PatternCalls", "TrendReads", "OutsideApp", "Clarity", "WordFit", "AskedAgain", "FigureFirst", "WrongThing", "ArmHabits", "MorningSense", "HonestStars", "TalkHours", "MorningAsks", "NewsMoves",
-        "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmDay", "NetLean", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "ZerodhaSession", "OrderWhy", "RelayHealth", "StreamHealth", "Tour", "DataAge", "Honest", "Thinking",
+        "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmDay", "NetLean", "ExpiryEve", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "ZerodhaSession", "OrderWhy", "RelayHealth", "StreamHealth", "Tour", "DataAge", "Honest", "Thinking",
         "SelfWhy", "Consistency", "CoPilot", "SinceMorning", "ExpiryPin", "ChainDrift", "ChainIntel", "DayClock", "GapRecord", "RangeBreaks", "PriorDay", "LastHour", "InsideDays", "FirstMove", "VixNext", "SplitDays", "Weekdays", "DayCompare", "LikeToday", "Structure", "MindChange", "Breadth",
         "TradeCase", "Scenarios", "Causes", "Agenda", "Improve")
 
@@ -1081,6 +1135,52 @@ class CollisionTest {
             assertTrue(PriorDay.asked(s)?.now != true, s)
         assertEquals(null, InsideDays.asked("what happens after an inside day")?.one)
         for (s in listOf("will today be an inside day", "was yesterday an inside bar", "my inside day trades")) assertEquals(null, InsideDays.asked(s), s)
+    }
+
+    // ---- Round 15: round 14's open items, the expiry-eve question, and the newest families ----
+
+    @Test fun roundFifteenWordingsNeitherOrderNorCommandNorBundle() {
+        val newest = setOf("ExpiryPin", "NetLean", "TalkHours", "VixNext", "ArmDay", "ExpiryEve", "Glossary")
+        val all = ASKED.filter { it.second in newest }
+        assertTrue(all.size >= 100, "${all.size}")
+        // Boss's own Hinglish, each where it belongs.
+        for ((s, want) in listOf("kal kya expire ho raha hai" to "ExpiryEve", "orb aaj kyun fail hua" to "ArmDay", "main long hoon ya short" to "NetLean",
+            "main tumse kab baat karta hoon" to "TalkHours", "inside day kya hota hai" to "Glossary")) assertTrue(s to want in all, s)
+        for ((s, want) in all) {
+            assertEquals(want, audit.feature(s), s)
+            val p = Ask.parse(s)
+            assertEquals(null, p.order, s); assertEquals(null, p.command, s)
+            assertTrue(Topic.ORDER !in p.topics && Topic.COMMAND !in p.topics, s)
+            assertTrue(!Bundle.acts(s), s)
+            assertEquals(null, Intents.quick(s), s)
+            assertTrue(!Reminder.asked(s) && !Reminder.cancelAsked(s) && !FollowUp.acts(s), s)
+            assertEquals(null, Reminder.parse(s, today.atTime(10, 0)), s)
+            assertTrue(Understand.questions(null, s).orEmpty().none { FollowUp.acts(it) || Ask.parse(it).command != null || Ask.parse(it).order != null }, s)
+        }
+        // The commands beside these words still act as before (each through its own confirm), and are never these questions.
+        for (s in listOf("stop orb", "switch off orb", "stop all strategies", "close all positions", "kill switch on", "square off my expiring positions",
+            "close everything expiring tomorrow")) {
+            assertEquals("Act", audit.feature(s), s)
+            assertTrue(!ExpiryEve.asked(s) && ArmDay.asked(s) == null && !NetLean.asked(s), s)
+        }
+        assertEquals(Command.Kind.STOP_ONE, Ask.parse("stop orb").command?.kind)
+        // Said with something to do, each is left to the multi-step plan (never answered and the action dropped).
+        for (s in listOf("what expires tomorrow then close all positions", "why did orb fail today and stop orb",
+            "am i net long or short then kill switch on"))
+            assertTrue(Bundle.acts(s) || Ask.parse(s).command != null || Ask.parse(s).order != null, s)
+        // When the expiry is, a forecast, an alert or advice is never the expiry-eve question.
+        for (s in listOf("when is the next expiry", "does nifty expire tomorrow", "which index expires tomorrow", "will nifty expire near max pain tomorrow",
+            "should i close what expires tomorrow", "remind me what expires tomorrow", "what expired yesterday", "what is expiry"))
+            assertTrue(!ExpiryEve.asked(s), s)
+        // The answer: the checklist when something of his expires, else that nothing does - with whether Zerodha was read. Nothing acts.
+        val d = java.time.LocalDate.of(2026, 10, 6)
+        assertEquals("x", ExpiryEve.answer("x", d, true))
+        assertTrue(ExpiryEve.answer(null, d, true).startsWith("Nothing you hold expires on the next trading day (Tue 6 Oct), Boss"))
+        assertTrue("Zerodha isn't logged in" in ExpiryEve.answer(null, d, false))
+        assertTrue("Boss" in ExpiryEve.answer(null, null, true) && "Boss" in ExpiryEve.LOCKED)
+        // The word's meaning, never a figure asked about; one day's shape stays InsideDays'.
+        assertTrue(Glossary.explain("what is an nr7 day")!!.startsWith("An inside day is"))
+        for (s in listOf("is today an inside day", "was yesterday an nr7 day", "what happens after an inside day")) assertEquals("InsideDays", audit.feature(s), s)
     }
 
     // ---- Again: the voice's own "say that again slowly" - heard before the question path, never a question family ----

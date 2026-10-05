@@ -76,7 +76,8 @@ object VixNext {
     /** The size or behaviour of a day asked of. */
     private const val HOW = " (how big|how wide|how large|how much|how far|how often|how many times|range|ranges|move|moves|moved|bigger|wider|larger|" +
         "smaller|narrower|quieter|calmer|volatile|swing|swings|usually|normally|typically|generally|tend to|tends to|on average|record|history|" +
-        "historically|stats|statistics|kitna|kitni|kitne|chalta|chalti|hilta|aksar) "
+        "historically|stats|statistics|kitna|kitni|kitne|chalta|chalti|hilta|aksar|how does|how do|how did|what happens|what usually happens|" +
+        "does nifty (fall|rise|drop|move|close)|does banknifty (fall|rise|drop|move|close)|does the market (fall|rise|drop|move|close)) "
     /** "VIX next day record", "VIX spike follow-through stats": the record named outright. */
     private const val NAMED = " (vix|india vix) (next day|next session|spike|jump|change) (record|stats|statistics|behaviour|behavior|follow through) "
     // Forecasts, advice, Boss's own book, alerts, a single day (and "when did VIX last jump", MarketMemory's), what-ifs,

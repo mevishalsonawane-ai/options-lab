@@ -1245,6 +1245,7 @@ object IraHub {
                 com.optionslab.ira.ChainDrift.asked(q) != null || com.optionslab.ira.SinceMorning.asked(q) ||
                 com.optionslab.ira.ExpiryPin.asked(q) != null ||
                 com.optionslab.ira.Headroom.asked(q) != null || com.optionslab.ira.ArmDay.asked(q) != null || com.optionslab.ira.NetLean.asked(q) || com.optionslab.ira.BotTrades.asked(q) != null ||
+                com.optionslab.ira.ExpiryEve.asked(q) ||
                 com.optionslab.ira.SwitchOff.asked(q) != null ||
                 com.optionslab.ira.SaidAbout.asked(q) != null || com.optionslab.ira.WeekAhead.asked(q) != null ||
                 com.optionslab.ira.ZerodhaSession.asked(q) != null || com.optionslab.ira.OrderWhy.asked(q) != null || com.optionslab.ira.Tour.asked(q) ||
@@ -2229,6 +2230,26 @@ object IraHub {
             if (phoneLocked()) { reply(com.optionslab.ira.NetLean.LOCKED); return true }
             val market = runCatching { com.optionslab.ira.NetLean.market(q) }.getOrNull()
             scope.launch(Dispatchers.IO) { reply(runCatching { IraBots.netLean(market) }.getOrElse { "I could not read which way your book leans just now, Boss." }) }
+            return true
+        }
+        // "What expires tomorrow?", "which of my positions expire tomorrow?", "kal kya expire ho raha hai"
+        // ([com.optionslab.ira.ExpiryEve]): the wrap-up's expiry-eve checklist asked for - his open Paper and Zerodha legs that
+        // expire on the next trading day, how far in or out of the money, the product and tomorrow's 15:05 square-off - or that
+        // nothing does. Boss's account, so never on a locked phone; facts only - nothing is placed, changed or closed. (Not in
+        // IraGoldAlgo.)
+        val expiryEveAsk = com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null &&
+            runCatching { com.optionslab.ira.ExpiryEve.asked(q) }.getOrDefault(false)
+        if (expiryEveAsk) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            if (phoneLocked()) { reply(com.optionslab.ira.ExpiryEve.LOCKED); return true }
+            scope.launch(Dispatchers.IO) {
+                val said = runCatching {
+                    val mk = com.optionslab.app.data.Market
+                    val next = com.optionslab.ira.ExpiryEve.nextTradingDay(mk.today()) { mk.isTradingDay(it) }
+                    com.optionslab.ira.ExpiryEve.answer(IraCoach.expiryEve(), next, com.optionslab.app.data.Broker.loggedIn)
+                }.getOrElse { "I could not read what of yours expires tomorrow just now, Boss." }
+                reply(said)
+            }
             return true
         }
         // "Explain my bots' trades today", "why did ORB take that trade?", "did my bots follow their rules?", "mere bots ne aaj kya

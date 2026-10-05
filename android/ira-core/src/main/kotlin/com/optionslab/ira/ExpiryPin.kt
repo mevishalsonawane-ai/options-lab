@@ -75,7 +75,7 @@ object ExpiryPin {
     /** "Does max pain work on expiry?": whether it has held, asked outright. */
     private const val WORK = " (work|works|worked|hold|holds|held|accurate|accuracy|reliable|hit rate|come true|comes true|sahi) "
     /** "Expiry pin record", "max pain hit rate": the record named outright. */
-    private const val NAMED = " (expiry pin|max pain pin|pin) (record|stats|statistics|history|hit rate) | max pain (record|track record|hit rate|accuracy) on expir| max pain (on|across|over) (past|previous|old|all) expiries "
+    private const val NAMED = " (expiry pin|max pain pin|pin) (record|stats|statistics|history|hit rate) | max pain (record|track record|hit rate|accuracy) on expir| max pain (on|across|over) (past|previous|old|all) expiries |^ max pain (hit rate|track record|accuracy) $"
     // Forecasts, advice, Boss's own book, today's or the next expiry (today's read is the chain's own), a single past
     // expiry, meanings, alerts and bots.
     private const val NOT = " (will|would|going to|gonna|tomorrow|tomorrows|predict|prediction|forecast|outlook|expected|expect|target|should|shall|buy|sell|" +
