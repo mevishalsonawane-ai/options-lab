@@ -1926,6 +1926,7 @@ object IraHub {
             runCatching { com.optionslab.ira.Hearing.asked(q) }.getOrDefault(false)) {
             val said = runCatching { com.optionslab.ira.Hearing.spoken(JarvisVoice.hearingDays, JarvisVoice.hearingDay(), JarvisVoice.googleSpeech) }
                 .getOrElse { "I couldn't read my hearing counts just now, Boss." }
+                .let { h -> JarvisVoice.languageSpoken().takeIf { it.isNotEmpty() }?.let { "$h $it" } ?: h }
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
             return true
         }

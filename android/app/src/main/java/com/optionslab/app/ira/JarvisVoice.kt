@@ -101,6 +101,7 @@ class JarvisVoice : Service() {
             append(com.optionslab.ira.BossPace.say(paceGaps)).append('\n')
             append(runCatching { com.optionslab.ira.CutIn.say(cutInNow(context ?: instance?.get()), cutInChoice) }.getOrElse { "Cut-in: could not check" }).append('\n')
             append(runCatching { com.optionslab.ira.Hearing.say(hearingDays, hearingDay()) }.getOrElse { "Hearing: could not read" }).append('\n')
+            append(runCatching { com.optionslab.ira.ListenLanguage.say(langState, instance?.get()?.lang, hearingDay()) }.getOrElse { "Language: could not read" }).append('\n')
             append("Last turns:\n"); traceLines(all = true).forEach { append("  ").append(it).append('\n') }
         }
 
@@ -374,6 +375,27 @@ class JarvisVoice : Service() {
             }
             save?.let { d -> runCatching { com.optionslab.app.security.SecurePrefs.putAllSoon(mapOf(HEARING_KEY to com.optionslab.ira.Hearing.save(d))) } }
         }
+
+        /**
+         * Which English the ears listen in, kept steady ([com.optionslab.ira.ListenLanguage]): the one that last gave
+         * words, at most one switch by itself a day - codes and counts only, kept on the phone.
+         */
+        private const val LANG_KEY = "jarvis.voice.lang"
+        @Volatile private var langKept: com.optionslab.ira.ListenLanguage.State? = null
+        val langState: com.optionslab.ira.ListenLanguage.State
+            get() = langKept ?: runCatching { com.optionslab.ira.ListenLanguage.load(com.optionslab.app.security.SecurePrefs.getString(LANG_KEY)) }
+                .getOrDefault(com.optionslab.ira.ListenLanguage.State()).also { langKept = it }
+        internal fun langCount(f: (com.optionslab.ira.ListenLanguage.State) -> com.optionslab.ira.ListenLanguage.State) {
+            val old = langState
+            val new = runCatching { f(old) }.getOrNull() ?: return
+            if (new == old) return
+            langKept = new
+            runCatching { com.optionslab.app.security.SecurePrefs.putAllSoon(mapOf(LANG_KEY to com.optionslab.ira.ListenLanguage.save(new))) }
+        }
+        /** The time now in India, HH:mm, for the language switch record. */
+        internal fun hhmm(): String = java.time.LocalTime.now(java.time.ZoneId.of("Asia/Kolkata")).let { "%02d:%02d".format(java.util.Locale.ENGLISH, it.hour, it.minute) }
+        /** What the ears are listening in now and why (after the hearing answer). */
+        fun languageSpoken(): String = runCatching { com.optionslab.ira.ListenLanguage.spoken(langState, instance?.get()?.lang, hearingDay()) }.getOrDefault("")
 
         /** Writes the hearing counts now (listening stopping). */
         internal fun hearingSave() {
@@ -680,6 +702,8 @@ class JarvisVoice : Service() {
         restoreMuted()
         if (rec == null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             rec = newRecognizer().also { it.setRecognitionListener(listener) }
+            // The English that last gave words, not afresh each start (Boss, 5 Oct 08:53).
+            lang = runCatching { com.optionslab.ira.ListenLanguage.start(langState, hearingDay()) }.getOrDefault("en-US")
             pickLanguage()
             tts = TextToSpeech(this) { status -> main.post { voiceReady = status == TextToSpeech.SUCCESS && pickOfflineVoice() } }
             listen()
@@ -846,10 +870,10 @@ class JarvisVoice : Service() {
             r.checkRecognitionSupport(Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH), ContextCompat.getMainExecutor(this),
                 object : android.speech.RecognitionSupportCallback {
                     override fun onSupportResult(s: android.speech.RecognitionSupport) {
-                        val have = s.installedOnDeviceLanguages.map { it.lowercase(java.util.Locale.ROOT).replace('_', '-') }
-                        // English (US) first: it is what heard Boss when it worked (4 Oct); English (India) when it is the only one.
-                        val pick = listOf("en-us", "en-in").firstOrNull { it in have } ?: have.firstOrNull { it.startsWith("en") }
-                        pick?.let { p -> main.post { lang = if (p.length == 5) p.substring(0, 3) + p.substring(3).uppercase(java.util.Locale.ROOT) else p } }
+                        // The English that last gave words when the phone has it; else English (US) first (what heard Boss
+                        // when it worked, 4 Oct); English (India) when it is the only one.
+                        val pick = com.optionslab.ira.ListenLanguage.pick(s.installedOnDeviceLanguages, langState, hearingDay(), googleSpeech)
+                        pick?.let { p -> main.post { lang = p } }
                     }
                     override fun onError(error: Int) {}
                 })
@@ -986,7 +1010,9 @@ class JarvisVoice : Service() {
             if (answeredEarly) { answeredEarly = false; return }      // already answered from its partial words
             listening = false
             loudNoMatch = 0
-            if (results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.any { it.isNotBlank() } == true) langWorks = true
+            if (results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.any { it.isNotBlank() } == true) {
+                langWorks = true; val l = lang; langCount { com.optionslab.ira.ListenLanguage.gaveWords(it, l, hearingDay()) }
+            }
             val readings = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION).orEmpty()
             // How sure the recognizer was of its best reading (many on-device ones give no score: then null, as before).
             val sure = com.optionslab.ira.Sure.best(results?.getFloatArray(SpeechRecognizer.CONFIDENCE_SCORES), readings.size)
@@ -1040,15 +1066,22 @@ class JarvisVoice : Service() {
             // The loudest sound says whether the microphone gave the recognizer anything (Boss, 4 Oct: error 7 each turn).
             note("error $error" + (if (turnLoudest > -100f) ", loudest %.0f dB".format(java.util.Locale.ENGLISH, turnLoudest) else ", no sound level") +
                 (turnPartial?.let { ", read ${it.trim().split(Regex("\\s+")).size} word(s) mid-turn" } ?: ", read nothing"))
-            // Clear speech, no words found, three turns in a row: the language pack may be the trouble - the other English.
+            // Clear speech, no words found, four turns in a row: the language pack may be the trouble - the other English.
             // Only turns where speech began, and never away from a language that has given words (Boss, 4 Oct: a quiet
             // room at 6-8 dB switched a working en-US to the missing en-IN, and listening stopped).
+            // Round 17 (Boss, 5 Oct 08:53): 4 in a row, at most one such switch a day, never away from the English that
+            // last gave words (kept on the phone, so a fresh start no longer forgets it) - [com.optionslab.ira.ListenLanguage].
             if (error == SpeechRecognizer.ERROR_NO_MATCH && turnSpeech && turnLoudest >= 6f && !langWorks) {
-                if (++loudNoMatch >= 3) {
+                val d = runCatching { com.optionslab.ira.ListenLanguage.clearNoWords(langState, lang, hearingDay(), hhmm(), ++loudNoMatch) }.getOrNull()
+                if (d != null && (d.to != null || d.held)) {
                     loudNoMatch = 0
-                    lang = if (lang == "en-IN") "en-US" else "en-IN"
-                    note("words not found in clear speech 3 times: now listening in $lang")
-                    IraActivity.add("Listening switched to $lang (no words found in clear speech).")
+                    langCount { d.state }
+                    val to = d.to
+                    if (to != null) {
+                        lang = to
+                        note("words not found in clear speech ${com.optionslab.ira.ListenLanguage.CLEAR_IN_ROW} times: now listening in $lang")
+                        d.state.last?.let { IraActivity.add(com.optionslab.ira.ListenLanguage.line(it)) }
+                    } else note("words not found in clear speech: kept $lang (a steady English)")
                 }
             } else if (error != SpeechRecognizer.ERROR_NO_MATCH) loudNoMatch = 0
             // His ears' own counts (numbers only): no words in Boss's speech, silence, or a failure of the speech service
@@ -1080,12 +1113,14 @@ class JarvisVoice : Service() {
                     // Boss's phone (4 Oct) has English (US) and Hindi on-device, not English (India): some recognizers
                     // refuse a missing language this way rather than "language unavailable". The other English first.
                     // Never away from a language that has given words; a refused en-IN goes back to English (US).
+                    val was = lang
                     if (!triedOtherLanguage && !langWorks) {
                         triedOtherLanguage = true; lang = if (lang == "en-IN") "en-US" else "en-IN"
                         IraActivity.add("Listening in $lang (the speech service refused the other English).")
                     } else if (lang == "en-IN" && !langWorks) {
                         lang = "en-US"; IraActivity.add("Listening in $lang (the speech service refused English (India)).")
                     }
+                    if (lang != was) { val to = lang; langCount { com.optionslab.ira.ListenLanguage.forced(it, was, to, hearingDay(), hhmm(), com.optionslab.ira.ListenLanguage.Why.REFUSED) } }
                     if (clientErrors >= 6 && runCatching { !SpeechRecognizer.isOnDeviceRecognitionAvailable(this@JarvisVoice) }.getOrDefault(false)) {
                         giveUp("This phone has no on-device speech recognition ready: update \"Speech Services by Google\" in the Play Store, then add English under Settings, System, Languages, On-device speech recognition.")
                         return
@@ -1098,8 +1133,16 @@ class JarvisVoice : Service() {
                 }
                 SpeechRecognizer.ERROR_LANGUAGE_NOT_SUPPORTED, SpeechRecognizer.ERROR_LANGUAGE_UNAVAILABLE ->
                     // The other English is missing on this phone: back to English (US) at once, never deaf for it.
-                    if (lang != "en-US") { lang = "en-US"; triedOtherLanguage = true; note("$lang back: the other English is not on this phone"); again() }
-                    else if (!triedOtherLanguage) { triedOtherLanguage = true; lang = "en-IN"; again() }
+                    if (lang != "en-US") {
+                        val was = lang; lang = "en-US"; triedOtherLanguage = true; note("$lang back: the other English is not on this phone")
+                        langCount { com.optionslab.ira.ListenLanguage.forced(it, was, "en-US", hearingDay(), hhmm(), com.optionslab.ira.ListenLanguage.Why.MISSING) }
+                        again()
+                    }
+                    else if (!triedOtherLanguage) {
+                        triedOtherLanguage = true; lang = "en-IN"
+                        langCount { com.optionslab.ira.ListenLanguage.forced(it, "en-US", "en-IN", hearingDay(), hhmm(), com.optionslab.ira.ListenLanguage.Why.MISSING) }
+                        again()
+                    }
                     else giveUp("No on-device English speech model: add one in the phone's Settings (System → Languages → On-device speech recognition).")
                 else -> {
                     // Silence and no-match are normal between sentences; a run of other errors backs off up to 5 s.
@@ -1130,6 +1173,7 @@ class JarvisVoice : Service() {
         runCatching { rec?.cancel() }
         listening = false
         loudNoMatch = 0; errorsInRow = 0; langWorks = true
+        run { val l = lang; langCount { com.optionslab.ira.ListenLanguage.gaveWords(it, l, hearingDay()) } }
         note("heard " + (if (WAKE.containsMatchIn(words)) "the name" else "${words.trim().split(Regex("\\s+")).size} words, no name") +
             " (answered from the partial words; the final reading not waited for)")
         hear(com.optionslab.ira.Hearing.Kind.HEARD, name = WAKE.containsMatchIn(words))
