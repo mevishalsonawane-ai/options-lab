@@ -268,7 +268,9 @@ object Requests {
 
     /** Does [text] ask what waits for Boss's yes? */
     fun listAsked(text: String): Boolean =
-        LIST.containsMatchIn(" " + spacedWords(text.lowercase().replace("'", "").replace("’", "")) + " ")
+        // RequestBook (usefulness 33) answers the same asks more fully (and what was answered): it goes first.
+        RequestBook.asked(text) == null &&
+            LIST.containsMatchIn(" " + spacedWords(text.lowercase().replace("'", "").replace("’", "")) + " ")
 
     /**
      * What waits, said: each request's heading, where it would act and its countdown, at [now] ([shown]). On a locked phone

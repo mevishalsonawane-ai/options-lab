@@ -2355,11 +2355,11 @@ class CollisionTest {
         // The charges
         "how much went in charges" to "Account:CHARGES", "today's charges" to "Account:CHARGES", "charges ne kitna khaya" to "Account:CHARGES",
         // The Requests panel asked
-        "open requests" to "Requests", "kya pending hai" to "Requests", "what's pending" to "Requests", "any pending requests" to "Requests",
-        "show requests" to "Requests", "what is waiting for my approval" to "Requests", "kuch pending hai kya" to "Requests",
-        "pending approvals" to "Requests", "how many requests" to "Requests", "anything waiting for me" to "Requests",
-        "kya approve karna hai" to "Requests", "requests dikhao" to "Requests", "open the requests panel" to "Requests",
-        "what requests are pending" to "Requests",
+        "open requests" to "RequestBook", "kya pending hai" to "Requests", "what's pending" to "Requests", "any pending requests" to "RequestBook",
+        "show requests" to "RequestBook", "what is waiting for my approval" to "RequestBook", "kuch pending hai kya" to "Requests",
+        "pending approvals" to "RequestBook", "how many requests" to "RequestBook", "anything waiting for me" to "Requests",
+        "kya approve karna hai" to "RequestBook", "requests dikhao" to "RequestBook", "open the requests panel" to "Requests",
+        "what requests are pending" to "RequestBook",
     )
 
     @Test fun roundTwentyFiveWordingsRouteAndNeverAct() {
