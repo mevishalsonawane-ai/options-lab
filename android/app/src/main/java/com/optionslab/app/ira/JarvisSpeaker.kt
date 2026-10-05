@@ -124,9 +124,12 @@ object JarvisSpeaker {
         val usualIdx = runCatching { IraTools.indexReadFor(said) }.getOrNull()
         val usualLocked = usualIdx != null && runCatching { IraHub.locked() }.getOrDefault(true)
         // Short answers (Boss's choice, the default): the one line the chat shows is what is said, whole (its safety notes kept).
-        val shortOn = !more && !reply.whole && runCatching { IraTools.shortAnswers }.getOrDefault(true)
+        // A kind Boss usually asks "more" after ([com.optionslab.ira.MoreAfter]): said in full straight away, not the short
+        // line first - never on a locked phone, never with his own "shorter" on. Length only.
+        val fullFirst = !more && !reply.whole && runCatching { IraTools.shortAnswers && IraTools.moreAfterFull(said, IraHub.locked()) }.getOrDefault(false)
+        val shortOn = !more && !reply.whole && !fullFirst && runCatching { IraTools.shortAnswers }.getOrDefault(true)
         val answerText = if (shortOn) runCatching { com.optionslab.ira.ShortAnswer.of(said, reply.text).line }.getOrDefault(reply.text) else reply.text
         val spokenText = runCatching { com.optionslab.ira.UsualIndex.aloud(usualIdx, answerText, usualLocked) }.getOrDefault(answerText)
-        speak(context, spokenText, if (more || shortOn) 8 else null)
+        speak(context, spokenText, if (more || shortOn || fullFirst) 8 else null)
     }
 }

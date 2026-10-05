@@ -2166,7 +2166,10 @@ class JarvisVoice : Service() {
                         echo = echo, late = late,
                         // Short answers (Boss's choice, the default): one precise line; "go on" / "more" gives the rest.
                         // Never an action's, confirm's or command's result ([IraHub.Msg.whole]; review, 5 Oct).
-                        short = !a.whole && runCatching { IraTools.shortAnswers }.getOrDefault(true))
+                        short = !a.whole && runCatching { IraTools.shortAnswers }.getOrDefault(true),
+                        // A kind Boss usually asks "more" after: said in full straight away, not the short line first
+                        // ([com.optionslab.ira.MoreAfter]; never on a locked phone - none passed then). Length only.
+                        fuller = { if (locked()) emptyList() else IraTools.moreAfterLearnedNow() })
                     // A question that named no index, read for the one Boss usually means ([com.optionslab.ira.UsualIndex]):
                     // "BankNifty, as usual:" before the answer, so he hears which index it is for (the chat's note says it
                     // in full). Speech wording only: never on a locked phone, never before a warning, never on a late answer.

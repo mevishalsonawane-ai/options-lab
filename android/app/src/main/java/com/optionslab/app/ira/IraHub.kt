@@ -1618,7 +1618,7 @@ object IraHub {
                 com.optionslab.ira.HonestStars.asked(q) != null || com.optionslab.ira.TalkHours.asked(q) != null || com.optionslab.ira.MorningAsks.asked(q) != null || com.optionslab.ira.BatteryUse.asked(q) ||
                 com.optionslab.ira.TurnDowns.asked(q) != null || com.optionslab.ira.TopicLength.asked(q) != null || com.optionslab.ira.OutlookCheck.asked(q) ||
                 com.optionslab.ira.UsualIndex.asked(q) != null || com.optionslab.ira.Nicknames.asked(q) != null || com.optionslab.ira.LeadIndex.asked(q) != null ||
-                com.optionslab.ira.LeadPart.asked(q) != null || com.optionslab.ira.NextAsk.asked(q) != null ||
+                com.optionslab.ira.LeadPart.asked(q) != null || com.optionslab.ira.NextAsk.asked(q) != null || com.optionslab.ira.MoreAfter.asked(q) != null ||
                 com.optionslab.ira.DayCompare.asked(q) != null || com.optionslab.ira.LikeToday.asked(q) }.getOrDefault(false)) {
             val prev = if (recent) _state.value.messages.lastOrNull { !it.fromIra }?.text else null
             val qs = runCatching { com.optionslab.ira.Understand.questions(prev, q) }.getOrNull()
@@ -2415,7 +2415,7 @@ object IraHub {
 
     /**
      * [ask]'s question branches on how Jarvis himself speaks and hears: AlertSense, Airtime, Hearing, PatternCalls,
-     * TrendReads, Clarity, WordFit, AskedAgain, FigureFirst, WrongThing, ArmHabits, MorningSense, HonestStars, TalkHours, MorningAsks, TurnDowns, TopicLength, OutlookCheck, UsualIndex, Nicknames, LeadIndex, LeadPart, NextAsk - in [ask]'s order. True when one
+     * TrendReads, Clarity, WordFit, AskedAgain, FigureFirst, WrongThing, ArmHabits, MorningSense, HonestStars, TalkHours, MorningAsks, TurnDowns, TopicLength, OutlookCheck, UsualIndex, Nicknames, LeadIndex, LeadPart, NextAsk, MoreAfter - in [ask]'s order. True when one
      * took [q], answered exactly as before; each branch keeps its own guard (not [bundled], no order, no command).
      */
     private fun askedOfHisWays(q: String, parsed: com.optionslab.ira.Question, bundled: Boolean, understood: Boolean): Boolean {
@@ -2666,6 +2666,18 @@ object IraHub {
             val nextAskSaid = if (nextAskReq == com.optionslab.ira.NextAsk.Request.RESET) IraTools.nextAskReset(phoneLocked())
                 else if (phoneLocked()) com.optionslab.ira.NextAsk.LOCKED else IraTools.nextAskSay()
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, nextAskSaid)).takeLast(MAX_MESSAGES)) }
+            return true
+        }
+        // "Which answers do I usually ask more about?" / "keep my short answers short": the kinds of answer said in full
+        // straight away aloud, as Boss usually asks for more after their short line ([com.optionslab.ira.MoreAfter]; kinds
+        // and minutes only). His habit: named on an unlocked phone only; the undo works locked too, in neutral words. The
+        // voice's length only - nothing learned acts. Not in IraGoldAlgo.
+        val moreAfterReq = if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null)
+            runCatching { com.optionslab.ira.MoreAfter.asked(q) }.getOrNull() else null
+        if (moreAfterReq != null) {
+            val moreAfterSaid = if (moreAfterReq == com.optionslab.ira.MoreAfter.Request.RESET) IraTools.moreAfterReset(phoneLocked())
+                else if (phoneLocked()) com.optionslab.ira.MoreAfter.LOCKED else IraTools.moreAfterSay()
+            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, moreAfterSaid)).takeLast(MAX_MESSAGES)) }
             return true
         }
         return false
@@ -4508,6 +4520,10 @@ object IraHub {
      * Understanding only: whatever is prepared waits for its confirm exactly as before.
      */
     private fun commandAsked(q: String, c: com.optionslab.ira.Command, confirmAlways: Boolean = false, heard: Boolean = false) {
+        // Boss's "more" right after a short answer: that answer's kind noted ([com.optionslab.ira.MoreAfter]; kinds and
+        // minutes only, never his words; never on a locked phone). Learning only - the "more" is answered exactly as before.
+        if (c.kind == com.optionslab.ira.Command.Kind.MORE && com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD)
+            runCatching { IraTools.moreAfterAsked(q, lastForMore(), phoneLocked()) }
         _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
         // Practice on a past day: replayed into the conversation, nothing traded.
         if (c.kind == com.optionslab.ira.Command.Kind.PRACTICE) { scope.launch { runCatching { IraTools.practice(c.target ?: q) { reply(it) } } }; return }

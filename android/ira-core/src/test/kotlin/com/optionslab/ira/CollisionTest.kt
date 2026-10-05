@@ -98,6 +98,7 @@ class CollisionTest {
         "LeadIndex" to { q -> LeadIndex.asked(q) != null },
         "LeadPart" to { q -> LeadPart.asked(q) != null },
         "NextAsk" to { q -> NextAsk.asked(q) != null },
+        "MoreAfter" to { q -> MoreAfter.asked(q) != null },
         "Headroom" to { q -> Headroom.asked(q) != null },
         "ArmFit" to { q -> ArmFit.asked(q) },
         "WeakLink" to { q -> WeakLink.asked(q) },
@@ -866,6 +867,21 @@ class CollisionTest {
         "don't offer follow ups" to "NextAsk", "do not ask me what comes next" to "NextAsk",
         "stop ending your answers with a question" to "NextAsk", "no more follow up offers" to "NextAsk",
         "agla sawal mat pucho" to "NextAsk", "agla sawal offer mat karo" to "NextAsk",
+        // ---- MoreAfter: the short answers Boss usually asks more after, said in full straight away aloud ----
+        "which answers do i usually ask more about" to "MoreAfter", "which answers do i ask for more after" to "MoreAfter",
+        "after which answers do i usually ask for more" to "MoreAfter", "where do i usually ask for more" to "MoreAfter",
+        "when do i ask you for more" to "MoreAfter", "which answers do you give me in full straight away" to "MoreAfter",
+        "which answers do you skip the short line for" to "MoreAfter", "why did you give me the whole answer" to "MoreAfter",
+        "why do you give me the full answer straight away" to "MoreAfter", "why didn't you keep it short" to "MoreAfter",
+        "why didn't you give me the short line" to "MoreAfter", "kaun se jawab ke baad main aur puchta hoon" to "MoreAfter",
+        "kis jawab ke baad main zyada puchta hoon" to "MoreAfter", "poora jawab seedha kyun diya" to "MoreAfter",
+        "keep my short answers short" to "MoreAfter", "keep your short answers short again" to "MoreAfter",
+        "give me the short line first" to "MoreAfter", "always say the short answer first" to "MoreAfter",
+        "stop skipping the short line" to "MoreAfter", "stop leaving out the short answer" to "MoreAfter",
+        "don't skip the short line" to "MoreAfter", "do not drop the short answer for some topics" to "MoreAfter",
+        "stop giving me the whole answer straight away" to "MoreAfter", "don't give me the full answer first" to "MoreAfter",
+        "forget which answers i ask more about" to "MoreAfter", "reset where i ask for more" to "MoreAfter",
+        "poora jawab seedha mat do" to "MoreAfter",
         // ...and a market question that merely puts Nifty first is never its undo: it keeps its market route.
         "nifty pehle batao" to "Market", "nifty ko pehle lo" to "Market", "give nifty first" to "Market", "say nifty first" to "Market",
         // ---- HonestStars: his confidence scores against their record ----
@@ -1271,7 +1287,7 @@ class CollisionTest {
     // ---- The audit's order is the hub's: read from IraHub.ask itself when the app's source is beside this module ----
 
     /** The question branches of IraHub.ask between the `bundled` read and the Plan block, in [CoverageTest.feature]'s order. */
-    private val HUB_ORDER = listOf("DayJournal", "AlertSense", "Airtime", "Hearing", "PatternCalls", "TrendReads", "OutsideApp", "Clarity", "WordFit", "AskedAgain", "FigureFirst", "WrongThing", "ArmHabits", "MorningSense", "HonestStars", "TalkHours", "MorningAsks", "TurnDowns", "TopicLength", "OutlookCheck", "UsualIndex", "Nicknames", "LeadIndex", "LeadPart", "NextAsk", "NewsMoves",
+    private val HUB_ORDER = listOf("DayJournal", "AlertSense", "Airtime", "Hearing", "PatternCalls", "TrendReads", "OutsideApp", "Clarity", "WordFit", "AskedAgain", "FigureFirst", "WrongThing", "ArmHabits", "MorningSense", "HonestStars", "TalkHours", "MorningAsks", "TurnDowns", "TopicLength", "OutlookCheck", "UsualIndex", "Nicknames", "LeadIndex", "LeadPart", "NextAsk", "MoreAfter", "NewsMoves",
         "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmFit", "WeakLink", "ArmChange", "PnlGap", "ArmDay", "BookDecay", "WhereIWin", "TradesADay", "AfterLoss", "RequestBook", "NetLean", "ExpiryEve", "BeforeTomorrow", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "ZerodhaSession", "OrderWhy", "RelayHealth", "StreamHealth", "BatteryUse", "WatchAsk", "Tour", "DataAge", "Honest", "Thinking",
         "SelfWhy", "Consistency", "CoPilot", "SinceMorning", "ExpiryPin", "ChainDrift", "ChainIntel", "DayClock", "GapRecord", "RangeBreaks", "PriorDay", "LastHour", "InsideDays", "FirstMove", "VixNext", "SplitDays", "RoundCloses", "MonthTurns", "LunchRange", "OpenHighLow", "BigCandles", "ExtremeCloses", "WeekRange", "RelativeMove", "Comebacks", "VixBand", "Overnight", "DayAfter", "OpenReach", "MultiDay", "MoveTime", "Weekdays", "DayCompare", "LikeToday", "Structure", "MindChange", "Breadth",
         "TradeCase", "Scenarios", "Causes", "Agenda", "Improve")

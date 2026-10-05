@@ -20,7 +20,8 @@ import java.util.Locale
  * ([TopicLength]), the index he means when he names none ([UsualIndex]), the nicknames he uses for his arms and positions
  * ([Nicknames]), the index he asks about by name, named first where both are given ([LeadIndex]), the part of a market read he
  * asks for on its own, said right after the price in an overview ([LeadPart]), the question he usually asks next, offered in
- * one short question at the end of an answer ([NextAsk]) and his own goals for the week ([Improve]) - each with when and why it changed and, where one exists, the
+ * one short question at the end of an answer ([NextAsk]), the kinds of answer said in full straight away aloud as he
+ * usually asks for more after their short line ([MoreAfter]) and his own goals for the week ([Improve]) - each with when and why it changed and, where one exists, the
  * words that undo it by voice.
  *
  * "What have you learned this week?" ([Ask.WEEK]), "what changed in how you work?" ([Ask.CHANGED]) and "show me
@@ -36,7 +37,8 @@ import java.util.Locale
  * said), the topics said shorter or in full ([TopicLength]: the usual length again), the index taken when he names none
  * ([UsualIndex]: Nifty again), the nicknames learned this week ([Nicknames]: forgotten), the index named first ([LeadIndex]: Nifty
  * first again), the part said first in an overview ([LeadPart]: the usual order again), the question offered next ([NextAsk]:
- * no longer offered) and his own goals. (His confidence words set to fit the
+ * no longer offered), the answers said in full straight away ([MoreAfter]: the short line first again) and his own goals.
+ * (His confidence words set to fit the
  * numbers beside them ([WordFit]) are listed with their own undo, but not reset here: that is a check on his own words
  * against his own record, not a habit learned from Boss.)
  * for this week. Never a setting, the PIN, Live, the AI's live trading, a guard or the Google speech choice - and never
@@ -69,6 +71,7 @@ object Learnings {
         LEAD_INDEX("The index I name first", true),
         LEAD_PART("What I say first in an overview", true),
         NEXT_ASK("The question I offer next, after an answer", true),
+        MORE_AFTER("Answers I say in full straight away, as you usually ask for more", true),
         ARM_HABITS("Your bots after losing days", true),
         SIT_OUT("Conditions I sit out", true),
         ANSWERS("Answer kinds I flag", true),
@@ -121,6 +124,8 @@ object Learnings {
         val routineLog: List<Routine.Seen> = emptyList(),
         /** When Boss last asked to stop the next-question offers ([NextAsk]). */
         val nextAsk: NextAsk.Log = NextAsk.Log(),
+        /** Boss's "more" after a short answer, kinds and minutes only ([MoreAfter]; read with [tally]). */
+        val moreAfter: MoreAfter.Log = MoreAfter.Log(),
     )
 
     fun day(d: LocalDate): String = "${d.dayOfMonth} ${d.month.getDisplayName(TextStyle.SHORT, Locale.ENGLISH)}"
@@ -230,6 +235,11 @@ object Learnings {
         // routine log, keys and minutes only). Words only: never answered unasked, nothing that acts.
         NextAsk.learned(i.routineLog, i.nextAsk, today).forEach { r ->
             out += Item(Area.NEXT_ASK, NextAsk.ledgerWhat(r), r.newest, NextAsk.ledgerWhy(r), NextAsk.UNDO)
+        }
+        // The kinds of answer said in full straight away aloud, as Boss usually asks for more after their short line
+        // ([MoreAfter]; kinds and minutes only, against the kinds tally). Only the voice's length changes - nothing that acts.
+        MoreAfter.learned(i.moreAfter, i.tally, now).forEach { r ->
+            out += Item(Area.MORE_AFTER, MoreAfter.ledgerWhat(r), r.newest.toLocalDate(), MoreAfter.ledgerWhy(r), MoreAfter.UNDO)
         }
         // What Boss does with his bots after losing days ([ArmHabits]; switches and signs only): his record - it arms or
         // disarms nothing, changes nothing Jarvis does, and so has no undo.
@@ -375,10 +385,10 @@ object Learnings {
                     val turnDowns: List<TurnDowns.Record> = emptyList(), val lengths: List<TopicLength.Record> = emptyList(),
                     val usualIndex: List<UsualIndex.Record> = emptyList(), val nicknames: List<Nicknames.Note> = emptyList(),
                     val leadIndex: List<LeadIndex.Record> = emptyList(), val leadPart: List<LeadPart.Record> = emptyList(),
-                    val nextAsk: List<NextAsk.Record> = emptyList()) {
+                    val nextAsk: List<NextAsk.Record> = emptyList(), val moreAfter: List<MoreAfter.Record> = emptyList()) {
         val empty: Boolean get() = words.isEmpty() && routines.isEmpty() && alerts.isEmpty() && goals == 0 && clarity.isEmpty() && figure.isEmpty() && morning.isEmpty() &&
             stars.isEmpty() && hours.isEmpty() && asks.isEmpty() && turnDowns.isEmpty() && lengths.isEmpty() && usualIndex.isEmpty() && nicknames.isEmpty() &&
-            leadIndex.isEmpty() && leadPart.isEmpty() && nextAsk.isEmpty()
+            leadIndex.isEmpty() && leadPart.isEmpty() && nextAsk.isEmpty() && moreAfter.isEmpty()
     }
 
     fun undo(i: Inputs, now: LocalDateTime): Undo {
@@ -400,7 +410,8 @@ object Learnings {
             Nicknames.week(i.nicknames, today),
             listOfNotNull(LeadIndex.learned(i.tally, i.leadIndex, today)),
             listOfNotNull(LeadPart.learned(i.tally, i.leadPart, today)),
-            NextAsk.learned(i.routineLog, i.nextAsk, today))
+            NextAsk.learned(i.routineLog, i.nextAsk, today),
+            MoreAfter.learned(i.moreAfter, i.tally, now))
     }
 
     /** [words] without those kept in the last [DAYS] days (the rest, and undated ones, stay). */
@@ -433,6 +444,7 @@ object Learnings {
         if (u.leadIndex.isEmpty()) null else "the index I name first (" + u.leadIndex.joinToString(", ") { it.phrase } + ") - Nifty first again",
         if (u.leadPart.isEmpty()) null else "what I say first in an overview (" + u.leadPart.joinToString(", ") { it.phrase } + ") - the usual order again",
         if (u.nextAsk.isEmpty()) null else "the question I offer next after an answer (" + u.nextAsk.take(SHOW).joinToString(", ") { it.phrase + " after " + it.afterPhrase } + ") - no longer offered",
+        if (u.moreAfter.isEmpty()) null else "the answers I say in full straight away (" + u.moreAfter.take(SHOW).joinToString(", ") { it.phrase } + ") - the short line first again",
         if (u.goals == 0) null else "my ${plural(u.goals, "goal")} for this week")
 
     const val ONLY = "Only learned behaviour: never a setting, your PIN, Live, AI trading, a guard or the Google speech choice. " +

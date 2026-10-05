@@ -1620,6 +1620,81 @@ internal object IraTools {
         return said
     }
 
+    // ---- the short answers Boss usually asks "more" after ([com.optionslab.ira.MoreAfter]) ---------------------------
+
+    /** Boss's "more" after a short answer: that answer's kind and the minute only - never his words or the answer. */
+    private const val MORE_AFTER = "jarvis.moreAfter"
+    @Volatile private var moreAfterCache: com.optionslab.ira.MoreAfter.Log? = null
+
+    fun moreAfterLog(): com.optionslab.ira.MoreAfter.Log = moreAfterCache ?: runCatching {
+        val o = JSONObject(prefs().getString(MORE_AFTER) ?: "{}")
+        val n = o.optJSONArray("n") ?: JSONArray()
+        com.optionslab.ira.MoreAfter.Log(
+            notes = (0 until n.length()).map { i -> n.getJSONObject(i).let { x ->
+                com.optionslab.ira.MoreAfter.Note(LocalDateTime.parse(x.getString("t")), x.getString("k")) } },
+            resetAt = o.optString("r").takeIf { it.isNotEmpty() }?.let { LocalDateTime.parse(it) })
+    }.getOrDefault(com.optionslab.ira.MoreAfter.Log()).also { moreAfterCache = it }
+
+    @Synchronized private fun moreAfterUpdate(f: (com.optionslab.ira.MoreAfter.Log) -> com.optionslab.ira.MoreAfter.Log) {
+        runCatching {
+            val log = f(moreAfterLog())
+            if (log == moreAfterCache) return@runCatching
+            moreAfterCache = log
+            val o = JSONObject().put("n", JSONArray().apply { log.notes.forEach { x -> put(JSONObject().put("t", x.at.toString()).put("k", x.kind)) } })
+            log.resetAt?.let { o.put("r", it.toString()) }
+            prefs().putAllSoon(mapOf(MORE_AFTER to o.toString()))
+        }
+    }
+
+    /** The kinds learned now (kinds and counts only), against the question kinds tally already kept. Nothing here acts. */
+    fun moreAfterLearnedNow(): List<com.optionslab.ira.MoreAfter.Record> =
+        runCatching { com.optionslab.ira.MoreAfter.learned(moreAfterLog(), askedKinds(), minuteNow()) }.getOrDefault(emptyList())
+
+    /**
+     * Boss said [said] - "more", "tell me more", "go on" - right after [last] (Jarvis's last answer and the question it
+     * answered): when that answer was said as a short line (short answers on, Boss's own "shorter" off), its kind is noted.
+     * Never on a [locked] phone (more is not said then), never for a note nobody asked for, never his words. Nothing acts.
+     */
+    fun moreAfterAsked(said: String, last: com.optionslab.ira.MoreAnswer.Last?, locked: Boolean) {
+        if (locked || last == null || last.unasked) return
+        if (!runCatching { shortAnswers && !brief }.getOrDefault(false)) return
+        if (!com.optionslab.ira.MoreAfter.wantsMore(said)) return
+        val kind = com.optionslab.ira.MoreAfter.kindAfter(last.question, last.text) ?: return
+        val now = minuteNow()
+        val before = moreAfterLearnedNow().any { it.kind == kind }
+        moreAfterUpdate { com.optionslab.ira.MoreAfter.heard(it, kind, now) }
+        if (!before) moreAfterLearnedNow().firstOrNull { it.kind == kind }?.let { r ->
+            IraActivity.add(com.optionslab.ira.MoreAfter.learnedNote(r))
+        }
+    }
+
+    /**
+     * Is the answer to [said] one to say in full straight away aloud ([com.optionslab.ira.MoreAfter])? Never on a [locked]
+     * phone, never with Boss's own "shorter" on, never for a command or an order. The voice's length only.
+     */
+    fun moreAfterFull(said: String, locked: Boolean): Boolean {
+        if (locked || runCatching { brief }.getOrDefault(true)) return false
+        val rs = moreAfterLearnedNow()
+        return rs.isNotEmpty() && runCatching { com.optionslab.ira.MoreAfter.detailed(said, rs) }.getOrDefault(false)
+    }
+
+    /** "Which answers do I usually ask more about?". */
+    fun moreAfterSay(): String = runCatching { com.optionslab.ira.MoreAfter.say(moreAfterLearnedNow()) }
+        .getOrDefault("I could not read my record of when you ask for more just now, Boss.")
+
+    /**
+     * "Keep my short answers short": every answer starts with its short line again, the count afresh from now. On a
+     * [locked] phone, one neutral reply that never names what was learned (nor whether).
+     */
+    fun moreAfterReset(locked: Boolean = false): String {
+        val said = if (locked) com.optionslab.ira.MoreAfter.RESET_LOCKED
+            else runCatching { com.optionslab.ira.MoreAfter.sayReset(moreAfterLearnedNow()) }.getOrDefault("Done, Boss: every answer starts with its short line again.")
+        val now = minuteNow()
+        moreAfterUpdate { com.optionslab.ira.MoreAfter.reset(now) }
+        IraActivity.add("Every answer starts with its short line again (as asked).")
+        return said
+    }
+
     // ---- the morning outlook checked against the close ([com.optionslab.ira.OutlookCheck]) ---------------------------
 
     /** Each index's 09:00 outlook numbers (previous close, range, direction read, pivot) and the day's open, high, low, close. Market data only. */
@@ -1689,7 +1764,8 @@ internal object IraTools {
         leadIndex = runCatching { firstIndexLog() }.getOrDefault(com.optionslab.ira.LeadIndex.Log()),
         leadPart = runCatching { leadPartLog() }.getOrDefault(com.optionslab.ira.LeadPart.Log()),
         routineLog = runCatching { routineLog() }.getOrDefault(emptyList()),
-        nextAsk = runCatching { nextAskLog() }.getOrDefault(com.optionslab.ira.NextAsk.Log()))
+        nextAsk = runCatching { nextAskLog() }.getOrDefault(com.optionslab.ira.NextAsk.Log()),
+        moreAfter = runCatching { moreAfterLog() }.getOrDefault(com.optionslab.ira.MoreAfter.Log()))
 
     /**
      * "Undo everything you learned this week", on Boss's Confirm: the wordings and routines kept in the last 7 days
@@ -1716,6 +1792,7 @@ internal object IraTools {
         if (u.leadIndex.isNotEmpty()) firstIndexSave(com.optionslab.ira.LeadIndex.reset(today))
         if (u.leadPart.isNotEmpty()) leadPartSave(com.optionslab.ira.LeadPart.reset(today))
         if (u.nextAsk.isNotEmpty()) { nextAskSave(com.optionslab.ira.NextAsk.reset(now)); nextAskOffered = null }
+        if (u.moreAfter.isNotEmpty()) moreAfterUpdate { com.optionslab.ira.MoreAfter.reset(now) }
         IraActivity.add("Undid this week's learning, as Boss confirmed: ${u.words.size} wording(s), ${u.routines.size} routine(s), " +
             "${u.alerts.size} alert kind(s) aloud again, ${u.clarity.size} answer kind(s) as usual aloud again, ${u.figure.size} market read kind(s) in the usual order again, ${u.morning.size} morning-check item(s) read out in full again, " +
             "${u.stars.size} confidence score(s) said plainly again, " + (if (u.hours.isNotEmpty()) "briefings in full at any hour again, " else "briefings unchanged, ") +
@@ -1726,7 +1803,8 @@ internal object IraTools {
             (if (u.nicknames.isNotEmpty()) "${u.nicknames.size} nickname(s) forgotten, " else "nicknames unchanged, ") +
             (if (u.leadIndex.isNotEmpty()) "Nifty named first again, " else "the index named first unchanged, ") +
             (if (u.leadPart.isNotEmpty()) "overviews in the usual order again, " else "overviews unchanged, ") +
-            (if (u.nextAsk.isNotEmpty()) "no question offered next." else "next-question offers unchanged."))
+            (if (u.nextAsk.isNotEmpty()) "no question offered next, " else "next-question offers unchanged, ") +
+            (if (u.moreAfter.isNotEmpty()) "every answer with its short line first again." else "short lines unchanged."))
         return u
     }
 

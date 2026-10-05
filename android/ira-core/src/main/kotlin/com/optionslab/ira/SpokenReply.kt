@@ -13,7 +13,8 @@ package com.optionslab.ira
  * so it is skipped. The words said are exactly as before - same choice of length, same order, same text.
  *
  * Choice of length, in this order (as before): "tell me more" said now - whole; "in detail" just answered - whole; Boss's
- * own "short answers" - one sentence; a topic learned short or whole; a kind said shorter after "what?"; else as usual.
+ * own "short answers" - one sentence; in short-answer mode the short line, or in full for a kind Boss usually asks "more"
+ * after ([MoreAfter], learning round 28); a topic learned short or whole; a kind said shorter after "what?"; else as usual.
  * Pure.
  */
 object SpokenReply {
@@ -35,11 +36,19 @@ object SpokenReply {
      */
     fun said(question: String, text: String, more: Boolean, wishedLong: Boolean, brief: Boolean,
              leading: () -> List<FigureFirst.Record>, learned: () -> List<TopicLength.Record>, shorter: () -> List<Clarity.Record>,
-             echo: String? = null, late: Boolean = false, short: Boolean = false): Said {
+             echo: String? = null, late: Boolean = false, short: Boolean = false,
+             fuller: () -> List<MoreAfter.Record> = { emptyList() }): Said {
+        // A kind Boss usually asks "more" after ([MoreAfter]; the app passes none on a locked phone): said in full straight
+        // away, as "tell me more" says it, instead of the short line first - never over his own "shorter" ([brief]), never
+        // for a command or an order. Read only in short-answer mode.
+        val fullFirst = short && !more && !wishedLong && !brief && runCatching {
+            val f = fuller()
+            f.isNotEmpty() && MoreAfter.detailed(question, f)
+        }.getOrDefault(false)
         // Short answers (Boss, 5 Oct - the default): the answer's one line ([ShortAnswer]), said whole - its safety
         // notes kept - and the rest kept for "go on". "Tell me more" and "in detail" are said as before. The learned
         // lengths below (topic, clarity, figure first) shape only the "detailed" choice: never the short line.
-        if (short && !more && !wishedLong) {
+        if (short && !more && !wishedLong && !fullFirst) {
             val sa = ShortAnswer.of(question, text)
             if (sa.details != null) {
                 val spoken = Aloud.say(sa.line, Aloud.Length.FULL.sentences)
@@ -63,6 +72,8 @@ object SpokenReply {
             more -> Aloud.Length.FULL.sentences
             wishedLong -> Aloud.Length.FULL.sentences
             brief -> Aloud.Length.SHORT.sentences
+            // As "tell me more" says it: Boss usually asks for more after this kind's short line ([MoreAfter]).
+            fullFirst -> Aloud.Length.FULL.sentences
             // A topic learned short is never one sentence for a question that also asks the trade check, the account or
             // what to do ([TopicLength.shortGuarded]); and no length drops a verdict or warning ([Aloud.keep]).
             else -> runCatching { TopicLength.sentencesOf(kind, learned())?.let { TopicLength.shortGuarded(question, it) } }.getOrNull()

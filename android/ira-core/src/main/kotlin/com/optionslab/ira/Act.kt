@@ -305,7 +305,7 @@ object Commands {
     /**
      * "Stop offering my morning question", "stop shortening your briefings", "stop reminding me why I turn your ideas down":
      * the undo of a speech habit Jarvis learned ([MorningAsks], [TurnDowns], [TalkHours], [HonestStars], [WordFit],
-     * [MorningSense], [TopicLength], [LeadIndex], [LeadPart], [NextAsk]) - never a strategy called "offering my morning question" (understanding round 17). Only when that
+     * [MorningSense], [TopicLength], [LeadIndex], [LeadPart], [NextAsk], [MoreAfter]) - never a strategy called "offering my morning question" (understanding round 17). Only when that
      * habit's own undo takes the very words: "stop orb", "stop the order watch", "stop offering trades" stay as they were.
      */
     private fun habitUndo(s: String): Boolean = HABIT_VERB.containsMatchIn(s) && (
@@ -313,7 +313,8 @@ object Commands {
             TalkHours.asked(s) == TalkHours.Request.RESET || HonestStars.asked(s) == HonestStars.Request.RESET ||
             WordFit.asked(s) == WordFit.Request.OFF || MorningSense.asked(s) == MorningSense.Request.RESET ||
             TopicLength.asked(s) == TopicLength.Request.RESET || LeadIndex.asked(s) == LeadIndex.Request.RESET ||
-            LeadPart.asked(s) == LeadPart.Request.RESET || NextAsk.asked(s) == NextAsk.Request.RESET)
+            LeadPart.asked(s) == LeadPart.Request.RESET || NextAsk.asked(s) == NextAsk.Request.RESET ||
+            MoreAfter.asked(s) == MoreAfter.Request.RESET)
 
     private fun one(kind: Command.Kind, what: String): Command {
         val n = rx("^(?:number |no |#)?(\\d{1,2})$").find(what)?.groupValues?.get(1)?.toIntOrNull()
