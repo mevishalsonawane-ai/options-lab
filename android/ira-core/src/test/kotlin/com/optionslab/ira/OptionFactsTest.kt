@@ -47,6 +47,8 @@ class MarketOpenAskTest {
         assertEquals(MarketDays.Asked.Day(java.time.LocalDate.of(2026, 10, 6)), MarketDays.asked("kal market kab khulega", java.time.LocalDate.of(2026, 10, 5)))
         assertEquals(MarketDays.Asked.Day(java.time.LocalDate.of(2026, 10, 7)), MarketDays.asked("market parso khulega", java.time.LocalDate.of(2026, 10, 5)))
         assertEquals(MarketDays.Asked.Day(java.time.LocalDate.of(2026, 10, 12)), MarketDays.asked("somvar ko market khulega", java.time.LocalDate.of(2026, 10, 6)))
+        assertNotEquals(OptionFacts.Asked.TimeLeft, OptionFacts.asked("what time does the market close tomorrow"))
+        assertNotEquals(OptionFacts.Asked.TimeLeft, OptionFacts.asked("kal market kab open hoga"))
         // "Next" alone is today's clock answer ("it opens next on ..."), as before.
         assertEquals(OptionFacts.Asked.TimeLeft, OptionFacts.asked("when does the market open next"))
         assertEquals("The market has closed for today (15:30), Boss. It opens next on Mon 6 Oct at 09:15.", OptionFacts.timeLeft(16 * 60, nextDay = "Mon 6 Oct"))

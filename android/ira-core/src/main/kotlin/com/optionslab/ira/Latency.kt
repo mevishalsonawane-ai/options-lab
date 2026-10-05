@@ -31,7 +31,7 @@ object Latency {
     fun asked(text: String): Boolean =
         Regex("(?i)^\\W*(jarvis,?\\s+)?(how (fast|quick|quickly|slow) (are you|do you answer|are you answering|are your answers)|" +
             "how long do you take( to answer)?|are you (slow|fast)( today)?|your (speed|answer time|response time)|" +
-            "tum kitna time (lagate|lete) ho|(jawab (mein|me) )?kitna time lagta hai)\\W*$").containsMatchIn(text)
+            "tum kitna time (lagate|lete) ho|jawab (mein|me) kitna time( lagta hai)?|kitna time lagta hai (jawab (mein|me)|tumhe))\\W*$").containsMatchIn(text)
 
     /** The spoken form of [say]: typical and slowest wait, and on which model ([model] its name). */
     fun spoken(list: List<Long>, model: String, onFastest: Boolean = true): String {

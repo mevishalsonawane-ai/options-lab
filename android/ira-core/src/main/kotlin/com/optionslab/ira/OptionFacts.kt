@@ -22,7 +22,8 @@ object OptionFacts {
     fun asked(text: String): Asked? {
         val t = text.lowercase(Locale.ENGLISH).replace("'", " ")
         // "When does the market open tomorrow / on Monday?" is the calendar's answer (MarketDays), not today's clock.
-        val dayNamed = MarketDays.namesAnotherDay(text)
+        val dayNamed = MarketDays.namesAnotherDay(text) ||
+            Regex("\\b(tomorrow|tmrw|kal|parso|monday|tuesday|wednesday|thursday|friday|saturday|sunday|somvar|mangalvar|budhvar|guruvar|shukravar|shanivar|ravivar)\\b").containsMatchIn(t)
         if (!dayNamed && Regex("\\b(how long|how much time|time left|minutes left)\\b.*\\b(close|market|session|trading)\\b|\\bwhen does (the )?market close\\b|\\bmarket band hone (mein|me) kitna (time|samay)\\b|\\bkitna (time|samay) (bacha|baaki)\\b|\\bwhen (does|will) (the )?market (open|start)\\b|\\bmarket kab (khulega|khulta|open hoga)\\b|\\bwhat time (does|will) (the )?market (open|close)\\b").containsMatchIn(t))
             return Asked.TimeLeft
         val m = Market.mentioned(text).firstOrNull { it in CHAIN }

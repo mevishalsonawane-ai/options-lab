@@ -16,5 +16,10 @@ class SuggestTest {
         assertNull(Suggest.closest("strategies"))
         // Starting strategies adds risk: never offered.
         assertNull(Suggest.closest("strategies start again"))
+        // Never the opposite of what was said, never a market not named, never a loose match.
+        assertNull(Suggest.closest("kill switch off kar do"))
+        assertNull(Suggest.closest("live mode switch kar do"))
+        assertNull(Suggest.closest("what is the lot size of reliance"))
+        assertNull(Suggest.closest("which model is better for trading"))
     }
 }
