@@ -65,6 +65,17 @@ class MainActivity : FragmentActivity() {
         setContent { Root(this, splash) }
     }
 
+    /** The screen's stalls are timed only while the app is on screen (the diagnostics' "Speed:" line). */
+    override fun onStart() {
+        super.onStart()
+        runCatching { com.optionslab.app.data.Speed.start() }
+    }
+
+    override fun onStop() {
+        runCatching { com.optionslab.app.data.Speed.stop() }
+        super.onStop()
+    }
+
     /** Every touch counts as activity for the idle lock. */
     override fun onResume() {
         super.onResume()

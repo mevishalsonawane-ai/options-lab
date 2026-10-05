@@ -1171,6 +1171,20 @@ object IraHub {
 
     fun ask(text: String) = ask(text, understood = false)
 
+    /**
+     * Speed (2026-10-05): Boss's question read OFF the screen's thread. [ask] runs every question reader in turn (many
+     * patterns) and reads and writes Jarvis's learnings (the vault: Keystore work, disk syncs); on the main thread that
+     * froze the screen for the length of it. Questions go through one lane, one at a time, in the order asked, exactly
+     * as [ask] / [askConfirmed] do them; the returned job ends when the question has been taken in (as [ask] returning
+     * did), so a caller waiting for the reply ([replyAfter]) still waits after it. Not tied to the screen: leaving the
+     * page never drops a question.
+     */
+    fun askSoon(text: String, confirmed: Boolean = false): kotlinx.coroutines.Job =
+        scope.launch(askLane) { if (confirmed) askConfirmed(text) else ask(text) }
+
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    private val askLane = Dispatchers.Default.limitedParallelism(1)
+
     /** A spoken request on a voice that was not recognised: any command in it waits for a yes / Confirm. */
     fun askConfirmed(text: String) = ask(text, understood = true)
 

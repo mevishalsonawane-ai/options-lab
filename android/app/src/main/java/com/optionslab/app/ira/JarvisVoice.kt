@@ -372,7 +372,8 @@ class JarvisVoice : Service() {
         var paceGaps: List<Long>
             get() = paceKept ?: runCatching { com.optionslab.ira.BossPace.load(com.optionslab.app.security.SecurePrefs.getString(PACE_KEY)) }
                 .getOrDefault(emptyList()).also { paceKept = it }
-            set(v) { paceKept = v; runCatching { com.optionslab.app.security.SecurePrefs.put(PACE_KEY, com.optionslab.ira.BossPace.save(v)) } }
+            // Written behind (learnPace runs on the main thread at every answer): readable at once, on disk a moment later.
+            set(v) { paceKept = v; runCatching { com.optionslab.app.security.SecurePrefs.putAllSoon(mapOf(PACE_KEY to com.optionslab.ira.BossPace.save(v))) } }
         private const val PACE_KEY = "jarvis.voice.pausegaps"
 
         /**
@@ -891,7 +892,8 @@ class JarvisVoice : Service() {
         if (!runCatching { am.adjustStreamVolume(st, android.media.AudioManager.ADJUST_MUTE, 0); true }.getOrDefault(false)) return
         if (runCatching { am.isStreamMute(st) }.getOrDefault(false)) {
             mutedForBeep += st
-            runCatching { com.optionslab.app.security.SecurePrefs.put(MUTED_KEY, st.toString()) }
+            // Written behind: this runs on the main thread at every listening turn (a vault write each time froze the screen).
+            runCatching { com.optionslab.app.security.SecurePrefs.putAllSoon(mapOf(MUTED_KEY to st.toString())) }
         }
         main.removeCallbacks(unmuteBeep); main.postDelayed(unmuteBeep, ms)
     }
@@ -911,7 +913,7 @@ class JarvisVoice : Service() {
         val am = getSystemService(android.media.AudioManager::class.java)
         for (st in mutedForBeep) runCatching { am?.adjustStreamVolume(st, android.media.AudioManager.ADJUST_UNMUTE, 0) }
         mutedForBeep.clear()
-        runCatching { com.optionslab.app.security.SecurePrefs.put(MUTED_KEY, null) }
+        runCatching { com.optionslab.app.security.SecurePrefs.putAllSoon(mapOf(MUTED_KEY to null)) }
     }
 
     /**
@@ -1674,7 +1676,8 @@ class JarvisVoice : Service() {
             // a full re-read competes with the voice for the phone's processor).
             else if (!chat && IraHub.online() && com.optionslab.ira.Market.NIFTY.trading(java.time.LocalDateTime.now(java.time.ZoneId.of("Asia/Kolkata"))) &&
                 st.liveAt?.isBefore(java.time.Instant.now().minusSeconds(120)) != false) launch(Dispatchers.Default) { runCatching { IraHub.refresh() } }
-            if (confirm) IraHub.askConfirmed(q) else IraHub.ask(q)
+            // Read off the main thread (this scope's); waited for, so the reply below is looked for after it as before.
+            IraHub.askSoon(q, confirmed = confirm).join()
             // A slow answer (your account, the trade check): say so at once instead of going quiet.
             val hold = launch { kotlinx.coroutines.delay(1_000); say("Working on it, Boss.", "wait") }
             val said = com.optionslab.ira.Secrets.redact(q.trim())

@@ -49,7 +49,19 @@ object Diag {
     }
 
     /** One writer thread: a banner shown from the screen's thread never waits on the disk. */
-    private val writer = java.util.concurrent.Executors.newSingleThreadExecutor { r -> Thread(r, "diag").apply { isDaemon = true } }
+    private val writer = java.util.concurrent.Executors.newSingleThreadScheduledExecutor { r -> Thread(r, "diag").apply { isDaemon = true } }
+
+    /**
+     * Speed (2026-10-05): the diary is up to [MAX] lines, and every write re-encrypts all of it with the Keystore (the
+     * phone's security chip, shared with every other vault and settings write). Written once per line, a burst of lines
+     * (a self-test, a stream reconnect) kept the chip busy for seconds. Lines are now kept in memory at once and written
+     * together [WRITE_AFTER_MS] after the first unwritten one; [flush] (the report, [lines]) writes them straight away.
+     */
+    private const val WRITE_AFTER_MS = 3_000L
+    /** Lines kept in memory and not yet written (guarded by this object's lock). */
+    private var dirty = false
+    /** A write is scheduled (guarded by this object's lock). */
+    private var scheduled = false
 
     /** Keep one event: "[area] text", time-stamped (IST) now, written in the background. Never throws. */
     fun record(area: String, text: String) {
@@ -64,12 +76,28 @@ object Diag {
             val l = diary()
             l.addLast(line)
             while (l.size > MAX) l.removeFirst()
-            Vault.writeFile(file, JSONArray(l.toList()).toString().toByteArray(Charsets.UTF_8))
+            dirty = true
+            if (!scheduled) {
+                scheduled = true
+                writer.schedule(Runnable { save() }, WRITE_AFTER_MS, java.util.concurrent.TimeUnit.MILLISECONDS)
+            }
         }
     }
 
-    /** Waits for the writes queued so far (tests, and the report, read what was just recorded). */
-    fun flush() { runCatching { writer.submit {}.get(5, java.util.concurrent.TimeUnit.SECONDS) } }
+    /** Writes the lines kept since the last write (on the writer thread, or the caller's in [flush]). */
+    @Synchronized
+    private fun save() {
+        scheduled = false
+        if (!dirty) return
+        dirty = false
+        runCatching { Vault.writeFile(file, JSONArray(diary().toList()).toString().toByteArray(Charsets.UTF_8)) }
+    }
+
+    /** Waits for the lines recorded so far and writes them (tests, and the report, read what was just recorded). */
+    fun flush() { runCatching { writer.submit(Runnable { save() }).get(5, java.util.concurrent.TimeUnit.SECONDS) } }
+
+    /** The app is crashing: the lines kept so far written now, on the crashing thread (never throws). */
+    fun saveNow() { if (::file.isInitialized) runCatching { save() } }
 
     /**
      * The diary's lines as kept ("MM-dd HH:mm:ss [area] text", oldest first, already redacted), after the queued writes:
@@ -98,6 +126,8 @@ object Diag {
         if (com.optionslab.app.BuildConfig.GOLD) append(gold())
         // Battery, round 1: what runs in the background now (listening, the stream, the watch's pace, the AI model, the phone's charge).
         append(com.optionslab.app.work.BatteryNow.line(app)).append('\n')
+        // Speed (Boss, 5 Oct: "too slow"): the screen's stalls today, the longest and what was running then; the app's start.
+        append(runCatching { Speed.line() }.getOrElse { "Speed: could not read" }).append('\n')
         // Jarvis's ears and his recent actions (Boss, 4 Oct: "is there a file of logs I can give you?").
         if (com.optionslab.app.BuildConfig.JARVIS) {
             append("\n-- Jarvis's ears --\n")
@@ -186,5 +216,5 @@ object Diag {
     }
 
     @Synchronized
-    fun wipe() { cache = null; if (::file.isInitialized) file.delete() }
+    fun wipe() { cache = null; dirty = false; if (::file.isInitialized) file.delete() }
 }

@@ -39,11 +39,23 @@ class IraAlgoApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        // Speed: how long this start takes on the screen's thread, and its slowest step (the diagnostics' "Speed:" line).
+        val startAt = android.os.SystemClock.uptimeMillis()
+        var slowest: Pair<String, Long>? = null
+        fun timed(name: String, f: () -> Unit) {
+            val a = android.os.SystemClock.uptimeMillis()
+            try { f() } finally {
+                val d = android.os.SystemClock.uptimeMillis() - a
+                if (d > (slowest?.second ?: -1L)) slowest = name to d
+            }
+        }
         // If the app ever crashes, keep what went wrong - class names and stack frames only, no
         // messages, encrypted in the vault, on this phone only, never logged or sent - so the
         // next start can show it and the owner can pass it on.
         val previous = Thread.getDefaultUncaughtExceptionHandler()
         Thread.setDefaultUncaughtExceptionHandler { t, e ->
+            // The diary's last few seconds of lines are written together (Diag): put them on disk before the process ends.
+            runCatching { com.optionslab.app.data.Diag.saveNow() }
             runCatching {
                 com.optionslab.app.security.Vault.writeFile(java.io.File(filesDir, CRASH_FILE), crashReport(t, e).toByteArray(Charsets.UTF_8))
             }
@@ -75,11 +87,13 @@ class IraAlgoApp : Application() {
         com.optionslab.app.data.Journal.init(this)
         com.optionslab.app.data.Diag.init(this)
         com.optionslab.app.data.KiteStream.init(this)
-        com.optionslab.app.data.GoldPaper.init(this)
-        com.optionslab.app.data.GoldTrendPaper.init(this)
-        com.optionslab.app.data.GoldDipPaper.init(this)
-        com.optionslab.app.data.GoldTasPaper.init(this)
-        com.optionslab.app.ira.IraHub.init(this)
+        timed("gold books") {
+            com.optionslab.app.data.GoldPaper.init(this)
+            com.optionslab.app.data.GoldTrendPaper.init(this)
+            com.optionslab.app.data.GoldDipPaper.init(this)
+            com.optionslab.app.data.GoldTasPaper.init(this)
+        }
+        timed("Jarvis's memory") { com.optionslab.app.ira.IraHub.init(this) }
         Notifier.createChannels(this)      // before the disarm below, which may post a notice
         // First start after a restore: everything restored comes back disarmed and paper only.
         // Done HERE, synchronously, before onCreate returns - so before any receiver, alarm,
@@ -97,5 +111,7 @@ class IraAlgoApp : Application() {
         ProcessLifecycleOwner.get().lifecycle.addObserver(SessionLock)
         // Keystore work stays off the main thread.
         Thread { runCatching { Jobs.scheduleAll(this) } }.start()
+        com.optionslab.app.data.Speed.startMs = android.os.SystemClock.uptimeMillis() - startAt
+        com.optionslab.app.data.Speed.startSlowest = slowest?.let { (n, ms) -> "$n $ms ms" }
     }
 }

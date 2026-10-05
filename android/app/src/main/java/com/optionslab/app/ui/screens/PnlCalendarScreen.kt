@@ -632,8 +632,14 @@ private fun ChargesCard(live: Boolean, month: YearMonth, tick: Int) {
 @Composable
 private fun JournalCard(trips: List<com.optionslab.engine.RoundTrips.Trip>) {
     val p = LocalPalette.current
-    val stats = remember(trips) { com.optionslab.app.data.Journal.byTag(trips) }
-    val notes = remember(trips) { com.optionslab.app.data.Journal.all().values.filter { it.note.isNotBlank() }.sortedByDescending { it.at }.take(5) }
+    // The journal is a vault file: read (decrypted) off the main thread, not while composing.
+    val read by produceState<Pair<List<com.optionslab.app.data.Journal.TagStat>, List<com.optionslab.app.data.Journal.Entry>>>(emptyList<com.optionslab.app.data.Journal.TagStat>() to emptyList(), trips) {
+        value = withContext(Dispatchers.IO) { runCatching {
+            com.optionslab.app.data.Journal.byTag(trips) to com.optionslab.app.data.Journal.all().values.filter { it.note.isNotBlank() }.sortedByDescending { it.at }.take(5)
+        }.getOrNull() } ?: value
+    }
+    val stats = read.first
+    val notes = read.second
     LedgerCard {
         Eyebrow("Journal")
         if (stats.isEmpty() && notes.isEmpty()) {

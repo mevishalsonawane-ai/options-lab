@@ -131,9 +131,10 @@ fun IraPage(orders: IraOrderPaths? = null) {
         IraMarket.mentioned(q).firstOrNull()?.let { focus = it }
         text = ""
         // The answer is ready at once (it is built from facts); the orb still shows a beat of thinking, then answers.
-        IraHub.ask(q)
+        // Read off the screen's thread (IraHub.askSoon); the spoken reply waits until the question is taken in, as before.
+        val asked = IraHub.askSoon(q)
         // Jarvis: the reply to a typed question is said aloud too (the owner's switch, on by default).
-        scope.launch { com.optionslab.app.ira.JarvisSpeaker.replyTo(ctxSpeak, q) }
+        scope.launch { asked.join(); com.optionslab.app.ira.JarvisSpeaker.replyTo(ctxSpeak, q) }
         typed = 2
         scope.launch { delay(600); typed = 3; delay(1_800); typed = 0 }
     }
@@ -161,8 +162,8 @@ fun IraPage(orders: IraOrderPaths? = null) {
             if (quick) QuickCommands(onDismiss = { quick = false }) { q, showChat ->
                 quick = false
                 // Starting or stopping everything from a menu tap always waits for Confirm (a mis-tap does nothing).
-                if (showChat) IraHub.askConfirmed(q) else IraHub.ask(q)
-                scope.launch { com.optionslab.app.ira.JarvisSpeaker.replyTo(ctx, q) }
+                val asked = IraHub.askSoon(q, confirmed = showChat)
+                scope.launch { asked.join(); com.optionslab.app.ira.JarvisSpeaker.replyTo(ctx, q) }
                 if (showChat) chat = true
             }
             Text(orbLabel(orbMode).uppercase(),
