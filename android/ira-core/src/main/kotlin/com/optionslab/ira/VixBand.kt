@@ -114,6 +114,15 @@ object VixBand {
     private val NAMED = Regex(" ((vix|implied|expected) (move|range|band) (record|records|stats|statistics|history|accuracy|hit rate|check|track record)|" +
         "vix band|(realised|realized|actual) (vol|volatility|move|moves) (vs|versus|against|compared to) (vix|implied|india vix|implied volatility)|" +
         "(vix|implied|implied volatility|implied vol|india vix) (vs|versus|against|compared to) (realised|realized|actual) (vol|volatility|move|moves)) ")
+    /** VIX itself judged right or wrong. */
+    private val TRUE = Regex(" (is|was|has been) (india )?vix (usually |normally |generally |really |actually |even |)(accurate|reliable|right|wrong|correct|any good|trustworthy|off) |" +
+        " (how often|how many times|how frequently) (is|does|has) (india )?vix (been )?(accurate|reliable|right|wrong|correct|off|get it right|gets it right|got it right|get it wrong|miss|misses) |" +
+        " how (good|accurate|reliable) is (india )?vix (at (predicting|calling|forecasting|pricing|guessing) (the )?(moves?|range|ranges|swings?)|) |" +
+        " (does|do|did) (india )?vix (get|gets|got) (it|the range|the move|the moves|the ranges) (right|wrong) ")
+    /** VIX as the yardstick: "as much as VIX says". */
+    private val SAYS = Regex(" (vix|india vix) (says|said|suggests|suggested|indicates|indicated|shows|showed|signals|signalled|signaled|points to|pointed to) ")
+    /** VIX's own feed or figure: DataAge's and the quote's, never this record. */
+    private val FEED = Regex(" (data|feed|quote|price|figure|number|reading|live|stale|updated|level) ")
     /** A size in % or points: VIX's own move, a what-if, a gap - others'. */
     private val SIZE = Regex(" \\d+(\\.\\d+)? ?(%|percent|per cent|pc|pct|points|point|pts) ")
     // A forecast or advice, Boss's own book, a what-if, alerts and reminders, the app's bots, a definition, a reason, today
@@ -135,6 +144,10 @@ object VixBand {
         val t = norm(text)
         if (NOT.containsMatchIn(t) || SIZE.containsMatchIn(t)) return null
         if (Market.mentioned(text).any { it == Market.GOLD }) return null
+        // Round 22: "is VIX accurate?", "how often is VIX wrong?", "does the market move as much as VIX says?" - VIX's record
+        // against the moves, asked without the band's own words.
+        if (VIXW.containsMatchIn(t) && !FEED.containsMatchIn(t) && (TRUE.containsMatchIn(t) || SAYS.containsMatchIn(t) && OUTCOME.containsMatchIn(t) && MOVE.containsMatchIn(t)))
+            return Q(multiple(t))
         if (!NAMED.containsMatchIn(t)) {
             if (!VIXW.containsMatchIn(t) && !PRICED.containsMatchIn(t)) return null
             if (!MOVE.containsMatchIn(t)) return null

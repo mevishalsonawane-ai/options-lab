@@ -63,10 +63,18 @@ object NeedsTrue {
         " where (do|does|will|would) (i|my|our) ([a-z0-9 ]{0,30})?(start losing|start making money|break even|turn profitable) |" +
         " (what|which) ([a-z]+ )?(level|price) do (i|we) need (for|to) (profit|make money|break even|be in profit) |" +
         " (make the case|the case|pros and cons|arguments?) (for|of|on) (holding|keeping|staying in) |" +
-        " $HOLDING (kaam|profit) (karegi|karega|karenge|degi|dega|denge) kya | $HOLDING (kab|kaise) (profit|paisa) (dega|degi|denge|banayega|banayegi) "
+        " $HOLDING (kaam|profit) (karegi|karega|karenge|degi|dega|denge) kya | $HOLDING (kab|kaise) (profit|paisa) (dega|degi|denge|banayega|banayegi) |" +
+        // Round 22: "what does Nifty need to do for my put", "where does Nifty need to be for my put", "when does my put start
+        // making money", "at what Nifty level am I in profit", "how much does Nifty have to move for me to break even".
+        " (what|where) (does|do|would|will) [a-z0-9 ]{0,20}(need|have) to (do|be|go|reach|get to|close|close at|hit) (for|so) (my|our) |" +
+        " when (does|do|will|would) (my|our) ([a-z0-9 ]{0,30})?$HOLDING (start making money|start losing|make money|turn profitable|break even|pay off|work|come good) |" +
+        " (at )?(what|which) ([a-z]+ )?(level|price) (am i|are we|will i be|would i be|do i get) (in profit|profitable|in the green|at breakeven|at break even|making money) |" +
+        " for (me|us) to (break even|get to breakeven|be at breakeven) "
     )
     /** "At what level do I break even", "what level do I need for profit": Boss's own book named by "I" (round 10). */
     private val I_HOLD = Regex(" (do|will|would|does) i (need|break even|make money|start losing|start making money|turn profitable) | where do i (start losing|break even) |" +
+        // Round 22: "at what Nifty level am I in profit", "for me to break even".
+        " (level|price) (am i|will i be|would i be) (in profit|profitable|in the green|at breakeven|at break even|making money) | for (me|us) to (break even|get to breakeven|be at breakeven) |" +
         // "Breakeven kitna door hai" (routing round 11): Hinglish asks his own breakeven's distance without "my".
         "^ (jarvis |boss )?(mera |meri |mere )?(break ?even|breakevens?)( level| point)? ((kitna|kitni|kitne) (door|dur|duur|paas|pass|bacha|baaki|baki)|kahan|kaha)( hai| he| h)?( kya)?( boss| jarvis)? $")
     /** Not this question: a what-if, an order or a change, the P&L now, a ranking, a plain list or a word explained. */

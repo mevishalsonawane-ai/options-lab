@@ -148,6 +148,14 @@ object WhereIWin {
     private val ASK = rx(
         // "Where do I make my money?", "where did I lose most of my money this month?"
         " where (do|did|have) i (make|lose|made|lost|earn|earned|been making|been losing) (most of |the most of |all of )?(my |the |)(most |)(money|profits?|losses|loss) " +
+        // Round 22: "where am I making money?", "where am I losing money?", "where do I lose the most?", "what do I make money on?",
+        // "which index works best for me?", "is selling working for me?", "how do I do on BankNifty?"
+        "| where (am i|have i been) (making|losing|earning) (most of |the most of |)(my |the |)(money|profits?|losses) " +
+        "| where (do|did) i (make|lose|made|lost|earn|earned) (the )?most " +
+        "| what (do|did) i (make|lose|made|lost|earn|earned) (the )?(most )?(my )?(money|profits?) (on|in|from|with) " +
+        "| which (index|indices|indexes|side|instrument|instruments) (works?|pays?|suits?) (best |)(for |)me " +
+        "| (is|are) $PAIRED (working|paying|paying off) (out )?(for|with) me " +
+        "| how (do|did|have) i (do|done|perform|performed|fare|fared) (on|in|with|at|trading) $PAIRED " +
         // "What kind of trades work for me?", "which trades make me money?", "what type of trades suit me?"
         "| (what|which) (kind|kinds|sort|sorts|type|types) of (trades?|trading|options?|positions?) (work|works|worked|work best|works best|make|makes|made|pay|pays|suit|suits|win|wins) (for |)(me|mine) " +
         "| which (of my )?(trades|side|instruments?) (work|works|make|makes|pay|pays|suit|suits) (best |)(for |)me " +

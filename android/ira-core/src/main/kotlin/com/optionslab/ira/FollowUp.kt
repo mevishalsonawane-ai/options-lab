@@ -23,13 +23,14 @@ object FollowUp {
      */
     private val NEXT = Regex("^ (uske baad|iske baad|us ke baad|is ke baad|uske baad kya|phir|fir|phir kya|fir kya|aage|aage kya|then what|and then|and then what|after that|what next|what s next|whats next|what happens next) $")
 
-    private enum class Span { YESTERDAY, LAST_WEEK, WEEK, MONTH, TODAY }
+    private enum class Span { YESTERDAY, LAST_WEEK, WEEK, MONTH, LAST_MONTH, TODAY }
     /** "What about yesterday?", "and last week?", "aur pichle hafte?": the same asked of another day or span. */
     private val WHEN = listOf(
         Span.YESTERDAY to Regex("^(yesterday|yesterday s|the day before|the previous day|last session|the last session)$"),
         Span.LAST_WEEK to Regex("^(last week|previous week|pichle hafte|pichhle hafte|pichla hafta|pichle hafta)$"),
         Span.WEEK to Regex("^(this week|week|is hafte|iss hafte|is hafta)$"),
         Span.MONTH to Regex("^(this month|month|is mahine|iss mahine|is mahina)$"),
+        Span.LAST_MONTH to Regex("^(last month|previous month|pichle mahine|pichhle mahine|pichla mahina)$"),
         Span.TODAY to Regex("^(today|aaj)$"),
     )
 
@@ -94,9 +95,54 @@ object FollowUp {
         // (Nor is any word that could act, in English or Hinglish: "aur Sensex ka order lagao".)
         if (VERB.containsMatchIn(" $rest ") || Compound.ACTION.containsMatchIn(" $rest ")) return null
         val newMarkets = Market.mentioned(rest)
-        if (newMarkets.isEmpty()) return WHEN.firstOrNull { it.second.matches(rest) }?.let { at(prev, prevMarkets, it.first) }
+        if (newMarkets.isEmpty()) {
+            val span = WHEN.firstOrNull { it.second.matches(rest) }?.first ?: return side(prev, rest)
+            return ownSpan(prev, span) ?: at(prev, prevMarkets, span)
+        }
         val from = prevMarkets.firstOrNull() ?: return null
         return swap(prev, from, newMarkets.first())
+    }
+
+    /** "Calls", "my put", "the put side": the other kind of option, as a follow-up names it. */
+    private val KIND = Regex("^(my |the |mere |meri )?(put|puts|call|calls)( side| options?)?$")
+    /** A put or a call named in what was asked before. */
+    private val PREV_KIND = Regex("(?i)\\b(puts?|calls?)\\b")
+
+    /**
+     * Round 22: "what needs to happen for my put to work?" then "what about my call?" asks it of the call; "where do I make
+     * my money?" then "what about puts?" asks it of puts. Only a question carries ([resolve] checks), and only an option's
+     * kind is swapped - never a strike, a size or a side.
+     */
+    private fun side(prev: String, rest: String): String? {
+        val k = KIND.matchEntire(rest)?.groupValues?.get(2) ?: return null
+        val want = if (k.startsWith("put")) "put" else "call"
+        if (PREV_KIND.containsMatchIn(prev)) {
+            // Both named before ("my calls or my puts"): nothing to swap.
+            if (PREV_KIND.findAll(prev).map { it.value.lowercase().take(3) }.distinct().count() > 1) return null
+            val swapped = PREV_KIND.replace(prev.trim()) { m ->
+                val w = m.value.lowercase()
+                if (w.startsWith(want)) m.value else want + (if (w.endsWith("s")) "s" else "")
+            }
+            return swapped.takeIf { it != prev.trim() }
+        }
+        // His own trades split by kind: the record cut by calls and puts.
+        if (WhereIWin.asked(prev) != null) return prev.trim().trimEnd('?', '.', '!').trim() + " on ${want}s"
+        return null
+    }
+
+    private val SPAN_WORDS = Regex("(?i)\\s*\\b(today|todays|aaj|(this|last|previous|past) (week|month)|weekly|monthly|on record|so far)\\b")
+
+    /**
+     * Round 22: "where do I make my money?" then "same for last week": his own record over that span, not his P&L
+     * (which [at] gives an account question). Only [WhereIWin]'s spans; yesterday is not one of them.
+     */
+    private fun ownSpan(prev: String, span: Span): String? {
+        if (WhereIWin.asked(prev) == null) return null
+        val words = when (span) {
+            Span.TODAY -> "today"; Span.WEEK -> "this week"; Span.LAST_WEEK -> "last week"
+            Span.MONTH -> "this month"; Span.LAST_MONTH -> "last month"; Span.YESTERDAY -> return null
+        }
+        return SPAN_WORDS.replace(prev.trim().trimEnd('?', '.', '!'), "").trim() + " " + words
     }
 
     /** [text] with [from] (as said: "bank nifty", "nifty 50", "bnf") swapped for [to]; null when [from] is not in it. */
@@ -125,6 +171,7 @@ object FollowUp {
             Span.LAST_WEEK -> "what was my p&l last week"
             Span.WEEK -> "what is my p&l this week"
             Span.MONTH -> "what is my p&l this month"
+            Span.LAST_MONTH -> "what was my p&l last month"
             Span.TODAY -> "what is my p&l today"
         }
         val m = prevMarkets.firstOrNull { it != Market.VIX && it != Market.GOLD } ?: return null
@@ -133,6 +180,7 @@ object FollowUp {
             Span.LAST_WEEK -> "how did ${m.label} do last week"
             Span.WEEK -> "how has ${m.label} done this week"
             Span.MONTH -> "how has ${m.label} done this month"
+            Span.LAST_MONTH -> "how did ${m.label} do last month"
             Span.TODAY -> "how is ${m.label} doing today"
         }
     }

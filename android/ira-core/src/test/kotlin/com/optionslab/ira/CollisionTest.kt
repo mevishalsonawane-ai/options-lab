@@ -2008,6 +2008,64 @@ class CollisionTest {
         assertEquals(null, Heard.fix("pl show nifty").takeIf { it != "pl show nifty" }, "a bare pl is never P&L")
     }
 
+    private val ROUND22 = listOf(
+        // Theta on his book, asked loosely
+        "what's theta doing for me" to "BookDecay", "is theta on my side" to "BookDecay", "am i theta positive" to "BookDecay",
+        "is my book theta negative" to "BookDecay", "what's the decay on my strangle" to "BookDecay", "how much theta does my strangle make" to "BookDecay",
+        "theta se kitna kama raha hoon" to "BookDecay",
+        // The comeback record asked as a habit, and a gain given up
+        "does nifty recover from a 1% fall" to "Comebacks", "how often does nifty give up a 1% gain intraday" to "Comebacks",
+        "does banknifty usually give up a 1% gain" to "Comebacks",
+        // VIX judged right or wrong against the moves
+        "is vix accurate" to "VixBand", "how often is vix wrong" to "VixBand", "how often does vix get it right" to "VixBand",
+        "how good is vix at predicting moves" to "VixBand", "does the market move as much as vix says" to "VixBand",
+        // Where he wins, asked in his own words
+        "where am i making money" to "WhereIWin", "where am i losing money" to "WhereIWin", "where do i lose the most" to "WhereIWin",
+        "what do i make money on" to "WhereIWin", "what do i lose money on" to "WhereIWin", "which index works best for me" to "WhereIWin",
+        "is selling working for me" to "WhereIWin", "how do i do on banknifty" to "WhereIWin",
+        // What has to happen for his position, with the index named first
+        "what does nifty need to do for my put" to "Account:NEED", "where does nifty need to be for my put" to "Account:NEED",
+        "when does my put start making money" to "Account:NEED", "at what nifty level am i in profit" to "Account:NEED",
+        "how much does nifty have to move for me to break even" to "Account:NEED",
+    )
+
+    /** Follow-ups (the question before, what is said now, what it is read as, and where that goes). */
+    private val ROUND22_FOLLOW = listOf(
+        Triple("what needs to happen for my put to work", "what about my call?", "what needs to happen for my call to work") to "Account:NEED",
+        Triple("what needs to happen for my put to work", "and the call?", "what needs to happen for my call to work") to "Account:NEED",
+        Triple("where do i make my money", "what about puts?", "where do i make my money on puts") to "WhereIWin",
+        Triple("where do i make my money", "same for last week", "where do i make my money last week") to "WhereIWin",
+        Triple("where do i make my money this month", "and last month?", "where do i make my money last month") to "WhereIWin",
+    )
+
+    @Test fun roundTwentyTwoWordingsRouteAndNeverAct() {
+        assertEquals(ROUND22.size, ROUND22.map { it.first }.distinct().size)
+        val wrong = ROUND22.mapNotNull { (s, want) -> audit.feature(s).let { got -> if (got == want) null else "\"$s\": wanted $want, got $got ${hits(s)}" } }
+        assertTrue(wrong.isEmpty(), wrong.joinToString("\n"))
+        for ((s, _) in ROUND22) neverActs(s)
+        for ((t, want) in ROUND22_FOLLOW) {
+            val (prev, now, read) = t
+            assertEquals(read, FollowUp.resolve(prev, now), now)
+            assertEquals(want, audit.feature(read), read)
+            neverActs(now); neverActs(read)
+        }
+        // Neighbours keep their own: the word explained, VIX's level and feed, today's market, the app's how-to, his orders,
+        // advice on his put, and the P&L over another span.
+        assertEquals("Glossary", audit.feature("what is theta"))
+        assertEquals("VixRank", audit.feature("is vix high"))
+        for (s in listOf("is vix data accurate", "is the vix figure right", "will vix be right tomorrow", "does nifty recover from here", "does nifty recover today",
+            "what does nifty need to do today", "at what level should i sell my put", "when should i close my put"))
+            assertTrue(audit.feature(s) !in setOf("VixBand", "Comebacks", "Account:NEED", "WhereIWin", "BookDecay"), "$s: ${audit.feature(s)}")
+        for (s in listOf("how do i trade banknifty", "how do i buy a put")) assertEquals("Account:HOWTO", audit.feature(s), s)
+        assertEquals("Account:ORDERS", audit.feature("is my order working"))
+        assertEquals("what was my p&l last week", FollowUp.resolve("what's my p&l", "same for last week"))
+        assertEquals("what was my p&l yesterday", FollowUp.resolve("where do i make my money", "and yesterday?"))
+        // An order or a command is never carried, whichever kind is named now; both kinds named before: nothing to swap.
+        for ((prev, now) in listOf("buy nifty 24000 put" to "what about calls?", "close my put" to "and the call?", "sell my calls" to "what about puts?",
+            "do i make more on calls or puts" to "what about puts?", "how is nifty" to "what about puts?")) assertEquals(null, FollowUp.resolve(prev, now), "$prev / $now")
+        for (s in listOf("sell my nifty put", "book my profit")) assertTrue(Ask.parse(s).command != null || Ask.parse(s).order != null, s)
+    }
+
     // ---- Again: the voice's own "say that again slowly" - heard before the question path, never a question family ----
 
     private val AGAIN = listOf("say that again slowly", "repeat it slower", "once more slowly", "dobara dheere bolo", "dheere se phir se bolo",

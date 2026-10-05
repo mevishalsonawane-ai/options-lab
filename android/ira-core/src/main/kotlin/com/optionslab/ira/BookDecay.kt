@@ -135,7 +135,7 @@ object BookDecay {
 
     private const val DECAY = "(theta|time decay|decay|thetas|time value decay)"
     private const val MINE = "(my|our|mera|meri|mere|hamara|hamari|hamare)"
-    private const val BOOK = "(book|books|positions?|portfolio|options?|option positions?|trades?|legs?|puts?|calls?|nifty puts?|nifty calls?|banknifty puts?|banknifty calls?|bank nifty puts?|bank nifty calls?|open positions?)"
+    private const val BOOK = "(book|books|positions?|portfolio|options?|option positions?|trades?|legs?|puts?|calls?|nifty puts?|nifty calls?|banknifty puts?|banknifty calls?|bank nifty puts?|bank nifty calls?|open positions?|straddles?|strangles?|spreads?|iron condors?|condors?|iron flys?|butterfly|butterflies)"
 
     private val ASK = rx(
         // "What's my theta?", "my net theta", "my total time decay", "my positions' theta", "my book's decay"
@@ -148,6 +148,11 @@ object BookDecay {
         // "Am I paying theta?", "am I collecting decay?", "is theta working for me or against me?", "am I long or short theta?"
         "| (am i|are we) (paying|losing|bleeding|collecting|earning|making|getting) $DECAY " +
         "| is $DECAY (working )?(for|against) (me|us) " +
+        // Round 22: "what's theta doing for me?", "is theta on my side?", "am I theta positive?", "how much theta does my strangle make?"
+        "| (whats|what is) $DECAY (doing|giving|making|costing|paying) (for |to )?(me|us) " +
+        "| is $DECAY on (my|our) side " +
+        "| (am i|are we|is my book|are my positions) (net )?(theta|decay) (positive|negative) " +
+        "| how much $DECAY (does|do|will) $MINE $BOOK (make|earn|collect|lose|pay|bleed|give up) " +
         "| (am i|are we|is my book|are my positions) (net )?(long |short |long or short |short or long )(theta|time decay|decay|gamma and theta)( or (long|short) (theta|decay))? " +
         // "How much decay over the weekend on my positions?", "weekend theta on my book"
         "| (weekend|holiday|overnight) $DECAY (on|of|for|in) $MINE " +
@@ -155,7 +160,7 @@ object BookDecay {
         "| $MINE $BOOK (decay|lose to decay|bleed|bleed to decay) (over|through|during|till|until) (the |this |a )?(long )?(weekend|holiday|holidays) " +
         // Hinglish: "meri positions ka theta kitna hai", "time decay se kitna nuksan ho raha hai", "decay kitna kha raha hai"
         "| $MINE ($BOOK )?(ka|ki|ke|par|pe|mein|me) $DECAY " +
-        "| $DECAY (se|me|mein|mai|ka|ki) (kitna|kitni|kitne) (nuksan|nuksaan|loss|kharcha|kamai|munafa|profit|paisa|paise|ja raha|jaa raha|ja rahi|kha raha|kat raha|ho raha|lag raha|mil raha) " +
+        "| $DECAY (se|me|mein|mai|ka|ki) (kitna|kitni|kitne) (nuksan|nuksaan|loss|kharcha|kamai|munafa|profit|paisa|paise|ja raha|jaa raha|ja rahi|kha raha|kat raha|ho raha|lag raha|mil raha|kama raha|kama rahe|kama rahi|kamaa raha|bana raha) " +
         "| $DECAY (kitna|kitni|kitne) (kha raha|kat raha|ho raha|lag raha|ja raha|jaa raha|mil raha|kha rahi|ho rahi|kama raha) ")
 
     /** Something else is meant: the word's meaning, a what-if, an order, a strategy's test, another day. */

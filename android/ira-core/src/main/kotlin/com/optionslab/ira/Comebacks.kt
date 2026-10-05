@@ -68,7 +68,7 @@ object Comebacks {
     /** Coming back from a move, or the move holding (or given back), in English and Hinglish. */
     private val TURN = Regex(" (recover|recovers|recovered|recovering|recovery|recoveries|bounce back|bounces back|bounced back|bouncing back|" +
         "come back|comes back|came back|coming back|comeback|comebacks|rebound|rebounds|rebounded|rebounding|claw back|claws back|clawed back|" +
-        "win back|wins back|won back|pare|pares|pared|give back|gives back|gave back|give it back|gives it back|give it all back|gives it all back|giveback|" +
+        "win back|wins back|won back|give up|gives up|gave up|give it up|gives it up|pare|pares|pared|give back|gives back|gave back|give it back|gives it back|give it all back|gives it all back|giveback|" +
         "fade|fades|faded|fading|hold|holds|held|holding|sustain|sustains|sustained|stick|sticks|end green|ends green|end red|ends red|" +
         "finish green|finishes green|finish red|finishes red|end in the green|ends in the green|end in the red|ends in the red|" +
         "wapas|waapas|vapas|vaapas|recover karta|recover karti|recover hota|recover hoti|tikta|tikti|tikta hai) ")
@@ -86,8 +86,12 @@ object Comebacks {
         "sink|sinks|sank|sinking|selloff|sell off|girta|girti|girte|girne|gira|giri|gire|gir|neeche|niche|tootne|tutne|toota|tuta) ")
     private val UP = Regex(" (up|rise|rises|rose|rising|risen|rally|rallies|rallied|rallying|jump|jumps|jumped|jumping|surge|surges|surged|" +
         "gain|gains|gained|climb|climbs|climbed|climbing|chadhta|chadhti|chadhne|chadha|chadhe|upar|badhne|badhta|badhti) ")
+    /** "Does Nifty recover...", "does it bounce back...": asked as a habit when said with a size. */
+    private val HABIT = Regex("^ (does|do) (nifty|bank nifty|banknifty|finnifty|fin nifty|sensex|the market|the index|it|they|indices|the indices) ")
     /** "Bounce back up" / "comes back up": the way back, never the move asked of. */
     private val BACK_UP = Regex(" (back|wapas|waapas|vapas|vaapas) up ")
+    /** "Give up a 1% gain" is giving it back, never a move up. */
+    private val GIVE_UP = Regex(" (give|gives|gave) (it )?up ")
     // A forecast or advice, Boss's own book, a what-if, alerts and reminders, the app's bots, stock screens, a definition, a
     // reason, today or now (the day's own read), the open, gaps, candles, the last hour, yesterday's levels, a week's, month's
     // or year's move, expiry, options, gold or VIX.
@@ -110,10 +114,11 @@ object Comebacks {
         if (Market.mentioned(text).any { it == Market.GOLD || it == Market.VIX }) return null
         val named = NAME.containsMatchIn(t)
         if (!named) {
-            if (!TURN.containsMatchIn(t) || !HOW.containsMatchIn(t)) return null
+            // (Round 22: "does Nifty recover from a 1% fall?" - asked of its habit with a size, never of today, which NOT keeps out.)
+            if (!TURN.containsMatchIn(t) || !(HOW.containsMatchIn(t) || HABIT.containsMatchIn(t) && SIZE.containsMatchIn(t))) return null
             if (!SIZE.containsMatchIn(t) && !INTRADAY.containsMatchIn(t)) return null
         }
-        val sides = BACK_UP.replace(t, " back ")
+        val sides = BACK_UP.replace(t, " back ").replace(GIVE_UP, " give back ")
         val down = DOWN.find(sides)?.range?.first
         val up = UP.find(sides)?.range?.first
         val dir = when {
