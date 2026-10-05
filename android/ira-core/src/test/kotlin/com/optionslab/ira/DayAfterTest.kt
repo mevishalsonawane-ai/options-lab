@@ -106,7 +106,10 @@ class DayAfterTest {
         assertNull(DayAfter.side(days, 1, 1.3))
 
         val said = DayAfter.answer(DayAfter.Q(null), Market.NIFTY, nifty(40), today, today.atTime(16, 0))
-        assertTrue(said.startsWith("Over the last 39 whole sessions of Nifty on this phone"), said)
+        // Round 28: the lead carries the key figure for both sides, set against any session.
+        assertTrue(said.startsWith("After 1%+ down days, Nifty's next session closed down again on 0% (of 10); after 1%+ up days, up again on 0% (of 10); " +
+            "after any session, 51% and 49%. Over the last 39 whole sessions of Nifty on this phone"), said)
+        assertTrue(ShortAnswer.trim(said.substringBefore(". ") + ".").endsWith("51% and 49%."), said)
         assertTrue(said.contains("a big day being a close 1% or more from the close before"), said)
         assertTrue(said.contains("After the 10 big down days, the next session opened down on 0 (0%), closed down again on 0 (0%) and up on 10;"), said)
         assertTrue(said.contains("After the 10 big up days, the next session opened up on 0 (0%), closed up again on 0 (0%) and down on 10;"), said)
@@ -119,8 +122,10 @@ class DayAfterTest {
         // One side asked; a size with too few days said plainly.
         val dn = DayAfter.answer(DayAfter.Q(-1), Market.NIFTY, nifty(40), today, today.atTime(16, 0))
         assertFalse(dn.contains("big up days"), dn)
+        assertTrue(dn.startsWith("After the 10 big down days (1%+) on this phone, Nifty's next session closed down again on 0%, against 51% after any session. Over the last"), dn)
         val few = DayAfter.answer(DayAfter.Q(1, 1.3), Market.NIFTY, nifty(40), today, today.atTime(16, 0))
         assertTrue(few.contains("Only 0 big up days of 1.3% or more - too few"), few)
+        assertTrue(few.startsWith("Over the last 39"), few)   // no side to lead with: opens as before
     }
 
     @Test fun todayEndedOnlyForAWholeSession() {
@@ -129,21 +134,51 @@ class DayAfterTest {
         val live = DayAfter.answer(DayAfter.Q(-1), Market.NIFTY, past + session(today, pc, pc * 0.988, LocalTime.of(11, 0)), today, today.atTime(11, 0))
         assertTrue(Regex("Today Nifty is -\\d\\.\\d\\d% on \\d+ \\w+'s close so far").containsMatchIn(live), live)
         val whole = DayAfter.answer(DayAfter.Q(-1), Market.NIFTY, past + session(today, pc, pc * 0.988), today, today.atTime(16, 0))
-        assertTrue(Regex("Today Nifty ended -1\\.20% on \\d+ \\w+'s close, a move of the size asked\\.").containsMatchIn(whole), whole)
+        assertTrue(Regex("Today Nifty ended -1\\.20% on \\d+ \\w+'s close, a move of the size asked - bigger, either way, than \\d+% of the 39 sessions in this record\\.").containsMatchIn(whole), whole)
         val cut = DayAfter.answer(DayAfter.Q(-1), Market.NIFTY, past + session(today, pc, pc * 0.988, LocalTime.of(11, 0)), today, today.atTime(16, 0))
         assertTrue(Regex("Today Nifty was -\\d\\.\\d\\d% on \\d+ \\w+'s close at 11:00").containsMatchIn(cut), cut)
         assertFalse(cut.contains("Today Nifty ended"), cut)
         // A fall today is not "of the size asked" when the big up days were asked.
         val upAsked = DayAfter.answer(DayAfter.Q(1), Market.NIFTY, past + session(today, pc, pc * 0.988), today, today.atTime(16, 0))
-        assertTrue(Regex("Today Nifty ended -1\\.20% on \\d+ \\w+'s close\\.").containsMatchIn(upAsked), upAsked)
+        assertTrue(Regex("Today Nifty ended -1\\.20% on \\d+ \\w+'s close - bigger").containsMatchIn(upAsked), upAsked)
+        assertTrue(upAsked.startsWith("After the 10 big up days"), upAsked)
         assertFalse(upAsked.contains("a move of the size asked"), upAsked)
         val both = DayAfter.answer(DayAfter.Q(null), Market.NIFTY, past + session(today, pc, pc * 0.988), today, today.atTime(16, 0))
         assertTrue(both.contains("a move of the size asked"), both)
     }
 
+    /** Round 28: a big day today leads, joined to what followed the big days of its way and its place in the record. */
+    @Test fun aBigDayTodayLeadsWithWhatFollowedSuchDays() {
+        val past = nifty(40)
+        val pc = past.last().c
+        val bars = past + session(today, pc, pc * 0.96, LocalTime.of(11, 0))   // about -1.12% at 11:00
+        val td = DayAfter.todayMove(bars, today, today.atTime(11, 0))!!
+        assertTrue(td.live); assertEquals(-1.12, td.move, 0.01)
+        assertEquals(49, DayAfter.percentile(DayAfter.past(bars, today), td.move))   // 19 of 39 days moved less (the 0.3% and 0.5% ones)
+        val said = DayAfter.answer(DayAfter.Q(null), Market.NIFTY, bars, today, today.atTime(11, 0))
+        assertTrue(Regex("^Today Nifty is -1\\.1\\d% so far, a big down day \\(1%\\+\\); after the 10 on this phone, the next session closed down again on 0%, " +
+            "against 51% after any session\\. Today Nifty is -1\\.1\\d% on \\d+ \\w+'s close so far, a move of the size asked - bigger, either way, than 49% " +
+            "of the 39 sessions in this record\\. The session is not over, so today's move can still change\\. Over the last 39").containsMatchIn(said), said)
+        // Said once only, and the short answer's lead keeps the key figure whole.
+        assertEquals(2, Regex("Today Nifty").findAll(said).count(), said)
+        val lead = said.substringBefore(". ") + "."
+        assertEquals(lead, ShortAnswer.trim(lead))
+        assertFalse(ADVICE.containsMatchIn(said), said)
+        // The other way asked: today is not that big day, so the asked side leads and today comes last.
+        val up = DayAfter.answer(DayAfter.Q(1), Market.NIFTY, bars, today, today.atTime(11, 0))
+        assertTrue(up.startsWith("After the 10 big up days (1%+)"), up)
+        assertTrue(up.contains("Today Nifty is -1.1") && !up.contains("a big down day"), up)
+        // Too few big days of today's way: said plainly in the lead.
+        val big = DayAfter.answer(DayAfter.Q(-1, 1.3), Market.NIFTY, past + session(today, pc, pc * 0.95), today, today.atTime(16, 0))
+        assertTrue(big.startsWith("Today Nifty ended -5.00%, a big down day (1.3%+); after the 10 on this phone"), big)
+        assertTrue(big.contains("than 100% of the 39 sessions") && !big.contains("not over"), big)
+        val none = DayAfter.answer(DayAfter.Q(-1, 2.0), Market.NIFTY, past + session(today, pc, pc * 0.95), today, today.atTime(16, 0))
+        assertTrue(none.startsWith("Today Nifty ended -5.00%, a big down day (2%+), but the phone has only 0 like it before - too few to say what followed (I need 5)."), none)
+    }
+
     @Test fun aSizeOutsideTheRangeIsSaid() {
         val said = DayAfter.answer(DayAfter.Q(-1, 1.0, 7.0), Market.NIFTY, nifty(40), today, today.atTime(16, 0))
-        assertTrue(said.startsWith("I count big days of 0.3 to 5% only, Boss, so here are the 1% days. Over the last 39"), said)
+        assertTrue(said.startsWith("I count big days of 0.3 to 5% only, Boss, so here are the 1% days. After the 10 big down days (1%+) on this phone"), said)
         assertFalse(DayAfter.answer(DayAfter.Q(-1), Market.NIFTY, nifty(40), today, today.atTime(16, 0)).contains("I count big days"))
     }
 

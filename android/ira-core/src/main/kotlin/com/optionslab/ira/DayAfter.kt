@@ -19,7 +19,11 @@ import kotlin.math.abs
  * how it closed (the same way, the other way or flat), how often it traded beyond the big day's own high (or low), how often
  * it closed back past the close before the big day (the whole move undone), and the median next-day move and range - set
  * against what followed every whole session on the phone, so an index that mostly closes up is not passed off as a bounce.
- * The newest big day and its next session, and today against the close before. A record of past days on this phone, said
+ * The newest big day and its next session, and today against the close before, with the share of the record's days that
+ * moved less. Reasoning round 28: the lead carries the key figure (for the short answer) - when today is a big day by the
+ * measure asked, today joined to what the next session did after the big days of its way ("Today Nifty is -1.24% so far, a
+ * big down day (1%+); after the 23 on this phone, the next session closed down again on 39%, against 47% after any
+ * session"), else what followed the big days asked against any session. A record of past days on this phone, said
  * with its counts and plainly when there are too few; never a forecast or advice; nothing acts. The intraday comeback stays
  * [Comebacks]', a close at the day's high or low [ExtremeCloses]', the run of closes [Streak]'s, the big days one by one
  * [MarketMemory]'s, the day after a VIX jump [VixNext]'s. Pure.
@@ -226,15 +230,83 @@ object DayAfter {
             days.count { it.nextPct * side >= FLAT }, days.size, median(days.map { it.nextRangePct }))
     }
 
+    /**
+     * Today against the close before ([move] %, close to close so far): [live] while the session trades, [whole] when it
+     * ended whole, else cut at [last]; [before] the session it is set against.
+     */
+    data class Today(val move: Double, val before: LocalDate, val live: Boolean, val whole: Boolean, val last: LocalTime)
+
+    /** Today against the close before, when the phone has today's session and a whole one just before it. */
+    fun todayMove(bars: List<Candle>, today: LocalDate, now: LocalDateTime, isTradingDay: (LocalDate) -> Boolean = Comebacks.WEEKDAYS): Today? {
+        val ss = MarketStory.sessions(bars)
+        val t = ss.lastOrNull { it.day == today }?.takeIf { it.bars.isNotEmpty() } ?: return null
+        val before = ss.lastOrNull { it.day.isBefore(today) }
+            ?.takeIf { Comebacks.whole(it) && it.close > 0 && Comebacks.follows(it.day, today, isTradingDay) } ?: return null
+        val live = now.toLocalDate() == today && now.toLocalTime().isBefore(CLOSE)
+        return Today((t.close - before.close) / before.close * 100, before.day, live, !live && Comebacks.whole(t), t.bars.last().t.toLocalTime())
+    }
+
+    /** The share (0-100, rounded) of [days] whose move, either way, was smaller than [move]'s: where today sits in the record. */
+    fun percentile(days: List<Day>, move: Double): Int =
+        if (days.isEmpty()) 0 else Math.round(days.count { abs(it.movePct) < abs(move) } * 100.0 / days.size).toInt()
+
+    /** True when [td] is a big day by [pct] the way asked ([side] null: either way). */
+    private fun isBig(td: Today, pct: Double, side: Int?) = abs(td.move) >= pct && (side == null || td.move * side > 0)
+
+    private fun hm(t: LocalTime) = "%02d:%02d".format(Locale.ENGLISH, t.hour, t.minute)
+
+    /**
+     * The lead sentence, its key figure first (reasoning round 28, for the short answer): today, when it is a big day by the
+     * measure asked, joined to what the next session did after the big days of its way on the phone; else what the next
+     * session did after the big days asked, set against any session. About 30 words at most; null when no side has
+     * [MIN_BIG] big days to say (the answer then opens as before).
+     */
+    private fun lead(m: Market, days: List<Day>, q: Q, td: Today?): String? {
+        val size = p1(q.pct) + "+"
+        fun way(sd: Int) = if (sd > 0) "up" else "down"
+        if (td != null && isBig(td, q.pct, q.side)) {
+            val sd = if (td.move > 0) 1 else -1
+            val r = side(days, sd, q.pct)
+            val now = when {
+                td.live -> "is ${s2(td.move)} so far"
+                td.whole -> "ended ${s2(td.move)}"
+                else -> "was ${s2(td.move)} at ${hm(td.last)}"
+            }
+            val head = "Today ${m.label} $now, a big ${way(sd)} day ($size)"
+            return if (r == null || r.count < MIN_BIG)
+                "$head, but the phone has only ${r?.count ?: 0} like it before - too few to say what followed (I need $MIN_BIG)."
+            else "$head; after the ${r.count} on this phone, the next session closed ${way(sd)} again on ${share(r.closedSame, r.count)}, " +
+                "against ${share(r.baseSame, r.baseCount)} after any session."
+        }
+        val said = (if (q.side != null) listOf(q.side) else listOf(-1, 1))
+            .mapNotNull { sd -> side(days, sd, q.pct)?.takeIf { it.count >= MIN_BIG } }
+        if (said.isEmpty()) return null
+        if (said.size == 1) {
+            val r = said[0]
+            return "After the ${r.count} big ${way(r.side)} days ($size) on this phone, ${m.label}'s next session closed ${way(r.side)} again on " +
+                "${share(r.closedSame, r.count)}, against ${share(r.baseSame, r.baseCount)} after any session."
+        }
+        val (d, u) = said
+        return "After $size down days, ${m.label}'s next session closed down again on ${share(d.closedSame, d.count)} (of ${d.count}); " +
+            "after $size up days, up again on ${share(u.closedSame, u.count)} (of ${u.count}); " +
+            "after any session, ${share(d.baseSame, d.baseCount)} and ${share(u.baseSame, u.baseCount)}."
+    }
+
     /** [m]'s record from its 1-minute candles over many days, for [q], at [now] on [today]; [isTradingDay] the app's calendar. */
     fun answer(q: Q, m: Market, bars: List<Candle>, today: LocalDate, now: LocalDateTime, isTradingDay: (LocalDate) -> Boolean = Comebacks.WEEKDAYS): String {
         val days = past(bars, today, isTradingDay)
         if (days.size < MIN_SESSIONS)
             return "I have only ${days.size} whole session${if (days.size == 1) "" else "s"} of ${m.label} with a whole one on each side on the phone, Boss - " +
                 "too few to say what followed its big days (I need $MIN_SESSIONS)."
+        val td = todayMove(bars, today, now, isTradingDay)
+        val bigToday = td != null && isBig(td, q.pct, q.side)
         val lines = ArrayList<String>()
+        // A size outside what is counted is corrected first, so the short answer never passes 1% days off as the size asked.
         if (q.asked != null)
             lines += "I count big days of ${p1(MIN_PCT).removeSuffix("%")} to ${p1(MAX_PCT)} only, Boss, so here are the ${p1(q.pct)} days."
+        lead(m, days, q, td)?.let { lines += it }
+        // A big day today: where it sits in the record, said right after the lead.
+        if (bigToday) lines += todayLine(m, days, td!!, q.pct, q.side)
         lines += "Over the last ${days.size} whole sessions of ${m.label} on this phone (${date(days.first().day)} to ${date(days.last().day)}), " +
             "a big day being a close ${p1(q.pct)} or more from the close before:"
         val sides = if (q.side != null) listOf(q.side) else listOf(-1, 1)
@@ -242,7 +314,7 @@ object DayAfter {
         val newest = days.lastOrNull { abs(it.movePct) >= q.pct && (q.side == null || it.movePct * q.side > 0) }
         if (newest != null)
             lines += "The newest was ${date(newest.day)}, when ${m.label} ended ${s2(newest.movePct)}; the next session, ${date(newest.next)}, ended ${s2(newest.nextPct)} on it."
-        todayLine(m, bars, today, now, q.pct, q.side, isTradingDay)?.let { lines += it }
+        if (td != null && !bigToday) lines += todayLine(m, days, td, q.pct, q.side)
         lines += NOTE
         return lines.joinToString(" ")
     }
@@ -262,22 +334,20 @@ object DayAfter {
             "After any whole session, ${m.label} closed $way the next day on ${share(r.baseSame, r.baseCount)}, so that is the share to set ${share(r.closedSame, r.count)} against.$small"
     }
 
-    /** Today against the close before, when the phone has today's session and a whole one just before it. */
-    private fun todayLine(m: Market, bars: List<Candle>, today: LocalDate, now: LocalDateTime, pct: Double, side: Int?, isTradingDay: (LocalDate) -> Boolean): String? {
-        val ss = MarketStory.sessions(bars)
-        val t = ss.lastOrNull { it.day == today }?.takeIf { it.bars.isNotEmpty() } ?: return null
-        val before = ss.lastOrNull { it.day.isBefore(today) }
-            ?.takeIf { Comebacks.whole(it) && it.close > 0 && Comebacks.follows(it.day, today, isTradingDay) } ?: return null
-        val live = now.toLocalDate() == today && now.toLocalTime().isBefore(CLOSE)
-        val move = (t.close - before.close) / before.close * 100
+    /**
+     * Today against the close before, and where its size sits among the record's days (round 28: the share of them that
+     * moved less, either way); while the session trades, said as not over.
+     */
+    private fun todayLine(m: Market, days: List<Day>, td: Today, pct: Double, side: Int?): String {
         // "Ended" only for a whole session; candles that stop early say when they stop.
-        val last = t.bars.last().t.toLocalTime()
         val where = when {
-            live -> "is ${s2(move)} on ${date(before.day)}'s close so far"
-            Comebacks.whole(t) -> "ended ${s2(move)} on ${date(before.day)}'s close"
-            else -> "was ${s2(move)} on ${date(before.day)}'s close at ${"%02d:%02d".format(Locale.ENGLISH, last.hour, last.minute)}"
+            td.live -> "is ${s2(td.move)} on ${date(td.before)}'s close so far"
+            td.whole -> "ended ${s2(td.move)} on ${date(td.before)}'s close"
+            else -> "was ${s2(td.move)} on ${date(td.before)}'s close at ${hm(td.last)}"
         }
-        val sized = if (abs(move) >= pct && (side == null || move * side > 0)) ", a move of the size asked" else ""
-        return "Today ${m.label} $where$sized."
+        val sized = if (isBig(td, pct, side)) ", a move of the size asked" else ""
+        val rank = "bigger, either way, than ${percentile(days, td.move)}% of the ${days.size} sessions in this record"
+        val open = if (td.live) " The session is not over, so today's move can still change." else ""
+        return "Today ${m.label} $where$sized - $rank.$open"
     }
 }
