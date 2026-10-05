@@ -233,6 +233,7 @@ object IraModel {
         lock.withLock {
             // Checked again under the lock: the model may have been switched while this waited.
             if (!usable()) return@withLock null
+            yieldedForVoice = false
             idle?.cancel()
             _state.update { it.copy(writing = true) }
             try {
@@ -243,7 +244,7 @@ object IraModel {
                     _state.update { it.copy(loaded = true, message = null) }
                 }
                 // The voice got busy while this waited for the lock or loaded the model: it gives way now (5 Oct).
-                if (runCatching { JarvisVoice.busyForModel }.getOrDefault(false)) return@withLock null
+                if (runCatching { JarvisVoice.busyForModel }.getOrDefault(false)) { yieldedForVoice = true; return@withLock null }
                 val watchdog = scope.launch { delay(TIMEOUT_MS); LlmNative.cancel() }
                 rewriting = true
                 val bytes = try { gently { Writer.prompt(question, facts, draft).let { p -> LlmNative.generate(handle, p, MAX_TOKENS, slots.pick(p), false) } } }
@@ -412,7 +413,23 @@ object IraModel {
      * first sound (37 s after Boss's words) and while the recognizer read Boss (7-9 s of speech read as nothing). Answers
      * the voice itself waits for ([complete]: Hindi, free-form words) are never stopped here.
      */
-    fun yieldToVoice() { if (rewriting) runCatching { LlmNative.cancel() } }
+    fun yieldToVoice() { if (rewriting) { yieldedForVoice = true; runCatching { LlmNative.cancel() } } }
+
+    /** The last [rewrite] gave way to the voice (it got busy before the rewrite began, or [yieldToVoice] stopped it). */
+    @Volatile var yieldedForVoice = false; private set
+
+    /**
+     * [rewrite] once the voice is free ([JarvisVoice.freeForModel]); one stopped for the voice is tried once more when the
+     * voice is free again - never more (bounded), and null when the voice stays busy (the answer shown stands).
+     */
+    suspend fun rewriteWhenFree(question: String, facts: List<String>, draft: String): String? {
+        repeat(2) {
+            if (!runCatching { JarvisVoice.freeForModel() }.getOrDefault(true)) return null
+            val r = runCatching { rewrite(question, facts, draft) }.getOrNull()
+            if (r != null || !yieldedForVoice) return r
+        }
+        return null
+    }
 
     /**
      * Runs [f] just below normal priority (the model's threads inherit it): the screen and the voice still come first,

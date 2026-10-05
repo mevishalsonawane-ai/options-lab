@@ -975,7 +975,7 @@ object IraHub {
         val plain = com.optionslab.ira.Overheard.said(lines.first(), phoneLocked(), "Boss, positions of yours expire today: they're named in the chat.")
         app?.let { JarvisPopup.show(it, "Expiry day: 15:05 square-off", plain) }
         reply(lines.first())
-        JarvisVoice.announce(com.optionslab.ira.Address.boss(plain))
+        JarvisVoice.announce(com.optionslab.ira.Address.boss(plain), urgent = true)
     }
 
     @Volatile private var feedWarned = false
@@ -1001,7 +1001,7 @@ object IraHub {
             feedWarned = true
             val text = com.optionslab.ira.FeedHealth.say(last())
             app?.let { JarvisPopup.show(it, "Live prices stopped", text) }
-            reply(text); JarvisVoice.announce(text); IraActivity.add("Warned: live prices stopped.")
+            reply(text); JarvisVoice.announce(text, urgent = true); IraActivity.add("Warned: live prices stopped.")
             Automations.acted(Automations.Auto.FEED, text)
         } else if (!stale && feedWarned) {
             feedWarned = false
@@ -1300,9 +1300,11 @@ object IraHub {
             if (any != null) { _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, com.optionslab.ira.Plan.ONLY_LOWERING)).takeLast(MAX_MESSAGES)) }; return }
         }
         // "How is Nifty, then close it": a close by a pronoun with no position of Boss's named before it - asked which,
-        // nothing done (never guessed, never dropped silently; routing round 12).
-        if (bundled && parsed.order == null && parsed.command == null && runCatching { com.optionslab.ira.Plan.pronounUnclear(q) }.getOrDefault(false)) {
-            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, com.optionslab.ira.Plan.WHICH_POSITION)).takeLast(MAX_MESSAGES)) }
+        // nothing done (never guessed, never dropped silently; routing round 12). The same when one was named but no plan
+        // was formed ("my put is losing, close it"): asked which. IraGoldAlgo only talks.
+        if (bundled && parsed.order == null && parsed.command == null && runCatching { com.optionslab.ira.Plan.pronounUnclear(q) || com.optionslab.ira.Plan.pronounAfter(q) }.getOrDefault(false)) {
+            val said = if (com.optionslab.app.BuildConfig.GOLD || GOLD_ONLY_TALK) GOLD_TALK_ONLY else com.optionslab.ira.Plan.WHICH_POSITION
+            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
             return
         }
         // Boss's own reminder ("remind me at 3 pm to check Nifty"): only said at its time, never run (Boss, 4 Oct).
@@ -1899,8 +1901,8 @@ object IraHub {
             // and then held the fast cores for up to 30 s, starving the speech engine and the recognizer. It now starts
             // only once the voice is free (the answer said, Boss not speaking) and is stopped when either starts again
             // ([JarvisVoice.freeForModel], [IraModel.yieldToVoice]); with Jarvis off it starts at once, as before.
-            val free = runCatching { JarvisVoice.freeForModel() }.getOrDefault(true)
-            val better = if (!free) null else runCatching { IraModel.rewrite(q, a.facts, a.text) }.getOrNull()
+            // One stopped for the voice is tried once more when it is free again ([IraModel.rewriteWhenFree]).
+            val better = runCatching { IraModel.rewriteWhenFree(q, a.facts, a.text) }.getOrNull()
             // The model's wording checked the same way (outside the update, which may run more than once).
             val betterFit = if (better != null && better != a.text) IraTools.fitWords(better) else null
             _state.update { s -> s.copy(messages = s.messages.map { m ->
@@ -2483,7 +2485,7 @@ object IraHub {
                 val mk = com.optionslab.ira.RangeBreaks.market(parsed.markets)
                 if (mk == null) com.optionslab.ira.RangeBreaks.NOT_HERE
                 else com.optionslab.ira.RangeBreaks.answer(orbAsk, mk, histories[mk]?.bars.orEmpty(),
-                    com.optionslab.app.data.Market.today(), LocalDateTime.now(IST))
+                    com.optionslab.app.data.Market.today(), com.optionslab.app.data.Market.now().toLocalDateTime())
             }.getOrElse { "I could not read the opening-range record just now, Boss." }
             _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
             reply(said)
@@ -2623,7 +2625,7 @@ object IraHub {
                 val mk = com.optionslab.ira.Structure.market(parsed.markets)
                 if (mk == null) com.optionslab.ira.Structure.NOT_HERE
                 else com.optionslab.ira.Structure.answer(structureAsk, mk, histories[mk]?.bars.orEmpty(),
-                    com.optionslab.app.data.Market.today(), LocalDateTime.now(IST)).also {
+                    com.optionslab.app.data.Market.today(), com.optionslab.app.data.Market.now().toLocalDateTime()).also {
                     // Kept so "what would change your mind?" tests this read (market data only; memory only, never stored).
                     lastStructureRead = runCatching { com.optionslab.ira.MindChange.said(mk, histories[mk]?.bars.orEmpty(), com.optionslab.app.data.Market.today()) }.getOrNull()
                     // A trend or range read said in session is noted, to be scored after the close ([com.optionslab.ira.TrendReads];
@@ -2832,8 +2834,7 @@ object IraHub {
             _state.update { it.copy(messages = (it.messages + msg).takeLast(MAX_MESSAGES)) }
             if (write) {
                 // Asked by voice, the answer above is said at once: the model's rewrite waits for the voice to be free.
-                val free = runCatching { JarvisVoice.freeForModel() }.getOrDefault(true)
-                val better = if (!free) null else runCatching { IraModel.rewrite(q, a.facts, a.text) }.getOrNull()
+                val better = runCatching { IraModel.rewriteWhenFree(q, a.facts, a.text) }.getOrNull()
                 val betterFit = if (better != null && better != a.text) IraTools.fitWords(better) else null
                 _state.update { s -> s.copy(messages = s.messages.map { m ->
                     if (m !== msg) m else if (betterFit != null) m.copy(text = betterFit, draft = a.text, writing = false) else m.copy(writing = false)

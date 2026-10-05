@@ -198,7 +198,7 @@ internal object IraBots {
             if (what == null || act == null || !exact) said += us
             else IraHub.offer(what, "Boss, $name is behaving unusually", "$text Shall I $what?", act)
         }
-        BotHealth.spoken(said)?.let { JarvisVoice.announce(com.optionslab.ira.Overheard.said(it, IraHub.locked())) }
+        BotHealth.spoken(said)?.let { JarvisVoice.announce(com.optionslab.ira.Overheard.said(it, IraHub.locked()), urgent = true) }
     }
 
     // ---- what Boss does with his bots after losing days ([com.optionslab.ira.ArmHabits]) --------------------------

@@ -96,7 +96,7 @@ internal object IraCoach {
         overtradeToldAt = now
         val text = com.optionslab.ira.Overtrade.say(n)
         IraHub.appContext()?.let { JarvisPopup.show(it, "Boss, slow down?", text) }
-        IraHub.note(text); JarvisVoice.announce(text); IraActivity.add("Warned: $n trades in 30 minutes.")
+        IraHub.note(text); JarvisVoice.announce(text, urgent = true); IraActivity.add("Warned: $n trades in 30 minutes.")
         Automations.acted(Automations.Auto.OVERTRADE, "Warned: $n trades in 30 minutes.")
     }
 
@@ -305,7 +305,7 @@ internal object IraCoach {
             .put("k", org.json.JSONArray(told + alerts.flatMap { it.marks })).toString())
         alerts.forEach { IraHub.note(it.text); IraActivity.add(it.text); Automations.acted(Automations.Auto.HEADSUP, it.text) }
         // One spoken line a pass, however many were noted (the worst first).
-        JarvisVoice.announce(alerts.first().spoken)
+        JarvisVoice.announce(alerts.first().spoken, urgent = true)
     }
 
     /** 15:10-15:18 on a trading day, once: open Zerodha MIS positions named before the broker's own square-off. */
@@ -321,7 +321,7 @@ internal object IraCoach {
         com.optionslab.app.security.SecurePrefs.put(key, m.today().toString())
         val mis = open.filter { it.product.equals("MIS", true) && it.qty != 0 }.map { it.symbol to it.qty }
         val text = com.optionslab.ira.MisNudge.say(mis) ?: return
-        IraHub.note(text); JarvisVoice.announce(com.optionslab.ira.MisNudge.say(mis, named = false)!!); IraActivity.add(text); Automations.acted(Automations.Auto.MIS, text)
+        IraHub.note(text); JarvisVoice.announce(com.optionslab.ira.MisNudge.say(mis, named = false)!!, urgent = true); IraActivity.add(text); Automations.acted(Automations.Auto.MIS, text)
     }
 
     /** 09:05-09:14 on a trading day, once: Zerodha not logged in while Live mode or a Zerodha arm needs it. */
@@ -361,7 +361,7 @@ internal object IraCoach {
         }
         val (next, say) = com.optionslab.ira.RelayWatch.next(relay, ok)
         relay = next
-        say?.let { IraHub.note(it); JarvisVoice.announce(it); IraActivity.add(it); Automations.acted(Automations.Auto.RELAY, it) }
+        say?.let { IraHub.note(it); JarvisVoice.announce(it, urgent = true); IraActivity.add(it); Automations.acted(Automations.Auto.RELAY, it) }
     }
 
     /** Just after the open (09:16 to 09:30), once a day: BankNifty's gap and how the arms did on such days. */
@@ -842,7 +842,7 @@ internal object IraCoach {
         val lines = com.optionslab.ira.PositionHealth.lines(ps, LocalDateTime.now(IST))
         IraHub.note(lines.joinToString("\n")); IraActivity.add(lines.first())
         Automations.acted(Automations.Auto.HEALTH, "Expiry-day position check.")
-        JarvisVoice.announce(com.optionslab.ira.Overheard.said(spoken, IraHub.locked()))
+        JarvisVoice.announce(com.optionslab.ira.Overheard.said(spoken, IraHub.locked()), urgent = true)
     }
 
     /**

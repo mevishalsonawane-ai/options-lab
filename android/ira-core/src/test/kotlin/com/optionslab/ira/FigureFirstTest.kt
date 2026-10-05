@@ -53,6 +53,29 @@ class FigureFirstTest {
             FigureFirst.reorder("Nifty is trending up. The day's move is 0.6 percent."))
     }
 
+    @Test fun nothingIsMovedAheadOfAnAgeDoubtOrClosedNote() {
+        val leading = FigureFirst.leading(log("topic:LEVELS", 3), now)
+        val notes = listOf(
+            "My prices are 7 minutes old, Boss. Nifty is in a range. Support is 24,500.",
+            "My last Nifty candle closed at 10:48, Boss, 12 minutes ago - the chart may have moved since. Nifty is in a range. Support is 24,500.",
+            "Did you mean the Nifty levels, Boss? Taking it that way. Nifty is in a range. Support is 24,500. Check me on this, Boss - you marked 3 of my levels wrong lately.",
+            "The market is closed; these are the last prices. Nifty is in a range. Support is 24,500.",
+            "Careful, Boss: the last Nifty price I have is 12 minutes old - the live feed is behind. Nifty is in a range. Support is 24,500.")
+        for (text in notes) {
+            assertTrue(FigureFirst.hasNote(text), text)
+            assertEquals(text, FigureFirst.reorder(text), text)
+            assertEquals(text, FigureFirst.lead("what are the levels on nifty", text, leading), text)
+            // Said SHORT (one sentence): the note is what is said, never dropped for the figure.
+            val short = Aloud.say(FigureFirst.lead("what are the levels on nifty", text, leading), Aloud.Length.SHORT)
+            assertFalse(short.startsWith("Support is 24,500"), short)
+        }
+        val aged = "My prices are 7 minutes old, Boss. Nifty is in a range. Support is 24,500."
+        assertTrue(Aloud.say(FigureFirst.lead("what are the levels on nifty", aged, leading), Aloud.Length.SHORT).contains("7 minutes old"))
+        // Without a note it is still reordered.
+        assertFalse(FigureFirst.hasNote("Nifty is in a range. Support is 24,500."))
+        assertEquals("Support is 24,500. Nifty is in a range.", FigureFirst.reorder("Nifty is in a range. Support is 24,500."))
+    }
+
     @Test fun onlyAMarketReadOfALeadingKindIsReordered() {
         val leading = FigureFirst.leading(log("topic:LEVELS", 3), now)
         val text = "Nifty is in a range. Support is 24,500."

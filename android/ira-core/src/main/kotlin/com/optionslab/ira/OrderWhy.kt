@@ -167,7 +167,7 @@ object OrderWhy {
     /**
      * A reason the app noted when it cancelled the order itself, as a clause after "because": "position_closed",
      * "exit:index_stop", "oco:stop", "oco:target", "unfilled_market", "you", "jarvis", "strategy", "protection_removed",
-     * "protection_replaced", "square_off", "expiry"; any other text is said as it is.
+     * "protection_replaced", "square_off", "expiry", "day_end"; any other text is said as it is.
      */
     fun noted(key: String): String {
         val k = key.trim()
@@ -187,6 +187,7 @@ object OrderWhy {
             k == "protection_replaced" -> "a new stop-and-target protection was set on the position, replacing the old one"
             k == "square_off" -> "the paper account's 15:15 intraday square-off cancels every intraday order still working"
             k == "expiry" -> "the contract expired, and the order ended with it"
+            k == "day_end" -> "the trading day ended, and the paper book closed out the order still working from it"
             else -> k.trimEnd('.')
         }
     }

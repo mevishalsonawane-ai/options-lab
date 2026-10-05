@@ -127,9 +127,15 @@ internal object IraTools {
      * already put the line in the chat, so nothing is lost). Only market colour is ever held back: any other kind, every
      * safety warning among them, is said as always. True when it was said.
      */
+    /** The alert kinds that are safety warnings: said at once aloud ([JarvisVoice.announce] urgent), never held for Boss to finish. */
+    private val SAFETY_ALERTS = setOf(Automations.Auto.HEADSUP, Automations.Auto.OVERTRADE, Automations.Auto.MIS, Automations.Auto.FEED,
+        Automations.Auto.EXPIRY, Automations.Auto.HEALTH, Automations.Auto.BOTS, Automations.Auto.RELAY, Automations.Auto.RESCUE,
+        Automations.Auto.GUARD, Automations.Auto.STALE, Automations.Auto.COOLOFF)
+
     fun sayAlert(a: Automations.Auto, text: String): Boolean {
         if (!alertAloud(a)) return false
-        val said = JarvisVoice.announce(text)
+        // A safety warning is said at once, even while Boss is speaking; market colour waits for him to finish.
+        val said = JarvisVoice.announce(text, urgent = a in SAFETY_ALERTS)
         // Only alerts Boss could hear are judged by what he did next.
         if (said) alertSaid(listOf(a))
         return said

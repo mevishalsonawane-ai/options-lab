@@ -65,16 +65,18 @@ class JarvisVoice : Service() {
 
         /**
          * Speaks [text] if Jarvis is listening now; false when it is not. Unasked ([prompted] false) during quiet hours
-         * it is shown as a pop-up instead.
+         * it is shown as a pop-up instead. [urgent]: a safety warning (a loss near the guard, the feed stopped, the
+         * square-off, overtrading...) is said at once, never held while Boss is speaking; market colour and briefings
+         * wait for him to finish (up to 8 s).
          */
-        fun announce(text: String, prompted: Boolean = false): Boolean {
+        fun announce(text: String, prompted: Boolean = false, urgent: Boolean = false): Boolean {
             val v = instance?.get() ?: return false
             // Unasked on a locked phone (it may be overheard): never an amount, a P&L or a symbol - only that it is in
             // the chat (every caller has already put the full line there).
             val said = if (prompted) text else com.optionslab.ira.Overheard.said(text, runCatching { IraHub.locked() }.getOrDefault(true))
             if (!prompted && quietNow()) { runCatching { JarvisPopup.show(v, "Jarvis", said) }; return true }
-            // Not a reply to Boss's words (never timed as one), and not said over him while he is speaking.
-            v.main.post { v.sayWhenFree(said, "answer") }
+            // Not a reply to Boss's words (never timed as one); unless urgent, not said over him while he is speaking.
+            v.main.post { if (urgent) { if (!v.stopped) v.say(said, "answer", reply = false) } else v.sayWhenFree(said, "answer") }
             return true
         }
 

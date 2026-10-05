@@ -289,12 +289,23 @@ object Paper {
             e.onQuotes(s, q, now).also { s = it.state; events += it.events }
             // Marks positions to the fresh LTP, which expiry settlement prices from.
             e.positionBook(s, now, q).also { s = it.state; events += it.events }
+            // The square-off's own events kept apart: only its cancels are the 15:15 square-off (reason text only).
+            val squareFrom = events.size
             e.squareOffDue(s, now, q).also { s = it.state; events += it.events }
+            val squareTo = events.size
             e.settleExpiries(s, now).also { s = it.state; events += it.events }
-            // The book's own cancels here are the 15:15 MIS square-off or a contract's expiry: noted, so Jarvis can say why.
-            val own = events.filterIsInstance<SandboxEvent.OrderUpdate>().filter { it.status == "cancelled" }.associate { u ->
-                val exp = s.orders.firstOrNull { it.orderId == u.orderId }?.symbol?.let { sym -> b.contracts[sym]?.expiry }
-                u.orderId to (if (exp != null && !exp.isAfter(now.toLocalDate())) "expiry" else "square_off")
+            // The book's own cancels here: a contract's expiry, the 15:15 MIS square-off, or (the catch-up after a day's end,
+            // anything else) the day ending - noted, so Jarvis can say why. Labels for the reason text only.
+            val own = events.withIndex().filter { (_, ev) -> ev is SandboxEvent.OrderUpdate && ev.status == "cancelled" }.associate { (i, ev) ->
+                val u = ev as SandboxEvent.OrderUpdate
+                val o = s.orders.firstOrNull { it.orderId == u.orderId }
+                val exp = o?.symbol?.let { sym -> b.contracts[sym]?.expiry }
+                u.orderId to when {
+                    exp != null && !exp.isAfter(now.toLocalDate()) -> "expiry"
+                    i in squareFrom until squareTo && o?.product == "MIS" -> "square_off"
+                    i in squareFrom until squareTo -> "expiry"
+                    else -> "day_end"
+                }
             }
             if (s != b.state) save(b.copy(state = s, why = if (own.isEmpty()) b.why else noted(b.why, own)))
             return events

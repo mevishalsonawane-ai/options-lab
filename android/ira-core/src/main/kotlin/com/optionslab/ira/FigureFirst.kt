@@ -87,12 +87,26 @@ object FigureFirst {
     fun hasFigure(sentence: String): Boolean = FIGURE.containsMatchIn(sentence)
 
     /**
+     * A note about the data's age, a doubt or a closed market ([DataAge.note], [Freshness], [SelfDoubt.Caution.wrap],
+     * "the market is closed"): an answer holding one is never reordered, so no figure is ever said ahead of it and a
+     * short answer aloud never drops it.
+     */
+    private val NOTE = rx("\\b(minutes?|seconds|hours?|over an hour) (old|ago)\\b|may have moved since|candle closed at|" +
+        "too old to quote|take these figures as from then|live feed is behind|feeds have not answered|last read the news|" +
+        "option chain i have is from|the last headline i have|check me on this|did you mean|market is closed|" +
+        "market's closed|these are the last prices|newest candle on the phone|\\(as of \\d{1,2}:\\d{2}\\)", RegexOption.IGNORE_CASE)
+
+    /** Does [text] hold a data-age, doubt or market-closed note (then it is never reordered)? */
+    fun hasNote(text: String): Boolean = NOTE.containsMatchIn(text)
+
+    /**
      * [text] with its first sentence holding a figure moved to the front (the rest in their order), or [text] as it is:
      * the first sentence already holds one, none of the first [LOOK] does, the one found leans on the sentence before it,
-     * or the answer is Hindi or in lines. Never a word changed, added or dropped.
+     * the answer is Hindi or in lines, or it holds a data-age, doubt or market-closed note ([hasNote]: nothing is ever
+     * moved ahead of one, nor one pushed past a short answer's end aloud). Never a word changed, added or dropped.
      */
     fun reorder(text: String): String {
-        if (text.contains('\n') || Aloud.hindi(text)) return text
+        if (text.contains('\n') || Aloud.hindi(text) || hasNote(text)) return text
         val parts = SENTENCE.split(text.trim()).filter { it.isNotBlank() }
         if (parts.size < 2 || hasFigure(parts[0])) return text
         val i = (1 until minOf(parts.size, LOOK)).firstOrNull { hasFigure(parts[it]) } ?: return text

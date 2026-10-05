@@ -110,6 +110,6 @@ class OrderWhyTest {
         val none = OrderWhy.answer(OrderWhy.asked("why was my order rejected")!!, listOf(day()[0]))
         assertEquals("None of today's orders was rejected, Boss.", none)
         for (k in listOf("position_closed", "oco:stop", "oco:target", "unfilled_market", "you", "jarvis", "strategy", "protection_removed",
-            "protection_replaced", "square_off", "expiry")) assertFalse(OrderWhy.noted(k) == k, k)
+            "protection_replaced", "square_off", "expiry", "day_end")) assertFalse(OrderWhy.noted(k) == k, k)
     }
 }

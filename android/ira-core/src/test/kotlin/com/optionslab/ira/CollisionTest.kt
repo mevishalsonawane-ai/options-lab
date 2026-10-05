@@ -709,6 +709,15 @@ class CollisionTest {
             assertEquals(null, Ask.parse(s).command, s)
         }
         assertTrue(Plan.WHICH_POSITION.startsWith("Which position should I close, Boss?") && "nothing was done" in Plan.WHICH_POSITION)
+        // Named before it, but no plan formed (the first part is no step): never dropped silently - the hub asks which.
+        for (s in listOf("my put is losing, close it", "my 24500 put looks weak then exit it")) {
+            assertTrue(Bundle.acts(s), s)
+            assertEquals(null, Plan.steps(s, ::hubStep), s)
+            assertTrue(!Plan.pronounUnclear(s), s)
+            assertTrue(Plan.pronounAfter(s), s)
+        }
+        for ((s, _) in named) assertTrue(Plan.pronounAfter(s), s)
+        for (s in listOf("close it", "how is nifty", "close my put")) assertTrue(!Plan.pronounAfter(s), s)
         // Alone, a pronoun close stays words that do nothing: never a command, an order, a Bundle act or a plan.
         for (s in listOf("close it", "close that", "exit it", "square it off", "close this one")) {
             val p = Ask.parse(s)

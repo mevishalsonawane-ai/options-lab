@@ -256,20 +256,43 @@ object Commands {
     /** The words after [after] (a name to match), or null. */
     private fun rest(s: String, after: String): String? = s.substringAfter(after, "").trim().takeIf { it.isNotEmpty() && !rx("^\\d+$").matches(it) }
 
-    /** The thing named by [c] among [names] (1-based numbers as Jarvis lists them, or the best name match), or null. */
+    /**
+     * The thing named by [c] among [names] (1-based numbers as Jarvis lists them, or the best name match), or null.
+     * Among option positions ("paper NIFTY25O2124500PE (75)"), "put" / "call" (or "pe" / "ce") is a must: only a
+     * position of that right can be picked, never the other; a strike said ("24500") matches inside the symbol. Two
+     * equally good matches (or "put" and "call" both said): null, so Jarvis asks which.
+     */
     fun pick(c: Command, names: List<String>): Int? {
         c.number?.let { return (it - 1).takeIf { i -> i in names.indices } }
         val want = c.target?.lowercase()?.replace(rx("[^a-z0-9 ]"), " ")?.split(rx("\\s+"))?.filter { it.length > 1 && it !in STOP_WORDS } ?: return null
         if (want.isEmpty()) return null
-        val scored = names.mapIndexed { i, n ->
-            val w = n.lowercase().replace(rx("[^a-z0-9 ]"), " ").split(rx("\\s+")).toSet()
-            i to want.count { it in w || w.any { x -> x.startsWith(it) } }
+        val toks = names.map { n -> n.lowercase().replace(rx("[^a-z0-9 ]"), " ").split(rx("\\s+")).filter { it.isNotEmpty() }.toSet() }
+        val rights = toks.map { w -> w.firstNotNullOfOrNull { x -> OPTION_RIGHT.find(x)?.groupValues?.get(1) } }
+        val saysPut = want.any { it in PUT_WORDS }
+        val saysCall = want.any { it in CALL_WORDS }
+        // Options among the names: the right said is required (both said: ask).
+        val options = rights.any { it != null }
+        if (options && saysPut && saysCall) return null
+        val right = if (!options) null else if (saysPut) "pe" else if (saysCall) "ce" else null
+        val scored = names.indices.map { i ->
+            val w = toks[i]
+            if (right != null && rights[i] != right) return@map i to 0
+            i to want.count {
+                (right != null && (it in PUT_WORDS || it in CALL_WORDS)) ||
+                    it in w || w.any { x -> x.startsWith(it) } ||
+                    // A strike (or a strike with its right, "24500pe") inside the symbol token.
+                    (it.length >= 3 && it.any(Char::isDigit) && w.any { x -> x.length > it.length && x.contains(it) })
+            }
         }.filter { it.second > 0 }
         val best = scored.maxOfOrNull { it.second } ?: return null
         return scored.filter { it.second == best }.singleOrNull()?.first
     }
 
     private val STOP_WORDS = setOf("the", "my", "strategy", "arm", "bot", "script", "on", "of", "for", "and")
+    private val PUT_WORDS = setOf("put", "puts", "pe")
+    private val CALL_WORDS = setOf("call", "calls", "ce")
+    /** An option symbol token's right: "nifty25o2124500pe" -> "pe". */
+    private val OPTION_RIGHT = rx("^[a-z]+\\d[a-z0-9]*\\d(pe|ce)$")
 
     /** The command in a few words, for the confirm button and the reply. */
     fun describe(c: Command, name: String? = null): String = when (c.kind) {

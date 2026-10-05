@@ -88,6 +88,15 @@ object Plan {
         return bits.size >= 2 && bits.withIndex().any { (i, b) -> i > 0 && pronounClose(b) && lastNamed(bits.subList(0, i)) == null }
     }
 
+    /**
+     * Said with a close by a pronoun after something else ("my put is losing, close it"), named before it or not: when no
+     * plan is formed from it, the hub asks which position ([WHICH_POSITION]) - the close is never dropped silently.
+     */
+    fun pronounAfter(text: String): Boolean {
+        val bits = text.trim().trimEnd('.', '!', '?').split(STRONG).flatMap { it.split(AND) }.map { it.trim() }.filter { it.isNotEmpty() }
+        return bits.size >= 2 && bits.withIndex().any { (i, b) -> i > 0 && pronounClose(b) }
+    }
+
     /** Said when a close by a pronoun names no position: nothing is done. */
     const val WHICH_POSITION = "Which position should I close, Boss? Say it by name, like \"close my 24500 put\" - nothing was done."
 
