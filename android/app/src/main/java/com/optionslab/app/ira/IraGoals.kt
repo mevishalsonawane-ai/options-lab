@@ -44,7 +44,8 @@ internal object IraGoals {
     suspend fun watch() {
         if (!com.optionslab.app.BuildConfig.JARVIS || com.optionslab.app.BuildConfig.GOLD) return
         val today = com.optionslab.app.data.Market.today().toString()
-        val told = runCatching { com.optionslab.app.security.SecurePrefs.getString(TOLD) }.getOrNull()?.split('|')?.toMutableSet() ?: mutableSetOf()
+        val stored = runCatching { com.optionslab.app.security.SecurePrefs.getString(TOLD) }.getOrNull()
+        val told = stored?.split('|')?.toMutableSet() ?: mutableSetOf()
         told.removeAll { !it.startsWith(today) }
         for (s in statuses()) {
             val state = when { s.broken -> "broken"; s.near -> "near"; s.met -> "met"; else -> null } ?: continue
@@ -58,7 +59,9 @@ internal object IraGoals {
             if (s.broken && s.goal.kind == Goals.Kind.MAX_LOSS) IraHub.offerKillSwitch("$text Shall I switch the kill switch on (no new positions; exits still go)?")
             else IraHub.note(text)
         }
-        runCatching { com.optionslab.app.security.SecurePrefs.put(TOLD, told.joinToString("|")) }
+        // Saved only when it changed: each save re-encrypts and rewrites the whole vault, and this ran at every pass.
+        val joined = told.joinToString("|")
+        if (joined != (stored ?: "")) runCatching { com.optionslab.app.security.SecurePrefs.put(TOLD, joined) }
     }
 
     fun isToday(d: LocalDate) = d == com.optionslab.app.data.Market.today()

@@ -58,7 +58,7 @@ object Practice {
 
     /** "Practice on last Thursday" / "practice on 24 September" / "practice yesterday": the day asked, or null. */
     fun day(text: String, today: LocalDate): LocalDate? {
-        val t = " " + text.lowercase().replace(Regex("[^a-z0-9 -]"), " ").replace(Regex("\\s+"), " ") + " "
+        val t = " " + text.lowercase().replace(rx("[^a-z0-9 -]"), " ").replace(rx("\\s+"), " ") + " "
         if (t.contains(" yesterday ")) return today.minusDays(1)
         java.time.DayOfWeek.entries.firstOrNull { t.contains(" last ${it.name.lowercase()} ") || t.contains(" on ${it.name.lowercase()} ") }?.let { w ->
             var x = today.minusDays(1); while (x.dayOfWeek != w) x = x.minusDays(1); return x
@@ -66,7 +66,7 @@ object Practice {
         return Events.date(text, today)?.let { if (it.isAfter(today)) it.minusYears(1) else it }
     }
 
-    fun asked(text: String): Boolean = Regex("(?i)\\b(practi[cs]e|replay|simulate|rehearse)\\b").containsMatchIn(text)
+    fun asked(text: String): Boolean = rx("(?i)\\b(practi[cs]e|replay|simulate|rehearse)\\b").containsMatchIn(text)
 }
 
 /**
@@ -133,7 +133,7 @@ object WakeSense {
     fun accept(alternatives: List<String>, level: Level): List<String> = when (level) {
         Level.NORMAL -> alternatives
         Level.STRICT -> alternatives.take(1).filter { a ->
-            a.lowercase().replace(Regex("[^a-z ]"), " ").trim().split(Regex("\\s+")).take(2).any { w -> w in setOf("jarvis", "jarvas", "jervis", "jarviss") }
+            a.lowercase().replace(rx("[^a-z ]"), " ").trim().split(rx("\\s+")).take(2).any { w -> w in setOf("jarvis", "jarvas", "jervis", "jarviss") }
         }
     }
 }

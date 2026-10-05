@@ -241,7 +241,6 @@ internal object IraCoach {
         if (!com.optionslab.app.BuildConfig.JARVIS || com.optionslab.app.BuildConfig.GOLD || !Automations.on(Automations.Auto.HEADSUP) ||
             !com.optionslab.app.data.Market.isOpen()) return
         val s = runCatching { AppSettings.load() }.getOrNull() ?: return
-        val bots = botSymbols()
         val open = ArrayList<com.optionslab.ira.HeadsUp.Pos>()
         runCatching { Paper.snapshot().takeIf { it.priced }?.positions?.positions.orEmpty().filter { it.quantity != 0 }.forEach {
             open += com.optionslab.ira.HeadsUp.Pos("P:${it.symbol}", it.symbol, false, it.quantity, it.averagePrice, it.ltp) } }
@@ -251,6 +250,9 @@ internal object IraCoach {
             kotlinx.coroutines.withTimeoutOrNull(15_000) { read.await() }?.filter { it.qty != 0 }?.forEach {
                 open += com.optionslab.ira.HeadsUp.Pos("L:${it.symbol}", it.symbol, true, it.qty, it.avg, it.last) }
         }
+        // Nothing open (most passes): the bots' holdings are not read.
+        if (open.isEmpty()) return
+        val bots = botSymbols()
         val mine = open.filter { it.symbol !in bots }
         if (mine.isEmpty()) return
         val day = com.optionslab.app.data.Market.today().toString()

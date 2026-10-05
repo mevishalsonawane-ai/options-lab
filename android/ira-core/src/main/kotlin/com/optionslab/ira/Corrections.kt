@@ -29,9 +29,9 @@ object Corrections {
     private val FILLER = Regex(" (jarvis|hey|ok|okay|please|boss|um|uh|so|tell me|can you|could you) ")
 
     fun normalize(text: String): String {
-        var t = " " + text.lowercase().replace(Regex("[^a-z0-9 ]"), " ").replace(Regex("\\s+"), " ").trim() + " "
+        var t = " " + text.lowercase().replace(rx("[^a-z0-9 ]"), " ").replace(rx("\\s+"), " ").trim() + " "
         repeat(3) { t = FILLER.replace(t, " ") }
-        return t.replace(Regex("\\s+"), " ").trim()
+        return t.replace(rx("\\s+"), " ").trim()
     }
 
     /** A question (asks, never acts) that Jarvis understands. */
@@ -67,7 +67,7 @@ object Corrections {
      */
     fun missed(text: String): Boolean {
         val t = normalize(text)
-        if (t.isEmpty() || t.split(" ").size > 8 || Regex("\\d").containsMatchIn(t)) return false
+        if (t.isEmpty() || t.split(" ").size > 8 || rx("\\d").containsMatchIn(t)) return false
         if (acts(text) || Chat.personal(text) || Chat.smallTalk(text, 0) != null) return false
         return Topic.OFF_TOPIC in Ask.parse(text).topics
     }

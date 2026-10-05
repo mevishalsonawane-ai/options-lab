@@ -49,7 +49,7 @@ object Writer {
     /** Should the model be asked at all? Only for answers built from facts - never orders, refusals or advice questions. */
     fun worthRewriting(q: Question, a: Answer): Boolean =
         // A one-line answer is plain already; rewriting it would only hold the model while the next question waits.
-        (a.text.length >= SHORT || Regex("(?<=[.!?])\\s+\\S").findAll(a.text).count() >= 1) &&
+        (a.text.length >= SHORT || rx("(?<=[.!?])\\s+\\S").findAll(a.text).count() >= 1) &&
         a.facts.isNotEmpty() && a.order == null && Topic.ADVICE !in q.topics && Topic.ORDER !in q.topics && Topic.BACKTEST !in q.topics
 
     private val ADVICE = Regex("\\b(should|shouldn't|recommend\\w*|suggest\\w*|advis\\w*|consider (buying|selling)|buy now|sell now|go long|go short|" +
@@ -61,10 +61,10 @@ object Writer {
      * is built from the facts), advice or forecast words the draft did not have, a link or a template token, or nothing.
      */
     fun check(output: String, facts: List<String>, draft: String): String? {
-        var t = output.substringBefore("<|im_end|>").replace(Regex("<\\|[^|]*\\|>"), " ").replace(Regex("\\s+"), " ").trim()
+        var t = output.substringBefore("<|im_end|>").replace(rx("<\\|[^|]*\\|>"), " ").replace(rx("\\s+"), " ").trim()
         if (t.isEmpty() || t.length > 900) return null
-        if (Regex("https?://|www\\.", RegexOption.IGNORE_CASE).containsMatchIn(t)) return null
-        val sentences = Regex("(?<=[.!?])\\s+").split(t).filter { it.isNotBlank() }
+        if (rx("https?://|www\\.", RegexOption.IGNORE_CASE).containsMatchIn(t)) return null
+        val sentences = rx("(?<=[.!?])\\s+").split(t).filter { it.isNotBlank() }
         if (sentences.size > 4) t = sentences.take(4).joinToString(" ")
         if (ADVICE.containsMatchIn(t) && !ADVICE.containsMatchIn(draft)) return null
         val known = facts + draft

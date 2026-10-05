@@ -23,7 +23,7 @@ object Exposure {
     data class Shock(val market: Market, val points: Double?, val pct: Double?, val sign: Int)
 
     private fun norm(text: String) = " " + text.lowercase().replace("p&l", "p l").replace("%", " percent ")
-        .replace(Regex("[^a-z0-9. ]"), " ").replace(Regex("(?<![0-9])\\.|\\.(?![0-9])"), " ").replace(Regex("\\s+"), " ").trim() + " "
+        .replace(rx("[^a-z0-9. ]"), " ").replace(rx("(?<![0-9])\\.|\\.(?![0-9])"), " ").replace(rx("\\s+"), " ").trim() + " "
 
     private val OWNER = Regex(" (my|mine|our|i|me|we|us) ")
     private val IF = Regex(" (if|suppose|say|what happens|what would happen|in case) ")
@@ -37,7 +37,7 @@ object Exposure {
         val t = norm(text)
         if (!IF.containsMatchIn(t) || !OWNER.containsMatchIn(t)) return null
         // "Should I buy puts if Nifty falls", "if I buy the 24500 CE and Nifty moves": advice or a new trade, not the positions.
-        if (Regex("\\b(should|shall|recommend|suggest)\\b|\\b(buy|sell)\\b.*\\b(ce|pe|call|put|calls|puts)\\b").containsMatchIn(t)) return null
+        if (rx("\\b(should|shall|recommend|suggest)\\b|\\b(buy|sell)\\b.*\\b(ce|pe|call|put|calls|puts)\\b").containsMatchIn(t)) return null
         val size = SIZE.find(t) ?: return null
         val n = size.groupValues[1].toDoubleOrNull()?.takeIf { it > 0 } ?: return null
         val pct = size.groupValues[2].startsWith("per")
@@ -96,8 +96,8 @@ object Exposure {
     /** "Which of my positions is losing most", "my worst position", "rank my positions". */
     fun rankAsked(text: String): Boolean {
         val t = norm(text)
-        return RANK.containsMatchIn(t) && Regex(" (position|positions|trade|trades|loser|losers|winner|winners) ").containsMatchIn(t) &&
-            OWNER.containsMatchIn(t) && !Regex(" (today s|yesterday|week|month|year|all time|ever|history|closed) ").containsMatchIn(t)
+        return RANK.containsMatchIn(t) && rx(" (position|positions|trade|trades|loser|losers|winner|winners) ").containsMatchIn(t) &&
+            OWNER.containsMatchIn(t) && !rx(" (today s|yesterday|week|month|year|all time|ever|history|closed) ").containsMatchIn(t)
     }
 
     private fun one(l: Leg): String {

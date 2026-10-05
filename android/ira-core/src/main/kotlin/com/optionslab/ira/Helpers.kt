@@ -215,7 +215,7 @@ object Activity {
 /** The morning self-check (the owner's wish, 2026-10-02): each part Jarvis needs, working or not. Pure. */
 object SelfCheck {
     /** "Run a self check", "system check", "check yourself", "sab theek hai?": the check asked for at any hour. */
-    fun asked(text: String): Boolean = Regex("(?i)^\\W*(jarvis,?\\s+)?(please\\s+)?(run (a |your )?(self[- ]?check|system check|health check|diagnostics?)|(self[- ]?check|system check|health check)|check yourself|are all your parts working|is everything working|sab (theek|thik) hai( na)?|sab kuch (theek|thik) hai( na)?)\\W*$").containsMatchIn(text)
+    fun asked(text: String): Boolean = rx("(?i)^\\W*(jarvis,?\\s+)?(please\\s+)?(run (a |your )?(self[- ]?check|system check|health check|diagnostics?)|(self[- ]?check|system check|health check)|check yourself|are all your parts working|is everything working|sab (theek|thik) hai( na)?|sab kuch (theek|thik) hai( na)?)\\W*$").containsMatchIn(text)
 
     /** [parts]: name to true (working), false (not) or null (not used). */
     fun lines(parts: List<Pair<String, Boolean?>>): List<String> {
@@ -252,13 +252,13 @@ object Hindi {
             "Reply with the translation only.\n\n$english"
 
     /** Every figure with its sign, also when "Rs" or "₹" sits between them ("+Rs 4,200" is +4200). */
-    private fun numbers(s: String) = Regex("([+-]?)\\s*(?:Rs\\.?\\s*|₹\\s*)?(\\d+(?:[.,]\\d+)*)").findAll(s)
+    private fun numbers(s: String) = rx("([+-]?)\\s*(?:Rs\\.?\\s*|₹\\s*)?(\\d+(?:[.,]\\d+)*)").findAll(s)
         .map { it.groupValues[1] + it.groupValues[2].replace(",", "") }.toList().sorted()
 
     /** The translation when it is Hindi and keeps every number, else null. */
     fun accept(english: String, hindi: String?): String? {
         val h = hindi?.trim()?.takeIf { it.isNotEmpty() } ?: return null
-        if (!Regex("[\\u0900-\\u097F]").containsMatchIn(h)) return null
+        if (!rx("[\\u0900-\\u097F]").containsMatchIn(h)) return null
         if (numbers(english) != numbers(h)) return null
         return h
     }

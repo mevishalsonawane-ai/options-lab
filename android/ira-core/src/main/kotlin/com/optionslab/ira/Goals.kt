@@ -27,37 +27,37 @@ object Goals {
 
     data class Status(val goal: Goal, val text: String, val broken: Boolean, val near: Boolean, val met: Boolean)
 
-    private fun t(s: String) = " " + s.lowercase(Locale.ENGLISH).replace(",", "").replace(Regex("[^a-z0-9. ]"), " ").replace(Regex("\\s+"), " ").trim() + " "
+    private fun t(s: String) = " " + s.lowercase(Locale.ENGLISH).replace(",", "").replace(rx("[^a-z0-9. ]"), " ").replace(rx("\\s+"), " ").trim() + " "
 
-    private fun amount(s: String): Double? = Regex(" (?:rs |inr |₹)?(\\d+(?:\\.\\d+)?) ?(k|thousand|lakh|lac)? ").find(s)?.let { m ->
+    private fun amount(s: String): Double? = rx(" (?:rs |inr |₹)?(\\d+(?:\\.\\d+)?) ?(k|thousand|lakh|lac)? ").find(s)?.let { m ->
         val n = m.groupValues[1].toDouble()
         when (m.groupValues[2]) { "k", "thousand" -> n * 1_000; "lakh", "lac" -> n * 100_000; else -> n }
     }
 
     private fun period(s: String): Period? = when {
-        Regex(" (week|weekly) ").containsMatchIn(s) -> Period.WEEK
-        Regex(" (month|monthly) ").containsMatchIn(s) -> Period.MONTH
-        Regex(" (day|daily|today|a day|per day) ").containsMatchIn(s) -> Period.DAY
+        rx(" (week|weekly) ").containsMatchIn(s) -> Period.WEEK
+        rx(" (month|monthly) ").containsMatchIn(s) -> Period.MONTH
+        rx(" (day|daily|today|a day|per day) ").containsMatchIn(s) -> Period.DAY
         else -> null
     }
 
     /** A goal set in words ("goal", "target", "keep ... under"), or null. */
     fun read(text: String): Goal? {
         val s = t(text)
-        if (!Regex(" (goal|target|aim|keep my|limit my) ").containsMatchIn(s)) return null
-        if (Regex(" (what|how|clear|remove|delete|forget|cancel) ").containsMatchIn(s)) return null
+        if (!rx(" (goal|target|aim|keep my|limit my) ").containsMatchIn(s)) return null
+        if (rx(" (what|how|clear|remove|delete|forget|cancel) ").containsMatchIn(s)) return null
         // An order with a target or a stop ("buy banknifty weekly 52000 ce target 200") is never a goal.
-        if (Regex(" (buy|sell|ce|pe|call|put|lot|lots|strike|stop loss|sl) ").containsMatchIn(s)) return null
-        val trades = Regex(" (no more than|at most|max|maximum|only|under|below|less than) (\\d{1,2}) trades? ").find(s)
+        if (rx(" (buy|sell|ce|pe|call|put|lot|lots|strike|stop loss|sl) ").containsMatchIn(s)) return null
+        val trades = rx(" (no more than|at most|max|maximum|only|under|below|less than) (\\d{1,2}) trades? ").find(s)
         if (trades != null) return Goal(Kind.MAX_TRADES, Period.DAY, trades.groupValues[2].toDouble()).takeIf { it.amount >= 1 }
         val p = period(s) ?: return null
         val n = amount(s)?.takeIf { it >= 100 } ?: return null
-        return if (Regex(" (loss|lose|losing|drawdown) ").containsMatchIn(s)) Goal(Kind.MAX_LOSS, p, n)
-            else if (Regex(" (make|earn|profit|gain|target) ").containsMatchIn(s)) Goal(Kind.TARGET, p, n) else null
+        return if (rx(" (loss|lose|losing|drawdown) ").containsMatchIn(s)) Goal(Kind.MAX_LOSS, p, n)
+            else if (rx(" (make|earn|profit|gain|target) ").containsMatchIn(s)) Goal(Kind.TARGET, p, n) else null
     }
 
-    fun asked(text: String): Boolean = Regex("(?i)\\b(what are|how are|show|tell me) (my|the) goals?\\b|\\bmy goals?\\b.*\\b(progress|doing|status)\\b|\\bgoal progress\\b").containsMatchIn(text)
-    fun clearAsked(text: String): Boolean = Regex("(?i)\\b(clear|remove|delete|forget|cancel) (all )?(my )?goals?\\b").containsMatchIn(text)
+    fun asked(text: String): Boolean = rx("(?i)\\b(what are|how are|show|tell me) (my|the) goals?\\b|\\bmy goals?\\b.*\\b(progress|doing|status)\\b|\\bgoal progress\\b").containsMatchIn(text)
+    fun clearAsked(text: String): Boolean = rx("(?i)\\b(clear|remove|delete|forget|cancel) (all )?(my )?goals?\\b").containsMatchIn(text)
 
     /** The days [p] covers up to [today]. */
     fun inPeriod(day: LocalDate, p: Period, today: LocalDate): Boolean = when (p) {

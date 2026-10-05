@@ -63,7 +63,7 @@ object Spoken {
     private class Tok(val raw: String) {
         val lead: String; val core: String; val trail: String
         init {
-            val m = Regex("^([^\\p{L}\\p{N}]*)(.*?)([^\\p{L}\\p{N}%]*)$").find(raw)!!
+            val m = rx("^([^\\p{L}\\p{N}]*)(.*?)([^\\p{L}\\p{N}%]*)$").find(raw)!!
             lead = m.groupValues[1]; core = m.groupValues[2]; trail = m.groupValues[3]
         }
         val w = core.lowercase(Locale.ENGLISH)
@@ -71,8 +71,8 @@ object Spoken {
 
     /** [text] with spoken numbers and times written as digits; [text] itself (exactly) when there are none. */
     fun digits(text: String): String {
-        val pre = text.replace(Regex("(?i)\\bo'?\\s?clock\\b"), "oclock").replace(Regex("(?<=[A-Za-z])-(?=[A-Za-z])"), " ")
-        val toks = pre.split(Regex("\\s+")).filter { it.isNotEmpty() }.map { Tok(it) }
+        val pre = text.replace(rx("(?i)\\bo'?\\s?clock\\b"), "oclock").replace(rx("(?<=[A-Za-z])-(?=[A-Za-z])"), " ")
+        val toks = pre.split(rx("\\s+")).filter { it.isNotEmpty() }.map { Tok(it) }
         val out = ArrayList<String>()
         var changed = false
         var i = 0
@@ -80,7 +80,7 @@ object Spoken {
             val hit = time(toks, i) ?: number(toks, i)
             if (hit != null) {
                 // ("a.m." keeps no stray dot once written "am".)
-                val trail = toks[i + hit.first - 1].trail.let { if (Regex("[ap]m$").containsMatchIn(hit.second) && it.startsWith(".")) it.drop(1) else it }
+                val trail = toks[i + hit.first - 1].trail.let { if (rx("[ap]m$").containsMatchIn(hit.second) && it.startsWith(".")) it.drop(1) else it }
                 out += toks[i].lead + hit.second + trail
                 i += hit.first; changed = true
             } else { out += toks[i].raw; i++ }
@@ -97,7 +97,7 @@ object Spoken {
         if (d == said) return said
         if (GUARD.containsMatchIn(norm(said)) || GUARD.containsMatchIn(norm(Hinglish.normalize(said))) || GUARD.containsMatchIn(norm(d))) return said
         // A number alone ("twenty four thousand") asks nothing.
-        if (Regex("[a-z]{2,}").findAll(d.lowercase(Locale.ENGLISH)).none { it.value !in UNITS && it.value !in setOf("am", "pm", "at") }) return said
+        if (rx("[a-z]{2,}").findAll(d.lowercase(Locale.ENGLISH)).none { it.value !in UNITS && it.value !in setOf("am", "pm", "at") }) return said
         if (FollowUp.acts(said) || FollowUp.acts(d)) return said
         if (Reminder.asked(said) || Reminder.asked(d) || Reminder.cancelAsked(d) || Memory.toKeep(said) != null || Memory.toKeep(d) != null ||
             Goals.read(said) != null || Goals.read(d) != null || AutoStop.read(said) != null || AutoStop.read(d) != null) return said
@@ -110,7 +110,7 @@ object Spoken {
         "tell me when|let me know|sl|stoploss|trailing|automatically|approve|confirm|yaad|bata dena|batana|bolna|setting|settings|" +
         "quantity|qty|exit|stop loss) ")
 
-    private fun norm(s: String) = " " + s.lowercase(Locale.ENGLISH).replace("'", "").replace(Regex("[^a-z0-9 ]"), " ").replace(Regex("\\s+"), " ").trim() + " "
+    private fun norm(s: String) = " " + s.lowercase(Locale.ENGLISH).replace("'", "").replace(rx("[^a-z0-9 ]"), " ").replace(rx("\\s+"), " ").trim() + " "
 
     // ---- Times ----
 
@@ -121,7 +121,7 @@ object Spoken {
     /** An hour 1..12 said in English or Hindi words ([digitsToo]: or written). */
     private fun hour(t: List<Tok>, k: Int, digitsToo: Boolean): Int? {
         val s = w(t, k)
-        val v = EN[s] ?: HI[s] ?: (if (digitsToo && Regex("^\\d{1,2}$").matches(s)) s.toInt() else null)
+        val v = EN[s] ?: HI[s] ?: (if (digitsToo && rx("^\\d{1,2}$").matches(s)) s.toInt() else null)
         return v?.takeIf { it in 1..12 }
     }
 
@@ -135,7 +135,7 @@ object Spoken {
             val u = if (joinable(t, k + 1)) EN[w(t, k + 1)]?.takeIf { it in 1..9 } else null
             return if (u != null) 2 to tens + u else 1 to tens
         }
-        if (Regex("^[0-5]\\d$").matches(s)) return 1 to s.toInt()
+        if (rx("^[0-5]\\d$").matches(s)) return 1 to s.toInt()
         return null
     }
 
@@ -165,7 +165,7 @@ object Spoken {
             val m = minutes(t, i + 1)
             if (m != null && !after(t, i + 1 + m.first)) {
                 val ap = ampm(t, i + 1 + m.first)
-                val wordy = EN.containsKey(s) || HI.containsKey(s) || !Regex("^\\d+$").matches(w(t, i + 1))
+                val wordy = EN.containsKey(s) || HI.containsKey(s) || !rx("^\\d+$").matches(w(t, i + 1))
                 if (ap != null) return (1 + m.first + 1) to "$h:%02d $ap".format(Locale.ENGLISH, m.second)
                 if (w(t, i - 1) in PREP && joinable(t, i) && (wordy || m.second >= 10)) return (1 + m.first) to "$h:%02d".format(Locale.ENGLISH, m.second)
             }
@@ -266,7 +266,7 @@ object Spoken {
                     val ds = StringBuilder()
                     var k = j + 1
                     while (joinable(t, k)) {
-                        val d = EN[w(t, k)]?.takeIf { it <= 9 } ?: w(t, k).takeIf { Regex("^\\d$").matches(it) }?.toInt() ?: break
+                        val d = EN[w(t, k)]?.takeIf { it <= 9 } ?: w(t, k).takeIf { rx("^\\d$").matches(it) }?.toInt() ?: break
                         ds.append(d); k++
                     }
                     if (ds.isEmpty() || cur % 1.0 != 0.0 || last == Last.MULT && cur == 0.0 && total > 0) break

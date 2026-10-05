@@ -122,9 +122,9 @@ object EventStudy {
 
     /** Which kind an event's name is (from the calendar), or null. */
     fun kindOf(name: String): Kind? = when {
-        Regex("(?i)\\brbi\\b|monetary policy").containsMatchIn(name) -> Kind.RBI
-        Regex("(?i)\\bfed\\b|fomc").containsMatchIn(name) -> Kind.FED
-        Regex("(?i)budget").containsMatchIn(name) -> Kind.BUDGET
+        rx("(?i)\\brbi\\b|monetary policy").containsMatchIn(name) -> Kind.RBI
+        rx("(?i)\\bfed\\b|fomc").containsMatchIn(name) -> Kind.FED
+        rx("(?i)budget").containsMatchIn(name) -> Kind.BUDGET
         else -> null
     }
 }

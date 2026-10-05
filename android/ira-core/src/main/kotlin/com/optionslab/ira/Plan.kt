@@ -48,7 +48,7 @@ object Plan {
 
     /** Did a step's result say it was not done? (The plan then stops there.) */
     fun failed(result: String): Boolean =
-        Regex("(?i)^(not |nothing was|i could not|i did not|could not|couldn't|that did not work|zerodha refused|refused|no |you have no)").containsMatchIn(result.trim())
+        rx("(?i)^(not |nothing was|i could not|i did not|could not|couldn't|that did not work|zerodha refused|refused|no |you have no)").containsMatchIn(result.trim())
 
     /** The plan in words, numbered. */
     fun say(steps: List<String>): String = steps.mapIndexed { i, s -> "${i + 1}) $s (${Toolbox.needOf(s).label})" }.joinToString("; ")
@@ -78,9 +78,9 @@ object AutoStop {
     fun read(text: String): Boolean? {
         val t = text.replace("'", " ")
         // An order or setting ("set automatic stop loss", "auto approve the ORB arm") is never this choice.
-        if (Regex("(?i)\\b(stop ?loss|sl|order|arm|lots?|buy|sell|approve)\\b").containsMatchIn(t) && !Regex("(?i)\\bask me\\b").containsMatchIn(t)) return null
+        if (rx("(?i)\\b(stop ?loss|sl|order|arm|lots?|buy|sell|approve)\\b").containsMatchIn(t) && !rx("(?i)\\bask me\\b").containsMatchIn(t)) return null
         // ("Don't do it automatically" / "stop doing it automatically" hold "do it automatically": asked, first.)
-        if (Regex("(?i)\\b(don t|dont|do not|stop|no more) (do|doing) (it|that|this|them|stops?) automatically").containsMatchIn(t)) return false
+        if (rx("(?i)\\b(don t|dont|do not|stop|no more) (do|doing) (it|that|this|them|stops?) automatically").containsMatchIn(t)) return false
         return when { ON.containsMatchIn(t) -> true; OFF.containsMatchIn(t) -> false; else -> null }
     }
 

@@ -9,7 +9,7 @@ import kotlin.math.sqrt
 private fun n(x: Double) = "%,.2f".format(Locale.ENGLISH, x)
 private fun pts(x: Double) = "%+,.2f".format(Locale.ENGLISH, x)
 private fun pct(x: Double) = "%+.2f%%".format(Locale.ENGLISH, x)
-private fun norm(text: String) = " " + text.lowercase().replace(Regex("[^a-z0-9: ]"), " ").replace(Regex("\\s+"), " ").trim() + " "
+private fun norm(text: String) = " " + text.lowercase().replace(rx("[^a-z0-9: ]"), " ").replace(rx("\\s+"), " ").trim() + " "
 
 /**
  * How far a market moved over a stretch of time (Jarvis self-improvement, 2026-10-03): "how much did Nifty move in the
@@ -25,12 +25,12 @@ object Moves {
         val t = norm(text)
         // "Nifty last 30 minutes", "BankNifty since open": a market named is enough without a verb.
         if (!MOVE.containsMatchIn(t) && Market.mentioned(text).isEmpty()) return null
-        Regex(" (last|past) (\\d{1,3}) (minutes|minute|mins|min) ").find(t)?.let { val m = it.groupValues[2].toInt(); if (m in 1..375) return Window(minutes = m, label = "in the last $m minutes") }
-        Regex(" (last|past) (\\d) (hours|hour|hrs|hr) ").find(t)?.let { val h = it.groupValues[2].toInt(); if (h in 1..6) return Window(minutes = h * 60, label = "in the last $h hour${if (h > 1) "s" else ""}") }
-        if (Regex(" (last|past|in the last|in an|in the past) (hour|one hour|1 hour) ").containsMatchIn(t)) return Window(minutes = 60, label = "in the last hour")
-        if (Regex(" (last|past) half (an )?hour ").containsMatchIn(t)) return Window(minutes = 30, label = "in the last 30 minutes")
-        if (Regex(" (since|from) (the )?(open|opening|morning|start|bell) ").containsMatchIn(t)) return Window(since = open, label = "since the open")
-        Regex(" (since|from) (\\d{1,2})(?::| |\\.)?(\\d{2})? ?(am|pm)? ").find(t)?.let { m ->
+        rx(" (last|past) (\\d{1,3}) (minutes|minute|mins|min) ").find(t)?.let { val m = it.groupValues[2].toInt(); if (m in 1..375) return Window(minutes = m, label = "in the last $m minutes") }
+        rx(" (last|past) (\\d) (hours|hour|hrs|hr) ").find(t)?.let { val h = it.groupValues[2].toInt(); if (h in 1..6) return Window(minutes = h * 60, label = "in the last $h hour${if (h > 1) "s" else ""}") }
+        if (rx(" (last|past|in the last|in an|in the past) (hour|one hour|1 hour) ").containsMatchIn(t)) return Window(minutes = 60, label = "in the last hour")
+        if (rx(" (last|past) half (an )?hour ").containsMatchIn(t)) return Window(minutes = 30, label = "in the last 30 minutes")
+        if (rx(" (since|from) (the )?(open|opening|morning|start|bell) ").containsMatchIn(t)) return Window(since = open, label = "since the open")
+        rx(" (since|from) (\\d{1,2})(?::| |\\.)?(\\d{2})? ?(am|pm)? ").find(t)?.let { m ->
             var h = m.groupValues[2].toInt(); val mi = m.groupValues[3].toIntOrNull() ?: 0
             val ap = m.groupValues[4]
             if (ap == "pm" && h < 12) h += 12
@@ -206,7 +206,7 @@ object DayStory {
 object Sources {
     private val ASK = Regex("^ (how do you know( that| this)?|where did you get (that|this)( from)?|what is that based on|what s that based on|whats that based on|source|sources|your source|show (me )?your (work|working|sources)|why do you say (that|so)|how did you work (that|it) out|based on what) $")
 
-    fun asked(text: String): Boolean = ASK.containsMatchIn(norm(text).replace(Regex("^ (jarvis|hey jarvis|ok jarvis|boss) "), " "))
+    fun asked(text: String): Boolean = ASK.containsMatchIn(norm(text).replace(rx("^ (jarvis|hey jarvis|ok jarvis|boss) "), " "))
 
     fun say(facts: List<String>): String =
         if (facts.isEmpty()) "That answer came from my own rules, Boss, not from figures I can list."
@@ -257,9 +257,9 @@ object Lookback {
     fun time(text: String): LocalTime? {
         val t = norm(text)
         // A past-tense word, or a market named with a clock time ("Nifty at 11:30", "BankNifty at 2 pm").
-        val clock = Regex(" at \\d{1,2}(:\\d{2}| ?(am|pm)) ").containsMatchIn(" " + text.lowercase().replace(Regex("[^a-z0-9: ]"), " ").replace(Regex("\\s+"), " ") + " ")
-        if (!Regex(" (was|were|where was|what was|how was|at what price|price at|level at) ").containsMatchIn(t) && !(clock && Market.mentioned(text).isNotEmpty())) return null
-        val m = Regex(" at (\\d{1,2})(?::|\\.| )?(\\d{2})? ?(am|pm)? ").find(t) ?: return null
+        val clock = rx(" at \\d{1,2}(:\\d{2}| ?(am|pm)) ").containsMatchIn(" " + text.lowercase().replace(rx("[^a-z0-9: ]"), " ").replace(rx("\\s+"), " ") + " ")
+        if (!rx(" (was|were|where was|what was|how was|at what price|price at|level at) ").containsMatchIn(t) && !(clock && Market.mentioned(text).isNotEmpty())) return null
+        val m = rx(" at (\\d{1,2})(?::|\\.| )?(\\d{2})? ?(am|pm)? ").find(t) ?: return null
         var h = m.groupValues[1].toInt(); val mi = m.groupValues[2].toIntOrNull() ?: 0
         val ap = m.groupValues[3]
         if (ap == "pm" && h < 12) h += 12
@@ -357,13 +357,13 @@ object Odds {
     fun asked(text: String): Ask? {
         val t = norm(text.replace(",", ""))
         val m = ASK.find(t) ?: TOUCH.find(t)?.let { tm ->
-            if (Regex(" (week|weekly|month|monthly|expiry|friday|monday|tuesday|wednesday|thursday|next|tomorrow) | at \\d{1,2}( \\d{2}| ?(am|pm)) ").containsMatchIn(t)) return null
+            if (rx(" (week|weekly|month|monthly|expiry|friday|monday|tuesday|wednesday|thursday|next|tomorrow) | at \\d{1,2}( \\d{2}| ?(am|pm)) ").containsMatchIn(t)) return null
             if (Market.mentioned(text).isEmpty()) return null
             return Ask(true, tm.groupValues[1].toDouble(), touch = true)
         } ?: return null
         // The odds are for the close (the VIX move for the time left): not a week or an expiry away, not by a clock time.
-        if (Regex(" (week|weekly|month|monthly|expiry|friday|monday|tuesday|wednesday|thursday|next) | at \\d{1,2}( \\d{2}| ?(am|pm)) ").containsMatchIn(t)) return null
-        if (Market.mentioned(text).isEmpty() && Regex(" (i|me|my) ").containsMatchIn(t)) return null
+        if (rx(" (week|weekly|month|monthly|expiry|friday|monday|tuesday|wednesday|thursday|next) | at \\d{1,2}( \\d{2}| ?(am|pm)) ").containsMatchIn(t)) return null
+        if (Market.mentioned(text).isEmpty() && rx(" (i|me|my) ").containsMatchIn(t)) return null
         return Ask(m.groupValues[1] in setOf("above", "over"), m.groupValues[2].toDouble())
     }
 
@@ -440,11 +440,11 @@ object PeriodMove {
 
     fun asked(text: String): Span? {
         val t = norm(text)
-        if (!Regex(" (do|did|done|doing|move|moved|perform|performed|change|changed|up|down|gain|fall|how much|how was|how is|how has) ").containsMatchIn(t)) return null
+        if (!rx(" (do|did|done|doing|move|moved|perform|performed|change|changed|up|down|gain|fall|how much|how was|how is|how has) ").containsMatchIn(t)) return null
         return when {
-            Regex(" last week ").containsMatchIn(t) -> Span.LAST_WEEK
-            Regex(" (this week|the week|weekly|week so far) ").containsMatchIn(t) -> Span.WEEK
-            Regex(" (this month|the month|monthly|month so far) ").containsMatchIn(t) -> Span.MONTH
+            rx(" last week ").containsMatchIn(t) -> Span.LAST_WEEK
+            rx(" (this week|the week|weekly|week so far) ").containsMatchIn(t) -> Span.WEEK
+            rx(" (this month|the month|monthly|month so far) ").containsMatchIn(t) -> Span.MONTH
             else -> null
         }
     }
@@ -479,7 +479,7 @@ object PeriodMove {
 object Briefing {
     private val ASK = Regex("^ (brief me|give me a brief(ing)?|briefing|catch me up|what do i need to know|what should i know|what s important|whats important|market briefing|morning briefing|morning brief|quick update|bring me up to speed|update me on everything)( today| now| jarvis)? $")
 
-    fun asked(text: String): Boolean = ASK.containsMatchIn(norm(text).replace(Regex("^ (jarvis|hey jarvis|ok jarvis|boss) "), " "))
+    fun asked(text: String): Boolean = ASK.containsMatchIn(norm(text).replace(rx("^ (jarvis|hey jarvis|ok jarvis|boss) "), " "))
 
     fun say(snaps: Map<Market, Snapshot>, now: LocalDateTime, events: List<String>): String? {
         val idx = Reasoning.INDICES.mapNotNull { m -> snaps[m]?.let { s -> s.changePct?.let { m to (s to it) } } }
@@ -527,14 +527,14 @@ object Payoff {
 
     fun asked(text: String): Ask? {
         val t = norm(text.replace(",", ""))
-        if (!Regex(" (worth|value|payoff|pay off|expiry|expire|expires|settle|settles|p l|profit|loss|make|lose|bought) ").containsMatchIn(t)) return null
-        val opt = Regex(" (\\d{4,6}) ?(ce|call|pe|put) ").find(t) ?: return null
+        if (!rx(" (worth|value|payoff|pay off|expiry|expire|expires|settle|settles|p l|profit|loss|make|lose|bought) ").containsMatchIn(t)) return null
+        val opt = rx(" (\\d{4,6}) ?(ce|call|pe|put) ").find(t) ?: return null
         val strike = opt.groupValues[1].toDouble()
         val call = opt.groupValues[2] == "ce" || opt.groupValues[2] == "call"
         // The index level: near the strike (a premium of 1,200 is not an index at 1,200).
-        val at = Regex(" (?:at|to|is at|goes to|closes at|ends at|expires at|settles at) (\\d{4,6}(?:\\.\\d+)?) ").findAll(t)
+        val at = rx(" (?:at|to|is at|goes to|closes at|ends at|expires at|settles at) (\\d{4,6}(?:\\.\\d+)?) ").findAll(t)
             .map { it.groupValues[1].toDouble() }.firstOrNull { it != strike && abs(it - strike) <= strike * 0.3 } ?: return null
-        val paid = Regex(" (?:bought at|bought for|paid|premium of|premium|cost) (\\d{1,5}(?:\\.\\d+)?) ").find(t)?.groupValues?.get(1)?.toDouble()
+        val paid = rx(" (?:bought at|bought for|paid|premium of|premium|cost) (\\d{1,5}(?:\\.\\d+)?) ").find(t)?.groupValues?.get(1)?.toDouble()
         return Ask(strike, call, at, paid)
     }
 
@@ -565,8 +565,8 @@ object OptionQuote {
     fun asked(text: String): Ask? {
         val t = norm(text.replace(",", ""))
         // Not an order, not a payoff sum, not an alarm, not Boss's own profit, loss or margin.
-        if (Regex(" (buy|sell|lot|lots|bought|sold|alert|alarm|remind|expiry|expires|loss|losses|profit|profits|margin|make|made|lose|lost|pnl|p l|earn|earned|i|me|my|mine) ").containsMatchIn(t) || Payoff.asked(text) != null) return null
-        val m = Regex(" (\\d{4,6}) ?(ce|pe|call|put) ").find(t) ?: return null
+        if (rx(" (buy|sell|lot|lots|bought|sold|alert|alarm|remind|expiry|expires|loss|losses|profit|profits|margin|make|made|lose|lost|pnl|p l|earn|earned|i|me|my|mine) ").containsMatchIn(t) || Payoff.asked(text) != null) return null
+        val m = rx(" (\\d{4,6}) ?(ce|pe|call|put) ").find(t) ?: return null
         val short = t.trim().split(" ").size <= 4                                  // "nifty 24500 ce" on its own
         if (!short && !QUOTE.containsMatchIn(t)) return null
         return Ask(m.groupValues[1].toDouble(), m.groupValues[2] == "ce" || m.groupValues[2] == "call")
@@ -615,8 +615,8 @@ object LevelInfo {
     fun asked(text: String): Double? {
         val t = norm(text.replace(",", ""))
         val m = ASK.find(t) ?: return null
-        if (m.groupValues[1] in setOf("why is", "is") && !Regex(" (important|significant|a level|key|a big level|special) ").containsMatchIn(t)) return null
-        return m.groupValues.drop(1).firstOrNull { Regex("^\\d{4,6}$").matches(it) }?.toDouble()
+        if (m.groupValues[1] in setOf("why is", "is") && !rx(" (important|significant|a level|key|a big level|special) ").containsMatchIn(t)) return null
+        return m.groupValues.drop(1).firstOrNull { rx("^\\d{4,6}$").matches(it) }?.toDouble()
     }
 
     fun say(s: Snapshot, x: Double): String? {
@@ -669,7 +669,7 @@ object BigPicture {
 object SinceLast {
     private val ASK = Regex("^ (what s changed|whats changed|what changed|what has changed|anything changed|any change|anything new since|what s different|whats different|since i last asked|since last time|update since last time)( since (i last asked|last time|then|my last question))?( on [a-z ]+)? $")
 
-    fun asked(text: String): Boolean = ASK.containsMatchIn(norm(text).replace(Regex("^ (jarvis|hey jarvis|ok jarvis|boss) "), " "))
+    fun asked(text: String): Boolean = ASK.containsMatchIn(norm(text).replace(rx("^ (jarvis|hey jarvis|ok jarvis|boss) "), " "))
 
     fun say(m: Market, then: Double, thenAt: LocalDateTime, now: Snapshot, nowAt: LocalDateTime = now.at): String {
         val mins = java.time.Duration.between(thenAt, nowAt).toMinutes()
@@ -765,8 +765,8 @@ object Outlook {
     fun span(text: String): Span {
         val t = norm(text)
         return when {
-            Regex(" (hour|hours|ghante|ghanta) ").containsMatchIn(t) -> Span.HOUR
-            Regex(" (week|weekly|hafte|hafta) ").containsMatchIn(t) -> Span.WEEK
+            rx(" (hour|hours|ghante|ghanta) ").containsMatchIn(t) -> Span.HOUR
+            rx(" (week|weekly|hafte|hafta) ").containsMatchIn(t) -> Span.WEEK
             else -> Span.DAY
         }
     }
@@ -775,7 +775,7 @@ object Outlook {
     fun session(text: String): String {
         val t = norm(text)
         when (span(text)) { Span.HOUR -> return "the next hour"; Span.WEEK -> return "the coming week"; Span.DAY -> Unit }
-        return Regex(" (monday|tuesday|wednesday|thursday|friday|tomorrow|today) ").find(t)?.groupValues?.get(1)
+        return rx(" (monday|tuesday|wednesday|thursday|friday|tomorrow|today) ").find(t)?.groupValues?.get(1)
             ?.let { if (it == "today" || it == "tomorrow") it else it.replaceFirstChar { c -> c.uppercase() } } ?: "the next session"
     }
 

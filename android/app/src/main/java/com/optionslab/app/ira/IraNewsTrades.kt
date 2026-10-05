@@ -32,9 +32,22 @@ internal object IraNewsTrades {
                    /** How sure Jarvis was (1-5) when it was suggested, for the bar it sets itself ([com.optionslab.ira.ActAlone.bar]). */
                    val stars: Int? = null)
 
-    /** Every news / pattern trade; an entry that does not read back is skipped, never the whole record. */
+    /** The record as last read ([all]): its saved text and what it read as. */
+    @Volatile private var lastRead: Pair<String?, List<Pos>>? = null
+
+    /**
+     * Every news / pattern trade; an entry that does not read back is skipped, never the whole record. Read again only
+     * when the saved text changed: each market-watch pass asks several times (the bots' holdings, Solo's loss limit, the
+     * tick), and the record holds up to 200 trades.
+     */
     fun all(): List<Pos> = runCatching {
-        val a = JSONArray(com.optionslab.app.security.SecurePrefs.getString(KEY) ?: "[]")
+        val raw = com.optionslab.app.security.SecurePrefs.getString(KEY)
+        val kept = lastRead
+        if (kept != null && kept.first == raw) kept.second else parse(raw).also { lastRead = raw to it }
+    }.getOrDefault(emptyList())
+
+    private fun parse(raw: String?): List<Pos> = runCatching {
+        val a = JSONArray(raw ?: "[]")
         (0 until a.length()).mapNotNull { i -> runCatching { a.getJSONObject(i).let { o ->
             Pos(o.getString("s"), o.getBoolean("l"), o.getDouble("e"), o.getInt("q"), o.getDouble("p"), if (o.has("st")) o.getDouble("st") else null,
                 o.getString("h"), o.getString("d"), o.optBoolean("c"), if (o.has("r")) o.getDouble("r") else null,

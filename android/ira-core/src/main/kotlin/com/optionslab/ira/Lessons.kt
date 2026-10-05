@@ -55,5 +55,5 @@ object Lessons {
         if (lessons.isEmpty()) "Nothing stands out yet from $trips closed trades, Boss: I need about $MIN_OWNER trades of an arm or strategy before I judge it."
         else "What the results teach, Boss (from $trips closed trades): " + lessons.joinToString(" ") { it.text }
 
-    fun asked(text: String): Boolean = Regex("(?i)\\bwhat (have you|did you) learn(ed|t)?\\b|\\blessons?\\b.*\\b(trades?|results?|learn)|\\bwhat (do|does) (my|the) (results|trades) (say|teach|show)").containsMatchIn(text)
+    fun asked(text: String): Boolean = rx("(?i)\\bwhat (have you|did you) learn(ed|t)?\\b|\\blessons?\\b.*\\b(trades?|results?|learn)|\\bwhat (do|does) (my|the) (results|trades) (say|teach|show)").containsMatchIn(text)
 }

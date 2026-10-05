@@ -60,9 +60,9 @@ object Hinglish {
     fun hasHindi(text: String): Boolean = HINDI.containsMatchIn(text.lowercase())
 
     fun normalize(text: String): String {
-        var t = text.lowercase().replace(Regex("[^a-z0-9.,&% ]"), " ").replace(Regex("\\s+"), " ").trim()
+        var t = text.lowercase().replace(rx("[^a-z0-9.,&% ]"), " ").replace(rx("\\s+"), " ").trim()
         if (!hasHindi(t)) return text
-        for ((r, to) in WORDS) t = r.replace(t, to).replace(Regex("\\s+"), " ").trim()
+        for ((r, to) in WORDS) t = r.replace(t, to).replace(rx("\\s+"), " ").trim()
         for ((r, verb) in VERBS) r.find(t)?.let { m -> t = "$verb ${m.groupValues[1].trim()}".trim() }
         return t
     }
@@ -136,21 +136,21 @@ object Hinglish {
      * no such question is in it. For reading QUESTIONS only - commands and orders are read from [normalize].
      */
     fun question(text: String): String {
-        val t = text.lowercase().replace(Regex("[^a-z0-9.,&% ]"), " ").replace(Regex("[.,]+(?=\\s|$)"), " ").replace(Regex("\\s+"), " ").trim()
-            .replace(Regex("\\s+(?:na|yaar|zara|jarvis|boss|please|ji)$"), "").replace(Regex("^(?:(?:jarvis|boss|hey|ok|okay|zara|yaar)\\s+)+"), "")
+        val t = text.lowercase().replace(rx("[^a-z0-9.,&% ]"), " ").replace(rx("[.,]+(?=\\s|$)"), " ").replace(rx("\\s+"), " ").trim()
+            .replace(rx("\\s+(?:na|yaar|zara|jarvis|boss|please|ji)$"), "").replace(rx("^(?:(?:jarvis|boss|hey|ok|okay|zara|yaar)\\s+)+"), "")
         for ((r, to) in QUESTIONS) {
             val m = r.find(t) ?: continue
             if (to in MARKET_ONLY && Market.mentioned(Heard.fix(m.groupValues.last())).isEmpty()) continue
-            return normalize(r.replace(t, to).replace(Regex("\\s+"), " ").trim())
+            return normalize(r.replace(t, to).replace(rx("\\s+"), " ").trim())
         }
         return text
     }
 
     /** "haan" / "nahi" and friends: true, false, or null when it is neither. */
     fun yesNo(text: String): Boolean? {
-        val t = " " + text.lowercase().replace(Regex("[^a-z ]"), " ").replace(Regex("\\s+"), " ").trim() + " "
-        if (Regex(" (nahi|nahin|nahii|nhi|nai|na|mat karo|mat|rehne do|ruko|cancel karo) ").containsMatchIn(t)) return false
-        if (Regex(" (haan|haa|ha|han|ji|ji haan|bilkul|theek hai|thik hai|kar do|kardo|le lo|lelo|chalo) ").containsMatchIn(t)) return true
+        val t = " " + text.lowercase().replace(rx("[^a-z ]"), " ").replace(rx("\\s+"), " ").trim() + " "
+        if (rx(" (nahi|nahin|nahii|nhi|nai|na|mat karo|mat|rehne do|ruko|cancel karo) ").containsMatchIn(t)) return false
+        if (rx(" (haan|haa|ha|han|ji|ji haan|bilkul|theek hai|thik hai|kar do|kardo|le lo|lelo|chalo) ").containsMatchIn(t)) return true
         return null
     }
 }

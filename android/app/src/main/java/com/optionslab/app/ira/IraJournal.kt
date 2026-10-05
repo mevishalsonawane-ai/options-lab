@@ -158,10 +158,11 @@ internal object IraJournal {
     suspend fun targetWatch() {
         if (!com.optionslab.app.BuildConfig.JARVIS || !Automations.on(Automations.Auto.TARGET)) return
         val t = target() ?: return
-        val pnl = (if (AppSettings.load().live && Broker.loggedIn) runCatching { Broker.passPositionBook().net.sumOf { it.pnl } }.getOrNull() else pnlNow()) ?: return
-        if (!com.optionslab.ira.DayTarget.reached(pnl, t)) return
+        // Told already today (every pass after): the P&L is not read.
         val key = "jarvis.target.told"
         if (com.optionslab.app.security.SecurePrefs.getString(key) == com.optionslab.app.data.Market.today().toString()) return
+        val pnl = (if (AppSettings.load().live && Broker.loggedIn) runCatching { Broker.passPositionBook().net.sumOf { it.pnl } }.getOrNull() else pnlNow()) ?: return
+        if (!com.optionslab.ira.DayTarget.reached(pnl, t)) return
         com.optionslab.app.security.SecurePrefs.put(key, com.optionslab.app.data.Market.today().toString())
         val text = com.optionslab.ira.DayTarget.say(pnl, t)
         // A locked phone may be overheard or seen: the amount stays in the chat.
@@ -183,12 +184,14 @@ internal object IraJournal {
     suspend fun staleWatch() {
         if (!com.optionslab.app.BuildConfig.JARVIS || !Automations.on(Automations.Auto.STALE) || !com.optionslab.app.data.Market.isOpen()) return
         val now = LocalDateTime.now(IST)
-        val bots = IraCoach.botSymbols()
         val open = ArrayList<Triple<String, Boolean, Pair<Double, Double>>>()   // symbol, live, (avg, ltp)
         runCatching { Paper.snapshot().positions.positions.filter { it.quantity > 0 }.forEach { open += Triple(it.symbol, false, it.averagePrice to it.ltp) } }
         if (Broker.loggedIn) runCatching { Broker.passPositionBook().net.filter { it.qty > 0 }.forEach { open += Triple(it.symbol, true, it.avg to it.last) } }
         val keys = open.map { (s, l, _) -> (if (l) "L:" else "P:") + s }.toSet()
         synchronized(firstSeen) { firstSeen.keys.retainAll(keys) }
+        // Nothing open (most passes): the bots' holdings are not read.
+        if (open.isEmpty()) return
+        val bots = IraCoach.botSymbols()
         val day = com.optionslab.app.data.Market.today().toString()
         for ((symbol, live, px) in open) {
             if (symbol in bots) continue

@@ -143,20 +143,20 @@ object AppAnswers {
 
     fun sections(text: String): Set<Section> {
         // (Read as a question: "aaj kitna kamaya" and a misheard "p and l" ask the P&L too - only what to read, never an action.)
-        val t = " " + Ask.reading(text).lowercase().replace("p&l", "p l").replace(Regex("[^a-z0-9 ]"), " ").replace(Regex("\\s+"), " ").trim() + " "
+        val t = " " + Ask.reading(text).lowercase().replace("p&l", "p l").replace(rx("[^a-z0-9 ]"), " ").replace(rx("\\s+"), " ").trim() + " "
         val out = LinkedHashSet<Section>()
         for ((s, r) in WORDS) if (r.containsMatchIn(t)) out += s
         // "My daily stop loss", "stop loss for the day", "max loss per day": the daily loss limit (Boss's words, 3 Oct),
         // not the stops on positions nor the P&L.
         if (DAY_STOP.containsMatchIn(t)) { out += Section.RISK; out.remove(Section.PROTECTIONS); out.remove(Section.PNL) }   // (paper's too: RISK lists both)
-        if (Section.RISK in out && Regex(" (daily loss|loss limit) ").containsMatchIn(t)) out.remove(Section.PNL)
-        if (Section.HISTORY in out && Regex(" (made|lost|earned|p l|pnl|profit|loss|make|earn|lose) ").containsMatchIn(t)) out.remove(Section.PNL)
-        if (Section.EVENTS in out && Regex(" (event|events|fed|fomc|rbi|budget|cpi) ").containsMatchIn(t)) out.remove(Section.HISTORY)
+        if (Section.RISK in out && rx(" (daily loss|loss limit) ").containsMatchIn(t)) out.remove(Section.PNL)
+        if (Section.HISTORY in out && rx(" (made|lost|earned|p l|pnl|profit|loss|make|earn|lose) ").containsMatchIn(t)) out.remove(Section.PNL)
+        if (Section.EVENTS in out && rx(" (event|events|fed|fomc|rbi|budget|cpi) ").containsMatchIn(t)) out.remove(Section.HISTORY)
         if (Section.FLOWS in out || Section.CHAIN in out) { out.remove(Section.HISTORY); out.remove(Section.STATUS) }
         if (Section.STUDY in out) { out.remove(Section.STRATEGIES); out.remove(Section.HISTORY); out.remove(Section.STATUS) }
         // "My last P&L", "previous day's profit": the last session, from the record.
-        if (Regex(" (last|previous|yesterday|yesterday s|last session s|last day s|last trading day s) (p l|pnl|profit|loss|day|session|result)").containsMatchIn(t) &&
-            Regex(" (p l|pnl|profit|loss|made|lost|result) ").containsMatchIn(t)) { out.remove(Section.PNL); out += Section.HISTORY }
+        if (rx(" (last|previous|yesterday|yesterday s|last session s|last day s|last trading day s) (p l|pnl|profit|loss|day|session|result)").containsMatchIn(t) &&
+            rx(" (p l|pnl|profit|loss|made|lost|result) ").containsMatchIn(t)) { out.remove(Section.PNL); out += Section.HISTORY }
         // "How did my Thursday expiry trades do this month?": a search of the owner's own trades.
         if (TradeSearch.asked(text) && out.none { it == Section.TIMEOFDAY || it == Section.REASONS }) { out.clear(); out += Section.SEARCH }
         // "What happens to my P&L if Nifty moves 100 points", "which of my positions is losing most": asked on their own.
@@ -173,7 +173,7 @@ object AppAnswers {
                 it == Section.SEARCH || it == Section.TIMEOFDAY || it == Section.REASONS || it == Section.MISTAKES || it == Section.MOVE || it == Section.RANK || it == Section.REPLAY || it == Section.MONTH || it == Section.CHARGES })
             out.removeAll(setOf(Section.EVENTS, Section.POSITIONS, Section.STATUS, Section.STRATEGIES, Section.ORDERS, Section.PNL, Section.SETTINGS, Section.HISTORY, Section.HOWTO, Section.STUDY, Section.REVIEW))
         if (Section.REVIEW in out) { out.remove(Section.HISTORY); out.remove(Section.ORDERS); out.remove(Section.PNL) }
-        if (out.isEmpty() || out == setOf(Section.STATUS) && Regex(" (how am i doing|how did i do|my account|account) ").containsMatchIn(t))
+        if (out.isEmpty() || out == setOf(Section.STATUS) && rx(" (how am i doing|how did i do|my account|account) ").containsMatchIn(t))
             out += listOf(Section.PNL, Section.POSITIONS, Section.ORDERS, Section.STRATEGIES)
         return out
     }
@@ -193,28 +193,28 @@ object AppAnswers {
             facts += lines
             parts += lines.take(SHOWN).joinToString(" ") + if (lines.size > SHOWN) " (and ${lines.size - SHOWN} more on screen)" else ""
         }
-        if (Regex("\\b(analy[sz]e|analysis|review|should)", RegexOption.IGNORE_CASE).containsMatchIn(q.text)) parts += "These are facts from the app, not advice."
+        if (rx("\\b(analy[sz]e|analysis|review|should)", RegexOption.IGNORE_CASE).containsMatchIn(q.text)) parts += "These are facts from the app, not advice."
         return Answer(parts.joinToString(" "), facts)
     }
 
     /** Where things are in the app. */
     fun howto(text: String): List<String> {
-        val t = " " + text.lowercase().replace("p&l", "p l").replace(Regex("[^a-z0-9 ]"), " ").replace(Regex("\\s+"), " ") + " "
+        val t = " " + text.lowercase().replace("p&l", "p l").replace(rx("[^a-z0-9 ]"), " ").replace(rx("\\s+"), " ") + " "
         val map = listOf(
-            Regex(" (kill switch|daily loss|drawdown|limit|limits|bot settings|risk) ") to "Kill switch, daily loss, drawdown and order limits: More, then Bot settings.",
-            Regex(" (zerodha|kite|login|log in|live|real orders|api|mode|paper) ") to "Zerodha login, Paper or Live mode and order limits: More, then Zerodha. The PAPER TRADING badge at the top switches the mode.",
-            Regex(" (alarm|alarms|alert|alerts) ") to "Price alarms and P&L alerts: More, then Alerts.",
-            Regex(" (pine|script|scripts|indicator) ") to "Pine scripts (write, backtest, put on the chart, auto-trade): Research, then Pine.",
-            Regex(" (strategy|strategies|arm|arms|orb) ") to "Strategies and the ORB arms: Trade, then Strategies. Pine arms (and the strategies Jarvis made): Research, then Pine.",
-            Regex(" (order|orders|position|positions|funds|account) ") to "Orders, positions and funds: Trade, then Account.",
-            Regex(" (p l|pnl|calendar|journal|history) ") to "P&L by day, the calendar and the journal: the P&L tab.",
-            Regex(" (option chain|chain|options|straddle|oi|iv|greeks|builder) ") to "Option chain, OI, IV, straddle and the strategy builder: the Options tab.",
-            Regex(" (chart|charts) ") to "Charts: the Chart tab; tap Options on a chart for option prices and buy or sell.",
-            Regex(" (pin|fingerprint|biometric|security|lock) ") to "PIN, fingerprint and device checks: More, then Security.",
-            Regex(" (schedule|schedules|holiday|holidays|notification|notifications) ") to "Daily jobs, notifications and market holidays: More, then Schedules.",
-            Regex(" (data|harvest|backup) ") to "The data record and the nightly harvest: More, then Data and harvest.",
-            Regex(" (backtest|portfolio|sip|replay|health) ") to "Backtests, portfolio, SIP, replay and strategy health: the Research tab.",
-            Regex(" (voice|jarvis|listen|model|ai) ") to "Jarvis's voice and AI model: Home, Ira, the Voice and AI model cards at the top.",
+            rx(" (kill switch|daily loss|drawdown|limit|limits|bot settings|risk) ") to "Kill switch, daily loss, drawdown and order limits: More, then Bot settings.",
+            rx(" (zerodha|kite|login|log in|live|real orders|api|mode|paper) ") to "Zerodha login, Paper or Live mode and order limits: More, then Zerodha. The PAPER TRADING badge at the top switches the mode.",
+            rx(" (alarm|alarms|alert|alerts) ") to "Price alarms and P&L alerts: More, then Alerts.",
+            rx(" (pine|script|scripts|indicator) ") to "Pine scripts (write, backtest, put on the chart, auto-trade): Research, then Pine.",
+            rx(" (strategy|strategies|arm|arms|orb) ") to "Strategies and the ORB arms: Trade, then Strategies. Pine arms (and the strategies Jarvis made): Research, then Pine.",
+            rx(" (order|orders|position|positions|funds|account) ") to "Orders, positions and funds: Trade, then Account.",
+            rx(" (p l|pnl|calendar|journal|history) ") to "P&L by day, the calendar and the journal: the P&L tab.",
+            rx(" (option chain|chain|options|straddle|oi|iv|greeks|builder) ") to "Option chain, OI, IV, straddle and the strategy builder: the Options tab.",
+            rx(" (chart|charts) ") to "Charts: the Chart tab; tap Options on a chart for option prices and buy or sell.",
+            rx(" (pin|fingerprint|biometric|security|lock) ") to "PIN, fingerprint and device checks: More, then Security.",
+            rx(" (schedule|schedules|holiday|holidays|notification|notifications) ") to "Daily jobs, notifications and market holidays: More, then Schedules.",
+            rx(" (data|harvest|backup) ") to "The data record and the nightly harvest: More, then Data and harvest.",
+            rx(" (backtest|portfolio|sip|replay|health) ") to "Backtests, portfolio, SIP, replay and strategy health: the Research tab.",
+            rx(" (voice|jarvis|listen|model|ai) ") to "Jarvis's voice and AI model: Home, Ira, the Voice and AI model cards at the top.",
         ).filter { it.first.containsMatchIn(t) }.map { it.second }
         return map.ifEmpty { listOf("The tabs: Home (Ira and the dashboard), Chart, Trade (account and strategies), P&L, Options, Research, More (Zerodha, Alerts, Security, Schedules, Bot settings, Data).") }
     }
@@ -222,7 +222,7 @@ object AppAnswers {
     /** "Can you listen to me?", "what can you do?" - about Ira (Jarvis) itself. */
     fun help(q: Question, voice: Boolean): Answer {
         val t = q.text.lowercase()
-        val aboutVoice = Regex("\\b(listen|hear|voice|speak|talk|mic|microphone)").containsMatchIn(t)
+        val aboutVoice = rx("\\b(listen|hear|voice|speak|talk|mic|microphone)").containsMatchIn(t)
         val voiceLine = if (voice) "Voice: switch on \"Listen for Jarvis\" in the Voice card at the top of this page and allow the microphone. " +
             "Then say \"Jarvis, how is Nifty?\" - or \"Jarvis\", wait for \"Yes?\", and ask. Say \"Jarvis, stop listening\" to switch it off. " +
             "It hears you on this phone only."

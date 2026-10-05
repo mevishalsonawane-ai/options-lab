@@ -41,7 +41,7 @@ object TradeReplay {
 
     enum class Scope { LAST, TODAY }
 
-    private fun norm(text: String) = " " + text.lowercase().replace("'", "").replace(Regex("[^a-z0-9 ]"), " ").replace(Regex("\\s+"), " ").trim() + " "
+    private fun norm(text: String) = " " + text.lowercase().replace("'", "").replace(rx("[^a-z0-9 ]"), " ").replace(rx("\\s+"), " ").trim() + " "
 
     private val LAST = Regex(" (how was|how did|how s|hows|how is|how about|replay|review|tell me about|walk me through|go over|go through|break down|look at|analy[sz]e) " +
         "(my|the) (last|latest|previous|most recent|recent) (trade|exit|round trip)s? ")
@@ -56,10 +56,10 @@ object TradeReplay {
      */
     fun asked(text: String): Scope? {
         val t = norm(text)
-        if (Regex(" why ").containsMatchIn(t)) return null
+        if (rx(" why ").containsMatchIn(t)) return null
         if (LAST.containsMatchIn(t)) return Scope.LAST
         // Another period is the trade search's or the weekly review's.
-        if (Regex(" (week|month|yesterday|weekly|monthly) ").containsMatchIn(t)) return null
+        if (rx(" (week|month|yesterday|weekly|monthly) ").containsMatchIn(t)) return null
         if (TODAY.containsMatchIn(t)) return Scope.TODAY
         return null
     }

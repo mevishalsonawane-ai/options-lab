@@ -12,8 +12,18 @@ internal object Rx {
     const val KEPT = 1024
     private val kept = ConcurrentHashMap<String, Regex>()
 
+    private val keptIgnoringCase = ConcurrentHashMap<String, Regex>()
+
     fun of(pattern: String): Regex = kept[pattern] ?: Regex(pattern).also { if (kept.size < KEPT) kept.putIfAbsent(pattern, it) }
+
+    /** [pattern] with [RegexOption.IGNORE_CASE], kept apart from the plain ones. */
+    fun ignoringCase(pattern: String): Regex = keptIgnoringCase[pattern]
+        ?: Regex(pattern, RegexOption.IGNORE_CASE).also { if (keptIgnoringCase.size < KEPT) keptIgnoringCase.putIfAbsent(pattern, it) }
 }
 
 /** [pattern] compiled once ([Rx]). */
 internal fun rx(pattern: String): Regex = Rx.of(pattern)
+
+/** [pattern] compiled once ([Rx]), as Regex(pattern, [option]); only [RegexOption.IGNORE_CASE] is kept. */
+internal fun rx(pattern: String, option: RegexOption): Regex =
+    if (option == RegexOption.IGNORE_CASE) Rx.ignoringCase(pattern) else Regex(pattern, option)

@@ -19,7 +19,7 @@ object SelfWhy {
     /** Asked about Jarvis's own doing ("why is ORB parked?"); a market question ("why is the market closed") is not. */
     fun asked(text: String): Boolean = ASKED.containsMatchIn(text) && (YOU.containsMatchIn(text) || !MARKET.containsMatchIn(text))
 
-    private fun words(s: String) = s.lowercase(Locale.ENGLISH).replace(Regex("[^a-z0-9 ]"), " ").split(Regex("\\s+")).filter { it.length > 1 && it !in STOP }.toSet()
+    private fun words(s: String) = s.lowercase(Locale.ENGLISH).replace(rx("[^a-z0-9 ]"), " ").split(rx("\\s+")).filter { it.length > 1 && it !in STOP }.toSet()
 
     /** The entry that answers [question], or null when the record holds nothing about it. */
     fun find(question: String, entries: List<Activity.Entry>): Activity.Entry? {

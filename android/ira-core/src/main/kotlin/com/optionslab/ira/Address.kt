@@ -10,9 +10,9 @@ object Address {
     fun boss(text: String): String {
         val t = text.trim()
         // Already addresses Boss anywhere ("Voice on, Boss.", "Good morning, Boss."): said once, never twice.
-        if (t.isEmpty() || Regex("\\b$NAME\\b").containsMatchIn(t)) return t
-        if (Regex("^(Hello|Hi|Hey|Good (morning|afternoon|evening))\\b").containsMatchIn(t))
-            return Regex("^(Hello|Hi|Hey|Good (morning|afternoon|evening))( there)?[.,!]?").replace(t) { "${it.groupValues[1]} $NAME." }
+        if (t.isEmpty() || rx("\\b$NAME\\b").containsMatchIn(t)) return t
+        if (rx("^(Hello|Hi|Hey|Good (morning|afternoon|evening))\\b").containsMatchIn(t))
+            return rx("^(Hello|Hi|Hey|Good (morning|afternoon|evening))( there)?[.,!]?").replace(t) { "${it.groupValues[1]} $NAME." }
         val word = t.takeWhile { !it.isWhitespace() }
         val keep = word.trimEnd(',', '.', ':', ';', '!', '?').removeSuffix("'s").removeSuffix("’s") in KEEP || word.length > 1 && word[1].isUpperCase() || word.first().isDigit()
         return "$NAME, " + (if (keep) t else t.replaceFirstChar { it.lowercase() })

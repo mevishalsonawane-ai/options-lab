@@ -54,7 +54,7 @@ object SharpMove {
     private fun pct(x: Double) = "%+.2f%%".format(Locale.ENGLISH, x)
     private fun pctAbs(x: Double) = "%.2f%%".format(Locale.ENGLISH, abs(x))
     private fun hm(t: LocalDateTime) = "%02d:%02d".format(Locale.ENGLISH, t.hour, t.minute)
-    private fun norm(text: String) = " " + text.lowercase().replace(Regex("[^a-z0-9: ]"), " ").replace(Regex("\\s+"), " ").trim() + " "
+    private fun norm(text: String) = " " + text.lowercase().replace(rx("[^a-z0-9: ]"), " ").replace(rx("\\s+"), " ").trim() + " "
 
     /** The candles of [day] in [bars], in time order. */
     private fun dayOf(bars: List<Candle>, day: java.time.LocalDate) = bars.filter { it.t.toLocalDate() == day }.sortedBy { it.t }
@@ -86,6 +86,9 @@ object SharpMove {
         val last = bars.maxByOrNull { it.t } ?: return null
         val day = dayOf(bars, last.t.toLocalDate())
         if (day.size <= WINDOW) return null
+        // No stretch of [MIN_PCT] or more today: none is sharp whatever the usual, so the earlier sessions are not read
+        // (the watch looks at every pass, and most passes find a quiet market).
+        if ((WINDOW until day.size).none { i -> day[i - WINDOW].c > 0 && abs((day[i].c - day[i - WINDOW].c) / day[i - WINDOW].c * 100) >= MIN_PCT }) return null
         val u = usual(bars, last.t.toLocalDate())
         fun at(i: Int) = Move(m, day[i - WINDOW].t, day[i].t, day[i - WINDOW].c, day[i].c, u)
         var end = -1

@@ -35,7 +35,7 @@ object Wake {
      * never his own voice heard back ([BargeIn]).
      */
     fun named(text: String): Boolean {
-        val t = " " + text.lowercase().replace(Regex("[^a-z0-9% ]"), " ").replace(Regex("\\s+"), " ").trim() + " "
+        val t = " " + text.lowercase().replace(rx("[^a-z0-9% ]"), " ").replace(rx("\\s+"), " ").trim() + " "
         return WORDS.any { t.contains(" $it ") }
     }
 
@@ -50,17 +50,17 @@ object Wake {
         val p = partial?.trim()?.takeIf { it.isNotEmpty() } ?: return null
         // Awake (after "Yes, Boss?"): the question read mid-turn counts too - at least two words, so a stray sound is not
         // taken for one (Boss, 4 Oct: long turns ended in error 7 with words already read).
-        if (awake && p.split(Regex("\\s+")).size >= 2) return p
+        if (awake && p.split(rx("\\s+")).size >= 2) return p
         return p.takeIf { heard(it, false) !is Heard.Ignore }
     }
 
-    fun hush(text: String): Boolean = HUSH.matches(text.lowercase().replace(Regex("[^a-z ]"), " ").replace(Regex("\\b(hey |ok |okay )?(jarvis|jarvas|jervis|jarviss|jarvish|jarwis|jaarvis|jarviz|jarbis)\\b"), " ")
-        .replace(Regex("\\s+"), " ").trim())
+    fun hush(text: String): Boolean = HUSH.matches(text.lowercase().replace(rx("[^a-z ]"), " ").replace(rx("\\b(hey |ok |okay )?(jarvis|jarvas|jervis|jarviss|jarvish|jarwis|jaarvis|jarviz|jarbis)\\b"), " ")
+        .replace(rx("\\s+"), " ").trim())
 
     /** [awake]: the wake word was said alone a moment ago, so this sentence is the question. */
     fun heard(text: String, awake: Boolean): Heard {
-        val t = " " + text.lowercase().replace(Regex("[^a-z0-9% ]"), " ").replace(Regex("\\s+"), " ").trim() + " "
-        val at = WORDS.mapNotNull { w -> Regex(" $w ").find(t)?.let { it.range.last } }.minOrNull()
+        val t = " " + text.lowercase().replace(rx("[^a-z0-9% ]"), " ").replace(rx("\\s+"), " ").trim() + " "
+        val at = WORDS.mapNotNull { w -> rx(" $w ").find(t)?.let { it.range.last } }.minOrNull()
             ?: FIRST.find(t)?.let { it.range.last }
         val rest = (if (at != null) t.substring(at) else t).trim().let { r -> var x = r; repeat(3) { x = x.replace(FILLER, "").trim() }; x }
         return when {
@@ -77,10 +77,10 @@ object Wake {
      * stays on screen with the facts it was built from.
      */
     fun spoken(text: String, sentences: Int = 3): String {
-        val parts = Regex("(?<=[.!?])\\s+").split(text.trim()).filter { it.isNotBlank() }
+        val parts = rx("(?<=[.!?])\\s+").split(text.trim()).filter { it.isNotBlank() }
         return parts.take(sentences).joinToString(" ")
-            .replace(Regex("(?:Rs|₹)\\s?([+-]?[\\d,]+(?:\\.\\d+)?)"), "$1 rupees")
-            .replace("+", "plus ").replace(Regex("(^|\\s)-(?=\\d)"), "$1minus ")
+            .replace(rx("(?:Rs|₹)\\s?([+-]?[\\d,]+(?:\\.\\d+)?)"), "$1 rupees")
+            .replace("+", "plus ").replace(rx("(^|\\s)-(?=\\d)"), "$1minus ")
     }
 
     /**
@@ -92,7 +92,7 @@ object Wake {
     fun pieces(text: String): List<String> {
         val t = text.trim()
         if (t.length < WHOLE_UNDER) return listOf(t)
-        val parts = Regex("(?<=[.!?])\\s+").split(t).filter { it.isNotBlank() }
+        val parts = rx("(?<=[.!?])\\s+").split(t).filter { it.isNotBlank() }
         var first = 0
         var head = ""
         while (first < parts.size && head.length < FIRST_AT_LEAST) { head = if (head.isEmpty()) parts[first] else "$head ${parts[first]}"; first++ }
@@ -116,14 +116,14 @@ object Wake {
     }
 
     private fun english(text: String): Boolean? {
-        val t = " " + text.lowercase().replace(Regex("[^a-z ]"), " ").replace(Regex("\\s+"), " ").trim() + " "
+        val t = " " + text.lowercase().replace(rx("[^a-z ]"), " ").replace(rx("\\s+"), " ").trim() + " "
         if (t.isBlank()) return null
-        if (Regex(" (no+|nope|nah|not|not now|don t|dont|do not|reject|rejected|cancel|skip|leave it|stop|wait|never|negative|abort|hold off|hold on|decline|declined|deny|denied|later) ").containsMatchIn(t)) return false
-        if (Regex(" (yes|yeah|yep|yup|sure|approve|approved|confirm|confirmed|go ahead|do it|place it|buy it|take it|ok|okay|affirmative|positive) ").containsMatchIn(t)) return true
+        if (rx(" (no+|nope|nah|not|not now|don t|dont|do not|reject|rejected|cancel|skip|leave it|stop|wait|never|negative|abort|hold off|hold on|decline|declined|deny|denied|later) ").containsMatchIn(t)) return false
+        if (rx(" (yes|yeah|yep|yup|sure|approve|approved|confirm|confirmed|go ahead|do it|place it|buy it|take it|ok|okay|affirmative|positive) ").containsMatchIn(t)) return true
         return null
     }
 
-    private fun words(s: String) = s.lowercase().replace(Regex("[^a-z0-9 ]"), " ").split(Regex("\\s+")).filter { it.length > 1 }
+    private fun words(s: String) = s.lowercase().replace(rx("[^a-z0-9 ]"), " ").split(rx("\\s+")).filter { it.length > 1 }
 
     /**
      * Jarvis's own words heard back (the speaker's tail, the room's echo): most of what was heard is in what it just

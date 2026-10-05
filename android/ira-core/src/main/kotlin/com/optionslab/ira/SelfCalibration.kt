@@ -231,7 +231,7 @@ object SelfCalibration {
         return "From $n of my ideas scored on real option prices (last $WINDOW_DAYS days), Boss. " + parts.joinToString(" ")
     }
 
-    fun asked(text: String): Boolean = Regex("(?i)\\bwhere are you (weak|strong|bad|good|worst|best)(est)?\\b|\\bwhat are you (bad|good|worst|best|weak|strong) at\\b|" +
+    fun asked(text: String): Boolean = rx("(?i)\\bwhere are you (weak|strong|bad|good|worst|best)(est)?\\b|\\bwhat are you (bad|good|worst|best|weak|strong) at\\b|" +
         "\\byour (weak|strong) (spots?|points?|areas?)\\b|\\bwhen do you do (badly|worst|best|well)\\b|\\bwhere do you (struggle|lose|do best|do worst)\\b").containsMatchIn(text)
 
     /** The scored suggestions as outcomes ([JarvisTrades.Suggestion.points] known); the kind is [Preference.kind]. */

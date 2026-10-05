@@ -34,6 +34,18 @@ object Moments {
         bars.filter { it.t.toLocalDate() < day }.groupBy { it.t.toLocalDate() }.toSortedMap()
             .map { (d, c) -> Day(d, c.maxOf { it.h }, c.minOf { it.l }) }
 
+    /**
+     * The last of [earlier] (the session just before [day]), found without grouping every session: [look] runs at each
+     * market-watch pass for each index, over days of 1-minute candles (2026-10-05). Same day, high and low.
+     */
+    fun lastEarlier(bars: List<Candle>, day: LocalDate): Day? {
+        var last: LocalDate? = null
+        for (b in bars) { val d = b.t.toLocalDate(); if (d < day && (last == null || d > last)) last = d }
+        val d = last ?: return null
+        val c = bars.filter { it.t.toLocalDate() == d }
+        return Day(d, c.maxOf { it.h }, c.minOf { it.l })
+    }
+
     private fun gapPct(s: Snapshot): Double? = s.prevClose?.let { (s.open - it) / it * 100 }
 
     /**
@@ -43,7 +55,7 @@ object Moments {
     fun look(s: Snapshot, bars: List<Candle>): Look? {
         if (s.market == Market.GOLD || s.market == Market.VIX || !s.trading) return null
         val prev = s.prevClose ?: return null
-        val y = earlier(bars, s.at.toLocalDate()).lastOrNull() ?: return null
+        val y = lastEarlier(bars, s.at.toLocalDate()) ?: return null
         val g = gapPct(s) ?: return null
         val gapOpen = abs(g) >= GAP_MIN_PCT && (if (g > 0) s.low > prev else s.high < prev)
         return Look(gapOpen, s.price > y.high, s.price < y.low)
@@ -61,6 +73,8 @@ object Moments {
                 "${m.label} has filled today's gap ${if (up) "up" else "down"}, Boss: it opened ${pts(s.open - prev)} points (${pct(g)}) " +
                     "${if (up) "above" else "below"} the previous close of ${px(m, prev)} and has come back to it. It is at ${px(m, s.price)} now.")
         }
+        // Neither the high nor the low newly passed (most looks): the earlier sessions are not read.
+        if (!(!before.aboveHigh && now.aboveHigh) && !(!before.belowLow && now.belowLow)) return out
         val days = earlier(bars, s.at.toLocalDate())
         val y = days.lastOrNull() ?: return out
         val name = y.day.dayOfWeek.getDisplayName(TextStyle.FULL, Locale.ENGLISH)

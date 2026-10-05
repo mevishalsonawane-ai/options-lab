@@ -24,7 +24,7 @@ object Spelling {
 
     fun fix(text: String): String {
         var changed = false
-        val out = Regex("[A-Za-z]+").replace(text) { m ->
+        val out = rx("[A-Za-z]+").replace(text) { m ->
             val w = m.value.lowercase()
             if (w.length < 4 || w in KNOWN) return@replace m.value
             val best = WORDS.filter { near(w, it) }

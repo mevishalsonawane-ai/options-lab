@@ -116,7 +116,7 @@ object Confidence {
 object WhatIf {
     /** The minute of day named ("10:30", "10 30", "2 pm", "half past ten" not read), within market hours, or null. */
     fun minute(text: String): Int? {
-        val t = " " + text.lowercase().replace(Regex("[^a-z0-9: ]"), " ").replace(Regex("\\s+"), " ") + " "
+        val t = " " + text.lowercase().replace(rx("[^a-z0-9: ]"), " ").replace(rx("\\s+"), " ") + " "
         fun at(m: MatchResult): Int? {
             var h = m.groupValues[1].toInt(); val min = m.groupValues[2].ifEmpty { "0" }.toInt()
             if (m.groupValues[3] == "pm" && h < 12) h += 12
@@ -124,17 +124,17 @@ object WhatIf {
             return (h * 60 + min).takeIf { min < 60 && it in (9 * 60 + 15)..(15 * 60 + 30) }
         }
         // A written time ("10:30", "2 pm") first; else the first number that is a market-hours time.
-        Regex(" (\\d{1,2}):(\\d{2}) ?(am|pm)? | (\\d{1,2})() ?(am|pm) ").findAll(t).forEach { m ->
+        rx(" (\\d{1,2}):(\\d{2}) ?(am|pm)? | (\\d{1,2})() ?(am|pm) ").findAll(t).forEach { m ->
             val g = if (m.groupValues[1].isNotEmpty()) listOf(m.groupValues[1], m.groupValues[2], m.groupValues[3]) else listOf(m.groupValues[4], "", m.groupValues[6])
             var h = g[0].toInt(); val min = g[1].ifEmpty { "0" }.toInt()
             if (g[2] == "pm" && h < 12) h += 12
             if (g[2].isEmpty() && h in 1..3) h += 12
             (h * 60 + min).takeIf { min < 60 && it in (9 * 60 + 15)..(15 * 60 + 30) }?.let { return it }
         }
-        return Regex(" (\\d{1,2})(?: (\\d{2}))? ?(am|pm)? ").findAll(t).firstNotNullOfOrNull { at(it) }
+        return rx(" (\\d{1,2})(?: (\\d{2}))? ?(am|pm)? ").findAll(t).firstNotNullOfOrNull { at(it) }
     }
 
-    fun asked(text: String): Boolean = Regex("(?i)\\bwhat if (i|we) (had )?(taken|took|take|bought|approved)|\\bwould (i|it) have (made|lost)|\\bif i had (taken|approved|bought)").containsMatchIn(text)
+    fun asked(text: String): Boolean = rx("(?i)\\bwhat if (i|we) (had )?(taken|took|take|bought|approved)|\\bwould (i|it) have (made|lost)|\\bif i had (taken|approved|bought)").containsMatchIn(text)
 }
 
 /** Quiet hours (the owner's wish, 2026-10-02): nothing spoken unasked between [from] and [to] (minutes of day). Pure. */
@@ -157,9 +157,9 @@ object MoveAlarm {
 
     fun read(s: String): Move? {
         // Only a condition ("if / when it falls 1%"), never a question about a move that happened ("why is it down 2%").
-        if (!Regex(" (if|when|once|whenever) ").containsMatchIn(s)) return null
-        val m = Regex(" (falls|drops|goes down|rises|goes up|jumps|crashes|gains|loses|sinks) (by )?(\\d+(?:\\.\\d+)?) ?(%|percent|per cent) ").find(s)
-            ?: Regex(" (\\d+(?:\\.\\d+)?) ?(%|percent|per cent) (fall|drop|rise|jump|gain|loss) ").find(s)?.let { x ->
+        if (!rx(" (if|when|once|whenever) ").containsMatchIn(s)) return null
+        val m = rx(" (falls|drops|goes down|rises|goes up|jumps|crashes|gains|loses|sinks) (by )?(\\d+(?:\\.\\d+)?) ?(%|percent|per cent) ").find(s)
+            ?: rx(" (\\d+(?:\\.\\d+)?) ?(%|percent|per cent) (fall|drop|rise|jump|gain|loss) ").find(s)?.let { x ->
                 return x.groupValues[1].toDouble().takeIf { it > 0 && it <= 20 }?.let { Move(it, x.groupValues[3] in setOf("rise", "jump", "gain")) } }
             ?: return null
         val pct = m.groupValues[3].toDouble().takeIf { it > 0 && it <= 20 } ?: return null

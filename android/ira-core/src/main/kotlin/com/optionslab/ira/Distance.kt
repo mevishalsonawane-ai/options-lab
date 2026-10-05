@@ -9,9 +9,9 @@ object Distance {
     private val ASK = Regex("(?i)\\b(how far|how many points|kitna door|kitni door|distance)\\b")
 
     fun asked(text: String): Asked? {
-        if (!ASK.containsMatchIn(text) || Regex("(?i)\\b(ce|pe|call|put|lots?|buy|sell)\\b").containsMatchIn(text)) return null
+        if (!ASK.containsMatchIn(text) || rx("(?i)\\b(ce|pe|call|put|lots?|buy|sell)\\b").containsMatchIn(text)) return null
         val m = Market.mentioned(text).firstOrNull { it != Market.GOLD } ?: return null
-        val lv = Regex("\\b(\\d{2,6}(?:\\.\\d+)?)\\b").findAll(text.replace(",", "")).mapNotNull { it.groupValues[1].toDoubleOrNull() }.filter { it >= 10 }.lastOrNull() ?: return null
+        val lv = rx("\\b(\\d{2,6}(?:\\.\\d+)?)\\b").findAll(text.replace(",", "")).mapNotNull { it.groupValues[1].toDoubleOrNull() }.filter { it >= 10 }.lastOrNull() ?: return null
         return Asked(m, lv)
     }
 

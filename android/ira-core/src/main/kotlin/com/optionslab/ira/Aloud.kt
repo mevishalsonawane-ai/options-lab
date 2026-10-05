@@ -42,16 +42,16 @@ object Aloud {
 
     /** "Boss" (or "बॉस") kept at its first mention only: "Yes, Boss. It is up, Boss." -> "Yes, Boss. It is up." */
     fun onceBoss(text: String): String {
-        val name = Regex("\\b${Address.NAME}\\b|$BOSS_HI")
+        val name = rx("\\b${Address.NAME}\\b|$BOSS_HI")
         val first = name.find(text) ?: return text
         val head = text.substring(0, first.range.last + 1)
         var rest = text.substring(first.range.last + 1)
         // ", Boss" before a pause or the end; "Boss, " starting a sentence (the next word then starts it); " Boss" mid-sentence.
-        rest = rest.replace(Regex(",\\s*(?:${Address.NAME}\\b|$BOSS_HI)(?=[\\s.,!?\\u0964]|$)"), "")
-        rest = rest.replace(Regex("(^|[.!?\\u0964]\\s+)(?:${Address.NAME}|$BOSS_HI)[,!.]?\\s+(\\S)")) { m ->
+        rest = rest.replace(rx(",\\s*(?:${Address.NAME}\\b|$BOSS_HI)(?=[\\s.,!?\\u0964]|$)"), "")
+        rest = rest.replace(rx("(^|[.!?\\u0964]\\s+)(?:${Address.NAME}|$BOSS_HI)[,!.]?\\s+(\\S)")) { m ->
             m.groupValues[1] + m.groupValues[2].replaceFirstChar { it.uppercase() }
         }
-        rest = rest.replace(Regex("\\s+(?:${Address.NAME}\\b|$BOSS_HI)"), "")
+        rest = rest.replace(rx("\\s+(?:${Address.NAME}\\b|$BOSS_HI)"), "")
         return head + rest
     }
 
@@ -61,16 +61,16 @@ object Aloud {
      * leading zero. Dates ("05.10.2026"), versions and words with digits in them are left as written.
      */
     fun numbers(text: String, hindi: Boolean = false): String {
-        var s = Regex("(?<![\\d:])(\\d{1,2}):(\\d{2})(?::(\\d{2}))?(?![\\d:])").replace(text) { m ->
+        var s = rx("(?<![\\d:])(\\d{1,2}):(\\d{2})(?::(\\d{2}))?(?![\\d:])").replace(text) { m ->
             var h = m.groupValues[1].toInt(); var min = m.groupValues[2].toInt()
             val sec = m.groupValues[3].toIntOrNull() ?: 0
             if (h > 23 || min > 59 || sec > 59) return@replace m.value
             if (sec >= 30) { min++; if (min == 60) { min = 0; h = (h + 1) % 24 } }
             "$h:" + min.toString().padStart(2, '0')
         }
-        s = Regex("(?<![\\w.,])(\\d{1,3}(?:,\\d{2,3})*|\\d+)\\.(\\d+)(?!\\w|[.,]\\d)").replace(s) { m -> round(m.groupValues[1], m.groupValues[2]) }
-        s = Regex("\\s?%").replace(s, if (hindi) " प्रतिशत" else " percent")
-        s = Regex("(?<=\\d)\\s?(pts?)\\b", RegexOption.IGNORE_CASE).replace(s) { m -> if (m.groupValues[1].length == 3) " points" else " point" }
+        s = rx("(?<![\\w.,])(\\d{1,3}(?:,\\d{2,3})*|\\d+)\\.(\\d+)(?!\\w|[.,]\\d)").replace(s) { m -> round(m.groupValues[1], m.groupValues[2]) }
+        s = rx("\\s?%").replace(s, if (hindi) " प्रतिशत" else " percent")
+        s = rx("(?<=\\d)\\s?(pts?)\\b", RegexOption.IGNORE_CASE).replace(s) { m -> if (m.groupValues[1].length == 3) " points" else " point" }
         return s
     }
 
@@ -82,7 +82,7 @@ object Aloud {
         if (!whole.contains(',')) return plain
         // Grouped as written: the same commas (Indian "1,23,456" or "123,456") on the whole part.
         val int = plain.substringBefore('.'); val dec = plain.substringAfter('.', "")
-        val indian = Regex("^\\d{1,2},\\d{2},").containsMatchIn(whole)
+        val indian = rx("^\\d{1,2},\\d{2},").containsMatchIn(whole)
         val grouped = if (indian && int.length > 3) int.dropLast(3).reversed().chunked(2).joinToString(",").reversed() + "," + int.takeLast(3)
             else int.reversed().chunked(3).joinToString(",").reversed()
         return if (dec.isEmpty()) grouped else "$grouped.$dec"

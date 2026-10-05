@@ -36,7 +36,7 @@ object MarketDays {
         if (NEXT.containsMatchIn(text)) return Asked.Next
         if (!DAY.containsMatchIn(text) || PAST.containsMatchIn(text)) return null
         val w = WHEN.find(text)?.value?.lowercase() ?: return null      // no day named: the usual status answer
-        val nextWeek = Regex("(?i)\\bnext\\s+$w\\b").containsMatchIn(text)
+        val nextWeek = rx("(?i)\\bnext\\s+$w\\b").containsMatchIn(text)
         val d = when (w) {
             "today", "aaj" -> today
             "tomorrow", "tmrw", "kal" -> today.plusDays(1)

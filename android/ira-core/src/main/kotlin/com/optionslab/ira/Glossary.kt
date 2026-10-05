@@ -65,7 +65,7 @@ object Glossary {
             .replace(Regex("^(jarvis|hey jarvis|ok jarvis|boss) "), "") + " "
         val meaning = MEANING.containsMatchIn(t)
         // Only a plain "what does it mean" outweighs "today" or a number ("explain the gap down today" wants today's gap).
-        val strict = Regex(" (mean|means|meaning|define|definition|what do you mean by|in simple words) ").containsMatchIn(t)
+        val strict = rx(" (mean|means|meaning|define|definition|what do you mean by|in simple words) ").containsMatchIn(t)
         if (!meaning && !WHATIS.containsMatchIn(t)) return null
         val named = Market.mentioned(text).any { it != Market.VIX }
         // The longest word first ("iron condor" before "condor", "max pain" before "pain").
@@ -75,9 +75,9 @@ object Glossary {
         if (hit.figure && !meaning) return null
         if (named && !meaning) return null
         // "What is the iv today", "what is the premium on 25000 ce": a figure wanted now, not the word.
-        if (!strict && (Regex(" (today|now|current|currently|next|this|on|for|data|doing|available|at|of) ").containsMatchIn(t) || Regex("\\d").containsMatchIn(t))) return null
+        if (!strict && (rx(" (today|now|current|currently|next|this|on|for|data|doing|available|at|of) ").containsMatchIn(t) || rx("\\d").containsMatchIn(t))) return null
         // "What is my margin / my stop loss": about the owner's own account, not the word.
-        if (!meaning && Regex(" (my|our) ").containsMatchIn(t)) return null
+        if (!meaning && rx(" (my|our) ").containsMatchIn(t)) return null
         return hit.text
     }
 }

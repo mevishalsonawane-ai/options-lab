@@ -29,7 +29,7 @@ object Latency {
 
     /** "How fast are you?", "how long do you take to answer", "kitna time lagta hai": his own answer times, aloud. */
     fun asked(text: String): Boolean =
-        Regex("(?i)^\\W*(jarvis,?\\s+)?(how (fast|quick|quickly|slow) (are you|do you answer|are you answering|are your answers)|" +
+        rx("(?i)^\\W*(jarvis,?\\s+)?(how (fast|quick|quickly|slow) (are you|do you answer|are you answering|are your answers)|" +
             "how long do you take( to answer)?|are you (slow|fast)( today)?|your (speed|answer time|response time)|" +
             "tum kitna time (lagate|lete) ho|jawab (mein|me) kitna time( lagta hai)?|kitna time lagta hai (jawab (mein|me)|tumhe))\\W*$").containsMatchIn(text)
 

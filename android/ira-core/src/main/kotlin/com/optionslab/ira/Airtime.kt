@@ -169,7 +169,7 @@ object Airtime {
         "how many (market )?alerts (did you|have you) (say|said|speak|spoken|give|given)( today| this hour)?|" +
         "(what did you|what have you) (not say|not tell me|keep to the chat)( today)?)( boss| jarvis)? $")
 
-    private fun norm(text: String) = " " + text.lowercase().replace(Regex("[^a-z0-9 ]"), " ").replace(Regex("\\s+"), " ").trim() + " "
+    private fun norm(text: String) = " " + text.lowercase().replace(rx("[^a-z0-9 ]"), " ").replace(rx("\\s+"), " ").trim() + " "
 
     /** "Why so quiet?", "did you hold back any alerts?" */
     fun asked(text: String): Boolean = ASKED.containsMatchIn(norm(text))

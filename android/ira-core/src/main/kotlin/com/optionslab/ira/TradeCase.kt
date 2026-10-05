@@ -110,8 +110,8 @@ object TradeCase {
         "^ $LEAD(trade (karu|karun|karna|karoon) (ya nahi|kya)|kya trade (karu|karun|karna)) (samjhao|samjha do|kyun|explain karo|pura batao) $"
     )
 
-    private fun norm(text: String) = " " + text.lowercase(Locale.ENGLISH).replace("’", "'").replace(Regex("[^a-z0-9 ]"), " ")
-        .replace(Regex("\\s+"), " ").trim() + " "
+    private fun norm(text: String) = " " + text.lowercase(Locale.ENGLISH).replace("’", "'").replace(rx("[^a-z0-9 ]"), " ")
+        .replace(rx("\\s+"), " ").trim() + " "
 
     /** "Make the case", "pros and cons of trading now", "talk me through it", "should I trade now and why?". Whole questions only. */
     fun asked(text: String): Boolean = ASKED.containsMatchIn(norm(text))

@@ -67,6 +67,6 @@ object Habits {
             (today == null || lastAsked[it.key]?.let { d -> !d.isBefore(today.minusDays(7)) } == true) }
             .maxByOrNull { it.value[hour.coerceIn(0, 23)] }?.key
 
-    fun asked(text: String): Boolean = Regex("^ ?(jarvis |hey jarvis )?(the usual|my usual|usual|same as always|the regular|you know what i want)( please| jarvis)? ?$")
-        .matches(text.lowercase().replace(Regex("[^a-z ]"), " ").replace(Regex("\\s+"), " ").trim())
+    fun asked(text: String): Boolean = rx("^ ?(jarvis |hey jarvis )?(the usual|my usual|usual|same as always|the regular|you know what i want)( please| jarvis)? ?$")
+        .matches(text.lowercase().replace(rx("[^a-z ]"), " ").replace(rx("\\s+"), " ").trim())
 }

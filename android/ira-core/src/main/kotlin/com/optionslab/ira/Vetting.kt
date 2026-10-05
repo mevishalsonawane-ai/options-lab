@@ -53,5 +53,5 @@ object Vetting {
             if (held.isNotEmpty()) " Going live is your step: arm it in Live with your PIN." else ""
     }
 
-    fun asked(text: String): Boolean = Regex("(?i)\\b(what|which)( strategies| ideas| arms)? (held up|has held up|have held up|passed|works?)\\b|\\bpaper tests?\\b|\\bbest (idea|strategy|strategies)\\b|\\bwhat (should|can) i (take|trade) live\\b").containsMatchIn(text)
+    fun asked(text: String): Boolean = rx("(?i)\\b(what|which)( strategies| ideas| arms)? (held up|has held up|have held up|passed|works?)\\b|\\bpaper tests?\\b|\\bbest (idea|strategy|strategies)\\b|\\bwhat (should|can) i (take|trade) live\\b").containsMatchIn(text)
 }

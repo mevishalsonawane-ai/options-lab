@@ -148,7 +148,7 @@ class Ira(private val book: PatternBook = PatternBook()) {
 
     /** Every number written in [text] appears in [facts]: the check a model's answer must pass (rule 4). */
     fun numbersBacked(text: String, facts: List<String>): Boolean {
-        val num = Regex("\\d[\\d,]*(\\.\\d+)?")
+        val num = rx("\\d[\\d,]*(\\.\\d+)?")
         val known = facts.flatMap { f -> num.findAll(f).map { it.value.replace(",", "") } }.toSet()
         return num.findAll(text).all { it.value.replace(",", "") in known }
     }

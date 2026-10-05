@@ -34,7 +34,7 @@ object Later {
      */
     fun mentionsTime(text: String): Boolean {
         // ("Stop all strategies today" is for now; "tomorrow" never is.)
-        if (IN.containsMatchIn(text) || Regex("(?i)\\b(tomorrow|tmrw|tomorow|kal)\\b").containsMatchIn(text)) return true
+        if (IN.containsMatchIn(text) || rx("(?i)\\b(tomorrow|tmrw|tomorow|kal)\\b").containsMatchIn(text)) return true
         return TIME.findAll(text).any { m ->
             val g = m.groupValues
             val h = (g[1].ifEmpty { g[4].ifEmpty { g[6] } }).toIntOrNull() ?: return@any false
@@ -90,7 +90,7 @@ object Later {
         return When(clean(t), at)
     }
 
-    private fun clean(s: String) = s.replace(FILLER, " ").replace(Regex("\\s+"), " ").trim().trimEnd(',', '.', '?', '!').trim()
+    private fun clean(s: String) = s.replace(FILLER, " ").replace(rx("\\s+"), " ").trim().trimEnd(',', '.', '?', '!').trim()
 
     /** "Sat 4 Oct at 09:00" (or "today at 15:15"). */
     fun say(at: LocalDateTime, now: LocalDateTime): String {

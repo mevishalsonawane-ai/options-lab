@@ -35,7 +35,7 @@ object AboutBoss {
     const val MAX_SAID = 3
 
     private fun t(s: String) = " " + s.lowercase(Locale.ENGLISH).replace("’", "'").replace("'", "").replace(",", "")
-        .replace(Regex("[^a-z0-9.: ]"), " ").replace(Regex("\\s+"), " ").trim() + " "
+        .replace(rx("[^a-z0-9.: ]"), " ").replace(rx("\\s+"), " ").trim() + " "
 
     private val LEAD = Regex("(?i)^\\s*(?:(?:hey |ok )?jarvis[,!.]?\\s+|boss[,!.]?\\s+|please\\s+)*")
 
@@ -83,7 +83,7 @@ object AboutBoss {
         if (told != null && told.value.trim().lowercase(Locale.ENGLISH).startsWith("remind") && Later.mentionsTime(led)) return null
         val what = (if (told != null) led.substring(told.range.last + 1) else led).trim().trimEnd('.', '!').trim()
         val s = t(what)
-        if (!Regex("^ (i|im|my) ").containsMatchIn(s) || QUESTION.containsMatchIn(s)) return null
+        if (!rx("^ (i|im|my) ").containsMatchIn(s) || QUESTION.containsMatchIn(s)) return null
         if (Secrets.hasSecret(what) || SECRET.containsMatchIn(what)) return null
         if (what.split(" ").size < 3) return null
         // Told as a fact ("remind me I ...", "note that my ..."), anything about himself; else only the plain patterns.
@@ -101,18 +101,18 @@ object AboutBoss {
     fun kind(fact: String): Kind {
         val s = t(fact)
         return when {
-            Regex(" (max|maximum|daily|day) loss | loss limit | stop for the day | lose more than | stop (trading )?(at|after) (a )?(loss|losing) ").containsMatchIn(s) -> Kind.LOSS
-            Regex(" (target|goal|aim) | make \\d").containsMatchIn(s) -> Kind.TARGET
-            Regex(" $MOOD | on tilt | overtrade | over trade | revenge | chase | chasing | panic | freeze | hesitate | weakness | mistake | losers | move my stop | average down | (book|exit) (too )?early ").containsMatchIn(s) ||
+            rx(" (max|maximum|daily|day) loss | loss limit | stop for the day | lose more than | stop (trading )?(at|after) (a )?(loss|losing) ").containsMatchIn(s) -> Kind.LOSS
+            rx(" (target|goal|aim) | make \\d").containsMatchIn(s) -> Kind.TARGET
+            rx(" $MOOD | on tilt | overtrade | over trade | revenge | chase | chasing | panic | freeze | hesitate | weakness | mistake | losers | move my stop | average down | (book|exit) (too )?early ").containsMatchIn(s) ||
                 WIN.containsMatchIn(s) || LOSS_AFTER.containsMatchIn(s) -> Kind.TEMPER
-            WEEKDAY.values.any { s.contains(" $it ") || s.contains(" ${it}s ") } || Regex(" (expiry|weekend|weekends|budget day|rbi day|event days?) ").containsMatchIn(s) -> Kind.DAYS
-            Regex(" $VERB | nifty | banknifty | bank nifty | finnifty | sensex | options? | overnight | lots? | capital | style | setup | edge | routine | morning | afternoon ").containsMatchIn(s) -> Kind.STYLE
+            WEEKDAY.values.any { s.contains(" $it ") || s.contains(" ${it}s ") } || rx(" (expiry|weekend|weekends|budget day|rbi day|event days?) ").containsMatchIn(s) -> Kind.DAYS
+            rx(" $VERB | nifty | banknifty | bank nifty | finnifty | sensex | options? | overnight | lots? | capital | style | setup | edge | routine | morning | afternoon ").containsMatchIn(s) -> Kind.STYLE
             else -> Kind.OTHER
         }
     }
 
     /** The amount in a target or a loss limit ("2000 a day", "5k", "1.5 lakh"), or null. */
-    fun amount(fact: String): Double? = Regex(" (?:rs |inr |rupees |₹)?(\\d+(?:\\.\\d+)?) ?(k|thousand|lakh|lac)? ").find(t(fact.replace("₹", " rs ")))?.let { m ->
+    fun amount(fact: String): Double? = rx(" (?:rs |inr |rupees |₹)?(\\d+(?:\\.\\d+)?) ?(k|thousand|lakh|lac)? ").find(t(fact.replace("₹", " rs ")))?.let { m ->
         val n = m.groupValues[1].toDoubleOrNull() ?: return@let null
         (n * when (m.groupValues[2]) { "k", "thousand" -> 1_000.0; "lakh", "lac" -> 100_000.0; else -> 1.0 }).takeIf { it >= 100 }
     }
@@ -176,7 +176,7 @@ object AboutBoss {
 
     // ---- asked by voice ------------------------------------------------------------------------------------------------
 
-    private fun norm(text: String) = t(text).replace(Regex("^ ((hey |ok )?jarvis |boss |please )+"), " ").replace(Regex(" (jarvis|boss|please) $"), " ")
+    private fun norm(text: String) = t(text).replace(rx("^ ((hey |ok )?jarvis |boss |please )+"), " ").replace(rx(" (jarvis|boss|please) $"), " ")
 
     private val KNOW = Regex("^ (so )?(what do you know about me|what all do you know about me|what have you learn(ed|t) about me|what do you remember about me|" +
         "tell me what you know about me|what have i told you about (me|myself)|what do you know of me|what you know about me|how well do you know me|" +
@@ -192,10 +192,10 @@ object AboutBoss {
     fun forgetAsked(text: String): Forget? {
         val s = norm(text)
         if (Memory.forgetAsked(text)) return null
-        if (Regex("^ (forget|drop|delete|remove|scratch|erase) (that|this|the last (thing|note|one|fact)( i told you)?|what i just (said|told you)|the last thing i (said|told you)) $").containsMatchIn(s))
+        if (rx("^ (forget|drop|delete|remove|scratch|erase) (that|this|the last (thing|note|one|fact)( i told you)?|what i just (said|told you)|the last thing i (said|told you)) $").containsMatchIn(s))
             return Forget(true)
-        val m = Regex("^ (?:forget|drop|delete|remove|erase) (?:that |about |the (?:note|fact|thing|bit) about |what i (?:said|told you) about )(.+) $").find(s)
-            ?: Regex("^ (?:forget|drop|delete|remove|erase) (my .+) $").find(s) ?: return null
+        val m = rx("^ (?:forget|drop|delete|remove|erase) (?:that |about |the (?:note|fact|thing|bit) about |what i (?:said|told you) about )(.+) $").find(s)
+            ?: rx("^ (?:forget|drop|delete|remove|erase) (my .+) $").find(s) ?: return null
         val about = m.groupValues[1].trim()
         if (NOT_A_FACT.containsMatchIn(" $about ") || about.length < 3) return null
         return Forget(false, about)

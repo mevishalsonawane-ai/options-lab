@@ -49,7 +49,7 @@ object MonthReview {
     private fun monthName(m: YearMonth) = m.month.getDisplayName(TextStyle.FULL, Locale.ENGLISH)
     private fun dayName(d: LocalDate) = d.dayOfWeek.getDisplayName(TextStyle.FULL, Locale.ENGLISH) + " ${d.dayOfMonth} " +
         d.month.getDisplayName(TextStyle.FULL, Locale.ENGLISH)
-    private fun norm(text: String) = " " + text.lowercase().replace(Regex("[^a-z0-9 ]"), " ").replace(Regex("\\s+"), " ").trim() + " "
+    private fun norm(text: String) = " " + text.lowercase().replace(rx("[^a-z0-9 ]"), " ").replace(rx("\\s+"), " ").trim() + " "
 
     private val ASKED = Regex(" (how (was|is|s|has been|did) (my|the) month|how did i do (this|last|the) month|how did my (trading|trades) (go|do) (this|last) month|" +
         "(review|recap|summari[sz]e|sum up|go over|go through) (my |the )?(this |last )?month|(review|recap) of (my |the |this |last )?month|" +
@@ -68,7 +68,7 @@ object MonthReview {
     fun month(text: String, today: LocalDate): YearMonth {
         val t = norm(text)
         val m = YearMonth.from(today)
-        return if (Regex(" (last|previous|past|pichla|pichle) (month|mahina|mahine) ").containsMatchIn(t)) m.minusMonths(1) else m
+        return if (rx(" (last|previous|past|pichla|pichle) (month|mahina|mahine) ").containsMatchIn(t)) m.minusMonths(1) else m
     }
 
     /** Is [today] the month's last trading day? (The next trading day falls in another month.) */

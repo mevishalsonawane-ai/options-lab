@@ -119,7 +119,7 @@ object Improve {
 
     /** The phrasings missed over the days, kept: [list] with [w] added on [day], the last 14 days and 60 at most, each once a day. */
     fun addMissed(list: List<Pair<LocalDate, String>>, day: LocalDate, w: String): List<Pair<LocalDate, String>> {
-        val t = Secrets.redact(w).replace(Regex("\\s+"), " ").trim().take(120)
+        val t = Secrets.redact(w).replace(rx("\\s+"), " ").trim().take(120)
         val kept = list.filter { !it.first.isBefore(day.minusDays(14)) }
         if (t.isEmpty()) return kept
         return (kept.filterNot { it.first == day && it.second.equals(t, ignoreCase = true) } + (day to t)).takeLast(60)
@@ -142,7 +142,7 @@ object Improve {
     fun toLearn(missed: List<String>, learned: List<Corrections.Learned>): List<String> {
         val known = learnedSet(learned)
         return missed.asSequence().filter { !Secrets.hasSecret(it) && !SECRETISH.containsMatchIn(it) }
-            .map { it.replace(Regex("\\s+"), " ").trim().take(120) }
+            .map { it.replace(rx("\\s+"), " ").trim().take(120) }
             .filter { w -> Corrections.normalize(w).let { it.isNotEmpty() && it !in known } && w.split(" ").size <= 12 }
             .filter { !acts(it) }
             .distinctBy { Corrections.normalize(it) }.take(MAX_WORDS).toList()
@@ -276,7 +276,7 @@ object Improve {
 
     /** "How are you improving?", "what are your goals?" (his own, never Boss's: "my goals" is Boss's). */
     fun asked(text: String): Boolean =
-        Regex("(?i)^\\W*(hey\\s+|ok\\s+)?(jarvis,?\\s+)?(so\\s+)?(how are you (improving|getting better|doing on your( own)? goals)|are you (improving|getting better)|" +
+        rx("(?i)^\\W*(hey\\s+|ok\\s+)?(jarvis,?\\s+)?(so\\s+)?(how are you (improving|getting better|doing on your( own)? goals)|are you (improving|getting better)|" +
             "what are your (own )?(goals|targets)( (for )?(this|the) week)?|(tell me|show me) your (own )?(goals|targets)|your (own )?goals( this week)?|" +
             "how are your (own )?goals( going| coming along)?|what are you (trying|working) to (improve|get better at)|what are you improving( on)?|" +
             "how is your self[- ]?improvement( going)?|tum kaise (improve|behtar) ho rahe ho|tumhare goals( kya hai)?)\\s*(jarvis|boss)?\\W*$").containsMatchIn(text)

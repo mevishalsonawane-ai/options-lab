@@ -769,15 +769,17 @@ object IraHub {
         // Guarded: a protection with a stop (or a trail), or a stop order the owner placed directly (ticket, Kite web).
         val guarded = runCatching { com.optionslab.app.data.Protections.active() }.getOrNull()?.filter { it.stop != null || it.trail != null }
             ?.map { (if (it.live) "L:" else "P:") + it.symbol }?.toMutableSet() ?: return
-        runCatching { com.optionslab.app.data.Paper.snapshot().orders.orders.filter { o -> o.priceType.uppercase() in setOf("SL", "SL-M") &&
-            o.status.lowercase() !in setOf("complete", "cancelled", "rejected") }.forEach { guarded += "P:" + it.symbol } }
-        if (com.optionslab.app.data.Broker.loggedIn) runCatching { com.optionslab.app.data.Broker.orders().filter { o -> o.working && o.type in setOf("SL", "SL-M") }
-            .forEach { guarded += "L:" + it.symbol } }
         val open = ArrayList<Pair<com.optionslab.ira.Rescue.Open, String>>()
         runCatching { com.optionslab.app.data.Paper.snapshot().positions.positions.filter { it.quantity != 0 }
             .forEach { open += com.optionslab.ira.Rescue.Open(it.symbol, false, it.quantity, it.averagePrice, it.ltp) to it.product } }
         if (com.optionslab.app.data.Broker.loggedIn) runCatching { com.optionslab.app.data.Broker.positionBook().net.filter { it.open && it.exchange == "NFO" }
             .forEach { open += com.optionslab.ira.Rescue.Open(it.symbol, true, it.qty, it.avg, it.last) to it.product } }
+        // Nothing open (most passes): nothing can be bare, so the stop orders are not read (a Zerodha read each pass).
+        if (open.isEmpty()) { synchronized(unguardedSince) { unguardedSince.clear() }; return }
+        runCatching { com.optionslab.app.data.Paper.snapshot().orders.orders.filter { o -> o.priceType.uppercase() in setOf("SL", "SL-M") &&
+            o.status.lowercase() !in setOf("complete", "cancelled", "rejected") }.forEach { guarded += "P:" + it.symbol } }
+        if (com.optionslab.app.data.Broker.loggedIn) runCatching { com.optionslab.app.data.Broker.orders().filter { o -> o.working && o.type in setOf("SL", "SL-M") }
+            .forEach { guarded += "L:" + it.symbol } }
         // The bots (ORB arms, Pine scripts, strategy runs) manage their own exits: only positions they do not hold.
         val bots = HashSet<String>()
         runCatching { com.optionslab.app.data.OrbArms.view().arms.mapNotNull { it.open?.symbol }.forEach { bots += it } }

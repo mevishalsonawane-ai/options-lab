@@ -302,8 +302,10 @@ internal object IraSolo {
                     val upTo = day.lastIndex - SETTLE
                     if (upTo > b.done) {
                         feed(b, day, upTo)
-                        b.minds.forEach { mind -> com.optionslab.app.security.SecurePrefs.put(mindKey(m, mind.h), mind.l.save()) }
-                        com.optionslab.app.security.SecurePrefs.put(brainKey(m) + ".at", "$today|${b.done}")
+                        // One save for the market's minds and its mark (each save re-encrypts and rewrites the whole vault,
+                        // and this runs every minute of the session): the same values, kept as before.
+                        com.optionslab.app.security.SecurePrefs.putAll(
+                            b.minds.associate { mind -> mindKey(m, mind.h) to mind.l.save() } + (brainKey(m) + ".at" to "$today|${b.done}"))
                     }
                 }
             }

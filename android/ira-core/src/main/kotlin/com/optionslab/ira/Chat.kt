@@ -57,8 +57,8 @@ object Chat {
     )
 
     private fun norm(text: String): String {
-        var t = " " + text.lowercase().replace(Regex("[^a-z0-9 ]"), " ").replace(Regex("\\s+"), " ").trim() + " "
-        repeat(2) { t = t.replace(Regex(" (jarvis|hey|hi|hello|ok|okay|boss|please) "), " ").replace(Regex("\\s+"), " ").let { " ${it.trim()} " } }
+        var t = " " + text.lowercase().replace(rx("[^a-z0-9 ]"), " ").replace(rx("\\s+"), " ").trim() + " "
+        repeat(2) { t = t.replace(rx(" (jarvis|hey|hi|hello|ok|okay|boss|please) "), " ").replace(rx("\\s+"), " ").let { " ${it.trim()} " } }
         return t
     }
 
@@ -91,12 +91,12 @@ object Chat {
     fun accept(reply: String?): String? {
         val r = reply?.trim()?.removePrefix("Jarvis:")?.trim()?.lineSequence()?.firstOrNull { it.isNotBlank() }?.trim() ?: return null
         if (r.length < 2 || r.length > 280) return null
-        if (Regex("\\d").containsMatchIn(r) || FIGURES.containsMatchIn(r)) return null
+        if (rx("\\d").containsMatchIn(r) || FIGURES.containsMatchIn(r)) return null
         if (ADVICE.containsMatchIn(r) || ACTED.containsMatchIn(r)) return null
         // At most two sentences.
-        val parts = Regex("(?<=[.!?])\\s+").split(r).filter { it.isNotBlank() }
+        val parts = rx("(?<=[.!?])\\s+").split(r).filter { it.isNotBlank() }
         // A reply cut short by the word limit ends at its last whole sentence.
-        val whole = parts.take(2).let { ps -> if (ps.size > 1 && !Regex("[.!?]$").containsMatchIn(ps.last())) ps.dropLast(1) else ps }
+        val whole = parts.take(2).let { ps -> if (ps.size > 1 && !rx("[.!?]$").containsMatchIn(ps.last())) ps.dropLast(1) else ps }
         return whole.joinToString(" ")
     }
 

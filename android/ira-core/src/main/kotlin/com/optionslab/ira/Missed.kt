@@ -8,7 +8,7 @@ object Missed {
     const val KEEP = 20
 
     fun add(list: List<String>, said: String): List<String> {
-        val w = Secrets.redact(said).replace(Regex("\\s+"), " ").trim().take(120)
+        val w = Secrets.redact(said).replace(rx("\\s+"), " ").trim().take(120)
         if (w.isEmpty()) return list
         return (list.filter { !it.equals(w, ignoreCase = true) } + w).takeLast(KEEP)
     }

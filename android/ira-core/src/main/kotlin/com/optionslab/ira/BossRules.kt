@@ -16,9 +16,9 @@ object BossRules {
 
     /** The rule in a kept note, or null when it holds none. */
     fun of(note: String): Rule? {
-        val t = " " + note.lowercase(Locale.ENGLISH).replace("'", " ").replace(Regex("[^a-z0-9: ]"), " ").replace(Regex("\\s+"), " ").trim() + " "
-        val avoid = Regex(" (don t|dont|do not|never|no|avoid|skip|stay away from|not) ").containsMatchIn(t)
-        fun minute(): Int? = Regex(" (\\d{1,2})[:.](\\d{2}) ?(am|pm)? | (\\d{1,2}) ?(am|pm) ").find(t)?.let { m ->
+        val t = " " + note.lowercase(Locale.ENGLISH).replace("'", " ").replace(rx("[^a-z0-9: ]"), " ").replace(rx("\\s+"), " ").trim() + " "
+        val avoid = rx(" (don t|dont|do not|never|no|avoid|skip|stay away from|not) ").containsMatchIn(t)
+        fun minute(): Int? = rx(" (\\d{1,2})[:.](\\d{2}) ?(am|pm)? | (\\d{1,2}) ?(am|pm) ").find(t)?.let { m ->
             val pm = (m.groupValues[3].ifEmpty { m.groupValues[5] }) == "pm"
             var h = (m.groupValues[1].ifEmpty { m.groupValues[4] }).toInt(); val mm = m.groupValues[2].ifEmpty { "0" }.toInt()
             if (pm && h < 12) h += 12

@@ -165,7 +165,7 @@ object Agenda {
         Kind.RULE -> when (i.id) {
             "rule:expiry" -> "Expiry day, Boss, and you asked me to skip expiry days: no trade ideas from me today."
             "rule:after" -> "It's ${hm(i.at)}, Boss: by your rule, no new trade ideas from me from now."
-            else -> "Boss, by your rule I hold trade ideas back until " + (Regex("until (\\d{2}:\\d{2})").find(i.text)?.groupValues?.get(1) ?: "the time you set") + "."
+            else -> "Boss, by your rule I hold trade ideas back until " + (rx("until (\\d{2}:\\d{2})").find(i.text)?.groupValues?.get(1) ?: "the time you set") + "."
         }
         else -> null
     }
