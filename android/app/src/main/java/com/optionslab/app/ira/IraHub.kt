@@ -1231,7 +1231,7 @@ object IraHub {
                 com.optionslab.ira.SwitchOff.asked(q) != null ||
                 com.optionslab.ira.SaidAbout.asked(q) != null || com.optionslab.ira.WeekAhead.asked(q) != null ||
                 com.optionslab.ira.ZerodhaSession.asked(q) != null || com.optionslab.ira.OrderWhy.asked(q) != null || com.optionslab.ira.Tour.asked(q) ||
-                com.optionslab.ira.RelayHealth.asked(q) != null ||
+                com.optionslab.ira.RelayHealth.asked(q) != null || com.optionslab.ira.StreamHealth.asked(q) ||
                 com.optionslab.ira.NeedsTrue.asked(q) ||
                 com.optionslab.ira.Clarity.asked(q) != null || com.optionslab.ira.DayClock.asked(q) != null ||
                 com.optionslab.ira.GapRecord.asked(q) != null || com.optionslab.ira.RangeBreaks.asked(q) != null ||
@@ -2042,7 +2042,7 @@ object IraHub {
 
     /**
      * [ask]'s question branches on the records and Boss's own setup: NewsMoves, TaxRecords, Learnings (and its undo),
-     * PreMarket, Headroom, BotTrades, SwitchOff, SaidAbout, WeekAhead, ZerodhaSession, OrderWhy, RelayHealth - in [ask]'s order. True when one
+     * PreMarket, Headroom, BotTrades, SwitchOff, SaidAbout, WeekAhead, ZerodhaSession, OrderWhy, RelayHealth, StreamHealth - in [ask]'s order. True when one
      * took [q], answered exactly as before; each branch keeps its own guard (not [bundled], no order, no command).
      */
     private fun askedOfRecords(q: String, parsed: com.optionslab.ira.Question, bundled: Boolean, understood: Boolean): Boolean {
@@ -2276,6 +2276,24 @@ object IraHub {
                         linked = b.linked, loggedIn = b.loggedIn, kill = st.guardKill)
                     com.optionslab.ira.RelayHealth.answer(relayAsk, com.optionslab.app.data.Diag.lines(), LocalDateTime.now(IST), setup)
                 }.getOrElse { "I could not read the relay record just now, Boss." })
+            }
+            return true
+        }
+        // "Why is live data dropping?", "why does the price stream keep disconnecting?", "stream kyun toot raha hai"
+        // ([com.optionslab.ira.StreamHealth]): from the diagnostics diary's [stream] lines - today's drops of Zerodha's live price
+        // stream, the last one's time and reason in plain words, the causes counted, and whether the order watch (which keeps
+        // the app running in the background) is up. Reads only: the stream reconnects by itself and nothing is switched here;
+        // no URL, key or token is ever in those lines. His setup and broker, so never on a locked phone. (Not in IraGoldAlgo.)
+        if (!bundled && parsed.order == null && parsed.command == null && !com.optionslab.app.BuildConfig.GOLD &&
+            runCatching { com.optionslab.ira.StreamHealth.asked(q) }.getOrDefault(false)) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            if (phoneLocked()) { reply("Unlock the phone for that, Boss."); return true }
+            scope.launch(Dispatchers.IO) {
+                reply(runCatching {
+                    val watch = runCatching { System.currentTimeMillis() - com.optionslab.app.work.Heartbeat.last() < 180_000 }.getOrNull()
+                    com.optionslab.ira.StreamHealth.answer(com.optionslab.app.data.Diag.lines(), com.optionslab.app.data.Market.now().toLocalDateTime(),
+                        com.optionslab.app.data.KiteStream.status.value.name, watch)
+                }.getOrElse { "I could not read the stream record just now, Boss." })
             }
             return true
         }

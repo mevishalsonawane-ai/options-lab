@@ -74,6 +74,7 @@ class IraAlgoApp : Application() {
         com.optionslab.app.data.TradeBook.init(this)
         com.optionslab.app.data.Journal.init(this)
         com.optionslab.app.data.Diag.init(this)
+        com.optionslab.app.data.KiteStream.init(this)
         com.optionslab.app.data.GoldPaper.init(this)
         com.optionslab.app.data.GoldTrendPaper.init(this)
         com.optionslab.app.data.GoldDipPaper.init(this)
