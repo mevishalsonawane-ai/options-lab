@@ -87,7 +87,8 @@ private val LocalEstimate = androidx.compose.runtime.staticCompositionLocalOf { 
  * (Zerodha); null when there is none (no charges kept, or gold, whose figures are after its own costs).
  */
 @Composable @androidx.compose.runtime.ReadOnlyComposable
-private fun chargesLine(charges: Double): String? = if (LocalGold.current) null else com.optionslab.ira.PnlCharges.line(charges, LocalEstimate.current)
+private fun chargesLine(charges: Double, exact: Boolean = false): String? =
+    if (LocalGold.current) null else com.optionslab.ira.PnlCharges.line(charges, LocalEstimate.current && !exact)
 
 /** Rupees in IraAlgo; US dollars and cents in IraGoldAlgo (its paper account is in USD). */
 @Composable @androidx.compose.runtime.ReadOnlyComposable
@@ -163,7 +164,7 @@ fun PnlCalendarScreen(model: AppModel) {
     // when that figure (or its trade count) changes.
     val accountToday by remember(live, today) { androidx.compose.runtime.derivedStateOf {
         if (live) (accountState.value as? com.optionslab.app.ui.Load.Done)?.value
-            ?.takeIf { it.book.net.isNotEmpty() || it.trades.isNotEmpty() }?.let { DailyPnl.Day(today, it.book.m2m, it.trades.size, it.charges) }
+            ?.takeIf { it.book.net.isNotEmpty() || it.trades.isNotEmpty() }?.let { DailyPnl.Day(today, it.book.m2m, it.trades.size, it.charges, exact = !it.chargesEstimate) }
         else (paperState.value as? com.optionslab.app.ui.Load.Done)?.value?.let { sn ->
             // Before charges, as the tiles show every day, with the day's charges for the tip and the totals.
             val pnl = sn.dayGross
@@ -281,7 +282,8 @@ private fun Headline(month: YearMonth, days: Map<LocalDate, DailyPnl.Day>, prev:
             Eyebrow("P&L · month")
             Text(rupees(net), style = Type.figure.copy(color = if (days.isEmpty()) p.inkFaint else tone, fontSize = 24.sp, fontWeight = FontWeight.SemiBold, letterSpacing = (-0.6).sp))
             // The month's figure is before charges (each day's as its tile); the month's charges in small type under it.
-            chargesLine(days.values.sumOf { it.charges })?.let { Text(it, style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 10.5.sp)) }
+            // Exact only when every day with charges has Zerodha's own figure (usefulness, round 35).
+            chargesLine(days.values.sumOf { it.charges }, exact = days.values.filter { it.charges > 0 }.let { d -> d.isNotEmpty() && d.all { it.exact } })?.let { Text(it, style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 10.5.sp)) }
             Text(if (prev.isEmpty()) "No figures for ${mon(month.minusMonths(1))}" else "${rupees(net - prev.values.sumOf { it.pnl })} vs ${mon(month.minusMonths(1))}",
                 style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 10.5.sp))
         }
@@ -430,7 +432,7 @@ private fun DayTip(d: LocalDate, day: DailyPnl.Day?, tile: androidx.compose.ui.g
             Text(day?.let { rupees(it.pnl) } ?: "No trades", style = Type.figure.copy(fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
                 color = when { day == null -> p.paper; day.pnl > 0 -> Color(0xFF3DDC97); day.pnl < 0 -> Color(0xFFFF7A73); else -> p.paper }))
             // The tile's figure is before charges; that day's charges under it, small.
-            day?.let { chargesLine(it.charges) }?.let { Text(it, style = Type.label.copy(color = p.paper.copy(alpha = 0.7f), fontSize = 9.5.sp)) }
+            day?.let { chargesLine(it.charges, it.exact) }?.let { Text(it, style = Type.label.copy(color = p.paper.copy(alpha = 0.7f), fontSize = 9.5.sp)) }
             day?.takeIf { it.trades > 0 }?.let { Text("${it.trades} trade${if (it.trades == 1) "" else "s"}", style = Type.label.copy(color = p.paper.copy(alpha = 0.7f), fontSize = 9.5.sp)) }
         }
     }

@@ -90,6 +90,23 @@ class IraWidgetTest : RobolectricTest() {
         assertEquals("hidden with the P&L", View.GONE, charges().visibility)
     }
 
+    @Test fun zerodhasExactChargesAreSaidWithoutTheEstimateWords() {
+        val charges = { view().findViewById<TextView>(R.id.w_charges) }
+        AppSettings.save(AppSettings.load().copy(widgetPnl = true))
+        IraWidget.publish(context, 24_800.0 to 0.01, null, 2_575.0)
+        IraWidget.charges(context, 180.0)
+        assertEquals("Charges ≈ ₹180 (estimate)", charges().text.toString())
+        IraWidget.charges(context, 163.4, exact = true)
+        assertEquals("P&L  Rs +2,575", pnl().text.toString())
+        assertEquals("Charges ₹163", charges().text.toString())
+        IraWidget.charges(context, 200.0)
+        assertEquals("an order filled since: the estimate again", "Charges ≈ ₹200 (estimate)", charges().text.toString())
+        IraWidget.charges(context, 163.4, exact = true)
+        AppSettings.save(AppSettings.load().copy(widgetPnl = false))
+        IraWidget.publish(context, 24_800.0 to 0.01, null, 2_575.0)
+        assertEquals("hidden with the P&L", View.GONE, charges().visibility)
+    }
+
     @Test fun publishingWithNoWidgetPlacedOnlyRecordsTheFigures() {
         val other = shadowOf(AppWidgetManager.getInstance(context))
         IraWidget.publish(context, 24_900.0 to 0.0, 55_100.0 to 0.0, null)

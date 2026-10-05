@@ -322,10 +322,13 @@ object DailyReports {
             val trades = all.size
             if (book.net.isNotEmpty() || trades > 0) {
                 total += book.m2m
-                val zCharges = com.optionslab.app.data.TradeBook.liveCharges(all)
+                // Zerodha's exact figure when the app kept it for every order of the day's trades (never asked from here;
+                // usefulness, round 35), else the estimate from them.
+                val zExact = runCatching { com.optionslab.app.data.TradeBook.exactChargesOn(Market.today()) }.getOrNull()
+                val zCharges = zExact ?: com.optionslab.app.data.TradeBook.liveCharges(all)
                 lines += "Zerodha: ${rs(book.m2m)} · $trades trade${if (trades == 1) "" else "s"}" +
-                    (com.optionslab.ira.PnlCharges.line(zCharges, estimate = true)?.let { " · ${it.lowercase()}" } ?: "")
-                runCatching { com.optionslab.app.data.DailyPnl.record(true, book.m2m, trades, zCharges) }
+                    (com.optionslab.ira.PnlCharges.line(zCharges, estimate = zExact == null)?.let { " · ${it.lowercase()}" } ?: "")
+                runCatching { com.optionslab.app.data.DailyPnl.record(true, book.m2m, trades, zCharges, exact = zExact != null) }
             }
             val open = book.net.count { it.qty != 0 }
             if (open > 0) lines += "⚠ Zerodha positions carried: $open (NRML)"

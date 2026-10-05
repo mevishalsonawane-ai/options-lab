@@ -700,7 +700,12 @@ object Tasks {
                 val liveCharges = com.optionslab.app.data.TradeBook.liveChargesOn(Market.today())
                 val exactCharges = com.optionslab.app.data.TradeBook.exactChargesOn(Market.today())
                 val chargesSaid = com.optionslab.ira.PnlCharges.said(exactCharges ?: liveCharges, estimate = exactCharges == null)?.let { " ($it)" } ?: ""
-                if (liveCharges != null) runCatching { com.optionslab.app.widget.IraWidget.charges(context, liveCharges) }
+                // Usefulness, round 35: the widget's small line says the exact figure too when it is kept for the day.
+                (exactCharges ?: liveCharges)?.let { c -> runCatching { com.optionslab.app.widget.IraWidget.charges(context, c, exact = exactCharges != null) } }
+                // ... and the calendar's day keeps it; a kept exact figure that no longer covers the day (an order filled
+                // since) gives way to the estimate - never an old figure called exact.
+                if (exactCharges != null) runCatching { com.optionslab.app.data.DailyPnl.recordCharges(true, exactCharges, exact = true) }
+                else if (liveCharges != null) runCatching { com.optionslab.app.data.DailyPnl.recordCharges(true, liveCharges, exact = false, onlyOverExact = true) }
                 lines.add(0, "Positions %s".format(if (s.hideAmountsOnLockScreen) "open: ${book.net.count { it.open }}" else "Rs %+,.0f".format(book.pnl) + chargesSaid))
                 pnlAlerts(context, s, book.pnl)
             }

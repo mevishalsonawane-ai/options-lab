@@ -26,17 +26,21 @@ object DayFigure {
      * A day's kept entry with its charges (Boss, 5 Oct: the P&L is shown before charges, the charges on a small line):
      * [pnl] the figure as the account always kept it (paper: after charges; Zerodha: its own m2m, before them), [trades]
      * the count, [charges] that day's charges (0 when not known: an entry kept before charges were, which then shows as it
-     * always did - nothing is migrated).
+     * always did - nothing is migrated), [exact] when they are Zerodha's own contract-note figure for every order of the
+     * day rather than the estimate from its trades (usefulness, round 35: the calendar then says "Charges ₹X").
      */
-    data class Kept(val pnl: Double, val trades: Int, val charges: Double = 0.0)
+    data class Kept(val pnl: Double, val trades: Int, val charges: Double = 0.0, val exact: Boolean = false)
 
     /**
-     * [next] with the day's charges: [charges] < 0 keeps the charges already [stored] (0 when none). Null when the entry
-     * is exactly what is [stored] (nothing to write).
+     * [next] with the day's charges: [charges] < 0 keeps the charges already [stored] (0 when none) with whether they were
+     * [Kept.exact]; a new figure is [exact] as said (never for no charges). Null when the entry is exactly what is
+     * [stored] (nothing to write).
      */
-    fun next(stored: Kept?, pnl: Double, trades: Int, charges: Double): Kept? {
-        val c = if (charges >= 0 && charges.isFinite()) paise(charges) else stored?.charges ?: 0.0
-        val entry = Kept(paise(pnl), if (trades >= 0) trades else stored?.trades ?: 0, c)
+    fun next(stored: Kept?, pnl: Double, trades: Int, charges: Double, exact: Boolean = false): Kept? {
+        val given = charges >= 0 && charges.isFinite()
+        val c = if (given) paise(charges) else stored?.charges ?: 0.0
+        val isExact = if (given) exact && c > 0 else stored?.exact ?: false
+        val entry = Kept(paise(pnl), if (trades >= 0) trades else stored?.trades ?: 0, c, isExact)
         return if (entry == stored) null else entry
     }
 

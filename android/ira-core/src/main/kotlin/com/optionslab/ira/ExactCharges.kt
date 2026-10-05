@@ -99,4 +99,37 @@ object ExactCharges {
         val ids = orderIds.filter { it.isNotBlank() }
         return ids.isNotEmpty() && keptIds.containsAll(ids)
     }
+
+    // ---- what the widgets keep beside Zerodha's P&L (usefulness, round 35) ------------------------------------------
+
+    /** The day's charges as a widget shows them under Zerodha's P&L: [value] rupees, an [estimate] or Zerodha's exact figure. */
+    data class Shown(val value: Double, val estimate: Boolean)
+
+    /**
+     * What a widget keeps after a reading: Zerodha's [exact] figure (kept for every order of the day's fills - the widget
+     * never asks Zerodha itself) wins over the [estimate] from the day's trades; with neither, what was [kept] earlier
+     * today stays - but a kept exact figure, when this reading [checked] for one and it no longer covers the day (an
+     * order filled since), is said as an estimate from then on: never an old figure called exact. Null: nothing to show.
+     */
+    fun widgetNext(kept: Shown?, exact: Double?, estimate: Double?, checked: Boolean): Shown? {
+        exact?.takeIf { it.isFinite() }?.let { return Shown(it, estimate = false) }
+        estimate?.takeIf { it.isFinite() }?.let { return Shown(it, estimate = true) }
+        val k = kept?.takeIf { it.value.isFinite() } ?: return null
+        return if (checked && !k.estimate) k.copy(estimate = true) else k
+    }
+
+    /** The widget's kept charges for [day]: "2026-10-05|180.00|x" (x: Zerodha's exact figure; e: an estimate). */
+    fun encodeDay(day: String, s: Shown): String =
+        String.format(java.util.Locale.ROOT, "%s|%.2f|%s", day, s.value, if (s.estimate) "e" else "x")
+
+    /**
+     * The charges [encodeDay] kept, when they are [today]'s; null for none, another day's, or a damaged record. An older
+     * build's "2026-10-05|180.00" (no third field) was always an estimate.
+     */
+    fun decodeDay(raw: String?, today: String): Shown? {
+        val f = raw?.split("|") ?: return null
+        if (f.size !in 2..3 || f[0] != today) return null
+        val v = f[1].toDoubleOrNull()?.takeIf { it.isFinite() } ?: return null
+        return Shown(v, estimate = f.getOrNull(2) != "x")
+    }
 }

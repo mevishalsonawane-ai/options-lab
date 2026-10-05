@@ -805,22 +805,23 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                 livePositions.value = book.net
                 com.optionslab.app.data.KiteStream.want("positions", book.net.filter { it.qty != 0 }.map { it.token })
                 val trades = tradesQ.await()
-                // Zerodha's P&L is before charges: the widgets show today's charges, estimated from these trades, under it.
+                // Zerodha's P&L is before charges: the widgets show today's charges under it - Zerodha's exact figure when
+                // already kept for exactly the day's orders (usefulness, round 35; no ask here), else the estimate from these trades.
                 val liveCharges = com.optionslab.app.data.TradeBook.liveCharges(trades)
-                runCatching { com.optionslab.app.widget.OpenWidget.fromZerodha(ctx, book, liveCharges) }
-                runCatching { com.optionslab.app.widget.IraWidget.charges(ctx, liveCharges) }
+                val keptExact = ordersQ.await().getOrNull()?.let { com.optionslab.app.data.ZerodhaCharges.kept(it) }
+                runCatching { com.optionslab.app.widget.OpenWidget.fromZerodha(ctx, book, liveCharges, keptExact) }
+                runCatching { com.optionslab.app.widget.IraWidget.charges(ctx, keptExact ?: liveCharges, exact = keptExact != null) }
                 runCatching { com.optionslab.app.data.TradeBook.recordLive(trades) }
                 // Today's Zerodha P&L for the calendar (Zerodha has no past days through its API).
                 // Speed, round 5: the calendar reads again only when the day's figure changed (a refresh that changes
                 // nothing no longer makes an open calendar re-read every book).
                 if (book.net.isNotEmpty() || trades.isNotEmpty()) runCatching {
                     // The calendar's bump comes from DailyPnl.changes (see pnlDays).
-                    com.optionslab.app.data.DailyPnl.record(true, book.m2m, trades.size, liveCharges)
+                    com.optionslab.app.data.DailyPnl.record(true, book.m2m, trades.size, keptExact ?: liveCharges, exact = keptExact != null)
                 }
                 val dayOrders = ordersQ.await().getOrThrow()
                 // Zerodha's exact charges when already kept for these orders (no ask here: the screen is not held for it).
-                Load.Done(Account(fundsQ.await(), book, dayOrders, trades, holdingsQ.await(),
-                    exactCharges = com.optionslab.app.data.ZerodhaCharges.kept(dayOrders)))
+                Load.Done(Account(fundsQ.await(), book, dayOrders, trades, holdingsQ.await(), exactCharges = keptExact))
             } catch (e: Exception) {
                 broker.value = brokerState()
                 Load.Failed(e.message ?: "could not read the account")
@@ -834,7 +835,13 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                 if (exact != null) {
                     // Only over the very read it was asked for: a newer read that landed meanwhile is never replaced by it.
                     val current = account.value
-                    if ((current as? Load.Done)?.value === shown) account.compareAndSet(current, Load.Done(shown.copy(exactCharges = exact)))
+                    if ((current as? Load.Done)?.value === shown && account.compareAndSet(current, Load.Done(shown.copy(exactCharges = exact)))) {
+                        // Usefulness, round 35: the widgets' small line and the calendar's day say it too, in place of the
+                        // estimate (for every order of the day; Zerodha's P&L itself stays as the widgets and calendar keep it).
+                        runCatching { com.optionslab.app.widget.IraWidget.charges(ctx, exact, exact = true) }
+                        runCatching { com.optionslab.app.widget.OpenWidget.exactCharges(ctx, exact) }
+                        runCatching { com.optionslab.app.data.DailyPnl.recordCharges(true, exact, exact = true) }
+                    }
                 }
             }
         }

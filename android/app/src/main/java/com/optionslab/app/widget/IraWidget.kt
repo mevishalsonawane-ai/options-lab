@@ -29,7 +29,10 @@ class IraWidget : AppWidgetProvider() {
         private const val K_BANK = "w.bank"
         private const val K_PNL = "w.pnl"
         private const val K_AT = "w.at"
-        /** Today's Zerodha charges estimate, "yyyy-MM-dd|rupees" (another day's is never shown). */
+        /**
+         * Today's Zerodha charges, "yyyy-MM-dd|rupees|x" (x: Zerodha's exact figure, e: the estimate; an older build's two
+         * fields were an estimate) - another day's is never shown ([com.optionslab.ira.ExactCharges.decodeDay]).
+         */
         private const val K_CHG = "w.chg"
 
         /** The account P&L last published (the live watch refreshes it every minute), or null. */
@@ -102,12 +105,16 @@ class IraWidget : AppWidgetProvider() {
         }
 
         /**
-         * Today's Zerodha charges, estimated from today's trades (the app's account read has them): the widget's P&L is
-         * Zerodha's own, before charges, and these go on a small line under it. Held with the other figures (the vault
-         * gets it with the next minute's write) and redrawn.
+         * Today's Zerodha charges: estimated from today's trades (the app's account read has them), or - [exact] - Zerodha's
+         * own contract-note figure the app already kept for every order of the day (usefulness, round 35: "Charges ₹X"
+         * instead of the estimate; the widget never asks Zerodha). The widget's P&L is Zerodha's own, before charges, and
+         * these go on a small line under it. Held with the other figures (the vault gets it with the next minute's write)
+         * and redrawn.
          */
-        fun charges(context: Context, value: Double?) {
-            val v = value?.takeIf { it.isFinite() }?.let { String.format(Locale.ROOT, "%s|%.2f", Market.today().toString(), it) }
+        fun charges(context: Context, value: Double?, exact: Boolean = false) {
+            val v = value?.takeIf { it.isFinite() }?.let {
+                com.optionslab.ira.ExactCharges.encodeDay(Market.today().toString(), com.optionslab.ira.ExactCharges.Shown(it, estimate = !exact))
+            }
             // Battery, round 14: the order watch hands the same figure every pass (once a minute) and redraws the widget
             // itself moments later ([publish]); redrawn here only when the figure changed (a new fill, a new day).
             val changed = synchronized(unsaved) {
@@ -122,9 +129,9 @@ class IraWidget : AppWidgetProvider() {
             if (ids.isNotEmpty()) render(context, mgr, ids)
         }
 
-        /** Today's charges estimate kept by [charges], or null (none, or another day's). */
-        private fun chargesToday(): Double? = textNow(K_CHG)?.split("|")?.takeIf { it.size == 2 && it[0] == Market.today().toString() }
-            ?.get(1)?.toDoubleOrNull()
+        /** Today's charges kept by [charges] (exact or an estimate), or null (none, or another day's). */
+        private fun chargesToday(): com.optionslab.ira.ExactCharges.Shown? =
+            com.optionslab.ira.ExactCharges.decodeDay(textNow(K_CHG), Market.today().toString())
 
         private fun line(name: String, raw: String?): String {
             val (last, chg) = raw?.split("|")?.let { it[0].toDouble() to it[1].toDouble() } ?: return "$name  —"
@@ -142,8 +149,9 @@ class IraWidget : AppWidgetProvider() {
                 v.setTextViewText(R.id.w_pnl, String.format(Locale.ENGLISH, "P&L  Rs %+,.0f", pnl))
                 v.setTextColor(R.id.w_pnl, context.getColor(if (pnl >= 0) R.color.widget_gain else R.color.widget_loss))
             } else v.setViewVisibility(R.id.w_pnl, View.GONE)
-            // Zerodha's P&L is before charges: today's estimated charges in small type under it (none known: no line).
-            val chargesLine = if (showPnl && pnl != null) com.optionslab.ira.PnlCharges.line(chargesToday(), estimate = true) else null
+            // Zerodha's P&L is before charges: today's charges in small type under it - Zerodha's exact figure when the app
+            // kept it for every order of the day, else the estimate (none known: no line).
+            val chargesLine = if (showPnl && pnl != null) chargesToday()?.let { com.optionslab.ira.PnlCharges.line(it.value, it.estimate) } else null
             if (chargesLine == null) v.setViewVisibility(R.id.w_charges, View.GONE)
             else { v.setViewVisibility(R.id.w_charges, View.VISIBLE); v.setTextViewText(R.id.w_charges, chargesLine) }
             val at = textNow(K_AT)
