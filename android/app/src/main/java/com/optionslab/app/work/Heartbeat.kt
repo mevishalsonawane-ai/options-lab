@@ -89,5 +89,14 @@ object Heartbeat {
             (if (since != null) "No check since $since. " else "The watch has not run today. ") +
                 "Stops, targets and strategy exits are not being watched. Tap to open IraAlgo and restart it.", "almanac",
             setting = "schedule.permissions")
+        // Once per stall, as the notification: Jarvis says in the chat which open positions and stops are now unwatched,
+        // and what keeps the phone from stopping the watch again. Only speaks (round 21). Off the main thread already
+        // (the alarm receiver's IO scope); bounded so a hung read never holds the receiver.
+        runCatching {
+            val at = if (since != null) lastAt.toLocalTime() else null
+            kotlinx.coroutines.runBlocking {
+                kotlinx.coroutines.withTimeoutOrNull(20_000) { com.optionslab.app.ira.IraWatchStopped.tell(context, at) }
+            }
+        }
     }
 }
