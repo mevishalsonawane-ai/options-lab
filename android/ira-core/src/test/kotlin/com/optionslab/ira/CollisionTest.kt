@@ -62,6 +62,7 @@ class CollisionTest {
         "TalkHours" to { q -> TalkHours.asked(q) != null },
         "MorningAsks" to { q -> MorningAsks.asked(q) != null },
         "TurnDowns" to { q -> TurnDowns.asked(q) != null },
+        "TopicLength" to { q -> TopicLength.asked(q) != null },
         "Headroom" to { q -> Headroom.asked(q) != null },
         "ArmFit" to { q -> ArmFit.asked(q) },
         "WeakLink" to { q -> WeakLink.asked(q) },
@@ -682,6 +683,11 @@ class CollisionTest {
         "why do i turn down your ideas" to "TurnDowns", "why did i reject your trade ideas" to "TurnDowns",
         "what reasons do i usually give for rejecting your suggestions" to "TurnDowns", "dont remind me why i turned your ideas down" to "TurnDowns",
         "don't remind me of my reasons" to "TurnDowns", "why did you tell me why i rejected them" to "TurnDowns",
+        // ---- TopicLength: the topics said in a sentence or in full aloud, as Boss asks for them ----
+        "how long do i like your answers" to "TopicLength", "which topics do you keep short" to "TopicLength",
+        "which topics do you say in detail for me" to "TopicLength", "do you know how short i like my answers" to "TopicLength",
+        "say every topic at the usual length" to "TopicLength", "forget how long i like my answers" to "TopicLength",
+        "kaun se topic short mein batate ho" to "TopicLength", "har topic normal length mein bolo" to "TopicLength",
         // ---- HonestStars: his confidence scores against their record ----
         "how honest are your stars" to "HonestStars", "do your 5 star ideas actually work" to "HonestStars",
         "tumhare confidence stars kitne sahi hain" to "HonestStars", "are your confidence ratings any good" to "HonestStars",
@@ -869,7 +875,8 @@ class CollisionTest {
         "stop offering the morning question at the morning check", "stop shortening your briefings", "stop cutting your briefings short",
         "stop saying the coin toss", "stop adding your record to your confidence", "stop qualifying your confidence",
         "stop skipping items in the morning check", "stop shortening the morning check", "stop reminding me why i turn your ideas down",
-        "stop telling me why i reject your ideas", "stop correcting your confidence words")
+        "stop telling me why i reject your ideas", "stop correcting your confidence words", "stop shortening answers by topic",
+        "stop saying topics in detail")
 
     @Test fun eachQuestionGoesWhereItShould() {
         assertTrue(ASKED.size >= 600, "${ASKED.size}")
@@ -893,7 +900,7 @@ class CollisionTest {
     // ---- The audit's order is the hub's: read from IraHub.ask itself when the app's source is beside this module ----
 
     /** The question branches of IraHub.ask between the `bundled` read and the Plan block, in [CoverageTest.feature]'s order. */
-    private val HUB_ORDER = listOf("DayJournal", "AlertSense", "Airtime", "Hearing", "PatternCalls", "TrendReads", "OutsideApp", "Clarity", "WordFit", "AskedAgain", "FigureFirst", "WrongThing", "ArmHabits", "MorningSense", "HonestStars", "TalkHours", "MorningAsks", "TurnDowns", "NewsMoves",
+    private val HUB_ORDER = listOf("DayJournal", "AlertSense", "Airtime", "Hearing", "PatternCalls", "TrendReads", "OutsideApp", "Clarity", "WordFit", "AskedAgain", "FigureFirst", "WrongThing", "ArmHabits", "MorningSense", "HonestStars", "TalkHours", "MorningAsks", "TurnDowns", "TopicLength", "NewsMoves",
         "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmFit", "WeakLink", "ArmDay", "NetLean", "ExpiryEve", "BeforeTomorrow", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "ZerodhaSession", "OrderWhy", "RelayHealth", "StreamHealth", "BatteryUse", "WatchAsk", "Tour", "DataAge", "Honest", "Thinking",
         "SelfWhy", "Consistency", "CoPilot", "SinceMorning", "ExpiryPin", "ChainDrift", "ChainIntel", "DayClock", "GapRecord", "RangeBreaks", "PriorDay", "LastHour", "InsideDays", "FirstMove", "VixNext", "SplitDays", "RoundCloses", "MonthTurns", "LunchRange", "Weekdays", "DayCompare", "LikeToday", "Structure", "MindChange", "Breadth",
         "TradeCase", "Scenarios", "Causes", "Agenda", "Improve")
@@ -1435,9 +1442,10 @@ class CollisionTest {
             // Its own undo takes it (the hub's branch is reached: no order, no command, not bundled), never "Act".
             val undo = MorningAsks.asked(s) == MorningAsks.Request.RESET || TurnDowns.asked(s) == TurnDowns.Request.RESET ||
                 TalkHours.asked(s) == TalkHours.Request.RESET || HonestStars.asked(s) == HonestStars.Request.RESET ||
-                WordFit.asked(s) == WordFit.Request.OFF || MorningSense.asked(s) == MorningSense.Request.RESET
+                WordFit.asked(s) == WordFit.Request.OFF || MorningSense.asked(s) == MorningSense.Request.RESET ||
+                TopicLength.asked(s) == TopicLength.Request.RESET
             assertTrue(undo, s)
-            assertTrue(audit.feature(s) in setOf("MorningAsks", "TurnDowns", "TalkHours", "HonestStars", "WordFit", "MorningSense"), "$s: ${audit.feature(s)}")
+            assertTrue(audit.feature(s) in setOf("MorningAsks", "TurnDowns", "TalkHours", "HonestStars", "WordFit", "MorningSense", "TopicLength"), "$s: ${audit.feature(s)}")
             assertTrue(Wake.heard("Jarvis, $s", false) is Wake.Heard.Ask, s)
         }
         // The commands stay exactly as they were, each through its own confirm.

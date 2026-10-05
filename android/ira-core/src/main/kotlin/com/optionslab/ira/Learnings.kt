@@ -16,7 +16,8 @@ import java.util.Locale
  * ([MorningSense]), the confidence scores said aloud with their record ([HonestStars]), the long unasked briefings said in a
  * sentence aloud outside the hours Boss talks to him ([TalkHours]), the question he asks every morning offered in one line
  * at the end of the morning check ([MorningAsks]), the reasons he turns Jarvis's trade ideas down for said up front
- * before the next idea they fit ([TurnDowns]) and his own goals for the week ([Improve]) - each with when and why it changed and, where one exists, the
+ * before the next idea they fit ([TurnDowns]), the topics said in a sentence or in full aloud as Boss asks for them
+ * ([TopicLength]) and his own goals for the week ([Improve]) - each with when and why it changed and, where one exists, the
  * words that undo it by voice.
  *
  * "What have you learned this week?" ([Ask.WEEK]), "what changed in how you work?" ([Ask.CHANGED]) and "show me
@@ -29,7 +30,7 @@ import java.util.Locale
  * order again), the morning-check items named in a few words ([MorningSense]: read out in full again), the confidence scores
  * said with their record ([HonestStars]: said plainly again), the briefings said shorter outside his hours ([TalkHours]:
  * in full at any hour again), the morning question offered ([MorningAsks]: no longer offered), his reasons said up front ([TurnDowns]: no longer
- * said) and his own goals. (His confidence words set to fit the
+ * said), the topics said shorter or in full ([TopicLength]: the usual length again) and his own goals. (His confidence words set to fit the
  * numbers beside them ([WordFit]) are listed with their own undo, but not reset here: that is a check on his own words
  * against his own record, not a habit learned from Boss.)
  * for this week. Never a setting, the PIN, Live, the AI's live trading, a guard or the Google speech choice - and never
@@ -56,6 +57,7 @@ object Learnings {
         HOURS("Briefings I keep short aloud outside your usual hours", false),
         MORNING_ASKS("Your usual morning question, offered at the end of the morning check", false),
         TURN_DOWNS("Your reasons for turning down my ideas, said up front", true),
+        LENGTHS("Topics I say in a sentence or in full aloud, as you ask for them", false),
         ARM_HABITS("Your bots after losing days", true),
         SIT_OUT("Conditions I sit out", true),
         ANSWERS("Answer kinds I flag", true),
@@ -97,6 +99,7 @@ object Learnings {
         val hours: TalkHours.Log = TalkHours.Log(),
         val asks: MorningAsks.Log = MorningAsks.Log(),
         val turnDowns: TurnDowns.Log = TurnDowns.Log(),
+        val lengths: TopicLength.Log = TopicLength.Log(),
     )
 
     fun day(d: LocalDate): String = "${d.dayOfMonth} ${d.month.getDisplayName(TextStyle.SHORT, Locale.ENGLISH)}"
@@ -177,6 +180,10 @@ object Learnings {
         // reason kinds and times only). Speech only: the idea and his answer are unchanged.
         TurnDowns.learned(i.turnDowns, now).forEach { r ->
             out += Item(Area.TURN_DOWNS, TurnDowns.ledgerWhat(r), r.newest.toLocalDate(), TurnDowns.ledgerWhy(r), TurnDowns.UNDO)
+        }
+        // The topics said in one sentence or in full aloud, as Boss keeps asking for them ([TopicLength]; kinds only).
+        TopicLength.learned(i.lengths, now).forEach { r ->
+            out += Item(Area.LENGTHS, TopicLength.ledgerWhat(r), r.newest.toLocalDate(), TopicLength.ledgerWhy(r), TopicLength.UNDO)
         }
         // What Boss does with his bots after losing days ([ArmHabits]; switches and signs only): his record - it arms or
         // disarms nothing, changes nothing Jarvis does, and so has no undo.
@@ -315,9 +322,9 @@ object Learnings {
                     val clarity: List<Clarity.Record> = emptyList(), val figure: List<FigureFirst.Record> = emptyList(),
                     val morning: List<MorningSense.Record> = emptyList(), val stars: List<HonestStars.Record> = emptyList(),
                     val hours: List<Int> = emptyList(), val asks: List<MorningAsks.Usual> = emptyList(),
-                    val turnDowns: List<TurnDowns.Record> = emptyList()) {
+                    val turnDowns: List<TurnDowns.Record> = emptyList(), val lengths: List<TopicLength.Record> = emptyList()) {
         val empty: Boolean get() = words.isEmpty() && routines.isEmpty() && alerts.isEmpty() && goals == 0 && clarity.isEmpty() && figure.isEmpty() && morning.isEmpty() &&
-            stars.isEmpty() && hours.isEmpty() && asks.isEmpty() && turnDowns.isEmpty()
+            stars.isEmpty() && hours.isEmpty() && asks.isEmpty() && turnDowns.isEmpty() && lengths.isEmpty()
     }
 
     fun undo(i: Inputs, now: LocalDateTime): Undo {
@@ -333,7 +340,8 @@ object Learnings {
             HonestStars.honest(i.stars, now, i.starsReset),
             TalkHours.record(i.hours, now).hours,
             MorningAsks.usual(i.asks, today),
-            TurnDowns.learned(i.turnDowns, now))
+            TurnDowns.learned(i.turnDowns, now),
+            TopicLength.learned(i.lengths, now))
     }
 
     /** [words] without those kept in the last [DAYS] days (the rest, and undated ones, stay). */
@@ -359,6 +367,7 @@ object Learnings {
         if (u.hours.isEmpty()) null else "the briefings I say shorter aloud outside your usual hours (" + TalkHours.spans(u.hours) + ") - in full at any hour again",
         if (u.asks.isEmpty()) null else "the morning question I offer at the end of the morning check (" + u.asks.joinToString(", ") { it.phrase } + ") - no longer offered",
         if (u.turnDowns.isEmpty()) null else "your reasons for turning down my ideas, said up front (" + u.turnDowns.joinToString(", ") { it.phrase } + ") - no longer said",
+        if (u.lengths.isEmpty()) null else "the topics I say in a sentence or in full aloud (" + u.lengths.joinToString(", ") { it.phrase } + ") - at the usual length again",
         if (u.goals == 0) null else "my ${plural(u.goals, "goal")} for this week")
 
     const val ONLY = "Only learned behaviour: never a setting, your PIN, Live, AI trading, a guard or the Google speech choice. " +

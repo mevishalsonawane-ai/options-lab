@@ -62,6 +62,7 @@ internal object IraTools {
             wrongAsked(said)
             talkHeard()
             asksHeard(said)
+            lengthAsked(said)
             val t = com.optionslab.ira.SelfDoubt.count(askedKinds(), com.optionslab.app.data.Market.today(), said)
             val o = JSONObject().apply { t.forEach { (d, m) -> put(d.toString(), JSONObject().apply { m.forEach { (k, n) -> put(k, n) } }) } }
             prefs().putAllSoon(mapOf(ASKED_KINDS to o.toString()))
@@ -1137,6 +1138,91 @@ internal object IraTools {
         return said
     }
 
+    // ---- how long Boss likes each topic's answers ([com.optionslab.ira.TopicLength]) -----------------------------------
+
+    /** The wishes noted: each answer kind, its direction and time only - never Boss's words or the answer. */
+    private const val TOPIC_LENGTH = "jarvis.topicLength"
+    @Volatile private var lengthCache: com.optionslab.ira.TopicLength.Log? = null
+    /** The kind of the question last asked and when (in memory only): "in short" soon after is about its answer. */
+    @Volatile private var lengthLast: Pair<String, LocalDateTime>? = null
+    /** When Boss last asked for the answer whole and was answered (ms; in memory only): said in full aloud. */
+    @Volatile private var lengthLongAt: Long = 0L
+
+    fun lengthLog(): com.optionslab.ira.TopicLength.Log = lengthCache ?: runCatching {
+        val o = JSONObject(prefs().getString(TOPIC_LENGTH) ?: "{}")
+        val n = o.optJSONArray("n") ?: JSONArray()
+        com.optionslab.ira.TopicLength.Log(
+            notes = (0 until n.length()).map { i -> n.getJSONObject(i).let { x ->
+                com.optionslab.ira.TopicLength.Note(LocalDateTime.parse(x.getString("t")), x.getString("k"), x.getString("d")) } },
+            resetAt = o.optString("r").takeIf { it.isNotEmpty() }?.let { LocalDateTime.parse(it) })
+    }.getOrDefault(com.optionslab.ira.TopicLength.Log()).also { lengthCache = it }
+
+    @Synchronized private fun lengthUpdate(f: (com.optionslab.ira.TopicLength.Log) -> com.optionslab.ira.TopicLength.Log) {
+        runCatching {
+            val log = f(lengthLog())
+            if (log == lengthCache) return@runCatching
+            lengthCache = log
+            val o = JSONObject().put("n", JSONArray().apply { log.notes.forEach { x -> put(JSONObject().put("t", x.at.toString()).put("k", x.kind).put("d", x.dir)) } })
+            log.resetAt?.let { o.put("r", it.toString()) }
+            prefs().putAllSoon(mapOf(TOPIC_LENGTH to o.toString()))
+        }
+    }
+
+    private fun lengthNow(): LocalDateTime = com.optionslab.app.data.Market.now().toLocalDateTime().withSecond(0).withNano(0)
+
+    /** A question with a kind of answer was asked ([said]'s kind only is kept, in memory). */
+    private fun lengthAsked(said: String) {
+        val k = runCatching { com.optionslab.ira.Clarity.kind(said) }.getOrNull() ?: return
+        lengthLast = k to lengthNow()
+    }
+
+    /**
+     * Boss's words [said] just after an answer ([last]: its text as in the chat): a wish for its length ("in short",
+     * "detail mein batao") within the minutes allowed is noted with that answer's kind, and the reply returned - the
+     * answer in its first sentence, or whole ([locked]: neither - it is left to the chat). Else null. Words only.
+     */
+    fun lengthWish(said: String, last: String?, locked: Boolean): String? {
+        val dir = com.optionslab.ira.TopicLength.wish(said) ?: return null
+        val (kind, at) = lengthLast ?: return null
+        val now = lengthNow()
+        if (!com.optionslab.ira.TopicLength.fresh(at, now)) return null
+        lengthLast = null
+        val before = com.optionslab.ira.TopicLength.learned(lengthLog(), now).firstOrNull { it.kind == kind }
+        lengthUpdate { com.optionslab.ira.TopicLength.heard(it, kind, dir, now) }
+        val after = com.optionslab.ira.TopicLength.learned(lengthLog(), now).firstOrNull { it.kind == kind }
+        val learnedNow = after?.takeIf { before == null || before.dir != it.dir }
+        if (learnedNow != null) IraActivity.add("Learned how Boss likes ${learnedNow.phrase}: ${learnedNow.dir.how}.")
+        if (dir == com.optionslab.ira.TopicLength.Dir.LONG && locked) return com.optionslab.ira.TopicLength.LOCKED_LONG
+        if (dir == com.optionslab.ira.TopicLength.Dir.LONG) lengthLongAt = System.currentTimeMillis()
+        // On a locked phone the answer is never said again (it may be his account's): the wish is noted only.
+        return com.optionslab.ira.TopicLength.reply(dir, if (locked) null else last, learnedNow)
+    }
+
+    /** Was [said] Boss's "in detail" answered just now (so it is said whole aloud)? */
+    fun lengthWished(said: String): Boolean =
+        System.currentTimeMillis() - lengthLongAt < 60_000L &&
+            runCatching { com.optionslab.ira.TopicLength.wish(said) == com.optionslab.ira.TopicLength.Dir.LONG }.getOrDefault(false)
+
+    /** How many sentences to say aloud answering [said] (a topic Boss keeps asking one way), or null: as usual. Voice only. */
+    fun lengthSentences(said: String): Int? = runCatching {
+        com.optionslab.ira.TopicLength.sentences(said, com.optionslab.ira.TopicLength.learned(lengthLog(), lengthNow()))
+    }.getOrNull()
+
+    /** "How long do I like your answers?". */
+    fun lengthSay(): String = runCatching { com.optionslab.ira.TopicLength.say(lengthLog(), lengthNow()) }
+        .getOrDefault("I could not read my record of how you like your answers just now, Boss.")
+
+    /** "Say every topic at the usual length": every topic as usual aloud, the count afresh. */
+    fun lengthReset(): String {
+        val now = lengthNow()
+        val said = runCatching { com.optionslab.ira.TopicLength.sayReset(lengthLog(), now) }
+            .getOrDefault("Done, Boss: every topic at the usual length aloud again.")
+        lengthUpdate { com.optionslab.ira.TopicLength.reset(it, now) }
+        lengthLast = null
+        IraActivity.add("Saying every topic at the usual length aloud again (as asked).")
+        return said
+    }
+
     // ---- what he has learned, in one view ([com.optionslab.ira.Learnings]) ------------------------------------------
 
     /** Every learning store read with its own accessor (the goals are added by [IraImprove], which holds them). */
@@ -1163,7 +1249,8 @@ internal object IraTools {
         starsReset = starsReset(),
         hours = runCatching { talkLog() }.getOrDefault(com.optionslab.ira.TalkHours.Log()),
         asks = runCatching { asksLog() }.getOrDefault(com.optionslab.ira.MorningAsks.Log()),
-        turnDowns = runCatching { turnLog() }.getOrDefault(com.optionslab.ira.TurnDowns.Log()))
+        turnDowns = runCatching { turnLog() }.getOrDefault(com.optionslab.ira.TurnDowns.Log()),
+        lengths = runCatching { lengthLog() }.getOrDefault(com.optionslab.ira.TopicLength.Log()))
 
     /**
      * "Undo everything you learned this week", on Boss's Confirm: the wordings and routines kept in the last 7 days
@@ -1184,11 +1271,13 @@ internal object IraTools {
         if (u.hours.isNotEmpty()) talkUpdate { com.optionslab.ira.TalkHours.reset(it, now) }
         if (u.asks.isNotEmpty()) { asksUpdate { com.optionslab.ira.MorningAsks.reset(it, now) }; asksOffered = null }
         if (u.turnDowns.isNotEmpty()) { turnUpdate { com.optionslab.ira.TurnDowns.reset(it, now) }; turnedDownAt = null }
+        if (u.lengths.isNotEmpty()) { lengthUpdate { com.optionslab.ira.TopicLength.reset(it, now) }; lengthLast = null }
         IraActivity.add("Undid this week's learning, as Boss confirmed: ${u.words.size} wording(s), ${u.routines.size} routine(s), " +
             "${u.alerts.size} alert kind(s) aloud again, ${u.clarity.size} answer kind(s) as usual aloud again, ${u.figure.size} market read kind(s) in the usual order again, ${u.morning.size} morning-check item(s) read out in full again, " +
             "${u.stars.size} confidence score(s) said plainly again, " + (if (u.hours.isNotEmpty()) "briefings in full at any hour again, " else "briefings unchanged, ") +
             (if (u.asks.isNotEmpty()) "no morning question offered, " else "morning check unchanged, ") +
-            (if (u.turnDowns.isNotEmpty()) "no reason of Boss's said up front." else "ideas asked as before."))
+            (if (u.turnDowns.isNotEmpty()) "no reason of Boss's said up front, " else "ideas asked as before, ") +
+            (if (u.lengths.isNotEmpty()) "every topic at the usual length aloud." else "topic lengths unchanged."))
         return u
     }
 

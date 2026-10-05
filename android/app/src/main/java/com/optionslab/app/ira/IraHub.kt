@@ -1236,6 +1236,14 @@ object IraHub {
             val noted = runCatching { IraTools.turnDownReason(q) }.getOrNull()
             if (noted != null) { _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, noted)).takeLast(MAX_MESSAGES)) }; return }
         }
+        // "In short" / "detail mein batao" just after an answer: the last answer said in its first sentence or whole, and
+        // that answer's kind noted with the wish ([com.optionslab.ira.TopicLength]; kinds only, never words) - a topic Boss
+        // keeps asking one way is then said that way aloud. Words only: never an order or a command, nothing learned acts.
+        if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !understood && !cleaned) {
+            val lastSaid = _state.value.messages.lastOrNull { it.fromIra }?.text
+            val sized = runCatching { IraTools.lengthWish(q, lastSaid, phoneLocked()) }.getOrNull()
+            if (sized != null) { _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, sized)).takeLast(MAX_MESSAGES)) }; return }
+        }
         // A new question: the model stops polishing the last answer (it stands as shown).
         IraModel.stopWriting()
         // Boss asking anything just after an unasked alert: he followed it up ([com.optionslab.ira.AlertSense]; kinds and minutes only).
@@ -1320,7 +1328,7 @@ object IraHub {
                 com.optionslab.ira.WrongThing.asked(q) != null || com.optionslab.ira.WrongThing.objected(q) || com.optionslab.ira.MindChange.asked(q) ||
                 com.optionslab.ira.ArmHabits.asked(q) || com.optionslab.ira.MorningSense.asked(q) != null ||
                 com.optionslab.ira.HonestStars.asked(q) != null || com.optionslab.ira.TalkHours.asked(q) != null || com.optionslab.ira.MorningAsks.asked(q) != null || com.optionslab.ira.BatteryUse.asked(q) ||
-                com.optionslab.ira.TurnDowns.asked(q) != null ||
+                com.optionslab.ira.TurnDowns.asked(q) != null || com.optionslab.ira.TopicLength.asked(q) != null ||
                 com.optionslab.ira.DayCompare.asked(q) != null || com.optionslab.ira.LikeToday.asked(q) }.getOrDefault(false)) {
             val prev = if (recent) _state.value.messages.lastOrNull { !it.fromIra }?.text else null
             val qs = runCatching { com.optionslab.ira.Understand.questions(prev, q) }.getOrNull()
@@ -1986,7 +1994,7 @@ object IraHub {
 
     /**
      * [ask]'s question branches on how Jarvis himself speaks and hears: AlertSense, Airtime, Hearing, PatternCalls,
-     * TrendReads, Clarity, WordFit, AskedAgain, FigureFirst, WrongThing, ArmHabits, MorningSense, HonestStars, TalkHours, MorningAsks, TurnDowns - in [ask]'s order. True when one
+     * TrendReads, Clarity, WordFit, AskedAgain, FigureFirst, WrongThing, ArmHabits, MorningSense, HonestStars, TalkHours, MorningAsks, TurnDowns, TopicLength - in [ask]'s order. True when one
      * took [q], answered exactly as before; each branch keeps its own guard (not [bundled], no order, no command).
      */
     private fun askedOfHisWays(q: String, parsed: com.optionslab.ira.Question, bundled: Boolean, understood: Boolean): Boolean {
@@ -2156,6 +2164,15 @@ object IraHub {
         if (turnAsk != null) {
             val said = if (turnAsk == com.optionslab.ira.TurnDowns.Request.RESET) IraTools.turnDownsReset()
                 else if (phoneLocked()) com.optionslab.ira.TurnDowns.LOCKED else IraTools.turnDownsSay()
+            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
+            return true
+        }
+        // "How long do I like your answers?" / "say every topic at the usual length": the topics said in a sentence or in
+        // full aloud, as Boss keeps asking for them ([com.optionslab.ira.TopicLength]; kinds only). Words only - nothing learned acts.
+        val lengthAsk = if (com.optionslab.app.BuildConfig.JARVIS && !bundled && parsed.order == null && parsed.command == null)
+            runCatching { com.optionslab.ira.TopicLength.asked(q) }.getOrNull() else null
+        if (lengthAsk != null) {
+            val said = if (lengthAsk == com.optionslab.ira.TopicLength.Request.RESET) IraTools.lengthReset() else IraTools.lengthSay()
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
             return true
         }

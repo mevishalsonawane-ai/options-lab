@@ -1723,15 +1723,19 @@ class JarvisVoice : Service() {
                 // Short answers (the owner's setting, or "shorter"): the first sentence; "tell me more" says the whole
                 // answer. Said as a person says it (Boss once, figures rounded), the rest left in the chat.
                 // Not sure of the words (echo): what he took them as goes first, one sentence, Boss named once. A kind of
-                // answer Boss often asks "what?" after is said shorter (two sentences or one; [com.optionslab.ira.Clarity]).
+                // answer Boss often asks "what?" after is said shorter (two sentences or one; [com.optionslab.ira.Clarity]); a topic
+                // Boss keeps asking "in short" or "in detail" after, in one sentence or whole ([com.optionslab.ira.TopicLength]).
                 // A market read Boss keeps asking again for its figure: that figure's sentence first aloud, the same words
                 // ([com.optionslab.ira.FigureFirst]); kept as the full answer too, so "go on" finds the same sentences.
                 else -> {
                     val ordered = IraTools.figureLead(q, a.text)
                     val spoken = com.optionslab.ira.Aloud.say(ordered, when {
                         com.optionslab.ira.Ask.parse(q).command?.kind == com.optionslab.ira.Command.Kind.MORE -> com.optionslab.ira.Aloud.Length.FULL.sentences
+                        // "Detail mein batao" said just now: his wish, said whole ([com.optionslab.ira.TopicLength]).
+                        IraTools.lengthWished(q) -> com.optionslab.ira.Aloud.Length.FULL.sentences
                         IraTools.brief -> com.optionslab.ira.Aloud.Length.SHORT.sentences
-                        else -> IraTools.claritySentences(q) ?: com.optionslab.ira.Aloud.Length.USUAL.sentences })
+                        // A topic Boss keeps asking "in short" or "in detail" after: said that way aloud (never over his own setting above).
+                        else -> IraTools.lengthSentences(q) ?: IraTools.claritySentences(q) ?: com.optionslab.ira.Aloud.Length.USUAL.sentences })
                     if (late) { full = ordered; "About what you asked earlier: $spoken" }
                     else { full = com.optionslab.ira.HeardBack.full(echo, ordered); com.optionslab.ira.HeardBack.lead(echo, spoken) }
                 }
