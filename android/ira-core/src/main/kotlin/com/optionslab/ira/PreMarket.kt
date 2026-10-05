@@ -195,7 +195,12 @@ object PreMarket {
         "^ $LEAD(am i (all )?set|are we (all )?(ready|set))$END|" +
         "^ $LEAD(do |go through |give me |read |read me |say )?(my |the |a |our )?(pre ?market|premarket|morning|pre open|preopen|opening|trading) (check ?list|checks?|readiness( check)?)( please)?$END|" +
         "^ $LEAD(check ?list|readiness check)( please)?$END|" +
-        "^ $LEAD(is everything|everything) (ready|set|in place|ok|okay) (for (the open|today|trading|the day))?( boss| jarvis| please)? $"
+        "^ $LEAD(is everything|everything) (ready|set|in place|ok|okay) (for (the open|today|trading|the day))?( boss| jarvis| please)? $|" +
+        // Round 9: "are we good to go for the open", "kya main trade ke liye ready hoon", "sab ready hai kya".
+        "^ $LEAD(am i|are we|is everything) (all )?good to go( for (the open|trading|today|the day|the market))?$END|" +
+        "^ $LEAD(kya )?(main|mai|hum|ham) (aaj )?(trade|trading|market|open) (ke liye|karne ke liye) (ready|taiyar|tayyar|set) (hoon|hu|hun|hain|hai)( kya)?$END|" +
+        "^ $LEAD(kya )?(sab|sab kuch|sabkuch) (ready|taiyar|tayyar|set) (hai|hain)( kya)?( (trade|trading|open|market) ke liye)?( kya)?$END|" +
+        "^ $LEAD(trade|trading|open|market) ke liye (sab )?(ready|taiyar|tayyar|set) (hoon|hu|hun|hain|hai)( kya)?$END"
     )
 
     /** "Am I ready to trade?", "pre-market checklist", "go through my morning checklist" - never going live ([Section.READY]). */

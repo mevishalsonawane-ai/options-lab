@@ -180,7 +180,11 @@ object AboutBoss {
 
     private val KNOW = Regex("^ (so )?(what do you know about me|what all do you know about me|what have you learn(ed|t) about me|what do you remember about me|" +
         "tell me what you know about me|what have i told you about (me|myself)|what do you know of me|what you know about me|how well do you know me|" +
-        "mere baare (mein|me) (kya|kitna) (jaante|jante|pata) (ho|hai)|tum mere baare (mein|me) kya jaante ho) $")
+        "mere baare (mein|me) (kya|kitna) (jaante|jante|pata) (ho|hai)|tum mere baare (mein|me) kya jaante ho|" +
+        // His own stated rules are among what he told (routing audit, round 9): "what are my rules", "mere rules kya hain".
+        "what are my (own )?(trading )?rules|what (rules|trading rules) (did i|have i) (tell|told|give|given|gave|set) you|" +
+        "(tell me|remind me of|read me|list) my (own )?(trading )?rules|what rules do i (have|follow|go by)|" +
+        "mere (apne )?(trading )?(rules|niyam|usool) (kya|kaun se) (hain|hai))( again| please)? $")
 
     /** "What do you know about me?" */
     fun knowAsked(text: String): Boolean = KNOW.containsMatchIn(norm(text))

@@ -185,7 +185,11 @@ object Hearing {
     fun asked(text: String): Boolean =
         rx("(?i)^\\W*(jarvis,?\\s+)?(how well (are|can) you (hearing|hear) me( today)?|are you having (any )?(trouble|problems?|difficulty) (hearing|listening)( me| to me)?( today)?|" +
             "(do you have|having) (any )?(trouble|problems?) hearing( me)?( today)?|how (is|s|'s) your hearing( today)?|how are your ears( today)?|" +
-            "(your )?hearing (report|stats|health)|how (good|clear) (am i|is my voice)( to you)?( today)?|mujhe theek se sun (pa )?rahe ho( kya)?|sunne mein (koi )?(dikkat|problem) (hai|ho rahi hai)( kya)?)\\W*$").containsMatchIn(text)
+            "(your )?hearing (report|stats|health)|how (good|clear) (am i|is my voice)( to you)?( today)?|mujhe theek se sun (pa )?rahe ho( kya)?|sunne mein (koi )?(dikkat|problem) (hai|ho rahi hai)( kya)?|" +
+            // Round 9: "can you hear me properly", "kya tum mujhe theek se sun rahe ho", "meri awaaz saaf aa rahi hai kya".
+            "can you hear me (properly|clearly|well|alright|all right)( today)?|are you hearing me (properly|clearly|well)( today)?|" +
+            "(kya )?(tum|aap|tu) mujhe (theek se|thik se|achhe se|acche se|saaf) sun (pa )?(rahe|raha|rahi) (ho|hai|hain)( kya)?|" +
+            "(kya )?(meri|mera) (awaaz|awaz|aawaz|aawaaz|voice) (saaf|clear|theek se|thik se) (aa rahi|aa raha|pahunch rahi|pahunch raha|sunai de rahi|sunai de raha) (hai|he)( kya)?)\\W*$").containsMatchIn(text)
 
     private fun pct(r: Double) = "${Math.round(r * 100)}%"
     private fun one(x: Double) = if (x == Math.floor(x)) x.toLong().toString() else "%.1f".format(java.util.Locale.ENGLISH, x)

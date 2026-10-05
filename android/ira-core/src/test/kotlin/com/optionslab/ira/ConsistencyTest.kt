@@ -243,4 +243,10 @@ class ConsistencyTest {
         val bare = TradeCase.build(TradeCase.Input(n, today.atTime(13, 45), bars = mapOf(Market.NIFTY to up), locked = true))
         assertTrue(bare.tensions.isEmpty()); assertNull(bare.mismatch)
     }
+
+    @Test fun askedOfMyCase() {
+        for (q in listOf("any contradictions in my case", "any contradictions in the case", "are there any conflicts in my trade case",
+                "any contradictions in this case")) assertTrue(Consistency.asked(q), q)
+        assertFalse(Consistency.asked("make the case"))
+    }
 }

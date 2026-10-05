@@ -131,4 +131,13 @@ class PreMarketTest {
         assertEquals(PreMarket.DAYS * 2, PreMarket.decode(many).size)
         assertTrue(PreMarket.decode("garbage\n").isEmpty())
     }
+
+    @Test fun askedInHinglishAndPlainWords() {
+        // Round 9: never going live - "live ke liye ready" and "good to go live" stay out.
+        for (q in listOf("kya main trade ke liye ready hoon", "sab ready hai kya", "kya sab kuch ready hai trading ke liye", "are we good to go for the open",
+                "am i good to go", "hum market ke liye taiyar hain kya", "trading ke liye ready hoon kya"))
+            assertTrue(PreMarket.asked(q), q)
+        for (q in listOf("kya main live ke liye ready hoon", "am i good to go live", "sab theek hai kya", "kya main ready hoon live trading ke liye"))
+            assertFalse(PreMarket.asked(q), q)
+    }
 }

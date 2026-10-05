@@ -163,7 +163,11 @@ object PatternCalls {
         "|\\bpattern (calls? )?(hit rate|track record|accuracy)\\b" +
         // Hinglish (routing audit, round 8): "kaun se patterns kaam karte hain", "pattern calls kaise rahe".
         "|\\b(kaun se|kaunse|kon se|konse) (candle |chart )?patterns? (kaam karte|kaam kar rahe|kaam kiye|chalte|chal rahe|sahi (jaate|jate|nikle|rahe))\\b" +
-        "|\\b(tumhare |aapke |your )?pattern calls? (kaise|kitne sahi) (rahe|hain|the|nikle)\\b")
+        "|\\b(tumhare |aapke |your )?pattern calls? (kaise|kitne sahi) (rahe|hain|the|nikle)\\b" +
+        // Which are trusted (round 9): "which patterns do you trust", "which patterns are reliable", "kaun se patterns pe bharosa hai".
+        "|\\b(which|what) (candle |chart )?patterns? (do you|can i|can we|could i) (trust|rely on|go by|believe)\\b" +
+        "|\\b(which|what) (candle |chart )?patterns? (are|have been|were) (reliable|trustworthy|dependable|accurate)\\b" +
+        "|\\b(kaun se|kaunse|kon se|konse) (candle |chart )?patterns? (pe|par|pr) (bharosa|bharosaa|bharose|yakeen|vishwas|bharosa kar)\\b")
 
     fun asked(text: String): Boolean = ASKED.containsMatchIn(text.replace(Regex("\\s+"), " "))
 

@@ -141,4 +141,13 @@ class AboutBossTest {
         assertFalse(a.kind.open, "Boss's words: never on a locked phone")
         assertTrue(Agenda.build(Agenda.Facts(friday, false, notes = notes)).none { it.kind == Agenda.Kind.ABOUT })
     }
+
+    @Test fun hisOwnRulesAreWhatHeTold() {
+        // Round 9: Boss's own stated rules read back with what he told (words only; nothing in them acts).
+        for (q in listOf("what are my rules", "Jarvis, what are my trading rules?", "what rules did i tell you", "remind me of my rules",
+                "what rules do i follow", "mere rules kya hain", "mere niyam kya hain")) assertTrue(AboutBoss.knowAsked(q), q)
+        for (q in listOf("what are my goals", "am i going against my own rules", "what are the rules of the exchange", "explain the rules"))
+            assertFalse(AboutBoss.knowAsked(q), q)
+        assertNull(AboutBoss.fact("what are my rules"))
+    }
 }

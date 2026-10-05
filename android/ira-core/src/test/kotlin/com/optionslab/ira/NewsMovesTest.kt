@@ -168,4 +168,26 @@ class NewsMovesTest {
         assertTrue(said.contains("News and the index on this phone"), said)
         assertFalse(Learnings.say(Learnings.items(i, now), Learnings.Ask.CHANGED, today, locked = false).contains("RBI headlines"))
     }
+
+    @Test fun askedWhetherTheNewsMovedItIsTimingOnly() {
+        // Round 9: "was it the news that moved Nifty?" - the record by theme, said as timing, never a cause.
+        assertEquals(NewsMoves.Ask(null, Market.NIFTY, cause = true), NewsMoves.asked("was it the news that moved nifty"))
+        assertEquals(NewsMoves.Ask(null, Market.NIFTY, cause = true), NewsMoves.asked("Was it the news that moved the market?"))
+        assertEquals(NewsMoves.Ask(NewsDesk.Tag.RBI, Market.BANKNIFTY, cause = true), NewsMoves.asked("was it rbi news that moved banknifty"))
+        assertEquals(NewsMoves.Ask(null, Market.NIFTY, cause = true), NewsMoves.asked("kya news se nifty gira"))
+        // Hinglish habits: how it reacts to a theme.
+        assertEquals(NewsMoves.Ask(NewsDesk.Tag.RBI, Market.NIFTY), NewsMoves.asked("rbi news pe nifty kaise react karta hai"))
+        assertEquals(NewsMoves.Ask(NewsDesk.Tag.FED, Market.NIFTY), NewsMoves.asked("fed ki news se market hilta hai kya"))
+        // Today's own move stays the news desk's; a forecast or Boss's book is never this.
+        assertNull(NewsMoves.asked("was it the news that moved nifty today"))
+        assertNull(NewsMoves.asked("will the rbi news move nifty"))
+        assertNull(NewsMoves.asked("was it the news that moved my positions"))
+        val log = notes(NewsDesk.Tag.RBI, 9, 4)
+        val said = NewsMoves.say(log, NewsMoves.Ask(null, Market.NIFTY, cause = true), today)
+        assertTrue(said.startsWith(NewsMoves.causeHead(Market.NIFTY)), said)
+        assertTrue(said.contains(NewsMoves.TIMING) && said.contains(NewsMoves.NOT_FORECAST), said)
+        assertFalse(Regex("(?i)\\b(because|due to|caused by|buy|sell|should|will)\\b").containsMatchIn(said), said)
+        val none = NewsMoves.say(emptyList(), NewsMoves.Ask(NewsDesk.Tag.FED, Market.NIFTY, cause = true), today)
+        assertTrue(none.startsWith("I can't say the news moved Nifty, Boss") && none.contains(NewsMoves.TIMING), none)
+    }
 }

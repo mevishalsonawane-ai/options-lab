@@ -211,4 +211,11 @@ class CoPilotTest {
         }
         assertNotNull(Structure.read(Market.NIFTY, b, today))
     }
+
+    @Test fun askedInHinglish() {
+        for (q in listOf("abhi sabse important kya hai", "aaj sabse zaroori kya hai", "kya matter karta hai abhi", "abhi kya important hai"))
+            assertTrue(CoPilot.asked(q), q)
+        for (q in listOf("theta kya hai", "mera p&l kya hai", "important news kya hai", "nifty kya kar raha hai"))
+            assertFalse(CoPilot.asked(q), q)
+    }
 }

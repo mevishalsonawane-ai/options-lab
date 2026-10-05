@@ -1239,20 +1239,22 @@ object IraHub {
         // A question said with something to do ("..., then exit all"): the question handlers below leave it to the multi-step
         // plan, so the action is never silently dropped ([com.optionslab.ira.Bundle]; review, 5 Oct).
         val bundled = runCatching { com.optionslab.ira.Bundle.acts(q) }.getOrDefault(true)
+        val parsed = Ask.parse(q)
         // "Help me journal today": today's journal drafted from the facts, then a few questions by voice. It holds the
-        // account, so the phone must be unlocked. Words only; the answers are kept, never acted on.
-        if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !bundled && runCatching { com.optionslab.ira.DayJournal.asked(q) }.getOrDefault(false)) {
+        // account, so the phone must be unlocked. Words only; the answers are kept, never acted on. (Like every question
+        // below, never when an order or a command is in the words.)
+        if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null &&
+            runCatching { com.optionslab.ira.DayJournal.asked(q) }.getOrDefault(false)) {
             _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
             if (phoneLocked()) { reply("Unlock the phone for that, Boss."); return }
             scope.launch(Dispatchers.IO) { reply(runCatching { IraDayJournal.help() }.getOrElse { "I could not draft your journal just now, Boss." }) }
             return
         }
-        val parsed = Ask.parse(q)
         // The kinds of question Boss asks (kind keys only, no words): set against those he marks wrong ([SelfDoubt]).
         scope.launch { runCatching { IraTools.countAsked(q) } }
         // "Which alerts do you hold back?" / "say everything again": the unasked alerts he says aloud less often (kinds only,
         // nothing about the account; it only ever changes how often his own voice speaks, never anything that acts).
-        val alertAsk = if (com.optionslab.app.BuildConfig.JARVIS && parsed.order == null && !bundled) runCatching { com.optionslab.ira.AlertSense.asked(q) }.getOrNull() else null
+        val alertAsk = if (com.optionslab.app.BuildConfig.JARVIS && !bundled && parsed.order == null && parsed.command == null) runCatching { com.optionslab.ira.AlertSense.asked(q) }.getOrNull() else null
         if (alertAsk != null) {
             _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
             scope.launch { reply(if (alertAsk == com.optionslab.ira.AlertSense.Request.ALL) IraTools.alertsAll()
@@ -1260,7 +1262,7 @@ object IraHub {
             return
         }
         // "Why so quiet?", "did you hold back any alerts?": today's market alerts - said aloud, or kept to the chat and why.
-        if (com.optionslab.app.BuildConfig.JARVIS && parsed.order == null && !bundled && runCatching { com.optionslab.ira.Airtime.asked(q) }.getOrDefault(false)) {
+        if (com.optionslab.app.BuildConfig.JARVIS && !bundled && parsed.order == null && parsed.command == null && runCatching { com.optionslab.ira.Airtime.asked(q) }.getOrDefault(false)) {
             _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
             reply(IraAirtime.answer())
             return

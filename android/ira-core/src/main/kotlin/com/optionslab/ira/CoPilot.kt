@@ -112,7 +112,10 @@ object CoPilot {
         "^ $LEAD(brief|briefing|brief me|give me a brief(ing)?|update me) (like a |as a |as my |as )?co ?pilot( (right now|now|today))?( boss| jarvis| please)? $|" +
         "^ $LEAD(co ?pilot) (brief(ing)?|mode brief|update)( (right now|now|today))?( boss| jarvis| please)? $|" +
         "^ $LEAD(rank|prioriti[sz]e) (what matters|the facts|today s facts|everything|it all)( (right now|now|today|for me))?( boss| jarvis| please)? $|" +
-        "^ $LEAD(top (3|5|three|five) (things|facts)|top things)( (right now|now|today))?( boss| jarvis| please)? $"
+        "^ $LEAD(top (3|5|three|five) (things|facts)|top things)( (right now|now|today))?( boss| jarvis| please)? $|" +
+        // Hinglish (round 9): "abhi sabse important kya hai", "kya matter karta hai abhi", "aaj sabse zaroori kya hai".
+        "^ $LEAD(abhi |aaj |is waqt )?(sabse )?(important|zaroori|zaruri|zaroori baat|important baat|important cheez) kya (hai|hain)( abhi| aaj| is waqt)?( boss| jarvis)? $|" +
+        "^ $LEAD(abhi |aaj )?kya (matter|important) (karta|kar raha|hai)( hai)?( abhi| aaj)?( boss| jarvis)? $"
     )
 
     /** "What matters right now?", "brief me like a co-pilot", "rank what matters" - and every wording of [Briefing]. */

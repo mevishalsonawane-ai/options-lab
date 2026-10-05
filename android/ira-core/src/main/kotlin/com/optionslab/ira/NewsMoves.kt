@@ -215,11 +215,20 @@ object NewsMoves {
         }
     }
 
-    /** What was asked: one theme ([tag]), or every theme (null), on [market]. */
-    data class Ask(val tag: NewsDesk.Tag?, val market: Market)
+    /**
+     * What was asked: one theme ([tag]), or every theme (null), on [market]; [cause]: asked whether the news moved it ("was it
+     * the news that moved Nifty?") - answered with the timing record only, never a cause.
+     */
+    data class Ask(val tag: NewsDesk.Tag?, val market: Market, val cause: Boolean = false)
+
+    /** Said first when Boss asks whether a headline moved the index: no cause is found, only how often it moved after such news. */
+    fun causeHead(m: Market): String = "I can't say the news moved ${m.label}, Boss - only how often it moved after such headlines on this phone."
 
     /** "How does the market react to RBI news?", "do Fed headlines move Nifty?", "which news moves Nifty most?" */
-    fun say(log: List<Note>, a: Ask, today: LocalDate, usual: Double? = null): String {
+    fun say(log: List<Note>, a: Ask, today: LocalDate, usual: Double? = null): String =
+        if (a.cause) causeHead(a.market) + " " + said(log, a, today, usual) else said(log, a, today, usual)
+
+    private fun said(log: List<Note>, a: Ask, today: LocalDate, usual: Double?): String {
         val m = a.market
         val yard = usual?.let { " In any hour on this phone, ${m.label} moves ${pct(BIG_PCT)} or more about ${share(it)} of the time." } ?: ""
         if (a.tag != null) {
@@ -283,6 +292,9 @@ object NewsMoves {
         Regex(" $MKT( s)? (reaction|reactions|response) (to|after|on) "),
         // "how much does Nifty move after RBI news?"
         Regex(" how (much|far|often) (does|do|did) $MKT $OFTEN(move|swing|react) (on|to|after|around|when) "),
+        // Hinglish (round 9): "RBI news pe Nifty kaise react karta hai", "Fed ki news se market hilta hai kya".
+        Regex(" (news|khabar|khabron|headline|headlines|announcement|policy|data) (pe|par|ke baad|aane ke baad|aane par|se) $MKT (kaise |kitna |kya )?" +
+            "(react|move|respond|hilta|hilti|hil jata|girta|chadhta|badalta)( karta| karti| karte)?( hai| hain)? "),
     )
     private val GENERAL = Regex(" (which|what) (kind of |kinds of |type of |types of |sort of )?(news|headlines) $OFTEN(moves|shakes|hits|affects) $MKT |" +
         " (which|what) (kind of |kinds of |type of |types of |sort of )?(news|headlines) (usually|typically|tend to|tends to) (move|moves|shake|hit|affect) $MKT |" +
@@ -291,12 +303,18 @@ object NewsMoves {
     private val NOT = Regex(" (will|would|going to|gonna|next|tomorrow|today|todays|yesterday|this morning|right now|predict|prediction|forecast|should|shall|buy|sell|" +
         "trade|trading|enter|exit|short|long|i|me|my|mine|we|our) ")
     private val BANK_INDEX = Regex(" (bank nifty|banknifty|nifty bank) ")
+    // "Was it the news that moved Nifty?", "was it RBI news that moved the market?", "kya news se nifty hila?" (round 9): asked of
+    // a cause, answered with timing only. (Today's own moves stay the news desk's: "today" is in [NOT].)
+    private val CAUSE = Regex(" (was|is|were) it (the |a |some |any )?(\\w+ )?(news|headline|headlines|announcement|policy|data|results) (that |which )?" +
+        "(moved|moves|moving|shook|shakes|hit|hits|drove|drives|pushed|pushes|caused|dragged|lifted|sank|knocked) $MKT|" +
+        " (kya )?(news|khabar|khabron|headline|headlines) (se|ki wajah se|ke karan|ke kaaran) $MKT (hila|gira|chadha|badha|upar gaya|neeche gaya|move hua|move kiya)")
 
     /** The theme and index asked about, or null. Facts only: a forecast, advice, Boss's own book or one day's moves are not this. */
     fun asked(text: String): Ask? {
         val t = norm(text)
         if (NOT.containsMatchIn(t)) return null
         val market = if (BANK_INDEX.containsMatchIn(t)) Market.BANKNIFTY else Market.NIFTY
+        if (CAUSE.containsMatchIn(t)) return Ask(ASK_TAGS.firstOrNull { it.second.containsMatchIn(t.replace(BANK_INDEX, " ")) }?.first, market, cause = true)
         if (GENERAL.containsMatchIn(t)) return Ask(null, market)
         if (SHAPES.none { it.containsMatchIn(t) }) return null
         val bare = t.replace(BANK_INDEX, " ")

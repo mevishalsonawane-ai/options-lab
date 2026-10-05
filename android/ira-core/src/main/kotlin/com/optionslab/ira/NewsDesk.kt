@@ -152,7 +152,7 @@ object NewsDesk {
     private val MAIN = Regex(" (main|top|big|biggest|major|key|important|leading|lead|badi|bada|khaas|khas|zaroori|zaruri) (market )?(news|headline|headlines|story|stories|khabar|khabren|khabrein) |" +
         " (what s|what is|whats) (making|in) (the )?(news|headlines) | news of the day | (today s|todays) (main |top |big )?(headlines|stories) |" +
         " (what s|what is|whats) the news today ")
-    private val MOVED = Regex(" (what|which|any|did|did any|was it|is) (the )?(news|headline|headlines|story|stories) (moved|move|moving|drove|drive|driving|caused|cause|causing|pushed|push|pushing|dragged|lifted|sank|hit) |" +
+    private val MOVED = Regex(" (what|which|any|did|did any|was it|is) (the )?(news|headline|headlines|story|stories) (that |which )?(moved|move|moving|drove|drive|driving|caused|cause|causing|pushed|push|pushing|dragged|lifted|sank|hit) |" +
         " (news|headline|headlines) behind (today s|todays|the market s|the markets) (move|moves|fall|drop|rally|rise|swing|swings|selloff|sell off) | did (the )?news move ")
     // The words Boss uses for each tag when asking (a few more than the tagging words, and never the indices: "any news on
     // Nifty" is [Ira]'s).

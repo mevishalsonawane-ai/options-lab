@@ -27,7 +27,9 @@ class CoverageTest {
     private fun route(said: String): List<Kind> {
         if (Corrections.wordsAsked(said) || Corrections.forgetWordAsked(said) != null) return listOf(Kind.JARVIS)
         if (Routine.asked(said) || Routine.forgetAsked(said)) return listOf(Kind.ACCOUNT)
-        val asSaid = Sources.asked(said) || PatternCalls.asked(said) || ChainDrift.asked(said) != null || Headroom.asked(said) != null || DayClock.asked(said) != null
+        val asSaid = Sources.asked(said) || AboutBoss.knowAsked(said) || Memory.recallAsked(said) || Memory.forgetAsked(said) || PatternCalls.asked(said) ||
+            Learnings.asked(said) != null || Learnings.undoAsked(said) || NewsMoves.asked(said) != null || PreMarket.asked(said) ||
+            ChainDrift.asked(said) != null || Headroom.asked(said) != null || DayClock.asked(said) != null
         return ((if (asSaid) null else Understand.questions(null, said)) ?: listOf(said)).map { kind(it, 0) }
     }
 
@@ -38,11 +40,17 @@ class CoverageTest {
         // are the market's.
         if (p.order == null && p.command == null && !Bundle.acts(q)) {
             if (DayJournal.asked(q)) return Kind.ACCOUNT
+            if (AlertSense.asked(q) != null || Airtime.asked(q) || Hearing.asked(q) || PatternCalls.asked(q)) return Kind.JARVIS
+            if (NewsMoves.asked(q) != null) return Kind.MARKET
+            if (TaxRecords.exportAsked(q)) return Kind.ACCOUNT
+            if (Learnings.asked(q) != null || Learnings.undoAsked(q)) return Kind.JARVIS
+            if (PreMarket.asked(q)) return Kind.ACCOUNT
             if (Headroom.asked(q) != null) return Kind.ACCOUNT
-            if (AlertSense.asked(q) != null || Airtime.asked(q) || PatternCalls.asked(q) || DataAge.asked(q)) return Kind.JARVIS
+            if (DataAge.asked(q)) return Kind.JARVIS
             if (Honest.asked(q) != null) return Kind.HONEST
             if (Thinking.asked(q) != null || Consistency.asked(q)) return Kind.JARVIS
-            if (ChainDrift.asked(q) != null || ChainIntel.asked(q) != null || DayClock.asked(q) != null || Structure.asked(q) != null || TradeCase.asked(q) || Scenarios.asked(q) != null) return Kind.MARKET
+            if (CoPilot.asked(q) || ChainDrift.asked(q) != null || ChainIntel.asked(q) != null || DayClock.asked(q) != null || Structure.asked(q) != null ||
+                Breadth.asked(q) != null || TradeCase.asked(q) || Scenarios.asked(q) != null) return Kind.MARKET
         }
         if (SelfCheck.asked(q)) return Kind.JARVIS
         if (p.command != null || p.order != null || Topic.ORDER in p.topics || Topic.COMMAND in p.topics) return Kind.ACT
@@ -415,34 +423,46 @@ class CoverageTest {
      */
     private fun feature(said: String, understood: Boolean = false, cleaned: Boolean = false): String {
         // Boss's own learned words and routine: only as said by him, before anything is cleaned or split.
+        // (Before the order / command guard, as in the hub: "forget ..." reads as acting to the parser and to Bundle, and these
+        // stores only drop Boss's own learned words and habits - nothing that trades.)
         if (!understood && (Corrections.wordsAsked(said) || Corrections.forgetWordAsked(said) != null)) return "Corrections"
         if (!understood && (Routine.asked(said) || Routine.forgetAsked(said))) return "Routine"
         val asSaid = Sources.asked(said) || AboutBoss.knowAsked(said) || Memory.recallAsked(said) || Memory.forgetAsked(said) ||
             Corrections.wordsAsked(said) || Corrections.forgetWordAsked(said) != null || Routine.asked(said) || Routine.forgetAsked(said) ||
-            PatternCalls.asked(said) || ChainDrift.asked(said) != null || Headroom.asked(said) != null || NeedsTrue.asked(said) || Clarity.asked(said) != null || DayClock.asked(said) != null
+            PatternCalls.asked(said) || Learnings.asked(said) != null || Learnings.undoAsked(said) || NewsMoves.asked(said) != null ||
+            PreMarket.asked(said) ||
+            ChainDrift.asked(said) != null || Headroom.asked(said) != null || NeedsTrue.asked(said) || Clarity.asked(said) != null || DayClock.asked(said) != null
         val qs = if (asSaid || understood || cleaned) null else Understand.questions(null, said)?.takeIf { it.isNotEmpty() && it != listOf(said) }
         if (qs != null) return if (qs.size == 1) feature(qs[0], cleaned = true) else qs.joinToString(" & ") { feature(it, understood = true) }
         val q = said
         // A question said with something to do: the question handlers leave it to the multi-step plan (IraHub's `bundled`).
         val free = !Bundle.acts(q)
-        if (free && DayJournal.asked(q)) return "DayJournal"
         val p = Ask.parse(q)
         val plain = p.order == null && p.command == null
         val alone = plain && free
-        if (free && p.order == null && AlertSense.asked(q) != null) return "AlertSense"
-        if (free && p.order == null && Airtime.asked(q)) return "Airtime"
+        if (alone && DayJournal.asked(q)) return "DayJournal"
+        if (alone && AlertSense.asked(q) != null) return "AlertSense"
+        if (alone && Airtime.asked(q)) return "Airtime"
+        if (alone && Hearing.asked(q)) return "Hearing"
         if (alone && PatternCalls.asked(q)) return "PatternCalls"
         if (alone && Clarity.asked(q) != null) return "Clarity"
+        if (alone && NewsMoves.asked(q) != null) return "NewsMoves"
         if (alone && TaxRecords.exportAsked(q)) return "TaxExport"
+        if (alone && Learnings.asked(q) != null) return "Learnings"
+        if (alone && !understood && Learnings.undoAsked(q)) return "LearningsUndo"
+        if (alone && PreMarket.asked(q)) return "PreMarket"
         if (alone && Headroom.asked(q) != null) return "Headroom"
         if (alone && DataAge.asked(q)) return "DataAge"
         if (alone && Honest.asked(q) != null) return "Honest"
+        // (The hub's Thinking falls through to SelfWhy when no reason was written and SelfWhy takes the words.)
         if (alone && Thinking.asked(q) != null) return "Thinking"
         if (alone && Consistency.asked(q)) return "Consistency"
+        if (alone && CoPilot.asked(q)) return "CoPilot"
         if (alone && ChainDrift.asked(q) != null) return "ChainDrift"
         if (alone && ChainIntel.asked(q) != null) return "ChainIntel"
         if (alone && DayClock.asked(q) != null) return "DayClock"
         if (alone && Structure.asked(q) != null) return "Structure"
+        if (alone && Breadth.asked(q) != null) return "Breadth"
         if (alone && TradeCase.asked(q)) return "TradeCase"
         if (alone && Scenarios.asked(q) != null) return "Scenarios"
         if (alone && Agenda.asked(q)) return "Agenda"
@@ -465,6 +485,7 @@ class CoverageTest {
         if (plain && Chat.smallTalk(q, 0) != null) return "Chat"
         if (Memory.toKeep(q) != null || plain && (AboutBoss.fact(q) != null || AboutBoss.forgetAsked(q) != null) || AboutBoss.knowAsked(q) ||
             Memory.recallAsked(q) || Memory.forgetAsked(q)) return "AboutBoss"
+        if (plain && AutoStop.read(q) != null) return "AutoStop"
         if (Goals.asked(q) || Goals.clearAsked(q)) return "Goals"
         if (plain && SelfWhy.asked(q)) return "SelfWhy"
         if (Vetting.asked(q)) return "Vetting"
@@ -516,7 +537,7 @@ class CoverageTest {
 
     private val ACCOUNT_REVIEW = "Account:REVIEW"
 
-    /** The new families (DayJournal to AboutBoss; round 7: Scenarios, Structure, PositionHealth, Routine, Corrections; round 8: NewsDesk, Consistency, PatternCalls, BotHealth), as Boss says them - English, Hinglish, the recognizer's spellings. */
+    /** The new families (DayJournal to AboutBoss; round 7: Scenarios, Structure, PositionHealth, Routine, Corrections; round 8: NewsDesk, Consistency, PatternCalls, BotHealth; round 9: PreMarket, NewsMoves, Hearing, CoPilot, Learnings), as Boss says them - English, Hinglish, the recognizer's spellings. */
     private val ROUTED: List<Pair<String, String>> = listOf(
         // ---- MarketMemory: the notable sessions remembered ----
         "when did nifty last gap down" to "MarketMemory", "when did banknifty last gap up this much" to "MarketMemory",
@@ -583,7 +604,7 @@ class CoverageTest {
         "mera journal likhwao" to "DayJournal",
         // ---- Improve and Lessons ----
         "how are you improving" to "Improve", "tum kaise improve ho rahe ho" to "Improve", "are you getting better" to "Improve",
-        "how are you getting better" to "Improve", "what are you improving" to "Improve", "what have you learned this week" to "Lessons",
+        "how are you getting better" to "Improve", "what are you improving" to "Improve", "what have you learned this week" to "Learnings",
         // ---- AboutBoss: what he was told about Boss ----
         "what do you know about me" to "AboutBoss", "tum mere baare mein kya jaante ho" to "AboutBoss", "what did i tell you" to "AboutBoss",
         "forget that i trade on fridays" to "AboutBoss", "i get greedy after a win" to "AboutBoss", "remember that i trade on fridays" to "AboutBoss",
@@ -808,6 +829,26 @@ class CoverageTest {
         "how is solo doing" to "Solo", "is my position healthy" to "Account:HEALTH",
         // ---- The chain's words asked are the glossary's; the chain's own reads stay ChainIntel's ----
         "what is a straddle" to "Glossary", "explain straddle" to "Glossary", "straddle kya hota hai" to "Glossary",
+        // ---- Round 9: Boss's own rules, the case's contradictions, the patterns trusted, the news that moved ----
+        "what are my rules" to "AboutBoss", "what rules did i tell you" to "AboutBoss", "mere rules kya hain" to "AboutBoss",
+        "any contradictions in my case" to "Consistency", "any contradictions in the case" to "Consistency",
+        "which patterns do you trust" to "PatternCalls", "which patterns can i trust" to "PatternCalls",
+        "kaun se patterns pe bharosa hai" to "PatternCalls",
+        "was it the news that moved nifty" to "NewsMoves", "was it the news that moved the market" to "NewsMoves",
+        "was it rbi news that moved banknifty" to "NewsMoves", "kya news se nifty gira" to "NewsMoves",
+        "did the news move banknifty" to "NewsDesk", "was it the news that moved nifty today" to "NewsDesk",
+        // ---- PreMarket ----
+        "am i ready to trade" to "PreMarket", "pre market checklist" to "PreMarket", "kya main trade ke liye ready hoon" to "PreMarket",
+        "sab ready hai kya" to "PreMarket", "go through my pre market checklist" to "PreMarket", "are we good to go for the open" to "PreMarket",
+        // ---- NewsMoves ----
+        "how does the market react to rbi news" to "NewsMoves", "rbi news pe nifty kaise react karta hai" to "NewsMoves",
+        "fed ki news se market hilta hai kya" to "NewsMoves", "which news moves nifty the most" to "NewsMoves",
+        // ---- Hearing ----
+        "how well are you hearing me" to "Hearing", "can you hear me properly" to "Hearing", "kya tum mujhe theek se sun rahe ho" to "Hearing",
+        "are you hearing me properly" to "Hearing", "mera awaaz saaf aa raha hai kya" to "Hearing",
+        // ---- CoPilot ----
+        "what matters right now" to "CoPilot", "brief me like a co pilot" to "CoPilot", "abhi sabse important kya hai" to "CoPilot",
+        "what's most important right now" to "CoPilot", "top three things right now" to "CoPilot", "kya matter karta hai abhi" to "CoPilot",
     )
 
     @Test fun eachFamilyGetsItsOwnQuestions() {
@@ -848,7 +889,7 @@ class CoverageTest {
             ("what are my habits with you" to "Routine") to ("what are my habits" to ACCOUNT_REVIEW),
             ("what's my routine" to "Routine") to ("what are my trading habits" to ACCOUNT_REVIEW),
             ("forget my routine" to "Routine") to ("forget what i told you" to "AboutBoss"),
-            ("what words have you learned" to "Corrections") to ("what have you learned this week" to "Lessons"),
+            ("what words have you learned" to "Corrections") to ("what have you learned this week" to "Learnings"),
             ("forget the word teeta" to "Corrections") to ("forget that i trade on fridays" to "AboutBoss"),
             ("what's my f&o turnover this year" to "Account:TAX") to ("export my trades for tax" to "TaxExport"),
             ("my tax summary" to "Account:TAX") to ("how much tax on my trades" to "Account:CHARGES"),
@@ -890,6 +931,36 @@ class CoverageTest {
         // "How did I do this week" is his week, not the calendar's events; "any events this week" stays the events.
         assertEquals(setOf(Section.HISTORY), AppAnswers.sections("how did i do this week"))
         assertEquals(setOf(Section.EVENTS), AppAnswers.sections("any events this week"))
+    }
+
+    /** Round 9's lines: Boss's rules, the case's contradictions, the patterns trusted, the news that moved, and the recent features' wordings. */
+    private val ROUND9 = listOf("what are my rules", "what rules did i tell you", "mere rules kya hain", "any contradictions in my case",
+        "which patterns do you trust", "which patterns can i trust", "kaun se patterns pe bharosa hai", "was it the news that moved nifty",
+        "was it the news that moved the market", "was it rbi news that moved banknifty", "kya news se nifty gira", "kya main trade ke liye ready hoon",
+        "sab ready hai kya", "go through my pre market checklist", "are we good to go for the open", "rbi news pe nifty kaise react karta hai",
+        "fed ki news se market hilta hai kya", "can you hear me properly", "kya tum mujhe theek se sun rahe ho", "are you hearing me properly",
+        "mera awaaz saaf aa raha hai kya", "abhi sabse important kya hai", "kya matter karta hai abhi", "top three things right now")
+
+    @Test fun roundNineWordingsNeitherOrderNorCommandNorBundle() {
+        for (s in ROUND9) {
+            val p = Ask.parse(s)
+            assertEquals(null, p.order, s); assertEquals(null, p.command, s)
+            assertTrue(Topic.ORDER !in p.topics && Topic.COMMAND !in p.topics, s)
+            assertTrue(!Bundle.acts(s), s)
+            assertEquals(null, Intents.quick(s), s)
+            assertTrue(!Reminder.asked(s) && !FollowUp.acts(s), s)
+            assertTrue(ROUTED.any { it.first == s }, s)
+        }
+        // Said with something to do, each is left to the multi-step plan (never answered and the action dropped).
+        for (s in listOf("what are my rules and then exit all", "am i ready to trade, then stop all strategies", "what matters right now then kill switch on",
+            "was it the news that moved nifty and close all positions"))
+            assertTrue(Bundle.acts(s) || Ask.parse(s).command != null || Ask.parse(s).order != null, s)
+        // The words that act stay as they were: a voice check and "run ..." are still commands, never these questions.
+        assertEquals(Command.Kind.VOICE_CHECK, Ask.parse("are you hearing me ok").command?.kind)
+        assertEquals(Command.Kind.START_ONE, Ask.parse("run the pre market checklist").command?.kind)
+        // Neighbours: his own rules, his goals, going against his rules.
+        assertEquals("AboutBoss", feature("what are my rules")); assertEquals("Goals", feature("what are my goals"))
+        assertEquals("Consistency", feature("am i going against my own rules"))
     }
 
     @Test fun noRoutedQuestionActs() {

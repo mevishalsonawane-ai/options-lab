@@ -146,4 +146,11 @@ class PatternCallsTest {
         val back = PatternCalls.load(PatternCalls.save(log) + "\nnot a line")
         assertEquals(log, back)
     }
+
+    @Test fun askedWhichPatternsAreTrusted() {
+        // Round 9: trust asked of the record - facts from this phone, never advice.
+        for (q in listOf("which patterns do you trust", "Which patterns can I trust?", "what patterns are reliable", "kaun se patterns pe bharosa hai",
+                "konse candle patterns par yakeen kar sakte hain")) assertTrue(PatternCalls.asked(q), q)
+        for (q in listOf("do you trust me", "which strategies do you trust", "is the hammer reliable")) assertFalse(PatternCalls.asked(q), q)
+    }
 }

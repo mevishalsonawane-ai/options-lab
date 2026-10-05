@@ -227,7 +227,7 @@ object Consistency {
 
     private const val LEAD = "(jarvis |hey jarvis |ok jarvis |boss |so |and |please |ok |okay )*"
     private val ASKED = Regex(
-        "^ $LEAD(are there |is there |do you see |do you find |any |see any |find any )(any )?(contradictions?|conflicts?|conflicting facts|inconsistenc(y|ies)|mixed signals)( in (the |your )?(facts|numbers|data|case|market|picture))?( (today|now|right now))?( boss| jarvis| please)? $|" +
+        "^ $LEAD(are there |is there |do you see |do you find |any |see any |find any )(any )?(contradictions?|conflicts?|conflicting facts|inconsistenc(y|ies)|mixed signals)( in (the |your |my |this )?(facts|numbers|data|case|trade case|market|picture))?( (today|now|right now))?( boss| jarvis| please)? $|" +
         "^ $LEAD(do|does) (the |your )?(facts|numbers|data|signals|market facts) (agree|conflict|contradict( each other)?|disagree|line up|add up|point the same way)( with each other)?( (today|now))?( boss| jarvis)? $|" +
         "^ $LEAD(are|is) (the |your )?(facts|numbers|data|signals) (consistent|contradictory|conflicting|in conflict|mixed)( (today|now))?( boss| jarvis)? $|" +
         "^ $LEAD(what s|what is|anything) (pulling|pointing) (different|opposite|two) ways( (today|now))?( boss| jarvis)? $|" +

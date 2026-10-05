@@ -123,6 +123,10 @@ class HearingHealthTest {
                 "mujhe theek se sun rahe ho kya")) assertTrue(Hearing.asked(q), q)
         for (q in listOf("can you hear me", "what did you hear", "how well is nifty doing", "are you having trouble placing orders"))
             assertFalse(Hearing.asked(q), q)
+        // Round 9's wordings (a bare "can you hear me" stays out above; "are you hearing me ok" stays the voice check).
+        for (q in listOf("can you hear me properly?", "are you hearing me properly", "kya tum mujhe theek se sun rahe ho", "aap mujhe saaf sun pa rahe ho kya",
+                "mera awaaz saaf aa raha hai kya", "meri awaaz clear aa rahi hai?")) assertTrue(Hearing.asked(q), q)
+        assertFalse(Hearing.asked("are you hearing me ok"))
         // Never a command: it only asks.
         for (q in listOf("how well are you hearing me", "are you having trouble hearing")) assertNull(Commands.parse(q), q)
     }
